@@ -7,22 +7,22 @@ import { CheckCircle, X, ShoppingBag, HeartHandshake, Loader2 } from "lucide-rea
 export default function StorefrontPaymentSuccess() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const [orderId, setOrderId] = useState<string | null>(null);
-  const [donationId, setDonationId] = useState<string | null>(null);
+  // Los datos del pago se derivan del query param en el estado inicial (no con un
+  // setState sincrónico en el efecto). El efecto solo limpia la URL (sin setState).
+  const pagoOk = searchParams.get("pago") === "ok";
+  const [orderId, setOrderId] = useState<string | null>(pagoOk ? searchParams.get("orden") : null);
+  const [donationId, setDonationId] = useState<string | null>(pagoOk ? searchParams.get("donacionId") : null);
   const [donationPaying, setDonationPaying] = useState(false);
   const [donationError, setDonationError] = useState("");
 
   useEffect(() => {
-    if (searchParams.get("pago") === "ok") {
-      setOrderId(searchParams.get("orden"));
-      setDonationId(searchParams.get("donacionId"));
-      const url = new URL(window.location.href);
-      url.searchParams.delete("pago");
-      url.searchParams.delete("orden");
-      url.searchParams.delete("donacionId");
-      router.replace(url.pathname + url.search, { scroll: false });
-    }
-  }, [searchParams, router]);
+    if (!pagoOk) return;
+    const url = new URL(window.location.href);
+    url.searchParams.delete("pago");
+    url.searchParams.delete("orden");
+    url.searchParams.delete("donacionId");
+    router.replace(url.pathname + url.search, { scroll: false });
+  }, [pagoOk, router]);
 
   async function payDonation() {
     if (donationPaying || !donationId) return;

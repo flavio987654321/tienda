@@ -7,8 +7,10 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { getApp, CATEGORY_LABELS } from "@/lib/apps/registry";
 import AppIcon from "@/components/apps/AppIcon";
 import MetaCatalogoWizard from "./MetaCatalogoWizard";
-import AnalyticsFieldApp from "./AnalyticsFieldApp";
 import FacebookConnectButton from "./FacebookConnectButton";
+import FacebookPixelWizard from "./FacebookPixelWizard";
+import FacebookWhatsAppWizard from "./FacebookWhatsAppWizard";
+import GoogleAnalyticsWizard from "./GoogleAnalyticsWizard";
 
 export default async function AppDetailPage({
   params,
@@ -39,6 +41,8 @@ export default async function AppDetailPage({
       fbBusinessId: true,
       fbCatalogId: true,
       fbFeedId: true,
+      fbWabaId: true,
+      gaConnectedAt: true,
     },
   });
 
@@ -58,6 +62,7 @@ export default async function AppDetailPage({
     "meta-catalogo": !!store?.fbConnectedAt,
     "google-analytics": !!analytics.googleAnalyticsId?.trim(),
     "facebook-pixel": !!analytics.facebookPixelId?.trim(),
+    "whatsapp-catalogo": !!store?.fbWabaId,
   };
   const installed = installedById[app.id] ?? false;
   const fbConfigured = !!process.env.FB_APP_ID && !!process.env.FB_APP_SECRET;
@@ -95,7 +100,11 @@ export default async function AppDetailPage({
               </div>
 
               <div className="mt-5 flex items-center gap-3">
-                {installed ? (
+                {app.comingSoon ? (
+                  <span className="inline-flex items-center gap-2 bg-amber-50 border border-amber-200 text-amber-700 font-bold px-6 py-2.5 rounded-lg text-sm">
+                    Próximamente
+                  </span>
+                ) : installed ? (
                   <span className="inline-flex items-center gap-2 bg-emerald-50 border border-emerald-200 text-emerald-700 font-bold px-6 py-2.5 rounded-lg text-sm">
                     <CheckCircle className="h-4 w-4" /> Instalada
                   </span>
@@ -143,7 +152,7 @@ export default async function AppDetailPage({
                 Para el catálogo de Meta, los pasos recién aparecen una vez
                 conectada la cuenta (el botón Instalar del hero abre el popup
                 de Facebook) — así no hay dos botones que hacen lo mismo. */}
-            {(app.id !== "meta-catalogo" || !!store?.fbConnectedAt) && (
+            {!app.comingSoon && (app.id !== "meta-catalogo" || !!store?.fbConnectedAt) && (
               <section id="instalacion" className="scroll-mt-6">
                 <div className="flex items-center gap-4 mb-4">
                   <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-slate-400 whitespace-nowrap">
@@ -161,8 +170,26 @@ export default async function AppDetailPage({
                     fbStatus={fb === "connected" ? "connected" : fb === "error" ? "error" : undefined}
                   />
                 )}
-                {app.id === "google-analytics" && <AnalyticsFieldApp field="googleAnalyticsId" />}
-                {app.id === "facebook-pixel" && <AnalyticsFieldApp field="facebookPixelId" />}
+                {app.id === "google-analytics" && (
+                  <GoogleAnalyticsWizard
+                    gaConnected={!!store?.gaConnectedAt}
+                    measurementId={analytics.googleAnalyticsId?.trim() || null}
+                  />
+                )}
+                {app.id === "facebook-pixel" && (
+                  <FacebookPixelWizard
+                    fbConnected={!!store?.fbConnectedAt}
+                    fbBusinessId={store?.fbBusinessId ?? null}
+                    pixelId={analytics.facebookPixelId?.trim() || null}
+                  />
+                )}
+                {app.id === "whatsapp-catalogo" && (
+                  <FacebookWhatsAppWizard
+                    fbConnected={!!store?.fbConnectedAt}
+                    fbCatalogId={store?.fbCatalogId ?? null}
+                    fbWabaId={store?.fbWabaId ?? null}
+                  />
+                )}
               </section>
             )}
 

@@ -210,7 +210,13 @@ model Store {
   fbBusinessId          String?
   fbCatalogId           String?
   fbFeedId              String?
+  fbWabaId              String?
   fbConnectedAt         DateTime?
+  // Google Analytics — vía OAuth (Google Analytics Admin API, refresh token cifrado)
+  gaRefreshToken        String?
+  gaAccountId           String?
+  gaPropertyId          String?
+  gaConnectedAt         DateTime?
   // Preview image generada al guardar el template
   previewImage          String?
   // Dirección de origen para cotizar envío en vivo (Envíopack). Opcional:
@@ -328,6 +334,9 @@ model Product {
   description      String?
   price            Float
   comparePrice     Float?
+  // Costo interno del producto (nunca se muestra en la tienda). Se usa para
+  // calcular el margen de ganancia. null = sin dato cargado (no asumir 0).
+  costPrice        Float?
   featured         Boolean   @default(false)
   viewCount        Int       @default(0)
   images           String    @default("[]")
@@ -386,8 +395,25 @@ model Product {
   publicReviews   PublicReview[]
   stockMovements  StockMovement[]
   affiliateClicks AffiliateClick[]
+  expenses        VehicleExpense[]
 
   @@index([deletedAt])
+}
+
+// Gastos asociados a un vehículo (Autos/Motos): compra, lavado, service,
+// cubiertas, etc. Reemplaza el campo único "costo" para este rubro porque un
+// vehículo suele acumular varios gastos a lo largo del tiempo, no uno solo.
+model VehicleExpense {
+  id        String    @id @default(cuid())
+  concepto  String
+  monto     Float
+  fecha     DateTime?
+  createdAt DateTime  @default(now())
+
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
 }
 
 model ProductVariant {
@@ -523,6 +549,10 @@ model OrderItem {
   id       String @id @default(cuid())
   quantity Int
   price    Float
+  // Costo del producto "congelado" al momento de la venta (copiado de
+  // Product.costPrice en el checkout). No se recalcula si el costo del
+  // producto cambia después — así un reporte de un mes cerrado no varía solo.
+  costAtSale Float?
 
   orderId String
   order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)

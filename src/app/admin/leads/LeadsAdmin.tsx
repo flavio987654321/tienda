@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { AlertTriangle, CheckCircle, XCircle, Clock } from "lucide-react";
 
 type LeadRow = {
@@ -23,6 +23,8 @@ export default function LeadsAdmin() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "suspicious">("suspicious");
 
+  // Refetch manual (botón "Actualizar") — el setLoading(true) sincrónico está
+  // OK acá porque corre desde un evento, no dentro de un efecto.
   const load = useCallback(async () => {
     setLoading(true);
     try {
@@ -34,7 +36,22 @@ export default function LeadsAdmin() {
     }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  // Fetch al montar. La carga arranca con loading=true, así que no hace falta
+  // setState sincrónico en el efecto: el primer setState ocurre recién después
+  // del await (boundary async), que es lo que piden las reglas de React.
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const res = await fetch("/api/admin/leads");
+        const data = await res.json();
+        if (active) setRows(data.leads ?? []);
+      } finally {
+        if (active) setLoading(false);
+      }
+    })();
+    return () => { active = false; };
+  }, []);
 
   const visible = filter === "suspicious" ? rows.filter(r => r.suspicious) : rows;
 

@@ -258,8 +258,10 @@ export default function VerificacionesAdmin() {
   const [requests, setRequests] = useState<VerifRequest[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // No setea loading=true acá: el spinner del montaje sale de useState(true) y
+  // el del cambio de pestaña lo enciende el botón (evento). Así el efecto que la
+  // llama no hace setState sincrónico (el primer setState es después del await).
   const load = useCallback(async () => {
-    setLoading(true);
     try {
       const res = await fetch(`/api/admin/verificacion?status=${activeTab}`);
       const d = await res.json();
@@ -289,7 +291,7 @@ export default function VerificacionesAdmin() {
         {TABS.map(({ value, label, icon }) => (
           <button
             key={value}
-            onClick={() => setActiveTab(value)}
+            onClick={() => { setLoading(true); setActiveTab(value); }}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all ${
               activeTab === value
                 ? "bg-indigo-600 text-white"

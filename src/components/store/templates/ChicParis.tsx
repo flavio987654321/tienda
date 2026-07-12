@@ -14,6 +14,7 @@ import VerifiedIconButton from "@/components/store/VerifiedIconButton";
 import { CartDrawer, type CartTheme } from "@/components/store/templates/shared/CartDrawer";
 import { OfferBadge } from "@/components/store/OfferBadge";
 import { CheckoutModal } from "@/components/store/templates/shared/CheckoutModal";
+import { ContactForm } from "@/components/store/templates/shared/ContactForm";
 import { FadeImage } from "@/components/store/templates/shared/FadeImage";
 import { SectionBlock } from "@/components/store/templates/shared/SectionBlock";
 import { parseVariantAttrs } from "@/lib/variantAttrs";
@@ -255,13 +256,12 @@ export default function ChicParis() {
     searchOpen, setSearchOpen, searchQuery, setSearchQuery,
     favorites, favoritesOpen, setFavoritesOpen,
     userDropdownOpen, setUserDropdownOpen, userDropdownRef,
-    toastMsg, contactStatus, setContactStatus, contactForm, setContactForm,
+    toastMsg,
     cartCount,
     searchResults, favoriteProducts,
     fmt, showToast, openModal, addToCart, addToPending, addAllToCart, removePendingItem, editPendingItem,
     pendingItems, pendingTotal, promoActive, pendingPromoDiscount, pendingCartValue, editingIdx,
-    handleContact, toggleFavorite,
-    contactCaptcha,
+    toggleFavorite,
   } = cart;
   const accentText = getContrastColor(ACC) === "light" ? "#fff" : "#111";
   const cartTheme: CartTheme = { BG:"#ffffff", S:"#fafafa", T:"#111111", MID:"#999999", border:"#e5e5e5", accent:ACC, accentText };
@@ -272,9 +272,10 @@ export default function ChicParis() {
     () => { if (modalProduct) setModalImg(i => (i - 1 + modalProduct.images.length) % modalProduct.images.length); }
   );
 
+  const [inquiryMessage, setInquiryMessage] = useState("");
   function openInquiry(product: Product) {
     setModalProduct(null);
-    setContactForm({ nombre: "", email: "", mensaje: `Hola, me interesa "${product.name}". ¿Me podés dar más información?` });
+    setInquiryMessage(`Hola, me interesa "${product.name}". ¿Me podés dar más información?`);
     setTimeout(() => scrollTo("contacto"), 100);
   }
   function shareProduct(product: Product) {
@@ -450,12 +451,6 @@ export default function ChicParis() {
   const bannerImgs = Array.from({ length: BANNER_COUNT }, (_, i) =>
     storeConfig?.imageOverrides?.[`heroBanner${i + 1}`]
   );
-
-  const iStyle: React.CSSProperties = {
-    display: "block", width: "100%", padding: "10px 14px",
-    border: "1px solid #ddd", fontSize: 13, outline: "none",
-    fontFamily: "inherit", boxSizing: "border-box", background: "#fff", color: "#111",
-  };
 
   useScrollReveal();
 
@@ -1217,53 +1212,40 @@ export default function ChicParis() {
 
         {/* Panel derecho — formulario */}
         <div style={{ background: "#fafaf8", padding: isMobile ? "48px 20px" : "72px 56px", display: "flex", flexDirection: "column", justifyContent: "center" }}>
-          {contactStatus === "sent" ? (
-            <div style={{ textAlign: "center" }}>
-              <div style={{ width: 64, height: 64, borderRadius: "50%", background: `${ACC}15`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px" }}>
-                <svg width={28} height={28} viewBox="0 0 24 24" fill="none" stroke={ACC} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-              </div>
-              <h3 style={{ margin: "0 0 10px", fontSize: 20, fontWeight: 900, color: "#111", textTransform: "uppercase" }}>¡Mensaje enviado!</h3>
-              <p style={{ fontSize: 14, color: "#777", margin: "0 0 28px" }}>Te respondemos a la brevedad.</p>
-              <button onClick={() => setContactStatus("idle")}
-                style={{ background: "transparent", color: "#111", border: "2px solid #ddd", padding: "10px 28px", fontSize: 11, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", cursor: "pointer" }}>
-                Enviar otro
-              </button>
-            </div>
-          ) : (
-            <>
-              <p style={{ margin: "0 0 32px", fontSize: 11, fontWeight: 700, color: "#999", letterSpacing: 3, textTransform: "uppercase" }}>Envianos un mensaje</p>
-              <form onSubmit={handleContact} style={{ display: "flex", flexDirection: "column", gap: 0 }}>
-                {/* Nombre + Email en fila */}
-                <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 12, marginBottom: 12 }}>
-                  {[["nombre", "Nombre", "text"], ["email", "Email", "email"]].map(([field, ph, type]) => (
-                    <div key={field}>
-                      <label style={{ display: "block", fontSize: 10, fontWeight: 700, color: "#999", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 6 }}>{ph}</label>
-                      <input required type={type} placeholder={`Tu ${ph.toLowerCase()}`}
-                        value={contactForm[field as keyof typeof contactForm]}
-                        onChange={e => setContactForm(f => ({ ...f, [field]: e.target.value }))}
-                        style={{ ...iStyle, borderColor: "#e0e0e0" }}
-                        onFocus={e => (e.target.style.borderColor = ACC)}
-                        onBlur={e => (e.target.style.borderColor = "#e0e0e0")} />
-                    </div>
-                  ))}
+          <ContactForm
+            storeId={storeConfig?.storeId} isPreview={isPreview} prefillMessage={inquiryMessage}
+            accent={ACC} textColor="#111" mutedColor="#e0e0e0"
+            radius={0} buttonRadius={0}
+            theme={{
+              showLabels: true,
+              labelStyle: { display:"block", fontSize:10, fontWeight:700, color:"#999", letterSpacing:1.5, textTransform:"uppercase", marginBottom:6 },
+              twoColTop: true,
+              inputBorderColor: "#e0e0e0",
+              focusBorderColor: ACC,
+              inputPadding: "10px 14px",
+              fontSize: 13,
+              gap: 12,
+              intro: <p style={{ margin:"0 0 20px", fontSize:11, fontWeight:700, color:"#999", letterSpacing:3, textTransform:"uppercase" }}>Envianos un mensaje</p>,
+              placeholders: { nombre: "Tu nombre", email: "Tu email", mensaje: "¿En qué te podemos ayudar?" },
+              buttonLabel: "Enviar mensaje →",
+              buttonFullWidth: false,
+              buttonStyle: { background:"#111", color:"#fff", padding:"15px 32px", fontSize:11, fontWeight:800, letterSpacing:3, textTransform:"uppercase", transition:"background 0.2s" },
+              buttonHoverStyle: { background: ACC },
+            }}
+            renderSent={reset => (
+              <div style={{ textAlign: "center" }}>
+                <div style={{ width: 64, height: 64, borderRadius: "50%", background: `${ACC}15`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px" }}>
+                  <svg width={28} height={28} viewBox="0 0 24 24" fill="none" stroke={ACC} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                 </div>
-                <label style={{ display: "block", fontSize: 10, fontWeight: 700, color: "#999", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 6 }}>Mensaje</label>
-                <textarea required placeholder="¿En qué te podemos ayudar?" rows={5}
-                  value={contactForm.mensaje}
-                  onChange={e => setContactForm(f => ({ ...f, mensaje: e.target.value }))}
-                  style={{ ...iStyle, resize: "none", borderColor: "#e0e0e0", marginBottom: 20 }}
-                  onFocus={e => (e.target.style.borderColor = ACC)}
-                  onBlur={e => (e.target.style.borderColor = "#e0e0e0")} />
-                {contactCaptcha.widget}
-                <button type="submit" disabled={contactStatus === "sending" || !contactCaptcha.ready}
-                  style={{ background: "#111", color: "#fff", border: "none", padding: "15px 32px", fontSize: 11, fontWeight: 800, letterSpacing: 3, textTransform: "uppercase", cursor: "pointer", alignSelf: "flex-start", opacity: contactStatus === "sending" ? 0.6 : 1, transition: "background 0.2s" }}
-                  onMouseEnter={e => { if (contactStatus !== "sending") e.currentTarget.style.background = ACC; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = "#111"; }}>
-                  {contactStatus === "sending" ? "Enviando..." : "Enviar mensaje →"}
+                <h3 style={{ margin: "0 0 10px", fontSize: 20, fontWeight: 900, color: "#111", textTransform: "uppercase" }}>¡Mensaje enviado!</h3>
+                <p style={{ fontSize: 14, color: "#777", margin: "0 0 28px" }}>Te respondemos a la brevedad.</p>
+                <button onClick={reset}
+                  style={{ background: "transparent", color: "#111", border: "2px solid #ddd", padding: "10px 28px", fontSize: 11, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", cursor: "pointer" }}>
+                  Enviar otro
                 </button>
-              </form>
-            </>
-          )}
+              </div>
+            )}
+          />
         </div>
       </section>
       </SectionBlock>
@@ -1415,7 +1397,7 @@ export default function ChicParis() {
           onClick={() => setModalProduct(null)}>
           <div style={{ background: "#fff", width: "100%", maxWidth: 860, maxHeight: isPreview ? "100%" : "90vh", overflow: "hidden", display: "flex", flexDirection: "column", borderRadius: 4, boxShadow: "0 32px 80px rgba(0,0,0,0.35)", position:"relative" }}
             onClick={e => e.stopPropagation()}>
-            <button onClick={() => { setModalProduct(null); setLightboxSrc(null); }} style={{ position:"absolute", top:8, right:8, zIndex:10, background:"rgba(0,0,0,0.5)", border:"none", color:"#fff", width:36, height:36, borderRadius:"50%", cursor:"pointer", fontSize:20, display:"flex", alignItems:"center", justifyContent:"center" }}>×</button>
+            <button onClick={() => { setModalProduct(null); setLightboxSrc(null); }} aria-label="Cerrar" style={{ position:"absolute", top:8, right:8, zIndex:10, background:"rgba(0,0,0,0.5)", border:"none", color:"#fff", width:36, height:36, borderRadius:"50%", cursor:"pointer", fontSize:20, display:"flex", alignItems:"center", justifyContent:"center" }}>×</button>
             <div style={{ overflow:"auto", flex:1, minHeight:0, display:"flex", flexDirection:"column" }}>
             <div style={{ display:"flex", flexDirection: isMobile ? "column" : "row" }}>
             {/* Images */}
@@ -1431,8 +1413,10 @@ export default function ChicParis() {
               })()}
               {modalProduct.images.length > 1 && (<>
                 <button onClick={() => setModalImg(i => (i - 1 + modalProduct.images.length) % modalProduct.images.length)}
+                  aria-label="Imagen anterior"
                   style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", background: "rgba(255,255,255,0.85)", border: "none", width: 34, height: 34, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, zIndex: 2 }}>‹</button>
                 <button onClick={() => setModalImg(i => (i + 1) % modalProduct.images.length)}
+                  aria-label="Imagen siguiente"
                   style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "rgba(255,255,255,0.85)", border: "none", width: 34, height: 34, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, zIndex: 2 }}>›</button>
                 <div style={{ position: "absolute", bottom: 12, left: "50%", transform: "translateX(-50%)", display: "flex", gap: 6, zIndex: 2 }}>
                   {modalProduct.images.map((_, i) => (
@@ -1854,7 +1838,7 @@ export default function ChicParis() {
         <div style={{ position:"fixed", inset:0, zIndex: isPreview ? 20001 : 9500, background:"rgba(0,0,0,0.97)", display:"flex", alignItems:"center", justifyContent:"center" }}
           onClick={() => setLightboxSrc(null)}>
           <img src={lightboxSrc} alt="" style={{ maxWidth:"100vw", maxHeight:"100vh", objectFit:"contain", touchAction:"pinch-zoom" }} onClick={e => e.stopPropagation()} />
-          <button onClick={() => setLightboxSrc(null)} style={{ position:"absolute", top:16, right:16, background:"rgba(255,255,255,0.15)", border:"none", color:"#fff", width:44, height:44, borderRadius:"50%", fontSize:22, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>×</button>
+          <button onClick={() => setLightboxSrc(null)} aria-label="Cerrar" style={{ position:"absolute", top:16, right:16, background:"rgba(255,255,255,0.15)", border:"none", color:"#fff", width:44, height:44, borderRadius:"50%", fontSize:22, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>×</button>
         </div>
       )}
 

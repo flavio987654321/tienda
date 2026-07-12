@@ -14,6 +14,7 @@ import VerifiedIconButton from "@/components/store/VerifiedIconButton";
 import { CartDrawer, type CartTheme } from "@/components/store/templates/shared/CartDrawer";
 import { OfferBadge } from "@/components/store/OfferBadge";
 import { CheckoutModal } from "@/components/store/templates/shared/CheckoutModal";
+import { ContactForm } from "@/components/store/templates/shared/ContactForm";
 import { FadeImage } from "@/components/store/templates/shared/FadeImage";
 import { SectionBlock } from "@/components/store/templates/shared/SectionBlock";
 import { PromoBannerCarousel } from "@/components/store/templates/shared/PromoBannerCarousel";
@@ -184,6 +185,7 @@ export default function FashionNoir() {
     return map;
   }, [products]);
   const { editMode, overrides: textOverrides, setOverride } = useEditContext();
+  const [inquiryMessage, setInquiryMessage] = useState("");
   const cart = useCartLogic(storefront);
   const {
     setCartOpen,
@@ -193,13 +195,12 @@ export default function FashionNoir() {
     searchOpen, setSearchOpen, searchQuery, setSearchQuery,
     favorites, favoritesOpen, setFavoritesOpen,
     userDropdownOpen, setUserDropdownOpen, userDropdownRef,
-    toastMsg, contactStatus, setContactStatus, contactForm, setContactForm,
+    toastMsg,
     cartCount,
     searchResults, favoriteProducts,
     fmt, showToast, openModal, addToCart, addToPending, addAllToCart, removePendingItem, editPendingItem,
     pendingItems, pendingTotal, promoActive, pendingPromoDiscount, pendingCartValue, editingIdx,
-    handleContact, toggleFavorite,
-    contactCaptcha,
+    toggleFavorite,
   } = cart;
   const imgSwipe = useTouchSwipe(
     () => { if (modalProduct) setModalImg(i => (i + 1) % modalProduct.images.length); },
@@ -208,7 +209,7 @@ export default function FashionNoir() {
 
   function openInquiry(product: StorefrontProduct) {
     setModalProduct(null);
-    setContactForm({ nombre: "", email: "", mensaje: `Hola, me interesa "${product.name}". ¿Me podés dar más información?` });
+    setInquiryMessage(`Hola, me interesa "${product.name}". ¿Me podés dar más información?`);
     setTimeout(() => scrollTo("contacto"), 100);
   }
   function shareProduct(product: StorefrontProduct) {
@@ -1292,42 +1293,33 @@ export default function FashionNoir() {
             <EditableZone field="contactSubtext" label="Subtítulo contacto">Respondemos todos los mensajes en menos de 24 horas hábiles.</EditableZone>
           </p>
 
-          {contactStatus === "sent" ? (
-            <div style={{ textAlign:"center", padding:"60px 0" }}>
-              <p style={{ fontSize:40, marginBottom:16 }}>✓</p>
-              <p style={{ fontFamily:"Georgia, serif", fontSize:22, color:contactoText, marginBottom:8 }}>¡Mensaje enviado!</p>
-              <p style={{ fontSize:13, opacity:0.5 }}>Te respondemos a la brevedad.</p>
-              <button onClick={() => setContactStatus("idle")} style={{ marginTop:24, background:"transparent", color:G, border:`1px solid ${G}`, padding:"10px 28px", fontSize:11, letterSpacing:2, cursor:"pointer", textTransform:"uppercase" }}>Enviar otro mensaje</button>
-            </div>
-          ) : (
-            <form onSubmit={handleContact} style={{ display:"flex", flexDirection:"column", gap:16 }}>
-              <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap:16 }}>
-                <div>
-                  <label style={{ display:"block", fontSize:10, letterSpacing:3, textTransform:"uppercase", opacity:0.6, marginBottom:8 }}>Nombre</label>
-                  <input required value={contactForm.nombre} onChange={e => setContactForm(f => ({...f, nombre:e.target.value}))}
-                    placeholder="Tu nombre" style={{ width:"100%", background:contactoInputBg, border:`1px solid ${contactoInputBorder}`, color:contactoText, padding:"12px 16px", fontSize:13, outline:"none", boxSizing:"border-box" }}
-                    onFocus={e => (e.target.style.borderColor=G)} onBlur={e => (e.target.style.borderColor=contactoInputBorder)}/>
-                </div>
-                <div>
-                  <label style={{ display:"block", fontSize:10, letterSpacing:3, textTransform:"uppercase", opacity:0.6, marginBottom:8 }}>Email</label>
-                  <input required type="email" value={contactForm.email} onChange={e => setContactForm(f => ({...f, email:e.target.value}))}
-                    placeholder="tu@email.com" style={{ width:"100%", background:contactoInputBg, border:`1px solid ${contactoInputBorder}`, color:contactoText, padding:"12px 16px", fontSize:13, outline:"none", boxSizing:"border-box" }}
-                    onFocus={e => (e.target.style.borderColor=G)} onBlur={e => (e.target.style.borderColor=contactoInputBorder)}/>
-                </div>
+          <ContactForm
+            storeId={storeConfig?.storeId} isPreview={isPreview} prefillMessage={inquiryMessage}
+            accent={G} textColor={contactoText} mutedColor={contactoInputBorder}
+            radius={0} buttonRadius={0}
+            theme={{
+              showLabels: true,
+              labelStyle: { display:"block", fontSize:10, letterSpacing:3, textTransform:"uppercase", opacity:0.6, marginBottom:8 },
+              twoColTop: true,
+              inputBg: contactoInputBg,
+              inputBorderColor: contactoInputBorder,
+              focusBorderColor: G,
+              inputPadding: "12px 16px",
+              fontSize: 13,
+              gap: 16,
+              placeholders: { nombre: "Tu nombre", email: "tu@email.com", mensaje: "¿En qué podemos ayudarte?" },
+              buttonLabel: "Enviar Mensaje",
+              buttonStyle: { background:G, color:BG, padding:"16px", fontSize:12, fontWeight:800, letterSpacing:3, textTransform:"uppercase" },
+            }}
+            renderSent={reset => (
+              <div style={{ textAlign:"center", padding:"60px 0" }}>
+                <p style={{ fontSize:40, marginBottom:16 }}>✓</p>
+                <p style={{ fontFamily:"Georgia, serif", fontSize:22, color:contactoText, marginBottom:8 }}>¡Mensaje enviado!</p>
+                <p style={{ fontSize:13, opacity:0.5 }}>Te respondemos a la brevedad.</p>
+                <button onClick={reset} style={{ marginTop:24, background:"transparent", color:G, border:`1px solid ${G}`, padding:"10px 28px", fontSize:11, letterSpacing:2, cursor:"pointer", textTransform:"uppercase" }}>Enviar otro mensaje</button>
               </div>
-              <div>
-                <label style={{ display:"block", fontSize:10, letterSpacing:3, textTransform:"uppercase", opacity:0.6, marginBottom:8 }}>Mensaje</label>
-                <textarea required rows={5} value={contactForm.mensaje} onChange={e => setContactForm(f => ({...f, mensaje:e.target.value}))}
-                  placeholder="¿En qué podemos ayudarte?" style={{ width:"100%", background:contactoInputBg, border:`1px solid ${contactoInputBorder}`, color:contactoText, padding:"12px 16px", fontSize:13, outline:"none", resize:"vertical", fontFamily:"inherit", boxSizing:"border-box" }}
-                  onFocus={e => (e.target.style.borderColor=G)} onBlur={e => (e.target.style.borderColor=contactoInputBorder)}/>
-              </div>
-              {contactCaptcha.widget}
-              <button type="submit" disabled={contactStatus==="sending" || !contactCaptcha.ready}
-                style={{ background:G, color:BG, border:"none", padding:"16px", fontSize:12, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor:"pointer", opacity: contactStatus==="sending" ? 0.6 : 1, transition:"opacity 0.2s" }}>
-                {contactStatus === "sending" ? "Enviando..." : "Enviar Mensaje"}
-              </button>
-            </form>
-          )}
+            )}
+          />
         </div>
       </section>
       </SectionBlock>
@@ -1492,7 +1484,7 @@ export default function FashionNoir() {
         <div style={{ position:"fixed", inset:0, zIndex: isPreview ? 20000 : 600, display:"flex", alignItems:"center", justifyContent:"center" }} onClick={() => { setModalProduct(null); setLightboxSrc(null); }}>
           <div style={{ position:"absolute", inset:0, background:"rgba(10,10,10,0.88)", backdropFilter:"blur(8px)" }}/>
           <div style={{ position:"relative", background:S, maxWidth:960, width:"calc(100% - 32px)", maxHeight: isPreview ? "100%" : "92vh", overflow:"hidden", display:"flex", flexDirection:"column" }} onClick={e => e.stopPropagation()}>
-            <button onClick={() => { setModalProduct(null); setLightboxSrc(null); }} style={{ position:"absolute", top:8, right:8, zIndex:10, background:"rgba(10,10,10,0.65)", border:"none", color:T, width:36, height:36, cursor:"pointer", fontSize:20, display:"flex", alignItems:"center", justifyContent:"center", backdropFilter:"blur(4px)" }}>×</button>
+            <button onClick={() => { setModalProduct(null); setLightboxSrc(null); }} aria-label="Cerrar" style={{ position:"absolute", top:8, right:8, zIndex:10, background:"rgba(10,10,10,0.65)", border:"none", color:T, width:36, height:36, cursor:"pointer", fontSize:20, display:"flex", alignItems:"center", justifyContent:"center", backdropFilter:"blur(4px)" }}>×</button>
             <div style={{ overflow:"auto", flex:1, minHeight:0, display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr" }}>
             <div>
               {/* Imagen principal con flechas */}
@@ -1511,12 +1503,14 @@ export default function FashionNoir() {
                 {modalProduct.images.length > 1 && (
                   <>
                     <button onClick={() => setModalImg(i => (i - 1 + modalProduct.images.length) % modalProduct.images.length)}
+                      aria-label="Imagen anterior"
                       style={{ position:"absolute", left:12, top:"50%", transform:"translateY(-50%)", background:"rgba(10,10,10,0.65)", border:`1px solid rgba(240,235,227,0.15)`, color:T, width:40, height:40, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", backdropFilter:"blur(4px)", transition:"background 0.2s" }}
                       onMouseEnter={e => (e.currentTarget.style.background="rgba(10,10,10,0.88)")}
                       onMouseLeave={e => (e.currentTarget.style.background="rgba(10,10,10,0.65)")}>
                       <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
                     </button>
                     <button onClick={() => setModalImg(i => (i + 1) % modalProduct.images.length)}
+                      aria-label="Imagen siguiente"
                       style={{ position:"absolute", right:12, top:"50%", transform:"translateY(-50%)", background:"rgba(10,10,10,0.65)", border:`1px solid rgba(240,235,227,0.15)`, color:T, width:40, height:40, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", backdropFilter:"blur(4px)", transition:"background 0.2s" }}
                       onMouseEnter={e => (e.currentTarget.style.background="rgba(10,10,10,0.88)")}
                       onMouseLeave={e => (e.currentTarget.style.background="rgba(10,10,10,0.65)")}>
@@ -1966,7 +1960,7 @@ export default function FashionNoir() {
         <div style={{ position:"fixed", inset:0, zIndex: isPreview ? 20001 : 700, background:"rgba(0,0,0,0.97)", display:"flex", alignItems:"center", justifyContent:"center" }}
           onClick={() => setLightboxSrc(null)}>
           <img src={lightboxSrc} alt="" style={{ maxWidth:"100vw", maxHeight:"100vh", objectFit:"contain", touchAction:"pinch-zoom" }} onClick={e => e.stopPropagation()} />
-          <button onClick={() => setLightboxSrc(null)} style={{ position:"absolute", top:16, right:16, background:"rgba(255,255,255,0.15)", border:"none", color:"#fff", width:44, height:44, borderRadius:"50%", fontSize:22, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>×</button>
+          <button onClick={() => setLightboxSrc(null)} aria-label="Cerrar" style={{ position:"absolute", top:16, right:16, background:"rgba(255,255,255,0.15)", border:"none", color:"#fff", width:44, height:44, borderRadius:"50%", fontSize:22, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>×</button>
         </div>
       )}
 

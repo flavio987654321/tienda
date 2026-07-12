@@ -125,7 +125,8 @@ export async function POST(req: NextRequest) {
     });
   } catch (e) {
     const errMsg = e instanceof Error ? e.message : JSON.stringify(e);
-    const errCause = (e as any)?.cause ?? (e as any)?.response ?? null;
+    const errObj = e as { cause?: unknown; response?: unknown } | null;
+    const errCause = errObj?.cause ?? errObj?.response ?? null;
     console.error("[suscripcion/preferencia] Error al crear preferencia MP:", errMsg, errCause);
     return NextResponse.json({ error: "No se pudo conectar con Mercado Pago. Intentá de nuevo en unos minutos." }, { status: 502 });
   }

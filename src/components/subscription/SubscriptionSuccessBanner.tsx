@@ -10,13 +10,15 @@ type SubInfo = { planLabel: string; billing: string; renewalDate: string } | nul
 export default function SubscriptionSuccessBanner() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const [show, setShow] = useState(false);
+  // El banner se muestra según el query param — se deriva en el estado inicial
+  // en vez de con un setState sincrónico en el efecto. El efecto solo limpia la
+  // URL y trae el detalle (fetch async), sin setState sincrónico.
+  const showFromUrl = searchParams.get("suscripcion") === "ok";
+  const [show, setShow] = useState(showFromUrl);
   const [sub, setSub] = useState<SubInfo>(null);
 
   useEffect(() => {
-    if (searchParams.get("suscripcion") !== "ok") return;
-
-    setShow(true);
+    if (!showFromUrl) return;
 
     // Limpiar query param sin recargar
     const url = new URL(window.location.href);
@@ -39,8 +41,7 @@ export default function SubscriptionSuccessBanner() {
         setSub({ planLabel, billing, renewalDate: renewalDate ?? "" });
       })
       .catch(() => {});
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams]);
+  }, [showFromUrl, router]);
 
   if (!show) return null;
 

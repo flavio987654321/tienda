@@ -90,6 +90,27 @@ export async function createCatalog(token: string, businessId: string, name: str
   return graphPost(`/${businessId}/owned_product_catalogs`, token, { name });
 }
 
+export async function listOwnedPixels(token: string, businessId: string): Promise<{ data: { id: string; name: string }[] }> {
+  return graphGet(`/${businessId}/adspixels`, token, { fields: "id,name" });
+}
+
+export async function createPixel(token: string, businessId: string, name: string): Promise<{ id: string }> {
+  return graphPost(`/${businessId}/adspixels`, token, { name });
+}
+
+export async function listOwnedWhatsAppAccounts(token: string, businessId: string): Promise<{ data: { id: string; name: string }[] }> {
+  return graphGet(`/${businessId}/owned_whatsapp_business_accounts`, token, { fields: "id,name" });
+}
+
+// Conecta el catálogo de productos ya existente (creado por Catálogo de Meta) a
+// una WhatsApp Business Account. A diferencia del resto de las llamadas de este
+// archivo, Meta no documenta con la misma claridad un único endpoint estable para
+// esto — queda a confirmar/ajustar contra developers.facebook.com apenas haya
+// acceso real para probarlo (recién ahí se puede validar contra una WABA real).
+export async function connectCatalogToWaba(token: string, wabaId: string, catalogId: string): Promise<{ success: boolean }> {
+  return graphPost(`/${wabaId}`, token, { whatsapp_business_catalog_id: catalogId });
+}
+
 export async function createProductFeed(token: string, catalogId: string, feedUrl: string, name: string): Promise<{ id: string }> {
   return graphPost(`/${catalogId}/product_feeds`, token, {
     name,

@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useSyncExternalStore } from "react";
 import type { StorefrontProduct } from "@/hooks/useStorefront";
 import { useTouchSwipe } from "@/hooks/useTouchSwipe";
 import { getContrastColor } from "@/contexts/EditContext";
@@ -8,8 +8,22 @@ export function fmtPrice(n: number, currency: string) {
   return (currency === "USD" ? "USD " : "$") + n.toLocaleString("es-AR");
 }
 
+// Tipo de puntero (touch vs mouse) leído sin efecto vía useSyncExternalStore.
+// No cambia durante la sesión, por eso el subscribe es un no-op; el snapshot de
+// servidor es "no touch" para que la hidratación coincida.
+const noopSubscribe = () => () => {};
+const getIsTouch = () => window.matchMedia("(pointer: coarse)").matches;
+
 export function attr(p: StorefrontProduct, key: string): string {
   return p.attributes.find(a => a.key.toLowerCase() === key.toLowerCase())?.value ?? "";
+}
+
+// "Localidad, Provincia" (campos nuevos) con fallback a los campos viejos
+// (Ubicación/Ciudad/"Ciudad / Zona") para vehículos publicados antes de que
+// existieran los selectores de Provincia/Localidad/Código Postal.
+export function vehicleLocation(p: StorefrontProduct): string {
+  const combined = [attr(p, "Localidad"), attr(p, "Provincia")].filter(Boolean).join(", ");
+  return combined || attr(p, "Ubicación") || attr(p, "Ciudad") || attr(p, "Ciudad / Zona") || "";
 }
 
 export function WaIcon({ size = 18 }: { size?: number }) {
@@ -65,7 +79,7 @@ export const AM_MODAL_CSS = `
   }
 `;
 
-export function VehicleModal({ product, accent, currency, whatsapp, products, onClose, onSelect, isFavorite, onToggleFavorite }: {
+export function VehicleModal({ product, accent, currency, whatsapp, products, onClose, onSelect, isFavorite, onToggleFavorite, storeId, isOwner, isPreview }: {
   product: StorefrontProduct; accent: string; currency: string;
   whatsapp: { enabled: boolean; number: string };
   products: StorefrontProduct[];
@@ -73,12 +87,14 @@ export function VehicleModal({ product, accent, currency, whatsapp, products, on
   onSelect: (p: StorefrontProduct) => void;
   isFavorite?: boolean;
   onToggleFavorite?: () => void;
+  storeId?: string;
+  isOwner?: boolean;
+  isPreview?: boolean;
 }) {
   const [imgIdx, setImgIdx] = useState(0);
   const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(null);
-  const [isTouch, setIsTouch] = useState(false);
   const [lightboxSrc, setLightboxSrc] = useState<string|null>(null);
-  useEffect(() => { setIsTouch(window.matchMedia("(pointer: coarse)").matches); }, []);
+  const isTouch = useSyncExternalStore(noopSubscribe, getIsTouch, () => false);
   const imgSwipe = useTouchSwipe(
     () => setImgIdx(i => (i + 1) % imgs.length),
     () => setImgIdx(i => (i - 1 + imgs.length) % imgs.length)
@@ -90,7 +106,7 @@ export function VehicleModal({ product, accent, currency, whatsapp, products, on
   const año = attr(product, "Año");
   const km = attr(product, "Km") || attr(product, "Kilómetros");
   const condicion = attr(product, "Condición");
-  const ubicacion = attr(product, "Ubicación") || attr(product, "Ciudad") || attr(product, "Ciudad / Zona") || "";
+  const ubicacion = vehicleLocation(product);
 
   const specs = [
     { label: "Marca",       value: attr(product, "Marca") },
@@ -121,6 +137,15 @@ export function VehicleModal({ product, accent, currency, whatsapp, products, on
 
   const waNumber = whatsapp.number.replace(/\D/g, "");
   const waMsg = encodeURIComponent(`Hola! Me interesa el ${product.name}${año ? ` (${año})` : ""}. ¿Está disponible?`);
+
+  function registerLead() {
+    if (!storeId || isOwner || isPreview) return;
+    fetch("/api/leads", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ storeId, productId: product.id, productName: product.name, productPrice: product.price }),
+    }).catch(() => {});
+  }
 
   useEffect(() => {
     const prev = document.body.style.overflow;
@@ -175,7 +200,7 @@ export function VehicleModal({ product, accent, currency, whatsapp, products, on
                 <svg width={16} height={16} viewBox="0 0 24 24" fill={isFavorite ? accent : "none"} stroke={isFavorite ? accent : "#666"} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
               </button>
             )}
-            <button onClick={onClose}
+            <button onClick={onClose} aria-label="Cerrar"
               style={{ background: "#f5f5f5", border: "none", cursor: "pointer",
                 width: 32, height: 32, borderRadius: "50%", fontSize: 18,
                 display: "flex", alignItems: "center", justifyContent: "center", color: "#666" }}>
@@ -232,6 +257,7 @@ export function VehicleModal({ product, accent, currency, whatsapp, products, on
                   {imgs.length > 1 && (
                     <>
                       <button onClick={() => { setImgIdx(i => (i - 1 + imgs.length) % imgs.length); setMousePos(null); }}
+                        aria-label="Imagen anterior"
                         style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)",
                           background: "rgba(0,0,0,0.52)", backdropFilter: "blur(6px)",
                           border: "1px solid rgba(255,255,255,0.18)", color: "#fff",
@@ -243,6 +269,7 @@ export function VehicleModal({ product, accent, currency, whatsapp, products, on
                         <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
                       </button>
                       <button onClick={() => { setImgIdx(i => (i + 1) % imgs.length); setMousePos(null); }}
+                        aria-label="Imagen siguiente"
                         style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)",
                           background: "rgba(0,0,0,0.52)", backdropFilter: "blur(6px)",
                           border: "1px solid rgba(255,255,255,0.18)", color: "#fff",
@@ -313,7 +340,7 @@ export function VehicleModal({ product, accent, currency, whatsapp, products, on
                   </div>
                   {whatsapp.enabled && waNumber && (
                     <a href={`https://wa.me/${waNumber}?text=${waMsg}`}
-                      target="_blank" rel="noopener noreferrer"
+                      target="_blank" rel="noopener noreferrer" onClick={registerLead}
                       style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
                         background: "#25d366", color: "white", textDecoration: "none",
                         padding: "14px 20px", borderRadius: 6, fontWeight: 700, fontSize: 14,
@@ -399,9 +426,8 @@ export function VehicleModal({ product, accent, currency, whatsapp, products, on
                   textTransform:"uppercase", letterSpacing:1.2 }}>Descripción</span>
                 <div style={{ flex:1, height:1, background:"#f0f0f0" }}/>
               </div>
-              <p style={{ margin: 0, fontSize: 14, color: "#555", lineHeight: 1.85 }}>
-                {product.description}
-              </p>
+              <div className="product-rte" dangerouslySetInnerHTML={{ __html: product.description || "" }}
+                style={{ fontSize: 14, color: "#555", lineHeight: 1.85 }} />
             </div>
           )}
 
@@ -504,7 +530,7 @@ export function VehicleModal({ product, accent, currency, whatsapp, products, on
         <div style={{ position:"fixed", inset:0, zIndex:100000, background:"rgba(0,0,0,0.97)", display:"flex", alignItems:"center", justifyContent:"center" }}
           onClick={() => setLightboxSrc(null)}>
           <img src={lightboxSrc} alt="" style={{ maxWidth:"100vw", maxHeight:"100vh", objectFit:"contain", touchAction:"pinch-zoom" }} onClick={e => e.stopPropagation()} />
-          <button onClick={() => setLightboxSrc(null)} style={{ position:"absolute", top:16, right:16, background:"rgba(255,255,255,0.15)", border:"none", color:"#fff", width:44, height:44, borderRadius:"50%", fontSize:22, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>×</button>
+          <button onClick={() => setLightboxSrc(null)} aria-label="Cerrar" style={{ position:"absolute", top:16, right:16, background:"rgba(255,255,255,0.15)", border:"none", color:"#fff", width:44, height:44, borderRadius:"50%", fontSize:22, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>×</button>
         </div>
       )}
     </div>
@@ -524,7 +550,7 @@ export function VehicleCard({ product, accent, currency, theme = "light", onClic
   const trans = attr(product, "Transmisión");
   const comb = attr(product, "Combustible");
   const condicion = attr(product, "Condición");
-  const ubicacion = attr(product, "Ubicación") || attr(product, "Ciudad") || attr(product, "Ciudad / Zona") || "";
+  const ubicacion = vehicleLocation(product);
 
   const D = theme === "dark";
   const cardBg    = D ? "#1e1e1e" : "#ffffff";

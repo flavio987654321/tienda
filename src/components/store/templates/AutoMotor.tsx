@@ -777,7 +777,8 @@ export default function AutoMotor() {
         <VehicleModal product={selected} accent={accent} currency={currency}
           whatsapp={whatsapp} products={products}
           onClose={() => setSelected(null)} onSelect={p => setSelected(p)}
-          isFavorite={favorites.includes(selected.id)} onToggleFavorite={() => toggleFavorite(selected.id)} />
+          isFavorite={favorites.includes(selected.id)} onToggleFavorite={() => toggleFavorite(selected.id)}
+          storeId={config?.storeId} isOwner={isOwner} isPreview={isPreview} />
       )}
 
       {!editMode && whatsapp.enabled && whatsapp.number && (

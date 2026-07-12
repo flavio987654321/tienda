@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
+import { sanitizeDescription } from "@/lib/products";
 
 type CsvRow = {
   nombre: string;
@@ -23,7 +24,9 @@ type CsvRow = {
   carroceria?: string;
   color?: string;
   puertas?: string;
-  ciudad?: string;
+  provincia?: string;
+  localidad?: string;
+  codigoPostal?: string;
   condicion?: string;
 };
 
@@ -34,7 +37,8 @@ const VEHICLE_ATTR_LABELS: [keyof CsvRow, string][] = [
   ["marca", "Marca"], ["modelo", "Modelo"], ["version", "Versión"], ["anio", "Año"],
   ["km", "Kilómetros"], ["motor", "Motor"], ["combustible", "Combustible"],
   ["transmision", "Transmisión"], ["traccion", "Tracción"], ["carroceria", "Carrocería"],
-  ["color", "Color"], ["puertas", "Puertas"], ["ciudad", "Ciudad / Zona"],
+  ["color", "Color"], ["puertas", "Puertas"],
+  ["provincia", "Provincia"], ["localidad", "Localidad"], ["codigoPostal", "Código Postal"],
 ];
 
 function buildVehicleAttributes(row: CsvRow): { key: string; value: string }[] {
@@ -92,7 +96,10 @@ export async function POST(req: NextRequest) {
       await prisma.product.create({
         data: {
           name: nombre,
-          description: row.descripcion?.trim() ?? null,
+          // La descripción se renderiza como HTML en la tienda pública — se
+          // sanitiza con la misma allowlist del formulario para que un CSV no
+          // pueda inyectar scripts/eventos (XSS almacenado).
+          description: row.descripcion?.trim() ? sanitizeDescription(row.descripcion.trim()) : null,
           price: precio,
           comparePrice: precioComp,
           category: row.categoria?.trim() || (isAutos ? "autos" : "general"),

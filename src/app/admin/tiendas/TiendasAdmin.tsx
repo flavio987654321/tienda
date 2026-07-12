@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
 import { Store, Package, Users, ShoppingBag, Globe, EyeOff, Calendar, RefreshCw, Power, Search, X, Trash2, RotateCcw, AlertTriangle } from "lucide-react";
 
@@ -40,7 +40,13 @@ function applyStoreFilter(stores: StoreRow[], filter: string): StoreRow[] {
 export default function TiendasAdmin({ stores: initial, filter: activeFilter }: { stores: StoreRow[]; filter: string }) {
   const baseStores = useMemo(() => applyStoreFilter(initial, activeFilter), [initial, activeFilter]);
   const [stores, setStores] = useState(baseStores);
-  useEffect(() => { setStores(baseStores); }, [baseStores]);
+  // Reset del estado local cuando cambian los props (patrón "adjust state during
+  // render" de React) — reemplaza al efecto de sincronización, sin el render extra.
+  const [prevBase, setPrevBase] = useState(baseStores);
+  if (baseStores !== prevBase) {
+    setPrevBase(baseStores);
+    setStores(baseStores);
+  }
 
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [query, setQuery] = useState("");

@@ -3,14 +3,13 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import type { StorefrontProduct, ValidatedCoupon, PlaceOrderParams } from "./useStorefront";
-import { getEnvioOptions, fmtEnvioPrice, getPagoOptions, fmt as fmtFn, type CartItem, type ContactStatus, type CheckoutStatus, type ShippingMethod } from "@/components/store/shared/cartTypes";
+import { getEnvioOptions, fmtEnvioPrice, getPagoOptions, fmt as fmtFn, type CartItem, type CheckoutStatus, type ShippingMethod } from "@/components/store/shared/cartTypes";
 import { useAuth } from "@/components/AuthProvider";
 import { LIVE_QUOTE_DOMICILIO_ID } from "@/types/store-config";
 import { PROVINCIAS_ARGENTINA } from "@/lib/provincias";
 import { parseVariantAttrs } from "@/lib/variantAttrs";
 import { promoEffectivePct } from "@/lib/promoLabel";
 import { resolveVariantPrice } from "@/lib/variantPrice";
-import { useTurnstile } from "@/components/Turnstile";
 
 // Misma lógica de matching de variante por talle/color que usan los templates
 // para mostrar "Sin stock"/"Últimas unidades" — se centraliza acá (y se expone
@@ -44,6 +43,9 @@ type StorefrontDeps = {
   isWholesale?: boolean;
   hasMercadoPago?: boolean;
   shippingMethods?: ShippingMethod[] | null;
+  // Moneda mostrada en la tienda (ARS/USD) — solo se usa para reportar el valor
+  // real de la compra al evento Purchase del Pixel de Meta, si está conectado.
+  currency?: string;
   // Las páginas de detalle de producto reusan `openModal` solo para cargar el producto
   // en el estado del carrito (addToCart/selectedSize/etc.), sin mostrar ningún modal
   // flotante encima — por eso no deben heredar el bloqueo de scroll del body pensado
@@ -51,7 +53,7 @@ type StorefrontDeps = {
   lockScrollOnModal?: boolean;
 };
 
-export function useCartLogic({ products, storeId, affiliateId = null, slug = null, isOwner = false, resolveVariantId, validateCoupon, placeOrder, checkoutMode = "cart", isWholesale = false, hasMercadoPago = false, shippingMethods, lockScrollOnModal = true }: StorefrontDeps) {
+export function useCartLogic({ products, storeId, affiliateId = null, slug = null, isOwner = false, resolveVariantId, validateCoupon, placeOrder, checkoutMode = "cart", isWholesale = false, hasMercadoPago = false, shippingMethods, lockScrollOnModal = true, currency = "ARS" }: StorefrontDeps) {
   const [cartItems,      setCartItems]      = useState<CartItem[]>([]);
   const [cartOpen,       setCartOpen]       = useState(false);
   const [modalProduct,   setModalProduct]   = useState<StorefrontProduct | null>(null);
@@ -78,9 +80,6 @@ export function useCartLogic({ products, storeId, affiliateId = null, slug = nul
   const [favoritesOpen,  setFavoritesOpen]  = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const [toastMsg,       setToastMsg]       = useState<string | null>(null);
-  const [contactStatus,  setContactStatus]  = useState<ContactStatus>("idle");
-  const [contactForm,    setContactForm]    = useState({ nombre:"", email:"", mensaje:"" });
-  const contactCaptcha = useTurnstile("contact");
   const [acceptedTerms,  setAcceptedTerms]  = useState(false);
   const [donationEnabled, setDonationEnabled] = useState(false);
   const [donationAmount,  setDonationAmount]  = useState(1000);
@@ -101,8 +100,12 @@ export function useCartLogic({ products, storeId, affiliateId = null, slug = nul
   const router = useRouter();
   const pathname = usePathname();
 
-  // Si el comprador llegó por link de afiliado, forzar MP como único método de pago
+  // Si el comprador llegó por link de afiliado, forzar MP como único método de pago.
+  // `affiliateId` arranca en null y se completa recién después del montaje (useStorefront
+  // lee `?ref=` de la URL en su propio efecto) — no hay forma de calcular esto en el
+  // render inicial, así que sincronizarlo con un efecto es el patrón correcto acá.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (affiliateId) setPagoId("mercadopago");
   }, [affiliateId]);
 
@@ -113,10 +116,13 @@ export function useCartLogic({ products, storeId, affiliateId = null, slug = nul
       .catch(() => {});
   }, []);
 
-  // Restaurar carrito y datos del comprador desde localStorage
+  // Restaurar carrito y datos del comprador desde localStorage. Es una lectura
+  // de un sistema externo al montar (no hay forma de leer localStorage durante
+  // el render en el servidor), así que corresponde hacerlo en un efecto.
   useEffect(() => {
     try {
       const savedCart = localStorage.getItem("storefront_cart");
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       if (savedCart) setCartItems(JSON.parse(savedCart));
       const savedBuyer = localStorage.getItem("storefront_buyer");
       if (savedBuyer) {
@@ -145,6 +151,7 @@ export function useCartLogic({ products, storeId, affiliateId = null, slug = nul
     } else {
       try {
         const savedFavs = localStorage.getItem("storefront_favorites");
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- lectura de localStorage al montar, no hay otra forma
         if (savedFavs) setFavorites(JSON.parse(savedFavs));
       } catch {}
     }
@@ -266,6 +273,7 @@ export function useCartLogic({ products, storeId, affiliateId = null, slug = nul
     if (cp.length < 4 || !provincia || cartItems.length === 0) {
       // El destino dejó de ser válido (ej: el comprador borró el CP después
       // de tener una cotización) — no dejar el precio viejo mostrándose.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setLiveQuote({ status: "idle", domicilio: null, sucursal: null });
       return;
     }
@@ -480,6 +488,7 @@ export function useCartLogic({ products, storeId, affiliateId = null, slug = nul
     const id = new URLSearchParams(window.location.search).get("producto");
     if (id) {
       const p = products.find((pr) => pr.id === id);
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- abre el modal según la URL, solo se sabe tras montar
       if (p) openModal(p);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -633,6 +642,7 @@ export function useCartLogic({ products, storeId, affiliateId = null, slug = nul
     const variantId = resolveVariantId(modalProduct, selectedSize, selectedColor);
     const stock = resolveVariantStock(modalProduct, selectedSize, selectedColor);
     // When the selected variant is out of stock, preserve the previous qty rather than zeroing it
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- ajusta el pendingItem en edición cuando cambia talle/color/cantidad, no se puede calcular en el render
     setPendingItems(prev => prev.map((item, i) => {
       if (i !== editingIdx) return item;
       const safeQty = stock === 0 ? item.qty : (stock !== null ? Math.min(Math.max(qty, 1), stock) : Math.max(qty, 1));
@@ -751,35 +761,20 @@ export function useCartLogic({ products, storeId, affiliateId = null, slug = nul
       return;
     }
 
-    setCheckoutStatus("done");
-  };
-
-  const handleContact = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!storeId) return;
-    setContactStatus("sending");
-    try {
-      const res = await fetch("/api/contact", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          storeId,
-          nombre: contactForm.nombre,
-          email: contactForm.email,
-          mensaje: contactForm.mensaje,
-          turnstileToken: contactCaptcha.token,
-        }),
-      });
-      if (res.ok) {
-        setContactStatus("sent");
-        setContactForm({ nombre: "", email: "", mensaje: "" });
-      } else {
-        setContactStatus("idle");
+    // Pago por transferencia sin donación: no hay ninguna navegación de por
+    // medio (a diferencia de MercadoPago o la donación), así que el email
+    // recién tipeado en el formulario sigue en memoria acá — el Pixel lo
+    // hashea solo del lado del navegador, nunca se manda en texto plano.
+    if (typeof window !== "undefined") {
+      const fbq = (window as unknown as { fbq?: (...args: unknown[]) => void }).fbq;
+      if (fbq && res.orderId) {
+        const email = buyerForm.email.trim().toLowerCase();
+        if (email) fbq("set", "userData", { em: email });
+        fbq("track", "Purchase", { value: orderTotal, currency }, { eventID: res.orderId });
       }
-    } catch {
-      setContactStatus("idle");
     }
-    contactCaptcha.reset();
+
+    setCheckoutStatus("done");
   };
 
   const toggleFavorite = async (id: string) => {
@@ -817,8 +812,6 @@ export function useCartLogic({ products, storeId, affiliateId = null, slug = nul
     favorites, favoritesOpen, setFavoritesOpen,
     userDropdownOpen, setUserDropdownOpen, userDropdownRef,
     toastMsg,
-    contactStatus, setContactStatus, contactForm, setContactForm,
-    contactCaptcha,
     acceptedTerms, setAcceptedTerms,
     donationEnabled, setDonationEnabled, donationAmount, setDonationAmount, canastaDisponible,
     // Derived
@@ -832,6 +825,6 @@ export function useCartLogic({ products, storeId, affiliateId = null, slug = nul
     // Functions
     fmt, showToast, openModal, addToCart, addToPending, addAllToCart, removePendingItem, updatePendingQty, editPendingItem,
     removeFromCart, updateQty,
-    openCheckout, handleApplyCoupon, handlePlaceOrder, handleContact, toggleFavorite,
+    openCheckout, handleApplyCoupon, handlePlaceOrder, toggleFavorite,
   };
 }

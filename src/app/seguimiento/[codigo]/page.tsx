@@ -93,10 +93,28 @@ export default function SeguimientoCodigoPage() {
   }, [codigo]);
 
   useEffect(() => {
-    fetchOrder();
+    // Primer fetch al montar sin setState sincrónico: loading ya arranca en true,
+    // así que el primer setState ocurre después del await. El refresco silencioso
+    // periódico sigue usando fetchOrder(true).
+    let active = true;
+    (async () => {
+      try {
+        const res = await fetch(`/api/seguimiento?codigo=${encodeURIComponent(codigo)}`);
+        const data = await res.json();
+        if (!active) return;
+        if (!res.ok) { setError(data.error ?? "Pedido no encontrado."); return; }
+        setOrder(data.order);
+        setLastUpdate(new Date());
+        setError("");
+      } catch {
+        if (active) setError("Error de conexión. Intentá de nuevo.");
+      } finally {
+        if (active) setLoading(false);
+      }
+    })();
     const interval = setInterval(() => fetchOrder(true), 30_000);
-    return () => clearInterval(interval);
-  }, [fetchOrder]);
+    return () => { active = false; clearInterval(interval); };
+  }, [fetchOrder, codigo]);
 
   const currentIndex  = order ? STATUS_ORDER.indexOf(order.status) : -1;
   const isCancelled   = order?.status === "CANCELLED";

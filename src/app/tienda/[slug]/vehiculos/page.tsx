@@ -183,6 +183,8 @@ function VehiculosPageInner() {
   const [templateId,  setTemplateId]  = useState("");
   const [navBgColor,  setNavBgColor]  = useState<string | null>(null);
   const [whatsapp,    setWhatsapp]    = useState<{ enabled: boolean; number: string; message?: string }>({ enabled: false, number: "" });
+  const [storeId,     setStoreId]     = useState<string | undefined>(undefined);
+  const [isOwner,     setIsOwner]     = useState(false);
   const [selected,  setSelected]  = useState<StorefrontProduct | null>(null);
   const [imgErrors,    setImgErrors]    = useState<Record<string, boolean>>({});
   const [hoveredMarca, setHoveredMarca] = useState<string | null>(null);
@@ -200,6 +202,8 @@ function VehiculosPageInner() {
       .then(data => {
         if (!data?.store) return;
         setStoreName(data.store.name ?? "Tienda");
+        setStoreId(data.store.id);
+        setIsOwner(!!data.isOwner);
         try {
           const cfg = JSON.parse(data.store.storeConfig || "{}");
           if (cfg.colors?.accent)          setAccent(cfg.colors.accent);
@@ -223,7 +227,7 @@ function VehiculosPageInner() {
       acc || (p.attributes?.find(a => a.key.toLowerCase() === key.toLowerCase())?.value ?? "")
     , ""), []);
 
-  const getCiudad = useCallback((p: StorefrontProduct) => getAttr(p, "Ciudad / Zona", "Ciudad", "Ubicación"), [getAttr]);
+  const getCiudad = useCallback((p: StorefrontProduct) => getAttr(p, "Localidad", "Ciudad / Zona", "Ciudad", "Ubicación"), [getAttr]);
   const getKm     = useCallback((p: StorefrontProduct) => getAttr(p, "Kilómetros", "Km"), [getAttr]);
 
   const categories = useMemo(() => {
@@ -550,7 +554,8 @@ function VehiculosPageInner() {
         <VehicleModal
           product={selected} accent={accent} currency={currency}
           whatsapp={whatsapp} products={filtered}
-          onClose={() => setSelected(null)} onSelect={p => setSelected(p)} />
+          onClose={() => setSelected(null)} onSelect={p => setSelected(p)}
+          storeId={storeId} isOwner={isOwner} />
       )}
     </div>
   );

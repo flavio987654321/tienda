@@ -12,6 +12,54 @@ export default function AppIcon({ id, className = "h-8 w-8" }: { id: string; cla
     );
   }
 
+  if (id === "google-shopping") {
+    return (
+      <svg viewBox="0 0 24 24" className={className} aria-hidden="true">
+        <path fill="#4285F4" d="M12 10.909v3.273h5.727c-.232 1.4-.99 2.586-2.11 3.382v2.788h3.41C21.036 18.61 22 15.955 22 12.818c0-.79-.073-1.55-.209-2.28H12z"/>
+        <path fill="#34A853" d="M12 22c2.7 0 4.964-.89 6.618-2.409l-3.41-2.788c-.945.636-2.155 1.01-3.208 1.01-2.468 0-4.556-1.665-5.303-3.905H3.18v2.86A9.996 9.996 0 0 0 12 22z"/>
+        <path fill="#FBBC05" d="M6.697 13.908A5.99 5.99 0 0 1 6.386 12c0-.663.114-1.31.311-1.908V7.232H3.18A9.996 9.996 0 0 0 2 12c0 1.614.386 3.14 1.18 4.768l3.517-2.86z"/>
+        <path fill="#EA4335" d="M12 6.182c1.468 0 2.786.505 3.823 1.496l2.868-2.868C16.959 3.09 14.696 2 12 2A9.996 9.996 0 0 0 3.18 7.232l3.517 2.86C7.444 7.847 9.532 6.182 12 6.182z"/>
+      </svg>
+    );
+  }
+
+  if (id === "whatsapp-catalogo") {
+    return (
+      <svg viewBox="0 0 24 24" className={className} aria-hidden="true">
+        <circle cx="12" cy="12" r="12" fill="#25D366" />
+        <path
+          fill="#fff"
+          d="M12 5.5a6.5 6.5 0 0 0-5.6 9.8L5.5 18.5l3.3-.9A6.5 6.5 0 1 0 12 5.5zm3.9 9.3c-.2.5-1 1-1.4 1-.4 0-.8.1-2.7-.7-2.3-1-3.7-3.3-3.8-3.5-.1-.2-.9-1.2-.9-2.3 0-1.1.6-1.6.8-1.9.2-.2.4-.3.6-.3h.4c.1 0 .3 0 .5.4.2.5.7 1.6.7 1.7.1.1.1.3 0 .4-.1.2-.1.3-.3.5-.1.2-.3.3-.4.5-.1.1-.3.3-.1.6.2.3.8 1.3 1.7 2.1 1.2 1 2.1 1.4 2.5 1.5.2.1.4.1.5-.1.1-.2.6-.7.8-.9.2-.2.3-.2.5-.1l1.5.7c.2.1.4.2.4.3.1.1.1.7-.1 1.2z"
+        />
+      </svg>
+    );
+  }
+
+  if (id === "meta-catalogo") {
+    return (
+      <svg viewBox="0 0 24 24" className={className} aria-hidden="true">
+        <defs>
+          <linearGradient id="ig-badge-gradient" x1="0%" y1="100%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#FFDD55" />
+            <stop offset="50%" stopColor="#FF543E" />
+            <stop offset="100%" stopColor="#C837AB" />
+          </linearGradient>
+        </defs>
+        {/* Facebook, atrás a la izquierda */}
+        <g transform="translate(1.4,1.4) scale(0.6)">
+          <path
+            fill="#1877F2"
+            d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"
+          />
+        </g>
+        {/* Instagram, adelante a la derecha */}
+        <rect x="10" y="10" width="13.2" height="13.2" rx="4" fill="url(#ig-badge-gradient)" stroke="white" strokeWidth="1.4" />
+        <circle cx="16.6" cy="16.6" r="3.3" fill="none" stroke="white" strokeWidth="1.1" />
+        <circle cx="20.6" cy="12.6" r="0.85" fill="white" />
+      </svg>
+    );
+  }
+
   if (id === "facebook-pixel") {
     return (
       <svg viewBox="0 0 24 24" className={className} aria-hidden="true">
@@ -23,7 +71,7 @@ export default function AppIcon({ id, className = "h-8 w-8" }: { id: string; cla
     );
   }
 
-  // meta-catalogo (y fallback): logo infinito de Meta
+  // fallback para ids no reconocidos: logo infinito de Meta
   return (
     <svg viewBox="0 0 24 24" className={className} aria-hidden="true">
       <path

@@ -19,6 +19,7 @@ interface Props {
   productId: string;
   productName: string;
   currentStatus: VehicleStatus;
+  costTotal: number;
   onSave: (data: VehicleStatusData) => void;
   onClose: () => void;
 }
@@ -39,7 +40,7 @@ export function VehicleStatusBadge({ status, animate = false }: { status: Vehicl
   );
 }
 
-export default function VehicleStatusModal({ productId, productName, currentStatus, onSave, onClose }: Props) {
+export default function VehicleStatusModal({ productId, productName, currentStatus, costTotal, onSave, onClose }: Props) {
   const [selected, setSelected]   = useState<VehicleStatus>(currentStatus);
   const [soldPrice, setSoldPrice] = useState("");
   const [buyerName, setBuyerName] = useState("");
@@ -173,6 +174,12 @@ export default function VehicleStatusModal({ productId, productName, currentStat
                   inputMode="numeric"
                   className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent"
                 />
+                {soldPrice && !isNaN(parseFloat(soldPrice)) && (
+                  <p className={`mt-1.5 text-xs font-semibold ${parseFloat(soldPrice) - costTotal < 0 ? "text-red-600" : "text-emerald-600"}`}>
+                    Ganancia estimada: ${Math.round(parseFloat(soldPrice) - costTotal).toLocaleString("es-AR")}
+                    {costTotal === 0 && <span className="text-gray-400 font-normal"> (sin gastos cargados)</span>}
+                  </p>
+                )}
               </div>
 
               <div>

@@ -24,6 +24,7 @@ export async function POST(_req: NextRequest, ctx: Ctx) {
       description:      source.description,
       price:            source.price,
       comparePrice:     source.comparePrice,
+      costPrice:        source.costPrice,
       images:           source.images,
       category:         source.category,
       subcategory:      source.subcategory,

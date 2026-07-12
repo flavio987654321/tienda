@@ -233,7 +233,7 @@ export async function POST(req: NextRequest) {
         totalQtyByProduct.set(item.productId, (totalQtyByProduct.get(item.productId) ?? 0) + item.quantity);
       }
 
-      const orderItems: { productId: string; variantId: string | null; quantity: number; price: number }[] = [];
+      const orderItems: { productId: string; variantId: string | null; quantity: number; price: number; costAtSale: number | null }[] = [];
       let promoSavingsAcc = 0;
       for (const item of normalizedItems) {
         const product = products.find((p) => p.id === item.productId);
@@ -312,6 +312,9 @@ export async function POST(req: NextRequest) {
           variantId: variant?.id ?? null,
           quantity: item.quantity,
           price: unitPrice,
+          // "Congelado" al momento de la venta — si después se edita el costo
+          // del producto, este pedido ya vendido no debe cambiar de ganancia.
+          costAtSale: product.costPrice ?? null,
         });
         promoSavingsAcc += promoApplies ? Math.round((wholesaleOrBasePrice - unitPrice) * item.quantity * 100) / 100 : 0;
       }

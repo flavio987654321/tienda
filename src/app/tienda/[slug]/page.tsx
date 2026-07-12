@@ -1,3 +1,4 @@
+import { createHash } from "crypto";
 import { prisma } from "@/lib/prisma";
 import StoreShell from "@/components/store/StoreShell";
 import { notFound } from "next/navigation";
@@ -20,6 +21,7 @@ export const dynamic = "force-dynamic";
 
 type TiendaPageProps = {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ pago?: string; orden?: string }>;
 };
 
 export async function generateMetadata({ params }: TiendaPageProps): Promise<Metadata> {
@@ -60,9 +62,10 @@ export async function generateMetadata({ params }: TiendaPageProps): Promise<Met
   };
 }
 
-export default async function TiendaPage({ params }: TiendaPageProps) {
+export default async function TiendaPage({ params, searchParams }: TiendaPageProps) {
   noStore();
   const { slug } = await params;
+  const { pago, orden } = await searchParams;
 
   const [store, currentUser] = await Promise.all([
     prisma.store.findFirst({
@@ -119,48 +122,76 @@ export default async function TiendaPage({ params }: TiendaPageProps) {
     ? new Date(store.owner.createdAt).toLocaleDateString("es-AR", { month: "long", year: "numeric" })
     : null;
 
-  let config: StoreConfig;
+  // El try/catch solo protege el parseo del JSON — el JSX de ComingSoonPage
+  // se construye después, afuera, para que un eventual error de render no
+  // quede (falsamente) capturado por este catch.
+  let parsed;
   try {
-    const parsed = JSON.parse(store.storeConfig || "{}");
-    if (!parsed?.template) {
-      return (
-        <ComingSoonPage
-          name={store.name}
-          logo={store.logo ?? null}
-          color={store.logoColor || store.primaryColor || "#6366f1"}
-          tagline={store.tagline ?? null}
-        />
-      );
-    }
-    config = {
-      ...DEFAULT_CONFIG,
-      ...parsed,
-      storeName: store.name,
-      storeId: store.id,
-      slug,
-      tipoTienda: store.tipoTienda ?? "GENERAL",
-      tieneVentaMayorista: store.tieneVentaMayorista ?? false,
-      hasMercadoPago: !!store.mpAccessToken,
-      isOwner,
-      isVerified: store.isVerified,
-      verifiedInfo: {
-        showName: store.verifiedShowName, name: store.owner?.name ?? null,
-        showCity: store.verifiedShowCity, city: store.owner?.city ?? null,
-        showPhone: store.verifiedShowPhone, phone: store.owner?.phone ?? null,
-        showSince: store.verifiedShowSince, memberSince,
-      },
-      // Solo mostrar el flyer si el dueño tiene Premium
-      flyerConfig: ownerIsPremium ? parsed.flyerConfig : undefined,
-    };
+    parsed = JSON.parse(store.storeConfig || "{}");
   } catch {
     notFound();
   }
 
+  if (!parsed?.template) {
+    return (
+      <ComingSoonPage
+        name={store.name}
+        logo={store.logo ?? null}
+        color={store.logoColor || store.primaryColor || "#6366f1"}
+        tagline={store.tagline ?? null}
+      />
+    );
+  }
+
+  const config: StoreConfig = {
+    ...DEFAULT_CONFIG,
+    ...parsed,
+    storeName: store.name,
+    storeId: store.id,
+    slug,
+    tipoTienda: store.tipoTienda ?? "GENERAL",
+    tieneVentaMayorista: store.tieneVentaMayorista ?? false,
+    hasMercadoPago: !!store.mpAccessToken,
+    isOwner,
+    isVerified: store.isVerified,
+    verifiedInfo: {
+      showName: store.verifiedShowName, name: store.owner?.name ?? null,
+      showCity: store.verifiedShowCity, city: store.owner?.city ?? null,
+      showPhone: store.verifiedShowPhone, phone: store.owner?.phone ?? null,
+      showSince: store.verifiedShowSince, memberSince,
+    },
+    // Solo mostrar el flyer si el dueño tiene Premium
+    flyerConfig: ownerIsPremium ? parsed.flyerConfig : undefined,
+  };
+
   const splashColor = store.logoColor || store.primaryColor || "#6366f1";
+
+  // Compra recién confirmada (vuelta de MercadoPago o transferencia con
+  // donación) — se recalcula acá el monto y el email del comprador desde la
+  // base (nunca se confía en datos de la URL), y se verifica que la orden sea
+  // de ESTA tienda, para que no se pueda inflar el Pixel de otra tienda
+  // pasando cualquier "orden" ajena en la URL.
+  let purchase: { eventId: string; value: number; currency: string; emHash?: string } | undefined;
+  if (pago === "ok" && orden) {
+    const order = await prisma.order.findFirst({
+      where: { id: orden, storeId: store.id },
+      select: { total: true, buyer: { select: { email: true } } },
+    });
+    if (order) {
+      const emHash = order.buyer.email
+        ? createHash("sha256").update(order.buyer.email.trim().toLowerCase()).digest("hex")
+        : undefined;
+      purchase = { eventId: orden, value: order.total, currency: config.currency, emHash };
+    }
+  }
 
   return (
     <>
-      <StoreTrackingScripts googleAnalyticsId={config.analytics?.googleAnalyticsId} facebookPixelId={config.analytics?.facebookPixelId} />
+      <StoreTrackingScripts
+        googleAnalyticsId={config.analytics?.googleAnalyticsId}
+        facebookPixelId={config.analytics?.facebookPixelId}
+        purchase={purchase}
+      />
       <PWAManager appVersion={STORE_VERSION} versionKey="pwa_store_version" disableNotifPrompt />
       <PwaFadeIn />
       {ownerIsPremium && !isOwner && (

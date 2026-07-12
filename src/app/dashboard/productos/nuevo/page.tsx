@@ -11,12 +11,15 @@ import {
 import Link from "next/link";
 import Image from "next/image";
 import { getStoreType } from "@/lib/storeTypes";
+import { calcMargin, calcVehicleCostTotal, formatFechaGasto } from "@/lib/margin";
 import StockHistoryPanel from "../StockHistoryPanel";
 import RichTextEditor from "@/components/RichTextEditor";
 import { VariantBuilder } from "@/components/dashboard/VariantBuilder";
 import { OfferBadge, OfferBadgePreview, type OfferBadgeKey } from "@/components/store/OfferBadge";
 
 type ImageItem = { url: string; variantValue?: string };
+
+const GASTO_CONCEPTOS = ["Compra", "Lavado", "Pulido/Detailing", "Service", "Cambio de cubiertas", "Otro"];
 
 const AUTO_SERVICES = [
   { key: "aceite",      label: "Aceite y filtros" },
@@ -93,7 +96,7 @@ const MAX_SOURCE_IMAGE_SIZE_BYTES = MAX_SOURCE_IMAGE_SIZE_MB * 1024 * 1024;
 const MAX_UPLOAD_IMAGE_SIZE_MB = 4;
 const MAX_UPLOAD_IMAGE_SIZE_BYTES = MAX_UPLOAD_IMAGE_SIZE_MB * 1024 * 1024;
 const MAX_IMAGE_SIDE = 2400;
-const MAX_PRODUCT_IMAGES = 5;
+const MAX_PRODUCT_IMAGES = 8;
 function makeDefaultVariant(dimensions: string[]): Variant {
   const attrs: Record<string, string> = {};
   dimensions.forEach(d => { attrs[d] = ""; });
@@ -191,6 +194,17 @@ function extraFieldsTip(tipoTienda: string): string {
     GENERAL:   "Información extra sin stock. Datos descriptivos que no afectan precio ni stock.",
   };
   return tips[tipoTienda] || "Información extra sin stock. A diferencia de las variantes, los atributos son datos descriptivos que no tienen stock propio.";
+}
+
+// Sugerencias de qué fotografiar, al estilo Tienda Nube — guían al vendedor
+// sobre qué ángulos/tomas suelen convertir más, en vez de una zona de drop vacía.
+function photoTips(hideVariants: boolean): string[] {
+  return [
+    "Subí una foto del producto de frente",
+    "Probá diferentes ángulos",
+    hideVariants ? "Mostrá detalles o el interior" : "Mostrá sus variantes",
+    "Sugerí cómo usarlo",
+  ];
 }
 
 function variantPlaceholder(name: string): string {
@@ -339,6 +353,7 @@ function ProductoFormPage() {
     description: "",
     price: "",
     comparePrice: "",
+    costPrice: "",
     offerBadge: "",
     offerNote: "",
     offerEndsAt: "",
@@ -386,6 +401,15 @@ function ProductoFormPage() {
   const videoFileInputRef = useRef<HTMLInputElement>(null);
   const [reelUrls, setReelUrls] = useState<string[]>([]);
   const [services, setServices] = useState<Record<string, boolean>>({});
+  type VehicleExpenseItem = { id: string; concepto: string; monto: number; fecha: string | null };
+  const [gastos, setGastos] = useState<VehicleExpenseItem[]>([]);
+  const [gastoConcepto, setGastoConcepto] = useState(GASTO_CONCEPTOS[0]);
+  const [gastoConceptoOtro, setGastoConceptoOtro] = useState("");
+  const [gastoMonto, setGastoMonto] = useState("");
+  const [gastoFecha, setGastoFecha] = useState("");
+  const [savingGasto, setSavingGasto] = useState(false);
+  const [gastoError, setGastoError] = useState("");
+  const [deletingGastoId, setDeletingGastoId] = useState<string | null>(null);
   const [isDirty, setIsDirty] = useState(false);
   const loadedRef = useRef(false);
   // Guarda category/subcategory crudos del producto cargado, para poder re-clasificar
@@ -465,6 +489,7 @@ function ProductoFormPage() {
           description: product.description || "",
           price: product.price?.toString() || "",
           comparePrice: product.comparePrice?.toString() || "",
+          costPrice: product.costPrice?.toString() || "",
           offerBadge: product.offerBadge || "",
           offerNote: product.offerNote || "",
           offerEndsAt: product.offerEndsAt
@@ -486,6 +511,12 @@ function ProductoFormPage() {
             .filter((img: ImageItem) => img.url)
         );
         setReelUrls(safeJsonArray(product.reelUrls || "[]").filter((url) => typeof url === "string") as string[]);
+        type RawExpense = { id: string; concepto: string; monto: number; fecha?: string | null };
+        setGastos(
+          Array.isArray(product.expenses)
+            ? product.expenses.map((g: RawExpense) => ({ id: g.id, concepto: g.concepto, monto: g.monto, fecha: g.fecha ?? null }))
+            : []
+        );
         setCarouselIdx(0);
         type RawVariant = { name: string; value: string; stock?: number; price?: number; sku?: string; lowStockThreshold?: number };
         const loadedVariants: Variant[] = product.variants?.length
@@ -604,7 +635,9 @@ function ProductoFormPage() {
       const updated = p.map((v, i) => (i === idx ? { ...v, [field]: value } : v));
       // Persiste en el ref para que el builder no pierda stock al agregar/quitar colores
       if (useBuilder) {
-        const sd = builderCfg.sizeDim;
+        // getBuilderConfig inline (función pura de módulo) para no referenciar
+        // builderCfg, que se declara más abajo en el componente.
+        const sd = getBuilderConfig(store.tipoTienda || "ROPA").sizeDim;
         updated.forEach(v => {
           const key = `${v.attrs["Color"] || ""}|||${v.attrs[sd] || ""}`;
           variantStockRef.current.set(key, { stock: v.stock, price: v.price, sku: v.sku, threshold: v.lowStockThreshold });
@@ -929,6 +962,51 @@ function ProductoFormPage() {
       ? Math.round((1 - parseFloat(form.price) / parseFloat(form.comparePrice)) * 100)
       : 0;
 
+  const margin = calcMargin(parseFloat(form.price || "0"), form.costPrice ? parseFloat(form.costPrice) : null);
+
+  async function handleAddGasto() {
+    if (savingGasto || !editingId) return;
+    const concepto = gastoConcepto === "Otro" ? gastoConceptoOtro.trim() : gastoConcepto;
+    if (!concepto) { setGastoError("Ingresá un concepto"); return; }
+    const monto = parseFloat(gastoMonto);
+    if (isNaN(monto) || monto <= 0) { setGastoError("Ingresá un monto válido"); return; }
+
+    setSavingGasto(true);
+    setGastoError("");
+    try {
+      const res = await fetch(`/api/productos/${editingId}/gastos`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ concepto, monto, fecha: gastoFecha || null }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setGastoError(data.error || "No se pudo agregar el gasto"); return; }
+      setGastos((prev) => [...prev, data.gasto]);
+      setGastoConcepto(GASTO_CONCEPTOS[0]);
+      setGastoConceptoOtro("");
+      setGastoMonto("");
+      setGastoFecha("");
+    } catch {
+      setGastoError("No se pudo agregar el gasto. Revisá tu conexión e intentá de nuevo.");
+    } finally {
+      setSavingGasto(false);
+    }
+  }
+
+  async function handleDeleteGasto(gastoId: string) {
+    if (deletingGastoId || !editingId) return;
+    setDeletingGastoId(gastoId);
+    try {
+      const res = await fetch(`/api/productos/${editingId}/gastos/${gastoId}`, { method: "DELETE" });
+      if (res.ok) setGastos((prev) => prev.filter((g) => g.id !== gastoId));
+      else setGastoError("No se pudo borrar el gasto. Intentá de nuevo.");
+    } catch {
+      setGastoError("No se pudo borrar el gasto. Revisá tu conexión e intentá de nuevo.");
+    } finally {
+      setDeletingGastoId(null);
+    }
+  }
+
   const totalStock = variants.reduce((s, v) => s + (parseInt(v.stock) || 0), 0);
 
   const attrPreviewGroups: Record<string, string[]> = {};
@@ -1109,32 +1187,50 @@ function ProductoFormPage() {
               </div>
 
               {/* Upload zone */}
-              <div
-                onClick={() => fileInputRef.current?.click()}
-                onDragOver={(e) => e.preventDefault()}
-                onDrop={handleDrop}
-                className="border-2 border-dashed border-gray-200 rounded-xl p-6 text-center cursor-pointer hover:border-indigo-400 hover:bg-indigo-50/30 transition-all group"
-              >
-                {uploadingImg ? (
+              {uploadingImg ? (
+                <div className="border-2 border-dashed border-gray-200 rounded-xl p-6 text-center">
                   <Loader2 className="h-8 w-8 text-indigo-400 animate-spin mx-auto mb-2" />
-                ) : (
-                  <Upload className="h-8 w-8 text-gray-300 group-hover:text-indigo-400 mx-auto mb-2 transition-colors" />
-                )}
-                <p className="text-sm text-gray-500">
-                  {uploadingImg ? "Subiendo..." : "Hace clic o arrastra imagenes aqui"}
-                </p>
-                <p className="text-xs text-gray-400 mt-1">
-                  Hasta {MAX_PRODUCT_IMAGES} fotos. JPG, PNG, WEBP - hasta {MAX_SOURCE_IMAGE_SIZE_MB} MB; se optimizan al subir
-                </p>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  className="hidden"
-                  onChange={handleImageUpload}
-                />
-              </div>
+                  <p className="text-sm text-gray-500">Subiendo...</p>
+                </div>
+              ) : images.length === 0 ? (
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {photoTips(storeTypeConfig.hideVariants).map((tip, i) => (
+                    <div
+                      key={i}
+                      onClick={() => fileInputRef.current?.click()}
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={handleDrop}
+                      className="border-2 border-dashed border-gray-200 rounded-xl p-4 text-center cursor-pointer hover:border-indigo-400 hover:bg-indigo-50/30 transition-all group flex flex-col items-center gap-2.5"
+                    >
+                      <span className="w-9 h-9 rounded-full border-2 border-indigo-200 text-indigo-400 group-hover:border-indigo-400 group-hover:bg-indigo-50 flex items-center justify-center transition-colors flex-shrink-0">
+                        <Plus className="h-4 w-4" />
+                      </span>
+                      <span className="text-xs font-medium text-gray-600 leading-snug">{tip}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div
+                  onClick={() => fileInputRef.current?.click()}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={handleDrop}
+                  className="border-2 border-dashed border-gray-200 rounded-xl p-3 text-center cursor-pointer hover:border-indigo-400 hover:bg-indigo-50/30 transition-all group flex items-center justify-center gap-2"
+                >
+                  <Upload className="h-4 w-4 text-gray-300 group-hover:text-indigo-400 transition-colors" />
+                  <span className="text-sm text-gray-500">Agregar más fotos</span>
+                </div>
+              )}
+              <p className="text-xs text-gray-400 text-center">
+                Hasta {MAX_PRODUCT_IMAGES} fotos (podés elegir varias a la vez). JPG, PNG, WEBP - hasta {MAX_SOURCE_IMAGE_SIZE_MB} MB; se optimizan al subir
+              </p>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                className="hidden"
+                onChange={handleImageUpload}
+              />
 
               {/* Hint cuando no hay colores definidos */}
               {!storeTypeConfig.hideVariants && colorValues.length === 0 && (
@@ -1335,6 +1431,129 @@ function ProductoFormPage() {
                   />
                 </div>
               </div>
+
+              {/* Costo interno + margen — todos los rubros excepto Autos/Motos (que usan Gastos del vehículo) */}
+              {!storeTypeConfig.usesVehicleExpenses && (
+                <div className="border-t border-gray-100 pt-4">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-sm font-medium text-gray-700">Costo</label>
+                    {margin.kind !== "no-cost" && (
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                        margin.kind === "loss" ? "bg-red-50 text-red-600" : "bg-green-50 text-green-700"
+                      }`}>
+                        {margin.kind === "loss" ? "Estás vendiendo a pérdida" : `Margen de ganancia: ${margin.marginPct.toFixed(0)}%`}
+                      </span>
+                    )}
+                  </div>
+                  <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-medium">$</span>
+                    <input
+                      type="number"
+                      value={form.costPrice}
+                      onChange={(e) => { updateForm("costPrice", e.target.value); markDirty(); }}
+                      min="0" step="0.01" placeholder="0"
+                      className="w-full border border-gray-200 rounded-xl pl-8 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </div>
+                  <p className="mt-1.5 text-xs text-gray-400">
+                    {margin.kind === "no-cost"
+                      ? "Cargalo para ver tu margen de ganancia. Es de uso interno, tus clientes no lo verán en la tienda."
+                      : "Es de uso interno, tus clientes no lo verán en la tienda."}
+                  </p>
+                </div>
+              )}
+
+              {/* Gastos del vehículo — solo Autos/Motos, reemplaza el campo Costo */}
+              {storeTypeConfig.usesVehicleExpenses && (
+                <div className="border-t border-gray-100 pt-4">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-sm font-medium text-gray-700">Gastos del vehículo</label>
+                    {gastos.length > 0 && (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-600">
+                        Costo total: ${calcVehicleCostTotal(gastos).toLocaleString("es-AR")}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-400 mb-3">
+                    Compra, lavado, service, cubiertas... Es de uso interno, tus clientes no lo verán en la tienda.
+                  </p>
+
+                  {!isEditing ? (
+                    <p className="text-xs text-amber-700 bg-amber-50 rounded-xl px-3 py-2.5">
+                      Guardá el vehículo primero para poder cargarle gastos.
+                    </p>
+                  ) : (
+                    <div className="space-y-2">
+                      {gastos.map((g) => (
+                        <div key={g.id} className="flex items-center justify-between gap-2 border border-gray-100 rounded-xl px-3 py-2">
+                          <div className="min-w-0">
+                            <p className="text-sm text-gray-800 truncate">{g.concepto}</p>
+                            {g.fecha && (
+                              <p className="text-xs text-gray-400">{formatFechaGasto(g.fecha)}</p>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className="text-sm font-semibold text-gray-700">${g.monto.toLocaleString("es-AR")}</span>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteGasto(g.id)}
+                              disabled={deletingGastoId === g.id}
+                              className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+
+                      <div className="flex flex-col sm:flex-row gap-2 pt-1">
+                        <select
+                          value={gastoConcepto}
+                          onChange={(e) => setGastoConcepto(e.target.value)}
+                          className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        >
+                          {GASTO_CONCEPTOS.map((c) => <option key={c} value={c}>{c}</option>)}
+                        </select>
+                        {gastoConcepto === "Otro" && (
+                          <input
+                            value={gastoConceptoOtro}
+                            onChange={(e) => setGastoConceptoOtro(e.target.value)}
+                            placeholder="Concepto"
+                            maxLength={100}
+                            className="border border-gray-200 rounded-xl px-3 py-2 text-sm flex-1 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                          />
+                        )}
+                        <div className="relative w-full sm:w-32">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
+                          <input
+                            type="number"
+                            value={gastoMonto}
+                            onChange={(e) => setGastoMonto(e.target.value)}
+                            min="0" step="0.01" placeholder="Monto"
+                            className="w-full border border-gray-200 rounded-xl pl-6 pr-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                          />
+                        </div>
+                        <input
+                          type="date"
+                          value={gastoFecha}
+                          onChange={(e) => setGastoFecha(e.target.value)}
+                          className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleAddGasto}
+                          disabled={savingGasto}
+                          className="px-4 py-2 rounded-xl bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 disabled:opacity-50 flex items-center justify-center gap-1.5 shrink-0"
+                        >
+                          {savingGasto ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
+                          {savingGasto ? "Agregando..." : "Agregar"}
+                        </button>
+                      </div>
+                      {gastoError && <p className="text-xs text-red-500">{gastoError}</p>}
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Toggle ¿En oferta? */}
               <div className="border-t border-gray-100 pt-4 space-y-4">
@@ -1687,7 +1906,8 @@ function ProductoFormPage() {
               </div>
             )}
 
-            {/* Promoción por cantidad — descuento automático al comprar N o más unidades */}
+            {/* Promoción por cantidad y Cuotas — no aplican a rubros con checkoutMode "inquiry" (ej. AUTOS): no hay compra online de varias unidades ni tarjeta de por medio */}
+            {!storeTypeConfig.hidePromotions && <>
             <div className="bg-white rounded-2xl border border-gray-100 p-5 space-y-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -1850,6 +2070,7 @@ function ProductoFormPage() {
                 ))}
               </div>
             </div>
+            </>}
 
             {/* Envío — peso y dimensiones, oculto para rubros como AUTOS que no se mandan por correo */}
             {!storeTypeConfig.hideShipping && <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">

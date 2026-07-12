@@ -403,6 +403,9 @@ export default function BilleteraPage() {
   // OTP: "bankform" | "withdraw" | null — acción pendiente hasta que se verifique identidad
   const [pendingAction, setPendingAction] = useState<"bankform" | "withdraw" | null>(null);
   const [otpToken, setOtpToken] = useState<string | null>(null);
+  // "Ahora" capturado una vez al montar — evita llamar Date.now() durante el
+  // render (impuro) al calcular la antigüedad de cada movimiento en la lista.
+  const [now] = useState(() => Date.now());
 
   function requireOtp(action: "bankform" | "withdraw") {
     const stored = getStoredOtpToken();
@@ -672,7 +675,7 @@ export default function BilleteraPage() {
 
                 // Retiro
                 const s = withdrawalStatus[m.status] ?? { label: m.status, color: "text-gray-600 bg-gray-50" };
-                const daysOld = Math.floor((Date.now() - new Date(m.createdAt).getTime()) / 86_400_000);
+                const daysOld = Math.floor((now - new Date(m.createdAt).getTime()) / 86_400_000);
                 const withdrawalLabel: Record<string, string> = {
                   PENDING: "Retiro solicitado",
                   PROCESSING: "Retiro en proceso",

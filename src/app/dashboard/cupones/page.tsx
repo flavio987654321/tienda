@@ -558,7 +558,7 @@ function ScratchDemoCanvas({ styles }: { styles: WidgetStyles }) {
     const SCRATCH_MS = 2200;
     const PAUSE_MS = 1000;
     const TOTAL = SCRATCH_MS + PAUSE_MS;
-    let start = performance.now();
+    const start = performance.now();
 
     function fillGold() {
       ctx.globalCompositeOperation = "source-over";
@@ -974,7 +974,7 @@ function WidgetEditor({ widget, onSave, onClose, saving, defaultTab = "general" 
                                   onChange={(e) => updatePrize(idx, { expiresAt: e.target.value || null })}
                                   className="flex-1 rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-400" />
                               </div>
-                              <p className="mt-1 text-xs text-gray-400">El número es cuántas personas en total pueden ganar este premio (después pasa a "sin premio" en la ruleta, aunque toque ese sector). La fecha corta la promo entera antes de esa cantidad si llega primero — no afecta el plazo del ganador de arriba.</p>
+                              <p className="mt-1 text-xs text-gray-400">El número es cuántas personas en total pueden ganar este premio (después pasa a “sin premio” en la ruleta, aunque toque ese sector). La fecha corta la promo entera antes de esa cantidad si llega primero — no afecta el plazo del ganador de arriba.</p>
                             </div>
 
                             {/* Código auto-generado */}

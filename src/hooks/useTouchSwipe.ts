@@ -1,12 +1,18 @@
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 
 export function useTouchSwipe(onSwipeLeft: () => void, onSwipeRight: () => void) {
   const startX = useRef<number | null>(null);
   const startY = useRef<number | null>(null);
   const cbLeft  = useRef(onSwipeLeft);
   const cbRight = useRef(onSwipeRight);
-  cbLeft.current  = onSwipeLeft;
-  cbRight.current = onSwipeRight;
+  // Mantener las callbacks más recientes sin recrear los handlers. Se actualizan
+  // después del commit (no durante el render) para no violar las reglas de refs
+  // de React — el comportamiento es idéntico porque el touch recién dispara tras
+  // la interacción del usuario, siempre después del commit.
+  useEffect(() => {
+    cbLeft.current  = onSwipeLeft;
+    cbRight.current = onSwipeRight;
+  });
 
   return {
     onTouchStart: (e: React.TouchEvent) => {

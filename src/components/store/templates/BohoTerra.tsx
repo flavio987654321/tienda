@@ -14,6 +14,7 @@ import VerifiedIconButton from "@/components/store/VerifiedIconButton";
 import { CartDrawer, type CartTheme } from "@/components/store/templates/shared/CartDrawer";
 import { OfferBadge } from "@/components/store/OfferBadge";
 import { CheckoutModal } from "@/components/store/templates/shared/CheckoutModal";
+import { ContactForm } from "@/components/store/templates/shared/ContactForm";
 import { FadeImage } from "@/components/store/templates/shared/FadeImage";
 import { SectionBlock } from "@/components/store/templates/shared/SectionBlock";
 import { PromoBannerCarousel } from "@/components/store/templates/shared/PromoBannerCarousel";
@@ -164,13 +165,12 @@ export default function BohoTerra() {
     searchOpen, setSearchOpen, searchQuery, setSearchQuery,
     favorites, favoritesOpen, setFavoritesOpen,
     userDropdownOpen, setUserDropdownOpen, userDropdownRef,
-    toastMsg, contactStatus, setContactStatus, contactForm, setContactForm,
+    toastMsg,
     cartCount,
     searchResults, favoriteProducts,
     fmt, showToast, openModal, addToCart, addToPending, addAllToCart, removePendingItem, editPendingItem,
     pendingItems, pendingTotal, promoActive, pendingPromoDiscount, pendingCartValue, editingIdx,
-    handleContact, toggleFavorite,
-    contactCaptcha,
+    toggleFavorite,
   } = cart;
   const cartTheme: CartTheme = { BG:"#ffffff", S, T, MID, border:"rgba(44,34,24,0.1)", accent:A, accentText:"#fff", serif:"Georgia, serif" };
   const variantPrice = modalProduct ? resolveVariantPrice(modalProduct.variants, selectedSize, selectedColor) : null;
@@ -180,9 +180,10 @@ export default function BohoTerra() {
     () => { if (modalProduct) setModalImg(i => (i - 1 + modalProduct.images.length) % modalProduct.images.length); }
   );
 
+  const [inquiryMessage, setInquiryMessage] = useState("");
   function openInquiry(product: Product) {
     setModalProduct(null);
-    setContactForm({ nombre: "", email: "", mensaje: `Hola, me interesa "${product.name}". ¿Me podés dar más información?` });
+    setInquiryMessage(`Hola, me interesa "${product.name}". ¿Me podés dar más información?`);
     setTimeout(() => scrollTo("contacto"), 100);
   }
   function shareProduct(product: Product) {
@@ -427,10 +428,6 @@ export default function BohoTerra() {
   const prevOferta = () => setOfertasIdx(i => Math.max(0, i - 1));
   const nextOferta = () => setOfertasIdx(i => Math.min(ofertasMaxIdx, i + 1));
   const ofertasSwipe = useTouchSwipe(nextOferta, prevOferta);
-
-  const iStyle:React.CSSProperties = { display:"block", width:"100%", marginBottom:10, background:"#fff", border:`1px solid #d5c9be`, color:T, padding:"11px 14px", fontSize:13, outline:"none", boxSizing:"border-box", fontFamily:"inherit" };
-  const onFI = (e:React.FocusEvent<HTMLInputElement|HTMLTextAreaElement>) => (e.target.style.borderColor=A);
-  const onBI = (e:React.FocusEvent<HTMLInputElement|HTMLTextAreaElement>) => (e.target.style.borderColor="#d5c9be");
 
   return (
     <div style={{ fontFamily:"'Helvetica Neue', Arial, sans-serif", background:BG, color:T, minHeight:"100vh" }}>
@@ -1164,32 +1161,34 @@ export default function BohoTerra() {
           </div>
           {/* der — formulario */}
           <div style={{ background:"#fff", padding: isMobile ? "32px 20px" : "40px 36px" }}>
-            {contactStatus==="sent" ? (
-              <div style={{ textAlign:"center", padding:"40px 0" }}>
-                <div style={{ width:56, height:56, borderRadius:"50%", border:`1.5px solid ${A}`, display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 16px" }}>
-                  <svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke={A} strokeWidth={2} strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+            <ContactForm
+              storeId={storeConfig?.storeId} isPreview={isPreview} prefillMessage={inquiryMessage}
+              accent={A} textColor={T} mutedColor="#d5c9be"
+              radius={0} buttonRadius={0}
+              theme={{
+                twoColTop: false,
+                inputBg: "#faf7f2",
+                inputBorderColor: "#d5c9be",
+                focusBorderColor: A,
+                inputPadding: "11px 14px",
+                fontSize: 13,
+                gap: 12,
+                intro: <p style={{ fontFamily:"Georgia, serif", fontStyle:"italic", fontSize:18, color:T, margin:"0 0 12px" }}><EditableZone field="contactFormHeading" label="Subtítulo formulario">Mandanos un mensaje</EditableZone></p>,
+                placeholders: { nombre: "Tu nombre", email: "tu@email.com", mensaje: "Tu mensaje" },
+                buttonLabel: "Enviar Mensaje",
+                buttonStyle: { width:"100%", background:A, color:"#fff", padding:"14px", fontSize:11, letterSpacing:4, textTransform:"uppercase" },
+              }}
+              renderSent={reset => (
+                <div style={{ textAlign:"center", padding:"40px 0" }}>
+                  <div style={{ width:56, height:56, borderRadius:"50%", border:`1.5px solid ${A}`, display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 16px" }}>
+                    <svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke={A} strokeWidth={2} strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  </div>
+                  <p style={{ fontFamily:"Georgia, serif", fontStyle:"italic", fontSize:20, color:T, marginBottom:8 }}>¡Mensaje enviado!</p>
+                  <p style={{ fontSize:13, color:MID, marginBottom:20 }}>Te respondemos a la brevedad.</p>
+                  <button onClick={reset} style={{ background:"transparent", color:A, border:`1px solid ${A}`, padding:"9px 24px", fontSize:11, letterSpacing:2, cursor:"pointer", textTransform:"uppercase" }}>Enviar otro</button>
                 </div>
-                <p style={{ fontFamily:"Georgia, serif", fontStyle:"italic", fontSize:20, color:T, marginBottom:8 }}>¡Mensaje enviado!</p>
-                <p style={{ fontSize:13, color:MID, marginBottom:20 }}>Te respondemos a la brevedad.</p>
-                <button onClick={()=>setContactStatus("idle")} style={{ background:"transparent", color:A, border:`1px solid ${A}`, padding:"9px 24px", fontSize:11, letterSpacing:2, cursor:"pointer", textTransform:"uppercase" }}>Enviar otro</button>
-              </div>
-            ) : (
-              <form onSubmit={handleContact}>
-                <p style={{ fontFamily:"Georgia, serif", fontStyle:"italic", fontSize:18, color:T, margin:"0 0 24px" }}><EditableZone field="contactFormHeading" label="Subtítulo formulario">Mandanos un mensaje</EditableZone></p>
-                <input required placeholder="Tu nombre" value={contactForm.nombre} onChange={e=>setContactForm(f=>({...f,nombre:e.target.value}))}
-                  style={{...iStyle, marginBottom:12}} onFocus={onFI} onBlur={onBI}/>
-                <input required type="email" placeholder="tu@email.com" value={contactForm.email} onChange={e=>setContactForm(f=>({...f,email:e.target.value}))}
-                  style={{...iStyle, marginBottom:12}} onFocus={onFI} onBlur={onBI}/>
-                <textarea required rows={4} placeholder="Tu mensaje" value={contactForm.mensaje} onChange={e=>setContactForm(f=>({...f,mensaje:e.target.value}))}
-                  style={{ display:"block", width:"100%", background:"#faf7f2", border:`1px solid #d5c9be`, color:T, padding:"11px 14px", fontSize:13, outline:"none", resize:"none", fontFamily:"inherit", boxSizing:"border-box", marginBottom:16 }}
-                  onFocus={onFI} onBlur={onBI}/>
-                {contactCaptcha.widget}
-                <button type="submit" disabled={contactStatus==="sending" || !contactCaptcha.ready}
-                  style={{ width:"100%", background:A, color:"#fff", border:"none", padding:"14px", fontSize:11, letterSpacing:4, textTransform:"uppercase", cursor:"pointer", opacity:contactStatus==="sending"?0.6:1 }}>
-                  {contactStatus==="sending" ? "Enviando..." : "Enviar Mensaje"}
-                </button>
-              </form>
-            )}
+              )}
+            />
           </div>
         </div>
       </section>
@@ -1301,7 +1300,7 @@ export default function BohoTerra() {
         <div style={{ position:"fixed", inset:0, zIndex: isPreview ? 20000 : 600, display:"flex", alignItems:"center", justifyContent:"center" }} onClick={()=>{ setModalProduct(null); setLightboxSrc(null); }}>
           <div style={{ position:"absolute", inset:0, background:"rgba(44,34,24,0.65)", backdropFilter:"blur(8px)" }}/>
           <div style={{ position:"relative", background:"#fff", maxWidth:920, width:"calc(100% - 32px)", maxHeight: isPreview ? "100%" : "92vh", overflow:"hidden", display:"flex", flexDirection:"column" }} onClick={e=>e.stopPropagation()}>
-            <button onClick={()=>{ setModalProduct(null); setLightboxSrc(null); }} style={{ position:"absolute", top:8, right:8, zIndex:10, background:"rgba(44,34,24,0.65)", border:"none", color:"#fff", width:36, height:36, cursor:"pointer", fontSize:20, display:"flex", alignItems:"center", justifyContent:"center" }}>×</button>
+            <button onClick={()=>{ setModalProduct(null); setLightboxSrc(null); }} aria-label="Cerrar" style={{ position:"absolute", top:8, right:8, zIndex:10, background:"rgba(44,34,24,0.65)", border:"none", color:"#fff", width:36, height:36, cursor:"pointer", fontSize:20, display:"flex", alignItems:"center", justifyContent:"center" }}>×</button>
             <div style={{ overflow:"auto", flex:1, minHeight:0, display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr" }}>
             <div>
               <div style={{ position:"relative", width:"100%", aspectRatio:"3/4" }} {...imgSwipe}>
@@ -1317,8 +1316,10 @@ export default function BohoTerra() {
                 })()}
                 {modalProduct.images.length > 1 && (<>
                   <button onClick={() => setModalImg(i => (i - 1 + modalProduct.images.length) % modalProduct.images.length)}
+                    aria-label="Imagen anterior"
                     style={{ position:"absolute", left:8, top:"50%", transform:"translateY(-50%)", background:"rgba(255,255,255,0.85)", border:"none", width:32, height:32, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", fontSize:16 }}>‹</button>
                   <button onClick={() => setModalImg(i => (i + 1) % modalProduct.images.length)}
+                    aria-label="Imagen siguiente"
                     style={{ position:"absolute", right:8, top:"50%", transform:"translateY(-50%)", background:"rgba(255,255,255,0.85)", border:"none", width:32, height:32, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", fontSize:16 }}>›</button>
                 </>)}
               </div>
@@ -1753,7 +1754,7 @@ export default function BohoTerra() {
         <div style={{ position:"fixed", inset:0, zIndex: isPreview ? 20001 : 700, background:"rgba(0,0,0,0.97)", display:"flex", alignItems:"center", justifyContent:"center" }}
           onClick={() => setLightboxSrc(null)}>
           <img src={lightboxSrc} alt="" style={{ maxWidth:"100vw", maxHeight:"100vh", objectFit:"contain", touchAction:"pinch-zoom" }} onClick={e => e.stopPropagation()} />
-          <button onClick={() => setLightboxSrc(null)} style={{ position:"absolute", top:16, right:16, background:"rgba(255,255,255,0.15)", border:"none", color:"#fff", width:44, height:44, borderRadius:"50%", fontSize:22, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>×</button>
+          <button onClick={() => setLightboxSrc(null)} aria-label="Cerrar" style={{ position:"absolute", top:16, right:16, background:"rgba(255,255,255,0.15)", border:"none", color:"#fff", width:44, height:44, borderRadius:"50%", fontSize:22, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>×</button>
         </div>
       )}
 

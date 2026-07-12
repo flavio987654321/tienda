@@ -50,13 +50,13 @@ export async function generateMetadata({ params, searchParams }: ProductoPagePro
   };
 }
 
-async function findAnalyticsConfig(slug: string) {
+async function findStoreConfig(slug: string) {
   const store = await prisma.store.findFirst({ where: { slug, isActive: true }, select: { storeConfig: true } });
   try {
     const parsed: Partial<StoreConfig> = JSON.parse(store?.storeConfig || "{}");
-    return parsed.analytics;
+    return { analytics: parsed.analytics, currency: parsed.currency || "ARS" };
   } catch {
-    return undefined;
+    return { analytics: undefined, currency: "ARS" as const };
   }
 }
 
@@ -68,16 +68,21 @@ export default async function ProductoPage({ params, searchParams }: ProductoPag
   // Los productos demo del editor (ej. "hogar-2") nunca existen en la base —
   // se resuelven en el cliente con datos de muestra en vez de buscarlos ahí.
   const isEditorDemo = from === "editor" && isDemoProductId(id);
+  let product: Awaited<ReturnType<typeof findProduct>> = null;
   if (!isEditorDemo) {
-    const product = await findProduct(slug, id);
+    product = await findProduct(slug, id);
     if (!product) notFound();
   }
 
-  const analytics = await findAnalyticsConfig(slug);
+  const { analytics, currency } = await findStoreConfig(slug);
 
   return (
     <>
-      <StoreTrackingScripts googleAnalyticsId={analytics?.googleAnalyticsId} facebookPixelId={analytics?.facebookPixelId} />
+      <StoreTrackingScripts
+        googleAnalyticsId={analytics?.googleAnalyticsId}
+        facebookPixelId={analytics?.facebookPixelId}
+        viewContent={product ? { contentId: product.id, value: product.price, currency } : undefined}
+      />
       <ProductDetailClient slug={slug} productId={id} />
     </>
   );

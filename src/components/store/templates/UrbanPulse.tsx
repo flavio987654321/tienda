@@ -14,6 +14,7 @@ import VerifiedIconButton from "@/components/store/VerifiedIconButton";
 import { CartDrawer, type CartTheme } from "@/components/store/templates/shared/CartDrawer";
 import { OfferBadge } from "@/components/store/OfferBadge";
 import { CheckoutModal } from "@/components/store/templates/shared/CheckoutModal";
+import { ContactForm } from "@/components/store/templates/shared/ContactForm";
 import { FadeImage } from "@/components/store/templates/shared/FadeImage";
 import { SectionBlock } from "@/components/store/templates/shared/SectionBlock";
 import { PromoBannerCarousel } from "@/components/store/templates/shared/PromoBannerCarousel";
@@ -235,13 +236,12 @@ export default function UrbanPulse() {
     searchOpen, setSearchOpen, searchQuery, setSearchQuery,
     favorites, favoritesOpen, setFavoritesOpen,
     userDropdownOpen, setUserDropdownOpen, userDropdownRef,
-    toastMsg, contactStatus, setContactStatus, contactForm, setContactForm,
+    toastMsg,
     cartCount,
     searchResults, favoriteProducts,
     fmt, showToast, openModal, addToCart, addToPending, addAllToCart, removePendingItem, editPendingItem,
     pendingItems, pendingTotal, promoActive, pendingPromoDiscount, pendingCartValue, editingIdx,
-    handleContact, toggleFavorite,
-    contactCaptcha,
+    toggleFavorite,
   } = cart;
   const accentText = getContrastColor(ACC) === "light" ? DARK : "#fff";
   const cartTheme: CartTheme = { BG:"#ffffff", S:BG, T:DARK, MID, border:"#e0e0e0", accent:ACC, accentText };
@@ -252,9 +252,10 @@ export default function UrbanPulse() {
     () => { if (modalProduct) setModalImg(i => (i - 1 + modalProduct.images.length) % modalProduct.images.length); }
   );
 
+  const [inquiryMessage, setInquiryMessage] = useState("");
   function openInquiry(product: Product) {
     setModalProduct(null);
-    setContactForm({ nombre: "", email: "", mensaje: `Hola, me interesa "${product.name}". ¿Me podés dar más información?` });
+    setInquiryMessage(`Hola, me interesa "${product.name}". ¿Me podés dar más información?`);
     setTimeout(() => scrollTo("contacto"), 100);
   }
   function shareProduct(product: Product) {
@@ -1138,31 +1139,30 @@ export default function UrbanPulse() {
             ))}
           </div>
           <div>
-            {contactStatus === "sent" ? (
-              <div style={{ height:"100%", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", textAlign:"center", border:`2px solid ${ACC}`, padding:40 }}>
-                <svg width={40} height={40} viewBox="0 0 24 24" fill="none" stroke={ACC} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom:16 }}><polyline points="20 6 9 17 4 12"/></svg>
-                <p style={{ color:contactUpText, fontSize:20, fontWeight:900, textTransform:"uppercase", margin:"0 0 8px" }}>¡Mensaje enviado!</p>
-                <p style={{ color:contactUpText, opacity:0.45, fontSize:13, margin:"0 0 16px" }}>Te respondemos pronto.</p>
-                <button onClick={() => setContactStatus("idle")} style={{ background:"transparent", color:ACC, border:`1px solid ${ACC}`, padding:"9px 24px", fontSize:11, letterSpacing:2, cursor:"pointer", textTransform:"uppercase" }}>Enviar otro</button>
-              </div>
-            ) : (
-              <form onSubmit={handleContact} style={{ display:"flex", flexDirection:"column", gap:14 }}>
-                <input type="text" placeholder="Tu nombre *" required
-                  value={contactForm.nombre} onChange={e => setContactForm(f => ({ ...f, nombre:e.target.value }))}
-                  style={{ background:contactInputBg, border:`1px solid ${contactInputBorder}`, color:contactUpText, padding:"16px 20px", fontSize:14, outline:"none", fontFamily:"inherit" }} />
-                <input type="email" placeholder="Tu email *" required
-                  value={contactForm.email} onChange={e => setContactForm(f => ({ ...f, email:e.target.value }))}
-                  style={{ background:contactInputBg, border:`1px solid ${contactInputBorder}`, color:contactUpText, padding:"16px 20px", fontSize:14, outline:"none", fontFamily:"inherit" }} />
-                <textarea placeholder="Tu mensaje *" required rows={5}
-                  value={contactForm.mensaje} onChange={e => setContactForm(f => ({ ...f, mensaje:e.target.value }))}
-                  style={{ background:contactInputBg, border:`1px solid ${contactInputBorder}`, color:contactUpText, padding:"16px 20px", fontSize:14, outline:"none", resize:"vertical", fontFamily:"inherit" }} />
-                {contactCaptcha.widget}
-                <button type="submit" disabled={contactStatus === "sending" || !contactCaptcha.ready}
-                  style={{ background:ACC, color:DARK, border:"none", padding:"18px", fontSize:11, fontWeight:900, letterSpacing:4, textTransform:"uppercase", cursor:"pointer" }}>
-                  {contactStatus === "sending" ? "Enviando..." : "Enviar Mensaje →"}
-                </button>
-              </form>
-            )}
+            <ContactForm
+              storeId={storeConfig?.storeId} isPreview={isPreview} prefillMessage={inquiryMessage}
+              accent={ACC} textColor={contactUpText} mutedColor={contactInputBorder}
+              radius={0} buttonRadius={0}
+              theme={{
+                twoColTop: false,
+                inputBg: contactInputBg,
+                inputBorderColor: contactInputBorder,
+                inputPadding: "16px 20px",
+                fontSize: 14,
+                gap: 14,
+                placeholders: { nombre: "Tu nombre *", email: "Tu email *", mensaje: "Tu mensaje *" },
+                buttonLabel: "Enviar Mensaje →",
+                buttonStyle: { background:ACC, color:DARK, padding:"18px", fontSize:11, fontWeight:900, letterSpacing:4, textTransform:"uppercase" },
+              }}
+              renderSent={reset => (
+                <div style={{ height:"100%", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", textAlign:"center", border:`2px solid ${ACC}`, padding:40 }}>
+                  <svg width={40} height={40} viewBox="0 0 24 24" fill="none" stroke={ACC} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom:16 }}><polyline points="20 6 9 17 4 12"/></svg>
+                  <p style={{ color:contactUpText, fontSize:20, fontWeight:900, textTransform:"uppercase", margin:"0 0 8px" }}>¡Mensaje enviado!</p>
+                  <p style={{ color:contactUpText, opacity:0.45, fontSize:13, margin:"0 0 16px" }}>Te respondemos pronto.</p>
+                  <button onClick={reset} style={{ background:"transparent", color:ACC, border:`1px solid ${ACC}`, padding:"9px 24px", fontSize:11, letterSpacing:2, cursor:"pointer", textTransform:"uppercase" }}>Enviar otro</button>
+                </div>
+              )}
+            />
           </div>
         </div>
         </div>
@@ -1409,7 +1409,7 @@ export default function UrbanPulse() {
           <div onClick={() => setModalProduct(null)} style={{ position:"absolute", inset:0, background:"rgba(0,0,0,0.7)" }} />
           <div style={{ position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center", padding:24 }}>
             <div style={{ background:WHITE, width:"100%", maxWidth:860, maxHeight: isPreview ? "100%" : "92vh", overflow:"hidden", display:"flex", flexDirection:"column", position:"relative" }}>
-              <button onClick={() => { setModalProduct(null); setLightboxSrc(null); }} style={{ position:"absolute", top:0, right:0, background:DARK, border:"none", color:ACC, width:40, height:40, fontSize:18, cursor:"pointer", zIndex:10, display:"flex", alignItems:"center", justifyContent:"center" }}>✕</button>
+              <button onClick={() => { setModalProduct(null); setLightboxSrc(null); }} aria-label="Cerrar" style={{ position:"absolute", top:0, right:0, background:DARK, border:"none", color:ACC, width:40, height:40, fontSize:18, cursor:"pointer", zIndex:10, display:"flex", alignItems:"center", justifyContent:"center" }}>✕</button>
               <div style={{ overflow:"auto", flex:1, minHeight:0, display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr" }}>
               <div>
                 <div style={{ position:"relative", width:"100%", aspectRatio:"3/4" }} {...imgSwipe}>
@@ -1425,8 +1425,10 @@ export default function UrbanPulse() {
                   })()}
                   {modalProduct.images.length > 1 && (<>
                     <button onClick={() => setModalImg(i => (i - 1 + modalProduct.images.length) % modalProduct.images.length)}
+                      aria-label="Imagen anterior"
                       style={{ position:"absolute", left:8, top:"50%", transform:"translateY(-50%)", background:"rgba(0,0,0,0.55)", border:"none", color:"#fff", width:42, height:42, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", fontSize:22, fontWeight:700, zIndex:2, borderRadius:2 }}>‹</button>
                     <button onClick={() => setModalImg(i => (i + 1) % modalProduct.images.length)}
+                      aria-label="Imagen siguiente"
                       style={{ position:"absolute", right:8, top:"50%", transform:"translateY(-50%)", background:"rgba(0,0,0,0.55)", border:"none", color:"#fff", width:42, height:42, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", fontSize:22, fontWeight:700, zIndex:2, borderRadius:2 }}>›</button>
                     <div style={{ position:"absolute", bottom:8, right:8, background:"rgba(0,0,0,0.5)", color:"#fff", fontSize:10, letterSpacing:1, padding:"3px 8px", borderRadius:2, zIndex:2 }}>
                       {modalImg+1} / {modalProduct.images.length}
@@ -1809,7 +1811,7 @@ export default function UrbanPulse() {
         <div style={{ position:"fixed", inset:0, zIndex: isPreview ? 20001 : 700, background:"rgba(0,0,0,0.97)", display:"flex", alignItems:"center", justifyContent:"center" }}
           onClick={() => setLightboxSrc(null)}>
           <img src={lightboxSrc} alt="" style={{ maxWidth:"100vw", maxHeight:"100vh", objectFit:"contain", touchAction:"pinch-zoom" }} onClick={e => e.stopPropagation()} />
-          <button onClick={() => setLightboxSrc(null)} style={{ position:"absolute", top:16, right:16, background:"rgba(255,255,255,0.15)", border:"none", color:"#fff", width:44, height:44, borderRadius:"50%", fontSize:22, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>×</button>
+          <button onClick={() => setLightboxSrc(null)} aria-label="Cerrar" style={{ position:"absolute", top:16, right:16, background:"rgba(255,255,255,0.15)", border:"none", color:"#fff", width:44, height:44, borderRadius:"50%", fontSize:22, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>×</button>
         </div>
       )}
     </div>

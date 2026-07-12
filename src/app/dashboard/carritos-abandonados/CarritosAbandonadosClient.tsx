@@ -108,20 +108,21 @@ function WhatsAppModal({
 
   const [message, setMessage] = useState(() => buildMessage(existingCoupon));
 
-  // Re-sync code suggestion when type/value changes (only before generating)
-  useEffect(() => {
-    if (!generated) {
-      const val = parseFloat(couponValue) || 0;
-      setCouponCode(autoCode(couponType, val));
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [couponType, couponValue]);
+  // Re-sync de la sugerencia de código y del mensaje al cambiar los inputs,
+  // ajustando el estado durante el render (patrón "adjust state on change" de
+  // React) en vez de con setState en un efecto.
+  const couponInputsKey = `${couponType}|${couponValue}`;
+  const [prevCouponInputs, setPrevCouponInputs] = useState(couponInputsKey);
+  if (couponInputsKey !== prevCouponInputs) {
+    setPrevCouponInputs(couponInputsKey);
+    if (!generated) setCouponCode(autoCode(couponType, parseFloat(couponValue) || 0));
+  }
 
-  // Re-sync message when coupon state changes
-  useEffect(() => {
+  const [prevWithCoupon, setPrevWithCoupon] = useState(withCoupon);
+  if (withCoupon !== prevWithCoupon) {
+    setPrevWithCoupon(withCoupon);
     if (!withCoupon) setMessage(buildMessage(null));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [withCoupon]);
+  }
 
   async function handleGenerate() {
     setGenError("");

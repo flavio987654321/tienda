@@ -26,8 +26,10 @@ export default function DenunciasAdmin() {
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<string | null>(null);
 
+  // No setea loading=true acá: el spinner del montaje sale de useState(true) y
+  // el del cambio de filtro lo enciende el botón (evento). Así el efecto que la
+  // llama no hace setState sincrónico (el primer setState es después del await).
   const loadReports = useCallback(async (status: string) => {
-    setLoading(true);
     try {
       const res = await fetch(`/api/admin/denuncias?status=${status}`);
       const data = await res.json();
@@ -72,7 +74,7 @@ export default function DenunciasAdmin() {
         {["PENDING", "REVIEWED", "RESOLVED", "ALL"].map((s) => (
           <button
             key={s}
-            onClick={() => setFilter(s)}
+            onClick={() => { setLoading(true); setFilter(s); }}
             className={`px-4 py-1.5 rounded-full text-sm font-medium border transition-all ${
               filter === s
                 ? "bg-indigo-600 text-white border-indigo-500"

@@ -76,9 +76,15 @@ export default function AppsExplorer({ installedById }: { installedById: Record<
                 <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">{app.description}</p>
               </div>
               <div className="shrink-0 flex flex-col items-end gap-1">
-                <span className="text-[11px] font-bold text-slate-500 border border-slate-200 rounded-full px-2.5 py-0.5 bg-slate-50">
-                  {app.price === "gratis" ? "Gratis" : "Pago"}
-                </span>
+                {app.comingSoon ? (
+                  <span className="text-[11px] font-bold text-amber-600 border border-amber-200 rounded-full px-2.5 py-0.5 bg-amber-50">
+                    Próximamente
+                  </span>
+                ) : (
+                  <span className="text-[11px] font-bold text-slate-500 border border-slate-200 rounded-full px-2.5 py-0.5 bg-slate-50">
+                    {app.price === "gratis" ? "Gratis" : "Pago"}
+                  </span>
+                )}
                 <ChevronRight className="h-4 w-4 text-slate-300 group-hover:text-indigo-500 transition-colors" />
               </div>
             </Link>

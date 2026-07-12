@@ -11,9 +11,9 @@ Hoodie Gris,29900,,Hombre,Buzos,,ACTIVO,
 // Autos y motos no entran en el mismo molde: un vehículo necesita Marca,
 // Modelo, Año, Km, etc. — son las mismas columnas que pide el formulario
 // (storeTypes.ts → AUTOS.extraFields), no las genéricas de cualquier producto.
-const CSV_TEMPLATE_AUTOS = `nombre,precio,precioComparacion,categoria,subcategoria,descripcion,estado,imagenes,marca,modelo,version,anio,km,motor,combustible,transmision,traccion,carroceria,color,puertas,ciudad,condicion
-Toyota Corolla 2022 XEI automático,18500000,,autos,sedán,Corolla XEI full equipo único dueño,ACTIVO,,Toyota,Corolla,XEI,2022,32000,2.0,Nafta,Automática,FWD,Sedán,Blanco,4,Capital Federal,Usado
-Yamaha MT-03 2021,4200000,4600000,motos,naked,,ACTIVO,,Yamaha,MT-03,,2021,8500,321cc,Nafta,Manual,,Naked,Negro,,Rosario,Usado
+const CSV_TEMPLATE_AUTOS = `nombre,precio,precioComparacion,categoria,subcategoria,descripcion,estado,imagenes,marca,modelo,version,anio,km,motor,combustible,transmision,traccion,carroceria,color,puertas,provincia,localidad,codigopostal,condicion
+Toyota Corolla 2022 XEI automático,18500000,,autos,sedán,Corolla XEI full equipo único dueño,ACTIVO,,Toyota,Corolla,XEI,2022,32000,2.0,Nafta,Automática,FWD,Sedán,Blanco,4,CABA,Capital Federal,1000,Usado
+Yamaha MT-03 2021,4200000,4600000,motos,naked,,ACTIVO,,Yamaha,MT-03,,2021,8500,321cc,Nafta,Manual,,Naked,Negro,,Santa Fe,Rosario,2000,Usado
 `;
 
 type ParsedRow = {
@@ -37,7 +37,9 @@ type ParsedRow = {
   carroceria?: string;
   color?: string;
   puertas?: string;
-  ciudad?: string;
+  provincia?: string;
+  localidad?: string;
+  codigoPostal?: string;
   condicion?: string;
 };
 
@@ -72,7 +74,9 @@ function parseCsv(text: string, isAutos: boolean): ParsedRow[] {
         carroceria: row["carroceria"] ?? "",
         color: row["color"] ?? "",
         puertas: row["puertas"] ?? "",
-        ciudad: row["ciudad"] ?? "",
+        provincia: row["provincia"] ?? "",
+        localidad: row["localidad"] ?? row["ciudad"] ?? "",
+        codigoPostal: row["codigopostal"] ?? row["codigo_postal"] ?? row["cp"] ?? "",
         condicion: row["condicion"] ?? "",
       } : {}),
     });
@@ -221,7 +225,7 @@ export default function CsvImportButton({ onImported, tipoTienda = "ROPA" }: { o
                   <p className="text-sm font-semibold text-indigo-800 mb-2">Formato del CSV</p>
                   <p className="text-xs text-indigo-700 leading-relaxed mb-3">
                     El archivo debe tener las columnas: <strong>nombre</strong>, <strong>precio</strong> (requeridos) + opcionales: precioComparacion, categoria, subcategoria, descripcion, estado (ACTIVO/OCULTO), imagenes (URLs separadas por |)
-                    {isAutos && <> + propias de vehículos: marca, modelo, version, anio, km, motor, combustible, transmision, traccion, carroceria, color, puertas, ciudad, condicion</>}.
+                    {isAutos && <> + propias de vehículos: marca, modelo, version, anio, km, motor, combustible, transmision, traccion, carroceria, color, puertas, provincia, localidad, codigopostal, condicion</>}.
                   </p>
                   <button onClick={downloadTemplate}
                     className="flex items-center gap-1.5 text-xs font-semibold text-indigo-700 hover:text-indigo-900 transition-colors">

@@ -110,6 +110,7 @@ body {
 .product-rte strong { font-weight: 700; }
 .product-rte em { font-style: italic; }
 .product-rte u  { text-decoration: underline; }
+.product-rte a  { text-decoration: underline; color: inherit; }
 
 /* ── Scroll reveal ── */
 [data-reveal] {

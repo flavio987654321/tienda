@@ -10,6 +10,7 @@ import {
 import VehicleStatusModal, { VehicleStatusBadge, type VehicleStatus, type VehicleStatusData } from "./VehicleStatusModal";
 import StockAdjustModal from "./StockAdjustModal";
 import { Boxes } from "lucide-react";
+import { calcVehicleCostTotal } from "@/lib/margin";
 
 interface Variant { id: string; name: string; value: string; stock: number; lowStockThreshold?: number | null }
 
@@ -27,6 +28,7 @@ interface Product {
   soldAt?: Date | string | null;
   soldPrice?: number | null;
   soldBuyerName?: string | null;
+  expenses?: { monto: number }[];
 }
 
 interface Props { products: Product[]; storeSlug?: string; storeName?: string; storeType?: string; initialStockFilter?: string }
@@ -66,7 +68,7 @@ export default function ProductsTable({ products: initialProducts, storeSlug = "
   const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
   const [qrProduct,     setQrProduct]     = useState<{ id: string; name: string; price: number; year?: string; km?: string } | null>(null);
   const [qrLoading,     setQrLoading]     = useState(false);
-  const [vehicleModal,  setVehicleModal]  = useState<{ id: string; name: string; status: VehicleStatus } | null>(null);
+  const [vehicleModal,  setVehicleModal]  = useState<{ id: string; name: string; status: VehicleStatus; costTotal: number } | null>(null);
   const [stockModal,    setStockModal]    = useState<Product | null>(null);
   const [showBulkStock, setShowBulkStock] = useState(false);
   const [bulkStockCategory, setBulkStockCategory] = useState("all");
@@ -118,7 +120,8 @@ export default function ProductsTable({ products: initialProducts, storeSlug = "
     const fs = nameClean.length > 38 ? 26 : nameClean.length > 24 ? 30 : 36;
     tmpCtx.font = `bold ${fs}px Arial, sans-serif`;
     const words = nameClean.split(" ");
-    let line = "", lines: string[] = [];
+    let line = "";
+    const lines: string[] = [];
     for (const w of words) {
       const test = line ? `${line} ${w}` : w;
       if (tmpCtx.measureText(test).width > maxNameW && line) { lines.push(line); line = w; }
@@ -422,6 +425,7 @@ export default function ProductsTable({ products: initialProducts, storeSlug = "
           productId={vehicleModal.id}
           productName={vehicleModal.name}
           currentStatus={vehicleModal.status}
+          costTotal={vehicleModal.costTotal}
           onSave={handleVehicleStatusSaved}
           onClose={() => setVehicleModal(null)}
         />
@@ -714,7 +718,7 @@ export default function ProductsTable({ products: initialProducts, storeSlug = "
                   <div className="mt-3 flex gap-1.5">
                     {!showStock && (
                       <button
-                        onClick={() => setVehicleModal({ id: product.id, name: product.name, status: (product.vehicleStatus ?? "AVAILABLE") as VehicleStatus })}
+                        onClick={() => setVehicleModal({ id: product.id, name: product.name, status: (product.vehicleStatus ?? "AVAILABLE") as VehicleStatus, costTotal: calcVehicleCostTotal(product.expenses ?? []) })}
                         className="flex-1 flex items-center justify-center gap-1 py-1.5 text-xs font-medium text-indigo-500 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors"
                       >
                         <Car className="h-3 w-3" /> Estado
@@ -825,7 +829,7 @@ export default function ProductsTable({ products: initialProducts, storeSlug = "
                       <div className="flex items-center gap-3">
                         {!showStock && (
                           <button
-                            onClick={() => setVehicleModal({ id: product.id, name: product.name, status: (product.vehicleStatus ?? "AVAILABLE") as VehicleStatus })}
+                            onClick={() => setVehicleModal({ id: product.id, name: product.name, status: (product.vehicleStatus ?? "AVAILABLE") as VehicleStatus, costTotal: calcVehicleCostTotal(product.expenses ?? []) })}
                             className="flex items-center gap-1.5 text-sm text-indigo-500 hover:text-indigo-700 font-medium"
                             title="Cambiar estado"
                           >

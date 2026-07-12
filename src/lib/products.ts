@@ -2,18 +2,53 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
 import sanitizeHtml from "sanitize-html";
+import { DESCRIPTION_TEXT_COLORS } from "@/lib/richTextColors";
+
+// Solo se acepta exactamente uno de los hex de la paleta cerrada del editor
+// (ver richTextColors.ts) — así un POST directo a la API (sin pasar por el
+// editor) no puede colar un `style` arbitrario.
+const ALLOWED_TEXT_COLOR = new RegExp(
+  `^(${DESCRIPTION_TEXT_COLORS.map((c) => c.value).join("|")})$`,
+  "i"
+);
 
 const DESCRIPTION_SANITIZE_OPTIONS: sanitizeHtml.IOptions = {
-  allowedTags: ["p", "strong", "em", "u", "s", "ul", "ol", "li", "br"],
+  allowedTags: ["p", "strong", "em", "u", "s", "ul", "ol", "li", "br", "span", "a"],
   allowedAttributes: {
     p: ["style"],
+    span: ["style"],
+    // target/rel se permiten porque el transformTags de abajo los fuerza a
+    // valores seguros — sin listarlos acá, sanitize-html los borraría después
+    // de agregarlos y los links terminarían abriendo en el mismo tab.
+    a: ["href", "target", "rel"],
   },
   allowedStyles: {
     p: { "text-align": [/^(left|center|right|justify)$/] },
+    span: { color: [ALLOWED_TEXT_COLOR] },
+  },
+  allowedSchemes: ["http", "https", "mailto"],
+  // Fuerza target/rel seguros sin importar lo que haya guardado el editor —
+  // así un link nunca puede abrir la tienda en el mismo tab ni pasar referrer.
+  transformTags: {
+    a: sanitizeHtml.simpleTransform("a", { target: "_blank", rel: "noopener noreferrer nofollow" }, true),
   },
 };
 
+// Sanitiza una descripción de producto con la misma allowlist que usa el
+// formulario. Exportada para que el import CSV (u otros orígenes) no pueda
+// guardar HTML sin filtrar — la descripción se renderiza con
+// dangerouslySetInnerHTML en la tienda pública, así que TODO camino de escritura
+// debe pasar por acá.
+export function sanitizeDescription(html: string): string {
+  return sanitizeHtml(html, DESCRIPTION_SANITIZE_OPTIONS);
+}
+
 export const MAX_PRODUCT_REELS = 3;
+
+// Tope de fotos por producto — debe coincidir con MAX_PRODUCT_IMAGES del
+// formulario (nuevo/page.tsx). Se aplica también en el servidor para que un POST
+// directo a la API no pueda guardar cientos de imágenes.
+export const MAX_PRODUCT_IMAGES = 8;
 const SINGLE_VARIANT_FALLBACK_VALUE = "Unico";
 
 export type NormalizedVariant = {
@@ -58,6 +93,7 @@ type ProductBodyRaw = {
   name?: unknown;
   price?: unknown;
   comparePrice?: unknown;
+  costPrice?: unknown;
   featured?: unknown;
   precioMayorista?: unknown;
   cantMinMayorista?: unknown;
@@ -84,6 +120,7 @@ type ValidatedProductBody = {
   sanitizedDescription: string;
   parsedPrice: number;
   parsedComparePrice: number | null;
+  parsedCostPrice: number | null;
   parsedFeatured: boolean;
   parsedPrecioMayorista: number | null;
   parsedCantMinMayorista: number | null;
@@ -109,7 +146,7 @@ const VALID_OFFER_BADGES = new Set(["OFERTA", "SALE", "PCT"]);
 export function validateProductBody(
   body: ProductBodyRaw
 ): { error: NextResponse } | ValidatedProductBody {
-  const { name, price, comparePrice, featured, precioMayorista, cantMinMayorista, preciosEscalonados, soloMayorista, cuotas, variants, reelUrls, weightKg, widthCm, heightCm, depthCm, promoQtyMin, promoQtyDiscount, promoType, promoPayQty, offerBadge, offerNote, offerEndsAt } = body;
+  const { name, price, comparePrice, costPrice, featured, precioMayorista, cantMinMayorista, preciosEscalonados, soloMayorista, cuotas, variants, reelUrls, weightKg, widthCm, heightCm, depthCm, promoQtyMin, promoQtyDiscount, promoType, promoPayQty, offerBadge, offerNote, offerEndsAt } = body;
 
   if (!name || typeof name !== "string" || name.trim().length < 2) {
     return { error: NextResponse.json({ error: "Nombre requerido (mínimo 2 caracteres)" }, { status: 400 }) };
@@ -166,6 +203,15 @@ export function validateProductBody(
   }
   if (parsedComparePrice !== null && parsedComparePrice <= parsedPrice) {
     return { error: NextResponse.json({ error: "El precio tachado debe ser mayor al precio actual (para mostrar un descuento real)" }, { status: 400 }) };
+  }
+
+  // Costo interno (opcional) — nunca se muestra en la tienda, solo se usa para
+  // calcular el margen de ganancia del dueño. Sin tope respecto al precio de
+  // venta: si el costo supera el precio, el margen se muestra negativo (venta
+  // a pérdida) en vez de bloquear el guardado.
+  const parsedCostPrice = costPrice ? parseFloat(costPrice as string) : null;
+  if (costPrice && (isNaN(parsedCostPrice!) || parsedCostPrice! <= 0)) {
+    return { error: NextResponse.json({ error: "El costo debe ser un número mayor a 0" }, { status: 400 }) };
   }
 
   const parsedPrecioMayorista = precioMayorista ? parseFloat(precioMayorista as string) : null;
@@ -352,6 +398,7 @@ export function validateProductBody(
     sanitizedDescription,
     parsedPrice,
     parsedComparePrice,
+    parsedCostPrice,
     parsedFeatured: featured === true,
     parsedPrecioMayorista,
     parsedCantMinMayorista,

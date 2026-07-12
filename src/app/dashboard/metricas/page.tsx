@@ -14,9 +14,12 @@ import {
   Eye,
   MousePointerClick,
   MessageSquare,
+  Wallet,
+  AlertTriangle,
 } from "lucide-react";
 import { ExportButtons } from "./ExportButtons";
 import ShareStatsButton from "./ShareStatsButton";
+import { aggregateProfitability, calcVehicleProfit, type ProfitOrderItem } from "@/lib/margin";
 
 // ─── Rango de fechas ──────────────────────────────────────────────────────────
 // Todas las comparaciones usan ventanas de igual longitud (período actual vs.
@@ -360,6 +363,56 @@ export default async function MetricasPage({
     ]);
   }
 
+  // ── Rentabilidad (no-AUTOS) ── Una sola query que cubre período actual + anterior
+  // (misma ventana doble que ya usa el resto de la página) para no duplicar el pedido a la DB.
+  let profitCurrentAgg = aggregateProfitability([]);
+  let profitPrevTotalProfit = 0;
+  if (!isAutos) {
+    const rawProfitItems = await prisma.orderItem.findMany({
+      where: {
+        order: {
+          storeId: store.id,
+          status: { in: CONFIRMED_ORDER_STATUSES },
+          createdAt: { gte: prevPeriodStart, lt: periodEndExclusive },
+        },
+      },
+      select: {
+        productId: true, quantity: true, price: true, costAtSale: true,
+        order: { select: { subtotal: true, discountAmount: true, createdAt: true } },
+      },
+    });
+    const currentItems: ProfitOrderItem[] = [];
+    const prevItems: ProfitOrderItem[] = [];
+    for (const it of rawProfitItems) {
+      const dateStr = utcDateStr(it.order.createdAt);
+      const mapped: ProfitOrderItem = {
+        productId: it.productId, quantity: it.quantity, price: it.price, costAtSale: it.costAtSale,
+        orderSubtotal: it.order.subtotal, orderDiscount: it.order.discountAmount, dateStr,
+      };
+      (dateStr >= periodStartStr ? currentItems : prevItems).push(mapped);
+    }
+    profitCurrentAgg = aggregateProfitability(currentItems);
+    profitPrevTotalProfit = aggregateProfitability(prevItems).totalProfit;
+  }
+
+  // ── Rentabilidad de vehículos vendidos en el período (AUTOS) ──
+  // Un vehículo solo cuenta para la ganancia si tiene al menos un gasto cargado —
+  // si nunca se cargó ni la "Compra", sumar soldPrice - 0 mostraría el 100% del
+  // precio de venta como ganancia, lo cual sería falso.
+  let soldVehiclesPeriod: { id: string; soldPrice: number | null; expenses: { monto: number }[] }[] = [];
+  if (isAutos) {
+    soldVehiclesPeriod = await prisma.product.findMany({
+      where: { storeId: store.id, deletedAt: null, vehicleStatus: "SOLD", soldAt: { gte: periodStart, lt: periodEndExclusive } },
+      select: { id: true, soldPrice: true, expenses: { select: { monto: true } } },
+    });
+  }
+  const soldVehiclesWithGastos = soldVehiclesPeriod.filter((v) => v.expenses.length > 0);
+  const vehicleProfits = soldVehiclesWithGastos
+    .map((v) => calcVehicleProfit(v.soldPrice, v.expenses))
+    .filter((p): p is number => p != null);
+  const totalVehicleProfit = vehicleProfits.reduce((s, p) => s + p, 0);
+  const avgVehicleProfit = vehicleProfits.length > 0 ? totalVehicleProfit / vehicleProfits.length : null;
+
   // ── Queries de StoreView (requieren migración SQL — fallan silenciosamente si la tabla no existe) ──
   let viewsPrevAgg: { _sum: { count: number | null } } = { _sum: { count: null } };
   let viewsPeriodRaw: { date: string; count: number }[] = [];
@@ -379,8 +432,8 @@ export default async function MetricasPage({
     console.error("[metricas] StoreView aggregate falló — ¿falta la migración?", err);
   }
 
-  // ── Nombres de productos para el top ──
-  const productIds = topProducts.map((p) => p.productId);
+  // ── Nombres de productos para el top y para la tabla de rentabilidad ──
+  const productIds = Array.from(new Set([...topProducts.map((p) => p.productId), ...profitCurrentAgg.byProduct.keys()]));
   const productNames = productIds.length
     ? await prisma.product.findMany({
         where: { id: { in: productIds } },
@@ -424,6 +477,25 @@ export default async function MetricasPage({
     totalViewsPeriod > 0 ? ((totalOrdersPeriod / totalViewsPeriod) * 100).toFixed(1) : null;
 
   const totalOrdersAllStatuses = ordersByStatus.reduce((s, o) => s + o._count, 0);
+
+  // ── Rentabilidad — tienda normal ──
+  const profitChartData = buildDailySeries(
+    periodStart,
+    rangeDays,
+    [...profitCurrentAgg.dailyProfit.entries()].map(([dateStr, value]) => ({ dateStr, value }))
+  );
+  const profitDiff = pctDiff(profitCurrentAgg.totalProfit, profitPrevTotalProfit);
+  const marginPctPeriod = profitCurrentAgg.totalNetRevenueKnownCost > 0
+    ? (profitCurrentAgg.totalProfit / profitCurrentAgg.totalNetRevenueKnownCost) * 100
+    : null;
+  const costCoveragePct = profitCurrentAgg.totalNetRevenueAll > 0
+    ? Math.round((profitCurrentAgg.totalNetRevenueKnownCost / profitCurrentAgg.totalNetRevenueAll) * 100)
+    : 0;
+  const profitByProductRanked = [...profitCurrentAgg.byProduct.entries()]
+    .filter(([, p]) => p.profit !== null)
+    .sort((a, b) => (b[1].profit ?? 0) - (a[1].profit ?? 0))
+    .slice(0, 8);
+  const productsWithoutCostCount = [...profitCurrentAgg.byProduct.values()].filter((p) => p.profit === null).length;
 
   // ── Métricas calculadas — AUTOS ──
   const totalLeadsPeriod = leadsPeriodRaw.length;
@@ -677,6 +749,106 @@ export default async function MetricasPage({
           </div>
         )}
 
+        {/* ── Rentabilidad ── */}
+        {isAutos ? (
+          soldVehiclesPeriod.length === 0 ? (
+            <div className="rounded-2xl border border-gray-100 bg-white p-6">
+              <h2 className="font-bold text-gray-900 mb-1">Rentabilidad</h2>
+              <p className="text-sm text-gray-500">Sin vehículos vendidos en el período.</p>
+            </div>
+          ) : soldVehiclesWithGastos.length === 0 ? (
+            <div className="rounded-2xl border border-gray-100 bg-white p-6">
+              <h2 className="font-bold text-gray-900 mb-1">Rentabilidad</h2>
+              <p className="text-sm text-gray-500">
+                Cargá los gastos de tus vehículos vendidos para ver la ganancia acá.{" "}
+                <Link href="/dashboard/productos" className="text-indigo-600 font-semibold hover:underline">Ir a Productos</Link>
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-4">
+              <KPICard
+                label="Ganancia total del período"
+                value={money(totalVehicleProfit)}
+                sub={`${soldVehiclesWithGastos.length} de ${soldVehiclesPeriod.length} vehículo${soldVehiclesPeriod.length !== 1 ? "s" : ""} vendido${soldVehiclesPeriod.length !== 1 ? "s" : ""} con gastos cargados`}
+                icon={Wallet}
+                iconBg="bg-emerald-50 text-emerald-600"
+              />
+              <KPICard
+                label="Ganancia promedio por vehículo vendido"
+                value={avgVehicleProfit !== null ? money(avgVehicleProfit) : "—"}
+                icon={TrendingUp}
+                iconBg="bg-indigo-50 text-indigo-600"
+              />
+            </div>
+          )
+        ) : profitCurrentAgg.totalNetRevenueKnownCost === 0 ? (
+          <div className="rounded-2xl border border-gray-100 bg-white p-6">
+            <h2 className="font-bold text-gray-900 mb-1">Rentabilidad</h2>
+            <p className="text-sm text-gray-500">
+              Cargá el costo de tus productos para ver tu rentabilidad acá.{" "}
+              <Link href="/dashboard/productos" className="text-indigo-600 font-semibold hover:underline">Ir a Productos</Link>
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            <div className="grid grid-cols-2 gap-4">
+              <KPICard
+                label={`Ganancia bruta (${RANGE_LABELS[rangeDays]})`}
+                value={money(profitCurrentAgg.totalProfit)}
+                sub={profitDiff === null ? "Sin datos del período anterior" : undefined}
+                trend={profitDiff}
+                icon={Wallet}
+                iconBg="bg-emerald-50 text-emerald-600"
+              />
+              <KPICard
+                label="Margen promedio"
+                value={marginPctPeriod !== null ? `${marginPctPeriod.toFixed(0)}%` : "—"}
+                sub={`${costCoveragePct}% de tus ventas del período tienen costo cargado`}
+                icon={TrendingUp}
+                iconBg="bg-indigo-50 text-indigo-600"
+              />
+            </div>
+
+            <div className="grid gap-6 lg:grid-cols-2">
+              <div className="rounded-2xl border border-gray-100 bg-white p-6">
+                <div className="flex items-center justify-between mb-0.5">
+                  <h2 className="font-bold text-gray-900">Ganancia diaria</h2>
+                  <p className="text-xl font-black text-violet-600">{money(profitCurrentAgg.totalProfit)}</p>
+                </div>
+                <p className="text-xs text-gray-400 mb-4">Últimos {rangeDays} días — solo ventas con costo cargado</p>
+                <LineChart data={profitChartData} color="#7c3aed" gradId="grad-violet" formatter={shortMoney} />
+              </div>
+
+              <div className="rounded-2xl border border-gray-100 bg-white p-6">
+                <h2 className="font-bold text-gray-900 mb-5">Rentabilidad por producto</h2>
+                {profitByProductRanked.length === 0 ? (
+                  <p className="text-sm text-gray-500">Ningún producto vendido en el período tiene costo cargado todavía.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {profitByProductRanked.map(([productId, p]) => (
+                      <div key={productId} className="flex items-center justify-between gap-2 text-sm">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <span className="font-medium text-gray-800 truncate">{nameMap[productId] ?? "Producto eliminado"}</span>
+                          {p.hasCoupon && (
+                            <span title="Incluye pedidos con cupón — ganancia parcialmente estimada">
+                              <AlertTriangle className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+                            </span>
+                          )}
+                        </div>
+                        <span className="font-bold text-emerald-600 shrink-0">{money(p.profit ?? 0)}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {productsWithoutCostCount > 0 && (
+                  <p className="mt-4 text-xs text-gray-400">
+                    {productsWithoutCostCount} producto{productsWithoutCostCount !== 1 ? "s" : ""} vendido{productsWithoutCostCount !== 1 ? "s" : ""} sin costo cargado no aparece{productsWithoutCostCount === 1 ? "" : "n"} en el ranking.
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
       </div>
     </DashboardLayout>

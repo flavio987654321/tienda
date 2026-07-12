@@ -35,7 +35,9 @@ export function Turnstile({ onVerify, apiRef, action }: {
   const containerRef = useRef<HTMLDivElement>(null);
   const widgetIdRef = useRef<string | null>(null);
   const onVerifyRef = useRef(onVerify);
-  onVerifyRef.current = onVerify;
+  // Mantener la callback más reciente en el ref sin asignarla durante el render
+  // (lo usan los callbacks de Turnstile, que corren siempre después del commit).
+  useEffect(() => { onVerifyRef.current = onVerify; });
   const [inView, setInView] = useState(false);
   const [scriptReady, setScriptReady] = useState(false);
   const [scriptFailed, setScriptFailed] = useState(false);

@@ -119,11 +119,11 @@ export default function ResenasClient({
       <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-4 mb-5 flex gap-3">
         <ShieldCheck className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" />
         <div>
-          <p className="text-sm font-semibold text-emerald-800 mb-0.5">¿Qué es "Compra verificada"?</p>
+          <p className="text-sm font-semibold text-emerald-800 mb-0.5">¿Qué es “Compra verificada”?</p>
           <p className="text-xs text-emerald-700 leading-relaxed">
             Una reseña se verifica <strong>automáticamente</strong> cuando el cliente deja su email y coincide con una compra entregada en tu tienda.
             También podés verificarla <strong>manualmente</strong> desde acá para ventas por WhatsApp, efectivo o transferencia.
-            El badge "✓ Compra verificada" aparece visible en tu tienda.
+            El badge “✓ Compra verificada” aparece visible en tu tienda.
           </p>
         </div>
       </div>

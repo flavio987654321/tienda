@@ -54,15 +54,26 @@ export default function LogoUploadCard({ storeName, initialLogo, initialLogoColo
     splashTimers.current = [t0, t1, t2];
   }, []);
 
+  // Al cerrarse el modal, resetear el estado de la animación durante el render
+  // (patrón "adjust state on prop change" de React) en vez de con setState en el
+  // efecto. El limpiado de timers queda en el efecto (tocar el ref o clearTimeout
+  // durante el render violaría las reglas de refs/pureza).
+  const [prevShowSplashModal, setPrevShowSplashModal] = useState(showSplashModal);
+  if (showSplashModal !== prevShowSplashModal) {
+    setPrevShowSplashModal(showSplashModal);
+    if (!showSplashModal) {
+      setSplashActive(false);
+      setSplashFading(false);
+      setSplashMounted(false);
+    }
+  }
+
   useEffect(() => {
     if (showSplashModal) {
       const t = setTimeout(() => startSplash(), 400);
       return () => clearTimeout(t);
     } else {
       splashTimers.current.forEach(clearTimeout);
-      setSplashActive(false);
-      setSplashFading(false);
-      setSplashMounted(false);
     }
   }, [showSplashModal, startSplash]);
 

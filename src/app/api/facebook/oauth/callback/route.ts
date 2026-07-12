@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getCurrentUser } from "@/lib/auth-session";
 import { exchangeOAuthCode, getLongLivedToken, getMe, encryptToken } from "@/lib/facebook";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "";
@@ -34,15 +35,22 @@ export async function GET(req: NextRequest) {
   const code  = searchParams.get("code");
   const state = searchParams.get("state");
 
-  // Leer cookie con nonce:storeId guardada al iniciar el flujo
+  // Leer cookie con el nonce guardado al iniciar el flujo
   const cookieValue = req.cookies.get("fb_oauth_state")?.value ?? "";
-  const [cookieNonce, storeId] = cookieValue.split(":");
+  const [cookieNonce] = cookieValue.split(":");
 
-  // Verificar que el nonce coincide (protección CSRF)
-  if (!code || !state || !cookieNonce || !storeId || state !== cookieNonce) {
+  // El nonce protege contra CSRF; la tienda a la que se guarda el token se
+  // resuelve SIEMPRE desde la sesión del dueño, nunca desde un valor de la
+  // cookie/URL (que podría fabricarse con el storeId público de otra tienda).
+  if (!code || !state || !cookieNonce || state !== cookieNonce) {
     console.warn("Facebook OAuth callback: nonce inválido o faltante", { state, cookieNonce });
     return popupCloseResponse("error");
   }
+
+  const user = await getCurrentUser();
+  if (!user) return popupCloseResponse("error");
+  const sessionStore = await prisma.store.findUnique({ where: { ownerId: user.id }, select: { id: true } });
+  if (!sessionStore) return popupCloseResponse("error");
 
   try {
     const shortToken = await exchangeOAuthCode(code);
@@ -54,7 +62,7 @@ export async function GET(req: NextRequest) {
     const me = await getMe(accessToken);
 
     await prisma.store.update({
-      where: { id: storeId },
+      where: { id: sessionStore.id },
       data: {
         fbAccessToken: encryptToken(accessToken),
         fbUserId:      me.id,

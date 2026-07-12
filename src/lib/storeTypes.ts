@@ -1,3 +1,5 @@
+import { PROVINCIAS_ARGENTINA } from "./provincias";
+
 export type StoreType =
   | "ROPA"
   | "AUTOS"
@@ -36,11 +38,20 @@ export interface StoreTypeConfig {
   // Oculta la sección "Envío" (peso/dimensiones del paquete) cuando el producto
   // no se manda por correo — ej. un auto o una moto se entregan en persona.
   hideShipping?: boolean;
+  // Oculta "Promoción por cantidad" y "Cuotas sin interés" — no tienen sentido
+  // para rubros donde no se compra por unidades múltiples online (ej. AUTOS,
+  // que usa checkoutMode "inquiry"). El precio de oferta (comparePrice) sigue
+  // disponible, esa sí aplica a un vehículo individual.
+  hidePromotions?: boolean;
   // Muestra el bloque "Historial de servicios" y usa el texto "Condición del
   // vehículo" en vez de "Condición del producto". Explícito (no inferido de
   // hideVariants) para que un futuro rubro con hideVariants:true no herede
   // por error textos/funciones pensadas para vehículos.
   showServiceHistory?: boolean;
+  // Usa la lista de "Gastos del vehículo" (compra, lavado, service, cubiertas...)
+  // en vez del campo único "Costo" — un vehículo se vende una sola vez y suele
+  // acumular varios gastos, a diferencia de un producto de stock repetido.
+  usesVehicleExpenses?: boolean;
   supportsFeatured?: boolean;
   condicionOptions?: string[];
   defaultVariantName: string;
@@ -101,7 +112,9 @@ export const STORE_TYPES: StoreTypeConfig[] = [
     hideVariants: true,
     hideTags: true,
     hideShipping: true,
+    hidePromotions: true,
     showServiceHistory: true,
+    usesVehicleExpenses: true,
     checkoutMode: "inquiry" as const,
     defaultVariantName: "Color",
     variantValuePlaceholder: "Rojo, Blanco, Negro",
@@ -130,7 +143,9 @@ export const STORE_TYPES: StoreTypeConfig[] = [
       { key: "carroceria", label: "Carrocería",  options: ["Sedán", "SUV", "Pickup", "Hatchback", "Coupé", "Convertible", "Van / Minivan", "Naked", "Scooter", "Trail / Enduro", "Cuatriciclo"], tip: "Puede repetir lo que ya elegiste en Subcategoría — usalo si querés ser más específico (ej: subcategoría \"autos\" + carrocería \"SUV\")." },
       { key: "color",      label: "Color",       placeholder: "Blanco, Negro, Gris, Rojo..." },
       { key: "puertas",    label: "Puertas",     options: ["2", "3", "4", "5"] },
-      { key: "ciudad",     label: "Ciudad / Zona", placeholder: "Ej: Capital Federal, GBA Norte, Rosario..." },
+      { key: "provincia",  label: "Provincia",   options: PROVINCIAS_ARGENTINA.map((p) => p.name) },
+      { key: "localidad",  label: "Localidad",   placeholder: "Ej: San Isidro, Nueva Córdoba, Rosario..." },
+      { key: "codigoPostal", label: "Código Postal", placeholder: "Ej: 1642", type: "number" },
     ],
   },
   {

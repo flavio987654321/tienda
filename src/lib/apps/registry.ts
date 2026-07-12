@@ -19,6 +19,8 @@ export type AppDefinition = {
   provider: "interno" | "externo";
   /** Marca dueña del servicio, se muestra como "Proporcionado por X". */
   providerName: string;
+  /** Visible en la vidriera pero sin botón de instalar todavía — se muestra "Próximamente". */
+  comingSoon?: boolean;
 };
 
 export const CATEGORY_LABELS: Record<AppCategory, string> = {
@@ -69,6 +71,37 @@ export const APPS_REGISTRY: AppDefinition[] = [
       "Sin esto, Meta no tiene forma de saber si tus anuncios generan ventas",
     ],
     category: "marketing",
+    price: "gratis",
+    provider: "interno",
+    providerName: "Meta",
+  },
+  {
+    id: "google-shopping",
+    name: "Google Shopping",
+    description:
+      "Mostrá tus productos gratis en la búsqueda de Google y en la pestaña Shopping, para que te encuentren clientes nuevos que ni sabían que existías.",
+    benefits: [
+      "Tus productos aparecen en Google sin pagar publicidad",
+      "Se actualiza solo: si cambiás un precio o se agota el stock, se ve reflejado",
+      "Funciona parecido al catálogo de Meta, pero del lado de Google",
+    ],
+    category: "ventas",
+    price: "gratis",
+    provider: "interno",
+    providerName: "Google",
+    comingSoon: true,
+  },
+  {
+    id: "whatsapp-catalogo",
+    name: "Catálogo en WhatsApp",
+    description:
+      "Mostrá tu catálogo de productos directo en tu WhatsApp Business, y activá gratis la inteligencia artificial de Meta para que les conteste a tus clientes sola, las 24 horas.",
+    benefits: [
+      "Tus clientes ven tus productos, precios y fotos sin salir de WhatsApp",
+      "Se actualiza solo, es el mismo catálogo que usan Facebook e Instagram",
+      "Podés activar gratis la IA de Meta para que responda consultas automáticamente",
+    ],
+    category: "ventas",
     price: "gratis",
     provider: "interno",
     providerName: "Meta",

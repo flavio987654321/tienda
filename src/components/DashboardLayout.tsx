@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef, useId } from "react";
+import { useEffect, useState, useCallback, useRef, useId, useSyncExternalStore } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -20,6 +20,17 @@ import TourGuide, { TOUR_STORAGE_KEY } from "@/components/TourGuide";
 import TermsUpdateBanner from "@/components/TermsUpdateBanner";
 
 const LEADS_STORE_TYPES = ["AUTOS"];
+
+// Suscripción a los eventos online/offline del navegador para useSyncExternalStore.
+// A nivel de módulo para que la referencia sea estable entre renders.
+function subscribeOnline(callback: () => void) {
+  window.addEventListener("online", callback);
+  window.addEventListener("offline", callback);
+  return () => {
+    window.removeEventListener("online", callback);
+    window.removeEventListener("offline", callback);
+  };
+}
 
 type NavItem = {
   href: string;
@@ -116,11 +127,10 @@ export default function DashboardLayout({
   const [pendingOrderCount, setPendingOrderCount] = useState(0);
   const [pendingLeadsCount, setPendingLeadsCount] = useState(0);
   const [storeType, setStoreType] = useState<string | null>(null);
-  // Arranca asumiendo "online" tanto en servidor como en cliente: leer
-  // navigator.onLine en el render inicial puede diferir del render del
-  // servidor y rompe la hidratación. El valor real se sincroniza en el
-  // efecto de abajo, una vez montado.
-  const [isOnline, setIsOnline] = useState(true);
+  // Estado online/offline vía useSyncExternalStore (patrón canónico de React para
+  // suscribirse a una fuente externa del navegador). El snapshot de servidor es
+  // "online" para no romper la hidratación; en el cliente lee navigator.onLine.
+  const isOnline = useSyncExternalStore(subscribeOnline, () => navigator.onLine, () => true);
   const [showTour, setShowTour] = useState(false);
   const [warnings, setWarnings] = useState<Warnings | null>(null);
 
@@ -169,14 +179,6 @@ export default function DashboardLayout({
     }
   }, [storeType]);
 
-  useEffect(() => {
-    setIsOnline(navigator.onLine);
-    const up = () => setIsOnline(true);
-    const dn = () => setIsOnline(false);
-    window.addEventListener("online", up);
-    window.addEventListener("offline", dn);
-    return () => { window.removeEventListener("online", up); window.removeEventListener("offline", dn); };
-  }, []);
 
   const fetchAffiliateCount = useCallback(() => {
     fetch("/api/vendedoras")

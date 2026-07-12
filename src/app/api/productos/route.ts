@@ -1,7 +1,7 @@
 ﻿import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
-import { validateProductBody, MAX_PRODUCT_REELS } from "@/lib/products";
+import { validateProductBody, MAX_PRODUCT_REELS, MAX_PRODUCT_IMAGES } from "@/lib/products";
 import { createNotificationMany } from "@/lib/notifications";
 
 export async function GET(req: NextRequest) {
@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
   const validated = validateProductBody(body);
   if ("error" in validated) return validated.error;
   const {
-    name, sanitizedDescription, parsedPrice, parsedComparePrice, parsedFeatured, parsedPrecioMayorista, parsedCantMinMayorista,
+    name, sanitizedDescription, parsedPrice, parsedComparePrice, parsedCostPrice, parsedFeatured, parsedPrecioMayorista, parsedCantMinMayorista,
     parsedPreciosEscalonados, parsedSoloMayorista, parsedCuotas, normalizedVariants,
     parsedWeightKg, parsedWidthCm, parsedHeightCm, parsedDepthCm,
     parsedPromoQtyMin, parsedPromoQtyDiscount, parsedPromoType, parsedPromoPayQty, parsedOfferBadge, parsedOfferNote, parsedOfferEndsAt,
@@ -70,12 +70,13 @@ export async function POST(req: NextRequest) {
       description: sanitizedDescription,
       price: parsedPrice,
       comparePrice: parsedComparePrice,
+      costPrice: parsedCostPrice,
       featured: parsedFeatured,
       category: category || "general",
       subcategory: subcategory || null,
       gender: gender || "unisex",
       tags: JSON.stringify(Array.isArray(tags) ? tags : []),
-      images: JSON.stringify(Array.isArray(images) ? images : []),
+      images: JSON.stringify(Array.isArray(images) ? images.slice(0, MAX_PRODUCT_IMAGES) : []),
       reelUrls: JSON.stringify(Array.isArray(reelUrls) ? reelUrls.slice(0, MAX_PRODUCT_REELS) : []),
       attributes: JSON.stringify(Array.isArray(attributes) ? attributes : []),
       precioMayorista: parsedPrecioMayorista,

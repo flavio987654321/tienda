@@ -1192,7 +1192,7 @@ function ProductosPageInner() {
               <div>
                 {/* Kicker */}
                 {titleStyle === "bold" ? (
-                  <p style={{ fontSize:11, letterSpacing:3, color:G, textTransform:"uppercase", margin:"0 0 8px", fontWeight:700 }}>// {label}</p>
+                  <p style={{ fontSize:11, letterSpacing:3, color:G, textTransform:"uppercase", margin:"0 0 8px", fontWeight:700 }}>{"// "}{label}</p>
                 ) : titleStyle === "organic" ? (
                   <p style={{ fontSize:11, fontStyle:"italic", color:MID, margin:"0 0 8px", fontFamily:serif }}>{label}</p>
                 ) : titleStyle === "minimal" ? (
