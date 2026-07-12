@@ -113,7 +113,7 @@ const CONTENT = {
           "Sos responsable de la veracidad y legalidad de los datos de tu catálogo que se sincronizan con terceros (nombres, precios, imágenes, disponibilidad). La sincronización refleja lo que cargaste en tu tienda.",
           "La disponibilidad, aprobación y continuidad de las funciones de terceros dependen exclusivamente de cada proveedor. Por ejemplo, la activación de la pestaña Tienda en Facebook o el etiquetado en Instagram está sujeta a revisiones y requisitos propios de Meta que TiendaApps no controla ni garantiza.",
           "TiendaApps no es responsable por suspensiones, rechazos, cambios de políticas o interrupciones de los servicios de Meta, Google u otros terceros integrados.",
-          "Podés desconectar cualquier integración en cualquier momento desde el panel. El tratamiento de datos de estas integraciones se detalla en la Política de Privacidad (sección 2 quinquies).",
+          "Podés desconectar cualquier integración en cualquier momento desde el panel. El tratamiento de datos de estas integraciones se detalla en la Política de Privacidad (secciones 2 quinquies y 2 sexies).",
           "TiendaApps puede agregar, modificar o discontinuar aplicaciones de la sección Aplicaciones, avisando con razonable anticipación cuando el cambio afecte una integración que tengas activa.",
         ],
       },
