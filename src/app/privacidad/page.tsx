@@ -110,6 +110,18 @@ const CONTENT = {
           "Qué NO accedemos de tu Facebook: no leemos tus publicaciones, amigos, mensajes ni ningún contenido personal — solo los permisos de administración de negocios y catálogos que autorizás en la pantalla de conexión.",
           "Los datos que Meta recibe se rigen por su propia política de privacidad: facebook.com/privacy",
           "Eliminación de los datos de la integración: podés desconectar Facebook en cualquier momento desde tu panel (Aplicaciones → Catálogo de Meta → Desconectar) — al hacerlo eliminamos de inmediato el token de acceso y todos los identificadores de Meta de nuestra base de datos. También podés revocar el acceso desde tu propia cuenta de Facebook (Configuración → Integraciones comerciales) o solicitar la eliminación por email a marketplacemitienda@gmail.com con el asunto 'Eliminar datos de Meta — [tu email]'. El catálogo creado en Meta te pertenece y se administra desde Meta Commerce Manager.",
+          "Si además conectás la app 'Catálogo en WhatsApp', usamos ese mismo token para vincular tu catálogo a tu WhatsApp Business — se guarda únicamente el identificador de esa cuenta de WhatsApp Business, con las mismas reglas de esta sección.",
+        ],
+      },
+      {
+        title: "2 sexies. Integración con Google Analytics",
+        body: "Desde la sección Aplicaciones podés conectar tu cuenta de Google Analytics para medir las visitas de tu tienda automáticamente, sin copiar ningún ID a mano. Esta integración es completamente opcional:",
+        list: [
+          "Qué recopilamos al conectar: un token de acceso otorgado por Google mediante tu autorización expresa (almacenado cifrado con AES-256-GCM), y los identificadores de tu cuenta y propiedad de Google Analytics. Nunca vemos tu contraseña de Google.",
+          "Qué hacemos con ese acceso: buscamos si ya tenés una propiedad de Google Analytics para reusarla, o creamos una nueva si no tenés, y creamos un 'flujo de datos web' para conseguir el ID de medición de tu tienda. Esta es la finalidad exclusiva de la integración.",
+          "Qué NO hacemos: no leemos ningún dato de tráfico, visitas ni reportes de tu cuenta de Google Analytics, ni accedemos a ningún otro producto de tu cuenta de Google (Gmail, Drive, etc.) — el permiso que pedimos solo alcanza para configurar la conexión.",
+          "Los datos que Google recibe se rigen por su propia política de privacidad: policies.google.com/privacy",
+          "Eliminación de los datos de la integración: podés desconectar Google en cualquier momento desde tu panel (Aplicaciones → Google Analytics → Desconectar) — al hacerlo eliminamos de inmediato el token de acceso de nuestra base de datos. También podés revocar el acceso desde myaccount.google.com/permissions o solicitar la eliminación por email a marketplacemitienda@gmail.com con el asunto 'Eliminar datos de Google — [tu email]'.",
         ],
       },
       {
@@ -127,7 +139,8 @@ const CONTENT = {
           "Resend (resend.com): envío de emails transaccionales (confirmaciones, alertas). Solo se comparte el email necesario para cada mensaje. Política de privacidad: resend.com/legal/privacy-policy",
           "Anthropic (anthropic.com): procesa los datos agregados de tu tienda para el funcionamiento de Sasha, nuestro asistente con IA. Ver sección 2 ter para el detalle de qué le compartimos. Política de privacidad: anthropic.com/privacy",
           "Envíopack (enviopack.com): si activás la cotización automática de envío, le compartimos la dirección de origen de tu tienda y el peso de los productos para calcular tarifas con Correo Argentino, OCA y Andreani. Política de privacidad: enviopack.com",
-          "Meta Platforms (facebook.com): si conectás el Catálogo de Meta desde la sección Aplicaciones, le compartimos los datos de tu catálogo de productos (ver sección 2 quinquies). Política de privacidad: facebook.com/privacy",
+          "Meta Platforms (facebook.com): si conectás el Catálogo de Meta o Catálogo en WhatsApp desde la sección Aplicaciones, le compartimos los datos de tu catálogo de productos (ver sección 2 quinquies). Política de privacidad: facebook.com/privacy",
+          "Google LLC (google.com): si conectás Google Analytics desde la sección Aplicaciones, usamos tu autorización para configurar tu propiedad de Analytics (ver sección 2 sexies). Política de privacidad: policies.google.com/privacy",
           "Autoridades competentes cuando sea requerido por ley.",
         ],
       },
