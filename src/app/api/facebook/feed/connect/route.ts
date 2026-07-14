@@ -34,6 +34,16 @@ export async function POST() {
 
     return NextResponse.json({ ok: true, feedId: feed.id });
   } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    // "(#200) Permissions error": Meta bloquea registrar el feed programado
+    // mientras la app está en "Acceso estándar", es decir ANTES de que la
+    // Revisión de la app apruebe el acceso avanzado a catalog_management. El
+    // catálogo ya quedó creado; el feed se activa solo cuando Meta aprueba —
+    // no es un error del dueño, así que se devuelve como "pendiente de revisión".
+    if (/#200|Permissions error/i.test(msg)) {
+      console.warn("Facebook /feed/connect: feed pendiente del acceso avanzado de Meta (#200)");
+      return NextResponse.json({ pendingReview: true });
+    }
     console.error("Facebook /feed/connect error:", err);
     return NextResponse.json({ error: "No se pudo conectar el catálogo con tu feed de productos" }, { status: 502 });
   }

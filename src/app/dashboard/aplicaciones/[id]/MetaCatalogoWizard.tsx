@@ -267,17 +267,39 @@ function FeedStep({ done }: { done: boolean }) {
   const router = useRouter();
   const [connecting, setConnecting] = useState(false);
   const [error, setError] = useState(false);
+  const [pendingReview, setPendingReview] = useState(false);
 
   async function connectFeed() {
     setConnecting(true);
     setError(false);
+    setPendingReview(false);
     const res = await fetch("/api/facebook/feed/connect", { method: "POST" });
-    if (res.ok) {
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.pendingReview) {
+      // Catálogo creado OK; el feed programado se activa cuando Meta apruebe el
+      // acceso avanzado (App Review). No es un error — se muestra como pendiente.
+      setPendingReview(true);
+      setConnecting(false);
+    } else if (res.ok) {
       router.refresh();
     } else {
       setError(true);
       setConnecting(false);
     }
+  }
+
+  if (pendingReview) {
+    return (
+      <div className="flex items-start gap-2.5 bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-3">
+        <CheckCircle className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
+        <div>
+          <p className="text-sm font-semibold text-emerald-800">¡Catálogo conectado!</p>
+          <p className="text-sm text-emerald-700 mt-0.5">
+            La sincronización automática de tus productos se activará cuando Meta termine de revisar tu tienda (suele tardar unos días). No tenés que hacer nada más — te vamos avisando.
+          </p>
+        </div>
+      </div>
+    );
   }
 
   if (done) {
