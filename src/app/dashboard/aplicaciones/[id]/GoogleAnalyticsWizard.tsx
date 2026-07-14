@@ -119,6 +119,7 @@ function PropertyStep({ done }: { done: boolean }) {
   const [loadError, setLoadError] = useState(false);
   const [connectingId, setConnectingId] = useState<string | null>(null);
   const [error, setError] = useState(false);
+  const [errorDetail, setErrorDetail] = useState<string | null>(null);
   const [disconnecting, setDisconnecting] = useState(false);
   const [disconnectError, setDisconnectError] = useState(false);
 
@@ -133,6 +134,7 @@ function PropertyStep({ done }: { done: boolean }) {
   async function connect(accountId: string) {
     setConnectingId(accountId);
     setError(false);
+    setErrorDetail(null);
     const res = await fetch("/api/google/analytics/connect", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -141,7 +143,9 @@ function PropertyStep({ done }: { done: boolean }) {
     if (res.ok) {
       router.refresh();
     } else {
+      const data = await res.json().catch(() => ({}));
       setError(true);
+      setErrorDetail(typeof data.detail === "string" ? data.detail : null);
       setConnectingId(null);
     }
   }
@@ -219,7 +223,12 @@ function PropertyStep({ done }: { done: boolean }) {
       <p className="text-sm text-slate-500 mb-3">
         Elegí tu cuenta de Google Analytics — si ya tenés una propiedad, la reusamos; si no, creamos una nueva sola.
       </p>
-      {error && <p className="text-sm text-red-500 mb-3">No se pudo conectar Google Analytics. Intentá de nuevo.</p>}
+      {error && (
+        <div className="mb-3">
+          <p className="text-sm text-red-500">No se pudo conectar Google Analytics. Intentá de nuevo.</p>
+          {errorDetail && <p className="text-xs text-red-400 mt-1 break-words">Detalle: {errorDetail}</p>}
+        </div>
+      )}
       <div className="space-y-2">
         {accounts.map((a) => (
           <div key={a.accountId} className="flex items-center justify-between border border-slate-200 rounded-lg px-4 py-3">

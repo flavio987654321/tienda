@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth-session";
 import { prisma } from "@/lib/prisma";
-import { listAccountSummaries, createProperty, createWebDataStream, getValidAccessToken } from "@/lib/googleAnalytics";
+import { listAccountSummaries, listDataStreams, createProperty, createWebDataStream, getValidAccessToken } from "@/lib/googleAnalytics";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://tiendaapps.com";
 
@@ -35,9 +35,21 @@ export async function POST(req: NextRequest) {
 
     const propertyId = existingProperty ?? (await createProperty(accessToken, accountId, `${store.name}`)).name;
 
-    const storeUrl = `${APP_URL}/tienda/${store.slug}`;
-    const stream = await createWebDataStream(accessToken, propertyId, storeUrl, `${store.name} — Web`);
-    const measurementId = stream.webStreamData?.measurementId;
+    // Reusar el stream web existente (y su measurementId) si la propiedad ya
+    // tiene uno — así reconectar es idempotente y no se acumulan streams ni
+    // se choca contra el límite de streams por propiedad. Solo se crea uno
+    // nuevo si la propiedad todavía no tiene ningún stream web.
+    const { dataStreams } = await listDataStreams(accessToken, propertyId);
+    const existingMeasurementId = dataStreams
+      ?.find((s) => s.type === "WEB_DATA_STREAM" && s.webStreamData?.measurementId)
+      ?.webStreamData?.measurementId;
+
+    let measurementId = existingMeasurementId;
+    if (!measurementId) {
+      const storeUrl = `${APP_URL}/tienda/${store.slug}`;
+      const stream = await createWebDataStream(accessToken, propertyId, storeUrl, `${store.name} — Web`);
+      measurementId = stream.webStreamData?.measurementId;
+    }
     if (!measurementId) throw new Error("Google no devolvió un measurementId");
 
     let config: Record<string, unknown> = {};
@@ -55,7 +67,10 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ ok: true, measurementId });
   } catch (err) {
-    console.error("Google Analytics /connect error:", err);
-    return NextResponse.json({ error: "No se pudo conectar Google Analytics" }, { status: 502 });
+    const detail = err instanceof Error ? err.message : String(err);
+    console.error("Google Analytics /connect error:", detail);
+    // Se devuelve el detalle real de Google para poder diagnosticar (p. ej.
+    // una cuenta que no admite crear propiedades, o un permiso faltante).
+    return NextResponse.json({ error: "No se pudo conectar Google Analytics", detail }, { status: 502 });
   }
 }

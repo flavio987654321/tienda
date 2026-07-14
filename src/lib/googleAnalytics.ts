@@ -98,6 +98,18 @@ export async function createProperty(accessToken: string, accountId: string, dis
   });
 }
 
+export type DataStream = {
+  name: string;
+  type?: string;
+  webStreamData?: { measurementId?: string };
+};
+
+// Lista los data streams de una propiedad para poder reusar el stream web ya
+// existente (y su measurementId) en vez de crear uno nuevo en cada conexión.
+export async function listDataStreams(accessToken: string, propertyId: string): Promise<{ dataStreams?: DataStream[] }> {
+  return adminGet(`/${propertyId}/dataStreams`, accessToken, { pageSize: "200" });
+}
+
 export async function createWebDataStream(
   accessToken: string,
   propertyId: string, // "properties/456"
