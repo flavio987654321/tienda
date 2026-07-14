@@ -11,6 +11,7 @@ import FacebookConnectButton from "./FacebookConnectButton";
 import FacebookPixelWizard from "./FacebookPixelWizard";
 import FacebookWhatsAppWizard from "./FacebookWhatsAppWizard";
 import GoogleAnalyticsWizard from "./GoogleAnalyticsWizard";
+import GoogleConnectButton from "./GoogleConnectButton";
 
 export default async function AppDetailPage({
   params,
@@ -110,6 +111,8 @@ export default async function AppDetailPage({
                   </span>
                 ) : app.id === "meta-catalogo" ? (
                   <FacebookConnectButton configured={fbConfigured} />
+                ) : app.id === "google-analytics" && !store?.gaConnectedAt ? (
+                  <GoogleConnectButton />
                 ) : (
                   <a
                     href="#instalacion"
@@ -149,10 +152,14 @@ export default async function AppDetailPage({
             </section>
 
             {/* Instalación / Configuración.
-                Para el catálogo de Meta, los pasos recién aparecen una vez
-                conectada la cuenta (el botón Instalar del hero abre el popup
-                de Facebook) — así no hay dos botones que hacen lo mismo. */}
-            {!app.comingSoon && (app.id !== "meta-catalogo" || !!store?.fbConnectedAt) && (
+                Para el catálogo de Meta y Google Analytics, los pasos recién
+                aparecen una vez conectada la cuenta (el botón Instalar del
+                hero abre el popup directo) — así no hay dos botones que
+                hacen lo mismo. Para Google Analytics también se muestra si
+                ya quedó instalado un ID aunque la cuenta esté desconectada,
+                para poder ver el estado y volver a conectar. */}
+            {!app.comingSoon && (app.id !== "meta-catalogo" || !!store?.fbConnectedAt) &&
+              (app.id !== "google-analytics" || !!store?.gaConnectedAt || installed) && (
               <section id="instalacion" className="scroll-mt-6">
                 <div className="flex items-center gap-4 mb-4">
                   <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-slate-400 whitespace-nowrap">

@@ -62,7 +62,6 @@ function AccountStep({ done }: { done: boolean }) {
   const router = useRouter();
   const [waiting, setWaiting] = useState(false);
   const [error, setError] = useState(false);
-  const [disconnecting, setDisconnecting] = useState(false);
 
   useEffect(() => {
     function onMessage(e: MessageEvent) {
@@ -89,27 +88,11 @@ function AccountStep({ done }: { done: boolean }) {
     window.open("/api/google/analytics/oauth/connect", "ga-oauth", `width=${w},height=${h},left=${left},top=${top}`);
   }
 
-  async function disconnect() {
-    setDisconnecting(true);
-    await fetch("/api/google/analytics/oauth/disconnect", { method: "POST" });
-    router.refresh();
-    setDisconnecting(false);
-  }
-
+  // El botón para desconectar/desinstalar vive solo en el Paso 2 (es el que
+  // muestra "Instalada"), así hay un único lugar que apaga todo. Acá el paso
+  // ya hecho es solo informativo.
   if (done) {
-    return (
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-slate-500">Tu cuenta de Google está conectada.</p>
-        <button
-          onClick={disconnect}
-          disabled={disconnecting}
-          className="inline-flex items-center gap-1.5 text-xs text-red-500 hover:text-red-600 transition-colors disabled:opacity-50"
-        >
-          {disconnecting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Unlink className="h-3 w-3" />}
-          Desconectar
-        </button>
-      </div>
-    );
+    return <p className="text-sm text-slate-500">Tu cuenta de Google está conectada.</p>;
   }
 
   return (
@@ -136,6 +119,8 @@ function PropertyStep({ done }: { done: boolean }) {
   const [loadError, setLoadError] = useState(false);
   const [connectingId, setConnectingId] = useState<string | null>(null);
   const [error, setError] = useState(false);
+  const [disconnecting, setDisconnecting] = useState(false);
+  const [disconnectError, setDisconnectError] = useState(false);
 
   useEffect(() => {
     if (done) return;
@@ -161,18 +146,46 @@ function PropertyStep({ done }: { done: boolean }) {
     }
   }
 
+  // Único botón que apaga toda la app: desconecta la cuenta de Google Y borra
+  // el ID de Analytics instalado (misma ruta /oauth/disconnect).
+  async function uninstall() {
+    setDisconnecting(true);
+    setDisconnectError(false);
+    const res = await fetch("/api/google/analytics/oauth/disconnect", { method: "POST" });
+    if (res.ok) {
+      router.refresh();
+    } else {
+      setDisconnectError(true);
+    }
+    setDisconnecting(false);
+  }
+
   if (done) {
     return (
       <div>
         <p className="text-sm text-slate-500 mb-3">Tu tienda ya está midiendo visitas con Google Analytics.</p>
-        <a
-          href="https://analytics.google.com"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 text-sm font-semibold text-indigo-600 hover:text-indigo-700"
-        >
-          Ver en Google Analytics <ExternalLink className="h-3.5 w-3.5" />
-        </a>
+        <div className="flex items-center gap-4">
+          <a
+            href="https://analytics.google.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 text-sm font-semibold text-indigo-600 hover:text-indigo-700"
+          >
+            Ver en Google Analytics <ExternalLink className="h-3.5 w-3.5" />
+          </a>
+          <button
+            onClick={uninstall}
+            disabled={disconnecting}
+            className="inline-flex items-center gap-1.5 text-xs text-red-500 hover:text-red-600 transition-colors disabled:opacity-50"
+          >
+            {disconnecting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Unlink className="h-3 w-3" />}
+            Desinstalar
+          </button>
+        </div>
+        <p className="text-[11px] text-slate-400 mt-2">
+          Al desinstalar se desconecta tu cuenta de Google y se borra el ID de Analytics — tu tienda deja de medir visitas hasta que vuelvas a instalar.
+        </p>
+        {disconnectError && <p className="text-xs text-red-500 mt-1.5">No se pudo desinstalar. Intentá de nuevo.</p>}
       </div>
     );
   }
