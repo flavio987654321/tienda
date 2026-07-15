@@ -10,6 +10,7 @@ import { cotizarEnvio } from "@/lib/enviopack";
 import { calculateGoalAmount, MIN_DONATION, MAX_DONATION_PCT_OF_GOAL } from "@/lib/canasta";
 import { recordStockMovement } from "@/lib/stockMovements";
 import { getClientIp } from "@/lib/request-ip";
+import { isSubscriptionActive } from "@/lib/subscription";
 
 type CheckoutItem = {
   productId: string;
@@ -78,7 +79,17 @@ async function resolveShipping(
   return { label: pickup.label, cost: 0 };
 }
 
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+// Los ids de este proyecto son cuid de Prisma (`c` + ~24 alfanuméricos), no UUID.
+//
+// Acá había un `UUID_RE` que ningún id de la base podía pasar, así que desde el
+// 5/7 (commit ad9dafb, "security hardening") el checkout rechazaba TODOS los
+// pedidos con 400 "Tienda inválida". El único pedido real de la plataforma es del
+// 26/6 — nueve días antes de ese commit — así que la falla no la vio nadie: la
+// única tienda con tráfico no tuvo ventas desde entonces.
+//
+// Se aceptan los dos formatos: hoy todo es cuid, pero si algún id migra a UUID
+// esto no vuelve a romperse en silencio.
+const ID_RE = /^(c[a-z0-9]{20,30}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i;
 
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req);
@@ -119,20 +130,20 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "El carrito esta vacio" }, { status: 400 });
   }
 
-  // Validar formato UUID para prevenir inyecciones
-  if (!UUID_RE.test(String(storeId))) {
+  // Validar el formato de los ids para descartar basura temprano
+  if (!ID_RE.test(String(storeId))) {
     return NextResponse.json({ error: "Tienda inválida" }, { status: 400 });
   }
   if (items.length > 20) {
     return NextResponse.json({ error: "El carrito no puede tener más de 20 líneas" }, { status: 400 });
   }
-  if (items.some(i => !UUID_RE.test(String(i.productId ?? "")))) {
+  if (items.some(i => !ID_RE.test(String(i.productId ?? "")))) {
     return NextResponse.json({ error: "Formato de producto inválido" }, { status: 400 });
   }
-  if (couponId && !UUID_RE.test(String(couponId))) {
+  if (couponId && !ID_RE.test(String(couponId))) {
     return NextResponse.json({ error: "Cupón inválido" }, { status: 400 });
   }
-  if (affiliateId && !UUID_RE.test(String(affiliateId))) {
+  if (affiliateId && !ID_RE.test(String(affiliateId))) {
     return NextResponse.json({ error: "Afiliado inválido" }, { status: 400 });
   }
 
@@ -155,14 +166,52 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Demasiados intentos. Esperá unos minutos e intentá de nuevo." }, { status: 429 });
   }
 
-  // Resolve shipping from store's config (dynamic per-store pricing)
-  const storeForShipping = await prisma.store.findUnique({
+  // La tienda tiene que existir Y estar habilitada para vender.
+  //
+  // Hasta acá el checkout no miraba NADA de esto: ni el cierre, ni la suscripción.
+  // O sea que aceptaba pedidos —y cobraba por MercadoPago— de tiendas cerradas y
+  // de suscripciones vencidas, incluido el trial de 7 días: alguien se registraba,
+  // no pagaba nunca, y su tienda seguía vendiendo para siempre. Peor todavía para
+  // el comprador, porque la dueña tiene el panel bloqueado y no puede despachar
+  // lo que le compraron.
+  //
+  // El cron cierra las tiendas vencidas, pero esto va igual: si el cron no corrió
+  // o falló, no queremos seguir tomando plata.
+  const store = await prisma.store.findUnique({
     where: { id: storeId },
-    select: { storeConfig: true },
+    select: {
+      storeConfig: true,
+      isActive: true,
+      closedAt: true,
+      owner: {
+        select: {
+          subscription: {
+            select: { status: true, trialEndsAt: true, currentPeriodEnd: true, gracePeriodEndsAt: true },
+          },
+        },
+      },
+    },
   });
+
+  if (!store || !store.isActive || store.closedAt) {
+    return NextResponse.json({ error: "Esta tienda no está disponible" }, { status: 409 });
+  }
+
+  // isSubscriptionActive incluye TRIAL y GRACE a propósito: durante la prueba y
+  // durante los días de gracia la tienda vende normal. Recién al vencer del todo
+  // deja de aceptar pedidos.
+  const sub = store.owner?.subscription;
+  if (!sub || !isSubscriptionActive(sub as Parameters<typeof isSubscriptionActive>[0])) {
+    return NextResponse.json(
+      { error: "Esta tienda no está aceptando pedidos en este momento" },
+      { status: 409 }
+    );
+  }
+
+  // Resolve shipping from store's config (dynamic per-store pricing)
   let storeShippingMethods: ShippingMethod[] = DEFAULT_SHIPPING_METHODS;
   try {
-    const cfg = JSON.parse(storeForShipping?.storeConfig || "{}");
+    const cfg = JSON.parse(store.storeConfig || "{}");
     if (Array.isArray(cfg.shippingMethods) && cfg.shippingMethods.length > 0) {
       storeShippingMethods = cfg.shippingMethods;
     }
