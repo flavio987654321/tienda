@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ShoppingBag, ArrowLeft } from "lucide-react";
+import { TERMS_LAST_UPDATED } from "@/lib/legal";
 
 const CONTENT = {
   owner: {
@@ -160,6 +161,8 @@ const CONTENT = {
         list: [
           "Datos de cuenta (nombre, email): mientras la cuenta esté activa + 90 días adicionales tras la cancelación.",
           "Datos de tienda (productos, precios, imágenes): mismos plazos que la cuenta.",
+          "Tienda cerrada ≠ cuenta cancelada: si cerrás tu tienda (o se cierra sola por falta de pago), tu cuenta sigue activa — podés entrar a tu panel y reactivarla cuando quieras. Por eso tu diseño, tus productos y tus imágenes se conservan sin plazo mientras no elimines la cuenta. El plazo de 90 días de arriba corre desde que eliminás la cuenta, no desde que cerrás la tienda.",
+          "Si tenés una tienda cerrada y querés que borremos todo igual, podés eliminar tu cuenta desde Configuración → Zona de peligro, o pedirlo por email (ver sección 8).",
           "Historial de pedidos: 12 meses adicionales tras el cierre de cuenta para resolver disputas o reclamaciones de garantía.",
           "Respaldo por cambio de rubro: si cambiás el tipo de tienda, los pedidos, pagos, comisiones y cupones del ciclo anterior se eliminan de tu panel, pero se conserva una copia interna de respaldo por hasta 10 años (plazo de conservación de documentación comercial, art. 328 del Código Civil y Comercial), con finalidad exclusiva contable y de resolución de disputas o contracargos. Podés descargarla en cualquier momento desde Configuración → Respaldos.",
           "Datos bancarios cifrados (CBU/CUIL): eliminados junto con la cuenta. No se conservan post-cancelación.",
@@ -502,7 +505,7 @@ export default async function PrivacidadPage({
           </div>
 
           <h1 className="text-4xl font-black mb-2">Política de Privacidad</h1>
-          <p className="text-gray-500 text-sm mb-6">Última actualización: julio 2026</p>
+          <p className="text-gray-500 text-sm mb-6">Última actualización: {TERMS_LAST_UPDATED}</p>
 
           {/* Responsable del tratamiento */}
           <div className="rounded-xl border border-white/10 bg-white/5 p-5 mb-8 text-sm text-gray-300 space-y-1">

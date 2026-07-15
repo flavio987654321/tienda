@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ShoppingBag, ArrowLeft } from "lucide-react";
+import { TERMS_LAST_UPDATED } from "@/lib/legal";
 
 const CONTENT = {
   owner: {
@@ -33,8 +34,8 @@ const CONTENT = {
           "Plan Tienda Premium: $25.000 ARS/mes o $225.000 ARS/año. Incluye todo lo del plan Pro más la posibilidad de conectar tu propio dominio, afiliados ilimitados, cupones ilimitados y soporte prioritario.",
           "Ambos planes incluyen 7 días de prueba gratuita sin tarjeta de crédito.",
           "Los pagos se procesan a través de Mercado Pago.",
-          "Ante el vencimiento, hay un período de gracia de 4 días para renovar antes de que se limite el acceso.",
-          "Las suscripciones se renuevan automáticamente salvo cancelación desde el panel.",
+          "Los pagos son por período: no hay débito automático ni renovación automática. Al vencer tu plan te avisamos por email y tenés que renovarlo vos desde 'Mi Plan'. Nunca te vamos a cobrar sin que lo confirmes.",
+          "Ante el vencimiento, hay un período de gracia de 4 días para renovar antes de que se limite el acceso al panel. Si no renovás, tu tienda se cierra en los plazos de la sección 7 — sin perder nada y con posibilidad de reactivarla.",
         ],
       },
       {
@@ -118,8 +119,19 @@ const CONTENT = {
         ],
       },
       {
-        title: "7. Cancelación y acceso",
-        body: "Podés cancelar tu suscripción en cualquier momento desde 'Mi Plan'. Tu tienda permanecerá visible hasta el fin del período abonado. Tras el vencimiento y período de gracia, la tienda se ocultará pero tus datos no se borran — podés reactivarla en cualquier momento. La cancelación no extingue las obligaciones de pago de comisiones ya acreditadas en el panel de comisiones de afiliados activos.",
+        title: "7. Cerrar tu tienda, reactivarla y cierre por falta de pago",
+        body: "Podés dejar de usar TiendaApps cuando quieras. Cerrar tu tienda y eliminar tu cuenta son dos cosas distintas:",
+        list: [
+          "Cerrar tu tienda (reversible): desde Configuración → Zona de peligro. Sale de línea en el momento, dejamos de cobrarte la suscripción y los links de tus afiliadas quedan pausados. No se borra nada: tu diseño, tus productos, tus imágenes y tu historial de pedidos quedan tal como los dejaste. Podés reactivarla desde tu panel cuando quieras, y las afiliadas que el cierre pausó recuperan su acceso automáticamente — no tienen que postularse de nuevo.",
+          "El cierre es inmediato: si te quedaban días del período que ya abonaste, no se devuelven ni se acreditan para después. Te lo avisamos antes de confirmar.",
+          "Bloqueos de protección: no vas a poder cerrar tu tienda mientras tengas pedidos sin entregar o cancelar, ni comisiones de afiliadas sin liquidar. Cerrar no extingue ninguna de esas obligaciones.",
+          "Cierre automático por falta de pago: si tu suscripción vence y no la renovás, tu tienda sigue online un tiempo y después se cierra sola, con el mismo efecto que el cierre voluntario — no se borra nada y podés reactivarla. El plazo se cuenta desde el vencimiento: 10 días corridos si nunca completaste un período pago (por ejemplo, si venías del período de prueba), y 20 días corridos si ya tenías un plan pago.",
+          "Antes de cerrarte la tienda por falta de pago te avisamos por email dos veces: el día que vence tu plan y otra vez unos días antes del cierre.",
+          "Acceso al panel tras el vencimiento: durante los primeros 4 días corridos desde que vence seguís entrando normalmente a tu panel, con un aviso. Pasado ese plazo el panel queda bloqueado hasta que renueves, aunque tu tienda siga online hasta la fecha de cierre.",
+          "Mientras tu tienda esté cerrada no acepta pedidos nuevos, y quien entre a su dirección web va a ver un aviso de que no está disponible.",
+          "Eliminar tu cuenta es otra cosa y no tiene vuelta: ver la sección 8. Si lo que querés es dejar de pagar sin perder tu trabajo, lo que corresponde es cerrar la tienda.",
+          "Las comisiones ya acreditadas en el panel de comisiones de tus afiliadas no se extinguen por cerrar tu tienda, ni por el cierre automático, ni por eliminar tu cuenta.",
+        ],
       },
       {
         title: "7 bis. Fallecimiento o incapacidad del titular",
@@ -244,8 +256,16 @@ const CONTENT = {
         body: "TiendaApps puede ofrecer premios o cupones adicionales por volumen de ventas a afiliados destacados. Estos beneficios son opcionales y pueden modificarse sin previo aviso.",
       },
       {
-        title: "7. Baja de la cuenta",
-        body: "Podés dejar de usar la plataforma como afiliado/a en cualquier momento, sin necesidad de cancelar ninguna suscripción. Tus comisiones ya acreditadas en tu panel de comisiones siguen disponibles para retirar. Si una tienda te da de baja como afiliado/a, perdés acceso a tu link para esa tienda, pero tu cuenta sigue activa para postularte a otras.",
+        title: "7. Baja de la cuenta y cierre de una tienda donde vendés",
+        body: null,
+        list: [
+          "Podés dejar de usar la plataforma como afiliado/a en cualquier momento, sin necesidad de cancelar ninguna suscripción. Tus comisiones ya acreditadas en tu panel de comisiones siguen disponibles para retirar.",
+          "Si una tienda te da de baja como afiliado/a, perdés acceso a tu link para esa tienda, pero tu cuenta sigue activa para postularte a otras.",
+          "Si una tienda donde vendés cierra —porque su dueño/a lo decidió o porque su plan venció— tu link para esa tienda queda pausado y deja de generar ventas nuevas. Te avisamos por email y por notificación en tu panel.",
+          "El cierre de una tienda no afecta tu saldo: las comisiones ya acreditadas siguen siendo tuyas y disponibles para retirar. Ninguna tienda puede cerrar ni eliminar su cuenta mientras te deba comisiones sin liquidar — el sistema se lo impide.",
+          "Si esa tienda vuelve a abrir, recuperás tu lugar y tu link se reactiva automáticamente: no tenés que postularte de nuevo ni volver a aceptar estos términos.",
+          "Tu cuenta y tus comisiones en otras tiendas no se ven afectadas por el cierre de una.",
+        ],
       },
       {
         title: "7 bis. Donaciones a la Canasta Solidaria o a una Causa Libre",
@@ -401,7 +421,7 @@ export default async function TerminosPage({
           </div>
 
           <h1 className="text-4xl font-black mb-2">Términos y Condiciones</h1>
-          <p className="text-gray-500 text-sm mb-6">Última actualización: julio 2026</p>
+          <p className="text-gray-500 text-sm mb-6">Última actualización: {TERMS_LAST_UPDATED}</p>
 
           {/* Responsable */}
           <div className="rounded-xl border border-white/10 bg-white/5 p-5 mb-8 text-sm text-gray-300 space-y-1">
