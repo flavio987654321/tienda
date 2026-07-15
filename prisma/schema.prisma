@@ -217,6 +217,10 @@ model Store {
   gaAccountId           String?
   gaPropertyId          String?
   gaConnectedAt         DateTime?
+  // Google Shopping — opt-in del dueño para que sus productos entren al feed
+  // central de Merchant Center de la plataforma. No hay OAuth: es solo el
+  // permiso explícito de la tienda para publicarse en Google.
+  gsEnabledAt           DateTime?
   // Preview image generada al guardar el template
   previewImage          String?
   // Dirección de origen para cotizar envío en vivo (Envíopack). Opcional:

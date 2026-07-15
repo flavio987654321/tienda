@@ -89,7 +89,6 @@ export const APPS_REGISTRY: AppDefinition[] = [
     price: "gratis",
     provider: "interno",
     providerName: "Google",
-    comingSoon: true,
   },
   {
     id: "whatsapp-catalogo",

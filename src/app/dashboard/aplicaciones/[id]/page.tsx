@@ -12,6 +12,8 @@ import FacebookPixelWizard from "./FacebookPixelWizard";
 import FacebookWhatsAppWizard from "./FacebookWhatsAppWizard";
 import GoogleAnalyticsWizard from "./GoogleAnalyticsWizard";
 import GoogleConnectButton from "./GoogleConnectButton";
+import GoogleShoppingWizard from "./GoogleShoppingWizard";
+import GoogleShoppingInstallButton from "./GoogleShoppingInstallButton";
 
 export default async function AppDetailPage({
   params,
@@ -44,6 +46,7 @@ export default async function AppDetailPage({
       fbFeedId: true,
       fbWabaId: true,
       gaConnectedAt: true,
+      gsEnabledAt: true,
     },
   });
 
@@ -64,6 +67,7 @@ export default async function AppDetailPage({
     "google-analytics": !!analytics.googleAnalyticsId?.trim(),
     "facebook-pixel": !!analytics.facebookPixelId?.trim(),
     "whatsapp-catalogo": !!store?.fbWabaId,
+    "google-shopping": !!store?.gsEnabledAt,
   };
   const installed = installedById[app.id] ?? false;
   const fbConfigured = !!process.env.FB_APP_ID && !!process.env.FB_APP_SECRET;
@@ -113,6 +117,8 @@ export default async function AppDetailPage({
                   <FacebookConnectButton configured={fbConfigured} />
                 ) : app.id === "google-analytics" && !store?.gaConnectedAt ? (
                   <GoogleConnectButton />
+                ) : app.id === "google-shopping" ? (
+                  <GoogleShoppingInstallButton />
                 ) : (
                   <a
                     href="#instalacion"
@@ -159,7 +165,8 @@ export default async function AppDetailPage({
                 ya quedó instalado un ID aunque la cuenta esté desconectada,
                 para poder ver el estado y volver a conectar. */}
             {!app.comingSoon && (app.id !== "meta-catalogo" || !!store?.fbConnectedAt) &&
-              (app.id !== "google-analytics" || !!store?.gaConnectedAt || installed) && (
+              (app.id !== "google-analytics" || !!store?.gaConnectedAt || installed) &&
+              (app.id !== "google-shopping" || !!store?.gsEnabledAt) && (
               <section id="instalacion" className="scroll-mt-6">
                 <div className="flex items-center gap-4 mb-4">
                   <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-slate-400 whitespace-nowrap">
@@ -183,6 +190,7 @@ export default async function AppDetailPage({
                     measurementId={analytics.googleAnalyticsId?.trim() || null}
                   />
                 )}
+                {app.id === "google-shopping" && <GoogleShoppingWizard />}
                 {app.id === "facebook-pixel" && (
                   <FacebookPixelWizard
                     fbConnected={!!store?.fbConnectedAt}

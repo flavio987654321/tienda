@@ -20,7 +20,7 @@ export default async function AplicacionesPage() {
 
   const store = await prisma.store.findUnique({
     where: { ownerId: user.id },
-    select: { id: true, fbConnectedAt: true, fbWabaId: true, storeConfig: true },
+    select: { id: true, fbConnectedAt: true, fbWabaId: true, gsEnabledAt: true, storeConfig: true },
   });
 
   const [pendingAffiliateCount, lowStockCount] = store
@@ -40,6 +40,7 @@ export default async function AplicacionesPage() {
     "google-analytics": !!analytics.googleAnalyticsId?.trim(),
     "facebook-pixel": !!analytics.facebookPixelId?.trim(),
     "whatsapp-catalogo": !!store?.fbWabaId,
+    "google-shopping": !!store?.gsEnabledAt,
   };
 
   return (
