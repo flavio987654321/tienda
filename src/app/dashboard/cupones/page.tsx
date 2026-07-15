@@ -6,7 +6,10 @@ import {
   Plus, Loader2, Settings, Palette, Gift, X, AlertCircle,
   ToggleLeft, ToggleRight, Copy, Check, Search, ChevronDown, ChevronUp, Trash2,
 } from "lucide-react";
-import { GAMIFICATION_EXCLUDED_TEMPLATES } from "@/lib/gamification";
+import {
+  GAMIFICATION_EXCLUDED_TEMPLATES,
+  readableTextOn, uprightAngle, wheelTextMaxWidth, fitWheelText,
+} from "@/lib/gamification";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -470,8 +473,8 @@ function CouponHistory() {
 
 // ─── Spin Wheel Preview ───────────────────────────────────────────────────────
 
-function SpinWheelPreview({ prizes, styles, centerType, centerText, size = 200 }: {
-  prizes: Prize[]; styles: WidgetStyles; centerType: string; centerText: string; size?: number;
+function SpinWheelPreview({ prizes, styles, centerType, centerText, storeLogo, size = 200 }: {
+  prizes: Prize[]; styles: WidgetStyles; centerType: string; centerText: string; storeLogo?: string | null; size?: number;
 }) {
   const cx = size / 2; const cy = size / 2; const r = size / 2 - 4;
   const items = prizes.length > 0 ? prizes : [
@@ -494,22 +497,46 @@ function SpinWheelPreview({ prizes, styles, centerType, centerText, size = 200 }
           const mid = sa + angleStep / 2;
           const tx = cx + r * 0.65 * Math.cos(mid); const ty = cy + r * 0.65 * Math.sin(mid);
           const color = styles.spinnerColors[i % styles.spinnerColors.length];
+          // Misma lógica que la ruleta real (src/lib/gamification): color legible
+          // según el sector, ángulo sin texto invertido y ajuste al ancho real.
+          const fitted = fitWheelText(p.label, wheelTextMaxWidth(r, items.length, 0.65), fontSize, fontSize * 0.55);
+          const angleDeg = (uprightAngle(mid + Math.PI / 2) * 180) / Math.PI;
           return (
             <g key={i}>
               <path d={`M${cx},${cy} L${x1},${y1} A${r},${r} 0 ${angleStep > Math.PI ? 1 : 0},1 ${x2},${y2} Z`}
                 fill={color} stroke={styles.spinnerBorder} strokeWidth="1.5" />
               <text x={tx} y={ty} textAnchor="middle" dominantBaseline="middle"
-                fontSize={fontSize} fontWeight="700" fill="#fff"
-                transform={`rotate(${(mid * 180) / Math.PI + 90}, ${tx}, ${ty})`}>
-                {p.label.length > 10 ? p.label.slice(0, 10) + "…" : p.label}
+                fontSize={fitted.fontSize} fontWeight="700" fill={readableTextOn(color)}
+                transform={`rotate(${angleDeg}, ${tx}, ${ty})`}>
+                {fitted.text}
               </text>
             </g>
           );
         })}
         <circle cx={cx} cy={cy} r={centerR} fill={styles.centerBg} stroke={styles.centerBorder} strokeWidth="3" />
-        <text x={cx} y={cy} textAnchor="middle" dominantBaseline="middle" fontSize={fontSize - 1} fontWeight="700" fill={styles.centerText}>
-          {(centerType === "text" ? centerText : "Logo").slice(0, 8)}
-        </text>
+        {/* Con centerType "logo" se dibuja el logo real de la tienda recortado al
+            círculo — igual que la ruleta de la tienda. Antes acá se escribía la
+            palabra "Logo", que no era lo que veía el cliente. */}
+        {centerType === "logo" ? (
+          storeLogo && (
+            <>
+              <clipPath id="wheel-center-clip">
+                <circle cx={cx} cy={cy} r={centerR - 2} />
+              </clipPath>
+              <image
+                href={storeLogo}
+                x={cx - centerR * 0.7} y={cy - centerR * 0.7}
+                width={centerR * 1.4} height={centerR * 1.4}
+                clipPath="url(#wheel-center-clip)"
+                preserveAspectRatio="xMidYMid meet"
+              />
+            </>
+          )
+        ) : (
+          <text x={cx} y={cy} textAnchor="middle" dominantBaseline="middle" fontSize={fontSize - 1} fontWeight="700" fill={styles.centerText}>
+            {centerText.slice(0, 8)}
+          </text>
+        )}
       </svg>
       <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1"
         style={{ width: 0, height: 0, borderLeft: `${Math.round(size * 0.04)}px solid transparent`, borderRight: `${Math.round(size * 0.04)}px solid transparent`, borderTop: `${Math.round(size * 0.09)}px solid ${styles.spinnerBorder}` }} />
@@ -609,7 +636,6 @@ function ScratchDemoCanvas({ styles }: { styles: WidgetStyles }) {
     fillGold();
     rafRef.current = requestAnimationFrame(frame);
     return () => cancelAnimationFrame(rafRef.current);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
@@ -630,8 +656,8 @@ function ScratchDemoCanvas({ styles }: { styles: WidgetStyles }) {
 
 // ─── Widget Editor ────────────────────────────────────────────────────────────
 
-function WidgetEditor({ widget, onSave, onClose, saving, defaultTab = "general" }: {
-  widget: Widget; onSave: (w: Widget) => void; onClose: () => void; saving: boolean; defaultTab?: "general" | "styles" | "prizes";
+function WidgetEditor({ widget, onSave, onClose, saving, storeLogo, defaultTab = "general" }: {
+  widget: Widget; onSave: (w: Widget) => void; onClose: () => void; saving: boolean; storeLogo?: string | null; defaultTab?: "general" | "styles" | "prizes";
 }) {
   const [form, setForm] = useState<Widget>(widget);
   const [tab, setTab] = useState<"general" | "styles" | "prizes">(defaultTab);
@@ -1030,13 +1056,16 @@ function WidgetEditor({ widget, onSave, onClose, saving, defaultTab = "general" 
           {/* Preview — oculto en pantallas pequeñas */}
           <div className="hidden lg:flex w-52 shrink-0 border-l border-gray-100 bg-gray-50 px-4 py-4 flex-col items-center gap-3 overflow-y-auto">
             <style>{`@keyframes preview-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Vista previa</p>
-            <div className="w-full rounded-2xl shadow-lg overflow-hidden" style={{ background: form.styles.popupBg }}>
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide shrink-0">Vista previa</p>
+            {/* shrink-0: sin esto flexbox aplasta la tarjeta cuando falta alto y,
+                al tener overflow-hidden, recortaba el final (el texto legal) en
+                vez de dejar scrollear el panel. */}
+            <div className="w-full shrink-0 rounded-2xl shadow-lg overflow-hidden" style={{ background: form.styles.popupBg }}>
               <div className="px-3 pt-3 pb-4 flex flex-col items-center gap-2">
                 {form.type === "SPIN"
                   ? (
                     <div style={{ animation: "preview-spin 9s linear infinite", transformOrigin: "center" }}>
-                      <SpinWheelPreview prizes={form.prizes} styles={form.styles} centerType={form.centerType} centerText={form.centerText} size={148} />
+                      <SpinWheelPreview prizes={form.prizes} styles={form.styles} centerType={form.centerType} centerText={form.centerText} storeLogo={storeLogo} size={148} />
                     </div>
                   )
                   : <ScratchDemoCanvas styles={form.styles} />
@@ -1049,7 +1078,7 @@ function WidgetEditor({ widget, onSave, onClose, saving, defaultTab = "general" 
                 {form.legalText && <p className="text-center text-xs opacity-50" style={{ color: form.styles.textColor }}>{form.legalText}</p>}
               </div>
             </div>
-            <p className="text-[10px] text-gray-400 text-center leading-relaxed">Demo animado — así lo ve tu cliente</p>
+            <p className="text-[10px] text-gray-400 text-center leading-relaxed shrink-0">Demo animado — así lo ve tu cliente</p>
           </div>
         </div>
 
@@ -1084,6 +1113,7 @@ function WidgetEditor({ widget, onSave, onClose, saving, defaultTab = "general" 
 export default function CuponesPage() {
   const [widget, setWidget] = useState<Widget | null>(null);
   const [storeTemplateId, setStoreTemplateId] = useState<string | null>(null);
+  const [storeLogo, setStoreLogo] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [showEditor, setShowEditor] = useState(false);
   const [editorDefaultTab, setEditorDefaultTab] = useState<"general" | "styles" | "prizes">("general");
@@ -1098,6 +1128,7 @@ export default function CuponesPage() {
     try {
       const res = await fetch("/api/gamification/widget").then((r) => r.json());
       setStoreTemplateId(res.storeTemplateId ?? null);
+      setStoreLogo(res.storeLogo ?? null);
       if (res.widget) {
         const w = res.widget;
         setWidget({
@@ -1210,6 +1241,7 @@ export default function CuponesPage() {
             if (widget && !widget.id) setWidget(null);
           }}
           saving={saving}
+          storeLogo={storeLogo}
           defaultTab={editorDefaultTab}
         />
       )}
@@ -1499,7 +1531,7 @@ export default function CuponesPage() {
                     Vista del cliente
                   </p>
                   {widget.type === "SPIN"
-                    ? <SpinWheelPreview prizes={widget.prizes} styles={widget.styles} centerType={widget.centerType} centerText={widget.centerText} size={140} />
+                    ? <SpinWheelPreview prizes={widget.prizes} styles={widget.styles} centerType={widget.centerType} centerText={widget.centerText} storeLogo={storeLogo} size={140} />
                     : <ScratchPreview styles={widget.styles} />
                   }
                   <div className="text-center">

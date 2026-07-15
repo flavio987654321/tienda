@@ -28,6 +28,8 @@ export async function GET(req: NextRequest) {
       legalText: true,
       centerType: true,
       centerText: true,
+      // El logo de la tienda se dibuja en el centro cuando centerType === "logo".
+      store: { select: { logo: true } },
       triggerType: true,
       triggerDelay: true,
       showFrequency: true,
@@ -56,7 +58,9 @@ export async function GET(req: NextRequest) {
   } catch {}
   const styles = { ...DEFAULT_STYLES, ...parsedStyles };
 
+  // `store` se aplana a `logo` para no exponer la relación entera al cliente.
+  const { store, ...rest } = widget;
   return NextResponse.json({
-    widget: { ...widget, styles, prizes: allPrizes },
+    widget: { ...rest, logo: store?.logo ?? null, styles, prizes: allPrizes },
   });
 }

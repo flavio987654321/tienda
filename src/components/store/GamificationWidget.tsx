@@ -4,10 +4,15 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { X, Copy, Check, Mail } from "lucide-react";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { useTurnstile } from "@/components/Turnstile";
+import { readableTextOn, overlayOn, uprightAngle, wheelTextMaxWidth, fitWheelText } from "@/lib/gamification";
 
 // Se muestra cuando el dueño de la tienda no cargó su propio texto legal —
 // deja en claro que los sectores no tienen todos la misma chance de salir.
 const DEFAULT_LEGAL_TEXT = "Los premios se sortean con distinta probabilidad cada uno. Un premio por persona.";
+
+// Marca de "ya ganó su cupón": apaga la pestaña flotante para siempre en este
+// navegador. El cupón le queda igual en el mail, así que no se pierde nada.
+const wonKey = (widgetId: string) => `gw_won_${widgetId}`;
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -26,6 +31,7 @@ type WidgetConfig = {
   title: string; subtitle: string; buttonText: string;
   reclaimText: string; legalText: string;
   centerType: string; centerText: string;
+  logo: string | null;
   triggerType: "ON_ENTER" | "FIRST_CLICK" | "DELAY";
   triggerDelay: number | null;
   showFrequency: "ONCE_EVER" | "ONCE_SESSION" | "ALWAYS";
@@ -53,10 +59,25 @@ function formatExpiry(iso: string | null): string | null {
 
 // ─── Wheel drawing ──────────────────────────────────────────────────────────
 
-function renderWheel(canvas: HTMLCanvasElement, cfg: WidgetConfig, rotation: number) {
+function renderWheel(canvas: HTMLCanvasElement, cfg: WidgetConfig, rotation: number, logo?: HTMLImageElement | null) {
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
-  const W = canvas.width; const H = canvas.height;
+
+  // El bitmap se ajusta al tamaño real en pantalla y a la densidad del
+  // dispositivo: antes era fijo en 256 y los celulares (2x/3x) lo agrandaban,
+  // así que la rueda se veía borrosa. Después de tocar canvas.width hay que
+  // reaplicar la escala, porque cambiarlo resetea el contexto.
+  const dpr = typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
+  const size = canvas.clientWidth || 256;
+  const px = Math.round(size * dpr);
+  if (canvas.width !== px || canvas.height !== px) {
+    canvas.width = px;
+    canvas.height = px;
+  }
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  // A partir de acá se dibuja en píxeles CSS, sin pensar en la densidad.
+  const W = size; const H = size;
   const cx = W / 2; const cy = H / 2;
   const r = Math.min(W, H) / 2 - 3;
   const items = cfg.prizes.length > 0 ? cfg.prizes : [
@@ -68,13 +89,22 @@ function renderWheel(canvas: HTMLCanvasElement, cfg: WidgetConfig, rotation: num
 
   ctx.clearRect(0, 0, W, H);
 
-  items.forEach((p, i) => {
+  // Sombra bajo la rueda: le da volumen y la despega del fondo del popup.
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, 2 * Math.PI);
+  ctx.fillStyle = cfg.styles.spinnerBorder;
+  ctx.shadowColor = "rgba(0,0,0,0.35)";
+  ctx.shadowBlur = Math.round(r * 0.12);
+  ctx.shadowOffsetY = Math.round(r * 0.04);
+  ctx.fill();
+  ctx.restore();
+
+  // Pasada 1 — sectores. Se dibujan todos antes que el texto para que el
+  // brillo de relieve quede debajo de las etiquetas y no las apague.
+  items.forEach((_p, i) => {
     const sa = rotation + i * step - Math.PI / 2;
     const ea = sa + step;
-    const x1 = cx + r * Math.cos(sa); const y1 = cy + r * Math.sin(sa);
-    const x2 = cx + r * Math.cos(ea); const y2 = cy + r * Math.sin(ea);
-    const mid = sa + step / 2;
-    const tx = cx + r * 0.64 * Math.cos(mid); const ty = cy + r * 0.64 * Math.sin(mid);
 
     ctx.beginPath();
     ctx.moveTo(cx, cy);
@@ -85,34 +115,92 @@ function renderWheel(canvas: HTMLCanvasElement, cfg: WidgetConfig, rotation: num
     ctx.strokeStyle = cfg.styles.spinnerBorder;
     ctx.lineWidth = 1.5;
     ctx.stroke();
+  });
+
+  // Brillo radial: aclara arriba y oscurece el borde, para que la rueda se vea
+  // con volumen. Va encima de los colores del dueño sin cambiarlos.
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, 2 * Math.PI);
+  ctx.clip();
+  const gloss = ctx.createRadialGradient(cx, cy - r * 0.35, r * 0.05, cx, cy, r);
+  gloss.addColorStop(0, "rgba(255,255,255,0.20)");
+  gloss.addColorStop(0.6, "rgba(255,255,255,0.02)");
+  gloss.addColorStop(1, "rgba(0,0,0,0.20)");
+  ctx.fillStyle = gloss;
+  ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
+  ctx.restore();
+
+  // Pasada 2 — etiquetas.
+  items.forEach((p, i) => {
+    const mid = rotation + i * step - Math.PI / 2 + step / 2;
+    const tx = cx + r * 0.64 * Math.cos(mid); const ty = cy + r * 0.64 * Math.sin(mid);
 
     ctx.save();
     ctx.translate(tx, ty);
-    ctx.rotate(mid + Math.PI / 2);
-    ctx.fillStyle = "#fff";
-    ctx.font = `bold ${Math.round(r * 0.1)}px system-ui`;
+    // uprightAngle evita que los sectores de abajo muestren el texto invertido.
+    ctx.rotate(uprightAngle(mid + Math.PI / 2));
+    const segColor = cfg.styles.spinnerColors[i % cfg.styles.spinnerColors.length];
+    ctx.fillStyle = readableTextOn(segColor);
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText((p.label || "").length > 10 ? p.label.slice(0, 10) + "…" : p.label, 0, 0);
+    // Se mide con el canvas real, así el ajuste es exacto y no estimado.
+    const measure = (t: string, f: number) => {
+      ctx.font = `bold ${f}px system-ui`;
+      return ctx.measureText(t).width;
+    };
+    const { text, fontSize } = fitWheelText(
+      p.label || "",
+      wheelTextMaxWidth(r, n, 0.64),
+      r * 0.1,
+      r * 0.055,
+      measure,
+    );
+    ctx.font = `bold ${fontSize}px system-ui`;
+    ctx.fillText(text, 0, 0);
     ctx.restore();
   });
 
-  // Center circle
+  // Center circle — con sombra propia, para que se lea como una pieza aparte.
   const cr = Math.round(r * 0.21);
+  ctx.save();
   ctx.beginPath();
   ctx.arc(cx, cy, cr, 0, 2 * Math.PI);
   ctx.fillStyle = cfg.styles.centerBg;
+  ctx.shadowColor = "rgba(0,0,0,0.3)";
+  ctx.shadowBlur = Math.round(r * 0.06);
   ctx.fill();
+  ctx.restore();
+  ctx.beginPath();
+  ctx.arc(cx, cy, cr, 0, 2 * Math.PI);
   ctx.strokeStyle = cfg.styles.centerBorder;
   ctx.lineWidth = 3;
   ctx.stroke();
-  const lbl = (cfg.centerType === "text" ? cfg.centerText : "").slice(0, 6);
-  if (lbl) {
-    ctx.fillStyle = cfg.styles.centerText;
-    ctx.font = `bold ${Math.round(cr * 0.46)}px system-ui`;
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText(lbl, cx, cy);
+
+  if (cfg.centerType === "logo") {
+    // El logo se dibuja recortado al círculo. Si todavía no cargó, el centro
+    // queda con su color de fondo y se redibuja solo cuando la imagen esté.
+    if (logo?.complete && logo.naturalWidth > 0) {
+      const box = cr * 1.4; // lado del cuadrado inscripto en el círculo
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(cx, cy, cr - 2, 0, 2 * Math.PI);
+      ctx.clip();
+      const scale = Math.min(box / logo.naturalWidth, box / logo.naturalHeight);
+      const w = logo.naturalWidth * scale;
+      const h = logo.naturalHeight * scale;
+      ctx.drawImage(logo, cx - w / 2, cy - h / 2, w, h);
+      ctx.restore();
+    }
+  } else {
+    const lbl = (cfg.centerText ?? "").slice(0, 6);
+    if (lbl) {
+      ctx.fillStyle = cfg.styles.centerText;
+      ctx.font = `bold ${Math.round(cr * 0.46)}px system-ui`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(lbl, cx, cy);
+    }
   }
 }
 
@@ -136,6 +224,7 @@ export default function GamificationWidget() {
   const wheelRef = useRef<HTMLCanvasElement>(null);
   const scratchRef = useRef<HTMLCanvasElement>(null);
   const rotation = useRef(0);
+  const logoImg = useRef<HTMLImageElement | null>(null);
   const scratchInited = useRef(false);
 
   // ── Load config ──────────────────────────────────────────────────────────
@@ -151,6 +240,8 @@ export default function GamificationWidget() {
   useEffect(() => {
     if (!cfg) return;
     const key = `gw_${cfg.id}`;
+    // Ya ganó su cupón (lo tiene en el mail): no se le vuelve a ofrecer nunca.
+    if (typeof window !== "undefined" && localStorage.getItem(wonKey(cfg.id))) return;
     if (cfg.showFrequency === "ONCE_EVER" && typeof window !== "undefined" && localStorage.getItem(key)) return;
     if (cfg.showFrequency === "ONCE_SESSION" && typeof window !== "undefined" && sessionStorage.getItem(key)) return;
 
@@ -169,12 +260,42 @@ export default function GamificationWidget() {
     }
   }, [cfg]);
 
-  // ── Draw wheel when popup opens ──────────────────────────────────────────
+  // ── Precarga del logo del centro ─────────────────────────────────────────
+  // El canvas no se entera solo de que una imagen terminó de cargar, así que
+  // al cargarla se redibuja la ruleta. Sin esto el centro quedaba vacío.
   useEffect(() => {
-    if (phase !== "popup" || cfg?.type !== "SPIN") return;
-    const canvas = wheelRef.current;
-    if (canvas) renderWheel(canvas, cfg, rotation.current);
-  }, [phase, cfg]);
+    if (cfg?.centerType !== "logo" || !cfg.logo) {
+      logoImg.current = null;
+      return;
+    }
+    const img = new Image();
+    img.src = cfg.logo;
+    img.onload = () => {
+      logoImg.current = img;
+      const canvas = wheelRef.current;
+      if (canvas && cfg.type === "SPIN") renderWheel(canvas, cfg, rotation.current, img);
+    };
+    return () => { img.onload = null; };
+  }, [cfg]);
+
+  // ── Giro lento en espera ─────────────────────────────────────────────────
+  // Mientras el cliente todavía no juega, la rueda gira despacio sola: así se
+  // nota que es interactiva y no una imagen quieta. Cuando juega (`busy`), este
+  // loop se corta y spinAnimate toma el control desde la rotación actual.
+  useEffect(() => {
+    if (phase !== "popup" || cfg?.type !== "SPIN" || busy) return;
+    let raf = 0;
+    let last = performance.now();
+    const tick = (now: number) => {
+      rotation.current = (rotation.current + ((now - last) / 1000) * 0.18) % (2 * Math.PI);
+      last = now;
+      const canvas = wheelRef.current;
+      if (canvas) renderWheel(canvas, cfg, rotation.current, logoImg.current);
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [phase, cfg, busy]);
 
   // ── Init scratch canvas when playing phase starts ────────────────────────
   const initScratch = useCallback(() => {
@@ -330,7 +451,7 @@ export default function GamificationWidget() {
         const t = Math.min((now - start) / duration, 1);
         const ease = 1 - Math.pow(1 - t, 3);
         const rot = startRot + target * ease;
-        renderWheel(canvas!, cfg!, rot);
+        renderWheel(canvas!, cfg!, rot, logoImg.current);
         if (t < 1) requestAnimationFrame(frame);
         else { rotation.current = rot % (2 * Math.PI); resolve(); }
       }
@@ -350,8 +471,16 @@ export default function GamificationWidget() {
   }
 
   function closePopup() {
-    setPhase("tab");
     scratchInited.current = false;
+    // Si ya ganó, el cupón además le llegó por mail, así que la pestaña no
+    // aporta nada y solo estorba (tapa contenido, sobre todo en el celular):
+    // se apaga para siempre. Si todavía no jugó, vuelve a la pestaña.
+    if (cfg && result?.couponCode && !result.isNoPrize) {
+      try { localStorage.setItem(wonKey(cfg.id), "1"); } catch { /* modo privado */ }
+      setPhase("idle");
+      return;
+    }
+    setPhase("tab");
     // Keep result and email so re-open shows a sensible state
   }
 
@@ -374,15 +503,17 @@ export default function GamificationWidget() {
         <button
           onClick={openPopup}
           aria-label={cfg.title}
-          className="fixed left-0 top-1/2 z-[9990] -translate-y-1/2 rounded-r-2xl px-2.5 py-5 shadow-xl transition-all duration-200 hover:translate-x-0.5 hover:brightness-110 active:scale-95"
+          className="fixed left-0 top-1/2 z-[9990] -translate-y-1/2 rounded-r-2xl px-2 py-2.5 sm:px-2.5 sm:py-5 shadow-xl transition-all duration-200 hover:translate-x-0.5 hover:brightness-110 active:scale-95"
           style={{ background: s.buttonBg }}
         >
+          {/* En celular va solo el ícono: la barra con el título tapaba media
+              pantalla (y abajo no hay lugar, están el carrito y WhatsApp). */}
           <span
             className="flex flex-col items-center gap-1.5"
             style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", color: s.buttonText }}
           >
             <span className="text-base">{cfg.type === "SPIN" ? "🎡" : "🪙"}</span>
-            <span className="text-xs font-black tracking-wide whitespace-nowrap">{cfg.title}</span>
+            <span className="hidden sm:inline text-xs font-black tracking-wide whitespace-nowrap">{cfg.title}</span>
           </span>
         </button>
       )}
@@ -402,7 +533,7 @@ export default function GamificationWidget() {
             <button
               onClick={closePopup}
               className="absolute right-4 top-4 z-10 rounded-full p-1.5 transition-opacity hover:opacity-60"
-              style={{ background: "rgba(255,255,255,0.12)" }}
+              style={{ background: overlayOn(s.popupBg, 0.12) }}
               aria-label="Cerrar"
             >
               <X className="h-4 w-4" style={{ color: s.textColor }} />
@@ -456,6 +587,15 @@ export default function GamificationWidget() {
                     <p className="text-xs text-center opacity-50" style={{ color: s.textColor }}>Válido hasta el {formatExpiry(result.expiresAt)}</p>
                   )}
                   <p className="text-xs text-center opacity-50" style={{ color: s.textColor }}>Ingresalo al finalizar tu compra</p>
+                  {/* Avisar que el cupón también viaja por mail es lo que permite
+                      apagar la pestaña al cerrar sin que el cliente sienta que
+                      pierde su código. */}
+                  <div className="flex items-center gap-2 rounded-2xl px-3 py-2.5 w-full" style={{ background: overlayOn(s.popupBg, 0.07) }}>
+                    <Mail className="h-4 w-4 shrink-0 opacity-60" style={{ color: s.textColor }} />
+                    <p className="text-xs leading-snug" style={{ color: s.textColor }}>
+                      También te lo mandamos por correo{email ? <> a <strong>{email}</strong></> : null}, así no lo perdés.
+                    </p>
+                  </div>
                 </>
               )}
 
@@ -479,9 +619,10 @@ export default function GamificationWidget() {
                   <p className="text-center font-black text-xl leading-tight" style={{ color: s.textColor }}>{cfg.title}</p>
                   <p className="text-center text-sm opacity-70" style={{ color: s.textColor }}>{cfg.subtitle}</p>
 
-                  {/* Wheel */}
-                  <div className="relative">
-                    <canvas ref={wheelRef} width={256} height={256} className="block rounded-full" />
+                  {/* Wheel — se adapta al ancho disponible (con tope), así no se
+                      corta en celulares angostos y aprovecha los anchos. */}
+                  <div className="relative w-full max-w-[256px]">
+                    <canvas ref={wheelRef} className="block w-full rounded-full" style={{ aspectRatio: "1 / 1" }} />
                     {/* Pointer */}
                     <div
                       className="absolute left-1/2 -translate-x-1/2"
@@ -501,7 +642,7 @@ export default function GamificationWidget() {
                     <div className="w-full space-y-1">
                       <div
                         className="flex items-center gap-2 rounded-2xl border px-3 py-2.5"
-                        style={{ borderColor: "rgba(255,255,255,0.18)", background: "rgba(255,255,255,0.07)" }}
+                        style={{ borderColor: overlayOn(s.popupBg, 0.18), background: overlayOn(s.popupBg, 0.07) }}
                       >
                         <Mail className="h-4 w-4 shrink-0 opacity-50" style={{ color: s.textColor }} />
                         <input
@@ -550,7 +691,7 @@ export default function GamificationWidget() {
                     <div className="w-full space-y-1">
                       <div
                         className="flex items-center gap-2 rounded-2xl border px-3 py-2.5"
-                        style={{ borderColor: "rgba(255,255,255,0.18)", background: "rgba(255,255,255,0.07)" }}
+                        style={{ borderColor: overlayOn(s.popupBg, 0.18), background: overlayOn(s.popupBg, 0.07) }}
                       >
                         <Mail className="h-4 w-4 shrink-0 opacity-50" style={{ color: s.textColor }} />
                         <input

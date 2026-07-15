@@ -23,7 +23,9 @@ export async function GET() {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
-  const store = await prisma.store.findUnique({ where: { ownerId: user.id }, select: { id: true, templateId: true } });
+  // `logo` se manda para que la vista previa dibuje el logo real de la tienda
+  // en el centro, igual que la ruleta de la tienda (antes escribía "Logo").
+  const store = await prisma.store.findUnique({ where: { ownerId: user.id }, select: { id: true, templateId: true, logo: true } });
   if (!store) return NextResponse.json({ error: "Tienda no encontrada" }, { status: 404 });
 
   const widget = await prisma.gamificationWidget.findUnique({
@@ -40,7 +42,7 @@ export async function GET() {
     },
   });
 
-  return NextResponse.json({ widget, storeTemplateId: store.templateId });
+  return NextResponse.json({ widget, storeTemplateId: store.templateId, storeLogo: store.logo });
 }
 
 // POST — upsert widget + auto-crea/actualiza cupones por cada premio
@@ -52,10 +54,11 @@ export async function POST(req: NextRequest) {
   if (!store) return NextResponse.json({ error: "Tienda no encontrada" }, { status: 404 });
 
   const body = await req.json();
+  // `emailRequired` no se lee del body a propósito: más abajo se fuerza a true.
   const {
     type, isActive, title, subtitle, buttonText, reclaimText, legalText,
     centerType, centerText, triggerType, triggerDelay,
-    showFrequency, emailRequired, styles, prizes,
+    showFrequency, styles, prizes,
   } = body;
 
   if (isActive && GAMIFICATION_EXCLUDED_TEMPLATES.has(store.templateId)) {

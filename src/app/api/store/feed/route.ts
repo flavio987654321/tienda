@@ -56,7 +56,17 @@ export async function GET(req: NextRequest) {
       if (!img) return null; // Meta requiere imagen — saltear si no tiene
 
       const link = `${APP_URL}/tienda/${store.slug}/producto/${encodeURIComponent(p.id)}`;
-      const description = p.description ? p.description.slice(0, 500) : store.name;
+      // Sin descripción propia, el nombre del producto informa más que el de la tienda.
+      const description = p.description ? p.description.slice(0, 500) : p.name;
+
+      // Si hay precio tachado, ese es el precio de lista y el actual es la
+      // oferta. Meta espera g:price = lista y g:sale_price = promo, cada uno
+      // una sola vez (antes se emitía g:price duplicado y el descuento se perdía).
+      const hasSale = p.comparePrice != null && p.comparePrice > p.price;
+      const priceTags = hasSale
+        ? `<g:price>${p.comparePrice!.toFixed(2)} ${store.currency}</g:price>
+      <g:sale_price>${p.price.toFixed(2)} ${store.currency}</g:sale_price>`
+        : `<g:price>${p.price.toFixed(2)} ${store.currency}</g:price>`;
 
       return `    <item>
       <g:id><![CDATA[${p.id}]]></g:id>
@@ -64,8 +74,7 @@ export async function GET(req: NextRequest) {
       <g:description><![CDATA[${description}]]></g:description>
       <g:link>${escapeXml(link)}</g:link>
       <g:image_link>${escapeXml(img)}</g:image_link>
-      <g:price>${p.price.toFixed(2)} ${store.currency}</g:price>
-      ${p.comparePrice && p.comparePrice > p.price ? `<g:sale_price>${p.price.toFixed(2)} ${store.currency}</g:sale_price>\n      <g:price>${p.comparePrice.toFixed(2)} ${store.currency}</g:price>` : ""}
+      ${priceTags}
       <g:availability>in stock</g:availability>
       <g:condition>new</g:condition>
       <g:brand><![CDATA[${store.name}]]></g:brand>
