@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/auth-session";
 import { logAdminAction } from "@/lib/admin-log";
 import { revalidatePath } from "next/cache";
 import { getClientIp } from "@/lib/request-ip";
+import { periodFor } from "@/lib/subscription";
 
 const VALID_STATUSES = ["TRIAL", "ACTIVE", "GRACE", "EXPIRED", "CANCELLED"];
 
@@ -48,6 +49,20 @@ export async function PATCH(
 
   if (plan === "MONTHLY" || plan === "ANNUAL") {
     data.plan = plan;
+  }
+
+  // `plan` sin fecha es media verdad: define cuánto dura el período, así que el
+  // vencimiento tiene que recalcularse con él. Antes esto escribía solo la
+  // etiqueta y "Activar ahora" ni siquiera tocaba la fecha, dejando ACTIVE sin
+  // vencimiento. Se reprograma el período —igual que un pago real— cuando se
+  // activa la suscripción o cuando cambia la facturación de una activa.
+  const effectivePlan = (data.plan as string) ?? sub.plan;
+  const activating = data.status === "ACTIVE";
+  const rebilling = data.plan !== undefined && (data.status ?? sub.status) === "ACTIVE";
+
+  if (activating || rebilling) {
+    Object.assign(data, periodFor(effectivePlan));
+    data.status = "ACTIVE";
   }
 
   if (Object.keys(data).length === 0) {

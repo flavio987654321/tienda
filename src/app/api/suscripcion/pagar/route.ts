@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth-session";
 import { prisma } from "@/lib/prisma";
-import { PRICES } from "@/lib/subscription";
+import { PRICES, periodFor } from "@/lib/subscription";
 import { checkRateLimit } from "@/lib/rate-limit";
 
 export async function POST(req: NextRequest) {
@@ -78,15 +78,12 @@ export async function POST(req: NextRequest) {
   // Mes gratis (100% off) — no pasar por MP
   if (finalAmount === 0) {
     const now = new Date();
-    const periodEnd = billing === "MONTHLY"
-      ? new Date(now.getTime() + 30 * 86400000)
-      : new Date(now.getTime() + 365 * 86400000);
-    const gracePeriodEndsAt = new Date(periodEnd.getTime() + 4 * 86400000);
+    const period = periodFor(billing, now);
 
     await prisma.subscription.upsert({
       where: { userId: user.id },
-      update: { role, tier, plan: billing, status: "ACTIVE", currentPeriodStart: now, currentPeriodEnd: periodEnd, gracePeriodEndsAt },
-      create: { userId: user.id, role, tier, plan: billing, status: "ACTIVE", trialEndsAt: now, currentPeriodStart: now, currentPeriodEnd: periodEnd, gracePeriodEndsAt },
+      update: { role, tier, plan: billing, status: "ACTIVE", ...period },
+      create: { userId: user.id, role, tier, plan: billing, status: "ACTIVE", trialEndsAt: now, ...period },
     });
 
     if (couponToMark) {
@@ -138,15 +135,12 @@ export async function POST(req: NextRequest) {
 
     if (mpData.status === "approved") {
       const now = new Date();
-      const periodEnd = billing === "MONTHLY"
-        ? new Date(now.getTime() + 30 * 86400000)
-        : new Date(now.getTime() + 365 * 86400000);
-      const gracePeriodEndsAt = new Date(periodEnd.getTime() + 4 * 86400000);
+      const period = periodFor(billing, now);
 
       await prisma.subscription.upsert({
         where: { userId: user.id },
-        update: { role, tier, plan: billing, status: "ACTIVE", currentPeriodStart: now, currentPeriodEnd: periodEnd, gracePeriodEndsAt, mpPaymentId: String(mpData.id) },
-        create: { userId: user.id, role, tier, plan: billing, status: "ACTIVE", trialEndsAt: now, currentPeriodStart: now, currentPeriodEnd: periodEnd, gracePeriodEndsAt, mpPaymentId: String(mpData.id) },
+        update: { role, tier, plan: billing, status: "ACTIVE", ...period, mpPaymentId: String(mpData.id) },
+        create: { userId: user.id, role, tier, plan: billing, status: "ACTIVE", trialEndsAt: now, ...period, mpPaymentId: String(mpData.id) },
       });
 
       if (couponToMark) {

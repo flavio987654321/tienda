@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createHmac, timingSafeEqual } from "crypto";
 import { prisma } from "@/lib/prisma";
+import { periodFor } from "@/lib/subscription";
 import { sendSubscriptionConfirmationEmail } from "@/lib/resend";
 
 // Valores aceptados en metadata — cualquier otra cosa se rechaza
@@ -120,10 +121,7 @@ export async function POST(req: NextRequest) {
     const { couponId } = payment.metadata ?? {};
 
     const now = new Date();
-    const periodEnd = billing === "MONTHLY"
-      ? new Date(now.getTime() + 30 * 86400000)
-      : new Date(now.getTime() + 365 * 86400000);
-    const gracePeriodEndsAt = new Date(periodEnd.getTime() + 4 * 86400000);
+    const period = periodFor(billing, now);
 
     await prisma.subscription.upsert({
       where: { userId },
@@ -132,9 +130,7 @@ export async function POST(req: NextRequest) {
         tier: safeTier,
         plan: billing,
         status: "ACTIVE",
-        currentPeriodStart: now,
-        currentPeriodEnd: periodEnd,
-        gracePeriodEndsAt,
+        ...period,
         mpPaymentId: String(payment.id),
       },
       create: {
@@ -144,9 +140,7 @@ export async function POST(req: NextRequest) {
         plan: billing,
         status: "ACTIVE",
         trialEndsAt: now,
-        currentPeriodStart: now,
-        currentPeriodEnd: periodEnd,
-        gracePeriodEndsAt,
+        ...period,
         mpPaymentId: String(payment.id),
       },
     });
@@ -168,7 +162,7 @@ export async function POST(req: NextRequest) {
         planLabel,
         billingLabel,
         amount: payment.transaction_amount ?? 0,
-        periodEnd,
+        periodEnd: period.currentPeriodEnd,
         paymentId: String(payment.id),
         planKey: plan,
       }).catch(() => {});
