@@ -5,6 +5,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { logAdminAction } from "@/lib/admin-log";
 import { createNotificationMany } from "@/lib/notifications";
 import { getClientIp } from "@/lib/request-ip";
+import { getClosureBlockers, isBlocked } from "@/lib/store-closure";
 
 export async function PATCH(
   req: NextRequest,
@@ -98,7 +99,7 @@ function extractStoragePaths(urls: (string | null | undefined)[], supabaseUrl: s
 // El email queda libre en Supabase Auth para que el usuario pueda re-registrarse.
 
 export async function DELETE(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const current = await getCurrentUser();
@@ -112,10 +113,22 @@ export async function DELETE(
     return NextResponse.json({ error: "No podés eliminar tu propia cuenta" }, { status: 400 });
   }
 
-  const target = await prisma.user.findUnique({ where: { id }, select: { role: true } });
+  const target = await prisma.user.findUnique({ where: { id }, select: { role: true, email: true } });
   if (!target) return NextResponse.json({ error: "Usuario no encontrado" }, { status: 404 });
   if (target.role === "ADMIN") {
     return NextResponse.json({ error: "No podés eliminar otra cuenta admin" }, { status: 400 });
+  }
+
+  // El modal pide tipear el email, pero hasta ahora esta ruta ni leía el body: la
+  // confirmación era puro teatro y un fetch directo borraba la cuenta sin más. El
+  // endpoint de la dueña sí valida server-side; éste ahora también.
+  const body = await req.json().catch(() => ({}));
+  const { confirm } = body as { confirm?: unknown };
+  if (typeof confirm !== "string" || confirm.trim().toLowerCase() !== target.email.toLowerCase()) {
+    return NextResponse.json(
+      { error: "El email ingresado no coincide con el de la cuenta" },
+      { status: 400 }
+    );
   }
 
   // ── 1. Recolectar datos ANTES de modificar la BD ──────────────────────────
@@ -135,6 +148,7 @@ export async function DELETE(
       store: {
         select: {
           id: true,
+          name: true,
           slug: true,
           logo: true,
           banner: true,
@@ -142,6 +156,9 @@ export async function DELETE(
           tcOwnerVersion: true,
           tcOwnerAcceptedIp: true,
           products: { select: { id: true, images: true, reelUrls: true } },
+          // Para avisarles antes de desactivarlas: después del update ya no son
+          // isActive y no habría a quién notificar.
+          affiliates: { where: { isActive: true }, select: { userId: true } },
         },
       },
       asAffiliate: {
@@ -174,6 +191,32 @@ export async function DELETE(
       },
       { status: 400 }
     );
+  }
+
+  // Si es dueña de tienda, los mismos bloqueadores que se aplica ella a sí misma
+  // desde su panel. Antes esta ruta no los tenía, así que desde el admin se podía
+  // borrar una cuenta con pedidos en curso (dejando compradores esperando algo que
+  // ya no va a llegar) y debiéndole comisiones a sus afiliadas (dejando esa plata
+  // huérfana) — cosas que su propia dueña no puede hacer. Mismo helper, así no se
+  // vuelven a desincronizar.
+  if (userData?.store) {
+    const blockers = await getClosureBlockers(prisma, userData.store.id);
+    if (isBlocked(blockers)) {
+      const partes: string[] = [];
+      if (blockers.pendingOrders > 0) {
+        partes.push(`${blockers.pendingOrders} pedido${blockers.pendingOrders !== 1 ? "s" : ""} en curso`);
+      }
+      if (blockers.pendingBalances > 0) {
+        partes.push(`$${blockers.pendingBalances.toLocaleString("es-AR")} sin pagar a sus afiliadas`);
+      }
+      return NextResponse.json(
+        {
+          error: `No se puede eliminar: la tienda tiene ${partes.join(" y ")}. Hay que resolver eso antes de borrar la cuenta.`,
+          ...blockers,
+        },
+        { status: 409 }
+      );
+    }
   }
 
   const allFileUrls: (string | null | undefined)[] = [
@@ -337,7 +380,7 @@ export async function DELETE(
       hadStore: !!userData?.store,
       hadSubscription: !!userData?.subscription,
     },
-    ip: getClientIp(_req),
+    ip: getClientIp(req),
   });
 
   // Si era afiliada, avisar a los dueños de las tiendas donde estaba afiliada
@@ -350,6 +393,23 @@ export async function DELETE(
         title: `Tu afiliada ${affiliateName} eliminó su cuenta`,
         body: `La cuenta de tu afiliada en ${a.store.name} fue eliminada. Su link de afiliado dejó de funcionar.`,
         link: "/dashboard/vendedoras",
+      }))
+    );
+  }
+
+  // Si era dueña de tienda, avisarle a SUS afiliadas que la tienda ya no existe.
+  // Antes esta ruta solo notificaba cuando la borrada era una afiliada: si el
+  // admin borraba a una dueña, sus afiliadas se quedaban con un link muerto y sin
+  // enterarse. El endpoint de la propia dueña sí las avisa (STORE_CLOSED).
+  const ownStoreAffiliates = userData?.store?.affiliates ?? [];
+  if (ownStoreAffiliates.length > 0 && userData?.store) {
+    await createNotificationMany(
+      ownStoreAffiliates.map((a) => ({
+        userId: a.userId,
+        type: "STORE_CLOSED",
+        title: `${userData.store!.name} cerró su tienda`,
+        body: "Tu link de afiliada fue desactivado. Los saldos ya acreditados en tu panel de comisiones siguen disponibles para retirar.",
+        link: "/afiliados",
       }))
     );
   }

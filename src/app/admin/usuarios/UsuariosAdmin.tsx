@@ -150,16 +150,26 @@ export default function UsuariosAdmin({ users: initial, filter: activeFilter }: 
   }
 
   async function deleteUser(user: User) {
+    if (deleteLoading) return;
     setDeleteLoading(true);
     try {
-      const res = await fetch(`/api/admin/usuarios/${user.id}`, { method: "DELETE" });
+      const res = await fetch(`/api/admin/usuarios/${user.id}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        // El endpoint valida esto server-side. Antes ni se mandaba: el input de
+        // confirmación era solo del lado del cliente.
+        body: JSON.stringify({ confirm: deleteConfirm }),
+      });
       if (res.ok) {
         setUsers(prev => prev.filter(u => u.id !== user.id));
         setDeleteModal(null);
         setDeleteConfirm("");
         showToast("Cuenta eliminada correctamente");
       } else {
-        showToast("Error al eliminar la cuenta", false);
+        // Mostrar el motivo real (bloqueadores, saldo pendiente) en vez de un
+        // "error" genérico que no dice nada.
+        const err = await res.json().catch(() => ({})) as { error?: string };
+        showToast(err.error ?? "Error al eliminar la cuenta", false);
       }
     } catch {
       showToast("Error de conexión", false);
@@ -397,10 +407,16 @@ export default function UsuariosAdmin({ users: initial, filter: activeFilter }: 
                 <AlertTriangle className="h-5 w-5 text-red-400" />
               </div>
               <div>
+                {/* El texto anterior decía que se borraba "todo: ... pedidos ...
+                    términos aceptados e historial completo", y era falso: el
+                    código anonimiza y CONSERVA los pedidos y las aceptaciones de
+                    T&C a propósito, por AFIP y la Ley 24.240. */}
                 <h3 className="text-white font-bold">Eliminar cuenta completa</h3>
                 <p className="text-gray-400 text-xs mt-1">
-                  Esta acción es <span className="text-red-400 font-semibold">permanente e irreversible</span>. Se borrará todo:
-                  cuenta, tienda, productos, pedidos, afiliaciones, suscripción, términos aceptados e historial completo.
+                  Acción <span className="text-red-400 font-semibold">permanente e irreversible</span>. Se eliminan los datos
+                  personales, la tienda, los productos y los archivos. El historial de pedidos y comisiones se
+                  <span className="text-gray-300"> anonimiza y se conserva</span> por obligación legal (AFIP, Ley 24.240).
+                  El email queda libre para re-registrarse.
                 </p>
               </div>
             </div>
