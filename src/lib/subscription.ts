@@ -18,9 +18,22 @@ export function getPriceForRole(role: string, tier: string, billing: "MONTHLY" |
 }
 
 export const TRIAL_DAYS = 7;
+/** Días con el panel accesible después de vencer. No es lo mismo que el cierre. */
 export const GRACE_DAYS = 4;
 export const MONTHLY_DAYS = 30;
 export const ANNUAL_DAYS = 365;
+
+// Días desde el vencimiento hasta que la tienda se cierra sola. Es una etapa
+// posterior a GRACE_DAYS: primero se bloquea el panel (gracia) y la tienda sigue
+// online, y recién después se cierra. Mismo esquema que Tiendanube, que da 2+8=10
+// días a las tiendas nuevas y 10+10=20 a las que ya venían pagando.
+//
+// La diferencia es deliberada: quien viene pagando se ganó el beneficio de la
+// duda; quien salió del trial sin pagar nunca, no.
+export const TRIAL_CLOSURE_DAYS = 10;
+export const PAID_CLOSURE_DAYS = 20;
+/** Días antes del cierre en que se manda el último aviso. */
+export const CLOSURE_WARNING_DAYS = 2;
 
 export type SubscriptionStatus = "TRIAL" | "ACTIVE" | "GRACE" | "EXPIRED" | "CANCELLED";
 
@@ -40,6 +53,13 @@ export function periodFor(plan: string, from: Date = new Date()) {
     currentPeriodStart: from,
     currentPeriodEnd,
     gracePeriodEndsAt: new Date(currentPeriodEnd.getTime() + GRACE_DAYS * 86400000),
+    // Un período nuevo borra los avisos del anterior: si renovó, los "se te venció"
+    // y "tu tienda cierra en 2 días" que ya recibió no aplican más, y cuando le
+    // vuelva a vencer tiene que recibirlos de nuevo. Va acá y no en cada llamador
+    // por lo mismo de siempre: son parte del mismo dato y separarlos los
+    // desincroniza.
+    expiredNotifiedAt: null,
+    closingNotifiedAt: null,
   };
 }
 
@@ -73,6 +93,26 @@ export function getSubscriptionStatus(sub: {
 export function isSubscriptionActive(sub: Parameters<typeof getSubscriptionStatus>[0]): boolean {
   const status = getSubscriptionStatus(sub);
   return status === "TRIAL" || status === "ACTIVE" || status === "GRACE";
+}
+
+/**
+ * Cuándo se cierra sola la tienda por falta de pago, o `null` si no corresponde
+ * (la suscripción está viva).
+ *
+ * El reloj arranca en el vencimiento real, no en el día que el cron la mira: si
+ * el cron no corrió una semana, la fecha de cierre no se corre una semana.
+ *
+ * `currentPeriodEnd` distingue los dos casos sin necesidad de un campo nuevo:
+ * existe solo si alguna vez tuvo un período de verdad (pagado o regalado por el
+ * admin). Si es null, nunca pasó del trial.
+ */
+export function closureDeadline(sub: Parameters<typeof getSubscriptionStatus>[0]): Date | null {
+  const status = getSubscriptionStatus(sub);
+  if (status !== "GRACE" && status !== "EXPIRED") return null;
+
+  const expiredAt = sub.currentPeriodEnd ?? sub.trialEndsAt;
+  const days = sub.currentPeriodEnd ? PAID_CLOSURE_DAYS : TRIAL_CLOSURE_DAYS;
+  return new Date(expiredAt.getTime() + days * 86400000);
 }
 
 export async function getUserSubscription(userId: string) {

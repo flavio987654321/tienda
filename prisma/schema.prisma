@@ -175,6 +175,12 @@ model Store {
   seoDescription        String?
   isActive              Boolean   @default(true)
   isPublished           Boolean   @default(false)
+  // Cierre voluntario de la dueña, o automático por falta de pago. Campo propio
+  // y NO `isActive` a propósito: ese ya significa "bajada por denuncia" y
+  // "cuenta eliminada", y una tienda cerrada por su dueña no puede mostrarle al
+  // visitante el mismo mensaje que una bajada por moderación. La cuenta sigue
+  // activa: entra al panel, ve el estado y la reactiva cuando quiere.
+  closedAt              DateTime?
   affiliatesEnabled     Boolean   @default(false)
   commissionRate        Float     @default(10)
   acceptsRewardCoupons  Boolean   @default(false)
@@ -251,6 +257,7 @@ model Store {
   publicReviews       PublicReview[]
   verificationRequest VerificationRequest?
   storeReports        StoreReport[]
+  closures            StoreClosure[]
   storeSubscriptions  StoreSubscription[]
   pushCampaigns       PushCampaign[]
   storeViews          StoreView[]
@@ -603,6 +610,11 @@ model Affiliate {
   id                 String    @id @default(cuid())
   status             String    @default("PENDING")
   isActive           Boolean   @default(false)
+  // Marca que a esta afiliada la pausó el cierre de la tienda, no la dueña a
+  // mano. Sin esto, `status = PAUSED` significaría dos cosas y al reactivar la
+  // tienda le levantaríamos la suspensión a alguien que la dueña había pausado a
+  // propósito. Solo las marcadas acá vuelven a APPROVED al reactivar.
+  pausedByClosure    Boolean   @default(false)
   applicationMessage String?
   experience         String?
   cvUrl              String?
@@ -910,8 +922,22 @@ model Subscription {
   currentPeriodStart DateTime?
   currentPeriodEnd   DateTime?
   gracePeriodEndsAt  DateTime?
+  // SIN USO: nadie lo lee ni lo escribe. Quedó de una función de "cancelar al fin
+  // del período" que nunca se construyó (los términos la prometían: "podés
+  // cancelar desde Mi Plan", y ese botón no existe). Hoy el equivalente real es
+  // cerrar la tienda, que cancela la suscripción en el acto. Se deja la columna
+  // porque borrarla es una migración destructiva y no molesta a nadie.
   cancelAtPeriodEnd  Boolean   @default(false)
+  // Avisos ya enviados de este período. El cron corre una vez por día, pero si se
+  // dispara dos veces (o a mano) no puede mandar el mismo mail de nuevo. Se
+  // reinician solos al empezar un período nuevo — los devuelve periodFor().
+  expiredNotifiedAt  DateTime?
+  closingNotifiedAt  DateTime?
   mpPaymentId        String?
+  // SIN USO: no hay suscripción recurrente de MercadoPago (preapproval). Los pagos
+  // son de una vez por período y la renovación la hace la dueña a mano. Los
+  // términos decían "las suscripciones se renuevan automáticamente" y era falso;
+  // se corrigió el 15/07/2026.
   mpPreapprovalId    String?
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
@@ -967,6 +993,32 @@ model StoreReport {
   status        String   @default("PENDING")
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+
+  @@index([storeId])
+  @@index([status, createdAt(sort: Desc)])
+}
+
+// Motivo por el que una dueña cerró su tienda. Se completa en el paso 2 del
+// cierre y lo lee el admin en /admin/cierres para entender por qué se va la
+// gente. Mismo patrón que StoreReport (motivo + comentario + estado leído).
+//
+// `storeName`/`ownerEmail`/`ownerName` son SNAPSHOTS a propósito, no se leen por
+// la relación: si más adelante elimina la cuenta, `User.email` se anonimiza a
+// deleted-*@deleted.invalid y `Store.name` pasa a "Tienda eliminada", así que el
+// reporte mostraría "Tienda eliminada" en vez de quién cerró y por qué.
+// DeletedAccountAudit ya usa esta misma estrategia por el mismo motivo.
+model StoreClosure {
+  id         String   @id @default(cuid())
+  storeId    String
+  store      Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  storeName  String
+  ownerEmail String
+  ownerName  String?
+  reason     String
+  comment    String?
+  status     String   @default("PENDING") // PENDING | REVIEWED
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   @@index([storeId])
   @@index([status, createdAt(sort: Desc)])

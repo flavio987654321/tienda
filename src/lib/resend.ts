@@ -714,3 +714,221 @@ export async function sendCanastaSoporteEmail({
     `,
   });
 }
+
+// ─── Vencimiento de la suscripción ───────────────────────────────────────────
+// Hasta ahora no existía NINGÚN aviso de vencimiento: el cron solo mandaba
+// carritos abandonados, recordatorios de retiro y alertas de MP. Cerrarle la
+// tienda a alguien sin haberle avisado antes es indefendible.
+
+/** Día 0: se venció. Todavía no pasa nada grave, pero el reloj arrancó. */
+export async function sendSubscriptionExpiredEmail({
+  to,
+  userName,
+  storeName,
+  closesOn,
+  daysLeft,
+}: {
+  to: string;
+  userName: string;
+  storeName: string;
+  closesOn: Date;
+  daysLeft: number;
+}) {
+  if (!process.env.RESEND_API_KEY) return;
+  const fecha = closesOn.toLocaleDateString("es-AR", { day: "numeric", month: "long" });
+  await resend.emails.send({
+    from: FROM,
+    to,
+    subject: `Se venció tu plan — ${storeName} sigue online por ${daysLeft} días`,
+    html: `
+      <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 16px;color:#111827;background:#fff;">
+        <div style="background:#b45309;border-radius:16px;padding:32px 24px;margin-bottom:28px;text-align:center;">
+          <p style="color:#fed7aa;font-size:13px;margin:0 0 6px;font-weight:500;">TiendaApps</p>
+          <h1 style="color:#fff;font-size:22px;margin:0;font-weight:800;">Se venció tu plan</h1>
+        </div>
+        <p style="font-size:15px;color:#374151;margin-bottom:6px;">Hola <strong>${escapeHtml(userName) || "ahí"}</strong>,</p>
+        <p style="font-size:15px;color:#374151;margin-bottom:24px;">
+          Tu suscripción venció y <strong>${escapeHtml(storeName)}</strong> todavía está online, pero no por siempre.
+        </p>
+        <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:20px;margin-bottom:24px;">
+          <p style="font-size:15px;color:#374151;margin:0;line-height:1.6;">
+            Tenés <strong>${daysLeft} días</strong> para renovar. Si no lo hacés, el <strong>${fecha}</strong> tu tienda
+            se cierra sola — pero no se borra nada: podés reactivarla cuando quieras.
+          </p>
+        </div>
+        ${APP_URL ? `
+        <div style="text-align:center;margin-bottom:24px;">
+          <a href="${APP_URL}/dashboard/mi-plan" style="display:inline-block;background:#4f46e5;color:#fff;text-decoration:none;font-weight:700;font-size:14px;padding:13px 28px;border-radius:12px;">Renovar mi plan</a>
+        </div>` : ""}
+        <p style="font-size:14px;color:#6b7280;margin-bottom:24px;">
+          ¿Problemas con el pago, o el plan te quedó grande? Respondé este email y lo vemos.
+        </p>
+        <p style="color:#9ca3af;font-size:12px;text-align:center;">TiendaApps — tu tienda online profesional</p>
+      </div>
+    `,
+  });
+}
+
+/** Último aviso, unos días antes de que el cron la cierre. */
+export async function sendSubscriptionClosingSoonEmail({
+  to,
+  userName,
+  storeName,
+  closesOn,
+  daysLeft,
+}: {
+  to: string;
+  userName: string;
+  storeName: string;
+  closesOn: Date;
+  daysLeft: number;
+}) {
+  if (!process.env.RESEND_API_KEY) return;
+  const fecha = closesOn.toLocaleDateString("es-AR", { day: "numeric", month: "long" });
+  const cuando = daysLeft <= 1 ? "mañana" : `en ${daysLeft} días`;
+  await resend.emails.send({
+    from: FROM,
+    to,
+    subject: `Último aviso: ${storeName} se cierra ${cuando}`,
+    html: `
+      <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 16px;color:#111827;background:#fff;">
+        <div style="background:#991b1b;border-radius:16px;padding:32px 24px;margin-bottom:28px;text-align:center;">
+          <p style="color:#fecaca;font-size:13px;margin:0 0 6px;font-weight:500;">TiendaApps</p>
+          <h1 style="color:#fff;font-size:22px;margin:0;font-weight:800;">Tu tienda se cierra ${cuando}</h1>
+        </div>
+        <p style="font-size:15px;color:#374151;margin-bottom:6px;">Hola <strong>${escapeHtml(userName) || "ahí"}</strong>,</p>
+        <p style="font-size:15px;color:#374151;margin-bottom:24px;">
+          Es el último aviso: el <strong>${fecha}</strong> vamos a cerrar <strong>${escapeHtml(storeName)}</strong> porque
+          el plan sigue sin renovarse. Va a dejar de estar online y de vender.
+        </p>
+        <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:20px;margin-bottom:24px;">
+          <p style="font-size:13px;color:#166534;margin:0 0 8px;font-weight:700;text-transform:uppercase;letter-spacing:0.03em;">Igual no perdés nada</p>
+          <p style="font-size:15px;color:#374151;margin:0;line-height:1.6;">
+            Tus productos, tu diseño y tu historial quedan guardados tal cual. Si volvés, reactivás la tienda desde tu
+            panel y está todo como lo dejaste.
+          </p>
+        </div>
+        ${APP_URL ? `
+        <div style="text-align:center;margin-bottom:24px;">
+          <a href="${APP_URL}/dashboard/mi-plan" style="display:inline-block;background:#dc2626;color:#fff;text-decoration:none;font-weight:700;font-size:14px;padding:13px 28px;border-radius:12px;">Renovar antes del ${fecha}</a>
+        </div>` : ""}
+        <p style="color:#9ca3af;font-size:12px;text-align:center;">TiendaApps — tu tienda online profesional</p>
+      </div>
+    `,
+  });
+}
+
+// ─── Cierre de tienda ────────────────────────────────────────────────────────
+
+/**
+ * Comprobante para la dueña de que su tienda quedó cerrada. Antes de esto, cerrar
+ * (que hasta ahora era eliminar la cuenta) no le mandaba absolutamente nada.
+ *
+ * El tono es deliberadamente tranquilo: cerrar no es un castigo ni un error, y lo
+ * más importante que tiene que quedarle claro es que sus cosas siguen ahí y que
+ * volver es un click.
+ */
+export async function sendStoreClosedOwnerEmail({
+  to,
+  userName,
+  storeName,
+  reason,
+}: {
+  to: string;
+  userName: string;
+  storeName: string;
+  reason: string;
+}) {
+  if (!process.env.RESEND_API_KEY) return;
+  await resend.emails.send({
+    from: FROM,
+    to,
+    subject: `Cerraste ${storeName}`,
+    html: `
+      <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 16px;color:#111827;background:#fff;">
+        <div style="background:#374151;border-radius:16px;padding:32px 24px;margin-bottom:28px;text-align:center;">
+          <p style="color:#d1d5db;font-size:13px;margin:0 0 6px;font-weight:500;">TiendaApps</p>
+          <h1 style="color:#fff;font-size:22px;margin:0;font-weight:800;">Tu tienda está cerrada</h1>
+        </div>
+        <p style="font-size:15px;color:#374151;margin-bottom:6px;">Hola <strong>${escapeHtml(userName) || "ahí"}</strong>,</p>
+        <p style="font-size:15px;color:#374151;margin-bottom:24px;">
+          Cerramos <strong>${escapeHtml(storeName)}</strong> como pediste. Ya no está online y dejamos de cobrarte la suscripción.
+        </p>
+        <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:20px;margin-bottom:24px;">
+          <p style="font-size:13px;color:#166534;margin:0 0 8px;font-weight:700;text-transform:uppercase;letter-spacing:0.03em;">Nada se borró</p>
+          <p style="font-size:15px;color:#374151;margin:0;line-height:1.6;">
+            Tu diseño, tus productos, tus imágenes y tu historial quedaron guardados tal cual los dejaste. Cuando quieras volver, entrás a tu panel y la reactivás — está todo como estaba.
+          </p>
+        </div>
+        <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:16px;margin-bottom:24px;">
+          <p style="font-size:12px;color:#6b7280;margin:0 0 4px;font-weight:600;text-transform:uppercase;letter-spacing:0.03em;">Motivo que nos dejaste</p>
+          <p style="font-size:14px;color:#374151;margin:0;">${escapeHtml(reason)}</p>
+        </div>
+        ${APP_URL ? `
+        <div style="text-align:center;margin-bottom:24px;">
+          <a href="${APP_URL}/dashboard" style="display:inline-block;background:#4f46e5;color:#fff;text-decoration:none;font-weight:700;font-size:14px;padding:13px 28px;border-radius:12px;">Reactivar mi tienda</a>
+        </div>` : ""}
+        <p style="font-size:14px;color:#6b7280;margin-bottom:24px;">
+          Si cerraste por algo que podamos resolver, contanos — respondé este email y lo vemos.
+        </p>
+        <p style="color:#9ca3af;font-size:12px;text-align:center;">
+          TiendaApps — tu tienda online profesional
+        </p>
+      </div>
+    `,
+  });
+}
+
+/**
+ * Aviso a cada afiliada de que la tienda donde vendía cerró.
+ *
+ * NO se reusa sendStoreOfflineEmail: ese dice "pausó temporalmente su actividad,
+ * tu link sigue existiendo", que en un cierre es falso. Hasta ahora el cierre solo
+ * generaba una notificación in-app, así que la afiliada que no abría la app nunca
+ * se enteraba de que había perdido una fuente de ingresos — mientras que por una
+ * simple pausa sí le llegaba un mail. El evento más grave avisaba menos.
+ */
+export async function sendStoreClosedAffiliateEmail({
+  to,
+  affiliateName,
+  storeName,
+}: {
+  to: string;
+  affiliateName: string;
+  storeName: string;
+}) {
+  if (!process.env.RESEND_API_KEY) return;
+  await resend.emails.send({
+    from: FROM,
+    to,
+    subject: `${storeName} cerró su tienda`,
+    html: `
+      <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 16px;color:#111827;background:#fff;">
+        <div style="background:#374151;border-radius:16px;padding:32px 24px;margin-bottom:28px;text-align:center;">
+          <p style="color:#d1d5db;font-size:13px;margin:0 0 6px;font-weight:500;">TiendaApps</p>
+          <h1 style="color:#fff;font-size:22px;margin:0;font-weight:800;">${escapeHtml(storeName)} cerró</h1>
+        </div>
+        <p style="font-size:15px;color:#374151;margin-bottom:6px;">Hola <strong>${escapeHtml(affiliateName) || "ahí"}</strong>,</p>
+        <p style="font-size:15px;color:#374151;margin-bottom:24px;">
+          Te avisamos que <strong>${escapeHtml(storeName)}</strong> cerró su tienda. Tu link de afiliada quedó pausado y por ahora no va a generar ventas nuevas.
+        </p>
+        <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:20px;margin-bottom:24px;">
+          <p style="font-size:13px;color:#166534;margin:0 0 8px;font-weight:700;text-transform:uppercase;letter-spacing:0.03em;">Tu plata está intacta</p>
+          <p style="font-size:15px;color:#374151;margin:0;line-height:1.6;">
+            El saldo que ya tenías acreditado sigue disponible para retirar, como siempre. Y si la tienda vuelve a abrir, recuperás tu lugar sin tener que postularte de nuevo.
+          </p>
+        </div>
+        ${APP_URL ? `
+        <div style="text-align:center;margin-bottom:24px;">
+          <a href="${APP_URL}/afiliados" style="display:inline-block;background:#4f46e5;color:#fff;text-decoration:none;font-weight:700;font-size:14px;padding:13px 28px;border-radius:12px;">Ir a mi panel</a>
+        </div>` : ""}
+        <p style="font-size:14px;color:#6b7280;margin-bottom:24px;">
+          Podés seguir vendiendo en las otras tiendas donde estés afiliada, o postularte a nuevas desde tu panel.
+        </p>
+        <p style="color:#9ca3af;font-size:12px;text-align:center;">
+          TiendaApps — tu tienda online profesional
+        </p>
+      </div>
+    `,
+  });
+}

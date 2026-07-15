@@ -256,8 +256,13 @@ export async function POST(req: NextRequest) {
 
   // Avisar por email al ganador — es la única forma en que puede recuperar su código
   // si cierra la ventana sin copiarlo, o si el widget se desactiva más tarde.
+  //
+  // Con await, no fire-and-forget: en serverless la función se puede congelar al
+  // devolver la respuesta y la promesa pendiente queda sin resolver, o sea que el
+  // cupón se pierde en silencio. No cuesta nada esperar: la ruleta ya está girando
+  // varios segundos en pantalla, así que el usuario no lo nota.
   if (!effectivelyNoPrize && normalizedEmail && couponCode && couponExpiresAt && couponDiscountType && couponDiscountValue !== null) {
-    sendGamificationWinEmail({
+    await sendGamificationWinEmail({
       to: normalizedEmail,
       storeName: widget.store.name,
       storeSlug: widget.store.slug,

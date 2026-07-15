@@ -115,7 +115,10 @@ export default async function AjustesPage({ searchParams }: { searchParams: Prom
 
           <section>
             <SectionLabel>Zona de peligro</SectionLabel>
-            <DangerZone />
+            <DangerZone
+              storeName={store?.name ?? ""}
+              paidUntil={sub?.currentPeriodEnd?.toISOString() ?? null}
+            />
           </section>
 
         </div>

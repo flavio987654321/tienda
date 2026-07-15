@@ -7,6 +7,7 @@ import type { Metadata } from "next";
 import type { StoreConfig } from "@/types/store-config";
 import { DEFAULT_CONFIG } from "@/types/store-config";
 import ComingSoonPage from "./ComingSoonPage";
+import ClosedStorePage from "./ClosedStorePage";
 import OwnerPreviewBadge from "./OwnerPreviewBadge";
 import VisitorBackButton from "./VisitorBackButton";
 import PwaInstallBanner from "@/components/store/PwaInstallBanner";
@@ -74,6 +75,7 @@ export default async function TiendaPage({ params, searchParams }: TiendaPagePro
         id: true,
         storeConfig: true,
         isPublished: true,
+        closedAt: true,
         name: true,
         logo: true,
         logoColor: true,
@@ -94,7 +96,11 @@ export default async function TiendaPage({ params, searchParams }: TiendaPagePro
             city: true,
             phone: true,
             createdAt: true,
-            subscription: { select: { tier: true } },
+            // El estado, no solo el tier: con `tier` solo, esta query no podía
+            // saber si la suscripción estaba viva ni aunque quisiera.
+            subscription: {
+              select: { tier: true, status: true, trialEndsAt: true, currentPeriodEnd: true, gracePeriodEndsAt: true },
+            },
           },
         },
       },
@@ -105,7 +111,30 @@ export default async function TiendaPage({ params, searchParams }: TiendaPagePro
   if (!store) notFound();
 
   const isOwner = !!currentUser && currentUser.id === store.ownerId;
-  const ownerIsPremium = store.owner?.subscription?.tier === "PREMIUM";
+
+  // Misma regla que generateMetadata (arriba, en este mismo archivo) y que el
+  // manifest y el push: premium es tier + suscripción viva. Antes acá se miraba
+  // solo el tier, así que este archivo tenía DOS definiciones de "es premium" con
+  // reglas distintas: una vencida seguía mostrando flyers y la campanita de
+  // novedades, esta última vacía porque su API sí chequea el estado.
+  // `isSubscriptionActive` incluye TRIAL y GRACE, así que durante la gracia sigue
+  // andando todo — que es lo que corresponde.
+  const sub = store.owner?.subscription;
+  const ownerIsPremium =
+    sub?.tier === "PREMIUM" && sub.status != null && isSubscriptionActive(sub as Parameters<typeof isSubscriptionActive>[0]);
+
+  // Antes que el chequeo de isPublished: cerrar también despublica, así que sin
+  // esto una tienda cerrada mostraría "Próximamente" y le mentiría al comprador.
+  // La dueña sí puede seguir viéndola, para revisarla antes de reactivar.
+  if (store.closedAt && !isOwner) {
+    return (
+      <ClosedStorePage
+        name={store.name}
+        logo={store.logo ?? null}
+        color={store.logoColor || store.primaryColor || "#6366f1"}
+      />
+    );
+  }
 
   if (!store.isPublished && !isOwner) {
     return (

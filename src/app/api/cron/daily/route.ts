@@ -1,9 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { sendAbandonedCartEmail } from "@/lib/resend";
+import {
+  sendAbandonedCartEmail,
+  sendSubscriptionExpiredEmail,
+  sendSubscriptionClosingSoonEmail,
+  sendStoreClosedOwnerEmail,
+  sendStoreClosedAffiliateEmail,
+} from "@/lib/resend";
 import { sendWithdrawalReminderEmail, sendMpHealthAlertEmail } from "@/lib/email";
-import { createNotification } from "@/lib/notifications";
+import { createNotification, createNotificationMany } from "@/lib/notifications";
 import { generarCuponesMensuales, expirarCuponesVencidos } from "@/lib/rewards";
+import { closureDeadline, CLOSURE_WARNING_DAYS } from "@/lib/subscription";
+import { applyStoreClosure } from "@/lib/store-closure";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "";
 
@@ -182,6 +190,126 @@ export async function GET(req: NextRequest) {
     await expirarCuponesVencidos();
     result.premiosMensuales = { year, month, affiliatesProcessed: affiliates.length };
   }
+
+  // ── 7. VENCIMIENTOS: AVISOS Y CIERRE POR FALTA DE PAGO ─────────────────────
+  //
+  // Los términos prometen esto desde siempre ("tras el vencimiento y período de
+  // gracia, la tienda se ocultará pero tus datos no se borran — podés reactivarla
+  // en cualquier momento") y el código no lo cumplía: una tienda impaga quedaba
+  // online y vendiendo para siempre, incluido el trial de 7 días.
+  //
+  // Este cron corre una vez por día. Los avisos se marcan en la suscripción para
+  // que una segunda corrida (o un disparo a mano) no los mande de nuevo.
+  const vencibles = await prisma.subscription.findMany({
+    // Los estados que puede tener alguien que dejó de pagar. El cálculo real lo
+    // hace getSubscriptionStatus: en la DB una vencida sigue diciendo ACTIVE.
+    // CANCELLED queda afuera: o ya cerró, o la canceló el admin a propósito.
+    where: { role: "OWNER", status: { in: ["ACTIVE", "TRIAL", "GRACE", "EXPIRED"] } },
+    select: {
+      id: true,
+      status: true,
+      trialEndsAt: true,
+      currentPeriodEnd: true,
+      gracePeriodEndsAt: true,
+      expiredNotifiedAt: true,
+      closingNotifiedAt: true,
+      user: {
+        select: {
+          email: true,
+          name: true,
+          store: { select: { id: true, name: true, closedAt: true } },
+        },
+      },
+    },
+  });
+
+  let cerradas = 0;
+  let avisosVencida = 0;
+  let avisosUltimos = 0;
+
+  for (const sub of vencibles) {
+    const store = sub.user.store;
+    if (!store || store.closedAt) continue; // sin tienda, o ya cerrada
+
+    const deadline = closureDeadline(sub);
+    if (!deadline) continue; // la suscripción sigue viva
+
+    const diasRestantes = Math.ceil((deadline.getTime() - now.getTime()) / 86400000);
+
+    if (now >= deadline) {
+      // Se acabó el plazo: mismas escrituras que el cierre voluntario.
+      // La suscripción NO se toca — ya está vencida, marcarla CANCELLED
+      // borraría el motivo real por el que cerró.
+      const afiliadas = await prisma.affiliate.findMany({
+        where: { storeId: store.id, isActive: true },
+        select: { userId: true, user: { select: { email: true, name: true } } },
+      });
+
+      await prisma.$transaction(async (tx) => {
+        await applyStoreClosure(tx, store.id);
+      });
+
+      if (afiliadas.length > 0) {
+        await createNotificationMany(
+          afiliadas.map((a) => ({
+            userId: a.userId,
+            type: "STORE_CLOSED",
+            title: `${store.name} cerró su tienda`,
+            body: "Tu link quedó pausado. El saldo que ya tenías acreditado sigue disponible para retirar, y si la tienda vuelve a abrir recuperás tu lugar.",
+            link: "/afiliados",
+          }))
+        );
+        await Promise.all(
+          afiliadas.map((a) =>
+            sendStoreClosedAffiliateEmail({
+              to: a.user.email,
+              affiliateName: a.user.name ?? "",
+              storeName: store.name,
+            }).catch((e) => console.error("[cron] mail cierre afiliada:", a.user.email, e))
+          )
+        );
+      }
+
+      await sendStoreClosedOwnerEmail({
+        to: sub.user.email,
+        userName: sub.user.name ?? "",
+        storeName: store.name,
+        reason: "Falta de pago",
+      }).catch((e) => console.error("[cron] mail cierre dueña:", sub.user.email, e));
+
+      cerradas++;
+      continue;
+    }
+
+    // Día 0: recién se venció. Se marca para no repetirlo si el cron corre dos veces.
+    if (!sub.expiredNotifiedAt) {
+      await sendSubscriptionExpiredEmail({
+        to: sub.user.email,
+        userName: sub.user.name ?? "",
+        storeName: store.name,
+        closesOn: deadline,
+        daysLeft: diasRestantes,
+      }).catch((e) => console.error("[cron] mail vencida:", sub.user.email, e));
+      await prisma.subscription.update({ where: { id: sub.id }, data: { expiredNotifiedAt: now } });
+      avisosVencida++;
+      continue; // un solo mail por día, no dos juntos
+    }
+
+    // Último aviso, unos días antes del cierre.
+    if (!sub.closingNotifiedAt && diasRestantes <= CLOSURE_WARNING_DAYS) {
+      await sendSubscriptionClosingSoonEmail({
+        to: sub.user.email,
+        userName: sub.user.name ?? "",
+        storeName: store.name,
+        closesOn: deadline,
+        daysLeft: diasRestantes,
+      }).catch((e) => console.error("[cron] mail ultimo aviso:", sub.user.email, e));
+      await prisma.subscription.update({ where: { id: sub.id }, data: { closingNotifiedAt: now } });
+      avisosUltimos++;
+    }
+  }
+
+  result.vencimientos = { revisadas: vencibles.length, cerradas, avisosVencida, avisosUltimos };
 
   return NextResponse.json(result);
 }

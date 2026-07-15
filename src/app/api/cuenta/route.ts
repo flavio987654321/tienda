@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createNotificationMany } from "@/lib/notifications";
+import { getClosureBlockers, getAffiliateOwnBalance, isBlocked } from "@/lib/store-closure";
 
 // ── helpers de storage ────────────────────────────────────────────────────────
 
@@ -48,41 +49,23 @@ export async function GET(req: NextRequest) {
   if (user.role === "OWNER") {
     const store = await prisma.store.findUnique({
       where: { ownerId: user.id },
-      select: {
-        name: true,
-        orders: {
-          where: { status: { in: ["PENDING", "PROCESSING"] } },
-          select: { id: true },
-        },
-        affiliates: {
-          where: { isActive: true },
-          select: { wallet: { select: { balance: true } } },
-        },
-      },
+      select: { id: true, name: true },
     });
 
-    const pendingOrders = store?.orders.length ?? 0;
-    const pendingBalances = store?.affiliates
-      .filter(a => a.wallet && a.wallet.balance > 0)
-      .reduce((sum, a) => sum + (a.wallet?.balance ?? 0), 0) ?? 0;
+    const blockers = store
+      ? await getClosureBlockers(prisma, store.id)
+      : { pendingOrders: 0, pendingBalances: 0 };
 
     return NextResponse.json({
       role: user.role,
       email: user.email,
       storeName: store?.name ?? "",
-      pendingOrders,
-      pendingBalances,
+      ...blockers,
     });
   }
 
   // Afiliada (u otro rol sin tienda): el saldo a revisar es el propio, en cada tienda donde está afiliada
-  const affiliations = await prisma.affiliate.findMany({
-    where: { userId: user.id },
-    select: { wallet: { select: { balance: true } } },
-  });
-  const pendingBalances = affiliations
-    .filter(a => a.wallet && a.wallet.balance > 0)
-    .reduce((sum, a) => sum + (a.wallet?.balance ?? 0), 0);
+  const pendingBalances = await getAffiliateOwnBalance(prisma, user.id);
 
   return NextResponse.json({
     role: user.role,
@@ -138,20 +121,13 @@ export async function DELETE(req: NextRequest) {
   if (isOwner && target === "account") {
     const storeData = await prisma.store.findUnique({
       where: { ownerId: user.id },
-      include: {
-        orders: { where: { status: { in: ["PENDING", "PROCESSING"] } }, select: { id: true } },
-        affiliates: { where: { isActive: true }, select: { userId: true, wallet: { select: { balance: true } } } },
-      },
+      select: { id: true, name: true, affiliates: { where: { isActive: true }, select: { userId: true } } },
     });
 
     if (storeData) {
-      const pendingOrders = storeData.orders.length;
-      const pendingBalances = storeData.affiliates
-        .filter(a => a.wallet && a.wallet.balance > 0)
-        .reduce((sum, a) => sum + (a.wallet?.balance ?? 0), 0);
-
-      if (pendingOrders > 0 || pendingBalances > 0) {
-        return NextResponse.json({ error: "Bloqueado", pendingOrders, pendingBalances }, { status: 409 });
+      const blockers = await getClosureBlockers(prisma, storeData.id);
+      if (isBlocked(blockers)) {
+        return NextResponse.json({ error: "Bloqueado", ...blockers }, { status: 409 });
       }
 
       // Notificar a afiliados activos
@@ -172,14 +148,7 @@ export async function DELETE(req: NextRequest) {
 
   // ── Para afiliada eliminando su cuenta: verificar saldo pendiente propio ──
   if (!isOwner && target === "account") {
-    const affiliations = await prisma.affiliate.findMany({
-      where: { userId: user.id },
-      select: { wallet: { select: { balance: true } } },
-    });
-    const pendingBalances = affiliations
-      .filter(a => a.wallet && a.wallet.balance > 0)
-      .reduce((sum, a) => sum + (a.wallet?.balance ?? 0), 0);
-
+    const pendingBalances = await getAffiliateOwnBalance(prisma, user.id);
     if (pendingBalances > 0) {
       return NextResponse.json({ error: "Bloqueado", pendingOrders: 0, pendingBalances }, { status: 409 });
     }

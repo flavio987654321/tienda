@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  LayoutDashboard, MessageSquare, Users, Store, ShoppingBag, LogOut, Shield, Menu, X, ShieldCheck, Wallet, BadgeCheck, Flag, HeartHandshake, Megaphone, PhoneCall,
+  LayoutDashboard, MessageSquare, Users, Store, ShoppingBag, LogOut, Shield, Menu, X, ShieldCheck, Wallet, BadgeCheck, Flag, HeartHandshake, Megaphone, PhoneCall, Power,
 } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -31,6 +31,7 @@ const NAV_GROUPS = [
     label: "Operaciones",
     items: [
       { href: "/admin/retiros", label: "Retiros", icon: Wallet },
+      { href: "/admin/cierres", label: "Cierres", icon: Power },
       { href: "/admin/canasta", label: "Donaciones", icon: HeartHandshake },
       { href: "/admin/promociones", label: "Promociones", icon: Megaphone },
     ],
@@ -43,7 +44,7 @@ const NAV_GROUPS = [
   },
 ];
 
-type Badges = { pendingVerif: number; pendingReports: number; pendingRetiros: number };
+type Badges = { pendingVerif: number; pendingReports: number; pendingRetiros: number; pendingCierres: number };
 
 function NavLinks({ pathname, badges, onNavigate }: { pathname: string; badges: Badges; onNavigate?: () => void }) {
   function isActive(href: string, exact?: boolean) {
@@ -54,6 +55,7 @@ function NavLinks({ pathname, badges, onNavigate }: { pathname: string; badges: 
     if (href === "/admin/verificaciones" && !pathname.startsWith("/admin/verificaciones")) return badges.pendingVerif;
     if (href === "/admin/denuncias" && !pathname.startsWith("/admin/denuncias")) return badges.pendingReports;
     if (href === "/admin/retiros" && !pathname.startsWith("/admin/retiros")) return badges.pendingRetiros;
+    if (href === "/admin/cierres" && !pathname.startsWith("/admin/cierres")) return badges.pendingCierres;
     return 0;
   }
 
@@ -121,7 +123,7 @@ function UserFooter({ user, onSignOut }: { user: { name: string | null; email: s
 
 export default function AdminSidebar({ user }: { user: { name: string | null; email: string } }) {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [badges, setBadges] = useState<Badges>({ pendingVerif: 0, pendingReports: 0, pendingRetiros: 0 });
+  const [badges, setBadges] = useState<Badges>({ pendingVerif: 0, pendingReports: 0, pendingRetiros: 0, pendingCierres: 0 });
   const pathname = usePathname();
   const { signOut } = useAuth();
 
@@ -138,6 +140,10 @@ export default function AdminSidebar({ user }: { user: { name: string | null; em
       fetch("/api/admin/retiros?count=1")
         .then((r) => r.json())
         .then((d) => { if (typeof d.count === "number") setBadges((b) => ({ ...b, pendingRetiros: d.count })); })
+        .catch(() => {});
+      fetch("/api/admin/cierres?count=1")
+        .then((r) => r.json())
+        .then((d) => { if (typeof d.count === "number") setBadges((b) => ({ ...b, pendingCierres: d.count })); })
         .catch(() => {});
     }
     fetchCounts();
@@ -158,6 +164,11 @@ export default function AdminSidebar({ user }: { user: { name: string | null; em
       .on(
         "postgres_changes" as Parameters<ReturnType<typeof supabase.channel>["on"]>[0],
         { event: "*", schema: "public", table: "WalletWithdrawal" },
+        () => fetchCounts()
+      )
+      .on(
+        "postgres_changes" as Parameters<ReturnType<typeof supabase.channel>["on"]>[0],
+        { event: "*", schema: "public", table: "StoreClosure" },
         () => fetchCounts()
       )
       .subscribe();
