@@ -195,12 +195,24 @@ export default async function TiendaPage({ params, searchParams }: TiendaPagePro
       <PWAManager appVersion={STORE_VERSION} versionKey="pwa_store_version" disableNotifPrompt />
       <PwaFadeIn />
       {ownerIsPremium && !isOwner && (
-        <PwaInstallBanner
-          logo={store.logo ?? null}
-          name={store.name ?? "Tienda"}
-          color={splashColor}
-          slug={slug}
-        />
+        <>
+          {/* Chrome dispara beforeinstallprompt apenas considera instalable la
+              página, que puede ser antes de que hidrate el banner y enganche su
+              listener. Este script corre al parsearse y lo deja guardado para
+              que el banner lo encuentre al montar. */}
+          <script
+            dangerouslySetInnerHTML={{
+              __html:
+                "window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();window.__pwaInstallPrompt=e;});",
+            }}
+          />
+          <PwaInstallBanner
+            logo={store.logo ?? null}
+            name={store.name ?? "Tienda"}
+            color={splashColor}
+            slug={slug}
+          />
+        </>
       )}
       <StoreShell
         config={{ ...config, showPushBell: ownerIsPremium && !isOwner }}

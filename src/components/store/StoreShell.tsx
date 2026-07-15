@@ -47,7 +47,7 @@ export default function StoreShell({ config, storeId, storeName, storeSlug, show
 
   return (
     <PushBellProvider storeId={storeId} storeSlug={storeSlug} enabled={showPushBell}>
-      {showPushBell && <StorePushBanner storeName={storeName} storeId={storeId} />}
+      {showPushBell && <StorePushBanner storeName={storeName} />}
       <StorefrontTemplateRenderer config={config} />
       <StorefrontPaymentSuccess />
     </PushBellProvider>

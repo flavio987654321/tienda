@@ -16,11 +16,18 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
 }
 
+declare global {
+  interface Window {
+    __pwaInstallPrompt?: BeforeInstallPromptEvent | null;
+  }
+}
+
 const STORAGE_KEY = (slug: string) => `pwa_banner_dismissed_${slug}`;
 
 export default function PwaInstallBanner({ logo, name, color, slug }: Props) {
   const [visible, setVisible] = useState(false);
   const deferredPrompt = useRef<BeforeInstallPromptEvent | null>(null);
+  const installing = useRef(false);
 
   useEffect(() => {
     // Already installed or dismissed
@@ -32,15 +39,29 @@ export default function PwaInstallBanner({ logo, name, color, slug }: Props) {
       (window.navigator as Navigator & { standalone?: boolean }).standalone === true;
     if (isStandalone) return;
 
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
+    const arm = (e: BeforeInstallPromptEvent) => {
+      deferredPrompt.current = e;
+      // Small delay — let the user settle into the page first
+      timer = setTimeout(() => setVisible(true), 3000);
+    };
+
+    // Chrome puede disparar beforeinstallprompt antes de que React hidrate y
+    // enganche el listener de abajo; el script del layout lo guarda acá para
+    // que el evento no se pierda y el cartel no deje de aparecer.
+    if (window.__pwaInstallPrompt) arm(window.__pwaInstallPrompt);
+
     const handler = (e: Event) => {
       e.preventDefault();
-      deferredPrompt.current = e as BeforeInstallPromptEvent;
-      // Small delay — let the user settle into the page first
-      setTimeout(() => setVisible(true), 3000);
+      arm(e as BeforeInstallPromptEvent);
     };
 
     window.addEventListener("beforeinstallprompt", handler);
-    return () => window.removeEventListener("beforeinstallprompt", handler);
+    return () => {
+      window.removeEventListener("beforeinstallprompt", handler);
+      clearTimeout(timer);
+    };
   }, [slug]);
 
   function dismiss() {
@@ -49,13 +70,26 @@ export default function PwaInstallBanner({ logo, name, color, slug }: Props) {
   }
 
   async function install() {
-    if (!deferredPrompt.current) return;
-    await deferredPrompt.current.prompt();
-    const { outcome } = await deferredPrompt.current.userChoice;
-    if (outcome === "accepted") {
-      localStorage.setItem(STORAGE_KEY(slug), "1");
-    }
+    const prompt = deferredPrompt.current;
+    if (!prompt || installing.current) return;
+    installing.current = true;
+    // prompt() solo se puede llamar una vez por evento: se consume antes del
+    // await para que un doble click no lo dispare dos veces (el segundo tiraba
+    // excepción de Chrome y quedaba sin atrapar).
     deferredPrompt.current = null;
+    window.__pwaInstallPrompt = null;
+
+    try {
+      await prompt.prompt();
+      const { outcome } = await prompt.userChoice;
+      if (outcome === "accepted") {
+        localStorage.setItem(STORAGE_KEY(slug), "1");
+      }
+    } catch {
+      // El diálogo nativo se cerró solo o el evento ya estaba consumido.
+    }
+
+    installing.current = false;
     setVisible(false);
   }
 
@@ -71,8 +105,13 @@ export default function PwaInstallBanner({ logo, name, color, slug }: Props) {
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: 120, opacity: 0 }}
           transition={{ type: "spring", stiffness: 340, damping: 32, mass: 0.9 }}
-          className="fixed bottom-5 left-1/2 z-[9990] w-[calc(100%-2rem)] max-w-sm -translate-x-1/2"
-          style={{ willChange: "transform, opacity" }}
+          className="fixed left-1/2 z-[9990] w-[calc(100%-2rem)] max-w-sm -translate-x-1/2"
+          style={{
+            willChange: "transform, opacity",
+            // Sin el safe-area, los 20px fijos caían debajo de la barra de
+            // gestos en los celus que no tienen botones físicos.
+            bottom: "calc(1.25rem + env(safe-area-inset-bottom, 0px))",
+          }}
         >
           {/* Glass card */}
           <div
