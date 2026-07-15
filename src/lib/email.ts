@@ -1,4 +1,4 @@
-﻿import nodemailer from "nodemailer";
+﻿import { Resend } from "resend";
 
 function escapeHtml(s: string | null | undefined): string {
   if (!s) return "";
@@ -10,15 +10,55 @@ function escapeHtml(s: string | null | undefined): string {
     .replace(/'/g, "&#39;");
 }
 
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: Number(process.env.SMTP_PORT) || 587,
-  secure: process.env.SMTP_SECURE === "true",
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
+// Antes esto salía por SMTP de Gmail con una "contraseña de aplicación", que
+// Google revoca cada vez que se cambia la clave de la cuenta: pasó el 9/7/2026
+// y dejó los 25 mails de este archivo muertos en silencio durante días (Gmail
+// devolvía EAUTH 535 y el error se perdía en un .catch()). Ahora se manda por
+// Resend, el mismo servicio que ya venía entregando los otros mails del
+// proyecto, desde el dominio propio y sin credenciales que caduquen.
+const resend = new Resend(process.env.RESEND_API_KEY ?? "no-key");
+
+// Solo se puede enviar desde un dominio verificado en Resend. La casilla no
+// necesita existir: es solo la dirección que figura como remitente.
+const FROM_ADDRESS =
+  (process.env.RESEND_FROM ?? "TiendaApps <noreply@tiendaapps.com>").match(/<([^>]+)>/)?.[1]?.trim() ??
+  "noreply@tiendaapps.com";
+
+/**
+ * Adaptador con la misma forma que nodemailer (`sendMail`), para que las 25
+ * funciones de abajo no cambien. Conserva el nombre visible que ya usaban
+ * (ej. "Girly Store") pero reemplaza la dirección por la del dominio
+ * verificado, que es la única desde la que Resend permite enviar.
+ */
+const transporter = {
+  async sendMail({
+    from,
+    to,
+    subject,
+    html,
+    replyTo,
+  }: {
+    from: string;
+    to: string;
+    subject: string;
+    html: string;
+    replyTo?: string;
+  }) {
+    const displayName = from.match(/^\s*"?([^"<]*?)"?\s*</)?.[1]?.trim().replace(/[<>"]/g, "");
+    const fromHeader = displayName ? `${displayName} <${FROM_ADDRESS}>` : FROM_ADDRESS;
+
+    const { error } = await resend.emails.send({
+      from: fromHeader,
+      to,
+      subject,
+      html,
+      ...(replyTo ? { replyTo } : {}),
+    });
+    // Resend devuelve el error en la respuesta en vez de tirar excepción, así
+    // que se convierte en throw para que los .catch() de siempre lo registren.
+    if (error) throw new Error(`Resend: ${error.name} — ${error.message}`);
   },
-});
+};
 
 export async function sendContactFormEmail({
   ownerEmail,
@@ -35,10 +75,10 @@ export async function sendContactFormEmail({
   phone?: string;
   message: string;
 }) {
-  if (!process.env.SMTP_HOST || !process.env.SMTP_USER) return;
+  if (!process.env.RESEND_API_KEY) return;
 
   await transporter.sendMail({
-    from: `"${storeName}" <${process.env.SMTP_USER}>`,
+    from: `"${storeName}" <${FROM_ADDRESS}>`,
     to: ownerEmail,
     replyTo: email,
     subject: `Nuevo mensaje de contacto de ${name} — ${storeName}`,
@@ -74,7 +114,7 @@ export async function sendLowStockEmail({
   storeName: string;
   products: { name: string; variant: string; stock: number }[];
 }) {
-  if (!process.env.SMTP_HOST || !process.env.SMTP_USER) return;
+  if (!process.env.RESEND_API_KEY) return;
 
   const outOfStock = products.filter((p) => p.stock === 0);
   const lowStock = products.filter((p) => p.stock > 0);
@@ -102,7 +142,7 @@ export async function sendLowStockEmail({
     : `<strong>${lowStock.length}</strong> producto${lowStock.length !== 1 ? "s" : ""} tienen stock bajo.`;
 
   await transporter.sendMail({
-    from: `"${storeName}" <${process.env.SMTP_USER}>`,
+    from: `"${storeName}" <${FROM_ADDRESS}>`,
     to: ownerEmail,
     subject,
     html: `
@@ -156,7 +196,7 @@ export async function sendReviewRequestEmail({
   storeSlug: string;
   products: { id: string; name: string }[];
 }) {
-  if (!process.env.SMTP_HOST || !process.env.SMTP_USER) return;
+  if (!process.env.RESEND_API_KEY) return;
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "";
   const productLinks = products
@@ -170,7 +210,7 @@ export async function sendReviewRequestEmail({
     .join("");
 
   await transporter.sendMail({
-    from: `"${storeName}" <${process.env.SMTP_USER}>`,
+    from: `"${storeName}" <${FROM_ADDRESS}>`,
     to: buyerEmail,
     subject: `¿Cómo te fue con tu compra en ${storeName}?`,
     html: `
@@ -217,14 +257,14 @@ export async function sendNewReviewToOwnerEmail({
   rating: number;
   comment?: string | null;
 }) {
-  if (!process.env.SMTP_HOST || !process.env.SMTP_USER) return;
+  if (!process.env.RESEND_API_KEY) return;
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "";
   const productUrl = `${appUrl}/tienda/${storeSlug}/producto/${productId}`;
   const stars = "⭐".repeat(rating) + "☆".repeat(5 - rating);
 
   await transporter.sendMail({
-    from: `"TiendaApps" <${process.env.SMTP_USER}>`,
+    from: `"TiendaApps" <${FROM_ADDRESS}>`,
     to: ownerEmail,
     subject: `Nueva reseña (${rating}★) en ${storeName}`,
     html: `
@@ -266,7 +306,7 @@ export async function sendAffiliateStatusEmail({
   storeSlug: string;
   status: "APPROVED" | "PAUSED" | "REMOVED" | "REJECTED";
 }) {
-  if (!process.env.SMTP_HOST || !process.env.SMTP_USER) return;
+  if (!process.env.RESEND_API_KEY) return;
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "";
   const dashboardUrl = `${appUrl}/afiliados`;
@@ -307,7 +347,7 @@ export async function sendAffiliateStatusEmail({
   }[status];
 
   await transporter.sendMail({
-    from: `"${storeName}" <${process.env.SMTP_USER}>`,
+    from: `"${storeName}" <${FROM_ADDRESS}>`,
     to: affiliateEmail,
     subject: content.subject,
     html: `
@@ -350,13 +390,13 @@ export async function sendNewAffiliateApplicationEmail({
   applicantEmail: string;
   applicationMessage?: string | null;
 }) {
-  if (!process.env.SMTP_HOST || !process.env.SMTP_USER) return;
+  if (!process.env.RESEND_API_KEY) return;
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "";
   const dashboardUrl = `${appUrl}/dashboard/vendedoras`;
 
   await transporter.sendMail({
-    from: `"TiendaApps" <${process.env.SMTP_USER}>`,
+    from: `"TiendaApps" <${FROM_ADDRESS}>`,
     to: ownerEmail,
     subject: `Nueva solicitud de afiliada en ${storeName}`,
     html: `
@@ -410,13 +450,13 @@ export async function sendCommissionEarnedEmail({
   commissionRate: number;
   newBalance: number;
 }) {
-  if (!process.env.SMTP_HOST || !process.env.SMTP_USER) return;
+  if (!process.env.RESEND_API_KEY) return;
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "";
   const fmt = (n: number) => `$${n.toLocaleString("es-AR")}`;
 
   await transporter.sendMail({
-    from: `"${storeName}" <${process.env.SMTP_USER}>`,
+    from: `"${storeName}" <${FROM_ADDRESS}>`,
     to: affiliateEmail,
     subject: `💰 Ganaste ${fmt(commissionAmount)} de comisión en ${storeName}`,
     html: `
@@ -564,7 +604,7 @@ export async function sendOrderConfirmationEmail({
   ownerContact?: { name: string | null; email: string | null; phone: string | null } | null;
   paymentProvider?: string | null;
 }) {
-  if (!process.env.SMTP_HOST || !process.env.SMTP_USER) return;
+  if (!process.env.RESEND_API_KEY) return;
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "";
   const fmt = (n: number) => `$${n.toLocaleString("es-AR")}`;
@@ -598,7 +638,7 @@ export async function sendOrderConfirmationEmail({
     .join("");
 
   await transporter.sendMail({
-    from: `"${storeName}" <${process.env.SMTP_USER}>`,
+    from: `"${storeName}" <${FROM_ADDRESS}>`,
     to: buyerEmail,
     subject: `Gracias por tu compra en ${storeName} — Pedido #${shortId}`,
     html: `
@@ -751,7 +791,7 @@ export async function sendNewOrderToOwnerEmail({
   total: number;
   paymentProvider?: string | null;
 }) {
-  if (!process.env.SMTP_HOST || !process.env.SMTP_USER) return;
+  if (!process.env.RESEND_API_KEY) return;
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "";
   const fmt = (n: number) => `$${n.toLocaleString("es-AR")}`;
@@ -788,7 +828,7 @@ export async function sendNewOrderToOwnerEmail({
   const addressLine = addressParts.length > 0 ? escapeHtml(addressParts.join(", ")) : null;
 
   await transporter.sendMail({
-    from: `"TiendaApps" <${process.env.SMTP_USER}>`,
+    from: `"TiendaApps" <${FROM_ADDRESS}>`,
     to: ownerEmail,
     subject: `Nuevo pedido #${shortId} en ${storeName}`,
     html: `
@@ -919,7 +959,7 @@ export async function sendOrderShippedEmail({
   shippingMethod: string;
   items: { name: string; variant?: string | null; quantity: number }[];
 }) {
-  if (!process.env.SMTP_HOST || !process.env.SMTP_USER) return;
+  if (!process.env.RESEND_API_KEY) return;
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "";
   const shortId = orderId.slice(-8).toUpperCase();
@@ -931,7 +971,7 @@ export async function sendOrderShippedEmail({
     .join("");
 
   await transporter.sendMail({
-    from: `"${storeName}" <${process.env.SMTP_USER}>`,
+    from: `"${storeName}" <${FROM_ADDRESS}>`,
     to: buyerEmail,
     subject: `Tu pedido #${shortId} fue enviado — ${storeName}`,
     html: `
@@ -998,7 +1038,7 @@ export async function sendWithdrawalRequestEmail({
   cuil: string | null;
   bankHolder: string | null;
 }) {
-  if (!process.env.SMTP_HOST || !process.env.SMTP_USER) return;
+  if (!process.env.RESEND_API_KEY) return;
 
   const fmt = (n: number) => `$${n.toLocaleString("es-AR")}`;
   const bankRows = [
@@ -1009,7 +1049,7 @@ export async function sendWithdrawalRequestEmail({
   ].filter(Boolean).join("");
 
   await transporter.sendMail({
-    from: `"TiendaApps" <${process.env.SMTP_USER}>`,
+    from: `"TiendaApps" <${FROM_ADDRESS}>`,
     to: ownerEmail,
     subject: `💸 ${affiliateName} solicitó un retiro de ${fmt(amount)} — ${storeName}`,
     html: `
@@ -1062,13 +1102,13 @@ export async function sendWithdrawalReminderEmail({
   daysOld: number;
   dashboardUrl: string;
 }) {
-  if (!process.env.SMTP_HOST || !process.env.SMTP_USER) return;
+  if (!process.env.RESEND_API_KEY) return;
 
   const fmt = (n: number) => `$${n.toLocaleString("es-AR")}`;
   const isUrgent = daysOld >= 15;
 
   await transporter.sendMail({
-    from: `"TiendaApps" <${process.env.SMTP_USER}>`,
+    from: `"TiendaApps" <${FROM_ADDRESS}>`,
     to: ownerEmail,
     subject: `${isUrgent ? "⚠️ URGENTE" : "🔔 Recordatorio"}: retiro pendiente de ${affiliateName} (${daysOld} días) — ${storeName}`,
     html: `
@@ -1111,11 +1151,11 @@ export async function sendWithdrawalApprovedEmail({
   storeName: string;
   amount: number;
 }) {
-  if (!process.env.SMTP_HOST || !process.env.SMTP_USER) return;
+  if (!process.env.RESEND_API_KEY) return;
   const fmt = (n: number) => `$${n.toLocaleString("es-AR")}`;
 
   await transporter.sendMail({
-    from: `"TiendaApps" <${process.env.SMTP_USER}>`,
+    from: `"TiendaApps" <${FROM_ADDRESS}>`,
     to: affiliateEmail,
     subject: `✅ Tu retiro de ${fmt(amount)} fue transferido — ${storeName}`,
     html: `
@@ -1153,11 +1193,14 @@ export async function sendAfiliadoSoporteEmail({
   asunto: string;
   mensaje: string;
 }) {
-  if (!process.env.SMTP_HOST || !process.env.SMTP_USER) return;
-  const adminEmail = process.env.ADMIN_EMAIL ?? process.env.SMTP_USER;
+  if (!process.env.RESEND_API_KEY) return;
+  // Antes caía a SMTP_USER si faltaba ADMIN_EMAIL; ya no hay SMTP, y sin una
+  // casilla real a la que escribir no tiene sentido intentar el envío.
+  const adminEmail = process.env.ADMIN_EMAIL;
+  if (!adminEmail) return;
 
   await transporter.sendMail({
-    from: `"TiendaApps" <${process.env.SMTP_USER}>`,
+    from: `"TiendaApps" <${FROM_ADDRESS}>`,
     to: adminEmail,
     replyTo: userEmail,
     subject: `🆘 Soporte afiliado: ${asunto}`,
@@ -1188,12 +1231,12 @@ export async function sendStoreOfflineEmail({
   affiliateName: string;
   storeName: string;
 }) {
-  if (!process.env.SMTP_HOST || !process.env.SMTP_USER) return;
+  if (!process.env.RESEND_API_KEY) return;
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "";
 
   await transporter.sendMail({
-    from: `"TiendaApps" <${process.env.SMTP_USER}>`,
+    from: `"TiendaApps" <${FROM_ADDRESS}>`,
     to: affiliateEmail,
     subject: `La tienda ${storeName} pausó su actividad temporalmente`,
     html: `
@@ -1241,14 +1284,14 @@ export async function sendOrderPaymentConfirmedEmail({
   storeSlug: string;
   total: number;
 }) {
-  if (!process.env.SMTP_HOST || !process.env.SMTP_USER) return;
+  if (!process.env.RESEND_API_KEY) return;
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "";
   const shortId = orderId.slice(-8).toUpperCase();
   const storeUrl = `${appUrl}/tienda/${storeSlug}`;
 
   await transporter.sendMail({
-    from: `"${storeName}" <${process.env.SMTP_USER}>`,
+    from: `"${storeName}" <${FROM_ADDRESS}>`,
     to: buyerEmail,
     subject: `Pago confirmado — Pedido #${shortId} en preparación`,
     html: `
@@ -1299,7 +1342,7 @@ export async function sendOrderCancelledEmail({
   storeName: string;
   ownerContact?: { email?: string | null; phone?: string | null } | null;
 }) {
-  if (!process.env.SMTP_HOST || !process.env.SMTP_USER) return;
+  if (!process.env.RESEND_API_KEY) return;
 
   const shortId = orderId.slice(-8).toUpperCase();
 
@@ -1311,7 +1354,7 @@ export async function sendOrderCancelledEmail({
     </div>` : "";
 
   await transporter.sendMail({
-    from: `"${storeName}" <${process.env.SMTP_USER}>`,
+    from: `"${storeName}" <${FROM_ADDRESS}>`,
     to: buyerEmail,
     subject: `Tu pedido #${shortId} fue cancelado — ${storeName}`,
     html: `
@@ -1351,13 +1394,13 @@ export async function sendNewStorePublishedEmail({
   storeName: string;
   commissionRate: number;
 }) {
-  if (!process.env.SMTP_HOST || !process.env.SMTP_USER) return;
+  if (!process.env.RESEND_API_KEY) return;
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "";
   const storeUrl = `${appUrl}/afiliados`;
 
   await transporter.sendMail({
-    from: `"TiendaApps" <${process.env.SMTP_USER}>`,
+    from: `"TiendaApps" <${FROM_ADDRESS}>`,
     to: affiliateEmail,
     subject: `Nueva tienda disponible: ${storeName} — postulate ahora`,
     html: `
@@ -1404,12 +1447,12 @@ export async function sendMpDisconnectedEmail({
   affiliateName: string;
   storeName: string;
 }) {
-  if (!process.env.SMTP_HOST || !process.env.SMTP_USER) return;
+  if (!process.env.RESEND_API_KEY) return;
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "";
 
   await transporter.sendMail({
-    from: `"TiendaApps" <${process.env.SMTP_USER}>`,
+    from: `"TiendaApps" <${FROM_ADDRESS}>`,
     to: affiliateEmail,
     subject: `El programa de afiliadas de ${storeName} está pausado`,
     html: `
@@ -1461,10 +1504,10 @@ export async function sendAdminAlertEmail({
   reason: string;
   actions: string[];
 }) {
-  if (!process.env.SMTP_HOST || !process.env.SMTP_USER) return;
+  if (!process.env.RESEND_API_KEY) return;
   const actionItems = actions.map(a => `<li>${escapeHtml(a)}</li>`).join("");
   await transporter.sendMail({
-    from: `"TiendaApps Alerta" <${process.env.SMTP_USER}>`,
+    from: `"TiendaApps Alerta" <${FROM_ADDRESS}>`,
     to: "marketplacemitienda@gmail.com",
     subject,
     html: `
@@ -1491,9 +1534,9 @@ export async function sendMpHealthAlertEmail({
   reason: string;
   lastEventAt: string;
 }) {
-  if (!process.env.SMTP_HOST || !process.env.SMTP_USER) return;
+  if (!process.env.RESEND_API_KEY) return;
   await transporter.sendMail({
-    from: `"TiendaApps Alerta" <${process.env.SMTP_USER}>`,
+    from: `"TiendaApps Alerta" <${FROM_ADDRESS}>`,
     to: "marketplacemitienda@gmail.com",
     subject: `⚠️ ALERTA: Problema detectado con MercadoPago — ${new Date().toLocaleString("es-AR")}`,
     html: `
@@ -1531,11 +1574,11 @@ export async function sendServiceInterruptionEmail({
   body: string;
   estimatedResolution?: string;
 }) {
-  if (!process.env.SMTP_HOST || !process.env.SMTP_USER) return;
+  if (!process.env.RESEND_API_KEY) return;
   const results = await Promise.allSettled(
     recipients.map((to) =>
       transporter.sendMail({
-        from: `"TiendaApps" <${process.env.SMTP_USER}>`,
+        from: `"TiendaApps" <${FROM_ADDRESS}>`,
         to,
         subject: escapeHtml(subject),
         html: `
@@ -1572,12 +1615,12 @@ export async function sendCommissionRateChangedEmail({
   oldRate: number;
   newRate: number;
 }) {
-  if (!process.env.SMTP_HOST || !process.env.SMTP_USER) return;
+  if (!process.env.RESEND_API_KEY) return;
   const direction = newRate < oldRate ? "bajó" : "subió";
   const color = newRate < oldRate ? "#dc2626" : "#16a34a";
 
   await transporter.sendMail({
-    from: `"TiendaApps" <${process.env.SMTP_USER}>`,
+    from: `"TiendaApps" <${FROM_ADDRESS}>`,
     to: affiliateEmail,
     subject: `Cambio de comisión en ${escapeHtml(storeName)} — ${oldRate}% → ${newRate}%`,
     html: `
@@ -1643,7 +1686,7 @@ export async function sendGamificationWinEmail({
   expiresAt: Date;
   legalText?: string | null;
 }) {
-  if (!process.env.SMTP_HOST || !process.env.SMTP_USER) return;
+  if (!process.env.RESEND_API_KEY) return;
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "";
   const storeUrl = `${appUrl}/tienda/${storeSlug}`;
@@ -1652,7 +1695,7 @@ export async function sendGamificationWinEmail({
   const expiryLabel = `${expiresAt.toLocaleDateString("es-AR", { day: "numeric", month: "long", year: "numeric" })} a las ${expiresAt.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })}`;
 
   await transporter.sendMail({
-    from: `"${storeName}" <${process.env.SMTP_USER}>`,
+    from: `"${storeName}" <${FROM_ADDRESS}>`,
     to,
     subject: `🎉 ¡Ganaste ${discountLabel} en ${storeName}!`,
     html: `
@@ -1710,9 +1753,9 @@ export async function sendOtpEmail({
   name: string | null;
   code: string;
 }) {
-  if (!process.env.SMTP_HOST || !process.env.SMTP_USER) return;
+  if (!process.env.RESEND_API_KEY) return;
   await transporter.sendMail({
-    from: `"TiendaApps" <${process.env.SMTP_USER}>`,
+    from: `"TiendaApps" <${FROM_ADDRESS}>`,
     to,
     subject: `Tu código de verificación: ${code}`,
     html: `
@@ -1725,6 +1768,47 @@ export async function sendOtpEmail({
         </div>
         <p style="font-size:12px;color:#64748b;margin:0 0 8px;">Si no fuiste vos, ignorá este email. Nadie puede acceder a tus datos sin el código.</p>
         <p style="font-size:11px;color:#475569;text-align:center;margin-top:24px;">TiendaApps · tiendaapps.com</p>
+      </div>
+    `,
+  });
+}
+
+// Formulario de contacto de la plataforma (tiendaapps.com/contacto). Vive acá y
+// no en la ruta para no repetir el cliente de correo: antes /api/contacto tenía
+// su propio nodemailer + SMTP de Gmail duplicado, y quedó roto igual que el
+// resto cuando Google revocó la contraseña de aplicación.
+export async function sendPlatformContactEmail({
+  name,
+  email,
+  subject,
+  message,
+}: {
+  name: string;
+  email: string;
+  subject: string;
+  message: string;
+}) {
+  if (!process.env.RESEND_API_KEY) return;
+  const adminEmail = process.env.ADMIN_EMAIL;
+  if (!adminEmail) return;
+
+  await transporter.sendMail({
+    from: `"TiendaApps Contacto" <${FROM_ADDRESS}>`,
+    to: adminEmail,
+    replyTo: email,
+    subject: `[Contacto] ${subject || "Sin asunto"} — ${name}`,
+    html: `
+      <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:32px;background:#0f172a;color:#e2e8f0;border-radius:16px">
+        <h2 style="color:#818cf8;margin:0 0 24px">Nuevo mensaje de contacto</h2>
+        <table style="width:100%;border-collapse:collapse">
+          <tr><td style="padding:8px 0;color:#94a3b8;font-size:13px;width:120px">Nombre</td><td style="padding:8px 0;font-weight:600">${escapeHtml(name)}</td></tr>
+          <tr><td style="padding:8px 0;color:#94a3b8;font-size:13px">Email</td><td style="padding:8px 0"><a href="mailto:${escapeHtml(email)}" style="color:#818cf8">${escapeHtml(email)}</a></td></tr>
+          ${subject ? `<tr><td style="padding:8px 0;color:#94a3b8;font-size:13px">Asunto</td><td style="padding:8px 0">${escapeHtml(subject)}</td></tr>` : ""}
+        </table>
+        <div style="margin-top:24px;background:#1e293b;border-radius:12px;padding:20px">
+          <p style="margin:0;color:#94a3b8;font-size:12px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px">Mensaje</p>
+          <p style="margin:0;line-height:1.7;white-space:pre-wrap">${escapeHtml(message)}</p>
+        </div>
       </div>
     `,
   });
