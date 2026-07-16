@@ -49,6 +49,12 @@ export async function GET(req: NextRequest) {
       recoveredAt: null,
       reminderSentAt: null,
       lastActivityAt: { lte: minAge, gte: maxAge },
+      // Solo tiendas online: no tiene sentido invitar a completar una compra en
+      // una tienda cerrada o despublicada — el checkout la rechaza y el link de
+      // recuperación lleva a la pantalla de "tienda cerrada". El carrito queda
+      // guardado igual; si la tienda vuelve, el recordatorio sale en la próxima
+      // corrida (reminderSentAt sigue en null).
+      store: { closedAt: null, isPublished: true },
     },
     include: { store: { select: { name: true, slug: true } } },
   });

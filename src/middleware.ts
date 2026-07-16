@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { needsMfaChallenge } from "@/lib/mfa";
 
 const PLATFORM_HOSTS = new Set([
   "tiendaapps.com",
@@ -53,12 +54,16 @@ function handleCors(request: NextRequest): NextResponse | null {
   return null;
 }
 
-async function runSupabaseAuth(request: NextRequest): Promise<NextResponse> {
+type SupabaseMiddleware = ReturnType<typeof createServerClient>;
+
+async function runSupabaseAuth(
+  request: NextRequest
+): Promise<{ response: NextResponse; supabase: SupabaseMiddleware | null }> {
   let response = NextResponse.next({ request });
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 
-  if (!url || !key) return response;
+  if (!url || !key) return { response, supabase: null };
 
   const supabase = createServerClient(url, key, {
     cookies: {
@@ -74,7 +79,7 @@ async function runSupabaseAuth(request: NextRequest): Promise<NextResponse> {
   });
 
   await supabase.auth.getUser();
-  return response;
+  return { response, supabase };
 }
 
 export async function middleware(request: NextRequest) {
@@ -138,7 +143,22 @@ export async function middleware(request: NextRequest) {
   const corsRes = handleCors(request);
   if (corsRes) return corsRes;
 
-  const res = await runSupabaseAuth(request);
+  const { response: res, supabase } = await runSupabaseAuth(request);
+
+  // Segundo factor para los ENDPOINTS del admin. El gate de las páginas vive en el
+  // layout de /admin, pero los /api/admin no pasan por ese layout: sin esto, una
+  // sesión con la contraseña pero sin el 2FA (aal1) no vería la UI pero igual
+  // podría llamar las rutas de admin (banear, eliminar, cambiar suscripciones).
+  // Acá se cierran para todos de una, incluidos los endpoints que se agreguen
+  // después. `needsMfaChallenge` falla abierto, así que un error no bloquea nada.
+  if (supabase && pathname.startsWith("/api/admin")) {
+    if (await needsMfaChallenge(supabase)) {
+      return NextResponse.json(
+        { error: "Verificación en dos pasos requerida" },
+        { status: 403 }
+      );
+    }
+  }
 
   // Headers de seguridad para el panel admin
   if (pathname.startsWith("/admin")) {
