@@ -1,5 +1,6 @@
 import { getCurrentUser } from "@/lib/auth-session";
 import { getUserSubscription } from "@/lib/subscription";
+import { hasDesign } from "@/lib/store-config";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -22,7 +23,7 @@ export default async function AjustesPage({ searchParams }: { searchParams: Prom
       select: {
         id: true, slug: true, customDomain: true, mpConnectedAt: true, mpSellerId: true,
         name: true, logo: true, logoColor: true, primaryColor: true, description: true,
-        tipoTienda: true,
+        tipoTienda: true, storeConfig: true, pageBlocks: true,
       },
     }),
   ]);
@@ -118,6 +119,7 @@ export default async function AjustesPage({ searchParams }: { searchParams: Prom
             <DangerZone
               storeName={store?.name ?? ""}
               paidUntil={sub?.currentPeriodEnd?.toISOString() ?? null}
+              hasDesign={hasDesign(store?.storeConfig, store?.pageBlocks)}
             />
           </section>
 

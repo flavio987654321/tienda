@@ -96,6 +96,7 @@ export default async function TiendaPage({ params, searchParams }: TiendaPagePro
             city: true,
             phone: true,
             createdAt: true,
+            banned: true,
             // El estado, no solo el tier: con `tier` solo, esta query no podía
             // saber si la suscripción estaba viva ni aunque quisiera.
             subscription: {
@@ -122,6 +123,21 @@ export default async function TiendaPage({ params, searchParams }: TiendaPagePro
   const sub = store.owner?.subscription;
   const ownerIsPremium =
     sub?.tier === "PREMIUM" && sub.status != null && isSubscriptionActive(sub as Parameters<typeof isSubscriptionActive>[0]);
+
+  // Dueño baneado: la tienda sale de línea para el público, igual que una cerrada.
+  // Banear corta el login del dueño pero no tocaba el storefront, así que la tienda
+  // de alguien suspendido seguía online y vendiendo. Se muestra la misma pantalla
+  // neutra de "no disponible" —al visitante no le incumbe el motivo—. El dueño
+  // baneado tampoco puede verla porque `banned` lo deja sin sesión (isOwner = false).
+  if (store.owner?.banned) {
+    return (
+      <ClosedStorePage
+        name={store.name}
+        logo={store.logo ?? null}
+        color={store.logoColor || store.primaryColor || "#6366f1"}
+      />
+    );
+  }
 
   // Antes que el chequeo de isPublished: cerrar también despublica, así que sin
   // esto una tienda cerrada mostraría "Próximamente" y le mentiría al comprador.

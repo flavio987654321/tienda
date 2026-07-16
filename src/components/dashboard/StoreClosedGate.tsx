@@ -16,10 +16,19 @@ import { useAuth } from "@/components/AuthProvider";
  * reactivar. Tiendanube hace justo esto: te deja entrar y te muestra el estado
  * real.
  *
- * Reactivar y volver a suscribirse son dos pasos distintos: acá se limpia el
- * cierre y, al recargar, el flujo de suscripción normal le pide el plan.
+ * `credit` llega solo si le quedan días de verdad —pagos o de prueba—, y sale
+ * del mismo `reactivationCredit` que usa el endpoint al escribir. Con días vuelve
+ * sin pagar; sin días va a tener que suscribirse. La pantalla tiene que decir
+ * cuál de las dos: antes prometía "vas a poder elegir un plan" y lo que aparecía
+ * después era un candado de "tu suscripción venció".
  */
-export default function StoreClosedGate({ closedAt }: { closedAt: string }) {
+export default function StoreClosedGate({
+  closedAt,
+  credit,
+}: {
+  closedAt: string;
+  credit: { status: "ACTIVE" | "TRIAL"; until: string } | null;
+}) {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [signingOut, setSigningOut] = useState(false);
@@ -28,11 +37,10 @@ export default function StoreClosedGate({ closedAt }: { closedAt: string }) {
   // los dos antes del primer re-render.
   const sending = useRef(false);
 
-  const fecha = new Date(closedAt).toLocaleDateString("es-AR", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
+  const fmtFecha = (iso: string) =>
+    new Date(iso).toLocaleDateString("es-AR", { day: "numeric", month: "long", year: "numeric" });
+
+  const fecha = fmtFecha(closedAt);
 
   async function reactivar() {
     if (sending.current) return;
@@ -86,7 +94,11 @@ export default function StoreClosedGate({ closedAt }: { closedAt: string }) {
           {loading ? <><Loader2 className="h-4 w-4 animate-spin" /> Reactivando…</> : <><Power className="h-4 w-4" /> Reactivar mi tienda</>}
         </button>
         <p className="text-[11px] text-gray-400 mb-4 leading-relaxed">
-          Al reactivarla vas a poder elegir un plan para volver a publicarla.
+          {credit
+            ? credit.status === "ACTIVE"
+              ? `Tenés la suscripción paga hasta el ${fmtFecha(credit.until)}: volvés sin pagar de nuevo. Después la publicás cuando quieras.`
+              : `Te queda prueba gratis hasta el ${fmtFecha(credit.until)}: volvés sin pagar. Después la publicás cuando quieras.`
+            : "Al reactivarla vas a tener que elegir un plan para volver a publicarla."}
         </p>
 
         <Link href="/" className="block text-sm text-gray-400 hover:text-gray-600 transition-colors mb-3">

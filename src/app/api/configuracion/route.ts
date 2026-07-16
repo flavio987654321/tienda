@@ -6,63 +6,7 @@ import { createNotificationMany } from "@/lib/notifications";
 import { isSafeUrl } from "@/lib/url-utils";
 import { sendNewStorePublishedEmail, sendStoreOfflineEmail, sendCommissionRateChangedEmail } from "@/lib/email";
 import { getClientIp } from "@/lib/request-ip";
-import { z } from "zod";
-
-const HEX_RE = /^#[0-9A-Fa-f]{6}$/;
-const storeConfigSchema = z.object({
-  template: z.enum(["fashion-noir", "boho-terra", "urban-pulse", "chic-paris", "auto-motor", "auto-drive", "electro-prime", "tech-nova", "home-studio", "casa-clara"]),
-  storeName: z.string().max(120),
-  storeTagline: z.string().max(200),
-  colors: z.object({ accent: z.string().regex(HEX_RE) }),
-  whatsapp: z.object({ enabled: z.boolean(), number: z.string().max(30) }),
-  socialLinks: z.object({
-    instagram: z.string().max(200),
-    facebook:  z.string().max(200),
-    tiktok:    z.string().max(200),
-    youtube:   z.string().max(200),
-    pinterest: z.string().max(200),
-  }),
-  currency: z.enum(["ARS", "USD"]),
-  language: z.enum(["ES", "EN"]),
-  seo: z.object({ enabled: z.boolean(), title: z.string().max(120), description: z.string().max(320) }),
-  analytics: z.object({
-    googleAnalyticsId: z.string().max(30).optional(),
-    facebookPixelId: z.string().max(30).optional(),
-  }).optional(),
-  textOverrides: z.record(z.string(), z.object({
-    text: z.string().max(500).optional(),
-    color: z.string().max(30).optional(),
-    fontFamily: z.string().max(80).optional(),
-    fontSize: z.number().optional(),
-    bold: z.boolean().optional(),
-    italic: z.boolean().optional(),
-    underline: z.boolean().optional(),
-    hidden: z.boolean().optional(),
-  })),
-  imageOverrides: z.record(z.string(), z.object({
-    url: z.string().max(2000).optional(),
-    overlayType: z.enum(["none", "dark", "light"]).optional(),
-    overlayOpacity: z.number().min(0).max(1).optional(),
-    posX: z.number().min(0).max(100).optional(),
-    posY: z.number().min(0).max(100).optional(),
-  })),
-  sectionColors: z.record(z.string(), z.string().max(30)),
-  bannerInterval: z.number().optional(),
-  promoBanner: z.object({ enabled: z.boolean(), messages: z.array(z.string().max(120)).max(3).optional() }).optional(),
-  previewFill: z.boolean().optional(),
-  tipoTienda: z.string().max(30).optional(),
-  tieneVentaMayorista: z.boolean().optional(),
-  ocultarPreciosPublico: z.boolean().optional(),
-  featuredCategories: z.array(z.string().max(80)).optional(),
-  storeId: z.string().optional(),
-  slug: z.string().optional(),
-  flyerConfig: z.object({
-    enabled: z.boolean(),
-    images: z.array(z.string().max(2000)).max(3),
-  }).optional(),
-  hiddenSections: z.array(z.string().max(60)).optional(),
-  sectionOrder: z.array(z.string().max(60)).optional(),
-});
+import { storeConfigSchema, mergeDesignConfig, resetStoreDesign } from "@/lib/store-config";
 
 export async function GET() {
   const user = await getCurrentUser();
@@ -82,9 +26,20 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) {
     return NextResponse.json({ error: "Config inválida", details: parsed.error.flatten() }, { status: 400 });
   }
+
+  // El editor solo es dueño de las claves del diseño. `mergeDesignConfig` preserva
+  // lo que escriben otras features (paymentInfo, shippingMethods) y que zod
+  // descarta al validar: guardar `parsed.data` tal cual borraba el CBU y los
+  // métodos de envío en cada guardado.
+  const current = await prisma.store.findUnique({
+    where: { ownerId: user.id },
+    select: { storeConfig: true },
+  });
+  if (!current) return NextResponse.json({ error: "Tienda no encontrada" }, { status: 404 });
+
   const store = await prisma.store.update({
     where: { ownerId: user.id },
-    data: { storeConfig: JSON.stringify(parsed.data) },
+    data: { storeConfig: mergeDesignConfig(current.storeConfig, parsed.data) },
     select: { slug: true },
   });
   revalidatePath(`/tienda/${store.slug}`, "layout");
@@ -115,25 +70,39 @@ async function notifyAffiliatesStoreOffline(storeId: string, storeName: string) 
   }
 }
 
-export async function DELETE() {
+// El único reset de diseño del proyecto. Antes había una segunda copia en
+// /api/cuenta (target: "store") para la Zona de peligro que además de divergir
+// —no despublicaba, no revalidaba el caché y no avisaba a las afiliadas— dejaba
+// a TODAS las afiliadas en REMOVED, irreversible, mientras el modal prometía que
+// se conservaban. Esa copia se eliminó y ahora los dos botones entran por acá.
+//
+// `confirm` es opcional: el reset del editor no lo manda (tiene su propio modal)
+// y la Zona de peligro sí, para que el nombre que escribe se valide del lado del
+// servidor y no solo en el navegador.
+export async function DELETE(req: NextRequest) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
   const prevStore = await prisma.store.findUnique({
     where: { ownerId: user.id },
-    select: { id: true, slug: true, name: true, isPublished: true },
+    select: { id: true, name: true },
   });
+  if (!prevStore) return NextResponse.json({ error: "Tienda no encontrada" }, { status: 404 });
 
-  const store = await prisma.store.update({
-    where: { ownerId: user.id },
-    data: { storeConfig: "{}", pageBlocks: "[]", isPublished: false },
-    select: { slug: true },
-  });
+  const body = await req.json().catch(() => ({})) as { confirm?: unknown };
+  if (body.confirm !== undefined && String(body.confirm).trim() !== prevStore.name) {
+    return NextResponse.json(
+      { error: "El nombre ingresado no coincide con el de tu tienda" },
+      { status: 400 }
+    );
+  }
 
-  revalidatePath(`/tienda/${store.slug}`, "layout");
+  const { slug, name, wasPublished } = await resetStoreDesign(prevStore.id);
 
-  if (prevStore?.isPublished && prevStore.id) {
-    notifyAffiliatesStoreOffline(prevStore.id, prevStore.name).catch(console.error);
+  revalidatePath(`/tienda/${slug}`, "layout");
+
+  if (wasPublished) {
+    notifyAffiliatesStoreOffline(prevStore.id, name).catch(console.error);
   }
 
   return NextResponse.json({ ok: true });
@@ -419,7 +388,7 @@ export async function PATCH(req: NextRequest) {
     where: { ownerId: user.id },
     select: {
       id: true, isPublished: true, slug: true, name: true, commissionRate: true, affiliatesEnabled: true,
-      mpConnectedAt: true, storeConfig: true,
+      mpConnectedAt: true, storeConfig: true, tipoTienda: true,
       _count: { select: { products: { where: { deletedAt: null } } } },
     },
   });
@@ -441,10 +410,18 @@ export async function PATCH(req: NextRequest) {
     const hasPayment = hasPaymentData || !!prevStore?.mpConnectedAt;
     const hasProducts = (prevStore?._count.products ?? 0) > 0;
 
+    // En AUTOS no se cobra por la plataforma: la operación se coordina aparte, y
+    // por eso la UI no le muestra métodos de pago ni MercadoPago. Exigirle un
+    // método de cobro la dejaba sin poder publicarse NUNCA —no tiene por dónde
+    // configurarlo— y el mensaje de error la mandaba a una pantalla que no
+    // existe para ella. `tipoTienda` no se traía en el select, así que este
+    // chequeo ni siquiera podía distinguirlas.
+    const isAutos = prevStore?.tipoTienda === "AUTOS";
+
     const missing = [
       !hasTemplate && "elegir el diseño de tu tienda",
       !hasProducts && "agregar al menos un producto",
-      !hasPayment && "configurar un método de cobro (MercadoPago, transferencia o efectivo)",
+      !isAutos && !hasPayment && "configurar un método de cobro (MercadoPago, transferencia o efectivo)",
     ].filter(Boolean);
     if (missing.length > 0) {
       return NextResponse.json({ error: `Para publicar tu tienda primero tenés que ${missing.join(" y ")}.` }, { status: 400 });

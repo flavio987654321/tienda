@@ -5,6 +5,7 @@ import { createNotificationMany } from "@/lib/notifications";
 import { fetchStoreOrdersForArchive, fetchStoreCouponsForArchive, fetchStoreWalletsForArchive } from "@/lib/storeArchive";
 import { STORE_TYPES } from "@/lib/storeTypes";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { stripDesignConfig } from "@/lib/store-config";
 
 // Bloqueo de negocio detectado dentro de la transacción → se traduce a 409.
 // El code le permite al modal ofrecer el botón de acción correcto.
@@ -189,7 +190,12 @@ export async function POST(req: Request) {
         tipoTiendaConfigurado: true,
         // Template y config del editor → arrancar de cero (los templates son tipo-específicos)
         templateId: "default",
-        storeConfig: "{}",
+        // `storeConfig` no es solo el diseño: acá adentro también viven el CBU,
+        // los envíos y las integraciones. Escribir "{}" —como se hacía antes—
+        // le borraba a la dueña sus datos de cobro y la conexión de Analytics
+        // por cambiar de rubro, cosas que no dependen del rubro: su banco es el
+        // mismo si pasa de ropa a autos. Se resetea solo el diseño.
+        storeConfig: stripDesignConfig(store.storeConfig),
         previewImage: null,
         // Bloques de página y nav → limpiar (estaban pensados para el tipo anterior)
         pageBlocks: "[]",

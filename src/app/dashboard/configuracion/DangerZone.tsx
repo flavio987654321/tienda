@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { AlertTriangle, Trash2, X, Loader2, ShieldAlert, Store, Power } from "lucide-react";
 import CerrarTiendaModal from "./CerrarTiendaModal";
 
@@ -18,9 +18,12 @@ type AccountInfo = {
 export default function DangerZone({
   storeName,
   paidUntil,
+  hasDesign,
 }: {
   storeName: string;
   paidUntil: string | null;
+  /** Si no hay diseño ni bloques, no se ofrece resetear: no hay nada que borrar. */
+  hasDesign: boolean;
 }) {
   const [target, setTarget] = useState<"store" | "account" | null>(null);
   const [closing, setClosing] = useState(false);
@@ -29,6 +32,9 @@ export default function DangerZone({
   const [loading, setLoading] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  // Guard contra doble click: `deleting` no alcanza porque React agrupa los
+  // setState y dos clicks muy juntos pasan los dos antes del primer re-render.
+  const sending = useRef(false);
 
   const fmt = (n: number) => `$${n.toLocaleString("es-AR")}`;
 
@@ -37,9 +43,17 @@ export default function DangerZone({
     setConfirmText("");
     setInfo(null);
     setTarget(t);
+
+    // El reset no tiene bloqueadores y el nombre ya viene por props: no hace
+    // falta ir al servidor a buscar nada.
+    if (t === "store") {
+      setInfo({ role: "OWNER", email: "", storeName, pendingOrders: 0, pendingBalances: 0 });
+      return;
+    }
+
     setLoading(true);
     try {
-      const data: AccountInfo = await fetch(`/api/cuenta?target=${t}`).then((r) => r.json());
+      const data: AccountInfo = await fetch("/api/cuenta?target=account").then((r) => r.json());
       setInfo(data);
     } catch {
       setErrorMsg("No pudimos cargar los datos. Intentá de nuevo.");
@@ -55,24 +69,38 @@ export default function DangerZone({
   }
 
   async function handleConfirm() {
-    if (!target || !info || confirmText !== info.storeName || deleting) return;
+    if (sending.current || !target || !info || confirmText.trim() !== info.storeName) return;
+    sending.current = true;
     setDeleting(true);
     setErrorMsg("");
-    const r = await fetch("/api/cuenta", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ target, confirm: confirmText }),
-    });
+
+    // Dos endpoints distintos porque son dos cosas distintas: resetear el diseño
+    // no toca la cuenta ni a las afiliadas. Antes los dos entraban por
+    // /api/cuenta y el reset arrastraba el borrado de afiliadas de la baja.
+    const r =
+      target === "store"
+        ? await fetch("/api/configuracion", {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ confirm: confirmText.trim() }),
+          })
+        : await fetch("/api/cuenta", {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ target: "account", confirm: confirmText.trim() }),
+          });
+
     if (r.ok) {
       window.location.href = target === "account" ? "/login" : "/dashboard/configuracion";
-    } else {
-      const err = await r.json();
-      setErrorMsg(err.error ?? "Ocurrió un error. Intentá de nuevo.");
-      setDeleting(false);
+      return;
     }
+    const err = await r.json().catch(() => ({}));
+    setErrorMsg(err.error ?? "Ocurrió un error. Intentá de nuevo.");
+    sending.current = false;
+    setDeleting(false);
   }
 
-  const canConfirm = info && confirmText === info.storeName && !loading;
+  const canConfirm = info && confirmText.trim() === info.storeName && !loading;
   const hasBlockers = info && (info.pendingOrders > 0 || info.pendingBalances > 0);
 
   return (
@@ -83,16 +111,20 @@ export default function DangerZone({
           <p className="text-sm font-bold text-red-700">Zona de peligro</p>
         </div>
         <div className="p-4 space-y-2.5">
-          <button
-            onClick={() => handleOpen("store")}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-lg border border-red-200 bg-red-50 hover:bg-red-100 text-sm text-red-700 font-medium transition-colors text-left"
-          >
-            <Store className="h-4 w-4 shrink-0" />
-            <div>
-              <p className="font-semibold">Resetear diseño de la tienda</p>
-              <p className="text-xs text-red-500 font-normal mt-0.5">Borra los bloques de la página. Productos y afiliados quedan.</p>
-            </div>
-          </button>
+          {/* Sin diseño no se ofrece: sería una acción destructiva que no borra
+              nada, y el modal le pediría confirmar la pérdida de algo que no existe. */}
+          {hasDesign && (
+            <button
+              onClick={() => handleOpen("store")}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-lg border border-red-200 bg-red-50 hover:bg-red-100 text-sm text-red-700 font-medium transition-colors text-left"
+            >
+              <Store className="h-4 w-4 shrink-0" />
+              <div>
+                <p className="font-semibold">Resetear diseño de la tienda</p>
+                <p className="text-xs text-red-500 font-normal mt-0.5">Volvés a elegir template desde cero. Tu tienda sale de línea hasta que la republiques.</p>
+              </div>
+            </button>
+          )}
 
           {/* La puerta de salida principal. Antes la única era eliminar la cuenta,
               que es irreversible — y la mayoría de las que la tocaban solo querían
@@ -182,8 +214,10 @@ export default function DangerZone({
                     <ul className="space-y-1.5 text-sm text-gray-600">
                       {target === "store" ? (
                         <>
-                          <li className="flex items-center gap-2"><Trash2 className="h-3.5 w-3.5 text-red-400" /> El diseño y bloques de tu página</li>
-                          <li className="flex items-center gap-2 text-gray-400"><span className="h-3.5 w-3.5 text-green-500 flex-shrink-0">✓</span> Productos, pedidos y afiliados se conservan</li>
+                          <li className="flex items-center gap-2"><Trash2 className="h-3.5 w-3.5 text-red-400" /> El diseño y los bloques de tu página</li>
+                          <li className="flex items-center gap-2"><Trash2 className="h-3.5 w-3.5 text-red-400" /> Tu tienda sale de línea hasta que la republiques</li>
+                          <li className="flex items-center gap-2 text-gray-400"><span className="h-3.5 w-3.5 text-green-500 flex-shrink-0">✓</span> Productos, pedidos y afiliadas se conservan</li>
+                          <li className="flex items-center gap-2 text-gray-400"><span className="h-3.5 w-3.5 text-green-500 flex-shrink-0">✓</span> Tus datos de cobro, envíos e integraciones también</li>
                         </>
                       ) : (
                         <>

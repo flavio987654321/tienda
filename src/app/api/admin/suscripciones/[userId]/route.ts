@@ -4,7 +4,7 @@ import { getCurrentUser } from "@/lib/auth-session";
 import { logAdminAction } from "@/lib/admin-log";
 import { revalidatePath } from "next/cache";
 import { getClientIp } from "@/lib/request-ip";
-import { periodFor } from "@/lib/subscription";
+import { periodFor, getSubscriptionStatus } from "@/lib/subscription";
 
 const VALID_STATUSES = ["TRIAL", "ACTIVE", "GRACE", "EXPIRED", "CANCELLED"];
 
@@ -34,12 +34,19 @@ export async function PATCH(
 
   if (status && VALID_STATUSES.includes(status)) {
     data.status = status;
+    // Un cambio de estado desde el panel es explícito y manda: se limpia el
+    // "no renovar" que pudo dejar un cierre de tienda anterior. Sin esto,
+    // cancelar a alguien que ya había cerrado su tienda no hacía nada —la marca
+    // sobrevivía y `getSubscriptionStatus` la seguía leyendo como ACTIVE hasta
+    // el vencimiento—, o sea que el botón Cancelar mentía.
+    data.cancelAtPeriodEnd = false;
   }
 
   if (typeof extendDays === "number" && extendDays > 0) {
     const base = sub.trialEndsAt > new Date() ? sub.trialEndsAt : new Date();
     data.trialEndsAt = new Date(base.getTime() + extendDays * 24 * 60 * 60 * 1000);
     data.status = "TRIAL";
+    data.cancelAtPeriodEnd = false;
   }
 
   if (tier === "BASIC" || tier === "PREMIUM") {
@@ -73,6 +80,7 @@ export async function PATCH(
 
   revalidatePath("/dashboard", "layout");
   revalidatePath("/dashboard/mi-plan");
+  revalidatePath("/admin/usuarios");
 
   const actions: string[] = [];
   if (data.status) actions.push(`CHANGE_STATUS:${data.status}`);
@@ -93,5 +101,7 @@ export async function PATCH(
     ip: getClientIp(req),
   });
 
-  return NextResponse.json(updated);
+  // statusReal para que el panel refresque el estado sin recargar: el modal
+  // muestra el estado vivo (getSubscriptionStatus), no el crudo de la columna.
+  return NextResponse.json({ ...updated, statusReal: getSubscriptionStatus(updated) });
 }

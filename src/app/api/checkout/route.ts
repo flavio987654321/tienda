@@ -185,23 +185,32 @@ export async function POST(req: NextRequest) {
       closedAt: true,
       owner: {
         select: {
+          banned: true,
           subscription: {
-            select: { status: true, trialEndsAt: true, currentPeriodEnd: true, gracePeriodEndsAt: true },
+            select: { status: true, trialEndsAt: true, currentPeriodEnd: true, gracePeriodEndsAt: true, cancelAtPeriodEnd: true },
           },
         },
       },
     },
   });
 
-  if (!store || !store.isActive || store.closedAt) {
+  // El ban del dueño también corta la venta: si no, banearlo por estafa le
+  // bloqueaba el panel pero la tienda seguía cobrando por MercadoPago pedidos que
+  // no iba a poder despachar. `banned` corta el login (auth-session), no el checkout.
+  if (!store || !store.isActive || store.closedAt || store.owner?.banned) {
     return NextResponse.json({ error: "Esta tienda no está disponible" }, { status: 409 });
   }
 
   // isSubscriptionActive incluye TRIAL y GRACE a propósito: durante la prueba y
   // durante los días de gracia la tienda vende normal. Recién al vencer del todo
   // deja de aceptar pedidos.
+  //
+  // Sin cast: el `as` que había acá tapaba que al select le faltara un campo, y
+  // eso es justo lo que no se puede permitir en el camino que cobra. Si mañana
+  // el select se olvida de traer algo, tiene que romper la compilación y no
+  // rechazar pedidos en silencio.
   const sub = store.owner?.subscription;
-  if (!sub || !isSubscriptionActive(sub as Parameters<typeof isSubscriptionActive>[0])) {
+  if (!sub || !isSubscriptionActive(sub)) {
     return NextResponse.json(
       { error: "Esta tienda no está aceptando pedidos en este momento" },
       { status: 409 }

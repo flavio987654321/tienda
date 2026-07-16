@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { getSubscriptionStatus } from "@/lib/subscription";
 import UsuariosAdmin, { type User } from "./UsuariosAdmin";
 
 export const dynamic = "force-dynamic";
@@ -14,8 +15,12 @@ export default async function AdminUsuariosPage({
     where: { role: { not: "ADMIN" } },
     orderBy: { createdAt: "desc" },
     include: {
-      subscription: { select: { status: true, plan: true, tier: true, role: true, trialEndsAt: true } },
-      store: { select: { name: true, isPublished: true } },
+      // currentPeriodEnd/gracePeriodEndsAt hacen falta para el estado REAL: en la
+      // base el status queda "ACTIVE" aunque la suscripción esté vencida, y el
+      // valor vivo lo calcula getSubscriptionStatus. El admin mostraba el crudo,
+      // así que una tienda vencida se veía "Activa".
+      subscription: { select: { status: true, plan: true, tier: true, role: true, trialEndsAt: true, currentPeriodEnd: true, gracePeriodEndsAt: true } },
+      store: { select: { name: true, isPublished: true, closedAt: true } },
       _count: { select: { orders: true } },
     },
   });
@@ -25,7 +30,16 @@ export default async function AdminUsuariosPage({
     createdAt: u.createdAt.toISOString(),
     updatedAt: undefined,
     subscription: u.subscription
-      ? { ...u.subscription, trialEndsAt: u.subscription.trialEndsAt.toISOString() }
+      ? {
+          ...u.subscription,
+          trialEndsAt: u.subscription.trialEndsAt.toISOString(),
+          // El estado real, calculado en el server, es lo que se muestra. `status`
+          // (el crudo) se manda igual porque el modal decide las acciones con él.
+          statusReal: getSubscriptionStatus(u.subscription),
+        }
+      : null,
+    store: u.store
+      ? { ...u.store, closedAt: u.store.closedAt?.toISOString() ?? null }
       : null,
   }));
 

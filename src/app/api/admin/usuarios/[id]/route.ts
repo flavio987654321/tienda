@@ -176,8 +176,8 @@ export async function DELETE(
     },
   });
 
-  // No se puede eliminar (de forma irreversible) una afiliada con saldo pendiente en la billetera:
-  // esa plata quedaría huérfana, sin forma de cobrarse ni rastro de qué pasó con ella.
+  // No se puede eliminar (de forma irreversible) una afiliada con saldo pendiente en su
+  // panel de comisiones: esa plata quedaría huérfana, sin forma de cobrarse ni rastro de qué pasó con ella.
   const affiliationsWithBalance = (userData?.asAffiliate ?? []).filter(
     (a) => (a.wallet?.balance ?? 0) > 0
   );
@@ -187,7 +187,7 @@ export async function DELETE(
       .join(", ");
     return NextResponse.json(
       {
-        error: `No se puede eliminar: la cuenta tiene saldo pendiente en su billetera (${detail}). Liquidá el saldo con el/la dueño/a de la tienda antes de eliminar la cuenta.`,
+        error: `No se puede eliminar: la cuenta tiene saldo pendiente en su panel de comisiones (${detail}). Liquidá el saldo con el/la dueño/a de la tienda antes de eliminar la cuenta.`,
       },
       { status: 400 }
     );

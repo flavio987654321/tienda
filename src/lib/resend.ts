@@ -6,6 +6,12 @@ const FROM = process.env.RESEND_FROM ?? "TiendaApps <noreply@tiendaapps.com>";
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "";
 const CANASTA_SUPPORT_EMAIL = process.env.CANASTA_SUPPORT_EMAIL ?? process.env.ADMIN_EMAIL ?? "";
 
+// Los mails se arman en el servidor, y en Vercel eso es UTC (3 h adelante de
+// Argentina). Sin fijar la zona, una fecha que cae después de las 21 hs de acá
+// se muestra con el día siguiente, y el mail termina diciendo un día distinto
+// del que ve la dueña en el panel (que se renderiza en su navegador, hora local).
+const AR_TZ = "America/Argentina/Buenos_Aires";
+
 function fmt(n: number) {
   return new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(n);
 }
@@ -368,7 +374,7 @@ export async function sendSubscriptionConfirmationEmail({
   if (!process.env.RESEND_API_KEY) return;
 
   const nextRenewal = periodEnd.toLocaleDateString("es-AR", {
-    day: "numeric", month: "long", year: "numeric",
+    day: "numeric", month: "long", year: "numeric", timeZone: AR_TZ,
   });
 
   const isPremium = planKey === "OWNER_PREMIUM";
@@ -735,7 +741,7 @@ export async function sendSubscriptionExpiredEmail({
   daysLeft: number;
 }) {
   if (!process.env.RESEND_API_KEY) return;
-  const fecha = closesOn.toLocaleDateString("es-AR", { day: "numeric", month: "long" });
+  const fecha = closesOn.toLocaleDateString("es-AR", { day: "numeric", month: "long", timeZone: AR_TZ });
   await resend.emails.send({
     from: FROM,
     to,
@@ -784,7 +790,7 @@ export async function sendSubscriptionClosingSoonEmail({
   daysLeft: number;
 }) {
   if (!process.env.RESEND_API_KEY) return;
-  const fecha = closesOn.toLocaleDateString("es-AR", { day: "numeric", month: "long" });
+  const fecha = closesOn.toLocaleDateString("es-AR", { day: "numeric", month: "long", timeZone: AR_TZ });
   const cuando = daysLeft <= 1 ? "mañana" : `en ${daysLeft} días`;
   await resend.emails.send({
     from: FROM,

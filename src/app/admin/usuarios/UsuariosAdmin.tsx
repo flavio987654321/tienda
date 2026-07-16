@@ -5,7 +5,8 @@ import Link from "next/link";
 import { Store, Zap, ShoppingCart, Shield, Calendar, X, RefreshCw, Ban, CheckCircle, Search, Trash2, AlertTriangle } from "lucide-react";
 
 type Sub = {
-  status: string;
+  status: string;       // crudo de la base — lo usa el modal para las acciones
+  statusReal: string;   // el vivo (getSubscriptionStatus) — lo que se muestra
   plan: string;
   tier: string;
   role: string;
@@ -24,7 +25,7 @@ export type User = {
   banned: boolean;
   createdAt: string;
   subscription: Sub | null;
-  store: { name: string; isPublished: boolean } | null;
+  store: { name: string; isPublished: boolean; closedAt: string | null } | null;
   _count: { orders: number };
 };
 
@@ -292,7 +293,9 @@ export default function UsuariosAdmin({ users: initial, filter: activeFilter }: 
               {filtered.map((u) => {
                 const isDeleted = u.email.endsWith(".invalid");
                 const role = ROLE_LABELS[u.role] ?? ROLE_LABELS.BUYER;
-                const sub = u.subscription ? STATUS_LABELS[u.subscription.status] : null;
+                // statusReal, no el crudo: una tienda paga vencida sigue diciendo
+                // "ACTIVE" en la base, y acá tiene que verse "Vencido".
+                const sub = u.subscription ? STATUS_LABELS[u.subscription.statusReal] : null;
                 const isBanLoading = loadingId === u.id + "-ban";
 
                 return (
@@ -340,9 +343,15 @@ export default function UsuariosAdmin({ users: initial, filter: activeFilter }: 
                       {u.store ? (
                         <div>
                           <p className="text-white text-xs font-medium">{u.store.name}</p>
-                          <p className={`text-xs ${u.store.isPublished ? "text-emerald-400" : "text-gray-500"}`}>
-                            {u.store.isPublished ? "Publicada" : "Sin publicar"}
-                          </p>
+                          {/* Una tienda cerrada por la dueña también tiene isPublished=false;
+                              sin distinguirla, se veía igual que un borrador. */}
+                          {u.store.closedAt ? (
+                            <p className="text-xs text-amber-400">Cerrada</p>
+                          ) : (
+                            <p className={`text-xs ${u.store.isPublished ? "text-emerald-400" : "text-gray-500"}`}>
+                              {u.store.isPublished ? "Publicada" : "Sin publicar"}
+                            </p>
+                          )}
                         </div>
                       ) : (
                         <span className="text-gray-600 text-xs">—</span>
@@ -380,13 +389,20 @@ export default function UsuariosAdmin({ users: initial, filter: activeFilter }: 
                               <><Ban className="h-3 w-3" /> Banear</>
                             )}
                           </button>
-                          <button
-                            onClick={() => { setDeleteModal(u); setDeleteConfirm(""); }}
-                            title="Eliminar cuenta completa"
-                            className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-gray-800 text-gray-500 hover:bg-red-950/60 hover:text-red-400 transition-all"
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </button>
+                          {/* Eliminar solo aparece en una cuenta ya baneada: es el
+                              último paso para cumplir un pedido legal de borrado
+                              (ARCO, Ley 25.326), no una acción de todos los días. El
+                              flujo es banear primero y borrar solo si lo piden — así
+                              no se borra una tienda de un click por error. */}
+                          {u.banned && (
+                            <button
+                              onClick={() => { setDeleteModal(u); setDeleteConfirm(""); }}
+                              title="Eliminar cuenta (pedido legal de borrado)"
+                              className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-gray-800 text-gray-500 hover:bg-red-950/60 hover:text-red-400 transition-all"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </button>
+                          )}
                         </div>
                       )}
                     </td>
@@ -479,15 +495,17 @@ export default function UsuariosAdmin({ users: initial, filter: activeFilter }: 
       {subModal && subModal.subscription && subModal.role === "OWNER" && (() => {
         const s = subModal.subscription;
         const isLoading = loadingId === subModal.id + "-sub";
-        const trialStillActive = s.status === "TRIAL" && new Date(s.trialEndsAt) > new Date();
+        // statusReal: getSubscriptionStatus ya devuelve TRIAL solo si sigue vigente,
+        // así que esto es equivalente a mirar la fecha, pero coherente con el resto.
+        const trialStillActive = s.statusReal === "TRIAL";
 
-        const willActivate = s.status === "TRIAL" && pendingPlan !== null;
+        const willActivate = s.statusReal === "TRIAL" && pendingPlan !== null;
         const pendingLabel = pendingPlan?.tier
           ? (pendingPlan.tier === "PREMIUM" ? "Tienda Premium" : "Tienda Pro")
           : pendingPlan?.plan === "ANNUAL" ? "facturación Anual" : pendingPlan?.plan === "MONTHLY" ? "facturación Mensual" : "";
 
         const statusActions: { label: string; body: object; color: string; disabled?: boolean; disabledReason?: string }[] = [];
-        if (s.status === "TRIAL") {
+        if (s.statusReal === "TRIAL") {
           statusActions.push(
             { label: "Extender trial +7 días",  body: { extendDays: 7 },    color: "bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 border-blue-500/20" },
             { label: "Extender trial +30 días", body: { extendDays: 30 },   color: "bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 border-indigo-500/20" },
@@ -495,14 +513,19 @@ export default function UsuariosAdmin({ users: initial, filter: activeFilter }: 
               disabled: trialStillActive, disabledReason: "El trial sigue vigente" },
             { label: "Vencer ahora",            body: { status: "EXPIRED" }, color: "bg-red-500/10 text-red-400 hover:bg-red-500/20 border-red-500/20" },
           );
-        } else if (s.status === "ACTIVE") {
+        } else if (s.statusReal === "ACTIVE") {
           statusActions.push(
+            // Período nuevo desde hoy (mensual o anual según su plan). Sirve para
+            // regalar/renovar tiempo a una tienda ya activa — antes no había forma
+            // desde la UI, solo "Vencer" o "Cancelar". Manda status ACTIVE, que en
+            // el backend dispara periodFor y reescribe currentPeriodEnd.
+            { label: `Renovar ${s.plan === "ANNUAL" ? "1 año" : "1 mes"} (desde hoy)`, body: { status: "ACTIVE" }, color: "bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border-emerald-500/20" },
             { label: "Vencer ahora",         body: { status: "EXPIRED" },    color: "bg-red-500/10 text-red-400 hover:bg-red-500/20 border-red-500/20" },
             { label: "Cancelar suscripción", body: { status: "CANCELLED" },  color: "bg-gray-500/10 text-gray-400 hover:bg-gray-500/20 border-gray-500/20" },
           );
-        } else if (s.status === "GRACE") {
+        } else if (s.statusReal === "GRACE") {
           statusActions.push(
-            { label: "Activar",  body: { status: "ACTIVE" },    color: "bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border-emerald-500/20" },
+            { label: `Renovar ${s.plan === "ANNUAL" ? "1 año" : "1 mes"} (desde hoy)`, body: { status: "ACTIVE" }, color: "bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border-emerald-500/20" },
             { label: "Cancelar", body: { status: "CANCELLED" }, color: "bg-gray-500/10 text-gray-400 hover:bg-gray-500/20 border-gray-500/20" },
           );
         } else {
@@ -529,8 +552,8 @@ export default function UsuariosAdmin({ users: initial, filter: activeFilter }: 
               <div className="space-y-0 mb-5 bg-gray-800/40 rounded-xl overflow-hidden">
                 <div className="flex justify-between items-center px-4 py-3 border-b border-white/5">
                   <span className="text-gray-400 text-sm">Estado</span>
-                  <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${STATUS_LABELS[s.status]?.color}`}>
-                    {STATUS_LABELS[s.status]?.label}
+                  <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${STATUS_LABELS[s.statusReal]?.color}`}>
+                    {STATUS_LABELS[s.statusReal]?.label}
                   </span>
                 </div>
                 <div className="flex justify-between items-center px-4 py-3 border-b border-white/5">
@@ -541,7 +564,7 @@ export default function UsuariosAdmin({ users: initial, filter: activeFilter }: 
                   <span className="text-gray-400 text-sm">Facturación</span>
                   <span className="text-white text-sm font-semibold">{s.plan === "ANNUAL" ? "Anual" : "Mensual"}</span>
                 </div>
-                {s.status === "TRIAL" && (
+                {s.statusReal === "TRIAL" && (
                   <div className="flex justify-between items-center px-4 py-3">
                     <span className="text-gray-400 text-sm">Trial vence</span>
                     <span className={`text-sm font-medium ${trialStillActive ? "text-blue-400" : "text-red-400"}`}>

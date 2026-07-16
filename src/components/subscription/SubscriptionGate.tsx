@@ -102,6 +102,11 @@ export default function SubscriptionGate({ status, daysLeft, tier, plan }: Props
 
   // Expirada — bloquear con modal
   if (status === "EXPIRED" || status === "CANCELLED") {
+    // "Venció" y "la cancelaste" no son lo mismo, y decirle a alguien que se le
+    // venció algo que dio de baja a propósito suena a error del sistema. Se
+    // separan los textos: el estado CANCELLED solo llega acá cuando ya no le
+    // quedan días pagos (si le quedaran, reactivar la habría devuelto a ACTIVE).
+    const cancelada = status === "CANCELLED";
     return (
       <>
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-100/90 backdrop-blur-md p-4">
@@ -109,9 +114,13 @@ export default function SubscriptionGate({ status, daysLeft, tier, plan }: Props
             <div className="w-12 h-12 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
               <AlertTriangle className="h-6 w-6 text-red-500" />
             </div>
-            <h2 className="text-xl font-bold text-gray-900 mb-2">Tu suscripción venció</h2>
+            <h2 className="text-xl font-bold text-gray-900 mb-2">
+              {cancelada ? "Tu suscripción está dada de baja" : "Tu suscripción venció"}
+            </h2>
             <p className="text-gray-500 text-sm mb-6 leading-relaxed">
-              Renová para seguir usando la plataforma. Tus datos y configuración están guardados.
+              {cancelada
+                ? "Para volver a usar la plataforma necesitás suscribirte de nuevo. Tus datos y tu configuración están guardados tal cual los dejaste."
+                : "Renová para seguir usando la plataforma. Tus datos y configuración están guardados."}
             </p>
 
             <button
@@ -119,7 +128,7 @@ export default function SubscriptionGate({ status, daysLeft, tier, plan }: Props
               className="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm flex items-center justify-center gap-2 transition-colors mb-3"
             >
               <CreditCard className="h-4 w-4" />
-              Renovar suscripción
+              {cancelada ? "Suscribirme de nuevo" : "Renovar suscripción"}
             </button>
 
             <Link href="/" className="block text-sm text-gray-400 hover:text-gray-600 transition-colors mb-3">

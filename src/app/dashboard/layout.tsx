@@ -1,5 +1,5 @@
 import { getCurrentUser } from "@/lib/auth-session";
-import { getUserSubscription, getSubscriptionStatus, daysRemaining } from "@/lib/subscription";
+import { getUserSubscription, getSubscriptionStatus, daysRemaining, reactivationCredit } from "@/lib/subscription";
 import { prisma } from "@/lib/prisma";
 import SubscriptionGate from "@/components/subscription/SubscriptionGate";
 import StoreClosedGate from "@/components/dashboard/StoreClosedGate";
@@ -32,14 +32,26 @@ export default async function DashboardLayout({ children }: { children: React.Re
   // El plan de afiliadas (SELLER) es gratuito — el gate de suscripción es solo para OWNER
   let gate = null;
   if (isOwner) {
+    const sub = await getUserSubscription(user.id);
+
     if (store?.closedAt) {
       // El cierre le gana al estado de la suscripción. Cerrar deja la suscripción
       // en CANCELLED, así que SubscriptionGate mostraría el modal bloqueante de
       // "tu suscripción venció — renová": un mensaje falso (la cerró ella a
       // propósito) que además taparía el botón de reactivar.
-      gate = <StoreClosedGate closedAt={store.closedAt.toISOString()} />;
+      //
+      // El mismo cálculo que hace /api/tienda/reactivar al escribir, así la
+      // pantalla no promete algo distinto de lo que va a pasar: prometer lo que
+      // no pasa fue justo el bug anterior.
+      const credito = reactivationCredit(sub);
+
+      gate = (
+        <StoreClosedGate
+          closedAt={store.closedAt.toISOString()}
+          credit={credito && { status: credito.status, until: credito.until.toISOString() }}
+        />
+      );
     } else {
-      const sub = await getUserSubscription(user.id);
       if (sub) {
         const status = getSubscriptionStatus(sub);
         const relevantDate =

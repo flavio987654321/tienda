@@ -60,6 +60,9 @@ export function periodFor(plan: string, from: Date = new Date()) {
     // desincroniza.
     expiredNotifiedAt: null,
     closingNotifiedAt: null,
+    // Un período nuevo es una suscripción viva: quien pagó de nuevo después de
+    // haber cerrado su tienda no arrastra el "no renovar" del período anterior.
+    cancelAtPeriodEnd: false,
   };
 }
 
@@ -71,6 +74,9 @@ export function getSubscriptionStatus(sub: {
 }): SubscriptionStatus {
   const now = new Date();
 
+  // CANCELLED es un estado terminal y acá no se interpreta: quien cierra su
+  // tienda conservando días pagos vuelve a ACTIVE en /api/tienda/reactivar, o
+  // sea que la base dice la verdad y esta función no tiene que adivinarla.
   if (sub.status === "CANCELLED") return "CANCELLED";
   if (sub.status === "TRIAL") {
     return now <= sub.trialEndsAt ? "TRIAL" : "EXPIRED";
@@ -113,6 +119,38 @@ export function closureDeadline(sub: Parameters<typeof getSubscriptionStatus>[0]
   const expiredAt = sub.currentPeriodEnd ?? sub.trialEndsAt;
   const days = sub.currentPeriodEnd ? PAID_CLOSURE_DAYS : TRIAL_CLOSURE_DAYS;
   return new Date(expiredAt.getTime() + days * 86400000);
+}
+
+/**
+ * Qué recupera una dueña al reactivar su tienda, o `null` si no recupera nada y
+ * va a tener que suscribirse.
+ *
+ * Cerrar la tienda deja la suscripción en CANCELLED pero no toca las fechas: los
+ * días ya estaban en la base y nadie los miraba, así que cerrar el día 30 de un
+ * plan anual y volver el día 60 pedía pagar el año entero de nuevo. Es lo que
+ * hace Shopify: si volvés dentro del ciclo que ya pagaste, no se te cobra otra vez.
+ *
+ * El trial cuenta igual. Alguien que está probando, cierra y se arrepiente no
+ * tiene por qué pasar a pagar: los días que le quedaban son suyos. No se puede
+ * estirar cerrando y reabriendo porque `trialEndsAt` es una fecha fija — el reloj
+ * corre igual mientras la tienda está cerrada, acá no se congela nada.
+ *
+ * `cancelAtPeriodEnd` es lo que separa esto de una cancelación del admin, que es
+ * un corte deliberado y no se revierte sola por reabrir la tienda.
+ */
+export function reactivationCredit(sub: {
+  status: string;
+  trialEndsAt: Date;
+  currentPeriodEnd: Date | null;
+  cancelAtPeriodEnd: boolean | null;
+} | null): { status: "ACTIVE" | "TRIAL"; until: Date } | null {
+  if (!sub || sub.status !== "CANCELLED" || sub.cancelAtPeriodEnd !== true) return null;
+  const now = new Date();
+  if (sub.currentPeriodEnd && sub.currentPeriodEnd > now) {
+    return { status: "ACTIVE", until: sub.currentPeriodEnd };
+  }
+  if (sub.trialEndsAt > now) return { status: "TRIAL", until: sub.trialEndsAt };
+  return null;
 }
 
 export async function getUserSubscription(userId: string) {

@@ -88,9 +88,15 @@ export async function POST(req: NextRequest) {
 
     // Esto sí es propio del cierre voluntario: no se le sigue cobrando una tienda
     // que ella misma cerró. (El del cron no la toca: ya está vencida.)
+    //
+    // `cancelAtPeriodEnd: true` es lo que separa este cierre de una cancelación
+    // del admin: dice "no renueva", no "cortale el acceso". Los días que ya pagó
+    // siguen siendo suyos, así que si reactiva antes del vencimiento entra sin
+    // pagar de nuevo. Sin esta marca, cerrar el día 30 de un plan anual y volver
+    // el día 60 le pedía el año entero otra vez.
     await tx.subscription.updateMany({
       where: { userId: user.id },
-      data: { status: "CANCELLED" },
+      data: { status: "CANCELLED", cancelAtPeriodEnd: true },
     });
 
     // storeName/ownerEmail/ownerName son snapshots: si más adelante elimina la
