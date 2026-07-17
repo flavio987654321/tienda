@@ -16,6 +16,7 @@ import { OfferBadge } from "@/components/store/OfferBadge";
 import { CheckoutModal } from "@/components/store/templates/shared/CheckoutModal";
 import { ContactForm } from "@/components/store/templates/shared/ContactForm";
 import { FadeImage } from "@/components/store/templates/shared/FadeImage";
+import StoreProductReels from "@/components/store/ProductReels";
 import { SectionBlock } from "@/components/store/templates/shared/SectionBlock";
 import { PromoBannerCarousel } from "@/components/store/templates/shared/PromoBannerCarousel";
 import { parseVariantAttrs } from "@/lib/variantAttrs";
@@ -100,7 +101,6 @@ export default function FashionNoir() {
   const [hoveredNavCat,      setHoveredNavCat]      = useState<string | null>(null);
   const [visibleCount,       setVisibleCount]       = useState(8);
   const [isMobile,           setIsMobile]           = useState(false);
-  const [reelIndex,          setReelIndex]          = useState(0);
   const [mobileMenuOpen,     setMobileMenuOpen]     = useState(false);
   const [mobileCatsOpen,     setMobileCatsOpen]     = useState(false);
   const [mobileOpenCat,      setMobileOpenCat]      = useState<string | null>(null);
@@ -251,7 +251,7 @@ export default function FashionNoir() {
   useEffect(() => {
     const slug = storeConfig?.slug;
     if (!modalProduct || !slug) { setReviews([]); return; }
-    setReviewsLoading(true); setReviewDone(false); setReelIndex(0); setReviewsShown(5);
+    setReviewsLoading(true); setReviewDone(false); setReviewsShown(5);
     setReviewForm(p => ({ ...p, rating: 5, comment: "" }));
     fetch(`/api/public/${slug}/reviews?productId=${modalProduct.id}`)
       .then(r => r.ok ? r.json() : { reviews: [] })
@@ -1537,26 +1537,10 @@ export default function FashionNoir() {
               {modalProduct.reelUrls.length > 0 && (
                 <div style={{ padding:"12px 14px 16px", borderTop:`1px solid rgba(240,235,227,0.08)`, background:"#0d0d0d" }}>
                   <p style={{ fontSize:9, letterSpacing:3, textTransform:"uppercase", color:T, opacity:0.4, margin:"0 0 10px" }}>Videos</p>
-                  <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:10 }}>
-                    {(() => {
-                      const url = modalProduct.reelUrls[reelIndex];
-                      if (/\.(mp4|webm|mov|ogg)(\?.*)?$/i.test(url)) return <video controls style={{ width:"100%", maxWidth:180, aspectRatio:"9/16", objectFit:"cover", background:"#000", borderRadius:4 }}><source src={url} /></video>;
-                      let embedUrl = "";
-                      if (url.includes("youtube.com/shorts/")) { const id = url.split("shorts/")[1]?.split("?")[0]; embedUrl = `https://www.youtube.com/embed/${id}`; }
-                      else if (url.includes("youtu.be/")) { const id = url.split("youtu.be/")[1]?.split("?")[0]; embedUrl = `https://www.youtube.com/embed/${id}`; }
-                      else if (url.includes("youtube.com/watch")) { try { const id = new URL(url).searchParams.get("v"); if (id) embedUrl = `https://www.youtube.com/embed/${id}`; } catch {} }
-                      if (embedUrl) return <iframe src={embedUrl} allow="autoplay; encrypted-media" allowFullScreen style={{ width:"100%", maxWidth:180, aspectRatio:"9/16", border:"none", borderRadius:4 }} />;
-                      const platform = url.includes("instagram") ? "Instagram Reel" : url.includes("tiktok") ? "TikTok" : "Video";
-                      return <a href={url} target="_blank" rel="noopener noreferrer" style={{ width:160, aspectRatio:"9/16", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:8, border:`1px solid rgba(240,235,227,0.15)`, textDecoration:"none", color:T, borderRadius:4, background:"#111" }}><svg width={22} height={22} viewBox="0 0 24 24" fill={G} stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg><span style={{ fontSize:10 }}>{platform}</span></a>;
-                    })()}
-                    {modalProduct.reelUrls.length > 1 && (
-                      <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-                        <button onClick={() => setReelIndex(i => (i - 1 + modalProduct.reelUrls.length) % modalProduct.reelUrls.length)} style={{ background:"none", border:`1px solid rgba(240,235,227,0.15)`, color:T, width:28, height:28, borderRadius:"50%", cursor:"pointer", fontSize:14, display:"flex", alignItems:"center", justifyContent:"center" }}>‹</button>
-                        <div style={{ display:"flex", gap:4 }}>{modalProduct.reelUrls.map((_, i) => <button key={i} onClick={() => setReelIndex(i)} style={{ width:5, height:5, borderRadius:"50%", background: i === reelIndex ? G : "rgba(240,235,227,0.2)", border:"none", cursor:"pointer", padding:0 }} />)}</div>
-                        <button onClick={() => setReelIndex(i => (i + 1) % modalProduct.reelUrls.length)} style={{ background:"none", border:`1px solid rgba(240,235,227,0.15)`, color:T, width:28, height:28, borderRadius:"50%", cursor:"pointer", fontSize:14, display:"flex", alignItems:"center", justifyContent:"center" }}>›</button>
-                      </div>
-                    )}
-                  </div>
+                  <StoreProductReels
+                    reelUrls={modalProduct.reelUrls}
+                    theme={{ accent: G, text: T, border: "rgba(240,235,227,0.15)", radius: 4 }}
+                  />
                 </div>
               )}
             </div>

@@ -16,6 +16,7 @@ import StockHistoryPanel from "../StockHistoryPanel";
 import RichTextEditor from "@/components/RichTextEditor";
 import { VariantBuilder } from "@/components/dashboard/VariantBuilder";
 import { OfferBadge, OfferBadgePreview, type OfferBadgeKey } from "@/components/store/OfferBadge";
+import { parseReel, isSafeReelUrl, playableReels, ReelPlayerModal } from "@/components/store/ProductReels";
 
 type ImageItem = { url: string; variantValue?: string };
 
@@ -97,6 +98,12 @@ const MAX_UPLOAD_IMAGE_SIZE_MB = 4;
 const MAX_UPLOAD_IMAGE_SIZE_BYTES = MAX_UPLOAD_IMAGE_SIZE_MB * 1024 * 1024;
 const MAX_IMAGE_SIDE = 2400;
 const MAX_PRODUCT_IMAGES = 8;
+// Debe coincidir con MAX_PRODUCT_REELS de lib/products.ts, que lo valida en el
+// server. Antes el formulario no lo miraba: podías subir un 4to video de 50 MB y
+// recién al guardar la API lo rechazaba, con el archivo ya subido y huerfano.
+const MAX_PRODUCT_REELS = 3;
+// Debe coincidir con MAX_VIDEO_SIZE_MB de api/upload/route.ts
+const MAX_VIDEO_SIZE_MB = 50;
 function makeDefaultVariant(dimensions: string[]): Variant {
   const attrs: Record<string, string> = {};
   dimensions.forEach(d => { attrs[d] = ""; });
@@ -209,6 +216,82 @@ function photoTips(hideVariants: boolean): string[] {
   ];
 }
 
+// Qué grabar, según el rubro. El video es lo que más convence de comprar, pero
+// nadie sabe qué filmar si no se lo decís.
+function reelTips(tipoTienda: string): string {
+  if (tipoTienda === "AUTOS") return "Mostrá el interior, el motor, el baúl y una vuelta alrededor.";
+  if (tipoTienda === "ROPA") return "Mostrá la prenda puesta, cómo cae y cómo se mueve.";
+  if (tipoTienda === "ALIMENTOS") return "Mostrá la textura, el corte o el plato ya servido.";
+  return "Mostrá el producto en uso, de cerca y desde varios ángulos.";
+}
+
+// Tarjeta de un reel en el formulario. Usa el mismo parseReel y el mismo recorte
+// que la tienda: lo que ves acá es lo que ve tu cliente. Antes el panel mostraba
+// el video entero (contain) y la tienda lo recortaba (cover), así que nunca te
+// enterabas de que un video horizontal le llegaba mutilado al comprador.
+function ReelCard({ url, onRemove, onPlay }: { url: string; onRemove: () => void; onPlay: () => void }) {
+  const reel = parseReel(url);
+
+  // Un link inválido igual se muestra (con la X): si lo escondiéramos, el vendedor
+  // no tendría cómo sacarlo y el guardado seguiría arrastrándolo.
+  if (!reel) {
+    return (
+      <div className="relative w-[116px] aspect-[9/16] rounded-xl overflow-hidden bg-red-50 border border-red-200 flex flex-col items-center justify-center gap-1.5 px-2 flex-shrink-0">
+        <X className="h-5 w-5 text-red-400" />
+        <span className="text-[10px] font-medium text-red-600 text-center leading-snug">Link inválido</span>
+        <button
+          type="button"
+          onClick={onRemove}
+          className="text-[10px] text-red-500 underline underline-offset-2"
+        >
+          Quitar
+        </button>
+      </div>
+    );
+  }
+
+  const isLink = reel.kind === "link";
+  return (
+    <div className="relative w-[116px] aspect-[9/16] rounded-xl overflow-hidden bg-black border border-gray-200 group flex-shrink-0">
+      {/* Instagram y TikTok no se pueden reproducir acá: se abren en su app, igual
+          que le va a pasar al comprador. Los demás abren el mismo modal de la tienda. */}
+      {isLink ? (
+        <a
+          href={reel.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="w-full h-full flex flex-col items-center justify-center gap-1.5 bg-gray-50 text-gray-500 hover:bg-gray-100 transition-colors"
+        >
+          <Film className="h-5 w-5 text-gray-400" />
+          <span className="text-[10px] font-medium">{reel.platform}</span>
+        </a>
+      ) : (
+        <button type="button" onClick={onPlay} className="w-full h-full block cursor-pointer" aria-label="Reproducir video">
+          {reel.kind === "video" ? (
+            <video src={reel.url} preload="metadata" muted playsInline className="w-full h-full object-cover" />
+          ) : (
+            // eslint-disable-next-line @next/next/no-img-element -- miniatura del CDN de YouTube, no pasa por el optimizador
+            <img src={`https://img.youtube.com/vi/${reel.id}/hqdefault.jpg`} alt="" className="w-full h-full object-cover" />
+          )}
+          <span className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <span className="w-8 h-8 rounded-full bg-black/55 group-hover:bg-black/75 transition-colors flex items-center justify-center">
+              <svg width={11} height={11} viewBox="0 0 24 24" fill="#fff" style={{ marginLeft: 2 }}><polygon points="5 3 19 12 5 21 5 3" /></svg>
+            </span>
+          </span>
+        </button>
+      )}
+      <button
+        type="button"
+        onClick={onRemove}
+        aria-label="Quitar video"
+        className="absolute top-1.5 right-1.5 bg-red-500 text-white rounded-full p-1 shadow-md z-10 transition-opacity opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
+      >
+        <X className="h-3 w-3" />
+      </button>
+    </div>
+  );
+}
+
 // Cuadro vacío del grid de fotos. Mide igual que una foto para que el lugar que
 // ocupa ahora sea el que va a ocupar la imagen.
 function PhotoAddCell({ label, onClick }: { label: string; onClick: () => void }) {
@@ -260,10 +343,6 @@ function getTalleSuggestions(category: string, subcategory: string): string[] {
     return ["26", "28", "30", "32", "34", "36", "38", "40", "42", "44"];
   }
   return ["Único", "XS", "S", "M", "L", "XL", "XXL", "XXXL"];
-}
-
-function isDirectVideoUrl(url: string) {
-  return /\.(mp4|webm|mov|ogg)(\?.*)?$/i.test(url);
 }
 
 function safeJsonArray(value: unknown) {
@@ -418,6 +497,9 @@ function ProductoFormPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoFileInputRef = useRef<HTMLInputElement>(null);
   const [reelUrls, setReelUrls] = useState<string[]>([]);
+  const [reelUrlDraft, setReelUrlDraft] = useState("");
+  const [showReelUrlInput, setShowReelUrlInput] = useState(false);
+  const [previewReelIdx, setPreviewReelIdx] = useState<number | null>(null);
   const [services, setServices] = useState<Record<string, boolean>>({});
   type VehicleExpenseItem = { id: string; concepto: string; monto: number; fecha: string | null };
   const [gastos, setGastos] = useState<VehicleExpenseItem[]>([]);
@@ -810,9 +892,35 @@ function ProductoFormPage() {
     uploadImages(Array.from(e.dataTransfer.files || []));
   }
 
+  function addReelUrl() {
+    const url = reelUrlDraft.trim();
+    if (!url) return;
+    if (!isSafeReelUrl(url)) {
+      setError("Pegá un link completo que empiece con https:// (Instagram, TikTok o YouTube).");
+      return;
+    }
+    if (reelUrls.length >= MAX_PRODUCT_REELS) {
+      setError(`Podés agregar hasta ${MAX_PRODUCT_REELS} videos por producto.`);
+      return;
+    }
+    // El tope se re-chequea adentro del updater: dos clicks rápidos leerían el
+    // mismo largo viejo y meterían el link dos veces.
+    setReelUrls((p) => (p.length >= MAX_PRODUCT_REELS || p.includes(url) ? p : [...p, url]));
+    setReelUrlDraft("");
+    setShowReelUrlInput(false);
+    markDirty();
+  }
+
   async function handleVideoFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+    // El corte va ANTES de subir: si no, el archivo (hasta 50 MB) ya viajó al
+    // storage y queda huérfano cuando el server rechaza el cuarto reel.
+    if (reelUrls.length >= MAX_PRODUCT_REELS) {
+      setError(`Podés subir hasta ${MAX_PRODUCT_REELS} videos por producto.`);
+      if (videoFileInputRef.current) videoFileInputRef.current.value = "";
+      return;
+    }
     setUploadingVideo(true);
     setError("");
     try {
@@ -822,8 +930,16 @@ function ProductoFormPage() {
       const data = await readJsonResponse(res);
       if (!res.ok) throw new Error(data.error || "No se pudo subir el video");
       if (data.url) {
-        setReelUrls(p => [...p, data.url as string]);
-        markDirty();
+        // Re-chequeo adentro del updater y no contra el largo del render: mientras
+        // el video viajaba se pudo haber pegado un link, y sumar acá a ciegas
+        // dejaba 4 reels que hacían fallar el guardado entero del producto.
+        let overflow = false;
+        setReelUrls((p) => {
+          if (p.length >= MAX_PRODUCT_REELS) { overflow = true; return p; }
+          return [...p, data.url as string];
+        });
+        if (overflow) setError(`Podés subir hasta ${MAX_PRODUCT_REELS} videos por producto.`);
+        else markDirty();
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "No se pudo subir el video");
@@ -911,7 +1027,7 @@ function ProductoFormPage() {
         featured: storeTypeConfig.supportsFeatured ? featured : false,
         tags: form.tags.split(",").map((t) => t.trim()).filter(Boolean),
         images: images.map((img) => img.variantValue ? img : img.url),
-        reelUrls,
+        reelUrls: reelUrls.map((u) => u.trim()).filter(Boolean),
         variants: preparedVariants,
         attributes: finalAttrs,
         precioMayorista: precioMayorista || null,
@@ -1316,29 +1432,20 @@ function ProductoFormPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="font-semibold text-gray-900">Reels / Videos</h2>
-                  <p className="text-xs text-gray-400 mt-0.5">Subí tu propio video (MP4, MOV) o pegá una URL de Instagram, TikTok o YouTube</p>
+                  <p className="text-xs text-gray-400 mt-0.5">Un video muestra el producto en movimiento — es lo que más convence de comprar</p>
                 </div>
-                <div className="flex items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={() => videoFileInputRef.current?.click()}
-                    disabled={uploadingVideo}
-                    className="flex items-center gap-1.5 text-sm text-indigo-600 font-medium hover:text-indigo-800 transition-colors disabled:opacity-50"
-                  >
-                    {uploadingVideo ? <Loader2 className="h-4 w-4 animate-spin" /> : <Film className="h-4 w-4" />}
-                    {uploadingVideo ? "Subiendo..." : "Subir video"}
-                  </button>
-                  <span className="text-gray-300">|</span>
-                  <button
-                    type="button"
-                    onClick={() => { setReelUrls(p => [...p, ""]); markDirty(); }}
-                    className="flex items-center gap-1.5 text-sm text-indigo-600 font-medium hover:text-indigo-800 transition-colors"
-                  >
-                    <Plus className="h-4 w-4" />
-                    Agregar URL
-                  </button>
-                </div>
+                <span className="text-xs text-gray-400">{reelUrls.length}/{MAX_PRODUCT_REELS}</span>
               </div>
+
+              {/* Ayuda visual: qué grabar y cuánto debe durar */}
+              <div className="flex items-start gap-2 bg-gray-50 rounded-xl px-3 py-2.5 text-xs text-gray-500">
+                <svg className="h-4 w-4 mt-0.5 shrink-0 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                <span>
+                  Grabá <strong>vertical</strong> (como una historia) y de <strong>15 a 30 segundos</strong>. {reelTips(store.tipoTienda || "ROPA")}{" "}
+                  Si el video te quedó horizontal no pasa nada: tu cliente lo abre a pantalla completa y lo ve entero.
+                </span>
+              </div>
+
               <input
                 ref={videoFileInputRef}
                 type="file"
@@ -1346,45 +1453,99 @@ function ProductoFormPage() {
                 className="hidden"
                 onChange={handleVideoFileUpload}
               />
-              {reelUrls.length === 0 && (
-                <p className="text-sm text-gray-400 text-center py-3">
-                  Sin videos. Subí un MP4 propio o pegá un link de Instagram, TikTok o YouTube.
-                </p>
-              )}
+              {/* Igual que las fotos: se ven los 3 lugares desde el arranque, así se
+                  entiende cuántos videos entran sin tener que contarlos. */}
               <div className="flex flex-wrap gap-3">
-              {reelUrls.map((url, i) => {
-                const isDirect = isDirectVideoUrl(url);
-                return isDirect ? (
-                  <div key={i} className="relative rounded-xl overflow-hidden bg-black flex-shrink-0" style={{ width: 140, aspectRatio: "9/16" }}>
-                    <video src={url} controls className="w-full h-full object-contain" />
-                    <button
-                      type="button"
-                      onClick={() => { setReelUrls(p => p.filter((_, j) => j !== i)); markDirty(); }}
-                      className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 shadow"
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </button>
+                {reelUrls.map((url, i) => (
+                  <ReelCard
+                    key={url + i}
+                    url={url}
+                    onRemove={() => { setReelUrls(p => p.filter((_, j) => j !== i)); markDirty(); }}
+                    onPlay={() => setPreviewReelIdx(i)}
+                  />
+                ))}
+
+                {uploadingVideo && (
+                  <div className="w-[116px] aspect-[9/16] border-2 border-dashed border-indigo-200 bg-indigo-50/30 rounded-xl flex flex-col items-center justify-center gap-2 flex-shrink-0">
+                    <Loader2 className="h-5 w-5 text-indigo-400 animate-spin" />
+                    <span className="text-[11px] text-gray-500">Subiendo...</span>
                   </div>
-                ) : (
-                  <div key={i} className="flex gap-2 items-center">
-                    <input
-                      type="url"
-                      value={url}
-                      onChange={(e) => { setReelUrls(p => p.map((u, j) => j === i ? e.target.value : u)); markDirty(); }}
-                      placeholder="https://www.instagram.com/reel/... o tiktok.com/..."
-                      className="flex-1 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => { setReelUrls(p => p.filter((_, j) => j !== i)); markDirty(); }}
-                      className="p-2.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
-                );
-              })}
+                )}
+
+                {Array.from({ length: Math.max(0, MAX_PRODUCT_REELS - reelUrls.length - (uploadingVideo ? 1 : 0)) }).map((_, i) => (
+                  <button
+                    key={`slot-${i}`}
+                    type="button"
+                    onClick={() => videoFileInputRef.current?.click()}
+                    disabled={uploadingVideo}
+                    className="w-[116px] aspect-[9/16] border-2 border-dashed border-gray-200 rounded-xl flex flex-col items-center justify-center gap-2.5 p-2 flex-shrink-0 cursor-pointer hover:border-indigo-400 hover:bg-indigo-50/30 transition-all group disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <span className="w-9 h-9 rounded-full border-2 border-indigo-200 text-indigo-400 group-hover:border-indigo-400 group-hover:bg-indigo-50 flex items-center justify-center transition-colors">
+                      <Plus className="h-4 w-4" />
+                    </span>
+                    <span className="text-[11px] font-medium text-gray-600 text-center leading-snug">Subir video</span>
+                  </button>
+                ))}
               </div>
+
+              {/* Se esconde mientras sube un video: si no, se podía pegar un link
+                  durante la subida y terminar con un reel de más. */}
+              {!showReelUrlInput && !uploadingVideo && reelUrls.length < MAX_PRODUCT_REELS && (
+                <button
+                  type="button"
+                  onClick={() => setShowReelUrlInput(true)}
+                  className="flex items-center gap-1.5 text-xs text-indigo-600 font-medium hover:text-indigo-800 transition-colors"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  o pegá un link de Instagram, TikTok o YouTube
+                </button>
+              )}
+
+              {/* El link se agrega recién cuando tiene contenido: antes se metia un
+                  string vacio en la lista y, si guardabas asi, la tienda mostraba
+                  una tarjeta de video rota que no llevaba a ningun lado. */}
+              {showReelUrlInput && !uploadingVideo && reelUrls.length < MAX_PRODUCT_REELS && (
+                <div className="flex gap-2 items-center">
+                  <input
+                    type="url"
+                    autoFocus
+                    value={reelUrlDraft}
+                    onChange={(e) => setReelUrlDraft(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addReelUrl(); } }}
+                    placeholder="https://www.instagram.com/reel/... o youtube.com/shorts/..."
+                    className="flex-1 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={addReelUrl}
+                    disabled={!reelUrlDraft.trim()}
+                    className="px-4 py-2.5 rounded-xl text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Agregar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setShowReelUrlInput(false); setReelUrlDraft(""); }}
+                    className="p-2.5 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-xl transition-colors"
+                    aria-label="Cancelar"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              )}
+
+              <p className="text-xs text-gray-400 text-center">
+                Hasta {MAX_PRODUCT_REELS} videos. MP4, WEBM o MOV de hasta {MAX_VIDEO_SIZE_MB} MB, o un link de Instagram, TikTok o YouTube
+              </p>
+
+              {/* El mismo reproductor que ve el comprador, no una imitación */}
+              {previewReelIdx !== null && (
+                <ReelPlayerModal
+                  reelUrls={reelUrls}
+                  startIndex={playableReels(reelUrls.slice(0, previewReelIdx)).length}
+                  onClose={() => setPreviewReelIdx(null)}
+                />
+              )}
             </div>
 
             {/* Historial de servicios — solo AUTOS */}

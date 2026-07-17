@@ -347,8 +347,17 @@ export function validateProductBody(
     }
   }
 
-  if (Array.isArray(reelUrls) && reelUrls.length > MAX_PRODUCT_REELS) {
-    return { error: NextResponse.json({ error: `Podes subir hasta ${MAX_PRODUCT_REELS} reels por producto` }, { status: 400 }) };
+  if (Array.isArray(reelUrls)) {
+    if (reelUrls.length > MAX_PRODUCT_REELS) {
+      return { error: NextResponse.json({ error: `Podes subir hasta ${MAX_PRODUCT_REELS} reels por producto` }, { status: 400 }) };
+    }
+    // El storefront renderiza estas URLs en un <a href> y en un <iframe>. Sin
+    // validar el esquema, un "javascript:..." guardado por un POST directo o por
+    // una cuenta comprometida le ejecuta codigo al comprador en el origen de la
+    // tienda. El cliente valida lo mismo; esta es la cerradura que importa.
+    if (!reelUrls.every((u) => typeof u === "string" && /^https?:\/\/\S+$/i.test(u.trim()))) {
+      return { error: NextResponse.json({ error: "Los videos deben ser links que empiecen con http:// o https://" }, { status: 400 }) };
+    }
   }
 
   // ── Promoción por cantidad (retail) ───────────────────────────────────────

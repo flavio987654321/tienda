@@ -2,6 +2,7 @@
 import { useState, useEffect, useSyncExternalStore } from "react";
 import type { StorefrontProduct } from "@/hooks/useStorefront";
 import { useTouchSwipe } from "@/hooks/useTouchSwipe";
+import StoreProductReels from "@/components/store/ProductReels";
 import { getContrastColor } from "@/contexts/EditContext";
 
 export function fmtPrice(n: number, currency: string) {
@@ -448,45 +449,10 @@ export function VehicleModal({ product, accent, currency, whatsapp, products, on
                   textTransform:"uppercase", letterSpacing:1.2 }}>Videos</span>
                 <div style={{ flex:1, height:1, background:"#f0f0f0" }}/>
               </div>
-              <div style={{ display:"flex", gap:12, flexWrap:"wrap" }}>
-                {product.reelUrls.map((url, i) => {
-                  const isDirect = /\.(mp4|webm|mov|ogg)(\?.*)?$/i.test(url);
-                  if (isDirect) {
-                    return (
-                      <div key={i} style={{ width:160, aspectRatio:"9/16", borderRadius:10,
-                        overflow:"hidden", background:"#000", flexShrink:0 }}>
-                        <video src={url} controls style={{ width:"100%", height:"100%", objectFit:"contain" }} />
-                      </div>
-                    );
-                  }
-                  const isYT = /youtu\.?be/.test(url);
-                  const ytId = isYT ? url.match(/(?:v=|youtu\.be\/)([^&?/]+)/)?.[1] : null;
-                  if (ytId) {
-                    return (
-                      <div key={i} style={{ width:160, aspectRatio:"9/16", borderRadius:10,
-                        overflow:"hidden", background:"#000", flexShrink:0 }}>
-                        <iframe
-                          src={`https://www.youtube.com/embed/${ytId}`}
-                          style={{ width:"100%", height:"100%", border:"none" }}
-                          allow="autoplay; encrypted-media" allowFullScreen />
-                      </div>
-                    );
-                  }
-                  return (
-                    <a key={i} href={url} target="_blank" rel="noopener noreferrer"
-                      style={{ display:"flex", flexDirection:"column", alignItems:"center",
-                        justifyContent:"center", gap:8, width:160, aspectRatio:"9/16",
-                        borderRadius:10, background:"#f8f8f8", border:"1.5px solid #e8e8e8",
-                        color:"#555", textDecoration:"none", flexShrink:0 }}>
-                      <svg width={28} height={28} viewBox="0 0 24 24" fill="none" stroke={accent} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
-                        <polygon points="23 7 16 12 23 17 23 7"/>
-                        <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
-                      </svg>
-                      <span style={{ fontSize:11, fontWeight:600, textAlign:"center", padding:"0 12px" }}>Ver video</span>
-                    </a>
-                  );
-                })}
-              </div>
+              <StoreProductReels
+                reelUrls={product.reelUrls}
+                theme={{ accent, text: "#555", border: "#e8e8e8", radius: 10 }}
+              />
             </div>
           )}
 

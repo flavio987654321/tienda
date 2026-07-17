@@ -5,6 +5,7 @@ import { FadeImage } from "@/components/store/templates/shared/FadeImage";
 import { CartDrawer, type CartTheme } from "@/components/store/templates/shared/CartDrawer";
 import { CheckoutModal } from "@/components/store/templates/shared/CheckoutModal";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
+import StoreProductReels from "@/components/store/ProductReels";
 import { getContrastColor, getReadableAccentText } from "@/contexts/EditContext";
 import { useTouchSwipe } from "@/hooks/useTouchSwipe";
 import { promoModalText } from "@/lib/promoLabel";
@@ -118,52 +119,15 @@ function useSelectedVariantStock(product: StorefrontProduct, selectedSize: strin
 }
 
 function ProductReels({ theme, reelUrls }: { theme: DetailTheme; reelUrls: string[] }) {
-  const [reelIndex, setReelIndex] = useState(0);
   if (reelUrls.length === 0) return null;
-  const url = reelUrls[reelIndex];
-
-  let media: React.ReactNode;
-  if (/\.(mp4|webm|mov|ogg)(\?.*)?$/i.test(url)) {
-    media = <video controls style={{ width: 170, aspectRatio: "9/16", objectFit: "cover", background: "#000", borderRadius: theme.radius }}><source src={url} /></video>;
-  } else {
-    let embedUrl = "";
-    if (url.includes("youtube.com/shorts/")) { const id = url.split("shorts/")[1]?.split("?")[0]; embedUrl = `https://www.youtube.com/embed/${id}`; }
-    else if (url.includes("youtu.be/")) { const id = url.split("youtu.be/")[1]?.split("?")[0]; embedUrl = `https://www.youtube.com/embed/${id}`; }
-    else if (url.includes("youtube.com/watch")) { try { const id = new URL(url).searchParams.get("v"); if (id) embedUrl = `https://www.youtube.com/embed/${id}`; } catch {} }
-    if (embedUrl) {
-      media = <iframe src={embedUrl} allow="autoplay; encrypted-media" allowFullScreen style={{ width: 170, aspectRatio: "9/16", border: "none", borderRadius: theme.radius }} />;
-    } else {
-      const platform = url.includes("instagram") ? "Instagram Reel" : url.includes("tiktok") ? "TikTok" : "Video";
-      media = (
-        <a href={url} target="_blank" rel="noopener noreferrer"
-          style={{ width: 170, aspectRatio: "9/16", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8, border: `1px solid ${theme.cardBorder}`, textDecoration: "none", color: theme.text, borderRadius: theme.radius, background: theme.pageBg }}>
-          <svg width={24} height={24} viewBox="0 0 24 24" fill={theme.accent} stroke="none"><polygon points="5 3 19 12 5 21 5 3" /></svg>
-          <span style={{ fontSize: 11 }}>{platform}</span>
-        </a>
-      );
-    }
-  }
 
   return (
     <div style={{ borderTop: `1px solid ${theme.cardBorder}`, paddingTop: 16, marginTop: 8 }}>
       <p style={{ fontSize: 13, fontWeight: 700, color: theme.text, margin: "0 0 12px" }}>Videos del producto</p>
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
-        {media}
-        {reelUrls.length > 1 && (
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <button onClick={() => setReelIndex(i => (i - 1 + reelUrls.length) % reelUrls.length)}
-              style={{ background: "none", border: `1px solid ${theme.cardBorder}`, color: theme.text, width: 30, height: 30, borderRadius: "50%", cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>‹</button>
-            <div style={{ display: "flex", gap: 5 }}>
-              {reelUrls.map((_, i) => (
-                <button key={i} onClick={() => setReelIndex(i)}
-                  style={{ width: 6, height: 6, borderRadius: "50%", background: i === reelIndex ? theme.accent : theme.cardBorder, border: "none", cursor: "pointer", padding: 0 }} />
-              ))}
-            </div>
-            <button onClick={() => setReelIndex(i => (i + 1) % reelUrls.length)}
-              style={{ background: "none", border: `1px solid ${theme.cardBorder}`, color: theme.text, width: 30, height: 30, borderRadius: "50%", cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>›</button>
-          </div>
-        )}
-      </div>
+      <StoreProductReels
+        reelUrls={reelUrls}
+        theme={{ accent: theme.accent, text: theme.text, border: theme.cardBorder, radius: theme.radius }}
+      />
     </div>
   );
 }
