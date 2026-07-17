@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import DashboardLayout from "@/components/DashboardLayout";
+import AutoRefresh from "@/components/AutoRefresh";
 import OrderActions from "@/components/orders/OrderActions";
 import OrderCheckbox from "@/components/orders/OrderCheckbox";
 import BulkActionsBar from "@/components/orders/BulkActionsBar";
@@ -78,6 +79,8 @@ export default async function PedidosPage({ searchParams }: Props) {
 
   return (
     <DashboardLayout userName={user.name} userEmail={user.email} userId={user.id} initialPendingAffiliateCount={pendingAffiliateCount}>
+      {/* Un pedido nuevo o un cambio de estado aparece solo, sin recargar */}
+      <AutoRefresh tables={["Order"]} />
       <BulkOrdersProvider orders={orders.map((o) => ({ id: o.id, status: o.status }))}>
       <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>

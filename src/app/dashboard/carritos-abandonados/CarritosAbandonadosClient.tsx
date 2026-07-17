@@ -394,6 +394,9 @@ export default function CarritosAbandonadosClient({
       if (res.ok) {
         setDeletedIds((prev) => new Set(prev).add(id));
         showToast("Carrito eliminado");
+        // La fila se esconde al toque, pero los contadores y el paginador los calcula
+        // el server: sin esto quedan con los números viejos hasta recargar a mano.
+        router.refresh();
       } else {
         const data = await res.json().catch(() => ({}));
         showToast(data?.error || "No se pudo eliminar el carrito", false);

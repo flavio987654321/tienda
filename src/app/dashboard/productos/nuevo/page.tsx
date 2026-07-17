@@ -6,7 +6,7 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { UnsavedChangesGuard } from "@/components/UnsavedChangesGuard";
 import {
   Plus, Trash2, Loader2, ArrowLeft, ChevronLeft, ChevronRight,
-  Upload, X, Star, ShoppingCart, Heart, Tag, Package, HelpCircle, Calendar, Film,
+  X, Star, ShoppingCart, Heart, Tag, Package, HelpCircle, Calendar, Film,
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -198,6 +198,8 @@ function extraFieldsTip(tipoTienda: string): string {
 
 // Sugerencias de qué fotografiar, al estilo Tienda Nube — guían al vendedor
 // sobre qué ángulos/tomas suelen convertir más, en vez de una zona de drop vacía.
+// Cada tip es la etiqueta de un cuadro libre: se van consumiendo a medida que
+// sube fotos, y la foto queda en el mismo cuadro donde estaba su consejo.
 function photoTips(hideVariants: boolean): string[] {
   return [
     "Subí una foto del producto de frente",
@@ -205,6 +207,23 @@ function photoTips(hideVariants: boolean): string[] {
     hideVariants ? "Mostrá detalles o el interior" : "Mostrá sus variantes",
     "Sugerí cómo usarlo",
   ];
+}
+
+// Cuadro vacío del grid de fotos. Mide igual que una foto para que el lugar que
+// ocupa ahora sea el que va a ocupar la imagen.
+function PhotoAddCell({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="aspect-square border-2 border-dashed border-gray-200 rounded-xl p-3 cursor-pointer hover:border-indigo-400 hover:bg-indigo-50/30 transition-all group flex flex-col items-center justify-center gap-2.5"
+    >
+      <span className="w-9 h-9 rounded-full border-2 border-indigo-200 text-indigo-400 group-hover:border-indigo-400 group-hover:bg-indigo-50 flex items-center justify-center transition-colors flex-shrink-0">
+        <Plus className="h-4 w-4" />
+      </span>
+      <span className="text-xs font-medium text-gray-600 leading-snug text-center">{label}</span>
+    </button>
+  );
 }
 
 function variantPlaceholder(name: string): string {
@@ -374,7 +393,6 @@ function ProductoFormPage() {
   const [builderSizes, setBuilderSizes] = useState<string[]>([]);
   const [useBuilder, setUseBuilder] = useState(false);
   const variantStockRef = useRef<Map<string, { stock: string; price: string; sku: string; threshold: string }>>(new Map());
-  const skipBuilderEffect = useRef(false);
   const [attributes, setAttributes] = useState<Attribute[]>([]);
   const [condicion, setCondicion] = useState<string>("Usado");
   const [precioMayorista, setPrecioMayorista] = useState("");
@@ -439,6 +457,10 @@ function ProductoFormPage() {
           if (!supportsBuilder) {
             const dims = getVariantOptions(d.store.tipoTienda || "ROPA").filter(o => o !== "Otro");
             setVariants([makeDefaultVariant(dims)]);
+          } else {
+            // El builder arranca sin combinaciones: las genera al elegir colores/talles.
+            // Sin esto quedaría viva la variante default del useState y se enviaría vacía.
+            setVariants([]);
           }
         }
       })
@@ -554,8 +576,6 @@ function ProductoFormPage() {
             if (s && !uniqueSizes.includes(s)) uniqueSizes.push(s);
           }
           variantStockRef.current = stockMap;
-          // Saltar el effect de regeneración — las variants ya están cargadas correctamente
-          skipBuilderEffect.current = true;
           setBuilderColors(uniqueColors);
           setBuilderSizes(uniqueSizes);
         }
@@ -648,40 +668,40 @@ function ProductoFormPage() {
     markDirty();
   }
 
-  // Auto-generación de variantes cuando el builder cambia colores o talles
-  useEffect(() => {
-    if (!useBuilder) return;
-    if (skipBuilderEffect.current) { skipBuilderEffect.current = false; return; }
-    if (builderColors.length === 0 && builderSizes.length === 0) { setVariants([]); return; }
-
+  // Combinaciones del builder. La llaman los handlers que cambian colores/talles —
+  // antes vivía en un effect, que además de encadenar renders se disparaba durante la
+  // carga y había que frenarlo con un flag. Acá no corre si nadie la llama.
+  // Con colores y talles vacíos devuelve [], que es lo que corresponde.
+  function buildVariantsFromBuilder(colors: string[], sizes: string[]): Variant[] {
+    // getBuilderConfig inline (función pura de módulo) para no referenciar
+    // builderCfg, que se declara más abajo en el componente.
+    const sd = getBuilderConfig(store.tipoTienda || "ROPA").sizeDim;
     const get = (key: string) => variantStockRef.current.get(key);
     const newVariants: Variant[] = [];
 
-    const sd = builderCfg.sizeDim;
-    if (builderColors.length > 0 && builderSizes.length > 0) {
-      for (const color of builderColors) {
-        for (const size of builderSizes) {
+    if (colors.length > 0 && sizes.length > 0) {
+      for (const color of colors) {
+        for (const size of sizes) {
           const key = `${color}|||${size}`;
           const prev = get(key);
           newVariants.push({ attrs: { Color: color, [sd]: size }, stock: prev?.stock ?? "0", price: prev?.price ?? "", sku: prev?.sku ?? "", lowStockThreshold: prev?.threshold ?? "" });
         }
       }
-    } else if (builderColors.length > 0) {
-      for (const color of builderColors) {
+    } else if (colors.length > 0) {
+      for (const color of colors) {
         const key = `${color}|||`;
         const prev = get(key);
         newVariants.push({ attrs: { Color: color }, stock: prev?.stock ?? "0", price: prev?.price ?? "", sku: prev?.sku ?? "", lowStockThreshold: prev?.threshold ?? "" });
       }
     } else {
-      for (const size of builderSizes) {
+      for (const size of sizes) {
         const key = `|||${size}`;
         const prev = get(key);
         newVariants.push({ attrs: { [sd]: size }, stock: prev?.stock ?? "0", price: prev?.price ?? "", sku: prev?.sku ?? "", lowStockThreshold: prev?.threshold ?? "" });
       }
     }
-    setVariants(newVariants);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [builderColors, builderSizes, useBuilder]);
+    return newVariants;
+  }
 
   // Asignar foto a un color (desde el builder)
   const assignPhotoToColor = useCallback((colorValue: string, imageUrl: string | undefined) => {
@@ -691,7 +711,6 @@ function ProductoFormPage() {
       return img;
     }));
     markDirty();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function addVariant() {
@@ -941,6 +960,9 @@ function ProductoFormPage() {
     ...storeTypeConfig.extraFields,
     ...(storeTypeConfig.extraFieldsByCategory?.[previewSubcategory] ?? []),
   ];
+  // Tips que todavía no consumió ninguna foto. Cuando se acaban, el grid sigue
+  // con un cuadro genérico: siempre queda uno libre hasta llegar al máximo.
+  const remainingPhotoTips = photoTips(storeTypeConfig.hideVariants).slice(images.length);
 
   // Al elegir una subcategoría con specs propias (ej: "tvs" → Pulgadas), agregamos
   // esos campos vacíos a la ficha técnica para que el vendedor los vea y los complete.
@@ -1186,40 +1208,89 @@ function ProductoFormPage() {
                 <span className="text-xs text-gray-400">{images.length}/{MAX_PRODUCT_IMAGES}</span>
               </div>
 
-              {/* Upload zone */}
-              {uploadingImg ? (
-                <div className="border-2 border-dashed border-gray-200 rounded-xl p-6 text-center">
-                  <Loader2 className="h-8 w-8 text-indigo-400 animate-spin mx-auto mb-2" />
-                  <p className="text-sm text-gray-500">Subiendo...</p>
-                </div>
-              ) : images.length === 0 ? (
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  {photoTips(storeTypeConfig.hideVariants).map((tip, i) => (
-                    <div
-                      key={i}
-                      onClick={() => fileInputRef.current?.click()}
-                      onDragOver={(e) => e.preventDefault()}
-                      onDrop={handleDrop}
-                      className="border-2 border-dashed border-gray-200 rounded-xl p-4 text-center cursor-pointer hover:border-indigo-400 hover:bg-indigo-50/30 transition-all group flex flex-col items-center gap-2.5"
-                    >
-                      <span className="w-9 h-9 rounded-full border-2 border-indigo-200 text-indigo-400 group-hover:border-indigo-400 group-hover:bg-indigo-50 flex items-center justify-center transition-colors flex-shrink-0">
-                        <Plus className="h-4 w-4" />
-                      </span>
-                      <span className="text-xs font-medium text-gray-600 leading-snug">{tip}</span>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div
-                  onClick={() => fileInputRef.current?.click()}
-                  onDragOver={(e) => e.preventDefault()}
-                  onDrop={handleDrop}
-                  className="border-2 border-dashed border-gray-200 rounded-xl p-3 text-center cursor-pointer hover:border-indigo-400 hover:bg-indigo-50/30 transition-all group flex items-center justify-center gap-2"
-                >
-                  <Upload className="h-4 w-4 text-gray-300 group-hover:text-indigo-400 transition-colors" />
-                  <span className="text-sm text-gray-500">Agregar más fotos</span>
+              {/* Hint de color arriba del grid: los selects viven adentro de cada cuadro */}
+              {images.length > 0 && colorValues.length > 0 && (
+                <div className="flex items-start gap-2 bg-indigo-50 rounded-xl px-3 py-2.5 text-xs text-indigo-700">
+                  <svg className="h-4 w-4 mt-0.5 shrink-0 text-indigo-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                  <span><strong>Asigná un color a cada foto</strong> para que el cliente vea la imagen correcta al elegir el color del producto.</span>
                 </div>
               )}
+
+              {/* Un solo grid: la foto queda en el mismo cuadro que ocupaba su consejo.
+                  El drop de archivos va acá y no en cada celda — cuando el drop viene de
+                  reordenar, dataTransfer.files está vacío y uploadImages corta solo. */}
+              <div
+                className="grid grid-cols-2 sm:grid-cols-4 gap-3"
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={handleDrop}
+              >
+                {images.map((img, i) => (
+                  <div key={img.url + i} className="flex flex-col gap-1.5">
+                    <div
+                      draggable
+                      onDragStart={() => setDragIdx(i)}
+                      onDragOver={(e) => { e.preventDefault(); }}
+                      onDrop={(e) => { e.preventDefault(); if (dragIdx !== null && dragIdx !== i) moveImage(dragIdx, i); setDragIdx(null); }}
+                      onDragEnd={() => setDragIdx(null)}
+                      onClick={() => setCarouselIdx(i)}
+                      className={`group relative aspect-square rounded-xl cursor-grab active:cursor-grabbing border-2 transition-all overflow-hidden ${
+                        dragIdx === i ? "opacity-40 scale-95" : ""
+                      } ${carouselIdx === i ? "border-indigo-500 ring-2 ring-indigo-200" : "border-transparent hover:border-gray-300"}`}
+                    >
+                      <Image src={img.url} alt="" fill sizes="(max-width: 640px) 45vw, 200px" className="object-cover" />
+                      {img.variantValue && (
+                        <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-center py-1">
+                          <span className="text-[10px] text-white font-semibold px-1 truncate block">{img.variantValue}</span>
+                        </div>
+                      )}
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); removeImage(i); }}
+                        aria-label="Quitar foto"
+                        className="absolute top-1.5 right-1.5 bg-red-500 text-white rounded-full p-1 shadow-md z-10 transition-opacity opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                      {i === 0 && (
+                        <div className="absolute top-1.5 left-1.5 bg-indigo-600/80 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-md">PORTADA</div>
+                      )}
+                    </div>
+                    {colorValues.length > 0 && (
+                      <select
+                        value={img.variantValue || ""}
+                        onChange={(e) => assignImageColor(i, e.target.value || undefined)}
+                        onClick={(e) => e.stopPropagation()}
+                        className={`w-full text-xs border rounded-lg bg-white py-1.5 px-2 cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-400 ${
+                          img.variantValue
+                            ? "border-indigo-300 text-indigo-700 font-medium bg-indigo-50"
+                            : "border-gray-200 text-gray-400"
+                        }`}
+                      >
+                        <option value="">Sin color</option>
+                        {colorValues.map((v) => (
+                          <option key={v} value={v}>{v}</option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+                ))}
+
+                {uploadingImg ? (
+                  <div className="aspect-square border-2 border-dashed border-indigo-200 bg-indigo-50/30 rounded-xl flex flex-col items-center justify-center gap-2">
+                    <Loader2 className="h-6 w-6 text-indigo-400 animate-spin" />
+                    <span className="text-xs text-gray-500">Subiendo...</span>
+                  </div>
+                ) : images.length < MAX_PRODUCT_IMAGES ? (
+                  remainingPhotoTips.length > 0 ? (
+                    remainingPhotoTips.map((tip) => (
+                      <PhotoAddCell key={tip} label={tip} onClick={() => fileInputRef.current?.click()} />
+                    ))
+                  ) : (
+                    <PhotoAddCell label="Agregar otra foto" onClick={() => fileInputRef.current?.click()} />
+                  )
+                ) : null}
+              </div>
+
               <p className="text-xs text-gray-400 text-center">
                 Hasta {MAX_PRODUCT_IMAGES} fotos (podés elegir varias a la vez). JPG, PNG, WEBP - hasta {MAX_SOURCE_IMAGE_SIZE_MB} MB; se optimizan al subir
               </p>
@@ -1237,72 +1308,6 @@ function ProductoFormPage() {
                 <div className="flex items-start gap-2 bg-gray-50 rounded-xl px-3 py-2.5 text-xs text-gray-500">
                   <svg className="h-4 w-4 mt-0.5 shrink-0 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
                   <span>Si tu producto tiene <strong>diferentes colores</strong>, primero agregá las variantes de color en <strong>Variantes y stock</strong> (más abajo) — después podrás asignar cada foto a su color.</span>
-                </div>
-              )}
-
-              {/* Thumbnails con asignación de color */}
-              {images.length > 0 && (
-                <div className="space-y-3">
-                  {colorValues.length > 0 && (
-                    <div className="flex items-start gap-2 bg-indigo-50 rounded-xl px-3 py-2.5 text-xs text-indigo-700">
-                      <svg className="h-4 w-4 mt-0.5 shrink-0 text-indigo-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                      <span><strong>Asigná un color a cada foto</strong> para que el cliente vea la imagen correcta al elegir el color del producto.</span>
-                    </div>
-                  )}
-                  <div className="flex gap-3 flex-wrap">
-                    {images.map((img, i) => (
-                      <div key={img.url + i} className="flex flex-col gap-1.5" style={{ width: colorValues.length > 0 ? 88 : 64 }}>
-                        <div
-                          draggable
-                          onDragStart={() => setDragIdx(i)}
-                          onDragOver={(e) => { e.preventDefault(); }}
-                          onDrop={(e) => { e.preventDefault(); if (dragIdx !== null && dragIdx !== i) moveImage(dragIdx, i); setDragIdx(null); }}
-                          onDragEnd={() => setDragIdx(null)}
-                          onClick={() => setCarouselIdx(i)}
-                          className={`group relative rounded-xl cursor-grab active:cursor-grabbing border-2 transition-all flex-shrink-0 overflow-hidden ${
-                            dragIdx === i ? "opacity-40 scale-95" : ""
-                          } ${carouselIdx === i ? "border-indigo-500 scale-105" : "border-transparent hover:border-gray-300"}`}
-                          style={{ width: colorValues.length > 0 ? 88 : 64, height: colorValues.length > 0 ? 88 : 64 }}
-                        >
-                          <Image src={img.url} alt="" fill className="object-cover" />
-                          {img.variantValue && (
-                            <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-center py-1">
-                              <span className="text-[9px] text-white font-semibold px-1 truncate block">{img.variantValue}</span>
-                            </div>
-                          )}
-                          <button
-                            type="button"
-                            onClick={(e) => { e.stopPropagation(); removeImage(i); }}
-                            className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity shadow-md z-10"
-                          >
-                            <X className="h-3 w-3" />
-                          </button>
-                          {i === 0 && (
-                            <div className="absolute top-1 left-1 bg-indigo-600/80 text-white text-[8px] font-bold px-1.5 py-0.5 rounded-md">PORTADA</div>
-                          )}
-                        </div>
-                        {colorValues.length > 0 && (
-                          <div>
-                            <select
-                              value={img.variantValue || ""}
-                              onChange={(e) => assignImageColor(i, e.target.value || undefined)}
-                              onClick={(e) => e.stopPropagation()}
-                              className={`w-full text-xs border rounded-lg bg-white py-1.5 px-2 cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-400 ${
-                                img.variantValue
-                                  ? "border-indigo-300 text-indigo-700 font-medium bg-indigo-50"
-                                  : "border-gray-200 text-gray-400"
-                              }`}
-                            >
-                              <option value="">Sin color</option>
-                              {colorValues.map((v) => (
-                                <option key={v} value={v}>{v}</option>
-                              ))}
-                            </select>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
                 </div>
               )}
             </div>
@@ -2141,7 +2146,13 @@ function ProductoFormPage() {
                 {["ROPA", "HOGAR_TECH"].includes(store.tipoTienda || "") && (
                   <button
                     type="button"
-                    onClick={() => setUseBuilder(v => !v)}
+                    onClick={() => {
+                      const turningOn = !useBuilder;
+                      setUseBuilder(turningOn);
+                      // Al volver al constructor las combinaciones se rearman desde los
+                      // colores/talles elegidos; al pasar a manual, las filas quedan como están.
+                      if (turningOn) setVariants(buildVariantsFromBuilder(builderColors, builderSizes));
+                    }}
                     className="text-xs text-gray-400 hover:text-indigo-600 underline underline-offset-2 transition-colors"
                   >
                     {useBuilder ? "Modo manual" : "Modo constructor"}
@@ -2171,8 +2182,8 @@ function ProductoFormPage() {
                   sizeLabel={builderCfg.sizeLabel}
                   sizePlaceholder={builderCfg.sizePlaceholder}
                   sizeHint={builderCfg.sizeHint}
-                  onColorsChange={(c) => { setBuilderColors(c); markDirty(); }}
-                  onSizesChange={(s) => { setBuilderSizes(s); markDirty(); }}
+                  onColorsChange={(c) => { setBuilderColors(c); setVariants(buildVariantsFromBuilder(c, builderSizes)); markDirty(); }}
+                  onSizesChange={(s) => { setBuilderSizes(s); setVariants(buildVariantsFromBuilder(builderColors, s)); markDirty(); }}
                   onVariantChange={updateVariantField}
                   onAssignPhoto={assignPhotoToColor}
                 />
