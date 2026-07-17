@@ -3,6 +3,7 @@ import { FadeImage } from "./FadeImage";
 import type { useCartLogic } from "@/hooks/useCartLogic";
 import { promoSavingsLabel } from "@/lib/promoLabel";
 import { resolveVariantPrice } from "@/lib/variantPrice";
+import { priceCart, resolveBasePrice, parseEscalones } from "@/lib/pricing";
 
 // Un solo componente de carrito reutilizado por todos los templates de un mismo
 // tipo de negocio (hoy: Electro Prime, Tech Nova, Home Studio, Casa Clara) — así
@@ -33,42 +34,40 @@ export function CartDrawer({
   const { BG, T, MID, border, accent, accentText, serif } = theme;
   const {
     cartItems, cartOpen, setCartOpen, cartCount, cartTotal, removeFromCart, updateQty,
-    openCheckout, fmt, wholesaleWarnings, isWholesale,
+    openCheckout, fmt, wholesaleWarnings,
   } = cart;
   const blockBuy = isOwner || isPreview;
 
+  // Precio base con el mismo resolvedor único que el carrito y el checkout
+  // (mayorista + escalones). Antes tenía su propia copia de esta cuenta.
   function itemBaseUnitPrice(item: typeof cartItems[number], qty: number): number {
-    const product = item.product;
-    const vp = resolveVariantPrice(product.variants, item.size, item.color, item.variantId);
-    const effectiveBase = vp ?? product.price;
-    if (!isWholesale || !product.cantMinMayorista || qty < product.cantMinMayorista) return effectiveBase;
-    const escalones = product.preciosEscalonados ?? [];
-    let best: number | null = null;
-    for (const band of escalones) {
-      if (qty >= band.desde && (best === null || band.precio < best)) best = band.precio;
-    }
-    return best ?? product.precioMayorista ?? effectiveBase;
+    const vp = resolveVariantPrice(item.product.variants, item.size, item.color, item.variantId);
+    return resolveBasePrice({
+      retailPrice: vp ?? item.product.price,
+      precioMayorista: item.product.precioMayorista,
+      cantMinMayorista: item.product.cantMinMayorista,
+      preciosEscalonados: parseEscalones(item.product.preciosEscalonados),
+    }, qty);
   }
 
-  // Retorna el total con descuento para un ítem, considerando N_PAY_M proporcional
-  function itemDiscountedTotal(item: typeof cartItems[number]): number {
-    const product = item.product;
-    const N = product.promoQtyMin;
-    const M = product.promoPayQty;
-    if (product.promoType === "N_PAY_M" && N && M && item.discountPct) {
-      const totalQtyForProduct = cartItems
-        .filter(i => i.product.id === product.id)
-        .reduce((s, i) => s + i.qty, 0);
-      if (totalQtyForProduct >= N) {
-        const baseUnit = itemBaseUnitPrice(item, totalQtyForProduct);
-        const paidQty = Math.floor(totalQtyForProduct / N) * M + totalQtyForProduct % N;
-        const effectiveUnit = (paidQty / totalQtyForProduct) * baseUnit;
-        return Math.round(effectiveUnit * item.qty * 100) / 100;
-      }
-    }
-    const baseUnit = itemBaseUnitPrice(item, item.qty);
-    return Math.round(baseUnit * item.qty * (1 - (item.discountPct ?? 0) / 100) * 100) / 100;
-  }
+  // Precio por línea con la MISMA función que el checkout y el total del carrito.
+  // Antes esta función tenía su propia cuenta de N×M que difería del checkout en el
+  // redondeo (B-03). itemBaseUnitPrice se queda solo para resolver el precio base;
+  // la promo la aplica priceCart. Los índices coinciden con cartItems (mismo orden).
+  const pricedLines = priceCart(
+    cartItems.map((item) => ({
+      productId: item.product.id,
+      variantId: item.variantId,
+      quantity: item.qty,
+      basePrice: itemBaseUnitPrice(item, item.qty),
+      promo: {
+        promoType: item.product.promoType,
+        promoQtyMin: item.product.promoQtyMin,
+        promoPayQty: item.product.promoPayQty,
+        promoQtyDiscount: item.product.promoQtyDiscount,
+      },
+    }))
+  ).lines;
 
   return (
     <div style={{ position:"fixed", inset:0, zIndex: isPreview ? 20000 : 150, pointerEvents: cartOpen ? "auto" : "none" }}>
@@ -108,17 +107,17 @@ export function CartDrawer({
                     <span style={{ width:24, textAlign:"center", fontSize:13, color:T }}>{item.qty}</span>
                     <button onClick={() => updateQty(idx, 1)} style={{ width:28, height:28, background:"none", border:"none", color:T, cursor:"pointer", fontSize:16 }}>+</button>
                   </div>
-                  {item.discountPct ? (
+                  {pricedLines[idx]?.promoApplied ? (
                     <div style={{ textAlign:"right" }}>
                       <span style={{ fontSize:11, color:MID, textDecoration:"line-through", display:"block", lineHeight:1.3 }}>
-                        {fmt(itemBaseUnitPrice(item, item.qty) * item.qty)}
+                        {fmt(pricedLines[idx].lineTotal + pricedLines[idx].savings)}
                       </span>
                       <span style={{ color:accent, fontWeight:700, fontSize:14 }}>
-                        {fmt(itemDiscountedTotal(item))}
+                        {fmt(pricedLines[idx].lineTotal)}
                       </span>
                     </div>
                   ) : (
-                    <span style={{ color:accent, fontWeight:700, fontSize:14 }}>{fmt(itemBaseUnitPrice(item, item.qty) * item.qty)}</span>
+                    <span style={{ color:accent, fontWeight:700, fontSize:14 }}>{fmt(pricedLines[idx]?.lineTotal ?? 0)}</span>
                   )}
                 </div>
               </div>
@@ -127,8 +126,8 @@ export function CartDrawer({
           ))}
         </div>
         {cartItems.length > 0 && (() => {
-          const fullTotal = cartItems.reduce((s, i) => s + itemBaseUnitPrice(i, i.qty) * i.qty, 0);
-          const promoSavings = fullTotal - cartTotal;
+          // El ahorro sale del motor (Σ savings), no de recalcular el precio lleno aparte.
+          const promoSavings = pricedLines.reduce((s, l) => s + l.savings, 0);
           return (
           <div style={{ padding:"16px 24px 28px", borderTop:`1px solid ${border}`, flexShrink:0 }}>
             <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>

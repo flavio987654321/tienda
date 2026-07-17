@@ -585,7 +585,7 @@ export async function sendOrderConfirmationEmail({
   buyerName: string;
   orderId: string;
   storeName: string;
-  items: { name: string; variant?: string | null; quantity: number; price: number; offerPrice?: number | null; comparePrice?: number | null }[];
+  items: { name: string; variant?: string | null; quantity: number; price: number; lineTotal?: number | null; offerPrice?: number | null; comparePrice?: number | null }[];
   subtotal: number;
   promoSavings?: number;
   promoType?: string | null;
@@ -631,7 +631,7 @@ export async function sendOrderConfirmationEmail({
             ${hasOferta ? `<s style="color:#9ca3af;font-size:12px;">${fmt(item.comparePrice!)}</s> ` : ""}${item.quantity} × ${fmt(item.price)}
           </td>
           <td style="padding:12px 16px;font-size:14px;font-weight:600;color:#111827;text-align:right;border-bottom:1px solid #f3f4f6;white-space:nowrap;">
-            ${fmt(item.price * item.quantity)}
+            ${fmt(item.lineTotal ?? item.price * item.quantity)}
           </td>
         </tr>`;
     })
@@ -778,7 +778,7 @@ export async function sendNewOrderToOwnerEmail({
     city?: string;
     province?: string;
   };
-  items: { name: string; variant?: string | null; quantity: number; price: number; offerPrice?: number | null; comparePrice?: number | null }[];
+  items: { name: string; variant?: string | null; quantity: number; price: number; lineTotal?: number | null; offerPrice?: number | null; comparePrice?: number | null }[];
   subtotal: number;
   promoSavings?: number;
   promoType?: string | null;
@@ -818,7 +818,7 @@ export async function sendNewOrderToOwnerEmail({
             ${hasOferta ? `<s style="color:#9ca3af;font-size:12px;">${fmt(item.comparePrice!)}</s> ` : ""}${item.quantity} × ${fmt(item.price)}
           </td>
           <td style="padding:12px 16px;font-size:14px;font-weight:600;color:#111827;text-align:right;border-bottom:1px solid #f3f4f6;white-space:nowrap;">
-            ${fmt(item.price * item.quantity)}
+            ${fmt(item.lineTotal ?? item.price * item.quantity)}
           </td>
         </tr>`;
     })

@@ -26,6 +26,7 @@ type OrderData = {
   items: {
     quantity: number;
     price: number;
+    lineTotal: number | null;
     product: { name: string };
     variant: { value: string; name: string } | null;
   }[];
@@ -286,7 +287,7 @@ export default function SeguimientoCodigoPage() {
                         )}
                       </div>
                       <div className="text-right shrink-0">
-                        <p className="text-sm font-bold text-gray-900">{fmt(item.price * item.quantity)}</p>
+                        <p className="text-sm font-bold text-gray-900">{fmt(item.lineTotal ?? item.price * item.quantity)}</p>
                         <p className="text-xs text-gray-400">×{item.quantity}</p>
                       </div>
                     </div>

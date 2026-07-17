@@ -560,6 +560,11 @@ model OrderItem {
   id       String @id @default(cuid())
   quantity Int
   price    Float
+  // Total real de la línea (precio efectivo × cantidad), calculado por el motor
+  // de precios. En una promo N×M el descuento NO es uniforme por unidad, así que
+  // price × quantity no reconstruye el total exacto — este campo lo guarda tal
+  // cual se cobró. Nullable: las órdenes viejas caen en price × quantity.
+  lineTotal Float?
   // Costo del producto "congelado" al momento de la venta (copiado de
   // Product.costPrice en el checkout). No se recalcula si el costo del
   // producto cambia después — así un reporte de un mes cerrado no varía solo.

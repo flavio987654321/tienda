@@ -378,7 +378,7 @@ export default async function MetricasPage({
         },
       },
       select: {
-        productId: true, quantity: true, price: true, costAtSale: true,
+        productId: true, quantity: true, price: true, lineTotal: true, costAtSale: true,
         order: { select: { subtotal: true, discountAmount: true, createdAt: true } },
       },
     });
@@ -387,7 +387,7 @@ export default async function MetricasPage({
     for (const it of rawProfitItems) {
       const dateStr = utcDateStr(it.order.createdAt);
       const mapped: ProfitOrderItem = {
-        productId: it.productId, quantity: it.quantity, price: it.price, costAtSale: it.costAtSale,
+        productId: it.productId, quantity: it.quantity, price: it.price, lineTotal: it.lineTotal, costAtSale: it.costAtSale,
         orderSubtotal: it.order.subtotal, orderDiscount: it.order.discountAmount, dateStr,
       };
       (dateStr >= periodStartStr ? currentItems : prevItems).push(mapped);

@@ -43,6 +43,7 @@ type Order = {
     id: string;
     quantity: number;
     price: number;
+    lineTotal: number | null;
     product: { id: string; name: string; images: string };
     variant: { name: string; value: string } | null;
   }[];
@@ -744,7 +745,7 @@ export default function MiCuentaPage() {
                                 {item.variant && <p className="text-xs text-gray-400">{item.variant.name}: {item.variant.value}</p>}
                                 <p className="text-xs text-gray-400">x{item.quantity}</p>
                               </div>
-                              <p className="text-sm font-bold text-gray-900 shrink-0">{money(item.price * item.quantity)}</p>
+                              <p className="text-sm font-bold text-gray-900 shrink-0">{money(item.lineTotal ?? item.price * item.quantity)}</p>
                             </div>
                           );
                         })}

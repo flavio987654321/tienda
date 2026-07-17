@@ -66,12 +66,12 @@ export async function GET(req: NextRequest) {
         order: { storeId: store.id, status: { in: CONFIRMED }, createdAt: { gte: startDate, lt: endDate } },
       },
       select: {
-        productId: true, quantity: true, price: true, costAtSale: true,
+        productId: true, quantity: true, price: true, lineTotal: true, costAtSale: true,
         order: { select: { subtotal: true, discountAmount: true, createdAt: true } },
       },
     });
     const profitItems: ProfitOrderItem[] = rawProfitItems.map((it) => ({
-      productId: it.productId, quantity: it.quantity, price: it.price, costAtSale: it.costAtSale,
+      productId: it.productId, quantity: it.quantity, price: it.price, lineTotal: it.lineTotal, costAtSale: it.costAtSale,
       orderSubtotal: it.order.subtotal, orderDiscount: it.order.discountAmount,
       dateStr: it.order.createdAt.toISOString().slice(0, 10),
     }));

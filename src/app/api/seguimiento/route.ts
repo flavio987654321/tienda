@@ -34,6 +34,7 @@ export async function GET(req: NextRequest) {
         select: {
           quantity: true,
           price: true,
+          lineTotal: true,
           product: { select: { name: true } },
           variant: { select: { value: true, name: true } },
         },

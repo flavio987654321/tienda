@@ -9,6 +9,7 @@ import { DEFAULT_SHIPPING_METHODS, LIVE_QUOTE_DOMICILIO_ID } from "@/types/store
 import { cotizarEnvio } from "@/lib/enviopack";
 import { calculateGoalAmount, MIN_DONATION, MAX_DONATION_PCT_OF_GOAL } from "@/lib/canasta";
 import { recordStockMovement } from "@/lib/stockMovements";
+import { priceCart, resolveBasePrice, parseEscalones, type PricingItem } from "@/lib/pricing";
 import { getClientIp } from "@/lib/request-ip";
 import { isSubscriptionActive } from "@/lib/subscription";
 
@@ -291,8 +292,12 @@ export async function POST(req: NextRequest) {
         totalQtyByProduct.set(item.productId, (totalQtyByProduct.get(item.productId) ?? 0) + item.quantity);
       }
 
-      const orderItems: { productId: string; variantId: string | null; quantity: number; price: number; costAtSale: number | null }[] = [];
-      let promoSavingsAcc = 0;
+      const orderItems: { productId: string; variantId: string | null; quantity: number; price: number; lineTotal: number; costAtSale: number | null }[] = [];
+      // El loop decrementa stock y resuelve el precio base (variante/mayorista);
+      // la cuenta de la promo la hace priceCart DESPUÉS, una sola vez, con la misma
+      // función que usa el carrito. Costo congelado en paralelo, mismo orden.
+      const pricingInputs: PricingItem[] = [];
+      const costAtSaleByIndex: (number | null)[] = [];
       for (const item of normalizedItems) {
         const product = products.find((p) => p.id === item.productId);
         if (!product) throw new Error("Producto no disponible");
@@ -333,52 +338,56 @@ export async function POST(req: NextRequest) {
           });
         }
 
-        const basePrice = variant?.price ?? product.price;
-        const wholesale = product.precioMayorista;
-        const minQty = product.cantMinMayorista;
-        if (minQty && item.quantity < minQty) {
-          throw new Error(`${product.name} requiere un mínimo de ${minQty} unidades`);
-        }
-        const wholesaleOrBasePrice = (wholesale && minQty && item.quantity >= minQty) ? wholesale : basePrice;
+        const retailPrice = variant?.price ?? product.price;
+        // B-04 resuelto: el mínimo mayorista es un umbral de descuento, NO un
+        // candado. Bajo el mínimo se vende al precio retail (antes el checkout
+        // rechazaba la compra aunque el carrito ya había mostrado ese precio).
+        // Precio base con mayorista + escalones, mismo resolvedor que el carrito
+        // (antes el checkout ignoraba los escalones y cobraba de más — B-01).
+        const wholesaleOrBasePrice = resolveBasePrice({
+          retailPrice,
+          precioMayorista: product.precioMayorista,
+          cantMinMayorista: product.cantMinMayorista,
+          preciosEscalonados: parseEscalones(product.preciosEscalonados),
+        }, item.quantity);
 
-        // Promo por cantidad: validada server-side desde la DB, nunca desde el cliente
-        const totalQtyForProduct = totalQtyByProduct.get(product.id) ?? item.quantity;
-        const promoApplies =
-          product.promoQtyMin != null &&
-          product.promoQtyMin >= 2 &&
-          totalQtyForProduct >= product.promoQtyMin &&
-          (product.promoType === "N_PAY_M"
-            ? product.promoPayQty != null && product.promoPayQty >= 1 && product.promoPayQty < product.promoQtyMin
-            : product.promoQtyDiscount != null && product.promoQtyDiscount > 0 && product.promoQtyDiscount <= 80);
-        const effectiveDiscountPct = promoApplies
-          ? (product.promoType === "N_PAY_M" && product.promoQtyMin && product.promoPayQty
-              ? (() => {
-                  const N = product.promoQtyMin!;
-                  const M = product.promoPayQty!;
-                  const paidQty = Math.floor(totalQtyForProduct / N) * M + totalQtyForProduct % N;
-                  return (1 - paidQty / totalQtyForProduct) * 100;
-                })()
-              : product.promoQtyDiscount ?? 0)
-          : 0;
-        // Redondear a centavos para evitar punto flotante en totales
-        const unitPrice = promoApplies
-          ? Math.round(wholesaleOrBasePrice * (1 - effectiveDiscountPct / 100) * 100) / 100
-          : wholesaleOrBasePrice;
-
-        orderItems.push({
+        pricingInputs.push({
           productId: product.id,
           variantId: variant?.id ?? null,
           quantity: item.quantity,
-          price: unitPrice,
-          // "Congelado" al momento de la venta — si después se edita el costo
-          // del producto, este pedido ya vendido no debe cambiar de ganancia.
-          costAtSale: product.costPrice ?? null,
+          basePrice: wholesaleOrBasePrice,
+          // La promo se lee de la DB, nunca del cliente — priceCart la valida igual.
+          promo: {
+            promoType: product.promoType,
+            promoQtyMin: product.promoQtyMin,
+            promoPayQty: product.promoPayQty,
+            promoQtyDiscount: product.promoQtyDiscount,
+          },
         });
-        promoSavingsAcc += promoApplies ? Math.round((wholesaleOrBasePrice - unitPrice) * item.quantity * 100) / 100 : 0;
+        // "Congelado" al momento de la venta — si después se edita el costo del
+        // producto, este pedido ya vendido no debe cambiar de ganancia.
+        costAtSaleByIndex.push(product.costPrice ?? null);
       }
 
-      const promoSavings = Math.round(promoSavingsAcc * 100) / 100;
-      const subtotal = orderItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+      // La cuenta de la promo, una sola vez, con la misma función que el carrito.
+      const pricing = priceCart(pricingInputs);
+      pricing.lines.forEach((line, i) => {
+        orderItems.push({
+          productId: line.productId,
+          variantId: line.variantId,
+          quantity: line.quantity,
+          price: line.unitPrice,
+          // El total exacto de la línea — para el N×M no coincide con price × qty.
+          lineTotal: line.lineTotal,
+          costAtSale: costAtSaleByIndex[i],
+        });
+      });
+
+      const promoSavings = pricing.promoSavings;
+      // El subtotal sale del total por línea (no de precio×cantidad): en un N×M el
+      // total de la línea es exacto, mientras que reconstruirlo desde el unitario
+      // redondeado metería el centavo que este motor justamente elimina.
+      const subtotal = pricing.subtotal;
 
       let discountAmount = 0;
       let validCouponId: string | null = null;
@@ -690,6 +699,7 @@ export async function POST(req: NextRequest) {
         variant: item.variantId ? (variantMap[item.variantId] ?? null) : null,
         quantity: item.quantity,
         price: item.price,
+        lineTotal: item.lineTotal,
         offerPrice: offerPriceMap[item.productId] ?? null,
         comparePrice: comparePriceMap[item.productId] ?? null,
       }));

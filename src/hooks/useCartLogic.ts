@@ -10,6 +10,7 @@ import { PROVINCIAS_ARGENTINA } from "@/lib/provincias";
 import { parseVariantAttrs } from "@/lib/variantAttrs";
 import { promoEffectivePct } from "@/lib/promoLabel";
 import { resolveVariantPrice } from "@/lib/variantPrice";
+import { priceCart, resolveBasePrice, parseEscalones } from "@/lib/pricing";
 
 // Misma lógica de matching de variante por talle/color que usan los templates
 // para mostrar "Sin stock"/"Últimas unidades" — se centraliza acá (y se expone
@@ -349,25 +350,6 @@ export function useCartLogic({ products, storeId, affiliateId = null, slug = nul
     return set;
   }, [modalProduct, selectedColor]);
 
-  // Devuelve el precio unitario efectivo para un producto en modo mayorista,
-  // aplicando el mejor escalón disponible según la cantidad.
-  // Prioridad: escalón más alto aplicable > precio base > precio retail.
-  function getEffectiveWholesalePrice(product: typeof cartItems[number]["product"], qty: number): number {
-    if (!product.cantMinMayorista || qty < product.cantMinMayorista) return product.price;
-    // Buscar el mejor escalón (desde ≤ qty, precio más bajo = mayor descuento)
-    const escalones = product.preciosEscalonados ?? [];
-    let bestEscalonPrice: number | null = null;
-    for (const band of escalones) {
-      if (qty >= band.desde) {
-        if (bestEscalonPrice === null || band.precio < bestEscalonPrice) {
-          bestEscalonPrice = band.precio;
-        }
-      }
-    }
-    if (bestEscalonPrice !== null) return bestEscalonPrice;
-    // Sin escalón aplicable: usar precio base mayorista
-    return product.precioMayorista ?? product.price;
-  }
 
   // Promo por cantidad: cantidad total en la selección pendiente del modal
   const pendingTotal = pendingItems.reduce((s, i) => s + i.qty, 0);
@@ -376,60 +358,60 @@ export function useCartLogic({ products, storeId, affiliateId = null, slug = nul
   );
   const pendingPromoDiscount = promoActive ? promoEffectivePct(modalProduct?.promoType, modalProduct?.promoQtyDiscount, modalProduct?.promoQtyMin, modalProduct?.promoPayQty) : 0;
 
-  // Valor total del pedido pendiente con la lógica correcta según tipo de promo:
-  // N_PAY_M literal: grupos completos de N pagan M, el resto a precio normal.
-  // PERCENT: descuento aplicado a todos los ítems cuando aplica la promo.
-  const pendingCartValue = (() => {
-    if (!modalProduct) return 0;
-    const variantPrice = resolveVariantPrice(modalProduct.variants, selectedSize, selectedColor);
-    const price = variantPrice ?? modalProduct.price;
-    const subtotal = pendingItems.reduce((s, i) => s + price * i.qty, 0);
-    if (!promoActive) return subtotal;
-    const N = modalProduct.promoQtyMin;
-    const M = modalProduct.promoPayQty;
-    if (modalProduct.promoType === "N_PAY_M" && N && M) {
-      const completeGroups = Math.floor(pendingTotal / N);
-      const remainder = pendingTotal % N;
-      return (completeGroups * M + remainder) * price;
-    }
-    return subtotal * (1 - pendingPromoDiscount / 100);
-  })();
+  // Total de la selección pendiente del modal, con el MISMO motor que el carrito y
+  // el checkout — antes era una 4ta copia de la cuenta de promos. Resuelve el
+  // precio de cada variante pendiente (antes usaba uno solo para todas). El preview
+  // no aplica mayorista, igual que hoy: es una estimación antes de sumar al carrito.
+  const pendingCartValue = modalProduct
+    ? priceCart(
+        pendingItems.map((pi) => {
+          const vp = resolveVariantPrice(modalProduct.variants, pi.size, pi.color, pi.variantId);
+          return {
+            productId: modalProduct.id,
+            variantId: pi.variantId,
+            quantity: pi.qty,
+            basePrice: vp ?? modalProduct.price,
+            promo: {
+              promoType: modalProduct.promoType,
+              promoQtyMin: modalProduct.promoQtyMin,
+              promoPayQty: modalProduct.promoPayQty,
+              promoQtyDiscount: modalProduct.promoQtyDiscount,
+            },
+          };
+        })
+      ).subtotal
+    : 0;
 
   // Derived values
-  const cartTotal = (() => {
-    // Agrupar por producto para calcular N_PAY_M con cantidades reales del carrito
-    const byProduct = new Map<string, typeof cartItems>();
-    for (const item of cartItems) {
-      const group = byProduct.get(item.product.id) ?? [];
-      group.push(item);
-      byProduct.set(item.product.id, group);
-    }
-    let total = 0;
-    for (const items of byProduct.values()) {
-      const product = items[0].product;
-      const totalQty = items.reduce((s, i) => s + i.qty, 0);
-      const N = product.promoQtyMin;
-      const M = product.promoPayQty;
-      if (product.promoType === "N_PAY_M" && N && M && totalQty >= N) {
-        // Para N_PAY_M usamos el precio de la primera variante del grupo (o base)
-        const fi = items[0];
-        const fvp = resolveVariantPrice(fi.product.variants, fi.size, fi.color, fi.variantId);
-        const basePrice = isWholesale ? getEffectiveWholesalePrice(product, totalQty) : (fvp ?? product.price);
-        const completeGroups = Math.floor(totalQty / N);
-        const remainder = totalQty % N;
-        total += (completeGroups * M + remainder) * basePrice;
-      } else {
-        // PERCENT u otras: usar discountPct almacenado por ítem
-        for (const item of items) {
-          const vp = resolveVariantPrice(item.product.variants, item.size, item.color, item.variantId);
-          const bp = isWholesale ? getEffectiveWholesalePrice(item.product, item.qty) : (vp ?? item.product.price);
-          const effectivePrice = Math.round(bp * (1 - (item.discountPct ?? 0) / 100) * 100) / 100;
-          total += effectivePrice * item.qty;
-        }
-      }
-    }
-    return total;
-  })();
+  // El total lo calcula priceCart — la MISMA función que usa el checkout que cobra.
+  // Antes acá había una copia de la cuenta de promos que difería del checkout en el
+  // redondeo del N×M (B-03). El precio base (variante o mayorista con escalones) se
+  // resuelve acá y se le pasa al motor; la promo la aplica él.
+  const cartTotal = priceCart(
+    cartItems.map((item) => {
+      const vp = resolveVariantPrice(item.product.variants, item.size, item.color, item.variantId);
+      // Mismo resolvedor que el checkout: mayorista + escalones si califica por
+      // cantidad, si no el precio de la variante. Sin gate de modo (como el checkout).
+      const basePrice = resolveBasePrice({
+        retailPrice: vp ?? item.product.price,
+        precioMayorista: item.product.precioMayorista,
+        cantMinMayorista: item.product.cantMinMayorista,
+        preciosEscalonados: parseEscalones(item.product.preciosEscalonados),
+      }, item.qty);
+      return {
+        productId: item.product.id,
+        variantId: item.variantId,
+        quantity: item.qty,
+        basePrice,
+        promo: {
+          promoType: item.product.promoType,
+          promoQtyMin: item.product.promoQtyMin,
+          promoPayQty: item.product.promoPayQty,
+          promoQtyDiscount: item.product.promoQtyDiscount,
+        },
+      };
+    })
+  ).subtotal;
   const wholesaleWarnings = isWholesale ? cartItems.filter(i =>
     i.product.cantMinMayorista && i.qty < i.product.cantMinMayorista
   ) : [];

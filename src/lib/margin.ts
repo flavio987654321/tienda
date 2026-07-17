@@ -47,13 +47,15 @@ export function calcVehicleProfit(
 // ítem dentro del subtotal del pedido. El total general (sumando todos los
 // productos) siempre da exacto — el prorrateo solo afecta el desglose por
 // producto individual cuando ese pedido puntual tuvo cupón.
+// Recibe el total BRUTO de la línea (ya con la promo por cantidad aplicada), no el
+// precio unitario: en un N×M el descuento no es uniforme por unidad y price × qty
+// no reconstruye el total. El llamador pasa OrderItem.lineTotal (o price × qty en
+// órdenes viejas sin el campo).
 export function calcItemNetRevenue(
-  itemPrice: number,
-  quantity: number,
+  itemRevenue: number,
   orderSubtotal: number,
   orderDiscount: number
 ): number {
-  const itemRevenue = itemPrice * quantity;
   if (orderDiscount <= 0 || orderSubtotal <= 0) return itemRevenue;
   const share = itemRevenue / orderSubtotal;
   return Math.max(0, itemRevenue - orderDiscount * share);
@@ -63,6 +65,8 @@ export type ProfitOrderItem = {
   productId: string;
   quantity: number;
   price: number;
+  // Total real de la línea; null en órdenes viejas → se cae a price × quantity.
+  lineTotal: number | null;
   costAtSale: number | null;
   orderSubtotal: number;
   orderDiscount: number;
@@ -96,7 +100,9 @@ export function aggregateProfitability(items: ProfitOrderItem[]): ProfitabilityA
   const dailyCost = new Map<string, number>();
 
   for (const it of items) {
-    const netRevenue = calcItemNetRevenue(it.price, it.quantity, it.orderSubtotal, it.orderDiscount);
+    // Total bruto real de la línea: el guardado, o price × qty para órdenes viejas.
+    const grossRevenue = it.lineTotal ?? it.price * it.quantity;
+    const netRevenue = calcItemNetRevenue(grossRevenue, it.orderSubtotal, it.orderDiscount);
     totalNetRevenueAll += netRevenue;
 
     const entry = internal.get(it.productId) ?? { quantity: 0, netRevenue: 0, profitSum: 0, hasCost: false, hasCoupon: false };
