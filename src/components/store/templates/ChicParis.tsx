@@ -271,6 +271,12 @@ export default function ChicParis() {
     () => { if (modalProduct) setModalImg(i => (i + 1) % modalProduct.images.length); },
     () => { if (modalProduct) setModalImg(i => (i - 1 + modalProduct.images.length) % modalProduct.images.length); }
   );
+  // Swipe táctil en el hero (mobile): es un carrusel fade por índice, sin esto solo
+  // se pasa con flechas/puntos. goToSlide ya reinicia el auto-avance al cambiar.
+  const heroSwipe = useTouchSwipe(
+    () => goToSlide((heroSlide + 1) % BANNER_COUNT),
+    () => goToSlide((heroSlide - 1 + BANNER_COUNT) % BANNER_COUNT)
+  );
 
   const [inquiryMessage, setInquiryMessage] = useState("");
   function openInquiry(product: Product) {
@@ -707,7 +713,8 @@ export default function ChicParis() {
       {/* ── HERO CAROUSEL ── */}
       <section id="hero" style={{ position: "relative", height: isPreview ? `calc(100vh - ${68 + (showAnnouncement ? PROMO_BAR_H : 0)}px)` : "100vh", background: "#111" }}
         onMouseEnter={() => setHeroPaused(true)}
-        onMouseLeave={() => setHeroPaused(false)}>
+        onMouseLeave={() => setHeroPaused(false)}
+        {...heroSwipe}>
 
         {Array.from({ length: BANNER_COUNT }, (_, i) => {
           const ov = bannerImgs[i];

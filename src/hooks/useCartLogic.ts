@@ -70,7 +70,7 @@ export function useCartLogic({ products, storeId, affiliateId = null, slug = nul
   const [pagoId,         setPagoId]         = useState("transferencia");
   const [coupon,         setCoupon]         = useState("");
   const [couponError,    setCouponError]    = useState("");
-  const [appliedCoupon,  setAppliedCoupon]  = useState<{ id: string; code: string; discount: number } | null>(null);
+  const [appliedCoupon,  setAppliedCoupon]  = useState<{ id: string; code: string; discount: number; discountType?: string; discountValue?: number } | null>(null);
   const [notas,          setNotas]          = useState("");
   const [rememberData,   setRememberData]   = useState(false);
   const [buyerForm,      setBuyerForm]      = useState({ nombre:"", email:"", telefono:"", direccion:"", ciudad:"", provincia:"", cp:"" });
@@ -695,7 +695,7 @@ export function useCartLogic({ products, storeId, affiliateId = null, slug = nul
     const emailForValidation = buyerForm.email.trim() || undefined;
     const res = await validateCoupon(coupon, cartTotal, emailForValidation);
     if ("error" in res) { setCouponError(res.error); return; }
-    setAppliedCoupon({ id: res.coupon.id, code: res.coupon.code, discount: res.discount });
+    setAppliedCoupon({ id: res.coupon.id, code: res.coupon.code, discount: res.discount, discountType: res.coupon.discountType, discountValue: res.coupon.discountValue });
     setCoupon("");
   };
 

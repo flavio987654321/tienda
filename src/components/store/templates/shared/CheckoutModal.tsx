@@ -167,9 +167,19 @@ export function CheckoutModal({
               </div>
               {couponError && <p style={{ fontSize:11, color:"#f87171", marginTop:-20, marginBottom:8 }}>{couponError}</p>}
               {appliedCoupon && (
-                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12, padding:"8px 12px", background:`${accent}15`, border:`1px solid ${accent}40`, borderRadius:6 }}>
-                  <span style={{ fontSize:12, color:accent }}>Cupón {appliedCoupon.code} aplicado</span>
-                  <button type="button" onClick={() => setAppliedCoupon(null)} aria-label="Quitar cupón" style={{ background:"none", border:"none", color:MID, cursor:"pointer", fontSize:12 }}>✕</button>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12, padding:"10px 12px", background:`${accent}15`, border:`1px solid ${accent}40`, borderRadius:6 }}>
+                  <span style={{ display:"flex", alignItems:"center", gap:8 }}>
+                    <span style={{ fontSize:17, lineHeight:1 }}>🎉</span>
+                    <span style={{ display:"flex", flexDirection:"column", lineHeight:1.25 }}>
+                      <span style={{ fontSize:13, color:accent, fontWeight:800, letterSpacing:0.3 }}>
+                        {appliedCoupon.discountValue
+                          ? (appliedCoupon.discountType === "percentage" ? `¡${appliedCoupon.discountValue}% OFF!` : `¡${fmt(appliedCoupon.discountValue)} OFF!`)
+                          : "¡Cupón aplicado!"}
+                      </span>
+                      <span style={{ fontSize:10, color:MID, letterSpacing:0.5 }}>Cupón {appliedCoupon.code}</span>
+                    </span>
+                  </span>
+                  <button type="button" onClick={() => setAppliedCoupon(null)} aria-label="Quitar cupón" style={{ background:"none", border:"none", color:MID, cursor:"pointer", fontSize:14 }}>✕</button>
                 </div>
               )}
 
@@ -195,7 +205,9 @@ export function CheckoutModal({
                 })()}
                 {couponDiscount > 0 && (
                   <div style={{ display:"flex", justifyContent:"space-between", marginBottom:8 }}>
-                    <span style={{ fontSize:13, color:accent }}>Descuento cupón</span>
+                    <span style={{ fontSize:13, color:accent }}>
+                      Descuento cupón{appliedCoupon?.discountType === "percentage" && appliedCoupon?.discountValue ? ` (${appliedCoupon.discountValue}%)` : ""}
+                    </span>
                     <span style={{ fontSize:13, color:accent }}>-{fmt(couponDiscount)}</span>
                   </div>
                 )}

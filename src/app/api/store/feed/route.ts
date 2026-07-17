@@ -8,7 +8,7 @@ const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://tiendaapps.com";
 
 // GET /api/store/feed?store=<slug>
 // Feed XML del catálogo completo de la tienda, para conectar en Meta Commerce Manager.
-// A diferencia de /api/vendedoras/feed, no lleva link de afiliado ni comisión.
+// Es el catálogo tal cual del titular: no lleva link de afiliado ni comisión.
 export async function GET(req: NextRequest) {
   const ip = getClientIp(req);
   // Meta refresca feeds cada pocas horas — 30 req/hora por IP es suficiente

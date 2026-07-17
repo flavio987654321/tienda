@@ -97,7 +97,6 @@ export default function AfiliadosNav() {
     { href: "/afiliados/premios",      label: "Mis premios",   icon: <Award className="h-4 w-4" /> },
     { href: "/afiliados/estadisticas", label: "Estadísticas",  icon: <BarChart3 className="h-4 w-4" /> },
     { href: "/afiliados/ranking",      label: "Ranking",       icon: <Trophy className="h-4 w-4" /> },
-    { href: "/afiliados/canales",      label: "Canales",       icon: <Share2 className="h-4 w-4" /> },
   ];
 
   const mobileLinks = [
@@ -109,7 +108,6 @@ export default function AfiliadosNav() {
     { href: "/afiliados/kit",          label: "Kit de contenido",icon: <Download className="h-4 w-4 text-indigo-500" /> },
     { href: "/afiliados/metas",        label: "Mis metas",       icon: <Target className="h-4 w-4 text-orange-500" /> },
     { href: "/afiliados/ranking",      label: "Ranking",          icon: <Trophy className="h-4 w-4 text-amber-500" /> },
-    { href: "/afiliados/canales",      label: "Canales",          icon: <Share2 className="h-4 w-4 text-sky-500" /> },
   ];
 
   return (

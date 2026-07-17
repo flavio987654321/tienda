@@ -29,7 +29,15 @@ export async function POST(req: NextRequest) {
   if (coupon.maxUses !== null && coupon.usedCount >= coupon.maxUses) return INVALID;
   // Cupón de gamificación: verificar que el email que valida es el ganador
   // (si el cupón es personal y no llegó email, tratamos como no coincide — no alcanza con omitirlo)
-  if (coupon.winnerEmail && coupon.winnerEmail !== String(email ?? "").trim().toLowerCase()) return INVALID;
+  if (coupon.winnerEmail && coupon.winnerEmail !== String(email ?? "").trim().toLowerCase()) {
+    // Mensaje específico (no el genérico "inválido") para que el ganador sepa QUÉ
+    // corregir: el cupón existe pero es personal. El riesgo de enumeración es
+    // marginal (código de 6 chars + rate-limit) y sin el email no se puede usar igual.
+    return NextResponse.json(
+      { error: "Este cupón es personal: ingresá el mismo email con el que lo ganaste en el sorteo." },
+      { status: 400 }
+    );
+  }
 
   if (subtotal !== undefined && subtotal < coupon.minOrderAmount) {
     return NextResponse.json({

@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef } from "react";
 import { FadeImage } from "./FadeImage";
 import { EditableImageButton, BgDragHandle, useEditContext } from "@/contexts/EditContext";
+import { useTouchSwipe } from "@/hooks/useTouchSwipe";
 import type { ImageOverride } from "@/types/store-config";
 
 // Carrusel de banner promocional (solo imagen, sin texto) compartido por los
@@ -60,6 +61,14 @@ export function PromoBannerCarousel({
   const filled = slots
     .map((s, i) => ({ ...s, i }))
     .filter((s): s is Slide & { i: number; url: string } => !!s.url);
+
+  // Swipe táctil en la tienda real (mobile): el carrusel es fade por opacidad, no
+  // un scroll nativo, así que sin esto en el celular solo se pasa con flechas/puntos.
+  // Igual que las flechas, cortar el auto-avance al interactuar.
+  const bannerSwipe = useTouchSwipe(
+    () => { setPublicSlide(s => (s + 1) % Math.max(1, filled.length)); if (intervalRef.current) clearInterval(intervalRef.current); },
+    () => { setPublicSlide(s => (s - 1 + filled.length) % Math.max(1, filled.length)); if (intervalRef.current) clearInterval(intervalRef.current); }
+  );
 
   useEffect(() => {
     if (editMode || filled.length <= 1) return;
@@ -130,7 +139,7 @@ export function PromoBannerCarousel({
   }
 
   return (
-    <section data-reveal style={{ position: "relative", height, overflow: "hidden", background: bg }}>
+    <section data-reveal style={{ position: "relative", height, overflow: "hidden", background: bg }} {...(filled.length > 1 ? bannerSwipe : {})}>
       {filled.map((s, idx) => {
         const isActive = publicSlide === idx;
         return (

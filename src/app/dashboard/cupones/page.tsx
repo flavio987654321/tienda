@@ -706,8 +706,33 @@ function WidgetEditor({ widget, onSave, onClose, saving, storeLogo, defaultTab =
     });
   }
 
+  // Texto canónico del cartel a partir del descuento real. Que la etiqueta salga
+  // del número evita que puedan contradecirse (fue una fuente de error real: el
+  // cartel decía 20% y el descuento cargado era 24%).
+  function canonicalPrizeLabel(type: "percentage" | "fixed", value: number): string {
+    if (!value || value <= 0) return "";
+    return type === "percentage" ? `${value}% OFF` : `$${value} OFF`;
+  }
+
   function updatePrize(idx: number, upd: Partial<Prize>) {
-    setForm((f) => ({ ...f, prizes: f.prizes.map((p, i) => i === idx ? { ...p, ...upd } : p) }));
+    setForm((f) => ({
+      ...f,
+      prizes: f.prizes.map((p, i) => {
+        if (i !== idx) return p;
+        const next = { ...p, ...upd };
+        // Al tocar el descuento, la etiqueta se arma sola con el % real — salvo
+        // que el dueño ya la haya personalizado (si coincide con la canónica vieja
+        // o está vacía, se actualiza; si es texto propio, se respeta y el candado
+        // del guardado avisa si quedó contradiciendo el número).
+        if (!next.isNoPrize && ("discountValue" in upd || "discountType" in upd)) {
+          const oldCanonical = canonicalPrizeLabel(p.discountType, p.discountValue);
+          if (!p.label.trim() || p.label.trim() === oldCanonical) {
+            next.label = canonicalPrizeLabel(next.discountType, next.discountValue);
+          }
+        }
+        return next;
+      }),
+    }));
   }
 
   function copyCode(code: string) {
@@ -743,6 +768,15 @@ function WidgetEditor({ widget, onSave, onClose, saving, storeLogo, defaultTab =
           setProbError(`El descuento de "${p.label}" debe ser mayor a 0.`);
           setTab("prizes");
           return;
+        }
+        // Candado: la etiqueta no puede prometer un % distinto al descuento real.
+        if (!p.isNoPrize && p.discountType === "percentage") {
+          const m = p.label.match(/(\d+)\s*%/);
+          if (m && parseInt(m[1], 10) !== p.discountValue) {
+            setProbError(`El cartel de "${p.label}" dice ${m[1]}% pero el descuento real es ${p.discountValue}%. Hacé que coincidan (corregí el cartel o el descuento).`);
+            setTab("prizes");
+            return;
+          }
         }
         if (!p.isNoPrize && (!p.winHours || p.winHours <= 0)) {
           setProbError(`Completá cuántas horas de validez tiene el cupón de "${p.label || `premio ${i + 1}`}" para el ganador.`);
@@ -945,24 +979,8 @@ function WidgetEditor({ widget, onSave, onClose, saving, storeLogo, defaultTab =
                       <div className="flex items-start gap-3">
                         <div className="flex-1 grid gap-3 sm:grid-cols-2">
 
-                          {/* Label */}
-                          <div>
-                            <label className="mb-1 block text-xs font-semibold text-gray-500">Etiqueta (se muestra en la ruleta)</label>
-                            <input value={p.label} onChange={(e) => updatePrize(idx, { label: e.target.value })}
-                              placeholder={p.isNoPrize ? "Sin premio" : "Ej: 20% OFF"}
-                              className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-400" />
-                          </div>
-
-                          {/* Probabilidad */}
-                          <div>
-                            <label className="mb-1 block text-xs font-semibold text-gray-500">Probabilidad (%)</label>
-                            <input type="number" min={0} max={100} value={p.probability}
-                              onChange={(e) => updatePrize(idx, { probability: parseInt(e.target.value) || 0 })}
-                              className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-400" />
-                          </div>
-
-                          {!p.isNoPrize && (<>
-                            {/* Tipo y valor */}
+                          {/* Tipo y valor del descuento — PRIMERO: el % real manda sobre el cartel */}
+                          {!p.isNoPrize && (
                             <div>
                               <label className="mb-1 block text-xs font-semibold text-gray-500">Tipo de descuento</label>
                               <div className="flex gap-2">
@@ -977,7 +995,26 @@ function WidgetEditor({ widget, onSave, onClose, saving, storeLogo, defaultTab =
                                   className="w-24 rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-400" />
                               </div>
                             </div>
+                          )}
 
+                          {/* Etiqueta — se arma sola con el % real; el guardado bloquea si no coincide */}
+                          <div>
+                            <label className="mb-1 block text-xs font-semibold text-gray-500">Etiqueta (se muestra en la ruleta)</label>
+                            <input value={p.label} onChange={(e) => updatePrize(idx, { label: e.target.value })}
+                              placeholder={p.isNoPrize ? "Sin premio" : "Se completa sola con el %"}
+                              className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-400" />
+                            {!p.isNoPrize && <p className="mt-1 text-xs text-gray-400">Se arma sola con el descuento. Si la cambiás, tiene que seguir coincidiendo con el %.</p>}
+                          </div>
+
+                          {/* Probabilidad */}
+                          <div>
+                            <label className="mb-1 block text-xs font-semibold text-gray-500">Probabilidad (%)</label>
+                            <input type="number" min={0} max={100} value={p.probability}
+                              onChange={(e) => updatePrize(idx, { probability: parseInt(e.target.value) || 0 })}
+                              className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-400" />
+                          </div>
+
+                          {!p.isNoPrize && (<>
                             {/* Validez para el ganador */}
                             <div>
                               <label className="mb-1 block text-xs font-semibold text-gray-500">⏱️ Validez del cupón para el ganador (horas) *</label>
