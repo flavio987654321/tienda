@@ -5,6 +5,7 @@ import {
   Percent, Tag, Gift, Truck, Store, Folder, ListChecks, Check, Plus, X,
   Info, AlertTriangle, Loader2, Search, Archive, Trash2, RotateCcw,
 } from "lucide-react";
+import { costFloorCheck } from "@/lib/promotions";
 
 // ── Tipos ────────────────────────────────────────────────────────────────────
 type Promotion = {
@@ -16,7 +17,7 @@ type Promotion = {
   isActive: boolean; archivedAt: string | null; status: string;
 };
 type Category = { name: string; count: number };
-type Product = { id: string; name: string; price: number; category: string };
+type Product = { id: string; name: string; price: number; category: string; costPrice: number | null };
 
 // ── Metadatos de cada tipo (ícono, color, textos, explicación) ───────────────
 const TYPE_META: Record<string, {
@@ -185,6 +186,9 @@ export default function PromocionesClient({
           {shown.map((p) => {
             const meta = TYPE_META[p.type] ?? TYPE_META.PERCENT;
             const archived = !isLive(p);
+            // Piso de costo: ¿esta promo deja algún producto bajo su costo? Solo se
+            // señala en promos vivas (una archivada ya no aplica).
+            const belowCost = archived ? 0 : costFloorCheck(p, products).below.length;
             return (
               <div key={p.id} className="bg-white border border-gray-100 rounded-2xl p-4 flex items-center gap-4 shadow-sm hover:shadow-md transition-shadow">
                 <div className={`w-11 h-11 rounded-xl grid place-items-center shrink-0 ${meta.tile}`}><meta.Icon className="h-5 w-5" /></div>
@@ -202,6 +206,12 @@ export default function PromocionesClient({
                 </div>
                 <div className="flex flex-col items-end gap-2 shrink-0">
                   {statusPill(p.status)}
+                  {belowCost > 0 && (
+                    <span title={`${belowCost} producto${belowCost !== 1 ? "s" : ""} por debajo de su costo`}
+                      className="text-[10.5px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 inline-flex items-center gap-1">
+                      <AlertTriangle className="h-3 w-3" /> bajo costo
+                    </span>
+                  )}
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
                   {!archived ? (
@@ -458,6 +468,43 @@ function Wizard({ categories, products, onClose, onCreated }: {
                 <ReviewRow k="Vigencia" v={`${startsAt ? fmtDate(startsAt + "T00:00") : "desde hoy"} · ${endsAt ? "hasta " + fmtDate(endsAt + "T00:00") : "sin fin"}`} />
                 <ReviewRow k="Con cupones" v={combines ? "Se combinan" : "No combina"} last />
               </div>
+              {(() => {
+                // Piso de costo (aviso, NO bloquea): ¿la promo deja algún producto bajo costo?
+                const cf = costFloorCheck({
+                  type: type ?? "",
+                  value: (type === "PERCENT" || type === "FIXED") ? parseNum(value) : null,
+                  minQty: type === "N_PAY_M" ? parseInt(minQty) : null,
+                  payQty: type === "N_PAY_M" ? parseInt(payQty) : null,
+                  scope: scope ?? "ALL",
+                  categories: scope === "CATEGORY" && cat ? [cat] : [],
+                  productIds: scope === "PRODUCTS" ? prodIds : [],
+                }, products);
+                if (cf.below.length === 0 && cf.missingCost === 0) return null;
+                return (
+                  <>
+                    {cf.below.length > 0 && (
+                      <div className="flex gap-2.5 items-start bg-amber-50 border border-amber-200 rounded-xl p-3 mt-3.5 text-[12.5px] text-amber-800">
+                        <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+                        <div>
+                          <b>Ojo: {cf.below.length} producto{cf.below.length !== 1 ? "s" : ""} quedaría{cf.below.length !== 1 ? "n" : ""} bajo su costo.</b>{" "}
+                          Podés crearla igual (gancho o liquidación) o ajustar el descuento.
+                          <ul className="mt-1.5 space-y-0.5">
+                            {cf.below.slice(0, 4).map((b) => (
+                              <li key={b.name}>· <b>{b.name}</b>: queda {money(b.effective)}, te cuesta {money(b.cost)}</li>
+                            ))}
+                            {cf.below.length > 4 && <li>· y {cf.below.length - 4} más…</li>}
+                          </ul>
+                        </div>
+                      </div>
+                    )}
+                    {cf.missingCost > 0 && (
+                      <p className="text-[11.5px] text-gray-400 mt-2">
+                        {cf.missingCost} producto{cf.missingCost !== 1 ? "s" : ""} sin costo cargado — no {cf.missingCost !== 1 ? "los" : "lo"} pudimos chequear.
+                      </p>
+                    )}
+                  </>
+                );
+              })()}
               <div className="flex gap-2.5 items-start bg-green-50 border border-green-200 rounded-xl p-3 mt-3.5 text-[12.5px] text-green-800">
                 <Check className="h-4 w-4 shrink-0 mt-0.5" />
                 <span>Al crearla, esos {affected} producto{affected !== 1 ? "s" : ""} muestran el precio con descuento en la tienda al instante.</span>

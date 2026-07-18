@@ -21,7 +21,7 @@ export default async function PromocionesPage() {
         prisma.storePromotion.findMany({ where: { storeId: store.id }, orderBy: { createdAt: "desc" } }),
         prisma.product.findMany({
           where: { storeId: store.id, isActive: true, deletedAt: null },
-          select: { id: true, name: true, price: true, category: true },
+          select: { id: true, name: true, price: true, category: true, costPrice: true },
           orderBy: { createdAt: "desc" },
         }),
       ])
@@ -62,7 +62,7 @@ export default async function PromocionesPage() {
       <PromocionesClient
         initialPromotions={rows}
         categories={categories}
-        products={products.map((p) => ({ id: p.id, name: p.name, price: p.price, category: p.category }))}
+        products={products.map((p) => ({ id: p.id, name: p.name, price: p.price, category: p.category, costPrice: p.costPrice }))}
         activeCount={rows.filter((r) => r.status === "active" || r.status === "scheduled").length}
       />
     </DashboardLayout>

@@ -45,8 +45,21 @@
     modales** son Fase 4.5 (hoy el descuento se ve en el TOTAL del carrito y el checkout, no en la ficha).
   - Decisiones cerradas: N×M mismo producto (mezclar = Fase 5); se caducan solas por fecha; se archivan
     no se borran (salvo las nunca usadas); coherencia de inputs form+server.
-- 🔲 Fases 3, 4, 4.5, 5 — pendientes.
-- 🔲 Pendiente aparte: B-02 (mayorista puerta de una vía), deploy de la Fase 1.
+- 🔲 **Decisión combinación (17/07)**: NO apilamos dos promos sobre el mismo producto → **gana la más
+  barata** (estilo Shopify: "un descuento de producto por ítem"). El apilado con casilla (estilo
+  Tiendanube, `combinesWithPromotions`) queda para más adelante SOLO si una dueña real lo pide. Motivo:
+  protege el margen y no confunde a emprendedoras. Verificado en la doc de las dos plataformas.
+- ✅ **Fase 3 — Piso de costo. COMPLETA (18/07, sin commit todavía).**
+  - `promotions.ts`: `promoEffectiveUnitPrice` (reusa el MOTOR, no duplica la cuenta) + `costFloorCheck(promo, products)`
+    → `{ below[], missingCost, inScope }`. FREE_SHIPPING corta antes (no toca precio). 7 casos en pricing.check.ts (CF-A..F), verdes.
+  - Wizard (paso Confirmar): cartel ámbar con los productos que quedan bajo costo (queda $X / cuesta $Y) + nota de
+    "N sin costo cargado". **NO bloquea crear** (gancho/liquidación es válido) — es la regla de Flavio.
+  - Lista: chip "bajo costo" en las promos vivas que venden algo bajo costo.
+  - `page.tsx` trae `costPrice`. Aviso a la dueña, NUNCA candado al comprador (el checkout no cambió). tsc+eslint+build ✓.
+  - Aviso "aviso en pedidos" (notificar cuando un pedido real vende bajo costo) queda como opción C aditiva, NO hecho.
+- 🔲 Fases 4, 4.5, 5 — pendientes.
+- 🔲 Pendiente aparte: B-02 (mayorista puerta de una vía), **deploy de Fase 1 + Fase 2** (ambas commiteadas
+  local, `25a649d` y `64ac3da`, sin pushear).
 
 ---
 
@@ -864,9 +877,34 @@ refactor no rompe nada, y **descubrir si alguno ya venía mintiendo**.
 Migración de `Promotion`, `/dashboard/promociones`, y el motor que las lee. Las promos viejas del
 producto **siguen funcionando en paralelo**.
 
-### Fase 3 — Combinación y piso de costo 🔲
-`combinesWith*` + el freno de no vender bajo costo + el panel mostrando qué se aplicó y **qué no, y
-por qué** (`blocked`).
+### Fase 3 — Piso de costo (aviso a la dueña) 🔄
+
+**Regla de oro de Flavio**: *"nunca vender bajo costo, pero AVISAR a la dueña, no frenar al comprador —
+sería un cliente menos"*. O sea: el piso de costo es un **aviso al que configura**, NUNCA un candado
+en el checkout. El comprador siempre paga el precio de la promo.
+
+**Qué hace, en criollo**: cuando la dueña arma "30% off en camperas", si alguna campera con eso queda
+**por debajo de su costo**, se lo decimos ahí mismo — "ojo, la Campera X quedaría a $8.000 y te cuesta
+$9.500". Ella decide: la baja igual (liquidación / gancho) o ajusta el descuento.
+
+**Alcance (lo que voy a construir)**:
+1. **Aviso en vivo en el wizard** (paso de reglas / confirmar): calcula, para cada producto en alcance,
+   el precio con la promo y lo compara con `costPrice`. Si alguno cae bajo costo, muestra un cartel
+   ámbar con **cuáles** y por cuánto. **No bloquea guardar** — la dueña puede seguir (loss-leader válido).
+2. **Señal en la lista de promos**: un chip discreto en las promos que hoy venden algo bajo costo, para
+   que lo pueda ver después, no solo al crearla.
+3. Reusar el cálculo del motor (precio efectivo por unidad bajo la promo), no inventar otra cuenta.
+
+**Casos de borde**:
+- **Producto sin costo cargado** (`costPrice` null): no se puede avisar → se **omite** (no cuenta como
+  "bajo costo"). Se aclara "N productos sin costo cargado, no los pudimos chequear". (Flavio ya venía
+  diciéndoles que carguen costos.)
+- N×M: el costo se mide sobre el **precio efectivo por unidad** en el combo (ej. 3×2 = pagar 2/3 del precio).
+- FREE_SHIPPING: no toca el precio del producto → nunca hay bajo costo por esta vía.
+
+**Fuera de Fase 3** (por la decisión de arriba): el apilado de dos promos (`combinesWithPromotions`) y
+el panel de "qué se aplicó y qué NO (blocked)" — este último tenía sentido cuando había combinación
+compleja; con "gana la más barata" no hay nada "bloqueado" que explicar. Se retoma solo si vuelve el apilado.
 
 ### Fase 4 — Migrar y limpiar 🔲
 Backfill: cada producto con `promoQtyMin` → una `Promotion` que apunta a él. Recién ahí se borran los

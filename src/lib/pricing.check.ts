@@ -8,6 +8,7 @@
 // de promos. Este archivo cubre A–G (la cuenta de promos, que es lo que priceCart hace).
 
 import { priceCart, resolveBasePrice, type PricingItem, type ActivePromotion, PROMO_PERCENT, PROMO_N_PAY_M } from "./pricing";
+import { costFloorCheck, type CostFloorPromo, type CostFloorProduct } from "./promotions";
 
 const BASE = 10000;
 const NO_PROMO = { promoType: null, promoQtyMin: null, promoPayQty: null, promoQtyDiscount: null };
@@ -109,6 +110,33 @@ for (const c of spCases) {
     c.expectedCoupons !== undefined ? `cupónOK=${r.couponsAllowed}` : "",
   ].filter(Boolean).join(" ");
   console.log(`${ok ? "OK  " : "FAIL"} [${c.id}] esperado $${c.expectedSubtotal.toLocaleString("es-AR")} · dio $${r.subtotal.toLocaleString("es-AR")} ${extra} — ${c.desc}`);
+}
+
+// ── Piso de costo (Fase 3): aviso a la dueña, no frena al comprador ───────────
+// A: precio $10.000, costo $8.000 (remeras) · B: $10.000, costo $5.000 (remeras)
+// · C: $10.000, SIN costo (pantalones).
+const cfProducts: CostFloorProduct[] = [
+  { id: "A", name: "A", price: 10000, costPrice: 8000, category: "remeras" },
+  { id: "B", name: "B", price: 10000, costPrice: 5000, category: "remeras" },
+  { id: "C", name: "C", price: 10000, costPrice: null, category: "pantalones" },
+];
+const cf = (p: Partial<CostFloorPromo> & { type: string }): CostFloorPromo => ({
+  type: p.type, value: p.value ?? null, minQty: p.minQty ?? null, payQty: p.payQty ?? null,
+  scope: p.scope ?? "ALL", categories: p.categories ?? [], productIds: p.productIds ?? [],
+});
+const cfCases: { id: string; promo: CostFloorPromo; below: number; missing: number; desc: string }[] = [
+  { id: "CF-A", promo: cf({ type: "PERCENT", value: 30 }), below: 1, missing: 1, desc: "30% ALL → A a $7.000 < $8.000 bajo costo; C sin costo" },
+  { id: "CF-B", promo: cf({ type: "PERCENT", value: 15 }), below: 0, missing: 1, desc: "15% ALL → A a $8.500 > $8.000, nadie bajo costo" },
+  { id: "CF-C", promo: cf({ type: "PERCENT", value: 30, scope: "CATEGORY", categories: ["remeras"] }), below: 1, missing: 0, desc: "30% solo remeras → A bajo costo, C fuera de alcance" },
+  { id: "CF-D", promo: cf({ type: "FIXED", value: 6000 }), below: 2, missing: 1, desc: "$6.000 off ALL → A y B a $4.000, ambos bajo costo" },
+  { id: "CF-E", promo: cf({ type: "N_PAY_M", minQty: 3, payQty: 2 }), below: 1, missing: 1, desc: "3×2 ALL → $6.666,67/u: A bajo $8.000, B no ($5.000)" },
+  { id: "CF-F", promo: cf({ type: "FREE_SHIPPING" }), below: 0, missing: 0, desc: "envío gratis → no toca precio, nunca bajo costo" },
+];
+for (const c of cfCases) {
+  const r = costFloorCheck(c.promo, cfProducts);
+  const ok = r.below.length === c.below && r.missingCost === c.missing;
+  if (!ok) failed++;
+  console.log(`${ok ? "OK  " : "FAIL"} [${c.id}] bajo costo=${r.below.length} (esp ${c.below}) · sin costo=${r.missingCost} (esp ${c.missing}) — ${c.desc}`);
 }
 
 console.log(failed === 0 ? "\n✅ Todos los casos dan el número congelado." : `\n❌ ${failed} caso(s) no coinciden.`);

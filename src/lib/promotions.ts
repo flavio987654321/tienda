@@ -3,6 +3,8 @@
 // consola no puede meter un "500% off" ni un "llevá 2 pagá 3". Ver PROMOCIONES.md
 // (reglas transversales · coherencia por tipo).
 
+import { priceCart, type ActivePromotion } from "./pricing";
+
 export const PROMO_TYPES = ["PERCENT", "FIXED", "N_PAY_M", "FREE_SHIPPING"] as const;
 export const PROMO_SCOPES = ["ALL", "CATEGORY", "PRODUCTS"] as const;
 export type PromoType = (typeof PROMO_TYPES)[number];
@@ -117,4 +119,69 @@ function parseDate(raw: unknown): Date | null {
   if (!raw || typeof raw !== "string") return null;
   const d = new Date(raw);
   return isNaN(d.getTime()) ? null : d;
+}
+
+// ── Piso de costo (aviso a la dueña, NUNCA frena al comprador) ────────────────
+// Fase 3. Regla de Flavio: avisar al que configura si la promo deja algún producto
+// bajo su costo; el comprador siempre paga el precio de la promo (un candado sería
+// un cliente menos). El checkout no cambia — esto es puramente informativo.
+
+// Precio unitario efectivo de un producto bajo la promo, en su mejor caso (para el
+// aviso). Reusa el MOTOR para no tener una 2da cuenta que se desincronice. Ignora
+// alcance y compra mínima a propósito (asume que la promo aplica al producto).
+// null = la promo no toca el precio del producto (FREE_SHIPPING o datos incompletos).
+// Interna: solo la usa costFloorCheck (se exportará si algún día la necesita otra parte).
+function promoEffectiveUnitPrice(
+  p: { type: string; value: number | null; minQty: number | null; payQty: number | null },
+  unitPrice: number
+): number | null {
+  if (p.type === "FREE_SHIPPING" || !(unitPrice > 0)) return null;
+  const qty = p.type === "N_PAY_M" && p.minQty && p.minQty >= 2 ? p.minQty : 1;
+  const promo: ActivePromotion = {
+    type: p.type, value: p.value, minQty: p.minQty, payQty: p.payQty,
+    minOrderAmount: 0, scope: "ALL", categories: [], productIds: [], combinesWithCoupons: true,
+  };
+  const line = priceCart(
+    [{
+      productId: "x", variantId: null, quantity: qty, basePrice: unitPrice, category: null,
+      promo: { promoType: null, promoQtyMin: null, promoPayQty: null, promoQtyDiscount: null },
+    }],
+    { promotions: [promo] }
+  ).lines[0];
+  if (!line || !line.promoApplied) return null; // la promo no descontó nada (datos incompletos)
+  return line.unitPrice;
+}
+
+export type CostFloorPromo = {
+  type: string; value: number | null; minQty: number | null; payQty: number | null;
+  scope: string; categories: string[]; productIds: string[];
+};
+export type CostFloorProduct = {
+  id: string; name: string; price: number; costPrice: number | null; category: string | null;
+};
+export type CostFloorResult = {
+  below: { name: string; effective: number; cost: number }[]; // productos que quedan bajo costo
+  missingCost: number;   // en alcance pero sin costo cargado (no se pudieron chequear)
+  inScope: number;       // total de productos alcanzados
+};
+
+// ¿Qué productos en alcance quedarían por debajo de su costo con esta promo?
+export function costFloorCheck(promo: CostFloorPromo, products: CostFloorProduct[]): CostFloorResult {
+  const inScope = products.filter((p) =>
+    promo.scope === "ALL" ? true :
+    promo.scope === "CATEGORY" ? (p.category != null && promo.categories.includes(p.category)) :
+    promo.scope === "PRODUCTS" ? promo.productIds.includes(p.id) : false
+  );
+  // Envío gratis no toca el precio del producto → nunca hay piso de costo que avisar
+  // (y no tiene sentido contar "sin costo cargado" acá).
+  if (promo.type === "FREE_SHIPPING") return { below: [], missingCost: 0, inScope: inScope.length };
+  const below: { name: string; effective: number; cost: number }[] = [];
+  let missingCost = 0;
+  for (const p of inScope) {
+    if (p.costPrice == null) { missingCost++; continue; }
+    if (p.costPrice <= 0) continue; // costo en 0 = no cargado de verdad, no se avisa
+    const eff = promoEffectiveUnitPrice(promo, p.price);
+    if (eff != null && eff < p.costPrice) below.push({ name: p.name, effective: eff, cost: p.costPrice });
+  }
+  return { below, missingCost, inScope: inScope.length };
 }
