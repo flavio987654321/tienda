@@ -3,8 +3,50 @@
 > Creado: 2026-07-17 | Workflow: 🔲 pendiente | 🔄 en progreso | ✅ hecho | ❌ descartado con justificación
 > Objetivo: sacar los descuentos de adentro del formulario de producto y convertirlos en una
 > entidad propia del panel, con reglas de combinación explícitas y una sola cuenta compartida.
->
-> **Nada de esto se toca hasta que el plan esté debatido y aprobado.**
+
+## 📍 ESTADO ACTUAL (se actualiza a medida que avanzamos)
+
+- ✅ **Fase 1 — Motor único de precios. COMMITEADO (`25a649d`, 17/07), sin deploy.**
+  - `src/lib/pricing.ts` (función pura) + `pricing.check.ts` (11 casos verdes).
+  - Enchufado en las 4 puntas: checkout, useCartLogic, CartDrawer, preview del modal.
+  - `resolveBasePrice` unifica mayorista + escalones.
+  - `OrderItem.lineTotal` nuevo (migración aditiva nullable). ✅ APLICADA a la base (prisma migrate deploy, 17/07).
+  - Bugs cerrados: B-01, B-03, B-04, B-05. B-06 documentado (intencional).
+- ✅ **Fase 2 — Modelo `StorePromotion` + sección + MOTOR. COMPLETA (17/07, sin deploy).**
+  - ✅ Prototipo visual aprobado por Flavio (fondo claro, redondeado, indigo, íconos lucide, tabs
+    Activas/Historial, flujo de 5 pasos, explicación de cada tipo, selector cat/productos).
+  - ✅ Modelo `StorePromotion` + migración `20260717010000_add_promotion` (tsc/validate ok).
+    ✅ APLICADA a la base (prisma migrate deploy, 17/07) — la tabla ya existe y la sección carga.
+    FK vuelta idempotente (DO block) por si se corre 2 veces. Registrada, el deploy real la saltea.
+    OJO: se llama StorePromotion, no Promotion — ya existe un `Promotion` (banners del admin marketplace).
+  - ✅ API CRUD: `src/lib/promotions.ts` (validación+estado, autoridad server) +
+    `/api/dashboard/promociones` GET/POST + `[id]` PATCH(editar/pausar/archivar)/DELETE.
+    OJO: va en `/api/dashboard/promociones`, NO `/api/promociones` (ese es de los flyers del
+    marketplace). Coherencia de inputs por tipo ya implementada en validatePromotionBody. tsc+eslint ok.
+  - ✅ Sección real `/dashboard/promociones`: `page.tsx` (server) + `PromocionesClient.tsx` (lista,
+    tabs Activas/Historial, wizard de 5 pasos con selector cat/productos, toggle/archivar/restaurar/
+    eliminar). Ítem en el sidebar (DashboardLayout, ícono BadgePercent). Estilo Tailwind del panel
+    real. build ✓. Se puede crear/listar/pausar/archivar promos de verdad.
+  - ✅ Motor: `priceCart(items, { promotions })` resuelve StorePromotion → precio (scope ALL/CAT/PRODUCTS,
+    fechas, compra mínima sobre subtotal SIN promo; PERCENT/FIXED por unidad con piso en 0/N_PAY_M mismo
+    producto/FREE_SHIPPING). **best-of por línea**: entre la promo del producto y las de tienda gana la
+    más barata, NUNCA se apilan (apilar dos promos = combinesWithPromotions, Fase 3). Devuelve también
+    `freeShipping` y `couponsAllowed`. 12 casos nuevos en pricing.check.ts (SP-A..L), todos verdes; los
+    congelados de Fase 1 (A–J) intactos.
+  - ✅ Enchufado en las puntas: checkout (autoridad, relee promos de la base dentro de la transacción,
+    cobra con promo, envío gratis a 0, gate de cupón) · `/api/public/[slug]` expone las vigentes ·
+    useStorefront/useCartLogic/CartDrawer/CheckoutModal + páginas /productos y detalle de producto.
+    El carrito muestra el mismo total que cobra el checkout (invariante de Fase 1). tsc + eslint + build ✓.
+  - ✅ `combinesWithCoupons` RESPETADO ya (el wizard lo promete): si una promo activa no combina, el
+    cupón no entra —ni en el server ni en el cliente, que oculta el campo—. `combinesWithPromotions` no
+    lo expone el wizard (default false → best-of ya lo respeta).
+  - ⏭️ Lo que NO entra acá (a propósito): el **piso de costo** (aviso a la dueña, no frena al comprador)
+    y el **panel de "qué se aplicó y qué no"** son Fase 3. Los **badges/tachado/contador en las cards y
+    modales** son Fase 4.5 (hoy el descuento se ve en el TOTAL del carrito y el checkout, no en la ficha).
+  - Decisiones cerradas: N×M mismo producto (mezclar = Fase 5); se caducan solas por fecha; se archivan
+    no se borran (salvo las nunca usadas); coherencia de inputs form+server.
+- 🔲 Fases 3, 4, 4.5, 5 — pendientes.
+- 🔲 Pendiente aparte: B-02 (mayorista puerta de una vía), deploy de la Fase 1.
 
 ---
 
@@ -651,6 +693,21 @@ El form valida para UX; **el server valida para seguridad**. El patrón que ya u
   `javascript:`. Toda URL que termine en un `href` o `src`.
 - **Fechas**: `startsAt < endsAt`, y validar que sean fechas reales.
 
+**Coherencia por tipo de promoción (pregunta de Flavio 17/07 — el input NO es libre):**
+Cada tipo tiene reglas duras que el form frena y el server rechaza. Nadie serio (Shopify/Tiendanube)
+deja input libre; el form guía y el server es la autoridad.
+
+| Tipo | Regla |
+|---|---|
+| `PERCENT` | `1 ≤ value ≤ 90` (o el tope que se fije). Ni negativo ni >100 |
+| `FIXED` | `value > 0`; el descuento se topea al precio del producto → el precio nunca queda negativo (`Math.min`, ya en el motor) |
+| `N_PAY_M` | `minQty ≥ 2`, `payQty ≥ 1`, `payQty < minQty`. No existe "llevá 2 pagá 3" |
+| `FREE_SHIPPING` | `minAmount ≥ 0` |
+| Todos | `startsAt ≤ endsAt`; `minOrderAmount ≥ 0`; nombre no vacío y con longitud tope |
+
+Más el **piso de costo** (decisión #7): al crear/editar, si la promo deja productos bajo costo, se
+avisa (no bloquea) y se listan cuáles — coherencia de negocio, no solo matemática.
+
 ### 4. Bloqueo de doble submit — en toda acción que muta
 
 Cada botón que crea/edita/borra:
@@ -833,11 +890,25 @@ sería pintar una caja vacía.
 tachado, badge, "llevá N pagá M", "envío gratis desde $X", y que los 8 templates + los modales + la
 página de producto lo usen. No renderizar promos a mano en cada template.
 
+**Capa de evento (Black Friday / Hot Sale / CyberMonday)** 🔲 — pregunta de Flavio 17/07.
+Black Friday **NO es un tipo de promoción**: es una promo normal (casi siempre `PERCENT` scope `ALL`)
+con un rango de fechas. El motor + la sección **ya lo resuelven** (se crea con fecha, arranca y se
+apaga sola). Lo que SÍ agregaría valor es una capa opcional de "evento" sobre una promo cualquiera:
+- un flag `isFeatured` (o `eventLabel`) en `Promotion` → en la tienda muestra un **badge distinto**
+  (ej. "BLACK FRIDAY" en vez del "20% OFF" genérico) + opcional **contador regresivo** hasta `endsAt`.
+- opcional: un banner de evento arriba de la tienda.
+No es un mecanismo nuevo — es render + un campo. Va acá (Fase 4.5) porque es decoración de tienda.
+En Argentina Hot Sale/CyberMonday mueven muchísimo, así que el contador + badge tienen ROI real.
+
 Alcance: card del producto, modal de vista rápida (los 4 de Moda), página de detalle, y el carrito.
 Que el descuento **resalte** — es lo que convierte la promo en venta.
 
-### Fase 5 — Mix & match 🔲
-"Llevá un pantalón + una remera + una campera → 20%". Lo más caro y lo menos urgente.
+### Fase 5 — Mix & match ("mezclar categorías") 🔲
+"Llevá un pantalón + una remera + una campera → el más barato gratis". Lo más caro y lo menos urgente.
+
+> **Decisión Flavio 17/07**: el N×M de la Fase 2 es **del mismo producto** ("llevá 3 remeras iguales,
+> pagá 2"). Mezclar productos/categorías distintos (el "cualquiera del combo, el más barato gratis")
+> queda confirmado para esta Fase 5, no descartado. El prototipo ya aclara esto en el texto del 3×2.
 
 **Cómo debe funcionar (verificado en Tiendanube)**: un N×M real cruza **productos distintos** del
 mismo grupo de promo y **bonifica el más barato**, no aplica un %. Ejemplo de su doc: A=$100, B=$80,

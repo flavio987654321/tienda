@@ -6,11 +6,29 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ slug
   const { slug } = await params;
   const { searchParams } = new URL(req.url);
   const withSales = searchParams.get("withSales") === "1";
+  const now = new Date();
 
   const [store, currentUser] = await Promise.all([
     prisma.store.findFirst({
       where: { slug, isActive: true },
       include: {
+        // Promociones vigentes de la tienda (StorePromotion). Solo los campos que
+        // el motor de precios necesita; la vigencia (fecha/activa/archivada) se
+        // filtra acá. El precio real lo recalcula el checkout releyendo la base.
+        promotions: {
+          where: {
+            isActive: true,
+            archivedAt: null,
+            AND: [
+              { OR: [{ startsAt: null }, { startsAt: { lte: now } }] },
+              { OR: [{ endsAt: null }, { endsAt: { gte: now } }] },
+            ],
+          },
+          select: {
+            type: true, value: true, minQty: true, payQty: true, minOrderAmount: true,
+            scope: true, categories: true, productIds: true, combinesWithCoupons: true,
+          },
+        },
         products: {
           where: { isActive: true, deletedAt: null },
           select: {

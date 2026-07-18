@@ -267,6 +267,7 @@ model Store {
   activityEvents      StoreActivityEvent[]
   milestones          StoreMilestone[]
   archives            StoreArchive[]
+  promotions          StorePromotion[]
 }
 
 // Suscripciones push a tiendas. userId es null para suscriptores anónimos legacy;
@@ -773,6 +774,49 @@ model Coupon {
   gamificationPrizes  GamificationPrize[]
 
   @@unique([storeId, code])
+}
+
+// Promoción: descuento que se aplica solo en la tienda, sobre un alcance
+// (toda la tienda / categoría / productos elegidos) y en un rango de fechas.
+// A diferencia de los campos promo* del producto (que la Fase 2 reemplaza), es
+// una entidad propia: una promo apunta a N productos, no al revés.
+// Se llama StorePromotion (no Promotion) porque ya existe un model Promotion:
+// el del panel admin del marketplace (banners de la home). Son cosas distintas.
+model StorePromotion {
+  id             String    @id @default(cuid())
+  name           String    // lo que ve la dueña en el panel (ej. "Verano en remeras")
+
+  // Qué descuenta
+  type           String    // PERCENT | FIXED | N_PAY_M | FREE_SHIPPING
+  value          Float?    // % (1..90) o monto fijo; null en N_PAY_M y FREE_SHIPPING
+  minQty         Int?      // N de "llevá N"  (solo N_PAY_M)
+  payQty         Int?      // M de "pagá M"   (solo N_PAY_M, payQty < minQty)
+  minOrderAmount Float     @default(0) // compra mínima para que aplique (0 = sin mínimo)
+
+  // A qué se aplica. Arrays como JSON string, igual que tags/reelUrls del repo.
+  scope          String    @default("ALL")  // ALL | CATEGORY | PRODUCTS
+  categories     String    @default("[]")   // JSON: nombres de categoría si scope=CATEGORY
+  productIds     String    @default("[]")   // JSON: ids de producto si scope=PRODUCTS
+
+  // Cuándo corre. null = sin límite por ese lado. Al pasar endsAt deja de aplicar sola.
+  startsAt       DateTime?
+  endsAt         DateTime?
+
+  // Con qué se combina (por defecto NO, como Tiendanube). priority desempata.
+  combinesWithCoupons    Boolean @default(false)
+  combinesWithPromotions Boolean @default(false)
+  priority               Int     @default(0)
+
+  isActive       Boolean   @default(true)  // toggle pausar/activar
+  archivedAt     DateTime?                 // seteado = en historial, no aplica más
+
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  storeId String
+  store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@index([storeId, isActive, archivedAt])
 }
 
 model Notification {

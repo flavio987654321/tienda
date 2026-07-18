@@ -25,7 +25,7 @@ export function CheckoutModal({
     cartItems, updateQty, buyerForm, setBuyerForm, rememberData, setRememberData,
     envioOptions, envioId, setEnvioId, pagoOptions, pagoId, setPagoId,
     notas, setNotas, coupon, setCoupon, couponError, appliedCoupon, setAppliedCoupon,
-    handleApplyCoupon, cartTotal, couponDiscount, envioPrice, envioCoordinar, orderTotal,
+    handleApplyCoupon, couponsAllowed, cartTotal, couponDiscount, envioPrice, envioCoordinar, orderTotal,
     canastaDisponible, donationEnabled, setDonationEnabled, donationAmount, setDonationAmount,
     acceptedTerms, setAcceptedTerms, handlePlaceOrder, fmt, fmtEnvioPrice, fmtLiveQuote,
     isWholesale,
@@ -160,11 +160,17 @@ export function CheckoutModal({
               <textarea placeholder="Notas para la tienda" rows={3} value={notas} onChange={e => setNotas(e.target.value)}
                 style={{ ...inputStyle, marginBottom:20, resize:"vertical", fontFamily:"inherit" }} />
 
-              <div style={{ display:"flex", gap:0, marginBottom:28 }}>
-                <input placeholder="CÓDIGO DE CUPÓN" value={coupon} onChange={e => setCoupon(e.target.value)}
-                  style={{ flex:1, background:S, border:`1px solid ${border}`, borderRight:"none", color:T, padding:"11px 14px", fontSize:11, letterSpacing:1, outline:"none", borderRadius:"6px 0 0 6px" }} />
-                <button type="button" onClick={handleApplyCoupon} style={{ background:"transparent", border:`1px solid ${border}`, color:accent, padding:"11px 18px", fontSize:11, letterSpacing:1, cursor:"pointer", borderRadius:"0 6px 6px 0" }}>Aplicar</button>
-              </div>
+              {couponsAllowed ? (
+                <div style={{ display:"flex", gap:0, marginBottom:28 }}>
+                  <input placeholder="CÓDIGO DE CUPÓN" value={coupon} onChange={e => setCoupon(e.target.value)}
+                    style={{ flex:1, background:S, border:`1px solid ${border}`, borderRight:"none", color:T, padding:"11px 14px", fontSize:11, letterSpacing:1, outline:"none", borderRadius:"6px 0 0 6px" }} />
+                  <button type="button" onClick={handleApplyCoupon} style={{ background:"transparent", border:`1px solid ${border}`, color:accent, padding:"11px 18px", fontSize:11, letterSpacing:1, cursor:"pointer", borderRadius:"0 6px 6px 0" }}>Aplicar</button>
+                </div>
+              ) : (
+                // Una promo activa no se combina con cupones — se oculta el campo en vez
+                // de dejar tipear un código que el checkout va a ignorar igual.
+                <p style={{ fontSize:11, opacity:0.6, marginBottom:28, color:T }}>Ya tenés una promoción aplicada. No se puede sumar un cupón encima.</p>
+              )}
               {couponError && <p style={{ fontSize:11, color:"#f87171", marginTop:-20, marginBottom:8 }}>{couponError}</p>}
               {appliedCoupon && (
                 <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12, padding:"10px 12px", background:`${accent}15`, border:`1px solid ${accent}40`, borderRadius:6 }}>

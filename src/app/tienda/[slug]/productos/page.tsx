@@ -5,7 +5,8 @@ import { useState, useEffect, useMemo, useRef, useCallback, Suspense, Fragment }
 import Link from "next/link";
 import { useCartLogic } from "@/hooks/useCartLogic";
 import type { StorefrontProduct, StorefrontVariant, PlaceOrderParams } from "@/hooks/useStorefront";
-import { getDemoPool, fillTargetFor } from "@/hooks/useStorefront";
+import { getDemoPool, fillTargetFor, parsePromotions } from "@/hooks/useStorefront";
+import type { ActivePromotion } from "@/lib/pricing";
 import { ENVIO_OPTIONS, PAGO_OPTIONS } from "@/components/store/shared/cartTypes";
 import { useTouchSwipe } from "@/hooks/useTouchSwipe";
 import { getContrastColor, getReadableAccentText } from "@/contexts/EditContext";
@@ -247,6 +248,7 @@ function ProductosPageInner() {
   const [onlyDestacados, setOnlyDestacados] = useState(destacadoParam);
 
   const [products,   setProducts]   = useState<StorefrontProduct[]>([]);
+  const [promotions, setPromotions] = useState<ActivePromotion[]>([]);
   const [loading,    setLoading]    = useState(true);
   const [error,      setError]      = useState<string | null>(null);
   const [storeName,  setStoreName]  = useState("Tienda");
@@ -319,9 +321,9 @@ function ProductosPageInner() {
     } catch { return { ok: false, error: "Error de conexión" }; }
   }, []);
 
-  const cart = useCartLogic({ products, slug, isOwner, resolveVariantId, validateCoupon, placeOrder });
+  const cart = useCartLogic({ products, promotions, slug, isOwner, resolveVariantId, validateCoupon, placeOrder });
   const {
-    cartItems, cartOpen, setCartOpen, cartCount, cartTotal, envioPrice, couponDiscount, orderTotal,
+    cartItems, cartOpen, setCartOpen, cartCount, cartTotal, envioPrice, couponDiscount, orderTotal, couponsAllowed,
     modalProduct, setModalProduct, modalImg, setModalImg,
     selectedSize, setSelectedSize, selectedColor, setSelectedColor, qty, setQty,
     checkoutOpen, setCheckoutOpen, checkoutStatus, checkoutError,
@@ -360,6 +362,7 @@ function ProductosPageInner() {
           const savedIcon = parseInt(cfg.textOverrides?.["cartIcon"]?.text ?? "0") || 0;
           setCartIconIdx(Math.abs(savedIcon) % CART_ICON_OPTIONS.length);
         } catch {}
+        setPromotions(parsePromotions(data.store.promotions));
         const real: StorefrontProduct[] = (data.store.products ?? []).map(mapProduct);
         if (fromEditor) {
           // En el editor: productos reales primero, demos para completar y poder
@@ -2132,7 +2135,8 @@ function ProductosPageInner() {
                     style={{ display:"block", width:"100%", marginBottom:18, background:inputBg, border:`1px solid ${inputBorder}`, color:T, padding:"10px 13px", fontSize:13, outline:"none", resize:"vertical", fontFamily:sans, boxSizing:"border-box" as const }}
                     onFocus={e => (e.target.style.borderColor=G)} onBlur={e => (e.target.style.borderColor=inputBorder)}/>
 
-                  {/* Cupón */}
+                  {/* Cupón — oculto si una promo activa no se combina con cupones */}
+                  {couponsAllowed ? (
                   <div style={{ display:"flex", marginBottom:6 }}>
                     <input placeholder="CÓDIGO DE CUPÓN" value={coupon} onChange={e => setCoupon(e.target.value)}
                       style={{ flex:1, background:inputBg, border:`1px solid ${inputBorder}`, borderRight:"none", color:T, padding:"10px 13px", fontSize:11, letterSpacing:2, outline:"none" }}
@@ -2140,6 +2144,9 @@ function ProductosPageInner() {
                     <button type="button" onClick={handleApplyCoupon}
                       style={{ background:"transparent", border:`1px solid ${inputBorder}`, color:GT, padding:"10px 16px", fontSize:11, letterSpacing:2, cursor:"pointer" }}>Aplicar</button>
                   </div>
+                  ) : (
+                    <p style={{ fontSize:11, opacity:0.6, marginBottom:6, color:T }}>Ya tenés una promoción aplicada. No se puede sumar un cupón encima.</p>
+                  )}
                   {couponError && <p style={{ fontSize:11, color:"#f87171", marginBottom:8 }}>{couponError}</p>}
                   {appliedCoupon && (
                     <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12, padding:"8px 12px", background:`${G}15`, border:`1px solid ${G}40` }}>

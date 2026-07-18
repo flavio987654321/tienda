@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { getStoreType } from "@/lib/storeTypes";
+import type { ActivePromotion } from "@/lib/pricing";
+import { parseStringArray } from "@/lib/promotions";
 
 export type StorefrontVariant = {
   id: string;
@@ -277,6 +279,42 @@ function mapProduct(raw: RawProduct): StorefrontProduct {
   };
 }
 
+// La promo cruda del endpoint público (arrays como JSON string). Se convierte a
+// ActivePromotion —lo que consume el motor— parseando esos arrays. La vigencia por
+// fecha ya la filtró el server; acá solo se le da forma para MOSTRAR el precio con
+// promo. El checkout recalcula todo releyendo la base, así que el cliente no manda.
+type RawPromotion = {
+  type: string;
+  value: number | null;
+  minQty: number | null;
+  payQty: number | null;
+  minOrderAmount: number;
+  scope: string;
+  categories: string;
+  productIds: string;
+  combinesWithCoupons: boolean;
+};
+
+function mapPromotion(raw: RawPromotion): ActivePromotion {
+  return {
+    type: raw.type,
+    value: raw.value,
+    minQty: raw.minQty,
+    payQty: raw.payQty,
+    minOrderAmount: raw.minOrderAmount ?? 0,
+    scope: raw.scope,
+    categories: parseStringArray(raw.categories),
+    productIds: parseStringArray(raw.productIds),
+    combinesWithCoupons: raw.combinesWithCoupons === true,
+  };
+}
+
+// El array `store.promotions` del endpoint público → ActivePromotion[]. Lo usan tanto
+// useStorefront como la página /productos (que hace su propio fetch), sin duplicar el parseo.
+export function parsePromotions(raw: unknown): ActivePromotion[] {
+  return Array.isArray(raw) ? (raw as RawPromotion[]).map(mapPromotion) : [];
+}
+
 export { isDemoProductId } from "@/lib/demoProducts";
 
 export function getDemoPool(tipoTienda?: string | null): StorefrontProduct[] {
@@ -294,6 +332,7 @@ export function useStorefront() {
   const previewFill = config?.previewFill ?? false;
 
   const [products, setProducts] = useState<StorefrontProduct[]>([]);
+  const [promotions, setPromotions] = useState<ActivePromotion[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
   const [affiliateId, setAffiliateId] = useState<string | null>(null);
 
@@ -330,6 +369,8 @@ export function useStorefront() {
     fetch(`/api/public/${slug}`)
       .then(r => r.ok ? r.json() : null)
       .then(data => {
+        // Promos vigentes de la tienda (solo cuentan las reales; el preview demo no tiene).
+        setPromotions(parsePromotions(data?.store?.promotions));
         const real: StorefrontProduct[] = data?.store?.products?.length
           ? data.store.products.map(mapProduct)
           : [];
@@ -401,5 +442,5 @@ export function useStorefront() {
   const hasMercadoPago     = config?.hasMercadoPago ?? false;
   const shippingMethods    = config?.shippingMethods ?? null;
 
-  return { products, loadingProducts, affiliateId, storeId, slug, isOwner: config?.isOwner ?? false, resolveVariantId, validateCoupon, placeOrder, checkoutMode, isWholesale, ocultarPrecios, defaultCategories, featuredCategories, hasMercadoPago, shippingMethods };
+  return { products, promotions, loadingProducts, affiliateId, storeId, slug, isOwner: config?.isOwner ?? false, resolveVariantId, validateCoupon, placeOrder, checkoutMode, isWholesale, ocultarPrecios, defaultCategories, featuredCategories, hasMercadoPago, shippingMethods };
 }

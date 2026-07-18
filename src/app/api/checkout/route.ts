@@ -9,7 +9,8 @@ import { DEFAULT_SHIPPING_METHODS, LIVE_QUOTE_DOMICILIO_ID } from "@/types/store
 import { cotizarEnvio } from "@/lib/enviopack";
 import { calculateGoalAmount, MIN_DONATION, MAX_DONATION_PCT_OF_GOAL } from "@/lib/canasta";
 import { recordStockMovement } from "@/lib/stockMovements";
-import { priceCart, resolveBasePrice, parseEscalones, type PricingItem } from "@/lib/pricing";
+import { priceCart, resolveBasePrice, parseEscalones, type PricingItem, type ActivePromotion } from "@/lib/pricing";
+import { parseStringArray } from "@/lib/promotions";
 import { getClientIp } from "@/lib/request-ip";
 import { isSubscriptionActive } from "@/lib/subscription";
 
@@ -356,6 +357,8 @@ export async function POST(req: NextRequest) {
           variantId: variant?.id ?? null,
           quantity: item.quantity,
           basePrice: wholesaleOrBasePrice,
+          // Categoría para el alcance por categoría de las StorePromotion.
+          category: product.category,
           // La promo se lee de la DB, nunca del cliente — priceCart la valida igual.
           promo: {
             promoType: product.promoType,
@@ -369,8 +372,35 @@ export async function POST(req: NextRequest) {
         costAtSaleByIndex.push(product.costPrice ?? null);
       }
 
+      // StorePromotion vigentes de esta tienda — leídas de la base acá adentro
+      // (el cliente nunca es la autoridad del precio). Vigencia = activa, sin
+      // archivar y dentro de [startsAt, endsAt]. El motor decide alcance, mínimo y tipo.
+      const nowTs = new Date();
+      const promoRows = await tx.storePromotion.findMany({
+        where: {
+          storeId,
+          isActive: true,
+          archivedAt: null,
+          AND: [
+            { OR: [{ startsAt: null }, { startsAt: { lte: nowTs } }] },
+            { OR: [{ endsAt: null }, { endsAt: { gte: nowTs } }] },
+          ],
+        },
+      });
+      const activePromos: ActivePromotion[] = promoRows.map((p) => ({
+        type: p.type,
+        value: p.value,
+        minQty: p.minQty,
+        payQty: p.payQty,
+        minOrderAmount: p.minOrderAmount,
+        scope: p.scope,
+        categories: parseStringArray(p.categories),
+        productIds: parseStringArray(p.productIds),
+        combinesWithCoupons: p.combinesWithCoupons,
+      }));
+
       // La cuenta de la promo, una sola vez, con la misma función que el carrito.
-      const pricing = priceCart(pricingInputs);
+      const pricing = priceCart(pricingInputs, { promotions: activePromos });
       pricing.lines.forEach((line, i) => {
         orderItems.push({
           productId: line.productId,
@@ -389,10 +419,15 @@ export async function POST(req: NextRequest) {
       // redondeado metería el centavo que este motor justamente elimina.
       const subtotal = pricing.subtotal;
 
+      // Envío gratis: si una StorePromotion de envío aplica, el envío pasa a 0.
+      const effectiveShippingCost = pricing.freeShipping ? 0 : shipping.cost;
+
       let discountAmount = 0;
       let validCouponId: string | null = null;
       let appliedCouponCode: string | null = null;
-      if (couponId) {
+      // Si hay una promo activa que no combina con cupones, el cupón no entra
+      // (lo que el wizard le promete a la dueña con "no combina con cupones").
+      if (couponId && pricing.couponsAllowed) {
         const coupon = await tx.coupon.findFirst({
           where: { id: couponId, storeId, isActive: true },
         });
@@ -424,8 +459,9 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      // Cupón de premio (AffiliateRewardCoupon) — solo si no hay cupón normal ya aplicado
-      if (!validCouponId && rewardCouponCode) {
+      // Cupón de premio (AffiliateRewardCoupon) — solo si no hay cupón normal ya
+      // aplicado y si la promo activa (si hay) permite combinar con cupones.
+      if (!validCouponId && rewardCouponCode && pricing.couponsAllowed) {
         const rewardCoupon = await tx.affiliateRewardCoupon.findUnique({
           where: { code: String(rewardCouponCode).trim().toUpperCase() },
         });
@@ -447,7 +483,7 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      const total = Math.max(0, subtotal - discountAmount + shipping.cost);
+      const total = Math.max(0, subtotal - discountAmount + effectiveShippingCost);
 
       // Nunca actualizar un usuario existente desde checkout — podría sobreescribir datos de dueñas u otros roles
       const buyer =
@@ -467,7 +503,7 @@ export async function POST(req: NextRequest) {
           discountAmount,
           lockedCommissionRate: validAffiliateId ? store.commissionRate : null,
           couponId: validCouponId,
-          shippingCost: shipping.cost,
+          shippingCost: effectiveShippingCost,
           shippingMethod: shipping.label,
           notes: customer.notes || null,
           shippingAddress: JSON.stringify({
@@ -496,7 +532,7 @@ export async function POST(req: NextRequest) {
               provider: "manual",
               service: shipping.label,
               status: "PENDING",
-              cost: shipping.cost,
+              cost: effectiveShippingCost,
             },
           },
         },

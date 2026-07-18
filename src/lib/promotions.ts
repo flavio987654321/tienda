@@ -1,0 +1,120 @@
+// Validación y estado de las promociones (StorePromotion). El form valida para la
+// UX; ESTO valida para seguridad — el server es la autoridad, un POST directo por
+// consola no puede meter un "500% off" ni un "llevá 2 pagá 3". Ver PROMOCIONES.md
+// (reglas transversales · coherencia por tipo).
+
+export const PROMO_TYPES = ["PERCENT", "FIXED", "N_PAY_M", "FREE_SHIPPING"] as const;
+export const PROMO_SCOPES = ["ALL", "CATEGORY", "PRODUCTS"] as const;
+export type PromoType = (typeof PROMO_TYPES)[number];
+export type PromoScope = (typeof PROMO_SCOPES)[number];
+
+// Tope de porcentaje. 90 y no 100: un 100% regala el producto, casi siempre es un
+// error de tipeo. Si alguna vez se quiere "gratis", se decide aparte.
+export const MAX_PROMO_PERCENT = 90;
+export const MAX_PROMO_NAME = 80;
+export const MAX_PROMO_SCOPE_ITEMS = 500; // tope de categorías/productos por promo
+
+export type PromotionStatus = "active" | "scheduled" | "expired" | "paused" | "archived";
+
+// Estado derivado (no se guarda). El mismo criterio lo usa el badge de la fila y
+// los contadores de arriba, para que coincidan.
+export function promotionStatus(
+  p: { isActive: boolean; archivedAt: Date | null; startsAt: Date | null; endsAt: Date | null },
+  now: Date
+): PromotionStatus {
+  if (p.archivedAt) return "archived";
+  if (p.endsAt && p.endsAt <= now) return "expired";
+  if (!p.isActive) return "paused";
+  if (p.startsAt && p.startsAt > now) return "scheduled";
+  return "active";
+}
+
+// Parseo seguro de los arrays guardados como JSON string (convención del repo).
+export function parseStringArray(raw: unknown): string[] {
+  let arr: unknown = raw;
+  if (typeof raw === "string") { try { arr = JSON.parse(raw); } catch { return []; } }
+  if (!Array.isArray(arr)) return [];
+  return arr.filter((x): x is string => typeof x === "string" && x.trim().length > 0).slice(0, MAX_PROMO_SCOPE_ITEMS);
+}
+
+export type ValidatedPromotion = {
+  name: string;
+  type: PromoType;
+  value: number | null;
+  minQty: number | null;
+  payQty: number | null;
+  minOrderAmount: number;
+  scope: PromoScope;
+  categories: string[];
+  productIds: string[];
+  startsAt: Date | null;
+  endsAt: Date | null;
+  combinesWithCoupons: boolean;
+  combinesWithPromotions: boolean;
+};
+
+type Body = Record<string, unknown>;
+
+// Devuelve { error } con el mensaje, o { data } con los campos ya limpios y coherentes.
+export function validatePromotionBody(body: Body): { error: string } | { data: ValidatedPromotion } {
+  const name = typeof body.name === "string" ? body.name.trim().slice(0, MAX_PROMO_NAME) : "";
+  if (name.length < 2) return { error: "Poné un nombre para la promoción." };
+
+  const type = body.type as PromoType;
+  if (!PROMO_TYPES.includes(type)) return { error: "Tipo de promoción inválido." };
+
+  const scope = body.scope as PromoScope;
+  if (!PROMO_SCOPES.includes(scope)) return { error: "Alcance inválido." };
+
+  // ── Alcance ──
+  const categories = scope === "CATEGORY" ? parseStringArray(body.categories) : [];
+  const productIds = scope === "PRODUCTS" ? parseStringArray(body.productIds) : [];
+  if (scope === "CATEGORY" && categories.length === 0) return { error: "Elegí al menos una categoría." };
+  if (scope === "PRODUCTS" && productIds.length === 0) return { error: "Elegí al menos un producto." };
+
+  // ── Reglas por tipo (coherencia dura) ──
+  let value: number | null = null;
+  let minQty: number | null = null;
+  let payQty: number | null = null;
+
+  if (type === "PERCENT") {
+    value = Number(body.value);
+    if (!Number.isFinite(value) || value < 1 || value > MAX_PROMO_PERCENT) {
+      return { error: `El porcentaje debe estar entre 1 y ${MAX_PROMO_PERCENT}.` };
+    }
+  } else if (type === "FIXED") {
+    value = Number(body.value);
+    if (!Number.isFinite(value) || value <= 0) return { error: "El monto de descuento debe ser mayor a 0." };
+  } else if (type === "N_PAY_M") {
+    minQty = Math.trunc(Number(body.minQty));
+    payQty = Math.trunc(Number(body.payQty));
+    if (!Number.isFinite(minQty) || minQty < 2) return { error: "En 'llevá N', N tiene que ser 2 o más." };
+    if (!Number.isFinite(payQty) || payQty < 1) return { error: "En 'pagá M', M tiene que ser 1 o más." };
+    if (payQty >= minQty) return { error: "El 'pagá' tiene que ser menor que el 'llevá' (ej. llevá 3 pagá 2)." };
+  }
+  // FREE_SHIPPING no usa value/minQty/payQty — solo minOrderAmount.
+
+  // ── Compra mínima ──
+  const minOrderAmount = body.minOrderAmount != null ? Number(body.minOrderAmount) : 0;
+  if (!Number.isFinite(minOrderAmount) || minOrderAmount < 0) return { error: "La compra mínima no puede ser negativa." };
+
+  // ── Fechas ──
+  const startsAt = parseDate(body.startsAt);
+  const endsAt = parseDate(body.endsAt);
+  if (startsAt && endsAt && endsAt < startsAt) return { error: "La fecha de fin no puede ser anterior a la de inicio." };
+
+  return {
+    data: {
+      name, type, value, minQty, payQty, minOrderAmount, scope, categories, productIds,
+      startsAt, endsAt,
+      combinesWithCoupons: body.combinesWithCoupons === true,
+      combinesWithPromotions: body.combinesWithPromotions === true,
+    },
+  };
+}
+
+function parseDate(raw: unknown): Date | null {
+  if (!raw || typeof raw !== "string") return null;
+  const d = new Date(raw);
+  return isNaN(d.getTime()) ? null : d;
+}

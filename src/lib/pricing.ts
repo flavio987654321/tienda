@@ -27,6 +27,11 @@ export const PROMO_N_PAY_M = "N_PAY_M";
 // Coincide con la validación del server (validateProductBody): 1..80%.
 const MAX_PROMO_PERCENT = 80;
 
+// Tope de las StorePromotion de tipo PERCENT (validatePromotionBody: 1..90). Es
+// distinto al de arriba porque las promos por producto (legado) toparon en 80 y
+// las de tienda en 90 — se dejan separados para no cambiar ninguna de las dos.
+const MAX_STORE_PERCENT = 90;
+
 // Acepta null y undefined: el server (Prisma) usa null, el storefront usa campos
 // opcionales (undefined). Así calza en las dos puntas sin coerción en cada lado.
 export type PromoConfig = {
@@ -44,6 +49,31 @@ export type PricingItem = {
   quantity: number;
   basePrice: number;   // precio unitario ya resuelto, sin la promo por cantidad
   promo: PromoConfig;
+  // Categoría del producto — la usan las StorePromotion con alcance por categoría.
+  // Opcional: los llamadores viejos (preview del modal) no la pasan y no la necesitan.
+  category?: string | null;
+};
+
+// ── StorePromotion (promociones a nivel tienda) ──────────────────────────────
+// La forma que consume el motor. El llamador YA filtró por vigencia (fecha activa,
+// isActive, sin archivar) — Prisma con fechas Date en el server, el storefront con
+// ISO strings; por eso acá no se tocan fechas. El motor sí evalúa el alcance, la
+// compra mínima y el tipo, que dependen del carrito. Los arrays ya vienen parseados.
+export type ActivePromotion = {
+  type: string;                 // PERCENT | FIXED | N_PAY_M | FREE_SHIPPING
+  value: number | null;         // % (PERCENT) o monto fijo por unidad (FIXED)
+  minQty: number | null;        // N de "llevá N" (N_PAY_M)
+  payQty: number | null;        // M de "pagá M" (N_PAY_M)
+  minOrderAmount: number;       // compra mínima (sobre el subtotal SIN promo) para que aplique
+  scope: string;                // ALL | CATEGORY | PRODUCTS
+  categories: string[];         // nombres de categoría si scope=CATEGORY
+  productIds: string[];         // ids de producto si scope=PRODUCTS
+  combinesWithCoupons: boolean; // si false y la promo aplica al carrito, el cupón no entra
+};
+
+export type PriceCartOptions = {
+  // Promos de tienda vigentes. El motor decide cuáles aplican y la mejor por línea.
+  promotions?: ActivePromotion[];
 };
 
 export type PricedLine = {
@@ -60,6 +90,12 @@ export type CartPricing = {
   lines: PricedLine[];
   subtotal: number;     // Σ lineTotal
   promoSavings: number; // Σ savings
+  // Alguna StorePromotion de envío gratis aplica a este carrito (mínimo cumplido y
+  // en alcance). El checkout y el checkout modal ponen el envío en 0.
+  freeShipping: boolean;
+  // Si false, hay una promo activa en el carrito que NO se combina con cupones
+  // (combinesWithCoupons=false): el checkout ignora el cupón y el modal lo bloquea.
+  couponsAllowed: boolean;
 };
 
 // Redondeo a centavos, estable, en un solo lugar. Todas las cuentas lo usan para
@@ -137,17 +173,78 @@ function paidUnitsNxM(totalQty: number, n: number, m: number): number {
   return completeGroups * m + remainder;
 }
 
+// ── StorePromotion: alcance y cuenta ─────────────────────────────────────────
+
+// ¿La promo alcanza a ESTE ítem? (por producto o por categoría). El mínimo de
+// compra se chequea aparte, a nivel carrito, porque depende del subtotal.
+function promoMatchesItem(p: ActivePromotion, it: PricingItem): boolean {
+  if (p.scope === "ALL") return true;
+  if (p.scope === "PRODUCTS") return p.productIds.includes(it.productId);
+  if (p.scope === "CATEGORY") return it.category != null && p.categories.includes(it.category);
+  return false;
+}
+
+// ¿La promo alcanza a ALGÚN ítem del carrito? (para envío gratis y el gate de cupón).
+function promoMatchesCart(p: ActivePromotion, items: PricingItem[]): boolean {
+  if (p.scope === "ALL") return true;
+  return items.some((it) => promoMatchesItem(p, it));
+}
+
 /**
- * Calcula el precio de todo el carrito aplicando las promos por cantidad.
- * Agrupa por producto porque el N×M y el mínimo del PERCENT dependen de la
- * cantidad TOTAL de ese producto en el carrito, no de cada línea suelta.
+ * Total de línea de UN ítem bajo UNA StorePromotion de descuento (no envío).
+ * Devuelve null si el tipo no descuenta el precio (FREE_SHIPPING o datos inválidos).
+ * `totalQty` es la cantidad total de ese producto en el carrito (para el N×M).
+ * Redondea a centavos una sola vez, igual que el resto del motor.
  */
-export function priceCart(items: PricingItem[]): CartPricing {
+function storePromoLineTotal(p: ActivePromotion, it: PricingItem, totalQty: number): number | null {
+  const base = it.basePrice * it.quantity;
+  if (p.type === "PERCENT") {
+    const pct = p.value != null && p.value > 0 ? Math.min(p.value, MAX_STORE_PERCENT) : 0;
+    if (pct <= 0) return null;
+    return roundCents(base * (1 - pct / 100));
+  }
+  if (p.type === "FIXED") {
+    if (p.value == null || p.value <= 0) return null;
+    // Monto fijo por unidad, con piso en 0 (nunca precio negativo). El aviso de
+    // "estás vendiendo bajo costo" es para la dueña (Fase 3), no frena al comprador.
+    return roundCents(Math.max(0, it.basePrice - p.value) * it.quantity);
+  }
+  if (p.type === "N_PAY_M") {
+    const n = p.minQty, m = p.payQty;
+    if (n == null || m == null || n < 2 || m < 1 || m >= n) return null;
+    // Del mismo producto (decisión aprobada; mezclar categorías = Fase 5). El
+    // beneficio se reparte parejo entre las líneas de ese producto con una razón.
+    const paid = paidUnitsNxM(totalQty, n, m);
+    return roundCents(it.basePrice * it.quantity * (paid / totalQty));
+  }
+  return null; // FREE_SHIPPING no toca el precio del ítem
+}
+
+/**
+ * Calcula el precio de todo el carrito aplicando las promos por cantidad del
+ * producto (legado) Y las StorePromotion de tienda. Agrupa por producto porque
+ * el N×M y el mínimo dependen de la cantidad TOTAL de ese producto, no de cada
+ * línea suelta.
+ *
+ * Entre la promo del producto y las de tienda que alcanzan al ítem se elige la
+ * MEJOR para el comprador (menor total de línea), nunca se apilan — combinar dos
+ * promos sobre el mismo ítem es una decisión aparte (combinesWithPromotions, Fase 3).
+ */
+export function priceCart(items: PricingItem[], opts?: PriceCartOptions): CartPricing {
   // Cantidad total por producto (todas las líneas del mismo producto suman).
   const totalQtyByProduct = new Map<string, number>();
   for (const it of items) {
     totalQtyByProduct.set(it.productId, (totalQtyByProduct.get(it.productId) ?? 0) + it.quantity);
   }
+
+  // Subtotal SIN ninguna promo — es la base contra la que se mide la compra mínima
+  // de las StorePromotion. Estable (no depende de qué promo aplique), sin circularidad.
+  const preSubtotal = roundCents(
+    items.reduce((s, it) => s + it.basePrice * it.quantity, 0)
+  );
+
+  // Promos de tienda que superan su compra mínima. El resto ni se considera.
+  const eligiblePromos = (opts?.promotions ?? []).filter((p) => preSubtotal >= p.minOrderAmount);
 
   const lines: PricedLine[] = [];
   let subtotal = 0;
@@ -156,25 +253,34 @@ export function priceCart(items: PricingItem[]): CartPricing {
   for (const it of items) {
     // El Map se llenó con todas las líneas arriba, así que la clave siempre está.
     const totalQty = totalQtyByProduct.get(it.productId)!;
-    const applies = promoApplies(it.promo, totalQty);
+    const baseLine = roundCents(it.basePrice * it.quantity);
 
-    // La "razón" de descuento de la línea. Clave: se calcula el TOTAL de la línea
-    // como base × cantidad × razón y se redondea UNA sola vez. Derivar primero un
-    // precio unitario y multiplicarlo después metía centavos de error (era B-03).
-    let ratio = 1;
-    if (applies && it.promo.promoType === PROMO_N_PAY_M) {
+    // Candidato 1: la promo por cantidad del producto (legado), misma cuenta de antes.
+    const productApplies = promoApplies(it.promo, totalQty);
+    let productLine = baseLine;
+    if (productApplies && it.promo.promoType === PROMO_N_PAY_M) {
       // N×M cuenta directa: se pagan `paid` de `totalQty` unidades. Misma razón
-      // para todas las líneas del producto → reparten el beneficio parejo.
+      // para todas las líneas del producto → reparten el beneficio parejo. Se
+      // calcula el TOTAL como base × cantidad × razón y se redondea UNA sola vez
+      // (derivar un unitario y multiplicarlo metía centavos de error, era B-03).
       const paid = paidUnitsNxM(totalQty, it.promo.promoQtyMin!, it.promo.promoPayQty!);
-      ratio = paid / totalQty;
-    } else if (applies) {
-      // PERCENT
-      ratio = 1 - it.promo.promoQtyDiscount! / 100;
+      productLine = roundCents(it.basePrice * it.quantity * (paid / totalQty));
+    } else if (productApplies) {
+      productLine = roundCents(it.basePrice * it.quantity * (1 - it.promo.promoQtyDiscount! / 100));
     }
 
-    const lineTotal = roundCents(it.basePrice * it.quantity * ratio);
+    // Candidatos 2..N: cada StorePromotion de descuento que alcanza a este ítem.
+    let bestLine = productLine;
+    for (const p of eligiblePromos) {
+      if (!promoMatchesItem(p, it)) continue;
+      const cand = storePromoLineTotal(p, it, totalQty);
+      if (cand != null && cand < bestLine) bestLine = cand;
+    }
+
+    const lineTotal = bestLine;
+    const applies = lineTotal < baseLine - 0.001;
     const unitPrice = it.quantity > 0 ? roundCents(lineTotal / it.quantity) : it.basePrice;
-    const savings = roundCents(it.basePrice * it.quantity - lineTotal);
+    const savings = roundCents(baseLine - lineTotal);
 
     lines.push({
       productId: it.productId,
@@ -189,5 +295,15 @@ export function priceCart(items: PricingItem[]): CartPricing {
     if (applies) promoSavings = roundCents(promoSavings + savings);
   }
 
-  return { lines, subtotal, promoSavings };
+  // Envío gratis: alguna promo de envío elegible que alcance al carrito.
+  const freeShipping = eligiblePromos.some(
+    (p) => p.type === "FREE_SHIPPING" && promoMatchesCart(p, items)
+  );
+
+  // Cupón permitido salvo que una promo que SÍ toca el carrito prohíba combinarlo.
+  const couponsAllowed = !eligiblePromos.some(
+    (p) => !p.combinesWithCoupons && promoMatchesCart(p, items)
+  );
+
+  return { lines, subtotal, promoSavings, freeShipping, couponsAllowed };
 }

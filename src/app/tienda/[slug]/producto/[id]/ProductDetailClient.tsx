@@ -5,7 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, ShoppingBag, MessageCircle, Check } from "lucide-react";
 import { useCartLogic } from "@/hooks/useCartLogic";
-import { getDemoPool, isDemoProductId, type StorefrontProduct, type StorefrontVariant, type PlaceOrderParams } from "@/hooks/useStorefront";
+import { getDemoPool, isDemoProductId, parsePromotions, type StorefrontProduct, type StorefrontVariant, type PlaceOrderParams } from "@/hooks/useStorefront";
+import type { ActivePromotion } from "@/lib/pricing";
 import { promoModalText } from "@/lib/promoLabel";
 import { resolveVariantPrice } from "@/lib/variantPrice";
 import type { ProductDetailViewProps } from "@/components/store/templates/productDetail/shared";
@@ -117,6 +118,7 @@ const fmt = (n: number) => "$" + n.toLocaleString("es-AR");
 export default function ProductDetailClient({ slug, productId }: { slug: string; productId: string }) {
   const router = useRouter();
   const [products, setProducts] = useState<StorefrontProduct[]>([]);
+  const [promotions, setPromotions] = useState<ActivePromotion[]>([]);
   const [storeId, setStoreId] = useState<string | null>(null);
   const [storeName, setStoreName] = useState("Tienda");
   const [whatsapp, setWhatsapp] = useState<string | null>(null);
@@ -152,6 +154,7 @@ export default function ProductDetailClient({ slug, productId }: { slug: string;
           if (cfg.socialLinks) setSocialLinks(cfg.socialLinks);
           if (cfg.sectionColors?.bgFooter) setFooterBg(cfg.sectionColors.bgFooter);
         } catch {}
+        setPromotions(parsePromotions(data.store.promotions));
         const real = (data.store.products ?? []).map(mapProduct);
         // Productos demo del editor (ej. "hogar-2"): no existen en la base,
         // se completan con el mismo pool de muestra que usa el home del template.
@@ -205,7 +208,7 @@ export default function ProductDetailClient({ slug, productId }: { slug: string;
     } catch { return { ok: false, error: "Error de conexión" }; }
   }, [storeId]);
 
-  const cart = useCartLogic({ products, storeId, resolveVariantId, validateCoupon, placeOrder, lockScrollOnModal: false });
+  const cart = useCartLogic({ products, promotions, storeId, resolveVariantId, validateCoupon, placeOrder, lockScrollOnModal: false });
   const {
     selectedSize, setSelectedSize, selectedColor, setSelectedColor, qty, setQty,
     addToCart, cartCount, toastMsg, openModal,

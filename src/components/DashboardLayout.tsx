@@ -7,7 +7,7 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   ShoppingBag, Package, Users, TrendingUp, Store, Settings, LogOut,
   BarChart2, Tag, Loader2, MessageCircle, BadgeCheck, ChevronRight,
-  CreditCard, Menu, X, Wallet, AlertTriangle, Bell, ShoppingCart, Star, LayoutGrid,
+  CreditCard, Menu, X, Wallet, AlertTriangle, Bell, ShoppingCart, Star, LayoutGrid, BadgePercent,
 } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
 import { AppLogo } from "@/components/AppLogo";
@@ -63,6 +63,7 @@ const NAV_GROUPS: NavGroup[] = [
       { href: "/dashboard/consultas",  label: "Consultas",  icon: MessageCircle, onlyFor: LEADS_STORE_TYPES, tourId: "consultas" },
       { href: "/dashboard/productos",  label: "Productos",  icon: Package,       tourId: "productos", labelFor: { AUTOS: "Vehículos" } },
       { href: "/dashboard/cupones",        label: "Cupones",        icon: Tag,   tourId: "cupones",   hiddenFor: LEADS_STORE_TYPES },
+      { href: "/dashboard/promociones",    label: "Promociones",    icon: BadgePercent, tourId: "promociones", hiddenFor: LEADS_STORE_TYPES },
       { href: "/dashboard/carritos-abandonados", label: "Carritos abandonados", icon: ShoppingCart, tourId: "carritos-abandonados", hiddenFor: LEADS_STORE_TYPES },
       { href: "/dashboard/vendedoras",     label: "Afiliados",      icon: Users,         tourId: "afiliados" },
       { href: "/dashboard/resenas",         label: "Reseñas",        icon: Star,  tourId: "resenas", hiddenFor: LEADS_STORE_TYPES },

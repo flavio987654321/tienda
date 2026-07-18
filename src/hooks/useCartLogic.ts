@@ -10,7 +10,7 @@ import { PROVINCIAS_ARGENTINA } from "@/lib/provincias";
 import { parseVariantAttrs } from "@/lib/variantAttrs";
 import { promoEffectivePct } from "@/lib/promoLabel";
 import { resolveVariantPrice } from "@/lib/variantPrice";
-import { priceCart, resolveBasePrice, parseEscalones } from "@/lib/pricing";
+import { priceCart, resolveBasePrice, parseEscalones, type ActivePromotion } from "@/lib/pricing";
 
 // Misma lógica de matching de variante por talle/color que usan los templates
 // para mostrar "Sin stock"/"Últimas unidades" — se centraliza acá (y se expone
@@ -33,6 +33,9 @@ function resolveVariantStock(product: StorefrontProduct, selectedSize: string, s
 
 type StorefrontDeps = {
   products: StorefrontProduct[];
+  // Promos de tienda vigentes (StorefrontProduct no las trae; llegan por acá desde
+  // useStorefront). El motor las aplica al total y define envío gratis / gate de cupón.
+  promotions?: ActivePromotion[];
   storeId?: string | null;
   affiliateId?: string | null;
   slug?: string | null;
@@ -54,7 +57,7 @@ type StorefrontDeps = {
   lockScrollOnModal?: boolean;
 };
 
-export function useCartLogic({ products, storeId, affiliateId = null, slug = null, isOwner = false, resolveVariantId, validateCoupon, placeOrder, checkoutMode = "cart", isWholesale = false, hasMercadoPago = false, shippingMethods, lockScrollOnModal = true, currency = "ARS" }: StorefrontDeps) {
+export function useCartLogic({ products, promotions = [], storeId, affiliateId = null, slug = null, isOwner = false, resolveVariantId, validateCoupon, placeOrder, checkoutMode = "cart", isWholesale = false, hasMercadoPago = false, shippingMethods, lockScrollOnModal = true, currency = "ARS" }: StorefrontDeps) {
   const [cartItems,      setCartItems]      = useState<CartItem[]>([]);
   const [cartOpen,       setCartOpen]       = useState(false);
   const [modalProduct,   setModalProduct]   = useState<StorefrontProduct | null>(null);
@@ -386,8 +389,8 @@ export function useCartLogic({ products, storeId, affiliateId = null, slug = nul
   // El total lo calcula priceCart — la MISMA función que usa el checkout que cobra.
   // Antes acá había una copia de la cuenta de promos que difería del checkout en el
   // redondeo del N×M (B-03). El precio base (variante o mayorista con escalones) se
-  // resuelve acá y se le pasa al motor; la promo la aplica él.
-  const cartTotal = priceCart(
+  // resuelve acá y se le pasa al motor; la promo (por producto Y de tienda) la aplica él.
+  const cartPricing = priceCart(
     cartItems.map((item) => {
       const vp = resolveVariantPrice(item.product.variants, item.size, item.color, item.variantId);
       // Mismo resolvedor que el checkout: mayorista + escalones si califica por
@@ -403,6 +406,7 @@ export function useCartLogic({ products, storeId, affiliateId = null, slug = nul
         variantId: item.variantId,
         quantity: item.qty,
         basePrice,
+        category: item.product.category,
         promo: {
           promoType: item.product.promoType,
           promoQtyMin: item.product.promoQtyMin,
@@ -410,8 +414,18 @@ export function useCartLogic({ products, storeId, affiliateId = null, slug = nul
           promoQtyDiscount: item.product.promoQtyDiscount,
         },
       };
-    })
-  ).subtotal;
+    }),
+    { promotions }
+  );
+  const cartTotal = cartPricing.subtotal;
+  // Líneas ya con la promo aplicada, en el mismo orden que cartItems — el CartDrawer
+  // las lee de acá en vez de recalcular (una sola cuenta, como manda la Fase 1).
+  const pricedLines = cartPricing.lines;
+  const cartPromoSavings = cartPricing.promoSavings;
+  // Envío gratis y si el cupón puede combinarse — derivados del motor, coherentes
+  // con lo que cobra el checkout.
+  const freeShipping = cartPricing.freeShipping;
+  const couponsAllowed = cartPricing.couponsAllowed;
   const wholesaleWarnings = isWholesale ? cartItems.filter(i =>
     i.product.cantMinMayorista && i.qty < i.product.cantMinMayorista
   ) : [];
@@ -419,9 +433,13 @@ export function useCartLogic({ products, storeId, affiliateId = null, slug = nul
   const envioOptions   = getEnvioOptions(shippingMethods);
   const selectedEnvio  = envioOptions.find(o => o.id === envioId) ?? envioOptions[0];
   const selectedLiveQuotePrice = selectedEnvio?.liveQuote ? getLiveQuotePrice(selectedEnvio.id) : null;
-  const envioPrice     = selectedEnvio?.liveQuote ? (selectedLiveQuotePrice ?? 0) : (selectedEnvio?.coordinar ? 0 : (selectedEnvio?.price ?? 0));
-  const envioCoordinar = selectedEnvio?.liveQuote ? selectedLiveQuotePrice == null : (selectedEnvio?.coordinar ?? false);
-  const couponDiscount = appliedCoupon?.discount ?? 0;
+  const envioPriceRaw  = selectedEnvio?.liveQuote ? (selectedLiveQuotePrice ?? 0) : (selectedEnvio?.coordinar ? 0 : (selectedEnvio?.price ?? 0));
+  // Una promo de envío gratis pone el costo en 0 y deja de ser "a coordinar".
+  const envioPrice     = freeShipping ? 0 : envioPriceRaw;
+  const envioCoordinar = freeShipping ? false : (selectedEnvio?.liveQuote ? selectedLiveQuotePrice == null : (selectedEnvio?.coordinar ?? false));
+  // El cupón no descuenta si una promo activa no combina con cupones — el checkout
+  // hace lo mismo, así que el total mostrado coincide con el cobrado.
+  const couponDiscount = couponsAllowed ? (appliedCoupon?.discount ?? 0) : 0;
   const orderTotal     = cartTotal + envioPrice - couponDiscount;
 
   const searchResults = searchQuery.trim().length > 0
@@ -674,6 +692,7 @@ export function useCartLogic({ products, storeId, affiliateId = null, slug = nul
   const handleApplyCoupon = async () => {
     setCouponError("");
     if (!coupon.trim()) return;
+    if (!couponsAllowed) { setCouponError("La promoción activa no se combina con cupones."); return; }
     const emailForValidation = buyerForm.email.trim() || undefined;
     const res = await validateCoupon(coupon, cartTotal, emailForValidation);
     if ("error" in res) { setCouponError(res.error); return; }
@@ -798,6 +817,8 @@ export function useCartLogic({ products, storeId, affiliateId = null, slug = nul
     donationEnabled, setDonationEnabled, donationAmount, setDonationAmount, canastaDisponible,
     // Derived
     cartTotal, cartCount, envioPrice, envioCoordinar, envioOptions, couponDiscount, orderTotal,
+    // Promos de tienda: líneas ya con promo, ahorro total, envío gratis y gate de cupón.
+    pricedLines, cartPromoSavings, freeShipping, couponsAllowed,
     searchResults, favoriteProducts, selectedVariantStock, outOfStockSizes,
     checkoutMode, isWholesale, wholesaleWarnings,
     pagoOptions: getPagoOptions(hasMercadoPago, !!affiliateId),

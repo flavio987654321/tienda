@@ -2,8 +2,6 @@
 import { FadeImage } from "./FadeImage";
 import type { useCartLogic } from "@/hooks/useCartLogic";
 import { promoSavingsLabel } from "@/lib/promoLabel";
-import { resolveVariantPrice } from "@/lib/variantPrice";
-import { priceCart, resolveBasePrice, parseEscalones } from "@/lib/pricing";
 
 // Un solo componente de carrito reutilizado por todos los templates de un mismo
 // tipo de negocio (hoy: Electro Prime, Tech Nova, Home Studio, Casa Clara) — así
@@ -34,40 +32,13 @@ export function CartDrawer({
   const { BG, T, MID, border, accent, accentText, serif } = theme;
   const {
     cartItems, cartOpen, setCartOpen, cartCount, cartTotal, removeFromCart, updateQty,
-    openCheckout, fmt, wholesaleWarnings,
+    openCheckout, fmt, wholesaleWarnings, pricedLines, cartPromoSavings,
   } = cart;
   const blockBuy = isOwner || isPreview;
 
-  // Precio base con el mismo resolvedor único que el carrito y el checkout
-  // (mayorista + escalones). Antes tenía su propia copia de esta cuenta.
-  function itemBaseUnitPrice(item: typeof cartItems[number], qty: number): number {
-    const vp = resolveVariantPrice(item.product.variants, item.size, item.color, item.variantId);
-    return resolveBasePrice({
-      retailPrice: vp ?? item.product.price,
-      precioMayorista: item.product.precioMayorista,
-      cantMinMayorista: item.product.cantMinMayorista,
-      preciosEscalonados: parseEscalones(item.product.preciosEscalonados),
-    }, qty);
-  }
-
-  // Precio por línea con la MISMA función que el checkout y el total del carrito.
-  // Antes esta función tenía su propia cuenta de N×M que difería del checkout en el
-  // redondeo (B-03). itemBaseUnitPrice se queda solo para resolver el precio base;
-  // la promo la aplica priceCart. Los índices coinciden con cartItems (mismo orden).
-  const pricedLines = priceCart(
-    cartItems.map((item) => ({
-      productId: item.product.id,
-      variantId: item.variantId,
-      quantity: item.qty,
-      basePrice: itemBaseUnitPrice(item, item.qty),
-      promo: {
-        promoType: item.product.promoType,
-        promoQtyMin: item.product.promoQtyMin,
-        promoPayQty: item.product.promoPayQty,
-        promoQtyDiscount: item.product.promoQtyDiscount,
-      },
-    }))
-  ).lines;
+  // pricedLines viene del hook (una sola cuenta, la misma que el checkout que cobra):
+  // ya trae la promo por producto Y las de tienda aplicadas, en el mismo orden que
+  // cartItems. Acá solo se dibuja — no se recalcula nada.
 
   return (
     <div style={{ position:"fixed", inset:0, zIndex: isPreview ? 20000 : 150, pointerEvents: cartOpen ? "auto" : "none" }}>
@@ -126,8 +97,8 @@ export function CartDrawer({
           ))}
         </div>
         {cartItems.length > 0 && (() => {
-          // El ahorro sale del motor (Σ savings), no de recalcular el precio lleno aparte.
-          const promoSavings = pricedLines.reduce((s, l) => s + l.savings, 0);
+          // El ahorro ya lo sumó el motor (Σ savings de la promo por producto Y de tienda).
+          const promoSavings = cartPromoSavings;
           return (
           <div style={{ padding:"16px 24px 28px", borderTop:`1px solid ${border}`, flexShrink:0 }}>
             <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
@@ -135,10 +106,13 @@ export function CartDrawer({
               <span style={{ fontSize:11, opacity:0.6, color:T }}>{cartCount} {cartCount === 1 ? "producto" : "productos"}</span>
             </div>
             {promoSavings > 0.01 && (() => {
+              // Etiqueta de la promo por producto (3×2, % off) si la hay; si el ahorro
+              // viene solo de una promo de tienda, un texto genérico.
               const pi = cartItems.find(i => i.discountPct && i.discountPct > 0);
+              const label = pi ? promoSavingsLabel(pi.product.promoType, pi.product.promoQtyMin, pi.product.promoPayQty, pi.discountPct) : "Promoción aplicada";
               return (
                 <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
-                  <span style={{ fontSize:12, color:"#16a34a", fontWeight:600 }}>{promoSavingsLabel(pi?.product.promoType, pi?.product.promoQtyMin, pi?.product.promoPayQty, pi?.discountPct)}</span>
+                  <span style={{ fontSize:12, color:"#16a34a", fontWeight:600 }}>{label}</span>
                   <span style={{ fontSize:12, color:"#16a34a", fontWeight:600 }}>-{fmt(promoSavings)}</span>
                 </div>
               );
