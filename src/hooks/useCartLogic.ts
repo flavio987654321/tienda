@@ -10,7 +10,7 @@ import { PROVINCIAS_ARGENTINA } from "@/lib/provincias";
 import { parseVariantAttrs } from "@/lib/variantAttrs";
 import { promoEffectivePct } from "@/lib/promoLabel";
 import { resolveVariantPrice } from "@/lib/variantPrice";
-import { priceCart, resolveBasePrice, parseEscalones, type ActivePromotion } from "@/lib/pricing";
+import { priceCart, resolveBasePrice, parseEscalones, freeShippingProgress, type ActivePromotion } from "@/lib/pricing";
 
 // Misma lógica de matching de variante por talle/color que usan los templates
 // para mostrar "Sin stock"/"Últimas unidades" — se centraliza acá (y se expone
@@ -390,8 +390,7 @@ export function useCartLogic({ products, promotions = [], storeId, affiliateId =
   // Antes acá había una copia de la cuenta de promos que difería del checkout en el
   // redondeo del N×M (B-03). El precio base (variante o mayorista con escalones) se
   // resuelve acá y se le pasa al motor; la promo (por producto Y de tienda) la aplica él.
-  const cartPricing = priceCart(
-    cartItems.map((item) => {
+  const pricingItems = cartItems.map((item) => {
       const vp = resolveVariantPrice(item.product.variants, item.size, item.color, item.variantId);
       // Mismo resolvedor que el checkout: mayorista + escalones si califica por
       // cantidad, si no el precio de la variante. Sin gate de modo (como el checkout).
@@ -414,9 +413,8 @@ export function useCartLogic({ products, promotions = [], storeId, affiliateId =
           promoQtyDiscount: item.product.promoQtyDiscount,
         },
       };
-    }),
-    { promotions }
-  );
+    });
+  const cartPricing = priceCart(pricingItems, { promotions });
   const cartTotal = cartPricing.subtotal;
   // Líneas ya con la promo aplicada, en el mismo orden que cartItems — el CartDrawer
   // las lee de acá en vez de recalcular (una sola cuenta, como manda la Fase 1).
@@ -426,6 +424,9 @@ export function useCartLogic({ products, promotions = [], storeId, affiliateId =
   // con lo que cobra el checkout.
   const freeShipping = cartPricing.freeShipping;
   const couponsAllowed = cartPricing.couponsAllowed;
+  // "Agregá $X y el envío es gratis": cuánto falta para la promo de envío más cercana.
+  // null si el carrito está vacío, si ya es gratis, o si no hay promo de envío que alcance.
+  const freeShippingGoal = freeShipping || cartItems.length === 0 ? null : freeShippingProgress(pricingItems, promotions);
   const wholesaleWarnings = isWholesale ? cartItems.filter(i =>
     i.product.cantMinMayorista && i.qty < i.product.cantMinMayorista
   ) : [];
@@ -818,7 +819,7 @@ export function useCartLogic({ products, promotions = [], storeId, affiliateId =
     // Derived
     cartTotal, cartCount, envioPrice, envioCoordinar, envioOptions, couponDiscount, orderTotal,
     // Promos de tienda: líneas ya con promo, ahorro total, envío gratis y gate de cupón.
-    pricedLines, cartPromoSavings, freeShipping, couponsAllowed,
+    pricedLines, cartPromoSavings, freeShipping, couponsAllowed, freeShippingGoal,
     searchResults, favoriteProducts, selectedVariantStock, outOfStockSizes,
     checkoutMode, isWholesale, wholesaleWarnings,
     pagoOptions: getPagoOptions(hasMercadoPago, !!affiliateId),

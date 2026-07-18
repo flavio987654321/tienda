@@ -179,6 +179,8 @@ export default function BohoTerra() {
   const displayPrice = variantPrice ?? (modalProduct?.price ?? 0);
   // Promo de tienda del producto abierto en el modal (usa displayPrice para respetar variantes).
   const modalPromo = modalProduct ? resolveProductPromo({ id: modalProduct.id, price: displayPrice, category: modalProduct.category }, promotions) : null;
+  // 3×2 en vivo: unidades que se PAGAN a la cantidad elegida (misma cuenta que el motor).
+  const nxmPaid = modalPromo?.nxm ? qty - Math.floor(qty / modalPromo.nxm.n) * (modalPromo.nxm.n - modalPromo.nxm.m) : null;
   const imgSwipe = useTouchSwipe(
     () => { if (modalProduct) setModalImg(i => (i + 1) % modalProduct.images.length); },
     () => { if (modalProduct) setModalImg(i => (i - 1 + modalProduct.images.length) % modalProduct.images.length); }
@@ -1478,6 +1480,19 @@ export default function BohoTerra() {
                   <button onClick={()=>setQty(q=>selectedVariantStock !== null ? Math.min(selectedVariantStock, q+1) : q+1)} style={{ width:36, height:36, background:"none", border:"none", color:T, fontSize:18, cursor:"pointer" }}>+</button>
                 </div>
               </div>
+              {/* 3×2 en vivo: progreso del beneficio N×M según la cantidad. */}
+              {modalPromo?.nxm && nxmPaid != null && (() => {
+                const { n, m } = modalPromo.nxm;
+                const free = qty - nxmPaid;
+                const toNext = (n - (qty % n)) % n;
+                return (
+                  <div style={{ fontSize:12.5, fontWeight:700, padding:"9px 12px", borderRadius:6, background: free > 0 ? "rgba(22,163,74,0.10)" : "#fff7ed", border:`1px solid ${free > 0 ? "rgba(22,163,74,0.28)" : "#fed7aa"}`, color: free > 0 ? "#16a34a" : "#c2410c" }}>
+                    {free > 0
+                      ? `🎉 Llevás ${qty}, pagás ${nxmPaid} · ${free} gratis${toNext > 0 ? ` — sumá ${toNext} y llevás otra gratis` : ""}`
+                      : `Promo ${n}×${m} · sumá ${toNext} más y una te sale gratis`}
+                  </div>
+                );
+              })()}
               {/* Stock por variante */}
               {selectedVariantStock !== null && selectedVariantStock === 0 && (
                 <p style={{ fontSize:12, color:"#888", fontWeight:500, margin:0 }}>Sin stock en esta combinación</p>
@@ -1528,7 +1543,7 @@ export default function BohoTerra() {
               ) : (
                 <button onClick={addToCart} disabled={selectedVariantStock === 0}
                   style={{ background: selectedVariantStock === 0 ? "rgba(181,101,42,0.3)" : A, color:"#fff", border:"none", padding:"15px", fontSize:11, letterSpacing:4, textTransform:"uppercase", cursor: selectedVariantStock === 0 ? "not-allowed" : "pointer", width:"100%" }}>
-                  {selectedVariantStock === 0 ? "Sin stock" : `Agregar al Carrito · ${fmt(displayPrice*qty)}`}
+                  {selectedVariantStock === 0 ? "Sin stock" : `Agregar al Carrito · ${fmt(nxmPaid != null ? nxmPaid*displayPrice : (modalPromo?.hasPriceDrop ? modalPromo.effectivePrice : displayPrice)*qty)}`}
                 </button>
               )}</div>)}
 

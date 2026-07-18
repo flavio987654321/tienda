@@ -49,7 +49,7 @@
   barata** (estilo Shopify: "un descuento de producto por ítem"). El apilado con casilla (estilo
   Tiendanube, `combinesWithPromotions`) queda para más adelante SOLO si una dueña real lo pide. Motivo:
   protege el margen y no confunde a emprendedoras. Verificado en la doc de las dos plataformas.
-- ✅ **Fase 3 — Piso de costo. COMPLETA (18/07, sin commit todavía).**
+- ✅ **Fase 3 — Piso de costo. COMPLETA. COMMITEADO (`0d353f5`, 18/07), sin deploy.**
   - `promotions.ts`: `promoEffectiveUnitPrice` (reusa el MOTOR, no duplica la cuenta) + `costFloorCheck(promo, products)`
     → `{ below[], missingCost, inScope }`. FREE_SHIPPING corta antes (no toca precio). 7 casos en pricing.check.ts (CF-A..F), verdes.
   - Wizard (paso Confirmar): cartel ámbar con los productos que quedan bajo costo (queda $X / cuesta $Y) + nota de
@@ -57,9 +57,36 @@
   - Lista: chip "bajo costo" en las promos vivas que venden algo bajo costo.
   - `page.tsx` trae `costPrice`. Aviso a la dueña, NUNCA candado al comprador (el checkout no cambió). tsc+eslint+build ✓.
   - Aviso "aviso en pedidos" (notificar cuando un pedido real vende bajo costo) queda como opción C aditiva, NO hecho.
-- 🔲 Fases 4, 4.5, 5 — pendientes.
-- 🔲 Pendiente aparte: B-02 (mayorista puerta de una vía), **deploy de Fase 1 + Fase 2** (ambas commiteadas
-  local, `25a649d` y `64ac3da`, sin pushear).
+- ✅ **Fase 4.5 — Display de la promo en TODA la tienda. COMMITEADO (`d610115`, 18/07), sin deploy.**
+  - Componente compartido `PromoDisplay.tsx` (`PromoTag` naranja + `PromoBlock` explicativo) + `describePromo()`
+    en `promoDisplay.ts` (headline + alcance + condiciones, estilo Tiendanube). Promo (naranja) ≠ Oferta (rojo).
+  - En /productos (cards+modal), los **8 templates** (homes + modales de Moda) y el **detalle** (genérico + los 4
+    temáticos vía `productDetail/shared.tsx`). `resolveProductPromo` devuelve `primaryPromo` para describir la que gana.
+  - Bugs cerrados: redondeo a peso entero (`roundCents`→`roundMoney`, mostrado==cobrado); botón "Agregar al carrito"
+    mostraba precio de lista; "29 productos elegidos" (GET parsea arrays); validación de inputs del wizard.
+  - Extras dashboard: emoji picker en el nombre; marca Promo/Oferta en la lista de productos (tabla+grilla);
+    grilla con acciones a igual ancho + "Editar" solo ícono; filtro "En promoción" en /productos.
+- 🔄 **Post-4.5 (en curso, sin commit):**
+  - ✅ **Ver/Editar promo**: el wizard reusado en modo edición (pre-cargado), abre en el paso 5 (= DETALLE de lo
+    elegido), "Atrás" para cambiar cualquier paso, "Guardar cambios" vía PATCH. Lápiz ✏️ en cada promo activa. build ✓.
+  - ✅ **3×2 en vivo**: cartel en el modal que cambia con la cantidad ("sumá 1 más y una gratis" → "🎉 Llevás 3,
+    pagás 2"); el total del botón refleja el N×M. En /productos + los 4 modales de Moda + el detalle (genérico y temático). build ✓.
+  - ✅ **Envío gratis en vivo**: helper `freeShippingProgress(items, promotions)` en pricing.ts (reusa `promoMatchesCart`,
+    mismo preSubtotal que el motor) → `useCartLogic` expone `freeShippingGoal` → cartel en el CartDrawer compartido
+    (8 templates + detalle) y en /productos: "🚚 Agregá $X y el envío es gratis" / "🎉 ¡Tenés envío gratis!". 4 casos FS-A..D verdes.
+- 🔲 **ANOTADO — pendientes / decisiones (18/07):**
+  - **Stats reales** ("ventas con promo" / "ahorro"): hoy $0 placeholder. Necesitan **vínculo Order↔promo** (columna
+    nueva en Order con el ahorro). Requiere **migración → solo funciona post-deploy** (base local = producción).
+    **Decisión de Flavio: dejarlo para el deploy** (no meterlo en main local para no romper pedidos).
+  - **Black Friday**: NO es un tipo de promo — es una **capa visual** sobre una promo normal. Diseño acordado:
+    un **interruptor "Evento Black Friday"** en el wizard (apagado por defecto; la FECHA no lo decide, el interruptor sí)
+    → el `PromoTag`/`PromoBlock` se pintan **negros** automáticamente en TODA la tienda (leverage del componente compartido)
+    + banner con **countdown** opcional (usa `endsAt`). **Requiere migración** (columna `isBlackFriday`/`eventType` en
+    StorePromotion) → mismo caso que stats: **va en el batch de deploy**, no se testea en local.
+  - **Mix & match** ("llevá 3 productos DISTINTOS de la misma/otra categoría y pagá 2"): **NO existe.** El N×M actual es
+    del **mismo producto**. Es **Fase 5** (la más cara, la menos pedida). No arrancar por acá.
+- 🔲 Pendiente aparte: B-02 (mayorista puerta de una vía), **deploy de Fase 1+2+3+4.5** (commiteadas local
+  `25a649d`/`64ac3da`/`0d353f5`/`d610115`, sin pushear).
 
 ---
 

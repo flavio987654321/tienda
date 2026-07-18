@@ -3,7 +3,7 @@
 import { useState, useCallback, useRef } from "react";
 import {
   Percent, Tag, Gift, Truck, Store, Folder, ListChecks, Check, Plus, X,
-  Info, AlertTriangle, Loader2, Search, Archive, Trash2, RotateCcw, Smile,
+  Info, AlertTriangle, Loader2, Search, Archive, Trash2, RotateCcw, Smile, Pencil,
 } from "lucide-react";
 import { costFloorCheck, MAX_PROMO_PERCENT as MAX_PCT } from "@/lib/promotions";
 
@@ -94,6 +94,7 @@ export default function PromocionesClient({
   const [promos, setPromos] = useState<Promotion[]>(initialPromotions);
   const [tab, setTab] = useState<"act" | "hist">("act");
   const [wizOpen, setWizOpen] = useState(false);
+  const [editing, setEditing] = useState<Promotion | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
 
@@ -166,7 +167,7 @@ export default function PromocionesClient({
             Descuentos que se aplican solos en la tienda. Definís una vez a qué productos van y desde cuándo — no producto por producto.
           </p>
         </div>
-        <button onClick={() => setWizOpen(true)} className="flex items-center gap-2 bg-gray-900 hover:bg-gray-800 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors">
+        <button onClick={() => { setEditing(null); setWizOpen(true); }} className="flex items-center gap-2 bg-gray-900 hover:bg-gray-800 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors">
           <Plus className="h-4 w-4" /> Nueva promoción
         </button>
       </div>
@@ -192,7 +193,7 @@ export default function PromocionesClient({
               <BadgeEmpty />
               <p className="mt-3 font-medium text-gray-700">Todavía no tenés promociones activas</p>
               <p className="mt-1">Creá la primera y se aplica sola en tu tienda.</p>
-              <button onClick={() => setWizOpen(true)} className="mt-4 inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors">
+              <button onClick={() => { setEditing(null); setWizOpen(true); }} className="mt-4 inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors">
                 <Plus className="h-4 w-4" /> Nueva promoción
               </button>
             </>
@@ -233,6 +234,7 @@ export default function PromocionesClient({
                 <div className="flex items-center gap-1 shrink-0">
                   {!archived ? (
                     <>
+                      <IconBtn title="Ver / editar" onClick={() => { setEditing(p); setWizOpen(true); }} disabled={busyId === p.id}><Pencil className="h-4 w-4" /></IconBtn>
                       <Toggle on={p.isActive && p.status !== "paused" ? true : p.isActive} disabled={busyId === p.id} onClick={() => toggle(p)} />
                       <IconBtn title="Archivar" onClick={() => archive(p)} disabled={busyId === p.id}><Archive className="h-4 w-4" /></IconBtn>
                     </>
@@ -251,10 +253,12 @@ export default function PromocionesClient({
 
       {wizOpen && (
         <Wizard
+          key={editing?.id ?? "new"}
           categories={categories}
           products={products}
-          onClose={() => setWizOpen(false)}
-          onCreated={async () => { setWizOpen(false); await refresh(); setTab("act"); showToast("Promoción creada"); }}
+          editPromo={editing}
+          onClose={() => { setWizOpen(false); setEditing(null); }}
+          onCreated={async () => { const wasEdit = !!editing; setWizOpen(false); setEditing(null); await refresh(); if (!wasEdit) setTab("act"); showToast(wasEdit ? "Promoción actualizada" : "Promoción creada"); }}
         />
       )}
 
@@ -296,28 +300,31 @@ function BadgeEmpty() {
 // ── Wizard de creación ───────────────────────────────────────────────────────
 const STEP_NAMES = ["Tipo", "Alcance", "Reglas", "Vigencia", "Confirmar"];
 
-function Wizard({ categories, products, onClose, onCreated }: {
-  categories: Category[]; products: Product[]; onClose: () => void; onCreated: () => void;
+function Wizard({ categories, products, onClose, onCreated, editPromo }: {
+  categories: Category[]; products: Product[]; onClose: () => void; onCreated: () => void; editPromo?: Promotion | null;
 }) {
-  const [step, setStep] = useState(1);
+  const isEdit = !!editPromo;
+  // En edición se abre directo en el paso 5 (Revisá): funciona como DETALLE de lo elegido,
+  // y desde ahí "Atrás" para cambiar cualquier paso. En creación arranca en el paso 1.
+  const [step, setStep] = useState(isEdit ? 5 : 1);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState("");
 
-  const [type, setType] = useState<string | null>(null);
-  const [scope, setScope] = useState<string | null>(null);
-  const [cat, setCat] = useState<string | null>(null);
-  const [prodIds, setProdIds] = useState<string[]>([]);
+  const [type, setType] = useState<string | null>(editPromo?.type ?? null);
+  const [scope, setScope] = useState<string | null>(editPromo?.scope ?? null);
+  const [cat, setCat] = useState<string | null>(editPromo?.scope === "CATEGORY" ? (editPromo.categories[0] ?? null) : null);
+  const [prodIds, setProdIds] = useState<string[]>(editPromo?.scope === "PRODUCTS" ? editPromo.productIds : []);
   const [prodSearch, setProdSearch] = useState("");
-  const [name, setName] = useState("");
+  const [name, setName] = useState(editPromo?.name ?? "");
   const nameRef = useRef<HTMLInputElement>(null);
   const [emojiOpen, setEmojiOpen] = useState(false);
-  const [value, setValue] = useState("");
-  const [minQty, setMinQty] = useState("3");
-  const [payQty, setPayQty] = useState("2");
-  const [minOrder, setMinOrder] = useState("");
-  const [startsAt, setStartsAt] = useState("");
-  const [endsAt, setEndsAt] = useState("");
-  const [combines, setCombines] = useState(false);
+  const [value, setValue] = useState(editPromo && (editPromo.type === "PERCENT" || editPromo.type === "FIXED") && editPromo.value != null ? String(editPromo.value) : "");
+  const [minQty, setMinQty] = useState(editPromo?.type === "N_PAY_M" && editPromo.minQty != null ? String(editPromo.minQty) : "3");
+  const [payQty, setPayQty] = useState(editPromo?.type === "N_PAY_M" && editPromo.payQty != null ? String(editPromo.payQty) : "2");
+  const [minOrder, setMinOrder] = useState(editPromo && editPromo.minOrderAmount > 0 ? String(editPromo.minOrderAmount) : "");
+  const [startsAt, setStartsAt] = useState(editPromo?.startsAt ? editPromo.startsAt.slice(0, 10) : "");
+  const [endsAt, setEndsAt] = useState(editPromo?.endsAt ? editPromo.endsAt.slice(0, 10) : "");
+  const [combines, setCombines] = useState(editPromo?.combinesWithCoupons ?? false);
 
   const meta = type ? TYPE_META[type] : null;
 
@@ -351,7 +358,7 @@ function Wizard({ categories, products, onClose, onCreated }: {
     return true;
   }
 
-  async function create() {
+  async function save() {
     setErr(""); setSaving(true);
     try {
       const body: Record<string, unknown> = {
@@ -364,14 +371,17 @@ function Wizard({ categories, products, onClose, onCreated }: {
       };
       if (type === "PERCENT" || type === "FIXED") body.value = parseNum(value);
       if (type === "N_PAY_M") { body.minQty = parseInt(minQty); body.payQty = parseInt(payQty); }
-      const res = await fetch("/api/dashboard/promociones", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      const res = await fetch(
+        isEdit ? `/api/dashboard/promociones/${editPromo!.id}` : "/api/dashboard/promociones",
+        { method: isEdit ? "PATCH" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }
+      );
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) { setErr(data.error || "No se pudo crear la promoción"); setSaving(false); return; }
+      if (!res.ok) { setErr(data.error || (isEdit ? "No se pudo guardar la promoción" : "No se pudo crear la promoción")); setSaving(false); return; }
       onCreated();
     } catch { setErr("Error de conexión"); setSaving(false); }
   }
 
-  function next() { if (!canNext()) return; if (step < 5) setStep(step + 1); else create(); }
+  function next() { if (!canNext()) return; if (step < 5) setStep(step + 1); else save(); }
 
   const affected = scope === "ALL" ? products.length : scope === "CATEGORY" ? (categories.find((c) => c.name === cat)?.count ?? 0) : prodIds.length;
   const filteredProds = products.filter((p) => p.name.toLowerCase().includes(prodSearch.toLowerCase()));
@@ -499,7 +509,7 @@ function Wizard({ categories, products, onClose, onCreated }: {
 
           {step === 5 && (
             <>
-              <StepTitle t="Revisá y creá" d="Ponele un nombre (lo ves solo vos) y confirmá." />
+              <StepTitle t={isEdit ? "Detalle de la promoción" : "Revisá y creá"} d={isEdit ? "Editá lo que quieras con “Atrás”. Guardá para aplicar los cambios al instante." : "Ponele un nombre (lo ves solo vos) y confirmá."} />
               <Field label="Nombre de la promoción">
                 <div className="relative">
                   <input
@@ -586,7 +596,7 @@ function Wizard({ categories, products, onClose, onCreated }: {
               })()}
               <div className="flex gap-2.5 items-start bg-green-50 border border-green-200 rounded-xl p-3 mt-3.5 text-[12.5px] text-green-800">
                 <Check className="h-4 w-4 shrink-0 mt-0.5" />
-                <span>Al crearla, esos {affected} producto{affected !== 1 ? "s" : ""} muestran el precio con descuento en la tienda al instante.</span>
+                <span>{isEdit ? "Al guardar" : "Al crearla"}, esos {affected} producto{affected !== 1 ? "s" : ""} muestran el precio con descuento en la tienda al instante.</span>
               </div>
               {err && <p className="text-sm text-red-600 mt-3">{err}</p>}
             </>
@@ -600,7 +610,7 @@ function Wizard({ categories, products, onClose, onCreated }: {
           </button>
           <button onClick={next} disabled={!canNext() || saving} className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors">
             {saving && <Loader2 className="h-4 w-4 animate-spin" />}
-            {step === 5 ? "Crear promoción" : "Continuar"}
+            {step === 5 ? (isEdit ? "Guardar cambios" : "Crear promoción") : "Continuar"}
           </button>
         </div>
       </div>

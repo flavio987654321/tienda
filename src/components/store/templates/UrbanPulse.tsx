@@ -250,6 +250,8 @@ export default function UrbanPulse() {
   const variantPrice = modalProduct ? resolveVariantPrice(modalProduct.variants, selectedSize, selectedColor) : null;
   const displayPrice = variantPrice ?? (modalProduct?.price ?? 0);
   const modalPromo = modalProduct ? resolveProductPromo({ id: modalProduct.id, price: displayPrice, category: modalProduct.category }, promotions) : null;
+  // 3×2 en vivo: unidades que se PAGAN a la cantidad elegida (misma cuenta que el motor).
+  const nxmPaid = modalPromo?.nxm ? qty - Math.floor(qty / modalPromo.nxm.n) * (modalPromo.nxm.n - modalPromo.nxm.m) : null;
   const imgSwipe = useTouchSwipe(
     () => { if (modalProduct) setModalImg(i => (i + 1) % modalProduct.images.length); },
     () => { if (modalProduct) setModalImg(i => (i - 1 + modalProduct.images.length) % modalProduct.images.length); }
@@ -1589,6 +1591,19 @@ export default function UrbanPulse() {
                     <button onClick={() => setQty(q => selectedVariantStock !== null ? Math.min(selectedVariantStock, q+1) : q+1)} style={{ width:36, height:36, background:"none", border:"none", fontSize:18, cursor:"pointer", fontWeight:900 }}>+</button>
                   </div>
                 </div>
+                {/* 3×2 en vivo: progreso del beneficio N×M según la cantidad. */}
+                {modalPromo?.nxm && nxmPaid != null && (() => {
+                  const { n, m } = modalPromo.nxm;
+                  const free = qty - nxmPaid;
+                  const toNext = (n - (qty % n)) % n;
+                  return (
+                    <div style={{ fontSize:12.5, fontWeight:800, padding:"9px 12px", borderRadius:6, marginBottom:20, background: free > 0 ? "rgba(22,163,74,0.10)" : "#fff7ed", border:`1px solid ${free > 0 ? "rgba(22,163,74,0.28)" : "#fed7aa"}`, color: free > 0 ? "#16a34a" : "#c2410c" }}>
+                      {free > 0
+                        ? `🎉 Llevás ${qty}, pagás ${nxmPaid} · ${free} gratis${toNext > 0 ? ` — sumá ${toNext} y llevás otra gratis` : ""}`
+                        : `Promo ${n}×${m} · sumá ${toNext} más y una te sale gratis`}
+                    </div>
+                  );
+                })()}
                 {/* Stock por variante */}
                 {selectedVariantStock !== null && selectedVariantStock === 0 && (
                   <p style={{ fontSize:12, color:"#888", fontWeight:700, margin:0 }}>Sin stock en esta combinación</p>
@@ -1640,7 +1655,7 @@ export default function UrbanPulse() {
                 ) : (
                   <button onClick={addToCart} disabled={selectedVariantStock === 0}
                     style={{ width:"100%", background: selectedVariantStock === 0 ? "#555" : DARK, color:ACC, border:"none", padding:"16px", fontSize:11, fontWeight:900, letterSpacing:3, textTransform:"uppercase", cursor: selectedVariantStock === 0 ? "not-allowed" : "pointer", marginBottom:10 }}>
-                    {selectedVariantStock === 0 ? "Sin stock" : `Agregar · ${fmt((modalPromo?.hasPriceDrop ? modalPromo.effectivePrice : displayPrice) * qty)}`}
+                    {selectedVariantStock === 0 ? "Sin stock" : `Agregar · ${fmt(nxmPaid != null ? nxmPaid * displayPrice : (modalPromo?.hasPriceDrop ? modalPromo.effectivePrice : displayPrice) * qty)}`}
                   </button>
                 )}
                   </div>
@@ -1781,7 +1796,7 @@ export default function UrbanPulse() {
             {isMobile && (
               <div style={{ borderTop:`2px solid ${DARK}`, padding:"12px 16px 16px", background:WHITE, flexShrink:0 }}>
                 <div style={{ display:"flex", alignItems:"baseline", gap:10, marginBottom:10 }}>
-                  <span style={{ fontSize:20, fontWeight:900, color:DARK }}>{ocultarPrecios ? "Consultá precio" : fmt((modalPromo?.hasPriceDrop ? modalPromo.effectivePrice : displayPrice) * qty)}</span>
+                  <span style={{ fontSize:20, fontWeight:900, color:DARK }}>{ocultarPrecios ? "Consultá precio" : fmt(nxmPaid != null ? nxmPaid * displayPrice : (modalPromo?.hasPriceDrop ? modalPromo.effectivePrice : displayPrice) * qty)}</span>
                   {!variantPrice && !ocultarPrecios && modalProduct.comparePrice && <span style={{ fontSize:12, color:MID, textDecoration:"line-through" }}>{fmt(modalProduct.comparePrice)}</span>}
                   {qty > 1 && <span style={{ fontSize:11, color:MID }}>× {qty}</span>}
                 </div>

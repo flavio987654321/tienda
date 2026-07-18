@@ -447,6 +447,8 @@ export default function FashionNoir() {
   const variantPrice = modalProduct ? resolveVariantPrice(modalProduct.variants, selectedSize, selectedColor) : null;
   const displayPrice = variantPrice ?? (modalProduct?.price ?? 0);
   const modalPromo = modalProduct ? resolveProductPromo({ id: modalProduct.id, price: displayPrice, category: modalProduct.category }, promotions) : null;
+  // 3×2 en vivo: unidades que se PAGAN a la cantidad elegida (misma cuenta que el motor).
+  const nxmPaid = modalPromo?.nxm ? qty - Math.floor(qty / modalPromo.nxm.n) * (modalPromo.nxm.n - modalPromo.nxm.m) : null;
 
   /* ─ Hero image con override dinámico ─ */
   const heroImageOv        = storeConfig?.imageOverrides?.["heroBackground"];
@@ -1689,6 +1691,20 @@ export default function FashionNoir() {
                 </div>
               </div>
 
+              {/* 3×2 en vivo: progreso del beneficio N×M según la cantidad. */}
+              {modalPromo?.nxm && nxmPaid != null && (() => {
+                const { n, m } = modalPromo.nxm;
+                const free = qty - nxmPaid;
+                const toNext = (n - (qty % n)) % n;
+                return (
+                  <div style={{ fontSize:12.5, fontWeight:700, padding:"9px 12px", borderRadius:6, background: free > 0 ? "rgba(22,163,74,0.12)" : "rgba(249,115,22,0.12)", border:`1px solid ${free > 0 ? "rgba(22,163,74,0.35)" : "rgba(249,115,22,0.35)"}`, color: free > 0 ? "#4ade80" : "#fb923c" }}>
+                    {free > 0
+                      ? `🎉 Llevás ${qty}, pagás ${nxmPaid} · ${free} gratis${toNext > 0 ? ` — sumá ${toNext} y llevás otra gratis` : ""}`
+                      : `Promo ${n}×${m} · sumá ${toNext} más y una te sale gratis`}
+                  </div>
+                );
+              })()}
+
               {/* Stock por variante (D-06) */}
               {selectedVariantStock !== null && selectedVariantStock === 0 && (
                 <p style={{ fontSize:12, color:"#888", fontWeight:500, margin:0 }}>Sin stock en esta combinación</p>
@@ -1746,7 +1762,7 @@ export default function FashionNoir() {
                 <button onClick={addToCart}
                   disabled={selectedVariantStock === 0}
                   style={{ background: selectedVariantStock === 0 ? "rgba(201,168,76,0.3)" : G, color:BG, border:"none", padding:"16px", fontSize:12, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor: selectedVariantStock === 0 ? "not-allowed" : "pointer", width:"100%" }}>
-                  {selectedVariantStock === 0 ? "Sin stock" : `Agregar al Carrito · ${fmt((modalPromo?.hasPriceDrop ? modalPromo.effectivePrice : displayPrice) * qty)}`}
+                  {selectedVariantStock === 0 ? "Sin stock" : `Agregar al Carrito · ${fmt(nxmPaid != null ? nxmPaid * displayPrice : (modalPromo?.hasPriceDrop ? modalPromo.effectivePrice : displayPrice) * qty)}`}
                 </button>
               )}
                 </div>
@@ -1883,7 +1899,7 @@ export default function FashionNoir() {
             {isMobile && (
               <div style={{ borderTop:`1px solid rgba(201,168,76,0.2)`, padding:"12px 16px 16px", background:S, flexShrink:0 }}>
                 <div style={{ display:"flex", alignItems:"baseline", gap:10, marginBottom:10 }}>
-                  <span style={{ fontSize:20, fontWeight:700, color:G }}>{ocultarPrecios ? "Consultá precio" : fmt((modalPromo?.hasPriceDrop ? modalPromo.effectivePrice : displayPrice) * qty)}</span>
+                  <span style={{ fontSize:20, fontWeight:700, color:G }}>{ocultarPrecios ? "Consultá precio" : fmt(nxmPaid != null ? nxmPaid * displayPrice : (modalPromo?.hasPriceDrop ? modalPromo.effectivePrice : displayPrice) * qty)}</span>
                   {!variantPrice && !ocultarPrecios && modalProduct.comparePrice && <span style={{ fontSize:12, color:"rgba(240,235,227,0.4)", textDecoration:"line-through" }}>{fmt(modalProduct.comparePrice)}</span>}
                   {qty > 1 && <span style={{ fontSize:11, color:"rgba(240,235,227,0.4)" }}>× {qty}</span>}
                 </div>

@@ -309,3 +309,22 @@ export function priceCart(items: PricingItem[], opts?: PriceCartOptions): CartPr
 
   return { lines, subtotal, promoSavings, freeShipping, couponsAllowed };
 }
+
+// Progreso hacia el envío gratis: la promo FREE_SHIPPING que alcanza al carrito (por alcance)
+// con el umbral más bajo TODAVÍA no alcanzado. Devuelve null si no hay promo de envío, si ya
+// se alcanzó (envío ya gratis) o si ninguna aplica. Es para el empujón del carrito
+// "agregá $X y el envío es gratis". Usa el MISMO preSubtotal que gate el motor.
+export function freeShippingProgress(
+  items: PricingItem[],
+  promotions?: ActivePromotion[]
+): { remaining: number; threshold: number } | null {
+  if (!promotions?.length) return null;
+  const preSubtotal = roundMoney(items.reduce((s, it) => s + it.basePrice * it.quantity, 0));
+  let best: { remaining: number; threshold: number } | null = null;
+  for (const p of promotions) {
+    if (p.type !== "FREE_SHIPPING" || !promoMatchesCart(p, items)) continue;
+    if (preSubtotal >= p.minOrderAmount) return null; // ya alcanzado → sin empujón
+    if (!best || p.minOrderAmount < best.threshold) best = { remaining: p.minOrderAmount - preSubtotal, threshold: p.minOrderAmount };
+  }
+  return best;
+}

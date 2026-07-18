@@ -410,6 +410,21 @@ export function ProductDetailBody({ theme, view }: { theme: DetailTheme; view: P
             </div>
           </div>
 
+          {/* 3×2 en vivo: progreso del beneficio N×M según la cantidad. */}
+          {promo.nxm && (() => {
+            const { n, m } = promo.nxm;
+            const paid = qty - Math.floor(qty / n) * (n - m);
+            const free = qty - paid;
+            const toNext = (n - (qty % n)) % n;
+            return (
+              <div style={{ fontSize: 12.5, fontWeight: 700, padding: "9px 12px", borderRadius: 8, margin: "0 0 20px", background: free > 0 ? "rgba(22,163,74,0.10)" : "#fff7ed", border: `1px solid ${free > 0 ? "rgba(22,163,74,0.28)" : "#fed7aa"}`, color: free > 0 ? "#16a34a" : "#c2410c" }}>
+                {free > 0
+                  ? `🎉 Llevás ${qty}, pagás ${paid} · ${free} gratis${toNext > 0 ? ` — sumá ${toNext} y llevás otra gratis` : ""}`
+                  : `Promo ${n}×${m} · sumá ${toNext} más y una te sale gratis`}
+              </div>
+            );
+          })()}
+
           <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 24 }}>
             <button onClick={addToCart} disabled={!canAdd || outOfStock}
               style={{ flex: "1 1 200px", background: (canAdd && !outOfStock) ? theme.accent : "#d1d5db", color: (canAdd && !outOfStock) ? theme.accentText : "#6b7280",

@@ -32,7 +32,7 @@ export function CartDrawer({
   const { BG, T, MID, border, accent, accentText, serif } = theme;
   const {
     cartItems, cartOpen, setCartOpen, cartCount, cartTotal, removeFromCart, updateQty,
-    openCheckout, fmt, wholesaleWarnings, pricedLines, cartPromoSavings,
+    openCheckout, fmt, wholesaleWarnings, pricedLines, cartPromoSavings, freeShipping, freeShippingGoal,
   } = cart;
   const blockBuy = isOwner || isPreview;
 
@@ -101,6 +101,16 @@ export function CartDrawer({
           const promoSavings = cartPromoSavings;
           return (
           <div style={{ padding:"16px 24px 28px", borderTop:`1px solid ${border}`, flexShrink:0 }}>
+            {/* Envío gratis en vivo: empujón hacia el umbral, o confirmación si ya llegó. */}
+            {freeShippingGoal ? (
+              <div style={{ marginBottom:14, padding:"10px 12px", background:"rgba(13,148,136,0.10)", border:"1px solid rgba(13,148,136,0.28)", borderRadius:8 }}>
+                <p style={{ fontSize:12.5, margin:0, color:"#0d9488", fontWeight:700 }}>🚚 Agregá {fmt(freeShippingGoal.remaining)} más y el envío es gratis</p>
+              </div>
+            ) : freeShipping ? (
+              <div style={{ marginBottom:14, padding:"10px 12px", background:"rgba(22,163,74,0.10)", border:"1px solid rgba(22,163,74,0.28)", borderRadius:8 }}>
+                <p style={{ fontSize:12.5, margin:0, color:"#16a34a", fontWeight:700 }}>🎉 ¡Tenés envío gratis!</p>
+              </div>
+            ) : null}
             <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
               <span style={{ fontSize:11, opacity:0.6, letterSpacing:1, textTransform:"uppercase", color:T }}>Subtotal</span>
               <span style={{ fontSize:11, opacity:0.6, color:T }}>{cartCount} {cartCount === 1 ? "producto" : "productos"}</span>

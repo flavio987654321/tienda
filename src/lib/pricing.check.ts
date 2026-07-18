@@ -7,7 +7,7 @@
 // están acá: pertenecen al resolvedor de precio base y al checkout, no al motor
 // de promos. Este archivo cubre A–G (la cuenta de promos, que es lo que priceCart hace).
 
-import { priceCart, resolveBasePrice, type PricingItem, type ActivePromotion, PROMO_PERCENT, PROMO_N_PAY_M } from "./pricing";
+import { priceCart, resolveBasePrice, freeShippingProgress, type PricingItem, type ActivePromotion, PROMO_PERCENT, PROMO_N_PAY_M } from "./pricing";
 import { costFloorCheck, type CostFloorPromo, type CostFloorProduct } from "./promotions";
 import { resolveProductPromo } from "./promoDisplay";
 
@@ -111,6 +111,26 @@ for (const c of spCases) {
     c.expectedCoupons !== undefined ? `cupónOK=${r.couponsAllowed}` : "",
   ].filter(Boolean).join(" ");
   console.log(`${ok ? "OK  " : "FAIL"} [${c.id}] esperado $${c.expectedSubtotal.toLocaleString("es-AR")} · dio $${r.subtotal.toLocaleString("es-AR")} ${extra} — ${c.desc}`);
+}
+
+// ── Envío gratis en vivo: cuánto falta para el umbral ────────────────────────
+const fsCases: { id: string; items: PricingItem[]; promotions: ActivePromotion[]; expected: number | null; desc: string }[] = [
+  { id: "FS-A", items: [item(1, NO_PROMO)], promotions: [promo({ type: "FREE_SHIPPING", minOrderAmount: 8000 })],
+    expected: null, desc: "$10.000 ≥ umbral $8.000 → ya gratis, sin empujón" },
+  { id: "FS-B", items: [item(1, NO_PROMO)], promotions: [promo({ type: "FREE_SHIPPING", minOrderAmount: 15000 })],
+    expected: 5000, desc: "$10.000 vs umbral $15.000 → faltan $5.000" },
+  { id: "FS-C", items: [item(1, NO_PROMO)], promotions: [promo({ type: "PERCENT", value: 20 })],
+    expected: null, desc: "no hay promo de envío → null" },
+  { id: "FS-D", items: [item(1, NO_PROMO)],
+    promotions: [promo({ type: "FREE_SHIPPING", minOrderAmount: 50000 }), promo({ type: "FREE_SHIPPING", minOrderAmount: 15000 })],
+    expected: 5000, desc: "dos umbrales ($50k y $15k) → el más cercano, faltan $5.000" },
+];
+for (const c of fsCases) {
+  const r = freeShippingProgress(c.items, c.promotions);
+  const got = r ? r.remaining : null;
+  const ok = got === c.expected;
+  if (!ok) failed++;
+  console.log(`${ok ? "OK  " : "FAIL"} [${c.id}] esperado ${c.expected === null ? "null" : "$" + c.expected.toLocaleString("es-AR")} · dio ${got === null ? "null" : "$" + got.toLocaleString("es-AR")} — ${c.desc}`);
 }
 
 // ── Piso de costo (Fase 3): aviso a la dueña, no frena al comprador ───────────

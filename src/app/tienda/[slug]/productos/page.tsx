@@ -328,6 +328,7 @@ function ProductosPageInner() {
   const cart = useCartLogic({ products, promotions, slug, isOwner, resolveVariantId, validateCoupon, placeOrder });
   const {
     cartItems, cartOpen, setCartOpen, cartCount, cartTotal, envioPrice, couponDiscount, orderTotal, couponsAllowed,
+    freeShipping, freeShippingGoal,
     modalProduct, setModalProduct, modalImg, setModalImg,
     selectedSize, setSelectedSize, selectedColor, setSelectedColor, qty, setQty,
     checkoutOpen, setCheckoutOpen, checkoutStatus, checkoutError,
@@ -570,6 +571,10 @@ function ProductosPageInner() {
   const displayPrice = variantPrice ?? (modalProduct?.price ?? 0);
   // Promo de tienda para el modal, sobre el precio efectivo (variante si hay).
   const modalPromo = resolveProductPromo({ id: modalProduct?.id ?? "", price: displayPrice, category: modalProduct?.category ?? null }, promotions);
+  // 3×2 EN VIVO: unidades que se PAGAN a la cantidad elegida (misma cuenta que el motor
+  // en pricing.ts: paid = qty − floor(qty/n)·(n−m)). Con esto el hint y el total del botón
+  // reflejan el beneficio N×M mientras el comprador sube la cantidad.
+  const nxmPaid = modalPromo.nxm ? qty - Math.floor(qty / modalPromo.nxm.n) * (modalPromo.nxm.n - modalPromo.nxm.m) : null;
 
   // ── Stock de la variante seleccionada en el modal ──────────────────────────
   const selectedVariantStock = useMemo(() => {
@@ -1821,6 +1826,20 @@ function ProductosPageInner() {
                 </div>
               </div>
 
+              {/* 3×2 en vivo: progreso del beneficio N×M según la cantidad elegida. */}
+              {modalPromo.nxm && nxmPaid != null && (() => {
+                const { n, m } = modalPromo.nxm;
+                const free = qty - nxmPaid;
+                const toNext = (n - (qty % n)) % n;
+                return (
+                  <div style={{ fontSize:12.5, fontWeight:700, padding:"9px 12px", borderRadius:6, background: free > 0 ? "rgba(22,163,74,0.10)" : "#fff7ed", border:`1px solid ${free > 0 ? "rgba(22,163,74,0.28)" : "#fed7aa"}`, color: free > 0 ? "#16a34a" : "#c2410c" }}>
+                    {free > 0
+                      ? `🎉 Llevás ${qty}, pagás ${nxmPaid} · ${free} gratis${toNext > 0 ? ` — sumá ${toNext} y llevás otra gratis` : ""}`
+                      : `Promo ${n}×${m} · sumá ${toNext} más y una te sale gratis`}
+                  </div>
+                );
+              })()}
+
               {selectedVariantStock !== null && selectedVariantStock === 0 && (
                 <p style={{ fontSize:12, color:"#f87171", fontWeight:600, margin:0 }}>Sin stock en esta combinación</p>
               )}
@@ -1861,7 +1880,7 @@ function ProductosPageInner() {
                 <button onClick={addToCart}
                   disabled={selectedVariantStock === 0}
                   style={{ background: selectedVariantStock === 0 ? `${G}40` : G, color:accentDark?"#000":"#fff", border:"none", padding:"15px", fontSize:11, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor: selectedVariantStock === 0 ? "not-allowed" : "pointer", marginTop:"auto" }}>
-                  {selectedVariantStock === 0 ? "Sin stock" : `Agregar al carrito · ${fmt((modalPromo.hasPriceDrop ? modalPromo.effectivePrice : displayPrice) * qty)}`}
+                  {selectedVariantStock === 0 ? "Sin stock" : `Agregar al carrito · ${fmt(nxmPaid != null ? nxmPaid * displayPrice : (modalPromo.hasPriceDrop ? modalPromo.effectivePrice : displayPrice) * qty)}`}
                 </button>
               )}
 
@@ -2210,6 +2229,17 @@ function ProductosPageInner() {
                       <button type="button" onClick={() => setAppliedCoupon(null)} style={{ background:"none", border:"none", color:MID, cursor:"pointer" }}>✕</button>
                     </div>
                   )}
+
+                  {/* Envío gratis en vivo */}
+                  {freeShippingGoal ? (
+                    <div style={{ marginTop:16, padding:"10px 12px", background:"rgba(13,148,136,0.10)", border:"1px solid rgba(13,148,136,0.28)", borderRadius:8 }}>
+                      <p style={{ fontSize:12.5, margin:0, color:"#0d9488", fontWeight:700 }}>🚚 Agregá {fmt(freeShippingGoal.remaining)} más y el envío es gratis</p>
+                    </div>
+                  ) : freeShipping ? (
+                    <div style={{ marginTop:16, padding:"10px 12px", background:"rgba(22,163,74,0.10)", border:"1px solid rgba(22,163,74,0.28)", borderRadius:8 }}>
+                      <p style={{ fontSize:12.5, margin:0, color:"#16a34a", fontWeight:700 }}>🎉 ¡Tenés envío gratis!</p>
+                    </div>
+                  ) : null}
 
                   {/* Totales */}
                   <div style={{ borderTop:`1px solid ${borderFaint}`, paddingTop:18, marginTop:18 }}>
