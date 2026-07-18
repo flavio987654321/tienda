@@ -10,6 +10,7 @@ import ProductsTable from "./ProductsTable";
 import ChangeStoreTypeButton from "./ChangeStoreTypeButton";
 import CsvImportButton from "./CsvImportButton";
 import { STORE_TYPES } from "@/lib/storeTypes";
+import { parseStringArray } from "@/lib/promotions";
 
 type Props = { searchParams: Promise<{ stock?: string }> };
 
@@ -41,6 +42,31 @@ export default async function ProductosPage({ searchParams }: Props) {
   const pendingAffiliateCount = store
     ? await prisma.affiliate.count({ where: { storeId: store.id, status: "PENDING" } })
     : 0;
+
+  // Qué productos tienen una promoción de tienda VIGENTE ahora (misma regla de vigencia
+  // que la tienda pública). Se computa acá y se pasa como lista de IDs para que la lista
+  // marque "Promo" sin recalcular precios ni sumar columnas.
+  const now = new Date();
+  const activePromos = store
+    ? await prisma.storePromotion.findMany({
+        where: {
+          storeId: store.id,
+          isActive: true,
+          archivedAt: null,
+          AND: [
+            { OR: [{ startsAt: null }, { startsAt: { lte: now } }] },
+            { OR: [{ endsAt: null }, { endsAt: { gte: now } }] },
+          ],
+        },
+        select: { scope: true, categories: true, productIds: true },
+      })
+    : [];
+  const anyAllScope = activePromos.some((p) => p.scope === "ALL");
+  const promoCats = new Set(activePromos.filter((p) => p.scope === "CATEGORY").flatMap((p) => parseStringArray(p.categories)));
+  const promoIds = new Set(activePromos.filter((p) => p.scope === "PRODUCTS").flatMap((p) => parseStringArray(p.productIds)));
+  const promotedIds = anyAllScope
+    ? products.map((p) => p.id)
+    : products.filter((p) => promoCats.has(p.category) || promoIds.has(p.id)).map((p) => p.id);
 
   return (
     <DashboardLayout userName={user.name} userEmail={user.email} userId={user.id} initialPendingAffiliateCount={pendingAffiliateCount}>
@@ -91,7 +117,7 @@ export default async function ProductosPage({ searchParams }: Props) {
           </Link>
         </div>
       ) : (
-        <ProductsTable products={products} storeSlug={store?.slug ?? ""} storeName={store?.name ?? ""} storeType={store?.tipoTienda ?? ""} initialStockFilter={stockParam} />
+        <ProductsTable products={products} storeSlug={store?.slug ?? ""} storeName={store?.name ?? ""} storeType={store?.tipoTienda ?? ""} initialStockFilter={stockParam} promotedIds={promotedIds} />
       )}
     </DashboardLayout>
   );

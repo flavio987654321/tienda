@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
-import { validatePromotionBody, promotionStatus } from "@/lib/promotions";
+import { validatePromotionBody, promotionStatus, parseStringArray } from "@/lib/promotions";
 
 // GET — listar promociones de la tienda. tab=act (vivas) | hist (historial).
 export async function GET(req: NextRequest) {
@@ -37,7 +37,15 @@ export async function GET(req: NextRequest) {
   };
   const filtered = tab === "act" ? all.filter(isLive) : all.filter((p) => !isLive(p));
 
-  const promotions = filtered.slice(skip, skip + take).map((p) => ({ ...p, status: promotionStatus(p, now) }));
+  // categories/productIds se guardan como JSON string — se PARSEAN a array acá para
+  // que el cliente reciba lo mismo que en la carga inicial (page.tsx). Sin esto,
+  // `productIds.length` contaba los caracteres del string (ej. 29) en vez de los productos.
+  const promotions = filtered.slice(skip, skip + take).map((p) => ({
+    ...p,
+    categories: parseStringArray(p.categories),
+    productIds: parseStringArray(p.productIds),
+    status: promotionStatus(p, now),
+  }));
 
   return NextResponse.json({ promotions, total: filtered.length, take, skip, stats });
 }

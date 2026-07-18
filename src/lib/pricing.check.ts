@@ -9,6 +9,7 @@
 
 import { priceCart, resolveBasePrice, type PricingItem, type ActivePromotion, PROMO_PERCENT, PROMO_N_PAY_M } from "./pricing";
 import { costFloorCheck, type CostFloorPromo, type CostFloorProduct } from "./promotions";
+import { resolveProductPromo } from "./promoDisplay";
 
 const BASE = 10000;
 const NO_PROMO = { promoType: null, promoQtyMin: null, promoPayQty: null, promoQtyDiscount: null };
@@ -137,6 +138,39 @@ for (const c of cfCases) {
   const ok = r.below.length === c.below && r.missingCost === c.missing;
   if (!ok) failed++;
   console.log(`${ok ? "OK  " : "FAIL"} [${c.id}] bajo costo=${r.below.length} (esp ${c.below}) · sin costo=${r.missingCost} (esp ${c.missing}) — ${c.desc}`);
+}
+
+// ── Display por producto (Fase 4.5): cómo se muestra la promo en la card ──────
+// Producto $10.000, categoría "remeras".
+const dp = { id: "P1", price: 10000, category: "remeras" as string | null };
+const dcheck = (id: string, got: boolean, desc: string) => { if (!got) failed++; console.log(`${got ? "OK  " : "FAIL"} [${id}] ${desc}`); };
+{
+  const r = resolveProductPromo(dp, [promo({ type: "PERCENT", value: 20 })]);
+  dcheck("DP-A", r.hasPriceDrop && r.effectivePrice === 8000 && r.pctOff === 20 && r.badge === "-20%", "20% sin mínimo → tacha $10.000, muestra $8.000, badge -20%");
+}
+{
+  const r = resolveProductPromo(dp, [promo({ type: "PERCENT", value: 20, minOrderAmount: 50000 })]);
+  dcheck("DP-B", !r.hasPriceDrop && r.pctOff === 20 && r.minOrder === 50000 && r.badge === null, "20% con mínimo $50k → no tacha, sin badge fuerte (nota condicional en la card)");
+}
+{
+  const r = resolveProductPromo(dp, [promo({ type: "N_PAY_M", minQty: 3, payQty: 2 })]);
+  dcheck("DP-C", !r.hasPriceDrop && r.nxm?.n === 3 && r.nxm?.m === 2 && r.badge === "3×2", "3×2 → badge 3×2, sin tachar el unitario");
+}
+{
+  const r = resolveProductPromo(dp, [promo({ type: "FIXED", value: 2000 })]);
+  dcheck("DP-D", r.hasPriceDrop && r.effectivePrice === 8000 && r.pctOff === 20, "FIXED $2.000 → $8.000 (equivale a 20%)");
+}
+{
+  const r = resolveProductPromo(dp, [promo({ type: "FREE_SHIPPING", minOrderAmount: 30000 })]);
+  dcheck("DP-E", !r.hasPriceDrop && r.freeShipping && r.minOrder === 30000 && r.badge === "Envío gratis", "envío gratis desde $30k → badge corto + minOrder para la nota");
+}
+{
+  const r = resolveProductPromo(dp, [promo({ type: "PERCENT", value: 20 }), promo({ type: "PERCENT", value: 30 })]);
+  dcheck("DP-F", r.effectivePrice === 7000 && r.pctOff === 30, "best-of: dos %, gana 30% → $7.000");
+}
+{
+  const r = resolveProductPromo(dp, [promo({ type: "PERCENT", value: 50, scope: "CATEGORY", categories: ["pantalones"] })]);
+  dcheck("DP-G", !r.hasPriceDrop && r.badge === null, "50% en pantalones → no alcanza a la remera, sin badge");
 }
 
 console.log(failed === 0 ? "\n✅ Todos los casos dan el número congelado." : `\n❌ ${failed} caso(s) no coinciden.`);

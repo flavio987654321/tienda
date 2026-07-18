@@ -1,11 +1,23 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import {
   Percent, Tag, Gift, Truck, Store, Folder, ListChecks, Check, Plus, X,
-  Info, AlertTriangle, Loader2, Search, Archive, Trash2, RotateCcw,
+  Info, AlertTriangle, Loader2, Search, Archive, Trash2, RotateCcw, Smile,
 } from "lucide-react";
-import { costFloorCheck } from "@/lib/promotions";
+import { costFloorCheck, MAX_PROMO_PERCENT as MAX_PCT } from "@/lib/promotions";
+
+// Emojis para el nombre de la promo (lo ve solo el dueño; le ayuda a reconocerla de un vistazo).
+const PROMO_EMOJIS = [
+  "🔥", "💥", "🎉", "🎁", "🏷️", "⚡", "💸", "🛍️", "✨", "⭐", "❤️", "😍",
+  "👑", "🎯", "🚀", "💯", "🥳", "🏆", "💎", "🤑", "☀️", "🍂", "❄️", "🌸",
+  "👗", "👟", "👜", "💄", "🏠", "📦", "🛒", "🎊",
+];
+
+// Solo dígitos (para el %). Bloquea letras/símbolos apenas se tipean.
+const onlyDigits = (s: string) => s.replace(/\D/g, "");
+// Dígitos + separadores de miles/decimal (para montos en pesos; parseNum los normaliza).
+const digitsMoney = (s: string) => s.replace(/[^\d.,]/g, "");
 
 // ── Tipos ────────────────────────────────────────────────────────────────────
 type Promotion = {
@@ -58,10 +70,15 @@ function discountLabel(p: Pick<Promotion, "type" | "value" | "minQty" | "payQty"
   if (p.type === "N_PAY_M") return `${p.minQty ?? 0} × ${p.payQty ?? 0}`;
   return "Envío gratis";
 }
-function scopeLabel(p: Pick<Promotion, "scope" | "categories" | "productIds">) {
+// Detalle de a QUÉ se aplica. Para "productos elegidos" muestra los nombres (no un
+// número suelto): si son pocos, todos; si son muchos, los primeros + "y N más".
+function scopeDetail(p: Pick<Promotion, "scope" | "categories" | "productIds">, products: Product[]) {
   if (p.scope === "ALL") return "Toda la tienda";
   if (p.scope === "CATEGORY") return "Categoría · " + (p.categories.join(", ") || "—");
-  return `${p.productIds.length} productos elegidos`;
+  const names = p.productIds.map((id) => products.find((pr) => pr.id === id)?.name).filter((n): n is string => !!n);
+  if (names.length === 0) return p.productIds.length === 1 ? "1 producto" : `${p.productIds.length} productos`;
+  if (names.length <= 2) return names.join(", ");
+  return `${names[0]}, ${names[1]} y ${names.length - 2} más`;
 }
 function fmtDate(iso: string | null) {
   if (!iso) return null;
@@ -198,7 +215,7 @@ export default function PromocionesClient({
                     <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${meta.tile}`}>{discountLabel(p)}</span>
                   </div>
                   <div className="text-[12.5px] text-gray-500 flex gap-2 flex-wrap items-center mt-0.5">
-                    <span className="text-gray-700 font-medium">{scopeLabel(p)}</span>
+                    <span className="text-gray-700 font-medium">{scopeDetail(p, products)}</span>
                     {p.minOrderAmount > 0 && <><span className="text-gray-300">/</span><span>mín. {money(p.minOrderAmount)}</span></>}
                     {p.endsAt && <><span className="text-gray-300">/</span><span>hasta {fmtDate(p.endsAt)}</span></>}
                     {p.startsAt && p.status === "scheduled" && <><span className="text-gray-300">/</span><span>desde {fmtDate(p.startsAt)}</span></>}
@@ -292,6 +309,8 @@ function Wizard({ categories, products, onClose, onCreated }: {
   const [prodIds, setProdIds] = useState<string[]>([]);
   const [prodSearch, setProdSearch] = useState("");
   const [name, setName] = useState("");
+  const nameRef = useRef<HTMLInputElement>(null);
+  const [emojiOpen, setEmojiOpen] = useState(false);
   const [value, setValue] = useState("");
   const [minQty, setMinQty] = useState("3");
   const [payQty, setPayQty] = useState("2");
@@ -302,11 +321,29 @@ function Wizard({ categories, products, onClose, onCreated }: {
 
   const meta = type ? TYPE_META[type] : null;
 
+  // Inserta el emoji en la posición del cursor (o al final) y deja el caret después.
+  function insertEmoji(emoji: string) {
+    const el = nameRef.current;
+    const start = el?.selectionStart ?? name.length;
+    const end = el?.selectionEnd ?? name.length;
+    const next = name.slice(0, start) + emoji + name.slice(end);
+    setName(next.slice(0, 60));
+    setEmojiOpen(false);
+    requestAnimationFrame(() => {
+      if (!el) return;
+      el.focus();
+      const pos = Math.min(start + emoji.length, 60);
+      el.setSelectionRange(pos, pos);
+    });
+  }
+
   function canNext() {
     if (step === 1) return !!type;
     if (step === 2) { if (!scope) return false; if (scope === "CATEGORY") return !!cat; if (scope === "PRODUCTS") return prodIds.length > 0; return true; }
     if (step === 3) {
-      if (type === "PERCENT" || type === "FIXED") return parseFloat(value) > 0;
+      // % entre 1 y 90 EN VIVO (antes solo pedía >0 y el server rechazaba al final).
+      if (type === "PERCENT") { const n = parseFloat(value); return n >= 1 && n <= MAX_PCT; }
+      if (type === "FIXED") return parseFloat(value) > 0;
       if (type === "N_PAY_M") return parseInt(minQty) >= 2 && parseInt(payQty) >= 1 && parseInt(payQty) < parseInt(minQty);
       return true;
     }
@@ -421,19 +458,22 @@ function Wizard({ categories, products, onClose, onCreated }: {
               {type === "N_PAY_M" ? (
                 <>
                   <div className="flex gap-3">
-                    <Field label="Llevando"><input value={minQty} onChange={(e) => setMinQty(e.target.value)} inputMode="numeric" className={inputCls} /></Field>
-                    <Field label="Paga"><input value={payQty} onChange={(e) => setPayQty(e.target.value)} inputMode="numeric" className={inputCls} /></Field>
+                    <Field label="Llevando"><input value={minQty} onChange={(e) => setMinQty(onlyDigits(e.target.value))} inputMode="numeric" className={inputCls} /></Field>
+                    <Field label="Paga"><input value={payQty} onChange={(e) => setPayQty(onlyDigits(e.target.value))} inputMode="numeric" className={inputCls} /></Field>
                   </div>
                   <InfoNote>Aplica juntando la cantidad del <b>mismo producto</b> (ej. 3 remeras iguales). Combinar productos distintos llega más adelante.</InfoNote>
                 </>
               ) : type === "FREE_SHIPPING" ? (
-                <Field label="Compra mínima" hint="Vacío = siempre gratis"><input value={minOrder} onChange={(e) => setMinOrder(e.target.value)} inputMode="numeric" placeholder="$ 50.000" className={inputCls} /></Field>
+                <Field label="Compra mínima" hint="Vacío = siempre gratis"><input value={minOrder} onChange={(e) => setMinOrder(digitsMoney(e.target.value))} inputMode="numeric" placeholder="$ 50.000" className={inputCls} /></Field>
               ) : (
                 <>
-                  <Field label={type === "FIXED" ? "Monto de descuento" : "Porcentaje de descuento (1 a 90)"}>
-                    <input value={value} onChange={(e) => setValue(e.target.value)} inputMode="numeric" placeholder={type === "FIXED" ? "$ 5.000" : "20"} className={inputCls} />
+                  <Field label={type === "FIXED" ? "Monto de descuento" : `Porcentaje de descuento (1 a ${MAX_PCT})`}>
+                    <input value={value} onChange={(e) => setValue(type === "PERCENT" ? onlyDigits(e.target.value) : digitsMoney(e.target.value))} inputMode="numeric" placeholder={type === "FIXED" ? "$ 5.000" : "20"} className={inputCls} />
+                    {type === "PERCENT" && value !== "" && (parseFloat(value) < 1 || parseFloat(value) > MAX_PCT) && (
+                      <p className="text-[12px] text-red-600 mt-1.5">El porcentaje tiene que estar entre 1 y {MAX_PCT}.</p>
+                    )}
                   </Field>
-                  <Field label="Compra mínima (opcional)"><input value={minOrder} onChange={(e) => setMinOrder(e.target.value)} inputMode="numeric" placeholder="Sin mínimo" className={inputCls} /></Field>
+                  <Field label="Compra mínima (opcional)"><input value={minOrder} onChange={(e) => setMinOrder(digitsMoney(e.target.value))} inputMode="numeric" placeholder="Sin mínimo" className={inputCls} /></Field>
                 </>
               )}
             </>
@@ -460,10 +500,49 @@ function Wizard({ categories, products, onClose, onCreated }: {
           {step === 5 && (
             <>
               <StepTitle t="Revisá y creá" d="Ponele un nombre (lo ves solo vos) y confirmá." />
-              <Field label="Nombre de la promoción"><input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ej. Verano en remeras" autoFocus className={inputCls} /></Field>
+              <Field label="Nombre de la promoción">
+                <div className="relative">
+                  <input
+                    ref={nameRef}
+                    value={name}
+                    onChange={(e) => setName(e.target.value.slice(0, 60))}
+                    maxLength={60}
+                    placeholder="Ej. 🔥 Verano en remeras"
+                    autoFocus
+                    className={inputCls + " pr-11"}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setEmojiOpen((o) => !o)}
+                    aria-label="Agregar emoji"
+                    className="absolute right-1.5 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-indigo-50 hover:text-indigo-600"
+                  >
+                    <Smile className="h-5 w-5" />
+                  </button>
+                  {emojiOpen && (
+                    <>
+                      <div className="fixed inset-0 z-10" onClick={() => setEmojiOpen(false)} />
+                      <div className="absolute right-0 z-20 mt-1.5 w-72 rounded-xl border border-gray-200 bg-white p-2 shadow-xl">
+                        <div className="grid grid-cols-8 gap-0.5">
+                          {PROMO_EMOJIS.map((e) => (
+                            <button
+                              key={e}
+                              type="button"
+                              onClick={() => insertEmoji(e)}
+                              className="flex h-8 w-8 items-center justify-center rounded-lg text-lg transition-colors hover:bg-gray-100"
+                            >
+                              {e}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </Field>
               <div className="bg-gray-50 border border-gray-100 rounded-xl overflow-hidden mt-2">
                 <ReviewRow k="Tipo" v={meta?.label ?? "—"} />
-                <ReviewRow k="Se aplica a" v={scope === "ALL" ? "Toda la tienda" : scope === "CATEGORY" ? `Categoría · ${cat} (${affected})` : `${prodIds.length} productos`} />
+                <ReviewRow k="Se aplica a" v={scopeDetail({ scope: scope ?? "ALL", categories: cat ? [cat] : [], productIds: prodIds }, products)} />
                 <ReviewRow k="Descuento" v={reviewDiscount(type, value, minQty, payQty)} />
                 <ReviewRow k="Vigencia" v={`${startsAt ? fmtDate(startsAt + "T00:00") : "desde hoy"} · ${endsAt ? "hasta " + fmtDate(endsAt + "T00:00") : "sin fin"}`} />
                 <ReviewRow k="Con cupones" v={combines ? "Se combinan" : "No combina"} last />

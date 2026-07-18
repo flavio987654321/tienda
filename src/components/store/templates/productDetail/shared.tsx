@@ -11,6 +11,8 @@ import { useTouchSwipe } from "@/hooks/useTouchSwipe";
 import { promoModalText } from "@/lib/promoLabel";
 import { resolveVariantPrice } from "@/lib/variantPrice";
 import { useTurnstile } from "@/components/Turnstile";
+import { PromoTag, PromoBlock } from "@/components/store/PromoDisplay";
+import { describePromo, type ProductPromoDisplay } from "@/lib/promoDisplay";
 import type { useCartLogic } from "@/hooks/useCartLogic";
 import type { StorefrontProduct } from "@/hooks/useStorefront";
 
@@ -93,6 +95,7 @@ export interface ProductDetailViewProps {
   cartCount: number;
   toastMsg: string | null;
   discount: number | null;
+  promo: ProductPromoDisplay;
   catalogHref: string;
 }
 
@@ -158,7 +161,7 @@ export function resolveDetailTheme(theme: DetailTheme, accentOverride: string | 
 export function ProductDetailBody({ theme, view }: { theme: DetailTheme; view: ProductDetailViewProps }) {
   const { slug, currency, whatsapp, product, related, hasMercadoPago, isPreview, isOwner, activeImg, setActiveImg,
     selectedSize, setSelectedSize, selectedColor, setSelectedColor,
-    needsSize, needsColor, canAdd, qty, setQty, addToCart, discount } = view;
+    needsSize, needsColor, canAdd, qty, setQty, addToCart, discount, promo } = view;
 
   const [tab, setTab] = useState<"desc" | "specs">("desc");
   const [cp, setCp] = useState("");
@@ -274,11 +277,13 @@ export function ProductDetailBody({ theme, view }: { theme: DetailTheme; view: P
           )}
           <div className="pdb-main" style={{ aspectRatio: "1/1", background: "#f8f8fa", borderRadius: theme.radius, overflow: "hidden", position: "relative", border: `1px solid ${theme.cardBorder}` }}
             {...imgSwipe}>
-            {discount && (
+            {promo.primaryPromo ? (
+              <PromoTag label={describePromo(promo.primaryPromo).headline} size="sm" />
+            ) : discount ? (
               <div style={{ position: "absolute", top: 12, left: 12, zIndex: 1, background: "#dc2626", color: "#fff", fontSize: 11, fontWeight: 800, padding: "4px 10px", borderRadius: 100 }}>
                 {discount}% OFF
               </div>
-            )}
+            ) : null}
             {product.images[activeImg] ? (
               <FadeImage src={product.images[activeImg]} alt={product.name} fill sizes="(max-width: 860px) 100vw, 50vw" priority
                 style={{ objectFit: "cover", cursor: "zoom-in" }}
@@ -309,15 +314,28 @@ export function ProductDetailBody({ theme, view }: { theme: DetailTheme; view: P
             {product.name}
           </h1>
 
-          <div style={{ display: "flex", alignItems: "baseline", gap: 12, marginBottom: 2 }}>
-            {!variantPrice && product.comparePrice && product.comparePrice > product.price && (
-              <span style={{ fontSize: 15, color: theme.muted, textDecoration: "line-through" }}>{fmtPrice(product.comparePrice, currency)}</span>
-            )}
-            {!variantPrice && discount && (
-              <span style={{ background: theme.accent, color: theme.accentText, fontSize: 11, fontWeight: 800, padding: "2px 8px", borderRadius: 6 }}>{discount}%OFF</span>
-            )}
-          </div>
-          <p style={{ margin: "0 0 6px", fontSize: 30, fontWeight: 800, color: theme.text }}>{fmtPrice(displayPrice, currency)}</p>
+          {promo.hasPriceDrop ? (
+            <>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 12, marginBottom: 2, flexWrap: "wrap" }}>
+                <span style={{ fontSize: 15, color: theme.muted, textDecoration: "line-through" }}>{fmtPrice(promo.originalPrice, currency)}</span>
+                {promo.pctOff != null && <span style={{ background: theme.accent, color: theme.accentText, fontSize: 11, fontWeight: 800, padding: "2px 8px", borderRadius: 6 }}>{promo.pctOff}%OFF</span>}
+              </div>
+              <p style={{ margin: "0 0 6px", fontSize: 30, fontWeight: 800, color: "#dc2626" }}>{fmtPrice(promo.effectivePrice, currency)}</p>
+            </>
+          ) : (
+            <>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 12, marginBottom: 2 }}>
+                {!variantPrice && product.comparePrice && product.comparePrice > product.price && (
+                  <span style={{ fontSize: 15, color: theme.muted, textDecoration: "line-through" }}>{fmtPrice(product.comparePrice, currency)}</span>
+                )}
+                {!variantPrice && discount && (
+                  <span style={{ background: theme.accent, color: theme.accentText, fontSize: 11, fontWeight: 800, padding: "2px 8px", borderRadius: 6 }}>{discount}%OFF</span>
+                )}
+              </div>
+              <p style={{ margin: "0 0 6px", fontSize: 30, fontWeight: 800, color: theme.text }}>{fmtPrice(displayPrice, currency)}</p>
+            </>
+          )}
+          {promo.primaryPromo && <div style={{ marginBottom: 12 }}><PromoBlock promo={promo.primaryPromo} freeShippingExtra={promo.freeShipping} /></div>}
           {product.offerNote && (
             <div style={{ fontSize: 13, color: "#059669", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 8, padding: "7px 12px", marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>
               <span>📋</span><span>{product.offerNote}</span>

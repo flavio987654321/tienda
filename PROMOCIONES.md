@@ -910,10 +910,26 @@ compleja; con "gana la más barata" no hay nada "bloqueado" que explicar. Se ret
 Backfill: cada producto con `promoQtyMin` → una `Promotion` que apunta a él. Recién ahí se borran los
 campos del producto y el cartel de "Promoción por cantidad" del formulario.
 
-### Fase 4.5 — Que el descuento se VEA en la tienda (pedido de Flavio) 🔲
+### Fase 4.5 — Que el descuento se VEA en la tienda (pedido de Flavio) 🔄 EN ESTO
 
 > *"que los templates rendericen bien las promociones, en los modales y en los productos, que resalte,
 > que se vea notorio el descuento o el texto"*.
+
+> **Visión ampliada de Flavio (18/07) — "la parte más crítica, lo mejor de lo mejor":**
+> - **Claridad ante todo.** Estilo + calidad. Es lo que se ve y lo que vende.
+> - En las **cards** de los bloques de productos de CADA template (no solo el precio: el badge, el tachado).
+> - En los **modales** de vista rápida.
+> - **En vivo al agregar al carrito**: si tiene 3×2 y el comprador va sumando cantidad, mostrar el
+>   progreso/beneficio en el momento ("llevás 2, sumá 1 y pagás 2"). Esto engancha con el `pendingCartValue`
+>   del modal (hoy solo mira la promo por producto, hay que sumarle las de tienda).
+> - **Black Friday / evento** entra acá (badge distinto + contador). Ver "Capa de evento" abajo.
+
+> **Cómo se construye (18/07):** resolver puro `resolveProductPromo(product, promotions)` en
+> [src/lib/promoDisplay.ts](src/lib/promoDisplay.ts) → { precio tachado, efectivo, `pctOff`, `nxm`,
+> envío gratis, `minOrder`, `badge` }. Reusa el MOTOR (mismo precio que cobra el checkout). Prioridad de
+> señal: descuento directo sin mínimo (tacha) > con mínimo (badge condicional) > 3×2 > envío gratis.
+> **Se prueba en UN template primero** (para que Flavio apruebe el estilo) y recién ahí se replica en los 8
+> + modales + detalle + /productos. El preview en vivo del 3×2 y Black Friday son incrementos siguientes.
 
 **Va acá, no antes**: no se puede renderizar una promo que todavía no existe como entidad. El render
 consume lo que produce el motor (Fase 1) sobre las promos que crea la sección (Fase 2). Antes de eso

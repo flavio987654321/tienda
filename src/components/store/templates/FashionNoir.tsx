@@ -13,6 +13,8 @@ import ReportStoreModal from "@/components/store/ReportStoreModal";
 import VerifiedIconButton from "@/components/store/VerifiedIconButton";
 import { CartDrawer, type CartTheme } from "@/components/store/templates/shared/CartDrawer";
 import { OfferBadge } from "@/components/store/OfferBadge";
+import { PromoTag, PromoBlock } from "@/components/store/PromoDisplay";
+import { resolveProductPromo, describePromo } from "@/lib/promoDisplay";
 import { CheckoutModal } from "@/components/store/templates/shared/CheckoutModal";
 import { ContactForm } from "@/components/store/templates/shared/ContactForm";
 import { FadeImage } from "@/components/store/templates/shared/FadeImage";
@@ -165,7 +167,7 @@ export default function FashionNoir() {
   const isOwner     = !!storeConfig?.isOwner;
   const hasWA       = !storeConfig || storeConfig.whatsapp.enabled;
   const storefront  = useStorefront();
-  const { products, loadingProducts, checkoutMode, isWholesale, ocultarPrecios, defaultCategories, featuredCategories } = storefront;
+  const { products, promotions, loadingProducts, checkoutMode, isWholesale, ocultarPrecios, defaultCategories, featuredCategories } = storefront;
   const isInquiryMode = checkoutMode === "inquiry" || ocultarPrecios;
 
   const categoryList = useMemo(() => {
@@ -444,6 +446,7 @@ export default function FashionNoir() {
   const cartTheme: CartTheme = { BG, S, T, MID:"#555555", border:"rgba(240,235,227,0.1)", accent:G, accentText, serif:"Georgia, serif" };
   const variantPrice = modalProduct ? resolveVariantPrice(modalProduct.variants, selectedSize, selectedColor) : null;
   const displayPrice = variantPrice ?? (modalProduct?.price ?? 0);
+  const modalPromo = modalProduct ? resolveProductPromo({ id: modalProduct.id, price: displayPrice, category: modalProduct.category }, promotions) : null;
 
   /* ─ Hero image con override dinámico ─ */
   const heroImageOv        = storeConfig?.imageOverrides?.["heroBackground"];
@@ -991,10 +994,13 @@ export default function FashionNoir() {
         )}
 
         <div style={{ display:"grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(auto-fill,minmax(260px,1fr))", gap: isMobile ? 12 : 24, marginBottom:48 }}>
-          {!loadingProducts && filtered.map(product => (
+          {!loadingProducts && filtered.map(product => {
+            const promo = resolveProductPromo(product, promotions);
+            return (
             <div key={product.id} onClick={() => openModal(product)} onMouseEnter={() => setHoveredId(product.id)} onMouseLeave={() => setHoveredId(null)}
               style={{ cursor:"pointer", position:"relative" }}>
               {(() => {
+                if (promo.primaryPromo) return <PromoTag label={describePromo(promo.primaryPromo).headline} size="sm" />;
                 const hasNxM = product.promoType === "N_PAY_M" && !!product.promoQtyMin && !!product.promoPayQty;
                 const hasOffer = !!product.comparePrice && product.comparePrice > product.price;
                 if (!hasNxM && !hasOffer) return null;
@@ -1022,12 +1028,24 @@ export default function FashionNoir() {
               </div>
               <p style={{ fontSize:11, color:productosMid, letterSpacing:2, textTransform:"uppercase", margin:"0 0 6px" }}>{product.category}</p>
               <p style={{ fontSize:16, color:productosText, margin:"0 0 8px", fontWeight:500 }}>{product.name}</p>
-              <div style={{ display:"flex", gap:10, alignItems:"center" }}>
-                <span style={{ fontSize:17, fontWeight:700, color:G }}>{ocultarPrecios ? "Consultá precio" : fmt(product.price)}</span>
-                {!ocultarPrecios && product.comparePrice && <span style={{ fontSize:13, color:productosMid, textDecoration:"line-through" }}>{fmt(product.comparePrice)}</span>}
+              <div style={{ display:"flex", gap:10, alignItems:"center", flexWrap:"wrap" }}>
+                {ocultarPrecios ? (
+                  <span style={{ fontSize:17, fontWeight:700, color:G }}>Consultá precio</span>
+                ) : promo.hasPriceDrop ? (
+                  <>
+                    <span style={{ fontSize:17, fontWeight:700, color:"#dc2626" }}>{fmt(promo.effectivePrice)}</span>
+                    <span style={{ fontSize:13, color:productosMid, textDecoration:"line-through" }}>{fmt(promo.originalPrice)}</span>
+                  </>
+                ) : (
+                  <>
+                    <span style={{ fontSize:17, fontWeight:700, color:G }}>{fmt(product.price)}</span>
+                    {product.comparePrice && <span style={{ fontSize:13, color:productosMid, textDecoration:"line-through" }}>{fmt(product.comparePrice)}</span>}
+                  </>
+                )}
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
 
         {/* Ver más / Ver toda la colección */}
@@ -1495,6 +1513,7 @@ export default function FashionNoir() {
                     onClick={() => setLightboxSrc(modalProduct.images[modalImg])} />
                 )}
                 {(() => {
+                  if (modalPromo?.primaryPromo) return <PromoTag label={describePromo(modalPromo.primaryPromo).headline} />;
                   const hasNxM = modalProduct.promoType === "N_PAY_M" && !!modalProduct.promoQtyMin && !!modalProduct.promoPayQty;
                   const hasOffer = !variantPrice && !!modalProduct.comparePrice && modalProduct.comparePrice > modalProduct.price;
                   if (!hasNxM && !hasOffer) return null;
@@ -1568,10 +1587,23 @@ export default function FashionNoir() {
                 </button>
                 )}
               </div>
-              <div style={{ display:"flex", gap:12, alignItems:"baseline" }}>
-                <span style={{ fontSize:24, fontWeight:700, color:G }}>{ocultarPrecios ? "Consultá precio" : fmt(displayPrice)}</span>
-                {!variantPrice && !ocultarPrecios && modalProduct.comparePrice && <span style={{ fontSize:15, color:"#444", textDecoration:"line-through" }}>{fmt(modalProduct.comparePrice)}</span>}
+              <div style={{ display:"flex", gap:12, alignItems:"baseline", flexWrap:"wrap" }}>
+                {ocultarPrecios ? (
+                  <span style={{ fontSize:24, fontWeight:700, color:G }}>Consultá precio</span>
+                ) : modalPromo?.hasPriceDrop ? (
+                  <>
+                    <span style={{ fontSize:24, fontWeight:700, color:"#dc2626" }}>{fmt(modalPromo.effectivePrice)}</span>
+                    <span style={{ fontSize:15, color:"#444", textDecoration:"line-through" }}>{fmt(modalPromo.originalPrice)}</span>
+                    {modalPromo.pctOff != null && <span style={{ fontSize:12, fontWeight:800, color:"#16a34a", background:"#dcfce7", padding:"2px 8px", borderRadius:4 }}>{modalPromo.pctOff}% OFF</span>}
+                  </>
+                ) : (
+                  <>
+                    <span style={{ fontSize:24, fontWeight:700, color:G }}>{fmt(displayPrice)}</span>
+                    {!variantPrice && modalProduct.comparePrice && <span style={{ fontSize:15, color:"#444", textDecoration:"line-through" }}>{fmt(modalProduct.comparePrice)}</span>}
+                  </>
+                )}
               </div>
+              {modalPromo?.primaryPromo && <PromoBlock promo={modalPromo.primaryPromo} freeShippingExtra={modalPromo.freeShipping} />}
               {!ocultarPrecios && modalProduct.offerNote && (
                 <div style={{ fontSize:12, color:"#4ade80", background:"rgba(74,222,128,0.08)", border:"1px solid rgba(74,222,128,0.2)", borderRadius:4, padding:"5px 10px", display:"flex", alignItems:"center", gap:6 }}>
                   <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
@@ -1714,7 +1746,7 @@ export default function FashionNoir() {
                 <button onClick={addToCart}
                   disabled={selectedVariantStock === 0}
                   style={{ background: selectedVariantStock === 0 ? "rgba(201,168,76,0.3)" : G, color:BG, border:"none", padding:"16px", fontSize:12, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor: selectedVariantStock === 0 ? "not-allowed" : "pointer", width:"100%" }}>
-                  {selectedVariantStock === 0 ? "Sin stock" : `Agregar al Carrito · ${fmt(displayPrice * qty)}`}
+                  {selectedVariantStock === 0 ? "Sin stock" : `Agregar al Carrito · ${fmt((modalPromo?.hasPriceDrop ? modalPromo.effectivePrice : displayPrice) * qty)}`}
                 </button>
               )}
                 </div>
@@ -1851,7 +1883,7 @@ export default function FashionNoir() {
             {isMobile && (
               <div style={{ borderTop:`1px solid rgba(201,168,76,0.2)`, padding:"12px 16px 16px", background:S, flexShrink:0 }}>
                 <div style={{ display:"flex", alignItems:"baseline", gap:10, marginBottom:10 }}>
-                  <span style={{ fontSize:20, fontWeight:700, color:G }}>{ocultarPrecios ? "Consultá precio" : fmt(displayPrice * qty)}</span>
+                  <span style={{ fontSize:20, fontWeight:700, color:G }}>{ocultarPrecios ? "Consultá precio" : fmt((modalPromo?.hasPriceDrop ? modalPromo.effectivePrice : displayPrice) * qty)}</span>
                   {!variantPrice && !ocultarPrecios && modalProduct.comparePrice && <span style={{ fontSize:12, color:"rgba(240,235,227,0.4)", textDecoration:"line-through" }}>{fmt(modalProduct.comparePrice)}</span>}
                   {qty > 1 && <span style={{ fontSize:11, color:"rgba(240,235,227,0.4)" }}>× {qty}</span>}
                 </div>

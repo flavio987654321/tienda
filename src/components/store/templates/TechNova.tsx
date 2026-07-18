@@ -8,6 +8,9 @@ import { useAuth } from "@/components/AuthProvider";
 import StoreFollowButton from "@/components/store/StoreFollowButton";
 import { EditableZone, EditableImageButton, EditableSectionBg, BgDragHandle, getContrastColor, getReadableAccentText, useEditContext } from "@/contexts/EditContext";
 import { useStorefront, isDemoProductId, type StorefrontProduct } from "@/hooks/useStorefront";
+import { resolveProductPromo, describePromo } from "@/lib/promoDisplay";
+import { PromoTag } from "@/components/store/PromoDisplay";
+import type { ActivePromotion } from "@/lib/pricing";
 import { useCartLogic } from "@/hooks/useCartLogic";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { ContactForm } from "@/components/store/templates/shared/ContactForm";
@@ -91,9 +94,10 @@ function CategoryIcon({ id, color }: { id: string; color: string }) {
   }
 }
 
-function ProductCard({ product, href, currency, isFavorite, onToggleFavorite, editMode }: {
-  product: StorefrontProduct; href: string; currency: string; isFavorite: boolean; onToggleFavorite: () => void; editMode?: boolean;
+function ProductCard({ product, href, currency, isFavorite, onToggleFavorite, editMode, promotions }: {
+  product: StorefrontProduct; href: string; currency: string; isFavorite: boolean; onToggleFavorite: () => void; editMode?: boolean; promotions?: ActivePromotion[];
 }) {
+  const promo = resolveProductPromo(product, promotions);
   const discount = product.comparePrice && product.comparePrice > product.price ? Math.round((1 - product.price / product.comparePrice) * 100) : null;
   const specs = product.attributes.slice(0, 2);
   // Los demos de relleno no existen en la base: antes de guardar el template, la tienda
@@ -103,7 +107,11 @@ function ProductCard({ product, href, currency, isFavorite, onToggleFavorite, ed
     <Link href={href} className="tn-card" onClick={e => { if (isUnclickableDemo) e.preventDefault(); }}
       style={{ textDecoration:"none", color:"inherit", background:"#fff", borderRadius:16, border:"1px solid #ececf5", overflow:"hidden", display:"block", cursor: isUnclickableDemo ? "default" : "pointer" }}>
       <div style={{ aspectRatio:"1/1", background:"#fafaff", position:"relative", overflow:"hidden" }}>
-        {discount && <div style={{ position:"absolute", top:10, left:10, zIndex:1, background:"#7c3aed", color:"#fff", fontSize:11, fontWeight:800, padding:"4px 9px", borderRadius:100 }}>{discount}% OFF</div>}
+        {promo.primaryPromo ? (
+          <PromoTag label={describePromo(promo.primaryPromo).headline} size="sm" />
+        ) : discount ? (
+          <div style={{ position:"absolute", top:10, left:10, zIndex:1, background:"#7c3aed", color:"#fff", fontSize:11, fontWeight:800, padding:"4px 9px", borderRadius:100 }}>{discount}% OFF</div>
+        ) : null}
         <button onClick={e => { e.preventDefault(); e.stopPropagation(); onToggleFavorite(); }}
           aria-label="Favorito"
           style={{ position:"absolute", top:8, right:8, zIndex:1, width:30, height:30, borderRadius:"50%", background:"rgba(255,255,255,0.9)", border:"none", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>
@@ -124,9 +132,18 @@ function ProductCard({ product, href, currency, isFavorite, onToggleFavorite, ed
       </div>
       <div style={{ padding:"14px 16px" }}>
         <p style={{ margin:"0 0 6px", fontSize:13, fontWeight:600, color:"#0f0f1a", lineHeight:1.4, display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical", overflow:"hidden" }}>{product.name}</p>
-        <p style={{ margin:0, fontSize:16, fontWeight:800, color:"#0f0f1a" }}>{fmtPrice(product.price, currency)}</p>
-        {product.comparePrice && product.comparePrice > product.price && (
-          <p style={{ margin:"2px 0 0", fontSize:12, color:"#9a9ab0", textDecoration:"line-through" }}>{fmtPrice(product.comparePrice, currency)}</p>
+        {promo.hasPriceDrop ? (
+          <>
+            <p style={{ margin:0, fontSize:16, fontWeight:800, color:"#dc2626" }}>{fmtPrice(promo.effectivePrice, currency)}</p>
+            <p style={{ margin:"2px 0 0", fontSize:12, color:"#9a9ab0", textDecoration:"line-through" }}>{fmtPrice(promo.originalPrice, currency)}</p>
+          </>
+        ) : (
+          <>
+            <p style={{ margin:0, fontSize:16, fontWeight:800, color:"#0f0f1a" }}>{fmtPrice(product.price, currency)}</p>
+            {product.comparePrice && product.comparePrice > product.price && (
+              <p style={{ margin:"2px 0 0", fontSize:12, color:"#9a9ab0", textDecoration:"line-through" }}>{fmtPrice(product.comparePrice, currency)}</p>
+            )}
+          </>
         )}
       </div>
     </Link>
@@ -177,7 +194,7 @@ export default function TechNova() {
   const config    = useStoreConfig();
   const pushBell  = usePushBell();
   const storefront = useStorefront();
-  const { products, loadingProducts } = storefront;
+  const { products, promotions, loadingProducts } = storefront;
   const cart = useCartLogic(storefront);
   const {
     favorites, favoritesOpen, setFavoritesOpen, favoriteProducts, toggleFavorite,
@@ -626,7 +643,7 @@ export default function TechNova() {
               <div ref={ofertasScrollRef} className="tn-prod-row" style={{ display:"flex", gap:18, overflowX:"auto", scrollSnapType:"x mandatory", paddingBottom:4 }}>
                 {ofertas.map(p => (
                   <div key={p.id} className="tn-prod-item" style={{ scrollSnapAlign:"start" }}>
-                    <ProductCard product={p} currency={currency} editMode={canOpenDemo}
+                    <ProductCard product={p} currency={currency} editMode={canOpenDemo} promotions={promotions}
                       href={`/tienda/${config?.slug ?? ""}/producto/${p.id}${isPreview ? "?from=editor" : ""}`}
                       isFavorite={favorites.includes(p.id)} onToggleFavorite={() => toggleFavorite(p.id)} />
                   </div>
@@ -673,7 +690,7 @@ export default function TechNova() {
               <div ref={prodScrollRef} className="tn-prod-row" style={{ display:"flex", gap:18, overflowX:"auto", scrollSnapType:"x mandatory", paddingBottom:4 }}>
                 {showcased.map(p => (
                   <div key={p.id} className="tn-prod-item" style={{ scrollSnapAlign:"start" }}>
-                    <ProductCard product={p} currency={currency} editMode={canOpenDemo}
+                    <ProductCard product={p} currency={currency} editMode={canOpenDemo} promotions={promotions}
                       href={`/tienda/${config?.slug ?? ""}/producto/${p.id}${isPreview ? "?from=editor" : ""}`}
                       isFavorite={favorites.includes(p.id)} onToggleFavorite={() => toggleFavorite(p.id)} />
                   </div>

@@ -8,6 +8,9 @@ import { useAuth } from "@/components/AuthProvider";
 import StoreFollowButton from "@/components/store/StoreFollowButton";
 import { EditableZone, EditableImageButton, EditableSectionBg, BgDragHandle, getContrastColor, getReadableAccentText, useEditContext } from "@/contexts/EditContext";
 import { useStorefront, isDemoProductId, type StorefrontProduct } from "@/hooks/useStorefront";
+import { resolveProductPromo, describePromo } from "@/lib/promoDisplay";
+import { PromoTag } from "@/components/store/PromoDisplay";
+import type { ActivePromotion } from "@/lib/pricing";
 import { useCartLogic } from "@/hooks/useCartLogic";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { ContactForm } from "@/components/store/templates/shared/ContactForm";
@@ -68,9 +71,10 @@ const CATEGORY_OPTIONS = [
   { id: "casa-y-jardin", label: "Casa y Jardín" },
 ];
 
-function ProductCard({ product, href, currency, accent, bg, text, isFavorite, onToggleFavorite, editMode }: {
-  product: StorefrontProduct; href: string; currency: string; accent: string; bg: string; text: string; isFavorite: boolean; onToggleFavorite: () => void; editMode?: boolean;
+function ProductCard({ product, href, currency, accent, bg, text, isFavorite, onToggleFavorite, editMode, promotions }: {
+  product: StorefrontProduct; href: string; currency: string; accent: string; bg: string; text: string; isFavorite: boolean; onToggleFavorite: () => void; editMode?: boolean; promotions?: ActivePromotion[];
 }) {
+  const promo = resolveProductPromo(product, promotions);
   // Los demos de relleno no existen en la base: antes de guardar el template, la tienda
   // pública todavía resuelve con el tipoTienda viejo y el detalle da "no disponible".
   const isUnclickableDemo = !editMode && isDemoProductId(product.id);
@@ -78,6 +82,7 @@ function ProductCard({ product, href, currency, accent, bg, text, isFavorite, on
     <Link href={href} onClick={e => { if (isUnclickableDemo) e.preventDefault(); }}
       style={{ textDecoration:"none", color:"inherit", display:"block", cursor: isUnclickableDemo ? "default" : "pointer" }}>
       <div style={{ aspectRatio:"4/5", background:"#f0ebe2", marginBottom:16, overflow:"hidden", position:"relative" }}>
+        {promo.primaryPromo && <PromoTag label={describePromo(promo.primaryPromo).headline} size="sm" />}
         <button onClick={e => { e.preventDefault(); e.stopPropagation(); onToggleFavorite(); }}
           aria-label="Favorito"
           style={{ position:"absolute", top:10, right:10, zIndex:1, width:32, height:32, borderRadius:"50%", background:"rgba(255,255,255,0.92)", border:"none", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>
@@ -90,10 +95,19 @@ function ProductCard({ product, href, currency, accent, bg, text, isFavorite, on
         )}
       </div>
       <p style={{ margin:"0 0 6px", fontSize:14, fontWeight:500, color:"#2c2218" }}>{product.name}</p>
-      <p style={{ margin:0, fontSize:15, fontWeight:600, color:getReadableAccentText(accent, bg, text) }}>
-        {fmtPrice(product.price, currency)}
-        {product.comparePrice && product.comparePrice > product.price && (
-          <span style={{ marginLeft:8, fontSize:13, color:"#c9bba9", textDecoration:"line-through" }}>{fmtPrice(product.comparePrice, currency)}</span>
+      <p style={{ margin:0, fontSize:15, fontWeight:600, color: promo.hasPriceDrop ? "#dc2626" : getReadableAccentText(accent, bg, text) }}>
+        {promo.hasPriceDrop ? (
+          <>
+            {fmtPrice(promo.effectivePrice, currency)}
+            <span style={{ marginLeft:8, fontSize:13, color:"#c9bba9", textDecoration:"line-through" }}>{fmtPrice(promo.originalPrice, currency)}</span>
+          </>
+        ) : (
+          <>
+            {fmtPrice(product.price, currency)}
+            {product.comparePrice && product.comparePrice > product.price && (
+              <span style={{ marginLeft:8, fontSize:13, color:"#c9bba9", textDecoration:"line-through" }}>{fmtPrice(product.comparePrice, currency)}</span>
+            )}
+          </>
         )}
       </p>
     </Link>
@@ -127,7 +141,7 @@ export default function HomeStudio() {
   const config    = useStoreConfig();
   const pushBell  = usePushBell();
   const storefront = useStorefront();
-  const { products, loadingProducts, isWholesale } = storefront;
+  const { products, promotions, loadingProducts, isWholesale } = storefront;
   const cart = useCartLogic(storefront);
   const {
     favorites, favoritesOpen, setFavoritesOpen, favoriteProducts, toggleFavorite,
@@ -521,7 +535,7 @@ export default function HomeStudio() {
             </div>
             <div className="hs-prod-grid" style={{ display:"grid", gap:32 }}>
               {ofertas.map(p => (
-                <ProductCard key={p.id} product={p} currency={currency} accent={accent} bg={ofertasBg} text={ofertasText} editMode={canOpenDemo}
+                <ProductCard key={p.id} product={p} currency={currency} accent={accent} bg={ofertasBg} text={ofertasText} editMode={canOpenDemo} promotions={promotions}
                   href={`/tienda/${config?.slug ?? ""}/producto/${p.id}${isPreview ? "?from=editor" : ""}`}
                   isFavorite={favorites.includes(p.id)} onToggleFavorite={() => toggleFavorite(p.id)} />
               ))}
@@ -552,7 +566,7 @@ export default function HomeStudio() {
           ) : showcased.length > 0 ? (
             <div className="hs-prod-grid" style={{ display:"grid", gap:40 }}>
               {showcased.map(p => (
-                <ProductCard key={p.id} product={p} currency={currency} accent={accent} bg={prodBg} text={prodText} editMode={canOpenDemo}
+                <ProductCard key={p.id} product={p} currency={currency} accent={accent} bg={prodBg} text={prodText} editMode={canOpenDemo} promotions={promotions}
                   href={`/tienda/${config?.slug ?? ""}/producto/${p.id}${isPreview ? "?from=editor" : ""}`}
                   isFavorite={favorites.includes(p.id)} onToggleFavorite={() => toggleFavorite(p.id)} />
               ))}

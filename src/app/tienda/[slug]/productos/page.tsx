@@ -13,7 +13,9 @@ import { getContrastColor, getReadableAccentText } from "@/contexts/EditContext"
 import ReportStoreModal from "@/components/store/ReportStoreModal";
 import { promoModalText } from "@/lib/promoLabel";
 import { OfferBadge } from "@/components/store/OfferBadge";
+import { PromoTag, PromoBlock } from "@/components/store/PromoDisplay";
 import { discountPercent } from "@/lib/discount";
+import { resolveProductPromo, describePromo } from "@/lib/promoDisplay";
 import { resolveVariantPrice } from "@/lib/variantPrice";
 import { useTurnstile } from "@/components/Turnstile";
 
@@ -246,6 +248,8 @@ function ProductosPageInner() {
   const [onlyOfertas, setOnlyOfertas] = useState(ofertaParam);
   const destacadoParam  = searchParams?.get("destacado") === "true";
   const [onlyDestacados, setOnlyDestacados] = useState(destacadoParam);
+  const promoParam   = searchParams?.get("promo") === "true";
+  const [onlyPromos, setOnlyPromos] = useState(promoParam);
 
   const [products,   setProducts]   = useState<StorefrontProduct[]>([]);
   const [promotions, setPromotions] = useState<ActivePromotion[]>([]);
@@ -529,6 +533,13 @@ function ProductosPageInner() {
       }
       if (priceRange && (p.price < priceRange[0] || p.price > priceRange[1])) return false;
       if (onlyOfertas && !(p.comparePrice && p.comparePrice > p.price)) return false;
+      if (onlyPromos) {
+        // "En promoción" = alguna promo de TIENDA vigente alcanza al producto (precio
+        // tachado, N×M, envío gratis o descuento condicional). Reusa el mismo resolver
+        // que pinta el badge, para que filtro y cartel coincidan.
+        const d = resolveProductPromo(p, promotions);
+        if (!(d.hasPriceDrop || d.nxm || d.freeShipping || d.pctOff != null)) return false;
+      }
       return true;
     });
     // "Lo más buscado" ordena por vistas reales de compradores (mayor a menor)
@@ -542,7 +553,7 @@ function ProductosPageInner() {
       return db - da;
     });
     return r;
-  }, [productsInCategory, activeAttrFilters, priceRange, search, sortBy, onlyOfertas, onlyDestacados]);
+  }, [productsInCategory, activeAttrFilters, priceRange, search, sortBy, onlyOfertas, onlyDestacados, onlyPromos, promotions]);
 
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE) || 1;
   const paginated  = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -557,6 +568,8 @@ function ProductosPageInner() {
 
   const variantPrice = modalProduct ? resolveVariantPrice(modalProduct.variants, selectedSize, selectedColor) : null;
   const displayPrice = variantPrice ?? (modalProduct?.price ?? 0);
+  // Promo de tienda para el modal, sobre el precio efectivo (variante si hay).
+  const modalPromo = resolveProductPromo({ id: modalProduct?.id ?? "", price: displayPrice, category: modalProduct?.category ?? null }, promotions);
 
   // ── Stock de la variante seleccionada en el modal ──────────────────────────
   const selectedVariantStock = useMemo(() => {
@@ -799,17 +812,20 @@ function ProductosPageInner() {
               else { el.style.borderColor="transparent"; el.style.transform=""; }
             };
 
-            // ── Badge de oferta per-template ──────────────────────────────────
+            // ── Badge de oferta/promo per-template ───────────────────────────
+            // La promo de TIENDA (Fase 4.5) tiene prioridad sobre la "oferta" del
+            // producto en el mismo badge → un solo badge, sin choque en la esquina.
+            const cardPromo = resolveProductPromo(product, promotions);
             const hasCardNxM = product.promoType === "N_PAY_M" && !!product.promoQtyMin && !!product.promoPayQty;
             const hasCardOffer = !!product.comparePrice && product.comparePrice > product.price;
-            const ofertaBadge = (hasCardNxM || hasCardOffer) ? (
-              <OfferBadge
-                badge={hasCardNxM ? null : (product.offerBadge ?? null)}
-                pct={hasCardOffer ? discountPercent(product.price, product.comparePrice) : null}
-                nxm={hasCardNxM ? { n: product.promoQtyMin!, m: product.promoPayQty! } : undefined}
-                size="sm"
-              />
-            ) : null;
+            const ofertaBadge = (() => {
+              // PROMOCIÓN de tienda → tag rectangular naranja con el beneficio ("20% OFF", "3×2", "Envío gratis").
+              if (cardPromo.primaryPromo) return <PromoTag label={describePromo(cardPromo.primaryPromo).headline} size="sm" />;
+              // OFERTA del producto → badge rojo (precio anterior tachado del propio producto).
+              if (hasCardNxM) return <OfferBadge nxm={{ n: product.promoQtyMin!, m: product.promoPayQty! }} size="sm" />;
+              if (hasCardOffer || product.offerBadge) return <OfferBadge badge={product.offerBadge ?? null} pct={hasCardOffer ? discountPercent(product.price, product.comparePrice) : null} size="sm" />;
+              return null;
+            })();
 
             // ── Contenedor de texto per-template ─────────────────────────────
             const textPad = (tabStyle === "pill" || tabStyle === "brutalist") ? "10px 14px 14px" : "0";
@@ -867,10 +883,23 @@ function ProductosPageInner() {
                 <div style={{ padding:textPad }}>
                   <p style={{ fontSize:10, color:MID, letterSpacing:2, textTransform:"uppercase", margin:"0 0 4px" }}>{product.category}</p>
                   <p style={nameStyle}>{product.name}</p>
-                  <div style={{ display:"flex", gap:8, alignItems:"center" }}>
-                    <span style={priceStyle}>{fmt(product.price)}</span>
-                    {product.comparePrice && <span style={{ fontSize:12, color:MID, textDecoration:"line-through" }}>{fmt(product.comparePrice)}</span>}
+                  <div style={{ display:"flex", gap:8, alignItems:"center", flexWrap:"wrap" }}>
+                    {cardPromo.hasPriceDrop ? (
+                      <>
+                        <span style={{ ...priceStyle, color:"#dc2626" }}>{fmt(cardPromo.effectivePrice)}</span>
+                        <span style={{ fontSize:12, color:MID, textDecoration:"line-through" }}>{fmt(cardPromo.originalPrice)}</span>
+                      </>
+                    ) : (
+                      <>
+                        <span style={priceStyle}>{fmt(product.price)}</span>
+                        {product.comparePrice && <span style={{ fontSize:12, color:MID, textDecoration:"line-through" }}>{fmt(product.comparePrice)}</span>}
+                      </>
+                    )}
                   </div>
+                  {/* Nota clara cuando el beneficio no es un tachado directo (3×2 / condicional / envío). */}
+                  {cardPromo.nxm && <p style={{ margin:"4px 0 0", fontSize:11, color:"#16a34a", fontWeight:700 }}>Llevá {cardPromo.nxm.n}, pagá {cardPromo.nxm.m}</p>}
+                  {cardPromo.pctOff != null && cardPromo.minOrder != null && <p style={{ margin:"4px 0 0", fontSize:11, color:"#dc2626", fontWeight:700 }}>{cardPromo.pctOff}% desde {fmt(cardPromo.minOrder)}</p>}
+                  {cardPromo.freeShipping && !cardPromo.nxm && !cardPromo.hasPriceDrop && cardPromo.pctOff == null && <p style={{ margin:"4px 0 0", fontSize:11, color:"#0d9488", fontWeight:700 }}>{cardPromo.minOrder ? `Envío gratis desde ${fmt(cardPromo.minOrder)}` : "Envío gratis"}</p>}
                 </div>
               </>
             );
@@ -964,8 +993,8 @@ function ProductosPageInner() {
             );
           })}
         </div>
-        {(activeCategory !== "Todos" || activeSubcategory || search || onlyOfertas || onlyDestacados) && (
-          <button onClick={() => { changeCategory("Todos"); setSearch(""); setOnlyOfertas(false); setOnlyDestacados(false); }}
+        {(activeCategory !== "Todos" || activeSubcategory || search || onlyOfertas || onlyDestacados || onlyPromos) && (
+          <button onClick={() => { changeCategory("Todos"); setSearch(""); setOnlyOfertas(false); setOnlyDestacados(false); setOnlyPromos(false); }}
             style={{ marginTop:10, background:"none", border:"none", color:MID, fontSize:11, letterSpacing:0.5, textDecoration:"underline", cursor:"pointer", padding:0 }}>
             Limpiar filtros
           </button>
@@ -1167,8 +1196,8 @@ function ProductosPageInner() {
         {/* ── TÍTULO + BÚSQUEDA ──────────────────────────────────────── */}
         {/* Kicker per-template */}
         {(() => {
-          const label = onlyOfertas ? "Promociones" : onlyDestacados ? "Selección" : "Colección completa";
-          const heading = onlyOfertas ? "Ofertas" : onlyDestacados ? "Lo más buscado" : activeCategory === "Todos" ? "Todos los productos" : activeCategory;
+          const label = onlyPromos ? "Promociones activas" : onlyOfertas ? "Promociones" : onlyDestacados ? "Selección" : "Colección completa";
+          const heading = onlyPromos ? "En promoción" : onlyOfertas ? "Ofertas" : onlyDestacados ? "Lo más buscado" : activeCategory === "Todos" ? "Todos los productos" : activeCategory;
           const sub = activeSubcategory;
           // Estilos de toggle per-template
           const toggleBase = (active: boolean): React.CSSProperties =>
@@ -1232,12 +1261,17 @@ function ProductosPageInner() {
                 </p>
               </div>
               <div style={{ display:"flex", gap:10, flexWrap:"wrap", alignItems:"center" }}>
-                <button onClick={() => { setOnlyDestacados(o => !o); setOnlyOfertas(false); setPage(1); }} style={toggleBase(onlyDestacados)}>
+                <button onClick={() => { setOnlyDestacados(o => !o); setOnlyOfertas(false); setOnlyPromos(false); setPage(1); }} style={toggleBase(onlyDestacados)}>
                   ⭐ Lo más buscado
                 </button>
-                <button onClick={() => { setOnlyOfertas(o => !o); setOnlyDestacados(false); setPage(1); }} style={toggleBase(onlyOfertas)}>
+                <button onClick={() => { setOnlyOfertas(o => !o); setOnlyDestacados(false); setOnlyPromos(false); setPage(1); }} style={toggleBase(onlyOfertas)}>
                   🔥 En oferta
                 </button>
+                {promotions.length > 0 && (
+                  <button onClick={() => { setOnlyPromos(o => !o); setOnlyOfertas(false); setOnlyDestacados(false); setPage(1); }} style={toggleBase(onlyPromos)}>
+                    🎁 En promoción
+                  </button>
+                )}
                 <div style={{ position:"relative" }}>
                   <input
                     value={search}
@@ -1347,8 +1381,8 @@ function ProductosPageInner() {
                   )}
                 </button>
               )}
-              {(activeCategory !== "Todos" || activeSubcategory || search || onlyOfertas || onlyDestacados || Object.keys(activeAttrFilters).length > 0 || priceRange) && (
-                <button onClick={() => { changeCategory("Todos"); setSearch(""); setOnlyOfertas(false); setOnlyDestacados(false); clearAttrFilters(); setPriceRange(null); }}
+              {(activeCategory !== "Todos" || activeSubcategory || search || onlyOfertas || onlyDestacados || onlyPromos || Object.keys(activeAttrFilters).length > 0 || priceRange) && (
+                <button onClick={() => { changeCategory("Todos"); setSearch(""); setOnlyOfertas(false); setOnlyDestacados(false); setOnlyPromos(false); clearAttrFilters(); setPriceRange(null); }}
                   style={{ background:"none", border:"none", color:MID, fontSize:11, letterSpacing:1, cursor:"pointer", padding:0, textDecoration:"underline" }}>
                   Limpiar filtros
                 </button>
@@ -1440,8 +1474,8 @@ function ProductosPageInner() {
                 </button>
               )}
 
-              {(activeCategory !== "Todos" || activeSubcategory || search || onlyOfertas || onlyDestacados || Object.keys(activeAttrFilters).length > 0 || priceRange) && (
-                <button onClick={() => { changeCategory("Todos"); setSearch(""); setOnlyOfertas(false); setOnlyDestacados(false); clearAttrFilters(); setPriceRange(null); }}
+              {(activeCategory !== "Todos" || activeSubcategory || search || onlyOfertas || onlyDestacados || onlyPromos || Object.keys(activeAttrFilters).length > 0 || priceRange) && (
+                <button onClick={() => { changeCategory("Todos"); setSearch(""); setOnlyOfertas(false); setOnlyDestacados(false); setOnlyPromos(false); clearAttrFilters(); setPriceRange(null); }}
                   style={{ background:"none", border:"none", color:MID, fontSize:11.5, cursor:"pointer", padding:0, textDecoration:"underline" }}>
                   Limpiar filtros
                 </button>
@@ -1518,8 +1552,8 @@ function ProductosPageInner() {
                     </div>
                   );
                 })}
-                {(activeCategory !== "Todos" || activeSubcategory || search || onlyOfertas || onlyDestacados) && (
-                  <button onClick={() => { changeCategory("Todos"); setSearch(""); setOnlyOfertas(false); setOnlyDestacados(false); }}
+                {(activeCategory !== "Todos" || activeSubcategory || search || onlyOfertas || onlyDestacados || onlyPromos) && (
+                  <button onClick={() => { changeCategory("Todos"); setSearch(""); setOnlyOfertas(false); setOnlyDestacados(false); setOnlyPromos(false); }}
                     style={{ flexShrink:0, background:"none", border:"none", color:MID, fontSize:11, letterSpacing:1, cursor:"pointer", padding:"9px 8px", textDecoration:"underline", whiteSpace:"nowrap" }}>
                     Limpiar filtros
                   </button>
@@ -1622,10 +1656,16 @@ function ProductosPageInner() {
             <div>
               <div style={{ position:"relative" }} {...imgSwipe}>
                 {(() => {
+                  // La PROMOCIÓN de tienda se muestra como tag rectangular (naranja) — distinta
+                  // de la OFERTA del producto (badge rojo), para que se distingan de un vistazo.
+                  if (modalPromo.primaryPromo) {
+                    return <PromoTag label={describePromo(modalPromo.primaryPromo).headline} />;
+                  }
                   const hasNxM = modalProduct.promoType === "N_PAY_M" && !!modalProduct.promoQtyMin && !!modalProduct.promoPayQty;
                   const hasOffer = !variantPrice && !!modalProduct.comparePrice && modalProduct.comparePrice > modalProduct.price;
-                  if (!hasNxM && !hasOffer) return null;
-                  return <OfferBadge badge={hasNxM ? null : (modalProduct.offerBadge ?? null)} pct={hasOffer ? discountPercent(modalProduct.price, modalProduct.comparePrice) : null} nxm={hasNxM ? { n: modalProduct.promoQtyMin!, m: modalProduct.promoPayQty! } : undefined} size="md" />;
+                  if (hasNxM) return <OfferBadge nxm={{ n: modalProduct.promoQtyMin!, m: modalProduct.promoPayQty! }} size="md" />;
+                  if (hasOffer || modalProduct.offerBadge) return <OfferBadge badge={modalProduct.offerBadge ?? null} pct={hasOffer ? discountPercent(modalProduct.price, modalProduct.comparePrice) : null} size="md" />;
+                  return null;
                 })()}
                 <img src={modalProduct.images[modalImg] ?? ""} alt={modalProduct.name}
                   style={{ width:"100%", aspectRatio:"3/4", objectFit:"cover", display:"block", cursor:"zoom-in" }}
@@ -1680,10 +1720,26 @@ function ProductosPageInner() {
                   </button>
                 )}
               </div>
-              <div style={{ display:"flex", gap:10, alignItems:"baseline" }}>
-                <span style={{ fontSize:22, fontWeight:700, color:GT }}>{fmt(displayPrice)}</span>
-                {!variantPrice && modalProduct.comparePrice && <span style={{ fontSize:14, color:MID, textDecoration:"line-through" }}>{fmt(modalProduct.comparePrice)}</span>}
+              <div style={{ display:"flex", gap:10, alignItems:"baseline", flexWrap:"wrap" }}>
+                {modalPromo.hasPriceDrop ? (
+                  <>
+                    <span style={{ fontSize:22, fontWeight:700, color:"#dc2626" }}>{fmt(modalPromo.effectivePrice)}</span>
+                    <span style={{ fontSize:14, color:MID, textDecoration:"line-through" }}>{fmt(modalPromo.originalPrice)}</span>
+                    {modalPromo.pctOff != null && (
+                      <span style={{ fontSize:12, fontWeight:800, color:"#16a34a", background:"#dcfce7", padding:"2px 8px", borderRadius:4, letterSpacing:0.3, whiteSpace:"nowrap" }}>
+                        {modalPromo.pctOff}% OFF
+                      </span>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <span style={{ fontSize:22, fontWeight:700, color:GT }}>{fmt(displayPrice)}</span>
+                    {!variantPrice && modalProduct.comparePrice && <span style={{ fontSize:14, color:MID, textDecoration:"line-through" }}>{fmt(modalProduct.comparePrice)}</span>}
+                  </>
+                )}
               </div>
+              {/* Bloque explicativo de la promo (headline + alcance + condiciones), estilo Tiendanube. */}
+              {modalPromo.primaryPromo && <PromoBlock promo={modalPromo.primaryPromo} freeShippingExtra={modalPromo.freeShipping} />}
               {modalProduct.offerNote && (
                 <div style={{ fontSize:12, color:"#059669", background:"#f0fdf4", border:"1px solid #bbf7d0", borderRadius:4, padding:"5px 10px", display:"flex", alignItems:"center", gap:6 }}>
                   <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
@@ -1805,7 +1861,7 @@ function ProductosPageInner() {
                 <button onClick={addToCart}
                   disabled={selectedVariantStock === 0}
                   style={{ background: selectedVariantStock === 0 ? `${G}40` : G, color:accentDark?"#000":"#fff", border:"none", padding:"15px", fontSize:11, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor: selectedVariantStock === 0 ? "not-allowed" : "pointer", marginTop:"auto" }}>
-                  {selectedVariantStock === 0 ? "Sin stock" : `Agregar al carrito · ${fmt(displayPrice * qty)}`}
+                  {selectedVariantStock === 0 ? "Sin stock" : `Agregar al carrito · ${fmt((modalPromo.hasPriceDrop ? modalPromo.effectivePrice : displayPrice) * qty)}`}
                 </button>
               )}
 

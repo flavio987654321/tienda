@@ -7,6 +7,8 @@ import { ChevronLeft, ShoppingBag, MessageCircle, Check } from "lucide-react";
 import { useCartLogic } from "@/hooks/useCartLogic";
 import { getDemoPool, isDemoProductId, parsePromotions, type StorefrontProduct, type StorefrontVariant, type PlaceOrderParams } from "@/hooks/useStorefront";
 import type { ActivePromotion } from "@/lib/pricing";
+import { resolveProductPromo, describePromo } from "@/lib/promoDisplay";
+import { PromoTag, PromoBlock } from "@/components/store/PromoDisplay";
 import { promoModalText } from "@/lib/promoLabel";
 import { resolveVariantPrice } from "@/lib/variantPrice";
 import type { ProductDetailViewProps } from "@/components/store/templates/productDetail/shared";
@@ -248,6 +250,9 @@ export default function ProductDetailClient({ slug, productId }: { slug: string;
   const displayPrice = variantPrice ?? product.price;
   const discount = !variantPrice && product.comparePrice && product.comparePrice > product.price
     ? Math.round((1 - product.price / product.comparePrice) * 100) : null;
+  // Promo de tienda del producto (usa displayPrice para respetar variantes). Alimenta el
+  // tag + bloque en la vista genérica y en los detalles temáticos (via ProductDetailViewProps).
+  const detailPromo = resolveProductPromo({ id: product.id, price: displayPrice, category: product.category }, promotions);
   const catalogHref = `/tienda/${slug}/productos${isPreview ? "?from=editor" : ""}`;
 
   const ThemedDetail = template ? THEMED_DETAIL[template] : undefined;
@@ -256,7 +261,7 @@ export default function ProductDetailClient({ slug, productId }: { slug: string;
       slug, storeName, currency, whatsapp, product, related, hasMercadoPago,
       isPreview, isOwner, socialLinks, accentOverride, footerBg, cart,
       activeImg, setActiveImg, selectedSize, setSelectedSize, selectedColor, setSelectedColor,
-      needsSize, needsColor, canAdd, qty, setQty, addToCart, cartCount, toastMsg, discount, catalogHref,
+      needsSize, needsColor, canAdd, qty, setQty, addToCart, cartCount, toastMsg, discount, promo: detailPromo, catalogHref,
     };
     return <ThemedDetail view={view} />;
   }
@@ -272,9 +277,11 @@ export default function ProductDetailClient({ slug, productId }: { slug: string;
           {/* Galería */}
           <div>
             <div className="aspect-square bg-gray-50 rounded-2xl overflow-hidden mb-3 relative">
-              {discount && (
+              {detailPromo.primaryPromo ? (
+                <PromoTag label={describePromo(detailPromo.primaryPromo).headline} size="sm" />
+              ) : discount ? (
                 <div className="absolute top-3 left-3 z-10 bg-red-600 text-white text-xs font-bold px-2.5 py-1 rounded-full">{discount}% OFF</div>
-              )}
+              ) : null}
               {product.images[activeImg] ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={product.images[activeImg]} alt={product.name} className="w-full h-full object-cover" />
@@ -300,12 +307,25 @@ export default function ProductDetailClient({ slug, productId }: { slug: string;
             <p className="text-xs uppercase tracking-wide text-gray-400 mb-1.5">{storeName}{product.subcategory ? ` · ${product.subcategory}` : ` · ${product.category}`}</p>
             <h1 className="text-2xl font-bold text-gray-900 mb-3">{product.name}</h1>
 
-            <div className="flex items-baseline gap-3 mb-1">
-              <span className="text-3xl font-bold text-gray-900">{fmt(displayPrice)}</span>
-              {!variantPrice && product.comparePrice && product.comparePrice > product.price && (
-                <span className="text-lg text-gray-400 line-through">{fmt(product.comparePrice)}</span>
+            <div className="flex items-baseline gap-3 mb-1 flex-wrap">
+              {detailPromo.hasPriceDrop ? (
+                <>
+                  <span className="text-3xl font-bold text-red-600">{fmt(detailPromo.effectivePrice)}</span>
+                  <span className="text-lg text-gray-400 line-through">{fmt(detailPromo.originalPrice)}</span>
+                  {detailPromo.pctOff != null && <span className="text-sm font-extrabold text-green-700 bg-green-100 px-2 py-0.5 rounded">{detailPromo.pctOff}% OFF</span>}
+                </>
+              ) : (
+                <>
+                  <span className="text-3xl font-bold text-gray-900">{fmt(displayPrice)}</span>
+                  {!variantPrice && product.comparePrice && product.comparePrice > product.price && (
+                    <span className="text-lg text-gray-400 line-through">{fmt(product.comparePrice)}</span>
+                  )}
+                </>
               )}
             </div>
+            {detailPromo.primaryPromo && (
+              <div className="mb-2"><PromoBlock promo={detailPromo.primaryPromo} freeShippingExtra={detailPromo.freeShipping} /></div>
+            )}
             {product.offerNote && (
               <p className="text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2 mb-2 flex items-center gap-2">
                 📋 {product.offerNote}

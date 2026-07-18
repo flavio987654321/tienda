@@ -13,6 +13,8 @@ import ReportStoreModal from "@/components/store/ReportStoreModal";
 import VerifiedIconButton from "@/components/store/VerifiedIconButton";
 import { CartDrawer, type CartTheme } from "@/components/store/templates/shared/CartDrawer";
 import { OfferBadge } from "@/components/store/OfferBadge";
+import { PromoTag, PromoBlock } from "@/components/store/PromoDisplay";
+import { resolveProductPromo, describePromo } from "@/lib/promoDisplay";
 import { CheckoutModal } from "@/components/store/templates/shared/CheckoutModal";
 import { ContactForm } from "@/components/store/templates/shared/ContactForm";
 import { FadeImage } from "@/components/store/templates/shared/FadeImage";
@@ -130,7 +132,7 @@ export default function UrbanPulse() {
   const isOwner     = !!storeConfig?.isOwner;
   const hasWA       = !storeConfig || storeConfig.whatsapp.enabled;
   const storefront  = useStorefront();
-  const { products, checkoutMode, isWholesale, ocultarPrecios, defaultCategories, featuredCategories } = storefront;
+  const { products, promotions, checkoutMode, isWholesale, ocultarPrecios, defaultCategories, featuredCategories } = storefront;
   const { editMode, overrides: textOverrides, setOverride } = useEditContext();
   const isInquiryMode = checkoutMode === "inquiry" || ocultarPrecios;
 
@@ -247,6 +249,7 @@ export default function UrbanPulse() {
   const cartTheme: CartTheme = { BG:"#ffffff", S:BG, T:DARK, MID, border:"#e0e0e0", accent:ACC, accentText };
   const variantPrice = modalProduct ? resolveVariantPrice(modalProduct.variants, selectedSize, selectedColor) : null;
   const displayPrice = variantPrice ?? (modalProduct?.price ?? 0);
+  const modalPromo = modalProduct ? resolveProductPromo({ id: modalProduct.id, price: displayPrice, category: modalProduct.category }, promotions) : null;
   const imgSwipe = useTouchSwipe(
     () => { if (modalProduct) setModalImg(i => (i + 1) % modalProduct.images.length); },
     () => { if (modalProduct) setModalImg(i => (i - 1 + modalProduct.images.length) % modalProduct.images.length); }
@@ -883,10 +886,12 @@ export default function UrbanPulse() {
         <div style={{ display:"grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(3,1fr)", gap:4 }}>
           {filtered.map((product, idx) => {
             const big = !isMobile && (idx === 0 || idx === 5);
+            const promo = resolveProductPromo(product, promotions);
             return (
               <div key={product.id} className="up-prod" onClick={() => openModal(product)}
                 style={{ gridColumn: big ? "span 2" : "span 1", cursor:"pointer", position:"relative", background:WHITE }}>
                 {(() => {
+                  if (promo.primaryPromo) return <PromoTag label={describePromo(promo.primaryPromo).headline} size={big ? "md" : "sm"} />;
                   const hasNxM = product.promoType === "N_PAY_M" && !!product.promoQtyMin && !!product.promoPayQty;
                   const hasOffer = !!product.comparePrice && product.comparePrice > product.price;
                   if (!hasNxM && !hasOffer) return null;
@@ -907,10 +912,22 @@ export default function UrbanPulse() {
                       <p style={{ margin:"4px 0 0", fontSize:14, fontWeight:800 }}>{product.name}</p>
                     </div>
                     <div style={{ textAlign:"right", flexShrink:0 }}>
-                      {!ocultarPrecios && product.comparePrice && <p style={{ margin:0, fontSize:11, color:MID, textDecoration:"line-through" }}>{fmt(product.comparePrice)}</p>}
-                      <p style={{ margin:0, fontSize:15, fontWeight:900, color: product.comparePrice ? RED : DARK }}>{ocultarPrecios ? "Consultá precio" : fmt(product.price)}</p>
-                      {!ocultarPrecios && discountPercent(product.price, product.comparePrice) !== null && (
-                        <p style={{ margin:"2px 0 0", fontSize:10, fontWeight:800, color:RED }}>-{discountPercent(product.price, product.comparePrice)}%</p>
+                      {ocultarPrecios ? (
+                        <p style={{ margin:0, fontSize:15, fontWeight:900, color:DARK }}>Consultá precio</p>
+                      ) : promo.hasPriceDrop ? (
+                        <>
+                          <p style={{ margin:0, fontSize:11, color:MID, textDecoration:"line-through" }}>{fmt(promo.originalPrice)}</p>
+                          <p style={{ margin:0, fontSize:15, fontWeight:900, color:RED }}>{fmt(promo.effectivePrice)}</p>
+                          {promo.pctOff != null && <p style={{ margin:"2px 0 0", fontSize:10, fontWeight:800, color:RED }}>-{promo.pctOff}%</p>}
+                        </>
+                      ) : (
+                        <>
+                          {product.comparePrice && <p style={{ margin:0, fontSize:11, color:MID, textDecoration:"line-through" }}>{fmt(product.comparePrice)}</p>}
+                          <p style={{ margin:0, fontSize:15, fontWeight:900, color: product.comparePrice ? RED : DARK }}>{fmt(product.price)}</p>
+                          {discountPercent(product.price, product.comparePrice) !== null && (
+                            <p style={{ margin:"2px 0 0", fontSize:10, fontWeight:800, color:RED }}>-{discountPercent(product.price, product.comparePrice)}%</p>
+                          )}
+                        </>
                       )}
                     </div>
                   </div>
@@ -1418,6 +1435,7 @@ export default function UrbanPulse() {
                       onClick={() => setLightboxSrc(modalProduct.images[modalImg])} />
                   )}
                   {(() => {
+                    if (modalPromo?.primaryPromo) return <PromoTag label={describePromo(modalPromo.primaryPromo).headline} />;
                     const hasNxM = modalProduct.promoType === "N_PAY_M" && !!modalProduct.promoQtyMin && !!modalProduct.promoPayQty;
                     const hasOffer = !variantPrice && !!modalProduct.comparePrice && modalProduct.comparePrice > modalProduct.price;
                     if (!hasNxM && !hasOffer) return null;
@@ -1472,10 +1490,23 @@ export default function UrbanPulse() {
                   </button>
                   )}
                 </div>
-                <div style={{ display:"flex", gap:14, alignItems:"baseline", marginBottom: modalProduct.offerNote ? 8 : 22 }}>
-                  <span style={{ fontSize:28, fontWeight:900, color: (!variantPrice && modalProduct.comparePrice) ? RED : DARK }}>{ocultarPrecios ? "Consultá precio" : fmt(displayPrice)}</span>
-                  {!variantPrice && !ocultarPrecios && modalProduct.comparePrice && <span style={{ fontSize:15, color:MID, textDecoration:"line-through" }}>{fmt(modalProduct.comparePrice)}</span>}
+                <div style={{ display:"flex", gap:14, alignItems:"baseline", marginBottom: modalProduct.offerNote ? 8 : 22, flexWrap:"wrap" }}>
+                  {ocultarPrecios ? (
+                    <span style={{ fontSize:28, fontWeight:900, color:DARK }}>Consultá precio</span>
+                  ) : modalPromo?.hasPriceDrop ? (
+                    <>
+                      <span style={{ fontSize:28, fontWeight:900, color:RED }}>{fmt(modalPromo.effectivePrice)}</span>
+                      <span style={{ fontSize:15, color:MID, textDecoration:"line-through" }}>{fmt(modalPromo.originalPrice)}</span>
+                      {modalPromo.pctOff != null && <span style={{ fontSize:12, fontWeight:800, color:"#16a34a", background:"#dcfce7", padding:"2px 8px", borderRadius:4 }}>{modalPromo.pctOff}% OFF</span>}
+                    </>
+                  ) : (
+                    <>
+                      <span style={{ fontSize:28, fontWeight:900, color: (!variantPrice && modalProduct.comparePrice) ? RED : DARK }}>{fmt(displayPrice)}</span>
+                      {!variantPrice && modalProduct.comparePrice && <span style={{ fontSize:15, color:MID, textDecoration:"line-through" }}>{fmt(modalProduct.comparePrice)}</span>}
+                    </>
+                  )}
                 </div>
+                {modalPromo?.primaryPromo && <div style={{ marginBottom:16 }}><PromoBlock promo={modalPromo.primaryPromo} freeShippingExtra={modalPromo.freeShipping} /></div>}
                 {!ocultarPrecios && modalProduct.offerNote && (
                   <div style={{ fontSize:12, color:"#f97316", background:"rgba(249,115,22,0.08)", border:"1px solid rgba(249,115,22,0.25)", borderRadius:4, padding:"5px 10px", display:"flex", alignItems:"center", gap:6 }}>
                     <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="#f97316" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
@@ -1609,7 +1640,7 @@ export default function UrbanPulse() {
                 ) : (
                   <button onClick={addToCart} disabled={selectedVariantStock === 0}
                     style={{ width:"100%", background: selectedVariantStock === 0 ? "#555" : DARK, color:ACC, border:"none", padding:"16px", fontSize:11, fontWeight:900, letterSpacing:3, textTransform:"uppercase", cursor: selectedVariantStock === 0 ? "not-allowed" : "pointer", marginBottom:10 }}>
-                    {selectedVariantStock === 0 ? "Sin stock" : `Agregar · ${fmt(displayPrice * qty)}`}
+                    {selectedVariantStock === 0 ? "Sin stock" : `Agregar · ${fmt((modalPromo?.hasPriceDrop ? modalPromo.effectivePrice : displayPrice) * qty)}`}
                   </button>
                 )}
                   </div>
@@ -1750,7 +1781,7 @@ export default function UrbanPulse() {
             {isMobile && (
               <div style={{ borderTop:`2px solid ${DARK}`, padding:"12px 16px 16px", background:WHITE, flexShrink:0 }}>
                 <div style={{ display:"flex", alignItems:"baseline", gap:10, marginBottom:10 }}>
-                  <span style={{ fontSize:20, fontWeight:900, color:DARK }}>{ocultarPrecios ? "Consultá precio" : fmt(displayPrice * qty)}</span>
+                  <span style={{ fontSize:20, fontWeight:900, color:DARK }}>{ocultarPrecios ? "Consultá precio" : fmt((modalPromo?.hasPriceDrop ? modalPromo.effectivePrice : displayPrice) * qty)}</span>
                   {!variantPrice && !ocultarPrecios && modalProduct.comparePrice && <span style={{ fontSize:12, color:MID, textDecoration:"line-through" }}>{fmt(modalProduct.comparePrice)}</span>}
                   {qty > 1 && <span style={{ fontSize:11, color:MID }}>× {qty}</span>}
                 </div>

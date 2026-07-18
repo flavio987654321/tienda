@@ -98,10 +98,12 @@ export type CartPricing = {
   couponsAllowed: boolean;
 };
 
-// Redondeo a centavos, estable, en un solo lugar. Todas las cuentas lo usan para
-// que no haya 3 criterios de redondeo distintos como pasaba antes.
-function roundCents(n: number): number {
-  return Math.round(n * 100) / 100;
+// Redondeo a PESO ENTERO, estable, en un solo lugar. En Argentina los precios se
+// muestran y se cobran en pesos enteros; sin esto, un 20% sobre $24.999 daba
+// $19.999,2 (feo y no es un monto que se cobre así). Todas las cuentas lo usan para
+// que no haya criterios de redondeo distintos y para que lo mostrado == lo cobrado.
+function roundMoney(n: number): number {
+  return Math.round(n);
 }
 
 // ── Precio base con mayorista y escalones ────────────────────────────────────
@@ -201,13 +203,13 @@ function storePromoLineTotal(p: ActivePromotion, it: PricingItem, totalQty: numb
   if (p.type === "PERCENT") {
     const pct = p.value != null && p.value > 0 ? Math.min(p.value, MAX_STORE_PERCENT) : 0;
     if (pct <= 0) return null;
-    return roundCents(base * (1 - pct / 100));
+    return roundMoney(base * (1 - pct / 100));
   }
   if (p.type === "FIXED") {
     if (p.value == null || p.value <= 0) return null;
     // Monto fijo por unidad, con piso en 0 (nunca precio negativo). El aviso de
     // "estás vendiendo bajo costo" es para la dueña (Fase 3), no frena al comprador.
-    return roundCents(Math.max(0, it.basePrice - p.value) * it.quantity);
+    return roundMoney(Math.max(0, it.basePrice - p.value) * it.quantity);
   }
   if (p.type === "N_PAY_M") {
     const n = p.minQty, m = p.payQty;
@@ -215,7 +217,7 @@ function storePromoLineTotal(p: ActivePromotion, it: PricingItem, totalQty: numb
     // Del mismo producto (decisión aprobada; mezclar categorías = Fase 5). El
     // beneficio se reparte parejo entre las líneas de ese producto con una razón.
     const paid = paidUnitsNxM(totalQty, n, m);
-    return roundCents(it.basePrice * it.quantity * (paid / totalQty));
+    return roundMoney(it.basePrice * it.quantity * (paid / totalQty));
   }
   return null; // FREE_SHIPPING no toca el precio del ítem
 }
@@ -239,7 +241,7 @@ export function priceCart(items: PricingItem[], opts?: PriceCartOptions): CartPr
 
   // Subtotal SIN ninguna promo — es la base contra la que se mide la compra mínima
   // de las StorePromotion. Estable (no depende de qué promo aplique), sin circularidad.
-  const preSubtotal = roundCents(
+  const preSubtotal = roundMoney(
     items.reduce((s, it) => s + it.basePrice * it.quantity, 0)
   );
 
@@ -253,7 +255,7 @@ export function priceCart(items: PricingItem[], opts?: PriceCartOptions): CartPr
   for (const it of items) {
     // El Map se llenó con todas las líneas arriba, así que la clave siempre está.
     const totalQty = totalQtyByProduct.get(it.productId)!;
-    const baseLine = roundCents(it.basePrice * it.quantity);
+    const baseLine = roundMoney(it.basePrice * it.quantity);
 
     // Candidato 1: la promo por cantidad del producto (legado), misma cuenta de antes.
     const productApplies = promoApplies(it.promo, totalQty);
@@ -264,9 +266,9 @@ export function priceCart(items: PricingItem[], opts?: PriceCartOptions): CartPr
       // calcula el TOTAL como base × cantidad × razón y se redondea UNA sola vez
       // (derivar un unitario y multiplicarlo metía centavos de error, era B-03).
       const paid = paidUnitsNxM(totalQty, it.promo.promoQtyMin!, it.promo.promoPayQty!);
-      productLine = roundCents(it.basePrice * it.quantity * (paid / totalQty));
+      productLine = roundMoney(it.basePrice * it.quantity * (paid / totalQty));
     } else if (productApplies) {
-      productLine = roundCents(it.basePrice * it.quantity * (1 - it.promo.promoQtyDiscount! / 100));
+      productLine = roundMoney(it.basePrice * it.quantity * (1 - it.promo.promoQtyDiscount! / 100));
     }
 
     // Candidatos 2..N: cada StorePromotion de descuento que alcanza a este ítem.
@@ -279,8 +281,8 @@ export function priceCart(items: PricingItem[], opts?: PriceCartOptions): CartPr
 
     const lineTotal = bestLine;
     const applies = lineTotal < baseLine - 0.001;
-    const unitPrice = it.quantity > 0 ? roundCents(lineTotal / it.quantity) : it.basePrice;
-    const savings = roundCents(baseLine - lineTotal);
+    const unitPrice = it.quantity > 0 ? roundMoney(lineTotal / it.quantity) : it.basePrice;
+    const savings = roundMoney(baseLine - lineTotal);
 
     lines.push({
       productId: it.productId,
@@ -291,8 +293,8 @@ export function priceCart(items: PricingItem[], opts?: PriceCartOptions): CartPr
       promoApplied: applies,
       savings: applies ? savings : 0,
     });
-    subtotal = roundCents(subtotal + lineTotal);
-    if (applies) promoSavings = roundCents(promoSavings + savings);
+    subtotal = roundMoney(subtotal + lineTotal);
+    if (applies) promoSavings = roundMoney(promoSavings + savings);
   }
 
   // Envío gratis: alguna promo de envío elegible que alcance al carrito.

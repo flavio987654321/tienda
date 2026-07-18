@@ -31,7 +31,7 @@ interface Product {
   expenses?: { monto: number }[];
 }
 
-interface Props { products: Product[]; storeSlug?: string; storeName?: string; storeType?: string; initialStockFilter?: string }
+interface Props { products: Product[]; storeSlug?: string; storeName?: string; storeType?: string; initialStockFilter?: string; promotedIds?: string[] }
 
 const PAGE_SIZE = 20;
 
@@ -46,8 +46,9 @@ function parseImages(raw: string): string[] {
 
 const VALID_STOCK_FILTERS = ["all", "out", "low", "critical"];
 
-export default function ProductsTable({ products: initialProducts, storeSlug = "", storeName = "", storeType = "", initialStockFilter = "all" }: Props) {
+export default function ProductsTable({ products: initialProducts, storeSlug = "", storeName = "", storeType = "", initialStockFilter = "all", promotedIds = [] }: Props) {
   const showStock = storeType !== "AUTOS";
+  const promotedSet = useMemo(() => new Set(promotedIds), [promotedIds]);
   const [products,      setProducts]      = useState(initialProducts);
   const [search,        setSearch]        = useState("");
   const [categoryFilter,setCategoryFilter]= useState("all");
@@ -688,6 +689,8 @@ export default function ProductsTable({ products: initialProducts, storeSlug = "
           {paginated.map(product => {
             const stock = product.variants.reduce((s, v) => s + v.stock, 0);
             const images = parseImages(product.images);
+            const inPromo = promotedSet.has(product.id);
+            const inOferta = !!product.comparePrice && product.comparePrice > product.price;
             return (
               <div key={product.id} className="bg-white rounded-2xl border border-gray-100 overflow-hidden group hover:shadow-md transition-shadow">
                 <div className="relative aspect-square bg-gray-50">
@@ -697,6 +700,13 @@ export default function ProductsTable({ products: initialProducts, storeSlug = "
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">
                       <Package className="h-8 w-8 text-gray-200" />
+                    </div>
+                  )}
+                  {/* Marcador de promo/oferta (arriba-izq; en AUTOS ese lugar lo usa el badge del vehículo) */}
+                  {showStock && (inPromo || inOferta) && (
+                    <div className="absolute top-2 left-2 flex flex-col items-start gap-1">
+                      {inPromo && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-violet-600 text-white shadow-sm">Promo</span>}
+                      {inOferta && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-rose-500 text-white shadow-sm">Oferta</span>}
                     </div>
                   )}
                   {showStock && <div className={`absolute top-2 right-2 h-2.5 w-2.5 rounded-full border-2 border-white ${stockDot(stock)}`} />}
@@ -715,47 +725,50 @@ export default function ProductsTable({ products: initialProducts, storeSlug = "
                   <p className="text-xs text-gray-400 capitalize truncate">{product.category}{product.subcategory ? ` › ${product.subcategory}` : ""}</p>
                   <p className="text-sm font-semibold text-gray-900 mt-0.5 line-clamp-2 leading-tight">{product.name}</p>
                   <p className="text-sm font-bold text-indigo-600 mt-1">${product.price.toLocaleString("es-AR")}</p>
+                  {/* Acciones: todos íconos a igual ancho (flex-1) — así ninguno queda
+                      apretado ni "perdido" al final de la fila (incluido Eliminar). */}
                   <div className="mt-3 flex gap-1.5">
                     {!showStock && (
                       <button
                         onClick={() => setVehicleModal({ id: product.id, name: product.name, status: (product.vehicleStatus ?? "AVAILABLE") as VehicleStatus, costTotal: calcVehicleCostTotal(product.expenses ?? []) })}
-                        className="flex-1 flex items-center justify-center gap-1 py-1.5 text-xs font-medium text-indigo-500 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors"
-                      >
-                        <Car className="h-3 w-3" /> Estado
+                        className="flex-1 flex items-center justify-center py-2 rounded-lg text-indigo-500 bg-indigo-50 hover:bg-indigo-100 transition-colors"
+                        title="Cambiar estado">
+                        <Car className="h-4 w-4" />
                       </button>
                     )}
                     <Link href={`/dashboard/productos/nuevo?edit=${product.id}`}
-                      className="flex-1 flex items-center justify-center gap-1 py-1.5 text-xs font-medium text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors">
-                      <Edit className="h-3 w-3" /> Editar
+                      className="flex-1 flex items-center justify-center py-2 rounded-lg text-indigo-600 bg-indigo-50 hover:bg-indigo-100 transition-colors"
+                      title="Editar">
+                      <Edit className="h-4 w-4" />
                     </Link>
                     {storeSlug && product.isActive && (
                       <a href={`/tienda/${storeSlug}?p=${product.id}`} target="_blank" rel="noopener noreferrer"
-                        className="flex items-center justify-center gap-1 px-2.5 py-1.5 text-xs font-medium text-emerald-500 bg-emerald-50 rounded-lg hover:bg-emerald-100 transition-colors"
+                        className="flex-1 flex items-center justify-center py-2 rounded-lg text-sky-500 bg-sky-50 hover:bg-sky-100 transition-colors"
                         title="Ver en tienda">
-                        <Eye className="h-3 w-3" />
+                        <Eye className="h-4 w-4" />
                       </a>
                     )}
                     {showStock && (
                       <button onClick={() => setStockModal(product)}
-                        className="flex items-center justify-center gap-1 px-2.5 py-1.5 text-xs font-medium text-emerald-500 bg-emerald-50 rounded-lg hover:bg-emerald-100 transition-colors"
+                        className="flex-1 flex items-center justify-center py-2 rounded-lg text-emerald-500 bg-emerald-50 hover:bg-emerald-100 transition-colors"
                         title="Ajustar stock">
-                        <Boxes className="h-3 w-3" />
+                        <Boxes className="h-4 w-4" />
                       </button>
                     )}
                     <button onClick={() => openQr(product)} disabled={qrLoading}
-                      className="flex items-center justify-center gap-1 px-2.5 py-1.5 text-xs font-medium text-violet-500 bg-violet-50 rounded-lg hover:bg-violet-100 transition-colors disabled:opacity-40"
+                      className="flex-1 flex items-center justify-center py-2 rounded-lg text-violet-500 bg-violet-50 hover:bg-violet-100 transition-colors disabled:opacity-40"
                       title="Código QR">
-                      <QrCode className="h-3 w-3" />
+                      <QrCode className="h-4 w-4" />
                     </button>
                     <button onClick={() => duplicateProduct(product)} disabled={duplicatingId === product.id}
-                      className="flex items-center justify-center gap-1 px-2.5 py-1.5 text-xs font-medium text-gray-500 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-40"
+                      className="flex-1 flex items-center justify-center py-2 rounded-lg text-gray-500 bg-gray-100 hover:bg-gray-200 transition-colors disabled:opacity-40"
                       title="Duplicar">
-                      <Copy className="h-3 w-3" />
+                      <Copy className="h-4 w-4" />
                     </button>
                     <button onClick={() => setPendingDelete({ id: product.id, name: product.name })} disabled={deletingId === product.id}
-                      className="flex items-center justify-center gap-1 px-2.5 py-1.5 text-xs font-medium text-red-400 bg-red-50 rounded-lg hover:bg-red-100 transition-colors disabled:opacity-40"
+                      className="flex-1 flex items-center justify-center py-2 rounded-lg text-red-500 bg-red-50 hover:bg-red-100 hover:text-red-600 transition-colors disabled:opacity-40"
                       title="Eliminar">
-                      <Trash2 className="h-3 w-3" />
+                      <Trash2 className="h-4 w-4" />
                     </button>
                   </div>
                 </div>
@@ -781,6 +794,8 @@ export default function ProductsTable({ products: initialProducts, storeSlug = "
               {paginated.map(product => {
                 const stock = product.variants.reduce((s, v) => s + v.stock, 0);
                 const images = parseImages(product.images);
+                const inPromo = promotedSet.has(product.id);
+                const inOferta = !!product.comparePrice && product.comparePrice > product.price;
                 return (
                   <tr key={product.id} className="hover:bg-gray-50/50 transition-colors">
                     <td className="px-6 py-4">
@@ -795,7 +810,11 @@ export default function ProductsTable({ products: initialProducts, storeSlug = "
                           )}
                         </div>
                         <div>
-                          <p className="font-semibold text-gray-900 text-sm">{product.name}</p>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <p className="font-semibold text-gray-900 text-sm">{product.name}</p>
+                            {inPromo && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-violet-100 text-violet-700">Promo</span>}
+                            {inOferta && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-rose-100 text-rose-600">Oferta</span>}
+                          </div>
                           <p className="text-xs text-gray-400 mt-0.5">{product.variants.length} variante{product.variants.length !== 1 ? "s" : ""}</p>
                         </div>
                       </div>
