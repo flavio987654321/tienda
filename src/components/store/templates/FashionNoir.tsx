@@ -246,7 +246,6 @@ export default function FashionNoir() {
       .then(r => r.ok ? r.json() : { reviews: [] })
       .then(d => setHomeReviews(d.reviews ?? []))
       .catch(() => {});
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [storeConfig?.slug]);
 
   // Cargar reseñas al abrir modal (D-04)

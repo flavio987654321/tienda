@@ -224,7 +224,6 @@ export default function BohoTerra() {
       .then(r => r.ok ? r.json() : { reviews: [] })
       .then(d => setHomeReviews(d.reviews ?? []))
       .catch(() => {});
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [storeConfig?.slug]);
 
   // Cargar reseñas al abrir modal (D-04): sincroniza el estado de reseñas con el modalProduct.id actual (fetch + reset), patrón estándar de "fetch on id change"

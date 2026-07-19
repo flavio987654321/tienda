@@ -242,7 +242,7 @@ export default function UrbanPulse() {
     cartCount,
     searchResults, favoriteProducts,
     fmt, showToast, openModal, addToCart, addToPending, addAllToCart, removePendingItem, editPendingItem,
-    pendingItems, pendingTotal, promoActive, pendingPromoDiscount, pendingCartValue, editingIdx,
+    pendingItems, pendingTotal, promoActive, pendingCartValue, editingIdx,
     toggleFavorite,
   } = cart;
   const accentText = getContrastColor(ACC) === "light" ? DARK : "#fff";

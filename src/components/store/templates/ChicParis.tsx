@@ -99,7 +99,6 @@ export default function ChicParis() {
   type HomeReview = PReview;
   const [reviews,        setReviews]        = useState<PReview[]>([]);
   const [homeReviews,    setHomeReviews]    = useState<HomeReview[]>([]);
-  const [reviewCarouselPage, setReviewCarouselPage] = useState(0);
   const [reviewsShown,   setReviewsShown]   = useState(5);
   const [reviewsLoading, setReviewsLoading] = useState(false);
   const [reviewForm,     setReviewForm]     = useState({ reviewer: "", rating: 5, comment: "", email: "" });
@@ -321,7 +320,6 @@ export default function ChicParis() {
       .then(r => r.ok ? r.json() : { reviews: [] })
       .then(d => setHomeReviews(d.reviews ?? []))
       .catch(() => {});
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [storeConfig?.slug]);
 
   // Cargar reseñas al abrir modal (D-04)

@@ -163,7 +163,6 @@ export default function AutoDrive() {
     if (!showAnn || annMessages.length <= 1) return;
     const id = setInterval(() => setAnnIdx(i => (i + 1) % annMessages.length), 3500);
     return () => clearInterval(id);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showAnn, annMessages.length]);
 
   useEffect(() => {
