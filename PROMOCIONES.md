@@ -1002,8 +1002,29 @@ En Argentina Hot Sale/CyberMonday mueven muchísimo, así que el contador + badg
 Alcance: card del producto, modal de vista rápida (los 4 de Moda), página de detalle, y el carrito.
 Que el descuento **resalte** — es lo que convierte la promo en venta.
 
-### Fase 5 — Mix & match ("mezclar categorías") 🔲
-"Llevá un pantalón + una remera + una campera → el más barato gratis". Lo más caro y lo menos urgente.
+### Fase 5 — Mix & match ("mezclar categorías") ✅ (19/07)
+"Llevá un pantalón + una remera + una campera → el más barato gratis".
+
+**Implementado como un tipo nuevo `MIX_N_PAY_M`** que reusa `minQty`/`payQty`/`scope` de la
+`StorePromotion` → **no necesitó columna nueva** (por eso se pudo construir y testear entero sin deployar).
+
+- **Motor** ([pricing.ts](src/lib/pricing.ts)): es una promo a **nivel carrito**, no por línea. `applyMixPromos`
+  junta TODAS las unidades que la promo alcanza (mezclando productos), y por cada grupo completo de N
+  regala las (N−M) **más baratas del pool**. Aplica UNA sola promo mix (la que más ahorra) y solo si
+  mejora lo que el conjunto ya tenía con las promos por-ítem → **best-of a nivel conjunto, sin apilar**,
+  coherente con el resto del sistema. `priceCart` quedó en 3 pasos: por-ítem → mix → derivados.
+- **Validación** ([promotions.ts](src/lib/promotions.ts)): mismas reglas que N×M (N≥2, M≥1, M<N).
+- **Piso de costo**: simula el grupo completo, igual que el N×M (caso CF-G).
+- **Display**: badge `N×M` en la card (si el comprador lleva N del MISMO producto el pool las cuenta
+  igual, así que el badge y el total del botón son correctos) + el bloque explicativo aclara que se
+  pueden **combinar productos distintos** y que **el más barato sale gratis**.
+- **Wizard**: tarjeta nueva "Combo: llevá N mezclando" (violeta), con su propia nota explicativa.
+- **Tests**: 7 casos `MX-*` en [pricing.check.ts](src/lib/pricing.check.ts) — incluye precios distintos
+  (se regala el más barato), 2 grupos, alcance por categoría, y los dos sentidos del best-of contra
+  una promo por ítem. Verificado: tsc limpio, `next build` OK, lint limpio.
+
+Lo que se muestra es lo que se cobra: el checkout lee las promos sin filtro de tipo y usa el MISMO
+`priceCart`, así que el mix se cobra igual que se muestra.
 
 > **Decisión Flavio 17/07**: el N×M de la Fase 2 es **del mismo producto** ("llevá 3 remeras iguales,
 > pagá 2"). Mezclar productos/categorías distintos (el "cualquiera del combo, el más barato gratis")

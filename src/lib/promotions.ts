@@ -5,7 +5,9 @@
 
 import { priceCart, type ActivePromotion } from "./pricing";
 
-export const PROMO_TYPES = ["PERCENT", "FIXED", "N_PAY_M", "FREE_SHIPPING"] as const;
+// MIX_N_PAY_M = mix & match (Fase 5): llevá N mezclando productos del alcance, el/los
+// más barato(s) gratis. Reusa minQty/payQty igual que N_PAY_M — no necesitó columna nueva.
+export const PROMO_TYPES = ["PERCENT", "FIXED", "N_PAY_M", "MIX_N_PAY_M", "FREE_SHIPPING"] as const;
 export const PROMO_SCOPES = ["ALL", "CATEGORY", "PRODUCTS"] as const;
 export type PromoType = (typeof PROMO_TYPES)[number];
 export type PromoScope = (typeof PROMO_SCOPES)[number];
@@ -87,7 +89,9 @@ export function validatePromotionBody(body: Body): { error: string } | { data: V
   } else if (type === "FIXED") {
     value = Number(body.value);
     if (!Number.isFinite(value) || value <= 0) return { error: "El monto de descuento debe ser mayor a 0." };
-  } else if (type === "N_PAY_M") {
+  } else if (type === "N_PAY_M" || type === "MIX_N_PAY_M") {
+    // Mismas reglas para el N×M del mismo producto y para el mix & match: lo único
+    // que cambia es si las unidades se cuentan de un solo producto o mezclando.
     minQty = Math.trunc(Number(body.minQty));
     payQty = Math.trunc(Number(body.payQty));
     if (!Number.isFinite(minQty) || minQty < 2) return { error: "En 'llevá N', N tiene que ser 2 o más." };
@@ -136,7 +140,10 @@ function promoEffectiveUnitPrice(
   unitPrice: number
 ): number | null {
   if (p.type === "FREE_SHIPPING" || !(unitPrice > 0)) return null;
-  const qty = p.type === "N_PAY_M" && p.minQty && p.minQty >= 2 ? p.minQty : 1;
+  // Para los dos N×M (mismo producto y mix) se simula el grupo completo: es el caso
+  // en que el precio por unidad baja más, que es justo lo que hay que avisar.
+  const isNxM = p.type === "N_PAY_M" || p.type === "MIX_N_PAY_M";
+  const qty = isNxM && p.minQty && p.minQty >= 2 ? p.minQty : 1;
   const promo: ActivePromotion = {
     type: p.type, value: p.value, minQty: p.minQty, payQty: p.payQty,
     minOrderAmount: 0, scope: "ALL", categories: [], productIds: [], combinesWithCoupons: true,

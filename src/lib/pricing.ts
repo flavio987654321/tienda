@@ -41,10 +41,10 @@ export type PricingItem = {
 // ISO strings; por eso acá no se tocan fechas. El motor sí evalúa el alcance, la
 // compra mínima y el tipo, que dependen del carrito. Los arrays ya vienen parseados.
 export type ActivePromotion = {
-  type: string;                 // PERCENT | FIXED | N_PAY_M | FREE_SHIPPING
+  type: string;                 // PERCENT | FIXED | N_PAY_M | MIX_N_PAY_M | FREE_SHIPPING
   value: number | null;         // % (PERCENT) o monto fijo por unidad (FIXED)
-  minQty: number | null;        // N de "llevá N" (N_PAY_M)
-  payQty: number | null;        // M de "pagá M" (N_PAY_M)
+  minQty: number | null;        // N de "llevá N" (N_PAY_M y MIX_N_PAY_M)
+  payQty: number | null;        // M de "pagá M" (N_PAY_M y MIX_N_PAY_M)
   minOrderAmount: number;       // compra mínima (sobre el subtotal SIN promo) para que aplique
   scope: string;                // ALL | CATEGORY | PRODUCTS
   categories: string[];         // nombres de categoría si scope=CATEGORY
@@ -191,14 +191,82 @@ function storePromoLineTotal(p: ActivePromotion, it: PricingItem, totalQty: numb
   return null; // FREE_SHIPPING no toca el precio del ítem
 }
 
+// Tipo MIX (mix & match). A diferencia de N_PAY_M (mismo producto), junta las
+// unidades elegibles de productos DISTINTOS del alcance y regala las más baratas:
+// "llevá 3 de estos productos/categorías, el más barato gratis". Reusa minQty/payQty.
+export const PROMO_MIX_N_PAY_M = "MIX_N_PAY_M";
+
+/**
+ * Aplica las promos MIX (mix & match) sobre `lineTotal` (lo muta). Junta TODAS las
+ * unidades del carrito que la promo alcanza (por alcance, mezclando productos), y por
+ * cada grupo completo de N regala las (N−M) unidades más baratas del pool. Aplica UNA
+ * sola promo MIX —la que más ahorra— y solo si mejora lo que el conjunto ya tenía con
+ * las promos por-ítem (best-of a nivel conjunto, sin apilar).
+ */
+function applyMixPromos(
+  items: PricingItem[],
+  eligiblePromos: ActivePromotion[],
+  baseLine: number[],
+  lineTotal: number[],
+): void {
+  let bestPlan: { idxs: number[]; reductionByIdx: Map<number, number>; saving: number } | null = null;
+
+  for (const p of eligiblePromos) {
+    if (p.type !== PROMO_MIX_N_PAY_M) continue;
+    const n = p.minQty, m = p.payQty;
+    if (n == null || m == null || n < 2 || m < 1 || m >= n) continue;
+
+    // Ítems que alcanza esta promo (por alcance).
+    const idxs: number[] = [];
+    for (let i = 0; i < items.length; i++) {
+      if (promoMatchesItem(p, items[i])) idxs.push(i);
+    }
+    if (idxs.length === 0) continue;
+
+    // Pool: una entrada por cada unidad elegible, con su precio base. Mezcla productos.
+    const units: { idx: number; price: number }[] = [];
+    for (const i of idxs) {
+      for (let k = 0; k < items[i].quantity; k++) units.push({ idx: i, price: items[i].basePrice });
+    }
+    if (units.length < n) continue; // ni un grupo completo
+
+    const freeUnits = Math.floor(units.length / n) * (n - m);
+    if (freeUnits <= 0) continue;
+
+    // Las más baratas del pool salen gratis (cross-producto).
+    units.sort((a, b) => a.price - b.price);
+    const reductionByIdx = new Map<number, number>();
+    let totalReduction = 0;
+    for (let u = 0; u < freeUnits; u++) {
+      const { idx, price } = units[u];
+      reductionByIdx.set(idx, (reductionByIdx.get(idx) ?? 0) + price);
+      totalReduction += price;
+    }
+
+    // best-of a nivel CONJUNTO: ¿el total del conjunto con MIX (base − regalo) es menor
+    // que lo que ya tiene con las promos por-ítem? Si no mejora, no se aplica.
+    let currentEligibleTotal = 0;
+    let baseEligibleTotal = 0;
+    for (const i of idxs) { currentEligibleTotal += lineTotal[i]; baseEligibleTotal += baseLine[i]; }
+    const saving = currentEligibleTotal - roundMoney(baseEligibleTotal - totalReduction);
+    if (saving <= 0) continue;
+
+    if (!bestPlan || saving > bestPlan.saving) bestPlan = { idxs, reductionByIdx, saving };
+  }
+
+  if (!bestPlan) return;
+  // Las líneas elegibles vuelven a base y se les descuenta el regalo (best-of ganó MIX).
+  for (const i of bestPlan.idxs) {
+    lineTotal[i] = roundMoney(baseLine[i] - (bestPlan.reductionByIdx.get(i) ?? 0));
+  }
+}
+
 /**
  * Calcula el precio de todo el carrito aplicando las StorePromotion de tienda.
- * Agrupa por producto porque el N×M y el mínimo dependen de la cantidad TOTAL de
- * ese producto, no de cada línea suelta.
- *
- * Cuando varias StorePromotion alcanzan al mismo ítem se elige la MEJOR para el
- * comprador (menor total de línea), nunca se apilan — combinar dos promos sobre el
- * mismo ítem es una decisión aparte (combinesWithPromotions, Fase 3).
+ * Tres pasos: (1) mejor promo POR-ÍTEM del mismo producto (PERCENT/FIXED/N×M);
+ * (2) promos MIX a nivel carrito (mezclan productos, el más barato gratis); (3)
+ * derivados. Nunca se apilan dos promos sobre el mismo ítem — gana la mejor para
+ * el comprador (combinar es una decisión aparte, combinesWithPromotions, Fase 3).
  */
 export function priceCart(items: PricingItem[], opts?: PriceCartOptions): CartPricing {
   // Cantidad total por producto (todas las líneas del mismo producto suman).
@@ -216,40 +284,46 @@ export function priceCart(items: PricingItem[], opts?: PriceCartOptions): CartPr
   // Promos de tienda que superan su compra mínima. El resto ni se considera.
   const eligiblePromos = (opts?.promotions ?? []).filter((p) => preSubtotal >= p.minOrderAmount);
 
-  const lines: PricedLine[] = [];
-  let subtotal = 0;
-  let promoSavings = 0;
-
+  // (1) Mejor promo por-ítem del mismo producto. El precio de lista es el piso.
+  const baseLine: number[] = [];
+  const lineTotal: number[] = [];
   for (const it of items) {
-    // El Map se llenó con todas las líneas arriba, así que la clave siempre está.
     const totalQty = totalQtyByProduct.get(it.productId)!;
-    const baseLine = roundMoney(it.basePrice * it.quantity);
-
-    // Cada StorePromotion de descuento que alcanza a este ítem es un candidato: se
-    // parte del precio de lista y gana el menor total de línea (la mejor para el
-    // comprador). No se apilan.
-    let bestLine = baseLine;
+    const bl = roundMoney(it.basePrice * it.quantity);
+    let best = bl;
     for (const p of eligiblePromos) {
       if (!promoMatchesItem(p, it)) continue;
       const cand = storePromoLineTotal(p, it, totalQty);
-      if (cand != null && cand < bestLine) bestLine = cand;
+      if (cand != null && cand < best) best = cand;
     }
+    baseLine.push(bl);
+    lineTotal.push(best);
+  }
 
-    const lineTotal = bestLine;
-    const applies = lineTotal < baseLine - 0.001;
-    const unitPrice = it.quantity > 0 ? roundMoney(lineTotal / it.quantity) : it.basePrice;
-    const savings = roundMoney(baseLine - lineTotal);
+  // (2) Promos MIX (mix & match) a nivel carrito, mutando lineTotal donde ganan.
+  applyMixPromos(items, eligiblePromos, baseLine, lineTotal);
 
+  // (3) Derivados a partir de los totales ya definitivos.
+  const lines: PricedLine[] = [];
+  let subtotal = 0;
+  let promoSavings = 0;
+  for (let i = 0; i < items.length; i++) {
+    const it = items[i];
+    const lt = lineTotal[i];
+    const bl = baseLine[i];
+    const applies = lt < bl - 0.001;
+    const unitPrice = it.quantity > 0 ? roundMoney(lt / it.quantity) : it.basePrice;
+    const savings = roundMoney(bl - lt);
     lines.push({
       productId: it.productId,
       variantId: it.variantId,
       quantity: it.quantity,
       unitPrice,
-      lineTotal,
+      lineTotal: lt,
       promoApplied: applies,
       savings: applies ? savings : 0,
     });
-    subtotal = roundMoney(subtotal + lineTotal);
+    subtotal = roundMoney(subtotal + lt);
     if (applies) promoSavings = roundMoney(promoSavings + savings);
   }
 

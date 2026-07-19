@@ -37,7 +37,7 @@ export function describePromo(p: ActivePromotion): { headline: string; scope: st
   let headline = "Promoción";
   if (p.type === "PERCENT" && p.value) headline = `${Math.round(p.value)}% OFF`;
   else if (p.type === "FIXED" && p.value) headline = `${ars(p.value)} OFF`;
-  else if (p.type === "N_PAY_M" && p.minQty && p.payQty) headline = `${p.minQty}×${p.payQty}`;
+  else if ((p.type === "N_PAY_M" || p.type === "MIX_N_PAY_M") && p.minQty && p.payQty) headline = `${p.minQty}×${p.payQty}`;
   else if (p.type === "FREE_SHIPPING") headline = "Envío gratis";
 
   const cats = p.categories.filter(Boolean);
@@ -48,6 +48,13 @@ export function describePromo(p: ActivePromotion): { headline: string; scope: st
 
   const conditions: string[] = [];
   if (p.type === "N_PAY_M" && p.minQty && p.payQty) conditions.push(`Llevá ${p.minQty}, pagá ${p.payQty}`);
+  // Mix & match: lo que lo hace distinto es que las unidades se pueden MEZCLAR entre
+  // productos, y lo que se regala es lo más barato. Decirlo explícito es la promo.
+  if (p.type === "MIX_N_PAY_M" && p.minQty && p.payQty) {
+    const free = p.minQty - p.payQty;
+    conditions.push(`Llevá ${p.minQty} combinando los productos que quieras`);
+    conditions.push(free === 1 ? "El más barato te sale gratis" : `Los ${free} más baratos te salen gratis`);
+  }
   if (p.minOrderAmount > 0) conditions.push(`Comprando ${ars(p.minOrderAmount)} o más`);
   conditions.push(p.combinesWithCoupons ? "Se puede combinar con un cupón" : "No se acumula con cupones");
   return { headline, scope, conditions };
@@ -91,7 +98,10 @@ export function resolveProductPromo(
   let nxm: { n: number; m: number } | null = null;
   let nxmPromo: ActivePromotion | null = null;
   for (const p of matching) {
-    if (p.type === "N_PAY_M" && p.minQty && p.minQty >= 2 && p.payQty && p.payQty >= 1 && p.payQty < p.minQty) {
+    // El mix & match también se muestra como N×M en la card: si el comprador lleva N
+    // unidades de ESTE producto, el pool las cuenta igual y una sale gratis. Que además
+    // se puedan mezclar productos lo explica el bloque (describePromo).
+    if ((p.type === "N_PAY_M" || p.type === "MIX_N_PAY_M") && p.minQty && p.minQty >= 2 && p.payQty && p.payQty >= 1 && p.payQty < p.minQty) {
       // El de mayor beneficio (menor razón pagás/llevás) gana como badge.
       if (!nxm || p.payQty / p.minQty < nxm.m / nxm.n) { nxm = { n: p.minQty, m: p.payQty }; nxmPromo = p; }
       continue;

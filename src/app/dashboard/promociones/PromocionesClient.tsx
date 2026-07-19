@@ -3,7 +3,7 @@
 import { useState, useCallback, useRef } from "react";
 import {
   Percent, Tag, Gift, Truck, Store, Folder, ListChecks, Check, Plus, X,
-  Info, AlertTriangle, Loader2, Search, Archive, Trash2, RotateCcw, Smile, Pencil,
+  Info, AlertTriangle, Loader2, Search, Archive, Trash2, RotateCcw, Smile, Pencil, Shuffle,
 } from "lucide-react";
 import { costFloorCheck, MAX_PROMO_PERCENT as MAX_PCT } from "@/lib/promotions";
 
@@ -42,14 +42,21 @@ const TYPE_META: Record<string, {
     et: "Un monto fijo menos, no un porcentaje",
     ed: "Se resta la misma plata a cada producto elegido. Ideal para liquidar: “$5.000 menos en toda campera”, cueste lo que cueste." },
   N_PAY_M: { Icon: Gift, tile: "bg-amber-50 text-amber-600", label: "Llevá N, pagá M", short: "Ej. llevá 3 iguales, pagá 2",
-    et: "Comprando varios del mismo producto, uno va sin cargo",
-    ed: "Se arma solo en el carrito. En un 3×2, llevando 3 unidades del mismo producto, paga 2. (Combinar productos distintos llega más adelante.)" },
+    et: "Comprando varios del MISMO producto, uno va sin cargo",
+    ed: "Se arma solo en el carrito. En un 3×2, llevando 3 unidades del mismo producto, paga 2. Si querés que pueda combinar productos distintos, usá “Combo: llevá N mezclando”." },
+  MIX_N_PAY_M: { Icon: Shuffle, tile: "bg-violet-50 text-violet-600", label: "Combo: llevá N mezclando", short: "Ej. llevá 3 cualesquiera, el más barato gratis",
+    et: "Comprando varios productos DISTINTOS, el más barato va sin cargo",
+    ed: "Como el 3×2 pero sin obligar a llevar el mismo producto: el cliente combina lo que quiera de lo que elijas (una remera + un pantalón + una campera) y el más barato de cada 3 le sale gratis. Es el que más sube el ticket promedio." },
   FREE_SHIPPING: { Icon: Truck, tile: "bg-teal-50 text-teal-600", label: "Envío gratis", short: "Ej. desde $50.000",
     et: "El envío pasa a costar cero",
     ed: "Si la compra supera el monto que pongas, el envío se bonifica en el checkout. Por debajo, paga envío normal." },
 };
 
 const money = (n: number) => "$" + Math.round(n).toLocaleString("es-AR");
+
+// Los dos tipos "llevá N pagá M" (mismo producto y mix & match) comparten los campos
+// minQty/payQty y toda la UI de reglas — lo único que cambia es si se puede mezclar.
+const isNxM = (t: string | null | undefined) => t === "N_PAY_M" || t === "MIX_N_PAY_M";
 
 function statusPill(s: string) {
   const map: Record<string, [string, string]> = {
@@ -67,7 +74,7 @@ function statusPill(s: string) {
 function discountLabel(p: Pick<Promotion, "type" | "value" | "minQty" | "payQty">) {
   if (p.type === "PERCENT") return `${p.value ?? 0}% OFF`;
   if (p.type === "FIXED") return `${money(p.value ?? 0)} OFF`;
-  if (p.type === "N_PAY_M") return `${p.minQty ?? 0} × ${p.payQty ?? 0}`;
+  if (isNxM(p.type)) return `${p.minQty ?? 0} × ${p.payQty ?? 0}`;
   return "Envío gratis";
 }
 // Detalle de a QUÉ se aplica. Para "productos elegidos" muestra los nombres (no un
@@ -319,8 +326,8 @@ function Wizard({ categories, products, onClose, onCreated, editPromo }: {
   const nameRef = useRef<HTMLInputElement>(null);
   const [emojiOpen, setEmojiOpen] = useState(false);
   const [value, setValue] = useState(editPromo && (editPromo.type === "PERCENT" || editPromo.type === "FIXED") && editPromo.value != null ? String(editPromo.value) : "");
-  const [minQty, setMinQty] = useState(editPromo?.type === "N_PAY_M" && editPromo.minQty != null ? String(editPromo.minQty) : "3");
-  const [payQty, setPayQty] = useState(editPromo?.type === "N_PAY_M" && editPromo.payQty != null ? String(editPromo.payQty) : "2");
+  const [minQty, setMinQty] = useState(isNxM(editPromo?.type) && editPromo?.minQty != null ? String(editPromo.minQty) : "3");
+  const [payQty, setPayQty] = useState(isNxM(editPromo?.type) && editPromo?.payQty != null ? String(editPromo.payQty) : "2");
   const [minOrder, setMinOrder] = useState(editPromo && editPromo.minOrderAmount > 0 ? String(editPromo.minOrderAmount) : "");
   const [startsAt, setStartsAt] = useState(editPromo?.startsAt ? editPromo.startsAt.slice(0, 10) : "");
   const [endsAt, setEndsAt] = useState(editPromo?.endsAt ? editPromo.endsAt.slice(0, 10) : "");
@@ -351,7 +358,7 @@ function Wizard({ categories, products, onClose, onCreated, editPromo }: {
       // % entre 1 y 90 EN VIVO (antes solo pedía >0 y el server rechazaba al final).
       if (type === "PERCENT") { const n = parseFloat(value); return n >= 1 && n <= MAX_PCT; }
       if (type === "FIXED") return parseFloat(value) > 0;
-      if (type === "N_PAY_M") return parseInt(minQty) >= 2 && parseInt(payQty) >= 1 && parseInt(payQty) < parseInt(minQty);
+      if (isNxM(type)) return parseInt(minQty) >= 2 && parseInt(payQty) >= 1 && parseInt(payQty) < parseInt(minQty);
       return true;
     }
     if (step === 5) return name.trim().length >= 2;
@@ -370,7 +377,7 @@ function Wizard({ categories, products, onClose, onCreated, editPromo }: {
         combinesWithCoupons: combines,
       };
       if (type === "PERCENT" || type === "FIXED") body.value = parseNum(value);
-      if (type === "N_PAY_M") { body.minQty = parseInt(minQty); body.payQty = parseInt(payQty); }
+      if (isNxM(type)) { body.minQty = parseInt(minQty); body.payQty = parseInt(payQty); }
       const res = await fetch(
         isEdit ? `/api/dashboard/promociones/${editPromo!.id}` : "/api/dashboard/promociones",
         { method: isEdit ? "PATCH" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }
@@ -464,14 +471,23 @@ function Wizard({ categories, products, onClose, onCreated, editPromo }: {
 
           {step === 3 && (
             <>
-              <StepTitle t="Las reglas" d={type === "FREE_SHIPPING" ? "¿Desde qué monto el envío es gratis?" : type === "N_PAY_M" ? "Definí el “llevá N, pagá M”." : "Cuánto se descuenta, y desde qué monto."} />
-              {type === "N_PAY_M" ? (
+              <StepTitle t="Las reglas" d={type === "FREE_SHIPPING" ? "¿Desde qué monto el envío es gratis?" : isNxM(type) ? "Definí el “llevá N, pagá M”." : "Cuánto se descuenta, y desde qué monto."} />
+              {isNxM(type) ? (
                 <>
                   <div className="flex gap-3">
                     <Field label="Llevando"><input value={minQty} onChange={(e) => setMinQty(onlyDigits(e.target.value))} inputMode="numeric" className={inputCls} /></Field>
                     <Field label="Paga"><input value={payQty} onChange={(e) => setPayQty(onlyDigits(e.target.value))} inputMode="numeric" className={inputCls} /></Field>
                   </div>
-                  <InfoNote>Aplica juntando la cantidad del <b>mismo producto</b> (ej. 3 remeras iguales). Combinar productos distintos llega más adelante.</InfoNote>
+                  {type === "MIX_N_PAY_M" ? (
+                    <InfoNote>
+                      El cliente puede <b>combinar productos distintos</b> (una remera + un pantalón + una campera).
+                      Juntando {minQty || "N"} unidades de lo que elijas, {parseInt(payQty) > 0 && parseInt(minQty) - parseInt(payQty) === 1
+                        ? <>la <b>más barata sale gratis</b></>
+                        : <>las <b>más baratas salen gratis</b></>}.
+                    </InfoNote>
+                  ) : (
+                    <InfoNote>Aplica juntando la cantidad del <b>mismo producto</b> (ej. 3 remeras iguales). Si querés que pueda mezclar productos distintos, usá <b>“Combo: llevá N mezclando”</b>.</InfoNote>
+                  )}
                 </>
               ) : type === "FREE_SHIPPING" ? (
                 <Field label="Compra mínima" hint="Vacío = siempre gratis"><input value={minOrder} onChange={(e) => setMinOrder(digitsMoney(e.target.value))} inputMode="numeric" placeholder="$ 50.000" className={inputCls} /></Field>
@@ -562,8 +578,8 @@ function Wizard({ categories, products, onClose, onCreated, editPromo }: {
                 const cf = costFloorCheck({
                   type: type ?? "",
                   value: (type === "PERCENT" || type === "FIXED") ? parseNum(value) : null,
-                  minQty: type === "N_PAY_M" ? parseInt(minQty) : null,
-                  payQty: type === "N_PAY_M" ? parseInt(payQty) : null,
+                  minQty: isNxM(type) ? parseInt(minQty) : null,
+                  payQty: isNxM(type) ? parseInt(payQty) : null,
                   scope: scope ?? "ALL",
                   categories: scope === "CATEGORY" && cat ? [cat] : [],
                   productIds: scope === "PRODUCTS" ? prodIds : [],
@@ -668,6 +684,7 @@ function parseNum(s: string): number { const n = parseFloat(String(s).replace(/[
 function reviewDiscount(type: string | null, value: string, minQty: string, payQty: string) {
   if (type === "PERCENT") return `${parseNum(value)}% OFF`;
   if (type === "FIXED") return `${money(parseNum(value))} OFF`;
+  if (type === "MIX_N_PAY_M") return `Llevá ${minQty} mezclando, pagá ${payQty}`;
   if (type === "N_PAY_M") return `Llevá ${minQty} pagá ${payQty}`;
   return "Envío gratis";
 }
