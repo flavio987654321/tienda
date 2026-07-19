@@ -142,10 +142,7 @@ function promoEffectiveUnitPrice(
     minOrderAmount: 0, scope: "ALL", categories: [], productIds: [], combinesWithCoupons: true,
   };
   const line = priceCart(
-    [{
-      productId: "x", variantId: null, quantity: qty, basePrice: unitPrice, category: null,
-      promo: { promoType: null, promoQtyMin: null, promoPayQty: null, promoQtyDiscount: null },
-    }],
+    [{ productId: "x", variantId: null, quantity: qty, basePrice: unitPrice, category: null }],
     { promotions: [promo] }
   ).lines[0];
   if (!line || !line.promoApplied) return null; // la promo no descontó nada (datos incompletos)

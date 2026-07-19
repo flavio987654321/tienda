@@ -22,7 +22,6 @@ import StoreProductReels from "@/components/store/ProductReels";
 import { SectionBlock } from "@/components/store/templates/shared/SectionBlock";
 import { parseVariantAttrs } from "@/lib/variantAttrs";
 import { colorToSwatch } from "@/lib/colorSwatch";
-import { promoModalText } from "@/lib/promoLabel";
 import { discountPercent } from "@/lib/discount";
 import { resolveVariantPrice } from "@/lib/variantPrice";
 import { useTurnstile } from "@/components/Turnstile";
@@ -260,8 +259,7 @@ export default function ChicParis() {
     toastMsg,
     cartCount,
     searchResults, favoriteProducts,
-    fmt, showToast, openModal, addToCart, addToPending, addAllToCart, removePendingItem, editPendingItem,
-    pendingItems, pendingTotal, promoActive, pendingPromoDiscount, pendingCartValue, editingIdx,
+    fmt, showToast, openModal, addToCart,
     toggleFavorite,
   } = cart;
   const accentText = getContrastColor(ACC) === "light" ? "#fff" : "#111";
@@ -892,10 +890,9 @@ export default function ChicParis() {
                   <div key={product.id} className="cp-prod" onClick={() => openModal(product)} style={{ cursor: "pointer", background: "#fff", borderRadius: 4, position: "relative", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
                     {(() => {
                       if (promo.primaryPromo) return <PromoTag label={describePromo(promo.primaryPromo).headline} size="sm" />;
-                      const hasNxM = product.promoType === "N_PAY_M" && !!product.promoQtyMin && !!product.promoPayQty;
                       const hasOffer = !!product.comparePrice && product.comparePrice > product.price;
-                      if (!hasNxM && !hasOffer) return null;
-                      return <OfferBadge badge={hasNxM ? null : product.offerBadge} pct={hasOffer ? discountPercent(product.price, product.comparePrice) : null} nxm={hasNxM ? { n: product.promoQtyMin!, m: product.promoPayQty! } : undefined} size="sm" />;
+                      if (!hasOffer) return null;
+                      return <OfferBadge badge={product.offerBadge} pct={discountPercent(product.price, product.comparePrice)} size="sm" />;
                     })()}
                     <div style={{ position: "relative", width: "100%", overflow: "hidden", aspectRatio: "3/4" }}>
                       <FadeImage className="cp-img" src={product.images[0] ?? "/placeholder.jpg"} alt={product.name} fill sizes="(max-width: 768px) 50vw, 25vw"
@@ -1432,10 +1429,9 @@ export default function ChicParis() {
                 onClick={() => setLightboxSrc(modalProduct.images[modalImg] ?? "/placeholder.jpg")} />
               {(() => {
                 if (modalPromo?.primaryPromo) return <PromoTag label={describePromo(modalPromo.primaryPromo).headline} />;
-                const hasNxM = modalProduct.promoType === "N_PAY_M" && !!modalProduct.promoQtyMin && !!modalProduct.promoPayQty;
                 const hasOffer = !variantPrice && !!modalProduct.comparePrice && modalProduct.comparePrice > modalProduct.price;
-                if (!hasNxM && !hasOffer) return null;
-                return <OfferBadge badge={hasNxM ? null : modalProduct.offerBadge} pct={hasOffer ? discountPercent(modalProduct.price, modalProduct.comparePrice) : null} nxm={hasNxM ? { n: modalProduct.promoQtyMin!, m: modalProduct.promoPayQty! } : undefined} size="md" />;
+                if (!hasOffer) return null;
+                return <OfferBadge badge={modalProduct.offerBadge} pct={discountPercent(modalProduct.price, modalProduct.comparePrice)} size="md" />;
               })()}
               {modalProduct.images.length > 1 && (<>
                 <button onClick={() => setModalImg(i => (i - 1 + modalProduct.images.length) % modalProduct.images.length)}
@@ -1621,40 +1617,6 @@ export default function ChicParis() {
                 <button onClick={() => openInquiry(modalProduct)} style={{ background: ACC, color: accentText, border: "none", padding: "15px", fontSize: 11, fontWeight: 800, letterSpacing: 3, textTransform: "uppercase", cursor: "pointer", width: "100%" }}>
                   Consultar disponibilidad
                 </button>
-              ) : modalProduct.promoQtyMin ? (
-                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                  <p style={{ fontSize:9, letterSpacing:2, textTransform:"uppercase", color:ACC, margin:0, fontWeight:600, opacity:0.7 }}>Promoción</p>
-                  <div style={{ fontSize: 11, fontWeight: 600, padding: "8px 12px", borderRadius: 4, background: promoActive ? "rgba(22,163,74,0.08)" : `${ACC}11`, color: promoActive ? "#16a34a" : ACC, border: `1px solid ${promoActive ? "rgba(22,163,74,0.2)" : `${ACC}33`}` }}>
-                    {promoModalText(modalProduct.promoType, modalProduct.promoQtyMin!, modalProduct.promoQtyDiscount, modalProduct.promoPayQty, pendingTotal)}
-                  </div>
-                  {pendingItems.length > 0 && (
-                    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                      {pendingItems.map((item, idx) => {
-                        const isEditing = editingIdx === idx;
-                        return (
-                          <div key={idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 11, color: "#555", padding: "5px 8px", background: isEditing ? `${ACC}18` : "#f8f8f8", borderRadius: 3, border: isEditing ? `1px dashed ${ACC}88` : "1px solid transparent" }}>
-                            <button onClick={() => editPendingItem(idx)} title={isEditing ? "Editando..." : "Tocá para editar"} style={{ background: "none", border: "none", color: isEditing ? ACC : "#777", cursor: "pointer", fontSize: 11, fontWeight: 600, padding: 0, textAlign: "left", flex: 1, opacity: isEditing ? 0.7 : 1 }}>
-                              {isEditing ? "✎ " : ""}{[isEditing ? selectedColor : item.color, isEditing ? selectedSize : item.size].filter(Boolean).join(" / ")} ×{isEditing ? qty : item.qty}
-                            </button>
-                            {!isEditing && <button onClick={() => removePendingItem(idx)} style={{ background: "none", border: "none", color: "#bbb", cursor: "pointer", fontSize: 14, padding: "0 2px" }}>×</button>}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                  <button onClick={addToPending} disabled={selectedVariantStock === 0}
-                    style={{ background: "none", border: `1px solid ${selectedVariantStock === 0 ? "#ccc" : ACC}`, color: selectedVariantStock === 0 ? "#ccc" : ACC, padding: "12px", fontSize: 11, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", cursor: selectedVariantStock === 0 ? "not-allowed" : "pointer" }}>
-                    {selectedVariantStock === 0 ? "Sin stock" : editingIdx !== null ? "✓ Confirmar cambios" : "+ Agregar a mi selección"}
-                  </button>
-                  {pendingItems.length > 0 && (() => {
-                    const total = pendingCartValue;
-                    return (
-                      <button onClick={addAllToCart} style={{ background: ACC, color: accentText, border: "none", padding: "14px", fontSize: 11, fontWeight: 800, letterSpacing: 2, textTransform: "uppercase", cursor: "pointer" }}>
-                        Agregar al Carrito ({pendingTotal} unid.) · {fmt(total)}
-                      </button>
-                    );
-                  })()}
-                </div>
               ) : (
                 <button onClick={addToCart} disabled={selectedVariantStock === 0}
                   style={{ background: selectedVariantStock === 0 ? "#ccc" : ACC, color: accentText, border: "none", padding: "15px", fontSize: 11, fontWeight: 800, letterSpacing: 3, textTransform: "uppercase", cursor: selectedVariantStock === 0 ? "not-allowed" : "pointer", width: "100%" }}>
@@ -1800,26 +1762,6 @@ export default function ChicParis() {
                     style={{ width: "100%", background: ACC, color: getContrastColor(ACC) === "light" ? "#fff" : "#111", border: "none", padding: "15px", fontSize: 11, fontWeight: 800, letterSpacing: 3, textTransform: "uppercase", cursor: "pointer" }}>
                     Consultar disponibilidad
                   </button>
-                ) : modalProduct.promoQtyMin ? (
-                  <div style={{ display: "flex", gap: 8 }}>
-                    <button onClick={addToPending} disabled={selectedVariantStock === 0}
-                      style={{ flex: 1, background: "none", border: `1px solid ${selectedVariantStock === 0 ? "#ccc" : ACC}`, color: selectedVariantStock === 0 ? "#ccc" : ACC, padding: "13px 8px", fontSize: 10, fontWeight: 700, letterSpacing: 1.5, textTransform: "uppercase", cursor: selectedVariantStock === 0 ? "not-allowed" : "pointer" }}>
-                      {selectedVariantStock === 0 ? "Sin stock" : `+ Selección${pendingTotal > 0 ? ` (${pendingTotal})` : ""}`}
-                    </button>
-                    {pendingItems.length > 0 && (() => {
-                      const total = pendingCartValue;
-                      return (
-                        <button onClick={addAllToCart} style={{ flex: 2, background: ACC, color: accentText, border: "none", padding: "13px 8px", fontSize: 10, fontWeight: 800, letterSpacing: 1.5, textTransform: "uppercase", cursor: "pointer" }}>
-                          {promoActive ? `Confirmar · ${fmt(total)} (-${pendingPromoDiscount}%)` : `Confirmar · ${fmt(total)}`}
-                        </button>
-                      );
-                    })()}
-                    {pendingItems.length === 0 && (
-                      <div style={{ flex: 2, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: "#bbb", textAlign: "center" }}>
-                        {`${modalProduct.promoQtyMin}+ uds = ${modalProduct.promoQtyDiscount}% off`}
-                      </div>
-                    )}
-                  </div>
                 ) : (
                   <button onClick={addToCart} disabled={selectedVariantStock === 0}
                     style={{ width: "100%", background: selectedVariantStock === 0 ? "#ccc" : ACC, color: accentText, border: "none", padding: "15px", fontSize: 11, fontWeight: 800, letterSpacing: 3, textTransform: "uppercase", cursor: selectedVariantStock === 0 ? "not-allowed" : "pointer" }}>

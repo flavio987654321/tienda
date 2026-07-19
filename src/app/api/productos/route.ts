@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
     name, sanitizedDescription, parsedPrice, parsedComparePrice, parsedCostPrice, parsedFeatured, parsedPrecioMayorista, parsedCantMinMayorista,
     parsedPreciosEscalonados, parsedSoloMayorista, parsedCuotas, normalizedVariants,
     parsedWeightKg, parsedWidthCm, parsedHeightCm, parsedDepthCm,
-    parsedPromoQtyMin, parsedPromoQtyDiscount, parsedPromoType, parsedPromoPayQty, parsedOfferBadge, parsedOfferNote, parsedOfferEndsAt,
+    parsedOfferBadge, parsedOfferNote, parsedOfferEndsAt,
   } = validated;
 
   // Guard de seguridad: escalones y soloMayorista solo aplican a tiendas mayoristas
@@ -83,10 +83,6 @@ export async function POST(req: NextRequest) {
       cantMinMayorista: parsedCantMinMayorista,
       preciosEscalonados: safeEscalonados,
       soloMayorista: safeSoloMayorista,
-      promoQtyMin: parsedPromoQtyMin,
-      promoQtyDiscount: parsedPromoQtyDiscount,
-      promoType: parsedPromoType,
-      promoPayQty: parsedPromoPayQty,
       offerBadge: parsedOfferBadge,
       offerNote: parsedOfferNote,
       offerEndsAt: parsedOfferEndsAt,

@@ -247,7 +247,7 @@ export async function POST(req: NextRequest) {
 
   try {
     let usedRewardCouponId: string | null = null;
-    const { createdOrder: order, promoSavings, promoProductInfo, appliedCouponCode } = await prisma.$transaction(async (tx) => {
+    const { createdOrder: order, promoSavings, appliedCouponCode } = await prisma.$transaction(async (tx) => {
       const store = await tx.store.findUnique({
         where: { id: storeId },
         select: {
@@ -286,12 +286,6 @@ export async function POST(req: NextRequest) {
         where: { id: { in: productIds }, storeId, isActive: true, deletedAt: null },
         include: { variants: true },
       });
-
-      // Pre-calcular cantidad total por producto para validar promos de cantidad
-      const totalQtyByProduct = new Map<string, number>();
-      for (const item of normalizedItems) {
-        totalQtyByProduct.set(item.productId, (totalQtyByProduct.get(item.productId) ?? 0) + item.quantity);
-      }
 
       const orderItems: { productId: string; variantId: string | null; quantity: number; price: number; lineTotal: number; costAtSale: number | null }[] = [];
       // El loop decrementa stock y resuelve el precio base (variante/mayorista);
@@ -359,13 +353,6 @@ export async function POST(req: NextRequest) {
           basePrice: wholesaleOrBasePrice,
           // Categoría para el alcance por categoría de las StorePromotion.
           category: product.category,
-          // La promo se lee de la DB, nunca del cliente — priceCart la valida igual.
-          promo: {
-            promoType: product.promoType,
-            promoQtyMin: product.promoQtyMin,
-            promoPayQty: product.promoPayQty,
-            promoQtyDiscount: product.promoQtyDiscount,
-          },
         });
         // "Congelado" al momento de la venta — si después se edita el costo del
         // producto, este pedido ya vendido no debe cambiar de ganancia.
@@ -557,11 +544,7 @@ export async function POST(req: NextRequest) {
         });
       }
 
-      // Capturar info del producto con promo para el email
-      const promoProduct = products.find(p => p.promoQtyMin && totalQtyByProduct.get(p.id) != null && totalQtyByProduct.get(p.id)! >= p.promoQtyMin);
-      const promoProductInfo = promoProduct ? { type: promoProduct.promoType, min: promoProduct.promoQtyMin!, payQty: promoProduct.promoPayQty } : null;
-
-      return { createdOrder, promoSavings, promoProductInfo, appliedCouponCode };
+      return { createdOrder, promoSavings, appliedCouponCode };
     }, { timeout: 15_000 });
 
     // Donación opcional a la Canasta Solidaria (toggle del carrito) — un
@@ -761,9 +744,6 @@ export async function POST(req: NextRequest) {
         items: emailItems,
         subtotal: order.subtotal,
         promoSavings: promoSavings > 0 ? promoSavings : undefined,
-        promoType: promoProductInfo?.type,
-        promoQtyMin: promoProductInfo?.min,
-        promoPayQty: promoProductInfo?.payQty,
         discountAmount: order.discountAmount,
         couponCode: appliedCouponCode ?? undefined,
         shippingCost: order.shippingCost,

@@ -9,7 +9,6 @@ import { getDemoPool, isDemoProductId, parsePromotions, type StorefrontProduct, 
 import type { ActivePromotion } from "@/lib/pricing";
 import { resolveProductPromo, describePromo } from "@/lib/promoDisplay";
 import { PromoTag, PromoBlock } from "@/components/store/PromoDisplay";
-import { promoModalText } from "@/lib/promoLabel";
 import { resolveVariantPrice } from "@/lib/variantPrice";
 import type { ProductDetailViewProps } from "@/components/store/templates/productDetail/shared";
 import ElectroPrimeDetail from "@/components/store/templates/productDetail/ElectroPrimeDetail";
@@ -33,8 +32,6 @@ type RawProduct = {
   cantMinMayorista?: number | null;
   preciosEscalonados?: string;
   soloMayorista?: boolean;
-  promoQtyMin?: number | null;
-  promoQtyDiscount?: number | null;
   cuotas?: number;
   category?: string;
   subcategory?: string;
@@ -44,8 +41,6 @@ type RawProduct = {
   reelUrls?: string;
   variants?: StorefrontVariant[];
   attributes?: string;
-  promoType?: string | null;
-  promoPayQty?: number | null;
   offerBadge?: string | null;
   offerNote?: string | null;
   offerEndsAt?: string | null;
@@ -98,10 +93,6 @@ function mapProduct(raw: RawProduct): StorefrontProduct {
     cantMinMayorista: raw.cantMinMayorista ?? null,
     preciosEscalonados: (() => { try { const p = JSON.parse(raw.preciosEscalonados || "[]"); return Array.isArray(p) ? p : []; } catch { return []; } })(),
     soloMayorista: raw.soloMayorista ?? false,
-    promoQtyMin: raw.promoQtyMin ?? null,
-    promoQtyDiscount: raw.promoQtyDiscount ?? null,
-    promoType: raw.promoType ?? "PERCENT",
-    promoPayQty: raw.promoPayQty ?? null,
     offerBadge: offerActive ? (raw.offerBadge ?? null) : null,
     offerNote: offerActive ? (raw.offerNote ?? null) : null,
     cuotas: raw.cuotas ?? 0,
@@ -329,11 +320,6 @@ export default function ProductDetailClient({ slug, productId }: { slug: string;
             {product.offerNote && (
               <p className="text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2 mb-2 flex items-center gap-2">
                 📋 {product.offerNote}
-              </p>
-            )}
-            {product.promoQtyMin && product.promoQtyDiscount && (
-              <p className="text-xs font-semibold px-3 py-2 rounded-lg bg-orange-50 border border-orange-200 text-orange-700 mb-2">
-                {promoModalText(product.promoType, product.promoQtyMin, product.promoQtyDiscount, product.promoPayQty, 0)}
               </p>
             )}
             <p className="text-xs text-gray-400 mb-6">Pagá en cuotas con tarjeta de crédito</p>

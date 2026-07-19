@@ -5,19 +5,17 @@
 //
 // Producto base: precio $10.000. Los casos de mayorista (H/I/J) y cupón (K–O) NO
 // están acá: pertenecen al resolvedor de precio base y al checkout, no al motor
-// de promos. Este archivo cubre A–G (la cuenta de promos, que es lo que priceCart hace).
+// de promos. El motor aplica las StorePromotion (promociones a nivel tienda);
+// eso es lo que cubren los casos SP-* y FS-*.
 
-import { priceCart, resolveBasePrice, freeShippingProgress, type PricingItem, type ActivePromotion, PROMO_PERCENT, PROMO_N_PAY_M } from "./pricing";
+import { priceCart, resolveBasePrice, freeShippingProgress, type PricingItem, type ActivePromotion } from "./pricing";
 import { costFloorCheck, type CostFloorPromo, type CostFloorProduct } from "./promotions";
 import { resolveProductPromo } from "./promoDisplay";
 
 const BASE = 10000;
-const NO_PROMO = { promoType: null, promoQtyMin: null, promoPayQty: null, promoQtyDiscount: null };
-const PERCENT_25 = { promoType: PROMO_PERCENT, promoQtyMin: 3, promoPayQty: null, promoQtyDiscount: 25 };
-const N3_PAY_2 = { promoType: PROMO_N_PAY_M, promoQtyMin: 3, promoPayQty: 2, promoQtyDiscount: null };
 
-function item(qty: number, promo: PricingItem["promo"], basePrice = BASE, opts?: { productId?: string; category?: string | null }): PricingItem {
-  return { productId: opts?.productId ?? "P", variantId: null, quantity: qty, basePrice, promo, category: opts?.category };
+function item(qty: number, basePrice = BASE, opts?: { productId?: string; category?: string | null }): PricingItem {
+  return { productId: opts?.productId ?? "P", variantId: null, quantity: qty, basePrice, category: opts?.category };
 }
 
 // Fábrica de StorePromotion vigentes (el llamador ya filtró por fecha).
@@ -30,16 +28,10 @@ function promo(p: Partial<ActivePromotion> & { type: string }): ActivePromotion 
   };
 }
 
+// Baseline sin ninguna promo: el subtotal es el precio de lista por cantidad.
 const cases: { id: string; items: PricingItem[]; expectedSubtotal: number; desc: string }[] = [
-  { id: "A", items: [item(1, NO_PROMO)],   expectedSubtotal: 10000, desc: "1u, sin promo" },
-  { id: "B", items: [item(3, NO_PROMO)],   expectedSubtotal: 30000, desc: "3u, sin promo" },
-  { id: "C", items: [item(2, PERCENT_25)], expectedSubtotal: 20000, desc: "PERCENT 25% min3, 2u → bajo el mínimo" },
-  { id: "D", items: [item(3, PERCENT_25)], expectedSubtotal: 22500, desc: "PERCENT 25% min3, 3u → $7.500 × 3" },
-  { id: "E", items: [item(3, N3_PAY_2)],   expectedSubtotal: 20000, desc: "3×2, 3u → paga 2" },
-  { id: "F", items: [item(4, N3_PAY_2)],   expectedSubtotal: 30000, desc: "3×2, 4u → paga 3" },
-  { id: "G", items: [item(6, N3_PAY_2)],   expectedSubtotal: 40000, desc: "3×2, 6u → paga 4" },
-  // Extra: dos líneas del MISMO producto (variantes distintas) que juntas activan la promo.
-  { id: "H", items: [item(2, N3_PAY_2), item(1, N3_PAY_2)], expectedSubtotal: 20000, desc: "3×2 repartido en 2 líneas (2+1) → paga 2" },
+  { id: "A", items: [item(1)], expectedSubtotal: 10000, desc: "1u, sin promo" },
+  { id: "B", items: [item(3)], expectedSubtotal: 30000, desc: "3u, sin promo" },
 ];
 
 let failed = 0;
@@ -66,38 +58,38 @@ for (const c of baseCases) {
 }
 
 // ── StorePromotion: el motor que las lee (Fase 2, último paso) ───────────────
-// Producto base $10.000 salvo aclaración. Cubre cada tipo, best-of contra la promo
-// del producto, el gate de compra mínima, envío gratis y el gate de cupón.
+// Producto base $10.000 salvo aclaración. Cubre cada tipo, el gate de compra
+// mínima, best-of entre dos promos, envío gratis y el gate de cupón.
 const P1 = { productId: "P1", category: "remeras" as string | null };
 const P2 = { productId: "P2", category: "pantalones" as string | null };
 const spCases: {
   id: string; items: PricingItem[]; promotions: ActivePromotion[];
   expectedSubtotal: number; expectedFree?: boolean; expectedCoupons?: boolean; desc: string;
 }[] = [
-  { id: "SP-A", items: [item(1, NO_PROMO)], promotions: [promo({ type: "PERCENT", value: 20 })],
+  { id: "SP-A", items: [item(1)], promotions: [promo({ type: "PERCENT", value: 20 })],
     expectedSubtotal: 8000, expectedCoupons: false, desc: "PERCENT 20% ALL, 1u → $8.000 · sin combinar cupón" },
-  { id: "SP-B", items: [item(2, NO_PROMO)], promotions: [promo({ type: "FIXED", value: 3000 })],
+  { id: "SP-B", items: [item(2)], promotions: [promo({ type: "FIXED", value: 3000 })],
     expectedSubtotal: 14000, desc: "FIXED $3.000/u ALL, 2u → $7.000 × 2" },
-  { id: "SP-C", items: [item(1, NO_PROMO)], promotions: [promo({ type: "FIXED", value: 15000 })],
+  { id: "SP-C", items: [item(1)], promotions: [promo({ type: "FIXED", value: 15000 })],
     expectedSubtotal: 0, desc: "FIXED $15.000/u sobre $10.000 → piso en 0, no negativo" },
-  { id: "SP-D", items: [item(3, NO_PROMO)], promotions: [promo({ type: "N_PAY_M", minQty: 3, payQty: 2 })],
+  { id: "SP-D", items: [item(3)], promotions: [promo({ type: "N_PAY_M", minQty: 3, payQty: 2 })],
     expectedSubtotal: 20000, desc: "N_PAY_M 3×2 ALL, 3u → paga 2" },
-  { id: "SP-E", items: [item(3, PERCENT_25)], promotions: [promo({ type: "PERCENT", value: 20 })],
-    expectedSubtotal: 22500, desc: "best-of: promo producto 25% gana a la de tienda 20% → $22.500" },
-  { id: "SP-F", items: [item(2, PERCENT_25)], promotions: [promo({ type: "PERCENT", value: 30 })],
-    expectedSubtotal: 14000, desc: "best-of: producto no llega al mínimo, gana tienda 30% → $14.000" },
-  { id: "SP-G", items: [item(2, NO_PROMO)], promotions: [promo({ type: "PERCENT", value: 20, minOrderAmount: 25000 })],
+  { id: "SP-E", items: [item(2, BASE, P1), item(1, BASE, P1)], promotions: [promo({ type: "N_PAY_M", minQty: 3, payQty: 2 })],
+    expectedSubtotal: 20000, desc: "N_PAY_M 3×2 repartido en 2 líneas del mismo producto (2+1) → paga 2" },
+  { id: "SP-F", items: [item(2)], promotions: [promo({ type: "PERCENT", value: 20 }), promo({ type: "PERCENT", value: 30 })],
+    expectedSubtotal: 14000, desc: "best-of: dos %, gana 30% → $7.000 × 2" },
+  { id: "SP-G", items: [item(2)], promotions: [promo({ type: "PERCENT", value: 20, minOrderAmount: 25000 })],
     expectedSubtotal: 20000, expectedCoupons: true, desc: "compra mínima $25k no alcanzada (2u=$20k) → no aplica" },
-  { id: "SP-H", items: [item(3, NO_PROMO)], promotions: [promo({ type: "PERCENT", value: 20, minOrderAmount: 25000 })],
+  { id: "SP-H", items: [item(3)], promotions: [promo({ type: "PERCENT", value: 20, minOrderAmount: 25000 })],
     expectedSubtotal: 24000, expectedCoupons: false, desc: "compra mínima $25k alcanzada (3u=$30k) → 20% off" },
-  { id: "SP-I", items: [item(1, NO_PROMO, BASE, P1), item(1, NO_PROMO, BASE, P2)],
+  { id: "SP-I", items: [item(1, BASE, P1), item(1, BASE, P2)],
     promotions: [promo({ type: "PERCENT", value: 50, scope: "CATEGORY", categories: ["remeras"] })],
     expectedSubtotal: 15000, desc: "50% solo en 'remeras': P1 $5.000 + P2 $10.000" },
-  { id: "SP-J", items: [item(1, NO_PROMO)], promotions: [promo({ type: "FREE_SHIPPING", minOrderAmount: 8000 })],
+  { id: "SP-J", items: [item(1)], promotions: [promo({ type: "FREE_SHIPPING", minOrderAmount: 8000 })],
     expectedSubtotal: 10000, expectedFree: true, desc: "envío gratis desde $8.000, compra $10.000 → gratis" },
-  { id: "SP-K", items: [item(1, NO_PROMO)], promotions: [promo({ type: "FREE_SHIPPING", minOrderAmount: 50000 })],
+  { id: "SP-K", items: [item(1)], promotions: [promo({ type: "FREE_SHIPPING", minOrderAmount: 50000 })],
     expectedSubtotal: 10000, expectedFree: false, desc: "envío gratis desde $50.000, compra $10.000 → NO" },
-  { id: "SP-L", items: [item(1, NO_PROMO)], promotions: [promo({ type: "PERCENT", value: 20, combinesWithCoupons: true })],
+  { id: "SP-L", items: [item(1)], promotions: [promo({ type: "PERCENT", value: 20, combinesWithCoupons: true })],
     expectedSubtotal: 8000, expectedCoupons: true, desc: "PERCENT 20% que SÍ combina con cupón" },
 ];
 for (const c of spCases) {
@@ -115,13 +107,13 @@ for (const c of spCases) {
 
 // ── Envío gratis en vivo: cuánto falta para el umbral ────────────────────────
 const fsCases: { id: string; items: PricingItem[]; promotions: ActivePromotion[]; expected: number | null; desc: string }[] = [
-  { id: "FS-A", items: [item(1, NO_PROMO)], promotions: [promo({ type: "FREE_SHIPPING", minOrderAmount: 8000 })],
+  { id: "FS-A", items: [item(1)], promotions: [promo({ type: "FREE_SHIPPING", minOrderAmount: 8000 })],
     expected: null, desc: "$10.000 ≥ umbral $8.000 → ya gratis, sin empujón" },
-  { id: "FS-B", items: [item(1, NO_PROMO)], promotions: [promo({ type: "FREE_SHIPPING", minOrderAmount: 15000 })],
+  { id: "FS-B", items: [item(1)], promotions: [promo({ type: "FREE_SHIPPING", minOrderAmount: 15000 })],
     expected: 5000, desc: "$10.000 vs umbral $15.000 → faltan $5.000" },
-  { id: "FS-C", items: [item(1, NO_PROMO)], promotions: [promo({ type: "PERCENT", value: 20 })],
+  { id: "FS-C", items: [item(1)], promotions: [promo({ type: "PERCENT", value: 20 })],
     expected: null, desc: "no hay promo de envío → null" },
-  { id: "FS-D", items: [item(1, NO_PROMO)],
+  { id: "FS-D", items: [item(1)],
     promotions: [promo({ type: "FREE_SHIPPING", minOrderAmount: 50000 }), promo({ type: "FREE_SHIPPING", minOrderAmount: 15000 })],
     expected: 5000, desc: "dos umbrales ($50k y $15k) → el más cercano, faltan $5.000" },
 ];

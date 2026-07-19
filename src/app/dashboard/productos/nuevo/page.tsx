@@ -479,11 +479,6 @@ function ProductoFormPage() {
   // Escalones: array de {desde, precio} como strings para los inputs controlados
   const [escalones, setEscalones] = useState<Array<{ desde: string; precio: string }>>([]);
   const [soloMayorista, setSoloMayorista] = useState(false);
-  const [promoEnabled, setPromoEnabled] = useState(false);
-  const [promoQtyMin, setPromoQtyMin] = useState("");
-  const [promoQtyDiscount, setPromoQtyDiscount] = useState("");
-  const [promoType, setPromoType] = useState<"PERCENT" | "N_PAY_M">("PERCENT");
-  const [promoPayQty, setPromoPayQty] = useState("");
   const [cuotas, setCuotas] = useState(0);
   const [weightKg, setWeightKg] = useState("");
   const [widthCm, setWidthCm] = useState("");
@@ -680,11 +675,6 @@ function ProductoFormPage() {
           }
         } catch { /* si falla el parse dejamos el estado vacío inicial */ }
         setSoloMayorista(product.soloMayorista === true);
-        setPromoQtyMin(product.promoQtyMin?.toString() || "");
-        setPromoQtyDiscount(product.promoQtyDiscount?.toString() || "");
-        setPromoType((product.promoType as "PERCENT" | "N_PAY_M") || "PERCENT");
-        setPromoPayQty(product.promoPayQty?.toString() || "");
-        setPromoEnabled(!!product.promoQtyMin);
         setIsOnSale(!!product.comparePrice);
         setCuotas(product.cuotas || 0);
         setWeightKg(product.weightKg?.toString() || "");
@@ -1036,10 +1026,6 @@ function ProductoFormPage() {
           .filter((e) => e.desde.trim() !== "" && e.precio.trim() !== "")
           .map((e) => ({ desde: parseInt(e.desde), precio: parseFloat(e.precio) })),
         soloMayorista,
-        promoQtyMin: promoEnabled ? (promoQtyMin || null) : null,
-        promoQtyDiscount: promoEnabled && promoType === "PERCENT" ? (promoQtyDiscount || null) : null,
-        promoType: promoEnabled ? promoType : "PERCENT",
-        promoPayQty: promoEnabled && promoType === "N_PAY_M" ? (promoPayQty || null) : null,
         cuotas,
         publishAt: publishAt || null,
         weightKg: weightKg || null,
@@ -1454,8 +1440,10 @@ function ProductoFormPage() {
                 onChange={handleVideoFileUpload}
               />
               {/* Igual que las fotos: se ven los 3 lugares desde el arranque, así se
-                  entiende cuántos videos entran sin tener que contarlos. */}
-              <div className="flex flex-wrap gap-3">
+                  entiende cuántos videos entran sin tener que contarlos. Centrados para
+                  que no queden pegados a la izquierda con un hueco a la derecha; en
+                  celular hacen wrap y quedan centrados igual. */}
+              <div className="flex flex-wrap justify-center gap-3">
                 {reelUrls.map((url, i) => (
                   <ReelCard
                     key={url + i}
@@ -1882,35 +1870,6 @@ function ProductoFormPage() {
                       )}
                     </div>
 
-                    {discount > 0 && promoEnabled && promoType === "PERCENT" && parseFloat(promoQtyDiscount) > 0 && (
-                      <div className="flex items-start gap-2 text-sm text-amber-700 bg-amber-50 border border-amber-200 px-4 py-3 rounded-xl">
-                        <svg className="h-4 w-4 shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                        <span>
-                          Tenés <strong>precio de oferta</strong> ({discount}% off) y <strong>promo por cantidad</strong> ({promoQtyDiscount}% off adicional) activos al mismo tiempo. El descuento de la promo se aplica <em>sobre</em> el precio ya rebajado — el cliente que compra {promoQtyMin}+ unidades obtiene ambos beneficios acumulados.
-                        </span>
-                      </div>
-                    )}
-
-                    {discount > 0 && promoEnabled && promoType === "N_PAY_M" && !!promoQtyMin && !!promoPayQty && (
-                      <div className="flex items-start gap-2 text-sm text-amber-700 bg-amber-50 border border-amber-200 px-4 py-3 rounded-xl">
-                        <svg className="h-4 w-4 shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                        <span>
-                          {(() => {
-                            const salePrice = parseFloat(form.price) || 0;
-                            const n = parseInt(promoQtyMin);
-                            const m = parseInt(promoPayQty);
-                            const totalPaga = salePrice * m;
-                            const efectivo = n > 0 ? Math.round(totalPaga / n) : null;
-                            return <>
-                              Tenés <strong>oferta ({discount}% off)</strong> y <strong>promo {n}×{m}</strong> activos al mismo tiempo.
-                              {" "}El cliente lleva {n} unidades pagando {m} × ${salePrice.toLocaleString("es-AR")} = <strong>${totalPaga.toLocaleString("es-AR")} en total</strong>
-                              {efectivo !== null && <> → <strong>${efectivo.toLocaleString("es-AR")} por unidad efectivo</strong></>}.
-                            </>;
-                          })()}
-                        </span>
-                      </div>
-                    )}
-
                     {discount > 0 && (
                       <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 px-4 py-2 rounded-xl">
                         <Tag className="h-4 w-4" />
@@ -2074,141 +2033,20 @@ function ProductoFormPage() {
 
             {/* Promoción por cantidad y Cuotas — no aplican a rubros con checkoutMode "inquiry" (ej. AUTOS): no hay compra online de varias unidades ni tarjeta de por medio */}
             {!storeTypeConfig.hidePromotions && <>
-            <div className="bg-white rounded-2xl border border-gray-100 p-5 space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="flex items-center gap-1">
-                    <p className="text-sm font-semibold text-gray-900">Promoción por cantidad</p>
-                    <Tip align="left" text="Elegí el tipo de promoción: «% de descuento» aplica un porcentaje de rebaja al comprar N o más unidades; «Llevá N, pagá M» cobra solo M unidades aunque el cliente lleve N (ej: llevá 3, pagá 2). El descuento se aplica automático en el carrito." />
-                  </div>
-                  <p className="text-xs text-gray-400 mt-0.5">{promoEnabled ? "Activa — se aplica automáticamente en el carrito" : "Desactivada — no se aplica ningún descuento"}</p>
-                </div>
-                {/* Toggle on/off */}
-                <button
-                  type="button"
-                  onClick={() => { setPromoEnabled(v => !v); markDirty(); }}
-                  className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${promoEnabled ? "bg-indigo-600" : "bg-gray-200"}`}
-                  role="switch"
-                  aria-checked={promoEnabled}
-                >
-                  <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ${promoEnabled ? "translate-x-5" : "translate-x-0"}`} />
-                </button>
-              </div>
-
-              {promoEnabled && <>
-              {/* Tipo de promo */}
-              <div className="grid grid-cols-2 gap-3">
-                <button type="button"
-                  onClick={() => { setPromoType("PERCENT"); markDirty(); }}
-                  className={`relative px-4 py-4 rounded-xl border-2 text-left transition-all ${promoType === "PERCENT" ? "border-indigo-600 bg-indigo-50" : "border-gray-100 bg-gray-50 hover:border-indigo-200"}`}>
-                  {promoType === "PERCENT" && <span className="absolute top-2.5 right-2.5 w-4 h-4 rounded-full bg-indigo-600 flex items-center justify-center text-white text-[9px]">✓</span>}
-                  <div className="text-xl mb-1.5">🏷️</div>
-                  <div className={`text-sm font-semibold ${promoType === "PERCENT" ? "text-indigo-700" : "text-gray-700"}`}>% de descuento</div>
-                  <div className="text-xs mt-0.5 text-gray-400">Comprá 3, obtenés 20% off</div>
-                </button>
-                <button type="button"
-                  onClick={() => { setPromoType("N_PAY_M"); markDirty(); }}
-                  className={`relative px-4 py-4 rounded-xl border-2 text-left transition-all ${promoType === "N_PAY_M" ? "border-indigo-600 bg-indigo-50" : "border-gray-100 bg-gray-50 hover:border-indigo-200"}`}>
-                  {promoType === "N_PAY_M" && <span className="absolute top-2.5 right-2.5 w-4 h-4 rounded-full bg-indigo-600 flex items-center justify-center text-white text-[9px]">✓</span>}
-                  <div className="text-xl mb-1.5">🎁</div>
-                  <div className={`text-sm font-semibold ${promoType === "N_PAY_M" ? "text-indigo-700" : "text-gray-700"}`}>Llevá N, pagá M</div>
-                  <div className="text-xs mt-0.5 text-gray-400">Llevá 3, pagá solo 2</div>
-                </button>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                    {promoType === "N_PAY_M" ? "Llevá (N)" : "Cantidad mínima"}
-                  </label>
-                  {(() => {
-                    const n = parseInt(promoQtyMin);
-                    const nErr = promoQtyMin !== "" && (!Number.isInteger(n) || n < 2);
-                    return <>
-                      <input
-                        type="number"
-                        value={promoQtyMin}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setPromoQtyMin(val);
-                          // Si M ya no es válido con el nuevo N, lo limpiamos
-                          const newN = parseInt(val);
-                          const m = parseInt(promoPayQty);
-                          if (promoType === "N_PAY_M" && promoPayQty !== "" && Number.isInteger(m) && Number.isInteger(newN) && m >= newN) {
-                            setPromoPayQty("");
-                          }
-                          markDirty();
-                        }}
-                        min="2" step="1" placeholder="ej: 3"
-                        className={`w-full border rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 ${nErr ? "border-red-400 bg-red-50" : "border-gray-200"}`}
-                      />
-                      {nErr
-                        ? <span className="text-xs text-red-500 mt-1 block">Debe ser un número entero de 2 o más</span>
-                        : <span className="text-xs text-gray-400 mt-1 block">Unidades (entre distintos colores/talles)</span>
-                      }
-                    </>;
-                  })()}
-                </div>
-                <div>
-                  {promoType === "PERCENT" ? (
-                    <>
-                      <label className="block text-sm font-medium text-gray-700 mb-1.5">Descuento (%)</label>
-                      {(() => {
-                        const d = parseFloat(promoQtyDiscount);
-                        const dErr = promoQtyDiscount !== "" && (isNaN(d) || d <= 0 || d > 80);
-                        return <>
-                          <input
-                            type="number"
-                            value={promoQtyDiscount}
-                            onChange={(e) => { setPromoQtyDiscount(e.target.value); markDirty(); }}
-                            min="1" max="80" step="1" placeholder="ej: 10"
-                            className={`w-full border rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 ${dErr ? "border-red-400 bg-red-50" : "border-gray-200"}`}
-                          />
-                          {dErr
-                            ? <span className="text-xs text-red-500 mt-1 block">Debe ser entre 1 y 80%</span>
-                            : <span className="text-xs text-gray-400 mt-1 block">Máximo 80%</span>
-                          }
-                        </>;
-                      })()}
-                    </>
-                  ) : (
-                    <>
-                      <label className="block text-sm font-medium text-gray-700 mb-1.5">Pagá (M)</label>
-                      {(() => {
-                        const n = parseInt(promoQtyMin);
-                        const m = parseInt(promoPayQty);
-                        const mErr = promoPayQty !== "" && (!Number.isInteger(m) || m < 1 || (Number.isInteger(n) && m >= n));
-                        const maxM = Number.isInteger(n) && n >= 2 ? n - 1 : undefined;
-                        return <>
-                          <input
-                            type="number"
-                            value={promoPayQty}
-                            onChange={(e) => { setPromoPayQty(e.target.value); markDirty(); }}
-                            min="1" max={maxM} step="1" placeholder="ej: 2"
-                            className={`w-full border rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 ${mErr ? "border-red-400 bg-red-50" : "border-gray-200"}`}
-                          />
-                          {mErr
-                            ? <span className="text-xs text-red-500 mt-1 block">
-                                {!Number.isInteger(m) || m < 1 ? "Debe ser un número entero de 1 o más" : `Debe ser menor que N (máx ${maxM})`}
-                              </span>
-                            : <span className="text-xs text-gray-400 mt-1 block">Debe ser menor que N{maxM !== undefined ? ` (máx ${maxM})` : ""}</span>
-                          }
-                        </>;
-                      })()}
-                    </>
-                  )}
+            <div className="bg-white rounded-2xl border border-gray-100 p-5">
+              <div className="flex items-start gap-3">
+                <div className="text-2xl leading-none mt-0.5">🎉</div>
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-gray-900">Promociones</p>
+                  <p className="text-xs text-gray-500 mt-1 leading-relaxed">
+                    Los descuentos (por cantidad, %, 3×2, envío gratis) ahora se crean en la sección <strong>Promociones</strong>. Desde ahí los aplicás a este producto, a una categoría o a toda la tienda, con fechas y todo.
+                  </p>
+                  <Link href="/dashboard/promociones" className="inline-flex items-center gap-1 mt-3 text-sm font-semibold text-indigo-600 hover:text-indigo-700">
+                    Ir a Promociones
+                    <span aria-hidden>→</span>
+                  </Link>
                 </div>
               </div>
-
-              {promoQtyMin && (promoType === "PERCENT" ? promoQtyDiscount : promoPayQty) && (
-                <div className="bg-indigo-50 border border-indigo-100 rounded-xl px-4 py-3 text-sm text-indigo-700">
-                  {promoType === "PERCENT"
-                    ? <>Al comprar <strong>{promoQtyMin} o más unidades</strong> de este producto, el cliente obtiene <strong>{promoQtyDiscount}% de descuento</strong> automáticamente.</>
-                    : <>Al comprar <strong>{promoQtyMin} unidades</strong>, el cliente paga solo <strong>{promoPayQty}</strong> — {Math.round((Number(promoQtyMin) - Number(promoPayQty)) / Number(promoQtyMin) * 100)}% de ahorro automático.</>
-                  }
-                </div>
-              )}
-              </>}
             </div>
 
             {/* Cuotas sin interés — informativo, no conectado a ningún banco ni a Mercado Pago */}
@@ -2663,11 +2501,9 @@ function ProductoFormPage() {
                     </div>
                   )}
 
-                  {/* Badge: NxM promo has priority, else manual badge if on sale */}
+                  {/* Badge de oferta manual (si el producto está en oferta) */}
                   {(() => {
-                    const hasNxM = promoEnabled && promoType === "N_PAY_M" && !!promoQtyMin && !!promoPayQty;
                     const hasOffer = isOnSale && !!form.comparePrice && parseFloat(form.comparePrice) > parseFloat(form.price || "0");
-                    if (hasNxM) return <OfferBadge nxm={{ n: parseInt(promoQtyMin), m: parseInt(promoPayQty) }} size="sm" />;
                     if (hasOffer && form.offerBadge) return <OfferBadge badge={form.offerBadge as OfferBadgeKey} pct={discount || null} size="sm" />;
                     return null;
                   })()}

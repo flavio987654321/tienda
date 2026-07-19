@@ -23,7 +23,6 @@ import { SectionBlock } from "@/components/store/templates/shared/SectionBlock";
 import { PromoBannerCarousel } from "@/components/store/templates/shared/PromoBannerCarousel";
 import { parseVariantAttrs } from "@/lib/variantAttrs";
 import { colorToSwatch } from "@/lib/colorSwatch";
-import { promoModalText } from "@/lib/promoLabel";
 import { discountPercent } from "@/lib/discount";
 import { resolveVariantPrice } from "@/lib/variantPrice";
 import { useTurnstile } from "@/components/Turnstile";
@@ -200,8 +199,7 @@ export default function FashionNoir() {
     toastMsg,
     cartCount,
     searchResults, favoriteProducts,
-    fmt, showToast, openModal, addToCart, addToPending, addAllToCart, removePendingItem, editPendingItem,
-    pendingItems, pendingTotal, promoActive, pendingPromoDiscount, pendingCartValue, editingIdx,
+    fmt, showToast, openModal, addToCart,
     toggleFavorite,
   } = cart;
   const imgSwipe = useTouchSwipe(
@@ -1002,10 +1000,9 @@ export default function FashionNoir() {
               style={{ cursor:"pointer", position:"relative" }}>
               {(() => {
                 if (promo.primaryPromo) return <PromoTag label={describePromo(promo.primaryPromo).headline} size="sm" />;
-                const hasNxM = product.promoType === "N_PAY_M" && !!product.promoQtyMin && !!product.promoPayQty;
                 const hasOffer = !!product.comparePrice && product.comparePrice > product.price;
-                if (!hasNxM && !hasOffer) return null;
-                return <OfferBadge badge={hasNxM ? null : product.offerBadge} pct={hasOffer ? discountPercent(product.price, product.comparePrice) : null} nxm={hasNxM ? { n: product.promoQtyMin!, m: product.promoPayQty! } : undefined} size="sm" />;
+                if (!hasOffer) return null;
+                return <OfferBadge badge={product.offerBadge} pct={discountPercent(product.price, product.comparePrice)} size="sm" />;
               })()}
               <div style={{ position:"relative", aspectRatio:"3/4", overflow:"hidden", background:S, marginBottom:16 }}>
                 {product.images[0] && <FadeImage src={product.images[0]} alt={product.name} fill sizes="(max-width: 768px) 50vw, 25vw" style={{ objectFit:"cover", transition:"transform 0.5s ease", transform: hoveredId===product.id ? "scale(1.05)" : "scale(1)" }} onError={e => { e.currentTarget.style.opacity="0"; }}/>}
@@ -1515,10 +1512,9 @@ export default function FashionNoir() {
                 )}
                 {(() => {
                   if (modalPromo?.primaryPromo) return <PromoTag label={describePromo(modalPromo.primaryPromo).headline} />;
-                  const hasNxM = modalProduct.promoType === "N_PAY_M" && !!modalProduct.promoQtyMin && !!modalProduct.promoPayQty;
                   const hasOffer = !variantPrice && !!modalProduct.comparePrice && modalProduct.comparePrice > modalProduct.price;
-                  if (!hasNxM && !hasOffer) return null;
-                  return <OfferBadge badge={hasNxM ? null : modalProduct.offerBadge} pct={hasOffer ? discountPercent(modalProduct.price, modalProduct.comparePrice) : null} nxm={hasNxM ? { n: modalProduct.promoQtyMin!, m: modalProduct.promoPayQty! } : undefined} size="md" />;
+                  if (!hasOffer) return null;
+                  return <OfferBadge badge={modalProduct.offerBadge} pct={discountPercent(modalProduct.price, modalProduct.comparePrice)} size="md" />;
                 })()}
                 {modalProduct.images.length > 1 && (
                   <>
@@ -1719,44 +1715,6 @@ export default function FashionNoir() {
                   style={{ background:G, color:BG, border:"none", padding:"16px", fontSize:12, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor:"pointer", width:"100%" }}>
                   Consultar disponibilidad
                 </button>
-              ) : modalProduct.promoQtyMin ? (
-                <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
-                  <p style={{ fontSize:9, letterSpacing:3, textTransform:"uppercase", color:G, margin:0, fontWeight:600, opacity:0.7 }}>Promoción</p>
-                  <div style={{ fontSize:11, fontWeight:600, letterSpacing:0.5, padding:"8px 12px", borderRadius:4, background: promoActive ? "rgba(52,211,153,0.12)" : "rgba(201,168,76,0.08)", color: promoActive ? "#34d399" : G, border:`1px solid ${promoActive ? "rgba(52,211,153,0.25)" : "rgba(201,168,76,0.2)"}` }}>
-                    {promoModalText(modalProduct.promoType, modalProduct.promoQtyMin!, modalProduct.promoQtyDiscount, modalProduct.promoPayQty, pendingTotal)}
-                  </div>
-                  {/* Lista de selección pendiente */}
-                  {pendingItems.length > 0 && (
-                    <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
-                      {pendingItems.map((item, idx) => {
-                        const isEditing = editingIdx === idx;
-                        return (
-                          <div key={idx} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", fontSize:11, color:"rgba(240,235,227,0.7)", padding:"5px 8px", background: isEditing ? `${G}18` : "rgba(240,235,227,0.04)", borderRadius:3, border: isEditing ? `1px dashed ${G}88` : "1px solid transparent" }}>
-                            <button onClick={() => editPendingItem(idx)} title={isEditing ? "Editando..." : "Tocá para editar"} style={{ background:"none", border:"none", color: isEditing ? G : "rgba(240,235,227,0.6)", cursor:"pointer", fontSize:11, fontWeight:600, padding:0, textAlign:"left", flex:1, opacity: isEditing ? 0.7 : 1, lineHeight:1 }}>
-                              {isEditing ? "✎ " : ""}{[isEditing ? selectedColor : item.color, isEditing ? selectedSize : item.size].filter(Boolean).join(" / ")} ×{isEditing ? qty : item.qty}
-                            </button>
-                            {!isEditing && <button onClick={() => removePendingItem(idx)} style={{ background:"none", border:"none", color:"rgba(240,235,227,0.4)", cursor:"pointer", fontSize:14, padding:"0 2px", lineHeight:1 }}>×</button>}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                  {/* Agregar variante a la selección */}
-                  <button onClick={addToPending} disabled={selectedVariantStock === 0}
-                    style={{ background:"none", border:`1px solid ${selectedVariantStock === 0 ? "rgba(201,168,76,0.2)" : G}`, color: selectedVariantStock === 0 ? "rgba(201,168,76,0.3)" : G, padding:"12px 16px", fontSize:11, fontWeight:700, letterSpacing:2, textTransform:"uppercase", cursor: selectedVariantStock === 0 ? "not-allowed" : "pointer" }}>
-                    {selectedVariantStock === 0 ? "Sin stock" : editingIdx !== null ? "✓ Confirmar cambios" : "+ Agregar a mi selección"}
-                  </button>
-                  {/* Confirmar todo al carrito */}
-                  {pendingItems.length > 0 && (() => {
-                    const total = pendingCartValue;
-                    return (
-                      <button onClick={addAllToCart}
-                        style={{ background:G, color:BG, border:"none", padding:"14px 16px", fontSize:12, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor:"pointer" }}>
-                        Agregar al Carrito ({pendingTotal} unid.) · {fmt(total)}
-                      </button>
-                    );
-                  })()}
-                </div>
               ) : (
                 <button onClick={addToCart}
                   disabled={selectedVariantStock === 0}
@@ -1907,27 +1865,6 @@ export default function FashionNoir() {
                     style={{ width:"100%", background:G, color:BG, border:"none", padding:"15px", fontSize:11, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor:"pointer" }}>
                     Consultar disponibilidad
                   </button>
-                ) : modalProduct.promoQtyMin ? (
-                  <div style={{ display:"flex", gap:8 }}>
-                    <button onClick={addToPending} disabled={selectedVariantStock === 0}
-                      style={{ flex:1, background:"none", border:`1px solid ${selectedVariantStock === 0 ? "rgba(201,168,76,0.2)" : G}`, color: selectedVariantStock === 0 ? "rgba(201,168,76,0.3)" : G, padding:"13px 8px", fontSize:10, fontWeight:700, letterSpacing:1.5, textTransform:"uppercase", cursor: selectedVariantStock === 0 ? "not-allowed" : "pointer" }}>
-                      {selectedVariantStock === 0 ? "Sin stock" : `+ Selección${pendingTotal > 0 ? ` (${pendingTotal})` : ""}`}
-                    </button>
-                    {pendingItems.length > 0 && (() => {
-                      const total = pendingCartValue;
-                      return (
-                        <button onClick={addAllToCart}
-                          style={{ flex:2, background:G, color:BG, border:"none", padding:"13px 8px", fontSize:10, fontWeight:800, letterSpacing:1.5, textTransform:"uppercase", cursor:"pointer" }}>
-                          {promoActive ? `Confirmar · ${fmt(total)} (-${pendingPromoDiscount}%)` : `Confirmar · ${fmt(total)}`}
-                        </button>
-                      );
-                    })()}
-                    {pendingItems.length === 0 && (
-                      <div style={{ flex:2, display:"flex", alignItems:"center", justifyContent:"center", fontSize:10, color:"rgba(240,235,227,0.35)", letterSpacing:1 }}>
-                        {`Llevá ${modalProduct.promoQtyMin}+ y obtenés ${modalProduct.promoQtyDiscount}% off`}
-                      </div>
-                    )}
-                  </div>
                 ) : (
                   <button onClick={addToCart} disabled={selectedVariantStock === 0}
                     style={{ width:"100%", background: selectedVariantStock === 0 ? "rgba(201,168,76,0.3)" : G, color:BG, border:"none", padding:"15px", fontSize:11, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor: selectedVariantStock === 0 ? "not-allowed" : "pointer" }}>

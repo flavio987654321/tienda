@@ -8,7 +8,6 @@ export type CartItem = {
   color: string;
   variantId: string | null;
   qty: number;
-  discountPct?: number;
 };
 
 export type ContactStatus = "idle" | "sending" | "sent";

@@ -106,10 +106,6 @@ type ProductBodyRaw = {
   widthCm?: unknown;
   heightCm?: unknown;
   depthCm?: unknown;
-  promoQtyMin?: unknown;
-  promoQtyDiscount?: unknown;
-  promoType?: unknown;
-  promoPayQty?: unknown;
   offerBadge?: unknown;
   offerNote?: unknown;
   offerEndsAt?: unknown;
@@ -132,10 +128,6 @@ type ValidatedProductBody = {
   parsedWidthCm: number | null;
   parsedHeightCm: number | null;
   parsedDepthCm: number | null;
-  parsedPromoQtyMin: number | null;
-  parsedPromoQtyDiscount: number | null;
-  parsedPromoType: string;
-  parsedPromoPayQty: number | null;
   parsedOfferBadge: string | null;
   parsedOfferNote: string | null;
   parsedOfferEndsAt: Date | null;
@@ -146,7 +138,7 @@ const VALID_OFFER_BADGES = new Set(["OFERTA", "SALE", "PCT"]);
 export function validateProductBody(
   body: ProductBodyRaw
 ): { error: NextResponse } | ValidatedProductBody {
-  const { name, price, comparePrice, costPrice, featured, precioMayorista, cantMinMayorista, preciosEscalonados, soloMayorista, cuotas, variants, reelUrls, weightKg, widthCm, heightCm, depthCm, promoQtyMin, promoQtyDiscount, promoType, promoPayQty, offerBadge, offerNote, offerEndsAt } = body;
+  const { name, price, comparePrice, costPrice, featured, precioMayorista, cantMinMayorista, preciosEscalonados, soloMayorista, cuotas, variants, reelUrls, weightKg, widthCm, heightCm, depthCm, offerBadge, offerNote, offerEndsAt } = body;
 
   if (!name || typeof name !== "string" || name.trim().length < 2) {
     return { error: NextResponse.json({ error: "Nombre requerido (mínimo 2 caracteres)" }, { status: 400 }) };
@@ -360,28 +352,6 @@ export function validateProductBody(
     }
   }
 
-  // ── Promoción por cantidad (retail) ───────────────────────────────────────
-  const parsedPromoType = (promoType === "N_PAY_M" ? "N_PAY_M" : "PERCENT") as string;
-  const parsedPromoQtyMin = promoQtyMin ? parseInt(promoQtyMin as string) : null;
-  if (promoQtyMin && (isNaN(parsedPromoQtyMin!) || parsedPromoQtyMin! < 2)) {
-    return { error: NextResponse.json({ error: "La cantidad mínima de la promo debe ser 2 o más" }, { status: 400 }) };
-  }
-  const parsedPromoPayQty = promoPayQty ? parseInt(promoPayQty as string) : null;
-  if (parsedPromoType === "N_PAY_M" && parsedPromoQtyMin !== null) {
-    if (!parsedPromoPayQty || parsedPromoPayQty < 1 || parsedPromoPayQty >= parsedPromoQtyMin) {
-      return { error: NextResponse.json({ error: "En la promo N pagá M, M debe ser menor que N y mayor a 0" }, { status: 400 }) };
-    }
-  }
-  const parsedPromoQtyDiscount = parsedPromoType === "N_PAY_M" && parsedPromoQtyMin && parsedPromoPayQty
-    ? Math.round((parsedPromoQtyMin - parsedPromoPayQty) / parsedPromoQtyMin * 100 * 100) / 100
-    : promoQtyDiscount ? parseFloat(promoQtyDiscount as string) : null;
-  if (parsedPromoType === "PERCENT" && promoQtyDiscount && (isNaN(parsedPromoQtyDiscount!) || parsedPromoQtyDiscount! <= 0 || parsedPromoQtyDiscount! > 80)) {
-    return { error: NextResponse.json({ error: "El descuento de la promo debe ser entre 1 y 80%" }, { status: 400 }) };
-  }
-  if (parsedPromoQtyMin !== null && parsedPromoQtyDiscount === null) {
-    return { error: NextResponse.json({ error: "Si configurás una promo, completá el descuento o el tipo N pagá M" }, { status: 400 }) };
-  }
-
   const parsedOfferBadge = typeof offerBadge === "string" && VALID_OFFER_BADGES.has(offerBadge)
     ? offerBadge
     : null;
@@ -419,10 +389,6 @@ export function validateProductBody(
     parsedHeightCm: heightResult.value,
     parsedWidthCm: widthResult.value,
     parsedDepthCm: depthResult.value,
-    parsedPromoQtyMin,
-    parsedPromoQtyDiscount,
-    parsedPromoType,
-    parsedPromoPayQty,
     parsedOfferBadge,
     parsedOfferNote,
     parsedOfferEndsAt,

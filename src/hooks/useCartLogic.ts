@@ -8,7 +8,6 @@ import { useAuth } from "@/components/AuthProvider";
 import { LIVE_QUOTE_DOMICILIO_ID } from "@/types/store-config";
 import { PROVINCIAS_ARGENTINA } from "@/lib/provincias";
 import { parseVariantAttrs } from "@/lib/variantAttrs";
-import { promoEffectivePct } from "@/lib/promoLabel";
 import { resolveVariantPrice } from "@/lib/variantPrice";
 import { priceCart, resolveBasePrice, parseEscalones, freeShippingProgress, type ActivePromotion } from "@/lib/pricing";
 
@@ -65,8 +64,6 @@ export function useCartLogic({ products, promotions = [], storeId, affiliateId =
   const [selectedSize,   setSelectedSize]   = useState("");
   const [selectedColor,  setSelectedColor]  = useState("");
   const [qty,            setQty]            = useState(1);
-  const [pendingItems,   setPendingItems]   = useState<Array<{ size: string; color: string; qty: number; variantId: string | null; stock: number | null }>>([]);
-  const [editingIdx,     setEditingIdx]     = useState<number | null>(null);
   const [checkoutOpen,   setCheckoutOpen]   = useState(false);
   const [checkoutStatus, setCheckoutStatus] = useState<CheckoutStatus>("idle");
   const [checkoutError,  setCheckoutError]  = useState("");
@@ -354,42 +351,11 @@ export function useCartLogic({ products, promotions = [], storeId, affiliateId =
   }, [modalProduct, selectedColor]);
 
 
-  // Promo por cantidad: cantidad total en la selección pendiente del modal
-  const pendingTotal = pendingItems.reduce((s, i) => s + i.qty, 0);
-  const promoActive = Boolean(
-    modalProduct?.promoQtyMin && pendingTotal >= modalProduct.promoQtyMin
-  );
-  const pendingPromoDiscount = promoActive ? promoEffectivePct(modalProduct?.promoType, modalProduct?.promoQtyDiscount, modalProduct?.promoQtyMin, modalProduct?.promoPayQty) : 0;
-
-  // Total de la selección pendiente del modal, con el MISMO motor que el carrito y
-  // el checkout — antes era una 4ta copia de la cuenta de promos. Resuelve el
-  // precio de cada variante pendiente (antes usaba uno solo para todas). El preview
-  // no aplica mayorista, igual que hoy: es una estimación antes de sumar al carrito.
-  const pendingCartValue = modalProduct
-    ? priceCart(
-        pendingItems.map((pi) => {
-          const vp = resolveVariantPrice(modalProduct.variants, pi.size, pi.color, pi.variantId);
-          return {
-            productId: modalProduct.id,
-            variantId: pi.variantId,
-            quantity: pi.qty,
-            basePrice: vp ?? modalProduct.price,
-            promo: {
-              promoType: modalProduct.promoType,
-              promoQtyMin: modalProduct.promoQtyMin,
-              promoPayQty: modalProduct.promoPayQty,
-              promoQtyDiscount: modalProduct.promoQtyDiscount,
-            },
-          };
-        })
-      ).subtotal
-    : 0;
-
   // Derived values
   // El total lo calcula priceCart — la MISMA función que usa el checkout que cobra.
   // Antes acá había una copia de la cuenta de promos que difería del checkout en el
   // redondeo del N×M (B-03). El precio base (variante o mayorista con escalones) se
-  // resuelve acá y se le pasa al motor; la promo (por producto Y de tienda) la aplica él.
+  // resuelve acá y se le pasa al motor; las StorePromotion las aplica él.
   const pricingItems = cartItems.map((item) => {
       const vp = resolveVariantPrice(item.product.variants, item.size, item.color, item.variantId);
       // Mismo resolvedor que el checkout: mayorista + escalones si califica por
@@ -406,12 +372,6 @@ export function useCartLogic({ products, promotions = [], storeId, affiliateId =
         quantity: item.qty,
         basePrice,
         category: item.product.category,
-        promo: {
-          promoType: item.product.promoType,
-          promoQtyMin: item.product.promoQtyMin,
-          promoPayQty: item.product.promoPayQty,
-          promoQtyDiscount: item.product.promoQtyDiscount,
-        },
       };
     });
   const cartPricing = priceCart(pricingItems, { promotions });
@@ -462,8 +422,6 @@ export function useCartLogic({ products, promotions = [], storeId, affiliateId =
   const openModal = (p: StorefrontProduct) => {
     setModalProduct(p);
     setModalImg(0);
-    setPendingItems([]);
-    setEditingIdx(null);
     setSelectedSize(p.sizes[0] ?? "");
     setSelectedColor(p.colors[0] ?? "");
     setQty(isWholesale && p.cantMinMayorista ? p.cantMinMayorista : 1);
@@ -551,137 +509,11 @@ export function useCartLogic({ products, promotions = [], storeId, affiliateId =
     addingToCartRef.current = false;
   };
 
-  const addToPending = () => {
-    if (!modalProduct) return;
-    const variantId = resolveVariantId(modalProduct, selectedSize, selectedColor);
-    const stock = resolveVariantStock(modalProduct, selectedSize, selectedColor);
-    if (stock === 0) return;
-    const safeQty = stock !== null ? Math.min(qty, stock) : qty;
-    setPendingItems(prev => {
-      if (editingIdx !== null) {
-        const duplicate = prev.findIndex((item, i) => i !== editingIdx && item.size === selectedSize && item.color === selectedColor);
-        if (duplicate !== -1) {
-          const mergedQty = stock !== null ? Math.min(prev[duplicate].qty + safeQty, stock) : prev[duplicate].qty + safeQty;
-          return prev.map((item, i) => i === duplicate ? { ...item, qty: mergedQty } : item).filter((_, i) => i !== editingIdx);
-        }
-        return prev;
-      }
-      const existing = prev.find(i => i.size === selectedSize && i.color === selectedColor);
-      if (existing) {
-        const newQty = stock !== null ? Math.min(existing.qty + qty, stock) : existing.qty + qty;
-        return prev.map(i => i === existing ? { ...i, qty: newQty } : i);
-      }
-      return [...prev, { size: selectedSize, color: selectedColor, qty: safeQty, variantId, stock }];
-    });
-    setEditingIdx(null);
-    setQty(1);
-  };
-
-  const addAllToCart = () => {
-    if (!modalProduct || pendingItems.length === 0 || addingToCartRef.current) return;
-    addingToCartRef.current = true;
-    const discountPct = promoActive ? promoEffectivePct(modalProduct.promoType, modalProduct.promoQtyDiscount, modalProduct.promoQtyMin, modalProduct.promoPayQty) : 0;
-    const validPendingItems = pendingItems.filter(i => i.qty > 0);
-    if (validPendingItems.length === 0) { addingToCartRef.current = false; return; }
-    setCartItems(prev => {
-      let updated = [...prev];
-      for (const item of validPendingItems) {
-        const ex = updated.find(i =>
-          i.product.id === modalProduct.id && i.size === item.size && i.color === item.color
-        );
-        if (ex) {
-          const newQty = item.stock !== null ? Math.min(ex.qty + item.qty, item.stock) : ex.qty + item.qty;
-          updated = updated.map(i => i === ex ? { ...i, qty: newQty, discountPct: discountPct || undefined } : i);
-        } else {
-          updated = [...updated, {
-            product: modalProduct,
-            size: item.size,
-            color: item.color,
-            variantId: item.variantId,
-            qty: item.qty,
-            discountPct: discountPct || undefined,
-          }];
-        }
-      }
-      return updated;
-    });
-    const totalAdded = validPendingItems.reduce((s, i) => s + i.qty, 0);
-    setPendingItems([]);
-    setEditingIdx(null);
-    setModalProduct(null);
-    showToast(
-      `${totalAdded} unidad${totalAdded !== 1 ? "es" : ""} agregada${totalAdded !== 1 ? "s" : ""} al carrito${discountPct > 0 ? ` · ${discountPct}% off` : ""}`
-    );
-    setCartOpen(true);
-    addingToCartRef.current = false;
-  };
-
-  const removePendingItem = (idx: number) => {
-    setPendingItems(prev => prev.filter((_, i) => i !== idx));
-    if (editingIdx === idx) setEditingIdx(null);
-    else if (editingIdx !== null && idx < editingIdx) setEditingIdx(editingIdx - 1);
-  };
-
-  const updatePendingQty = (idx: number, delta: number) =>
-    setPendingItems(prev => prev.map((item, i) => {
-      if (i !== idx) return item;
-      const newQty = Math.max(1, item.qty + delta);
-      return { ...item, qty: item.stock !== null ? Math.min(newQty, item.stock) : newQty };
-    }));
-
-  const editPendingItem = (idx: number) => {
-    const item = pendingItems[idx];
-    if (!item) return;
-    setEditingIdx(idx);
-    setSelectedSize(item.size);
-    setSelectedColor(item.color);
-    setQty(item.qty);
-  };
-
-  useEffect(() => {
-    if (editingIdx === null || !modalProduct) return;
-    const variantId = resolveVariantId(modalProduct, selectedSize, selectedColor);
-    const stock = resolveVariantStock(modalProduct, selectedSize, selectedColor);
-    // When the selected variant is out of stock, preserve the previous qty rather than zeroing it
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- ajusta el pendingItem en edición cuando cambia talle/color/cantidad, no se puede calcular en el render
-    setPendingItems(prev => prev.map((item, i) => {
-      if (i !== editingIdx) return item;
-      const safeQty = stock === 0 ? item.qty : (stock !== null ? Math.min(Math.max(qty, 1), stock) : Math.max(qty, 1));
-      if (item.size === selectedSize && item.color === selectedColor && item.qty === safeQty) return item;
-      return { ...item, size: selectedSize, color: selectedColor, qty: safeQty, variantId, stock };
-    }));
-  }, [selectedColor, selectedSize, qty, editingIdx, modalProduct?.id]);
-
   const removeFromCart = (idx: number) =>
-    setCartItems(prev => {
-      const removed = prev[idx];
-      const filtered = prev.filter((_, i) => i !== idx);
-      if (!removed?.product.promoQtyMin || !removed.product.promoQtyDiscount) return filtered;
-      const totalQty = filtered.filter(i => i.product.id === removed.product.id).reduce((s, i) => s + i.qty, 0);
-      const promoActive = totalQty >= removed.product.promoQtyMin;
-      return filtered.map(i =>
-        i.product.id === removed.product.id
-          ? { ...i, discountPct: promoActive ? removed.product.promoQtyDiscount! : undefined }
-          : i
-      );
-    });
+    setCartItems(prev => prev.filter((_, i) => i !== idx));
 
   const updateQty = (idx: number, delta: number) =>
-    setCartItems(prev => {
-      const updated = prev.map((item, i) => i === idx ? { ...item, qty: Math.max(1, item.qty + delta) } : item);
-      const affected = updated[idx];
-      if (!affected?.product.promoQtyMin) return updated;
-      const totalQty = updated.filter(i => i.product.id === affected.product.id).reduce((s, i) => s + i.qty, 0);
-      const promoOn = totalQty >= affected.product.promoQtyMin;
-      const discountPct = promoOn
-        ? promoEffectivePct(affected.product.promoType, affected.product.promoQtyDiscount, affected.product.promoQtyMin, affected.product.promoPayQty)
-        : 0;
-      return updated.map(i =>
-        i.product.id === affected.product.id
-          ? { ...i, discountPct: discountPct > 0 ? discountPct : undefined }
-          : i
-      );
-    });
+    setCartItems(prev => prev.map((item, i) => i === idx ? { ...item, qty: Math.max(1, item.qty + delta) } : item));
 
   const openCheckout = () => {
     setCartOpen(false);
@@ -824,10 +656,8 @@ export function useCartLogic({ products, promotions = [], storeId, affiliateId =
     checkoutMode, isWholesale, wholesaleWarnings,
     pagoOptions: getPagoOptions(hasMercadoPago, !!affiliateId),
     fmtEnvioPrice, fmtLiveQuote,
-    // Multi-selección (promo por cantidad)
-    pendingItems, pendingTotal, promoActive, pendingPromoDiscount, pendingCartValue, editingIdx,
     // Functions
-    fmt, showToast, openModal, addToCart, addToPending, addAllToCart, removePendingItem, updatePendingQty, editPendingItem,
+    fmt, showToast, openModal, addToCart,
     removeFromCart, updateQty,
     openCheckout, handleApplyCoupon, handlePlaceOrder, toggleFavorite,
   };

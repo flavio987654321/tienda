@@ -13,42 +13,23 @@
 // cifra real, siempre releyendo los datos desde la base. El cliente nunca es la
 // autoridad del precio; solo dibuja lo que esta función también calcula server-side.
 //
-// ALCANCE: la cuenta de PROMOS por producto (PERCENT y N×M) sobre un precio base
-// ya resuelto. Quién elige ese precio base (variante / mayorista / escalón) es un
-// paso previo — así el enredo del mayorista (ver B-01/B-04) no contamina esta
-// cuenta. El cupón y el envío son a nivel pedido y viven en el checkout; esta
-// función llega hasta el subtotal.
+// ALCANCE: la cuenta de las StorePromotion (promociones a nivel tienda) sobre un
+// precio base ya resuelto. Quién elige ese precio base (variante / mayorista /
+// escalón) es un paso previo — así el enredo del mayorista (ver B-01/B-04) no
+// contamina esta cuenta. El cupón y el envío son a nivel pedido y viven en el
+// checkout; esta función llega hasta el subtotal.
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const PROMO_PERCENT = "PERCENT";
-export const PROMO_N_PAY_M = "N_PAY_M";
-
-// Tope de descuento por promo de porcentaje, por seguridad ante datos corruptos.
-// Coincide con la validación del server (validateProductBody): 1..80%.
-const MAX_PROMO_PERCENT = 80;
-
-// Tope de las StorePromotion de tipo PERCENT (validatePromotionBody: 1..90). Es
-// distinto al de arriba porque las promos por producto (legado) toparon en 80 y
-// las de tienda en 90 — se dejan separados para no cambiar ninguna de las dos.
+// Tope de las StorePromotion de tipo PERCENT (validatePromotionBody: 1..90).
 const MAX_STORE_PERCENT = 90;
 
-// Acepta null y undefined: el server (Prisma) usa null, el storefront usa campos
-// opcionales (undefined). Así calza en las dos puntas sin coerción en cada lado.
-export type PromoConfig = {
-  promoType: string | null | undefined;
-  promoQtyMin: number | null | undefined;
-  promoPayQty: number | null | undefined;
-  promoQtyDiscount: number | null | undefined;
-};
-
 // Un ítem del carrito ya con su precio base resuelto (variante o mayorista/escalón).
-// La promo se aplica ENCIMA de este precio.
+// Las StorePromotion se aplican ENCIMA de este precio.
 export type PricingItem = {
   productId: string;
   variantId: string | null;
   quantity: number;
-  basePrice: number;   // precio unitario ya resuelto, sin la promo por cantidad
-  promo: PromoConfig;
+  basePrice: number;   // precio unitario ya resuelto
   // Categoría del producto — la usan las StorePromotion con alcance por categoría.
   // Opcional: los llamadores viejos (preview del modal) no la pasan y no la necesitan.
   category?: string | null;
@@ -154,18 +135,6 @@ export function resolveBasePrice(cfg: BasePriceConfig, qty: number): number {
   return best ?? precioMayorista;
 }
 
-// ¿La promo de cantidad de un producto es válida y aplica para esta cantidad total?
-// Réplica exacta de la guarda del checkout, en un solo lugar.
-function promoApplies(promo: PromoConfig, totalQty: number): boolean {
-  const { promoType, promoQtyMin, promoPayQty, promoQtyDiscount } = promo;
-  if (!promoQtyMin || promoQtyMin < 2 || totalQty < promoQtyMin) return false;
-  if (promoType === PROMO_N_PAY_M) {
-    return promoPayQty != null && promoPayQty >= 1 && promoPayQty < promoQtyMin;
-  }
-  // PERCENT
-  return promoQtyDiscount != null && promoQtyDiscount > 0 && promoQtyDiscount <= MAX_PROMO_PERCENT;
-}
-
 // Cuántas unidades se PAGAN en un N×M, para una cantidad total.
 // "Llevá N pagá M": por cada grupo completo de N pagás M; el resto, a precio lleno.
 // Cuenta directa (decisión aprobada) — no se convierte a % ni se redondea por unidad.
@@ -223,14 +192,13 @@ function storePromoLineTotal(p: ActivePromotion, it: PricingItem, totalQty: numb
 }
 
 /**
- * Calcula el precio de todo el carrito aplicando las promos por cantidad del
- * producto (legado) Y las StorePromotion de tienda. Agrupa por producto porque
- * el N×M y el mínimo dependen de la cantidad TOTAL de ese producto, no de cada
- * línea suelta.
+ * Calcula el precio de todo el carrito aplicando las StorePromotion de tienda.
+ * Agrupa por producto porque el N×M y el mínimo dependen de la cantidad TOTAL de
+ * ese producto, no de cada línea suelta.
  *
- * Entre la promo del producto y las de tienda que alcanzan al ítem se elige la
- * MEJOR para el comprador (menor total de línea), nunca se apilan — combinar dos
- * promos sobre el mismo ítem es una decisión aparte (combinesWithPromotions, Fase 3).
+ * Cuando varias StorePromotion alcanzan al mismo ítem se elige la MEJOR para el
+ * comprador (menor total de línea), nunca se apilan — combinar dos promos sobre el
+ * mismo ítem es una decisión aparte (combinesWithPromotions, Fase 3).
  */
 export function priceCart(items: PricingItem[], opts?: PriceCartOptions): CartPricing {
   // Cantidad total por producto (todas las líneas del mismo producto suman).
@@ -257,22 +225,10 @@ export function priceCart(items: PricingItem[], opts?: PriceCartOptions): CartPr
     const totalQty = totalQtyByProduct.get(it.productId)!;
     const baseLine = roundMoney(it.basePrice * it.quantity);
 
-    // Candidato 1: la promo por cantidad del producto (legado), misma cuenta de antes.
-    const productApplies = promoApplies(it.promo, totalQty);
-    let productLine = baseLine;
-    if (productApplies && it.promo.promoType === PROMO_N_PAY_M) {
-      // N×M cuenta directa: se pagan `paid` de `totalQty` unidades. Misma razón
-      // para todas las líneas del producto → reparten el beneficio parejo. Se
-      // calcula el TOTAL como base × cantidad × razón y se redondea UNA sola vez
-      // (derivar un unitario y multiplicarlo metía centavos de error, era B-03).
-      const paid = paidUnitsNxM(totalQty, it.promo.promoQtyMin!, it.promo.promoPayQty!);
-      productLine = roundMoney(it.basePrice * it.quantity * (paid / totalQty));
-    } else if (productApplies) {
-      productLine = roundMoney(it.basePrice * it.quantity * (1 - it.promo.promoQtyDiscount! / 100));
-    }
-
-    // Candidatos 2..N: cada StorePromotion de descuento que alcanza a este ítem.
-    let bestLine = productLine;
+    // Cada StorePromotion de descuento que alcanza a este ítem es un candidato: se
+    // parte del precio de lista y gana el menor total de línea (la mejor para el
+    // comprador). No se apilan.
+    let bestLine = baseLine;
     for (const p of eligiblePromos) {
       if (!promoMatchesItem(p, it)) continue;
       const cand = storePromoLineTotal(p, it, totalQty);

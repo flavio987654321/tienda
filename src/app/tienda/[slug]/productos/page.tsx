@@ -11,7 +11,6 @@ import { ENVIO_OPTIONS, PAGO_OPTIONS } from "@/components/store/shared/cartTypes
 import { useTouchSwipe } from "@/hooks/useTouchSwipe";
 import { getContrastColor, getReadableAccentText } from "@/contexts/EditContext";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
-import { promoModalText } from "@/lib/promoLabel";
 import { OfferBadge } from "@/components/store/OfferBadge";
 import { PromoTag, PromoBlock } from "@/components/store/PromoDisplay";
 import { discountPercent } from "@/lib/discount";
@@ -70,8 +69,6 @@ type RawProduct = {
   cantMinMayorista?: number | null;
   preciosEscalonados?: string;
   soloMayorista?: boolean;
-  promoQtyMin?: number | null;
-  promoQtyDiscount?: number | null;
   category?: string;
   subcategory?: string;
   gender?: string;
@@ -80,8 +77,6 @@ type RawProduct = {
   reelUrls?: string;
   variants?: StorefrontVariant[];
   attributes?: string;
-  promoType?: string | null;
-  promoPayQty?: number | null;
   offerBadge?: string | null;
   offerNote?: string | null;
   offerEndsAt?: string | null;
@@ -135,10 +130,6 @@ function mapProduct(raw: RawProduct): StorefrontProduct {
     cantMinMayorista: raw.cantMinMayorista ?? null,
     preciosEscalonados: (() => { try { const p = JSON.parse(raw.preciosEscalonados || "[]"); return Array.isArray(p) ? p : []; } catch { return []; } })(),
     soloMayorista: raw.soloMayorista ?? false,
-    promoQtyMin: raw.promoQtyMin ?? null,
-    promoQtyDiscount: raw.promoQtyDiscount ?? null,
-    promoType: raw.promoType ?? "PERCENT",
-    promoPayQty: raw.promoPayQty ?? null,
     offerBadge: offerActive ? (raw.offerBadge ?? null) : null,
     offerNote: offerActive ? (raw.offerNote ?? null) : null,
     category: raw.category ?? "general",
@@ -335,8 +326,7 @@ function ProductosPageInner() {
     envioId, setEnvioId, pagoId, setPagoId,
     coupon, setCoupon, couponError, appliedCoupon, setAppliedCoupon,
     notas, setNotas, rememberData, setRememberData, buyerForm, setBuyerForm,
-    toastMsg, openModal, addToCart, addToPending, addAllToCart,
-    pendingItems, pendingTotal, promoActive, pendingPromoDiscount, pendingCartValue, removePendingItem,
+    toastMsg, openModal, addToCart,
     removeFromCart, updateQty,
     openCheckout, handleApplyCoupon, handlePlaceOrder, toggleFavorite, favorites,
   } = cart;
@@ -821,13 +811,11 @@ function ProductosPageInner() {
             // La promo de TIENDA (Fase 4.5) tiene prioridad sobre la "oferta" del
             // producto en el mismo badge → un solo badge, sin choque en la esquina.
             const cardPromo = resolveProductPromo(product, promotions);
-            const hasCardNxM = product.promoType === "N_PAY_M" && !!product.promoQtyMin && !!product.promoPayQty;
             const hasCardOffer = !!product.comparePrice && product.comparePrice > product.price;
             const ofertaBadge = (() => {
               // PROMOCIÓN de tienda → tag rectangular naranja con el beneficio ("20% OFF", "3×2", "Envío gratis").
               if (cardPromo.primaryPromo) return <PromoTag label={describePromo(cardPromo.primaryPromo).headline} size="sm" />;
               // OFERTA del producto → badge rojo (precio anterior tachado del propio producto).
-              if (hasCardNxM) return <OfferBadge nxm={{ n: product.promoQtyMin!, m: product.promoPayQty! }} size="sm" />;
               if (hasCardOffer || product.offerBadge) return <OfferBadge badge={product.offerBadge ?? null} pct={hasCardOffer ? discountPercent(product.price, product.comparePrice) : null} size="sm" />;
               return null;
             })();
@@ -1666,9 +1654,7 @@ function ProductosPageInner() {
                   if (modalPromo.primaryPromo) {
                     return <PromoTag label={describePromo(modalPromo.primaryPromo).headline} />;
                   }
-                  const hasNxM = modalProduct.promoType === "N_PAY_M" && !!modalProduct.promoQtyMin && !!modalProduct.promoPayQty;
                   const hasOffer = !variantPrice && !!modalProduct.comparePrice && modalProduct.comparePrice > modalProduct.price;
-                  if (hasNxM) return <OfferBadge nxm={{ n: modalProduct.promoQtyMin!, m: modalProduct.promoPayQty! }} size="md" />;
                   if (hasOffer || modalProduct.offerBadge) return <OfferBadge badge={modalProduct.offerBadge ?? null} pct={hasOffer ? discountPercent(modalProduct.price, modalProduct.comparePrice) : null} size="md" />;
                   return null;
                 })()}
@@ -1847,42 +1833,11 @@ function ProductosPageInner() {
                 <p style={{ fontSize:12, color:"#fb923c", fontWeight:600, margin:0 }}>¡Últimas {selectedVariantStock} unidades!</p>
               )}
 
-              {modalProduct.promoQtyMin && modalProduct.promoQtyDiscount ? (
-                <div style={{ display:"flex", flexDirection:"column", gap:10, marginTop:"auto" }}>
-                  <p style={{ fontSize:9, letterSpacing:2, textTransform:"uppercase", color:GT, margin:0, fontWeight:600, opacity:0.7 }}>Promoción por cantidad</p>
-                  <div style={{ fontSize:11, fontWeight:600, padding:"8px 12px", borderRadius:4, background: promoActive ? "rgba(52,211,153,0.1)" : `${G}10`, color: promoActive ? "#16a34a" : GT, border:`1px solid ${promoActive ? "rgba(52,211,153,0.25)" : `${G}30`}` }}>
-                    {promoModalText(modalProduct.promoType, modalProduct.promoQtyMin!, modalProduct.promoQtyDiscount, modalProduct.promoPayQty, pendingTotal)}
-                  </div>
-                  {pendingItems.length > 0 && (
-                    <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
-                      {pendingItems.map((item, idx) => (
-                        <div key={idx} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", fontSize:11, color:T, padding:"5px 8px", background:`${G}08`, borderRadius:3 }}>
-                          <span>{[item.color, item.size].filter(Boolean).join(" / ") || "1 unidad"} ×{item.qty}</span>
-                          <button onClick={() => removePendingItem(idx)} style={{ background:"none", border:"none", color:MID, cursor:"pointer", fontSize:14, padding:"0 2px" }}>×</button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  <button onClick={addToPending} disabled={selectedVariantStock === 0}
-                    style={{ background:"none", border:`1px solid ${selectedVariantStock === 0 ? `${G}30` : G}`, color: selectedVariantStock === 0 ? `${G}50` : GT, padding:"12px", fontSize:11, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor: selectedVariantStock === 0 ? "not-allowed" : "pointer" }}>
-                    {selectedVariantStock === 0 ? "Sin stock" : `+ Agregar a mi selección${pendingTotal > 0 ? ` (${pendingTotal})` : ""}`}
-                  </button>
-                  {pendingItems.length > 0 && (() => {
-                    const total = pendingCartValue;
-                    return (
-                      <button onClick={addAllToCart} style={{ background:G, color:accentDark?"#000":"#fff", border:"none", padding:"14px", fontSize:11, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor:"pointer" }}>
-                        {promoActive ? `Agregar al carrito (${pendingTotal} uds) · ${fmt(total)} (-${pendingPromoDiscount}%)` : `Agregar al carrito (${pendingTotal} uds) · ${fmt(total)}`}
-                      </button>
-                    );
-                  })()}
-                </div>
-              ) : (
-                <button onClick={addToCart}
-                  disabled={selectedVariantStock === 0}
-                  style={{ background: selectedVariantStock === 0 ? `${G}40` : G, color:accentDark?"#000":"#fff", border:"none", padding:"15px", fontSize:11, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor: selectedVariantStock === 0 ? "not-allowed" : "pointer", marginTop:"auto" }}>
-                  {selectedVariantStock === 0 ? "Sin stock" : `Agregar al carrito · ${fmt(nxmPaid != null ? nxmPaid * displayPrice : (modalPromo.hasPriceDrop ? modalPromo.effectivePrice : displayPrice) * qty)}`}
-                </button>
-              )}
+              <button onClick={addToCart}
+                disabled={selectedVariantStock === 0}
+                style={{ background: selectedVariantStock === 0 ? `${G}40` : G, color:accentDark?"#000":"#fff", border:"none", padding:"15px", fontSize:11, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor: selectedVariantStock === 0 ? "not-allowed" : "pointer", marginTop:"auto" }}>
+                {selectedVariantStock === 0 ? "Sin stock" : `Agregar al carrito · ${fmt(nxmPaid != null ? nxmPaid * displayPrice : (modalPromo.hasPriceDrop ? modalPromo.effectivePrice : displayPrice) * qty)}`}
+              </button>
 
               {/* ── Reels / Videos — carrusel vertical 9:16 */}
               {modalProduct.reelUrls.length > 0 && (

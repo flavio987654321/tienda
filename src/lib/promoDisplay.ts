@@ -60,10 +60,7 @@ export type PromoDisplayProduct = { id: string; price: number; category: string 
 // evalúa aparte para decidir si se tacha o es condicional). null = no descontó.
 function directUnitPrice(p: ActivePromotion, price: number): number | null {
   const line = priceCart(
-    [{
-      productId: "x", variantId: null, quantity: 1, basePrice: price, category: null,
-      promo: { promoType: null, promoQtyMin: null, promoPayQty: null, promoQtyDiscount: null },
-    }],
+    [{ productId: "x", variantId: null, quantity: 1, basePrice: price, category: null }],
     { promotions: [{ ...p, scope: "ALL", minOrderAmount: 0, categories: [], productIds: [] }] }
   ).lines[0];
   return line?.promoApplied ? line.unitPrice : null;

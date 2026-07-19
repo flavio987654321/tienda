@@ -1,7 +1,6 @@
 "use client";
 import { FadeImage } from "./FadeImage";
 import type { useCartLogic } from "@/hooks/useCartLogic";
-import { promoSavingsLabel } from "@/lib/promoLabel";
 
 // Un solo componente de carrito reutilizado por todos los templates de un mismo
 // tipo de negocio (hoy: Electro Prime, Tech Nova, Home Studio, Casa Clara) — así
@@ -115,18 +114,12 @@ export function CartDrawer({
               <span style={{ fontSize:11, opacity:0.6, letterSpacing:1, textTransform:"uppercase", color:T }}>Subtotal</span>
               <span style={{ fontSize:11, opacity:0.6, color:T }}>{cartCount} {cartCount === 1 ? "producto" : "productos"}</span>
             </div>
-            {promoSavings > 0.01 && (() => {
-              // Etiqueta de la promo por producto (3×2, % off) si la hay; si el ahorro
-              // viene solo de una promo de tienda, un texto genérico.
-              const pi = cartItems.find(i => i.discountPct && i.discountPct > 0);
-              const label = pi ? promoSavingsLabel(pi.product.promoType, pi.product.promoQtyMin, pi.product.promoPayQty, pi.discountPct) : "Promoción aplicada";
-              return (
-                <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
-                  <span style={{ fontSize:12, color:"#16a34a", fontWeight:600 }}>{label}</span>
-                  <span style={{ fontSize:12, color:"#16a34a", fontWeight:600 }}>-{fmt(promoSavings)}</span>
-                </div>
-              );
-            })()}
+            {promoSavings > 0.01 && (
+              <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
+                <span style={{ fontSize:12, color:"#16a34a", fontWeight:600 }}>Promoción aplicada</span>
+                <span style={{ fontSize:12, color:"#16a34a", fontWeight:600 }}>-{fmt(promoSavings)}</span>
+              </div>
+            )}
             <div style={{ display:"flex", justifyContent:"space-between", marginBottom:20 }}>
               <span style={{ fontSize:13, opacity:0.7, color:T }}>Total</span>
               <span style={{ fontSize:22, fontWeight:700, color:accent }}>{fmt(cartTotal)}</span>

@@ -23,7 +23,6 @@ import { SectionBlock } from "@/components/store/templates/shared/SectionBlock";
 import { PromoBannerCarousel } from "@/components/store/templates/shared/PromoBannerCarousel";
 import { parseVariantAttrs } from "@/lib/variantAttrs";
 import { colorToSwatch } from "@/lib/colorSwatch";
-import { promoModalText } from "@/lib/promoLabel";
 import { discountPercent } from "@/lib/discount";
 import { resolveVariantPrice } from "@/lib/variantPrice";
 import { useTurnstile } from "@/components/Turnstile";
@@ -241,8 +240,7 @@ export default function UrbanPulse() {
     toastMsg,
     cartCount,
     searchResults, favoriteProducts,
-    fmt, showToast, openModal, addToCart, addToPending, addAllToCart, removePendingItem, editPendingItem,
-    pendingItems, pendingTotal, promoActive, pendingCartValue, editingIdx,
+    fmt, showToast, openModal, addToCart,
     toggleFavorite,
   } = cart;
   const accentText = getContrastColor(ACC) === "light" ? DARK : "#fff";
@@ -894,10 +892,9 @@ export default function UrbanPulse() {
                 style={{ gridColumn: big ? "span 2" : "span 1", cursor:"pointer", position:"relative", background:WHITE }}>
                 {(() => {
                   if (promo.primaryPromo) return <PromoTag label={describePromo(promo.primaryPromo).headline} size={big ? "md" : "sm"} />;
-                  const hasNxM = product.promoType === "N_PAY_M" && !!product.promoQtyMin && !!product.promoPayQty;
                   const hasOffer = !!product.comparePrice && product.comparePrice > product.price;
-                  if (!hasNxM && !hasOffer) return null;
-                  return <OfferBadge badge={hasNxM ? null : product.offerBadge} pct={hasOffer ? discountPercent(product.price, product.comparePrice) : null} nxm={hasNxM ? { n: product.promoQtyMin!, m: product.promoPayQty! } : undefined} size={big ? "md" : "sm"} />;
+                  if (!hasOffer) return null;
+                  return <OfferBadge badge={product.offerBadge} pct={discountPercent(product.price, product.comparePrice)} size={big ? "md" : "sm"} />;
                 })()}
                 <div style={{ position:"relative", width:"100%", overflow:"hidden", aspectRatio: big ? "16/9" : "3/4" }}>
                   {product.images[0] && <FadeImage className="up-prod-img" src={product.images[0]} alt={product.name} fill sizes={big ? "(max-width: 768px) 100vw, 66vw" : "(max-width: 768px) 50vw, 33vw"} style={{ objectFit:"cover" }} />}
@@ -1438,10 +1435,9 @@ export default function UrbanPulse() {
                   )}
                   {(() => {
                     if (modalPromo?.primaryPromo) return <PromoTag label={describePromo(modalPromo.primaryPromo).headline} />;
-                    const hasNxM = modalProduct.promoType === "N_PAY_M" && !!modalProduct.promoQtyMin && !!modalProduct.promoPayQty;
                     const hasOffer = !variantPrice && !!modalProduct.comparePrice && modalProduct.comparePrice > modalProduct.price;
-                    if (!hasNxM && !hasOffer) return null;
-                    return <OfferBadge badge={hasNxM ? null : modalProduct.offerBadge} pct={hasOffer ? discountPercent(modalProduct.price, modalProduct.comparePrice) : null} nxm={hasNxM ? { n: modalProduct.promoQtyMin!, m: modalProduct.promoPayQty! } : undefined} size="md" />;
+                    if (!hasOffer) return null;
+                    return <OfferBadge badge={modalProduct.offerBadge} pct={discountPercent(modalProduct.price, modalProduct.comparePrice)} size="md" />;
                   })()}
                   {modalProduct.images.length > 1 && (<>
                     <button onClick={() => setModalImg(i => (i - 1 + modalProduct.images.length) % modalProduct.images.length)}
@@ -1618,40 +1614,6 @@ export default function UrbanPulse() {
                     style={{ width:"100%", background:DARK, color:ACC, border:"none", padding:"16px", fontSize:11, fontWeight:900, letterSpacing:3, textTransform:"uppercase", cursor:"pointer", marginBottom:10 }}>
                     Consultar disponibilidad
                   </button>
-                ) : modalProduct.promoQtyMin ? (
-                  <div style={{ display:"flex", flexDirection:"column", gap:10, marginBottom:10 }}>
-                    <p style={{ fontSize:9, letterSpacing:3, textTransform:"uppercase", color:ACC, margin:0, fontWeight:700 }}>Promoción</p>
-                    <div style={{ fontSize:11, fontWeight:700, padding:"8px 12px", background: promoActive ? "rgba(52,211,153,0.1)" : `${ACC}22`, color: promoActive ? "#34d399" : DARK, border:`2px solid ${promoActive ? "rgba(52,211,153,0.3)" : DARK}` }}>
-                      {promoModalText(modalProduct.promoType, modalProduct.promoQtyMin!, modalProduct.promoQtyDiscount, modalProduct.promoPayQty, pendingTotal)}
-                    </div>
-                    {pendingItems.length > 0 && (
-                      <div style={{ display:"flex", flexDirection:"column", gap:3 }}>
-                        {pendingItems.map((item, idx) => {
-                          const isEditing = editingIdx === idx;
-                          return (
-                            <div key={idx} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", fontSize:11, fontWeight:700, color:DARK, padding:"5px 8px", background: isEditing ? `${ACC}22` : `${ACC}11`, border: isEditing ? `1px dashed ${ACC}` : `1px solid ${DARK}22` }}>
-                              <button onClick={() => editPendingItem(idx)} title={isEditing ? "Editando..." : "Tocá para editar"} style={{ background:"none", border:"none", color: isEditing ? ACC : DARK, cursor:"pointer", fontSize:11, fontWeight:700, padding:0, textAlign:"left", flex:1, opacity: isEditing ? 0.7 : 1 }}>
-                                {isEditing ? "✎ " : ""}{[isEditing ? selectedColor : item.color, isEditing ? selectedSize : item.size].filter(Boolean).join(" / ")} ×{isEditing ? qty : item.qty}
-                              </button>
-                              {!isEditing && <button onClick={() => removePendingItem(idx)} style={{ background:"none", border:"none", color:MID, cursor:"pointer", fontSize:14, padding:"0 2px", fontWeight:900 }}>×</button>}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                    <button onClick={addToPending} disabled={selectedVariantStock === 0}
-                      style={{ width:"100%", background: selectedVariantStock === 0 ? "#555" : "none", border:`2px solid ${selectedVariantStock === 0 ? "#555" : DARK}`, color: selectedVariantStock === 0 ? "#999" : DARK, padding:"13px", fontSize:10, fontWeight:900, letterSpacing:2, textTransform:"uppercase", cursor: selectedVariantStock === 0 ? "not-allowed" : "pointer" }}>
-                      {selectedVariantStock === 0 ? "Sin stock" : editingIdx !== null ? "✓ Confirmar cambios" : "+ Agregar a mi selección"}
-                    </button>
-                    {pendingItems.length > 0 && (() => {
-                      const total = pendingCartValue;
-                      return (
-                        <button onClick={addAllToCart} style={{ width:"100%", background:DARK, color:ACC, border:"none", padding:"14px", fontSize:11, fontWeight:900, letterSpacing:3, textTransform:"uppercase", cursor:"pointer" }}>
-                          Agregar ({pendingTotal} unid.) · {fmt(total)}
-                        </button>
-                      );
-                    })()}
-                  </div>
                 ) : (
                   <button onClick={addToCart} disabled={selectedVariantStock === 0}
                     style={{ width:"100%", background: selectedVariantStock === 0 ? "#555" : DARK, color:ACC, border:"none", padding:"16px", fontSize:11, fontWeight:900, letterSpacing:3, textTransform:"uppercase", cursor: selectedVariantStock === 0 ? "not-allowed" : "pointer", marginBottom:10 }}>

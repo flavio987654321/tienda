@@ -8,7 +8,6 @@ import ReportStoreModal from "@/components/store/ReportStoreModal";
 import StoreProductReels from "@/components/store/ProductReels";
 import { getContrastColor, getReadableAccentText } from "@/contexts/EditContext";
 import { useTouchSwipe } from "@/hooks/useTouchSwipe";
-import { promoModalText } from "@/lib/promoLabel";
 import { resolveVariantPrice } from "@/lib/variantPrice";
 import { useTurnstile } from "@/components/Turnstile";
 import { PromoTag, PromoBlock } from "@/components/store/PromoDisplay";
@@ -339,11 +338,6 @@ export function ProductDetailBody({ theme, view }: { theme: DetailTheme; view: P
           {product.offerNote && (
             <div style={{ fontSize: 13, color: "#059669", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 8, padding: "7px 12px", marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>
               <span>📋</span><span>{product.offerNote}</span>
-            </div>
-          )}
-          {product.promoQtyMin && product.promoQtyDiscount && (
-            <div style={{ fontSize: 12, fontWeight: 600, padding: "7px 12px", borderRadius: 8, background: `${theme.accent}11`, color: theme.accent, border: `1px solid ${theme.accent}30`, marginBottom: 12 }}>
-              {promoModalText(product.promoType, product.promoQtyMin, product.promoQtyDiscount, product.promoPayQty, 0)}
             </div>
           )}
           {hasMercadoPago ? (

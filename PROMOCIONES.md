@@ -933,9 +933,27 @@ $9.500". Ella decide: la baja igual (liquidación / gancho) o ajusta el descuent
 el panel de "qué se aplicó y qué NO (blocked)" — este último tenía sentido cuando había combinación
 compleja; con "gana la más barata" no hay nada "bloqueado" que explicar. Se retoma solo si vuelve el apilado.
 
-### Fase 4 — Migrar y limpiar 🔲
-Backfill: cada producto con `promoQtyMin` → una `Promotion` que apunta a él. Recién ahí se borran los
-campos del producto y el cartel de "Promoción por cantidad" del formulario.
+### Fase 4 — Migrar y limpiar ✅ (código) · 🔲 drop de columnas (deploy)
+**No hubo nada real que migrar.** Verificado contra la base de prod (19/07): un solo producto tenía la
+promo vieja cargada (`promoQtyMin`) y era de prueba (girly-store, "Camiseta Hanes"). Las StorePromotion
+"remeras"/"holaaa mundo" también eran de prueba. Así que Fase 4 = limpieza de código sin backfill.
+
+**Hecho (código, sin deployar):** se retiró TODO el sistema viejo "Promoción por cantidad" del producto:
+- `pricing.ts`: fuera `PromoConfig`, `PricingItem.promo`, `promoApplies`, bloque "Candidato 1" legado.
+- `promoLabel.ts`: **borrado** (era 100% del sistema viejo).
+- `useCartLogic`: fuera el flujo de "multi-selección" (pendientes) que solo existía para esa promo, y
+  `discountPct` del carrito. Decisión de Flavio (19/07): sacarlo (el modal queda con un solo botón).
+- Templates (Boho/Chic/FashionNoir/UrbanPulse), `/productos`, detalle, CartDrawer, CheckoutModal: fuera
+  el badge/hint viejo. El display NUEVO (`PromoTag`/`PromoBlock`/tachado) queda intacto.
+- Server: `products.ts` (validate), `api/productos` POST+PATCH, `api/public/[slug]`, `checkout`, `email.ts`.
+- Formulario del producto: la tarjeta "Promoción por cantidad" → **nota de solo lectura** que linkea a
+  la sección Promociones.
+- Verificado: `tsc` limpio, motor 34/34 verde, `next build` OK, sin variables sin uso.
+
+**Pendiente para el DEPLOY:** las 4 columnas siguen en `schema.prisma` (`promoQtyMin`, `promoQtyDiscount`,
+`promoType`, `promoPayQty` en `Product`) pero ya **nadie las lee ni escribe** — quedan inertes. En el deploy:
+quitarlas del schema + migración `DROP COLUMN`. El producto de prueba con datos viejos desaparece solo al
+dropear la columna.
 
 ### Fase 4.5 — Que el descuento se VEA en la tienda (pedido de Flavio) 🔄 EN ESTO
 
