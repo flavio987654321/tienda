@@ -37,7 +37,7 @@ export default function StoreTypeModal({
     else router.back();
   }
 
-  async function downloadCsv(tipo: "productos" | "pedidos" | "cupones") {
+  async function downloadCsv(tipo: "productos" | "pedidos" | "cupones" | "promociones") {
     if (downloading) return;
     setDownloading(tipo);
     setError("");
@@ -186,6 +186,7 @@ export default function StoreTypeModal({
                 "Todos los pedidos recibidos",
                 "Todas las consultas (leads)",
                 "Todos los cupones de descuento",
+                "Todas las promociones de la tienda",
                 "Los carritos abandonados",
                 "Las reseñas de productos",
                 "El historial de ventas y estadísticas de tus afiliadas",
@@ -210,6 +211,7 @@ export default function StoreTypeModal({
                 ["productos", "Mis productos"],
                 ["pedidos", "Mis pedidos (incluye pagos y comisiones)"],
                 ["cupones", "Mis cupones"],
+                ["promociones", "Mis promociones"],
               ] as const).map(([tipo, label]) => (
                 <button
                   key={tipo}

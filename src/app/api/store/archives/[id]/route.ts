@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
-import { ordersToCsv, couponsToCsv, CSV_BOM, type ArchivedOrder } from "@/lib/storeArchive";
+import { ordersToCsv, couponsToCsv, promotionsToCsv, CSV_BOM, type ArchivedOrder } from "@/lib/storeArchive";
 import { checkRateLimit } from "@/lib/rate-limit";
 import type { Prisma } from "@prisma/client";
 
@@ -35,9 +35,12 @@ export async function GET(
 
   // Las fechas del snapshot son strings tras el JSON.parse; los generadores de
   // CSV las pasan por new Date(), que acepta ambos formatos.
+  // `promotions` solo existe en respaldos creados después de que las promociones
+  // se sumaran al cambio de rubro; en los viejos queda undefined y el CSV sale vacío.
   const data = JSON.parse(archive.data) as {
     orders?: ArchivedOrder[];
     coupons?: Prisma.CouponGetPayload<Record<string, never>>[];
+    promotions?: Prisma.StorePromotionGetPayload<Record<string, never>>[];
   };
 
   if (tipo === "pedidos") {
@@ -54,6 +57,15 @@ export async function GET(
       headers: {
         "Content-Type": "text/csv; charset=utf-8",
         "Content-Disposition": `attachment; filename="respaldo_cupones_${rubro}_${date}.csv"`,
+      },
+    });
+  }
+
+  if (tipo === "promociones") {
+    return new NextResponse(CSV_BOM + promotionsToCsv(data.promotions ?? []), {
+      headers: {
+        "Content-Type": "text/csv; charset=utf-8",
+        "Content-Disposition": `attachment; filename="respaldo_promociones_${rubro}_${date}.csv"`,
       },
     });
   }

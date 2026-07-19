@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
-import { fetchStoreOrdersForArchive, fetchStoreCouponsForArchive, ordersToCsv, couponsToCsv, csvEscape, CSV_BOM } from "@/lib/storeArchive";
+import { fetchStoreOrdersForArchive, fetchStoreCouponsForArchive, fetchStorePromotionsForArchive, ordersToCsv, couponsToCsv, promotionsToCsv, csvEscape, CSV_BOM } from "@/lib/storeArchive";
 import { checkRateLimit } from "@/lib/rate-limit";
 
 const csvResponse = (csv: string, filename: string) =>
@@ -36,6 +36,11 @@ export async function GET(req: Request) {
   if (tipo === "cupones") {
     const coupons = await fetchStoreCouponsForArchive(prisma, store.id);
     return csvResponse(couponsToCsv(coupons), `cupones_${storeName}_${date}.csv`);
+  }
+
+  if (tipo === "promociones") {
+    const promos = await fetchStorePromotionsForArchive(prisma, store.id);
+    return csvResponse(promotionsToCsv(promos), `promociones_${storeName}_${date}.csv`);
   }
 
   const products = await prisma.product.findMany({

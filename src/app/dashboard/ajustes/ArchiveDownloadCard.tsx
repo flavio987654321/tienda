@@ -47,6 +47,7 @@ export default function ArchiveDownloadCard({ archives }: { archives: ArchiveIte
               {([
                 ["pedidos", "Pedidos"],
                 ["cupones", "Cupones"],
+                ["promociones", "Promociones"],
                 ["completo", "Todo (JSON)"],
               ] as const).map(([tipo, label]) => (
                 <a

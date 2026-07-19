@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
 import { createNotificationMany } from "@/lib/notifications";
-import { fetchStoreOrdersForArchive, fetchStoreCouponsForArchive, fetchStoreWalletsForArchive } from "@/lib/storeArchive";
+import { fetchStoreOrdersForArchive, fetchStoreCouponsForArchive, fetchStoreWalletsForArchive, fetchStorePromotionsForArchive } from "@/lib/storeArchive";
 import { STORE_TYPES } from "@/lib/storeTypes";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { stripDesignConfig } from "@/lib/store-config";
@@ -109,6 +109,7 @@ export async function POST(req: Request) {
     const ordersToArchive = await fetchStoreOrdersForArchive(tx, store.id);
     const couponsToArchive = await fetchStoreCouponsForArchive(tx, store.id);
     const walletsToArchive = await fetchStoreWalletsForArchive(tx, store.id);
+    const promotionsToArchive = await fetchStorePromotionsForArchive(tx, store.id);
 
     const totalFacturado = ordersToArchive
       .filter((o) => o.payment?.status === "APPROVED")
@@ -120,7 +121,7 @@ export async function POST(req: Request) {
         tipoTiendaAnterior: store.tipoTienda,
         ordersCount: ordersToArchive.length,
         totalFacturado,
-        data: JSON.stringify({ orders: ordersToArchive, coupons: couponsToArchive, wallets: walletsToArchive }),
+        data: JSON.stringify({ orders: ordersToArchive, coupons: couponsToArchive, wallets: walletsToArchive, promotions: promotionsToArchive }),
       },
     });
 
@@ -147,6 +148,15 @@ export async function POST(req: Request) {
     // ── Consultas y cupones ──
     await tx.lead.deleteMany({ where: { storeId: store.id } });
     await tx.coupon.deleteMany({ where: { storeId: store.id } });
+
+    // ── Promociones de tienda ──
+    // Sin esto sobreviven al cambio de rubro, y las de alcance ALL ("20% OFF en
+    // todo") se aplican solas al catálogo nuevo: la dueña pasa de ropa a autos y
+    // sus autos salen con descuento sin haber tocado nada. Las de alcance por
+    // producto quedan además apuntando a ids que ya no existen.
+    // No hay FK contra Product (productIds es un JSON string), así que el borrado
+    // de productos de arriba no las arrastra: hay que borrarlas explícitamente.
+    await tx.storePromotion.deleteMany({ where: { storeId: store.id } });
 
     // ── Carritos abandonados (ya quedaron archivados los pedidos reales; esto
     // es solo el email/carrito capturado en checkout, sin transacción) ──

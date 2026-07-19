@@ -41,6 +41,13 @@ export function fetchStoreCouponsForArchive(db: DbClient, storeId: string) {
   return db.coupon.findMany({ where: { storeId }, orderBy: { createdAt: "desc" } });
 }
 
+// Promociones de tienda: como los cupones, son ofertas que la dueña pudo haber
+// comunicado a sus clientes, así que se archivan antes de borrarlas en el
+// cambio de rubro.
+export function fetchStorePromotionsForArchive(db: DbClient, storeId: string) {
+  return db.storePromotion.findMany({ where: { storeId }, orderBy: { createdAt: "desc" } });
+}
+
 // Saldos y retiros de afiliadas: el reset solo procede con balances en cero,
 // pero el historial de retiros ya pagados (con snapshot bancario) es la prueba
 // de la plataforma de que esas transferencias existieron — se archiva siempre.
@@ -98,6 +105,52 @@ export function ordersToCsv(orders: ArchivedOrder[]): string {
       escape(o.commission?.affiliate?.user?.name),
     ].join(",");
   });
+
+  return [header.join(","), ...rows].join("\n");
+}
+
+// Los arrays de alcance se guardan como JSON string (igual que tags/reelUrls).
+// Para el CSV interesa que se lea, no que sea parseable de vuelta.
+function scopeDetail(p: Prisma.StorePromotionGetPayload<Record<string, never>>): string {
+  const parse = (raw: string): string[] => {
+    try {
+      const v = JSON.parse(raw || "[]");
+      return Array.isArray(v) ? v.map(String) : [];
+    } catch { return []; }
+  };
+  if (p.scope === "CATEGORY") return parse(p.categories).join(" | ");
+  if (p.scope === "PRODUCTS") {
+    const n = parse(p.productIds).length;
+    return `${n} producto${n !== 1 ? "s" : ""}`;
+  }
+  return "Toda la tienda";
+}
+
+export function promotionsToCsv(promos: Prisma.StorePromotionGetPayload<Record<string, never>>[]): string {
+  const header = [
+    "Nombre", "Tipo", "Valor", "Llevá", "Pagá", "Compra mínima",
+    "Alcance", "Detalle del alcance", "Desde", "Hasta",
+    "Combina con cupones", "Activa", "Archivada", "Creada",
+  ];
+
+  const day = (d: Date | null) => (d ? new Date(d).toISOString().slice(0, 10) : "");
+
+  const rows = promos.map((p) => [
+    escape(p.name),
+    escape(p.type),
+    p.value ?? "",
+    p.minQty ?? "",
+    p.payQty ?? "",
+    p.minOrderAmount,
+    escape(p.scope),
+    escape(scopeDetail(p)),
+    day(p.startsAt),
+    day(p.endsAt),
+    p.combinesWithCoupons ? "SI" : "NO",
+    p.isActive ? "SI" : "NO",
+    p.archivedAt ? "SI" : "NO",
+    day(p.createdAt),
+  ].join(","));
 
   return [header.join(","), ...rows].join("\n");
 }

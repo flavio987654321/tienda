@@ -225,6 +225,13 @@ export async function DELETE(req: NextRequest) {
         await tx.coupon.deleteMany({ where: { storeId } });
       }
 
+      // Promociones: igual que los cupones. El nombre lo escribe la dueña
+      // ("Verano en lo de Laura"), así que entra en la anonimización.
+      // Los pedidos no se tocan: Order.promoSummary es un JSON congelado al
+      // momento de la venta, sin FK contra la promo, así que el comprobante
+      // sigue diciendo qué se aplicó aunque la promo ya no exista.
+      await tx.storePromotion.deleteMany({ where: { storeId } });
+
       // Anonimizar tienda
       await tx.store.update({
         where: { id: storeId },
