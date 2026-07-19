@@ -472,6 +472,13 @@ model Order {
   discountAmount       Float    @default(0)
   shippingCost         Float    @default(0)
   shippingMethod       String?
+  // Promociones aplicadas, "congeladas" al momento de la venta: después la promo
+  // puede cambiar, pausarse o archivarse, y el comprobante tiene que seguir diciendo
+  // la verdad de lo que se cobró.
+  // - promoSavings: cuánto ahorró el comprador por promos (número suelto para métricas).
+  // - promoSummary: JSON con QUÉ promos ganaron { applied:[{name,label,savings}], freeShipping }.
+  promoSavings         Float    @default(0)
+  promoSummary         String?
   trackingCode         String?
   notes                String?
   shippingAddress      String   @default("{}")

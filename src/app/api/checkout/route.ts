@@ -494,6 +494,12 @@ export async function POST(req: NextRequest) {
           couponId: validCouponId,
           shippingCost: effectiveShippingCost,
           shippingMethod: shipping.label,
+          // Promos "congeladas": qué se aplicó y cuánto ahorró, tal cual se cobró.
+          // Después la promo puede cambiar o archivarse; el comprobante no debe cambiar.
+          promoSavings: pricing.promoSavings,
+          promoSummary: (pricing.appliedPromos.length > 0 || pricing.freeShippingPromo)
+            ? JSON.stringify({ applied: pricing.appliedPromos, freeShipping: pricing.freeShippingPromo })
+            : null,
           notes: customer.notes || null,
           shippingAddress: JSON.stringify({
             name: customer.name,

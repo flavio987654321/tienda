@@ -509,6 +509,27 @@ export type EmailPromo = { name: string | null; label: string; type: string; sav
 
 const emailMoney = (n: number) => `$${n.toLocaleString("es-AR")}`;
 
+/** Lee `Order.promoSummary` (JSON congelado en la venta) de forma tolerante: si el
+ *  dato falta o vino roto, se devuelve vacío y el email simplemente no muestra promos. */
+export function parseOrderPromoSummary(raw: string | null | undefined): {
+  appliedPromos: EmailPromo[];
+  freeShippingPromo: EmailPromo | null;
+} {
+  const empty = { appliedPromos: [], freeShippingPromo: null };
+  if (!raw) return empty;
+  try {
+    const parsed = JSON.parse(raw);
+    const isPromo = (p: unknown): p is EmailPromo =>
+      !!p && typeof p === "object" && typeof (p as EmailPromo).label === "string";
+    return {
+      appliedPromos: Array.isArray(parsed?.applied) ? parsed.applied.filter(isPromo) : [],
+      freeShippingPromo: isPromo(parsed?.freeShipping) ? parsed.freeShipping : null,
+    };
+  } catch {
+    return empty;
+  }
+}
+
 /** Una fila por promo aplicada: "🎉 Verano en remeras · 20% OFF   − $2.000" */
 function promoRowsHtml(appliedPromos?: EmailPromo[] | null): string {
   if (!appliedPromos?.length) return "";
@@ -1335,6 +1356,9 @@ export async function sendOrderPaymentConfirmedEmail({
   couponCode,
   shippingCost,
   shippingMethod,
+  appliedPromos,
+  freeShippingPromo,
+  promoSavings,
 }: {
   buyerEmail: string;
   buyerName: string;
@@ -1350,6 +1374,10 @@ export async function sendOrderPaymentConfirmedEmail({
   couponCode?: string | null;
   shippingCost?: number;
   shippingMethod?: string | null;
+  // Promos congeladas en la venta (Order.promoSummary / promoSavings).
+  appliedPromos?: EmailPromo[] | null;
+  freeShippingPromo?: EmailPromo | null;
+  promoSavings?: number;
 }) {
   if (!process.env.RESEND_API_KEY) return;
 
@@ -1380,18 +1408,14 @@ export async function sendOrderPaymentConfirmedEmail({
             <span style="font-size:14px;color:#6b7280;">Subtotal</span>
             <span style="font-size:14px;color:#374151;">${fmt(subtotal)}</span>
           </div>
+          ${promoRowsHtml(appliedPromos)}
           ${discountAmount && discountAmount > 0 ? `
           <div style="display:flex;justify-content:space-between;margin-bottom:${couponCode ? "4px" : "10px"};">
             <span style="font-size:14px;color:#16a34a;font-weight:600;">🎟️ Cupón de descuento</span>
             <span style="font-size:14px;color:#16a34a;font-weight:600;">− ${fmt(discountAmount)}</span>
           </div>
           ${couponCode ? `<div style="text-align:right;margin-bottom:10px;"><span style="font-size:11px;font-family:monospace;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:4px;padding:2px 8px;color:#15803d;font-weight:700;letter-spacing:0.08em;">${escapeHtml(couponCode)}</span></div>` : ""}` : ""}
-          ${shippingCost != null ? `
-          <div style="display:flex;justify-content:space-between;margin-bottom:${shippingMethod ? "4px" : "14px"};">
-            <span style="font-size:14px;color:#6b7280;">Costo de envío</span>
-            <span style="font-size:14px;color:${shippingCost === 0 ? "#16a34a" : "#374151"};font-weight:${shippingCost === 0 ? "700" : "400"};">${shippingCost === 0 ? "¡Gratis!" : fmt(shippingCost)}</span>
-          </div>
-          ${shippingMethod ? `<div style="font-size:11px;color:#9ca3af;margin-bottom:14px;">${escapeHtml(shippingMethod)}</div>` : ""}` : ""}
+          ${shippingCost != null ? shippingRowHtml(shippingCost, shippingMethod ?? "", freeShippingPromo) : ""}
           <div style="border-top:1px solid #e5e7eb;padding-top:14px;display:flex;justify-content:space-between;align-items:center;">
             <span style="font-size:15px;font-weight:700;color:#111827;">Total pagado</span>
             <span style="font-size:20px;font-weight:800;color:#16a34a;">${fmt(total)}</span>
@@ -1425,6 +1449,7 @@ export async function sendOrderPaymentConfirmedEmail({
 
         ${itemsBlock}
         ${breakdown}
+        ${savingsBannerHtml((promoSavings ?? 0) + (discountAmount ?? 0), freeShippingPromo)}
 
         <div style="text-align:center;margin-bottom:28px;">
           <a href="${appUrl}/seguimiento/${shortId}"

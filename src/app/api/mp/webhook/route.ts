@@ -4,7 +4,7 @@ import { waitUntil } from "@vercel/functions";
 import { prisma } from "@/lib/prisma";
 import MercadoPagoConfig, { Payment } from "mercadopago";
 import { createNotification } from "@/lib/notifications";
-import { sendOrderPaymentConfirmedEmail, sendCommissionEarnedEmail } from "@/lib/email";
+import { sendOrderPaymentConfirmedEmail, sendCommissionEarnedEmail, parseOrderPromoSummary } from "@/lib/email";
 
 type CommissionResult = { commissionId: string; amount: number; rate: number; newBalance: number };
 
@@ -259,6 +259,10 @@ async function processPaymentWebhook(paymentId: string) {
         couponCode: order.coupon?.code ?? null,
         shippingCost: order.shippingCost,
         shippingMethod: order.shippingMethod,
+        // Promos congeladas al momento de la venta (no se recalculan: la promo pudo
+        // haber cambiado desde entonces y el comprobante tiene que ser fiel).
+        ...parseOrderPromoSummary(order.promoSummary),
+        promoSavings: order.promoSavings,
       }).catch((err) => console.error("[email] sendOrderPaymentConfirmedEmail (mp webhook) failed:", err));
     }
 
