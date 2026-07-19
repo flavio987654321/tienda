@@ -118,11 +118,11 @@ export default function AffiliateToggle({
             </>
           )}
           <Link
-            href="/dashboard/ajustes"
+            href="/dashboard/pagos"
             className={`inline-flex items-center gap-1.5 mt-3 text-sm font-semibold px-3 py-1.5 rounded-lg transition-colors ${enabled ? "text-amber-700 bg-amber-100 hover:bg-amber-200" : "text-orange-700 bg-orange-100 hover:bg-orange-200"}`}
           >
             <ExternalLink className="h-3.5 w-3.5" />
-            Ir a Ajustes → Conectar MercadoPago
+            Ir a Pagos → Conectar MercadoPago
           </Link>
         </div>
       </div>

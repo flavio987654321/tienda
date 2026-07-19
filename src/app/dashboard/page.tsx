@@ -128,7 +128,7 @@ export default async function DashboardPage() {
       {
         done: !!storeExtra?.mpConnectedAt,
         label: "Conectá MercadoPago para cobrar",
-        href: "/dashboard/ajustes",
+        href: "/dashboard/pagos",
         tip: "Necesario para recibir pagos con tarjeta o débito.",
       },
       {

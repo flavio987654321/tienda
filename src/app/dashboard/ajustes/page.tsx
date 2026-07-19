@@ -6,12 +6,13 @@ import { redirect } from "next/navigation";
 import DashboardLayout from "@/components/DashboardLayout";
 import DangerZone from "@/app/dashboard/configuracion/DangerZone";
 import AjustesClient from "./AjustesClient";
-import MpConnectButton from "./MpConnectButton";
 import LogoUploadCard from "@/components/LogoUploadCard";
 import ArchiveDownloadCard from "./ArchiveDownloadCard";
 
-export default async function AjustesPage({ searchParams }: { searchParams: Promise<{ mp?: string }> }) {
-  const { mp } = await searchParams;
+// La conexión con MercadoPago vive en /dashboard/pagos, junto al resto de los
+// medios de cobro (transferencia, efectivo). Acá quedan identidad, presencia y
+// opciones de cuenta.
+export default async function AjustesPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
   if (user.role !== "OWNER") redirect("/dashboard");
@@ -21,20 +22,19 @@ export default async function AjustesPage({ searchParams }: { searchParams: Prom
     prisma.store.findUnique({
       where: { ownerId: user.id },
       select: {
-        id: true, slug: true, customDomain: true, mpConnectedAt: true, mpSellerId: true,
+        id: true, slug: true, customDomain: true,
         name: true, logo: true, logoColor: true, primaryColor: true, description: true,
         tipoTienda: true, storeConfig: true, pageBlocks: true,
       },
     }),
   ]);
 
-  const [pendingAffiliateCount, lowStockCount, activeAffiliateCount] = store
+  const [pendingAffiliateCount, lowStockCount] = store
     ? await Promise.all([
         prisma.affiliate.count({ where: { storeId: store.id, status: "PENDING" } }),
         prisma.product.count({ where: { storeId: store.id, deletedAt: null, variants: { every: { stock: 0 } } } }),
-        prisma.affiliate.count({ where: { storeId: store.id, status: "APPROVED", isActive: true } }),
       ])
-    : [0, 0, 0];
+    : [0, 0];
 
   // Respaldos de ciclos anteriores (se crean al cambiar de rubro)
   const archives = store
@@ -62,7 +62,7 @@ export default async function AjustesPage({ searchParams }: { searchParams: Prom
         <div className="border-b border-slate-200 bg-white px-6 py-8">
           <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-slate-400 mb-2">Mi tienda</p>
           <h1 className="text-3xl font-black text-slate-900 tracking-tight">Configuración</h1>
-          <p className="text-slate-500 text-sm mt-1.5">{store?.tipoTienda === "AUTOS" ? "Logo, dominio y opciones de cuenta." : "Logo, dominio, pagos y opciones de cuenta."}</p>
+          <p className="text-slate-500 text-sm mt-1.5">Logo, dominio y opciones de cuenta.</p>
         </div>
 
         {/* Content */}
@@ -91,19 +91,6 @@ export default async function AjustesPage({ searchParams }: { searchParams: Prom
               tipoTienda={store?.tipoTienda}
             />
           </section>
-
-          {store?.tipoTienda !== "AUTOS" && (
-            <section>
-              <SectionLabel>Pagos</SectionLabel>
-              <MpConnectButton
-                connected={!!store?.mpConnectedAt}
-                connectedAt={store?.mpConnectedAt?.toISOString() ?? null}
-                mpSellerId={store?.mpSellerId ?? null}
-                mpStatus={mp === "connected" ? "connected" : mp === "error" ? "error" : undefined}
-                activeAffiliatesCount={activeAffiliateCount}
-              />
-            </section>
-          )}
 
           {archives.length > 0 && (
             <section>

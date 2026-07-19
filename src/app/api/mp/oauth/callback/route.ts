@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
   // Verificar que el nonce coincide (protección CSRF)
   if (!code || !state || !cookieNonce || !storeId || state !== cookieNonce) {
     console.warn("MP OAuth callback: nonce inválido o faltante", { state, cookieNonce });
-    return NextResponse.redirect(`${APP_URL}/dashboard/ajustes?mp=error`);
+    return NextResponse.redirect(`${APP_URL}/dashboard/pagos?mp=error`);
   }
 
   try {
@@ -37,12 +37,12 @@ export async function GET(req: NextRequest) {
       },
     });
 
-    const res = NextResponse.redirect(`${APP_URL}/dashboard/ajustes?mp=connected`);
+    const res = NextResponse.redirect(`${APP_URL}/dashboard/pagos?mp=connected`);
     // Borrar la cookie de estado una vez usada
     res.cookies.delete("mp_oauth_state");
     return res;
   } catch (err) {
     console.error("MP OAuth callback error:", err);
-    return NextResponse.redirect(`${APP_URL}/dashboard/ajustes?mp=error`);
+    return NextResponse.redirect(`${APP_URL}/dashboard/pagos?mp=error`);
   }
 }

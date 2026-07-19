@@ -14,6 +14,7 @@ import {
   generatePolicyDeliveryAutos, generatePolicyOperationAutos, generatePolicyTermsAutos,
   type LegalWizardAnswers, type LegalWizardAnswersAutos, type LegalStoreInfo,
 } from "@/lib/legal-generator";
+import MpConnectButton from "./MpConnectButton";
 
 type Props = {
   initial: {
@@ -33,6 +34,11 @@ type Props = {
     storeName: string;
     contact: string;
     isAutos: boolean;
+    mpConnected: boolean;
+    mpConnectedAt: string | null;
+    mpSellerId: string | null;
+    mpStatus?: "connected" | "error";
+    activeAffiliatesCount: number;
   };
 };
 
@@ -198,7 +204,7 @@ export default function PagosClient({ initial }: Props) {
             <div>
               <p className="text-sm font-semibold text-blue-900">¿Para qué sirve esto?</p>
               <p className="text-xs text-blue-700 mt-0.5 leading-relaxed">
-                Esta pantalla junta dos cosas distintas: <strong>cómo te cobran</strong> (transferencia, efectivo) y <strong>cómo se entrega</strong> el pedido (retiro, envío). No hace falta activar todo — elegís solo las opciones que usás en tu negocio. Lo que actives le llega al cliente en el email de confirmación del pedido.
+                Esta pantalla junta dos cosas distintas: <strong>cómo te cobran</strong> (MercadoPago, transferencia, efectivo) y <strong>cómo se entrega</strong> el pedido (retiro, envío). No hace falta activar todo — elegís solo las opciones que usás en tu negocio. Lo que actives le llega al cliente en el email de confirmación del pedido.
               </p>
             </div>
           </div>
@@ -214,6 +220,19 @@ export default function PagosClient({ initial }: Props) {
       )}
 
       {!isAutos && <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 pt-2">Cómo te cobran</p>}
+
+      {/* MERCADOPAGO — cobro automático. Va primero porque es el único medio
+          que confirma el pago solo; los de abajo dependen de que la dueña
+          revise el comprobante a mano. */}
+      {!isAutos && (
+        <MpConnectButton
+          connected={initial.mpConnected}
+          connectedAt={initial.mpConnectedAt}
+          mpSellerId={initial.mpSellerId}
+          mpStatus={initial.mpStatus}
+          activeAffiliatesCount={initial.activeAffiliatesCount}
+        />
+      )}
 
       {/* TRANSFERENCIA */}
       {!isAutos && (

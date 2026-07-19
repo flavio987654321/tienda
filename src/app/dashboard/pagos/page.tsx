@@ -6,7 +6,10 @@ import PagosClient from "./PagosClient";
 import type { StorePaymentInfo, ShippingMethod } from "@/types/store-config";
 import { DEFAULT_PAYMENT_INFO, DEFAULT_SHIPPING_METHODS } from "@/types/store-config";
 
-export default async function PagosPage() {
+// `mp` lo setea el callback de OAuth de MercadoPago (?mp=connected | ?mp=error)
+// para poder mostrar el resultado de la conexión al volver.
+export default async function PagosPage({ searchParams }: { searchParams: Promise<{ mp?: string }> }) {
+  const { mp } = await searchParams;
   const user = await getCurrentUser();
   if (!user) redirect("/login");
   if (user.role !== "OWNER") redirect("/dashboard");
@@ -19,6 +22,8 @@ export default async function PagosPage() {
       tipoTienda: true,
       whatsappNumber: true,
       storeConfig: true,
+      mpConnectedAt: true,
+      mpSellerId: true,
       policyReturns: true,
       policyShipping: true,
       policyTerms: true,
@@ -32,12 +37,13 @@ export default async function PagosPage() {
     },
   });
 
-  const [pendingAffiliateCount, lowStockCount] = store
+  const [pendingAffiliateCount, lowStockCount, activeAffiliateCount] = store
     ? await Promise.all([
         prisma.affiliate.count({ where: { storeId: store.id, status: "PENDING" } }),
         prisma.product.count({ where: { storeId: store.id, deletedAt: null, variants: { every: { stock: 0 } } } }),
+        prisma.affiliate.count({ where: { storeId: store.id, status: "APPROVED", isActive: true } }),
       ])
-    : [0, 0];
+    : [0, 0, 0];
 
   const isAutos = store?.tipoTienda === "AUTOS";
 
@@ -97,6 +103,11 @@ export default async function PagosPage() {
                 storeName: store?.name ?? "",
                 contact: store?.whatsappNumber ?? "",
                 isAutos,
+                mpConnected: !!store?.mpConnectedAt,
+                mpConnectedAt: store?.mpConnectedAt?.toISOString() ?? null,
+                mpSellerId: store?.mpSellerId ?? null,
+                mpStatus: mp === "connected" ? "connected" : mp === "error" ? "error" : undefined,
+                activeAffiliatesCount: activeAffiliateCount,
               }}
             />
           </section>

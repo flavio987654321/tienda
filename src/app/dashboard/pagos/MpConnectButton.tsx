@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { AlertTriangle, CheckCircle, Loader2, Unlink, X, XCircle, Zap } from "lucide-react";
+import { AlertTriangle, CheckCircle, Lightbulb, Loader2, Unlink, X, XCircle, Zap } from "lucide-react";
 
 type Props = {
   connected: boolean;
@@ -18,7 +18,7 @@ export default function MpConnectButton({ connected, connectedAt, mpSellerId, mp
   async function confirmDisconnect() {
     setDisconnecting(true);
     await fetch("/api/mp/oauth/disconnect", { method: "POST" });
-    window.location.href = "/dashboard/ajustes";
+    window.location.href = "/dashboard/pagos";
   }
 
   return (
@@ -32,8 +32,13 @@ export default function MpConnectButton({ connected, connectedAt, mpSellerId, mp
           </svg>
           <div>
             <h2 className="text-sm font-semibold text-slate-900">MercadoPago</h2>
-            <p className="text-xs text-slate-400">Pagos automáticos con split para afiliadas</p>
+            <p className="text-xs text-slate-400">Cobrá con tarjeta, débito o dinero en cuenta</p>
           </div>
+          {connected && (
+            <span className="ml-auto text-[11px] font-bold uppercase tracking-wider text-emerald-600 bg-emerald-50 border border-emerald-200 rounded-full px-2.5 py-1">
+              Activo
+            </span>
+          )}
         </div>
 
         {mpStatus === "connected" && (
@@ -63,9 +68,20 @@ export default function MpConnectButton({ connected, connectedAt, mpSellerId, mp
                 )}
               </div>
             </div>
-            <p className="text-sm text-slate-500 mb-4">
-              Los compradores podrán pagar con tarjeta o MP. Las comisiones de tus afiliadas se acreditan y transfieren automáticamente.
-            </p>
+
+            <p className="text-xs font-semibold text-slate-600 mb-2">Qué está pasando ahora</p>
+            <ul className="space-y-2 mb-4">
+              <Bullet color="emerald">
+                En tu tienda aparece el botón <strong className="text-slate-700">Pagar con MercadoPago</strong>. El cliente paga en el momento y vos lo ves como pedido pagado, sin esperar el comprobante.
+              </Bullet>
+              <Bullet color="emerald">
+                <strong className="text-slate-700">La plata entra a tu cuenta de MercadoPago</strong>, no a TiendaApps. Los plazos de acreditación los pone MercadoPago.
+              </Bullet>
+              <Bullet color="emerald">
+                Podés sumar afiliadas: la comisión se descuenta sola en cada venta que traigan.
+              </Bullet>
+            </ul>
+
             <button
               onClick={() => setShowModal(true)}
               disabled={disconnecting}
@@ -78,8 +94,28 @@ export default function MpConnectButton({ connected, connectedAt, mpSellerId, mp
         ) : (
           <div>
             <p className="text-sm text-slate-500 mb-4">
-              Conectá tu cuenta de MercadoPago para que los compradores paguen con tarjeta o MP y las comisiones de tus afiliadas se transfieran solas.
+              Es la forma más rápida de cobrar: el cliente paga con tarjeta, débito o el dinero de su cuenta
+              de MercadoPago, sin que tengas que revisar comprobantes de transferencia a mano.
             </p>
+
+            <p className="text-xs font-semibold text-slate-600 mb-2">Qué pasa cuando apretás el botón</p>
+            <ul className="space-y-2 mb-4">
+              <Bullet color="blue">
+                Se abre MercadoPago y te pide autorizar a TiendaApps. Cuando aceptás, volvés sola a esta pantalla.
+              </Bullet>
+              <Bullet color="blue">
+                <strong className="text-slate-700">Nunca escribís tu contraseña acá.</strong> La autorización pasa
+                por MercadoPago y podés cortarla cuando quieras.
+              </Bullet>
+              <Bullet color="blue">
+                <strong className="text-slate-700">La plata de cada venta entra a tu cuenta de MercadoPago</strong>, no
+                a TiendaApps.
+              </Bullet>
+              <Bullet color="blue">
+                Se habilita el programa de afiliadas, que necesita MercadoPago para descontar la comisión en el momento.
+              </Bullet>
+            </ul>
+
             <a
               href="/api/mp/oauth/connect"
               className="inline-flex items-center gap-2 bg-[#009EE3] hover:bg-[#0088c7] text-white font-semibold px-5 py-2.5 rounded-lg text-sm transition-colors"
@@ -89,6 +125,33 @@ export default function MpConnectButton({ connected, connectedAt, mpSellerId, mp
             </a>
           </div>
         )}
+
+        {/* Consejos — lo que más confunde a la hora de conectar */}
+        <div className="mt-5 pt-4 border-t border-slate-100">
+          <div className="flex items-center gap-2 mb-2.5">
+            <Lightbulb className="h-3.5 w-3.5 text-amber-500" />
+            <p className="text-xs font-semibold text-slate-600">Consejos</p>
+          </div>
+          <ul className="space-y-2">
+            {!connected && (
+              <Bullet color="amber">
+                <strong className="text-slate-700">Fijate con qué cuenta estás abierta en MercadoPago antes de conectar.</strong> Se
+                conecta la que tengas iniciada en el navegador. Si tenés una personal y una del negocio, entrá primero con la del negocio.
+              </Bullet>
+            )}
+            <Bullet color="amber">
+              No hace falta crear una cuenta nueva ni ser empresa: sirve la misma que ya usás para cobrar.
+            </Bullet>
+            <Bullet color="amber">
+              MercadoPago te descuenta su comisión por procesar el pago —{" "}
+              <strong className="text-slate-700">TiendaApps no te cobra nada por venta</strong>. Lo único que se
+              descuenta aparte es la comisión de tu afiliada, si la venta vino por el link de una.
+            </Bullet>
+            <Bullet color="amber">
+              Podés tener MercadoPago y transferencia activos a la vez: el comprador elige con cuál pagar.
+            </Bullet>
+          </ul>
+        </div>
       </div>
 
       {showModal && (
@@ -105,10 +168,14 @@ export default function MpConnectButton({ connected, connectedAt, mpSellerId, mp
             </div>
 
             <div className="px-6 py-5 space-y-3">
+              <p className="text-sm text-gray-600">
+                Tu tienda deja de mostrar el botón de pago con tarjeta. Los pedidos nuevos solo van a poder pagarse
+                por los medios manuales que tengas activos (transferencia o efectivo).
+              </p>
               {activeAffiliatesCount > 0 ? (
                 <>
                   <p className="text-sm text-gray-600">
-                    Tenés <strong className="text-gray-900">{activeAffiliatesCount} afiliada{activeAffiliatesCount !== 1 ? "s" : ""} activa{activeAffiliatesCount !== 1 ? "s" : ""}</strong>. Al desconectar:
+                    Además tenés <strong className="text-gray-900">{activeAffiliatesCount} afiliada{activeAffiliatesCount !== 1 ? "s" : ""} activa{activeAffiliatesCount !== 1 ? "s" : ""}</strong>. Al desconectar:
                   </p>
                   <ul className="space-y-2 text-sm text-gray-600">
                     <li className="flex items-start gap-2">
@@ -130,7 +197,8 @@ export default function MpConnectButton({ connected, connectedAt, mpSellerId, mp
                 </>
               ) : (
                 <p className="text-sm text-gray-600">
-                  Los cobros vuelven a ser manuales. Podés volver a conectar tu cuenta en cualquier momento.
+                  El dinero que ya cobraste no se toca: está en tu cuenta de MercadoPago. Podés volver a conectar
+                  cuando quieras.
                 </p>
               )}
             </div>
@@ -154,5 +222,20 @@ export default function MpConnectButton({ connected, connectedAt, mpSellerId, mp
         </div>
       )}
     </>
+  );
+}
+
+const BULLET_COLORS = {
+  emerald: "text-emerald-500",
+  blue: "text-blue-500",
+  amber: "text-amber-500",
+} as const;
+
+function Bullet({ color, children }: { color: keyof typeof BULLET_COLORS; children: React.ReactNode }) {
+  return (
+    <li className="flex items-start gap-2 text-xs text-slate-500 leading-relaxed">
+      <span className={`${BULLET_COLORS[color]} font-bold mt-px shrink-0`}>•</span>
+      <span>{children}</span>
+    </li>
   );
 }
