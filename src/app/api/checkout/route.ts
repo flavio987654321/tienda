@@ -247,7 +247,7 @@ export async function POST(req: NextRequest) {
 
   try {
     let usedRewardCouponId: string | null = null;
-    const { createdOrder: order, promoSavings, appliedCouponCode } = await prisma.$transaction(async (tx) => {
+    const { createdOrder: order, promoSavings, appliedCouponCode, appliedPromos, freeShippingPromo } = await prisma.$transaction(async (tx) => {
       const store = await tx.store.findUnique({
         where: { id: storeId },
         select: {
@@ -375,6 +375,8 @@ export async function POST(req: NextRequest) {
         },
       });
       const activePromos: ActivePromotion[] = promoRows.map((p) => ({
+        // El nombre viaja al motor para poder decir en el email QUÉ promo se aplicó.
+        name: p.name,
         type: p.type,
         value: p.value,
         minQty: p.minQty,
@@ -544,7 +546,12 @@ export async function POST(req: NextRequest) {
         });
       }
 
-      return { createdOrder, promoSavings, appliedCouponCode };
+      return {
+        createdOrder, promoSavings, appliedCouponCode,
+        // Qué promos ganaron y cuál dio el envío gratis — para nombrarlas en el email.
+        appliedPromos: pricing.appliedPromos,
+        freeShippingPromo: pricing.freeShippingPromo,
+      };
     }, { timeout: 15_000 });
 
     // Donación opcional a la Canasta Solidaria (toggle del carrito) — un
@@ -744,6 +751,10 @@ export async function POST(req: NextRequest) {
         items: emailItems,
         subtotal: order.subtotal,
         promoSavings: promoSavings > 0 ? promoSavings : undefined,
+        // Detalle de QUÉ promos se aplicaron (nombre + etiqueta + ahorro de cada una)
+        // y cuál dejó el envío gratis, para que el email no diga solo "ahorraste $X".
+        appliedPromos,
+        freeShippingPromo,
         discountAmount: order.discountAmount,
         couponCode: appliedCouponCode ?? undefined,
         shippingCost: order.shippingCost,

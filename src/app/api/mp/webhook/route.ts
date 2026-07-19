@@ -120,6 +120,15 @@ async function processPaymentWebhook(paymentId: string) {
       include: {
         store: true,
         buyer: { select: { email: true, name: true } },
+        // Para que el mail de "pago acreditado" sea un comprobante de verdad
+        // (qué compró y el desglose), no solo el total.
+        items: {
+          include: {
+            product: { select: { name: true } },
+            variant: { select: { name: true, value: true } },
+          },
+        },
+        coupon: { select: { code: true } },
         affiliate: {
           select: {
             id: true,
@@ -238,6 +247,18 @@ async function processPaymentWebhook(paymentId: string) {
         storeName: order.store.name,
         storeSlug: order.store.slug,
         total: order.total,
+        items: order.items.map((it) => ({
+          name: it.product.name,
+          variant: it.variant ? `${it.variant.name}: ${it.variant.value}` : null,
+          quantity: it.quantity,
+          // Las órdenes viejas no tienen lineTotal → se reconstruye con precio × cantidad.
+          lineTotal: it.lineTotal ?? it.price * it.quantity,
+        })),
+        subtotal: order.subtotal,
+        discountAmount: order.discountAmount,
+        couponCode: order.coupon?.code ?? null,
+        shippingCost: order.shippingCost,
+        shippingMethod: order.shippingMethod,
       }).catch((err) => console.error("[email] sendOrderPaymentConfirmedEmail (mp webhook) failed:", err));
     }
 

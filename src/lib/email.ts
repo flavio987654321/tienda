@@ -502,6 +502,65 @@ export async function sendCommissionEarnedEmail({
   });
 }
 
+// ── Bloque de ahorros (promos / cupón / envío) ────────────────────────────────
+// Compartido por los 3 mails de pedido. La regla: el comprador tiene que ver QUÉ
+// promo se le aplicó y cuánto le ahorró, no un "ahorraste $X" anónimo.
+export type EmailPromo = { name: string | null; label: string; type: string; savings: number };
+
+const emailMoney = (n: number) => `$${n.toLocaleString("es-AR")}`;
+
+/** Una fila por promo aplicada: "🎉 Verano en remeras · 20% OFF   − $2.000" */
+function promoRowsHtml(appliedPromos?: EmailPromo[] | null): string {
+  if (!appliedPromos?.length) return "";
+  return appliedPromos
+    .filter((p) => p.savings > 0)
+    .map((p) => {
+      // Si tiene nombre propio se muestran los dos: el nombre dice cuál es, la
+      // etiqueta dice en qué consiste. Si no tiene nombre, alcanza la etiqueta.
+      const title = p.name ? `${escapeHtml(p.name)} · ${escapeHtml(p.label)}` : escapeHtml(p.label);
+      return `
+          <div style="display:flex;justify-content:space-between;margin-bottom:10px;">
+            <span style="font-size:14px;color:#16a34a;font-weight:600;">🎉 ${title}</span>
+            <span style="font-size:14px;color:#16a34a;font-weight:600;">− ${emailMoney(p.savings)}</span>
+          </div>`;
+    })
+    .join("");
+}
+
+/** Fila de envío: distingue "gratis POR una promo" de un simple "sin cargo" (retiro). */
+function shippingRowHtml(shippingCost: number, shippingMethod: string, freeShippingPromo?: EmailPromo | null): string {
+  const isFreeByPromo = shippingCost === 0 && !!freeShippingPromo;
+  const value = shippingCost === 0
+    ? (isFreeByPromo ? "¡Gratis!" : "Sin cargo")
+    : emailMoney(shippingCost);
+  const valueColor = isFreeByPromo ? "#16a34a" : "#374151";
+  const sub = isFreeByPromo
+    ? `${escapeHtml(shippingMethod)} · <span style="color:#16a34a;font-weight:600;">Envío gratis${freeShippingPromo?.name ? ` por “${escapeHtml(freeShippingPromo.name)}”` : " por promoción"}</span>`
+    : escapeHtml(shippingMethod);
+  return `
+          <div style="display:flex;justify-content:space-between;margin-bottom:10px;">
+            <span style="font-size:14px;color:#6b7280;">Costo de envío</span>
+            <span style="font-size:14px;color:${valueColor};font-weight:${isFreeByPromo ? "700" : "400"};">${value}</span>
+          </div>
+          <div style="font-size:11px;color:#9ca3af;margin-bottom:14px;">${sub}</div>`;
+}
+
+/** Cartel final: cuánto se ahorró en total, en una sola frase. */
+function savingsBannerHtml(totalSaved: number, freeShippingPromo?: EmailPromo | null): string {
+  if (totalSaved <= 0 && !freeShippingPromo) return "";
+  const line = totalSaved > 0
+    ? `🎉 En esta compra ahorraste ${emailMoney(totalSaved)}`
+    : `🚚 En esta compra el envío te salió gratis`;
+  const extra = totalSaved > 0 && freeShippingPromo
+    ? `<p style="font-size:12.5px;color:#16a34a;margin:5px 0 0;">…y además el envío te salió gratis 🚚</p>`
+    : "";
+  return `
+        <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:14px 18px;margin-bottom:28px;text-align:center;">
+          <p style="font-size:15px;font-weight:800;color:#15803d;margin:0;">${line}</p>
+          ${extra}
+        </div>`;
+}
+
 function buildPaymentBlock(paymentInfo?: {
   transferencia?: { enabled?: boolean; titular?: string; cbu?: string; cvu?: string; alias?: string; banco?: string; cuil?: string; instrucciones?: string };
   efectivo?: { enabled?: boolean; instrucciones?: string };
@@ -568,6 +627,8 @@ export async function sendOrderConfirmationEmail({
   items,
   subtotal,
   promoSavings,
+  appliedPromos,
+  freeShippingPromo,
   discountAmount,
   couponCode,
   shippingCost,
@@ -585,6 +646,8 @@ export async function sendOrderConfirmationEmail({
   items: { name: string; variant?: string | null; quantity: number; price: number; lineTotal?: number | null; offerPrice?: number | null; comparePrice?: number | null }[];
   subtotal: number;
   promoSavings?: number;
+  appliedPromos?: EmailPromo[] | null;
+  freeShippingPromo?: EmailPromo | null;
   discountAmount: number;
   couponCode?: string | null;
   shippingCost: number;
@@ -680,27 +743,27 @@ export async function sendOrderConfirmationEmail({
             <span style="font-size:14px;color:#dc2626;font-weight:600;">🏷️ Ahorro por oferta</span>
             <span style="font-size:14px;color:#dc2626;font-weight:600;">− ${fmt(ofertaSavings)}</span>
           </div>` : ""}
-          ${promoSavings && promoSavings > 0 ? `
+          ${appliedPromos?.length
+            ? promoRowsHtml(appliedPromos)
+            : (promoSavings && promoSavings > 0 ? `
           <div style="display:flex;justify-content:space-between;margin-bottom:10px;">
             <span style="font-size:14px;color:#16a34a;font-weight:600;">🎉 Ahorro por promoción</span>
-            <span style="font-size:14px;color:#16a34a;font-weight:600;">− ${fmt(promoSavings)} incluidos</span>
-          </div>` : ""}
+            <span style="font-size:14px;color:#16a34a;font-weight:600;">− ${fmt(promoSavings)}</span>
+          </div>` : "")}
           ${discountAmount > 0 ? `
           <div style="display:flex;justify-content:space-between;margin-bottom:${couponCode ? "4px" : "10px"};">
-            <span style="font-size:14px;color:#16a34a;font-weight:600;">Cupón${couponCode ? "" : " aplicado"}</span>
+            <span style="font-size:14px;color:#16a34a;font-weight:600;">🎟️ Cupón de descuento</span>
             <span style="font-size:14px;color:#16a34a;font-weight:600;">− ${fmt(discountAmount)}</span>
           </div>
           ${couponCode ? `<div style="text-align:right;margin-bottom:10px;"><span style="font-size:11px;font-family:monospace;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:4px;padding:2px 8px;color:#15803d;font-weight:700;letter-spacing:0.08em;">${escapeHtml(couponCode)}</span></div>` : ""}` : ""}
-          <div style="display:flex;justify-content:space-between;margin-bottom:10px;">
-            <span style="font-size:14px;color:#6b7280;">Costo de envío</span>
-            <span style="font-size:14px;color:#374151;">${shippingCost === 0 ? "Sin cargo" : fmt(shippingCost)}</span>
-          </div>
-          <div style="font-size:11px;color:#9ca3af;margin-bottom:14px;">${escapeHtml(shippingMethod)}</div>
+          ${shippingRowHtml(shippingCost, shippingMethod, freeShippingPromo)}
           <div style="border-top:1px solid #e5e7eb;padding-top:14px;display:flex;justify-content:space-between;align-items:center;">
             <span style="font-size:15px;font-weight:700;color:#111827;">Total</span>
             <span style="font-size:20px;font-weight:800;color:#111827;">${fmt(total)}</span>
           </div>
         </div>
+
+        ${savingsBannerHtml(ofertaSavings + (promoSavings ?? 0) + discountAmount, freeShippingPromo)}
 
         <!-- CTA -->
         <div style="text-align:center;margin-bottom:28px;">
@@ -751,6 +814,8 @@ export async function sendNewOrderToOwnerEmail({
   items,
   subtotal,
   promoSavings,
+  appliedPromos,
+  freeShippingPromo,
   discountAmount,
   couponCode,
   shippingCost,
@@ -772,6 +837,8 @@ export async function sendNewOrderToOwnerEmail({
   items: { name: string; variant?: string | null; quantity: number; price: number; lineTotal?: number | null; offerPrice?: number | null; comparePrice?: number | null }[];
   subtotal: number;
   promoSavings?: number;
+  appliedPromos?: EmailPromo[] | null;
+  freeShippingPromo?: EmailPromo | null;
   discountAmount: number;
   couponCode?: string | null;
   shippingCost: number;
@@ -890,22 +957,20 @@ export async function sendNewOrderToOwnerEmail({
             <span style="font-size:14px;color:#dc2626;font-weight:600;">🏷️ Ahorro por oferta</span>
             <span style="font-size:14px;color:#dc2626;font-weight:600;">− ${fmt(ofertaSavings)}</span>
           </div>` : ""}
-          ${promoSavings && promoSavings > 0 ? `
+          ${appliedPromos?.length
+            ? promoRowsHtml(appliedPromos)
+            : (promoSavings && promoSavings > 0 ? `
           <div style="display:flex;justify-content:space-between;margin-bottom:10px;">
-            <span style="font-size:14px;color:#16a34a;font-weight:600;">Ahorro por promoción</span>
-            <span style="font-size:14px;color:#16a34a;font-weight:600;">− ${fmt(promoSavings)} incluidos</span>
-          </div>` : ""}
+            <span style="font-size:14px;color:#16a34a;font-weight:600;">🎉 Ahorro por promoción</span>
+            <span style="font-size:14px;color:#16a34a;font-weight:600;">− ${fmt(promoSavings)}</span>
+          </div>` : "")}
           ${discountAmount > 0 ? `
           <div style="display:flex;justify-content:space-between;margin-bottom:${couponCode ? "4px" : "10px"};">
-            <span style="font-size:14px;color:#16a34a;font-weight:600;">Cupón${couponCode ? "" : " aplicado"}</span>
+            <span style="font-size:14px;color:#16a34a;font-weight:600;">🎟️ Cupón de descuento</span>
             <span style="font-size:14px;color:#16a34a;font-weight:600;">− ${fmt(discountAmount)}</span>
           </div>
           ${couponCode ? `<div style="text-align:right;margin-bottom:10px;"><span style="font-size:11px;font-family:monospace;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:4px;padding:2px 8px;color:#15803d;font-weight:700;letter-spacing:0.08em;">${escapeHtml(couponCode)}</span></div>` : ""}` : ""}
-          <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
-            <span style="font-size:14px;color:#6b7280;">Envío</span>
-            <span style="font-size:14px;color:#374151;">${shippingCost === 0 ? "Sin cargo" : fmt(shippingCost)}</span>
-          </div>
-          <div style="font-size:11px;color:#9ca3af;margin-bottom:14px;">${escapeHtml(shippingMethod)}</div>
+          ${shippingRowHtml(shippingCost, shippingMethod, freeShippingPromo)}
           <div style="border-top:1px solid #e5e7eb;padding-top:14px;display:flex;justify-content:space-between;align-items:center;">
             <span style="font-size:15px;font-weight:700;color:#111827;">Total a cobrar${paymentProvider === "mp" ? " (MercadoPago)" : ""}</span>
             <span style="font-size:22px;font-weight:800;color:#111827;">${fmt(total)}</span>
@@ -1264,6 +1329,12 @@ export async function sendOrderPaymentConfirmedEmail({
   storeName,
   storeSlug,
   total,
+  items,
+  subtotal,
+  discountAmount,
+  couponCode,
+  shippingCost,
+  shippingMethod,
 }: {
   buyerEmail: string;
   buyerName: string;
@@ -1271,12 +1342,66 @@ export async function sendOrderPaymentConfirmedEmail({
   storeName: string;
   storeSlug: string;
   total: number;
+  // Detalle de lo COBRADO. Es el mail que el comprador guarda como comprobante,
+  // así que lleva el mismo desglose que el de confirmación, no solo el total.
+  items?: { name: string; variant?: string | null; quantity: number; lineTotal: number }[];
+  subtotal?: number;
+  discountAmount?: number;
+  couponCode?: string | null;
+  shippingCost?: number;
+  shippingMethod?: string | null;
 }) {
   if (!process.env.RESEND_API_KEY) return;
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "";
   const shortId = orderId.slice(-8).toUpperCase();
   const storeUrl = `${appUrl}/tienda/${storeSlug}`;
+  const fmt = (n: number) => `$${n.toLocaleString("es-AR")}`;
+
+  const itemsBlock = items?.length
+    ? `
+        <p style="font-size:11px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:0.06em;margin:0 0 8px;">Qué compraste</p>
+        <div style="border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;margin-bottom:18px;">
+          ${items.map((it, i) => `
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;${i > 0 ? "border-top:1px solid #f3f4f6;" : ""}">
+            <div>
+              <p style="font-size:14px;color:#111827;margin:0;font-weight:600;">${escapeHtml(it.name)}</p>
+              <p style="font-size:12px;color:#9ca3af;margin:2px 0 0;">${it.variant ? escapeHtml(it.variant) + " · " : ""}Cantidad: ${it.quantity}</p>
+            </div>
+            <span style="font-size:14px;color:#374151;font-weight:600;white-space:nowrap;">${fmt(it.lineTotal)}</span>
+          </div>`).join("")}
+        </div>`
+    : "";
+
+  const breakdown = subtotal != null
+    ? `
+        <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:18px 20px;margin-bottom:28px;">
+          <div style="display:flex;justify-content:space-between;margin-bottom:10px;">
+            <span style="font-size:14px;color:#6b7280;">Subtotal</span>
+            <span style="font-size:14px;color:#374151;">${fmt(subtotal)}</span>
+          </div>
+          ${discountAmount && discountAmount > 0 ? `
+          <div style="display:flex;justify-content:space-between;margin-bottom:${couponCode ? "4px" : "10px"};">
+            <span style="font-size:14px;color:#16a34a;font-weight:600;">🎟️ Cupón de descuento</span>
+            <span style="font-size:14px;color:#16a34a;font-weight:600;">− ${fmt(discountAmount)}</span>
+          </div>
+          ${couponCode ? `<div style="text-align:right;margin-bottom:10px;"><span style="font-size:11px;font-family:monospace;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:4px;padding:2px 8px;color:#15803d;font-weight:700;letter-spacing:0.08em;">${escapeHtml(couponCode)}</span></div>` : ""}` : ""}
+          ${shippingCost != null ? `
+          <div style="display:flex;justify-content:space-between;margin-bottom:${shippingMethod ? "4px" : "14px"};">
+            <span style="font-size:14px;color:#6b7280;">Costo de envío</span>
+            <span style="font-size:14px;color:${shippingCost === 0 ? "#16a34a" : "#374151"};font-weight:${shippingCost === 0 ? "700" : "400"};">${shippingCost === 0 ? "¡Gratis!" : fmt(shippingCost)}</span>
+          </div>
+          ${shippingMethod ? `<div style="font-size:11px;color:#9ca3af;margin-bottom:14px;">${escapeHtml(shippingMethod)}</div>` : ""}` : ""}
+          <div style="border-top:1px solid #e5e7eb;padding-top:14px;display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-size:15px;font-weight:700;color:#111827;">Total pagado</span>
+            <span style="font-size:20px;font-weight:800;color:#16a34a;">${fmt(total)}</span>
+          </div>
+        </div>`
+    : `
+        <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:18px 20px;margin-bottom:28px;text-align:center;">
+          <p style="font-size:11px;font-weight:700;color:#166534;text-transform:uppercase;letter-spacing:0.06em;margin:0 0 6px;">Total confirmado</p>
+          <p style="font-size:28px;font-weight:900;color:#16a34a;margin:0;">${fmt(total)}</p>
+        </div>`;
 
   await transporter.sendMail({
     from: `"${storeName}" <${FROM_ADDRESS}>`,
@@ -1295,12 +1420,11 @@ export async function sendOrderPaymentConfirmedEmail({
         <p style="font-size:15px;color:#374151;margin:0 0 6px;">Hola <strong>${escapeHtml(buyerName)}</strong>,</p>
         <p style="font-size:15px;color:#6b7280;margin:0 0 24px;line-height:1.6;">
           Tu pago fue confirmado y el pedido ya está en preparación. Te avisaremos cuando sea despachado.
+          Guardá este email como comprobante.
         </p>
 
-        <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:18px 20px;margin-bottom:28px;text-align:center;">
-          <p style="font-size:11px;font-weight:700;color:#166534;text-transform:uppercase;letter-spacing:0.06em;margin:0 0 6px;">Total confirmado</p>
-          <p style="font-size:28px;font-weight:900;color:#16a34a;margin:0;">$${total.toLocaleString("es-AR")}</p>
-        </div>
+        ${itemsBlock}
+        ${breakdown}
 
         <div style="text-align:center;margin-bottom:28px;">
           <a href="${appUrl}/seguimiento/${shortId}"

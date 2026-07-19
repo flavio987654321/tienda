@@ -15,7 +15,7 @@
 //   4) Envío gratis → badge "Envío gratis" (+ "desde $Z" si hay mínimo).
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { priceCart, type ActivePromotion } from "./pricing";
+import { priceCart, promoLabel, type ActivePromotion } from "./pricing";
 
 export type ProductPromoDisplay = {
   hasPriceDrop: boolean;   // mostrar precio tachado + efectivo
@@ -34,11 +34,8 @@ export type ProductPromoDisplay = {
 // que hace entendible QUÉ promo hay, más allá del precio tachado.
 export function describePromo(p: ActivePromotion): { headline: string; scope: string; conditions: string[] } {
   const ars = (n: number) => "$" + Math.round(n).toLocaleString("es-AR");
-  let headline = "Promoción";
-  if (p.type === "PERCENT" && p.value) headline = `${Math.round(p.value)}% OFF`;
-  else if (p.type === "FIXED" && p.value) headline = `${ars(p.value)} OFF`;
-  else if ((p.type === "N_PAY_M" || p.type === "MIX_N_PAY_M") && p.minQty && p.payQty) headline = `${p.minQty}×${p.payQty}`;
-  else if (p.type === "FREE_SHIPPING") headline = "Envío gratis";
+  // Misma etiqueta corta que usa el email y el comprobante — una sola fuente.
+  const headline = promoLabel(p);
 
   const cats = p.categories.filter(Boolean);
   const scope =

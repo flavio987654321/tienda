@@ -41,6 +41,10 @@ export type PricingItem = {
 // ISO strings; por eso acá no se tocan fechas. El motor sí evalúa el alcance, la
 // compra mínima y el tipo, que dependen del carrito. Los arrays ya vienen parseados.
 export type ActivePromotion = {
+  // Nombre que le puso la dueña ("Verano en remeras"). Opcional: el preview del modal
+  // y los chequeos internos no lo necesitan; el checkout SÍ lo pasa para poder decir
+  // en el email QUÉ promo se aplicó, no solo cuánto se ahorró.
+  name?: string | null;
   type: string;                 // PERCENT | FIXED | N_PAY_M | MIX_N_PAY_M | FREE_SHIPPING
   value: number | null;         // % (PERCENT) o monto fijo por unidad (FIXED)
   minQty: number | null;        // N de "llevá N" (N_PAY_M y MIX_N_PAY_M)
@@ -67,10 +71,25 @@ export type PricedLine = {
   savings: number;      // cuánto ahorró esta línea respecto al precio base
 };
 
+// Una promo que efectivamente descontó, para poder NOMBRARLA (email, comprobante).
+// `label` es la etiqueta corta del beneficio ("20% OFF", "3×2") y `name` el nombre que
+// le puso la dueña. `savings` es lo que ahorró esa promo puntual.
+export type AppliedPromo = {
+  name: string | null;
+  label: string;
+  type: string;
+  savings: number;
+};
+
 export type CartPricing = {
   lines: PricedLine[];
   subtotal: number;     // Σ lineTotal
   promoSavings: number; // Σ savings
+  // Qué promos ganaron y cuánto aportó cada una (para el email y el comprobante).
+  appliedPromos: AppliedPromo[];
+  // La promo de envío gratis que aplicó, si hubo — para decir "gratis POR esta promo"
+  // en vez de un "Sin cargo" que se confunde con retirar en el local.
+  freeShippingPromo: AppliedPromo | null;
   // Alguna StorePromotion de envío gratis aplica a este carrito (mínimo cumplido y
   // en alcance). El checkout y el checkout modal ponen el envío en 0.
   freeShipping: boolean;
@@ -196,6 +215,20 @@ function storePromoLineTotal(p: ActivePromotion, it: PricingItem, totalQty: numb
 // "llevá 3 de estos productos/categorías, el más barato gratis". Reusa minQty/payQty.
 export const PROMO_MIX_N_PAY_M = "MIX_N_PAY_M";
 
+/** Etiqueta corta del beneficio ("20% OFF", "3×2", "Envío gratis"). Una sola fuente
+ *  para el badge de la tienda, el email y el comprobante. */
+export function promoLabel(p: Pick<ActivePromotion, "type" | "value" | "minQty" | "payQty">): string {
+  if (p.type === "PERCENT" && p.value) return `${Math.round(p.value)}% OFF`;
+  if (p.type === "FIXED" && p.value) return `$${Math.round(p.value).toLocaleString("es-AR")} OFF`;
+  if ((p.type === "N_PAY_M" || p.type === PROMO_MIX_N_PAY_M) && p.minQty && p.payQty) return `${p.minQty}×${p.payQty}`;
+  if (p.type === "FREE_SHIPPING") return "Envío gratis";
+  return "Promoción";
+}
+
+function toAppliedPromo(p: ActivePromotion, savings: number): AppliedPromo {
+  return { name: p.name ?? null, label: promoLabel(p), type: p.type, savings: roundMoney(savings) };
+}
+
 /**
  * Aplica las promos MIX (mix & match) sobre `lineTotal` (lo muta). Junta TODAS las
  * unidades del carrito que la promo alcanza (por alcance, mezclando productos), y por
@@ -208,8 +241,8 @@ function applyMixPromos(
   eligiblePromos: ActivePromotion[],
   baseLine: number[],
   lineTotal: number[],
-): void {
-  let bestPlan: { idxs: number[]; reductionByIdx: Map<number, number>; saving: number } | null = null;
+): { promo: ActivePromotion; idxs: number[] } | null {
+  let bestPlan: { promo: ActivePromotion; idxs: number[]; reductionByIdx: Map<number, number>; saving: number } | null = null;
 
   for (const p of eligiblePromos) {
     if (p.type !== PROMO_MIX_N_PAY_M) continue;
@@ -251,14 +284,15 @@ function applyMixPromos(
     const saving = currentEligibleTotal - roundMoney(baseEligibleTotal - totalReduction);
     if (saving <= 0) continue;
 
-    if (!bestPlan || saving > bestPlan.saving) bestPlan = { idxs, reductionByIdx, saving };
+    if (!bestPlan || saving > bestPlan.saving) bestPlan = { promo: p, idxs, reductionByIdx, saving };
   }
 
-  if (!bestPlan) return;
+  if (!bestPlan) return null;
   // Las líneas elegibles vuelven a base y se les descuenta el regalo (best-of ganó MIX).
   for (const i of bestPlan.idxs) {
     lineTotal[i] = roundMoney(baseLine[i] - (bestPlan.reductionByIdx.get(i) ?? 0));
   }
+  return { promo: bestPlan.promo, idxs: bestPlan.idxs };
 }
 
 /**
@@ -285,28 +319,36 @@ export function priceCart(items: PricingItem[], opts?: PriceCartOptions): CartPr
   const eligiblePromos = (opts?.promotions ?? []).filter((p) => preSubtotal >= p.minOrderAmount);
 
   // (1) Mejor promo por-ítem del mismo producto. El precio de lista es el piso.
+  // Se guarda CUÁL promo ganó cada línea para poder nombrarla después (email).
   const baseLine: number[] = [];
   const lineTotal: number[] = [];
+  const winnerByLine: (ActivePromotion | null)[] = [];
   for (const it of items) {
     const totalQty = totalQtyByProduct.get(it.productId)!;
     const bl = roundMoney(it.basePrice * it.quantity);
     let best = bl;
+    let winner: ActivePromotion | null = null;
     for (const p of eligiblePromos) {
       if (!promoMatchesItem(p, it)) continue;
       const cand = storePromoLineTotal(p, it, totalQty);
-      if (cand != null && cand < best) best = cand;
+      if (cand != null && cand < best) { best = cand; winner = p; }
     }
     baseLine.push(bl);
     lineTotal.push(best);
+    winnerByLine.push(winner);
   }
 
   // (2) Promos MIX (mix & match) a nivel carrito, mutando lineTotal donde ganan.
-  applyMixPromos(items, eligiblePromos, baseLine, lineTotal);
+  // Si el mix gana, pasa a ser la promo responsable de esas líneas.
+  const mixWin = applyMixPromos(items, eligiblePromos, baseLine, lineTotal);
+  if (mixWin) for (const i of mixWin.idxs) winnerByLine[i] = mixWin.promo;
 
   // (3) Derivados a partir de los totales ya definitivos.
   const lines: PricedLine[] = [];
   let subtotal = 0;
   let promoSavings = 0;
+  // Cuánto ahorró CADA promo (para poder nombrarlas en el email/comprobante).
+  const savingsByPromo = new Map<ActivePromotion, number>();
   for (let i = 0; i < items.length; i++) {
     const it = items[i];
     const lt = lineTotal[i];
@@ -324,20 +366,34 @@ export function priceCart(items: PricingItem[], opts?: PriceCartOptions): CartPr
       savings: applies ? savings : 0,
     });
     subtotal = roundMoney(subtotal + lt);
-    if (applies) promoSavings = roundMoney(promoSavings + savings);
+    if (applies) {
+      promoSavings = roundMoney(promoSavings + savings);
+      const w = winnerByLine[i];
+      if (w) savingsByPromo.set(w, (savingsByPromo.get(w) ?? 0) + savings);
+    }
   }
+  // Ordenadas por lo que más ahorró, así el email destaca primero la más fuerte.
+  const appliedPromos: AppliedPromo[] = [...savingsByPromo.entries()]
+    .map(([p, s]) => toAppliedPromo(p, s))
+    .sort((a, b) => b.savings - a.savings);
 
-  // Envío gratis: alguna promo de envío elegible que alcance al carrito.
-  const freeShipping = eligiblePromos.some(
+  // Envío gratis: la promo de envío elegible que alcanza al carrito. Se guarda cuál
+  // fue para poder decir "gratis por esta promo" y no un "sin cargo" ambiguo.
+  const fsPromo = eligiblePromos.find(
     (p) => p.type === "FREE_SHIPPING" && promoMatchesCart(p, items)
-  );
+  ) ?? null;
 
   // Cupón permitido salvo que una promo que SÍ toca el carrito prohíba combinarlo.
   const couponsAllowed = !eligiblePromos.some(
     (p) => !p.combinesWithCoupons && promoMatchesCart(p, items)
   );
 
-  return { lines, subtotal, promoSavings, freeShipping, couponsAllowed };
+  return {
+    lines, subtotal, promoSavings, appliedPromos,
+    freeShipping: fsPromo != null,
+    freeShippingPromo: fsPromo ? toAppliedPromo(fsPromo, 0) : null,
+    couponsAllowed,
+  };
 }
 
 // Progreso hacia el envío gratis: la promo FREE_SHIPPING que alcanza al carrito (por alcance)

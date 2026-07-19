@@ -21,6 +21,7 @@ function item(qty: number, basePrice = BASE, opts?: { productId?: string; catego
 // Fábrica de StorePromotion vigentes (el llamador ya filtró por fecha).
 function promo(p: Partial<ActivePromotion> & { type: string }): ActivePromotion {
   return {
+    name: p.name ?? null,
     type: p.type, value: p.value ?? null, minQty: p.minQty ?? null, payQty: p.payQty ?? null,
     minOrderAmount: p.minOrderAmount ?? 0, scope: p.scope ?? "ALL",
     categories: p.categories ?? [], productIds: p.productIds ?? [],
@@ -142,6 +143,44 @@ for (const c of mixCases) {
   const ok = r.subtotal === c.expectedSubtotal;
   if (!ok) failed++;
   console.log(`${ok ? "OK  " : "FAIL"} [${c.id}] esperado $${c.expectedSubtotal.toLocaleString("es-AR")} · dio $${r.subtotal.toLocaleString("es-AR")} — ${c.desc}`);
+}
+
+// ── Qué promos ganaron (para nombrarlas en el email/comprobante) ──────────────
+// El motor no solo dice CUÁNTO se ahorró: dice QUÉ promo lo hizo y cuánto aportó.
+const dcheck0 = (id: string, got: boolean, desc: string) => { if (!got) failed++; console.log(`${got ? "OK  " : "FAIL"} [${id}] ${desc}`); };
+{
+  const r = priceCart([item(1)], { promotions: [promo({ name: "Verano en remeras", type: "PERCENT", value: 20 })] });
+  const a = r.appliedPromos[0];
+  dcheck0("AP-A", r.appliedPromos.length === 1 && a.name === "Verano en remeras" && a.label === "20% OFF" && a.savings === 2000,
+    "20% con nombre → 1 promo aplicada, etiqueta '20% OFF', ahorro $2.000");
+}
+{
+  const r = priceCart([item(1, 10000, M1), item(1, 6000, M2), item(1, 4000, M3)],
+    { promotions: [promo({ name: "Combo verano", type: "MIX_N_PAY_M", minQty: 3, payQty: 2 })] });
+  const a = r.appliedPromos[0];
+  dcheck0("AP-B", r.appliedPromos.length === 1 && a.name === "Combo verano" && a.label === "3×2" && a.savings === 4000,
+    "mix 3×2 → la promo reportada es el combo, ahorro $4.000 (el más barato)");
+}
+{
+  // Dos promos que tocan productos distintos → las dos se reportan por separado.
+  const r = priceCart([item(1, 10000, P1), item(1, 10000, P2)], {
+    promotions: [
+      promo({ name: "Remeras 20", type: "PERCENT", value: 20, scope: "CATEGORY", categories: ["remeras"] }),
+      promo({ name: "Pantalones 50", type: "PERCENT", value: 50, scope: "CATEGORY", categories: ["pantalones"] }),
+    ],
+  });
+  const byName = Object.fromEntries(r.appliedPromos.map((a) => [a.name, a.savings]));
+  dcheck0("AP-C", r.appliedPromos.length === 2 && byName["Pantalones 50"] === 5000 && byName["Remeras 20"] === 2000,
+    "dos promos por categoría → se reportan las dos con su ahorro cada una");
+}
+{
+  const r = priceCart([item(1)], { promotions: [promo({ name: "Envío gratis verano", type: "FREE_SHIPPING", minOrderAmount: 5000 })] });
+  dcheck0("AP-D", r.freeShipping && r.freeShippingPromo?.name === "Envío gratis verano" && r.appliedPromos.length === 0,
+    "envío gratis → se reporta cuál promo lo dio, y no cuenta como ahorro de producto");
+}
+{
+  const r = priceCart([item(1)]);
+  dcheck0("AP-E", r.appliedPromos.length === 0 && r.freeShippingPromo === null, "sin promos → nada que reportar");
 }
 
 // ── Envío gratis en vivo: cuánto falta para el umbral ────────────────────────
