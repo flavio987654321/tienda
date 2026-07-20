@@ -3,15 +3,22 @@
 // el contenido cambie de forma sustantiva — dispara el banner de re-aceptación
 // para usuarios que aceptaron una versión anterior.
 //
+// 1.4 (20/07/2026) — promociones de tienda: tope del plan Pro (5 vigentes, más el
+// de 10 cupones ahora bien definido), su borrado y respaldo en el cambio de rubro,
+// y el bloqueo del cambio cuando hay ofertas que un cliente todavía puede usar.
+// Suma también los carritos abandonados a la política de privacidad, que no
+// figuraban en ningún lado, y aclara que el descuento de los cupones de premio de
+// afiliados lo absorbe la tienda donde se canjean, no TiendaApps.
+//
 // 1.3 (15/07/2026) — cierre y reactivación de tienda, cierre automático por falta
 // de pago con sus plazos, y aclaración de que una tienda cerrada no es una cuenta
 // cancelada (la retención de datos no arranca al cerrar).
 //
 // Ojo: este valor estuvo clavado en "1.2" desde el 23/06 mientras los términos
 // cambiaron seis veces (Meta, Google Analytics, cambio de rubro, entre otros), así
-// que el banner nunca se disparó por ninguno de esos cambios. Este bump arrastra
-// toda esa deuda de una: quien acepte ahora acepta también lo de julio.
-export const CURRENT_TERMS_VERSION = "1.3";
+// que el banner nunca se disparó por ninguno de esos cambios. El bump a 1.3
+// arrastró toda esa deuda de una.
+export const CURRENT_TERMS_VERSION = "1.4";
 
 /**
  * Lo que se muestra al pie de /terminos y /privacidad. Vive acá, pegado a la

@@ -225,6 +225,12 @@ export async function DELETE(req: NextRequest) {
         await tx.coupon.deleteMany({ where: { storeId } });
       }
 
+      // Carritos abandonados: guardan email, nombre y teléfono de gente que ni
+      // siquiera llegó a comprar. El cron los limpia a los 45 días, pero solo
+      // los no recuperados — los recuperados quedaban para siempre, incluso
+      // después de que la dueña se dio de baja. Se borran con la cuenta.
+      await tx.abandonedCart.deleteMany({ where: { storeId } });
+
       // Promociones: igual que los cupones. El nombre lo escribe la dueña
       // ("Verano en lo de Laura"), así que entra en la anonimización.
       // Los pedidos no se tocan: Order.promoSummary es un JSON congelado al

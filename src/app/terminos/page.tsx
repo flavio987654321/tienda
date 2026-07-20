@@ -30,8 +30,9 @@ const CONTENT = {
         title: "3. Planes disponibles",
         body: null,
         list: [
-          "Plan Tienda Pro: $20.000 ARS/mes o $180.000 ARS/año. Incluye subdominio propio (tutienda.tiendaapps.com), hasta 6 afiliados activos, hasta 10 cupones activos simultáneos y soporte por email.",
-          "Plan Tienda Premium: $25.000 ARS/mes o $225.000 ARS/año. Incluye todo lo del plan Pro más la posibilidad de conectar tu propio dominio, afiliados ilimitados, cupones ilimitados y soporte prioritario.",
+          "Plan Tienda Pro: $20.000 ARS/mes o $180.000 ARS/año. Incluye subdominio propio (tutienda.tiendaapps.com), hasta 6 afiliados activos, hasta 10 cupones vigentes, hasta 5 promociones vigentes y soporte por email.",
+          "Plan Tienda Premium: $25.000 ARS/mes o $225.000 ARS/año. Incluye todo lo del plan Pro más la posibilidad de conectar tu propio dominio, afiliados ilimitados, y cupones y promociones sin límite, con soporte prioritario.",
+          "Los topes del plan Pro cuentan lo que está vigente en cada momento, no lo que creaste alguna vez: al desactivar, archivar o dejar vencer un cupón o una promoción, ese lugar queda libre de inmediato. Tampoco ocupan lugar los cupones que genera la ruleta o la raspadita (ni sus premios ganados), que no tienen tope.",
           "Ambos planes incluyen 7 días de prueba gratuita sin tarjeta de crédito.",
           "Los pagos se procesan a través de Mercado Pago.",
           "Los pagos son por período: no hay débito automático ni renovación automática. Al vencer tu plan te avisamos por email y tenés que renovarlo vos desde 'Mi Plan'. Nunca te vamos a cobrar sin que lo confirmes.",
@@ -148,11 +149,13 @@ const CONTENT = {
         title: "7 ter. Cambio de rubro de la tienda",
         body: "El panel te permite cambiar el tipo (rubro) de tu tienda. Es una acción con consecuencias importantes que aceptás al confirmarla:",
         list: [
-          "El cambio de rubro reinicia tu tienda: se eliminan de tu panel los productos, pedidos, pagos, cupones, reseñas, consultas, carritos abandonados y el historial de ventas de tus afiliadas del ciclo anterior. La acción es irreversible desde el panel.",
-          "Bloqueos de protección: el cambio no se permite mientras tengas pedidos sin entregar o cancelar, premios de ruleta ganados por clientes y todavía vigentes sin usar, o comisiones de afiliadas sin liquidar (saldo acreditado o retiros pendientes). Las comisiones ya acreditadas no se extinguen por el cambio de rubro: el sistema exige liquidarlas antes.",
-          "Antes de confirmar, la plataforma te ofrece descargar una copia de tus productos, pedidos (con pagos y comisiones) y cupones. Como emisor de los comprobantes y responsable fiscal de tus ventas (sección 5), la conservación de esos registros es tu responsabilidad — te recomendamos descargarlos y guardarlos.",
+          "El cambio de rubro reinicia tu tienda: se eliminan de tu panel los productos, pedidos, pagos, cupones, promociones, reseñas, consultas, carritos abandonados y el historial de ventas de tus afiliadas del ciclo anterior. La acción es irreversible desde el panel.",
+          "Bloqueos de protección: el cambio no se permite mientras tengas pedidos sin entregar o cancelar, premios de ruleta ganados por clientes y todavía vigentes sin usar, comisiones de afiliadas sin liquidar (saldo acreditado o retiros pendientes), cupones que tus clientes todavía puedan usar, o promociones aplicándose en tu tienda. Las comisiones ya acreditadas no se extinguen por el cambio de rubro: el sistema exige liquidarlas antes.",
+          "Ofertas vigentes: el sistema no te deja cambiar de rubro con cupones o promociones que un cliente pueda usar en ese momento. Tenés que darlos de baja vos —desactivar o eliminar los cupones, archivar las promociones— para que la baja de la oferta sea una decisión tuya y no un borrado automático. Los que ya estén desactivados, vencidos, agotados o archivados no frenan el cambio, y se eliminan junto con el resto del ciclo anterior.",
+          "Antes de confirmar, la plataforma te ofrece descargar una copia de tus productos, pedidos (con pagos y comisiones), cupones y promociones. Como emisor de los comprobantes y responsable fiscal de tus ventas (sección 5), la conservación de esos registros es tu responsabilidad — te recomendamos descargarlos y guardarlos.",
           "TiendaApps conserva además una copia interna de respaldo de los registros del ciclo anterior por hasta 10 años, con finalidad exclusiva contable y de defensa ante disputas, garantías o contracargos. Podés descargarla en cualquier momento desde Configuración → Respaldos.",
-          "Cupones vigentes: el cambio elimina todos los cupones de descuento. Si comunicaste cupones a tus clientes (por email, redes u otro medio) y siguen vigentes, sos responsable de avisarles de la baja por los mismos medios por los que los difundiste (art. 7, Ley 24.240 — la oferta obliga a quien la emite) o de esperar a que venzan antes de cambiar de rubro.",
+          "Aviso a tus clientes: si difundiste un cupón o una promoción (por email, redes u otro medio) y lo das de baja para poder cambiar de rubro, sos responsable de avisar de esa baja por los mismos medios por los que lo difundiste (art. 7, Ley 24.240 — la oferta obliga a quien la emite), o de esperar a que venza antes de cambiar. Darlo de baja en el panel lo desactiva en la plataforma, pero no cancela por sí solo el anuncio que hiciste por fuera.",
+          "Los cupones de premio que TiendaApps le entrega a los afiliados (sección 6) no se ven afectados por tu cambio de rubro ni te frenan el cambio: no son cupones de tu tienda, pertenecen al afiliado y puede usarlos en cualquier otra tienda que los acepte.",
           "Tu tienda pública queda despublicada (offline) desde el cambio hasta que configures y publiques el catálogo del nuevo rubro. La ruleta de premios, si la usabas, queda desactivada hasta que la configures con premios nuevos.",
         ],
       },
@@ -254,6 +257,11 @@ const CONTENT = {
       {
         title: "6. Premios y beneficios",
         body: "TiendaApps puede ofrecer premios o cupones adicionales por volumen de ventas a afiliados destacados. Estos beneficios son opcionales y pueden modificarse sin previo aviso.",
+        list: [
+          "Los cupones de premio se canjean en las tiendas que eligieron aceptarlos. La aceptación es opcional y está desactivada por defecto: se activa desde el panel de la tienda, y el descuento lo absorbe la tienda donde se usa, no TiendaApps.",
+          "El descuento de un cupón de premio tiene un tope de $100.000 ARS por pedido y no se acumula con otro cupón en la misma compra.",
+          "El afiliado no puede usar un cupón de premio en la tienda donde está afiliado.",
+        ],
       },
       {
         title: "7. Baja de la cuenta y cierre de una tienda donde vendés",

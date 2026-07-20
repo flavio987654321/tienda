@@ -128,6 +128,10 @@ const CONTENT = {
       {
         title: "3. Datos de tus clientes y potenciales compradores",
         body: "Como Dueño de tienda, tenés acceso a los datos de envío y contacto de tus compradores. Adicionalmente, cuando un potencial comprador hace una consulta por WhatsApp a través del link de un afiliado, la Plataforma registra el nombre, teléfono y mensaje del consultante y te lo muestra en el panel de Consultas para que puedas confirmar o rechazar la venta y gestionar la comisión correspondiente. Sos responsable de tratar esos datos de acuerdo con la legislación vigente (Ley 25.326 de Protección de Datos Personales) y no podés usarlos para fines distintos a la gestión del pedido o la consulta.",
+        list: [
+          "Carritos abandonados: si alguien carga sus datos en tu checkout y no termina la compra, vas a ver su email, nombre, teléfono y los productos elegidos en la sección Carritos abandonados. Es la misma obligación que con el resto: solo podés usar esos datos para intentar recuperar esa compra puntual (un recordatorio o un mensaje por WhatsApp), nunca para sumarlos a una lista de difusión ni para ofrecerles otra cosa.",
+          "Esos carritos se eliminan solos a los 45 días sin actividad si la compra no se completó. Si la persona te pide que borres sus datos, tenés que hacerlo aunque no hayan pasado los 45 días.",
+        ],
       },
       {
         title: "4. Procesadores de datos (terceros que procesan tus datos)",
@@ -164,6 +168,7 @@ const CONTENT = {
           "Tienda cerrada ≠ cuenta cancelada: si cerrás tu tienda (o se cierra sola por falta de pago), tu cuenta sigue activa — podés entrar a tu panel y reactivarla cuando quieras. Por eso tu diseño, tus productos y tus imágenes se conservan sin plazo mientras no elimines la cuenta. El plazo de 90 días de arriba corre desde que eliminás la cuenta, no desde que cerrás la tienda.",
           "Si tenés una tienda cerrada y querés que borremos todo igual, podés eliminar tu cuenta desde Configuración → Zona de peligro, o pedirlo por email (ver sección 8).",
           "Historial de pedidos: 12 meses adicionales tras el cierre de cuenta para resolver disputas o reclamaciones de garantía.",
+          "Carritos abandonados de tu tienda: se eliminan automáticamente a los 45 días sin actividad si la compra no se completó. Los que sí terminaron en compra quedan como parte del pedido y siguen su mismo plazo.",
           "Respaldo por cambio de rubro: si cambiás el tipo de tienda, los pedidos, pagos, comisiones y cupones del ciclo anterior se eliminan de tu panel, pero se conserva una copia interna de respaldo por hasta 10 años (plazo de conservación de documentación comercial, art. 328 del Código Civil y Comercial), con finalidad exclusiva contable y de resolución de disputas o contracargos. Podés descargarla en cualquier momento desde Configuración → Respaldos.",
           "Datos bancarios cifrados (CBU/CUIL): eliminados junto con la cuenta. No se conservan post-cancelación.",
           "Backups automáticos de base de datos: 30 días de retención gestionados por Supabase. Los backups no permiten recuperar una cuenta eliminada.",
@@ -283,6 +288,7 @@ const CONTENT = {
           "Datos de pedidos: dirección de envío, productos comprados e historial de compras.",
           "Datos de pago: procesados directamente por cada tienda. TiendaApps no almacena datos de tarjetas.",
           "Datos de uso: tiendas visitadas, productos vistos y productos guardados como favoritos.",
+          "Compras que no llegaste a terminar: si cargás tus datos en el checkout de una tienda y no completás el pedido, guardamos tu email, nombre, teléfono y los productos que habías elegido, y la tienda los ve en su panel. Sirve para que puedan recordarte el carrito. Ver la sección 2 bis.",
         ],
       },
       {
@@ -303,6 +309,17 @@ const CONTENT = {
           "Para sincronizar tus favoritos entre dispositivos.",
           "Para enviarte notificaciones de estado de tus pedidos.",
           "Para mejorar la plataforma en base a patrones de uso anónimos.",
+        ],
+      },
+      {
+        title: "2 bis. Carritos que no terminaste de comprar",
+        body: "Si empezás un pedido y cargás tus datos de contacto pero no lo completás, la tienda guarda ese carrito para poder recuperarlo:",
+        list: [
+          "Qué se guarda: tu email, tu nombre y tu teléfono si los cargaste, más los productos que habías elegido y el total.",
+          "Para qué: la tienda puede enviarte un único email recordándote el carrito, y contactarte por WhatsApp si dejaste tu teléfono. Puede ofrecerte un cupón de descuento para que termines la compra.",
+          "Base legal: interés legítimo en recuperar una operación que vos iniciaste (art. 5 inc. f, Ley 25.326). No es publicidad: no se usa para enviarte novedades ni ofertas de otros productos.",
+          "Cuánto dura: si no completás la compra, el carrito se elimina automáticamente a los 45 días de tu última actividad.",
+          "Cómo frenarlo: escribiendo a marketplacemitienda@gmail.com pedís que se borre el carrito y no recibís el recordatorio. También podés pedírselo directamente a la tienda.",
         ],
       },
       {
@@ -336,6 +353,7 @@ const CONTENT = {
         list: [
           "Datos de cuenta (nombre, email): mientras la cuenta esté activa + 30 días para eliminación completa.",
           "Historial de pedidos: 1 año tras el cierre de cuenta para resolución de garantías y disputas.",
+          "Carritos que no terminaste de comprar: 45 días desde tu última actividad, y después se eliminan solos (sección 2 bis).",
           "Si una tienda donde compraste cambia de rubro, ese pedido deja de verse en tu historial, pero TiendaApps conserva una copia interna de respaldo (incluye tus datos de contacto y envío de ese pedido) por hasta 10 años, con finalidad exclusiva de respaldo contable, garantías, disputas y contracargos. Podés pedir el comprobante de una compra archivada por los medios de la sección 8.",
           "Favoritos y preferencias: eliminados al eliminar la cuenta.",
           "Para eliminar tu cuenta antes del plazo escribí a marketplacemitienda@gmail.com con el asunto 'Eliminación de cuenta — [tu email]'.",
