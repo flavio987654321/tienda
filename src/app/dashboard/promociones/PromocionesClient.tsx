@@ -95,9 +95,11 @@ function fmtDate(iso: string | null) {
 
 export default function PromocionesClient({
   initialPromotions, categories, products, activeCount, maxPromotions,
+  ventasConPromo, ahorroDelMes,
 }: {
   initialPromotions: Promotion[]; categories: Category[]; products: Product[]; activeCount: number;
   maxPromotions: number | null;
+  ventasConPromo: number; ahorroDelMes: number;
 }) {
   const [promos, setPromos] = useState<Promotion[]>(initialPromotions);
   const [tab, setTab] = useState<"act" | "hist">("act");
@@ -222,8 +224,8 @@ export default function PromocionesClient({
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
         <StatCard tile="bg-indigo-50 text-indigo-600" Icon={Tag} value={String(liveCount || activeCount)} label="Promociones activas" />
-        <StatCard tile="bg-green-50 text-green-600" Icon={Check} value="0" label="Ventas con promo este mes" />
-        <StatCard tile="bg-amber-50 text-amber-600" Icon={Gift} value="$0" label="Ahorro dado a clientes" />
+        <StatCard tile="bg-green-50 text-green-600" Icon={Check} value={String(ventasConPromo)} label="Ventas con promo este mes" />
+        <StatCard tile="bg-amber-50 text-amber-600" Icon={Gift} value={`$${Math.round(ahorroDelMes).toLocaleString("es-AR")}`} label="Ahorro dado este mes" />
       </div>
 
       {/* Tabs */}

@@ -17,7 +17,19 @@ export default async function PromocionesPage() {
     select: { id: true },
   });
 
-  const [promos, products, sub] = store
+  // Arranque del mes en hora de Argentina. Sin esto, el servidor (UTC en Vercel)
+  // corta el mes 3 horas antes y los pedidos de la última noche del mes caen en
+  // el mes siguiente, así que el panel no coincide con lo que ve la dueña.
+  const inicioDeMes = mesActualEnArgentina();
+
+  // Un pedido cuenta como "con promo" si tiene promoSummary, no si ahorró plata:
+  // una promo de envío gratis no toca promoSavings (baja shippingCost) y si
+  // midiéramos por el ahorro esa venta no aparecería en ningún lado.
+  const conPromoDelMes = store
+    ? { storeId: store.id, promoSummary: { not: null }, status: { not: "CANCELLED" }, createdAt: { gte: inicioDeMes } }
+    : null;
+
+  const [promos, products, sub, ventasConPromo, ahorroAgg] = store
     ? await Promise.all([
         prisma.storePromotion.findMany({ where: { storeId: store.id }, orderBy: { createdAt: "desc" } }),
         prisma.product.findMany({
@@ -26,8 +38,13 @@ export default async function PromocionesPage() {
           orderBy: { createdAt: "desc" },
         }),
         prisma.subscription.findUnique({ where: { userId: user.id }, select: { tier: true } }),
+        prisma.order.count({ where: conPromoDelMes! }),
+        // Los cancelados quedan afuera: ahí no se le regaló nada a nadie.
+        prisma.order.aggregate({ where: conPromoDelMes!, _sum: { promoSavings: true } }),
       ])
-    : [[], [], null];
+    : [[], [], null, 0, null];
+
+  const ahorroDelMes = ahorroAgg?._sum.promoSavings ?? 0;
 
   const now = new Date();
   const rows = promos.map((p) => ({
@@ -69,9 +86,27 @@ export default async function PromocionesPage() {
         // null = sin tope (Premium). El cupo usado lo calcula el cliente con el
         // mismo criterio que el POST: vivas ocupan lugar, archivadas y vencidas no.
         maxPromotions={isPremiumTier(sub?.tier) ? null : PRO_MAX_LIVE_PROMOTIONS}
+        ventasConPromo={ventasConPromo}
+        ahorroDelMes={ahorroDelMes}
       />
     </DashboardLayout>
   );
+}
+
+// Primer día del mes en curso, según el calendario argentino, devuelto como
+// instante UTC para comparar contra createdAt.
+function mesActualEnArgentina(): Date {
+  const [y, m] = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Argentina/Buenos_Aires",
+    year: "numeric",
+    month: "2-digit",
+  })
+    .format(new Date())
+    .split("-")
+    .map(Number);
+  // Argentina es UTC-3 todo el año (no tiene horario de verano desde 2009), así
+  // que el 1° a las 00:00 de acá son las 03:00 UTC.
+  return new Date(Date.UTC(y, m - 1, 1, 3, 0, 0));
 }
 
 function safeArr(raw: string): string[] {
