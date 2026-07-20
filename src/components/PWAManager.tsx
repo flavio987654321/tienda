@@ -53,16 +53,55 @@ export default function PWAManager({ appVersion, versionKey, disableNotifPrompt 
   const [showUpdatedToast, setShowUpdatedToast] = useState(false);
   const [showNotifBanner, setShowNotifBanner] = useState(false);
   const [promptState, setPromptState] = useState<PromptState>("idle");
+  // Build que está sirviendo el servidor cuando detectamos que hay algo nuevo.
+  // Se guarda para poder silenciar el aviso de ESE build si el usuario lo cierra.
+  const [serverBuildId, setServerBuildId] = useState<string | null>(null);
 
-  // ── App version check (independiente del SW) ─────────────────────────────
+  // ── ¿Salió una versión nueva? (independiente del SW) ──────────────────────
+  //
+  // Le pregunta al servidor qué build está sirviendo y lo compara contra el que
+  // trae ESTE bundle. Si difieren, hay algo nuevo que este cliente no tiene.
+  //
+  // Hace falta preguntar cada tanto, y no solo al abrir, porque una PWA
+  // instalada corre en standalone: sin barra de direcciones ni F5, la única
+  // forma de que el usuario se actualice es este aviso. Si la deja abierta dos
+  // días, sin este chequeo se queda con el código viejo y sin manera de salir.
+  //
+  // Antes esto comparaba contra localStorage, y con un build que cambia en cada
+  // deploy eso daba un falso positivo: al abrir la app ya te bajabas el código
+  // nuevo, pero como el valor guardado era el viejo te aparecía igual el cartel
+  // de "actualizá" para algo que acababas de recibir.
   useEffect(() => {
-    if (!appVersion || !versionKey) return;
-    const stored = localStorage.getItem(versionKey);
-    if (stored && stored !== appVersion) {
-      setUpdateAvailable(true);
-    } else {
-      localStorage.setItem(versionKey, appVersion);
+    if (!appVersion) return;
+
+    let cancelado = false;
+    async function chequear() {
+      try {
+        const res = await fetch("/api/version", { cache: "no-store" });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (cancelado || !data?.buildId) return;
+        if (data.buildId === appVersion) return; // ya está al día
+        // Si cerró el aviso de ESTE build, no insistir cada hora. Cuando salga
+        // uno nuevo el id cambia y vuelve a avisar.
+        if (versionKey && localStorage.getItem(versionKey) === data.buildId) return;
+        setServerBuildId(data.buildId);
+        setUpdateAvailable(true);
+      } catch {
+        // Sin conexión o servidor caído: no es momento de pedir que actualice.
+      }
     }
+
+    chequear();
+    const interval = setInterval(chequear, 60 * 60 * 1000);
+    const onVisible = () => { if (document.visibilityState === "visible") chequear(); };
+    document.addEventListener("visibilitychange", onVisible);
+
+    return () => {
+      cancelado = true;
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, [appVersion, versionKey]);
 
   // ── Service Worker registration + update detection ───────────────────────
@@ -134,11 +173,11 @@ export default function PWAManager({ appVersion, versionKey, disableNotifPrompt 
   }, []);
 
   // ── Handlers ─────────────────────────────────────────────────────────────
+  // Recargar es lo que trae el código nuevo. En una PWA instalada este botón es
+  // la ÚNICA forma de hacerlo: standalone no tiene barra de direcciones ni F5.
   const applyUpdate = useCallback(() => {
     setUpdating(true);
     sessionStorage.setItem("pwa_just_updated", "1");
-    // Guardar la nueva versión antes de recargar
-    if (appVersion && versionKey) localStorage.setItem(versionKey, appVersion);
     setTimeout(() => {
       if (waitingWorker) {
         waitingWorker.postMessage({ type: "SKIP_WAITING" });
@@ -148,13 +187,13 @@ export default function PWAManager({ appVersion, versionKey, disableNotifPrompt 
         window.location.reload();
       }
     }, 600);
-  }, [waitingWorker, appVersion, versionKey]);
+  }, [waitingWorker]);
 
   const dismissUpdate = useCallback(() => {
     setUpdateAvailable(false);
-    // Si descarta, guardamos la versión igual para no volver a mostrar
-    if (appVersion && versionKey) localStorage.setItem(versionKey, appVersion);
-  }, [appVersion, versionKey]);
+    // Silencia solo este build. Cuando salga otro, el id cambia y vuelve a avisar.
+    if (versionKey && serverBuildId) localStorage.setItem(versionKey, serverBuildId);
+  }, [versionKey, serverBuildId]);
 
   const dismissNotifBanner = useCallback(() => {
     setShowNotifBanner(false);

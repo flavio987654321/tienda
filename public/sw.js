@@ -1,5 +1,13 @@
 // ─── TiendaApps Service Worker ─────────────────────────────────────────────
-// Bump SW_VERSION when deploying to force cache invalidation on all clients.
+// SW_VERSION nombra el caché de ESTE service worker, que guarda dos cosas y
+// nada más: la pantalla de "sin conexión" y el favicon (ver el install de abajo).
+// El fetch es network-first y solo intercepta navegación, así que el código de
+// la app NUNCA sale de acá — siempre se pide a la red.
+//
+// O sea: subir este número NO es lo que hace que el usuario reciba la versión
+// nueva de la app. De eso se encarga src/lib/app-versions.ts, que sale del
+// commit deployado y avisa solo. Tocá esto únicamente si cambiás offline.html
+// o el favicon y querés que se refresquen en quienes ya tienen la app instalada.
 const SW_VERSION = "v12";
 const CACHE_NAME = `tiendaapps-${SW_VERSION}`;
 const OFFLINE_URL = "/offline.html";
