@@ -406,6 +406,10 @@ function Wizard({ categories, products, onClose, onCreated, editPromo }: {
   }
 
   async function save() {
+    // Guard síncrono anti doble-click: el `disabled` del botón depende del
+    // re-render de React, así que dos clicks rápidos entraban los dos y creaban
+    // la promoción dos veces (y podían pasarse del tope del plan).
+    if (saving) return;
     setErr(""); setSaving(true);
     try {
       const body: Record<string, unknown> = {

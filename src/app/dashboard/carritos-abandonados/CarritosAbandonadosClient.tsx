@@ -125,6 +125,9 @@ function WhatsAppModal({
   }
 
   async function handleGenerate() {
+    // Guard síncrono: sin esto, dos clicks rápidos creaban dos cupones (el
+    // segundo fallaba por código duplicado, o gastaba lugar del tope del plan).
+    if (generating) return;
     setGenError("");
     const val = parseFloat(couponValue);
     if (!val || val <= 0) { setGenError("Ingresá un valor mayor a 0"); return; }

@@ -55,6 +55,9 @@ function emptyStats() {
   return { active: 0 };
 }
 
+// Tope del plan alcanzado, detectado dentro de la transacción → se traduce a 403.
+class PromotionLimitError extends Error {}
+
 // POST — crear promoción.
 export async function POST(req: NextRequest) {
   const user = await getCurrentUser();
@@ -63,12 +66,52 @@ export async function POST(req: NextRequest) {
   const store = await prisma.store.findUnique({ where: { ownerId: user.id }, select: { id: true } });
   if (!store) return NextResponse.json({ error: "Tienda no encontrada" }, { status: 404 });
 
+  const sub = await prisma.subscription.findUnique({ where: { userId: user.id }, select: { tier: true } });
+
+  const body = await req.json().catch(() => ({}));
+  const result = validatePromotionBody(body);
+  if ("error" in result) return NextResponse.json({ error: result.error }, { status: 400 });
+  const d = result.data;
+
   // Tope del plan Pro: cuenta las promos vivas (activas, programadas o pausadas).
   // Archivar o dejar vencer una libera lugar al instante.
-  const sub = await prisma.subscription.findUnique({ where: { userId: user.id }, select: { tier: true } });
-  if (!isPremiumTier(sub?.tier)) {
-    const liveCount = await prisma.storePromotion.count({ where: livePromotionsWhere(store.id) });
-    if (liveCount >= PRO_MAX_LIVE_PROMOTIONS) {
+  //
+  // Contar y crear van en la misma transacción, con la fila de la tienda tomada
+  // con FOR UPDATE (mismo recurso que usa el cambio de rubro). Sueltos, dos
+  // pedidos simultáneos —dos pestañas, o un doble click que le gane al guard
+  // del botón— contaban los dos 4 de 5 y creaban los dos: 6 promos en un plan
+  // de 5.
+  try {
+    const promotion = await prisma.$transaction(async (tx) => {
+      if (!isPremiumTier(sub?.tier)) {
+        await tx.$queryRaw`SELECT id FROM "Store" WHERE id = ${store.id} FOR UPDATE`;
+        const liveCount = await tx.storePromotion.count({ where: livePromotionsWhere(store.id) });
+        if (liveCount >= PRO_MAX_LIVE_PROMOTIONS) throw new PromotionLimitError();
+      }
+
+      return tx.storePromotion.create({
+        data: {
+          storeId: store.id,
+          name: d.name,
+          type: d.type,
+          value: d.value,
+          minQty: d.minQty,
+          payQty: d.payQty,
+          minOrderAmount: d.minOrderAmount,
+          scope: d.scope,
+          categories: JSON.stringify(d.categories),
+          productIds: JSON.stringify(d.productIds),
+          startsAt: d.startsAt,
+          endsAt: d.endsAt,
+          combinesWithCoupons: d.combinesWithCoupons,
+          combinesWithPromotions: d.combinesWithPromotions,
+        },
+      });
+    });
+
+    return NextResponse.json({ promotion }, { status: 201 });
+  } catch (err) {
+    if (err instanceof PromotionLimitError) {
       return NextResponse.json(
         {
           error: `Llegaste a las ${PRO_MAX_LIVE_PROMOTIONS} promociones del plan Tienda Pro. Archivá una para crear otra, o pasá a Premium para tenerlas sin límite.`,
@@ -77,31 +120,6 @@ export async function POST(req: NextRequest) {
         { status: 403 }
       );
     }
+    throw err;
   }
-
-  const body = await req.json().catch(() => ({}));
-  const result = validatePromotionBody(body);
-  if ("error" in result) return NextResponse.json({ error: result.error }, { status: 400 });
-  const d = result.data;
-
-  const promotion = await prisma.storePromotion.create({
-    data: {
-      storeId: store.id,
-      name: d.name,
-      type: d.type,
-      value: d.value,
-      minQty: d.minQty,
-      payQty: d.payQty,
-      minOrderAmount: d.minOrderAmount,
-      scope: d.scope,
-      categories: JSON.stringify(d.categories),
-      productIds: JSON.stringify(d.productIds),
-      startsAt: d.startsAt,
-      endsAt: d.endsAt,
-      combinesWithCoupons: d.combinesWithCoupons,
-      combinesWithPromotions: d.combinesWithPromotions,
-    },
-  });
-
-  return NextResponse.json({ promotion }, { status: 201 });
 }

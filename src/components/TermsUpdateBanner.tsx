@@ -23,6 +23,7 @@ export default function TermsUpdateBanner() {
   }, []);
 
   async function accept() {
+    if (accepting) return; // guard síncrono anti doble-click
     setAccepting(true);
     try {
       const res = await fetch("/api/auth/terms-status", { method: "POST" });

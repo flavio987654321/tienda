@@ -16,6 +16,8 @@ export default function MpConnectButton({ connected, connectedAt, mpSellerId, mp
   const [showModal, setShowModal] = useState(false);
 
   async function confirmDisconnect() {
+    // Guard síncrono: el `disabled` llega recién en el re-render.
+    if (disconnecting) return;
     setDisconnecting(true);
     await fetch("/api/mp/oauth/disconnect", { method: "POST" });
     window.location.href = "/dashboard/pagos";

@@ -116,23 +116,6 @@ export async function POST(req: NextRequest) {
   ]);
   if (!store) return NextResponse.json({ error: "Tienda no encontrada" }, { status: 404 });
 
-  // Cuenta solo los cupones propios que siguen vivos: los vencidos, los apagados
-  // y los de la ruleta no ocupan lugar. Antes contaba `coupon.count({ storeId })`
-  // a secas, así que una ruleta de 5 premios ya te comía media cuota y cada
-  // ganador te acercaba al tope sin que la dueña hubiera creado nada.
-  if (!isPremiumTier(sub?.tier)) {
-    const couponCount = await prisma.coupon.count({ where: myActiveCouponsWhere(store.id) });
-    if (couponCount >= PRO_MAX_ACTIVE_COUPONS) {
-      return NextResponse.json(
-        {
-          error: `Llegaste a los ${PRO_MAX_ACTIVE_COUPONS} cupones activos del plan Tienda Pro. Apagá o dejá vencer uno para crear otro, o pasá a Premium para tenerlos sin límite.`,
-          code: "LIMIT_REACHED",
-        },
-        { status: 403 }
-      );
-    }
-  }
-
   const body = await req.json();
   const { code, discountType, discountValue, minOrderAmount, maxUses, expiresAt, label } = body;
 
@@ -163,18 +146,54 @@ export async function POST(req: NextRequest) {
 
   const labelClean = typeof label === "string" ? label.trim().slice(0, 60) || null : null;
 
-  const coupon = await prisma.coupon.create({
-    data: {
-      code: codeClean,
-      discountType,
-      discountValue: value,
-      minOrderAmount: parseFloat(minOrderAmount) || 0,
-      maxUses: maxUses ? parseInt(maxUses) : null,
-      expiresAt: expiresAt ? new Date(expiresAt) : null,
-      label: labelClean,
-      storeId: store.id,
-    },
-  });
+  // Tope del plan Pro. Cuenta solo los cupones propios que siguen vivos: los
+  // vencidos, los apagados y los de la ruleta no ocupan lugar. Antes contaba
+  // `coupon.count({ storeId })` a secas, así que una ruleta de 5 premios ya te
+  // comía media cuota y cada ganador te acercaba al tope sin que la dueña
+  // hubiera creado nada.
+  //
+  // Contar y crear van juntos, con la fila de la tienda tomada con FOR UPDATE:
+  // sueltos, dos pedidos simultáneos contaban los dos 9 de 10 y creaban los dos.
+  try {
+    const coupon = await prisma.$transaction(async (tx) => {
+      if (!isPremiumTier(sub?.tier)) {
+        await tx.$queryRaw`SELECT id FROM "Store" WHERE id = ${store.id} FOR UPDATE`;
+        const couponCount = await tx.coupon.count({ where: myActiveCouponsWhere(store.id) });
+        if (couponCount >= PRO_MAX_ACTIVE_COUPONS) throw new CouponLimitError();
+      }
 
-  return NextResponse.json({ coupon }, { status: 201 });
+      return tx.coupon.create({
+        data: {
+          code: codeClean,
+          discountType,
+          discountValue: value,
+          minOrderAmount: parseFloat(minOrderAmount) || 0,
+          maxUses: maxUses ? parseInt(maxUses) : null,
+          expiresAt: expiresAt ? new Date(expiresAt) : null,
+          label: labelClean,
+          storeId: store.id,
+        },
+      });
+    });
+
+    return NextResponse.json({ coupon }, { status: 201 });
+  } catch (err) {
+    if (err instanceof CouponLimitError) {
+      return NextResponse.json(
+        {
+          error: `Llegaste a los ${PRO_MAX_ACTIVE_COUPONS} cupones activos del plan Tienda Pro. Apagá o dejá vencer uno para crear otro, o pasá a Premium para tenerlos sin límite.`,
+          code: "LIMIT_REACHED",
+        },
+        { status: 403 }
+      );
+    }
+    // Carrera con otro pedido creando el mismo código: el unique lo frena.
+    if ((err as { code?: string })?.code === "P2002") {
+      return NextResponse.json({ error: "Ya existe un cupón con ese código" }, { status: 409 });
+    }
+    throw err;
+  }
 }
+
+// Tope del plan alcanzado, detectado dentro de la transacción → se traduce a 403.
+class CouponLimitError extends Error {}

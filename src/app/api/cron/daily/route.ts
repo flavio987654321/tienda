@@ -328,13 +328,16 @@ export async function GET(req: NextRequest) {
   // que está deployado. Si el deploy no salió, la constante sigue siendo la
   // vieja y no encuentra a nadie — no puede avisar de unos términos que no
   // están online.
+  // Los `null` van explícitos en cada OR: en SQL `NOT (NULL = '1.4')` da NULL,
+  // no true, así que un `NOT` solo se come a quien tiene el campo vacío. Sin
+  // esto quedaban afuera justo los que nunca aceptaron ninguna versión, que son
+  // los que más necesitan el aviso.
   const pendientesTerminos = await prisma.user.findMany({
     where: {
       email: { not: { contains: "@deleted.invalid" } },
-      NOT: { termsVersion: CURRENT_TERMS_VERSION },
-      OR: [
-        { termsNotifiedVersion: null },
-        { NOT: { termsNotifiedVersion: CURRENT_TERMS_VERSION } },
+      AND: [
+        { OR: [{ termsVersion: null }, { NOT: { termsVersion: CURRENT_TERMS_VERSION } }] },
+        { OR: [{ termsNotifiedVersion: null }, { NOT: { termsNotifiedVersion: CURRENT_TERMS_VERSION } }] },
       ],
     },
     select: { id: true, email: true, name: true, role: true },
