@@ -32,13 +32,19 @@ import { priceCart, promoLabel, type ActivePromotion } from "./pricing";
  * filtro y el email escriban exactamente lo mismo: si cada lado lo formateara a
  * su manera, en una pantalla diría "BLACK FRIDAY" y en otra "Black friday".
  */
-export function eventLabelOf(p: ActivePromotion | null | undefined): string | null {
+export function eventLabelOf(p: PromoEventFields | null | undefined): string | null {
   const raw = p?.eventLabel?.trim();
   return raw ? raw : null;
 }
 
+// Lo mínimo para resolver el evento. Se pide esto y no un ActivePromotion entero
+// porque la página de la tienda lo calcula en el servidor con una consulta chica
+// (solo eventLabel y endsAt) — obligarla a armar promos completas para poder
+// llamar acá sería pedirle datos que no necesita.
+export type PromoEventFields = { eventLabel?: string | null; endsAt?: string | Date | null };
+
 /** Fin de la promo como Date, o null. Acepta Date (server) o ISO (storefront). */
-function endsAtDate(p: ActivePromotion): Date | null {
+function endsAtDate(p: PromoEventFields): Date | null {
   if (!p.endsAt) return null;
   const d = p.endsAt instanceof Date ? p.endsAt : new Date(p.endsAt);
   return Number.isNaN(d.getTime()) ? null : d;
@@ -55,7 +61,7 @@ function endsAtDate(p: ActivePromotion): Date | null {
  * Las promos sin fecha de fin van al final: no tienen urgencia que comunicar.
  */
 export function resolveStoreEvent(
-  promotions: ActivePromotion[] | undefined | null
+  promotions: PromoEventFields[] | undefined | null
 ): { label: string; endsAt: Date | null } | null {
   const conEvento = (promotions ?? []).filter((p) => eventLabelOf(p));
   if (!conEvento.length) return null;

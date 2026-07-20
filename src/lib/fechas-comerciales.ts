@@ -151,7 +151,18 @@ export function getUpcomingDates(daysAhead = 21): FechaComercial[] {
  * El año no importa: se usa solo para leer los nombres, que no cambian.
  */
 export function getEventNames(): string[] {
-  return buildCalendar(new Date().getUTCFullYear()).map((f) => f.nombre);
+  return buildCalendar(new Date().getUTCFullYear()).map((f) => nombreCorto(f.nombre));
+}
+
+/**
+ * Versión corta para mostrar. Los nombres del calendario son descriptivos
+ * ("San Valentín / Día de los Enamorados") porque Sasha los usa en frases, pero
+ * en la etiqueta de un producto —arriba de la foto, en un celular— no entran:
+ * se cortaban a la mitad de una palabra ("SAN VALENTÍN / DÍA DE LO").
+ * Se corta en la barra, que es justo donde arranca el sinónimo.
+ */
+function nombreCorto(nombre: string): string {
+  return nombre.split(" / ")[0].trim();
 }
 
 /**
@@ -162,6 +173,11 @@ export function getEventDate(nombre: string): Date | null {
   const hoy = getArgentinaToday();
   const year = hoy.getUTCFullYear();
   const candidatas = [...buildCalendar(year), ...buildCalendar(year + 1)];
-  const match = candidatas.filter((f) => f.nombre === nombre && f.fecha >= hoy);
+  // Compara contra el nombre corto además del completo: el selector de promos
+  // ofrece los cortos, así que buscar solo por el completo no encontraba nunca
+  // "San Valentín" y no proponía la fecha.
+  const match = candidatas.filter(
+    (f) => (f.nombre === nombre || nombreCorto(f.nombre) === nombre) && f.fecha >= hoy
+  );
   return match.length ? match[0].fecha : null;
 }
