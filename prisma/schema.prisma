@@ -30,6 +30,10 @@ model User {
   termsAcceptedAt DateTime?
   termsVersion    String?
   termsAcceptedIp String?
+  // Última versión de los términos por la que se le mandó el aviso por email.
+  // Separada de termsVersion (que es lo que ACEPTÓ) para no volver a escribirle
+  // a quien ya fue avisado pero todavía no entró a aceptar.
+  termsNotifiedVersion String?
   // Datos bancarios para retiros de comisiones (únicos por persona, aplican a todas sus afiliaciones)
   affiliateCbu         String?
   affiliateAlias       String?

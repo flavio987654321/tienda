@@ -21,6 +21,21 @@
 export const CURRENT_TERMS_VERSION = "1.4";
 
 /**
+ * Qué cambió en la versión vigente, en criollo, para el email de aviso.
+ *
+ * Vive pegado a la versión a propósito: si subís CURRENT_TERMS_VERSION y no
+ * tocás esto, el mail sale describiendo los cambios de la versión anterior.
+ * Escribilo como se lo contarías a la dueña de una tienda, sin números de
+ * sección ni "conforme a lo dispuesto".
+ */
+export const CURRENT_TERMS_SUMMARY: string[] = [
+  "Sumamos las promociones de tienda: cuántas podés tener según tu plan, y qué pasa con ellas si cambiás de rubro.",
+  "Aclaramos los topes del plan Pro: cuentan lo que tenés vigente, no lo que creaste alguna vez, y los cupones de la ruleta no ocupan lugar.",
+  "Ahora no se puede cambiar de rubro con cupones o promociones que tus clientes todavía puedan usar: los das de baja vos, para que no desaparezcan sin que te enteres.",
+  "Explicamos qué pasa con los carritos que alguien deja sin comprar: qué datos se guardan, para qué, y que se borran solos a los 45 días.",
+];
+
+/**
  * Lo que se muestra al pie de /terminos y /privacidad. Vive acá, pegado a la
  * versión, para que no se puedan desincronizar: antes era un string literal
  * escrito a mano y duplicado en los dos archivos, y los propios documentos

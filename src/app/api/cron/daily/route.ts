@@ -6,7 +6,9 @@ import {
   sendSubscriptionClosingSoonEmail,
   sendStoreClosedOwnerEmail,
   sendStoreClosedAffiliateEmail,
+  sendTermsUpdatedEmail,
 } from "@/lib/resend";
+import { CURRENT_TERMS_VERSION, CURRENT_TERMS_SUMMARY } from "@/lib/legal";
 import { sendWithdrawalReminderEmail, sendMpHealthAlertEmail } from "@/lib/email";
 import { createNotification, createNotificationMany } from "@/lib/notifications";
 import { generarCuponesMensuales, expirarCuponesVencidos } from "@/lib/rewards";
@@ -316,6 +318,57 @@ export async function GET(req: NextRequest) {
   }
 
   result.vencimientos = { revisadas: vencibles.length, cerradas, avisosVencida, avisosUltimos };
+
+  // ── AVISO DE CAMBIO EN LOS TÉRMINOS ────────────────────────────────────────
+  // Le escribe SOLO a quien todavía no aceptó la versión vigente y a quien no
+  // se le avisó por esta versión. El que entra a la app ve el banner y acepta
+  // ahí, así que nunca recibe el mail: esto es el plan B para el que no volvió.
+  //
+  // Corre siempre, sin fecha de disparo: lee CURRENT_TERMS_VERSION del código
+  // que está deployado. Si el deploy no salió, la constante sigue siendo la
+  // vieja y no encuentra a nadie — no puede avisar de unos términos que no
+  // están online.
+  const pendientesTerminos = await prisma.user.findMany({
+    where: {
+      email: { not: { contains: "@deleted.invalid" } },
+      NOT: { termsVersion: CURRENT_TERMS_VERSION },
+      OR: [
+        { termsNotifiedVersion: null },
+        { NOT: { termsNotifiedVersion: CURRENT_TERMS_VERSION } },
+      ],
+    },
+    select: { id: true, email: true, name: true, role: true },
+  });
+
+  let avisosTerminos = 0;
+  for (const u of pendientesTerminos) {
+    // Cada rol acepta desde su propia pantalla, que es donde vive el banner.
+    // ?terminos=1 lo fuerza a mostrarse aunque lo hayan cerrado con la ✕.
+    const acceptPath =
+      u.role === "OWNER" ? "/dashboard?terminos=1"
+      : u.role === "SELLER" ? "/afiliados?terminos=1"
+      : "/mi-cuenta?terminos=1";
+
+    try {
+      await sendTermsUpdatedEmail({
+        to: u.email,
+        userName: u.name ?? "",
+        acceptPath,
+        summary: CURRENT_TERMS_SUMMARY,
+      });
+      // Se marca solo si el envío no tiró: si Resend falla, queda pendiente y
+      // lo reintenta mañana en vez de darlo por avisado.
+      await prisma.user.update({
+        where: { id: u.id },
+        data: { termsNotifiedVersion: CURRENT_TERMS_VERSION },
+      });
+      avisosTerminos++;
+    } catch (e) {
+      console.error("[cron] mail terminos:", u.email, e);
+    }
+  }
+
+  result.terminos = { version: CURRENT_TERMS_VERSION, pendientes: pendientesTerminos.length, avisados: avisosTerminos };
 
   return NextResponse.json(result);
 }

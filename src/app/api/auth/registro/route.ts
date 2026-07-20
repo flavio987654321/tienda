@@ -108,6 +108,9 @@ export async function POST(req: NextRequest) {
           termsAcceptedAt: new Date(),
           termsVersion: TERMS_VERSION,
           termsAcceptedIp: ip,
+          // Acaba de aceptar la versión vigente al registrarse: no tiene por qué
+          // recibir el mail de "actualizamos los términos" de esa misma versión.
+          termsNotifiedVersion: TERMS_VERSION,
           ...(phone ? { phone: phone.trim() } : {}),
           ...(type === "OWNER"
             ? {

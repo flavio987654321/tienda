@@ -1045,3 +1045,73 @@ export async function sendWelcomeEmail({
     `,
   });
 }
+
+/**
+ * Aviso de que cambiaron los Términos / la Privacidad.
+ *
+ * Lo dispara el cron diario, y solo le llega a quien NO aceptó todavía: el que
+ * entra a la app ve el banner, acepta ahí, y nunca recibe este mail. O sea que
+ * es el plan B para el que no volvió a entrar, no un envío masivo.
+ *
+ * `acceptUrl` apunta a la pantalla donde vive el banner de ese rol, con
+ * ?terminos=1 para que se muestre aunque lo hayan cerrado antes.
+ */
+export async function sendTermsUpdatedEmail({
+  to,
+  userName,
+  acceptPath,
+  summary,
+}: {
+  to: string;
+  userName: string;
+  acceptPath: string;
+  summary: string[];
+}) {
+  if (!process.env.RESEND_API_KEY) return;
+
+  const items = summary
+    .map(
+      (s) =>
+        `<li style="margin:0 0 10px;font-size:14px;color:#374151;line-height:1.6;">${escapeHtml(s)}</li>`
+    )
+    .join("");
+
+  await resend.emails.send({
+    from: FROM,
+    to,
+    subject: "Actualizamos nuestros Términos y Política de Privacidad",
+    html: `
+      <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 16px;color:#111827;background:#fff;">
+        <div style="background:#4f46e5;border-radius:16px;padding:32px 24px;margin-bottom:28px;text-align:center;">
+          <p style="color:#c7d2fe;font-size:13px;margin:0 0 6px;font-weight:500;">TiendaApps</p>
+          <h1 style="color:#fff;font-size:22px;margin:0;font-weight:800;">Actualizamos nuestros términos</h1>
+        </div>
+        <p style="font-size:15px;color:#374151;margin-bottom:6px;">Hola <strong>${escapeHtml(userName) || "ahí"}</strong>,</p>
+        <p style="font-size:15px;color:#374151;margin-bottom:22px;">
+          Cambiamos nuestros Términos y Condiciones y la Política de Privacidad. Te contamos qué cambió,
+          sin vueltas:
+        </p>
+        <ul style="margin:0 0 24px;padding-left:20px;">${items}</ul>
+        <div style="background:#eef2ff;border:1px solid #c7d2fe;border-radius:12px;padding:16px 18px;margin-bottom:24px;">
+          <p style="margin:0;font-size:14px;color:#3730a3;line-height:1.6;">
+            Para seguir usando tu cuenta necesitamos que los aceptes. Entrá y vas a ver un cartel arriba
+            con el botón para hacerlo — te lleva menos de un segundo.
+          </p>
+        </div>
+        ${APP_URL ? `
+        <div style="text-align:center;margin-bottom:24px;">
+          <a href="${APP_URL}${acceptPath}" style="display:inline-block;background:#4f46e5;color:#fff;text-decoration:none;font-weight:700;font-size:14px;padding:13px 28px;border-radius:12px;">Entrar y aceptar</a>
+        </div>
+        <p style="font-size:13px;color:#9ca3af;text-align:center;margin-bottom:24px;">
+          También podés leerlos completos en
+          <a href="${APP_URL}/terminos" style="color:#6366f1;">Términos</a> y
+          <a href="${APP_URL}/privacidad" style="color:#6366f1;">Privacidad</a>.
+        </p>` : ""}
+        <p style="font-size:14px;color:#6b7280;margin-bottom:24px;">
+          Si algo no te cierra, respondé este email y lo hablamos.
+        </p>
+        <p style="color:#9ca3af;font-size:12px;text-align:center;">TiendaApps — tu tienda online profesional</p>
+      </div>
+    `,
+  });
+}

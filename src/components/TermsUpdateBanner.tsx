@@ -9,7 +9,13 @@ export default function TermsUpdateBanner() {
   const [accepting, setAccepting] = useState(false);
 
   useEffect(() => {
-    if (sessionStorage.getItem("termsBannerDismissed") === "1") return;
+    // El mail de aviso linkea con ?terminos=1. Sin esto, quien cerró el cartel
+    // con la ✕ volvía desde el mail y no lo encontraba: se quedaba sin forma de
+    // aceptar, y el cron le seguía escribiendo porque nunca aceptaba.
+    const forzado = new URLSearchParams(window.location.search).get("terminos") === "1";
+    if (!forzado && sessionStorage.getItem("termsBannerDismissed") === "1") return;
+    if (forzado) sessionStorage.removeItem("termsBannerDismissed");
+
     fetch("/api/auth/terms-status")
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => { if (d?.needsAcceptance) setVisible(true); })
