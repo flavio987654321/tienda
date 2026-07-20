@@ -5,6 +5,7 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
 import { promotionStatus } from "@/lib/promotions";
+import { isPremiumTier, PRO_MAX_LIVE_PROMOTIONS } from "@/lib/planLimits";
 import PromocionesClient from "./PromocionesClient";
 
 export default async function PromocionesPage() {
@@ -16,7 +17,7 @@ export default async function PromocionesPage() {
     select: { id: true },
   });
 
-  const [promos, products] = store
+  const [promos, products, sub] = store
     ? await Promise.all([
         prisma.storePromotion.findMany({ where: { storeId: store.id }, orderBy: { createdAt: "desc" } }),
         prisma.product.findMany({
@@ -24,8 +25,9 @@ export default async function PromocionesPage() {
           select: { id: true, name: true, price: true, category: true, costPrice: true },
           orderBy: { createdAt: "desc" },
         }),
+        prisma.subscription.findUnique({ where: { userId: user.id }, select: { tier: true } }),
       ])
-    : [[], []];
+    : [[], [], null];
 
   const now = new Date();
   const rows = promos.map((p) => ({
@@ -64,6 +66,9 @@ export default async function PromocionesPage() {
         categories={categories}
         products={products.map((p) => ({ id: p.id, name: p.name, price: p.price, category: p.category, costPrice: p.costPrice }))}
         activeCount={rows.filter((r) => r.status === "active" || r.status === "scheduled").length}
+        // null = sin tope (Premium). El cupo usado lo calcula el cliente con el
+        // mismo criterio que el POST: vivas ocupan lugar, archivadas y vencidas no.
+        maxPromotions={isPremiumTier(sub?.tier) ? null : PRO_MAX_LIVE_PROMOTIONS}
       />
     </DashboardLayout>
   );

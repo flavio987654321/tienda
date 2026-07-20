@@ -94,9 +94,10 @@ function fmtDate(iso: string | null) {
 }
 
 export default function PromocionesClient({
-  initialPromotions, categories, products, activeCount,
+  initialPromotions, categories, products, activeCount, maxPromotions,
 }: {
   initialPromotions: Promotion[]; categories: Category[]; products: Product[]; activeCount: number;
+  maxPromotions: number | null;
 }) {
   const [promos, setPromos] = useState<Promotion[]>(initialPromotions);
   const [tab, setTab] = useState<"act" | "hist">("act");
@@ -113,6 +114,11 @@ export default function PromocionesClient({
   const isLive = (p: Promotion) => p.status === "active" || p.status === "scheduled" || p.status === "paused";
   const shown = promos.filter((p) => (tab === "act" ? isLive(p) : !isLive(p)));
   const liveCount = promos.filter((p) => p.status === "active" || p.status === "scheduled").length;
+
+  // Cupo del plan. `isLive` es exactamente el criterio del servidor (no archivada
+  // y no vencida), así que el número de acá es el que el POST va a aplicar.
+  const slotsUsed = promos.filter(isLive).length;
+  const atLimit = maxPromotions !== null && slotsUsed >= maxPromotions;
 
   async function refresh() {
     // El endpoint devuelve un tab por vez; traemos los dos y unimos, para que
@@ -174,10 +180,44 @@ export default function PromocionesClient({
             Descuentos que se aplican solos en la tienda. Definís una vez a qué productos van y desde cuándo — no producto por producto.
           </p>
         </div>
-        <button onClick={() => { setEditing(null); setWizOpen(true); }} className="flex items-center gap-2 bg-gray-900 hover:bg-gray-800 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors">
-          <Plus className="h-4 w-4" /> Nueva promoción
-        </button>
+        <div className="flex flex-col items-end gap-1.5">
+          <button
+            onClick={() => { setEditing(null); setWizOpen(true); }}
+            disabled={atLimit}
+            title={atLimit ? `Llegaste a las ${maxPromotions} promociones del plan Tienda Pro` : undefined}
+            className="flex items-center gap-2 bg-gray-900 hover:bg-gray-800 disabled:bg-gray-300 disabled:cursor-not-allowed text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors"
+          >
+            <Plus className="h-4 w-4" /> Nueva promoción
+          </button>
+          {/* El cupo se muestra siempre, no solo al llegar al tope: la idea es que
+              nadie se entere del límite recién cuando le rebotan el formulario. */}
+          {maxPromotions !== null && (
+            <p className={`text-xs font-medium ${atLimit ? "text-amber-600" : "text-gray-400"}`}>
+              {slotsUsed} de {maxPromotions} · plan Tienda Pro
+            </p>
+          )}
+        </div>
       </div>
+
+      {atLimit && (
+        <div className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3.5 mb-6">
+          <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+          <div className="text-sm">
+            <p className="font-semibold text-amber-900">
+              Llegaste a las {maxPromotions} promociones del plan Tienda Pro
+            </p>
+            <p className="text-amber-800 mt-0.5 leading-relaxed">
+              Para crear otra, archivá alguna que ya no uses desde el botón{" "}
+              <Archive className="h-3 w-3 inline-block -mt-0.5" /> de la lista — las archivadas y las
+              vencidas no ocupan lugar, y podés restaurarlas cuando quieras. Con{" "}
+              <a href="/dashboard/mi-plan" className="font-semibold underline underline-offset-2 hover:text-amber-900">
+                Tienda Premium
+              </a>{" "}
+              las tenés sin límite.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">

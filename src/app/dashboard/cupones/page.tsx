@@ -111,6 +111,8 @@ function CouponHistory() {
   const [coupons, setCoupons] = useState<CouponRow[]>([]);
   const [total, setTotal] = useState(0);
   const [stats, setStats] = useState<HistoryStats | null>(null);
+  // max === null → plan Premium, sin tope (no se muestra el cupo).
+  const [limit, setLimit] = useState<{ used: number; max: number | null } | null>(null);
   const [statusFilter, setStatusFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -189,6 +191,7 @@ function CouponHistory() {
         setCoupons(data.coupons ?? []);
         setTotal(data.total ?? 0);
         if (data.stats) setStats(data.stats);
+        if (data.limit) setLimit(data.limit);
       }
     } finally {
       setLoading(false);
@@ -231,9 +234,26 @@ function CouponHistory() {
 
   return (
     <div className="mt-12">
-      <div className="mb-5">
-        <h2 className="text-lg font-bold text-gray-900">Historial de cupones</h2>
-        <p className="text-sm text-gray-500">Todos los cupones de tu tienda, sus usos y estadísticas</p>
+      <div className="mb-5 flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <h2 className="text-lg font-bold text-gray-900">Historial de cupones</h2>
+          <p className="text-sm text-gray-500">Todos los cupones de tu tienda, sus usos y estadísticas</p>
+        </div>
+        {/* Cupo del plan, siempre visible: el tope no se descubre recién cuando
+            rebota la creación. Cuenta solo los cupones propios que siguen vivos
+            — los de la ruleta y los vencidos no ocupan lugar. */}
+        {limit?.max != null && (
+          <div className={`rounded-xl border px-3.5 py-2 ${limit.used >= limit.max ? "border-amber-200 bg-amber-50" : "border-gray-100 bg-white"}`}>
+            <p className={`text-sm font-bold ${limit.used >= limit.max ? "text-amber-700" : "text-gray-900"}`}>
+              {limit.used} de {limit.max} cupones
+            </p>
+            <p className={`text-xs ${limit.used >= limit.max ? "text-amber-600" : "text-gray-400"}`}>
+              {limit.used >= limit.max
+                ? "Llegaste al tope del plan Pro"
+                : "Plan Tienda Pro · no cuentan los vencidos ni los de la ruleta"}
+            </p>
+          </div>
+        )}
       </div>
 
       {stats && (

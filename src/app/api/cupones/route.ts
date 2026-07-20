@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { myActiveCouponsWhere, isPremiumTier, PRO_MAX_ACTIVE_COUPONS } from "@/lib/planLimits";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
 import { isValidCouponCode, normalizeCouponCode } from "@/lib/coupons";
@@ -32,7 +33,7 @@ export async function GET(req: NextRequest) {
   // Volumen por tienda es chico (decenas/cientos) — se trae todo y se filtra/pagina en JS.
   // Necesario porque "agotado" depende de comparar dos columnas (usedCount vs maxUses),
   // algo que Prisma no puede expresar en un where sin SQL crudo.
-  const [allCoupons, discountAgg, activePrizeTemplates] = await Promise.all([
+  const [allCoupons, discountAgg, activePrizeTemplates, myActiveCount, sub] = await Promise.all([
     prisma.coupon.findMany({
       where: {
         storeId: store.id,
@@ -52,6 +53,10 @@ export async function GET(req: NextRequest) {
       where: { couponId: { not: null }, widget: { storeId: store.id, isActive: true } },
       select: { couponId: true },
     }),
+    // Mismo count que usa el POST para bloquear: así el número que ve la dueña
+    // es exactamente el que se le va a aplicar, sin sorpresas al guardar.
+    prisma.coupon.count({ where: myActiveCouponsWhere(store.id, now) }),
+    prisma.subscription.findUnique({ where: { userId: user.id }, select: { tier: true } }),
   ]);
   const activePrizeTemplateIds = new Set(activePrizeTemplates.map((p) => p.couponId as string));
 
@@ -93,6 +98,10 @@ export async function GET(req: NextRequest) {
       ...stats,
       totalDiscount: discountAgg._sum.discountAmount ?? 0,
     },
+    limit: {
+      used: myActiveCount,
+      max: isPremiumTier(sub?.tier) ? null : PRO_MAX_ACTIVE_COUPONS,
+    },
   });
 }
 
@@ -107,11 +116,18 @@ export async function POST(req: NextRequest) {
   ]);
   if (!store) return NextResponse.json({ error: "Tienda no encontrada" }, { status: 404 });
 
-  if (!sub || sub.tier !== "PREMIUM") {
-    const couponCount = await prisma.coupon.count({ where: { storeId: store.id } });
-    if (couponCount >= 10) {
+  // Cuenta solo los cupones propios que siguen vivos: los vencidos, los apagados
+  // y los de la ruleta no ocupan lugar. Antes contaba `coupon.count({ storeId })`
+  // a secas, así que una ruleta de 5 premios ya te comía media cuota y cada
+  // ganador te acercaba al tope sin que la dueña hubiera creado nada.
+  if (!isPremiumTier(sub?.tier)) {
+    const couponCount = await prisma.coupon.count({ where: myActiveCouponsWhere(store.id) });
+    if (couponCount >= PRO_MAX_ACTIVE_COUPONS) {
       return NextResponse.json(
-        { error: "Alcanzaste el límite de 10 cupones del plan Tienda Pro. Actualizá a Premium para crear más." },
+        {
+          error: `Llegaste a los ${PRO_MAX_ACTIVE_COUPONS} cupones activos del plan Tienda Pro. Apagá o dejá vencer uno para crear otro, o pasá a Premium para tenerlos sin límite.`,
+          code: "LIMIT_REACHED",
+        },
         { status: 403 }
       );
     }
