@@ -27,6 +27,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ slug
           select: {
             type: true, value: true, minQty: true, payQty: true, minOrderAmount: true,
             scope: true, categories: true, productIds: true, combinesWithCoupons: true,
+            // `name` y `eventLabel` no los usa el motor de precios: van para que
+            // la tienda pueda mostrar de qué promo/evento se trata (tag, banner,
+            // filtro) sin pedir otra vez al servidor.
+            name: true, eventLabel: true, endsAt: true,
           },
         },
         products: {

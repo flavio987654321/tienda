@@ -62,6 +62,7 @@ export default async function PromocionesPage() {
     endsAt: p.endsAt ? p.endsAt.toISOString() : null,
     combinesWithCoupons: p.combinesWithCoupons,
     combinesWithPromotions: p.combinesWithPromotions,
+    eventLabel: p.eventLabel,
     isActive: p.isActive,
     archivedAt: p.archivedAt ? p.archivedAt.toISOString() : null,
     status: promotionStatus(p, now),

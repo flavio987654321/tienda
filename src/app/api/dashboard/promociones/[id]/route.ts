@@ -58,6 +58,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       endsAt: d.endsAt,
       combinesWithCoupons: d.combinesWithCoupons,
       combinesWithPromotions: d.combinesWithPromotions,
+      eventLabel: d.eventLabel,
     },
   });
 

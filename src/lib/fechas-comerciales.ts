@@ -141,3 +141,27 @@ export function getUpcomingDates(daysAhead = 21): FechaComercial[] {
       diasFaltan: Math.round((f.fecha.getTime() - today.getTime()) / 86_400_000),
     }));
 }
+
+/**
+ * Nombres de las fechas comerciales, para que el wizard de promociones ofrezca
+ * los mismos que ya usa Sasha en sus sugerencias. Si la dueña arranca una promo
+ * desde "falta poco para el Día de la Madre", el evento que elija acá se llama
+ * igual — sin esto cada lado inventaría su propia lista.
+ *
+ * El año no importa: se usa solo para leer los nombres, que no cambian.
+ */
+export function getEventNames(): string[] {
+  return buildCalendar(new Date().getUTCFullYear()).map((f) => f.nombre);
+}
+
+/**
+ * Próxima ocurrencia de un evento del calendario, o null si el nombre es propio
+ * de la tienda. Sirve para proponer fechas al crear la promo.
+ */
+export function getEventDate(nombre: string): Date | null {
+  const hoy = getArgentinaToday();
+  const year = hoy.getUTCFullYear();
+  const candidatas = [...buildCalendar(year), ...buildCalendar(year + 1)];
+  const match = candidatas.filter((f) => f.nombre === nombre && f.fecha >= hoy);
+  return match.length ? match[0].fecha : null;
+}

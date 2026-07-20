@@ -45,6 +45,11 @@ export type ActivePromotion = {
   // y los chequeos internos no lo necesitan; el checkout SÍ lo pasa para poder decir
   // en el email QUÉ promo se aplicó, no solo cuánto se ahorró.
   name?: string | null;
+  // Evento comercial ("Black Friday"), y cuándo termina. El motor los ignora —
+  // no cambian ni un centavo. Viajan acá porque la tienda ya recibe esta lista
+  // y así el tag, el banner con cuenta regresiva y el filtro salen de lo mismo.
+  eventLabel?: string | null;
+  endsAt?: string | Date | null;
   type: string;                 // PERCENT | FIXED | N_PAY_M | MIX_N_PAY_M | FREE_SHIPPING
   value: number | null;         // % (PERCENT) o monto fijo por unidad (FIXED)
   minQty: number | null;        // N de "llevá N" (N_PAY_M y MIX_N_PAY_M)

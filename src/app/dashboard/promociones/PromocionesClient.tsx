@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useMemo } from "react";
+import { getEventNames, getEventDate } from "@/lib/fechas-comerciales";
 import {
   Percent, Tag, Gift, Truck, Store, Folder, ListChecks, Check, Plus, X,
   Info, AlertTriangle, Loader2, Search, Archive, Trash2, RotateCcw, Smile, Pencil, Shuffle,
 } from "lucide-react";
-import { costFloorCheck, MAX_PROMO_PERCENT as MAX_PCT } from "@/lib/promotions";
+import { costFloorCheck, MAX_PROMO_PERCENT as MAX_PCT, MAX_EVENT_LABEL } from "@/lib/promotions";
 
 // Emojis para el nombre de la promo (lo ve solo el dueño; le ayuda a reconocerla de un vistazo).
 const PROMO_EMOJIS = [
@@ -26,6 +27,7 @@ type Promotion = {
   scope: string; categories: string[]; productIds: string[];
   startsAt: string | null; endsAt: string | null;
   combinesWithCoupons: boolean; combinesWithPromotions: boolean;
+  eventLabel: string | null;
   isActive: boolean; archivedAt: string | null; status: string;
 };
 type Category = { name: string; count: number };
@@ -375,6 +377,32 @@ function Wizard({ categories, products, onClose, onCreated, editPromo }: {
   const [endsAt, setEndsAt] = useState(editPromo?.endsAt ? editPromo.endsAt.slice(0, 10) : "");
   const [combines, setCombines] = useState(editPromo?.combinesWithCoupons ?? false);
 
+  // Evento comercial. `eventMode` separa "ninguno" / "una del calendario" / "el mío",
+  // porque con un solo string no se distingue "todavía no elegí" de "escribí vacío".
+  const eventosCalendario = useMemo(() => getEventNames(), []);
+  const eventoInicial = editPromo?.eventLabel ?? "";
+  const [eventMode, setEventMode] = useState<"none" | "cal" | "custom">(
+    !eventoInicial ? "none" : eventosCalendario.includes(eventoInicial) ? "cal" : "custom"
+  );
+  const [eventLabel, setEventLabel] = useState(eventoInicial);
+
+  // Al elegir una fecha del calendario, se proponen las fechas de la promo si
+  // están vacías: Black Friday cae distinto cada año y nadie se lo acuerda.
+  // Solo se completan si no había nada — no se pisa lo que la dueña ya puso.
+  function elegirEventoDelCalendario(nombre: string) {
+    setEventMode("cal");
+    setEventLabel(nombre);
+    const fecha = getEventDate(nombre);
+    if (!fecha) return;
+    const iso = fecha.toISOString().slice(0, 10);
+    if (!endsAt) setEndsAt(iso);
+    if (!startsAt) {
+      const desde = new Date(fecha);
+      desde.setUTCDate(desde.getUTCDate() - 3); // arranca unos días antes, como se usa
+      setStartsAt(desde.toISOString().slice(0, 10));
+    }
+  }
+
   const meta = type ? TYPE_META[type] : null;
 
   // Inserta el emoji en la posición del cursor (o al final) y deja el caret después.
@@ -421,6 +449,8 @@ function Wizard({ categories, products, onClose, onCreated, editPromo }: {
         minOrderAmount: parseNum(minOrder),
         startsAt: startsAt || null, endsAt: endsAt || null,
         combinesWithCoupons: combines,
+        // "" cuando no hay evento — el servidor lo normaliza a null.
+        eventLabel: eventMode === "none" ? "" : eventLabel.trim(),
       };
       if (type === "PERCENT" || type === "FIXED") body.value = parseNum(value);
       if (isNxM(type)) { body.minQty = parseInt(minQty); body.payQty = parseInt(payQty); }
@@ -554,6 +584,42 @@ function Wizard({ categories, products, onClose, onCreated, editPromo }: {
           {step === 4 && (
             <>
               <StepTitle t="Vigencia y combinación" d="Cuándo corre, y si se puede sumar con cupones. Cuando pasa la fecha de fin, se apaga sola." />
+
+              {/* Evento comercial — opcional. Cambia cómo se ve en la tienda,
+                  no cuánto se descuenta. */}
+              <Field label="¿Es parte de un evento? (opcional)">
+                <div className="flex flex-wrap gap-1.5">
+                  <EventChip on={eventMode === "none"} onClick={() => { setEventMode("none"); setEventLabel(""); }}>
+                    Sin evento
+                  </EventChip>
+                  {eventosCalendario.map((n) => (
+                    <EventChip key={n} on={eventMode === "cal" && eventLabel === n} onClick={() => elegirEventoDelCalendario(n)}>
+                      {n}
+                    </EventChip>
+                  ))}
+                  <EventChip on={eventMode === "custom"} onClick={() => { setEventMode("custom"); setEventLabel(""); }}>
+                    Otro…
+                  </EventChip>
+                </div>
+                {eventMode === "custom" && (
+                  <input
+                    value={eventLabel}
+                    onChange={(e) => setEventLabel(e.target.value.slice(0, MAX_EVENT_LABEL))}
+                    maxLength={MAX_EVENT_LABEL}
+                    placeholder="Ej. Aniversario de la tienda"
+                    autoFocus
+                    className={inputCls + " mt-2"}
+                  />
+                )}
+                {eventMode !== "none" && eventLabel.trim() && (
+                  <p className="text-[11.5px] text-gray-500 mt-2 leading-relaxed">
+                    En tu tienda va a aparecer un cartel de <b>{eventLabel.trim()}</b> arriba de todo, el nombre
+                    en la etiqueta de cada producto, y un filtro para ver solo estos.
+                    {endsAt && <> Con la fecha de fin puesta, se muestra además una cuenta regresiva.</>}
+                  </p>
+                )}
+              </Field>
+
               <div className="flex gap-3">
                 <Field label="Desde"><input type="date" value={startsAt} onChange={(e) => setStartsAt(e.target.value)} className={inputCls} /></Field>
                 <Field label="Hasta (opcional)"><input type="date" value={endsAt} onChange={(e) => setEndsAt(e.target.value)} className={inputCls} /></Field>
@@ -713,6 +779,25 @@ function PkRow({ on, onClick, name, sub, radio }: { on: boolean; onClick: () => 
     </button>
   );
 }
+// Chip para elegir el evento comercial. Compacto porque son once opciones y
+// tienen que entrar sin que el modal crezca a lo loco.
+function EventChip({ on, onClick, children }: { on: boolean; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={on}
+      className={`rounded-lg border px-2.5 py-1.5 text-[12px] font-medium transition-colors ${
+        on
+          ? "border-indigo-500 bg-indigo-50 text-indigo-700"
+          : "border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:bg-gray-50"
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
 function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return <div className="mb-3.5 flex-1"><label className="block text-[12.5px] font-semibold text-gray-700 mb-1.5">{label}</label>{children}{hint && <p className="text-[11.5px] text-gray-400 mt-1.5">{hint}</p>}</div>;
 }

@@ -55,7 +55,12 @@ export type ValidatedPromotion = {
   endsAt: Date | null;
   combinesWithCoupons: boolean;
   combinesWithPromotions: boolean;
+  eventLabel: string | null;
 };
+
+// Tope del nombre del evento. Se muestra dentro del tag del producto, al lado
+// del descuento; más largo que esto no entra y rompe la tarjeta.
+export const MAX_EVENT_LABEL = 24;
 
 type Body = Record<string, unknown>;
 
@@ -109,12 +114,19 @@ export function validatePromotionBody(body: Body): { error: string } | { data: V
   const endsAt = parseDate(body.endsAt);
   if (startsAt && endsAt && endsAt < startsAt) return { error: "La fecha de fin no puede ser anterior a la de inicio." };
 
+  // ── Evento ──
+  // Vacío o solo espacios cuenta como "sin evento": si no, una promo quedaría
+  // con un evento en blanco y la tienda mostraría un tag con un separador suelto.
+  const eventoCrudo = typeof body.eventLabel === "string" ? body.eventLabel.trim() : "";
+  const eventLabel = eventoCrudo ? eventoCrudo.slice(0, MAX_EVENT_LABEL) : null;
+
   return {
     data: {
       name, type, value, minQty, payQty, minOrderAmount, scope, categories, productIds,
       startsAt, endsAt,
       combinesWithCoupons: body.combinesWithCoupons === true,
       combinesWithPromotions: body.combinesWithPromotions === true,
+      eventLabel,
     },
   };
 }
