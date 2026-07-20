@@ -10,7 +10,15 @@ import { stripDesignConfig } from "@/lib/store-config";
 // Bloqueo de negocio detectado dentro de la transacción → se traduce a 409.
 // El code le permite al modal ofrecer el botón de acción correcto.
 class ResetBlockedError extends Error {
-  constructor(readonly code: "UNRESOLVED_ORDERS" | "UNCLAIMED_PRIZES" | "PENDING_COMMISSIONS", message: string) {
+  constructor(
+    readonly code:
+      | "UNRESOLVED_ORDERS"
+      | "UNCLAIMED_PRIZES"
+      | "PENDING_COMMISSIONS"
+      | "LIVE_COUPONS"
+      | "LIVE_PROMOTIONS",
+    message: string
+  ) {
     super(message);
   }
 }
@@ -83,6 +91,59 @@ export async function POST(req: Request) {
       throw new ResetBlockedError(
         "UNCLAIMED_PRIZES",
         `Hay ${unclaimedPrizes} premio${unclaimedPrizes > 1 ? "s" : ""} de la ruleta ganado${unclaimedPrizes > 1 ? "s" : ""} y sin reclamar todavía. Esperá a que se usen o venzan antes de cambiar de rubro.`
+      );
+    }
+
+    // ── Ofertas vivas ──
+    // Una promo o un cupón que un cliente puede usar AHORA es una oferta que ya
+    // está en la calle: la ley obliga a quien la emite (art. 7, Ley 24.240).
+    // Archivarla no le sirve de nada al comprador — el cupón deja de existir y
+    // el reclamo sigue en pie. Peor si el rubro nuevo es AUTOS, donde Cupones y
+    // Promociones ni aparecen en el panel: la dueña se quedaría sin la pantalla
+    // para verlos. Así que en vez de borrarlas calladas, se frena el cambio y
+    // ella decide darlas de baja.
+    //
+    // Solo bloquea lo que un cliente puede usar hoy: apagadas, vencidas,
+    // agotadas y archivadas no frenan nada (igual se borran más abajo).
+    const now = new Date();
+
+    // winnerEmail: null → los premios ya ganados tienen su propio bloqueo arriba,
+    // con otra salida (esos no los puede dar de baja ella sin sacarle algo a alguien).
+    const ownCoupons = await tx.coupon.findMany({
+      where: {
+        storeId: store.id,
+        winnerEmail: null,
+        isActive: true,
+        OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
+      },
+      select: { code: true, usedCount: true, maxUses: true },
+    });
+    // Agotado = ya nadie más lo puede usar. Se compara en JS porque son dos
+    // columnas y Prisma no lo expresa en un where.
+    const usableCoupons = ownCoupons.filter((c) => c.maxUses == null || c.usedCount < c.maxUses);
+    if (usableCoupons.length > 0) {
+      const muestra = usableCoupons.slice(0, 3).map((c) => c.code).join(", ");
+      throw new ResetBlockedError(
+        "LIVE_COUPONS",
+        `Tenés ${usableCoupons.length} cupón${usableCoupons.length > 1 ? "es" : ""} que tus clientes todavía pueden usar (${muestra}${usableCoupons.length > 3 ? "…" : ""}). Si cambiás de rubro dejan de funcionar y quien los tenga te los va a reclamar igual. Desactivalos o eliminalos desde Cupones antes de seguir.`
+      );
+    }
+
+    const livePromotions = await tx.storePromotion.count({
+      where: {
+        storeId: store.id,
+        archivedAt: null,
+        isActive: true,
+        AND: [
+          { OR: [{ startsAt: null }, { startsAt: { lte: now } }] },
+          { OR: [{ endsAt: null }, { endsAt: { gt: now } }] },
+        ],
+      },
+    });
+    if (livePromotions > 0) {
+      throw new ResetBlockedError(
+        "LIVE_PROMOTIONS",
+        `Tenés ${livePromotions} promoción${livePromotions > 1 ? "es" : ""} aplicándose en tu tienda ahora mismo. Si cambiás de rubro se dan de baja y quien la haya visto anunciada te la puede reclamar. Archivalas desde Promociones antes de seguir.`
       );
     }
 
