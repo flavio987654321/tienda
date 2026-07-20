@@ -5,6 +5,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { CURRENT_TERMS_VERSION } from "@/lib/legal";
 import { verifyTurnstile } from "@/lib/turnstile";
 import { getClientIp } from "@/lib/request-ip";
+import { sendWelcomeEmail } from "@/lib/resend";
 
 const TERMS_VERSION = CURRENT_TERMS_VERSION;
 
@@ -134,6 +135,16 @@ export async function POST(req: NextRequest) {
             : {}),
         },
       });
+
+      // Bienvenida. Va acá y no por cron: el alta es el disparador, así llega
+      // en el momento. Sin await a propósito — si Resend está caído o lento, la
+      // cuenta ya está creada y no tiene por qué fallar el registro por un mail.
+      sendWelcomeEmail({
+        to: normalizedEmail,
+        userName: name,
+        role: type,
+        storeName: type === "OWNER" ? storeName : null,
+      }).catch((err) => console.error("[email] sendWelcomeEmail failed:", err));
 
       return NextResponse.json({ success: true, userId: user.id });
     } catch (dbError) {

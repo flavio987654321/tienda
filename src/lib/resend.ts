@@ -938,3 +938,110 @@ export async function sendStoreClosedAffiliateEmail({
     `,
   });
 }
+
+/**
+ * Bienvenida, al crear la cuenta. Se manda desde el registro (no por cron): el
+ * alta misma es el disparador, así llega en el momento y no al día siguiente.
+ *
+ * El contenido cambia según el rol porque los tres arrancan haciendo cosas
+ * distintas — a una dueña le sirve "cargá tu primer producto" y a una afiliada
+ * no le dice nada.
+ */
+export async function sendWelcomeEmail({
+  to,
+  userName,
+  role,
+  storeName,
+}: {
+  to: string;
+  userName: string;
+  role: "OWNER" | "SELLER" | "BUYER";
+  storeName?: string | null;
+}) {
+  if (!process.env.RESEND_API_KEY) return;
+
+  const hola = escapeHtml(userName) || "ahí";
+  const btn = (href: string, label: string) =>
+    APP_URL
+      ? `<div style="text-align:center;margin-bottom:24px;">
+           <a href="${APP_URL}${href}" style="display:inline-block;background:#4f46e5;color:#fff;text-decoration:none;font-weight:700;font-size:14px;padding:13px 28px;border-radius:12px;">${label}</a>
+         </div>`
+      : "";
+
+  const paso = (n: number, titulo: string, detalle: string) => `
+    <tr>
+      <td style="vertical-align:top;padding:0 12px 16px 0;width:28px;">
+        <div style="width:26px;height:26px;border-radius:999px;background:#eef2ff;color:#4f46e5;font-weight:800;font-size:13px;text-align:center;line-height:26px;">${n}</div>
+      </td>
+      <td style="vertical-align:top;padding-bottom:16px;">
+        <p style="margin:0;font-size:15px;color:#111827;font-weight:700;">${titulo}</p>
+        <p style="margin:2px 0 0;font-size:14px;color:#6b7280;line-height:1.5;">${detalle}</p>
+      </td>
+    </tr>`;
+
+  let titular: string;
+  let intro: string;
+  let cuerpo: string;
+
+  if (role === "OWNER") {
+    titular = "Tu tienda ya existe";
+    intro = `Creamos <strong>${escapeHtml(storeName) || "tu tienda"}</strong> y tenés <strong>7 días de prueba</strong>, sin tarjeta ni compromiso.`;
+    cuerpo = `
+      <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:16px 18px;margin-bottom:24px;">
+        <p style="margin:0;font-size:14px;color:#92400e;line-height:1.6;">
+          <strong>Todavía nadie la puede ver.</strong> Tu tienda arranca apagada a propósito, para que la
+          armes tranquila. Cuando esté como querés, la publicás vos desde el panel.
+        </p>
+      </div>
+      <p style="font-size:15px;color:#111827;font-weight:700;margin:0 0 14px;">Por dónde empezar</p>
+      <table style="width:100%;border-collapse:collapse;margin-bottom:20px;">
+        ${paso(1, "Elegí el diseño", "Una plantilla y tus colores. Se cambia cuando quieras.")}
+        ${paso(2, "Cargá tu primer producto", "Con uno solo ya podés ver cómo te queda la tienda.")}
+        ${paso(3, "Configurá cómo cobrás", "Conectá MercadoPago o cargá tu CBU para transferencias.")}
+        ${paso(4, "Publicá", "Recién ahí tu tienda queda online y podés compartir el link.")}
+      </table>
+      ${btn("/dashboard", "Ir a mi panel")}`;
+  } else if (role === "SELLER") {
+    titular = "Bienvenida a TiendaApps";
+    intro = "Tu cuenta de vendedora ya está lista. Es gratis y no vence.";
+    cuerpo = `
+      <p style="font-size:15px;color:#111827;font-weight:700;margin:0 0 14px;">Cómo funciona</p>
+      <table style="width:100%;border-collapse:collapse;margin-bottom:20px;">
+        ${paso(1, "Buscá una tienda", "Mirá las que tienen el programa abierto y postulate.")}
+        ${paso(2, "Esperá que te aprueben", "La dueña recibe tu solicitud y te avisa.")}
+        ${paso(3, "Compartí tu link", "Cada venta que entre por ahí queda registrada a tu nombre.")}
+        ${paso(4, "Cobrá tu comisión", "Se acredita sola en tu panel de comisiones cuando el pago se confirma.")}
+      </table>
+      ${btn("/afiliados", "Ver tiendas disponibles")}`;
+  } else {
+    titular = "Bienvenido a TiendaApps";
+    intro = "Tu cuenta ya está lista. Es gratuita y no requiere tarjeta.";
+    cuerpo = `
+      <p style="font-size:15px;color:#374151;line-height:1.6;margin-bottom:20px;">
+        Desde tu cuenta podés comprar en cualquier tienda de la plataforma, seguir el estado de tus
+        pedidos y guardar tus productos favoritos.
+      </p>
+      ${btn("/tiendas", "Explorar tiendas")}`;
+  }
+
+  await resend.emails.send({
+    from: FROM,
+    to,
+    subject: role === "OWNER" ? `¡Bienvenida! ${storeName ? `${storeName} ya existe` : "Tu tienda ya existe"}` : "Bienvenida a TiendaApps",
+    html: `
+      <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 16px;color:#111827;background:#fff;">
+        <div style="background:#4f46e5;border-radius:16px;padding:32px 24px;margin-bottom:28px;text-align:center;">
+          <p style="color:#c7d2fe;font-size:13px;margin:0 0 6px;font-weight:500;">TiendaApps</p>
+          <h1 style="color:#fff;font-size:22px;margin:0;font-weight:800;">${titular}</h1>
+        </div>
+        <p style="font-size:15px;color:#374151;margin-bottom:6px;">Hola <strong>${hola}</strong>,</p>
+        <p style="font-size:15px;color:#374151;margin-bottom:24px;">${intro}</p>
+        ${cuerpo}
+        <p style="font-size:14px;color:#6b7280;margin-bottom:24px;">
+          ¿Alguna duda? Respondé este email y te contestamos.
+        </p>
+        <p style="color:#9ca3af;font-size:12px;text-align:center;">TiendaApps — tu tienda online profesional</p>
+      </div>
+    `,
+  });
+}
