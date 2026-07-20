@@ -14,6 +14,7 @@ import HomeStudio from "./templates/HomeStudio";
 import CasaClara from "./templates/CasaClara";
 import FlyerPopup from "./FlyerPopup";
 import GamificationWidget from "./GamificationWidget";
+import EventBanner from "./EventBanner";
 import { GAMIFICATION_EXCLUDED_TEMPLATES } from "@/lib/gamification";
 
 const TEMPLATES: Record<string, React.ComponentType> = {
@@ -51,6 +52,9 @@ export default function StorefrontTemplateRenderer({ config }: { config: StoreCo
         sectionOrder: config.sectionOrder ?? [],
         moveSection: () => {},
       }}>
+        {/* Arriba del template: es una franja de ancho completo, no un overlay.
+            Acá adentro lo heredan los 8 templates con promos sin tocar ninguno. */}
+        <EventBanner />
         <Template />
         {!config.isOwner && config.flyerConfig?.enabled && (config.flyerConfig.images?.length ?? 0) > 0 && (
           <FlyerPopup flyer={config.flyerConfig} />

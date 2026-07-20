@@ -17,6 +17,64 @@
 
 import { priceCart, promoLabel, type ActivePromotion } from "./pricing";
 
+// ─── Evento comercial ────────────────────────────────────────────────────────
+// Una promo puede pertenecer a un evento ("Black Friday"). Es SOLO presentación:
+// no cambia ni un centavo del precio, que lo sigue resolviendo el motor.
+//
+// Todo lo que muestra el evento —el tag del producto, el banner de arriba, el
+// filtro del listado— sale de acá. La regla que lo mantiene coherente es que
+// NADIE pregunta "¿este producto está en Black Friday?" por su cuenta: pregunta
+// qué promo gana (resolveProductPromo) y esa promo dice si tiene evento. Así el
+// filtro no puede mostrar un producto sin el cartel, ni al revés.
+
+/**
+ * Formato único del nombre del evento. Existe para que el tag, el banner, el
+ * filtro y el email escriban exactamente lo mismo: si cada lado lo formateara a
+ * su manera, en una pantalla diría "BLACK FRIDAY" y en otra "Black friday".
+ */
+export function eventLabelOf(p: ActivePromotion | null | undefined): string | null {
+  const raw = p?.eventLabel?.trim();
+  return raw ? raw : null;
+}
+
+/** Fin de la promo como Date, o null. Acepta Date (server) o ISO (storefront). */
+function endsAtDate(p: ActivePromotion): Date | null {
+  if (!p.endsAt) return null;
+  const d = p.endsAt instanceof Date ? p.endsAt : new Date(p.endsAt);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+/**
+ * El evento que muestra el banner de la tienda, entre todas las promos vigentes.
+ *
+ * Gana el que TERMINA ANTES: es el más urgente y el que conviene comunicar. Sin
+ * una regla escrita, con dos eventos pisados (Black Friday y Cyber Monday caen
+ * pegados) la tienda mostraría uno u otro según el orden en que vengan de la
+ * base — un bug que aparece meses después y no se puede reproducir.
+ *
+ * Las promos sin fecha de fin van al final: no tienen urgencia que comunicar.
+ */
+export function resolveStoreEvent(
+  promotions: ActivePromotion[] | undefined | null
+): { label: string; endsAt: Date | null } | null {
+  const conEvento = (promotions ?? []).filter((p) => eventLabelOf(p));
+  if (!conEvento.length) return null;
+
+  const ordenadas = [...conEvento].sort((a, b) => {
+    const fa = endsAtDate(a);
+    const fb = endsAtDate(b);
+    if (fa && fb) return fa.getTime() - fb.getTime();
+    if (fa) return -1;
+    if (fb) return 1;
+    // Empate real (ninguna tiene fin): por nombre, para que sea estable entre
+    // recargas en vez de depender del orden de la consulta.
+    return (eventLabelOf(a) ?? "").localeCompare(eventLabelOf(b) ?? "");
+  });
+
+  const ganadora = ordenadas[0];
+  return { label: eventLabelOf(ganadora)!, endsAt: endsAtDate(ganadora) };
+}
+
 export type ProductPromoDisplay = {
   hasPriceDrop: boolean;   // mostrar precio tachado + efectivo
   effectivePrice: number;  // precio unitario a mostrar (= original si no hay descuento directo)
@@ -32,10 +90,15 @@ export type ProductPromoDisplay = {
 // Descripción en lenguaje humano de UNA promo, para el bloque explicativo del modal/card
 // (estilo Tiendanube: "¡20% OFF! · Válido en la categoría X · Comprando $Z o más"). Es lo
 // que hace entendible QUÉ promo hay, más allá del precio tachado.
-export function describePromo(p: ActivePromotion): { headline: string; scope: string; conditions: string[] } {
+export function describePromo(p: ActivePromotion): { headline: string; scope: string; conditions: string[]; event: string | null } {
   const ars = (n: number) => "$" + Math.round(n).toLocaleString("es-AR");
   // Misma etiqueta corta que usa el email y el comprobante — una sola fuente.
-  const headline = promoLabel(p);
+  const base = promoLabel(p);
+  // Con evento, el titular lo lleva adelante ("BLACK FRIDAY · 20% OFF"). Va acá y
+  // no en cada template porque los 8 llaman a esta función para armar el tag: si
+  // se resolviera arriba, habría que tocar los 8 y alguno se olvidaría.
+  const event = eventLabelOf(p);
+  const headline = event ? `${event.toUpperCase()} · ${base}` : base;
 
   const cats = p.categories.filter(Boolean);
   const scope =
@@ -54,7 +117,7 @@ export function describePromo(p: ActivePromotion): { headline: string; scope: st
   }
   if (p.minOrderAmount > 0) conditions.push(`Comprando ${ars(p.minOrderAmount)} o más`);
   conditions.push(p.combinesWithCoupons ? "Se puede combinar con un cupón" : "No se acumula con cupones");
-  return { headline, scope, conditions };
+  return { headline, scope, conditions, event };
 }
 
 export type PromoDisplayProduct = { id: string; price: number; category: string | null };

@@ -281,6 +281,11 @@ type RawPromotion = {
   categories: string;
   productIds: string;
   combinesWithCoupons: boolean;
+  // Presentación: no entran en la cuenta del precio, pero sin ellos la tienda no
+  // puede mostrar el evento (tag, banner, filtro) ni decir qué promo se aplicó.
+  name?: string | null;
+  eventLabel?: string | null;
+  endsAt?: string | null;
 };
 
 function mapPromotion(raw: RawPromotion): ActivePromotion {
@@ -294,6 +299,9 @@ function mapPromotion(raw: RawPromotion): ActivePromotion {
     categories: parseStringArray(raw.categories),
     productIds: parseStringArray(raw.productIds),
     combinesWithCoupons: raw.combinesWithCoupons === true,
+    name: raw.name ?? null,
+    eventLabel: raw.eventLabel ?? null,
+    endsAt: raw.endsAt ?? null,
   };
 }
 

@@ -10,7 +10,7 @@
 
 import { priceCart, resolveBasePrice, freeShippingProgress, type PricingItem, type ActivePromotion } from "./pricing";
 import { costFloorCheck, type CostFloorPromo, type CostFloorProduct } from "./promotions";
-import { resolveProductPromo, describePromo } from "./promoDisplay";
+import { resolveProductPromo, describePromo, resolveStoreEvent } from "./promoDisplay";
 
 const BASE = 10000;
 
@@ -26,6 +26,9 @@ function promo(p: Partial<ActivePromotion> & { type: string }): ActivePromotion 
     minOrderAmount: p.minOrderAmount ?? 0, scope: p.scope ?? "ALL",
     categories: p.categories ?? [], productIds: p.productIds ?? [],
     combinesWithCoupons: p.combinesWithCoupons ?? false,
+    // Presentación (no tocan el precio): el evento y su fin viajan con la promo.
+    eventLabel: p.eventLabel ?? null,
+    endsAt: p.endsAt ?? null,
   };
 }
 
@@ -268,6 +271,58 @@ const dcheck = (id: string, got: boolean, desc: string) => { if (!got) failed++;
   const d = r.primaryPromo ? describePromo(r.primaryPromo) : null;
   dcheck("DP-H", !r.hasPriceDrop && r.nxm?.n === 3 && r.badge === "3×2" && !!d?.conditions.some(c => c.includes("gratis")),
     "mix 3×2 → badge 3×2 + el bloque avisa que el más barato sale gratis");
+}
+
+// ── Evento comercial (Black Friday y compañía) ───────────────────────────────
+// Es presentación pura: ninguno de estos casos puede mover un precio.
+{
+  const p = promo({ type: "PERCENT", value: 20, eventLabel: "Black Friday" });
+  const d = describePromo(p);
+  dcheck("EV-A", d.headline === "BLACK FRIDAY · 20% OFF" && d.event === "Black Friday",
+    "con evento → el titular lo lleva adelante en mayúsculas");
+}
+{
+  const d = describePromo(promo({ type: "PERCENT", value: 20 }));
+  dcheck("EV-B", d.headline === "20% OFF" && d.event === null,
+    "sin evento → titular igual que antes (no rompe lo que ya andaba)");
+}
+{
+  // Un evento en blanco no debe ensuciar el tag con un separador suelto.
+  const d = describePromo(promo({ type: "PERCENT", value: 20, eventLabel: "   " }));
+  dcheck("EV-C", d.headline === "20% OFF" && d.event === null, "evento en blanco → se ignora");
+}
+{
+  const conEvento = promo({ type: "PERCENT", value: 20, eventLabel: "Black Friday" });
+  const sinEvento = promo({ type: "PERCENT", value: 20 });
+  const a = resolveProductPromo(dp, [conEvento]).effectivePrice;
+  const b = resolveProductPromo(dp, [sinEvento]).effectivePrice;
+  dcheck("EV-D", a === b && a === 8000, "el evento no cambia el precio: mismo número con y sin");
+}
+{
+  // Dos eventos pisados: gana el que termina antes, sin importar el orden de entrada.
+  const bf = promo({ type: "PERCENT", value: 20, eventLabel: "Black Friday", endsAt: "2026-11-27T00:00:00Z" });
+  const cm = promo({ type: "PERCENT", value: 20, eventLabel: "Cyber Monday", endsAt: "2026-11-30T00:00:00Z" });
+  const r1 = resolveStoreEvent([bf, cm]);
+  const r2 = resolveStoreEvent([cm, bf]);
+  dcheck("EV-E", r1?.label === "Black Friday" && r2?.label === "Black Friday",
+    "dos eventos → gana el que termina antes, y no depende del orden");
+}
+{
+  // Con fin y sin fin: el que tiene fecha comunica urgencia, va primero.
+  const conFin = promo({ type: "PERCENT", value: 20, eventLabel: "Black Friday", endsAt: "2026-11-27T00:00:00Z" });
+  const sinFin = promo({ type: "PERCENT", value: 20, eventLabel: "Liquidación" });
+  dcheck("EV-F", resolveStoreEvent([sinFin, conFin])?.label === "Black Friday",
+    "el que tiene fecha de fin gana al que no la tiene");
+}
+{
+  const sinFin = promo({ type: "PERCENT", value: 20, eventLabel: "Liquidación" });
+  const r = resolveStoreEvent([sinFin]);
+  dcheck("EV-G", r?.label === "Liquidación" && r.endsAt === null,
+    "sin fecha de fin → hay banner pero no hay cuenta regresiva");
+}
+{
+  dcheck("EV-H", resolveStoreEvent([promo({ type: "PERCENT", value: 20 })]) === null && resolveStoreEvent([]) === null,
+    "sin promos con evento → no hay banner");
 }
 
 console.log(failed === 0 ? "\n✅ Todos los casos dan el número congelado." : `\n❌ ${failed} caso(s) no coinciden.`);

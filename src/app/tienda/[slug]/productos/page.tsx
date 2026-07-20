@@ -14,7 +14,7 @@ import ReportStoreModal from "@/components/store/ReportStoreModal";
 import { OfferBadge } from "@/components/store/OfferBadge";
 import { PromoTag, PromoBlock } from "@/components/store/PromoDisplay";
 import { discountPercent } from "@/lib/discount";
-import { resolveProductPromo, describePromo } from "@/lib/promoDisplay";
+import { resolveProductPromo, describePromo, resolveStoreEvent } from "@/lib/promoDisplay";
 import { resolveVariantPrice } from "@/lib/variantPrice";
 import { useTurnstile } from "@/components/Turnstile";
 
@@ -244,6 +244,11 @@ function ProductosPageInner() {
 
   const [products,   setProducts]   = useState<StorefrontProduct[]>([]);
   const [promotions, setPromotions] = useState<ActivePromotion[]>([]);
+  // Evento vigente de la tienda, si hay. Mismo resolvedor que el banner y que el
+  // tag del producto: si el listado dice "Black Friday", es el mismo evento que
+  // anuncia el banner. Cuando hay evento, el filtro de promociones pasa a
+  // llamarse como él, en vez de sumar otro botón a una barra que ya tiene varios.
+  const storeEvent = useMemo(() => resolveStoreEvent(promotions), [promotions]);
   const [loading,    setLoading]    = useState(true);
   const [error,      setError]      = useState<string | null>(null);
   const [storeName,  setStoreName]  = useState("Tienda");
@@ -1262,7 +1267,7 @@ function ProductosPageInner() {
                 </button>
                 {promotions.length > 0 && (
                   <button onClick={() => { setOnlyPromos(o => !o); setOnlyOfertas(false); setOnlyDestacados(false); setPage(1); }} style={toggleBase(onlyPromos)}>
-                    🎁 En promoción
+                    {storeEvent ? `🎁 ${storeEvent.label}` : "🎁 En promoción"}
                   </button>
                 )}
                 <div style={{ position:"relative" }}>
