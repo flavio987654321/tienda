@@ -4,13 +4,31 @@ import { useEffect, useState } from "react";
 import { Loader2, X, CheckCircle, Ticket, Lock, ArrowLeft, ShieldCheck } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 
+/**
+ * Ojo: este modal NO recibe el importe.
+ *
+ * Antes lo recibía como prop y cada pantalla mandaba el suyo. La página de
+ * precios calculaba un total con descuento por los días no usados, lo mostraba
+ * acá, y el endpoint de cobro —que nunca se enteraba de ese descuento— le cobraba
+ * el precio de lista. La persona veía $200.000 y le llegaban $225.000.
+ *
+ * Ahora el importe lo pide el propio modal al servidor, al mismo lugar que después
+ * hace el cobro. Ninguna pantalla puede prometer un precio distinto al real,
+ * aunque se equivoque.
+ */
 type Props = {
   plan: "OWNER_BASIC" | "OWNER_PREMIUM" | "AFFILIATE";
   billing: "MONTHLY" | "ANNUAL";
-  amount: number;
-  prorated?: boolean;
   onClose: () => void;
   onSuccess: () => void;
+};
+
+type Cotizacion = {
+  destino: { plan: string; billing: string };
+  precioLista: number;
+  credito: number;
+  aPagar: number;
+  diasRestantes: number;
 };
 
 interface SubscriptionCoupon {
@@ -25,17 +43,23 @@ function money(n: number) {
   return new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(n);
 }
 
-export default function PaymentModal({ plan, billing, amount, onClose, onSuccess }: Props) {
+export default function PaymentModal({ plan, billing, onClose, onSuccess }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [availableCoupon, setAvailableCoupon] = useState<SubscriptionCoupon | null>(null);
   const [appliedCoupon, setAppliedCoupon] = useState<SubscriptionCoupon | null>(null);
   const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
+  const [cotizacion, setCotizacion] = useState<Cotizacion | null>(null);
+  const [errorCotizacion, setErrorCotizacion] = useState(false);
 
+  const amount = cotizacion?.aPagar ?? 0;
+  // El mismo orden que usa el servidor: primero se descuentan los días no usados
+  // y el porcentaje del cupón se aplica sobre lo que queda. Si acá fuera al revés,
+  // el total mostrado volvería a no coincidir con el cobrado.
   const discount = appliedCoupon ? Math.round(amount * appliedCoupon.discountValue / 100) : 0;
   const finalAmount = amount - discount;
-  const isFreeMonth = finalAmount === 0;
+  const isFreeMonth = cotizacion !== null && finalAmount === 0;
 
   useEffect(() => {
     fetch("/api/vendedoras/premios")
@@ -50,7 +74,29 @@ export default function PaymentModal({ plan, billing, amount, onClose, onSuccess
       .catch(() => {});
   }, []);
 
+  // El precio real, del servidor. Hasta que llega, el botón de pagar no se
+  // habilita: es preferible una espera de un segundo a mostrar un número que
+  // después no sea el que se cobra.
+  useEffect(() => {
+    let vigente = true;
+    fetch("/api/suscripcion/cotizar")
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error("cotizar"))))
+      .then((data: { cotizaciones: Cotizacion[] }) => {
+        if (!vigente) return;
+        const match = data.cotizaciones?.find(
+          (c) => c.destino.plan === plan && c.destino.billing === billing
+        );
+        if (match) setCotizacion(match);
+        else setErrorCotizacion(true);
+      })
+      .catch(() => { if (vigente) setErrorCotizacion(true); });
+    return () => { vigente = false; };
+  }, [plan, billing]);
+
   async function handlePay() {
+    // Guard síncrono: el `disabled` del botón llega recién en el re-render, así
+    // que un doble click rápido dispara dos veces sin esto.
+    if (loading || !cotizacion) return;
     setLoading(true);
     setError("");
     try {
@@ -70,7 +116,11 @@ export default function PaymentModal({ plan, billing, amount, onClose, onSuccess
     }
   }
 
-  const planLabel = plan === "OWNER_PREMIUM" ? "Dueño Premium" : plan === "OWNER_BASIC" ? "Dueño Básico" : "Afiliado";
+  // Los nombres que ve la gente son "Tienda Pro" y "Tienda Premium". "Básico" es
+  // el valor interno del tier y no existe en ninguna pantalla ni en los Términos:
+  // que apareciera justo en el modal de pago era pedirle plata por un plan que no
+  // figura en ningún lado.
+  const planLabel = plan === "OWNER_PREMIUM" ? "Tienda Premium" : plan === "OWNER_BASIC" ? "Tienda Pro" : "Afiliado";
   const billingLabel = billing === "MONTHLY" ? "mensual" : "anual";
 
   const renewalDate = (() => {
@@ -220,22 +270,51 @@ export default function PaymentModal({ plan, billing, amount, onClose, onSuccess
             </div>
           )}
 
-          {/* Resumen */}
+          {/* Resumen. Cada línea es una resta que se puede seguir con el dedo:
+              precio de lista, lo que ya pagó, el cupón, y el total. */}
           <div className="rounded-xl border border-gray-200 overflow-hidden">
-            <div className="px-4 py-3 flex justify-between text-sm">
-              <span className="text-gray-500">{planLabel} {billingLabel}</span>
-              <span className="text-gray-900 font-medium">{money(amount)}</span>
-            </div>
-            {appliedCoupon && !isFreeMonth && (
-              <div className="px-4 py-3 flex justify-between text-sm border-t border-gray-100">
-                <span className="text-emerald-600">Descuento</span>
-                <span className="text-emerald-600 font-medium">−{money(discount)}</span>
+            {errorCotizacion ? (
+              <div className="px-4 py-5 text-center">
+                <p className="text-sm text-gray-600">No pudimos calcular el precio.</p>
+                <p className="mt-1 text-xs text-gray-400">Cerrá y volvé a intentar en un momento.</p>
               </div>
+            ) : !cotizacion ? (
+              <div className="flex items-center justify-center gap-2 px-4 py-6 text-sm text-gray-400">
+                <Loader2 className="h-4 w-4 animate-spin" /> Calculando tu precio…
+              </div>
+            ) : (
+              <>
+                <div className="px-4 py-3 flex justify-between text-sm">
+                  <span className="text-gray-500">{planLabel} {billingLabel}</span>
+                  <span className="text-gray-900 font-medium">{money(cotizacion.precioLista)}</span>
+                </div>
+
+                {cotizacion.credito > 0 && (
+                  <div className="px-4 py-3 border-t border-gray-100">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-emerald-600">Días que ya pagaste</span>
+                      <span className="text-emerald-600 font-medium">−{money(cotizacion.credito)}</span>
+                    </div>
+                    <p className="mt-1 text-xs text-gray-400">
+                      Te quedaban {cotizacion.diasRestantes} {cotizacion.diasRestantes === 1 ? "día" : "días"} de tu
+                      plan anterior y te los descontamos.
+                    </p>
+                  </div>
+                )}
+
+                {appliedCoupon && discount > 0 && (
+                  <div className="px-4 py-3 flex justify-between text-sm border-t border-gray-100">
+                    <span className="text-emerald-600">Cupón {appliedCoupon.code}</span>
+                    <span className="text-emerald-600 font-medium">−{money(discount)}</span>
+                  </div>
+                )}
+
+                <div className="px-4 py-3 flex justify-between border-t border-gray-200 bg-gray-50">
+                  <span className="text-sm font-semibold text-gray-900">Total a pagar hoy</span>
+                  <span className="text-sm font-bold text-gray-900">{isFreeMonth ? "Sin cargo" : money(finalAmount)}</span>
+                </div>
+              </>
             )}
-            <div className="px-4 py-3 flex justify-between border-t border-gray-200 bg-gray-50">
-              <span className="text-sm font-semibold text-gray-900">Total</span>
-              <span className="text-sm font-bold text-gray-900">{isFreeMonth ? "Gratis" : money(finalAmount)}</span>
-            </div>
           </div>
 
           {error && (
@@ -244,7 +323,9 @@ export default function PaymentModal({ plan, billing, amount, onClose, onSuccess
 
           <button
             type="button"
-            disabled={loading}
+            // Sin cotización no se puede pagar: es lo que impide arrancar un
+            // cobro sin haberle mostrado antes cuánto es.
+            disabled={loading || !cotizacion}
             onClick={handlePay}
             className="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
           >

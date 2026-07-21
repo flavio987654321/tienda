@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth-session";
 import { prisma } from "@/lib/prisma";
-import { PRICES, periodFor } from "@/lib/subscription";
+import { periodFor, cotizarCambioDePlan } from "@/lib/subscription";
 import { platformClient } from "@/lib/mp";
 import { Preference } from "mercadopago";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -38,11 +38,25 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "El plan de afiliadas es gratuito, no requiere pago" }, { status: 400 });
   }
 
-  const baseAmount = PRICES[plan as keyof typeof PRICES]?.[billing as "MONTHLY" | "ANNUAL"];
-  if (!baseAmount) return NextResponse.json({ error: "Plan inválido" }, { status: 400 });
+  // Se validan contra la lista de valores permitidos y no con un cast: `plan`
+  // llega del navegador y va directo a buscar un precio.
+  if (plan !== "OWNER_BASIC" && plan !== "OWNER_PREMIUM") {
+    return NextResponse.json({ error: "Plan inválido" }, { status: 400 });
+  }
+  if (billing !== "MONTHLY" && billing !== "ANNUAL") {
+    return NextResponse.json({ error: "Ciclo de facturación inválido" }, { status: 400 });
+  }
 
-  const role = plan.startsWith("OWNER") ? "OWNER" : "AFFILIATE";
+  const role = "OWNER";
   const tier = plan === "OWNER_PREMIUM" ? "PREMIUM" : "BASIC";
+
+  // El monto lo decide el servidor con los datos de la base, SIEMPRE. El
+  // navegador no manda ningún importe: la pantalla de precios mostraba un total
+  // con descuento que este endpoint no aplicaba, y MercadoPago terminaba
+  // cobrando el precio de lista. Ahora la pantalla pregunta y acá se recalcula.
+  const subActual = await prisma.subscription.findUnique({ where: { userId: user.id } });
+  const cotizacion = cotizarCambioDePlan(subActual, { plan, billing });
+  const baseAmount = cotizacion.aPagar;
 
   // Validar y aplicar cupón si viene
   let finalAmount = baseAmount;
@@ -59,6 +73,10 @@ export async function POST(req: NextRequest) {
       coupon.status === "AVAILABLE" &&
       coupon.expiresAt > new Date()
     ) {
+      // El porcentaje se aplica sobre lo que quedó DESPUÉS del descuento por días
+      // no usados, no sobre el precio de lista. Así los dos beneficios se suman
+      // sin que el total pueda irse abajo de cero, y un cupón del 100% sigue
+      // dejando la suscripción en cero.
       finalAmount = Math.round(baseAmount * (1 - Math.min(coupon.discountValue, 100) / 100));
       couponId = coupon.id;
     }
@@ -84,7 +102,10 @@ export async function POST(req: NextRequest) {
   }
 
   // Crear preferencia de Checkout Pro en MP
-  const planLabel = plan === "OWNER_PREMIUM" ? "Dueño Premium" : plan === "OWNER_BASIC" ? "Dueño Básico" : "Afiliado";
+  // Este texto es el que ve la persona en el checkout de MercadoPago y le queda
+  // en el comprobante: tiene que ser el nombre real del plan. "Dueño Básico" no
+  // existe en ninguna pantalla ni en los Términos.
+  const planLabel = plan === "OWNER_PREMIUM" ? "Tienda Premium" : plan === "OWNER_BASIC" ? "Tienda Pro" : "Afiliado";
   const billingLabel = billing === "MONTHLY" ? "Mensual" : "Anual";
 
   const accessToken = process.env.MP_ACCESS_TOKEN;

@@ -154,7 +154,9 @@ export async function POST(req: NextRequest) {
     }
 
     if (userRecord.email) {
-      const planLabel = plan === "OWNER_PREMIUM" ? "Dueño Premium" : "Dueño Básico";
+      // El nombre que le llega por email tiene que coincidir con el del checkout
+      // y con el de "Mi plan": son el mismo plan visto tres veces.
+      const planLabel = plan === "OWNER_PREMIUM" ? "Tienda Premium" : "Tienda Pro";
       const billingLabel = billing === "MONTHLY" ? "Mensual" : "Anual";
       sendSubscriptionConfirmationEmail({
         to: userRecord.email,
