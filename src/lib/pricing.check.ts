@@ -318,11 +318,11 @@ const dcheck = (id: string, got: boolean, desc: string) => { if (!got) failed++;
   const sinFin = promo({ type: "PERCENT", value: 20, eventLabel: "Liquidación" });
   const r = resolveStoreEvent([sinFin]);
   dcheck("EV-G", r?.label === "Liquidación" && r.endsAt === null,
-    "sin fecha de fin → hay banner pero no hay cuenta regresiva");
+    "sin fecha de fin → el evento igual nombra al filtro, sin fecha que mostrar");
 }
 {
   dcheck("EV-H", resolveStoreEvent([promo({ type: "PERCENT", value: 20 })]) === null && resolveStoreEvent([]) === null,
-    "sin promos con evento → no hay banner");
+    "sin promos con evento → el filtro se llama como siempre");
 }
 
 console.log(failed === 0 ? "\n✅ Todos los casos dan el número congelado." : `\n❌ ${failed} caso(s) no coinciden.`);

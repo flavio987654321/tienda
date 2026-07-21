@@ -153,6 +153,9 @@ export async function POST(req: NextRequest) {
     planTier,
     checklist,
     momento: getArgentinaAhora(),
+    // Misma condición que el menú (DashboardLayout). Si se lee de otro lado,
+    // Sasha termina mandando a una sección que la dueña no tiene.
+    appsEnabled: process.env.NEXT_PUBLIC_APPS_ENABLED === "1",
   });
 
   const messages: ChatMessage[] = greet

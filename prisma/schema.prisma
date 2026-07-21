@@ -820,8 +820,8 @@ model StorePromotion {
 
   // Evento comercial al que pertenece ("Black Friday", "Día de la Madre", o uno
   // propio). null = promo suelta, sin evento. Cuando tiene valor, la tienda lo
-  // muestra en el tag del producto, en un banner con cuenta regresiva y como
-  // filtro en el listado. No cambia el cálculo del precio, es solo presentación.
+  // muestra en el tag del producto y le pone su nombre al filtro del listado.
+  // No cambia el cálculo del precio, es solo presentación.
   eventLabel     String?
 
   isActive       Boolean   @default(true)  // toggle pausar/activar
