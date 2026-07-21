@@ -48,6 +48,9 @@ const ICONS: Record<string, string> = {
   STORE_RESET: "🔄",
   store_offline: "🔕",
   STORE_CLOSED: "🚪",
+  // Plan (dueño) — los emite el admin al cambiar el tier de una cuenta
+  PLAN_UPGRADED: "👑",
+  PLAN_DOWNGRADED: "📋",
 };
 
 function timeAgo(dateStr: string) {

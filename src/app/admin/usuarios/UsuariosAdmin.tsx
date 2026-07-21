@@ -75,6 +75,17 @@ export default function UsuariosAdmin({ users: initial, filter: activeFilter }: 
   useEffect(() => { setUsers(baseUsers); }, [baseUsers]);
 
   const [subModal, setSubModal] = useState<User | null>(null);
+  // Lo que la tienda tiene cargado de aquello que Pro limita. Se pide al abrir el
+  // modal para poder avisar antes de bajar de plan, en vez de que la dueña se
+  // entere al chocarse con el tope.
+  // Guarda de quién son los números: abrir un usuario, cerrar y abrir otro rápido
+  // hacía que la respuesta del primero llegara después y pintara los cupones de
+  // una tienda en el modal de otra.
+  const [usoPlan, setUsoPlan] = useState<{
+    userId: string;
+    uso: { cupones: number; promociones: number; afiliados: number } | null;
+    topesPro: { cupones: number; promociones: number; afiliados: number };
+  } | null>(null);
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [deleteModal, setDeleteModal] = useState<User | null>(null);
@@ -120,6 +131,14 @@ export default function UsuariosAdmin({ users: initial, filter: activeFilter }: 
     } finally {
       setLoadingId(null);
     }
+  }
+
+  function abrirUsoPlan(userId: string) {
+    setUsoPlan(null);
+    fetch(`/api/admin/suscripciones/${userId}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (d) setUsoPlan({ userId, ...d }); })
+      .catch(() => {});
   }
 
   async function changeSub(userId: string, body: object) {
@@ -330,7 +349,7 @@ export default function UsuariosAdmin({ users: initial, filter: activeFilter }: 
                         </span>
                       ) : sub ? (
                         <button
-                          onClick={() => setSubModal(u)}
+                          onClick={() => { setSubModal(u); abrirUsoPlan(u.id); }}
                           className={`text-xs font-semibold px-2.5 py-1 rounded-full transition-opacity hover:opacity-70 ${sub.color}`}
                         >
                           {getTierLabel(u.subscription!)} · {sub.label} · {u.subscription!.plan === "ANNUAL" ? "Anual" : "Mensual"}
@@ -578,6 +597,39 @@ export default function UsuariosAdmin({ users: initial, filter: activeFilter }: 
               {/* Cambiar tipo de plan */}
               <div className="mb-4">
                 <p className="text-gray-500 text-xs font-semibold uppercase tracking-wider mb-2">Tipo de plan</p>
+
+                {/* Solo cuando bajar a Pro dejaría algo por encima del tope. Si
+                    entra holgado no se dice nada: un cartel que aparece siempre
+                    deja de leerse. */}
+                {(() => {
+                  if (s.tier !== "PREMIUM" || !usoPlan?.uso) return null;
+                  if (usoPlan.userId !== subModal.id) return null;
+                  const { uso, topesPro } = usoPlan;
+                  const excedidos = [
+                    { que: "cupones", tiene: uso.cupones, tope: topesPro.cupones },
+                    { que: "promociones", tiene: uso.promociones, tope: topesPro.promociones },
+                    { que: "afiliados", tiene: uso.afiliados, tope: topesPro.afiliados },
+                  ].filter((x) => x.tiene > x.tope);
+                  if (excedidos.length === 0) return null;
+                  return (
+                    <div className="mb-2.5 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2.5">
+                      <p className="text-xs font-semibold text-amber-300">
+                        Con Tienda Pro esta tienda queda por encima del tope
+                      </p>
+                      <ul className="mt-1 space-y-0.5">
+                        {excedidos.map((x) => (
+                          <li key={x.que} className="text-[11px] text-amber-200/80">
+                            {x.tiene} {x.que} · el tope de Pro es {x.tope}
+                          </li>
+                        ))}
+                      </ul>
+                      <p className="mt-1.5 text-[11px] text-amber-200/60">
+                        Lo que ya tiene creado sigue funcionando; no va a poder crear más hasta hacer lugar.
+                      </p>
+                    </div>
+                  );
+                })()}
+
                 <div className="grid grid-cols-2 gap-2">
                   {[
                     { label: "Tienda Pro",     body: { tier: "BASIC" } },

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { myActiveCouponsWhere, isPremiumTier, PRO_MAX_ACTIVE_COUPONS } from "@/lib/planLimits";
+import { myActiveCouponsWhere, PRO_MAX_ACTIVE_COUPONS } from "@/lib/planLimits";
+import { hasActivePremium, SUB_STATUS_SELECT } from "@/lib/subscription";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
 import { isValidCouponCode, normalizeCouponCode } from "@/lib/coupons";
@@ -56,7 +57,7 @@ export async function GET(req: NextRequest) {
     // Mismo count que usa el POST para bloquear: así el número que ve la dueña
     // es exactamente el que se le va a aplicar, sin sorpresas al guardar.
     prisma.coupon.count({ where: myActiveCouponsWhere(store.id, now) }),
-    prisma.subscription.findUnique({ where: { userId: user.id }, select: { tier: true } }),
+    prisma.subscription.findUnique({ where: { userId: user.id }, select: SUB_STATUS_SELECT }),
   ]);
   const activePrizeTemplateIds = new Set(activePrizeTemplates.map((p) => p.couponId as string));
 
@@ -100,7 +101,7 @@ export async function GET(req: NextRequest) {
     },
     limit: {
       used: myActiveCount,
-      max: isPremiumTier(sub?.tier) ? null : PRO_MAX_ACTIVE_COUPONS,
+      max: hasActivePremium(sub) ? null : PRO_MAX_ACTIVE_COUPONS,
     },
   });
 }
@@ -112,7 +113,7 @@ export async function POST(req: NextRequest) {
 
   const [store, sub] = await Promise.all([
     prisma.store.findUnique({ where: { ownerId: user.id }, select: { id: true } }),
-    prisma.subscription.findUnique({ where: { userId: user.id }, select: { tier: true } }),
+    prisma.subscription.findUnique({ where: { userId: user.id }, select: SUB_STATUS_SELECT }),
   ]);
   if (!store) return NextResponse.json({ error: "Tienda no encontrada" }, { status: 404 });
 
@@ -156,7 +157,7 @@ export async function POST(req: NextRequest) {
   // sueltos, dos pedidos simultáneos contaban los dos 9 de 10 y creaban los dos.
   try {
     const coupon = await prisma.$transaction(async (tx) => {
-      if (!isPremiumTier(sub?.tier)) {
+      if (!hasActivePremium(sub)) {
         await tx.$queryRaw`SELECT id FROM "Store" WHERE id = ${store.id} FOR UPDATE`;
         const couponCount = await tx.coupon.count({ where: myActiveCouponsWhere(store.id) });
         if (couponCount >= PRO_MAX_ACTIVE_COUPONS) throw new CouponLimitError();

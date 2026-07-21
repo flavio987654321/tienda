@@ -22,6 +22,9 @@ import {
   Wallet,
 } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth-session";
+import { PRO_MAX_AFFILIATES } from "@/lib/planLimits";
+import { hasActivePremium, SUB_STATUS_SELECT } from "@/lib/subscription";
+import LimitePlanBanner from "@/components/dashboard/LimitePlanBanner";
 import AffiliateToggle from "./AffiliateToggle";
 import MetasWidget from "./MetasWidget";
 import WithdrawalPayButton from "@/components/affiliates/WithdrawalPayButton";
@@ -90,6 +93,16 @@ export default async function VendedorasPage() {
   const teamAffiliates = affiliates.filter((affiliate) => affiliate.status !== "PENDING" && affiliate.status !== "REMOVED");
   const approved = affiliates.filter((affiliate) => affiliate.status === "APPROVED");
   const active = approved.filter((affiliate) => affiliate.isActive);
+
+  // Misma cuenta que hace cumplir /api/vendedoras/[id] al aprobar (APPROVED +
+  // isActive): si el aviso contara distinto, diría "te queda lugar" y el botón
+  // igual rebotaría.
+  const subTier = await prisma.subscription.findUnique({
+    where: { userId: user.id },
+    select: SUB_STATUS_SELECT,
+  });
+  const maxAffiliates = hasActivePremium(subTier) ? null : PRO_MAX_AFFILIATES;
+  const atAffiliateLimit = maxAffiliates !== null && active.length >= maxAffiliates;
   const now = new Date();
   const startThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
   const startLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
@@ -272,6 +285,22 @@ export default async function VendedorasPage() {
           </div>
         ))}
       </div>
+
+      {/* Antes acá no había ningún aviso: la dueña se enteraba del tope recién al
+          apretar "Aprobar" y comerse el error, con la persona esperando del otro lado. */}
+      {atAffiliateLimit && (
+        <LimitePlanBanner
+          titulo={`Llegaste a los ${maxAffiliates} afiliados del plan Tienda Pro`}
+          queGanas="afiliados sin límite"
+          comoLiberar={
+            <>
+              No vas a poder aprobar más solicitudes hasta hacer lugar. Para liberar uno, pausá
+              a alguien que no esté vendiendo desde la lista de abajo — los pausados no ocupan
+              lugar y podés reactivarlos cuando quieras.
+            </>
+          }
+        />
+      )}
 
       {pending.length > 0 && (
         <section className="mb-8">

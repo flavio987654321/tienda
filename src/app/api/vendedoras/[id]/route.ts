@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
 import { sendAffiliateStatusEmail } from "@/lib/email";
 import { createNotification } from "@/lib/notifications";
+import { PRO_MAX_AFFILIATES } from "@/lib/planLimits";
+import { hasActivePremium, SUB_STATUS_SELECT } from "@/lib/subscription";
 
 type RouteContext = {
   params: Promise<{ id: string }>;
@@ -31,14 +33,14 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
   }
 
   if (action === "approve") {
-    const sub = await prisma.subscription.findUnique({ where: { userId: ownerId }, select: { tier: true } });
-    if (!sub || sub.tier !== "PREMIUM") {
+    const sub = await prisma.subscription.findUnique({ where: { userId: ownerId }, select: SUB_STATUS_SELECT });
+    if (!hasActivePremium(sub)) {
       const activeCount = await prisma.affiliate.count({
         where: { ownerId, status: "APPROVED", isActive: true },
       });
-      if (activeCount >= 6) {
+      if (activeCount >= PRO_MAX_AFFILIATES) {
         return NextResponse.json(
-          { error: "Alcanzaste el límite de 6 afiliados del plan Tienda Pro. Actualizá a Premium para agregar más." },
+          { error: `Alcanzaste el límite de ${PRO_MAX_AFFILIATES} afiliados del plan Tienda Pro. Pausá a alguien que no esté vendiendo, o pasá a Premium para tenerlos sin límite.` },
           { status: 403 }
         );
       }
@@ -167,14 +169,14 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
   }
 
   if (action === "reactivate") {
-    const subR = await prisma.subscription.findUnique({ where: { userId: ownerId }, select: { tier: true } });
-    if (!subR || subR.tier !== "PREMIUM") {
+    const subR = await prisma.subscription.findUnique({ where: { userId: ownerId }, select: SUB_STATUS_SELECT });
+    if (!hasActivePremium(subR)) {
       const activeCount = await prisma.affiliate.count({
         where: { ownerId, status: "APPROVED", isActive: true },
       });
-      if (activeCount >= 6) {
+      if (activeCount >= PRO_MAX_AFFILIATES) {
         return NextResponse.json(
-          { error: "Alcanzaste el límite de 6 afiliados del plan Tienda Pro. Actualizá a Premium para agregar más." },
+          { error: `Alcanzaste el límite de ${PRO_MAX_AFFILIATES} afiliados del plan Tienda Pro. Pausá a alguien que no esté vendiendo, o pasá a Premium para tenerlos sin límite.` },
           { status: 403 }
         );
       }

@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { AppLogo } from "@/components/AppLogo";
 import { useTurnstile } from "@/components/Turnstile";
 import { isPwa } from "@/lib/pwa";
+import { PRICES as PLAN_PRICES, PRO_MAX_AFFILIATES, PRO_MAX_ACTIVE_COUPONS } from "@/lib/planLimits";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import {
@@ -22,11 +23,13 @@ export default function RegistroPage() {
 
 type AccountType = "owner" | "seller" | "buyer";
 
-// El plan de vendedor/a (seller) es gratuito, por eso no tiene precios acá
+// El plan de vendedor/a (seller) es gratuito, por eso no tiene precios acá.
+// Los números salen de lib/subscription, que es de donde los toma el cobro: acá
+// estaban copiados, así que cambiar un precio obligaba a acordarse de este archivo.
 const PRICES = {
   owner: {
-    BASIC:   { MONTHLY: 20000, ANNUAL: 180000 },
-    PREMIUM: { MONTHLY: 25000, ANNUAL: 225000 },
+    BASIC:   PLAN_PRICES.OWNER_BASIC,
+    PREMIUM: PLAN_PRICES.OWNER_PREMIUM,
   },
 };
 
@@ -439,7 +442,7 @@ function RegistroContent() {
                       </button>
                     </div>
                     {ownerTier === "BASIC" ? (
-                      <p className="text-xs text-gray-400 mt-1.5">6 afiliados · 10 cupones · Dominio propio no incluido</p>
+                      <p className="text-xs text-gray-400 mt-1.5">{PRO_MAX_AFFILIATES} afiliados · {PRO_MAX_ACTIVE_COUPONS} cupones · Dominio propio no incluido</p>
                     ) : (
                       <p className="text-xs text-amber-700/80 mt-1.5">Afiliados y cupones ilimitados · Dominio propio · App instalable · Flyer publicitario</p>
                     )}

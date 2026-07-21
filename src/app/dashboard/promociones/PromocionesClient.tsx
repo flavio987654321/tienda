@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, useCallback, useRef, useMemo } from "react";
-import { getEventNames, getEventDate } from "@/lib/fechas-comerciales";
+import { getEventNames, getEventRange } from "@/lib/fechas-comerciales";
 import {
   Percent, Tag, Gift, Truck, Store, Folder, ListChecks, Check, Plus, X,
   Info, AlertTriangle, Loader2, Search, Archive, Trash2, RotateCcw, Smile, Pencil, Shuffle,
 } from "lucide-react";
 import { costFloorCheck, MAX_PROMO_PERCENT as MAX_PCT, MAX_EVENT_LABEL } from "@/lib/promotions";
+import LimitePlanBanner from "@/components/dashboard/LimitePlanBanner";
 
 // Emojis para el nombre de la promo (lo ve solo el dueño; le ayuda a reconocerla de un vistazo).
 const PROMO_EMOJIS = [
@@ -204,23 +205,17 @@ export default function PromocionesClient({
       </div>
 
       {atLimit && (
-        <div className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3.5 mb-6">
-          <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
-          <div className="text-sm">
-            <p className="font-semibold text-amber-900">
-              Llegaste a las {maxPromotions} promociones del plan Tienda Pro
-            </p>
-            <p className="text-amber-800 mt-0.5 leading-relaxed">
+        <LimitePlanBanner
+          titulo={`Llegaste a las ${maxPromotions} promociones del plan Tienda Pro`}
+          queGanas="promociones sin límite"
+          comoLiberar={
+            <>
               Para crear otra, archivá alguna que ya no uses desde el botón{" "}
               <Archive className="h-3 w-3 inline-block -mt-0.5" /> de la lista — las archivadas y las
-              vencidas no ocupan lugar, y podés restaurarlas cuando quieras. Con{" "}
-              <a href="/dashboard/mi-plan" className="font-semibold underline underline-offset-2 hover:text-amber-900">
-                Tienda Premium
-              </a>{" "}
-              las tenés sin límite.
-            </p>
-          </div>
-        </div>
+              vencidas no ocupan lugar, y podés restaurarlas cuando quieras.
+            </>
+          }
+        />
       )}
 
       {/* Stats */}
@@ -392,15 +387,10 @@ function Wizard({ categories, products, onClose, onCreated, editPromo }: {
   function elegirEventoDelCalendario(nombre: string) {
     setEventMode("cal");
     setEventLabel(nombre);
-    const fecha = getEventDate(nombre);
-    if (!fecha) return;
-    const iso = fecha.toISOString().slice(0, 10);
-    if (!endsAt) setEndsAt(iso);
-    if (!startsAt) {
-      const desde = new Date(fecha);
-      desde.setUTCDate(desde.getUTCDate() - 3); // arranca unos días antes, como se usa
-      setStartsAt(desde.toISOString().slice(0, 10));
-    }
+    const rango = getEventRange(nombre);
+    if (!rango) return;
+    if (!endsAt) setEndsAt(rango.hasta.toISOString().slice(0, 10));
+    if (!startsAt) setStartsAt(rango.desde.toISOString().slice(0, 10));
   }
 
   const meta = type ? TYPE_META[type] : null;

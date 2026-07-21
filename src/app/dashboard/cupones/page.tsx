@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef, Fragment } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
+import LimitePlanBanner from "@/components/dashboard/LimitePlanBanner";
 import {
   Plus, Loader2, Settings, Palette, Gift, X, AlertCircle,
   ToggleLeft, ToggleRight, Copy, Check, Search, ChevronDown, ChevronUp, Trash2,
@@ -255,6 +256,19 @@ function CouponHistory() {
           </div>
         )}
       </div>
+
+      {limit?.max != null && limit.used >= limit.max && (
+        <LimitePlanBanner
+          titulo={`Llegaste a los ${limit.max} cupones activos del plan Tienda Pro`}
+          queGanas="cupones sin límite"
+          comoLiberar={
+            <>
+              Para crear otro, apagá alguno que ya no uses o dejá que venza — los vencidos y los
+              de la ruleta no ocupan lugar. Podés apagarlos desde la lista de abajo.
+            </>
+          }
+        />
+      )}
 
       {stats && (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">

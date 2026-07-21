@@ -5,8 +5,56 @@ import { logAdminAction } from "@/lib/admin-log";
 import { revalidatePath } from "next/cache";
 import { getClientIp } from "@/lib/request-ip";
 import { periodFor, getSubscriptionStatus } from "@/lib/subscription";
+import { createNotification } from "@/lib/notifications";
+import {
+  myActiveCouponsWhere,
+  livePromotionsWhere,
+  PRO_MAX_ACTIVE_COUPONS,
+  PRO_MAX_LIVE_PROMOTIONS,
+  PRO_MAX_AFFILIATES,
+} from "@/lib/planLimits";
 
 const VALID_STATUSES = ["TRIAL", "ACTIVE", "GRACE", "EXPIRED", "CANCELLED"];
+
+/**
+ * Cuánto tiene cargado esta tienda de lo que el plan Pro limita.
+ *
+ * Sirve para que el admin no baje de plan a ciegas: bajar a Pro a alguien con 30
+ * cupones no rompe nada —los existentes siguen andando y no puede crear más— pero
+ * es una sorpresa evitable si se ve el número antes de apretar.
+ *
+ * Se cuenta con las mismas condiciones que aplican los topes (planLimits), no con
+ * un count crudo: si acá contara distinto, el aviso diría un número y el sistema
+ * después haría cumplir otro.
+ */
+export async function GET(
+  _req: NextRequest,
+  { params }: { params: Promise<{ userId: string }> }
+) {
+  const current = await getCurrentUser();
+  if (!current || current.role !== "ADMIN") {
+    return NextResponse.json({ error: "No autorizado" }, { status: 403 });
+  }
+
+  const { userId } = await params;
+  const store = await prisma.store.findUnique({ where: { ownerId: userId }, select: { id: true } });
+  if (!store) return NextResponse.json({ uso: null });
+
+  const [cupones, promociones, afiliados] = await Promise.all([
+    prisma.coupon.count({ where: myActiveCouponsWhere(store.id) }),
+    prisma.storePromotion.count({ where: livePromotionsWhere(store.id) }),
+    prisma.affiliate.count({ where: { ownerId: userId, status: "APPROVED", isActive: true } }),
+  ]);
+
+  return NextResponse.json({
+    uso: { cupones, promociones, afiliados },
+    topesPro: {
+      cupones: PRO_MAX_ACTIVE_COUPONS,
+      promociones: PRO_MAX_LIVE_PROMOTIONS,
+      afiliados: PRO_MAX_AFFILIATES,
+    },
+  });
+}
 
 export async function PATCH(
   req: NextRequest,
@@ -77,6 +125,24 @@ export async function PATCH(
   }
 
   const updated = await prisma.subscription.update({ where: { userId }, data });
+
+  // Avisarle a la dueña que le cambiaron el plan. Es un cambio que le hicimos
+  // nosotros a su cuenta y que le cambia lo que puede hacer: sin aviso, se entera
+  // recién cuando algo deja de funcionarle. Solo cuando el tier cambia de verdad
+  // —tocar el estado o extender el trial no altera qué funciones tiene—.
+  const tierCambio = data.tier !== undefined && data.tier !== sub.tier;
+  if (tierCambio) {
+    const aPremium = data.tier === "PREMIUM";
+    await createNotification({
+      userId,
+      type: aPremium ? "PLAN_UPGRADED" : "PLAN_DOWNGRADED",
+      title: aPremium ? "Tu plan pasó a Tienda Premium" : "Tu plan pasó a Tienda Pro",
+      body: aPremium
+        ? "Ya tenés cupones, promociones y afiliados sin límite, notificaciones, dominio propio y tu tienda instalable como app."
+        : `Tienda Pro incluye hasta ${PRO_MAX_ACTIVE_COUPONS} cupones, ${PRO_MAX_LIVE_PROMOTIONS} promociones y ${PRO_MAX_AFFILIATES} afiliados. Lo que ya tenías creado sigue funcionando.`,
+      link: "/dashboard/mi-plan",
+    });
+  }
 
   revalidatePath("/dashboard", "layout");
   revalidatePath("/dashboard/mi-plan");

@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { CheckCircle, Clock, AlertTriangle, CreditCard, ArrowRight, RefreshCw, Zap, Crown, Star } from "lucide-react";
+import { CheckCircle, Clock, AlertTriangle, CreditCard, ArrowRight, RefreshCw, Zap, Crown, Star, Bell, Globe } from "lucide-react";
 import { getSubscriptionStatus, daysRemaining, getPriceForRole } from "@/lib/subscription";
+import { PRO_MAX_ACTIVE_COUPONS, PRO_MAX_LIVE_PROMOTIONS, PRO_MAX_AFFILIATES, PUSH_CAMPAIGNS_PER_WEEK } from "@/lib/planLimits";
 import PaymentModal from "@/components/subscription/PaymentModal";
 
 type Sub = {
@@ -15,7 +16,12 @@ type Sub = {
   gracePeriodEndsAt: Date | null;
 } | null;
 
-type Props = { sub: Sub; userRole: "OWNER" | "SELLER" };
+type Props = {
+  sub: Sub;
+  userRole: "OWNER" | "SELLER";
+  /** Llega con ?upgrade=premium desde los avisos de tope: abre el pago sin un click más. */
+  autoUpgrade?: boolean;
+};
 
 function money(n: number) {
   return new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(n);
@@ -30,7 +36,17 @@ const PLAN_CONFIG = {
       lightGradient: "from-indigo-50 to-violet-50",
       border: "border-indigo-200",
       icon: Store,
-      features: ["Tienda personalizada", "Productos ilimitados", "Panel de pedidos", "Afiliados", "Cupones de descuento"],
+      // Con los números adentro: sin ellos, la dueña se enteraba del tope recién
+      // cuando el sistema la frenaba. Y salen de las constantes que los aplican,
+      // así que no pueden decir un número distinto al que se hace cumplir.
+      features: [
+        "Tienda con subdominio incluido",
+        "Productos y variantes ilimitados",
+        "Panel de pedidos y estadísticas",
+        `Hasta ${PRO_MAX_AFFILIATES} afiliados`,
+        `Hasta ${PRO_MAX_ACTIVE_COUPONS} cupones activos`,
+        `Hasta ${PRO_MAX_LIVE_PROMOTIONS} promociones a la vez`,
+      ],
     },
     PREMIUM: {
       name: "Tienda Premium",
@@ -38,7 +54,18 @@ const PLAN_CONFIG = {
       lightGradient: "from-violet-50 to-fuchsia-50",
       border: "border-violet-200",
       icon: Crown,
-      features: ["Todo lo de Básico", "Métricas avanzadas", "Múltiples plantillas premium", "Soporte prioritario", "Badge verificado"],
+      // Antes prometía tres cosas que NO son exclusivas —métricas, diseños y el
+      // badge de verificación son idénticos en los dos planes— y no nombraba
+      // ninguna de las cuatro que sí lo son. Vender lo que no se cumple no suma:
+      // el que se pasa por el badge después descubre que ya lo tenía.
+      features: [
+        "Todo lo de Tienda Pro, sin topes",
+        "Tu tienda instalable como app en el celular",
+        `Avisales novedades por notificación (${PUSH_CAMPAIGNS_PER_WEEK} por semana)`,
+        "Conectá tu propio dominio",
+        "Flyer de promoción al entrar a tu tienda",
+        "Soporte prioritario",
+      ],
     },
   },
 };
@@ -59,8 +86,26 @@ const STATUS_CONFIG: Record<string, { label: string; textColor: string; bgColor:
   CANCELLED: { label: "Cancelada",         textColor: "text-gray-600",    bgColor: "bg-gray-100",   borderColor: "border-gray-200",    icon: AlertTriangle },
 };
 
-export default function MiPlanClient({ sub, userRole }: Props) {
-  const [payModal, setPayModal] = useState<{ plan: "OWNER_BASIC" | "OWNER_PREMIUM"; billing: "MONTHLY" | "ANNUAL"; amount: number } | null>(null);
+export default function MiPlanClient({ sub, userRole, autoUpgrade = false }: Props) {
+  // Inicializador perezoso en vez de un efecto: el modal tiene que estar abierto
+  // en el primer render, no aparecer después de un parpadeo. Se ignora si ya es
+  // Premium (no hay nada que comprar) o si la cuenta es de afiliada (es gratis).
+  const [payModal, setPayModal] = useState<{ plan: "OWNER_BASIC" | "OWNER_PREMIUM"; billing: "MONTHLY" | "ANNUAL" } | null>(() => {
+    if (!autoUpgrade || userRole !== "OWNER" || !sub) return null;
+    if ((sub.tier ?? "BASIC") === "PREMIUM") return null;
+    const billing = sub.plan === "ANNUAL" ? "ANNUAL" : "MONTHLY";
+    return { plan: "OWNER_PREMIUM", billing };
+  });
+
+  // Al cerrar se saca ?upgrade=premium de la URL: si queda, cerrar el pago y
+  // refrescar lo vuelve a abrir, y la persona no puede mirar su plan tranquila.
+  // replaceState y no router.replace para no re-renderizar la página entera.
+  function cerrarPago() {
+    setPayModal(null);
+    if (typeof window !== "undefined" && window.location.search.includes("upgrade=")) {
+      window.history.replaceState(null, "", window.location.pathname);
+    }
+  }
 
   // El plan de afiliadas es gratuito — nunca se le pide pagar, sin importar si tiene
   // una suscripción vieja en la base (de antes de este cambio).
@@ -85,7 +130,7 @@ export default function MiPlanClient({ sub, userRole }: Props) {
         <p className="text-gray-700 font-semibold mb-1">Sin suscripción activa</p>
         <p className="text-gray-400 text-sm mb-6">Elegí un plan para empezar a usar la plataforma.</p>
         <button
-          onClick={() => setPayModal({ plan: "OWNER_BASIC", billing: "MONTHLY", amount: getPriceForRole("OWNER", "BASIC", "MONTHLY") })}
+          onClick={() => setPayModal({ plan: "OWNER_BASIC", billing: "MONTHLY" })}
           className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-indigo-600 text-white text-sm font-bold hover:bg-indigo-500 transition-colors shadow-lg shadow-indigo-200"
         >
           <CreditCard className="h-4 w-4" /> Suscribirme
@@ -242,13 +287,24 @@ export default function MiPlanClient({ sub, userRole }: Props) {
             </div>
             <p className="text-sm text-gray-500 mb-4">Desbloqueá estas funciones mejorando tu plan.</p>
             <div className="space-y-3">
+              {/* Faltaban las notificaciones y el dominio: la lista mostraba 2 de
+                  las 4 funciones exclusivas, o sea que escondía media diferencia
+                  entre los planes justo en la pantalla donde se decide pagar.
+                  Los colores van literales y no armados con `bg-${color}-100`:
+                  Tailwind solo genera las clases que encuentra escritas enteras,
+                  así que las armadas en tiempo de ejecución dependen de que otra
+                  pantalla las use por casualidad. El violeta zafaba (ProductsTable
+                  lo usa literal); el fucsia no existía en ningún lado y el círculo
+                  salía sin color. */}
               {[
-                { icon: Zap, color: "violet", label: "Tu tienda como app (PWA)", desc: "Los clientes pueden instalarla en su celular" },
-                { icon: Star, color: "fuchsia", label: "Flyers publicitarios", desc: "Popup automático al entrar a tu tienda" },
-              ].map(({ icon: Icon, color, label, desc }) => (
+                { icon: Zap, tile: "bg-violet-100", ink: "text-violet-400", label: "Tu tienda como app (PWA)", desc: "Los clientes la instalan en su celular" },
+                { icon: Bell, tile: "bg-indigo-100", ink: "text-indigo-400", label: "Notificaciones push", desc: `Avisales novedades, hasta ${PUSH_CAMPAIGNS_PER_WEEK} por semana` },
+                { icon: Globe, tile: "bg-sky-100", ink: "text-sky-400", label: "Dominio propio", desc: "Tu tienda en tudominio.com, lo configuramos nosotros" },
+                { icon: Star, tile: "bg-fuchsia-100", ink: "text-fuchsia-400", label: "Flyers publicitarios", desc: "Aviso automático al entrar a tu tienda" },
+              ].map(({ icon: Icon, tile, ink, label, desc }) => (
                 <div key={label} className="flex items-center gap-3 p-4 bg-gray-50 rounded-2xl border border-gray-100 opacity-70">
-                  <div className={`w-10 h-10 bg-${color}-100 rounded-xl flex items-center justify-center`}>
-                    <Icon className={`h-5 w-5 text-${color}-400`} />
+                  <div className={`w-10 h-10 ${tile} rounded-xl flex items-center justify-center shrink-0`}>
+                    <Icon className={`h-5 w-5 ${ink}`} />
                   </div>
                   <div>
                     <p className="text-sm font-bold text-gray-600">{label}</p>
@@ -270,7 +326,7 @@ export default function MiPlanClient({ sub, userRole }: Props) {
             <button
               onClick={() => {
                 const planKey = planTier === "PREMIUM" ? "OWNER_PREMIUM" : "OWNER_BASIC";
-                setPayModal({ plan: planKey, billing: planBilling, amount: planPrice });
+                setPayModal({ plan: planKey, billing: planBilling });
               }}
               className="w-full flex items-center justify-between px-5 py-3.5 rounded-2xl border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 transition-colors group"
             >
@@ -288,7 +344,7 @@ export default function MiPlanClient({ sub, userRole }: Props) {
             <button
               onClick={() => {
                 const planKey = planTier === "PREMIUM" ? "OWNER_PREMIUM" : "OWNER_BASIC";
-                setPayModal({ plan: planKey, billing: "ANNUAL", amount: getPriceForRole("OWNER", planTier, "ANNUAL") });
+                setPayModal({ plan: planKey, billing: "ANNUAL" });
               }}
               className="w-full flex items-center justify-between px-5 py-3.5 rounded-2xl border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 transition-colors group"
             >
@@ -304,7 +360,7 @@ export default function MiPlanClient({ sub, userRole }: Props) {
 
           {isActive && planTier === "BASIC" && (
             <button
-              onClick={() => setPayModal({ plan: "OWNER_PREMIUM", billing: planBilling, amount: getPriceForRole("OWNER", "PREMIUM", planBilling) })}
+              onClick={() => setPayModal({ plan: "OWNER_PREMIUM", billing: planBilling })}
               className="w-full flex items-center justify-between px-5 py-3.5 rounded-2xl border border-violet-200 bg-violet-50 hover:bg-violet-100 transition-colors group"
             >
               <div className="flex items-center gap-3 text-sm font-semibold text-violet-700">
@@ -336,8 +392,7 @@ export default function MiPlanClient({ sub, userRole }: Props) {
         <PaymentModal
           plan={payModal.plan}
           billing={payModal.billing}
-          amount={payModal.amount}
-          onClose={() => setPayModal(null)}
+          onClose={cerrarPago}
           onSuccess={() => { setPayModal(null); window.location.reload(); }}
         />
       )}

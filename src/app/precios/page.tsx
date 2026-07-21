@@ -7,11 +7,20 @@ import { AppLogo } from "@/components/AppLogo";
 import { useSearchParams } from "next/navigation";
 import { Check, ShoppingBag, Zap, Store, Star, ArrowRight, PartyPopper, ShoppingCart, Crown, Mail, X, BadgeCheck, Menu, Package, MessageCircle } from "lucide-react";
 import PaymentModal from "@/components/subscription/PaymentModal";
+import { PRICES, PRO_MAX_ACTIVE_COUPONS, PRO_MAX_LIVE_PROMOTIONS, PRO_MAX_AFFILIATES, PUSH_CAMPAIGNS_PER_WEEK } from "@/lib/planLimits";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 function money(amount: number) {
   return new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(amount);
 }
+
+type Cotizacion = {
+  destino: { plan: string; billing: string };
+  precioLista: number;
+  credito: number;
+  aPagar: number;
+  diasRestantes: number;
+};
 
 type UserSub = {
   status: string;
@@ -35,7 +44,10 @@ function PreciosContent() {
   const pathname = usePathname();
   const [isAnnual, setIsAnnual] = useState(false);
   const [ownerTier, setOwnerTier] = useState<"BASIC" | "PREMIUM">("BASIC");
-  const [payModal, setPayModal] = useState<{ plan: "OWNER_BASIC" | "OWNER_PREMIUM" | "AFFILIATE"; billing: "MONTHLY" | "ANNUAL"; amount: number; prorated?: boolean } | null>(null);
+  const [payModal, setPayModal] = useState<{ plan: "OWNER_BASIC" | "OWNER_PREMIUM" | "AFFILIATE"; billing: "MONTHLY" | "ANNUAL" } | null>(null);
+  // Precios ya calculados por el servidor, con el descuento por días no usados
+  // aplicado. Vacío mientras carga o si no hay sesión: ahí se muestra el de lista.
+  const [cotizaciones, setCotizaciones] = useState<Cotizacion[]>([]);
   const [userSub, setUserSub] = useState<UserSub | null>(null);
   const [userName, setUserName] = useState<string | null>(null);
   const [userMetaRole, setUserMetaRole] = useState<string | null>(null);
@@ -55,6 +67,13 @@ function PreciosContent() {
           if (sub.role === "OWNER") setOwnerTier(sub.tier === "PREMIUM" ? "PREMIUM" : "BASIC");
         }
       })
+      .catch(() => {});
+
+    // Va con el estado de la suscripción porque se refrescan juntos: después de
+    // pagar, el plan cambia y los descuentos que quedaban dejan de aplicar.
+    fetch("/api/suscripcion/cotizar")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => setCotizaciones(data?.cotizaciones ?? []))
       .catch(() => {});
   }
 
@@ -89,13 +108,12 @@ function PreciosContent() {
     return () => { if (channel) supabase.removeChannel(channel); };
   }, []);
 
-  const ownerPrices = {
-    BASIC:   { monthly: 20000, annual: 180000 },
-    PREMIUM: { monthly: 25000, annual: 225000 },
-  };
-  const selectedOwner = ownerPrices[ownerTier];
-  const ownerMonthlyEquiv = isAnnual ? Math.round(selectedOwner.annual / 12) : selectedOwner.monthly;
-  const ownerPrice = isAnnual ? selectedOwner.annual : selectedOwner.monthly;
+  // De la misma constante que usa el cobro. Estaban copiados acá con otro formato
+  // de claves, así que un cambio de precio se aplicaba en el checkout pero no en
+  // la pantalla que lo anuncia.
+  const selectedOwner = ownerTier === "PREMIUM" ? PRICES.OWNER_PREMIUM : PRICES.OWNER_BASIC;
+  const ownerMonthlyEquiv = isAnnual ? Math.round(selectedOwner.ANNUAL / 12) : selectedOwner.MONTHLY;
+  const ownerPrice = isAnnual ? selectedOwner.ANNUAL : selectedOwner.MONTHLY;
 
   // Helpers para saber si el plan mostrado es el plan actual del usuario
   const viewingBilling: "MONTHLY" | "ANNUAL" = isAnnual ? "ANNUAL" : "MONTHLY";
@@ -116,16 +134,20 @@ function PreciosContent() {
     return userSub.plan === "MONTHLY" && viewingBilling === "ANNUAL" && userSub.status === "ACTIVE";
   }
 
-  function getProratedAmount(plan: "OWNER_BASIC" | "OWNER_PREMIUM") {
-    if (!userSub?.currentPeriodEnd) return ownerPrice;
-    // eslint-disable-next-line react-hooks/purity -- estimación de precio para mostrar en UI, una pequeña variación de "ahora" entre renders no tiene impacto (no se usa para cobrar)
-    const now = Date.now();
-    const periodEnd = new Date(userSub.currentPeriodEnd).getTime();
-    const daysLeft = Math.max(0, Math.ceil((periodEnd - now) / 86400000));
-    const monthlyPrice = plan === "OWNER_PREMIUM" ? 25000 : 20000;
-    const annualPrice = plan === "OWNER_PREMIUM" ? 225000 : 180000;
-    const credit = Math.round((daysLeft / 30) * monthlyPrice);
-    return Math.max(0, annualPrice - credit);
+  /**
+   * El precio real del servidor, no una estimación de esta pantalla.
+   *
+   * Antes acá se calculaba el descuento a mano y se mostraba "pagás $200.000",
+   * pero el endpoint de cobro no sabía nada de eso y MercadoPago cobraba los
+   * $225.000 de lista. Además la cuenta dividía por 30 días fijos, así que a
+   * alguien en plan anual le prometía un descuento enorme que tampoco existía.
+   * Ahora el número lo da el mismo lugar que después cobra.
+   */
+  function getAnnualQuote(plan: "OWNER_BASIC" | "OWNER_PREMIUM") {
+    const q = cotizaciones.find((c) => c.destino.plan === plan && c.destino.billing === "ANNUAL");
+    // Sin cotización todavía (cargando, o sin sesión) se muestra el precio de
+    // lista sin descuento: nunca un número menor al que se va a cobrar.
+    return q ?? { aPagar: ownerPrice, credito: 0 };
   }
 
   return (
@@ -384,7 +406,7 @@ function PreciosContent() {
                   <p className="text-xs text-gray-500 mt-1">
                     {money(ownerPrice)} facturado anualmente
                     <span className="ml-2 text-teal-600 font-semibold">
-                      Ahorrás {money(selectedOwner.monthly * 12 - selectedOwner.annual)}
+                      Ahorrás {money(selectedOwner.MONTHLY * 12 - selectedOwner.ANNUAL)}
                     </span>
                   </p>
                 )}
@@ -398,10 +420,11 @@ function PreciosContent() {
                   { text: "Tienda con subdominio incluido", both: true },
                   { text: "Productos y variantes ilimitados", both: true },
                   { text: "Panel de pedidos y estadísticas", both: true },
-                  { text: `Hasta 6 afiliados`, both: false, basic: true, premiumText: "Afiliados ilimitados" },
-                  { text: `Hasta 10 cupones activos`, both: false, basic: true, premiumText: "Cupones ilimitados" },
+                  { text: `Hasta ${PRO_MAX_AFFILIATES} afiliados`, both: false, basic: true, premiumText: "Afiliados ilimitados" },
+                  { text: `Hasta ${PRO_MAX_ACTIVE_COUPONS} cupones activos`, both: false, basic: true, premiumText: "Cupones ilimitados" },
+                  { text: `Hasta ${PRO_MAX_LIVE_PROMOTIONS} promociones a la vez`, both: false, basic: true, premiumText: "Promociones ilimitadas" },
                   { text: "Tienda instalable como app (PWA)", both: false, basic: false, premiumOnly: true },
-                  { text: "Notificaciones push a visitantes (2 por semana)", both: false, basic: false, premiumOnly: true },
+                  { text: `Notificaciones push a visitantes (${PUSH_CAMPAIGNS_PER_WEEK} por semana)`, both: false, basic: false, premiumOnly: true },
                   { text: "Conectá tu dominio propio (lo configuramos nosotros)", both: false, basic: false, premiumOnly: true },
                   { text: "Flyer de publicidad al entrar a la tienda", both: false, basic: false, premiumOnly: true },
                   { text: "Soporte por email", both: false, basic: true, premiumText: "Soporte prioritario" },
@@ -461,8 +484,12 @@ function PreciosContent() {
                   );
                 }
                 if (isUpgradeToAnnual("OWNER", cardTier)) {
-                  const proratedAmt = getProratedAmount(planKey);
-                  const credit = ownerPrice - proratedAmt;
+                  // Los dos números salen de la misma cotización del servidor.
+                  // Antes el descuento se sacaba restando (precio − a pagar):
+                  // daba lo mismo, pero cualquier diferencia entre esa resta y
+                  // lo que cobra el servidor se hubiera visto como un descuento
+                  // que no es. Mejor que los dos vengan del mismo lugar.
+                  const { aPagar: proratedAmt, credito: credit } = getAnnualQuote(planKey);
                   return (
                     <>
                       {credit > 0 && (
@@ -471,7 +498,7 @@ function PreciosContent() {
                         </p>
                       )}
                       <button
-                        onClick={() => setPayModal({ plan: planKey, billing: "ANNUAL", amount: proratedAmt, prorated: true })}
+                        onClick={() => setPayModal({ plan: planKey, billing: "ANNUAL" })}
                         className={`flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl text-sm font-bold transition-all text-white hover:opacity-90 hover:scale-[1.02] shadow-lg ${btnClass}`}
                       >
                         Cambiar a anual <ArrowRight className="h-4 w-4" />
@@ -482,7 +509,7 @@ function PreciosContent() {
                 if (isRegistered || userSub) {
                   return (
                     <button
-                      onClick={() => setPayModal({ plan: planKey, billing: isAnnual ? "ANNUAL" : "MONTHLY", amount: ownerPrice })}
+                      onClick={() => setPayModal({ plan: planKey, billing: isAnnual ? "ANNUAL" : "MONTHLY" })}
                       className={`flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl text-sm font-bold transition-all text-white hover:opacity-90 hover:scale-[1.02] shadow-lg ${btnClass}`}
                     >
                       {userSub ? "Cambiar de plan" : "Suscribirme ahora"} <ArrowRight className="h-4 w-4" />
@@ -573,7 +600,6 @@ function PreciosContent() {
         <PaymentModal
           plan={payModal.plan}
           billing={payModal.billing}
-          amount={payModal.amount}
           onClose={() => setPayModal(null)}
           onSuccess={() => {
             setPayModal(null);

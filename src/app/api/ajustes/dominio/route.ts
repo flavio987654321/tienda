@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth-session";
 import { prisma } from "@/lib/prisma";
-import { getUserSubscription } from "@/lib/subscription";
+import { getUserSubscription, hasActivePremium } from "@/lib/subscription";
 import { syncTurnstileHostname } from "@/lib/turnstile";
 
 // El captcha (Turnstile) valida el hostname: sin esto, en una tienda con dominio
@@ -49,8 +49,10 @@ export async function POST(req: NextRequest) {
   const user = await getCurrentUser();
   if (!user || user.role !== "OWNER") return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
+  // Con el plan al día, no solo con el plan: miraba `tier` a secas, así que una
+  // suscripción Premium vencida seguía pudiendo conectar dominios nuevos.
   const sub = await getUserSubscription(user.id);
-  if (!sub || sub.tier !== "PREMIUM") {
+  if (!hasActivePremium(sub)) {
     return NextResponse.json({ error: "Esta función requiere el plan Tienda Premium" }, { status: 403 });
   }
 

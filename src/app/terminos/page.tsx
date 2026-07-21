@@ -1,6 +1,13 @@
 import Link from "next/link";
 import { ShoppingBag, ArrowLeft } from "lucide-react";
 import { TERMS_LAST_UPDATED } from "@/lib/legal";
+import { PRICES, PRO_MAX_ACTIVE_COUPONS, PRO_MAX_LIVE_PROMOTIONS, PRO_MAX_AFFILIATES } from "@/lib/planLimits";
+
+// Los precios y topes de la sección 3 salen de las constantes que los aplican.
+// Escritos a mano, este texto podía quedar diciendo un precio viejo — y es el
+// documento que la gente acepta, así que no puede estar desactualizado.
+// Si cambian, hay que subir CURRENT_TERMS_VERSION: es un cambio de contrato.
+const ars = (n: number) => "$" + n.toLocaleString("es-AR");
 
 const CONTENT = {
   owner: {
@@ -30,8 +37,8 @@ const CONTENT = {
         title: "3. Planes disponibles",
         body: null,
         list: [
-          "Plan Tienda Pro: $20.000 ARS/mes o $180.000 ARS/año. Incluye subdominio propio (tutienda.tiendaapps.com), hasta 6 afiliados activos, hasta 10 cupones vigentes, hasta 5 promociones vigentes y soporte por email.",
-          "Plan Tienda Premium: $25.000 ARS/mes o $225.000 ARS/año. Incluye todo lo del plan Pro más la posibilidad de conectar tu propio dominio, afiliados ilimitados, y cupones y promociones sin límite, con soporte prioritario.",
+          `Plan Tienda Pro: ${ars(PRICES.OWNER_BASIC.MONTHLY)} ARS/mes o ${ars(PRICES.OWNER_BASIC.ANNUAL)} ARS/año. Incluye subdominio propio (tutienda.tiendaapps.com), hasta ${PRO_MAX_AFFILIATES} afiliados activos, hasta ${PRO_MAX_ACTIVE_COUPONS} cupones vigentes, hasta ${PRO_MAX_LIVE_PROMOTIONS} promociones vigentes y soporte por email.`,
+          `Plan Tienda Premium: ${ars(PRICES.OWNER_PREMIUM.MONTHLY)} ARS/mes o ${ars(PRICES.OWNER_PREMIUM.ANNUAL)} ARS/año. Incluye todo lo del plan Pro más la posibilidad de conectar tu propio dominio, afiliados ilimitados, y cupones y promociones sin límite, con soporte prioritario.`,
           "Los topes del plan Pro cuentan lo que está vigente en cada momento, no lo que creaste alguna vez: al desactivar, archivar o dejar vencer un cupón o una promoción, ese lugar queda libre de inmediato. Tampoco ocupan lugar los cupones que genera la ruleta o la raspadita (ni sus premios ganados), que no tienen tope.",
           "Ambos planes incluyen 7 días de prueba gratuita sin tarjeta de crédito.",
           "Los pagos se procesan a través de Mercado Pago.",

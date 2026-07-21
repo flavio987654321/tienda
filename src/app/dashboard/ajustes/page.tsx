@@ -1,5 +1,5 @@
 import { getCurrentUser } from "@/lib/auth-session";
-import { getUserSubscription } from "@/lib/subscription";
+import { getUserSubscription, hasActivePremium } from "@/lib/subscription";
 import { hasDesign } from "@/lib/store-config";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
@@ -45,8 +45,10 @@ export default async function AjustesPage() {
       })
     : [];
 
-  const tier = sub?.tier ?? "BASIC";
-  const isPremium = tier === "PREMIUM";
+  // Vigente, no solo Premium: esta pantalla ofrece conectar el dominio propio, y
+  // el endpoint que lo hace ahora exige la suscripción al día. Sin esto, el botón
+  // se mostraba y después rebotaba.
+  const isPremium = hasActivePremium(sub);
 
   return (
     <DashboardLayout

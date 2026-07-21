@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/auth-session";
 import { revalidatePath } from "next/cache";
 import { createNotificationMany } from "@/lib/notifications";
 import { isSafeUrl } from "@/lib/url-utils";
+import { hasActivePremium, SUB_STATUS_SELECT } from "@/lib/subscription";
 import { sendNewStorePublishedEmail, sendStoreOfflineEmail, sendCommissionRateChangedEmail } from "@/lib/email";
 import { getClientIp } from "@/lib/request-ip";
 import { storeConfigSchema, mergeDesignConfig, resetStoreDesign } from "@/lib/store-config";
@@ -13,9 +14,12 @@ export async function GET() {
   if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   const [store, subscription] = await Promise.all([
     prisma.store.findUnique({ where: { ownerId: user.id } }),
-    prisma.subscription.findUnique({ where: { userId: user.id }, select: { tier: true } }),
+    prisma.subscription.findUnique({ where: { userId: user.id }, select: SUB_STATUS_SELECT }),
   ]);
-  return NextResponse.json({ store, isPremium: subscription?.tier === "PREMIUM" });
+  // Con el estado, no solo con el tier: este `isPremium` habilita el editor del
+  // flyer. Mirando solo el plan, una Premium vencida podía seguir configurándolo
+  // aunque la tienda pública ya no lo muestre (ahí sí se chequea el estado).
+  return NextResponse.json({ store, isPremium: hasActivePremium(subscription) });
 }
 
 export async function POST(req: NextRequest) {

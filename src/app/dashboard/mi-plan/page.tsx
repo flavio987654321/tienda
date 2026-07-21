@@ -4,12 +4,20 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import MiPlanClient from "./MiPlanClient";
 
-export default async function MiPlanPage() {
+export default async function MiPlanPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ upgrade?: string }>;
+}) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
   if (user.role !== "OWNER" && user.role !== "SELLER") redirect("/dashboard");
 
-  const sub = await getUserSubscription(user.id);
+  const [sub, { upgrade }] = await Promise.all([getUserSubscription(user.id), searchParams]);
+
+  // Se lee acá y baja como prop en vez de usar useSearchParams en el cliente:
+  // así no hace falta envolver nada en Suspense y la página sigue igual.
+  const autoUpgrade = upgrade === "premium";
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -22,7 +30,7 @@ export default async function MiPlanPage() {
           <p className="text-gray-500 text-sm mt-1">Gestioná tu suscripción y método de pago.</p>
         </div>
 
-        <MiPlanClient sub={sub} userRole={user.role as "OWNER" | "SELLER"} />
+        <MiPlanClient sub={sub} userRole={user.role as "OWNER" | "SELLER"} autoUpgrade={autoUpgrade} />
       </div>
     </div>
   );

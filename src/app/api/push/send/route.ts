@@ -3,10 +3,10 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
 import { getUserSubscription, isSubscriptionActive } from "@/lib/subscription";
 import { sendPushToStore } from "@/lib/push";
+import { PUSH_CAMPAIGNS_PER_WEEK as CAMPAIGNS_PER_WEEK } from "@/lib/planLimits";
 
 const TITLE_MAX = 50;
 const BODY_MAX = 150;
-const CAMPAIGNS_PER_WEEK = 3;
 const EXPIRY_OPTIONS_DAYS = [3, 7, 14, 30] as const;
 const DEFAULT_EXPIRY_DAYS = 7;
 

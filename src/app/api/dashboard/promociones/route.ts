@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
 import { validatePromotionBody, promotionStatus, parseStringArray } from "@/lib/promotions";
-import { livePromotionsWhere, isPremiumTier, PRO_MAX_LIVE_PROMOTIONS } from "@/lib/planLimits";
+import { livePromotionsWhere, PRO_MAX_LIVE_PROMOTIONS } from "@/lib/planLimits";
+import { hasActivePremium, SUB_STATUS_SELECT } from "@/lib/subscription";
 
 // GET — listar promociones de la tienda. tab=act (vivas) | hist (historial).
 export async function GET(req: NextRequest) {
@@ -66,7 +67,7 @@ export async function POST(req: NextRequest) {
   const store = await prisma.store.findUnique({ where: { ownerId: user.id }, select: { id: true } });
   if (!store) return NextResponse.json({ error: "Tienda no encontrada" }, { status: 404 });
 
-  const sub = await prisma.subscription.findUnique({ where: { userId: user.id }, select: { tier: true } });
+  const sub = await prisma.subscription.findUnique({ where: { userId: user.id }, select: SUB_STATUS_SELECT });
 
   const body = await req.json().catch(() => ({}));
   const result = validatePromotionBody(body);
@@ -83,7 +84,7 @@ export async function POST(req: NextRequest) {
   // de 5.
   try {
     const promotion = await prisma.$transaction(async (tx) => {
-      if (!isPremiumTier(sub?.tier)) {
+      if (!hasActivePremium(sub)) {
         await tx.$queryRaw`SELECT id FROM "Store" WHERE id = ${store.id} FOR UPDATE`;
         const liveCount = await tx.storePromotion.count({ where: livePromotionsWhere(store.id) });
         if (liveCount >= PRO_MAX_LIVE_PROMOTIONS) throw new PromotionLimitError();
