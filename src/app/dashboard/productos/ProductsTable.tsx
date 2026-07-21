@@ -11,6 +11,7 @@ import VehicleStatusModal, { VehicleStatusBadge, type VehicleStatus, type Vehicl
 import StockAdjustModal from "./StockAdjustModal";
 import { Boxes } from "lucide-react";
 import { calcVehicleCostTotal } from "@/lib/margin";
+import { SITE_URL } from "@/lib/site";
 
 interface Variant { id: string; name: string; value: string; stock: number; lowStockThreshold?: number | null }
 
@@ -80,7 +81,7 @@ export default function ProductsTable({ products: initialProducts, storeSlug = "
   const [bulkStockSuccess,  setBulkStockSuccess]  = useState("");
   const [toast,         setToast]         = useState<string | null>(null);
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://tiendaapps.com";
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? SITE_URL;
 
   async function openQr(product: Product) {
     setQrLoading(true);
@@ -695,6 +696,12 @@ export default function ProductsTable({ products: initialProducts, storeSlug = "
               <div key={product.id} className="bg-white rounded-2xl border border-gray-100 overflow-hidden group hover:shadow-md transition-shadow">
                 <div className="relative aspect-square bg-gray-50">
                   {images[0] ? (
+                    // Va <img> y no <Image>: la API guarda la URL de la imagen sin
+                    // validar de qué host viene, así que puede ser cualquiera. Con
+                    // next/image, un host que no esté en remotePatterns tira error y
+                    // se cae toda la pantalla de productos. El onError de abajo está
+                    // justamente porque acá se cuenta con imágenes rotas.
+                    // eslint-disable-next-line @next/next/no-img-element
                     <img src={images[0]} alt={product.name} className="w-full h-full object-cover"
                       onError={e => { e.currentTarget.style.opacity = "0"; }} />
                   ) : (
@@ -805,6 +812,8 @@ export default function ProductsTable({ products: initialProducts, storeSlug = "
                             <Package className="h-5 w-5 text-gray-300" />
                           </div>
                           {images[0] && (
+                            // Mismo motivo que arriba: URL de host no validado.
+                            // eslint-disable-next-line @next/next/no-img-element
                             <img src={images[0]} alt={product.name} className="relative w-full h-full object-cover z-10"
                               onError={e => { e.currentTarget.style.opacity = "0"; }} />
                           )}

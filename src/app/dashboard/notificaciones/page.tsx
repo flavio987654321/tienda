@@ -333,7 +333,7 @@ export default function NotificacionesPage() {
                     type="url"
                     value={url}
                     onChange={(e) => setUrl(e.target.value.slice(0, URL_MAX))}
-                    placeholder="https://tiendaapps.com/tienda/mi-tienda"
+                    placeholder="https://www.tiendaapps.com/tienda/mi-tienda"
                     className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-transparent"
                   />
                   <p className="text-[11px] text-gray-400 mt-1">Al tocar la notificación, el cliente irá a esta URL. Si no ponés ninguna, va a tu tienda.</p>

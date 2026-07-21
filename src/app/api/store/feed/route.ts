@@ -3,8 +3,9 @@ import { prisma } from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { escapeXml, parseFirstImage } from "@/lib/metaFeed";
 import { getClientIp } from "@/lib/request-ip";
+import { SITE_URL } from "@/lib/site";
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://tiendaapps.com";
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? SITE_URL;
 
 // GET /api/store/feed?store=<slug>
 // Feed XML del catálogo completo de la tienda, para conectar en Meta Commerce Manager.

@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth-session";
 import { prisma } from "@/lib/prisma";
 import { createProductFeed, decryptToken } from "@/lib/facebook";
+import { SITE_URL } from "@/lib/site";
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://tiendaapps.com";
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? SITE_URL;
 
 // POST /api/facebook/feed/connect
 // Registra el feed XML de la tienda como product feed programado del catálogo conectado.

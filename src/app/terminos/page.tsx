@@ -1,7 +1,23 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { ShoppingBag, ArrowLeft } from "lucide-react";
 import { TERMS_LAST_UPDATED } from "@/lib/legal";
 import { PRICES, PRO_MAX_ACTIVE_COUPONS, PRO_MAX_LIVE_PROMOTIONS, PRO_MAX_AFFILIATES } from "@/lib/planLimits";
+import { siteUrl } from "@/lib/site";
+
+const DESCRIPTION =
+  "Términos y condiciones de TiendaApps: qué incluye cada plan, cómo funcionan los cobros, las cancelaciones y el programa de afiliados.";
+
+export const metadata: Metadata = {
+  title: "Términos y Condiciones",
+  description: DESCRIPTION,
+  alternates: { canonical: "/terminos" },
+  openGraph: {
+    title: "Términos y Condiciones | TiendaApps",
+    description: DESCRIPTION,
+    url: siteUrl("/terminos"),
+  },
+};
 
 // Los precios y topes de la sección 3 salen de las constantes que los aplican.
 // Escritos a mano, este texto podía quedar diciendo un precio viejo — y es el

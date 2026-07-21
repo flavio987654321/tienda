@@ -1,6 +1,22 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { ShoppingBag, ArrowLeft } from "lucide-react";
 import { TERMS_LAST_UPDATED } from "@/lib/legal";
+import { siteUrl } from "@/lib/site";
+
+const DESCRIPTION =
+  "Política de privacidad de TiendaApps: qué datos guardamos, para qué los usamos, cuánto los conservamos y cómo pedir que los borremos.";
+
+export const metadata: Metadata = {
+  title: "Política de Privacidad",
+  description: DESCRIPTION,
+  alternates: { canonical: "/privacidad" },
+  openGraph: {
+    title: "Política de Privacidad | TiendaApps",
+    description: DESCRIPTION,
+    url: siteUrl("/privacidad"),
+  },
+};
 
 const CONTENT = {
   owner: {

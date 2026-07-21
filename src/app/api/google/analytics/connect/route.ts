@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth-session";
 import { prisma } from "@/lib/prisma";
 import { listAccountSummaries, listDataStreams, createProperty, createWebDataStream, getValidAccessToken } from "@/lib/googleAnalytics";
+import { SITE_URL } from "@/lib/site";
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://tiendaapps.com";
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? SITE_URL;
 
 // POST /api/google/analytics/connect  { accountId }
 // Conecta la cuenta de Google Analytics elegida: reusa la primera propiedad
