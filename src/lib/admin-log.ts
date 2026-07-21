@@ -5,7 +5,10 @@ type LogInput = {
   adminEmail: string;
   action: string;
   targetId: string;
-  targetType: "USER" | "STORE" | "SUBSCRIPTION";
+  // "MFA": el admin activó o apagó su propia verificación en dos pasos. Es sobre
+  // su cuenta y no sobre otra, pero se distingue de "USER" para poder filtrar los
+  // cambios de seguridad del panel aparte de las acciones sobre terceros.
+  targetType: "USER" | "STORE" | "SUBSCRIPTION" | "MFA";
   details?: Record<string, unknown>;
   ip?: string | null;
 };

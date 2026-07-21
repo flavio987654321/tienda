@@ -27,3 +27,32 @@ export async function needsMfaChallenge(supabase: SupabaseClient): Promise<boole
     return false;
   }
 }
+
+/**
+ * ¿Esta cuenta ya tiene el segundo factor configurado?
+ *
+ * Distinto de `needsMfaChallenge`, que responde "¿falta pasarlo en ESTA sesión?".
+ * Sin factor, aquella devuelve false y deja entrar — por eso el 2FA era opcional
+ * de hecho: quien nunca lo activaba entraba con la contraseña sola. Esta es la
+ * que permite exigirlo.
+ *
+ * `listFactors()` sí va a la red (a diferencia del otro chequeo), así que se usa
+ * solo en el layout del admin, una vez por navegación, y no en el middleware.
+ *
+ * Falla ABIERTO, igual que el resto del MFA acá: si la consulta se cae, devuelve
+ * true (deja pasar) en vez de trabar el panel. Un problema de red no puede dejar
+ * al admin afuera de su propio sistema; el próximo request vuelve a exigirlo.
+ */
+export async function hasVerifiedMfaFactor(supabase: SupabaseClient): Promise<boolean> {
+  try {
+    const { data, error } = await supabase.auth.mfa.listFactors();
+    if (error) {
+      console.error("[mfa] no se pudo leer los factores; se deja pasar:", error.message);
+      return true;
+    }
+    return (data?.totp?.length ?? 0) > 0;
+  } catch (e) {
+    console.error("[mfa] error leyendo los factores; se deja pasar:", e);
+    return true;
+  }
+}

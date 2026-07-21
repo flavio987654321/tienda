@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth-session";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { needsMfaChallenge } from "@/lib/mfa";
+import { needsMfaChallenge, hasVerifiedMfaFactor } from "@/lib/mfa";
+import MfaRequiredGate from "./MfaRequiredGate";
 import AdminSidebar from "./AdminSidebar";
 
 export const dynamic = "force-dynamic";
@@ -17,6 +18,18 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const supabase = await createSupabaseServerClient();
   if (await needsMfaChallenge(supabase)) {
     redirect("/verificar-2fa");
+  }
+
+  // El segundo factor es obligatorio para el admin. Antes alcanzaba con no
+  // activarlo nunca: `needsMfaChallenge` solo exige el desafío a quien YA tiene
+  // un factor, así que la cuenta sin configurar entraba con la contraseña sola.
+  //
+  // No se redirige a /admin/seguridad porque esa página también pasa por este
+  // layout y el redirect se llamaría a sí mismo en loop. Se muestra la activación
+  // en el lugar del panel: es la única acción que le queda, y así no puede quedar
+  // trabado.
+  if (!(await hasVerifiedMfaFactor(supabase))) {
+    return <MfaRequiredGate />;
   }
 
   return (

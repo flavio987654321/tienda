@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { ShieldCheck, ShieldAlert, Loader2, Copy, Check, X, KeyRound } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 type View = "loading" | "off" | "enrolling" | "on";
@@ -14,6 +15,7 @@ type View = "loading" | "off" | "enrolling" | "on";
 // → Users → el admin → MFA), documentado para no quedar nunca afuera.
 export default function SeguridadClient() {
   const supabase = createSupabaseBrowserClient();
+  const router = useRouter();
 
   const [view, setView] = useState<View>("loading");
   const [error, setError] = useState("");
@@ -26,6 +28,9 @@ export default function SeguridadClient() {
   const [secret, setSecret] = useState("");
   const [code, setCode] = useState("");
   const [copied, setCopied] = useState(false);
+  // Confirmación para apagar el 2FA (ver disable2fa).
+  const [confirming, setConfirming] = useState(false);
+  const [confirmText, setConfirmText] = useState("");
 
   async function refreshStatus() {
     setError("");
@@ -107,7 +112,13 @@ export default function SeguridadClient() {
       setQrCode("");
       setSecret("");
       setCode("");
+      registrar("enabled");
       await refreshStatus();
+      // Re-evalúa el layout del admin en el servidor. Importa cuando esto se
+      // muestra dentro del gate de "activá el 2FA": sin esto, la persona activa
+      // el factor y se queda mirando la misma pantalla de activación en vez de
+      // entrar al panel. En /admin/seguridad no cambia nada visible.
+      router.refresh();
     } catch {
       setError("Error de conexión. Intentá de nuevo.");
     } finally {
@@ -126,8 +137,25 @@ export default function SeguridadClient() {
     setError("");
   }
 
+  /**
+   * Le avisa al servidor que el 2FA se activó o se apagó, para que quede en el
+   * historial del admin. El cambio real ya lo hizo Supabase — esto solo lo anota,
+   * así que si falla no se rompe nada ni se le muestra un error a nadie.
+   */
+  function registrar(action: "enabled" | "disabled") {
+    fetch("/api/admin/seguridad/log", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action }),
+    }).catch(() => {});
+  }
+
   async function disable2fa() {
     if (sending.current) return;
+    // Escribir la palabra, no un confirm(): apagar esto deja el panel entero
+    // detrás de una sola contraseña. Antes alcanzaba un click, que es lo mismo
+    // que pediría alguien que se sentó en una sesión abierta.
+    if (confirmText.trim().toUpperCase() !== "DESACTIVAR") return;
     sending.current = true;
     setBusy(true);
     setError("");
@@ -136,6 +164,9 @@ export default function SeguridadClient() {
       for (const f of data?.all ?? []) {
         await supabase.auth.mfa.unenroll({ factorId: f.id });
       }
+      registrar("disabled");
+      setConfirmText("");
+      setConfirming(false);
       await refreshStatus();
     } catch {
       setError("No se pudo desactivar. Intentá de nuevo.");
@@ -283,14 +314,52 @@ export default function SeguridadClient() {
               Supabase (Authentication → Users → tu cuenta → quitar el factor).
             </p>
           </div>
-          <button
-            onClick={disable2fa}
-            disabled={busy}
-            className="w-full py-2.5 rounded-xl border border-red-500/20 bg-red-500/10 text-red-400 hover:bg-red-500/20 disabled:opacity-50 text-sm font-semibold transition-colors flex items-center justify-center gap-2"
-          >
-            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldAlert className="h-4 w-4" />}
-            Desactivar 2FA
-          </button>
+          {!confirming ? (
+            <button
+              onClick={() => setConfirming(true)}
+              disabled={busy}
+              className="w-full py-2.5 rounded-xl border border-red-500/20 bg-red-500/10 text-red-400 hover:bg-red-500/20 disabled:opacity-50 text-sm font-semibold transition-colors flex items-center justify-center gap-2"
+            >
+              <ShieldAlert className="h-4 w-4" />
+              Desactivar 2FA
+            </button>
+          ) : (
+            <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-4">
+              <p className="text-sm font-semibold text-red-300">¿Seguro que querés desactivarlo?</p>
+              <p className="mt-1.5 text-xs leading-relaxed text-gray-400">
+                El panel de administración queda protegido solo por tu contraseña. Cualquiera que
+                la tenga entra sin ningún otro paso.
+              </p>
+              <p className="mt-3 text-xs text-gray-500">
+                Escribí <strong className="font-mono text-gray-300">DESACTIVAR</strong> para confirmar:
+              </p>
+              <input
+                type="text"
+                value={confirmText}
+                onChange={(e) => setConfirmText(e.target.value)}
+                placeholder="DESACTIVAR"
+                autoComplete="off"
+                className="mt-2 w-full rounded-lg border border-white/10 bg-gray-800 px-3 py-2 font-mono text-sm text-white outline-none transition-colors focus:border-red-500/40"
+              />
+              <div className="mt-3 flex gap-2">
+                <button
+                  onClick={() => { setConfirming(false); setConfirmText(""); }}
+                  disabled={busy}
+                  className="rounded-lg border border-white/10 px-4 py-2 text-sm font-semibold text-gray-400 transition-colors hover:text-white disabled:opacity-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={disable2fa}
+                  disabled={busy || confirmText.trim().toUpperCase() !== "DESACTIVAR"}
+                  className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-red-600 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldAlert className="h-4 w-4" />}
+                  Desactivar
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
