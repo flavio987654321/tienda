@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import { redirect } from "next/navigation";
+import Image from "next/image";
 import DashboardLayout from "@/components/DashboardLayout";
 import AffiliateActions from "@/components/affiliates/AffiliateActions";
 import CopyLinkButton from "@/components/CopyLinkButton";
@@ -200,7 +201,7 @@ export default async function VendedorasPage() {
       );
 
   return (
-    <DashboardLayout userName={user.name} userEmail={user.email} userId={user.id} initialPendingAffiliateCount={pending.length}>
+    <DashboardLayout userName={user.name} userId={user.id} initialPendingAffiliateCount={pending.length}>
       <AutoRefresh />
       <div className="flex items-center justify-between mb-8">
         <div>
@@ -441,7 +442,7 @@ export default async function VendedorasPage() {
                       <div className="flex min-w-0 items-start gap-3">
                         <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-500 text-lg font-black text-white overflow-hidden">
                           {affiliate.user.image ? (
-                            <img src={affiliate.user.image} alt={displayName} className="h-12 w-12 object-cover" />
+                            <Image src={affiliate.user.image} alt={displayName} width={48} height={48} className="h-12 w-12 object-cover" />
                           ) : (
                             displayName[0]?.toUpperCase() ?? "A"
                           )}

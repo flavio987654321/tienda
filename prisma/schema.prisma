@@ -231,6 +231,12 @@ model Store {
   // central de Merchant Center de la plataforma. No hay OAuth: es solo el
   // permiso explícito de la tienda para publicarse en Google.
   gsEnabledAt           DateTime?
+  // Última vez que el dueño abrió Carritos abandonados. El puntito del sidebar
+  // cuenta los carritos con actividad posterior a esta fecha, no los pendientes:
+  // un carrito abandonado casi nunca se "resuelve" (recoveredAt se llena solo si
+  // la persona vuelve y compra), así que un contador de pendientes quedaría
+  // prendido para siempre y se volvería ruido. NULL = nunca la abrió, todos nuevos.
+  abandonedCartsSeenAt  DateTime?
   // Preview image generada al guardar el template
   previewImage          String?
   // Dirección de origen para cotizar envío en vivo (Envíopack). Opcional:

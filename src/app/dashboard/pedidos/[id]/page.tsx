@@ -50,7 +50,7 @@ export default async function PedidoDetailPage({ params }: Props) {
   const itemCount = order.items.reduce((sum, item) => sum + item.quantity, 0);
 
   return (
-    <DashboardLayout userName={user.name} userEmail={user.email} userId={user.id} initialPendingAffiliateCount={pendingAffiliateCount}>
+    <DashboardLayout userName={user.name} userId={user.id} initialPendingAffiliateCount={pendingAffiliateCount}>
       <div className="mb-6 flex items-center gap-3">
         <Link
           href="/dashboard/pedidos"

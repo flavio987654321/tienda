@@ -95,7 +95,6 @@ const NAV_GROUPS: NavGroup[] = [
 export default function DashboardLayout({
   children,
   userName,
-  userEmail,
   userId,
   storeId,
   initialPendingAffiliateCount = 0,
@@ -105,7 +104,6 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
   userName?: string | null;
-  userEmail?: string | null;
   userId?: string | null;
   storeId?: string | null;
   initialPendingAffiliateCount?: number;
@@ -127,6 +125,7 @@ export default function DashboardLayout({
   const [lowStockCount, setLowStockCount] = useState(initialLowStockCount);
   const [pendingOrderCount, setPendingOrderCount] = useState(0);
   const [pendingLeadsCount, setPendingLeadsCount] = useState(0);
+  const [newCartsCount, setNewCartsCount] = useState(0);
   const [storeType, setStoreType] = useState<string | null>(null);
   // Estado online/offline vía useSyncExternalStore (patrón canónico de React para
   // suscribirse a una fuente externa del navegador). El snapshot de servidor es
@@ -228,6 +227,32 @@ export default function DashboardLayout({
       .catch(() => {});
   }, [storeType]);
 
+  // Carritos abandonados con actividad desde la última visita. Se espera a saber
+  // el tipo de tienda porque las de consultas no tienen carrito: sin este guard,
+  // una tienda que cambió de rubro encendería el puntito del menú mobile por
+  // carritos viejos de un link que ya ni se muestra.
+  //
+  // Estando parado en la página no se pregunta: como este fetch espera a storeType,
+  // llegaba después del "ya lo vi" que manda la propia página y volvía a prender el
+  // puntito con el número viejo. Y como el layout no se vuelve a montar al navegar,
+  // quedaba encendido hasta recargar. Depender de pathname también lo refresca al
+  // moverse por el panel, que antes solo pasaba una vez por montaje.
+  useEffect(() => {
+    if (!storeType || LEADS_STORE_TYPES.includes(storeType)) return;
+    if (pathname.startsWith("/dashboard/carritos-abandonados")) return;
+    fetch("/api/dashboard/carritos-abandonados/nuevos")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => setNewCartsCount(data?.count ?? 0))
+      .catch(() => {});
+  }, [storeType, pathname]);
+
+  // La página de carritos avisa que ya se vio; el puntito se apaga sin recargar.
+  useEffect(() => {
+    function onSeen() { setNewCartsCount(0); }
+    window.addEventListener("abandoned-carts-seen", onSeen);
+    return () => window.removeEventListener("abandoned-carts-seen", onSeen);
+  }, []);
+
   function isActive(href: string, exact?: boolean) {
     return exact ? pathname === href : pathname.startsWith(href);
   }
@@ -239,17 +264,24 @@ export default function DashboardLayout({
     return false;
   }
 
+  // Qué contador y de qué color lleva cada link, en un solo lugar. Rojo = alguien
+  // espera que le contestes, naranja = alerta de stock, amarillo = entró algo
+  // nuevo para atender.
+  const badges: Record<string, { count: number; color: string }> = {
+    "/dashboard/vendedoras": { count: pendingAffiliateCount, color: "bg-red-500" },
+    "/dashboard/consultas":  { count: pendingLeadsCount,     color: "bg-red-500" },
+    "/dashboard/productos":  { count: lowStockCount,         color: "bg-orange-500" },
+    "/dashboard/pedidos":    { count: pendingOrderCount,     color: "bg-yellow-500" },
+    "/dashboard/carritos-abandonados": { count: newCartsCount, color: "bg-yellow-500" },
+  };
+
   function getBadge(href: string) {
-    const isAffil = href === "/dashboard/vendedoras" && pendingAffiliateCount > 0;
-    const isStock = href === "/dashboard/productos"  && lowStockCount > 0;
-    const isOrder = href === "/dashboard/pedidos"    && pendingOrderCount > 0;
-    const isLeads = href === "/dashboard/consultas"  && pendingLeadsCount > 0;
-    const count   = isAffil ? pendingAffiliateCount : isStock ? lowStockCount : isLeads ? pendingLeadsCount : pendingOrderCount;
-    const color   = isAffil || isLeads ? "bg-red-500" : isStock ? "bg-orange-500" : "bg-yellow-500";
-    return { has: isAffil || isStock || isOrder || isLeads, count, color };
+    const badge = badges[href];
+    const count = badge?.count ?? 0;
+    return { has: count > 0, count, color: badge?.color ?? "bg-gray-400" };
   }
 
-  const anyBadge = pendingAffiliateCount > 0 || pendingOrderCount > 0 || lowStockCount > 0 || pendingLeadsCount > 0;
+  const anyBadge = Object.values(badges).some((b) => b.count > 0);
 
   function onTouchStart(e: React.TouchEvent) {
     touchStartX.current = e.touches[0].clientX;

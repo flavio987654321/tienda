@@ -49,7 +49,6 @@ export default async function ResenasPage() {
   return (
     <DashboardLayout
       userName={user.name}
-      userEmail={user.email}
       userId={user.id}
       initialPendingAffiliateCount={pendingAffiliateCount}
     >

@@ -69,7 +69,7 @@ export default async function ProductosPage({ searchParams }: Props) {
     : products.filter((p) => promoCats.has(p.category) || promoIds.has(p.id)).map((p) => p.id);
 
   return (
-    <DashboardLayout userName={user.name} userEmail={user.email} userId={user.id} initialPendingAffiliateCount={pendingAffiliateCount}>
+    <DashboardLayout userName={user.name} userId={user.id} initialPendingAffiliateCount={pendingAffiliateCount}>
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">

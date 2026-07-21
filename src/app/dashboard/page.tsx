@@ -164,7 +164,7 @@ export default async function DashboardPage() {
   return (
     <DashboardLayout
       userName={user.name}
-      userEmail={user.email}
+     
       userId={user.id}
       storeId={store.id}
       initialPendingAffiliateCount={pendingAffiliateCount}

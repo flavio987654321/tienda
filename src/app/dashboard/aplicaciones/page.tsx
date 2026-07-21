@@ -46,7 +46,6 @@ export default async function AplicacionesPage() {
   return (
     <DashboardLayout
       userName={user.name}
-      userEmail={user.email}
       userId={user.id}
       initialPendingAffiliateCount={pendingAffiliateCount}
       initialLowStockCount={lowStockCount}

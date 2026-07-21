@@ -508,7 +508,7 @@ export default async function MetricasPage({
 
   // ── Render ──
   return (
-    <DashboardLayout userName={user.name} userEmail={user.email} userId={user.id}>
+    <DashboardLayout userName={user.name} userId={user.id}>
       {/* Las métricas salen de los pedidos: una venta nueva las recalcula sola */}
       <AutoRefresh tables={["Order"]} />
       {/* Estilos de impresión — oculta sidebar y nav al guardar como PDF */}

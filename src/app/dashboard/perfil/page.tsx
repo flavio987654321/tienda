@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { BadgeCheck, Camera, Check, Clock, Loader2, Save, ShieldAlert, Upload, X } from "lucide-react";
 
@@ -70,18 +70,35 @@ function CameraModal({ facingMode, label, onCapture, onClose }: {
   const [ready, setReady] = useState(false);
   const [camError, setCamError] = useState("");
 
-  function startCamera() {
+  // Dar vuelta la cámara resetea el cartel de error y el "listo" del render
+  // anterior. Se hace acá y no dentro del efecto porque es un reseteo por cambio
+  // de prop: adentro del efecto sería un setState sincrónico que encadena renders.
+  const [prevFacingMode, setPrevFacingMode] = useState(facingMode);
+  if (facingMode !== prevFacingMode) {
+    setPrevFacingMode(facingMode);
     setCamError("");
     setReady(false);
+  }
+
+  // Si el navegador soporta cámara o no es algo que no cambia mientras el modal
+  // está abierto, así que se resuelve una vez al montar y se muestra como texto
+  // derivado. Antes se escribía con setCamError desde el efecto, que era el
+  // setState sincrónico que encadenaba renders.
+  const [cameraUnsupported] = useState(
+    () => typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia
+  );
+  const shownError = cameraUnsupported
+    ? "Tu navegador no soporta acceso a cámara. Probá con Chrome o Edge actualizados."
+    : camError;
+
+  function startCamera() {
     streamRef.current?.getTracks().forEach((t) => t.stop());
     streamRef.current = null;
 
-    if (!navigator.mediaDevices?.getUserMedia) {
-      setCamError("Tu navegador no soporta acceso a cámara. Probá con Chrome o Edge actualizados.");
-      return;
-    }
+    const media = navigator.mediaDevices;
+    if (!media?.getUserMedia) return;
 
-    navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: facingMode } } })
+    media.getUserMedia({ video: { facingMode: { ideal: facingMode } } })
       .then((stream) => {
         streamRef.current = stream;
         if (videoRef.current) {
@@ -137,14 +154,14 @@ function CameraModal({ facingMode, label, onCapture, onClose }: {
         </div>
         <div className="relative bg-black aspect-video">
           <video ref={videoRef} className="w-full h-full object-cover" muted playsInline />
-          {!ready && !camError && (
+          {!ready && !shownError && (
             <div className="absolute inset-0 flex items-center justify-center">
               <Loader2 className="h-8 w-8 text-white animate-spin" />
             </div>
           )}
-          {camError && (
+          {shownError && (
             <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center gap-3">
-              <p className="text-white text-sm">{camError}</p>
+              <p className="text-white text-sm">{shownError}</p>
               <button
                 type="button"
                 onClick={startCamera}
@@ -187,15 +204,16 @@ function FileInput({ label, file, onChange, error, onError, facingMode = "enviro
   facingMode?: "user" | "environment";
 }) {
   const galleryRef = useRef<HTMLInputElement>(null);
-  const [preview, setPreview] = useState<string | null>(null);
   const [showCamera, setShowCamera] = useState(false);
 
+  // La miniatura se deriva del archivo en vez de guardarse en estado: antes esto
+  // era un useEffect que hacía setState, y eso encadena un render de más cada vez
+  // que cambiás la foto. El efecto queda solo para liberar la URL del blob.
+  const preview = useMemo(() => (file ? URL.createObjectURL(file) : null), [file]);
   useEffect(() => {
-    if (!file) { setPreview(null); return; }
-    const url = URL.createObjectURL(file);
-    setPreview(url);
-    return () => URL.revokeObjectURL(url);
-  }, [file]);
+    if (!preview) return;
+    return () => URL.revokeObjectURL(preview);
+  }, [preview]);
 
   function handleFile(f: File | null) {
     if (!f) { onChange(null); onError?.(""); if (galleryRef.current) galleryRef.current.value = ""; return; }
@@ -234,6 +252,11 @@ function FileInput({ label, file, onChange, error, onError, facingMode = "enviro
       }`}>
         {file && preview ? (
           <div className="relative">
+            {/* Va <img> y no <Image>: `preview` es una URL blob: del archivo que
+                la persona acaba de elegir y que todavía no se subió a ningún
+                lado. next/image no puede optimizar un blob local —lo pasaría por
+                el optimizador y fallaría— y acá no hay nada que optimizar. */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={preview} alt={label} className="w-full h-28 object-cover" />
             <button
               type="button"
@@ -389,7 +412,7 @@ export default function PerfilPage() {
   const toggleDisabled = !!togglingKey || !isVerified;
 
   return (
-    <DashboardLayout userName={profile?.name} userEmail={profile?.email}>
+    <DashboardLayout userName={profile?.name}>
       {showSaveConfirm && (
         <ConfirmDialog
           message="¿Guardás los cambios de tu perfil?"

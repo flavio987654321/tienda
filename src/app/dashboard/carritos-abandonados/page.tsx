@@ -1,8 +1,6 @@
 export const dynamic = "force-dynamic";
 
 import { redirect } from "next/navigation";
-import Link from "next/link";
-import { ChevronLeft, ChevronRight } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
@@ -23,8 +21,12 @@ export default async function CarritosAbandonadosPage({ searchParams }: Props) {
 
   const store = await prisma.store.findUnique({
     where: { ownerId: user.id },
-    select: { id: true, slug: true, name: true },
+    select: { id: true, slug: true, name: true, abandonedCartsSeenAt: true },
   });
+
+  // Se lee acá, antes de que el cliente marque la página como vista: si no, para
+  // cuando se pinta la lista ya no quedaría ninguno marcado como nuevo.
+  const seenAt = store?.abandonedCartsSeenAt ?? null;
 
   const where = store
     ? {
@@ -76,6 +78,7 @@ export default async function CarritosAbandonadosPage({ searchParams }: Props) {
       total: cart.total,
       lastActivityAt: cart.lastActivityAt.toISOString(),
       reminderSent: Boolean(cart.reminderSentAt),
+      isNew: seenAt === null || cart.lastActivityAt > seenAt,
     };
   });
 
@@ -86,7 +89,7 @@ export default async function CarritosAbandonadosPage({ searchParams }: Props) {
   };
 
   return (
-    <DashboardLayout userName={user.name} userEmail={user.email} userId={user.id}>
+    <DashboardLayout userName={user.name} userId={user.id}>
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Carritos abandonados</h1>
         <p className="text-gray-500 mt-1 max-w-2xl text-sm">

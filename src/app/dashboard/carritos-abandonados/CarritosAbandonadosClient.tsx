@@ -22,6 +22,7 @@ type CartRow = {
   total: number;
   lastActivityAt: string;
   reminderSent: boolean;
+  isNew: boolean;
 };
 
 type Stats = { pending: number; recovered: number; recoveredRevenue: number };
@@ -374,6 +375,15 @@ export default function CarritosAbandonadosClient({
   const [generatedCoupons, setGeneratedCoupons] = useState<Record<string, GeneratedCoupon>>({});
   const [waOpenedIds, setWaOpenedIds] = useState<Set<string>>(new Set());
 
+  // Abrir la página apaga el puntito del sidebar. Los chips "Nuevo" de esta
+  // pantalla ya vinieron calculados del servidor, así que marcar visto ahora no
+  // los borra de golpe: se siguen viendo hasta la próxima carga.
+  useEffect(() => {
+    fetch("/api/dashboard/carritos-abandonados/nuevos", { method: "POST" })
+      .then(() => window.dispatchEvent(new Event("abandoned-carts-seen")))
+      .catch(() => {});
+  }, []);
+
   function showToast(msg: string, ok = true) {
     setToast({ msg, ok });
     setTimeout(() => setToast(null), 3500);
@@ -544,6 +554,11 @@ export default function CarritosAbandonadosClient({
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
                       <p className="font-bold text-gray-900">{cart.customerName || "Sin nombre"}</p>
+                      {cart.isNew && (
+                        <span className="inline-flex items-center rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-semibold text-yellow-800">
+                          Nuevo
+                        </span>
+                      )}
                       {(cart.reminderSent || justSent) && (
                         <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-700">
                           <Check className="h-3 w-3" /> Email enviado

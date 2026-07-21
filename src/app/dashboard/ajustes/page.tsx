@@ -53,7 +53,6 @@ export default async function AjustesPage() {
   return (
     <DashboardLayout
       userName={user.name}
-      userEmail={user.email}
       userId={user.id}
       initialPendingAffiliateCount={pendingAffiliateCount}
       initialLowStockCount={lowStockCount}

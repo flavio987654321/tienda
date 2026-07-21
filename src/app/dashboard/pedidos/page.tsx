@@ -78,7 +78,7 @@ export default async function PedidosPage({ searchParams }: Props) {
   }
 
   return (
-    <DashboardLayout userName={user.name} userEmail={user.email} userId={user.id} initialPendingAffiliateCount={pendingAffiliateCount}>
+    <DashboardLayout userName={user.name} userId={user.id} initialPendingAffiliateCount={pendingAffiliateCount}>
       {/* Un pedido nuevo o un cambio de estado aparece solo, sin recargar */}
       <AutoRefresh tables={["Order"]} />
       <BulkOrdersProvider orders={orders.map((o) => ({ id: o.id, status: o.status }))}>

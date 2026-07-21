@@ -79,7 +79,7 @@ export default async function PromocionesPage() {
     .sort((a, b) => a.name.localeCompare(b.name));
 
   return (
-    <DashboardLayout userName={user.name} userEmail={user.email} userId={user.id}>
+    <DashboardLayout userName={user.name} userId={user.id}>
       <PromocionesClient
         initialPromotions={rows}
         categories={categories}
