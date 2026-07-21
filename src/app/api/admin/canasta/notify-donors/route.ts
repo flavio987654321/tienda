@@ -25,16 +25,38 @@ export async function POST(req: NextRequest) {
   if (!campaign) return NextResponse.json({ error: "No hay campaña vigente" }, { status: 404 });
 
   // Límite: máximo 3 avisos masivos por día por campaña.
+  //
+  // Se reserva el lugar ANTES de mandar, en la misma transacción que cuenta.
+  // Contando primero y registrando al final, dos clicks casi simultáneos veían
+  // los dos "2 de 3" y mandaban los dos: 4 emails a cada donante. Mismo patrón
+  // que usan los topes de cupones y promociones.
+  const MAX_POR_DIA = 3;
   const startOfDay = new Date();
   startOfDay.setHours(0, 0, 0, 0);
-  const sentToday = await prisma.donationNotification.count({
-    where: { campaignId: campaign.id, createdAt: { gte: startOfDay } },
-  });
-  if (sentToday >= 3) {
-    return NextResponse.json(
-      { error: "Ya se enviaron 3 avisos hoy. Probá de nuevo mañana." },
-      { status: 429 }
-    );
+
+  let notificationId: string;
+  try {
+    notificationId = await prisma.$transaction(async (tx) => {
+      // Toma la fila de la campaña: dos pedidos simultáneos se serializan acá.
+      await tx.$queryRaw`SELECT id FROM "DonationCampaign" WHERE id = ${campaign.id} FOR UPDATE`;
+      const sentToday = await tx.donationNotification.count({
+        where: { campaignId: campaign.id, createdAt: { gte: startOfDay } },
+      });
+      if (sentToday >= MAX_POR_DIA) throw new DailyLimitError();
+      // sentCount arranca en 0 y se completa abajo con los que salieron de verdad.
+      const n = await tx.donationNotification.create({
+        data: { campaignId: campaign.id, message: message.trim(), sentCount: 0 },
+      });
+      return n.id;
+    });
+  } catch (e) {
+    if (e instanceof DailyLimitError) {
+      return NextResponse.json(
+        { error: `Ya se enviaron ${MAX_POR_DIA} avisos hoy. Probá de nuevo mañana.` },
+        { status: 429 }
+      );
+    }
+    throw e;
   }
 
   const donors = await prisma.donation.findMany({
@@ -58,9 +80,24 @@ export async function POST(req: NextRequest) {
   const sent = results.filter((r) => r.status === "fulfilled").length;
   const failed = results.length - sent;
 
-  await prisma.donationNotification.create({
-    data: { campaignId: campaign.id, message: message.trim(), sentCount: sent },
+  // El registro ya existe (se creó al reservar el lugar); acá se completa con
+  // cuántos salieron realmente.
+  await prisma.donationNotification.update({
+    where: { id: notificationId },
+    data: { sentCount: sent },
   });
 
-  return NextResponse.json({ ok: true, totalDonors: donors.length, sent, failed, remainingToday: 2 - sentToday });
+  const usadosHoy = await prisma.donationNotification.count({
+    where: { campaignId: campaign.id, createdAt: { gte: startOfDay } },
+  });
+
+  return NextResponse.json({
+    ok: true,
+    totalDonors: donors.length,
+    sent,
+    failed,
+    remainingToday: Math.max(0, MAX_POR_DIA - usadosHoy),
+  });
 }
+
+class DailyLimitError extends Error {}

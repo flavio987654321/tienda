@@ -5,6 +5,11 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { HeartHandshake, Loader2, Sparkles, ArrowLeft } from "lucide-react";
 import SoporteBanner from "@/components/canasta/SoporteBanner";
+import { useTurnstile } from "@/components/Turnstile";
+// De las mismas constantes que aplica /api/canasta/donate: acá estaban copiadas
+// a mano, así que el formulario podía dejar pasar un monto que el servidor
+// rechazaba (o frenar uno válido).
+import { MIN_DONATION, MAX_DONATION_PCT_OF_GOAL, maxDonationFor } from "@/lib/canasta";
 
 const QUICK_AMOUNTS = [1000, 2000, 5000, 10000];
 
@@ -42,6 +47,9 @@ function DonarContent() {
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // El mismo captcha invisible que ya usan registro, contacto y reseñas. El
+  // donante no ve ni hace nada, salvo que Cloudflare lo tome por bot.
+  const captcha = useTurnstile("canasta-donate");
 
   useEffect(() => {
     fetch("/api/canasta/campaign", { cache: "no-store" })
@@ -54,7 +62,7 @@ function DonarContent() {
   }, []);
 
   const remaining = campaign ? Math.max(0, campaign.goalAmount - totalRaised) : null;
-  const maxDonation = campaign ? Math.min(Math.floor(campaign.goalAmount * 0.2), remaining ?? Infinity) : null;
+  const maxDonation = campaign ? maxDonationFor(campaign.goalAmount, totalRaised) : null;
 
   async function submit() {
     if (submitting) return;
@@ -64,12 +72,12 @@ function DonarContent() {
       setError("Tenés que aceptar los Términos y Condiciones para continuar.");
       return;
     }
-    if (typeof amount !== "number" || !Number.isFinite(amount) || amount < 1000) {
-      setError("El monto mínimo es $1.000");
+    if (typeof amount !== "number" || !Number.isFinite(amount) || amount < MIN_DONATION) {
+      setError(`El monto mínimo es ${formatMoney(MIN_DONATION)}`);
       return;
     }
     if (maxDonation !== null && amount > maxDonation) {
-      const cappedByRemaining = remaining !== null && remaining <= Math.floor((campaign?.goalAmount ?? 0) * 0.2);
+      const cappedByRemaining = remaining !== null && remaining <= Math.floor((campaign?.goalAmount ?? 0) * MAX_DONATION_PCT_OF_GOAL);
       setError(
         cappedByRemaining
           ? `Solo faltan ${formatMoney(maxDonation)} para completar la meta — doná ese monto o menos.`
@@ -87,13 +95,20 @@ function DonarContent() {
       const res = await fetch("/api/canasta/donate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount, donorName, donorPhone, donorEmail, donorLocalidad }),
+        body: JSON.stringify({ amount, donorName, donorPhone, donorEmail, donorLocalidad, turnstileToken: captcha.token }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "No se pudo iniciar la donación");
-      window.location.href = data.checkoutUrl;
+      // assign() en vez de asignar .href: hace exactamente lo mismo (redirige a
+      // MercadoPago, que es un dominio externo y no puede ir por el router de
+      // Next), pero como es una llamada y no una escritura, no dispara la regla
+      // de React que prohíbe modificar valores de afuera del componente.
+      window.location.assign(data.checkoutUrl);
     } catch (e) {
       setError(e instanceof Error ? e.message : "No se pudo iniciar la donación");
+      // El token es de un solo uso: sin resetearlo, reintentar después de un
+      // error manda el mismo token gastado y vuelve a fallar siempre.
+      captcha.reset();
       setSubmitting(false);
     }
   }
@@ -138,7 +153,7 @@ function DonarContent() {
       <div className="max-w-md mx-auto px-6 py-10">
         <h1 className="text-2xl font-bold mb-1">Donar a {campaign.name}</h1>
         <p className="text-sm text-gray-500 mb-6">
-          Mínimo $1.000{maxDonation ? ` — máximo ${formatMoney(maxDonation)} por persona` : ""}. Podés donar con o sin crear una cuenta.
+          Mínimo {formatMoney(MIN_DONATION)}{maxDonation ? ` — máximo ${formatMoney(maxDonation)} por persona` : ""}. Podés donar con o sin crear una cuenta.
         </p>
 
         {failed && (
@@ -166,7 +181,7 @@ function DonarContent() {
             </div>
             <input
               type="number"
-              min={1000}
+              min={MIN_DONATION}
               value={amount}
               onChange={(e) => setAmount(e.target.value ? Number(e.target.value) : "")}
               placeholder="Otro monto"
@@ -220,10 +235,12 @@ function DonarContent() {
 
           {error && <p className="text-sm text-red-600">{error}</p>}
 
+          {captcha.widget}
+
           <button
             type="button"
             onClick={submit}
-            disabled={submitting || !acceptedTerms}
+            disabled={submitting || !acceptedTerms || !captcha.ready}
             className="w-full bg-gradient-to-r from-amber-500 to-green-600 hover:from-amber-600 hover:to-green-700 disabled:opacity-60 text-white font-semibold rounded-xl py-3.5 transition-all flex items-center justify-center gap-2"
           >
             {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}

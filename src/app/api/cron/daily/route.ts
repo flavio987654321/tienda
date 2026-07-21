@@ -171,7 +171,14 @@ export async function GET(req: NextRequest) {
     const ago90d = new Date(now.getTime() - 90  * 24 * 60 * 60 * 1000);
     const ago6m  = new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000);
     const ago1y  = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
-    const [sessions, clicks, notifications, adminLogs, coupons, storeViews, oldCarts] = await Promise.all([
+    // Donaciones que quedaron a mitad de camino: se crean al apretar "Continuar
+    // al pago" y quedan PENDING para siempre si la persona no completa el pago
+    // en MercadoPago. Nunca se limpiaban. Se les da 7 días de margen, muy por
+    // encima de lo que dura un checkout, para no borrar una que todavía podría
+    // confirmarse: el webhook solo toca las PENDING, así que borrar una viva
+    // haría que un pago real no se registre nunca.
+    const ago7d = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const [sessions, clicks, notifications, adminLogs, coupons, storeViews, oldCarts, staleDonations] = await Promise.all([
       prisma.session.deleteMany({ where: { expires: { lt: now } } }),
       prisma.affiliateClick.deleteMany({ where: { createdAt: { lt: ago90d } } }),
       prisma.notification.deleteMany({ where: { read: true, createdAt: { lt: ago30d } } }),
@@ -179,8 +186,9 @@ export async function GET(req: NextRequest) {
       prisma.affiliateRewardCoupon.deleteMany({ where: { status: "EXPIRED", expiresAt: { lt: ago6m } } }),
       prisma.storeView.deleteMany({ where: { date: { lt: ago1y.toISOString().slice(0, 10) } } }),
       prisma.abandonedCart.deleteMany({ where: { recoveredAt: null, lastActivityAt: { lt: new Date(now.getTime() - 45 * 24 * 60 * 60 * 1000) } } }),
+      prisma.donation.deleteMany({ where: { status: "PENDING", createdAt: { lt: ago7d } } }),
     ]);
-    result.cleanup = { sessions: sessions.count, clicks: clicks.count, notifications: notifications.count, adminLogs: adminLogs.count, coupons: coupons.count, storeViews: storeViews.count, oldCarts: oldCarts.count };
+    result.cleanup = { sessions: sessions.count, clicks: clicks.count, notifications: notifications.count, adminLogs: adminLogs.count, coupons: coupons.count, storeViews: storeViews.count, oldCarts: oldCarts.count, staleDonations: staleDonations.count };
   }
 
   // ── 6. PREMIOS MENSUALES (solo día 1 del mes) ──────────────────────────────

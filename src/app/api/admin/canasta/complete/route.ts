@@ -71,9 +71,12 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // status: "COMPLETED" explícito acá también para el caso LIBRE sin
-    // meta (se cierra directo desde ACTIVE) — si no, el índice "una activa
-    // por tipo" la sigue contando como activa y bloquea crear la próxima.
+    // status: "COMPLETED" explícito acá también para el caso LIBRE sin meta, que
+    // se cierra directo desde ACTIVE. Lo que impide dos campañas vivas del mismo
+    // tipo es el chequeo del POST de /campaign (no hay ningún índice único en la
+    // base, aunque un comentario viejo acá decía que sí): mira ACTIVE y COMPLETED
+    // sin entregar, así que sin este cambio de estado la anterior seguiría
+    // frenando la creación de la próxima.
     await tx.donationCampaign.update({
       where: { id: campaignId },
       data: { status: "COMPLETED", deliveredAt: new Date() },

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { calculateGoalAmount } from "@/lib/canasta";
+import { calculateGoalAmount, fundedProducts } from "@/lib/canasta";
 
 export const dynamic = "force-dynamic";
 
@@ -51,20 +51,11 @@ export async function GET(req: NextRequest) {
   const goalAmount = calculateGoalAmount(campaign.products, campaign.reservePct);
   const progressPct = goalAmount > 0 ? Math.min(100, Math.round((totalRaised / goalAmount) * 100)) : 0;
 
-  // Los productos se "llenan" en orden a medida que entra plata, como si
-  // la donación cayera en la canasta y completara un producto a la vez.
-  let remaining = totalRaised;
-  const products = campaign.products.map((p) => {
-    let fundedPct = 0;
-    if (remaining >= p.targetPrice) {
-      fundedPct = 100;
-      remaining -= p.targetPrice;
-    } else if (remaining > 0) {
-      fundedPct = Math.round((remaining / p.targetPrice) * 100);
-      remaining = 0;
-    }
-    return { id: p.id, name: p.name, image: p.image, targetPrice: p.targetPrice, fundedPct };
-  });
+  const products = fundedProducts(
+    campaign.products.map((p) => ({ id: p.id, name: p.name, image: p.image, targetPrice: p.targetPrice })),
+    totalRaised,
+    campaign.reservePct
+  );
 
   return NextResponse.json({
     campaign: {

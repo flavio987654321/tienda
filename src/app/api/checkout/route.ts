@@ -573,8 +573,16 @@ export async function POST(req: NextRequest) {
       body.donationAmount >= MIN_DONATION
     ) {
       try {
+        // `type: "CANASTA"` y `deliveredAt: null` son obligatorios, como en todas
+        // las demás consultas de campañas. Sin el tipo, esto agarraba la campaña
+        // activa más nueva fuera cual fuera: si había una Causa Libre creada
+        // después, la donación del checkout se iba a la causa equivocada. Y como
+        // una Libre no tiene productos, `calculateGoalAmount([])` daba 0 → el tope
+        // quedaba en 0 → el monto en 0 → no llegaba al mínimo y la donación se
+        // descartaba en silencio. El comprador tildaba "donar", pagaba, y no
+        // quedaba registro en ningún lado.
         const campaign = await prisma.donationCampaign.findFirst({
-          where: { status: "ACTIVE" },
+          where: { type: "CANASTA", status: "ACTIVE", deliveredAt: null },
           include: { products: { orderBy: { sortOrder: "asc" } } },
           orderBy: { createdAt: "desc" },
         });
@@ -600,7 +608,17 @@ export async function POST(req: NextRequest) {
               },
             });
             donationId = donation.id;
+          } else if (!existingConfirmed) {
+            // Queda registro de por qué no se guardó. Pasa, por ejemplo, con una
+            // campaña recién creada: los 14 productos vienen en $100, así que el
+            // tope por persona da menos que el mínimo y no entra ninguna donación.
+            // Sin este log, se pierde sin que nadie se entere.
+            console.warn("[checkout] donación descartada: el monto quedó bajo el mínimo", {
+              pedido: body.donationAmount, tope: maxDonation, minimo: MIN_DONATION, campaña: campaign.id,
+            });
           }
+        } else {
+          console.warn("[checkout] donación descartada: no hay canasta activa", { pedido: body.donationAmount });
         }
       } catch (e) {
         console.error("[checkout] error creando donación opcional:", e);

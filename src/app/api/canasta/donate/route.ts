@@ -6,6 +6,7 @@ import { platformClient } from "@/lib/mp";
 import { calculateGoalAmount, MIN_DONATION, MAX_DONATION_PCT_OF_GOAL } from "@/lib/canasta";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { getClientIp } from "@/lib/request-ip";
+import { verifyTurnstile } from "@/lib/turnstile";
 
 export const runtime = "nodejs";
 
@@ -80,13 +81,34 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  // Captcha después de validar los campos y antes de tocar la base: un error de
+  // formulario no consume el token (es de un solo uso), y ningún bot llega a
+  // crear una donación ni a pedirle una preferencia a MercadoPago.
+  //
+  // Era el único formulario público de escritura sin captcha. Nadie podía robar
+  // plata —el webhook verifica el pago contra MercadoPago— pero sí llenar la base
+  // de donaciones pendientes y quemar la cuota de la API de MP, que es la cuenta
+  // de cobro de toda la plataforma.
+  if (!(await verifyTurnstile(body.turnstileToken, ip, "canasta-donate"))) {
+    return NextResponse.json(
+      { error: "No pudimos verificar que sos una persona. Intentá de nuevo." },
+      { status: 400 }
+    );
+  }
+
   const user = await getCurrentUser();
   const email = donorEmail.trim().toLowerCase();
   const phone = donorPhone.trim();
 
-  // Chequeo amigable antes de tocar la DB (el índice único parcial es el
-  // que realmente protege contra condiciones de carrera, esto es solo para
-  // dar un mensaje claro en el caso normal).
+  // Una donación confirmada por persona y por campaña. Es un chequeo blando y
+  // nada más: NO hay ningún índice único que lo respalde (un comentario viejo
+  // acá decía que sí; en la base solo existe el único de mpPaymentId).
+  //
+  // Y es a propósito. La confirmación la hace el webhook sobre una donación que
+  // YA se pagó: si un índice rechazara la segunda, la plata quedaría cobrada y la
+  // donación sin registrar, que es bastante peor que dos donaciones de la misma
+  // persona. Con dos pestañas a la vez se pueden colar dos; se aceptan las dos,
+  // porque las dos se pagaron de verdad.
   const dedupConditions = user ? [{ userId: user.id }, { donorEmail: email, donorPhone: phone }] : [{ donorEmail: email, donorPhone: phone }];
   const existingConfirmed = await prisma.donation.findFirst({
     where: { campaignId: campaign.id, status: "CONFIRMED", OR: dedupConditions },

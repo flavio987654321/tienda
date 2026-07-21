@@ -57,7 +57,8 @@ function CreateCausaForm() {
       setError("La meta tiene que ser un número mayor a 0 (o dejala vacía para sin techo)");
       return;
     }
-    if (!confirm(`¿Crear la causa "${name}"?`)) return;
+    // Sin confirm(): el formulario ya dice qué pasa según tenga meta o no, y la
+    // causa se puede borrar mientras no tenga donaciones.
     setCreating(true);
     setError(null);
     try {
@@ -85,10 +86,17 @@ function CreateCausaForm() {
   }
 
   return (
-    <div className="p-8 max-w-md mx-auto text-center">
-      <HeartHandshake className="h-10 w-10 text-amber-500 mx-auto mb-3" />
-      <p className="text-gray-400 mb-6">No hay ninguna Causa Libre activa todavía. Creá una nueva para empezar a recibir donaciones.</p>
-      <div className="space-y-3 text-left">
+    <div className="p-6 sm:p-8 max-w-lg mx-auto">
+      <div className="text-center mb-6">
+        <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-500/10 ring-1 ring-amber-500/20">
+          <HeartHandshake className="h-6 w-6 text-amber-500" />
+        </div>
+        <h1 className="text-lg font-bold text-white">Nueva Causa Libre</h1>
+        <p className="mt-1 text-sm text-gray-500">
+          Una situación puntual, con su propia historia y su foto.
+        </p>
+      </div>
+      <div className="space-y-4 rounded-2xl border border-white/10 bg-white/[0.02] p-5 text-left">
         {mediaUrl &&
           (mediaType === "VIDEO" ? (
             <video src={mediaUrl} controls className="w-full max-h-48 rounded-lg bg-black" />
@@ -117,55 +125,65 @@ function CreateCausaForm() {
           }}
         />
         <div>
-          <label className="text-xs text-gray-500 mb-1 block">Nombre de la causa</label>
+          <label className="text-xs font-semibold text-gray-400 mb-1.5 block">Nombre de la causa</label>
           <input
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Ej: Ayudemos a la familia Pérez"
-            className="w-full bg-white/5 border border-white/10 rounded px-3 py-2 text-sm text-white"
+            className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-white outline-none transition-colors focus:border-amber-500/50"
           />
         </div>
         <div>
-          <label className="text-xs text-gray-500 mb-1 block">Descripción — por qué hace falta la plata</label>
+          <label className="text-xs font-semibold text-gray-400 mb-1.5 block">Descripción — por qué hace falta la plata</label>
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             rows={3}
-            className="w-full bg-white/5 border border-white/10 rounded px-3 py-2 text-sm text-white resize-none"
+            className="w-full resize-none rounded-lg border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-white outline-none transition-colors focus:border-amber-500/50"
           />
         </div>
         <div>
-          <label className="text-xs text-gray-500 mb-1 block">Teléfono de contacto</label>
+          <label className="text-xs font-semibold text-gray-400 mb-1.5 block">Teléfono de contacto</label>
           <input
             type="text"
             value={contactPhone}
             onChange={(e) => setContactPhone(e.target.value)}
-            className="w-full bg-white/5 border border-white/10 rounded px-3 py-2 text-sm text-white"
+            className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-white outline-none transition-colors focus:border-amber-500/50"
           />
         </div>
         <div>
-          <label className="text-xs text-gray-500 mb-1 block">Meta en $ (opcional — vacío = sin techo)</label>
+          <label className="text-xs font-semibold text-gray-400 mb-1.5 block">Meta en pesos</label>
           <input
             type="number"
             min={0}
             value={goalAmount}
             onChange={(e) => setGoalAmount(e.target.value)}
-            placeholder="Sin techo"
-            className="w-full bg-white/5 border border-white/10 rounded px-3 py-2 text-sm text-white"
+            placeholder="Dejala vacía para no poner techo"
+            className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-white outline-none transition-colors focus:border-amber-500/50"
           />
+          {/* La diferencia entre poner meta o no cambia cómo se cierra la campaña,
+              y eso no estaba dicho en ningún lado. */}
+          <p className="mt-1.5 text-xs text-gray-600">
+            {goalAmount.trim()
+              ? "Al llegar a la meta se cierra sola y te avisamos para que registres la entrega."
+              : "Sin meta la causa no se cierra sola: la cerrás vos cuando decidas, desde la pestaña de entrega."}
+          </p>
         </div>
+
         <button
           type="button"
           onClick={create}
           disabled={creating || uploading || !name.trim()}
-          className="w-full bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-gray-950 font-semibold py-2.5 rounded-lg flex items-center justify-center gap-2"
+          className="flex w-full items-center justify-center gap-2 rounded-xl bg-amber-500 py-3 font-semibold text-gray-950 transition-colors hover:bg-amber-400 disabled:cursor-not-allowed disabled:opacity-40"
         >
           {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-          Crear causa
+          {creating ? "Creando…" : "Crear causa"}
         </button>
-        {uploading && <p className="text-xs text-gray-500 text-center">Esperá a que termine de subir la foto/video antes de crear.</p>}
-        {error && <p className="text-xs text-red-400 text-center">{error}</p>}
+        {uploading && <p className="text-center text-xs text-gray-500">Esperá a que termine de subir la foto o el video.</p>}
+        {error && (
+          <p className="rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-xs text-red-400">{error}</p>
+        )}
       </div>
     </div>
   );
@@ -306,25 +324,25 @@ function EditCausaForm({ campaign }: { campaign: NonNullable<Campaign> }) {
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="w-full bg-white/5 border border-white/10 rounded px-3 py-2 text-sm text-white"
+            className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-white outline-none transition-colors focus:border-amber-500/50"
           />
         </div>
         <div>
-          <label className="text-xs text-gray-500 mb-1 block">Descripción — por qué hace falta la plata</label>
+          <label className="text-xs font-semibold text-gray-400 mb-1.5 block">Descripción — por qué hace falta la plata</label>
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             rows={3}
-            className="w-full bg-white/5 border border-white/10 rounded px-3 py-2 text-sm text-white resize-none"
+            className="w-full resize-none rounded-lg border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-white outline-none transition-colors focus:border-amber-500/50"
           />
         </div>
         <div>
-          <label className="text-xs text-gray-500 mb-1 block">Teléfono de contacto</label>
+          <label className="text-xs font-semibold text-gray-400 mb-1.5 block">Teléfono de contacto</label>
           <input
             type="text"
             value={contactPhone}
             onChange={(e) => setContactPhone(e.target.value)}
-            className="w-full bg-white/5 border border-white/10 rounded px-3 py-2 text-sm text-white"
+            className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-white outline-none transition-colors focus:border-amber-500/50"
           />
         </div>
         <div>
@@ -335,7 +353,7 @@ function EditCausaForm({ campaign }: { campaign: NonNullable<Campaign> }) {
             value={goalAmount}
             onChange={(e) => setGoalAmount(e.target.value)}
             placeholder="Sin techo"
-            className="w-full bg-white/5 border border-white/10 rounded px-3 py-2 text-sm text-white"
+            className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-white outline-none transition-colors focus:border-amber-500/50"
           />
         </div>
         <button

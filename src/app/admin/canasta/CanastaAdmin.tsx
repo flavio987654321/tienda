@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Upload, Loader2, Check, HeartHandshake, Plus, X, Trash2, Pencil } from "lucide-react";
 import { useSavedNumberField, useSavedTextField } from "./useSavedNumberField";
+import { calculateGoalAmount } from "@/lib/canasta";
 
 type Product = {
   id: string;
@@ -403,7 +404,9 @@ function CreateCampaignForm() {
 
   async function create() {
     if (creating || !name.trim()) return;
-    if (!confirm(`¿Crear la campaña "${name}"? Después vas a poder agregar los productos.`)) return;
+    // Sin confirm(): la tarjeta de arriba ya dice qué va a pasar, y la campaña se
+    // puede borrar mientras no tenga donaciones. Un cartel del navegador para una
+    // acción reversible que ya está explicada es ruido.
     setCreating(true);
     setError(null);
     try {
@@ -422,68 +425,137 @@ function CreateCampaignForm() {
     }
   }
 
+  // Ejemplo con números redondos para que el % de reserva se entienda sin tener
+  // que hacer la cuenta: es la parte de cada donación que NO compra alimentos.
+  const EJEMPLO = 100_000;
+  const paraAlimentos = Math.round(EJEMPLO * (1 - reservePct / 100));
+
   return (
-    <div className="p-8 max-w-md mx-auto text-center">
-      <HeartHandshake className="h-10 w-10 text-amber-500 mx-auto mb-3" />
-      <p className="text-gray-400 mb-6">No hay una campaña activa todavía. Creá una nueva para empezar a cargar productos.</p>
-      <div className="space-y-3 text-left">
+    <div className="p-6 sm:p-8 max-w-lg mx-auto">
+      <div className="text-center mb-6">
+        <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-500/10 ring-1 ring-amber-500/20">
+          <HeartHandshake className="h-6 w-6 text-amber-500" />
+        </div>
+        <h1 className="text-lg font-bold text-white">Nueva Canasta Solidaria</h1>
+        <p className="mt-1 text-sm text-gray-500">
+          Todavía no hay ninguna campaña activa.
+        </p>
+      </div>
+
+      <div className="space-y-4 rounded-2xl border border-white/10 bg-white/[0.02] p-5">
         <div>
-          <label className="text-xs text-gray-500 mb-1 block">Nombre de la campaña</label>
+          <label htmlFor="campaign-name" className="mb-1.5 block text-xs font-semibold text-gray-400">
+            Nombre de la campaña
+          </label>
           <input
+            id="campaign-name"
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="w-full bg-white/5 border border-white/10 rounded px-3 py-2 text-sm text-white"
+            className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-white outline-none transition-colors focus:border-amber-500/50"
           />
+          <p className="mt-1.5 text-xs text-gray-600">
+            Lo ve la gente al donar. El número al final se incrementa solo en la próxima.
+          </p>
         </div>
+
         <div>
-          <label className="text-xs text-gray-500 mb-1 block">% reserva (envío + gastos)</label>
-          <input
-            type="number"
-            min={0}
-            max={50}
-            value={reservePct}
-            onChange={(e) => setReservePct(Number(e.target.value) || 0)}
-            className="w-24 bg-white/5 border border-white/10 rounded px-3 py-2 text-sm text-white"
-          />
+          <label htmlFor="reserve-pct" className="mb-1.5 block text-xs font-semibold text-gray-400">
+            Reserva para envío y gastos
+          </label>
+          <div className="flex items-center gap-2">
+            <input
+              id="reserve-pct"
+              type="number"
+              min={0}
+              max={50}
+              value={reservePct}
+              onChange={(e) => setReservePct(Math.min(50, Math.max(0, Number(e.target.value) || 0)))}
+              className="w-20 rounded-lg border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-white outline-none transition-colors focus:border-amber-500/50"
+            />
+            <span className="text-sm text-gray-500">% de lo recaudado</span>
+          </div>
+          {/* La cuenta hecha, en vivo: sin esto "10%" es un número abstracto y no
+              se ve qué parte de la donación llega a la familia. */}
+          <p className="mt-1.5 text-xs text-gray-600">
+            De cada <span className="text-gray-400">{formatMoney(EJEMPLO)}</span> donados,{" "}
+            <span className="font-semibold text-amber-500/90">{formatMoney(paraAlimentos)}</span> se van en alimentos
+            y el resto cubre el envío. Se puede cambiar después.
+          </p>
         </div>
+
+        {/* Qué va a pasar al apretar. Antes el botón creaba 14 productos sin
+            avisar y aparecían de golpe. */}
+        <div className="rounded-xl border border-white/5 bg-white/[0.02] p-3.5">
+          <p className="text-xs font-semibold text-gray-400">Al crearla</p>
+          <ul className="mt-1.5 space-y-1 text-xs text-gray-500">
+            <li>Se cargan 14 alimentos de ejemplo para que edites nombre, precio y foto.</li>
+            <li>La meta se calcula sola con esos precios más la reserva.</li>
+            <li>Queda visible para donar apenas la creás — podés borrarla mientras no tenga donaciones.</li>
+          </ul>
+        </div>
+
         <button
           type="button"
           onClick={create}
           disabled={creating || !name.trim()}
-          className="w-full bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-gray-950 font-semibold py-2.5 rounded-lg flex items-center justify-center gap-2"
+          className="flex w-full items-center justify-center gap-2 rounded-xl bg-amber-500 py-3 font-semibold text-gray-950 transition-colors hover:bg-amber-400 disabled:cursor-not-allowed disabled:opacity-40"
         >
           {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-          Crear campaña
+          {creating ? "Creando…" : "Crear campaña"}
         </button>
-        {error && <p className="text-xs text-red-400 text-center">{error}</p>}
+        {error && (
+          <p className="rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-xs text-red-400">{error}</p>
+        )}
       </div>
     </div>
   );
 }
 
+/**
+ * El caso "todavía no hay campaña" se resuelve ANTES de declarar ningún estado.
+ *
+ * Antes el `if (!campaign)` estaba abajo de los `useState`, así que el mismo
+ * componente cubría los dos casos. Al crear la campaña llegaban los 14 productos
+ * por props, pero React no vuelve a montar nada —es el mismo componente— y
+ * `useState` conserva su valor inicial: la lista quedaba vacía y en pantalla se
+ * veía solo el cuadrito de "Agregar". Recién al recargar a mano aparecían los 14.
+ *
+ * Con el early return acá arriba, el editor se monta de cero recién cuando ya hay
+ * campaña. El `key` cubre además el cambio de una campaña a otra (después de una
+ * entrega arranca la siguiente): sin él, la nueva heredaría los productos de la
+ * anterior. Es el mismo patrón que usa CausaLibreAdmin, que por eso no falla.
+ */
 export default function CanastaAdmin({ campaign }: { campaign: Campaign }) {
+  if (!campaign) return <CreateCampaignForm />;
+  return <EditCampaign key={campaign.id} campaign={campaign} />;
+}
+
+function EditCampaign({ campaign }: { campaign: NonNullable<Campaign> }) {
   const router = useRouter();
-  const [products, setProducts] = useState<Product[]>(campaign?.products ?? []);
+  const [products, setProducts] = useState<Product[]>(campaign.products);
   const [prices, setPrices] = useState<Record<string, number>>(
-    () => Object.fromEntries((campaign?.products ?? []).map((p) => [p.id, p.targetPrice]))
+    () => Object.fromEntries(campaign.products.map((p) => [p.id, p.targetPrice]))
   );
   const [deletingCampaign, setDeletingCampaign] = useState(false);
   const [deleteCampaignError, setDeleteCampaignError] = useState<string | null>(null);
 
-  if (!campaign) {
-    return <CreateCampaignForm />;
-  }
-
   const productsTotal = Object.values(prices).reduce((sum, p) => sum + p, 0);
-  const goalAmount = Math.round(productsTotal / (1 - campaign.reservePct / 100));
+  // De la misma función que usan el tope de donación, el progreso público y el
+  // clonado de campaña. Acá la fórmula estaba repetida a mano, que es justo lo
+  // que ese helper existe para evitar.
+  const goalAmount = calculateGoalAmount(
+    Object.values(prices).map((targetPrice) => ({ targetPrice })),
+    campaign.reservePct
+  );
 
   async function handleDeleteCampaign() {
-    if (!confirm(`¿Eliminar la campaña "${campaign!.name}"? Solo se puede si todavía no tiene donaciones confirmadas. Esta acción no se puede deshacer.`)) return;
+    if (!confirm(`¿Eliminar la campaña "${campaign.name}"? Solo se puede si todavía no tiene donaciones confirmadas. Esta acción no se puede deshacer.`)) return;
+    if (deletingCampaign) return;
     setDeletingCampaign(true);
     setDeleteCampaignError(null);
     try {
-      await deleteJSON(`/api/admin/canasta/campaign?id=${campaign!.id}`);
+      await deleteJSON(`/api/admin/canasta/campaign?id=${campaign.id}`);
       router.refresh();
     } catch (e) {
       setDeleteCampaignError(e instanceof Error ? e.message : "No se pudo eliminar");

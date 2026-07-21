@@ -40,9 +40,28 @@ export async function POST(req: NextRequest) {
   }
   const campaignType = type === "LIBRE" ? "LIBRE" : "CANASTA";
 
-  const existing = await prisma.donationCampaign.findFirst({ where: { type: campaignType, status: "ACTIVE" } });
+  // Sin entrega registrada no arranca la siguiente.
+  //
+  // Antes esto solo miraba `status: "ACTIVE"`, así que una campaña que ya había
+  // llegado a su meta —COMPLETED, esperando que se registre a quién se le
+  // entregó— no frenaba nada. Se podía crear la próxima y la anterior, con toda
+  // la plata recaudada, desaparecía de la pantalla: el panel muestra una sola
+  // campaña por tipo (la más nueva sin entregar) y la vieja quedaba sin ningún
+  // lugar desde donde cerrarla.
+  const existing = await prisma.donationCampaign.findFirst({
+    where: { type: campaignType, status: { in: ["ACTIVE", "COMPLETED"] }, deliveredAt: null },
+    select: { name: true, status: true },
+  });
   if (existing) {
-    return NextResponse.json({ error: "Ya hay una campaña activa de este tipo" }, { status: 409 });
+    return NextResponse.json(
+      {
+        error:
+          existing.status === "COMPLETED"
+            ? `"${existing.name}" ya llegó a su meta y falta registrar la entrega. Registrala en la pestaña de entrega y ahí arranca la siguiente.`
+            : `Ya hay una campaña activa de este tipo ("${existing.name}").`,
+      },
+      { status: 409 }
+    );
   }
 
   if (campaignType === "LIBRE") {
