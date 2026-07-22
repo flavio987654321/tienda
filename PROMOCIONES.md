@@ -1066,8 +1066,8 @@ seguridad: sigue siendo válida, simplemente tenía menos alcance del que creía
 
 | Orden | Qué | Tipo | Estado |
 |---|---|---|---|
-| 1 | **B-07** — `FIXED` puede dejar el producto en $0 | 🔴 bug de plata | ✅ **DECIDIDO: se bloquea** (22/07). Falta implementar |
-| 2 | **B-08** — promo sin descuento igual bloquea el cupón | 🟠 bug de experiencia | 🔲 sin tocar |
+| ~~1~~ | ~~**B-07** — `FIXED` puede dejar el producto en $0~~ | ✅ **HECHO** | **ARREGLADO (22/07)**: `fixedFloorError` en `promotions.ts`, enchufado en **crear y editar**. Nombra el producto: *"Con $12.000, «Llavero» ($4.000) quedaría gratis"*. Casos **FF-A/B/C/D** |
+| ~~2~~ | ~~**B-08** — promo sin descuento igual bloquea el cupón~~ | ✅ **HECHO** | **ARREGLADO (22/07)**: el gate mira las promos que **realmente aplicaron** (ganaron línea, o son el envío gratis que se activó), no las que alcanzan por scope. Casos **CG-A/B/C/D** |
 | 3 | **Decisión #12** — envío gratis por producto libera el pedido entero | 🤔 debate | ✅ **CERRADO (22/07): queda como está** |
 | 4 | **Decisión #11** — envío gratis sobre método "a coordinar" | 🤔 debate | ✅ **CERRADO (22/07): lo resuelve #7c** — al registrar el envío bonificado, en `coordinar` da $0 (la verdad: no se regaló nada). No hace falta prohibir ni avisar |
 | 5 | **B-09** — el wizard limita a UNA categoría aunque el motor soporta varias, y al editar trunca | 🔴 **subió de prioridad (22/07)** | ✅ **DECIDIDO: varias categorías.** Falta implementar — **bloquea el caso estrella del Combo**, ver nota abajo |
@@ -1077,14 +1077,14 @@ seguridad: sigue siendo válida, simplemente tenía menos alcance del que creía
 | 9 | **F6-C4** — guiar al que arma la promo, con sus propios números (idea de Flavio) | ✏️ UX | 🔲 a diseñar |
 | 10 | **F6-C5** — el paso 3 no aclara la unidad: ni "pesos por producto" ni "porcentaje" | ✏️ texto | 🔲 sin tocar |
 | 11 | **F6-C6** — el checkout no muestra QUÉ producto tiene la promo, ni cuál promo es | ✏️ UX | 🔲 sin tocar |
-| 12 | **B-10** — el CheckoutModal tiene su PROPIA cuenta del precio base | 🟠 confirmado, dormido | ✅ **VERIFICADO (22/07)**: divergencia real, 0 productos con mayorista → no corre hoy. Arreglo chico |
+| ~~12~~ | ~~**B-10** — el CheckoutModal tiene su PROPIA cuenta del precio base~~ | ✅ **HECHO** | **ARREGLADO (22/07)**: ahora usa `resolveBasePrice` del motor. Se borró la copia local (y el `isWholesale` que quedó sin uso). tsc + eslint limpios |
 | 13 | **F6-C7** — avisar cuando una promo nueva nunca va a aplicar (tapada por otra) | ✏️ UX | 🔲 sin tocar |
 | 14 | **F6-C8** — "Compra mínima" no dice que se mide sobre TODO el pedido | ✏️ texto | 🔲 sin tocar |
 | 15 | **F6-C9** — avisar al crear un PRODUCTO que cae bajo una promo fija peligrosa | ✏️ UX | 🔲 sin tocar |
-| 16 | **B-11** — el N×M cobra $1 de más por cada 3 talles distintos | 🔴 bug de plata | 🔲 sin tocar |
+| ~~16~~ | ~~**B-11** — el N×M cobra $1 de más por cada 3 talles distintos~~ | ✅ **HECHO** | **ARREGLADO (22/07)**: reparto con redondeo acumulado (`repartirNxM`), la suma cierra siempre. Casos **SP-M / SP-N / SP-O / SP-P** en la suite |
 | 17 | **F6-C10** — "3×2 en remeras" NO es "3 remeras cualesquiera", y el paso 2 no lo recuerda | ✏️ UX | 🔲 sin tocar |
 | 18 | **F6-C11** — Combo con UN solo producto: se comporta como un 3×2 y nadie lo avisa | ✏️ UX | 🔲 sin tocar |
-| 19 | **B-12** — con dos promos de envío gratis, cuál se nombra depende del orden de la base | 🟡 no determinista | 🔲 sin tocar |
+| ~~19~~ | ~~**B-12** — con dos promos de envío gratis, cuál se nombra depende del orden de la base~~ | ✅ **HECHO** | **ARREGLADO (22/07)**: gana el umbral **más alto ya superado**, desempate por nombre. Mismo criterio que `resolveStoreEvent`. Caso **SP-Q** |
 | 20 | **#7c** — el envío bonificado NO se resta de la ganancia (Métricas miente) | 🔴 plata | ✅ **SOLUCIÓN ACORDADA (22/07)**, falta implementar — requiere migración |
 | 21 | **F6-C12** — el paso 4 apila 19 chips de evento para un campo opcional | ✏️ UX | ✅ **DECIDIDO: toggle + desplegable** |
 | — | *(lo que agregue Flavio en esta ronda)* | | |
