@@ -182,25 +182,78 @@ function promoEffectiveUnitPrice(
 // puede caer bajo la promo y quedar gratis sin que nadie revise (F6-C9, pendiente).
 export type FixedFloorProduct = { name: string; price: number; category: string | null; id: string };
 
-export function fixedFloorError(
-  promo: { type: string; value: number | null; scope: string; categories: string[]; productIds: string[] },
-  products: FixedFloorProduct[]
-): string | null {
-  if (promo.type !== "FIXED" || promo.value == null || !(promo.value > 0)) return null;
-  const enAlcance = products.filter((p) =>
+// Qué productos alcanza una promo. Estaba escrito tres veces igual (candado del
+// monto fijo, piso de costo, impacto): tres copias de la misma regla son tres
+// lugares donde puede quedar desincronizada, que es exactamente lo que causó B-10.
+type ScopeFields = { scope: string; categories: string[]; productIds: string[] };
+
+export function productsInScope<T extends { id: string; category: string | null }>(
+  promo: ScopeFields, products: T[]
+): T[] {
+  return products.filter((p) =>
     promo.scope === "ALL" ? true :
     promo.scope === "CATEGORY" ? (p.category != null && promo.categories.includes(p.category)) :
     promo.scope === "PRODUCTS" ? promo.productIds.includes(p.id) : false
   );
+}
+
+// ── Impacto de un monto fijo, producto por producto (F6-C4) ──────────────────
+// El mismo monto es un descuento suave o una regalada según a qué le caiga:
+// $5.000 es un 23% sobre $22.000 y un 83% sobre $6.000. Nadie tiene ese cálculo
+// en la cabeza mientras tipea, así que lo hace el panel y lo muestra en vivo.
+//
+// Devuelve los tres cortes que necesita la pantalla: el PEOR caso (una línea bajo
+// el campo), los que quedarían GRATIS (lo único que bloquea, B-07) y los que pasan
+// el umbral de descuento profundo (aviso en Revisá, no bloquea).
+
+/** A partir de acá el descuento se avisa: más de la mitad del precio del producto. */
+export const DEEP_DISCOUNT_PCT = 50;
+
+export type FixedImpactItem = { id: string; name: string; price: number; effective: number; pct: number };
+export type FixedImpactResult = {
+  inScope: number;               // productos con precio cargado dentro del alcance
+  worst: FixedImpactItem | null; // el de descuento más profundo (= el más barato)
+  free: FixedImpactItem[];       // quedarían en $0 — esto SÍ frena (B-07)
+  deep: FixedImpactItem[];       // pasan DEEP_DISCOUNT_PCT sin llegar a gratis — solo avisan
+};
+
+const IMPACTO_VACIO: FixedImpactResult = { inScope: 0, worst: null, free: [], deep: [] };
+
+export function fixedImpact(
+  promo: { type: string; value: number | null } & ScopeFields,
+  products: FixedFloorProduct[]
+): FixedImpactResult {
+  if (promo.type !== "FIXED" || promo.value == null || !(promo.value > 0)) return IMPACTO_VACIO;
+  const value = promo.value;
+  const items = productsInScope(promo, products)
+    .filter((p) => p.price > 0) // sin precio cargado no se puede juzgar
+    .map((p) => {
+      // Mismo tope que el motor (`Math.max(0, base - value)`): sin esto el % daría
+      // más de 100 y el precio, negativo.
+      const effective = Math.max(0, p.price - value);
+      return { id: p.id, name: p.name, price: p.price, effective, pct: Math.round((1 - effective / p.price) * 100) };
+    })
+    // Del más profundo al más suave. A igual %, primero el más barato: entre dos
+    // productos gratis, el que se nombra es el que más obviamente está mal.
+    .sort((a, b) => b.pct - a.pct || a.price - b.price);
+
+  return {
+    inScope: items.length,
+    worst: items[0] ?? null,
+    free: items.filter((i) => i.effective <= 0),
+    deep: items.filter((i) => i.effective > 0 && i.pct >= DEEP_DISCOUNT_PCT),
+  };
+}
+
+export function fixedFloorError(
+  promo: { type: string; value: number | null } & ScopeFields,
+  products: FixedFloorProduct[]
+): string | null {
   // El más barato del alcance es el que define el riesgo: si ese sobrevive, todos.
-  let peor: FixedFloorProduct | null = null;
-  for (const p of enAlcance) {
-    if (!(p.price > 0)) continue; // sin precio cargado no se puede juzgar
-    if (p.price <= promo.value && (peor === null || p.price < peor.price)) peor = p;
-  }
+  const peor = fixedImpact(promo, products).free[0];
   if (!peor) return null;
   const ars = (n: number) => "$" + Math.round(n).toLocaleString("es-AR");
-  return `Con ${ars(promo.value)} de descuento, “${peor.name}” (${ars(peor.price)}) quedaría gratis. Bajá el monto o sacalo del alcance.`;
+  return `Con ${ars(promo.value!)} de descuento, “${peor.name}” (${ars(peor.price)}) quedaría gratis. Bajá el monto o sacalo del alcance.`;
 }
 
 export type CostFloorPromo = {
@@ -218,11 +271,7 @@ export type CostFloorResult = {
 
 // ¿Qué productos en alcance quedarían por debajo de su costo con esta promo?
 export function costFloorCheck(promo: CostFloorPromo, products: CostFloorProduct[]): CostFloorResult {
-  const inScope = products.filter((p) =>
-    promo.scope === "ALL" ? true :
-    promo.scope === "CATEGORY" ? (p.category != null && promo.categories.includes(p.category)) :
-    promo.scope === "PRODUCTS" ? promo.productIds.includes(p.id) : false
-  );
+  const inScope = productsInScope(promo, products);
   // Envío gratis no toca el precio del producto → nunca hay piso de costo que avisar
   // (y no tiene sentido contar "sin costo cargado" acá).
   if (promo.type === "FREE_SHIPPING") return { below: [], missingCost: 0, inScope: inScope.length };

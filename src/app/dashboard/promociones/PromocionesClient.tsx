@@ -6,7 +6,10 @@ import {
   Percent, Tag, Gift, Truck, Store, Folder, ListChecks, Check, Plus, X,
   Info, AlertTriangle, Loader2, Search, Archive, Trash2, RotateCcw, Smile, Pencil, Shuffle,
 } from "lucide-react";
-import { costFloorCheck, MAX_PROMO_PERCENT as MAX_PCT, MAX_EVENT_LABEL } from "@/lib/promotions";
+import {
+  costFloorCheck, fixedImpact, DEEP_DISCOUNT_PCT, type FixedImpactResult,
+  MAX_PROMO_PERCENT as MAX_PCT, MAX_EVENT_LABEL,
+} from "@/lib/promotions";
 import LimitePlanBanner from "@/components/dashboard/LimitePlanBanner";
 
 // Emojis para el nombre de la promo (lo ve solo el dueño; le ayuda a reconocerla de un vistazo).
@@ -425,6 +428,27 @@ function Wizard({ categories, products, onClose, onCreated, editPromo }: {
 
   const meta = type ? TYPE_META[type] : null;
 
+  // F6-C4 — qué le hace este monto al catálogo REAL, recalculado mientras se
+  // tipea. Solo en `FIXED`: un porcentaje descuenta lo mismo en un producto de
+  // $8.000 que en uno de $130.000, así que no hay nada que descubrir; un monto
+  // fijo, en cambio, es un 23% o un 83% según a quién le caiga.
+  //
+  // ⚠️ Mira el catálogo de HOY. Con alcance "toda la tienda", un producto que se
+  // cargue mañana puede caer bajo esta promo sin que nadie revise nada (F6-C9).
+  const impacto = useMemo(
+    () => fixedImpact(
+      {
+        type: type ?? "",
+        value: type === "FIXED" ? parseNum(value) : null,
+        scope: scope ?? "ALL",
+        categories: scope === "CATEGORY" ? cats : [],
+        productIds: scope === "PRODUCTS" ? prodIds : [],
+      },
+      products
+    ),
+    [type, value, scope, cats, prodIds, products]
+  );
+
   // Inserta el emoji en la posición del cursor (o al final) y deja el caret después.
   function insertEmoji(emoji: string) {
     const el = nameRef.current;
@@ -447,7 +471,10 @@ function Wizard({ categories, products, onClose, onCreated, editPromo }: {
     if (step === 3) {
       // % entre 1 y 90 EN VIVO (antes solo pedía >0 y el server rechazaba al final).
       if (type === "PERCENT") { const n = parseFloat(value); return n >= 1 && n <= MAX_PCT; }
-      if (type === "FIXED") return parseFloat(value) > 0;
+      // El único freno de la sección (todo lo demás avisa): un producto en $0.
+      // Es la misma regla que el tope de 90 del porcentaje, y frenar acá y no
+      // recién al guardar evita que se completen dos pasos más para nada.
+      if (type === "FIXED") return parseNum(value) > 0 && impacto.free.length === 0;
       if (isNxM(type)) return parseInt(minQty) >= 2 && parseInt(payQty) >= 1 && parseInt(payQty) < parseInt(minQty);
       return true;
     }
@@ -649,6 +676,9 @@ function Wizard({ categories, products, onClose, onCreated, editPromo }: {
                     {type === "PERCENT" && value !== "" && (parseFloat(value) < 1 || parseFloat(value) > MAX_PCT) && (
                       <p className="text-[12px] text-red-600 mt-1.5">El porcentaje tiene que estar entre 1 y {MAX_PCT}.</p>
                     )}
+                    {/* F6-C4: la consecuencia del monto, con sus propios productos,
+                        antes de guardar. */}
+                    {type === "FIXED" && <ImpactoFijo imp={impacto} />}
                   </Field>
                   {/* F6-C8: el mínimo se mide sobre el subtotal de TODO el carrito,
                       no sobre lo que está en promoción. Quien arma "20% en remeras
@@ -829,6 +859,43 @@ function Wizard({ categories, products, onClose, onCreated, editPromo }: {
                   </>
                 );
               })()}
+              {(() => {
+                // F6-C4 (b) — descuentos muy profundos, mismo molde que el piso de
+                // costo. Va también acá y no solo en el paso 3 porque al EDITAR el
+                // asistente abre directo en este paso: si un producto barato se
+                // cargó después de crear la promo, este cartel es el único lugar
+                // donde aparece el aviso.
+                if (type !== "FIXED") return null;
+                if (impacto.free.length > 0) {
+                  const w = impacto.free[0];
+                  return (
+                    <div className="flex gap-2.5 items-start bg-red-50 border border-red-200 rounded-xl p-3 mt-3.5 text-[12.5px] text-red-700">
+                      <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+                      <div>
+                        <b>“{w.name}” ({money(w.price)}) quedaría gratis</b> con {money(parseNum(value))} de descuento
+                        {impacto.free.length > 1 && <>, igual que otro{impacto.free.length > 2 ? "s" : ""} {impacto.free.length - 1}</>}.
+                        {" "}No se puede guardar así: bajá el monto o sacalo del alcance.
+                      </div>
+                    </div>
+                  );
+                }
+                if (impacto.deep.length === 0) return null;
+                return (
+                  <div className="flex gap-2.5 items-start bg-amber-50 border border-amber-200 rounded-xl p-3 mt-3.5 text-[12.5px] text-amber-800">
+                    <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+                    <div>
+                      <b>{impacto.deep.length} producto{impacto.deep.length !== 1 ? "s" : ""} queda{impacto.deep.length !== 1 ? "n" : ""} con más de la mitad de descuento.</b>{" "}
+                      Podés crearla igual — fijate que sea lo que querías.
+                      <ul className="mt-1.5 space-y-0.5">
+                        {impacto.deep.slice(0, 4).map((d) => (
+                          <li key={d.id}>· <b>{d.name}</b>: {money(d.price)} → {money(d.effective)} ({d.pct}%)</li>
+                        ))}
+                        {impacto.deep.length > 4 && <li>· y {impacto.deep.length - 4} más…</li>}
+                      </ul>
+                    </div>
+                  </div>
+                );
+              })()}
               <div className="flex gap-2.5 items-start bg-green-50 border border-green-200 rounded-xl p-3 mt-3.5 text-[12.5px] text-green-800">
                 <Check className="h-4 w-4 shrink-0 mt-0.5" />
                 <span>{isEdit ? "Al guardar" : "Al crearla"}, esos {affected} producto{affected !== 1 ? "s" : ""} muestran el precio con descuento en la tienda al instante.</span>
@@ -899,6 +966,34 @@ function InfoNote({ children }: { children: React.ReactNode }) {
 function WarnNote({ children }: { children: React.ReactNode }) {
   return <div className="flex gap-2.5 items-start bg-amber-50 border border-amber-200 rounded-xl p-3 mt-3 text-[12.5px] text-amber-900"><AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" /><span>{children}</span></div>;
 }
+// F6-C4 — una línea que responde "¿y esto qué le hace a mis productos?" mientras
+// se escribe el monto. El riesgo de un monto fijo es siempre el mismo número —
+// monto ÷ el más barato del alcance — y nadie lo tiene en la cabeza al tipear.
+// El color es el aviso: gris normal, ámbar si pasa la mitad del precio, rojo si
+// algo queda gratis (único caso que además frena).
+function ImpactoFijo({ imp }: { imp: FixedImpactResult }) {
+  const w = imp.worst;
+  if (!w) return null; // sin monto todavía, o sin productos con precio en alcance
+  const gratis = w.effective <= 0;
+  const hondo = w.pct >= DEEP_DISCOUNT_PCT;
+  const cls = gratis ? "text-red-600" : hondo ? "text-amber-700" : "text-gray-500";
+  return (
+    <p className={`text-[12px] mt-1.5 ${cls}`}>
+      {gratis ? (
+        <>
+          <b>“{w.name}” ({money(w.price)}) quedaría gratis.</b>{" "}
+          {imp.free.length > 1 && <>Y {imp.free.length - 1} producto{imp.free.length - 1 !== 1 ? "s" : ""} más. </>}
+          Bajá el monto o cambiá el alcance para seguir.
+        </>
+      ) : (
+        <>
+          El más barato en alcance, <b>{w.name}</b> ({money(w.price)}), queda en <b>{money(w.effective)}</b> — {w.pct}% de descuento.
+        </>
+      )}
+    </p>
+  );
+}
+
 function Empty({ children }: { children: React.ReactNode }) {
   return <div className="px-4 py-4 text-[12.5px] text-gray-400">{children}</div>;
 }

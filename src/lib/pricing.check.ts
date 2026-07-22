@@ -9,7 +9,7 @@
 // eso es lo que cubren los casos SP-* y FS-*.
 
 import { priceCart, resolveBasePrice, freeShippingProgress, type PricingItem, type ActivePromotion } from "./pricing";
-import { costFloorCheck, fixedFloorError, type CostFloorPromo, type CostFloorProduct } from "./promotions";
+import { costFloorCheck, fixedFloorError, fixedImpact, type CostFloorPromo, type CostFloorProduct } from "./promotions";
 import { resolveProductPromo, describePromo, resolveStoreEvent } from "./promoDisplay";
 
 const BASE = 10000;
@@ -192,6 +192,32 @@ for (const c of spCases) {
     const ok = (c.err !== null) === c.debeFrenar;
     if (!ok) failed++;
     console.log(`${ok ? "OK  " : "FAIL"} [${c.id}] ${c.err ? "frenó" : "pasó"} — ${c.desc}`);
+  }
+
+  // ── F6-C4: el impacto que se muestra en vivo mientras se tipea el monto ─────
+  // Lo que se congela acá es el NÚMERO que ve el dueño antes de guardar: si el
+  // peor caso o el % se calculan mal, el panel da un consejo falso — peor que no
+  // dar ninguno.
+  const impCasos: { id: string; imp: ReturnType<typeof fixedImpact>; peor: string | null; pct: number | null; libres: number; hondos: number; desc: string }[] = [
+    { id: "FI-A", imp: fixedImpact(fixed(3000), prods), peor: "Llavero", pct: 75, libres: 0, hondos: 1,
+      desc: "el peor caso es el MÁS BARATO, no el primero de la lista: $3.000 sobre $4.000 = 75%" },
+    { id: "FI-B", imp: fixedImpact(fixed(2000), prods), peor: "Llavero", pct: 50, libres: 0, hondos: 1,
+      desc: "justo en el umbral (50%) → ya avisa" },
+    { id: "FI-C", imp: fixedImpact(fixed(1000), prods), peor: "Llavero", pct: 25, libres: 0, hondos: 0,
+      desc: "descuento suave → sin aviso, pero igual muestra la línea" },
+    { id: "FI-D", imp: fixedImpact(fixed(5000), prods), peor: "Llavero", pct: 100, libres: 1, hondos: 0,
+      desc: "gratis: el % se topea en 100 (no 125) y sale de `hondos` para no contarse dos veces" },
+    { id: "FI-E", imp: fixedImpact(fixed(5000, "CATEGORY", ["remeras"]), prods), peor: "Remera básica", pct: 23, libres: 0, hondos: 0,
+      desc: "el alcance manda: sin el llavero, el mismo monto pasa a ser un 23%" },
+    { id: "FI-F", imp: fixedImpact({ type: "PERCENT", value: 5000, scope: "ALL", categories: [], productIds: [] }, prods), peor: null, pct: null, libres: 0, hondos: 0,
+      desc: "no es monto fijo → no se calcula nada" },
+  ];
+  for (const c of impCasos) {
+    const peor = c.imp.worst?.name ?? null;
+    const pct = c.imp.worst?.pct ?? null;
+    const ok = peor === c.peor && pct === c.pct && c.imp.free.length === c.libres && c.imp.deep.length === c.hondos;
+    if (!ok) failed++;
+    console.log(`${ok ? "OK  " : "FAIL"} [${c.id}] peor=${peor} ${pct}% · gratis=${c.imp.free.length} · hondos=${c.imp.deep.length} — ${c.desc}`);
   }
 }
 

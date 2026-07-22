@@ -1074,7 +1074,7 @@ seguridad: sigue siendo válida, simplemente tenía menos alcance del que creía
 | ~~6~~ | ~~**F6-C1** — el ejemplo del tipo mete una categoría en el paso del tipo~~ | ✅ **HECHO** | **APLICADO (22/07)**: ejemplos neutros en `PERCENT` y `FIXED`; la aclaración del alcance quedó en el encabezado del paso 1, no repetida en los cinco tipos |
 | ~~7~~ | ~~**F6-C2** — "Se aplica solo en la tienda" tiene dos lecturas~~ | ✅ **HECHO** | **APLICADO (22/07)**: *"Se aplica solo con entrar a tu tienda: no tiene que escribir ningún cupón."* — "código" pasó a "cupón" |
 | ~~8~~ | ~~**F6-C3** — el selector de categoría no muestra el rango de precios~~ | ✅ **HECHO** | **ARREGLADO (22/07)**: `catSub` muestra *"14 productos · $55.000 a $99.000"* en cada categoría. Salió junto con B-09, es el mismo selector |
-| 9 | **F6-C4** — guiar al que arma la promo, con sus propios números (idea de Flavio) | ✏️ UX | 🔲 a diseñar |
+| ~~9~~ | ~~**F6-C4** — guiar al que arma la promo, con sus propios números (idea de Flavio)~~ | ✅ **HECHO** | **APLICADO (22/07)**: `fixedImpact` en `promotions.ts` + línea viva bajo el campo del monto (*"El más barato en alcance, Llavero ($4.000), queda en $1.000 — 75% de descuento"*), gris/ámbar/rojo según profundidad, y cartel con la lista en Revisá. El caso "gratis" ahora **frena en el paso 3** en vez de recién al guardar. Casos **FI-A…FI-F** |
 | ~~10~~ | ~~**F6-C5** — el paso 3 no aclara la unidad~~ | ✅ **HECHO** | **APLICADO (22/07)**: *"Monto de descuento **por producto**"* + ayuda *"se resta a cada unidad: en un carrito con 3 productos descuenta 3 veces"*. El % aclara que se calcula sobre el precio de venta |
 | 11 | **F6-C6** — el checkout no muestra QUÉ producto tiene la promo, ni cuál promo es | ✏️ UX | 🔲 sin tocar |
 | ~~12~~ | ~~**B-10** — el CheckoutModal tiene su PROPIA cuenta del precio base~~ | ✅ **HECHO** | **ARREGLADO (22/07)**: ahora usa `resolveBasePrice` del motor. Se borró la copia local (y el `isWholesale` que quedó sin uso). tsc + eslint limpios |
@@ -1087,7 +1087,23 @@ seguridad: sigue siendo válida, simplemente tenía menos alcance del que creía
 | ~~19~~ | ~~**B-12** — con dos promos de envío gratis, cuál se nombra depende del orden de la base~~ | ✅ **HECHO** | **ARREGLADO (22/07)**: gana el umbral **más alto ya superado**, desempate por nombre. Mismo criterio que `resolveStoreEvent`. Caso **SP-Q** |
 | 20 | **#7c** — el envío bonificado NO se resta de la ganancia (Métricas miente) | 🔴 plata | ✅ **SOLUCIÓN ACORDADA (22/07)**, falta implementar — requiere migración |
 | ~~21~~ | ~~**F6-C12** — el paso 4 apila 19 chips de evento para un campo opcional~~ | ✅ **HECHO** | **APLICADO (22/07)**: toggle apagado por defecto + desplegable al prenderlo. Se borró `EventChip` (quedó sin uso). Además avisa cuando completa las fechas solo, y deja de avisar si las tocás |
+| 22 | **B-13** — un monto escrito con separador de miles se guarda ÷1000 | 🔴 plata | 🔲 **NUEVO (22/07)**, encontrado al implementar F6-C4 |
 | — | *(lo que agregue Flavio en esta ronda)* | | |
+
+#### B-13 — "$5.000" se guarda como $5 (encontrado 22/07)
+
+El campo del monto acepta puntos y comas (`digitsMoney`), pero `parseNum` los interpreta como **decimales**:
+`parseNum("5.000")` → `parseFloat("5.000")` → **5**. Lo mismo `"5,000"`. Solo sale bien si se tipea `50000`
+sin separadores — y el placeholder del campo dice justamente `$ 5.000`, o sea que **el ejemplo enseña la
+forma que se rompe**. Afecta al monto fijo y a la compra mínima (los dos usan `digitsMoney` + `parseNum`).
+
+**No es nuevo** — está desde que existe el campo. Aparece ahora porque la línea viva de F6-C4 lo hace
+visible: escribiendo `5.000` el panel contesta *"Con $5 de descuento…"*, que es la primera vez que el
+sistema dice en voz alta lo que entendió.
+
+→ Arreglo: `parseNum` tiene que distinguir separador de miles de separador decimal (en es-AR el decimal es
+la **coma** y el punto es de miles), o el campo tiene que formatear mientras se tipea. **Ojo**: `parseNum`
+también la usa el % — ahí no molesta porque son enteros de 1 a 90, pero el arreglo tiene que no romperlo.
 
 #### #7c — cómo se entera Métricas del envío regalado (acordado 22/07)
 
