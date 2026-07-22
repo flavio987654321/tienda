@@ -5,6 +5,7 @@ import type { CartTheme } from "./CartDrawer";
 import { FadeImage } from "./FadeImage";
 import { PROVINCIAS_ARGENTINA } from "@/lib/provincias";
 import { resolveVariantPrice } from "@/lib/variantPrice";
+import { resolveBasePrice, parseEscalones } from "@/lib/pricing";
 
 // Checkout completo (datos del comprador, envío, pago, cupón, donación opcional
 // y términos) compartido por todos los templates de un mismo tipo de negocio.
@@ -27,20 +28,25 @@ export function CheckoutModal({
     handleApplyCoupon, couponsAllowed, cartTotal, couponDiscount, envioPrice, envioCoordinar, orderTotal,
     canastaDisponible, donationEnabled, setDonationEnabled, donationAmount, setDonationAmount,
     acceptedTerms, setAcceptedTerms, handlePlaceOrder, fmt, fmtEnvioPrice, fmtLiveQuote,
-    isWholesale,
   } = cart;
 
+  // Precio base (variante + mayorista + escalones) resuelto por el MOTOR, no por
+  // una copia local. Antes esto era una tercera implementación de la misma cuenta
+  // —y no idéntica: tenía un gate `isWholesale` que el motor NO tiene a propósito
+  // (ver B-06 en PROMOCIONES.md, se sacó del carrito y de la caja y había quedado
+  // vivo acá). Con una tienda sin el modo mayorista pero con productos que
+  // califican por cantidad, esta pantalla mostraba el precio de lista mientras el
+  // motor cobraba el mayorista, y la diferencia caía dentro de "Promoción
+  // aplicada" — atribuyéndole a una promo lo que era descuento por volumen (B-10).
   function itemEffectiveUnitPrice(item: typeof cartItems[number], qty: number): number {
     const product = item.product;
     const vp = resolveVariantPrice(product.variants, item.size, item.color, item.variantId);
-    const effectiveBase = vp ?? product.price;
-    if (!isWholesale || !product.cantMinMayorista || qty < product.cantMinMayorista) return effectiveBase;
-    const escalones = product.preciosEscalonados ?? [];
-    let best: number | null = null;
-    for (const band of escalones) {
-      if (qty >= band.desde && (best === null || band.precio < best)) best = band.precio;
-    }
-    return best ?? product.precioMayorista ?? effectiveBase;
+    return resolveBasePrice({
+      retailPrice: vp ?? product.price,
+      precioMayorista: product.precioMayorista,
+      cantMinMayorista: product.cantMinMayorista,
+      preciosEscalonados: parseEscalones(product.preciosEscalonados),
+    }, qty);
   }
 
   if (!checkoutOpen) return null;
