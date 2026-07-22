@@ -446,10 +446,19 @@ export default function Home() {
     return () => clearInterval(timer);
   }, []);
 
+  // El reloj arranca de cero cada vez que cambia la vista, la cambie el timer o
+  // la persona. Antes las deps eran [] : el intervalo se creaba al montar y
+  // corría por su cuenta, así que si tocabas una pestaña a mitad del ciclo te
+  // quedaba solo el resto del tiempo para mirarla (a veces menos de un segundo).
+  // Depende de featureSlide entero y no solo del índice porque cada clic
+  // reemplaza el array — así también se reinicia si tocás la pestaña que ya
+  // estaba activa, que es justo cuando alguien quiere quedarse mirándola.
+  // setTimeout en vez de setInterval: ahora dispara una sola vez por ciclo y el
+  // efecto lo vuelve a armar.
   useEffect(() => {
-    const timer = setInterval(() => setFeatureSlide(([i]) => [(i + 1) % FEATURES.length, 1]), 12000);
-    return () => clearInterval(timer);
-  }, []);
+    const timer = setTimeout(() => setFeatureSlide(([i]) => [(i + 1) % FEATURES.length, 1]), 12000);
+    return () => clearTimeout(timer);
+  }, [featureSlide]);
 
   useEffect(() => {
     const update = () => setThumbW(window.innerWidth < 640 ? 160 : 320);
