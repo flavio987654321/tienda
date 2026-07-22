@@ -1,0 +1,11 @@
+-- #7c — el envío bonificado tiene que dejar rastro.
+--
+-- `shippingCost` guarda lo que pagó el comprador, que con una promo de envío
+-- gratis es 0. El costo real del envío no desaparece —la tienda lo sigue
+-- pagando— pero hasta ahora no quedaba escrito en ningún lado, así que Métricas
+-- contaba esa plata como ganancia.
+--
+-- DEFAULT 0 y no NULL: los pedidos viejos no bonificaron nada que sepamos, y 0
+-- es la verdad para todos ellos. Así el cálculo no tiene que distinguir entre
+-- "no se bonificó" y "no sabemos".
+ALTER TABLE "Order" ADD COLUMN IF NOT EXISTS "shippingWaived" DOUBLE PRECISION NOT NULL DEFAULT 0;

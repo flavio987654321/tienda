@@ -1085,10 +1085,33 @@ seguridad: sigue siendo válida, simplemente tenía menos alcance del que creía
 | ~~17~~ | ~~**F6-C10** — el alcance significa distinto según el tipo y la pantalla era la misma~~ | ✅ **HECHO** | **APLICADO (22/07)**: el paso 2 cambia de pregunta según el tipo (*"¿En qué productos vale el 3×2?"* / *"¿Qué productos se pueden mezclar?"*) + aviso en el N×M de que cada producto arma su grupo y **los talles cuentan juntos**. Requería B-11 arreglado, y lo estaba |
 | ~~18~~ | ~~**F6-C11** — Combo con UN solo producto~~ | ✅ **HECHO** | **APLICADO (22/07)**: aviso ámbar (`WarnNote`) al elegir un único producto con el combo. Avisa, no bloquea |
 | ~~19~~ | ~~**B-12** — con dos promos de envío gratis, cuál se nombra depende del orden de la base~~ | ✅ **HECHO** | **ARREGLADO (22/07)**: gana el umbral **más alto ya superado**, desempate por nombre. Mismo criterio que `resolveStoreEvent`. Caso **SP-Q** |
-| 20 | **#7c** — el envío bonificado NO se resta de la ganancia (Métricas miente) | 🔴 plata | ✅ **SOLUCIÓN ACORDADA (22/07)**, falta implementar — requiere migración |
+| ~~20~~ | ~~**#7c** — el envío bonificado NO se resta de la ganancia (Métricas miente)~~ | ✅ **HECHO** | **APLICADO (22/07)**: columna `Order.shippingWaived` + el checkout la escribe + Métricas la resta en un bloque propio. ⚠️ **La migración se aplica al deployar** — hasta entonces el checkout y Métricas no corren contra la base actual |
 | ~~21~~ | ~~**F6-C12** — el paso 4 apila 19 chips de evento para un campo opcional~~ | ✅ **HECHO** | **APLICADO (22/07)**: toggle apagado por defecto + desplegable al prenderlo. Se borró `EventChip` (quedó sin uso). Además avisa cuando completa las fechas solo, y deja de avisar si las tocás |
 | ~~22~~ | ~~**B-13** — un monto escrito con separador de miles se guarda ÷1000~~ | ✅ **HECHO** | **ARREGLADO (22/07)**: `parseMoneyInput` en `promotions.ts` lee a la argentina (punto = miles, coma = decimal), y `moneyInputValue` hace el camino de vuelta al editar. Casos **MP-A…MP-I** |
+| ~~23~~ | ~~**B-14** — el candado del monto fijo contaba productos BORRADOS~~ | ✅ **HECHO** | **NUEVO (22/07)**, encontrado en la revisión previa al deploy. Ver abajo |
 | — | *(lo que agregue Flavio en esta ronda)* | | |
+
+#### B-14 — el candado frenaba por un producto que ya no existe (revisión del 22/07)
+
+Encontrado revisando los 10 commits **antes** de pushear, no ejecutando: comparando las dos consultas.
+
+El candado de B-07 corre en el server (`POST` y `PATCH` de promociones) con
+`where: { storeId, isActive: true }` — **sin `deletedAt: null`**. Pero el asistente juzga con los
+productos que trae [promociones/page.tsx:37](src/app/dashboard/promociones/page.tsx), que **sí** los
+excluye. Las dos puertas del mismo candado miraban catálogos distintos.
+
+**Qué pasaba**: un producto borrado de $4.000 bloqueaba una promo de $5.000. El asistente mostraba todo
+en verde los cinco pasos, y al apretar *Crear* saltaba un error nombrando un producto que la dueña **no
+ve en ningún lado y no puede arreglar**. Sin salida más que bajar el monto sin entender por qué.
+
+**Por qué es el peor lugar posible para este bug**: es el **único** punto de toda la sección que bloquea
+en vez de avisar. Un falso aviso molesta; un falso bloqueo deja a alguien trabado sin explicación.
+
+→ `deletedAt: null` en las dos consultas. Mismo criterio en las tres puertas.
+
+**La lección, que vale más que el arreglo**: cuando la misma regla se evalúa en dos lados, no alcanza con
+que la *lógica* sea compartida (`fixedFloorError` ya lo era) — **los datos de entrada también tienen que
+serlo**. Es la misma familia que B-10, un escalón más arriba.
 
 #### B-13 — "$5.000" se guarda como $5 (encontrado 22/07)
 
@@ -1147,6 +1170,31 @@ El pedido queda diciendo *"cobré $0 de envío, pero regalé $8.000"* y la ganan
 **cuesta**. Es una aproximación — pero es el único número que el sistema conoce de verdad, y es mucho
 mejor que el $0 de hoy. Mismo criterio de honestidad que el piso de costo (proteger lo que se puede y
 decir en voz alta lo que no).
+
+✅ **APLICADO (22/07)**, los tres pasos, tal cual estaba acordado:
+
+1. `Order.shippingWaived Float @default(0)` — migración `20260722120000_add_order_shipping_waived`.
+   `DEFAULT 0` y no nullable: los pedidos viejos no bonificaron nada que sepamos, y **0 es la verdad para
+   todos ellos**. Así el cálculo no tiene que distinguir "no se bonificó" de "no sabemos".
+   `prisma migrate diff` confirma **una sola** diferencia contra la base, sin otra deriva.
+2. El checkout la escribe: `pricing.freeShipping ? shipping.cost : 0`. **Un solo lugar de escritura** —
+   el webhook de MP lee y actualiza pedidos, no los crea.
+3. Métricas la resta, en un **bloque propio** debajo de los KPI: *"Envíos que regalaste −$X"* +
+   *"Ganancia después de los envíos"*. Solo aparece si de verdad se bonificó algo en el período.
+
+**Por qué va aparte y no dentro de `aggregateProfitability`**: el envío bonificado es un costo **por
+pedido**, y la rentabilidad se calcula **por ítem**. Repartirlo entre los productos del carrito sería
+inventar un número que después aparecería en *"Rentabilidad por producto"* como si fuera real. Restarlo
+al total es lo único que se puede afirmar.
+
+**La decisión #11 quedó cumplida sin escribir código**: el método "a coordinar" ya tiene `cost: 0`
+([checkout/route.ts:75-77](src/app/api/checkout/route.ts)), así que `shippingWaived` da 0 solo. No se
+regaló nada porque nunca se iba a cobrar nada.
+
+🚨 **La migración se aplica al DEPLOYAR** ([[reference_db_es_produccion]]: nunca `prisma migrate dev`).
+Hasta que eso pase, la columna **no existe** en la base — y como `.env.local` apunta a la base real,
+**el checkout y Métricas no corren en local**: tiran `P2022` (la misma firma que rompió `/admin/disenos`
+al arrancar esta sesión). No es un bug del código, es el orden de las cosas.
 
 ✅ **Resuelve también el debate #11**: en un método `coordinar: true` el precio es $0, así que el envío
 bonificado da $0 — que es **la verdad**, ahí no se regaló nada. El mismo dato responde las dos preguntas,

@@ -60,6 +60,17 @@ export async function GET(req: NextRequest) {
 
   // Costo/ganancia — solo tiendas con carrito (Autos vende por consulta, no usa Order/OrderItem)
   let hasCostData = false;
+  // #7c — los envíos bonificados del período. Va también acá y no solo en la
+  // pantalla: este CSV es con lo que alguien hace las cuentas de verdad, y si
+  // Métricas resta los envíos y el export no, uno de los dos miente.
+  let shippingWaivedTotal = 0;
+  if (!isAutos) {
+    const waived = await prisma.order.aggregate({
+      where: { storeId: store.id, status: { in: CONFIRMED }, createdAt: { gte: startDate, lt: endDate } },
+      _sum: { shippingWaived: true },
+    });
+    shippingWaivedTotal = waived._sum.shippingWaived ?? 0;
+  }
   if (!isAutos) {
     const rawProfitItems = await prisma.orderItem.findMany({
       where: {
@@ -104,6 +115,12 @@ export async function GET(req: NextRequest) {
     `Visitas totales,${totalVisits}`,
     `Ticket promedio,${totalOrders > 0 ? Math.round(totalRevenue / totalOrders) : 0}`,
     ...(showProfit ? [`Costo total,${totalCost}`, `Ganancia total,${totalProfit}`] : []),
+    // Se muestra aunque no haya costos cargados: el envío regalado es plata que
+    // salió igual, y no depende de que los productos tengan costo.
+    ...(shippingWaivedTotal > 0
+      ? [`Envíos bonificados,${Math.round(shippingWaivedTotal)}`,
+         ...(showProfit ? [`Ganancia después de envíos,${Math.round(totalProfit - shippingWaivedTotal)}`] : [])]
+      : []),
     ``,
     ...(showProfit ? [`# Los productos sin costo cargado no están incluidos en Costo/Ganancia`, ``] : []),
     `# DETALLE DIARIO`,

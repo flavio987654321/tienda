@@ -396,6 +396,25 @@ export default async function MetricasPage({
     profitPrevTotalProfit = aggregateProfitability(prevItems).totalProfit;
   }
 
+  // ── #7c — el envío que la tienda regaló en el período ──
+  // Va APARTE de la ganancia por producto a propósito: es un costo por PEDIDO, y
+  // repartirlo entre los productos del carrito sería inventar un número que
+  // después aparecería en "Rentabilidad por producto" como si fuera real.
+  // Hasta acá este costo no existía en ningún lado y esa plata se contaba como
+  // ganancia — una promo de envío gratis mejoraba las métricas en vez de costar.
+  let shippingWaivedPeriod = 0;
+  if (!isAutos) {
+    const waived = await prisma.order.aggregate({
+      where: {
+        storeId: store.id,
+        status: { in: CONFIRMED_ORDER_STATUSES },
+        createdAt: { gte: periodStart, lt: periodEndExclusive },
+      },
+      _sum: { shippingWaived: true },
+    });
+    shippingWaivedPeriod = waived._sum.shippingWaived ?? 0;
+  }
+
   // ── Rentabilidad de vehículos vendidos en el período (AUTOS) ──
   // Un vehículo solo cuenta para la ganancia si tiene al menos un gasto cargado —
   // si nunca se cargó ni la "Compra", sumar soldPrice - 0 mostraría el 100% del
@@ -811,6 +830,27 @@ export default async function MetricasPage({
                 iconBg="bg-indigo-50 text-indigo-600"
               />
             </div>
+
+            {/* #7c — el envío bonificado, restado a la vista. Solo aparece si de
+                verdad se regaló algún envío en el período: una tienda sin promos
+                de envío no tiene por qué ver una fila en cero. */}
+            {shippingWaivedPeriod > 0 && (
+              <div className="rounded-2xl border border-gray-100 bg-white p-5">
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <div>
+                    <h2 className="font-bold text-gray-900">Envíos que regalaste</h2>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      Lo que te costaron los envíos bonificados por tus promociones. No se lo cobraste al cliente, pero lo pagaste vos.
+                    </p>
+                  </div>
+                  <p className="text-xl font-black text-rose-600">−{money(shippingWaivedPeriod)}</p>
+                </div>
+                <div className="mt-4 flex flex-wrap items-baseline justify-between gap-2 border-t border-gray-100 pt-4">
+                  <p className="text-sm font-semibold text-gray-700">Ganancia después de los envíos</p>
+                  <p className="text-xl font-black text-gray-900">{money(profitCurrentAgg.totalProfit - shippingWaivedPeriod)}</p>
+                </div>
+              </div>
+            )}
 
             <div className="grid gap-6 lg:grid-cols-2">
               <div className="rounded-2xl border border-gray-100 bg-white p-6">

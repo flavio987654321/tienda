@@ -410,6 +410,10 @@ export async function POST(req: NextRequest) {
 
       // Envío gratis: si una StorePromotion de envío aplica, el envío pasa a 0.
       const effectiveShippingCost = pricing.freeShipping ? 0 : shipping.cost;
+      // Lo que el envío habría costado, cuando la promo lo bonificó. La tienda lo
+      // sigue pagando aunque no se lo cobre al comprador: sin guardarlo, ese costo
+      // desaparecía del sistema y Métricas lo contaba como ganancia (#7c).
+      const shippingWaived = pricing.freeShipping ? shipping.cost : 0;
 
       let discountAmount = 0;
       let validCouponId: string | null = null;
@@ -493,6 +497,7 @@ export async function POST(req: NextRequest) {
           lockedCommissionRate: validAffiliateId ? store.commissionRate : null,
           couponId: validCouponId,
           shippingCost: effectiveShippingCost,
+          shippingWaived,
           shippingMethod: shipping.label,
           // Promos "congeladas": qué se aplicó y cuánto ahorró, tal cual se cobró.
           // Después la promo puede cambiar o archivarse; el comprobante no debe cambiar.

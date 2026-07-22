@@ -481,6 +481,11 @@ model Order {
   subtotal             Float    @default(0)
   discountAmount       Float    @default(0)
   shippingCost         Float    @default(0)
+  // Lo que el envío HABRÍA costado cuando una promo lo bonificó. `shippingCost`
+  // guarda lo que pagó el comprador (0 con envío gratis), así que sin esta columna
+  // el costo del envío regalado desaparecía del sistema y Métricas contaba esa
+  // plata como ganancia. 0 = no se bonificó nada (#7c).
+  shippingWaived       Float    @default(0)
   shippingMethod       String?
   // Promociones aplicadas, "congeladas" al momento de la venta: después la promo
   // puede cambiar, pausarse o archivarse, y el comprobante tiene que seguir diciendo
