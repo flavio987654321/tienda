@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { HeartHandshake, Sparkles } from "lucide-react";
+import { useMarkAdminSectionSeen } from "@/hooks/useMarkAdminSectionSeen";
 import CanastaAdmin from "./CanastaAdmin";
 import CausaLibreAdmin from "./CausaLibreAdmin";
 import CanastaEntregaAdmin from "./CanastaEntregaAdmin";
@@ -56,6 +57,7 @@ export default function CanastaAdminTabs({
   libre: Bundle<LibreCampaign>;
 }) {
   const [tab, setTab] = useState<"canasta" | "libre">("canasta");
+  useMarkAdminSectionSeen("donaciones");
 
   return (
     <div>

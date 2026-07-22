@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  LayoutDashboard, MessageSquare, Users, Store, ShoppingBag, LogOut, Shield, Menu, X, ShieldCheck, Wallet, BadgeCheck, Flag, HeartHandshake, Megaphone, PhoneCall, Power, Lock,
+  LayoutDashboard, MessageSquare, Users, Store, ShoppingBag, LogOut, Shield, Menu, X, ShieldCheck, Wallet, BadgeCheck, Flag, HeartHandshake, Megaphone, PhoneCall, Power, Lock, Palette,
 } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -21,6 +21,7 @@ const NAV_GROUPS = [
   {
     label: "Moderación",
     items: [
+      { href: "/admin/disenos", label: "Diseños", icon: Palette },
       { href: "/admin/verificaciones", label: "Verificaciones", icon: BadgeCheck },
       { href: "/admin/denuncias", label: "Denuncias", icon: Flag },
       { href: "/admin/leads", label: "Leads / Consultas", icon: PhoneCall },
@@ -45,7 +46,16 @@ const NAV_GROUPS = [
   },
 ];
 
-type Badges = { pendingVerif: number; pendingReports: number; pendingRetiros: number; pendingCierres: number };
+// Dos familias de badge que conviven:
+//  - pending*: cuántas cosas faltan RESOLVER (verificaciones, denuncias, retiros,
+//    cierres). Siguen contando aunque ya las hayas visto, hasta accionarlas.
+//  - new*: cuántas cosas ENTRARON desde la última vez que abriste la sección
+//    (diseños, leads, testimonios, donaciones). Vienen de /section-views y se
+//    apagan al entrar. Son secciones distintas, no se solapan.
+type Badges = {
+  pendingVerif: number; pendingReports: number; pendingRetiros: number; pendingCierres: number;
+  newDisenos: number; newLeads: number; newTestimonios: number; newDonaciones: number;
+};
 
 function NavLinks({ pathname, badges, onNavigate }: { pathname: string; badges: Badges; onNavigate?: () => void }) {
   function isActive(href: string, exact?: boolean) {
@@ -53,10 +63,16 @@ function NavLinks({ pathname, badges, onNavigate }: { pathname: string; badges: 
   }
 
   function getBadge(href: string): number {
-    if (href === "/admin/verificaciones" && !pathname.startsWith("/admin/verificaciones")) return badges.pendingVerif;
-    if (href === "/admin/denuncias" && !pathname.startsWith("/admin/denuncias")) return badges.pendingReports;
-    if (href === "/admin/retiros" && !pathname.startsWith("/admin/retiros")) return badges.pendingRetiros;
-    if (href === "/admin/cierres" && !pathname.startsWith("/admin/cierres")) return badges.pendingCierres;
+    // El badge se oculta mientras estás en la sección (te la estás mirando).
+    if (pathname.startsWith(href)) return 0;
+    if (href === "/admin/verificaciones") return badges.pendingVerif;
+    if (href === "/admin/denuncias") return badges.pendingReports;
+    if (href === "/admin/retiros") return badges.pendingRetiros;
+    if (href === "/admin/cierres") return badges.pendingCierres;
+    if (href === "/admin/disenos") return badges.newDisenos;
+    if (href === "/admin/leads") return badges.newLeads;
+    if (href === "/admin/testimonios") return badges.newTestimonios;
+    if (href === "/admin/canasta") return badges.newDonaciones;
     return 0;
   }
 
@@ -124,57 +140,71 @@ function UserFooter({ user, onSignOut }: { user: { name: string | null; email: s
 
 export default function AdminSidebar({ user }: { user: { name: string | null; email: string } }) {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [badges, setBadges] = useState<Badges>({ pendingVerif: 0, pendingReports: 0, pendingRetiros: 0, pendingCierres: 0 });
+  const [badges, setBadges] = useState<Badges>({
+    pendingVerif: 0, pendingReports: 0, pendingRetiros: 0, pendingCierres: 0,
+    newDisenos: 0, newLeads: 0, newTestimonios: 0, newDonaciones: 0,
+  });
   const pathname = usePathname();
   const { signOut } = useAuth();
 
   useEffect(() => {
-    function fetchCounts() {
-      fetch("/api/admin/verificacion?count=1")
-        .then((r) => r.json())
-        .then((d) => { if (typeof d.count === "number") setBadges((b) => ({ ...b, pendingVerif: d.count })); })
-        .catch(() => {});
-      fetch("/api/admin/denuncias?count=1")
-        .then((r) => r.json())
-        .then((d) => { if (typeof d.count === "number") setBadges((b) => ({ ...b, pendingReports: d.count })); })
-        .catch(() => {});
-      fetch("/api/admin/retiros?count=1")
-        .then((r) => r.json())
-        .then((d) => { if (typeof d.count === "number") setBadges((b) => ({ ...b, pendingRetiros: d.count })); })
-        .catch(() => {});
-      fetch("/api/admin/cierres?count=1")
-        .then((r) => r.json())
-        .then((d) => { if (typeof d.count === "number") setBadges((b) => ({ ...b, pendingCierres: d.count })); })
-        .catch(() => {});
+    // Todos los contadores en una sola llamada. El setState ocurre después del
+    // await (async boundary), como pide la regla de efectos del proyecto.
+    async function fetchCounts() {
+      try {
+        const d = await (await fetch("/api/admin/badges")).json();
+        setBadges({
+          pendingVerif: d.pendingVerif ?? 0,
+          pendingReports: d.pendingReports ?? 0,
+          pendingRetiros: d.pendingRetiros ?? 0,
+          pendingCierres: d.pendingCierres ?? 0,
+          newDisenos: d.newDisenos ?? 0,
+          newLeads: d.newLeads ?? 0,
+          newTestimonios: d.newTestimonios ?? 0,
+          newDonaciones: d.newDonaciones ?? 0,
+        });
+      } catch {
+        // Un contador que no carga no rompe el panel: se deja el valor previo.
+      }
     }
-    fetchCounts();
 
+    // Debounce: los cambios en vivo suelen llegar en ráfaga (varios eventos en
+    // un par de segundos). En vez de recalcular por cada uno, se agrupan en una
+    // sola llamada medio segundo después del último.
+    let debounce: ReturnType<typeof setTimeout>;
+    function scheduleFetch() {
+      clearTimeout(debounce);
+      debounce = setTimeout(fetchCounts, 500);
+    }
+
+    fetchCounts(); // primera carga: inmediata, sin esperar el debounce
+
+    // Cuando una página marca su sección como vista, refetch para apagar el badge
+    // sin esperar al realtime (que escucha las tablas de datos, no section-views).
+    window.addEventListener("admin-section-seen", scheduleFetch);
+
+    // Tablas que, al cambiar, pueden mover algún contador. Se agrupan bajo el
+    // mismo debounce.
+    const TABLES = [
+      "VerificationRequest", "StoreReport", "WalletWithdrawal", "StoreClosure",
+      "DesignBrief", "Lead", "Testimonial", "Donation",
+    ];
     const supabase = createSupabaseBrowserClient();
-    const channel = supabase
-      .channel("admin-pending-counts")
-      .on(
+    let channel = supabase.channel("admin-badge-counts");
+    for (const table of TABLES) {
+      channel = channel.on(
         "postgres_changes" as Parameters<ReturnType<typeof supabase.channel>["on"]>[0],
-        { event: "*", schema: "public", table: "VerificationRequest" },
-        () => fetchCounts()
-      )
-      .on(
-        "postgres_changes" as Parameters<ReturnType<typeof supabase.channel>["on"]>[0],
-        { event: "*", schema: "public", table: "StoreReport" },
-        () => fetchCounts()
-      )
-      .on(
-        "postgres_changes" as Parameters<ReturnType<typeof supabase.channel>["on"]>[0],
-        { event: "*", schema: "public", table: "WalletWithdrawal" },
-        () => fetchCounts()
-      )
-      .on(
-        "postgres_changes" as Parameters<ReturnType<typeof supabase.channel>["on"]>[0],
-        { event: "*", schema: "public", table: "StoreClosure" },
-        () => fetchCounts()
-      )
-      .subscribe();
+        { event: "*", schema: "public", table },
+        () => scheduleFetch()
+      );
+    }
+    channel.subscribe();
 
-    return () => { supabase.removeChannel(channel); };
+    return () => {
+      clearTimeout(debounce);
+      supabase.removeChannel(channel);
+      window.removeEventListener("admin-section-seen", scheduleFetch);
+    };
   }, []);
 
   return (

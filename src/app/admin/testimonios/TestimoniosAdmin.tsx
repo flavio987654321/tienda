@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { CheckCircle, XCircle, Trash2, Clock, User, MapPin, MessageSquare, Star } from "lucide-react";
+import { useMarkAdminSectionSeen } from "@/hooks/useMarkAdminSectionSeen";
 
 type Testimonial = {
   id: string;
@@ -17,6 +18,7 @@ type Testimonial = {
 export default function TestimoniosAdmin({ testimonials: initial }: { testimonials: Testimonial[] }) {
   const [items, setItems] = useState(initial);
   const [loading, setLoading] = useState<string | null>(null);
+  useMarkAdminSectionSeen("testimonios");
 
   async function setApproved(id: string, approved: boolean) {
     setLoading(id);

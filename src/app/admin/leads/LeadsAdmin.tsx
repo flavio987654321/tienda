@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { AlertTriangle, CheckCircle, XCircle, Clock } from "lucide-react";
+import { useMarkAdminSectionSeen } from "@/hooks/useMarkAdminSectionSeen";
 
 type LeadRow = {
   storeId: string;
@@ -22,6 +23,7 @@ export default function LeadsAdmin() {
   const [rows, setRows] = useState<LeadRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "suspicious">("suspicious");
+  useMarkAdminSectionSeen("leads");
 
   // Refetch manual (botón "Actualizar") — el setLoading(true) sincrónico está
   // OK acá porque corre desde un evento, no dentro de un efecto.
