@@ -168,6 +168,41 @@ function promoEffectiveUnitPrice(
   return line.unitPrice;
 }
 
+// ── Candado del monto fijo: ningún producto puede quedar en $0 (B-07) ─────────
+// El motor pisa el precio en 0 (`Math.max(0, base - value)`), así que un FIXED
+// mayor o igual al precio REGALA el producto. `PERCENT` ya está topeado en 90
+// justamente para que eso no pase ("un 100% regala el producto, casi siempre es
+// un error de tipeo") — esto es la misma regla, aplicada al tipo que no la tenía.
+//
+// Es el ÚNICO lugar de la sección donde se bloquea en vez de avisar: no es una
+// opinión sobre el negocio (liquidar bajo costo es válido y por eso el piso de
+// costo solo avisa), es que "gratis" no es un resultado que el sistema acepte.
+//
+// ⚠️ Con scope=ALL esto mira el catálogo de HOY: un producto cargado después
+// puede caer bajo la promo y quedar gratis sin que nadie revise (F6-C9, pendiente).
+export type FixedFloorProduct = { name: string; price: number; category: string | null; id: string };
+
+export function fixedFloorError(
+  promo: { type: string; value: number | null; scope: string; categories: string[]; productIds: string[] },
+  products: FixedFloorProduct[]
+): string | null {
+  if (promo.type !== "FIXED" || promo.value == null || !(promo.value > 0)) return null;
+  const enAlcance = products.filter((p) =>
+    promo.scope === "ALL" ? true :
+    promo.scope === "CATEGORY" ? (p.category != null && promo.categories.includes(p.category)) :
+    promo.scope === "PRODUCTS" ? promo.productIds.includes(p.id) : false
+  );
+  // El más barato del alcance es el que define el riesgo: si ese sobrevive, todos.
+  let peor: FixedFloorProduct | null = null;
+  for (const p of enAlcance) {
+    if (!(p.price > 0)) continue; // sin precio cargado no se puede juzgar
+    if (p.price <= promo.value && (peor === null || p.price < peor.price)) peor = p;
+  }
+  if (!peor) return null;
+  const ars = (n: number) => "$" + Math.round(n).toLocaleString("es-AR");
+  return `Con ${ars(promo.value)} de descuento, “${peor.name}” (${ars(peor.price)}) quedaría gratis. Bajá el monto o sacalo del alcance.`;
+}
+
 export type CostFloorPromo = {
   type: string; value: number | null; minQty: number | null; payQty: number | null;
   scope: string; categories: string[]; productIds: string[];

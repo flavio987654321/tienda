@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
-import { validatePromotionBody } from "@/lib/promotions";
+import { validatePromotionBody, fixedFloorError } from "@/lib/promotions";
 
 // Confirma que la promo existe Y es de la tienda del usuario. Sin esto, cualquiera
 // con el id editaría promos de otra tienda.
@@ -41,6 +41,17 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const result = validatePromotionBody(body);
   if ("error" in result) return NextResponse.json({ error: result.error }, { status: 400 });
   const d = result.data;
+
+  // Mismo candado que al crear (B-07): editar es la otra puerta por la que un
+  // monto fijo puede terminar regalando un producto.
+  if (d.type === "FIXED") {
+    const productos = await prisma.product.findMany({
+      where: { storeId: promo.storeId, isActive: true },
+      select: { id: true, name: true, price: true, category: true },
+    });
+    const err = fixedFloorError(d, productos);
+    if (err) return NextResponse.json({ error: err }, { status: 400 });
+  }
 
   const updated = await prisma.storePromotion.update({
     where: { id },

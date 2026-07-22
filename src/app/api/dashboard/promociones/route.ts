@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
-import { validatePromotionBody, promotionStatus, parseStringArray } from "@/lib/promotions";
+import { validatePromotionBody, promotionStatus, parseStringArray, fixedFloorError } from "@/lib/promotions";
 import { livePromotionsWhere, PRO_MAX_LIVE_PROMOTIONS } from "@/lib/planLimits";
 import { hasActivePremium, SUB_STATUS_SELECT } from "@/lib/subscription";
 
@@ -73,6 +73,18 @@ export async function POST(req: NextRequest) {
   const result = validatePromotionBody(body);
   if ("error" in result) return NextResponse.json({ error: result.error }, { status: 400 });
   const d = result.data;
+
+  // Candado del monto fijo (B-07): se consulta el catálogo porque el tope depende
+  // del precio del producto más barato en alcance, no de un número fijo. Solo se
+  // consulta cuando hace falta — los otros tipos no pagan la query.
+  if (d.type === "FIXED") {
+    const productos = await prisma.product.findMany({
+      where: { storeId: store.id, isActive: true },
+      select: { id: true, name: true, price: true, category: true },
+    });
+    const err = fixedFloorError(d, productos);
+    if (err) return NextResponse.json({ error: err }, { status: 400 });
+  }
 
   // Tope del plan Pro: cuenta las promos vivas (activas, programadas o pausadas).
   // Archivar o dejar vencer una libera lugar al instante.
