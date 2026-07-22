@@ -1089,7 +1089,72 @@ seguridad: sigue siendo válida, simplemente tenía menos alcance del que creía
 | ~~21~~ | ~~**F6-C12** — el paso 4 apila 19 chips de evento para un campo opcional~~ | ✅ **HECHO** | **APLICADO (22/07)**: toggle apagado por defecto + desplegable al prenderlo. Se borró `EventChip` (quedó sin uso). Además avisa cuando completa las fechas solo, y deja de avisar si las tocás |
 | ~~22~~ | ~~**B-13** — un monto escrito con separador de miles se guarda ÷1000~~ | ✅ **HECHO** | **ARREGLADO (22/07)**: `parseMoneyInput` en `promotions.ts` lee a la argentina (punto = miles, coma = decimal), y `moneyInputValue` hace el camino de vuelta al editar. Casos **MP-A…MP-I** |
 | ~~23~~ | ~~**B-14** — el candado del monto fijo contaba productos BORRADOS~~ | ✅ **HECHO** | **NUEVO (22/07)**, encontrado en la revisión previa al deploy. Ver abajo |
+| ~~24~~ | ~~**El piso del motor** — cerrar el hueco de F6-C9 por construcción~~ | ✅ **HECHO** | **APLICADO (22/07)**: `MIN_PRICE_RATIO` en `pricing.ts`. Ningún descuento directo puede dejar un producto bajo el 10% de su precio. Casos **PISO-A…PISO-G**. ⚠️ Cambia el número congelado de **SP-C** a propósito |
 | — | *(lo que agregue Flavio en esta ronda)* | | |
+
+#### El piso del motor — la deuda de F6-C9, cerrada por construcción (22/07)
+
+F6-C9 avisa al crear un producto que cae bajo una promo fija, pero **no frena**, así que quedaba un hueco
+consciente: ignorando el cartel rojo, el producto igual se mostraba **gratis** en la tienda.
+
+**La opción obvia era hacer que el formulario de productos bloqueara. Se descartó**, por dos razones: es
+la puerta equivocada (el producto no es el problema, la promo mal configurada sí) y trabar el guardado de
+un producto por una promo ajena es de las cosas más molestas que puede hacer un panel.
+
+**Lo que se hizo: poner el piso en el motor.**
+
+```ts
+// antes
+Math.max(0, it.basePrice - p.value)
+// ahora
+Math.max(it.basePrice * MIN_PRICE_RATIO, it.basePrice - p.value)
+```
+
+**No es un número inventado: es el espejo exacto del tope de 90 que el `PERCENT` ya tenía.** Ese tope
+existe desde siempre porque *"un 100% regala el producto, casi siempre es un error de tipeo"* — y al monto
+fijo nunca se le puso la misma garantía. Un porcentaje siempre dejaba al menos el 10% del precio; un monto
+fijo podía llevarlo a cero.
+
+**Por qué esto y no otro aviso**: los avisos protegen las puertas que conocemos (crear la promo, crear el
+producto) y siempre va a haber una que se escape. El piso protege **el resultado**, sin importar por dónde
+entró la mala configuración.
+
+**Lo que NO toca — y es deliberado**: el 3×2 y el combo **siguen regalando** una unidad. Ahí lo gratis es
+la promesa explícita de la promo, no un accidente. Casos **PISO-E** y **PISO-F**.
+
+**El candado se movió de 100% a 90%**, por coherencia: si el motor pisa el precio a partir del 90%, dejar
+que se configure un 95% significaría recortar en silencio y no decírselo a nadie. Ahora
+`MAX_FIXED_DISCOUNT_PCT = MAX_PROMO_PERCENT` y el mensaje dice el máximo real en pesos para ese producto.
+
+🔒 **PISO-A ata los dos números**: si alguien sube el tope del `%` o baja el piso sin tocar el otro, la
+suite falla. Sin eso, el sistema podía quedar incoherente en silencio otra vez.
+
+⚠️ **Número congelado cambiado a propósito**: `SP-C` (monto fijo mayor al precio) pasó de **$0** a
+**$1.000**. Aprobado por Flavio con el cambio a la vista. Se hizo ahora justamente porque la cuenta no
+tiene ventas reales: no hay ningún pedido histórico con el que tenga que seguir cuadrando.
+
+**Verificado que las cuatro superficies dicen el mismo número** (sonda temporal, borrada): motor, card de
+la tienda (`promoDisplay`), asistente (`fixedImpact`) y formulario de productos (`deepestFixedOnProduct`).
+La card lo toma sola porque ya reusaba el motor.
+
+| Precio | Descuento | Motor | Card | Asistente | Form. producto |
+|---|---|---|---|---|---|
+| $10.000 | −$12.000 | 1000 | 1000 | 1000 | 1000 |
+| $10.000 | −$50.000 | 1000 | 1000 | 1000 | 1000 |
+| $4.000 | −$5.000 | 400 | 400 | 400 | 400 |
+| $22.000 | −$5.000 | 17000 | 17000 | 17000 | 17000 |
+
+#### La otra deuda — el envío bonificado es lo que se COBRA, no lo que CUESTA
+
+**Decisión (22/07): se deja como está, y se revisa cuando llegue Enviopack.**
+
+Se evaluó agregar un campo *"costo real del envío"* por método. Se descartó: **un campo que nadie mantiene
+da peor información que una aproximación decente**, y la aproximación acá es mejor de lo que suena — el
+precio que la dueña le pone a un envío de tarifa plana **ya es su propia estimación de lo que le cuesta**.
+
+Y hay una razón de timing decisiva: cuando [[project_enviopack_marketplace]] habilite la cuenta
+marketplace, **el costo real llega solo con la cotización**, sin ningún campo que mantener. Construir ahora
+un campo manual sería trabajo para desarmar después.
 
 #### B-14 — el candado frenaba por un producto que ya no existe (revisión del 22/07)
 

@@ -7,7 +7,7 @@ import {
   Info, AlertTriangle, Loader2, Search, Archive, Trash2, RotateCcw, Smile, Pencil, Shuffle,
 } from "lucide-react";
 import {
-  costFloorCheck, fixedImpact, deadPromoCheck, DEEP_DISCOUNT_PCT, type FixedImpactResult,
+  costFloorCheck, fixedImpact, deadPromoCheck, DEEP_DISCOUNT_PCT, MAX_FIXED_DISCOUNT_PCT as MAX_FIXED_PCT, type FixedImpactResult,
   parseMoneyInput, moneyInputValue,
   MAX_PROMO_PERCENT as MAX_PCT, MAX_EVENT_LABEL,
 } from "@/lib/promotions";
@@ -503,7 +503,7 @@ function Wizard({ categories, products, existentes, onClose, onCreated, editProm
       // El único freno de la sección (todo lo demás avisa): un producto en $0.
       // Es la misma regla que el tope de 90 del porcentaje, y frenar acá y no
       // recién al guardar evita que se completen dos pasos más para nada.
-      if (type === "FIXED") return parseNum(value) > 0 && impacto.free.length === 0;
+      if (type === "FIXED") return parseNum(value) > 0 && impacto.capped.length === 0;
       if (isNxM(type)) return parseInt(minQty) >= 2 && parseInt(payQty) >= 1 && parseInt(payQty) < parseInt(minQty);
       return true;
     }
@@ -898,15 +898,16 @@ function Wizard({ categories, products, existentes, onClose, onCreated, editProm
                 // cargó después de crear la promo, este cartel es el único lugar
                 // donde aparece el aviso.
                 if (type !== "FIXED") return null;
-                if (impacto.free.length > 0) {
-                  const w = impacto.free[0];
+                if (impacto.capped.length > 0) {
+                  const w = impacto.capped[0];
                   return (
                     <div className="flex gap-2.5 items-start bg-red-50 border border-red-200 rounded-xl p-3 mt-3.5 text-[12.5px] text-red-700">
                       <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
                       <div>
-                        <b>“{w.name}” ({money(w.price)}) quedaría gratis</b> con {money(parseNum(value))} de descuento
-                        {impacto.free.length > 1 && <>, igual que otro{impacto.free.length > 2 ? "s" : ""} {impacto.free.length - 1}</>}.
-                        {" "}No se puede guardar así: bajá el monto o sacalo del alcance.
+                        <b>“{w.name}” ({money(w.price)}) quedaría casi regalado</b> con {money(parseNum(value))} de descuento
+                        {impacto.capped.length > 1 && <>, igual que otro{impacto.capped.length > 2 ? "s" : ""} {impacto.capped.length - 1}</>}.
+                        {" "}El máximo es {MAX_FIXED_PCT}% de descuento — para ese producto, {money(w.price * MAX_FIXED_PCT / 100)}.
+                        {" "}Bajá el monto o sacalo del alcance.
                       </div>
                     </div>
                   );
@@ -1018,20 +1019,20 @@ function WarnNote({ children }: { children: React.ReactNode }) {
 // se escribe el monto. El riesgo de un monto fijo es siempre el mismo número —
 // monto ÷ el más barato del alcance — y nadie lo tiene en la cabeza al tipear.
 // El color es el aviso: gris normal, ámbar si pasa la mitad del precio, rojo si
-// algo queda gratis (único caso que además frena).
+// algo llega al tope del 90% (único caso que además frena).
 function ImpactoFijo({ imp }: { imp: FixedImpactResult }) {
   const w = imp.worst;
   if (!w) return null; // sin monto todavía, o sin productos con precio en alcance
-  const gratis = w.effective <= 0;
+  const alPiso = imp.capped.length > 0;
   const hondo = w.pct >= DEEP_DISCOUNT_PCT;
-  const cls = gratis ? "text-red-600" : hondo ? "text-amber-700" : "text-gray-500";
+  const cls = alPiso ? "text-red-600" : hondo ? "text-amber-700" : "text-gray-500";
   return (
     <p className={`text-[12px] mt-1.5 ${cls}`}>
-      {gratis ? (
+      {alPiso ? (
         <>
-          <b>“{w.name}” ({money(w.price)}) quedaría gratis.</b>{" "}
-          {imp.free.length > 1 && <>Y {imp.free.length - 1} producto{imp.free.length - 1 !== 1 ? "s" : ""} más. </>}
-          Bajá el monto o cambiá el alcance para seguir.
+          <b>“{w.name}” ({money(w.price)}) quedaría casi regalado.</b>{" "}
+          {imp.capped.length > 1 && <>Y {imp.capped.length - 1} producto{imp.capped.length - 1 !== 1 ? "s" : ""} más. </>}
+          El máximo es {MAX_FIXED_PCT}% — bajá el monto o cambiá el alcance para seguir.
         </>
       ) : (
         <>

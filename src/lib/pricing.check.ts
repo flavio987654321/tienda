@@ -8,9 +8,9 @@
 // de promos. El motor aplica las StorePromotion (promociones a nivel tienda);
 // eso es lo que cubren los casos SP-* y FS-*.
 
-import { priceCart, resolveBasePrice, freeShippingProgress, type PricingItem, type ActivePromotion } from "./pricing";
+import { priceCart, resolveBasePrice, freeShippingProgress, MIN_PRICE_RATIO, type PricingItem, type ActivePromotion } from "./pricing";
 import {
-  costFloorCheck, fixedFloorError, fixedImpact, deepestFixedOnProduct, deadPromoCheck, parseMoneyInput, moneyInputValue,
+  costFloorCheck, fixedFloorError, fixedImpact, deepestFixedOnProduct, deadPromoCheck, parseMoneyInput, moneyInputValue, MAX_PROMO_PERCENT,
   type CostFloorPromo, type CostFloorProduct,
 } from "./promotions";
 import { resolveProductPromo, describePromo, resolveStoreEvent } from "./promoDisplay";
@@ -83,8 +83,11 @@ const spCases: {
     expectedSubtotal: 8000, expectedCoupons: false, desc: "PERCENT 20% ALL, 1u → $8.000 · sin combinar cupón" },
   { id: "SP-B", items: [item(2)], promotions: [promo({ type: "FIXED", value: 3000 })],
     expectedSubtotal: 14000, desc: "FIXED $3.000/u ALL, 2u → $7.000 × 2" },
+  // ⚠️ NÚMERO CAMBIADO A PROPÓSITO (22/07): antes esperaba 0. El motor tenía el
+  // piso en 0, o sea que un monto mayor al precio REGALABA el producto. Ahora el
+  // piso es MIN_PRICE_RATIO — el espejo del tope de 90 que el PERCENT ya tenía.
   { id: "SP-C", items: [item(1)], promotions: [promo({ type: "FIXED", value: 15000 })],
-    expectedSubtotal: 0, desc: "FIXED $15.000/u sobre $10.000 → piso en 0, no negativo" },
+    expectedSubtotal: 1000, desc: "FIXED $15.000/u sobre $10.000 → piso en el 10%, nunca gratis" },
   { id: "SP-D", items: [item(3)], promotions: [promo({ type: "N_PAY_M", minQty: 3, payQty: 2 })],
     expectedSubtotal: 20000, desc: "N_PAY_M 3×2 ALL, 3u → paga 2" },
   { id: "SP-E", items: [item(2, BASE, P1), item(1, BASE, P1)], promotions: [promo({ type: "N_PAY_M", minQty: 3, payQty: 2 })],
@@ -208,8 +211,8 @@ for (const c of spCases) {
       desc: "justo en el umbral (50%) → ya avisa" },
     { id: "FI-C", imp: fixedImpact(fixed(1000), prods), peor: "Llavero", pct: 25, libres: 0, hondos: 0,
       desc: "descuento suave → sin aviso, pero igual muestra la línea" },
-    { id: "FI-D", imp: fixedImpact(fixed(5000), prods), peor: "Llavero", pct: 100, libres: 1, hondos: 0,
-      desc: "gratis: el % se topea en 100 (no 125) y sale de `hondos` para no contarse dos veces" },
+    { id: "FI-D", imp: fixedImpact(fixed(5000), prods), peor: "Llavero", pct: 90, libres: 1, hondos: 0,
+      desc: "monto mayor al precio: el piso lo deja en 90% (no 100 ni 125) y sale de `hondos` para no contarse dos veces" },
     { id: "FI-E", imp: fixedImpact(fixed(5000, "CATEGORY", ["remeras"]), prods), peor: "Remera básica", pct: 23, libres: 0, hondos: 0,
       desc: "el alcance manda: sin el llavero, el mismo monto pasa a ser un 23%" },
     { id: "FI-F", imp: fixedImpact({ type: "PERCENT", value: 5000, scope: "ALL", categories: [], productIds: [] }, prods), peor: null, pct: null, libres: 0, hondos: 0,
@@ -218,10 +221,53 @@ for (const c of spCases) {
   for (const c of impCasos) {
     const peor = c.imp.worst?.name ?? null;
     const pct = c.imp.worst?.pct ?? null;
-    const ok = peor === c.peor && pct === c.pct && c.imp.free.length === c.libres && c.imp.deep.length === c.hondos;
+    const ok = peor === c.peor && pct === c.pct && c.imp.capped.length === c.libres && c.imp.deep.length === c.hondos;
     if (!ok) failed++;
-    console.log(`${ok ? "OK  " : "FAIL"} [${c.id}] peor=${peor} ${pct}% · gratis=${c.imp.free.length} · hondos=${c.imp.deep.length} — ${c.desc}`);
+    console.log(`${ok ? "OK  " : "FAIL"} [${c.id}] peor=${peor} ${pct}% · gratis=${c.imp.capped.length} · hondos=${c.imp.deep.length} — ${c.desc}`);
   }
+}
+
+// ── El piso: ningún producto se vende regalado ───────────────────────────────
+// Cierra el agujero que los avisos no podían cerrar: se protege el RESULTADO, sin
+// importar por qué puerta entró la mala configuración.
+{
+  const chk = (id: string, got: boolean, desc: string) => { if (!got) failed++; console.log(`${got ? "OK  " : "FAIL"} [${id}] ${desc}`); };
+
+  // El que ata los dos números. Si alguien sube el tope del % o baja el piso sin
+  // tocar el otro, el sistema queda incoherente en silencio y esto lo grita.
+  chk("PISO-A", Math.abs(MIN_PRICE_RATIO - (1 - MAX_PROMO_PERCENT / 100)) < 1e-9,
+    `el piso (${MIN_PRICE_RATIO}) es el espejo exacto del tope del % (${MAX_PROMO_PERCENT}) — si uno cambia, el otro también`);
+
+  const r1 = priceCart([item(1)], { promotions: [promo({ type: "FIXED", value: 50000 })] });
+  chk("PISO-B", r1.subtotal === 1000,
+    `un monto absurdo ($50.000 sobre $10.000) no regala: queda ${r1.subtotal}`);
+
+  const r2 = priceCart([item(1)], { promotions: [promo({ type: "FIXED", value: 9000 })] });
+  chk("PISO-C", r2.subtotal === 1000,
+    "justo en el limite (90% de descuento) el resultado es el mismo, sin salto raro");
+
+  const r3 = priceCart([item(1)], { promotions: [promo({ type: "FIXED", value: 8999 })] });
+  chk("PISO-D", r3.subtotal === 1001,
+    "un peso por debajo del limite el piso NO se activa: la cuenta normal manda");
+
+  // El piso es solo para descuentos directos. En el 3×2 y el combo la unidad
+  // gratis es la promesa explicita de la promo, no un accidente que haya que tapar.
+  const r4 = priceCart([item(3)], { promotions: [promo({ type: "N_PAY_M", minQty: 3, payQty: 2 })] });
+  chk("PISO-E", r4.subtotal === 20000,
+    "el 3x2 sigue regalando una unidad — el piso no lo toca");
+
+  const r5 = priceCart(
+    [item(1, 10000, { productId: "X1" }), item(1, 10000, { productId: "X2" }), item(1, 3000, { productId: "X3" })],
+    { promotions: [promo({ type: "MIX_N_PAY_M", minQty: 3, payQty: 2 })] }
+  );
+  chk("PISO-F", r5.subtotal === 20000,
+    "el combo sigue regalando el mas barato entero — el piso no lo toca");
+
+  // Y la otra mitad: el panel tiene que decir el MISMO numero que cobra el motor.
+  const prods = [{ id: "P", name: "Remera", price: 10000, category: null }];
+  const imp = fixedImpact({ type: "FIXED", value: 50000, scope: "ALL", categories: [], productIds: [] }, prods);
+  chk("PISO-G", imp.worst?.effective === 1000 && imp.capped.length === 1,
+    `el panel muestra ${imp.worst?.effective} igual que el motor, y lo marca para frenar`);
 }
 
 // ── F6-C6: cada línea dice CUÁL promo la ganó ────────────────────────────────
@@ -268,8 +314,8 @@ for (const c of spCases) {
   const nuevo = { id: "", price: 10000, category: "remeras" as string | null };
 
   const casos: { id: string; r: ReturnType<typeof deepestFixedOnProduct>; promo: string | null; pct: number | null; desc: string }[] = [
-    { id: "PP-A", r: deepestFixedOnProduct(nuevo, [promo("Liquidación", 12000)]), promo: "Liquidación", pct: 100,
-      desc: "producto de $10.000 bajo una promo de $12.000 en toda la tienda → quedaría GRATIS" },
+    { id: "PP-A", r: deepestFixedOnProduct(nuevo, [promo("Liquidación", 12000)]), promo: "Liquidación", pct: 90,
+      desc: "producto de $10.000 bajo una promo de $12.000: el piso lo salva de quedar gratis, pero igual hay que avisar" },
     { id: "PP-B", r: deepestFixedOnProduct(nuevo, [promo("Suave", 2000)]), promo: "Suave", pct: 20,
       desc: "descuento chico: se calcula igual, la pantalla decide si avisa" },
     { id: "PP-C", r: deepestFixedOnProduct(nuevo, [promo("Camperas", 12000, "CATEGORY", ["camperas"])]), promo: null, pct: null,

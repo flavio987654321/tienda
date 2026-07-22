@@ -17,7 +17,7 @@ import RichTextEditor from "@/components/RichTextEditor";
 import { VariantBuilder } from "@/components/dashboard/VariantBuilder";
 import { OfferBadge, OfferBadgePreview, type OfferBadgeKey } from "@/components/store/OfferBadge";
 import { parseReel, isSafeReelUrl, playableReels, ReelPlayerModal } from "@/components/store/ProductReels";
-import { deepestFixedOnProduct, DEEP_DISCOUNT_PCT } from "@/lib/promotions";
+import { deepestFixedOnProduct, DEEP_DISCOUNT_PCT, MAX_FIXED_DISCOUNT_PCT } from "@/lib/promotions";
 
 type ImageItem = { url: string; variantValue?: string };
 
@@ -1600,23 +1600,25 @@ function ProductoFormPage() {
                     otro lado. */}
                 {avisarPromo && promoRiesgo && (
                   <div className={`mt-2 flex gap-2 items-start rounded-xl border p-3 text-[12.5px] ${
-                    promoRiesgo.effective <= 0
+                    promoRiesgo.pct >= MAX_FIXED_DISCOUNT_PCT
                       ? "bg-red-50 border-red-200 text-red-700"
                       : "bg-amber-50 border-amber-200 text-amber-800"
                   }`}>
                     <Tag className="h-4 w-4 shrink-0 mt-0.5" />
                     <div>
-                      {promoRiesgo.effective <= 0 ? (
+                      {promoRiesgo.pct >= MAX_FIXED_DISCOUNT_PCT ? (
                         <>
-                          <b>Con este precio, el producto se va a mostrar gratis en tu tienda.</b>{" "}
+                          <b>Con este precio, el producto se va a mostrar casi regalado.</b>{" "}
                           La promoción “{promoRiesgo.promoName}” descuenta ${promoRiesgo.value.toLocaleString("es-AR")} y
-                          este producto sale ${parseFloat(form.price || "0").toLocaleString("es-AR")}.
+                          este producto sale ${parseFloat(form.price || "0").toLocaleString("es-AR")} — se va a mostrar
+                          a <b>${Math.round(promoRiesgo.effective).toLocaleString("es-AR")}</b>, que es el mínimo que
+                          permite el sistema ({100 - MAX_FIXED_DISCOUNT_PCT}% del precio).
                           Subile el precio, o entrá a Promociones y sacalo del alcance.
                         </>
                       ) : (
                         <>
                           <b>Ojo:</b> la promoción “{promoRiesgo.promoName}” le descuenta ${promoRiesgo.value.toLocaleString("es-AR")} a
-                          este producto — se va a mostrar a <b>${promoRiesgo.effective.toLocaleString("es-AR")}</b>, un {promoRiesgo.pct}% menos.
+                          este producto — se va a mostrar a <b>${Math.round(promoRiesgo.effective).toLocaleString("es-AR")}</b>, un {promoRiesgo.pct}% menos.
                         </>
                       )}
                     </div>

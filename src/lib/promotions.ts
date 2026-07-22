@@ -3,7 +3,7 @@
 // consola no puede meter un "500% off" ni un "llevá 2 pagá 3". Ver PROMOCIONES.md
 // (reglas transversales · coherencia por tipo).
 
-import { priceCart, type ActivePromotion } from "./pricing";
+import { priceCart, MIN_PRICE_RATIO, type ActivePromotion } from "./pricing";
 
 // MIX_N_PAY_M = mix & match (Fase 5): llevá N mezclando productos del alcance, el/los
 // más barato(s) gratis. Reusa minQty/payQty igual que N_PAY_M — no necesitó columna nueva.
@@ -236,21 +236,29 @@ export function productsInScope<T extends { id: string; category: string | null 
 // en la cabeza mientras tipea, así que lo hace el panel y lo muestra en vivo.
 //
 // Devuelve los tres cortes que necesita la pantalla: el PEOR caso (una línea bajo
-// el campo), los que quedarían GRATIS (lo único que bloquea, B-07) y los que pasan
-// el umbral de descuento profundo (aviso en Revisá, no bloquea).
+// el campo), los que TOCAN EL PISO del motor (lo único que bloquea, B-07) y los
+// que pasan el umbral de descuento profundo (aviso en Revisá, no bloquea).
 
 /** A partir de acá el descuento se avisa: más de la mitad del precio del producto. */
 export const DEEP_DISCOUNT_PCT = 50;
+
+/**
+ * El descuento más profundo que un monto fijo puede llegar a dar: el mismo que el
+ * tope del porcentaje. Pasado esto, el motor pisa el precio (`MIN_PRICE_RATIO`) y
+ * la promo dejaría de cumplirse como está escrita — así que se frena al configurar
+ * en vez de recortar en silencio.
+ */
+export const MAX_FIXED_DISCOUNT_PCT = MAX_PROMO_PERCENT;
 
 export type FixedImpactItem = { id: string; name: string; price: number; effective: number; pct: number };
 export type FixedImpactResult = {
   inScope: number;               // productos con precio cargado dentro del alcance
   worst: FixedImpactItem | null; // el de descuento más profundo (= el más barato)
-  free: FixedImpactItem[];       // quedarían en $0 — esto SÍ frena (B-07)
-  deep: FixedImpactItem[];       // pasan DEEP_DISCOUNT_PCT sin llegar a gratis — solo avisan
+  capped: FixedImpactItem[];     // el motor tendría que pisarles el precio — esto SÍ frena (B-07)
+  deep: FixedImpactItem[];       // pasan DEEP_DISCOUNT_PCT sin llegar al piso — solo avisan
 };
 
-const IMPACTO_VACIO: FixedImpactResult = { inScope: 0, worst: null, free: [], deep: [] };
+const IMPACTO_VACIO: FixedImpactResult = { inScope: 0, worst: null, capped: [], deep: [] };
 
 export function fixedImpact(
   promo: { type: string; value: number | null } & ScopeFields,
@@ -261,20 +269,25 @@ export function fixedImpact(
   const items = productsInScope(promo, products)
     .filter((p) => p.price > 0) // sin precio cargado no se puede juzgar
     .map((p) => {
-      // Mismo tope que el motor (`Math.max(0, base - value)`): sin esto el % daría
-      // más de 100 y el precio, negativo.
-      const effective = Math.max(0, p.price - value);
+      // EXACTAMENTE la misma cuenta que hace el motor. Si acá dijera otra cosa, el
+      // panel prometería un precio y el checkout cobraría otro.
+      const effective = Math.max(p.price * MIN_PRICE_RATIO, p.price - value);
       return { id: p.id, name: p.name, price: p.price, effective, pct: Math.round((1 - effective / p.price) * 100) };
     })
     // Del más profundo al más suave. A igual %, primero el más barato: entre dos
-    // productos gratis, el que se nombra es el que más obviamente está mal.
+    // productos al piso, el que se nombra es el que más obviamente está mal.
     .sort((a, b) => b.pct - a.pct || a.price - b.price);
+
+  // Tocó el piso = el monto pedido supera lo que el motor va a descontar de verdad.
+  // Se compara contra el precio y no contra `effective` para no depender del
+  // redondeo del porcentaje mostrado.
+  const tocaElPiso = (i: FixedImpactItem) => value > i.price * (MAX_FIXED_DISCOUNT_PCT / 100);
 
   return {
     inScope: items.length,
     worst: items[0] ?? null,
-    free: items.filter((i) => i.effective <= 0),
-    deep: items.filter((i) => i.effective > 0 && i.pct >= DEEP_DISCOUNT_PCT),
+    capped: items.filter(tocaElPiso),
+    deep: items.filter((i) => !tocaElPiso(i) && i.pct >= DEEP_DISCOUNT_PCT),
   };
 }
 
@@ -283,10 +296,13 @@ export function fixedFloorError(
   products: FixedFloorProduct[]
 ): string | null {
   // El más barato del alcance es el que define el riesgo: si ese sobrevive, todos.
-  const peor = fixedImpact(promo, products).free[0];
+  const peor = fixedImpact(promo, products).capped[0];
   if (!peor) return null;
   const ars = (n: number) => "$" + Math.round(n).toLocaleString("es-AR");
-  return `Con ${ars(promo.value!)} de descuento, “${peor.name}” (${ars(peor.price)}) quedaría gratis. Bajá el monto o sacalo del alcance.`;
+  const maximo = Math.floor(peor.price * (MAX_FIXED_DISCOUNT_PCT / 100));
+  return `Con ${ars(promo.value!)} de descuento, “${peor.name}” (${ars(peor.price)}) quedaría casi regalado. ` +
+    `El máximo es ${MAX_FIXED_DISCOUNT_PCT}% de descuento — para ese producto, ${ars(maximo)}. ` +
+    `Bajá el monto o sacalo del alcance.`;
 }
 
 // ── La otra puerta: un producto nuevo que cae bajo una promo fija (F6-C9) ────

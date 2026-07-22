@@ -109,6 +109,28 @@ export type CartPricing = {
   couponsAllowed: boolean;
 };
 
+// ── El piso: ningún producto se vende regalado ───────────────────────────────
+// Un producto nunca puede quedar por debajo de este porcentaje de su precio por
+// culpa de un descuento directo.
+//
+// No es un número elegido al azar: es el ESPEJO EXACTO del tope de 90 que ya
+// tenía el porcentaje (`MAX_PROMO_PERCENT`, en promotions.ts). Ese tope existe
+// desde siempre porque "un 100% regala el producto, casi siempre es un error de
+// tipeo" — pero el monto fijo nunca tuvo la misma garantía, y con un piso en 0
+// alcanzaba con que el precio bajara para que la tienda empezara a regalar.
+//
+// Acá está la clave: los avisos protegen las puertas que conocemos (crear la
+// promo, crear el producto), y siempre va a haber una que se nos escape. Esto
+// protege el RESULTADO, sin importar por dónde entró la mala configuración.
+//
+// ⚠️ NO aplica al 3×2 ni al combo: ahí la unidad gratis es la promesa explícita
+// de la promo, no un accidente. El piso es solo para descuentos directos.
+//
+// No se importa `MAX_PROMO_PERCENT` de promotions.ts porque ese archivo ya
+// importa de acá y sería un ciclo. El caso PISO-A de la suite ata los dos
+// números para que no puedan separarse sin que algo falle.
+export const MIN_PRICE_RATIO = 0.10;
+
 // Redondeo a PESO ENTERO, estable, en un solo lugar. En Argentina los precios se
 // muestran y se cobran en pesos enteros; sin esto, un 20% sobre $24.999 daba
 // $19.999,2 (feo y no es un monto que se cobre así). Todas las cuentas lo usan para
@@ -206,9 +228,11 @@ function storePromoLineTotal(p: ActivePromotion, it: PricingItem, totalQty: numb
   }
   if (p.type === "FIXED") {
     if (p.value == null || p.value <= 0) return null;
-    // Monto fijo por unidad, con piso en 0 (nunca precio negativo). El aviso de
-    // "estás vendiendo bajo costo" es para la dueña (Fase 3), no frena al comprador.
-    return roundMoney(Math.max(0, it.basePrice - p.value) * it.quantity);
+    // Monto fijo por unidad, con el piso de MIN_PRICE_RATIO. Antes el piso era 0,
+    // o sea que un monto mayor al precio REGALABA el producto. El aviso de "estás
+    // vendiendo bajo costo" es para la dueña (Fase 3) y no frena al comprador,
+    // pero "gratis" no es un precio: es plata que se va sin que nadie lo pidiera.
+    return roundMoney(Math.max(it.basePrice * MIN_PRICE_RATIO, it.basePrice - p.value) * it.quantity);
   }
   if (p.type === "N_PAY_M") {
     const exact = nxmExactLineTotal(p, it, totalQty);
