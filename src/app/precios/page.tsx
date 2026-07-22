@@ -2,10 +2,11 @@
 
 import { useState, Suspense, useEffect } from "react";
 import Link from "next/link";
-import { useRouter, usePathname } from "next/navigation";
-import { AppLogo } from "@/components/AppLogo";
+import { useRouter } from "next/navigation";
 import { useSearchParams } from "next/navigation";
-import { Check, ShoppingBag, Zap, Store, Star, ArrowRight, PartyPopper, ShoppingCart, Crown, Mail, X, BadgeCheck, Menu, Package, MessageCircle } from "lucide-react";
+import { Check, ShoppingBag, Zap, Store, Star, ArrowRight, PartyPopper, ShoppingCart, Crown, Mail, X, BadgeCheck } from "lucide-react";
+import { SiteNav } from "@/components/SiteNav";
+import { SiteFooter } from "@/components/SiteFooter";
 import PaymentModal from "@/components/subscription/PaymentModal";
 import { PRICES, PRO_MAX_ACTIVE_COUPONS, PRO_MAX_LIVE_PROMOTIONS, PRO_MAX_AFFILIATES, PUSH_CAMPAIGNS_PER_WEEK } from "@/lib/planLimits";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -40,8 +41,6 @@ export default function PreciosPage() {
 }
 
 function PreciosContent() {
-  const [mobileMenu, setMobileMenu] = useState(false);
-  const pathname = usePathname();
   const [isAnnual, setIsAnnual] = useState(false);
   const [ownerTier, setOwnerTier] = useState<"BASIC" | "PREMIUM">("BASIC");
   const [payModal, setPayModal] = useState<{ plan: "OWNER_BASIC" | "OWNER_PREMIUM" | "AFFILIATE"; billing: "MONTHLY" | "ANNUAL" } | null>(null);
@@ -152,92 +151,7 @@ function PreciosContent() {
 
   return (
     <div className="min-h-screen bg-white text-gray-950">
-      {/* Navbar */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-xl border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-1.5">
-            <AppLogo size={72} />
-            <span className="text-lg font-bold text-gray-950">TiendaApps</span>
-          </Link>
-          <div className="hidden md:flex items-center gap-8">
-            <Link href="/#tiendas" className="text-gray-500 hover:text-gray-900 text-sm font-medium transition-colors">Tiendas</Link>
-            <Link href="/#como-funciona" className="text-gray-500 hover:text-gray-900 text-sm font-medium transition-colors">Cómo funciona</Link>
-            <Link href="/quienes-somos" className="text-gray-500 hover:text-gray-900 text-sm font-medium transition-colors">Quiénes somos</Link>
-            <Link href="/precios" className="text-gray-950 text-sm font-medium transition-colors">Precios</Link>
-            <Link href="/seguimiento" className="text-gray-500 hover:text-gray-900 text-sm font-medium transition-colors flex items-center gap-1.5"><Package className="h-4 w-4" />Seguimiento</Link>
-            <Link href="/contacto" className="text-gray-500 hover:text-gray-900 text-sm font-medium transition-colors flex items-center gap-1.5"><MessageCircle className="h-4 w-4" />Contacto</Link>
-          </div>
-          <div className="hidden md:flex items-center gap-3">
-            {userName || userSub ? (
-              <>
-                <span className="text-gray-500 text-sm">Hola, {userName?.split(" ")[0] ?? "usuario"}</span>
-                <Link
-                  href={userSub?.role === "AFFILIATE" ? "/afiliados" : "/dashboard"}
-                  className="bg-orange-600 hover:bg-orange-500 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-all"
-                >
-                  Mi panel
-                </Link>
-              </>
-            ) : (
-              <>
-                <Link href="/login" className="text-gray-600 hover:text-gray-900 text-sm font-medium px-5 py-2.5 rounded-xl border border-gray-200 hover:border-gray-300 transition-all">
-                  Iniciar sesión
-                </Link>
-                <Link href="/registro" className="bg-orange-600 hover:bg-orange-500 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-all">
-                  Crear cuenta
-                </Link>
-              </>
-            )}
-          </div>
-
-          <button onClick={() => setMobileMenu(true)} className="md:hidden text-gray-500 hover:text-gray-900">
-            <Menu className="h-6 w-6" />
-          </button>
-        </div>
-      </nav>
-
-      {/* Mobile menu overlay */}
-      {mobileMenu && (
-        <div
-          className="fixed inset-0 z-40 bg-gray-900/40 backdrop-blur-sm md:hidden"
-          onClick={() => setMobileMenu(false)}
-        />
-      )}
-      {/* Mobile menu drawer (slide from right) */}
-      <div className={`fixed top-0 right-0 bottom-0 z-50 w-72 bg-white border-l border-gray-200 transition-transform duration-300 ease-in-out md:hidden flex flex-col ${mobileMenu ? "translate-x-0" : "translate-x-full"}`}>
-        <div className="flex items-center justify-between px-6 py-5 border-b border-gray-200">
-          <span className="text-gray-950 font-bold">Menú</span>
-          <button onClick={() => setMobileMenu(false)} className="text-gray-500 hover:text-gray-900">
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-        <div className="flex flex-col gap-1 px-4 py-4 flex-1">
-          {[
-            { href: "/", label: "Inicio" },
-            { href: "/#como-funciona", label: "Cómo funciona" },
-            { href: "/tiendas", label: "Tiendas" },
-            { href: "/quienes-somos", label: "Quiénes somos" },
-            { href: "/precios", label: "Precios" },
-          ].map(({ href, label }) => {
-            const active = href === "/precios" ? pathname === "/precios" : href === "/quienes-somos" ? pathname === "/quienes-somos" : href === "/tiendas" ? pathname === "/tiendas" : false;
-            return (
-              <Link
-                key={href}
-                href={href}
-                onClick={() => setMobileMenu(false)}
-                className={`flex items-center gap-2 py-3 px-3 rounded-xl transition-all text-sm font-medium ${active ? "bg-orange-50 text-orange-600 border border-orange-200" : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"}`}
-              >
-                {active && <span className="w-1.5 h-1.5 rounded-full bg-orange-500 flex-shrink-0" />}
-                {label}
-              </Link>
-            );
-          })}
-          <div className="pt-3 border-t border-gray-200 flex flex-col gap-2 mt-2">
-            <Link href="/login" onClick={() => setMobileMenu(false)} className="block text-center border border-gray-200 rounded-xl py-3 text-sm text-gray-800 hover:bg-gray-50 transition-colors">Iniciar sesión</Link>
-            <Link href="/registro" onClick={() => setMobileMenu(false)} className="block text-center bg-orange-600 hover:bg-orange-500 text-white font-semibold py-3 px-3 rounded-xl transition-colors">Crear cuenta</Link>
-          </div>
-        </div>
-      </div>
+      <SiteNav active="precios" fixed />
 
       <div className="pt-32 pb-24 px-6">
         <div className="max-w-6xl mx-auto">
@@ -595,6 +509,8 @@ function PreciosContent() {
           </p>
         </div>
       </div>
+
+      <SiteFooter />
 
       {payModal && (
         <PaymentModal

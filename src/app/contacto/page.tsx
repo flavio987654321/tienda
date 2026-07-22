@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
-import { Package, MessageCircle, Send, Loader2, CheckCircle2, Mail, Clock, MapPin } from "lucide-react";
-import { AppLogo } from "@/components/AppLogo";
+import { Send, Loader2, CheckCircle2, Mail, Clock, MapPin } from "lucide-react";
+import { SiteNav } from "@/components/SiteNav";
+import { SiteFooter } from "@/components/SiteFooter";
 import { useTurnstile } from "@/components/Turnstile";
 
 export default function ContactoPage() {
@@ -44,29 +44,7 @@ export default function ContactoPage() {
   return (
     <div className="min-h-screen bg-white flex flex-col">
 
-      {/* Navbar */}
-      <nav className="bg-white/90 backdrop-blur-xl border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-1.5">
-            <AppLogo size={72} />
-            <span className="text-lg font-bold text-gray-950">TiendaApps</span>
-          </Link>
-          <div className="hidden md:flex items-center gap-8">
-            <Link href="/#tiendas" className="text-gray-500 hover:text-gray-900 text-sm font-medium transition-colors">Tiendas</Link>
-            <Link href="/#como-funciona" className="text-gray-500 hover:text-gray-900 text-sm font-medium transition-colors">Cómo funciona</Link>
-            <Link href="/quienes-somos" className="text-gray-500 hover:text-gray-900 text-sm font-medium transition-colors">Quiénes somos</Link>
-            <Link href="/precios" className="text-gray-500 hover:text-gray-900 text-sm font-medium transition-colors">Precios</Link>
-            <Link href="/seguimiento" className="text-gray-500 hover:text-gray-900 text-sm font-medium transition-colors flex items-center gap-1.5"><Package className="h-4 w-4" />Seguimiento</Link>
-            <Link href="/contacto" className="text-gray-950 text-sm font-medium transition-colors flex items-center gap-1.5"><MessageCircle className="h-4 w-4" />Contacto</Link>
-          </div>
-          <div className="hidden md:flex items-center gap-3">
-            <Link href="/login" className="text-gray-600 hover:text-gray-900 text-sm font-medium px-5 py-2.5 rounded-xl border border-gray-200 hover:border-gray-300 transition-all">Iniciar sesión</Link>
-            <Link href="/registro" className="bg-orange-600 hover:bg-orange-500 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-all">
-              Crear cuenta
-            </Link>
-          </div>
-        </div>
-      </nav>
+      <SiteNav active="contacto" />
 
       {/* Hero + form */}
       <div className="flex-1 flex items-center">
@@ -210,6 +188,8 @@ export default function ContactoPage() {
 
         </div>
       </div>
+
+      <SiteFooter />
     </div>
   );
 }

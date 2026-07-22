@@ -1,24 +1,23 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useSyncExternalStore } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useAuth } from "@/components/AuthProvider";
-import { STORE_TYPES } from "@/lib/storeTypes";
 import PromotionsCarousel from "@/components/PromotionsCarousel";
 import AsistentePersonaje from "@/components/dashboard/AsistentePersonaje";
 import { AppLogo } from "@/components/AppLogo";
 import { useTurnstile } from "@/components/Turnstile";
 import { motion, AnimatePresence, useMotionValue, useTransform, useSpring, useScroll, useMotionValueEvent } from "framer-motion";
 import {
-  ArrowRight, X, Store, Users, TrendingUp, CheckCircle, Trophy,
-  ShoppingBag, Star, Zap, Send, MessageCircle, Mail, HeartHandshake,
-  Package, ShoppingCart, Eye, ChevronRight, ChevronLeft, Menu,
-  BadgeCheck, Shirt, Car, Home as HomeIcon, Utensils, Sparkles, Dumbbell, PawPrint, BookOpen, LayoutGrid,
+  ArrowRight, X, Store, Users, TrendingUp, CheckCircle,
+  ShoppingBag, Star, Send, MessageCircle, HeartHandshake,
+  Package, ShoppingCart, ChevronRight, ChevronLeft, Menu,
+  BadgeCheck, Sparkles,
   ExternalLink, Info, Bell, Tag, Shield, Clock,
 } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
 import { TEMPLATE_CATEGORIES } from "@/lib/templateRegistry";
+import { SiteFooter } from "@/components/SiteFooter";
 
 /* ─── 3D Tilt Card ─── */
 function Card3D({ children, className = "" }: { children: React.ReactNode; className?: string }) {
@@ -54,26 +53,6 @@ function Card3D({ children, className = "" }: { children: React.ReactNode; class
 
 const fadeUp = { hidden: { opacity: 0, y: 28 }, show: { opacity: 1, y: 0, transition: { duration: 0.55 } } };
 const stagger = { hidden: {}, show: { transition: { staggerChildren: 0.1 } } };
-
-const PLACEHOLDER_COLORS = ["#f97316", "#f59e0b", "#e11d48", "#0d9488", "#fb7185", "#eab308"];
-
-type RealStore = {
-  id: string;
-  slug: string;
-  name: string;
-  description: string | null;
-  logo: string | null;
-  banner: string | null;
-  primaryColor: string;
-  totalProducts: number;
-  totalOrders: number;
-  categories: string[];
-  coverImg: string | null;
-  heroImg: string | null;
-  isVerified: boolean;
-  tipoTienda: string;
-  updatedAt: number;
-};
 
 type RealTestimonial = {
   id: string;
@@ -216,8 +195,6 @@ function TestimonioModal({ onClose }: { onClose: () => void }) {
 
 const TESTIMONIALS: { name: string; role: string; text: string; img: string }[] = [];
 
-const SLOTS = 6;
-
 const ROTATING_WORDS = ["vender", "crecer", "todo", "despegar"];
 
 const FEATURES = [
@@ -278,23 +255,6 @@ const FEATURES = [
     img: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=800&q=80",
   },
 ];
-
-const STORE_TYPE_LABELS: Record<string, string> = Object.fromEntries(
-  STORE_TYPES.map((t) => [t.id, t.label])
-);
-
-const TYPE_ICONS: Record<string, LucideIcon> = {
-  TODAS:     LayoutGrid,
-  ROPA:      Shirt,
-  AUTOS:     Car,
-  HOGAR_TECH: HomeIcon,
-  ALIMENTOS: Utensils,
-  BELLEZA:   Sparkles,
-  DEPORTE:   Dumbbell,
-  MASCOTAS:  PawPrint,
-  LIBROS:    BookOpen,
-  GENERAL:   Store,
-};
 
 /* ─── Galería de plantillas ("Diseño según tu rubro") ─── */
 const TEMPLATE_ITEMS = TEMPLATE_CATEGORIES.flatMap((cat) =>
@@ -417,12 +377,27 @@ function TemplateInfoModal({ item, onClose }: { item: typeof TEMPLATE_ITEMS[numb
 }
 
 const ANNOUNCEMENT_H = 40;
+const ANNOUNCEMENT_KEY = "announcement_v2";
+const ANNOUNCEMENT_EVENT = "announcement-dismissed";
+
+// La barra vive en localStorage, que no existe en el servidor. Se lee con
+// useSyncExternalStore en vez de un useState + useEffect para no disparar un
+// render en cascada: el snapshot del servidor es "cerrada", así que el HTML
+// server-side y la hidratación coinciden, y recién después React relee el
+// valor real del navegador.
+function subscribeAnnouncement(onChange: () => void) {
+  window.addEventListener(ANNOUNCEMENT_EVENT, onChange);
+  return () => window.removeEventListener(ANNOUNCEMENT_EVENT, onChange);
+}
 
 export default function Home() {
   const [mobileMenu, setMobileMenu] = useState(false);
   const [navScrolled, setNavScrolled] = useState(false);
-  const [announcementClosed, setAnnouncementClosed] = useState(true);
-  const [realStores, setRealStores] = useState<RealStore[]>([]);
+  const announcementClosed = useSyncExternalStore(
+    subscribeAnnouncement,
+    () => localStorage.getItem(ANNOUNCEMENT_KEY) !== null,
+    () => true,
+  );
   const [realTestimonials, setRealTestimonials] = useState<RealTestimonial[]>([]);
   const [testimonioModal, setTestimonioModal] = useState(false);
   const [comunidadHref, setComunidadHref] = useState("/comunidad");
@@ -439,20 +414,12 @@ export default function Home() {
   const { scrollY } = useScroll();
   useMotionValueEvent(scrollY, "change", (v) => setNavScrolled(v > 50));
 
-  useEffect(() => {
-    if (!localStorage.getItem("announcement_v2")) setAnnouncementClosed(false);
-  }, []);
-
   function dismissAnnouncement() {
-    setAnnouncementClosed(true);
-    localStorage.setItem("announcement_v2", "1");
+    localStorage.setItem(ANNOUNCEMENT_KEY, "1");
+    window.dispatchEvent(new Event(ANNOUNCEMENT_EVENT));
   }
 
   useEffect(() => {
-    fetch("/api/stores?featured=true&limit=6")
-      .then((r) => r.json())
-      .then((d) => { if (Array.isArray(d.stores)) setRealStores(d.stores); })
-      .catch(() => {});
     fetch("/api/testimonios")
       .then((r) => r.json())
       .then((d) => { if (Array.isArray(d)) setRealTestimonials(d); })
@@ -562,9 +529,8 @@ export default function Home() {
           </Link>
 
           <div className="hidden md:flex items-center gap-8">
-            {[["#tiendas", "Tiendas"], ["#como-funciona", "Cómo funciona"]].map(([href, label]) => (
-              <a key={href} href={href} className="text-gray-500 hover:text-gray-900 text-sm font-medium transition-colors">{label}</a>
-            ))}
+            <Link href="/tiendas" className="text-gray-500 hover:text-gray-900 text-sm font-medium transition-colors">Tiendas</Link>
+            <a href="#como-funciona" className="text-gray-500 hover:text-gray-900 text-sm font-medium transition-colors">Cómo funciona</a>
             <Link href="/quienes-somos" className="text-gray-500 hover:text-gray-900 text-sm font-medium transition-colors">Quiénes somos</Link>
             <Link href="/precios" className="text-gray-500 hover:text-gray-900 text-sm font-medium transition-colors">Precios</Link>
             <Link href="/seguimiento" className="text-gray-500 hover:text-gray-900 text-sm font-medium transition-colors flex items-center gap-1.5">
@@ -621,9 +587,8 @@ export default function Home() {
                 </button>
               </div>
               <div className="flex flex-col gap-1 px-4 py-4 flex-1">
-                {[["#tiendas", "Tiendas"], ["#como-funciona", "Cómo funciona"]].map(([href, label]) => (
-                  <a key={href} href={href} onClick={() => setMobileMenu(false)} className="block text-gray-700 hover:text-gray-900 py-3 px-3 rounded-xl hover:bg-gray-50 transition-colors">{label}</a>
-                ))}
+                <Link href="/tiendas" onClick={() => setMobileMenu(false)} className="block text-gray-700 hover:text-gray-900 py-3 px-3 rounded-xl hover:bg-gray-50 transition-colors">Tiendas</Link>
+                <a href="#como-funciona" onClick={() => setMobileMenu(false)} className="block text-gray-700 hover:text-gray-900 py-3 px-3 rounded-xl hover:bg-gray-50 transition-colors">Cómo funciona</a>
                 <Link href="/quienes-somos" onClick={() => setMobileMenu(false)} className="block text-gray-700 hover:text-gray-900 py-3 px-3 rounded-xl hover:bg-gray-50 transition-colors">Quiénes somos</Link>
                 <Link href="/precios" onClick={() => setMobileMenu(false)} className="block text-gray-700 hover:text-gray-900 py-3 px-3 rounded-xl hover:bg-gray-50 transition-colors">Precios</Link>
                 <Link href="/seguimiento" onClick={() => setMobileMenu(false)} className="block text-gray-700 hover:text-gray-900 py-3 px-3 rounded-xl hover:bg-gray-50 transition-colors">Seguimiento</Link>
@@ -1154,114 +1119,73 @@ export default function Home() {
         {templateInfoModal && <TemplateInfoModal item={templateInfoModal} onClose={() => setTemplateInfoModal(null)} />}
       </AnimatePresence>
 
-      {/* ── VER TIENDAS ── */}
-      <section id="tiendas" className="py-24 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-6">
-          <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={stagger} className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-4">
-            <div>
-              <motion.p variants={fadeUp} className="text-orange-600 font-semibold text-sm uppercase tracking-widest mb-2">Tiendas reales</motion.p>
-              <motion.h2 variants={fadeUp} className="text-4xl font-black text-gray-950">Explorá las tiendas activas</motion.h2>
-            </div>
-            <motion.div variants={fadeUp}>
-              <Link href="/tiendas" className="flex items-center gap-2 text-orange-600 font-semibold hover:text-orange-700 transition-colors">
-                Ver todas <ChevronRight className="h-5 w-5" />
-              </Link>
+      {/* ── DISEÑO PROPIO ── */}
+      {/* Fondo blanco a propósito: la galería de arriba es gray-50, y con el
+          mismo gris las dos secciones se leían como una sola. Layout partido
+          (foto izquierda / texto derecha) que queda espejado con Afiliados,
+          justo debajo, que tiene el texto a la izquierda. */}
+      <section className="py-24 bg-white overflow-hidden">
+        <div className="max-w-6xl mx-auto px-6">
+          <motion.div
+            initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.2 }} variants={stagger}
+            className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center"
+          >
+            {/* Izquierda: foto cálida de un comercio real andando. El "resultado"
+                al que se aspira, no un mockup del producto. */}
+            <motion.div variants={fadeUp} className="relative">
+              <div className="absolute -inset-4 bg-gradient-to-br from-amber-200/40 to-orange-200/30 rounded-[2rem] blur-2xl pointer-events-none" />
+              <div className="relative rounded-3xl overflow-hidden shadow-xl aspect-[4/3] lg:aspect-[5/6]">
+                <Image
+                  src="https://images.unsplash.com/photo-1552960562-daf630e9278b?auto=format&fit=crop&w=900&q=80"
+                  alt="Dos emprendedores diseñando su tienda online juntos frente a una laptop"
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 1024px) 100vw, 50vw"
+                />
+              </div>
+              {/* Detalle flotante para reforzar la calidez y el "sin costo". */}
+              <div className="absolute -bottom-4 -right-2 sm:right-6 bg-white rounded-2xl shadow-lg border border-gray-100 px-4 py-3 flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-orange-100 flex items-center justify-center">
+                  <Sparkles className="h-4 w-4 text-orange-600" />
+                </div>
+                <div className="leading-tight">
+                  <p className="text-sm font-bold text-gray-900">Diseño a tu medida</p>
+                  <p className="text-xs text-gray-400">Sin costo</p>
+                </div>
+              </div>
             </motion.div>
-          </motion.div>
 
-          <motion.div initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.1 }} variants={stagger} className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
-            {Array.from({ length: SLOTS }).map((_, i) => {
-              const store = realStores[i];
-              const color = PLACEHOLDER_COLORS[i % PLACEHOLDER_COLORS.length];
-              return (
-                <motion.div key={i} variants={fadeUp}>
-                  <Card3D>
-                    {store ? (
-                      <Link href={`/tienda/${store.slug}`} className="block bg-white rounded-2xl overflow-hidden border border-gray-200 shadow-sm hover:shadow-xl transition-all duration-300 group">
-                        <div className="relative overflow-hidden h-32 sm:h-44 bg-gray-50">
-                          {(store.coverImg || store.heroImg) ? (
-                            <Image
-                              src={(store.coverImg ?? store.heroImg)!}
-                              alt={store.name ?? ""}
-                              fill
-                              className="object-cover group-hover:scale-105 transition-transform duration-500"
-                              sizes="(max-width: 1024px) 50vw, 33vw"
-                            />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center" style={{ background: store.primaryColor + "18" }}>
-                              {(() => { const Icon = TYPE_ICONS[store.tipoTienda] ?? Store; return <Icon className="h-10 w-10 opacity-30" style={{ color: store.primaryColor }} />; })()}
-                            </div>
-                          )}
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-transparent" />
-                          {store.isVerified && (
-                            <div className="absolute top-2.5 right-2.5">
-                              <div className="flex items-center gap-1 bg-orange-600 text-white text-[10px] font-bold px-2 py-1 rounded-full shadow">
-                                <BadgeCheck className="h-3 w-3" />
-                                Verificado
-                              </div>
-                            </div>
-                          )}
-                          {(() => {
-                            const StoreIcon = TYPE_ICONS[store.tipoTienda];
-                            return StoreIcon ? (
-                              <div className="absolute top-2.5 left-2.5 w-7 h-7 rounded-lg bg-white/90 backdrop-blur-sm border border-black/5 shadow-sm flex items-center justify-center">
-                                <StoreIcon className="h-3.5 w-3.5 text-gray-600" />
-                              </div>
-                            ) : null;
-                          })()}
-                        </div>
-                        <div className="h-0.5" style={{ backgroundColor: store.primaryColor + "80" }} />
-                        <div className="p-3 sm:p-4 min-h-[80px] sm:min-h-[124px] flex flex-col">
-                          {STORE_TYPE_LABELS[store.tipoTienda] && (
-                            <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest">
-                              {STORE_TYPE_LABELS[store.tipoTienda]}
-                            </span>
-                          )}
-                          <h3 className="font-bold text-gray-900 text-sm leading-snug truncate group-hover:text-orange-600 transition-colors mt-0.5 mb-1">
-                            {store.name}
-                          </h3>
-                          <p className="text-xs text-gray-400 line-clamp-1 mb-3 min-h-[16px]">
-                            {store.description ?? ""}
-                          </p>
-                          <div className="flex items-center justify-between pt-3 border-t border-gray-100 mt-auto">
-                            <div className="flex items-center gap-1.5 text-[11px] text-gray-400 font-medium">
-                              <span>{store.totalProducts} producto{store.totalProducts !== 1 ? "s" : ""}</span>
-                              {store.totalOrders > 0 && (
-                                <span className="text-teal-600 font-semibold">· {store.totalOrders} pedido{store.totalOrders !== 1 ? "s" : ""}</span>
-                              )}
-                            </div>
-                            <span className="flex items-center gap-1 text-[11px] font-bold text-gray-400 group-hover:text-orange-600 transition-colors">
-                              <Eye className="h-3.5 w-3.5" />
-                              Ver tienda
-                            </span>
-                          </div>
-                        </div>
-                      </Link>
-                    ) : (
-                      <div className="bg-white border border-dashed border-gray-200 rounded-2xl overflow-hidden">
-                        <div className="h-32 sm:h-44 flex items-center justify-center" style={{ backgroundColor: color + "11" }}>
-                          <div className="text-center">
-                            <div className="w-12 h-12 rounded-2xl mx-auto mb-2 flex items-center justify-center" style={{ backgroundColor: color + "22" }}>
-                              <Store className="h-6 w-6" style={{ color }} />
-                            </div>
-                            <span className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Próximamente</span>
-                          </div>
-                        </div>
-                        <div className="h-0.5" style={{ backgroundColor: color + "40" }} />
-                        <div className="p-3 sm:p-4 min-h-[80px] sm:min-h-[124px] flex flex-col justify-between">
-                          <div>
-                            <div className="h-2.5 bg-gray-100 rounded-full w-1/3 mb-2" />
-                            <div className="h-4 bg-gray-100 rounded-full w-3/4 mb-2" />
-                            <div className="h-3 bg-gray-100 rounded-full w-1/2" />
-                          </div>
-                          <div className="h-3 bg-gray-100 rounded-full w-2/3 mt-3 pt-3 border-t border-gray-100" />
-                        </div>
-                      </div>
-                    )}
-                  </Card3D>
-                </motion.div>
-              );
-            })}
+            {/* Derecha: título + una frase que invita, sin listar pasos. */}
+            <motion.div variants={fadeUp}>
+              <p className="text-orange-600 font-semibold text-sm uppercase tracking-widest mb-4">
+                Tu propio diseño
+              </p>
+              <h2 className="text-4xl sm:text-5xl font-black text-gray-950 mb-6 leading-tight">
+                ¿Ninguna plantilla es la tuya?
+              </h2>
+              <p className="text-gray-500 text-lg leading-relaxed mb-4">
+                Contanos cómo imaginás tu tienda y la <strong className="text-gray-900 font-semibold">diseñamos
+                con vos</strong>, a tu gusto y sin que te cueste nada.
+              </p>
+              <p className="text-gray-500 text-lg leading-relaxed mb-9">
+                No necesitás saber de diseño ni tener la tienda creada. Vos nos contás la idea, nosotros la hacemos realidad.
+              </p>
+
+              <Link
+                href="/diseno-propio"
+                className="inline-flex items-center gap-2 bg-orange-600 hover:bg-orange-500 text-white font-bold px-8 py-4 rounded-2xl transition-all shadow-lg shadow-orange-500/25 hover:shadow-orange-500/40 hover:scale-105"
+              >
+                Diseñar mi tienda <ArrowRight className="h-5 w-5" />
+              </Link>
+              <p className="text-gray-400 text-sm mt-4">Gratis · Sin registrarte · Te respondemos por mail o WhatsApp</p>
+
+              {/* La letra chica va a la vista y no recién al final del formulario:
+                  si el trato no le cierra a alguien, mejor que se entere antes. */}
+              <p className="text-xs text-gray-400 leading-relaxed mt-8 pt-6 border-t border-gray-200">
+                El diseño terminado se suma al catálogo de TiendaApps y otras tiendas van a poder usarlo.
+                Tus colores, tus fotos, tu logo y tus productos siguen siendo únicos tuyos.
+              </p>
+            </motion.div>
           </motion.div>
         </div>
       </section>
@@ -1582,47 +1506,7 @@ export default function Home() {
       </section>
 
       {/* ── FOOTER ── */}
-      <footer className="bg-white border-t border-gray-200 px-6 py-12">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-10 mb-10">
-            <div className="md:col-span-2">
-              <div className="flex items-center gap-2.5 mb-4">
-                <AppLogo size={32} />
-                <span className="text-lg font-bold text-gray-900">TiendaApps</span>
-              </div>
-              <p className="text-gray-500 text-sm leading-relaxed max-w-xs">
-                La plataforma de ecommerce con sistema de afiliados para crecer con equipo.
-              </p>
-              <div className="flex items-center gap-4 mt-5">
-                <Link href="/contacto" className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-orange-600 transition-colors">
-                  <Mail className="h-4 w-4" /> marketplacemitienda@gmail.com
-                </Link>
-              </div>
-            </div>
-            <div>
-              <p className="text-gray-900 font-semibold text-sm mb-4">Plataforma</p>
-              <ul className="space-y-2.5">
-                {[["#tiendas", "Ver tiendas"], ["#como-funciona", "Cómo funciona"], ["/registro", "Crear cuenta"], ["/login", "Iniciar sesión"]].map(([href, label]) => (
-                  <li key={label}><a href={href} className="text-gray-500 hover:text-gray-900 text-sm transition-colors">{label}</a></li>
-                ))}
-              </ul>
-            </div>
-            <div>
-              <p className="text-gray-900 font-semibold text-sm mb-4">Afiliados</p>
-              <ul className="space-y-2.5">
-                {[["/afiliados", "Postularme"], ["/afiliados/billetera", "Mis comisiones"], ["/quienes-somos", "Quiénes somos"]].map(([href, label]) => (
-                  <li key={label}><a href={href} className="text-gray-500 hover:text-gray-900 text-sm transition-colors">{label}</a></li>
-                ))}
-                <li><Link href="/contacto" className="text-gray-500 hover:text-gray-900 text-sm transition-colors">Contacto</Link></li>
-              </ul>
-            </div>
-          </div>
-          <div className="border-t border-gray-200 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3">
-            <p className="text-gray-400 text-sm">© 2026 TiendaApps. Hecho con ❤️ para vos.</p>
-            <p className="text-gray-400 text-xs">Plataforma ecommerce para tiendas y afiliados</p>
-          </div>
-        </div>
-      </footer>
+      <SiteFooter />
 
       {/* ── Floating canasta solidaria button ── */}
       <motion.div
