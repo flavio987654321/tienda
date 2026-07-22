@@ -205,14 +205,48 @@ function storePromoLineTotal(p: ActivePromotion, it: PricingItem, totalQty: numb
     return roundMoney(Math.max(0, it.basePrice - p.value) * it.quantity);
   }
   if (p.type === "N_PAY_M") {
-    const n = p.minQty, m = p.payQty;
-    if (n == null || m == null || n < 2 || m < 1 || m >= n) return null;
-    // Del mismo producto (decisión aprobada; mezclar categorías = Fase 5). El
-    // beneficio se reparte parejo entre las líneas de ese producto con una razón.
-    const paid = paidUnitsNxM(totalQty, n, m);
-    return roundMoney(it.basePrice * it.quantity * (paid / totalQty));
+    const exact = nxmExactLineTotal(p, it, totalQty);
+    return exact == null ? null : roundMoney(exact);
   }
   return null; // FREE_SHIPPING no toca el precio del ítem
+}
+
+/**
+ * Total de línea de un N×M SIN redondear. El redondeo se hace aparte, porque
+ * cuando el mismo producto entra al carrito en varias líneas (talles/colores)
+ * redondear cada una por su cuenta acumula error: 3 líneas de 1 unidad a
+ * $10.000 con 3×2 daban $6.667 × 3 = $20.001 en vez de $20.000, siempre en
+ * contra del comprador (B-11). Ver `repartirNxM`.
+ */
+function nxmExactLineTotal(p: ActivePromotion, it: PricingItem, totalQty: number): number | null {
+  const n = p.minQty, m = p.payQty;
+  if (n == null || m == null || n < 2 || m < 1 || m >= n) return null;
+  if (!(totalQty > 0)) return null;
+  // Del mismo producto (decisión aprobada; mezclar categorías = Fase 5). El
+  // beneficio se reparte parejo entre las líneas de ese producto con una razón.
+  const paid = paidUnitsNxM(totalQty, n, m);
+  return it.basePrice * it.quantity * (paid / totalQty);
+}
+
+/**
+ * Reparte el total de un N×M entre las líneas de un mismo producto de forma que
+ * la SUMA sea exactamente el total redondeado del grupo — no la suma de líneas
+ * redondeadas por separado (B-11).
+ *
+ * Usa redondeo acumulado: cada línea recibe `round(acumulado hasta acá) −
+ * round(acumulado anterior)`. Así ninguna línea se desvía más de un peso y el
+ * total cierra siempre. Es el mismo criterio que se usa para repartir un
+ * descuento de pedido entre ítems sin que cambie el total.
+ */
+function repartirNxM(idxs: number[], exactos: number[], lineTotal: number[]): void {
+  let acumExacto = 0;
+  let acumRedondeado = 0;
+  for (let k = 0; k < idxs.length; k++) {
+    acumExacto += exactos[k];
+    const hasta = roundMoney(acumExacto);
+    lineTotal[idxs[k]] = hasta - acumRedondeado;
+    acumRedondeado = hasta;
+  }
 }
 
 // Tipo MIX (mix & match). A diferencia de N_PAY_M (mismo producto), junta las
@@ -343,6 +377,29 @@ export function priceCart(items: PricingItem[], opts?: PriceCartOptions): CartPr
     winnerByLine.push(winner);
   }
 
+  // (1b) Re-reparto de los N×M que ganaron, por producto. Se hace acá y no en el
+  // loop de arriba porque el reparto exacto necesita ver TODAS las líneas del
+  // producto juntas, y recién ahora se sabe cuáles ganó el N×M. Sin esto, cada
+  // línea redondeaba su fracción por separado y el mismo producto en 3 talles
+  // cobraba $1 de más (B-11).
+  const nxmGroups = new Map<string, number[]>();
+  for (let i = 0; i < items.length; i++) {
+    const w = winnerByLine[i];
+    if (w?.type !== "N_PAY_M") continue;
+    // La clave incluye la promo: dos líneas del mismo producto siempre ganan con
+    // la misma promo, pero agrupar por las dos cosas lo deja a prueba de futuro.
+    const key = `${items[i].productId} ${w.minQty} ${w.payQty}`;
+    const arr = nxmGroups.get(key);
+    if (arr) arr.push(i); else nxmGroups.set(key, [i]);
+  }
+  for (const idxs of nxmGroups.values()) {
+    if (idxs.length < 2) continue; // una sola línea ya está exacta
+    const w = winnerByLine[idxs[0]]!;
+    const totalQty = totalQtyByProduct.get(items[idxs[0]].productId)!;
+    const exactos = idxs.map((i) => nxmExactLineTotal(w, items[i], totalQty) ?? lineTotal[i]);
+    repartirNxM(idxs, exactos, lineTotal);
+  }
+
   // (2) Promos MIX (mix & match) a nivel carrito, mutando lineTotal donde ganan.
   // Si el mix gana, pasa a ser la promo responsable de esas líneas.
   const mixWin = applyMixPromos(items, eligiblePromos, baseLine, lineTotal);
@@ -384,14 +441,35 @@ export function priceCart(items: PricingItem[], opts?: PriceCartOptions): CartPr
 
   // Envío gratis: la promo de envío elegible que alcanza al carrito. Se guarda cuál
   // fue para poder decir "gratis por esta promo" y no un "sin cargo" ambiguo.
-  const fsPromo = eligiblePromos.find(
-    (p) => p.type === "FREE_SHIPPING" && promoMatchesCart(p, items)
-  ) ?? null;
+  // Con DOS promos de envío gratis vigentes el envío queda gratis igual, pero hay
+  // que decir cuál lo hizo. Antes se tomaba la primera del array, o sea el orden
+  // en que la base las devolvía: el mismo carrito podía mostrar un motivo u otro
+  // (B-12). Gana la del umbral MÁS ALTO que el carrito ya superó — es la más
+  // exigente de las que se cumplieron, y por lo tanto la que mejor explica el
+  // beneficio ("gratis por superar $50.000", no "por superar $10.000"). Empate
+  // real: por nombre, para que sea estable entre recargas. Mismo criterio que
+  // resolveStoreEvent, que ya resolvió este problema para los eventos.
+  const fsPromo = eligiblePromos
+    .filter((p) => p.type === "FREE_SHIPPING" && promoMatchesCart(p, items))
+    .sort((a, b) =>
+      b.minOrderAmount - a.minOrderAmount ||
+      (a.name ?? "").localeCompare(b.name ?? "")
+    )[0] ?? null;
 
-  // Cupón permitido salvo que una promo que SÍ toca el carrito prohíba combinarlo.
-  const couponsAllowed = !eligiblePromos.some(
-    (p) => !p.combinesWithCoupons && promoMatchesCart(p, items)
-  );
+  // Cupón permitido salvo que una promo que EFECTIVAMENTE dio algo prohíba
+  // combinarlo. Antes se miraba si la promo *alcanzaba* el carrito por su
+  // alcance, y eso bloqueaba de más (B-08): con un 3×2 y el cliente llevando UNA
+  // unidad, la promo no descontaba nada y el cupón quedaba bloqueado igual — se
+  // quedaba sin las dos cosas. Y es el peor escenario posible, porque casi todos
+  // los carritos empiezan con una unidad.
+  //
+  // El criterio NO puede ser "ahorró plata": el envío gratis otorga el beneficio
+  // sin generar ahorro de línea, y ahí bloquear SÍ es correcto. Por eso se juntan
+  // las dos formas de haber aplicado: haber ganado alguna línea, o ser la promo
+  // de envío que se activó.
+  const promosQueAplicaron = new Set<ActivePromotion>(savingsByPromo.keys());
+  if (fsPromo) promosQueAplicaron.add(fsPromo);
+  const couponsAllowed = ![...promosQueAplicaron].some((p) => !p.combinesWithCoupons);
 
   return {
     lines, subtotal, promoSavings, appliedPromos,

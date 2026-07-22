@@ -9,13 +9,19 @@
 // eso es lo que cubren los casos SP-* y FS-*.
 
 import { priceCart, resolveBasePrice, freeShippingProgress, type PricingItem, type ActivePromotion } from "./pricing";
-import { costFloorCheck, type CostFloorPromo, type CostFloorProduct } from "./promotions";
+import { costFloorCheck, fixedFloorError, type CostFloorPromo, type CostFloorProduct } from "./promotions";
 import { resolveProductPromo, describePromo, resolveStoreEvent } from "./promoDisplay";
 
 const BASE = 10000;
 
 function item(qty: number, basePrice = BASE, opts?: { productId?: string; category?: string | null }): PricingItem {
   return { productId: opts?.productId ?? "P", variantId: null, quantity: qty, basePrice, category: opts?.category };
+}
+
+// El MISMO producto en otra variante (talle/color). Son líneas distintas del
+// carrito con el mismo productId — el caso que destapó B-11.
+function variante(qty: number, variantId: string, basePrice = BASE): PricingItem {
+  return { productId: "P", variantId, quantity: qty, basePrice, category: null };
 }
 
 // Fábrica de StorePromotion vigentes (el llamador ya filtró por fecha).
@@ -95,6 +101,24 @@ const spCases: {
     expectedSubtotal: 10000, expectedFree: false, desc: "envío gratis desde $50.000, compra $10.000 → NO" },
   { id: "SP-L", items: [item(1)], promotions: [promo({ type: "PERCENT", value: 20, combinesWithCoupons: true })],
     expectedSubtotal: 8000, expectedCoupons: true, desc: "PERCENT 20% que SÍ combina con cupón" },
+
+  // ── B-11: el mismo producto repartido en VARIAS líneas (talles/colores) ──────
+  // La suite tenía N×M pero nunca partía el producto en 3+ líneas, y por eso no
+  // agarró el bug: cada línea redondeaba su fracción por separado y siempre hacia
+  // arriba. 3 líneas de 1 unidad daban $20.001 en vez de $20.000 — en contra del
+  // comprador, y en el caso más común de una tienda de ropa (una prenda, 3 talles).
+  { id: "SP-M", items: [variante(1, "S"), variante(1, "M"), variante(1, "L")],
+    promotions: [promo({ type: "N_PAY_M", minQty: 3, payQty: 2 })],
+    expectedSubtotal: 20000, desc: "B-11: 3×2 con la misma prenda en 3 talles → paga 2 exactas" },
+  { id: "SP-N", items: [variante(1, "S"), variante(1, "M"), variante(1, "L"), variante(1, "XL"), variante(1, "XXL"), variante(1, "XXXL")],
+    promotions: [promo({ type: "N_PAY_M", minQty: 3, payQty: 2 })],
+    expectedSubtotal: 40000, desc: "B-11: 6 talles con 3×2 → dos grupos, paga 4 exactas" },
+  { id: "SP-O", items: [variante(1, "S"), variante(2, "M")],
+    promotions: [promo({ type: "N_PAY_M", minQty: 3, payQty: 2 })],
+    expectedSubtotal: 20000, desc: "B-11: partición 1+2 (la que ya daba bien) sigue dando bien" },
+  { id: "SP-P", items: [variante(3, "S")],
+    promotions: [promo({ type: "N_PAY_M", minQty: 3, payQty: 2 })],
+    expectedSubtotal: 20000, desc: "B-11: una sola línea de 3 → sin cambios" },
 ];
 for (const c of spCases) {
   const r = priceCart(c.items, { promotions: c.promotions });
@@ -107,6 +131,68 @@ for (const c of spCases) {
     c.expectedCoupons !== undefined ? `cupónOK=${r.couponsAllowed}` : "",
   ].filter(Boolean).join(" ");
   console.log(`${ok ? "OK  " : "FAIL"} [${c.id}] esperado $${c.expectedSubtotal.toLocaleString("es-AR")} · dio $${r.subtotal.toLocaleString("es-AR")} ${extra} — ${c.desc}`);
+}
+
+// ── B-12: con DOS promos de envío gratis, cuál se nombra no puede depender del
+// orden en que la base las devuelva. Gana la del umbral más alto ya superado.
+{
+  const barata = promo({ type: "FREE_SHIPPING", minOrderAmount: 3000, name: "Envío gratis siempre" });
+  const exigente = promo({ type: "FREE_SHIPPING", minOrderAmount: 8000, name: "Black Friday envío gratis" });
+  const carrito = [item(1)]; // $10.000: supera los dos umbrales
+  const normal = priceCart(carrito, { promotions: [barata, exigente] });
+  const invertido = priceCart(carrito, { promotions: [exigente, barata] });
+  const estable = normal.freeShippingPromo?.name === invertido.freeShippingPromo?.name;
+  const gana = normal.freeShippingPromo?.name === "Black Friday envío gratis";
+  const ok = estable && gana && normal.freeShipping;
+  if (!ok) failed++;
+  console.log(`${ok ? "OK  " : "FAIL"} [SP-Q] dos envíos gratis → nombra "${normal.freeShippingPromo?.name}" sin importar el orden (invertido: "${invertido.freeShippingPromo?.name}") — B-12`);
+}
+
+// ── B-08: el cupón solo se bloquea si la promo REALMENTE dio algo ────────────
+{
+  const nxm = promo({ type: "N_PAY_M", minQty: 3, payQty: 2, combinesWithCoupons: false });
+  const envio = promo({ type: "FREE_SHIPPING", minOrderAmount: 8000, combinesWithCoupons: false });
+  const casos: { id: string; r: ReturnType<typeof priceCart>; esperado: boolean; desc: string }[] = [
+    { id: "CG-A", r: priceCart([item(1)], { promotions: [nxm] }), esperado: true,
+      desc: "3×2 con 1 sola unidad: no descontó nada → el cupón SIGUE permitido" },
+    { id: "CG-B", r: priceCart([item(3)], { promotions: [nxm] }), esperado: false,
+      desc: "3×2 con 3 unidades: sí descontó → cupón bloqueado (correcto)" },
+    { id: "CG-C", r: priceCart([item(1)], { promotions: [envio] }), esperado: false,
+      desc: "envío gratis otorgado: bloquea aunque no haya ahorro de línea" },
+    { id: "CG-D", r: priceCart([item(1, 5000)], { promotions: [envio] }), esperado: true,
+      desc: "envío gratis NO alcanzado ($5.000 < $8.000) → cupón permitido" },
+  ];
+  for (const c of casos) {
+    const ok = c.r.couponsAllowed === c.esperado;
+    if (!ok) failed++;
+    console.log(`${ok ? "OK  " : "FAIL"} [${c.id}] cupónOK=${c.r.couponsAllowed} — ${c.desc}`);
+  }
+}
+
+// ── B-07: el candado del monto fijo. Ningún producto puede quedar en $0 ───────
+{
+  const prods = [
+    { id: "A", name: "Remera básica", price: 22000, category: "remeras" },
+    { id: "B", name: "Llavero", price: 4000, category: "accesorios" },
+  ];
+  const fixed = (value: number, scope = "ALL", cats: string[] = [], ids: string[] = []) =>
+    ({ type: "FIXED", value, scope, categories: cats, productIds: ids });
+
+  const casos: { id: string; err: string | null; debeFrenar: boolean; desc: string }[] = [
+    { id: "FF-A", err: fixedFloorError(fixed(5000), prods), debeFrenar: true,
+      desc: "$5.000 en toda la tienda con un producto de $4.000 → FRENA" },
+    { id: "FF-B", err: fixedFloorError(fixed(3000), prods), debeFrenar: false,
+      desc: "$3.000 en toda la tienda: nadie llega a $0 → pasa" },
+    { id: "FF-C", err: fixedFloorError(fixed(5000, "CATEGORY", ["remeras"]), prods), debeFrenar: false,
+      desc: "$5.000 solo en remeras: el llavero está fuera de alcance → pasa" },
+    { id: "FF-D", err: fixedFloorError(fixed(22000, "PRODUCTS", [], ["A"]), prods), debeFrenar: true,
+      desc: "monto IGUAL al precio (no solo mayor) → FRENA" },
+  ];
+  for (const c of casos) {
+    const ok = (c.err !== null) === c.debeFrenar;
+    if (!ok) failed++;
+    console.log(`${ok ? "OK  " : "FAIL"} [${c.id}] ${c.err ? "frenó" : "pasó"} — ${c.desc}`);
+  }
 }
 
 // ── Mix & match (Fase 5): llevá N MEZCLANDO productos, el más barato gratis ───
