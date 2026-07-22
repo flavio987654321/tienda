@@ -1,0 +1,16 @@
+-- Repara una diferencia entre el schema y la base: DesignBrief.telefono existe
+-- en schema.prisma pero nunca se creó en la base.
+--
+-- Por qué pasó: la migración 20260721120000_add_design_brief usa
+-- CREATE TABLE IF NOT EXISTS, y la tabla ya existía (creada a mano durante el
+-- desarrollo) desde ANTES de que el formulario tuviera campo de teléfono. Al
+-- deployar, el IF NOT EXISTS vio la tabla, no hizo nada, y la migración quedó
+-- marcada como aplicada — con la columna faltando. Ese es el riesgo de
+-- IF NOT EXISTS en un CREATE TABLE: no falla, pero tampoco corrige la forma.
+--
+-- Consecuencia: tanto leer la bandeja del admin como GUARDAR un brief nuevo
+-- tiraban P2022, o sea que el formulario público estaba rechazando ideas.
+--
+-- ADD COLUMN IF NOT EXISTS es idempotente: sirve igual si la columna ya se
+-- agregó a mano antes de deployar.
+ALTER TABLE "DesignBrief" ADD COLUMN IF NOT EXISTS "telefono" TEXT;
