@@ -79,7 +79,11 @@ export async function POST(req: NextRequest) {
   // consulta cuando hace falta — los otros tipos no pagan la query.
   if (d.type === "FIXED") {
     const productos = await prisma.product.findMany({
-      where: { storeId: store.id, isActive: true },
+      // `deletedAt: null` no es opcional: el asistente juzga con los productos que
+      // trae `page.tsx`, que excluye los borrados. Sin esta condición el server
+      // frenaría por un producto que la dueña ya no ve —y no puede arreglar— con
+      // el asistente mostrándole todo en verde.
+      where: { storeId: store.id, isActive: true, deletedAt: null },
       select: { id: true, name: true, price: true, category: true },
     });
     const err = fixedFloorError(d, productos);

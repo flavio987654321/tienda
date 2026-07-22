@@ -46,7 +46,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   // monto fijo puede terminar regalando un producto.
   if (d.type === "FIXED") {
     const productos = await prisma.product.findMany({
-      where: { storeId: promo.storeId, isActive: true },
+      // Mismo criterio que el POST y que el asistente: los borrados no cuentan.
+      where: { storeId: promo.storeId, isActive: true, deletedAt: null },
       select: { id: true, name: true, price: true, category: true },
     });
     const err = fixedFloorError(d, productos);
