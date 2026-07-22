@@ -183,8 +183,28 @@ export default function AdminSidebar({ user }: { user: { name: string | null; em
     // sin esperar al realtime (que escucha las tablas de datos, no section-views).
     window.addEventListener("admin-section-seen", scheduleFetch);
 
+    // Rechequeo periódico + al volver a la pestaña. NO es redundante con el
+    // realtime de abajo: de las 8 tablas que se escuchan, hoy solo Testimonial
+    // está en la publicación `supabase_realtime` de la base, así que las otras 7
+    // no emiten ningún evento y el badge solo aparecía recargando la página
+    // entera. Agregarlas a la publicación sería el arreglo "natural", pero esa
+    // lista también define qué puede escuchar cualquier visitante con la anon
+    // key (que viaja en el bundle público) y estas tablas tienen RLS apagado:
+    // publicar DesignBrief o Lead expondría mails y teléfonos en vivo. Sondear
+    // desde el panel, que ya está autenticado, cuesta una consulta por minuto y
+    // no abre nada.
+    const POLL_MS = 60_000;
+    const poll = setInterval(fetchCounts, POLL_MS);
+    // Al volver a la pestaña se rechequea en el acto: es cuando la persona
+    // efectivamente está mirando y el dato viejo se nota.
+    const onVisible = () => { if (document.visibilityState === "visible") scheduleFetch(); };
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", onVisible);
+
     // Tablas que, al cambiar, pueden mover algún contador. Se agrupan bajo el
-    // mismo debounce.
+    // mismo debounce. Se mantienen suscritas: las que sí están publicadas
+    // (Testimonial) siguen avisando al instante, y si algún día se publican las
+    // demás con RLS, esto empieza a funcionar sin tocar nada.
     const TABLES = [
       "VerificationRequest", "StoreReport", "WalletWithdrawal", "StoreClosure",
       "DesignBrief", "Lead", "Testimonial", "Donation",
@@ -202,8 +222,11 @@ export default function AdminSidebar({ user }: { user: { name: string | null; em
 
     return () => {
       clearTimeout(debounce);
+      clearInterval(poll);
       supabase.removeChannel(channel);
       window.removeEventListener("admin-section-seen", scheduleFetch);
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", onVisible);
     };
   }, []);
 
