@@ -143,6 +143,29 @@ async function processPaymentWebhook(paymentId: string) {
 
     if (!order || order.status !== "PENDING") return NextResponse.json({ ok: true });
 
+    // ── Validar que lo pagado sea lo que el pedido dice (A-03) ────────────────
+    // Antes se confirmaba solo con `status === "approved"`, sin mirar el monto: un
+    // pago por menos de lo debido confirmaba el pedido igual y nadie se enteraba.
+    // Mismo criterio que el webhook de suscripciones, que ya validaba así.
+    //
+    // Tolerancia del 5% hacia abajo, por redondeos y por cuotas con recargo que MP
+    // liquida distinto. Un pago de MÁS no frena nada (puede ser un ajuste de MP),
+    // pero se registra: si aparece seguido, hay algo que revisar.
+    const pagado = payment.transaction_amount;
+    if (typeof pagado === "number" && order.total > 0) {
+      if (pagado < order.total * 0.95) {
+        console.error("[mp/webhook] monto pagado MENOR al del pedido — no se confirma", {
+          paymentId, orderId: order.id, recibido: pagado, esperado: order.total,
+        });
+        return NextResponse.json({ ok: true });
+      }
+      if (pagado > order.total * 1.05) {
+        console.warn("[mp/webhook] monto pagado MAYOR al del pedido — se confirma igual", {
+          paymentId, orderId: order.id, recibido: pagado, esperado: order.total,
+        });
+      }
+    }
+
     // La transacción retorna el resultado de la comisión directamente
     // para que TypeScript pueda narrowar el tipo correctamente post-await
     const commissionResult: CommissionResult | null = await prisma.$transaction(async (tx) => {

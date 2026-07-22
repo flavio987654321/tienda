@@ -9,6 +9,7 @@ import { ArrowLeft, Clock, MessageSquare, Package, Star, Truck, UserRound } from
 import { getCurrentUser } from "@/lib/auth-session";
 import { money } from "@/lib/utils";
 import { statusLabel, statusClass, parseAddress } from "@/lib/orders";
+import { parseOrderPromoSummary } from "@/lib/email";
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -104,21 +105,48 @@ export default async function PedidoDetailPage({ params }: Props) {
               </div>
             ))}
           </div>
-          {(order.discountAmount > 0 || order.shippingCost > 0) && (
-            <div className="mt-2 space-y-0.5 rounded-xl bg-gray-50 p-3 text-xs text-gray-500">
-              <p className="flex justify-between"><span>Subtotal</span><span>{money(order.subtotal)}</span></p>
-              {order.discountAmount > 0 && (
-                <p className="flex justify-between text-emerald-600">
-                  <span>Descuento{order.coupon ? ` (${order.coupon.code})` : ""}</span>
-                  <span>− {money(order.discountAmount)}</span>
-                </p>
-              )}
-              {order.shippingCost > 0 && (
-                <p className="flex justify-between"><span>Envío</span><span>{money(order.shippingCost)}</span></p>
-              )}
-              <p className="flex justify-between font-bold text-gray-800"><span>Total</span><span>{money(order.total)}</span></p>
-            </div>
-          )}
+          {(() => {
+            // A-04 — QUÉ promoción se aplicó, no solo cuánto se ahorró.
+            // `promoSummary` se guardaba en cada pedido y se usaba en los mails y en
+            // el conteo de la sección Promociones, pero ninguna pantalla del panel
+            // lo mostraba: el comprador veía la promo en su mail y la dueña no la
+            // veía en su panel. Sale del JSON congelado en la venta, así que dice lo
+            // que se cobró aunque la promo haya cambiado o se haya archivado.
+            const { appliedPromos, freeShippingPromo } = parseOrderPromoSummary(order.promoSummary);
+            const hayPromo = appliedPromos.length > 0 || !!freeShippingPromo;
+            // El bloque también aparece con promo sin cupón ni envío pago — antes en
+            // ese caso no se mostraba nada, ni siquiera el subtotal.
+            if (!(order.discountAmount > 0 || order.shippingCost > 0 || hayPromo)) return null;
+            return (
+              <div className="mt-2 space-y-0.5 rounded-xl bg-gray-50 p-3 text-xs text-gray-500">
+                <p className="flex justify-between"><span>Subtotal</span><span>{money(order.subtotal)}</span></p>
+                {appliedPromos.filter((p) => p.savings > 0).map((p, i) => (
+                  <p key={i} className="flex justify-between gap-3 text-emerald-600">
+                    <span>🎉 {p.name ? `${p.name} · ${p.label}` : p.label}</span>
+                    <span className="shrink-0">− {money(p.savings)}</span>
+                  </p>
+                ))}
+                {order.discountAmount > 0 && (
+                  <p className="flex justify-between text-emerald-600">
+                    <span>Descuento{order.coupon ? ` (${order.coupon.code})` : ""}</span>
+                    <span>− {money(order.discountAmount)}</span>
+                  </p>
+                )}
+                {order.shippingCost > 0 && (
+                  <p className="flex justify-between"><span>Envío</span><span>{money(order.shippingCost)}</span></p>
+                )}
+                {freeShippingPromo && (
+                  <p className="flex justify-between gap-3 text-emerald-600">
+                    <span>🚚 Envío gratis{freeShippingPromo.name ? ` · ${freeShippingPromo.name}` : ""}</span>
+                    {/* Lo que costaba ese envío y la tienda no cobró (#7c). Sin esto
+                        el "gratis" parece salir de la nada. */}
+                    <span className="shrink-0">{order.shippingWaived > 0 ? `te costó ${money(order.shippingWaived)}` : "sin cargo"}</span>
+                  </p>
+                )}
+                <p className="flex justify-between font-bold text-gray-800"><span>Total</span><span>{money(order.total)}</span></p>
+              </div>
+            );
+          })()}
         </div>
 
         <div className="rounded-2xl border border-gray-100 bg-white p-5">

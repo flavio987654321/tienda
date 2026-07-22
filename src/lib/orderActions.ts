@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { sendReviewRequestEmail, sendCommissionEarnedEmail, sendOrderShippedEmail, sendOrderPaymentConfirmedEmail, sendOrderCancelledEmail } from "@/lib/email";
+import { sendReviewRequestEmail, sendCommissionEarnedEmail, sendOrderShippedEmail, sendOrderPaymentConfirmedEmail, sendOrderCancelledEmail, parseOrderPromoSummary } from "@/lib/email";
 import { createNotification } from "@/lib/notifications";
 import { recordStockMovement, wentBackAboveThreshold, dispatchLowStockAlerts, DEFAULT_LOW_STOCK_THRESHOLD, type LowStockItem } from "@/lib/stockMovements";
 import { ORDER_ACTION_TRANSITIONS } from "@/lib/orders";
@@ -34,6 +34,9 @@ export async function runOrderAction({ orderId: id, ownerId, action, trackingCod
         items: { include: { product: true, variant: true } },
         payment: true,
         shipping: true,
+        // Para que el mail de "pago acreditado" del pago manual (transferencia,
+        // efectivo) sea el mismo comprobante que el de MercadoPago — A-02.
+        coupon: { select: { code: true } },
         affiliate: { include: { wallet: true, user: { select: { email: true, name: true } } } },
         commission: true,
       },
@@ -137,6 +140,14 @@ export async function runOrderAction({ orderId: id, ownerId, action, trackingCod
         data: { orderId: order.id, fromStatus: order.status, toStatus: "CONFIRMED", changedBy: ownerId },
       });
 
+      // A-02 — el MISMO comprobante que manda el webhook de MercadoPago.
+      // Antes acá solo viajaba el total: quien pagaba por transferencia recibía un
+      // mail sin qué compró, sin el envío y sin la promo que lo convenció de
+      // comprar. La plantilla acepta todos estos campos como opcionales, así que
+      // no fallaba — degradaba en silencio, que es peor. Y transferencia es el
+      // medio más usado en tiendas chicas.
+      //
+      // Nada de esto se recalcula: sale de la orden, tal como se cobró.
       sendOrderPaymentConfirmedEmail({
         buyerEmail: order.buyer.email,
         buyerName: order.buyer.name || "",
@@ -144,6 +155,22 @@ export async function runOrderAction({ orderId: id, ownerId, action, trackingCod
         storeName: order.store.name,
         storeSlug: order.store.slug,
         total: order.total,
+        items: order.items.map((it) => ({
+          name: it.product.name,
+          variant: it.variant ? `${it.variant.name}: ${it.variant.value}` : null,
+          quantity: it.quantity,
+          // Las órdenes viejas no tienen lineTotal → se reconstruye con precio × cantidad.
+          lineTotal: it.lineTotal ?? it.price * it.quantity,
+        })),
+        subtotal: order.subtotal,
+        discountAmount: order.discountAmount,
+        couponCode: order.coupon?.code ?? null,
+        shippingCost: order.shippingCost,
+        shippingMethod: order.shippingMethod,
+        // Promos congeladas al momento de la venta: no se recalculan, la promo pudo
+        // haber cambiado desde entonces y el comprobante tiene que ser fiel.
+        ...parseOrderPromoSummary(order.promoSummary),
+        promoSavings: order.promoSavings,
       }).catch((err) => console.error("[email] sendOrderPaymentConfirmedEmail failed:", err));
 
       return confirmed;

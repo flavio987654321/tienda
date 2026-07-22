@@ -30,6 +30,16 @@ export default async function PromocionesPage() {
     ? { storeId: store.id, promoSummary: { not: null }, status: { not: "CANCELLED" }, createdAt: { gte: inicioDeMes } }
     : null;
 
+  // A-05 — lo que de verdad cuestan los envíos de esta tienda, para poder decírselo
+  // a la dueña ANTES de que arme un envío gratis. Con cotización en vivo la tarifa
+  // la pone el transportista y varía por destino: el costo del envío bonificado no
+  // es un número que ella eligió. Salen de los pedidos reales, no de la tarifa
+  // configurada — es el mismo principio que el resto de los avisos: mostrarle sus
+  // propios números en vez de una advertencia genérica.
+  const enviosReales = store
+    ? { storeId: store.id, status: { not: "CANCELLED" }, shippingCost: { gt: 0 } }
+    : null;
+
   const [promos, products, sub, ventasConPromo, ahorroAgg] = store
     ? await Promise.all([
         prisma.storePromotion.findMany({ where: { storeId: store.id }, orderBy: { createdAt: "desc" } }),
@@ -46,6 +56,20 @@ export default async function PromocionesPage() {
     : [[], [], null, 0, null];
 
   const ahorroDelMes = ahorroAgg?._sum.promoSavings ?? 0;
+
+  // Rango real de envíos cobrados. Si la tienda todavía no despachó nada, queda en
+  // null y el asistente no inventa un número: muestra la advertencia sin datos.
+  const envioAgg = enviosReales
+    ? await prisma.order.aggregate({
+        where: enviosReales,
+        _avg: { shippingCost: true },
+        _max: { shippingCost: true },
+        _count: true,
+      })
+    : null;
+  const costoEnvio = envioAgg && envioAgg._count > 0
+    ? { promedio: Math.round(envioAgg._avg.shippingCost ?? 0), maximo: Math.round(envioAgg._max.shippingCost ?? 0), pedidos: envioAgg._count }
+    : null;
 
   const now = new Date();
   const rows = promos.map((p) => ({
@@ -88,6 +112,8 @@ export default async function PromocionesPage() {
         // null = sin tope (Premium). El cupo usado lo calcula el cliente con el
         // mismo criterio que el POST: vivas ocupan lugar, archivadas y vencidas no.
         maxPromotions={hasActivePremium(sub) ? null : PRO_MAX_LIVE_PROMOTIONS}
+        // Lo que le cuestan los envíos de verdad, para el aviso del envío gratis (A-05).
+        costoEnvio={costoEnvio}
         ventasConPromo={ventasConPromo}
         ahorroDelMes={ahorroDelMes}
       />

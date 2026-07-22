@@ -43,25 +43,30 @@ export async function POST(req: NextRequest) {
     ? Math.round((commissionBase * order.lockedCommissionRate) / 100)
     : 0;
 
-  // Si hay cupón o envío pago, el total difiere de la suma de ítems.
-  // MP no admite precios negativos, así que en esos casos consolidamos
-  // todo en un único ítem con el total exacto.
-  const hasAdjustments = (order.discountAmount ?? 0) > 0 || (order.shippingCost ?? 0) > 0;
-  const items = hasAdjustments
-    ? [{
-        id: order.id,
-        title: order.items.length === 1
-          ? order.items[0].product.name
-          : `${order.items.length} productos`,
-        unit_price: order.total,
-        quantity: 1,
-      }]
-    : order.items.map((item) => ({
-        id: item.id,
-        title: item.product.name,
-        unit_price: item.price,
-        quantity: item.quantity,
-      }));
+  // SIEMPRE un solo ítem con el total exacto de la orden (A-01).
+  //
+  // Antes esto se hacía solo cuando había cupón o envío pago; sin ellos se armaba
+  // ítem por ítem con `price × quantity`. Esa reconstrucción NO da el total del
+  // pedido cuando hay un N×M: el unitario está redondeado y el total exacto vive en
+  // `lineTotal` — el propio checkout lo deja escrito ("para el N×M no coincide con
+  // price × qty", checkout/route.ts). Con 3 unidades de $10.000 en un 3×2, la línea
+  // vale $20.000 y la suma de unitarios da $20.001: MP cobraba un peso de más.
+  //
+  // Es el mismo error que B-11, en el otro extremo del sistema. La causa de fondo
+  // es la misma de siempre: reconstruir un número que ya estaba calculado. Se
+  // consolida siempre, y la clase entera de error desaparece.
+  //
+  // Se pierde el detalle por ítem en la pantalla de MP — pero eso ya pasaba en la
+  // mayoría de los pedidos (cualquiera con cupón o envío pago), y el comprador
+  // tiene el desglose completo en el mail de confirmación.
+  const items = [{
+    id: order.id,
+    title: order.items.length === 1
+      ? order.items[0].product.name
+      : `${order.items.length} productos`,
+    unit_price: order.total,
+    quantity: 1,
+  }];
 
   const MP_TIMEOUT_MS = 10_000;
   const timeout = new Promise<never>((_, reject) =>

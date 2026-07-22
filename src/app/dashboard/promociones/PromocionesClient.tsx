@@ -36,6 +36,8 @@ type Promotion = {
   isActive: boolean; archivedAt: string | null; status: string;
 };
 type Category = { name: string; count: number };
+// Envíos ya cobrados por esta tienda — el costo real que absorbe un envío gratis.
+export type CostoEnvio = { promedio: number; maximo: number; pedidos: number } | null;
 type Product = { id: string; name: string; price: number; category: string; costPrice: number | null };
 
 // ── Metadatos de cada tipo (ícono, color, textos, explicación) ───────────────
@@ -120,10 +122,13 @@ function fmtDate(iso: string | null) {
 
 export default function PromocionesClient({
   initialPromotions, categories, products, activeCount, maxPromotions,
-  ventasConPromo, ahorroDelMes,
+  costoEnvio, ventasConPromo, ahorroDelMes,
 }: {
   initialPromotions: Promotion[]; categories: Category[]; products: Product[]; activeCount: number;
   maxPromotions: number | null;
+  // Lo que costaron los envíos ya despachados. null = la tienda todavía no despachó
+  // ninguno, y entonces no hay número real que mostrar (A-05).
+  costoEnvio: CostoEnvio;
   ventasConPromo: number; ahorroDelMes: number;
 }) {
   const [promos, setPromos] = useState<Promotion[]>(initialPromotions);
@@ -326,6 +331,7 @@ export default function PromocionesClient({
           products={products}
           // Las que ya existen, para poder avisar si la nueva nace muerta (F6-C7).
           existentes={promos}
+          costoEnvio={costoEnvio}
           editPromo={editing}
           onClose={() => { setWizOpen(false); setEditing(null); }}
           onCreated={async () => { const wasEdit = !!editing; setWizOpen(false); setEditing(null); await refresh(); if (!wasEdit) setTab("act"); showToast(wasEdit ? "Promoción actualizada" : "Promoción creada"); }}
@@ -370,8 +376,8 @@ function BadgeEmpty() {
 // ── Wizard de creación ───────────────────────────────────────────────────────
 const STEP_NAMES = ["Tipo", "Alcance", "Reglas", "Vigencia", "Confirmar"];
 
-function Wizard({ categories, products, existentes, onClose, onCreated, editPromo }: {
-  categories: Category[]; products: Product[]; existentes: Promotion[];
+function Wizard({ categories, products, existentes, costoEnvio, onClose, onCreated, editPromo }: {
+  categories: Category[]; products: Product[]; existentes: Promotion[]; costoEnvio: CostoEnvio;
   onClose: () => void; onCreated: () => void; editPromo?: Promotion | null;
 }) {
   const isEdit = !!editPromo;
@@ -688,7 +694,34 @@ function Wizard({ categories, products, existentes, onClose, onCreated, editProm
                   )}
                 </>
               ) : type === "FREE_SHIPPING" ? (
-                <Field label="Compra mínima" hint="Vacío = siempre gratis"><input value={minOrder} onChange={(e) => setMinOrder(digitsMoney(e.target.value))} inputMode="numeric" placeholder="$ 50.000" className={inputCls} /></Field>
+                <>
+                  <Field label="Compra mínima" hint="Vacío = siempre gratis"><input value={minOrder} onChange={(e) => setMinOrder(digitsMoney(e.target.value))} inputMode="numeric" placeholder="$ 50.000" className={inputCls} /></Field>
+                  {/* A-05 — el envío gratis es la única promo cuyo costo NO lo elige
+                      la dueña: con cotización en vivo la tarifa la pone el
+                      transportista y cambia por destino. Se le muestran sus propios
+                      envíos ya despachados, igual que con el monto fijo. */}
+                  {costoEnvio ? (
+                    <WarnNote>
+                      Cada envío que regales te lo pagás vos. Los {costoEnvio.pedidos} que ya despachaste
+                      costaron <b>{money(costoEnvio.promedio)} en promedio</b>
+                      {costoEnvio.maximo > costoEnvio.promedio && <> y hasta <b>{money(costoEnvio.maximo)}</b> el más caro</>}.
+                      {" "}Con esa plata en juego, conviene poner una compra mínima que la cubra.
+                    </WarnNote>
+                  ) : (
+                    <InfoNote>
+                      El costo del envío lo pagás vos: al comprador se le bonifica, pero el transportista
+                      cobra igual. Si usás <b>cotización en vivo</b>, la tarifa cambia según a dónde vaya el
+                      paquete — un envío al sur puede costar bastante más que uno cerca.
+                    </InfoNote>
+                  )}
+                  {/* Sin mínimo, cualquier compra —por chica que sea— se lleva el envío. */}
+                  {!(parseNum(minOrder) > 0) && (
+                    <WarnNote>
+                      Sin compra mínima, <b>todos</b> los pedidos van con envío gratis, incluso uno de un
+                      solo producto barato. Es el caso donde el envío se puede comer la ganancia entera.
+                    </WarnNote>
+                  )}
+                </>
               ) : (
                 <>
                   {/* F6-C5: los campos decían solo "Monto de descuento" y un signo
