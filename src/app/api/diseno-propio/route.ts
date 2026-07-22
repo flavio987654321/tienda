@@ -4,7 +4,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { getClientIp } from "@/lib/request-ip";
 import { verifyTurnstile } from "@/lib/turnstile";
 import { DESIGN_BRIEF_TERMS_VERSION } from "@/lib/legal";
-import { RUBRO_IDS, ESTETICA_IDS, PALETA_IDS } from "@/lib/designBrief";
+import { RUBRO_IDS, ESTETICA_IDS, PALETA_IDS, FOTOS_IDS, CATALOGO_IDS, LOGO_IDS } from "@/lib/designBrief";
 import { sendDesignBriefAdminEmail } from "@/lib/email";
 
 // Valores cerrados: el wizard manda ids de una lista fija, así que se validan
@@ -59,6 +59,19 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Dejanos un teléfono o WhatsApp válido." }, { status: 400 });
   }
 
+  // Datos de marca. Las tres de opciones cerradas se validan contra la lista:
+  // se acepta vacío (los briefs viejos no las tienen y el paso no las exige
+  // todas), pero si viene algo tiene que ser un id conocido y no basura.
+  const queVende = libre(body.queVende);
+  const nombreTienda = libre(body.nombreTienda);
+  const opcion = (v: unknown, ids: string[]) => {
+    const s = String(v ?? "").trim();
+    return s && ids.includes(s) ? s : null;
+  };
+  const fotos = opcion(body.fotos, FOTOS_IDS);
+  const catalogo = opcion(body.catalogo, CATALOGO_IDS);
+  const logo = opcion(body.logo, LOGO_IDS);
+
   // La aceptación no se infiere ni se asume: si no viene true, no se guarda.
   // Es el permiso para publicar el diseño en el catálogo, así que sin eso el
   // brief no sirve.
@@ -89,6 +102,11 @@ export async function POST(req: NextRequest) {
         coloresPropios,
         referencias,
         noQuiero,
+        nombreTienda,
+        queVende,
+        fotos,
+        catalogo,
+        logo,
         nombre: nombreFinal,
         email,
         telefono: telefonoFinal,
@@ -117,6 +135,11 @@ export async function POST(req: NextRequest) {
       coloresPropios,
       referencias,
       noQuiero,
+      nombreTienda,
+      queVende,
+      fotos,
+      catalogo,
+      logo,
       tieneTienda,
       tiendaUrl,
     });

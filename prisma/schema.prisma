@@ -1313,6 +1313,13 @@ model DesignBrief {
   coloresPropios String?
   referencias    String?
   noQuiero       String?
+  // Datos que definen la anatomía de la plantilla (ver lib/designBrief).
+  // Opcionales porque los briefs anteriores a esta pregunta no los tienen.
+  nombreTienda   String?
+  queVende       String?  // "remeras de mujer", "repuestos de moto": el rubro solo no alcanza
+  fotos          String?  // propias | algunas | catalogo | ninguna
+  catalogo       String?  // chico | medio | grande | enorme
+  logo           String?  // tengo | feo | no
   // Quién lo pidió
   nombre         String
   email          String

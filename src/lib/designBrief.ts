@@ -55,6 +55,41 @@ export const PALETAS: { id: string; label: string; colors: [string, string, stri
   { id: "blanco-negro", label: "Blanco y negro", colors: ["#000000", "#525252", "#ffffff"] },
 ];
 
+// Las tres de abajo se contestan de un toque a propósito: son las que más pesan
+// para diseñar, pero si se piden como texto libre alargan el formulario y la
+// gente abandona. Con opciones cerradas se responden en segundos y además se
+// pueden agrupar después para ver patrones.
+
+// Lo que MÁS define si una tienda se ve cara o barata. Si las fotos son flojas,
+// el diseño se tiene que apoyar en tipografía y aire en vez de imágenes grandes:
+// es una decisión de arquitectura de la plantilla, no un gusto.
+export const FOTOS: Option[] = [
+  { id: "propias",  label: "Sí, tengo fotos propias", desc: "Sacadas por vos o por un fotógrafo." },
+  { id: "algunas",  label: "Algunas",                 desc: "Tenés varias, pero no de todo." },
+  { id: "catalogo", label: "Las del proveedor",       desc: "Las que te pasa quien te vende." },
+  { id: "ninguna",  label: "Todavía ninguna",         desc: "Las vas a conseguir más adelante." },
+];
+
+// Define si alcanza una grilla simple o hace falta buscador, filtros y
+// categorías destacadas.
+export const CATALOGO: Option[] = [
+  { id: "chico",   label: "Menos de 20",  desc: "Pocos productos, bien elegidos." },
+  { id: "medio",   label: "Entre 20 y 100", desc: "Un catálogo normal." },
+  { id: "grande",  label: "Entre 100 y 500", desc: "Necesitás categorías y buscador." },
+  { id: "enorme",  label: "Más de 500",   desc: "Catálogo grande, con filtros." },
+];
+
+// Sin logo el encabezado se diseña distinto, resolviendo el nombre con
+// tipografía en vez de una imagen.
+export const LOGO: Option[] = [
+  { id: "tengo",   label: "Sí, tengo logo",    desc: "Ya lo usás en tus redes." },
+  { id: "feo",     label: "Tengo pero no me gusta", desc: "Lo querés mejorar." },
+  { id: "no",      label: "No tengo",          desc: "Todavía no hiciste ninguno." },
+];
+
 export const RUBRO_IDS = RUBROS.map((r) => r.id);
 export const ESTETICA_IDS = ESTETICAS.map((e) => e.id);
 export const PALETA_IDS = PALETAS.map((p) => p.id);
+export const FOTOS_IDS = FOTOS.map((f) => f.id);
+export const CATALOGO_IDS = CATALOGO.map((c) => c.id);
+export const LOGO_IDS = LOGO.map((l) => l.id);

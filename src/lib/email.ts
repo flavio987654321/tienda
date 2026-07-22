@@ -1,5 +1,5 @@
 ﻿import { Resend } from "resend";
-import { RUBROS, ESTETICAS, PALETAS } from "@/lib/designBrief";
+import { RUBROS, ESTETICAS, PALETAS, FOTOS, CATALOGO, LOGO } from "@/lib/designBrief";
 import { siteUrl } from "@/lib/site";
 
 function escapeHtml(s: string | null | undefined): string {
@@ -1311,6 +1311,11 @@ export async function sendDesignBriefAdminEmail(brief: {
   coloresPropios: string | null;
   referencias: string | null;
   noQuiero: string | null;
+  nombreTienda: string | null;
+  queVende: string | null;
+  fotos: string | null;
+  catalogo: string | null;
+  logo: string | null;
   tieneTienda: boolean;
   tiendaUrl: string | null;
 }) {
@@ -1323,6 +1328,11 @@ export async function sendDesignBriefAdminEmail(brief: {
   const esteticaLabel = ESTETICAS.find((e) => e.id === brief.estetica)?.label ?? brief.estetica;
   const paletaLabel = PALETAS.find((p) => p.id === brief.paleta)?.label ?? brief.paleta;
   const waDigits = brief.telefono ? brief.telefono.replace(/\D/g, "") : "";
+  // Los briefs anteriores a estas preguntas no los traen, así que cada uno se
+  // muestra solo si vino.
+  const fotosLabel = FOTOS.find((f) => f.id === brief.fotos)?.label ?? null;
+  const catalogoLabel = CATALOGO.find((c) => c.id === brief.catalogo)?.label ?? null;
+  const logoLabel = LOGO.find((l) => l.id === brief.logo)?.label ?? null;
 
   const row = (label: string, value: string) =>
     `<tr><td style="color:#6b7280;padding:5px 0;width:120px;vertical-align:top;">${label}</td><td style="font-weight:600;color:#111827;">${value}</td></tr>`;
@@ -1348,10 +1358,15 @@ export async function sendDesignBriefAdminEmail(brief: {
           ${row("Email", `<a href="mailto:${escapeHtml(brief.email)}" style="color:#ea580c;">${escapeHtml(brief.email)}</a>`)}
           ${brief.telefono ? row("Teléfono", `<a href="https://wa.me/${waDigits}" style="color:#16a34a;">${escapeHtml(brief.telefono)}</a>`) : ""}
           ${brief.tieneTienda ? row("Tienda", `Ya tiene${brief.tiendaUrl ? `: ${escapeHtml(brief.tiendaUrl)}` : ""}`) : ""}
+          ${brief.nombreTienda ? row("Su tienda", escapeHtml(brief.nombreTienda)) : ""}
           ${row("Rubro", escapeHtml(rubroLabel))}
+          ${brief.queVende ? row("Qué vende", escapeHtml(brief.queVende)) : ""}
           ${row("Estética", escapeHtml(esteticaLabel))}
           ${row("Paleta", escapeHtml(paletaLabel))}
           ${brief.coloresPropios ? row("Colores marca", escapeHtml(brief.coloresPropios)) : ""}
+          ${fotosLabel ? row("Fotos", escapeHtml(fotosLabel)) : ""}
+          ${catalogoLabel ? row("Catálogo", escapeHtml(catalogoLabel)) : ""}
+          ${logoLabel ? row("Logo", escapeHtml(logoLabel)) : ""}
         </table>
         ${extra("Referencias", brief.referencias)}
         ${extra("Qué NO quiere", brief.noQuiero)}

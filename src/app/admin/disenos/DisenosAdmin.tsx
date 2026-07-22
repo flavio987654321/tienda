@@ -5,7 +5,7 @@ import {
   Palette, Mail, Phone, Store, ExternalLink, Ban, Loader2,
   ChevronLeft, ChevronRight, Sparkles, TrendingUp,
 } from "lucide-react";
-import { RUBROS, ESTETICAS, PALETAS } from "@/lib/designBrief";
+import { RUBROS, ESTETICAS, PALETAS, FOTOS, CATALOGO, LOGO } from "@/lib/designBrief";
 import { useMarkAdminSectionSeen } from "@/hooks/useMarkAdminSectionSeen";
 
 type Brief = {
@@ -16,6 +16,11 @@ type Brief = {
   coloresPropios: string | null;
   referencias: string | null;
   noQuiero: string | null;
+  nombreTienda: string | null;
+  queVende: string | null;
+  fotos: string | null;
+  catalogo: string | null;
+  logo: string | null;
   nombre: string;
   email: string;
   telefono: string | null;
@@ -39,10 +44,24 @@ const STATUS_ORDER = ["NEW", "REVIEWED", "BUILDING", "DONE", "DISCARDED"] as con
 const rubroById = new Map(RUBROS.map((r) => [r.id, r]));
 const esteticaById = new Map(ESTETICAS.map((e) => [e.id, e]));
 const paletaById = new Map(PALETAS.map((p) => [p.id, p]));
+// Los briefs viejos no tienen estos campos, así que se resuelven a null y la
+// tarjeta simplemente no los muestra.
+const fotosById = new Map(FOTOS.map((f) => [f.id, f.label]));
+const catalogoById = new Map(CATALOGO.map((c) => [c.id, c.label]));
+const logoById = new Map(LOGO.map((l) => [l.id, l.label]));
 
 function rubroLabel(id: string) {
   const r = rubroById.get(id);
   return r ? `${r.emoji} ${r.label}` : id;
+}
+
+function Dato({ label, valor }: { label: string; valor: string }) {
+  return (
+    <span className="inline-flex items-center gap-1.5 bg-black/20 border border-white/5 rounded-lg px-2.5 py-1.5 text-xs">
+      <span className="text-gray-500">{label}:</span>
+      <span className="text-gray-200 font-medium">{valor}</span>
+    </span>
+  );
 }
 
 function fmtDate(iso: string) {
@@ -288,6 +307,18 @@ export default function DisenosAdmin() {
                     </div>
                   </div>
                 </div>
+
+                {/* Datos de marca: definen cómo se construye la plantilla, así que
+                    van arriba de los textos libres y no escondidos entre ellos. */}
+                {(b.queVende || b.nombreTienda || b.fotos || b.catalogo || b.logo) && (
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    {b.nombreTienda && <Dato label="Se llama" valor={b.nombreTienda} />}
+                    {b.queVende && <Dato label="Vende" valor={b.queVende} />}
+                    {b.fotos && <Dato label="Fotos" valor={fotosById.get(b.fotos) ?? b.fotos} />}
+                    {b.catalogo && <Dato label="Catálogo" valor={catalogoById.get(b.catalogo) ?? b.catalogo} />}
+                    {b.logo && <Dato label="Logo" valor={logoById.get(b.logo) ?? b.logo} />}
+                  </div>
+                )}
 
                 {/* Detalles opcionales */}
                 {(b.coloresPropios || b.referencias || b.noQuiero) && (

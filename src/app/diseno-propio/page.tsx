@@ -8,9 +8,9 @@ import {
 import { SiteNav } from "@/components/SiteNav";
 import { SiteFooter } from "@/components/SiteFooter";
 import { useTurnstile } from "@/components/Turnstile";
-import { RUBROS, ESTETICAS, PALETAS } from "@/lib/designBrief";
+import { RUBROS, ESTETICAS, PALETAS, FOTOS, CATALOGO, LOGO, type Option } from "@/lib/designBrief";
 
-const TOTAL_STEPS = 5;
+const TOTAL_STEPS = 6;
 const PER_PAGE = 6; // estéticas y paletas se muestran de a 6, con paginación
 
 type Form = {
@@ -20,6 +20,11 @@ type Form = {
   coloresPropios: string;
   referencias: string;
   noQuiero: string;
+  nombreTienda: string;
+  queVende: string;
+  fotos: string;
+  catalogo: string;
+  logo: string;
   nombre: string;
   email: string;
   telefono: string;
@@ -30,9 +35,41 @@ type Form = {
 
 const EMPTY: Form = {
   tipoTienda: "", estetica: "", paleta: "", coloresPropios: "",
-  referencias: "", noQuiero: "", nombre: "", email: "", telefono: "",
+  referencias: "", noQuiero: "",
+  nombreTienda: "", queVende: "", fotos: "", catalogo: "", logo: "",
+  nombre: "", email: "", telefono: "",
   tieneTienda: "", tiendaUrl: "", acepta: false,
 };
+
+// Fila de opciones de un toque. Se usa tres veces en el paso 4; cada una ocupa
+// poco alto para que el paso entre sin scroll en un celular.
+function Chips({ label, hint, options, value, onPick }: {
+  label: string; hint?: string; options: Option[]; value: string; onPick: (id: string) => void;
+}) {
+  return (
+    <div className="mb-6 last:mb-0">
+      <span className="text-sm font-semibold text-gray-700 block mb-1">{label}</span>
+      {hint && <span className="text-xs text-gray-400 block mb-2.5">{hint}</span>}
+      <div className="flex flex-wrap gap-2">
+        {options.map((o) => (
+          <button
+            key={o.id}
+            type="button"
+            onClick={() => onPick(o.id)}
+            title={o.desc}
+            className={`px-3.5 py-2 rounded-xl border-2 text-sm font-medium transition-all ${
+              value === o.id
+                ? "border-orange-500 bg-orange-50 text-orange-900"
+                : "border-gray-200 text-gray-600 hover:border-gray-300"
+            }`}
+          >
+            {o.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 function Pager({ page, pages, onPrev, onNext }: { page: number; pages: number; onPrev: () => void; onNext: () => void }) {
   return (
@@ -82,6 +119,13 @@ export default function DisenoPropioPage() {
     if (step === 1 && !form.tipoTienda) { setError("Elegí qué vendés para seguir."); return; }
     if (step === 2 && !form.estetica)   { setError("Elegí una estética para seguir."); return; }
     if (step === 3 && !form.paleta)     { setError("Elegí una paleta para seguir."); return; }
+    // Del paso 4 se piden solo las tres que cambian cómo se construye la
+    // plantilla. El nombre y el logo se pueden charlar después por WhatsApp.
+    if (step === 4) {
+      if (!form.queVende.trim())        { setError("Contanos qué vendés exactamente — el rubro solo no alcanza."); return; }
+      if (!form.fotos)                  { setError("Decinos si tenés fotos: es lo que más define el diseño."); return; }
+      if (!form.catalogo)               { setError("Elegí más o menos cuántos productos vas a cargar."); return; }
+    }
     setError("");
     setStep((s) => Math.min(s + 1, TOTAL_STEPS));
   }
@@ -310,7 +354,68 @@ export default function DisenoPropioPage() {
                 </>
               )}
 
+              {/* Paso 4: los cinco datos que definen la anatomía de la plantilla.
+                  Tres son de un toque y dos son textos cortos, así que suma un
+                  paso pero casi nada de esfuerzo — sin esto hay que preguntarlo
+                  todo por WhatsApp después. */}
               {step === 4 && (
+                <>
+                  <h2 className="text-2xl font-black text-gray-950 mb-2">Contanos de tu marca</h2>
+                  <p className="text-gray-500 text-sm mb-6">
+                    Esto define cómo se arma la tienda por dentro. Son cinco toques.
+                  </p>
+
+                  <div className="grid sm:grid-cols-2 gap-3 mb-6">
+                    <label className="block">
+                      <span className="text-sm font-semibold text-gray-700 block mb-2">
+                        ¿Cómo se llama? <span className="text-gray-400 font-normal">(opcional)</span>
+                      </span>
+                      <input
+                        type="text"
+                        value={form.nombreTienda}
+                        onChange={(e) => set("nombreTienda", e.target.value)}
+                        maxLength={80}
+                        placeholder="El nombre de tu tienda"
+                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-orange-500 focus:outline-none text-sm"
+                      />
+                    </label>
+                    <label className="block">
+                      <span className="text-sm font-semibold text-gray-700 block mb-2">¿Qué vendés exactamente?</span>
+                      <input
+                        type="text"
+                        value={form.queVende}
+                        onChange={(e) => set("queVende", e.target.value)}
+                        maxLength={120}
+                        placeholder="Ej: remeras de mujer"
+                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-orange-500 focus:outline-none text-sm"
+                      />
+                    </label>
+                  </div>
+
+                  <Chips
+                    label="¿Tenés fotos de tus productos?"
+                    hint="Es lo que más define si la tienda se ve cara o barata."
+                    options={FOTOS}
+                    value={form.fotos}
+                    onPick={(v) => set("fotos", v)}
+                  />
+                  <Chips
+                    label="¿Cuántos productos vas a cargar?"
+                    hint="Define si hace falta buscador y filtros."
+                    options={CATALOGO}
+                    value={form.catalogo}
+                    onPick={(v) => set("catalogo", v)}
+                  />
+                  <Chips
+                    label="¿Tenés logo?"
+                    options={LOGO}
+                    value={form.logo}
+                    onPick={(v) => set("logo", v)}
+                  />
+                </>
+              )}
+
+              {step === 5 && (
                 <>
                   <h2 className="text-2xl font-black text-gray-950 mb-2">Mostranos ejemplos</h2>
                   <p className="text-gray-500 text-sm mb-6">
@@ -346,7 +451,7 @@ export default function DisenoPropioPage() {
                 </>
               )}
 
-              {step === 5 && (
+              {step === 6 && (
                 <>
                   <h2 className="text-2xl font-black text-gray-950 mb-2">¿Cómo te contactamos?</h2>
                   <p className="text-gray-500 text-sm mb-6">Es lo último. No te vamos a llenar de mails.</p>
