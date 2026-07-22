@@ -38,12 +38,15 @@ type Product = { id: string; name: string; price: number; category: string; cost
 const TYPE_META: Record<string, {
   Icon: typeof Percent; tile: string; label: string; short: string; et: string; ed: string;
 }> = {
-  PERCENT: { Icon: Percent, tile: "bg-indigo-50 text-indigo-600", label: "Porcentaje de descuento", short: "Ej. 20% off en las remeras",
+  // Los ejemplos NO nombran una categoría a propósito (F6-C1): este paso responde
+  // QUÉ tipo de descuento es, y el DÓNDE se elige en el paso 2. Decir "20% off en
+  // las remeras" hacía pensar que el tipo servía solo para categorías.
+  PERCENT: { Icon: Percent, tile: "bg-indigo-50 text-indigo-600", label: "Porcentaje de descuento", short: "Ej. 20% de descuento",
     et: "Un porcentaje menos en el precio",
-    ed: "El cliente ve el precio original tachado y el nuevo debajo. Se aplica solo en la tienda, sin escribir ningún código." },
-  FIXED: { Icon: Tag, tile: "bg-rose-50 text-rose-600", label: "Monto fijo de descuento", short: "Ej. $5.000 off en camperas",
+    ed: "El cliente ve el precio original tachado y el nuevo debajo. Se aplica solo con entrar a tu tienda: no tiene que escribir ningún cupón." },
+  FIXED: { Icon: Tag, tile: "bg-rose-50 text-rose-600", label: "Monto fijo de descuento", short: "Ej. $5.000 de descuento",
     et: "Un monto fijo menos, no un porcentaje",
-    ed: "Se resta la misma plata a cada producto elegido. Ideal para liquidar: “$5.000 menos en toda campera”, cueste lo que cueste." },
+    ed: "Se resta la misma plata a cada producto, cueste lo que cueste. Ideal para liquidar: en uno de $30.000 son $5.000 menos, y en uno de $8.000 también." },
   N_PAY_M: { Icon: Gift, tile: "bg-amber-50 text-amber-600", label: "Llevá N, pagá M", short: "Ej. llevá 3 iguales, pagá 2",
     et: "Comprando varios del MISMO producto, uno va sin cargo",
     ed: "Se arma solo en el carrito. En un 3×2, llevando 3 unidades del mismo producto, paga 2. Si querés que pueda combinar productos distintos, usá “Combo: llevá N mezclando”." },
@@ -399,6 +402,9 @@ function Wizard({ categories, products, onClose, onCreated, editPromo }: {
     !eventoInicial ? "none" : eventosCalendario.includes(eventoInicial) ? "cal" : "custom"
   );
   const [eventLabel, setEventLabel] = useState(eventoInicial);
+  // True cuando elegir un evento del calendario completó alguna fecha vacía, para
+  // decirlo en pantalla en vez de que las fechas cambien solas sin explicación.
+  const [fechasAuto, setFechasAuto] = useState(false);
 
   // Al elegir una fecha del calendario, se proponen las fechas de la promo si
   // están vacías: Black Friday cae distinto cada año y nadie se lo acuerda.
@@ -408,8 +414,13 @@ function Wizard({ categories, products, onClose, onCreated, editPromo }: {
     setEventLabel(nombre);
     const rango = getEventRange(nombre);
     if (!rango) return;
+    // Solo completa lo que esté vacío: no pisa fechas que ya cargaste. Se avisa
+    // cuando lo hace (F6-C12) — antes las fechas cambiaban solas sin decir nada,
+    // y como a veces no cambiaban (porque ya estaban puestas), no se entendía.
+    const lleno = !endsAt || !startsAt;
     if (!endsAt) setEndsAt(rango.hasta.toISOString().slice(0, 10));
     if (!startsAt) setStartsAt(rango.desde.toISOString().slice(0, 10));
+    setFechasAuto(lleno);
   }
 
   const meta = type ? TYPE_META[type] : null;
@@ -509,7 +520,11 @@ function Wizard({ categories, products, onClose, onCreated, editPromo }: {
         <div className="px-6 py-5 min-h-[250px]">
           {step === 1 && (
             <>
-              <StepTitle t="¿Qué tipo de promoción?" d="Elegí cómo querés que se descuente. Abajo te explico cómo funciona cada una." />
+              {/* La aclaración del alcance va acá y no en cada tipo (F6-C1): vale
+                  para los cinco, y repetirla cinco veces era ruido. Responde la
+                  duda que antes disparaban los ejemplos ("¿esto es solo para
+                  categorías?"). */}
+              <StepTitle t="¿Qué tipo de promoción?" d="Elegí cómo querés que se descuente — abajo te explico cada una. En el paso siguiente elegís dónde se aplica: toda la tienda, categorías o productos sueltos." />
               <div className="space-y-2.5">
                 {Object.entries(TYPE_META).map(([k, m]) => (
                   <OptCard key={k} sel={type === k} onClick={() => setType(k)} tile={m.tile} Icon={m.Icon} title={m.label} desc={m.short} />
@@ -526,7 +541,31 @@ function Wizard({ categories, products, onClose, onCreated, editPromo }: {
 
           {step === 2 && (
             <>
-              <StepTitle t="¿A qué se aplica?" d="Elegís una vez y vale para todos esos productos. Esto es lo que hoy no podés hacer." />
+              {/* F6-C10: el alcance SIGNIFICA distinto según el tipo y la pantalla
+                  era idéntica en los cinco. Para % y monto fijo es "dónde se
+                  aplica el descuento"; para el N×M es "qué productos pueden armar
+                  su propio grupo"; para el combo es "qué se puede mezclar entre
+                  sí". Misma pregunta para tres cosas distintas confundía. */}
+              <StepTitle
+                t={type === "N_PAY_M" ? `¿En qué productos vale el ${minQty}×${payQty}?`
+                  : type === "MIX_N_PAY_M" ? "¿Qué productos se pueden mezclar?"
+                  : "¿A qué se aplica?"}
+                d={type === "N_PAY_M" ? "Elegís una vez y vale para todos esos productos."
+                  : type === "MIX_N_PAY_M" ? "El cliente combina entre estos productos para llegar a la cantidad."
+                  : "Elegís una vez y vale para todos esos productos. Esto es lo que hoy no podés hacer."}
+              />
+              {/* El recordatorio va acá y no solo en el paso 1: el texto del tipo
+                  ya aclara "del MISMO producto", pero se lee una pantalla antes de
+                  tomar esta decisión, y al elegir una categoría la lectura natural
+                  vuelve a ser "3 remeras cualesquiera". Es un problema de momento,
+                  no de redacción. */}
+              {type === "N_PAY_M" && (
+                <InfoNote>
+                  Cada producto arma su propio grupo de {minQty} — los talles y colores del mismo
+                  producto cuentan juntos. Si querés que el cliente pueda mezclar productos
+                  distintos, volvé atrás y elegí “Combo: llevá N mezclando”.
+                </InfoNote>
+              )}
               <div className="space-y-2.5">
                 <OptCard sel={scope === "ALL"} onClick={() => setScope("ALL")} tile="bg-indigo-50 text-indigo-600" Icon={Store} title="Toda la tienda" desc="Cada producto de tu catálogo" />
                 <OptCard sel={scope === "CATEGORY"} onClick={() => setScope("CATEGORY")} tile="bg-indigo-50 text-indigo-600" Icon={Folder} title="Categorías" desc="Todos los productos de uno o varios rubros" />
@@ -560,6 +599,15 @@ function Wizard({ categories, products, onClose, onCreated, editPromo }: {
                   </div>
                 </Picker>
               )}
+              {/* F6-C11: el combo con UN solo producto no puede mezclar nada y
+                  termina comportándose igual que un "llevá N, pagá M". No está
+                  roto, pero no hace lo que la persona cree. Avisa, no bloquea. */}
+              {type === "MIX_N_PAY_M" && scope === "PRODUCTS" && prodIds.length === 1 && (
+                <WarnNote>
+                  Elegiste un solo producto. El combo sirve para que el cliente mezcle varios —
+                  con uno solo funciona igual que “Llevá N, pagá M”.
+                </WarnNote>
+              )}
             </>
           )}
 
@@ -587,13 +635,27 @@ function Wizard({ categories, products, onClose, onCreated, editPromo }: {
                 <Field label="Compra mínima" hint="Vacío = siempre gratis"><input value={minOrder} onChange={(e) => setMinOrder(digitsMoney(e.target.value))} inputMode="numeric" placeholder="$ 50.000" className={inputCls} /></Field>
               ) : (
                 <>
-                  <Field label={type === "FIXED" ? "Monto de descuento" : `Porcentaje de descuento (1 a ${MAX_PCT})`}>
+                  {/* F6-C5: los campos decían solo "Monto de descuento" y un signo
+                      de pesos en el placeholder. Nadie aclaraba que el monto se
+                      resta a CADA unidad — Flavio, conociendo el sistema por
+                      dentro, entendió que descontaba del total del pedido. */}
+                  <Field
+                    label={type === "FIXED" ? "Monto de descuento por producto" : `Porcentaje de descuento (1 a ${MAX_PCT})`}
+                    hint={type === "FIXED"
+                      ? "En pesos, y se resta a cada unidad: en un carrito con 3 productos descuenta 3 veces."
+                      : "Se calcula sobre el precio de venta de cada producto."}
+                  >
                     <input value={value} onChange={(e) => setValue(type === "PERCENT" ? onlyDigits(e.target.value) : digitsMoney(e.target.value))} inputMode="numeric" placeholder={type === "FIXED" ? "$ 5.000" : "20"} className={inputCls} />
                     {type === "PERCENT" && value !== "" && (parseFloat(value) < 1 || parseFloat(value) > MAX_PCT) && (
                       <p className="text-[12px] text-red-600 mt-1.5">El porcentaje tiene que estar entre 1 y {MAX_PCT}.</p>
                     )}
                   </Field>
-                  <Field label="Compra mínima (opcional)"><input value={minOrder} onChange={(e) => setMinOrder(digitsMoney(e.target.value))} inputMode="numeric" placeholder="Sin mínimo" className={inputCls} /></Field>
+                  {/* F6-C8: el mínimo se mide sobre el subtotal de TODO el carrito,
+                      no sobre lo que está en promoción. Quien arma "20% en remeras
+                      desde $50.000" suele pensar "$50.000 de remeras". */}
+                  <Field label="Compra mínima del pedido (opcional)" hint="Cuenta el total del carrito, no solo los productos en promoción.">
+                    <input value={minOrder} onChange={(e) => setMinOrder(digitsMoney(e.target.value))} inputMode="numeric" placeholder="Sin mínimo" className={inputCls} />
+                  </Field>
                 </>
               )}
             </>
@@ -605,20 +667,42 @@ function Wizard({ categories, products, onClose, onCreated, editPromo }: {
 
               {/* Evento comercial — opcional. Cambia cómo se ve en la tienda,
                   no cuánto se descuenta. */}
-              <Field label="¿Es parte de un evento? (opcional)">
-                <div className="flex flex-wrap gap-1.5">
-                  <EventChip on={eventMode === "none"} onClick={() => { setEventMode("none"); setEventLabel(""); }}>
-                    Sin evento
-                  </EventChip>
-                  {eventosCalendario.map((n) => (
-                    <EventChip key={n} on={eventMode === "cal" && eventLabel === n} onClick={() => elegirEventoDelCalendario(n)}>
-                      {n}
-                    </EventChip>
-                  ))}
-                  <EventChip on={eventMode === "custom"} onClick={() => { setEventMode("custom"); setEventLabel(""); }}>
-                    Otro…
-                  </EventChip>
+              {/* F6-C12: antes eran 19 chips apilados, media pantalla para un campo
+                  OPCIONAL que la mayoría de las promos no usa — el que solo quiere
+                  poner fechas se comía todo eso. Ahora arranca apagado y, al
+                  prenderlo, aparece un desplegable: escala si se suman fechas, y
+                  quien pone un evento ya sabe cuál, no necesita explorar. Los
+                  ejemplos del subtítulo cubren el descubrimiento que daban los chips. */}
+              <div className="flex justify-between items-center gap-3 bg-gray-50 border border-gray-100 rounded-xl p-3.5 mb-3.5">
+                <div>
+                  <div className="font-semibold text-[13.5px] text-gray-900">¿Es parte de un evento?</div>
+                  <div className="text-xs text-gray-500 mt-0.5 max-w-[34ch]">Black Friday, Día de la Madre, Hot Sale… Cambia cómo se ve en la tienda, no cuánto descuenta.</div>
                 </div>
+                <Toggle
+                  on={eventMode !== "none"}
+                  onClick={() => {
+                    if (eventMode === "none") { setEventMode("cal"); setEventLabel(""); }
+                    else { setEventMode("none"); setEventLabel(""); setFechasAuto(false); }
+                  }}
+                />
+              </div>
+
+              <Field label="">
+                {eventMode !== "none" && (
+                  <select
+                    value={eventMode === "custom" ? "__otro__" : eventLabel}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      if (v === "__otro__") { setEventMode("custom"); setEventLabel(""); setFechasAuto(false); }
+                      else if (v) elegirEventoDelCalendario(v);
+                    }}
+                    className={inputCls}
+                  >
+                    <option value="">Elegí el evento…</option>
+                    {eventosCalendario.map((n) => <option key={n} value={n}>{n}</option>)}
+                    <option value="__otro__">Otro… (le pongo el nombre yo)</option>
+                  </select>
+                )}
                 {eventMode === "custom" && (
                   <input
                     value={eventLabel}
@@ -638,9 +722,14 @@ function Wizard({ categories, products, onClose, onCreated, editPromo }: {
                 )}
               </Field>
 
+              {fechasAuto && eventLabel.trim() && (
+                <p className="text-[11.5px] text-indigo-700 bg-indigo-50 border border-indigo-100 rounded-lg px-3 py-2 mb-2.5">
+                  Elegiste <b>{eventLabel.trim()}</b> y completamos las fechas. Podés cambiarlas.
+                </p>
+              )}
               <div className="flex gap-3">
-                <Field label="Desde"><input type="date" value={startsAt} onChange={(e) => setStartsAt(e.target.value)} className={inputCls} /></Field>
-                <Field label="Hasta (opcional)"><input type="date" value={endsAt} onChange={(e) => setEndsAt(e.target.value)} className={inputCls} /></Field>
+                <Field label="Desde"><input type="date" value={startsAt} onChange={(e) => { setStartsAt(e.target.value); setFechasAuto(false); }} className={inputCls} /></Field>
+                <Field label="Hasta (opcional)"><input type="date" value={endsAt} onChange={(e) => { setEndsAt(e.target.value); setFechasAuto(false); }} className={inputCls} /></Field>
               </div>
               <div className="flex justify-between items-center gap-3 bg-gray-50 border border-gray-100 rounded-xl p-3.5">
                 <div><div className="font-semibold text-[13.5px] text-gray-900">¿Se combina con cupones?</div><div className="text-xs text-gray-500 mt-0.5 max-w-[34ch]">En “No”, quien tenga esta promo no puede usar un cupón encima.</div></div>
@@ -797,30 +886,18 @@ function PkRow({ on, onClick, name, sub, radio }: { on: boolean; onClick: () => 
     </button>
   );
 }
-// Chip para elegir el evento comercial. Compacto porque son once opciones y
-// tienen que entrar sin que el modal crezca a lo loco.
-function EventChip({ on, onClick, children }: { on: boolean; onClick: () => void; children: React.ReactNode }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={on}
-      className={`rounded-lg border px-2.5 py-1.5 text-[12px] font-medium transition-colors ${
-        on
-          ? "border-indigo-500 bg-indigo-50 text-indigo-700"
-          : "border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:bg-gray-50"
-      }`}
-    >
-      {children}
-    </button>
-  );
-}
 
 function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return <div className="mb-3.5 flex-1"><label className="block text-[12.5px] font-semibold text-gray-700 mb-1.5">{label}</label>{children}{hint && <p className="text-[11.5px] text-gray-400 mt-1.5">{hint}</p>}</div>;
 }
 function InfoNote({ children }: { children: React.ReactNode }) {
   return <div className="flex gap-2.5 items-start bg-green-50 border border-green-200 rounded-xl p-3 mt-1 text-[12.5px] text-green-800"><Info className="h-4 w-4 shrink-0 mt-0.5" /><span>{children}</span></div>;
+}
+// Aviso ámbar: algo que conviene saber pero NO impide seguir. Mismo criterio que
+// el cartel de piso de costo — el panel avisa, no traba (el único bloqueo de la
+// sección es el monto fijo que dejaría un producto en $0).
+function WarnNote({ children }: { children: React.ReactNode }) {
+  return <div className="flex gap-2.5 items-start bg-amber-50 border border-amber-200 rounded-xl p-3 mt-3 text-[12.5px] text-amber-900"><AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" /><span>{children}</span></div>;
 }
 function Empty({ children }: { children: React.ReactNode }) {
   return <div className="px-4 py-4 text-[12.5px] text-gray-400">{children}</div>;

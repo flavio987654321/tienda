@@ -1071,22 +1071,22 @@ seguridad: sigue siendo válida, simplemente tenía menos alcance del que creía
 | 3 | **Decisión #12** — envío gratis por producto libera el pedido entero | 🤔 debate | ✅ **CERRADO (22/07): queda como está** |
 | 4 | **Decisión #11** — envío gratis sobre método "a coordinar" | 🤔 debate | ✅ **CERRADO (22/07): lo resuelve #7c** — al registrar el envío bonificado, en `coordinar` da $0 (la verdad: no se regaló nada). No hace falta prohibir ni avisar |
 | ~~5~~ | ~~**B-09** — el wizard limita a UNA categoría, y al editar trunca~~ | ✅ **HECHO** | **ARREGLADO (22/07)**: selector multi (`cats: string[]`), sin el `[0]` de la precarga. Tarjeta → *"Categorías · uno o varios rubros"*, plural en `describePromo` y `scopeDetail`, y el conteo de alcance ahora suma todas. **Ya se puede armar el Combo cruzando categorías** |
-| 6 | **F6-C1** — el ejemplo del tipo mete una categoría en el paso del tipo | ✏️ texto | ✅ **REDACTADO**, sin implementar |
-| 7 | **F6-C2** — "Se aplica solo en la tienda" tiene dos lecturas | ✏️ texto | ✅ **REDACTADO**, sin implementar |
+| ~~6~~ | ~~**F6-C1** — el ejemplo del tipo mete una categoría en el paso del tipo~~ | ✅ **HECHO** | **APLICADO (22/07)**: ejemplos neutros en `PERCENT` y `FIXED`; la aclaración del alcance quedó en el encabezado del paso 1, no repetida en los cinco tipos |
+| ~~7~~ | ~~**F6-C2** — "Se aplica solo en la tienda" tiene dos lecturas~~ | ✅ **HECHO** | **APLICADO (22/07)**: *"Se aplica solo con entrar a tu tienda: no tiene que escribir ningún cupón."* — "código" pasó a "cupón" |
 | ~~8~~ | ~~**F6-C3** — el selector de categoría no muestra el rango de precios~~ | ✅ **HECHO** | **ARREGLADO (22/07)**: `catSub` muestra *"14 productos · $55.000 a $99.000"* en cada categoría. Salió junto con B-09, es el mismo selector |
 | 9 | **F6-C4** — guiar al que arma la promo, con sus propios números (idea de Flavio) | ✏️ UX | 🔲 a diseñar |
-| 10 | **F6-C5** — el paso 3 no aclara la unidad: ni "pesos por producto" ni "porcentaje" | ✏️ texto | 🔲 sin tocar |
+| ~~10~~ | ~~**F6-C5** — el paso 3 no aclara la unidad~~ | ✅ **HECHO** | **APLICADO (22/07)**: *"Monto de descuento **por producto**"* + ayuda *"se resta a cada unidad: en un carrito con 3 productos descuenta 3 veces"*. El % aclara que se calcula sobre el precio de venta |
 | 11 | **F6-C6** — el checkout no muestra QUÉ producto tiene la promo, ni cuál promo es | ✏️ UX | 🔲 sin tocar |
 | ~~12~~ | ~~**B-10** — el CheckoutModal tiene su PROPIA cuenta del precio base~~ | ✅ **HECHO** | **ARREGLADO (22/07)**: ahora usa `resolveBasePrice` del motor. Se borró la copia local (y el `isWholesale` que quedó sin uso). tsc + eslint limpios |
 | 13 | **F6-C7** — avisar cuando una promo nueva nunca va a aplicar (tapada por otra) | ✏️ UX | 🔲 sin tocar |
-| 14 | **F6-C8** — "Compra mínima" no dice que se mide sobre TODO el pedido | ✏️ texto | 🔲 sin tocar |
+| ~~14~~ | ~~**F6-C8** — "Compra mínima" no dice que se mide sobre TODO el pedido~~ | ✅ **HECHO** | **APLICADO (22/07)**: *"Compra mínima **del pedido**"* + *"Cuenta el total del carrito, no solo los productos en promoción."* |
 | 15 | **F6-C9** — avisar al crear un PRODUCTO que cae bajo una promo fija peligrosa | ✏️ UX | 🔲 sin tocar |
 | ~~16~~ | ~~**B-11** — el N×M cobra $1 de más por cada 3 talles distintos~~ | ✅ **HECHO** | **ARREGLADO (22/07)**: reparto con redondeo acumulado (`repartirNxM`), la suma cierra siempre. Casos **SP-M / SP-N / SP-O / SP-P** en la suite |
-| 17 | **F6-C10** — "3×2 en remeras" NO es "3 remeras cualesquiera", y el paso 2 no lo recuerda | ✏️ UX | 🔲 sin tocar |
-| 18 | **F6-C11** — Combo con UN solo producto: se comporta como un 3×2 y nadie lo avisa | ✏️ UX | 🔲 sin tocar |
+| ~~17~~ | ~~**F6-C10** — el alcance significa distinto según el tipo y la pantalla era la misma~~ | ✅ **HECHO** | **APLICADO (22/07)**: el paso 2 cambia de pregunta según el tipo (*"¿En qué productos vale el 3×2?"* / *"¿Qué productos se pueden mezclar?"*) + aviso en el N×M de que cada producto arma su grupo y **los talles cuentan juntos**. Requería B-11 arreglado, y lo estaba |
+| ~~18~~ | ~~**F6-C11** — Combo con UN solo producto~~ | ✅ **HECHO** | **APLICADO (22/07)**: aviso ámbar (`WarnNote`) al elegir un único producto con el combo. Avisa, no bloquea |
 | ~~19~~ | ~~**B-12** — con dos promos de envío gratis, cuál se nombra depende del orden de la base~~ | ✅ **HECHO** | **ARREGLADO (22/07)**: gana el umbral **más alto ya superado**, desempate por nombre. Mismo criterio que `resolveStoreEvent`. Caso **SP-Q** |
 | 20 | **#7c** — el envío bonificado NO se resta de la ganancia (Métricas miente) | 🔴 plata | ✅ **SOLUCIÓN ACORDADA (22/07)**, falta implementar — requiere migración |
-| 21 | **F6-C12** — el paso 4 apila 19 chips de evento para un campo opcional | ✏️ UX | ✅ **DECIDIDO: toggle + desplegable** |
+| ~~21~~ | ~~**F6-C12** — el paso 4 apila 19 chips de evento para un campo opcional~~ | ✅ **HECHO** | **APLICADO (22/07)**: toggle apagado por defecto + desplegable al prenderlo. Se borró `EventChip` (quedó sin uso). Además avisa cuando completa las fechas solo, y deja de avisar si las tocás |
 | — | *(lo que agregue Flavio en esta ronda)* | | |
 
 #### #7c — cómo se entera Métricas del envío regalado (acordado 22/07)
