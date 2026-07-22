@@ -9,7 +9,10 @@
 // eso es lo que cubren los casos SP-* y FS-*.
 
 import { priceCart, resolveBasePrice, freeShippingProgress, type PricingItem, type ActivePromotion } from "./pricing";
-import { costFloorCheck, fixedFloorError, fixedImpact, type CostFloorPromo, type CostFloorProduct } from "./promotions";
+import {
+  costFloorCheck, fixedFloorError, fixedImpact, deepestFixedOnProduct, deadPromoCheck, parseMoneyInput, moneyInputValue,
+  type CostFloorPromo, type CostFloorProduct,
+} from "./promotions";
 import { resolveProductPromo, describePromo, resolveStoreEvent } from "./promoDisplay";
 
 const BASE = 10000;
@@ -218,6 +221,191 @@ for (const c of spCases) {
     const ok = peor === c.peor && pct === c.pct && c.imp.free.length === c.libres && c.imp.deep.length === c.hondos;
     if (!ok) failed++;
     console.log(`${ok ? "OK  " : "FAIL"} [${c.id}] peor=${peor} ${pct}% · gratis=${c.imp.free.length} · hondos=${c.imp.deep.length} — ${c.desc}`);
+  }
+}
+
+// ── F6-C6: cada línea dice CUÁL promo la ganó ────────────────────────────────
+// El motor ya elegía la ganadora por línea para hacer la cuenta y la tiraba. Al
+// exponerla, el carrito puede nombrarla sin recalcular nada — que es el punto:
+// una segunda cuenta paralela es lo que fue B-10.
+{
+  const chk = (id: string, got: boolean, desc: string) => { if (!got) failed++; console.log(`${got ? "OK  " : "FAIL"} [${id}] ${desc}`); };
+  const veinte = promo({ type: "PERCENT", value: 20, name: "Verano" });
+  const treinta = promo({ type: "PERCENT", value: 30, name: "Liquidación" });
+  const soloRemeras = promo({ type: "PERCENT", value: 50, scope: "CATEGORY", categories: ["remeras"], name: "Remerazo" });
+
+  const r1 = priceCart([item(1)], { promotions: [veinte] });
+  chk("LP-A", r1.lines[0].promo?.name === "Verano" && r1.lines[0].promo?.label === "20% OFF",
+    `la línea nombra la promo que ganó → ${r1.lines[0].promo?.name} · ${r1.lines[0].promo?.label}`);
+
+  const r2 = priceCart([item(1)], { promotions: [veinte, treinta] });
+  chk("LP-B", r2.lines[0].promo?.name === "Liquidación",
+    "con dos promos nombra la que GANÓ, no la primera del array");
+
+  const r3 = priceCart([item(1, BASE, P1), item(1, BASE, P2)], { promotions: [soloRemeras] });
+  chk("LP-C", r3.lines[0].promo?.name === "Remerazo" && r3.lines[1].promo === null,
+    "la línea fuera de alcance no nombra ninguna promo");
+
+  const r4 = priceCart([item(1)], { promotions: [promo({ type: "PERCENT", value: 20, minOrderAmount: 999999 })] });
+  chk("LP-D", r4.lines[0].promo === null,
+    "promo que alcanza pero NO llegó al mínimo → no se anuncia nada");
+
+  const r5 = priceCart([item(1)], { promotions: [veinte] });
+  chk("LP-E", r5.lines[0].promo?.savings === r5.lines[0].savings,
+    "lo que dice la promo de la línea es lo que ahorró esa línea, no otro número");
+
+  const r6 = priceCart([item(1)], { promotions: [promo({ type: "FREE_SHIPPING", minOrderAmount: 5000 })] });
+  chk("LP-F", r6.lines[0].promo === null && r6.freeShipping,
+    "el envío gratis no descuenta la línea → va aparte, no como promo de producto");
+}
+
+// ── F6-C9: la otra puerta — un producto que cae bajo una promo fija vigente ──
+// Espejo de FI: allá era una promo contra el catálogo, acá es un producto contra
+// las promos. Tienen que dar el MISMO número, o una pantalla contradice a la otra.
+{
+  const promo = (name: string, value: number, scope = "ALL", cats: string[] = [], ids: string[] = []) =>
+    ({ name, type: "FIXED", value, scope, categories: cats, productIds: ids });
+  const nuevo = { id: "", price: 10000, category: "remeras" as string | null };
+
+  const casos: { id: string; r: ReturnType<typeof deepestFixedOnProduct>; promo: string | null; pct: number | null; desc: string }[] = [
+    { id: "PP-A", r: deepestFixedOnProduct(nuevo, [promo("Liquidación", 12000)]), promo: "Liquidación", pct: 100,
+      desc: "producto de $10.000 bajo una promo de $12.000 en toda la tienda → quedaría GRATIS" },
+    { id: "PP-B", r: deepestFixedOnProduct(nuevo, [promo("Suave", 2000)]), promo: "Suave", pct: 20,
+      desc: "descuento chico: se calcula igual, la pantalla decide si avisa" },
+    { id: "PP-C", r: deepestFixedOnProduct(nuevo, [promo("Camperas", 12000, "CATEGORY", ["camperas"])]), promo: null, pct: null,
+      desc: "otra categoría → no lo alcanza, no se avisa nada" },
+    { id: "PP-D", r: deepestFixedOnProduct(nuevo, [promo("Remeras", 6000, "CATEGORY", ["remeras"])]), promo: "Remeras", pct: 60,
+      desc: "su categoría sí lo alcanza" },
+    { id: "PP-E", r: deepestFixedOnProduct(nuevo, [promo("Elegidos", 9000, "PRODUCTS", [], ["P1"])]), promo: null, pct: null,
+      desc: "promo por producto elegido: uno NUEVO (sin id) no puede estar en la lista" },
+    { id: "PP-F", r: deepestFixedOnProduct({ ...nuevo, id: "P1" }, [promo("Elegidos", 9000, "PRODUCTS", [], ["P1"])]), promo: "Elegidos", pct: 90,
+      desc: "el mismo producto EDITÁNDOSE sí está en la lista → avisa" },
+    { id: "PP-G", r: deepestFixedOnProduct(nuevo, [promo("Suave", 2000), promo("Fuerte", 8000)]), promo: "Fuerte", pct: 80,
+      desc: "con varias promos gana la que más descuenta, que es la que hay que avisar" },
+    { id: "PP-H", r: deepestFixedOnProduct({ ...nuevo, price: 0 }, [promo("Liquidación", 12000)]), promo: null, pct: null,
+      desc: "sin precio cargado todavía → no se inventa un aviso" },
+  ];
+  for (const c of casos) {
+    const ok = (c.r?.promoName ?? null) === c.promo && (c.r?.pct ?? null) === c.pct;
+    if (!ok) failed++;
+    console.log(`${ok ? "OK  " : "FAIL"} [${c.id}] ${c.r ? `${c.r.promoName} ${c.r.pct}%` : "sin aviso"} — ${c.desc}`);
+  }
+
+  // Coherencia entre las dos puertas: el mismo producto y la misma promo tienen
+  // que dar el mismo precio final, se mire desde donde se mire.
+  const p = { id: "P1", name: "Remera", price: 10000, category: "remeras" as string | null };
+  const pr = promo("Liquidación", 6000);
+  const desdeLaPromo = fixedImpact(pr, [p]).worst;
+  const desdeElProducto = deepestFixedOnProduct(p, [pr]);
+  const ok = desdeLaPromo?.effective === desdeElProducto?.effective && desdeLaPromo?.pct === desdeElProducto?.pct;
+  if (!ok) failed++;
+  console.log(`${ok ? "OK  " : "FAIL"} [PP-I] promo→${desdeLaPromo?.effective} (${desdeLaPromo?.pct}%) · producto→${desdeElProducto?.effective} (${desdeElProducto?.pct}%) — las dos pantallas dicen el mismo número`);
+}
+
+// ── F6-C7: la promo que nace muerta ──────────────────────────────────────────
+// El riesgo grande acá NO es dejar pasar una muerta: es la falsa alarma. Decirle
+// "esto no va a aplicar nunca" a alguien que armó una promo perfectamente buena
+// destruye la confianza en todos los demás avisos del panel. Por eso la mayoría
+// de estos casos verifica que se CALLE.
+{
+  const chk = (id: string, got: boolean, desc: string) => { if (!got) failed++; console.log(`${got ? "OK  " : "FAIL"} [${id}] ${desc}`); };
+  const prods = [
+    { id: "A", name: "Pantalón barato", price: 53000, category: "pantalones" },
+    { id: "B", name: "Pantalón caro", price: 80000, category: "pantalones" },
+    { id: "C", name: "Remera", price: 22000, category: "remeras" },
+  ];
+  const viva = (p: Partial<Parameters<typeof deadPromoCheck>[1][number]> & { name: string; type: string; value: number }) => ({
+    minOrderAmount: 0, startsAt: null, endsAt: null, isActive: true, archivedAt: null,
+    scope: "ALL", categories: [], productIds: [], ...p,
+  });
+  const nueva = (p: Partial<Parameters<typeof deadPromoCheck>[0]> & { type: string; value: number }) => ({
+    minOrderAmount: 0, startsAt: null, endsAt: null,
+    scope: "ALL", categories: [], productIds: [], ...p,
+  });
+
+  chk("DM-A",
+    deadPromoCheck(nueva({ type: "PERCENT", value: 20 }), [viva({ name: "Treinta", type: "PERCENT", value: 30 })], prods) != null,
+    "20% con un 30% ya activo en el mismo alcance → nace muerta, avisa");
+
+  chk("DM-B",
+    deadPromoCheck(nueva({ type: "PERCENT", value: 30 }), [viva({ name: "Veinte", type: "PERCENT", value: 20 })], prods) == null,
+    "al revés (la nueva descuenta MÁS) → se calla");
+
+  // El caso del documento: 20% vs $12.000 sobre pantalones reales. El fijo gana en
+  // el barato y pierde en el caro, así que NINGUNA de las dos está muerta.
+  const soloPantalones = { scope: "CATEGORY", categories: ["pantalones"] };
+  chk("DM-C",
+    deadPromoCheck(nueva({ type: "FIXED", value: 12000, ...soloPantalones }),
+      [viva({ name: "Veinte", type: "PERCENT", value: 20, ...soloPantalones })], prods) == null,
+    "% y monto fijo se REPARTEN los productos (el fijo gana en el barato) → no avisa");
+
+  chk("DM-D",
+    deadPromoCheck(nueva({ type: "PERCENT", value: 20, ...soloPantalones }),
+      [viva({ name: "Remerazo", type: "PERCENT", value: 50, scope: "CATEGORY", categories: ["remeras"] })], prods) == null,
+    "la rival es de OTRA categoría → no la tapa");
+
+  chk("DM-E",
+    deadPromoCheck(nueva({ type: "PERCENT", value: 20 }),
+      [viva({ name: "Treinta", type: "PERCENT", value: 30, minOrderAmount: 90000 })], prods) == null,
+    "la rival pide compra mínima más alta → hay carritos donde la nueva es la única");
+
+  chk("DM-F",
+    deadPromoCheck(nueva({ type: "PERCENT", value: 20 }),
+      [viva({ name: "Treinta", type: "PERCENT", value: 30, isActive: false })], prods) == null,
+    "la rival está PAUSADA → no tapa nada");
+
+  chk("DM-G",
+    deadPromoCheck(nueva({ type: "PERCENT", value: 20, startsAt: "2026-01-01", endsAt: "2026-12-31" }),
+      [viva({ name: "Treinta", type: "PERCENT", value: 30, startsAt: "2026-06-01", endsAt: "2026-06-30" })], prods) == null,
+    "la rival cubre solo un mes de la vigencia nueva → la tapa un rato, no siempre");
+
+  chk("DM-H",
+    deadPromoCheck(nueva({ type: "PERCENT", value: 20, startsAt: "2026-06-05", endsAt: "2026-06-20" }),
+      [viva({ name: "Treinta", type: "PERCENT", value: 30, startsAt: "2026-06-01", endsAt: "2026-06-30" })], prods) != null,
+    "la rival cubre TODA la vigencia nueva → ahí sí, nace muerta");
+
+  chk("DM-I",
+    deadPromoCheck(nueva({ type: "N_PAY_M", value: 0 }), [viva({ name: "Treinta", type: "PERCENT", value: 30 })], prods) == null,
+    "un 3×2 depende de la cantidad: con 1 unidad no da nada → nunca se lo declara muerto");
+
+  chk("DM-J",
+    deadPromoCheck(nueva({ type: "PERCENT", value: 20 }), [viva({ name: "Igual", type: "PERCENT", value: 20 })], prods) != null,
+    "duplicado exacto: empata en todo, no aporta nada → avisa");
+
+  const r = deadPromoCheck(nueva({ type: "PERCENT", value: 10 }), [
+    viva({ name: "Pantalones 30", type: "PERCENT", value: 30, scope: "CATEGORY", categories: ["pantalones"] }),
+    viva({ name: "Remeras 40", type: "PERCENT", value: 40, scope: "CATEGORY", categories: ["remeras"] }),
+  ], prods);
+  chk("DM-K", r != null && r.killers.length === 2,
+    `dos promos que entre las dos cubren todo el catálogo → nombra a las dos (${r?.killers.join(" + ") ?? "—"})`);
+}
+
+// ── B-13: montos escritos a mano, a la argentina ─────────────────────────────
+// Es la puerta por la que entra la plata: lo que este parseo devuelve es lo que
+// se guarda y después descuenta el motor. "5.000" tiene que ser cinco mil.
+{
+  const casos: { id: string; entrada: string; esperado: number; desc: string }[] = [
+    { id: "MP-A", entrada: "5.000", esperado: 5000, desc: "el punto es de MILES — antes daba 5 y guardaba $5 (B-13)" },
+    { id: "MP-B", entrada: "50000", esperado: 50000, desc: "sin separadores, la única forma que andaba antes" },
+    { id: "MP-C", entrada: "1.234.567", esperado: 1234567, desc: "varios puntos de miles" },
+    { id: "MP-D", entrada: "5,50", esperado: 5.5, desc: "la coma SÍ es decimal (es-AR)" },
+    { id: "MP-E", entrada: "1.234,56", esperado: 1234.56, desc: "los dos separadores juntos, cada uno en su papel" },
+    { id: "MP-F", entrada: "$ 12.000", esperado: 12000, desc: "con símbolo y espacio pegados, como se copia y pega" },
+    { id: "MP-G", entrada: "", esperado: 0, desc: "vacío → 0, no NaN (es lo que hace pasar el campo opcional)" },
+    { id: "MP-H", entrada: ",", esperado: 0, desc: "solo un separador → 0, no NaN" },
+  ];
+  for (const c of casos) {
+    const r = parseMoneyInput(c.entrada);
+    const ok = r === c.esperado;
+    if (!ok) failed++;
+    console.log(`${ok ? "OK  " : "FAIL"} [${c.id}] "${c.entrada}" → ${r} (esp ${c.esperado}) — ${c.desc}`);
+  }
+
+  // La vuelta: editar y guardar sin tocar nada no puede cambiar el monto.
+  for (const n of [5000, 5000.5, 0.5, 1234567]) {
+    const ok = parseMoneyInput(moneyInputValue(n)) === n;
+    if (!ok) failed++;
+    console.log(`${ok ? "OK  " : "FAIL"} [MP-I] ${n} → "${moneyInputValue(n)}" → ${parseMoneyInput(moneyInputValue(n))} — abrir y guardar una promo deja el monto igual`);
   }
 }
 

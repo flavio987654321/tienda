@@ -7,7 +7,8 @@ import {
   Info, AlertTriangle, Loader2, Search, Archive, Trash2, RotateCcw, Smile, Pencil, Shuffle,
 } from "lucide-react";
 import {
-  costFloorCheck, fixedImpact, DEEP_DISCOUNT_PCT, type FixedImpactResult,
+  costFloorCheck, fixedImpact, deadPromoCheck, DEEP_DISCOUNT_PCT, type FixedImpactResult,
+  parseMoneyInput, moneyInputValue,
   MAX_PROMO_PERCENT as MAX_PCT, MAX_EVENT_LABEL,
 } from "@/lib/promotions";
 import LimitePlanBanner from "@/components/dashboard/LimitePlanBanner";
@@ -323,6 +324,8 @@ export default function PromocionesClient({
           key={editing?.id ?? "new"}
           categories={categories}
           products={products}
+          // Las que ya existen, para poder avisar si la nueva nace muerta (F6-C7).
+          existentes={promos}
           editPromo={editing}
           onClose={() => { setWizOpen(false); setEditing(null); }}
           onCreated={async () => { const wasEdit = !!editing; setWizOpen(false); setEditing(null); await refresh(); if (!wasEdit) setTab("act"); showToast(wasEdit ? "Promoción actualizada" : "Promoción creada"); }}
@@ -367,8 +370,9 @@ function BadgeEmpty() {
 // ── Wizard de creación ───────────────────────────────────────────────────────
 const STEP_NAMES = ["Tipo", "Alcance", "Reglas", "Vigencia", "Confirmar"];
 
-function Wizard({ categories, products, onClose, onCreated, editPromo }: {
-  categories: Category[]; products: Product[]; onClose: () => void; onCreated: () => void; editPromo?: Promotion | null;
+function Wizard({ categories, products, existentes, onClose, onCreated, editPromo }: {
+  categories: Category[]; products: Product[]; existentes: Promotion[];
+  onClose: () => void; onCreated: () => void; editPromo?: Promotion | null;
 }) {
   const isEdit = !!editPromo;
   // En edición se abre directo en el paso 5 (Revisá): funciona como DETALLE de lo elegido,
@@ -389,10 +393,12 @@ function Wizard({ categories, products, onClose, onCreated, editPromo }: {
   const [name, setName] = useState(editPromo?.name ?? "");
   const nameRef = useRef<HTMLInputElement>(null);
   const [emojiOpen, setEmojiOpen] = useState(false);
-  const [value, setValue] = useState(editPromo && (editPromo.type === "PERCENT" || editPromo.type === "FIXED") && editPromo.value != null ? String(editPromo.value) : "");
+  // `moneyInputValue` y no `String()`: al editar, un monto con decimales venía en
+  // formato inglés ("5000.5") y el parseo argentino lo leería como 50005 (B-13).
+  const [value, setValue] = useState(editPromo && (editPromo.type === "PERCENT" || editPromo.type === "FIXED") && editPromo.value != null ? moneyInputValue(editPromo.value) : "");
   const [minQty, setMinQty] = useState(isNxM(editPromo?.type) && editPromo?.minQty != null ? String(editPromo.minQty) : "3");
   const [payQty, setPayQty] = useState(isNxM(editPromo?.type) && editPromo?.payQty != null ? String(editPromo.payQty) : "2");
-  const [minOrder, setMinOrder] = useState(editPromo && editPromo.minOrderAmount > 0 ? String(editPromo.minOrderAmount) : "");
+  const [minOrder, setMinOrder] = useState(editPromo && editPromo.minOrderAmount > 0 ? moneyInputValue(editPromo.minOrderAmount) : "");
   const [startsAt, setStartsAt] = useState(editPromo?.startsAt ? editPromo.startsAt.slice(0, 10) : "");
   const [endsAt, setEndsAt] = useState(editPromo?.endsAt ? editPromo.endsAt.slice(0, 10) : "");
   const [combines, setCombines] = useState(editPromo?.combinesWithCoupons ?? false);
@@ -447,6 +453,29 @@ function Wizard({ categories, products, onClose, onCreated, editPromo }: {
       products
     ),
     [type, value, scope, cats, prodIds, products]
+  );
+
+  // F6-C7 — ¿esta promo va a ganar en algún producto, o ya hay otra que siempre
+  // conviene más? No se bloquea nada: dos promos sobre la misma categoría se
+  // reparten los productos (el barato toma el monto fijo, los caros el
+  // porcentaje). El aviso es para el caso en que la nueva no gana en ninguno y
+  // queda de adorno en la lista, marcada como "Activa".
+  const promoMuerta = useMemo(
+    () => deadPromoCheck(
+      {
+        type: type ?? "",
+        value: (type === "PERCENT" || type === "FIXED") ? parseNum(value) : null,
+        minOrderAmount: parseNum(minOrder),
+        startsAt: startsAt || null, endsAt: endsAt || null,
+        scope: scope ?? "ALL",
+        categories: scope === "CATEGORY" ? cats : [],
+        productIds: scope === "PRODUCTS" ? prodIds : [],
+      },
+      // Al editar, la promo no compite consigo misma.
+      existentes.filter((p) => p.id !== editPromo?.id),
+      products
+    ),
+    [type, value, minOrder, startsAt, endsAt, scope, cats, prodIds, existentes, editPromo?.id, products]
   );
 
   // Inserta el emoji en la posición del cursor (o al final) y deja el caret después.
@@ -774,7 +803,10 @@ function Wizard({ categories, products, onClose, onCreated, editPromo }: {
 
           {step === 5 && (
             <>
-              <StepTitle t={isEdit ? "Detalle de la promoción" : "Revisá y creá"} d={isEdit ? "Editá lo que quieras con “Atrás”. Guardá para aplicar los cambios al instante." : "Ponele un nombre (lo ves solo vos) y confirmá."} />
+              {/* El nombre NO es solo interno, y decir que sí lo era estaba mal:
+                  el email del pedido ya lo mostraba ("Verano en remeras · 20% OFF"),
+                  y desde F6-C6 también aparece en el carrito y en el checkout. */}
+              <StepTitle t={isEdit ? "Detalle de la promoción" : "Revisá y creá"} d={isEdit ? "Editá lo que quieras con “Atrás”. Guardá para aplicar los cambios al instante." : "Ponele un nombre y confirmá. Lo van a ver tus clientes en el carrito y en el mail del pedido."} />
               <Field label="Nombre de la promoción">
                 <div className="relative">
                   <input
@@ -896,6 +928,22 @@ function Wizard({ categories, products, onClose, onCreated, editPromo }: {
                   </div>
                 );
               })()}
+              {/* F6-C7 — la promo que nace muerta. No bloquea: puede ser a
+                  propósito (dejarla lista para cuando venza la otra). Pero
+                  guardarla creyendo que va a descontar algo, cuando figura como
+                  "Activa" y no aplica nunca, es peor que cualquier molestia. */}
+              {promoMuerta && (
+                <div className="flex gap-2.5 items-start bg-amber-50 border border-amber-200 rounded-xl p-3 mt-3.5 text-[12.5px] text-amber-800">
+                  <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+                  <div>
+                    <b>Esta promoción no se va a aplicar nunca.</b>{" "}
+                    {promoMuerta.killers.length === 1
+                      ? <>Ya tenés “{promoMuerta.killers[0]}” activa, y en todos los productos del alcance le conviene más al cliente.</>
+                      : <>Entre {promoMuerta.killers.map((k) => `“${k}”`).join(" y ")} ya cubren todos los productos del alcance con un mejor precio.</>}
+                    {" "}Podés crearla igual, o subir el descuento para que gane en algún producto.
+                  </div>
+                </div>
+              )}
               <div className="flex gap-2.5 items-start bg-green-50 border border-green-200 rounded-xl p-3 mt-3.5 text-[12.5px] text-green-800">
                 <Check className="h-4 w-4 shrink-0 mt-0.5" />
                 <span>{isEdit ? "Al guardar" : "Al crearla"}, esos {affected} producto{affected !== 1 ? "s" : ""} muestran el precio con descuento en la tienda al instante.</span>
@@ -1001,7 +1049,8 @@ function ReviewRow({ k, v, last }: { k: string; v: string; last?: boolean }) {
   return <div className={`flex justify-between gap-4 px-4 py-2.5 text-[13px] ${last ? "" : "border-b border-gray-100"}`}><span className="text-gray-500">{k}</span><span className="font-semibold text-gray-900 text-right">{v}</span></div>;
 }
 
-function parseNum(s: string): number { const n = parseFloat(String(s).replace(/[^\d.,]/g, "").replace(",", ".")); return Number.isFinite(n) ? n : 0; }
+// El parseo de montos vive en la librería (B-13): "5.000" son cinco mil y no cinco.
+const parseNum = parseMoneyInput;
 function reviewDiscount(type: string | null, value: string, minQty: string, payQty: string) {
   if (type === "PERCENT") return `${parseNum(value)}% OFF`;
   if (type === "FIXED") return `${money(parseNum(value))} OFF`;

@@ -1076,18 +1076,18 @@ seguridad: sigue siendo válida, simplemente tenía menos alcance del que creía
 | ~~8~~ | ~~**F6-C3** — el selector de categoría no muestra el rango de precios~~ | ✅ **HECHO** | **ARREGLADO (22/07)**: `catSub` muestra *"14 productos · $55.000 a $99.000"* en cada categoría. Salió junto con B-09, es el mismo selector |
 | ~~9~~ | ~~**F6-C4** — guiar al que arma la promo, con sus propios números (idea de Flavio)~~ | ✅ **HECHO** | **APLICADO (22/07)**: `fixedImpact` en `promotions.ts` + línea viva bajo el campo del monto (*"El más barato en alcance, Llavero ($4.000), queda en $1.000 — 75% de descuento"*), gris/ámbar/rojo según profundidad, y cartel con la lista en Revisá. El caso "gratis" ahora **frena en el paso 3** en vez de recién al guardar. Casos **FI-A…FI-F** |
 | ~~10~~ | ~~**F6-C5** — el paso 3 no aclara la unidad~~ | ✅ **HECHO** | **APLICADO (22/07)**: *"Monto de descuento **por producto**"* + ayuda *"se resta a cada unidad: en un carrito con 3 productos descuenta 3 veces"*. El % aclara que se calcula sobre el precio de venta |
-| 11 | **F6-C6** — el checkout no muestra QUÉ producto tiene la promo, ni cuál promo es | ✏️ UX | 🔲 sin tocar |
+| ~~11~~ | ~~**F6-C6** — el checkout no muestra QUÉ producto tiene la promo, ni cuál promo es~~ | ✅ **HECHO** | **APLICADO (22/07)**: `PricedLine.promo` expone la ganadora que el motor ya elegía y tiraba. Carrito: el nombre bajo cada producto. Checkout: **una fila por promo** con su ahorro, en vez de un "Promoción aplicada" único. Casos **LP-A…LP-F** |
 | ~~12~~ | ~~**B-10** — el CheckoutModal tiene su PROPIA cuenta del precio base~~ | ✅ **HECHO** | **ARREGLADO (22/07)**: ahora usa `resolveBasePrice` del motor. Se borró la copia local (y el `isWholesale` que quedó sin uso). tsc + eslint limpios |
-| 13 | **F6-C7** — avisar cuando una promo nueva nunca va a aplicar (tapada por otra) | ✏️ UX | 🔲 sin tocar |
+| ~~13~~ | ~~**F6-C7** — avisar cuando una promo nueva nunca va a aplicar (tapada por otra)~~ | ✅ **HECHO** | **APLICADO (22/07)**: `deadPromoCheck` + cartel ámbar en Revisá. Solo afirma "nunca" con las tres condiciones cumplidas (tipos comparables, mínimo igual o menor, vigencia cubierta entera). Casos **DM-A…DM-K**, la mayoría verificando que se CALLE |
 | ~~14~~ | ~~**F6-C8** — "Compra mínima" no dice que se mide sobre TODO el pedido~~ | ✅ **HECHO** | **APLICADO (22/07)**: *"Compra mínima **del pedido**"* + *"Cuenta el total del carrito, no solo los productos en promoción."* |
-| 15 | **F6-C9** — avisar al crear un PRODUCTO que cae bajo una promo fija peligrosa | ✏️ UX | 🔲 sin tocar |
+| ~~15~~ | ~~**F6-C9** — avisar al crear un PRODUCTO que cae bajo una promo fija peligrosa~~ | ✅ **HECHO** | **APLICADO (22/07)**: `deepestFixedOnProduct` + endpoint `/api/dashboard/promociones/vigentes`; aviso bajo el campo de precio en el formulario de productos, ámbar desde 50% y rojo si queda gratis. **Avisa, no frena.** Casos **PP-A…PP-I** |
 | ~~16~~ | ~~**B-11** — el N×M cobra $1 de más por cada 3 talles distintos~~ | ✅ **HECHO** | **ARREGLADO (22/07)**: reparto con redondeo acumulado (`repartirNxM`), la suma cierra siempre. Casos **SP-M / SP-N / SP-O / SP-P** en la suite |
 | ~~17~~ | ~~**F6-C10** — el alcance significa distinto según el tipo y la pantalla era la misma~~ | ✅ **HECHO** | **APLICADO (22/07)**: el paso 2 cambia de pregunta según el tipo (*"¿En qué productos vale el 3×2?"* / *"¿Qué productos se pueden mezclar?"*) + aviso en el N×M de que cada producto arma su grupo y **los talles cuentan juntos**. Requería B-11 arreglado, y lo estaba |
 | ~~18~~ | ~~**F6-C11** — Combo con UN solo producto~~ | ✅ **HECHO** | **APLICADO (22/07)**: aviso ámbar (`WarnNote`) al elegir un único producto con el combo. Avisa, no bloquea |
 | ~~19~~ | ~~**B-12** — con dos promos de envío gratis, cuál se nombra depende del orden de la base~~ | ✅ **HECHO** | **ARREGLADO (22/07)**: gana el umbral **más alto ya superado**, desempate por nombre. Mismo criterio que `resolveStoreEvent`. Caso **SP-Q** |
 | 20 | **#7c** — el envío bonificado NO se resta de la ganancia (Métricas miente) | 🔴 plata | ✅ **SOLUCIÓN ACORDADA (22/07)**, falta implementar — requiere migración |
 | ~~21~~ | ~~**F6-C12** — el paso 4 apila 19 chips de evento para un campo opcional~~ | ✅ **HECHO** | **APLICADO (22/07)**: toggle apagado por defecto + desplegable al prenderlo. Se borró `EventChip` (quedó sin uso). Además avisa cuando completa las fechas solo, y deja de avisar si las tocás |
-| 22 | **B-13** — un monto escrito con separador de miles se guarda ÷1000 | 🔴 plata | 🔲 **NUEVO (22/07)**, encontrado al implementar F6-C4 |
+| ~~22~~ | ~~**B-13** — un monto escrito con separador de miles se guarda ÷1000~~ | ✅ **HECHO** | **ARREGLADO (22/07)**: `parseMoneyInput` en `promotions.ts` lee a la argentina (punto = miles, coma = decimal), y `moneyInputValue` hace el camino de vuelta al editar. Casos **MP-A…MP-I** |
 | — | *(lo que agregue Flavio en esta ronda)* | | |
 
 #### B-13 — "$5.000" se guarda como $5 (encontrado 22/07)
@@ -1104,6 +1104,26 @@ sistema dice en voz alta lo que entendió.
 → Arreglo: `parseNum` tiene que distinguir separador de miles de separador decimal (en es-AR el decimal es
 la **coma** y el punto es de miles), o el campo tiene que formatear mientras se tipea. **Ojo**: `parseNum`
 también la usa el % — ahí no molesta porque son enteros de 1 a 90, pero el arreglo tiene que no romperlo.
+
+✅ **ARREGLADO (22/07)**. Al medirlo en vivo resultó **peor de lo estimado** — no era solo `"5.000" → 5`:
+
+| Escrito | Se guardaba | Ahora |
+|---|---|---|
+| `5.000` | **$5** | $5.000 |
+| `1.234.567` | **$1,234** | $1.234.567 |
+| `$ 12.000` | **$12** | $12.000 |
+| `1.234,56` | **$1,234** | $1.234,56 |
+
+`parseMoneyInput` (en `promotions.ts`, no en la pantalla, para poder congelarlo en la suite): con coma
+presente, ella es el decimal y los puntos son de miles; sin coma, todos los puntos son de miles.
+
+**Lo que casi se rompe al arreglarlo**: la precarga al **editar** hacía `String(editPromo.value)`, que da
+formato inglés (`"5000.5"`) — con el parseo nuevo eso se leería como **50005**. O sea que el arreglo,
+solo, convertía un bug de tipeo en uno peor: *abrir una promo y guardarla sin tocar nada le multiplicaba
+el monto por mil*. Por eso existe `moneyInputValue`, el camino de vuelta, y el caso **MP-I** lo congela
+como ida y vuelta (`parseMoneyInput(moneyInputValue(n)) === n`).
+
+El `%` no se tocó y no podía romperse: su campo filtra con `onlyDigits`, así que nunca tiene separadores.
 
 #### #7c — cómo se entera Métricas del envío regalado (acordado 22/07)
 
@@ -1350,6 +1370,27 @@ nunca frenar al comprador), en el otro extremo del flujo.
 ⚠️ Sin esto, el candado de (c) da una **falsa sensación de cobertura**: protege el momento de crear la
 promo y deja abierto el de crear el producto.
 
+✅ **APLICADO (22/07)**. `deepestFixedOnProduct` es el **espejo** de `fixedImpact`: allá es una promo contra
+el catálogo, acá es un producto contra las promos vigentes. Los dos usan el mismo cálculo por dentro, y el
+caso **PP-I** congela justamente eso — que las dos pantallas digan el mismo número. Si cada una hiciera su
+cuenta, tarde o temprano una diría *"queda en $4.000"* y la otra *"queda en $3.995"*.
+
+El aviso vive bajo el campo de precio del formulario de productos y se recalcula al tipear. Ámbar desde
+50%, rojo si el producto queda gratis.
+
+**Decisiones al implementarlo:**
+
+- **Solo promos `active`** — una pausada o programada no le está descontando nada a nadie hoy. Avisar por
+  ellas sería una alarma por algo que no está pasando.
+- **Endpoint propio** (`/vigentes`) y no el GET de la lista: ese pagina, incluye pausadas y archivadas y
+  devuelve la promo entera para pintarla. El formulario de productos no tiene por qué arrastrar todo eso.
+- **Avisa, no frena** — el precio del producto es una decisión del dueño, y la promo se arregla del otro
+  lado. ⚠️ **Queda un hueco consciente**: un producto puede terminar mostrándose gratis si el dueño ignora
+  el cartel rojo. Frenarlo es una decisión de Flavio, no mía: bloquear el guardado de un producto por una
+  promo ajena es mucho más molesto que bloquear la promo, que es donde el candado ya está.
+- **En producto NUEVO no matchea `scope=PRODUCTS`** y está bien: todavía no tiene id, así que no puede
+  estar en una lista de elegidos. Al **editar** sí (caso PP-F).
+
 #### F6-C8 — la compra mínima se mide sobre el carrito entero (22/07)
 
 Revisado el último campo del paso 3. **No está roto**, pero tiene la misma falla que F6-C5: el campo no
@@ -1413,6 +1454,30 @@ costo. ⚠️ Ojo al calcularlo: "nunca aplica" depende del **precio de cada pro
 arriba muestra que un fijo puede ganar en los baratos y perder en los caros), así que solo es "muerta"
 si pierde en **todos** los productos del alcance. Y hay que contemplar fechas que no se solapan.
 
+✅ **APLICADO (22/07)** — `deadPromoCheck`, cartel ámbar en Revisá.
+
+**El riesgo de este aviso no es dejar pasar una promo muerta: es la falsa alarma.** Decirle *"esto no va
+a aplicar nunca"* a alguien que armó una promo perfectamente buena rompe la confianza en **todos** los
+demás avisos del panel. Por eso la función es deliberadamente conservadora y **8 de los 11 casos
+congelados verifican que se calle**, no que hable.
+
+**Tres condiciones para animarse a decir "nunca", y las tres tienen su caso:**
+
+| Condición | Por qué | Caso |
+|---|---|---|
+| Solo entre `PERCENT` y `FIXED` | Un 3×2 da o no da según **cuántas** unidades lleve el comprador: con una sola no da nada y el % sí. No se puede afirmar "nunca" sobre algo que depende de la cantidad | **DM-I** |
+| La rival pide un carrito **igual o más chico** | Si pide más, hay compras donde la nueva es la única que aplica | **DM-E** |
+| La rival cubre la vigencia nueva **entera** | Solaparse a medias la tapa un rato, no siempre | **DM-G** / **DM-H** |
+
+Y el caso que da nombre a todo esto: **DM-C** confirma con los pantalones reales que un `%` y un monto
+fijo **se reparten** los productos —el fijo gana en el barato, el % en los caros— así que ninguna de las
+dos está muerta y el panel **no dice nada**. Ese es el que hubiera dado la falsa alarma si el chequeo
+mirara solo "cuál descuenta más".
+
+**Extras que salieron solos**: `DM-J` (crear dos veces la misma promo sin darse cuenta también avisa,
+porque empatar tampoco aporta) y `DM-K` (dos promos que **entre las dos** cubren todo el catálogo — se
+nombran las dos).
+
 #### F6-C6 — carrito mixto: qué ve el comprador (22/07)
 
 Pregunta de Flavio: *"si selecciono 3 productos y 2 están con la promo y el otro no, ¿qué pasa? ¿cómo
@@ -1445,6 +1510,23 @@ Por eso el carrito puede tachar el precio pero no puede decir el motivo. → Agr
 la promo ganadora a `PricedLine`. **No hay que recalcular nada ni tocar la cuenta**: es exponer un dato
 que el motor ya tuvo en la mano. Con eso las tres pantallas (card, carrito, checkout) pueden nombrarla
 desde la misma fuente, sin una segunda cuenta (que es justo lo que causó B-10).
+
+✅ **APLICADO (22/07)**, y salió tal cual estaba previsto: `PricedLine.promo` expone lo que el motor ya
+elegía. **Ningún número de la suite se movió** — es dato nuevo, no una cuenta nueva.
+
+- **Carrito**: el nombre de la promo bajo cada producto, en el color de acento.
+- **Checkout**: **una fila por promo** con su ahorro (`appliedPromos`, la misma lista que sale en el email)
+  en vez del *"Promoción aplicada"* único. Si por lo que fuera no llegara el detalle, cae en la fila
+  genérica de antes: el ahorro nunca deja de mostrarse.
+
+**Alcance real, verificado**: los **8** templates de tienda usan `shared/CartDrawer` y `shared/CheckoutModal`,
+así que un solo cambio los cubre a los ocho. (AutoDrive y AutoMotor no tienen carrito — son de vehículos.)
+
+⚠️ **Efecto colateral que hubo que arreglar**: el paso 5 del asistente decía *"Ponele un nombre **(lo ves
+solo vos)**"*. Eso **ya era falso antes** de este cambio — el email del pedido viene mostrando
+`nombre · etiqueta` al comprador desde la Fase 4 ([email.ts:543](src/lib/email.ts)) — y F6-C6 lo empeoraba
+llevándolo a dos pantallas más. Ahora dice: *"Ponele un nombre y confirmá. Lo van a ver tus clientes en el
+carrito y en el mail del pedido."* Si un nombre suena interno, conviene revisarlo: **lo lee el cliente**.
 
 #### B-10 — el CheckoutModal reimplementa el precio base (a verificar antes de tocar)
 

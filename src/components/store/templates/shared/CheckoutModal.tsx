@@ -26,6 +26,7 @@ export function CheckoutModal({
     envioOptions, envioId, setEnvioId, pagoOptions, pagoId, setPagoId,
     notas, setNotas, coupon, setCoupon, couponError, appliedCoupon, setAppliedCoupon,
     handleApplyCoupon, couponsAllowed, cartTotal, couponDiscount, envioPrice, envioCoordinar, orderTotal,
+    appliedPromos,
     canastaDisponible, donationEnabled, setDonationEnabled, donationAmount, setDonationAmount,
     acceptedTerms, setAcceptedTerms, handlePlaceOrder, fmt, fmtEnvioPrice, fmtLiveQuote,
   } = cart;
@@ -203,11 +204,27 @@ export function CheckoutModal({
                       <span style={{ fontSize:13, opacity:0.6, color:T }}>Subtotal</span>
                       <span style={{ fontSize:13, opacity:0.6, color:T }}>{fmt(promoSavings > 0.01 ? fullTotal : cartTotal)}</span>
                     </div>
+                    {/* F6-C6 — una fila POR promo, con su nombre y cuánto aportó,
+                        en vez de un "Promoción aplicada" único que no decía cuál
+                        ni permitía revisar la cuenta. Es la misma lista que sale
+                        después en el email del pedido, así que el resumen del
+                        checkout y el comprobante dicen exactamente lo mismo.
+                        Si por lo que fuera no llegara el detalle, cae en la fila
+                        genérica de antes: el ahorro nunca deja de mostrarse. */}
                     {promoSavings > 0.01 && (
-                      <div style={{ display:"flex", justifyContent:"space-between", marginBottom:8 }}>
-                        <span style={{ fontSize:13, color:"#16a34a", fontWeight:600 }}>Promoción aplicada</span>
-                        <span style={{ fontSize:13, color:"#16a34a", fontWeight:600 }}>-{fmt(promoSavings)}</span>
-                      </div>
+                      appliedPromos?.length ? appliedPromos.map((p, i) => (
+                        <div key={i} style={{ display:"flex", justifyContent:"space-between", marginBottom:8, gap:12 }}>
+                          <span style={{ fontSize:13, color:"#16a34a", fontWeight:600 }}>
+                            {p.name ? `${p.name} · ${p.label}` : p.label}
+                          </span>
+                          <span style={{ fontSize:13, color:"#16a34a", fontWeight:600, whiteSpace:"nowrap" }}>-{fmt(p.savings)}</span>
+                        </div>
+                      )) : (
+                        <div style={{ display:"flex", justifyContent:"space-between", marginBottom:8 }}>
+                          <span style={{ fontSize:13, color:"#16a34a", fontWeight:600 }}>Promoción aplicada</span>
+                          <span style={{ fontSize:13, color:"#16a34a", fontWeight:600 }}>-{fmt(promoSavings)}</span>
+                        </div>
+                      )
                     )}
                   </>;
                 })()}

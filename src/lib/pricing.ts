@@ -74,6 +74,12 @@ export type PricedLine = {
   lineTotal: number;    // unitPrice * quantity, redondeado a centavos
   promoApplied: boolean;
   savings: number;      // cuánto ahorró esta línea respecto al precio base
+  // CUÁL promo ganó esta línea (null si no descontó ninguna). El motor ya elegía
+  // la ganadora por línea para hacer la cuenta y después la tiraba: el carrito y
+  // el checkout sabían que había descuento pero no podían decir por qué (F6-C6).
+  // Se expone en vez de recalcularse afuera — una segunda cuenta paralela es
+  // exactamente lo que fue B-10.
+  promo: AppliedPromo | null;
 };
 
 // Una promo que efectivamente descontó, para poder NOMBRARLA (email, comprobante).
@@ -418,6 +424,7 @@ export function priceCart(items: PricingItem[], opts?: PriceCartOptions): CartPr
     const applies = lt < bl - 0.001;
     const unitPrice = it.quantity > 0 ? roundMoney(lt / it.quantity) : it.basePrice;
     const savings = roundMoney(bl - lt);
+    const w = winnerByLine[i];
     lines.push({
       productId: it.productId,
       variantId: it.variantId,
@@ -426,11 +433,13 @@ export function priceCart(items: PricingItem[], opts?: PriceCartOptions): CartPr
       lineTotal: lt,
       promoApplied: applies,
       savings: applies ? savings : 0,
+      // Solo si de verdad descontó: una promo que alcanza la línea pero perdió
+      // contra otra (o no llegó al mínimo) no tiene nada que anunciar.
+      promo: applies && w ? toAppliedPromo(w, savings) : null,
     });
     subtotal = roundMoney(subtotal + lt);
     if (applies) {
       promoSavings = roundMoney(promoSavings + savings);
-      const w = winnerByLine[i];
       if (w) savingsByPromo.set(w, (savingsByPromo.get(w) ?? 0) + savings);
     }
   }

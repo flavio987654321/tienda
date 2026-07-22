@@ -17,8 +17,12 @@ import RichTextEditor from "@/components/RichTextEditor";
 import { VariantBuilder } from "@/components/dashboard/VariantBuilder";
 import { OfferBadge, OfferBadgePreview, type OfferBadgeKey } from "@/components/store/OfferBadge";
 import { parseReel, isSafeReelUrl, playableReels, ReelPlayerModal } from "@/components/store/ProductReels";
+import { deepestFixedOnProduct, DEEP_DISCOUNT_PCT } from "@/lib/promotions";
 
 type ImageItem = { url: string; variantValue?: string };
+
+// Lo que devuelve /api/dashboard/promociones/vigentes: solo lo que decide alcance.
+type PromoFijaVigente = { name: string; type: string; value: number | null; scope: string; categories: string[]; productIds: string[] };
 
 const GASTO_CONCEPTOS = ["Compra", "Lavado", "Pulido/Detailing", "Service", "Cambio de cubiertas", "Otro"];
 
@@ -491,7 +495,17 @@ function ProductoFormPage() {
   // la subcategoría si productSubcategories termina de llenarse después de este fetch
   const loadedProductRef = useRef<{ category: string; subcategory: string } | null>(null);
 
+  // Promos de monto fijo corriendo ahora, para avisar si ESTE producto cae bajo
+  // una que lo dejaría gratis o casi (F6-C9). Al crear la promo se chequea el
+  // catálogo del momento; esta es la otra puerta, la que se abre después.
+  const [promosFijas, setPromosFijas] = useState<PromoFijaVigente[]>([]);
+
   useEffect(() => {
+    fetch("/api/dashboard/promociones/vigentes")
+      .then((r) => r.json())
+      .then((d) => setPromosFijas(d.promotions || []))
+      .catch(() => {}); // sin promos cargadas simplemente no se avisa nada
+
     fetch("/api/configuracion")
       .then((r) => r.json())
       .then((d) => {
@@ -1068,6 +1082,20 @@ function ProductoFormPage() {
 
   const margin = calcMargin(parseFloat(form.price || "0"), form.costPrice ? parseFloat(form.costPrice) : null);
 
+  // F6-C9 — ¿alguna promo de monto fijo vigente le pega fuerte a este producto?
+  // Se recalcula al tipear el precio y al cambiar la categoría, que son las dos
+  // cosas que deciden si cae en el alcance. Con `editingId` en el id, también
+  // detecta las promos que apuntan a este producto por nombre propio; en un
+  // producto nuevo ese caso no existe todavía y el id vacío no matchea nada.
+  const promoRiesgo = useMemo(
+    () => deepestFixedOnProduct(
+      { id: editingId ?? "", price: parseFloat(form.price || "0"), category: form.category || null },
+      promosFijas
+    ),
+    [editingId, form.price, form.category, promosFijas]
+  );
+  const avisarPromo = promoRiesgo != null && promoRiesgo.pct >= DEEP_DISCOUNT_PCT;
+
   async function handleAddGasto() {
     if (savingGasto || !editingId) return;
     const concepto = gastoConcepto === "Otro" ? gastoConceptoOtro.trim() : gastoConcepto;
@@ -1564,6 +1592,36 @@ function ProductoFormPage() {
                     className="w-full border border-gray-200 rounded-xl pl-8 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                 </div>
+                {/* F6-C9 — el candado del monto fijo protege el momento de CREAR
+                    la promo. Este es el otro lado: un producto barato cargado
+                    después entra a una promo que ya está corriendo, y hasta acá
+                    nadie revisaba nada. Avisa, no frena: el precio del producto
+                    es una decisión del dueño, y la promo se puede arreglar del
+                    otro lado. */}
+                {avisarPromo && promoRiesgo && (
+                  <div className={`mt-2 flex gap-2 items-start rounded-xl border p-3 text-[12.5px] ${
+                    promoRiesgo.effective <= 0
+                      ? "bg-red-50 border-red-200 text-red-700"
+                      : "bg-amber-50 border-amber-200 text-amber-800"
+                  }`}>
+                    <Tag className="h-4 w-4 shrink-0 mt-0.5" />
+                    <div>
+                      {promoRiesgo.effective <= 0 ? (
+                        <>
+                          <b>Con este precio, el producto se va a mostrar gratis en tu tienda.</b>{" "}
+                          La promoción “{promoRiesgo.promoName}” descuenta ${promoRiesgo.value.toLocaleString("es-AR")} y
+                          este producto sale ${parseFloat(form.price || "0").toLocaleString("es-AR")}.
+                          Subile el precio, o entrá a Promociones y sacalo del alcance.
+                        </>
+                      ) : (
+                        <>
+                          <b>Ojo:</b> la promoción “{promoRiesgo.promoName}” le descuenta ${promoRiesgo.value.toLocaleString("es-AR")} a
+                          este producto — se va a mostrar a <b>${promoRiesgo.effective.toLocaleString("es-AR")}</b>, un {promoRiesgo.pct}% menos.
+                        </>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Costo interno + margen — todos los rubros excepto Autos/Motos (que usan Gastos del vehículo) */}

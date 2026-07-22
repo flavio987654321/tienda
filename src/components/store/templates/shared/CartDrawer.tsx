@@ -71,6 +71,18 @@ export function CartDrawer({
                     {[item.color, item.size].filter(Boolean).join(" · ")}
                   </p>
                 )}
+                {/* F6-C6 — QUÉ promo bajó este precio. Antes el carrito tachaba el
+                    precio y no decía por qué: el comprador veía el descuento pero no
+                    sabía si era el 3×2, el 20% o el combo, y menos si convenía sumar
+                    una unidad más. Sale de `promo` que ya trae la línea del motor
+                    (misma cuenta que cobra el checkout), NO de una segunda cuenta acá. */}
+                {pricedLines[idx]?.promo && (
+                  <p style={{ fontSize:11, margin:"0 0 8px", color:accent, fontWeight:700 }}>
+                    {pricedLines[idx].promo!.name
+                      ? `${pricedLines[idx].promo!.name} · ${pricedLines[idx].promo!.label}`
+                      : pricedLines[idx].promo!.label}
+                  </p>
+                )}
                 <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
                   <div style={{ display:"flex", alignItems:"center", border:`1px solid ${border}` }}>
                     <button onClick={() => updateQty(idx, -1)} style={{ width:28, height:28, background:"none", border:"none", color:T, cursor:"pointer", fontSize:16 }}>−</button>

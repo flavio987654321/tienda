@@ -652,6 +652,9 @@ export function useCartLogic({ products, promotions = [], storeId, affiliateId =
     cartTotal, cartCount, envioPrice, envioCoordinar, envioOptions, couponDiscount, orderTotal,
     // Promos de tienda: líneas ya con promo, ahorro total, envío gratis y gate de cupón.
     pricedLines, cartPromoSavings, freeShipping, couponsAllowed, freeShippingGoal,
+    // Qué promos ganaron y cuánto aportó cada una — para NOMBRARLAS en el checkout
+    // (F6-C6) con la misma lista que después sale en el email del pedido.
+    appliedPromos: cartPricing.appliedPromos,
     searchResults, favoriteProducts, selectedVariantStock, outOfStockSizes,
     checkoutMode, isWholesale, wholesaleWarnings,
     pagoOptions: getPagoOptions(hasMercadoPago, !!affiliateId),

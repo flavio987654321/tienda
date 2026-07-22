@@ -182,6 +182,39 @@ function promoEffectiveUnitPrice(
 // puede caer bajo la promo y quedar gratis sin que nadie revise (F6-C9, pendiente).
 export type FixedFloorProduct = { name: string; price: number; category: string | null; id: string };
 
+// ── Montos escritos a mano, a la argentina (B-13) ────────────────────────────
+// "5.000" son cinco mil, no cinco: acá el punto separa MILES y la coma decimales.
+// El parseo anterior mandaba el texto crudo a `parseFloat`, que lee el punto como
+// decimal — así que quien escribía "5.000" en el monto de descuento guardaba $5.
+// Y el placeholder del campo dice justamente "$ 5.000": el ejemplo enseñaba la
+// forma que se rompía. Solo salía bien tipeando "50000" de corrido.
+//
+// Vive en la librería y no en la pantalla para poder congelarlo en la suite: es
+// la puerta por la que entra la plata que después cobra el motor.
+
+export function parseMoneyInput(s: string): number {
+  const limpio = String(s).replace(/[^\d.,]/g, "");
+  const ultimaComa = limpio.lastIndexOf(",");
+  // Con coma, ELLA manda: lo de la izquierda son miles (se tiran los puntos) y lo
+  // de la derecha, decimales. Sin coma, todos los puntos son de miles — nadie
+  // escribe "5.50" por cinco pesos con cincuenta, y menos en un monto de promo.
+  const normalizado = ultimaComa === -1
+    ? limpio.replace(/\./g, "")
+    : limpio.slice(0, ultimaComa).replace(/[.,]/g, "") + "." + limpio.slice(ultimaComa + 1).replace(/[.,]/g, "");
+  const n = parseFloat(normalizado);
+  return Number.isFinite(n) ? n : 0;
+}
+
+/**
+ * El camino de vuelta: un número del sistema escrito como se escribe en el campo.
+ * Hace falta al EDITAR — `String(5000.5)` da "5000.5", con punto decimal a la
+ * inglesa, que el parseo de arriba leería como 50005. Abrir una promo y guardarla
+ * sin tocar nada no puede multiplicar el monto por mil.
+ */
+export function moneyInputValue(n: number): string {
+  return String(n).replace(".", ",");
+}
+
 // Qué productos alcanza una promo. Estaba escrito tres veces igual (candado del
 // monto fijo, piso de costo, impacto): tres copias de la misma regla son tres
 // lugares donde puede quedar desincronizada, que es exactamente lo que causó B-10.
@@ -254,6 +287,124 @@ export function fixedFloorError(
   if (!peor) return null;
   const ars = (n: number) => "$" + Math.round(n).toLocaleString("es-AR");
   return `Con ${ars(promo.value!)} de descuento, “${peor.name}” (${ars(peor.price)}) quedaría gratis. Bajá el monto o sacalo del alcance.`;
+}
+
+// ── La otra puerta: un producto nuevo que cae bajo una promo fija (F6-C9) ────
+// `fixedImpact` mira UNA promo contra el catálogo, y se usa al armar la promo.
+// Esto es el espejo: UN producto contra las promos vigentes, para el momento en
+// que se carga el producto.
+//
+// Hace falta porque el candado de B-07 protege una sola puerta. Se crea una promo
+// de $12.000 off en toda la tienda —perfectamente sana con el catálogo de hoy— y
+// tres semanas después se carga un producto de $10.000. Nadie revisa nada: el
+// producto entra a una promo que lo regala. El chequeo tiene que estar también
+// acá, donde se comete ese error.
+export type PromoOnProduct = { promoName: string; value: number; effective: number; pct: number };
+
+export function deepestFixedOnProduct(
+  product: { id: string; price: number; category: string | null },
+  promos: ({ name: string; type: string; value: number | null } & ScopeFields)[]
+): PromoOnProduct | null {
+  if (!(product.price > 0)) return null;
+  let peor: PromoOnProduct | null = null;
+  for (const p of promos) {
+    // Se reusa el mismo cálculo que ve el dueño al armar la promo: si los dos
+    // lados no dieran el mismo número, una pantalla contradiría a la otra.
+    const w = fixedImpact(p, [{ id: product.id, name: "", price: product.price, category: product.category }]).worst;
+    if (!w) continue;
+    if (peor === null || w.pct > peor.pct) peor = { promoName: p.name, value: p.value!, effective: w.effective, pct: w.pct };
+  }
+  return peor;
+}
+
+// ── Promos que nacen muertas (F6-C7) ─────────────────────────────────────────
+// Dos promos sobre la misma categoría NO se pisan: se reparten, y cada producto
+// toma la que más le conviene al comprador. Por eso no se bloquea nada — con
+// "20% en pantalones" + "$12.000 en pantalones", el barato toma el fijo y los
+// caros toman el porcentaje, sin que nadie lo configure.
+//
+// Lo que sí hay que avisar es el caso en que la nueva promo **nunca** va a ganar:
+// con un "30% en pantalones" ya activo, crear un "20% en pantalones" deja una
+// promo que figura como Activa, con su nombre y su fecha, y es un adorno.
+//
+// Tres condiciones para animarse a decir "nunca", y las tres importan:
+//   1. Solo entre PERCENT y FIXED. Un 3×2 descuenta o no según CUÁNTAS unidades
+//      lleve el comprador, así que un % no está muerto porque exista un 3×2:
+//      con una sola unidad, el 3×2 no da nada y el % sí.
+//   2. La rival tiene que pedir un carrito igual o más chico. Si pide más, hay
+//      compras donde la nueva es la única que aplica.
+//   3. La rival tiene que cubrir TODA la vigencia de la nueva, no solaparse a
+//      medias. Una que arranca a mitad de camino la tapa un rato, no siempre.
+export type DeadPromoRival = {
+  name: string; type: string; value: number | null; minOrderAmount: number;
+  startsAt: Date | string | null; endsAt: Date | string | null;
+  isActive: boolean; archivedAt: Date | string | null;
+} & ScopeFields;
+
+export type DeadPromoNew = {
+  type: string; value: number | null; minOrderAmount: number;
+  startsAt: Date | string | null; endsAt: Date | string | null;
+} & ScopeFields;
+
+function aFecha(v: Date | string | null): Date | null {
+  if (!v) return null;
+  const d = v instanceof Date ? v : new Date(v);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+/** ¿La vigencia de `rival` cubre por completo la de `nueva`? (null = sin límite) */
+function cubreLaVigencia(rival: DeadPromoRival, nueva: DeadPromoNew): boolean {
+  const rd = aFecha(rival.startsAt), rh = aFecha(rival.endsAt);
+  const nd = aFecha(nueva.startsAt), nh = aFecha(nueva.endsAt);
+  if (rd && (!nd || rd > nd)) return false;   // la rival arranca después
+  if (rh && (!nh || rh < nh)) return false;   // la rival termina antes
+  return true;
+}
+
+const TIPOS_COMPARABLES = new Set(["PERCENT", "FIXED"]);
+
+// Precio unitario bajo una promo DIRECTA. `minQty`/`payQty` van en null porque
+// acá solo entran PERCENT y FIXED, que no dependen de la cantidad — es
+// justamente lo que permite afirmar "nunca gana".
+function precioDirecto(p: { type: string; value: number | null }, price: number): number | null {
+  return promoEffectiveUnitPrice({ type: p.type, value: p.value, minQty: null, payQty: null }, price);
+}
+
+/**
+ * Los nombres de las promos que dejan a `nueva` sin ningún producto donde ganar,
+ * o null si en al menos uno conviene (o si no se puede juzgar con certeza).
+ */
+export function deadPromoCheck(
+  nueva: DeadPromoNew, rivales: DeadPromoRival[], products: FixedFloorProduct[]
+): { killers: string[] } | null {
+  if (!TIPOS_COMPARABLES.has(nueva.type) || nueva.value == null || !(nueva.value > 0)) return null;
+
+  const candidatas = rivales.filter((r) =>
+    TIPOS_COMPARABLES.has(r.type) && r.value != null && r.value > 0 &&
+    r.isActive && !r.archivedAt &&
+    r.minOrderAmount <= nueva.minOrderAmount &&
+    cubreLaVigencia(r, nueva)
+  );
+  if (!candidatas.length) return null;
+
+  const enAlcance = productsInScope(nueva, products).filter((p) => p.price > 0);
+  if (!enAlcance.length) return null; // sin productos que juzgar, no se afirma nada
+
+  const killers = new Set<string>();
+  for (const p of enAlcance) {
+    const conLaNueva = precioDirecto(nueva, p.price);
+    if (conLaNueva == null) return null;
+    const tapa = candidatas.find((r) => {
+      if (!productsInScope(r, [p]).length) return false;
+      const conLaRival = precioDirecto(r, p.price);
+      // `<=` y no `<`: si empatan, la nueva tampoco aporta nada (es el caso de
+      // crear dos veces la misma promo sin darse cuenta).
+      return conLaRival != null && conLaRival <= conLaNueva;
+    });
+    if (!tapa) return null; // gana en al menos un producto → está viva
+    killers.add(tapa.name);
+  }
+  return { killers: [...killers] };
 }
 
 export type CostFloorPromo = {
