@@ -84,12 +84,27 @@ function discountLabel(p: Pick<Promotion, "type" | "value" | "minQty" | "payQty"
 // número suelto): si son pocos, todos; si son muchos, los primeros + "y N más".
 function scopeDetail(p: Pick<Promotion, "scope" | "categories" | "productIds">, products: Product[]) {
   if (p.scope === "ALL") return "Toda la tienda";
-  if (p.scope === "CATEGORY") return "Categoría · " + (p.categories.join(", ") || "—");
+  if (p.scope === "CATEGORY") return (p.categories.length === 1 ? "Categoría · " : "Categorías · ") + (p.categories.join(", ") || "—");
   const names = p.productIds.map((id) => products.find((pr) => pr.id === id)?.name).filter((n): n is string => !!n);
   if (names.length === 0) return p.productIds.length === 1 ? "1 producto" : `${p.productIds.length} productos`;
   if (names.length <= 2) return names.join(", ");
   return `${names[0]}, ${names[1]} y ${names.length - 2} más`;
 }
+// Subtítulo de cada categoría en el selector: cuántos productos y entre qué
+// precios (F6-C3). El selector de productos ya mostraba el precio de cada uno;
+// el de categorías decía solo "5 productos", y con un monto fijo eso es elegir a
+// ciegas — el riesgo es `monto ÷ el más barato del alcance`, así que "$5.000" es
+// un 23% en una categoría que arranca en $22.000 y un 80% en una que arranca en
+// $6.000. Mismo dato, decisión completamente distinta.
+function catSub(c: Category, products: Product[]) {
+  const cant = `${c.count} producto${c.count === 1 ? "" : "s"}`;
+  const precios = products.filter((p) => p.category === c.name).map((p) => p.price)
+    .filter((n) => n > 0).sort((a, b) => a - b);
+  if (!precios.length) return cant;
+  const min = precios[0], max = precios[precios.length - 1];
+  return min === max ? `${cant} · ${money(min)}` : `${cant} · ${money(min)} a ${money(max)}`;
+}
+
 function fmtDate(iso: string | null) {
   if (!iso) return null;
   const d = new Date(iso);
@@ -358,7 +373,11 @@ function Wizard({ categories, products, onClose, onCreated, editPromo }: {
 
   const [type, setType] = useState<string | null>(editPromo?.type ?? null);
   const [scope, setScope] = useState<string | null>(editPromo?.scope ?? null);
-  const [cat, setCat] = useState<string | null>(editPromo?.scope === "CATEGORY" ? (editPromo.categories[0] ?? null) : null);
+  // Varias categorías, no una. El modelo, la validación del server, el motor y los
+  // textos de la tienda ya soportaban una lista: el selector era el único eslabón
+  // corto (B-09). Antes precargaba `categories[0]`, así que abrir y guardar una
+  // promo de 2 categorías borraba la segunda sin avisar.
+  const [cats, setCats] = useState<string[]>(editPromo?.scope === "CATEGORY" ? editPromo.categories : []);
   const [prodIds, setProdIds] = useState<string[]>(editPromo?.scope === "PRODUCTS" ? editPromo.productIds : []);
   const [prodSearch, setProdSearch] = useState("");
   const [name, setName] = useState(editPromo?.name ?? "");
@@ -413,7 +432,7 @@ function Wizard({ categories, products, onClose, onCreated, editPromo }: {
 
   function canNext() {
     if (step === 1) return !!type;
-    if (step === 2) { if (!scope) return false; if (scope === "CATEGORY") return !!cat; if (scope === "PRODUCTS") return prodIds.length > 0; return true; }
+    if (step === 2) { if (!scope) return false; if (scope === "CATEGORY") return cats.length > 0; if (scope === "PRODUCTS") return prodIds.length > 0; return true; }
     if (step === 3) {
       // % entre 1 y 90 EN VIVO (antes solo pedía >0 y el server rechazaba al final).
       if (type === "PERCENT") { const n = parseFloat(value); return n >= 1 && n <= MAX_PCT; }
@@ -434,7 +453,7 @@ function Wizard({ categories, products, onClose, onCreated, editPromo }: {
     try {
       const body: Record<string, unknown> = {
         name: name.trim(), type, scope,
-        categories: scope === "CATEGORY" && cat ? [cat] : [],
+        categories: scope === "CATEGORY" ? cats : [],
         productIds: scope === "PRODUCTS" ? prodIds : [],
         minOrderAmount: parseNum(minOrder),
         startsAt: startsAt || null, endsAt: endsAt || null,
@@ -456,7 +475,10 @@ function Wizard({ categories, products, onClose, onCreated, editPromo }: {
 
   function next() { if (!canNext()) return; if (step < 5) setStep(step + 1); else save(); }
 
-  const affected = scope === "ALL" ? products.length : scope === "CATEGORY" ? (categories.find((c) => c.name === cat)?.count ?? 0) : prodIds.length;
+  // Con varias categorías el alcance es la suma de todas, no el conteo de una.
+  const affected = scope === "ALL" ? products.length
+    : scope === "CATEGORY" ? categories.filter((c) => cats.includes(c.name)).reduce((s, c) => s + c.count, 0)
+    : prodIds.length;
   const filteredProds = products.filter((p) => p.name.toLowerCase().includes(prodSearch.toLowerCase()));
 
   return (
@@ -507,13 +529,19 @@ function Wizard({ categories, products, onClose, onCreated, editPromo }: {
               <StepTitle t="¿A qué se aplica?" d="Elegís una vez y vale para todos esos productos. Esto es lo que hoy no podés hacer." />
               <div className="space-y-2.5">
                 <OptCard sel={scope === "ALL"} onClick={() => setScope("ALL")} tile="bg-indigo-50 text-indigo-600" Icon={Store} title="Toda la tienda" desc="Cada producto de tu catálogo" />
-                <OptCard sel={scope === "CATEGORY"} onClick={() => setScope("CATEGORY")} tile="bg-indigo-50 text-indigo-600" Icon={Folder} title="Una categoría" desc="Todos los productos de un rubro" />
+                <OptCard sel={scope === "CATEGORY"} onClick={() => setScope("CATEGORY")} tile="bg-indigo-50 text-indigo-600" Icon={Folder} title="Categorías" desc="Todos los productos de uno o varios rubros" />
                 <OptCard sel={scope === "PRODUCTS"} onClick={() => setScope("PRODUCTS")} tile="bg-indigo-50 text-indigo-600" Icon={ListChecks} title="Productos elegidos" desc="Los seleccionás uno por uno" />
               </div>
               {scope === "CATEGORY" && (
-                <Picker label="Elegí la categoría" right={cat ?? undefined}>
+                <Picker label="Elegí las categorías" right={cats.length ? `${cats.length} elegidas` : undefined}>
                   {categories.length === 0 ? <Empty>No tenés categorías cargadas todavía.</Empty> : categories.map((c) => (
-                    <PkRow key={c.name} on={cat === c.name} onClick={() => setCat(c.name)} radio name={c.name} sub={`${c.count} productos`} />
+                    <PkRow
+                      key={c.name}
+                      on={cats.includes(c.name)}
+                      onClick={() => setCats((prev) => prev.includes(c.name) ? prev.filter((x) => x !== c.name) : [...prev, c.name])}
+                      name={c.name}
+                      sub={catSub(c, products)}
+                    />
                   ))}
                 </Picker>
               )}
@@ -670,7 +698,7 @@ function Wizard({ categories, products, onClose, onCreated, editPromo }: {
               </Field>
               <div className="bg-gray-50 border border-gray-100 rounded-xl overflow-hidden mt-2">
                 <ReviewRow k="Tipo" v={meta?.label ?? "—"} />
-                <ReviewRow k="Se aplica a" v={scopeDetail({ scope: scope ?? "ALL", categories: cat ? [cat] : [], productIds: prodIds }, products)} />
+                <ReviewRow k="Se aplica a" v={scopeDetail({ scope: scope ?? "ALL", categories: cats, productIds: prodIds }, products)} />
                 <ReviewRow k="Descuento" v={reviewDiscount(type, value, minQty, payQty)} />
                 <ReviewRow k="Vigencia" v={`${startsAt ? fmtDate(startsAt + "T00:00") : "desde hoy"} · ${endsAt ? "hasta " + fmtDate(endsAt + "T00:00") : "sin fin"}`} />
                 <ReviewRow k="Con cupones" v={combines ? "Se combinan" : "No combina"} last />
@@ -683,7 +711,7 @@ function Wizard({ categories, products, onClose, onCreated, editPromo }: {
                   minQty: isNxM(type) ? parseInt(minQty) : null,
                   payQty: isNxM(type) ? parseInt(payQty) : null,
                   scope: scope ?? "ALL",
-                  categories: scope === "CATEGORY" && cat ? [cat] : [],
+                  categories: scope === "CATEGORY" ? cats : [],
                   productIds: scope === "PRODUCTS" ? prodIds : [],
                 }, products);
                 if (cf.below.length === 0 && cf.missingCost === 0) return null;

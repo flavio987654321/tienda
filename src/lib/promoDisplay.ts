@@ -108,7 +108,9 @@ export function describePromo(p: ActivePromotion): { headline: string; scope: st
 
   const cats = p.categories.filter(Boolean);
   const scope =
-    p.scope === "CATEGORY" ? (cats.length ? `en la categoría: ${cats.join(", ")}` : "en una categoría")
+    p.scope === "CATEGORY" ? (cats.length
+      ? `en ${cats.length === 1 ? "la categoría" : "las categorías"}: ${cats.join(", ")}`
+      : "en una categoría")
     : p.scope === "PRODUCTS" ? "en productos seleccionados"
     : "en toda la tienda";
 

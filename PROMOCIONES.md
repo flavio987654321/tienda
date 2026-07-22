@@ -1070,10 +1070,10 @@ seguridad: sigue siendo válida, simplemente tenía menos alcance del que creía
 | ~~2~~ | ~~**B-08** — promo sin descuento igual bloquea el cupón~~ | ✅ **HECHO** | **ARREGLADO (22/07)**: el gate mira las promos que **realmente aplicaron** (ganaron línea, o son el envío gratis que se activó), no las que alcanzan por scope. Casos **CG-A/B/C/D** |
 | 3 | **Decisión #12** — envío gratis por producto libera el pedido entero | 🤔 debate | ✅ **CERRADO (22/07): queda como está** |
 | 4 | **Decisión #11** — envío gratis sobre método "a coordinar" | 🤔 debate | ✅ **CERRADO (22/07): lo resuelve #7c** — al registrar el envío bonificado, en `coordinar` da $0 (la verdad: no se regaló nada). No hace falta prohibir ni avisar |
-| 5 | **B-09** — el wizard limita a UNA categoría aunque el motor soporta varias, y al editar trunca | 🔴 **subió de prioridad (22/07)** | ✅ **DECIDIDO: varias categorías.** Falta implementar — **bloquea el caso estrella del Combo**, ver nota abajo |
+| ~~5~~ | ~~**B-09** — el wizard limita a UNA categoría, y al editar trunca~~ | ✅ **HECHO** | **ARREGLADO (22/07)**: selector multi (`cats: string[]`), sin el `[0]` de la precarga. Tarjeta → *"Categorías · uno o varios rubros"*, plural en `describePromo` y `scopeDetail`, y el conteo de alcance ahora suma todas. **Ya se puede armar el Combo cruzando categorías** |
 | 6 | **F6-C1** — el ejemplo del tipo mete una categoría en el paso del tipo | ✏️ texto | ✅ **REDACTADO**, sin implementar |
 | 7 | **F6-C2** — "Se aplica solo en la tienda" tiene dos lecturas | ✏️ texto | ✅ **REDACTADO**, sin implementar |
-| 8 | **F6-C3** — el selector de categoría no muestra el rango de precios | ✏️ UX | 🔲 sin tocar |
+| ~~8~~ | ~~**F6-C3** — el selector de categoría no muestra el rango de precios~~ | ✅ **HECHO** | **ARREGLADO (22/07)**: `catSub` muestra *"14 productos · $55.000 a $99.000"* en cada categoría. Salió junto con B-09, es el mismo selector |
 | 9 | **F6-C4** — guiar al que arma la promo, con sus propios números (idea de Flavio) | ✏️ UX | 🔲 a diseñar |
 | 10 | **F6-C5** — el paso 3 no aclara la unidad: ni "pesos por producto" ni "porcentaje" | ✏️ texto | 🔲 sin tocar |
 | 11 | **F6-C6** — el checkout no muestra QUÉ producto tiene la promo, ni cuál promo es | ✏️ UX | 🔲 sin tocar |
