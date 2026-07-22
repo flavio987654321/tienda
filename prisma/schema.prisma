@@ -1292,3 +1292,63 @@ model StoreMilestone {
   @@unique([storeId, type])
   @@index([storeId, shownAt])
 }
+
+// ─── DESIGN BRIEF (formulario "Diseñá tu propia tienda") ──────────────────────
+// Una idea de diseño mandada desde /diseno-propio. No tiene relación con Store
+// ni con User a propósito: el formulario es público y sin registro, así que la
+// mayoría de los briefs llegan de gente que todavía no tiene cuenta. Si ya tiene
+// tienda lo dice en tiendaUrl, como texto libre, para no atarlo a un FK que en
+// la mayoría de los casos estaría vacío.
+//
+// La idea no es construir una plantilla por brief — cada plantilla es un
+// componente de ~1200 líneas y un impuesto de mantenimiento permanente. Se
+// construye por patrón: se agrupan por tipoTienda + estetica y se hace primero
+// lo que más se repite, para que cada diseño nuevo le sirva a muchas y no a una.
+model DesignBrief {
+  id             String   @id @default(cuid())
+  // Qué pidió
+  tipoTienda     String   // ROPA | HOGAR_TECH | AUTOS | GASTRONOMIA | HOTELERIA | INMOBILIARIA | GENERAL (ver lib/designBrief RUBROS)
+  estetica       String   // ver lib/designBrief ESTETICAS
+  paleta         String   // ver lib/designBrief PALETAS
+  coloresPropios String?
+  referencias    String?
+  noQuiero       String?
+  // Quién lo pidió
+  nombre         String
+  email          String
+  telefono       String?
+  tieneTienda    Boolean  @default(false)
+  tiendaUrl      String?
+  // Aceptación de que el diseño se publica en el catálogo. Mismo patrón que
+  // tcOwner* de Store (fecha + IP + versión), pero con su propia versión:
+  // DESIGN_BRIEF_TERMS_VERSION en lib/legal, no CURRENT_TERMS_VERSION.
+  acceptedAt     DateTime @default(now())
+  acceptedIp     String?
+  acceptedVersion String
+  // NEW = sin mirar | REVIEWED = leído | BUILDING = se está diseñando
+  // DONE = la plantilla ya está publicada | DISCARDED = no se va a hacer
+  status         String   @default("NEW")
+  createdAt      DateTime @default(now())
+
+  @@index([status, createdAt(sort: Desc)])
+  @@index([tipoTienda, estetica])
+}
+
+// ─── ADMIN SECTION VIEW (puntito de "algo nuevo" del panel admin) ─────────────
+// Registra cuándo el admin abrió por última vez cada sección del panel que
+// recibe cosas (diseños, leads/consultas, testimonios, donaciones). El badge del
+// sidebar cuenta lo que entró DESPUÉS de seenAt — el mismo criterio que
+// abandonedCartsSeenAt de Store, pero acá global por admin y por sección, para no
+// sumar una columna nueva cada vez que aparece una sección más.
+//
+// Sin relación formal a User (solo userId) a propósito: son pocos admins, y así
+// no hay que tocar el modelo User ni cascada al borrar. section es texto libre
+// controlado desde el código (ADMIN_SECTIONS en lib), no un enum de DB.
+model AdminSectionView {
+  id      String   @id @default(cuid())
+  userId  String
+  section String   // disenos | leads | testimonios | donaciones
+  seenAt  DateTime @default(now())
+
+  @@unique([userId, section])
+}

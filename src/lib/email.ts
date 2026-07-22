@@ -1,4 +1,6 @@
 ﻿import { Resend } from "resend";
+import { RUBROS, ESTETICAS, PALETAS } from "@/lib/designBrief";
+import { siteUrl } from "@/lib/site";
 
 function escapeHtml(s: string | null | undefined): string {
   if (!s) return "";
@@ -1291,6 +1293,70 @@ export async function sendAfiliadoSoporteEmail({
         </table>
         <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:16px;font-size:14px;line-height:1.6;color:#374151;white-space:pre-wrap;">${escapeHtml(mensaje)}</div>
         <p style="color:#9ca3af;font-size:12px;margin-top:16px;">Respondé directamente a este email para contestarle al afiliado.</p>
+      </div>
+    `,
+  });
+}
+
+// Aviso al admin cuando entra una idea desde "Diseñá tu propia tienda". El brief
+// ya quedó guardado y visible en /admin/disenos; esto es el segundo canal, para
+// enterarse aunque no se entre al panel. Sale por Resend como el resto.
+export async function sendDesignBriefAdminEmail(brief: {
+  nombre: string;
+  email: string;
+  telefono: string | null;
+  tipoTienda: string;
+  estetica: string;
+  paleta: string;
+  coloresPropios: string | null;
+  referencias: string | null;
+  noQuiero: string | null;
+  tieneTienda: boolean;
+  tiendaUrl: string | null;
+}) {
+  if (!process.env.RESEND_API_KEY) return;
+  const adminEmail = process.env.ADMIN_EMAIL;
+  if (!adminEmail) return;
+
+  const rubro = RUBROS.find((r) => r.id === brief.tipoTienda);
+  const rubroLabel = rubro ? `${rubro.emoji} ${rubro.label}` : brief.tipoTienda;
+  const esteticaLabel = ESTETICAS.find((e) => e.id === brief.estetica)?.label ?? brief.estetica;
+  const paletaLabel = PALETAS.find((p) => p.id === brief.paleta)?.label ?? brief.paleta;
+  const waDigits = brief.telefono ? brief.telefono.replace(/\D/g, "") : "";
+
+  const row = (label: string, value: string) =>
+    `<tr><td style="color:#6b7280;padding:5px 0;width:120px;vertical-align:top;">${label}</td><td style="font-weight:600;color:#111827;">${value}</td></tr>`;
+
+  const extra = (label: string, value: string | null) =>
+    value
+      ? `<div style="margin-top:12px;"><p style="color:#6b7280;font-size:13px;margin:0 0 4px;">${label}</p><div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;padding:12px;font-size:14px;line-height:1.5;color:#374151;white-space:pre-wrap;">${escapeHtml(value)}</div></div>`
+      : "";
+
+  await transporter.sendMail({
+    from: `"TiendaApps" <${FROM_ADDRESS}>`,
+    to: adminEmail,
+    replyTo: brief.email,
+    subject: `🎨 Nueva idea de diseño: ${rubroLabel} · ${esteticaLabel}`,
+    html: `
+      <div style="font-family:sans-serif;max-width:540px;margin:0 auto;padding:32px 16px;color:#111827;">
+        <div style="background:#ea580c;border-radius:12px;padding:24px;margin-bottom:24px;">
+          <p style="color:rgba(255,255,255,0.8);font-size:13px;margin:0 0 4px;">Diseñá tu propia tienda</p>
+          <h1 style="color:#fff;font-size:20px;margin:0;font-weight:700;">Nueva idea de diseño</h1>
+        </div>
+        <table style="width:100%;margin-bottom:8px;font-size:14px;">
+          ${row("Nombre", escapeHtml(brief.nombre))}
+          ${row("Email", `<a href="mailto:${escapeHtml(brief.email)}" style="color:#ea580c;">${escapeHtml(brief.email)}</a>`)}
+          ${brief.telefono ? row("Teléfono", `<a href="https://wa.me/${waDigits}" style="color:#16a34a;">${escapeHtml(brief.telefono)}</a>`) : ""}
+          ${brief.tieneTienda ? row("Tienda", `Ya tiene${brief.tiendaUrl ? `: ${escapeHtml(brief.tiendaUrl)}` : ""}`) : ""}
+          ${row("Rubro", escapeHtml(rubroLabel))}
+          ${row("Estética", escapeHtml(esteticaLabel))}
+          ${row("Paleta", escapeHtml(paletaLabel))}
+          ${brief.coloresPropios ? row("Colores marca", escapeHtml(brief.coloresPropios)) : ""}
+        </table>
+        ${extra("Referencias", brief.referencias)}
+        ${extra("Qué NO quiere", brief.noQuiero)}
+        <a href="${siteUrl("/admin/disenos")}" style="display:inline-block;margin-top:24px;background:#ea580c;color:#fff;text-decoration:none;font-weight:700;font-size:14px;padding:12px 20px;border-radius:10px;">Ver en el panel</a>
+        <p style="color:#9ca3af;font-size:12px;margin-top:16px;">Respondé directamente a este email para escribirle a la persona.</p>
       </div>
     `,
   });

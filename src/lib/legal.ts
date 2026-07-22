@@ -21,6 +21,19 @@
 export const CURRENT_TERMS_VERSION = "1.4";
 
 /**
+ * Condiciones del diseño colaborativo (/diseno-propio). Versión aparte de
+ * CURRENT_TERMS_VERSION a propósito: los términos generales los acepta gente
+ * registrada (dueños, vendedores, compradores) y subirlos dispara el banner de
+ * re-aceptación para todos. El formulario de diseño, en cambio, lo llena
+ * cualquiera sin registrarse, y su único compromiso es que el diseño que salga
+ * de su idea se publica en el catálogo. Mezclarlos obligaría a media plataforma
+ * a re-aceptar términos por algo que no la toca.
+ *
+ * 1.0 (21/07/2026) — versión inicial.
+ */
+export const DESIGN_BRIEF_TERMS_VERSION = "1.0";
+
+/**
  * Qué cambió en la versión vigente, en criollo, para el email de aviso.
  *
  * Vive pegado a la versión a propósito: si subís CURRENT_TERMS_VERSION y no
