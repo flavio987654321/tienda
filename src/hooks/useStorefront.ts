@@ -77,16 +77,19 @@ export type PlaceOrderParams = {
 
 // Claves que mapean a "talle" (dimensión principal no-color) según tipoTienda
 const SIZE_ATTRS  = [
-  "talle", "size", "talla", "talles", "sizes",          // ROPA / DEPORTE
-  "tamaño", "tamano",                                    // HOGAR / MASCOTAS / GENERAL
-  "almacenamiento",                                      // TECH
-  "ram",                                                 // TECH
+  // Se conservan claves de rubros que ya no existen (ej. "formato"): son nombres
+  // de variante que pueden estar guardados en productos viejos, y sacarlos haría
+  // que esos productos dejen de parsearse.
+  "talle", "size", "talla", "talles", "sizes",          // ROPA
+  "tamaño", "tamano",                                    // HOGAR_TECH / GENERAL
+  "almacenamiento",                                      // HOGAR_TECH
+  "ram",                                                 // HOGAR_TECH
   "versión", "version",                                  // AUTOS
-  "formato",                                             // LIBROS
+  "formato",                                             // histórico
   "variante",                                            // GENERAL
-  "material",                                            // HOGAR
-  "sabor",                                               // ALIMENTOS / MASCOTAS
-  "peso/tamaño", "peso",                                 // ALIMENTOS
+  "material",                                            // HOGAR_TECH
+  "sabor",                                               // GASTRONOMIA
+  "peso/tamaño", "peso",                                 // GASTRONOMIA
 ];
 // Claves que mapean a "color"
 const COLOR_ATTRS = ["color", "colour", "colores", "colors", "tono"];

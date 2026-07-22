@@ -183,10 +183,10 @@ export const TEMPLATE_DEFAULTS: Record<TemplateId, { accent: string; storeName: 
 };
 
 export const TEMPLATE_TIPO_TIENDA: Record<TemplateId, string[]> = {
-  "fashion-noir": ["ROPA", "BELLEZA", "DEPORTE", "MASCOTAS", "LIBROS", "ALIMENTOS", "GENERAL"],
-  "boho-terra":   ["ROPA", "BELLEZA", "ALIMENTOS", "MASCOTAS", "LIBROS", "GENERAL"],
-  "urban-pulse":  ["ROPA", "DEPORTE", "GENERAL"],
-  "chic-paris":   ["ROPA", "BELLEZA", "GENERAL"],
+  "fashion-noir": ["ROPA", "GASTRONOMIA", "GENERAL"],
+  "boho-terra":   ["ROPA", "GASTRONOMIA", "GENERAL"],
+  "urban-pulse":  ["ROPA", "GENERAL"],
+  "chic-paris":   ["ROPA", "GENERAL"],
   "auto-motor":   ["AUTOS"],
   "auto-drive":   ["AUTOS"],
   "electro-prime": ["HOGAR_TECH"],

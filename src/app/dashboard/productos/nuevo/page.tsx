@@ -38,11 +38,7 @@ function getVariantOptions(storeType: string): string[] {
     ROPA:      ["Talle", "Color"],
     AUTOS:     ["Color", "Versión"],
     HOGAR_TECH: ["Color", "Tamaño"],
-    ALIMENTOS: ["Peso/Tamaño", "Sabor"],
-    BELLEZA:   ["Tono", "Tamaño"],
-    DEPORTE:   ["Talle", "Color"],
-    MASCOTAS:  ["Tamaño", "Sabor"],
-    LIBROS:    ["Formato"],
+    GASTRONOMIA: ["Peso/Tamaño", "Sabor"],
     GENERAL:   ["Variante", "Color", "Tamaño"],
   };
   const options = map[storeType] || ["Variante"];
@@ -150,11 +146,7 @@ function variantExample(tipoTienda: string): string {
     ROPA:      "ej: Talle S + Color Negro",
     AUTOS:     "ej: Color Blanco + Versión Full",
     HOGAR_TECH: "ej: Color Blanco + Tamaño Grande",
-    BELLEZA:   "ej: Tono Claro + Tamaño Grande",
-    DEPORTE:   "ej: Talle S + Color Rojo",
-    ALIMENTOS: "ej: 500g + Vainilla",
-    MASCOTAS:  "ej: Tamaño Pequeño + Sabor Pollo",
-    LIBROS:    "ej: Formato Físico",
+    GASTRONOMIA: "ej: 500g + Vainilla",
     GENERAL:   "ej: Color Rojo + Tamaño Grande",
   };
   return examples[tipoTienda] || "ej: Variante 1 + Variante 2";
@@ -163,12 +155,8 @@ function variantExample(tipoTienda: string): string {
 function variantTip(tipoTienda: string): string {
   const tips: Record<string, string> = {
     ROPA:      "Una fila por combinación. Ej: Talle S + Color Negro → fila 1, Talle M + Color Blanco → fila 2. Cada fila tiene su propio stock.",
-    BELLEZA:   "Una fila por combinación. Ej: Tono Claro + Tamaño Grande → fila 1, Tono Oscuro + Tamaño Chico → fila 2.",
     HOGAR_TECH: "Una fila por combinación. Ej: Color Blanco + Tamaño Grande → fila 1, Color Negro + Tamaño Chico → fila 2. Si el producto varía por capacidad/almacenamiento, usá esos valores en vez de Color/Tamaño. Cada fila tiene su propio stock.",
-    DEPORTE:   "Una fila por combinación. Ej: Talle S + Color Rojo → fila 1, Talle M + Color Azul → fila 2.",
-    ALIMENTOS: "Una fila por combinación. Ej: 500g + Vainilla → fila 1, 1kg + Chocolate → fila 2.",
-    MASCOTAS:  "Una fila por combinación. Ej: Tamaño Pequeño + Sabor Pollo → fila 1. Cada fila tiene su propio stock.",
-    LIBROS:    "Una fila por formato. Ej: Físico → fila 1, Digital → fila 2. Cada fila tiene su propio stock.",
+    GASTRONOMIA: "Una fila por combinación. Ej: 500g + Vainilla → fila 1, 1kg + Chocolate → fila 2.",
     GENERAL:   "Una fila por combinación. Ej: Color Rojo + Tamaño Grande → fila 1. Cada fila tiene su propio stock.",
   };
   return tips[tipoTienda] || "Una fila por combinación de variantes. Cada fila tiene su propio stock.";
@@ -177,12 +165,8 @@ function variantTip(tipoTienda: string): string {
 function tagsTip(tipoTienda: string): string {
   const tips: Record<string, string> = {
     ROPA:      "Palabras clave para búsqueda. Ej: negro, oversize, algodón. No afectan el precio ni el stock.",
-    BELLEZA:   "Palabras clave para búsqueda. Ej: vegano, sin parabenos, hidratante.",
     HOGAR_TECH: "Palabras clave para búsqueda. Ej: liberado, sin cargador, inverter, escandinavo.",
-    ALIMENTOS: "Palabras clave para búsqueda. Ej: sin tacc, vegano, artesanal.",
-    DEPORTE:   "Palabras clave para búsqueda. Ej: running, gym, impermeable.",
-    MASCOTAS:  "Palabras clave para búsqueda. Ej: perro, gato, natural, sin conservantes.",
-    LIBROS:    "Palabras clave para búsqueda. Ej: ficción, bestseller, regalo, tapa dura.",
+    GASTRONOMIA: "Palabras clave para búsqueda. Ej: sin tacc, vegano, artesanal.",
     GENERAL:   "Palabras clave para búsqueda separadas por coma. Ayudan a tus clientes a encontrar el producto.",
   };
   return tips[tipoTienda] || "Palabras clave separadas por coma para que tus clientes encuentren el producto.";
@@ -193,11 +177,7 @@ function extraFieldsTip(tipoTienda: string): string {
     ROPA:      "Información extra sin stock. Ej: Material → Algodón, Género → Unisex. A diferencia de las variantes, los atributos son datos descriptivos que no tienen stock propio.",
     AUTOS:     "Información extra sin stock. Ej: Marca → Toyota, Año → 2022, Combustible → Nafta. Son datos descriptivos del vehículo, no afectan precio ni stock.",
     HOGAR_TECH: "Información extra sin stock. Ej: Marca → Samsung, Pulgadas → 55, RAM → 8GB. A diferencia de las variantes, los atributos son datos descriptivos que no tienen stock propio.",
-    BELLEZA:   "Información extra sin stock. Ej: Marca → L'Oréal, Tipo de piel → Mixta. Son datos descriptivos, no afectan precio ni stock.",
-    DEPORTE:   "Información extra sin stock. Ej: Deporte → Running, Material → Mesh transpirable.",
-    ALIMENTOS: "Información extra sin stock. Ej: Ingredientes → Harina, azúcar, manteca.",
-    MASCOTAS:  "Información extra sin stock. Ej: Para mascota → Perro, Edad recomendada → Adulto.",
-    LIBROS:    "Información extra sin stock. Ej: Autor → Gabriel García Márquez, Editorial → Sudamericana.",
+    GASTRONOMIA: "Información extra sin stock. Ej: Ingredientes → Harina, azúcar, manteca.",
     GENERAL:   "Información extra sin stock. Datos descriptivos que no afectan precio ni stock.",
   };
   return tips[tipoTienda] || "Información extra sin stock. A diferencia de las variantes, los atributos son datos descriptivos que no tienen stock propio.";
@@ -221,7 +201,7 @@ function photoTips(hideVariants: boolean): string[] {
 function reelTips(tipoTienda: string): string {
   if (tipoTienda === "AUTOS") return "Mostrá el interior, el motor, el baúl y una vuelta alrededor.";
   if (tipoTienda === "ROPA") return "Mostrá la prenda puesta, cómo cae y cómo se mueve.";
-  if (tipoTienda === "ALIMENTOS") return "Mostrá la textura, el corte o el plato ya servido.";
+  if (tipoTienda === "GASTRONOMIA") return "Mostrá la textura, el corte o el plato ya servido.";
   return "Mostrá el producto en uso, de cerca y desde varios ángulos.";
 }
 

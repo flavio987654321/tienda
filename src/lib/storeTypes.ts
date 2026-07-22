@@ -1,14 +1,15 @@
 import { PROVINCIAS_ARGENTINA } from "./provincias";
 
+// Rubros vigentes. Se sacaron BELLEZA, DEPORTE, MASCOTAS y LIBROS: estaban en
+// comingSoon desde siempre, ninguna tienda los usaba y sumaban ruido a cada
+// selector. ALIMENTOS pasó a llamarse GASTRONOMIA. Inmobiliarias y hotelería
+// van a entrar más adelante — hotelería, además, necesita reservas por fecha,
+// que es una feature entera y no un rubro más.
 export type StoreType =
   | "ROPA"
   | "AUTOS"
   | "HOGAR_TECH"
-  | "ALIMENTOS"
-  | "BELLEZA"
-  | "DEPORTE"
-  | "MASCOTAS"
-  | "LIBROS"
+  | "GASTRONOMIA"
   | "GENERAL";
 
 export interface ExtraField {
@@ -71,7 +72,7 @@ export interface StoreTypeConfig {
 export const STORE_TYPES: StoreTypeConfig[] = [
   {
     id: "ROPA",
-    label: "Ropa y moda",
+    label: "Moda y ropa",
     emoji: "👗",
     description: "Indumentaria, calzado y accesorios de moda: remeras, pantalones, vestidos, zapatillas, carteras, joyas. Tiene talles y colores.",
     supportsWholesale: true,
@@ -150,7 +151,7 @@ export const STORE_TYPES: StoreTypeConfig[] = [
   },
   {
     id: "HOGAR_TECH",
-    label: "Hogar y Tecnología",
+    label: "Tecno y hogar",
     emoji: "🏠",
     description: "Electrodomésticos, celulares, informática, audio/video, muebles y artículos para el hogar y jardín.",
     supportsWholesale: true,
@@ -337,11 +338,10 @@ export const STORE_TYPES: StoreTypeConfig[] = [
     },
   },
   {
-    id: "ALIMENTOS",
-    label: "Alimentos",
-    emoji: "🥗",
-    description: "Comida, bebidas, almacén, viandas, productos gourmet o de despensa.",
-    comingSoon: true,
+    id: "GASTRONOMIA",
+    label: "Gastronomía",
+    emoji: "🍽️",
+    description: "Comida y bebida: rotisería, viandas, panadería, almacén, café, productos gourmet o de despensa.",
     supportsWholesale: true,
     supportsCondicion: false,
     hideVariants: false,
@@ -367,126 +367,10 @@ export const STORE_TYPES: StoreTypeConfig[] = [
     ],
   },
   {
-    id: "BELLEZA",
-    label: "Belleza y cuidado",
-    emoji: "💄",
-    description: "Cosmética, maquillaje, perfumería, skincare y productos de cuidado personal.",
-    comingSoon: true,
-    supportsWholesale: true,
-    supportsCondicion: false,
-    hideVariants: false,
-    hideTags: false,
-    checkoutMode: "cart" as const,
-    defaultVariantName: "Tono",
-    variantValuePlaceholder: "Claro, Medio, Oscuro",
-    namePlaceholder: "Ej: Sérum vitamina C antiedad 30ml",
-    tagsPlaceholder: "natural, vegano, sin-parabenos",
-    categorias: ["maquillaje", "skincare", "perfumes", "cabello", "uñas", "higiene", "suplementos"],
-    subcategorias: {
-      maquillaje: ["labios", "ojos", "rostro", "bases", "contorno"],
-      skincare: ["limpieza", "hidratación", "solar", "antiedad", "serum"],
-      perfumes: ["mujer", "hombre", "unisex"],
-      cabello: ["shampoo", "acondicionador", "mascarillas", "tinturas", "styling"],
-      uñas: ["esmaltes", "acrilicos", "herramientas"],
-      higiene: ["desodorantes", "jabones", "pasta-dental", "afeitado"],
-      suplementos: ["vitaminas", "colágeno", "proteínas"],
-    },
-    extraFields: [
-      { key: "marca", label: "Marca", placeholder: "L'Oreal, Maybelline..." },
-      { key: "tipo-piel", label: "Tipo de piel", placeholder: "Seca, mixta, grasa, sensible..." },
-    ],
-  },
-  {
-    id: "DEPORTE",
-    label: "Deporte y fitness",
-    emoji: "⚽",
-    description: "Indumentaria deportiva, calzado, equipamiento y accesorios para entrenar o practicar un deporte.",
-    comingSoon: true,
-    supportsWholesale: true,
-    supportsCondicion: false,
-    hideVariants: false,
-    hideTags: false,
-    checkoutMode: "cart" as const,
-    defaultVariantName: "Talle",
-    variantValuePlaceholder: "S, M, L, XL",
-    namePlaceholder: "Ej: Zapatillas running Nike Air talle 42",
-    tagsPlaceholder: "running, gym, futbol",
-    categorias: ["ropa-deportiva", "calzado", "equipamiento", "suplementos", "accesorios", "camping"],
-    subcategorias: {
-      "ropa-deportiva": ["remeras", "calzas", "shorts", "camperas", "medias"],
-      calzado: ["running", "fútbol", "básquet", "training", "trekking"],
-      equipamiento: ["pesas", "colchonetas", "pelota", "raquetas", "bicicletas"],
-      suplementos: ["proteínas", "creatina", "pre-workout", "vitaminas"],
-      accesorios: ["bolsos", "botellones", "guantes", "rodilleras"],
-      camping: ["carpas", "bolsas-de-dormir", "mochilas", "linternas"],
-    },
-    extraFields: [
-      { key: "deporte", label: "Deporte/Actividad", placeholder: "Fútbol, running, gym..." },
-    ],
-  },
-  {
-    id: "MASCOTAS",
-    label: "Mascotas",
-    emoji: "🐾",
-    description: "Alimento, accesorios, juguetes y cuidado para perros, gatos y otras mascotas.",
-    comingSoon: true,
-    supportsWholesale: true,
-    supportsCondicion: false,
-    hideVariants: false,
-    hideTags: false,
-    checkoutMode: "cart" as const,
-    defaultVariantName: "Tamaño",
-    variantValuePlaceholder: "Pequeño, Mediano, Grande",
-    namePlaceholder: "Ej: Collar acolchado para perro mediano",
-    tagsPlaceholder: "perro, gato, natural",
-    categorias: ["alimentos", "accesorios", "juguetes", "higiene", "ropa-mascotas", "salud"],
-    subcategorias: {
-      alimentos: ["perros", "gatos", "aves", "peces", "roedores"],
-      accesorios: ["correas", "collares", "camas", "jaulas", "transportines"],
-      juguetes: ["perros", "gatos", "aves"],
-      higiene: ["shampoos", "cepillos", "cortauñas", "pañales"],
-      "ropa-mascotas": ["ropa", "zapatos", "disfraces"],
-      salud: ["antiparasitarios", "vitaminas", "primeros-auxilios"],
-    },
-    extraFields: [
-      { key: "para-animal", label: "Para mascota", placeholder: "Perro, gato, ave..." },
-    ],
-  },
-  {
-    id: "LIBROS",
-    label: "Libros y arte",
-    emoji: "📚",
-    description: "Libros, revistas, papelería, materiales de arte y manualidades.",
-    comingSoon: true,
-    supportsWholesale: false,
-    supportsCondicion: false,
-    hideVariants: false,
-    hideTags: false,
-    checkoutMode: "cart" as const,
-    defaultVariantName: "Formato",
-    variantValuePlaceholder: "Físico, Digital, Tapa dura",
-    namePlaceholder: "Ej: Cien años de soledad - Gabriel García Márquez",
-    tagsPlaceholder: "ficcion, bestseller, regalo",
-    categorias: ["libros", "arte", "manualidades", "musica", "juegos", "papeleria"],
-    subcategorias: {
-      libros: ["ficción", "no-ficción", "infantil", "comics", "educación", "autoayuda"],
-      arte: ["pinturas", "esculturas", "fotografía", "ilustraciones"],
-      manualidades: ["materiales", "kits", "herramientas"],
-      musica: ["instrumentos", "partituras", "accesorios"],
-      juegos: ["mesa", "cartas", "rompecabezas", "coleccionables"],
-      papeleria: ["cuadernos", "lapiceros", "plumas", "sellos"],
-    },
-    extraFields: [
-      { key: "autor", label: "Autor/Artista", placeholder: "Nombre del autor..." },
-      { key: "editorial", label: "Editorial/Marca", placeholder: "Editorial..." },
-    ],
-  },
-  {
     id: "GENERAL",
-    label: "General",
+    label: "Otros",
     emoji: "🏪",
     description: "Para cualquier otro producto que no encaje en los rubros anteriores.",
-    comingSoon: true,
     supportsWholesale: true,
     supportsCondicion: false,
     hideVariants: false,

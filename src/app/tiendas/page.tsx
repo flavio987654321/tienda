@@ -5,7 +5,7 @@ import Link from "next/link";
 import {
   BadgeCheck, Eye, Search, ChevronLeft, ChevronRight,
   Package, ArrowLeft, LayoutGrid, Shirt, Car,
-  Home, Utensils, Sparkles, Dumbbell, PawPrint, BookOpen, Store,
+  Home, Utensils, Store,
 } from "lucide-react";
 import { STORE_TYPES } from "@/lib/storeTypes";
 import type { LucideIcon } from "lucide-react";
@@ -32,11 +32,7 @@ const TYPE_ICONS: Record<string, LucideIcon> = {
   ROPA:      Shirt,
   AUTOS:     Car,
   HOGAR_TECH: Home,
-  ALIMENTOS: Utensils,
-  BELLEZA:   Sparkles,
-  DEPORTE:   Dumbbell,
-  MASCOTAS:  PawPrint,
-  LIBROS:    BookOpen,
+  GASTRONOMIA: Utensils,
   GENERAL:   Store,
 };
 
