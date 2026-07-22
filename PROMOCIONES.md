@@ -74,6 +74,13 @@
   - ✅ **Envío gratis en vivo**: helper `freeShippingProgress(items, promotions)` en pricing.ts (reusa `promoMatchesCart`,
     mismo preSubtotal que el motor) → `useCartLogic` expone `freeShippingGoal` → cartel en el CartDrawer compartido
     (8 templates + detalle) y en /productos: "🚚 Agregá $X y el envío es gratis" / "🎉 ¡Tenés envío gratis!". 4 casos FS-A..D verdes.
+- 🔄 **Fase 6 — Repaso funcional tipo por tipo (22/07, EN ESTO con Flavio).** Ver la sección de la
+  fase para la cola de trabajo completa. Resumen: la suite congelada corre entera en verde; los
+  hallazgos salieron de sondear casos que **no** cubría. Abiertos: 🔴 **B-07** (`FIXED` puede dejar el
+  producto en $0) · 🟠 **B-08** (promo sin descuento igual bloquea el cupón) · 🟠 **B-09** (el wizard
+  limita a una categoría y al editar trunca) · debates **#11** y **#12** (envío gratis) · dos textos
+  confusos del wizard (**F6-C1**, **F6-C2**). Ninguno tocado: primero se ordena y se debate. Todo lo que
+  salga de esta ronda entra en la Fase 6.
 - 🔲 **ANOTADO — pendientes / decisiones (18/07):**
   - **Stats reales** ("ventas con promo" / "ahorro"): hoy $0 placeholder. Necesitan **vínculo Order↔promo** (columna
     nueva en Order con el ahorro). Requiere **migración → solo funciona post-deploy** (base local = producción).
@@ -512,7 +519,8 @@ inventar. La respuesta correcta es empujar a que carguen el costo, no fingir que
 | 8 | ¿Promos por categoría en la Fase 1? | **Sí.** Es el 80% del valor: *"20% off en remeras"* con un click | 🔲 |
 | 9 | ¿Mix & match (pantalón + remera + campera)? | **Fase 5.** Es lo más caro de construir y lo menos pedido. No arrancar por acá | 🔲 |
 | 10 | ¿`FREE_SHIPPING` como tipo de promoción? | **Sí, Fase 2.** No depende de Envíopack: los métodos ya tienen precio fijo. Ver sección de envío | 🔲 |
-| 11 | ¿Qué pasa con envío gratis en métodos `coordinar`? | Impedir la promo o avisar: ahí el precio es $0 y se arregla por afuera, "gratis" no significa nada | 🔲 |
+| 11 | ¿Qué pasa con envío gratis en métodos `coordinar`? | Impedir la promo o avisar: ahí el precio es $0 y se arregla por afuera, "gratis" no significa nada. **Verificado 22/07**: no es un bug de plata (`cost: found.coordinar ? 0 : found.price`, checkout:77 → poner 0 sobre 0 no cambia nada). Es de **comunicación**: la tienda anuncia "envío gratis" sobre algo que nunca cobró, y el comprador puede entender que el flete de afuera va incluido | 🔲 |
+| 12 | Envío gratis con alcance `PRODUCTS`/`CATEGORY`: ¿libera el envío de TODO el pedido? | **Hoy sí**: `promoMatchesCart` devuelve true si alcanza a **algún** ítem, así que con el producto A en promo y B fuera, el envío del pedido entero sale gratis (verificado 22/07). Es defendible —el envío es del pedido, no del ítem— pero conviene que sea a propósito y no un efecto secundario. La alternativa (exigir que TODO el carrito esté en alcance) es más restrictiva y más difícil de explicar | 🔲 |
 
 ---
 
@@ -777,6 +785,10 @@ abajo y se decide aparte — no se mezcla en el mismo commit.
 | B-03 | **N×M calculado distinto en carrito vs checkout.** Carrito: `(grupos×M + resto) × precio`. Checkout: convierte a % y redondea por unidad → diferencia de centavos (3×2 de $1.000: carrito $2.000, checkout $2.000,01) | Sí, pero es sub-peso y solo con N×M activo (0 productos hoy) | Se arregla **solo** con el motor único de Fase 1 — las dos puntas usan la misma función |
 | B-05 | **OrderItem.price × qty ≠ subtotal cobrado en N×M.** Se guarda el precio unitario redondeado; en un N×M no divisible, price×quantity da un centavo más que el lineTotal. El CARGO es correcto (usa pricing.subtotal), pero el desglose por ítem en email/métricas miente por centavos | Sí, pero solo con N×M activo (0 productos) | **Documentado, no se toca ahora.** Arreglarlo bien pide guardar el lineTotal en OrderItem (cambio de schema + métricas). El cargo real es correcto. Se revisa cuando N×M se use de verdad |
 | B-06 | **Se quitó el gate `isWholesale` del carrito.** Ahora el mayorista aplica siempre que el producto tenga precioMayorista y qty≥min, sin mirar el modo mayorista de la tienda | Cambio de comportamiento, 0 productos | **Intencional, no es bug.** El checkout nunca tuvo ese gate; mantenerlo en el carrito re-crearía la desincronización que la Fase 1 elimina. Se deja documentado |
+| B-07 | 🔴 **`FIXED` puede regalar el producto.** `validatePromotionBody` solo exige `value > 0`, nunca lo compara contra el precio. El motor pisa en 0 (`Math.max(0, base - value)`) → con `FIXED $15.000` sobre un producto de $10.000 el subtotal da **$0**. No hace falta un tipeo: una tienda con productos de $2.000 a $50.000 que ponga *"$5.000 off en toda la tienda"* regala todo lo que valga menos de $5.000. **Incoherencia**: `PERCENT` está topeado en 90 justamente porque *"un 100% regala el producto"*, y `FIXED` puede hacer eso mismo sin ningún candado. El aviso de piso de costo no lo cubre (necesita `costPrice`, hoy 0 de 58 productos) | Sí — alcanza con crear la promo desde el panel | 🔲 **A decidir**: ¿tope duro (rechazar si `value ≥` el precio del producto más barato del alcance), o aviso fuerte estilo piso de costo? Ojo: el alcance `ALL` incluye productos futuros, así que un chequeo solo al crear no alcanza |
+| B-08 | 🟠 **Una promo que NO descuenta nada igual bloquea el cupón.** `couponsAllowed` mira si la promo **alcanza** el carrito (`promoMatchesCart`, por scope), no si **efectivamente descontó**. Con un 3×2 `combinesWithCoupons=false` y el cliente llevando 1 sola unidad: ahorro $0 y el cupón igual queda bloqueado → se queda sin las dos cosas. Pasa igual con `MIX_N_PAY_M`. Verificado: con una promo de categoría fuera de alcance el cupón SÍ se permite, así que el filtro por scope anda; lo que falta es preguntar por el descuento real | Sí, en cuanto haya un N×M que no combine con cupones | 🔲 Gatear por "esta promo aportó ahorro en este carrito" en vez de por alcance. Ojo con `FREE_SHIPPING`: ahí no hay ahorro de línea pero el beneficio SÍ se otorga, así que no puede ser solo `savings > 0` |
+| B-09 | 🟠 **El wizard limita el alcance a UNA categoría, aunque todo lo de abajo soporta varias.** El selector es un radio (`const [cat, setCat] = useState<string \| null>`, [PromocionesClient.tsx:361](src/app/dashboard/promociones/PromocionesClient.tsx)) y al guardar manda `categories: cat ? [cat] : []` (:437). Pero el modelo guarda una lista, `parseStringArray` acepta hasta 500 y el motor hace `p.categories.includes(...)` → *"20% en remeras y buzos"* obliga a crear **dos promociones** por una limitación solo del formulario. **Arista peor**: al editar lee `editPromo.categories[0]` (:361), así que si una promo tuviera 2 categorías, abrirla y guardarla **borra la segunda sin avisar** | Sí — el límite se sufre siempre; la truncación solo si algo llegara a crear una promo multi-categoría (hoy el wizard no puede, pero la API sí lo acepta) | ✅ **DECIDIDO (Flavio, 22/07): se puede elegir MÁS DE UNA categoría.** Motivo: dejarlo en una **no era gratis** —había que *agregar* una validación en el server que rechace >1, porque la API ya las acepta—, o sea que mantener el límite costaba más que sacarlo y dejaba menos. Además *"20% en remeras y buzos"* es un caso normal de temporada que hoy obliga a crear 2 promos separadas. Falta implementar: (a) selector multi (reusar el patrón del de productos, que ya es multi), (b) sacar el `[0]` de la precarga al editar, (c) tarjeta *"Una categoría"* → *"Categorías"*, (d) plural en `describePromo` (*"en la categoría:"* → *"en las categorías:"* cuando hay más de una). `scopeDetail` y el resumen del wizard YA hacen `join(", ")`, no hay que tocarlos |
+| B-11 | 🔴 **El N×M cobra de más cuando el producto va en varios talles.** `storePromoLineTotal` reparte el beneficio por línea con `roundMoney(basePrice * quantity * (paid / totalQty))` ([pricing.ts:207-214](src/lib/pricing.ts)): **cada línea redondea su fracción por separado y siempre hacia arriba**. Misma remera de $10.000 con 3×2: 3 unidades en 1 línea → $20.000 ✅ · en 2 líneas (1+2) → $20.000 ✅ · **en 3 líneas (talles S, M, L) → $20.001** ❌. Escala: 6 talles → **+$2**, 9 talles → **+$3**. Va **en contra del comprador** (se le prometió "llevá 3, pagá 2" y paga 2 + $1) | Sí, y en el caso más común de una tienda de ropa: la misma prenda en varios talles son líneas distintas del carrito con el mismo `productId` | 🔲 Repartir el total del grupo entre las líneas **sin redondear cada una por su cuenta** (calcular el total exacto del producto y asignar el resto a una sola línea, tipo mayor-resto), de modo que Σ líneas == total correcto. **Agregar el caso a `pricing.check.ts` con 3 líneas de 1 unidad** — la suite tiene N×M pero no parte el producto en 3+ líneas, por eso no lo agarró |
 | B-04 | **Mayorista bajo el mínimo: el carrito muestra precio, el checkout rechaza.** Carrito devuelve precio de lista si `qty < cantMinMayorista`; checkout **tiraba error** ("requiere un mínimo de N") | Sí, pero solo con mayorista activo (0 productos) | ✅ **RESUELTO (Flavio, opción 1)**: el mínimo mayorista es un umbral de descuento, no un candado. Se sacó el `throw`; bajo el mínimo se vende al precio retail. `soloMayorista` es solo visibilidad, no enforcea mínimo. Carrito y checkout ahora coinciden |
 
 ---
@@ -1037,6 +1049,653 @@ el subconjunto donde "el más barato gratis" = "pagás M unidades × precio". El
 dejar la puerta abierta a esta generalización (recibir un grupo de ítems, no un solo producto).
 
 > Fuente: [Tiendanube — "llevá X pagá Y"](https://ayuda.tiendanube.com/es_AR/123465-cupones-y-promociones/como-ofrecer-promociones-de-x-y-x)
+
+---
+
+### Fase 6 — Repaso funcional tipo por tipo 🔄 EN ESTO (22/07)
+
+Revisión de cada promoción ya construida, buscando huecos de comportamiento. **Todo lo que salga de
+acá entra en esta fase**: los bugs, los debates y lo que Flavio vaya marcando.
+
+**Punto de partida (22/07):** la suite congelada corre entera en verde
+(`npx tsx src/lib/pricing.check.ts`). Los hallazgos NO son casos rotos de la suite — salieron de
+sondear escenarios que la suite no cubría. Eso importa para no perder la confianza en la red de
+seguridad: sigue siendo válida, simplemente tenía menos alcance del que creíamos.
+
+#### Cola de trabajo
+
+| Orden | Qué | Tipo | Estado |
+|---|---|---|---|
+| 1 | **B-07** — `FIXED` puede dejar el producto en $0 | 🔴 bug de plata | ✅ **DECIDIDO: se bloquea** (22/07). Falta implementar |
+| 2 | **B-08** — promo sin descuento igual bloquea el cupón | 🟠 bug de experiencia | 🔲 sin tocar |
+| 3 | **Decisión #12** — envío gratis por producto libera el pedido entero | 🤔 debate | ✅ **CERRADO (22/07): queda como está** |
+| 4 | **Decisión #11** — envío gratis sobre método "a coordinar" | 🤔 debate | ✅ **CERRADO (22/07): lo resuelve #7c** — al registrar el envío bonificado, en `coordinar` da $0 (la verdad: no se regaló nada). No hace falta prohibir ni avisar |
+| 5 | **B-09** — el wizard limita a UNA categoría aunque el motor soporta varias, y al editar trunca | 🔴 **subió de prioridad (22/07)** | ✅ **DECIDIDO: varias categorías.** Falta implementar — **bloquea el caso estrella del Combo**, ver nota abajo |
+| 6 | **F6-C1** — el ejemplo del tipo mete una categoría en el paso del tipo | ✏️ texto | ✅ **REDACTADO**, sin implementar |
+| 7 | **F6-C2** — "Se aplica solo en la tienda" tiene dos lecturas | ✏️ texto | ✅ **REDACTADO**, sin implementar |
+| 8 | **F6-C3** — el selector de categoría no muestra el rango de precios | ✏️ UX | 🔲 sin tocar |
+| 9 | **F6-C4** — guiar al que arma la promo, con sus propios números (idea de Flavio) | ✏️ UX | 🔲 a diseñar |
+| 10 | **F6-C5** — el paso 3 no aclara la unidad: ni "pesos por producto" ni "porcentaje" | ✏️ texto | 🔲 sin tocar |
+| 11 | **F6-C6** — el checkout no muestra QUÉ producto tiene la promo, ni cuál promo es | ✏️ UX | 🔲 sin tocar |
+| 12 | **B-10** — el CheckoutModal tiene su PROPIA cuenta del precio base | 🟠 confirmado, dormido | ✅ **VERIFICADO (22/07)**: divergencia real, 0 productos con mayorista → no corre hoy. Arreglo chico |
+| 13 | **F6-C7** — avisar cuando una promo nueva nunca va a aplicar (tapada por otra) | ✏️ UX | 🔲 sin tocar |
+| 14 | **F6-C8** — "Compra mínima" no dice que se mide sobre TODO el pedido | ✏️ texto | 🔲 sin tocar |
+| 15 | **F6-C9** — avisar al crear un PRODUCTO que cae bajo una promo fija peligrosa | ✏️ UX | 🔲 sin tocar |
+| 16 | **B-11** — el N×M cobra $1 de más por cada 3 talles distintos | 🔴 bug de plata | 🔲 sin tocar |
+| 17 | **F6-C10** — "3×2 en remeras" NO es "3 remeras cualesquiera", y el paso 2 no lo recuerda | ✏️ UX | 🔲 sin tocar |
+| 18 | **F6-C11** — Combo con UN solo producto: se comporta como un 3×2 y nadie lo avisa | ✏️ UX | 🔲 sin tocar |
+| 19 | **B-12** — con dos promos de envío gratis, cuál se nombra depende del orden de la base | 🟡 no determinista | 🔲 sin tocar |
+| 20 | **#7c** — el envío bonificado NO se resta de la ganancia (Métricas miente) | 🔴 plata | ✅ **SOLUCIÓN ACORDADA (22/07)**, falta implementar — requiere migración |
+| 21 | **F6-C12** — el paso 4 apila 19 chips de evento para un campo opcional | ✏️ UX | ✅ **DECIDIDO: toggle + desplegable** |
+| — | *(lo que agregue Flavio en esta ronda)* | | |
+
+#### #7c — cómo se entera Métricas del envío regalado (acordado 22/07)
+
+**El dato ya existe y se está tirando.** En [checkout/route.ts:412](src/app/api/checkout/route.ts):
+
+```ts
+const effectiveShippingCost = pricing.freeShipping ? 0 : shipping.cost;
+```
+
+`shipping.cost` es **exactamente lo que se bonificó**: se calcula, se compara y se descarta.
+
+**Solución mínima honesta** (la que ya proponía el plan, ahora con el punto de enganche identificado):
+
+1. Columna nueva en `Order` (ej. `shippingWaived Float?`) — **requiere migración → va en un lote de deploy**
+2. Al cobrar: si `pricing.freeShipping`, guardar ahí `shipping.cost` (lo que **iba** a cobrarse)
+3. En Métricas: restarlo del profit
+
+El pedido queda diciendo *"cobré $0 de envío, pero regalé $8.000"* y la ganancia deja de salir inflada.
+
+⚠️ **Límite que hay que decir en voz alta**: es lo que la tienda **cobra** por ese envío, no lo que le
+**cuesta**. Es una aproximación — pero es el único número que el sistema conoce de verdad, y es mucho
+mejor que el $0 de hoy. Mismo criterio de honestidad que el piso de costo (proteger lo que se puede y
+decir en voz alta lo que no).
+
+✅ **Resuelve también el debate #11**: en un método `coordinar: true` el precio es $0, así que el envío
+bonificado da $0 — que es **la verdad**, ahí no se regaló nada. El mismo dato responde las dos preguntas,
+sin necesidad de prohibir la promo ni de un aviso especial.
+
+#### F6-C12 — el paso 4 apila 19 chips para un campo opcional (22/07)
+
+Flavio: *"no me gusta que esté todo apilado, ¿y si pones para activarlo con un toggle y que aparezca un
+selector?"*. **De acuerdo**: 19 chips ocupan media pantalla para un campo **opcional** que la mayoría de
+las promos no usa; quien solo quiere poner fechas se come todo eso.
+
+**Decidido**: toggle apagado por defecto → al prenderlo, un **desplegable** (no chips). Motivos:
+19 chips siguen siendo mucho aunque se abran, el desplegable escala si se agregan fechas, y quien pone un
+evento **ya sabe cuál** — no necesita explorar. Contra honesto: con chips se **descubre** que existe la
+opción; se compensa con el texto del toggle (*"Black Friday, Día de la Madre, Hot Sale…"*) como pista.
+
+**Agregar además**: hoy `elegirEventoDelCalendario` ([PromocionesClient.tsx:387-394](src/app/dashboard/promociones/PromocionesClient.tsx))
+**completa las fechas sin decirlo** — es una ayuda escondida. → *"Elegiste Black Friday — completamos las
+fechas. Podés cambiarlas."* Ojo: solo completa si están **vacías** (`if (!endsAt)` / `if (!startsAt)`),
+así que no pisa lo que ya cargaste. Está bien que no pise, pero hoy no se entiende por qué a veces las
+fechas cambian y a veces no.
+
+#### Revisión de `FREE_SHIPPING` (22/07) — cierra la ronda
+
+✅ **El empujón del carrito es correcto**: $20.000 → *"faltan $30.000"* · $49.000 → *"faltan $1.000"* ·
+$50.000 → gratis, sin empujón. `freeShippingProgress` elige el umbral **más bajo no alcanzado**, con
+regla determinista.
+
+✅ **El cruce con cupones es el mejor resuelto de los cinco tipos** — y esto **condiciona el arreglo de
+B-08**:
+
+| Carrito (promo `combinesWithCoupons=false`, mínimo $50.000) | Envío gratis | Cupón |
+|---|---|---|
+| $20.000 (no llega) | no | ✅ permitido |
+| $60.000 (llega) | sí | ❌ bloqueado — **correcto** |
+
+El filtro de `minOrderAmount` ya saca la promo de `eligiblePromos` cuando no aplica, así que acá no hay
+falso bloqueo. ⚠️ **Por eso B-08 no se puede arreglar con "bloquear solo si `savings > 0`"**: el envío
+gratis **otorga el beneficio sin generar ahorro de línea**, y ese criterio lo rompería. Confirmado con
+números.
+
+**B-12 — no determinismo al nombrar la promo de envío.** `priceCart` toma la promo de envío con
+`eligiblePromos.find(...)` ([pricing.ts:387-389](src/lib/pricing.ts)): **la primera del array**, sin
+regla de desempate. Con dos promos de envío vigentes, invertir el orden cambia el nombre reportado
+(*"Promo vieja"* vs *"Black Friday envío gratis"*). El envío queda gratis igual → **no hay error de
+plata**, pero el comprador puede leer un motivo que no es el real, y depende del `orderBy` de la
+consulta.
+
+> Incoherencia interna: el proyecto **ya resolvió exactamente esto** para los eventos —`resolveStoreEvent`
+> tiene desempate explícito (gana el que termina antes) con el comentario *"sin una regla escrita… un bug
+> que aparece meses después y no se puede reproducir"*. El envío gratis no tiene esa regla.
+> → Aplicar el mismo criterio: umbral más alto alcanzado, o el que termina antes. Lo importante es que
+> **haya una regla escrita**.
+
+**#7c sigue sin decidir y es el ítem con más plata de la sección.** El envío bonificado no entra al
+margen: `Order.shippingCost` guarda lo que pagó el **comprador**, no lo que le cuesta a la tienda. Si se
+regala el envío, lo paga la dueña y **Métricas muestra la ganancia inflada** — cuanto mejor funciona la
+promo, más miente. Es el único de los cinco tipos con un agujero en las métricas. Opción mínima honesta
+ya propuesta en el plan: registrar *"envío bonificado $X"* usando el precio del método que se bonificó
+(que **sí** se conoce: es el precio fijo configurado) y restarlo del profit.
+
+#### `N_PAY_M` vs `MIX_N_PAY_M` — por qué se confunden (22/07)
+
+Flavio: *"no le encuentro la diferencia, los dos se llevan uno gratis"*. Tiene una explicación exacta:
+**con 3 unidades del mismo producto los dos tipos dan idéntico resultado** (verificado: −$50.000 los
+dos). La diferencia aparece **solo al mezclar**:
+
+| El cliente lleva | `N_PAY_M` | `MIX_N_PAY_M` |
+|---|---|---|
+| Remera + pantalón + campera (3 distintos) | paga los 3 | **paga 2** (regala el más barato) |
+| 3 remeras iguales | **paga 2** | **paga 2** |
+
+**Por qué existen los dos** (no es redundancia): el 3×2 obliga a llevar 3 **iguales** → vacía un modelo
+puntual, sirve para liquidar stock. El Combo deja llevar uno de cada cosa → sube el ticket promedio pero
+no limpia ningún modelo. Empujan compras distintas.
+
+→ Esto refuerza **F6-C10**: si el panel explicara la diferencia **donde se elige** (y no solo en el paso
+1), la confusión no aparecería. Es el mismo problema de *momento*.
+
+✅ **Sano — el alcance es obligatorio**: `canNext` del paso 2 exige categoría elegida (`!!cat`) o al
+menos un producto (`prodIds.length > 0`), y `validatePromotionBody` lo vuelve a rechazar en el server
+(*"Elegí al menos una categoría/producto"*). No hay agujero ahí.
+
+**F6-C11** — pero con `MIX_N_PAY_M` y **un solo producto** elegido, el wizard **deja seguir**. La promo
+no puede mezclar nada y termina comportándose igual que un `N_PAY_M`. No está rota, pero no hace lo que
+la persona cree. → Aviso (sin bloquear): *"Elegiste un solo producto. El combo sirve para que el cliente
+mezcle varios — con uno solo funciona igual que 'Llevá N, pagá M'."*
+
+#### Revisión de `N_PAY_M` (22/07)
+
+Verificado con el motor (remeras de $10.000, promo 3×2 con `scope=CATEGORY`):
+
+| Caso | Resultado |
+|---|---|
+| 3 remeras **distintas** (negra + blanca + roja) | ahorro **$0** — correcto, es del mismo producto |
+| 3 unidades de la **misma** remera | ahorro $10.000 ✅ |
+| La misma remera en talles **S, M, L** | ahorro $9.999 ❌ → **B-11** |
+| 4 unidades (un grupo + 1 suelta) | paga 3 ✅ |
+| 6 unidades (dos grupos) | paga 4 ✅ |
+| 1 unidad, promo que no combina con cupones | ahorro $0 y **cupón bloqueado** → **B-08** |
+
+✅ **Sano**: los talles/variantes del mismo producto **suman** para el N×M (`totalQtyByProduct` agrupa por
+`productId`, no por variante), que es lo que uno espera. Los grupos parciales se resuelven bien.
+
+**F6-C10 — el alcance SIGNIFICA distinto según el tipo, y la pantalla es idéntica en los cinco.**
+
+Flavio, sobre el paso 2 con `N_PAY_M`: *"¿acá solo me debería dar la opción de elegir por producto? si
+elijo tres categorías y llevo una de cada una, ¿estaría haciendo lo del combo?"*
+
+Verificado — misma config (3 categorías, 3×2), cambiando solo el tipo:
+
+| Carrito | `N_PAY_M` | `MIX_N_PAY_M` |
+|---|---|---|
+| Un pantalón + una campera + una remera | **$0** | **−$45.000** (regala la campera) |
+| 3 remeras iguales | −$50.000 | −$50.000 |
+
+→ **No, no es lo mismo que el combo.** Y con 3 iguales los dos tipos coinciden: la diferencia aparece
+**solo al mezclar**.
+
+**¿Restringir `N_PAY_M` a `PRODUCTS`? NO.** Elegir una categoría acá es un **atajo para habilitar muchos
+productos**: con 20 modelos de remera, `CATEGORY` los habilita los 20 de una (cada uno con su propio
+3×2). Sacarlo obligaría a tildar 20 productos para algo que hoy son dos clics.
+
+**El problema real es la pregunta, no las opciones:**
+
+| Tipo | Qué significa elegir "remeras" |
+|---|---|
+| `PERCENT` / `FIXED` | dónde **se aplica** el descuento |
+| `N_PAY_M` | qué productos pueden **armar su propio grupo** de 3 |
+| `MIX_N_PAY_M` | qué productos se pueden **mezclar entre sí** |
+
+Los tres usan el mismo título *"¿A qué se aplica?"*. → **Cambiar la pregunta del paso 2 según el tipo.**
+Para `N_PAY_M`: *"¿En qué productos vale el 3×2?"* + nota:
+
+> *"Cada producto arma su propio grupo de 3 — los talles y colores del mismo producto cuentan juntos.
+> Para que el cliente pueda mezclar productos distintos, usá 'Combo: llevá N mezclando'."*
+
+**Las dos mitades de la nota importan** y responden dos confusiones distintas que tuvo Flavio:
+
+1. *"elegir muchos productos"* ≠ *"combinarlos"*. El alcance dice **qué productos tienen su propio 3×2**,
+   no "llevá estos tres juntos". Con un 3×2 sobre [remera negra, remera blanca, pantalón]: 1 de cada uno
+   → **sin descuento**; 3 remeras negras → sí. **La categoría no interviene**: dos remeras distintas de
+   la misma categoría siguen siendo productos distintos; lo único que agrupa es el `productId`.
+2. **Los talles/colores SÍ suman** (son variantes del mismo `productId`): remera negra en S+M+L cuenta
+   como 3. Para una tienda de ropa esto es lo primero que necesita saber, y hoy no está dicho en ningún
+   lado. ⚠️ Es exactamente el caso de **B-11** (cobra $1 de más), así que al documentarlo conviene tener
+   ese bug arreglado — si no, el panel promete algo que se cobra con un peso de sobra.
+
+> El texto del **tipo** (paso 1) ya lo explica bien y hasta deriva al Combo. El problema es **dónde**: se
+> lee en el paso 1 y la decisión que lo contradice se toma en el paso 2. No es un problema de redacción
+> (como F6-C1/C2) sino de **momento** — el recordatorio tiene que estar donde se decide.
+
+✅ **Sano — el comprador no tiene que buscar**: cada producto alcanzado muestra su badge `3×2` en la
+tarjeta, el modal y el detalle (Fase 4.5, caso DP-C de la suite). Lo que no ve es **cuál** promo le tocó
+cuando hay varias → F6-C6.
+
+#### ⬆️ B-09 sube de prioridad: bloquea el caso estrella del Combo (22/07)
+
+`B-09` entró como una comodidad ("*20% en remeras y buzos* obliga a crear 2 promos"). Revisando
+`N_PAY_M`/`MIX_N_PAY_M` resulta ser más que eso.
+
+La explicación del Combo en el propio panel dice:
+
+> *"el cliente combina lo que quiera de lo que elijas **(una remera + un pantalón + una campera)** y el
+> más barato de cada 3 le sale gratis"*
+
+Ese ejemplo **cruza tres categorías**, y el selector deja elegir **una sola**. → **El panel describe algo
+que el panel no deja configurar.** Es la promo insignia del tipo y no se puede armar por categorías.
+
+Y no es una limitación del motor: en la corrida de F6-C10 se le pasaron las 3 categorías y funcionó
+perfecto (−$45.000, regaló la campera). **Solo falta el selector.**
+
+**Rodeos que existen hoy** (por eso no es un bloqueo total, pero sí una mala experiencia):
+`scope=PRODUCTS` tildando cada prenda una por una — en Girly Store serían **24 productos a mano** para lo
+que deberían ser 3 clics — o `scope=ALL`, más amplio de lo que se quería.
+
+→ Al implementar B-09, **priorizar**: no es solo comodidad, habilita el caso de uso principal de
+`MIX_N_PAY_M`.
+
+**B-08 se confirma acá, y es su peor escenario**: el 3×2 es el tipo donde más va a pasar, porque casi
+todos los carritos empiezan con **una** unidad — o sea que el cupón queda bloqueado justo cuando la promo
+todavía no dio nada.
+
+#### Diseño propuesto para B-07 (cómo avisar, planteo de Flavio 22/07)
+
+*"¿cómo le hacemos saber que ese producto no se puede aplicar por el monto fijo cuando estamos creando
+la promo?"*
+
+**Ya existe el molde**: el paso 5 (Confirmar) muestra un cartel ámbar con los productos que quedan bajo
+costo (Fase 3). Mismo lugar, mismo formato, mismos datos — `page.tsx` ya trae los productos con precio.
+
+**(a) Paso 3, línea viva bajo el campo del monto** (solo `FIXED`):
+> Con **$12.000**, el más barato (Remera $22.000) queda en **$10.000** — *55% de descuento*
+
+Se recalcula al tipear. Normal <50%, ámbar ≥50%, rojo si algo llega a $0. (Esto **es** F6-C4.)
+
+**(b) Paso 5, cartel con la lista**, calcado del de piso de costo:
+> ⚠️ **3 productos quedan con más de la mitad de descuento** · Remera $22.000 → $10.000 (55%) · …
+
+**(c) 🔴 El caso `$0` SÍ se bloquea — recomendación, y el motivo importa:**
+el resto de los avisos no bloquean (regla de Flavio, y se respeta), pero *"producto gratis"* es
+distinto **por coherencia interna del sistema**: `PERCENT` ya está topeado en 90 y **no** en 100
+justamente porque *"un 100% regala el producto"* — y ese tope **sí es un bloqueo duro que ya existe en
+el código**. Si el porcentaje no puede llegar al 100%, el monto fijo tampoco debería.
+
+> **B-07 no es "falta un aviso": es que falta el mismo candado que el otro tipo ya tiene.**
+
+Mensaje al rechazar, nombrando el producto: *"Con $12.000, la Remera básica ($10.000) quedaría gratis.
+Bajá el monto o sacala del alcance."*
+
+#### F6-C9 — el hueco de los productos futuros
+
+Todo lo de arriba mira **el catálogo de hoy**. Con `scope=ALL`, si mañana se carga un producto de $8.000
+bajo una promo fija de $12.000 activa, entra a una promo que le da 100% de descuento y **nadie revisó
+nada** — el chequeo pasó cuando se creó la promo.
+
+→ El aviso tiene que estar **en la otra puerta**: al crear/editar un **producto**, si cae bajo una promo
+`FIXED` activa que lo dejaría gratis o casi, avisar ahí. Mismo principio de siempre (avisarle al dueño,
+nunca frenar al comprador), en el otro extremo del flujo.
+
+⚠️ Sin esto, el candado de (c) da una **falsa sensación de cobertura**: protege el momento de crear la
+promo y deja abierto el de crear el producto.
+
+#### F6-C8 — la compra mínima se mide sobre el carrito entero (22/07)
+
+Revisado el último campo del paso 3. **No está roto**, pero tiene la misma falla que F6-C5: el campo no
+dice contra qué se mide.
+
+`minOrderAmount` se compara contra `preSubtotal`, que es el subtotal de **todo el carrito** sin promos
+([pricing.ts:319-324](src/lib/pricing.ts)) — no contra los ítems en alcance. Verificado con
+*"20% en remeras, comprando $50.000 o más"*:
+
+| Carrito | ¿Aplica? |
+|---|---|
+| Una remera de $10.000 | ❌ no |
+| Una remera de $10.000 **+ un pantalón de $45.000** | ✅ **sí** (compró $10.000 de remeras y se llevó el 20%) |
+| Solo pantalones por $60.000 | ❌ no (no hay remeras en alcance) |
+
+**Es una interpretación válida** —"compra mínima del pedido", que es lo que hace Shopify— y medirla sobre
+el pre-subtotal evita la circularidad (el descuento no se muerde la cola). No se cambia el
+comportamiento. Pero el campo dice solo *"Compra mínima (opcional)"* y quien arma *"20% en remeras desde
+$50.000"* puede estar pensando *"el que me compre $50.000 **de remeras**"*.
+
+→ **Propuesta**: `Compra mínima del pedido (opcional)` + ayuda: *"Cuenta el total del carrito, no solo
+los productos en promoción."*
+
+> Patrón que se repite en el paso 3: **los tres campos son números sin unidad declarada** — el monto fijo
+> no dice "por producto" (F6-C5), el porcentaje no dice que es sobre el precio de lista, y la compra
+> mínima no dice que es del pedido. Conviene resolverlos juntos, es el mismo arreglo.
+
+#### F6-C7 — promos superpuestas: NO bloquear, avisar (22/07)
+
+Planteo de Flavio: *"si hago una promo de % en pantalones y después una de $, ¿me debería dejar elegir
+pantalones o tacharlo como ocupado?"*.
+
+**Respuesta: no se bloquea.** Verificado con el motor — dos promos sobre la misma categoría **no se
+pisan, se reparten**: cada producto toma la que más le conviene al comprador.
+
+Con `20% en pantalones` + `$12.000 en pantalones`, sobre los pantalones reales de Girly Store:
+
+| Pantalón | Con 20% | Con $12.000 | Gana | Paga |
+|---|---|---|---|---|
+| $53.000 | $42.400 | **$41.000** | el fijo | $41.000 |
+| $68.000 | **$54.400** | $56.000 | el % | $54.400 |
+| $80.000 | **$64.000** | $68.000 | el % | $64.000 |
+
+El barato toma el monto fijo, los caros toman el porcentaje, **sin que nadie lo configure**. Bloquear
+mataría eso. Y además:
+
+- `10% en toda la tienda` + `30% en pantalones` es de las combinaciones **más útiles** que hay (la
+  general hace de piso, la específica gana donde aplica). Es como funciona Shopify. Bloquear `ALL`
+  porque existe una promo de categoría mataría el caso más común. **`ALL` no queda inútil: queda como piso.**
+- Las promos tienen **fechas**: una de diciembre y otra de enero sobre la misma categoría no se pisan
+  nunca. Bloquear mirando solo el alcance ignora el tiempo. (Y también pueden estar pausadas.)
+
+**Lo que sí hay que avisar — el hallazgo real:** se puede crear una promo que **nunca va a aplicar**.
+Con `30% en pantalones` ya activa, crear `20% en pantalones` da una promo muerta: el motor siempre
+elige la del 30%, pero la del 20% aparece en la lista como *"Activa"*, con su nombre y su fecha, y es un
+adorno. Verificado: `producto $60.000 → paga $42.000 · aplicó: 30% OFF`.
+
+→ Propuesta: en el paso **Confirmar**, avisar *"Ya tenés '30% en pantalones' activa. Esta promo no se va
+a aplicar nunca porque la otra siempre conviene más."* Sin bloquear — misma filosofía que el piso de
+costo. ⚠️ Ojo al calcularlo: "nunca aplica" depende del **precio de cada producto** (el ejemplo de
+arriba muestra que un fijo puede ganar en los baratos y perder en los caros), así que solo es "muerta"
+si pierde en **todos** los productos del alcance. Y hay que contemplar fechas que no se solapan.
+
+#### F6-C6 — carrito mixto: qué ve el comprador (22/07)
+
+Pregunta de Flavio: *"si selecciono 3 productos y 2 están con la promo y el otro no, ¿qué pasa? ¿cómo
+se ve? ¿y en el checkout?"*. Verificado en el código:
+
+| Pantalla | Qué muestra |
+|---|---|
+| **Carrito** ([CartDrawer.tsx:80-91](src/components/store/templates/shared/CartDrawer.tsx)) | ✅ **Bien**: por línea. El producto con promo muestra el precio viejo tachado + el nuevo en color; el que no tiene promo muestra su precio normal. Abajo, *"Promoción aplicada −$X"* |
+| **Checkout** ([CheckoutModal.tsx:191-207](src/components/store/templates/shared/CheckoutModal.tsx)) | ⚠️ **Sin detalle**: cada ítem se lista a precio de lista (`itemEffectiveUnitPrice × qty`) y el descuento aparece **solo como un total** al pie. No se ve cuál de los 3 productos tenía la promo |
+
+Además, **ninguna de las dos dice QUÉ promo se aplicó** — las dos dicen *"Promoción aplicada"* a secas.
+El motor ya calcula `appliedPromos` (nombre + etiqueta + ahorro de cada una) y hoy eso **solo se usa en
+el email**. Con dos promos distintas en el mismo carrito, el comprador ve un número y ningún motivo.
+
+→ Propuesta: en el checkout, marcar la línea con promo igual que el carrito; y en las dos pantallas,
+nombrar la promo cuando hay una sola (*"3×2 en remeras −$10.000"*), o listar las dos si hay varias.
+
+**¿Y si el comprador eligiera qué promo aplicar?** (planteo de Flavio, 22/07) — **No.** Elegir solo
+puede empeorarle el precio (el motor ya le da el más barato de todos, cualquier otra opción es igual o
+peor), agrega una decisión sin respuesta correcta en el momento de mayor abandono, y no lo hace ni
+Shopify ni Tiendanube. Lo que falta no es la elección, es el aviso.
+
+**El habilitador técnico (chico, y cambia el tamaño del trabajo):** `priceCart` **ya sabe** qué promo
+ganó cada línea — lo guarda en `winnerByLine` mientras calcula ([pricing.ts:330-349](src/lib/pricing.ts))
+— pero **no lo devuelve**: `PricedLine` sale con `{ unitPrice, lineTotal, promoApplied, savings }` y sin
+identidad de la promo. `appliedPromos` existe pero está **agregado a nivel carrito**, así que sirve para
+el pie del total y no para etiquetar una línea.
+
+Por eso el carrito puede tachar el precio pero no puede decir el motivo. → Agregar el nombre/etiqueta de
+la promo ganadora a `PricedLine`. **No hay que recalcular nada ni tocar la cuenta**: es exponer un dato
+que el motor ya tuvo en la mano. Con eso las tres pantallas (card, carrito, checkout) pueden nombrarla
+desde la misma fuente, sin una segunda cuenta (que es justo lo que causó B-10).
+
+#### B-10 — el CheckoutModal reimplementa el precio base (a verificar antes de tocar)
+
+[CheckoutModal.tsx:33-44](src/components/store/templates/shared/CheckoutModal.tsx) define
+`itemEffectiveUnitPrice`, que resuelve variante + mayorista + escalones **por su cuenta**, en vez de
+usar `resolveBasePrice` del motor. Es una segunda cuenta del precio viviendo fuera de `pricing.ts` —
+exactamente lo que la Fase 1 existía para eliminar.
+
+**Y no es una copia idéntica**: tiene un gate `if (!isWholesale || ...)` que el motor **no tiene a
+propósito** (ver **B-06**: *"el checkout nunca tuvo ese gate; mantenerlo en el carrito re-crearía la
+desincronización que la Fase 1 elimina"*). Se sacó del carrito y quedó vivo acá.
+
+Se usa en dos lugares que importan: el precio por ítem que se lista (:100) y el `fullTotal` del que sale
+`promoSavings = fullTotal − cartTotal` (:193-194) — o sea que el *"Promoción aplicada −$X"* del checkout
+**mezcla un número propio con uno del motor**. Si los dos caminos no coinciden, ese ahorro se muestra mal.
+
+✅ **VERIFICADO (22/07) — la divergencia es real, pero está dormida.**
+
+`useCartLogic` ([:359-368](src/hooks/useCartLogic.ts)) llama a `resolveBasePrice` **sin gate**, y el
+comentario del código lo dice explícito: *"Mismo resolvedor que el checkout … **Sin gate de modo (como el
+checkout)**"*. El `CheckoutModal` sí lo tiene. **No es un descuido de copia**: la Fase 1 lo removió de las
+otras dos puntas y esta tercera copia quedó atrás.
+
+**Qué pasaría si se despertara** (producto que califica por cantidad + tienda con el modo mayorista
+apagado): el motor usa el precio mayorista y el `CheckoutModal` muestra el retail → precios por ítem que
+no coinciden con lo cobrado, y la diferencia cae dentro de *"Promoción aplicada"*, **atribuyendo a una
+promo lo que es descuento mayorista**. El **cobro sigue siendo correcto** (el total sale del motor); lo
+que miente es el desglose en pantalla.
+
+**¿Corre hoy? NO** — consultado en la base: `precioMayorista` cargado en **0** productos ·
+`cantMinMayorista` en **0** · `tieneVentaMayorista=true` en **0 de 4** tiendas. Tan dormido como B-01 y
+por el mismo motivo (nadie llegó al switch).
+
+→ **Baja urgencia, pero NO bajar de prioridad dentro de la tanda 1**: es una **tercera copia** de la
+cuenta del precio, y mientras exista, cualquier arreglo del motor **no llega a esa pantalla**. El arreglo
+es chico: reemplazar `itemEffectiveUnitPrice` por `resolveBasePrice`, que es lo que ya usan las otras dos
+puntas.
+
+#### F6-C5 — "Monto de descuento" no dice por unidad (22/07)
+
+Flavio, leyendo el formulario, entendió que `FIXED` descontaba **del total del pedido**: *"junta todos
+los productos, los suma, y el descuento lo hace con respecto a eso"*. No es así, y el formulario nunca
+lo aclara.
+
+**Comportamiento real** (verificado con el motor, promo de $10.000):
+
+| Carrito | Sin promo | Con promo | Descontó |
+|---|---|---|---|
+| 3 productos distintos, 1 c/u | $155.000 | $125.000 | **$30.000** |
+| 1 producto × 3 unidades | $150.000 | $120.000 | **$30.000** |
+| 1 unidad | $50.000 | $40.000 | $10.000 |
+
+Es `Math.max(0, basePrice - value) * quantity` ([pricing.ts:205](src/lib/pricing.ts)): **por unidad**,
+sin tope de pedido. Una promo llamada *"$10.000 de descuento"* descuenta $10.000 **× la cantidad de
+unidades en alcance** — con 10 prendas son **$100.000 en un solo pedido**.
+
+**El campo hoy** ([PromocionesClient.tsx:562](src/app/dashboard/promociones/PromocionesClient.tsx)) dice
+solo `Monto de descuento`, placeholder `$ 5.000`. El de `PERCENT`, en cambio, sí se explica
+(`Porcentaje de descuento (1 a 90)`).
+
+→ **Propuesta**: `Monto de descuento por producto` + ayuda debajo: *"Se resta a cada unidad. En un
+carrito con 3 productos, descuenta 3 veces."*
+
+⚠️ **Ojo al implementar**: esto NO es lo mismo que B-07. B-07 es que el descuento puede superar el
+precio (producto gratis); esto es que **se multiplica por la cantidad**. Son dos formas distintas de
+crecer y se suman: un producto barato comprado de a muchos combina las dos. Un aviso que solo mire el
+precio unitario no cubre este caso.
+
+#### F6-C4 — ayudar a armar la promo (planteo de Flavio, 22/07)
+
+> *"si es riesgoso, ¿no deberíamos ayudar al usuario a armar su promoción? ¿poner recomendado en alguno
+> de los tres: tienda, categoría o producto?"*
+
+El instinto es correcto: avisar en el paso Confirmar (piso de costo, Fase 3) llega tarde — hay que
+guiar **mientras** se arma. Pero un badge fijo de *"Recomendado"* por alcance **no sirve**, y el motivo
+importa: **el alcance riesgoso depende del tipo**. Para `PERCENT`, `ALL` es perfectamente seguro (siempre
+da el mismo %, sin importar el rango de precios); recomendar ahí "mejor por categoría" sería un consejo
+falso. El mismo cartel no puede servir para los cinco tipos.
+
+**Propuesta: mostrarle sus propios números en vez de nuestra opinión.** Dos lugares:
+
+1. **Paso 2 (alcance)** — cada opción con su rango, igual que el selector de productos que ya muestra
+   precio: *"Toda la tienda · 44 productos · $22.000 a $130.000"* / *"remeras · 5 productos · $22.000 a
+   $38.000"*. Esto **es** F6-C3, extendido a las tres opciones.
+2. **Paso 3 (monto)** — línea viva mientras escribe, solo en `FIXED`: *"Con $10.000, el más barato
+   ($45.000) queda en $35.000 — 22% de descuento."* Color según severidad: normal hasta ~50%, ámbar más
+   allá, rojo si algún producto llega a $0.
+
+Se apoya en la regla ya derivada (`monto ÷ precio del más barato del alcance`) y en datos que el server
+**ya trae** (los productos con precio, para el piso de costo). Es coherente con el patrón del panel:
+avisar sin bloquear, que es la regla de Flavio desde la Fase 3.
+
+⚠️ Pendiente de definir: en `scope=ALL` el alcance incluye **productos futuros**, así que la línea del
+paso 3 describe el catálogo de hoy, no el de mañana. No invalida el aviso, pero no puede presentarse
+como una garantía (mismo límite que B-07).
+
+#### Dato real del catálogo (consultado 22/07, no supuesto)
+
+Consultado en vivo mientras se analizaba el alcance del monto fijo:
+
+| Tienda | Productos activos | Rango de precios |
+|---|---|---|
+| Girly Store | 44 | $22.000 → $130.000 (**x5,9**) |
+| Amaranta | 42 | $33.000 → $170.000 (**x5,2**) |
+
+Pero **dentro de cada categoría el rango se achica**: remeras x1,7 · camperas x1,8 · Sweater x1,5 ·
+pantalones x1,5 (la excepción es *vestidos* de Amaranta, x4,9).
+
+**Por qué importa**: confirma con datos que `FIXED` es sano por categoría y riesgoso en `ALL`. Con
+$20.000 off en toda Girly Store, **10 productos** quedarían con más del 50% de descuento sin que nadie
+lo haya pedido. Ninguna tienda tiene hoy productos tan baratos como para que un monto típico los deje
+gratis — o sea que **B-07 no está explotando hoy**, pero está a un producto barato de distancia.
+
+**Regla que sale de acá para el aviso de B-07**: el descuento más profundo de una promo `FIXED` es
+`monto ÷ precio del producto MÁS BARATO del alcance`. Un solo número mide el riesgo, y se puede calcular
+al crear la promo con los productos que ya están en alcance. (Ojo: en `scope=ALL` el alcance incluye
+productos futuros, así que el chequeo al crear no cubre todo — ver B-07.)
+
+- **F6-C3** — el selector de **productos** muestra el precio al lado de cada uno, pero el de
+  **categorías** solo dice *"N productos"*. Con `FIXED` esa es justo la información que hace falta para
+  no equivocarse. → Mostrar el rango: *"remeras · 5 productos · $22.000 a $38.000"*. Barato de hacer (el
+  server ya trae los productos con precio para el piso de costo) y ataca la causa de B-07 antes de que
+  ocurra, en vez de avisar después.
+
+#### Detalle de los de texto (revisión del % con Flavio, 22/07)
+
+- **F6-C1** — `TYPE_META` ([PromocionesClient.tsx:41-46](src/app/dashboard/promociones/PromocionesClient.tsx)):
+  `PERCENT` dice *"Ej. 20% off en las remeras"* y `FIXED` *"Ej. $5.000 off en camperas"*. Los dos nombran
+  una categoría en el **paso 1**, que es donde se elige el TIPO; el alcance se decide recién en el paso 2.
+  Da a entender que esos tipos son para categorías.
+  ✅ **DECIDIDO (Flavio, 22/07)**: el paso 1 responde QUÉ tipo de descuento es; el DÓNDE es el paso 2, y
+  no se mezclan. Ejemplos neutros: `PERCENT` → *"Ej. 20% de descuento"*, `FIXED` → *"Ej. $5.000 de
+  descuento"*. La duda de "¿dónde se aplica?" que dispara el ejemplo se responde con una línea aparte en
+  la explicación del tipo y no metiéndola en el ejemplo.
+  ✅ **DECIDIDO (22/07), redactado y listo para aplicar — NO implementado todavía** (se probó y se
+  revirtió: la ronda es de análisis, se toca código recién cuando esté toda la cola ordenada).
+
+  **Textos finales acordados** (`TYPE_META`, [PromocionesClient.tsx:41-46](src/app/dashboard/promociones/PromocionesClient.tsx)):
+
+  | Campo | Queda |
+  |---|---|
+  | `PERCENT.short` | `Ej. 20% de descuento` |
+  | `PERCENT.ed` | `El cliente ve el precio original tachado y el nuevo debajo. Se aplica solo con entrar a tu tienda: no tiene que escribir ningún cupón.` |
+  | `FIXED.short` | `Ej. $5.000 de descuento` |
+  | `FIXED.ed` | `Se resta la misma plata a cada producto, cueste lo que cueste. Ideal para liquidar: en uno de $30.000 son $5.000 menos, y en uno de $8.000 también.` |
+  | Encabezado paso 1 | `Elegí cómo querés que se descuente — abajo te explico cada una. En el paso siguiente elegís dónde se aplica: toda la tienda, categorías o productos sueltos.` |
+
+  Notas de la redacción: (a) la aclaración del alcance va en el **encabezado del paso 1**, no en cada
+  tipo — vale para los cinco y repetirla era ruido; (b) la explicación de `FIXED` también nombraba una
+  categoría (*"$5.000 menos en toda campera"*), misma falla que el ejemplo, y el reemplazo muestra lo que
+  hace **único** al tipo (el descuento no cambia con el precio), que es justo lo que lo vuelve peligroso
+  (ver B-07); (c) el encabezado conserva el *"abajo te explico cada una"* original; (d) los otros tres
+  tipos ya tenían ejemplos neutros y no se tocan.
+- **F6-C2** — mismo lugar: *"Se aplica solo en la tienda, sin escribir ningún código"*. La intención (por
+  la segunda mitad) es "automático, sin cupón", pero *"solo en la tienda"* se lee como "solo en la tienda
+  online, no en otro lado" — y esa lectura **tampoco es falsa** (un pedido armado a mano por WhatsApp no
+  pasa por el motor). Dos significados verdaderos y ninguno claro. → *"Se aplica solo con entrar a tu
+  tienda: el cliente no tiene que escribir ningún cupón."*
+
+#### Verificado sano en este repaso (no tocar)
+
+- **N×M repartido en 2 variantes** del mismo producto: $6.667 + $13.333 = **$20.000 exacto**, sin
+  deriva de redondeo. Era sospecha propia y quedó descartada.
+- **Mix & match**: regala las unidades más baratas del conjunto y solo si mejora el total. No apila.
+- **Alcance por categoría**: no toca lo que está fuera, ni bloquea cupones de más (es el control que
+  prueba que B-08 es un problema del gate y no del scope).
+- **Autoridad del server**: el checkout relee las promos de la base dentro de la transacción. Un POST
+  por consola no puede inventar un precio.
+
+#### Veredicto sobre el diseño de combinación (22/07)
+
+Flavio: *"¿y está bien que funcione así?"* (best-of, sin apilar, sin poder habilitar el apilado).
+
+**El motor está bien. Lo que falta es la comunicación.** No hay que cambiar la regla:
+
+- El comprador siempre paga lo más barato de lo que la tienda ofreció, y se explica en una frase.
+- No apilar protege el margen — el ejemplo del propio plan (oferta 30% + 3×2 + cupón 24% → bajo costo,
+  $76.000 de pérdida en 30 unidades) es exactamente lo que evita.
+- Shopify y Tiendanube arrancan sin combinar, por separado y por el mismo motivo.
+- El público real (2 tiendas de conocidos, 58 productos, **0 con `costPrice`**) no está para un
+  interruptor de apilado: sería una trampa, no una función.
+
+**Pero el best-of decide en silencio, y hoy nadie se entera de lo que decidió.** Ese es el costo del
+diseño y no está pagado:
+
+- El comprador no sabe **qué** promo se le aplicó (**F6-C6**). Si la tienda anunció un 3×2 y el motor le
+  dio un 20% porque convenía más, el comprador cree que perdió el 3×2.
+- La dueña no sabe **cuál perdió** (**F6-C7**): una promo tapada figura como *"Activa"* y no hace nada.
+
+→ Los ítems 11 y 13 de la cola **no son extras: son la contracara del diseño**. Si el sistema decide
+solo, tiene que contar qué decidió.
+
+**Nota menor**: `combinesWithPromotions` existe en la base, siempre vale `false` y el wizard nunca lo
+muestra. Está documentado como decisión consciente (esperando que una dueña real lo pida), pero es un
+campo que hoy no hace nada — tenerlo presente contra la regla del proyecto de "nada de código muerto".
+
+#### 🎯 PRINCIPIO RECTOR DE LA FASE (Flavio, 22/07)
+
+> *"acordate que esto de promociones tiene que ser un sistema inteligente para que ayude a la hora de
+> crear una promoción"*
+
+No alcanza con que el motor calcule bien. **El panel tiene que ayudar a decidir**, no solo impedir
+errores. Qué significa "inteligente" acá, en concreto:
+
+| No es | Es |
+|---|---|
+| Validar que el número sea válido | Mostrar **qué va a pasar** con ese número |
+| Consejos genéricos ("cuidado con los descuentos") | **Sus propios productos y precios**, calculados |
+| Avisar después de guardar | Avisar **mientras decide**, en el paso donde elige |
+| Un mensaje de error | Un mensaje que **nombra el producto** y qué hacer |
+| Bloquear por las dudas | Avisar; bloquear **solo** donde el sistema ya decidió que algo es inválido (ver B-07/c) |
+
+**La cola de la Fase 6 ya responde a esto** — conviene leerla con esta lente:
+
+- **F6-C3** (rango de precios en el selector) → le da el dato **mientras** elige el alcance
+- **F6-C4** (línea viva al escribir el monto) → le muestra la consecuencia **antes** de guardar
+- **F6-C7** (promo tapada por otra) → detecta una configuración **inútil**, no inválida
+- **F6-C9** (aviso al crear el producto) → cierra la puerta que el chequeo de la promo no ve
+- **F6-C6** (nombrar la promo aplicada) → la misma idea, del lado del comprador
+
+**Ideas candidatas que salen de aplicar este principio** (🔲 sin decidir, para evaluar):
+
+1. **Sugerir el tipo según el catálogo real**: si la categoría elegida tiene precios parejos (x1,5), el
+   monto fijo es sano; si están desparramados (x5), recomendar porcentaje. Se apoya en el dato que ya
+   consultamos (rango por categoría) y no en una opinión genérica.
+2. **Resumen de impacto al confirmar**: *"Alcanza 14 productos · descuento real entre 17% y 22% ·
+   ahorro promedio $9.400 por unidad"*. Responde "¿qué acabo de crear?" de un vistazo, con sus números.
+3. **Aviso de solapamiento de fechas**: dos promos sobre el mismo alcance corriendo a la vez — no para
+   bloquear (ver F6-C7), sino para que sepa que conviven y cuál va a ganar.
+
+#### 🚦 QUÉ FALTA PARA ARRANCAR (22/07)
+
+**Ya decidido, listo para implementar (6):** B-09 · F6-C1 · F6-C2 · F6-C12 · #7c · #11 *(cerrado por #7c)*.
+
+**✅ Las 4 definiciones pendientes quedaron CERRADAS (Flavio, 22/07 — aceptó las recomendaciones):**
+
+| # | Decisión | Motivo registrado |
+|---|---|---|
+| 1 | **B-07: el caso "$0" se BLOQUEA**, no se avisa | Único lugar de la fase donde se traba, y no es criterio nuevo: `PERCENT` ya está topeado en 90 para que nada quede gratis. Es la misma regla aplicada al tipo que no la tenía. El resto de los avisos siguen sin bloquear |
+| 2 | **#12: queda como está** — el envío gratis por producto/categoría **libera el pedido entero** | El envío es del pedido, no del ítem. La alternativa (exigir que TODO el carrito esté en alcance) es más restrictiva y más difícil de explicar al comprador |
+| 3 | **La fase va por TANDAS**, no todo junto | 21 ítems en un solo lote es imposible de verificar y de revertir |
+| 4 | **La migración de #7c viaja sola o al final**, nunca mezclada con los arreglos del motor | La base local ES producción: una migración solo se prueba post-deploy. Mezclarla con cambios de precios haría imposible saber qué rompió qué |
+
+**Tarea previa a estimar (no es una decisión):** verificar **B-10**. Está marcado "a verificar" y hasta
+saber si los dos caminos divergen no se puede dimensionar. Es lo primero que haría.
+
+**Orden sugerido, en tres tandas:**
+
+1. **Lo que hoy cobra o bloquea mal** (sin migración, todo dentro del motor + su caso en la suite):
+   **B-11** (único que ya cobra de más) → **B-07** → **B-08** → **B-12**.
+2. **El wizard** (sin migración): **B-09** (desbloquea el caso estrella del Combo) → textos y momentos
+   (**F6-C1, C2, C5, C8, C10, C11, C12**) → los números en vivo (**F6-C3 + C4**, que son el mismo trabajo)
+   → los avisos (**F6-C7, C9, C11**).
+3. **Con migración, en un lote de deploy**: **#7c** (envío bonificado en Métricas).
+
+**F6-C6** (nombrar la promo aplicada) puede ir en la tanda 1 o 2: el habilitador es chico (exponer la
+promo ganadora en `PricedLine`) pero toca las 3 pantallas del storefront.
+
+⚠️ **Dependencia que no se puede invertir**: **B-11 antes que F6-C10**. La nota de C10 documenta que "los
+talles cuentan juntos", que es justo el caso que B-11 cobra con $1 de más. Documentarlo antes de
+arreglarlo pone por escrito una promesa que se cobra mal — y hoy el bug está oculto solo porque nadie
+sabe que esa combinación funciona.
+
+#### Regla de esta fase
+
+Cada arreglo entra con **su caso en `pricing.check.ts`**. Los dos bugs existen justamente porque la
+suite no cubría esos escenarios; cerrarlos sin agregar el caso deja la puerta abierta a que vuelvan.
 
 ---
 
