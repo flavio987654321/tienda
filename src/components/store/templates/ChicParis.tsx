@@ -993,8 +993,11 @@ export default function ChicParis() {
           ))}
         </div>
 
-        {/* Arrows */}
-        {[[-1, "left", "14px"], [1, "right", "14px"]].map(([dir, side, offset]) => (
+        {/* Arrows — en celular NO: caían justo sobre el subtítulo centrado del
+            hero (top 50%) y lo tapaban. Ahí se navega con el swipe (ya activo) y
+            los puntitos. Desde tablet (>=768) sí se muestran, que hay lugar de
+            sobra a los costados. */}
+        {!isMobile && [[-1, "left", "14px"], [1, "right", "14px"]].map(([dir, side, offset]) => (
           <button key={String(side)} onClick={() => goToSlide((heroSlide + Number(dir) + BANNER_COUNT) % BANNER_COUNT)}
             style={{ position: "absolute", top: "50%", [String(side)]: String(offset), transform: "translateY(-50%)", background: "rgba(255,255,255,0.15)", border: "none", color: "#fff", width: 44, height: 44, borderRadius: "50%", cursor: "pointer", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(4px)", zIndex: 10, transition: "background 0.2s" }}
             onMouseEnter={e => { setHeroPaused(true); e.currentTarget.style.background = "rgba(255,255,255,0.3)"; }}
@@ -1736,7 +1739,7 @@ export default function ChicParis() {
       </div>
 
       {/* ── FOOTER ── */}
-      <footer style={{ background: footerBg, padding: "48px 40px 32px", position: "relative" }}>
+      <footer style={{ background: footerBg, padding: isMobile ? "40px 20px 88px" : "48px 40px 32px", position: "relative" }}>
         <EditableSectionBg field="bgFooter" label="Fondo footer" />
         <div style={{ maxWidth: 1280, margin: "0 auto" }}>
           {/* Dos columnas, no tres: la de "Legal" se sacó por duplicada. */}
@@ -1780,7 +1783,14 @@ export default function ChicParis() {
             {/* La columna "Legal" que iba acá se sacó: repetía exactamente los mismos
                 tres links que la barra de abajo, en el mismo footer. */}
           </div>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px 24px", paddingLeft: hasWA ? 110 : 0, paddingRight: 100 }}>
+          {/* Los paddings de 110/100 dejan lugar a los botones flotantes (carrito
+              y WhatsApp) para que no tapen los links — pero eso es SOLO en
+              escritorio, donde los botones viven en las esquinas de abajo. En
+              celular esos paddings dejaban ~130px de ancho util y apilaban todo
+              en una columnita apretada; ahí se sacan (el footer ya tiene 88px de
+              padding abajo para que los botones flotantes no pisen la ultima
+              linea) y las dos partes se apilan prolijas. */}
+          <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", justifyContent: "space-between", alignItems: isMobile ? "flex-start" : "center", flexWrap: "wrap", gap: isMobile ? 16 : "8px 24px", paddingLeft: isMobile ? 0 : (hasWA ? 110 : 0), paddingRight: isMobile ? 0 : 100 }}>
             <div style={{ display: "flex", flexWrap: "wrap", gap: "0 16px" }}>
               {[
                 { label: "Política de devoluciones", tipo: "devoluciones" },
