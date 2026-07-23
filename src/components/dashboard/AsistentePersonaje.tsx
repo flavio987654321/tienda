@@ -79,21 +79,24 @@ export default function AsistentePersonaje({
         transition={{ duration: 0.25 }}
       />
 
-      <motion.ellipse
-        cx="31" cy="42" fill="#fff"
-        rx={rxBase} ry={ojoIzqCerrado ? 0.6 : ryBase}
-        animate={{ rx: rxBase, ry: ojoIzqCerrado ? 0.6 : ryBase }}
-        transition={{ duration: 0.12 }}
+      {/* El parpadeo va por `transform: scaleY`, no animando `rx`/`ry`. En
+          framer-motion 12 animar `rx`/`ry` de un SVG tira "Expected length,
+          undefined" en cada parpadeo: no lee bien el valor actual y escribe
+          undefined un instante. `scaleY` (con transform-box: fill-box para que
+          el origen sea el centro del ojo, no el del SVG) tiene el mismo efecto de
+          achicar el ojo, está soportado en todos los navegadores, y `rx`/`ry`
+          quedan como números fijos que nunca se rompen. */}
+      <ellipse
+        cx="31" cy="42" fill="#fff" rx={rxBase} ry={ryBase}
+        style={{ transformBox: "fill-box", transformOrigin: "center", transform: ojoIzqCerrado ? "scaleY(0.1)" : "scaleY(1)", transition: "transform 0.12s ease" }}
       />
       {!ojoIzqCerrado && (
         <motion.circle cx={31 + PUPILA_DX[estado]} r="2.5" fill="#1c1917" cy="42" animate={{ cx: 31 + PUPILA_DX[estado] }} transition={{ duration: 0.25 }} />
       )}
 
-      <motion.ellipse
-        cx="57" cy="42" fill="#fff"
-        rx={rxBase} ry={ojoDerCerrado ? 0.6 : ryBase}
-        animate={{ rx: rxBase, ry: ojoDerCerrado ? 0.6 : ryBase }}
-        transition={{ duration: 0.12 }}
+      <ellipse
+        cx="57" cy="42" fill="#fff" rx={rxBase} ry={ryBase}
+        style={{ transformBox: "fill-box", transformOrigin: "center", transform: ojoDerCerrado ? "scaleY(0.1)" : "scaleY(1)", transition: "transform 0.12s ease" }}
       />
       {!ojoDerCerrado && (
         <motion.circle cx={57 + PUPILA_DX[estado]} r="2.5" fill="#1c1917" cy="42" animate={{ cx: 57 + PUPILA_DX[estado] }} transition={{ duration: 0.25 }} />
