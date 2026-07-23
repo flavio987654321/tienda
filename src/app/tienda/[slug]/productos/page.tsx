@@ -321,7 +321,7 @@ function ProductosPageInner() {
     } catch { return { ok: false, error: "Error de conexión" }; }
   }, []);
 
-  const cart = useCartLogic({ products, promotions, slug, isOwner, resolveVariantId, validateCoupon, placeOrder });
+  const cart = useCartLogic({ products, promotions, slug, isOwner, isPreview: fromEditor, resolveVariantId, validateCoupon, placeOrder });
   const {
     cartItems, cartOpen, setCartOpen, cartCount, cartTotal, envioPrice, couponDiscount, orderTotal, couponsAllowed,
     freeShipping, freeShippingGoal,

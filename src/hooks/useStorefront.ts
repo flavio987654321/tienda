@@ -441,5 +441,10 @@ export function useStorefront() {
   const hasMercadoPago     = config?.hasMercadoPago ?? false;
   const shippingMethods    = config?.shippingMethods ?? null;
 
-  return { products, promotions, loadingProducts, affiliateId, storeId, slug, isOwner: config?.isOwner ?? false, resolveVariantId, validateCoupon, placeOrder, checkoutMode, isWholesale, ocultarPrecios, defaultCategories, featuredCategories, hasMercadoPago, shippingMethods };
+  // `isPreview` sale acá afuera porque el carrito lo necesita para NO contar vistas
+  // de producto en el editor. Ojo: en el editor `isOwner` NO alcanza — el config del
+  // dashboard se arma desde DEFAULT_CONFIG y nunca setea isOwner, así que llega en
+  // false aunque quien está mirando sea el dueño. `previewFill` es lo único que
+  // distingue "estoy acomodando mi tienda" de "un comprador está navegando".
+  return { products, promotions, loadingProducts, affiliateId, storeId, slug, isOwner: config?.isOwner ?? false, isPreview: previewFill, resolveVariantId, validateCoupon, placeOrder, checkoutMode, isWholesale, ocultarPrecios, defaultCategories, featuredCategories, hasMercadoPago, shippingMethods };
 }

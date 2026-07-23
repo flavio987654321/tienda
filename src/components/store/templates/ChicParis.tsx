@@ -14,7 +14,7 @@ import ReportStoreModal from "@/components/store/ReportStoreModal";
 import VerifiedIconButton from "@/components/store/VerifiedIconButton";
 import { CartDrawer, type CartTheme } from "@/components/store/templates/shared/CartDrawer";
 import { OfferBadge } from "@/components/store/OfferBadge";
-import { PromoTag, PromoBlock } from "@/components/store/PromoDisplay";
+import { PromoTag, PromoBlock, PromoPrice } from "@/components/store/PromoDisplay";
 import { resolveProductPromo, describePromo } from "@/lib/promoDisplay";
 import { CheckoutModal } from "@/components/store/templates/shared/CheckoutModal";
 import { ContactForm } from "@/components/store/templates/shared/ContactForm";
@@ -914,21 +914,9 @@ export default function ChicParis() {
                     <div style={{ padding: "14px 16px 18px" }}>
                       <p style={{ margin: "0 0 4px", fontSize: 10, color: "#999", letterSpacing: 2, textTransform: "uppercase", fontWeight: 600 }}>{product.category}</p>
                       <p style={{ margin: "0 0 8px", fontSize: 14, fontWeight: 700, color: prodText, lineHeight: 1.3 }}>{product.name}</p>
-                      <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-                        {ocultarPrecios ? (
-                          <span style={{ fontSize: 16, fontWeight: 800, color: ACC }}>Consultá precio</span>
-                        ) : promo.hasPriceDrop ? (
-                          <>
-                            <span style={{ fontSize: 16, fontWeight: 800, color: "#dc2626" }}>{fmt(promo.effectivePrice)}</span>
-                            <span style={{ fontSize: 13, color: "#aaa", textDecoration: "line-through" }}>{fmt(promo.originalPrice)}</span>
-                          </>
-                        ) : (
-                          <>
-                            <span style={{ fontSize: 16, fontWeight: 800, color: ACC }}>{fmt(product.price)}</span>
-                            {product.comparePrice && <span style={{ fontSize: 13, color: "#aaa", textDecoration: "line-through" }}>{fmt(product.comparePrice)}</span>}
-                          </>
-                        )}
-                      </div>
+                      <PromoPrice product={product} promotions={promotions} fmt={fmt} accent={ACC}
+                        priceSize={16} compareSize={13} ocultarPrecios={ocultarPrecios}
+                        gap={10} align="center" />
                     </div>
                   </div>
                   );
@@ -970,7 +958,13 @@ export default function ChicParis() {
                 <div style={{ position: "relative" }}>
                   <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2, 360px)", justifyContent: "center", gap: isMobile ? 32 : 48 }}>
                     {pageItems.map(p => {
-                      const pct = p.comparePrice && p.comparePrice > p.price ? Math.round((1 - p.price / p.comparePrice) * 100) : null;
+                      // El círculo del % tiene que decir el MISMO descuento que el precio
+                      // de al lado. Si hay una promo de tienda vigente manda ella; si no,
+                      // el % sale de la oferta del producto (comparePrice).
+                      const promoP = resolveProductPromo(p, promotions);
+                      const pct = promoP.hasPriceDrop
+                        ? promoP.pctOff
+                        : (p.comparePrice && p.comparePrice > p.price ? Math.round((1 - p.price / p.comparePrice) * 100) : null);
                       return (
                         <div key={p.id} onClick={() => openModal(p)} className="cp-zoom" style={{ cursor: "pointer", display: "flex", gap: 20, alignItems: "center" }}>
                           <div style={{ position: "relative", width: 140, height: 175, flexShrink: 0, background: "#f5f5f5", overflow: "hidden", borderRadius: 4 }}>
@@ -981,10 +975,9 @@ export default function ChicParis() {
                           </div>
                           <div>
                             <p style={{ margin: "0 0 8px", fontSize: 16, fontFamily: "'Playfair Display', Georgia, serif", fontStyle: "italic", color: ofertasText }}>{p.name}</p>
-                            <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-                              <span style={{ fontSize: 16, fontWeight: 800, color: ACC }}>{ocultarPrecios ? "Consultá" : fmt(p.price)}</span>
-                              {p.comparePrice && p.comparePrice > p.price && <span style={{ fontSize: 13, color: "#999", textDecoration: "line-through" }}>{fmt(p.comparePrice)}</span>}
-                            </div>
+                            <PromoPrice product={p} promotions={promotions} fmt={fmt} accent={ACC}
+                              priceSize={16} compareSize={13} ocultarPrecios={ocultarPrecios} consultaLabel="Consultá"
+                              gap={10} align="center" />
                           </div>
                         </div>
                       );
@@ -1060,10 +1053,8 @@ export default function ChicParis() {
                       </div>
                       <div style={{ padding: "10px 0 0" }}>
                         <p style={{ margin: "0 0 4px", fontSize: 13, fontWeight: 600, color: masVistoText }}>{p.name}</p>
-                        <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
-                          <span style={{ fontSize: 14, fontWeight: 800, color: ACC }}>{ocultarPrecios ? "Consultá" : fmt(p.price)}</span>
-                          {!ocultarPrecios && p.comparePrice && p.comparePrice > p.price && <span style={{ fontSize: 11, color: "#aaa", textDecoration: "line-through" }}>{fmt(p.comparePrice)}</span>}
-                        </div>
+                        <PromoPrice product={p} promotions={promotions} fmt={fmt} accent={ACC}
+                          priceSize={14} compareSize={11} ocultarPrecios={ocultarPrecios} consultaLabel="Consultá" />
                       </div>
                     </div>
                   ))}
@@ -1392,10 +1383,8 @@ export default function ChicParis() {
                   <FadeImage src={p.images[0] ?? "/placeholder.jpg"} alt={p.name} width={48} height={60} style={{ objectFit: "cover", flexShrink: 0 }} />
                   <div>
                     <p style={{ margin: "0 0 4px", fontSize: 13, fontWeight: 600 }}>{p.name}</p>
-                    <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
-                      <p style={{ margin: 0, fontSize: 13, color: ACC, fontWeight: 700 }}>{ocultarPrecios ? "Consultá precio" : fmt(p.price)}</p>
-                      {!ocultarPrecios && p.comparePrice && p.comparePrice > p.price && <p style={{ margin: 0, fontSize: 11, color: "#aaa", textDecoration: "line-through" }}>{fmt(p.comparePrice)}</p>}
-                    </div>
+                    <PromoPrice product={p} promotions={promotions} fmt={fmt} accent={ACC}
+                      priceSize={13} compareSize={11} weight={700} ocultarPrecios={ocultarPrecios} />
                   </div>
                 </div>
               )) : searchQuery ? (
@@ -1738,7 +1727,8 @@ export default function ChicParis() {
                         {p.images[0] && <FadeImage src={p.images[0]} alt={p.name} fill sizes="(max-width: 768px) 50vw, 200px" className="cp-zoom-img" style={{ objectFit: "cover" }} />}
                       </div>
                       <p style={{ margin: "8px 0 2px", fontSize: 12, color: "#111", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 1, WebkitBoxOrient: "vertical" as const }}>{p.name}</p>
-                      <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: ACC }}>{ocultarPrecios ? "Consultá precio" : fmt(p.price)}</p>
+                      <PromoPrice product={p} promotions={promotions} fmt={fmt} accent={ACC}
+                        priceSize={13} weight={700} ocultarPrecios={ocultarPrecios} />
                     </div>
                   ))}
                 </div>
@@ -1789,10 +1779,9 @@ export default function ChicParis() {
                   <FadeImage src={product.images[0] ?? "/placeholder.jpg"} alt={product.name} width={64} height={80} style={{ objectFit: "cover" }} />
                   <div style={{ flex: 1 }}>
                     <p style={{ margin: "0 0 4px", fontSize: 13, fontWeight: 600 }}>{product.name}</p>
-                    <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 8 }}>
-                      <p style={{ margin: 0, fontSize: 13, color: ACC, fontWeight: 700 }}>{ocultarPrecios ? "Consultá precio" : fmt(product.price)}</p>
-                      {!ocultarPrecios && product.comparePrice && product.comparePrice > product.price && <p style={{ margin: 0, fontSize: 11, color: "#aaa", textDecoration: "line-through" }}>{fmt(product.comparePrice)}</p>}
-                    </div>
+                    <PromoPrice product={product} promotions={promotions} fmt={fmt} accent={ACC}
+                      priceSize={13} compareSize={11} weight={700} ocultarPrecios={ocultarPrecios}
+                      gap={8} style={{ marginBottom: 8 }} />
                     <button onClick={() => { setFavoritesOpen(false); openModal(product); }}
                       style={{ background: ACC, color: getContrastColor(ACC) === "light" ? "#fff" : "#111", border: "none", padding: "6px 16px", fontSize: 10, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", cursor: "pointer" }}>
                       Ver

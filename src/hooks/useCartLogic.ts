@@ -40,6 +40,10 @@ type StorefrontDeps = {
   affiliateId?: string | null;
   slug?: string | null;
   isOwner?: boolean;
+  // Estamos dentro del editor del dashboard (o de la galería de plantillas), no en
+  // la tienda real. Solo se usa para no ensuciar las vistas de producto: el dueño
+  // abre veinte veces la vista rápida acomodando la tienda y eso no es tráfico.
+  isPreview?: boolean;
   resolveVariantId: (product: StorefrontProduct, size: string, color: string) => string | null;
   validateCoupon: (code: string, subtotal: number, email?: string) => Promise<{ coupon: ValidatedCoupon; discount: number } | { error: string }>;
   placeOrder: (params: PlaceOrderParams) => Promise<{ ok: boolean; orderId?: string; donationId?: string; error?: string }>;
@@ -57,7 +61,7 @@ type StorefrontDeps = {
   lockScrollOnModal?: boolean;
 };
 
-export function useCartLogic({ products, promotions = [], storeId, affiliateId = null, slug = null, isOwner = false, resolveVariantId, validateCoupon, placeOrder, checkoutMode = "cart", isWholesale = false, hasMercadoPago = false, shippingMethods, lockScrollOnModal = true, currency = "ARS" }: StorefrontDeps) {
+export function useCartLogic({ products, promotions = [], storeId, affiliateId = null, slug = null, isOwner = false, isPreview = false, resolveVariantId, validateCoupon, placeOrder, checkoutMode = "cart", isWholesale = false, hasMercadoPago = false, shippingMethods, lockScrollOnModal = true, currency = "ARS" }: StorefrontDeps) {
   const [cartItems,      setCartItems]      = useState<CartItem[]>([]);
   const [cartOpen,       setCartOpen]       = useState(false);
   const [modalProduct,   setModalProduct]   = useState<StorefrontProduct | null>(null);
@@ -427,7 +431,7 @@ export function useCartLogic({ products, promotions = [], storeId, affiliateId =
     setSelectedColor(p.colors[0] ?? "");
     setQty(isWholesale && p.cantMinMayorista ? p.cantMinMayorista : 1);
     setSearchOpen(false);
-    registrarVista(p.id, slug, isOwner);
+    registrarVista(p.id, slug, isOwner, isPreview);
   };
 
   // Deep link a un producto puntual (ej: ?producto=ID desde favoritos en otro panel)
