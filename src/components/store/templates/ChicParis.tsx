@@ -1287,7 +1287,8 @@ export default function ChicParis() {
       <footer style={{ background: footerBg, padding: "48px 40px 32px", position: "relative" }}>
         <EditableSectionBg field="bgFooter" label="Fondo footer" />
         <div style={{ maxWidth: 1280, margin: "0 auto" }}>
-          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "2fr 1fr 1fr", gap: isMobile ? 32 : 40, marginBottom: 40, paddingBottom: 40, borderBottom: `1px solid ${footerText === "#fff" ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.08)"}` }}>
+          {/* Dos columnas, no tres: la de "Legal" se sacó por duplicada. */}
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "2fr 1fr", gap: isMobile ? 32 : 40, marginBottom: 40, paddingBottom: 40, borderBottom: `1px solid ${footerText === "#fff" ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.08)"}` }}>
             <div>
               <p style={{ margin: "0 0 12px", fontSize: 18, fontWeight: 900, color: footerText, letterSpacing: 3, textTransform: "uppercase" }}>
                 <EditableZone field="storeName" label="Nombre footer">{storeConfig?.storeName ?? "CHIC PARIS"}</EditableZone>
@@ -1305,39 +1306,23 @@ export default function ChicParis() {
                 </div>
               )}
             </div>
-            <div>
-              <p style={{ margin: "0 0 16px", fontSize: 10, fontWeight: 800, color: footerText, letterSpacing: 3, textTransform: "uppercase" }}>Colecciones</p>
-              {["Mujer", "Hombre", "Accesorios", "Sale"].map(l => (
-                <button key={l} onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?t=chic-paris${isPreview ? "&from=editor" : ""}${l !== "Sale" ? `&categoria=${encodeURIComponent(l)}` : ""}`; }}
-                  style={{ display: "block", background: "none", border: "none", color: footerText, opacity: 0.55, fontSize: 13, cursor: "pointer", padding: "4px 0", textAlign: "left" }}>{l}</button>
-              ))}
-            </div>
-            <div>
-              <p style={{ margin: "0 0 16px", fontSize: 10, fontWeight: 800, color: footerText, letterSpacing: 3, textTransform: "uppercase" }}>Legal</p>
-              {[
-                { label: "Política de devoluciones", tipo: "devoluciones" },
-                { label: "Política de envíos",       tipo: "envios" },
-                { label: "Términos y condiciones",   tipo: "terminos" },
-              ].map(({ label, tipo }) => (
-                editMode ? (
-                  <button key={tipo} type="button" onClick={() => window.open("/dashboard/pagos", "_blank")}
-                    title="Editar en Dashboard → Pagos"
-                    style={{ display: "flex", alignItems: "center", gap: 5, margin: "0 0 8px", fontSize: 13, color: footerText, opacity: 0.55, background: "none", border: "none", cursor: "pointer", padding: 0, textAlign: "left" }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = "1"; }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = "0.55"; }}>
-                    {label}
-                    <svg width={9} height={9} viewBox="0 0 24 24" fill="none" stroke="#818cf8" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                  </button>
-                ) : (
-                  <a key={tipo} href={`/tienda/${storeConfig?.slug ?? ""}/politicas?tipo=${tipo}`}
-                    style={{ display: "block", margin: "0 0 8px", fontSize: 13, color: footerText, opacity: 0.55, textDecoration: "none" }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = "1"; }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = "0.55"; }}>
-                    {label}
-                  </a>
-                )
-              ))}
-            </div>
+            {/* Las colecciones salen de las categorías REALES de la tienda — las
+                mismas que el menú del navbar (`categoryList`). Antes estaban
+                escritas a mano en el template ("Mujer", "Hombre", "Accesorios",
+                "Sale") y no coincidían con ninguna categoría de ninguna tienda: los
+                cuatro links llevaban a un listado vacío. Si la tienda todavía no
+                tiene categorías, la columna no se muestra. */}
+            {categoryList.length > 0 && (
+              <div>
+                <p style={{ margin: "0 0 16px", fontSize: 10, fontWeight: 800, color: footerText, letterSpacing: 3, textTransform: "uppercase" }}>Colecciones</p>
+                {categoryList.slice(0, 6).map(l => (
+                  <button key={l} onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?t=chic-paris${isPreview ? "&from=editor" : ""}&categoria=${encodeURIComponent(l!)}`; }}
+                    style={{ display: "block", background: "none", border: "none", color: footerText, opacity: 0.55, fontSize: 13, cursor: "pointer", padding: "4px 0", textAlign: "left", textTransform: "capitalize" }}>{l}</button>
+                ))}
+              </div>
+            )}
+            {/* La columna "Legal" que iba acá se sacó: repetía exactamente los mismos
+                tres links que la barra de abajo, en el mismo footer. */}
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px 24px", paddingLeft: hasWA ? 110 : 0, paddingRight: 100 }}>
             <div style={{ display: "flex", flexWrap: "wrap", gap: "0 16px" }}>
