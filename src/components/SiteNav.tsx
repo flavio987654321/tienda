@@ -48,12 +48,17 @@ export function SiteNav({ active, fixed = false }: { active?: SiteNavKey; fixed?
           <span className="text-lg font-bold text-gray-950">TiendaApps</span>
         </Link>
 
-        <div className="hidden md:flex items-center gap-8">
+        {/* El menú completo (6 links + logo + 2 botones) no entra en 768px: en
+            tablet se encimaban el logo y el primer link. Aparece recién en `lg`
+            (1024px), que es donde hay ancho de sobra; abajo de eso manda la
+            hamburguesa. El gap arranca chico y se agranda en `xl` para respetar
+            el desktop grande, que ya se veía bien. */}
+        <div className="hidden lg:flex items-center gap-6 xl:gap-8">
           {LINKS.map(({ key, href, label, icon: Icon }) => (
             <Link
               key={key}
               href={href}
-              className={`${active === key ? "text-gray-950" : "text-gray-500 hover:text-gray-900"} text-sm font-medium transition-colors${Icon ? " flex items-center gap-1.5" : ""}`}
+              className={`${active === key ? "text-gray-950" : "text-gray-500 hover:text-gray-900"} text-sm font-medium whitespace-nowrap transition-colors${Icon ? " flex items-center gap-1.5" : ""}`}
             >
               {Icon && <Icon className="h-4 w-4" />}
               {label}
@@ -61,20 +66,20 @@ export function SiteNav({ active, fixed = false }: { active?: SiteNavKey; fixed?
           ))}
         </div>
 
-        <div className="hidden md:flex items-center gap-3">
+        <div className="hidden lg:flex items-center gap-3">
           {user ? (
             <>
-              <span className="text-gray-500 text-sm">Hola, {userName ?? "!"}</span>
-              <Link href={panelHref} className="bg-orange-600 hover:bg-orange-500 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-all">
+              <span className="text-gray-500 text-sm whitespace-nowrap">Hola, {userName ?? "!"}</span>
+              <Link href={panelHref} className="bg-orange-600 hover:bg-orange-500 text-white text-sm font-semibold whitespace-nowrap px-5 py-2.5 rounded-xl transition-all">
                 {panelLabel}
               </Link>
             </>
           ) : (
             <>
-              <Link href="/login" className="text-gray-600 hover:text-gray-900 text-sm font-medium px-5 py-2.5 rounded-xl border border-gray-200 hover:border-gray-300 transition-all">
+              <Link href="/login" className="text-gray-600 hover:text-gray-900 text-sm font-medium whitespace-nowrap px-5 py-2.5 rounded-xl border border-gray-200 hover:border-gray-300 transition-all">
                 Iniciar sesión
               </Link>
-              <Link href="/registro" className="bg-orange-600 hover:bg-orange-500 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-all">
+              <Link href="/registro" className="bg-orange-600 hover:bg-orange-500 text-white text-sm font-semibold whitespace-nowrap px-5 py-2.5 rounded-xl transition-all">
                 Crear cuenta
               </Link>
             </>
@@ -84,7 +89,7 @@ export function SiteNav({ active, fixed = false }: { active?: SiteNavKey; fixed?
         <button
           onClick={() => setMobileMenu(true)}
           aria-label="Abrir menú"
-          className="md:hidden text-gray-600 hover:text-gray-900 transition-colors"
+          className="lg:hidden text-gray-600 hover:text-gray-900 transition-colors"
         >
           <Menu className="h-6 w-6" />
         </button>
@@ -101,7 +106,7 @@ export function SiteNav({ active, fixed = false }: { active?: SiteNavKey; fixed?
         que el panel era transparente. Afuera del nav, `inset-0` vuelve a ser la
         pantalla entera. */}
     {mobileMenu && (
-      <div className="md:hidden fixed inset-0 z-[60] bg-white flex flex-col">
+      <div className="lg:hidden fixed inset-0 z-[60] bg-white flex flex-col">
           <div className="flex items-center justify-between px-6 py-5 border-b border-gray-200">
             <span className="text-gray-900 font-bold">Menú</span>
             <button onClick={() => setMobileMenu(false)} aria-label="Cerrar menú" className="text-gray-500 hover:text-gray-900">
