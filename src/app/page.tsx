@@ -972,8 +972,12 @@ export default function Home() {
             <motion.p variants={fadeUp} className="text-gray-500 text-lg max-w-2xl mx-auto">Tienda, pagos, pedidos, cupones, notificaciones push, estadísticas, Pixel de Facebook, afiliados — todo en un solo panel, sin instalar nada.</motion.p>
           </motion.div>
 
-          {/* Tabs */}
-          <div className="flex flex-wrap justify-center gap-2 mb-8">
+          {/* Tabs. En celular van en grilla de 2 columnas parejas: con
+              `flex-wrap` cada pastilla tomaba el ancho de su texto y, centradas,
+              las filas quedaban de distinto ancho y sin alinear (se veian
+              desordenadas). Desde `sm` vuelve al tab bar centrado de siempre, que
+              en pantalla ancha se ve bien. */}
+          <div className="grid grid-cols-2 gap-2 mb-8 sm:flex sm:flex-wrap sm:justify-center">
             {FEATURES.map((f, i) => {
               const Icon = f.icon;
               const active = featureSlide[0] === i;
@@ -981,7 +985,7 @@ export default function Home() {
                 <button
                   key={i}
                   onClick={() => setFeatureSlide([i, i >= featureSlide[0] ? 1 : -1])}
-                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm border transition-all"
+                  className="flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl font-semibold text-sm border transition-all sm:px-5"
                   style={active
                     ? { backgroundColor: f.color, borderColor: f.color, color: "#fff", boxShadow: `0 4px 14px ${f.color}44` }
                     : { backgroundColor: "#fff", borderColor: "#e5e7eb", color: "#6b7280" }
