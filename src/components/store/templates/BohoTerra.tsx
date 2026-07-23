@@ -14,7 +14,7 @@ import ReportStoreModal from "@/components/store/ReportStoreModal";
 import VerifiedIconButton from "@/components/store/VerifiedIconButton";
 import { CartDrawer, type CartTheme } from "@/components/store/templates/shared/CartDrawer";
 import { OfferBadge } from "@/components/store/OfferBadge";
-import { PromoTag, PromoBlock } from "@/components/store/PromoDisplay";
+import { PromoTag, PromoBlock, PromoPrice } from "@/components/store/PromoDisplay";
 import { resolveProductPromo, describePromo } from "@/lib/promoDisplay";
 import { CheckoutModal } from "@/components/store/templates/shared/CheckoutModal";
 import { ContactForm } from "@/components/store/templates/shared/ContactForm";
@@ -97,7 +97,6 @@ export default function BohoTerra() {
   const coleccionMid  = getContrastColor(coleccionBg) === "light" ? "#d5c9be" : "#9a8070";
   const ofertasBg   = sc["bgOfertas"] ?? S;
   const ofertasText = getContrastColor(ofertasBg) === "light" ? "#faf7f2" : "#2c2218";
-  const ofertasMid  = getContrastColor(ofertasBg) === "light" ? "#d5c9be" : "#9a8070";
   const masVistoBg   = sc["bgMasVisto"] ?? BG;
   const masVistoText = getContrastColor(masVistoBg) === "light" ? "#faf7f2" : "#2c2218";
   const nosotrosBg = sc["bgNosotros"] ?? S;
@@ -494,10 +493,8 @@ export default function BohoTerra() {
                     </div>
                     <div style={{ padding:"10px 12px" }}>
                       <p style={{ fontFamily:"Georgia, serif", fontStyle:"italic", fontSize:12, margin:"0 0 4px" }}>{p.name}</p>
-                      <div style={{ display:"flex", alignItems:"baseline", gap:6 }}>
-                        <p style={{ fontSize:13, color:A, fontWeight:700, margin:0 }}>{ocultarPrecios ? "Consultá precio" : fmt(p.price)}</p>
-                        {!ocultarPrecios && p.comparePrice && p.comparePrice > p.price && <p style={{ fontSize:11, color:MID, textDecoration:"line-through", margin:0 }}>{fmt(p.comparePrice)}</p>}
-                      </div>
+                      <PromoPrice product={p} promotions={promotions} fmt={fmt} accent={A}
+                        priceSize={13} compareSize={11} weight={700} ocultarPrecios={ocultarPrecios} />
                     </div>
                   </button>
                 ))}
@@ -963,7 +960,13 @@ export default function BohoTerra() {
               <div style={{ overflow:"hidden", padding: ofertasMaxIdx > 0 ? (isMobile ? "0 60px" : "0 64px") : (isMobile ? "0 16px" : "0 40px") }}>
                 <div style={{ display:"flex", gap:20, transition:"transform 0.45s cubic-bezier(.4,0,.2,1)", transform: isMobile ? `translateX(calc(-${ofertasIdx} * (85% + 20px)))` : `translateX(calc(-${ofertasIdx} * (100% / ${CARDS_PER_VIEW} + 20px / ${CARDS_PER_VIEW})))` }}>
                   {ofertasProducts.map(p => {
-                    const pct = p.comparePrice && p.comparePrice > p.price ? Math.round((1 - p.price / p.comparePrice) * 100) : null;
+                    // El "-30%" tiene que decir el MISMO descuento que el precio de
+                    // abajo. Si hay promo de tienda vigente manda ella; si no, sale
+                    // de la oferta del producto (comparePrice), como antes.
+                    const promoP = resolveProductPromo(p, promotions);
+                    const pct = promoP.hasPriceDrop
+                      ? promoP.pctOff
+                      : (p.comparePrice && p.comparePrice > p.price ? Math.round((1 - p.price / p.comparePrice) * 100) : null);
                     return (
                       <div key={p.id} onClick={() => openModal(p)} className="bt-zoom"
                         style={{ flexShrink:0, width: isMobile ? "85%" : `calc((100% - ${(CARDS_PER_VIEW-1)*20}px) / ${CARDS_PER_VIEW})`, cursor:"pointer", position:"relative" }}>
@@ -973,10 +976,9 @@ export default function BohoTerra() {
                         </div>
                         <p style={{ fontSize:10, color:A, letterSpacing:3, textTransform:"uppercase", margin:"0 0 5px" }}>{p.category}</p>
                         <p style={{ fontFamily:"Georgia, serif", fontStyle:"italic", fontSize:17, color:ofertasText, margin:"0 0 8px", lineHeight:1.3 }}>{p.name}</p>
-                        <div style={{ display:"flex", gap:10, alignItems:"center" }}>
-                          <span style={{ fontSize:16, fontWeight:700, color:ofertasText }}>{ocultarPrecios ? "Consultá precio" : fmt(p.price)}</span>
-                          {p.comparePrice && p.comparePrice > p.price && <span style={{ fontSize:13, color:ofertasMid, textDecoration:"line-through" }}>{fmt(p.comparePrice)}</span>}
-                        </div>
+                        <PromoPrice product={p} promotions={promotions} fmt={fmt} accent={ofertasText}
+                          priceSize={16} compareSize={13} weight={700} ocultarPrecios={ocultarPrecios}
+                          gap={10} align="center" />
                       </div>
                     );
                   })}
@@ -1038,10 +1040,9 @@ export default function BohoTerra() {
                       </div>
                       <div style={{ padding:"10px 0 0" }}>
                         <p style={{ margin:"0 0 4px", fontFamily:"Georgia, serif", fontStyle:"italic", fontSize:14, color:masVistoText }}>{p.name}</p>
-                        <div style={{ display:"flex", alignItems:"baseline", gap:6 }}>
-                          <span style={{ fontSize:14, fontWeight:700, color:masVistoText }}>{ocultarPrecios ? "Consultá" : fmt(p.price)}</span>
-                          {!ocultarPrecios && p.comparePrice && p.comparePrice > p.price && <span style={{ fontSize:11, color:masVistoText, opacity:0.45, textDecoration:"line-through" }}>{fmt(p.comparePrice)}</span>}
-                        </div>
+                        <PromoPrice product={p} promotions={promotions} fmt={fmt} accent={masVistoText}
+                          priceSize={14} compareSize={11} weight={700} ocultarPrecios={ocultarPrecios}
+                          consultaLabel="Consultá" />
                       </div>
                     </div>
                   ))}
@@ -1645,7 +1646,8 @@ export default function BohoTerra() {
                           {p.images[0] && <FadeImage src={p.images[0]} alt={p.name} fill sizes="(max-width: 768px) 50vw, 25vw" style={{ objectFit:"cover" }} />}
                         </div>
                         <p style={{ margin:"8px 0 2px", fontSize:12, color:T, overflow:"hidden", display:"-webkit-box", WebkitLineClamp:1, WebkitBoxOrient:"vertical" as const }}>{p.name}</p>
-                        <p style={{ margin:0, fontSize:13, fontWeight:700, color:A }}>{ocultarPrecios ? "Consultá precio" : fmt(p.price)}</p>
+                        <PromoPrice product={p} promotions={promotions} fmt={fmt} accent={A}
+                          priceSize={13} weight={700} ocultarPrecios={ocultarPrecios} />
                       </div>
                     ))}
                   </div>
@@ -1656,7 +1658,10 @@ export default function BohoTerra() {
             {isMobile && (
               <div style={{ borderTop:`1px solid rgba(44,34,24,0.12)`, padding:"12px 16px 16px", background:"#fff", flexShrink:0 }}>
                 <div style={{ display:"flex", alignItems:"baseline", gap:10, marginBottom:10 }}>
-                  <span style={{ fontSize:20, fontWeight:700, color:A }}>{ocultarPrecios ? "Consultá precio" : fmt(displayPrice * qty)}</span>
+                  {/* El total de mobile ignoraba las promos: mostraba precio × cantidad
+                      mientras el botón de desktop ya descontaba. Ahora los dos usan la
+                      misma cuenta (N×M primero, después baja de precio, después × qty). */}
+                  <span style={{ fontSize:20, fontWeight:700, color:A }}>{ocultarPrecios ? "Consultá precio" : fmt(nxmPaid != null ? nxmPaid*displayPrice : (modalPromo?.hasPriceDrop ? modalPromo.effectivePrice : displayPrice)*qty)}</span>
                   {!variantPrice && !ocultarPrecios && modalProduct.comparePrice && <span style={{ fontSize:12, color:MID, textDecoration:"line-through" }}>{fmt(modalProduct.comparePrice)}</span>}
                   {qty > 1 && <span style={{ fontSize:11, color:MID }}>× {qty}</span>}
                 </div>
@@ -1698,10 +1703,9 @@ export default function BohoTerra() {
                   {product.images[0] ? <FadeImage src={product.images[0]} alt={product.name} width={64} height={86} style={{ objectFit:"cover", flexShrink:0 }}/> : <div style={{ width:64, height:86, flexShrink:0, background:S }}/>}
                   <div style={{ flex:1 }}>
                     <p style={{ fontFamily:"Georgia, serif", fontStyle:"italic", fontSize:14, margin:"0 0 4px", color:T }}>{product.name}</p>
-                    <div style={{ display:"flex", alignItems:"baseline", gap:8, marginBottom:10 }}>
-                      <p style={{ fontSize:13, color:A, fontWeight:700, margin:0 }}>{ocultarPrecios ? "Consultá precio" : fmt(product.price)}</p>
-                      {!ocultarPrecios && product.comparePrice && product.comparePrice > product.price && <p style={{ fontSize:11, color:MID, textDecoration:"line-through", margin:0 }}>{fmt(product.comparePrice)}</p>}
-                    </div>
+                    <PromoPrice product={product} promotions={promotions} fmt={fmt} accent={A}
+                      priceSize={13} compareSize={11} weight={700} ocultarPrecios={ocultarPrecios}
+                      gap={8} style={{ marginBottom:10 }} />
                     <div style={{ display:"flex", gap:8 }}>
                       <button onClick={() => { setFavoritesOpen(false); openModal(product); }}
                         style={{ background:A, color:"#fff", border:"none", padding:"7px 14px", fontSize:10, letterSpacing:2, fontWeight:600, textTransform:"uppercase", cursor:"pointer" }}>

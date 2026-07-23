@@ -14,7 +14,7 @@ import ReportStoreModal from "@/components/store/ReportStoreModal";
 import VerifiedIconButton from "@/components/store/VerifiedIconButton";
 import { CartDrawer, type CartTheme } from "@/components/store/templates/shared/CartDrawer";
 import { OfferBadge } from "@/components/store/OfferBadge";
-import { PromoTag, PromoBlock } from "@/components/store/PromoDisplay";
+import { PromoTag, PromoBlock, PromoPrice } from "@/components/store/PromoDisplay";
 import { resolveProductPromo, describePromo } from "@/lib/promoDisplay";
 import { CheckoutModal } from "@/components/store/templates/shared/CheckoutModal";
 import { ContactForm } from "@/components/store/templates/shared/ContactForm";
@@ -1011,7 +1011,12 @@ export default function UrbanPulse() {
                 </div>
                 <div style={{ display:"grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(4,1fr)", gap:2 }}>
                   {displayList.map(p => {
-                    const pct = p.comparePrice && p.comparePrice > p.price ? Math.round((1 - p.price / p.comparePrice) * 100) : null;
+                    // El "-30%" tiene que coincidir con el precio: si hay promo de
+                    // tienda manda ella, si no sale del comparePrice.
+                    const promoP = resolveProductPromo(p, promotions);
+                    const pct = promoP.hasPriceDrop
+                      ? promoP.pctOff
+                      : (p.comparePrice && p.comparePrice > p.price ? Math.round((1 - p.price / p.comparePrice) * 100) : null);
                     return (
                       <div key={p.id} onClick={() => openModal(p)} className="up-zoom" style={{ cursor:"pointer" }}>
                         <div style={{ position:"relative", width:"100%", aspectRatio:"3/4", background:DARK, overflow:"hidden" }}>
@@ -1020,10 +1025,9 @@ export default function UrbanPulse() {
                         </div>
                         <div style={{ padding:"10px 0 0" }}>
                           <p style={{ margin:"0 0 4px", fontSize:11, fontWeight:700, textTransform:"uppercase", letterSpacing:1, color:ofertasTextUp, overflow:"hidden", display:"-webkit-box", WebkitLineClamp:1, WebkitBoxOrient:"vertical" as const }}>{p.name}</p>
-                          <div style={{ display:"flex", gap:8, alignItems:"center" }}>
-                            <span style={{ fontSize:13, fontWeight:900, color:ACC }}>{ocultarPrecios ? "Consultá" : fmt(p.price)}</span>
-                            {p.comparePrice && p.comparePrice > p.price && <span style={{ fontSize:11, color:MID, textDecoration:"line-through" }}>{fmt(p.comparePrice)}</span>}
-                          </div>
+                          <PromoPrice product={p} promotions={promotions} fmt={fmt} accent={ACC}
+                            priceSize={13} compareSize={11} weight={900} ocultarPrecios={ocultarPrecios}
+                            consultaLabel="Consultá" gap={8} align="center" />
                         </div>
                       </div>
                     );
@@ -1076,10 +1080,9 @@ export default function UrbanPulse() {
                       </div>
                       <div style={{ padding:"10px 0 0" }}>
                         <p style={{ margin:"0 0 4px", fontSize:11, fontWeight:700, textTransform:"uppercase", letterSpacing:1, color:masVistoTextUp, overflow:"hidden", display:"-webkit-box", WebkitLineClamp:1, WebkitBoxOrient:"vertical" as const }}>{p.name}</p>
-                        <div style={{ display:"flex", alignItems:"baseline", gap:6 }}>
-                          <span style={{ fontSize:13, fontWeight:900, color:ACC }}>{ocultarPrecios ? "Consultá" : fmt(p.price)}</span>
-                          {!ocultarPrecios && p.comparePrice && p.comparePrice > p.price && <span style={{ fontSize:11, color:MID, textDecoration:"line-through" }}>{fmt(p.comparePrice)}</span>}
-                        </div>
+                        <PromoPrice product={p} promotions={promotions} fmt={fmt} accent={ACC}
+                          priceSize={13} compareSize={11} weight={900} ocultarPrecios={ocultarPrecios}
+                          consultaLabel="Consultá" />
                       </div>
                     </div>
                   ))}
@@ -1389,7 +1392,8 @@ export default function UrbanPulse() {
                   <div>
                     <p style={{ color:"rgba(255,255,255,0.4)", fontSize:10, fontWeight:800, letterSpacing:2, textTransform:"uppercase", margin:0 }}>{p.category}</p>
                     <p style={{ color:WHITE, fontSize:13, fontWeight:800, margin:"5px 0 4px" }}>{p.name}</p>
-                    <p style={{ color:ACC, fontWeight:900, fontSize:13, margin:0 }}>{ocultarPrecios ? "Consultá precio" : fmt(p.price)}</p>
+                    <PromoPrice product={p} promotions={promotions} fmt={fmt} accent={ACC}
+                      priceSize={13} weight={900} ocultarPrecios={ocultarPrecios} />
                   </div>
                 </div>
               ))}
@@ -1416,10 +1420,9 @@ export default function UrbanPulse() {
                     <div style={{ flex:1 }}>
                       <p style={{ margin:0, fontSize:10, color:MID, fontWeight:800, letterSpacing:2, textTransform:"uppercase" }}>{p.category}</p>
                       <p style={{ margin:"4px 0 6px", fontSize:13, fontWeight:800 }}>{p.name}</p>
-                      <div style={{ display:"flex", alignItems:"baseline", gap:8, marginBottom:10 }}>
-                        <p style={{ margin:0, fontSize:14, fontWeight:900 }}>{ocultarPrecios ? "Consultá precio" : fmt(p.price)}</p>
-                        {!ocultarPrecios && p.comparePrice && p.comparePrice > p.price && <p style={{ margin:0, fontSize:11, color:MID, textDecoration:"line-through" }}>{fmt(p.comparePrice)}</p>}
-                      </div>
+                      <PromoPrice product={p} promotions={promotions} fmt={fmt} accent={DARK}
+                        priceSize={14} compareSize={11} weight={900} ocultarPrecios={ocultarPrecios}
+                        gap={8} style={{ marginBottom:10 }} />
                       <button onClick={() => openModal(p)} style={{ background:DARK, color:ACC, border:"none", padding:"7px 14px", fontSize:10, fontWeight:900, letterSpacing:2, textTransform:"uppercase", cursor:"pointer" }}>Ver</button>
                     </div>
                     <button onClick={() => toggleFavorite(p.id)} style={{ background:"none", border:"none", fontSize:16, cursor:"pointer", alignSelf:"flex-start", padding:4, color:MID }}>✕</button>
@@ -1759,7 +1762,8 @@ export default function UrbanPulse() {
                             {p.images[0] && <FadeImage src={p.images[0]} alt={p.name} fill sizes="(max-width: 768px) 50vw, 25vw" style={{ objectFit:"cover" }} />}
                           </div>
                           <p style={{ margin:"8px 0 2px", fontSize:12, color:DARK, overflow:"hidden", display:"-webkit-box", WebkitLineClamp:1, WebkitBoxOrient:"vertical" as const }}>{p.name}</p>
-                          <p style={{ margin:0, fontSize:13, fontWeight:900, color:DARK }}>{ocultarPrecios ? "Consultá precio" : fmt(p.price)}</p>
+                          <PromoPrice product={p} promotions={promotions} fmt={fmt} accent={DARK}
+                            priceSize={13} weight={900} ocultarPrecios={ocultarPrecios} />
                         </div>
                       ))}
                     </div>
