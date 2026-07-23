@@ -133,12 +133,14 @@ const STRIP_ITEMS = [
   { slot: 3, titleField: "garantia4Title", titleDefault: "Atención rápida",  descField: "garantia4Desc", descDefault: "Respondemos en menos de 24hs" },
 ];
 
+// Cuántos productos muestra la home de entrada, y cuántos suma cada "Ver más".
+const PASO_PRODUCTOS = 8;
+
 export default function ChicParis() {
   const [scrolled,        setScrolled]        = useState(false);
-  const [activeCategory,  setActiveCategory]  = useState("Todos");
   const [activeGender,    setActiveGender]    = useState<string | null>(null);
   const [hoveredNavCat,   setHoveredNavCat]   = useState<string | null>(null);
-  const [visibleCount,    setVisibleCount]    = useState(8);
+  const [visibleCount,    setVisibleCount]    = useState(PASO_PRODUCTOS);
   const [isMobile,        setIsMobile]        = useState(false);
   const [mobileMenuOpen,  setMobileMenuOpen]  = useState(false);
   const [mobileCatsOpen,  setMobileCatsOpen]  = useState(false);
@@ -207,9 +209,13 @@ export default function ChicParis() {
 
   const categoryList = useMemo(() => {
     const cats = [...new Set(products.map(p => p.category).filter(c => c && c !== "general"))];
-    const base = cats.length > 0 ? cats : defaultCategories.slice(0, 6);
+    // Las genéricas del rubro son relleno del EDITOR, para que el navbar no se
+    // vea vacío mientras se diseña. En la tienda real no van: ningún producto
+    // las tiene, así que cada una sería un link a un listado vacío — y el
+    // visitante lee "no tienen nada", no "todavía no cargaron categorías".
+    const base = cats.length > 0 ? cats : (isPreview ? defaultCategories.slice(0, 6) : []);
     return featuredCategories.length > 0 ? base.filter(c => featuredCategories.includes(c)) : base;
-  }, [products, defaultCategories, featuredCategories]);
+  }, [products, defaultCategories, featuredCategories, isPreview]);
 
   const ACC   = storeConfig?.colors.accent ?? "#c0392b";
   const sc    = storeConfig?.sectionColors ?? {};
@@ -584,14 +590,16 @@ export default function ChicParis() {
     return map;
   }, [products]);
 
-  const changeGender = (g: string | null) => { setActiveGender(g); setActiveCategory("Todos"); setVisibleCount(8); };
+  const changeGender = (g: string | null) => { setActiveGender(g); setVisibleCount(PASO_PRODUCTOS); };
 
   const allFiltered = useMemo(() => products.filter(p => {
     if (activeGender && p.gender !== activeGender && p.gender !== "unisex") return false;
-    if (activeCategory !== "Todos" && p.category !== activeCategory) return false;
     return true;
-  }), [products, activeGender, activeCategory]);
+  }), [products, activeGender]);
+  // Los productos ya vienen todos en la misma respuesta de /api/public/[slug],
+  // así que "Ver más" no pide nada al servidor: solo deja de recortar la lista.
   const filtered    = allFiltered.slice(0, visibleCount);
+  const quedanMas   = allFiltered.length > filtered.length;
 
   const similarProducts = useMemo(() => {
     if (!modalProduct) return [];
@@ -668,8 +676,9 @@ export default function ChicParis() {
         <div style={{ maxWidth: 1280, margin: "0 auto", padding: "0 32px", height: 68, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           {/* Nav left */}
           {!isMobile && <nav style={{ display: "flex", gap: 24, alignItems: "center" }}>
-            {/* CATEGORÍAS dropdown */}
-            <div style={{ position: "relative" }}
+            {/* CATEGORÍAS dropdown — sin categorías no se muestra: el panel
+                desplegable quedaría como un recuadro blanco vacío. */}
+            {categoryList.length > 0 && <div style={{ position: "relative" }}
               onMouseEnter={() => setHoveredNavCat("__open__")}
               onMouseLeave={() => setHoveredNavCat(null)}>
               <button style={{ background: "none", border: "none", fontSize: 12, fontWeight: 600, letterSpacing: 2, textTransform: "uppercase", cursor: "pointer", color: (isPreview || scrolled) ? "#111" : "#fff", padding: 0, display: "flex", alignItems: "center", gap: 4 }}>
@@ -714,7 +723,7 @@ export default function ChicParis() {
                 </div>
                 </>
               )}
-            </div>
+            </div>}
             {/* MUJER */}
             <button onClick={() => { changeGender(activeGender === "mujer" ? null : "mujer"); scrollTo("productos"); }}
               style={{ background: "none", border: "none", fontSize: 12, fontWeight: 600, letterSpacing: 2, textTransform: "uppercase", cursor: "pointer", padding: 0, color: activeGender === "mujer" ? ACC : (isPreview || scrolled) ? "#111" : "#fff" }}>
@@ -842,7 +851,7 @@ export default function ChicParis() {
                         window.location.href = `/tienda/${storeConfig?.slug}/productos?t=chic-paris${isPreview ? "&from=editor" : ""}&categoria=${encodeURIComponent(cat)}`;
                         setMobileMenuOpen(false); setMobileCatsOpen(false);
                       }
-                    }} style={{ display: "flex", width: "100%", background: "#fafafa", border: "none", borderBottom: "1px solid #f0f0f0", color: activeCategory===cat ? ACC : "#111", padding: "13px 24px 13px 40px", fontSize: 11, textAlign: "left", cursor: "pointer", letterSpacing: 2, fontWeight: 600, textTransform: "uppercase", alignItems: "center", justifyContent: "space-between" }}>
+                    }} style={{ display: "flex", width: "100%", background: "#fafafa", border: "none", borderBottom: "1px solid #f0f0f0", color: "#111", padding: "13px 24px 13px 40px", fontSize: 11, textAlign: "left", cursor: "pointer", letterSpacing: 2, fontWeight: 600, textTransform: "uppercase", alignItems: "center", justifyContent: "space-between" }}>
                       {cat}
                       {subs.length > 0 && <span style={{ fontSize: 12, opacity: 0.4, transition: "transform 0.2s", transform: mobileOpenCat===cat ? "rotate(90deg)" : "none", display: "inline-block" }}>›</span>}
                     </button>
@@ -919,7 +928,7 @@ export default function ChicParis() {
                   </p>
                   <div style={{ display: "flex", gap: 12 }}>
                     {(editMode || !storeConfig?.textOverrides?.[`slide${i + 1}Cta`]?.hidden) && (
-                      <button onClick={() => scrollTo("productos")} style={{ background: ACC, color: getContrastColor(ACC) === "light" ? "#fff" : "#111", border: "none", padding: "14px 32px", fontSize: 11, fontWeight: 800, letterSpacing: 3, textTransform: "uppercase", cursor: "pointer" }}>
+                      <button onClick={() => scrollTo("productos")} style={{ background: ACC, color: accentText, border: "none", padding: "14px 32px", fontSize: 11, fontWeight: 800, letterSpacing: 3, textTransform: "uppercase", cursor: "pointer" }}>
                         <EditableZone field={`slide${i + 1}Cta`} label={`Slide ${i + 1} — Botón`}>Ver Colección</EditableZone>
                       </button>
                     )}
@@ -1031,9 +1040,11 @@ export default function ChicParis() {
               <EditableZone field="productsKicker" label="Kicker productos">Temporada</EditableZone>
             </span>
             <h2 style={{ fontSize: "clamp(28px,3.5vw,42px)", fontWeight: 900, color: prodText, margin: "8px 0 0", textTransform: "uppercase", letterSpacing: "-0.5px" }}>
-              {activeGender === "mujer" ? "Mujer" : activeGender === "hombre" ? "Hombre" : activeCategory !== "Todos" ? activeCategory : <EditableZone field="productsHeading" label="Título sección productos">Nuestra Colección</EditableZone>}
+              {activeGender === "mujer" ? "Mujer" : activeGender === "hombre" ? "Hombre" : <EditableZone field="productsHeading" label="Título sección productos">Nuestra Colección</EditableZone>}
             </h2>
-            <p style={{ fontSize:12, color:prodText, opacity:0.45, margin:"6px 0 0" }}>{allFiltered.length} piezas</p>
+            <p style={{ fontSize:12, color:prodText, opacity:0.45, margin:"6px 0 0" }}>
+              {quedanMas ? `Mostrando ${filtered.length} de ${allFiltered.length} piezas` : `${allFiltered.length} piezas`}
+            </p>
           </div>
 
           {loadingProducts ? (
@@ -1085,9 +1096,17 @@ export default function ChicParis() {
                   );
                 })}
               </div>
-              <div style={{ textAlign: "center", marginTop: 48 }}>
+              <div style={{ textAlign: "center", marginTop: 48, display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
+                {quedanMas && (
+                  <button onClick={() => setVisibleCount(c => c + PASO_PRODUCTOS)}
+                    style={{ background: "none", color: prodText, border: `1px solid ${prodText}`, padding: "14px 44px", fontSize: 11, fontWeight: 700, letterSpacing: 3, textTransform: "uppercase", cursor: "pointer", transition: "opacity 0.2s" }}
+                    onMouseEnter={e => (e.currentTarget.style.opacity = "0.7")}
+                    onMouseLeave={e => (e.currentTarget.style.opacity = "1")}>
+                    Ver más ({allFiltered.length - filtered.length})
+                  </button>
+                )}
                 <a href={`/tienda/${storeConfig?.slug}/productos?t=chic-paris${isPreview ? "&from=editor" : ""}`}
-                  style={{ display: "inline-block", background: ACC, color: getContrastColor(ACC) === "light" ? "#fff" : "#111", border: `1px solid ${prodText}`, padding: "14px 44px", fontSize: 11, fontWeight: 700, letterSpacing: 3, textTransform: "uppercase", textDecoration: "none", transition: "opacity 0.2s" }}
+                  style={{ display: "inline-block", background: ACC, color: accentText, border: `1px solid ${prodText}`, padding: "14px 44px", fontSize: 11, fontWeight: 700, letterSpacing: 3, textTransform: "uppercase", textDecoration: "none", transition: "opacity 0.2s" }}
                   onMouseEnter={e => (e.currentTarget.style.opacity = "0.85")}
                   onMouseLeave={e => (e.currentTarget.style.opacity = "1")}>
                   Ver colección completa
@@ -1133,7 +1152,7 @@ export default function ChicParis() {
                           <div style={{ position: "relative", width: 140, height: 175, flexShrink: 0, background: "#f5f5f5", overflow: "hidden", borderRadius: 4 }}>
                             {p.images[0] && <FadeImage src={p.images[0]} alt={p.name} fill sizes="140px" className="cp-zoom-img" style={{ objectFit: "cover" }} />}
                             {pct && (
-                              <span style={{ position: "absolute", top: -8, right: -8, width: 42, height: 42, borderRadius: "50%", background: ACC, color: getContrastColor(ACC) === "light" ? "#fff" : "#111", fontSize: 11, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", textAlign: "center", lineHeight: 1.1 }}>-{pct}%</span>
+                              <span style={{ position: "absolute", top: -8, right: -8, width: 42, height: 42, borderRadius: "50%", background: ACC, color: accentText, fontSize: 11, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", textAlign: "center", lineHeight: 1.1 }}>-{pct}%</span>
                             )}
                           </div>
                           <div>
@@ -1557,7 +1576,7 @@ export default function ChicParis() {
                             </p>
                             <div style={{ display: "flex", gap: 8 }}>
                               <button type="submit" disabled={tiendaEnviando || !tiendaCaptcha.ready}
-                                style={{ flex: 1, background: ACC, color: getContrastColor(ACC) === "light" ? "#fff" : "#111", border: "none", padding: "12px", fontSize: 10, fontWeight: 800, letterSpacing: 2, textTransform: "uppercase", cursor: tiendaEnviando ? "default" : "pointer", opacity: tiendaEnviando ? 0.6 : 1 }}>
+                                style={{ flex: 1, background: ACC, color: accentText, border: "none", padding: "12px", fontSize: 10, fontWeight: 800, letterSpacing: 2, textTransform: "uppercase", cursor: tiendaEnviando ? "default" : "pointer", opacity: tiendaEnviando ? 0.6 : 1 }}>
                                 {tiendaEnviando ? "Enviando..." : "Sí, enviar"}
                               </button>
                               <button type="button" onClick={() => setTiendaConfirmando(false)} disabled={tiendaEnviando}
@@ -1570,7 +1589,7 @@ export default function ChicParis() {
                           <button type="button" disabled={isPreview || !tiendaValida}
                             onClick={() => setTiendaConfirmando(true)}
                             title={tiendaValida ? undefined : "Escribí tu nombre y elegí cuántas estrellas"}
-                            style={{ background: !isPreview && tiendaValida ? ACC : "#f3f4f6", color: !isPreview && tiendaValida ? (getContrastColor(ACC) === "light" ? "#fff" : "#111") : "#9ca3af", border: "none", padding: "12px", fontSize: 10, fontWeight: 800, letterSpacing: 3, textTransform: "uppercase", cursor: !isPreview && tiendaValida ? "pointer" : "default" }}>
+                            style={{ background: !isPreview && tiendaValida ? ACC : "#f3f4f6", color: !isPreview && tiendaValida ? (accentText) : "#9ca3af", border: "none", padding: "12px", fontSize: 10, fontWeight: 800, letterSpacing: 3, textTransform: "uppercase", cursor: !isPreview && tiendaValida ? "pointer" : "default" }}>
                             Dejar mi reseña
                           </button>
                         )}
@@ -1627,7 +1646,7 @@ export default function ChicParis() {
             <p style={{ fontSize: 15, color: aboutText, opacity: 0.75, lineHeight: 1.8, margin: "0 0 32px" }}>
               <EditableZone field="aboutParagraph2" label="Párrafo 2 nosotros">Trabajamos con talleres locales que respetan a su gente. Moda responsable, sin resignar estilo.</EditableZone>
             </p>
-            <button onClick={() => scrollTo("contacto")} style={{ background: ACC, color: getContrastColor(ACC) === "light" ? "#fff" : "#111", border: "none", padding: "13px 32px", fontSize: 11, fontWeight: 800, letterSpacing: 3, textTransform: "uppercase", cursor: "pointer" }}>
+            <button onClick={() => scrollTo("contacto")} style={{ background: ACC, color: accentText, border: "none", padding: "13px 32px", fontSize: 11, fontWeight: 800, letterSpacing: 3, textTransform: "uppercase", cursor: "pointer" }}>
               <EditableZone field="aboutCta" label="Botón nosotros">Contactanos</EditableZone>
             </button>
           </div>
@@ -1956,7 +1975,7 @@ export default function ChicParis() {
                 return (
                   <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 16 }}>
                     {condicionAttr && (
-                      <span style={{ alignSelf: "flex-start", fontSize: 10, letterSpacing: 1, textTransform: "uppercase", fontWeight: 800, color: getContrastColor(ACC) === "light" ? "#fff" : "#111", background: ACC, padding: "4px 10px", borderRadius: 4 }}>{condicionAttr.value}</span>
+                      <span style={{ alignSelf: "flex-start", fontSize: 10, letterSpacing: 1, textTransform: "uppercase", fontWeight: 800, color: accentText, background: ACC, padding: "4px 10px", borderRadius: 4 }}>{condicionAttr.value}</span>
                     )}
                     {otherAttrs.length > 0 && (
                       <div style={{ borderRadius: 4, overflow: "hidden", border: "1px solid #f0f0f0" }}>
@@ -1989,7 +2008,7 @@ export default function ChicParis() {
                         <button key={s} onClick={() => setSelectedSize(s)} style={{
                           padding: "8px 14px", border: selectedSize === s ? `2px solid ${ACC}` : "2px solid #e0e0e0",
                           background: selectedSize === s ? ACC : "transparent",
-                          color: selectedSize === s ? (getContrastColor(ACC) === "light" ? "#fff" : "#111") : "#333",
+                          color: selectedSize === s ? (accentText) : "#333",
                           fontSize: 12, fontWeight: 700, cursor: "pointer", transition: "all 0.15s",
                           opacity: outOfStock ? 0.35 : 1, textDecoration: outOfStock ? "line-through" : "none",
                         }}>{s}</button>
@@ -2009,7 +2028,7 @@ export default function ChicParis() {
                           display: "flex", alignItems: "center", gap: 7,
                           padding: "8px 14px", border: selectedColor === c ? `2px solid ${ACC}` : "2px solid #e0e0e0",
                           background: selectedColor === c ? ACC : "transparent",
-                          color: selectedColor === c ? (getContrastColor(ACC) === "light" ? "#fff" : "#111") : "#333",
+                          color: selectedColor === c ? (accentText) : "#333",
                           fontSize: 12, fontWeight: 700, cursor: "pointer", transition: "all 0.15s",
                         }}>
                           {swatch && <span style={{ width: 14, height: 14, borderRadius: "50%", background: swatch, border: "1px solid rgba(0,0,0,0.15)", flexShrink: 0 }} />}
@@ -2058,7 +2077,11 @@ export default function ChicParis() {
               ) : (
                 <button onClick={addToCart} disabled={selectedVariantStock === 0}
                   style={{ background: selectedVariantStock === 0 ? "#ccc" : ACC, color: accentText, border: "none", padding: "15px", fontSize: 11, fontWeight: 800, letterSpacing: 3, textTransform: "uppercase", cursor: selectedVariantStock === 0 ? "not-allowed" : "pointer", width: "100%" }}>
-                  {selectedVariantStock === 0 ? "Sin stock" : "Agregar al carrito"}
+                  {/* El total va en el botón como en los otros tres templates de
+                      moda. En mobile el número ya está arriba del botón; acá no
+                      estaba en ningún lado, y con un 3×2 o cantidad > 1 el
+                      comprador tenía que sacar la cuenta de cabeza. */}
+                  {selectedVariantStock === 0 ? "Sin stock" : `Agregar al carrito · ${fmt(nxmPaid != null ? nxmPaid * displayPrice : (modalPromo?.hasPriceDrop ? modalPromo.effectivePrice : displayPrice) * qty)}`}
                 </button>
               )}</div>)}
 
@@ -2177,7 +2200,7 @@ export default function ChicParis() {
                       )}
                       {!isPreview && reviewCaptcha.widget}
                       <button type="submit" disabled={isPreview || reviewSubmitting || !reviewForm.reviewer.trim() || !reviewCaptcha.ready}
-                        style={{ background: isPreview || reviewSubmitting || !reviewForm.reviewer.trim() ? "#f3f4f6" : ACC, color: isPreview || reviewSubmitting || !reviewForm.reviewer.trim() ? "#9ca3af" : getContrastColor(ACC) === "light" ? "#fff" : "#111", border: "none", padding: "12px", fontSize: 10, fontWeight: 800, letterSpacing: 3, textTransform: "uppercase", cursor: isPreview ? "default" : "pointer" }}>
+                        style={{ background: isPreview || reviewSubmitting || !reviewForm.reviewer.trim() ? "#f3f4f6" : ACC, color: isPreview || reviewSubmitting || !reviewForm.reviewer.trim() ? "#9ca3af" : accentText, border: "none", padding: "12px", fontSize: 10, fontWeight: 800, letterSpacing: 3, textTransform: "uppercase", cursor: isPreview ? "default" : "pointer" }}>
                         {reviewSubmitting ? "Publicando..." : "Publicar reseña"}
                       </button>
                     </form>
@@ -2214,7 +2237,7 @@ export default function ChicParis() {
                 </div>
                 {isInquiryMode ? (
                   <button onClick={() => openInquiry(modalProduct)}
-                    style={{ width: "100%", background: ACC, color: getContrastColor(ACC) === "light" ? "#fff" : "#111", border: "none", padding: "15px", fontSize: 11, fontWeight: 800, letterSpacing: 3, textTransform: "uppercase", cursor: "pointer" }}>
+                    style={{ width: "100%", background: ACC, color: accentText, border: "none", padding: "15px", fontSize: 11, fontWeight: 800, letterSpacing: 3, textTransform: "uppercase", cursor: "pointer" }}>
                     Consultar disponibilidad
                   </button>
                 ) : (
@@ -2253,7 +2276,7 @@ export default function ChicParis() {
                       priceSize={13} compareSize={11} weight={700} ocultarPrecios={ocultarPrecios}
                       gap={8} style={{ marginBottom: 8 }} />
                     <button onClick={() => { setFavoritesOpen(false); openModal(product); }}
-                      style={{ background: ACC, color: getContrastColor(ACC) === "light" ? "#fff" : "#111", border: "none", padding: "6px 16px", fontSize: 10, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", cursor: "pointer" }}>
+                      style={{ background: ACC, color: accentText, border: "none", padding: "6px 16px", fontSize: 10, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", cursor: "pointer" }}>
                       Ver
                     </button>
                   </div>
@@ -2286,7 +2309,7 @@ export default function ChicParis() {
             style={{ position:"fixed", bottom:24, ...(hasWA ? {left:24} : {right:24}), zIndex:500, width:52, height:52, borderRadius:"50%", background:ACC, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 6px 18px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.3)", transition:"transform 0.2s" }}
             onMouseEnter={e => (e.currentTarget.style.transform="scale(1.1)")}
             onMouseLeave={e => (e.currentTarget.style.transform="scale(1)")}>
-            <svg width={26} height={26} viewBox="0 0 24 24" fill="none" stroke={getContrastColor(ACC)==="light"?"#fff":"#111"} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">{CART_ICON_OPTIONS[cartIconIdx]}</svg>
+            <svg width={26} height={26} viewBox="0 0 24 24" fill="none" stroke={accentText} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">{CART_ICON_OPTIONS[cartIconIdx]}</svg>
             {cartCount > 0 && !editMode && <span style={{ position:"absolute", top:-4, right:-4, background:"#e53e3e", color:"#fff", borderRadius:"50%", width:20, height:20, fontSize:11, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center" }}>{cartCount}</span>}
             {editMode && (
               <button onClick={e => { e.stopPropagation(); setOverride("cartIcon", { text: String(nextCartIconIdx) }); }} title="Cambiar ícono del carrito"

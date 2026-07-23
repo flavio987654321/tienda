@@ -79,6 +79,20 @@ export function normalizeVariants(input: unknown): NormalizedVariant[] {
     variants[0].value = SINGLE_VARIANT_FALLBACK_VALUE;
   }
 
+  // Un producto sin NINGUNA variante no tiene dónde guardar stock: el stock vive
+  // en ProductVariant, `Product` no tiene columna. Ese producto quedaba con las
+  // tres respuestas a la vez: "sin stock" en el panel (la suma de cero variantes
+  // da 0), "disponible" en la tienda (el cartel exige variants.length > 0) y
+  // vendible en el checkout (solo descuenta stock si hay variante).
+  //
+  // Se llega ahí vaciando los campos de la única fila de variante en el
+  // formulario. En vez de arrastrar el caso hasta las diez plantillas, se cierra
+  // acá: siempre queda una fila. Si el dueño no puso stock, es 0 — que es lo que
+  // el panel ya le venía diciendo.
+  if (variants.length === 0) {
+    return [{ name: "Unidad", value: SINGLE_VARIANT_FALLBACK_VALUE, stock: "0", price: "", sku: "", lowStockThreshold: "" }];
+  }
+
   return variants;
 }
 
