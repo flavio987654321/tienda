@@ -7,6 +7,7 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { Star } from "lucide-react";
 import ResenasClient from "./ResenasClient";
 import { parseFirstImage } from "@/lib/metaFeed";
+import { TEMPLATES_CON_RESENA_TIENDA } from "@/types/store-config";
 
 export default async function ResenasPage() {
   const user = await getCurrentUser();
@@ -14,7 +15,7 @@ export default async function ResenasPage() {
 
   const store = await prisma.store.findUnique({
     where: { ownerId: user.id },
-    select: { id: true, slug: true },
+    select: { id: true, slug: true, storeConfig: true },
   });
   if (!store) redirect("/dashboard");
 
@@ -37,6 +38,15 @@ export default async function ResenasPage() {
       product: { select: { id: true, name: true, images: true } },
     },
   });
+
+  // ¿El diseño que tiene puesto esta tienda dibuja el formulario de "opiná sobre
+  // la tienda"? Si no, el panel lo dice en vez de mostrar una pestaña esperando
+  // reseñas que nadie puede escribirle.
+  let aceptaResenaTienda = false;
+  try {
+    const t = JSON.parse(store.storeConfig || "{}")?.template;
+    aceptaResenaTienda = TEMPLATES_CON_RESENA_TIENDA.includes(t);
+  } catch { /* config ilegible: se asume que no */ }
 
   const serialized = reviews.map(r => ({
     ...r,
@@ -66,7 +76,7 @@ export default async function ResenasPage() {
         </div>
         <p className="text-gray-500 ml-9">Reseñas que tus clientes dejaron en tus productos.</p>
       </div>
-      <ResenasClient initialReviews={serialized} slug={store.slug} />
+      <ResenasClient initialReviews={serialized} slug={store.slug} aceptaResenaTienda={aceptaResenaTienda} />
     </DashboardLayout>
   );
 }

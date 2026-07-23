@@ -1222,8 +1222,17 @@ export default function ChicParis() {
 
           const deProducto = isPreview ? PREVIEW_REVIEWS : homeReviews;
           const deTienda   = isPreview ? PREVIEW_TIENDA  : storeReviews;
-          const lista      = resenaTab === "tienda" ? deTienda : deProducto;
           const sinNada    = deProducto.length === 0 && deTienda.length === 0;
+          // Si la pestaña que está abierta no tiene nada pero la otra sí, se
+          // muestra la que tiene. Abrir en una vacía teniendo contenido al lado
+          // hace que la tienda parezca sin reseñas cuando no lo está — y nadie va
+          // a tocar una pestaña para ver si atrás hay algo.
+          const tabEfectiva =
+            !sinNada && ((resenaTab === "producto" && deProducto.length === 0) ||
+                         (resenaTab === "tienda"   && deTienda.length === 0))
+              ? (resenaTab === "producto" ? "tienda" : "producto")
+              : resenaTab;
+          const lista      = tabEfectiva === "tienda" ? deTienda : deProducto;
 
           // El bloque ya NO desaparece cuando no hay reseñas: adentro está el
           // formulario para dejar la primera, y escondido no habría forma de
@@ -1251,7 +1260,7 @@ export default function ChicParis() {
                     4,8 con 200). En modo preview se muestra el 5 de las de ejemplo. */}
                 {(() => {
                   const promedio = isPreview ? 5 : (reviewStats?.promedio ?? 0);
-                  const total = isPreview ? PREVIEW_REVIEWS.length : (reviewStats?.total ?? 0);
+                  const total = isPreview ? (PREVIEW_REVIEWS.length + PREVIEW_TIENDA.length) : (reviewStats?.total ?? 0);
                   if (!total) return null;
                   return (
                     <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "0 0 8px", flexWrap: "wrap" }}>
@@ -1266,8 +1275,17 @@ export default function ChicParis() {
                     </div>
                   );
                 })()}
+                {/* Con CERO reseñas el título cambia. "Lo que dicen nuestras
+                    clientas" arriba de una sección vacía queda peor que no tener
+                    la sección: parece una tienda a la que nadie le compró. Con
+                    algo escrito, la sección pasa a ser una invitación, que es
+                    para lo que sirve mientras no haya opiniones.
+                    Si el dueño escribió su propio título, manda el suyo — no le
+                    pisamos una decisión que ya tomó. */}
                 <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "clamp(22px,2.5vw,34px)", fontWeight: 300, fontStyle: "italic", margin: 0, color: "#111" }}>
-                  <EditableZone field="pruebaSocialTitle" label="Título prueba social">Lo que dicen nuestras clientas</EditableZone>
+                  <EditableZone field="pruebaSocialTitle" label="Título prueba social">
+                    {sinNada ? "¿Ya compraste? Contanos cómo te fue" : "Lo que dicen nuestras clientas"}
+                  </EditableZone>
                 </h2>
 
                 {/* ── Aviso, solo mientras se edita ──────────────────────────────
@@ -1315,8 +1333,8 @@ export default function ChicParis() {
                         background: "none", border: "none", cursor: "pointer", padding: "0 0 10px",
                         marginBottom: -1, fontSize: 10, fontWeight: 700, letterSpacing: 2,
                         textTransform: "uppercase",
-                        color: resenaTab === t.key ? "#111" : "#999",
-                        borderBottom: `2px solid ${resenaTab === t.key ? ACC : "transparent"}`,
+                        color: tabEfectiva === t.key ? "#111" : "#999",
+                        borderBottom: `2px solid ${tabEfectiva === t.key ? ACC : "transparent"}`,
                       }}>
                       {t.label} <span style={{ color: "#aaa", fontWeight: 400 }}>({t.n})</span>
                     </button>
@@ -1328,7 +1346,7 @@ export default function ChicParis() {
               {lista.length === 0 && (
                 <div style={{ padding: isMobile ? "0 20px 8px" : "0 40px 8px" }}>
                   <p style={{ fontSize: 13, color: "#777", lineHeight: 1.7, margin: 0, maxWidth: 520 }}>
-                    {resenaTab === "tienda"
+                    {tabEfectiva === "tienda"
                       ? sinNada
                         ? "Todavía nadie dejó su opinión. Si compraste acá, contanos cómo te fue — sos la primera."
                         : "Todavía nadie opinó sobre la tienda en general. Si compraste, contanos cómo te fue."
@@ -1413,7 +1431,7 @@ export default function ChicParis() {
                   Una reseña de PRODUCTO necesita saber de qué producto es, así
                   que se deja desde la ficha. Una de tienda no apunta a nada: este
                   es el único lugar donde puede vivir su formulario. */}
-              {resenaTab === "tienda" && (
+              {tabEfectiva === "tienda" && (
                 <div style={{ padding: isMobile ? "28px 20px 0" : "36px 40px 0" }}>
                   <div style={{ maxWidth: 480, background: "#fafafa", border: "1px solid #f0f0f0", padding: isMobile ? "20px" : "24px" }}>
                     {tiendaListo ? (

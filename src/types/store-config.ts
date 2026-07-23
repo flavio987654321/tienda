@@ -2,6 +2,18 @@ export type TemplateId = "fashion-noir" | "boho-terra" | "urban-pulse" | "chic-p
 
 export const TEMPLATES_WITH_CAROUSEL: TemplateId[] = ["chic-paris", "electro-prime", "tech-nova", "home-studio", "casa-clara"];
 
+// Qué templates dibujan el formulario de "opiná sobre esta tienda".
+//
+// Las reseñas de tienda funcionan en toda la plataforma —la base, la API, el
+// panel del dueño— pero el formulario para dejarlas todavía vive en un solo
+// template. En los demás, el dueño ve la pestaña "La tienda" en su panel y
+// espera reseñas que nadie puede escribirle.
+//
+// Sin esta lista sería exactamente el problema de la foto de fondo: prometer
+// algo que del otro lado no existe, y que no hay forma de descubrir salvo
+// esperando. Al portar el formulario a otro template, hay que sumarlo acá.
+export const TEMPLATES_CON_RESENA_TIENDA: TemplateId[] = ["chic-paris"];
+
 // ── Qué secciones aceptan FOTO de fondo, por template ────────────────────────
 // El fondo de una sección es un COLOR. Algunos templates además saben dibujar una
 // foto detrás, y otros no — Chic Paris, por ejemplo, no lo hace en ninguna.

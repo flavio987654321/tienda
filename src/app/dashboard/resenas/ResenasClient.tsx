@@ -24,9 +24,12 @@ const POR_PAGINA = 20;
 export default function ResenasClient({
   initialReviews,
   slug,
+  aceptaResenaTienda,
 }: {
   initialReviews: Review[];
   slug: string;
+  /** ¿El diseño puesto dibuja el formulario de reseñas de tienda? */
+  aceptaResenaTienda: boolean;
 }) {
   const [reviews, setReviews] = useState(initialReviews);
   const [deleting, setDeleting] = useState<string | null>(null);
@@ -194,6 +197,20 @@ export default function ResenasClient({
           ? "Opiniones sobre un producto puntual. Se publican solas: están atadas a algo concreto y le sirven a quien está por comprar ese producto."
           : "Opiniones sobre tu tienda en general — la atención, el envío, la experiencia. Se dejan desde tu portada y no apuntan a ningún producto, así que las revisás vos antes de que se publiquen."}
       </p>
+
+      {/* Si el diseño puesto no dibuja el formulario, se dice. Sin esto, el dueño
+          ve una pestaña vacía esperando reseñas que nadie puede escribirle, y no
+          hay forma de que se entere salvo esperando para siempre. */}
+      {tab === "tienda" && !aceptaResenaTienda && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-5 flex gap-3">
+          <Clock className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+          <p className="text-xs text-amber-800 leading-relaxed">
+            <strong>Tu diseño actual todavía no tiene el formulario</strong> para que te dejen
+            opiniones sobre la tienda, así que por ahora esta pestaña no va a recibir nada.
+            Las reseñas de tus productos siguen funcionando normal.
+          </p>
+        </div>
+      )}
 
       {/* ── Cola de aprobación ── */}
       {tab === "tienda" && pendientes.length > 0 && (

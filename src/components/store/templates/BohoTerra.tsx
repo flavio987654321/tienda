@@ -1093,8 +1093,15 @@ export default function BohoTerra() {
                   )}
                   <p style={{ fontSize:12, fontWeight:600, color:T, margin:0, letterSpacing:2, textTransform:"uppercase" }}>{r.reviewer}</p>
                   {r.product?.name && <p style={{ fontSize:11, color:MID, margin:0 }}>{r.product.name}</p>}
+                  {/* "auto" = el sistema cruzó un pedido ENTREGADO con ese email y
+                      ese producto. "owner" = lo marcó el dueño a mano. Decir
+                      "Compra verificada" en los dos casos es afirmarle al
+                      comprador una compra que nadie comprobó. El panel del dueño
+                      ya los distinguía; el que mentía era este cartel. */}
                   {r.verified && (
-                    <p style={{ fontSize:10, fontWeight:600, color:"#16a34a", margin:"4px 0 0", letterSpacing:0.5 }}>✓ Compra verificada</p>
+                    <p style={{ fontSize:10, fontWeight:600, color: r.verifiedBy === "auto" ? "#16a34a" : MID, margin:"4px 0 0", letterSpacing:0.5 }}>
+                      {r.verifiedBy === "auto" ? "✓ Compra verificada" : "✓ Verificada por la tienda"}
+                    </p>
                   )}
                 </div>
                 {allReviews.length > 1 && (

@@ -1243,8 +1243,13 @@ export default function FashionNoir() {
                         <div>
                           <p style={{ fontSize:11, fontWeight:700, color:G, margin:"0 0 2px", letterSpacing:1, textTransform:"uppercase" }}>{r.reviewer}</p>
                           {r.product?.name && <p style={{ fontSize:11, color:"rgba(240,235,227,0.35)", margin:0 }}>{r.product.name}</p>}
+                          {/* Ver el comentario largo en BohoTerra: "auto" lo verificó
+                              el sistema contra un pedido entregado, "owner" lo marcó
+                              el dueño. No son lo mismo y no pueden decir lo mismo. */}
                           {r.verified && (
-                            <p style={{ fontSize:10, fontWeight:700, color:"#34d399", margin:"4px 0 0", letterSpacing:0.3 }}>✓ Compra verificada</p>
+                            <p style={{ fontSize:10, fontWeight:700, color: r.verifiedBy === "auto" ? "#34d399" : "rgba(240,235,227,0.55)", margin:"4px 0 0", letterSpacing:0.3 }}>
+                              {r.verifiedBy === "auto" ? "✓ Compra verificada" : "✓ Verificada por la tienda"}
+                            </p>
                           )}
                         </div>
                       </div>
