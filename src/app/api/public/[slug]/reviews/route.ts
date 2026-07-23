@@ -5,6 +5,8 @@ import { getCurrentUser } from "@/lib/auth-session";
 import { sendNewReviewToOwnerEmail } from "@/lib/email";
 import { getClientIp } from "@/lib/request-ip";
 import { verifyTurnstile } from "@/lib/turnstile";
+import { parseFirstImage } from "@/lib/metaFeed";
+import { COMENTARIO_MAX, RESENADOR_MAX } from "@/lib/reviews";
 
 export async function GET(
   _req: NextRequest,
@@ -17,27 +19,59 @@ export async function GET(
   const store = await prisma.store.findUnique({ where: { slug }, select: { id: true } });
   if (!store) return NextResponse.json({ reviews: [] });
 
-  function firstImage(images: string): string | null {
-    try { const a = JSON.parse(images); return Array.isArray(a) && a[0] ? a[0] : null; }
-    catch { return null; }
-  }
+  // `images` guarda `[{ url, variantValue }]`, no `["url"]`. La copia local que
+  // había acá devolvía el OBJETO entero como si fuera la URL, así que la foto del
+  // producto en las reseñas nunca se vio: al template le llegaba un objeto donde
+  // esperaba un string. `parseFirstImage` entiende las dos formas —quedan
+  // productos viejos guardados como lista de strings— y es la que usa el resto
+  // del sistema.
+  const firstImage = parseFirstImage;
 
+  // ── Portada ────────────────────────────────────────────────────────────────
+  // Sin `productId` esto alimenta el bloque de prueba social de la home, que es
+  // la parte más visible de la tienda.
+  //
+  // Antes traía las 12 más recientes con comentario, sin mirar el puntaje: una
+  // reseña de 1★ ("no me llegó nunca") aparecía en la portada, abajo del título
+  // "Lo que dicen nuestras clientas", al instante y antes de que el dueño llegara
+  // a leer el mail de aviso. El único remedio era borrarla.
+  //
+  // A la PORTADA suben solo las de 4★ y 5★. No es censura: la reseña mala sigue
+  // publicada y visible en su producto, que es donde le sirve a quien está por
+  // comprar ese producto. Lo que deja de pasar es que la elija como cartel de
+  // entrada de la tienda alguien que no es el dueño.
   if (!productId) {
-    const rows = await prisma.publicReview.findMany({
-      where: { storeId: store.id, comment: { not: null } },
-      orderBy: { createdAt: "desc" },
-      take: 12,
-      select: {
-        id: true, rating: true, comment: true, reviewer: true,
-        verified: true, verifiedBy: true, createdAt: true,
-        product: { select: { name: true, images: true } },
-      },
-    });
+    const [rows, stats] = await Promise.all([
+      prisma.publicReview.findMany({
+        where: { storeId: store.id, comment: { not: null }, rating: { gte: 4 } },
+        orderBy: { createdAt: "desc" },
+        take: 12,
+        select: {
+          id: true, rating: true, comment: true, reviewer: true,
+          verified: true, verifiedBy: true, createdAt: true,
+          product: { select: { id: true, name: true, images: true } },
+        },
+      }),
+      // El promedio se saca sobre TODAS las reseñas, no solo sobre las que se
+      // muestran. Promediar únicamente las de 4★ y 5★ daría un número inflado
+      // que la tienda estaría publicando como si fuera su reputación real.
+      prisma.publicReview.aggregate({
+        where: { storeId: store.id },
+        _avg: { rating: true },
+        _count: { _all: true },
+      }),
+    ]);
     const reviews = rows.map(r => ({
       ...r,
-      product: { name: r.product.name, image: firstImage(r.product.images) },
+      product: { id: r.product.id, name: r.product.name, image: firstImage(r.product.images) },
     }));
-    return NextResponse.json({ reviews });
+    return NextResponse.json({
+      reviews,
+      stats: {
+        promedio: stats._avg.rating ?? 0,
+        total: stats._count._all,
+      },
+    });
   }
 
   const rows = await prisma.publicReview.findMany({
@@ -47,12 +81,12 @@ export async function GET(
     select: {
       id: true, rating: true, comment: true, reviewer: true,
       verified: true, verifiedBy: true, createdAt: true,
-      product: { select: { name: true, images: true } },
+      product: { select: { id: true, name: true, images: true } },
     },
   });
   const reviews = rows.map(r => ({
     ...r,
-    product: { name: r.product.name, image: firstImage(r.product.images) },
+    product: { id: r.product.id, name: r.product.name, image: firstImage(r.product.images) },
   }));
   return NextResponse.json({ reviews });
 }
@@ -82,6 +116,19 @@ export async function POST(
   if (typeof rating !== "number" || rating < 1 || rating > 5) {
     return NextResponse.json({ error: "Rating inválido" }, { status: 400 });
   }
+
+  // El comentario NO tenía ningún tope: ni en el formulario ni acá. `reviewer` sí
+  // lo tenía (80), el comentario no. Cualquiera podía mandar un texto de megas
+  // por POST —sin pasar por el formulario— y quedaba guardado y publicado.
+  //
+  // Y no era solo la base: las tarjetas de la portada están en una fila que las
+  // estira a todas al alto de la más alta. Una sola reseña larguísima dejaba la
+  // portada arruinada hasta que el dueño la borrara a mano.
+  //
+  // El tope va acá y no solo en el formulario porque el del formulario se saltea
+  // mandando el POST directo. Se recorta en vez de rechazar: quien escribió de
+  // más igual dejó su reseña, no pierde lo que puso.
+  const comentario = typeof comment === "string" ? comment.trim().slice(0, COMENTARIO_MAX) || null : null;
 
   // Captcha al final: un error de campos no consume el token (es de un solo uso)
   if (!(await verifyTurnstile(turnstileToken, ip, "review"))) {
@@ -127,8 +174,8 @@ export async function POST(
       storeId:    store.id,
       productId,
       rating:     Math.round(rating),
-      comment:    comment?.trim() || null,
-      reviewer:   reviewer.trim().slice(0, 80),
+      comment:    comentario,
+      reviewer:   reviewer.trim().slice(0, RESENADOR_MAX),
       verified,
       verifiedBy,
     },
@@ -139,7 +186,7 @@ export async function POST(
   });
 
   const productName = store.products[0].name;
-  const reviewerTrimmed = reviewer.trim().slice(0, 80);
+  const reviewerTrimmed = reviewer.trim().slice(0, RESENADOR_MAX);
   void Promise.all([
     prisma.notification.create({
       data: {
@@ -158,7 +205,7 @@ export async function POST(
       productName,
       reviewerName: reviewerTrimmed,
       rating:       Math.round(rating),
-      comment:      comment?.trim() || null,
+      comment:      comentario,
     }),
   ]).catch(() => {});
 

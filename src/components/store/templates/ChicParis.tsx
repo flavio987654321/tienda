@@ -10,6 +10,7 @@ import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { useCartLogic } from "@/hooks/useCartLogic";
 import { useTouchSwipe } from "@/hooks/useTouchSwipe";
 import { masVistos, MIN_MAS_VISTOS } from "@/lib/masVistos";
+import { COMENTARIO_MAX } from "@/lib/reviews";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
 import VerifiedIconButton from "@/components/store/VerifiedIconButton";
 import { CartDrawer, type CartTheme } from "@/components/store/templates/shared/CartDrawer";
@@ -28,6 +29,59 @@ import { resolveVariantPrice } from "@/lib/variantPrice";
 import { useTurnstile } from "@/components/Turnstile";
 
 type Product = StorefrontProduct;
+
+/* ── Comentario de una reseña en la portada ────────────────────────────────────
+   Las tarjetas van en una fila que las estira a todas al alto de la más alta, así
+   que un comentario largo agranda TODAS. Se recorta a 6 líneas.
+
+   El "Ver reseña completa" aparece SOLO si el texto de verdad no entró. No se
+   decide por la cantidad de caracteres —cuántos entran depende del ancho de la
+   tarjeta, que cambia entre celular y escritorio— sino midiendo el elemento ya
+   dibujado: si lo que ocupa el texto supera lo que se ve, está cortado.
+
+   Se mide con ResizeObserver y no una sola vez, porque al girar el teléfono o
+   achicar la ventana la tarjeta cambia de ancho y un texto que entraba deja de
+   entrar. Observar además dispara solo la primera vez, así que no hace falta
+   medir a mano y encadenar un render de más.
+──────────────────────────────────────────────────────────────────────────────── */
+function ResenaComentario({ texto, onVerMas, acento }: {
+  texto: string;
+  onVerMas: (() => void) | null;
+  acento: string;
+}) {
+  const ref = useRef<HTMLParagraphElement>(null);
+  const [cortado, setCortado] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => {
+      const ahora = el.scrollHeight > el.clientHeight + 1;
+      setCortado(prev => (prev === ahora ? prev : ahora));
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [texto]);
+
+  return (
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
+      <p ref={ref} style={{
+        fontFamily: "'Playfair Display', Georgia, serif", fontStyle: "italic",
+        fontSize: 13, color: "#444", lineHeight: 1.75, margin: 0,
+        display: "-webkit-box", WebkitLineClamp: 6, WebkitBoxOrient: "vertical",
+        overflow: "hidden",
+      }}>&ldquo;{texto}&rdquo;</p>
+      {cortado && onVerMas && (
+        <button type="button" onClick={onVerMas}
+          style={{ alignSelf: "flex-start", background: "none", border: "none", padding: 0, cursor: "pointer",
+                   fontSize: 10, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", color: acento }}>
+          Ver reseña completa →
+        </button>
+      )}
+    </div>
+  );
+}
+
 
 const SIZE_ATTRS = ["talle","size","talla","talles","sizes","tamaño","tamano","almacenamiento","ram","versión","version","formato","variante","material","sabor","peso/tamaño","peso"];
 
@@ -95,10 +149,11 @@ export default function ChicParis() {
   const [announcementIdx,  setAnnouncementIdx]  = useState(0);
   const [announcementVisible, setAnnouncementVisible] = useState(true);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  type PReview = { id: string; rating: number; comment: string | null; reviewer: string; verified: boolean; verifiedBy: string | null; createdAt: string; product?: { name: string; image: string | null } };
+  type PReview = { id: string; rating: number; comment: string | null; reviewer: string; verified: boolean; verifiedBy: string | null; createdAt: string; product?: { id: string; name: string; image: string | null } };
   type HomeReview = PReview;
   const [reviews,        setReviews]        = useState<PReview[]>([]);
   const [homeReviews,    setHomeReviews]    = useState<HomeReview[]>([]);
+  const [reviewStats,    setReviewStats]    = useState<{ promedio: number; total: number } | null>(null);
   const [reviewsShown,   setReviewsShown]   = useState(5);
   const [reviewsLoading, setReviewsLoading] = useState(false);
   const [reviewForm,     setReviewForm]     = useState({ reviewer: "", rating: 5, comment: "", email: "" });
@@ -317,13 +372,21 @@ export default function ChicParis() {
     if (!slug) return;
     fetch(`/api/public/${slug}/reviews`)
       .then(r => r.ok ? r.json() : { reviews: [] })
-      .then(d => setHomeReviews(d.reviews ?? []))
+      .then(d => {
+        setHomeReviews(d.reviews ?? []);
+        // El promedio sale de TODAS las reseñas de la tienda, no de las cuatro
+        // que se muestran acá — por eso viene del servidor y no se calcula sobre
+        // `d.reviews`, que ya está filtrado a 4★ y 5★.
+        if (d.stats) setReviewStats(d.stats);
+      })
       .catch(() => {});
   }, [storeConfig?.slug]);
 
-  // Cargar reseñas al abrir modal (D-04)
+  // Cargar reseñas al abrir modal (D-04): sincroniza el estado de reseñas con el
+  // modalProduct.id actual (fetch + reset), patrón estándar de "fetch on id change".
   useEffect(() => {
     const slug = storeConfig?.slug;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- limpia las reseñas del producto anterior al cerrar el modal; depende de una interacción, no se puede calcular durante el render
     if (!modalProduct || !slug) { setReviews([]); return; }
     setReviewsLoading(true); setReviewDone(false); setReviewsShown(5);
     setReviewForm(p => ({ ...p, rating: 5, comment: "" }));
@@ -1073,12 +1136,23 @@ export default function ChicParis() {
 
       <SectionBlock id="cp-prueba-social" label="Prueba social" isPreview={isPreview} defaultOrder={CP_SECTION_IDS}>
         {(() => {
+          // Las reseñas de ejemplo van colgadas de PRODUCTOS REALES de la tienda.
+          // Antes eran nombres inventados ("Vestido lino") y `image: null`, así que
+          // el editor mostraba la tarjeta SIN la foto del producto — que es la
+          // mitad de lo que se ve en la tienda de verdad. El dueño diseñaba mirando
+          // algo que no era lo que le iba a quedar.
           const PREVIEW_REVIEWS: HomeReview[] = [
-            { id:"p1", rating:5, comment:"Calidad increíble y llegó rapidísimo. Ya compré tres veces y siempre perfecta.", reviewer:"María L.", verified:true, verifiedBy:"auto", createdAt:"", product:{ name:"Vestido lino", image:null } },
-            { id:"p2", rating:5, comment:"El diseño es exactamente como en las fotos. Me enamoré cuando lo vi puesto.", reviewer:"Sofía M.", verified:false, verifiedBy:null, createdAt:"", product:{ name:"Blazer oversize", image:null } },
-            { id:"p3", rating:5, comment:"Excelente atención y envío super rápido. La recomiendo sin dudarlo.", reviewer:"Valentina R.", verified:true, verifiedBy:"owner", createdAt:"", product:{ name:"Jean wide leg", image:null } },
-            { id:"p4", rating:5, comment:"Super recomendada, el packaging es hermoso y llegó antes de lo esperado.", reviewer:"Camila F.", verified:false, verifiedBy:null, createdAt:"", product:{ name:"Remera seda", image:null } },
-          ];
+            { id:"p1", rating:5, comment:"Calidad increíble y llegó rapidísimo. Ya compré tres veces y siempre perfecta.", reviewer:"María L.",     verified:true,  verifiedBy:"auto"  },
+            { id:"p2", rating:5, comment:"El diseño es exactamente como en las fotos. Me enamoré cuando lo vi puesto.",   reviewer:"Sofía M.",     verified:false, verifiedBy:null    },
+            { id:"p3", rating:4, comment:"Excelente atención y envío super rápido. La recomiendo sin dudarlo.",           reviewer:"Valentina R.", verified:true,  verifiedBy:"owner" },
+            { id:"p4", rating:5, comment:"Super recomendada, el packaging es hermoso y llegó antes de lo esperado.",      reviewer:"Camila F.",    verified:false, verifiedBy:null    },
+          ].map((r, i) => {
+            const p = products[i % Math.max(products.length, 1)];
+            return {
+              ...r, createdAt: "",
+              product: p ? { id: p.id, name: p.name, image: p.images[0] ?? null } : undefined,
+            };
+          });
           const allReviews = isPreview ? PREVIEW_REVIEWS : homeReviews;
           if (allReviews.length === 0) return null;
           async function deleteHomeReview(reviewId: string) {
@@ -1093,10 +1167,64 @@ export default function ChicParis() {
             <section data-reveal style={{ position:"relative", background: sc["bgPruebaSocial"] ?? "#fff", padding: isMobile ? "56px 0" : "72px 0", borderTop: "1px solid #f0f0f0" }}>
               <EditableSectionBg field="bgPruebaSocial" label="Fondo prueba social" />
               <div style={{ padding: isMobile ? "0 20px" : "0 40px", marginBottom: 32 }}>
-                <p style={{ fontSize: 10, letterSpacing: 4, color: ACC, textTransform: "uppercase", fontWeight: 700, margin: "0 0 8px" }}>{"★ ★ ★ ★ ★"}</p>
+                {/* Las cinco estrellas estaban escritas a mano —el texto literal
+                    "★ ★ ★ ★ ★"— así que una tienda con promedio 2,4 mostraba igual
+                    cinco estrellas doradas arriba de sus propias reseñas. No era un
+                    adorno: era una afirmación que sus datos desmentían.
+                    Ahora se dibuja el promedio real, con la cantidad al lado para
+                    que se pueda dimensionar (4,8 con 2 reseñas no es lo mismo que
+                    4,8 con 200). En modo preview se muestra el 5 de las de ejemplo. */}
+                {(() => {
+                  const promedio = isPreview ? 5 : (reviewStats?.promedio ?? 0);
+                  const total = isPreview ? PREVIEW_REVIEWS.length : (reviewStats?.total ?? 0);
+                  if (!total) return null;
+                  return (
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "0 0 8px", flexWrap: "wrap" }}>
+                      <span style={{ display: "flex", gap: 2 }}>
+                        {[1, 2, 3, 4, 5].map(s => (
+                          <span key={s} style={{ fontSize: 13, lineHeight: 1, color: s <= Math.round(promedio) ? ACC : "#e8e8e8" }}>★</span>
+                        ))}
+                      </span>
+                      <span style={{ fontSize: 10, letterSpacing: 2, color: "#757575", textTransform: "uppercase", fontWeight: 700 }}>
+                        {promedio.toFixed(1).replace(".", ",")} · {total} {total === 1 ? "reseña" : "reseñas"}
+                      </span>
+                    </div>
+                  );
+                })()}
                 <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "clamp(22px,2.5vw,34px)", fontWeight: 300, fontStyle: "italic", margin: 0, color: "#111" }}>
                   <EditableZone field="pruebaSocialTitle" label="Título prueba social">Lo que dicen nuestras clientas</EditableZone>
                 </h2>
+
+                {/* ── Aviso, solo mientras se edita ──────────────────────────────
+                    Las 4 reseñas de abajo son de ejemplo y no se pueden tocar,
+                    pero nada lo decía: quedaba pensar que eran reales, o esperar
+                    poder editarlas.
+                    No se limita a avisar que son falsas — usa los números reales
+                    de la tienda para decir qué va a pasar. El caso importante es
+                    el del medio: hay reseñas pero ninguna califica, así que el
+                    bloque NO aparece en la tienda publicada. Eso, sin este cartel,
+                    es imposible de descubrir: en el editor se ve lleno. */}
+                {isPreview && (() => {
+                  const total = reviewStats?.total ?? 0;
+                  const enPortada = homeReviews.length;
+                  const detalle =
+                    total === 0
+                      ? "Tu tienda todavía no tiene ninguna. Hasta que llegue la primera, este bloque no se muestra en la tienda publicada."
+                      : enPortada === 0
+                        ? `Tenés ${total} ${total === 1 ? "reseña" : "reseñas"}, pero ninguna de 4★ o 5★ con comentario escrito — que son las únicas que suben a la portada. Por eso, hoy este bloque no se muestra en tu tienda.`
+                        : `Tenés ${total} ${total === 1 ? "reseña" : "reseñas"} y ${enPortada} ${enPortada === 1 ? "va" : "van"} a aparecer acá: las de 4★ y 5★ con comentario.`;
+                  return (
+                    <div style={{ display: "flex", gap: 9, marginTop: 14, padding: "10px 13px", background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 8, maxWidth: 620 }}>
+                      <span style={{ flexShrink: 0, fontSize: 13, lineHeight: 1.4 }}>⚠️</span>
+                      <p style={{ margin: 0, fontSize: 11.5, color: "#92400e", lineHeight: 1.55 }}>
+                        <strong>Estas reseñas son de ejemplo.</strong> No se pueden editar y no se publican —
+                        están para que veas cómo queda el bloque. Se reemplazan solas por las reseñas reales
+                        de tus clientas. {detalle}
+                        {" "}El título de arriba y el fondo sí son tuyos: esos se editan y se guardan.
+                      </p>
+                    </div>
+                  );
+                })()}
               </div>
               <div style={{ display: "flex", gap: 16, overflowX: "auto", scrollSnapType: "x mandatory", WebkitOverflowScrolling: "touch", paddingLeft: isMobile ? 20 : 40, paddingRight: isMobile ? 20 : 40, paddingBottom: 8, scrollbarWidth: "none" }}>
                 {allReviews.map(r => (
@@ -1111,16 +1239,55 @@ export default function ChicParis() {
                     <div style={{ display: "flex", gap: 2 }}>
                       {[1,2,3,4,5].map(s => <span key={s} style={{ color: s <= r.rating ? ACC : "#e8e8e8", fontSize: 13 }}>★</span>)}
                     </div>
-                    {r.comment && <p style={{ fontFamily: "'Playfair Display', Georgia, serif", fontStyle: "italic", fontSize: 13, color: "#444", lineHeight: 1.75, margin: 0, flex: 1 }}>&ldquo;{r.comment}&rdquo;</p>}
+                    {r.comment && (
+                      <ResenaComentario
+                        texto={r.comment}
+                        acento={ACC}
+                        // Abre la vista rápida de ESE producto, que ya trae todas
+                        // sus reseñas enteras. No manda a /producto/[id] porque
+                        // chic-paris no usa página de detalle —usa el modal— y
+                        // sacarlo de la portada sería cambiarle el recorrido.
+                        // Si el producto no está entre los cargados, no se ofrece
+                        // el link en vez de abrir un modal vacío.
+                        onVerMas={(() => {
+                          const p = r.product?.id ? products.find(x => x.id === r.product!.id) : undefined;
+                          return p && !isPreview ? () => setModalProduct(p) : null;
+                        })()}
+                      />
+                    )}
                     <div style={{ borderTop: "1px solid #f0f0f0", paddingTop: 12, display:"flex", alignItems:"center", gap:10 }}>
+                      {/* 36px es muy chico para una prenda: no se distingue si es
+                          una campera o un pantalón, que es justo lo que aporta. */}
                       {r.product?.image && (
-                        <img src={r.product.image} alt={r.product?.name ?? ""} style={{ width:36, height:36, objectFit:"cover", borderRadius:4, border:"1px solid #f0f0f0", flexShrink:0 }} />
+                        <FadeImage src={r.product.image} alt={r.product?.name ?? ""} width={46} height={46} style={{ objectFit:"cover", borderRadius:4, border:"1px solid #f0f0f0", flexShrink:0 }} />
                       )}
                       <div>
                         <p style={{ fontSize: 10, fontWeight: 700, color: "#111", margin: "0 0 2px", letterSpacing: 1.5, textTransform: "uppercase" }}>{r.reviewer}</p>
-                        {r.product?.name && <p style={{ fontSize: 10, color: "#bbb", margin: 0 }}>{r.product.name}</p>}
+                        {/* Era 10px en #bbb: contraste 1,84 sobre el #fafafa de la
+                            tarjeta, cuando el mínimo legible es 4,5. Casi el mismo
+                            color que el fondo. #747474 es el gris más parecido que
+                            sí se lee. */}
+                        {/* El nombre lo pone el dueño y puede ser largo ("Campera inflable
+    larga negra talle XL"). Con el corte a 2 líneas la fila de abajo
+    no crece sin control; que no se salga de la tarjeta ya lo cubre
+    el `overflow-wrap` global. */}
+{r.product?.name && (
+  <p style={{ fontSize: 11, color: "#6e6e6e", margin: 0, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{r.product.name}</p>
+)}
+                        {/* El sello decía "Compra verificada" en los dos casos, y
+                            no son lo mismo: "auto" significa que el sistema cruzó
+                            un pedido ENTREGADO con ese email y ese producto;
+                            "owner" significa que lo marcó el dueño a mano. La
+                            tienda estaba afirmando una compra que nadie comprobó.
+                            El panel del dueño ya distinguía los dos — el que
+                            mentía era el cartel que ve el comprador. */}
+                        {/* 9px con esos colores no llegaba al mínimo legible (3,16 el
+                            verde y 2,46 el gris, contra 4,5). Son los tonos más
+                            parecidos que sí se leen sobre el #fafafa de la tarjeta. */}
                         {r.verified && (
-                          <p style={{ fontSize: 9, fontWeight: 700, color: "#16a34a", margin: "4px 0 0", letterSpacing: 0.5 }}>✓ Compra verificada</p>
+                          <p style={{ fontSize: 10, fontWeight: 700, color: r.verifiedBy === "auto" ? "#117f3a" : "#607490", margin: "4px 0 0", letterSpacing: 0.5 }}>
+                            {r.verifiedBy === "auto" ? "✓ Compra verificada" : "✓ Verificada por la tienda"}
+                          </p>
                         )}
                       </div>
                     </div>
@@ -1216,20 +1383,15 @@ export default function ChicParis() {
               </div>
             ))}
 
-            {/* Social links */}
-            {storeConfig?.socialLinks && (isPreview || Object.entries(storeConfig.socialLinks).some(([, v]) => v)) && (
-              <div style={{ display: "flex", gap: 16, marginTop: 8 }}>
-                {Object.entries(storeConfig.socialLinks).filter(([, v]) => isPreview || v).map(([net, url]) => (
-                  <a key={net} href={url || "#"} target={url ? "_blank" : undefined} rel="noopener"
-                    onClick={e => { if (!url) e.preventDefault(); }}
-                    style={{ fontSize: 10, fontWeight: 700, letterSpacing: 2, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", textDecoration: "none", transition: "color 0.2s", opacity: url ? 1 : 0.4, cursor: url ? "pointer" : "default" }}
-                    onMouseEnter={e => (e.currentTarget.style.color = ACC)}
-                    onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.4)")}>
-                    {net}
-                  </a>
-                ))}
-              </div>
-            )}
+            {/* Las redes NO van acá: están en el footer, que arranca a menos de una
+                pantalla de distancia, con la misma lista y el mismo fondo oscuro.
+                Se veían dos veces seguidas.
+                Se dejan en el footer y no acá por una razón concreta: esta sección
+                es un bloque que el dueño puede ocultar (`cp-contacto`) y el footer
+                no. Si se hubiera hecho al revés, ocultar Contacto se llevaba
+                puestas las redes de toda la tienda sin que nadie lo pidiera.
+                Lo que sí queda es Email y WhatsApp, que son para escribir — que es
+                justo lo que vino a hacer alguien que llegó hasta el formulario. */}
           </div>
         </div>
 
@@ -1287,7 +1449,11 @@ export default function ChicParis() {
               <p style={{ margin: 0, fontSize: 13, color: footerText, opacity: 0.55, lineHeight: 1.7, maxWidth: 280 }}>
                 <EditableZone field="footerDescription" label="Descripción footer">Moda contemporánea para quienes eligen con intención.</EditableZone>
               </p>
-              {storeConfig?.socialLinks && (
+              {/* El `.some()` no estaba: con todas las redes vacías, el filtro dejaba
+                  la lista en cero pero el <div> se dibujaba igual y metía 20px de
+                  aire suelto abajo de la descripción. Antes se disimulaba porque
+                  las redes también estaban arriba; ahora este es el único lugar. */}
+              {storeConfig?.socialLinks && (isPreview || Object.values(storeConfig.socialLinks).some(v => v)) && (
                 <div style={{ display: "flex", gap: 14, marginTop: 20 }}>
                   {Object.entries(storeConfig.socialLinks).filter(([, v]) => isPreview || v).map(([net, url]) => (
                     <a key={net} href={url || "#"} target={url ? "_blank" : undefined} rel="noopener"
@@ -1702,9 +1868,18 @@ export default function ChicParis() {
                             style={{ background: "none", border: "none", fontSize: 20, cursor: isPreview ? "default" : "pointer", color: s <= reviewForm.rating ? ACC : "#e5e7eb", padding: "2px" }}>★</button>
                         ))}
                       </div>
+                      {/* El tope viene del servidor (COMENTARIO_MAX) para que sean
+                          el mismo número. Sin esto se podía escribir sin límite y
+                          el recorte aparecía recién después de publicar, cortando
+                          la reseña a la mitad sin haber avisado nunca. */}
                       <textarea value={reviewForm.comment} onChange={e => !isPreview && setReviewForm(p => ({ ...p, comment: e.target.value }))}
-                        placeholder="Comentario (opcional)" rows={3} readOnly={isPreview}
+                        placeholder="Comentario (opcional)" rows={3} readOnly={isPreview} maxLength={COMENTARIO_MAX}
                         style={{ border: "1px solid #e5e7eb", padding: "9px 12px", fontSize: 12, resize: "none", outline: "none" }} />
+                      {reviewForm.comment.length > COMENTARIO_MAX - 80 && (
+                        <p style={{ margin: "-4px 0 0", fontSize: 10, color: reviewForm.comment.length >= COMENTARIO_MAX ? "#dc2626" : "#6e6e6e", textAlign: "right" }}>
+                          {reviewForm.comment.length} / {COMENTARIO_MAX}
+                        </p>
+                      )}
                       {!isPreview && reviewCaptcha.widget}
                       <button type="submit" disabled={isPreview || reviewSubmitting || !reviewForm.reviewer.trim() || !reviewCaptcha.ready}
                         style={{ background: isPreview || reviewSubmitting || !reviewForm.reviewer.trim() ? "#f3f4f6" : ACC, color: isPreview || reviewSubmitting || !reviewForm.reviewer.trim() ? "#9ca3af" : getContrastColor(ACC) === "light" ? "#fff" : "#111", border: "none", padding: "12px", fontSize: 10, fontWeight: 800, letterSpacing: 3, textTransform: "uppercase", cursor: isPreview ? "default" : "pointer" }}>
@@ -1799,6 +1974,7 @@ export default function ChicParis() {
       {lightboxSrc && (
         <div style={{ position:"fixed", inset:0, zIndex: isPreview ? 20001 : 9500, background:"rgba(0,0,0,0.97)", display:"flex", alignItems:"center", justifyContent:"center" }}
           onClick={() => setLightboxSrc(null)}>
+          {/* eslint-disable-next-line @next/next/no-img-element -- el lightbox es la foto a pantalla completa con zoom de dos dedos: necesita el <img> nativo. next/image pide medidas fijas o un padre posicionado, y ninguna de las dos cosas conviven con maxWidth/maxHeight en viewport + touchAction pinch-zoom. */}
           <img src={lightboxSrc} alt="" style={{ maxWidth:"100vw", maxHeight:"100vh", objectFit:"contain", touchAction:"pinch-zoom" }} onClick={e => e.stopPropagation()} />
           <button onClick={() => setLightboxSrc(null)} aria-label="Cerrar" style={{ position:"absolute", top:16, right:16, background:"rgba(255,255,255,0.15)", border:"none", color:"#fff", width:44, height:44, borderRadius:"50%", fontSize:22, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>×</button>
         </div>
