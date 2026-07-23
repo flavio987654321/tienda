@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import {
-  ArrowLeft, ArrowRight, Check, CheckCircle2, Loader2, Sparkles, X,
+  ArrowLeft, ArrowRight, Check, CheckCircle2, ChevronDown, Loader2, Sparkles, X,
 } from "lucide-react";
 import { SiteNav } from "@/components/SiteNav";
 import { SiteFooter } from "@/components/SiteFooter";
@@ -41,49 +41,34 @@ const EMPTY: Form = {
   tieneTienda: "", tiendaUrl: "", acepta: false,
 };
 
-// Opciones de un toque. Se usa tres veces en el paso 4. Van en una grilla de dos
-// columnas de ancho parejo —no en `flex-wrap`, que dejaba pastillas de distinto
-// ancho apiladas en zigzag y con el borde derecho irregular— y cada una lleva un
-// círculo que se marca con un tilde al elegirla, para que se lea "elegí una".
-// Si la cantidad es impar, la última ocupa las dos columnas: así no queda una
-// celda vacía a la derecha.
-function Chips({ label, hint, options, value, onPick }: {
+// Opciones de un toque del paso 4 (fotos / catálogo / logo). Van en un <select>
+// nativo, no en botones: las etiquetas son largas ("Sí, tengo fotos propias") y
+// en pantallas chicas se partían en dos líneas dentro de una pastilla angosta.
+// El select siempre muestra una sola línea y en celular abre el selector nativo,
+// que es la mejor experiencia táctil. El borde se pone naranja cuando ya se eligió,
+// mismo lenguaje visual que el resto del formulario. `appearance-none` + chevron
+// propio para que se vea igual en todos los navegadores.
+function SelectField({ label, hint, options, value, onPick }: {
   label: string; hint?: string; options: Option[]; value: string; onPick: (id: string) => void;
 }) {
-  const impar = options.length % 2 === 1;
   return (
     <div className="mb-6 last:mb-0">
       <span className="text-sm font-semibold text-gray-700 block mb-1">{label}</span>
       {hint && <span className="text-xs text-gray-400 block mb-2.5">{hint}</span>}
-      <div className="grid grid-cols-2 gap-2">
-        {options.map((o, i) => {
-          const active = value === o.id;
-          const ultimaSola = impar && i === options.length - 1;
-          return (
-            <button
-              key={o.id}
-              type="button"
-              onClick={() => onPick(o.id)}
-              title={o.desc}
-              className={`flex items-center gap-2.5 text-left px-3.5 py-3 rounded-xl border-2 text-sm font-medium transition-all ${
-                ultimaSola ? "col-span-2" : ""
-              } ${
-                active
-                  ? "border-orange-500 bg-orange-50 text-orange-900"
-                  : "border-gray-200 text-gray-600 hover:border-gray-300"
-              }`}
-            >
-              <span
-                className={`flex-shrink-0 w-[18px] h-[18px] rounded-full border-2 flex items-center justify-center transition-colors ${
-                  active ? "border-orange-500 bg-orange-500" : "border-gray-300"
-                }`}
-              >
-                {active && <Check className="h-3 w-3 text-white" strokeWidth={3} />}
-              </span>
-              <span className="leading-tight">{o.label}</span>
-            </button>
-          );
-        })}
+      <div className="relative">
+        <select
+          value={value}
+          onChange={(e) => onPick(e.target.value)}
+          className={`w-full appearance-none px-4 py-3 pr-10 rounded-xl border-2 text-sm font-medium bg-white focus:outline-none transition-colors ${
+            value ? "border-orange-500 text-gray-900" : "border-gray-200 text-gray-500"
+          }`}
+        >
+          <option value="" disabled>Elegí una opción</option>
+          {options.map((o) => (
+            <option key={o.id} value={o.id} className="text-gray-900">{o.label}</option>
+          ))}
+        </select>
+        <ChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
       </div>
     </div>
   );
@@ -410,21 +395,21 @@ export default function DisenoPropioPage() {
                     </label>
                   </div>
 
-                  <Chips
+                  <SelectField
                     label="¿Tenés fotos de tus productos?"
                     hint="Es lo que más define si la tienda se ve cara o barata."
                     options={FOTOS}
                     value={form.fotos}
                     onPick={(v) => set("fotos", v)}
                   />
-                  <Chips
+                  <SelectField
                     label="¿Cuántos productos vas a cargar?"
                     hint="Define si hace falta buscador y filtros."
                     options={CATALOGO}
                     value={form.catalogo}
                     onPick={(v) => set("catalogo", v)}
                   />
-                  <Chips
+                  <SelectField
                     label="¿Tenés logo?"
                     options={LOGO}
                     value={form.logo}
