@@ -503,7 +503,19 @@ export default function Home() {
   }, [featureSlide]);
 
   useEffect(() => {
-    const update = () => setThumbW(window.innerWidth < 640 ? 160 : 320);
+    const update = () => {
+      const w = window.innerWidth;
+      if (w < 640) {
+        // Dos por fila en celular. Antes era 160px fijo, pero con el gap (12px)
+        // dos tarjetas (160+12+160 = 332) no entraban en un 368px y caían a una
+        // sola por fila, dejando la galería larguísima. Ahora el ancho se calcula
+        // para que entren exactamente dos: (pantalla − padding px-6 (48) − gap (12)) / 2.
+        // Con tope de 320 por si algún día hay un celular muy ancho.
+        setThumbW(Math.min(320, Math.floor((w - 48 - 12) / 2)));
+      } else {
+        setThumbW(320);
+      }
+    };
     update();
     window.addEventListener("resize", update);
     return () => window.removeEventListener("resize", update);
