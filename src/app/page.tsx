@@ -1483,7 +1483,11 @@ export default function Home() {
               </div>
             </motion.div>
 
-            <motion.div variants={fadeUp}>
+            {/* En celular el botón se centra: la nube de arriba y el chat de
+                abajo van centrados, así que pegado a la izquierda quedaba
+                descolgado. En desktop se mantiene a la izquierda, acompañando los
+                párrafos de texto que están alineados a la izquierda. */}
+            <motion.div variants={fadeUp} className="flex justify-center sm:justify-start">
               <Link href="/registro" className="inline-flex items-center gap-2 bg-orange-600 hover:bg-orange-500 text-white px-6 py-3 rounded-2xl font-semibold transition-all shadow-lg shadow-orange-500/25 hover:scale-105">
                 Creá tu tienda y probalo <ArrowRight className="h-4 w-4" />
               </Link>
