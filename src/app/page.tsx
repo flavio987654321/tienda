@@ -584,40 +584,44 @@ export default function Home() {
             <span className="text-lg font-bold text-gray-900">TiendaApps</span>
           </Link>
 
-          <div className="hidden md:flex items-center gap-8">
-            <Link href="/tiendas" className="text-gray-500 hover:text-gray-900 text-sm font-medium transition-colors">Tiendas</Link>
-            <a href="#como-funciona" className="text-gray-500 hover:text-gray-900 text-sm font-medium transition-colors">Cómo funciona</a>
-            <Link href="/quienes-somos" className="text-gray-500 hover:text-gray-900 text-sm font-medium transition-colors">Quiénes somos</Link>
-            <Link href="/precios" className="text-gray-500 hover:text-gray-900 text-sm font-medium transition-colors">Precios</Link>
-            <Link href="/seguimiento" className="text-gray-500 hover:text-gray-900 text-sm font-medium transition-colors flex items-center gap-1.5">
+          {/* Mismo criterio que el nav compartido (SiteNav): el menú completo no
+              entra en 768px, así que aparece recién en lg (1024px) y abajo de eso
+              manda la hamburguesa. whitespace-nowrap para que ningún link ni botón
+              se parta a dos líneas. El gap arranca chico y crece en xl. */}
+          <div className="hidden lg:flex items-center gap-6 xl:gap-8">
+            <Link href="/tiendas" className="text-gray-500 hover:text-gray-900 text-sm font-medium whitespace-nowrap transition-colors">Tiendas</Link>
+            <a href="#como-funciona" className="text-gray-500 hover:text-gray-900 text-sm font-medium whitespace-nowrap transition-colors">Cómo funciona</a>
+            <Link href="/quienes-somos" className="text-gray-500 hover:text-gray-900 text-sm font-medium whitespace-nowrap transition-colors">Quiénes somos</Link>
+            <Link href="/precios" className="text-gray-500 hover:text-gray-900 text-sm font-medium whitespace-nowrap transition-colors">Precios</Link>
+            <Link href="/seguimiento" className="text-gray-500 hover:text-gray-900 text-sm font-medium whitespace-nowrap transition-colors flex items-center gap-1.5">
               <Package className="h-4 w-4" />Seguimiento
             </Link>
-            <Link href="/contacto" className="text-gray-500 hover:text-gray-900 text-sm font-medium transition-colors flex items-center gap-1.5">
+            <Link href="/contacto" className="text-gray-500 hover:text-gray-900 text-sm font-medium whitespace-nowrap transition-colors flex items-center gap-1.5">
               <MessageCircle className="h-4 w-4" />Contacto
             </Link>
           </div>
 
-          <div className="hidden md:flex items-center gap-3">
+          <div className="hidden lg:flex items-center gap-3">
             {sessionUser ? (
               <>
-                <span className="text-gray-500 text-sm">Hola, {userName ?? "!"}</span>
-                <Link href={panelHref} className="bg-orange-600 hover:bg-orange-500 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-all shadow-lg shadow-orange-500/25 hover:shadow-orange-500/40 hover:scale-105">
+                <span className="text-gray-500 text-sm whitespace-nowrap">Hola, {userName ?? "!"}</span>
+                <Link href={panelHref} className="bg-orange-600 hover:bg-orange-500 text-white text-sm font-semibold whitespace-nowrap px-5 py-2.5 rounded-xl transition-all shadow-lg shadow-orange-500/25 hover:shadow-orange-500/40 hover:scale-105">
                   {panelLabel}
                 </Link>
               </>
             ) : (
               <>
-                <Link href="/login" className="text-gray-600 hover:text-gray-900 text-sm font-medium px-5 py-2.5 rounded-xl border border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-all">
+                <Link href="/login" className="text-gray-600 hover:text-gray-900 text-sm font-medium whitespace-nowrap px-5 py-2.5 rounded-xl border border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-all">
                   Iniciar sesión
                 </Link>
-                <Link href="/registro" className="relative bg-orange-600 hover:bg-orange-500 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-all shadow-lg shadow-orange-500/25 hover:shadow-orange-500/40 hover:scale-105">
+                <Link href="/registro" className="relative bg-orange-600 hover:bg-orange-500 text-white text-sm font-semibold whitespace-nowrap px-5 py-2.5 rounded-xl transition-all shadow-lg shadow-orange-500/25 hover:shadow-orange-500/40 hover:scale-105">
                   Crear cuenta
                 </Link>
               </>
             )}
           </div>
 
-          <button onClick={() => setMobileMenu(!mobileMenu)} className="md:hidden text-gray-500 hover:text-gray-900">
+          <button onClick={() => setMobileMenu(!mobileMenu)} className="lg:hidden text-gray-500 hover:text-gray-900">
             <Menu className="h-6 w-6" />
           </button>
         </div>
@@ -628,13 +632,13 @@ export default function Home() {
           <>
             <motion.div
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="fixed inset-0 z-40 bg-gray-900/40 backdrop-blur-sm md:hidden"
+              className="fixed inset-0 z-40 bg-gray-900/40 backdrop-blur-sm lg:hidden"
               onClick={() => setMobileMenu(false)}
             />
             <motion.div
               initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }}
               transition={{ type: "tween", duration: 0.3 }}
-              className="fixed top-0 right-0 bottom-0 z-50 w-72 bg-white border-l border-gray-200 flex flex-col md:hidden"
+              className="fixed top-0 right-0 bottom-0 z-50 w-72 bg-white border-l border-gray-200 flex flex-col lg:hidden"
             >
               <div className="flex items-center justify-between px-6 py-5 border-b border-gray-200">
                 <span className="text-gray-900 font-bold">Menú</span>
