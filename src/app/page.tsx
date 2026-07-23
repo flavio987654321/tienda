@@ -504,14 +504,19 @@ export default function Home() {
 
   useEffect(() => {
     const update = () => {
-      const w = window.innerWidth;
+      // clientWidth, NO innerWidth: innerWidth incluye la barra de scroll (en
+      // DevTools son ~15px reales), así que las dos tarjetas se pasaban por ese
+      // margen y caían a una por fila. clientWidth es el ancho real disponible
+      // —sin la barra— y en un celular de verdad da lo mismo (ahí la barra no
+      // ocupa espacio).
+      const w = document.documentElement.clientWidth;
       if (w < 640) {
         // Dos por fila en celular. Antes era 160px fijo, pero con el gap (12px)
-        // dos tarjetas (160+12+160 = 332) no entraban en un 368px y caían a una
-        // sola por fila, dejando la galería larguísima. Ahora el ancho se calcula
-        // para que entren exactamente dos: (pantalla − padding px-6 (48) − gap (12)) / 2.
-        // Con tope de 320 por si algún día hay un celular muy ancho.
-        setThumbW(Math.min(320, Math.floor((w - 48 - 12) / 2)));
+        // dos tarjetas no entraban y caían a una sola, dejando la galería
+        // larguísima. El ancho se calcula para que entren exactamente dos:
+        // (pantalla − padding px-6 (48) − gap (12)) / 2, con 2px de aire para
+        // que un redondeo no las tire a la fila de abajo. Tope de 320.
+        setThumbW(Math.min(320, Math.floor((w - 48 - 12) / 2) - 2));
       } else {
         setThumbW(320);
       }
