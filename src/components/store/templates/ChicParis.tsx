@@ -10,7 +10,7 @@ import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { useCartLogic } from "@/hooks/useCartLogic";
 import { useTouchSwipe } from "@/hooks/useTouchSwipe";
 import { masVistos, MIN_MAS_VISTOS } from "@/lib/masVistos";
-import { COMENTARIO_MAX } from "@/lib/reviews";
+import { COMENTARIO_MAX, RESENADOR_MAX } from "@/lib/reviews";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
 import VerifiedIconButton from "@/components/store/VerifiedIconButton";
 import { CartDrawer, type CartTheme } from "@/components/store/templates/shared/CartDrawer";
@@ -154,6 +154,17 @@ export default function ChicParis() {
   const [reviews,        setReviews]        = useState<PReview[]>([]);
   const [homeReviews,    setHomeReviews]    = useState<HomeReview[]>([]);
   const [reviewStats,    setReviewStats]    = useState<{ promedio: number; total: number } | null>(null);
+  // Reseñas de la TIENDA: hablan de la atención y del envío, no de un producto.
+  const [storeReviews,   setStoreReviews]   = useState<HomeReview[]>([]);
+  const [resenaTab,      setResenaTab]      = useState<"tienda" | "producto">("producto");
+  const [tiendaForm,     setTiendaForm]     = useState({ reviewer: "", rating: 5, comment: "", email: "" });
+  const [tiendaEnviando, setTiendaEnviando] = useState(false);
+  const [tiendaListo,    setTiendaListo]    = useState(false);
+  const [tiendaHoneypot, setTiendaHoneypot] = useState("");
+  const [tiendaConfirmando, setTiendaConfirmando] = useState(false);
+  // Un captcha propio: el token es de un solo uso, así que compartirlo con el
+  // formulario del producto haría que el segundo envío viaje con uno ya gastado.
+  const tiendaCaptcha = useTurnstile("review");
   const [reviewsShown,   setReviewsShown]   = useState(5);
   const [reviewsLoading, setReviewsLoading] = useState(false);
   const [reviewForm,     setReviewForm]     = useState({ reviewer: "", rating: 5, comment: "", email: "" });
@@ -374,6 +385,7 @@ export default function ChicParis() {
       .then(r => r.ok ? r.json() : { reviews: [] })
       .then(d => {
         setHomeReviews(d.reviews ?? []);
+        setStoreReviews(d.storeReviews ?? []);
         // El promedio sale de TODAS las reseñas de la tienda, no de las cuatro
         // que se muestran acá — por eso viene del servidor y no se calcula sobre
         // `d.reviews`, que ya está filtrado a 4★ y 5★.
@@ -468,11 +480,17 @@ export default function ChicParis() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [modalImg]);
 
+  // `reviewSubmitting` es estado: recién bloquea en el render siguiente, y con
+  // Enter en un campo el envío ni pasa por el botón. Sin candado sincrónico, dos
+  // toques rápidos dejaban la reseña duplicada.
+  const enviandoResena = useRef(false);
+
   async function submitReview(e: React.FormEvent) {
     e.preventDefault();
-    if (isPreview || isOwner || reviewHoneypot) return;
+    if (isPreview || isOwner || reviewHoneypot || enviandoResena.current) return;
     const slug = storeConfig?.slug;
     if (!modalProduct || !slug || !reviewForm.reviewer.trim()) return;
+    enviandoResena.current = true;
     setReviewSubmitting(true);
     try {
       const res = await fetch(`/api/public/${slug}/reviews`, {
@@ -486,7 +504,51 @@ export default function ChicParis() {
         setReviewForm({ reviewer: "", rating: 5, comment: "", email: "" });
         setReviewDone(true); setTimeout(() => setReviewDone(false), 4000);
       }
-    } catch {} finally { reviewCaptcha.reset(); setReviewSubmitting(false); }
+    } catch {} finally { enviandoResena.current = false; reviewCaptcha.reset(); setReviewSubmitting(false); }
+  }
+
+  const enviandoTienda = useRef(false);
+
+  // Lo mínimo para que la reseña sirva: un nombre de verdad y una puntuación
+  // válida. El email es opcional, pero si lo escribieron tiene que parecer un
+  // email — si no, la verificación automática nunca va a encontrar su compra y
+  // nadie va a entender por qué quedó sin sello.
+  const emailTienda = tiendaForm.email.trim();
+  const emailPlausible = !emailTienda || /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(emailTienda);
+  const tiendaValida =
+    tiendaForm.reviewer.trim().length >= 2 &&
+    tiendaForm.rating >= 1 && tiendaForm.rating <= 5 &&
+    emailPlausible;
+
+  async function submitResenaTienda(e: React.FormEvent) {
+    e.preventDefault();
+    if (isPreview || isOwner || tiendaHoneypot || enviandoTienda.current) return;
+    const slug = storeConfig?.slug;
+    // Se revalida acá y no solo en el botón: el submit también sale con Enter en
+    // un campo, que no pasa por el botón deshabilitado.
+    if (!slug || !tiendaValida) return;
+    enviandoTienda.current = true;
+    setTiendaEnviando(true);
+    try {
+      const res = await fetch(`/api/public/${slug}/reviews`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        // Sin `productId`: eso es lo que la vuelve una reseña de la tienda.
+        body: JSON.stringify({
+          rating: tiendaForm.rating, comment: tiendaForm.comment, reviewer: tiendaForm.reviewer,
+          buyerEmail: tiendaForm.email.trim() || undefined, turnstileToken: tiendaCaptcha.token,
+        }),
+      });
+      if (res.ok) {
+        // NO se agrega a la lista: nace pendiente de aprobación y todavía no es
+        // pública. Meterla en pantalla haría creer que ya se publicó, y al
+        // recargar habría desaparecido sin ninguna explicación.
+        setTiendaForm({ reviewer: "", rating: 5, comment: "", email: "" });
+        setTiendaConfirmando(false);
+        setTiendaListo(true);
+        setTimeout(() => setTiendaListo(false), 8000);
+      }
+    } catch {} finally { enviandoTienda.current = false; tiendaCaptcha.reset(); setTiendaEnviando(false); }
   }
 
   const subcategoriesFor = useMemo(() => {
@@ -1153,8 +1215,21 @@ export default function ChicParis() {
               product: p ? { id: p.id, name: p.name, image: p.images[0] ?? null } : undefined,
             };
           });
-          const allReviews = isPreview ? PREVIEW_REVIEWS : homeReviews;
-          if (allReviews.length === 0) return null;
+          const PREVIEW_TIENDA: HomeReview[] = [
+            { id:"t1", rating:5, comment:"La atención fue impecable. Me respondieron todas las dudas por WhatsApp antes de comprar.", reviewer:"Lucía P.",   verified:true,  verifiedBy:"auto", createdAt:"" },
+            { id:"t2", rating:5, comment:"Llegó todo en tiempo y forma, muy bien embalado. Vuelvo a comprar seguro.",                  reviewer:"Agustina B.", verified:false, verifiedBy:null,   createdAt:"" },
+          ];
+
+          const deProducto = isPreview ? PREVIEW_REVIEWS : homeReviews;
+          const deTienda   = isPreview ? PREVIEW_TIENDA  : storeReviews;
+          const lista      = resenaTab === "tienda" ? deTienda : deProducto;
+          const sinNada    = deProducto.length === 0 && deTienda.length === 0;
+
+          // El bloque ya NO desaparece cuando no hay reseñas: adentro está el
+          // formulario para dejar la primera, y escondido no habría forma de
+          // arrancar nunca. Lo que sí cambia es el título — un "Lo que dicen
+          // nuestras clientas" con nada abajo queda peor que no tenerlo.
+
           async function deleteHomeReview(reviewId: string) {
             if (!storeConfig?.slug) return;
             await fetch(`/api/public/${storeConfig.slug}/reviews`, {
@@ -1225,9 +1300,45 @@ export default function ChicParis() {
                     </div>
                   );
                 })()}
+                {/* ── Las dos pestañas ──────────────────────────────────────
+                    Son dos cosas distintas y se leen distinto: una habla de un
+                    producto puntual, la otra de cómo atiende la tienda. Mezcladas
+                    en una sola fila, quien busca saber "si son serios" tiene que
+                    leer opiniones de talles. */}
+                <div style={{ display: "flex", gap: 24, marginTop: 20, borderBottom: "1px solid #eee" }}>
+                  {([
+                    { key: "producto" as const, label: "Los productos", n: deProducto.length },
+                    { key: "tienda"   as const, label: "La tienda",     n: deTienda.length },
+                  ]).map(t => (
+                    <button key={t.key} type="button" onClick={() => setResenaTab(t.key)}
+                      style={{
+                        background: "none", border: "none", cursor: "pointer", padding: "0 0 10px",
+                        marginBottom: -1, fontSize: 10, fontWeight: 700, letterSpacing: 2,
+                        textTransform: "uppercase",
+                        color: resenaTab === t.key ? "#111" : "#999",
+                        borderBottom: `2px solid ${resenaTab === t.key ? ACC : "transparent"}`,
+                      }}>
+                      {t.label} <span style={{ color: "#aaa", fontWeight: 400 }}>({t.n})</span>
+                    </button>
+                  ))}
+                </div>
               </div>
+
+              {/* Vacío: en vez de esconder el bloque, se invita a escribir. */}
+              {lista.length === 0 && (
+                <div style={{ padding: isMobile ? "0 20px 8px" : "0 40px 8px" }}>
+                  <p style={{ fontSize: 13, color: "#777", lineHeight: 1.7, margin: 0, maxWidth: 520 }}>
+                    {resenaTab === "tienda"
+                      ? sinNada
+                        ? "Todavía nadie dejó su opinión. Si compraste acá, contanos cómo te fue — sos la primera."
+                        : "Todavía nadie opinó sobre la tienda en general. Si compraste, contanos cómo te fue."
+                      : "Todavía nadie opinó sobre un producto. Las opiniones se dejan desde la ficha de cada uno."}
+                  </p>
+                </div>
+              )}
+
               <div style={{ display: "flex", gap: 16, overflowX: "auto", scrollSnapType: "x mandatory", WebkitOverflowScrolling: "touch", paddingLeft: isMobile ? 20 : 40, paddingRight: isMobile ? 20 : 40, paddingBottom: 8, scrollbarWidth: "none" }}>
-                {allReviews.map(r => (
+                {lista.map(r => (
                   <div key={r.id} style={{ flexShrink: 0, width: isMobile ? "85vw" : 300, scrollSnapAlign: "start", background: "#fafafa", border: "1px solid #f0f0f0", padding: "24px 24px 20px", display: "flex", flexDirection: "column", gap: 12, position: "relative" }}>
                     {isOwner && !isPreview && (
                       <button onClick={() => deleteHomeReview(r.id)}
@@ -1294,8 +1405,108 @@ export default function ChicParis() {
                   </div>
                 ))}
               </div>
-              {allReviews.length > (isMobile ? 1 : 3) && (
+              {lista.length > (isMobile ? 1 : 3) && (
                 <p style={{ textAlign: "center", fontSize: 10, color: "#ccc", letterSpacing: 2, marginTop: 16, textTransform: "uppercase" }}>← deslizá →</p>
+              )}
+
+              {/* ── Formulario, solo en la pestaña de la tienda ───────────────
+                  Una reseña de PRODUCTO necesita saber de qué producto es, así
+                  que se deja desde la ficha. Una de tienda no apunta a nada: este
+                  es el único lugar donde puede vivir su formulario. */}
+              {resenaTab === "tienda" && (
+                <div style={{ padding: isMobile ? "28px 20px 0" : "36px 40px 0" }}>
+                  <div style={{ maxWidth: 480, background: "#fafafa", border: "1px solid #f0f0f0", padding: isMobile ? "20px" : "24px" }}>
+                    {tiendaListo ? (
+                      // Nace pendiente: si dijera "¡Publicada!" y no apareciera,
+                      // la persona pensaría que se perdió y la escribiría de nuevo.
+                      <p style={{ margin: 0, fontSize: 13, color: "#117f3a", lineHeight: 1.7 }}>
+                        <strong>¡Gracias!</strong> La tienda la revisa antes de publicarla, así que
+                        todavía no la vas a ver acá arriba.
+                      </p>
+                    ) : (
+                      <form onSubmit={submitResenaTienda} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                        <p style={{ margin: 0, fontSize: 10, letterSpacing: 2, textTransform: "uppercase", fontWeight: 700, color: "#111" }}>
+                          Contanos cómo te fue
+                        </p>
+
+                        {/* Trampa para bots: invisible para una persona, irresistible
+                            para un robot que completa todo lo que encuentra. */}
+                        <input value={tiendaHoneypot} onChange={e => setTiendaHoneypot(e.target.value)}
+                          tabIndex={-1} autoComplete="off" aria-hidden="true"
+                          style={{ position: "absolute", left: -9999, width: 1, height: 1, opacity: 0 }} />
+
+                        <div style={{ display: "flex", gap: 4 }}>
+                          {[1,2,3,4,5].map(s => (
+                            <button key={s} type="button" onClick={() => setTiendaForm(p => ({ ...p, rating: s }))}
+                              aria-label={`${s} de 5 estrellas`}
+                              style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontSize: 20, lineHeight: 1, color: s <= tiendaForm.rating ? ACC : "#ddd" }}>★</button>
+                          ))}
+                        </div>
+
+                        <input value={tiendaForm.reviewer} maxLength={RESENADOR_MAX} required
+                          onChange={e => setTiendaForm(p => ({ ...p, reviewer: e.target.value }))}
+                          placeholder="Tu nombre"
+                          style={{ border: "1px solid #e5e7eb", padding: "9px 12px", fontSize: 12, outline: "none" }} />
+
+                        <input value={tiendaForm.email} type="email" maxLength={120}
+                          onChange={e => setTiendaForm(p => ({ ...p, email: e.target.value }))}
+                          placeholder="Tu email (opcional)"
+                          style={{ border: "1px solid #e5e7eb", padding: "9px 12px", fontSize: 12, outline: "none" }} />
+                        <p style={{ margin: "-6px 0 0", fontSize: 10.5, color: "#777", lineHeight: 1.5 }}>
+                          Si compraste acá, tu reseña sale con el sello “✓ Compra verificada”. El email no se publica.
+                        </p>
+
+                        <textarea value={tiendaForm.comment} rows={3} maxLength={COMENTARIO_MAX}
+                          onChange={e => setTiendaForm(p => ({ ...p, comment: e.target.value }))}
+                          placeholder="La atención, el envío, la experiencia..."
+                          style={{ border: "1px solid #e5e7eb", padding: "9px 12px", fontSize: 12, resize: "none", outline: "none" }} />
+                        {tiendaForm.comment.length > COMENTARIO_MAX - 80 && (
+                          <p style={{ margin: "-6px 0 0", fontSize: 10, color: tiendaForm.comment.length >= COMENTARIO_MAX ? "#dc2626" : "#777", textAlign: "right" }}>
+                            {tiendaForm.comment.length} / {COMENTARIO_MAX}
+                          </p>
+                        )}
+
+                        {!isPreview && tiendaCaptcha.widget}
+
+                        {/* Confirmación en dos pasos, adentro del formulario. Una
+                            reseña es pública y con el nombre de quien la escribe:
+                            conviene un segundo para releerla. Se evita `confirm()`
+                            del navegador, que en celular tapa el texto que se está
+                            por confirmar. */}
+                        {tiendaConfirmando ? (
+                          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                            <p style={{ margin: 0, fontSize: 11.5, color: "#111", lineHeight: 1.6 }}>
+                              Se publica con tu nombre, <strong>{tiendaForm.reviewer.trim()}</strong>, y {tiendaForm.rating} de 5 estrellas. ¿La mandamos?
+                            </p>
+                            <div style={{ display: "flex", gap: 8 }}>
+                              <button type="submit" disabled={tiendaEnviando || !tiendaCaptcha.ready}
+                                style={{ flex: 1, background: ACC, color: getContrastColor(ACC) === "light" ? "#fff" : "#111", border: "none", padding: "12px", fontSize: 10, fontWeight: 800, letterSpacing: 2, textTransform: "uppercase", cursor: tiendaEnviando ? "default" : "pointer", opacity: tiendaEnviando ? 0.6 : 1 }}>
+                                {tiendaEnviando ? "Enviando..." : "Sí, enviar"}
+                              </button>
+                              <button type="button" onClick={() => setTiendaConfirmando(false)} disabled={tiendaEnviando}
+                                style={{ background: "none", border: "1px solid #ddd", color: "#666", padding: "12px 18px", fontSize: 10, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", cursor: "pointer" }}>
+                                Volver
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <button type="button" disabled={isPreview || !tiendaValida}
+                            onClick={() => setTiendaConfirmando(true)}
+                            title={tiendaValida ? undefined : "Escribí tu nombre y elegí cuántas estrellas"}
+                            style={{ background: !isPreview && tiendaValida ? ACC : "#f3f4f6", color: !isPreview && tiendaValida ? (getContrastColor(ACC) === "light" ? "#fff" : "#111") : "#9ca3af", border: "none", padding: "12px", fontSize: 10, fontWeight: 800, letterSpacing: 3, textTransform: "uppercase", cursor: !isPreview && tiendaValida ? "pointer" : "default" }}>
+                            Dejar mi reseña
+                          </button>
+                        )}
+
+                        {isPreview && (
+                          <p style={{ margin: 0, fontSize: 10, color: "#999", fontStyle: "italic" }}>
+                            Vista previa — el formulario funciona en tu tienda publicada.
+                          </p>
+                        )}
+                      </form>
+                    )}
+                  </div>
+                </div>
               )}
             </section>
           );

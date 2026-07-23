@@ -140,11 +140,19 @@ export async function POST(
   // de la experiencia. Es un tipo distinto, no un dato que falta.
   const esDeTienda = !productId;
 
-  if (!rating || !reviewer?.trim()) {
-    return NextResponse.json({ error: "Faltan campos requeridos" }, { status: 400 });
+  // `typeof` antes de `.trim()`: con `reviewer: 5` en el JSON, el `reviewer?.trim()`
+  // de antes tiraba TypeError y el endpoint respondía 500. Un POST mal armado no
+  // puede hacer explotar el servidor, tiene que contestar 400 y seguir.
+  if (typeof reviewer !== "string" || reviewer.trim().length < 2) {
+    return NextResponse.json({ error: "Escribí tu nombre (al menos 2 letras)" }, { status: 400 });
   }
-  if (typeof rating !== "number" || rating < 1 || rating > 5) {
+  if (typeof rating !== "number" || !Number.isFinite(rating) || rating < 1 || rating > 5) {
     return NextResponse.json({ error: "Rating inválido" }, { status: 400 });
+  }
+  // El id de producto tiene que ser un texto. Si viene un objeto o un número, la
+  // consulta a Prisma falla con un error de tipo en vez de un 400 entendible.
+  if (productId !== undefined && productId !== null && typeof productId !== "string") {
+    return NextResponse.json({ error: "Producto inválido" }, { status: 400 });
   }
 
   // El comentario NO tenía ningún tope: ni en el formulario ni acá. `reviewer` sí
