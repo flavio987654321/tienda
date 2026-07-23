@@ -298,9 +298,13 @@ export async function PATCH(
   // Dos acciones distintas por el mismo verbo: marcar como verificada, o
   // publicar/despublicar. Se piden por separado y nunca las dos juntas, así una
   // no puede pisar la otra por accidente.
+  // REJECTED en vez de borrar: rechazar no es lo mismo que destruir. El dueño
+  // puede cambiar de opinión, y una reseña borrada no deja rastro de que existió
+  // — si la misma persona vuelve a escribir, nadie se acuerda. Además sale de la
+  // cola de pendientes, que era el motivo por el que uno querría borrarla.
   const { reviewId, verified, status } = body;
   const cambiaVerificacion = typeof verified === "boolean";
-  const cambiaEstado = status === "APPROVED" || status === "PENDING";
+  const cambiaEstado = status === "APPROVED" || status === "PENDING" || status === "REJECTED";
 
   if (!reviewId || (!cambiaVerificacion && !cambiaEstado)) {
     return NextResponse.json({ error: "Hace falta reviewId y una acción: `verified` o `status`" }, { status: 400 });
