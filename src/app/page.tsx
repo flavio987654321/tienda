@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useSyncExternalStore } from "react";
+import { useTouchSwipe } from "@/hooks/useTouchSwipe";
 import Link from "next/link";
 import Image from "next/image";
 import { useAuth } from "@/components/AuthProvider";
@@ -60,6 +61,10 @@ type RealTestimonial = {
   role: string;
   location: string | null;
   text: string;
+  // La persona elige de 1 a 5 al enviar su historia y la API lo guarda y lo
+  // devuelve. Faltaba acá, así que la página no tenía con qué pintar la
+  // calificación real y mostraba siempre cinco estrellas.
+  rating: number;
 };
 
 /* ─── Modal: Contá tu historia ─── */
@@ -69,9 +74,16 @@ function TestimonioModal({ onClose }: { onClose: () => void }) {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
   const captcha = useTurnstile("testimonio");
+  // Candado contra el doble envío. El botón deshabilitado NO alcanza: `sending`
+  // es estado, o sea que recién bloquea en el render siguiente, y además con
+  // Enter dentro de un campo el formulario se manda sin pasar por el botón. Un
+  // ref cambia en el acto y corta la segunda llamada antes del fetch.
+  const enviando = useRef(false);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    if (enviando.current) return;
+    enviando.current = true;
     setSending(true);
     setError("");
     try {
@@ -84,9 +96,11 @@ function TestimonioModal({ onClose }: { onClose: () => void }) {
       setSent(true);
     } catch {
       setError("Algo salió mal. Intentá de nuevo.");
+    } finally {
+      enviando.current = false;
+      captcha.reset();
+      setSending(false);
     }
-    captcha.reset();
-    setSending(false);
   }
 
   return (
@@ -144,7 +158,10 @@ function TestimonioModal({ onClose }: { onClose: () => void }) {
                   className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm"
                 />
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              {/* Una sola columna en celular: el modal mide como mucho 448 px y con
+                  el padding quedan ~256 px útiles. Partidos en dos, el desplegable
+                  con "Dueño/a de tienda" no entraba. */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-medium text-gray-500 mb-1.5">Soy...</label>
                   <select
@@ -192,8 +209,6 @@ function TestimonioModal({ onClose }: { onClose: () => void }) {
     </motion.div>
   );
 }
-
-const TESTIMONIALS: { name: string; role: string; text: string; img: string }[] = [];
 
 const ROTATING_WORDS = ["vender", "crecer", "todo", "despegar"];
 
@@ -414,6 +429,33 @@ export default function Home() {
   const { scrollY } = useScroll();
   useMotionValueEvent(scrollY, "change", (v) => setNavScrolled(v > 50));
 
+  // Pasar de herramienta. Se definen una sola vez y los usan las flechas, los
+  // puntos y el deslizar con el dedo — así los tres se mueven igual, incluida la
+  // dirección de la animación (el 2do valor del par).
+  const featureNext = () => setFeatureSlide(([i]) => [(i + 1) % FEATURES.length, 1]);
+  const featurePrev = () => setFeatureSlide(([i]) => [i === 0 ? FEATURES.length - 1 : i - 1, -1]);
+  // En celular y tablet no hay mouse: sin esto, las flechas y los puntitos eran
+  // la única forma de pasar de tarjeta, y en la galería de plantillas las flechas
+  // ni siquiera se muestran (`hidden md:flex`). El hook ya distingue el gesto
+  // horizontal del scroll vertical, así que no interfiere con bajar la página.
+  const featureSwipe = useTouchSwipe(featureNext, featurePrev);
+
+  // El filtrado y el total de páginas se calculan acá y no dentro del render de
+  // la galería, porque ahora hay tres cosas que necesitan saber en qué página
+  // estamos y cuántas hay: las flechas, los puntos y el deslizar. Una sola cuenta
+  // para las tres, y el movimiento no puede pasarse de los extremos.
+  const TEMPLATES_PAGE_SIZE = 6;
+  const templatesFiltered = TEMPLATE_ITEMS.filter((t) => templateFilter === "todo" || t.categoryId === templateFilter);
+  const templateTotalPages = Math.max(1, Math.ceil(templatesFiltered.length / TEMPLATES_PAGE_SIZE));
+  const templatePageSafe = Math.min(templatePage, templateTotalPages - 1);
+  const goTemplatePage = (dir: 1 | -1) => {
+    const destino = templatePageSafe + dir;
+    if (destino < 0 || destino > templateTotalPages - 1) return;
+    setTemplateNavDir(dir);
+    setTemplatePage(destino);
+  };
+  const templatesSwipe = useTouchSwipe(() => goTemplatePage(1), () => goTemplatePage(-1));
+
   function dismissAnnouncement() {
     localStorage.setItem(ANNOUNCEMENT_KEY, "1");
     window.dispatchEvent(new Event(ANNOUNCEMENT_EVENT));
@@ -481,7 +523,12 @@ export default function Home() {
           className="fixed top-0 left-0 right-0 z-[60] flex items-center justify-center gap-2 sm:gap-4 px-10"
           style={{ height: ANNOUNCEMENT_H, background: "linear-gradient(90deg,#ea580c,#e11d48)" }}
         >
-          <span className="text-white text-xs sm:text-sm font-semibold whitespace-nowrap">
+          {/* `truncate` en vez de `whitespace-nowrap`: con dos textos que no
+              admiten corte más el padding lateral, en un celular de 320-360 px no
+              entraban y se recortaban por los dos lados (la barra está centrada y
+              la página no scrollea en horizontal, así que quedaba texto perdido).
+              Truncando, esta parte cede espacio y el botón se ve entero siempre. */}
+          <span className="text-white text-xs sm:text-sm font-semibold truncate min-w-0">
             ✨ 7 días de prueba gratis
           </span>
           <span className="text-orange-200 hidden sm:inline text-sm">·</span>
@@ -656,7 +703,11 @@ export default function Home() {
               Tienda online + Mercado Pago integrado + afiliados que venden por vos — todo en un panel, sin técnicos ni inversión inicial.
             </motion.p>
 
-            <motion.div variants={fadeUp} className="flex flex-wrap gap-4 mb-5">
+            {/* Centrados hasta `lg`, igual que el bloque de Diseño Propio: mientras
+                el hero es una sola columna los botones pegados al margen izquierdo
+                quedan sueltos debajo de un título que ocupa todo el ancho. Desde
+                `lg` el hero se parte en dos y vuelven a alinearse con el texto. */}
+            <motion.div variants={fadeUp} className="flex flex-wrap justify-center lg:justify-start gap-4 mb-5">
               <Link
                 href="/registro"
                 className="group flex items-center gap-2.5 bg-orange-600 hover:bg-orange-500 text-white px-8 py-4 rounded-2xl font-semibold text-lg transition-all shadow-xl shadow-orange-500/25 hover:shadow-orange-500/40 hover:scale-105"
@@ -674,7 +725,9 @@ export default function Home() {
             </motion.div>
 
             {/* ── TRUST STACK ── */}
-            <motion.div variants={fadeUp} className="flex flex-wrap items-center gap-x-5 gap-y-2 mb-10 text-gray-500 text-xs">
+            {/* Acompaña a los botones de arriba: si se centran solo ellos, esta
+                fila queda colgada contra el margen izquierdo. */}
+            <motion.div variants={fadeUp} className="flex flex-wrap justify-center lg:justify-start items-center gap-x-5 gap-y-2 mb-10 text-gray-500 text-xs">
               <span className="flex items-center gap-1.5 font-medium">
                 <Shield className="h-3.5 w-3.5 text-emerald-500" />
                 Pago seguro
@@ -937,8 +990,8 @@ export default function Home() {
             })}
           </div>
 
-          {/* Slider */}
-          <div className="relative overflow-hidden rounded-3xl border border-gray-200 shadow-xl shadow-gray-100 min-h-[420px]">
+          {/* Slider — se puede pasar con el dedo en celular y tablet */}
+          <div {...featureSwipe} className="relative overflow-hidden rounded-3xl border border-gray-200 shadow-xl shadow-gray-100 min-h-[420px]">
             <AnimatePresence mode="wait" custom={featureSlide[1]}>
               <motion.div
                 key={featureSlide[0]}
@@ -988,7 +1041,8 @@ export default function Home() {
           {/* Controles */}
           <div className="flex items-center justify-center gap-4 mt-8">
             <button
-              onClick={() => setFeatureSlide(([i]) => [i === 0 ? FEATURES.length - 1 : i - 1, -1])}
+              onClick={featurePrev}
+              aria-label="Herramienta anterior"
               className="w-10 h-10 rounded-full border border-gray-200 bg-white flex items-center justify-center text-gray-400 hover:text-orange-600 hover:border-orange-300 transition-all"
             >
               <ChevronLeft className="h-5 w-5" />
@@ -1006,7 +1060,8 @@ export default function Home() {
             </div>
 
             <button
-              onClick={() => setFeatureSlide(([i]) => [(i + 1) % FEATURES.length, 1])}
+              onClick={featureNext}
+              aria-label="Herramienta siguiente"
               className="w-10 h-10 rounded-full border border-gray-200 bg-white flex items-center justify-center text-gray-400 hover:text-orange-600 hover:border-orange-300 transition-all"
             >
               <ChevronRight className="h-5 w-5" />
@@ -1047,13 +1102,13 @@ export default function Home() {
           </motion.div>
 
           {(() => {
-            const filtered = TEMPLATE_ITEMS.filter((t) => templateFilter === "todo" || t.categoryId === templateFilter);
-            const PAGE_SIZE = 6;
-            const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-            const page = Math.min(templatePage, totalPages - 1);
-            const pageItems = filtered.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE);
+            // Las cuentas viven arriba, en el cuerpo del componente, para que las
+            // compartan las flechas, los puntos y el deslizar con el dedo.
+            const totalPages = templateTotalPages;
+            const page = templatePageSafe;
+            const pageItems = templatesFiltered.slice(page * TEMPLATES_PAGE_SIZE, page * TEMPLATES_PAGE_SIZE + TEMPLATES_PAGE_SIZE);
             const slots: (typeof pageItems[number] | null)[] = [...pageItems];
-            while (slots.length < PAGE_SIZE) slots.push(null);
+            while (slots.length < TEMPLATES_PAGE_SIZE) slots.push(null);
 
             return (
               <div className="px-0 md:px-14">
@@ -1062,7 +1117,7 @@ export default function Home() {
                   {totalPages > 1 && (
                     <button
                       type="button"
-                      onClick={(e) => { e.preventDefault(); if (page === 0) return; setTemplateNavDir(-1); setTemplatePage((p) => p - 1); }}
+                      onClick={(e) => { e.preventDefault(); goTemplatePage(-1); }}
                       aria-disabled={page === 0}
                       aria-label="Bloque anterior"
                       className={`hidden md:flex absolute left-0 top-1/2 -translate-y-1/2 z-10 w-9 items-center justify-center bg-transparent border-none text-gray-400 hover:text-orange-600 transition-colors ${page === 0 ? "opacity-20 pointer-events-none" : "cursor-pointer"}`}
@@ -1074,7 +1129,7 @@ export default function Home() {
                   {totalPages > 1 && (
                     <button
                       type="button"
-                      onClick={(e) => { e.preventDefault(); if (page === totalPages - 1) return; setTemplateNavDir(1); setTemplatePage((p) => p + 1); }}
+                      onClick={(e) => { e.preventDefault(); goTemplatePage(1); }}
                       aria-disabled={page === totalPages - 1}
                       aria-label="Siguiente bloque"
                       className={`hidden md:flex absolute right-0 top-1/2 -translate-y-1/2 z-10 w-9 items-center justify-center bg-transparent border-none text-gray-400 hover:text-orange-600 transition-colors ${page === totalPages - 1 ? "opacity-20 pointer-events-none" : "cursor-pointer"}`}
@@ -1084,8 +1139,10 @@ export default function Home() {
                     </button>
                   )}
 
-                  {/* overflow-hidden solo en el wrapper de la animación, no afecta las flechas */}
-                  <div className="overflow-hidden">
+                  {/* overflow-hidden solo en el wrapper de la animación, no afecta las flechas.
+                      El gesto va acá: en celular las flechas están ocultas (`hidden md:flex`),
+                      así que sin esto los puntitos eran la única forma de pasar de bloque. */}
+                  <div {...templatesSwipe} className="overflow-hidden">
                     <motion.div
                       key={`${templateFilter}-${page}`}
                       initial={{ opacity: 0, x: templateNavDir * 32 }}
@@ -1135,13 +1192,38 @@ export default function Home() {
           justo debajo, que tiene el texto a la izquierda. */}
       <section className="py-24 bg-white overflow-hidden">
         <div className="max-w-6xl mx-auto px-6">
+          {/* En celular las dos columnas colapsan a una, y el orden del código
+              dejaba foto → título → descripción: se entraba a la sección por una
+              foto sin saber de qué se trataba. El orden natural es leer el título,
+              ver la foto y después el detalle.
+
+              El orden se cambia con `order-*` (solo mobile) y en desktop se
+              recompone con posición explícita de grid: la foto ocupa la columna
+              izquierda entera y el texto queda partido en dos filas a la derecha,
+              exactamente como se veía antes. Así el título vive en UN solo lugar
+              del markup — duplicarlo para mobile sería dos textos que mantener. */}
           <motion.div
             initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.2 }} variants={stagger}
-            className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center"
+            className="grid lg:grid-cols-2 lg:grid-rows-[auto_auto] gap-y-10 lg:gap-x-16 lg:gap-y-0 items-center"
           >
-            {/* Izquierda: foto cálida de un comercio real andando. El "resultado"
-                al que se aspira, no un mockup del producto. */}
-            <motion.div variants={fadeUp} className="relative">
+            {/* Título — en celular arranca acá; en desktop vuelve arriba a la derecha. */}
+            <motion.div variants={fadeUp} className="order-1 lg:col-start-2 lg:row-start-1 lg:self-end">
+              <p className="text-orange-600 font-semibold text-sm uppercase tracking-widest mb-4">
+                Tu propio diseño
+              </p>
+              <h2 className="text-4xl sm:text-5xl font-black text-gray-950 mb-0 lg:mb-6 leading-tight">
+                ¿Ninguna plantilla es la tuya?
+              </h2>
+            </motion.div>
+
+            {/* Foto cálida de un comercio real andando. El "resultado" al que se
+                aspira, no un mockup del producto.
+
+                El grid recién se parte en dos a partir de `lg`, así que entre 640
+                y 1023 px la foto ocupaba el ancho entero: en una tablet de 1000 px
+                son ~975×731 px de foto sola. Se le pone techo y se centra; en
+                celular y en desktop queda como estaba. */}
+            <motion.div variants={fadeUp} className="relative order-2 w-full sm:max-w-xl sm:mx-auto lg:max-w-none lg:mx-0 lg:col-start-1 lg:row-start-1 lg:row-span-2 lg:self-center">
               <div className="absolute -inset-4 bg-gradient-to-br from-amber-200/40 to-orange-200/30 rounded-[2rem] blur-2xl pointer-events-none" />
               <div className="relative rounded-3xl overflow-hidden shadow-xl aspect-[4/3] lg:aspect-[5/6]">
                 <Image
@@ -1164,14 +1246,8 @@ export default function Home() {
               </div>
             </motion.div>
 
-            {/* Derecha: título + una frase que invita, sin listar pasos. */}
-            <motion.div variants={fadeUp}>
-              <p className="text-orange-600 font-semibold text-sm uppercase tracking-widest mb-4">
-                Tu propio diseño
-              </p>
-              <h2 className="text-4xl sm:text-5xl font-black text-gray-950 mb-6 leading-tight">
-                ¿Ninguna plantilla es la tuya?
-              </h2>
+            {/* El detalle: una frase que invita, sin listar pasos. */}
+            <motion.div variants={fadeUp} className="order-3 lg:col-start-2 lg:row-start-2 lg:self-start">
               <p className="text-gray-500 text-lg leading-relaxed mb-4">
                 Contanos cómo imaginás tu tienda y la <strong className="text-gray-900 font-semibold">diseñamos
                 con vos</strong>, a tu gusto y sin que te cueste nada.
@@ -1180,13 +1256,21 @@ export default function Home() {
                 No necesitás saber de diseño ni tener la tienda creada. Vos nos contás la idea, nosotros la hacemos realidad.
               </p>
 
-              <Link
-                href="/diseno-propio"
-                className="inline-flex items-center gap-2 bg-orange-600 hover:bg-orange-500 text-white font-bold px-8 py-4 rounded-2xl transition-all shadow-lg shadow-orange-500/25 hover:shadow-orange-500/40 hover:scale-105"
-              >
-                Diseñar mi tienda <ArrowRight className="h-5 w-5" />
-              </Link>
-              <p className="text-gray-400 text-sm mt-4">Gratis · Sin registrarte · Te respondemos por mail o WhatsApp</p>
+              {/* Centrado hasta `lg`: mientras la sección es una sola columna, el
+                  botón pegado a la izquierda queda perdido debajo de un texto que
+                  ocupa todo el ancho. Desde `lg` esto vuelve a ser la columna
+                  derecha del bloque partido y se alinea con el resto.
+                  La línea de abajo acompaña al botón — si se centra uno solo, el
+                  otro queda colgado. */}
+              <div className="text-center lg:text-left">
+                <Link
+                  href="/diseno-propio"
+                  className="inline-flex items-center gap-2 bg-orange-600 hover:bg-orange-500 text-white font-bold px-8 py-4 rounded-2xl transition-all shadow-lg shadow-orange-500/25 hover:shadow-orange-500/40 hover:scale-105"
+                >
+                  Diseñar mi tienda <ArrowRight className="h-5 w-5" />
+                </Link>
+                <p className="text-gray-400 text-sm mt-4">Gratis · Sin registrarte · Te respondemos por mail o WhatsApp</p>
+              </div>
 
               {/* La letra chica va a la vista y no recién al final del formulario:
                   si el trato no le cierra a alguien, mejor que se entere antes. */}
@@ -1249,7 +1333,10 @@ export default function Home() {
                 ))}
               </div>
 
-              <motion.div variants={fadeUp} className="mt-10">
+              {/* Centrado hasta `lg` como los demás: acá la columna del collage de
+                  fotos está oculta en celular (`hidden lg:block`), así que el botón
+                  quedaba solo contra el margen izquierdo debajo de los tres pasos. */}
+              <motion.div variants={fadeUp} className="mt-10 text-center lg:text-left">
                 <Link href="/afiliados" className="inline-flex items-center gap-2 bg-orange-600 hover:bg-orange-500 text-white px-7 py-3.5 rounded-2xl font-semibold transition-all shadow-lg shadow-orange-500/25 hover:scale-105">
                   Quiero ser afiliado <ArrowRight className="h-4 w-4" />
                 </Link>
@@ -1421,52 +1508,46 @@ export default function Home() {
             <motion.p variants={fadeUp} className="text-gray-500 text-lg mt-3 max-w-xl mx-auto">Cuando haya historias reales de usuarios, las vas a ver acá. Por ahora, podés ser el primero.</motion.p>
           </motion.div>
 
-          <motion.div initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.1 }} variants={stagger} className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-            {(() => {
-              const displayed = [
-                ...realTestimonials.slice(0, 3),
-                ...TESTIMONIALS.slice(0, Math.max(0, 3 - realTestimonials.length)).map((t, i) => ({
-                  id: `fallback-${i}`, name: t.name, role: t.role, location: null, text: t.text, rating: 5, img: t.img,
-                })),
-              ].slice(0, 3);
-              return displayed.map((t) => (
+          {/* Solo historias reales y aprobadas. Antes había además una lista de
+              relleno que estaba vacía desde siempre: todo el armado que la mezclaba
+              con las reales, y las ramas de foto y de "Verificado" que servían para
+              distinguirlas, no se ejecutaban nunca. Si no hay ninguna, la grilla no
+              se dibuja — el texto de arriba ya explica que todavía no hay. */}
+          {realTestimonials.length > 0 && (
+            <motion.div initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.1 }} variants={stagger} className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+              {realTestimonials.slice(0, 3).map((t) => (
                 <motion.div key={t.id} variants={fadeUp}>
                   <Card3D className="h-full">
                     <div className="h-full bg-white rounded-3xl p-7 border border-gray-100 shadow-sm hover:shadow-lg transition-all flex flex-col">
-                      <div className="flex gap-0.5 mb-4">
+                      {/* Las estrellas vacías van en gris. Antes las dos ramas del
+                          ternario eran idénticas (ámbar en las dos), así que quien
+                          puntuaba con 3 aparecía publicado con 5. */}
+                      <div className="flex gap-0.5 mb-4" aria-label={`${t.rating} de 5 estrellas`}>
                         {[1,2,3,4,5].map((s) => (
-                          <Star key={s} className={`h-4 w-4 ${"rating" in t && s <= (t as {rating:number}).rating ? "fill-amber-400 text-amber-400" : "fill-amber-400 text-amber-400"}`} />
+                          <Star key={s} className={`h-4 w-4 ${s <= t.rating ? "fill-amber-400 text-amber-400" : "text-gray-300"}`} />
                         ))}
                       </div>
                       <p className="text-gray-700 text-sm leading-relaxed mb-6 italic flex-1">&ldquo;{t.text}&rdquo;</p>
                       <div className="flex items-center gap-3">
-                        {"img" in t && (t as {img:string}).img ? (
-                          <div className="relative w-11 h-11 rounded-full overflow-hidden flex-shrink-0">
-                            <Image src={(t as {img:string}).img} alt={t.name} fill className="object-cover" />
-                          </div>
-                        ) : (
-                          <div className="w-11 h-11 rounded-full bg-orange-100 flex items-center justify-center flex-shrink-0">
-                            <span className="text-orange-600 font-bold text-sm">{t.name[0]}</span>
-                          </div>
-                        )}
+                        <div className="w-11 h-11 rounded-full bg-orange-100 flex items-center justify-center flex-shrink-0">
+                          <span className="text-orange-600 font-bold text-sm">{t.name[0]}</span>
+                        </div>
                         <div>
                           <p className="font-bold text-gray-900 text-sm">{t.name}</p>
                           <p className="text-gray-500 text-xs">
-                            {t.role}{"location" in t && t.location ? ` · ${t.location}` : ""}
+                            {t.role}{t.location ? ` · ${t.location}` : ""}
                           </p>
                         </div>
-                        {realTestimonials.some((r) => r.id === t.id) && (
-                          <div className="ml-auto">
-                            <span className="text-xs bg-teal-50 text-teal-700 border border-teal-200 px-2 py-0.5 rounded-full font-medium">Verificado</span>
-                          </div>
-                        )}
+                        <div className="ml-auto">
+                          <span className="text-xs bg-teal-50 text-teal-700 border border-teal-200 px-2 py-0.5 rounded-full font-medium">Verificado</span>
+                        </div>
                       </div>
                     </div>
                   </Card3D>
                 </motion.div>
-              ));
-            })()}
-          </motion.div>
+              ))}
+            </motion.div>
+          )}
 
           <motion.div initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center">
             <button

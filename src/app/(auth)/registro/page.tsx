@@ -664,7 +664,12 @@ function RegistroContent() {
 
   /* ── STEP 1: elegí tu tipo ── */
   return (
-    <div className="min-h-screen bg-white flex items-center justify-center p-6 relative">
+    // `overflow-hidden` porque los dos globos decorativos de abajo se salen a
+    // propósito del borde (`-left-32` y `-right-32`, o sea 128 px afuera). El de
+    // la derecha es el que suma ancho a la página. Es la misma convención que ya
+    // usan las secciones con globos de quienes-somos y de afiliados en el home;
+    // acá se había pasado por alto.
+    <div className="min-h-screen bg-white flex items-center justify-center p-6 relative overflow-hidden">
       <style>{`
         .grid-bg { background-image: linear-gradient(rgba(249,115,22,.05) 1px, transparent 1px), linear-gradient(90deg, rgba(249,115,22,.05) 1px, transparent 1px); background-size: 48px 48px; }
       `}</style>
@@ -688,11 +693,21 @@ function RegistroContent() {
             const premiumPerks = "premiumPerks" in rest ? (rest as { premiumPerks: string[] }).premiumPerks : undefined;
             const c = COLOR_MAP[color];
             return (
-              <button
+              // La tarjeta NO puede ser un <button>: adentro tiene los dos botones
+              // de plan (Tienda Pro / Premium) y el HTML no permite un botón dentro
+              // de otro. El navegador "arregla" el marcado por su cuenta al parsear,
+              // le queda distinto al que renderiza React en el servidor, y eso es el
+              // error de hidratación. Div con rol de botón: mismo comportamiento,
+              // incluido el teclado, sin anidar.
+              <div
                 key={key}
-                type="button"
+                role="button"
+                tabIndex={0}
                 onClick={() => selectType(key)}
-                className={`group text-left flex flex-col ${c.bg} border ${c.border} rounded-3xl p-6 transition-all duration-300 hover:scale-[1.02] shadow-sm`}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") { e.preventDefault(); selectType(key); }
+                }}
+                className={`group text-left flex flex-col cursor-pointer ${c.bg} border ${c.border} rounded-3xl p-6 transition-all duration-300 hover:scale-[1.02] shadow-sm`}
               >
                 <div className={`w-12 h-12 ${c.iconBg} rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
                   <Icon className={`h-6 w-6 ${c.text}`} />
@@ -759,7 +774,7 @@ function RegistroContent() {
                     {cta} <ArrowRight className="h-4 w-4" />
                   </div>
                 </div>
-              </button>
+              </div>
             );
           })}
         </div>

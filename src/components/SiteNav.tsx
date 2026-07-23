@@ -40,6 +40,7 @@ export function SiteNav({ active, fixed = false }: { active?: SiteNavKey; fixed?
   const userName = user?.name?.split(" ")[0] ?? null;
 
   return (
+    <>
     <nav className={`${fixed ? "fixed top-0 left-0 right-0 z-50" : "relative"} bg-white/90 backdrop-blur-xl border-b border-gray-200`}>
       <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-1.5">
@@ -88,9 +89,19 @@ export function SiteNav({ active, fixed = false }: { active?: SiteNavKey; fixed?
           <Menu className="h-6 w-6" />
         </button>
       </div>
+    </nav>
 
-      {mobileMenu && (
-        <div className="md:hidden fixed inset-0 z-[60] bg-white flex flex-col">
+    {/* El panel va FUERA del <nav> a propósito, y no es un detalle de orden.
+        El <nav> tiene `backdrop-blur-xl`, y un elemento con backdrop-filter pasa a
+        ser el bloque contenedor de sus descendientes `position: fixed` — igual que
+        pasa con transform o filter. Estando adentro, el `inset-0` del panel no se
+        media contra la pantalla sino contra la barra: 72 px de alto. El fondo
+        blanco tapaba solo la franja del título "Menú" y los links de abajo se
+        desbordaban sin nada atrás, así que se leía la página por debajo y parecía
+        que el panel era transparente. Afuera del nav, `inset-0` vuelve a ser la
+        pantalla entera. */}
+    {mobileMenu && (
+      <div className="md:hidden fixed inset-0 z-[60] bg-white flex flex-col">
           <div className="flex items-center justify-between px-6 py-5 border-b border-gray-200">
             <span className="text-gray-900 font-bold">Menú</span>
             <button onClick={() => setMobileMenu(false)} aria-label="Cerrar menú" className="text-gray-500 hover:text-gray-900">
@@ -121,8 +132,8 @@ export function SiteNav({ active, fixed = false }: { active?: SiteNavKey; fixed?
               )}
             </div>
           </div>
-        </div>
-      )}
-    </nav>
+      </div>
+    )}
+    </>
   );
 }
