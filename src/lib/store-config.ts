@@ -42,24 +42,45 @@ export const storeConfigSchema = z.object({
     googleAnalyticsId: z.string().max(30).optional(),
     facebookPixelId: z.string().max(30).optional(),
   }).optional(),
+  // Espejo de `TextOverride` (src/types/store-config.ts). Zod DESCARTA las claves
+  // que no figuran acá: si se agrega un ajuste al panel y se olvida esta lista, se
+  // ve bien mientras editás y desaparece al recargar. Los dos archivos se tocan
+  // juntos, siempre.
   textOverrides: z.record(z.string(), z.object({
     text: z.string().max(500).optional(),
     color: z.string().max(30).optional(),
     fontFamily: z.string().max(80).optional(),
-    fontSize: z.number().optional(),
+    // Con topes: sin ellos, un valor absurdo guardado a mano reventaba el diseño y
+    // no había forma de notarlo hasta verlo roto. El panel ofrece de 10 a 64.
+    fontSize: z.number().min(8).max(200).optional(),
     bold: z.boolean().optional(),
     italic: z.boolean().optional(),
     underline: z.boolean().optional(),
     hidden: z.boolean().optional(),
+    align: z.enum(["left", "center", "right"]).optional(),
+    uppercase: z.boolean().optional(),
+    lineHeight: z.number().min(0.7).max(3).optional(),
+    letterSpacing: z.number().min(-5).max(20).optional(),
   })),
+  // Espejo de `ImageOverride`. Mismo cuidado que arriba: lo que falte acá se
+  // guarda bien en pantalla y desaparece al recargar, sin ningún error a la vista.
   imageOverrides: z.record(z.string(), z.object({
     url: z.string().max(2000).optional(),
     overlayType: z.enum(["none", "dark", "light"]).optional(),
     overlayOpacity: z.number().min(0).max(1).optional(),
     posX: z.number().min(0).max(100).optional(),
     posY: z.number().min(0).max(100).optional(),
+    // Faltaba: el panel ofrecía "Ocultar texto del slide" desde siempre y Chic
+    // Paris lo lee, pero zod lo descartaba al guardar. Se tildaba, el texto
+    // desaparecía en el momento, y volvía solo al recargar la tienda.
+    hideContent: z.boolean().optional(),
   })),
-  sectionColors: z.record(z.string(), z.string().max(30)),
+  // El fondo de una sección puede ser un color (`#0a0a0a`, 7 caracteres) o un
+  // degradado ya armado como CSS (`linear-gradient(90deg, #… 20%, #… 100%)`, unos
+  // 50). El tope viejo de 30 alcanzaba para el color y cortaba el degradado —y
+  // como zod hace fallar el guardado entero, la tienda no habría podido guardar
+  // NADA hasta sacarlo a mano de la base.
+  sectionColors: z.record(z.string(), z.string().max(200)),
   bannerInterval: z.number().optional(),
   promoBanner: z.object({ enabled: z.boolean(), messages: z.array(z.string().max(120)).max(3).optional() }).optional(),
   previewFill: z.boolean().optional(),

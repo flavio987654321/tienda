@@ -2,10 +2,12 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import DashboardLayout from "@/components/DashboardLayout";
-import type { StoreConfig, TextOverride, ImageOverride } from "@/types/store-config";
-import { DEFAULT_CONFIG, TEMPLATES_WITH_CAROUSEL, TEMPLATE_DEFAULTS } from "@/types/store-config";
+import type { StoreConfig, TextOverride, ImageOverride, TemplateId } from "@/types/store-config";
+import { DEFAULT_CONFIG, TEMPLATES_WITH_CAROUSEL, TEMPLATE_DEFAULTS, SECTION_BG_PHOTO } from "@/types/store-config";
 import { StoreConfigContext } from "@/contexts/StoreConfigContext";
 import { EditContext, useEditContext, getContrastColor } from "@/contexts/EditContext";
+import { parseColor, toHex, contrastRatio, nearestLegible, MIN_LEGIBLE, MIN_LEGIBLE_GRANDE } from "@/lib/contrast";
+import { parseBg, serializeBg, extremo, extremosDe, DIR_LABELS, type SectionBg, type BgDir, type BgHacia } from "@/lib/section-bg";
 import { TEMPLATE_CATEGORIES, type TemplateInfo } from "@/lib/templateRegistry";
 import { UnsavedChangesGuard } from "@/components/UnsavedChangesGuard";
 
@@ -384,7 +386,7 @@ function BrowserFrame({ storeName, children }: { storeName: string; children: Re
           <div style={{ width: 12, height: 12, borderRadius: "50%", background: "#28ca41" }} />
         </div>
         <div style={{ flex: 1, background: "#0f172a", borderRadius: 6, padding: "5px 14px",
-          fontSize: 12, color: "#64748b", textAlign: "center", userSelect: "none" }}>
+          fontSize: 12, color: P.muted, textAlign: "center", userSelect: "none" }}>
           mitienda.com/tienda/{storeName.toLowerCase().replace(/\s+/g, "-")}
         </div>
       </div>
@@ -452,10 +454,10 @@ function FlyerImageSlot({ url, slot, onUpload, onRemove }: {
           <img src={url} alt="" style={{ width: 40, height: 54, objectFit: "cover", borderRadius: 6, border: "1px solid #e2e8f0", flexShrink: 0 }} />
           <div style={{ flex: 1, minWidth: 0 }}>
             <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: "#1e293b" }}>Flyer {slot + 1}</p>
-            <p style={{ margin: "2px 0 0", fontSize: 10, color: "#94a3b8", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Imagen cargada ✓</p>
+            <p style={{ margin: "2px 0 0", fontSize: 10, color: P.muted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Imagen cargada ✓</p>
           </div>
           <button onClick={() => fileRef.current?.click()} disabled={uploading}
-            style={{ fontSize: 11, padding: "5px 9px", border: "1px solid #e2e8f0", borderRadius: 6, background: "white", cursor: "pointer", color: "#64748b", whiteSpace: "nowrap" }}>
+            style={{ fontSize: 11, padding: "5px 9px", border: "1px solid #e2e8f0", borderRadius: 6, background: "white", cursor: "pointer", color: P.muted, whiteSpace: "nowrap" }}>
             Cambiar
           </button>
           <button onClick={() => onRemove(slot)}
@@ -469,11 +471,11 @@ function FlyerImageSlot({ url, slot, onUpload, onRemove }: {
             🖼
           </div>
           <div style={{ flex: 1 }}>
-            <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: "#94a3b8" }}>Flyer {slot + 1}</p>
+            <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: P.muted }}>Flyer {slot + 1}</p>
             <p style={{ margin: "2px 0 0", fontSize: 10, color: "#cbd5e1" }}>Sin imagen</p>
           </div>
           <button onClick={() => fileRef.current?.click()} disabled={uploading}
-            style={{ fontSize: 11, padding: "5px 9px", border: "1px solid #e2e8f0", borderRadius: 6, background: uploading ? "#f8fafc" : "white", cursor: uploading ? "default" : "pointer", color: "#64748b", whiteSpace: "nowrap" }}>
+            style={{ fontSize: 11, padding: "5px 9px", border: "1px solid #e2e8f0", borderRadius: 6, background: uploading ? "#f8fafc" : "white", cursor: uploading ? "default" : "pointer", color: P.muted, whiteSpace: "nowrap" }}>
             {uploading ? "Subiendo…" : "Subir imagen"}
           </button>
         </>
@@ -549,15 +551,15 @@ function ConfigModal({ config, update, onClose, onSave, onDelete, storeSlug, isP
         <div style={{ padding: "18px 24px 14px", borderBottom: "1px solid #f1f5f9", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div>
             <h2 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: "#0f172a" }}>Configuración avanzada</h2>
-            <p style={{ margin: "2px 0 0", fontSize: 12, color: "#94a3b8" }}>Usá &quot;Guardar y cerrar&quot; para que los cambios queden guardados</p>
+            <p style={{ margin: "2px 0 0", fontSize: 12, color: P.muted }}>Usá &quot;Guardar y cerrar&quot; para que los cambios queden guardados</p>
           </div>
-          <button onClick={onClose} style={{ width: 32, height: 32, border: "1px solid #e2e8f0", borderRadius: 8, background: "white", cursor: "pointer", fontSize: 18, color: "#64748b", display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
+          <button onClick={onClose} style={{ width: 32, height: 32, border: "1px solid #e2e8f0", borderRadius: 8, background: "white", cursor: "pointer", fontSize: 18, color: P.muted, display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
         </div>
 
         {/* Body */}
         <div style={{ flex: 1, overflowY: "auto", padding: "16px 24px 24px" }}>
 
-          <p style={{ margin: "4px 0 10px", fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: 1 }}>Apariencia</p>
+          <p style={{ margin: "4px 0 10px", fontSize: 11, fontWeight: 700, color: P.muted, textTransform: "uppercase", letterSpacing: 1 }}>Apariencia</p>
 
           {/* Colores */}
           <div style={sec}>
@@ -573,7 +575,7 @@ function ConfigModal({ config, update, onClose, onSave, onDelete, storeSlug, isP
                 onFocus={e => (e.target.style.borderColor = "#6366f1")}
                 onBlur={e => (e.target.style.borderColor = "#e2e8f0")} />
             </div>
-            <p style={{ margin: "8px 0 0", fontSize: 11, color: "#94a3b8" }}>Afecta botones, precios y elementos destacados.</p>
+            <p style={{ margin: "8px 0 0", fontSize: 11, color: P.muted }}>Afecta botones, precios y elementos destacados.</p>
           </div>
 
           {/* Color nav — solo templates auto y Hogar/Tecnología */}
@@ -594,16 +596,16 @@ function ConfigModal({ config, update, onClose, onSave, onDelete, storeSlug, isP
                   onBlur={e => (e.target.style.borderColor = "#e2e8f0")} />
                 {config.sectionColors?.["navBg"] && (
                   <button onClick={() => { const next = { ...config.sectionColors }; delete next["navBg"]; update("sectionColors", next); }}
-                    style={{ padding: "7px 12px", border: "1px solid #e2e8f0", borderRadius: 8, background: "white", cursor: "pointer", fontSize: 12, color: "#64748b", whiteSpace: "nowrap" }}>
+                    style={{ padding: "7px 12px", border: "1px solid #e2e8f0", borderRadius: 8, background: "white", cursor: "pointer", fontSize: 12, color: P.muted, whiteSpace: "nowrap" }}>
                     ↺ Reset
                   </button>
                 )}
               </div>
-              <p style={{ margin: "8px 0 0", fontSize: 11, color: "#94a3b8" }}>El texto y los íconos del nav se adaptan automáticamente al color elegido.</p>
+              <p style={{ margin: "8px 0 0", fontSize: 11, color: P.muted }}>El texto y los íconos del nav se adaptan automáticamente al color elegido.</p>
             </div>
           )}
 
-          <p style={{ margin: "20px 0 10px", fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: 1 }}>Contacto y comunicación</p>
+          <p style={{ margin: "20px 0 10px", fontSize: 11, fontWeight: 700, color: P.muted, textTransform: "uppercase", letterSpacing: 1 }}>Contacto y comunicación</p>
 
           {/* WhatsApp */}
           <div style={sec}>
@@ -614,7 +616,7 @@ function ConfigModal({ config, update, onClose, onSave, onDelete, storeSlug, isP
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div>
                   <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: "#1e293b" }}>Botón flotante</p>
-                  <p style={{ margin: "2px 0 0", fontSize: 11, color: "#94a3b8" }}>Visible en todas las páginas</p>
+                  <p style={{ margin: "2px 0 0", fontSize: 11, color: P.muted }}>Visible en todas las páginas</p>
                 </div>
                 <Toggle value={config.whatsapp.enabled}
                   onChange={v => update("whatsapp", { ...config.whatsapp, enabled: v })} />
@@ -636,7 +638,7 @@ function ConfigModal({ config, update, onClose, onSave, onDelete, storeSlug, isP
                       onChange={e => update("whatsapp", { ...config.whatsapp, message: e.target.value })}
                       onFocus={e => (e.target.style.borderColor = "#6366f1")}
                       onBlur={e => (e.target.style.borderColor = "#e2e8f0")} />
-                    <p style={{ margin: "4px 0 0", fontSize: 11, color: "#94a3b8" }}>Texto que se pre-carga cuando el cliente hace click en el botón</p>
+                    <p style={{ margin: "4px 0 0", fontSize: 11, color: P.muted }}>Texto que se pre-carga cuando el cliente hace click en el botón</p>
                   </div>
                 </>
               )}
@@ -652,7 +654,7 @@ function ConfigModal({ config, update, onClose, onSave, onDelete, storeSlug, isP
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div>
                   <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: "#1e293b" }}>Mostrar barra</p>
-                  <p style={{ margin: "2px 0 0", fontSize: 11, color: "#94a3b8" }}>Franja promocional en la parte superior</p>
+                  <p style={{ margin: "2px 0 0", fontSize: 11, color: P.muted }}>Franja promocional en la parte superior</p>
                 </div>
                 <Toggle value={config.promoBanner?.enabled !== false}
                   onChange={v => update("promoBanner", { enabled: v })} />
@@ -679,7 +681,7 @@ function ConfigModal({ config, update, onClose, onSave, onDelete, storeSlug, isP
                         onBlur={e => (e.target.style.borderColor = "#e2e8f0")} />
                     </div>
                   ))}
-                  <p style={{ margin: 0, fontSize: 11, color: "#94a3b8" }}>Los mensajes vacíos no se muestran. Se rotan automáticamente cada 3.5 seg.</p>
+                  <p style={{ margin: 0, fontSize: 11, color: P.muted }}>Los mensajes vacíos no se muestran. Se rotan automáticamente cada 3.5 seg.</p>
                 </div>
               )}
             </div>
@@ -710,7 +712,7 @@ function ConfigModal({ config, update, onClose, onSave, onDelete, storeSlug, isP
             </div>
           </div>
 
-          <p style={{ margin: "20px 0 10px", fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: 1 }}>Configuración de la tienda</p>
+          <p style={{ margin: "20px 0 10px", fontSize: 11, fontWeight: 700, color: P.muted, textTransform: "uppercase", letterSpacing: 1 }}>Configuración de la tienda</p>
 
           {/* Moneda & Idioma */}
           <div style={sec}>
@@ -764,8 +766,8 @@ function ConfigModal({ config, update, onClose, onSave, onDelete, storeSlug, isP
                   onChange={e => update("bannerInterval", Number(e.target.value))}
                   style={{ width: "100%", accentColor: "#6366f1" }} />
                 <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
-                  <span style={{ fontSize: 11, color: "#94a3b8" }}>2s (rápido)</span>
-                  <span style={{ fontSize: 11, color: "#94a3b8" }}>10s (lento)</span>
+                  <span style={{ fontSize: 11, color: P.muted }}>2s (rápido)</span>
+                  <span style={{ fontSize: 11, color: P.muted }}>10s (lento)</span>
                 </div>
               </div>
             </div>
@@ -781,7 +783,7 @@ function ConfigModal({ config, update, onClose, onSave, onDelete, storeSlug, isP
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <div>
                     <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: "#1e293b" }}>Ocultar precios al público</p>
-                    <p style={{ margin: "2px 0 0", fontSize: 11, color: "#94a3b8" }}>Muestra &quot;Consultá precio&quot; — clientes consultan antes de ver valores</p>
+                    <p style={{ margin: "2px 0 0", fontSize: 11, color: P.muted }}>Muestra &quot;Consultá precio&quot; — clientes consultan antes de ver valores</p>
                   </div>
                   <Toggle value={config.ocultarPreciosPublico ?? false}
                     onChange={v => update("ocultarPreciosPublico", v)} />
@@ -801,7 +803,7 @@ function ConfigModal({ config, update, onClose, onSave, onDelete, storeSlug, isP
               <p style={{ margin: "0 0 4px", fontSize: 12, fontWeight: 700, color: "#0f172a", display: "flex", alignItems: "center", gap: 6 }}>
                 📌 Categorías destacadas
               </p>
-              <p style={{ margin: "0 0 12px", fontSize: 11, color: "#94a3b8" }}>
+              <p style={{ margin: "0 0 12px", fontSize: 11, color: P.muted }}>
                 Elegí cuáles aparecen como secciones en el inicio. Si no seleccionás ninguna, se muestran todas.
               </p>
               <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
@@ -820,7 +822,7 @@ function ConfigModal({ config, update, onClose, onSave, onDelete, storeSlug, isP
               </div>
               {(config.featuredCategories ?? []).length > 0 && (
                 <button type="button" onClick={() => update("featuredCategories", [])}
-                  style={{ marginTop: 8, width: "100%", padding: "6px", border: "1px solid #e2e8f0", borderRadius: 7, background: "white", color: "#94a3b8", fontSize: 11, cursor: "pointer" }}>
+                  style={{ marginTop: 8, width: "100%", padding: "6px", border: "1px solid #e2e8f0", borderRadius: 7, background: "white", color: P.muted, fontSize: 11, cursor: "pointer" }}>
                   Mostrar todas las categorías
                 </button>
               )}
@@ -836,7 +838,7 @@ function ConfigModal({ config, update, onClose, onSave, onDelete, storeSlug, isP
               {isPremium ? (
                 <span style={{ fontSize: 10, fontWeight: 700, color: "#d97706", background: "#fffbeb", border: "1px solid #fde68a", padding: "2px 8px", borderRadius: 20, flexShrink: 0 }}>★ Premium</span>
               ) : (
-                <span style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", background: "#f8fafc", border: "1px solid #e2e8f0", padding: "2px 8px", borderRadius: 20, flexShrink: 0 }}>Solo Premium</span>
+                <span style={{ fontSize: 10, fontWeight: 700, color: P.muted, background: "#f8fafc", border: "1px solid #e2e8f0", padding: "2px 8px", borderRadius: 20, flexShrink: 0 }}>Solo Premium</span>
               )}
             </div>
 
@@ -854,7 +856,7 @@ function ConfigModal({ config, update, onClose, onSave, onDelete, storeSlug, isP
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
                   <div>
                     <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: "#1e293b" }}>Activar flyer</p>
-                    <p style={{ margin: "2px 0 0", fontSize: 11, color: "#94a3b8" }}>Aparece al entrar a la tienda, en cada visita</p>
+                    <p style={{ margin: "2px 0 0", fontSize: 11, color: P.muted }}>Aparece al entrar a la tienda, en cada visita</p>
                   </div>
                   <Toggle
                     value={config.flyerConfig?.enabled ?? false}
@@ -897,7 +899,7 @@ function ConfigModal({ config, update, onClose, onSave, onDelete, storeSlug, isP
                     )}
 
                     {/* Info PWA */}
-                    <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 8, padding: "9px 12px", marginTop: 10, fontSize: 11, color: "#64748b", lineHeight: 1.5 }}>
+                    <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 8, padding: "9px 12px", marginTop: 10, fontSize: 11, color: P.muted, lineHeight: 1.5 }}>
                       📱 Si tus clientes tienen la tienda instalada como app (PWA), el flyer aparece justo después de la pantalla de carga.
                     </div>
                   </>
@@ -906,7 +908,7 @@ function ConfigModal({ config, update, onClose, onSave, onDelete, storeSlug, isP
             )}
           </div>
 
-          <p style={{ margin: "20px 0 10px", fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: 1 }}>Marketing y descubribilidad</p>
+          <p style={{ margin: "20px 0 10px", fontSize: 11, fontWeight: 700, color: P.muted, textTransform: "uppercase", letterSpacing: 1 }}>Marketing y descubribilidad</p>
 
           {/* SEO */}
           <div style={sec}>
@@ -917,7 +919,7 @@ function ConfigModal({ config, update, onClose, onSave, onDelete, storeSlug, isP
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div>
                   <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: "#1e293b" }}>Activar SEO</p>
-                  <p style={{ margin: "2px 0 0", fontSize: 11, color: "#94a3b8" }}>Mejora la visibilidad en Google</p>
+                  <p style={{ margin: "2px 0 0", fontSize: 11, color: P.muted }}>Mejora la visibilidad en Google</p>
                 </div>
                 <Toggle value={config.seo.enabled}
                   onChange={v => update("seo", { ...config.seo, enabled: v })} />
@@ -973,7 +975,7 @@ function ConfigModal({ config, update, onClose, onSave, onDelete, storeSlug, isP
               </p>
               <div style={{ display: "flex", gap: 8 }}>
                 <button onClick={() => setConfirmingDelete(false)}
-                  style={{ flex: 1, padding: "9px", border: "1px solid #e2e8f0", borderRadius: 8, background: "white", color: "#64748b", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+                  style={{ flex: 1, padding: "9px", border: "1px solid #e2e8f0", borderRadius: 8, background: "white", color: P.muted, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
                   Cancelar
                 </button>
                 <button onClick={onDelete}
@@ -990,6 +992,38 @@ function ConfigModal({ config, update, onClose, onSave, onDelete, storeSlug, isP
 }
 
 /* ── Image field editor (sub-componente con su propio estado) ── */
+/* ── Paleta del panel de edición ─────────────────────────────────────────────
+   Una sola definición para los tres editores (texto, imagen y fondo). Antes cada
+   uno repetía sus propios colores oscuros, así que cambiar el tema significaba
+   tocar tres lugares y esperar que no se olvidara ninguno.
+   El panel es claro porque convive con la vista previa de la tienda, que casi
+   siempre es clara: un bloque oscuro al lado competía con lo que estás mirando en
+   vez de acompañarlo. */
+const P = {
+  bg: "#ffffff",
+  bgSoft: "#f8fafc",
+  border: "#e2e8f0",
+  text: "#1e293b",
+  muted: "#64748b",
+  hint: "#94a3b8",
+  accent: "#6366f1",
+  accentSoft: "#eef2ff",
+  danger: "#dc2626",
+  dangerSoft: "#fef2f2",
+};
+
+const panelBtn: React.CSSProperties = {
+  padding: "5px 11px", borderRadius: 6, border: `1.5px solid ${P.border}`,
+  background: P.bg, color: P.text, cursor: "pointer",
+  fontSize: 11, fontWeight: 600, whiteSpace: "nowrap",
+};
+const panelBtnActive: React.CSSProperties = {
+  ...panelBtn, border: `1.5px solid ${P.accent}`, background: P.accent, color: "#fff",
+};
+
+/** Mismo tope que `textOverrides.text` en el esquema de zod. Los dos se tocan juntos. */
+const TEXTO_MAX = 500;
+
 function ImageFieldEditor({
   field, ov, info, currentOverlay, hasChanges, base, setImageOverride, setActiveField,
 }: {
@@ -1006,9 +1040,16 @@ function ImageFieldEditor({
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
 
+  // `uploading` es estado: recién bloquea en el render siguiente. Si se eligen dos
+  // fotos rápido, las dos subidas arrancan, y la que termina última gana — que
+  // puede ser la PRIMERA. Quedaba puesta una foto distinta de la última elegida,
+  // sin ningún error a la vista. El candado tiene que ser sincrónico.
+  const subiendo = useRef(false);
+
   const handleFile = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file || subiendo.current) return;
+    subiendo.current = true;
     setUploading(true);
     setUploadError(null);
     try {
@@ -1023,39 +1064,273 @@ function ImageFieldEditor({
       const msg = err instanceof Error ? err.message : "Error al subir la imagen";
       setUploadError(msg);
     } finally {
+      subiendo.current = false;
       setUploading(false);
       if (fileRef.current) fileRef.current.value = "";
     }
   }, [field, setImageOverride]);
 
-  const dk = { color: "#f1f5f9" };
-  const dkMuted = { color: "#94a3b8" };
-  const dkBtn: React.CSSProperties = { padding: "5px 11px", borderRadius: 6, border: "1.5px solid rgba(255,255,255,0.15)", background: "rgba(255,255,255,0.07)", color: "#f1f5f9", cursor: "pointer", fontSize: 11, fontWeight: 600, whiteSpace: "nowrap" as const };
-  const dkBtnActive: React.CSSProperties = { ...dkBtn, border: "1.5px solid #6366f1", background: "#6366f1", color: "white" };
+  const dk = { color: P.text };
+  const dkMuted = { color: P.muted };
+  const dkBtn = panelBtn;
+  const dkBtnActive = panelBtnActive;
+
+  // ── El hueco real donde va esta foto ───────────────────────────────────────
+  // El consejo de medidas estaba escrito a mano y era el mismo siempre, pero el
+  // hueco NO es siempre el mismo: cambia según el template y según la pantalla.
+  // En una sección vertical el panel recomendaba "horizontal" — justo al revés.
+  // Así que en vez de afirmar, se mide.
+  //
+  // Con ResizeObserver y no con una medición suelta: alcanza con que el dueño
+  // pase de escritorio a celular, o achique la ventana, para que el hueco cambie
+  // de forma. Si se midiera una sola vez, el consejo quedaría viejo enseguida.
+  // Guarda de qué campo es la medida. Al pasar de una imagen a otra, si la nueva
+  // no se puede medir, sin esto el panel seguía mostrando —con total seguridad—
+  // la recomendación del hueco anterior.
+  const [medido, setMedido] = useState<{ campo: string; w: number; h: number } | null>(null);
+  const hueco = medido && medido.campo === field ? medido : null;
+  useEffect(() => {
+    const slot = document.querySelector(`[data-edit-image="${CSS.escape(field)}"]`)?.parentElement;
+    if (!slot) return;
+    // `observe` dispara una primera vez con el tamaño actual, así que no hace
+    // falta medir a mano acá (que además encadenaría un render de más).
+    const ro = new ResizeObserver(() => {
+      const r = slot.getBoundingClientRect();
+      if (r.width < 8 || r.height < 8) return;
+      const w = Math.round(r.width);
+      const h = Math.round(r.height);
+      setMedido(prev => (prev && prev.campo === field && prev.w === w && prev.h === h ? prev : { campo: field, w, h }));
+    });
+    ro.observe(slot);
+    return () => ro.disconnect();
+  }, [field]);
+
+  const forma = hueco
+    ? hueco.w / hueco.h > 1.25 ? "horizontal"
+    : hueco.w / hueco.h < 0.8  ? "vertical"
+    : "cuadrada"
+    : null;
+
+  // Se pide el doble del hueco para que no se vea pixelada en pantallas retina,
+  // con techo: en un hero ancho, "el doble" serían 3000px y eso solo hace que la
+  // tienda cargue lento.
+  const recomendado = hueco
+    ? (() => {
+        const escala = Math.max(1, Math.min(2, 1800 / hueco.w));
+        const r = (n: number) => Math.round((n * escala) / 50) * 50;
+        return { w: r(hueco.w), h: r(hueco.h) };
+      })()
+    : null;
+
+  // La parte del tip escrita a mano que hablaba de medidas se cae cuando tenemos
+  // la medida de verdad: dos consejos que se contradicen es peor que ninguno.
+  const tipSinMedidas = recomendado
+    ? (info?.tip ?? "").replace(/\s*Recomendad[oa]:[^.]*\.?/i, " ").trim()
+    : info?.tip;
+
+  // ── Encuadre ───────────────────────────────────────────────────────────────
+  // Los diez templates recortan las fotos con `cover` y ya leen `posX`/`posY`
+  // para decidir qué parte se ve. El panel nunca lo ofreció: una foto vertical
+  // metida en un hero panorámico se recortaba por el centro y no había forma de
+  // correrla. Se arrastra sobre la muestra, y las barras quedan para el ajuste
+  // fino (y para quien no puede arrastrar).
+  const posX = ov.posX ?? 50;
+  const posY = ov.posY ?? 50;
+  const enCentro = posX === 50 && posY === 50;
+
+  // Medidas reales de la foto. Hacen falta para dos cosas distintas, y sin ellas
+  // las barras mienten (ver `sobraX`/`sobraY` acá abajo).
+  const [natural, setNatural] = useState<{ url: string; w: number; h: number } | null>(null);
+  useEffect(() => {
+    if (!ov.url) return;
+    const img = new window.Image();
+    const url = ov.url;
+    img.onload = () => setNatural({ url, w: img.naturalWidth, h: img.naturalHeight });
+    img.src = url;
+    return () => { img.onload = null; };
+  }, [ov.url]);
+  // Se compara la URL en vez de limpiar el estado al cambiar de foto: así no hay
+  // un instante mostrando las medidas de la foto anterior.
+  const medidas = natural && natural.url === ov.url ? natural : null;
+
+  // ── Cuánto se puede mover, de verdad ───────────────────────────────────────
+  // La sección recorta con `cover`: la foto se agranda hasta tapar el hueco, y
+  // SOBRA por un solo lado. Una foto más apaisada que el hueco sobra a lo ancho y
+  // encaja justo de alto — moverla para arriba o abajo no hace absolutamente
+  // nada, por más que la barra se mueva.
+  //
+  // Y lo que sobra no es del tamaño del hueco: si sobra poco, arrastrar el dedo
+  // 100px tiene que mover la foto muchísimo menos que si sobra mucho. Repartir el
+  // arrastre sobre el ancho de la caja —que es lo que hacía antes— daba un
+  // movimiento que no seguía al dedo: lento cuando sobraba poco, disparado cuando
+  // sobraba mucho.
+  const propHueco = hueco ? hueco.w / hueco.h : 16 / 9;
+  const propFoto = medidas ? medidas.w / medidas.h : null;
+  const sobraX = propFoto ? Math.max(0, propFoto / propHueco - 1) : null;
+  const sobraY = propFoto ? Math.max(0, propHueco / propFoto - 1) : null;
+  // Menos de un 2% de sobra es un pelito de nada: la barra se movería entera para
+  // correr la foto dos píxeles. Mejor decir que ese eje no se mueve.
+  const mueveX = sobraX === null || sobraX > 0.02;
+  const mueveY = sobraY === null || sobraY > 0.02;
+
+  const arrastre = useRef<{ x: number; y: number; px: number; py: number; w: number; h: number } | null>(null);
+  const topes = (n: number) => Math.max(0, Math.min(100, Math.round(n)));
+
+  const alArrastrar = (e: React.PointerEvent<HTMLDivElement>) => {
+    const a = arrastre.current;
+    if (!a) return;
+    // Se invierte a propósito: uno arrastra LA FOTO, no la ventana. Llevarla a la
+    // derecha tiene que mostrar lo que estaba tapado a la izquierda.
+    const avanceX = ((e.clientX - a.x) / a.w) * 100;
+    const avanceY = ((e.clientY - a.y) / a.h) * 100;
+    const nx = mueveX ? topes(a.px - avanceX / (sobraX || 1)) : posX;
+    const ny = mueveY ? topes(a.py - avanceY / (sobraY || 1)) : posY;
+    // Sin esto, apoyar el dedo y moverlo dos píxeles sobre un eje muerto escribía
+    // 50/50 igual: la tienda quedaba marcada como "con cambios sin guardar" por
+    // algo que no cambió nada.
+    if (nx === posX && ny === posY) return;
+    setImageOverride(field, { posX: nx, posY: ny });
+  };
+
+  const capaMuestra = currentOverlay === "none" ? null
+    : currentOverlay === "light"
+      ? `rgba(255,255,255,${ov.overlayOpacity ?? 0.6})`
+      : `rgba(0,0,0,${ov.overlayOpacity ?? 0.6})`;
 
   return (
-    <div style={{ ...base, display: "flex", flexDirection: "column" }}>
-      {/* Fila 1: label + upload + preview */}
-      <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 10, padding: "10px 20px 9px", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
-        <span style={{ fontSize: 11, fontWeight: 700, color: "#818cf8", background: "rgba(99,102,241,0.2)", borderRadius: 20, padding: "3px 10px", whiteSpace: "nowrap", flexShrink: 0 }}>
+    <div data-editor-panel style={{ ...base, display: "flex", flexDirection: "column" }}>
+      {/* ── Encabezado ── */}
+      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 18px", borderBottom: "1px solid #eef1f5", position: "sticky", top: 0, background: P.bg, zIndex: 2 }}>
+        <span style={{ fontSize: 11, fontWeight: 700, color: P.accent, background: P.accentSoft, borderRadius: 20, padding: "3px 10px", whiteSpace: "nowrap" }}>
           📷 {info?.label ?? field}
         </span>
-        {info?.tip && (
-          <span style={{ fontSize: 11, color: "#94a3b8" }}>{info.tip}</span>
-        )}
-        <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleFile} />
-        <button onClick={() => fileRef.current?.click()} disabled={uploading}
-          style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 16px", borderRadius: 7, border: "none", background: uploading ? "#4338ca" : "#6366f1", color: "white", fontSize: 12, fontWeight: 700, cursor: uploading ? "default" : "pointer", whiteSpace: "nowrap", opacity: uploading ? 0.7 : 1 }}>
-          {uploading ? "Subiendo..." : ov.url ? "Cambiar imagen" : "Elegir imagen"}
-        </button>
-        {ov.url && <img src={ov.url} alt="" style={{ width: 36, height: 36, objectFit: "cover", borderRadius: 6, border: "1px solid rgba(255,255,255,0.15)", flexShrink: 0 }} />}
-        {uploadError && <span style={{ fontSize: 11, color: "#f87171", whiteSpace: "nowrap" }}>⚠ {uploadError}</span>}
         <div style={{ flex: 1 }} />
-        <button onClick={() => setActiveField(null)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 20, ...dkMuted, flexShrink: 0, lineHeight: 1, padding: 0 }}>×</button>
+        <button onClick={() => setActiveField(null)} aria-label="Cerrar editor"
+          style={{ background: "none", border: "none", cursor: "pointer", fontSize: 20, ...dkMuted, flexShrink: 0, lineHeight: 1, padding: 0 }}>×</button>
       </div>
 
-      {/* Fila 2: capa + opacidad + reset */}
-      <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 20px", flexWrap: "wrap" }}>
+      {/* ── Foto ── */}
+      <div style={{ padding: "14px 18px", borderBottom: "1px solid #eef1f5" }}>
+        <p style={{ margin: 0, fontSize: 10, fontWeight: 700, color: P.hint, letterSpacing: 1, textTransform: "uppercase" }}>Foto</p>
+        <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleFile} />
+        <button onClick={() => fileRef.current?.click()} disabled={uploading}
+          style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, width: "100%", marginTop: 8, padding: "8px 16px", borderRadius: 7, border: "none", background: uploading ? "#4338ca" : "#6366f1", color: "white", fontSize: 12, fontWeight: 700, cursor: uploading ? "default" : "pointer", opacity: uploading ? 0.7 : 1 }}>
+          {uploading ? "Subiendo..." : ov.url ? "Cambiar imagen" : "Elegir imagen"}
+        </button>
+        {uploadError && <p style={{ margin: "6px 0 0", fontSize: 11, color: P.danger }}>⚠ {uploadError}</p>}
+
+        {recomendado && forma && (
+          <div style={{ marginTop: 9, background: P.bgSoft, border: `1px solid ${P.border}`, borderRadius: 8, padding: "9px 11px" }}>
+            <p style={{ margin: 0, fontSize: 10.5, color: P.text, lineHeight: 1.5 }}>
+              📐 Acá el hueco es <strong>{forma}</strong> ({hueco!.w}×{hueco!.h}).
+              Subí una foto <strong>{forma}</strong> de al menos{" "}
+              <strong>{recomendado.w}×{recomendado.h}px</strong>.
+            </p>
+            <p style={{ margin: "5px 0 0", fontSize: 10, color: P.muted, lineHeight: 1.45 }}>
+              Esta medida sale del hueco tal como está ahora: cambia según el template y según la
+              pantalla. Si vas a mirar la tienda en celular, revisala también ahí.
+            </p>
+          </div>
+        )}
+
+        {tipSinMedidas && <p style={{ margin: "7px 0 0", fontSize: 10.5, color: P.muted, lineHeight: 1.45 }}>{tipSinMedidas}</p>}
+      </div>
+
+      {/* ── Encuadre ── */}
+      {ov.url && (
+      <div style={{ padding: "14px 18px", borderBottom: "1px solid #eef1f5" }}>
+        <p style={{ margin: 0, fontSize: 10, fontWeight: 700, color: P.hint, letterSpacing: 1, textTransform: "uppercase" }}>Encuadre</p>
+
+        <div
+          onPointerDown={e => {
+            const r = e.currentTarget.getBoundingClientRect();
+            arrastre.current = { x: e.clientX, y: e.clientY, px: posX, py: posY, w: r.width, h: r.height };
+            e.currentTarget.setPointerCapture(e.pointerId);
+          }}
+          onPointerMove={alArrastrar}
+          // Se suelta solo si de verdad se había agarrado: liberar una captura que
+          // nunca se tomó tira excepción y mata el render del panel entero.
+          onPointerUp={e => {
+            if (!arrastre.current) return;
+            arrastre.current = null;
+            if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId);
+          }}
+          onPointerCancel={() => { arrastre.current = null; }}
+          style={{
+            position: "relative", marginTop: 8,
+            // La muestra copia la forma del hueco de verdad. Dibujarla siempre
+            // apaisada mentía justo donde más importa: en un hueco vertical uno
+            // encuadra mirando una franja ancha que no existe.
+            aspectRatio: hueco ? `${hueco.w} / ${hueco.h}` : "16 / 9",
+            // Un hueco alto se manda por el alto y no por el ancho: si se fijara
+            // el ancho al 100%, la muestra saldría larguísima, empujaría las
+            // barras fuera de la pantalla y habría que scrollear para encuadrar.
+            ...(hueco && hueco.h > hueco.w
+              ? { height: 260, width: "auto", maxWidth: "100%", marginLeft: "auto", marginRight: "auto" }
+              : { width: "100%" }),
+            borderRadius: 8, border: "1px solid #e2e8f0", overflow: "hidden",
+            backgroundImage: `url(${ov.url})`, backgroundSize: "cover",
+            backgroundPosition: `${posX}% ${posY}%`, backgroundRepeat: "no-repeat",
+            cursor: "grab",
+            // Sin esto, arrastrar hacia abajo en un celular scrollea el panel en
+            // vez de mover la foto.
+            touchAction: "none", userSelect: "none",
+          }}
+        >
+          {capaMuestra && <div style={{ position: "absolute", inset: 0, background: capaMuestra, pointerEvents: "none" }} />}
+          <span style={{
+            position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-50%)",
+            fontSize: 10.5, fontWeight: 700, color: "#fff", background: "rgba(15,23,42,0.55)",
+            padding: "4px 9px", borderRadius: 20, pointerEvents: "none", whiteSpace: "nowrap",
+          }}>
+            ✥ Arrastrá la foto
+          </span>
+        </div>
+
+        {/* Una barra apagada dice más que una barra que se mueve sin efecto: si
+            está viva, se puede mover; si no, se explica por qué no. */}
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 10, opacity: mueveX ? 1 : 0.4 }}>
+          <span style={{ fontSize: 11, ...dkMuted, width: 66, flexShrink: 0 }}>Izq. / Der.</span>
+          <input type="range" min={0} max={100} step={1} value={posX} disabled={!mueveX}
+            onChange={e => setImageOverride(field, { posX: Number(e.target.value) })}
+            style={{ flex: 1, minWidth: 0, accentColor: "#6366f1" }} />
+          <span style={{ fontSize: 12, fontWeight: 700, ...dk, width: 36, textAlign: "right" }}>{posX}%</span>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6, opacity: mueveY ? 1 : 0.4 }}>
+          <span style={{ fontSize: 11, ...dkMuted, width: 66, flexShrink: 0 }}>Arr. / Abajo</span>
+          <input type="range" min={0} max={100} step={1} value={posY} disabled={!mueveY}
+            onChange={e => setImageOverride(field, { posY: Number(e.target.value) })}
+            style={{ flex: 1, minWidth: 0, accentColor: "#6366f1" }} />
+          <span style={{ fontSize: 12, fontWeight: 700, ...dk, width: 36, textAlign: "right" }}>{posY}%</span>
+        </div>
+
+        {medidas && (!mueveX || !mueveY) && (
+          <p style={{ margin: "7px 0 0", fontSize: 10.5, color: P.muted, lineHeight: 1.45 }}>
+            {!mueveX && !mueveY
+              ? "Esta foto tiene justo la forma del hueco: entra entera y no hay nada que correr."
+              : !mueveX
+                ? "De izquierda a derecha no hay nada que mover: la foto entra justa de ancho. Lo que sobra es alto — usá la barra de arriba/abajo."
+                : "De arriba a abajo no hay nada que mover: la foto entra justa de alto. Lo que sobra es ancho — usá la barra de izquierda/derecha."}
+          </p>
+        )}
+
+        {!enCentro && (
+          <button onClick={() => setImageOverride(field, { posX: undefined, posY: undefined })}
+            style={{ ...dkBtn, marginTop: 8, width: "100%" }}>↺ Volver al centro</button>
+        )}
+
+        <p style={{ margin: "8px 0 0", fontSize: 10.5, color: P.muted, lineHeight: 1.45 }}>
+          La sección recorta la foto para llenarla. Con esto elegís qué parte queda a la vista —
+          útil cuando lo importante no está justo en el centro.
+          {hueco
+            ? " La muestra tiene la forma exacta del hueco, así que lo que ves acá es lo que va a salir."
+            : " La sección real puede ser más alta o más ancha que esta muestra; mirá la tienda al lado para confirmar."}
+        </p>
+      </div>
+      )}
+
+      {/* ── Capa + extras ── */}
+      <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "12px 18px", flexWrap: "wrap" }}>
         <span style={{ fontSize: 11, fontWeight: 600, ...dkMuted, whiteSpace: "nowrap" }}>Capa:</span>
         {(["none", "dark", "light"] as const).map(t => (
           <button key={t} onClick={() => setImageOverride(field, { overlayType: t })}
@@ -1065,7 +1340,7 @@ function ImageFieldEditor({
         ))}
         {currentOverlay !== "none" && (
           <>
-            <div style={{ width: 1, height: 18, background: "rgba(255,255,255,0.1)" }} />
+            <div style={{ width: 1, height: 18, background: "#e2e8f0" }} />
             <span style={{ fontSize: 11, ...dkMuted }}>Opacidad</span>
             <input type="range" min={10} max={90} step={5}
               value={Math.round((ov.overlayOpacity ?? 0.6) * 100)}
@@ -1078,7 +1353,7 @@ function ImageFieldEditor({
         )}
         {field.startsWith("heroBanner") && (
           <>
-            <div style={{ width: 1, height: 18, background: "rgba(255,255,255,0.1)" }} />
+            <div style={{ width: 1, height: 18, background: "#e2e8f0" }} />
             <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", userSelect: "none" }}>
               <input
                 type="checkbox"
@@ -1092,48 +1367,157 @@ function ImageFieldEditor({
         )}
         {(field.startsWith("heroBanner") || field.startsWith("promoBanner")) && (
           <>
-            <div style={{ width: 1, height: 18, background: "rgba(255,255,255,0.1)" }} />
+            <div style={{ width: 1, height: 18, background: "#e2e8f0" }} />
             <span title="El tiempo de rotación del carrusel se configura en ⚙ Configuración avanzada → Carrusel de banner (es el mismo para los 3 banners)."
               style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, ...dkMuted, whiteSpace: "nowrap", cursor: "help" }}>
-              <span style={{ width: 14, height: 14, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.35)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, flexShrink: 0 }}>?</span>
+              <span style={{ width: 14, height: 14, borderRadius: "50%", border: `1px solid ${P.border}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, flexShrink: 0 }}>?</span>
               Velocidad del carrusel: en ⚙ Configuración avanzada
             </span>
           </>
         )}
         <div style={{ flex: 1 }} />
         {hasChanges && (
-          <button onClick={() => setImageOverride(field, { url: undefined, overlayType: undefined, overlayOpacity: undefined, hideContent: undefined })}
+          <button onClick={() => setImageOverride(field, { url: undefined, overlayType: undefined, overlayOpacity: undefined, hideContent: undefined, posX: undefined, posY: undefined })}
             style={{ ...dkBtn, padding: "5px 12px" }} title="Restablecer">↺ Restablecer</button>
         )}
+      </div>
+
+      {/* ── Consejos ── */}
+      {/* El consejo cambia según lo que la persona está por hacer: repetir siempre
+          lo mismo hace que se deje de leer. */}
+      <div style={{ padding: "12px 18px", borderTop: "1px solid #eef1f5" }}>
+        <p style={{ margin: 0, fontSize: 10, fontWeight: 700, color: P.hint, letterSpacing: 1, textTransform: "uppercase" }}>Consejos</p>
+        <ul style={{ margin: "8px 0 0", padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 7 }}>
+          {(!ov.url
+            ? [
+                forma
+                  ? `Este hueco es ${forma}: una foto ${forma} entra casi entera. Si subís una de la forma contraria, la sección le va a recortar los costados para llenarla.`
+                  : "Elegí una foto bien iluminada: la sección la estira para llenarla, y una foto chica se ve pixelada.",
+                "Evitá fotos con texto adentro — en el celular la sección se angosta y ese texto se corta.",
+              ]
+            : [
+                "Arrastrá la foto para elegir qué parte se ve. Si lo importante está arriba (una cara, un cartel), subí la barra de Arr./Abajo.",
+                capaMuestra
+                  ? "La capa existe para que el texto se lea. Bajala hasta donde el texto todavía se distinga: cuanta menos capa, más se ve tu foto."
+                  : "Sin capa la foto se ve tal cual, pero si tiene zonas claras y oscuras el texto encima va a costar leerlo en alguna.",
+                "El hueco cambia de forma entre escritorio y celular. Encuadrá en uno y después pasate al otro para ver si sigue bien.",
+              ]
+          ).map((consejo, i) => (
+            <li key={i} style={{ display: "flex", gap: 7, fontSize: 10.5, color: P.muted, lineHeight: 1.45 }}>
+              <span style={{ flexShrink: 0 }}>💡</span>
+              <span>{consejo}</span>
+            </li>
+          ))}
+        </ul>
       </div>
     </div>
   );
 }
 
 /* ── Background + image editor for section bg fields ────────── */
-function BgFieldEditor({ field, base, setActiveField }: {
+function BgFieldEditor({ field, base, setActiveField, aceptaFoto }: {
   field: string;
   base: React.CSSProperties;
   setActiveField: (f: string | null) => void;
+  /** ¿Este template dibuja foto de fondo en ESTA sección? Si no, no se ofrece. */
+  aceptaFoto: boolean;
 }) {
   const { sectionColors, setSectionColor, imageOverrides, setImageOverride } = useEditContext();
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  // Mismo candado sincrónico que en el editor de imágenes: dos fotos elegidas
+  // rápido lanzaban dos subidas y ganaba la que terminaba última, no la última
+  // elegida. Ver el comentario largo allá.
+  const subiendo = useRef(false);
 
   const imgKey = `sectionbg_${field}`;
-  const currentColor = sectionColors[field] ?? "#0a0a0a";
   const ov: ImageOverride = imageOverrides[imgKey] ?? {};
   const currentOverlay = ov.overlayType ?? "dark";
   const hasImage = !!ov.url;
 
+  // Lo guardado puede ser un color o un degradado. Se lee siempre de vuelta al
+  // mismo objeto para que las barras aparezcan donde quedaron la última vez.
+  const bg: SectionBg = parseBg(sectionColors[field]);
+  const esDegradado = bg.tipo === "degradado";
+
+  // El color que el TEMPLATE trae de fábrica para esta sección. El panel no lo
+  // conoce —vive adentro de cada template— así que se lo pregunta al navegador:
+  // se busca el botón de "Fondo" de esa sección y se lee el fondo que su
+  // contenedor está mostrando. Es el mismo truco que usa el editor de texto para
+  // saber sobre qué color está escribiendo.
+  const [fondoDeFabrica, setFondoDeFabrica] = useState<string | null>(null);
+  const yaTieneColor = !!sectionColors[field];
+  useEffect(() => {
+    if (yaTieneColor) return; // hay uno elegido: el de fábrica no interesa
+    let el = document.querySelector(`[data-edit-bg="${CSS.escape(field)}"]`)?.parentElement ?? null;
+    // Se sube hasta encontrar un fondo de verdad. Un `backgroundColor` con alfa 0
+    // es "no pinta nada" y se lee como negro: dar eso por bueno haría que un
+    // difuminado sobre una sección transparente arrancara del negro.
+    while (el) {
+      const crudo = getComputedStyle(el).backgroundColor;
+      if (!/,\s*0(\.0+)?\s*\)$/.test(crudo)) {
+        const rgb = parseColor(crudo);
+        if (rgb) {
+          // eslint-disable-next-line react-hooks/set-state-in-effect -- el color de fábrica solo existe en el DOM ya pintado; leerlo durante el render daría distinto en el servidor y en el cliente. Es un solo set por sección y no se encadena: `yaTieneColor` no cambia por esto.
+          setFondoDeFabrica(toHex(rgb));
+          return;
+        }
+      }
+      el = el.parentElement;
+    }
+  }, [field, yaTieneColor]);
+
+  // Prioridad: lo elegido → lo que el template ya muestra → negro. El negro es el
+  // último recurso y en la práctica no se usa, pero sin él el input se queda sin
+  // valor y React lo convierte en no-controlado.
+  const currentColor = (bg.color || fondoDeFabrica || "#0a0a0a").trim();
+
+  const escribir = (next: SectionBg) => setSectionColor(field, serializeBg(next));
+
+  /** Cambiar el color base sin perder el difuminado que ya estaba puesto. */
+  const setBase = (color: string) =>
+    escribir(esDegradado ? { ...bg, color } : { tipo: "color", color });
+
+  // Al prender el difuminado por primera vez conviene que se note: sobre un fondo
+  // oscuro se va hacia claro y al revés. Arrancar siempre "hacia claro" haría que
+  // en una sección blanca el primer clic no cambiara nada y pareciera roto.
+  const encenderDegradado = (dir: BgDir) =>
+    escribir(
+      esDegradado
+        ? { ...bg, dir }
+        : {
+            tipo: "degradado", color: currentColor, dir,
+            hacia: getContrastColor(currentColor) === "light" ? "claro" : "oscuro",
+            fuerza: 35, desde: 0,
+          }
+    );
+
+  // Los dos extremos del fondo, para poder avisar si el texto se pierde en uno.
+  const [extremoA, extremoB] = extremosDe(bg);
+  const contrasteA = getContrastColor(extremoA);
+  const contrasteB = getContrastColor(extremoB);
+  // El template elige el color del texto UNA vez para toda la sección. Si una
+  // punta pide texto claro y la otra oscuro, en una de las dos no se va a leer.
+  const puntasPeleadas = esDegradado && contrasteA !== contrasteB;
+
+  /** El difuminado más fuerte que no hace que las puntas pidan textos distintos. */
+  const maxFuerzaLegible = (color: string, hacia: BgHacia): number => {
+    const lado = getContrastColor(color);
+    for (let f = 100; f > 0; f -= 5) {
+      if (getContrastColor(extremo(color, hacia, f)) === lado) return f;
+    }
+    return 0;
+  };
+
   const contrast = hasImage
     ? (currentOverlay === "light" ? "dark" : "light")
-    : getContrastColor(currentColor);
+    : getContrastColor(sectionColors[field] || currentColor);
 
   const handleFile = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file || subiendo.current) return;
+    subiendo.current = true;
     setUploading(true);
     setUploadError(null);
     try {
@@ -1147,56 +1531,191 @@ function BgFieldEditor({ field, base, setActiveField }: {
     } catch (err: unknown) {
       setUploadError(err instanceof Error ? err.message : "Error al subir la imagen");
     } finally {
+      subiendo.current = false;
       setUploading(false);
       if (fileRef.current) fileRef.current.value = "";
     }
   }, [imgKey, setImageOverride]);
 
-  const dkBtn: React.CSSProperties = { padding: "5px 11px", borderRadius: 6, border: "1.5px solid rgba(255,255,255,0.15)", background: "rgba(255,255,255,0.07)", color: "#f1f5f9", cursor: "pointer", fontSize: 11, fontWeight: 600, whiteSpace: "nowrap" as const };
-  const dkBtnActive: React.CSSProperties = { ...dkBtn, border: "1.5px solid #6366f1", background: "#6366f1", color: "white" };
+  const dkBtn = panelBtn;
+  const dkBtnActive = panelBtnActive;
 
   return (
-    <div style={{ ...base, display: "flex", flexDirection: "column" }}>
-      {/* Fila 1: label + color + foto de fondo + cerrar */}
-      <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 10, padding: "10px 20px 9px", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
-        <span style={{ fontSize: 11, fontWeight: 700, color: "#818cf8", background: "rgba(99,102,241,0.2)", borderRadius: 20, padding: "3px 10px", whiteSpace: "nowrap", flexShrink: 0 }}>
+    <div data-editor-panel style={{ ...base, display: "flex", flexDirection: "column" }}>
+      {/* ── Encabezado ── */}
+      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 18px", borderBottom: "1px solid #eef1f5", position: "sticky", top: 0, background: P.bg, zIndex: 2 }}>
+        <span style={{ fontSize: 11, fontWeight: 700, color: P.accent, background: P.accentSoft, borderRadius: 20, padding: "3px 10px", whiteSpace: "nowrap" }}>
           🎨 Fondo
         </span>
-
-        {/* Color picker + hex */}
-        <input type="color" value={currentColor} onChange={e => setSectionColor(field, e.target.value)}
-          style={{ width: 32, height: 32, padding: 2, border: "1px solid rgba(255,255,255,0.15)", borderRadius: 6, cursor: "pointer", flexShrink: 0 }} />
-        <input value={currentColor} onChange={e => setSectionColor(field, e.target.value)} placeholder="#ffffff"
-          style={{ width: 84, border: "1px solid rgba(255,255,255,0.15)", borderRadius: 7, padding: "5px 9px", fontSize: 12, outline: "none", fontFamily: "monospace", background: "rgba(255,255,255,0.07)", color: "#f1f5f9" }}
-          onFocus={e => (e.target.style.borderColor = "#6366f1")}
-          onBlur={e => (e.target.style.borderColor = "rgba(255,255,255,0.15)")} />
-
-        <div style={{ width: 1, height: 20, background: "rgba(255,255,255,0.1)", flexShrink: 0 }} />
-
-        {/* Foto de fondo */}
-        <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleFile} />
-        {ov.url && <img src={ov.url} alt="" style={{ width: 34, height: 30, objectFit: "cover", borderRadius: 5, border: "1px solid rgba(255,255,255,0.15)", flexShrink: 0 }} />}
-        <button onClick={() => fileRef.current?.click()} disabled={uploading}
-          style={{ ...dkBtn, ...(ov.url ? dkBtnActive : {}), display: "flex", alignItems: "center", gap: 5 }}>
-          📷 {uploading ? "Subiendo..." : ov.url ? "Cambiar foto" : "Foto de fondo"}
-        </button>
-
-        {/* Contraste */}
-        <span style={{ fontSize: 11, color: "#94a3b8", whiteSpace: "nowrap" }}>
-          Texto: <strong style={{ color: contrast === "light" ? "#a5b4fc" : "#f1f5f9" }}>
-            {contrast === "light" ? "☀ claro" : "🌑 oscuro"}
-          </strong>
-        </span>
-
         <div style={{ flex: 1 }} />
-        {uploadError && <span style={{ fontSize: 11, color: "#f87171" }}>⚠ {uploadError}</span>}
-        <button onClick={() => setActiveField(null)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 20, color: "#94a3b8", lineHeight: 1, padding: 0 }}>×</button>
+        <button onClick={() => setActiveField(null)} aria-label="Cerrar editor"
+          style={{ background: "none", border: "none", cursor: "pointer", fontSize: 20, color: P.muted, lineHeight: 1, padding: 0 }}>×</button>
       </div>
+
+      {/* ── Color ── */}
+      <div style={{ padding: "14px 18px", borderBottom: "1px solid #eef1f5" }}>
+        <p style={{ margin: 0, fontSize: 10, fontWeight: 700, color: P.hint, letterSpacing: 1, textTransform: "uppercase" }}>Color</p>
+
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8 }}>
+          {/* El picker nativo solo entiende #rrggbb: si le llega el degradado
+              entero se queda en negro y engaña. Por eso todo esto trabaja contra
+              el color BASE, y el degradado se arma en la sección de abajo. */}
+          <input type="color" value={parseColor(currentColor) ? currentColor : "#0a0a0a"} onChange={e => setBase(e.target.value)}
+            style={{ width: 34, height: 32, padding: 2, border: "1px solid #e2e8f0", borderRadius: 6, cursor: "pointer", flexShrink: 0 }} />
+          <input value={currentColor} onChange={e => setBase(e.target.value)} placeholder="#ffffff"
+            style={{ flex: 1, minWidth: 0, border: "1px solid #e2e8f0", borderRadius: 7, padding: "7px 9px", fontSize: 12, outline: "none", fontFamily: "monospace", background: "#f8fafc", color: P.text }}
+            onFocus={e => (e.target.style.borderColor = "#6366f1")}
+            onBlur={e => (e.target.style.borderColor = "#e2e8f0")} />
+        </div>
+
+        {/* Tonos que funcionan de fondo. Elegir un color a ojo en la rueda es la
+            forma más rápida de arruinar una tienda: casi todos los colores puros
+            pelean con las fotos de los productos. Estos son neutros y apagados a
+            propósito — el color fuerte va en los botones, no en el fondo. */}
+        <div style={{ display: "flex", gap: 6, marginTop: 10, flexWrap: "wrap" }}>
+          {[
+            ["#ffffff", "Blanco"], ["#fafaf8", "Hueso"], ["#f5f0eb", "Crema"],
+            ["#f1f5f9", "Gris frío"], ["#e7e5e4", "Gris cálido"],
+            ["#1e293b", "Azul noche"], ["#1c1917", "Café oscuro"], ["#0a0a0a", "Negro"],
+          ].map(([hex, nombre]) => (
+            <button key={hex} type="button" title={nombre}
+              onClick={() => setBase(hex)}
+              style={{
+                width: 30, height: 30, borderRadius: 7, cursor: "pointer", background: hex,
+                border: currentColor.toLowerCase() === hex ? `2px solid ${P.accent}` : "1px solid rgba(0,0,0,0.15)",
+                boxShadow: currentColor.toLowerCase() === hex ? `0 0 0 2px ${P.accentSoft}` : "none",
+              }} />
+          ))}
+        </div>
+
+        {/* Consecuencia, no solo el dato: se dice qué le pasa al texto. */}
+        <p style={{ margin: "10px 0 0", fontSize: 10.5, color: P.muted, lineHeight: 1.45 }}>
+          Con este fondo, los textos de la sección se muestran en{" "}
+          <strong style={{ color: P.text }}>{contrast === "light" ? "claro" : "oscuro"}</strong>.
+          Se ajusta solo — no hace falta que cambies cada texto.
+        </p>
+      </div>
+
+      {/* ── Difuminado ── */}
+      {/* No se ofrece si hay foto: la foto tapa el color, así que las barras
+          moverían algo que no se ve y parecería que están rotas. */}
+      {!hasImage && (
+      <div style={{ padding: "14px 18px", borderBottom: "1px solid #eef1f5" }}>
+        <p style={{ margin: 0, fontSize: 10, fontWeight: 700, color: P.hint, letterSpacing: 1, textTransform: "uppercase" }}>Difuminado</p>
+
+        {/* La muestra es el valor real que se va a guardar, no una imitación:
+            si acá se ve raro, en la tienda se va a ver igual de raro. */}
+        <div style={{
+          marginTop: 8, height: 48, borderRadius: 8, border: "1px solid #e2e8f0",
+          // Si todavía no se eligió nada, se muestra el color que trae el template
+          // —no un recuadro vacío que no se parece a la sección real.
+          background: serializeBg(bg) || currentColor,
+          display: "flex", alignItems: "center", justifyContent: "center",
+        }}>
+          <span style={{ fontSize: 11, fontWeight: 700, color: contrast === "light" ? "#f5f5f5" : "#111111" }}>
+            Texto de ejemplo
+          </span>
+        </div>
+
+        <div style={{ display: "flex", gap: 6, marginTop: 10, flexWrap: "wrap" }}>
+          {/* Si ya está sin difuminado no hace nada: apretarlo no puede fijar el
+              color de fábrica como si lo hubieras elegido vos —después no habría
+              forma de volver a "sin tocar". */}
+          <button type="button" disabled={!esDegradado}
+            onClick={() => escribir({ tipo: "color", color: currentColor })}
+            style={{ ...(!esDegradado ? dkBtnActive : dkBtn), cursor: esDegradado ? "pointer" : "default" }}>
+            Sin difuminado
+          </button>
+          {(Object.keys(DIR_LABELS) as BgDir[]).map(d => (
+            <button key={d} type="button" title={DIR_LABELS[d].nombre} aria-label={DIR_LABELS[d].nombre}
+              onClick={() => encenderDegradado(d)}
+              style={{ ...(esDegradado && bg.dir === d ? dkBtnActive : dkBtn), width: 32, padding: "6px 0", fontSize: 14, lineHeight: 1 }}>
+              {DIR_LABELS[d].flecha}
+            </button>
+          ))}
+        </div>
+
+        {bg.tipo === "degradado" && (<>
+          <div style={{ display: "flex", gap: 6, marginTop: 10 }}>
+            {(["claro", "oscuro"] as const).map(h => (
+              <button key={h} type="button" onClick={() => escribir({ ...bg, hacia: h })}
+                style={{ ...(bg.hacia === h ? dkBtnActive : dkBtn), flex: 1 }}>
+                {h === "claro" ? "☀️ Hacia claro" : "🌑 Hacia oscuro"}
+              </button>
+            ))}
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 10 }}>
+            <span style={{ fontSize: 11, color: P.muted, width: 66, flexShrink: 0 }}>Fuerza</span>
+            <input type="range" min={0} max={100} step={5} value={bg.fuerza}
+              onChange={e => escribir({ ...bg, fuerza: Number(e.target.value) })}
+              style={{ flex: 1, minWidth: 0, accentColor: "#6366f1" }} />
+            <span style={{ fontSize: 12, fontWeight: 700, color: P.text, width: 36, textAlign: "right" }}>{bg.fuerza}%</span>
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6 }}>
+            <span style={{ fontSize: 11, color: P.muted, width: 66, flexShrink: 0 }}>Arranca en</span>
+            <input type="range" min={0} max={80} step={5} value={bg.desde}
+              onChange={e => escribir({ ...bg, desde: Number(e.target.value) })}
+              style={{ flex: 1, minWidth: 0, accentColor: "#6366f1" }} />
+            <span style={{ fontSize: 12, fontWeight: 700, color: P.text, width: 36, textAlign: "right" }}>{bg.desde}%</span>
+          </div>
+
+          <p style={{ margin: "9px 0 0", fontSize: 10.5, color: P.muted, lineHeight: 1.45 }}>
+            <strong style={{ color: P.text }}>Fuerza</strong> es cuánto se aclara u oscurece la punta.{" "}
+            <strong style={{ color: P.text }}>Arranca en</strong> es cuánto tramo queda del color liso antes de que empiece a difuminar.
+          </p>
+
+          {/* La parte inteligente: no alcanza con que el degradado se vea lindo
+              en el panel. El template elige el color del texto UNA sola vez para
+              toda la sección, así que si las dos puntas piden textos distintos,
+              media sección queda ilegible — y eso no se nota mirando la barra. */}
+          {puntasPeleadas && (
+            <div style={{ marginTop: 10, background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 8, padding: "9px 11px" }}>
+              <p style={{ margin: 0, fontSize: 10.5, color: "#92400e", lineHeight: 1.45 }}>
+                ⚠ Una punta queda clara y la otra oscura. El texto se elige una sola vez para toda la sección,
+                así que en una de las dos se va a perder.
+              </p>
+              <button type="button"
+                onClick={() => escribir({ ...bg, fuerza: maxFuerzaLegible(bg.color, bg.hacia) })}
+                style={{ ...dkBtn, marginTop: 7, width: "100%", borderColor: "#fbbf24", color: "#92400e" }}>
+                Bajarlo a lo máximo que se lee
+              </button>
+            </div>
+          )}
+        </>)}
+      </div>
+      )}
+
+      {/* ── Foto ── */}
+      {/* Solo donde el template de verdad la dibuja. Ofrecerla en todos lados era
+          prometer algo que no pasaba: la foto se subía, se guardaba y no aparecía
+          nunca — y nadie podía darse cuenta salvo esperando. Fondo es color; la
+          foto es la excepción, no la regla. */}
+      {aceptaFoto && (
+      <div style={{ padding: "14px 18px", borderBottom: "1px solid #eef1f5" }}>
+        <p style={{ margin: 0, fontSize: 10, fontWeight: 700, color: P.hint, letterSpacing: 1, textTransform: "uppercase" }}>Foto de fondo</p>
+        <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleFile} />
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8 }}>
+          {ov.url && <img src={ov.url} alt="" style={{ width: 40, height: 34, objectFit: "cover", borderRadius: 5, border: "1px solid #e2e8f0", flexShrink: 0 }} />}
+          <button onClick={() => fileRef.current?.click()} disabled={uploading}
+            style={{ ...dkBtn, ...(ov.url ? dkBtnActive : {}), flex: 1, padding: "7px 0", display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
+            📷 {uploading ? "Subiendo..." : ov.url ? "Cambiar foto" : "Elegir foto"}
+          </button>
+        </div>
+        {uploadError && <p style={{ margin: "6px 0 0", fontSize: 11, color: P.danger }}>⚠ {uploadError}</p>}
+        <p style={{ margin: "7px 0 0", fontSize: 10.5, color: P.muted, lineHeight: 1.45 }}>
+          {ov.url
+            ? "La foto tapa el color. Usá la capa de abajo para que los textos se sigan leyendo encima."
+            : "Opcional. Sin foto se usa el color de arriba, que es lo más liviano y lo que más rápido carga."}
+        </p>
+      </div>
+      )}
 
       {/* Fila 2: capa (solo si hay imagen) + reset color */}
       <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 20px", flexWrap: "wrap" }}>
         {hasImage && (<>
-          <span style={{ fontSize: 11, fontWeight: 600, color: "#94a3b8", whiteSpace: "nowrap" }}>Capa:</span>
+          <span style={{ fontSize: 11, fontWeight: 600, color: P.muted, whiteSpace: "nowrap" }}>Capa:</span>
           {(["dark", "light", "none"] as const).map(t => (
             <button key={t} onClick={() => setImageOverride(imgKey, { overlayType: t })}
               style={currentOverlay === t ? dkBtnActive : dkBtn}>
@@ -1208,12 +1727,12 @@ function BgFieldEditor({ field, base, setActiveField }: {
               value={Math.round((ov.overlayOpacity ?? 0.45) * 100)}
               onChange={e => setImageOverride(imgKey, { overlayOpacity: Number(e.target.value) / 100 })}
               style={{ width: 80, accentColor: "#6366f1" }} />
-            <span style={{ fontSize: 12, fontWeight: 700, color: "#f1f5f9", minWidth: 32 }}>
+            <span style={{ fontSize: 12, fontWeight: 700, color: P.text, minWidth: 32 }}>
               {Math.round((ov.overlayOpacity ?? 0.45) * 100)}%
             </span>
           </>)}
           <button onClick={() => setImageOverride(imgKey, { url: undefined, overlayType: undefined, overlayOpacity: undefined })}
-            style={{ ...dkBtn, border: "1.5px solid rgba(239,68,68,0.4)", color: "#f87171" }}>
+            style={{ ...dkBtn, border: "1.5px solid rgba(239,68,68,0.4)", color: P.danger }}>
             ✕ Quitar foto
           </button>
         </>)}
@@ -1223,7 +1742,7 @@ function BgFieldEditor({ field, base, setActiveField }: {
           </button>
         )}
         {!hasImage && !sectionColors[field] && (
-          <span style={{ fontSize: 11, color: "#64748b" }}>💡 El contraste del texto se ajusta automáticamente al color elegido.</span>
+          <span style={{ fontSize: 11, color: P.muted }}>💡 El contraste del texto se ajusta automáticamente al color elegido.</span>
         )}
       </div>
     </div>
@@ -1231,33 +1750,85 @@ function BgFieldEditor({ field, base, setActiveField }: {
 }
 
 /* ── Floating editor (text + image) ─────────────────────────── */
-function FloatingEditor({ textFieldLabels }: { textFieldLabels: Record<string, string> }) {
+function FloatingEditor({ textFieldLabels, template }: { textFieldLabels: Record<string, string>; template: TemplateId }) {
   const { activeField, setActiveField, overrides, setOverride, resetOverride, imageOverrides, setImageOverride } = useEditContext();
+
+  // Cerrar con Escape o tocando fuera del panel.
+  //
+  // El clic va en `pointerdown` y no en `click` por un motivo: si tocás OTRA zona
+  // editable de la tienda, queremos cambiar de campo, no cerrar y perder el panel.
+  // `pointerdown` corre antes que el `click` de la zona, así que primero cerramos
+  // y enseguida la zona abre el campo nuevo — el panel nunca parpadea a media
+  // interacción ni queda abierto sobre el campo equivocado.
+  useEffect(() => {
+    if (!activeField) return;
+    const esc = (e: KeyboardEvent) => { if (e.key === "Escape") setActiveField(null); };
+    const fuera = (e: PointerEvent) => {
+      const t = e.target as Element | null;
+      if (t?.closest?.("[data-editor-panel]")) return;
+      setActiveField(null);
+    };
+    document.addEventListener("keydown", esc);
+    document.addEventListener("pointerdown", fuera);
+    return () => {
+      document.removeEventListener("keydown", esc);
+      document.removeEventListener("pointerdown", fuera);
+    };
+  }, [activeField, setActiveField]);
 
   if (!activeField) return null;
 
   const isImageField = activeField.startsWith("img:");
   const isBgField = activeField.startsWith("bg:");
+  // Solo tipografías que EXISTEN en el dispositivo de quien mira la tienda.
+  //
+  // El proyecto no carga ninguna fuente web —no hay next/font, ni Google Fonts, ni
+  // @font-face—, así que cuando un template pide 'Inter' o 'Playfair Display' el
+  // navegador no las tiene y cae a la siguiente de la lista. Ofrecer una fuente que
+  // no carga es peor que no ofrecerla: la elegís, no cambia nada y no entendés por
+  // qué. Cada opción de acá termina en una familia genérica, así que siempre se ve
+  // algo parecido a lo prometido.
+  //
+  // Los nombres describen CÓMO SE VE, no cómo se llama: "Elegante con serifa" le
+  // dice algo a quien arma su tienda; "Georgia" no.
   const FONT_OPTIONS = [
-    { label: "Predeterminada", value: "" },
-    { label: "Sans-serif",     value: "system-ui, -apple-system, sans-serif" },
-    { label: "Serif",          value: "Georgia, Cambria, serif" },
-    { label: "Monoespaciada",  value: "ui-monospace, monospace" },
+    { label: "Del diseño",           value: "" },
+    { label: "Moderna",              value: "system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" },
+    { label: "Clásica sin serifa",   value: "'Helvetica Neue', Helvetica, Arial, sans-serif" },
+    { label: "Ancha y legible",      value: "Verdana, Geneva, Tahoma, sans-serif" },
+    { label: "Redondeada",           value: "'Trebuchet MS', 'Lucida Grande', sans-serif" },
+    { label: "Elegante con serifa",  value: "Georgia, 'Times New Roman', serif" },
+    { label: "Editorial",            value: "'Palatino Linotype', 'Book Antiqua', Palatino, serif" },
+    { label: "Titular impactante",   value: "Impact, 'Arial Narrow Bold', sans-serif" },
+    { label: "Máquina de escribir",  value: "'Courier New', Courier, monospace" },
   ];
   const FONT_SIZES = [10, 12, 13, 14, 15, 16, 18, 20, 24, 28, 32, 36, 42, 48, 56, 64];
 
+  // Panel a la derecha, no una barra abajo. La barra tapaba justo lo que estabas
+  // editando: el título del hero queda en la mitad baja de la pantalla y la barra
+  // se le sentaba encima. Además medía 100 px de alto — no entraba ni un renglón
+  // de ayuda, y por eso el editor de textos nunca tuvo consejos.
+  //
+  // La tienda NO se achica para hacerle lugar: los templates deciden si dibujan la
+  // versión de celular mirando `window.innerWidth`, no el ancho de su contenedor.
+  // Si angostáramos la vista previa, seguirían creyendo que están en escritorio y
+  // mostrarían ese diseño apretujado — una pantalla que no existe en la realidad.
+  // La vista previa tiene un solo trabajo y es no mentir.
+  const PANEL_W = 340;
+  const TOPBAR_H = 44;
   const base: React.CSSProperties = {
-    position: "fixed", bottom: 0, left: 72, right: 0, zIndex: 99999,
-    background: "#1e293b", borderTop: "2px solid #6366f1",
-    borderRadius: "12px 12px 0 0",
-    boxShadow: "0 -6px 32px rgba(0,0,0,0.45)",
+    position: "fixed", top: TOPBAR_H, right: 0, bottom: 0, width: PANEL_W, zIndex: 99999,
+    background: P.bg, borderLeft: `1px solid ${P.border}`,
+    boxShadow: "-10px 0 30px rgba(15,23,42,0.10)",
     fontFamily: "system-ui, -apple-system, sans-serif",
+    overflowY: "auto",
+    animation: "editorPanelIn 0.28s cubic-bezier(0.22,1,0.36,1)",
   };
 
   /* ── Background color + image editor ── */
   if (isBgField) {
     const field = activeField.slice(3);
-    return <BgFieldEditor field={field} base={base} setActiveField={setActiveField} />;
+    return <BgFieldEditor field={field} base={base} setActiveField={setActiveField} aceptaFoto={SECTION_BG_PHOTO[template]?.includes(field) ?? false} />;
   }
 
   /* ── Image editor ── */
@@ -1266,7 +1837,10 @@ function FloatingEditor({ textFieldLabels }: { textFieldLabels: Record<string, s
     const ov = imageOverrides[field] ?? {};
     const info = IMAGE_FIELD_INFO[field];
     const currentOverlay = ov.overlayType ?? "dark";
-    const hasChanges = ov.url !== undefined || ov.overlayType !== undefined || ov.overlayOpacity !== undefined || ov.hideContent !== undefined;
+    // El encuadre cuenta como cambio: sin esto, mover la foto y no tocar nada más
+    // dejaba el botón de restablecer escondido y no había forma de deshacerlo.
+    const hasChanges = ov.url !== undefined || ov.overlayType !== undefined || ov.overlayOpacity !== undefined
+      || ov.hideContent !== undefined || ov.posX !== undefined || ov.posY !== undefined;
 
     return <ImageFieldEditor
       field={field}
@@ -1288,111 +1862,263 @@ function FloatingEditor({ textFieldLabels }: { textFieldLabels: Record<string, s
 
   const fmtBtn = (active: boolean): React.CSSProperties => ({
     width: 28, height: 28,
-    border: `1.5px solid ${active ? "#6366f1" : "rgba(255,255,255,0.15)"}`,
-    borderRadius: 6, background: active ? "#6366f1" : "rgba(255,255,255,0.07)",
-    cursor: "pointer", color: active ? "white" : "#f1f5f9",
+    border: `1.5px solid ${active ? "#6366f1" : "#e2e8f0"}`,
+    borderRadius: 6, background: active ? "#6366f1" : "#f8fafc",
+    cursor: "pointer", color: active ? "#fff" : P.text,
     flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center",
     fontSize: 12,
   });
-  const divider = <div style={{ width: 1, height: 20, background: "rgba(255,255,255,0.1)", flexShrink: 0 }} />;
+  // Cada control lleva su renglón de ayuda. En la barra de abajo esto era
+  // imposible —100 px de alto no dan para explicar nada— así que el editor de
+  // textos se manejaba a pura adivinanza: nadie sabía qué pasaba al dejar el
+  // campo vacío, ni qué hacía "Visible".
+  const ayuda = (texto: string) => (
+    <p style={{ margin: "5px 0 0", fontSize: 10.5, color: P.muted, lineHeight: 1.45 }}>{texto}</p>
+  );
+  const titulo = (texto: string) => (
+    <p style={{ margin: 0, fontSize: 10, fontWeight: 700, color: P.muted, letterSpacing: 1, textTransform: "uppercase" }}>{texto}</p>
+  );
+  const bloque: React.CSSProperties = { padding: "14px 18px", borderBottom: "1px solid #eef1f5" };
+
+  // ── ¿El color elegido se lee sobre su fondo? ────────────────────────────────
+  // El fondo NO se deduce de la configuración: cada template pinta sus secciones a
+  // su manera y muchos usan colores escritos en el código. Se lee de la pantalla
+  // misma, subiendo por los contenedores del texto hasta dar con uno que tenga
+  // color propio — que es exactamente lo que va a ver un comprador.
+  //
+  // Si el fondo es una foto no hay color que leer y no se avisa nada: preferimos
+  // callarnos antes que dar un veredicto sobre algo que no medimos.
+  const fondoDetras = (() => {
+    if (typeof document === "undefined") return null;
+    let el = document.querySelector(`[data-edit-field="${CSS.escape(activeField)}"]`)?.parentElement ?? null;
+    while (el) {
+      const bg = getComputedStyle(el).backgroundColor;
+      const c = parseColor(bg);
+      // Transparente llega como alfa 0 — hay que seguir subiendo.
+      if (c && !/,\s*0\s*\)$/.test(bg)) return c;
+      el = el.parentElement;
+    }
+    return null;
+  })();
+
+  const colorElegido = ov.color ? parseColor(ov.color) : null;
+  const ratio = colorElegido && fondoDetras ? contrastRatio(colorElegido, fondoDetras) : null;
+  // A los títulos grandes se les exige menos: se leen mejor por su tamaño.
+  const minimoContraste = (ov.fontSize ?? 0) >= 24 ? MIN_LEGIBLE_GRANDE : MIN_LEGIBLE;
+  const colorSugerido = ratio != null && ratio < minimoContraste && colorElegido && fondoDetras
+    ? nearestLegible(colorElegido, fondoDetras, minimoContraste)
+    : null;
 
   return (
-    <div style={{ ...base, display: "flex", flexDirection: "column" }}>
-
-      {/* ── Fila 1: label + campo de texto + cerrar ── */}
-      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 20px 9px", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+    <div data-editor-panel style={{ ...base, display: "flex", flexDirection: "column" }}>
+      {/* ── Encabezado: qué estoy editando ── */}
+      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 18px", borderBottom: "1px solid #eef1f5", position: "sticky", top: 0, background: P.bg, zIndex: 2 }}>
         <span style={{
-          fontSize: 11, fontWeight: 700, color: "#818cf8",
-          background: "rgba(99,102,241,0.2)", borderRadius: 20, padding: "3px 10px",
-          whiteSpace: "nowrap", flexShrink: 0,
+          fontSize: 11, fontWeight: 700, color: P.accent,
+          background: P.accentSoft, borderRadius: 20, padding: "3px 10px",
+          flexShrink: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
         }}>
           ✏ {label}
         </span>
-        <input
-          value={ov.text ?? ""}
-          placeholder="Texto personalizado (vacío = usa el original del template)"
-          onChange={e => setOverride(activeField, { text: e.target.value || undefined })}
-          style={{
-            flex: 1, border: "1px solid rgba(255,255,255,0.15)", borderRadius: 8,
-            padding: "6px 12px", fontSize: 13, outline: "none",
-            fontFamily: "inherit", color: "#f1f5f9", background: "rgba(255,255,255,0.07)",
-          }}
-          onFocus={e => (e.target.style.borderColor = "#6366f1")}
-          onBlur={e => (e.target.style.borderColor = "rgba(255,255,255,0.15)")}
-        />
-        <button type="button" onClick={() => setActiveField(null)}
-          style={{ background: "none", border: "none", cursor: "pointer", fontSize: 20, color: "#64748b", flexShrink: 0, lineHeight: 1, padding: 0 }}>
+        <div style={{ flex: 1 }} />
+        {hasOverride && (
+          <button type="button" onClick={() => resetOverride(activeField)}
+            title="Volver este texto a como venía en el diseño"
+            style={{ ...fmtBtn(false), fontSize: 14, width: 26, height: 26 }}>↺</button>
+        )}
+        <button type="button" onClick={() => setActiveField(null)} aria-label="Cerrar editor"
+          style={{ background: "none", border: "none", cursor: "pointer", fontSize: 20, color: P.muted, flexShrink: 0, lineHeight: 1, padding: 0 }}>
           ×
         </button>
       </div>
 
-      {/* ── Fila 2: formato ── */}
-      <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 20px", flexWrap: "wrap" }}>
+      {/* ── Texto ── */}
+      <div style={bloque}>
+        {titulo("Texto")}
+        {/* El tope NO es cosmético: al guardar, zod rechaza cualquier texto de más
+            de 500 y hace fallar la validación ENTERA. Un párrafo largo en un solo
+            texto dejaba la tienda sin poder guardar nada —ni colores, ni fotos, ni
+            precios— con un "Error al guardar" que no decía dónde estaba el
+            problema. Es mucho mejor frenar acá, donde se ve lo que pasa. */}
+        <textarea
+          value={ov.text ?? ""}
+          placeholder={label}
+          rows={3}
+          maxLength={TEXTO_MAX}
+          onChange={e => setOverride(activeField, { text: e.target.value || undefined })}
+          style={{
+            width: "100%", boxSizing: "border-box", marginTop: 7,
+            border: "1px solid #e2e8f0", borderRadius: 8,
+            padding: "8px 11px", fontSize: 13, outline: "none", resize: "vertical",
+            fontFamily: "inherit", color: P.text, background: "#f8fafc",
+          }}
+          onFocus={e => (e.target.style.borderColor = "#6366f1")}
+          onBlur={e => (e.target.style.borderColor = "#e2e8f0")}
+        />
+        {ov.text && ov.text.length > TEXTO_MAX - 60 && (
+          <p style={{ margin: "5px 0 0", fontSize: 10.5, color: ov.text.length >= TEXTO_MAX ? P.danger : P.muted }}>
+            {ov.text.length} de {TEXTO_MAX} caracteres
+            {ov.text.length >= TEXTO_MAX ? " — llegaste al máximo." : ""}
+          </p>
+        )}
+        {ayuda(ov.text
+          ? "Se muestra este texto en lugar del que trae el diseño."
+          : "Vacío significa que se usa el texto original del diseño. Escribí para reemplazarlo.")}
+      </div>
 
-        {/* Color */}
-        <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+      {/* ── Formato ── */}
+      <div style={bloque}>
+        {titulo("Formato")}
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
           <input type="color" value={ov.color ?? "#000000"}
             onChange={e => setOverride(activeField, { color: e.target.value })}
             title="Color del texto"
-            style={{ width: 28, height: 28, padding: 2, border: "1px solid rgba(255,255,255,0.15)", borderRadius: 6, cursor: "pointer", flexShrink: 0 }} />
-          <span style={{ fontSize: 10, color: "#64748b", whiteSpace: "nowrap" }}>Color</span>
+            style={{ width: 30, height: 30, padding: 2, border: "1px solid #e2e8f0", borderRadius: 6, cursor: "pointer", flexShrink: 0 }} />
+          {([
+            ["bold",      "B", { fontWeight: 700 }],
+            ["italic",    "I", { fontStyle: "italic" as const }],
+            ["underline", "U", { textDecoration: "underline" as const }],
+          ] as const).map(([key, lbl, st]) => (
+            <button key={key} type="button"
+              onClick={() => setOverride(activeField, { [key]: !ov[key as keyof TextOverride] })}
+              style={{ ...fmtBtn(!!ov[key as keyof TextOverride]), width: 30, height: 30, ...st }}>
+              {lbl}
+            </button>
+          ))}
+        </div>
+        <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+          <select value={ov.fontFamily ?? ""}
+            onChange={e => setOverride(activeField, { fontFamily: e.target.value || undefined })}
+            style={{ flex: 1, minWidth: 0, fontSize: 11, padding: "6px 6px", border: "1px solid #e2e8f0", borderRadius: 6, cursor: "pointer", color: P.text, background: "#f8fafc", height: 30 }}>
+            {/* Cada opción se dibuja con SU tipografía: se elige viendo, no
+                imaginándose a qué suena el nombre. */}
+            {FONT_OPTIONS.map(f => (
+              <option key={f.value} value={f.value} style={{ color: "#111", background: "#fff", fontFamily: f.value || "inherit" }}>
+                {f.label}
+              </option>
+            ))}
+          </select>
+          <select value={ov.fontSize ?? ""}
+            onChange={e => setOverride(activeField, { fontSize: e.target.value ? Number(e.target.value) : undefined })}
+            style={{ width: 92, flexShrink: 0, fontSize: 11, padding: "6px 6px", border: "1px solid #e2e8f0", borderRadius: 6, cursor: "pointer", color: P.text, background: "#f8fafc", height: 30 }}>
+            <option value="" style={{ color: "#111", background: "#fff" }}>Tamaño</option>
+            {FONT_SIZES.map(s => <option key={s} value={s} style={{ color: "#111", background: "#fff" }}>{s}px</option>)}
+          </select>
+        </div>
+        {/* Alineación + mayúsculas: los dos ajustes que más se usan, a la vista. */}
+        <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+          <div style={{ display: "flex", gap: 4 }}>
+            {([
+              ["left",   "Izquierda", "M3 5h18M3 10h11M3 15h18M3 20h11"],
+              ["center", "Centrado",  "M3 5h18M6 10h12M3 15h18M6 20h12"],
+              ["right",  "Derecha",   "M3 5h18M10 10h11M3 15h18M10 20h11"],
+            ] as const).map(([val, titulo2, d]) => (
+              <button key={val} type="button" title={titulo2}
+                onClick={() => setOverride(activeField, { align: ov.align === val ? undefined : val })}
+                style={{ ...fmtBtn(ov.align === val), width: 30, height: 30 }}>
+                <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round"><path d={d} /></svg>
+              </button>
+            ))}
+          </div>
+          <button type="button" title="Todo en mayúsculas"
+            onClick={() => setOverride(activeField, { uppercase: ov.uppercase ? undefined : true })}
+            style={{ ...fmtBtn(!!ov.uppercase), width: 30, height: 30, fontSize: 11, fontWeight: 800 }}>
+            AA
+          </button>
+        </div>
+        {ayuda("Si no elegís nada, se respeta el estilo del diseño — que ya está pensado para que todo combine.")}
+
+        {/* Aviso, no bloqueo: la decisión sigue siendo tuya, pero con el dato a la
+            vista en vez de descubrirlo cuando un cliente no puede leer tu tienda. */}
+        {ratio != null && ratio < minimoContraste && (
+          <div style={{ marginTop: 10, padding: "9px 11px", borderRadius: 8, background: "#fffbeb", border: "1px solid #fde68a" }}>
+            <p style={{ margin: 0, fontSize: 11, color: "#92400e", lineHeight: 1.5 }}>
+              <strong>Este color casi no se lee sobre su fondo.</strong> El contraste
+              da {ratio.toFixed(1)} y para leerse cómodo necesita al menos {minimoContraste}.
+            </p>
+            {colorSugerido ? (
+              <button type="button"
+                onClick={() => setOverride(activeField, { color: colorSugerido })}
+                style={{ ...panelBtn, marginTop: 8, width: "100%", padding: "6px 0", display: "flex", alignItems: "center", justifyContent: "center", gap: 7 }}>
+                <span style={{ width: 13, height: 13, borderRadius: 3, background: colorSugerido, border: "1px solid rgba(0,0,0,0.15)", flexShrink: 0 }} />
+                Usar el tono más parecido que sí se lee
+              </button>
+            ) : (
+              <p style={{ margin: "6px 0 0", fontSize: 10.5, color: "#92400e", opacity: 0.85, lineHeight: 1.45 }}>
+                Con este fondo no hay ningún tono de ese color que se lea bien. Convendría
+                cambiar el fondo de la sección.
+              </p>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* ── Ajuste fino ── */}
+      {/* Detrás de un desplegable a propósito: son los que casi nunca se tocan, y
+          a la vista competían con los de arriba. La queja no era que faltaran
+          herramientas sino que el panel estuviera desordenado — más controles
+          sueltos lo empeoran. */}
+      <details style={bloque}>
+        <summary style={{ cursor: "pointer", listStyle: "none", display: "flex", alignItems: "center", gap: 6, userSelect: "none" }}>
+          {titulo("Ajuste fino")}
+          <span style={{ fontSize: 10, color: P.hint }}>▾</span>
+        </summary>
+
+        <div style={{ marginTop: 12 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+            <span style={{ fontSize: 11, color: P.muted }}>Separación entre renglones</span>
+            <span style={{ fontSize: 11, fontWeight: 700, color: P.text }}>
+              {ov.lineHeight != null ? `${ov.lineHeight.toFixed(2)}×` : "del diseño"}
+            </span>
+          </div>
+          <input type="range" min={0.8} max={2.4} step={0.05}
+            value={ov.lineHeight ?? 1.4}
+            onChange={e => setOverride(activeField, { lineHeight: Number(e.target.value) })}
+            style={{ width: "100%", accentColor: P.accent, marginTop: 4 }} />
         </div>
 
-        {divider}
+        <div style={{ marginTop: 12 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+            <span style={{ fontSize: 11, color: P.muted }}>Separación entre letras</span>
+            <span style={{ fontSize: 11, fontWeight: 700, color: P.text }}>
+              {ov.letterSpacing != null ? `${ov.letterSpacing}px` : "del diseño"}
+            </span>
+          </div>
+          <input type="range" min={-3} max={12} step={0.5}
+            value={ov.letterSpacing ?? 0}
+            onChange={e => setOverride(activeField, { letterSpacing: Number(e.target.value) })}
+            style={{ width: "100%", accentColor: P.accent, marginTop: 4 }} />
+        </div>
 
-        {/* Fuente */}
-        <select value={ov.fontFamily ?? ""}
-          onChange={e => setOverride(activeField, { fontFamily: e.target.value || undefined })}
-          style={{ fontSize: 11, padding: "4px 6px", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 6, cursor: "pointer", color: "#f1f5f9", background: "rgba(255,255,255,0.07)", height: 28 }}>
-          {FONT_OPTIONS.map(f => <option key={f.value} value={f.value} style={{ color: "#111", background: "#fff" }}>{f.label}</option>)}
-        </select>
-
-        {/* Tamaño */}
-        <select value={ov.fontSize ?? ""}
-          onChange={e => setOverride(activeField, { fontSize: e.target.value ? Number(e.target.value) : undefined })}
-          style={{ fontSize: 11, padding: "4px 6px", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 6, cursor: "pointer", color: "#f1f5f9", background: "rgba(255,255,255,0.07)", width: 80, height: 28 }}>
-          <option value="" style={{ color: "#111", background: "#fff" }}>Tamaño</option>
-          {FONT_SIZES.map(s => <option key={s} value={s} style={{ color: "#111", background: "#fff" }}>{s}px</option>)}
-        </select>
-
-        {divider}
-
-        {/* B I U */}
-        {([
-          ["bold",      "B", { fontWeight: 700 }],
-          ["italic",    "I", { fontStyle: "italic" as const }],
-          ["underline", "U", { textDecoration: "underline" as const }],
-        ] as const).map(([key, lbl, st]) => (
-          <button key={key} type="button"
-            onClick={() => setOverride(activeField, { [key]: !ov[key as keyof TextOverride] })}
-            style={{ ...fmtBtn(!!ov[key as keyof TextOverride]), ...st }}>
-            {lbl}
+        {/* Sin esto no habría vuelta atrás: una vez que movés la barra, no existe
+            el valor "sin definir" — quedarías pegado a un número para siempre. */}
+        {(ov.lineHeight != null || ov.letterSpacing != null) && (
+          <button type="button"
+            onClick={() => setOverride(activeField, { lineHeight: undefined, letterSpacing: undefined })}
+            style={{ ...panelBtn, marginTop: 12, width: "100%", padding: "6px 0" }}>
+            ↺ Volver a los valores del diseño
           </button>
-        ))}
+        )}
+      </details>
 
-        <div style={{ flex: 1 }} />
-
-        {/* 👁 Visibilidad */}
+      {/* ── Visibilidad ── */}
+      <div style={bloque}>
+        {titulo("Visibilidad")}
         <button type="button"
           onClick={() => setOverride(activeField, { hidden: isHidden ? undefined : true })}
-          title={isHidden ? "Mostrar en la tienda" : "Ocultar de la tienda"}
           style={{
-            display: "flex", alignItems: "center", gap: 5,
-            padding: "4px 11px", height: 28, borderRadius: 6,
-            border: `1.5px solid ${isHidden ? "#f87171" : "rgba(255,255,255,0.15)"}`,
-            background: isHidden ? "rgba(239,68,68,0.15)" : "rgba(255,255,255,0.07)",
+            display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+            width: "100%", marginTop: 8, padding: "8px 11px", borderRadius: 6,
+            border: `1.5px solid `,
+            background: isHidden ? "rgba(239,68,68,0.15)" : "#f8fafc",
             color: isHidden ? "#f87171" : "#94a3b8",
-            cursor: "pointer", fontSize: 11, fontWeight: 600, whiteSpace: "nowrap",
+            cursor: "pointer", fontSize: 12, fontWeight: 600,
           }}>
-          {isHidden ? "👁 Oculto" : "👁 Visible"}
+          {isHidden ? "👁 Oculto en tu tienda" : "👁 Visible en tu tienda"}
         </button>
-
-        {/* ↺ Reset */}
-        {hasOverride && (
-          <button type="button" onClick={() => resetOverride(activeField)}
-            title="Restablecer todo"
-            style={{ ...fmtBtn(false), fontSize: 14 }}>↺</button>
-        )}
+        {ayuda(isHidden
+          ? "Nadie lo ve en tu tienda. Acá en el editor te lo seguimos mostrando para que puedas volver a activarlo."
+          : "Tocá para esconderlo de tu tienda sin borrar lo que escribiste.")}
       </div>
     </div>
   );
@@ -1608,15 +2334,31 @@ export default function ConfiguracionPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ storeConfig: config }),
       });
-      if (!res.ok) throw new Error("Error al guardar");
+      if (!res.ok) {
+        // La validación rechaza el config ENTERO por un solo campo, y hasta ahora
+        // el detalle que manda el servidor se tiraba a la basura: quedaba un
+        // "No se pudo guardar" y nada que tocar. Reintentar no arregla un dato
+        // inválido — hay que decir cuál es.
+        const detalle = await res.json().catch(() => null);
+        const campos = detalle?.details?.fieldErrors
+          ? Object.keys(detalle.details.fieldErrors as Record<string, unknown>)
+          : [];
+        throw new Error(
+          campos.length
+            ? `Hay un dato que el sistema no acepta en: ${campos.join(", ")}. Revisalo y volvé a guardar.`
+            : "No se pudo guardar. Intentá de nuevo."
+        );
+      }
       setSavedTemplateId(config.template);
       setSavedConfig(config);
       setIsDirty(false);
       setSaved(true);
       setTimeout(() => setSaved(false), 2200);
-    } catch {
-      setSaveError("No se pudo guardar. Intentá de nuevo.");
-      setTimeout(() => setSaveError(null), 3000);
+    } catch (err) {
+      const msg = err instanceof Error && err.message ? err.message : "No se pudo guardar. Intentá de nuevo.";
+      setSaveError(msg);
+      // Un error explicativo necesita más tiempo en pantalla que un "reintentá".
+      setTimeout(() => setSaveError(null), msg.length > 45 ? 8000 : 3000);
     } finally {
       setSaving(false);
     }
@@ -1716,7 +2458,7 @@ export default function ConfiguracionPage() {
     return (
       <DashboardLayout>
         <div style={{ display: "flex", height: "100%", alignItems: "center", justifyContent: "center",
-          flexDirection: "column", gap: 16, color: "#64748b", fontFamily: "system-ui, -apple-system, sans-serif" }}>
+          flexDirection: "column", gap: 16, color: P.muted, fontFamily: "system-ui, -apple-system, sans-serif" }}>
           <p style={{ margin: 0, fontSize: 28 }}>⚠️</p>
           <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#1e293b" }}>No se pudo cargar la configuración</p>
           <p style={{ margin: 0, fontSize: 14 }}>Verificá tu conexión e intentá de nuevo.</p>
@@ -1752,12 +2494,12 @@ export default function ConfiguracionPage() {
               </div>
               <div style={{ flex: 1, background: "white", overflowY: "auto", overflowX: "hidden",
                 padding: "32px 48px" }}>
-                <p style={{ margin: "0 0 4px", fontSize: 12, fontWeight: 600, color: "#94a3b8",
+                <p style={{ margin: "0 0 4px", fontSize: 12, fontWeight: 600, color: P.muted,
                   textTransform: "uppercase", letterSpacing: 1 }}>Paso 1 de 3</p>
                 <h1 style={{ margin: "0 0 6px", fontSize: 22, fontWeight: 800, color: "#0f172a" }}>
                   Elegí el diseño de tu tienda
                 </h1>
-                <p style={{ margin: "0 0 36px", fontSize: 13, color: "#64748b" }}>
+                <p style={{ margin: "0 0 36px", fontSize: 13, color: P.muted }}>
                   Hacé click en un diseño para verlo en detalle.
                 </p>
 
@@ -1769,7 +2511,7 @@ export default function ConfiguracionPage() {
                       <div style={{ flex: 1, height: 1, background: "linear-gradient(to right, #e2e8f0, transparent)" }} />
                       <span style={{
                         fontSize: 9, fontWeight: 700, padding: "2px 8px", borderRadius: 20,
-                        background: "#f1f5f9", color: "#94a3b8", border: "1px solid #e2e8f0",
+                        background: "#f1f5f9", color: P.muted, border: "1px solid #e2e8f0",
                         textTransform: "uppercase", letterSpacing: 0.5,
                       }}>{cat.templates.length} diseños</span>
                     </div>
@@ -1850,7 +2592,7 @@ export default function ConfiguracionPage() {
             <button onClick={handleBackToGallery}
               style={{ display: "flex", alignItems: "center", gap: 5, padding: "6px 12px",
                 border: "1px solid #e2e8f0", borderRadius: 8, background: "white",
-                color: "#64748b", fontSize: 12, fontWeight: 600, cursor: "pointer",
+                color: P.muted, fontSize: 12, fontWeight: 600, cursor: "pointer",
                 whiteSpace: "nowrap", flexShrink: 0, transition: "all 0.15s" }}
               onMouseEnter={e => { e.currentTarget.style.borderColor = "#cbd5e1"; e.currentTarget.style.color = "#374151"; }}
               onMouseLeave={e => { e.currentTarget.style.borderColor = "#e2e8f0"; e.currentTarget.style.color = "#64748b"; }}>
@@ -1868,7 +2610,7 @@ export default function ConfiguracionPage() {
               <span style={{ fontSize: 13, fontWeight: 700, color: "#0f172a", whiteSpace: "nowrap" }}>
                 {selected!.name}
               </span>
-              <span style={{ fontSize: 11, color: "#94a3b8", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              <span style={{ fontSize: 11, color: P.muted, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                 {selected!.desc}
               </span>
             </div>
@@ -1917,7 +2659,7 @@ export default function ConfiguracionPage() {
           <button onClick={handleBackToGallery}
             style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 10px",
               borderRadius: 6, background: "none", border: "none",
-              color: "#64748b", fontSize: 12, fontWeight: 500, cursor: "pointer",
+              color: P.muted, fontSize: 12, fontWeight: 500, cursor: "pointer",
               whiteSpace: "nowrap", flexShrink: 0, transition: "background 0.12s, color 0.12s" }}
             onMouseEnter={e => { e.currentTarget.style.background = "#f1f5f9"; e.currentTarget.style.color = "#1e293b"; }}
             onMouseLeave={e => { e.currentTarget.style.background = "none"; e.currentTarget.style.color = "#64748b"; }}>
@@ -1950,7 +2692,7 @@ export default function ConfiguracionPage() {
                 title="Ver tienda en una pestaña nueva"
                 style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 10px",
                   borderRadius: 6, background: "none", border: "none",
-                  color: "#64748b", fontSize: 12, fontWeight: 500, cursor: "pointer",
+                  color: P.muted, fontSize: 12, fontWeight: 500, cursor: "pointer",
                   whiteSpace: "nowrap", textDecoration: "none", transition: "background 0.12s, color 0.12s" }}
                 onMouseEnter={e => { e.currentTarget.style.background = "#f1f5f9"; e.currentTarget.style.color = "#1e293b"; }}
                 onMouseLeave={e => { e.currentTarget.style.background = "none"; e.currentTarget.style.color = "#64748b"; }}>
@@ -1964,7 +2706,7 @@ export default function ConfiguracionPage() {
             <button onClick={() => setConfigModalOpen(true)} title="Configuración avanzada"
               style={{ display: "flex", alignItems: "center", justifyContent: "center",
                 width: 32, height: 32, borderRadius: 6, background: "none", border: "none",
-                color: "#94a3b8", cursor: "pointer", transition: "background 0.12s, color 0.12s" }}
+                color: P.muted, cursor: "pointer", transition: "background 0.12s, color 0.12s" }}
               onMouseEnter={e => { e.currentTarget.style.background = "#f1f5f9"; e.currentTarget.style.color = "#475569"; }}
               onMouseLeave={e => { e.currentTarget.style.background = "none"; e.currentTarget.style.color = "#94a3b8"; }}>
               <svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
@@ -2032,7 +2774,7 @@ export default function ConfiguracionPage() {
               </StoreConfigContext.Provider>
             </div>
           </div>
-          <FloatingEditor textFieldLabels={TEXT_FIELD_LABELS} />
+          <FloatingEditor textFieldLabels={TEXT_FIELD_LABELS} template={config.template} />
         </EditContext.Provider>
 
       </div>
@@ -2046,7 +2788,7 @@ export default function ConfiguracionPage() {
       {confirmLeave && (
         <div style={{ position:"fixed", inset:0, zIndex:9999, display:"flex", alignItems:"center", justifyContent:"center", padding:16 }}>
           <div style={{ position:"absolute", inset:0, background:"rgba(0,0,0,0.6)", backdropFilter:"blur(4px)" }} onClick={() => setConfirmLeave(false)} />
-          <div style={{ position:"relative", background:"#0f172a", border:"1px solid rgba(255,255,255,0.1)", borderRadius:16, padding:24, maxWidth:360, width:"100%", boxShadow:"0 20px 60px rgba(0,0,0,0.5)" }}>
+          <div style={{ position:"relative", background:"#0f172a", border:"1px solid #e2e8f0", borderRadius:16, padding:24, maxWidth:360, width:"100%", boxShadow:"0 20px 60px rgba(0,0,0,0.5)" }}>
             <div style={{ display:"flex", gap:16, marginBottom:20 }}>
               <div style={{ width:40, height:40, background:"rgba(245,158,11,0.15)", borderRadius:12, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
                 <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
@@ -2058,7 +2800,7 @@ export default function ConfiguracionPage() {
             </div>
             <div style={{ display:"flex", gap:10 }}>
               <button onClick={() => setConfirmLeave(false)}
-                style={{ flex:1, background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.1)", color:"white", borderRadius:10, padding:"10px 0", fontSize:13, fontWeight:600, cursor:"pointer" }}>
+                style={{ flex:1, background:"rgba(255,255,255,0.05)", border:"1px solid #e2e8f0", color:"white", borderRadius:10, padding:"10px 0", fontSize:13, fontWeight:600, cursor:"pointer" }}>
                 Quedarme
               </button>
               <button onClick={() => {

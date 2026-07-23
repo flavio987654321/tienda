@@ -1,6 +1,7 @@
 "use client";
 import { createContext, useContext, useState, useEffect, useRef } from "react";
 import type { TextOverride, ImageOverride } from "@/types/store-config";
+import { colorRepresentativo } from "@/lib/section-bg";
 
 type EditContextType = {
   editMode: boolean;
@@ -38,7 +39,14 @@ export const EditContext = createContext<EditContextType>({
   moveSection: () => {},
 });
 
-export function getContrastColor(hex: string): "light" | "dark" {
+export function getContrastColor(color: string): "light" | "dark" {
+  if (!color) return "dark";
+  // El fondo de una sección puede ser un degradado, no solo un color. Cuando lo
+  // es, se decide con el punto medio: los diez templates llaman acá para saber
+  // si el texto va claro u oscuro, así que resolverlo en este único lugar
+  // alcanza para todos —y para los que vengan— en vez de enseñarle a cada uno a
+  // leer degradados.
+  const hex = colorRepresentativo(color);
   if (!hex) return "dark";
   let full = hex.startsWith("#") ? hex : "#" + hex;
   // Expand shorthand #RGB → #RRGGBB
@@ -85,6 +93,15 @@ export function EditableZone({
   const isActive = activeField === field;
   const ov = overrides[field] ?? {};
 
+  // ── El ÚNICO lugar donde los ajustes se vuelven CSS ────────────────────────
+  // Todos los templates envuelven sus textos en <EditableZone>, así que lo que se
+  // agregue acá lo heredan los diez de una vez — y también cualquier template
+  // futuro, sin tocarle nada. Por eso no se aplican estilos dentro de cada
+  // template: sería la misma lógica repetida diez veces, desincronizándose.
+  //
+  // Cada línea es condicional a propósito: si el ajuste no está definido, la
+  // propiedad ni se escribe y manda el estilo original del diseño. Poner un valor
+  // por defecto acá pisaría el diseño de todos los templates.
   const overrideStyle: React.CSSProperties = {
     ...(ov.color      && { color: ov.color }),
     ...(ov.fontFamily && { fontFamily: ov.fontFamily }),
@@ -92,6 +109,17 @@ export function EditableZone({
     ...(ov.bold       !== undefined && { fontWeight: ov.bold ? 700 : "normal" }),
     ...(ov.italic     !== undefined && { fontStyle: ov.italic ? "italic" : "normal" }),
     ...(ov.underline  !== undefined && { textDecoration: ov.underline ? "underline" : "none" }),
+    // `textAlign` no tiene ningún efecto sobre un elemento en línea, y esta zona
+    // se dibuja como <span> salvo que se le pase `block`. Sin el display forzado,
+    // el control se vería andar en el panel y el texto no se movería nunca.
+    // Con `block` la zona pasa a ocupar el ancho de su contenedor —el <h1> o el
+    // <p> que la envuelve— que es contra el que uno espera alinear.
+    ...(ov.align      && { textAlign: ov.align, display: "block", width: "100%" }),
+    ...(ov.uppercase  !== undefined && { textTransform: ov.uppercase ? "uppercase" : "none" }),
+    ...(ov.lineHeight && { lineHeight: ov.lineHeight }),
+    // 0 es un espaciado válido (junta las letras al máximo normal), así que se
+    // pregunta por `undefined` y no por si el número es "verdadero".
+    ...(ov.letterSpacing !== undefined && { letterSpacing: `${ov.letterSpacing}px` }),
   };
 
   const displayContent = ov.text !== undefined ? ov.text : children;
@@ -157,6 +185,12 @@ export function EditableZone({
 
   return (
     <Tag
+      // Marca para poder encontrar este texto en la pantalla desde el panel de
+      // edición. Se usa para leer el fondo REAL que tiene detrás —subiendo por sus
+      // contenedores hasta dar con uno que tenga color— y avisar si el color
+      // elegido no se lee. Adivinar el fondo desde la configuración no serviría:
+      // cada template pinta sus secciones a su manera.
+      data-edit-field={field}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       onClick={(e: React.MouseEvent) => { e.stopPropagation(); setActiveField(field); }}
@@ -258,6 +292,11 @@ export function EditableImageButton({
         onMouseLeave={() => setHovered(false)}
         onClick={(e) => { e.stopPropagation(); setActiveField(isActive ? null : imageKey); }}
         title={compact ? label : undefined}
+        // Le deja al panel una forma de encontrar el hueco real donde va la foto y
+        // medirlo. Sin esto, el panel dibujaba la muestra apaisada siempre y
+        // recomendaba medidas fijas — y en las secciones verticales le estaba
+        // diciendo al dueño justo lo contrario de lo que le convenía.
+        data-edit-image={field}
         style={compact ? {
           position: "absolute", top: 8, right: 8, zIndex: 9998,
           display: "flex", alignItems: "center", justifyContent: "center",
@@ -309,6 +348,11 @@ export function EditableSectionBg({ field, label }: { field: string; label: stri
       onMouseLeave={() => setHovered(false)}
       onClick={(e) => { e.stopPropagation(); setActiveField(isActive ? null : bgKey); }}
       title={`Editar fondo: ${label}`}
+      // Le deja al panel una forma de encontrar la sección y leer el fondo que
+      // tiene puesto AHORA. Sin esto, el panel no sabe el color que trae el
+      // template de fábrica: asume negro, y prender un difuminado sobre una
+      // sección que nunca se tocó la pintaba de negro de golpe.
+      data-edit-bg={field}
       style={{
         position: "absolute", top: 16, left: 16, zIndex: 9998,
         display: "flex", alignItems: "center", gap: 5,

@@ -2,6 +2,37 @@ export type TemplateId = "fashion-noir" | "boho-terra" | "urban-pulse" | "chic-p
 
 export const TEMPLATES_WITH_CAROUSEL: TemplateId[] = ["chic-paris", "electro-prime", "tech-nova", "home-studio", "casa-clara"];
 
+// ── Qué secciones aceptan FOTO de fondo, por template ────────────────────────
+// El fondo de una sección es un COLOR. Algunos templates además saben dibujar una
+// foto detrás, y otros no — Chic Paris, por ejemplo, no lo hace en ninguna.
+//
+// Sin esta lista el panel ofrecía "Foto de fondo" en todas las secciones de todos
+// los templates: la foto se subía, se guardaba bien y el template no la leía nunca.
+// No era que tardara en aparecer; no aparecía jamás, y no había forma de darse
+// cuenta salvo esperando.
+//
+// Sale de leer qué claves `sectionbg_*` consume realmente cada template. Si a un
+// template se le agrega una sección con foto, hay que sumarla acá o el dueño no va
+// a poder cargarla.
+export const SECTION_BG_PHOTO: Record<TemplateId, string[]> = {
+  "auto-drive":    ["bgCatalogo", "bgCategorias", "bgContacto", "bgFooter", "bgHero", "bgNosotros", "bgServicios", "bgStats"],
+  "auto-motor":    ["bgCatalogo", "bgContacto", "bgFooter", "bgNosotros", "bgServicios"],
+  "boho-terra":    ["bgNewsletter"],
+  "casa-clara":    ["bgContacto", "bgFooter", "bgHero", "bgNosotros", "bgOfertas", "bgProductos"],
+  "chic-paris":    [],
+  "electro-prime": ["bgConfianza", "bgContacto", "bgDepartamentos", "bgFooter", "bgHero", "bgNosotros", "bgOfertas", "bgProductos"],
+  "fashion-noir":  ["bgContacto", "bgFooter", "bgStatement"],
+  "home-studio":   ["bgConfianza", "bgContacto", "bgDepartamentos", "bgFooter", "bgHero", "bgNosotros", "bgOfertas", "bgProductos"],
+  "tech-nova":     ["bgConfianza", "bgContacto", "bgDepartamentos", "bgFooter", "bgHero", "bgNosotros", "bgOfertas", "bgProductos"],
+  "urban-pulse":   ["bgContacto", "bgFooter"],
+};
+
+// OJO: agregar un campo acá NO alcanza. Hay que tocar los tres lugares a la vez:
+//   1. este tipo,
+//   2. el esquema de `src/lib/store-config.ts` — Zod descarta lo que no conoce, así
+//      que un campo nuevo se guarda bien en pantalla y desaparece al recargar,
+//   3. `overrideStyle` en `src/contexts/EditContext.tsx`, que es el único lugar
+//      donde esto se convierte en CSS (y por eso lo heredan los diez templates).
 export type TextOverride = {
   text?: string;
   color?: string;
@@ -11,6 +42,12 @@ export type TextOverride = {
   italic?: boolean;
   underline?: boolean;
   hidden?: boolean;
+  align?: "left" | "center" | "right";
+  uppercase?: boolean;
+  /** Múltiplo del tamaño de letra (1.4 = 140%). */
+  lineHeight?: number;
+  /** Espacio entre letras, en px. Puede ser negativo para juntarlas. */
+  letterSpacing?: number;
 };
 
 export type ImageOverride = {
