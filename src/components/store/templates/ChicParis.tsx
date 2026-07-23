@@ -4,7 +4,7 @@ import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { usePushBell } from "@/contexts/PushBellContext";
 import { useAuth } from "@/components/AuthProvider";
 import StoreFollowButton from "@/components/store/StoreFollowButton";
-import { EditableZone, EditableImageButton, EditableSectionBg, getContrastColor, useEditContext } from "@/contexts/EditContext";
+import { EditableZone, EditableImageButton, EditableSectionBg, getContrastColor, getReadableAccentText, useEditContext } from "@/contexts/EditContext";
 import { useStorefront, type StorefrontProduct } from "@/hooks/useStorefront";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { useCartLogic } from "@/hooks/useCartLogic";
@@ -339,6 +339,11 @@ export default function ChicParis() {
     toggleFavorite,
   } = cart;
   const accentText = getContrastColor(ACC) === "light" ? "#fff" : "#111";
+  // Acento usado como TEXTO/borde sobre el fondo claro de la sección de reseñas
+  // (el botón "Dejá tu opinión" es contorneado, no relleno). Si el acento es muy
+  // claro queda casi invisible sobre blanco —justo lo que se veía—, así que se
+  // cae a un gris oscuro seguro. Con un acento normal usa el acento, como antes.
+  const opinionAccent = getReadableAccentText(ACC, sc["bgPruebaSocial"] ?? "#fff", "#111");
   const cartTheme: CartTheme = { BG:"#ffffff", S:"#fafafa", T:"#111111", MID:"#999999", border:"#e5e5e5", accent:ACC, accentText };
   const variantPrice = modalProduct ? resolveVariantPrice(modalProduct.variants, selectedSize, selectedColor) : null;
   const displayPrice = variantPrice ?? (modalProduct?.price ?? 0);
@@ -1542,7 +1547,7 @@ export default function ChicParis() {
               {tabEfectiva === "tienda" && (
                 <div style={{ padding: isMobile ? "24px 20px 0" : "32px 40px 0", textAlign: "center" }}>
                   <button type="button" onClick={abrirTiendaModal}
-                    style={{ background: "none", border: `1px solid ${ACC}`, color: ACC, padding: "13px 40px", fontSize: 10, fontWeight: 800, letterSpacing: 3, textTransform: "uppercase", cursor: "pointer", transition: "opacity 0.2s" }}
+                    style={{ background: "none", border: `1px solid ${opinionAccent}`, color: opinionAccent, padding: "13px 40px", fontSize: 10, fontWeight: 800, letterSpacing: 3, textTransform: "uppercase", cursor: "pointer", transition: "opacity 0.2s" }}
                     onMouseEnter={e => (e.currentTarget.style.opacity = "0.7")}
                     onMouseLeave={e => (e.currentTarget.style.opacity = "1")}>
                     Dejá tu opinión
