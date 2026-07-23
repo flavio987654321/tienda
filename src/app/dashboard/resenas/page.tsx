@@ -6,6 +6,7 @@ import { getCurrentUser } from "@/lib/auth-session";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Star } from "lucide-react";
 import ResenasClient from "./ResenasClient";
+import { parseFirstImage } from "@/lib/metaFeed";
 
 export default async function ResenasPage() {
   const user = await getCurrentUser();
@@ -32,19 +33,25 @@ export default async function ResenasPage() {
       verified: true,
       verifiedBy: true,
       createdAt: true,
-      product: { select: { name: true, images: true } },
+      status: true,
+      product: { select: { id: true, name: true, images: true } },
     },
   });
 
-  const serialized = reviews.map(r => {
-    let productImage: string | null = null;
-    try { const a = JSON.parse(r.product.images); productImage = Array.isArray(a) && a[0] ? a[0] : null; } catch {}
-    return {
-      ...r,
-      createdAt: r.createdAt.toISOString(),
-      product: { name: r.product.name, image: productImage },
-    };
-  });
+  const serialized = reviews.map(r => ({
+    ...r,
+    createdAt: r.createdAt.toISOString(),
+    // Sin producto = reseña de la tienda entera.
+    //
+    // El armado de la imagen estaba escrito a mano acá y devolvía el objeto
+    // completo (`{url, variantValue}`) donde se esperaba la URL, así que la foto
+    // del producto tampoco se veía en este panel. Era la tercera copia del mismo
+    // error; ahora las tres usan `parseFirstImage`, que además entiende los
+    // productos viejos guardados como lista de textos.
+    product: r.product
+      ? { id: r.product.id, name: r.product.name, image: parseFirstImage(r.product.images) }
+      : null,
+  }));
 
   return (
     <DashboardLayout

@@ -249,45 +249,68 @@ export async function sendNewReviewToOwnerEmail({
   reviewerName,
   rating,
   comment,
+  pendiente = false,
 }: {
   ownerEmail: string;
   storeName: string;
   storeSlug: string;
-  productId: string;
-  productName: string;
+  /** `null` cuando la reseña habla de la tienda entera y no de un producto. */
+  productId?: string | null;
+  productName?: string | null;
   reviewerName: string;
   rating: number;
   comment?: string | null;
+  /** Está esperando aprobación: todavía no se ve en la tienda. */
+  pendiente?: boolean;
 }) {
   if (!process.env.RESEND_API_KEY) return;
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "";
-  const productUrl = `${appUrl}/tienda/${storeSlug}/producto/${productId}`;
   const stars = "⭐".repeat(rating) + "☆".repeat(5 - rating);
+
+  // Adónde manda el botón. Una reseña pendiente NO está publicada: mandar a la
+  // tienda sería mandar a un lugar donde no está, sin explicar por qué. Y aunque
+  // esté publicada, para hacer algo con ella —borrarla, verificarla— hay que
+  // estar en el panel, que hasta ahora el mail no nombraba en ningún lado.
+  const destino = pendiente || !productId
+    ? { url: `${appUrl}/dashboard/resenas`, texto: pendiente ? "Revisarla y aprobarla" : "Verla en mi panel" }
+    : { url: `${appUrl}/tienda/${storeSlug}/producto/${productId}`, texto: "Ver la reseña en mi tienda" };
 
   await transporter.sendMail({
     from: `"TiendaApps" <${FROM_ADDRESS}>`,
     to: ownerEmail,
-    subject: `Nueva reseña (${rating}★) en ${storeName}`,
+    subject: pendiente
+      ? `Reseña de tu tienda (${rating}★) esperando tu aprobación`
+      : `Nueva reseña (${rating}★) en ${storeName}`,
     html: `
       <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:520px;margin:0 auto;padding:32px 16px;color:#111827;background:#ffffff;">
         <div style="background:#111827;border-radius:16px;padding:28px;margin-bottom:24px;">
           <p style="color:#9ca3af;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;margin:0 0 8px;font-weight:600;">${escapeHtml(storeName)}</p>
-          <h1 style="color:#ffffff;font-size:22px;margin:0;font-weight:800;letter-spacing:-0.02em;">Nueva reseña recibida</h1>
+          <h1 style="color:#ffffff;font-size:22px;margin:0;font-weight:800;letter-spacing:-0.02em;">${
+            productName ? "Nueva reseña recibida" : "Opinaron sobre tu tienda"
+          }</h1>
         </div>
 
+        ${pendiente ? `
+        <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:14px 16px;margin-bottom:16px;">
+          <p style="font-size:13px;color:#92400e;margin:0;line-height:1.6;">
+            <strong>Todavía no se ve en tu tienda.</strong> Las reseñas sobre la tienda no apuntan a
+            ningún producto y salen en tu portada, así que las revisás vos antes de que se publiquen.
+          </p>
+        </div>` : ""}
+
         <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:20px;margin-bottom:24px;">
-          <p style="font-size:13px;color:#6b7280;margin:0 0 4px;">Producto</p>
-          <p style="font-size:15px;font-weight:700;color:#111827;margin:0 0 14px;">${escapeHtml(productName)}</p>
+          <p style="font-size:13px;color:#6b7280;margin:0 0 4px;">${productName ? "Producto" : "Sobre"}</p>
+          <p style="font-size:15px;font-weight:700;color:#111827;margin:0 0 14px;">${escapeHtml(productName ?? "Tu tienda en general")}</p>
           <p style="font-size:18px;margin:0 0 10px;">${stars}</p>
           ${comment ? `<p style="font-size:14px;color:#374151;line-height:1.6;margin:0;white-space:pre-wrap;">"${escapeHtml(comment)}"</p>` : ""}
           <p style="font-size:12px;color:#9ca3af;margin:14px 0 0;">— ${escapeHtml(reviewerName)}</p>
         </div>
 
         <div style="text-align:center;margin-bottom:24px;">
-          <a href="${productUrl}"
+          <a href="${destino.url}"
              style="display:inline-block;background:#111827;color:#fff;padding:14px 32px;border-radius:10px;font-weight:700;font-size:15px;text-decoration:none;">
-            Ver la reseña en mi tienda
+            ${destino.texto}
           </a>
         </div>
       </div>

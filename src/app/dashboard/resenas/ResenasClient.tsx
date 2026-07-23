@@ -2,9 +2,9 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { Star, Trash2, Package, ShieldCheck, ShieldOff } from "lucide-react";
+import { Star, Trash2, Package, Store, ShieldCheck, ShieldOff } from "lucide-react";
 
-type Review = {
+export type Review = {
   id: string;
   rating: number;
   comment: string | null;
@@ -12,7 +12,10 @@ type Review = {
   verified: boolean;
   verifiedBy: string | null;
   createdAt: string;
-  product: { name: string; image: string | null };
+  /** "APPROVED" | "PENDING". Solo las de tienda pueden estar pendientes. */
+  status: string;
+  /** `null` = habla de la tienda entera, no de un producto. */
+  product: { id: string; name: string; image: string | null } | null;
 };
 
 export default function ResenasClient({
@@ -174,11 +177,16 @@ export default function ResenasClient({
             >
               {/* Imagen del producto */}
               <div className="flex-shrink-0 w-14 h-14 rounded-lg overflow-hidden border border-gray-100 bg-gray-50 self-start">
-                {r.product.image ? (
+                {/* Sin producto es una reseña de la tienda entera: lleva el ícono
+                    de local en vez del de paquete, para distinguirlas de un
+                    vistazo en una lista que ahora mezcla las dos. */}
+                {r.product?.image ? (
                   <Image src={r.product.image} alt={r.product.name} width={56} height={56} className="w-full h-full object-cover" />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
-                    <Package className="w-5 h-5 text-gray-300" />
+                    {r.product
+                      ? <Package className="w-5 h-5 text-gray-300" />
+                      : <Store className="w-5 h-5 text-indigo-300" />}
                   </div>
                 )}
               </div>
@@ -208,9 +216,11 @@ export default function ResenasClient({
                   <p className="text-sm text-gray-700 leading-relaxed mb-2">&ldquo;{r.comment}&rdquo;</p>
                 )}
 
-                {/* Producto */}
+                {/* De qué habla la reseña */}
                 <div className="flex items-center gap-1.5 text-xs text-gray-400">
-                  <span className="font-medium">{r.product.name}</span>
+                  {r.product
+                    ? <span className="font-medium">{r.product.name}</span>
+                    : <span className="font-medium text-indigo-500">Sobre la tienda</span>}
                 </div>
               </div>
 

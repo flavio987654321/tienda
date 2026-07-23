@@ -41,32 +41,50 @@ export async function GET(
   // comprar ese producto. Lo que deja de pasar es que la elija como cartel de
   // entrada de la tienda alguien que no es el dueño.
   if (!productId) {
-    const [rows, stats] = await Promise.all([
+    const campos = {
+      id: true, rating: true, comment: true, reviewer: true,
+      verified: true, verifiedBy: true, createdAt: true,
+      product: { select: { id: true, name: true, images: true } },
+    } as const;
+
+    const [deProducto, deTienda, stats] = await Promise.all([
       prisma.publicReview.findMany({
-        where: { storeId: store.id, comment: { not: null }, rating: { gte: 4 } },
-        orderBy: { createdAt: "desc" },
-        take: 12,
-        select: {
-          id: true, rating: true, comment: true, reviewer: true,
-          verified: true, verifiedBy: true, createdAt: true,
-          product: { select: { id: true, name: true, images: true } },
-        },
+        where: { storeId: store.id, productId: { not: null }, comment: { not: null }, rating: { gte: 4 }, status: "APPROVED" },
+        orderBy: { createdAt: "desc" }, take: 12, select: campos,
       }),
-      // El promedio se saca sobre TODAS las reseñas, no solo sobre las que se
-      // muestran. Promediar únicamente las de 4★ y 5★ daría un número inflado
-      // que la tienda estaría publicando como si fuera su reputación real.
+      // Las de tienda no se filtran por puntaje: ya pasaron por el dueño, que es
+      // un filtro más fino que "4 o más". Filtrarlas otra vez sería descartar
+      // algo que él eligió publicar a propósito.
+      prisma.publicReview.findMany({
+        where: { storeId: store.id, productId: null, comment: { not: null }, status: "APPROVED" },
+        orderBy: { createdAt: "desc" }, take: 12, select: campos,
+      }),
+      // El promedio se saca sobre TODAS las publicadas —de los dos tipos— y no
+      // solo sobre las que se muestran. Promediar únicamente las de 4★ y 5★
+      // daría un número inflado que la tienda estaría publicando como si fuera
+      // su reputación real. Las pendientes no cuentan: todavía no son públicas.
       prisma.publicReview.aggregate({
-        where: { storeId: store.id },
+        where: { storeId: store.id, status: "APPROVED" },
         _avg: { rating: true },
         _count: { _all: true },
       }),
     ]);
-    const reviews = rows.map(r => ({
+
+    // Una reseña de TIENDA no tiene producto. Va `null` explícito y no un objeto
+    // vacío: quien lo lea tiene que decidir qué mostrar, no descubrir a mitad de
+    // camino que el nombre es "".
+    const conProducto = (rows: typeof deProducto) => rows.map(r => ({
       ...r,
-      product: { id: r.product.id, name: r.product.name, image: firstImage(r.product.images) },
+      product: r.product
+        ? { id: r.product.id, name: r.product.name, image: firstImage(r.product.images) }
+        : null,
     }));
+
     return NextResponse.json({
-      reviews,
+      // `reviews` conserva el nombre viejo a propósito: los otros templates ya
+      // leen esa clave y no hay que tocarlos para que sigan andando.
+      reviews: conProducto(deProducto),
+      storeReviews: conProducto(deTienda),
       stats: {
         promedio: stats._avg.rating ?? 0,
         total: stats._count._all,
@@ -74,8 +92,11 @@ export async function GET(
     });
   }
 
+  // `status: APPROVED` por si acaso: hoy las de producto nacen aprobadas y no se
+  // pueden despublicar, pero si algún día eso cambia, esta lista no tiene que ser
+  // la que se entere último y muestre algo que no debía verse.
   const rows = await prisma.publicReview.findMany({
-    where: { storeId: store.id, productId },
+    where: { storeId: store.id, productId, status: "APPROVED" },
     orderBy: { createdAt: "desc" },
     take: 50,
     select: {
@@ -84,9 +105,14 @@ export async function GET(
       product: { select: { id: true, name: true, images: true } },
     },
   });
+  // Acá el producto siempre está —se filtró por `productId`— pero el tipo ya no
+  // lo garantiza, y encadenar un `!` sería mentirle al compilador justo donde nos
+  // acaba de avisar bien.
   const reviews = rows.map(r => ({
     ...r,
-    product: { id: r.product.id, name: r.product.name, image: firstImage(r.product.images) },
+    product: r.product
+      ? { id: r.product.id, name: r.product.name, image: firstImage(r.product.images) }
+      : null,
   }));
   return NextResponse.json({ reviews });
 }
@@ -110,7 +136,11 @@ export async function POST(
   // Honeypot: bot detectado, responder con 201 falso para no revelar que fue bloqueado
   if (website) return NextResponse.json({ review: null }, { status: 201 });
 
-  if (!productId || !rating || !reviewer?.trim()) {
+  // Sin producto, la reseña habla de la tienda entera: de la atención, del envío,
+  // de la experiencia. Es un tipo distinto, no un dato que falta.
+  const esDeTienda = !productId;
+
+  if (!rating || !reviewer?.trim()) {
     return NextResponse.json({ error: "Faltan campos requeridos" }, { status: 400 });
   }
   if (typeof rating !== "number" || rating < 1 || rating > 5) {
@@ -142,14 +172,36 @@ export async function POST(
       name: true,
       ownerId: true,
       owner: { select: { email: true, name: true } },
-      products: { where: { id: productId }, select: { id: true, name: true } },
     },
   });
-  if (!store || !store.products.length) {
-    return NextResponse.json({ error: "Producto no encontrado" }, { status: 404 });
+  if (!store) return NextResponse.json({ error: "Tienda no encontrada" }, { status: 404 });
+
+  // El producto se busca aparte, y solo si vino uno.
+  //
+  // Antes venía en el `select` de la tienda como `products: { where: { id:
+  // productId } }`. Con `productId` en undefined, Prisma IGNORA el filtro y
+  // devuelve TODOS los productos: la validación de "producto no encontrado"
+  // pasaba igual, y el mail al dueño salía nombrando un producto cualquiera de
+  // la lista. Una reseña de tienda habría llegado disfrazada de reseña de otra
+  // cosa.
+  let producto: { id: string; name: string } | null = null;
+  if (!esDeTienda) {
+    producto = await prisma.product.findFirst({
+      where: { id: productId, storeId: store.id },
+      select: { id: true, name: true },
+    });
+    if (!producto) {
+      return NextResponse.json({ error: "Producto no encontrado" }, { status: 404 });
+    }
   }
 
-  // Verificación automática: si viene email, buscar una Order DELIVERED de este comprador para este producto
+  // Verificación automática: si viene email, se busca un pedido ENTREGADO de esa
+  // persona en esta tienda.
+  //
+  // Para una reseña de PRODUCTO tiene que haber comprado ESE producto. Para una
+  // de TIENDA alcanza con haber comprado cualquier cosa acá: está opinando de la
+  // atención y del envío, no de un artículo, y exigirle un producto puntual
+  // dejaría sin sello a quien compró tres veces cosas distintas.
   let verified = false;
   let verifiedBy: string | null = null;
   if (buyerEmail && typeof buyerEmail === "string" && buyerEmail.includes("@")) {
@@ -159,7 +211,7 @@ export async function POST(
         storeId: store.id,
         status: "DELIVERED",
         buyer: { email: { equals: normalizedEmail, mode: "insensitive" } },
-        items: { some: { productId } },
+        ...(producto ? { items: { some: { productId: producto.id } } } : {}),
       },
       select: { id: true },
     });
@@ -172,28 +224,38 @@ export async function POST(
   const review = await prisma.publicReview.create({
     data: {
       storeId:    store.id,
-      productId,
+      productId:  producto?.id ?? null,
       rating:     Math.round(rating),
       comment:    comentario,
       reviewer:   reviewer.trim().slice(0, RESENADOR_MAX),
       verified,
       verifiedBy,
+      // Las de producto salen publicadas al toque: están atadas a algo concreto
+      // y le sirven a quien está por comprar ese producto. Las de tienda esperan
+      // al dueño, porque van derecho a la portada y no hace falta ni fingir que
+      // compraste para dejar una.
+      status:     esDeTienda ? "PENDING" : "APPROVED",
     },
     select: {
       id: true, rating: true, comment: true, reviewer: true,
-      verified: true, verifiedBy: true, createdAt: true,
+      verified: true, verifiedBy: true, createdAt: true, status: true,
     },
   });
 
-  const productName = store.products[0].name;
   const reviewerTrimmed = reviewer.trim().slice(0, RESENADOR_MAX);
+  const estrellas = Math.round(rating);
   void Promise.all([
     prisma.notification.create({
       data: {
         userId:  store.ownerId,
         type:    "NEW_REVIEW",
-        title:   "Nueva reseña recibida",
-        body:    `${reviewerTrimmed} dejó ${Math.round(rating)}★ en ${productName}`,
+        // El aviso dice de qué tipo es y, si espera aprobación, lo dice. Una
+        // reseña pendiente que se anuncia igual que una publicada se queda sin
+        // aprobar para siempre: nada empuja al dueño a entrar.
+        title:   esDeTienda ? "Nueva reseña de tu tienda" : "Nueva reseña recibida",
+        body:    esDeTienda
+          ? `${reviewerTrimmed} dejó ${estrellas}★ sobre tu tienda — esperando que la aprobes`
+          : `${reviewerTrimmed} dejó ${estrellas}★ en ${producto!.name}`,
         link:    "/dashboard/resenas",
       },
     }),
@@ -201,11 +263,12 @@ export async function POST(
       ownerEmail:   store.owner.email!,
       storeName:    store.name,
       storeSlug:    slug,
-      productId,
-      productName,
+      productId:    producto?.id ?? null,
+      productName:  producto?.name ?? null,
       reviewerName: reviewerTrimmed,
-      rating:       Math.round(rating),
+      rating:       estrellas,
       comment:      comentario,
+      pendiente:    esDeTienda,
     }),
   ]).catch(() => {});
 
@@ -232,25 +295,42 @@ export async function PATCH(
   const body = await req.json().catch(() => null);
   if (!body) return NextResponse.json({ error: "Datos inválidos" }, { status: 400 });
 
-  const { reviewId, verified } = body;
-  if (!reviewId || typeof verified !== "boolean") {
-    return NextResponse.json({ error: "reviewId y verified son requeridos" }, { status: 400 });
+  // Dos acciones distintas por el mismo verbo: marcar como verificada, o
+  // publicar/despublicar. Se piden por separado y nunca las dos juntas, así una
+  // no puede pisar la otra por accidente.
+  const { reviewId, verified, status } = body;
+  const cambiaVerificacion = typeof verified === "boolean";
+  const cambiaEstado = status === "APPROVED" || status === "PENDING";
+
+  if (!reviewId || (!cambiaVerificacion && !cambiaEstado)) {
+    return NextResponse.json({ error: "Hace falta reviewId y una acción: `verified` o `status`" }, { status: 400 });
   }
 
   const existing = await prisma.publicReview.findFirst({
     where: { id: reviewId, storeId: store.id },
-    select: { id: true },
+    select: { id: true, productId: true },
   });
   if (!existing) return NextResponse.json({ error: "Reseña no encontrada" }, { status: 404 });
+
+  // Una reseña de producto se publica sola y no tiene cola de aprobación. Dejar
+  // que se la ponga en PENDING sería darle al dueño una forma de esconder las
+  // malas de sus productos sin borrarlas — que es exactamente lo que el filtro
+  // de la portada evita tener que hacer.
+  if (cambiaEstado && existing.productId) {
+    return NextResponse.json(
+      { error: "Las reseñas de un producto no se aprueban ni se despublican: se publican solas." },
+      { status: 400 }
+    );
+  }
 
   const updated = await prisma.publicReview.update({
     where: { id: reviewId },
     data: {
-      verified,
-      verifiedBy: verified ? "owner" : null,
+      ...(cambiaVerificacion && { verified, verifiedBy: verified ? "owner" : null }),
+      ...(cambiaEstado && { status }),
     },
     select: {
-      id: true, verified: true, verifiedBy: true,
+      id: true, verified: true, verifiedBy: true, status: true,
     },
   });
 

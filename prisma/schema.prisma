@@ -766,13 +766,29 @@ model PublicReview {
   verifiedBy String?  // "auto" = cruzado con Order DB | "owner" = dueño lo marcó manualmente
   createdAt  DateTime @default(now())
 
+  // "APPROVED" | "PENDING"
+  //
+  // Las de PRODUCTO nacen aprobadas: están atadas a algo concreto y le sirven a
+  // quien está por comprar ese producto. Las de TIENDA nacen pendientes, porque
+  // no apuntan a nada y van derecho a la portada — un formulario público de
+  // "opiná sobre esta tienda" es lo más fácil de spamear que hay, ni siquiera
+  // hace falta fingir que compraste.
+  //
+  // El default es APPROVED para que las que ya existen —todas de producto y ya
+  // publicadas— queden como están sin tener que tocarlas.
+  status String @default("APPROVED")
+
   storeId String
   store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
 
-  productId String
-  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  // Opcional: una reseña de TIENDA no habla de ningún producto. Antes era
+  // obligatorio y por eso no se podían guardar.
+  productId String?
+  product   Product? @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@index([storeId, productId])
+  // Para la cola de pendientes del panel y para el listado por tipo.
+  @@index([storeId, status])
 }
 
 model Coupon {
