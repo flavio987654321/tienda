@@ -1569,44 +1569,72 @@ export default function ChicParis() {
       {/* ── ABOUT ── */}
       <section id="nosotros" data-reveal style={{ background: aboutBg, padding: isMobile ? "48px 16px" : "80px 40px", position: "relative" }}>
         <EditableSectionBg field="bgAbout" label="Fondo nosotros" />
-        <div style={{ maxWidth: 900, margin: "0 auto", display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: isMobile ? 32 : 60, alignItems: "center" }}>
-          <div style={{ position: "relative" }}>
-            {(() => {
-              const ov = storeConfig?.imageOverrides?.["nosotrosImage"];
-              return (
-                <div style={{ width: "100%", aspectRatio: "4/5", background: "#d8d0c8", overflow: "hidden", position: "relative" }}>
-                  {ov?.url
-                    ? <FadeImage src={ov.url} alt="" fill sizes="(max-width: 768px) 100vw, 450px" style={{ objectFit: "cover", objectPosition: `${ov.posX ?? 50}% ${ov.posY ?? 50}%` }} />
-                    : <div style={{ width: "100%", height: "100%", background: "linear-gradient(135deg, #e8e0d8, #c8bcb0)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                        <span style={{ fontSize: 11, color: "#a09080", letterSpacing: 2, textTransform: "uppercase", fontWeight: 600 }}>Subí tu foto</span>
-                      </div>
-                  }
-                  {ov?.overlayType && ov.overlayType !== "none" && (
-                    <div style={{ position:"absolute", inset:0, pointerEvents:"none", background: ov.overlayType === "light" ? `rgba(255,255,255,${ov.overlayOpacity ?? 0.45})` : `rgba(0,0,0,${ov.overlayOpacity ?? 0.45})` }} />
-                  )}
-                </div>
-              );
-            })()}
-            <EditableImageButton field="nosotrosImage" label="Imagen nosotros" />
-          </div>
-          <div>
-            <span style={{ fontSize: 10, letterSpacing: 5, fontWeight: 700, color: ACC, textTransform: "uppercase", display: "block", marginBottom: 16 }}>
-              <EditableZone field="aboutKicker" label="Kicker nosotros">Nuestra Historia</EditableZone>
-            </span>
-            <h2 style={{ fontSize: "clamp(26px,3vw,38px)", fontWeight: 900, color: aboutText, margin: "0 0 20px", lineHeight: 1.1, textTransform: "uppercase" }}>
-              <EditableZone field="aboutHeading" label="Título nosotros">Moda con propósito.</EditableZone>
-            </h2>
-            <p style={{ fontSize: 15, color: aboutText, opacity: 0.75, lineHeight: 1.8, margin: "0 0 16px" }}>
-              <EditableZone field="aboutParagraph1" label="Párrafo 1 nosotros">Creamos prendas pensando en la mujer y el hombre que eligen con consciencia. Cada pieza combina diseño contemporáneo con materiales seleccionados para durar.</EditableZone>
-            </p>
-            <p style={{ fontSize: 15, color: aboutText, opacity: 0.75, lineHeight: 1.8, margin: "0 0 32px" }}>
-              <EditableZone field="aboutParagraph2" label="Párrafo 2 nosotros">Trabajamos con talleres locales que respetan a su gente. Moda responsable, sin resignar estilo.</EditableZone>
-            </p>
-            <button onClick={() => scrollTo("contacto")} style={{ background: ACC, color: accentText, border: "none", padding: "13px 32px", fontSize: 11, fontWeight: 800, letterSpacing: 3, textTransform: "uppercase", cursor: "pointer" }}>
-              <EditableZone field="aboutCta" label="Botón nosotros">Contactanos</EditableZone>
-            </button>
-          </div>
-        </div>
+        {(() => {
+          const imagenEl = (
+            <div style={{ position: "relative" }}>
+              {(() => {
+                const ov = storeConfig?.imageOverrides?.["nosotrosImage"];
+                return (
+                  <div style={{ width: "100%", aspectRatio: "4/5", background: "#d8d0c8", overflow: "hidden", position: "relative" }}>
+                    {ov?.url
+                      ? <FadeImage src={ov.url} alt="" fill sizes="(max-width: 768px) 100vw, 450px" style={{ objectFit: "cover", objectPosition: `${ov.posX ?? 50}% ${ov.posY ?? 50}%` }} />
+                      : <div style={{ width: "100%", height: "100%", background: "linear-gradient(135deg, #e8e0d8, #c8bcb0)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          <span style={{ fontSize: 11, color: "#a09080", letterSpacing: 2, textTransform: "uppercase", fontWeight: 600 }}>Subí tu foto</span>
+                        </div>
+                    }
+                    {ov?.overlayType && ov.overlayType !== "none" && (
+                      <div style={{ position:"absolute", inset:0, pointerEvents:"none", background: ov.overlayType === "light" ? `rgba(255,255,255,${ov.overlayOpacity ?? 0.45})` : `rgba(0,0,0,${ov.overlayOpacity ?? 0.45})` }} />
+                    )}
+                  </div>
+                );
+              })()}
+              <EditableImageButton field="nosotrosImage" label="Imagen nosotros" />
+            </div>
+          );
+          const tituloEl = (
+            <>
+              <span style={{ fontSize: 10, letterSpacing: 5, fontWeight: 700, color: ACC, textTransform: "uppercase", display: "block", marginBottom: 16 }}>
+                <EditableZone field="aboutKicker" label="Kicker nosotros">Nuestra Historia</EditableZone>
+              </span>
+              <h2 style={{ fontSize: "clamp(26px,3vw,38px)", fontWeight: 900, color: aboutText, margin: "0 0 20px", lineHeight: 1.1, textTransform: "uppercase" }}>
+                <EditableZone field="aboutHeading" label="Título nosotros">Moda con propósito.</EditableZone>
+              </h2>
+            </>
+          );
+          const descEl = (
+            <>
+              <p style={{ fontSize: 15, color: aboutText, opacity: 0.75, lineHeight: 1.8, margin: "0 0 16px" }}>
+                <EditableZone field="aboutParagraph1" label="Párrafo 1 nosotros">Creamos prendas pensando en la mujer y el hombre que eligen con consciencia. Cada pieza combina diseño contemporáneo con materiales seleccionados para durar.</EditableZone>
+              </p>
+              <p style={{ fontSize: 15, color: aboutText, opacity: 0.75, lineHeight: 1.8, margin: "0 0 32px" }}>
+                <EditableZone field="aboutParagraph2" label="Párrafo 2 nosotros">Trabajamos con talleres locales que respetan a su gente. Moda responsable, sin resignar estilo.</EditableZone>
+              </p>
+              <button onClick={() => scrollTo("contacto")} style={{ background: ACC, color: accentText, border: "none", padding: "13px 32px", fontSize: 11, fontWeight: 800, letterSpacing: 3, textTransform: "uppercase", cursor: "pointer" }}>
+                <EditableZone field="aboutCta" label="Botón nosotros">Contactanos</EditableZone>
+              </button>
+            </>
+          );
+          // En celular el orden natural de lectura es TÍTULO → FOTO → DESCRIPCIÓN.
+          // Antes se apilaba en el orden del grid (foto primero, porque va en la
+          // columna izquierda del layout de escritorio), y quedaba foto → título →
+          // texto. En escritorio se mantiene el 2 columnas de siempre: foto a la
+          // izquierda, texto (título + descripción) a la derecha.
+          if (isMobile) {
+            return (
+              <div style={{ maxWidth: 900, margin: "0 auto", display: "flex", flexDirection: "column", gap: 24 }}>
+                <div>{tituloEl}</div>
+                {imagenEl}
+                <div>{descEl}</div>
+              </div>
+            );
+          }
+          return (
+            <div style={{ maxWidth: 900, margin: "0 auto", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 60, alignItems: "center" }}>
+              {imagenEl}
+              <div>{tituloEl}{descEl}</div>
+            </div>
+          );
+        })()}
       </section>
       </SectionBlock>
 
