@@ -247,9 +247,11 @@ export default function FashionNoir() {
       .catch(() => {});
   }, [storeConfig?.slug]);
 
-  // Cargar reseñas al abrir modal (D-04)
+  // Cargar reseñas al abrir modal (D-04): sincroniza el estado de reseñas con el
+  // modalProduct.id actual (fetch + reset), patrón estándar de "fetch on id change".
   useEffect(() => {
     const slug = storeConfig?.slug;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- limpia las reseñas del producto anterior al cerrar el modal; depende de una interacción, no se puede calcular durante el render
     if (!modalProduct || !slug) { setReviews([]); return; }
     setReviewsLoading(true); setReviewDone(false); setReviewsShown(5);
     setReviewForm(p => ({ ...p, rating: 5, comment: "" }));
@@ -1236,7 +1238,7 @@ export default function FashionNoir() {
                       {r.comment && <p style={{ fontFamily:"Georgia, serif", fontStyle:"italic", fontSize:14, color:T, lineHeight:1.8, margin:0, flex:1 }}>&ldquo;{r.comment}&rdquo;</p>}
                       <div style={{ display:"flex", alignItems:"center", gap:10 }}>
                         {r.product?.image && (
-                          <img src={r.product.image} alt={r.product?.name ?? ""} style={{ width:38, height:38, objectFit:"cover", borderRadius:4, border:"1px solid rgba(201,168,76,0.18)", flexShrink:0 }} />
+                          <FadeImage src={r.product.image} alt={r.product?.name ?? ""} width={38} height={38} style={{ objectFit:"cover", borderRadius:4, border:"1px solid rgba(201,168,76,0.18)", flexShrink:0 }} />
                         )}
                         <div>
                           <p style={{ fontSize:11, fontWeight:700, color:G, margin:"0 0 2px", letterSpacing:1, textTransform:"uppercase" }}>{r.reviewer}</p>
@@ -1846,7 +1848,7 @@ export default function FashionNoir() {
             {(() => {
               if (similarProducts.length === 0) return null;
               return (
-                <div style={{ gridColumn: isMobile ? undefined : "1 / -1", padding: isMobile ? "20px 20px 28px" : "0 36px 36px", borderTop:"1px solid rgba(240,235,227,0.08)", paddingTop:24 }}>
+                <div style={{ gridColumn: isMobile ? undefined : "1 / -1", paddingTop: 24, paddingLeft: isMobile ? 20 : 36, paddingRight: isMobile ? 20 : 36, paddingBottom: isMobile ? 28 : 36, borderTop:"1px solid rgba(240,235,227,0.08)" }}>
                   <p style={{ fontSize:10, letterSpacing:3, textTransform:"uppercase", opacity:0.5, margin:"0 0 16px" }}>Productos similares</p>
                   <div style={{ display:"grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(4,1fr)", gap:14 }}>
                     {similarProducts.map(p => (
@@ -1937,6 +1939,7 @@ export default function FashionNoir() {
       {lightboxSrc && (
         <div style={{ position:"fixed", inset:0, zIndex: isPreview ? 20001 : 700, background:"rgba(0,0,0,0.97)", display:"flex", alignItems:"center", justifyContent:"center" }}
           onClick={() => setLightboxSrc(null)}>
+          {/* eslint-disable-next-line @next/next/no-img-element -- el lightbox es la foto a pantalla completa con zoom de dos dedos: necesita el <img> nativo. next/image pide medidas fijas o un padre posicionado, y ninguna de las dos cosas conviven con maxWidth/maxHeight en viewport + touchAction pinch-zoom. */}
           <img src={lightboxSrc} alt="" style={{ maxWidth:"100vw", maxHeight:"100vh", objectFit:"contain", touchAction:"pinch-zoom" }} onClick={e => e.stopPropagation()} />
           <button onClick={() => setLightboxSrc(null)} aria-label="Cerrar" style={{ position:"absolute", top:16, right:16, background:"rgba(255,255,255,0.15)", border:"none", color:"#fff", width:44, height:44, borderRadius:"50%", fontSize:22, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>×</button>
         </div>

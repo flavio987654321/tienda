@@ -841,7 +841,7 @@ export default function BohoTerra() {
       <section id="coleccion" data-reveal style={{ padding:"80px 0", background:coleccionBg, position:"relative" }}>
         <EditableSectionBg field="bgColeccion" label="Fondo colección" />
         {/* encabezado */}
-        <div style={{ maxWidth:1280, margin:"0 auto", padding: isMobile ? "0 16px" : "0 40px", marginBottom:40, borderBottom:`1px solid rgba(44,34,24,0.1)`, paddingBottom:24 }}>
+        <div style={{ maxWidth:1280, margin:"0 auto", paddingLeft: isMobile ? 16 : 40, paddingRight: isMobile ? 16 : 40, paddingTop: 0, paddingBottom: 24, marginBottom:40, borderBottom:`1px solid rgba(44,34,24,0.1)` }}>
           <h2 style={{ fontFamily:"Georgia, serif", fontSize:"clamp(22px,2.5vw,32px)", fontWeight:400, fontStyle:"italic", margin:0, color:coleccionText }}>
             {activeGender==="mujer" ? "Mujer" : activeGender==="hombre" ? "Hombre" : activeCategory==="Todos" ? "Toda la colección" : activeCategory}
           </h2>
@@ -955,7 +955,7 @@ export default function BohoTerra() {
         {(allOfertas.length > 0 || isPreview) && (
           <section data-reveal style={{ padding:"80px 0", background:ofertasBg, position:"relative" }}>
             <EditableSectionBg field="bgOfertas" label="Fondo ofertas" />
-            <div style={{ maxWidth:1280, margin:"0 auto", padding: isMobile ? "0 16px" : "0 40px", marginBottom:40, borderBottom:`1px solid rgba(44,34,24,0.1)`, paddingBottom:24 }}>
+            <div style={{ maxWidth:1280, margin:"0 auto", paddingLeft: isMobile ? 16 : 40, paddingRight: isMobile ? 16 : 40, paddingTop: 0, paddingBottom: 24, marginBottom:40, borderBottom:`1px solid rgba(44,34,24,0.1)` }}>
               <p style={{ fontSize:10, letterSpacing:5, color:A, textTransform:"uppercase", margin:"0 0 8px", fontFamily:"Georgia, serif", fontStyle:"italic" }}><EditableZone field="ofertasKicker" label="Texto sobre Ofertas">Aprovechá</EditableZone></p>
               <h2 style={{ fontFamily:"Georgia, serif", fontSize:"clamp(22px,2.5vw,32px)", fontWeight:400, fontStyle:"italic", margin:0, color:ofertasText }}><EditableZone field="ofertasTitle" label="Título Ofertas">Ofertas</EditableZone></h2>
             </div>
@@ -1089,7 +1089,7 @@ export default function BohoTerra() {
                 <p style={{ fontFamily:"Georgia, serif", fontStyle:"italic", fontSize: isMobile ? 17 : 20, color:T, lineHeight:1.85, margin:"0 0 28px" }}>{r.comment}</p>
                 <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:6 }}>
                   {r.product?.image && (
-                    <img src={r.product.image} alt={r.product?.name ?? ""} style={{ width:44, height:44, objectFit:"cover", borderRadius:6, border:`1px solid rgba(44,34,24,0.12)` }} />
+                    <FadeImage src={r.product.image} alt={r.product?.name ?? ""} width={44} height={44} style={{ objectFit:"cover", borderRadius:6, border:`1px solid rgba(44,34,24,0.12)` }} />
                   )}
                   <p style={{ fontSize:12, fontWeight:600, color:T, margin:0, letterSpacing:2, textTransform:"uppercase" }}>{r.reviewer}</p>
                   {r.product?.name && <p style={{ fontSize:11, color:MID, margin:0 }}>{r.product.name}</p>}
@@ -1274,7 +1274,7 @@ export default function BohoTerra() {
             })}
           </div>
         </div>
-        <div style={{ borderTop:`1px solid rgba(44,34,24,0.07)`, padding: isMobile ? "16px" : "16px 40px", paddingLeft: hasWA ? (isMobile ? 90 : 110) : (isMobile ? 16 : 40), paddingRight: isMobile ? 90 : 110, maxWidth:1280, margin:"0 auto", display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:"8px 24px" }}>
+        <div style={{ borderTop:`1px solid rgba(44,34,24,0.07)`, paddingTop: 16, paddingBottom: 16, paddingLeft: hasWA ? (isMobile ? 90 : 110) : (isMobile ? 16 : 40), paddingRight: isMobile ? 90 : 110, maxWidth:1280, margin:"0 auto", display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:"8px 24px" }}>
           <div style={{ display:"flex", flexWrap:"wrap", gap:"0 16px" }}>
             {[
               { label: "Política de devoluciones", tipo: "devoluciones" },
@@ -1629,7 +1629,7 @@ export default function BohoTerra() {
             {(() => {
               if (similarProducts.length === 0) return null;
               return (
-                <div style={{ gridColumn: isMobile ? undefined : "1 / -1", padding: isMobile ? "20px 20px 28px" : "0 36px 36px", borderTop:`1px solid rgba(44,34,24,0.08)`, paddingTop:24 }}>
+                <div style={{ gridColumn: isMobile ? undefined : "1 / -1", paddingTop: 24, paddingLeft: isMobile ? 20 : 36, paddingRight: isMobile ? 20 : 36, paddingBottom: isMobile ? 28 : 36, borderTop:`1px solid rgba(44,34,24,0.08)` }}>
                   <p style={{ fontSize:10, letterSpacing:4, color:MID, textTransform:"uppercase", margin:"0 0 16px" }}>Productos similares</p>
                   <div style={{ display:"grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(4,1fr)", gap:14 }}>
                     {similarProducts.map(p => (
@@ -1721,6 +1721,7 @@ export default function BohoTerra() {
       {lightboxSrc && (
         <div style={{ position:"fixed", inset:0, zIndex: isPreview ? 20001 : 700, background:"rgba(0,0,0,0.97)", display:"flex", alignItems:"center", justifyContent:"center" }}
           onClick={() => setLightboxSrc(null)}>
+          {/* eslint-disable-next-line @next/next/no-img-element -- el lightbox es la foto a pantalla completa con zoom de dos dedos: necesita el <img> nativo. next/image pide medidas fijas o un padre posicionado, y ninguna de las dos cosas conviven con maxWidth/maxHeight en viewport + touchAction pinch-zoom. */}
           <img src={lightboxSrc} alt="" style={{ maxWidth:"100vw", maxHeight:"100vh", objectFit:"contain", touchAction:"pinch-zoom" }} onClick={e => e.stopPropagation()} />
           <button onClick={() => setLightboxSrc(null)} aria-label="Cerrar" style={{ position:"absolute", top:16, right:16, background:"rgba(255,255,255,0.15)", border:"none", color:"#fff", width:44, height:44, borderRadius:"50%", fontSize:22, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>×</button>
         </div>

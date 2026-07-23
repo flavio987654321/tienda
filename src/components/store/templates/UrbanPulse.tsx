@@ -286,9 +286,11 @@ export default function UrbanPulse() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [products]);
 
-  // Cargar reseñas al abrir modal (D-04)
+  // Cargar reseñas al abrir modal (D-04): sincroniza el estado de reseñas con el
+  // modalProduct.id actual (fetch + reset), patrón estándar de "fetch on id change".
   useEffect(() => {
     const slug = storeConfig?.slug;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- limpia las reseñas del producto anterior al cerrar el modal; depende de una interacción, no se puede calcular durante el render
     if (!modalProduct || !slug) { setReviews([]); return; }
     setReviewsLoading(true); setReviewDone(false); setReviewsShown(5);
     setReviewForm(p => ({ ...p, rating: 5, comment: "" }));
@@ -1797,6 +1799,7 @@ export default function UrbanPulse() {
       {lightboxSrc && (
         <div style={{ position:"fixed", inset:0, zIndex: isPreview ? 20001 : 700, background:"rgba(0,0,0,0.97)", display:"flex", alignItems:"center", justifyContent:"center" }}
           onClick={() => setLightboxSrc(null)}>
+          {/* eslint-disable-next-line @next/next/no-img-element -- el lightbox es la foto a pantalla completa con zoom de dos dedos: necesita el <img> nativo. next/image pide medidas fijas o un padre posicionado, y ninguna de las dos cosas conviven con maxWidth/maxHeight en viewport + touchAction pinch-zoom. */}
           <img src={lightboxSrc} alt="" style={{ maxWidth:"100vw", maxHeight:"100vh", objectFit:"contain", touchAction:"pinch-zoom" }} onClick={e => e.stopPropagation()} />
           <button onClick={() => setLightboxSrc(null)} aria-label="Cerrar" style={{ position:"absolute", top:16, right:16, background:"rgba(255,255,255,0.15)", border:"none", color:"#fff", width:44, height:44, borderRadius:"50%", fontSize:22, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>×</button>
         </div>
