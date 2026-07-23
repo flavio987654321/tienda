@@ -41,31 +41,49 @@ const EMPTY: Form = {
   tieneTienda: "", tiendaUrl: "", acepta: false,
 };
 
-// Fila de opciones de un toque. Se usa tres veces en el paso 4; cada una ocupa
-// poco alto para que el paso entre sin scroll en un celular.
+// Opciones de un toque. Se usa tres veces en el paso 4. Van en una grilla de dos
+// columnas de ancho parejo —no en `flex-wrap`, que dejaba pastillas de distinto
+// ancho apiladas en zigzag y con el borde derecho irregular— y cada una lleva un
+// círculo que se marca con un tilde al elegirla, para que se lea "elegí una".
+// Si la cantidad es impar, la última ocupa las dos columnas: así no queda una
+// celda vacía a la derecha.
 function Chips({ label, hint, options, value, onPick }: {
   label: string; hint?: string; options: Option[]; value: string; onPick: (id: string) => void;
 }) {
+  const impar = options.length % 2 === 1;
   return (
     <div className="mb-6 last:mb-0">
       <span className="text-sm font-semibold text-gray-700 block mb-1">{label}</span>
       {hint && <span className="text-xs text-gray-400 block mb-2.5">{hint}</span>}
-      <div className="flex flex-wrap gap-2">
-        {options.map((o) => (
-          <button
-            key={o.id}
-            type="button"
-            onClick={() => onPick(o.id)}
-            title={o.desc}
-            className={`px-3.5 py-2 rounded-xl border-2 text-sm font-medium transition-all ${
-              value === o.id
-                ? "border-orange-500 bg-orange-50 text-orange-900"
-                : "border-gray-200 text-gray-600 hover:border-gray-300"
-            }`}
-          >
-            {o.label}
-          </button>
-        ))}
+      <div className="grid grid-cols-2 gap-2">
+        {options.map((o, i) => {
+          const active = value === o.id;
+          const ultimaSola = impar && i === options.length - 1;
+          return (
+            <button
+              key={o.id}
+              type="button"
+              onClick={() => onPick(o.id)}
+              title={o.desc}
+              className={`flex items-center gap-2.5 text-left px-3.5 py-3 rounded-xl border-2 text-sm font-medium transition-all ${
+                ultimaSola ? "col-span-2" : ""
+              } ${
+                active
+                  ? "border-orange-500 bg-orange-50 text-orange-900"
+                  : "border-gray-200 text-gray-600 hover:border-gray-300"
+              }`}
+            >
+              <span
+                className={`flex-shrink-0 w-[18px] h-[18px] rounded-full border-2 flex items-center justify-center transition-colors ${
+                  active ? "border-orange-500 bg-orange-500" : "border-gray-300"
+                }`}
+              >
+                {active && <Check className="h-3 w-3 text-white" strokeWidth={3} />}
+              </span>
+              <span className="leading-tight">{o.label}</span>
+            </button>
+          );
+        })}
       </div>
     </div>
   );
@@ -167,7 +185,7 @@ export default function DisenoPropioPage() {
 
   if (sent) {
     return (
-      <div className="min-h-screen bg-white flex flex-col">
+      <div className="min-h-screen bg-white flex flex-col [color-scheme:light]">
         <SiteNav />
         <div className="flex-1 flex items-center justify-center px-6 py-24">
           <div className="text-center max-w-lg">
@@ -194,7 +212,7 @@ export default function DisenoPropioPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white flex flex-col">
+    <div className="min-h-screen bg-white flex flex-col [color-scheme:light]">
       <SiteNav />
 
       {/* Intro. Va completa a propósito: la mayoría llega desde un link de redes
@@ -348,7 +366,7 @@ export default function DisenoPropioPage() {
                       onChange={(e) => set("coloresPropios", e.target.value)}
                       maxLength={200}
                       placeholder="Ej: verde agua y dorado, o #2dd4bf"
-                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-orange-500 focus:outline-none text-sm"
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-orange-500 focus:outline-none text-sm bg-white text-gray-900 placeholder-gray-400"
                     />
                   </label>
                 </>
@@ -376,7 +394,7 @@ export default function DisenoPropioPage() {
                         onChange={(e) => set("nombreTienda", e.target.value)}
                         maxLength={80}
                         placeholder="El nombre de tu tienda"
-                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-orange-500 focus:outline-none text-sm"
+                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-orange-500 focus:outline-none text-sm bg-white text-gray-900 placeholder-gray-400"
                       />
                     </label>
                     <label className="block">
@@ -387,7 +405,7 @@ export default function DisenoPropioPage() {
                         onChange={(e) => set("queVende", e.target.value)}
                         maxLength={120}
                         placeholder="Ej: remeras de mujer"
-                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-orange-500 focus:outline-none text-sm"
+                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-orange-500 focus:outline-none text-sm bg-white text-gray-900 placeholder-gray-400"
                       />
                     </label>
                   </div>
@@ -430,7 +448,7 @@ export default function DisenoPropioPage() {
                       rows={3}
                       maxLength={2000}
                       placeholder="Pegá hasta 3 links: tiendas, cuentas de Instagram, lo que sea que te guste cómo se ve."
-                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-orange-500 focus:outline-none text-sm resize-none"
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-orange-500 focus:outline-none text-sm bg-white text-gray-900 placeholder-gray-400 resize-none"
                     />
                   </label>
                   <label className="block">
@@ -441,7 +459,7 @@ export default function DisenoPropioPage() {
                       rows={3}
                       maxLength={2000}
                       placeholder="Ej: nada de fondo negro, no me gustan las letras finitas, sin fotos de modelos."
-                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-orange-500 focus:outline-none text-sm resize-none"
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-orange-500 focus:outline-none text-sm bg-white text-gray-900 placeholder-gray-400 resize-none"
                     />
                   </label>
                   <p className="text-xs text-gray-400 leading-relaxed mt-5 bg-gray-50 rounded-xl p-4">
@@ -481,7 +499,7 @@ export default function DisenoPropioPage() {
                         maxLength={80}
                         autoComplete="name"
                         placeholder="Cómo te llamás"
-                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-orange-500 focus:outline-none text-sm"
+                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-orange-500 focus:outline-none text-sm bg-white text-gray-900 placeholder-gray-400"
                       />
                     </label>
                     <label className="block">
@@ -493,7 +511,7 @@ export default function DisenoPropioPage() {
                         maxLength={120}
                         autoComplete="email"
                         placeholder="tu@email.com"
-                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-orange-500 focus:outline-none text-sm"
+                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-orange-500 focus:outline-none text-sm bg-white text-gray-900 placeholder-gray-400"
                       />
                     </label>
                     <label className="block">
@@ -506,7 +524,7 @@ export default function DisenoPropioPage() {
                         maxLength={30}
                         autoComplete="tel"
                         placeholder="Ej: 11 2345 6789"
-                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-orange-500 focus:outline-none text-sm"
+                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-orange-500 focus:outline-none text-sm bg-white text-gray-900 placeholder-gray-400"
                       />
                       <span className="text-xs text-gray-400 mt-1.5 block">Para poder coordinar más rápido si hace falta.</span>
                     </label>
@@ -536,7 +554,7 @@ export default function DisenoPropioPage() {
                           onChange={(e) => set("tiendaUrl", e.target.value)}
                           maxLength={200}
                           placeholder="El nombre o el link de tu tienda"
-                          className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-orange-500 focus:outline-none text-sm"
+                          className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-orange-500 focus:outline-none text-sm bg-white text-gray-900 placeholder-gray-400"
                         />
                       </label>
                     )}
