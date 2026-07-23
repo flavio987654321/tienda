@@ -1007,14 +1007,18 @@ export default function ChicParis() {
       <div style={{ display:"flex", flexDirection:"column" }}>
       <SectionBlock id="cp-strip" label="Garantías" isPreview={isPreview} defaultOrder={CP_SECTION_IDS}>
       {/* ── STRIP ── */}
-      <section data-reveal style={{ background: stripBg, borderTop: `1px solid ${stripText === "#111" ? "rgba(0,0,0,0.07)" : "rgba(255,255,255,0.1)"}`, borderBottom: `1px solid ${stripText === "#111" ? "rgba(0,0,0,0.07)" : "rgba(255,255,255,0.1)"}`, padding: "20px 40px", position: "relative" }}>
+      <section data-reveal style={{ background: stripBg, borderTop: `1px solid ${stripText === "#111" ? "rgba(0,0,0,0.07)" : "rgba(255,255,255,0.1)"}`, borderBottom: `1px solid ${stripText === "#111" ? "rgba(0,0,0,0.07)" : "rgba(255,255,255,0.1)"}`, padding: isMobile ? "28px 16px" : "20px 40px", position: "relative" }}>
         <EditableSectionBg field="bgStrip" label="Fondo franja garantías" />
-        <div style={{ maxWidth: 1100, margin: "0 auto", display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 16 }}>
+        {/* En celular NO se apilan de a uno: van en grilla de 2 columnas, con el
+            ícono arriba y el texto centrado abajo, así cada beneficio tiene el
+            ancho completo de su celda y el texto entra bien. En escritorio siguen
+            en fila (ícono a la izquierda), repartidos con space-between. */}
+        <div style={{ maxWidth: 1100, margin: "0 auto", display: isMobile ? "grid" : "flex", gridTemplateColumns: isMobile ? "1fr 1fr" : undefined, justifyContent: isMobile ? undefined : "space-between", flexWrap: isMobile ? undefined : "wrap", gap: isMobile ? 24 : 16 }}>
           {STRIP_ITEMS.map(({ slot, titleField, titleDefault, descField, descDefault }) => {
             const iconIdx = (Math.abs(parseInt(textOverrides[`garantia${slot + 1}Icon`]?.text ?? "0") || 0)) % STRIP_ICONS[slot].length;
             const nextIdx = (iconIdx + 1) % STRIP_ICONS[slot].length;
             return (
-              <div key={titleField} style={{ display: "flex", alignItems: "center", gap: 14, flex: "1 1 200px" }}>
+              <div key={titleField} style={{ display: "flex", flexDirection: isMobile ? "column" : "row", alignItems: "center", textAlign: isMobile ? "center" : "left", gap: isMobile ? 8 : 14, flex: isMobile ? undefined : "1 1 200px" }}>
                 <div style={{ color: ACC, flexShrink: 0, position: "relative" }}>
                   {STRIP_ICONS[slot][iconIdx]}
                   {editMode && (
@@ -1620,11 +1624,15 @@ export default function ChicParis() {
           // texto. En escritorio se mantiene el 2 columnas de siempre: foto a la
           // izquierda, texto (título + descripción) a la derecha.
           if (isMobile) {
+            // En celular, además del orden, el título y la descripción (con su
+            // botón) van centrados: alineados a la izquierda quedaban descolgados
+            // debajo de la foto centrada. En escritorio se mantiene a la izquierda,
+            // que es el estilo editorial del bloque.
             return (
               <div style={{ maxWidth: 900, margin: "0 auto", display: "flex", flexDirection: "column", gap: 24 }}>
-                <div>{tituloEl}</div>
+                <div style={{ textAlign: "center" }}>{tituloEl}</div>
                 {imagenEl}
-                <div>{descEl}</div>
+                <div style={{ textAlign: "center" }}>{descEl}</div>
               </div>
             );
           }
