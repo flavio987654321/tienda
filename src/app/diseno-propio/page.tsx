@@ -59,8 +59,10 @@ function SelectField({ label, hint, options, value, onPick }: {
         <select
           value={value}
           onChange={(e) => onPick(e.target.value)}
-          className={`w-full appearance-none px-4 py-3 pr-10 rounded-xl border-2 text-sm font-medium bg-white focus:outline-none transition-colors ${
-            value ? "border-orange-500 text-gray-900" : "border-gray-200 text-gray-500"
+          className={`w-full appearance-none cursor-pointer px-4 py-3 pr-10 rounded-xl border-2 text-sm font-medium bg-white focus:outline-none transition-colors ${
+            value
+              ? "border-orange-500 text-gray-900 hover:border-orange-600"
+              : "border-gray-200 text-gray-500 hover:border-gray-300 hover:bg-gray-50"
           }`}
         >
           <option value="" disabled>Elegí una opción</option>
