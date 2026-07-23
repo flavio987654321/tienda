@@ -25,8 +25,13 @@ export function SiteFooter() {
   return (
     <footer className="bg-white border-t border-gray-200 px-6 py-12">
       <div className="max-w-7xl mx-auto">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-10 mb-10">
-          <div className="md:col-span-2">
+        {/* En celular "Plataforma" y "Afiliados" iban apiladas: dejaba el footer
+            largo y con la mitad derecha vacía. Con dos columnas, la marca ocupa
+            el ancho completo arriba (col-span-2) y las dos listas de links quedan
+            lado a lado abajo. En desktop siguen siendo las cuatro columnas de
+            siempre (grid de 4: marca 2 + las dos listas). */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-10 md:gap-10 mb-10">
+          <div className="col-span-2">
             <div className="flex items-center gap-2.5 mb-4">
               <AppLogo size={32} />
               <span className="text-lg font-bold text-gray-900">TiendaApps</span>
