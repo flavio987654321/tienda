@@ -24,15 +24,37 @@ html {
   overflow-x: hidden;
 }
 
+/* `overflow-wrap` se hereda, así que puesto en `body` lo agarra todo lo de
+   adentro: que una palabra sin espacios no rompa la caja que la contiene.
+   Por defecto el navegador NO corta una palabra larga: la deja salirse. Y el
+   texto de una tienda no lo escribimos nosotros — lo escriben los dueños y los
+   compradores. Basta con una URL pegada en una reseña, o un nombre de producto
+   largo con guiones, para que se salga de su tarjeta y se encime con la de al
+   lado; en un título rompe el ancho de la sección y aparece scroll horizontal en
+   toda la página.
+   Va acá y no en cada template porque el problema es de todos y de los que
+   vengan. `break-word` solo actúa cuando la palabra NO entra: el texto normal se
+   sigue cortando por los espacios, como siempre. */
 body {
   background: #ffffff;
   color: #171717;
   font-family: Arial, Helvetica, sans-serif;
+  overflow-wrap: break-word;
 }
 
 .dark body {
   background: #0f172a;
   color: #f1f5f9;
+}
+
+/* Entrada del panel de edición del editor de tiendas. Vive acá y no dentro del
+   componente porque lo usan los tres editores (texto, imagen y fondo) y la regla
+   tiene que existir aunque el que se abra primero sea cualquiera de ellos.
+   Deslizarse desde el borde cuenta de dónde salió el panel, en vez de aparecer
+   de golpe encima de la tienda. */
+@keyframes editorPanelIn {
+  from { transform: translateX(100%); opacity: 0.4; }
+  to   { transform: translateX(0);    opacity: 1;   }
 }
 
 @keyframes popIn {
