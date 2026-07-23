@@ -10,6 +10,7 @@ import { PROVINCIAS_ARGENTINA } from "@/lib/provincias";
 import { parseVariantAttrs } from "@/lib/variantAttrs";
 import { resolveVariantPrice } from "@/lib/variantPrice";
 import { priceCart, resolveBasePrice, parseEscalones, freeShippingProgress, type ActivePromotion } from "@/lib/pricing";
+import { registrarVista } from "@/lib/registrarVista";
 
 // Misma lógica de matching de variante por talle/color que usan los templates
 // para mostrar "Sin stock"/"Últimas unidades" — se centraliza acá (y se expone
@@ -426,19 +427,7 @@ export function useCartLogic({ products, promotions = [], storeId, affiliateId =
     setSelectedColor(p.colors[0] ?? "");
     setQty(isWholesale && p.cantMinMayorista ? p.cantMinMayorista : 1);
     setSearchOpen(false);
-    // Registrar vista real del comprador: una vez por producto por sesión.
-    // Se omite si es el dueño, si está en preview, o si no hay slug real.
-    if (!isOwner && slug && typeof sessionStorage !== "undefined") {
-      const key = `pview_${p.id}`;
-      if (!sessionStorage.getItem(key)) {
-        sessionStorage.setItem(key, "1");
-        fetch(`/api/public/${slug}/product-view`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ productId: p.id }),
-        }).catch(() => {});
-      }
-    }
+    registrarVista(p.id, slug, isOwner);
   };
 
   // Deep link a un producto puntual (ej: ?producto=ID desde favoritos en otro panel)

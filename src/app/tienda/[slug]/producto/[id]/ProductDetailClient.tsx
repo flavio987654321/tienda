@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, ShoppingBag, MessageCircle, Check } from "lucide-react";
 import { useCartLogic } from "@/hooks/useCartLogic";
+import { registrarVista } from "@/lib/registrarVista";
 import { getDemoPool, isDemoProductId, parsePromotions, type StorefrontProduct, type StorefrontVariant, type PlaceOrderParams } from "@/hooks/useStorefront";
 import type { ActivePromotion } from "@/lib/pricing";
 import { resolveProductPromo, describePromo } from "@/lib/promoDisplay";
@@ -162,6 +163,18 @@ export default function ProductDetailClient({ slug, productId }: { slug: string;
   }, [slug, productId, isPreview]);
 
   const product = useMemo(() => products.find(p => p.id === productId) ?? null, [products, productId]);
+
+  // Contar la vista también acá. Antes solo se contaba al abrir el modal de vista
+  // rápida desde la home o el listado, así que quien llegaba directo a esta página
+  // —desde Google, desde un link compartido, desde una publicación— no sumaba nada.
+  // Era la mitad de los caminos, y justamente la que trae gente de afuera.
+  //
+  // Se espera a que `isOwner` esté resuelto (viene del fetch de arriba): contar antes
+  // sería contarle las visitas al dueño mientras revisa su propia tienda.
+  useEffect(() => {
+    if (loading || !product) return;
+    registrarVista(product.id, slug, isOwner, isPreview);
+  }, [loading, product, slug, isOwner, isPreview]);
   const related = useMemo(
     () => products.filter(p => p.id !== productId && p.category === product?.category).slice(0, 6),
     [products, productId, product?.category]

@@ -9,6 +9,7 @@ import { useStorefront, type StorefrontProduct } from "@/hooks/useStorefront";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { useCartLogic } from "@/hooks/useCartLogic";
 import { useTouchSwipe } from "@/hooks/useTouchSwipe";
+import { masVistos, MIN_MAS_VISTOS } from "@/lib/masVistos";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
 import VerifiedIconButton from "@/components/store/VerifiedIconButton";
 import { CartDrawer, type CartTheme } from "@/components/store/templates/shared/CartDrawer";
@@ -1027,11 +1028,10 @@ export default function ChicParis() {
       {/* ── LO MÁS VISTO ── */}
       <SectionBlock id="cp-masvisto" label="Lo más visto" isPreview={isPreview} defaultOrder={CP_SECTION_IDS}>
         {(() => {
-          const featured = products.filter(p => p.featured);
-          const base = featured.length > 0 ? featured : products;
-          const pool = [...base].sort((a, b) => (b.viewCount ?? 0) - (a.viewCount ?? 0));
-          const displayList = pool.slice(0, 8);
-          const hasMore = pool.length > 8;
+          // Vistas reales de compradores. En el editor se rellena para poder
+          // configurar la sección; en la tienda real, si no hay datos no se muestra.
+          const { lista: displayList, conVistas, esRelleno } = masVistos(products, { relleno: isPreview });
+          const hasMore = conVistas > displayList.length;
           if (displayList.length === 0) return null;
           return (
             <section data-reveal style={{ position: "relative", background: masVistoBg, padding: isMobile ? "48px 16px" : "72px 40px", borderTop: "1px solid #f0f0f0" }}>
@@ -1041,12 +1041,22 @@ export default function ChicParis() {
                   <p style={{ fontSize: 10, letterSpacing: 4, color: ACC, textTransform: "uppercase", fontWeight: 700, margin: "0 0 6px" }}><EditableZone field="masVistoKicker" label="Texto sobre Lo más visto">Tendencia</EditableZone></p>
                   <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "clamp(24px,3vw,38px)", fontWeight: 300, fontStyle: "italic", margin: 0, color: masVistoText }}><EditableZone field="masVistoTitle" label="Título Lo más visto">Lo más visto</EditableZone></h2>
                 </div>
+                {/* Solo el dueño, y solo en el editor: la sección se está viendo con
+                    relleno porque la tienda todavía no juntó vistas. */}
+                {esRelleno && (
+                  <p style={{ margin: "-24px 0 24px", fontSize: 12, color: "#b45309", background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 6, padding: "8px 12px" }}>
+                    Todavía no hay suficientes vistas de compradores, así que te mostramos productos de ejemplo
+                    para que puedas darle formato. <b>En tu tienda esta sección aparece sola</b> cuando al menos
+                    {" "}{MIN_MAS_VISTOS} productos hayan sido vistos.
+                  </p>
+                )}
                 <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(4,1fr)", gap: 16 }}>
-                  {displayList.map((p, idx) => (
+                  {displayList.map((p) => (
                     <div key={p.id} onClick={() => openModal(p)} className="cp-zoom" style={{ cursor: "pointer" }}>
+                      {/* Sin el "#1, #2…" de antes: numerar sugiere un ranking firme
+                          donde la diferencia real suele ser de una sola visita. */}
                       <div style={{ position: "relative", width: "100%", aspectRatio: "3/4", background: "#f5f5f5", overflow: "hidden", borderRadius: 4 }}>
                         {p.images[0] && <FadeImage src={p.images[0]} alt={p.name} fill sizes="(max-width: 768px) 50vw, 25vw" className="cp-zoom-img" style={{ objectFit: "cover" }} />}
-                        <span style={{ position: "absolute", top: 10, left: 10, background: "rgba(0,0,0,0.65)", color: "#fff", fontSize: 10, fontWeight: 700, padding: "4px 10px" }}>#{idx + 1}</span>
                       </div>
                       <div style={{ padding: "10px 0 0" }}>
                         <p style={{ margin: "0 0 4px", fontSize: 13, fontWeight: 600, color: masVistoText }}>{p.name}</p>
