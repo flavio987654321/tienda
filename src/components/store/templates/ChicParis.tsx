@@ -162,6 +162,7 @@ export default function ChicParis() {
   const [tiendaListo,    setTiendaListo]    = useState(false);
   const [tiendaHoneypot, setTiendaHoneypot] = useState("");
   const [tiendaConfirmando, setTiendaConfirmando] = useState(false);
+  const [tiendaError,    setTiendaError]    = useState<string | null>(null);
   // Un captcha propio: el token es de un solo uso, así que compartirlo con el
   // formulario del producto haría que el segundo envío viaje con uno ya gastado.
   const tiendaCaptcha = useTurnstile("review");
@@ -172,6 +173,7 @@ export default function ChicParis() {
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
   const [reviewDone,     setReviewDone]     = useState(false);
   const [reviewHoneypot, setReviewHoneypot] = useState("");
+  const [reviewError,    setReviewError]    = useState<string | null>(null);
   const [showReport,     setShowReport]     = useState(false);
   const [lightboxSrc,    setLightboxSrc]    = useState<string|null>(null);
   useEffect(() => {
@@ -502,9 +504,19 @@ export default function ChicParis() {
         const data = await res.json();
         setReviews(p => [data.review, ...p]);
         setReviewForm({ reviewer: "", rating: 5, comment: "", email: "" });
+        setReviewError(null);
         setReviewDone(true); setTimeout(() => setReviewDone(false), 4000);
+      } else {
+        // CP-12: antes esto era silencio. Se apagaba el "Publicando...", el botón
+        // volvía a habilitarse, y el comprador no sabía si se había publicado o
+        // no. El servidor manda el motivo —captcha, nombre corto, demasiadas
+        // reseñas seguidas— y se muestra tal cual.
+        const d = await res.json().catch(() => null);
+        setReviewError(d?.error || "No se pudo publicar tu reseña. Probá de nuevo en un momento.");
       }
-    } catch {} finally { enviandoResena.current = false; reviewCaptcha.reset(); setReviewSubmitting(false); }
+    } catch {
+      setReviewError("No se pudo conectar. Revisá tu internet y probá de nuevo.");
+    } finally { enviandoResena.current = false; reviewCaptcha.reset(); setReviewSubmitting(false); }
   }
 
   const enviandoTienda = useRef(false);
@@ -545,10 +557,20 @@ export default function ChicParis() {
         // recargar habría desaparecido sin ninguna explicación.
         setTiendaForm({ reviewer: "", rating: 5, comment: "", email: "" });
         setTiendaConfirmando(false);
+        setTiendaError(null);
         setTiendaListo(true);
         setTimeout(() => setTiendaListo(false), 8000);
+      } else {
+        // Este formulario nació con el mismo silencio que CP-12 documentaba dos
+        // renglones más abajo: se copió el patrón roto sin mirarlo.
+        const d = await res.json().catch(() => null);
+        setTiendaError(d?.error || "No se pudo enviar tu reseña. Probá de nuevo en un momento.");
+        setTiendaConfirmando(false);
       }
-    } catch {} finally { enviandoTienda.current = false; tiendaCaptcha.reset(); setTiendaEnviando(false); }
+    } catch {
+      setTiendaError("No se pudo conectar. Revisá tu internet y probá de nuevo.");
+      setTiendaConfirmando(false);
+    } finally { enviandoTienda.current = false; tiendaCaptcha.reset(); setTiendaEnviando(false); }
   }
 
   const subcategoriesFor = useMemo(() => {
@@ -612,14 +634,21 @@ export default function ChicParis() {
           height: PROMO_BAR_H, background: "#111",
           display: "flex", alignItems: "center", justifyContent: "center",
         }}>
+          {/* CP-3. El índice no se reiniciaba al cambiar la cantidad de mensajes:
+              si estabas en el 3ro y el dueño dejaba 2, `messages[2]` quedaba en
+              undefined y la franja se veía negra y vacía arriba de toda la tienda.
+              Y el intervalo que la rota corta antes cuando queda un solo mensaje,
+              así que ni siquiera salía sola de ese estado.
+              Se acota al leer en vez de con un efecto: un efecto necesitaría un
+              render extra, y en ese render la franja ya se dibujó vacía. */}
           <span style={{ fontSize: 11, fontWeight: 600, color: "#fff", letterSpacing: 1 }}>
-            {announcementMessages[announcementIdx]}
+            {announcementMessages[announcementIdx % announcementMessages.length]}
           </span>
           {announcementMessages.length > 1 && (
             <div style={{ position: "absolute", bottom: 4, left: "50%", transform: "translateX(-50%)", display: "flex", gap: 4 }}>
               {announcementMessages.map((_, i) => (
                 <button key={i} onClick={() => setAnnouncementIdx(i)}
-                  style={{ width: i === announcementIdx ? 14 : 5, height: 3, border: "none", borderRadius: 2, background: i === announcementIdx ? "#fff" : "rgba(255,255,255,0.3)", cursor: "pointer", padding: 0, transition: "all 0.3s" }} />
+                  style={{ width: i === announcementIdx % announcementMessages.length ? 14 : 5, height: 3, border: "none", borderRadius: 2, background: i === announcementIdx % announcementMessages.length ? "#fff" : "rgba(255,255,255,0.3)", cursor: "pointer", padding: 0, transition: "all 0.3s" }} />
               ))}
             </div>
           )}
@@ -838,9 +867,14 @@ export default function ChicParis() {
       )}
 
       {/* ── HERO CAROUSEL ── */}
+      {/* CP-4. El hero mide la pantalla entera, así que "pausar al pasar el mouse"
+          sobre TODA la sección significaba pausar siempre: apenas alguien mueve el
+          mouse ya está encima. En la práctica la mayoría de los visitantes de
+          escritorio veía el slide 1 y nunca los otros dos.
+          La pausa sigue existiendo, pero solo donde tiene sentido: sobre los
+          controles —las flechas y los puntitos—, que es cuando la persona está
+          eligiendo qué mirar y el avance automático le pelea el clic. */}
       <section id="hero" style={{ position: "relative", height: isPreview ? `calc(100vh - ${68 + (showAnnouncement ? PROMO_BAR_H : 0)}px)` : "100vh", background: "#111" }}
-        onMouseEnter={() => setHeroPaused(true)}
-        onMouseLeave={() => setHeroPaused(false)}
         {...heroSwipe}>
 
         {Array.from({ length: BANNER_COUNT }, (_, i) => {
@@ -902,8 +936,12 @@ export default function ChicParis() {
           );
         })}
 
-        {/* Dots */}
-        <div style={{ position: "absolute", bottom: 32, left: "50%", transform: "translateX(-50%)", display: "flex", gap: 10, zIndex: 10 }}>
+        {/* Dots — acá sí se pausa: si alguien está por elegir un slide, que el
+            avance automático no se lo cambie abajo del dedo. */}
+        <div
+          onMouseEnter={() => setHeroPaused(true)}
+          onMouseLeave={() => setHeroPaused(false)}
+          style={{ position: "absolute", bottom: 32, left: "50%", transform: "translateX(-50%)", display: "flex", gap: 10, zIndex: 10 }}>
           {Array.from({ length: BANNER_COUNT }, (_, i) => (
             <button key={i} onClick={() => goToSlide(i)} style={{
               width: heroSlide === i ? 28 : 8, height: 8, borderRadius: 4, border: "none", padding: 0,
@@ -917,8 +955,8 @@ export default function ChicParis() {
         {[[-1, "left", "14px"], [1, "right", "14px"]].map(([dir, side, offset]) => (
           <button key={String(side)} onClick={() => goToSlide((heroSlide + Number(dir) + BANNER_COUNT) % BANNER_COUNT)}
             style={{ position: "absolute", top: "50%", [String(side)]: String(offset), transform: "translateY(-50%)", background: "rgba(255,255,255,0.15)", border: "none", color: "#fff", width: 44, height: 44, borderRadius: "50%", cursor: "pointer", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(4px)", zIndex: 10, transition: "background 0.2s" }}
-            onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,0.3)")}
-            onMouseLeave={e => (e.currentTarget.style.background = "rgba(255,255,255,0.15)")}>
+            onMouseEnter={e => { setHeroPaused(true); e.currentTarget.style.background = "rgba(255,255,255,0.3)"; }}
+            onMouseLeave={e => { setHeroPaused(false); e.currentTarget.style.background = "rgba(255,255,255,0.15)"; }}>
             {Number(dir) === -1 ? "‹" : "›"}
           </button>
         ))}
@@ -1239,13 +1277,29 @@ export default function ChicParis() {
           // arrancar nunca. Lo que sí cambia es el título — un "Lo que dicen
           // nuestras clientas" con nada abajo queda peor que no tenerlo.
 
+          // CP-11. Tenía dos problemas juntos: no preguntaba nada —un clic al lado
+          // y la reseña se iba, sin deshacer— y sacaba la tarjeta de la pantalla
+          // ANTES de saber si el servidor la había borrado. Con el fetch fallando,
+          // el dueño la veía desaparecer, se quedaba tranquilo, y al día siguiente
+          // seguía publicada.
           async function deleteHomeReview(reviewId: string) {
             if (!storeConfig?.slug) return;
-            await fetch(`/api/public/${storeConfig.slug}/reviews`, {
-              method:"DELETE", headers:{"Content-Type":"application/json"},
-              body: JSON.stringify({ reviewId }),
-            });
-            setHomeReviews(prev => prev.filter(r => r.id !== reviewId));
+            if (!confirm("¿Eliminar esta reseña? No se puede deshacer.")) return;
+            try {
+              const res = await fetch(`/api/public/${storeConfig.slug}/reviews`, {
+                method:"DELETE", headers:{"Content-Type":"application/json"},
+                body: JSON.stringify({ reviewId }),
+              });
+              if (!res.ok) {
+                alert("No se pudo eliminar la reseña. Sigue publicada — probá de nuevo.");
+                return;
+              }
+              // Recién acá, con la confirmación del servidor en la mano.
+              setHomeReviews(prev => prev.filter(r => r.id !== reviewId));
+              setStoreReviews(prev => prev.filter(r => r.id !== reviewId));
+            } catch {
+              alert("No se pudo conectar. La reseña sigue publicada.");
+            }
           }
           return (
             <section data-reveal style={{ position:"relative", background: sc["bgPruebaSocial"] ?? "#fff", padding: isMobile ? "56px 0" : "72px 0", borderTop: "1px solid #f0f0f0" }}>
@@ -1446,6 +1500,11 @@ export default function ChicParis() {
                         <p style={{ margin: 0, fontSize: 10, letterSpacing: 2, textTransform: "uppercase", fontWeight: 700, color: "#111" }}>
                           Contanos cómo te fue
                         </p>
+                        {tiendaError && (
+                          <p style={{ margin: 0, fontSize: 11.5, color: "#b91c1c", background: "#fef2f2", border: "1px solid #fecaca", padding: "8px 11px", lineHeight: 1.5 }}>
+                            ⚠ {tiendaError}
+                          </p>
+                        )}
 
                         {/* Trampa para bots: invisible para una persona, irresistible
                             para un robot que completa todo lo que encuentra. */}
@@ -2078,6 +2137,13 @@ export default function ChicParis() {
                 ) : (
                   <div style={{ position: "relative" }}>
                     {isPreview && <div style={{ position: "absolute", inset: 0, zIndex: 10, cursor: "default" }} onClick={e => e.stopPropagation()} />}
+                    {/* CP-12: el motivo del rechazo, arriba del formulario y con
+                        el texto que manda el servidor. Antes no se decía nada. */}
+                    {reviewError && (
+                      <p style={{ margin: "0 0 10px", fontSize: 11.5, color: "#b91c1c", background: "#fef2f2", border: "1px solid #fecaca", padding: "8px 11px", lineHeight: 1.5 }}>
+                        ⚠ {reviewError}
+                      </p>
+                    )}
                     <form onSubmit={isPreview ? e => e.preventDefault() : submitReview} style={{ display: "flex", flexDirection: "column", gap: 10, opacity: isPreview ? 0.55 : 1 }}>
                       <input value={reviewHoneypot} onChange={e => setReviewHoneypot(e.target.value)} name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" style={{ opacity:0, height:0, position:"absolute", pointerEvents:"none" }} />
                       <input value={reviewForm.reviewer} onChange={e => !isPreview && setReviewForm(p => ({ ...p, reviewer: e.target.value }))}
