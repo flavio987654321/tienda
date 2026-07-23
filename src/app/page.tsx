@@ -212,6 +212,21 @@ function TestimonioModal({ onClose }: { onClose: () => void }) {
 
 const ROTATING_WORDS = ["vender", "crecer", "todo", "despegar"];
 
+// Preguntas de ejemplo de Sasha, para la "nube flotante": aparecen y desaparecen
+// flotando en distintos puntos del bloque. Cada una tiene su posición [top%, left%].
+// Hay dos disposiciones porque en celular no hay ancho para dispersarlas sin que se
+// pisen: WIDE se esparce, NARROW va más centrada y en ritmo vertical.
+const SASHA_QUESTIONS = [
+  "¿Cuánto vendí esta semana?",
+  "Armame un cupón para el Hot Sale",
+  "¿Qué productos se venden más?",
+  "Tengo un pedido sin confirmar",
+  "¿Cómo conecto Mercado Pago?",
+  "Ideas para el Día del Padre",
+];
+const SASHA_POS_WIDE: [number, number][]   = [[14, 24], [22, 66], [45, 37], [52, 71], [74, 29], [82, 60]];
+const SASHA_POS_NARROW: [number, number][] = [[6, 48], [23, 45], [40, 55], [57, 44], [74, 55], [91, 49]];
+
 const FEATURES = [
   {
     icon: Store, tab: "Tu tienda", color: "#ea580c",
@@ -421,6 +436,7 @@ export default function Home() {
   const [templatePage, setTemplatePage] = useState(0);
   const [templateNavDir, setTemplateNavDir] = useState(1);
   const [thumbW, setThumbW] = useState(320);
+  const [cloudNarrow, setCloudNarrow] = useState(false);
   const [rotatingWordIdx, setRotatingWordIdx] = useState(0);
   const [featureSlide, setFeatureSlide] = useState<[number, number]>([0, 1]);
   const [templatesInView, setTemplatesInView] = useState(false);
@@ -510,6 +526,7 @@ export default function Home() {
       // —sin la barra— y en un celular de verdad da lo mismo (ahí la barra no
       // ocupa espacio).
       const w = document.documentElement.clientWidth;
+      setCloudNarrow(w < 640);
       if (w < 640) {
         // Dos por fila en celular. Antes era 160px fijo, pero con el gap (12px)
         // dos tarjetas no entraban y caían a una sola, dejando la galería
@@ -1437,26 +1454,32 @@ export default function Home() {
               No necesitás saber de tecnología. Le preguntás como si le hablaras a una persona, y te responde como una persona.
             </motion.p>
 
-            {/* Chips de ejemplo */}
+            {/* Nube flotante de preguntas de ejemplo. En vez de una lista quieta,
+                las preguntas aparecen y desaparecen flotando en distintos puntos
+                del bloque. Cada una está en una posición absoluta fija (para que no
+                se pisen) y anima opacidad + una deriva suave en Y, con el ciclo
+                escalonado (delay i*0.75) para que en todo momento haya ~3-4
+                legibles mientras las otras entran/salen. Las posiciones cambian
+                según el ancho: dispersas en desktop, más centradas en celular. */}
             <motion.div variants={fadeUp} className="mb-8">
               <p style={{ color: "#6b7280" }} className="text-xs font-semibold uppercase tracking-wider mb-3">Por ejemplo, le podés preguntar:</p>
-              <div className="flex flex-wrap gap-2">
-                {[
-                  "¿Cuánto vendí esta semana?",
-                  "Armame un cupón para el Hot Sale",
-                  "¿Qué productos se venden más?",
-                  "Tengo un pedido sin confirmar",
-                  "¿Cómo conecto Mercado Pago?",
-                  "Ideas para el Día del Padre",
-                ].map((q) => (
-                  <span
-                    key={q}
-                    className="inline-flex items-center gap-1.5 bg-white border border-gray-200 text-gray-700 text-xs font-medium px-3 py-1.5 rounded-full shadow-sm"
-                  >
-                    <MessageCircle className="h-3 w-3 text-orange-400 flex-shrink-0" />
-                    {q}
-                  </span>
-                ))}
+              <div className="relative w-full h-[260px] sm:h-[220px]">
+                {SASHA_QUESTIONS.map((q, i) => {
+                  const [top, left] = (cloudNarrow ? SASHA_POS_NARROW : SASHA_POS_WIDE)[i];
+                  return (
+                    <div key={q} className="absolute -translate-x-1/2 -translate-y-1/2" style={{ top: `${top}%`, left: `${left}%` }}>
+                      <motion.span
+                        className="inline-flex items-center gap-1.5 bg-white border border-gray-200 text-gray-700 text-[11px] sm:text-xs font-medium px-3 py-1.5 rounded-full shadow-sm whitespace-nowrap"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: [0, 1, 1, 0], y: [7, 0, -5, -9], scale: [0.92, 1, 1, 0.95] }}
+                        transition={{ duration: 5, delay: i * 0.75, repeat: Infinity, repeatDelay: 1.2, ease: "easeInOut", times: [0, 0.22, 0.72, 1] }}
+                      >
+                        <MessageCircle className="h-3 w-3 text-orange-400 flex-shrink-0" />
+                        {q}
+                      </motion.span>
+                    </div>
+                  );
+                })}
               </div>
             </motion.div>
 
