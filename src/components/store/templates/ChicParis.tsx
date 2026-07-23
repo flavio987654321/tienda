@@ -136,6 +136,12 @@ const STRIP_ITEMS = [
 // Cuántos productos muestra la home de entrada, y cuántos suma cada "Ver más".
 const PASO_PRODUCTOS = 8;
 
+// Color de las estrellas llenas (rating). Dorado fijo, NO el acento: las
+// estrellas son doradas por convención en cualquier tienda, y atarlas al acento
+// las volvía casi invisibles cuando el acento es claro. Es el mismo dorado que
+// usa el badge de "destacado".
+const STAR_ON = "#f59e0b";
+
 export default function ChicParis() {
   const [scrolled,        setScrolled]        = useState(false);
   const [activeGender,    setActiveGender]    = useState<string | null>(null);
@@ -1366,7 +1372,7 @@ export default function ChicParis() {
                     <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "0 0 8px", flexWrap: "wrap" }}>
                       <span style={{ display: "flex", gap: 2 }}>
                         {[1, 2, 3, 4, 5].map(s => (
-                          <span key={s} style={{ fontSize: 13, lineHeight: 1, color: s <= Math.round(promedio) ? ACC : "#e8e8e8" }}>★</span>
+                          <span key={s} style={{ fontSize: 13, lineHeight: 1, color: s <= Math.round(promedio) ? STAR_ON : "#e8e8e8" }}>★</span>
                         ))}
                       </span>
                       <span style={{ fontSize: 10, letterSpacing: 2, color: "#757575", textTransform: "uppercase", fontWeight: 700 }}>
@@ -1477,7 +1483,7 @@ export default function ChicParis() {
                         title="Eliminar reseña">×</button>
                     )}
                     <div style={{ display: "flex", gap: 2 }}>
-                      {[1,2,3,4,5].map(s => <span key={s} style={{ color: s <= r.rating ? ACC : "#e8e8e8", fontSize: 13 }}>★</span>)}
+                      {[1,2,3,4,5].map(s => <span key={s} style={{ color: s <= r.rating ? STAR_ON : "#e8e8e8", fontSize: 13 }}>★</span>)}
                     </div>
                     {r.comment && (
                       <ResenaComentario
@@ -2052,14 +2058,14 @@ export default function ChicParis() {
                           <div style={{ textAlign:"center", minWidth:56 }}>
                             <p style={{ fontSize:34, fontWeight:800, color:"#111", margin:0, lineHeight:1 }}>{avg.toFixed(1)}</p>
                             <div style={{ display:"flex", gap:2, justifyContent:"center", margin:"6px 0 4px" }}>
-                              {[1,2,3,4,5].map(s => <span key={s} style={{ fontSize:11, color: s <= Math.round(avg) ? ACC : "#e5e7eb" }}>★</span>)}
+                              {[1,2,3,4,5].map(s => <span key={s} style={{ fontSize:11, color: s <= Math.round(avg) ? STAR_ON : "#e5e7eb" }}>★</span>)}
                             </div>
                             <p style={{ fontSize:9, color:"#bbb", margin:0, fontWeight:600, letterSpacing:0.5 }}>{reviews.length} reseña{reviews.length !== 1 ? "s" : ""}</p>
                           </div>
                           <div style={{ flex:1, display:"flex", flexDirection:"column", gap:5 }}>
                             {dist.map(d => (
                               <div key={d.stars} style={{ display:"flex", alignItems:"center", gap:8 }}>
-                                <span style={{ fontSize:9, color:ACC, minWidth:14, textAlign:"right", fontWeight:700 }}>{d.stars}★</span>
+                                <span style={{ fontSize:9, color:STAR_ON, minWidth:14, textAlign:"right", fontWeight:700 }}>{d.stars}★</span>
                                 <div style={{ flex:1, height:4, background:"#f0f0f0", borderRadius:2, overflow:"hidden" }}>
                                   <div style={{ height:"100%", width:`${reviews.length ? (d.count / reviews.length) * 100 : 0}%`, background:ACC, borderRadius:2 }} />
                                 </div>
@@ -2087,7 +2093,7 @@ export default function ChicParis() {
                               <span style={{ fontSize:10, color:"#bbb" }}>{new Date(r.createdAt).toLocaleDateString("es-AR", { day:"numeric", month:"short", year:"numeric" })}</span>
                             </div>
                             <div style={{ display:"flex", gap:1, marginBottom: r.comment ? 8 : 0 }}>
-                              {[1,2,3,4,5].map(s => <span key={s} style={{ fontSize:12, color: s <= r.rating ? ACC : "#e5e7eb" }}>★</span>)}
+                              {[1,2,3,4,5].map(s => <span key={s} style={{ fontSize:12, color: s <= r.rating ? STAR_ON : "#e5e7eb" }}>★</span>)}
                             </div>
                             {r.comment && <p style={{ fontSize:13, color:"#666", margin:0, lineHeight:1.65 }}>{r.comment}</p>}
                           </div>
@@ -2133,7 +2139,7 @@ export default function ChicParis() {
                       <div style={{ display: "flex", gap: 4 }}>
                         {[1,2,3,4,5].map(s => (
                           <button key={s} type="button" onClick={() => !isPreview && setReviewForm(p => ({ ...p, rating: s }))}
-                            style={{ background: "none", border: "none", fontSize: 20, cursor: isPreview ? "default" : "pointer", color: s <= reviewForm.rating ? ACC : "#e5e7eb", padding: "2px" }}>★</button>
+                            style={{ background: "none", border: "none", fontSize: 20, cursor: isPreview ? "default" : "pointer", color: s <= reviewForm.rating ? STAR_ON : "#e5e7eb", padding: "2px" }}>★</button>
                         ))}
                       </div>
                       {/* El tope viene del servidor (COMENTARIO_MAX) para que sean
@@ -2255,7 +2261,7 @@ export default function ChicParis() {
                     {[1,2,3,4,5].map(s => (
                       <button key={s} type="button" onClick={() => setTiendaForm(p => ({ ...p, rating: s }))}
                         aria-label={`${s} de 5 estrellas`}
-                        style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontSize: 24, lineHeight: 1, color: s <= tiendaForm.rating ? ACC : "#ddd" }}>★</button>
+                        style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontSize: 24, lineHeight: 1, color: s <= tiendaForm.rating ? STAR_ON : "#ddd" }}>★</button>
                     ))}
                   </div>
 
