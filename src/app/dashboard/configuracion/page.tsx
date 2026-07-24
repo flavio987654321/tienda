@@ -1147,7 +1147,13 @@ function ImageFieldEditor({
   // el fallback) y se vuelve propio recién cuando se mueve.
   const posX = mobil ? (ov.posXMobile ?? ov.posX ?? 50) : (ov.posX ?? 50);
   const posY = mobil ? (ov.posYMobile ?? ov.posY ?? 50) : (ov.posY ?? 50);
-  const enCentro = posX === 50 && posY === 50;
+  // El botón "volver al centro" aparece cuando el foco del MODO ACTUAL fue tocado.
+  // En celular eso es tener posXMobile/posYMobile propios (no el valor heredado de
+  // PC por el fallback); en PC, estar fuera del 50/50. Sin distinguir el modo, en
+  // celular el botón aparecía por el valor de PC y al tocarlo no hacía nada.
+  const focoModificado = mobil
+    ? (ov.posXMobile !== undefined || ov.posYMobile !== undefined)
+    : (posX !== 50 || posY !== 50);
 
   // Medidas reales de la foto. Hacen falta para dos cosas distintas, y sin ellas
   // las barras mienten (ver `sobraX`/`sobraY` acá abajo).
@@ -1348,7 +1354,7 @@ function ImageFieldEditor({
           </p>
         )}
 
-        {!enCentro && (
+        {focoModificado && (
           <button onClick={() => setImageOverride(field, mobil ? { posXMobile: undefined, posYMobile: undefined } : { posX: undefined, posY: undefined })}
             style={{ ...dkBtn, marginTop: 8, width: "100%" }}>↺ Volver al centro{mobil ? " (celular)" : ""}</button>
         )}
@@ -1411,7 +1417,7 @@ function ImageFieldEditor({
         )}
         <div style={{ flex: 1 }} />
         {hasChanges && (
-          <button onClick={() => setImageOverride(field, { url: undefined, overlayType: undefined, overlayOpacity: undefined, hideContent: undefined, posX: undefined, posY: undefined })}
+          <button onClick={() => setImageOverride(field, { url: undefined, overlayType: undefined, overlayOpacity: undefined, hideContent: undefined, posX: undefined, posY: undefined, posXMobile: undefined, posYMobile: undefined })}
             style={{ ...dkBtn, padding: "5px 12px" }} title="Restablecer">↺ Restablecer</button>
         )}
       </div>
@@ -1874,7 +1880,8 @@ function FloatingEditor({ textFieldLabels, template }: { textFieldLabels: Record
     // El encuadre cuenta como cambio: sin esto, mover la foto y no tocar nada más
     // dejaba el botón de restablecer escondido y no había forma de deshacerlo.
     const hasChanges = ov.url !== undefined || ov.overlayType !== undefined || ov.overlayOpacity !== undefined
-      || ov.hideContent !== undefined || ov.posX !== undefined || ov.posY !== undefined;
+      || ov.hideContent !== undefined || ov.posX !== undefined || ov.posY !== undefined
+      || ov.posXMobile !== undefined || ov.posYMobile !== undefined;
 
     return <ImageFieldEditor
       field={field}
