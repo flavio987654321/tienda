@@ -945,11 +945,21 @@ export default function ChicParis() {
                 <div style={{ position: "absolute", inset: 0, background: overlayGradient }} />
               )}
               {!hideContent && (
-                <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", justifyContent: "center", padding: isMobile ? "0 20px" : "0 80px", maxWidth: 640 }}>
+                <>
+                {/* Velo para el texto en celular: el texto va ABAJO sobre este
+                    gradiente, así se lee sobre CUALQUIER foto —aunque el dueño
+                    haya apagado el overlay general— y no queda encima del centro
+                    de la imagen, que es donde suele estar el sujeto (una cara, una
+                    prenda). En escritorio el texto va al centro-izquierda y de eso
+                    ya se ocupa el overlay direccional de más arriba. */}
+                {isMobile && (
+                  <div style={{ position: "absolute", inset: 0, pointerEvents: "none", background: "linear-gradient(to top, rgba(0,0,0,0.78) 0%, rgba(0,0,0,0.42) 26%, rgba(0,0,0,0) 58%)" }} />
+                )}
+                <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", justifyContent: isMobile ? "flex-end" : "center", padding: isMobile ? "0 24px 104px" : "0 80px", maxWidth: isMobile ? undefined : 640 }}>
                   <span style={{ color: ACC, fontSize: 11, letterSpacing: 5, fontWeight: 700, textTransform: "uppercase", marginBottom: 16 }}>
                     <EditableZone field={`slide${i + 1}Kicker`} label={`Slide ${i + 1} — Kicker`}>Nueva Colección</EditableZone>
                   </span>
-                  <h1 style={{ color: "#fff", fontSize: "clamp(36px,5.5vw,72px)", fontWeight: 900, lineHeight: 1.05, margin: "0 0 20px", textTransform: "uppercase", letterSpacing: "-1px" }}>
+                  <h1 style={{ color: "#fff", fontSize: isMobile ? "clamp(28px,7.5vw,40px)" : "clamp(36px,5.5vw,72px)", fontWeight: 900, lineHeight: 1.05, margin: "0 0 20px", textTransform: "uppercase", letterSpacing: "-1px" }}>
                     <EditableZone field={`slide${i + 1}Heading`} label={`Slide ${i + 1} — Título`}>
                       {["Diseño que habla por vos.", "Elegancia sin esfuerzo.", "Tu próximo favorito."][i]}
                     </EditableZone>
@@ -972,6 +982,7 @@ export default function ChicParis() {
                     )}
                   </div>
                 </div>
+                </>
               )}
               {isActive && <EditableImageButton field={`heroBanner${i + 1}`} label={`Imagen banner ${i + 1}`} />}
             </div>
