@@ -1134,8 +1134,19 @@ function ImageFieldEditor({
   // metida en un hero panorámico se recortaba por el centro y no había forma de
   // correrla. Se arrastra sobre la muestra, y las barras quedan para el ajuste
   // fino (y para quien no puede arrastrar).
-  const posX = ov.posX ?? 50;
-  const posY = ov.posY ?? 50;
+  // ── Foco por dispositivo (Nivel 2) ─────────────────────────────────────────
+  // El banner es a pantalla completa: su recorte cambia mucho entre celular
+  // (alto y angosto) y PC (ancho y bajo), y con un solo punto de foco no se puede
+  // controlar el recorte en los dos. Para esas imágenes se ofrece un encuadre
+  // aparte para celular. En el resto (forma fija, ej. la foto de "Nosotros" 4:5)
+  // el toggle no aparece: el recorte es el mismo en celular y PC.
+  const esHero = field.startsWith("heroBanner");
+  const [modoMobil, setModoMobil] = useState(false);
+  const mobil = esHero && modoMobil;
+  // En celular el valor arranca del de PC (que es lo que hoy se ve en el celu por
+  // el fallback) y se vuelve propio recién cuando se mueve.
+  const posX = mobil ? (ov.posXMobile ?? ov.posX ?? 50) : (ov.posX ?? 50);
+  const posY = mobil ? (ov.posYMobile ?? ov.posY ?? 50) : (ov.posY ?? 50);
   const enCentro = posX === 50 && posY === 50;
 
   // Medidas reales de la foto. Hacen falta para dos cosas distintas, y sin ellas
@@ -1165,9 +1176,13 @@ function ImageFieldEditor({
   // movimiento que no seguía al dedo: lento cuando sobraba poco, disparado cuando
   // sobraba mucho.
   const propHueco = hueco ? hueco.w / hueco.h : 16 / 9;
+  // En modo celular la muestra tiene forma de celular a pantalla completa
+  // (~390×844), no la del hueco medido (que en el editor suele ser el de PC).
+  const PROP_MOBIL = 390 / 844;
+  const propMuestra = mobil ? PROP_MOBIL : propHueco;
   const propFoto = medidas ? medidas.w / medidas.h : null;
-  const sobraX = propFoto ? Math.max(0, propFoto / propHueco - 1) : null;
-  const sobraY = propFoto ? Math.max(0, propHueco / propFoto - 1) : null;
+  const sobraX = propFoto ? Math.max(0, propFoto / propMuestra - 1) : null;
+  const sobraY = propFoto ? Math.max(0, propMuestra / propFoto - 1) : null;
   // Menos de un 2% de sobra es un pelito de nada: la barra se movería entera para
   // correr la foto dos píxeles. Mejor decir que ese eje no se mueve.
   const mueveX = sobraX === null || sobraX > 0.02;
@@ -1189,7 +1204,7 @@ function ImageFieldEditor({
     // 50/50 igual: la tienda quedaba marcada como "con cambios sin guardar" por
     // algo que no cambió nada.
     if (nx === posX && ny === posY) return;
-    setImageOverride(field, { posX: nx, posY: ny });
+    setImageOverride(field, mobil ? { posXMobile: nx, posYMobile: ny } : { posX: nx, posY: ny });
   };
 
   const capaMuestra = currentOverlay === "none" ? null
@@ -1241,6 +1256,25 @@ function ImageFieldEditor({
       <div style={{ padding: "14px 18px", borderBottom: "1px solid #eef1f5" }}>
         <p style={{ margin: 0, fontSize: 10, fontWeight: 700, color: P.hint, letterSpacing: 1, textTransform: "uppercase" }}>Encuadre</p>
 
+        {/* Toggle PC / Celular — solo en el banner, que es la imagen cuya forma
+            cambia entre dispositivos. Cada uno guarda su propio foco. */}
+        {esHero && (
+          <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
+            {[{ k: false, label: "🖥️ PC" }, { k: true, label: "📱 Celular" }].map(({ k, label }) => (
+              <button key={String(k)} onClick={() => setModoMobil(k)}
+                style={{ flex: 1, padding: "7px 0", borderRadius: 7, border: `1px solid ${modoMobil === k ? "#6366f1" : P.border}`, background: modoMobil === k ? "#6366f1" : "transparent", color: modoMobil === k ? "#fff" : P.text, fontSize: 11.5, fontWeight: 700, cursor: "pointer" }}>
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
+        {mobil && (
+          <p style={{ margin: "8px 0 0", fontSize: 10.5, color: P.muted, lineHeight: 1.45 }}>
+            Estás encuadrando cómo se ve el banner <strong>en celular</strong> (pantalla alta y angosta).
+            La muestra tiene forma de celular. En PC se encuadra por separado.
+          </p>
+        )}
+
         <div
           onPointerDown={e => {
             const r = e.currentTarget.getBoundingClientRect();
@@ -1261,11 +1295,11 @@ function ImageFieldEditor({
             // La muestra copia la forma del hueco de verdad. Dibujarla siempre
             // apaisada mentía justo donde más importa: en un hueco vertical uno
             // encuadra mirando una franja ancha que no existe.
-            aspectRatio: hueco ? `${hueco.w} / ${hueco.h}` : "16 / 9",
-            // Un hueco alto se manda por el alto y no por el ancho: si se fijara
-            // el ancho al 100%, la muestra saldría larguísima, empujaría las
-            // barras fuera de la pantalla y habría que scrollear para encuadrar.
-            ...(hueco && hueco.h > hueco.w
+            aspectRatio: mobil ? "390 / 844" : (hueco ? `${hueco.w} / ${hueco.h}` : "16 / 9"),
+            // Una muestra alta (celular, o un hueco vertical) se manda por el alto y
+            // no por el ancho: si se fijara el ancho al 100%, saldría larguísima,
+            // empujaría las barras fuera de la pantalla y habría que scrollear.
+            ...((mobil || (hueco && hueco.h > hueco.w))
               ? { height: 260, width: "auto", maxWidth: "100%", marginLeft: "auto", marginRight: "auto" }
               : { width: "100%" }),
             borderRadius: 8, border: "1px solid #e2e8f0", overflow: "hidden",
@@ -1292,14 +1326,14 @@ function ImageFieldEditor({
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 10, opacity: mueveX ? 1 : 0.4 }}>
           <span style={{ fontSize: 11, ...dkMuted, width: 66, flexShrink: 0 }}>Izq. / Der.</span>
           <input type="range" min={0} max={100} step={1} value={posX} disabled={!mueveX}
-            onChange={e => setImageOverride(field, { posX: Number(e.target.value) })}
+            onChange={e => setImageOverride(field, mobil ? { posXMobile: Number(e.target.value) } : { posX: Number(e.target.value) })}
             style={{ flex: 1, minWidth: 0, accentColor: "#6366f1" }} />
           <span style={{ fontSize: 12, fontWeight: 700, ...dk, width: 36, textAlign: "right" }}>{posX}%</span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6, opacity: mueveY ? 1 : 0.4 }}>
           <span style={{ fontSize: 11, ...dkMuted, width: 66, flexShrink: 0 }}>Arr. / Abajo</span>
           <input type="range" min={0} max={100} step={1} value={posY} disabled={!mueveY}
-            onChange={e => setImageOverride(field, { posY: Number(e.target.value) })}
+            onChange={e => setImageOverride(field, mobil ? { posYMobile: Number(e.target.value) } : { posY: Number(e.target.value) })}
             style={{ flex: 1, minWidth: 0, accentColor: "#6366f1" }} />
           <span style={{ fontSize: 12, fontWeight: 700, ...dk, width: 36, textAlign: "right" }}>{posY}%</span>
         </div>
@@ -1315,8 +1349,8 @@ function ImageFieldEditor({
         )}
 
         {!enCentro && (
-          <button onClick={() => setImageOverride(field, { posX: undefined, posY: undefined })}
-            style={{ ...dkBtn, marginTop: 8, width: "100%" }}>↺ Volver al centro</button>
+          <button onClick={() => setImageOverride(field, mobil ? { posXMobile: undefined, posYMobile: undefined } : { posX: undefined, posY: undefined })}
+            style={{ ...dkBtn, marginTop: 8, width: "100%" }}>↺ Volver al centro{mobil ? " (celular)" : ""}</button>
         )}
 
         <p style={{ margin: "8px 0 0", fontSize: 10.5, color: P.muted, lineHeight: 1.45 }}>

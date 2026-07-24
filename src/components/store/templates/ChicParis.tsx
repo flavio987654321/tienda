@@ -938,9 +938,15 @@ export default function ChicParis() {
               pointerEvents: isActive ? "auto" : "none",
               background: ov?.url ? "transparent" : ["#1a1a2e", "#16213e", "#0f3460"][i],
             }}>
-              {ov?.url && (
-                <FadeImage src={ov.url} alt="" fill sizes="100vw" style={{ objectFit: "cover", objectPosition: `${ov.posX ?? 50}% ${ov.posY ?? 50}%` }} />
-              )}
+              {ov?.url && (() => {
+                // Foco separado por dispositivo: en celular el banner se recorta
+                // muy distinto (pantalla alta y angosta), así que si hay un foco de
+                // celular seteado se usa ese; si no, cae al de PC. En escritorio
+                // siempre el de PC.
+                const fx = isMobile ? (ov.posXMobile ?? ov.posX ?? 50) : (ov.posX ?? 50);
+                const fy = isMobile ? (ov.posYMobile ?? ov.posY ?? 50) : (ov.posY ?? 50);
+                return <FadeImage src={ov.url} alt="" fill sizes="100vw" style={{ objectFit: "cover", objectPosition: `${fx}% ${fy}%` }} />;
+              })()}
               {overlayGradient && (
                 <div style={{ position: "absolute", inset: 0, background: overlayGradient }} />
               )}

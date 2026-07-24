@@ -68,6 +68,12 @@ export type ImageOverride = {
   overlayOpacity?: number;
   posX?: number; // focal point X, 0-100, default 50
   posY?: number; // focal point Y, 0-100, default 50
+  // Punto de foco SEPARADO para celular. Solo tiene sentido en imágenes a pantalla
+  // completa (el banner del hero), cuya forma cambia mucho entre celular (alto y
+  // angosto) y PC (ancho y bajo): con un solo foco, el recorte de una pantalla no
+  // se puede controlar en la otra. Si no está seteado, el template cae a posX/posY.
+  posXMobile?: number; // focal point X en celular, 0-100
+  posYMobile?: number; // focal point Y en celular, 0-100
   hideContent?: boolean; // hide template text + buttons (for images with embedded text)
 };
 

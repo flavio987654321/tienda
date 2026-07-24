@@ -70,6 +70,11 @@ export const storeConfigSchema = z.object({
     overlayOpacity: z.number().min(0).max(1).optional(),
     posX: z.number().min(0).max(100).optional(),
     posY: z.number().min(0).max(100).optional(),
+    // Foco separado para celular (solo lo usan las imágenes a pantalla completa,
+    // ej. el banner del hero). Sin esto, zod descartaría el encuadre de celular al
+    // guardar: se vería bien en el momento y volvería a posX/posY al recargar.
+    posXMobile: z.number().min(0).max(100).optional(),
+    posYMobile: z.number().min(0).max(100).optional(),
     // Faltaba: el panel ofrecía "Ocultar texto del slide" desde siempre y Chic
     // Paris lo lee, pero zod lo descartaba al guardar. Se tildaba, el texto
     // desaparecía en el momento, y volvía solo al recargar la tienda.
