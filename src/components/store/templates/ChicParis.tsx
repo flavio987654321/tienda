@@ -4,7 +4,7 @@ import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { usePushBell } from "@/contexts/PushBellContext";
 import { useAuth } from "@/components/AuthProvider";
 import StoreFollowButton from "@/components/store/StoreFollowButton";
-import { EditableZone, EditableImageButton, EditableSectionBg, getContrastColor, getReadableAccentText, useEditContext } from "@/contexts/EditContext";
+import { EditableZone, EditableImageButton, EditableSectionBg, getContrastColor, getReadableAccentText, getReadableAccentFill, useEditContext } from "@/contexts/EditContext";
 import { useStorefront, type StorefrontProduct } from "@/hooks/useStorefront";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { useCartLogic } from "@/hooks/useCartLogic";
@@ -44,13 +44,21 @@ type Product = StorefrontProduct;
    entrar. Observar además dispara solo la primera vez, así que no hace falta
    medir a mano y encadenar un render de más.
 ──────────────────────────────────────────────────────────────────────────────── */
-function ResenaComentario({ texto, onVerMas, acento }: {
+function ResenaComentario({ texto, onVerMas, acento, estiloTexto, comillas = true }: {
   texto: string;
-  onVerMas: (() => void) | null;
+  /** Si viene, el botón lleva a otro lado (la portada abre la ficha del producto).
+   *  Si no viene, el botón despliega el texto acá mismo — que es lo que hace falta
+   *  adentro de la vista rápida, donde ya estás en la ficha y no hay a dónde ir. */
+  onVerMas?: (() => void) | null;
   acento: string;
+  /** El bloque de la portada usa Playfair en itálica; la vista rápida, la
+   *  tipografía del panel. Solo cambia el aspecto: el recorte es el mismo. */
+  estiloTexto?: React.CSSProperties;
+  comillas?: boolean;
 }) {
   const ref = useRef<HTMLParagraphElement>(null);
   const [cortado, setCortado] = useState(false);
+  const [abierto, setAbierto] = useState(false);
 
   useEffect(() => {
     const el = ref.current;
@@ -68,14 +76,20 @@ function ResenaComentario({ texto, onVerMas, acento }: {
       <p ref={ref} style={{
         fontFamily: "'Playfair Display', Georgia, serif", fontStyle: "italic",
         fontSize: 13, color: "#444", lineHeight: 1.75, margin: 0,
-        display: "-webkit-box", WebkitLineClamp: 6, WebkitBoxOrient: "vertical",
-        overflow: "hidden",
-      }}>&ldquo;{texto}&rdquo;</p>
-      {cortado && onVerMas && (
-        <button type="button" onClick={onVerMas}
+        ...estiloTexto,
+        // El recorte va al final para que no se lo pise `estiloTexto`, y se
+        // levanta entero al desplegar: dejar el `-webkit-box` con el clamp en
+        // "none" también funciona, pero sigue aplicando el modelo de caja raro.
+        ...(abierto ? {} : {
+          display: "-webkit-box", WebkitLineClamp: 6, WebkitBoxOrient: "vertical",
+          overflow: "hidden",
+        }),
+      }}>{comillas ? <>&ldquo;{texto}&rdquo;</> : texto}</p>
+      {cortado && !abierto && (
+        <button type="button" onClick={onVerMas ?? (() => setAbierto(true))}
           style={{ alignSelf: "flex-start", background: "none", border: "none", padding: 0, cursor: "pointer",
                    fontSize: 10, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", color: acento }}>
-          Ver reseña completa →
+          {onVerMas ? "Ver reseña completa →" : "Leer todo"}
         </button>
       )}
     </div>
@@ -84,6 +98,31 @@ function ResenaComentario({ texto, onVerMas, acento }: {
 
 
 const SIZE_ATTRS = ["talle","size","talla","talles","sizes","tamaño","tamano","almacenamiento","ram","versión","version","formato","variante","material","sabor","peso/tamaño","peso"];
+const COLOR_ATTRS = ["color","colour","colores","colors","tono"];
+
+/* ── Foto ↔ color ↔ talle ─────────────────────────────────────────────────────
+   Las tres cosas están atadas: el dueño le asigna un color a cada foto en el
+   editor de producto, y cada variante es un combo color+talle con su stock.
+   Tocar cualquiera de las tres tiene que acomodar a las otras dos.
+──────────────────────────────────────────────────────────────────────────────── */
+
+/** Valor de un atributo de variante buscando la clave por nombre (talle, color…). */
+function valorAttr(attrs: Record<string, unknown>, claves: string[]): string {
+  const k = Object.keys(attrs).find(x => claves.includes(x.toLowerCase()));
+  return k != null && attrs[k] != null ? String(attrs[k]) : "";
+}
+
+/** Las variantes con sus atributos ya parseados; las que no son JSON quedan afuera. */
+function variantesConAttrs(p: Product) {
+  return p.variants
+    .map(v => ({ v, a: parseVariantAttrs(v.name) }))
+    .filter((x): x is { v: Product["variants"][number]; a: Record<string, unknown> } => !!x.a);
+}
+
+/** Índice de la foto que el dueño le asignó a ese color, o -1 si ninguna. */
+function fotoDeColor(p: Product, color: string): number {
+  return p.imageItems.findIndex(img => !!img.variantValue && img.variantValue.toLowerCase() === color.toLowerCase());
+}
 
 const BANNER_COUNT = 3;
 
@@ -136,11 +175,46 @@ const STRIP_ITEMS = [
 // Cuántos productos muestra la home de entrada, y cuántos suma cada "Ver más".
 const PASO_PRODUCTOS = 8;
 
+// Reseñas de la vista rápida: cuántas se ven de entrada y cuántas suma cada
+// "Ver más". Antes empezaba en 5 y sumaba de a 10, sin ningún motivo.
+//
+// No se paginan a propósito. La lista está adentro de un panel que scrollea: con
+// páginas, tocar "siguiente" reemplaza el contenido ARRIBA de donde estás mirando
+// y quedás parado en el medio de la lista nueva. "Ver más" agrega abajo, donde ya
+// tenés el dedo. Y no ahorraría ninguna consulta: el servidor manda las 50 más
+// recientes de una sola vez, así que esto solo deja de recortar una lista que ya
+// está en memoria.
+const PASO_RESENAS = 5;
+
 // Color de las estrellas llenas (rating). Dorado fijo, NO el acento: las
 // estrellas son doradas por convención en cualquier tienda, y atarlas al acento
 // las volvía casi invisibles cuando el acento es claro. Es el mismo dorado que
 // usa el badge de "destacado".
 const STAR_ON = "#f59e0b";
+
+/* ── Vista rápida del producto: un solo título de bloque y una sola separación ──
+   Cada bloque del panel de detalles inventaba el suyo: "DESCRIPCIÓN" en 9px #aaa,
+   "TALLE" y "COLOR" en 11px #333, el cuadro de características sin ningún título,
+   y las separaciones eran márgenes sueltos de 8, 14, 16 y 20px sin línea. Leído de
+   corrido no se veía dónde terminaba una cosa y empezaba la otra: era una sola
+   parrafada de controles.
+
+   `primero` es para el encabezado (categoría + nombre + precio), que no lleva
+   línea arriba porque no hay nada de qué separarlo.
+──────────────────────────────────────────────────────────────────────────────── */
+const CP_MODAL_TITULO: React.CSSProperties = {
+  margin: "0 0 12px", fontSize: 10, fontWeight: 800, letterSpacing: 2.5,
+  textTransform: "uppercase", color: "#999",
+};
+
+function CpBloque({ titulo, primero = false, children }: { titulo?: string; primero?: boolean; children: React.ReactNode }) {
+  return (
+    <div style={primero ? undefined : { borderTop: "1px solid #f0f0f0", marginTop: 20, paddingTop: 20 }}>
+      {titulo && <p style={CP_MODAL_TITULO}>{titulo}</p>}
+      {children}
+    </div>
+  );
+}
 
 export default function ChicParis() {
   const [scrolled,        setScrolled]        = useState(false);
@@ -175,6 +249,10 @@ export default function ChicParis() {
   // Un captcha propio: el token es de un solo uso, así que compartirlo con el
   // formulario del producto haría que el segundo envío viaje con uno ya gastado.
   const tiendaCaptcha = useTurnstile("review");
+  // El formulario de reseña del producto vive en un modal, igual que el de la
+  // tienda. Inline al final de la lista quedaba inalcanzable: con 50 reseñas
+  // cargadas había que scrollear las 50 para llegar a escribir la propia.
+  const [resenaProdOpen, setResenaProdOpen] = useState(false);
   const [reviewsShown,   setReviewsShown]   = useState(5);
   const [reviewsLoading, setReviewsLoading] = useState(false);
   const [reviewForm,     setReviewForm]     = useState({ reviewer: "", rating: 5, comment: "", email: "" });
@@ -350,6 +428,24 @@ export default function ChicParis() {
   // claro queda casi invisible sobre blanco —justo lo que se veía—, así que se
   // cae a un gris oscuro seguro. Con un acento normal usa el acento, como antes.
   const opinionAccent = getReadableAccentText(ACC, sc["bgPruebaSocial"] ?? "#fff", "#111");
+  // El acento, listo para usarse SOBRE EL BLANCO del modal. Con un acento claro
+  // (beige, gris perla, celeste pastel) todo lo que se pintaba con el acento crudo
+  // quedaba casi del color del fondo: el precio, el talle y el color elegidos, el
+  // badge de condición, las estrellas de las reseñas. Es el mismo problema que ya
+  // tenía resuelto `opinionAccent` para el botón de reseñas — y el comentario de
+  // `getReadableAccentText` nombra al precio como su caso de uso, pero el modal
+  // nunca lo llamaba.
+  const accentLegible = getReadableAccentText(ACC, "#ffffff", "#111");
+  // El acento como RELLENO (el chip del talle/color elegido, el badge de
+  // condición, las barras del gráfico de reseñas). Va por otra regla que el texto:
+  // acá no importa si el color se lee escrito sino si se distingue del blanco como
+  // superficie, y con la regla de texto perdían su color acentos que de fondo
+  // andan perfecto — naranja, dorado, amarillo, gris medio.
+  const accentRelleno = getReadableAccentFill(ACC, "#ffffff", "#111");
+  // Texto arriba de ese relleno. Ojo: no sirve `accentText`, que está calculado
+  // contra el acento CRUDO — si el acento se cayó a negro, `accentText` seguiría
+  // dando negro y el botón elegido quedaría negro sobre negro.
+  const accentRellenoText = getContrastColor(accentRelleno) === "light" ? "#fff" : "#111";
   const cartTheme: CartTheme = { BG:"#ffffff", S:"#fafafa", T:"#111111", MID:"#999999", border:"#e5e5e5", accent:ACC, accentText };
   const variantPrice = modalProduct ? resolveVariantPrice(modalProduct.variants, selectedSize, selectedColor) : null;
   const displayPrice = variantPrice ?? (modalProduct?.price ?? 0);
@@ -357,8 +453,8 @@ export default function ChicParis() {
   // 3×2 en vivo: unidades que se PAGAN a la cantidad elegida (misma cuenta que el motor).
   const nxmPaid = modalPromo?.nxm ? qty - Math.floor(qty / modalPromo.nxm.n) * (modalPromo.nxm.n - modalPromo.nxm.m) : null;
   const imgSwipe = useTouchSwipe(
-    () => { if (modalProduct) setModalImg(i => (i + 1) % modalProduct.images.length); },
-    () => { if (modalProduct) setModalImg(i => (i - 1 + modalProduct.images.length) % modalProduct.images.length); }
+    () => elegirFoto(modalImg + 1),
+    () => elegirFoto(modalImg - 1)
   );
   // Swipe táctil en el hero (mobile): es un carrusel fade por índice, sin esto solo
   // se pasa con flechas/puntos. goToSlide ya reinicia el auto-avance al cambiar.
@@ -420,7 +516,7 @@ export default function ChicParis() {
     const slug = storeConfig?.slug;
     // eslint-disable-next-line react-hooks/set-state-in-effect -- limpia las reseñas del producto anterior al cerrar el modal; depende de una interacción, no se puede calcular durante el render
     if (!modalProduct || !slug) { setReviews([]); return; }
-    setReviewsLoading(true); setReviewDone(false); setReviewsShown(5);
+    setReviewsLoading(true); setReviewDone(false); setReviewsShown(5); setResenaProdOpen(false);
     setReviewForm(p => ({ ...p, rating: 5, comment: "" }));
     fetch(`/api/public/${slug}/reviews?productId=${modalProduct.id}`)
       .then(r => r.ok ? r.json() : { reviews: [] })
@@ -430,75 +526,85 @@ export default function ChicParis() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [modalProduct?.id]);
 
-  const colorSyncingRef = useRef(false);
+  /* ── Elegir foto / color / talle ─────────────────────────────────────────────
+     Antes esto eran TRES efectos que se disparaban entre sí, coordinados por un
+     ref (`colorSyncingRef`) para no entrar en bucle: se ponía en `true` justo
+     antes de `setModalImg`, contando con que el efecto de la foto lo iba a
+     consumir enseguida.
 
-  // Al cambiar color: sync imagen + talle disponible
+     El problema: si la foto que había que poner ya era la que estaba puesta,
+     React corta ahí y ese efecto NO corre — así que el ref quedaba en `true`
+     para siempre y se comía la sincronización SIGUIENTE. En un producto de dos
+     fotos se llegaba en dos clics: tocabas una miniatura y el color no cambiaba,
+     con lo cual quedaba la foto de un color y otro color seleccionado. Y ese
+     color seleccionado es el que se agrega al carrito: se veía el pantalón beige
+     y se compraba el gris.
+
+     Ahora se resuelve en el click, que es donde la decisión existe de verdad. Sin
+     efectos encadenados, sin flags y sin estados intermedios: lo que se ve y lo
+     que se compra salen del mismo lugar.
+  ──────────────────────────────────────────────────────────────────────────── */
+
+  // Si el talle puesto no existe en ese color, pasa al primero con stock.
+  function acomodarTalleA(color: string) {
+    if (!modalProduct) return;
+    const delColor = variantesConAttrs(modalProduct)
+      .filter(x => valorAttr(x.a, COLOR_ATTRS).toLowerCase() === color.toLowerCase());
+    if (!delColor.length) return;
+    if (selectedSize && delColor.some(x => valorAttr(x.a, SIZE_ATTRS).toLowerCase() === selectedSize.toLowerCase())) return;
+    const mejor = delColor.find(x => x.v.stock > 0) ?? delColor[0];
+    const talle = valorAttr(mejor.a, SIZE_ATTRS);
+    if (talle && talle !== selectedSize) setSelectedSize(talle);
+  }
+
+  function elegirColor(color: string) {
+    if (!modalProduct) return;
+    setSelectedColor(color);
+    const idx = fotoDeColor(modalProduct, color);
+    if (idx !== -1) setModalImg(idx);
+    acomodarTalleA(color);
+  }
+
+  // Acepta índices fuera de rango para que las flechas sean `elegirFoto(i ± 1)`.
+  function elegirFoto(i: number) {
+    if (!modalProduct) return;
+    const total = modalProduct.images.length;
+    if (!total) return;
+    const idx = ((i % total) + total) % total;
+    setModalImg(idx);
+    const color = modalProduct.imageItems[idx]?.variantValue;
+    if (!color || color.toLowerCase() === selectedColor.toLowerCase()) return;
+    setSelectedColor(color);
+    acomodarTalleA(color);
+  }
+
+  function elegirTalle(talle: string) {
+    if (!modalProduct) return;
+    setSelectedSize(talle);
+    const conTalle = variantesConAttrs(modalProduct)
+      .filter(x => valorAttr(x.a, SIZE_ATTRS).toLowerCase() === talle.toLowerCase());
+    if (!conTalle.length) return;
+    // Si el color puesto viene en ese talle, no se toca: el que eligió el color
+    // fue el comprador y cambiárselo solo porque cambió de talle es pisarle la
+    // decisión.
+    if (selectedColor && conTalle.some(x => valorAttr(x.a, COLOR_ATTRS).toLowerCase() === selectedColor.toLowerCase())) return;
+    const mejor = conTalle.find(x => x.v.stock > 0) ?? conTalle[0];
+    const color = valorAttr(mejor.a, COLOR_ATTRS);
+    if (!color || color === selectedColor) return;
+    setSelectedColor(color);
+    const idx = fotoDeColor(modalProduct, color);
+    if (idx !== -1) setModalImg(idx);
+  }
+
+  // Lo único que sigue siendo un efecto: al ABRIR la vista rápida hay que mostrar
+  // la foto del color con el que abre, y ahí no hubo ningún click que lo resuelva
+  // (`openModal` es del hook compartido por los 10 templates y deja la foto 0).
   useEffect(() => {
     if (!modalProduct || !selectedColor) return;
-    const imgIdx = modalProduct.imageItems.findIndex(
-      (img) => img.variantValue && img.variantValue.toLowerCase() === selectedColor.toLowerCase()
-    );
-    if (imgIdx !== -1) { colorSyncingRef.current = true; setModalImg(imgIdx); }
-    const colorVariants = modalProduct.variants.filter((v) => {
-      const a = parseVariantAttrs(v.name);
-      return !!a && Object.values(a).some((x) => String(x).toLowerCase() === selectedColor.toLowerCase());
-    });
-    if (!colorVariants.length) return;
-    const best = colorVariants.find((v) => v.stock > 0) ?? colorVariants[0];
-    const bestAttrs = parseVariantAttrs(best.name);
-    if (bestAttrs) {
-      const sizeKey = Object.keys(bestAttrs).find((k: string) => SIZE_ATTRS.includes(k.toLowerCase()));
-      if (sizeKey && bestAttrs[sizeKey] && bestAttrs[sizeKey] !== selectedSize) setSelectedSize(String(bestAttrs[sizeKey]));
-    }
+    const idx = fotoDeColor(modalProduct, selectedColor);
+    if (idx !== -1) setModalImg(idx);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedColor, modalProduct?.id]);
-
-  // Al cambiar talle: sync color + imagen si el combo talle+color actual no existe
-  useEffect(() => {
-    if (!modalProduct || !selectedSize) return;
-    if (selectedColor) {
-      const hasCombo = modalProduct.variants.some((v) => {
-        const a = parseVariantAttrs(v.name);
-        if (!a) return false;
-        const vals = Object.values(a).map((x) => String(x).toLowerCase());
-        return vals.includes(selectedSize.toLowerCase()) && vals.includes(selectedColor.toLowerCase());
-      });
-      if (hasCombo) return;
-    }
-    const sizeVariants = modalProduct.variants.filter((v) => {
-      const a = parseVariantAttrs(v.name);
-      if (!a) return false;
-      return Object.entries(a).some(([k, val]) => SIZE_ATTRS.includes(k.toLowerCase()) && String(val).toLowerCase() === selectedSize.toLowerCase());
-    });
-    if (!sizeVariants.length) return;
-    const best = sizeVariants.find((v) => v.stock > 0) ?? sizeVariants[0];
-    const bestAttrs = parseVariantAttrs(best.name);
-    if (bestAttrs) {
-      const colorKey = Object.keys(bestAttrs).find((k: string) => ["color","colour","colores","colors","tono"].includes(k.toLowerCase()));
-      if (colorKey && bestAttrs[colorKey]) {
-        const newColor = String(bestAttrs[colorKey]);
-        if (newColor !== selectedColor) {
-          setSelectedColor(newColor);
-          const imgIdx = modalProduct.imageItems.findIndex(
-            (img) => img.variantValue && img.variantValue.toLowerCase() === newColor.toLowerCase()
-          );
-          if (imgIdx !== -1) { colorSyncingRef.current = true; setModalImg(imgIdx); }
-        }
-      }
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedSize, modalProduct?.id]);
-
-  // Al cambiar de imagen (flechas/miniaturas): sync color si esa foto pertenece a otra variante
-  useEffect(() => {
-    if (!modalProduct) return;
-    if (colorSyncingRef.current) { colorSyncingRef.current = false; return; }
-    const img = modalProduct.imageItems[modalImg];
-    if (img?.variantValue && img.variantValue.toLowerCase() !== selectedColor?.toLowerCase()) {
-      setSelectedColor(img.variantValue);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [modalImg]);
+  }, [modalProduct?.id]);
 
   // `reviewSubmitting` es estado: recién bloquea en el render siguiente, y con
   // Enter en un campo el envío ni pasa por el botón. Sin candado sincrónico, dos
@@ -523,6 +629,9 @@ export default function ChicParis() {
         setReviews(p => [data.review, ...p]);
         setReviewForm({ reviewer: "", rating: 5, comment: "", email: "" });
         setReviewError(null);
+        // Se cierra el modal: la reseña recién publicada está en la lista de
+        // atrás, y dejarlo abierto con el formulario vacío parece que no pasó nada.
+        setResenaProdOpen(false);
         setReviewDone(true); setTimeout(() => setReviewDone(false), 4000);
       } else {
         // CP-12: antes esto era silencio. Se apagaba el "Publicando...", el botón
@@ -643,6 +752,28 @@ export default function ChicParis() {
     return [...sameSub, ...sameCat, ...rest].slice(0, 4);
   }, [products, modalProduct]);
 
+  /* ── Reseñas que dibuja la vista rápida ──────────────────────────────────────
+     En el editor, con el producto todavía sin reseñas, se muestran DE EJEMPLO:
+     es la única forma de que el dueño vea el bloque lleno —el promedio, el
+     gráfico de estrellas y las tarjetas—. Sin esto diseña mirando un "Sé el
+     primero en dejar una reseña" y se entera de cómo queda recién cuando le
+     escribe un cliente.
+
+     Mismo criterio, y mismo cartel de aviso, que el bloque de prueba social de la
+     home. Las fechas son fijas a propósito: una fecha calculada al vuelo cambia
+     entre el servidor y el navegador y rompe la hidratación.
+  ──────────────────────────────────────────────────────────────────────────── */
+  const RESENAS_EJEMPLO: PReview[] = [
+    { id:"ej-1", rating:5, comment:"Tal cual la foto y el talle justo. Llegó en tres días.", reviewer:"Micaela R.", verified:true,  verifiedBy:"auto",  createdAt:"2026-07-18T14:00:00.000Z" },
+    { id:"ej-2", rating:5, comment:"La tela es muy buena para el precio. Ya pedí otro en el otro color.", reviewer:"Julián T.", verified:false, verifiedBy:null,    createdAt:"2026-07-11T14:00:00.000Z" },
+    { id:"ej-3", rating:4, comment:"Muy lindo, aunque me quedó un poco largo. Igual lo recomiendo.", reviewer:"Carla V.",  verified:true,  verifiedBy:"owner", createdAt:"2026-06-29T14:00:00.000Z" },
+  ];
+  // `reviewsLoading` importa: sin él, entre que se abre el modal y contesta el
+  // servidor la lista está vacía y aparecerían las de ejemplo por un instante,
+  // justo para ser reemplazadas por las reales.
+  const resenasDeEjemplo = isPreview && !reviewsLoading && reviews.length === 0;
+  const resenasVisibles  = resenasDeEjemplo ? RESENAS_EJEMPLO : reviews;
+
   // Banner slide images
   const bannerImgs = Array.from({ length: BANNER_COUNT }, (_, i) =>
     storeConfig?.imageOverrides?.[`heroBanner${i + 1}`]
@@ -672,7 +803,7 @@ export default function ChicParis() {
       {showAnnouncement && (
         <div style={{
           position: isPreview ? "sticky" : "fixed", top: 0, left: isPreview ? undefined : 0, right: isPreview ? undefined : 0, zIndex: isPreview ? 10001 : 1001,
-          height: PROMO_BAR_H, background: "#111",
+          height: PROMO_BAR_H, background: "#111", overflow: "hidden",
           display: "flex", alignItems: "center", justifyContent: "center",
         }}>
           {/* CP-3. El índice no se reiniciaba al cambiar la cantidad de mensajes:
@@ -682,7 +813,17 @@ export default function ChicParis() {
               así que ni siquiera salía sola de ese estado.
               Se acota al leer en vez de con un efecto: un efecto necesitaría un
               render extra, y en ese render la franja ya se dibujó vacía. */}
-          <span style={{ fontSize: 11, fontWeight: 600, color: "#fff", letterSpacing: 1 }}>
+          {/* Un solo renglón, cueste lo que cueste. El dashboard deja escribir 120
+              caracteres y esta franja mide 36px FIJOS — y el navbar está clavado
+              en `top: PROMO_BAR_H`. Sin esto, en un celular un mensaje largo se
+              parte en tres renglones que se derraman encima del navbar y del hero.
+              Los 44px de padding a los costados son el lugar del botón de cerrar:
+              van simétricos para que el texto siga centrado de verdad. */}
+          <span style={{
+            fontSize: 11, fontWeight: 600, color: "#fff", letterSpacing: 1,
+            maxWidth: "100%", boxSizing: "border-box", padding: "0 44px",
+            whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+          }}>
             {announcementMessages[announcementIdx % announcementMessages.length]}
           </span>
           {announcementMessages.length > 1 && (
@@ -975,7 +1116,11 @@ export default function ChicParis() {
                       {["Piezas únicas para cada momento de tu día.", "Colección cuidada para quienes eligen con intención.", "Tendencias de temporada, calidad que dura."][i]}
                     </EditableZone>
                   </p>
-                  <div style={{ display: "flex", gap: 12 }}>
+                  {/* `flexWrap`: en 360px los dos botones juntos no entran (cada uno
+                      son ~164px con su padding, más el gap), así que se achicaban y
+                      el texto se partía adentro del botón. Ahora el segundo baja de
+                      renglón entero. */}
+                  <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
                     {(editMode || !storeConfig?.textOverrides?.[`slide${i + 1}Cta`]?.hidden) && (
                       <button onClick={() => scrollTo("productos")} style={{ background: ACC, color: accentText, border: "none", padding: "14px 32px", fontSize: 11, fontWeight: 800, letterSpacing: 3, textTransform: "uppercase", cursor: "pointer" }}>
                         <EditableZone field={`slide${i + 1}Cta`} label={`Slide ${i + 1} — Botón`}>Ver Colección</EditableZone>
@@ -1222,13 +1367,18 @@ export default function ChicParis() {
                       );
                     })}
                   </div>
-                  {totalPages > 1 && page > 0 && (
+                  {/* Las flechas, en celular NO: la grilla pasa a una sola columna
+                      y la foto arranca pegada al borde izquierdo, así que la flecha
+                      quedaba justo encima de la prenda. Es el mismo caso que ya
+                      arreglamos en el hero. Abajo están los puntitos, que en celular
+                      son el control que se usa. */}
+                  {!isMobile && totalPages > 1 && page > 0 && (
                     <button onClick={() => setOfertasPage(p => p - 1)} aria-label="Anterior"
                       style={{ position: "absolute", left: 0, top: "50%", transform: "translateY(-50%)", background: "#fff", border: `1px solid ${ACC}`, color: ACC, width: 44, height: 44, borderRadius: "50%", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 10 }}>
                       <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
                     </button>
                   )}
-                  {totalPages > 1 && page < totalPages - 1 && (
+                  {!isMobile && totalPages > 1 && page < totalPages - 1 && (
                     <button onClick={() => setOfertasPage(p => p + 1)} aria-label="Siguiente"
                       style={{ position: "absolute", right: 0, top: "50%", transform: "translateY(-50%)", background: "#fff", border: `1px solid ${ACC}`, color: ACC, width: 44, height: 44, borderRadius: "50%", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 10 }}>
                       <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg>
@@ -1893,14 +2043,21 @@ export default function ChicParis() {
       {modalProduct && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: isPreview ? 20000 : 9000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20, backdropFilter: "blur(4px)" }}
           onClick={() => setModalProduct(null)}>
-          <div style={{ background: "#fff", width: "100%", maxWidth: 860, maxHeight: isPreview ? "100%" : "90vh", overflow: "hidden", display: "flex", flexDirection: "column", borderRadius: 4, boxShadow: "0 32px 80px rgba(0,0,0,0.35)", position:"relative" }}
+          <div style={{ background: "#fff", width: "100%", maxWidth: 980, maxHeight: isPreview ? "100%" : "90vh", overflow: "hidden", display: "flex", flexDirection: "column", borderRadius: 4, boxShadow: "0 32px 80px rgba(0,0,0,0.35)", position:"relative" }}
             onClick={e => e.stopPropagation()}>
             <button onClick={() => { setModalProduct(null); setLightboxSrc(null); }} aria-label="Cerrar" style={{ position:"absolute", top:8, right:8, zIndex:10, background:"rgba(0,0,0,0.5)", border:"none", color:"#fff", width:36, height:36, borderRadius:"50%", cursor:"pointer", fontSize:20, display:"flex", alignItems:"center", justifyContent:"center" }}>×</button>
             <div style={{ overflow:"auto", flex:1, minHeight:0, display:"flex", flexDirection:"column" }}>
             <div style={{ display:"flex", flexDirection: isMobile ? "column" : "row" }}>
-            {/* Images */}
-            <div style={{ width: isMobile ? "100%" : "48%", flexShrink: 0, position: "relative", overflow: "hidden", aspectRatio: isMobile ? "4/3" : undefined }} {...imgSwipe}>
-              <FadeImage src={modalProduct.images[modalImg] ?? "/placeholder.jpg"} alt={modalProduct.name} fill sizes="(max-width: 768px) 100vw, 420px"
+            {/* Images — la columna NO se estira al alto del panel de detalles
+                (`alignSelf:"flex-start"`). Sin eso, al ser hermana en una fila
+                flex tomaba el alto de TODO lo de la derecha —descripción, talles,
+                reseñas— y la foto, con `objectFit:cover`, mostraba una franja
+                vertical altísima: se veía el cierre de la campera a cinco
+                aumentos en vez de la prenda. Ahora la caja tiene proporción
+                propia, la misma 3/4 que la grilla del catálogo. */}
+            <div style={{ width: isMobile ? "100%" : "48%", flexShrink: 0, alignSelf: "flex-start" }}>
+            <div style={{ position: "relative", width: "100%", overflow: "hidden", aspectRatio: isMobile ? "4/3" : "3/4" }} {...imgSwipe}>
+              <FadeImage src={modalProduct.images[modalImg] ?? "/placeholder.jpg"} alt={modalProduct.name} fill sizes="(max-width: 768px) 100vw, 480px"
                 style={{ objectFit: "cover", cursor:"zoom-in" }}
                 onClick={() => setLightboxSrc(modalProduct.images[modalImg] ?? "/placeholder.jpg")} />
               {(() => {
@@ -1910,52 +2067,59 @@ export default function ChicParis() {
                 return <OfferBadge badge={modalProduct.offerBadge} pct={discountPercent(modalProduct.price, modalProduct.comparePrice)} size="md" />;
               })()}
               {modalProduct.images.length > 1 && (<>
-                <button onClick={() => setModalImg(i => (i - 1 + modalProduct.images.length) % modalProduct.images.length)}
+                <button onClick={() => elegirFoto(modalImg - 1)}
                   aria-label="Imagen anterior"
                   style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", background: "rgba(255,255,255,0.85)", border: "none", width: 34, height: 34, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, zIndex: 2 }}>‹</button>
-                <button onClick={() => setModalImg(i => (i + 1) % modalProduct.images.length)}
+                <button onClick={() => elegirFoto(modalImg + 1)}
                   aria-label="Imagen siguiente"
                   style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "rgba(255,255,255,0.85)", border: "none", width: 34, height: 34, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, zIndex: 2 }}>›</button>
                 <div style={{ position: "absolute", bottom: 12, left: "50%", transform: "translateX(-50%)", display: "flex", gap: 6, zIndex: 2 }}>
                   {modalProduct.images.map((_, i) => (
-                    <button key={i} onClick={() => setModalImg(i)}
+                    <button key={i} onClick={() => elegirFoto(i)} aria-label={`Foto ${i + 1}`}
                       style={{ width: i === modalImg ? 24 : 8, height: 8, borderRadius: 4, border: "none", background: i === modalImg ? "#fff" : "rgba(255,255,255,0.5)", cursor: "pointer", padding: 0, transition: "all 0.3s" }} />
                   ))}
                 </div>
               </>)}
-              {modalProduct.reelUrls.length > 0 && (
-                <div style={{ padding: "12px 14px 16px", borderTop: "1px solid #f0f0f0", background: "#fafafa" }}>
-                  <p style={{ fontSize: 9, letterSpacing: 2, fontWeight: 700, textTransform: "uppercase", marginBottom: 10, color: "#bbb" }}>Videos</p>
-                  <StoreProductReels
-                    reelUrls={modalProduct.reelUrls}
-                    theme={{ accent: ACC, text: "#111", border: `${ACC}33`, radius: 4 }}
-                  />
-                </div>
-              )}
+            </div>
+            {/* Miniaturas — antes solo había flechas y puntitos, y los puntitos no
+                dicen QUÉ hay en las otras fotos: el que no los ve, se va creyendo
+                que el producto tiene una sola imagen. Van abajo y en fila, igual
+                que en FashionNoir / BohoTerra / UrbanPulse, así el mismo diseño
+                sirve en celular y en escritorio (una tira vertical al costado no
+                entra en 360px y obligaría a mantener dos).
+                Tocar una miniatura solo mueve `modalImg`: el efecto que ya existe
+                se encarga de sincronizar el color cuando esa foto es de otra
+                variante. */}
+            {modalProduct.images.length > 1 && (
+              <div style={{ display: "flex", gap: 8, padding: "10px 14px 0", overflowX: "auto", scrollbarWidth: "none" }}>
+                {modalProduct.images.map((img, i) => (
+                  <button key={i} onClick={() => elegirFoto(i)} aria-label={`Ver foto ${i + 1}`}
+                    style={{ position: "relative", width: 56, height: 74, flexShrink: 0, padding: 0, cursor: "pointer", overflow: "hidden",
+                             background: "#f5f5f5", border: i === modalImg ? `2px solid ${ACC}` : "1px solid #e8e8e8", transition: "border-color 0.2s" }}>
+                    <FadeImage src={img} alt="" fill sizes="56px" style={{ objectFit: "cover" }} />
+                  </button>
+                ))}
+              </div>
+            )}
             </div>
             {/* Details */}
-            <div style={{ flex: 1, padding: isMobile ? "20px 20px" : 32, overflowY: "auto", display: "flex", flexDirection: "column" }}>
-              <p style={{ margin: "0 0 6px", fontSize: 10, color: "#999", letterSpacing: 2, textTransform: "uppercase", fontWeight: 600 }}>{modalProduct.category}</p>
-              <h2 style={{ margin: "0 0 10px", fontSize: 22, fontWeight: 900, color: "#111", lineHeight: 1.2 }}>{modalProduct.name}</h2>
-              <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>
-                <button onClick={() => shareProduct(modalProduct)}
-                  style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "1px solid #e5e7eb", color: "#9ca3af", padding: "5px 12px", fontSize: 10, letterSpacing: 1, cursor: "pointer", transition: "color 0.2s" }}
-                  onMouseEnter={e => (e.currentTarget.style.color = "#374151")} onMouseLeave={e => (e.currentTarget.style.color = "#9ca3af")}>
-                  <svg width={11} height={11} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
-                  Copiar link
-                </button>
-                {hasWA && (
-                <button onClick={() => whatsappShare(modalProduct)}
-                  style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "1px solid #bbf7d0", color: "#16a34a", padding: "5px 12px", fontSize: 10, letterSpacing: 1, cursor: "pointer", transition: "color 0.2s" }}
-                  onMouseEnter={e => (e.currentTarget.style.color = "#15803d")} onMouseLeave={e => (e.currentTarget.style.color = "#16a34a")}>
-                  <svg width={11} height={11} viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413z"/><path d="M11.897 0C5.395 0 .13 5.266.13 11.767c0 2.078.545 4.03 1.495 5.727L.057 24l6.7-1.757A11.71 11.71 0 0 0 11.897 23.534c6.503 0 11.768-5.265 11.768-11.767C23.67 5.266 18.4 0 11.897 0zm0 21.536h-.004a9.726 9.726 0 0 1-4.96-1.358l-.356-.211-3.678.965.982-3.581-.232-.368A9.73 9.73 0 0 1 2.158 11.767C2.158 6.355 6.551 2 11.897 2c2.581 0 5.007 1.007 6.831 2.831a9.604 9.604 0 0 1 2.828 6.83c0 5.347-4.393 9.875-9.659 9.875z"/></svg>
-                  WhatsApp
-                </button>
-                )}
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8, flexWrap: "wrap" }}>
+            {/* Sin `overflowY:auto`: quedaba de cuando las reseñas vivían acá
+                adentro. La columna no tiene alto limitado, así que nunca llegaba a
+                scrollear — pero de aparecer, sería un scroll adentro del scroll
+                del modal, justo lo que evitamos. */}
+            <div style={{ flex: 1, padding: isMobile ? "20px 20px" : 32, display: "flex", flexDirection: "column" }}>
+              {/* ── Encabezado: qué es, cómo se llama y cuánto sale ──────────
+                  El precio va pegado al nombre. Antes en el medio estaban los dos
+                  botones de compartir, que son lo último que hace alguien que
+                  todavía no sabe cuánto cuesta — ahora bajaron al final. */}
+              <p style={{ margin: "0 0 6px", fontSize: 10, color: "#999", letterSpacing: 2, textTransform: "uppercase", fontWeight: 600 }}>
+                {modalProduct.category}
+                {modalProduct.subcategory && <span style={{ opacity: 0.65 }}> › {modalProduct.subcategory}</span>}
+              </p>
+              <h2 style={{ margin: "0 0 12px", fontSize: 22, fontWeight: 900, color: "#111", lineHeight: 1.2 }}>{modalProduct.name}</h2>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
                 {ocultarPrecios ? (
-                  <span style={{ fontSize: 24, fontWeight: 900, color: ACC }}>Consultá precio</span>
+                  <span style={{ fontSize: 24, fontWeight: 900, color: accentLegible }}>Consultá precio</span>
                 ) : modalPromo?.hasPriceDrop ? (
                   <>
                     <span style={{ fontSize: 24, fontWeight: 900, color: "#dc2626" }}>{fmt(modalPromo.effectivePrice)}</span>
@@ -1964,70 +2128,48 @@ export default function ChicParis() {
                   </>
                 ) : (
                   <>
-                    <span style={{ fontSize: 24, fontWeight: 900, color: ACC }}>{fmt(displayPrice)}</span>
-                    {!variantPrice && modalProduct.comparePrice && <span style={{ fontSize: 16, color: "#bbb", textDecoration: "line-through" }}>{fmt(modalProduct.comparePrice)}</span>}
+                    <span style={{ fontSize: 24, fontWeight: 900, color: accentLegible }}>{fmt(displayPrice)}</span>
+                    {/* `> price`, no `comparePrice` a secas: con un precio anterior
+                        igual o menor al actual se tachaba un número que no era
+                        ninguna oferta. El badge de la foto ya preguntaba bien —
+                        el que mentía era este. Es el mismo arreglo que `PromoPrice`
+                        hizo en las listas (CP-1); el modal quedó afuera porque
+                        pinta el precio a mano. */}
+                    {!variantPrice && modalProduct.comparePrice != null && modalProduct.comparePrice > modalProduct.price && (
+                      <span style={{ fontSize: 16, color: "#bbb", textDecoration: "line-through" }}>{fmt(modalProduct.comparePrice)}</span>
+                    )}
                   </>
                 )}
               </div>
-              {modalPromo?.primaryPromo && <PromoBlock promo={modalPromo.primaryPromo} freeShippingExtra={modalPromo.freeShipping} />}
+              {modalPromo?.primaryPromo && (
+                <div style={{ marginTop: 14 }}>
+                  <PromoBlock promo={modalPromo.primaryPromo} freeShippingExtra={modalPromo.freeShipping} />
+                </div>
+              )}
               {!ocultarPrecios && modalProduct.offerNote && (
-                <div style={{ fontSize: 12, color: "#059669", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 4, padding: "5px 10px", display: "flex", alignItems: "center", gap: 6 }}>
+                <div style={{ marginTop: 10, fontSize: 12, color: "#059669", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 4, padding: "5px 10px", display: "flex", alignItems: "center", gap: 6 }}>
                   <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                   <span>{modalProduct.offerNote}</span>
                 </div>
               )}
-              {modalProduct.description && (
-                <div style={{ borderTop: "1px solid #eee", paddingTop: 14 }}>
-                  <p style={{ fontSize: 9, letterSpacing: 2, textTransform: "uppercase", color: "#aaa", margin: "0 0 8px", fontWeight: 600 }}>Descripción</p>
-                  <div className="product-rte" dangerouslySetInnerHTML={{ __html: modalProduct.description }} style={{ fontSize: 14, color: "#555", lineHeight: 1.7 }} />
-                </div>
-              )}
 
-              {(() => {
-                const attrs = modalProduct.attributes ?? [];
-                const condicionAttr = attrs.find(a => a.key === "Condición");
-                const serviciosAttr = attrs.find(a => a.key === "Servicios");
-                const otherAttrs = attrs.filter(a => a.key !== "Condición" && a.key !== "Servicios");
-                let servicios: string[] = [];
-                if (serviciosAttr) { try { servicios = Object.entries(JSON.parse(serviciosAttr.value)).filter(([, v]) => v).map(([k]) => k); } catch {} }
-                if (!condicionAttr && otherAttrs.length === 0 && servicios.length === 0) return null;
-                return (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 16 }}>
-                    {condicionAttr && (
-                      <span style={{ alignSelf: "flex-start", fontSize: 10, letterSpacing: 1, textTransform: "uppercase", fontWeight: 800, color: accentText, background: ACC, padding: "4px 10px", borderRadius: 4 }}>{condicionAttr.value}</span>
-                    )}
-                    {otherAttrs.length > 0 && (
-                      <div style={{ borderRadius: 4, overflow: "hidden", border: "1px solid #f0f0f0" }}>
-                        {otherAttrs.map((a, i) => (
-                          <div key={a.key} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "7px 12px", background: i%2===0 ? "#fafafa" : "#fff", borderBottom: i < otherAttrs.length-1 ? "1px solid #f0f0f0" : "none" }}>
-                            <span style={{ fontSize: 10, fontWeight: 700, color: "#999", textTransform: "uppercase", letterSpacing: 0.5 }}>{a.key}</span>
-                            <span style={{ fontSize: 12, color: "#111", fontWeight: 500 }}>{a.value}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    {servicios.length > 0 && (
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                        {servicios.map(k => (
-                          <span key={k} style={{ fontSize: 10, letterSpacing: 1, padding: "4px 10px", border: "1px solid #e5e7eb", color: "#555", borderRadius: 4 }}>✓ {k}</span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                );
-              })()}
-
+              {/* ── Comprar ─────────────────────────────────────────────────
+                  Talle, color, cantidad y el botón, todo junto y ARRIBA de la
+                  descripción. Antes había que pasar la ficha entera —descripción
+                  larga incluida— para encontrar dónde se agrega al carrito: el
+                  que ya decidió comprar tenía que leer igual. */}
+              <CpBloque>
               {modalProduct.sizes.length > 0 && (
                 <div style={{ marginBottom: 16 }}>
-                  <p style={{ margin: "0 0 10px", fontSize: 11, fontWeight: 700, color: "#333", textTransform: "uppercase", letterSpacing: 1 }}>Talle</p>
+                  <p style={CP_MODAL_TITULO}>Talle</p>
                   <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                     {modalProduct.sizes.map(s => {
                       const outOfStock = outOfStockSizes.has(s);
                       return (
-                        <button key={s} onClick={() => setSelectedSize(s)} style={{
-                          padding: "8px 14px", border: selectedSize === s ? `2px solid ${ACC}` : "2px solid #e0e0e0",
-                          background: selectedSize === s ? ACC : "transparent",
-                          color: selectedSize === s ? (accentText) : "#333",
+                        <button key={s} onClick={() => elegirTalle(s)} style={{
+                          padding: "8px 14px", border: selectedSize === s ? `2px solid ${accentRelleno}` : "2px solid #e0e0e0",
+                          background: selectedSize === s ? accentRelleno : "transparent",
+                          color: selectedSize === s ? accentRellenoText : "#333",
                           fontSize: 12, fontWeight: 700, cursor: "pointer", transition: "all 0.15s",
                           opacity: outOfStock ? 0.35 : 1, textDecoration: outOfStock ? "line-through" : "none",
                         }}>{s}</button>
@@ -2038,16 +2180,16 @@ export default function ChicParis() {
               )}
               {modalProduct.colors.length > 0 && (
                 <div style={{ marginBottom: 16 }}>
-                  <p style={{ margin: "0 0 10px", fontSize: 11, fontWeight: 700, color: "#333", textTransform: "uppercase", letterSpacing: 1 }}>Color</p>
+                  <p style={CP_MODAL_TITULO}>Color</p>
                   <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                     {modalProduct.colors.map(c => {
                       const swatch = colorToSwatch(c);
                       return (
-                        <button key={c} onClick={() => setSelectedColor(c)} style={{
+                        <button key={c} onClick={() => elegirColor(c)} style={{
                           display: "flex", alignItems: "center", gap: 7,
-                          padding: "8px 14px", border: selectedColor === c ? `2px solid ${ACC}` : "2px solid #e0e0e0",
-                          background: selectedColor === c ? ACC : "transparent",
-                          color: selectedColor === c ? (accentText) : "#333",
+                          padding: "8px 14px", border: selectedColor === c ? `2px solid ${accentRelleno}` : "2px solid #e0e0e0",
+                          background: selectedColor === c ? accentRelleno : "transparent",
+                          color: selectedColor === c ? accentRellenoText : "#333",
                           fontSize: 12, fontWeight: 700, cursor: "pointer", transition: "all 0.15s",
                         }}>
                           {swatch && <span style={{ width: 14, height: 14, borderRadius: "50%", background: swatch, border: "1px solid rgba(0,0,0,0.15)", flexShrink: 0 }} />}
@@ -2059,9 +2201,9 @@ export default function ChicParis() {
                 </div>
               )}
 
-              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
-                <p style={{ margin: 0, fontSize: 11, fontWeight: 700, color: "#333", textTransform: "uppercase", letterSpacing: 1 }}>Cantidad</p>
-                <div style={{ display: "flex", alignItems: "center", border: "2px solid #e0e0e0" }}>
+              <div style={{ marginBottom: 16 }}>
+                <p style={CP_MODAL_TITULO}>Cantidad</p>
+                <div style={{ display: "flex", alignItems: "center", border: "2px solid #e0e0e0", width: "fit-content" }}>
                   <button onClick={() => setQty(q => Math.max(isWholesale && modalProduct.cantMinMayorista ? modalProduct.cantMinMayorista : 1, q - 1))} style={{ width: 36, height: 36, background: "none", border: "none", cursor: "pointer", fontSize: 18, color: "#333" }}>−</button>
                   <span style={{ width: 36, textAlign: "center", fontSize: 14, fontWeight: 700 }}>{qty}</span>
                   <button onClick={() => setQty(q => selectedVariantStock !== null ? Math.min(selectedVariantStock, q + 1) : q + 1)} style={{ width: 36, height: 36, background: "none", border: "none", cursor: "pointer", fontSize: 18, color: "#333" }}>+</button>
@@ -2082,55 +2224,183 @@ export default function ChicParis() {
               })()}
               {/* Stock por variante */}
               {selectedVariantStock !== null && selectedVariantStock === 0 && (
-                <p style={{ fontSize:12, color:"#888", fontWeight:600, margin:0 }}>Sin stock en esta combinación</p>
+                <p style={{ fontSize:12, color:"#888", fontWeight:600, margin:"0 0 12px" }}>Sin stock en esta combinación</p>
               )}
               {selectedVariantStock !== null && selectedVariantStock > 0 && selectedVariantStock <= 5 && (
-                <p style={{ fontSize:12, color:"#ef4444", fontWeight:700, margin:0 }}>¡Últimas {selectedVariantStock} unidades!</p>
+                <p style={{ fontSize:12, color:"#ef4444", fontWeight:700, margin:"0 0 12px" }}>¡Últimas {selectedVariantStock} unidades!</p>
               )}
+              {/* El botón ya NO lleva línea propia arriba: está adentro del bloque
+                  de compra, y una línea acá lo separaba justo de los controles a
+                  los que pertenece. */}
               {!isMobile && (
-                <div style={{ borderTop: "1px solid #f0f0f0", marginTop: 4, paddingTop: 16 }}>
-                  {isInquiryMode ? (
-                <button onClick={() => openInquiry(modalProduct)} style={{ background: ACC, color: accentText, border: "none", padding: "15px", fontSize: 11, fontWeight: 800, letterSpacing: 3, textTransform: "uppercase", cursor: "pointer", width: "100%" }}>
-                  Consultar disponibilidad
-                </button>
-              ) : (
-                <button onClick={addToCart} disabled={selectedVariantStock === 0}
-                  style={{ background: selectedVariantStock === 0 ? "#ccc" : ACC, color: accentText, border: "none", padding: "15px", fontSize: 11, fontWeight: 800, letterSpacing: 3, textTransform: "uppercase", cursor: selectedVariantStock === 0 ? "not-allowed" : "pointer", width: "100%" }}>
-                  {/* El total va en el botón como en los otros tres templates de
-                      moda. En mobile el número ya está arriba del botón; acá no
-                      estaba en ningún lado, y con un 3×2 o cantidad > 1 el
-                      comprador tenía que sacar la cuenta de cabeza. */}
-                  {selectedVariantStock === 0 ? "Sin stock" : `Agregar al carrito · ${fmt(nxmPaid != null ? nxmPaid * displayPrice : (modalPromo?.hasPriceDrop ? modalPromo.effectivePrice : displayPrice) * qty)}`}
-                </button>
-              )}</div>)}
+                isInquiryMode ? (
+                  <button onClick={() => openInquiry(modalProduct)} style={{ background: ACC, color: accentText, border: "none", padding: "15px", fontSize: 11, fontWeight: 800, letterSpacing: 3, textTransform: "uppercase", cursor: "pointer", width: "100%" }}>
+                    Consultar disponibilidad
+                  </button>
+                ) : (
+                  <button onClick={addToCart} disabled={selectedVariantStock === 0}
+                    style={{ background: selectedVariantStock === 0 ? "#ccc" : ACC, color: accentText, border: "none", padding: "15px", fontSize: 11, fontWeight: 800, letterSpacing: 3, textTransform: "uppercase", cursor: selectedVariantStock === 0 ? "not-allowed" : "pointer", width: "100%" }}>
+                    {/* El total va en el botón como en los otros tres templates de
+                        moda. En mobile el número ya está arriba del botón; acá no
+                        estaba en ningún lado, y con un 3×2 o cantidad > 1 el
+                        comprador tenía que sacar la cuenta de cabeza. */}
+                    {selectedVariantStock === 0 ? "Sin stock" : `Agregar al carrito · ${fmt(nxmPaid != null ? nxmPaid * displayPrice : (modalPromo?.hasPriceDrop ? modalPromo.effectivePrice : displayPrice) * qty)}`}
+                  </button>
+                )
+              )}
+              </CpBloque>
 
-              {/* Reseñas — D-04 */}
-              <div style={{ borderTop: "1px solid #f0f0f0", paddingTop: 24, marginTop: 20 }}>
-                <p style={{ margin: "0 0 20px", fontSize: 11, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", color: "#999" }}>
-                  Reseñas{reviews.length > 0 && ` (${reviews.length})`}
+              {modalProduct.description && (
+                <CpBloque titulo="Descripción">
+                  <div className="product-rte" dangerouslySetInnerHTML={{ __html: modalProduct.description }} style={{ fontSize: 14, color: "#555", lineHeight: 1.7 }} />
+                </CpBloque>
+              )}
+
+              {/* El cuadro de datos técnicos no tenía ningún título: aparecía una
+                  tabla suelta después de la descripción y no se entendía qué era. */}
+              {(() => {
+                const attrs = modalProduct.attributes ?? [];
+                const condicionAttr = attrs.find(a => a.key === "Condición");
+                const serviciosAttr = attrs.find(a => a.key === "Servicios");
+                const otherAttrs = attrs.filter(a => a.key !== "Condición" && a.key !== "Servicios");
+                let servicios: string[] = [];
+                if (serviciosAttr) { try { servicios = Object.entries(JSON.parse(serviciosAttr.value)).filter(([, v]) => v).map(([k]) => k); } catch {} }
+                if (!condicionAttr && otherAttrs.length === 0 && servicios.length === 0) return null;
+                return (
+                  <CpBloque titulo="Características">
+                    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                      {condicionAttr && (
+                        <span style={{ alignSelf: "flex-start", fontSize: 10, letterSpacing: 1, textTransform: "uppercase", fontWeight: 800, color: accentRellenoText, background: accentRelleno, padding: "4px 10px", borderRadius: 4 }}>{condicionAttr.value}</span>
+                      )}
+                      {otherAttrs.length > 0 && (
+                        <div style={{ borderRadius: 4, overflow: "hidden", border: "1px solid #f0f0f0" }}>
+                          {otherAttrs.map((a, i) => (
+                            <div key={a.key} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, padding: "7px 12px", background: i%2===0 ? "#fafafa" : "#fff", borderBottom: i < otherAttrs.length-1 ? "1px solid #f0f0f0" : "none" }}>
+                              <span style={{ fontSize: 10, fontWeight: 700, color: "#999", textTransform: "uppercase", letterSpacing: 0.5 }}>{a.key}</span>
+                              <span style={{ fontSize: 12, color: "#111", fontWeight: 500, textAlign: "right" }}>{a.value}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {servicios.length > 0 && (
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                          {servicios.map(k => (
+                            <span key={k} style={{ fontSize: 10, letterSpacing: 1, padding: "4px 10px", border: "1px solid #e5e7eb", color: "#555", borderRadius: 4 }}>✓ {k}</span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </CpBloque>
+                );
+              })()}
+
+              {/* Compartir — al final. Es lo que se hace DESPUÉS de decidir, no
+                  antes de saber el precio, que es donde estaba. */}
+              <CpBloque>
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                  <button onClick={() => shareProduct(modalProduct)}
+                    style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "1px solid #e5e7eb", color: "#9ca3af", padding: "5px 12px", fontSize: 10, letterSpacing: 1, cursor: "pointer", transition: "color 0.2s" }}
+                    onMouseEnter={e => (e.currentTarget.style.color = "#374151")} onMouseLeave={e => (e.currentTarget.style.color = "#9ca3af")}>
+                    <svg width={11} height={11} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                    Copiar link
+                  </button>
+                  {hasWA && (
+                  <button onClick={() => whatsappShare(modalProduct)}
+                    style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "1px solid #bbf7d0", color: "#16a34a", padding: "5px 12px", fontSize: 10, letterSpacing: 1, cursor: "pointer", transition: "color 0.2s" }}
+                    onMouseEnter={e => (e.currentTarget.style.color = "#15803d")} onMouseLeave={e => (e.currentTarget.style.color = "#16a34a")}>
+                    <svg width={11} height={11} viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413z"/><path d="M11.897 0C5.395 0 .13 5.266.13 11.767c0 2.078.545 4.03 1.495 5.727L.057 24l6.7-1.757A11.71 11.71 0 0 0 11.897 23.534c6.503 0 11.768-5.265 11.768-11.767C23.67 5.266 18.4 0 11.897 0zm0 21.536h-.004a9.726 9.726 0 0 1-4.96-1.358l-.356-.211-3.678.965.982-3.581-.232-.368A9.73 9.73 0 0 1 2.158 11.767C2.158 6.355 6.551 2 11.897 2c2.581 0 5.007 1.007 6.831 2.831a9.604 9.604 0 0 1 2.828 6.83c0 5.347-4.393 9.875-9.659 9.875z"/></svg>
+                    WhatsApp
+                  </button>
+                  )}
+                </div>
+              </CpBloque>
+
+            </div>
+            </div>
+            {/* ── Videos — a lo ANCHO, no adentro de la columna de la foto ─────
+                Dos motivos, y el segundo es el que importa:
+                  · La foto se dibuja con `fill` (`position:absolute; inset:0`) y
+                    lo absoluto se pinta ENCIMA de lo que está en flujo normal:
+                    metido en la caja de la foto, el bloque quedaba tapado por la
+                    prenda —se veía el video flotando suelto, sin su título— y en
+                    celular además recortado por el `overflow:hidden`.
+                  · Colgado abajo de la columna, era lo que estiraba la izquierda:
+                    la columna derecha terminaba en "Copiar link" y al lado
+                    quedaba un vacío de ~330px. Los videos son una sección del
+                    producto, como las reseñas o los similares, no parte de la
+                    galería — y acá abajo tienen ancho para mostrar varios en
+                    fila en vez de uno solo. */}
+            {modalProduct.reelUrls.length > 0 && (
+              <div style={{ borderTop: "1px solid #f0f0f0", padding: isMobile ? "20px 20px" : "24px 32px" }}>
+                <p style={CP_MODAL_TITULO}>Videos</p>
+                <StoreProductReels
+                  reelUrls={modalProduct.reelUrls}
+                  theme={{ accent: ACC, text: "#111", border: `${ACC}33`, radius: 4 }}
+                />
+              </div>
+            )}
+
+            {/* ── Reseñas (D-04) — a lo ANCHO, abajo de las dos columnas ───────
+                Estaban adentro de la columna derecha, que es la mitad del modal, y
+                son lo más largo de la ficha. Eso causaba las dos cosas de una:
+                  · la columna de la foto quedaba con un hueco blanco enorme abajo
+                    (ahora que la foto tiene proporción propia ya no se estira para
+                    acompañar a las reseñas, y se veía el vacío);
+                  · y las reseñas se leían espichadas en ~440px cuando acá tienen
+                    ~940, que es donde un texto de 6 líneas se lee cómodo.
+                Van antes de "Productos similares", que ya vivía a lo ancho. */}
+            <div style={{ borderTop: "1px solid #f0f0f0", padding: isMobile ? "20px 20px" : "24px 32px" }}>
+                <p style={{ ...CP_MODAL_TITULO, marginBottom: 20 }}>
+                  Reseñas{resenasVisibles.length > 0 && ` (${resenasVisibles.length})`}
                 </p>
+                {/* Solo en el editor: aclara que lo de abajo es de mentira. Sin
+                    esto el dueño cree que ya tiene reseñas — o peor, las busca en
+                    el panel para contestarlas. */}
+                {resenasDeEjemplo && (
+                  <div style={{ display:"flex", gap:9, margin:"0 0 16px", padding:"10px 13px", background:"#fffbeb", border:"1px solid #fde68a", borderRadius:8 }}>
+                    <span style={{ flexShrink:0, fontSize:13, lineHeight:1.4 }}>⚠️</span>
+                    <p style={{ margin:0, fontSize:11.5, color:"#92400e", lineHeight:1.55 }}>
+                      <strong>Estas reseñas son de ejemplo.</strong> Este producto todavía no tiene ninguna:
+                      están para que veas cómo queda el bloque. No se publican y desaparecen solas en cuanto
+                      llegue la primera de verdad.
+                    </p>
+                  </div>
+                )}
+                {/* El botón va ACÁ, arriba de la lista: con muchas reseñas
+                    cargadas, abajo del todo no lo encuentra nadie. */}
+                {!isOwner && !reviewDone && (
+                  <button type="button" onClick={() => { setReviewError(null); setResenaProdOpen(true); }}
+                    style={{ marginBottom: 18, background:"none", border:`1px solid ${accentLegible}`, color:accentLegible, padding:"10px 22px", fontSize:10, fontWeight:800, letterSpacing:2, textTransform:"uppercase", cursor:"pointer", transition:"opacity 0.2s" }}
+                    onMouseEnter={e => (e.currentTarget.style.opacity = "0.7")}
+                    onMouseLeave={e => (e.currentTarget.style.opacity = "1")}>
+                    Escribí tu reseña
+                  </button>
+                )}
                 {reviewsLoading ? (
                   <p style={{ fontSize: 12, color: "#bbb" }}>Cargando...</p>
-                ) : reviews.length > 0 ? (
+                ) : resenasVisibles.length > 0 ? (
                   <div style={{ marginBottom: 24 }}>
                     {(() => {
-                      const avg = reviews.reduce((s, r) => s + r.rating, 0) / reviews.length;
-                      const dist = [5,4,3,2,1].map(s => ({ stars:s, count: reviews.filter(r => r.rating === s).length }));
+                      const avg = resenasVisibles.reduce((s, r) => s + r.rating, 0) / resenasVisibles.length;
+                      const dist = [5,4,3,2,1].map(s => ({ stars:s, count: resenasVisibles.filter(r => r.rating === s).length }));
+                      // `maxWidth` acotado: a lo ancho del modal las barritas del
+                      // gráfico quedaban de medio metro y el promedio perdido allá
+                      // a la izquierda. Es un resumen, no una tabla.
                       return (
-                        <div style={{ display:"flex", gap:20, alignItems:"center", marginBottom:20, padding:"14px 16px", background:"#fafafa", border:"1px solid #f0f0f0", borderRadius:4 }}>
+                        <div style={{ display:"flex", gap:20, alignItems:"center", marginBottom:20, padding:"14px 16px", background:"#fafafa", border:"1px solid #f0f0f0", borderRadius:4, maxWidth: 440 }}>
                           <div style={{ textAlign:"center", minWidth:56 }}>
                             <p style={{ fontSize:34, fontWeight:800, color:"#111", margin:0, lineHeight:1 }}>{avg.toFixed(1)}</p>
                             <div style={{ display:"flex", gap:2, justifyContent:"center", margin:"6px 0 4px" }}>
                               {[1,2,3,4,5].map(s => <span key={s} style={{ fontSize:11, color: s <= Math.round(avg) ? STAR_ON : "#e5e7eb" }}>★</span>)}
                             </div>
-                            <p style={{ fontSize:9, color:"#bbb", margin:0, fontWeight:600, letterSpacing:0.5 }}>{reviews.length} reseña{reviews.length !== 1 ? "s" : ""}</p>
+                            <p style={{ fontSize:9, color:"#bbb", margin:0, fontWeight:600, letterSpacing:0.5 }}>{resenasVisibles.length} reseña{resenasVisibles.length !== 1 ? "s" : ""}</p>
                           </div>
                           <div style={{ flex:1, display:"flex", flexDirection:"column", gap:5 }}>
                             {dist.map(d => (
                               <div key={d.stars} style={{ display:"flex", alignItems:"center", gap:8 }}>
                                 <span style={{ fontSize:9, color:STAR_ON, minWidth:14, textAlign:"right", fontWeight:700 }}>{d.stars}★</span>
                                 <div style={{ flex:1, height:4, background:"#f0f0f0", borderRadius:2, overflow:"hidden" }}>
-                                  <div style={{ height:"100%", width:`${reviews.length ? (d.count / reviews.length) * 100 : 0}%`, background:ACC, borderRadius:2 }} />
+                                  <div style={{ height:"100%", width:`${resenasVisibles.length ? (d.count / resenasVisibles.length) * 100 : 0}%`, background:accentRelleno, borderRadius:2 }} />
                                 </div>
                                 <span style={{ fontSize:9, color:"#bbb", minWidth:12, textAlign:"right" }}>{d.count}</span>
                               </div>
@@ -2139,10 +2409,16 @@ export default function ChicParis() {
                         </div>
                       );
                     })()}
-                    <div style={{ display:"flex", flexDirection:"column" }}>
-                      {reviews.slice(0, reviewsShown).map((r, i) => (
-                        <div key={r.id} style={{ display:"flex", gap:12, padding:"16px 0", borderBottom: i < Math.min(reviewsShown, reviews.length) - 1 ? "1px solid #f5f5f5" : "none" }}>
-                          <div style={{ width:34, height:34, borderRadius:"50%", flexShrink:0, background:`${ACC}15`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:13, fontWeight:700, color:ACC }}>
+                    {/* De a dos por fila en escritorio. A lo ancho del modal, una
+                        sola columna daba renglones de ~140 caracteres — casi el
+                        doble de lo que el ojo sigue sin perderse (60-80). En dos
+                        columnas cada renglón queda en ~64, que es el ideal, y de
+                        paso no sobra espacio a la derecha. En celular va una
+                        sola, obviamente. */}
+                    <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2, 1fr)", columnGap: 32, alignItems: "start" }}>
+                      {resenasVisibles.slice(0, reviewsShown).map(r => (
+                        <div key={r.id} style={{ display:"flex", gap:12, padding:"16px 0", borderBottom: "1px solid #f5f5f5" }}>
+                          <div style={{ width:34, height:34, borderRadius:"50%", flexShrink:0, background:`${ACC}15`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:13, fontWeight:700, color:accentLegible }}>
                             {r.reviewer.charAt(0).toUpperCase()}
                           </div>
                           <div style={{ flex:1 }}>
@@ -2158,80 +2434,40 @@ export default function ChicParis() {
                             <div style={{ display:"flex", gap:1, marginBottom: r.comment ? 8 : 0 }}>
                               {[1,2,3,4,5].map(s => <span key={s} style={{ fontSize:12, color: s <= r.rating ? STAR_ON : "#e5e7eb" }}>★</span>)}
                             </div>
-                            {r.comment && <p style={{ fontSize:13, color:"#666", margin:0, lineHeight:1.65 }}>{r.comment}</p>}
+                            {/* Recortado a 6 líneas con "Leer todo", el mismo
+                                componente que usa el bloque de la portada. El tope
+                                es de 500 caracteres: sin recorte, una sola reseña
+                                larga son 9 líneas y empuja a las otras cuatro
+                                fuera de la pantalla. */}
+                            {r.comment && (
+                              <ResenaComentario texto={r.comment} acento={accentLegible} comillas={false}
+                                estiloTexto={{ fontFamily: "inherit", fontStyle: "normal", fontSize: 13, color: "#666", lineHeight: 1.65 }} />
+                            )}
                           </div>
                         </div>
                       ))}
                     </div>
-                    {reviews.length > reviewsShown && (
-                      <button onClick={() => setReviewsShown(n => n + 10)} style={{ marginTop:14, background:"none", border:"1px solid #e5e7eb", color:ACC, fontSize:10, fontWeight:700, letterSpacing:1.5, cursor:"pointer", padding:"8px 20px", textTransform:"uppercase", display:"block" }}>
-                        Ver más ({reviews.length - reviewsShown})
+                    {resenasVisibles.length > reviewsShown && (
+                      <button onClick={() => setReviewsShown(n => n + PASO_RESENAS)} style={{ marginTop:14, background:"none", border:"1px solid #e5e7eb", color:accentLegible, fontSize:10, fontWeight:700, letterSpacing:1.5, cursor:"pointer", padding:"8px 20px", textTransform:"uppercase", display:"block" }}>
+                        Ver más ({resenasVisibles.length - reviewsShown})
                       </button>
                     )}
                   </div>
                 ) : (
                   <p style={{ fontSize: 12, color: "#bbb", marginBottom: 16 }}>Sé el primero en dejar una reseña.</p>
                 )}
-                {isOwner ? (
-                  <p style={{ fontSize: 11, color: "#bbb", fontStyle: "italic" }}>El dueño no puede dejar reseñas en su propia tienda.</p>
-                ) : reviewDone ? (
-                  <p style={{ fontSize: 12, color: ACC, fontWeight: 700 }}>¡Gracias por tu reseña!</p>
-                ) : (
-                  <div style={{ position: "relative" }}>
-                    {isPreview && <div style={{ position: "absolute", inset: 0, zIndex: 10, cursor: "default" }} onClick={e => e.stopPropagation()} />}
-                    {/* CP-12: el motivo del rechazo, arriba del formulario y con
-                        el texto que manda el servidor. Antes no se decía nada. */}
-                    {reviewError && (
-                      <p style={{ margin: "0 0 10px", fontSize: 11.5, color: "#b91c1c", background: "#fef2f2", border: "1px solid #fecaca", padding: "8px 11px", lineHeight: 1.5 }}>
-                        ⚠ {reviewError}
-                      </p>
-                    )}
-                    <form onSubmit={isPreview ? e => e.preventDefault() : submitReview} style={{ display: "flex", flexDirection: "column", gap: 10, opacity: isPreview ? 0.55 : 1 }}>
-                      <input value={reviewHoneypot} onChange={e => setReviewHoneypot(e.target.value)} name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" style={{ opacity:0, height:0, position:"absolute", pointerEvents:"none" }} />
-                      <input value={reviewForm.reviewer} onChange={e => !isPreview && setReviewForm(p => ({ ...p, reviewer: e.target.value }))}
-                        placeholder="Tu nombre" readOnly={isPreview}
-                        style={{ border: "1px solid #e5e7eb", padding: "9px 12px", fontSize: 12, outline: "none" }} />
-                      <div>
-                        <input value={reviewForm.email} onChange={e => !isPreview && setReviewForm(p => ({ ...p, email: e.target.value }))}
-                          placeholder="Tu email (opcional — verifica tu compra)" type="email" readOnly={isPreview} autoComplete="email"
-                          style={{ width: "100%", boxSizing: "border-box", border: "1px solid #e5e7eb", padding: "9px 12px", fontSize: 12, outline: "none" }} />
-                        <p style={{ fontSize: 10, color: "#aaa", margin: "3px 0 0", lineHeight: 1.4 }}>
-                          Si compraste acá, tu reseña mostrará &ldquo;✓ Compra verificada&rdquo;. El email no se publica.
-                        </p>
-                      </div>
-                      <div style={{ display: "flex", gap: 4 }}>
-                        {[1,2,3,4,5].map(s => (
-                          <button key={s} type="button" onClick={() => !isPreview && setReviewForm(p => ({ ...p, rating: s }))}
-                            style={{ background: "none", border: "none", fontSize: 20, cursor: isPreview ? "default" : "pointer", color: s <= reviewForm.rating ? STAR_ON : "#e5e7eb", padding: "2px" }}>★</button>
-                        ))}
-                      </div>
-                      {/* El tope viene del servidor (COMENTARIO_MAX) para que sean
-                          el mismo número. Sin esto se podía escribir sin límite y
-                          el recorte aparecía recién después de publicar, cortando
-                          la reseña a la mitad sin haber avisado nunca. */}
-                      <textarea value={reviewForm.comment} onChange={e => !isPreview && setReviewForm(p => ({ ...p, comment: e.target.value }))}
-                        placeholder="Comentario (opcional)" rows={3} readOnly={isPreview} maxLength={COMENTARIO_MAX}
-                        style={{ border: "1px solid #e5e7eb", padding: "9px 12px", fontSize: 12, resize: "none", outline: "none" }} />
-                      {reviewForm.comment.length > COMENTARIO_MAX - 80 && (
-                        <p style={{ margin: "-4px 0 0", fontSize: 10, color: reviewForm.comment.length >= COMENTARIO_MAX ? "#dc2626" : "#6e6e6e", textAlign: "right" }}>
-                          {reviewForm.comment.length} / {COMENTARIO_MAX}
-                        </p>
-                      )}
-                      {!isPreview && reviewCaptcha.widget}
-                      <button type="submit" disabled={isPreview || reviewSubmitting || !reviewForm.reviewer.trim() || !reviewCaptcha.ready}
-                        style={{ background: isPreview || reviewSubmitting || !reviewForm.reviewer.trim() ? "#f3f4f6" : ACC, color: isPreview || reviewSubmitting || !reviewForm.reviewer.trim() ? "#9ca3af" : accentText, border: "none", padding: "12px", fontSize: 10, fontWeight: 800, letterSpacing: 3, textTransform: "uppercase", cursor: isPreview ? "default" : "pointer" }}>
-                        {reviewSubmitting ? "Publicando..." : "Publicar reseña"}
-                      </button>
-                    </form>
-                    {isPreview && <p style={{ fontSize: 10, color: "#bbb", fontStyle: "italic", marginTop: 6 }}>Vista previa — solo disponible en la tienda real.</p>}
-                  </div>
+                {/* El formulario se fue al modal que abre el botón de arriba. Acá
+                    quedan los dos casos en los que no hay nada que escribir. */}
+                {isOwner && (
+                  <p style={{ fontSize: 11, color: "#bbb", fontStyle: "italic", marginTop: 4 }}>El dueño no puede dejar reseñas en su propia tienda.</p>
+                )}
+                {reviewDone && (
+                  <p style={{ fontSize: 12, color: accentLegible, fontWeight: 700, marginTop: 4 }}>¡Gracias por tu reseña!</p>
                 )}
               </div>
-            </div>
-            </div>
             {similarProducts.length > 0 && (
               <div style={{ borderTop: "1px solid #f0f0f0", padding: isMobile ? "20px 20px" : "24px 32px" }}>
-                <p style={{ margin: "0 0 14px", fontSize: 11, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", color: "#999" }}>Productos similares</p>
+                <p style={CP_MODAL_TITULO}>Productos similares</p>
                 <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(4,1fr)", gap: 12 }}>
                   {similarProducts.map(p => (
                     <div key={p.id} onClick={() => openModal(p)} className="cp-zoom" style={{ cursor: "pointer" }}>
@@ -2250,8 +2486,15 @@ export default function ChicParis() {
             {isMobile && (
               <div style={{ borderTop: "1px solid #f0f0f0", padding: "12px 16px 16px", background: "#fff", flexShrink: 0 }}>
                 <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 10 }}>
-                  <span style={{ fontSize: 20, fontWeight: 700, color: ACC }}>{ocultarPrecios ? "Consultá precio" : fmt(nxmPaid != null ? nxmPaid * displayPrice : (modalPromo?.hasPriceDrop ? modalPromo.effectivePrice : displayPrice) * qty)}</span>
-                  {!variantPrice && !ocultarPrecios && modalProduct.comparePrice && <span style={{ fontSize: 12, color: "#bbb", textDecoration: "line-through" }}>{fmt(modalProduct.comparePrice)}</span>}
+                  <span style={{ fontSize: 20, fontWeight: 700, color: accentLegible }}>{ocultarPrecios ? "Consultá precio" : fmt(nxmPaid != null ? nxmPaid * displayPrice : (modalPromo?.hasPriceDrop ? modalPromo.effectivePrice : displayPrice) * qty)}</span>
+                  {/* × la cantidad, igual que el número grande de al lado. Antes el
+                      de arriba era el TOTAL y este el precio anterior UNITARIO: con
+                      cantidad 2 se leía "$16.000" tachando "$10.000", o sea el
+                      tachado más barato que lo que se paga. Y `> price` por lo
+                      mismo que arriba. */}
+                  {!variantPrice && !ocultarPrecios && modalProduct.comparePrice != null && modalProduct.comparePrice > modalProduct.price && (
+                    <span style={{ fontSize: 12, color: "#bbb", textDecoration: "line-through" }}>{fmt(modalProduct.comparePrice * qty)}</span>
+                  )}
                   {qty > 1 && <span style={{ fontSize: 11, color: "#bbb" }}>× {qty}</span>}
                 </div>
                 {isInquiryMode ? (
@@ -2394,6 +2637,82 @@ export default function ChicParis() {
         </div>
       )}
 
+      {/* ── MODAL: reseña del PRODUCTO ─────────────────────────────────────
+          Lo abre "Escribí tu reseña", que está arriba de la lista. Antes el
+          formulario era lo último del panel: con 50 reseñas cargadas había que
+          bajarlas todas para llegar a escribir la propia, y encima empujaba a
+          "Productos similares" fuera de la vista.
+          Va DESPUÉS del modal de producto en el DOM y con z-index mayor, porque
+          se abre estando ese abierto y tiene que quedar por encima. */}
+      {modalProduct && resenaProdOpen && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: isPreview ? 20002 : 9600, display: "flex", alignItems: isMobile ? "flex-end" : "center", justifyContent: "center", padding: isMobile ? 0 : 20, backdropFilter: "blur(4px)" }}
+          onClick={() => setResenaProdOpen(false)}>
+          <div style={{ background: "#fff", width: "100%", maxWidth: 460, maxHeight: "92vh", overflowY: "auto", borderRadius: isMobile ? "12px 12px 0 0" : 4, boxShadow: "0 24px 64px rgba(0,0,0,0.3)", position: "relative" }}
+            onClick={e => e.stopPropagation()}>
+            <button onClick={() => setResenaProdOpen(false)} aria-label="Cerrar"
+              style={{ position: "absolute", top: 10, right: 10, zIndex: 2, background: "none", border: "none", color: "#999", width: 32, height: 32, cursor: "pointer", fontSize: 22, lineHeight: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
+            <div style={{ padding: isMobile ? "28px 22px 26px" : "30px 28px 26px" }}>
+              <p style={{ margin: "0 0 4px", fontSize: 10, letterSpacing: 2, textTransform: "uppercase", fontWeight: 700, color: "#111" }}>Tu reseña</p>
+              {/* Que se vea DE QUÉ producto es: el modal tapa la ficha, y con
+                  cuatro pestañas abiertas no siempre se acuerda uno. */}
+              <p style={{ margin: "0 0 16px", fontSize: 12, color: "#888", lineHeight: 1.5 }}>
+                Sobre <strong style={{ color: "#111" }}>{modalProduct.name}</strong>.
+              </p>
+              {/* CP-12: el motivo del rechazo, arriba del formulario y con
+                  el texto que manda el servidor. Antes no se decía nada. */}
+              {reviewError && (
+                <p style={{ margin: "0 0 10px", fontSize: 11.5, color: "#b91c1c", background: "#fef2f2", border: "1px solid #fecaca", padding: "8px 11px", lineHeight: 1.5 }}>
+                  ⚠ {reviewError}
+                </p>
+              )}
+              <form onSubmit={isPreview ? e => e.preventDefault() : submitReview} style={{ display: "flex", flexDirection: "column", gap: 10, opacity: isPreview ? 0.55 : 1 }}>
+                <input value={reviewHoneypot} onChange={e => setReviewHoneypot(e.target.value)} name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" style={{ opacity:0, height:0, position:"absolute", pointerEvents:"none" }} />
+                <input value={reviewForm.reviewer} onChange={e => !isPreview && setReviewForm(p => ({ ...p, reviewer: e.target.value }))}
+                  placeholder="Tu nombre" readOnly={isPreview}
+                  style={{ border: "1px solid #e5e7eb", padding: "10px 12px", fontSize: 13, outline: "none" }} />
+                <div>
+                  <input value={reviewForm.email} onChange={e => !isPreview && setReviewForm(p => ({ ...p, email: e.target.value }))}
+                    placeholder="Tu email (opcional — verifica tu compra)" type="email" readOnly={isPreview} autoComplete="email"
+                    style={{ width: "100%", boxSizing: "border-box", border: "1px solid #e5e7eb", padding: "10px 12px", fontSize: 13, outline: "none" }} />
+                  <p style={{ fontSize: 10.5, color: "#777", margin: "4px 0 0", lineHeight: 1.4 }}>
+                    Si compraste acá, tu reseña mostrará &ldquo;✓ Compra verificada&rdquo;. El email no se publica.
+                  </p>
+                </div>
+                <div style={{ display: "flex", gap: 4 }}>
+                  {[1,2,3,4,5].map(s => (
+                    <button key={s} type="button" onClick={() => !isPreview && setReviewForm(p => ({ ...p, rating: s }))}
+                      aria-label={`${s} de 5 estrellas`}
+                      style={{ background: "none", border: "none", fontSize: 24, lineHeight: 1, cursor: isPreview ? "default" : "pointer", color: s <= reviewForm.rating ? STAR_ON : "#e5e7eb", padding: "2px" }}>★</button>
+                  ))}
+                </div>
+                {/* El tope viene del servidor (COMENTARIO_MAX) para que sean
+                    el mismo número. Sin esto se podía escribir sin límite y
+                    el recorte aparecía recién después de publicar, cortando
+                    la reseña a la mitad sin haber avisado nunca. */}
+                <textarea value={reviewForm.comment} onChange={e => !isPreview && setReviewForm(p => ({ ...p, comment: e.target.value }))}
+                  placeholder="Comentario (opcional)" rows={3} readOnly={isPreview} maxLength={COMENTARIO_MAX}
+                  style={{ border: "1px solid #e5e7eb", padding: "10px 12px", fontSize: 13, resize: "none", outline: "none" }} />
+                {reviewForm.comment.length > COMENTARIO_MAX - 80 && (
+                  <p style={{ margin: "-4px 0 0", fontSize: 10, color: reviewForm.comment.length >= COMENTARIO_MAX ? "#dc2626" : "#6e6e6e", textAlign: "right" }}>
+                    {reviewForm.comment.length} / {COMENTARIO_MAX}
+                  </p>
+                )}
+                {!isPreview && reviewCaptcha.widget}
+                <button type="submit" disabled={isPreview || reviewSubmitting || !reviewForm.reviewer.trim() || !reviewCaptcha.ready}
+                  style={{ background: isPreview || reviewSubmitting || !reviewForm.reviewer.trim() ? "#f3f4f6" : ACC, color: isPreview || reviewSubmitting || !reviewForm.reviewer.trim() ? "#9ca3af" : accentText, border: "none", padding: "13px", fontSize: 10, fontWeight: 800, letterSpacing: 3, textTransform: "uppercase", cursor: isPreview ? "default" : "pointer" }}>
+                  {reviewSubmitting ? "Publicando..." : "Publicar reseña"}
+                </button>
+              </form>
+              {isPreview && (
+                <p style={{ margin: "10px 0 0", fontSize: 10, color: "#999", fontStyle: "italic", textAlign: "center" }}>
+                  Vista previa — el formulario funciona en tu tienda publicada.
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       <CheckoutModal cart={cart} theme={cartTheme} isPreview={isPreview} storeSlug={storeConfig?.slug ?? ""} />
       <CartDrawer cart={cart} theme={cartTheme} isOwner={isOwner} isPreview={isPreview} whatsapp={storeConfig?.whatsapp} />
 
@@ -2476,7 +2795,7 @@ export default function ChicParis() {
 
       {/* ── TOAST ── */}
       {toastMsg && (
-        <div style={{ position: "fixed", bottom: 28, left: "50%", transform: "translateX(-50%)", background: "#111", color: "#fff", padding: "12px 24px", borderRadius: 4, fontSize: 13, fontWeight: 600, zIndex: 99999, animation: "cp-toast 0.3s ease", boxShadow: "0 8px 24px rgba(0,0,0,0.25)", whiteSpace: "nowrap" }}>
+        <div style={{ position: "fixed", bottom: 28, left: "50%", transform: "translateX(-50%)", background: "#111", color: "#fff", padding: "12px 24px", borderRadius: 4, fontSize: 13, fontWeight: 600, zIndex: 99999, animation: "cp-toast 0.3s ease", boxShadow: "0 8px 24px rgba(0,0,0,0.25)", maxWidth:"calc(100vw - 32px)", textAlign:"center" }}>
           {toastMsg}
         </div>
       )}
