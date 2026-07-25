@@ -463,7 +463,7 @@ export default function BohoTerra() {
 
       {/* TOAST */}
       {toastMsg && (
-        <div style={{ position:"fixed", bottom:28, left:"50%", transform:"translateX(-50%)", background:T, color:BG, padding:"10px 24px", fontSize:12, fontWeight:600, zIndex:999, whiteSpace:"nowrap", letterSpacing:1 }}>
+        <div style={{ position:"fixed", bottom:28, left:"50%", transform:"translateX(-50%)", background:T, color:BG, padding:"10px 24px", fontSize:12, fontWeight:600, zIndex:999, maxWidth:"calc(100vw - 32px)", textAlign:"center", letterSpacing:1 }}>
           ✓ {toastMsg}
         </div>
       )}

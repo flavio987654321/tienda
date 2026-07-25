@@ -543,7 +543,7 @@ export default function FashionNoir() {
 
       {/* ── TOAST ──────────────────────────────────────────── */}
       {toastMsg && (
-        <div style={{ position:"fixed", bottom:32, left:"50%", transform:"translateX(-50%)", background:G, color:BG, padding:"12px 28px", fontSize:13, fontWeight:700, zIndex:999, whiteSpace:"nowrap", boxShadow:"0 8px 32px rgba(0,0,0,0.4)" }}>
+        <div style={{ position:"fixed", bottom:32, left:"50%", transform:"translateX(-50%)", background:G, color:BG, padding:"12px 28px", fontSize:13, fontWeight:700, zIndex:999, maxWidth:"calc(100vw - 32px)", textAlign:"center", boxShadow:"0 8px 32px rgba(0,0,0,0.4)" }}>
           ✓ {toastMsg}
         </div>
       )}
