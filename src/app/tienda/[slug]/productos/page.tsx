@@ -398,6 +398,9 @@ function ProductosPageInner() {
     coupon, setCoupon, couponError, appliedCoupon, setAppliedCoupon,
     notas, setNotas, rememberData, setRememberData, buyerForm, setBuyerForm,
     toastMsg, openModal, addToCart,
+    // Esta pantalla no los usaba: ni el talle ni el color avisaban que estaban
+    // agotados hasta despues de elegirlos.
+    outOfStockSizes, outOfStockColors,
     removeFromCart, updateQty,
     openCheckout, handleApplyCoupon, handlePlaceOrder, toggleFavorite, favorites,
   } = cart;
@@ -1876,12 +1879,15 @@ function ProductosPageInner() {
                 <div>
                   <p style={tituloBloque}>Talle</p>
                   <div style={{ display:"flex", gap:7, flexWrap:"wrap" }}>
-                    {modalProduct.sizes.map(size => (
-                      <button key={size} onClick={() => elegirTalle(size)}
-                        style={{ width:44, height:44, fontSize:12, fontWeight: selectedSize===size ? 800 : 600, border: `2px solid ${selectedSize===size ? chipBg : border}`, background: selectedSize===size ? chipBg : "transparent", color: selectedSize===size ? chipText : T, cursor:"pointer", transition:"all 0.2s" }}>
-                        {size}
-                      </button>
-                    ))}
+                    {modalProduct.sizes.map(size => {
+                      const sinStock = outOfStockSizes.has(size);
+                      return (
+                        <button key={size} onClick={() => elegirTalle(size)}
+                          style={{ width:44, height:44, fontSize:12, fontWeight: selectedSize===size ? 800 : 600, border: `2px solid ${selectedSize===size ? chipBg : border}`, background: selectedSize===size ? chipBg : "transparent", color: selectedSize===size ? chipText : T, cursor:"pointer", transition:"all 0.2s", opacity: sinStock ? 0.35 : 1, textDecoration: sinStock ? "line-through" : "none" }}>
+                          {size}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -1894,9 +1900,10 @@ function ProductosPageInner() {
                         "Petróleo" o "Arena" no le dicen nada a nadie hasta verlo. */}
                     {modalProduct.colors.map(color => {
                       const swatch = colorToSwatch(color);
+                      const sinStock = outOfStockColors.has(color);
                       return (
                         <button key={color} onClick={() => elegirColor(color)}
-                          style={{ display:"flex", alignItems:"center", gap:7, padding:"9px 14px", fontSize:11, border: `2px solid ${selectedColor===color ? chipBg : border}`, background: selectedColor===color ? chipBg : "transparent", color: selectedColor===color ? chipText : T, fontWeight: selectedColor===color ? 700 : 400, cursor:"pointer", transition:"all 0.2s" }}>
+                          style={{ display:"flex", alignItems:"center", gap:7, padding:"9px 14px", fontSize:11, border: `2px solid ${selectedColor===color ? chipBg : border}`, background: selectedColor===color ? chipBg : "transparent", color: selectedColor===color ? chipText : T, fontWeight: selectedColor===color ? 700 : 400, cursor:"pointer", transition:"all 0.2s", opacity: sinStock ? 0.35 : 1, textDecoration: sinStock ? "line-through" : "none" }}>
                           {/* El anillo del puntito usa el color del TEXTO del chip,
                               que por construcción contrasta con su fondo. Con un
                               anillo fijo oscuro, el color "Negro" elegido quedaba

@@ -412,7 +412,7 @@ export default function ChicParis() {
     setCartOpen,
     modalProduct, setModalProduct, modalImg, setModalImg,
     selectedSize, setSelectedSize, selectedColor, setSelectedColor,
-    qty, setQty, selectedVariantStock, outOfStockSizes,
+    qty, setQty, selectedVariantStock, outOfStockSizes, outOfStockColors,
     searchOpen, setSearchOpen, searchQuery, setSearchQuery,
     favorites, favoritesOpen, setFavoritesOpen,
     userDropdownOpen, setUserDropdownOpen, userDropdownRef,
@@ -2184,6 +2184,10 @@ export default function ChicParis() {
                   <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                     {modalProduct.colors.map(c => {
                       const swatch = colorToSwatch(c);
+                      // Agotado en TODOS sus talles: se atenúa y se tacha, igual que
+                      // el talle sin stock. Antes el color se ofrecía como cualquier
+                      // otro y el comprador se enteraba recién después de elegirlo.
+                      const sinStock = outOfStockColors.has(c);
                       return (
                         <button key={c} onClick={() => elegirColor(c)} style={{
                           display: "flex", alignItems: "center", gap: 7,
@@ -2191,6 +2195,7 @@ export default function ChicParis() {
                           background: selectedColor === c ? accentRelleno : "transparent",
                           color: selectedColor === c ? accentRellenoText : "#333",
                           fontSize: 12, fontWeight: 700, cursor: "pointer", transition: "all 0.15s",
+                          opacity: sinStock ? 0.35 : 1, textDecoration: sinStock ? "line-through" : "none",
                         }}>
                           {/* El anillo usa el color del TEXTO del chip, que por
                               construcción contrasta con su fondo. Con un anillo
