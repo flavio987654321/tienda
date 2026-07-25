@@ -13,7 +13,9 @@ import { getContrastColor, getReadableAccentText, getReadableAccentFill } from "
 import { colorToSwatch } from "@/lib/colorSwatch";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
 import { OfferBadge } from "@/components/store/OfferBadge";
-import { PromoTag, PromoBlock } from "@/components/store/PromoDisplay";
+import { PromoTag, PromoBlock, PromoPrice } from "@/components/store/PromoDisplay";
+import { useSombrasScroll } from "@/components/store/useSombrasScroll";
+import StoreProductReels from "@/components/store/ProductReels";
 import { discountPercent } from "@/lib/discount";
 import { resolveProductPromo, describePromo, resolveStoreEvent } from "@/lib/promoDisplay";
 import { resolveVariantPrice } from "@/lib/variantPrice";
@@ -345,7 +347,14 @@ function ProductosPageInner() {
   const reviewCaptcha = useTurnstile("review");
   const [reviewDone,       setReviewDone]       = useState(false);
   const [isMobile,         setIsMobile]         = useState(false);
-  const [reelIndex,        setReelIndex]        = useState(0);
+  // Alto de la fila de dos columnas del modal. Manda la columna izquierda (foto +
+  // miniaturas + videos), que tiene alto propio; la derecha se ajusta a ese alto y
+  // scrollea por dentro. Sin esto, la derecha crecía con la descripción y dejaba un
+  // vacío blanco al lado de los reels, más grande cuanto más texto hubiera cargado
+  // el vendedor. Se mide porque depende de cuántas miniaturas y cuántos reels tenga
+  // el producto. Solo en escritorio: en celular las columnas se apilan.
+  const colFotoRef = useRef<HTMLDivElement>(null);
+  const [altoColFoto, setAltoColFoto] = useState<number | null>(null);
   const [lightboxSrc,      setLightboxSrc]      = useState<string|null>(null);
 
   // ── Funciones estables para useCartLogic ──────────────────────────────────
@@ -391,6 +400,11 @@ function ProductosPageInner() {
   const {
     cartItems, cartOpen, setCartOpen, cartCount, cartTotal, envioPrice, couponDiscount, orderTotal, couponsAllowed,
     freeShipping, freeShippingGoal,
+    // El carrito y el checkout de esta página son una copia escrita a mano, anterior
+    // al motor de promociones: mostraban `product.price * qty` y no leían nada de
+    // esto. El total venía del motor y las líneas no, así que con una promo vigente
+    // el ítem decía $60.000 y el total $48.000 en la misma pantalla.
+    pricedLines, cartPromoSavings, appliedPromos,
     modalProduct, setModalProduct, modalImg, setModalImg,
     selectedSize, setSelectedSize, selectedColor, setSelectedColor, qty, setQty,
     checkoutOpen, setCheckoutOpen, checkoutStatus, checkoutError,
@@ -785,7 +799,6 @@ function ProductosPageInner() {
     if (!modalProduct || !slug) return;
     setReviews([]);
     setReviewDone(false);
-    setReelIndex(0);
     setReviewsShown(5);
     setReviewsLoading(true);
     fetch(`/api/public/${slug}/reviews?productId=${modalProduct.id}`)
@@ -795,6 +808,26 @@ function ProductosPageInner() {
       .finally(() => setReviewsLoading(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [modalProduct?.id, slug]);
+
+  // ── Alto de la columna de la foto (ver dónde se declara `altoColFoto`) ──────
+  useEffect(() => {
+    const el = colFotoRef.current;
+    if (isMobile || !modalProduct || !el) return;
+    const ro = new ResizeObserver(() => {
+      const alto = el.offsetHeight;
+      setAltoColFoto(prev => (prev === alto ? prev : alto));
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [isMobile, modalProduct]);
+  // Derivado y no un `setState(null)` adentro del efecto: apagarlo con estado
+  // dispara un render en cascada. Al reabrir el modal el ResizeObserver mide de
+  // nuevo apenas observa, así que no queda un alto viejo.
+  const altoPanel = isMobile || !modalProduct ? null : altoColFoto;
+  // Con la barra del panel oculta no queda senal de que hay mas para leer. Los
+  // degradados la reponen, y solo cuando de verdad falta contenido.
+  const { ref: panelRef, arriba: sombraArriba, abajo: sombraAbajo } =
+    useSombrasScroll<HTMLDivElement>([altoPanel, modalProduct?.id]);
 
   // ── Tema activo ─────────────────────────────────────────────────────────────
   const th: Theme = THEMES[template] ?? THEMES["fashion-noir"];
@@ -1266,6 +1299,9 @@ function ProductosPageInner() {
     <div style={{ background:BG, color:T, minHeight:"100vh", fontFamily:sans }}>
       <style>{`
   .st-tabs::-webkit-scrollbar{display:none}.st-tabs{scrollbar-width:none;-ms-overflow-style:none}
+  /* Panel derecho del modal: scrollea pero sin dibujar su barra. Al lado de la del
+     modal quedaban dos barras pegadas y no se entendia cual movia que. */
+  .st-sin-barra::-webkit-scrollbar{display:none}.st-sin-barra{scrollbar-width:none;-ms-overflow-style:none}
   .pr-range{position:absolute;top:0;left:0;width:100%;margin:0;background:none;pointer-events:none;-webkit-appearance:none;appearance:none}
   .pr-range::-webkit-slider-runnable-track{background:none}
   .pr-range::-moz-range-track{background:none}
@@ -1793,7 +1829,10 @@ function ProductosPageInner() {
             <div style={{ overflow:"auto", flex:1, minHeight:0, display:"grid", gridTemplateColumns: isMobile ? "1fr" : "48% 1fr" }}>
             {/* Galería — `alignSelf:start` para que no se estire al alto de la
                 columna de al lado y quede aire muerto abajo de las miniaturas. */}
-            <div style={{ alignSelf: "start" }}>
+            {/* El aire lo pone la COLUMNA, no cada bloque: asi la foto, las
+                miniaturas y los videos arrancan todos en la misma vertical. */}
+            <div ref={colFotoRef} style={{ alignSelf: "start", boxSizing: "border-box",
+                                           padding: isMobile ? 0 : "28px 0 28px 28px" }}>
               <div style={{ position:"relative" }} {...imgSwipe}>
                 {(() => {
                   // La PROMOCIÓN de tienda se muestra como tag rectangular (naranja) — distinta
@@ -1820,18 +1859,57 @@ function ProductosPageInner() {
                 </>)}
               </div>
               {modalProduct.images.length > 1 && (
-                <div style={{ display:"flex", gap:6, padding:"8px 12px", background:BG, overflowX:"auto" }}>
+                /* 56×74 como en el modal del template: cuadradas de 48 recortaban
+                   la prenda a un cuadrado y la miniatura no se parecía a la foto
+                   que abría. Misma proporción 3/4 que la foto grande. */
+                <div style={{ display:"flex", gap:8, padding: isMobile ? "10px 14px 0" : "10px 0 0", overflowX:"auto", scrollbarWidth:"none" }}>
                   {modalProduct.images.map((img, i) => (
                     <button key={i} onClick={() => elegirFoto(i)} aria-label={`Ver foto ${i + 1}`}
-                      style={{ width:48, height:48, flexShrink:0, padding:2, border: i===modalImg ? `2px solid ${GT}` : `1px solid ${border}`, background:"none", cursor:"pointer" }}>
+                      style={{ width:56, height:74, flexShrink:0, padding:0, overflow:"hidden", background:S, border: i===modalImg ? `2px solid ${GT}` : `1px solid ${border}`, cursor:"pointer", transition:"border-color 0.2s" }}>
                       <img src={img} alt="" style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }}/>
                     </button>
                   ))}
                 </div>
               )}
+            {/* ── Videos, debajo de la foto y DENTRO de esta columna ────────────
+                Acá el espacio a la derecha de los reels no es un vacío: es la
+                columna de la descripción. Por eso van adentro y no a lo ancho —
+                a lo ancho son 3 miniaturas angostas solas en una fila de 1030px,
+                y no hay forma de que la llenen.
+                Usa el MISMO componente que los templates en vez de la copia inline
+                que había acá: esa embebía el video en 160px y lo hacía mirar en un
+                recuadro, sin pantalla completa ni swipe entre videos, y ya se
+                estaba separando del otro (flechas y puntitos propios). Un solo
+                lugar para arreglar cuando algo falle. */}
+            {modalProduct.reelUrls.length > 0 && (
+              <div style={{ padding: isMobile ? "18px 16px 0" : "22px 0 0" }}>
+                <p style={tituloBloque}>Videos del producto</p>
+                <StoreProductReels
+                  reelUrls={modalProduct.reelUrls}
+                  ancho={isMobile ? 120 : 160}
+                  theme={{ accent: G, text: T, border: border, radius: 8 }}
+                />
+              </div>
+            )}
             </div>
-            {/* Detalle */}
-            <div style={{ padding:"clamp(20px,4vw,36px) clamp(16px,3.5vw,32px)", display:"flex", flexDirection:"column", gap:18, overflowY: isMobile ? "visible" : "auto" }}>
+            {/* Detalle — se ajusta al alto de la columna de la foto y scrollea por
+                dentro, igual que en el modal del template. Este panel termina justo
+                donde arranca Reseñas; de ahí para abajo scrollea el modal, así que
+                los dos scrolls no compiten. En celular no aplica: columnas apiladas
+                y sin alto fijo, porque cortaría el contenido. */}
+            <div style={{ position:"relative", display:"flex", minWidth:0 }}>
+            {/* Degradados: reponen la señal que se perdió al ocultar la barra.
+                Aparecen solo si de verdad queda contenido de ese lado. */}
+            {sombraArriba && (
+              <div style={{ position:"absolute", left:0, right:0, top:0, height:28, zIndex:2, pointerEvents:"none",
+                            background:`linear-gradient(to top, transparent, ${S})` }} />
+            )}
+            {sombraAbajo && (
+              <div style={{ position:"absolute", left:0, right:0, bottom:0, height:44, zIndex:2, pointerEvents:"none",
+                            background:`linear-gradient(to bottom, transparent, ${S})` }} />
+            )}
+            <div ref={panelRef} className="st-sin-barra" style={{ flex:1, padding:"clamp(20px,4vw,36px) clamp(16px,3.5vw,32px)", display:"flex", flexDirection:"column", gap:18, minHeight:0,
+                          ...(altoPanel ? { maxHeight: altoPanel, overflowY:"auto" as const } : {}) }}>
               <div>
                 <p style={{ fontSize:10, letterSpacing:3, color:GT, textTransform:"uppercase", marginBottom:6 }}>
                   {modalProduct.category}{modalProduct.subcategory && <span style={{ opacity:0.6 }}> › {modalProduct.subcategory}</span>}
@@ -1953,13 +2031,15 @@ function ProductosPageInner() {
 
               <button onClick={addToCart}
                 disabled={selectedVariantStock === 0}
-                style={{ background: selectedVariantStock === 0 ? `${G}40` : G, color:accentDark?"#000":"#fff", border:"none", padding:"15px", fontSize:11, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor: selectedVariantStock === 0 ? "not-allowed" : "pointer", marginTop:"auto" }}>
+                style={{ background: selectedVariantStock === 0 ? `${G}40` : G, color:accentDark?"#000":"#fff", border:"none", padding:"15px", fontSize:11, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor: selectedVariantStock === 0 ? "not-allowed" : "pointer" }}>
                 {selectedVariantStock === 0 ? "Sin stock" : `Agregar al carrito · ${fmt(nxmPaid != null ? nxmPaid * displayPrice : (modalPromo.hasPriceDrop ? modalPromo.effectivePrice : displayPrice) * qty)}`}
               </button>
 
               {modalProduct.description && (
                 <div style={{ borderTop:`1px solid ${borderFaint}`, paddingTop:18 }}>
                   <p style={tituloBloque}>Descripción</p>
+                  {/* Sin recortar: el panel tiene alto fijo y scrollea, así que un
+                      texto largo ya no deforma nada — se lee bajando acá adentro. */}
                   <div className="product-rte" dangerouslySetInnerHTML={{ __html: modalProduct.description }} style={{ fontSize:13, color:MID, lineHeight:1.75 }} />
                 </div>
               )}
@@ -2023,57 +2103,7 @@ function ProductosPageInner() {
                 )}
               </div>
             </div>
-
-            {/* ── Videos — a lo ANCHO, fuera de la columna ────────────────────
-                Metidos en la columna de detalles quedaban en 160px de ancho, y
-                encima estiraban esa columna dejando el vacío al lado de la foto.
-                Son una sección del producto, como las reseñas o los similares:
-                acá abajo entran a tamaño real. `gridColumn: 1 / -1` es el mismo
-                mecanismo que ya usaba "Productos similares". */}
-            {modalProduct.reelUrls.length > 0 && (
-              <div style={{ gridColumn: isMobile ? undefined : "1 / -1", borderTop:`1px solid ${border}`, padding: isMobile ? "20px 16px" : "24px 32px" }}>
-                  <p style={tituloBloque}>Videos del producto</p>
-                  {/* Alineado a la izquierda, como todo lo demás del modal. El
-                      `center` venía de cuando este bloque vivía encajonado en una
-                      columna de 160px: ahí no se notaba, pero a lo ancho deja el
-                      video solo en el medio de la nada. */}
-                  <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-start", gap:10 }}>
-                    {(() => {
-                      const url = modalProduct.reelUrls[reelIndex];
-                      if (/\.(mp4|webm|mov|ogg)(\?.*)?$/i.test(url)) {
-                        return <video controls style={{ width:160, aspectRatio:"9/16", objectFit:"cover", background:"#000", borderRadius:8 }}><source src={url} /></video>;
-                      }
-                      let embedUrl = "";
-                      if (url.includes("youtube.com/shorts/")) { const id = url.split("shorts/")[1]?.split("?")[0]; embedUrl = `https://www.youtube.com/embed/${id}`; }
-                      else if (url.includes("youtu.be/")) { const id = url.split("youtu.be/")[1]?.split("?")[0]; embedUrl = `https://www.youtube.com/embed/${id}`; }
-                      else if (url.includes("youtube.com/watch")) { try { const id = new URL(url).searchParams.get("v"); if (id) embedUrl = `https://www.youtube.com/embed/${id}`; } catch {} }
-                      if (embedUrl) return <iframe src={embedUrl} allow="autoplay; encrypted-media" allowFullScreen style={{ width:160, aspectRatio:"9/16", border:"none", borderRadius:8 }} />;
-                      const platform = url.includes("instagram") ? "Instagram Reel" : url.includes("tiktok") ? "TikTok" : "Video";
-                      return (
-                        <a href={url} target="_blank" rel="noopener noreferrer"
-                          style={{ width:160, aspectRatio:"9/16", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:8, border:`1px solid ${border}`, textDecoration:"none", color:T, borderRadius:8, background:S }}>
-                          <svg width={24} height={24} viewBox="0 0 24 24" fill={G} stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                          <span style={{ fontSize:11 }}>{platform}</span>
-                        </a>
-                      );
-                    })()}
-                    {modalProduct.reelUrls.length > 1 && (
-                      <div style={{ display:"flex", alignItems:"center", gap:12 }}>
-                        <button onClick={() => setReelIndex(i => (i - 1 + modalProduct.reelUrls.length) % modalProduct.reelUrls.length)}
-                          style={{ background:"none", border:`1px solid ${border}`, color:T, width:30, height:30, borderRadius:"50%", cursor:"pointer", fontSize:16, display:"flex", alignItems:"center", justifyContent:"center" }}>‹</button>
-                        <div style={{ display:"flex", gap:5 }}>
-                          {modalProduct.reelUrls.map((_, i) => (
-                            <button key={i} onClick={() => setReelIndex(i)}
-                              style={{ width:6, height:6, borderRadius:"50%", background: i === reelIndex ? G : `${T}30`, border:"none", cursor:"pointer", padding:0 }} />
-                          ))}
-                        </div>
-                        <button onClick={() => setReelIndex(i => (i + 1) % modalProduct.reelUrls.length)}
-                          style={{ background:"none", border:`1px solid ${border}`, color:T, width:30, height:30, borderRadius:"50%", cursor:"pointer", fontSize:16, display:"flex", alignItems:"center", justifyContent:"center" }}>›</button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
+            </div>
 
             {/* ── Reseñas — a lo ANCHO, igual que en el template ──────────────
                 Adentro de la columna de detalles eran lo más largo del panel: la
@@ -2200,9 +2230,23 @@ function ProductosPageInner() {
                   <div style={{ display:"grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(4,1fr)", gap:14 }}>
                     {similar.map(p => (
                       <div key={p.id} onClick={() => openModal(p)} style={{ cursor:"pointer" }}>
-                        <img src={p.images[0] ?? ""} alt={p.name} style={{ width:"100%", aspectRatio:"3/4", objectFit:"cover", display:"block" }} onError={e => { e.currentTarget.style.opacity="0"; }} />
+                        {/* El precio salía de `fmt(p.price)` a secas: mostraba el de
+                            lista aunque el producto tuviera promo u oferta, así que
+                            el mismo producto valía una cosa acá y otra al abrirlo.
+                            `PromoPrice` es el que ya usa el resto de la tienda. */}
+                        <div style={{ position:"relative" }}>
+                          <img src={p.images[0] ?? ""} alt={p.name} style={{ width:"100%", aspectRatio:"3/4", objectFit:"cover", display:"block" }} onError={e => { e.currentTarget.style.opacity="0"; }} />
+                          {(() => {
+                            const pr = resolveProductPromo(p, promotions);
+                            if (pr.primaryPromo) return <PromoTag label={describePromo(pr.primaryPromo).headline} size="sm" />;
+                            const enOferta = !!p.comparePrice && p.comparePrice > p.price;
+                            if (!enOferta && !p.offerBadge) return null;
+                            return <OfferBadge badge={p.offerBadge ?? null} pct={enOferta ? discountPercent(p.price, p.comparePrice) : null} size="sm" />;
+                          })()}
+                        </div>
                         <p style={{ margin:"8px 0 2px", fontSize:12, color:T, overflow:"hidden", display:"-webkit-box", WebkitLineClamp:1, WebkitBoxOrient:"vertical" as const }}>{p.name}</p>
-                        <p style={{ margin:0, fontSize:13, fontWeight:700, color:GT }}>{fmt(p.price)}</p>
+                        <PromoPrice product={p} promotions={promotions} fmt={fmt} accent={GT} sobre={T}
+                          priceSize={13} compareSize={11} weight={700} />
                       </div>
                     ))}
                   </div>
@@ -2296,30 +2340,77 @@ function ProductosPageInner() {
                   <p style={{ fontSize:34, marginBottom:10 }}>🛍️</p>
                   <p style={{ fontSize:13, lineHeight:1.8, color:T }}>Tu carrito está vacío.<br/>Explorá la colección.</p>
                 </div>
-              : cartItems.map((item, idx) => (
+              : cartItems.map((item, idx) => {
+                // ¿Esta línea se cobra al precio de lista del producto? Si mandó el
+                // precio de una variante, el mayorista o un escalón por cantidad,
+                // `comparePrice` deja de ser referencia válida y el tachado podría
+                // quedar por DEBAJO de lo que se paga. Mismo cuidado que el modal
+                // (CP-15) y que el carrito compartido.
+                const linea = pricedLines[idx];
+                const unitario = linea && item.qty > 0 ? (linea.lineTotal + linea.savings) / item.qty : item.product.price;
+                const enOferta = Math.abs(unitario - item.product.price) < 0.01
+                  && (item.product.comparePrice ?? 0) > item.product.price;
+                return (
                 <div key={idx} style={{ display:"flex", gap:12, padding:"14px 0", borderBottom:`1px solid ${borderFaint}` }}>
                   {item.product.images[0] && <img src={item.product.images[0]} alt="" style={{ width:66, height:88, objectFit:"cover", flexShrink:0 }}/>}
                   <div style={{ flex:1 }}>
                     <p style={{ fontSize:14, margin:"0 0 2px", fontWeight:500, color:T }}>{item.product.name}</p>
                     <p style={{ fontSize:11, opacity:0.45, margin:"0 0 8px" }}>{[item.color, item.size && `Talle ${item.size}`].filter(Boolean).join(" · ")}</p>
+                    {/* Qué promo bajó este precio, igual que en el carrito de los
+                        templates. Sale de `pricedLines`, que es la misma cuenta que
+                        cobra el checkout — no se recalcula nada acá. */}
+                    {pricedLines[idx]?.promo ? (
+                      <p style={{ fontSize:11, margin:"0 0 8px", color:GT, fontWeight:700 }}>
+                        {pricedLines[idx].promo!.name
+                          ? `${pricedLines[idx].promo!.name} · ${pricedLines[idx].promo!.label}`
+                          : pricedLines[idx].promo!.label}
+                      </p>
+                    ) : enOferta ? (
+                      <p style={{ fontSize:11, margin:"0 0 8px", color:"#dc2626", fontWeight:700 }}>
+                        Oferta · {Math.round((1 - item.product.price / item.product.comparePrice!) * 100)}% OFF
+                      </p>
+                    ) : null}
                     <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
                       <div style={{ display:"flex", alignItems:"center", border:`1px solid ${border}` }}>
                         <button onClick={() => updateQty(idx,-1)} style={{ width:26, height:26, background:"none", border:"none", color:T, cursor:"pointer", fontSize:15 }}>−</button>
                         <span style={{ width:22, textAlign:"center", fontSize:12, color:T }}>{item.qty}</span>
                         <button onClick={() => updateQty(idx,1)} style={{ width:26, height:26, background:"none", border:"none", color:T, cursor:"pointer", fontSize:15 }}>+</button>
                       </div>
-                      <span style={{ color:GT, fontWeight:700, fontSize:14 }}>{fmt(item.product.price * item.qty)}</span>
+                      {(() => {
+                        const antes = linea?.promoApplied
+                          ? linea.lineTotal + linea.savings
+                          : enOferta
+                            ? item.product.comparePrice! * item.qty
+                            : null;
+                        return (
+                          <div style={{ textAlign:"right" }}>
+                            {antes != null && (
+                              <span style={{ fontSize:11, color:MID, opacity:0.75, textDecoration:"line-through", display:"block", lineHeight:1.3 }}>{fmt(antes)}</span>
+                            )}
+                            <span style={{ color:GT, fontWeight:700, fontSize:14 }}>{fmt(linea?.lineTotal ?? 0)}</span>
+                          </div>
+                        );
+                      })()}
                     </div>
                   </div>
                   <button onClick={() => removeFromCart(idx)} style={{ background:"none", border:"none", color:MID, cursor:"pointer", fontSize:18, alignSelf:"flex-start", transition:"color 0.2s" }}
                     onMouseEnter={e => (e.currentTarget.style.color=T)}
                     onMouseLeave={e => (e.currentTarget.style.color=MID)}>×</button>
                 </div>
-              ))
+                );
+              })
             }
           </div>
           {cartItems.length > 0 && (
             <div style={{ padding:"14px 22px 28px", borderTop:`1px solid ${borderFaint}` }}>
+              {/* El ahorro lo sumó el motor. Sin esta fila el comprador veía el
+                  total ya descontado pero sin ninguna señal de que la promo entró. */}
+              {cartPromoSavings > 0.01 && (
+                <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
+                  <span style={{ fontSize:12, color:"#16a34a", fontWeight:600 }}>Promoción aplicada</span>
+                  <span style={{ fontSize:12, color:"#16a34a", fontWeight:600 }}>-{fmt(cartPromoSavings)}</span>
+                </div>
+              )}
               <div style={{ display:"flex", justifyContent:"space-between", marginBottom:20 }}>
                 <span style={{ fontSize:13, opacity:0.6, color:T }}>Total</span>
                 <span style={{ fontSize:20, fontWeight:700, color:GT }}>{fmt(cartTotal)}</span>
@@ -2370,7 +2461,22 @@ function ProductosPageInner() {
                         <div style={{ flex:1 }}>
                           <p style={{ fontSize:13, margin:"0 0 2px", fontWeight:500, color:T }}>{item.product.name}</p>
                           <p style={{ fontSize:11, opacity:0.4, margin:"0 0 4px" }}>{[item.color, item.size && `Talle ${item.size}`].filter(Boolean).join(" · ")}</p>
-                          <p style={{ fontSize:13, color:GT, fontWeight:700, margin:0 }}>{fmt(item.product.price)} × {item.qty}</p>
+                          {(() => {
+                            // El unitario SIN promo (lo que la línea valdría sin ella),
+                            // que es lo que se detalla abajo promo por promo. Antes era
+                            // `product.price`, que además se saltea el precio de la
+                            // variante, el mayorista y los escalones por cantidad.
+                            const linea = pricedLines[idx];
+                            const base = linea ? (linea.lineTotal + linea.savings) / item.qty : item.product.price;
+                            return <p style={{ fontSize:13, color:GT, fontWeight:700, margin:0 }}>{fmt(base)} × {item.qty}</p>;
+                          })()}
+                          {pricedLines[idx]?.promo && (
+                            <p style={{ fontSize:11, margin:"4px 0 0", color:"#16a34a", fontWeight:600 }}>
+                              {pricedLines[idx].promo!.name
+                                ? `${pricedLines[idx].promo!.name} · ${pricedLines[idx].promo!.label}`
+                                : pricedLines[idx].promo!.label}
+                            </p>
+                          )}
                         </div>
                       </div>
                     ))}
@@ -2465,8 +2571,25 @@ function ProductosPageInner() {
                   <div style={{ borderTop:`1px solid ${borderFaint}`, paddingTop:18, marginTop:18 }}>
                     <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
                       <span style={{ fontSize:13, opacity:0.55, color:T }}>Subtotal</span>
-                      <span style={{ fontSize:13, opacity:0.55, color:T }}>{fmt(cartTotal)}</span>
+                      <span style={{ fontSize:13, opacity:0.55, color:T }}>{fmt(cartPromoSavings > 0.01 ? cartTotal + cartPromoSavings : cartTotal)}</span>
                     </div>
+                    {/* Una fila POR promo con su nombre y cuánto aportó — la misma
+                        lista que sale después en el email del pedido, así que el
+                        resumen y el comprobante dicen lo mismo. Si no llegara el
+                        detalle, cae en una fila genérica: el ahorro siempre se ve. */}
+                    {cartPromoSavings > 0.01 && (
+                      appliedPromos?.length ? appliedPromos.map((p, i) => (
+                        <div key={i} style={{ display:"flex", justifyContent:"space-between", marginBottom:6, gap:12 }}>
+                          <span style={{ fontSize:13, color:"#16a34a", fontWeight:600 }}>{p.name ? `${p.name} · ${p.label}` : p.label}</span>
+                          <span style={{ fontSize:13, color:"#16a34a", fontWeight:600, whiteSpace:"nowrap" }}>-{fmt(p.savings)}</span>
+                        </div>
+                      )) : (
+                        <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
+                          <span style={{ fontSize:13, color:"#16a34a", fontWeight:600 }}>Promoción aplicada</span>
+                          <span style={{ fontSize:13, color:"#16a34a", fontWeight:600 }}>-{fmt(cartPromoSavings)}</span>
+                        </div>
+                      )
+                    )}
                     {couponDiscount > 0 && (
                       <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
                         <span style={{ fontSize:13, color:GT }}>Descuento</span>

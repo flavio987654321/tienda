@@ -16,6 +16,7 @@ import VerifiedIconButton from "@/components/store/VerifiedIconButton";
 import { CartDrawer, type CartTheme } from "@/components/store/templates/shared/CartDrawer";
 import { OfferBadge } from "@/components/store/OfferBadge";
 import { PromoTag, PromoBlock, PromoPrice } from "@/components/store/PromoDisplay";
+import { useSombrasScroll } from "@/components/store/useSombrasScroll";
 import { resolveProductPromo, describePromo } from "@/lib/promoDisplay";
 import { CheckoutModal } from "@/components/store/templates/shared/CheckoutModal";
 import { ContactForm } from "@/components/store/templates/shared/ContactForm";
@@ -436,6 +437,11 @@ export default function ChicParis() {
   // `getReadableAccentText` nombra al precio como su caso de uso, pero el modal
   // nunca lo llamaba.
   const accentLegible = getReadableAccentText(ACC, "#ffffff", "#111");
+  // El mismo cálculo, pero contra el fondo de CADA bloque. El precio sin descuento
+  // se pinta con el acento, y los bloques de la home tienen fondo propio y editable:
+  // con un acento arena sobre el beige de "Lo más visto" el precio se leía blanco
+  // sobre blanco. `accentLegible` solo sirve para lo que va sobre blanco.
+  const accentSobre = (bg: string, texto: string) => getReadableAccentText(ACC, bg, texto);
   // El acento como RELLENO (el chip del talle/color elegido, el badge de
   // condición, las barras del gráfico de reseñas). Va por otra regla que el texto:
   // acá no importa si el color se lee escrito sino si se distingue del blanco como
@@ -446,12 +452,69 @@ export default function ChicParis() {
   // contra el acento CRUDO — si el acento se cayó a negro, `accentText` seguiría
   // dando negro y el botón elegido quedaría negro sobre negro.
   const accentRellenoText = getContrastColor(accentRelleno) === "light" ? "#fff" : "#111";
+  // El aviso de promo/oferta de una tarjeta. Estaba escrito a mano solo en la
+  // grilla del catálogo y en el modal, así que en "Lo más visto", similares,
+  // favoritos y el buscador el comprador no veía nada. Con un % de descuento
+  // todavía lo delataba el precio en rojo, pero una promo 3×2 o de envío gratis
+  // NO toca el precio: ahí el producto se veía idéntico a uno sin promo.
+  //   · "foto" → tag en la esquina, para las tarjetas con imagen grande.
+  //   · "chip" → línea aparte, para las miniaturas de 48/64px del buscador y
+  //     favoritos, donde un tag encima taparía media foto.
+  const avisoPromo = (p: Product, modo: "foto" | "chip" = "foto") => {
+    const pr = resolveProductPromo(p, promotions);
+    const pct = discountPercent(p.price, p.comparePrice);
+    const enOferta = !!p.comparePrice && p.comparePrice > p.price;
+    if (!pr.primaryPromo && !enOferta) return null;
+    if (modo === "foto") {
+      return pr.primaryPromo
+        ? <PromoTag label={describePromo(pr.primaryPromo).headline} size="sm" />
+        : <OfferBadge badge={p.offerBadge} pct={pct} size="sm" />;
+    }
+    return (
+      <span style={{ display: "inline-block", marginTop: 4, maxWidth: "100%", background: pr.primaryPromo ? "#ea580c" : "#dc2626", color: "#fff", fontSize: 9, fontWeight: 800, letterSpacing: 0.4, textTransform: "uppercase", padding: "2px 6px", borderRadius: 3, lineHeight: 1.3 }}>
+        {pr.primaryPromo ? describePromo(pr.primaryPromo).headline : `${pct}% OFF`}
+      </span>
+    );
+  };
   const cartTheme: CartTheme = { BG:"#ffffff", S:"#fafafa", T:"#111111", MID:"#999999", border:"#e5e5e5", accent:ACC, accentText };
   const variantPrice = modalProduct ? resolveVariantPrice(modalProduct.variants, selectedSize, selectedColor) : null;
   const displayPrice = variantPrice ?? (modalProduct?.price ?? 0);
   const modalPromo = modalProduct ? resolveProductPromo({ id: modalProduct.id, price: displayPrice, category: modalProduct.category }, promotions) : null;
   // 3×2 en vivo: unidades que se PAGAN a la cantidad elegida (misma cuenta que el motor).
   const nxmPaid = modalPromo?.nxm ? qty - Math.floor(qty / modalPromo.nxm.n) * (modalPromo.nxm.n - modalPromo.nxm.m) : null;
+  // Lo que se va a cobrar por lo que hay elegido ahora mismo: precio de variante,
+  // promo y cantidad, con el N×M ya resuelto. Va DENTRO del botón de comprar.
+  const totalAPagar = fmt(nxmPaid != null ? nxmPaid * displayPrice : (modalPromo?.hasPriceDrop ? modalPromo.effectivePrice : displayPrice) * qty);
+  // ── Alto de la fila de dos columnas ────────────────────────────────────────
+  // La columna izquierda (foto + miniaturas + videos) es la que manda: tiene alto
+  // propio y predecible. La derecha se ajusta a ESE alto y scrollea por dentro.
+  // Sin esto, la derecha crecía con la descripción y dejaba un vacío blanco al
+  // lado de los reels que cambiaba de tamaño según cuánto texto hubiera cargado
+  // el vendedor. Ahora ese espacio lo llena más descripción, que es lo que uno
+  // quiere ver ahí, y el bloque de reseñas siempre arranca en el mismo lugar.
+  // Se mide en vez de calcularse porque el alto depende de cuántas miniaturas y
+  // cuántos reels tenga el producto. Solo en escritorio: en celular las columnas
+  // se apilan y un alto fijo cortaría el contenido.
+  const colFotoRef = useRef<HTMLDivElement>(null);
+  const [altoColFoto, setAltoColFoto] = useState<number | null>(null);
+  useEffect(() => {
+    const el = colFotoRef.current;
+    if (isMobile || !modalProduct || !el) return;
+    const ro = new ResizeObserver(() => {
+      const alto = el.offsetHeight;
+      setAltoColFoto(prev => (prev === alto ? prev : alto));
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [isMobile, modalProduct]);
+  // Derivado y no un `setState(null)` adentro del efecto: apagarlo con estado
+  // dispara un render en cascada (y lo marca el lint). Al reabrir el modal el
+  // ResizeObserver mide de nuevo apenas observa, así que no queda un alto viejo.
+  const altoPanel = isMobile || !modalProduct ? null : altoColFoto;
+  // Con la barra del panel oculta no queda ninguna señal de que hay más para leer.
+  // Los degradados la reponen, y solo cuando de verdad falta contenido.
+  const { ref: panelRef, arriba: sombraArriba, abajo: sombraAbajo } =
+    useSombrasScroll<HTMLDivElement>([altoPanel, modalProduct?.id]);
   const imgSwipe = useTouchSwipe(
     () => elegirFoto(modalImg + 1),
     () => elegirFoto(modalImg - 1)
@@ -784,6 +847,11 @@ export default function ChicParis() {
   return (
     <div style={{ fontFamily: "'Inter','Helvetica Neue',Arial,sans-serif", background: "#fff", color: "#111", minHeight: "100vh" }}>
       <style>{`
+        /* Panel derecho del modal: scrollea pero sin dibujar su barra. Al lado de
+           la del modal quedaban dos barras pegadas y no se entendía cuál movía qué.
+           El corte del texto ya avisa que hay más abajo. */
+        .cp-sin-barra::-webkit-scrollbar { display:none }
+        .cp-sin-barra { scrollbar-width:none; -ms-overflow-style:none }
         .cp-img { transition:transform 0.45s ease; }
         .cp-overlay { opacity:0; transition:opacity 0.3s; }
         @media (hover:hover) and (pointer:fine) {
@@ -1262,15 +1330,9 @@ export default function ChicParis() {
             <>
               <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(auto-fill,minmax(260px,1fr))", gap: isMobile ? 12 : 24 }}>
                 {filtered.map(product => {
-                  const promo = resolveProductPromo(product, promotions);
                   return (
                   <div key={product.id} className="cp-prod" onClick={() => openModal(product)} style={{ cursor: "pointer", background: "#fff", borderRadius: 4, position: "relative", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
-                    {(() => {
-                      if (promo.primaryPromo) return <PromoTag label={describePromo(promo.primaryPromo).headline} size="sm" />;
-                      const hasOffer = !!product.comparePrice && product.comparePrice > product.price;
-                      if (!hasOffer) return null;
-                      return <OfferBadge badge={product.offerBadge} pct={discountPercent(product.price, product.comparePrice)} size="sm" />;
-                    })()}
+                    {avisoPromo(product)}
                     <div style={{ position: "relative", width: "100%", overflow: "hidden", aspectRatio: "3/4" }}>
                       <FadeImage className="cp-img" src={product.images[0] ?? "/placeholder.jpg"} alt={product.name} fill sizes="(max-width: 768px) 50vw, 25vw"
                         style={{ objectFit: "cover" }} />
@@ -1290,7 +1352,7 @@ export default function ChicParis() {
                     <div style={{ padding: "14px 16px 18px" }}>
                       <p style={{ margin: "0 0 4px", fontSize: 10, color: "#999", letterSpacing: 2, textTransform: "uppercase", fontWeight: 600 }}>{product.category}</p>
                       <p style={{ margin: "0 0 8px", fontSize: 14, fontWeight: 700, color: prodText, lineHeight: 1.3 }}>{product.name}</p>
-                      <PromoPrice product={product} promotions={promotions} fmt={fmt} accent={ACC}
+                      <PromoPrice product={product} promotions={promotions} fmt={fmt} accent={accentLegible} sobre="#111"
                         priceSize={16} compareSize={13} ocultarPrecios={ocultarPrecios}
                         gap={10} align="center" />
                     </div>
@@ -1323,7 +1385,15 @@ export default function ChicParis() {
       {/* ── OFERTAS ── */}
       <SectionBlock id="cp-ofertas" label="Ofertas" isPreview={isPreview} defaultOrder={CP_SECTION_IDS}>
         {(() => {
-          const allOfertas = products.filter(p => p.comparePrice && p.comparePrice > p.price);
+          // "Oferta" para el comprador es cualquier cosa que le salga más barata,
+          // no solo el precio anterior del producto: si una promoción de tienda le
+          // baja el precio, esto también es una oferta y tiene que aparecer acá.
+          // Ojo con las promos que NO tocan el precio (3×2, envío gratis): esas se
+          // anuncian con su tag pero no entran en este bloque, porque el precio
+          // que se mostraría al lado sería el de lista y parecería un error.
+          const allOfertas = products.filter(p =>
+            (p.comparePrice && p.comparePrice > p.price) || resolveProductPromo(p, promotions).hasPriceDrop
+          );
           if (allOfertas.length === 0 && !isPreview) return null;
           const displayList = (allOfertas.length > 0 ? allOfertas : products).slice(0, 8);
           const hasMore = allOfertas.length > 8;
@@ -1359,7 +1429,7 @@ export default function ChicParis() {
                           </div>
                           <div>
                             <p style={{ margin: "0 0 8px", fontSize: 16, fontFamily: "'Playfair Display', Georgia, serif", fontStyle: "italic", color: ofertasText }}>{p.name}</p>
-                            <PromoPrice product={p} promotions={promotions} fmt={fmt} accent={ACC}
+                            <PromoPrice product={p} promotions={promotions} fmt={fmt} accent={accentSobre(ofertasBg, ofertasText)} sobre={ofertasText}
                               priceSize={16} compareSize={13} ocultarPrecios={ocultarPrecios} consultaLabel="Consultá"
                               gap={10} align="center" />
                           </div>
@@ -1439,10 +1509,11 @@ export default function ChicParis() {
                           donde la diferencia real suele ser de una sola visita. */}
                       <div style={{ position: "relative", width: "100%", aspectRatio: "3/4", background: "#f5f5f5", overflow: "hidden", borderRadius: 4 }}>
                         {p.images[0] && <FadeImage src={p.images[0]} alt={p.name} fill sizes="(max-width: 768px) 50vw, 25vw" className="cp-zoom-img" style={{ objectFit: "cover" }} />}
+                        {avisoPromo(p)}
                       </div>
                       <div style={{ padding: "10px 0 0" }}>
                         <p style={{ margin: "0 0 4px", fontSize: 13, fontWeight: 600, color: masVistoText }}>{p.name}</p>
-                        <PromoPrice product={p} promotions={promotions} fmt={fmt} accent={ACC}
+                        <PromoPrice product={p} promotions={promotions} fmt={fmt} accent={accentSobre(masVistoBg, masVistoText)} sobre={masVistoText}
                           priceSize={14} compareSize={11} ocultarPrecios={ocultarPrecios} consultaLabel="Consultá" />
                       </div>
                     </div>
@@ -2025,8 +2096,9 @@ export default function ChicParis() {
                   <FadeImage src={p.images[0] ?? "/placeholder.jpg"} alt={p.name} width={48} height={60} style={{ objectFit: "cover", flexShrink: 0 }} />
                   <div>
                     <p style={{ margin: "0 0 4px", fontSize: 13, fontWeight: 600 }}>{p.name}</p>
-                    <PromoPrice product={p} promotions={promotions} fmt={fmt} accent={ACC}
+                    <PromoPrice product={p} promotions={promotions} fmt={fmt} accent={accentLegible} sobre="#111"
                       priceSize={13} compareSize={11} weight={700} ocultarPrecios={ocultarPrecios} />
+                    {avisoPromo(p, "chip")}
                   </div>
                 </div>
               )) : searchQuery ? (
@@ -2055,7 +2127,12 @@ export default function ChicParis() {
                 vertical altísima: se veía el cierre de la campera a cinco
                 aumentos en vez de la prenda. Ahora la caja tiene proporción
                 propia, la misma 3/4 que la grilla del catálogo. */}
-            <div style={{ width: isMobile ? "100%" : "48%", flexShrink: 0, alignSelf: "flex-start" }}>
+            {/* El aire lo pone la COLUMNA, no cada bloque: así la foto, las
+                miniaturas y los videos arrancan todos en la misma vertical. Antes
+                la foto iba pegada al borde del modal y los reels tampoco respiraban
+                del filo izquierdo. */}
+            <div ref={colFotoRef} style={{ width: isMobile ? "100%" : "48%", flexShrink: 0, alignSelf: "flex-start",
+                                           boxSizing: "border-box", padding: isMobile ? 0 : "28px 0 28px 28px" }}>
             <div style={{ position: "relative", width: "100%", overflow: "hidden", aspectRatio: isMobile ? "4/3" : "3/4" }} {...imgSwipe}>
               <FadeImage src={modalProduct.images[modalImg] ?? "/placeholder.jpg"} alt={modalProduct.name} fill sizes="(max-width: 768px) 100vw, 480px"
                 style={{ objectFit: "cover", cursor:"zoom-in" }}
@@ -2091,7 +2168,7 @@ export default function ChicParis() {
                 se encarga de sincronizar el color cuando esa foto es de otra
                 variante. */}
             {modalProduct.images.length > 1 && (
-              <div style={{ display: "flex", gap: 8, padding: "10px 14px 0", overflowX: "auto", scrollbarWidth: "none" }}>
+              <div style={{ display: "flex", gap: 8, padding: isMobile ? "10px 14px 0" : "10px 0 0", overflowX: "auto", scrollbarWidth: "none" }}>
                 {modalProduct.images.map((img, i) => (
                   <button key={i} onClick={() => elegirFoto(i)} aria-label={`Ver foto ${i + 1}`}
                     style={{ position: "relative", width: 56, height: 74, flexShrink: 0, padding: 0, cursor: "pointer", overflow: "hidden",
@@ -2101,13 +2178,47 @@ export default function ChicParis() {
                 ))}
               </div>
             )}
+            {/* ── Videos, debajo de la foto y DENTRO de esta columna ────────────
+                Acá el espacio a la derecha de los reels no es un vacío: es la
+                columna de la descripción. Por eso van adentro y no a lo ancho —
+                a lo ancho son 3 miniaturas angostas solas en una fila de 1030px,
+                y no hay forma de que la llenen. Alineados a la izquierda, en
+                línea con la foto y las miniaturas.
+                Ojo con meterlos DENTRO de la caja de la foto: esa se dibuja con
+                `fill` (`position:absolute; inset:0`) y taparía el bloque. Van
+                como hermanos, después de las miniaturas. */}
+            {modalProduct.reelUrls.length > 0 && (
+              <div style={{ padding: isMobile ? "18px 20px 0" : "22px 0 0" }}>
+                <p style={CP_MODAL_TITULO}>Videos</p>
+                {/* 160 y no el 104 por defecto: al lado de una foto de ~440px el
+                    reel chico parecía una estampilla y no se distinguía qué se
+                    estaba mostrando. Es el mismo ancho que usa el modal de la
+                    página de productos, para que los dos se vean igual. */}
+                <StoreProductReels
+                  reelUrls={modalProduct.reelUrls}
+                  ancho={isMobile ? 120 : 160}
+                  theme={{ accent: ACC, text: "#111", border: `${ACC}33`, radius: 4 }}
+                />
+              </div>
+            )}
             </div>
-            {/* Details */}
-            {/* Sin `overflowY:auto`: quedaba de cuando las reseñas vivían acá
-                adentro. La columna no tiene alto limitado, así que nunca llegaba a
-                scrollear — pero de aparecer, sería un scroll adentro del scroll
-                del modal, justo lo que evitamos. */}
-            <div style={{ flex: 1, padding: isMobile ? "20px 20px" : 32, display: "flex", flexDirection: "column" }}>
+            {/* Details — se ajusta al alto de la columna de la foto y scrollea por
+                dentro. El scroll de acá NO compite con el del modal: este panel
+                termina justo donde arranca Reseñas, y de ahí para abajo scrollea
+                el modal. En celular no aplica (columnas apiladas, sin alto fijo). */}
+            <div style={{ flex: 1, minWidth: 0, position: "relative", display: "flex" }}>
+            {/* Degradados: reponen la señal que se perdió al ocultar la barra.
+                Aparecen solo si de verdad queda contenido de ese lado. */}
+            {sombraArriba && (
+              <div style={{ position: "absolute", left: 0, right: 0, top: 0, height: 28, zIndex: 2, pointerEvents: "none",
+                            background: "linear-gradient(to top, transparent, #ffffff)" }} />
+            )}
+            {sombraAbajo && (
+              <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 44, zIndex: 2, pointerEvents: "none",
+                            background: "linear-gradient(to bottom, transparent, #ffffff)" }} />
+            )}
+            <div ref={panelRef} className="cp-sin-barra" style={{ flex: 1, minHeight: 0, padding: isMobile ? "20px 20px" : "28px 32px", display: "flex", flexDirection: "column",
+                          ...(altoPanel ? { maxHeight: altoPanel, overflowY: "auto" as const } : {}) }}>
               {/* ── Encabezado: qué es, cómo se llama y cuánto sale ──────────
                   El precio va pegado al nombre. Antes en el medio estaban los dos
                   botones de compartir, que son lo último que hace alguien que
@@ -2123,7 +2234,7 @@ export default function ChicParis() {
                 ) : modalPromo?.hasPriceDrop ? (
                   <>
                     <span style={{ fontSize: 24, fontWeight: 900, color: "#dc2626" }}>{fmt(modalPromo.effectivePrice)}</span>
-                    <span style={{ fontSize: 16, color: "#bbb", textDecoration: "line-through" }}>{fmt(modalPromo.originalPrice)}</span>
+                    <span style={{ fontSize: 16, color: "#8a8a8a", textDecoration: "line-through" }}>{fmt(modalPromo.originalPrice)}</span>
                     {modalPromo.pctOff != null && <span style={{ fontSize: 12, fontWeight: 800, color: "#16a34a", background: "#dcfce7", padding: "2px 8px", borderRadius: 4 }}>{modalPromo.pctOff}% OFF</span>}
                   </>
                 ) : (
@@ -2136,7 +2247,7 @@ export default function ChicParis() {
                         hizo en las listas (CP-1); el modal quedó afuera porque
                         pinta el precio a mano. */}
                     {!variantPrice && modalProduct.comparePrice != null && modalProduct.comparePrice > modalProduct.price && (
-                      <span style={{ fontSize: 16, color: "#bbb", textDecoration: "line-through" }}>{fmt(modalProduct.comparePrice)}</span>
+                      <span style={{ fontSize: 16, color: "#8a8a8a", textDecoration: "line-through" }}>{fmt(modalProduct.comparePrice)}</span>
                     )}
                   </>
                 )}
@@ -2250,10 +2361,9 @@ export default function ChicParis() {
                   <button onClick={addToCart} disabled={selectedVariantStock === 0}
                     style={{ background: selectedVariantStock === 0 ? "#ccc" : ACC, color: accentText, border: "none", padding: "15px", fontSize: 11, fontWeight: 800, letterSpacing: 3, textTransform: "uppercase", cursor: selectedVariantStock === 0 ? "not-allowed" : "pointer", width: "100%" }}>
                     {/* El total va en el botón como en los otros tres templates de
-                        moda. En mobile el número ya está arriba del botón; acá no
-                        estaba en ningún lado, y con un 3×2 o cantidad > 1 el
-                        comprador tenía que sacar la cuenta de cabeza. */}
-                    {selectedVariantStock === 0 ? "Sin stock" : `Agregar al carrito · ${fmt(nxmPaid != null ? nxmPaid * displayPrice : (modalPromo?.hasPriceDrop ? modalPromo.effectivePrice : displayPrice) * qty)}`}
+                        moda: sin él, con un 3×2 o cantidad > 1 el comprador tenía
+                        que sacar la cuenta de cabeza. */}
+                    {selectedVariantStock === 0 ? "Sin stock" : `Agregar al carrito · ${totalAPagar}`}
                   </button>
                 )
               )}
@@ -2261,6 +2371,8 @@ export default function ChicParis() {
 
               {modalProduct.description && (
                 <CpBloque titulo="Descripción">
+                  {/* Sin recortar: el panel tiene alto fijo y scrollea, así que un
+                      texto largo ya no deforma nada — se lee bajando acá adentro. */}
                   <div className="product-rte" dangerouslySetInnerHTML={{ __html: modalProduct.description }} style={{ fontSize: 14, color: "#555", lineHeight: 1.7 }} />
                 </CpBloque>
               )}
@@ -2326,29 +2438,7 @@ export default function ChicParis() {
 
             </div>
             </div>
-            {/* ── Videos — a lo ANCHO, no adentro de la columna de la foto ─────
-                Dos motivos, y el segundo es el que importa:
-                  · La foto se dibuja con `fill` (`position:absolute; inset:0`) y
-                    lo absoluto se pinta ENCIMA de lo que está en flujo normal:
-                    metido en la caja de la foto, el bloque quedaba tapado por la
-                    prenda —se veía el video flotando suelto, sin su título— y en
-                    celular además recortado por el `overflow:hidden`.
-                  · Colgado abajo de la columna, era lo que estiraba la izquierda:
-                    la columna derecha terminaba en "Copiar link" y al lado
-                    quedaba un vacío de ~330px. Los videos son una sección del
-                    producto, como las reseñas o los similares, no parte de la
-                    galería — y acá abajo tienen ancho para mostrar varios en
-                    fila en vez de uno solo. */}
-            {modalProduct.reelUrls.length > 0 && (
-              <div style={{ borderTop: "1px solid #f0f0f0", padding: isMobile ? "20px 20px" : "24px 32px" }}>
-                <p style={CP_MODAL_TITULO}>Videos</p>
-                <StoreProductReels
-                  reelUrls={modalProduct.reelUrls}
-                  theme={{ accent: ACC, text: "#111", border: `${ACC}33`, radius: 4 }}
-                />
-              </div>
-            )}
-
+            </div>
             {/* ── Reseñas (D-04) — a lo ANCHO, abajo de las dos columnas ───────
                 Estaban adentro de la columna derecha, que es la mitad del modal, y
                 son lo más largo de la ficha. Eso causaba las dos cosas de una:
@@ -2482,30 +2572,26 @@ export default function ChicParis() {
                     <div key={p.id} onClick={() => openModal(p)} className="cp-zoom" style={{ cursor: "pointer" }}>
                       <div style={{ position: "relative", width: "100%", aspectRatio: "3/4", borderRadius: 4, overflow: "hidden", background: "#f5f5f5" }}>
                         {p.images[0] && <FadeImage src={p.images[0]} alt={p.name} fill sizes="(max-width: 768px) 50vw, 200px" className="cp-zoom-img" style={{ objectFit: "cover" }} />}
+                        {avisoPromo(p)}
                       </div>
                       <p style={{ margin: "8px 0 2px", fontSize: 12, color: "#111", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 1, WebkitBoxOrient: "vertical" as const }}>{p.name}</p>
-                      <PromoPrice product={p} promotions={promotions} fmt={fmt} accent={ACC}
-                        priceSize={13} weight={700} ocultarPrecios={ocultarPrecios} />
+                      <PromoPrice product={p} promotions={promotions} fmt={fmt} accent={accentLegible} sobre="#111"
+                        priceSize={13} compareSize={11} weight={700} ocultarPrecios={ocultarPrecios} />
                     </div>
                   ))}
                 </div>
               </div>
             )}
             </div>
+            {/* Barra fija de comprar en celular. El precio va DENTRO del botón,
+                como en la página de productos y como en el botón de arriba. Antes
+                tenía una fila aparte con el precio grande y el botón mudo debajo:
+                en un modal que ya muestra el precio en el encabezado, el mismo
+                número aparecía tres veces y la barra ocupaba el doble de alto,
+                caro en una pantalla de 360. La barra se queda porque es el único
+                botón de comprar siempre visible mientras se scrollea. */}
             {isMobile && (
               <div style={{ borderTop: "1px solid #f0f0f0", padding: "12px 16px 16px", background: "#fff", flexShrink: 0 }}>
-                <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 10 }}>
-                  <span style={{ fontSize: 20, fontWeight: 700, color: accentLegible }}>{ocultarPrecios ? "Consultá precio" : fmt(nxmPaid != null ? nxmPaid * displayPrice : (modalPromo?.hasPriceDrop ? modalPromo.effectivePrice : displayPrice) * qty)}</span>
-                  {/* × la cantidad, igual que el número grande de al lado. Antes el
-                      de arriba era el TOTAL y este el precio anterior UNITARIO: con
-                      cantidad 2 se leía "$16.000" tachando "$10.000", o sea el
-                      tachado más barato que lo que se paga. Y `> price` por lo
-                      mismo que arriba. */}
-                  {!variantPrice && !ocultarPrecios && modalProduct.comparePrice != null && modalProduct.comparePrice > modalProduct.price && (
-                    <span style={{ fontSize: 12, color: "#bbb", textDecoration: "line-through" }}>{fmt(modalProduct.comparePrice * qty)}</span>
-                  )}
-                  {qty > 1 && <span style={{ fontSize: 11, color: "#bbb" }}>× {qty}</span>}
-                </div>
                 {isInquiryMode ? (
                   <button onClick={() => openInquiry(modalProduct)}
                     style={{ width: "100%", background: ACC, color: accentText, border: "none", padding: "15px", fontSize: 11, fontWeight: 800, letterSpacing: 3, textTransform: "uppercase", cursor: "pointer" }}>
@@ -2513,8 +2599,8 @@ export default function ChicParis() {
                   </button>
                 ) : (
                   <button onClick={addToCart} disabled={selectedVariantStock === 0}
-                    style={{ width: "100%", background: selectedVariantStock === 0 ? "#ccc" : ACC, color: accentText, border: "none", padding: "15px", fontSize: 11, fontWeight: 800, letterSpacing: 3, textTransform: "uppercase", cursor: selectedVariantStock === 0 ? "not-allowed" : "pointer" }}>
-                    {selectedVariantStock === 0 ? "Sin stock" : "Agregar al carrito"}
+                    style={{ width: "100%", background: selectedVariantStock === 0 ? "#ccc" : ACC, color: accentText, border: "none", padding: "15px", fontSize: 11, fontWeight: 800, letterSpacing: 2, textTransform: "uppercase", cursor: selectedVariantStock === 0 ? "not-allowed" : "pointer" }}>
+                    {selectedVariantStock === 0 ? "Sin stock" : `Agregar al carrito · ${totalAPagar}`}
                   </button>
                 )}
               </div>
@@ -2722,8 +2808,11 @@ export default function ChicParis() {
         </div>
       )}
 
-      <CheckoutModal cart={cart} theme={cartTheme} isPreview={isPreview} storeSlug={storeConfig?.slug ?? ""} />
-      <CartDrawer cart={cart} theme={cartTheme} isOwner={isOwner} isPreview={isPreview} whatsapp={storeConfig?.whatsapp} />
+      {/* zIndex propio: este template tiene el navbar en 1000 y la barra de anuncios
+          en 1001, mucho más alto que los otros. Con los 150/300 por defecto el
+          carrito y la caja quedaban por DEBAJO y se les comía el encabezado. */}
+      <CheckoutModal cart={cart} theme={cartTheme} isPreview={isPreview} storeSlug={storeConfig?.slug ?? ""} zIndex={9800} />
+      <CartDrawer cart={cart} theme={cartTheme} isOwner={isOwner} isPreview={isPreview} whatsapp={storeConfig?.whatsapp} zIndex={9700} />
 
       {/* ── FAVORITES ── */}
       {favoritesOpen && (
@@ -2742,9 +2831,10 @@ export default function ChicParis() {
                   <FadeImage src={product.images[0] ?? "/placeholder.jpg"} alt={product.name} width={64} height={80} style={{ objectFit: "cover" }} />
                   <div style={{ flex: 1 }}>
                     <p style={{ margin: "0 0 4px", fontSize: 13, fontWeight: 600 }}>{product.name}</p>
-                    <PromoPrice product={product} promotions={promotions} fmt={fmt} accent={ACC}
+                    <PromoPrice product={product} promotions={promotions} fmt={fmt} accent={accentLegible} sobre="#111"
                       priceSize={13} compareSize={11} weight={700} ocultarPrecios={ocultarPrecios}
-                      gap={8} style={{ marginBottom: 8 }} />
+                      gap={8} style={{ marginBottom: 4 }} />
+                    <div style={{ marginBottom: 8 }}>{avisoPromo(product, "chip")}</div>
                     <button onClick={() => { setFavoritesOpen(false); openModal(product); }}
                       style={{ background: ACC, color: accentText, border: "none", padding: "6px 16px", fontSize: 10, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", cursor: "pointer" }}>
                       Ver
