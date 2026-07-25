@@ -57,6 +57,12 @@ const COLOR_ATTRS = ["color","colour","colores","colors","tono"];
 // pide nada: solo deja de recortar una lista que ya está en memoria.
 const PASO_RESENAS = 5;
 
+// Color de las estrellas llenas. Dorado fijo, NO el acento del template: las
+// estrellas son doradas por convención en cualquier tienda, y atarlas al acento
+// las volvía casi invisibles cuando el acento es claro. Es la misma decisión (y
+// el mismo dorado) que ya había tomado ChicParis.
+const STAR_ON = "#f59e0b";
+
 /* ── Comentario de una reseña ──────────────────────────────────────────────────
    El tope del servidor es de 500 caracteres, que son unos 9 renglones: sin
    recortar, una sola reseña larga empuja a las demás fuera de la pantalla.
@@ -1994,7 +2000,11 @@ function ProductosPageInner() {
             {modalProduct.reelUrls.length > 0 && (
               <div style={{ gridColumn: isMobile ? undefined : "1 / -1", borderTop:`1px solid ${border}`, padding: isMobile ? "20px 16px" : "24px 32px" }}>
                   <p style={tituloBloque}>Videos del producto</p>
-                  <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:10 }}>
+                  {/* Alineado a la izquierda, como todo lo demás del modal. El
+                      `center` venía de cuando este bloque vivía encajonado en una
+                      columna de 160px: ahí no se notaba, pero a lo ancho deja el
+                      video solo en el medio de la nada. */}
+                  <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-start", gap:10 }}>
                     {(() => {
                       const url = modalProduct.reelUrls[reelIndex];
                       if (/\.(mp4|webm|mov|ogg)(\?.*)?$/i.test(url)) {
@@ -2075,7 +2085,7 @@ function ProductosPageInner() {
                           <div style={{ textAlign:"center", minWidth:56 }}>
                             <p style={{ fontSize:34, fontWeight:800, color:T, margin:0, lineHeight:1 }}>{avg.toFixed(1)}</p>
                             <div style={{ display:"flex", gap:2, justifyContent:"center", margin:"6px 0 4px" }}>
-                              {[1,2,3,4,5].map(s => <span key={s} style={{ fontSize:11, color: s <= Math.round(avg) ? G : `${T}22` }}>★</span>)}
+                              {[1,2,3,4,5].map(s => <span key={s} style={{ fontSize:11, color: s <= Math.round(avg) ? STAR_ON : `${T}22` }}>★</span>)}
                             </div>
                             <p style={{ fontSize:9, opacity:0.4, margin:0, letterSpacing:0.5 }}>{resenasVisibles.length} reseña{resenasVisibles.length !== 1 ? "s" : ""}</p>
                           </div>
@@ -2110,13 +2120,18 @@ function ProductosPageInner() {
                               </span>
                             </div>
                             <div style={{ display:"flex", gap:1, marginBottom: r.comment ? 8 : 0 }}>
-                              {[1,2,3,4,5].map(s => <span key={s} style={{ fontSize:12, color: s <= r.rating ? G : `${T}20` }}>★</span>)}
+                              {[1,2,3,4,5].map(s => <span key={s} style={{ fontSize:12, color: s <= r.rating ? STAR_ON : `${T}20` }}>★</span>)}
                             </div>
                             {/* Recortado a 6 líneas con "Leer todo". El tope del
                                 servidor es de 500 caracteres: sin recorte, una
                                 sola reseña larga son ~9 renglones y empuja a las
                                 otras fuera de la pantalla. */}
-                            {r.comment && <ComentarioResena texto={r.comment} acento={GT} color={MID} />}
+                            {/* El color es `T` (el texto normal del tema) al 65%, no
+                                `MID`: MID ya es un gris apagado y al 65% sobre el
+                                fondo del modal el comentario quedaba casi invisible.
+                                Antes esto no pasaba porque el <p> no fijaba color y
+                                heredaba T — se perdió al extraer el componente. */}
+                            {r.comment && <ComentarioResena texto={r.comment} acento={GT} color={T} />}
                           </div>
                         </div>
                       ))}
@@ -2202,7 +2217,7 @@ function ProductosPageInner() {
                   {[1,2,3,4,5].map(s => (
                     <button key={s} type="button" onClick={() => !fromEditor && setReviewForm(p => ({ ...p, rating: s }))}
                       aria-label={`${s} de 5 estrellas`}
-                      style={{ background:"none", border:"none", fontSize:24, lineHeight:1, cursor: fromEditor ? "default" : "pointer", color: s <= reviewForm.rating ? G : `${T}30`, padding:"2px" }}>★</button>
+                      style={{ background:"none", border:"none", fontSize:24, lineHeight:1, cursor: fromEditor ? "default" : "pointer", color: s <= reviewForm.rating ? STAR_ON : `${T}30`, padding:"2px" }}>★</button>
                   ))}
                 </div>
                 <textarea value={reviewForm.comment} onChange={e => !fromEditor && setReviewForm(p => ({ ...p, comment: e.target.value }))}
