@@ -2192,7 +2192,11 @@ export default function ChicParis() {
                           color: selectedColor === c ? accentRellenoText : "#333",
                           fontSize: 12, fontWeight: 700, cursor: "pointer", transition: "all 0.15s",
                         }}>
-                          {swatch && <span style={{ width: 14, height: 14, borderRadius: "50%", background: swatch, border: "1px solid rgba(0,0,0,0.15)", flexShrink: 0 }} />}
+                          {/* El anillo usa el color del TEXTO del chip, que por
+                              construcción contrasta con su fondo. Con un anillo
+                              fijo oscuro, el color "Negro" elegido quedaba como un
+                              puntito negro sobre un chip negro — invisible. */}
+                          {swatch && <span style={{ width: 14, height: 14, borderRadius: "50%", background: swatch, border: `1px solid ${selectedColor === c ? accentRellenoText : "rgba(0,0,0,0.25)"}`, flexShrink: 0 }} />}
                           {c}
                         </button>
                       );

@@ -1897,7 +1897,13 @@ function ProductosPageInner() {
                       return (
                         <button key={color} onClick={() => elegirColor(color)}
                           style={{ display:"flex", alignItems:"center", gap:7, padding:"9px 14px", fontSize:11, border: `2px solid ${selectedColor===color ? chipBg : border}`, background: selectedColor===color ? chipBg : "transparent", color: selectedColor===color ? chipText : T, fontWeight: selectedColor===color ? 700 : 400, cursor:"pointer", transition:"all 0.2s" }}>
-                          {swatch && <span style={{ width:14, height:14, borderRadius:"50%", background:swatch, border:"1px solid rgba(0,0,0,0.15)", flexShrink:0 }} />}
+                          {/* El anillo del puntito usa el color del TEXTO del chip,
+                              que por construcción contrasta con su fondo. Con un
+                              anillo fijo oscuro, el color "Negro" elegido quedaba
+                              como un puntito negro sobre un chip negro — invisible.
+                              Y en los templates oscuros pasaba lo mismo con
+                              "Blanco". */}
+                          {swatch && <span style={{ width:14, height:14, borderRadius:"50%", background:swatch, border:`1px solid ${selectedColor===color ? chipText : "rgba(0,0,0,0.25)"}`, flexShrink:0 }} />}
                           {color}
                         </button>
                       );
