@@ -9,7 +9,8 @@ import { getDemoPool, fillTargetFor, parsePromotions } from "@/hooks/useStorefro
 import type { ActivePromotion } from "@/lib/pricing";
 import { ENVIO_OPTIONS, PAGO_OPTIONS } from "@/components/store/shared/cartTypes";
 import { useTouchSwipe } from "@/hooks/useTouchSwipe";
-import { getContrastColor, getReadableAccentText } from "@/contexts/EditContext";
+import { getContrastColor, getReadableAccentText, getReadableAccentFill } from "@/contexts/EditContext";
+import { colorToSwatch } from "@/lib/colorSwatch";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
 import { OfferBadge } from "@/components/store/OfferBadge";
 import { PromoTag, PromoBlock } from "@/components/store/PromoDisplay";
@@ -814,6 +815,13 @@ function ProductosPageInner() {
     margin: "0 0 12px", fontSize: 10, fontWeight: 700, letterSpacing: 2.5,
     textTransform: "uppercase", color: MID,
   };
+  // El talle/color ELEGIDO va con relleno sólido, como en el modal del template:
+  // con borde y un tinte apenas se distinguía del no elegido. Se usa el acento
+  // cuando se separa del fondo de la página como superficie y, si no (acentos casi
+  // del color del fondo), cae al color de texto del tema — que en los templates
+  // oscuros es claro y en los claros es oscuro, así que sirve para los 10.
+  const chipBg   = getReadableAccentFill(G, BG, T);
+  const chipText = getContrastColor(chipBg) === "light" ? "#fff" : "#111";
 
   /* En el editor, con el producto todavía sin reseñas, se muestran DE EJEMPLO:
      es la única forma de que el dueño vea el bloque lleno (el promedio, el
@@ -1860,27 +1868,17 @@ function ProductosPageInner() {
                   Color, talle, cantidad y el botón, todo junto y ARRIBA de la
                   descripción. Antes había que pasar la descripción entera y la
                   tabla de características para llegar a elegir el talle. */}
-              {modalProduct.colors.length > 0 && (
-                <div>
-                  <p style={{ fontSize:10, letterSpacing:3, textTransform:"uppercase", marginBottom:8, opacity:0.55 }}>Color: <strong style={{ color:T }}>{selectedColor}</strong></p>
-                  <div style={{ display:"flex", gap:7, flexWrap:"wrap" }}>
-                    {modalProduct.colors.map(color => (
-                      <button key={color} onClick={() => elegirColor(color)}
-                        style={{ padding:"6px 14px", fontSize:11, border: selectedColor===color ? `2px solid ${GT}` : `1px solid ${border}`, background: selectedColor===color ? `${GT}1f` : "transparent", color:T, fontWeight: selectedColor===color ? 700 : 400, cursor:"pointer", transition:"all 0.2s" }}>
-                        {color}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
+              {/* Talle primero y color después, el mismo orden que el modal del
+                  template. Los títulos van a secas ("TALLE", no "TALLE: 32"):
+                  repetir el valor elegido en el título es decir dos veces lo
+                  mismo, y el chip marcado ya lo dice. */}
               {modalProduct.sizes.length > 0 && (
                 <div>
-                  <p style={{ fontSize:10, letterSpacing:3, textTransform:"uppercase", marginBottom:8, opacity:0.55 }}>Talle: <strong style={{ color:T }}>{selectedSize}</strong></p>
+                  <p style={tituloBloque}>Talle</p>
                   <div style={{ display:"flex", gap:7, flexWrap:"wrap" }}>
                     {modalProduct.sizes.map(size => (
                       <button key={size} onClick={() => elegirTalle(size)}
-                        style={{ width:44, height:44, fontSize:12, fontWeight: selectedSize===size ? 800 : 600, border: selectedSize===size ? `2px solid ${GT}` : `1px solid ${border}`, background: selectedSize===size ? `${GT}1f` : "transparent", color:T, cursor:"pointer", transition:"all 0.2s" }}>
+                        style={{ width:44, height:44, fontSize:12, fontWeight: selectedSize===size ? 800 : 600, border: `2px solid ${selectedSize===size ? chipBg : border}`, background: selectedSize===size ? chipBg : "transparent", color: selectedSize===size ? chipText : T, cursor:"pointer", transition:"all 0.2s" }}>
                         {size}
                       </button>
                     ))}
@@ -1888,9 +1886,31 @@ function ProductosPageInner() {
                 </div>
               )}
 
-              <div style={{ display:"flex", alignItems:"center", gap:14 }}>
-                <p style={{ fontSize:10, letterSpacing:3, textTransform:"uppercase", opacity:0.55, margin:0 }}>Cantidad</p>
-                <div style={{ display:"flex", alignItems:"center", border:`1px solid ${border}` }}>
+              {modalProduct.colors.length > 0 && (
+                <div>
+                  <p style={tituloBloque}>Color</p>
+                  <div style={{ display:"flex", gap:7, flexWrap:"wrap" }}>
+                    {/* Con el puntito de muestra, como en el modal del template:
+                        "Petróleo" o "Arena" no le dicen nada a nadie hasta verlo. */}
+                    {modalProduct.colors.map(color => {
+                      const swatch = colorToSwatch(color);
+                      return (
+                        <button key={color} onClick={() => elegirColor(color)}
+                          style={{ display:"flex", alignItems:"center", gap:7, padding:"9px 14px", fontSize:11, border: `2px solid ${selectedColor===color ? chipBg : border}`, background: selectedColor===color ? chipBg : "transparent", color: selectedColor===color ? chipText : T, fontWeight: selectedColor===color ? 700 : 400, cursor:"pointer", transition:"all 0.2s" }}>
+                          {swatch && <span style={{ width:14, height:14, borderRadius:"50%", background:swatch, border:"1px solid rgba(0,0,0,0.15)", flexShrink:0 }} />}
+                          {color}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Apilada como talle y color, no en línea: eran tres controles del
+                  mismo tipo puestos de dos formas distintas. */}
+              <div>
+                <p style={tituloBloque}>Cantidad</p>
+                <div style={{ display:"flex", alignItems:"center", border:`1px solid ${border}`, width:"fit-content" }}>
                   <button onClick={() => setQty(q => Math.max(1,q-1))} style={{ width:36, height:36, background:"none", border:"none", color:T, fontSize:18, cursor:"pointer" }}>−</button>
                   <span style={{ width:36, textAlign:"center", fontSize:14, color:T }}>{qty}</span>
                   <button onClick={() => setQty(q => q+1)} style={{ width:36, height:36, background:"none", border:"none", color:T, fontSize:18, cursor:"pointer" }}>+</button>
