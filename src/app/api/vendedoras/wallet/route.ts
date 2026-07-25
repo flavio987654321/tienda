@@ -5,7 +5,7 @@ import { getCurrentUser } from "@/lib/auth-session";
 import { encryptIfNeeded, decryptIfNeeded } from "@/lib/crypto";
 import { sendWithdrawalRequestEmail } from "@/lib/email";
 import { createNotification } from "@/lib/notifications";
-import { verifyOtpToken } from "./otp/route";
+import { verifyOtpToken } from "@/lib/otp-token";
 
 const MIN_WITHDRAWAL = 100;
 const BANK_LOCKOUT_HOURS = 72;
