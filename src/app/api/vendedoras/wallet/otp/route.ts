@@ -1,35 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createHash, createHmac, randomInt } from "crypto";
+import { createHash, randomInt } from "crypto";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
 import { sendOtpEmail } from "@/lib/email";
+import { makeOtpToken } from "@/lib/otp-token";
 
 const OTP_TTL_MS = 10 * 60 * 1000; // 10 minutos
-const TOKEN_TTL_MS = 30 * 60 * 1000; // 30 minutos
 const MAX_OTP_ATTEMPTS = 5;
 
 function hashOtp(code: string, salt: string): string {
   return createHash("sha256").update(`${code}:${salt}`).digest("hex");
-}
-
-export function makeOtpToken(userId: string): string {
-  const secret = process.env.NEXTAUTH_SECRET!;
-  const ts = Date.now().toString();
-  const sig = createHmac("sha256", secret).update(`${userId}:${ts}`).digest("hex");
-  return `${userId}:${ts}:${sig}`;
-}
-
-export function verifyOtpToken(token: string | null | undefined, expectedUserId: string): boolean {
-  if (!token) return false;
-  const parts = token.split(":");
-  if (parts.length !== 3) return false;
-  const [userId, ts, sig] = parts;
-  if (userId !== expectedUserId) return false;
-  const tsNum = parseInt(ts, 10);
-  if (isNaN(tsNum) || Date.now() - tsNum > TOKEN_TTL_MS) return false;
-  const secret = process.env.NEXTAUTH_SECRET!;
-  const expected = createHmac("sha256", secret).update(`${userId}:${ts}`).digest("hex");
-  return sig === expected;
 }
 
 // POST — solicitar código OTP

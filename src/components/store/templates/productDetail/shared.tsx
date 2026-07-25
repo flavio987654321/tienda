@@ -746,7 +746,7 @@ export function ProductDetailOverlays({ theme, view }: { theme: DetailTheme; vie
       </div>
 
       {toastMsg && (
-        <div style={{ position: "fixed", bottom: 24, left: "50%", transform: "translateX(-50%)", background: theme.text, color: theme.pageBg, padding: "12px 20px", fontSize: 13, fontWeight: 600, zIndex: 600, boxShadow: "0 4px 20px rgba(0,0,0,0.35)", whiteSpace: "nowrap" }}>
+        <div style={{ position: "fixed", bottom: 24, left: "50%", transform: "translateX(-50%)", background: theme.text, color: theme.pageBg, padding: "12px 20px", fontSize: 13, fontWeight: 600, zIndex: 600, boxShadow: "0 4px 20px rgba(0,0,0,0.35)", maxWidth:"calc(100vw - 32px)", textAlign:"center" }}>
           {toastMsg}
         </div>
       )}

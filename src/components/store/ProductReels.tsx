@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTouchSwipe } from "@/hooks/useTouchSwipe";
 
@@ -56,6 +56,9 @@ export function parseReel(rawUrl: string): Reel | null {
   return { kind: "link", url, platform };
 }
 
+// Ancho por defecto de cada miniatura. Se puede agrandar por template con la prop
+// `ancho`: en un modal de producto, 104px deja el reel como una estampilla al lado
+// de una foto de 470px y no se llega a distinguir qué se está mostrando.
 const THUMB_W = 104;
 
 function PlayBadge() {
@@ -70,10 +73,10 @@ function PlayBadge() {
   );
 }
 
-function ReelThumb({ reel, theme, onOpen }: { reel: Reel; theme: ReelTheme; onOpen: () => void }) {
+function ReelThumb({ reel, theme, onOpen, ancho = THUMB_W }: { reel: Reel; theme: ReelTheme; onOpen: () => void; ancho?: number }) {
   const box: React.CSSProperties = {
     position: "relative",
-    width: THUMB_W,
+    width: ancho,
     aspectRatio: "9/16",
     borderRadius: theme.radius ?? 10,
     overflow: "hidden",
@@ -260,13 +263,65 @@ export function playableReels(reelUrls: string[]): Reel[] {
  * Fila de miniaturas de reels. Cada template pone su propio titulo/marco alrededor;
  * esto resuelve las miniaturas, el reproductor y el swipe.
  */
-export default function ProductReels({ reelUrls, theme }: { reelUrls: string[]; theme: ReelTheme }) {
+// Flecha para correr la tira de miniaturas. Va por fuera para no redeclararla en
+// cada render del componente de arriba.
+function FlechaTira({ lado, theme, onClick }: { lado: "izq" | "der"; theme: ReelTheme; onClick: () => void }) {
+  return (
+    <button type="button" onClick={onClick} aria-label={lado === "izq" ? "Ver videos anteriores" : "Ver más videos"}
+      style={{
+        position: "absolute", top: "50%", transform: "translateY(-50%)",
+        [lado === "izq" ? "left" : "right"]: -6,
+        width: 32, height: 32, borderRadius: "50%", cursor: "pointer",
+        background: "#fff", border: `1px solid ${theme.border}`, color: theme.text,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        fontSize: 16, lineHeight: 1, padding: 0, zIndex: 2,
+        boxShadow: "0 2px 8px rgba(0,0,0,0.14)",
+      }}>
+      {lado === "izq" ? "‹" : "›"}
+    </button>
+  );
+}
+
+export default function ProductReels({ reelUrls, theme, ancho }: { reelUrls: string[]; theme: ReelTheme; ancho?: number }) {
   const [openIdx, setOpenIdx] = useState<number | null>(null);
+  // Identidad estable de la lista. Como dependencia de efectos, `reelUrls` a secas
+  // es un array nuevo en cada render y rearmaría los observers todo el tiempo.
+  const urlsKey = (reelUrls ?? []).join("|");
+  // Qué flechas mostrar. Se mide la tira ya dibujada en vez de contar miniaturas:
+  // cuántas entran depende del ancho de la columna, que cambia entre 360 y 1280.
+  const tiraRef = useRef<HTMLDivElement>(null);
+  const [puedeIzq, setPuedeIzq] = useState(false);
+  const [puedeDer, setPuedeDer] = useState(false);
+  const medirTira = useCallback(() => {
+    const el = tiraRef.current;
+    if (!el) return;
+    setPuedeIzq(el.scrollLeft > 4);
+    setPuedeDer(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
+  }, []);
+  useEffect(() => {
+    const el = tiraRef.current;
+    if (!el) return;
+    // La primera medición en un frame aparte: llamarla acá sería un setState
+    // sincrónico dentro del efecto.
+    const raf = requestAnimationFrame(medirTira);
+    el.addEventListener("scroll", medirTira, { passive: true });
+    const ro = new ResizeObserver(medirTira);
+    ro.observe(el);
+    return () => {
+      cancelAnimationFrame(raf);
+      el.removeEventListener("scroll", medirTira);
+      ro.disconnect();
+    };
+  }, [medirTira, urlsKey, ancho]);
+  const correr = useCallback((dir: 1 | -1) => {
+    const el = tiraRef.current;
+    if (!el) return;
+    // Un "paso" es lo que se ve, para no dejar una miniatura cortada al volver.
+    el.scrollBy({ left: dir * el.clientWidth, behavior: "smooth" });
+  }, []);
 
   // Los modales de los templates reusan el mismo componente al cambiar de producto:
   // si no reseteamos, el indice del producto anterior queda vivo.
-  // El ?? va aca y no en el guard de abajo: los hooks corren antes del early return.
-  const urlsKey = (reelUrls ?? []).join("|");
   const [prevUrlsKey, setPrevUrlsKey] = useState(urlsKey);
   if (prevUrlsKey !== urlsKey) {
     setPrevUrlsKey(urlsKey);
@@ -285,18 +340,30 @@ export default function ProductReels({ reelUrls, theme }: { reelUrls: string[]; 
 
   return (
     <>
-      <div style={{ display: "flex", gap: 10, overflowX: "auto", paddingBottom: 4, WebkitOverflowScrolling: "touch" }}>
-        {reels.map((reel, i) => {
-          const playIdx = reel.kind === "link" ? -1 : playable.indexOf(reel);
-          return (
-            <ReelThumb
-              key={reel.url + i}
-              reel={reel}
-              theme={theme}
-              onOpen={() => setOpenIdx(playIdx)}
-            />
-          );
-        })}
+      {/* La tira scrollea de costado, pero el `overflowX` solo no se descubre con
+          mouse: en una columna angosta (768px, ~325 de ancho útil) entran dos
+          miniaturas de las tres y la tercera quedaba invisible. Las flechas
+          aparecen SOLO si de verdad sobra tira para correr — con una o dos
+          miniaturas que entran, no molestan. */}
+      <div style={{ position: "relative" }}>
+        <div ref={tiraRef} className="reels-tira"
+          style={{ display: "flex", gap: 10, overflowX: "auto", paddingBottom: 4, WebkitOverflowScrolling: "touch", scrollBehavior: "smooth" }}>
+          {reels.map((reel, i) => {
+            const playIdx = reel.kind === "link" ? -1 : playable.indexOf(reel);
+            return (
+              <ReelThumb
+                key={reel.url + i}
+                reel={reel}
+                theme={theme}
+                ancho={ancho}
+                onOpen={() => setOpenIdx(playIdx)}
+              />
+            );
+          })}
+        </div>
+        <style>{`.reels-tira::-webkit-scrollbar{display:none}.reels-tira{scrollbar-width:none;-ms-overflow-style:none}`}</style>
+        {puedeIzq && <FlechaTira lado="izq" theme={theme} onClick={() => correr(-1)} />}
+        {puedeDer && <FlechaTira lado="der" theme={theme} onClick={() => correr(1)} />}
       </div>
 
       {openIdx !== null && openIdx >= 0 && playable.length > 0 && (

@@ -902,7 +902,7 @@ export default function ElectroPrime() {
       <CheckoutModal cart={cart} theme={cartTheme} isPreview={isPreview} storeSlug={config?.slug ?? ""} />
 
       {toastMsg && (
-        <div style={{ position:"fixed", bottom:24, left:"50%", transform:"translateX(-50%)", background:"#111", color:"#fff", padding:"12px 20px", fontSize:13, fontWeight:600, zIndex:600, boxShadow:"0 4px 20px rgba(0,0,0,0.35)", whiteSpace:"nowrap" }}>
+        <div style={{ position:"fixed", bottom:24, left:"50%", transform:"translateX(-50%)", background:"#111", color:"#fff", padding:"12px 20px", fontSize:13, fontWeight:600, zIndex:600, boxShadow:"0 4px 20px rgba(0,0,0,0.35)", maxWidth:"calc(100vw - 32px)", textAlign:"center" }}>
           {toastMsg}
         </div>
       )}

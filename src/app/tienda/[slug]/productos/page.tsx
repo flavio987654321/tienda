@@ -9,10 +9,13 @@ import { getDemoPool, fillTargetFor, parsePromotions } from "@/hooks/useStorefro
 import type { ActivePromotion } from "@/lib/pricing";
 import { ENVIO_OPTIONS, PAGO_OPTIONS } from "@/components/store/shared/cartTypes";
 import { useTouchSwipe } from "@/hooks/useTouchSwipe";
-import { getContrastColor, getReadableAccentText } from "@/contexts/EditContext";
+import { getContrastColor, getReadableAccentText, getReadableAccentFill } from "@/contexts/EditContext";
+import { colorToSwatch } from "@/lib/colorSwatch";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
 import { OfferBadge } from "@/components/store/OfferBadge";
-import { PromoTag, PromoBlock } from "@/components/store/PromoDisplay";
+import { PromoTag, PromoBlock, PromoPrice } from "@/components/store/PromoDisplay";
+import { useSombrasScroll } from "@/components/store/useSombrasScroll";
+import StoreProductReels from "@/components/store/ProductReels";
 import { discountPercent } from "@/lib/discount";
 import { resolveProductPromo, describePromo, resolveStoreEvent } from "@/lib/promoDisplay";
 import { resolveVariantPrice } from "@/lib/variantPrice";
@@ -49,6 +52,63 @@ const SIZE_ATTRS  = [
   "sabor","peso/tamaño","peso",
 ];
 const COLOR_ATTRS = ["color","colour","colores","colors","tono"];
+
+// Reseñas: cuántas se ven de entrada y cuántas suma cada "Ver más". No se paginan
+// a propósito — la lista vive adentro de un panel que scrollea, y con páginas
+// tocar "siguiente" reemplaza el contenido ARRIBA de donde estás mirando. Además
+// el servidor manda las 50 más recientes de una sola vez, así que "Ver más" no
+// pide nada: solo deja de recortar una lista que ya está en memoria.
+const PASO_RESENAS = 5;
+
+// Color de las estrellas llenas. Dorado fijo, NO el acento del template: las
+// estrellas son doradas por convención en cualquier tienda, y atarlas al acento
+// las volvía casi invisibles cuando el acento es claro. Es la misma decisión (y
+// el mismo dorado) que ya había tomado ChicParis.
+const STAR_ON = "#f59e0b";
+
+/* ── Comentario de una reseña ──────────────────────────────────────────────────
+   El tope del servidor es de 500 caracteres, que son unos 9 renglones: sin
+   recortar, una sola reseña larga empuja a las demás fuera de la pantalla.
+   Se recorta a 6 líneas y se despliega en el lugar.
+
+   El "Leer todo" aparece SOLO si el texto de verdad no entró. No se decide por
+   cantidad de caracteres —cuántos entran depende del ancho, que cambia entre
+   celular y escritorio— sino midiendo el elemento ya dibujado. Con
+   ResizeObserver, no una sola vez: al girar el teléfono la tarjeta cambia de
+   ancho y un texto que entraba deja de entrar.
+──────────────────────────────────────────────────────────────────────────────── */
+function ComentarioResena({ texto, acento, color }: { texto: string; acento: string; color: string }) {
+  const ref = useRef<HTMLParagraphElement>(null);
+  const [cortado, setCortado] = useState(false);
+  const [abierto, setAbierto] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => {
+      const ahora = el.scrollHeight > el.clientHeight + 1;
+      setCortado(prev => (prev === ahora ? prev : ahora));
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [texto]);
+
+  return (
+    <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+      <p ref={ref} style={{
+        fontSize:12, opacity:0.65, margin:0, lineHeight:1.65, color,
+        ...(abierto ? {} : { display:"-webkit-box", WebkitLineClamp:6, WebkitBoxOrient:"vertical", overflow:"hidden" }),
+      }}>{texto}</p>
+      {cortado && !abierto && (
+        <button type="button" onClick={() => setAbierto(true)}
+          style={{ alignSelf:"flex-start", background:"none", border:"none", padding:0, cursor:"pointer",
+                   fontSize:10, fontWeight:700, letterSpacing:1, textTransform:"uppercase", color:acento }}>
+          Leer todo
+        </button>
+      )}
+    </div>
+  );
+}
 const PAGE_SIZE   = 24;
 
 /* ── Ícono de carrito — mismas variantes que se eligen en el editor ── */
@@ -272,14 +332,29 @@ function ProductosPageInner() {
 
   type PReview = { id: string; rating: number; comment: string | null; reviewer: string; createdAt: string };
   const [reviews,          setReviews]          = useState<PReview[]>([]);
-  const [reviewsShown,     setReviewsShown]     = useState(5);
+  // El formulario vive en un modal, igual que en el template: inline al final de
+  // la lista quedaba inalcanzable con muchas reseñas cargadas.
+  const [resenaModalOpen,  setResenaModalOpen]  = useState(false);
+  const [reviewsShown,     setReviewsShown]     = useState(PASO_RESENAS);
   const [reviewsLoading,   setReviewsLoading]   = useState(false);
-  const [reviewForm,       setReviewForm]       = useState({ reviewer: "", rating: 5, comment: "" });
+  // El email es opcional pero NO es de adorno: es lo que el servidor cruza contra
+  // los pedidos entregados para poner el sello "✓ Compra verificada". Sin este
+  // campo, una reseña dejada desde el listado no podía salir verificada nunca —
+  // el modal del template sí lo pedía, así que la misma persona conseguía el sello
+  // o no según desde qué pantalla escribiera.
+  const [reviewForm,       setReviewForm]       = useState({ reviewer: "", rating: 5, comment: "", email: "" });
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
   const reviewCaptcha = useTurnstile("review");
   const [reviewDone,       setReviewDone]       = useState(false);
   const [isMobile,         setIsMobile]         = useState(false);
-  const [reelIndex,        setReelIndex]        = useState(0);
+  // Alto de la fila de dos columnas del modal. Manda la columna izquierda (foto +
+  // miniaturas + videos), que tiene alto propio; la derecha se ajusta a ese alto y
+  // scrollea por dentro. Sin esto, la derecha crecía con la descripción y dejaba un
+  // vacío blanco al lado de los reels, más grande cuanto más texto hubiera cargado
+  // el vendedor. Se mide porque depende de cuántas miniaturas y cuántos reels tenga
+  // el producto. Solo en escritorio: en celular las columnas se apilan.
+  const colFotoRef = useRef<HTMLDivElement>(null);
+  const [altoColFoto, setAltoColFoto] = useState<number | null>(null);
   const [lightboxSrc,      setLightboxSrc]      = useState<string|null>(null);
 
   // ── Funciones estables para useCartLogic ──────────────────────────────────
@@ -325,6 +400,11 @@ function ProductosPageInner() {
   const {
     cartItems, cartOpen, setCartOpen, cartCount, cartTotal, envioPrice, couponDiscount, orderTotal, couponsAllowed,
     freeShipping, freeShippingGoal,
+    // El carrito y el checkout de esta página son una copia escrita a mano, anterior
+    // al motor de promociones: mostraban `product.price * qty` y no leían nada de
+    // esto. El total venía del motor y las líneas no, así que con una promo vigente
+    // el ítem decía $60.000 y el total $48.000 en la misma pantalla.
+    pricedLines, cartPromoSavings, appliedPromos,
     modalProduct, setModalProduct, modalImg, setModalImg,
     selectedSize, setSelectedSize, selectedColor, setSelectedColor, qty, setQty,
     checkoutOpen, setCheckoutOpen, checkoutStatus, checkoutError,
@@ -332,6 +412,9 @@ function ProductosPageInner() {
     coupon, setCoupon, couponError, appliedCoupon, setAppliedCoupon,
     notas, setNotas, rememberData, setRememberData, buyerForm, setBuyerForm,
     toastMsg, openModal, addToCart,
+    // Esta pantalla no los usaba: ni el talle ni el color avisaban que estaban
+    // agotados hasta despues de elegirlos.
+    outOfStockSizes, outOfStockColors,
     removeFromCart, updateQty,
     openCheckout, handleApplyCoupon, handlePlaceOrder, toggleFavorite, favorites,
   } = cart;
@@ -441,6 +524,15 @@ function ProductosPageInner() {
       (!activeSubcategory || p.subcategory === activeSubcategory)
     ),
     [products, activeCategory, activeSubcategory]
+  );
+
+  // ¿Hay al menos un producto con precio anterior? De eso depende que se muestre
+  // el filtro "En oferta" — se mira sobre TODO el catálogo y no sobre la categoría
+  // abierta, para que el botón no aparezca y desaparezca al navegar entre
+  // categorías, que se lee como un parpadeo y no como una decisión.
+  const hayOfertas = useMemo(
+    () => products.some(p => p.comparePrice != null && p.comparePrice > p.price),
+    [products]
   );
 
   const availableAttrFilters = useMemo(() => {
@@ -589,75 +681,88 @@ function ProductosPageInner() {
     return match?.stock ?? null;
   }, [modalProduct, selectedSize, selectedColor]);
 
-  // ── Al cambiar color: sync imagen + talle disponible ────────────────────────
+  /* ── Elegir foto / color / talle ─────────────────────────────────────────────
+     Antes eran tres efectos que se disparaban entre sí. El de la foto, al ver una
+     foto de otro color, cambiaba el color; y el del color volvía a mover la foto
+     a la PRIMERA de ese color. Con productos de varias fotos del mismo color eso
+     es un rebote: tocabas la segunda foto del azul y volvías sola a la primera.
+     Verificado contra la base: 37 de los 90 productos activos tienen dos o más
+     fotos del mismo color, y "Jean Skinny" tiene las cuatro en azul — ahí las
+     flechas y las miniaturas directamente no servían para nada.
+
+     Ahora se resuelve en el click, igual que en el template: `elegirFoto` pone la
+     foto que se pidió y punto; el color solo se toca si esa foto es de otro.
+  ──────────────────────────────────────────────────────────────────────────── */
+  const attrsDe = (name: string): Record<string, unknown> | null => {
+    try { const a = JSON.parse(name); return a && typeof a === "object" && !Array.isArray(a) ? a : null; } catch { return null; }
+  };
+  const valorAttr = (a: Record<string, unknown>, claves: string[]): string => {
+    const k = Object.keys(a).find(x => claves.includes(x.toLowerCase()));
+    return k != null && a[k] != null ? String(a[k]) : "";
+  };
+  const variantesConAttrs = (p: StorefrontProduct) =>
+    p.variants.map(v => ({ v, a: attrsDe(v.name) }))
+      .filter((x): x is { v: StorefrontProduct["variants"][number]; a: Record<string, unknown> } => !!x.a);
+  const fotoDeColor = (p: StorefrontProduct, color: string) =>
+    p.imageItems.findIndex(img => !!img.variantValue && img.variantValue.toLowerCase() === color.toLowerCase());
+
+  // Si el talle puesto no existe en ese color, pasa al primero con stock.
+  function acomodarTalleA(color: string) {
+    if (!modalProduct) return;
+    const delColor = variantesConAttrs(modalProduct)
+      .filter(x => valorAttr(x.a, COLOR_ATTRS).toLowerCase() === color.toLowerCase());
+    if (!delColor.length) return;
+    if (selectedSize && delColor.some(x => valorAttr(x.a, SIZE_ATTRS).toLowerCase() === selectedSize.toLowerCase())) return;
+    const mejor = delColor.find(x => x.v.stock > 0) ?? delColor[0];
+    const talle = valorAttr(mejor.a, SIZE_ATTRS);
+    if (talle && talle !== selectedSize) setSelectedSize(talle);
+  }
+
+  function elegirColor(color: string) {
+    if (!modalProduct) return;
+    setSelectedColor(color);
+    const idx = fotoDeColor(modalProduct, color);
+    if (idx !== -1) setModalImg(idx);
+    acomodarTalleA(color);
+  }
+
+  // Acepta índices fuera de rango para que las flechas sean `elegirFoto(i ± 1)`.
+  function elegirFoto(i: number) {
+    if (!modalProduct) return;
+    const total = modalProduct.images.length;
+    if (!total) return;
+    const idx = ((i % total) + total) % total;
+    setModalImg(idx);
+    const color = modalProduct.imageItems[idx]?.variantValue;
+    if (!color || color.toLowerCase() === selectedColor.toLowerCase()) return;
+    setSelectedColor(color);
+    acomodarTalleA(color);
+  }
+
+  function elegirTalle(talle: string) {
+    if (!modalProduct) return;
+    setSelectedSize(talle);
+    const conTalle = variantesConAttrs(modalProduct)
+      .filter(x => valorAttr(x.a, SIZE_ATTRS).toLowerCase() === talle.toLowerCase());
+    if (!conTalle.length) return;
+    // Si el color puesto viene en ese talle, no se toca: lo eligió el comprador.
+    if (selectedColor && conTalle.some(x => valorAttr(x.a, COLOR_ATTRS).toLowerCase() === selectedColor.toLowerCase())) return;
+    const mejor = conTalle.find(x => x.v.stock > 0) ?? conTalle[0];
+    const color = valorAttr(mejor.a, COLOR_ATTRS);
+    if (!color || color === selectedColor) return;
+    setSelectedColor(color);
+    const idx = fotoDeColor(modalProduct, color);
+    if (idx !== -1) setModalImg(idx);
+  }
+
+  // Lo único que sigue siendo un efecto: al ABRIR la ficha hay que mostrar la foto
+  // del color con el que abre, y ahí no hubo ningún click que lo resuelva.
   useEffect(() => {
     if (!modalProduct || !selectedColor) return;
-    const imgIdx = modalProduct.imageItems.findIndex(
-      (img) => img.variantValue && img.variantValue.toLowerCase() === selectedColor.toLowerCase()
-    );
-    if (imgIdx !== -1) setModalImg(imgIdx);
-    const colorVariants = modalProduct.variants.filter((v) => {
-      try { const a = JSON.parse(v.name); return typeof a === "object" && Object.values(a).some((x) => String(x).toLowerCase() === selectedColor.toLowerCase()); } catch { return false; }
-    });
-    if (!colorVariants.length) return;
-    const best = colorVariants.find((v) => v.stock > 0) ?? colorVariants[0];
-    try {
-      const a = JSON.parse(best.name);
-      const sizeKey = Object.keys(a).find(k => SIZE_ATTRS.includes(k.toLowerCase()));
-      if (sizeKey && a[sizeKey] && a[sizeKey] !== selectedSize) setSelectedSize(a[sizeKey]);
-    } catch {}
+    const idx = fotoDeColor(modalProduct, selectedColor);
+    if (idx !== -1) setModalImg(idx);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedColor, modalProduct?.id]);
-
-  // ── Al cambiar talle: sync color + imagen si el combo actual no existe ───────
-  useEffect(() => {
-    if (!modalProduct || !selectedSize) return;
-    if (selectedColor) {
-      const hasCombo = modalProduct.variants.some((v) => {
-        try {
-          const a = JSON.parse(v.name);
-          if (typeof a !== "object") return false;
-          const vals = Object.values(a).map((x) => String(x).toLowerCase());
-          return vals.includes(selectedSize.toLowerCase()) && vals.includes(selectedColor.toLowerCase());
-        } catch { return false; }
-      });
-      if (hasCombo) return;
-    }
-    const sizeVariants = modalProduct.variants.filter((v) => {
-      try {
-        const a = JSON.parse(v.name);
-        if (typeof a !== "object") return false;
-        return Object.entries(a).some(([k, val]) => SIZE_ATTRS.includes(k.toLowerCase()) && String(val).toLowerCase() === selectedSize.toLowerCase());
-      } catch { return false; }
-    });
-    if (!sizeVariants.length) return;
-    const best = sizeVariants.find((v) => v.stock > 0) ?? sizeVariants[0];
-    try {
-      const a = JSON.parse(best.name);
-      const colorKey = Object.keys(a).find((k: string) => COLOR_ATTRS.includes(k.toLowerCase()));
-      if (colorKey && a[colorKey]) {
-        const newColor = String(a[colorKey]);
-        if (newColor !== selectedColor) {
-          setSelectedColor(newColor);
-          const imgIdx = modalProduct.imageItems.findIndex(
-            (img) => img.variantValue && img.variantValue.toLowerCase() === newColor.toLowerCase()
-          );
-          if (imgIdx !== -1) setModalImg(imgIdx);
-        }
-      }
-    } catch {}
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedSize, modalProduct?.id]);
-
-  // Al cambiar de imagen (flechas/miniaturas): sync color si esa foto pertenece a otra variante
-  useEffect(() => {
-    if (!modalProduct) return;
-    const img = modalProduct.imageItems[modalImg];
-    if (img?.variantValue && img.variantValue.toLowerCase() !== selectedColor?.toLowerCase()) {
-      setSelectedColor(img.variantValue);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [modalImg]);
+  }, [modalProduct?.id]);
 
   // ── isMobile ───────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -685,8 +790,8 @@ function ProductosPageInner() {
   }, []);
 
   const imgSwipe = useTouchSwipe(
-    () => { if (modalProduct) setModalImg(i => (i + 1) % modalProduct.images.length); },
-    () => { if (modalProduct) setModalImg(i => (i - 1 + modalProduct.images.length) % modalProduct.images.length); }
+    () => elegirFoto(modalImg + 1),
+    () => elegirFoto(modalImg - 1)
   );
 
   // ── Cargar reseñas al abrir modal ──────────────────────────────────────────
@@ -694,7 +799,6 @@ function ProductosPageInner() {
     if (!modalProduct || !slug) return;
     setReviews([]);
     setReviewDone(false);
-    setReelIndex(0);
     setReviewsShown(5);
     setReviewsLoading(true);
     fetch(`/api/public/${slug}/reviews?productId=${modalProduct.id}`)
@@ -704,6 +808,26 @@ function ProductosPageInner() {
       .finally(() => setReviewsLoading(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [modalProduct?.id, slug]);
+
+  // ── Alto de la columna de la foto (ver dónde se declara `altoColFoto`) ──────
+  useEffect(() => {
+    const el = colFotoRef.current;
+    if (isMobile || !modalProduct || !el) return;
+    const ro = new ResizeObserver(() => {
+      const alto = el.offsetHeight;
+      setAltoColFoto(prev => (prev === alto ? prev : alto));
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [isMobile, modalProduct]);
+  // Derivado y no un `setState(null)` adentro del efecto: apagarlo con estado
+  // dispara un render en cascada. Al reabrir el modal el ResizeObserver mide de
+  // nuevo apenas observa, así que no queda un alto viejo.
+  const altoPanel = isMobile || !modalProduct ? null : altoColFoto;
+  // Con la barra del panel oculta no queda senal de que hay mas para leer. Los
+  // degradados la reponen, y solo cuando de verdad falta contenido.
+  const { ref: panelRef, arriba: sombraArriba, abajo: sombraAbajo } =
+    useSombrasScroll<HTMLDivElement>([altoPanel, modalProduct?.id]);
 
   // ── Tema activo ─────────────────────────────────────────────────────────────
   const th: Theme = THEMES[template] ?? THEMES["fashion-noir"];
@@ -718,6 +842,38 @@ function ProductosPageInner() {
   // botón: si el acento elegido casi no se distingue del fondo de la página,
   // caemos al color de texto normal del tema en vez de dejarlo invisible.
   const GT = getReadableAccentText(G, BG, T);
+  // Un solo título de bloque para todo el modal (Descripción, Características,
+  // Videos, Reseñas, Productos similares). Antes cada uno tenía el suyo: 9px con
+  // opacity 0.7, 10px con opacity 0.5, 10px en GT... Leído de corrido no se veía
+  // dónde terminaba una sección y empezaba la otra. Mismo criterio que el modal
+  // del template.
+  const tituloBloque: React.CSSProperties = {
+    margin: "0 0 12px", fontSize: 10, fontWeight: 700, letterSpacing: 2.5,
+    textTransform: "uppercase", color: MID,
+  };
+  // El talle/color ELEGIDO va con relleno sólido, como en el modal del template:
+  // con borde y un tinte apenas se distinguía del no elegido. Se usa el acento
+  // cuando se separa del fondo de la página como superficie y, si no (acentos casi
+  // del color del fondo), cae al color de texto del tema — que en los templates
+  // oscuros es claro y en los claros es oscuro, así que sirve para los 10.
+  const chipBg   = getReadableAccentFill(G, BG, T);
+  const chipText = getContrastColor(chipBg) === "light" ? "#fff" : "#111";
+
+  /* En el editor, con el producto todavía sin reseñas, se muestran DE EJEMPLO:
+     es la única forma de que el dueño vea el bloque lleno (el promedio, el
+     gráfico de estrellas y las tarjetas). Mismo criterio, y mismo cartel de
+     aviso, que el modal del template y que el bloque de prueba social de la home.
+     Las fechas son fijas a propósito: una calculada al vuelo cambia entre el
+     servidor y el navegador y rompe la hidratación. */
+  const RESENAS_EJEMPLO: PReview[] = [
+    { id:"ej-1", rating:5, comment:"Tal cual la foto y el talle justo. Llegó en tres días.", reviewer:"Micaela R.", createdAt:"2026-07-18T14:00:00.000Z" },
+    { id:"ej-2", rating:5, comment:"La tela es muy buena para el precio. Ya pedí otro en el otro color.", reviewer:"Julián T.", createdAt:"2026-07-11T14:00:00.000Z" },
+    { id:"ej-3", rating:4, comment:"Muy lindo, aunque me quedó un poco largo. Igual lo recomiendo.", reviewer:"Carla V.", createdAt:"2026-06-29T14:00:00.000Z" },
+  ];
+  // `reviewsLoading` importa: sin él, entre que se abre la ficha y contesta el
+  // servidor la lista está vacía y aparecerían las de ejemplo por un instante.
+  const resenasDeEjemplo = fromEditor && !reviewsLoading && reviews.length === 0;
+  const resenasVisibles  = resenasDeEjemplo ? RESENAS_EJEMPLO : reviews;
   // Fondo de inputs dentro del modal (cuyo fondo es S). Si inputBg coincide con S
   // (como en Urban Pulse donde ambos son #1e293b), los inputs desaparecen —
   // en ese caso usamos BG (el nivel más oscuro) para crear contraste visible.
@@ -741,12 +897,12 @@ function ProductosPageInner() {
       const res = await fetch(`/api/public/${slug}/reviews`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productId: modalProduct.id, rating: reviewForm.rating, comment: reviewForm.comment, reviewer: reviewForm.reviewer, turnstileToken: reviewCaptcha.token }),
+        body: JSON.stringify({ productId: modalProduct.id, rating: reviewForm.rating, comment: reviewForm.comment, reviewer: reviewForm.reviewer, buyerEmail: reviewForm.email.trim() || undefined, turnstileToken: reviewCaptcha.token }),
       });
       if (res.ok) {
         const data = await res.json();
         setReviews(p => [data.review, ...p]);
-        setReviewForm({ reviewer: "", rating: 5, comment: "" });
+        setReviewForm({ reviewer: "", rating: 5, comment: "", email: "" });
         setReviewDone(true);
       }
     } catch {}
@@ -834,10 +990,17 @@ function ProductosPageInner() {
               : tabStyle === "brutalist"
               ? { fontSize:12, color:T, margin:"0 0 6px", fontWeight:800, textTransform:"uppercase", letterSpacing:0.5, lineHeight:1.3 }
               : { fontSize:15, color:T, margin:"0 0 7px", fontWeight:500, fontFamily:serif, lineHeight:1.3 };
+            // Las tres variantes cambian tamaño y peso —esa es la idea— pero el
+            // COLOR es el mismo en las tres: `GT`, el acento ya validado contra el
+            // fondo de la página. Dos de ellas usaban `G` crudo, y con un acento
+            // claro (beige, crema) el precio se pintaba casi del color del fondo:
+            // en chic-paris (fondo #f9f9f7) desaparecía entero y en la tarjeta solo
+            // quedaba visible el precio TACHADO, que va en gris. O sea que se veía
+            // el precio viejo y no el que se cobra.
             const priceStyle: React.CSSProperties = tabStyle === "brutalist"
-              ? { fontSize:16, fontWeight:900, color:G }
+              ? { fontSize:16, fontWeight:900, color:GT }
               : tabStyle === "underline"
-              ? { fontSize:15, fontWeight:600, color:G }
+              ? { fontSize:15, fontWeight:600, color:GT }
               : { fontSize:16, fontWeight:700, color:GT };
 
             // ── Imagen mb: 0 cuando el wrapper maneja el overflow ────────────
@@ -1136,6 +1299,9 @@ function ProductosPageInner() {
     <div style={{ background:BG, color:T, minHeight:"100vh", fontFamily:sans }}>
       <style>{`
   .st-tabs::-webkit-scrollbar{display:none}.st-tabs{scrollbar-width:none;-ms-overflow-style:none}
+  /* Panel derecho del modal: scrollea pero sin dibujar su barra. Al lado de la del
+     modal quedaban dos barras pegadas y no se entendia cual movia que. */
+  .st-sin-barra::-webkit-scrollbar{display:none}.st-sin-barra{scrollbar-width:none;-ms-overflow-style:none}
   .pr-range{position:absolute;top:0;left:0;width:100%;margin:0;background:none;pointer-events:none;-webkit-appearance:none;appearance:none}
   .pr-range::-webkit-slider-runnable-track{background:none}
   .pr-range::-moz-range-track{background:none}
@@ -1262,9 +1428,17 @@ function ProductosPageInner() {
                 <button onClick={() => { setOnlyDestacados(o => !o); setOnlyOfertas(false); setOnlyPromos(false); setPage(1); }} style={toggleBase(onlyDestacados)}>
                   ⭐ Lo más buscado
                 </button>
-                <button onClick={() => { setOnlyOfertas(o => !o); setOnlyDestacados(false); setOnlyPromos(false); setPage(1); }} style={toggleBase(onlyOfertas)}>
-                  🔥 En oferta
-                </button>
+                {/* Solo si de verdad hay alguna oferta. Este filtro SÍ filtra
+                    (a diferencia de "Lo más buscado", que solo reordena): sin
+                    ningún producto con precio anterior, tocarlo dejaba el catálogo
+                    vacío. Un filtro que lleva a la nada es peor que no tenerlo —
+                    el visitante no lee "no hay ofertas ahora", lee "no tienen
+                    nada". El de promos, al lado, ya se cuidaba solo. */}
+                {hayOfertas && (
+                  <button onClick={() => { setOnlyOfertas(o => !o); setOnlyDestacados(false); setOnlyPromos(false); setPage(1); }} style={toggleBase(onlyOfertas)}>
+                    🔥 En oferta
+                  </button>
+                )}
                 {promotions.length > 0 && (
                   <button onClick={() => { setOnlyPromos(o => !o); setOnlyOfertas(false); setOnlyDestacados(false); setPage(1); }} style={toggleBase(onlyPromos)}>
                     {storeEvent ? `🎁 ${storeEvent.label}` : "🎁 En promoción"}
@@ -1647,11 +1821,18 @@ function ProductosPageInner() {
       {modalProduct && (
         <div style={{ position:"fixed", inset:0, zIndex:200, display:"flex", alignItems:"center", justifyContent:"center" }} onClick={() => { setModalProduct(null); setLightboxSrc(null); }}>
           <div style={{ position:"absolute", inset:0, background:overlayBg, backdropFilter:"blur(8px)" }}/>
-          <div style={{ position: isMobile ? "absolute" : "relative", ...(isMobile ? {top:0,right:0,bottom:0,left:0} : {maxWidth:920, width:"calc(100% - 32px)", maxHeight:"92vh"}), background:S, overflow:"hidden", display:"flex", flexDirection:"column" }} onClick={e => e.stopPropagation()}>
+          <div style={{ position: isMobile ? "absolute" : "relative", ...(isMobile ? {top:0,right:0,bottom:0,left:0} : {maxWidth:980, width:"calc(100% - 32px)", maxHeight:"92vh"}), background:S, overflow:"hidden", display:"flex", flexDirection:"column" }} onClick={e => e.stopPropagation()}>
             <button onClick={() => { setModalProduct(null); setLightboxSrc(null); }} style={{ position:"absolute", top:10, right:10, zIndex:10, background:"rgba(0,0,0,0.65)", border:"none", color:"#fff", width:36, height:36, cursor:"pointer", fontSize:20, display:"flex", alignItems:"center", justifyContent:"center", backdropFilter:"blur(4px)" }}>×</button>
-            <div style={{ overflow:"auto", flex:1, minHeight:0, display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr" }}>
-            {/* Galería */}
-            <div>
+            {/* 48% para la foto, como en el modal del template (ahí es el mismo
+                número). A 50/50 la columna de comprar quedaba más angosta de lo
+                necesario y los chips de talle se apretaban en 768. */}
+            <div style={{ overflow:"auto", flex:1, minHeight:0, display:"grid", gridTemplateColumns: isMobile ? "1fr" : "48% 1fr" }}>
+            {/* Galería — `alignSelf:start` para que no se estire al alto de la
+                columna de al lado y quede aire muerto abajo de las miniaturas. */}
+            {/* El aire lo pone la COLUMNA, no cada bloque: asi la foto, las
+                miniaturas y los videos arrancan todos en la misma vertical. */}
+            <div ref={colFotoRef} style={{ alignSelf: "start", boxSizing: "border-box",
+                                           padding: isMobile ? 0 : "28px 0 28px 28px" }}>
               <div style={{ position:"relative" }} {...imgSwipe}>
                 {(() => {
                   // La PROMOCIÓN de tienda se muestra como tag rectangular (naranja) — distinta
@@ -1668,9 +1849,9 @@ function ProductosPageInner() {
                   onError={e => { e.currentTarget.style.opacity="0"; }}
                   onClick={() => setLightboxSrc(modalProduct.images[modalImg] ?? "")} />
                 {modalProduct.images.length > 1 && (<>
-                  <button onClick={() => setModalImg(i => (i-1+modalProduct.images.length)%modalProduct.images.length)}
+                  <button onClick={() => elegirFoto(modalImg - 1)} aria-label="Imagen anterior"
                     style={{ position:"absolute", left:8, top:"50%", transform:"translateY(-50%)", background:"rgba(0,0,0,0.45)", border:"none", color:"#fff", width:34, height:34, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", fontSize:18, borderRadius:2 }}>‹</button>
-                  <button onClick={() => setModalImg(i => (i+1)%modalProduct.images.length)}
+                  <button onClick={() => elegirFoto(modalImg + 1)} aria-label="Imagen siguiente"
                     style={{ position:"absolute", right:8, top:"50%", transform:"translateY(-50%)", background:"rgba(0,0,0,0.45)", border:"none", color:"#fff", width:34, height:34, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", fontSize:18, borderRadius:2 }}>›</button>
                   <div style={{ position:"absolute", bottom:8, right:8, background:"rgba(0,0,0,0.5)", color:"#fff", fontSize:10, letterSpacing:1, padding:"3px 8px", borderRadius:2 }}>
                     {modalImg+1} / {modalProduct.images.length}
@@ -1678,44 +1859,66 @@ function ProductosPageInner() {
                 </>)}
               </div>
               {modalProduct.images.length > 1 && (
-                <div style={{ display:"flex", gap:6, padding:"8px 12px", background:BG, overflowX:"auto" }}>
+                /* 56×74 como en el modal del template: cuadradas de 48 recortaban
+                   la prenda a un cuadrado y la miniatura no se parecía a la foto
+                   que abría. Misma proporción 3/4 que la foto grande. */
+                <div style={{ display:"flex", gap:8, padding: isMobile ? "10px 14px 0" : "10px 0 0", overflowX:"auto", scrollbarWidth:"none" }}>
                   {modalProduct.images.map((img, i) => (
-                    <button key={i} onClick={() => setModalImg(i)}
-                      style={{ width:48, height:48, flexShrink:0, padding:2, border: i===modalImg ? `2px solid ${G}` : "2px solid transparent", background:"none", cursor:"pointer" }}>
+                    <button key={i} onClick={() => elegirFoto(i)} aria-label={`Ver foto ${i + 1}`}
+                      style={{ width:56, height:74, flexShrink:0, padding:0, overflow:"hidden", background:S, border: i===modalImg ? `2px solid ${GT}` : `1px solid ${border}`, cursor:"pointer", transition:"border-color 0.2s" }}>
                       <img src={img} alt="" style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }}/>
                     </button>
                   ))}
                 </div>
               )}
+            {/* ── Videos, debajo de la foto y DENTRO de esta columna ────────────
+                Acá el espacio a la derecha de los reels no es un vacío: es la
+                columna de la descripción. Por eso van adentro y no a lo ancho —
+                a lo ancho son 3 miniaturas angostas solas en una fila de 1030px,
+                y no hay forma de que la llenen.
+                Usa el MISMO componente que los templates en vez de la copia inline
+                que había acá: esa embebía el video en 160px y lo hacía mirar en un
+                recuadro, sin pantalla completa ni swipe entre videos, y ya se
+                estaba separando del otro (flechas y puntitos propios). Un solo
+                lugar para arreglar cuando algo falle. */}
+            {modalProduct.reelUrls.length > 0 && (
+              <div style={{ padding: isMobile ? "18px 16px 0" : "22px 0 0" }}>
+                <p style={tituloBloque}>Videos del producto</p>
+                <StoreProductReels
+                  reelUrls={modalProduct.reelUrls}
+                  ancho={isMobile ? 120 : 160}
+                  theme={{ accent: G, text: T, border: border, radius: 8 }}
+                />
+              </div>
+            )}
             </div>
-            {/* Detalle */}
-            <div style={{ padding:"clamp(20px,4vw,36px) clamp(16px,3.5vw,32px)", display:"flex", flexDirection:"column", gap:18, overflowY: isMobile ? "visible" : "auto" }}>
+            {/* Detalle — se ajusta al alto de la columna de la foto y scrollea por
+                dentro, igual que en el modal del template. Este panel termina justo
+                donde arranca Reseñas; de ahí para abajo scrollea el modal, así que
+                los dos scrolls no compiten. En celular no aplica: columnas apiladas
+                y sin alto fijo, porque cortaría el contenido. */}
+            <div style={{ position:"relative", display:"flex", minWidth:0 }}>
+            {/* Degradados: reponen la señal que se perdió al ocultar la barra.
+                Aparecen solo si de verdad queda contenido de ese lado. */}
+            {sombraArriba && (
+              <div style={{ position:"absolute", left:0, right:0, top:0, height:28, zIndex:2, pointerEvents:"none",
+                            background:`linear-gradient(to top, transparent, ${S})` }} />
+            )}
+            {sombraAbajo && (
+              <div style={{ position:"absolute", left:0, right:0, bottom:0, height:44, zIndex:2, pointerEvents:"none",
+                            background:`linear-gradient(to bottom, transparent, ${S})` }} />
+            )}
+            <div ref={panelRef} className="st-sin-barra" style={{ flex:1, padding:"clamp(20px,4vw,36px) clamp(16px,3.5vw,32px)", display:"flex", flexDirection:"column", gap:18, minHeight:0,
+                          ...(altoPanel ? { maxHeight: altoPanel, overflowY:"auto" as const } : {}) }}>
               <div>
                 <p style={{ fontSize:10, letterSpacing:3, color:GT, textTransform:"uppercase", marginBottom:6 }}>
                   {modalProduct.category}{modalProduct.subcategory && <span style={{ opacity:0.6 }}> › {modalProduct.subcategory}</span>}
                 </p>
                 <h2 style={{ fontFamily:serif, fontSize:24, margin:0, lineHeight:1.2, color:T }}>{modalProduct.name}</h2>
               </div>
-              <div style={{ display:"flex", gap:6, marginBottom:2 }}>
-                <button onClick={() => { const url = `${window.location.origin}${window.location.pathname}?p=${modalProduct.id}`; navigator.clipboard.writeText(url).catch(()=>{}); }}
-                  style={{ display:"flex", alignItems:"center", gap:5, background:"none", border:`1px solid ${border}`, color:MID, padding:"5px 12px", fontSize:10, letterSpacing:1, cursor:"pointer" }}>
-                  <svg width={11} height={11} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
-                  Copiar link
-                </button>
-                {whatsapp?.enabled && whatsapp.number && (
-                  <button onClick={() => {
-                    const phone = whatsapp.number.replace(/\D/g, "");
-                    const h = new Date().getHours();
-                    const saludo = h < 12 ? "Buenos días" : h < 20 ? "Buenas tardes" : "Buenas noches";
-                    const text = `${saludo}! Me interesa el producto "${modalProduct.name}". ¿Me podés dar más información?`;
-                    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(text)}`, "_blank");
-                  }}
-                    style={{ display:"flex", alignItems:"center", gap:5, background:"none", border:"1px solid rgba(37,211,102,0.3)", color:"rgba(37,211,102,0.7)", padding:"5px 12px", fontSize:10, letterSpacing:1, cursor:"pointer" }}>
-                    <svg width={11} height={11} viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413z"/><path d="M11.897 0C5.395 0 .13 5.266.13 11.767c0 2.078.545 4.03 1.495 5.727L.057 24l6.7-1.757A11.71 11.71 0 0 0 11.897 23.534c6.503 0 11.768-5.265 11.768-11.767C23.67 5.266 18.4 0 11.897 0zm0 21.536h-.004a9.726 9.726 0 0 1-4.96-1.358l-.356-.211-3.678.965.982-3.581-.232-.368A9.73 9.73 0 0 1 2.158 11.767C2.158 6.355 6.551 2 11.897 2c2.581 0 5.007 1.007 6.831 2.831a9.604 9.604 0 0 1 2.828 6.83c0 5.347-4.393 9.875-9.659 9.875z"/></svg>
-                    WhatsApp
-                  </button>
-                )}
-              </div>
+              {/* El precio va pegado al título. Antes en el medio estaban los dos
+                  botones de compartir, que son lo último que hace alguien que
+                  todavía no sabe cuánto cuesta — bajaron al final del panel. */}
               <div style={{ display:"flex", gap:10, alignItems:"baseline", flexWrap:"wrap" }}>
                 {modalPromo.hasPriceDrop ? (
                   <>
@@ -1742,75 +1945,63 @@ function ProductosPageInner() {
                   <span>{modalProduct.offerNote}</span>
                 </div>
               )}
-              {modalProduct.description && (
-                <div style={{ borderTop:`1px solid ${borderFaint}`, paddingTop:14 }}>
-                  <p style={{ fontSize:9, letterSpacing:2, textTransform:"uppercase", color:MID, margin:"0 0 8px", fontWeight:600, opacity:0.7 }}>Descripción</p>
-                  <div className="product-rte" dangerouslySetInnerHTML={{ __html: modalProduct.description }} style={{ fontSize:13, color:MID, lineHeight:1.75 }} />
+              {/* ── Comprar ─────────────────────────────────────────────────
+                  Color, talle, cantidad y el botón, todo junto y ARRIBA de la
+                  descripción. Antes había que pasar la descripción entera y la
+                  tabla de características para llegar a elegir el talle. */}
+              {/* Talle primero y color después, el mismo orden que el modal del
+                  template. Los títulos van a secas ("TALLE", no "TALLE: 32"):
+                  repetir el valor elegido en el título es decir dos veces lo
+                  mismo, y el chip marcado ya lo dice. */}
+              {modalProduct.sizes.length > 0 && (
+                <div>
+                  <p style={tituloBloque}>Talle</p>
+                  <div style={{ display:"flex", gap:7, flexWrap:"wrap" }}>
+                    {modalProduct.sizes.map(size => {
+                      const sinStock = outOfStockSizes.has(size);
+                      return (
+                        <button key={size} onClick={() => elegirTalle(size)}
+                          style={{ width:44, height:44, fontSize:12, fontWeight: selectedSize===size ? 800 : 600, border: `2px solid ${selectedSize===size ? chipBg : border}`, background: selectedSize===size ? chipBg : "transparent", color: selectedSize===size ? chipText : T, cursor:"pointer", transition:"all 0.2s", opacity: sinStock ? 0.35 : 1, textDecoration: sinStock ? "line-through" : "none" }}>
+                          {size}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
-
-              {(() => {
-                const attrs = modalProduct.attributes ?? [];
-                const condicionAttr = attrs.find(a => a.key === "Condición");
-                const serviciosAttr = attrs.find(a => a.key === "Servicios");
-                const otherAttrs = attrs.filter(a => a.key !== "Condición" && a.key !== "Servicios");
-                let servicios: string[] = [];
-                if (serviciosAttr) { try { servicios = Object.entries(JSON.parse(serviciosAttr.value)).filter(([, v]) => v).map(([k]) => k); } catch {} }
-                if (!condicionAttr && otherAttrs.length === 0 && servicios.length === 0) return null;
-                return (
-                  <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
-                    {condicionAttr && (
-                      <span style={{ alignSelf:"flex-start", fontSize:10, letterSpacing:2, textTransform:"uppercase", fontWeight:700, color:GT, border:`1px solid ${GT}`, padding:"4px 10px" }}>{condicionAttr.value}</span>
-                    )}
-                    {otherAttrs.length > 0 && (
-                      <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
-                        {otherAttrs.map(a => (
-                          <p key={a.key} style={{ fontSize:12, opacity:0.65, margin:0, color:T }}><span style={{ opacity:0.85 }}>{a.key}:</span> {a.value}</p>
-                        ))}
-                      </div>
-                    )}
-                    {servicios.length > 0 && (
-                      <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
-                        {servicios.map(k => (
-                          <span key={k} style={{ fontSize:10, letterSpacing:1, padding:"4px 10px", border:`1px solid ${border}`, color:T }}>✓ {k}</span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                );
-              })()}
 
               {modalProduct.colors.length > 0 && (
                 <div>
-                  <p style={{ fontSize:10, letterSpacing:3, textTransform:"uppercase", marginBottom:8, opacity:0.55 }}>Color: <strong style={{ color:T }}>{selectedColor}</strong></p>
+                  <p style={tituloBloque}>Color</p>
                   <div style={{ display:"flex", gap:7, flexWrap:"wrap" }}>
-                    {modalProduct.colors.map(color => (
-                      <button key={color} onClick={() => setSelectedColor(color)}
-                        style={{ padding:"6px 14px", fontSize:11, border: selectedColor===color ? `1px solid ${G}` : `1px solid ${border}`, background: selectedColor===color ? `${G}20` : "transparent", color:T, cursor:"pointer", transition:"all 0.2s" }}>
-                        {color}
-                      </button>
-                    ))}
+                    {/* Con el puntito de muestra, como en el modal del template:
+                        "Petróleo" o "Arena" no le dicen nada a nadie hasta verlo. */}
+                    {modalProduct.colors.map(color => {
+                      const swatch = colorToSwatch(color);
+                      const sinStock = outOfStockColors.has(color);
+                      return (
+                        <button key={color} onClick={() => elegirColor(color)}
+                          style={{ display:"flex", alignItems:"center", gap:7, padding:"9px 14px", fontSize:11, border: `2px solid ${selectedColor===color ? chipBg : border}`, background: selectedColor===color ? chipBg : "transparent", color: selectedColor===color ? chipText : T, fontWeight: selectedColor===color ? 700 : 400, cursor:"pointer", transition:"all 0.2s", opacity: sinStock ? 0.35 : 1, textDecoration: sinStock ? "line-through" : "none" }}>
+                          {/* El anillo del puntito usa el color del TEXTO del chip,
+                              que por construcción contrasta con su fondo. Con un
+                              anillo fijo oscuro, el color "Negro" elegido quedaba
+                              como un puntito negro sobre un chip negro — invisible.
+                              Y en los templates oscuros pasaba lo mismo con
+                              "Blanco". */}
+                          {swatch && <span style={{ width:14, height:14, borderRadius:"50%", background:swatch, border:`1px solid ${selectedColor===color ? chipText : "rgba(0,0,0,0.25)"}`, flexShrink:0 }} />}
+                          {color}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               )}
 
-              {modalProduct.sizes.length > 0 && (
-                <div>
-                  <p style={{ fontSize:10, letterSpacing:3, textTransform:"uppercase", marginBottom:8, opacity:0.55 }}>Talle: <strong style={{ color:T }}>{selectedSize}</strong></p>
-                  <div style={{ display:"flex", gap:7, flexWrap:"wrap" }}>
-                    {modalProduct.sizes.map(size => (
-                      <button key={size} onClick={() => setSelectedSize(size)}
-                        style={{ width:44, height:44, fontSize:12, fontWeight:600, border: selectedSize===size ? `1px solid ${G}` : `1px solid ${border}`, background: selectedSize===size ? `${G}20` : "transparent", color:T, cursor:"pointer", transition:"all 0.2s" }}>
-                        {size}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <div style={{ display:"flex", alignItems:"center", gap:14 }}>
-                <p style={{ fontSize:10, letterSpacing:3, textTransform:"uppercase", opacity:0.55, margin:0 }}>Cantidad</p>
-                <div style={{ display:"flex", alignItems:"center", border:`1px solid ${border}` }}>
+              {/* Apilada como talle y color, no en línea: eran tres controles del
+                  mismo tipo puestos de dos formas distintas. */}
+              <div>
+                <p style={tituloBloque}>Cantidad</p>
+                <div style={{ display:"flex", alignItems:"center", border:`1px solid ${border}`, width:"fit-content" }}>
                   <button onClick={() => setQty(q => Math.max(1,q-1))} style={{ width:36, height:36, background:"none", border:"none", color:T, fontSize:18, cursor:"pointer" }}>−</button>
                   <span style={{ width:36, textAlign:"center", fontSize:14, color:T }}>{qty}</span>
                   <button onClick={() => setQty(q => q+1)} style={{ width:36, height:36, background:"none", border:"none", color:T, fontSize:18, cursor:"pointer" }}>+</button>
@@ -1840,80 +2031,133 @@ function ProductosPageInner() {
 
               <button onClick={addToCart}
                 disabled={selectedVariantStock === 0}
-                style={{ background: selectedVariantStock === 0 ? `${G}40` : G, color:accentDark?"#000":"#fff", border:"none", padding:"15px", fontSize:11, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor: selectedVariantStock === 0 ? "not-allowed" : "pointer", marginTop:"auto" }}>
+                style={{ background: selectedVariantStock === 0 ? `${G}40` : G, color:accentDark?"#000":"#fff", border:"none", padding:"15px", fontSize:11, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor: selectedVariantStock === 0 ? "not-allowed" : "pointer" }}>
                 {selectedVariantStock === 0 ? "Sin stock" : `Agregar al carrito · ${fmt(nxmPaid != null ? nxmPaid * displayPrice : (modalPromo.hasPriceDrop ? modalPromo.effectivePrice : displayPrice) * qty)}`}
               </button>
 
-              {/* ── Reels / Videos — carrusel vertical 9:16 */}
-              {modalProduct.reelUrls.length > 0 && (
-                <div style={{ borderTop:`1px solid ${borderFaint}`, paddingTop:14, marginTop:4 }}>
-                  <p style={{ fontSize:10, letterSpacing:3, textTransform:"uppercase", marginBottom:10, opacity:0.5 }}>Videos del producto</p>
-                  <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:10 }}>
-                    {(() => {
-                      const url = modalProduct.reelUrls[reelIndex];
-                      if (/\.(mp4|webm|mov|ogg)(\?.*)?$/i.test(url)) {
-                        return <video controls style={{ width:160, aspectRatio:"9/16", objectFit:"cover", background:"#000", borderRadius:8 }}><source src={url} /></video>;
-                      }
-                      let embedUrl = "";
-                      if (url.includes("youtube.com/shorts/")) { const id = url.split("shorts/")[1]?.split("?")[0]; embedUrl = `https://www.youtube.com/embed/${id}`; }
-                      else if (url.includes("youtu.be/")) { const id = url.split("youtu.be/")[1]?.split("?")[0]; embedUrl = `https://www.youtube.com/embed/${id}`; }
-                      else if (url.includes("youtube.com/watch")) { try { const id = new URL(url).searchParams.get("v"); if (id) embedUrl = `https://www.youtube.com/embed/${id}`; } catch {} }
-                      if (embedUrl) return <iframe src={embedUrl} allow="autoplay; encrypted-media" allowFullScreen style={{ width:160, aspectRatio:"9/16", border:"none", borderRadius:8 }} />;
-                      const platform = url.includes("instagram") ? "Instagram Reel" : url.includes("tiktok") ? "TikTok" : "Video";
-                      return (
-                        <a href={url} target="_blank" rel="noopener noreferrer"
-                          style={{ width:160, aspectRatio:"9/16", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:8, border:`1px solid ${border}`, textDecoration:"none", color:T, borderRadius:8, background:S }}>
-                          <svg width={24} height={24} viewBox="0 0 24 24" fill={G} stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                          <span style={{ fontSize:11 }}>{platform}</span>
-                        </a>
-                      );
-                    })()}
-                    {modalProduct.reelUrls.length > 1 && (
-                      <div style={{ display:"flex", alignItems:"center", gap:12 }}>
-                        <button onClick={() => setReelIndex(i => (i - 1 + modalProduct.reelUrls.length) % modalProduct.reelUrls.length)}
-                          style={{ background:"none", border:`1px solid ${border}`, color:T, width:30, height:30, borderRadius:"50%", cursor:"pointer", fontSize:16, display:"flex", alignItems:"center", justifyContent:"center" }}>‹</button>
-                        <div style={{ display:"flex", gap:5 }}>
-                          {modalProduct.reelUrls.map((_, i) => (
-                            <button key={i} onClick={() => setReelIndex(i)}
-                              style={{ width:6, height:6, borderRadius:"50%", background: i === reelIndex ? G : `${T}30`, border:"none", cursor:"pointer", padding:0 }} />
-                          ))}
-                        </div>
-                        <button onClick={() => setReelIndex(i => (i + 1) % modalProduct.reelUrls.length)}
-                          style={{ background:"none", border:`1px solid ${border}`, color:T, width:30, height:30, borderRadius:"50%", cursor:"pointer", fontSize:16, display:"flex", alignItems:"center", justifyContent:"center" }}>›</button>
-                      </div>
-                    )}
-                  </div>
+              {modalProduct.description && (
+                <div style={{ borderTop:`1px solid ${borderFaint}`, paddingTop:18 }}>
+                  <p style={tituloBloque}>Descripción</p>
+                  {/* Sin recortar: el panel tiene alto fijo y scrollea, así que un
+                      texto largo ya no deforma nada — se lee bajando acá adentro. */}
+                  <div className="product-rte" dangerouslySetInnerHTML={{ __html: modalProduct.description }} style={{ fontSize:13, color:MID, lineHeight:1.75 }} />
                 </div>
               )}
 
-              {/* ── Reseñas */}
-              <div style={{ borderTop:`1px solid ${borderFaint}`, paddingTop:24, marginTop:8 }}>
-                <p style={{ fontSize:10, letterSpacing:3, textTransform:"uppercase", opacity:0.5, margin:"0 0 20px" }}>
-                  Reseñas{reviews.length > 0 && ` (${reviews.length})`}
+              {/* El cuadro de datos técnicos no tenía ningún título: aparecía una
+                  lista suelta después de la descripción y no se entendía qué era. */}
+              {(() => {
+                const attrs = modalProduct.attributes ?? [];
+                const condicionAttr = attrs.find(a => a.key === "Condición");
+                const serviciosAttr = attrs.find(a => a.key === "Servicios");
+                const otherAttrs = attrs.filter(a => a.key !== "Condición" && a.key !== "Servicios");
+                let servicios: string[] = [];
+                if (serviciosAttr) { try { servicios = Object.entries(JSON.parse(serviciosAttr.value)).filter(([, v]) => v).map(([k]) => k); } catch {} }
+                if (!condicionAttr && otherAttrs.length === 0 && servicios.length === 0) return null;
+                return (
+                  <div style={{ borderTop:`1px solid ${borderFaint}`, paddingTop:18 }}>
+                    <p style={tituloBloque}>Características</p>
+                    <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+                      {condicionAttr && (
+                        <span style={{ alignSelf:"flex-start", fontSize:10, letterSpacing:2, textTransform:"uppercase", fontWeight:700, color:GT, border:`1px solid ${GT}`, padding:"4px 10px" }}>{condicionAttr.value}</span>
+                      )}
+                      {otherAttrs.length > 0 && (
+                        <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
+                          {otherAttrs.map(a => (
+                            <p key={a.key} style={{ fontSize:12, opacity:0.65, margin:0, color:T }}><span style={{ opacity:0.85 }}>{a.key}:</span> {a.value}</p>
+                          ))}
+                        </div>
+                      )}
+                      {servicios.length > 0 && (
+                        <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
+                          {servicios.map(k => (
+                            <span key={k} style={{ fontSize:10, letterSpacing:1, padding:"4px 10px", border:`1px solid ${border}`, color:T }}>✓ {k}</span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Compartir — al final: es lo que se hace DESPUÉS de decidir, no
+                  antes de saber el precio, que es donde estaba. */}
+              <div style={{ borderTop:`1px solid ${borderFaint}`, paddingTop:18, display:"flex", gap:6, flexWrap:"wrap" }}>
+                <button onClick={() => { const url = `${window.location.origin}${window.location.pathname}?p=${modalProduct.id}`; navigator.clipboard.writeText(url).catch(()=>{}); }}
+                  style={{ display:"flex", alignItems:"center", gap:5, background:"none", border:`1px solid ${border}`, color:MID, padding:"5px 12px", fontSize:10, letterSpacing:1, cursor:"pointer" }}>
+                  <svg width={11} height={11} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                  Copiar link
+                </button>
+                {whatsapp?.enabled && whatsapp.number && (
+                  <button onClick={() => {
+                    const phone = whatsapp.number.replace(/\D/g, "");
+                    const h = new Date().getHours();
+                    const saludo = h < 12 ? "Buenos días" : h < 20 ? "Buenas tardes" : "Buenas noches";
+                    const text = `${saludo}! Me interesa el producto "${modalProduct.name}". ¿Me podés dar más información?`;
+                    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(text)}`, "_blank");
+                  }}
+                    style={{ display:"flex", alignItems:"center", gap:5, background:"none", border:"1px solid rgba(37,211,102,0.3)", color:"rgba(37,211,102,0.7)", padding:"5px 12px", fontSize:10, letterSpacing:1, cursor:"pointer" }}>
+                    <svg width={11} height={11} viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413z"/><path d="M11.897 0C5.395 0 .13 5.266.13 11.767c0 2.078.545 4.03 1.495 5.727L.057 24l6.7-1.757A11.71 11.71 0 0 0 11.897 23.534c6.503 0 11.768-5.265 11.768-11.767C23.67 5.266 18.4 0 11.897 0zm0 21.536h-.004a9.726 9.726 0 0 1-4.96-1.358l-.356-.211-3.678.965.982-3.581-.232-.368A9.73 9.73 0 0 1 2.158 11.767C2.158 6.355 6.551 2 11.897 2c2.581 0 5.007 1.007 6.831 2.831a9.604 9.604 0 0 1 2.828 6.83c0 5.347-4.393 9.875-9.659 9.875z"/></svg>
+                    WhatsApp
+                  </button>
+                )}
+              </div>
+            </div>
+            </div>
+
+            {/* ── Reseñas — a lo ANCHO, igual que en el template ──────────────
+                Adentro de la columna de detalles eran lo más largo del panel: la
+                estiraban muy por debajo de la foto y encima se leían en media
+                pantalla. Acá abajo entran a lo ancho y las tarjetas van de a dos
+                por fila (ver más abajo), que es donde el renglón queda en ~64
+                caracteres en vez de ~140. */}
+            <div style={{ gridColumn: isMobile ? undefined : "1 / -1", borderTop:`1px solid ${border}`, padding: isMobile ? "20px 16px" : "24px 32px" }}>
+                <p style={{ ...tituloBloque, marginBottom: 20 }}>
+                  Reseñas{resenasVisibles.length > 0 && ` (${resenasVisibles.length})`}
                 </p>
+                {/* Solo en el editor: aclara que lo de abajo es de mentira. Sin
+                    esto el dueño cree que ya tiene reseñas. */}
+                {resenasDeEjemplo && (
+                  <div style={{ display:"flex", gap:9, margin:"0 0 16px", padding:"10px 13px", background:"#fffbeb", border:"1px solid #fde68a", borderRadius:8, maxWidth:620 }}>
+                    <span style={{ flexShrink:0, fontSize:13, lineHeight:1.4 }}>⚠️</span>
+                    <p style={{ margin:0, fontSize:11.5, color:"#92400e", lineHeight:1.55 }}>
+                      <strong>Estas reseñas son de ejemplo.</strong> Este producto todavía no tiene ninguna:
+                      están para que veas cómo queda el bloque. No se publican y desaparecen solas en cuanto
+                      llegue la primera de verdad.
+                    </p>
+                  </div>
+                )}
+                {/* El botón va ACÁ, arriba de la lista: con muchas reseñas
+                    cargadas, abajo del todo no lo encuentra nadie. */}
+                {!(!fromEditor && isOwner) && !reviewDone && (
+                  <button type="button" onClick={() => setResenaModalOpen(true)}
+                    style={{ marginBottom:18, background:"none", border:`1px solid ${GT}`, color:GT, padding:"10px 22px", fontSize:10, fontWeight:800, letterSpacing:2, textTransform:"uppercase", cursor:"pointer" }}>
+                    Escribí tu reseña
+                  </button>
+                )}
                 {reviewsLoading ? (
                   <p style={{ fontSize:12, opacity:0.4 }}>Cargando...</p>
-                ) : reviews.length > 0 ? (
+                ) : resenasVisibles.length > 0 ? (
                   <div style={{ marginBottom:24 }}>
                     {/* Resumen: promedio + distribución */}
                     {(() => {
-                      const avg = reviews.reduce((s, r) => s + r.rating, 0) / reviews.length;
-                      const dist = [5,4,3,2,1].map(s => ({ stars:s, count: reviews.filter(r => r.rating === s).length }));
+                      const avg = resenasVisibles.reduce((s, r) => s + r.rating, 0) / resenasVisibles.length;
+                      const dist = [5,4,3,2,1].map(s => ({ stars:s, count: resenasVisibles.filter(r => r.rating === s).length }));
                       return (
                         <div style={{ display:"flex", gap:20, alignItems:"center", marginBottom:20, padding:"14px 16px", background: dark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)", borderRadius:6 }}>
                           <div style={{ textAlign:"center", minWidth:56 }}>
                             <p style={{ fontSize:34, fontWeight:800, color:T, margin:0, lineHeight:1 }}>{avg.toFixed(1)}</p>
                             <div style={{ display:"flex", gap:2, justifyContent:"center", margin:"6px 0 4px" }}>
-                              {[1,2,3,4,5].map(s => <span key={s} style={{ fontSize:11, color: s <= Math.round(avg) ? G : `${T}22` }}>★</span>)}
+                              {[1,2,3,4,5].map(s => <span key={s} style={{ fontSize:11, color: s <= Math.round(avg) ? STAR_ON : `${T}22` }}>★</span>)}
                             </div>
-                            <p style={{ fontSize:9, opacity:0.4, margin:0, letterSpacing:0.5 }}>{reviews.length} reseña{reviews.length !== 1 ? "s" : ""}</p>
+                            <p style={{ fontSize:9, opacity:0.4, margin:0, letterSpacing:0.5 }}>{resenasVisibles.length} reseña{resenasVisibles.length !== 1 ? "s" : ""}</p>
                           </div>
                           <div style={{ flex:1, display:"flex", flexDirection:"column", gap:5 }}>
                             {dist.map(d => (
                               <div key={d.stars} style={{ display:"flex", alignItems:"center", gap:8 }}>
                                 <span style={{ fontSize:9, color:GT, minWidth:14, textAlign:"right", opacity:0.7 }}>{d.stars}★</span>
                                 <div style={{ flex:1, height:4, background: dark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.08)", borderRadius:2, overflow:"hidden" }}>
-                                  <div style={{ height:"100%", width:`${reviews.length ? (d.count / reviews.length) * 100 : 0}%`, background:G, borderRadius:2 }} />
+                                  <div style={{ height:"100%", width:`${resenasVisibles.length ? (d.count / resenasVisibles.length) * 100 : 0}%`, background:G, borderRadius:2 }} />
                                 </div>
                                 <span style={{ fontSize:9, opacity:0.35, minWidth:12, textAlign:"right" }}>{d.count}</span>
                               </div>
@@ -1922,10 +2166,12 @@ function ProductosPageInner() {
                         </div>
                       );
                     })()}
-                    {/* Lista de reseñas */}
-                    <div style={{ display:"flex", flexDirection:"column" }}>
-                      {reviews.slice(0, reviewsShown).map((r, i) => (
-                        <div key={r.id} style={{ display:"flex", gap:12, padding:"16px 0", borderBottom: i < Math.min(reviewsShown, reviews.length) - 1 ? `1px solid ${borderFaint}` : "none" }}>
+                    {/* Lista — de a dos por fila en escritorio: a lo ancho del
+                        modal, una sola columna daba renglones de ~140 caracteres,
+                        casi el doble de lo que el ojo sigue sin perderse (60-80). */}
+                    <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2, 1fr)", columnGap:32, alignItems:"start" }}>
+                      {resenasVisibles.slice(0, reviewsShown).map(r => (
+                        <div key={r.id} style={{ display:"flex", gap:12, padding:"16px 0", borderBottom:`1px solid ${borderFaint}` }}>
                           <div style={{ width:34, height:34, borderRadius:"50%", flexShrink:0, background:`${G}20`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:13, fontWeight:700, color:GT }}>
                             {r.reviewer.charAt(0).toUpperCase()}
                           </div>
@@ -1937,54 +2183,39 @@ function ProductosPageInner() {
                               </span>
                             </div>
                             <div style={{ display:"flex", gap:1, marginBottom: r.comment ? 8 : 0 }}>
-                              {[1,2,3,4,5].map(s => <span key={s} style={{ fontSize:12, color: s <= r.rating ? G : `${T}20` }}>★</span>)}
+                              {[1,2,3,4,5].map(s => <span key={s} style={{ fontSize:12, color: s <= r.rating ? STAR_ON : `${T}20` }}>★</span>)}
                             </div>
-                            {r.comment && <p style={{ fontSize:12, opacity:0.65, margin:0, lineHeight:1.65 }}>{r.comment}</p>}
+                            {/* Recortado a 6 líneas con "Leer todo". El tope del
+                                servidor es de 500 caracteres: sin recorte, una
+                                sola reseña larga son ~9 renglones y empuja a las
+                                otras fuera de la pantalla. */}
+                            {/* El color es `T` (el texto normal del tema) al 65%, no
+                                `MID`: MID ya es un gris apagado y al 65% sobre el
+                                fondo del modal el comentario quedaba casi invisible.
+                                Antes esto no pasaba porque el <p> no fijaba color y
+                                heredaba T — se perdió al extraer el componente. */}
+                            {r.comment && <ComentarioResena texto={r.comment} acento={GT} color={T} />}
                           </div>
                         </div>
                       ))}
                     </div>
-                    {reviews.length > reviewsShown && (
-                      <button onClick={() => setReviewsShown(n => n + 10)} style={{ marginTop:14, background:"none", border:`1px solid ${border}`, color:GT, fontSize:10, fontWeight:700, letterSpacing:1.5, cursor:"pointer", padding:"8px 20px", textTransform:"uppercase", display:"block" }}>
-                        Ver más ({reviews.length - reviewsShown})
+                    {resenasVisibles.length > reviewsShown && (
+                      <button onClick={() => setReviewsShown(n => n + PASO_RESENAS)} style={{ marginTop:14, background:"none", border:`1px solid ${border}`, color:GT, fontSize:10, fontWeight:700, letterSpacing:1.5, cursor:"pointer", padding:"8px 20px", textTransform:"uppercase", display:"block" }}>
+                        Ver más ({resenasVisibles.length - reviewsShown})
                       </button>
                     )}
                   </div>
                 ) : (
                   <p style={{ fontSize:12, opacity:0.35, marginBottom:16 }}>Sé el primero en dejar una reseña.</p>
                 )}
-                {!fromEditor && isOwner ? (
-                  <p style={{ fontSize:11, opacity:0.4, fontStyle:"italic" }}>El dueño no puede dejar reseñas en su propia tienda.</p>
-                ) : reviewDone ? (
-                  <p style={{ fontSize:12, color:GT, fontWeight:600 }}>¡Gracias por tu reseña!</p>
-                ) : (
-                  <div style={{ position:"relative" }}>
-                    {fromEditor && <div style={{ position:"absolute", inset:0, zIndex:10, cursor:"default" }} onClick={e => e.stopPropagation()} />}
-                    <form onSubmit={fromEditor ? e => e.preventDefault() : submitReview} style={{ display:"flex", flexDirection:"column", gap:10, opacity: fromEditor ? 0.55 : 1 }}>
-                      <input value={reviewForm.reviewer} onChange={e => !fromEditor && setReviewForm(p => ({ ...p, reviewer: e.target.value }))}
-                        placeholder="Tu nombre" readOnly={fromEditor}
-                        style={{ background:modalInputBg, border:`1px solid ${inputBorder}`, color:T, padding:"9px 12px", fontSize:12, outline:"none" }}
-                        onFocus={e => { if (!fromEditor) e.target.style.borderColor=G; }} onBlur={e => (e.target.style.borderColor=inputBorder)} />
-                      <div style={{ display:"flex", gap:4 }}>
-                        {[1,2,3,4,5].map(s => (
-                          <button key={s} type="button" onClick={() => !fromEditor && setReviewForm(p => ({ ...p, rating: s }))}
-                            style={{ background:"none", border:"none", fontSize:22, cursor: fromEditor ? "default" : "pointer", color: s <= reviewForm.rating ? G : `${T}30`, padding:"2px" }}>★</button>
-                        ))}
-                      </div>
-                      <textarea value={reviewForm.comment} onChange={e => !fromEditor && setReviewForm(p => ({ ...p, comment: e.target.value }))}
-                        placeholder="Comentario (opcional)" rows={3} readOnly={fromEditor}
-                        style={{ background:modalInputBg, border:`1px solid ${inputBorder}`, color:T, padding:"9px 12px", fontSize:12, resize:"none", outline:"none", fontFamily:sans }}
-                        onFocus={e => { if (!fromEditor) e.target.style.borderColor=G; }} onBlur={e => (e.target.style.borderColor=inputBorder)} />
-                      {!fromEditor && reviewCaptcha.widget}
-                      <button type="submit" disabled={fromEditor || reviewSubmitting || !reviewForm.reviewer.trim() || !reviewCaptcha.ready}
-                        style={{ background: fromEditor || reviewSubmitting || !reviewForm.reviewer.trim() ? `${G}40` : G, color:accentDark?"#000":"#fff", border:"none", padding:"12px", fontSize:11, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor: fromEditor || reviewSubmitting || !reviewForm.reviewer.trim() ? "not-allowed" : "pointer" }}>
-                        {reviewSubmitting ? "Enviando..." : "Publicar reseña"}
-                      </button>
-                    </form>
-                    {fromEditor && <p style={{ fontSize:10, opacity:0.45, fontStyle:"italic", marginTop:6 }}>Vista previa — solo disponible en la tienda real.</p>}
-                  </div>
+                {/* El formulario se fue al modal que abre el botón de arriba. Acá
+                    quedan los dos casos en los que no hay nada que escribir. */}
+                {!fromEditor && isOwner && (
+                  <p style={{ fontSize:11, opacity:0.4, fontStyle:"italic", marginTop:4 }}>El dueño no puede dejar reseñas en su propia tienda.</p>
                 )}
-              </div>
+                {reviewDone && (
+                  <p style={{ fontSize:12, color:GT, fontWeight:600, marginTop:4 }}>¡Gracias por tu reseña!</p>
+                )}
             </div>
             {(() => {
               const others = products.filter(p => p.id !== modalProduct.id);
@@ -1999,15 +2230,88 @@ function ProductosPageInner() {
                   <div style={{ display:"grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(4,1fr)", gap:14 }}>
                     {similar.map(p => (
                       <div key={p.id} onClick={() => openModal(p)} style={{ cursor:"pointer" }}>
-                        <img src={p.images[0] ?? ""} alt={p.name} style={{ width:"100%", aspectRatio:"3/4", objectFit:"cover", display:"block" }} onError={e => { e.currentTarget.style.opacity="0"; }} />
+                        {/* El precio salía de `fmt(p.price)` a secas: mostraba el de
+                            lista aunque el producto tuviera promo u oferta, así que
+                            el mismo producto valía una cosa acá y otra al abrirlo.
+                            `PromoPrice` es el que ya usa el resto de la tienda. */}
+                        <div style={{ position:"relative" }}>
+                          <img src={p.images[0] ?? ""} alt={p.name} style={{ width:"100%", aspectRatio:"3/4", objectFit:"cover", display:"block" }} onError={e => { e.currentTarget.style.opacity="0"; }} />
+                          {(() => {
+                            const pr = resolveProductPromo(p, promotions);
+                            if (pr.primaryPromo) return <PromoTag label={describePromo(pr.primaryPromo).headline} size="sm" />;
+                            const enOferta = !!p.comparePrice && p.comparePrice > p.price;
+                            if (!enOferta && !p.offerBadge) return null;
+                            return <OfferBadge badge={p.offerBadge ?? null} pct={enOferta ? discountPercent(p.price, p.comparePrice) : null} size="sm" />;
+                          })()}
+                        </div>
                         <p style={{ margin:"8px 0 2px", fontSize:12, color:T, overflow:"hidden", display:"-webkit-box", WebkitLineClamp:1, WebkitBoxOrient:"vertical" as const }}>{p.name}</p>
-                        <p style={{ margin:0, fontSize:13, fontWeight:700, color:GT }}>{fmt(p.price)}</p>
+                        <PromoPrice product={p} promotions={promotions} fmt={fmt} accent={GT} sobre={T}
+                          priceSize={13} compareSize={11} weight={700} />
                       </div>
                     ))}
                   </div>
                 </div>
               );
             })()}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL: reseña del producto ─────────────────────────────────
+          Lo abre "Escribí tu reseña", que está arriba de la lista. Antes el
+          formulario era lo último de la ficha: con muchas reseñas cargadas había
+          que bajarlas todas para llegar a escribir la propia.
+          zIndex 250: por encima de la ficha (200) y por debajo del lightbox (300). */}
+      {modalProduct && resenaModalOpen && (
+        <div style={{ position:"fixed", inset:0, zIndex:250, background:"rgba(0,0,0,0.6)", backdropFilter:"blur(4px)", display:"flex", alignItems: isMobile ? "flex-end" : "center", justifyContent:"center", padding: isMobile ? 0 : 20 }}
+          onClick={() => setResenaModalOpen(false)}>
+          <div style={{ background:S, width:"100%", maxWidth:460, maxHeight:"92vh", overflowY:"auto", position:"relative", borderRadius: isMobile ? "12px 12px 0 0" : 0 }}
+            onClick={e => e.stopPropagation()}>
+            <button onClick={() => setResenaModalOpen(false)} aria-label="Cerrar"
+              style={{ position:"absolute", top:10, right:10, background:"none", border:"none", color:MID, width:32, height:32, cursor:"pointer", fontSize:22, lineHeight:1 }}>×</button>
+            <div style={{ padding: isMobile ? "28px 22px 26px" : "30px 28px 26px" }}>
+              <p style={{ ...tituloBloque, marginBottom:4 }}>Tu reseña</p>
+              {/* De qué producto es: el modal tapa la ficha. */}
+              <p style={{ margin:"0 0 16px", fontSize:12, color:MID, lineHeight:1.5 }}>
+                Sobre <strong style={{ color:T }}>{modalProduct.name}</strong>.
+              </p>
+              <form onSubmit={fromEditor ? e => e.preventDefault() : submitReview} style={{ display:"flex", flexDirection:"column", gap:10, opacity: fromEditor ? 0.55 : 1 }}>
+                <input value={reviewForm.reviewer} onChange={e => !fromEditor && setReviewForm(p => ({ ...p, reviewer: e.target.value }))}
+                  placeholder="Tu nombre" readOnly={fromEditor}
+                  style={{ background:modalInputBg, border:`1px solid ${inputBorder}`, color:T, padding:"10px 12px", fontSize:13, outline:"none" }}
+                  onFocus={e => { if (!fromEditor) e.target.style.borderColor=G; }} onBlur={e => (e.target.style.borderColor=inputBorder)} />
+                <div>
+                  <input value={reviewForm.email} onChange={e => !fromEditor && setReviewForm(p => ({ ...p, email: e.target.value }))}
+                    placeholder="Tu email (opcional — verifica tu compra)" type="email" readOnly={fromEditor} autoComplete="email"
+                    style={{ width:"100%", boxSizing:"border-box", background:modalInputBg, border:`1px solid ${inputBorder}`, color:T, padding:"10px 12px", fontSize:13, outline:"none" }}
+                    onFocus={e => { if (!fromEditor) e.target.style.borderColor=G; }} onBlur={e => (e.target.style.borderColor=inputBorder)} />
+                  <p style={{ fontSize:10.5, color:MID, margin:"4px 0 0", lineHeight:1.4 }}>
+                    Si compraste acá, tu reseña mostrará &ldquo;✓ Compra verificada&rdquo;. El email no se publica.
+                  </p>
+                </div>
+                <div style={{ display:"flex", gap:4 }}>
+                  {[1,2,3,4,5].map(s => (
+                    <button key={s} type="button" onClick={() => !fromEditor && setReviewForm(p => ({ ...p, rating: s }))}
+                      aria-label={`${s} de 5 estrellas`}
+                      style={{ background:"none", border:"none", fontSize:24, lineHeight:1, cursor: fromEditor ? "default" : "pointer", color: s <= reviewForm.rating ? STAR_ON : `${T}30`, padding:"2px" }}>★</button>
+                  ))}
+                </div>
+                <textarea value={reviewForm.comment} onChange={e => !fromEditor && setReviewForm(p => ({ ...p, comment: e.target.value }))}
+                  placeholder="Comentario (opcional)" rows={3} readOnly={fromEditor}
+                  style={{ background:modalInputBg, border:`1px solid ${inputBorder}`, color:T, padding:"10px 12px", fontSize:13, resize:"none", outline:"none", fontFamily:sans }}
+                  onFocus={e => { if (!fromEditor) e.target.style.borderColor=G; }} onBlur={e => (e.target.style.borderColor=inputBorder)} />
+                {!fromEditor && reviewCaptcha.widget}
+                <button type="submit" disabled={fromEditor || reviewSubmitting || !reviewForm.reviewer.trim() || !reviewCaptcha.ready}
+                  style={{ background: fromEditor || reviewSubmitting || !reviewForm.reviewer.trim() ? `${G}40` : G, color:accentDark?"#000":"#fff", border:"none", padding:"13px", fontSize:11, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor: fromEditor || reviewSubmitting || !reviewForm.reviewer.trim() ? "not-allowed" : "pointer" }}>
+                  {reviewSubmitting ? "Enviando..." : "Publicar reseña"}
+                </button>
+              </form>
+              {fromEditor && (
+                <p style={{ margin:"10px 0 0", fontSize:10, opacity:0.45, fontStyle:"italic", textAlign:"center" }}>
+                  Vista previa — el formulario funciona en tu tienda publicada.
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -2036,30 +2340,77 @@ function ProductosPageInner() {
                   <p style={{ fontSize:34, marginBottom:10 }}>🛍️</p>
                   <p style={{ fontSize:13, lineHeight:1.8, color:T }}>Tu carrito está vacío.<br/>Explorá la colección.</p>
                 </div>
-              : cartItems.map((item, idx) => (
+              : cartItems.map((item, idx) => {
+                // ¿Esta línea se cobra al precio de lista del producto? Si mandó el
+                // precio de una variante, el mayorista o un escalón por cantidad,
+                // `comparePrice` deja de ser referencia válida y el tachado podría
+                // quedar por DEBAJO de lo que se paga. Mismo cuidado que el modal
+                // (CP-15) y que el carrito compartido.
+                const linea = pricedLines[idx];
+                const unitario = linea && item.qty > 0 ? (linea.lineTotal + linea.savings) / item.qty : item.product.price;
+                const enOferta = Math.abs(unitario - item.product.price) < 0.01
+                  && (item.product.comparePrice ?? 0) > item.product.price;
+                return (
                 <div key={idx} style={{ display:"flex", gap:12, padding:"14px 0", borderBottom:`1px solid ${borderFaint}` }}>
                   {item.product.images[0] && <img src={item.product.images[0]} alt="" style={{ width:66, height:88, objectFit:"cover", flexShrink:0 }}/>}
                   <div style={{ flex:1 }}>
                     <p style={{ fontSize:14, margin:"0 0 2px", fontWeight:500, color:T }}>{item.product.name}</p>
                     <p style={{ fontSize:11, opacity:0.45, margin:"0 0 8px" }}>{[item.color, item.size && `Talle ${item.size}`].filter(Boolean).join(" · ")}</p>
+                    {/* Qué promo bajó este precio, igual que en el carrito de los
+                        templates. Sale de `pricedLines`, que es la misma cuenta que
+                        cobra el checkout — no se recalcula nada acá. */}
+                    {pricedLines[idx]?.promo ? (
+                      <p style={{ fontSize:11, margin:"0 0 8px", color:GT, fontWeight:700 }}>
+                        {pricedLines[idx].promo!.name
+                          ? `${pricedLines[idx].promo!.name} · ${pricedLines[idx].promo!.label}`
+                          : pricedLines[idx].promo!.label}
+                      </p>
+                    ) : enOferta ? (
+                      <p style={{ fontSize:11, margin:"0 0 8px", color:"#dc2626", fontWeight:700 }}>
+                        Oferta · {Math.round((1 - item.product.price / item.product.comparePrice!) * 100)}% OFF
+                      </p>
+                    ) : null}
                     <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
                       <div style={{ display:"flex", alignItems:"center", border:`1px solid ${border}` }}>
                         <button onClick={() => updateQty(idx,-1)} style={{ width:26, height:26, background:"none", border:"none", color:T, cursor:"pointer", fontSize:15 }}>−</button>
                         <span style={{ width:22, textAlign:"center", fontSize:12, color:T }}>{item.qty}</span>
                         <button onClick={() => updateQty(idx,1)} style={{ width:26, height:26, background:"none", border:"none", color:T, cursor:"pointer", fontSize:15 }}>+</button>
                       </div>
-                      <span style={{ color:GT, fontWeight:700, fontSize:14 }}>{fmt(item.product.price * item.qty)}</span>
+                      {(() => {
+                        const antes = linea?.promoApplied
+                          ? linea.lineTotal + linea.savings
+                          : enOferta
+                            ? item.product.comparePrice! * item.qty
+                            : null;
+                        return (
+                          <div style={{ textAlign:"right" }}>
+                            {antes != null && (
+                              <span style={{ fontSize:11, color:MID, opacity:0.75, textDecoration:"line-through", display:"block", lineHeight:1.3 }}>{fmt(antes)}</span>
+                            )}
+                            <span style={{ color:GT, fontWeight:700, fontSize:14 }}>{fmt(linea?.lineTotal ?? 0)}</span>
+                          </div>
+                        );
+                      })()}
                     </div>
                   </div>
                   <button onClick={() => removeFromCart(idx)} style={{ background:"none", border:"none", color:MID, cursor:"pointer", fontSize:18, alignSelf:"flex-start", transition:"color 0.2s" }}
                     onMouseEnter={e => (e.currentTarget.style.color=T)}
                     onMouseLeave={e => (e.currentTarget.style.color=MID)}>×</button>
                 </div>
-              ))
+                );
+              })
             }
           </div>
           {cartItems.length > 0 && (
             <div style={{ padding:"14px 22px 28px", borderTop:`1px solid ${borderFaint}` }}>
+              {/* El ahorro lo sumó el motor. Sin esta fila el comprador veía el
+                  total ya descontado pero sin ninguna señal de que la promo entró. */}
+              {cartPromoSavings > 0.01 && (
+                <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
+                  <span style={{ fontSize:12, color:"#16a34a", fontWeight:600 }}>Promoción aplicada</span>
+                  <span style={{ fontSize:12, color:"#16a34a", fontWeight:600 }}>-{fmt(cartPromoSavings)}</span>
+                </div>
+              )}
               <div style={{ display:"flex", justifyContent:"space-between", marginBottom:20 }}>
                 <span style={{ fontSize:13, opacity:0.6, color:T }}>Total</span>
                 <span style={{ fontSize:20, fontWeight:700, color:GT }}>{fmt(cartTotal)}</span>
@@ -2110,7 +2461,22 @@ function ProductosPageInner() {
                         <div style={{ flex:1 }}>
                           <p style={{ fontSize:13, margin:"0 0 2px", fontWeight:500, color:T }}>{item.product.name}</p>
                           <p style={{ fontSize:11, opacity:0.4, margin:"0 0 4px" }}>{[item.color, item.size && `Talle ${item.size}`].filter(Boolean).join(" · ")}</p>
-                          <p style={{ fontSize:13, color:GT, fontWeight:700, margin:0 }}>{fmt(item.product.price)} × {item.qty}</p>
+                          {(() => {
+                            // El unitario SIN promo (lo que la línea valdría sin ella),
+                            // que es lo que se detalla abajo promo por promo. Antes era
+                            // `product.price`, que además se saltea el precio de la
+                            // variante, el mayorista y los escalones por cantidad.
+                            const linea = pricedLines[idx];
+                            const base = linea ? (linea.lineTotal + linea.savings) / item.qty : item.product.price;
+                            return <p style={{ fontSize:13, color:GT, fontWeight:700, margin:0 }}>{fmt(base)} × {item.qty}</p>;
+                          })()}
+                          {pricedLines[idx]?.promo && (
+                            <p style={{ fontSize:11, margin:"4px 0 0", color:"#16a34a", fontWeight:600 }}>
+                              {pricedLines[idx].promo!.name
+                                ? `${pricedLines[idx].promo!.name} · ${pricedLines[idx].promo!.label}`
+                                : pricedLines[idx].promo!.label}
+                            </p>
+                          )}
                         </div>
                       </div>
                     ))}
@@ -2205,8 +2571,25 @@ function ProductosPageInner() {
                   <div style={{ borderTop:`1px solid ${borderFaint}`, paddingTop:18, marginTop:18 }}>
                     <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
                       <span style={{ fontSize:13, opacity:0.55, color:T }}>Subtotal</span>
-                      <span style={{ fontSize:13, opacity:0.55, color:T }}>{fmt(cartTotal)}</span>
+                      <span style={{ fontSize:13, opacity:0.55, color:T }}>{fmt(cartPromoSavings > 0.01 ? cartTotal + cartPromoSavings : cartTotal)}</span>
                     </div>
+                    {/* Una fila POR promo con su nombre y cuánto aportó — la misma
+                        lista que sale después en el email del pedido, así que el
+                        resumen y el comprobante dicen lo mismo. Si no llegara el
+                        detalle, cae en una fila genérica: el ahorro siempre se ve. */}
+                    {cartPromoSavings > 0.01 && (
+                      appliedPromos?.length ? appliedPromos.map((p, i) => (
+                        <div key={i} style={{ display:"flex", justifyContent:"space-between", marginBottom:6, gap:12 }}>
+                          <span style={{ fontSize:13, color:"#16a34a", fontWeight:600 }}>{p.name ? `${p.name} · ${p.label}` : p.label}</span>
+                          <span style={{ fontSize:13, color:"#16a34a", fontWeight:600, whiteSpace:"nowrap" }}>-{fmt(p.savings)}</span>
+                        </div>
+                      )) : (
+                        <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
+                          <span style={{ fontSize:13, color:"#16a34a", fontWeight:600 }}>Promoción aplicada</span>
+                          <span style={{ fontSize:13, color:"#16a34a", fontWeight:600 }}>-{fmt(cartPromoSavings)}</span>
+                        </div>
+                      )
+                    )}
                     {couponDiscount > 0 && (
                       <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
                         <span style={{ fontSize:13, color:GT }}>Descuento</span>

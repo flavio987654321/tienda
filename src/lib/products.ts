@@ -34,13 +34,38 @@ const DESCRIPTION_SANITIZE_OPTIONS: sanitizeHtml.IOptions = {
   },
 };
 
+/* ── El color de la descripción se perdía al guardar ───────────────────────────
+   El editor (TipTap) guarda el color leyendo `element.style.color` del DOM, y el
+   navegador normaliza CUALQUIER color a `rgb(r, g, b)`. O sea que una descripción
+   que se abre y se vuelve a guardar no llega con el `#ef4444` que eligió el dueño
+   sino con `rgb(239, 68, 68)` — y el allowlist de acá abajo es de hex, así que le
+   borraba el `style` y dejaba un `<span>` pelado. El dueño elegía el color, lo
+   veía bien mientras editaba, y al volver a la ficha no estaba más.
+
+   Se normaliza a hex ANTES de sanear en vez de aceptar `rgb()` en el allowlist:
+   así la lista sigue siendo los 8 colores exactos de la paleta y un POST directo
+   a la API tampoco puede colar un color arbitrario en otro formato.
+
+   Corre sobre todo el HTML, pero eso no afloja nada: después pasa igual por
+   sanitize-html, que solo deja `color` y `text-align` en `<p>` y `<span>`.
+──────────────────────────────────────────────────────────────────────────────── */
+function normalizarColoresAHex(html: string): string {
+  return html.replace(
+    /rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*(?:,\s*[\d.]+\s*)?\)/gi,
+    (_m, r: string, g: string, b: string) => {
+      const dosDigitos = (n: string) => Math.min(255, parseInt(n, 10)).toString(16).padStart(2, "0");
+      return `#${dosDigitos(r)}${dosDigitos(g)}${dosDigitos(b)}`;
+    }
+  );
+}
+
 // Sanitiza una descripción de producto con la misma allowlist que usa el
 // formulario. Exportada para que el import CSV (u otros orígenes) no pueda
 // guardar HTML sin filtrar — la descripción se renderiza con
 // dangerouslySetInnerHTML en la tienda pública, así que TODO camino de escritura
 // debe pasar por acá.
 export function sanitizeDescription(html: string): string {
-  return sanitizeHtml(html, DESCRIPTION_SANITIZE_OPTIONS);
+  return sanitizeHtml(normalizarColoresAHex(html), DESCRIPTION_SANITIZE_OPTIONS);
 }
 
 export const MAX_PRODUCT_REELS = 3;
@@ -167,8 +192,10 @@ export function validateProductBody(
   if (description && typeof description === "string" && description.length > 8000) {
     return { error: NextResponse.json({ error: "La descripción no puede superar 8000 caracteres" }, { status: 400 }) };
   }
+  // Por `sanitizeDescription`, que ademas normaliza los colores a hex — este era
+  // el camino del formulario y se le escapaba.
   const sanitizedDescription = typeof description === "string"
-    ? sanitizeHtml(description, DESCRIPTION_SANITIZE_OPTIONS)
+    ? sanitizeDescription(description)
     : "";
   if (category && typeof category === "string" && category.length > 100) {
     return { error: NextResponse.json({ error: "La categoría no puede superar 100 caracteres" }, { status: 400 }) };

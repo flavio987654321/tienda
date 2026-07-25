@@ -85,6 +85,7 @@ export function PromoPrice({
   consultaLabel = "Consultá precio",
   gap = 6,
   align = "baseline",
+  sobre,
   style,
 }: {
   /** El producto tal cual viene del storefront. `comparePrice` es opcional: sin él, no se tacha nada. */
@@ -102,9 +103,22 @@ export function PromoPrice({
   consultaLabel?: string;
   gap?: number;
   align?: CSSProperties["alignItems"];
+  /**
+   * Color de TEXTO del bloque donde se dibuja este precio (el que el template ya
+   * eligió para que contraste con el fondo de esa sección). De ahí sale el color
+   * del precio tachado. Antes era un `#aaa` fijo pensado para fondo blanco: en un
+   * bloque beige, verde o negro el tachado se perdía justo cuando es la prueba de
+   * que hay descuento. Sin este dato se mantiene el gris de siempre.
+   */
+  sobre?: string;
   style?: CSSProperties;
 }) {
   const wrap: CSSProperties = { display: "flex", alignItems: align, gap, flexWrap: "wrap", ...style };
+  // La opacidad es la que lo deja "apagado" respecto del precio real, y como
+  // atenúa CONTRA el fondo del bloque nunca lo vuelve ilegible.
+  const tachado: CSSProperties = sobre
+    ? { color: sobre, opacity: 0.6, textDecoration: "line-through" }
+    : { color: "#aaa", textDecoration: "line-through" };
 
   if (ocultarPrecios) {
     return (
@@ -123,7 +137,7 @@ export function PromoPrice({
       <div style={wrap}>
         <span style={{ fontSize: priceSize, fontWeight: weight, color: "#dc2626" }}>{fmt(promo.effectivePrice)}</span>
         {compareSize != null && (
-          <span style={{ fontSize: compareSize, color: "#aaa", textDecoration: "line-through" }}>{fmt(promo.originalPrice)}</span>
+          <span style={{ fontSize: compareSize, ...tachado }}>{fmt(promo.originalPrice)}</span>
         )}
       </div>
     );
@@ -135,7 +149,7 @@ export function PromoPrice({
     <div style={wrap}>
       <span style={{ fontSize: priceSize, fontWeight: weight, color: accent }}>{fmt(product.price)}</span>
       {compareSize != null && enOferta && (
-        <span style={{ fontSize: compareSize, color: "#aaa", textDecoration: "line-through" }}>{fmt(product.comparePrice!)}</span>
+        <span style={{ fontSize: compareSize, ...tachado }}>{fmt(product.comparePrice!)}</span>
       )}
     </div>
   );

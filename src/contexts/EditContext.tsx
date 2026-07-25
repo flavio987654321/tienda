@@ -39,25 +39,31 @@ export const EditContext = createContext<EditContextType>({
   moveSection: () => {},
 });
 
-export function getContrastColor(color: string): "light" | "dark" {
-  if (!color) return "dark";
-  // El fondo de una sección puede ser un degradado, no solo un color. Cuando lo
-  // es, se decide con el punto medio: los diez templates llaman acá para saber
-  // si el texto va claro u oscuro, así que resolverlo en este único lugar
-  // alcanza para todos —y para los que vengan— en vez de enseñarle a cada uno a
-  // leer degradados.
+// Luminancia relativa del color (0 = negro, 1 = blanco), o `null` si no se pudo
+// leer. El fondo de una sección puede ser un degradado, no solo un color: cuando
+// lo es, se decide con el punto medio. Los diez templates pasan por acá para
+// saber si el texto va claro u oscuro, así que resolverlo en este único lugar
+// alcanza para todos —y para los que vengan— en vez de enseñarle a cada uno a
+// leer degradados.
+function luminancia(color: string): number | null {
+  if (!color) return null;
   const hex = colorRepresentativo(color);
-  if (!hex) return "dark";
+  if (!hex) return null;
   let full = hex.startsWith("#") ? hex : "#" + hex;
   // Expand shorthand #RGB → #RRGGBB
   if (full.length === 4) {
     full = "#" + full[1] + full[1] + full[2] + full[2] + full[3] + full[3];
   }
-  if (full.length < 7) return "dark";
+  if (full.length < 7) return null;
   const r = parseInt(full.slice(1, 3), 16) / 255;
   const g = parseInt(full.slice(3, 5), 16) / 255;
   const b = parseInt(full.slice(5, 7), 16) / 255;
-  const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+export function getContrastColor(color: string): "light" | "dark" {
+  const lum = luminancia(color);
+  if (lum == null) return "dark";
   return lum > 0.5 ? "dark" : "light";
 }
 
@@ -69,6 +75,29 @@ export function getContrastColor(color: string): "light" | "dark" {
 // texto "seguro" del propio tema en vez del acento.
 export function getReadableAccentText(accent: string, bg: string, fallback: string): string {
   return getContrastColor(accent) !== getContrastColor(bg) ? accent : fallback;
+}
+
+// Para usar el acento como RELLENO (el chip del talle elegido, un badge), no como
+// texto. Es una pregunta distinta de la de arriba: ahí importa si el color se LEE
+// sobre el fondo; acá, si se DISTINGUE del fondo como superficie.
+//
+// Con la regla de texto alcanzaba para el precio pero descartaba acentos que como
+// relleno andan perfecto: un naranja sobre blanco se lee mal escrito, pero pintado
+// de fondo se ve clarísimo —y el texto de adentro se resuelve aparte con
+// getContrastColor, así que nunca queda ilegible—. Usar una sola regla para las
+// dos cosas mandaba a negro naranjas, dorados y amarillos sin motivo.
+//
+// Se mide con el ratio de contraste de WCAG ((L1+0.05)/(L2+0.05)): 1.0 es el mismo
+// color y 21 es blanco contra negro. Debajo de 1.25 el relleno se confunde con el
+// fondo (beige, crema, marfil, blanco); de ahí para arriba se recorta solo.
+const RATIO_MINIMO_RELLENO = 1.25;
+
+export function getReadableAccentFill(accent: string, bg: string, fallback: string): string {
+  const a = luminancia(accent);
+  const b = luminancia(bg);
+  if (a == null || b == null) return fallback;
+  const ratio = (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+  return ratio >= RATIO_MINIMO_RELLENO ? accent : fallback;
 }
 
 export function useEditContext() { return useContext(EditContext); }

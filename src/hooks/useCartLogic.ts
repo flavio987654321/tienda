@@ -355,6 +355,33 @@ export function useCartLogic({ products, promotions = [], storeId, affiliateId =
     return set;
   }, [modalProduct, selectedColor]);
 
+  /* Colores sin stock en NINGUN talle. Es el equivalente de arriba pero al reves,
+     y hasta ahora no existia: el talle sin stock se mostraba tachado, el color no.
+     El comprador tocaba el color como si nada y recien despues de elegirlo leia
+     "Sin stock en esta combinacion".
+
+     A diferencia de los talles, esto NO depende del talle elegido: un color se
+     marca solo si esta agotado en todos sus talles. Si lo atara al talle puesto,
+     el color se tacharia y destacharia solo al cambiar de talle, que se lee como
+     un parpadeo y no como informacion.
+
+     Aparece sobre todo con la matriz de variantes del formulario: agregar un
+     color crea la combinacion con TODOS los talles en stock 0, asi que un color
+     recien agregado y sin cargar queda ofrecido en la tienda sin poder comprarse. */
+  const outOfStockColors = useMemo(() => {
+    const set = new Set<string>();
+    if (!modalProduct?.variants.length) return set;
+    for (const color of modalProduct.colors) {
+      const matching = modalProduct.variants.filter(v => {
+        const a = parseVariantAttrs(v.name);
+        if (a) return Object.values(a).map(x => String(x).toLowerCase()).includes(color.toLowerCase());
+        return v.value.includes(color);
+      });
+      if (matching.length > 0 && matching.every(v => v.stock === 0)) set.add(color);
+    }
+    return set;
+  }, [modalProduct]);
+
 
   // Derived values
   // El total lo calcula priceCart — la MISMA función que usa el checkout que cobra.
@@ -648,7 +675,7 @@ export function useCartLogic({ products, promotions = [], storeId, affiliateId =
     // Qué promos ganaron y cuánto aportó cada una — para NOMBRARLAS en el checkout
     // (F6-C6) con la misma lista que después sale en el email del pedido.
     appliedPromos: cartPricing.appliedPromos,
-    searchResults, favoriteProducts, selectedVariantStock, outOfStockSizes,
+    searchResults, favoriteProducts, selectedVariantStock, outOfStockSizes, outOfStockColors,
     checkoutMode, isWholesale, wholesaleWarnings,
     pagoOptions: getPagoOptions(hasMercadoPago, !!affiliateId),
     fmtEnvioPrice, fmtLiveQuote,
