@@ -3,6 +3,7 @@ import { HandHeart } from "lucide-react";
 import type { useCartLogic } from "@/hooks/useCartLogic";
 import type { CartTheme } from "./CartDrawer";
 import { FadeImage } from "./FadeImage";
+import { getReadableAccentText } from "@/contexts/EditContext";
 import { PROVINCIAS_ARGENTINA } from "@/lib/provincias";
 import { resolveVariantPrice } from "@/lib/variantPrice";
 import { resolveBasePrice, parseEscalones } from "@/lib/pricing";
@@ -12,14 +13,20 @@ import { resolveBasePrice, parseEscalones } from "@/lib/pricing";
 // Mismo motivo que CartDrawer: un solo lugar para arreglar/mantener en vez de
 // una copia por template.
 export function CheckoutModal({
-  cart, theme, isPreview, storeSlug,
+  cart, theme, isPreview, storeSlug, zIndex = 300,
 }: {
   cart: ReturnType<typeof useCartLogic>;
   theme: CartTheme;
   isPreview: boolean;
   storeSlug: string;
+  /** Igual que en CartDrawer, y siempre por encima de él: el checkout se abre desde el carrito. */
+  zIndex?: number;
 }) {
   const { BG, S, T, MID, border, accent, accentText, serif } = theme;
+  // Mismo motivo que en el carrito: el acento crudo se usaba como color de TEXTO
+  // (total, cupon, links, precios). Con un acento claro esta pantalla quedaba
+  // ilegible entera. `accent` se sigue usando de relleno en los botones.
+  const accentTexto = getReadableAccentText(accent, BG, T);
   const {
     checkoutOpen, setCheckoutOpen, checkoutStatus, setCheckoutStatus, checkoutError,
     cartItems, updateQty, buyerForm, setBuyerForm, rememberData, setRememberData,
@@ -58,7 +65,7 @@ export function CheckoutModal({
   };
 
   return (
-    <div style={{ position:"fixed", inset:0, zIndex: isPreview ? 20010 : 300, display:"flex", alignItems:"flex-start", justifyContent:"flex-end" }}>
+    <div style={{ position:"fixed", inset:0, zIndex: isPreview ? 20010 : zIndex, display:"flex", alignItems:"flex-start", justifyContent:"flex-end" }}>
       <div onClick={() => setCheckoutOpen(false)} style={{ position:"absolute", inset:0, background:"rgba(10,10,10,0.6)", backdropFilter:"blur(4px)" }} />
       <div style={{ position:"relative", width:"min(480px, 100vw)", height:"100vh", background:BG, display:"flex", flexDirection:"column", overflowY:"auto", borderLeft:`1px solid ${border}` }}>
         <div style={{ padding:"24px 28px 16px", borderBottom:`1px solid ${border}`, display:"flex", justifyContent:"space-between", alignItems:"flex-start", flexShrink:0 }}>
@@ -103,7 +110,7 @@ export function CheckoutModal({
                       {(item.size || item.color) && (
                         <p style={{ fontSize:11, opacity:0.5, margin:"0 0 6px", color:T }}>{[item.color, item.size].filter(Boolean).join(" · ")}</p>
                       )}
-                      <p style={{ fontSize:13, color:accent, fontWeight:700, margin:0 }}>
+                      <p style={{ fontSize:13, color:accentTexto, fontWeight:700, margin:0 }}>
                         {fmt(itemEffectiveUnitPrice(item, item.qty))} × {item.qty}
                       </p>
                     </div>
@@ -170,7 +177,7 @@ export function CheckoutModal({
                 <div style={{ display:"flex", gap:0, marginBottom:28 }}>
                   <input placeholder="CÓDIGO DE CUPÓN" value={coupon} onChange={e => setCoupon(e.target.value)}
                     style={{ flex:1, background:S, border:`1px solid ${border}`, borderRight:"none", color:T, padding:"11px 14px", fontSize:11, letterSpacing:1, outline:"none", borderRadius:"6px 0 0 6px" }} />
-                  <button type="button" onClick={handleApplyCoupon} style={{ background:"transparent", border:`1px solid ${border}`, color:accent, padding:"11px 18px", fontSize:11, letterSpacing:1, cursor:"pointer", borderRadius:"0 6px 6px 0" }}>Aplicar</button>
+                  <button type="button" onClick={handleApplyCoupon} style={{ background:"transparent", border:`1px solid ${border}`, color:accentTexto, padding:"11px 18px", fontSize:11, letterSpacing:1, cursor:"pointer", borderRadius:"0 6px 6px 0" }}>Aplicar</button>
                 </div>
               ) : (
                 // Una promo activa no se combina con cupones — se oculta el campo en vez
@@ -183,7 +190,7 @@ export function CheckoutModal({
                   <span style={{ display:"flex", alignItems:"center", gap:8 }}>
                     <span style={{ fontSize:17, lineHeight:1 }}>🎉</span>
                     <span style={{ display:"flex", flexDirection:"column", lineHeight:1.25 }}>
-                      <span style={{ fontSize:13, color:accent, fontWeight:800, letterSpacing:0.3 }}>
+                      <span style={{ fontSize:13, color:accentTexto, fontWeight:800, letterSpacing:0.3 }}>
                         {appliedCoupon.discountValue
                           ? (appliedCoupon.discountType === "percentage" ? `¡${appliedCoupon.discountValue}% OFF!` : `¡${fmt(appliedCoupon.discountValue)} OFF!`)
                           : "¡Cupón aplicado!"}
@@ -230,10 +237,10 @@ export function CheckoutModal({
                 })()}
                 {couponDiscount > 0 && (
                   <div style={{ display:"flex", justifyContent:"space-between", marginBottom:8 }}>
-                    <span style={{ fontSize:13, color:accent }}>
+                    <span style={{ fontSize:13, color:accentTexto }}>
                       Descuento cupón{appliedCoupon?.discountType === "percentage" && appliedCoupon?.discountValue ? ` (${appliedCoupon.discountValue}%)` : ""}
                     </span>
-                    <span style={{ fontSize:13, color:accent }}>-{fmt(couponDiscount)}</span>
+                    <span style={{ fontSize:13, color:accentTexto }}>-{fmt(couponDiscount)}</span>
                   </div>
                 )}
                 <div style={{ display:"flex", justifyContent:"space-between", marginBottom:16 }}>
@@ -242,19 +249,19 @@ export function CheckoutModal({
                 </div>
                 <div style={{ display:"flex", justifyContent:"space-between" }}>
                   <span style={{ fontSize:16, fontWeight:700, color:T }}>Total</span>
-                  <span style={{ fontSize:20, fontWeight:800, color:accent }}>{fmt(orderTotal)}</span>
+                  <span style={{ fontSize:20, fontWeight:800, color:accentTexto }}>{fmt(orderTotal)}</span>
                 </div>
               </div>
 
               {canastaDisponible && (
                 <div style={{ marginTop:20, paddingTop:16, borderTop:`1px solid ${border}` }}>
                   <label style={{ display:"flex", alignItems:"center", justifyContent:"space-between", cursor:"pointer" }}>
-                    <span style={{ fontSize:13, color:T, display:"flex", alignItems:"center", gap:6 }}><HandHeart size={16} style={{ color:accent }} /> ¿Donar?</span>
+                    <span style={{ fontSize:13, color:T, display:"flex", alignItems:"center", gap:6 }}><HandHeart size={16} style={{ color:accentTexto }} /> ¿Donar?</span>
                     <input type="checkbox" checked={donationEnabled} onChange={e => setDonationEnabled(e.target.checked)} style={{ accentColor:accent }} />
                   </label>
                   <p style={{ fontSize:10, opacity:0.6, marginTop:6, lineHeight:1.5, color:T }}>
                     Sumá un aporte aparte para completar una canasta de alimentos para un vecino — se paga por separado, no afecta tu compra.{" "}
-                    <a href="/comunidad/campana" target="_blank" rel="noopener" style={{ color:accent, textDecoration:"underline" }}>¿Cómo funciona?</a>
+                    <a href="/comunidad/campana" target="_blank" rel="noopener" style={{ color:accentTexto, textDecoration:"underline" }}>¿Cómo funciona?</a>
                   </p>
                   {donationEnabled && (
                     <div style={{ marginTop:10 }}>
@@ -280,9 +287,9 @@ export function CheckoutModal({
                 <input type="checkbox" checked={acceptedTerms} onChange={e => setAcceptedTerms(e.target.checked)} style={{ marginTop:2, accentColor:accent, flexShrink:0 }} />
                 <span style={{ fontSize:11, color:T, opacity:0.7, lineHeight:1.6 }}>
                   Acepto los{" "}
-                  <a href={`/tienda/${storeSlug}/politicas?tipo=terminos`} target="_blank" rel="noopener" style={{ color:accent, textDecoration:"underline" }}>Términos y Condiciones</a>
+                  <a href={`/tienda/${storeSlug}/politicas?tipo=terminos`} target="_blank" rel="noopener" style={{ color:accentTexto, textDecoration:"underline" }}>Términos y Condiciones</a>
                   {" "}de la tienda y la{" "}
-                  <a href="/privacidad?role=buyer" target="_blank" rel="noopener" style={{ color:accent, textDecoration:"underline" }}>Política de Privacidad</a>
+                  <a href="/privacidad?role=buyer" target="_blank" rel="noopener" style={{ color:accentTexto, textDecoration:"underline" }}>Política de Privacidad</a>
                 </span>
               </label>
               <button type="submit" disabled={checkoutStatus === "placing" || !acceptedTerms}

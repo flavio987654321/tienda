@@ -1,5 +1,6 @@
 "use client";
 import { FadeImage } from "./FadeImage";
+import { getReadableAccentText } from "@/contexts/EditContext";
 import type { useCartLogic } from "@/hooks/useCartLogic";
 
 // Un solo componente de carrito reutilizado por todos los templates de un mismo
@@ -20,13 +21,21 @@ export type CartTheme = {
 };
 
 export function CartDrawer({
-  cart, theme, isOwner, isPreview, whatsapp,
+  cart, theme, isOwner, isPreview, whatsapp, zIndex = 150,
 }: {
   cart: ReturnType<typeof useCartLogic>;
   theme: CartTheme;
   isOwner: boolean;
   isPreview: boolean;
   whatsapp?: { enabled: boolean; number: string; message?: string };
+  /**
+   * Por encima de qué tiene que quedar el carrito. El 150 de siempre alcanza para
+   * los templates cuyo navbar vive en 100/110, pero no es universal: Chic Paris
+   * tiene el navbar en 1000 y la barra de anuncios en 1001, así que se dibujaban
+   * ENCIMA del carrito y le tapaban el título y el primer producto. Un panel que
+   * el comprador abrió siempre gana contra el chrome de la página.
+   */
+  zIndex?: number;
 }) {
   const { BG, T, MID, border, accent, accentText, serif } = theme;
   const {
@@ -34,13 +43,24 @@ export function CartDrawer({
     openCheckout, fmt, wholesaleWarnings, pricedLines, cartPromoSavings, freeShipping, freeShippingGoal,
   } = cart;
   const blockBuy = isOwner || isPreview;
+  // Los precios y el nombre de la promo iban pintados con el acento CRUDO. Con un
+  // acento claro —beige, arena, pastel— eso es texto casi blanco sobre el fondo
+  // blanco del carrito: el total y el descuento quedaban invisibles justo en el
+  // paso donde el comprador decide. Se calcula acá y no en cada template porque
+  // el carrito es el único que sabe contra qué fondo se está dibujando.
+  // Ojo: `accent` a secas se sigue usando de RELLENO (el botón), donde no hay
+  // problema de contraste porque `accentText` ya está calculado contra él.
+  const accentTexto = getReadableAccentText(accent, BG, T);
+  // El tachado se apoya en el color de texto del carrito, que ya contrasta con su
+  // fondo, en vez de un gris fijo que se pierde en los carritos oscuros.
+  const tachado = { color: MID || T, opacity: 0.75, textDecoration: "line-through" as const };
 
   // pricedLines viene del hook (una sola cuenta, la misma que el checkout que cobra):
   // ya trae la promo por producto Y las de tienda aplicadas, en el mismo orden que
   // cartItems. Acá solo se dibuja — no se recalcula nada.
 
   return (
-    <div style={{ position:"fixed", inset:0, zIndex: isPreview ? 20000 : 150, pointerEvents: cartOpen ? "auto" : "none" }}>
+    <div style={{ position:"fixed", inset:0, zIndex: isPreview ? 20000 : zIndex, pointerEvents: cartOpen ? "auto" : "none" }}>
       <div onClick={() => setCartOpen(false)} style={{ position:"absolute", inset:0, background:"rgba(10,10,10,0.55)", opacity: cartOpen ? 1 : 0, transition:"opacity 0.3s" }} />
       <div style={{ position:"absolute", top:0, right:0, bottom:0, width:"min(420px, 100vw)", background:BG, transform: cartOpen ? "translateX(0)" : "translateX(100%)", transition:"transform 0.35s cubic-bezier(.4,0,.2,1)", display:"flex", flexDirection:"column", borderLeft:`1px solid ${border}` }}>
         <div style={{ padding:"24px 24px 16px", borderBottom:`1px solid ${border}`, display:"flex", justifyContent:"space-between", alignItems:"center", flexShrink:0 }}>
@@ -53,7 +73,19 @@ export function CartDrawer({
               <p style={{ fontSize:36, marginBottom:12 }}>🛒</p>
               <p style={{ fontSize:13, lineHeight:1.8, color:T }}>Tu carrito está vacío.<br/>Explorá el catálogo.</p>
             </div>
-          ) : cartItems.map((item, idx) => (
+          ) : cartItems.map((item, idx) => {
+            // ¿Esta línea se está cobrando al precio de lista del producto? Si no
+            // —porque mandó el precio de una variante, el mayorista o un escalón por
+            // cantidad—, `comparePrice` deja de ser una referencia válida: anunciar
+            // la oferta o tachar ese número puede mostrar un "antes" MÁS BARATO que
+            // lo que se paga. Es el mismo cuidado que ya tiene el modal (CP-15).
+            // El unitario sale del motor (lineTotal + lo que ahorró la promo), no de
+            // una cuenta propia.
+            const linea = pricedLines[idx];
+            const unitario = linea && item.qty > 0 ? (linea.lineTotal + linea.savings) / item.qty : item.product.price;
+            const precioDeLista = Math.abs(unitario - item.product.price) < 0.01;
+            const enOferta = precioDeLista && (item.product.comparePrice ?? 0) > item.product.price;
+            return (
             <div key={idx} style={{ display:"flex", gap:14, padding:"16px 0", borderBottom:`1px solid ${border}` }}>
               {(() => {
                 const colorSrc = item.color
@@ -76,36 +108,61 @@ export function CartDrawer({
                     sabía si era el 3×2, el 20% o el combo, y menos si convenía sumar
                     una unidad más. Sale de `promo` que ya trae la línea del motor
                     (misma cuenta que cobra el checkout), NO de una segunda cuenta acá. */}
-                {pricedLines[idx]?.promo && (
-                  <p style={{ fontSize:11, margin:"0 0 8px", color:accent, fontWeight:700 }}>
+                {pricedLines[idx]?.promo ? (
+                  <p style={{ fontSize:11, margin:"0 0 8px", color:accentTexto, fontWeight:700 }}>
                     {pricedLines[idx].promo!.name
                       ? `${pricedLines[idx].promo!.name} · ${pricedLines[idx].promo!.label}`
                       : pricedLines[idx].promo!.label}
                   </p>
-                )}
+                ) : enOferta ? (
+                  /* La OFERTA del producto (precio anterior) no se anunciaba en
+                     ningún lado del carrito: el comprador venía de ver "$48.000
+                     antes $60.000" y acá le aparecía el precio solo, sin rastro de
+                     que el descuento se hubiera respetado. Es la promo de tienda
+                     la que tiene su propia línea arriba; esto cubre el otro caso. */
+                  <p style={{ fontSize:11, margin:"0 0 8px", color:"#dc2626", fontWeight:700 }}>
+                    Oferta · {Math.round((1 - item.product.price / item.product.comparePrice!) * 100)}% OFF
+                  </p>
+                ) : null}
                 <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
                   <div style={{ display:"flex", alignItems:"center", border:`1px solid ${border}` }}>
                     <button onClick={() => updateQty(idx, -1)} style={{ width:28, height:28, background:"none", border:"none", color:T, cursor:"pointer", fontSize:16 }}>−</button>
                     <span style={{ width:24, textAlign:"center", fontSize:13, color:T }}>{item.qty}</span>
                     <button onClick={() => updateQty(idx, 1)} style={{ width:28, height:28, background:"none", border:"none", color:T, cursor:"pointer", fontSize:16 }}>+</button>
                   </div>
-                  {pricedLines[idx]?.promoApplied ? (
-                    <div style={{ textAlign:"right" }}>
-                      <span style={{ fontSize:11, color:MID, textDecoration:"line-through", display:"block", lineHeight:1.3 }}>
-                        {fmt(pricedLines[idx].lineTotal + pricedLines[idx].savings)}
-                      </span>
-                      <span style={{ color:accent, fontWeight:700, fontSize:14 }}>
-                        {fmt(pricedLines[idx].lineTotal)}
-                      </span>
-                    </div>
-                  ) : (
-                    <span style={{ color:accent, fontWeight:700, fontSize:14 }}>{fmt(pricedLines[idx]?.lineTotal ?? 0)}</span>
-                  )}
+                  {(() => {
+                    const linea = pricedLines[idx];
+                    // Qué precio tachar: si mandó una promo de tienda, lo que la
+                    // línea valdría sin ella; si no, el precio anterior de la
+                    // oferta × cantidad. Nunca los dos: se tachan por la misma razón
+                    // y encimados parecerían dos descuentos distintos.
+                    //
+                    // `precioDeLista` es la condición que evita el mismo error que
+                    // CP-15: `comparePrice` es el precio anterior del PRODUCTO, así
+                    // que solo sirve de referencia si la línea se está cobrando a
+                    // ese precio. Si mandó el precio de una variante o el mayorista
+                    // por cantidad, el tachado puede terminar por DEBAJO de lo que
+                    // se paga — un "descuento" que en la pantalla resta plata.
+                    const antes = linea?.promoApplied
+                      ? linea.lineTotal + linea.savings
+                      : precioDeLista && (item.product.comparePrice ?? 0) > item.product.price
+                        ? item.product.comparePrice! * item.qty
+                        : null;
+                    return (
+                      <div style={{ textAlign:"right" }}>
+                        {antes != null && (
+                          <span style={{ fontSize:11, display:"block", lineHeight:1.3, ...tachado }}>{fmt(antes)}</span>
+                        )}
+                        <span style={{ color:accentTexto, fontWeight:700, fontSize:14 }}>{fmt(linea?.lineTotal ?? 0)}</span>
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
               <button onClick={() => removeFromCart(idx)} aria-label="Quitar del carrito" style={{ background:"none", border:"none", color:MID, cursor:"pointer", fontSize:18, alignSelf:"flex-start" }}>×</button>
             </div>
-          ))}
+            );
+          })}
         </div>
         {cartItems.length > 0 && (() => {
           // El ahorro ya lo sumó el motor (Σ savings de la promo por producto Y de tienda).
@@ -134,7 +191,7 @@ export function CartDrawer({
             )}
             <div style={{ display:"flex", justifyContent:"space-between", marginBottom:20 }}>
               <span style={{ fontSize:13, opacity:0.7, color:T }}>Total</span>
-              <span style={{ fontSize:22, fontWeight:700, color:accent }}>{fmt(cartTotal)}</span>
+              <span style={{ fontSize:22, fontWeight:700, color:accentTexto }}>{fmt(cartTotal)}</span>
             </div>
             {wholesaleWarnings.length > 0 && (
               <div style={{ marginBottom:14, padding:"10px 14px", background:"rgba(234,179,8,0.1)", borderLeft:"3px solid #eab308", borderRadius:"0 6px 6px 0" }}>
