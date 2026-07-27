@@ -31,7 +31,8 @@ export function CheckoutModal({
     checkoutOpen, setCheckoutOpen, checkoutStatus, setCheckoutStatus, checkoutError,
     cartItems, updateQty, buyerForm, setBuyerForm, rememberData, setRememberData,
     envioOptions, envioId, setEnvioId, pagoOptions, pagoId, setPagoId,
-    notas, setNotas, coupon, setCoupon, couponError, appliedCoupon, setAppliedCoupon,
+    notas, setNotas, coupon, setCoupon, couponError, setAppliedCoupon,
+    cuponAbierto, setCuponAbierto, cuponActivo, cuponBloqueado,
     handleApplyCoupon, couponsAllowed, cartTotal, couponDiscount, envioPrice, envioCoordinar, orderTotal,
     appliedPromos,
     canastaDisponible, donationEnabled, setDonationEnabled, donationAmount, setDonationAmount,
@@ -173,32 +174,57 @@ export function CheckoutModal({
               <textarea placeholder="Notas para la tienda" rows={3} value={notas} onChange={e => setNotas(e.target.value)}
                 style={{ ...inputStyle, marginBottom:20, resize:"vertical", fontFamily:"inherit" }} />
 
-              {couponsAllowed ? (
-                <div style={{ display:"flex", gap:0, marginBottom:28 }}>
-                  <input placeholder="CÓDIGO DE CUPÓN" value={coupon} onChange={e => setCoupon(e.target.value)}
-                    style={{ flex:1, background:S, border:`1px solid ${border}`, borderRight:"none", color:T, padding:"11px 14px", fontSize:11, letterSpacing:1, outline:"none", borderRadius:"6px 0 0 6px" }} />
-                  <button type="button" onClick={handleApplyCoupon} style={{ background:"transparent", border:`1px solid ${border}`, color:accentTexto, padding:"11px 18px", fontSize:11, letterSpacing:1, cursor:"pointer", borderRadius:"0 6px 6px 0" }}>Aplicar</button>
-                </div>
-              ) : (
-                // Una promo activa no se combina con cupones — se oculta el campo en vez
-                // de dejar tipear un código que el checkout va a ignorar igual.
-                <p style={{ fontSize:11, opacity:0.6, marginBottom:28, color:T }}>Ya tenés una promoción aplicada. No se puede sumar un cupón encima.</p>
-              )}
-              {couponError && <p style={{ fontSize:11, color:"#f87171", marginTop:-20, marginBottom:8 }}>{couponError}</p>}
-              {appliedCoupon && (
+              {/* ── CUPÓN ────────────────────────────────────────────────────────
+                  Plegado detrás de un link, como en casi todo el comercio grande.
+                  Un campo de cupón abierto le avisa al comprador que existe un
+                  descuento que él no tiene: se va a buscarlo a Google en mitad del
+                  checkout y una parte no vuelve. El que TIENE un código lo busca
+                  igual; el que no lo tiene, mejor que no se entere acá.
+
+                  Y no se esconde cuando hay una promo que no combina: al que trae
+                  el cupón en la mano, un campo que desapareció se le parece a la
+                  página rota. Se muestra y se le dice por qué no entra.  */}
+              {cuponActivo ? (
                 <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12, padding:"10px 12px", background:`${accent}15`, border:`1px solid ${accent}40`, borderRadius:6 }}>
                   <span style={{ display:"flex", alignItems:"center", gap:8 }}>
                     <span style={{ fontSize:17, lineHeight:1 }}>🎉</span>
                     <span style={{ display:"flex", flexDirection:"column", lineHeight:1.25 }}>
                       <span style={{ fontSize:13, color:accentTexto, fontWeight:800, letterSpacing:0.3 }}>
-                        {appliedCoupon.discountValue
-                          ? (appliedCoupon.discountType === "percentage" ? `¡${appliedCoupon.discountValue}% OFF!` : `¡${fmt(appliedCoupon.discountValue)} OFF!`)
+                        {cuponActivo.discountValue
+                          ? (cuponActivo.discountType === "percentage" ? `¡${cuponActivo.discountValue}% OFF!` : `¡${fmt(cuponActivo.discountValue)} OFF!`)
                           : "¡Cupón aplicado!"}
                       </span>
-                      <span style={{ fontSize:10, color:MID, letterSpacing:0.5 }}>Cupón {appliedCoupon.code}</span>
+                      <span style={{ fontSize:10, color:MID, letterSpacing:0.5 }}>Cupón {cuponActivo.code}</span>
                     </span>
                   </span>
                   <button type="button" onClick={() => setAppliedCoupon(null)} aria-label="Quitar cupón" style={{ background:"none", border:"none", color:MID, cursor:"pointer", fontSize:14 }}>✕</button>
+                </div>
+              ) : cuponBloqueado ? (
+                // El cupón sigue guardado: si el carrito cambia y la promo deja de
+                // aplicar, vuelve solo. Por eso se avisa en vez de borrarlo.
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", gap:10, marginBottom:12, padding:"10px 12px", background:"rgba(217,119,6,0.10)", border:"1px solid rgba(217,119,6,0.30)", borderRadius:6 }}>
+                  <span style={{ display:"flex", flexDirection:"column", lineHeight:1.3 }}>
+                    <span style={{ fontSize:12.5, color:"#d97706", fontWeight:700 }}>El cupón {cuponBloqueado.code} no se está aplicando</span>
+                    <span style={{ fontSize:10.5, color:MID }}>La promoción de tu carrito no se combina con cupones.</span>
+                  </span>
+                  <button type="button" onClick={() => setAppliedCoupon(null)} aria-label="Quitar cupón" style={{ background:"none", border:"none", color:MID, cursor:"pointer", fontSize:14, flexShrink:0 }}>✕</button>
+                </div>
+              ) : !cuponAbierto ? (
+                <button type="button" onClick={() => setCuponAbierto(true)}
+                  style={{ display:"block", background:"none", border:"none", padding:0, marginBottom:28, color:accentTexto, fontSize:12, cursor:"pointer", textDecoration:"underline", textUnderlineOffset:3 }}>
+                  ¿Tenés un código de descuento?
+                </button>
+              ) : (
+                <div style={{ marginBottom:28 }}>
+                  <div style={{ display:"flex", gap:0 }}>
+                    <input placeholder="CÓDIGO DE CUPÓN" value={coupon} onChange={e => setCoupon(e.target.value)}
+                      style={{ flex:1, minWidth:0, background:S, border:`1px solid ${border}`, borderRight:"none", color:T, padding:"11px 14px", fontSize:11, letterSpacing:1, outline:"none", borderRadius:"6px 0 0 6px" }} />
+                    <button type="button" onClick={handleApplyCoupon} style={{ background:"transparent", border:`1px solid ${border}`, color:accentTexto, padding:"11px 18px", fontSize:11, letterSpacing:1, cursor:"pointer", borderRadius:"0 6px 6px 0", flexShrink:0 }}>Aplicar</button>
+                  </div>
+                  {!couponsAllowed && (
+                    <p style={{ fontSize:11, opacity:0.75, margin:"8px 0 0", color:T }}>Tenés una promoción aplicada que no se combina con cupones.</p>
+                  )}
+                  {couponError && <p style={{ fontSize:11, color:"#f87171", margin:"8px 0 0" }}>{couponError}</p>}
                 </div>
               )}
 
@@ -238,7 +264,7 @@ export function CheckoutModal({
                 {couponDiscount > 0 && (
                   <div style={{ display:"flex", justifyContent:"space-between", marginBottom:8 }}>
                     <span style={{ fontSize:13, color:accentTexto }}>
-                      Descuento cupón{appliedCoupon?.discountType === "percentage" && appliedCoupon?.discountValue ? ` (${appliedCoupon.discountValue}%)` : ""}
+                      Descuento cupón{cuponActivo?.discountType === "percentage" && cuponActivo?.discountValue ? ` (${cuponActivo.discountValue}%)` : ""}
                     </span>
                     <span style={{ fontSize:13, color:accentTexto }}>-{fmt(couponDiscount)}</span>
                   </div>

@@ -409,7 +409,8 @@ function ProductosPageInner() {
     selectedSize, setSelectedSize, selectedColor, setSelectedColor, qty, setQty,
     checkoutOpen, setCheckoutOpen, checkoutStatus, checkoutError,
     envioId, setEnvioId, pagoId, setPagoId,
-    coupon, setCoupon, couponError, appliedCoupon, setAppliedCoupon,
+    coupon, setCoupon, couponError, setAppliedCoupon,
+    cuponAbierto, setCuponAbierto, cuponActivo, cuponBloqueado,
     notas, setNotas, rememberData, setRememberData, buyerForm, setBuyerForm,
     toastMsg, openModal, addToCart,
     // Esta pantalla no los usaba: ni el talle ni el color avisaban que estaban
@@ -2536,23 +2537,41 @@ function ProductosPageInner() {
                     style={{ display:"block", width:"100%", marginBottom:18, background:inputBg, border:`1px solid ${inputBorder}`, color:T, padding:"10px 13px", fontSize:13, outline:"none", resize:"vertical", fontFamily:sans, boxSizing:"border-box" as const }}
                     onFocus={e => (e.target.style.borderColor=G)} onBlur={e => (e.target.style.borderColor=inputBorder)}/>
 
-                  {/* Cupón — oculto si una promo activa no se combina con cupones */}
-                  {couponsAllowed ? (
-                  <div style={{ display:"flex", marginBottom:6 }}>
-                    <input placeholder="CÓDIGO DE CUPÓN" value={coupon} onChange={e => setCoupon(e.target.value)}
-                      style={{ flex:1, background:inputBg, border:`1px solid ${inputBorder}`, borderRight:"none", color:T, padding:"10px 13px", fontSize:11, letterSpacing:2, outline:"none" }}
-                      onFocus={e => (e.target.style.borderColor=G)} onBlur={e => (e.target.style.borderColor=inputBorder)}/>
-                    <button type="button" onClick={handleApplyCoupon}
-                      style={{ background:"transparent", border:`1px solid ${inputBorder}`, color:GT, padding:"10px 16px", fontSize:11, letterSpacing:2, cursor:"pointer" }}>Aplicar</button>
-                  </div>
-                  ) : (
-                    <p style={{ fontSize:11, opacity:0.6, marginBottom:6, color:T }}>Ya tenés una promoción aplicada. No se puede sumar un cupón encima.</p>
-                  )}
-                  {couponError && <p style={{ fontSize:11, color:"#f87171", marginBottom:8 }}>{couponError}</p>}
-                  {appliedCoupon && (
+                  {/* Cupón — mismo criterio que el checkout compartido (CheckoutModal):
+                      plegado detrás de un link para no mandar al comprador a buscar
+                      códigos en Google en mitad de la compra, y visible aunque haya
+                      una promo que no combine, avisando por qué no entra. */}
+                  {cuponActivo ? (
                     <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12, padding:"8px 12px", background:`${G}15`, border:`1px solid ${G}40` }}>
-                      <span style={{ fontSize:12, color:GT }}>Cupón {appliedCoupon.code} aplicado</span>
-                      <button type="button" onClick={() => setAppliedCoupon(null)} style={{ background:"none", border:"none", color:MID, cursor:"pointer" }}>✕</button>
+                      <span style={{ fontSize:12, color:GT }}>Cupón {cuponActivo.code} aplicado</span>
+                      <button type="button" onClick={() => setAppliedCoupon(null)} aria-label="Quitar cupón" style={{ background:"none", border:"none", color:MID, cursor:"pointer" }}>✕</button>
+                    </div>
+                  ) : cuponBloqueado ? (
+                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", gap:10, marginBottom:12, padding:"8px 12px", background:"rgba(217,119,6,0.10)", border:"1px solid rgba(217,119,6,0.30)" }}>
+                      <span style={{ display:"flex", flexDirection:"column", lineHeight:1.3 }}>
+                        <span style={{ fontSize:12, color:"#d97706", fontWeight:700 }}>El cupón {cuponBloqueado.code} no se está aplicando</span>
+                        <span style={{ fontSize:10.5, color:MID }}>La promoción de tu carrito no se combina con cupones.</span>
+                      </span>
+                      <button type="button" onClick={() => setAppliedCoupon(null)} aria-label="Quitar cupón" style={{ background:"none", border:"none", color:MID, cursor:"pointer", flexShrink:0 }}>✕</button>
+                    </div>
+                  ) : !cuponAbierto ? (
+                    <button type="button" onClick={() => setCuponAbierto(true)}
+                      style={{ display:"block", background:"none", border:"none", padding:0, marginBottom:12, color:GT, fontSize:12, cursor:"pointer", textDecoration:"underline", textUnderlineOffset:3 }}>
+                      ¿Tenés un código de descuento?
+                    </button>
+                  ) : (
+                    <div style={{ marginBottom:12 }}>
+                      <div style={{ display:"flex" }}>
+                        <input placeholder="CÓDIGO DE CUPÓN" value={coupon} onChange={e => setCoupon(e.target.value)}
+                          style={{ flex:1, minWidth:0, background:inputBg, border:`1px solid ${inputBorder}`, borderRight:"none", color:T, padding:"10px 13px", fontSize:11, letterSpacing:2, outline:"none" }}
+                          onFocus={e => (e.target.style.borderColor=G)} onBlur={e => (e.target.style.borderColor=inputBorder)}/>
+                        <button type="button" onClick={handleApplyCoupon}
+                          style={{ background:"transparent", border:`1px solid ${inputBorder}`, color:GT, padding:"10px 16px", fontSize:11, letterSpacing:2, cursor:"pointer", flexShrink:0 }}>Aplicar</button>
+                      </div>
+                      {!couponsAllowed && (
+                        <p style={{ fontSize:11, opacity:0.75, margin:"8px 0 0", color:T }}>Tenés una promoción aplicada que no se combina con cupones.</p>
+                      )}
+                      {couponError && <p style={{ fontSize:11, color:"#f87171", margin:"8px 0 0" }}>{couponError}</p>}
                     </div>
                   )}
 

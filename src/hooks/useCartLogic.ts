@@ -76,6 +76,9 @@ export function useCartLogic({ products, promotions = [], storeId, affiliateId =
   const [pagoId,         setPagoId]         = useState("transferencia");
   const [coupon,         setCoupon]         = useState("");
   const [couponError,    setCouponError]    = useState("");
+  // El campo de cupón arranca plegado detrás de un link (ver CheckoutModal). Vive
+  // acá y no en cada checkout para que el listado y los templates se comporten igual.
+  const [cuponAbierto,   setCuponAbierto]   = useState(false);
   const [appliedCoupon,  setAppliedCoupon]  = useState<{ id: string; code: string; discount: number; discountType?: string; discountValue?: number } | null>(null);
   const [notas,          setNotas]          = useState("");
   const [rememberData,   setRememberData]   = useState(false);
@@ -432,7 +435,20 @@ export function useCartLogic({ products, promotions = [], storeId, affiliateId =
   const envioCoordinar = freeShipping ? false : (selectedEnvio?.liveQuote ? selectedLiveQuotePrice == null : (selectedEnvio?.coordinar ?? false));
   // El cupón no descuenta si una promo activa no combina con cupones — el checkout
   // hace lo mismo, así que el total mostrado coincide con el cobrado.
-  const couponDiscount = couponsAllowed ? (appliedCoupon?.discount ?? 0) : 0;
+  //
+  // Y eso puede cambiar SIN que el comprador toque el cupón: lo aplica con 1 unidad
+  // en el carrito, agrega 2 más, se activa un 3×2 no combinable y el cupón deja de
+  // valer. Antes `appliedCoupon` seguía en pie y el checkout mostraba a la vez el
+  // cartel de "no se puede sumar un cupón" y el recuadro verde "¡Cupón aplicado!".
+  // La plata estaba bien (el descuento ya era 0); lo que se contradecía era la
+  // pantalla.
+  //
+  // Se DERIVA en vez de borrar el cupón guardado: si vuelve a sacar la unidad, vale
+  // otra vez sin tener que tipearlo. `cuponBloqueado` es ese mismo cupón cuando no
+  // entra, para poder DECIRLO en pantalla en lugar de que desaparezca solo.
+  const cuponActivo    = couponsAllowed ? appliedCoupon : null;
+  const cuponBloqueado = couponsAllowed ? null : appliedCoupon;
+  const couponDiscount = cuponActivo?.discount ?? 0;
   const orderTotal     = cartTotal + envioPrice - couponDiscount;
 
   const searchResults = searchQuery.trim().length > 0
@@ -576,7 +592,10 @@ export function useCartLogic({ products, promotions = [], storeId, affiliateId =
       },
       shippingMethod:  envioId,
       paymentProvider: pagoId,
-      couponId:        appliedCoupon?.id ?? null,
+      // El bloqueado no se manda: el servidor lo ignoraría igual (chequea
+      // `pricing.couponsAllowed`), pero así el pedido no queda con un cupón atado
+      // que no descontó nada.
+      couponId:        cuponActivo?.id ?? null,
       donationAmount:  donationEnabled ? donationAmount : undefined,
     });
     if (!res.ok) { setCheckoutStatus("idle"); setCheckoutError(res.error ?? "Error al procesar"); return; }
@@ -596,6 +615,7 @@ export function useCartLogic({ products, promotions = [], storeId, affiliateId =
       }
       setCartItems([]);
       setAppliedCoupon(null);
+      setCuponAbierto(false);
       try { localStorage.removeItem("storefront_cart"); } catch {}
       window.location.href = mpData.initPoint;
       return;
@@ -603,6 +623,7 @@ export function useCartLogic({ products, promotions = [], storeId, affiliateId =
 
     setCartItems([]);
     setAppliedCoupon(null);
+    setCuponAbierto(false);
     try { localStorage.removeItem("storefront_cart"); } catch {}
 
     // Pago por transferencia: no hay redirección a MP para la compra. Si
@@ -660,6 +681,7 @@ export function useCartLogic({ products, promotions = [], storeId, affiliateId =
     checkoutOpen, setCheckoutOpen, checkoutStatus, setCheckoutStatus, checkoutError,
     envioId, setEnvioId, pagoId, setPagoId,
     coupon, setCoupon, couponError, appliedCoupon, setAppliedCoupon,
+    cuponAbierto, setCuponAbierto,
     notas, setNotas, rememberData, setRememberData,
     buyerForm, setBuyerForm,
     searchOpen, setSearchOpen, searchQuery, setSearchQuery,
@@ -672,6 +694,9 @@ export function useCartLogic({ products, promotions = [], storeId, affiliateId =
     cartTotal, cartCount, envioPrice, envioCoordinar, envioOptions, couponDiscount, orderTotal,
     // Promos de tienda: líneas ya con promo, ahorro total, envío gratis y gate de cupón.
     pricedLines, cartPromoSavings, freeShipping, couponsAllowed, freeShippingGoal,
+    // El cupón guardado, partido en el que descuenta y el que quedó bloqueado por
+    // una promo. Los checkouts pintan uno u otro, nunca los dos.
+    cuponActivo, cuponBloqueado,
     // Qué promos ganaron y cuánto aportó cada una — para NOMBRARLAS en el checkout
     // (F6-C6) con la misma lista que después sale en el email del pedido.
     appliedPromos: cartPricing.appliedPromos,

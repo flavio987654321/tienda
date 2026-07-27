@@ -418,7 +418,12 @@ export function priceCart(items: PricingItem[], opts?: PriceCartOptions): CartPr
     if (w?.type !== "N_PAY_M") continue;
     // La clave incluye la promo: dos líneas del mismo producto siempre ganan con
     // la misma promo, pero agrupar por las dos cosas lo deja a prueba de futuro.
-    const key = `${items[i].productId} ${w.minQty} ${w.payQty}`;
+    //
+    // El separador va ESCRITO como escape y no como el byte NUL crudo, que es lo que
+    // había acá: dos NUL literales alcanzaban para que ripgrep clasificara este
+    // archivo como binario y lo SALTEARA en todas las búsquedas. Grepear el motor de
+    // precios devolvía "sin resultados" con el texto delante de los ojos.
+    const key = `${items[i].productId}\u0000${w.minQty}\u0000${w.payQty}`;
     const arr = nxmGroups.get(key);
     if (arr) arr.push(i); else nxmGroups.set(key, [i]);
   }
