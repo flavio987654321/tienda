@@ -857,6 +857,12 @@ export default function ChicParis() {
            El corte del texto ya avisa que hay más abajo. */
         .cp-sin-barra::-webkit-scrollbar { display:none }
         .cp-sin-barra { scrollbar-width:none; -ms-overflow-style:none }
+        /* Flechas de Ofertas: se apoyan sobre la foto hasta que hay lugar para las 44px
+           de la flecha a cada lado de la grilla. La grilla mide 768 (2×360 + 48) y el
+           contenedor es el ancho menos 80 de padding, así que el margen libre de cada
+           lado es (ancho − 80 − 768) / 2 y recién llega a 44 en 936px. Abajo de eso,
+           puntitos. */
+        @media (max-width:940px) { .cp-flecha-of { display:none } }
         .cp-img { transition:transform 0.45s ease; }
         .cp-overlay { opacity:0; transition:opacity 0.3s; }
         @media (hover:hover) and (pointer:fine) {
@@ -1415,7 +1421,13 @@ export default function ChicParis() {
                   <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "clamp(26px,3.5vw,42px)", fontWeight: 300, fontStyle: "italic", margin: 0, color: ofertasText }}><EditableZone field="ofertasTitle" label="Título Ofertas">Ofertas</EditableZone></h2>
                 </div>
                 <div style={{ position: "relative" }}>
-                  <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2, 360px)", justifyContent: "center", gap: isMobile ? 32 : 48 }}>
+                  {/* minmax(0, 360px) y no 360px pelado. Con el ancho fijo, entre 768 y
+                      848px de pantalla el bloque se desbordaba: `isMobile` corta en 768,
+                      así que a 768 ya se dibuja en dos columnas, y dos columnas de 360
+                      más 48 de gap piden 768px cuando el contenedor mide 688 (768 menos
+                      los 40 de padding de cada lado). 80px de más, justo en el ancho de
+                      una tablet vertical. Ahora las columnas se achican hasta entrar. */}
+                  <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2, minmax(0, 360px))", justifyContent: "center", gap: isMobile ? 32 : 48 }}>
                     {pageItems.map(p => {
                       // El círculo del % tiene que decir el MISMO descuento que el precio
                       // de al lado. Si hay una promo de tienda vigente manda ella; si no,
@@ -1466,15 +1478,20 @@ export default function ChicParis() {
                       y la foto arranca pegada al borde izquierdo, así que la flecha
                       quedaba justo encima de la prenda. Es el mismo caso que ya
                       arreglamos en el hero. Abajo están los puntitos, que en celular
-                      son el control que se usa. */}
+                      son el control que se usa.
+                      En tablet pasa lo mismo y el `!isMobile` no alcanza: hasta 936px
+                      las dos columnas no dejan los 44px que mide la flecha, y vuelve a
+                      caer sobre la foto. Eso lo corta el CSS (.cp-flecha-of), que puede
+                      mirar el ancho real; `isMobile` solo sabe de 768. Los puntitos
+                      siguen ahí. */}
                   {!isMobile && totalPages > 1 && page > 0 && (
-                    <button onClick={() => setOfertasPage(p => p - 1)} aria-label="Anterior"
+                    <button onClick={() => setOfertasPage(p => p - 1)} aria-label="Anterior" className="cp-flecha-of"
                       style={{ position: "absolute", left: 0, top: "50%", transform: "translateY(-50%)", background: "#fff", border: `1px solid ${ACC}`, color: ACC, width: 44, height: 44, borderRadius: "50%", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 10 }}>
                       <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
                     </button>
                   )}
                   {!isMobile && totalPages > 1 && page < totalPages - 1 && (
-                    <button onClick={() => setOfertasPage(p => p + 1)} aria-label="Siguiente"
+                    <button onClick={() => setOfertasPage(p => p + 1)} aria-label="Siguiente" className="cp-flecha-of"
                       style={{ position: "absolute", right: 0, top: "50%", transform: "translateY(-50%)", background: "#fff", border: `1px solid ${ACC}`, color: ACC, width: 44, height: 44, borderRadius: "50%", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 10 }}>
                       <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg>
                     </button>
