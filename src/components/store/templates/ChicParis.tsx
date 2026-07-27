@@ -1420,6 +1420,12 @@ export default function ChicParis() {
                       // El círculo del % tiene que decir el MISMO descuento que el precio
                       // de al lado. Si hay una promo de tienda vigente manda ella; si no,
                       // el % sale de la oferta del producto (comparePrice).
+                      //
+                      // El círculo y el chip de abajo NO dicen lo mismo: el círculo dice
+                      // cuánto baja el precio de ESTE producto, el chip dice cuál promo lo
+                      // baja. Un descuento de $10.000 es -20% en una remera de $50.000 y
+                      // -10% en una campera de $100.000 — con el nombre de la promo solo,
+                      // el comprador no sabe cuánto se ahorra acá.
                       const promoP = resolveProductPromo(p, promotions);
                       const pct = promoP.hasPriceDrop
                         ? promoP.pctOff
@@ -1428,15 +1434,29 @@ export default function ChicParis() {
                         <div key={p.id} onClick={() => openModal(p)} className="cp-zoom" style={{ cursor: "pointer", display: "flex", gap: 20, alignItems: "center" }}>
                           <div style={{ position: "relative", width: 140, height: 175, flexShrink: 0, background: "#f5f5f5", overflow: "hidden", borderRadius: 4 }}>
                             {p.images[0] && <FadeImage src={p.images[0]} alt={p.name} fill sizes="140px" className="cp-zoom-img" style={{ objectFit: "cover" }} />}
+                            {/* Adentro de la foto, no a caballo del borde. El contenedor
+                                recorta (ese `overflow:hidden` es lo que redondea la
+                                imagen), así que con top/right negativos el círculo
+                                perdía la esquina y se veía como un cuadrado con una
+                                punta comida. */}
                             {pct && (
-                              <span style={{ position: "absolute", top: -8, right: -8, width: 42, height: 42, borderRadius: "50%", background: ACC, color: accentText, fontSize: 11, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", textAlign: "center", lineHeight: 1.1 }}>-{pct}%</span>
+                              <span style={{ position: "absolute", top: 8, right: 8, width: 40, height: 40, borderRadius: "50%", background: ACC, color: accentText, fontSize: 11, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", textAlign: "center", lineHeight: 1.1 }}>-{pct}%</span>
                             )}
                           </div>
-                          <div>
+                          {/* flex:1 — la columna de la grilla mide 360px fijos y el texto
+                              ocupaba lo que medía, dejando un vacío a la derecha. */}
+                          <div style={{ flex: 1, minWidth: 0 }}>
                             <p style={{ margin: "0 0 8px", fontSize: 16, fontFamily: "'Playfair Display', Georgia, serif", fontStyle: "italic", color: ofertasText }}>{p.name}</p>
                             <PromoPrice product={p} promotions={promotions} fmt={fmt} accent={accentSobre(ofertasBg, ofertasText)} sobre={ofertasText}
                               priceSize={16} compareSize={13} ocultarPrecios={ocultarPrecios} consultaLabel="Consultá"
                               gap={10} align="center" />
+                            {/* Este era el ÚNICO bloque de la tienda que no decía qué promo
+                                era: todos los demás llaman a `avisoPromo` y este se había
+                                escrito su propio círculo a mano. Va en modo "chip" y no
+                                "foto" porque acá la foto mide 140px y el tag de una promo
+                                con nombre largo ("SAN VALENTÍN · $10.000 OFF") la taparía
+                                entera. */}
+                            {avisoPromo(p, "chip")}
                           </div>
                         </div>
                       );
