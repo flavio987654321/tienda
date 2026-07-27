@@ -67,6 +67,48 @@ export function getContrastColor(color: string): "light" | "dark" {
   return lum > 0.5 ? "dark" : "light";
 }
 
+// ── Texto ARRIBA de una superficie pintada ───────────────────────────────────
+// Devuelve el que MÁS contraste da, medido con el ratio de WCAG, en vez de
+// decidirlo por un umbral de luminosidad como getContrastColor.
+//
+// `luminancia` de acá arriba promedia los canales tal cual vienen, sin deshacer
+// la curva gamma del sRGB. Para grises alcanza, pero en colores saturados se
+// desvía feo: el naranja #ea580c da 0.445 —o sea "poné texto blanco"— cuando su
+// luminancia real es 0.245 y el blanco encima le da 3.56 de contraste contra los
+// 5.90 del negro. El texto quedaba en el color equivocado justo en los acentos
+// más elegidos: naranjas, dorados, amarillos, verdes fuertes.
+//
+// Ojo: NO cambiar getContrastColor por esto. Esa función también se usa para
+// preguntar "¿estos dos colores están en veredas opuestas?" (getReadableAccentText),
+// que es otra pregunta y ahí el corte en el medio es el que corresponde.
+export function textoSobre(fondo: string): "#fff" | "#111" {
+  return contrasteWCAG(fondo, "#ffffff") >= contrasteWCAG(fondo, "#111111") ? "#fff" : "#111";
+}
+
+/** Ratio de contraste WCAG entre dos colores: (L1 + 0.05) / (L2 + 0.05). */
+export function contrasteWCAG(a: string, b: string): number {
+  const la = luminanciaReal(a);
+  const lb = luminanciaReal(b);
+  if (la == null || lb == null) return 1;
+  return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
+}
+
+/** Luminancia relativa de WCAG: la de verdad, deshaciendo la curva del sRGB. */
+function luminanciaReal(color: string): number | null {
+  const hex = colorRepresentativo(color);
+  if (!hex) return null;
+  let full = hex.startsWith("#") ? hex : "#" + hex;
+  if (full.length === 4) full = "#" + full[1] + full[1] + full[2] + full[2] + full[3] + full[3];
+  if (full.length < 7) return null;
+  const canal = (c: number) => {
+    const s = c / 255;
+    return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+  };
+  return 0.2126 * canal(parseInt(full.slice(1, 3), 16))
+       + 0.7152 * canal(parseInt(full.slice(3, 5), 16))
+       + 0.0722 * canal(parseInt(full.slice(5, 7), 16));
+}
+
 // Para usar el acento como color de TEXTO sobre un fondo (precio, nombre de
 // marca, etc.) — no como fondo de botón, eso ya lo resuelve getContrastColor
 // del otro lado. Si el acento elegido casi no se distingue de ese fondo (ej.

@@ -9,7 +9,7 @@ import { getDemoPool, fillTargetFor, parsePromotions } from "@/hooks/useStorefro
 import type { ActivePromotion } from "@/lib/pricing";
 import { ENVIO_OPTIONS, PAGO_OPTIONS } from "@/components/store/shared/cartTypes";
 import { useTouchSwipe } from "@/hooks/useTouchSwipe";
-import { getContrastColor, getReadableAccentText, getReadableAccentFill } from "@/contexts/EditContext";
+import { getContrastColor, getReadableAccentText, getReadableAccentFill, textoSobre } from "@/contexts/EditContext";
 import { colorToSwatch } from "@/lib/colorSwatch";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
 import { OfferBadge } from "@/components/store/OfferBadge";
@@ -838,7 +838,12 @@ function ProductosPageInner() {
   // Texto blanco/negro sobre fondos pintados con el acento (G): se calcula según
   // el color real elegido, no según si el template en sí es claro u oscuro —
   // así un acento muy claro en un template claro sigue siendo legible.
-  const accentDark = getContrastColor(G) === "dark";
+  // El nombre engaña: no responde "¿el acento es oscuro?" sino "¿el texto que va
+  // ARRIBA del acento tiene que ser oscuro?". Se mide con el contraste real de
+  // WCAG y no con el umbral de luminosidad de getContrastColor, que en colores
+  // saturados se equivoca: un naranja #ea580c pedía texto blanco (3.56 de
+  // contraste) cuando el negro le daba 5.90.
+  const accentDark = textoSobre(G) === "#111";
   // Para usar G como color de TEXTO (precio, marca, etc.) en vez de fondo de
   // botón: si el acento elegido casi no se distingue del fondo de la página,
   // caemos al color de texto normal del tema en vez de dejarlo invisible.
@@ -1125,7 +1130,7 @@ function ProductosPageInner() {
                 <div style={{ display:"flex", alignItems:"center" }}>
                   <button onClick={() => changeCategory(cat)}
                     style={{ flex:1, textAlign:"left", background:"none", border:"none", margin:0, padding:"7px 0", fontSize:12.5,
-                      fontWeight: isActive ? 700 : 500, color: isActive ? G : T, cursor:"pointer", letterSpacing:0.2 }}>
+                      fontWeight: isActive ? 700 : 500, color: isActive ? GT : T, cursor:"pointer", letterSpacing:0.2 }}>
                     {cat}
                   </button>
                   {subcats.length > 0 && (
@@ -1139,7 +1144,7 @@ function ProductosPageInner() {
                   <div style={{ display:"flex", flexDirection:"column", gap:1, paddingLeft:14, marginBottom:4 }}>
                     <button onClick={() => changeCategory(cat)}
                       style={{ textAlign:"left", background:"none", border:"none", padding:"5px 0", fontSize:11.5,
-                        color: !activeSubcategory && isActive ? G : MID, cursor:"pointer" }}>
+                        color: !activeSubcategory && isActive ? GT : MID, cursor:"pointer" }}>
                       Todos en {cat}
                     </button>
                     {subcats.map(sub => (
@@ -1369,7 +1374,13 @@ function ProductosPageInner() {
             tabStyle === "pill"
               ? { background: active ? G : "rgba(44,34,24,0.06)", color: active ? (accentDark?"#000":"#fff") : T, border:`1px solid ${active ? G : "rgba(44,34,24,0.15)"}`, borderRadius:999, padding:"9px 18px", fontSize:12, fontWeight:600, cursor:"pointer", whiteSpace:"nowrap" as const, transition:"background 0.2s, border-color 0.2s" }
               : tabStyle === "underline"
-              ? { background:"none", color: active ? G : T, border:"none", borderBottom:`2px solid ${active ? G : "transparent"}`, padding:"9px 4px", fontSize:12, fontWeight:600, cursor:"pointer", whiteSpace:"nowrap" as const, transition:"border-color 0.2s, color 0.2s" }
+              // El estilo "underline" no pinta fondo: el acento se usa como TEXTO,
+              // así que va GT y no G crudo. Con G se volvía invisible cuando el
+              // acento se parecía al fondo de la página — un acento #fafafa dejaba
+              // el filtro elegido en blanco sobre blanco. La rayita de abajo es
+              // superficie, no texto, y por eso usa chipBg, que se cae al color del
+              // tema recién cuando ni como línea se distingue.
+              ? { background:"none", color: active ? GT : T, border:"none", borderBottom:`2px solid ${active ? chipBg : "transparent"}`, padding:"9px 4px", fontSize:12, fontWeight:600, cursor:"pointer", whiteSpace:"nowrap" as const, transition:"border-color 0.2s, color 0.2s" }
               : tabStyle === "brutalist"
               ? { background: active ? G : "transparent", color: active ? (accentDark?"#000":"#fff") : T, border:`2px solid ${active ? G : border}`, boxShadow: active ? `3px 3px 0 ${G}` : "none", padding:"9px 16px", fontSize:12, fontWeight:800, cursor:"pointer", whiteSpace:"nowrap" as const, transition:"border-color 0.15s, box-shadow 0.15s" }
               : { background: active ? G : "none", color: active ? (accentDark?"#000":"#fff") : T, border:`1px solid ${active ? G : border}`, padding:"10px 16px", fontSize:12, fontWeight:600, cursor:"pointer", whiteSpace:"nowrap" as const };
@@ -1693,7 +1704,7 @@ function ProductosPageInner() {
                   const tabWrapperStyle: React.CSSProperties = tabStyle === "pill"
                     ? { display:"flex", alignItems:"stretch", border:`1px solid ${isActive ? G : border}`, borderRadius:999, overflow:"hidden", transition:"border-color 0.2s" }
                     : tabStyle === "underline"
-                    ? { display:"flex", alignItems:"stretch", border:"none", borderBottom:`2px solid ${isActive ? G : "transparent"}`, paddingBottom:8, transition:"border-color 0.2s" }
+                    ? { display:"flex", alignItems:"stretch", border:"none", borderBottom:`2px solid ${isActive ? chipBg : "transparent"}`, paddingBottom:8, transition:"border-color 0.2s" }
                     : tabStyle === "brutalist"
                     ? { display:"flex", alignItems:"stretch", border:`2px solid ${isActive ? G : border}`, boxShadow: isActive ? `3px 3px 0 ${G}` : "none", transition:"border-color 0.15s, box-shadow 0.15s" }
                     : { display:"flex", alignItems:"stretch", border:`1px solid ${isActive ? G : border}`, transition:"border-color 0.2s" };
@@ -1701,7 +1712,7 @@ function ProductosPageInner() {
                   const tabBtnStyle: React.CSSProperties = tabStyle === "pill"
                     ? { background: isActive ? G : "transparent", color: isActive ? (accentDark?"#000":"#fff") : T, border:"none", padding:"8px 18px", fontSize:11, letterSpacing:1, cursor:"pointer", fontWeight:600, textTransform:"uppercase", whiteSpace:"nowrap" as const, transition:"background 0.2s, color 0.2s" }
                     : tabStyle === "underline"
-                    ? { background:"none", color: isActive ? G : T, border:"none", padding:"8px 0", fontSize:12, letterSpacing:2, cursor:"pointer", fontWeight: isActive ? 700 : 400, textTransform:"uppercase", whiteSpace:"nowrap" as const, transition:"color 0.2s, font-weight 0.15s", fontFamily:serif }
+                    ? { background:"none", color: isActive ? GT : T, border:"none", padding:"8px 0", fontSize:12, letterSpacing:2, cursor:"pointer", fontWeight: isActive ? 700 : 400, textTransform:"uppercase", whiteSpace:"nowrap" as const, transition:"color 0.2s, font-weight 0.15s", fontFamily:serif }
                     : tabStyle === "brutalist"
                     ? { background: isActive ? G : "transparent", color: isActive ? (accentDark?"#000":"#fff") : T, border:"none", padding:"9px 18px", fontSize:11, fontWeight:900, letterSpacing:1, cursor:"pointer", textTransform:"uppercase", whiteSpace:"nowrap" as const }
                     : { background: isActive ? G : "transparent", color: isActive ? (accentDark?"#000":"#fff") : T, border:"none", padding:"9px 20px", fontSize:11, letterSpacing:2, cursor:"pointer", fontWeight:600, textTransform:"uppercase", whiteSpace:"nowrap" as const, fontFamily:serif, transition:"all 0.2s" };
