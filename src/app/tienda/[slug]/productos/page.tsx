@@ -975,7 +975,7 @@ function ProductosPageInner() {
             const hasCardOffer = !!product.comparePrice && product.comparePrice > product.price;
             const ofertaBadge = (() => {
               // PROMOCIÓN de tienda → tag rectangular naranja con el beneficio ("20% OFF", "3×2", "Envío gratis").
-              if (cardPromo.primaryPromo) return <PromoTag label={describePromo(cardPromo.primaryPromo).headline} size="sm" />;
+              if (cardPromo.primaryPromo) return <PromoTag tipo={cardPromo.primaryPromo.type} label={describePromo(cardPromo.primaryPromo).headline} size="sm" />;
               // OFERTA del producto → badge rojo (precio anterior tachado del propio producto).
               if (hasCardOffer || product.offerBadge) return <OfferBadge badge={product.offerBadge ?? null} pct={hasCardOffer ? discountPercent(product.price, product.comparePrice) : null} size="sm" />;
               return null;
@@ -1838,7 +1838,7 @@ function ProductosPageInner() {
                   // La PROMOCIÓN de tienda se muestra como tag rectangular (naranja) — distinta
                   // de la OFERTA del producto (badge rojo), para que se distingan de un vistazo.
                   if (modalPromo.primaryPromo) {
-                    return <PromoTag label={describePromo(modalPromo.primaryPromo).headline} />;
+                    return <PromoTag tipo={modalPromo.primaryPromo.type} label={describePromo(modalPromo.primaryPromo).headline} />;
                   }
                   const hasOffer = !variantPrice && !!modalProduct.comparePrice && modalProduct.comparePrice > modalProduct.price;
                   if (hasOffer || modalProduct.offerBadge) return <OfferBadge badge={modalProduct.offerBadge ?? null} pct={hasOffer ? discountPercent(modalProduct.price, modalProduct.comparePrice) : null} size="md" />;
@@ -2238,7 +2238,7 @@ function ProductosPageInner() {
                           <img src={p.images[0] ?? ""} alt={p.name} style={{ width:"100%", aspectRatio:"3/4", objectFit:"cover", display:"block" }} onError={e => { e.currentTarget.style.opacity="0"; }} />
                           {(() => {
                             const pr = resolveProductPromo(p, promotions);
-                            if (pr.primaryPromo) return <PromoTag label={describePromo(pr.primaryPromo).headline} size="sm" />;
+                            if (pr.primaryPromo) return <PromoTag tipo={pr.primaryPromo.type} label={describePromo(pr.primaryPromo).headline} size="sm" />;
                             const enOferta = !!p.comparePrice && p.comparePrice > p.price;
                             if (!enOferta && !p.offerBadge) return null;
                             return <OfferBadge badge={p.offerBadge ?? null} pct={enOferta ? discountPercent(p.price, p.comparePrice) : null} size="sm" />;

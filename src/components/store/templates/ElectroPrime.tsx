@@ -143,7 +143,7 @@ function ProductCard({ product, href, currency, isFavorite, onToggleFavorite, ed
       <div style={{ aspectRatio:"1/1", background:"#f8fafc", position:"relative" }}>
         {/* PROMO de tienda → tag naranja rectangular. OFERTA del producto → pill rojo. */}
         {promo.primaryPromo ? (
-          <PromoTag label={describePromo(promo.primaryPromo).headline} size="sm" />
+          <PromoTag tipo={promo.primaryPromo.type} label={describePromo(promo.primaryPromo).headline} size="sm" />
         ) : compareDiscount ? (
           <div style={{ position:"absolute", top:10, left:10, zIndex:1, background:"#dc2626", color:"#fff", fontSize:11, fontWeight:800, padding:"4px 9px", borderRadius:100 }}>{compareDiscount}% OFF</div>
         ) : null}

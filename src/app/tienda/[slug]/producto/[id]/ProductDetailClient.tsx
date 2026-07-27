@@ -282,7 +282,7 @@ export default function ProductDetailClient({ slug, productId }: { slug: string;
           <div>
             <div className="aspect-square bg-gray-50 rounded-2xl overflow-hidden mb-3 relative">
               {detailPromo.primaryPromo ? (
-                <PromoTag label={describePromo(detailPromo.primaryPromo).headline} size="sm" />
+                <PromoTag tipo={detailPromo.primaryPromo.type} label={describePromo(detailPromo.primaryPromo).headline} size="sm" />
               ) : discount ? (
                 <div className="absolute top-3 left-3 z-10 bg-red-600 text-white text-xs font-bold px-2.5 py-1 rounded-full">{discount}% OFF</div>
               ) : null}

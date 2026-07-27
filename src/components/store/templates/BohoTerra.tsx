@@ -858,7 +858,7 @@ export default function BohoTerra() {
                   onClick={()=>openModal(product)}>
                   {(() => {
                     // PROMO de tienda → tag naranja; OFERTA del producto → badge rojo.
-                    if (promo.primaryPromo) return <PromoTag label={describePromo(promo.primaryPromo).headline} size="md" />;
+                    if (promo.primaryPromo) return <PromoTag tipo={promo.primaryPromo.type} label={describePromo(promo.primaryPromo).headline} size="md" />;
                     const hasOffer = !!product.comparePrice && product.comparePrice > product.price;
                     if (!hasOffer) return null;
                     return <OfferBadge badge={product.offerBadge} pct={discountPercent(product.price, product.comparePrice)} size="md" />;
@@ -1344,7 +1344,7 @@ export default function BohoTerra() {
                     onClick={() => setLightboxSrc(modalProduct.images[modalImg])} />
                 )}
                 {(() => {
-                  if (modalPromo?.primaryPromo) return <PromoTag label={describePromo(modalPromo.primaryPromo).headline} />;
+                  if (modalPromo?.primaryPromo) return <PromoTag tipo={modalPromo.primaryPromo.type} label={describePromo(modalPromo.primaryPromo).headline} />;
                   const hasOffer = !variantPrice && !!modalProduct.comparePrice && modalProduct.comparePrice > modalProduct.price;
                   if (!hasOffer) return null;
                   return <OfferBadge badge={modalProduct.offerBadge} pct={discountPercent(modalProduct.price, modalProduct.comparePrice)} size="md" />;

@@ -277,7 +277,7 @@ export function ProductDetailBody({ theme, view }: { theme: DetailTheme; view: P
           <div className="pdb-main" style={{ aspectRatio: "1/1", background: "#f8f8fa", borderRadius: theme.radius, overflow: "hidden", position: "relative", border: `1px solid ${theme.cardBorder}` }}
             {...imgSwipe}>
             {promo.primaryPromo ? (
-              <PromoTag label={describePromo(promo.primaryPromo).headline} size="sm" />
+              <PromoTag tipo={promo.primaryPromo.type} label={describePromo(promo.primaryPromo).headline} size="sm" />
             ) : discount ? (
               <div style={{ position: "absolute", top: 12, left: 12, zIndex: 1, background: "#dc2626", color: "#fff", fontSize: 11, fontWeight: 800, padding: "4px 10px", borderRadius: 100 }}>
                 {discount}% OFF

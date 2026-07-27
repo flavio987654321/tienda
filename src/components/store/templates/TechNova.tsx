@@ -108,7 +108,7 @@ function ProductCard({ product, href, currency, isFavorite, onToggleFavorite, ed
       style={{ textDecoration:"none", color:"inherit", background:"#fff", borderRadius:16, border:"1px solid #ececf5", overflow:"hidden", display:"block", cursor: isUnclickableDemo ? "default" : "pointer" }}>
       <div style={{ aspectRatio:"1/1", background:"#fafaff", position:"relative", overflow:"hidden" }}>
         {promo.primaryPromo ? (
-          <PromoTag label={describePromo(promo.primaryPromo).headline} size="sm" />
+          <PromoTag tipo={promo.primaryPromo.type} label={describePromo(promo.primaryPromo).headline} size="sm" />
         ) : discount ? (
           <div style={{ position:"absolute", top:10, left:10, zIndex:1, background:"#7c3aed", color:"#fff", fontSize:11, fontWeight:800, padding:"4px 9px", borderRadius:100 }}>{discount}% OFF</div>
         ) : null}

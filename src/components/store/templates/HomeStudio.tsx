@@ -82,7 +82,7 @@ function ProductCard({ product, href, currency, accent, bg, text, isFavorite, on
     <Link href={href} onClick={e => { if (isUnclickableDemo) e.preventDefault(); }}
       style={{ textDecoration:"none", color:"inherit", display:"block", cursor: isUnclickableDemo ? "default" : "pointer" }}>
       <div style={{ aspectRatio:"4/5", background:"#f0ebe2", marginBottom:16, overflow:"hidden", position:"relative" }}>
-        {promo.primaryPromo && <PromoTag label={describePromo(promo.primaryPromo).headline} size="sm" />}
+        {promo.primaryPromo && <PromoTag tipo={promo.primaryPromo.type} label={describePromo(promo.primaryPromo).headline} size="sm" />}
         <button onClick={e => { e.preventDefault(); e.stopPropagation(); onToggleFavorite(); }}
           aria-label="Favorito"
           style={{ position:"absolute", top:10, right:10, zIndex:1, width:32, height:32, borderRadius:"50%", background:"rgba(255,255,255,0.92)", border:"none", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>

@@ -15,7 +15,7 @@ import ReportStoreModal from "@/components/store/ReportStoreModal";
 import VerifiedIconButton from "@/components/store/VerifiedIconButton";
 import { CartDrawer, type CartTheme } from "@/components/store/templates/shared/CartDrawer";
 import { OfferBadge } from "@/components/store/OfferBadge";
-import { PromoTag, PromoBlock, PromoPrice } from "@/components/store/PromoDisplay";
+import { PromoTag, PromoBlock, PromoPrice, coloresPromo } from "@/components/store/PromoDisplay";
 import { useSombrasScroll } from "@/components/store/useSombrasScroll";
 import { resolveProductPromo, describePromo } from "@/lib/promoDisplay";
 import { CheckoutModal } from "@/components/store/templates/shared/CheckoutModal";
@@ -467,11 +467,16 @@ export default function ChicParis() {
     if (!pr.primaryPromo && !enOferta) return null;
     if (modo === "foto") {
       return pr.primaryPromo
-        ? <PromoTag label={describePromo(pr.primaryPromo).headline} size="sm" />
+        ? <PromoTag tipo={pr.primaryPromo.type} label={describePromo(pr.primaryPromo).headline} size="sm" />
         : <OfferBadge badge={p.offerBadge} pct={pct} size="sm" />;
     }
     return (
-      <span style={{ display: "inline-block", marginTop: 4, maxWidth: "100%", background: pr.primaryPromo ? "#ea580c" : "#dc2626", color: "#fff", fontSize: 9, fontWeight: 800, letterSpacing: 0.4, textTransform: "uppercase", padding: "2px 6px", borderRadius: 3, lineHeight: 1.3 }}>
+      <span style={{ display: "inline-block", marginTop: 4, maxWidth: "100%",
+                     // Mismo color que tendría su tag en la foto: el chip del buscador
+                     // y el de favoritos son el mismo aviso, en chico.
+                     background: pr.primaryPromo ? coloresPromo(pr.primaryPromo.type).fondo : "#dc2626",
+                     color: pr.primaryPromo ? coloresPromo(pr.primaryPromo.type).texto : "#fff",
+                     fontSize: 9, fontWeight: 800, letterSpacing: 0.4, textTransform: "uppercase", padding: "2px 6px", borderRadius: 3, lineHeight: 1.3 }}>
         {pr.primaryPromo ? describePromo(pr.primaryPromo).headline : `${pct}% OFF`}
       </span>
     );
@@ -2138,7 +2143,7 @@ export default function ChicParis() {
                 style={{ objectFit: "cover", cursor:"zoom-in" }}
                 onClick={() => setLightboxSrc(modalProduct.images[modalImg] ?? "/placeholder.jpg")} />
               {(() => {
-                if (modalPromo?.primaryPromo) return <PromoTag label={describePromo(modalPromo.primaryPromo).headline} />;
+                if (modalPromo?.primaryPromo) return <PromoTag tipo={modalPromo.primaryPromo.type} label={describePromo(modalPromo.primaryPromo).headline} />;
                 const hasOffer = !variantPrice && !!modalProduct.comparePrice && modalProduct.comparePrice > modalProduct.price;
                 if (!hasOffer) return null;
                 return <OfferBadge badge={modalProduct.offerBadge} pct={discountPercent(modalProduct.price, modalProduct.comparePrice)} size="md" />;

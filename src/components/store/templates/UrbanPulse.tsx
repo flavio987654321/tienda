@@ -894,7 +894,7 @@ export default function UrbanPulse() {
               <div key={product.id} className="up-prod" onClick={() => openModal(product)}
                 style={{ gridColumn: big ? "span 2" : "span 1", cursor:"pointer", position:"relative", background:WHITE }}>
                 {(() => {
-                  if (promo.primaryPromo) return <PromoTag label={describePromo(promo.primaryPromo).headline} size={big ? "md" : "sm"} />;
+                  if (promo.primaryPromo) return <PromoTag tipo={promo.primaryPromo.type} label={describePromo(promo.primaryPromo).headline} size={big ? "md" : "sm"} />;
                   const hasOffer = !!product.comparePrice && product.comparePrice > product.price;
                   if (!hasOffer) return null;
                   return <OfferBadge badge={product.offerBadge} pct={discountPercent(product.price, product.comparePrice)} size={big ? "md" : "sm"} />;
@@ -1449,7 +1449,7 @@ export default function UrbanPulse() {
                       onClick={() => setLightboxSrc(modalProduct.images[modalImg])} />
                   )}
                   {(() => {
-                    if (modalPromo?.primaryPromo) return <PromoTag label={describePromo(modalPromo.primaryPromo).headline} />;
+                    if (modalPromo?.primaryPromo) return <PromoTag tipo={modalPromo.primaryPromo.type} label={describePromo(modalPromo.primaryPromo).headline} />;
                     const hasOffer = !variantPrice && !!modalProduct.comparePrice && modalProduct.comparePrice > modalProduct.price;
                     if (!hasOffer) return null;
                     return <OfferBadge badge={modalProduct.offerBadge} pct={discountPercent(modalProduct.price, modalProduct.comparePrice)} size="md" />;

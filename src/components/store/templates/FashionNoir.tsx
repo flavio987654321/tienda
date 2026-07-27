@@ -999,7 +999,7 @@ export default function FashionNoir() {
             <div key={product.id} onClick={() => openModal(product)} onMouseEnter={() => setHoveredId(product.id)} onMouseLeave={() => setHoveredId(null)}
               style={{ cursor:"pointer", position:"relative" }}>
               {(() => {
-                if (promo.primaryPromo) return <PromoTag label={describePromo(promo.primaryPromo).headline} size="sm" />;
+                if (promo.primaryPromo) return <PromoTag tipo={promo.primaryPromo.type} label={describePromo(promo.primaryPromo).headline} size="sm" />;
                 const hasOffer = !!product.comparePrice && product.comparePrice > product.price;
                 if (!hasOffer) return null;
                 return <OfferBadge badge={product.offerBadge} pct={discountPercent(product.price, product.comparePrice)} size="sm" />;
@@ -1528,7 +1528,7 @@ export default function FashionNoir() {
                     onClick={() => setLightboxSrc(modalProduct.images[modalImg])} />
                 )}
                 {(() => {
-                  if (modalPromo?.primaryPromo) return <PromoTag label={describePromo(modalPromo.primaryPromo).headline} />;
+                  if (modalPromo?.primaryPromo) return <PromoTag tipo={modalPromo.primaryPromo.type} label={describePromo(modalPromo.primaryPromo).headline} />;
                   const hasOffer = !variantPrice && !!modalProduct.comparePrice && modalProduct.comparePrice > modalProduct.price;
                   if (!hasOffer) return null;
                   return <OfferBadge badge={modalProduct.offerBadge} pct={discountPercent(modalProduct.price, modalProduct.comparePrice)} size="md" />;
