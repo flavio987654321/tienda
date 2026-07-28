@@ -1102,3 +1102,21 @@ texto de al lado.
 las flechas de orden le pisan la esquina inferior del ícono del tercer beneficio. Es más leve —sus
 íconos son viñetas visibles y se aciertan fácil— y no se tocó, para no cambiarle el editor a otro
 template sin que lo pidan. Queda anotado.
+
+**Los controles de sección, al filo.** Flavio, mirando el editor: *"las flechas que hacen subir o
+bajar el bloque tapan el editor, o sea el texto"*. No era de un template: `SectionBlock` les pone los
+controles a **todas** las secciones de los diez, con las flechas centradas abajo y el ojo abajo a la
+derecha, flotando a 10px del borde. En una sección alta no molesta; en una franja de 80px con el
+contenido repartido a lo ancho, caen encima del texto.
+
+Se propusieron dos salidas —que aparecieran al pasar el mouse, o sacarlos afuera en una barrita— y
+Flavio descartó las dos con un argumento mejor: *"si hacemos lo que decís no van a saber"*. Y propuso
+la que se implementó: **achicarlos y pegarlos al filo del bloque**.
+
+El filo entre dos secciones es la única línea que nunca tiene contenido, y encima es donde estos
+botones significan algo: mueven el bloque respecto del de al lado. Ahora van ahí, aplanados —20px de
+alto contra los 26 de antes—, uno en cada esquina de abajo y sin separación del borde, así el ancho
+útil de la sección queda libre. Arriba a la izquierda no se podía: esa esquina se la queda el chip de
+"Fondo" (`EditableSectionBg`, en `top:16 left:16`).
+
+Le llega a los diez templates de una.

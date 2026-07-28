@@ -293,3 +293,35 @@ lado también copia sus agujeros.
 ⚠️ Y el reemplazo masivo se comió **su propia definición** (`const accentText = accentText;`). Lo
 cazó `tsc` al instante (TS7022 + TS2448), pero la lección queda: un buscar-y-reemplazar sobre una
 expresión incluye la línea donde esa expresión **se define**.
+
+---
+
+## 28/07/2026 — El botón de cambiar ícono de la franja estaba tapado
+
+Salió arreglando el mismo bug en Urban Pulse (ver `URBAN-PULSE.md`). Flavio pidió corregirlo también
+acá.
+
+`SectionBlock` planta sus controles con `zIndex:200`: "Ocultar bloque" abajo a la derecha y las
+flechas de orden abajo y al centro. La franja de garantías mide unos 80px de alto, así que **esas
+flechas caen sobre la esquina de abajo del ícono del tercer beneficio** y le comen parte del área de
+clic.
+
+Subirle el `zIndex` al botón habría sido peor: es transparente (`opacity:0`), así que se quedaría con
+el mouse encima de las flechas y las dejaría **a ellas** sin clic. La salida fue correrlo a la esquina
+de arriba del ícono, fuera de la banda que usa el editor.
+
+De paso, lo que Flavio llamó "dificultad": el botón vivía encima del ícono con `opacity:0` y solo
+aparecía si le pegabas justo con el mouse — nada avisaba que existía. Ahora la fichita se ve siempre
+en modo edición y el globo de ayuda dice **"Cambiar ícono (2 de 5)"**, así se sabe cuántos hay y en
+cuál se está. Antes se avanzaba a ciegas y sin forma de volver sin dar la vuelta entera.
+
+**Está igual en otros cuatro templates**, todos con la misma forma —botón `inset:0`, `opacity:0`, sin
+`zIndex`, adentro de un `SectionBlock`—: `FashionNoir` (garantías), `ElectroPrime` (confianza),
+`TechNova` (confianza, dos lugares) y `AutoDrive` (filtros rápidos, dos lugares). Que choque o no
+depende del alto de cada sección. No se tocaron.
+
+**Corrección del mismo día.** La primera versión quedó mal: la fichita se puso a la DERECHA del ícono
+y acá el ícono va pegado al texto, así que caía justo encima de las primeras letras del título. Se
+movió a la izquierda, donde se mete en el aire que separa un beneficio del otro. (En Urban Pulse va a
+la derecha porque allá cada beneficio es un bloque con su propia esquina libre — la misma decisión no
+sirve para los dos.)

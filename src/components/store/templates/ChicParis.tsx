@@ -1159,13 +1159,36 @@ export default function ChicParis() {
               <div key={titleField} style={{ display: "flex", flexDirection: isMobile ? "column" : "row", alignItems: "center", textAlign: isMobile ? "center" : "left", gap: isMobile ? 8 : 14, flex: isMobile ? undefined : "1 1 200px" }}>
                 <div style={{ color: ACC, flexShrink: 0, position: "relative" }}>
                   {STRIP_ICONS[slot][iconIdx]}
+                  {/* ── Cambiar ícono ────────────────────────────────────────
+                      Estaba ENCIMA del ícono, con `opacity:0`, y aparecía solo al
+                      pasarle el mouse justo por arriba. Dos problemas, los mismos
+                      que se arreglaron en Urban Pulse.
+                      El de verdad: `SectionBlock` planta sus controles con
+                      `zIndex:200` —las flechas de orden van abajo y al centro— y
+                      esta franja mide unos 80px de alto, así que esas flechas caen
+                      sobre la esquina de abajo del ícono del tercer beneficio y le
+                      comen parte del área de clic.
+                      Subirle el `zIndex` al botón sería peor: es transparente, así
+                      que se quedaría con el mouse encima de las flechas y las
+                      dejaría a ELLAS sin clic. La salida es correrlo a la esquina
+                      de arriba, fuera de la banda que usa el editor.
+                      El otro: nada avisaba que se podía cambiar. Ahora la fichita
+                      se ve siempre, y el globo de ayuda dice cuántos íconos hay y
+                      en cuál se está. */}
                   {editMode && (
                     <button
                       onClick={() => setOverride(`garantia${slot + 1}Icon`, { text: String(nextIdx) })}
-                      title="Cambiar ícono"
-                      style={{ position: "absolute", inset: 0, background: "rgba(99,102,241,0.9)", border: "none", borderRadius: 4, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 11, opacity: 0, transition: "opacity 0.15s" }}
+                      title={`Cambiar ícono (${iconIdx + 1} de ${STRIP_ICONS[slot].length})`}
+                      // A la IZQUIERDA del ícono, no a la derecha. Acá el ícono va
+                      // antes del texto y están pegados: con la fichita a la
+                      // derecha caía justo encima de las primeras letras del
+                      // título. Hacia la izquierda se mete en el aire que separa
+                      // un beneficio del otro, que sobra. (En Urban Pulse va a la
+                      // derecha porque allá cada beneficio es un bloque con su
+                      // propia esquina libre.)
+                      style={{ position: "absolute", top: -12, left: -12, zIndex: 210, width: 20, height: 20, background: "rgba(99,102,241,0.92)", border: "1.5px solid rgba(255,255,255,0.5)", borderRadius: 5, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 11, lineHeight: 1, boxShadow: "0 2px 6px rgba(0,0,0,0.3)", opacity: 0.8, transition: "opacity 0.15s" }}
                       onMouseEnter={e => (e.currentTarget.style.opacity = "1")}
-                      onMouseLeave={e => (e.currentTarget.style.opacity = "0")}
+                      onMouseLeave={e => (e.currentTarget.style.opacity = "0.8")}
                     >↻</button>
                   )}
                 </div>
