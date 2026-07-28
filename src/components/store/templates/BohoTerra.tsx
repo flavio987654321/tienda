@@ -180,7 +180,13 @@ export default function BohoTerra() {
     fmt, showToast, openModal, addToCart,
     toggleFavorite,
   } = cart;
-  const cartTheme: CartTheme = { BG:"#ffffff", S, T, MID, border:"rgba(44,34,24,0.1)", accent:A, accentText:"#fff", serif:"Georgia, serif" };
+  // El texto que va ARRIBA de un relleno pintado con el acento. Estaba clavado en
+  // "#fff": con la terracota de fábrica queda blanco sobre naranja —justo en el
+  // límite— y con cualquier acento claro que elija la dueña, blanco sobre claro.
+  // No estaba invertido como en los otros cinco templates: directamente no miraba
+  // el acento.
+  const accentText = textoSobre(A);
+  const cartTheme: CartTheme = { BG:"#ffffff", S, T, MID, border:"rgba(44,34,24,0.1)", accent:A, accentText, serif:"Georgia, serif" };
   const variantPrice = modalProduct ? resolveVariantPrice(modalProduct.variants, selectedSize, selectedColor) : null;
   const displayPrice = variantPrice ?? (modalProduct?.price ?? 0);
   // Promo de tienda del producto abierto en el modal (usa displayPrice para respetar variantes).

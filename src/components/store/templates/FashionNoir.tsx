@@ -4,7 +4,7 @@ import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { usePushBell } from "@/contexts/PushBellContext";
 import { useAuth } from "@/components/AuthProvider";
 import StoreFollowButton from "@/components/store/StoreFollowButton";
-import { EditableZone, EditableImageButton, EditableSectionBg, BgDragHandle, getContrastColor, useEditContext } from "@/contexts/EditContext";
+import { EditableZone, EditableImageButton, EditableSectionBg, BgDragHandle, getContrastColor, useEditContext, textoSobre } from "@/contexts/EditContext";
 import { useStorefront, type StorefrontProduct } from "@/hooks/useStorefront";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { useCartLogic } from "@/hooks/useCartLogic";
@@ -442,7 +442,15 @@ export default function FashionNoir() {
   const BG = "#0a0a0a";  // background
   const S  = "#111111";  // surface
   const T  = "#f0ebe3";  // text
-  const accentText = getContrastColor(G) === "light" ? BG : T;
+  // El texto que va ARRIBA de un relleno pintado con el acento. Viaja en
+  // `cartTheme` al CartDrawer y al CheckoutModal compartidos, asi que si esta mal
+  // se rompe el carrito y el checkout enteros.
+  //
+  // Estaba INVERTIDO: `getContrastColor(X) === "light"` significa "sobre X va texto
+  // CLARO", y la rama devolvia el oscuro. Con el acento de fabrica de este template
+  // daba un contraste ilegible. `textoSobre` mide con el ratio real de WCAG y no
+  // puede equivocarse de lado.
+  const accentText = textoSobre(G);
   const cartTheme: CartTheme = { BG, S, T, MID:"#555555", border:"rgba(240,235,227,0.1)", accent:G, accentText, serif:"Georgia, serif" };
   const variantPrice = modalProduct ? resolveVariantPrice(modalProduct.variants, selectedSize, selectedColor) : null;
   const displayPrice = variantPrice ?? (modalProduct?.price ?? 0);

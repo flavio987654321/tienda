@@ -6,7 +6,7 @@ import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { usePushBell } from "@/contexts/PushBellContext";
 import { useAuth } from "@/components/AuthProvider";
 import StoreFollowButton from "@/components/store/StoreFollowButton";
-import { EditableZone, EditableImageButton, EditableSectionBg, BgDragHandle, getContrastColor, getReadableAccentText, useEditContext } from "@/contexts/EditContext";
+import { EditableZone, EditableImageButton, EditableSectionBg, BgDragHandle, getContrastColor, getReadableAccentText, useEditContext, textoSobre } from "@/contexts/EditContext";
 import { useStorefront, isDemoProductId, type StorefrontProduct } from "@/hooks/useStorefront";
 import { useCartLogic } from "@/hooks/useCartLogic";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
@@ -206,7 +206,15 @@ export default function ElectroPrime() {
   const isPreview = !!config?.previewFill;
   const isOwner   = !!config?.isOwner;
   const accent    = config?.colors.accent ?? "#ea580c";
-  const accentText = getContrastColor(accent) === "light" ? "#111" : "#fff";
+  // El texto que va ARRIBA de un relleno pintado con el acento. Viaja en
+  // `cartTheme` al CartDrawer y al CheckoutModal compartidos, asi que si esta mal
+  // se rompe el carrito y el checkout enteros.
+  //
+  // Estaba INVERTIDO: `getContrastColor(X) === "light"` significa "sobre X va texto
+  // CLARO", y la rama devolvia el oscuro. Con el acento de fabrica de este template
+  // daba un contraste ilegible. `textoSobre` mide con el ratio real de WCAG y no
+  // puede equivocarse de lado.
+  const accentText = textoSobre(accent);
   // El acento se usa como color de TEXTO en varias secciones (no como fondo de
   // botón, eso ya lo resuelve accentText) — cada sección puede tener su propio
   // fondo personalizado, así que validamos contra el de cada una puntualmente.

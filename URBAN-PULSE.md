@@ -576,10 +576,53 @@ las de producto.
   la conversión porque ahí el color de la sección es lo que se quiere dibujar.
 - **UP-4 está igual en BohoTerra y FashionNoir.** Antes de arreglar el modal de otro template de
   moda, evaluar extraerlo a `shared/`: los cuatro lo tienen copiado y pegado.
-- **El `accentText` invertido (UP-3D) puede estar en más templates.** Se detectó de casualidad acá.
-  Vale revisar CasaClara, ElectroPrime, HomeStudio y TechNova, que declaran esa constante con la
-  misma forma sospechosa (`getContrastColor(accent) === "light" ? "#111" : "#fff"`).
+- ~~**El `accentText` invertido (UP-3D) puede estar en más templates.**~~ **Revisado el 28/07: estaba
+  en SEIS.** Ver abajo.
 - Todo cambio visual se revisa en **360 / 768 / 1280**. 768 es donde más se rompe.
+
+### El `accentText` estaba mal en seis templates ✅
+
+Se salió a buscar el patrón de UP-3D al resto de los templates. Estaba en **seis**, no en cuatro.
+`accentText` es el color del texto que va **encima** de un relleno pintado con el acento, y viaja en
+`cartTheme` al `CartDrawer` y al `CheckoutModal` compartidos: si está mal, se rompen el carrito y el
+checkout enteros.
+
+Cinco lo tenían **invertido** — `getContrastColor(X) === "light"` significa *"sobre X va texto
+CLARO"*, y la rama devolvía el oscuro:
+
+```tsx
+CasaClara, ElectroPrime, HomeStudio, TechNova   getContrastColor(accent) === "light" ? "#111" : "#fff"
+FashionNoir                                     getContrastColor(G)      === "light" ? BG     : T
+```
+
+Y **BohoTerra** era un caso distinto: `accentText:"#fff"` escrito a mano. No estaba invertido —
+directamente no miraba el acento.
+
+Medido con el acento **de fábrica** de cada uno, que es lo que ve cualquier tienda hoy:
+
+| Template | Acento | Antes | Ahora | |
+|---|---|---|---|---|
+| CasaClara | `#0f172a` | **1.06** | **17.85** | negro sobre negro |
+| FashionNoir | `#c9a84c` | **1.93** | **8.26** | claro sobre dorado |
+| TechNova | `#7c3aed` | 3.31 | 5.70 | |
+| ElectroPrime | `#ea580c` | 5.30 | 5.30 | acertaba de casualidad |
+| HomeStudio | `#b5652a` | 4.37 | 4.37 | acertaba de casualidad |
+| BohoTerra | `#b5652a` | 4.32 | 4.37 | |
+
+**CasaClara y Fashion Noir tenían el carrito y el checkout ilegibles de fábrica** — no hacía falta que
+nadie tocara nada. Los tres que acertaban lo hacían por casualidad: se rompían apenas la dueña
+cambiara el color.
+
+Los seis pasaron a `textoSobre(acento)`, que mide con el ratio real de WCAG y no puede equivocarse de
+lado. Comprobado también con seis acentos elegidos a mano (blanco, negro, neón, vino, azul, crema):
+todos quedan por encima de 5.
+
+⚠️ **Lo que el arreglo NO puede resolver.** `textoSobre` elige el mejor de los dos colores posibles,
+pero con la **terracota `#b5652a`** —el acento de fábrica de HomeStudio y BohoTerra— el mejor da
+**4.37**, apenas debajo del mínimo de 4.5 para texto normal. No es un error del código: ni el blanco
+ni el negro llegan sobre ese naranja. Para el texto de los botones —mayúsculas y en negrita— el
+mínimo aplicable es 3.0 y sí lo pasa, pero si se quiere cumplir 4.5 en todos lados hay que oscurecer
+un poco ese acento por defecto. Es decisión de diseño, no se tocó.
 
 ### Registro
 
