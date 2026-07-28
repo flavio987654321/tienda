@@ -310,7 +310,14 @@ export default function UrbanPulse() {
     const imgIdx = modalProduct.imageItems.findIndex(
       (img) => img.variantValue && img.variantValue.toLowerCase() === selectedColor.toLowerCase()
     );
-    if (imgIdx !== -1) { colorSyncingRef.current = true; setModalImg(imgIdx); }
+    // `imgIdx !== modalImg` es lo que evita que la bandera quede trabada. Si la foto
+    // que corresponde al color YA es la que se está viendo, React descarta el
+    // setState y el efecto de [modalImg] —el único que baja la bandera— no corre.
+    // Quedaba en true para siempre, y el próximo cambio de foto a mano se lo comía
+    // sin sincronizar el color. Peor todavía: al abrir el modal, modalImg es 0 y la
+    // foto del primer color suele ser la 0, así que se trababa desde el arranque y
+    // el PRIMER clic en una miniatura ya no funcionaba (UP-4).
+    if (imgIdx !== -1 && imgIdx !== modalImg) { colorSyncingRef.current = true; setModalImg(imgIdx); }
     const colorVariants = modalProduct.variants.filter((v) => {
       const a = parseVariantAttrs(v.name);
       return !!a && Object.values(a).some((x) => String(x).toLowerCase() === selectedColor.toLowerCase());
@@ -354,7 +361,8 @@ export default function UrbanPulse() {
           const imgIdx = modalProduct.imageItems.findIndex(
             (img) => img.variantValue && img.variantValue.toLowerCase() === newColor.toLowerCase()
           );
-          if (imgIdx !== -1) { colorSyncingRef.current = true; setModalImg(imgIdx); }
+          // Mismo motivo que arriba: solo se levanta si la foto va a cambiar de verdad.
+          if (imgIdx !== -1 && imgIdx !== modalImg) { colorSyncingRef.current = true; setModalImg(imgIdx); }
         }
       }
     }
@@ -861,10 +869,17 @@ export default function UrbanPulse() {
                 </div>
               ))}
             </div>
-            <div style={{ display:"flex", alignItems:"baseline", gap:16, marginBottom:32 }}>
-              <span style={{ color:ACC, fontSize:36, fontWeight:900 }}>{ocultarPrecios ? "Consultá precio" : fmt(featuredProduct.price)}</span>
-              {!ocultarPrecios && featuredProduct.comparePrice && <span style={{ color:featuredText, opacity:0.25, fontSize:20, textDecoration:"line-through" }}>{fmt(featuredProduct.comparePrice)}</span>}
-            </div>
+            {/* UP-1 — Este precio estaba escrito a mano con `fmt(featuredProduct.price)`
+                y era el único de la tienda que NO consultaba las promociones. Con una
+                promo del 20% vigente, el bloque más grande de la página decía $50.000
+                mientras la grilla de abajo decía $40.000 y el carrito cobraba $40.000:
+                las dos cifras visibles a la vez. `PromoPrice` hace imposible mostrar un
+                precio sin haber preguntado por las promos.
+                El tachado usa `sobre` para atenuarse CONTRA el fondo de esta sección,
+                que es editable, en vez del gris fijo pensado para fondo blanco. */}
+            <PromoPrice product={featuredProduct} promotions={promotions} fmt={fmt} accent={ACC} sobre={featuredText}
+              priceSize={36} compareSize={20} weight={900} ocultarPrecios={ocultarPrecios}
+              gap={16} align="baseline" style={{ marginBottom:32 }} />
             <button onClick={() => isInquiryMode ? openInquiry(featuredProduct) : openModal(featuredProduct)}
               style={{ width:"100%", background:ACC, color:DARK, border:"none", padding:"18px", fontSize:11, fontWeight:900, letterSpacing:4, textTransform:"uppercase", cursor:"pointer" }}>
               {isInquiryMode ? "Consultar disponibilidad" : "Agregar al Carrito"}
@@ -997,7 +1012,15 @@ export default function UrbanPulse() {
       {/* OFERTAS */}
       <SectionBlock id="up-ofertas" label="Ofertas" isPreview={isPreview} defaultOrder={UP_SECTION_IDS}>
         {(() => {
-          const allOfertas = products.filter(p => p.comparePrice && p.comparePrice > p.price);
+          // "Oferta" para el comprador es cualquier cosa que le salga más barata hoy,
+          // no solo el precio anterior del producto: si una promoción de tienda le baja
+          // el precio, eso también es una oferta y tiene que aparecer acá (UP-2).
+          // Ojo con las promos que NO tocan el precio (3×2, envío gratis): esas se
+          // anuncian con su tag pero no entran, porque el precio que se mostraría al
+          // lado sería el de lista y parecería un error de la página.
+          const allOfertas = products.filter(p =>
+            (p.comparePrice && p.comparePrice > p.price) || resolveProductPromo(p, promotions).hasPriceDrop
+          );
           if (allOfertas.length === 0 && !isPreview) return null;
           const displayList = (allOfertas.length > 0 ? allOfertas : products).slice(0, 8);
           const hasMore = allOfertas.length > 8;

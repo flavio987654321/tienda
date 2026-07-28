@@ -8,11 +8,11 @@ Los números de línea son los del día de la revisión: se corren a medida que 
 
 | # | Qué pasa | Gravedad | Estado |
 |---|---|---|---|
-| UP-1 | El producto destacado muestra un precio que no es el que se cobra | Alta | pendiente |
-| UP-2 | El bloque Ofertas ignora las promociones | Alta | pendiente |
+| ~~UP-1~~ | ~~El producto destacado muestra un precio que no es el que se cobra~~ | Alta | **hecho** 27/07 |
+| ~~UP-2~~ | ~~El bloque Ofertas ignora las promociones~~ | Alta | **hecho** 27/07 |
 | UP-3 | El acento no se adapta: se pierde el texto o se pierde él | Alta | pendiente |
-| UP-4 | El selector de color se traba y deja de sincronizar | Media | pendiente |
-| UP-5 | Cinco de siete lugares no dicen que el producto tiene promo | Media | pendiente |
+| ~~UP-4~~ | ~~El selector de color se traba y deja de sincronizar~~ | Media | **hecho** 27/07 |
+| UP-5 | Seis de ocho lugares no dicen que el producto tiene promo | Media | pendiente |
 | UP-6 | El panel de favoritos se sale de la pantalla en 360px | Baja | pendiente |
 | UP-7 | Un `0` suelto arriba de la foto en Ofertas | Baja | pendiente |
 | UP-8 | El buscador usa dos columnas fijas también en celular | Baja | pendiente |
@@ -35,7 +35,7 @@ Los números de línea son los del día de la revisión: se corren a medida que 
 
 ## Bugs
 
-### UP-1 — El producto destacado muestra un precio que no es el que se cobra
+### ~~UP-1~~ — El producto destacado muestra un precio que no es el que se cobra ✅
 
 `src/components/store/templates/UrbanPulse.tsx:865`
 
@@ -60,13 +60,16 @@ Tampoco lleva el tag de la promo, así que ni siquiera se anuncia.
 Es exactamente el caso que `PromoPrice` existe para impedir; su comentario lo describe palabra por
 palabra: *"el mismo producto aparecía a $8.000 en la grilla y a $10.000 tres bloques más abajo"*.
 
-**Cómo se arregla:** reemplazar el precio a mano por `<PromoPrice>` y agregar el aviso de promo.
-Ojo con el fondo: este bloque es `featuredBg`, editable, así que el `accent` tiene que ser el
-legible (ver UP-3) y hay que pasarle `sobre={featuredText}`.
+**Arreglado el 27/07.** El precio pasa por `<PromoPrice>`, que hace imposible mostrar un número sin
+haber consultado las promos. Se le pasa además `sobre={featuredText}` para que el tachado se atenúe
+contra el fondo de esta sección —que es editable— en vez del gris fijo pensado para fondo blanco.
+
+Queda pendiente de otras tareas: el `accent` sigue siendo `ACC` crudo (lo barre **UP-3**) y el
+bloque todavía no muestra QUÉ promo es (lo barre **UP-5**).
 
 ---
 
-### UP-2 — El bloque Ofertas ignora las promociones
+### ~~UP-2~~ — El bloque Ofertas ignora las promociones ✅
 
 `src/components/store/templates/UrbanPulse.tsx:1000`
 
@@ -85,9 +88,9 @@ products.filter(p =>
 );
 ```
 
-**Cómo se arregla:** copiar ese filtro. Y mantener la regla de Chic Paris: las promos que **no**
-tocan el precio (3×2, envío gratis) NO entran, porque al lado se mostraría el precio de lista sin
-nada tachado y parece un error de la página.
+**Arreglado el 27/07.** Se copió ese filtro. Se mantiene la regla de Chic Paris: las promos que
+**no** tocan el precio (3×2, envío gratis) NO entran, porque al lado se mostraría el precio de lista
+sin nada tachado y parecería un error de la página.
 
 ---
 
@@ -154,7 +157,7 @@ contraste y se pierde justo cuando es la prueba de que hay descuento.
 
 ---
 
-### UP-4 — El selector de color se traba y deja de sincronizar
+### ~~UP-4~~ — El selector de color se traba y deja de sincronizar ✅
 
 `src/components/store/templates/UrbanPulse.tsx:313` (y el mismo patrón en 357)
 
@@ -174,27 +177,36 @@ Y se dispara en el caso más común de todos: al abrir el modal `modalImg` es 0 
 color suele ser justamente la 0, así que la bandera queda trabada desde el arranque y **el primer
 clic en una miniatura ya no sincroniza**.
 
-**Cómo se arregla:** levantar la bandera solo cuando la imagen de verdad va a cambiar.
+**Arreglado el 27/07.** La bandera se levanta solo cuando la imagen de verdad va a cambiar, en los
+dos lugares donde se sincroniza (por color y por talle):
 
 ```tsx
 if (imgIdx !== -1 && imgIdx !== modalImg) { colorSyncingRef.current = true; setModalImg(imgIdx); }
 ```
 
-Está igual en BohoTerra y FashionNoir: conviene arreglar los tres de una.
+⚠️ **Sigue igual en BohoTerra y FashionNoir.** Antes de tocarlos, evaluar extraer el modal a
+`shared/`: los cuatro templates de moda lo tienen copiado y pegado, así que este mismo arreglo va a
+haber que hacerlo tres veces más.
 
 ---
 
-### UP-5 — Cinco de siete lugares no dicen que el producto tiene promo
+### UP-5 — Seis de ocho lugares no dicen que el producto tiene promo
 
 | Dónde | Línea | ¿Avisa? |
 |---|---|---|
 | Grilla del catálogo | 897 | ✅ `PromoTag` / `OfferBadge` |
 | Modal de producto | 1452 | ✅ |
+| **Producto destacado** | **864** | ❌ *(se sumó al arreglar UP-1)* |
 | Ofertas | 1022 | ❌ |
 | Lo más visto | 1078 | ❌ |
 | Buscador | 1390 | ❌ |
 | Favoritos | 1418 | ❌ |
 | Productos similares | 1761 | ❌ |
+
+El destacado entró a esta lista al cerrar UP-1: ahí se arregló el **precio**, que era el problema de
+plata, pero el bloque sigue sin decir qué promo se lo baja. Y tiene una particularidad — la foto ya
+lleva el `badge` propio del producto arriba a la izquierda, justo donde `PromoTag` se posiciona. Ahí
+conviene el modo `"chip"` al lado del precio, que además es donde se explica solo.
 
 Con un descuento en porcentaje el precio en rojo todavía lo delata. Pero una promo **3×2** o de
 **envío gratis** no toca el precio: en esos cinco lugares el producto se ve idéntico a uno sin
@@ -258,11 +270,17 @@ lateral, como hacen el resto de las secciones (`isMobile ? 16 : 40`).
 
 ## Notas para cuando se arregle
 
-- **El orden que conviene:** UP-1 y UP-2 son de plata y se ven hoy con las promos de prueba
-  activas. UP-4 es funcional y se dispara siempre. UP-3 es el más grande en cantidad de líneas
-  pero es mecánico una vez definidas las dos constantes.
-- **UP-3 y UP-5 se tocan:** los dos pasan por las mismas cinco secciones. Conviene hacerlos en la
-  misma pasada para no leer el archivo dos veces.
+- **Lo que sigue:** UP-3 es el más grande en cantidad de líneas (40 usos del acento) pero es
+  mecánico una vez definidas las dos constantes. UP-5 pasa por las mismas secciones, así que
+  **conviene hacer los dos en la misma pasada** y no leer el archivo dos veces. UP-6, UP-7 y UP-8
+  son de una línea cada uno.
 - **UP-4 está igual en BohoTerra y FashionNoir.** Antes de arreglar el modal de otro template de
   moda, evaluar extraerlo a `shared/`: los cuatro lo tienen copiado y pegado.
 - Todo cambio visual se revisa en **360 / 768 / 1280**. 768 es donde más se rompe.
+
+### Registro
+
+**27/07/2026 — UP-1, UP-2 y UP-4.** `tsc` limpio, eslint sin errores nuevos, `/preview/urban-pulse`
+carga en 200 y el log del dev server no reporta errores de runtime. Al cerrar UP-1 apareció una
+consecuencia que se anotó en UP-5: el bloque destacado se sumó a la lista de los que no avisan qué
+promo tienen.
