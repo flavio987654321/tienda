@@ -1006,3 +1006,57 @@ quedaría translúcido también.
 
 `tsc` y eslint limpios. `/plantillas/urban-pulse` y `/tienda/tiendaapps` en 200. **La revisión visual
 en 360 / 768 / 1280 queda de Flavio**: acá no hay navegador.
+
+**28/07/2026 — el damero, corregido.** Flavio con una captura del editor: *"creo que hay un bug,
+queda medio mal, además se tiene que adaptar a todo tipo de pantallas"*.
+
+**El bug.** El primer bloque parecía el doble de ancho que los otros tres. No lo era: el contenedor
+tenía `maxWidth:1200` centrado, así que a los costados quedaba el fondo de la SECCIÓN —del mismo
+color que los bloques pares— y el primero se fundía con el margen izquierdo. Un damero solo se lee si
+los cuadros miden todos lo mismo, y para eso tiene que llegar al filo. Ahora va a sangre, igual que
+el hero.
+
+**Lo de las pantallas.** Yendo a sangre, el ancho de cada bloque pasa a depender de la pantalla: 480px
+en un monitor de 1920 y 190px en una notebook de 768. Con medidas fijas, el ícono le comía media celda
+a la más chica y se perdía en la más grande. Todo lo que ocupa lugar se mide ahora en `clamp` —crece
+con la pantalla pero con piso y techo— y el texto lleva un `paddingRight` en porcentaje para no
+meterse debajo de la marca de agua.
+
+Cuentas a los cuatro anchos que importan, con el bloque más largo ("30 días de cambio"):
+
+| Ancho | Bloque | Ícono | Texto termina en | Ícono empieza en |
+|---|---|---|---|---|
+| 1920 | 480 | 104 | 344 | 385 |
+| 1280 | 320 | 83 | 227 | 243 |
+| 768 | 192 | 52 | 134 | 144 |
+| 360 (2 col) | 180 | 54 | 119 | 130 |
+
+En ninguno se pisan. En 768 y 360 el título se parte en dos renglones, que entran en el alto mínimo.
+
+Dos correcciones más: el ícono ya no recibe un número de píxeles —un SVG con `width` fijo no escala—
+sino que el contenedor pone la medida con `aspectRatio` y el SVG la llena al 100%; y se le baja el
+`strokeWidth` de 1,8 a 1,2, porque estirado a 104px ese trazo terminaba en casi 8px, un garabato
+grueso en vez de una marca de agua. En el editor la opacidad baja de 0,30 a 0,22: al 30% el ícono
+parecía contenido y no fondo.
+
+Dos cosas más que reportó Flavio mirando el editor:
+
+**Los íconos no tenían respiro.** Estaban en `right:-2%`, saliéndose por el filo, y con un tamaño que
+casi igualaba el alto del bloque: apretados contra la esquina y, en el último, cortados contra el
+borde de la pantalla. Ahora tienen margen propio a la derecha y miden bastante menos que el alto, así
+que les queda aire arriba y abajo también — a 1920, 84 de ícono en 132 de alto.
+
+**La franja se fundía con lo de arriba.** El filo era `3px solid DARK` en la sección: un filo negro
+debajo de un hero oscuro no tiene dónde empezar, y el bloque negro se pegaba a la imagen como si
+fueran lo mismo. Y ningún color único lo arregla, porque los bloques alternan claro y oscuro: lo que
+se despega de uno se pierde en el otro.
+
+Ahora **el filo lo elige cada bloque contra su propio fondo**: el acento si ahí se distingue, y si no
+el color de su texto, que por definición contrasta. Con el neón de fábrica queda negro sobre los
+claros y **neón sobre los oscuros** — y es justo el neón el que despega el bloque negro del hero.
+
+Se usa `getReadableAccentFill` y no `getReadableAccentText`: el filo es una superficie de 4px, no una
+letra. La pregunta no es *"¿se lee el acento acá?"* sino *"¿se distingue del fondo?"*, y con la regla
+de texto un naranja o un dorado sobre blanco se descartan sin motivo aunque pintados se vean
+perfecto. El repo tiene un helper para cada pregunta y el comentario de `getReadableAccentFill` avisa
+exactamente de esta confusión.

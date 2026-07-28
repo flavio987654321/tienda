@@ -4,7 +4,7 @@ import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { usePushBell } from "@/contexts/PushBellContext";
 import { useAuth } from "@/components/AuthProvider";
 import StoreFollowButton from "@/components/store/StoreFollowButton";
-import { EditableZone, EditableImageButton, EditableSectionBg, BgDragHandle, getContrastColor, getReadableAccentText, textoSobre, contrasteWCAG, useEditContext } from "@/contexts/EditContext";
+import { EditableZone, EditableImageButton, EditableSectionBg, BgDragHandle, getContrastColor, getReadableAccentText, getReadableAccentFill, textoSobre, contrasteWCAG, useEditContext } from "@/contexts/EditContext";
 import { colorRepresentativo } from "@/lib/section-bg";
 import { useStorefront, type StorefrontProduct } from "@/hooks/useStorefront";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
@@ -906,9 +906,25 @@ export default function UrbanPulse() {
           el ícono deja de ser una viñeta —que era justamente lo que lo hacía
           parecerse al otro— y pasa a ser una marca de agua grande detrás del
           texto, que se sigue pudiendo cambiar desde el editor. */}
-      <section data-reveal style={{ background:garantiasUpBg, borderTop:`3px solid ${DARK}`, borderBottom:`3px solid ${DARK}`, position:"relative" }}>
+      {/* Los filos ya no van en la SECCIÓN sino en cada bloque, y no son negros
+          fijos. Con un filo negro, un bloque negro debajo de un hero oscuro no
+          tenía dónde empezar: se fundían y la franja no se leía como algo aparte.
+          Y ningún color único sirve, porque los bloques alternan claro y oscuro:
+          lo que se despega de uno se pierde en el otro.
+          La solución es que el filo lo elija CADA bloque contra su propio fondo:
+          el acento si ahí se ve, y si no el color de su texto, que por definición
+          contrasta. Con el neón de fábrica queda negro sobre los claros y neón
+          sobre los oscuros — y es justo el neón el que despega el bloque negro del
+          hero. */}
+      <section data-reveal style={{ background:garantiasUpBg, position:"relative" }}>
         <EditableSectionBg field="bgGarantias" label="Fondo garantías" />
-        <div style={{ maxWidth:1200, margin:"0 auto", display:"grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(4,1fr)" }}>
+        {/* De borde a borde, sin `maxWidth`. Con el ancho acotado y centrado, a
+            los costados quedaba el fondo de la SECCIÓN, que es el mismo color que
+            los bloques pares: el primero se fundía con el margen izquierdo y
+            parecía el doble de ancho que los otros tres. Un damero solo se lee si
+            los cuadros miden todos lo mismo, y para eso tiene que llegar al filo.
+            Es además cómo está resuelto el hero, que también va a sangre. */}
+        <div style={{ display:"grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(4,1fr)" }}>
           {GARANTIAS.map((g, i) => {
             const iconIdx = (Math.abs(parseInt(textOverrides[`garantia${i+1}Icon`]?.text ?? "0") || 0)) % UP_STRIP_ICONS[i].length;
             const nextIdx = (iconIdx + 1) % UP_STRIP_ICONS[i].length;
@@ -919,24 +935,53 @@ export default function UrbanPulse() {
             const alterno = isMobile ? ((Math.floor(i / 2) + i) % 2 === 1) : (i % 2 === 1);
             const fondo = alterno ? garAltBg   : garantiasUpBg;
             const tinta = alterno ? garAltText : garantiasUpText;
+            // Para MEDIR hay que usar un color sólido: el fondo de la sección
+            // puede venir en degradado.
+            const fondoSolido = alterno ? garAltBg : garantiasUpSolido;
+            // `Fill` y no `Text`: el filo es una SUPERFICIE de 4px, no una letra.
+            // La pregunta no es "¿se lee el acento acá?" sino "¿se distingue del
+            // fondo?", y son distintas — con la regla de texto, un naranja o un
+            // dorado sobre blanco se descartan sin motivo, aunque pintados se vean
+            // perfecto. El repo tiene un helper para cada una.
+            const filo = getReadableAccentFill(ACC, fondoSolido, tinta);
             const icono = UP_STRIP_ICONS[i][iconIdx];
             return (
+              // Yendo a sangre, el ancho de cada bloque depende de la pantalla:
+              // 480px en un monitor de 1920 y 190px en una notebook de 768. Con
+              // medidas fijas el ícono le comía media celda a la más chica y se
+              // perdía en la más grande, así que todo lo que ocupa lugar se mide
+              // en `clamp`: crece con la pantalla pero con piso y techo.
               <div key={g.title} style={{ position:"relative", overflow:"hidden", background:fondo,
-                                          padding: isMobile ? "20px 16px" : "26px 24px",
-                                          minHeight: isMobile ? 104 : 122,
-                                          display:"flex", flexDirection:"column", justifyContent:"flex-end" }}>
+                                          borderTop:`4px solid ${filo}`, borderBottom:`4px solid ${filo}`,
+                                          padding: isMobile ? "18px 14px" : "clamp(18px,2vw,30px) clamp(16px,1.8vw,30px)",
+                                          minHeight: isMobile ? 96 : "clamp(96px,8vw,132px)",
+                                          display:"flex", flexDirection:"column", justifyContent:"center" }}>
                 {/* La marca de agua: el mismo ícono de siempre, agrandado y casi
                     transparente, saliéndose por el borde derecho. La opacidad va
                     en el span de adentro y no en este: si fuera acá, el botón de
-                    cambiar ícono también quedaría translúcido. */}
-                <span style={{ position:"absolute", right:-10, top:"50%", transform:"translateY(-50%)", lineHeight:0,
+                    cambiar ícono también quedaría translúcido.
+                    El tamaño lo pone este contenedor —con `aspectRatio` para que
+                    tenga alto propio— y el SVG lo llena al 100%. Antes se le
+                    pasaba un número de píxeles al SVG, que no puede escalar. */}
+                {/* Adentro y con aire. Estaba en `right:-2%`, saliéndose por el
+                    filo, y con un tamaño que casi igualaba el alto del bloque: se
+                    veía apretado contra la esquina y, en el último bloque, cortado
+                    contra el borde de la pantalla. Ahora tiene margen propio a la
+                    derecha y mide bastante menos que el alto, así que le queda aire
+                    arriba y abajo también (a 1920: 84 de ícono en 132 de alto). */}
+                <span style={{ position:"absolute", right: isMobile ? 10 : "clamp(12px,1.4vw,26px)", top:"50%", transform:"translateY(-50%)", lineHeight:0,
+                               width: isMobile ? "clamp(40px,13vw,64px)" : "clamp(46px,5.2vw,84px)", aspectRatio:"1",
                                pointerEvents: editMode ? "auto" : "none" }}>
-                  {/* En el editor sube al 30%: al 9% nadie descubriría que se
+                  {/* En el editor sube al 22%: al 9% nadie descubriría que se
                       puede cambiar. */}
-                  <span style={{ display:"block", color:tinta, opacity: editMode ? 0.3 : 0.09 }}>
+                  <span style={{ display:"block", width:"100%", height:"100%", color:tinta, opacity: editMode ? 0.22 : 0.09 }}>
+                    {/* `strokeWidth` más fino al agrandar: los íconos están
+                        dibujados en una caja de 24 y con el trazo en 1,8. Estirados
+                        a 104px ese trazo se estira con ellos y termina en casi 8px
+                        — un garabato grueso, no una marca de agua. */}
                     {isValidElement(icono)
-                      ? cloneElement(icono as React.ReactElement<{ width?: number; height?: number }>,
-                                     { width: isMobile ? 74 : 96, height: isMobile ? 74 : 96 })
+                      ? cloneElement(icono as React.ReactElement<{ width?: number | string; height?: number | string; strokeWidth?: number }>,
+                                     { width: "100%", height: "100%", strokeWidth: 1.2 })
                       : icono}
                   </span>
                   {editMode && (
@@ -945,10 +990,12 @@ export default function UrbanPulse() {
                       onMouseEnter={e => (e.currentTarget.style.opacity="1")} onMouseLeave={e => (e.currentTarget.style.opacity="0")}>↻</button>
                   )}
                 </span>
-                <p style={{ position:"relative", margin:0, fontSize: isMobile ? 13 : 15, fontWeight:900, letterSpacing:1.2, textTransform:"uppercase", lineHeight:1.15, color:tinta }}>
+                {/* `paddingRight` para que el texto no se meta debajo del ícono en
+                    los anchos chicos, donde la marca de agua ocupa media celda. */}
+                <p style={{ position:"relative", margin:0, paddingRight: isMobile ? "30%" : "26%", fontSize: isMobile ? 12.5 : "clamp(12px,1.15vw,16px)", fontWeight:900, letterSpacing:1.2, textTransform:"uppercase", lineHeight:1.15, color:tinta, overflowWrap:"anywhere" }}>
                   <EditableZone field={`garantia${i+1}Title`} label={`Título garantía ${i+1}`}>{g.title}</EditableZone>
                 </p>
-                <p style={{ position:"relative", margin:"5px 0 0", fontSize:11, color:tinta, opacity:0.7 }}>
+                <p style={{ position:"relative", margin:"5px 0 0", paddingRight: isMobile ? "30%" : "26%", fontSize: isMobile ? 10.5 : 11, lineHeight:1.35, color:tinta, opacity:0.7, overflowWrap:"anywhere" }}>
                   <EditableZone field={`garantia${i+1}Desc`} label={`Descripción garantía ${i+1}`}>{g.desc}</EditableZone>
                 </p>
               </div>
