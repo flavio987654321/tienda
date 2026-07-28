@@ -456,6 +456,36 @@ Los ejemplos son **propios de cada template**. Antes Urban Pulse tenía los suyo
 los suyos; ahora siguen separados a propósito — si se compartieran, las previews de la galería se
 verían clonadas.
 
+#### Segunda pasada: el diseño todavía se parecía al de Chic Paris
+
+Flavio lo miró y marcó tres cosas. Las tres eran ciertas:
+
+**1. Las estrellas salían negras.** Estaban dibujadas con `ACC` **crudo** — el mismo descuido que
+barrió UP-3, que se me escapó en el bloque nuevo. Con un acento oscuro sobre una sección oscura no se
+veían. Medido:
+
+| Acento | Fondo | Antes (`ACC` crudo) | Ahora (`accentSobre`) |
+|---|---|---|---|
+| neón `#d4ff00` | oscuro | 16.52 | **16.52** (conserva el acento) |
+| negro `#000000` | oscuro | **1.10** | **19.17** |
+| blanco `#ffffff` | claro | 1.09 | 17.58 |
+| vino `#722F37` | oscuro | 1.99 | 19.17 |
+
+Nunca peor: cuando el acento se distingue del fondo, lo deja.
+
+**2. La tarjeta era igual a la de Chic Paris.** Ahora la foto va **a la izquierda y a toda la altura**
+de la tarjeta, con el texto a la derecha. Y la grilla bajó de 4 a **2 columnas**: con cuatro por fila
+quedaban ~220px para el texto y la foto no podía crecer — es el ancho lo que la agranda.
+
+Una reseña de **tienda** no tiene producto, así que en su lugar va la inicial de quien escribe en un
+cuadrado del acento. Sin eso, la pestaña "La tienda" quedaba con tarjetas de otra forma.
+
+**3. La reseña no llevaba al producto.** Preguntó si al hacer clic iba a la ficha, y no: lo único que
+llevaba era el link "Ver reseña →", que `ResenaComentario` solo dibuja cuando el comentario es largo y
+se corta. Con comentarios cortos no aparecía nunca — y con la foto grande, la tarjeta *parece*
+clickeable. Ahora la **foto** y el **nombre del producto** abren la vista rápida. El nombre también,
+porque en celular la foto es de 104px y no se lee como un botón.
+
 #### Y el cartel de Chic Paris mentía
 
 Al migrar apareció esto. El aviso del editor le decía al dueño:
@@ -526,3 +556,10 @@ misma pasada para que la lógica no quedara escrita dos veces. En el camino apar
 editor de Chic Paris afirmaba algo que el código no hace. `tsc` limpio, eslint sin errores nuevos,
 `/plantillas/urban-pulse` y `/plantillas/chic-paris` en 200 con sus ejemplos, sus promedios y los dos
 tipos de sello, log sin errores de runtime. Nada pusheado ni deployado.
+
+Segunda pasada el mismo día, con Flavio mirando el resultado: las estrellas salían negras porque las
+dibujé con el acento crudo (1.10 de contraste con su acento; ahora 19.17), la tarjeta seguía
+pareciéndose a la de Chic Paris —se pasó la foto a la izquierda y a toda la altura, y la grilla de 4
+a 2 columnas para que la foto pueda crecer—, y la reseña no llevaba a la ficha del producto, que
+ahora se abre desde la foto y desde el nombre. `tsc` y eslint limpios, `/plantillas/urban-pulse` en
+200, log sin errores después del último compilado.

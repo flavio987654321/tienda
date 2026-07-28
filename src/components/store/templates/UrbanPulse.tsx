@@ -1178,45 +1178,84 @@ export default function UrbanPulse() {
           </div>
         )}
 
-        <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(4,1fr)", gap:12, padding: isMobile ? "0 20px" : "0 40px", position:"relative", zIndex:1 }}>
-          {resenas.lista.map(r => (
-            <div key={r.id} style={{ background:testimonialsCardBg, border:`1px solid ${testimonialsCardBorder}`, padding:"28px", display:"flex", flexDirection:"column", gap:14, position:"relative" }}>
+        {/* Dos columnas y no cuatro. Con la foto al costado, cuatro tarjetas por
+            fila dejan ~220px para el texto y la foto no puede crecer: es el ancho
+            lo que la agranda. Con dos, la foto ocupa toda la altura de la tarjeta
+            y la prenda se ve de verdad. */}
+        <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2, minmax(0, 1fr))", gap:12, padding: isMobile ? "0 20px" : "0 40px", position:"relative", zIndex:1 }}>
+          {resenas.lista.map(r => {
+            // A dónde lleva esta reseña. Abre la vista rápida de ESE producto,
+            // que ya trae todas sus reseñas enteras: Urban Pulse usa el modal y
+            // no la página de detalle, así que mandar a /producto/[id] le
+            // cambiaría el recorrido. Si el producto no está entre los cargados
+            // —o estamos en el editor— no se ofrece nada, en vez de abrir un
+            // modal vacío.
+            const productoDeLaResena = r.product?.id ? products.find(x => x.id === r.product!.id) : undefined;
+            const irAlProducto = productoDeLaResena && !isPreview ? () => openModal(productoDeLaResena) : null;
+            return (
+            <div key={r.id} style={{ background:testimonialsCardBg, border:`1px solid ${testimonialsCardBorder}`, display:"flex", alignItems:"stretch", position:"relative", overflow:"hidden" }}>
               {isOwner && !isPreview && (
                 <button onClick={() => resenas.borrar(r.id)} title="Eliminar reseña"
-                  style={{ position:"absolute", top:8, right:8, background:"none", border:"none", color:testimonialsMid, cursor:"pointer", fontSize:16, lineHeight:1, padding:4 }}
+                  style={{ position:"absolute", top:8, right:8, zIndex:2, background:"none", border:"none", color:testimonialsMid, cursor:"pointer", fontSize:16, lineHeight:1, padding:4 }}
                   onMouseEnter={e => (e.currentTarget.style.color = "#ef4444")}
                   onMouseLeave={e => (e.currentTarget.style.color = testimonialsMid)}>×</button>
               )}
-              <div style={{ display:"flex", gap:3 }}>
-                {Array.from({length:5}).map((_, si) => (
-                  <svg key={si} width={13} height={13} viewBox="0 0 24 24" fill={si < r.rating ? ACC : testimonialsMid} stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                ))}
-              </div>
-              {r.comment && (
-                <ResenaComentario
-                  texto={r.comment}
-                  acento={accentSobre(testimonialsBgUp, testimonialsText)}
-                  estiloTexto={{ color:testimonialsMid, fontSize:13, lineHeight:1.7 }}
-                  textoBoton={{ desplegar:"Leer todo", irA:"Ver reseña →" }}
-                  // Abre la vista rápida de ESE producto, que ya trae todas sus
-                  // reseñas enteras. Urban Pulse usa el modal, no la página de
-                  // detalle, así que mandarla a /producto/[id] le cambiaría el
-                  // recorrido. Si el producto no está cargado, no se ofrece el
-                  // link en vez de abrir un modal vacío.
-                  onVerMas={(() => {
-                    const p = r.product?.id ? products.find(x => x.id === r.product!.id) : undefined;
-                    return p && !isPreview ? () => openModal(p) : null;
-                  })()}
-                />
-              )}
-              <div style={{ borderTop:`1px solid ${testimonialsCardBorder}`, paddingTop:12, display:"flex", alignItems:"center", gap:10, marginTop:"auto" }}>
-                {r.product?.image && (
-                  <FadeImage src={r.product.image} alt={r.product?.name ?? ""} width={42} height={42} style={{ objectFit:"cover", flexShrink:0, border:`1px solid ${testimonialsCardBorder}` }} />
+
+              {/* La foto, a la izquierda y a toda la altura. Una reseña de TIENDA
+                  no tiene producto, así que en su lugar va la inicial en un
+                  cuadrado — la misma idea que usa el modal de producto. Sin esto
+                  la pestaña "La tienda" quedaba con tarjetas de otra forma. */}
+              <div
+                onClick={irAlProducto ?? undefined}
+                role={irAlProducto ? "button" : undefined}
+                tabIndex={irAlProducto ? 0 : undefined}
+                onKeyDown={irAlProducto ? (e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); irAlProducto(); } }) : undefined}
+                title={irAlProducto ? `Ver ${r.product?.name ?? "el producto"}` : undefined}
+                className={irAlProducto ? "up-zoom" : undefined}
+                style={{ position:"relative", flexShrink:0, width: isMobile ? 104 : 132, background: r.product?.image ? DARK : accentSobre(testimonialsBgUp, testimonialsText), borderRight:`1px solid ${testimonialsCardBorder}`, cursor: irAlProducto ? "pointer" : "default", overflow:"hidden" }}>
+                {r.product?.image ? (
+                  <FadeImage src={r.product.image} alt={r.product?.name ?? ""} fill sizes="(max-width: 768px) 104px, 132px" className={irAlProducto ? "up-zoom-img" : undefined} style={{ objectFit:"cover" }} />
+                ) : (
+                  <div style={{ position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center", fontSize: isMobile ? 34 : 42, fontWeight:900, color: textoSobre(accentSobre(testimonialsBgUp, testimonialsText)), lineHeight:1 }}>
+                    {r.reviewer.charAt(0).toUpperCase()}
+                  </div>
                 )}
-                <div style={{ minWidth:0 }}>
+              </div>
+
+              <div style={{ flex:1, minWidth:0, padding: isMobile ? "20px 18px" : "24px 26px", display:"flex", flexDirection:"column", gap:12 }}>
+                <div style={{ display:"flex", gap:3 }}>
+                  {Array.from({length:5}).map((_, si) => (
+                    // El relleno era `ACC` crudo: con un acento oscuro sobre una
+                    // sección oscura las estrellas quedaban negras sobre negro.
+                    // Es el mismo descuido que barrió UP-3 y este se había
+                    // escapado. `accentSobre` devuelve el acento cuando se
+                    // distingue del fondo, y un color legible cuando no.
+                    <svg key={si} width={15} height={15} viewBox="0 0 24 24" fill={si < r.rating ? accentSobre(testimonialsBgUp, testimonialsText) : testimonialsMid} stroke="none" style={{ opacity: si < r.rating ? 1 : 0.35 }}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                  ))}
+                </div>
+                {r.comment && (
+                  <ResenaComentario
+                    texto={r.comment}
+                    acento={accentSobre(testimonialsBgUp, testimonialsText)}
+                    estiloTexto={{ color:testimonialsMid, fontSize:13, lineHeight:1.7 }}
+                    textoBoton={{ desplegar:"Leer todo", irA:"Ver reseña →" }}
+                    onVerMas={irAlProducto}
+                  />
+                )}
+                <div style={{ borderTop:`1px solid ${testimonialsCardBorder}`, paddingTop:12, marginTop:"auto", minWidth:0 }}>
                   <p style={{ color:accentSobre(testimonialsBgUp, testimonialsText), fontSize:10, fontWeight:900, letterSpacing:3, textTransform:"uppercase", margin:0 }}>{r.reviewer}</p>
+                  {/* El nombre del producto también lleva a su ficha. La foto sola
+                      alcanzaba en escritorio, pero en celular es de 104px y en una
+                      lista de reseñas no se lee como un botón. */}
                   {r.product?.name && (
-                    <p style={{ color:testimonialsMid, fontSize:11, margin:"3px 0 0", display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical" as const, overflow:"hidden" }}>{r.product.name}</p>
+                    irAlProducto ? (
+                      <button type="button" onClick={irAlProducto}
+                        style={{ background:"none", border:"none", padding:0, margin:"3px 0 0", textAlign:"left", cursor:"pointer", color:testimonialsMid, fontSize:11, fontFamily:"inherit", display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical" as const, overflow:"hidden", textDecoration:"underline", textUnderlineOffset:3 }}>
+                        {r.product.name}
+                      </button>
+                    ) : (
+                      <p style={{ color:testimonialsMid, fontSize:11, margin:"3px 0 0", display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical" as const, overflow:"hidden" }}>{r.product.name}</p>
+                    )
                   )}
                   {/* "Compra verificada" y "Verificada por la tienda" NO son lo
                       mismo: la primera la cruzó el sistema contra un pedido
@@ -1229,7 +1268,8 @@ export default function UrbanPulse() {
                 </div>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
 
         {/* El formulario vive en un modal: acá solo el disparador, para que las
