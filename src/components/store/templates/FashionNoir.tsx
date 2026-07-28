@@ -4,6 +4,7 @@ import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { usePushBell } from "@/contexts/PushBellContext";
 import { useAuth } from "@/components/AuthProvider";
 import StoreFollowButton from "@/components/store/StoreFollowButton";
+import { useResenasProducto } from "@/hooks/useResenasProducto";
 import { EditableZone, EditableImageButton, EditableSectionBg, BgDragHandle, getContrastColor, useEditContext, textoSobre } from "@/contexts/EditContext";
 import { useStorefront, type StorefrontProduct } from "@/hooks/useStorefront";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
@@ -112,11 +113,8 @@ export default function FashionNoir() {
   const [activeSubcategory,  setActiveSubcategory]  = useState<string | null>(null);
   type PReview = { id: string; rating: number; comment: string | null; reviewer: string; verified: boolean; verifiedBy: string | null; createdAt: string; product?: { name: string; image: string | null } };
   type HomeReview = PReview;
-  const [reviews,        setReviews]        = useState<PReview[]>([]);
   const [homeReviews,    setHomeReviews]    = useState<HomeReview[]>([]);
   const [reviewCarouselPage, setReviewCarouselPage] = useState(0);
-  const [reviewsShown,   setReviewsShown]   = useState(5);
-  const [reviewsLoading, setReviewsLoading] = useState(false);
   const [reviewForm,     setReviewForm]     = useState({ reviewer: "", rating: 5, comment: "", email: "" });
   const reviewCaptcha = useTurnstile("review");
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
@@ -247,19 +245,19 @@ export default function FashionNoir() {
       .catch(() => {});
   }, [storeConfig?.slug]);
 
-  // Cargar reseñas al abrir modal (D-04): sincroniza el estado de reseñas con el
-  // modalProduct.id actual (fetch + reset), patrón estándar de "fetch on id change".
+  // Las reseñas del producto abierto: carga, paginado, promedio y total. Antes
+  // esto estaba escrito acá a mano —igual que en los otros tres templates de moda
+  // y en la página de listado— y traía los tres bugs que describe el hook: sin
+  // paginar (con 200 reseñas se llegaba a la 50 y las demás no existían), el
+  // promedio calculado sobre las que habían llegado, y las reseñas del producto
+  // anterior pegadas en la ficha si abrías dos seguidos.
+  const resenasProd = useResenasProducto({ slug: storeConfig?.slug, productId: modalProduct?.id });
+
   useEffect(() => {
-    const slug = storeConfig?.slug;
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- limpia las reseñas del producto anterior al cerrar el modal; depende de una interacción, no se puede calcular durante el render
-    if (!modalProduct || !slug) { setReviews([]); return; }
-    setReviewsLoading(true); setReviewDone(false); setReviewsShown(5);
+    if (!modalProduct) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- depende de una interacción (abrir otra ficha), no se puede calcular durante el render
+    setReviewDone(false);
     setReviewForm(p => ({ ...p, rating: 5, comment: "" }));
-    fetch(`/api/public/${slug}/reviews?productId=${modalProduct.id}`)
-      .then(r => r.ok ? r.json() : { reviews: [] })
-      .then(d => setReviews(d.reviews ?? []))
-      .catch(() => setReviews([]))
-      .finally(() => setReviewsLoading(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [modalProduct?.id]);
 
@@ -277,7 +275,7 @@ export default function FashionNoir() {
       });
       if (res.ok) {
         const data = await res.json();
-        setReviews(p => [data.review, ...p]);
+        resenasProd.agregar(data.review);
         setReviewForm({ reviewer: "", rating: 5, comment: "", email: "" });
         setReviewDone(true); setTimeout(() => setReviewDone(false), 4000);
       }
@@ -1753,15 +1751,17 @@ export default function FashionNoir() {
               {/* Reseñas — D-04 */}
               <div style={{ borderTop:`1px solid rgba(240,235,227,0.08)`, paddingTop:24, marginTop:20 }}>
                 <p style={{ fontSize:10, letterSpacing:3, textTransform:"uppercase", opacity:0.5, margin:"0 0 20px" }}>
-                  Reseñas{reviews.length > 0 && ` (${reviews.length})`}
+                  Reseñas{resenasProd.total > 0 && ` (${resenasProd.total})`}
                 </p>
-                {reviewsLoading ? (
+                {resenasProd.cargando ? (
                   <p style={{ fontSize:12, opacity:0.4 }}>Cargando...</p>
-                ) : reviews.length > 0 ? (
+                ) : resenasProd.lista.length > 0 ? (
                   <div style={{ marginBottom:24 }}>
                     {(() => {
-                      const avg = reviews.reduce((s, r) => s + r.rating, 0) / reviews.length;
-                      const dist = [5,4,3,2,1].map(s => ({ stars:s, count: reviews.filter(r => r.rating === s).length }));
+                      // El promedio, el total y las barras salen de la base, no de
+                      // las reseñas que llegaron (ver `useResenasProducto`).
+                      const avg = resenasProd.promedio;
+                      const dist = [5,4,3,2,1].map(s => ({ stars:s, count: resenasProd.distribucion[s] ?? 0 }));
                       return (
                         <div style={{ display:"flex", gap:20, alignItems:"center", marginBottom:20, padding:"14px 16px", background:"rgba(255,255,255,0.04)", borderRadius:4 }}>
                           <div style={{ textAlign:"center", minWidth:56 }}>
@@ -1769,14 +1769,14 @@ export default function FashionNoir() {
                             <div style={{ display:"flex", gap:2, justifyContent:"center", margin:"6px 0 4px" }}>
                               {[1,2,3,4,5].map(s => <span key={s} style={{ fontSize:11, color: s <= Math.round(avg) ? G : "rgba(240,235,227,0.15)" }}>★</span>)}
                             </div>
-                            <p style={{ fontSize:9, opacity:0.4, margin:0, letterSpacing:0.5 }}>{reviews.length} reseña{reviews.length !== 1 ? "s" : ""}</p>
+                            <p style={{ fontSize:9, opacity:0.4, margin:0, letterSpacing:0.5 }}>{resenasProd.total} reseña{resenasProd.total !== 1 ? "s" : ""}</p>
                           </div>
                           <div style={{ flex:1, display:"flex", flexDirection:"column", gap:5 }}>
                             {dist.map(d => (
                               <div key={d.stars} style={{ display:"flex", alignItems:"center", gap:8 }}>
                                 <span style={{ fontSize:9, color:G, minWidth:14, textAlign:"right", opacity:0.7 }}>{d.stars}★</span>
                                 <div style={{ flex:1, height:4, background:"rgba(255,255,255,0.08)", borderRadius:2, overflow:"hidden" }}>
-                                  <div style={{ height:"100%", width:`${reviews.length ? (d.count / reviews.length) * 100 : 0}%`, background:G, borderRadius:2 }} />
+                                  <div style={{ height:"100%", width:`${resenasProd.total ? (d.count / resenasProd.total) * 100 : 0}%`, background:G, borderRadius:2 }} />
                                 </div>
                                 <span style={{ fontSize:9, opacity:0.3, minWidth:12, textAlign:"right" }}>{d.count}</span>
                               </div>
@@ -1786,8 +1786,8 @@ export default function FashionNoir() {
                       );
                     })()}
                     <div style={{ display:"flex", flexDirection:"column" }}>
-                      {reviews.slice(0, reviewsShown).map((r, i) => (
-                        <div key={r.id} style={{ display:"flex", gap:12, padding:"16px 0", borderBottom: i < Math.min(reviewsShown, reviews.length) - 1 ? `1px solid rgba(240,235,227,0.06)` : "none" }}>
+                      {resenasProd.lista.slice(0, resenasProd.mostradas).map((r, i) => (
+                        <div key={r.id} style={{ display:"flex", gap:12, padding:"16px 0", borderBottom: i < Math.min(resenasProd.mostradas, resenasProd.lista.length) - 1 ? `1px solid rgba(240,235,227,0.06)` : "none" }}>
                           <div style={{ width:34, height:34, borderRadius:"50%", flexShrink:0, background:`${G}22`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:13, fontWeight:700, color:G }}>
                             {r.reviewer.charAt(0).toUpperCase()}
                           </div>
@@ -1809,9 +1809,9 @@ export default function FashionNoir() {
                         </div>
                       ))}
                     </div>
-                    {reviews.length > reviewsShown && (
-                      <button onClick={() => setReviewsShown(n => n + 10)} style={{ marginTop:14, background:"none", border:`1px solid rgba(240,235,227,0.15)`, color:G, fontSize:10, fontWeight:700, letterSpacing:1.5, cursor:"pointer", padding:"8px 20px", textTransform:"uppercase", display:"block" }}>
-                        Ver más ({reviews.length - reviewsShown})
+                    {resenasProd.hayMas && (
+                      <button onClick={resenasProd.verMas} disabled={resenasProd.cargandoMas} style={{ marginTop:14, background:"none", border:`1px solid rgba(240,235,227,0.15)`, color:G, fontSize:10, fontWeight:700, letterSpacing:1.5, cursor: resenasProd.cargandoMas ? "default" : "pointer", padding:"8px 20px", textTransform:"uppercase", display:"block" }}>
+                        {resenasProd.cargandoMas ? "Cargando…" : `Ver más (${resenasProd.faltan})`}
                       </button>
                     )}
                   </div>

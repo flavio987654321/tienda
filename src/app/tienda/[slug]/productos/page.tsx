@@ -9,6 +9,7 @@ import { getDemoPool, fillTargetFor, parsePromotions } from "@/hooks/useStorefro
 import type { ActivePromotion } from "@/lib/pricing";
 import { ENVIO_OPTIONS, PAGO_OPTIONS } from "@/components/store/shared/cartTypes";
 import { useTouchSwipe } from "@/hooks/useTouchSwipe";
+import { useResenasProducto, type ResenaProducto } from "@/hooks/useResenasProducto";
 import { getContrastColor, getReadableAccentText, getReadableAccentFill, textoSobre } from "@/contexts/EditContext";
 import { colorToSwatch } from "@/lib/colorSwatch";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
@@ -59,6 +60,16 @@ const COLOR_ATTRS = ["color","colour","colores","colors","tono"];
 // el servidor manda las 50 más recientes de una sola vez, así que "Ver más" no
 // pide nada: solo deja de recortar una lista que ya está en memoria.
 const PASO_RESENAS = 5;
+
+// Reseñas de muestra para la vista previa del editor, cuando el producto todavía
+// no tiene ninguna. Viven acá afuera y no adentro del componente porque son datos
+// fijos: adentro se rearmaban en cada render y el hook las veía como una lista
+// nueva cada vez.
+const RESENAS_EJEMPLO: ResenaProducto[] = [
+  { id:"ej-1", rating:5, comment:"Tal cual la foto y el talle justo. Llegó en tres días.", reviewer:"Micaela R.", createdAt:"2026-07-18T14:00:00.000Z" },
+  { id:"ej-2", rating:5, comment:"La tela es muy buena para el precio. Ya pedí otro en el otro color.", reviewer:"Julián T.", createdAt:"2026-07-11T14:00:00.000Z" },
+  { id:"ej-3", rating:4, comment:"Muy lindo, aunque me quedó un poco largo. Igual lo recomiendo.", reviewer:"Carla V.", createdAt:"2026-06-29T14:00:00.000Z" },
+];
 
 // Color de las estrellas llenas. Dorado fijo, NO el acento del template: las
 // estrellas son doradas por convención en cualquier tienda, y atarlas al acento
@@ -345,13 +356,9 @@ function ProductosPageInner() {
     el.scrollBy({ left: dir * el.clientWidth * 0.6, behavior: "smooth" });
   }
 
-  type PReview = { id: string; rating: number; comment: string | null; reviewer: string; createdAt: string };
-  const [reviews,          setReviews]          = useState<PReview[]>([]);
   // El formulario vive en un modal, igual que en el template: inline al final de
   // la lista quedaba inalcanzable con muchas reseñas cargadas.
   const [resenaModalOpen,  setResenaModalOpen]  = useState(false);
-  const [reviewsShown,     setReviewsShown]     = useState(PASO_RESENAS);
-  const [reviewsLoading,   setReviewsLoading]   = useState(false);
   // El email es opcional pero NO es de adorno: es lo que el servidor cruza contra
   // los pedidos entregados para poner el sello "✓ Compra verificada". Sin este
   // campo, una reseña dejada desde el listado no podía salir verificada nunca —
@@ -810,20 +817,23 @@ function ProductosPageInner() {
     () => elegirFoto(modalImg - 1)
   );
 
-  // ── Cargar reseñas al abrir modal ──────────────────────────────────────────
+  // ── Reseñas del producto abierto ───────────────────────────────────────────
+  // Carga, paginado, promedio y total. Antes estaba escrito acá a mano —igual que
+  // en los cuatro templates de moda— y traía los tres bugs que explica el hook:
+  // sin paginar (con 200 reseñas se llegaba a la 50 y las demás no existían), el
+  // promedio calculado sobre las que habían llegado, y las reseñas del producto
+  // anterior pegadas en la ficha si abrías dos seguidos.
+  const resenasProd = useResenasProducto({
+    slug, productId: modalProduct?.id,
+    paso: PASO_RESENAS, ejemplos: RESENAS_EJEMPLO, isPreview: fromEditor,
+  });
+
   useEffect(() => {
-    if (!modalProduct || !slug) return;
-    setReviews([]);
+    if (!modalProduct) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- depende de una interacción (abrir otra ficha), no se puede calcular durante el render
     setReviewDone(false);
-    setReviewsShown(5);
-    setReviewsLoading(true);
-    fetch(`/api/public/${slug}/reviews?productId=${modalProduct.id}`)
-      .then(r => r.ok ? r.json() : { reviews: [] })
-      .then(d => setReviews(d.reviews ?? []))
-      .catch(() => {})
-      .finally(() => setReviewsLoading(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [modalProduct?.id, slug]);
+  }, [modalProduct?.id]);
 
   // ── Alto de la columna de la foto (ver dónde se declara `altoColFoto`) ──────
   useEffect(() => {
@@ -886,15 +896,8 @@ function ProductosPageInner() {
      aviso, que el modal del template y que el bloque de prueba social de la home.
      Las fechas son fijas a propósito: una calculada al vuelo cambia entre el
      servidor y el navegador y rompe la hidratación. */
-  const RESENAS_EJEMPLO: PReview[] = [
-    { id:"ej-1", rating:5, comment:"Tal cual la foto y el talle justo. Llegó en tres días.", reviewer:"Micaela R.", createdAt:"2026-07-18T14:00:00.000Z" },
-    { id:"ej-2", rating:5, comment:"La tela es muy buena para el precio. Ya pedí otro en el otro color.", reviewer:"Julián T.", createdAt:"2026-07-11T14:00:00.000Z" },
-    { id:"ej-3", rating:4, comment:"Muy lindo, aunque me quedó un poco largo. Igual lo recomiendo.", reviewer:"Carla V.", createdAt:"2026-06-29T14:00:00.000Z" },
-  ];
-  // `reviewsLoading` importa: sin él, entre que se abre la ficha y contesta el
-  // servidor la lista está vacía y aparecerían las de ejemplo por un instante.
-  const resenasDeEjemplo = fromEditor && !reviewsLoading && reviews.length === 0;
-  const resenasVisibles  = resenasDeEjemplo ? RESENAS_EJEMPLO : reviews;
+  const resenasDeEjemplo = resenasProd.usandoEjemplos;
+  const resenasVisibles  = resenasProd.lista;
   // Fondo de inputs dentro del modal (cuyo fondo es S). Si inputBg coincide con S
   // (como en Urban Pulse donde ambos son #1e293b), los inputs desaparecen —
   // en ese caso usamos BG (el nivel más oscuro) para crear contraste visible.
@@ -922,7 +925,7 @@ function ProductosPageInner() {
       });
       if (res.ok) {
         const data = await res.json();
-        setReviews(p => [data.review, ...p]);
+        resenasProd.agregar(data.review);
         setReviewForm({ reviewer: "", rating: 5, comment: "", email: "" });
         setReviewDone(true);
       }
@@ -2146,7 +2149,7 @@ function ProductosPageInner() {
                 caracteres en vez de ~140. */}
             <div style={{ gridColumn: isMobile ? undefined : "1 / -1", borderTop:`1px solid ${border}`, padding: isMobile ? "20px 16px" : "24px 32px" }}>
                 <p style={{ ...tituloBloque, marginBottom: 20 }}>
-                  Reseñas{resenasVisibles.length > 0 && ` (${resenasVisibles.length})`}
+                  Reseñas{resenasProd.total > 0 && ` (${resenasProd.total})`}
                 </p>
                 {/* Solo en el editor: aclara que lo de abajo es de mentira. Sin
                     esto el dueño cree que ya tiene reseñas. */}
@@ -2168,14 +2171,15 @@ function ProductosPageInner() {
                     Escribí tu reseña
                   </button>
                 )}
-                {reviewsLoading ? (
+                {resenasProd.cargando ? (
                   <p style={{ fontSize:12, opacity:0.4 }}>Cargando...</p>
                 ) : resenasVisibles.length > 0 ? (
                   <div style={{ marginBottom:24 }}>
-                    {/* Resumen: promedio + distribución */}
+                    {/* Resumen: promedio + distribución. Los tres números salen de
+                        la base, no de las reseñas que llegaron — ver el hook. */}
                     {(() => {
-                      const avg = resenasVisibles.reduce((s, r) => s + r.rating, 0) / resenasVisibles.length;
-                      const dist = [5,4,3,2,1].map(s => ({ stars:s, count: resenasVisibles.filter(r => r.rating === s).length }));
+                      const avg = resenasProd.promedio;
+                      const dist = [5,4,3,2,1].map(s => ({ stars:s, count: resenasProd.distribucion[s] ?? 0 }));
                       return (
                         <div style={{ display:"flex", gap:20, alignItems:"center", marginBottom:20, padding:"14px 16px", background: dark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)", borderRadius:6 }}>
                           <div style={{ textAlign:"center", minWidth:56 }}>
@@ -2183,14 +2187,14 @@ function ProductosPageInner() {
                             <div style={{ display:"flex", gap:2, justifyContent:"center", margin:"6px 0 4px" }}>
                               {[1,2,3,4,5].map(s => <span key={s} style={{ fontSize:11, color: s <= Math.round(avg) ? STAR_ON : `${T}22` }}>★</span>)}
                             </div>
-                            <p style={{ fontSize:9, opacity:0.4, margin:0, letterSpacing:0.5 }}>{resenasVisibles.length} reseña{resenasVisibles.length !== 1 ? "s" : ""}</p>
+                            <p style={{ fontSize:9, opacity:0.4, margin:0, letterSpacing:0.5 }}>{resenasProd.total} reseña{resenasProd.total !== 1 ? "s" : ""}</p>
                           </div>
                           <div style={{ flex:1, display:"flex", flexDirection:"column", gap:5 }}>
                             {dist.map(d => (
                               <div key={d.stars} style={{ display:"flex", alignItems:"center", gap:8 }}>
                                 <span style={{ fontSize:9, color:GT, minWidth:14, textAlign:"right", opacity:0.7 }}>{d.stars}★</span>
                                 <div style={{ flex:1, height:4, background: dark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.08)", borderRadius:2, overflow:"hidden" }}>
-                                  <div style={{ height:"100%", width:`${resenasVisibles.length ? (d.count / resenasVisibles.length) * 100 : 0}%`, background:G, borderRadius:2 }} />
+                                  <div style={{ height:"100%", width:`${resenasProd.total ? (d.count / resenasProd.total) * 100 : 0}%`, background:G, borderRadius:2 }} />
                                 </div>
                                 <span style={{ fontSize:9, opacity:0.35, minWidth:12, textAlign:"right" }}>{d.count}</span>
                               </div>
@@ -2203,7 +2207,7 @@ function ProductosPageInner() {
                         modal, una sola columna daba renglones de ~140 caracteres,
                         casi el doble de lo que el ojo sigue sin perderse (60-80). */}
                     <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2, 1fr)", columnGap:32, alignItems:"start" }}>
-                      {resenasVisibles.slice(0, reviewsShown).map(r => (
+                      {resenasVisibles.slice(0, resenasProd.mostradas).map(r => (
                         <div key={r.id} style={{ display:"flex", gap:12, padding:"16px 0", borderBottom:`1px solid ${borderFaint}` }}>
                           <div style={{ width:34, height:34, borderRadius:"50%", flexShrink:0, background:`${G}20`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:13, fontWeight:700, color:GT }}>
                             {r.reviewer.charAt(0).toUpperCase()}
@@ -2232,9 +2236,9 @@ function ProductosPageInner() {
                         </div>
                       ))}
                     </div>
-                    {resenasVisibles.length > reviewsShown && (
-                      <button onClick={() => setReviewsShown(n => n + PASO_RESENAS)} style={{ marginTop:14, background:"none", border:`1px solid ${border}`, color:GT, fontSize:10, fontWeight:700, letterSpacing:1.5, cursor:"pointer", padding:"8px 20px", textTransform:"uppercase", display:"block" }}>
-                        Ver más ({resenasVisibles.length - reviewsShown})
+                    {resenasProd.hayMas && (
+                      <button onClick={resenasProd.verMas} disabled={resenasProd.cargandoMas} style={{ marginTop:14, background:"none", border:`1px solid ${border}`, color:GT, fontSize:10, fontWeight:700, letterSpacing:1.5, cursor: resenasProd.cargandoMas ? "default" : "pointer", padding:"8px 20px", textTransform:"uppercase", display:"block" }}>
+                        {resenasProd.cargandoMas ? "Cargando…" : `Ver más (${resenasProd.faltan})`}
                       </button>
                     )}
                   </div>

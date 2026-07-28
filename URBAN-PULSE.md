@@ -907,3 +907,27 @@ medida que se avanza, no cambiar la estructura.
 **Queda pendiente en los otros:** Chic Paris, Boho Terra, Fashion Noir y la página de listado siguen
 promediando sobre la página cargada. No se rompieron —el cambio del endpoint es aditivo y ellos
 ignoran `stats`— pero les falta el mismo arreglo.
+
+**28/07/2026 — el mismo arreglo en los otros cuatro.** Flavio: *"tocalos ahora para no olvidarnos"*.
+Chic Paris, Boho Terra, Fashion Noir y la página de listado tenían los tres bugs de arriba, porque
+tenían el mismo código copiado.
+
+En vez de escribir el arreglo cuatro veces más, la lógica salió a **`src/hooks/useResenasProducto.ts`**
+y la usan los cinco. El hook no decide nada de diseño: devuelve `lista`, `mostradas`, `total`,
+`promedio`, `distribucion`, `hayMas`, `faltan`, `verMas()` y `agregar()`, y cada template los dibuja
+como quiera. También se llevó las reseñas de ejemplo del editor, que estaban en Chic Paris y en el
+listado con la misma lógica de "si es preview y no hay ninguna, mostrar tres inventadas".
+
+Se fueron **cinco copias** de: el `useState` de reseñas, el `fetch` al abrir la ficha, el contador de
+"cuántas mostrar", el promedio a mano y el alta local al publicar. Las reseñas de ejemplo, además,
+se subieron a nivel de módulo: adentro del componente se rearmaban en cada render.
+
+Cada template conserva su propio `useEffect` chico para lo suyo —el formulario, el aviso de gracias,
+los bloques plegables de Urban Pulse—, que es estado de la vista y no de los datos.
+
+De paso desapareció el error de eslint `set-state-in-effect` de `productos/page.tsx:816`, que estaba
+anotado como pre-existente: era justo ese efecto.
+
+`tsc` limpio y eslint sin errores en los seis archivos —quedan los `<img>` del listado, que son
+pre-existentes—. Las cinco páginas afectadas responden 200. Sigue sin poder probarse con reseñas
+reales: no hay ninguna en la base.

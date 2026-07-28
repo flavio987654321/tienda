@@ -9,6 +9,7 @@ import { useStorefront, type StorefrontProduct } from "@/hooks/useStorefront";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { useCartLogic } from "@/hooks/useCartLogic";
 import { useHomeReviews, type EjemplosDeResenas } from "@/hooks/useHomeReviews";
+import { useResenasProducto, type ResenaProducto } from "@/hooks/useResenasProducto";
 import { ResenaComentario } from "@/components/store/templates/shared/ResenaComentario";
 import { useTouchSwipe } from "@/hooks/useTouchSwipe";
 import { masVistos, MIN_MAS_VISTOS } from "@/lib/masVistos";
@@ -156,6 +157,16 @@ const PASO_PRODUCTOS = 8;
 // está en memoria.
 const PASO_RESENAS = 5;
 
+// Reseñas de muestra para la vista previa del editor, cuando el producto todavía
+// no tiene ninguna. Viven acá afuera y no adentro del componente porque son datos
+// fijos: adentro se rearmaban en cada render y el hook las veía como una lista
+// nueva cada vez.
+const RESENAS_EJEMPLO: ResenaProducto[] = [
+  { id:"ej-1", rating:5, comment:"Tal cual la foto y el talle justo. Llegó en tres días.", reviewer:"Micaela R.", verified:true,  verifiedBy:"auto",  createdAt:"2026-07-18T14:00:00.000Z" },
+  { id:"ej-2", rating:5, comment:"La tela es muy buena para el precio. Ya pedí otro en el otro color.", reviewer:"Julián T.", verified:false, verifiedBy:null,    createdAt:"2026-07-11T14:00:00.000Z" },
+  { id:"ej-3", rating:4, comment:"Muy lindo, aunque me quedó un poco largo. Igual lo recomiendo.", reviewer:"Carla V.",  verified:true,  verifiedBy:"owner", createdAt:"2026-06-29T14:00:00.000Z" },
+];
+
 // Color de las estrellas llenas (rating). Dorado fijo, NO el acento: las
 // estrellas son doradas por convención en cualquier tienda, y atarlas al acento
 // las volvía casi invisibles cuando el acento es claro. Es el mismo dorado que
@@ -201,14 +212,10 @@ export default function ChicParis() {
   const [announcementIdx,  setAnnouncementIdx]  = useState(0);
   const [announcementVisible, setAnnouncementVisible] = useState(true);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  type PReview = { id: string; rating: number; comment: string | null; reviewer: string; verified: boolean; verifiedBy: string | null; createdAt: string; product?: { id: string; name: string; image: string | null } };
-  const [reviews,        setReviews]        = useState<PReview[]>([]);
   // El formulario de reseña del producto vive en un modal, igual que el de la
   // tienda. Inline al final de la lista quedaba inalcanzable: con 50 reseñas
   // cargadas había que scrollear las 50 para llegar a escribir la propia.
   const [resenaProdOpen, setResenaProdOpen] = useState(false);
-  const [reviewsShown,   setReviewsShown]   = useState(5);
-  const [reviewsLoading, setReviewsLoading] = useState(false);
   const [reviewForm,     setReviewForm]     = useState({ reviewer: "", rating: 5, comment: "", email: "" });
   const reviewCaptcha = useTurnstile("review");
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
@@ -541,19 +548,23 @@ export default function ChicParis() {
 
   // Las reseñas de la home ya no se piden acá: lo hace `useHomeReviews`.
 
-  // Cargar reseñas al abrir modal (D-04): sincroniza el estado de reseñas con el
-  // modalProduct.id actual (fetch + reset), patrón estándar de "fetch on id change".
+  // Las reseñas del producto abierto: carga, paginado, promedio y total. Antes
+  // esto estaba escrito acá a mano —igual que en los otros tres templates de moda
+  // y en la página de listado— y traía tres bugs que el hook explica en detalle:
+  // sin paginar (con 200 reseñas se llegaba a la 50 y las demás no existían), el
+  // promedio calculado sobre las que habían llegado, y las reseñas del producto
+  // anterior pegadas en la ficha si abrías dos seguidos.
+  const resenasProd = useResenasProducto({
+    slug: storeConfig?.slug, productId: modalProduct?.id,
+    paso: PASO_RESENAS, ejemplos: RESENAS_EJEMPLO, isPreview,
+  });
+
+  // Lo que se resetea acá es lo del TEMPLATE: el formulario y su modal.
   useEffect(() => {
-    const slug = storeConfig?.slug;
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- limpia las reseñas del producto anterior al cerrar el modal; depende de una interacción, no se puede calcular durante el render
-    if (!modalProduct || !slug) { setReviews([]); return; }
-    setReviewsLoading(true); setReviewDone(false); setReviewsShown(5); setResenaProdOpen(false);
+    if (!modalProduct) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- depende de una interacción (abrir otra ficha), no se puede calcular durante el render
+    setReviewDone(false); setResenaProdOpen(false);
     setReviewForm(p => ({ ...p, rating: 5, comment: "" }));
-    fetch(`/api/public/${slug}/reviews?productId=${modalProduct.id}`)
-      .then(r => r.ok ? r.json() : { reviews: [] })
-      .then(d => setReviews(d.reviews ?? []))
-      .catch(() => setReviews([]))
-      .finally(() => setReviewsLoading(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [modalProduct?.id]);
 
@@ -657,7 +668,7 @@ export default function ChicParis() {
       });
       if (res.ok) {
         const data = await res.json();
-        setReviews(p => [data.review, ...p]);
+        resenasProd.agregar(data.review);
         setReviewForm({ reviewer: "", rating: 5, comment: "", email: "" });
         setReviewError(null);
         // Se cierra el modal: la reseña recién publicada está en la lista de
@@ -722,16 +733,8 @@ export default function ChicParis() {
      home. Las fechas son fijas a propósito: una fecha calculada al vuelo cambia
      entre el servidor y el navegador y rompe la hidratación.
   ──────────────────────────────────────────────────────────────────────────── */
-  const RESENAS_EJEMPLO: PReview[] = [
-    { id:"ej-1", rating:5, comment:"Tal cual la foto y el talle justo. Llegó en tres días.", reviewer:"Micaela R.", verified:true,  verifiedBy:"auto",  createdAt:"2026-07-18T14:00:00.000Z" },
-    { id:"ej-2", rating:5, comment:"La tela es muy buena para el precio. Ya pedí otro en el otro color.", reviewer:"Julián T.", verified:false, verifiedBy:null,    createdAt:"2026-07-11T14:00:00.000Z" },
-    { id:"ej-3", rating:4, comment:"Muy lindo, aunque me quedó un poco largo. Igual lo recomiendo.", reviewer:"Carla V.",  verified:true,  verifiedBy:"owner", createdAt:"2026-06-29T14:00:00.000Z" },
-  ];
-  // `reviewsLoading` importa: sin él, entre que se abre el modal y contesta el
-  // servidor la lista está vacía y aparecerían las de ejemplo por un instante,
-  // justo para ser reemplazadas por las reales.
-  const resenasDeEjemplo = isPreview && !reviewsLoading && reviews.length === 0;
-  const resenasVisibles  = resenasDeEjemplo ? RESENAS_EJEMPLO : reviews;
+  const resenasDeEjemplo = resenasProd.usandoEjemplos;
+  const resenasVisibles  = resenasProd.lista;
 
   // Banner slide images
   const bannerImgs = Array.from({ length: BANNER_COUNT }, (_, i) =>
@@ -2344,7 +2347,7 @@ export default function ChicParis() {
                 Van antes de "Productos similares", que ya vivía a lo ancho. */}
             <div style={{ borderTop: "1px solid #f0f0f0", padding: isMobile ? "20px 20px" : "24px 32px" }}>
                 <p style={{ ...CP_MODAL_TITULO, marginBottom: 20 }}>
-                  Reseñas{resenasVisibles.length > 0 && ` (${resenasVisibles.length})`}
+                  Reseñas{resenasProd.total > 0 && ` (${resenasProd.total})`}
                 </p>
                 {/* Solo en el editor: aclara que lo de abajo es de mentira. Sin
                     esto el dueño cree que ya tiene reseñas — o peor, las busca en
@@ -2369,13 +2372,15 @@ export default function ChicParis() {
                     Escribí tu reseña
                   </button>
                 )}
-                {reviewsLoading ? (
+                {resenasProd.cargando ? (
                   <p style={{ fontSize: 12, color: "#bbb" }}>Cargando...</p>
                 ) : resenasVisibles.length > 0 ? (
                   <div style={{ marginBottom: 24 }}>
                     {(() => {
-                      const avg = resenasVisibles.reduce((s, r) => s + r.rating, 0) / resenasVisibles.length;
-                      const dist = [5,4,3,2,1].map(s => ({ stars:s, count: resenasVisibles.filter(r => r.rating === s).length }));
+                      // El promedio, el total y las barras salen de la base, no de
+                      // las reseñas que llegaron (ver `useResenasProducto`).
+                      const avg = resenasProd.promedio;
+                      const dist = [5,4,3,2,1].map(s => ({ stars:s, count: resenasProd.distribucion[s] ?? 0 }));
                       // `maxWidth` acotado: a lo ancho del modal las barritas del
                       // gráfico quedaban de medio metro y el promedio perdido allá
                       // a la izquierda. Es un resumen, no una tabla.
@@ -2386,14 +2391,14 @@ export default function ChicParis() {
                             <div style={{ display:"flex", gap:2, justifyContent:"center", margin:"6px 0 4px" }}>
                               {[1,2,3,4,5].map(s => <span key={s} style={{ fontSize:11, color: s <= Math.round(avg) ? STAR_ON : "#e5e7eb" }}>★</span>)}
                             </div>
-                            <p style={{ fontSize:9, color:"#bbb", margin:0, fontWeight:600, letterSpacing:0.5 }}>{resenasVisibles.length} reseña{resenasVisibles.length !== 1 ? "s" : ""}</p>
+                            <p style={{ fontSize:9, color:"#bbb", margin:0, fontWeight:600, letterSpacing:0.5 }}>{resenasProd.total} reseña{resenasProd.total !== 1 ? "s" : ""}</p>
                           </div>
                           <div style={{ flex:1, display:"flex", flexDirection:"column", gap:5 }}>
                             {dist.map(d => (
                               <div key={d.stars} style={{ display:"flex", alignItems:"center", gap:8 }}>
                                 <span style={{ fontSize:9, color:STAR_ON, minWidth:14, textAlign:"right", fontWeight:700 }}>{d.stars}★</span>
                                 <div style={{ flex:1, height:4, background:"#f0f0f0", borderRadius:2, overflow:"hidden" }}>
-                                  <div style={{ height:"100%", width:`${resenasVisibles.length ? (d.count / resenasVisibles.length) * 100 : 0}%`, background:accentRelleno, borderRadius:2 }} />
+                                  <div style={{ height:"100%", width:`${resenasProd.total ? (d.count / resenasProd.total) * 100 : 0}%`, background:accentRelleno, borderRadius:2 }} />
                                 </div>
                                 <span style={{ fontSize:9, color:"#bbb", minWidth:12, textAlign:"right" }}>{d.count}</span>
                               </div>
@@ -2409,7 +2414,7 @@ export default function ChicParis() {
                         paso no sobra espacio a la derecha. En celular va una
                         sola, obviamente. */}
                     <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2, 1fr)", columnGap: 32, alignItems: "start" }}>
-                      {resenasVisibles.slice(0, reviewsShown).map(r => (
+                      {resenasVisibles.slice(0, resenasProd.mostradas).map(r => (
                         <div key={r.id} style={{ display:"flex", gap:12, padding:"16px 0", borderBottom: "1px solid #f5f5f5" }}>
                           <div style={{ width:34, height:34, borderRadius:"50%", flexShrink:0, background:`${ACC}15`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:13, fontWeight:700, color:accentLegible }}>
                             {r.reviewer.charAt(0).toUpperCase()}
@@ -2440,9 +2445,9 @@ export default function ChicParis() {
                         </div>
                       ))}
                     </div>
-                    {resenasVisibles.length > reviewsShown && (
-                      <button onClick={() => setReviewsShown(n => n + PASO_RESENAS)} style={{ marginTop:14, background:"none", border:"1px solid #e5e7eb", color:accentLegible, fontSize:10, fontWeight:700, letterSpacing:1.5, cursor:"pointer", padding:"8px 20px", textTransform:"uppercase", display:"block" }}>
-                        Ver más ({resenasVisibles.length - reviewsShown})
+                    {resenasProd.hayMas && (
+                      <button onClick={resenasProd.verMas} disabled={resenasProd.cargandoMas} style={{ marginTop:14, background:"none", border:"1px solid #e5e7eb", color:accentLegible, fontSize:10, fontWeight:700, letterSpacing:1.5, cursor: resenasProd.cargandoMas ? "default" : "pointer", padding:"8px 20px", textTransform:"uppercase", display:"block" }}>
+                        {resenasProd.cargandoMas ? "Cargando…" : `Ver más (${resenasProd.faltan})`}
                       </button>
                     )}
                   </div>

@@ -9,6 +9,7 @@ import { useStorefront, type StorefrontProduct } from "@/hooks/useStorefront";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { useCartLogic } from "@/hooks/useCartLogic";
 import { useHomeReviews, type EjemplosDeResenas } from "@/hooks/useHomeReviews";
+import { useResenasProducto } from "@/hooks/useResenasProducto";
 import { ResenaComentario } from "@/components/store/templates/shared/ResenaComentario";
 import { useTouchSwipe } from "@/hooks/useTouchSwipe";
 import { masVistos, MIN_MAS_VISTOS } from "@/lib/masVistos";
@@ -120,22 +121,6 @@ export default function UrbanPulse() {
   const [mobileMenuOpen,   setMobileMenuOpen]   = useState(false);
   const [mobileCatsOpen,   setMobileCatsOpen]   = useState(false);
   const [mobileOpenCat,    setMobileOpenCat]    = useState<string | null>(null);
-  type PReview = { id: string; rating: number; comment: string | null; reviewer: string; verified: boolean; verifiedBy: string | null; createdAt: string; product?: { name: string; image: string | null } };
-  const [reviews,        setReviews]        = useState<PReview[]>([]);
-  const [reviewsShown,   setReviewsShown]   = useState(5);
-  const [reviewsLoading, setReviewsLoading] = useState(false);
-  // El promedio, el total y las barras vienen de la BASE, no de las reseñas que
-  // llegaron. Calculados acá con 300 reseñas daban "el promedio de las últimas
-  // 50" publicado como si fuera el del producto — y la portada, que sí usa el
-  // agregado, mostraba otro número para la misma tienda.
-  type ResenaStats = { promedio: number; total: number; distribucion: Record<number, number> };
-  const [reviewStats,    setReviewStats]    = useState<ResenaStats | null>(null);
-  const [reviewsMore,    setReviewsMore]    = useState(false);
-  // A qué producto pertenece la lista cargada. Sin esto, abrir un producto y
-  // saltar enseguida a otro puede dejar las reseñas del primero pegadas en la
-  // ficha del segundo: gana la respuesta que llega última, no la que se pidió
-  // última.
-  const resenasDe = useRef<string | null>(null);
   const [reviewForm,     setReviewForm]     = useState({ reviewer: "", rating: 5, comment: "", email: "" });
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
   // Trampa para bots: invisible para una persona, irresistible para un robot que
@@ -431,60 +416,22 @@ export default function UrbanPulse() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [products]);
 
-  // Cargar reseñas al abrir modal (D-04): sincroniza el estado de reseñas con el
-  // modalProduct.id actual (fetch + reset), patrón estándar de "fetch on id change".
+  // Las reseñas del producto abierto: carga, paginado, promedio y total. Vive en
+  // `useResenasProducto` porque esto mismo estaba escrito cinco veces —los cuatro
+  // templates de moda y la página de listado— con el mismo bug en las cinco.
+  const resenasProd = useResenasProducto({ slug: storeConfig?.slug, productId: modalProduct?.id });
+
+  // Lo que se resetea acá es lo del TEMPLATE, no las reseñas: el formulario, el
+  // aviso de "gracias" y los dos bloques plegables. Si quedaran abiertos, abrir un
+  // similar desde el pie del modal te deja mirando la mitad de una descripción que
+  // no es la que pediste.
   useEffect(() => {
-    const slug = storeConfig?.slug;
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- limpia las reseñas del producto anterior al cerrar el modal; depende de una interacción, no se puede calcular durante el render
-    if (!modalProduct || !slug) { setReviews([]); setReviewStats(null); resenasDe.current = null; return; }
-    const id = modalProduct.id;
-    resenasDe.current = id;
-    setReviewsLoading(true); setReviewDone(false); setReviewsShown(5); setReviewStats(null);
-    // Se pliegan de nuevo al cambiar de producto: si quedaran abiertas, abrir un
-    // similar desde el pie del modal te deja mirando la mitad de una descripción
-    // que no es la que pediste.
-    setDescAbierta(false); setFormResenaAbierto(false);
+    if (!modalProduct) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- depende de una interacción (abrir otra ficha), no se puede calcular durante el render
+    setReviewDone(false); setDescAbierta(false); setFormResenaAbierto(false);
     setReviewForm(p => ({ ...p, rating: 5, comment: "" }));
-    fetch(`/api/public/${slug}/reviews?productId=${id}`)
-      .then(r => r.ok ? r.json() : null)
-      .then(d => {
-        if (resenasDe.current !== id) return;
-        setReviews(d?.reviews ?? []);
-        setReviewStats(d?.stats ?? null);
-      })
-      .catch(() => { if (resenasDe.current === id) setReviews([]); })
-      .finally(() => { if (resenasDe.current === id) setReviewsLoading(false); });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [modalProduct?.id]);
-
-  // "Ver más" hace dos cosas según haga falta: primero destapa las que ya están
-  // cargadas y, cuando se acaban, va a buscar la página siguiente. Antes el
-  // servidor mandaba 50 y no había forma de pedir más: con 200 reseñas, el
-  // comprador llegaba a la 50 y el botón desaparecía sin decir que faltaban 150.
-  const verMasResenas = async () => {
-    const total = reviewStats?.total ?? reviews.length;
-    const objetivo = Math.min(reviewsShown + 10, total);
-    const slug = storeConfig?.slug;
-    const id = modalProduct?.id;
-    if (objetivo > reviews.length && reviews.length < total && slug && id && !reviewsMore) {
-      setReviewsMore(true);
-      try {
-        const r = await fetch(`/api/public/${slug}/reviews?productId=${id}&skip=${reviews.length}`);
-        const d = r.ok ? await r.json() : null;
-        if (resenasDe.current === id && d?.reviews?.length) {
-          setReviews(prev => {
-            // Se descartan las repetidas por id: entre una página y la siguiente
-            // puede entrar una reseña nueva y correr todo un lugar, y React se
-            // queja —con razón— de dos hijos con la misma key.
-            const vistas = new Set(prev.map(x => x.id));
-            return [...prev, ...(d.reviews as PReview[]).filter(x => !vistas.has(x.id))];
-          });
-        }
-      } catch { /* se queda con las que ya tiene */ }
-      finally { if (resenasDe.current === id) setReviewsMore(false); }
-    }
-    setReviewsShown(objetivo);
-  };
 
   const colorSyncingRef = useRef(false);
 
@@ -585,21 +532,10 @@ export default function UrbanPulse() {
       });
       if (res.ok) {
         const data = await res.json();
-        setReviews(p => [data.review, ...p]);
-        // El promedio y el total ahora vienen de la base, así que hay que moverlos
-        // acá también: si no, quien acaba de publicar ve su reseña en la lista y
-        // el contador de arriba clavado en el número viejo. Se recalcula en vez de
-        // volver a pedir la página entera.
-        setReviewStats(s => {
-          if (!s) return s;
-          const total = s.total + 1;
-          const r = data.review?.rating ?? reviewForm.rating;
-          return {
-            total,
-            promedio: (s.promedio * s.total + r) / total,
-            distribucion: { ...s.distribucion, [r]: (s.distribucion[r] ?? 0) + 1 },
-          };
-        });
+        // Alta local: mete la reseña arriba y mueve el promedio y el total, que
+        // ahora vienen de la base. Sin esto, quien acaba de publicar ve su reseña
+        // en la lista y el contador de arriba clavado en el número viejo.
+        resenasProd.agregar(data.review);
         setReviewForm({ reviewer: "", rating: 5, comment: "", email: "" });
         setReviewDone(true); setTimeout(() => setReviewDone(false), 4000);
       }
@@ -1980,9 +1916,9 @@ export default function UrbanPulse() {
                 {/* Atajo a las reseñas, que ahora viven en la otra columna. Sin
                     esto no hay ninguna señal de que el producto tenga opiniones
                     hasta que scrolleás medio modal. */}
-                {(reviewStats?.total ?? reviews.length) > 0 && (() => {
-                  const totalRes = reviewStats?.total ?? reviews.length;
-                  const prom = reviewStats?.promedio ?? (reviews.reduce((s, r) => s + r.rating, 0) / reviews.length);
+                {resenasProd.total > 0 && (() => {
+                  const totalRes = resenasProd.total;
+                  const prom = resenasProd.promedio;
                   return (
                     <button type="button" onClick={() => document.getElementById("up-modal-resenas")?.scrollIntoView({ behavior:"smooth", block:"start" })}
                       style={{ display:"flex", alignItems:"center", gap:7, background:"none", border:"none", padding:0, marginBottom:14, cursor:"pointer" }}>
@@ -2227,18 +2163,17 @@ export default function UrbanPulse() {
 
                 {/* Reseñas — D-04 */}
                 <div id="up-modal-resenas">
-                  {tituloModal((reviewStats?.total ?? reviews.length) > 0 ? `Reseñas (${reviewStats?.total ?? reviews.length})` : "Reseñas")}
-                  {reviewsLoading ? (
+                  {tituloModal(resenasProd.total > 0 ? `Reseñas (${resenasProd.total})` : "Reseñas")}
+                  {resenasProd.cargando ? (
                     <p style={{ fontSize:12, color:MID }}>Cargando...</p>
-                  ) : reviews.length > 0 ? (
+                  ) : resenasProd.lista.length > 0 ? (
                     <div style={{ marginBottom:24 }}>
                       {(() => {
-                        // De la base cuando está; si el endpoint no mandó `stats`
-                        // —una tienda vieja en caché— se calcula con lo que llegó,
-                        // que es lo que hacía siempre.
-                        const totalRes = reviewStats?.total ?? reviews.length;
-                        const avg = reviewStats?.promedio ?? (reviews.reduce((s, r) => s + r.rating, 0) / reviews.length);
-                        const dist = [5,4,3,2,1].map(s => ({ stars:s, count: reviewStats?.distribucion?.[s] ?? reviews.filter(r => r.rating === s).length }));
+                        // Los tres salen de la base, no de las reseñas que llegaron
+                        // (ver `useResenasProducto`).
+                        const totalRes = resenasProd.total;
+                        const avg = resenasProd.promedio;
+                        const dist = [5,4,3,2,1].map(s => ({ stars:s, count: resenasProd.distribucion[s] ?? 0 }));
                         return (
                           <div style={{ display:"flex", gap:20, alignItems:"center", marginBottom:20, padding:"14px 16px", background:BG, border:`2px solid ${DARK}` }}>
                             <div style={{ textAlign:"center", minWidth:56 }}>
@@ -2269,8 +2204,8 @@ export default function UrbanPulse() {
                         );
                       })()}
                       <div style={{ display:"flex", flexDirection:"column" }}>
-                        {reviews.slice(0, reviewsShown).map((r, i) => (
-                          <div key={r.id} style={{ display:"flex", gap:12, padding:"16px 0", borderBottom: i < Math.min(reviewsShown, reviews.length) - 1 ? `1px solid ${DARK}` : "none" }}>
+                        {resenasProd.lista.slice(0, resenasProd.mostradas).map((r, i) => (
+                          <div key={r.id} style={{ display:"flex", gap:12, padding:"16px 0", borderBottom: i < Math.min(resenasProd.mostradas, resenasProd.lista.length) - 1 ? `1px solid ${DARK}` : "none" }}>
                             {/* El cuadradito con la inicial de quien reseñó. Estaba
                                 con el acento crudo sobre el blanco del modal: con un
                                 acento claro se perdían la letra y el borde a la vez. */}
@@ -2303,10 +2238,10 @@ export default function UrbanPulse() {
                           </div>
                         ))}
                       </div>
-                      {(reviewStats?.total ?? reviews.length) > reviewsShown && (
-                        <button onClick={verMasResenas} disabled={reviewsMore}
-                          style={{ marginTop:14, background:"none", border:`2px solid ${DARK}`, color: reviewsMore ? MID : accSobreClaro, fontSize:9, fontWeight:900, letterSpacing:2, cursor: reviewsMore ? "default" : "pointer", padding:"8px 20px", textTransform:"uppercase", display:"block" }}>
-                          {reviewsMore ? "Cargando…" : `Ver más (${(reviewStats?.total ?? reviews.length) - reviewsShown})`}
+                      {resenasProd.hayMas && (
+                        <button onClick={resenasProd.verMas} disabled={resenasProd.cargandoMas}
+                          style={{ marginTop:14, background:"none", border:`2px solid ${DARK}`, color: resenasProd.cargandoMas ? MID : accSobreClaro, fontSize:9, fontWeight:900, letterSpacing:2, cursor: resenasProd.cargandoMas ? "default" : "pointer", padding:"8px 20px", textTransform:"uppercase", display:"block" }}>
+                          {resenasProd.cargandoMas ? "Cargando…" : `Ver más (${resenasProd.faltan})`}
                         </button>
                       )}
                     </div>
