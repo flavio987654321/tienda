@@ -352,17 +352,40 @@ ANTES    color: <el degradado>   → CSS inválido, se descarta
 DESPUÉS  color: #9a8c8c                            contraste 5.94
 ```
 
-**Arreglado el 27/07.** Se agregó `productosBgSolido = colorRepresentativo(productosBgUp)` y se usa
-en el `color:` y en el `onMouseLeave`. `colorRepresentativo` ya existía en `section-bg.ts` y devuelve
-el punto medio del degradado — que es exactamente contra el que se eligió `productosTextUp`, así que
-el contraste queda garantizado por la misma construcción de antes.
+#### El primer arreglo se quedó corto
+
+El primer intento fue `colorRepresentativo(productosBgUp)`: el punto medio del degradado, que sí es
+un color válido. El texto volvió a aparecer, pero Flavio lo miró y dijo que seguía mal — y tenía
+razón. **Copiar el fondo no es adaptarse.** Con un fondo de tono intermedio la etiqueta sale de ese
+tono intermedio y apenas se despega del relleno: 5.94 donde se podía tener 19.17.
+
+La regla buena es la misma que el resto del template: **elegir el texto midiendo contra la superficie
+que tiene atrás**, que acá es el relleno del propio botón, no el fondo de la sección.
+
+```tsx
+const productosBotonText = textoSobre(productosTextUp);
+```
+
+Medido en los cinco casos que puede armar el panel:
+
+| Fondo de la sección | Relleno | Antes (copiaba el fondo) | Ahora (mide el relleno) |
+|---|---|---|---|
+| degradado mauve (el de la tienda) | `#0f0f0f` | `#9a8c8c` **5.94** | `#fff` **19.17** |
+| claro liso | `#0f0f0f` | `#ffffff` 19.17 | `#fff` 19.17 |
+| oscuro liso | `#ffffff` | `#0f0f0f` 19.17 | `#111` 18.88 |
+| degradado claro | `#0f0f0f` | `#f8f4f4` 17.56 | `#fff` 19.17 |
+| degradado oscuro | `#ffffff` | `#252525` 15.33 | `#111` 18.88 |
+
+Nunca es peor y en el caso que se reportó es tres veces mejor. Como efecto secundario ya no hace
+falta `colorRepresentativo` acá: el fondo de la sección **dejó de entrar a un `color:`**, que era la
+causa raíz.
 
 #### Estaba igual en Boho Terra
 
 Al buscar el patrón apareció en `BohoTerra.tsx:762` y `:942`, en los botones "Ver Colección" y "Ver
 colección completa". Ahí el estado normal está bien —fondo transparente— y la inversión ocurre **al
-pasar el mouse**, así que la etiqueta desaparecía en el hover. Mismo arreglo, con `heroLeftBgSolido`
-y `coleccionBgSolido`. Los dos fondos que toca (`bgHeroLeft`, `bgColeccion`) están efectivamente
+pasar el mouse**, así que la etiqueta desaparecía en el hover. Mismo arreglo, con `heroLeftBotonText`
+y `coleccionBotonText`. Los dos fondos que toca (`bgHeroLeft`, `bgColeccion`) están efectivamente
 usados por tiendas reales.
 
 ⚠️ **Queda un caso menor sin tocar, a la espera de decisión.** Seis templates (TechNova, CasaClara,
@@ -376,10 +399,12 @@ palabra en cada uno.
 ## Notas para cuando se arregle
 
 - **Cerrados los nueve puntos**, del UP-1 al UP-9.
-- **El degradado como `color:` (UP-9) es una clase de bug, no un caso.** La regla: el valor de
-  `sectionColors` sirve para `background:` y para nada más. Cualquier otro lugar que lo reciba
-  —`color`, `border`, `fill`, `stroke`— necesita pasar antes por `colorRepresentativo`. Quedan sin
-  tocar los seis `border: 2px solid ${navBg}` descritos en UP-9.
+- **UP-9 es una clase de bug, no un caso.** La regla: el valor de `sectionColors` sirve para
+  `background:` y para nada más — puede ser un degradado, y `color`/`border`/`fill`/`stroke` no los
+  aceptan. Y donde hacía falta un color de texto, la respuesta no era convertir el degradado a color
+  sino **no mirar el fondo de la sección**: el texto se elige midiendo contra la superficie que tiene
+  detrás. Quedan sin tocar los seis `border: 2px solid ${navBg}` descritos en UP-9, que sí necesitan
+  la conversión porque ahí el color de la sección es lo que se quiere dibujar.
 - **UP-4 está igual en BohoTerra y FashionNoir.** Antes de arreglar el modal de otro template de
   moda, evaluar extraerlo a `shared/`: los cuatro lo tienen copiado y pegado.
 - **El `accentText` invertido (UP-3D) puede estar en más templates.** Se detectó de casualidad acá.
@@ -409,5 +434,11 @@ server sin errores de runtime. Nada pusheado ni deployado.
 leyendo la config real de la tienda en la base (consulta de solo lectura) en vez de deducirlo: el
 fondo de la sección estaba guardado como `linear-gradient(...)`, y ese string llegaba a un `color:`,
 donde el CSS es inválido. El contraste medido pasó de **1.00 a 5.94**. El mismo patrón apareció en
-Boho Terra y se arregló igual. `tsc` limpio, eslint sin errores nuevos, `/preview/urban-pulse` y
-`/preview/boho-terra` en 200, log sin errores. Nada pusheado ni deployado.
+Boho Terra y se arregló igual.
+
+Segunda pasada el mismo día: Flavio miró el resultado y avisó que el botón seguía sin adaptarse. El
+primer arreglo solo había hecho válido el color, no legible — copiaba el fondo de la sección en vez
+de medir. Se cambió por `textoSobre(<relleno del botón>)` y se midieron los cinco fondos que puede
+armar el panel: **5.94 → 19.17** en el caso reportado, y nunca peor en los otros cuatro. `tsc`
+limpio, eslint sin errores nuevos, `/preview/urban-pulse` y `/preview/boho-terra` en 200, log sin
+errores. Nada pusheado ni deployado.
