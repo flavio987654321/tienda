@@ -10,6 +10,11 @@ import type { ActivePromotion } from "@/lib/pricing";
 import { ENVIO_OPTIONS, PAGO_OPTIONS } from "@/components/store/shared/cartTypes";
 import { useTouchSwipe } from "@/hooks/useTouchSwipe";
 import { useResenasProducto, type ResenaProducto } from "@/hooks/useResenasProducto";
+// Las fotos pasan por `next/image` (vía `FadeImage`, el mismo que usan los diez
+// templates) y no por `<img>` sueltos: así el celular baja una versión del tamaño
+// que va a mostrar y en WebP, en vez del JPG original de la cámara. Esta página
+// dibuja el catálogo entero, que es donde más pesa.
+import { FadeImage } from "@/components/store/templates/shared/FadeImage";
 import { getContrastColor, getReadableAccentText, getReadableAccentFill, textoSobre } from "@/contexts/EditContext";
 import { colorToSwatch } from "@/lib/colorSwatch";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
@@ -1034,10 +1039,14 @@ function ProductosPageInner() {
               <>
                 <div style={{ position:"relative", aspectRatio:"3/4", overflow:"hidden", background:S, marginBottom:imgMb }}>
                   {product.images[0] ? (
-                    <img src={product.images[0]} alt={product.name}
+                    <FadeImage src={product.images[0]} alt={product.name}
+                      fill sizes="(max-width: 768px) 50vw, (max-width: 1280px) 33vw, 25vw"
                       className="pc-img"
-                      style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }}
-                      onError={e => { e.currentTarget.style.opacity="0"; }}/>
+                      // La transición va también acá y no solo en el CSS de
+                      // `.pc-img`: `FadeImage` escribe su fundido en el `style`
+                      // inline, que le gana a la hoja de estilos. Sin esto el
+                      // acercamiento al pasar el mouse pasaba a ser un salto.
+                      style={{ objectFit:"cover", transition:"transform 0.5s ease" }} />
                   ) : (
                     <div style={{ width:"100%", height:"100%", display:"flex", alignItems:"center", justifyContent:"center", opacity:0.15 }}>
                       <svg width={48} height={48} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={0.8}><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
@@ -1869,7 +1878,9 @@ function ProductosPageInner() {
                 miniaturas y los videos arrancan todos en la misma vertical. */}
             <div ref={colFotoRef} style={{ alignSelf: "start", boxSizing: "border-box",
                                            padding: isMobile ? 0 : "28px 0 28px 28px" }}>
-              <div style={{ position:"relative" }} {...imgSwipe}>
+              {/* `aspectRatio` acá arriba: la foto pasó a `fill`, que se mide
+                  contra el contenedor. Antes el alto lo ponía la propia imagen. */}
+              <div style={{ position:"relative", aspectRatio:"3/4" }} {...imgSwipe}>
                 {(() => {
                   // La PROMOCIÓN de tienda se muestra como tag rectangular (naranja) — distinta
                   // de la OFERTA del producto (badge rojo), para que se distingan de un vistazo.
@@ -1880,9 +1891,9 @@ function ProductosPageInner() {
                   if (hasOffer || modalProduct.offerBadge) return <OfferBadge badge={modalProduct.offerBadge ?? null} pct={hasOffer ? discountPercent(modalProduct.price, modalProduct.comparePrice) : null} size="md" />;
                   return null;
                 })()}
-                <img src={modalProduct.images[modalImg] ?? ""} alt={modalProduct.name}
-                  style={{ width:"100%", aspectRatio:"3/4", objectFit:"cover", display:"block", cursor:"zoom-in" }}
-                  onError={e => { e.currentTarget.style.opacity="0"; }}
+                <FadeImage src={modalProduct.images[modalImg] ?? "/placeholder.jpg"} alt={modalProduct.name}
+                  fill sizes="(max-width: 768px) 100vw, 480px"
+                  style={{ objectFit:"cover", cursor:"zoom-in" }}
                   onClick={() => setLightboxSrc(modalProduct.images[modalImg] ?? "")} />
                 {modalProduct.images.length > 1 && (<>
                   <button onClick={() => elegirFoto(modalImg - 1)} aria-label="Imagen anterior"
@@ -1902,7 +1913,7 @@ function ProductosPageInner() {
                   {modalProduct.images.map((img, i) => (
                     <button key={i} onClick={() => elegirFoto(i)} aria-label={`Ver foto ${i + 1}`}
                       style={{ width:56, height:74, flexShrink:0, padding:0, overflow:"hidden", background:S, border: i===modalImg ? `2px solid ${GT}` : `1px solid ${border}`, cursor:"pointer", transition:"border-color 0.2s" }}>
-                      <img src={img} alt="" style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }}/>
+                      <FadeImage src={img} alt="" width={56} height={74} style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }} />
                     </button>
                   ))}
                 </div>
@@ -2271,8 +2282,8 @@ function ProductosPageInner() {
                             lista aunque el producto tuviera promo u oferta, así que
                             el mismo producto valía una cosa acá y otra al abrirlo.
                             `PromoPrice` es el que ya usa el resto de la tienda. */}
-                        <div style={{ position:"relative" }}>
-                          <img src={p.images[0] ?? ""} alt={p.name} style={{ width:"100%", aspectRatio:"3/4", objectFit:"cover", display:"block" }} onError={e => { e.currentTarget.style.opacity="0"; }} />
+                        <div style={{ position:"relative", aspectRatio:"3/4" }}>
+                          <FadeImage src={p.images[0] ?? "/placeholder.jpg"} alt={p.name} fill sizes="(max-width: 768px) 50vw, 25vw" style={{ objectFit:"cover" }} />
                           {(() => {
                             const pr = resolveProductPromo(p, promotions);
                             if (pr.primaryPromo) return <PromoTag tipo={pr.primaryPromo.type} label={describePromo(pr.primaryPromo).headline} size="sm" paleta={paletaPromo} />;
@@ -2358,6 +2369,11 @@ function ProductosPageInner() {
       {lightboxSrc && (
         <div style={{ position:"fixed", inset:0, zIndex:300, background:"rgba(0,0,0,0.97)", display:"flex", alignItems:"center", justifyContent:"center" }}
           onClick={() => setLightboxSrc(null)}>
+          {/* Este SÍ se queda como <img>. Es la vista de zoom: se abre justamente
+              para mirar la foto ENTERA, al tamaño original y con pinch-zoom.
+              Pasarla por `next/image` la redimensionaría al alto de la pantalla,
+              que es lo contrario de lo que la persona pidió al abrirla. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={lightboxSrc} alt="" style={{ maxWidth:"100vw", maxHeight:"100vh", objectFit:"contain", touchAction:"pinch-zoom" }} onClick={e => e.stopPropagation()} />
           <button onClick={() => setLightboxSrc(null)} style={{ position:"absolute", top:16, right:16, background:"rgba(255,255,255,0.15)", border:"none", color:"#fff", width:44, height:44, borderRadius:"50%", fontSize:22, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>×</button>
         </div>
@@ -2389,7 +2405,7 @@ function ProductosPageInner() {
                   && (item.product.comparePrice ?? 0) > item.product.price;
                 return (
                 <div key={idx} style={{ display:"flex", gap:12, padding:"14px 0", borderBottom:`1px solid ${borderFaint}` }}>
-                  {item.product.images[0] && <img src={item.product.images[0]} alt="" style={{ width:66, height:88, objectFit:"cover", flexShrink:0 }}/>}
+                  {item.product.images[0] && <FadeImage src={item.product.images[0]} alt="" width={66} height={88} style={{ objectFit:"cover", flexShrink:0 }} />}
                   <div style={{ flex:1 }}>
                     <p style={{ fontSize:14, margin:"0 0 2px", fontWeight:500, color:T }}>{item.product.name}</p>
                     <p style={{ fontSize:11, opacity:0.45, margin:"0 0 8px" }}>{[item.color, item.size && `Talle ${item.size}`].filter(Boolean).join(" · ")}</p>
@@ -2494,7 +2510,7 @@ function ProductosPageInner() {
                   <div style={{ marginBottom:24 }}>
                     {cartItems.map((item, idx) => (
                       <div key={idx} style={{ display:"flex", gap:12, padding:"10px 0", borderBottom:`1px solid ${borderFaint}` }}>
-                        {item.product.images[0] && <img src={item.product.images[0]} alt="" style={{ width:52, height:70, objectFit:"cover", flexShrink:0 }}/>}
+                        {item.product.images[0] && <FadeImage src={item.product.images[0]} alt="" width={52} height={70} style={{ objectFit:"cover", flexShrink:0 }} />}
                         <div style={{ flex:1 }}>
                           <p style={{ fontSize:13, margin:"0 0 2px", fontWeight:500, color:T }}>{item.product.name}</p>
                           <p style={{ fontSize:11, opacity:0.4, margin:"0 0 4px" }}>{[item.color, item.size && `Talle ${item.size}`].filter(Boolean).join(" · ")}</p>

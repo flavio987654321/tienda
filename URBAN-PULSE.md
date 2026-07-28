@@ -704,10 +704,15 @@ El de `.product-rte` se arregló en `globals.css`, así que **vale para los diez
 ## Notas para cuando se arregle
 
 - **Cerrados los once puntos**, del UP-1 al UP-11.
-- **`/plantillas/[id]` tira `useAuth debe usarse dentro de AuthProvider` en el servidor.** Es
-  pre-existente y ajeno a este trabajo: `useAuth` entró a los templates en `35c8252` y esa ruta no
-  envuelve en `AuthProvider`. La página igual responde 200 —React se recupera en el cliente— pero cada
-  render de la galería ensucia el log. No está arreglado.
+- ~~**`/plantillas/[id]` tira `useAuth debe usarse dentro de AuthProvider`.**~~ **Falso, revisado el
+  28/07.** No hay nada que arreglar y el diagnóstico que había acá estaba mal en la premisa:
+  `AuthProvider` **sí** envuelve esa ruta — `Providers` está en el layout raíz
+  (`src/app/layout.tsx:59`) y desde ahí cubre toda la aplicación.
+  Los 24 errores del log están todos entre 00:19:09 y 00:19:29, **justo después** de un error de
+  sintaxis JSX en `UrbanPulse.tsx` a las 00:19:02, mientras se reescribía el modal. Cuando un módulo
+  no compila, el árbol se rompe y el `useAuth` de adentro del template salta por eso: es un síntoma
+  del error de compilación, no una falta de proveedor. En los 36 minutos siguientes de log, con el
+  archivo ya sano, no volvió a aparecer ni una vez.
 - **Boho Terra y Fashion Noir todavía no usan `useHomeReviews`.** Tienen el bloque a medias, escrito
   a mano: solo reseñas de producto, sin pestañas, sin promedio y sin forma de dejar una de la tienda.
   Migrarlos es lo que falta para que los cuatro queden parejos, y ahora es barato — el hook ya está.
@@ -931,3 +936,31 @@ anotado como pre-existente: era justo ese efecto.
 `tsc` limpio y eslint sin errores en los seis archivos —quedan los `<img>` del listado, que son
 pre-existentes—. Las cinco páginas afectadas responden 200. Sigue sin poder probarse con reseñas
 reales: no hay ninguna en la base.
+
+**28/07/2026 — los `<img>` del listado, y un diagnóstico mío que estaba mal.**
+
+**Los `<img>`.** `productos/page.tsx` dibujaba siete imágenes con `<img>` suelto en vez de
+`next/image`, así que el navegador se bajaba el archivo original —el JPG que salió de la cámara— sin
+redimensionar ni convertir a WebP. Es la página que muestra el catálogo entero, o sea donde más pesa.
+Seis pasaron a `FadeImage`, el mismo envoltorio que usan los diez templates: las tarjetas de la
+grilla, la foto del modal, las miniaturas, los similares y los dos renglones de producto del carrito
+y del checkout.
+
+La séptima **se queda como `<img>` a propósito**, con su `eslint-disable` y el motivo escrito al
+lado: es la vista de zoom, que se abre justamente para ver la foto entera al tamaño original y con
+pinch-zoom. Redimensionarla sería lo contrario de lo que pidió quien la abrió.
+
+Dos detalles que aparecieron al hacerlo: dos contenedores necesitaban `aspectRatio` propio, porque
+con `fill` el alto lo pone el contenedor y antes lo ponía la imagen; y la tarjeta del catálogo
+necesitaba repetir su `transition` en el `style` inline, porque el fundido de `FadeImage` se escribe
+ahí y le gana a la hoja de estilos — sin eso, el acercamiento al pasar el mouse pasaba a ser un
+salto.
+
+**El `useAuth`: no había nada que arreglar, y lo que yo había anotado estaba mal.** Ver la nota
+corregida en *Notas para cuando se arregle*. En resumen: `AuthProvider` **sí** envuelve
+`/plantillas/[id]` —`Providers` está en el layout raíz— y los 24 errores del log salieron todos en
+los veinte segundos posteriores a un error de sintaxis JSX en `UrbanPulse.tsx`, mientras se
+reescribía el modal. Era un síntoma de que el módulo no compilaba, no una falta de proveedor.
+
+`tsc` limpio y **eslint sin un solo aviso** en el listado, por primera vez. La página responde 200
+con `?t=urban-pulse` y con `?t=chic-paris`.
