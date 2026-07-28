@@ -17,7 +17,7 @@ import { PromoTag, PromoBlock, PromoPrice } from "@/components/store/PromoDispla
 import { useSombrasScroll } from "@/components/store/useSombrasScroll";
 import StoreProductReels from "@/components/store/ProductReels";
 import { discountPercent } from "@/lib/discount";
-import { resolveProductPromo, describePromo, resolveStoreEvent } from "@/lib/promoDisplay";
+import { resolveProductPromo, describePromo, resolveStoreEvent, eventLabelOf } from "@/lib/promoDisplay";
 import { resolveVariantPrice } from "@/lib/variantPrice";
 import { useTurnstile } from "@/components/Turnstile";
 
@@ -309,6 +309,18 @@ function ProductosPageInner() {
   // anuncia el banner. Cuando hay evento, el filtro de promociones pasa a
   // llamarse como él, en vez de sumar otro botón a una barra que ya tiene varios.
   const storeEvent = useMemo(() => resolveStoreEvent(promotions), [promotions]);
+  // ...pero solo si el nombre del evento dice la verdad sobre lo que va a mostrar.
+  // El filtro no filtra POR evento: muestra todo producto al que le llegue alguna
+  // promo (ver `onlyPromos` más abajo). Con una campaña de San Valentín y un 3×2
+  // suelto conviviendo, el botón decía "San Valentín" y traía también el 3×2.
+  //
+  // Así que el evento nombra al filtro solo cuando TODAS las promos vigentes son
+  // de ese evento —el caso de la tienda chica que arma una campaña, que es para
+  // quien se pensó—. Mezcladas, gana el nombre genérico.
+  const eventoNombraFiltro = useMemo(() => {
+    if (!storeEvent || promotions.length === 0) return null;
+    return promotions.every(p => eventLabelOf(p) === storeEvent.label) ? storeEvent.label : null;
+  }, [storeEvent, promotions]);
   const [loading,    setLoading]    = useState(true);
   const [error,      setError]      = useState<string | null>(null);
   const [storeName,  setStoreName]  = useState("Tienda");
@@ -1366,8 +1378,14 @@ function ProductosPageInner() {
         {/* ── TÍTULO + BÚSQUEDA ──────────────────────────────────────── */}
         {/* Kicker per-template */}
         {(() => {
-          const label = onlyPromos ? "Promociones activas" : onlyOfertas ? "Promociones" : onlyDestacados ? "Selección" : "Colección completa";
-          const heading = onlyPromos ? "En promoción" : onlyOfertas ? "Ofertas" : onlyDestacados ? "Lo más buscado" : activeCategory === "Todos" ? "Todos los productos" : activeCategory;
+          // El título tiene que decir lo mismo que el botón que se tocó. Antes el
+          // botón decía "San Valentín" y al hacer clic la página se titulaba "En
+          // promoción": el comprador perdía la confirmación de haber llegado a
+          // donde quería. El kicker de ofertas decía "Promociones", que además es
+          // el otro concepto (oferta = precio anterior del producto; promoción =
+          // regla de la tienda).
+          const label = onlyPromos ? (eventoNombraFiltro ? "Campaña" : "Promociones activas") : onlyOfertas ? "Aprovechá" : onlyDestacados ? "Selección" : "Colección completa";
+          const heading = onlyPromos ? (eventoNombraFiltro ?? "En promoción") : onlyOfertas ? "Ofertas" : onlyDestacados ? "Lo más buscado" : activeCategory === "Todos" ? "Todos los productos" : activeCategory;
           const sub = activeSubcategory;
           // Estilos de toggle per-template
           const toggleBase = (active: boolean): React.CSSProperties =>
@@ -1453,7 +1471,7 @@ function ProductosPageInner() {
                 )}
                 {promotions.length > 0 && (
                   <button onClick={() => { setOnlyPromos(o => !o); setOnlyOfertas(false); setOnlyDestacados(false); setPage(1); }} style={toggleBase(onlyPromos)}>
-                    {storeEvent ? `🎁 ${storeEvent.label}` : "🎁 En promoción"}
+                    {eventoNombraFiltro ? `🎁 ${eventoNombraFiltro}` : "🎁 En promoción"}
                   </button>
                 )}
                 <div style={{ position:"relative" }}>
