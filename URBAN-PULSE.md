@@ -17,9 +17,11 @@ Los números de línea son los del día de la revisión: se corren a medida que 
 | ~~UP-7~~ | ~~Un `0` suelto arriba de la foto en Ofertas~~ | Baja | **hecho** 27/07 |
 | ~~UP-8~~ | ~~El buscador usa dos columnas fijas también en celular~~ | Baja | **hecho** 27/07 |
 | ~~UP-9~~ | ~~Con un fondo en degradado, el botón "Ver colección completa" queda sin texto~~ | Alta | **hecho** 27/07 |
+| ~~UP-10~~ | ~~El bloque de opiniones son cuatro personas inventadas en el código~~ | Alta | **hecho** 28/07 |
 
-**Los nueve puntos están cerrados.** UP-9 no salió de la auditoría: lo reportó Flavio con una
-captura de su propia tienda. Lo que queda anotado no es de este template: está en
+**Los diez puntos están cerrados.** Los dos últimos no salieron de la auditoría: UP-9 lo reportó
+Flavio con una captura de su propia tienda, y UP-10 fue un pedido suyo — traer las reseñas de verdad
+al bloque de opiniones. Lo que queda anotado no es de este template: está en
 [Notas para cuando se arregle](#notas-para-cuando-se-arregle).
 
 ---
@@ -396,9 +398,84 @@ palabra en cada uno.
 
 ---
 
+### ~~UP-10~~ — El bloque de opiniones son cuatro personas inventadas ✅
+
+`src/components/store/templates/UrbanPulse.tsx:42`
+
+```tsx
+const TESTIMONIALS = [
+  { name:"Valentina R.", text:"La calidad es increíble...", stars:5 },
+  ...
+];
+```
+
+El bloque "Lo que dicen nuestros clientes" no leía ninguna reseña: eran cuatro textos fijos, iguales
+para **todas** las tiendas que usaran Urban Pulse. Y las reseñas de verdad existían — pero escondidas
+adentro del modal de producto, a un clic de distancia.
+
+Las cinco estrellas también estaban escritas a mano, así que una tienda con promedio 3,2 publicaba
+cinco estrellas llenas arriba de sus propias opiniones.
+
+Cómo estaba repartido antes de tocar nada:
+
+| Template | Bloque de reseñas |
+|---|---|
+| Chic Paris | completo: dos pestañas, promedio real, borrar, formulario |
+| Boho Terra | a medias: solo las de producto |
+| Fashion Noir | a medias |
+| **Urban Pulse** | **ninguno** |
+
+**Arreglado el 28/07.** Se separó la **función** del **diseño**, que es lo que pidió Flavio:
+
+- **`src/hooks/useHomeReviews.ts`** (nuevo) — de dónde salen las reseñas, las dos pestañas y su
+  respaldo, el promedio, borrar con confirmación del servidor, y el formulario de reseña de tienda con
+  su captcha propio. **Compartido.**
+- **`shared/ResenaComentario.tsx`** (nuevo) — el recorte del comentario y el "leer todo". Vivía dentro
+  de Chic Paris. Se le sacó el Playfair que traía de fábrica: hacía que cualquier template que lo
+  usara sin pensarlo apareciera escrito con la letra de otro. Ahora cada uno pasa la suya.
+- **El diseño queda en cada template.** Chic Paris es un carrusel horizontal de tarjetas claras con
+  Playfair en itálica; Urban Pulse es la grilla dura del resto del template — bordes rectos,
+  mayúsculas, estrellas dibujadas en SVG, sin curvas.
+
+**Chic Paris migró al hook** en la misma pasada: si no, la lógica quedaba escrita dos veces igual que
+antes. Es refactor puro, sin cambio visual.
+
+#### Qué se ve, y dónde
+
+| Dónde | Qué muestra |
+|---|---|
+| Editor y galería de templates | reseñas **de ejemplo**, con un cartel que aclara que lo son |
+| Tienda publicada, con reseñas | las **reales** |
+| Tienda publicada, sin ninguna | el bloque **vacío**, invitando a dejar la primera |
+
+El bloque **no se esconde** cuando está vacío. Adentro está el botón para dejar la primera reseña de
+la tienda: escondido, una tienda nueva no tendría nunca cómo recibirla. Lo que sí cambia con cero
+reseñas es el título, que deja de afirmar que los clientes dicen algo.
+
+Los ejemplos son **propios de cada template**. Antes Urban Pulse tenía los suyos fijos y Chic Paris
+los suyos; ahora siguen separados a propósito — si se compartieran, las previews de la galería se
+verían clonadas.
+
+#### Y el cartel de Chic Paris mentía
+
+Al migrar apareció esto. El aviso del editor le decía al dueño:
+
+> *"Hasta que llegue la primera, este bloque **no se muestra** en la tienda publicada."*
+
+**Es falso.** El bloque siempre se muestra — no hay un solo `return null` en todo el camino, y el
+`SectionBlock` solo esconde lo que el dueño esconde a mano. Lo decía en dos de sus tres casos. Se
+corrigió el texto para que describa lo que el código hace de verdad, y de paso se sumó a la cuenta lo
+que faltaba: las reseñas **de tienda** aprobadas también suben a la portada, y el cartel solo contaba
+las de producto.
+
+---
+
 ## Notas para cuando se arregle
 
-- **Cerrados los nueve puntos**, del UP-1 al UP-9.
+- **Cerrados los diez puntos**, del UP-1 al UP-10.
+- **Boho Terra y Fashion Noir todavía no usan `useHomeReviews`.** Tienen el bloque a medias, escrito
+  a mano: solo reseñas de producto, sin pestañas, sin promedio y sin forma de dejar una de la tienda.
+  Migrarlos es lo que falta para que los cuatro queden parejos, y ahora es barato — el hook ya está.
 - **UP-9 es una clase de bug, no un caso.** La regla: el valor de `sectionColors` sirve para
   `background:` y para nada más — puede ser un degradado, y `color`/`border`/`fill`/`stroke` no los
   aceptan. Y donde hacía falta un color de texto, la respuesta no era convertir el degradado a color
@@ -442,3 +519,10 @@ de medir. Se cambió por `textoSobre(<relleno del botón>)` y se midieron los ci
 armar el panel: **5.94 → 19.17** en el caso reportado, y nunca peor en los otros cuatro. `tsc`
 limpio, eslint sin errores nuevos, `/preview/urban-pulse` y `/preview/boho-terra` en 200, log sin
 errores. Nada pusheado ni deployado.
+
+**28/07/2026 — UP-10.** Las reseñas de la portada. Se extrajo la función a `useHomeReviews` y a
+`shared/ResenaComentario`, Urban Pulse estrenó el hook con diseño propio, y Chic Paris migró en la
+misma pasada para que la lógica no quedara escrita dos veces. En el camino apareció que el cartel del
+editor de Chic Paris afirmaba algo que el código no hace. `tsc` limpio, eslint sin errores nuevos,
+`/plantillas/urban-pulse` y `/plantillas/chic-paris` en 200 con sus ejemplos, sus promedios y los dos
+tipos de sello, log sin errores de runtime. Nada pusheado ni deployado.

@@ -8,6 +8,8 @@ import { EditableZone, EditableImageButton, EditableSectionBg, getContrastColor,
 import { useStorefront, type StorefrontProduct } from "@/hooks/useStorefront";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { useCartLogic } from "@/hooks/useCartLogic";
+import { useHomeReviews, type EjemplosDeResenas } from "@/hooks/useHomeReviews";
+import { ResenaComentario } from "@/components/store/templates/shared/ResenaComentario";
 import { useTouchSwipe } from "@/hooks/useTouchSwipe";
 import { masVistos, MIN_MAS_VISTOS } from "@/lib/masVistos";
 import { COMENTARIO_MAX, RESENADOR_MAX } from "@/lib/reviews";
@@ -45,58 +47,25 @@ type Product = StorefrontProduct;
    entrar. Observar además dispara solo la primera vez, así que no hace falta
    medir a mano y encadenar un render de más.
 ──────────────────────────────────────────────────────────────────────────────── */
-function ResenaComentario({ texto, onVerMas, acento, estiloTexto, comillas = true }: {
-  texto: string;
-  /** Si viene, el botón lleva a otro lado (la portada abre la ficha del producto).
-   *  Si no viene, el botón despliega el texto acá mismo — que es lo que hace falta
-   *  adentro de la vista rápida, donde ya estás en la ficha y no hay a dónde ir. */
-  onVerMas?: (() => void) | null;
-  acento: string;
-  /** El bloque de la portada usa Playfair en itálica; la vista rápida, la
-   *  tipografía del panel. Solo cambia el aspecto: el recorte es el mismo. */
-  estiloTexto?: React.CSSProperties;
-  comillas?: boolean;
-}) {
-  const ref = useRef<HTMLParagraphElement>(null);
-  const [cortado, setCortado] = useState(false);
-  const [abierto, setAbierto] = useState(false);
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const ro = new ResizeObserver(() => {
-      const ahora = el.scrollHeight > el.clientHeight + 1;
-      setCortado(prev => (prev === ahora ? prev : ahora));
-    });
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, [texto]);
-
-  return (
-    <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
-      <p ref={ref} style={{
-        fontFamily: "'Playfair Display', Georgia, serif", fontStyle: "italic",
-        fontSize: 13, color: "#444", lineHeight: 1.75, margin: 0,
-        ...estiloTexto,
-        // El recorte va al final para que no se lo pise `estiloTexto`, y se
-        // levanta entero al desplegar: dejar el `-webkit-box` con el clamp en
-        // "none" también funciona, pero sigue aplicando el modelo de caja raro.
-        ...(abierto ? {} : {
-          display: "-webkit-box", WebkitLineClamp: 6, WebkitBoxOrient: "vertical",
-          overflow: "hidden",
-        }),
-      }}>{comillas ? <>&ldquo;{texto}&rdquo;</> : texto}</p>
-      {cortado && !abierto && (
-        <button type="button" onClick={onVerMas ?? (() => setAbierto(true))}
-          style={{ alignSelf: "flex-start", background: "none", border: "none", padding: 0, cursor: "pointer",
-                   fontSize: 10, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", color: acento }}>
-          {onVerMas ? "Ver reseña completa →" : "Leer todo"}
-        </button>
-      )}
-    </div>
-  );
-}
-
+// ── Reseñas de ejemplo, SOLO para el editor y la galería de templates ────────
+// Sirven para diseñar el bloque con algo adentro. En la tienda publicada no
+// aparecen nunca. Van colgadas de PRODUCTOS REALES de la tienda —lo hace el
+// hook—: antes eran nombres inventados con `image: null` y el editor mostraba la
+// tarjeta SIN la foto, que es la mitad de lo que se ve en la tienda de verdad.
+//
+// Son propias de Chic Paris: Urban Pulse tiene las suyas, con su voz.
+const EJEMPLOS_RESENAS_CP: EjemplosDeResenas = {
+  producto: [
+    { id:"cp-p1", rating:5, comment:"Calidad increíble y llegó rapidísimo. Ya compré tres veces y siempre perfecta.", reviewer:"María L.",     verified:true,  verifiedBy:"auto"  },
+    { id:"cp-p2", rating:5, comment:"El diseño es exactamente como en las fotos. Me enamoré cuando lo vi puesto.",   reviewer:"Sofía M.",     verified:false, verifiedBy:null    },
+    { id:"cp-p3", rating:4, comment:"Excelente atención y envío super rápido. La recomiendo sin dudarlo.",           reviewer:"Valentina R.", verified:true,  verifiedBy:"owner" },
+    { id:"cp-p4", rating:5, comment:"Super recomendada, el packaging es hermoso y llegó antes de lo esperado.",      reviewer:"Camila F.",    verified:false, verifiedBy:null    },
+  ],
+  tienda: [
+    { id:"cp-t1", rating:5, comment:"La atención fue impecable. Me respondieron todas las dudas por WhatsApp antes de comprar.", reviewer:"Lucía P.",    verified:true,  verifiedBy:"auto" },
+    { id:"cp-t2", rating:5, comment:"Llegó todo en tiempo y forma, muy bien embalado. Vuelvo a comprar seguro.",                 reviewer:"Agustina B.", verified:false, verifiedBy:null   },
+  ],
+};
 
 const SIZE_ATTRS = ["talle","size","talla","talles","sizes","tamaño","tamano","almacenamiento","ram","versión","version","formato","variante","material","sabor","peso/tamaño","peso"];
 const COLOR_ATTRS = ["color","colour","colores","colors","tono"];
@@ -233,23 +202,7 @@ export default function ChicParis() {
   const [announcementVisible, setAnnouncementVisible] = useState(true);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   type PReview = { id: string; rating: number; comment: string | null; reviewer: string; verified: boolean; verifiedBy: string | null; createdAt: string; product?: { id: string; name: string; image: string | null } };
-  type HomeReview = PReview;
   const [reviews,        setReviews]        = useState<PReview[]>([]);
-  const [homeReviews,    setHomeReviews]    = useState<HomeReview[]>([]);
-  const [reviewStats,    setReviewStats]    = useState<{ promedio: number; total: number } | null>(null);
-  // Reseñas de la TIENDA: hablan de la atención y del envío, no de un producto.
-  const [storeReviews,   setStoreReviews]   = useState<HomeReview[]>([]);
-  const [resenaTab,      setResenaTab]      = useState<"tienda" | "producto">("producto");
-  const [tiendaForm,     setTiendaForm]     = useState({ reviewer: "", rating: 5, comment: "", email: "" });
-  const [tiendaEnviando, setTiendaEnviando] = useState(false);
-  const [tiendaListo,    setTiendaListo]    = useState(false);
-  const [tiendaHoneypot, setTiendaHoneypot] = useState("");
-  const [tiendaConfirmando, setTiendaConfirmando] = useState(false);
-  const [tiendaError,    setTiendaError]    = useState<string | null>(null);
-  const [tiendaModalOpen, setTiendaModalOpen] = useState(false);
-  // Un captcha propio: el token es de un solo uso, así que compartirlo con el
-  // formulario del producto haría que el segundo envío viaje con uno ya gastado.
-  const tiendaCaptcha = useTurnstile("review");
   // El formulario de reseña del producto vive en un modal, igual que el de la
   // tienda. Inline al final de la lista quedaba inalcanzable: con 50 reseñas
   // cargadas había que scrollear las 50 para llegar a escribir la propia.
@@ -290,6 +243,31 @@ export default function ChicParis() {
   const isOwner     = !!storeConfig?.isOwner;
   const storefront  = useStorefront();
   const { products, promotions, loadingProducts, checkoutMode, isWholesale, ocultarPrecios, defaultCategories, featuredCategories } = storefront;
+
+  // ── El bloque de prueba social ──────────────────────────────────────────────
+  // Todo esto —de dónde salen las reseñas, las dos pestañas, el promedio, borrar
+  // y publicar una de tienda— vivía escrito acá. Se movió a `useHomeReviews` al
+  // traer el bloque a Urban Pulse: es la misma función y no tiene por qué existir
+  // dos veces. Lo que queda en este archivo es el diseño.
+  //
+  // Se desarma con los nombres que ya usaba el JSX de abajo para no reescribir
+  // sesenta puntos de la pantalla por un cambio que no es visual.
+  const resenasHome = useHomeReviews({
+    slug: storeConfig?.slug,
+    isPreview, isOwner,
+    productos: products,
+    ejemplos: EJEMPLOS_RESENAS_CP,
+  });
+  const {
+    deProducto, deTienda, lista, tab: tabEfectiva, setTab: setResenaTab, sinNada,
+    stats: reviewStats, borrar: deleteHomeReview,
+    form: tiendaForm, setForm: setTiendaForm, valida: tiendaValida,
+    enviando: tiendaEnviando, listo: tiendaListo, error: tiendaError,
+    confirmando: tiendaConfirmando, setConfirmando: setTiendaConfirmando,
+    honeypot: tiendaHoneypot, setHoneypot: setTiendaHoneypot,
+    enviar: submitResenaTienda, captcha: tiendaCaptcha,
+    modalAbierto: tiendaModalOpen, abrirModal: abrirTiendaModal, cerrarModal: cerrarTiendaModal,
+  } = resenasHome;
   const { editMode, activeField, setActiveField, overrides: textOverrides, setOverride } = useEditContext();
   const isInquiryMode = checkoutMode === "inquiry" || ocultarPrecios;
 
@@ -561,22 +539,7 @@ export default function ChicParis() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [products]);
 
-  // Cargar reseñas de la home (prueba social)
-  useEffect(() => {
-    const slug = storeConfig?.slug;
-    if (!slug) return;
-    fetch(`/api/public/${slug}/reviews`)
-      .then(r => r.ok ? r.json() : { reviews: [] })
-      .then(d => {
-        setHomeReviews(d.reviews ?? []);
-        setStoreReviews(d.storeReviews ?? []);
-        // El promedio sale de TODAS las reseñas de la tienda, no de las cuatro
-        // que se muestran acá — por eso viene del servidor y no se calcula sobre
-        // `d.reviews`, que ya está filtrado a 4★ y 5★.
-        if (d.stats) setReviewStats(d.stats);
-      })
-      .catch(() => {});
-  }, [storeConfig?.slug]);
+  // Las reseñas de la home ya no se piden acá: lo hace `useHomeReviews`.
 
   // Cargar reseñas al abrir modal (D-04): sincroniza el estado de reseñas con el
   // modalProduct.id actual (fetch + reset), patrón estándar de "fetch on id change".
@@ -714,80 +677,8 @@ export default function ChicParis() {
     } finally { enviandoResena.current = false; reviewCaptcha.reset(); setReviewSubmitting(false); }
   }
 
-  const enviandoTienda = useRef(false);
-
-  // Lo mínimo para que la reseña sirva: un nombre de verdad y una puntuación
-  // válida. El email es opcional, pero si lo escribieron tiene que parecer un
-  // email — si no, la verificación automática nunca va a encontrar su compra y
-  // nadie va a entender por qué quedó sin sello.
-  const emailTienda = tiendaForm.email.trim();
-  const emailPlausible = !emailTienda || /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(emailTienda);
-  const tiendaValida =
-    tiendaForm.reviewer.trim().length >= 2 &&
-    tiendaForm.rating >= 1 && tiendaForm.rating <= 5 &&
-    emailPlausible;
-
-  async function submitResenaTienda(e: React.FormEvent) {
-    e.preventDefault();
-    if (isPreview || isOwner || tiendaHoneypot || enviandoTienda.current) return;
-    const slug = storeConfig?.slug;
-    // Se revalida acá y no solo en el botón: el submit también sale con Enter en
-    // un campo, que no pasa por el botón deshabilitado.
-    if (!slug || !tiendaValida) return;
-    enviandoTienda.current = true;
-    setTiendaEnviando(true);
-    try {
-      const res = await fetch(`/api/public/${slug}/reviews`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        // Sin `productId`: eso es lo que la vuelve una reseña de la tienda.
-        body: JSON.stringify({
-          rating: tiendaForm.rating, comment: tiendaForm.comment, reviewer: tiendaForm.reviewer,
-          buyerEmail: tiendaForm.email.trim() || undefined, turnstileToken: tiendaCaptcha.token,
-        }),
-      });
-      if (res.ok) {
-        // NO se agrega a la lista: nace pendiente de aprobación y todavía no es
-        // pública. Meterla en pantalla haría creer que ya se publicó, y al
-        // recargar habría desaparecido sin ninguna explicación.
-        setTiendaForm({ reviewer: "", rating: 5, comment: "", email: "" });
-        setTiendaConfirmando(false);
-        setTiendaError(null);
-        // El modal se queda abierto mostrando el "¡Gracias!". Se resetea al
-        // cerrarlo (abrirTiendaModal/cerrarTiendaModal), no con un timeout: si
-        // volviera solo al formulario con el modal abierto, parecería que no
-        // pasó nada.
-        setTiendaListo(true);
-      } else {
-        // Este formulario nació con el mismo silencio que CP-12 documentaba dos
-        // renglones más abajo: se copió el patrón roto sin mirarlo.
-        const d = await res.json().catch(() => null);
-        setTiendaError(d?.error || "No se pudo enviar tu reseña. Probá de nuevo en un momento.");
-        setTiendaConfirmando(false);
-      }
-    } catch {
-      setTiendaError("No se pudo conectar. Revisá tu internet y probá de nuevo.");
-      setTiendaConfirmando(false);
-    } finally { enviandoTienda.current = false; tiendaCaptcha.reset(); setTiendaEnviando(false); }
-  }
-
-  // El formulario de reseña de tienda vive en un modal: abajo del carrusel hay
-  // un botón que lo abre. Antes estaba inline en la pestaña, y con varias
-  // reseñas al lado empujaba todo para abajo. Abrir en limpio y cerrar reseteando
-  // el estado —error, confirmación y el "gracias"— para que la próxima vez que se
-  // abra no arrastre lo anterior.
-  function abrirTiendaModal() {
-    setTiendaError(null);
-    setTiendaConfirmando(false);
-    setTiendaListo(false);
-    setTiendaModalOpen(true);
-  }
-  function cerrarTiendaModal() {
-    setTiendaModalOpen(false);
-    setTiendaError(null);
-    setTiendaConfirmando(false);
-    setTiendaListo(false);
-  }
+  // La validacion, el envio y el abrir/cerrar del modal se fueron a
+  // useHomeReviews. Lo que queda en este archivo es el vestido del formulario.
 
   const subcategoriesFor = useMemo(() => {
     const map: Record<string, string[]> = {};
@@ -1579,71 +1470,10 @@ export default function ChicParis() {
 
       <SectionBlock id="cp-prueba-social" label="Prueba social" isPreview={isPreview} defaultOrder={CP_SECTION_IDS}>
         {(() => {
-          // Las reseñas de ejemplo van colgadas de PRODUCTOS REALES de la tienda.
-          // Antes eran nombres inventados ("Vestido lino") y `image: null`, así que
-          // el editor mostraba la tarjeta SIN la foto del producto — que es la
-          // mitad de lo que se ve en la tienda de verdad. El dueño diseñaba mirando
-          // algo que no era lo que le iba a quedar.
-          const PREVIEW_REVIEWS: HomeReview[] = [
-            { id:"p1", rating:5, comment:"Calidad increíble y llegó rapidísimo. Ya compré tres veces y siempre perfecta.", reviewer:"María L.",     verified:true,  verifiedBy:"auto"  },
-            { id:"p2", rating:5, comment:"El diseño es exactamente como en las fotos. Me enamoré cuando lo vi puesto.",   reviewer:"Sofía M.",     verified:false, verifiedBy:null    },
-            { id:"p3", rating:4, comment:"Excelente atención y envío super rápido. La recomiendo sin dudarlo.",           reviewer:"Valentina R.", verified:true,  verifiedBy:"owner" },
-            { id:"p4", rating:5, comment:"Super recomendada, el packaging es hermoso y llegó antes de lo esperado.",      reviewer:"Camila F.",    verified:false, verifiedBy:null    },
-          ].map((r, i) => {
-            const p = products[i % Math.max(products.length, 1)];
-            return {
-              ...r, createdAt: "",
-              product: p ? { id: p.id, name: p.name, image: p.images[0] ?? null } : undefined,
-            };
-          });
-          const PREVIEW_TIENDA: HomeReview[] = [
-            { id:"t1", rating:5, comment:"La atención fue impecable. Me respondieron todas las dudas por WhatsApp antes de comprar.", reviewer:"Lucía P.",   verified:true,  verifiedBy:"auto", createdAt:"" },
-            { id:"t2", rating:5, comment:"Llegó todo en tiempo y forma, muy bien embalado. Vuelvo a comprar seguro.",                  reviewer:"Agustina B.", verified:false, verifiedBy:null,   createdAt:"" },
-          ];
-
-          const deProducto = isPreview ? PREVIEW_REVIEWS : homeReviews;
-          const deTienda   = isPreview ? PREVIEW_TIENDA  : storeReviews;
-          const sinNada    = deProducto.length === 0 && deTienda.length === 0;
-          // Si la pestaña que está abierta no tiene nada pero la otra sí, se
-          // muestra la que tiene. Abrir en una vacía teniendo contenido al lado
-          // hace que la tienda parezca sin reseñas cuando no lo está — y nadie va
-          // a tocar una pestaña para ver si atrás hay algo.
-          const tabEfectiva =
-            !sinNada && ((resenaTab === "producto" && deProducto.length === 0) ||
-                         (resenaTab === "tienda"   && deTienda.length === 0))
-              ? (resenaTab === "producto" ? "tienda" : "producto")
-              : resenaTab;
-          const lista      = tabEfectiva === "tienda" ? deTienda : deProducto;
-
-          // El bloque ya NO desaparece cuando no hay reseñas: adentro está el
-          // formulario para dejar la primera, y escondido no habría forma de
-          // arrancar nunca. Lo que sí cambia es el título — un "Lo que dicen
-          // nuestras clientas" con nada abajo queda peor que no tenerlo.
-
-          // CP-11. Tenía dos problemas juntos: no preguntaba nada —un clic al lado
-          // y la reseña se iba, sin deshacer— y sacaba la tarjeta de la pantalla
-          // ANTES de saber si el servidor la había borrado. Con el fetch fallando,
-          // el dueño la veía desaparecer, se quedaba tranquilo, y al día siguiente
-          // seguía publicada.
-          async function deleteHomeReview(reviewId: string) {
-            if (!storeConfig?.slug) return;
-            if (!confirm("¿Eliminar esta reseña? No se puede deshacer.")) return;
-            try {
-              const res = await fetch(`/api/public/${storeConfig.slug}/reviews`, {
-                method:"DELETE", headers:{"Content-Type":"application/json"},
-                body: JSON.stringify({ reviewId }),
-              });
-              if (!res.ok) {
-                alert("No se pudo eliminar la reseña. Sigue publicada — probá de nuevo.");
-                return;
-              }
-              // Recién acá, con la confirmación del servidor en la mano.
-              setHomeReviews(prev => prev.filter(r => r.id !== reviewId));
-              setStoreReviews(prev => prev.filter(r => r.id !== reviewId));
-            } catch {
-              alert("No se pudo conectar. La reseña sigue publicada.");
-            }
-          }
+          // Los datos y las reglas vienen de useHomeReviews (ver arriba). Solo
+          // se listan los ejemplos del editor, que son propios de este template:
+          // si Chic Paris y Urban Pulse mostraran los mismos textos falsos, las
+          // previews de la galeria se verian clonadas.
           return (
             <section data-reveal style={{ position:"relative", background: sc["bgPruebaSocial"] ?? "#fff", padding: isMobile ? "56px 0" : "72px 0", borderTop: "1px solid #f0f0f0" }}>
               <EditableSectionBg field="bgPruebaSocial" label="Fondo prueba social" />
@@ -1657,7 +1487,9 @@ export default function ChicParis() {
                     4,8 con 200). En modo preview se muestra el 5 de las de ejemplo. */}
                 {(() => {
                   const promedio = isPreview ? 5 : (reviewStats?.promedio ?? 0);
-                  const total = isPreview ? (PREVIEW_REVIEWS.length + PREVIEW_TIENDA.length) : (reviewStats?.total ?? 0);
+                  const total = isPreview
+                    ? (EJEMPLOS_RESENAS_CP.producto.length + EJEMPLOS_RESENAS_CP.tienda.length)
+                    : (reviewStats?.total ?? 0);
                   if (!total) return null;
                   return (
                     <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "0 0 8px", flexWrap: "wrap" }}>
@@ -1706,14 +1538,20 @@ export default function ChicParis() {
                     bloque NO aparece en la tienda publicada. Eso, sin este cartel,
                     es imposible de descubrir: en el editor se ve lleno. */}
                 {isPreview && (() => {
-                  const total = reviewStats?.total ?? 0;
-                  const enPortada = homeReviews.length;
+                  const total = resenasHome.totalReal;
+                  const enPortada = resenasHome.enPortadaReal;
+                  // Este cartel MENTÍA en sus dos primeros casos: decía que el
+                  // bloque "no se muestra en la tienda publicada", y el bloque
+                  // siempre se muestra —no hay un solo `return null`—. Con cero
+                  // reseñas queda vacío, invitando a dejar la primera, y eso es a
+                  // propósito: escondido, una tienda nueva no tendría nunca cómo
+                  // recibirla, porque el botón para dejarla vive acá adentro.
                   const detalle =
                     total === 0
-                      ? "Tu tienda todavía no tiene ninguna. Hasta que llegue la primera, este bloque no se muestra en la tienda publicada."
+                      ? "Tu tienda todavía no tiene ninguna. Hasta que llegue la primera, el bloque se muestra vacío, invitando a tus clientas a dejarla."
                       : enPortada === 0
-                        ? `Tenés ${total} ${total === 1 ? "reseña" : "reseñas"}, pero ninguna de 4★ o 5★ con comentario escrito — que son las únicas que suben a la portada. Por eso, hoy este bloque no se muestra en tu tienda.`
-                        : `Tenés ${total} ${total === 1 ? "reseña" : "reseñas"} y ${enPortada} ${enPortada === 1 ? "va" : "van"} a aparecer acá: las de 4★ y 5★ con comentario.`;
+                        ? `Tenés ${total} ${total === 1 ? "reseña" : "reseñas"}, pero ninguna sube a la portada todavía: de los productos suben las de 4★ y 5★ con comentario, y las de tu tienda, las que hayas aprobado. Por eso hoy el bloque se ve vacío.`
+                        : `Tenés ${total} ${total === 1 ? "reseña" : "reseñas"} y ${enPortada} ${enPortada === 1 ? "va" : "van"} a aparecer acá: las de 4★ y 5★ con comentario, más las de tu tienda que hayas aprobado.`;
                   return (
                     <div style={{ display: "flex", gap: 9, marginTop: 14, padding: "10px 13px", background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 8, maxWidth: 620 }}>
                       <span style={{ flexShrink: 0, fontSize: 13, lineHeight: 1.4 }}>⚠️</span>
@@ -1780,6 +1618,11 @@ export default function ChicParis() {
                       <ResenaComentario
                         texto={r.comment}
                         acento={ACC}
+                        // La tipografía se pasa explícita: el componente ya no
+                        // trae Playfair de fábrica, porque cuando lo traía
+                        // cualquier template que lo usara sin pensarlo aparecía
+                        // escrito con la letra de Chic Paris.
+                        estiloTexto={{ fontFamily: "'Playfair Display', Georgia, serif", fontStyle: "italic", color: "#444" }}
                         // Abre la vista rápida de ESE producto, que ya trae todas
                         // sus reseñas enteras. No manda a /producto/[id] porque
                         // chic-paris no usa página de detalle —usa el modal— y

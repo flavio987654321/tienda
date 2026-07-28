@@ -8,8 +8,11 @@ import { EditableZone, EditableImageButton, EditableSectionBg, BgDragHandle, get
 import { useStorefront, type StorefrontProduct } from "@/hooks/useStorefront";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { useCartLogic } from "@/hooks/useCartLogic";
+import { useHomeReviews, type EjemplosDeResenas } from "@/hooks/useHomeReviews";
+import { ResenaComentario } from "@/components/store/templates/shared/ResenaComentario";
 import { useTouchSwipe } from "@/hooks/useTouchSwipe";
 import { masVistos, MIN_MAS_VISTOS } from "@/lib/masVistos";
+import { COMENTARIO_MAX, RESENADOR_MAX } from "@/lib/reviews";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
 import VerifiedIconButton from "@/components/store/VerifiedIconButton";
 import { CartDrawer, type CartTheme } from "@/components/store/templates/shared/CartDrawer";
@@ -39,12 +42,33 @@ const CART_ICON_OPTIONS: React.ReactNode[] = [
 
 const SIZE_ATTRS =["talle","size","talla","talles","sizes","tamaño","tamano","almacenamiento","ram","versión","version","formato","variante","material","sabor","peso/tamaño","peso"];
 
-const TESTIMONIALS = [
-  { name:"Valentina R.", text:"La calidad es increíble, se nota que es para alto rendimiento. Volví a comprar dos veces este mes.", stars:5 },
-  { name:"Marcos D.", text:"El hoodie de training es lo mejor que compré. Cómodo, liviano y se ve súper bien en el gym.", stars:5 },
-  { name:"Lucía P.", text:"Los leggings seamless no se corren ni se transparentan. Perfectos para cualquier entrenamiento.", stars:5 },
-  { name:"Ignacio M.", text:"Atención rápida y envío en 48hs. Los shorts son de primera calidad.", stars:4 },
-];
+// ── Reseñas de ejemplo, SOLO para el editor y la galería de templates ────────
+// Sirven para diseñar el bloque con algo adentro. En la tienda publicada no
+// aparecen nunca: ahí se muestran las reseñas de verdad, y si todavía no hay
+// ninguna el bloque queda sin tarjetas, invitando a dejar la primera.
+//
+// Son propias de Urban Pulse a propósito. Antes eran cuatro testimonios fijos
+// escritos acá, y todas las tiendas con este template mostraban a las mismas
+// cuatro personas diciendo lo mismo. Chic Paris tiene las suyas, con su voz: si
+// se compartieran, las previews de los templates se verían clonadas.
+const EJEMPLOS_RESENAS: EjemplosDeResenas = {
+  producto: [
+    { id:"up-p1", rating:5, reviewer:"Valentina R.", verified:true,  verifiedBy:"auto",
+      comment:"La calidad es increíble, se nota que es para alto rendimiento. Volví a comprar dos veces este mes." },
+    { id:"up-p2", rating:5, reviewer:"Marcos D.",    verified:false, verifiedBy:null,
+      comment:"El hoodie de training es lo mejor que compré. Cómodo, liviano y se ve súper bien en el gym." },
+    { id:"up-p3", rating:5, reviewer:"Lucía P.",     verified:true,  verifiedBy:"owner",
+      comment:"Los leggings seamless no se corren ni se transparentan. Perfectos para cualquier entrenamiento." },
+    { id:"up-p4", rating:4, reviewer:"Ignacio M.",   verified:false, verifiedBy:null,
+      comment:"Los shorts son de primera calidad. Le saco una estrella porque me quedaron un talle grande." },
+  ],
+  tienda: [
+    { id:"up-t1", rating:5, reviewer:"Brenda S.", verified:true,  verifiedBy:"auto",
+      comment:"Pedí un jueves y el sábado ya lo tenía. Me escribieron por WhatsApp para avisarme cuando salió." },
+    { id:"up-t2", rating:5, reviewer:"Tomás A.",  verified:false, verifiedBy:null,
+      comment:"Cambié un talle sin drama, ni me pidieron el ticket. Se nota que les importa que te quede bien." },
+  ],
+};
 
 const TICKER = "NUEVA COLECCIÓN · ENVÍO GRATIS +$30.000 · 30 DÍAS DE CAMBIO · 6 CUOTAS SIN INTERÉS · ";
 
@@ -135,6 +159,16 @@ export default function UrbanPulse() {
   const { products, promotions, checkoutMode, isWholesale, ocultarPrecios, defaultCategories, featuredCategories } = storefront;
   const { editMode, overrides: textOverrides, setOverride } = useEditContext();
   const isInquiryMode = checkoutMode === "inquiry" || ocultarPrecios;
+
+  // Las reseñas de la portada. La lógica —qué sube, las dos pestañas, el promedio,
+  // borrar y publicar— es compartida; el diseño está más abajo y es de este
+  // template. Ver `useHomeReviews`.
+  const resenas = useHomeReviews({
+    slug: storeConfig?.slug,
+    isPreview, isOwner,
+    productos: products,
+    ejemplos: EJEMPLOS_RESENAS,
+  });
 
   const categoryList = useMemo(() => {
     const cats = [...new Set(products.map(p => p.category).filter(c => c && c !== "general"))];
@@ -1053,38 +1087,165 @@ export default function UrbanPulse() {
       </section>
       </SectionBlock>
 
-      {/* TESTIMONIALS */}
-      <SectionBlock id="up-testimonios" label="Testimonios" isPreview={isPreview} defaultOrder={UP_SECTION_IDS}>
+      {/* RESEÑAS ─────────────────────────────────────────────────────────────
+          Antes eran cuatro testimonios inventados en el código. Ahora son las
+          reseñas de verdad: la FUNCIÓN está en `useHomeReviews` y se comparte con
+          los otros templates; el diseño es de acá.
+
+          Y el diseño no se parece al de Chic Paris a propósito. Allá es un
+          carrusel horizontal de tarjetas claras con Playfair en itálica; acá es la
+          grilla dura del resto de Urban Pulse — bordes rectos, mayúsculas,
+          estrellas dibujadas, sin curvas. */}
+      <SectionBlock id="up-testimonios" label="Reseñas" isPreview={isPreview} defaultOrder={UP_SECTION_IDS}>
       <section data-reveal style={{ background:testimonialsBgUp, padding:"80px 0", position:"relative" }}>
-        <EditableSectionBg field="bgTestimonios" label="Fondo testimonios" />
-        <div style={{ padding:"0 40px", marginBottom:36, position:"relative", zIndex:1 }}>
-          <h2 style={{ color:testimonialsText, fontSize:"clamp(30px,3.5vw,42px)", fontWeight:900, textTransform:"uppercase", letterSpacing:"-1px", margin:0 }}>
-            <EditableZone field="testimonialsHeading" label="Título testimonios">Lo que dicen nuestros clientes</EditableZone>
-          </h2>
-        </div>
-        <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(4,1fr)", gap:12, padding:"0 40px", position:"relative", zIndex:1 }}>
-          {TESTIMONIALS.map((t, i) => {
-            const starsVal = Math.min(5, Math.max(1, parseInt(textOverrides[`testimonial${i+1}Stars`]?.text ?? String(t.stars)) || t.stars));
+        <EditableSectionBg field="bgTestimonios" label="Fondo reseñas" />
+        <div style={{ padding: isMobile ? "0 20px" : "0 40px", marginBottom:28, position:"relative", zIndex:1 }}>
+          {/* El promedio REAL. Los cuatro testimonios viejos mostraban cinco
+              estrellas siempre, así que una tienda con promedio 3,2 publicaba
+              cinco doradas arriba de sus propias reseñas. */}
+          {(() => {
+            const promedio = isPreview ? 4.8 : (resenas.stats?.promedio ?? 0);
+            const total    = isPreview ? 6   : (resenas.stats?.total ?? 0);
+            if (!total) return null;
             return (
-              <div key={i} style={{ background:testimonialsCardBg, border:`1px solid ${testimonialsCardBorder}`, padding:"28px" }}>
-                <div style={{ display:"flex", gap:3, marginBottom:14, cursor: editMode ? "pointer" : "default" }}
-                  onClick={() => editMode && setOverride(`testimonial${i+1}Stars`, { text: String(starsVal < 5 ? starsVal + 1 : 1) })}
-                  title={editMode ? "Click para cambiar estrellas" : undefined}>
-                  {Array.from({length:5}).map((_,si) => (
-                    <svg key={si} width={13} height={13} viewBox="0 0 24 24" fill={si < starsVal ? ACC : testimonialsMid} stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:12, flexWrap:"wrap" }}>
+                <span style={{ display:"flex", gap:3 }}>
+                  {[1,2,3,4,5].map(s => (
+                    <svg key={s} width={15} height={15} viewBox="0 0 24 24" fill={s <= Math.round(promedio) ? ACC : testimonialsMid} stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
                   ))}
-                  {editMode && <span style={{ fontSize:9, color:testimonialsMid, marginLeft:4, alignSelf:"center" }}>↑</span>}
-                </div>
-                <p style={{ color:testimonialsMid, fontSize:13, lineHeight:1.7, margin:"0 0 18px" }}>
-                  &quot;<EditableZone field={`testimonial${i+1}Text`} label={`Testimonio ${i+1} — Texto`}>{t.text}</EditableZone>&quot;
-                </p>
-                <p style={{ color:accentSobre(testimonialsBgUp, testimonialsText), fontSize:10, fontWeight:900, letterSpacing:3, textTransform:"uppercase", margin:0 }}>
-                  <EditableZone field={`testimonial${i+1}Name`} label={`Testimonio ${i+1} — Nombre`}>{t.name}</EditableZone>
-                </p>
+                </span>
+                <span style={{ color:testimonialsText, fontSize:11, fontWeight:900, letterSpacing:2, textTransform:"uppercase" }}>
+                  {promedio.toFixed(1).replace(".", ",")} · {total} {total === 1 ? "reseña" : "reseñas"}
+                </span>
               </div>
             );
-          })}
+          })()}
+          <h2 style={{ color:testimonialsText, fontSize:"clamp(30px,3.5vw,42px)", fontWeight:900, textTransform:"uppercase", letterSpacing:"-1px", margin:0 }}>
+            {/* Con cero reseñas el título deja de afirmar algo que no pasó. Si el
+                dueño escribió el suyo, manda el suyo. */}
+            <EditableZone field="testimonialsHeading" label="Título reseñas">
+              {resenas.sinNada ? "¿Ya compraste? Contanos cómo te fue" : "Lo que dicen nuestros clientes"}
+            </EditableZone>
+          </h2>
+
+          {/* Aviso, solo mientras se edita: que quede claro que esas cuatro no
+              son reales y qué va a pasar en la tienda publicada. */}
+          {isPreview && (
+            <div style={{ display:"flex", gap:9, marginTop:16, padding:"11px 14px", background:"#fffbeb", border:"2px solid #fde68a", maxWidth:640 }}>
+              <span style={{ flexShrink:0, fontSize:13, lineHeight:1.4 }}>⚠️</span>
+              <p style={{ margin:0, fontSize:11.5, color:"#92400e", lineHeight:1.55 }}>
+                <strong>Estas reseñas son de ejemplo.</strong> No se pueden editar y no se publican —
+                están para que veas cómo queda el bloque. En tu tienda se reemplazan solas por las
+                reseñas reales de tus clientes.{" "}
+                {resenas.totalReal === 0
+                  ? "Todavía no tenés ninguna: hasta que llegue la primera, el bloque se muestra vacío invitando a dejarla."
+                  : `Hoy tenés ${resenas.totalReal} ${resenas.totalReal === 1 ? "reseña" : "reseñas"}, y ${resenas.enPortadaReal} ${resenas.enPortadaReal === 1 ? "aparece" : "aparecen"} acá: las de 4★ y 5★ con comentario, más las de tu tienda que hayas aprobado.`}
+                {" "}El título y el fondo sí son tuyos: esos se editan y se guardan.
+              </p>
+            </div>
+          )}
+
+          {/* Las dos pestañas: opinar de un producto y opinar de la tienda son
+              cosas distintas. Mezcladas, quien quiere saber "si son serios" tiene
+              que leer comentarios sobre talles. */}
+          <div style={{ display:"flex", gap:28, marginTop:22, borderBottom:`2px solid ${testimonialsCardBorder}` }}>
+            {([
+              { key:"producto" as const, label:"Los productos", n: resenas.deProducto.length },
+              { key:"tienda"   as const, label:"La tienda",     n: resenas.deTienda.length },
+            ]).map(t => (
+              <button key={t.key} type="button" onClick={() => resenas.setTab(t.key)}
+                style={{ background:"none", border:"none", cursor:"pointer", padding:"0 0 12px", marginBottom:-2,
+                         fontSize:10, fontWeight:900, letterSpacing:2, textTransform:"uppercase",
+                         color: resenas.tab === t.key ? testimonialsText : testimonialsMid,
+                         borderBottom:`3px solid ${resenas.tab === t.key ? ACC : "transparent"}` }}>
+                {t.label} <span style={{ opacity:0.6, fontWeight:700 }}>({t.n})</span>
+              </button>
+            ))}
+          </div>
         </div>
+
+        {/* Vacío: en vez de esconder el bloque, se invita a escribir. Escondido,
+            una tienda nueva no tendría nunca cómo recibir la primera. */}
+        {resenas.lista.length === 0 && (
+          <div style={{ padding: isMobile ? "0 20px 8px" : "0 40px 8px", position:"relative", zIndex:1 }}>
+            <p style={{ color:testimonialsMid, fontSize:13, lineHeight:1.7, margin:0, maxWidth:520 }}>
+              {resenas.tab === "tienda"
+                ? resenas.sinNada
+                  ? "Todavía nadie dejó su opinión. Si compraste acá, contanos cómo te fue — sos el primero."
+                  : "Todavía nadie opinó sobre la tienda en general. Si compraste, contanos cómo te fue."
+                : "Todavía nadie opinó sobre un producto. Las opiniones se dejan desde la ficha de cada uno."}
+            </p>
+          </div>
+        )}
+
+        <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(4,1fr)", gap:12, padding: isMobile ? "0 20px" : "0 40px", position:"relative", zIndex:1 }}>
+          {resenas.lista.map(r => (
+            <div key={r.id} style={{ background:testimonialsCardBg, border:`1px solid ${testimonialsCardBorder}`, padding:"28px", display:"flex", flexDirection:"column", gap:14, position:"relative" }}>
+              {isOwner && !isPreview && (
+                <button onClick={() => resenas.borrar(r.id)} title="Eliminar reseña"
+                  style={{ position:"absolute", top:8, right:8, background:"none", border:"none", color:testimonialsMid, cursor:"pointer", fontSize:16, lineHeight:1, padding:4 }}
+                  onMouseEnter={e => (e.currentTarget.style.color = "#ef4444")}
+                  onMouseLeave={e => (e.currentTarget.style.color = testimonialsMid)}>×</button>
+              )}
+              <div style={{ display:"flex", gap:3 }}>
+                {Array.from({length:5}).map((_, si) => (
+                  <svg key={si} width={13} height={13} viewBox="0 0 24 24" fill={si < r.rating ? ACC : testimonialsMid} stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                ))}
+              </div>
+              {r.comment && (
+                <ResenaComentario
+                  texto={r.comment}
+                  acento={accentSobre(testimonialsBgUp, testimonialsText)}
+                  estiloTexto={{ color:testimonialsMid, fontSize:13, lineHeight:1.7 }}
+                  textoBoton={{ desplegar:"Leer todo", irA:"Ver reseña →" }}
+                  // Abre la vista rápida de ESE producto, que ya trae todas sus
+                  // reseñas enteras. Urban Pulse usa el modal, no la página de
+                  // detalle, así que mandarla a /producto/[id] le cambiaría el
+                  // recorrido. Si el producto no está cargado, no se ofrece el
+                  // link en vez de abrir un modal vacío.
+                  onVerMas={(() => {
+                    const p = r.product?.id ? products.find(x => x.id === r.product!.id) : undefined;
+                    return p && !isPreview ? () => openModal(p) : null;
+                  })()}
+                />
+              )}
+              <div style={{ borderTop:`1px solid ${testimonialsCardBorder}`, paddingTop:12, display:"flex", alignItems:"center", gap:10, marginTop:"auto" }}>
+                {r.product?.image && (
+                  <FadeImage src={r.product.image} alt={r.product?.name ?? ""} width={42} height={42} style={{ objectFit:"cover", flexShrink:0, border:`1px solid ${testimonialsCardBorder}` }} />
+                )}
+                <div style={{ minWidth:0 }}>
+                  <p style={{ color:accentSobre(testimonialsBgUp, testimonialsText), fontSize:10, fontWeight:900, letterSpacing:3, textTransform:"uppercase", margin:0 }}>{r.reviewer}</p>
+                  {r.product?.name && (
+                    <p style={{ color:testimonialsMid, fontSize:11, margin:"3px 0 0", display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical" as const, overflow:"hidden" }}>{r.product.name}</p>
+                  )}
+                  {/* "Compra verificada" y "Verificada por la tienda" NO son lo
+                      mismo: la primera la cruzó el sistema contra un pedido
+                      entregado, la segunda la marcó el dueño a mano. */}
+                  {r.verified && (
+                    <p style={{ fontSize:9.5, fontWeight:900, letterSpacing:0.5, margin:"5px 0 0", color: r.verifiedBy === "auto" ? "#22c55e" : testimonialsMid }}>
+                      {r.verifiedBy === "auto" ? "✓ Compra verificada" : "✓ Verificada por la tienda"}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* El formulario vive en un modal: acá solo el disparador, para que las
+            reseñas no queden empujadas por un formulario largo. Una reseña de
+            PRODUCTO no va por acá —necesita saber de qué producto es— así que se
+            deja desde la ficha; ésta es de la tienda y no apunta a nada. */}
+        {resenas.tab === "tienda" && (
+          <div style={{ padding: isMobile ? "26px 20px 0" : "34px 40px 0", textAlign:"center", position:"relative", zIndex:1 }}>
+            <button type="button" onClick={resenas.abrirModal}
+              style={{ background:"none", border:`2px solid ${testimonialsText}`, color:testimonialsText, padding:"14px 42px", fontSize:10, fontWeight:900, letterSpacing:3, textTransform:"uppercase", cursor:"pointer", transition:"all 0.2s" }}
+              onMouseEnter={e => { e.currentTarget.style.background = testimonialsText; e.currentTarget.style.color = textoSobre(testimonialsText); }}
+              onMouseLeave={e => { e.currentTarget.style.background = "none"; e.currentTarget.style.color = testimonialsText; }}>
+              Dejá tu opinión
+            </button>
+          </div>
+        )}
       </section>
       </SectionBlock>
 
@@ -1904,6 +2065,131 @@ export default function UrbanPulse() {
               </div>
             )}
           </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL: reseña de la TIENDA ────────────────────────────────────────
+          El formulario no va inline en el bloque: con varias reseñas al lado
+          empujaría todo para abajo. La lógica está en `useHomeReviews`; acá solo
+          el vestido de Urban Pulse — bordes rectos de 3px, mayúsculas, sin curvas. */}
+      {resenas.modalAbierto && (
+        <div className="up-fade" onClick={resenas.cerrarModal}
+          style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.9)", zIndex: isPreview ? 20000 : 900, display:"flex", alignItems: isMobile ? "flex-end" : "center", justifyContent:"center", padding: isMobile ? 0 : 20 }}>
+          <div onClick={e => e.stopPropagation()}
+            style={{ background:WHITE, width:"100%", maxWidth:480, maxHeight:"92vh", overflowY:"auto", border:`3px solid ${DARK}`, position:"relative" }}>
+            <button onClick={resenas.cerrarModal} aria-label="Cerrar"
+              style={{ position:"absolute", top:8, right:10, zIndex:2, background:"none", border:"none", color:DARK, width:32, height:32, cursor:"pointer", fontSize:22, lineHeight:1 }}>✕</button>
+            <div style={{ padding: isMobile ? "28px 22px 26px" : "32px 30px 28px" }}>
+              {resenas.listo ? (
+                // Nace pendiente de aprobación: si dijera "¡Publicada!" y no
+                // apareciera, la persona pensaría que se perdió y la escribiría
+                // de nuevo.
+                <div style={{ textAlign:"center", padding:"8px 0" }}>
+                  <div style={{ fontSize:34, marginBottom:10, color:accSobreClaro }}>✓</div>
+                  <p style={{ margin:"0 0 6px", fontSize:13, fontWeight:900, letterSpacing:2, textTransform:"uppercase", color:DARK }}>¡Gracias por tu opinión!</p>
+                  <p style={{ margin:"0 0 20px", fontSize:12.5, color:MID, lineHeight:1.6 }}>
+                    La tienda la revisa antes de publicarla, así que todavía no la vas a ver acá.
+                  </p>
+                  <button type="button" onClick={resenas.cerrarModal}
+                    style={{ background:ACC, color:accentText, border:"none", padding:"12px 34px", fontSize:10, fontWeight:900, letterSpacing:3, textTransform:"uppercase", cursor:"pointer" }}>
+                    Cerrar
+                  </button>
+                </div>
+              ) : (
+                <form onSubmit={resenas.enviar} style={{ display:"flex", flexDirection:"column", gap:12 }}>
+                  <div>
+                    <p style={{ margin:"0 0 5px", fontSize:11, letterSpacing:3, textTransform:"uppercase", fontWeight:900, color:DARK }}>
+                      Contanos cómo te fue
+                    </p>
+                    <p style={{ margin:0, fontSize:12, color:MID, lineHeight:1.5 }}>
+                      Tu opinión sobre la atención, el envío y la experiencia de comprar acá.
+                    </p>
+                  </div>
+                  {resenas.error && (
+                    <p style={{ margin:0, fontSize:11.5, color:"#b91c1c", background:"#fef2f2", border:"2px solid #fecaca", padding:"9px 12px", lineHeight:1.5 }}>
+                      ⚠ {resenas.error}
+                    </p>
+                  )}
+
+                  {/* Trampa para bots: invisible para una persona, irresistible
+                      para un robot que completa todo lo que encuentra. */}
+                  <input value={resenas.honeypot} onChange={e => resenas.setHoneypot(e.target.value)}
+                    tabIndex={-1} autoComplete="off" aria-hidden="true"
+                    style={{ position:"absolute", left:-9999, width:1, height:1, opacity:0 }} />
+
+                  <div style={{ display:"flex", gap:5 }}>
+                    {[1,2,3,4,5].map(s => (
+                      <button key={s} type="button" onClick={() => resenas.setForm(p => ({ ...p, rating: s }))}
+                        aria-label={`${s} de 5 estrellas`}
+                        style={{ background:"none", border:"none", padding:0, cursor:"pointer", lineHeight:0 }}>
+                        <svg width={26} height={26} viewBox="0 0 24 24" fill={s <= resenas.form.rating ? ACC : "#dcdcdc"} stroke={s <= resenas.form.rating ? DARK : "none"} strokeWidth={1}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                      </button>
+                    ))}
+                  </div>
+
+                  <input value={resenas.form.reviewer} maxLength={RESENADOR_MAX} required
+                    onChange={e => resenas.setForm(p => ({ ...p, reviewer: e.target.value }))}
+                    placeholder="Tu nombre"
+                    style={{ border:`2px solid ${DARK}`, padding:"11px 12px", fontSize:13, outline:"none", fontFamily:"inherit" }} />
+
+                  <input value={resenas.form.email} type="email" maxLength={120} autoComplete="email"
+                    onChange={e => resenas.setForm(p => ({ ...p, email: e.target.value }))}
+                    placeholder="Tu email (opcional)"
+                    style={{ border:`2px solid ${DARK}`, padding:"11px 12px", fontSize:13, outline:"none", fontFamily:"inherit" }} />
+                  <p style={{ margin:"-6px 0 0", fontSize:10.5, color:MID, lineHeight:1.5 }}>
+                    Si compraste acá, tu reseña sale con el sello “✓ Compra verificada”. El email no se publica.
+                  </p>
+
+                  <textarea value={resenas.form.comment} rows={3} maxLength={COMENTARIO_MAX}
+                    onChange={e => resenas.setForm(p => ({ ...p, comment: e.target.value }))}
+                    placeholder="La atención, el envío, la experiencia..."
+                    style={{ border:`2px solid ${DARK}`, padding:"11px 12px", fontSize:13, resize:"none", outline:"none", fontFamily:"inherit" }} />
+                  {resenas.form.comment.length > COMENTARIO_MAX - 80 && (
+                    <p style={{ margin:"-6px 0 0", fontSize:10, color: resenas.form.comment.length >= COMENTARIO_MAX ? "#dc2626" : MID, textAlign:"right" }}>
+                      {resenas.form.comment.length} / {COMENTARIO_MAX}
+                    </p>
+                  )}
+
+                  {!isPreview && resenas.captcha.widget}
+
+                  {/* Confirmación en dos pasos. Una reseña es pública y lleva el
+                      nombre de quien la escribe: conviene un segundo para
+                      releerla. Se evita el `confirm()` del navegador, que en
+                      celular tapa el texto que se está por confirmar. */}
+                  {resenas.confirmando ? (
+                    <div style={{ display:"flex", flexDirection:"column", gap:9 }}>
+                      <p style={{ margin:0, fontSize:11.5, color:DARK, lineHeight:1.6 }}>
+                        Se publica con tu nombre, <strong>{resenas.form.reviewer.trim()}</strong>, y {resenas.form.rating} de 5 estrellas. ¿La mandamos?
+                      </p>
+                      <div style={{ display:"flex", gap:8 }}>
+                        <button type="submit" disabled={resenas.enviando || !resenas.captcha.ready}
+                          style={{ flex:1, background:ACC, color:accentText, border:"none", padding:"13px", fontSize:10, fontWeight:900, letterSpacing:2, textTransform:"uppercase", cursor: resenas.enviando ? "default" : "pointer", opacity: resenas.enviando ? 0.6 : 1 }}>
+                          {resenas.enviando ? "Enviando..." : "Sí, enviar"}
+                        </button>
+                        <button type="button" onClick={() => resenas.setConfirmando(false)} disabled={resenas.enviando}
+                          style={{ background:"none", border:`2px solid ${DARK}`, color:DARK, padding:"13px 18px", fontSize:10, fontWeight:900, letterSpacing:2, textTransform:"uppercase", cursor:"pointer" }}>
+                          Volver
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button type="button" disabled={isPreview || !resenas.valida}
+                      onClick={() => resenas.setConfirmando(true)}
+                      title={resenas.valida ? undefined : "Escribí tu nombre y elegí cuántas estrellas"}
+                      style={{ background: !isPreview && resenas.valida ? ACC : "#ededed", color: !isPreview && resenas.valida ? accentText : "#9a9a9a", border:"none", padding:"14px", fontSize:10, fontWeight:900, letterSpacing:3, textTransform:"uppercase", cursor: !isPreview && resenas.valida ? "pointer" : "default" }}>
+                      Dejar mi reseña
+                    </button>
+                  )}
+
+                  {isPreview && (
+                    <p style={{ margin:0, fontSize:10, color:MID, fontStyle:"italic", textAlign:"center" }}>
+                      Vista previa — el formulario funciona en tu tienda publicada.
+                    </p>
+                  )}
+                </form>
+              )}
+            </div>
           </div>
         </div>
       )}
