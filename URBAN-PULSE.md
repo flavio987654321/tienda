@@ -10,9 +10,9 @@ Los números de línea son los del día de la revisión: se corren a medida que 
 |---|---|---|---|
 | ~~UP-1~~ | ~~El producto destacado muestra un precio que no es el que se cobra~~ | Alta | **hecho** 27/07 |
 | ~~UP-2~~ | ~~El bloque Ofertas ignora las promociones~~ | Alta | **hecho** 27/07 |
-| UP-3 | El acento no se adapta: se pierde el texto o se pierde él | Alta | pendiente |
+| ~~UP-3~~ | ~~El acento no se adapta: se pierde el texto o se pierde él~~ | Alta | **hecho** 27/07 |
 | ~~UP-4~~ | ~~El selector de color se traba y deja de sincronizar~~ | Media | **hecho** 27/07 |
-| UP-5 | Seis de ocho lugares no dicen que el producto tiene promo | Media | pendiente |
+| ~~UP-5~~ | ~~Seis de ocho lugares no dicen que el producto tiene promo~~ | Media | **hecho** 27/07 |
 | UP-6 | El panel de favoritos se sale de la pantalla en 360px | Baja | pendiente |
 | UP-7 | Un `0` suelto arriba de la foto en Ofertas | Baja | pendiente |
 | UP-8 | El buscador usa dos columnas fijas también en celular | Baja | pendiente |
@@ -94,7 +94,7 @@ sin nada tachado y parecería un error de la página.
 
 ---
 
-### UP-3 — El acento no se adapta: se pierde el texto o se pierde él
+### ~~UP-3~~ — El acento no se adapta: se pierde el texto o se pierde él ✅
 
 El acento es editable (`storeConfig?.colors.accent`, línea 146, con `#d4ff00` de fábrica). Hay
 **40 usos** y ninguno pasa por los helpers de legibilidad que ya existen en `EditContext`
@@ -147,13 +147,40 @@ Ninguna de las cinco llamadas a `PromoPrice` (1028, 1083, 1395, 1423, 1765) pasa
 así que el tachado usa el `#aaa` fijo pensado para fondo blanco. Sobre un fondo claro da 2,32 de
 contraste y se pierde justo cuando es la prueba de que hay descuento.
 
-**Cómo se arregla:** el mismo camino que Chic Paris y la página de productos.
+#### D) Y había un `accentText` inverso alimentando el carrito
 
-- Para el relleno: una constante `accentText = textoSobre(ACC)` y usarla en los 13 lugares en vez
-  de `DARK`. `textoSobre` elige por contraste real de WCAG, no por umbral de luminosidad.
-- Para el texto: `accentSobre(bg, texto) = getReadableAccentText(ACC, bg, texto)`, que cae al color
-  de texto del tema cuando el acento no se distingue del fondo.
-- Para el tachado: pasar `sobre={<el color de texto de esa sección>}` en las cinco llamadas.
+Apareció al arreglar lo anterior: `tsc` avisó que la constante ya existía, declarada más abajo solo
+para el `cartTheme`. Estaba **al revés**:
+
+```tsx
+const accentText = getContrastColor(ACC) === "light" ? DARK : "#fff";
+```
+
+`getContrastColor(X) === "light"` significa *"sobre X va texto claro"*, y la rama devolvía `DARK`.
+Con el acento de fábrica —el neón `#d4ff00`— terminaba pidiendo **blanco sobre amarillo**:
+
+```
+accentText viejo → #fff    contraste 1,16
+accentText nuevo → #111    contraste 16,28
+```
+
+Y no era decorativo: ese valor viaja en `cartTheme` al `CartDrawer` y al `CheckoutModal`
+compartidos, así que afectaba al carrito y al checkout enteros.
+
+**Arreglado el 27/07.** Se agregaron las dos constantes que faltaban y se barrieron los 40 usos:
+
+- `accentText = textoSobre(ACC)` para el texto **sobre** el acento — 13 lugares, más el `cartTheme`,
+  que ahora usa esta misma y no la invertida.
+- `accentSobre(bg, texto) = getReadableAccentText(ACC, bg, texto)` para el acento **como** texto, con
+  el fondo real de cada sección. Se derivaron además `accSobreDark` y `accSobreClaro` para los dos
+  fondos que se repiten (el negro de la marca y el gris de adentro del modal).
+- Las seis llamadas a `PromoPrice` reciben ahora el acento legible **y** `sobre`, así el tachado se
+  atenúa contra el fondo de su sección en vez del gris fijo.
+
+**Queda afuera a propósito:** los bordes decorativos que usan el acento (las rayitas del nav, los
+`borderTop` de sección, la sombra de los links del footer). Si el acento se parece al fondo se
+pierde una línea, no información. Los tres bordes que **sí** llevaban información —el tilde de
+"mensaje enviado", el botón de ver más reseñas y el de publicar— sí se corrigieron.
 
 ---
 
@@ -190,7 +217,7 @@ haber que hacerlo tres veces más.
 
 ---
 
-### UP-5 — Seis de ocho lugares no dicen que el producto tiene promo
+### ~~UP-5~~ — Seis de ocho lugares no dicen que el producto tiene promo ✅
 
 | Dónde | Línea | ¿Avisa? |
 |---|---|---|
@@ -215,9 +242,20 @@ ninguna promo.
 Chic Paris resolvió esto con un helper `avisoPromo(p, modo)` —un solo lugar que decide entre tag
 sobre la foto y chip aparte— y lo llama desde las siete secciones. Acá nunca llegó.
 
-**Cómo se arregla:** portar `avisoPromo` (está en `ChicParis.tsx`, cerca de la línea 463) y llamarlo
-en las cinco secciones que faltan. En las miniaturas chicas (buscador 56px, favoritos 68px) va en
-modo `"chip"`, que es para lo que se creó ese modo.
+**Arreglado el 27/07.** Se portó `avisoPromo(p, modo)` y ahora las ocho secciones avisan:
+
+| Modo | Dónde | Por qué |
+|---|---|---|
+| `"foto"` | Lo más visto, similares | la foto está libre, el tag va en la esquina como en el catálogo |
+| `"chip"` | destacado, Ofertas, buscador, favoritos | ver abajo |
+
+Los cuatro `"chip"` no son por gusto: en el **destacado** esa esquina ya la ocupa el `badge` propio
+del producto y `PromoTag` se posiciona justo ahí; en **Ofertas** la ocupa el badge del `%`; y el
+**buscador** y **favoritos** son miniaturas de 56 y 68px, donde un tag encima tapa media foto.
+
+En Ofertas conviven el `%` y el chip a propósito: no dicen lo mismo. El `%` dice cuánto baja el
+precio de ESE producto, el chip dice cuál promo se lo baja — un descuento de $10.000 es −20% en una
+remera de $50.000 y −10% en una campera de $100.000.
 
 ---
 
@@ -270,12 +308,12 @@ lateral, como hacen el resto de las secciones (`isMobile ? 16 : 40`).
 
 ## Notas para cuando se arregle
 
-- **Lo que sigue:** UP-3 es el más grande en cantidad de líneas (40 usos del acento) pero es
-  mecánico una vez definidas las dos constantes. UP-5 pasa por las mismas secciones, así que
-  **conviene hacer los dos en la misma pasada** y no leer el archivo dos veces. UP-6, UP-7 y UP-8
-  son de una línea cada uno.
+- **Lo que queda:** UP-6, UP-7 y UP-8, de una línea cada uno.
 - **UP-4 está igual en BohoTerra y FashionNoir.** Antes de arreglar el modal de otro template de
   moda, evaluar extraerlo a `shared/`: los cuatro lo tienen copiado y pegado.
+- **El `accentText` invertido (UP-3D) puede estar en más templates.** Se detectó de casualidad acá.
+  Vale revisar CasaClara, ElectroPrime, HomeStudio y TechNova, que declaran esa constante con la
+  misma forma sospechosa (`getContrastColor(accent) === "light" ? "#111" : "#fff"`).
 - Todo cambio visual se revisa en **360 / 768 / 1280**. 768 es donde más se rompe.
 
 ### Registro
@@ -284,3 +322,9 @@ lateral, como hacen el resto de las secciones (`isMobile ? 16 : 40`).
 carga en 200 y el log del dev server no reporta errores de runtime. Al cerrar UP-1 apareció una
 consecuencia que se anotó en UP-5: el bloque destacado se sumó a la lista de los que no avisan qué
 promo tienen.
+
+**27/07/2026 — UP-3 y UP-5**, en la misma pasada porque tocan las mismas secciones. 40 usos del
+acento revisados uno por uno contra el fondo real de cada lugar; ocho secciones avisando la promo.
+En el camino apareció UP-3D, el `accentText` invertido que alimentaba el carrito: no estaba en la
+auditoría original, lo destapó `tsc` al chocar con la constante nueva. Verificado igual que la
+tanda anterior: `tsc`, eslint, preview en 200 y sin errores de runtime.

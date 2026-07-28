@@ -4,7 +4,7 @@ import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { usePushBell } from "@/contexts/PushBellContext";
 import { useAuth } from "@/components/AuthProvider";
 import StoreFollowButton from "@/components/store/StoreFollowButton";
-import { EditableZone, EditableImageButton, EditableSectionBg, BgDragHandle, getContrastColor, useEditContext } from "@/contexts/EditContext";
+import { EditableZone, EditableImageButton, EditableSectionBg, BgDragHandle, getContrastColor, getReadableAccentText, textoSobre, useEditContext } from "@/contexts/EditContext";
 import { useStorefront, type StorefrontProduct } from "@/hooks/useStorefront";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { useCartLogic } from "@/hooks/useCartLogic";
@@ -14,7 +14,7 @@ import ReportStoreModal from "@/components/store/ReportStoreModal";
 import VerifiedIconButton from "@/components/store/VerifiedIconButton";
 import { CartDrawer, type CartTheme } from "@/components/store/templates/shared/CartDrawer";
 import { OfferBadge } from "@/components/store/OfferBadge";
-import { PromoTag, PromoBlock, PromoPrice } from "@/components/store/PromoDisplay";
+import { PromoTag, PromoBlock, PromoPrice, coloresPromo } from "@/components/store/PromoDisplay";
 import { resolveProductPromo, describePromo } from "@/lib/promoDisplay";
 import { CheckoutModal } from "@/components/store/templates/shared/CheckoutModal";
 import { ContactForm } from "@/components/store/templates/shared/ContactForm";
@@ -183,6 +183,30 @@ export default function UrbanPulse() {
   const masVistoBgUp   = scu["bgMasVisto"]  ?? DARK;
   const masVistoTextUp = getContrastColor(masVistoBgUp) === "light" ? WHITE : DARK;
 
+  // ── El acento tiene que adaptarse (UP-3) ───────────────────────────────────
+  // `ACC` lo elige la dueña y este template lo usaba crudo en los 40 lugares donde
+  // aparece. Fallaba en las dos direcciones:
+  //
+  //   · Como RELLENO llevaba `color:DARK` escrito a mano. Con el neón de fábrica un
+  //     texto negro encima se lee perfecto, pero con un acento oscuro quedaba negro
+  //     sobre negro — y son los botones que importan ("Agregar al carrito", el CTA
+  //     del hero, el de mayorista).
+  //   · Como TEXTO iba crudo sobre fondos de sección que la dueña puede aclarar. El
+  //     neón #d4ff00 sobre blanco da 1,16 de contraste (el mínimo legible es 4,5):
+  //     invisible. De fábrica esos fondos son oscuros, así que el problema no se ve
+  //     hasta el día que alguien aclara una sección.
+  //
+  // Los dos helpers ya existían en EditContext y este template no los usaba.
+  // `textoSobre` elige por contraste real de WCAG, no por umbral de luminosidad.
+  const accentText = textoSobre(ACC);
+  // El acento como color de TEXTO sobre un fondo dado. Si no se distingue de ese
+  // fondo, cae al color de texto que esa sección ya calculó para sí misma.
+  const accentSobre = (bg: string, texto: string) => getReadableAccentText(ACC, bg, texto);
+  // Los dos fondos que se repiten y no son de sección: el negro de la marca (botones,
+  // barra flotante, logo) y el gris claro de adentro del modal (reseñas).
+  const accSobreDark  = accentSobre(DARK, WHITE);
+  const accSobreClaro = accentSobre(BG, DARK);
+
   const promoBannerEnabled = storeConfig?.promoBanner?.enabled !== false;
   const configMsgs = storeConfig?.promoBanner?.messages?.filter(m => m.trim()) ?? [];
   const tickerContent = configMsgs.length > 0
@@ -244,8 +268,44 @@ export default function UrbanPulse() {
     fmt, showToast, openModal, addToCart,
     toggleFavorite,
   } = cart;
-  const accentText = getContrastColor(ACC) === "light" ? DARK : "#fff";
+  // `accentText` se declaraba acá una segunda vez, solo para el carrito, y estaba
+  // INVERTIDO: `getContrastColor(ACC) === "light"` significa "sobre ACC va texto
+  // claro", y la rama devolvía DARK. Con el acento de fábrica —el neón #d4ff00—
+  // terminaba pidiendo BLANCO sobre amarillo: 1,16 de contraste, ilegible, en el
+  // carrito y el checkout enteros. Ahora usa el mismo `accentText` de arriba, que
+  // mide con el contraste real de WCAG y da 16,28.
   const cartTheme: CartTheme = { BG:"#ffffff", S:BG, T:DARK, MID, border:"#e0e0e0", accent:ACC, accentText };
+  // ── El aviso de promo/oferta de una tarjeta (UP-5) ─────────────────────────
+  // Estaba escrito a mano solo en la grilla del catálogo y en el modal, así que en
+  // Ofertas, "Lo más visto", el destacado, similares, favoritos y el buscador el
+  // comprador no veía nada. Con un descuento en porcentaje el precio en rojo todavía
+  // lo delataba, pero una promo 3×2 o de envío gratis NO toca el precio: ahí el
+  // producto se veía idéntico a uno sin promo.
+  //   · "foto" → tag en la esquina, para las tarjetas con imagen grande.
+  //   · "chip" → línea aparte, para las miniaturas de 56/68px del buscador y
+  //     favoritos, donde un tag encima taparía media foto, y para el destacado,
+  //     cuya foto ya lleva el `badge` propio del producto justo en esa esquina.
+  const avisoPromo = (p: Product, modo: "foto" | "chip" = "foto") => {
+    const pr = resolveProductPromo(p, promotions);
+    const pct = discountPercent(p.price, p.comparePrice);
+    const enOferta = !!p.comparePrice && p.comparePrice > p.price;
+    if (!pr.primaryPromo && !enOferta) return null;
+    if (modo === "foto") {
+      return pr.primaryPromo
+        ? <PromoTag tipo={pr.primaryPromo.type} label={describePromo(pr.primaryPromo).headline} size="sm" />
+        : <OfferBadge badge={p.offerBadge} pct={pct} size="sm" />;
+    }
+    return (
+      <span style={{ display:"inline-block", marginTop:4, maxWidth:"100%",
+                     // Mismo color que tendría su tag en la foto: el chip es el mismo
+                     // aviso, en chico.
+                     background: pr.primaryPromo ? coloresPromo(pr.primaryPromo.type).fondo : "#dc2626",
+                     color: pr.primaryPromo ? coloresPromo(pr.primaryPromo.type).texto : "#fff",
+                     fontSize:9, fontWeight:900, letterSpacing:0.5, textTransform:"uppercase", padding:"2px 6px", lineHeight:1.3 }}>
+        {pr.primaryPromo ? describePromo(pr.primaryPromo).headline : `${pct}% OFF`}
+      </span>
+    );
+  };
   const variantPrice = modalProduct ? resolveVariantPrice(modalProduct.variants, selectedSize, selectedColor) : null;
   const displayPrice = variantPrice ?? (modalProduct?.price ?? 0);
   const modalPromo = modalProduct ? resolveProductPromo({ id: modalProduct.id, price: displayPrice, category: modalProduct.category }, promotions) : null;
@@ -458,7 +518,7 @@ export default function UrbanPulse() {
 
       {/* TOAST */}
       {toastMsg && (
-        <div style={{ position:"fixed", bottom:90, left:"50%", transform:"translateX(-50%)", background:DARK, color:ACC, padding:"12px 28px", fontSize:11, fontWeight:900, letterSpacing:2, textTransform:"uppercase", zIndex:9999, maxWidth:"calc(100vw - 32px)", textAlign:"center" }}>
+        <div style={{ position:"fixed", bottom:90, left:"50%", transform:"translateX(-50%)", background:DARK, color:accSobreDark, padding:"12px 28px", fontSize:11, fontWeight:900, letterSpacing:2, textTransform:"uppercase", zIndex:9999, maxWidth:"calc(100vw - 32px)", textAlign:"center" }}>
           {toastMsg}
         </div>
       )}
@@ -472,7 +532,7 @@ export default function UrbanPulse() {
                 {t.split("·").map((seg, i, arr) => (
                   <span key={i}>
                     <span style={{ color:"rgba(255,255,255,0.85)", fontSize:11, fontWeight:700, letterSpacing:2 }}>{seg}</span>
-                    {i < arr.length - 1 && <span style={{ color:ACC, fontSize:11, fontWeight:900, margin:"0 8px" }}>·</span>}
+                    {i < arr.length - 1 && <span style={{ color:accSobreDark, fontSize:11, fontWeight:900, margin:"0 8px" }}>·</span>}
                   </span>
                 ))}
               </span>
@@ -486,7 +546,7 @@ export default function UrbanPulse() {
         <div style={{ display:"flex", alignItems:"center", gap:6, fontWeight:900, fontSize:18, letterSpacing:4, textTransform:"uppercase", flexShrink:0 }}>
           <span style={{ maxWidth:200, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
             <EditableZone field="storeName" label="Nombre de la tienda">
-              {storeConfig?.storeName ?? <span>URBAN<span style={{ background:DARK, color:ACC, padding:"3px 7px", marginLeft:2 }}>PULSE</span></span>}
+              {storeConfig?.storeName ?? <span>URBAN<span style={{ background:DARK, color:accSobreDark, padding:"3px 7px", marginLeft:2 }}>PULSE</span></span>}
             </EditableZone>
           </span>
           <VerifiedIconButton isVerified={storeConfig?.isVerified} info={storeConfig?.verifiedInfo} />
@@ -510,7 +570,7 @@ export default function UrbanPulse() {
                   return (
                     <div key={cat} style={{ border:`2px solid ${DARK}`, padding:"10px 12px", background:"#f5f5f5" }}>
                       <button onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?t=urban-pulse${isPreview ? "&from=editor" : ""}&categoria=${encodeURIComponent(cat)}`; setHoveredNavCat(null); }}
-                        style={{ display:"block", width:"100%", background:ACC, border:`2px solid ${DARK}`, color:DARK, padding:"6px 8px", marginBottom:8, fontSize:11, fontWeight:800, textAlign:"left", cursor:"pointer", letterSpacing:1, textTransform:"uppercase", transition:"transform 0.1s" }}
+                        style={{ display:"block", width:"100%", background:ACC, border:`2px solid ${DARK}`, color:accentText, padding:"6px 8px", marginBottom:8, fontSize:11, fontWeight:800, textAlign:"left", cursor:"pointer", letterSpacing:1, textTransform:"uppercase", transition:"transform 0.1s" }}
                         onMouseEnter={e => { e.currentTarget.style.transform = "translate(-2px,-2px)"; e.currentTarget.style.boxShadow = `2px 2px 0 ${DARK}`; }}
                         onMouseLeave={e => { e.currentTarget.style.transform = "translate(0,0)"; e.currentTarget.style.boxShadow = "none"; }}>
                         {cat}
@@ -696,7 +756,7 @@ export default function UrbanPulse() {
       <section style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "55% 45%", minHeight: isMobile ? "auto" : "calc(100vh - 100px)", overflow:"hidden" }}>
         <div style={{ background:heroLeftUpBg, display:"flex", flexDirection:"column", justifyContent:"flex-end", padding: isMobile ? "60px 20px 48px" : "80px 64px", clipPath: isMobile ? "none" : "polygon(0 0, 100% 0, 91% 100%, 0 100%)", position:"relative" }}>
           <EditableSectionBg field="bgHeroLeft" label="Fondo hero" />
-          <span style={{ color:ACC, fontSize:10, letterSpacing:6, fontWeight:800, textTransform:"uppercase", marginBottom:20, display:"block" }}>
+          <span style={{ color:accentSobre(heroLeftUpBg, heroLeftUpText), fontSize:10, letterSpacing:6, fontWeight:800, textTransform:"uppercase", marginBottom:20, display:"block" }}>
             <EditableZone field="storeTagline" label="Tagline">{storeConfig?.storeTagline ?? "▶ Nueva Colección 2025"}</EditableZone>
           </span>
           <h1 style={{ color:heroLeftUpText, fontSize: isMobile ? "clamp(32px,9vw,52px)" : "clamp(58px,7.5vw,108px)", fontWeight:900, lineHeight:0.88, margin:"0 0 28px", textTransform:"uppercase", letterSpacing:"-2px" }}>
@@ -708,7 +768,7 @@ export default function UrbanPulse() {
           <div style={{ display:"flex", gap:12 }}>
             {(editMode || !storeConfig?.textOverrides?.["heroCta"]?.hidden) && (
               <button onClick={() => scrollTo("productos")}
-                style={{ background:ACC, color:DARK, border:"none", padding:"16px 36px", fontSize:11, fontWeight:900, letterSpacing:3, textTransform:"uppercase", cursor:"pointer" }}>
+                style={{ background:ACC, color:accentText, border:"none", padding:"16px 36px", fontSize:11, fontWeight:900, letterSpacing:3, textTransform:"uppercase", cursor:"pointer" }}>
                 <EditableZone field="heroCta" label="Botón principal">Ver Colección</EditableZone>
               </button>
             )}
@@ -725,7 +785,7 @@ export default function UrbanPulse() {
           <BgDragHandle imgKey="heroImage" />
           <EditableImageButton field="heroImage" label="Imagen hero" />
           {(() => { const ov = storeConfig?.imageOverrides?.["heroImage"]; if (!ov?.overlayType || ov.overlayType === "none") return null; return <div style={{ position:"absolute", inset:0, pointerEvents:"none", background: ov.overlayType === "light" ? `rgba(255,255,255,${ov.overlayOpacity ?? 0.45})` : `rgba(0,0,0,${ov.overlayOpacity ?? 0.45})` }} />; })()}
-          <div style={{ position:"absolute", top:36, right:36, background:ACC, color:DARK, padding:"12px 20px", fontWeight:900, fontSize:10, letterSpacing:4, textTransform:"uppercase" }}>
+          <div style={{ position:"absolute", top:36, right:36, background:ACC, color:accentText, padding:"12px 20px", fontWeight:900, fontSize:10, letterSpacing:4, textTransform:"uppercase" }}>
             <EditableZone field="heroNewDropBadge" label="Badge hero">New Drop</EditableZone>
           </div>
         </div>
@@ -807,7 +867,7 @@ export default function UrbanPulse() {
               <div style={{ position:"absolute", inset:0, background:"linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 55%)" }} />
               <div style={{ position:"absolute", bottom:24, left:24 }}>
                 <p style={{ color:WHITE, fontSize:26, fontWeight:900, textTransform:"uppercase", letterSpacing:2, margin:"0 0 6px" }}>{c.label}</p>
-                <p style={{ color:ACC, fontSize:10, fontWeight:900, letterSpacing:3, textTransform:"uppercase", margin:0 }}>Ver colección →</p>
+                <p style={{ color:accentSobre(categoriesBgUp, categoriasText), fontSize:10, fontWeight:900, letterSpacing:3, textTransform:"uppercase", margin:0 }}>Ver colección →</p>
               </div>
             </div>
           ))}
@@ -821,15 +881,15 @@ export default function UrbanPulse() {
       {isWholesale && (
         <section data-reveal style={{ background:DARK, borderTop:`2px solid ${ACC}` }}>
           <div style={{ maxWidth:1200, margin:"0 auto", padding:"64px 40px", display:"flex", flexDirection:"column", alignItems:"center", textAlign:"center", gap:20 }}>
-            <span style={{ fontSize:9, letterSpacing:5, color:ACC, textTransform:"uppercase", fontWeight:900, background:"rgba(212,255,0,0.1)", padding:"5px 14px", borderRadius:2 }}>⚡ Tienda mayorista</span>
+            <span style={{ fontSize:9, letterSpacing:5, color:accSobreDark, textTransform:"uppercase", fontWeight:900, background:"rgba(212,255,0,0.1)", padding:"5px 14px", borderRadius:2 }}>⚡ Tienda mayorista</span>
             <h2 style={{ fontSize:"clamp(28px,4vw,52px)", fontWeight:900, color:WHITE, margin:0, textTransform:"uppercase", letterSpacing:"-1px", lineHeight:1.05 }}>
-              SOLICITÁ TU<br/><span style={{ color:ACC }}>LISTA DE PRECIOS</span>
+              SOLICITÁ TU<br/><span style={{ color:accSobreDark }}>LISTA DE PRECIOS</span>
             </h2>
             <p style={{ fontSize:13, color:"rgba(255,255,255,0.5)", maxWidth:460, margin:0, lineHeight:1.7, letterSpacing:"0.2px" }}>
               Precios exclusivos para revendedores y distribuidores. Completá el formulario de contacto y te respondemos con tu lista personalizada en menos de 24 hs.
             </p>
             <button onClick={() => scrollTo("contacto")}
-              style={{ background:ACC, color:DARK, border:"none", padding:"14px 44px", fontSize:10, fontWeight:900, letterSpacing:4, textTransform:"uppercase", cursor:"pointer", borderRadius:2, marginTop:4 }}>
+              style={{ background:ACC, color:accentText, border:"none", padding:"14px 44px", fontSize:10, fontWeight:900, letterSpacing:4, textTransform:"uppercase", cursor:"pointer", borderRadius:2, marginTop:4 }}>
               CONSULTAR AHORA →
             </button>
           </div>
@@ -846,13 +906,13 @@ export default function UrbanPulse() {
           <div style={{ position:"relative", width:"100%", aspectRatio:"3/4" }}>
             {featuredProduct.images[0] && <FadeImage src={featuredProduct.images[0]} alt={featuredProduct.name} fill sizes="(max-width: 768px) 100vw, 50vw" style={{ objectFit:"cover" }} />}
             {featuredProduct.badge && (
-              <span style={{ position:"absolute", top:20, left:20, background:ACC, color:DARK, padding:"6px 14px", fontSize:10, fontWeight:900, letterSpacing:3, textTransform:"uppercase" }}>
+              <span style={{ position:"absolute", top:20, left:20, background:ACC, color:accentText, padding:"6px 14px", fontSize:10, fontWeight:900, letterSpacing:3, textTransform:"uppercase" }}>
                 {featuredProduct.badge}
               </span>
             )}
           </div>
           <div style={{ padding: isMobile ? "28px 20px" : "60px 56px" }}>
-            <span style={{ color:ACC, fontSize:10, letterSpacing:6, fontWeight:800, textTransform:"uppercase", display:"block", marginBottom:16 }}>
+            <span style={{ color:accentSobre(featuredBg, featuredText), fontSize:10, letterSpacing:6, fontWeight:800, textTransform:"uppercase", display:"block", marginBottom:16 }}>
               <EditableZone field="featuredLabel" label="Etiqueta featured">▶ Featured Drop</EditableZone>
             </span>
             <h2 style={{ color:featuredText, fontSize:"clamp(32px,4vw,50px)", fontWeight:900, textTransform:"uppercase", lineHeight:1.05, margin:"0 0 20px", letterSpacing:"-1px" }}>
@@ -877,11 +937,14 @@ export default function UrbanPulse() {
                 precio sin haber preguntado por las promos.
                 El tachado usa `sobre` para atenuarse CONTRA el fondo de esta sección,
                 que es editable, en vez del gris fijo pensado para fondo blanco. */}
-            <PromoPrice product={featuredProduct} promotions={promotions} fmt={fmt} accent={ACC} sobre={featuredText}
+            <PromoPrice product={featuredProduct} promotions={promotions} fmt={fmt} accent={accentSobre(featuredBg, featuredText)} sobre={featuredText}
               priceSize={36} compareSize={20} weight={900} ocultarPrecios={ocultarPrecios}
-              gap={16} align="baseline" style={{ marginBottom:32 }} />
+              gap={16} align="baseline" style={{ marginBottom:12 }} />
+            {/* En "chip" y no en la foto: esa esquina ya la ocupa el `badge` propio
+                del producto, y PromoTag se posiciona justo ahí. */}
+            <div style={{ marginBottom:24 }}>{avisoPromo(featuredProduct, "chip")}</div>
             <button onClick={() => isInquiryMode ? openInquiry(featuredProduct) : openModal(featuredProduct)}
-              style={{ width:"100%", background:ACC, color:DARK, border:"none", padding:"18px", fontSize:11, fontWeight:900, letterSpacing:4, textTransform:"uppercase", cursor:"pointer" }}>
+              style={{ width:"100%", background:ACC, color:accentText, border:"none", padding:"18px", fontSize:11, fontWeight:900, letterSpacing:4, textTransform:"uppercase", cursor:"pointer" }}>
               {isInquiryMode ? "Consultar disponibilidad" : "Agregar al Carrito"}
             </button>
           </div>
@@ -999,7 +1062,7 @@ export default function UrbanPulse() {
                 <p style={{ color:testimonialsMid, fontSize:13, lineHeight:1.7, margin:"0 0 18px" }}>
                   &quot;<EditableZone field={`testimonial${i+1}Text`} label={`Testimonio ${i+1} — Texto`}>{t.text}</EditableZone>&quot;
                 </p>
-                <p style={{ color:ACC, fontSize:10, fontWeight:900, letterSpacing:3, textTransform:"uppercase", margin:0 }}>
+                <p style={{ color:accentSobre(testimonialsBgUp, testimonialsText), fontSize:10, fontWeight:900, letterSpacing:3, textTransform:"uppercase", margin:0 }}>
                   <EditableZone field={`testimonial${i+1}Name`} label={`Testimonio ${i+1} — Nombre`}>{t.name}</EditableZone>
                 </p>
               </div>
@@ -1029,7 +1092,7 @@ export default function UrbanPulse() {
               <EditableSectionBg field="bgOfertas" label="Fondo ofertas" />
               <div style={{ maxWidth:1200, margin:"0 auto" }}>
                 <div style={{ marginBottom:32 }}>
-                  <p style={{ fontSize:9, letterSpacing:5, color:ACC, textTransform:"uppercase", fontWeight:900, margin:"0 0 8px" }}><EditableZone field="ofertasKicker" label="Texto sobre Ofertas">Aprovechá</EditableZone></p>
+                  <p style={{ fontSize:9, letterSpacing:5, color:accentSobre(ofertasBgUp, ofertasTextUp), textTransform:"uppercase", fontWeight:900, margin:"0 0 8px" }}><EditableZone field="ofertasKicker" label="Texto sobre Ofertas">Aprovechá</EditableZone></p>
                   <h2 style={{ fontSize:"clamp(32px,4vw,44px)", fontWeight:900, textTransform:"uppercase", letterSpacing:"-1px", margin:0, color:ofertasTextUp }}><EditableZone field="ofertasTitle" label="Título Ofertas">Ofertas</EditableZone></h2>
                 </div>
                 <div style={{ display:"grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(4,1fr)", gap:2 }}>
@@ -1044,13 +1107,17 @@ export default function UrbanPulse() {
                       <div key={p.id} onClick={() => openModal(p)} className="up-zoom" style={{ cursor:"pointer" }}>
                         <div style={{ position:"relative", width:"100%", aspectRatio:"3/4", background:DARK, overflow:"hidden" }}>
                           {p.images[0] && <FadeImage src={p.images[0]} alt={p.name} fill sizes="(max-width: 768px) 50vw, 25vw" className="up-zoom-img" style={{ objectFit:"cover" }} />}
-                          {pct && <span style={{ position:"absolute", top:0, left:0, background:ACC, color:DARK, fontSize:10, fontWeight:900, padding:"5px 10px", letterSpacing:1 }}>-{pct}%</span>}
+                          {pct && <span style={{ position:"absolute", top:0, left:0, background:ACC, color:accentText, fontSize:10, fontWeight:900, padding:"5px 10px", letterSpacing:1 }}>-{pct}%</span>}
                         </div>
                         <div style={{ padding:"10px 0 0" }}>
                           <p style={{ margin:"0 0 4px", fontSize:11, fontWeight:700, textTransform:"uppercase", letterSpacing:1, color:ofertasTextUp, overflow:"hidden", display:"-webkit-box", WebkitLineClamp:1, WebkitBoxOrient:"vertical" as const }}>{p.name}</p>
-                          <PromoPrice product={p} promotions={promotions} fmt={fmt} accent={ACC}
+                          <PromoPrice product={p} promotions={promotions} fmt={fmt} accent={accentSobre(ofertasBgUp, ofertasTextUp)} sobre={ofertasTextUp}
                             priceSize={13} compareSize={11} weight={900} ocultarPrecios={ocultarPrecios}
                             consultaLabel="Consultá" gap={8} align="center" />
+                          {/* En "chip": la esquina de la foto ya la ocupa el badge del %.
+                              Y no dicen lo mismo — el % dice cuánto baja el precio de
+                              ESTE producto, el chip dice cuál promo se lo baja. */}
+                          {avisoPromo(p, "chip")}
                         </div>
                       </div>
                     );
@@ -1081,7 +1148,7 @@ export default function UrbanPulse() {
               <EditableSectionBg field="bgMasVisto" label="Fondo lo más visto" />
               <div style={{ maxWidth:1200, margin:"0 auto" }}>
                 <div style={{ marginBottom:32 }}>
-                  <p style={{ fontSize:9, letterSpacing:5, color:ACC, textTransform:"uppercase", fontWeight:900, margin:"0 0 8px" }}><EditableZone field="masVistoKicker" label="Texto sobre Lo más visto">Tendencia</EditableZone></p>
+                  <p style={{ fontSize:9, letterSpacing:5, color:accentSobre(masVistoBgUp, masVistoTextUp), textTransform:"uppercase", fontWeight:900, margin:"0 0 8px" }}><EditableZone field="masVistoKicker" label="Texto sobre Lo más visto">Tendencia</EditableZone></p>
                   <h2 style={{ fontSize:"clamp(32px,4vw,44px)", fontWeight:900, textTransform:"uppercase", letterSpacing:"-1px", margin:0, color:masVistoTextUp }}><EditableZone field="masVistoTitle" label="Título Lo más visto">Lo más visto</EditableZone></h2>
                 </div>
                 {/* Solo el dueño, y solo en el editor: la sección se está viendo con
@@ -1100,10 +1167,11 @@ export default function UrbanPulse() {
                           donde la diferencia real suele ser de una sola visita. */}
                       <div style={{ position:"relative", width:"100%", aspectRatio:"3/4", background:"#1a1a1a", overflow:"hidden" }}>
                         {p.images[0] && <FadeImage src={p.images[0]} alt={p.name} fill sizes="(max-width: 768px) 50vw, 25vw" className="up-zoom-img" style={{ objectFit:"cover" }} />}
+                        {avisoPromo(p)}
                       </div>
                       <div style={{ padding:"10px 0 0" }}>
                         <p style={{ margin:"0 0 4px", fontSize:11, fontWeight:700, textTransform:"uppercase", letterSpacing:1, color:masVistoTextUp, overflow:"hidden", display:"-webkit-box", WebkitLineClamp:1, WebkitBoxOrient:"vertical" as const }}>{p.name}</p>
-                        <PromoPrice product={p} promotions={promotions} fmt={fmt} accent={ACC}
+                        <PromoPrice product={p} promotions={promotions} fmt={fmt} accent={accentSobre(masVistoBgUp, masVistoTextUp)} sobre={masVistoTextUp}
                           priceSize={13} compareSize={11} weight={900} ocultarPrecios={ocultarPrecios}
                           consultaLabel="Consultá" />
                       </div>
@@ -1154,7 +1222,9 @@ export default function UrbanPulse() {
           {(() => { const ov = storeConfig?.imageOverrides?.["nosotrosImage"]; if (!ov?.overlayType || ov.overlayType === "none") return null; return <div style={{ position:"absolute", inset:0, pointerEvents:"none", background: ov.overlayType === "light" ? `rgba(255,255,255,${ov.overlayOpacity ?? 0.45})` : `rgba(0,0,0,${ov.overlayOpacity ?? 0.45})` }} />; })()}
           <BgDragHandle imgKey="nosotrosImage" />
           <EditableImageButton field="nosotrosImage" label="Imagen nosotros" />
-          <div style={{ position:"absolute", bottom:-16, left:-16, background:ACC, padding:"20px 28px" }}>
+          {/* El texto de adentro no declaraba color: heredaba el del padre y quedaba
+              a merced de dónde estuviera parado el bloque. Sobre el acento manda accentText. */}
+          <div style={{ position:"absolute", bottom:-16, left:-16, background:ACC, color:accentText, padding:"20px 28px" }}>
             <p style={{ margin:0, fontSize:12, fontWeight:900, textTransform:"uppercase", letterSpacing:2 }}><EditableZone field="aboutStat4" label="Stat: Desde 2021">Desde 2021</EditableZone></p>
             <p style={{ margin:"4px 0 0", fontSize:11, opacity:0.6 }}><EditableZone field="aboutStatLabel4" label="Etiqueta stat: Vistiendo">Vistiendo a Argentina</EditableZone></p>
           </div>
@@ -1174,7 +1244,7 @@ export default function UrbanPulse() {
         <div style={{ position:"relative", zIndex:1, padding:"80px 40px" }}>
         <div style={{ maxWidth:1100, margin:"0 auto", display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: isMobile ? 40 : 80 }}>
           <div>
-            <span style={{ color:ACC, fontSize:10, letterSpacing:6, fontWeight:800, textTransform:"uppercase", display:"block", marginBottom:16 }}><EditableZone field="contactKicker" label="Etiqueta contacto">▶ Contacto</EditableZone></span>
+            <span style={{ color:accentSobre(contactUpBg, contactUpText), fontSize:10, letterSpacing:6, fontWeight:800, textTransform:"uppercase", display:"block", marginBottom:16 }}><EditableZone field="contactKicker" label="Etiqueta contacto">▶ Contacto</EditableZone></span>
             <h2 style={{ color:contactUpText, fontSize:"clamp(36px,4vw,48px)", fontWeight:900, textTransform:"uppercase", letterSpacing:"-1px", lineHeight:1, margin:"0 0 28px" }}>
               <EditableZone field="contactHeading" label="Título contacto">Hablemos.</EditableZone>
             </h2>
@@ -1206,14 +1276,14 @@ export default function UrbanPulse() {
                 gap: 14,
                 placeholders: { nombre: "Tu nombre *", email: "Tu email *", mensaje: "Tu mensaje *" },
                 buttonLabel: "Enviar Mensaje →",
-                buttonStyle: { background:ACC, color:DARK, padding:"18px", fontSize:11, fontWeight:900, letterSpacing:4, textTransform:"uppercase" },
+                buttonStyle: { background:ACC, color:accentText, padding:"18px", fontSize:11, fontWeight:900, letterSpacing:4, textTransform:"uppercase" },
               }}
               renderSent={reset => (
                 <div style={{ height:"100%", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", textAlign:"center", border:`2px solid ${ACC}`, padding:40 }}>
-                  <svg width={40} height={40} viewBox="0 0 24 24" fill="none" stroke={ACC} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom:16 }}><polyline points="20 6 9 17 4 12"/></svg>
+                  <svg width={40} height={40} viewBox="0 0 24 24" fill="none" stroke={accentSobre(contactUpBg, contactUpText)} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom:16 }}><polyline points="20 6 9 17 4 12"/></svg>
                   <p style={{ color:contactUpText, fontSize:20, fontWeight:900, textTransform:"uppercase", margin:"0 0 8px" }}>¡Mensaje enviado!</p>
                   <p style={{ color:contactUpText, opacity:0.45, fontSize:13, margin:"0 0 16px" }}>Te respondemos pronto.</p>
-                  <button onClick={reset} style={{ background:"transparent", color:ACC, border:`1px solid ${ACC}`, padding:"9px 24px", fontSize:11, letterSpacing:2, cursor:"pointer", textTransform:"uppercase" }}>Enviar otro</button>
+                  <button onClick={reset} style={{ background:"transparent", color:accentSobre(contactUpBg, contactUpText), border:`1px solid ${ACC}`, padding:"9px 24px", fontSize:11, letterSpacing:2, cursor:"pointer", textTransform:"uppercase" }}>Enviar otro</button>
                 </div>
               )}
             />
@@ -1237,7 +1307,7 @@ export default function UrbanPulse() {
             <div>
               <div style={{ fontWeight:900, fontSize:24, letterSpacing:4, textTransform:"uppercase", color:footerUpText, marginBottom:16 }}>
                 <EditableZone field="storeName" label="Nombre de la tienda">
-                  {storeConfig?.storeName ?? <span>URBAN<span style={{ color:ACC }}>PULSE</span></span>}
+                  {storeConfig?.storeName ?? <span>URBAN<span style={{ color:accentSobre(footerUpBg, footerUpText) }}>PULSE</span></span>}
                 </EditableZone>
               </div>
               <p style={{ color:footerUpMid, fontSize:13, lineHeight:1.8, maxWidth:260 }}>
@@ -1378,7 +1448,7 @@ export default function UrbanPulse() {
             style={{ position:"fixed", bottom:24, ...(hasWA ? {left:24} : {right:24}), zIndex:500, width:52, height:52, borderRadius:"50%", background:ACC, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 6px 18px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.3)", transition:"transform 0.2s" }}
             onMouseEnter={e => (e.currentTarget.style.transform="scale(1.1)")}
             onMouseLeave={e => (e.currentTarget.style.transform="scale(1)")}>
-            <svg width={26} height={26} viewBox="0 0 24 24" fill="none" stroke={getContrastColor(ACC)==="light"?"#fff":DARK} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">{CART_ICON_OPTIONS[cartIconIdx]}</svg>
+            <svg width={26} height={26} viewBox="0 0 24 24" fill="none" stroke={accentText} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">{CART_ICON_OPTIONS[cartIconIdx]}</svg>
             {cartCount > 0 && !editMode && <span style={{ position:"absolute", top:-4, right:-4, background:"#e53e3e", color:"#fff", borderRadius:"50%", width:20, height:20, fontSize:11, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center" }}>{cartCount}</span>}
             {editMode && (
               <button onClick={e => { e.stopPropagation(); setOverride("cartIcon", { text: String(nextCartIconIdx) }); }} title="Cambiar ícono del carrito"
@@ -1415,8 +1485,9 @@ export default function UrbanPulse() {
                   <div>
                     <p style={{ color:"rgba(255,255,255,0.4)", fontSize:10, fontWeight:800, letterSpacing:2, textTransform:"uppercase", margin:0 }}>{p.category}</p>
                     <p style={{ color:WHITE, fontSize:13, fontWeight:800, margin:"5px 0 4px" }}>{p.name}</p>
-                    <PromoPrice product={p} promotions={promotions} fmt={fmt} accent={ACC}
+                    <PromoPrice product={p} promotions={promotions} fmt={fmt} accent={accSobreDark} sobre={WHITE}
                       priceSize={13} weight={900} ocultarPrecios={ocultarPrecios} />
+                    {avisoPromo(p, "chip")}
                   </div>
                 </div>
               ))}
@@ -1443,10 +1514,11 @@ export default function UrbanPulse() {
                     <div style={{ flex:1 }}>
                       <p style={{ margin:0, fontSize:10, color:MID, fontWeight:800, letterSpacing:2, textTransform:"uppercase" }}>{p.category}</p>
                       <p style={{ margin:"4px 0 6px", fontSize:13, fontWeight:800 }}>{p.name}</p>
-                      <PromoPrice product={p} promotions={promotions} fmt={fmt} accent={DARK}
+                      <PromoPrice product={p} promotions={promotions} fmt={fmt} accent={DARK} sobre={DARK}
                         priceSize={14} compareSize={11} weight={900} ocultarPrecios={ocultarPrecios}
-                        gap={8} style={{ marginBottom:10 }} />
-                      <button onClick={() => openModal(p)} style={{ background:DARK, color:ACC, border:"none", padding:"7px 14px", fontSize:10, fontWeight:900, letterSpacing:2, textTransform:"uppercase", cursor:"pointer" }}>Ver</button>
+                        gap={8} style={{ marginBottom:4 }} />
+                      <div style={{ marginBottom:10 }}>{avisoPromo(p, "chip")}</div>
+                      <button onClick={() => openModal(p)} style={{ background:DARK, color:accSobreDark, border:"none", padding:"7px 14px", fontSize:10, fontWeight:900, letterSpacing:2, textTransform:"uppercase", cursor:"pointer" }}>Ver</button>
                     </div>
                     <button onClick={() => toggleFavorite(p.id)} style={{ background:"none", border:"none", fontSize:16, cursor:"pointer", alignSelf:"flex-start", padding:4, color:MID }}>✕</button>
                   </div>
@@ -1463,7 +1535,7 @@ export default function UrbanPulse() {
           <div onClick={() => setModalProduct(null)} style={{ position:"absolute", inset:0, background:"rgba(0,0,0,0.7)" }} />
           <div style={{ position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center", padding:24 }}>
             <div style={{ background:WHITE, width:"100%", maxWidth:860, maxHeight: isPreview ? "100%" : "92vh", overflow:"hidden", display:"flex", flexDirection:"column", position:"relative" }}>
-              <button onClick={() => { setModalProduct(null); setLightboxSrc(null); }} aria-label="Cerrar" style={{ position:"absolute", top:0, right:0, background:DARK, border:"none", color:ACC, width:40, height:40, fontSize:18, cursor:"pointer", zIndex:10, display:"flex", alignItems:"center", justifyContent:"center" }}>✕</button>
+              <button onClick={() => { setModalProduct(null); setLightboxSrc(null); }} aria-label="Cerrar" style={{ position:"absolute", top:0, right:0, background:DARK, border:"none", color:accSobreDark, width:40, height:40, fontSize:18, cursor:"pointer", zIndex:10, display:"flex", alignItems:"center", justifyContent:"center" }}>✕</button>
               <div style={{ overflow:"auto", flex:1, minHeight:0, display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr" }}>
               <div>
                 <div style={{ position:"relative", width:"100%", aspectRatio:"3/4" }} {...imgSwipe}>
@@ -1566,7 +1638,7 @@ export default function UrbanPulse() {
                   return (
                     <div style={{ display:"flex", flexDirection:"column", gap:10, marginBottom:18 }}>
                       {condicionAttr && (
-                        <span style={{ alignSelf:"flex-start", fontSize:9, letterSpacing:1.5, textTransform:"uppercase", fontWeight:900, color:DARK, background:ACC, padding:"5px 10px" }}>{condicionAttr.value}</span>
+                        <span style={{ alignSelf:"flex-start", fontSize:9, letterSpacing:1.5, textTransform:"uppercase", fontWeight:900, color:accentText, background:ACC,padding:"5px 10px" }}>{condicionAttr.value}</span>
                       )}
                       {otherAttrs.length > 0 && (
                         <div style={{ borderRadius:2, overflow:"hidden", border:`2px solid ${DARK}` }}>
@@ -1649,12 +1721,12 @@ export default function UrbanPulse() {
                   <div style={{ borderTop:`2px solid ${DARK}`, marginTop:4, paddingTop:16 }}>
                   {isInquiryMode ? (
                   <button onClick={() => openInquiry(modalProduct)}
-                    style={{ width:"100%", background:DARK, color:ACC, border:"none", padding:"16px", fontSize:11, fontWeight:900, letterSpacing:3, textTransform:"uppercase", cursor:"pointer", marginBottom:10 }}>
+                    style={{ width:"100%", background:DARK, color:accSobreDark, border:"none", padding:"16px", fontSize:11, fontWeight:900, letterSpacing:3, textTransform:"uppercase", cursor:"pointer", marginBottom:10 }}>
                     Consultar disponibilidad
                   </button>
                 ) : (
                   <button onClick={addToCart} disabled={selectedVariantStock === 0}
-                    style={{ width:"100%", background: selectedVariantStock === 0 ? "#555" : DARK, color:ACC, border:"none", padding:"16px", fontSize:11, fontWeight:900, letterSpacing:3, textTransform:"uppercase", cursor: selectedVariantStock === 0 ? "not-allowed" : "pointer", marginBottom:10 }}>
+                    style={{ width:"100%", background: selectedVariantStock === 0 ? "#555" : DARK, color:accSobreDark, border:"none", padding:"16px", fontSize:11, fontWeight:900, letterSpacing:3, textTransform:"uppercase", cursor: selectedVariantStock === 0 ? "not-allowed" : "pointer", marginBottom:10 }}>
                     {selectedVariantStock === 0 ? "Sin stock" : `Agregar · ${fmt(nxmPaid != null ? nxmPaid * displayPrice : (modalPromo?.hasPriceDrop ? modalPromo.effectivePrice : displayPrice) * qty)}`}
                   </button>
                 )}
@@ -1690,7 +1762,7 @@ export default function UrbanPulse() {
                             <div style={{ flex:1, display:"flex", flexDirection:"column", gap:5 }}>
                               {dist.map(d => (
                                 <div key={d.stars} style={{ display:"flex", alignItems:"center", gap:8 }}>
-                                  <span style={{ fontSize:9, color:ACC, minWidth:14, textAlign:"right", fontWeight:900 }}>{d.stars}★</span>
+                                  <span style={{ fontSize:9, color:accSobreClaro, minWidth:14, textAlign:"right", fontWeight:900 }}>{d.stars}★</span>
                                   <div style={{ flex:1, height:4, background:`${DARK}18`, borderRadius:0, overflow:"hidden" }}>
                                     <div style={{ height:"100%", width:`${reviews.length ? (d.count / reviews.length) * 100 : 0}%`, background:ACC, borderRadius:0 }} />
                                   </div>
@@ -1712,7 +1784,7 @@ export default function UrbanPulse() {
                                 <div style={{ display:"flex", alignItems:"center", gap:6, flexWrap:"wrap" }}>
                                   <span style={{ fontSize:12, fontWeight:900, textTransform:"uppercase" }}>{r.reviewer}</span>
                                   {r.verified && (
-                                    <span style={{ fontSize:9, fontWeight:900, color:ACC, border:`1px solid ${ACC}`, padding:"1px 5px", letterSpacing:0.5, textTransform:"uppercase" }}>✓ Verificada</span>
+                                    <span style={{ fontSize:9, fontWeight:900, color:accSobreClaro, border:`1px solid ${ACC}`, padding:"1px 5px", letterSpacing:0.5, textTransform:"uppercase" }}>✓ Verificada</span>
                                   )}
                                 </div>
                                 <span style={{ fontSize:9, color:MID, fontWeight:700 }}>{new Date(r.createdAt).toLocaleDateString("es-AR", { day:"numeric", month:"short", year:"numeric" })}</span>
@@ -1726,7 +1798,7 @@ export default function UrbanPulse() {
                         ))}
                       </div>
                       {reviews.length > reviewsShown && (
-                        <button onClick={() => setReviewsShown(n => n + 10)} style={{ marginTop:14, background:"none", border:`2px solid ${DARK}`, color:ACC, fontSize:9, fontWeight:900, letterSpacing:2, cursor:"pointer", padding:"8px 20px", textTransform:"uppercase", display:"block" }}>
+                        <button onClick={() => setReviewsShown(n => n + 10)} style={{ marginTop:14, background:"none", border:`2px solid ${DARK}`, color:accSobreClaro, fontSize:9, fontWeight:900, letterSpacing:2, cursor:"pointer", padding:"8px 20px", textTransform:"uppercase", display:"block" }}>
                           Ver más ({reviews.length - reviewsShown})
                         </button>
                       )}
@@ -1737,7 +1809,7 @@ export default function UrbanPulse() {
                   {isOwner ? (
                     <p style={{ fontSize:11, color:MID, fontStyle:"italic" }}>El dueño no puede dejar reseñas en su propia tienda.</p>
                   ) : reviewDone ? (
-                    <p style={{ fontSize:12, color:ACC, fontWeight:900 }}>¡Gracias por tu reseña!</p>
+                    <p style={{ fontSize:12, color:accSobreClaro, fontWeight:900 }}>¡Gracias por tu reseña!</p>
                   ) : (
                     <div style={{ position:"relative" }}>
                       {isPreview && <div style={{ position:"absolute", inset:0, zIndex:10, cursor:"default" }} onClick={e => e.stopPropagation()} />}
@@ -1764,7 +1836,7 @@ export default function UrbanPulse() {
                           style={{ background:"none", border:`2px solid ${DARK}`, padding:"9px 12px", fontSize:12, resize:"none", outline:"none" }} />
                         {!isPreview && reviewCaptcha.widget}
                         <button type="submit" disabled={isPreview || reviewSubmitting || !reviewForm.reviewer.trim() || !reviewCaptcha.ready}
-                          style={{ background: isPreview || reviewSubmitting || !reviewForm.reviewer.trim() ? MID : DARK, color:ACC, border:"none", padding:"12px", fontSize:10, fontWeight:900, letterSpacing:3, textTransform:"uppercase", cursor: isPreview ? "default" : "pointer" }}>
+                          style={{ background: isPreview || reviewSubmitting || !reviewForm.reviewer.trim() ? MID : DARK, color:accSobreDark, border:"none", padding:"12px", fontSize:10, fontWeight:900, letterSpacing:3, textTransform:"uppercase", cursor: isPreview ? "default" : "pointer" }}>
                           {reviewSubmitting ? "Publicando..." : "Publicar reseña"}
                         </button>
                       </form>
@@ -1783,9 +1855,10 @@ export default function UrbanPulse() {
                         <div key={p.id} onClick={() => openModal(p)} style={{ cursor:"pointer" }}>
                           <div style={{ position:"relative", width:"100%", aspectRatio:"3/4", background:BG }}>
                             {p.images[0] && <FadeImage src={p.images[0]} alt={p.name} fill sizes="(max-width: 768px) 50vw, 25vw" style={{ objectFit:"cover" }} />}
+                            {avisoPromo(p)}
                           </div>
                           <p style={{ margin:"8px 0 2px", fontSize:12, color:DARK, overflow:"hidden", display:"-webkit-box", WebkitLineClamp:1, WebkitBoxOrient:"vertical" as const }}>{p.name}</p>
-                          <PromoPrice product={p} promotions={promotions} fmt={fmt} accent={DARK}
+                          <PromoPrice product={p} promotions={promotions} fmt={fmt} accent={DARK} sobre={DARK}
                             priceSize={13} weight={900} ocultarPrecios={ocultarPrecios} />
                         </div>
                       ))}
@@ -1803,12 +1876,12 @@ export default function UrbanPulse() {
                 </div>
                 {isInquiryMode ? (
                   <button onClick={() => openInquiry(modalProduct)}
-                    style={{ width:"100%", background:DARK, color:ACC, border:"none", padding:"16px", fontSize:11, fontWeight:900, letterSpacing:3, textTransform:"uppercase", cursor:"pointer" }}>
+                    style={{ width:"100%", background:DARK, color:accSobreDark, border:"none", padding:"16px", fontSize:11, fontWeight:900, letterSpacing:3, textTransform:"uppercase", cursor:"pointer" }}>
                     Consultar disponibilidad
                   </button>
                 ) : (
                   <button onClick={addToCart} disabled={selectedVariantStock === 0}
-                    style={{ width:"100%", background: selectedVariantStock === 0 ? "#555" : DARK, color:ACC, border:"none", padding:"16px", fontSize:11, fontWeight:900, letterSpacing:3, textTransform:"uppercase", cursor: selectedVariantStock === 0 ? "not-allowed" : "pointer" }}>
+                    style={{ width:"100%", background: selectedVariantStock === 0 ? "#555" : DARK, color:accSobreDark, border:"none", padding:"16px", fontSize:11, fontWeight:900, letterSpacing:3, textTransform:"uppercase", cursor: selectedVariantStock === 0 ? "not-allowed" : "pointer" }}>
                     {selectedVariantStock === 0 ? "Sin stock" : "Agregar al Carrito"}
                   </button>
                 )}
