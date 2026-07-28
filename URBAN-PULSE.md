@@ -964,3 +964,45 @@ reescribía el modal. Era un síntoma de que el módulo no compilaba, no una fal
 
 `tsc` limpio y **eslint sin un solo aviso** en el listado, por primera vez. La página responde 200
 con `?t=urban-pulse` y con `?t=chic-paris`.
+
+**28/07/2026 — la franja de garantías.** Flavio: *"lo que no me gusta es que es igual que la de Chic
+Paris"*. Tenía razón, y era literal: **el mismo bloque**. Los dos hacían ícono a la izquierda, título
+en negrita, descripción al 60% de opacidad, cuatro en fila. Chic Paris pinta el ícono con el acento y
+apila en celular; Urban Pulse engordaba el borde. Nada más.
+
+Lo que había que romper era eso: *ícono + dos renglones chicos, cuatro veces*. Se eligió, entre tres
+propuestas, el **damero**: cuatro bloques macizos pegados, sin líneas separadoras —separa el color—,
+alternando el fondo de la sección con el acento. El ícono deja de ser una viñeta y pasa a ser una
+marca de agua grande y casi transparente detrás del texto, que se sale por el borde derecho. El
+título crece de 11 a 15 y el bloque pasa a tener alto propio.
+
+**El fondo sigue siendo editable.** Los bloques pares llevan el color que elige la dueña, así que el
+control `bgGarantias` no queda de adorno; los impares llevan el acento.
+
+**Cuándo entra el acento y cuándo no.** Medido con la función real: el neón de fábrica sobre blanco
+da **1,16** —dos bloques que se ven iguales, no hay damero— y sobre un fondo oscuro, **16,52**. Con
+menos de 1,6 el bloque alterno se va al extremo opuesto al fondo: blanco si el fondo es oscuro,
+negro si es claro. No es siempre negro a propósito: una tienda con la franja en negro y un acento
+casi negro se habría quedado con los ocho bloques del mismo color.
+
+| Fondo | Acento | Contraste | Bloque alterno |
+|---|---|---|---|
+| blanco | neón `#d4ff00` | 1,16 | negro |
+| blanco | terracota `#b5652a` | 4,32 | **acento** |
+| blanco | azul `#1d4ed8` | 6,70 | **acento** |
+| blanco | amarillo pastel | 1,25 | negro |
+| negro | neón `#d4ff00` | 16,52 | **acento** |
+| negro | casi negro `#111` | 1,02 | blanco |
+
+**En celular alterna distinto.** Son 2 columnas, y con la cuenta de escritorio (`i % 2`) quedarían
+dos franjas verticales —la primera columna toda oscura, la segunda toda clara— en vez de un damero.
+Ahí alterna por fila + columna.
+
+De paso, dos cosas del bloque viejo: el color del texto salía de `getContrastColor(garantiasUpBg)`,
+que con un degradado no puede leer la luminosidad y devuelve "dark" por descarte —texto oscuro sobre
+un degradado oscuro, la regla de UP-9—; ahora mide contra `colorRepresentativo`. Y la opacidad de la
+marca de agua va en un span interno: si fuera en el contenedor, el botón de cambiar ícono del editor
+quedaría translúcido también.
+
+`tsc` y eslint limpios. `/plantillas/urban-pulse` y `/tienda/tiendaapps` en 200. **La revisión visual
+en 360 / 768 / 1280 queda de Flavio**: acá no hay navegador.

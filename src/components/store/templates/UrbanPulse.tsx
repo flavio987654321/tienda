@@ -1,10 +1,11 @@
 "use client";
-import { useState, useEffect, useRef, useMemo, Fragment } from "react";
+import { useState, useEffect, useRef, useMemo, Fragment, cloneElement, isValidElement } from "react";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { usePushBell } from "@/contexts/PushBellContext";
 import { useAuth } from "@/components/AuthProvider";
 import StoreFollowButton from "@/components/store/StoreFollowButton";
-import { EditableZone, EditableImageButton, EditableSectionBg, BgDragHandle, getContrastColor, getReadableAccentText, textoSobre, useEditContext } from "@/contexts/EditContext";
+import { EditableZone, EditableImageButton, EditableSectionBg, BgDragHandle, getContrastColor, getReadableAccentText, textoSobre, contrasteWCAG, useEditContext } from "@/contexts/EditContext";
+import { colorRepresentativo } from "@/lib/section-bg";
 import { useStorefront, type StorefrontProduct } from "@/hooks/useStorefront";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { useCartLogic } from "@/hooks/useCartLogic";
@@ -193,7 +194,13 @@ export default function UrbanPulse() {
 
   const scu = storeConfig?.sectionColors ?? {};
   const garantiasUpBg   = scu["bgGarantias"]  ?? WHITE;
-  const garantiasUpText = getContrastColor(garantiasUpBg) === "light" ? WHITE : DARK;
+  // El valor de `sectionColors` puede ser un DEGRADADO, y eso solo sirve para
+  // `background:`. Para elegir el color del texto hay que medir contra un color
+  // sólido: `getContrastColor` con un degradado no puede leer la luminosidad y
+  // devuelve "dark" por descarte, o sea texto oscuro sobre un degradado oscuro.
+  // Es la regla de UP-9, acá aplicada al bloque que estamos rehaciendo.
+  const garantiasUpSolido = colorRepresentativo(garantiasUpBg);
+  const garantiasUpText   = textoSobre(garantiasUpSolido);
   const featuredBg      = scu["bgFeatured"]   ?? DARK;
   const featuredText    = getContrastColor(featuredBg) === "light" ? WHITE : DARK;
   const heroLeftUpBg    = scu["bgHeroLeft"]   ?? DARK;
@@ -264,6 +271,21 @@ export default function UrbanPulse() {
   // barra flotante, logo) y el gris claro de adentro del modal (reseñas).
   const accSobreDark  = accentSobre(DARK, WHITE);
   const accSobreClaro = accentSobre(BG, DARK);
+  // ── El damero de la franja de garantías ────────────────────────────────────
+  // Los bloques pares llevan el fondo de la sección —el que elige la dueña, así
+  // el control de color sigue sirviendo para algo— y los impares el acento.
+  // Si esos dos colores se parecen demasiado no hay damero, es una franja lisa:
+  // ahí los impares caen a DARK, que se despega de cualquier fondo claro.
+  // Medido: con el neón de fábrica sobre blanco da 1,16 —dos bloques que se ven
+  // igual— y sobre un fondo oscuro, 16,52. O sea que el acento entra cuando de
+  // verdad se despega, y en el resto de los casos manda el blanco y negro.
+  const dameroSeVe = contrasteWCAG(garantiasUpSolido, ACC) >= 1.6;
+  // Cuando el acento no sirve, el bloque alterno se va al extremo OPUESTO al
+  // fondo. Si esto fuera siempre DARK, una tienda con la franja en negro y un
+  // acento casi negro se quedaría con los ocho bloques del mismo color y sin
+  // damero.
+  const garAltBg   = dameroSeVe ? ACC : (garantiasUpText === "#fff" ? WHITE : DARK);
+  const garAltText = dameroSeVe ? accentText : textoSobre(garAltBg);
 
   const promoBannerEnabled = storeConfig?.promoBanner?.enabled !== false;
   const configMsgs = storeConfig?.promoBanner?.messages?.filter(m => m.trim()) ?? [];
@@ -874,27 +896,61 @@ export default function UrbanPulse() {
 
       <div style={{ display:"flex", flexDirection:"column" }}>
       <SectionBlock id="up-garantias" label="Garantías" isPreview={isPreview} defaultOrder={UP_SECTION_IDS}>
-      {/* GARANTÍAS */}
+      {/* GARANTÍAS — un damero, no una fila de íconos ──────────────────────────
+          Esto era, línea por línea, el mismo bloque que el de Chic Paris: ícono a
+          la izquierda, título en negrita, descripción al 60% de opacidad, cuatro
+          en fila. Cambiaba el grosor del borde y poco más, y era el bloque que
+          menos se parecía al resto de Urban Pulse.
+          Ahora son cuatro bloques macizos pegados, alternando el fondo de la
+          sección con el acento. No llevan líneas separadoras: separa el color. Y
+          el ícono deja de ser una viñeta —que era justamente lo que lo hacía
+          parecerse al otro— y pasa a ser una marca de agua grande detrás del
+          texto, que se sigue pudiendo cambiar desde el editor. */}
       <section data-reveal style={{ background:garantiasUpBg, borderTop:`3px solid ${DARK}`, borderBottom:`3px solid ${DARK}`, position:"relative" }}>
         <EditableSectionBg field="bgGarantias" label="Fondo garantías" />
         <div style={{ maxWidth:1200, margin:"0 auto", display:"grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(4,1fr)" }}>
           {GARANTIAS.map((g, i) => {
             const iconIdx = (Math.abs(parseInt(textOverrides[`garantia${i+1}Icon`]?.text ?? "0") || 0)) % UP_STRIP_ICONS[i].length;
             const nextIdx = (iconIdx + 1) % UP_STRIP_ICONS[i].length;
+            // En escritorio son 4 columnas y alterna uno sí uno no. En celular son
+            // 2, y con esa misma cuenta quedarían dos FRANJAS VERTICALES en vez de
+            // un damero — la primera columna toda oscura y la segunda toda clara.
+            // Por eso ahí alterna por fila + columna.
+            const alterno = isMobile ? ((Math.floor(i / 2) + i) % 2 === 1) : (i % 2 === 1);
+            const fondo = alterno ? garAltBg   : garantiasUpBg;
+            const tinta = alterno ? garAltText : garantiasUpText;
+            const icono = UP_STRIP_ICONS[i][iconIdx];
             return (
-              <div key={g.title} style={{ display:"flex", alignItems:"center", gap:12, padding: isMobile ? "14px 16px" : "18px 24px", borderRight: i < 3 ? `1px solid rgba(0,0,0,0.1)` : "none" }}>
-                <span style={{ color:garantiasUpText, position:"relative", flexShrink:0 }}>
-                  {UP_STRIP_ICONS[i][iconIdx]}
+              <div key={g.title} style={{ position:"relative", overflow:"hidden", background:fondo,
+                                          padding: isMobile ? "20px 16px" : "26px 24px",
+                                          minHeight: isMobile ? 104 : 122,
+                                          display:"flex", flexDirection:"column", justifyContent:"flex-end" }}>
+                {/* La marca de agua: el mismo ícono de siempre, agrandado y casi
+                    transparente, saliéndose por el borde derecho. La opacidad va
+                    en el span de adentro y no en este: si fuera acá, el botón de
+                    cambiar ícono también quedaría translúcido. */}
+                <span style={{ position:"absolute", right:-10, top:"50%", transform:"translateY(-50%)", lineHeight:0,
+                               pointerEvents: editMode ? "auto" : "none" }}>
+                  {/* En el editor sube al 30%: al 9% nadie descubriría que se
+                      puede cambiar. */}
+                  <span style={{ display:"block", color:tinta, opacity: editMode ? 0.3 : 0.09 }}>
+                    {isValidElement(icono)
+                      ? cloneElement(icono as React.ReactElement<{ width?: number; height?: number }>,
+                                     { width: isMobile ? 74 : 96, height: isMobile ? 74 : 96 })
+                      : icono}
+                  </span>
                   {editMode && (
                     <button onClick={() => setOverride(`garantia${i+1}Icon`, { text: String(nextIdx) })} title="Cambiar ícono"
-                      style={{ position:"absolute", inset:0, background:"rgba(99,102,241,0.9)", border:"none", borderRadius:4, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", color:"#fff", fontSize:11, opacity:0, transition:"opacity 0.15s" }}
+                      style={{ position:"absolute", inset:0, background:"rgba(99,102,241,0.9)", border:"none", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", color:"#fff", fontSize:15, opacity:0, transition:"opacity 0.15s" }}
                       onMouseEnter={e => (e.currentTarget.style.opacity="1")} onMouseLeave={e => (e.currentTarget.style.opacity="0")}>↻</button>
                   )}
                 </span>
-                <div>
-                  <p style={{ margin:0, fontSize:11, fontWeight:900, letterSpacing:1, textTransform:"uppercase", color:garantiasUpText }}><EditableZone field={`garantia${i+1}Title`} label={`Título garantía ${i+1}`}>{g.title}</EditableZone></p>
-                  <p style={{ margin:0, fontSize:11, color:garantiasUpText, opacity:0.6 }}><EditableZone field={`garantia${i+1}Desc`} label={`Descripción garantía ${i+1}`}>{g.desc}</EditableZone></p>
-                </div>
+                <p style={{ position:"relative", margin:0, fontSize: isMobile ? 13 : 15, fontWeight:900, letterSpacing:1.2, textTransform:"uppercase", lineHeight:1.15, color:tinta }}>
+                  <EditableZone field={`garantia${i+1}Title`} label={`Título garantía ${i+1}`}>{g.title}</EditableZone>
+                </p>
+                <p style={{ position:"relative", margin:"5px 0 0", fontSize:11, color:tinta, opacity:0.7 }}>
+                  <EditableZone field={`garantia${i+1}Desc`} label={`Descripción garantía ${i+1}`}>{g.desc}</EditableZone>
+                </p>
               </div>
             );
           })}
