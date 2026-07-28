@@ -66,64 +66,76 @@ export function SectionBlock({
         </div>
       )}
 
-      {/* ── Los controles van PEGADOS al filo de abajo ────────────────────────
-          Estaban flotando adentro de la sección: las flechas centradas y a 10px
-          del borde, y el ojo abajo a la derecha. En una sección alta no molesta,
-          pero en una franja de garantías —80px de alto y el contenido repartido a
-          lo ancho— caían justo encima del texto y del botón de cambiar ícono. No
-          es un problema de un template: le pasa a cualquier sección baja de los
-          diez.
-          El filo entre dos secciones es la única línea que nunca tiene contenido,
-          y encima es donde estos botones significan algo: mueven el bloque
-          respecto del de al lado. Van ahí, aplanados —20px de alto contra los 26
-          de antes—, uno en cada esquina y sin separación del borde, así el ancho
-          útil de la sección queda libre.
-          Arriba a la izquierda no se puede: esa esquina se la queda el chip de
-          "Fondo" (`EditableSectionBg`, en `top:16 left:16`). */}
-      {(() => {
-        const filo: React.CSSProperties = {
-          color: "#fff", border: "1px solid rgba(255,255,255,0.3)", borderBottom: "none",
-          height: 20, fontSize: 10, fontWeight: 700, padding: 0,
-          display: "flex", alignItems: "center", justifyContent: "center",
-          backdropFilter: "blur(8px)", letterSpacing: 0.3,
-        };
-        return (
-          <>
-            {/* Flechas de orden — esquina de abajo a la izquierda, pegadas. */}
-            <div style={{ position: "absolute", bottom: 0, left: 0, zIndex: 200, display: "flex", borderTopRightRadius: 6, overflow: "hidden" }}>
-              <button
-                onClick={() => moveSection(id, defaultOrder, "up")}
-                disabled={isFirst}
-                title={isFirst ? "Ya es el primer bloque" : `Subir "${label}"`}
-                style={{ ...filo, background: "rgba(0,0,0,0.78)", borderLeft: "none", width: 26,
-                         cursor: isFirst ? "default" : "pointer", opacity: isFirst ? 0.35 : 1 }}
-              >
-                ▲
-              </button>
-              <button
-                onClick={() => moveSection(id, defaultOrder, "down")}
-                disabled={isLast}
-                title={isLast ? "Ya es el último bloque" : `Bajar "${label}"`}
-                style={{ ...filo, background: "rgba(0,0,0,0.78)", borderLeft: "none", width: 26,
-                         cursor: isLast ? "default" : "pointer", opacity: isLast ? 0.35 : 1 }}
-              >
-                ▼
-              </button>
-            </div>
+      {/* Toggle en esquina inferior derecha — la superior ya la usan los controles
+          propios del editor (cambiar imagen, fondo de sección, etc.) */}
+      <div style={{ position: "absolute", bottom: 10, right: 10, zIndex: 200 }}>
+        <button
+          onClick={() => toggleHiddenSection(id)}
+          title={isHidden ? `Mostrar "${label}"` : `Ocultar "${label}"`}
+          style={{
+            background: isHidden ? "rgba(239,68,68,0.92)" : "rgba(0,0,0,0.72)",
+            color: "#fff", border: "1.5px solid rgba(255,255,255,0.4)", borderRadius: 7,
+            padding: "5px 12px", fontSize: 11, fontWeight: 700,
+            cursor: "pointer", display: "flex", alignItems: "center", gap: 5,
+            backdropFilter: "blur(8px)", letterSpacing: 0.3,
+            boxShadow: "0 2px 8px rgba(0,0,0,0.45)",
+          }}
+        >
+          {isHidden ? "👁 Mostrar bloque" : "👁 Ocultar bloque"}
+        </button>
+      </div>
 
-            {/* Ocultar / mostrar — esquina de abajo a la derecha, pegada. */}
-            <button
-              onClick={() => toggleHiddenSection(id)}
-              title={isHidden ? `Mostrar "${label}"` : `Ocultar "${label}"`}
-              style={{ ...filo, position: "absolute", bottom: 0, right: 0, zIndex: 200,
-                       background: isHidden ? "rgba(239,68,68,0.92)" : "rgba(0,0,0,0.78)",
-                       borderRight: "none", borderTopLeftRadius: 6, padding: "0 10px", gap: 5, cursor: "pointer" }}
-            >
-              {isHidden ? "👁 Mostrar bloque" : "👁 Ocultar bloque"}
-            </button>
-          </>
-        );
-      })()}
+      {/* ── Flechas de orden ──────────────────────────────────────────────────
+          Una sola pastilla con las dos flechas adentro, centrada abajo y pegada
+          al filo del bloque.
+          Eran dos botones cuadrados de 26×26 separados, flotando a 10px del
+          borde. En una sección alta no molestaban, pero en una franja de
+          garantías —80px de alto y el contenido repartido a lo ancho— caían justo
+          encima del texto. No es un problema de un template: le pasa a cualquier
+          sección baja de los diez.
+          Juntas en una pastilla ocupan casi la mitad de alto (20 contra 26) y
+          apoyadas en el filo se corren del medio de la franja, que es donde vive
+          el contenido. El filo entre dos secciones es además donde estos botones
+          significan algo: mueven el bloque respecto del de al lado.
+          Las dos van siempre, aunque una esté deshabilitada: si desapareciera la
+          que no se puede usar, la pastilla cambiaría de ancho al mover un bloque y
+          la otra flecha se correría de abajo del mouse. */}
+      <div style={{
+        position: "absolute", bottom: 4, left: "50%", transform: "translateX(-50%)", zIndex: 200,
+        display: "flex", alignItems: "stretch", overflow: "hidden",
+        background: "rgba(0,0,0,0.78)", border: "1px solid rgba(255,255,255,0.32)", borderRadius: 999,
+        backdropFilter: "blur(8px)", boxShadow: "0 2px 8px rgba(0,0,0,0.45)",
+      }}>
+        <button
+          onClick={() => moveSection(id, defaultOrder, "up")}
+          disabled={isFirst}
+          title={isFirst ? "Ya es el primer bloque" : `Subir "${label}"`}
+          style={{
+            background: "none", color: "#fff", border: "none", padding: 0,
+            width: 30, height: 20, fontSize: 10, fontWeight: 700, lineHeight: 1,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            cursor: isFirst ? "default" : "pointer", opacity: isFirst ? 0.3 : 1,
+          }}
+        >
+          ▲
+        </button>
+        {/* El separador va acá y no como borde de los botones: así no se ve en las
+            puntas de la pastilla, solo entre las dos flechas. */}
+        <span style={{ width: 1, background: "rgba(255,255,255,0.28)" }} />
+        <button
+          onClick={() => moveSection(id, defaultOrder, "down")}
+          disabled={isLast}
+          title={isLast ? "Ya es el último bloque" : `Bajar "${label}"`}
+          style={{
+            background: "none", color: "#fff", border: "none", padding: 0,
+            width: 30, height: 20, fontSize: 10, fontWeight: 700, lineHeight: 1,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            cursor: isLast ? "default" : "pointer", opacity: isLast ? 0.3 : 1,
+          }}
+        >
+          ▼
+        </button>
+      </div>
     </div>
   );
 }

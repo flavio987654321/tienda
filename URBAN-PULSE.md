@@ -1111,12 +1111,20 @@ contenido repartido a lo ancho, caen encima del texto.
 
 Se propusieron dos salidas —que aparecieran al pasar el mouse, o sacarlos afuera en una barrita— y
 Flavio descartó las dos con un argumento mejor: *"si hacemos lo que decís no van a saber"*. Y propuso
-la que se implementó: **achicarlos y pegarlos al filo del bloque**.
+la que se implementó: **achicarlas y pegarlas al filo del bloque**.
 
-El filo entre dos secciones es la única línea que nunca tiene contenido, y encima es donde estos
-botones significan algo: mueven el bloque respecto del de al lado. Ahora van ahí, aplanados —20px de
-alto contra los 26 de antes—, uno en cada esquina de abajo y sin separación del borde, así el ancho
-útil de la sección queda libre. Arriba a la izquierda no se podía: esa esquina se la queda el chip de
-"Fondo" (`EditableSectionBg`, en `top:16 left:16`).
+Primer intento, corregido en el acto por él: se movieron las flechas a la esquina de abajo a la
+izquierda **y** se tocó el botón de ocultar. Las dos cosas estaban mal. *"El de ocultar bloque no lo
+tenías que tocar, estaba bien ese"* — quedó **idéntico al original**, verificado con el diff contra la
+versión anterior. Y *"tienen que ir en el centro, no en la izquierda las flechas"*.
+
+Cómo quedó: **una sola pastilla con las dos flechas adentro**, centrada abajo y apoyada en el filo.
+Eran dos botones cuadrados de 26×26 separados, flotando a 10px del borde; juntas ocupan casi la mitad
+de alto (20 contra 26) y, apoyadas en el filo, se corren del medio de la franja, que es donde vive el
+contenido. El filo entre dos secciones es además donde estos botones significan algo: mueven el
+bloque respecto del de al lado.
+
+Las dos flechas van siempre, aunque una esté deshabilitada: si desapareciera la que no se puede usar,
+la pastilla cambiaría de ancho al mover un bloque y la otra flecha se correría de abajo del mouse.
 
 Le llega a los diez templates de una.
