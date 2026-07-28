@@ -126,6 +126,10 @@ export default function UrbanPulse() {
   const [reviewsLoading, setReviewsLoading] = useState(false);
   const [reviewForm,     setReviewForm]     = useState({ reviewer: "", rating: 5, comment: "", email: "" });
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
+  // Trampa para bots: invisible para una persona, irresistible para un robot que
+  // completa todo lo que encuentra. El captcha ya cubre esto, pero es la segunda
+  // llave y no cuesta nada — el formulario de la tienda y Chic Paris ya la tenían.
+  const [reviewHoneypot, setReviewHoneypot] = useState("");
   const reviewCaptcha = useTurnstile("review");
   const [reviewDone,     setReviewDone]     = useState(false);
   const [showReport,     setShowReport]     = useState(false);
@@ -490,11 +494,18 @@ export default function UrbanPulse() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [modalImg]);
 
+  // Guarda contra el doble envío. `reviewSubmitting` apaga el botón, pero es un
+  // `setState`: no se aplica hasta el siguiente render, así que dos clics rápidos
+  // —o dejar apretado Enter en un campo— entran los dos y publican la reseña dos
+  // veces. Un ref se actualiza en el acto. Chic Paris ya lo tenía; acá faltaba.
+  const enviandoResenaProd = useRef(false);
+
   async function submitReview(e: React.FormEvent) {
     e.preventDefault();
-    if (isPreview || isOwner) return;
+    if (isPreview || isOwner || reviewHoneypot || enviandoResenaProd.current) return;
     const slug = storeConfig?.slug;
     if (!modalProduct || !slug || !reviewForm.reviewer.trim()) return;
+    enviandoResenaProd.current = true;
     setReviewSubmitting(true);
     try {
       const res = await fetch(`/api/public/${slug}/reviews`, {
@@ -508,7 +519,7 @@ export default function UrbanPulse() {
         setReviewForm({ reviewer: "", rating: 5, comment: "", email: "" });
         setReviewDone(true); setTimeout(() => setReviewDone(false), 4000);
       }
-    } catch {} finally { reviewCaptcha.reset(); setReviewSubmitting(false); }
+    } catch {} finally { enviandoResenaProd.current = false; reviewCaptcha.reset(); setReviewSubmitting(false); }
   }
 
   const subcategoriesFor = useMemo(() => {
@@ -1104,8 +1115,8 @@ export default function UrbanPulse() {
               estrellas siempre, así que una tienda con promedio 3,2 publicaba
               cinco doradas arriba de sus propias reseñas. */}
           {(() => {
-            const promedio = isPreview ? 4.8 : (resenas.stats?.promedio ?? 0);
-            const total    = isPreview ? 6   : (resenas.stats?.total ?? 0);
+            const promedio = resenas.promedioMostrado;
+            const total    = resenas.totalMostrado;
             if (!total) return null;
             return (
               <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:12, flexWrap:"wrap" }}>
@@ -2038,6 +2049,10 @@ export default function UrbanPulse() {
                     <div style={{ position:"relative" }}>
                       {isPreview && <div style={{ position:"absolute", inset:0, zIndex:10, cursor:"default" }} onClick={e => e.stopPropagation()} />}
                       <form onSubmit={isPreview ? e => e.preventDefault() : submitReview} style={{ display:"flex", flexDirection:"column", gap:10, opacity: isPreview ? 0.55 : 1 }}>
+                        {/* Trampa para bots: invisible para una persona. */}
+                        <input value={reviewHoneypot} onChange={e => setReviewHoneypot(e.target.value)}
+                          tabIndex={-1} autoComplete="off" aria-hidden="true"
+                          style={{ position:"absolute", left:-9999, width:1, height:1, opacity:0 }} />
                         <input value={reviewForm.reviewer} onChange={e => !isPreview && setReviewForm(p => ({ ...p, reviewer: e.target.value }))}
                           placeholder="Tu nombre" readOnly={isPreview}
                           style={{ background:"none", border:`2px solid ${DARK}`, padding:"9px 12px", fontSize:12, fontWeight:600, outline:"none" }} />
@@ -2221,17 +2236,22 @@ export default function UrbanPulse() {
                       </div>
                     </div>
                   ) : (
-                    <button type="button" disabled={isPreview || !resenas.valida}
+                    <button type="button" disabled={!resenas.puedeEnviar}
                       onClick={() => resenas.setConfirmando(true)}
-                      title={resenas.valida ? undefined : "Escribí tu nombre y elegí cuántas estrellas"}
-                      style={{ background: !isPreview && resenas.valida ? ACC : "#ededed", color: !isPreview && resenas.valida ? accentText : "#9a9a9a", border:"none", padding:"14px", fontSize:10, fontWeight:900, letterSpacing:3, textTransform:"uppercase", cursor: !isPreview && resenas.valida ? "pointer" : "default" }}>
+                      title={resenas.bloqueo ? undefined : resenas.valida ? undefined : "Escribí tu nombre y elegí cuántas estrellas"}
+                      style={{ background: resenas.puedeEnviar ? ACC : "#ededed", color: resenas.puedeEnviar ? accentText : "#9a9a9a", border:"none", padding:"14px", fontSize:10, fontWeight:900, letterSpacing:3, textTransform:"uppercase", cursor: resenas.puedeEnviar ? "pointer" : "default" }}>
                       Dejar mi reseña
                     </button>
                   )}
 
-                  {isPreview && (
-                    <p style={{ margin:0, fontSize:10, color:MID, fontStyle:"italic", textAlign:"center" }}>
-                      Vista previa — el formulario funciona en tu tienda publicada.
+                  {/* El botón se apaga por dos motivos distintos y ninguno se
+                      adivina mirándolo. Antes solo se avisaba el de vista previa,
+                      así que el dueño escribía todo, apretaba y no pasaba nada. */}
+                  {resenas.bloqueo && (
+                    <p style={{ margin:0, fontSize:10.5, color:MID, fontStyle:"italic", textAlign:"center", lineHeight:1.5 }}>
+                      {resenas.bloqueo === "preview"
+                        ? "Vista previa — el formulario funciona en tu tienda publicada."
+                        : "Sos el dueño de esta tienda: las reseñas las dejan tus clientes."}
                     </p>
                   )}
                 </form>

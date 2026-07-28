@@ -502,6 +502,48 @@ Tres cosas que hicieron falta para que no se pisen los clics:
 
 La foto conserva `role`/`tabIndex`/`onKeyDown`: para quien no usa mouse, ese es el punto de entrada.
 
+#### Tercera pasada: revisión de los 20 commits de la sesión
+
+Flavio pidió revisar todo lo tocado buscando bugs, código muerto, duplicado, validaciones y dobles
+clics. La suite congelada de precios pasa entera, no quedó código muerto y no hay ningún
+`{numero && ...}` nuevo. Aparecieron cuatro cosas, las cuatro arregladas:
+
+**R-1 — El botón "Dejá tu opinión" era inalcanzable.** El más grave, y rompía justo lo que se había
+pedido. El respaldo de pestaña corregía **también** la pestaña que el visitante había tocado a mano:
+
+| Reseñas | Pestaña pedida | Efectiva | ¿Botón? |
+|---|---|---|---|
+| 0 y 0 | producto (por defecto) | producto | ❌ |
+| 3 de producto, 0 de tienda | producto | producto | ❌ |
+| 3 de producto, 0 de tienda | **tienda** (tocada) | **producto** ← rebote | ❌ |
+
+O sea: **el botón solo aparecía si ya existía una reseña de tienda**, y como es el único lugar desde
+donde se deja una, nunca podía existir la primera. Es exactamente la pescadilla que el comentario de
+Chic Paris decía estar evitando.
+
+Ahora el respaldo solo acomoda la pestaña que abrió sola; **si el visitante eligió, manda su
+elección**. Y sin ninguna reseña abre en "La tienda", que es la única accionable. Verificado con los
+siete casos posibles.
+
+**R-2 — El dueño apretaba y no pasaba nada.** `enviar` corta en seco con `isOwner`, pero el botón solo
+se apagaba en vista previa: el dueño mirando su tienda publicada escribía todo, apretaba y no ocurría
+nada — sin error, sin cerrar. El hook ahora expone `bloqueo` (`"dueño"` / `"preview"`) y los dos
+templates lo dicen.
+
+**R-3 — El formulario de reseña de producto de Urban Pulse no tenía guarda contra doble envío.**
+`reviewSubmitting` apaga el botón, pero es un `setState`: no se aplica hasta el próximo render, así
+que dos clics rápidos entran los dos. Chic Paris ya tenía el ref y el honeypot; acá faltaban los dos.
+Es pre-existente, no lo introdujo esta tanda.
+
+**R-4 — El promedio del editor estaba escrito a mano.** Chic Paris anunciaba **5,0** mientras sus
+propios ejemplos promedian **4,8** y una tarjeta de 4★ estaba a la vista. Ahora sale del hook,
+calculado sobre los ejemplos.
+
+**Queda anotado y sin hacer** (refactor, no bug): la UI del cupón está escrita dos veces
+(`CheckoutModal` y `productos/page.tsx`), Urban Pulse tiene dos formularios de reseña casi idénticos
+—el de producto y el de tienda, ~110 líneas cada uno—, y `accentSobre(testimonialsBgUp,
+testimonialsText)` se recalcula 6 veces por tarjeta pudiendo ser una constante.
+
 #### Y el cartel de Chic Paris mentía
 
 Al migrar apareció esto. El aviso del editor le decía al dueño:

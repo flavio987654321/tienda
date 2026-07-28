@@ -63,7 +63,14 @@ export function useHomeReviews({
   const [deProductoReal, setDeProductoReal] = useState<HomeReview[]>([]);
   const [deTiendaReal,   setDeTiendaReal]   = useState<HomeReview[]>([]);
   const [stats,          setStats]          = useState<{ promedio: number; total: number } | null>(null);
-  const [tab,            setTab]            = useState<"tienda" | "producto">("producto");
+  const [tabPedida,      setTabPedida]      = useState<"tienda" | "producto">("producto");
+  // ¿La tocó el visitante, o es todavía la que abrió sola? El respaldo de más
+  // abajo solo puede corregir la SEGUNDA.
+  const [tabElegida,     setTabElegida]     = useState(false);
+  const setTab = useCallback((t: "tienda" | "producto") => {
+    setTabPedida(t);
+    setTabElegida(true);
+  }, []);
 
   useEffect(() => {
     if (!slug) return;
@@ -102,19 +109,40 @@ export function useHomeReviews({
     [ejemplos.tienda],
   );
 
+  // El promedio de los ejemplos sale de los ejemplos, no de un número escrito al
+  // lado que hay que acordarse de actualizar.
+  const promedioDeEjemplos = useMemo(() => {
+    const todos = [...ejemplos.producto, ...ejemplos.tienda];
+    if (todos.length === 0) return 0;
+    return todos.reduce((s, r) => s + r.rating, 0) / todos.length;
+  }, [ejemplos.producto, ejemplos.tienda]);
+
   const deProducto = isPreview ? deProductoEjemplo : deProductoReal;
   const deTienda   = isPreview ? deTiendaEjemplo   : deTiendaReal;
   const sinNada    = deProducto.length === 0 && deTienda.length === 0;
 
-  // Si la pestaña abierta no tiene nada pero la otra sí, se muestra la que tiene.
-  // Abrir en una vacía teniendo contenido al lado hace que la tienda parezca sin
-  // reseñas cuando no lo está — y nadie va a tocar una pestaña para ver si atrás
-  // hay algo.
-  const tabEfectiva =
-    !sinNada && ((tab === "producto" && deProducto.length === 0) ||
-                 (tab === "tienda"   && deTienda.length === 0))
-      ? (tab === "producto" ? "tienda" : "producto")
-      : tab;
+  // ── Qué pestaña se muestra ─────────────────────────────────────────────────
+  // El respaldo existe porque abrir en una pestaña vacía teniendo contenido al
+  // lado hace que la tienda parezca sin reseñas cuando no lo está, y nadie va a
+  // tocar una pestaña para ver si atrás hay algo.
+  //
+  // Pero antes corregía TAMBIÉN la pestaña que el visitante había tocado a mano, y
+  // eso dejaba el botón "Dejá tu opinión" —que vive en la pestaña "La tienda"—
+  // inalcanzable justo cuando hacía falta:
+  //
+  //   con 3 reseñas de producto y 0 de tienda, tocar "La tienda" rebotaba a
+  //   "Los productos", así que nadie podía dejar la primera de tienda… y sin la
+  //   primera, la pestaña nunca dejaba de estar vacía.
+  //
+  // Ahora: si el visitante eligió, manda su elección. Si no la tocó, el respaldo
+  // acomoda — y sin ninguna reseña abre en "La tienda", que es la única desde la
+  // que se puede dejar una, y cuyo vacío invita en vez de explicar.
+  const tabEfectiva: "tienda" | "producto" =
+    tabElegida            ? tabPedida
+    : sinNada             ? "tienda"
+    : deProducto.length === 0 ? "tienda"
+    : deTienda.length === 0   ? "producto"
+    : tabPedida;
   const lista = tabEfectiva === "tienda" ? deTienda : deProducto;
 
   // ── El bloque SIEMPRE se dibuja, aunque no haya ni una reseña ──────────────
@@ -172,6 +200,14 @@ export function useHomeReviews({
     form.rating >= 1 && form.rating <= 5 &&
     emailPlausible;
 
+  // Por qué este formulario no va a enviar, para poder DECIRLO. `enviar` corta en
+  // seco con el dueño y en vista previa, pero el botón solo se apagaba en vista
+  // previa: el dueño mirando su tienda publicada escribía todo, apretaba, y no
+  // pasaba nada — sin error, sin cerrar, sin nada. Parecía colgado.
+  const bloqueo: "dueño" | "preview" | null =
+    isOwner ? "dueño" : isPreview ? "preview" : null;
+  const puedeEnviar = !bloqueo && valida;
+
   async function enviar(e: React.FormEvent) {
     e.preventDefault();
     if (isPreview || isOwner || honeypot || enVuelo.current) return;
@@ -228,6 +264,13 @@ export function useHomeReviews({
     /** Promedio y total REALES, aun en preview: el cartel del editor los usa para
      *  decirle al dueño qué va a pasar en su tienda de verdad. */
     stats,
+    /** Promedio y total que le corresponden a lo que se está mostrando: en la
+     *  tienda, los reales del servidor; en el editor, los que salen de los
+     *  ejemplos. Antes cada template escribía este número a mano y se
+     *  desincronizaba solo — Chic Paris anunciaba "5,0" con una tarjeta de 4★ a
+     *  la vista, porque sus ejemplos promedian 4,8. */
+    promedioMostrado: isPreview ? promedioDeEjemplos : (stats?.promedio ?? 0),
+    totalMostrado:    isPreview ? (ejemplos.producto.length + ejemplos.tienda.length) : (stats?.total ?? 0),
     totalReal: stats?.total ?? 0,
     /** Cuántas suben de verdad a la portada hoy, por tipo. El cartel del editor
      *  las usa para decirle al dueño qué va a ver en su tienda publicada. */
@@ -237,7 +280,8 @@ export function useHomeReviews({
     // Acciones del dueño
     borrar,
     // Formulario de reseña de tienda
-    form, setForm, valida, enviando, listo, error, confirmando, setConfirmando,
+    form, setForm, valida, bloqueo, puedeEnviar,
+    enviando, listo, error, confirmando, setConfirmando,
     honeypot, setHoneypot, enviar, captcha,
     modalAbierto, abrirModal, cerrarModal,
   };

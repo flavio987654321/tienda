@@ -260,7 +260,7 @@ export default function ChicParis() {
   });
   const {
     deProducto, deTienda, lista, tab: tabEfectiva, setTab: setResenaTab, sinNada,
-    stats: reviewStats, borrar: deleteHomeReview,
+    borrar: deleteHomeReview,
     form: tiendaForm, setForm: setTiendaForm, valida: tiendaValida,
     enviando: tiendaEnviando, listo: tiendaListo, error: tiendaError,
     confirmando: tiendaConfirmando, setConfirmando: setTiendaConfirmando,
@@ -1486,10 +1486,8 @@ export default function ChicParis() {
                     que se pueda dimensionar (4,8 con 2 reseñas no es lo mismo que
                     4,8 con 200). En modo preview se muestra el 5 de las de ejemplo. */}
                 {(() => {
-                  const promedio = isPreview ? 5 : (reviewStats?.promedio ?? 0);
-                  const total = isPreview
-                    ? (EJEMPLOS_RESENAS_CP.producto.length + EJEMPLOS_RESENAS_CP.tienda.length)
-                    : (reviewStats?.total ?? 0);
+                  const promedio = resenasHome.promedioMostrado;
+                  const total = resenasHome.totalMostrado;
                   if (!total) return null;
                   return (
                     <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "0 0 8px", flexWrap: "wrap" }}>
@@ -2608,17 +2606,22 @@ export default function ChicParis() {
                       </div>
                     </div>
                   ) : (
-                    <button type="button" disabled={isPreview || !tiendaValida}
+                    <button type="button" disabled={!resenasHome.puedeEnviar}
                       onClick={() => setTiendaConfirmando(true)}
-                      title={tiendaValida ? undefined : "Escribí tu nombre y elegí cuántas estrellas"}
-                      style={{ background: !isPreview && tiendaValida ? ACC : "#f3f4f6", color: !isPreview && tiendaValida ? accentText : "#9ca3af", border: "none", padding: "13px", fontSize: 10, fontWeight: 800, letterSpacing: 3, textTransform: "uppercase", cursor: !isPreview && tiendaValida ? "pointer" : "default" }}>
+                      title={resenasHome.bloqueo ? undefined : tiendaValida ? undefined : "Escribí tu nombre y elegí cuántas estrellas"}
+                      style={{ background: resenasHome.puedeEnviar ? ACC : "#f3f4f6", color: resenasHome.puedeEnviar ? accentText : "#9ca3af", border: "none", padding: "13px", fontSize: 10, fontWeight: 800, letterSpacing: 3, textTransform: "uppercase", cursor: resenasHome.puedeEnviar ? "pointer" : "default" }}>
                       Dejar mi reseña
                     </button>
                   )}
 
-                  {isPreview && (
-                    <p style={{ margin: 0, fontSize: 10, color: "#999", fontStyle: "italic", textAlign: "center" }}>
-                      Vista previa — el formulario funciona en tu tienda publicada.
+                  {/* El botón se apaga por dos motivos distintos y ninguno se
+                      adivina mirándolo. Antes solo se avisaba el de vista previa,
+                      así que el dueño escribía todo, apretaba y no pasaba nada. */}
+                  {resenasHome.bloqueo && (
+                    <p style={{ margin: 0, fontSize: 10.5, color: "#999", fontStyle: "italic", textAlign: "center", lineHeight: 1.5 }}>
+                      {resenasHome.bloqueo === "preview"
+                        ? "Vista previa — el formulario funciona en tu tienda publicada."
+                        : "Sos el dueño de esta tienda: las reseñas las dejan tus clientas."}
                     </p>
                   )}
                 </form>
