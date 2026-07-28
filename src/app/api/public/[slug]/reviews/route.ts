@@ -92,19 +92,53 @@ export async function GET(
     });
   }
 
+  // ── Ficha de un producto ───────────────────────────────────────────────────
   // `status: APPROVED` por si acaso: hoy las de producto nacen aprobadas y no se
   // pueden despublicar, pero si algún día eso cambia, esta lista no tiene que ser
   // la que se entere último y muestre algo que no debía verse.
-  const rows = await prisma.publicReview.findMany({
-    where: { storeId: store.id, productId, status: "APPROVED" },
-    orderBy: { createdAt: "desc" },
-    take: 50,
-    select: {
-      id: true, rating: true, comment: true, reviewer: true,
-      verified: true, verifiedBy: true, createdAt: true,
-      product: { select: { id: true, name: true, images: true } },
-    },
-  });
+  //
+  // `skip` pagina el "Ver más" de los templates. Antes había un `take: 50` pelado
+  // y nada más: con 200 reseñas el comprador llegaba hasta la 50 y las otras 150
+  // no existían para él, sin una sola señal de que estaban. La página sigue
+  // midiendo 50 para no cambiarle el comportamiento a quien ya llamaba sin `skip`.
+  const PAGINA = 50;
+  const skipCrudo = Number(searchParams.get("skip"));
+  const skip = Number.isFinite(skipCrudo) && skipCrudo > 0 ? Math.floor(skipCrudo) : 0;
+
+  const deEsteProducto = { storeId: store.id, productId, status: "APPROVED" as const };
+
+  const [rows, porPuntaje] = await Promise.all([
+    prisma.publicReview.findMany({
+      where: deEsteProducto,
+      orderBy: { createdAt: "desc" },
+      skip, take: PAGINA,
+      select: {
+        id: true, rating: true, comment: true, reviewer: true,
+        verified: true, verifiedBy: true, createdAt: true,
+        product: { select: { id: true, name: true, images: true } },
+      },
+    }),
+    // El promedio, el total y las barras de la ficha se calculaban en el navegador
+    // sobre las reseñas que habían llegado. Con 300 reseñas eso es *el promedio de
+    // las últimas 50* mostrado como si fuera el del producto — y la portada, que
+    // sí usa el agregado de la base, publicaba otro número para la misma tienda.
+    // Un `groupBy` por puntaje da las tres cosas en una sola consulta.
+    prisma.publicReview.groupBy({
+      by: ["rating"],
+      where: deEsteProducto,
+      _count: { _all: true },
+    }),
+  ]);
+
+  const distribucion: Record<number, number> = { 1:0, 2:0, 3:0, 4:0, 5:0 };
+  let suma = 0, total = 0;
+  for (const g of porPuntaje) {
+    const n = g._count._all;
+    distribucion[g.rating] = n;
+    suma  += g.rating * n;
+    total += n;
+  }
+
   // Acá el producto siempre está —se filtró por `productId`— pero el tipo ya no
   // lo garantiza, y encadenar un `!` sería mentirle al compilador justo donde nos
   // acaba de avisar bien.
@@ -114,7 +148,10 @@ export async function GET(
       ? { id: r.product.id, name: r.product.name, image: firstImage(r.product.images) }
       : null,
   }));
-  return NextResponse.json({ reviews });
+  return NextResponse.json({
+    reviews,
+    stats: { promedio: total ? suma / total : 0, total, distribucion },
+  });
 }
 
 export async function POST(

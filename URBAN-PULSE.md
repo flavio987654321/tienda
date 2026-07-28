@@ -868,3 +868,42 @@ De paso, un ternario muerto: `color: activeGender==="mujer" ? DARK : DARK`.
 **Verificado que es solo de Urban Pulse.** Los otros tres templates de moda y la página de listado ya
 resolvían bien el mismo botón: Chic Paris con `accentRellenoText`, Boho Terra y Fashion Noir con un
 fondo tintado y el texto en el color normal, y el listado con el par `chipBg`/`chipText`.
+
+**28/07/2026 — qué pasa con muchas reseñas.** Pregunta de Flavio. El layout aguanta: el modal está
+clavado a 92vh, se dibujan 5 y el comentario se recorta a 5 líneas, así que mide lo mismo con 3 que
+con 300. Pero había un techo silencioso.
+
+`GET /api/public/[slug]/reviews?productId=X` tenía un `take: 50` pelado y **sin paginación**. Con 200
+reseñas, el comprador llegaba a la 50 y el botón "Ver más" desaparecía sin decir que faltaban 150.
+
+Y peor: el promedio, el total y las barras de la ficha se calculaban **en el navegador sobre las
+reseñas que habían llegado**. Con 300 reseñas eso es *el promedio de las últimas 50* publicado como
+si fuera el del producto — mientras la portada, que sí usa el agregado de la base, mostraba otro
+número para la misma tienda. Es el mismo bug que UP-1: dos cifras distintas de lo mismo en la misma
+página, y la equivocada en el lugar más visible.
+
+Arreglado en los dos lados:
+
+- **El endpoint** acepta `skip` y devuelve `stats: { promedio, total, distribucion }`, sacados de un
+  `groupBy` por puntaje — una sola consulta da las tres cosas. La página sigue midiendo 50 para no
+  cambiarle nada a quien llamaba sin `skip`.
+- **El modal** muestra esos números y "Ver más" primero destapa las cargadas y después va a buscar la
+  página siguiente. Al publicar una reseña propia, el promedio y el total se recalculan en el momento
+  en vez de pedir todo de nuevo.
+
+También se corrigió una carrera que ya existía: abrir un producto y saltar enseguida a otro podía
+dejar las reseñas del primero pegadas en la ficha del segundo. Ahora un `ref` guarda a qué producto
+pertenece la lista y descarta la respuesta que llega tarde.
+
+**Verificación.** No hay ni una reseña en toda la base (se comprobó con un `groupBy` de solo lectura),
+así que no se pudo probar con datos reales sin escribir en producción. Se probó lo que sí se podía:
+el endpoint responde bien con `skip` vacío, negativo, no numérico y absurdamente grande —ningún 500—;
+y la paginación se simuló con 0, 1, 5, 6, 50, 51, 60, 127, 300 y 1000 reseñas: en las diez llega a
+todas, sin fetches de más (con ≤50 no hace ninguno) y sin bucles.
+
+Con 1000 reseñas son 100 clics de "Ver más". Si algún día hace falta, el paso es agrandar el salto a
+medida que se avanza, no cambiar la estructura.
+
+**Queda pendiente en los otros:** Chic Paris, Boho Terra, Fashion Noir y la página de listado siguen
+promediando sobre la página cargada. No se rompieron —el cambio del endpoint es aditivo y ellos
+ignoran `stats`— pero les falta el mismo arreglo.
