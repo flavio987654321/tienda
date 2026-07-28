@@ -5,7 +5,7 @@ import { usePushBell } from "@/contexts/PushBellContext";
 import { useAuth } from "@/components/AuthProvider";
 import StoreFollowButton from "@/components/store/StoreFollowButton";
 import { EditableZone, EditableImageButton, EditableSectionBg, BgDragHandle, getContrastColor, getReadableAccentText, textoSobre, contrasteWCAG, useEditContext } from "@/contexts/EditContext";
-import { colorRepresentativo } from "@/lib/section-bg";
+import { colorRepresentativo, extremo } from "@/lib/section-bg";
 import { useStorefront, type StorefrontProduct } from "@/hooks/useStorefront";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { useCartLogic } from "@/hooks/useCartLogic";
@@ -273,6 +273,54 @@ export default function UrbanPulse() {
   // barra flotante, logo) y el gris claro de adentro del modal (reseñas).
   const accSobreDark  = accentSobre(DARK, WHITE);
   const accSobreClaro = accentSobre(BG, DARK);
+  // ── El color del precio REBAJADO ───────────────────────────────────────────
+  // Antes había dos rojos fijos —uno escrito acá y otro adentro de `PromoPrice`—
+  // y el precio se pintaba de ocho maneras distintas según el bloque: en cuatro
+  // lugares el normal iba en acento y en los otros cuatro en negro, sin regla.
+  // Por eso el acento se sentía suelto: aparecía en la mitad de los precios.
+  // Ahora hay una sola regla: el precio normal usa el color de texto de su
+  // sección, y el rebajado usa el ACENTO. El acento pasa a significar una sola
+  // cosa en toda la tienda — acá hay algo que te conviene.
+  //
+  // El color del rebajado tiene que cumplir DOS cosas a la vez: leerse sobre el
+  // fondo donde cae, y verse distinto del precio normal. El acento cumple las dos
+  // casi siempre, pero no cuando es casi blanco o casi negro: ahí coincide con el
+  // texto de la sección y el descuento deja de notarse. Para esos casos queda el
+  // rojo — y no el rojo fijo de antes, sino aclarado u oscurecido hasta
+  // despegarse de ESE fondo.
+  // "¿Se ven distintos estos dos colores?" — y para esto el contraste de WCAG NO
+  // sirve: mide solo luminosidad. Dice que el neón de fábrica #d4ff00 y el blanco
+  // son casi el mismo color (1,16) cuando a la vista no se parecen en nada, y con
+  // ese criterio el acento no habría entrado nunca. La distancia en RGB sí toma el
+  // tono. 60 sobre un máximo de 441: dos grises vecinos quedan afuera, dos colores
+  // que alguien llamaría distintos quedan adentro.
+  const aRgb = (c: string) => {
+    const h = c.trim().replace("#", "");
+    const x = h.length === 3 ? h.split("").map(d => d + d).join("") : h;
+    return /^[0-9a-f]{6}$/i.test(x)
+      ? [parseInt(x.slice(0,2),16), parseInt(x.slice(2,4),16), parseInt(x.slice(4,6),16)]
+      : null;
+  };
+  const seVenDistintos = (a: string, b: string) => {
+    const A = aRgb(a), B = aRgb(b);
+    // Si alguno no es un hex —un `rgba()`, un nombre de color— se cae al contraste,
+    // que es peor pero nunca da un falso "sí".
+    if (!A || !B) return contrasteWCAG(a, b) >= 1.6;
+    return Math.hypot(A[0]-B[0], A[1]-B[1], A[2]-B[2]) >= 60;
+  };
+  const precioRebajado = (fondo: string, textoNormal: string) => {
+    // Un sólido para medir: el fondo de sección puede venir en degradado.
+    const solido = colorRepresentativo(fondo);
+    // 3 y no 4,5 porque son números grandes y en negrita.
+    const seLee       = contrasteWCAG(ACC, solido) >= 3;
+    const seDistingue = seVenDistintos(ACC, textoNormal);
+    if (seLee && seDistingue) return ACC;
+    let rojo = RED;
+    const hacia = textoSobre(solido) === "#fff" ? "claro" : "oscuro";
+    for (let i = 0; i < 8 && contrasteWCAG(rojo, solido) < 4.5; i++) rojo = extremo(rojo, hacia, 12);
+    return rojo;
+  };
+  const rebajadoClaro = precioRebajado(WHITE, DARK);
   // ── El damero de la franja de garantías ────────────────────────────────────
   // Los bloques pares llevan el fondo de la sección —el que elige la dueña, así
   // el control de color sigue sirviendo para algo— y los impares el acento.
@@ -1311,7 +1359,7 @@ export default function UrbanPulse() {
                 precio sin haber preguntado por las promos.
                 El tachado usa `sobre` para atenuarse CONTRA el fondo de esta sección,
                 que es editable, en vez del gris fijo pensado para fondo blanco. */}
-            <PromoPrice product={featuredProduct} promotions={promotions} fmt={fmt} accent={accentSobre(featuredBg, featuredText)} sobre={featuredText}
+            <PromoPrice product={featuredProduct} promotions={promotions} fmt={fmt} accent={featuredText} rebajado={precioRebajado(featuredBg, featuredText)} sobre={featuredText}
               priceSize={36} compareSize={20} weight={900} ocultarPrecios={ocultarPrecios}
               gap={16} align="baseline" style={{ marginBottom:12 }} />
             {/* En "chip" y no en la foto: esa esquina ya la ocupa el `badge` propio
@@ -1383,15 +1431,15 @@ export default function UrbanPulse() {
                       ) : promo.hasPriceDrop ? (
                         <>
                           <p style={{ margin:0, fontSize:11, color:MID, textDecoration:"line-through" }}>{fmt(promo.originalPrice)}</p>
-                          <p style={{ margin:0, fontSize:15, fontWeight:900, color:RED }}>{fmt(promo.effectivePrice)}</p>
-                          {promo.pctOff != null && <p style={{ margin:"2px 0 0", fontSize:10, fontWeight:800, color:RED }}>-{promo.pctOff}%</p>}
+                          <p style={{ margin:0, fontSize:15, fontWeight:900, color:rebajadoClaro }}>{fmt(promo.effectivePrice)}</p>
+                          {promo.pctOff != null && <p style={{ margin:"2px 0 0", fontSize:10, fontWeight:800, color:rebajadoClaro }}>-{promo.pctOff}%</p>}
                         </>
                       ) : (
                         <>
                           {product.comparePrice && <p style={{ margin:0, fontSize:11, color:MID, textDecoration:"line-through" }}>{fmt(product.comparePrice)}</p>}
-                          <p style={{ margin:0, fontSize:15, fontWeight:900, color: product.comparePrice ? RED : DARK }}>{fmt(product.price)}</p>
+                          <p style={{ margin:0, fontSize:15, fontWeight:900, color: product.comparePrice ? rebajadoClaro : DARK }}>{fmt(product.price)}</p>
                           {discountPercent(product.price, product.comparePrice) !== null && (
-                            <p style={{ margin:"2px 0 0", fontSize:10, fontWeight:800, color:RED }}>-{discountPercent(product.price, product.comparePrice)}%</p>
+                            <p style={{ margin:"2px 0 0", fontSize:10, fontWeight:800, color:rebajadoClaro }}>-{discountPercent(product.price, product.comparePrice)}%</p>
                           )}
                         </>
                       )}
@@ -1685,7 +1733,7 @@ export default function UrbanPulse() {
                         </div>
                         <div style={{ padding:"10px 0 0" }}>
                           <p style={{ margin:"0 0 4px", fontSize:11, fontWeight:700, textTransform:"uppercase", letterSpacing:1, color:ofertasTextUp, overflow:"hidden", display:"-webkit-box", WebkitLineClamp:1, WebkitBoxOrient:"vertical" as const }}>{p.name}</p>
-                          <PromoPrice product={p} promotions={promotions} fmt={fmt} accent={accentSobre(ofertasBgUp, ofertasTextUp)} sobre={ofertasTextUp}
+                          <PromoPrice product={p} promotions={promotions} fmt={fmt} accent={ofertasTextUp} rebajado={precioRebajado(ofertasBgUp, ofertasTextUp)} sobre={ofertasTextUp}
                             priceSize={13} compareSize={11} weight={900} ocultarPrecios={ocultarPrecios}
                             consultaLabel="Consultá" gap={8} align="center" />
                           {/* En "chip": la esquina de la foto ya la ocupa el badge del %.
@@ -1745,7 +1793,7 @@ export default function UrbanPulse() {
                       </div>
                       <div style={{ padding:"10px 0 0" }}>
                         <p style={{ margin:"0 0 4px", fontSize:11, fontWeight:700, textTransform:"uppercase", letterSpacing:1, color:masVistoTextUp, overflow:"hidden", display:"-webkit-box", WebkitLineClamp:1, WebkitBoxOrient:"vertical" as const }}>{p.name}</p>
-                        <PromoPrice product={p} promotions={promotions} fmt={fmt} accent={accentSobre(masVistoBgUp, masVistoTextUp)} sobre={masVistoTextUp}
+                        <PromoPrice product={p} promotions={promotions} fmt={fmt} accent={masVistoTextUp} rebajado={precioRebajado(masVistoBgUp, masVistoTextUp)} sobre={masVistoTextUp}
                           priceSize={13} compareSize={11} weight={900} ocultarPrecios={ocultarPrecios}
                           consultaLabel="Consultá" />
                       </div>
@@ -2059,7 +2107,7 @@ export default function UrbanPulse() {
                   <div>
                     <p style={{ color:"rgba(255,255,255,0.4)", fontSize:10, fontWeight:800, letterSpacing:2, textTransform:"uppercase", margin:0 }}>{p.category}</p>
                     <p style={{ color:WHITE, fontSize:13, fontWeight:800, margin:"5px 0 4px" }}>{p.name}</p>
-                    <PromoPrice product={p} promotions={promotions} fmt={fmt} accent={accSobreDark} sobre={WHITE}
+                    <PromoPrice product={p} promotions={promotions} fmt={fmt} accent={WHITE} rebajado={precioRebajado(DARK, WHITE)} sobre={WHITE}
                       priceSize={13} weight={900} ocultarPrecios={ocultarPrecios} />
                     {avisoPromo(p, "chip")}
                   </div>
@@ -2088,7 +2136,7 @@ export default function UrbanPulse() {
                     <div style={{ flex:1 }}>
                       <p style={{ margin:0, fontSize:10, color:MID, fontWeight:800, letterSpacing:2, textTransform:"uppercase" }}>{p.category}</p>
                       <p style={{ margin:"4px 0 6px", fontSize:13, fontWeight:800 }}>{p.name}</p>
-                      <PromoPrice product={p} promotions={promotions} fmt={fmt} accent={DARK} sobre={DARK}
+                      <PromoPrice product={p} promotions={promotions} fmt={fmt} accent={DARK} rebajado={rebajadoClaro} sobre={DARK}
                         priceSize={14} compareSize={11} weight={900} ocultarPrecios={ocultarPrecios}
                         gap={8} style={{ marginBottom:4 }} />
                       <div style={{ marginBottom:10 }}>{avisoPromo(p, "chip")}</div>
@@ -2242,13 +2290,17 @@ export default function UrbanPulse() {
                     <span style={{ fontSize:28, fontWeight:900, color:DARK }}>Consultá precio</span>
                   ) : modalPromo?.hasPriceDrop ? (
                     <>
-                      <span style={{ fontSize:28, fontWeight:900, color:RED }}>{fmt(modalPromo.effectivePrice)}</span>
+                      <span style={{ fontSize:28, fontWeight:900, color:rebajadoClaro }}>{fmt(modalPromo.effectivePrice)}</span>
                       <span style={{ fontSize:15, color:MID, textDecoration:"line-through" }}>{fmt(modalPromo.originalPrice)}</span>
-                      {modalPromo.pctOff != null && <span style={{ fontSize:12, fontWeight:800, color:"#16a34a", background:"#dcfce7", padding:"2px 8px", borderRadius:4 }}>{modalPromo.pctOff}% OFF</span>}
+                      {/* El "% OFF" era verde sobre verde claro: un tercer color en
+                          el mismo renglón, sin relación con nada. Va con el acento
+                          de fondo y su texto legible encima, que es la misma regla
+                          de los chips de promo. */}
+                      {modalPromo.pctOff != null && <span style={{ fontSize:12, fontWeight:800, color:textoSobre(rebajadoClaro), background:rebajadoClaro, padding:"2px 8px", borderRadius:4 }}>{modalPromo.pctOff}% OFF</span>}
                     </>
                   ) : (
                     <>
-                      <span style={{ fontSize:28, fontWeight:900, color: (!variantPrice && modalProduct.comparePrice) ? RED : DARK }}>{fmt(displayPrice)}</span>
+                      <span style={{ fontSize:28, fontWeight:900, color: (!variantPrice && modalProduct.comparePrice) ? rebajadoClaro : DARK }}>{fmt(displayPrice)}</span>
                       {!variantPrice && modalProduct.comparePrice && <span style={{ fontSize:15, color:MID, textDecoration:"line-through" }}>{fmt(modalProduct.comparePrice)}</span>}
                     </>
                   )}
@@ -2627,7 +2679,7 @@ export default function UrbanPulse() {
                             {avisoPromo(p)}
                           </div>
                           <p style={{ margin:"8px 0 2px", fontSize:12, color:DARK, overflow:"hidden", display:"-webkit-box", WebkitLineClamp:1, WebkitBoxOrient:"vertical" as const }}>{p.name}</p>
-                          <PromoPrice product={p} promotions={promotions} fmt={fmt} accent={DARK} sobre={DARK}
+                          <PromoPrice product={p} promotions={promotions} fmt={fmt} accent={DARK} rebajado={rebajadoClaro} sobre={DARK}
                             priceSize={13} weight={900} ocultarPrecios={ocultarPrecios} />
                         </div>
                       ))}

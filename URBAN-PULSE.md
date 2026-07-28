@@ -21,8 +21,9 @@ Los números de línea son los del día de la revisión: se corren a medida que 
 | ~~UP-11~~ | ~~Quedaban 5 lugares donde el acento no se adapta, y las promos se ven iguales a Chic Paris~~ | Alta | **hecho** 28/07 |
 | ~~UP-12~~ | ~~La ficha de producto era la de Chic Paris con otra ropa~~ | Alta | **hecho** 28/07 |
 | ~~UP-13~~ | ~~El bloque destacado muestra el octavo producto de la lista, con una ficha inventada~~ | Alta | **hecho** 28/07 |
+| ~~UP-14~~ | ~~El precio se pinta de ocho maneras distintas, con dos rojos que nadie eligió juntos~~ | Alta | **hecho** 28/07 |
 
-**Los trece puntos están cerrados.** Del UP-9 en adelante ya no salieron de la auditoría original:
+**Los catorce puntos están cerrados.** Del UP-9 en adelante ya no salieron de la auditoría original:
 los reportó Flavio mirando su propia tienda o los pidió él. UP-9 lo vio con una captura, y UP-10 fue
 un pedido suyo — traer las reseñas de verdad
 al bloque de opiniones. Lo que queda anotado no es de este template: está en
@@ -1196,3 +1197,67 @@ lista de 340px.
 
 `tsc` y eslint limpios, `/plantillas/urban-pulse` y `/tienda/tiendaapps` en 200. **La revisión visual
 queda de Flavio**, acá no hay navegador.
+
+### UP-14 — El precio se pintaba de ocho maneras, con dos rojos distintos ✅
+
+Flavio: *"noto que el acento está desentendido con todo el template, como que siento que hay un bug, y
+en algunos lados el precio está en rojo, ¿por qué? No sé si me gusta mucho eso"*. Las dos cosas eran
+el mismo bug.
+
+| Bloque | Precio normal | Precio rebajado |
+|---|---|---|
+| Grilla del catálogo | negro | rojo `#e63329` |
+| Vista rápida | negro | rojo `#e63329` |
+| Destacado | **acento** | rojo `#dc2626` |
+| Ofertas | **acento** | rojo `#dc2626` |
+| Lo más visto | **acento** | rojo `#dc2626` |
+| Buscador | **acento** | rojo `#dc2626` |
+| Favoritos | negro | rojo `#dc2626` |
+| Similares | negro | rojo `#dc2626` |
+
+**Por qué el acento se sentía suelto.** Aparecía en el precio de **4 lugares de 8** y en los otros 4
+el precio era negro, sin ninguna regla: dependía de si ese bloque usaba `PromoPrice` o tenía el precio
+escrito a mano. No era una impresión.
+
+**Los dos rojos.** `#e63329` estaba escrito en el template y `#dc2626` adentro de `PromoPrice`. Nadie
+los eligió juntos: son dos caminos distintos que nadie cruzó. Y los dos son fijos — ignoran el fondo
+de la sección, que es editable. Medidos daban entre 3,97 y 4,83: nunca ilegibles, porque son números
+grandes y en negrita, pero nunca bien tampoco.
+
+**La regla nueva, una sola para los ocho:** el precio normal usa el color de texto de su sección, y el
+rebajado usa el **acento**. El acento pasa a significar una sola cosa en toda la tienda.
+
+`PromoPrice` recibe una prop `rebajado` que por defecto sigue siendo el rojo de siempre, así que **los
+otros nueve templates no cambian en nada**.
+
+**Los dos agujeros que aparecieron al verificarlo**, los dos encontrados midiendo y no mirando:
+
+1. **El acento no siempre puede ser el precio.** Si es casi blanco o casi negro coincide con el color
+   del texto de la sección y el descuento deja de notarse. Para esos casos queda el rojo — pero
+   aclarado u oscurecido hasta despegarse de ESE fondo, no el fijo de antes.
+2. **El contraste de WCAG no sirve para preguntar "¿se ven distintos?".** Mide solo luminosidad: dice
+   que el neón `#d4ff00` y el blanco son casi el mismo color (1,16) cuando a la vista no se parecen en
+   nada. Con ese criterio el acento no habría entrado nunca. Se compara la distancia en RGB, que sí
+   toma el tono: 60 sobre un máximo de 441.
+
+Verificado con cinco acentos sobre las dos superficies reales. En las diez combinaciones el precio
+rebajado se lee sobre su fondo **y** se distingue del normal:
+
+| Acento | Tarjeta (blanca) | Ofertas (negro) |
+|---|---|---|
+| neón `#d4ff00` | rojo — el neón sobre blanco da 1,16 | **acento** (16,52) |
+| blanco | rojo | rojo — el acento sería el mismo color que el precio normal |
+| casi negro | rojo | rojo |
+| terracota `#b5652a` | **acento** (4,32) | **acento** (4,44) |
+| azul `#1d4ed8` | **acento** (6,70) | rojo — el azul sobre negro da 2,86 |
+
+O sea: **con un acento blanco el precio nunca puede llevarlo**, porque es el color del texto. Para
+verlo en los precios hace falta un acento con color; con el neón de fábrica aparece en las secciones
+oscuras.
+
+De paso, el `% OFF` de la vista rápida era verde sobre verde claro —un tercer color en el mismo
+renglón, sin relación con nada— y pasa a usar el mismo color del precio rebajado. El rojo queda en un
+solo lugar de todo el template: el fondo del sello "Sale", que es una etiqueta y no un precio.
+
+`tsc` y eslint limpios. `/plantillas/urban-pulse`, `/plantillas/chic-paris` y `/tienda/tiendaapps` en
+200, verificados en un servidor propio que quedó apagado.

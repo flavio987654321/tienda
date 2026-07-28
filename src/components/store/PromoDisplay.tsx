@@ -212,6 +212,7 @@ export function PromoPrice({
   gap = 6,
   align = "baseline",
   sobre,
+  rebajado,
   style,
 }: {
   /** El producto tal cual viene del storefront. `comparePrice` es opcional: sin él, no se tacha nada. */
@@ -229,6 +230,17 @@ export function PromoPrice({
   consultaLabel?: string;
   gap?: number;
   align?: CSSProperties["alignItems"];
+  /**
+   * Color del precio cuando SÍ hay descuento. Sin esta prop sigue siendo el rojo
+   * de siempre, así que los templates que no la pasan no cambian en nada.
+   *
+   * Existe porque el rojo es un color FIJO: no mira el fondo de la sección —que
+   * la dueña puede editar— ni tiene relación con la paleta del template. Sobre
+   * los fondos de Urban Pulse daba entre 3,97 y 4,83 de contraste: nunca
+   * ilegible, porque son números grandes y en negrita, pero nunca bien tampoco. Y
+   * el día que alguien pone un fondo rojizo, el precio de oferta desaparece.
+   */
+  rebajado?: string;
   /**
    * Color de TEXTO del bloque donde se dibuja este precio (el que el template ya
    * eligió para que contraste con el fondo de esa sección). De ahí sale el color
@@ -256,12 +268,13 @@ export function PromoPrice({
 
   const promo = resolveProductPromo(product, promotions);
 
-  // Hay promo de tienda: el precio baja de verdad. Va en rojo —el mismo que usa la
-  // grilla del catálogo— para que se lea distinto del precio normal en acento.
+  // Hay promo de tienda: el precio baja de verdad, y se pinta distinto del normal
+  // para que se note. Por defecto el rojo de siempre; el template puede pasar el
+  // suyo con `rebajado` (ver el comentario de la prop).
   if (promo.hasPriceDrop) {
     return (
       <div style={wrap}>
-        <span style={{ fontSize: priceSize, fontWeight: weight, color: "#dc2626" }}>{fmt(promo.effectivePrice)}</span>
+        <span style={{ fontSize: priceSize, fontWeight: weight, color: rebajado ?? "#dc2626" }}>{fmt(promo.effectivePrice)}</span>
         {compareSize != null && (
           <span style={{ fontSize: compareSize, ...tachado }}>{fmt(promo.originalPrice)}</span>
         )}
