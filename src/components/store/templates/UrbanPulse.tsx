@@ -135,6 +135,8 @@ export default function UrbanPulse() {
   // miles de píxeles de alto y el comprador tiene que scrollear a ciegas para
   // llegar a los similares. El formulario solo, son ~110px de campos que casi
   // nadie va a usar en esa visita.
+  const [featuredPanel,     setFeaturedPanel]     = useState(false);
+  const [featuredBusqueda,  setFeaturedBusqueda]  = useState("");
   const [descAbierta,       setDescAbierta]       = useState(false);
   const [formResenaAbierto, setFormResenaAbierto] = useState(false);
   const [showReport,     setShowReport]     = useState(false);
@@ -583,7 +585,51 @@ export default function UrbanPulse() {
     return true;
   }), [products, activeGender, activeCategory]);
   const filtered    = allFiltered.slice(0, visibleCount);
-  const featuredProduct  = products[7] ?? products[0] ?? null;
+  // ── Qué producto muestra el bloque destacado ───────────────────────────────
+  // Era `products[7] ?? products[0]`: el OCTAVO de la lista. La dueña no podía
+  // elegirlo, y cambiaba solo —sin avisar— cada vez que agregaba o borraba un
+  // producto y ese lugar pasaba a ser otro.
+  //
+  // La configuración es de ESTE bloque y no del producto. La tienda tiene además
+  // una marca "destacado" en la ficha de cada producto, pero es global y cada
+  // template la usa a su manera (Casa Clara y Electro Prime arman con ella una
+  // grilla entera): atar este bloque a esa marca haría que tocar una cosa moviera
+  // la otra. Se guarda en `textOverrides`, igual que el índice de ícono de las
+  // garantías, así se configura desde el bloque mismo y viaja con el resto del
+  // diseño al guardar.
+  //
+  // `featuredRotacion` son horas: 0 apagado, o 6 / 12 / 24.
+  const featuredElegidoId = textOverrides["featuredProductId"]?.text ?? "";
+  const featuredRotacionHs = Number(textOverrides["featuredRotacion"]?.text ?? "0") || 0;
+  // El reloj se lee UNA vez, al montar, y no durante el render: leerlo en pleno
+  // render es impuro —dos renders seguidos pueden caer en franjas distintas— y el
+  // linter de React lo rechaza con razón. Con el valor guardado, la elección
+  // queda quieta mientras la página está abierta, que es justo lo que se quiere:
+  // el producto no se le tiene que cambiar por debajo a quien lo está mirando.
+  // Va como inicializador perezoso de `useState` —la forma que React tiene
+  // justamente para esto— y no suelto en el cuerpo del componente ni en un
+  // efecto: suelto es impuro y en un efecto encadena un render de más. Así se
+  // evalúa una sola vez y queda quieto.
+  const [relojFeatured] = useState(() => Date.now());
+  const featuredProduct = useMemo(() => {
+    if (products.length === 0) return null;
+    if (featuredRotacionHs > 0) {
+      // Determinista dentro de cada ventana: todos los que entran en la misma
+      // franja horaria ven el mismo producto, y cambia solo al pasar a la
+      // siguiente. No hace falta ningún temporizador — nadie deja la página
+      // abierta seis horas— ni rompe la hidratación, porque `products` llega por
+      // fetch y en el servidor este bloque todavía no existe.
+      //
+      // Va en ciclo y no al azar de verdad: sorteando cada franja, el mismo
+      // producto puede salir tres veces seguidas y otro no salir nunca. Así todos
+      // tienen su turno y ninguno se repite pegado.
+      const franja = Math.floor(relojFeatured / (featuredRotacionHs * 3600_000));
+      return products[franja % products.length];
+    }
+    // Si el producto elegido se borró, cae al primero en vez de dejar el bloque
+    // vacío.
+    return (featuredElegidoId ? products.find(p => p.id === featuredElegidoId) : null) ?? products[0];
+  }, [products, featuredElegidoId, featuredRotacionHs, relojFeatured]);
 
   const similarProducts = useMemo(() => {
     if (!modalProduct) return [];
@@ -1109,6 +1155,89 @@ export default function UrbanPulse() {
       {featuredProduct && (
       <section id="featured" data-reveal style={{ background:featuredBg, padding:"80px 40px", position:"relative" }}>
         <EditableSectionBg field="bgFeatured" label="Fondo featured" />
+
+        {/* ── Elegir qué producto se destaca ────────────────────────────────
+            Vive acá adentro y no en el panel de configuración: es un ajuste de
+            ESTE bloque, y se decide mirándolo. Lo mismo que el botón de cambiar
+            ícono de las garantías, que también se resuelve sobre el bloque.
+            `zIndex` por encima de 200, que es donde `SectionBlock` pone sus
+            propios controles. */}
+        {editMode && (
+          <div style={{ position:"absolute", top:14, right:14, zIndex:210 }}>
+            <button onClick={() => setFeaturedPanel(o => !o)}
+              title="Elegir qué producto se muestra acá"
+              style={{ background: featuredPanel ? "rgba(99,102,241,0.95)" : "rgba(0,0,0,0.72)", color:"#fff",
+                       border:"1.5px solid rgba(255,255,255,0.4)", borderRadius:7, padding:"5px 12px",
+                       fontSize:11, fontWeight:700, letterSpacing:0.3, cursor:"pointer",
+                       display:"flex", alignItems:"center", gap:6, backdropFilter:"blur(8px)",
+                       boxShadow:"0 2px 8px rgba(0,0,0,0.45)" }}>
+              ◆ {featuredRotacionHs > 0 ? `Rota cada ${featuredRotacionHs}h` : "Elegir producto"}
+            </button>
+
+            {featuredPanel && (
+              <div style={{ position:"absolute", top:36, right:0, width:270, maxHeight:340, overflowY:"auto",
+                            background:"rgba(17,17,17,0.97)", border:"1px solid rgba(255,255,255,0.18)", borderRadius:10,
+                            boxShadow:"0 12px 32px rgba(0,0,0,0.55)", padding:12, backdropFilter:"blur(10px)" }}>
+                <p style={{ margin:"0 0 8px", fontSize:10, fontWeight:800, letterSpacing:1.5, textTransform:"uppercase", color:"rgba(255,255,255,0.5)" }}>
+                  Ir cambiando solo
+                </p>
+                <div style={{ display:"flex", gap:5, marginBottom:14 }}>
+                  {[["0","No"],["6","6 h"],["12","12 h"],["24","24 h"]].map(([valor, etiqueta]) => {
+                    const activo = String(featuredRotacionHs) === valor;
+                    return (
+                      <button key={valor} onClick={() => setOverride("featuredRotacion", { text: valor })}
+                        style={{ flex:1, background: activo ? "#6366f1" : "rgba(255,255,255,0.08)", color:"#fff",
+                                 border:`1px solid ${activo ? "#6366f1" : "rgba(255,255,255,0.15)"}`, borderRadius:6,
+                                 padding:"6px 0", fontSize:11, fontWeight:700, cursor:"pointer" }}>
+                        {etiqueta}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Con la rotación puesta, elegir uno a mano no haría nada: se
+                    avisa en vez de dejar una lista que no obedece. */}
+                {featuredRotacionHs > 0 ? (
+                  <p style={{ margin:0, fontSize:11, lineHeight:1.5, color:"rgba(255,255,255,0.55)" }}>
+                    Va pasando por todos tus productos, uno por cada ventana de {featuredRotacionHs} horas.
+                    Poné <strong style={{ color:"#fff" }}>No</strong> si querés elegir uno fijo.
+                  </p>
+                ) : (
+                  <>
+                    <p style={{ margin:"0 0 8px", fontSize:10, fontWeight:800, letterSpacing:1.5, textTransform:"uppercase", color:"rgba(255,255,255,0.5)" }}>
+                      Cuál mostrar
+                    </p>
+                    {/* Buscador: una tienda con doscientos productos no se
+                        resuelve scrolleando una lista de 340px. */}
+                    <input value={featuredBusqueda} onChange={e => setFeaturedBusqueda(e.target.value)}
+                      placeholder="Buscar por nombre…"
+                      style={{ width:"100%", boxSizing:"border-box", marginBottom:8, background:"rgba(255,255,255,0.08)",
+                               border:"1px solid rgba(255,255,255,0.15)", borderRadius:6, padding:"6px 9px",
+                               fontSize:11.5, color:"#fff", outline:"none", fontFamily:"inherit" }} />
+                    <div style={{ display:"flex", flexDirection:"column", gap:2 }}>
+                      {products
+                        .filter(p => p.name.toLowerCase().includes(featuredBusqueda.trim().toLowerCase()))
+                        .map(p => {
+                        const activo = p.id === featuredProduct.id;
+                        return (
+                          <button key={p.id} onClick={() => { setOverride("featuredProductId", { text: p.id }); setFeaturedPanel(false); }}
+                            style={{ display:"flex", alignItems:"center", gap:9, width:"100%", textAlign:"left",
+                                     background: activo ? "rgba(99,102,241,0.28)" : "none", border:"none", borderRadius:6,
+                                     padding:"5px 6px", cursor:"pointer", color:"#fff" }}>
+                            <span style={{ position:"relative", width:26, height:34, flexShrink:0, background:"rgba(255,255,255,0.08)", overflow:"hidden", borderRadius:3 }}>
+                              {p.images[0] && <FadeImage src={p.images[0]} alt="" fill sizes="26px" style={{ objectFit:"cover" }} />}
+                            </span>
+                            <span style={{ fontSize:11.5, lineHeight:1.3, overflow:"hidden", display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical" as const }}>{p.name}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+        )}
         <div style={{ maxWidth:1100, margin:"0 auto", display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap:0, alignItems:"center" }}>
           <div style={{ position:"relative", width:"100%", aspectRatio:"3/4" }}>
             {featuredProduct.images[0] && <FadeImage src={featuredProduct.images[0]} alt={featuredProduct.name} fill sizes="(max-width: 768px) 100vw, 50vw" style={{ objectFit:"cover" }} />}
@@ -1125,17 +1254,55 @@ export default function UrbanPulse() {
             <h2 style={{ color:featuredText, fontSize:"clamp(32px,4vw,50px)", fontWeight:900, textTransform:"uppercase", lineHeight:1.05, margin:"0 0 20px", letterSpacing:"-1px" }}>
               {featuredProduct.name}
             </h2>
-            <p style={{ color:featuredText, opacity:0.45, fontSize:14, lineHeight:1.8, marginBottom:28 }}>
-              <EditableZone field="featuredDescription" label="Descripción featured">Tecnología de compresión avanzada para máximo soporte muscular y recuperación activa. Perfecto para entrenamiento de alta intensidad.</EditableZone>
-            </p>
-            <div style={{ marginBottom:32 }}>
-              {[["Material","87% Nylon · 13% Elastane"],["Tecnología","4-Way Stretch"],["Uso","Gym · Running · Training"]].map(([k,v]) => (
-                <div key={k} style={{ display:"flex", justifyContent:"space-between", padding:"10px 0", borderBottom:`1px solid ${featuredText === WHITE ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)"}` }}>
-                  <span style={{ color:featuredText, opacity:0.35, fontSize:11, fontWeight:800, letterSpacing:2, textTransform:"uppercase" }}>{k}</span>
-                  <span style={{ color:featuredText, fontSize:12 }}>{v}</span>
+            {/* ── La descripción, ahora del producto ──────────────────────────
+                Era un texto fijo sobre tecnología de compresión: un vestido se
+                anunciaba como ropa de gimnasio, y una tienda de muebles habría
+                mostrado lo mismo. El texto editable sigue existiendo, pero pasa a
+                ser el respaldo para cuando el producto no trae descripción —así
+                nadie pierde lo que ya escribió y el bloque nunca queda vacío. */}
+            {/* Solo lo básico: el texto sin etiquetas y recortado a tres
+                renglones. La descripción completa la escribe la dueña en un editor
+                de texto rico y puede traer listas, una imagen pegada o veinte
+                renglones — acá adentro eso estira la columna y descuadra el bloque.
+                Con la rotación sería peor: cada producto la tiene de un largo
+                distinto y el bloque cambiaría de alto solo, cada seis horas.
+                No lleva "ver más": el botón de abajo ya va a la ficha, y dos
+                salidas al mismo lugar le comen fuerza a la principal. */}
+            {featuredProduct.description ? (
+              <p style={{ color:featuredText, opacity:0.55, fontSize:14, lineHeight:1.8, marginBottom:28,
+                          display:"-webkit-box", WebkitLineClamp:3, WebkitBoxOrient:"vertical" as const, overflow:"hidden" }}>
+                {featuredProduct.description.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim()}
+              </p>
+            ) : (
+              <p style={{ color:featuredText, opacity:0.45, fontSize:14, lineHeight:1.8, marginBottom:28 }}>
+                <EditableZone field="featuredDescription" label="Descripción featured">Contanos en una línea por qué este producto vale la pena.</EditableZone>
+              </p>
+            )}
+            {/* ── La ficha, ahora de los atributos del producto ───────────────
+                Las tres filas estaban escritas a mano en el código —"87% Nylon",
+                "4-Way Stretch", "Gym · Running · Training"— y ni siquiera eran
+                editables. Ahora salen de los atributos que la dueña ya carga en la
+                ficha del producto, los mismos que muestra la vista rápida.
+                Si el producto no tiene ninguno, la tabla no aparece: mejor un
+                bloque más corto que tres datos inventados. Se saltean "Servicios"
+                —que se guarda como JSON y se dibuja aparte— y "Condición", que en
+                la vista rápida va como sello y no como fila. */}
+            {(() => {
+              const ficha = (featuredProduct.attributes ?? [])
+                .filter(a => a.key !== "Servicios" && a.key !== "Condición")
+                .slice(0, 3);
+              if (ficha.length === 0) return null;
+              return (
+                <div style={{ marginBottom:32 }}>
+                  {ficha.map(a => (
+                    <div key={a.key} style={{ display:"flex", justifyContent:"space-between", alignItems:"baseline", gap:16, padding:"10px 0", borderBottom:`1px solid ${featuredText === WHITE ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)"}` }}>
+                      <span style={{ color:featuredText, opacity:0.35, fontSize:11, fontWeight:800, letterSpacing:2, textTransform:"uppercase", flexShrink:0 }}>{a.key}</span>
+                      <span style={{ color:featuredText, fontSize:12, textAlign:"right", minWidth:0, overflowWrap:"anywhere" }}>{a.value}</span>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              );
+            })()}
             {/* UP-1 — Este precio estaba escrito a mano con `fmt(featuredProduct.price)`
                 y era el único de la tienda que NO consultaba las promociones. Con una
                 promo del 20% vigente, el bloque más grande de la página decía $50.000
@@ -1150,9 +1317,21 @@ export default function UrbanPulse() {
             {/* En "chip" y no en la foto: esa esquina ya la ocupa el `badge` propio
                 del producto, y PromoTag se posiciona justo ahí. */}
             <div style={{ marginBottom:24 }}>{avisoPromo(featuredProduct, "chip")}</div>
+            {/* El botón decía "Agregar al Carrito" y no agrega nada: abre la
+                ficha. Y no es que faltara implementarlo — `addToCart` lee el
+                producto, el talle y el color del estado del modal, así que fuera
+                de él no tiene qué agregar. Tampoco debería: en un template de
+                moda todo tiene talle, y meter "el que venga" en el carrito es un
+                cambio, un reclamo o una venta perdida.
+                Así que dice lo que hace, pero sin apagarse: "Ver producto" es
+                flojo para el botón más grande de la página. El texto se arma con
+                lo que el producto realmente pide elegir. */}
             <button onClick={() => isInquiryMode ? openInquiry(featuredProduct) : openModal(featuredProduct)}
               style={{ width:"100%", background:ACC, color:accentText, border:"none", padding:"18px", fontSize:11, fontWeight:900, letterSpacing:4, textTransform:"uppercase", cursor:"pointer" }}>
-              {isInquiryMode ? "Consultar disponibilidad" : "Agregar al Carrito"}
+              {isInquiryMode              ? "Consultar disponibilidad"
+               : featuredProduct.sizes.length  > 0 ? "Elegir talle y comprar"
+               : featuredProduct.colors.length > 0 ? "Elegir color y comprar"
+               : "Comprar"}
             </button>
           </div>
         </div>

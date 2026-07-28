@@ -19,9 +19,12 @@ Los números de línea son los del día de la revisión: se corren a medida que 
 | ~~UP-9~~ | ~~Con un fondo en degradado, el botón "Ver colección completa" queda sin texto~~ | Alta | **hecho** 27/07 |
 | ~~UP-10~~ | ~~El bloque de opiniones son cuatro personas inventadas en el código~~ | Alta | **hecho** 28/07 |
 | ~~UP-11~~ | ~~Quedaban 5 lugares donde el acento no se adapta, y las promos se ven iguales a Chic Paris~~ | Alta | **hecho** 28/07 |
+| ~~UP-12~~ | ~~La ficha de producto era la de Chic Paris con otra ropa~~ | Alta | **hecho** 28/07 |
+| ~~UP-13~~ | ~~El bloque destacado muestra el octavo producto de la lista, con una ficha inventada~~ | Alta | **hecho** 28/07 |
 
-**Los once puntos están cerrados.** Los dos últimos no salieron de la auditoría: UP-9 lo reportó
-Flavio con una captura de su propia tienda, y UP-10 fue un pedido suyo — traer las reseñas de verdad
+**Los trece puntos están cerrados.** Del UP-9 en adelante ya no salieron de la auditoría original:
+los reportó Flavio mirando su propia tienda o los pidió él. UP-9 lo vio con una captura, y UP-10 fue
+un pedido suyo — traer las reseñas de verdad
 al bloque de opiniones. Lo que queda anotado no es de este template: está en
 [Notas para cuando se arregle](#notas-para-cuando-se-arregle).
 
@@ -1128,3 +1131,68 @@ Las dos flechas van siempre, aunque una esté deshabilitada: si desapareciera la
 la pastilla cambiaría de ancho al mover un bloque y la otra flecha se correría de abajo del mouse.
 
 Le llega a los diez templates de una.
+
+### UP-13 — El bloque destacado mostraba el octavo producto de la lista, con una ficha inventada ✅
+
+Flavio, mirando el bloque: *"tenemos que hacer que ese bloque sea editable, no solamente el fondo;
+que podamos elegir qué producto mostrar, y con la opción de que sea aleatorio cada 6, 12 o 24 horas"*.
+
+**Lo que había.** Cuatro cosas, y ninguna era de diseño:
+
+1. **El producto era `products[7] ?? products[0]`** — el octavo de la lista. La dueña no podía
+   elegirlo, y cambiaba solo, sin avisar, cada vez que agregaba o borraba un producto y ese lugar
+   pasaba a ser otro.
+2. **La ficha técnica estaba escrita a mano en el código**: `[["Material","87% Nylon · 13% Elastane"],
+   ["Tecnología","4-Way Stretch"],["Uso","Gym · Running · Training"]]`. Ni salía del producto ni era
+   editable. Un **vestido midi** se anunciaba como ropa de compresión para gimnasio, y una tienda de
+   muebles habría mostrado exactamente lo mismo.
+3. **La descripción tampoco era la del producto**: un texto fijo sobre tecnología de compresión.
+4. **El botón decía "Agregar al Carrito" y no agregaba nada**: abre la ficha.
+
+**Dónde se guarda la elección.** En `textOverrides`, igual que el índice de ícono de las garantías, y
+se configura **desde el bloque mismo** — no hay pantalla nueva en el dashboard. Dos claves:
+`featuredProductId` y `featuredRotacion` (horas: 0, 6, 12 o 24).
+
+Se evaluó atarlo a la marca **"destacado"** que ya tiene la ficha de cada producto y que usan Casa
+Clara, Electro Prime y Home Studio. **Se descartó**: esa marca es global y cada template la usa a su
+manera —allá arma una grilla entera—, así que tocar una cosa habría movido la otra. Flavio lo pidió
+explícitamente: *"este es para este template, tiene que ser personal para este template"*.
+
+**La rotación.** Cada 6, 12 o 24 horas, a elección, y apagada por defecto.
+
+- No hay temporizador. Nadie deja la página abierta seis horas, así que la ventana se calcula una vez
+  y listo. Y no debe cambiar mientras alguien mira: el bloque tiene precio y botón de comprar.
+- **No rompe la hidratación**, que era la duda inicial: `products` llega por `fetch` en el cliente
+  (`useStorefront`), así que en el servidor este bloque directamente no existe.
+- El reloj se lee con el **inicializador perezoso de `useState`**, no suelto en el render ni en un
+  efecto. El linter de React rechaza las dos: leerlo suelto es impuro y en un efecto encadena un
+  render de más. Las dos veces tenía razón.
+- Va **en ciclo y no sorteando**: sorteando cada ventana, el mismo producto puede salir tres veces
+  seguidas y otro no salir nunca. Así todos tienen su turno y ninguno se repite pegado.
+
+**La ficha y la descripción, ahora del producto.** Los atributos que la dueña ya carga —los mismos que
+muestra la vista rápida— y su descripción. Si el producto no tiene atributos, la tabla **no aparece**:
+mejor un bloque más corto que tres datos inventados. El texto editable que había sigue existiendo,
+pero pasa a ser el respaldo para cuando el producto no trae descripción, así nadie pierde lo que ya
+escribió. Sin esto, la rotación habría empeorado el problema: mañana rota a otra prenda y sigue
+diciendo "4-Way Stretch".
+
+De la descripción se muestra **solo lo básico: el texto sin etiquetas, recortado a tres renglones**.
+La escribe la dueña en un editor de texto rico y puede traer listas, una imagen pegada o veinte
+renglones; ahí adentro eso estira la columna y descuadra el bloque. Con la rotación sería peor: cada
+producto la tiene de un largo distinto y el bloque cambiaría de alto solo, cada seis horas. No lleva
+"ver más" — el botón de abajo ya va a la ficha, y dos salidas al mismo lugar le comen fuerza a la
+principal.
+
+**El botón.** No es que faltara implementar el agregar: `addToCart` lee el producto, el talle y el
+color del estado del modal, así que fuera de él no tiene qué agregar. Y tampoco debería —en un
+template de moda todo tiene talle, y meter "el que venga" es un cambio, un reclamo o una venta
+perdida—. Dice lo que hace, pero sin apagarse: *"Ver producto"* es flojo para el botón más grande de
+la página. Se arma con lo que el producto realmente pide elegir: **"Elegir talle y comprar"**,
+**"Elegir color y comprar"** o **"Comprar"**.
+
+El panel de edición lleva buscador: una tienda con doscientos productos no se resuelve scrolleando una
+lista de 340px.
+
+`tsc` y eslint limpios, `/plantillas/urban-pulse` y `/tienda/tiendaapps` en 200. **La revisión visual
+queda de Flavio**, acá no hay navegador.
