@@ -616,6 +616,91 @@ tocar "Ver colección completa". Ahora hay una tabla `template → paleta` en un
 
 ---
 
+### UP-12 — La ficha de producto era la de Chic Paris con otra ropa ✅
+
+Pedido de Flavio: *"vamos con los modales de urban pulse, ¿cómo podemos hacer para que sean
+diferentes a Chic Paris? Obvio que tenemos que pensar en todo: los reels, descripción, productos
+similares, etc. Las imágenes, las miniaturas, agrandar más el modal"* y, enseguida: *"tenemos que
+pensar qué va a pasar cuando hay más descripción o más reseñas, que no rompa el modal"*.
+
+**El diagnóstico.** Cambiaban los bordes y la tipografía; el esqueleto era el mismo. Foto a la
+izquierda, **todo** lo demás apilado en la columna derecha, similares abajo a lo ancho. Y más chico:
+860px contra los 980 de Chic Paris.
+
+Esa estructura es justo la que se rompe con contenido largo. Todo lo pesado —descripción, ficha,
+videos, reseñas y el formulario— vivía en una columna de ~370px:
+
+- con un producto real esa columna mide varios miles de píxeles;
+- el botón de comprar se va de pantalla a los dos scrolls y no vuelve;
+- al lado de la foto queda un vacío enorme, porque la foto ocupa 500px de una columna de 3000.
+
+**La estructura nueva** (elegida por Flavio entre tres): **panel de compra fijo**. La derecha lleva
+solo lo que hace falta para comprar y queda clavada (`position:sticky`) mientras la izquierda —foto,
+descripción, ficha, videos, reseñas, similares— corre por debajo. El precio y el botón están siempre
+a la vista y **el modal mide lo mismo con dos reseñas que con doscientas**.
+
+```
+┌──────────────────────────────────────────────┐
+│ ▪ ┌────────────────┐  │ REMERA OVERSIZE   ✕ │
+│ ▪ │      FOTO      │  │ $24.900             │
+│ ▪ │     GRANDE     │  │ ★★★★★ 4.6 · 47      │
+│ ▪ └────────────────┘  │ TALLE / COLOR / CANT│
+│ ──────────────────    │ [ AGREGAR ]         │
+│ ▌ DESCRIPCIÓN ────    │                     │
+│ ▌ FICHA TÉCNICA ──    │  ← el panel queda   │
+│ ▌ VIDEOS ─────────    │     fijo mientras   │
+│ ▌ RESEÑAS (47) ───    │     la izquierda    │
+│ ▌ TAMBIÉN TE PUEDE…   │     scrollea        │
+└──────────────────────────────────────────────┘
+```
+
+| | Antes | Ahora |
+|---|---|---|
+| Ancho | 860 | **1080** |
+| Columna de compra | 50% (~400px) | `clamp(300px, 36%, 400px)` |
+| Miniaturas | fila abajo, 58×68, **sin `overflow`** | tira **vertical** al costado, 72×90 |
+| Descripción | ~370px de ancho | ~640px, plegada a 200px con *Leer todo* |
+| Videos | ~370px | ~640px, `ancho` de miniatura 148 |
+| Reseñas | columna de compra | sección propia, comentario a 5 líneas |
+| En celular | flotando a 92vh | pantalla completa, barra de comprar abajo |
+
+**Por qué la tira de miniaturas va en `position:absolute`.** El alto de la fila lo tiene que fijar la
+foto. Si la tira fuera un hermano flex, diez miniaturas estirarían la fila a 1000px y la foto se iría
+con ellas. Con `top:0 bottom:0` mide exactamente lo que la foto y scrollea sola cuando no entran.
+
+**Por qué `minmax(0,1fr)` y no `1fr`.** La descripción la escribe el dueño en un editor de texto rico
+y puede traer una tabla ancha o un link larguísimo sin espacios. Con `1fr` eso estira la columna y
+descuadra el modal entero.
+
+**Por qué el panel además scrollea por dentro.** `sticky` no alcanza si el panel llega a ser más alto
+que la pantalla —un producto con doce talles y ocho colores en un portátil bajito—: el botón de
+comprar quedaría abajo, fuera de alcance.
+
+#### Los cinco desbordes que ya existían
+
+| Dónde | Qué pasaba |
+|---|---|
+| Miniaturas | `display:flex` sin `overflow-x`. Con ocho fotos se salían del modal. Chic Paris sí lo tenía. |
+| Descripción | `.product-rte` no tenía `img{max-width:100%}`. Una imagen pegada en el editor rompía el ancho; un link largo sin espacios, igual. |
+| Ficha técnica | un valor sin espacios (un código de barras, una URL) empujaba la tabla. |
+| Comentario de reseña | sin recorte. Una reseña de 2000 caracteres, con diez más abajo, es un muro. |
+| Formulario de reseña | **sin `maxLength`** — el de la tienda sí los tenía. Se podía escribir un comentario de cincuenta mil caracteres para que el servidor lo rechazara al final. |
+
+El de `.product-rte` se arregló en `globals.css`, así que **vale para los diez templates**.
+
+#### Tres cosas de contraste que aparecieron de paso
+
+- **Los botones de compartir eran invisibles.** Fondo `rgba(255,255,255,0.06)` y borde
+  `rgba(255,255,255,0.12)` sobre el **blanco** del modal —colores heredados de un template oscuro— y
+  el hover pintaba el texto de blanco: al pasar el mouse desaparecían. El verde de WhatsApp al 70%
+  daba 2,0 de contraste (el de marca entero da 1,8).
+- **Cinco usos del acento crudo adentro del modal.** UP-11 barrió la portada y estos quedaron: las
+  estrellas del promedio, las de cada reseña, las del formulario, la barra de distribución y el borde
+  del sello *Verificada*. Con un acento claro se borran sobre el blanco de la ficha. Y las estrellas
+  **vacías** estaban en `DARK`, o sea más marcadas que las llenas.
+- **El texto de la descripción estaba en `#777`**, que sobre blanco da 4,48 y el mínimo para texto
+  normal es 4,5. Para una etiqueta suelta da igual; para un párrafo de veinte líneas, no.
+
 ## Notas para cuando se arregle
 
 - **Cerrados los once puntos**, del UP-1 al UP-11.
@@ -632,8 +717,13 @@ tocar "Ver colección completa". Ahora hay una tabla `template → paleta` en un
   sino **no mirar el fondo de la sección**: el texto se elige midiendo contra la superficie que tiene
   detrás. Quedan sin tocar los seis `border: 2px solid ${navBg}` descritos en UP-9, que sí necesitan
   la conversión porque ahí el color de la sección es lo que se quiere dibujar.
-- **UP-4 está igual en BohoTerra y FashionNoir.** Antes de arreglar el modal de otro template de
-  moda, evaluar extraerlo a `shared/`: los cuatro lo tienen copiado y pegado.
+- **UP-4 está igual en BohoTerra y FashionNoir.** ~~Evaluar extraer el modal a `shared/`.~~
+  **Descartado el 28/07 para el layout**: con UP-12 la ficha de Urban Pulse dejó de tener la
+  estructura de las otras tres a propósito —panel de compra fijo contra columna única—, y Flavio
+  quiere que cada template se vea distinto. Un componente compartido que aguante las dos estructuras
+  sería más difícil de leer que las dos copias. Lo que sí conviene compartir es la **lógica**: el
+  `colorSyncingRef` de UP-4, el recorte del comentario (`ResenaComentario`, ya hecho) y el `fetch` de
+  reseñas del producto, que están escritos igual en los cuatro.
 - ~~**El `accentText` invertido (UP-3D) puede estar en más templates.**~~ **Revisado el 28/07: estaba
   en SEIS.** Ver abajo.
 - Todo cambio visual se revisa en **360 / 768 / 1280**. 768 es donde más se rompe.
@@ -737,3 +827,22 @@ criterios que la clásica, que quedó sin tocar (verificado: peor caso 4.99, el 
 `tsc` y eslint limpios —el error de `setState` en efecto de `productos/page.tsx` es pre-existente, se
 comprobó contra HEAD—, `/plantillas/urban-pulse` y el listado con `?t=urban-pulse` en 200. Nada
 pusheado ni deployado.
+
+**28/07/2026 — UP-12.** La ficha de producto. Flavio eligió, entre tres estructuras, la del **panel
+de compra fijo**: la derecha lleva solo lo necesario para comprar y queda clavada mientras la
+izquierda —foto grande con la tira de miniaturas al costado, descripción, ficha, videos, reseñas y
+similares— corre por debajo. El modal pasa de 860 a 1080 y, en celular, a pantalla completa.
+
+La pregunta que vino junto con el pedido —*"qué va a pasar cuando hay más descripción o más
+reseñas"*— destapó cinco desbordes que ya existían: las miniaturas sin `overflow-x`, la descripción
+sin tope para imágenes ni links largos, un valor de ficha sin espacios que empuja la tabla, el
+comentario de reseña sin recorte y el formulario del producto sin `maxLength` (el de la tienda sí los
+tenía). El de la descripción se arregló en `globals.css`, así que vale para los diez templates.
+
+De paso: los dos botones de compartir eran invisibles —colores de un template oscuro sobre el blanco
+del modal, y el hover pintaba el texto de blanco— y quedaban cinco usos del acento crudo adentro del
+modal que el barrido de UP-11 no había tocado.
+
+`tsc` y eslint limpios, `/plantillas/urban-pulse` en 200. **La revisión visual en 360 / 768 / 1280
+queda pendiente de Flavio**: en esta sesión no había herramienta de navegador, así que el layout está
+verificado por cálculo, no visto. Nada pusheado ni deployado.

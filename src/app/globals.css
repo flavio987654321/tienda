@@ -138,6 +138,16 @@ body {
 .product-rte em { font-style: italic; }
 .product-rte u  { text-decoration: underline; }
 .product-rte a  { text-decoration: underline; color: inherit; }
+/* Contención: la descripción la escribe el dueño en un editor de texto rico y
+   puede traer cualquier cosa. Sin estas reglas, una imagen pegada, un link largo
+   sin espacios o una tabla ancha estiran la columna y descuadran el modal
+   entero — el precio y el botón de comprar se van de pantalla. */
+.product-rte img,
+.product-rte video,
+.product-rte iframe { max-width: 100%; height: auto; display: block; }
+.product-rte { overflow-wrap: anywhere; }
+.product-rte pre { white-space: pre-wrap; overflow-x: auto; }
+.product-rte table { display: block; max-width: 100%; overflow-x: auto; }
 
 /* ── Scroll reveal ── */
 [data-reveal] {

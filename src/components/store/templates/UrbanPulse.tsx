@@ -132,6 +132,13 @@ export default function UrbanPulse() {
   const [reviewHoneypot, setReviewHoneypot] = useState("");
   const reviewCaptcha = useTurnstile("review");
   const [reviewDone,     setReviewDone]     = useState(false);
+  // La columna larga del modal arranca plegada en sus dos partes más pesadas. Sin
+  // esto, un producto con una descripción de catálogo y 40 reseñas nace con varios
+  // miles de píxeles de alto y el comprador tiene que scrollear a ciegas para
+  // llegar a los similares. El formulario solo, son ~110px de campos que casi
+  // nadie va a usar en esa visita.
+  const [descAbierta,       setDescAbierta]       = useState(false);
+  const [formResenaAbierto, setFormResenaAbierto] = useState(false);
   const [showReport,     setShowReport]     = useState(false);
   const [lightboxSrc,    setLightboxSrc]    = useState<string|null>(null);
   useEffect(() => {
@@ -360,6 +367,18 @@ export default function UrbanPulse() {
       </span>
     );
   };
+  // ── El título de cada sección larga de la ficha ────────────────────────────
+  // Barra corta en el acento, la etiqueta en mayúsculas y una línea que se come
+  // el resto del ancho. Es lo que separa esta ficha de la de Chic Paris, que
+  // titula centrado y en serif. La barra usa `accSobreClaro` y no `ACC` crudo:
+  // con un acento casi blanco, sobre el blanco del modal desaparecería.
+  const tituloModal = (texto: string) => (
+    <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:16 }}>
+      <span style={{ width:24, height:4, background:accSobreClaro, flexShrink:0 }} />
+      <span style={{ fontSize:11, fontWeight:900, letterSpacing:3, textTransform:"uppercase", color:DARK, whiteSpace:"nowrap" }}>{texto}</span>
+      <span style={{ flex:1, height:1, background:`${DARK}1f`, minWidth:0 }} />
+    </div>
+  );
   const variantPrice = modalProduct ? resolveVariantPrice(modalProduct.variants, selectedSize, selectedColor) : null;
   const displayPrice = variantPrice ?? (modalProduct?.price ?? 0);
   const modalPromo = modalProduct ? resolveProductPromo({ id: modalProduct.id, price: displayPrice, category: modalProduct.category }, promotions) : null;
@@ -407,6 +426,10 @@ export default function UrbanPulse() {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- limpia las reseñas del producto anterior al cerrar el modal; depende de una interacción, no se puede calcular durante el render
     if (!modalProduct || !slug) { setReviews([]); return; }
     setReviewsLoading(true); setReviewDone(false); setReviewsShown(5);
+    // Se pliegan de nuevo al cambiar de producto: si quedaran abiertas, abrir un
+    // similar desde el pie del modal te deja mirando la mitad de una descripción
+    // que no es la que pediste.
+    setDescAbierta(false); setFormResenaAbierto(false);
     setReviewForm(p => ({ ...p, rating: 5, comment: "" }));
     fetch(`/api/public/${slug}/reviews?productId=${modalProduct.id}`)
       .then(r => r.ok ? r.json() : { reviews: [] })
@@ -1782,14 +1805,59 @@ export default function UrbanPulse() {
       {modalProduct && (
         <div className="up-fade" style={{ position:"fixed", inset:0, zIndex: isPreview ? 20000 : 600 }}>
           <div onClick={() => setModalProduct(null)} style={{ position:"absolute", inset:0, background:"rgba(0,0,0,0.7)" }} />
-          <div style={{ position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center", padding:24 }}>
-            <div style={{ background:WHITE, width:"100%", maxWidth:860, maxHeight: isPreview ? "100%" : "92vh", overflow:"hidden", display:"flex", flexDirection:"column", position:"relative" }}>
+          <div style={{ position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center", padding: isMobile ? 0 : 24 }}>
+            {/* ── La ficha de producto de Urban Pulse ───────────────────────────
+                Chic Paris apila TODO en la columna derecha: descripción, ficha,
+                videos, reseñas y el formulario. Con un producto real esa columna
+                mide varios miles de píxeles: el botón de comprar se va de pantalla
+                a los dos scrolls y al lado de la foto queda un vacío enorme.
+                Acá la derecha lleva SOLO lo que hace falta para comprar y queda
+                clavada mientras la izquierda —foto, descripción, ficha, videos,
+                reseñas, similares— corre por debajo. El precio y el botón están
+                siempre a la vista, y da igual si la descripción tiene tres líneas
+                o tres pantallas: el modal mide lo mismo.
+                El ancho pasa de 860 a 1080, y la columna de compra se mide con
+                `clamp`: 36% del modal, nunca menos de 300px ni más de 400. A 768
+                deja 300 para comprar y ~420 para la foto; a 1280, 389 y 691. */}
+            {/* En celular la ficha ocupa la pantalla entera (`height` y `maxHeight`
+                al 100%, sin padding alrededor). Antes quedaba en 92vh y flotando:
+                se veía una franja del fondo arriba y abajo, y la barra de comprar
+                —que va abajo de todo— terminaba a media pantalla. */}
+            <div style={{ background:WHITE, width:"100%", maxWidth:1080, height: isMobile ? "100%" : undefined, maxHeight: (isPreview || isMobile) ? "100%" : "92vh", overflow:"hidden", display:"flex", flexDirection:"column", position:"relative" }}>
               <button onClick={() => { setModalProduct(null); setLightboxSrc(null); }} aria-label="Cerrar" style={{ position:"absolute", top:0, right:0, background:DARK, border:"none", color:accSobreDark, width:40, height:40, fontSize:18, cursor:"pointer", zIndex:10, display:"flex", alignItems:"center", justifyContent:"center" }}>✕</button>
-              <div style={{ overflow:"auto", flex:1, minHeight:0, display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr" }}>
-              <div>
-                <div style={{ position:"relative", width:"100%", aspectRatio:"3/4" }} {...imgSwipe}>
+              {/* `minmax(0,1fr)` y no `1fr`: la descripción la escribe el dueño en
+                  un editor de texto rico y puede traer una tabla ancha o un link
+                  larguísimo sin espacios. Con `1fr` eso estira la columna y
+                  descuadra el modal entero; con el mínimo en 0 manda la columna. */}
+              <div style={{ overflow:"auto", flex:1, minHeight:0,
+                            ...(isMobile
+                              ? { display:"flex", flexDirection:"column" as const }
+                              : { display:"grid", gridTemplateColumns:"minmax(0,1fr) clamp(300px, 36%, 400px)", alignItems:"start" }) }}>
+              <div style={{ ...(isMobile ? {} : { gridColumn:1, gridRow:1 }), minWidth:0, padding: isMobile ? 0 : "26px 26px 0" }}>
+                <div style={{ position:"relative", paddingLeft: (!isMobile && modalProduct.images.length > 1) ? 84 : 0 }}>
+                {/* Miniaturas en tira VERTICAL, al costado. En Chic Paris van abajo
+                    y en fila: ahí cada foto extra le come alto a la foto grande.
+                    Al costado no le sacan nada, y de paso son más grandes (72×90
+                    contra 58×68).
+                    Va en `position:absolute` a propósito: el alto de la fila lo
+                    tiene que fijar la FOTO. Si la tira fuera un hermano flex, diez
+                    miniaturas estirarían la fila a 1000px y la foto se iría con
+                    ellas. Con `top:0 bottom:0` mide exactamente lo que la foto y
+                    scrollea sola cuando no entran. */}
+                {!isMobile && modalProduct.images.length > 1 && (
+                  <div style={{ position:"absolute", left:0, top:0, bottom:0, width:72, overflowY:"auto", scrollbarWidth:"none", display:"flex", flexDirection:"column", gap:8 }}>
+                    {modalProduct.images.map((img, i) => (
+                      <button key={i} onClick={() => setModalImg(i)} aria-label={`Ver foto ${i+1}`}
+                        style={{ position:"relative", width:72, height:90, flexShrink:0, padding:0, cursor:"pointer", overflow:"hidden", background:BG,
+                                 border: i === modalImg ? `3px solid ${DARK}` : `1px solid ${DARK}22`, opacity: i === modalImg ? 1 : 0.5 }}>
+                        <FadeImage src={img} alt="" fill sizes="72px" style={{ objectFit:"cover" }} />
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <div style={{ position:"relative", width:"100%", maxWidth: isMobile ? undefined : 520, aspectRatio:"3/4", background:BG }} {...imgSwipe}>
                   {modalProduct.images[modalImg] && (
-                    <FadeImage src={modalProduct.images[modalImg]} alt={modalProduct.name} fill sizes="(max-width: 768px) 100vw, 420px" style={{ objectFit:"cover", cursor:"zoom-in" }}
+                    <FadeImage src={modalProduct.images[modalImg]} alt={modalProduct.name} fill sizes="(max-width: 768px) 100vw, 520px" style={{ objectFit:"cover", cursor:"zoom-in" }}
                       onClick={() => setLightboxSrc(modalProduct.images[modalImg])} />
                   )}
                   {(() => {
@@ -1810,43 +1878,62 @@ export default function UrbanPulse() {
                     </div>
                   </>)}
                 </div>
-                {modalProduct.images.length > 1 && (
-                  <div style={{ display:"flex", gap:4, padding:4 }}>
+                </div>
+                {/* En celular la tira vuelve abajo y en fila: una columna al
+                    costado en 360px le comería el ancho a la foto. `overflowX`
+                    porque ocho fotos no entran — la versión de escritorio que
+                    había acá tampoco lo tenía y se salían del modal. */}
+                {isMobile && modalProduct.images.length > 1 && (
+                  <div style={{ display:"flex", gap:6, padding:"6px 12px 0", overflowX:"auto", scrollbarWidth:"none" }}>
                     {modalProduct.images.map((img, i) => (
-                      <FadeImage key={i} src={img} alt="" onClick={() => setModalImg(i)} width={58} height={68}
-                        style={{ objectFit:"cover", cursor:"pointer", border: i === modalImg ? `2px solid ${DARK}` : "2px solid transparent", opacity: i === modalImg ? 1 : 0.5 }} />
+                      <button key={i} onClick={() => setModalImg(i)} aria-label={`Ver foto ${i+1}`}
+                        style={{ position:"relative", width:64, height:80, flexShrink:0, padding:0, cursor:"pointer", overflow:"hidden", background:BG,
+                                 border: i === modalImg ? `3px solid ${DARK}` : `1px solid ${DARK}22`, opacity: i === modalImg ? 1 : 0.5 }}>
+                        <FadeImage src={img} alt="" fill sizes="64px" style={{ objectFit:"cover" }} />
+                      </button>
                     ))}
                   </div>
                 )}
-                {modalProduct.reelUrls.length > 0 && (
-                  <div style={{ borderTop:`2px solid ${DARK}`, padding:"14px 8px 8px" }}>
-                    <p style={{ fontSize:9, letterSpacing:3, fontWeight:900, textTransform:"uppercase", marginBottom:10, color:DARK, opacity:0.4, paddingLeft:4 }}>Videos</p>
-                    <StoreProductReels
-                      reelUrls={modalProduct.reelUrls}
-                      theme={{ accent: ACC, text: DARK, border: DARK, radius: 0 }}
-                    />
-                  </div>
-                )}
               </div>
-              <div style={{ padding:32 }}>
+
+              {/* ── Panel de compra ───────────────────────────────────────────
+                  Solo lo necesario para comprar. Todo lo que se lee —descripción,
+                  ficha, videos, reseñas— se fue a la columna de la izquierda.
+                  `alignSelf:start` + `gridRow:"1 / span 2"`: el panel se apoya
+                  arriba, pero su área abarca las dos filas de la izquierda, que es
+                  el alto contra el que puede desplazarse. Sin el `span 2` su área
+                  sería solo la fila de la foto y no tendría dónde quedarse fijo.
+                  `maxHeight` + `overflowY`: si el panel llegara a ser más alto que
+                  la pantalla —un producto con doce talles y ocho colores en un
+                  portátil bajito— `sticky` no alcanza y el botón de comprar queda
+                  abajo, fuera de alcance. Así el panel scrollea por dentro.
+                  Los 46 de arriba son para no meterse debajo del cuadrado de
+                  cerrar, que está pegado a la esquina de la tarjeta. */}
+              <div style={ isMobile
+                ? { padding:"22px 18px 2px", borderTop:`3px solid ${DARK}`, minWidth:0 }
+                : { gridColumn:2, gridRow:"1 / span 2", position:"sticky", top:0, alignSelf:"start",
+                    maxHeight: isPreview ? "100vh" : "92vh", overflowY:"auto", boxSizing:"border-box",
+                    padding:"46px 26px 30px", borderLeft:`3px solid ${DARK}`, background:WHITE, minWidth:0 } }>
                 <p style={{ margin:"0 0 6px", fontSize:10, color:MID, fontWeight:800, letterSpacing:3, textTransform:"uppercase" }}>{modalProduct.category}</p>
-                <h3 style={{ margin:"0 0 10px", fontSize:24, fontWeight:900, textTransform:"uppercase", letterSpacing:"-0.5px" }}>{modalProduct.name}</h3>
-                <div style={{ display:"flex", gap:6, marginBottom:18 }}>
-                  <button onClick={() => shareProduct(modalProduct)}
-                    style={{ display:"flex", alignItems:"center", gap:5, background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.12)", color:MID, padding:"5px 12px", fontSize:9, fontWeight:900, letterSpacing:1.5, textTransform:"uppercase", cursor:"pointer", transition:"color 0.2s" }}
-                    onMouseEnter={e=>(e.currentTarget.style.color=WHITE)} onMouseLeave={e=>(e.currentTarget.style.color=MID)}>
-                    <svg width={11} height={11} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
-                    Copiar link
-                  </button>
-                  {hasWA && (
-                  <button onClick={() => whatsappShare(modalProduct)}
-                    style={{ display:"flex", alignItems:"center", gap:5, background:"rgba(37,211,102,0.08)", border:"1px solid rgba(37,211,102,0.25)", color:"rgba(37,211,102,0.7)", padding:"5px 12px", fontSize:9, fontWeight:900, letterSpacing:1.5, textTransform:"uppercase", cursor:"pointer", transition:"color 0.2s" }}
-                    onMouseEnter={e=>(e.currentTarget.style.color="#25D366")} onMouseLeave={e=>(e.currentTarget.style.color="rgba(37,211,102,0.7)")}>
-                    <svg width={11} height={11} viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413z"/><path d="M11.897 0C5.395 0 .13 5.266.13 11.767c0 2.078.545 4.03 1.495 5.727L.057 24l6.7-1.757A11.71 11.71 0 0 0 11.897 23.534c6.503 0 11.768-5.265 11.768-11.767C23.67 5.266 18.4 0 11.897 0zm0 21.536h-.004a9.726 9.726 0 0 1-4.96-1.358l-.356-.211-3.678.965.982-3.581-.232-.368A9.73 9.73 0 0 1 2.158 11.767C2.158 6.355 6.551 2 11.897 2c2.581 0 5.007 1.007 6.831 2.831a9.604 9.604 0 0 1 2.828 6.83c0 5.347-4.393 9.875-9.659 9.875z"/></svg>
-                    WhatsApp
-                  </button>
-                  )}
-                </div>
+                <h3 style={{ margin:"0 0 14px", fontSize:24, fontWeight:900, textTransform:"uppercase", letterSpacing:"-0.5px", overflowWrap:"anywhere" }}>{modalProduct.name}</h3>
+                {/* Atajo a las reseñas, que ahora viven en la otra columna. Sin
+                    esto no hay ninguna señal de que el producto tenga opiniones
+                    hasta que scrolleás medio modal. */}
+                {reviews.length > 0 && (() => {
+                  const prom = reviews.reduce((s, r) => s + r.rating, 0) / reviews.length;
+                  return (
+                    <button type="button" onClick={() => document.getElementById("up-modal-resenas")?.scrollIntoView({ behavior:"smooth", block:"start" })}
+                      style={{ display:"flex", alignItems:"center", gap:7, background:"none", border:"none", padding:0, marginBottom:14, cursor:"pointer" }}>
+                      <span style={{ display:"flex", gap:1 }}>
+                        {[1,2,3,4,5].map(s => <span key={s} style={{ fontSize:13, color: s <= Math.round(prom) ? accSobreClaro : `${DARK}28` }}>★</span>)}
+                      </span>
+                      <span style={{ fontSize:11, fontWeight:900, color:DARK }}>{prom.toFixed(1)}</span>
+                      <span style={{ fontSize:10, fontWeight:800, color:MID, letterSpacing:1, textTransform:"uppercase", textDecoration:"underline" }}>
+                        {reviews.length} reseña{reviews.length !== 1 ? "s" : ""}
+                      </span>
+                    </button>
+                  );
+                })()}
                 <div style={{ display:"flex", gap:14, alignItems:"baseline", marginBottom: modalProduct.offerNote ? 8 : 22, flexWrap:"wrap" }}>
                   {ocultarPrecios ? (
                     <span style={{ fontSize:28, fontWeight:900, color:DARK }}>Consultá precio</span>
@@ -1870,42 +1957,16 @@ export default function UrbanPulse() {
                     <span>{modalProduct.offerNote}</span>
                   </div>
                 )}
-                {modalProduct.description && (
-                  <div style={{ borderTop:`1px solid rgba(248,250,252,0.06)`, paddingTop:16 }}>
-                    <p style={{ fontSize:9, letterSpacing:3, textTransform:"uppercase", color:MID, margin:"0 0 8px", fontWeight:700 }}>Descripción</p>
-                    <div className="product-rte" dangerouslySetInnerHTML={{ __html: modalProduct.description }} style={{ fontSize:13, color:MID, lineHeight:1.7 }} />
-                  </div>
-                )}
+                {/* La condición (Nuevo / Usado / Reacondicionado) se queda en el
+                    panel: es un dato de COMPRA, no de ficha. El resto de los
+                    atributos y los servicios se fueron a "Ficha técnica", en la
+                    columna de la izquierda. */}
                 {(() => {
-                  const attrs = modalProduct.attributes ?? [];
-                  const condicionAttr = attrs.find(a => a.key === "Condición");
-                  const serviciosAttr = attrs.find(a => a.key === "Servicios");
-                  const otherAttrs = attrs.filter(a => a.key !== "Condición" && a.key !== "Servicios");
-                  let servicios: string[] = [];
-                  if (serviciosAttr) { try { servicios = Object.entries(JSON.parse(serviciosAttr.value)).filter(([, v]) => v).map(([k]) => k); } catch {} }
-                  if (!condicionAttr && otherAttrs.length === 0 && servicios.length === 0) return null;
+                  const cond = (modalProduct.attributes ?? []).find(a => a.key === "Condición");
+                  if (!cond) return null;
                   return (
-                    <div style={{ display:"flex", flexDirection:"column", gap:10, marginBottom:18 }}>
-                      {condicionAttr && (
-                        <span style={{ alignSelf:"flex-start", fontSize:9, letterSpacing:1.5, textTransform:"uppercase", fontWeight:900, color:accentText, background:ACC,padding:"5px 10px" }}>{condicionAttr.value}</span>
-                      )}
-                      {otherAttrs.length > 0 && (
-                        <div style={{ borderRadius:2, overflow:"hidden", border:`2px solid ${DARK}` }}>
-                          {otherAttrs.map((a, i) => (
-                            <div key={a.key} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"7px 12px", background: i%2===0 ? `${DARK}08` : WHITE, borderBottom: i < otherAttrs.length-1 ? `1px solid ${DARK}15` : "none" }}>
-                              <span style={{ fontSize:9, fontWeight:900, color:DARK, textTransform:"uppercase", letterSpacing:0.5 }}>{a.key}</span>
-                              <span style={{ fontSize:12, color:DARK, fontWeight:700 }}>{a.value}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                      {servicios.length > 0 && (
-                        <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
-                          {servicios.map(k => (
-                            <span key={k} style={{ fontSize:9, letterSpacing:1, padding:"4px 10px", border:`2px solid ${DARK}`, color:DARK, fontWeight:800 }}>✓ {k}</span>
-                          ))}
-                        </div>
-                      )}
+                    <div style={{ marginBottom:18 }}>
+                      <span style={{ display:"inline-block", fontSize:9, letterSpacing:1.5, textTransform:"uppercase", fontWeight:900, color:accentText, background:ACC, padding:"5px 10px" }}>{cond.value}</span>
                     </div>
                   );
                 })()}
@@ -1987,11 +2048,120 @@ export default function UrbanPulse() {
                   {favorites.includes(modalProduct.id) ? "Guardado" : "Guardar en favoritos"}
                 </button>
 
+                {/* Compartir. Estaba arriba de todo, entre el nombre y el precio,
+                    empujando el precio para abajo en un panel que tiene que ser
+                    corto — y con colores heredados de un template oscuro: fondo
+                    `rgba(255,255,255,0.06)` y borde `rgba(255,255,255,0.12)` sobre
+                    el BLANCO del modal, o sea invisibles, y el hover pintaba el
+                    texto de blanco, o sea que al pasar el mouse desaparecía.
+                    El verde de WhatsApp al 70% sobre blanco daba 2,0 de contraste;
+                    el de marca entero da 1,8. Va uno más oscuro, que se lee. */}
+                <div style={{ display:"flex", gap:6, marginTop:10 }}>
+                  <button onClick={() => shareProduct(modalProduct)}
+                    style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:5, flex:1, background:"none", border:`1px solid ${DARK}30`, color:MID, padding:"8px 10px", fontSize:9, fontWeight:900, letterSpacing:1.5, textTransform:"uppercase", cursor:"pointer", transition:"color 0.2s, border-color 0.2s" }}
+                    onMouseEnter={e=>{ e.currentTarget.style.color=DARK; e.currentTarget.style.borderColor=DARK; }}
+                    onMouseLeave={e=>{ e.currentTarget.style.color=MID; e.currentTarget.style.borderColor=`${DARK}30`; }}>
+                    <svg width={11} height={11} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                    Copiar link
+                  </button>
+                  {hasWA && (
+                  <button onClick={() => whatsappShare(modalProduct)}
+                    style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:5, flex:1, background:"rgba(37,211,102,0.10)", border:"1px solid rgba(11,122,62,0.45)", color:"#0b7a3e", padding:"8px 10px", fontSize:9, fontWeight:900, letterSpacing:1.5, textTransform:"uppercase", cursor:"pointer", transition:"background 0.2s" }}
+                    onMouseEnter={e=>(e.currentTarget.style.background="rgba(37,211,102,0.22)")} onMouseLeave={e=>(e.currentTarget.style.background="rgba(37,211,102,0.10)")}>
+                    <svg width={11} height={11} viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413z"/><path d="M11.897 0C5.395 0 .13 5.266.13 11.767c0 2.078.545 4.03 1.495 5.727L.057 24l6.7-1.757A11.71 11.71 0 0 0 11.897 23.534c6.503 0 11.768-5.265 11.768-11.767C23.67 5.266 18.4 0 11.897 0zm0 21.536h-.004a9.726 9.726 0 0 1-4.96-1.358l-.356-.211-3.678.965.982-3.581-.232-.368A9.73 9.73 0 0 1 2.158 11.767C2.158 6.355 6.551 2 11.897 2c2.581 0 5.007 1.007 6.831 2.831a9.604 9.604 0 0 1 2.828 6.83c0 5.347-4.393 9.875-9.659 9.875z"/></svg>
+                    WhatsApp
+                  </button>
+                  )}
+                </div>
+              </div>
+
+              {/* ── La columna que se lee ─────────────────────────────────────
+                  Todo lo largo vive acá: descripción, ficha, videos, reseñas y
+                  similares. Puede medir lo que quiera —el panel de compra no se
+                  mueve— y a ~640px de ancho la descripción y los videos se leen de
+                  verdad, contra los ~370 que tenían metidos en la columna de
+                  compra. */}
+              <div style={{ ...(isMobile ? {} : { gridColumn:1, gridRow:2 }), minWidth:0,
+                            padding: isMobile ? "26px 18px 30px" : "36px 26px 34px",
+                            display:"flex", flexDirection:"column", gap:34 }}>
+
+                {modalProduct.description && (() => {
+                  // Cuánto texto hay DE VERDAD, sin las etiquetas: con el HTML
+                  // crudo, un párrafo de dos líneas con una negrita y un link ya
+                  // pasa los 320 caracteres y aparecería un "Leer todo" para algo
+                  // que se lee entero de un vistazo.
+                  const plano = modalProduct.description.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+                  const larga = plano.length > 320;
+                  const plegada = larga && !descAbierta;
+                  return (
+                    <div>
+                      {tituloModal("Descripción")}
+                      <div style={{ position:"relative", maxHeight: plegada ? 200 : undefined, overflow: plegada ? "hidden" : undefined }}>
+                        {/* El texto va en #3d3d3d y no en MID (#777): #777 sobre
+                            blanco da 4,48 de contraste y el mínimo para texto
+                            normal es 4,5. Para una etiqueta suelta da igual; para
+                            un párrafo de veinte líneas, no. */}
+                        <div className="product-rte" dangerouslySetInnerHTML={{ __html: modalProduct.description }}
+                          style={{ fontSize:13.5, color:"#3d3d3d", lineHeight:1.8, maxWidth:680 }} />
+                        {plegada && <div style={{ position:"absolute", left:0, right:0, bottom:0, height:80, background:`linear-gradient(rgba(255,255,255,0), ${WHITE})`, pointerEvents:"none" }} />}
+                      </div>
+                      {larga && (
+                        <button type="button" onClick={() => setDescAbierta(a => !a)}
+                          style={{ marginTop:12, background:"none", border:`2px solid ${DARK}`, color:DARK, padding:"7px 18px", fontSize:9, fontWeight:900, letterSpacing:2, textTransform:"uppercase", cursor:"pointer" }}>
+                          {descAbierta ? "Leer menos" : "Leer todo"}
+                        </button>
+                      )}
+                    </div>
+                  );
+                })()}
+
+                {(() => {
+                  const attrs = modalProduct.attributes ?? [];
+                  const otros = attrs.filter(a => a.key !== "Condición" && a.key !== "Servicios");
+                  const serviciosAttr = attrs.find(a => a.key === "Servicios");
+                  let servicios: string[] = [];
+                  if (serviciosAttr) { try { servicios = Object.entries(JSON.parse(serviciosAttr.value)).filter(([, v]) => v).map(([k]) => k); } catch {} }
+                  if (otros.length === 0 && servicios.length === 0) return null;
+                  return (
+                    <div>
+                      {tituloModal("Ficha técnica")}
+                      {otros.length > 0 && (
+                        <div style={{ border:`2px solid ${DARK}`, maxWidth:680 }}>
+                          {otros.map((a, i) => (
+                            <div key={a.key} style={{ display:"flex", justifyContent:"space-between", alignItems:"baseline", gap:16, padding:"9px 14px", background: i%2===0 ? `${DARK}08` : WHITE, borderBottom: i < otros.length-1 ? `1px solid ${DARK}15` : "none" }}>
+                              <span style={{ fontSize:9, fontWeight:900, color:DARK, textTransform:"uppercase", letterSpacing:0.5, flexShrink:0 }}>{a.key}</span>
+                              {/* Un valor sin espacios —un código de barras, una
+                                  URL— empujaba la tabla y con ella toda la columna. */}
+                              <span style={{ fontSize:12.5, color:DARK, fontWeight:700, textAlign:"right", minWidth:0, overflowWrap:"anywhere" }}>{a.value}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {servicios.length > 0 && (
+                        <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginTop:12 }}>
+                          {servicios.map(k => (
+                            <span key={k} style={{ fontSize:9, letterSpacing:1, padding:"5px 11px", border:`2px solid ${DARK}`, color:DARK, fontWeight:800, textTransform:"uppercase" }}>✓ {k}</span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+
+                {modalProduct.reelUrls.length > 0 && (
+                  <div>
+                    {tituloModal("Videos")}
+                    <StoreProductReels
+                      reelUrls={modalProduct.reelUrls}
+                      ancho={isMobile ? 116 : 148}
+                      theme={{ accent: accSobreClaro, text: DARK, border: DARK, radius: 0 }}
+                    />
+                  </div>
+                )}
+
                 {/* Reseñas — D-04 */}
-                <div style={{ borderTop:`2px solid ${DARK}`, paddingTop:24, marginTop:20 }}>
-                  <p style={{ fontSize:9, letterSpacing:3, fontWeight:900, textTransform:"uppercase", color:MID, margin:"0 0 20px" }}>
-                    Reseñas{reviews.length > 0 && ` (${reviews.length})`}
-                  </p>
+                <div id="up-modal-resenas">
+                  {tituloModal(reviews.length > 0 ? `Reseñas (${reviews.length})` : "Reseñas")}
                   {reviewsLoading ? (
                     <p style={{ fontSize:12, color:MID }}>Cargando...</p>
                   ) : reviews.length > 0 ? (
@@ -2004,7 +2174,13 @@ export default function UrbanPulse() {
                             <div style={{ textAlign:"center", minWidth:56 }}>
                               <p style={{ fontSize:34, fontWeight:900, color:DARK, margin:0, lineHeight:1 }}>{avg.toFixed(1)}</p>
                               <div style={{ display:"flex", gap:2, justifyContent:"center", margin:"6px 0 4px" }}>
-                                {[1,2,3,4,5].map(s => <span key={s} style={{ fontSize:11, color: s <= Math.round(avg) ? ACC : DARK }}>★</span>)}
+                                {/* Las estrellas de adentro del modal se quedaron
+                                    con el acento crudo cuando UP-11 barrió las de
+                                    la portada: sobre el blanco de la ficha, un
+                                    acento claro las borra. Y las vacías estaban en
+                                    DARK, o sea MÁS marcadas que las llenas: al
+                                    revés de lo que tienen que decir. */}
+                                {[1,2,3,4,5].map(s => <span key={s} style={{ fontSize:11, color: s <= Math.round(avg) ? accSobreClaro : "#d8d8d8" }}>★</span>)}
                               </div>
                               <p style={{ fontSize:9, color:MID, margin:0, fontWeight:700, letterSpacing:0.5, textTransform:"uppercase" }}>{reviews.length} reseña{reviews.length !== 1 ? "s" : ""}</p>
                             </div>
@@ -2013,7 +2189,7 @@ export default function UrbanPulse() {
                                 <div key={d.stars} style={{ display:"flex", alignItems:"center", gap:8 }}>
                                   <span style={{ fontSize:9, color:accSobreClaro, minWidth:14, textAlign:"right", fontWeight:900 }}>{d.stars}★</span>
                                   <div style={{ flex:1, height:4, background:`${DARK}18`, borderRadius:0, overflow:"hidden" }}>
-                                    <div style={{ height:"100%", width:`${reviews.length ? (d.count / reviews.length) * 100 : 0}%`, background:ACC, borderRadius:0 }} />
+                                    <div style={{ height:"100%", width:`${reviews.length ? (d.count / reviews.length) * 100 : 0}%`, background:accSobreClaro, borderRadius:0 }} />
                                   </div>
                                   <span style={{ fontSize:9, color:MID, minWidth:12, textAlign:"right", fontWeight:700 }}>{d.count}</span>
                                 </div>
@@ -2036,15 +2212,23 @@ export default function UrbanPulse() {
                                 <div style={{ display:"flex", alignItems:"center", gap:6, flexWrap:"wrap" }}>
                                   <span style={{ fontSize:12, fontWeight:900, textTransform:"uppercase" }}>{r.reviewer}</span>
                                   {r.verified && (
-                                    <span style={{ fontSize:9, fontWeight:900, color:accSobreClaro, border:`1px solid ${ACC}`, padding:"1px 5px", letterSpacing:0.5, textTransform:"uppercase" }}>✓ Verificada</span>
+                                    <span style={{ fontSize:9, fontWeight:900, color:accSobreClaro, border:`1px solid ${accSobreClaro}`, padding:"1px 5px", letterSpacing:0.5, textTransform:"uppercase" }}>✓ Verificada</span>
                                   )}
                                 </div>
                                 <span style={{ fontSize:9, color:MID, fontWeight:700 }}>{new Date(r.createdAt).toLocaleDateString("es-AR", { day:"numeric", month:"short", year:"numeric" })}</span>
                               </div>
                               <div style={{ display:"flex", gap:1, marginBottom: r.comment ? 8 : 0 }}>
-                                {[1,2,3,4,5].map(s => <span key={s} style={{ fontSize:12, color: s <= r.rating ? ACC : `${DARK}30` }}>★</span>)}
+                                {[1,2,3,4,5].map(s => <span key={s} style={{ fontSize:12, color: s <= r.rating ? accSobreClaro : "#d8d8d8" }}>★</span>)}
                               </div>
-                              {r.comment && <p style={{ fontSize:12, color:MID, margin:0, lineHeight:1.6 }}>{r.comment}</p>}
+                              {/* Recortado a 5 líneas con "Leer todo". Una reseña
+                                  de 2000 caracteres, con diez más abajo, convierte
+                                  la sección en un muro y empuja los similares
+                                  fuera de la vista. */}
+                              {r.comment && (
+                                <ResenaComentario texto={r.comment} acento={accSobreClaro} comillas={false} lineas={5}
+                                  estiloTexto={{ fontSize:12.5, color:"#3d3d3d", lineHeight:1.7 }}
+                                  textoBoton={{ desplegar:"Leer todo", irA:"Ver reseña" }} />
+                              )}
                             </div>
                           </div>
                         ))}
@@ -2062,6 +2246,15 @@ export default function UrbanPulse() {
                     <p style={{ fontSize:11, color:MID, fontStyle:"italic" }}>El dueño no puede dejar reseñas en su propia tienda.</p>
                   ) : reviewDone ? (
                     <p style={{ fontSize:12, color:accSobreClaro, fontWeight:900 }}>¡Gracias por tu reseña!</p>
+                  ) : !formResenaAbierto ? (
+                    // Plegado hasta que alguien lo pida: son cinco campos, el
+                    // captcha y una aclaración legal —unos 300px— que casi nadie
+                    // va a usar en esa visita y que separan las reseñas de los
+                    // similares.
+                    <button type="button" onClick={() => setFormResenaAbierto(true)}
+                      style={{ background:DARK, color:accSobreDark, border:"none", padding:"12px 24px", fontSize:10, fontWeight:900, letterSpacing:2.5, textTransform:"uppercase", cursor:"pointer" }}>
+                      Escribir una reseña
+                    </button>
                   ) : (
                     <div style={{ position:"relative" }}>
                       {isPreview && <div style={{ position:"absolute", inset:0, zIndex:10, cursor:"default" }} onClick={e => e.stopPropagation()} />}
@@ -2070,12 +2263,18 @@ export default function UrbanPulse() {
                         <input value={reviewHoneypot} onChange={e => setReviewHoneypot(e.target.value)}
                           tabIndex={-1} autoComplete="off" aria-hidden="true"
                           style={{ position:"absolute", left:-9999, width:1, height:1, opacity:0 }} />
+                        {/* `maxLength` — el formulario de reseña de la TIENDA ya
+                            los tenía; este no. Sin tope se podía mandar un nombre
+                            de mil caracteres y un comentario de cincuenta mil: el
+                            servidor lo rechaza, así que la persona escribe todo
+                            para que le digan que no al final. Y si entrara, sería
+                            un muro adentro de la ficha. */}
                         <input value={reviewForm.reviewer} onChange={e => !isPreview && setReviewForm(p => ({ ...p, reviewer: e.target.value }))}
-                          placeholder="Tu nombre" readOnly={isPreview}
+                          placeholder="Tu nombre" readOnly={isPreview} maxLength={RESENADOR_MAX}
                           style={{ background:"none", border:`2px solid ${DARK}`, padding:"9px 12px", fontSize:12, fontWeight:600, outline:"none" }} />
                         <div>
                           <input value={reviewForm.email} onChange={e => !isPreview && setReviewForm(p => ({ ...p, email: e.target.value }))}
-                            placeholder="Tu email (opcional — verifica tu compra)" type="email" readOnly={isPreview} autoComplete="email"
+                            placeholder="Tu email (opcional — verifica tu compra)" type="email" readOnly={isPreview} autoComplete="email" maxLength={120}
                             style={{ width:"100%", boxSizing:"border-box", background:"none", border:`2px solid ${DARK}`, padding:"9px 12px", fontSize:12, fontWeight:600, outline:"none" }} />
                           <p style={{ fontSize:9, color:MID, margin:"3px 0 0", fontWeight:700, letterSpacing:0.5, textTransform:"uppercase", lineHeight:1.4 }}>
                             Si compraste acá, tu reseña mostrará ✓ VERIFICADA. El email no se publica.
@@ -2084,12 +2283,17 @@ export default function UrbanPulse() {
                         <div style={{ display:"flex", gap:4 }}>
                           {[1,2,3,4,5].map(s => (
                             <button key={s} type="button" onClick={() => !isPreview && setReviewForm(p => ({ ...p, rating: s }))}
-                              style={{ background:"none", border:"none", fontSize:20, cursor: isPreview ? "default" : "pointer", color: s <= reviewForm.rating ? ACC : DARK, padding:"2px" }}>★</button>
+                              style={{ background:"none", border:"none", fontSize:20, cursor: isPreview ? "default" : "pointer", color: s <= reviewForm.rating ? accSobreClaro : "#d8d8d8", padding:"2px" }}>★</button>
                           ))}
                         </div>
                         <textarea value={reviewForm.comment} onChange={e => !isPreview && setReviewForm(p => ({ ...p, comment: e.target.value }))}
-                          placeholder="Comentario (opcional)" rows={3} readOnly={isPreview}
+                          placeholder="Comentario (opcional)" rows={3} readOnly={isPreview} maxLength={COMENTARIO_MAX}
                           style={{ background:"none", border:`2px solid ${DARK}`, padding:"9px 12px", fontSize:12, resize:"none", outline:"none" }} />
+                        {reviewForm.comment.length > COMENTARIO_MAX - 80 && (
+                          <p style={{ margin:"-6px 0 0", fontSize:10, color: reviewForm.comment.length >= COMENTARIO_MAX ? "#dc2626" : MID, textAlign:"right", fontWeight:700 }}>
+                            {reviewForm.comment.length} / {COMENTARIO_MAX}
+                          </p>
+                        )}
                         {!isPreview && reviewCaptcha.widget}
                         <button type="submit" disabled={isPreview || reviewSubmitting || !reviewForm.reviewer.trim() || !reviewCaptcha.ready}
                           style={{ background: isPreview || reviewSubmitting || !reviewForm.reviewer.trim() ? MID : DARK, color:accSobreDark, border:"none", padding:"12px", fontSize:10, fontWeight:900, letterSpacing:3, textTransform:"uppercase", cursor: isPreview ? "default" : "pointer" }}>
@@ -2100,12 +2304,10 @@ export default function UrbanPulse() {
                     </div>
                   )}
                 </div>
-              </div>
-              {(() => {
-                if (similarProducts.length === 0) return null;
-                return (
-                  <div style={{ gridColumn: isMobile ? undefined : "1 / -1", padding:32, borderTop:"1px solid #f0f0f0" }}>
-                    <p style={{ margin:"0 0 16px", fontSize:10, color:MID, fontWeight:800, letterSpacing:3, textTransform:"uppercase" }}>Productos similares</p>
+
+                {similarProducts.length > 0 && (
+                  <div>
+                    {tituloModal("También te puede gustar")}
                     <div style={{ display:"grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(4,1fr)", gap:14 }}>
                       {similarProducts.map(p => (
                         <div key={p.id} onClick={() => openModal(p)} style={{ cursor:"pointer" }}>
@@ -2120,8 +2322,8 @@ export default function UrbanPulse() {
                       ))}
                     </div>
                   </div>
-                );
-              })()}
+                )}
+              </div>
             </div>
             {isMobile && (
               <div style={{ borderTop:`2px solid ${DARK}`, padding:"12px 16px 16px", background:WHITE, flexShrink:0 }}>
