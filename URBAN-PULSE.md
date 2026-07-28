@@ -846,3 +846,25 @@ modal que el barrido de UP-11 no había tocado.
 `tsc` y eslint limpios, `/plantillas/urban-pulse` en 200. **La revisión visual en 360 / 768 / 1280
 queda pendiente de Flavio**: en esta sesión no había herramienta de navegador, así que el layout está
 verificado por cálculo, no visto. Nada pusheado ni deployado.
+
+**28/07/2026 — el acento, cuarta pasada.** Flavio: *"quedó muy lindo, pero mirá cuando selecciono el
+talle se pone oscuro"*. El botón del talle elegido pinta el fondo de `DARK` y escribía el número con
+el acento crudo: con un acento oscuro, negro sobre negro — y el talle seleccionado era justo el único
+que no se leía.
+
+Se barrieron los **40 usos** de `ACC` del archivo separando los dos casos. El acento como **relleno o
+borde decorativo** (la bolita de favoritos, los `borderTop` de sección, el círculo del carrito, que ya
+lleva `stroke={accentText}`) no tiene texto encima y está bien. El acento como **texto sobre un fondo
+conocido** fallaba en tres lugares más, todos con la misma forma `? ACC : DARK`:
+
+| Línea | Qué es | Fondo | Ahora |
+|---|---|---|---|
+| 1984 | el talle seleccionado | `DARK` | `accSobreDark` |
+| 828 | el género activo en el menú de celular | `DARK` | `accSobreDark` |
+| 809 | la categoría activa en el menú de celular | `#f5f5f5` | `accSobreClaro` |
+
+De paso, un ternario muerto: `color: activeGender==="mujer" ? DARK : DARK`.
+
+**Verificado que es solo de Urban Pulse.** Los otros tres templates de moda y la página de listado ya
+resolvían bien el mismo botón: Chic Paris con `accentRellenoText`, Boho Terra y Fashion Noir con un
+fondo tintado y el texto en el color normal, y el listado con el par `chipBg`/`chipText`.

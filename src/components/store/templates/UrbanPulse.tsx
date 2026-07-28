@@ -682,7 +682,7 @@ export default function UrbanPulse() {
           </div>
           {/* MUJER */}
           <button onClick={() => { changeGender(activeGender==="mujer" ? null : "mujer"); scrollTo("productos"); }}
-            style={{ background:"none", border:"none", borderBottom: activeGender==="mujer" ? `2px solid ${ACC}` : "2px solid transparent", fontSize:11, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor:"pointer", color: activeGender==="mujer" ? DARK : DARK, padding:"4px 0", transition:"border-color 0.2s" }}
+            style={{ background:"none", border:"none", borderBottom: activeGender==="mujer" ? `2px solid ${ACC}` : "2px solid transparent", fontSize:11, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor:"pointer", color: DARK, padding:"4px 0", transition:"border-color 0.2s" }}
             onMouseEnter={e => { e.currentTarget.style.borderBottomColor = ACC; }}
             onMouseLeave={e => { if(activeGender!=="mujer") e.currentTarget.style.borderBottomColor = "transparent"; }}>
             Mujer
@@ -806,7 +806,7 @@ export default function UrbanPulse() {
                       window.location.href = `/tienda/${storeConfig?.slug}/productos?t=urban-pulse${isPreview ? "&from=editor" : ""}&categoria=${encodeURIComponent(cat)}`;
                       setMobileMenuOpen(false); setMobileCatsOpen(false);
                     }
-                  }} style={{ display:"flex", width:"100%", background:"#f5f5f5", border:"none", borderBottom:`1px solid rgba(0,0,0,0.1)`, color: activeCategory===cat ? ACC : DARK, padding:"13px 24px 13px 40px", fontSize:11, textAlign:"left", cursor:"pointer", letterSpacing:3, fontWeight:800, textTransform:"uppercase", alignItems:"center", justifyContent:"space-between" }}>
+                  }} style={{ display:"flex", width:"100%", background:"#f5f5f5", border:"none", borderBottom:`1px solid rgba(0,0,0,0.1)`, color: activeCategory===cat ? accSobreClaro : DARK, padding:"13px 24px 13px 40px", fontSize:11, textAlign:"left", cursor:"pointer", letterSpacing:3, fontWeight:800, textTransform:"uppercase", alignItems:"center", justifyContent:"space-between" }}>
                     {cat}
                     {subs.length > 0 && <span style={{ fontSize:12, opacity:0.5, transition:"transform 0.2s", transform: mobileOpenCat===cat ? "rotate(90deg)" : "none", display:"inline-block" }}>›</span>}
                   </button>
@@ -825,7 +825,7 @@ export default function UrbanPulse() {
           </>
           {[["Mujer","mujer"],["Hombre","hombre"]].map(([label, g]) => (
             <button key={g} onClick={() => { changeGender(activeGender===g ? null : g); scrollTo("productos"); setMobileMenuOpen(false); }}
-              style={{ display:"block", width:"100%", background: activeGender===g ? DARK : "none", border:"none", borderBottom:`2px solid ${DARK}`, color: activeGender===g ? ACC : DARK, padding:"16px 24px", fontSize:12, textAlign:"left", cursor:"pointer", letterSpacing:3, fontWeight:800, textTransform:"uppercase" }}>
+              style={{ display:"block", width:"100%", background: activeGender===g ? DARK : "none", border:"none", borderBottom:`2px solid ${DARK}`, color: activeGender===g ? accSobreDark : DARK, padding:"16px 24px", fontSize:12, textAlign:"left", cursor:"pointer", letterSpacing:3, fontWeight:800, textTransform:"uppercase" }}>
               {label}
             </button>
           ))}
@@ -1977,7 +1977,11 @@ export default function UrbanPulse() {
                       const outOfStock = outOfStockSizes.has(s);
                       return (
                         <button key={s} onClick={() => setSelectedSize(s)}
-                          style={{ border:`2px solid ${selectedSize === s ? DARK : "#ddd"}`, background: selectedSize === s ? DARK : WHITE, color: selectedSize === s ? ACC : DARK, padding:"7px 13px", fontSize:11, fontWeight:800, cursor:"pointer", letterSpacing:1, opacity: outOfStock ? 0.35 : 1, textDecoration: outOfStock ? "line-through" : "none" }}>
+                          // El talle elegido pinta el fondo de DARK y escribía el
+                          // número con el acento crudo: con un acento oscuro
+                          // quedaba negro sobre negro y el talle seleccionado era
+                          // justo el único que no se leía.
+                          style={{ border:`2px solid ${selectedSize === s ? DARK : "#ddd"}`, background: selectedSize === s ? DARK : WHITE, color: selectedSize === s ? accSobreDark : DARK, padding:"7px 13px", fontSize:11, fontWeight:800, cursor:"pointer", letterSpacing:1, opacity: outOfStock ? 0.35 : 1, textDecoration: outOfStock ? "line-through" : "none" }}>
                           {s}
                         </button>
                       );
