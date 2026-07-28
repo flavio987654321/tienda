@@ -1078,3 +1078,27 @@ punta a punta. La blanca va del lado de afuera y la negra pegada a los bloques. 
 de las cintas de peligro y de las tipografías de carrera: dos filos opuestos, sin degradado.
 
 Los filos por bloque se sacaron: con este, sobraban.
+
+**El botón de cambiar ícono estaba tapado.** Flavio: *"hay un pequeño bug o dificultad a la hora de
+cambiar el ícono"*. Eran las dos cosas.
+
+**El bug.** `SectionBlock` planta sus controles con `zIndex:200` — "👁 Ocultar bloque" en
+`bottom:10 right:10` y las flechas de orden en `bottom:10 left:50%`. La franja mide poco más de 100px
+de alto, así que esos botones caen justo encima del ícono del **cuarto** bloque y del **segundo**. El
+botón de cambiar ícono no tenía `zIndex`, así que ahí estaba tapado: no era que costara, es que no se
+podía.
+
+**La dificultad.** Aunque no estuviera tapado, el botón vivía encima de la marca de agua con
+`opacity:0` y solo aparecía si le pegabas justo con el mouse. Nada avisaba que existía, y menos ahora
+que el ícono es una marca de agua al 22%.
+
+Ahora es una fichita fija arriba a la derecha de cada bloque —esquina que el editor no usa, porque la
+de arriba a la izquierda se la queda el chip de "Fondo"—, con `zIndex` por encima de los controles de
+sección y con la cuenta en el globo de ayuda (*"Cambiar ícono (2 de 5)"*), así se sabe cuántos hay y
+en cuál se está. La marca de agua pasa a `pointerEvents:"none"` siempre, así no le roba un clic al
+texto de al lado.
+
+**Ojo, lo mismo pasa en Chic Paris.** Su franja también vive en un `SectionBlock` y también es baja:
+las flechas de orden le pisan la esquina inferior del ícono del tercer beneficio. Es más leve —sus
+íconos son viñetas visibles y se aciertan fácil— y no se tocó, para no cambiarle el editor a otro
+template sin que lo pidan. Queda anotado.

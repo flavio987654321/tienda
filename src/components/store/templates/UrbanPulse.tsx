@@ -955,9 +955,9 @@ export default function UrbanPulse() {
                                           minHeight: isMobile ? 96 : "clamp(96px,8vw,132px)",
                                           display:"flex", flexDirection:"column", justifyContent:"center" }}>
                 {/* La marca de agua: el mismo ícono de siempre, agrandado y casi
-                    transparente. La opacidad va en el span de adentro y no en
-                    este: si fuera acá, el botón de cambiar ícono también quedaría
-                    translúcido.
+                    transparente. No recibe clics ni en el editor —el botón para
+                    cambiarlo está abajo, aparte— así que nunca le roba uno al
+                    texto que tiene al lado.
                     El tamaño lo pone este contenedor —con `aspectRatio` para que
                     tenga alto propio— y el SVG lo llena al 100%. Antes se le
                     pasaba un número de píxeles al SVG, que no puede escalar.
@@ -969,9 +969,9 @@ export default function UrbanPulse() {
                     arriba y abajo también (a 1920: 84 de ícono en 132 de alto). */}
                 <span style={{ position:"absolute", right: isMobile ? 10 : "clamp(12px,1.4vw,26px)", top:"50%", transform:"translateY(-50%)", lineHeight:0,
                                width: isMobile ? "clamp(40px,13vw,64px)" : "clamp(46px,5.2vw,84px)", aspectRatio:"1",
-                               pointerEvents: editMode ? "auto" : "none" }}>
-                  {/* En el editor sube al 22%: al 9% nadie descubriría que se
-                      puede cambiar. */}
+                               pointerEvents:"none" }}>
+                  {/* En el editor sube al 22%: al 9% la dueña no llega a ver cuál
+                      de los íconos tiene puesto mientras los va cambiando. */}
                   <span style={{ display:"block", width:"100%", height:"100%", color:tinta, opacity: editMode ? 0.22 : 0.09 }}>
                     {/* `strokeWidth` más fino al agrandar: los íconos están
                         dibujados en una caja de 24 y con el trazo en 1,8. Estirados
@@ -982,12 +982,33 @@ export default function UrbanPulse() {
                                      { width: "100%", height: "100%", strokeWidth: 1.2 })
                       : icono}
                   </span>
-                  {editMode && (
-                    <button onClick={() => setOverride(`garantia${i+1}Icon`, { text: String(nextIdx) })} title="Cambiar ícono"
-                      style={{ position:"absolute", inset:0, background:"rgba(99,102,241,0.9)", border:"none", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", color:"#fff", fontSize:15, opacity:0, transition:"opacity 0.15s" }}
-                      onMouseEnter={e => (e.currentTarget.style.opacity="1")} onMouseLeave={e => (e.currentTarget.style.opacity="0")}>↻</button>
-                  )}
                 </span>
+                {/* ── Cambiar ícono ──────────────────────────────────────────
+                    Estaba encima de la marca de agua, invisible hasta que le
+                    pegabas justo con el mouse. Dos problemas.
+                    Uno de verdad: `SectionBlock` planta sus controles con
+                    `zIndex:200` —"Ocultar bloque" abajo a la derecha y las flechas
+                    de orden abajo al centro— y esta franja mide poco más de 100px
+                    de alto, así que esos botones caían encima del ícono del cuarto
+                    bloque y del segundo. Ahí el botón estaba TAPADO: no era que
+                    costara, es que no se podía.
+                    El otro: aunque no estuviera tapado, nada avisaba que existía.
+                    Ahora es una fichita fija arriba a la derecha de cada bloque
+                    —esquina que el editor no usa, porque la de arriba a la
+                    izquierda se la queda el chip de "Fondo"—, con `zIndex` por
+                    encima de los controles de sección y con la cuenta en el globo
+                    de ayuda, así se sabe cuántos íconos hay y en cuál se está. */}
+                {editMode && (
+                  <button onClick={() => setOverride(`garantia${i+1}Icon`, { text: String(nextIdx) })}
+                    title={`Cambiar ícono (${iconIdx + 1} de ${UP_STRIP_ICONS[i].length})`}
+                    style={{ position:"absolute", top:6, right:6, zIndex:210, width:26, height:26,
+                             background:"rgba(99,102,241,0.92)", border:"1.5px solid rgba(255,255,255,0.45)", borderRadius:6,
+                             color:"#fff", fontSize:14, lineHeight:1, cursor:"pointer",
+                             display:"flex", alignItems:"center", justifyContent:"center",
+                             boxShadow:"0 2px 6px rgba(0,0,0,0.35)", opacity:0.85, transition:"opacity 0.15s" }}
+                    onMouseEnter={e => (e.currentTarget.style.opacity="1")}
+                    onMouseLeave={e => (e.currentTarget.style.opacity="0.85")}>↻</button>
+                )}
                 {/* `paddingRight` para que el texto no se meta debajo del ícono en
                     los anchos chicos, donde la marca de agua ocupa media celda. */}
                 <p style={{ position:"relative", margin:0, paddingRight: isMobile ? "30%" : "26%", fontSize: isMobile ? 12.5 : "clamp(12px,1.15vw,16px)", fontWeight:900, letterSpacing:1.2, textTransform:"uppercase", lineHeight:1.15, color:tinta, overflowWrap:"anywhere" }}>
