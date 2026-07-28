@@ -486,6 +486,40 @@ const mixCases: {
   { id: "MX-G", items: [item(1, 10000, M1), item(1, 10000, M2)],
     promotions: [promo({ type: "MIX_N_PAY_M", minQty: 3, payQty: 2 }), promo({ type: "PERCENT", value: 50 })],
     expectedSubtotal: 10000, desc: "best-of: el mix no llega al grupo → gana el 50% por ítem" },
+
+  // ── B-13: lo que SOBRA del último grupo conserva su promo ───────────────────
+  // El carrito real que lo destapó: 3 camperas + 1 pantalón, con un 3×2 que cubre
+  // las dos categorías y un 20% solo en pantalones. El pool son 4 unidades: entra
+  // un grupo de 3 (las tres camperas, las más baratas) y el pantalón SOBRA. Antes
+  // el mix se llevaba puestas todas las líneas de su alcance y el pantalón volvía
+  // a lista: el carrito salía $190.000 y borrar la promo del 20% de la tienda daba
+  // exactamente el mismo total, o sea que esa promo no servía para nada.
+  { id: "MX-H", items: [item(3, 45000, M1), item(1, 60000, M3)],
+    promotions: [
+      promo({ type: "MIX_N_PAY_M", minQty: 3, payQty: 2, scope: "CATEGORY", categories: ["remeras", "pantalones"] }),
+      promo({ type: "PERCENT", value: 20, scope: "CATEGORY", categories: ["pantalones"] }),
+    ],
+    expectedSubtotal: 138000, desc: "B-13: el 3×2 se queda con las 3 camperas; el pantalón sobra y conserva su 20% (90.000 + 48.000)" },
+
+  // El contrario, para que el arreglo no se pase de generoso: acá NO sobra nada
+  // —3 unidades, un grupo justo—, así que las que se pagan son "las 2" del 3×2 y
+  // no llevan encima ningún otro descuento. Es MX-F mirado desde este ángulo.
+  { id: "MX-I", items: [item(1, 10000, M1), item(1, 10000, M2), item(1, 10000, M3)],
+    promotions: [
+      promo({ type: "MIX_N_PAY_M", minQty: 3, payQty: 2 }),
+      promo({ type: "PERCENT", value: 20 }),
+    ],
+    expectedSubtotal: 20000, desc: "B-13 al revés: sin sobrantes, las 3 son del mix → $20.000, no $16.000" },
+
+  // Sobrante del MISMO producto que forma el grupo: la línea entera es del mix
+  // (no se parte en dos precios) y el best-of igual la protege — 4×$45.000 con
+  // una gratis sale $135.000, más barato que el 20% por ítem ($144.000).
+  { id: "MX-J", items: [item(4, 45000, M1)],
+    promotions: [
+      promo({ type: "MIX_N_PAY_M", minQty: 3, payQty: 2 }),
+      promo({ type: "PERCENT", value: 20 }),
+    ],
+    expectedSubtotal: 135000, desc: "sobrante del mismo producto: la línea no se parte, y el best-of la deja en el mix" },
 ];
 for (const c of mixCases) {
   const r = priceCart(c.items, { promotions: c.promotions });

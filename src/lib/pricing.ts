@@ -332,32 +332,59 @@ function applyMixPromos(
     }
     if (units.length < n) continue; // ni un grupo completo
 
-    const freeUnits = Math.floor(units.length / n) * (n - m);
+    const grupos = Math.floor(units.length / n);
+    const freeUnits = grupos * (n - m);
     if (freeUnits <= 0) continue;
 
     // Las más baratas del pool salen gratis (cross-producto).
     units.sort((a, b) => a.price - b.price);
+
+    // El MIX se queda con las unidades que forman los grupos COMPLETOS. Lo que sobra
+    // del último grupo no es parte del trato: son las más caras, y siguen con la promo
+    // por-ítem que hubieran ganado. Sin esta distinción el MIX se llevaba puestas todas
+    // las líneas de su alcance, incluidas las que no formaban grupo, y esas volvían a
+    // precio de lista perdiendo su promo (B-13): con un 3×2 sobre camperas+pantalones
+    // y un 20% en pantalones, un carrito de 3 camperas + 1 pantalón salía $190.000
+    // cuando lo correcto son $178.000 — y borrar la promo del 20% daba el mismo total,
+    // o sea que no servía para nada.
+    //
+    // Ojo con lo contrario, que también estuvo mal un rato: si TODAS las unidades caen
+    // dentro de los grupos, todas son del MIX. Las que se pagan son "las 2" del 3×2 y
+    // no llevan encima otro descuento (MX-F).
+    const enGrupos = grupos * n;
+    const lineasDelMix = new Set<number>();
+    for (let u = 0; u < enGrupos; u++) lineasDelMix.add(units[u].idx);
+
     const reductionByIdx = new Map<number, number>();
-    let totalReduction = 0;
     for (let u = 0; u < freeUnits; u++) {
       const { idx, price } = units[u];
       reductionByIdx.set(idx, (reductionByIdx.get(idx) ?? 0) + price);
-      totalReduction += price;
     }
 
-    // best-of a nivel CONJUNTO: ¿el total del conjunto con MIX (base − regalo) es menor
-    // que lo que ya tiene con las promos por-ítem? Si no mejora, no se aplica.
+    // best-of a nivel CONJUNTO: ¿el total del conjunto con MIX es menor que lo que ya
+    // tiene con las promos por-ítem? Si no mejora, no se aplica. Se compara sobre el
+    // resultado REAL, o sea contando que las líneas de afuera del grupo no cambian.
     let currentEligibleTotal = 0;
-    let baseEligibleTotal = 0;
-    for (const i of idxs) { currentEligibleTotal += lineTotal[i]; baseEligibleTotal += baseLine[i]; }
-    const saving = currentEligibleTotal - roundMoney(baseEligibleTotal - totalReduction);
+    let nuevoEligibleTotal = 0;
+    for (const i of idxs) {
+      currentEligibleTotal += lineTotal[i];
+      nuevoEligibleTotal += lineasDelMix.has(i)
+        ? roundMoney(baseLine[i] - (reductionByIdx.get(i) ?? 0))
+        : lineTotal[i];
+    }
+    const saving = currentEligibleTotal - nuevoEligibleTotal;
     if (saving <= 0) continue;
 
-    if (!bestPlan || saving > bestPlan.saving) bestPlan = { promo: p, idxs, reductionByIdx, saving };
+    if (!bestPlan || saving > bestPlan.saving) {
+      bestPlan = { promo: p, idxs: [...lineasDelMix], reductionByIdx, saving };
+    }
   }
 
   if (!bestPlan) return null;
-  // Las líneas elegibles vuelven a base y se les descuenta el regalo (best-of ganó MIX).
+  // Solo las líneas que forman grupo pasan a manos del MIX: vuelven a base y se les
+  // descuenta el regalo. Las de afuera ni se tocan, así conservan la promo que ya
+  // habían ganado —y su lugar en `winnerByLine`, para que el carrito siga diciendo
+  // cuál es.
   for (const i of bestPlan.idxs) {
     lineTotal[i] = roundMoney(baseLine[i] - (bestPlan.reductionByIdx.get(i) ?? 0));
   }
