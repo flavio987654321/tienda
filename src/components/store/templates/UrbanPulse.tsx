@@ -10,6 +10,7 @@ import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { useCartLogic } from "@/hooks/useCartLogic";
 import { useTouchSwipe } from "@/hooks/useTouchSwipe";
 import { masVistos, MIN_MAS_VISTOS } from "@/lib/masVistos";
+import { colorRepresentativo } from "@/lib/section-bg";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
 import VerifiedIconButton from "@/components/store/VerifiedIconButton";
 import { CartDrawer, type CartTheme } from "@/components/store/templates/shared/CartDrawer";
@@ -178,6 +179,16 @@ export default function UrbanPulse() {
   const footerBgImg     = storeConfig?.imageOverrides?.["sectionbg_bgFooter"];
   const productosBgUp   = scu["bgProductos"]  ?? BG;
   const productosTextUp = getContrastColor(productosBgUp) === "light" ? WHITE : DARK;
+  // El fondo de una sección puede ser un DEGRADADO, no solo un color: el panel lo
+  // guarda como el string de CSS ya armado ("linear-gradient(...)") y va derecho a
+  // `background:`, que lo acepta. Pero `color:` NO acepta degradados: el navegador
+  // descarta la declaración entera y el texto se queda con el color que herede.
+  // El botón "Ver colección completa" es la sección al revés —se pinta con el color
+  // del texto y se escribe con el del fondo—, así que era el único lugar donde el
+  // fondo terminaba en un `color:`. Con un degradado el botón quedaba pintado y el
+  // texto adentro invisible. `colorRepresentativo` devuelve el punto medio del
+  // degradado, que es contra el que se eligió `productosTextUp`.
+  const productosBgSolido = colorRepresentativo(productosBgUp);
   const ofertasBgUp   = scu["bgOfertas"]  ?? DARK;
   const ofertasTextUp = getContrastColor(ofertasBgUp) === "light" ? WHITE : DARK;
   const masVistoBgUp   = scu["bgMasVisto"]  ?? DARK;
@@ -1027,9 +1038,9 @@ export default function UrbanPulse() {
         </div>
         <div style={{ textAlign:"center", marginTop:48 }}>
           <a href={`/tienda/${storeConfig?.slug}/productos?t=urban-pulse${isPreview ? "&from=editor" : ""}`}
-            style={{ display:"inline-block", background:productosTextUp, color:productosBgUp, border:`3px solid ${productosTextUp}`, padding:"16px 52px", fontSize:11, fontWeight:900, letterSpacing:4, textTransform:"uppercase", textDecoration:"none", transition:"all 0.2s" }}
+            style={{ display:"inline-block", background:productosTextUp, color:productosBgSolido, border:`3px solid ${productosTextUp}`, padding:"16px 52px", fontSize:11, fontWeight:900, letterSpacing:4, textTransform:"uppercase", textDecoration:"none", transition:"all 0.2s" }}
             onMouseEnter={e=>{ e.currentTarget.style.background="transparent"; e.currentTarget.style.color=productosTextUp; }}
-            onMouseLeave={e=>{ e.currentTarget.style.background=productosTextUp; e.currentTarget.style.color=productosBgUp; }}>
+            onMouseLeave={e=>{ e.currentTarget.style.background=productosTextUp; e.currentTarget.style.color=productosBgSolido; }}>
             Ver colección completa
           </a>
         </div>

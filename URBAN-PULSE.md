@@ -16,8 +16,10 @@ Los números de línea son los del día de la revisión: se corren a medida que 
 | ~~UP-6~~ | ~~El panel de favoritos se sale de la pantalla en 360px~~ | Baja | **hecho** 27/07 |
 | ~~UP-7~~ | ~~Un `0` suelto arriba de la foto en Ofertas~~ | Baja | **hecho** 27/07 |
 | ~~UP-8~~ | ~~El buscador usa dos columnas fijas también en celular~~ | Baja | **hecho** 27/07 |
+| ~~UP-9~~ | ~~Con un fondo en degradado, el botón "Ver colección completa" queda sin texto~~ | Alta | **hecho** 27/07 |
 
-**Los ocho puntos de la auditoría están cerrados.** Lo que sigue no es de este template: está en
+**Los nueve puntos están cerrados.** UP-9 no salió de la auditoría: lo reportó Flavio con una
+captura de su propia tienda. Lo que queda anotado no es de este template: está en
 [Notas para cuando se arregle](#notas-para-cuando-se-arregle).
 
 ---
@@ -318,9 +320,66 @@ Ahora la tarjeta ocupa los 328 de ancho útil y al texto le sobran 230.
 
 ---
 
+### ~~UP-9~~ — Con un fondo en degradado, el botón "Ver colección completa" queda sin texto ✅
+
+No salió de la auditoría. Lo reportó Flavio con una captura de su tienda: el botón se veía como un
+**rectángulo negro liso, sin una letra adentro**.
+
+`src/components/store/templates/UrbanPulse.tsx:1030`
+
+```tsx
+style={{ background:productosTextUp, color:productosBgUp, ... }}
+```
+
+El botón es **la sección al revés**: se pinta con el color del texto y se escribe con el del fondo.
+Como los dos colores salen del mismo par, por construcción siempre contrastan… mientras el fondo sea
+un color.
+
+Pero el fondo de una sección **puede ser un degradado**. El panel lo guarda como el string de CSS ya
+armado y va derecho a `background:`, que lo acepta — esa es justamente la gracia del diseño, según el
+comentario de `src/lib/section-bg.ts`. El problema es que este era el único lugar del template donde
+ese valor terminaba en un **`color:`**, y `color:` no acepta degradados: el navegador **descarta la
+declaración entera** y el texto se queda con el color que herede.
+
+Medido con el fondo real de la tienda `tiendaapps`:
+
+```
+bgProductos guardado : linear-gradient(90deg, #6e5b5b 0%, #c5bdbd 100%)
+punto medio          : #9a8c8c        →  relleno del botón: #0f0f0f
+
+ANTES    color: <el degradado>   → CSS inválido, se descarta
+         el texto hereda #0f0f0f → sobre #0f0f0f   contraste 1.00
+DESPUÉS  color: #9a8c8c                            contraste 5.94
+```
+
+**Arreglado el 27/07.** Se agregó `productosBgSolido = colorRepresentativo(productosBgUp)` y se usa
+en el `color:` y en el `onMouseLeave`. `colorRepresentativo` ya existía en `section-bg.ts` y devuelve
+el punto medio del degradado — que es exactamente contra el que se eligió `productosTextUp`, así que
+el contraste queda garantizado por la misma construcción de antes.
+
+#### Estaba igual en Boho Terra
+
+Al buscar el patrón apareció en `BohoTerra.tsx:762` y `:942`, en los botones "Ver Colección" y "Ver
+colección completa". Ahí el estado normal está bien —fondo transparente— y la inversión ocurre **al
+pasar el mouse**, así que la etiqueta desaparecía en el hover. Mismo arreglo, con `heroLeftBgSolido`
+y `coleccionBgSolido`. Los dos fondos que toca (`bgHeroLeft`, `bgColeccion`) están efectivamente
+usados por tiendas reales.
+
+⚠️ **Queda un caso menor sin tocar, a la espera de decisión.** Seis templates (TechNova, CasaClara,
+AutoMotor, AutoDrive, HomeStudio, ElectroPrime) hacen `border: 2px solid ${navBg}` en el anillo del
+puntito de notificaciones. Con un `navBg` en degradado el borde se descarta igual, pero ahí se pierde
+un anillo decorativo de 2px, no un texto: el puntito rojo se sigue viendo. Es el mismo arreglo de una
+palabra en cada uno.
+
+---
+
 ## Notas para cuando se arregle
 
-- **La auditoría está cerrada:** los ocho puntos, del UP-1 al UP-8.
+- **Cerrados los nueve puntos**, del UP-1 al UP-9.
+- **El degradado como `color:` (UP-9) es una clase de bug, no un caso.** La regla: el valor de
+  `sectionColors` sirve para `background:` y para nada más. Cualquier otro lugar que lo reciba
+  —`color`, `border`, `fill`, `stroke`— necesita pasar antes por `colorRepresentativo`. Quedan sin
+  tocar los seis `border: 2px solid ${navBg}` descritos en UP-9.
 - **UP-4 está igual en BohoTerra y FashionNoir.** Antes de arreglar el modal de otro template de
   moda, evaluar extraerlo a `shared/`: los cuatro lo tienen copiado y pegado.
 - **El `accentText` invertido (UP-3D) puede estar en más templates.** Se detectó de casualidad acá.
@@ -345,3 +404,10 @@ tanda anterior: `tsc`, eslint, preview en 200 y sin errores de runtime.
 pasada. Con esto quedan cerrados los ocho puntos de la auditoría. Verificado igual que las tandas
 anteriores: `tsc` limpio, eslint sin errores nuevos, `/preview/urban-pulse` en 200 y el log del dev
 server sin errores de runtime. Nada pusheado ni deployado.
+
+**27/07/2026 — UP-9**, reportado por Flavio con una captura, ya cerrada la auditoría. Se confirmó
+leyendo la config real de la tienda en la base (consulta de solo lectura) en vez de deducirlo: el
+fondo de la sección estaba guardado como `linear-gradient(...)`, y ese string llegaba a un `color:`,
+donde el CSS es inválido. El contraste medido pasó de **1.00 a 5.94**. El mismo patrón apareció en
+Boho Terra y se arregló igual. `tsc` limpio, eslint sin errores nuevos, `/preview/urban-pulse` y
+`/preview/boho-terra` en 200, log sin errores. Nada pusheado ni deployado.

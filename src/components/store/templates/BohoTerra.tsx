@@ -10,6 +10,7 @@ import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { useCartLogic } from "@/hooks/useCartLogic";
 import { useTouchSwipe } from "@/hooks/useTouchSwipe";
 import { masVistos, MIN_MAS_VISTOS } from "@/lib/masVistos";
+import { colorRepresentativo } from "@/lib/section-bg";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
 import VerifiedIconButton from "@/components/store/VerifiedIconButton";
 import { CartDrawer, type CartTheme } from "@/components/store/templates/shared/CartDrawer";
@@ -95,6 +96,13 @@ export default function BohoTerra() {
   const coleccionBg   = sc["bgColeccion"] ?? BG;
   const coleccionText = getContrastColor(coleccionBg) === "light" ? "#faf7f2" : "#2c2218";
   const coleccionMid  = getContrastColor(coleccionBg) === "light" ? "#d5c9be" : "#9a8070";
+  // Estos dos fondos pueden ser un DEGRADADO (el panel guarda el CSS ya armado), y
+  // los botones "Ver Colección" y "Ver colección completa" se dan vuelta al pasarles
+  // el mouse: se pintan del color del texto y se escriben con el del fondo. `color:`
+  // no acepta degradados —el navegador tira la declaración y el texto hereda—, así
+  // que al hover la etiqueta desaparecía. El punto medio del degradado sí sirve.
+  const heroLeftBgSolido  = colorRepresentativo(heroLeftBg);
+  const coleccionBgSolido = colorRepresentativo(coleccionBg);
   const ofertasBg   = sc["bgOfertas"] ?? S;
   const ofertasText = getContrastColor(ofertasBg) === "light" ? "#faf7f2" : "#2c2218";
   const masVistoBg   = sc["bgMasVisto"] ?? BG;
@@ -759,7 +767,7 @@ export default function BohoTerra() {
           </p>
           {(editMode || !storeConfig?.textOverrides?.["heroCta"]?.hidden) && (
             <button onClick={()=>scrollTo("coleccion")} style={{ alignSelf:"flex-start", background:"none", color:heroLeftText, border:`1.5px solid ${heroLeftText}`, padding:"14px 40px", fontSize:11, letterSpacing:4, textTransform:"uppercase", cursor:"pointer", transition:"all 0.25s" }}
-              onMouseEnter={e=>{ e.currentTarget.style.background=heroLeftText; e.currentTarget.style.color=heroLeftBg; }}
+              onMouseEnter={e=>{ e.currentTarget.style.background=heroLeftText; e.currentTarget.style.color=heroLeftBgSolido; }}
               onMouseLeave={e=>{ e.currentTarget.style.background="none"; e.currentTarget.style.color=heroLeftText; }}>
               <EditableZone field="heroCta" label="Botón principal">Ver Colección</EditableZone>
             </button>
@@ -939,7 +947,7 @@ export default function BohoTerra() {
         <div style={{ textAlign:"center", marginTop:48 }}>
           <a href={`/tienda/${storeConfig?.slug}/productos?t=boho-terra${isPreview ? "&from=editor" : ""}`}
             style={{ display:"inline-block", border:`1px solid ${coleccionText}`, color:coleccionText, background:"transparent", padding:"14px 40px", fontSize:11, letterSpacing:3, textTransform:"uppercase", textDecoration:"none", transition:"all 0.2s", fontFamily:"Georgia, serif", fontStyle:"italic" }}
-            onMouseEnter={e=>{ e.currentTarget.style.background=coleccionText; e.currentTarget.style.color=coleccionBg; }}
+            onMouseEnter={e=>{ e.currentTarget.style.background=coleccionText; e.currentTarget.style.color=coleccionBgSolido; }}
             onMouseLeave={e=>{ e.currentTarget.style.background="transparent"; e.currentTarget.style.color=coleccionText; }}>
             Ver colección completa
           </a>
