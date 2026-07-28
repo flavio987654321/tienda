@@ -13,7 +13,7 @@ import { getContrastColor, getReadableAccentText, getReadableAccentFill, textoSo
 import { colorToSwatch } from "@/lib/colorSwatch";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
 import { OfferBadge } from "@/components/store/OfferBadge";
-import { PromoTag, PromoBlock, PromoPrice } from "@/components/store/PromoDisplay";
+import { PromoTag, PromoBlock, PromoPrice, paletaDeTemplate } from "@/components/store/PromoDisplay";
 import { useSombrasScroll } from "@/components/store/useSombrasScroll";
 import StoreProductReels from "@/components/store/ProductReels";
 import { discountPercent } from "@/lib/discount";
@@ -292,6 +292,9 @@ function ProductosPageInner() {
   const router       = useRouter();
   const slug         = params?.slug as string;
   const tParam       = searchParams?.get("t") ?? null;
+  // Los colores de las promos siguen al template del que se viene: si no, el mismo
+  // 3x2 se ve de un color en la portada y de otro una pantalla despues.
+  const paletaPromo  = paletaDeTemplate(tParam);
   const fromEditor   = searchParams?.get("from") === "editor";
   const catParam     = searchParams?.get("categoria") ?? null;
   const subCatParam  = searchParams?.get("subcategoria") ?? null;
@@ -993,7 +996,7 @@ function ProductosPageInner() {
             const hasCardOffer = !!product.comparePrice && product.comparePrice > product.price;
             const ofertaBadge = (() => {
               // PROMOCIÓN de tienda → tag rectangular naranja con el beneficio ("20% OFF", "3×2", "Envío gratis").
-              if (cardPromo.primaryPromo) return <PromoTag tipo={cardPromo.primaryPromo.type} label={describePromo(cardPromo.primaryPromo).headline} size="sm" />;
+              if (cardPromo.primaryPromo) return <PromoTag tipo={cardPromo.primaryPromo.type} label={describePromo(cardPromo.primaryPromo).headline} size="sm" paleta={paletaPromo} />;
               // OFERTA del producto → badge rojo (precio anterior tachado del propio producto).
               if (hasCardOffer || product.offerBadge) return <OfferBadge badge={product.offerBadge ?? null} pct={hasCardOffer ? discountPercent(product.price, product.comparePrice) : null} size="sm" />;
               return null;
@@ -1868,7 +1871,7 @@ function ProductosPageInner() {
                   // La PROMOCIÓN de tienda se muestra como tag rectangular (naranja) — distinta
                   // de la OFERTA del producto (badge rojo), para que se distingan de un vistazo.
                   if (modalPromo.primaryPromo) {
-                    return <PromoTag tipo={modalPromo.primaryPromo.type} label={describePromo(modalPromo.primaryPromo).headline} />;
+                    return <PromoTag tipo={modalPromo.primaryPromo.type} label={describePromo(modalPromo.primaryPromo).headline} paleta={paletaPromo} />;
                   }
                   const hasOffer = !variantPrice && !!modalProduct.comparePrice && modalProduct.comparePrice > modalProduct.price;
                   if (hasOffer || modalProduct.offerBadge) return <OfferBadge badge={modalProduct.offerBadge ?? null} pct={hasOffer ? discountPercent(modalProduct.price, modalProduct.comparePrice) : null} size="md" />;
@@ -1968,7 +1971,7 @@ function ProductosPageInner() {
                 )}
               </div>
               {/* Bloque explicativo de la promo (headline + alcance + condiciones), estilo Tiendanube. */}
-              {modalPromo.primaryPromo && <PromoBlock promo={modalPromo.primaryPromo} freeShippingExtra={modalPromo.freeShipping} />}
+              {modalPromo.primaryPromo && <PromoBlock promo={modalPromo.primaryPromo} freeShippingExtra={modalPromo.freeShipping} paleta={paletaPromo} />}
               {modalProduct.offerNote && (
                 <div style={{ fontSize:12, color:"#059669", background:"#f0fdf4", border:"1px solid #bbf7d0", borderRadius:4, padding:"5px 10px", display:"flex", alignItems:"center", gap:6 }}>
                   <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
@@ -2268,7 +2271,7 @@ function ProductosPageInner() {
                           <img src={p.images[0] ?? ""} alt={p.name} style={{ width:"100%", aspectRatio:"3/4", objectFit:"cover", display:"block" }} onError={e => { e.currentTarget.style.opacity="0"; }} />
                           {(() => {
                             const pr = resolveProductPromo(p, promotions);
-                            if (pr.primaryPromo) return <PromoTag tipo={pr.primaryPromo.type} label={describePromo(pr.primaryPromo).headline} size="sm" />;
+                            if (pr.primaryPromo) return <PromoTag tipo={pr.primaryPromo.type} label={describePromo(pr.primaryPromo).headline} size="sm" paleta={paletaPromo} />;
                             const enOferta = !!p.comparePrice && p.comparePrice > p.price;
                             if (!enOferta && !p.offerBadge) return null;
                             return <OfferBadge badge={p.offerBadge ?? null} pct={enOferta ? discountPercent(p.price, p.comparePrice) : null} size="sm" />;

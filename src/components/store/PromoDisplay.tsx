@@ -2,6 +2,7 @@
 import type { CSSProperties } from "react";
 import { describePromo, resolveProductPromo, type PromoDisplayProduct } from "@/lib/promoDisplay";
 import type { ActivePromotion } from "@/lib/pricing";
+import { extremo } from "@/lib/section-bg";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Presentación de la PROMOCIÓN de tienda en la tienda pública. Se usa en cards,
@@ -45,9 +46,59 @@ const COLOR_PROMO: Record<string, string> = {
 };
 const COLOR_PROMO_FALLBACK = "#c2410c";
 
+// ── La paleta se puede cambiar por template ──────────────────────────────────
+// La de arriba son tonos profundos con texto blanco, y es la que usan casi todos.
+// Urban Pulse habla otro idioma —bloques planos, alto contraste, sin degradados—
+// y con la paleta profunda sus chips se veían iguales a los de Chic Paris.
+//
+// Los tonos de abajo se eligieron con los MISMOS dos criterios que los de arriba,
+// medidos y no a ojo:
+//   1) cada uno da 5:1 o más contra el texto que le toca (el más justo, 6.11)
+//   2) están repartidos por la rueda, con 60° o más entre vecinos — a 10px de alto
+//      dos colores cercanos son el mismo color
+// Y uno propio: que NO se confundan con los de Chic Paris, que era el pedido.
+//
+//   amarillo 50 · verde 130 · cyan 190 · violeta 255 · magenta 320
+export type PaletaPromo = Record<string, string>;
+
+export const PALETA_PROMO_NEON: PaletaPromo = {
+  PERCENT:       "#ffd91a", // amarillo señal (15.01)
+  N_PAY_M:       "#2bee4b", // verde neón     (13.27)
+  FREE_SHIPPING: "#10d2f9", // cyan           (11.47)
+  MIX_N_PAY_M:   "#9674fb", // violeta        ( 6.11)
+  FIXED:         "#fb51c2", // magenta        ( 6.97)
+};
+
+// Qué template usa qué paleta. Vive acá y no en cada pantalla porque la página de
+// LISTADO también dibuja promos y se pinta con los colores del template del que
+// viene (`?t=`): sin esta tabla, el mismo 3×2 se veía violeta en la portada de Urban
+// Pulse y azul una pantalla después, al tocar "Ver colección completa".
+// Los que no figuran usan la clásica.
+const PALETA_POR_TEMPLATE: Record<string, PaletaPromo> = {
+  "urban-pulse": PALETA_PROMO_NEON,
+};
+
+export function paletaDeTemplate(t?: string | null): PaletaPromo | undefined {
+  return (t && PALETA_POR_TEMPLATE[t]) || undefined;
+}
+
+/**
+ * El mismo color de la promo pero oscurecido lo justo para que se LEA como texto
+ * sobre un fondo claro. Un tono sirve de relleno con mucho menos contraste del que
+ * necesita para ser texto, así que es una pregunta distinta y tiene su función.
+ * Devuelve el color tal cual si ya se lee: los tonos profundos no se tocan.
+ */
+export function paraTexto(fondo: string): string {
+  let c = fondo;
+  // De a poco y con tope: 8 vueltas del 18% alcanzan para el amarillo más claro, y
+  // el tope evita quedarse dando vueltas si `extremo` no puede leer el color.
+  for (let i = 0; i < 8 && contrasta(c, "#ffffff") < 4.5; i++) c = extremo(c, "oscuro", 18);
+  return c;
+}
+
 /** Color de fondo del tipo de promo, y el de texto que se lee encima. */
-export function coloresPromo(tipo?: string) {
-  const fondo = (tipo && COLOR_PROMO[tipo]) || COLOR_PROMO_FALLBACK;
+export function coloresPromo(tipo?: string, paleta: PaletaPromo = COLOR_PROMO) {
+  const fondo = (tipo && paleta[tipo]) || paleta.PERCENT || COLOR_PROMO_FALLBACK;
   // Se elige el que MAS contrasta, no por un umbral de luminosidad. `getContrastColor`
   // decide con lum > 0.5 y sobre estos tonos se equivocaba: para el naranja pedia
   // blanco (3.56) cuando el negro daba 5.30. Asi, si mañana alguien mete un amarillo
@@ -74,9 +125,9 @@ function luminanciaRelativa(hex: string): number | null {
   return 0.2126 * canal((n >> 16) & 255) + 0.7152 * canal((n >> 8) & 255) + 0.0722 * canal(n & 255);
 }
 
-export function PromoTag({ label, size = "md", tipo }: { label: string; size?: "sm" | "md"; tipo?: string }) {
+export function PromoTag({ label, size = "md", tipo, paleta }: { label: string; size?: "sm" | "md"; tipo?: string; paleta?: PaletaPromo }) {
   const sm = size === "sm";
-  const { fondo, texto } = coloresPromo(tipo);
+  const { fondo, texto } = coloresPromo(tipo, paleta);
   const style: CSSProperties = {
     position: "absolute",
     top: sm ? 8 : 14,
@@ -98,22 +149,28 @@ export function PromoTag({ label, size = "md", tipo }: { label: string; size?: "
   return <div style={style}>{label}</div>;
 }
 
-export function PromoBlock({ promo, freeShippingExtra = false }: { promo: ActivePromotion; freeShippingExtra?: boolean }) {
+export function PromoBlock({ promo, freeShippingExtra = false, paleta }: { promo: ActivePromotion; freeShippingExtra?: boolean; paleta?: PaletaPromo }) {
   const d = describePromo(promo);
   // El bloque sigue el color de su tipo, igual que el tag: si el tag de la foto es
   // violeta y el cuadro de abajo naranja, parecen dos promos distintas.
   // El fondo y el borde son el mismo color con alfa (14 ≈ 8%, 40 ≈ 25%), así no
   // hay que mantener una segunda tabla de tintes por tipo.
-  const { fondo } = coloresPromo(promo.type);
+  const { fondo } = coloresPromo(promo.type, paleta);
+  // El titular y los puntitos van con el color de la promo, pero acá el color se usa
+  // como TEXTO sobre un tinte casi blanco, y eso es otra pregunta que usarlo de
+  // relleno. Los tonos profundos de la paleta clásica se leen bien; los neón de
+  // Urban Pulse no: el amarillo #ffd91a sobre blanco da 1.4. `paraTexto` lo oscurece
+  // lo justo, así el bloque sigue siendo del color de su promo sin volverse ilegible.
+  const tinta = paraTexto(fondo);
   return (
     <div style={{ background: `${fondo}14`, border: `1px solid ${fondo}40`, borderRadius: 6, padding: "11px 13px", display: "flex", flexDirection: "column", gap: 5 }}>
-      <div style={{ fontSize: 15, fontWeight: 800, color: fondo }}>¡{d.headline}!</div>
+      <div style={{ fontSize: 15, fontWeight: 800, color: tinta }}>¡{d.headline}!</div>
       {/* El cuerpo va en gris oscuro y no en el color de la promo: sobre un tinte
           tan claro, el color propio de cada tipo se lee flojo. */}
       <div style={{ fontSize: 12.5, color: "#3f3f46", lineHeight: 1.5 }}>Válido {d.scope}.</div>
       {d.conditions.map((c, i) => (
         <div key={i} style={{ fontSize: 11.5, color: "#3f3f46", opacity: 0.85, display: "flex", alignItems: "center", gap: 6 }}>
-          <span style={{ width: 4, height: 4, borderRadius: "50%", background: fondo, display: "inline-block", flexShrink: 0 }} />
+          <span style={{ width: 4, height: 4, borderRadius: "50%", background: tinta, display: "inline-block", flexShrink: 0 }} />
           {c}
         </div>
       ))}

@@ -17,7 +17,7 @@ import ReportStoreModal from "@/components/store/ReportStoreModal";
 import VerifiedIconButton from "@/components/store/VerifiedIconButton";
 import { CartDrawer, type CartTheme } from "@/components/store/templates/shared/CartDrawer";
 import { OfferBadge } from "@/components/store/OfferBadge";
-import { PromoTag, PromoBlock, PromoPrice, coloresPromo } from "@/components/store/PromoDisplay";
+import { PromoTag, PromoBlock, PromoPrice, coloresPromo, PALETA_PROMO_NEON } from "@/components/store/PromoDisplay";
 import { resolveProductPromo, describePromo } from "@/lib/promoDisplay";
 import { CheckoutModal } from "@/components/store/templates/shared/CheckoutModal";
 import { ContactForm } from "@/components/store/templates/shared/ContactForm";
@@ -346,15 +346,15 @@ export default function UrbanPulse() {
     if (!pr.primaryPromo && !enOferta) return null;
     if (modo === "foto") {
       return pr.primaryPromo
-        ? <PromoTag tipo={pr.primaryPromo.type} label={describePromo(pr.primaryPromo).headline} size="sm" />
+        ? <PromoTag tipo={pr.primaryPromo.type} label={describePromo(pr.primaryPromo).headline} size="sm" paleta={PALETA_PROMO_NEON} />
         : <OfferBadge badge={p.offerBadge} pct={pct} size="sm" />;
     }
     return (
       <span style={{ display:"inline-block", marginTop:4, maxWidth:"100%",
                      // Mismo color que tendría su tag en la foto: el chip es el mismo
                      // aviso, en chico.
-                     background: pr.primaryPromo ? coloresPromo(pr.primaryPromo.type).fondo : "#dc2626",
-                     color: pr.primaryPromo ? coloresPromo(pr.primaryPromo.type).texto : "#fff",
+                     background: pr.primaryPromo ? coloresPromo(pr.primaryPromo.type, PALETA_PROMO_NEON).fondo : "#dc2626",
+                     color: pr.primaryPromo ? coloresPromo(pr.primaryPromo.type, PALETA_PROMO_NEON).texto : "#fff",
                      fontSize:9, fontWeight:900, letterSpacing:0.5, textTransform:"uppercase", padding:"2px 6px", lineHeight:1.3 }}>
         {pr.primaryPromo ? describePromo(pr.primaryPromo).headline : `${pct}% OFF`}
       </span>
@@ -641,8 +641,8 @@ export default function UrbanPulse() {
                           {subs.map(sub => (
                             <button key={sub} onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?t=urban-pulse${isPreview ? "&from=editor" : ""}&categoria=${encodeURIComponent(cat)}&subcategoria=${encodeURIComponent(sub)}`; setHoveredNavCat(null); }}
                               style={{ background:WHITE, border:`1.5px solid ${DARK}`, color:DARK, padding:"4px 8px", fontSize:9.5, fontWeight:700, textAlign:"left", cursor:"pointer", letterSpacing:0.5, textTransform:"uppercase" }}
-                              onMouseEnter={e => { e.currentTarget.style.background = ACC; }}
-                              onMouseLeave={e => { e.currentTarget.style.background = WHITE; }}>
+                              onMouseEnter={e => { e.currentTarget.style.background = ACC; e.currentTarget.style.color = accentText; }}
+                              onMouseLeave={e => { e.currentTarget.style.background = WHITE; e.currentTarget.style.color = DARK; }}>
                               {sub}
                             </button>
                           ))}
@@ -732,8 +732,8 @@ export default function UrbanPulse() {
                     </p>
                     <a href={panelHref} onClick={() => setUserDropdownOpen(false)}
                       style={{ display:"block", width:"100%", padding:"10px 16px", textDecoration:"none", fontSize:11, fontWeight:800, letterSpacing:2, textTransform:"uppercase", color:DARK, borderBottom:`1px solid ${BG}` }}
-                      onMouseEnter={e => { e.currentTarget.style.background = ACC; }}
-                      onMouseLeave={e => { e.currentTarget.style.background = "none"; }}>{panelLabel}</a>
+                      onMouseEnter={e => { e.currentTarget.style.background = ACC; e.currentTarget.style.color = accentText; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = "none"; e.currentTarget.style.color = DARK; }}>{panelLabel}</a>
                     <button onClick={() => { if (isPreview) return; setUserDropdownOpen(false); signOut("/"); }}
                       style={{ display:"block", width:"100%", padding:"10px 16px", background:"none", border:"none", textAlign:"left", fontSize:11, fontWeight:800, letterSpacing:2, textTransform:"uppercase", cursor: isPreview ? "default" : "pointer", color:"#ef4444", opacity: isPreview ? 0.45 : 1 }}
                       onMouseEnter={e => { if (!isPreview) e.currentTarget.style.background = "#fff1f1"; }}
@@ -743,12 +743,12 @@ export default function UrbanPulse() {
                   <>
                     <a href={isPreview ? undefined : `/login?redirect=/tienda/${storeConfig?.slug}`} onClick={() => !isPreview && setUserDropdownOpen(false)}
                       style={{ display:"block", padding:"10px 16px", textDecoration:"none", fontSize:11, fontWeight:800, letterSpacing:2, textTransform:"uppercase", color:DARK, borderBottom:`1px solid ${BG}`, cursor: isPreview ? "default" : "pointer" }}
-                      onMouseEnter={e => { if (!isPreview) e.currentTarget.style.background = ACC; }}
-                      onMouseLeave={e => { e.currentTarget.style.background = "none"; }}>Iniciar sesión</a>
+                      onMouseEnter={e => { if (!isPreview) { e.currentTarget.style.background = ACC; e.currentTarget.style.color = accentText; } }}
+                      onMouseLeave={e => { e.currentTarget.style.background = "none"; e.currentTarget.style.color = DARK; }}>Iniciar sesión</a>
                     <a href={isPreview ? undefined : `/registro?plan=buyer&redirect=/tienda/${storeConfig?.slug}`} onClick={() => !isPreview && setUserDropdownOpen(false)}
                       style={{ display:"block", padding:"10px 16px", textDecoration:"none", fontSize:11, fontWeight:800, letterSpacing:2, textTransform:"uppercase", color:DARK, cursor: isPreview ? "default" : "pointer" }}
-                      onMouseEnter={e => { if (!isPreview) e.currentTarget.style.background = ACC; }}
-                      onMouseLeave={e => { e.currentTarget.style.background = "none"; }}>Registrarse</a>
+                      onMouseEnter={e => { if (!isPreview) { e.currentTarget.style.background = ACC; e.currentTarget.style.color = accentText; } }}
+                      onMouseLeave={e => { e.currentTarget.style.background = "none"; e.currentTarget.style.color = DARK; }}>Registrarse</a>
                   </>
                 )}
               </div>
@@ -1033,7 +1033,7 @@ export default function UrbanPulse() {
               <div key={product.id} className="up-prod" onClick={() => openModal(product)}
                 style={{ gridColumn: big ? "span 2" : "span 1", cursor:"pointer", position:"relative", background:WHITE }}>
                 {(() => {
-                  if (promo.primaryPromo) return <PromoTag tipo={promo.primaryPromo.type} label={describePromo(promo.primaryPromo).headline} size={big ? "md" : "sm"} />;
+                  if (promo.primaryPromo) return <PromoTag tipo={promo.primaryPromo.type} label={describePromo(promo.primaryPromo).headline} size={big ? "md" : "sm"} paleta={PALETA_PROMO_NEON} />;
                   const hasOffer = !!product.comparePrice && product.comparePrice > product.price;
                   if (!hasOffer) return null;
                   return <OfferBadge badge={product.offerBadge} pct={discountPercent(product.price, product.comparePrice)} size={big ? "md" : "sm"} />;
@@ -1073,7 +1073,12 @@ export default function UrbanPulse() {
                     </div>
                   </div>
                   {product.badge && (
-                    <span style={{ display:"inline-block", marginTop:8, background: product.badge === "Sale" ? RED : DARK, color: product.badge === "Sale" ? WHITE : ACC, padding:"3px 10px", fontSize:9, fontWeight:900, letterSpacing:3, textTransform:"uppercase" }}>
+                    // El badge del producto ("Nuevo", "Sale"). El que NO es "Sale"
+                    // se pintaba de negro con el acento CRUDO de texto: con un
+                    // acento oscuro quedaba negro sobre negro y la etiqueta
+                    // desaparecía. `accSobreDark` devuelve el acento cuando se
+                    // distingue del negro, y blanco cuando no.
+                    <span style={{ display:"inline-block", marginTop:8, background: product.badge === "Sale" ? RED : DARK, color: product.badge === "Sale" ? WHITE : accSobreDark, padding:"3px 10px", fontSize:9, fontWeight:900, letterSpacing:3, textTransform:"uppercase" }}>
                       {product.badge}
                     </span>
                   )}
@@ -1122,7 +1127,10 @@ export default function UrbanPulse() {
               <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:12, flexWrap:"wrap" }}>
                 <span style={{ display:"flex", gap:3 }}>
                   {[1,2,3,4,5].map(s => (
-                    <svg key={s} width={15} height={15} viewBox="0 0 24 24" fill={s <= Math.round(promedio) ? ACC : testimonialsMid} stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                    // Mismo caso que las estrellas de las tarjetas: el acento crudo
+                    // sobre una sección oscura se pierde. Estas son las del
+                    // PROMEDIO, arriba del título, y se habían quedado sin arreglar.
+                    <svg key={s} width={15} height={15} viewBox="0 0 24 24" fill={s <= Math.round(promedio) ? accentSobre(testimonialsBgUp, testimonialsText) : testimonialsMid} stroke="none" style={{ opacity: s <= Math.round(promedio) ? 1 : 0.35 }}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
                   ))}
                 </span>
                 <span style={{ color:testimonialsText, fontSize:11, fontWeight:900, letterSpacing:2, textTransform:"uppercase" }}>
@@ -1278,8 +1286,14 @@ export default function UrbanPulse() {
                   {/* "Compra verificada" y "Verificada por la tienda" NO son lo
                       mismo: la primera la cruzó el sistema contra un pedido
                       entregado, la segunda la marcó el dueño a mano. */}
+                  {/* El verde era fijo (`#22c55e`) y el fondo de esta sección lo
+                      elige la dueña: sobre un fondo verdoso el sello quedaba casi
+                      invisible. `getReadableAccentText` lo conserva mientras se
+                      despegue del fondo y cae al color de texto de la sección
+                      cuando no — el sello sigue distinguiéndose por el ✓ y por la
+                      negrita, que es lo que de verdad lo señala. */}
                   {r.verified && (
-                    <p style={{ fontSize:9.5, fontWeight:900, letterSpacing:0.5, margin:"5px 0 0", color: r.verifiedBy === "auto" ? "#22c55e" : testimonialsMid }}>
+                    <p style={{ fontSize:9.5, fontWeight:900, letterSpacing:0.5, margin:"5px 0 0", color: r.verifiedBy === "auto" ? getReadableAccentText("#22c55e", testimonialsBgUp, testimonialsText) : testimonialsMid }}>
                       {r.verifiedBy === "auto" ? "✓ Compra verificada" : "✓ Verificada por la tienda"}
                     </p>
                   )}
@@ -1779,7 +1793,7 @@ export default function UrbanPulse() {
                       onClick={() => setLightboxSrc(modalProduct.images[modalImg])} />
                   )}
                   {(() => {
-                    if (modalPromo?.primaryPromo) return <PromoTag tipo={modalPromo.primaryPromo.type} label={describePromo(modalPromo.primaryPromo).headline} />;
+                    if (modalPromo?.primaryPromo) return <PromoTag tipo={modalPromo.primaryPromo.type} label={describePromo(modalPromo.primaryPromo).headline} paleta={PALETA_PROMO_NEON} />;
                     const hasOffer = !variantPrice && !!modalProduct.comparePrice && modalProduct.comparePrice > modalProduct.price;
                     if (!hasOffer) return null;
                     return <OfferBadge badge={modalProduct.offerBadge} pct={discountPercent(modalProduct.price, modalProduct.comparePrice)} size="md" />;
@@ -1849,7 +1863,7 @@ export default function UrbanPulse() {
                     </>
                   )}
                 </div>
-                {modalPromo?.primaryPromo && <div style={{ marginBottom:16 }}><PromoBlock promo={modalPromo.primaryPromo} freeShippingExtra={modalPromo.freeShipping} /></div>}
+                {modalPromo?.primaryPromo && <div style={{ marginBottom:16 }}><PromoBlock promo={modalPromo.primaryPromo} freeShippingExtra={modalPromo.freeShipping} paleta={PALETA_PROMO_NEON} /></div>}
                 {!ocultarPrecios && modalProduct.offerNote && (
                   <div style={{ fontSize:12, color:"#f97316", background:"rgba(249,115,22,0.08)", border:"1px solid rgba(249,115,22,0.25)", borderRadius:4, padding:"5px 10px", display:"flex", alignItems:"center", gap:6 }}>
                     <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="#f97316" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
@@ -2011,7 +2025,10 @@ export default function UrbanPulse() {
                       <div style={{ display:"flex", flexDirection:"column" }}>
                         {reviews.slice(0, reviewsShown).map((r, i) => (
                           <div key={r.id} style={{ display:"flex", gap:12, padding:"16px 0", borderBottom: i < Math.min(reviewsShown, reviews.length) - 1 ? `1px solid ${DARK}` : "none" }}>
-                            <div style={{ width:34, height:34, borderRadius:0, flexShrink:0, background:`${ACC}18`, border:`1px solid ${ACC}`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:12, fontWeight:900, color:ACC, textTransform:"uppercase" }}>
+                            {/* El cuadradito con la inicial de quien reseñó. Estaba
+                                con el acento crudo sobre el blanco del modal: con un
+                                acento claro se perdían la letra y el borde a la vez. */}
+                            <div style={{ width:34, height:34, borderRadius:0, flexShrink:0, background:`${accSobreClaro}18`, border:`1px solid ${accSobreClaro}`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:12, fontWeight:900, color:accSobreClaro, textTransform:"uppercase" }}>
                               {r.reviewer.charAt(0).toUpperCase()}
                             </div>
                             <div style={{ flex:1 }}>
@@ -2185,7 +2202,10 @@ export default function UrbanPulse() {
                       <button key={s} type="button" onClick={() => resenas.setForm(p => ({ ...p, rating: s }))}
                         aria-label={`${s} de 5 estrellas`}
                         style={{ background:"none", border:"none", padding:0, cursor:"pointer", lineHeight:0 }}>
-                        <svg width={26} height={26} viewBox="0 0 24 24" fill={s <= resenas.form.rating ? ACC : "#dcdcdc"} stroke={s <= resenas.form.rating ? DARK : "none"} strokeWidth={1}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                        {/* El modal es blanco: con un acento claro las estrellas
+                            elegidas desaparecían. `accSobreClaro` cae a un color
+                            legible cuando el acento no se despega del blanco. */}
+                        <svg width={26} height={26} viewBox="0 0 24 24" fill={s <= resenas.form.rating ? accSobreClaro : "#dcdcdc"} stroke={s <= resenas.form.rating ? DARK : "none"} strokeWidth={1}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
                       </button>
                     ))}
                   </div>

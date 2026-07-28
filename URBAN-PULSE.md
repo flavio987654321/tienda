@@ -18,8 +18,9 @@ Los números de línea son los del día de la revisión: se corren a medida que 
 | ~~UP-8~~ | ~~El buscador usa dos columnas fijas también en celular~~ | Baja | **hecho** 27/07 |
 | ~~UP-9~~ | ~~Con un fondo en degradado, el botón "Ver colección completa" queda sin texto~~ | Alta | **hecho** 27/07 |
 | ~~UP-10~~ | ~~El bloque de opiniones son cuatro personas inventadas en el código~~ | Alta | **hecho** 28/07 |
+| ~~UP-11~~ | ~~Quedaban 5 lugares donde el acento no se adapta, y las promos se ven iguales a Chic Paris~~ | Alta | **hecho** 28/07 |
 
-**Los diez puntos están cerrados.** Los dos últimos no salieron de la auditoría: UP-9 lo reportó
+**Los once puntos están cerrados.** Los dos últimos no salieron de la auditoría: UP-9 lo reportó
 Flavio con una captura de su propia tienda, y UP-10 fue un pedido suyo — traer las reseñas de verdad
 al bloque de opiniones. Lo que queda anotado no es de este template: está en
 [Notas para cuando se arregle](#notas-para-cuando-se-arregle).
@@ -558,9 +559,66 @@ las de producto.
 
 ---
 
+### UP-11 — El acento seguía perdiéndose, y las promos se veían iguales a Chic Paris ✅
+
+Flavio marcó tres cosas con capturas. Las tres eran ciertas.
+
+#### A) Cinco lugares más donde el acento no se adaptaba
+
+UP-3 barrió 40 usos pero se le escaparon estos, porque no son `color:ACC` a secas:
+
+| Dónde | Qué pasaba |
+|---|---|
+| Badge del producto ("NUEVO") | `color: p.badge === "Sale" ? WHITE : ACC` sobre fondo `DARK` — acento oscuro = **negro sobre negro** |
+| Menú de categorías, y 3 más | el hover pintaba `background = ACC` y el texto quedaba en `DARK` fijo |
+| Estrellas del **promedio** | `fill={ACC}` crudo — se arreglaron las de las tarjetas y estas quedaron |
+| Estrellas del formulario | `fill={ACC}` sobre el blanco del modal |
+| Cuadradito de la inicial | `background:${ACC}18` + `color:ACC` sobre blanco: con acento claro se perdían letra y borde |
+
+La lección: el patrón peligroso no es solo `color:ACC`. También lo son **el ternario**
+(`? WHITE : ACC`) y **el hover que pinta el fondo sin tocar el texto**, que no aparecen si uno
+grepea `color:\s*ACC`.
+
+#### B) "✓ Compra verificada" con un verde fijo
+
+Era `#22c55e` escrito a mano y el fondo de la sección lo elige la dueña: sobre un fondo verdoso el
+sello quedaba casi invisible. Ahora pasa por `getReadableAccentText`, que conserva el verde mientras
+se despegue del fondo y cae al color de texto de la sección cuando no. El sello se sigue
+distinguiendo por el ✓ y la negrita.
+
+#### C) Urban Pulse tiene su propia paleta de promos
+
+Las promos usaban la misma tabla de colores para los diez templates, así que los chips de Urban Pulse
+se veían idénticos a los de Chic Paris. La paleta pasó a ser un parámetro (`coloresPromo(tipo,
+paleta)`), y Urban Pulse estrena una neón, calculada con **los mismos dos criterios** que la clásica —
+no elegida a ojo:
+
+| Tipo | Clásica | Neón (Urban Pulse) | Contraste del chip |
+|---|---|---|---|
+| PERCENT | `#c2410c` | `#ffd91a` amarillo | 13.66 |
+| N_PAY_M | `#4d7c0f` | `#2bee4b` verde | 12.08 |
+| FREE_SHIPPING | `#0f766e` | `#10d2f9` cyan | 10.44 |
+| MIX_N_PAY_M | `#1d4ed8` | `#9674fb` violeta | 5.56 |
+| FIXED | `#a21caf` | `#fb51c2` magenta | 6.35 |
+
+Separación en la rueda: 90° · 80° · 60° · 65° · 65° — todos ≥49°, así no se confunden a 10px de alto.
+La clásica **no se movió**: los otros nueve templates quedan igual (verificado, peor caso 4.99, el
+mismo de antes).
+
+**Lo que hubo que resolver además:** `PromoBlock` usa el color de la promo **como texto** sobre un
+tinte casi blanco. Los tonos profundos se leen; los neón no —el amarillo sobre blanco da 1.4—. Se
+agregó `paraTexto`, que oscurece el color lo justo y **deja intactos** los que ya se leen. Peor caso
+del titular neón: 4.81.
+
+**Y la página de listado.** Se pinta con los colores del template del que viene (`?t=`), pero dibujaba
+las promos con la clásica: el mismo 3×2 se veía violeta en la portada y azul una pantalla después, al
+tocar "Ver colección completa". Ahora hay una tabla `template → paleta` en un solo lugar.
+
+---
+
 ## Notas para cuando se arregle
 
-- **Cerrados los diez puntos**, del UP-1 al UP-10.
+- **Cerrados los once puntos**, del UP-1 al UP-11.
 - **`/plantillas/[id]` tira `useAuth debe usarse dentro de AuthProvider` en el servidor.** Es
   pre-existente y ajeno a este trabajo: `useAuth` entró a los templates en `35c8252` y esa ruta no
   envuelve en `AuthProvider`. La página igual responde 200 —React se recupera en el cliente— pero cada
@@ -668,3 +726,14 @@ pareciéndose a la de Chic Paris —se pasó la foto a la izquierda y a toda la 
 a 2 columnas para que la foto pueda crecer—, y la reseña no llevaba a la ficha del producto, que
 ahora se abre desde la foto y desde el nombre. `tsc` y eslint limpios, `/plantillas/urban-pulse` en
 200, log sin errores después del último compilado.
+
+**28/07/2026 — UP-11.** Reportado por Flavio con tres capturas. Aparecieron cinco usos más del acento
+que UP-3 no había agarrado —el badge del producto, cuatro hovers y tres juegos de estrellas— porque
+ninguno tiene la forma `color:ACC` que se había grepeado: son ternarios (`? WHITE : ACC`) y hovers que
+pintan el fondo sin tocar el texto. Además el sello de compra verificada tenía un verde fijo sobre un
+fondo editable. Y se le dio a Urban Pulse su propia paleta de promos, medida con los mismos dos
+criterios que la clásica, que quedó sin tocar (verificado: peor caso 4.99, el mismo de antes).
+
+`tsc` y eslint limpios —el error de `setState` en efecto de `productos/page.tsx` es pre-existente, se
+comprobó contra HEAD—, `/plantillas/urban-pulse` y el listado con `?t=urban-pulse` en 200. Nada
+pusheado ni deployado.
