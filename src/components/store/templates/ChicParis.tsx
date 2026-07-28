@@ -1451,7 +1451,11 @@ export default function ChicParis() {
                                 imagen), así que con top/right negativos el círculo
                                 perdía la esquina y se veía como un cuadrado con una
                                 punta comida. */}
-                            {pct && (
+                            {/* `!!pct` y no `pct &&`: con `pct === 0` el `&&` devuelve el
+                                número, y React dibuja un "0" suelto arriba de la foto. Se
+                                llega ahí con una oferta de menos del 0,5% (comparePrice
+                                $10.040 contra $10.000 redondea a 0%). */}
+                            {!!pct && (
                               <span style={{ position: "absolute", top: 8, right: 8, width: 40, height: 40, borderRadius: "50%", background: ACC, color: accentText, fontSize: 11, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", textAlign: "center", lineHeight: 1.1 }}>-{pct}%</span>
                             )}
                           </div>

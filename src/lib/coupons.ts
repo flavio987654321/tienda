@@ -20,7 +20,8 @@ export function isValidCouponCode(value: string) {
 // un carrito de $300.000, la pantalla decía −$60.000 y el servidor cobraba
 // −$50.000: el comprador aprobaba un total y se le creaba el pedido con otro,
 // $10.000 más caro, sin ningún aviso.
-// El techo del descuento es RELATIVO al carrito, no un monto fijo.
+//
+// ── El techo es RELATIVO al carrito, no un monto fijo ────────────────────────
 //
 // Antes era $50.000 escrito a mano, y un número absoluto no puede servir en una
 // plataforma donde un carrito es un llavero de $4.000 o un auto de $28.000.000.
