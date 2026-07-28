@@ -13,9 +13,12 @@ Los números de línea son los del día de la revisión: se corren a medida que 
 | ~~UP-3~~ | ~~El acento no se adapta: se pierde el texto o se pierde él~~ | Alta | **hecho** 27/07 |
 | ~~UP-4~~ | ~~El selector de color se traba y deja de sincronizar~~ | Media | **hecho** 27/07 |
 | ~~UP-5~~ | ~~Seis de ocho lugares no dicen que el producto tiene promo~~ | Media | **hecho** 27/07 |
-| UP-6 | El panel de favoritos se sale de la pantalla en 360px | Baja | pendiente |
-| UP-7 | Un `0` suelto arriba de la foto en Ofertas | Baja | pendiente |
-| UP-8 | El buscador usa dos columnas fijas también en celular | Baja | pendiente |
+| ~~UP-6~~ | ~~El panel de favoritos se sale de la pantalla en 360px~~ | Baja | **hecho** 27/07 |
+| ~~UP-7~~ | ~~Un `0` suelto arriba de la foto en Ofertas~~ | Baja | **hecho** 27/07 |
+| ~~UP-8~~ | ~~El buscador usa dos columnas fijas también en celular~~ | Baja | **hecho** 27/07 |
+
+**Los ocho puntos de la auditoría están cerrados.** Lo que sigue no es de este template: está en
+[Notas para cuando se arregle](#notas-para-cuando-se-arregle).
 
 ---
 
@@ -259,7 +262,7 @@ remera de $50.000 y −10% en una campera de $100.000.
 
 ---
 
-### UP-6 — El panel de favoritos se sale de la pantalla en 360px
+### ~~UP-6~~ — El panel de favoritos se sale de la pantalla en 360px ✅
 
 `src/components/store/templates/UrbanPulse.tsx:1409`
 
@@ -269,12 +272,12 @@ remera de $50.000 y −10% en una campera de $100.000.
 
 Ancho fijo sin `maxWidth`. En un teléfono de 360px sobresale 40px por el borde izquierdo.
 
-**Cómo se arregla:** `width:400, maxWidth:"100vw"`. Verificar en los tres anchos de siempre —
-360 / 768 / 1280.
+**Arreglado el 27/07.** Se le agregó `maxWidth:"100vw"`. El `width:400` se deja: es el ancho que se
+quiere cuando la pantalla da, y `maxWidth` lo recorta sola cuando no. En 768 y 1280 no cambia nada.
 
 ---
 
-### UP-7 — Un `0` suelto arriba de la foto en Ofertas
+### ~~UP-7~~ — Un `0` suelto arriba de la foto en Ofertas ✅
 
 `src/components/store/templates/UrbanPulse.tsx:1024`
 
@@ -286,11 +289,12 @@ Con `pct === 0` el `&&` no devuelve `false`, devuelve el número, y React dibuja
 arriba de la foto, sin badge ni nada. Se llega con una oferta de menos del 0,5%: un precio anterior
 de $10.040 contra $10.000 redondea a 0%.
 
-**Cómo se arregla:** `{!!pct && ...}`. Es el mismo arreglo que se hizo en Chic Paris el 27/07.
+**Arreglado el 27/07.** `{!!pct && ...}`, el mismo arreglo que en Chic Paris. El `!!` fuerza el `0` a
+`false`, y `false` React no lo dibuja.
 
 ---
 
-### UP-8 — El buscador usa dos columnas fijas también en celular
+### ~~UP-8~~ — El buscador usa dos columnas fijas también en celular ✅
 
 `src/components/store/templates/UrbanPulse.tsx:1387`
 
@@ -301,14 +305,22 @@ de $10.040 contra $10.000 redondea a 0%.
 Dos columnas siempre, con `padding:"80px 40px 40px"` en el contenedor. En 360px quedan 140px por
 tarjeta para una foto de 56px más el nombre y el precio.
 
-**Cómo se arregla:** una columna en celular (`isMobile ? "1fr" : "1fr 1fr"`) y bajar el padding
-lateral, como hacen el resto de las secciones (`isMobile ? 16 : 40`).
+**Arreglado el 27/07.** Una columna en celular y el padding lateral a 16, como el resto de las
+secciones:
+
+```tsx
+padding: isMobile ? "72px 16px 32px" : "80px 40px 40px"
+gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr"
+```
+
+Cuentas en 360px: antes quedaban **140px** por tarjeta para una foto de 56 más el nombre y el precio.
+Ahora la tarjeta ocupa los 328 de ancho útil y al texto le sobran 230.
 
 ---
 
 ## Notas para cuando se arregle
 
-- **Lo que queda:** UP-6, UP-7 y UP-8, de una línea cada uno.
+- **La auditoría está cerrada:** los ocho puntos, del UP-1 al UP-8.
 - **UP-4 está igual en BohoTerra y FashionNoir.** Antes de arreglar el modal de otro template de
   moda, evaluar extraerlo a `shared/`: los cuatro lo tienen copiado y pegado.
 - **El `accentText` invertido (UP-3D) puede estar en más templates.** Se detectó de casualidad acá.
@@ -328,3 +340,8 @@ acento revisados uno por uno contra el fondo real de cada lugar; ocho secciones 
 En el camino apareció UP-3D, el `accentText` invertido que alimentaba el carrito: no estaba en la
 auditoría original, lo destapó `tsc` al chocar con la constante nueva. Verificado igual que la
 tanda anterior: `tsc`, eslint, preview en 200 y sin errores de runtime.
+
+**27/07/2026 — UP-6, UP-7 y UP-8**, los tres de responsive y de una línea cada uno, en una sola
+pasada. Con esto quedan cerrados los ocho puntos de la auditoría. Verificado igual que las tandas
+anteriores: `tsc` limpio, eslint sin errores nuevos, `/preview/urban-pulse` en 200 y el log del dev
+server sin errores de runtime. Nada pusheado ni deployado.
