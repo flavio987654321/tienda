@@ -2175,7 +2175,14 @@ export default function ChicParis() {
                 del filo izquierdo. */}
             <div ref={colFotoRef} style={{ width: isMobile ? "100%" : "48%", flexShrink: 0, alignSelf: "flex-start",
                                            boxSizing: "border-box", padding: isMobile ? 0 : "28px 0 28px 28px" }}>
-            <div style={{ position: "relative", width: "100%", overflow: "hidden", aspectRatio: isMobile ? "4/3" : "3/4" }} {...imgSwipe}>
+            {/* 3/4 también en celular. Era 4/3 —apaisado— y las fotos de ropa son
+                verticales: con `objectFit:cover` la caja recortaba la prenda arriba y
+                abajo, y en un teléfono de 360px se perdía casi la mitad del alto. El
+                comprador solo veía la foto entera si la abría en grande, que es
+                justamente lo que uno hace DESPUÉS de que la miniatura lo convenció.
+                Es además el único lugar de la tienda que no usaba 3/4: la grilla, lo
+                más visto, los similares y el modal del listado ya lo usan. */}
+            <div style={{ position: "relative", width: "100%", overflow: "hidden", aspectRatio: "3/4" }} {...imgSwipe}>
               <FadeImage src={modalProduct.images[modalImg] ?? "/placeholder.jpg"} alt={modalProduct.name} fill sizes="(max-width: 768px) 100vw, 480px"
                 style={{ objectFit: "cover", cursor:"zoom-in" }}
                 onClick={() => setLightboxSrc(modalProduct.images[modalImg] ?? "/placeholder.jpg")} />
