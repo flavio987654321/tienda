@@ -483,8 +483,24 @@ cuadrado del acento. Sin eso, la pestaña "La tienda" quedaba con tarjetas de ot
 **3. La reseña no llevaba al producto.** Preguntó si al hacer clic iba a la ficha, y no: lo único que
 llevaba era el link "Ver reseña →", que `ResenaComentario` solo dibuja cuando el comentario es largo y
 se corta. Con comentarios cortos no aparecía nunca — y con la foto grande, la tarjeta *parece*
-clickeable. Ahora la **foto** y el **nombre del producto** abren la vista rápida. El nombre también,
-porque en celular la foto es de 104px y no se lee como un botón.
+clickeable.
+
+Primero se hicieron clickeables la foto y el nombre. Flavio marcó que no alcanzaba, y tenía razón:
+son blancos chicos y nada indica que el resto no responda. **Ahora lleva la tarjeta entera**, con el
+borde pasando al acento al pasar por encima. Una reseña de **tienda** no apunta a ningún producto, así
+que ahí la tarjeta no es clickeable y no finge serlo.
+
+Tres cosas que hicieron falta para que no se pisen los clics:
+
+- El **botón de borrar** del dueño hace `stopPropagation`. Sin eso, borrar la reseña abría además la
+  ficha del producto.
+- **`ResenaComentario` también**, y va en el componente compartido porque es correcto en general. Pesa
+  sobre todo en el caso de "Leer todo": ahí el botón despliega el texto en el lugar, y que además se
+  abriera el modal sería justo lo contrario de lo pedido.
+- El **nombre del producto** volvió a ser texto plano. Como botón dentro de una tarjeta clickeable, el
+  clic se disparaba dos veces.
+
+La foto conserva `role`/`tabIndex`/`onKeyDown`: para quien no usa mouse, ese es el punto de entrada.
 
 #### Y el cartel de Chic Paris mentía
 
@@ -503,6 +519,10 @@ las de producto.
 ## Notas para cuando se arregle
 
 - **Cerrados los diez puntos**, del UP-1 al UP-10.
+- **`/plantillas/[id]` tira `useAuth debe usarse dentro de AuthProvider` en el servidor.** Es
+  pre-existente y ajeno a este trabajo: `useAuth` entró a los templates en `35c8252` y esa ruta no
+  envuelve en `AuthProvider`. La página igual responde 200 —React se recupera en el cliente— pero cada
+  render de la galería ensucia el log. No está arreglado.
 - **Boho Terra y Fashion Noir todavía no usan `useHomeReviews`.** Tienen el bloque a medias, escrito
   a mano: solo reseñas de producto, sin pestañas, sin promedio y sin forma de dejar una de la tienda.
   Migrarlos es lo que falta para que los cuatro queden parejos, y ahora es barato — el hook ya está.

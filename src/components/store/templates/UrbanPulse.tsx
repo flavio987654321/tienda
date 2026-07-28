@@ -1192,10 +1192,22 @@ export default function UrbanPulse() {
             // modal vacío.
             const productoDeLaResena = r.product?.id ? products.find(x => x.id === r.product!.id) : undefined;
             const irAlProducto = productoDeLaResena && !isPreview ? () => openModal(productoDeLaResena) : null;
+            // La tarjeta ENTERA lleva a la ficha cuando la reseña habla de un
+            // producto. Antes llevaban solo la foto y el nombre, que son blancos
+            // chicos —en celular la foto son 104px— y no se adivina que el resto
+            // no responde. Una reseña de TIENDA no apunta a nada, así que ahí la
+            // tarjeta no es clickeable y no finge serlo.
             return (
-            <div key={r.id} style={{ background:testimonialsCardBg, border:`1px solid ${testimonialsCardBorder}`, display:"flex", alignItems:"stretch", position:"relative", overflow:"hidden" }}>
+            <div key={r.id}
+              onClick={irAlProducto ?? undefined}
+              title={irAlProducto ? `Ver ${r.product?.name ?? "el producto"}` : undefined}
+              style={{ background:testimonialsCardBg, border:`1px solid ${testimonialsCardBorder}`, display:"flex", alignItems:"stretch", position:"relative", overflow:"hidden", cursor: irAlProducto ? "pointer" : "default", transition:"border-color 0.2s" }}
+              onMouseEnter={e => { if (irAlProducto) e.currentTarget.style.borderColor = accentSobre(testimonialsBgUp, testimonialsText); }}
+              onMouseLeave={e => { if (irAlProducto) e.currentTarget.style.borderColor = testimonialsCardBorder; }}>
               {isOwner && !isPreview && (
-                <button onClick={() => resenas.borrar(r.id)} title="Eliminar reseña"
+                // `stopPropagation`: sin esto, borrar la reseña abría además la
+                // ficha del producto, porque el clic seguía subiendo a la tarjeta.
+                <button onClick={e => { e.stopPropagation(); resenas.borrar(r.id); }} title="Eliminar reseña"
                   style={{ position:"absolute", top:8, right:8, zIndex:2, background:"none", border:"none", color:testimonialsMid, cursor:"pointer", fontSize:16, lineHeight:1, padding:4 }}
                   onMouseEnter={e => (e.currentTarget.style.color = "#ef4444")}
                   onMouseLeave={e => (e.currentTarget.style.color = testimonialsMid)}>×</button>
@@ -1205,12 +1217,14 @@ export default function UrbanPulse() {
                   no tiene producto, así que en su lugar va la inicial en un
                   cuadrado — la misma idea que usa el modal de producto. Sin esto
                   la pestaña "La tienda" quedaba con tarjetas de otra forma. */}
+              {/* El clic lo maneja la tarjeta. Acá quedan solo el teclado —para
+                  quien no usa mouse, este es el punto de entrada— y el zoom de la
+                  foto, que es la señal de que algo pasa al pasar por encima. */}
               <div
-                onClick={irAlProducto ?? undefined}
                 role={irAlProducto ? "button" : undefined}
                 tabIndex={irAlProducto ? 0 : undefined}
                 onKeyDown={irAlProducto ? (e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); irAlProducto(); } }) : undefined}
-                title={irAlProducto ? `Ver ${r.product?.name ?? "el producto"}` : undefined}
+                aria-label={irAlProducto ? `Ver ${r.product?.name ?? "el producto"}` : undefined}
                 className={irAlProducto ? "up-zoom" : undefined}
                 style={{ position:"relative", flexShrink:0, width: isMobile ? 104 : 132, background: r.product?.image ? DARK : accentSobre(testimonialsBgUp, testimonialsText), borderRight:`1px solid ${testimonialsCardBorder}`, cursor: irAlProducto ? "pointer" : "default", overflow:"hidden" }}>
                 {r.product?.image ? (
@@ -1244,18 +1258,11 @@ export default function UrbanPulse() {
                 )}
                 <div style={{ borderTop:`1px solid ${testimonialsCardBorder}`, paddingTop:12, marginTop:"auto", minWidth:0 }}>
                   <p style={{ color:accentSobre(testimonialsBgUp, testimonialsText), fontSize:10, fontWeight:900, letterSpacing:3, textTransform:"uppercase", margin:0 }}>{r.reviewer}</p>
-                  {/* El nombre del producto también lleva a su ficha. La foto sola
-                      alcanzaba en escritorio, pero en celular es de 104px y en una
-                      lista de reseñas no se lee como un botón. */}
+                  {/* Texto plano: el nombre ya no necesita ser su propio botón
+                      ahora que toda la tarjeta lleva a la ficha. Como botón
+                      adentro de la tarjeta clickeable, el clic disparaba dos veces. */}
                   {r.product?.name && (
-                    irAlProducto ? (
-                      <button type="button" onClick={irAlProducto}
-                        style={{ background:"none", border:"none", padding:0, margin:"3px 0 0", textAlign:"left", cursor:"pointer", color:testimonialsMid, fontSize:11, fontFamily:"inherit", display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical" as const, overflow:"hidden", textDecoration:"underline", textUnderlineOffset:3 }}>
-                        {r.product.name}
-                      </button>
-                    ) : (
-                      <p style={{ color:testimonialsMid, fontSize:11, margin:"3px 0 0", display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical" as const, overflow:"hidden" }}>{r.product.name}</p>
-                    )
+                    <p style={{ color:testimonialsMid, fontSize:11, margin:"3px 0 0", display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical" as const, overflow:"hidden" }}>{r.product.name}</p>
                   )}
                   {/* "Compra verificada" y "Verificada por la tienda" NO son lo
                       mismo: la primera la cruzó el sistema contra un pedido

@@ -61,7 +61,12 @@ export function ResenaComentario({
         }),
       }}>{comillas ? <>&ldquo;{texto}&rdquo;</> : texto}</p>
       {cortado && !abierto && (
-        <button type="button" onClick={onVerMas ?? (() => setAbierto(true))}
+        // `stopPropagation`: esta tarjeta puede estar adentro de un contenedor
+        // clickeable —en Urban Pulse la reseña entera lleva a la ficha del
+        // producto— y sin esto el clic se contaría dos veces. Más importante en
+        // el caso de "Leer todo": ahí el botón despliega el texto acá mismo, y
+        // que además se abriera el modal sería justo lo contrario de lo pedido.
+        <button type="button" onClick={e => { e.stopPropagation(); (onVerMas ?? (() => setAbierto(true)))(); }}
           style={{ alignSelf: "flex-start", background: "none", border: "none", padding: 0, cursor: "pointer",
                    fontSize: 10, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", color: acento }}>
           {onVerMas ? etiquetas.irA : etiquetas.desplegar}
