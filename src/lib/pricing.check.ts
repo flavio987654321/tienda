@@ -14,7 +14,7 @@ import {
   type CostFloorPromo, type CostFloorProduct,
 } from "./promotions";
 import { resolveProductPromo, describePromo, resolveStoreEvent } from "./promoDisplay";
-import { couponDiscountFor, MAX_COUPON_DISCOUNT } from "./coupons";
+import { couponDiscountFor, couponValueError } from "./coupons";
 
 const BASE = 10000;
 
@@ -212,12 +212,16 @@ for (const c of spCases) {
   const casos: { id: string; cupon: { discountType: string; discountValue: number }; subtotal: number; esperado: number; desc: string }[] = [
     { id: "CD-A", cupon: { discountType: "percentage", discountValue: 20 }, subtotal: 100000, esperado: 20000,
       desc: "20% sobre $100.000" },
-    { id: "CD-B", cupon: { discountType: "percentage", discountValue: 20 }, subtotal: 300000, esperado: MAX_COUPON_DISCOUNT,
-      desc: "20% sobre $300.000 → tope de $50.000 (antes acá mostraba $60.000 y cobraba $50.000)" },
+    { id: "CD-B", cupon: { discountType: "percentage", discountValue: 20 }, subtotal: 300000, esperado: 60000,
+      desc: "20% sobre $300.000 → $60.000 completos (el tope viejo de $50.000 recortaba acá sin motivo)" },
     { id: "CD-C", cupon: { discountType: "fixed", discountValue: 8000 }, subtotal: 100000, esperado: 8000,
       desc: "monto fijo por debajo del subtotal" },
-    { id: "CD-D", cupon: { discountType: "fixed", discountValue: 999999 }, subtotal: 30000, esperado: 30000,
-      desc: "monto fijo mayor al carrito → nunca deja el total en negativo" },
+    { id: "CD-D", cupon: { discountType: "fixed", discountValue: 999999 }, subtotal: 30000, esperado: 27000,
+      desc: "monto fijo enorme → recortado al 90% del carrito, nunca deja un pedido de $0" },
+    { id: "CD-G", cupon: { discountType: "percentage", discountValue: 100 }, subtotal: 100000, esperado: 90000,
+      desc: "cupón del 100% → tampoco deja el pedido en $0 (MercadoPago no puede cobrarlo)" },
+    { id: "CD-H", cupon: { discountType: "percentage", discountValue: 10 }, subtotal: 28000000, esperado: 2800000,
+      desc: "10% sobre un auto de $28.000.000 → $2.800.000. Con el tope fijo daba $50.000" },
     { id: "CD-E", cupon: { discountType: "percentage", discountValue: 20 }, subtotal: 0, esperado: 0,
       desc: "carrito vacío → sin descuento" },
   ];
@@ -235,6 +239,37 @@ for (const c of spCases) {
   const ok = antes === 20000 && despues === 10000;
   if (!ok) failed++;
   console.log(`${ok ? "OK  " : "FAIL"} [CD-F] el descuento sigue al carrito: $${antes.toLocaleString("es-AR")} con $100.000 y $${despues.toLocaleString("es-AR")} con $50.000`);
+}
+
+// ── El cero de más se ataja al CREAR el cupón, no al cobrarlo ─────────────────
+// En el checkout ya es tarde: lo único que se puede hacer es recortar en silencio.
+// Acá la dueña ve el error y lo corrige. Para el monto fijo no hay un número
+// universal, así que se compara contra los datos de SU tienda.
+{
+  const casos: { id: string; cupon: { discountType: string; discountValue: number; minOrderAmount: number }; precioMax: number | null; rechaza: boolean; desc: string }[] = [
+    { id: "CV-A", cupon: { discountType: "percentage", discountValue: 20, minOrderAmount: 0 }, precioMax: 50000, rechaza: false,
+      desc: "20% → siempre válido, el porcentaje se escala solo" },
+    { id: "CV-B", cupon: { discountType: "percentage", discountValue: 120, minOrderAmount: 0 }, precioMax: 50000, rechaza: true,
+      desc: "120% → rechazado" },
+    { id: "CV-C", cupon: { discountType: "fixed", discountValue: 100000, minOrderAmount: 500000 }, precioMax: 50000, rechaza: false,
+      desc: "$100.000 desde $500.000 → coherente, aunque supere al producto más caro" },
+    { id: "CV-D", cupon: { discountType: "fixed", discountValue: 1000000, minOrderAmount: 500000 }, precioMax: 50000, rechaza: true,
+      desc: "$1.000.000 desde $500.000 → deja el pedido en nada, es un cero de más" },
+    { id: "CV-E", cupon: { discountType: "fixed", discountValue: 10000, minOrderAmount: 0 }, precioMax: 60000, rechaza: false,
+      desc: "$10.000 sin mínimo, con productos de hasta $60.000 → válido" },
+    { id: "CV-F", cupon: { discountType: "fixed", discountValue: 1000000, minOrderAmount: 0 }, precioMax: 60000, rechaza: true,
+      desc: "$1.000.000 sin mínimo vendiendo hasta $60.000 → vale más que todo el catálogo" },
+    { id: "CV-G", cupon: { discountType: "fixed", discountValue: 500000, minOrderAmount: 0 }, precioMax: 28000000, rechaza: false,
+      desc: "$500.000 en una tienda de autos → legítimo. Un tope fijo lo habría rechazado" },
+    { id: "CV-H", cupon: { discountType: "fixed", discountValue: 999999, minOrderAmount: 0 }, precioMax: null, rechaza: false,
+      desc: "tienda sin productos todavía → no se inventa un límite, lo ataja el techo del checkout" },
+  ];
+  for (const c of casos) {
+    const err = couponValueError(c.cupon, c.precioMax);
+    const ok = (err != null) === c.rechaza;
+    if (!ok) failed++;
+    console.log(`${ok ? "OK  " : "FAIL"} [${c.id}] ${err ? "rechaza" : "acepta"} — ${c.desc}`);
+  }
 }
 
 // ── B-07: el candado del monto fijo. Ningún producto puede quedar en $0 ───────

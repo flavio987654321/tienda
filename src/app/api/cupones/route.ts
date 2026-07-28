@@ -3,7 +3,7 @@ import { myActiveCouponsWhere, PRO_MAX_ACTIVE_COUPONS } from "@/lib/planLimits";
 import { hasActivePremium, SUB_STATUS_SELECT } from "@/lib/subscription";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
-import { isValidCouponCode, normalizeCouponCode } from "@/lib/coupons";
+import { isValidCouponCode, normalizeCouponCode, couponValueError } from "@/lib/coupons";
 
 type CouponRow = Awaited<ReturnType<typeof prisma.coupon.findMany>>[number];
 
@@ -134,8 +134,26 @@ export async function POST(req: NextRequest) {
   if (isNaN(value) || value <= 0) {
     return NextResponse.json({ error: "El valor del descuento debe ser mayor a 0" }, { status: 400 });
   }
-  if (discountType === "percentage" && value > 100) {
-    return NextResponse.json({ error: "El porcentaje no puede superar 100%" }, { status: 400 });
+  const minOrder = parseFloat(minOrderAmount) || 0;
+  if (minOrder < 0) {
+    return NextResponse.json({ error: "La compra mínima no puede ser negativa" }, { status: 400 });
+  }
+  // El monto fijo no se puede validar contra un número universal: depende de lo que
+  // venda cada tienda. Si el cupón no exige compra mínima, la referencia es el
+  // producto más caro del catálogo (ver couponValueError). Solo se busca en ese
+  // caso, para no pagar la consulta al pedir un porcentaje.
+  const precioMax = discountType === "fixed" && minOrder <= 0
+    ? (await prisma.product.aggregate({
+        where: { storeId: store.id, isActive: true, deletedAt: null },
+        _max: { price: true },
+      }))._max.price ?? null
+    : null;
+  const errorValor = couponValueError(
+    { discountType, discountValue: value, minOrderAmount: minOrder },
+    precioMax,
+  );
+  if (errorValor) {
+    return NextResponse.json({ error: errorValor }, { status: 400 });
   }
 
   const existing = await prisma.coupon.findUnique({
@@ -168,7 +186,7 @@ export async function POST(req: NextRequest) {
           code: codeClean,
           discountType,
           discountValue: value,
-          minOrderAmount: parseFloat(minOrderAmount) || 0,
+          minOrderAmount: minOrder,
           maxUses: maxUses ? parseInt(maxUses) : null,
           expiresAt: expiresAt ? new Date(expiresAt) : null,
           label: labelClean,
