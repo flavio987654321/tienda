@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { normalizeCouponCode } from "@/lib/coupons";
+import { normalizeCouponCode, couponDiscountFor } from "@/lib/coupons";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { getClientIp } from "@/lib/request-ip";
 
@@ -45,10 +45,10 @@ export async function POST(req: NextRequest) {
     }, { status: 400 });
   }
 
-  const discount =
-    coupon.discountType === "percentage"
-      ? Math.round((subtotal * coupon.discountValue) / 100)
-      : Math.min(coupon.discountValue, subtotal);
+  // Misma función que usa el checkout para cobrar (couponDiscountFor). Acá se
+  // calculaba aparte y sin el tope del porcentaje, así que la pantalla prometía
+  // más descuento del que después se cobraba.
+  const discount = couponDiscountFor(coupon, subtotal ?? 0);
 
   return NextResponse.json({
     coupon: {
@@ -56,6 +56,9 @@ export async function POST(req: NextRequest) {
       code: coupon.code,
       discountType: coupon.discountType,
       discountValue: coupon.discountValue,
+      // Las REGLAS viajan al carrito para que pueda recalcular el descuento cuando
+      // el carrito cambia, en vez de quedarse con el número de este momento.
+      minOrderAmount: coupon.minOrderAmount,
     },
     discount,
   });

@@ -14,6 +14,7 @@ import {
   type CostFloorPromo, type CostFloorProduct,
 } from "./promotions";
 import { resolveProductPromo, describePromo, resolveStoreEvent } from "./promoDisplay";
+import { couponDiscountFor, MAX_COUPON_DISCOUNT } from "./coupons";
 
 const BASE = 10000;
 
@@ -173,6 +174,67 @@ for (const c of spCases) {
     if (!ok) failed++;
     console.log(`${ok ? "OK  " : "FAIL"} [${c.id}] cupónOK=${c.r.couponsAllowed} — ${c.desc}`);
   }
+}
+
+// ── El cupón es del CARRITO, no de cada producto ──────────────────────────────
+// Con promos mezcladas —dos que aceptan cupón y una que no— alcanza esa una para
+// bloquearlo en todo el pedido. No hay cupón "parcial" que se aplique solo a los
+// productos cuyas promos lo permiten: `couponsAllowed` es uno solo para el carrito.
+{
+  const REM = { productId: "rem", category: "remeras" as string | null };
+  const CAM = { productId: "cam", category: "camperas" as string | null };
+  const PAN = { productId: "pan", category: "pantalones" as string | null };
+  const si1 = promo({ name: "San Valentín", type: "FIXED", value: 10000, scope: "CATEGORY", categories: ["remeras"], combinesWithCoupons: true });
+  const si2 = promo({ name: "3×2 camperas", type: "N_PAY_M", minQty: 3, payQty: 2, scope: "CATEGORY", categories: ["camperas"], combinesWithCoupons: true });
+  const no1 = promo({ name: "20% pantalones", type: "PERCENT", value: 20, scope: "CATEGORY", categories: ["pantalones"], combinesWithCoupons: false });
+  const todas = [si1, si2, no1];
+  const casos: { id: string; items: PricingItem[]; esperado: boolean; desc: string }[] = [
+    { id: "CG-E", items: [item(1, 50000, REM), item(3, 45000, CAM)], esperado: true,
+      desc: "las dos promos del carrito aceptan cupón → permitido" },
+    { id: "CG-F", items: [item(1, 50000, REM), item(3, 45000, CAM), item(1, 60000, PAN)], esperado: false,
+      desc: "dos aceptan y una no → BLOQUEADO para todo el carrito, no solo para el pantalón" },
+    { id: "CG-G", items: [item(1, 50000, REM), item(3, 45000, CAM), item(1, 60000, PAN)], esperado: false,
+      desc: "sacando el pantalón del carrito el cupón vuelve (ver CG-E): el bloqueo es del pedido" },
+  ];
+  for (const c of casos) {
+    const r = priceCart(c.items, { promotions: todas });
+    const ok = r.couponsAllowed === c.esperado;
+    if (!ok) failed++;
+    console.log(`${ok ? "OK  " : "FAIL"} [${c.id}] cupónOK=${r.couponsAllowed} — ${c.desc}`);
+  }
+}
+
+// ── El descuento del cupón: una sola fórmula para mostrar y para cobrar ───────
+// Estaba escrita dos veces y no coincidían. `/api/cupones/validar` calculaba el
+// porcentaje SIN tope y el checkout lo topeaba en $50.000: la pantalla prometía
+// −$60.000 y el pedido se creaba con −$50.000.
+{
+  const casos: { id: string; cupon: { discountType: string; discountValue: number }; subtotal: number; esperado: number; desc: string }[] = [
+    { id: "CD-A", cupon: { discountType: "percentage", discountValue: 20 }, subtotal: 100000, esperado: 20000,
+      desc: "20% sobre $100.000" },
+    { id: "CD-B", cupon: { discountType: "percentage", discountValue: 20 }, subtotal: 300000, esperado: MAX_COUPON_DISCOUNT,
+      desc: "20% sobre $300.000 → tope de $50.000 (antes acá mostraba $60.000 y cobraba $50.000)" },
+    { id: "CD-C", cupon: { discountType: "fixed", discountValue: 8000 }, subtotal: 100000, esperado: 8000,
+      desc: "monto fijo por debajo del subtotal" },
+    { id: "CD-D", cupon: { discountType: "fixed", discountValue: 999999 }, subtotal: 30000, esperado: 30000,
+      desc: "monto fijo mayor al carrito → nunca deja el total en negativo" },
+    { id: "CD-E", cupon: { discountType: "percentage", discountValue: 20 }, subtotal: 0, esperado: 0,
+      desc: "carrito vacío → sin descuento" },
+  ];
+  for (const c of casos) {
+    const got = couponDiscountFor(c.cupon, c.subtotal);
+    const ok = got === c.esperado;
+    if (!ok) failed++;
+    console.log(`${ok ? "OK  " : "FAIL"} [${c.id}] dio $${got.toLocaleString("es-AR")} · esperado $${c.esperado.toLocaleString("es-AR")} — ${c.desc}`);
+  }
+  // El bug de fondo: el descuento tiene que seguir al carrito, no quedarse en el
+  // número de cuando se aplicó. Mismo cupón, carrito a la mitad → mitad de descuento.
+  const cupon = { discountType: "percentage", discountValue: 20 };
+  const antes = couponDiscountFor(cupon, 100000);
+  const despues = couponDiscountFor(cupon, 50000);
+  const ok = antes === 20000 && despues === 10000;
+  if (!ok) failed++;
+  console.log(`${ok ? "OK  " : "FAIL"} [CD-F] el descuento sigue al carrito: $${antes.toLocaleString("es-AR")} con $100.000 y $${despues.toLocaleString("es-AR")} con $50.000`);
 }
 
 // ── B-07: el candado del monto fijo. Ningún producto puede quedar en $0 ───────

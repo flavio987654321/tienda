@@ -51,8 +51,12 @@ export type StorefrontProduct = {
 export type ValidatedCoupon = {
   id: string;
   code: string;
+  // Las REGLAS, no el monto: el carrito recalcula el descuento cada vez que cambia
+  // (ver `couponDiscountFor`). Guardar el monto de cuando se aplicó dejaba el total
+  // mintiendo apenas el comprador agregaba o sacaba algo.
   discountType: string;
   discountValue: number;
+  minOrderAmount: number;
   discount: number;
 };
 

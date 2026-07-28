@@ -32,7 +32,7 @@ export function CheckoutModal({
     cartItems, updateQty, buyerForm, setBuyerForm, rememberData, setRememberData,
     envioOptions, envioId, setEnvioId, pagoOptions, pagoId, setPagoId,
     notas, setNotas, coupon, setCoupon, couponError, setAppliedCoupon,
-    cuponAbierto, setCuponAbierto, cuponActivo, cuponBloqueado,
+    cuponAbierto, setCuponAbierto, cuponActivo, cuponBloqueado, motivoCupon,
     handleApplyCoupon, couponsAllowed, cartTotal, couponDiscount, envioPrice, envioCoordinar, orderTotal,
     appliedPromos,
     canastaDisponible, donationEnabled, setDonationEnabled, donationAmount, setDonationAmount,
@@ -205,7 +205,11 @@ export function CheckoutModal({
                 <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", gap:10, marginBottom:12, padding:"10px 12px", background:"rgba(217,119,6,0.10)", border:"1px solid rgba(217,119,6,0.30)", borderRadius:6 }}>
                   <span style={{ display:"flex", flexDirection:"column", lineHeight:1.3 }}>
                     <span style={{ fontSize:12.5, color:"#d97706", fontWeight:700 }}>El cupón {cuponBloqueado.code} no se está aplicando</span>
-                    <span style={{ fontSize:10.5, color:MID }}>La promoción de tu carrito no se combina con cupones.</span>
+                    <span style={{ fontSize:10.5, color:MID }}>
+                      {motivoCupon === "minimo"
+                        ? `Es para compras desde ${fmt(cuponBloqueado.minOrderAmount)}.`
+                        : "La promoción de tu carrito no se combina con cupones."}
+                    </span>
                   </span>
                   <button type="button" onClick={() => setAppliedCoupon(null)} aria-label="Quitar cupón" style={{ background:"none", border:"none", color:MID, cursor:"pointer", fontSize:14, flexShrink:0 }}>✕</button>
                 </div>

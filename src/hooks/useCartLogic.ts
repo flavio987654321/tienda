@@ -10,6 +10,7 @@ import { PROVINCIAS_ARGENTINA } from "@/lib/provincias";
 import { parseVariantAttrs } from "@/lib/variantAttrs";
 import { resolveVariantPrice } from "@/lib/variantPrice";
 import { priceCart, resolveBasePrice, parseEscalones, freeShippingProgress, type ActivePromotion } from "@/lib/pricing";
+import { couponDiscountFor } from "@/lib/coupons";
 import { registrarVista } from "@/lib/registrarVista";
 
 // Misma lógica de matching de variante por talle/color que usan los templates
@@ -79,7 +80,9 @@ export function useCartLogic({ products, promotions = [], storeId, affiliateId =
   // El campo de cupón arranca plegado detrás de un link (ver CheckoutModal). Vive
   // acá y no en cada checkout para que el listado y los templates se comporten igual.
   const [cuponAbierto,   setCuponAbierto]   = useState(false);
-  const [appliedCoupon,  setAppliedCoupon]  = useState<{ id: string; code: string; discount: number; discountType?: string; discountValue?: number } | null>(null);
+  // Se guardan las REGLAS del cupón, no el monto que descontó al aplicarlo: ese
+  // número envejece apenas cambia el carrito. El monto se deriva más abajo.
+  const [appliedCoupon,  setAppliedCoupon]  = useState<{ id: string; code: string; discountType: string; discountValue: number; minOrderAmount: number } | null>(null);
   const [notas,          setNotas]          = useState("");
   const [rememberData,   setRememberData]   = useState(false);
   const [buyerForm,      setBuyerForm]      = useState({ nombre:"", email:"", telefono:"", direccion:"", ciudad:"", provincia:"", cp:"" });
@@ -446,9 +449,24 @@ export function useCartLogic({ products, promotions = [], storeId, affiliateId =
   // Se DERIVA en vez de borrar el cupón guardado: si vuelve a sacar la unidad, vale
   // otra vez sin tener que tipearlo. `cuponBloqueado` es ese mismo cupón cuando no
   // entra, para poder DECIRLO en pantalla en lugar de que desaparezca solo.
-  const cuponActivo    = couponsAllowed ? appliedCoupon : null;
-  const cuponBloqueado = couponsAllowed ? null : appliedCoupon;
-  const couponDiscount = cuponActivo?.discount ?? 0;
+  //
+  // Y el monto se RECALCULA sobre el carrito de ahora con la misma función que usa
+  // el servidor para cobrar (`couponDiscountFor`). Antes se guardaba el número que
+  // había dado al aplicarlo y no se tocaba nunca: con un 20% aplicado sobre
+  // $100.000 el carrito seguía restando $20.000 aunque el comprador sacara la mitad
+  // de las cosas — un 40% sobre lo que quedaba. El servidor cobraba bien; el total
+  // en pantalla era el que mentía.
+  //
+  // El mínimo de compra también se vuelve a mirar: si el carrito baja de ese monto,
+  // el cupón deja de valer, igual que lo va a decidir el checkout.
+  const bajoMinimo     = appliedCoupon != null && cartTotal < appliedCoupon.minOrderAmount;
+  const cuponVale      = couponsAllowed && !bajoMinimo;
+  const cuponActivo    = cuponVale ? appliedCoupon : null;
+  const cuponBloqueado = cuponVale ? null : appliedCoupon;
+  // Por qué no entra, para poder decirlo en pantalla en vez de que desaparezca solo.
+  const motivoCupon: "promo" | "minimo" | null =
+    !cuponBloqueado ? null : (!couponsAllowed ? "promo" : "minimo");
+  const couponDiscount = cuponActivo ? couponDiscountFor(cuponActivo, cartTotal) : 0;
   const orderTotal     = cartTotal + envioPrice - couponDiscount;
 
   const searchResults = searchQuery.trim().length > 0
@@ -565,7 +583,11 @@ export function useCartLogic({ products, promotions = [], storeId, affiliateId =
     const emailForValidation = buyerForm.email.trim() || undefined;
     const res = await validateCoupon(coupon, cartTotal, emailForValidation);
     if ("error" in res) { setCouponError(res.error); return; }
-    setAppliedCoupon({ id: res.coupon.id, code: res.coupon.code, discount: res.discount, discountType: res.coupon.discountType, discountValue: res.coupon.discountValue });
+    setAppliedCoupon({
+      id: res.coupon.id, code: res.coupon.code,
+      discountType: res.coupon.discountType, discountValue: res.coupon.discountValue,
+      minOrderAmount: res.coupon.minOrderAmount ?? 0,
+    });
     setCoupon("");
   };
 
@@ -696,7 +718,7 @@ export function useCartLogic({ products, promotions = [], storeId, affiliateId =
     pricedLines, cartPromoSavings, freeShipping, couponsAllowed, freeShippingGoal,
     // El cupón guardado, partido en el que descuenta y el que quedó bloqueado por
     // una promo. Los checkouts pintan uno u otro, nunca los dos.
-    cuponActivo, cuponBloqueado,
+    cuponActivo, cuponBloqueado, motivoCupon,
     // Qué promos ganaron y cuánto aportó cada una — para NOMBRARLAS en el checkout
     // (F6-C6) con la misma lista que después sale en el email del pedido.
     appliedPromos: cartPricing.appliedPromos,

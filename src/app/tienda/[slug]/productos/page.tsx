@@ -422,7 +422,7 @@ function ProductosPageInner() {
     checkoutOpen, setCheckoutOpen, checkoutStatus, checkoutError,
     envioId, setEnvioId, pagoId, setPagoId,
     coupon, setCoupon, couponError, setAppliedCoupon,
-    cuponAbierto, setCuponAbierto, cuponActivo, cuponBloqueado,
+    cuponAbierto, setCuponAbierto, cuponActivo, cuponBloqueado, motivoCupon,
     notas, setNotas, rememberData, setRememberData, buyerForm, setBuyerForm,
     toastMsg, openModal, addToCart,
     // Esta pantalla no los usaba: ni el talle ni el color avisaban que estaban
@@ -2579,7 +2579,11 @@ function ProductosPageInner() {
                     <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", gap:10, marginBottom:12, padding:"8px 12px", background:"rgba(217,119,6,0.10)", border:"1px solid rgba(217,119,6,0.30)" }}>
                       <span style={{ display:"flex", flexDirection:"column", lineHeight:1.3 }}>
                         <span style={{ fontSize:12, color:"#d97706", fontWeight:700 }}>El cupón {cuponBloqueado.code} no se está aplicando</span>
-                        <span style={{ fontSize:10.5, color:MID }}>La promoción de tu carrito no se combina con cupones.</span>
+                        <span style={{ fontSize:10.5, color:MID }}>
+                          {motivoCupon === "minimo"
+                            ? `Es para compras desde ${fmt(cuponBloqueado.minOrderAmount)}.`
+                            : "La promoción de tu carrito no se combina con cupones."}
+                        </span>
                       </span>
                       <button type="button" onClick={() => setAppliedCoupon(null)} aria-label="Quitar cupón" style={{ background:"none", border:"none", color:MID, cursor:"pointer", flexShrink:0 }}>✕</button>
                     </div>

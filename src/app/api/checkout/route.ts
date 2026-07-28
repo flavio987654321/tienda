@@ -11,6 +11,7 @@ import { calculateGoalAmount, MIN_DONATION, MAX_DONATION_PCT_OF_GOAL } from "@/l
 import { recordStockMovement } from "@/lib/stockMovements";
 import { priceCart, resolveBasePrice, parseEscalones, type PricingItem, type ActivePromotion } from "@/lib/pricing";
 import { parseStringArray } from "@/lib/promotions";
+import { couponDiscountFor } from "@/lib/coupons";
 import { getClientIp } from "@/lib/request-ip";
 import { isSubscriptionActive } from "@/lib/subscription";
 
@@ -441,10 +442,9 @@ export async function POST(req: NextRequest) {
               data: { usedCount: { increment: 1 } },
             });
             if (updated.count > 0) {
-              const MAX_COUPON_DISCOUNT = 50_000;
-              discountAmount = coupon.discountType === "percentage"
-                ? Math.min(Math.round((subtotal * coupon.discountValue) / 100), MAX_COUPON_DISCOUNT)
-                : Math.min(coupon.discountValue, subtotal);
+              // La misma función que usa el endpoint de validar y el carrito, para
+              // que lo que el comprador aprobó sea lo que se cobra.
+              discountAmount = couponDiscountFor(coupon, subtotal);
               validCouponId = coupon.id;
               appliedCouponCode = coupon.code;
             }
