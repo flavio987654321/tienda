@@ -4,7 +4,7 @@ import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { usePushBell } from "@/contexts/PushBellContext";
 import { useAuth } from "@/components/AuthProvider";
 import StoreFollowButton from "@/components/store/StoreFollowButton";
-import { EditableZone, EditableImageButton, EditableSectionBg, BgDragHandle, getContrastColor, getReadableAccentText, getReadableAccentFill, textoSobre, contrasteWCAG, useEditContext } from "@/contexts/EditContext";
+import { EditableZone, EditableImageButton, EditableSectionBg, BgDragHandle, getContrastColor, getReadableAccentText, textoSobre, contrasteWCAG, useEditContext } from "@/contexts/EditContext";
 import { colorRepresentativo } from "@/lib/section-bg";
 import { useStorefront, type StorefrontProduct } from "@/hooks/useStorefront";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
@@ -906,18 +906,26 @@ export default function UrbanPulse() {
           el ícono deja de ser una viñeta —que era justamente lo que lo hacía
           parecerse al otro— y pasa a ser una marca de agua grande detrás del
           texto, que se sigue pudiendo cambiar desde el editor. */}
-      {/* Los filos ya no van en la SECCIÓN sino en cada bloque, y no son negros
-          fijos. Con un filo negro, un bloque negro debajo de un hero oscuro no
-          tenía dónde empezar: se fundían y la franja no se leía como algo aparte.
-          Y ningún color único sirve, porque los bloques alternan claro y oscuro:
-          lo que se despega de uno se pierde en el otro.
-          La solución es que el filo lo elija CADA bloque contra su propio fondo:
-          el acento si ahí se ve, y si no el color de su texto, que por definición
-          contrasta. Con el neón de fábrica queda negro sobre los claros y neón
-          sobre los oscuros — y es justo el neón el que despega el bloque negro del
-          hero. */}
+      {/* ── El filo doble ────────────────────────────────────────────────────
+          Arriba y abajo de la franja van DOS líneas pegadas, una blanca y una
+          negra de 3px cada una.
+          Antes el filo lo elegía cada bloque contra su propio fondo. Se veía bien
+          contra el bloque, pero no contra lo que la franja tiene ENCIMA: el borde
+          de arriba aparecía y desaparecía a lo largo del ancho —la línea negra del
+          bloque blanco se borraba contra el hero negro, la del bloque de al lado
+          sí se veía contra la foto clara—. No era un borde, eran pedazos de borde.
+          Y ningún color único lo arregla, porque arriba puede haber cualquier
+          imagen y no se sabe de qué color es.
+          Dos líneas opuestas sí: contra algo oscuro trabaja la blanca, contra algo
+          claro la negra, y sobre una foto que tiene de las dos siempre hay una de
+          las dos recortándose. El borde pasa a ser uno solo y parejo de punta a
+          punta. La blanca va del lado de afuera y la negra pegada a los bloques.
+          Es además el mismo recurso de las cintas de peligro y las tipografías de
+          las camisetas de carrera: dos filos opuestos, sin degradado. */}
       <section data-reveal style={{ background:garantiasUpBg, position:"relative" }}>
         <EditableSectionBg field="bgGarantias" label="Fondo garantías" />
+        <div style={{ height:3, background:WHITE }} />
+        <div style={{ height:3, background:DARK }} />
         {/* De borde a borde, sin `maxWidth`. Con el ancho acotado y centrado, a
             los costados quedaba el fondo de la SECCIÓN, que es el mismo color que
             los bloques pares: el primero se fundía con el margen izquierdo y
@@ -935,15 +943,6 @@ export default function UrbanPulse() {
             const alterno = isMobile ? ((Math.floor(i / 2) + i) % 2 === 1) : (i % 2 === 1);
             const fondo = alterno ? garAltBg   : garantiasUpBg;
             const tinta = alterno ? garAltText : garantiasUpText;
-            // Para MEDIR hay que usar un color sólido: el fondo de la sección
-            // puede venir en degradado.
-            const fondoSolido = alterno ? garAltBg : garantiasUpSolido;
-            // `Fill` y no `Text`: el filo es una SUPERFICIE de 4px, no una letra.
-            // La pregunta no es "¿se lee el acento acá?" sino "¿se distingue del
-            // fondo?", y son distintas — con la regla de texto, un naranja o un
-            // dorado sobre blanco se descartan sin motivo, aunque pintados se vean
-            // perfecto. El repo tiene un helper para cada una.
-            const filo = getReadableAccentFill(ACC, fondoSolido, tinta);
             const icono = UP_STRIP_ICONS[i][iconIdx];
             return (
               // Yendo a sangre, el ancho de cada bloque depende de la pantalla:
@@ -952,18 +951,17 @@ export default function UrbanPulse() {
               // perdía en la más grande, así que todo lo que ocupa lugar se mide
               // en `clamp`: crece con la pantalla pero con piso y techo.
               <div key={g.title} style={{ position:"relative", overflow:"hidden", background:fondo,
-                                          borderTop:`4px solid ${filo}`, borderBottom:`4px solid ${filo}`,
                                           padding: isMobile ? "18px 14px" : "clamp(18px,2vw,30px) clamp(16px,1.8vw,30px)",
                                           minHeight: isMobile ? 96 : "clamp(96px,8vw,132px)",
                                           display:"flex", flexDirection:"column", justifyContent:"center" }}>
                 {/* La marca de agua: el mismo ícono de siempre, agrandado y casi
-                    transparente, saliéndose por el borde derecho. La opacidad va
-                    en el span de adentro y no en este: si fuera acá, el botón de
-                    cambiar ícono también quedaría translúcido.
+                    transparente. La opacidad va en el span de adentro y no en
+                    este: si fuera acá, el botón de cambiar ícono también quedaría
+                    translúcido.
                     El tamaño lo pone este contenedor —con `aspectRatio` para que
                     tenga alto propio— y el SVG lo llena al 100%. Antes se le
-                    pasaba un número de píxeles al SVG, que no puede escalar. */}
-                {/* Adentro y con aire. Estaba en `right:-2%`, saliéndose por el
+                    pasaba un número de píxeles al SVG, que no puede escalar.
+                    Adentro y con aire: estaba en `right:-2%`, saliéndose por el
                     filo, y con un tamaño que casi igualaba el alto del bloque: se
                     veía apretado contra la esquina y, en el último bloque, cortado
                     contra el borde de la pantalla. Ahora tiene margen propio a la
@@ -1002,6 +1000,10 @@ export default function UrbanPulse() {
             );
           })}
         </div>
+        {/* El mismo filo doble abajo, espejado: la negra pegada a los bloques y la
+            blanca del lado del banner, que también es una foto cualquiera. */}
+        <div style={{ height:3, background:DARK }} />
+        <div style={{ height:3, background:WHITE }} />
       </section>
       </SectionBlock>
 

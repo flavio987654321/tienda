@@ -1060,3 +1060,21 @@ letra. La pregunta no es *"¿se lee el acento acá?"* sino *"¿se distingue del 
 de texto un naranja o un dorado sobre blanco se descartan sin motivo aunque pintados se vean
 perfecto. El repo tiene un helper para cada pregunta y el comentario de `getReadableAccentFill` avisa
 exactamente de esta confusión.
+
+**El filo doble.** Flavio, con la barra ya funcionando: *"el diseño sí, pero la diferencia entre la
+imagen y la barra no me termina de cerrar"*. Y tenía razón otra vez, con un problema más fino que el
+anterior.
+
+El filo por bloque contrastaba con **su propio bloque**, pero no con lo que la franja tiene **encima**.
+Recorriendo el borde de arriba de izquierda a derecha: la línea negra del bloque blanco se borraba
+contra el hero negro; la blanca del bloque de al lado sí se veía; la siguiente negra volvía a verse
+contra la foto clara del musgo. No era un borde, eran pedazos de borde. Y ningún color único lo
+arregla: arriba puede haber cualquier imagen y no se sabe de qué color es.
+
+Ahora van **dos líneas pegadas, una blanca y una negra de 3px cada una**, a lo ancho de toda la
+franja, arriba y abajo. Contra algo oscuro trabaja la blanca; contra algo claro, la negra; sobre una
+foto que tiene de las dos, siempre hay una recortándose. El borde pasa a ser uno solo y parejo de
+punta a punta. La blanca va del lado de afuera y la negra pegada a los bloques. Es además el recurso
+de las cintas de peligro y de las tipografías de carrera: dos filos opuestos, sin degradado.
+
+Los filos por bloque se sacaron: con este, sobraban.
