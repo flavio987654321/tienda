@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
+import { ESTADOS_VENTA_CONFIRMADA_LISTA } from "@/lib/order-status";
 
 export async function GET() {
   const user = await getCurrentUser();
@@ -8,7 +9,7 @@ export async function GET() {
 
   const [orders, submitted] = await Promise.all([
     prisma.order.findMany({
-      where: { buyerId: user.id, status: { in: ["CONFIRMED", "SHIPPED", "DELIVERED"] } },
+      where: { buyerId: user.id, status: { in: ESTADOS_VENTA_CONFIRMADA_LISTA } },
       include: {
         items: { include: { product: { select: { id: true, name: true, images: true } } } },
         store: { select: { name: true, slug: true } },

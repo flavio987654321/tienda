@@ -12,6 +12,8 @@ import {
   Store, Star, BadgeCheck, CheckCircle2,
   Eye,
 } from "lucide-react";
+import { ESTADOS_VENTA_CONFIRMADA_LISTA } from "@/lib/order-status";
+
 export default async function DashboardPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
@@ -53,7 +55,7 @@ export default async function DashboardPage() {
   }) : [];
 
   const totalRevenue = !isAutos ? await prisma.order.aggregate({
-    where: { storeId: store.id, status: { in: ["CONFIRMED", "SHIPPED", "DELIVERED"] } },
+    where: { storeId: store.id, status: { in: ESTADOS_VENTA_CONFIRMADA_LISTA } },
     _sum: { total: true },
   }) : { _sum: { total: null } };
 

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
 import { createNotification } from "@/lib/notifications";
 import { sendNewReviewToOwnerEmail } from "@/lib/email";
+import { ESTADOS_VENTA_CONFIRMADA_LISTA } from "@/lib/order-status";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -33,7 +34,7 @@ export async function GET(req: NextRequest) {
       ? prisma.orderItem.findFirst({
           where: {
             productId,
-            order: { buyerId: user.id, status: { in: ["CONFIRMED", "SHIPPED", "DELIVERED"] } },
+            order: { buyerId: user.id, status: { in: ESTADOS_VENTA_CONFIRMADA_LISTA } },
           },
           select: { orderId: true },
         })
@@ -76,7 +77,7 @@ export async function POST(req: NextRequest) {
 
   // Verificar que el usuario compró este producto en este pedido
   const orderItem = await prisma.orderItem.findFirst({
-    where: { orderId, productId, order: { buyerId: user.id, status: { in: ["CONFIRMED", "SHIPPED", "DELIVERED"] } } },
+    where: { orderId, productId, order: { buyerId: user.id, status: { in: ESTADOS_VENTA_CONFIRMADA_LISTA } } },
   });
   if (!orderItem) {
     return NextResponse.json({ error: "Solo podés reseñar productos que compraste y fueron confirmados" }, { status: 403 });

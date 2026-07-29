@@ -13,6 +13,7 @@ import { ArrowUpRight, ChevronLeft, ChevronRight, Clock, Download, MessageSquare
 import { getCurrentUser } from "@/lib/auth-session";
 import { money } from "@/lib/utils";
 import { statusLabel, statusClass, statusBorderClass, parseAddress } from "@/lib/orders";
+import { ESTADOS_VENTA_CONFIRMADA_LISTA } from "@/lib/order-status";
 
 const PAGE_SIZE = 15;
 const FILTERABLE_STATUSES = ["PENDING", "CONFIRMED", "SHIPPED", "DELIVERED", "CANCELLED"];
@@ -57,9 +58,9 @@ export default async function PedidosPage({ searchParams }: Props) {
         prisma.order.count({ where: where! }),
         prisma.order.count({ where: { storeId: store.id } }),
         prisma.order.count({ where: { storeId: store.id, status: "PENDING" } }),
-        prisma.order.count({ where: { storeId: store.id, status: { in: ["CONFIRMED", "SHIPPED", "DELIVERED"] } } }),
+        prisma.order.count({ where: { storeId: store.id, status: { in: ESTADOS_VENTA_CONFIRMADA_LISTA } } }),
         prisma.order.aggregate({
-          where: { storeId: store.id, status: { in: ["CONFIRMED", "SHIPPED", "DELIVERED"] } },
+          where: { storeId: store.id, status: { in: ESTADOS_VENTA_CONFIRMADA_LISTA } },
           _sum: { total: true },
         }),
         prisma.affiliate.count({ where: { storeId: store.id, status: "PENDING" } }),

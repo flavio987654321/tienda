@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
+import { ESTADOS_VENTA_CONFIRMADA_LISTA } from "@/lib/order-status";
 
 export async function GET() {
   const user = await getCurrentUser();
@@ -37,7 +38,7 @@ export async function GET() {
         }),
         prisma.orderItem.groupBy({
           by: ["productId"],
-          where: { order: { affiliateId: aff.id, status: { in: ["CONFIRMED", "SHIPPED", "DELIVERED"] } } },
+          where: { order: { affiliateId: aff.id, status: { in: ESTADOS_VENTA_CONFIRMADA_LISTA } } },
           _count: { productId: true },
           _sum: { price: true },
           orderBy: { _count: { productId: "desc" } },
@@ -70,7 +71,7 @@ export async function GET() {
         }),
         // revenue total generado + ticket promedio (órdenes confirmadas)
         prisma.order.aggregate({
-          where: { affiliateId: aff.id, status: { in: ["CONFIRMED", "SHIPPED", "DELIVERED"] } },
+          where: { affiliateId: aff.id, status: { in: ESTADOS_VENTA_CONFIRMADA_LISTA } },
           _sum: { total: true },
           _count: { id: true },
         }),

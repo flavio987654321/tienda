@@ -10,6 +10,7 @@ import {
 import Link from "next/link";
 import Image from "next/image";
 import { useAuth } from "@/components/AuthProvider";
+import { esVentaConfirmada } from "@/lib/order-status";
 
 interface OrderItem {
   id: string;
@@ -131,7 +132,7 @@ export default function PedidosPage() {
   }
 
   const totalCommission = data?.orders.reduce((s, o) => s + (o.commission?.amount ?? 0), 0) ?? 0;
-  const confirmedCount = data?.orders.filter((o) => ["CONFIRMED", "SHIPPED", "DELIVERED"].includes(o.status)).length ?? 0;
+  const confirmedCount = data?.orders.filter((o) => esVentaConfirmada(o.status)).length ?? 0;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-[#030712]">

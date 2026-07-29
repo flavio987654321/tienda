@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
+import { ESTADOS_VENTA_CONFIRMADA_LISTA } from "@/lib/order-status";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -100,7 +101,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ slug
       productId: { in: visibleProductIds },
       order: {
         storeId: store.id,
-        status: { in: ["CONFIRMED", "SHIPPED", "DELIVERED"] },
+        status: { in: ESTADOS_VENTA_CONFIRMADA_LISTA },
         createdAt: { gte: ninetyDaysAgo },
       },
     },

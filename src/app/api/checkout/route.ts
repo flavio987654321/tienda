@@ -14,6 +14,7 @@ import { parseStringArray } from "@/lib/promotions";
 import { couponDiscountFor } from "@/lib/coupons";
 import { getClientIp } from "@/lib/request-ip";
 import { isSubscriptionActive } from "@/lib/subscription";
+import { ESTADOS_VENTA_CONFIRMADA_LISTA } from "@/lib/order-status";
 
 type CheckoutItem = {
   productId: string;
@@ -691,7 +692,7 @@ export async function POST(req: NextRequest) {
         }
 
         const revAgg = await prisma.order.aggregate({
-          where: { storeId: order.storeId, status: { in: ["CONFIRMED", "SHIPPED", "DELIVERED"] } },
+          where: { storeId: order.storeId, status: { in: ESTADOS_VENTA_CONFIRMADA_LISTA } },
           _sum: { total: true },
         });
         const totalRev = revAgg._sum.total ?? 0;

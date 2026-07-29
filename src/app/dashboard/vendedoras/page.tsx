@@ -29,6 +29,7 @@ import LimitePlanBanner from "@/components/dashboard/LimitePlanBanner";
 import AffiliateToggle from "./AffiliateToggle";
 import MetasWidget from "./MetasWidget";
 import WithdrawalPayButton from "@/components/affiliates/WithdrawalPayButton";
+import { esVentaConfirmada } from "@/lib/order-status";
 
 function statusClass(status: string) {
   if (status === "APPROVED") return "bg-green-100 text-green-700";
@@ -152,7 +153,7 @@ export default async function VendedorasPage() {
         lastMonth = a.commissions
           .filter((c) => c.status === "PAID" && new Date(c.createdAt) >= startLastMonth && new Date(c.createdAt) < endLastMonth)
           .reduce((s, c) => s + c.amount, 0);
-        const confirmedOrders = a.orders.filter((o) => ["CONFIRMED", "SHIPPED", "DELIVERED"].includes(o.status));
+        const confirmedOrders = a.orders.filter((o) => esVentaConfirmada(o.status));
         confirmedCount = confirmedOrders.length;
         grossSales = confirmedOrders.reduce((s, o) => s + o.total, 0);
       }
@@ -196,7 +197,7 @@ export default async function VendedorasPage() {
   const ventasConfirmadas = isInquiryStore
     ? Array.from(leadsMap.values()).reduce((sum, l) => sum + l.confirmed, 0)
     : affiliates.reduce(
-        (sum, affiliate) => sum + affiliate.orders.filter((order) => ["CONFIRMED", "SHIPPED", "DELIVERED"].includes(order.status)).length,
+        (sum, affiliate) => sum + affiliate.orders.filter((order) => esVentaConfirmada(order.status)).length,
         0
       );
 
@@ -425,7 +426,7 @@ export default async function VendedorasPage() {
         ) : (
           <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
             {teamAffiliates.map((affiliate) => {
-              const confirmedOrders = affiliate.orders.filter((order) => ["CONFIRMED", "SHIPPED", "DELIVERED"].includes(order.status));
+              const confirmedOrders = affiliate.orders.filter((order) => esVentaConfirmada(order.status));
               const grossSales = confirmedOrders.reduce((sum, order) => sum + order.total, 0);
               const walletBalance = affiliate.wallet?.balance ?? 0;
               const paidCommission = affiliate.commissions

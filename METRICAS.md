@@ -334,10 +334,15 @@ archivos**. Eso funciona hasta que dos copias dejan de coincidir, y ahí no fall
 pantallas muestran plata distinta y no hay forma de saber cuál miente. Ya había pasado entre
 Métricas y Sasha.
 
-Ahora hay una sola definición. Métricas, el CSV y Sasha la usan.
+Ahora hay una sola definición y **la usan las 17**: Métricas, el CSV, Sasha, Inicio, Pedidos,
+Vendedoras, el panel de afiliadas, checkout, reseñas y la API pública.
 
-🔲 **Pendiente:** las otras ~9 copias (afiliados, reseñas, checkout, vendedoras) siguen sueltas.
-No se tocaron para no mezclar con esto, pero deberían apuntar al mismo lugar.
+Dos listas parecidas **no** se tocaron porque no son ésta:
+
+- `FILTERABLE_STATUSES` (Pedidos) incluye PENDING y CANCELLED — es "todos los estados", para el filtro.
+- `STATUS_ORDER` (seguimiento) es el orden del recorrido, no qué cuenta como venta.
+
+Confundirlas y reemplazarlas sería el mismo error al revés.
 
 ---
 
