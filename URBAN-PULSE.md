@@ -2072,3 +2072,35 @@ regla que no estaba escrita.**
 ### Estado del build
 
 `npx next build` completo, sin errores. `tsc` y eslint limpios en todo el proyecto.
+
+### Anotado, NO arreglado — el 3×2 se reparte mal entre las líneas del carrito
+
+Apareció probando la compra con Flavio. **El total es correcto**; lo que no cierra es a qué línea se le
+asigna el descuento.
+
+Carrito con 10 unidades del mismo pantalón (5 en talle 34 y 5 en talle 32), con un 3×2 vigente:
+
+| | se pagan | descuento |
+|---|---|---|
+| La cuenta del motor | 7 de 10 unidades | **−$180.000** ✓ coincide con el carrito |
+
+Pero el reparto por línea no coincide con el que el propio código dice que quiere hacer:
+
+| línea | lo que dice `nxmExactLineTotal` | lo que muestra el carrito |
+|---|---|---|
+| Talle 34 (5u) | $210.000 | **$120.000** |
+| Talle 32 (5u) | $210.000 | **$300.000** |
+
+Los dos suman $420.000, así que **no es un problema de plata**: nadie paga de más ni de menos. El
+comentario del motor dice *"el beneficio se reparte parejo entre las líneas de ese producto con una
+razón"* (`basePrice * quantity * paid/totalQty`), y eso daría $210.000 y $210.000. En la pantalla todo
+el beneficio cae en la primera línea y la segunda aparece **sin ninguna señal de que participó**.
+
+Para el comprador: mira la línea del talle 32, ve $300.000 sin descuento ni etiqueta de promo, y puede
+pensar que el 3×2 no le agarró — cuando sí.
+
+**No se toca en esta auditoría, a propósito.** `src/lib/pricing.ts` es el motor de promociones, tiene
+su propio documento (`PROMOCIONES.md`), lo usan las diez plantillas y **todas** las tiendas, y el
+síntoma es de atribución, no de cobro. Meterle mano al final de una pasada de otro template, sin
+poder correr una compra real contra cada tipo de promo, es cambiar algo que hoy cobra bien. Merece su
+propia revisión.
