@@ -900,6 +900,68 @@ function ProductosPageInner() {
   const chipBg   = getReadableAccentFill(G, BG, T);
   const chipText = getContrastColor(chipBg) === "light" ? "#fff" : "#111";
 
+  /* ── El modal con la forma de Urban Pulse ────────────────────────────────────
+     Esta página tiene UN modal para los cuatro templates de moda, y su forma es la
+     de Chic Paris: foto a la izquierda al 48%, miniaturas en fila abajo, y todo lo
+     demás —descripción, características, compartir— apilado en la columna derecha.
+     Urban Pulse dejó de tener esa forma en UP-12: la derecha lleva SOLO lo que hace
+     falta para comprar y queda clavada, mientras la izquierda corre por debajo.
+     Abrir el mismo producto desde el home y desde el catálogo daba dos fichas
+     visiblemente distintas — lo vio Flavio: "es como que usa el modal de productos
+     pero del template de Chic Paris".
+     Sólo en escritorio: en celular las dos formas son la misma columna apilada.
+     Los otros tres siguen con la forma de siempre hasta que les toque su auditoría. */
+  const modalUP = template === "urban-pulse" && !isMobile;
+
+  /* Descripción y características salen acá afuera porque van en DOS lugares según
+     el template: adentro del panel de compra en los otros tres, y abajo de la foto
+     en Urban Pulse. Una sola definición para que no puedan quedar distintas. */
+  const bloqueDescripcion = modalProduct?.description ? (
+    <div style={{ borderTop:`1px solid ${borderFaint}`, paddingTop:18 }}>
+      <p style={tituloBloque}>Descripción</p>
+      {/* Sin recortar: el panel tiene alto fijo y scrollea, así que un
+          texto largo ya no deforma nada — se lee bajando acá adentro. */}
+      <div className="product-rte" dangerouslySetInnerHTML={{ __html: modalProduct.description }} style={{ fontSize:13, color:MID, lineHeight:1.75 }} />
+    </div>
+  ) : null;
+
+  // El cuadro de datos técnicos no tenía ningún título: aparecía una
+  // lista suelta después de la descripción y no se entendía qué era.
+  const bloqueCaracteristicas = (() => {
+    if (!modalProduct) return null;
+    const attrs = modalProduct.attributes ?? [];
+    const condicionAttr = attrs.find(a => a.key === "Condición");
+    const serviciosAttr = attrs.find(a => a.key === "Servicios");
+    const otherAttrs = attrs.filter(a => a.key !== "Condición" && a.key !== "Servicios");
+    let servicios: string[] = [];
+    if (serviciosAttr) { try { servicios = Object.entries(JSON.parse(serviciosAttr.value)).filter(([, v]) => v).map(([k]) => k); } catch {} }
+    if (!condicionAttr && otherAttrs.length === 0 && servicios.length === 0) return null;
+    return (
+      <div style={{ borderTop:`1px solid ${borderFaint}`, paddingTop:18 }}>
+        <p style={tituloBloque}>Características</p>
+        <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+          {condicionAttr && (
+            <span style={{ alignSelf:"flex-start", fontSize:10, letterSpacing:2, textTransform:"uppercase", fontWeight:700, color:GT, border:`1px solid ${GT}`, padding:"4px 10px" }}>{condicionAttr.value}</span>
+          )}
+          {otherAttrs.length > 0 && (
+            <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
+              {otherAttrs.map(a => (
+                <p key={a.key} style={{ fontSize:12, opacity:0.65, margin:0, color:T }}><span style={{ opacity:0.85 }}>{a.key}:</span> {a.value}</p>
+              ))}
+            </div>
+          )}
+          {servicios.length > 0 && (
+            <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
+              {servicios.map(k => (
+                <span key={k} style={{ fontSize:10, letterSpacing:1, padding:"4px 10px", border:`1px solid ${border}`, color:T }}>✓ {k}</span>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  })();
+
   /* En el editor, con el producto todavía sin reseñas, se muestran DE EJEMPLO:
      es la única forma de que el dueño vea el bloque lleno (el promedio, el
      gráfico de estrellas y las tarjetas). Mismo criterio, y mismo cartel de
@@ -1880,18 +1942,46 @@ function ProductosPageInner() {
       {modalProduct && (
         <div style={{ position:"fixed", inset:0, zIndex:200, display:"flex", alignItems:"center", justifyContent:"center" }} onClick={() => { setModalProduct(null); setLightboxSrc(null); }}>
           <div style={{ position:"absolute", inset:0, background:overlayBg, backdropFilter:"blur(8px)" }}/>
-          <div style={{ position: isMobile ? "absolute" : "relative", ...(isMobile ? {top:0,right:0,bottom:0,left:0} : {maxWidth:980, width:"calc(100% - 32px)", maxHeight:"92vh"}), background:S, overflow:"hidden", display:"flex", flexDirection:"column" }} onClick={e => e.stopPropagation()}>
+          {/* 1080 y no 980 en Urban Pulse: es el ancho del modal del template. La
+              columna de compra se lleva entre 300 y 400, así que con 980 a la foto
+              le quedaban ~600 y con 1080 le quedan ~700. */}
+          <div style={{ position: isMobile ? "absolute" : "relative", ...(isMobile ? {top:0,right:0,bottom:0,left:0} : {maxWidth: modalUP ? 1080 : 980, width:"calc(100% - 32px)", maxHeight:"92vh"}), background:S, overflow:"hidden", display:"flex", flexDirection:"column" }} onClick={e => e.stopPropagation()}>
             <button onClick={() => { setModalProduct(null); setLightboxSrc(null); }} style={{ position:"absolute", top:10, right:10, zIndex:10, background:"rgba(0,0,0,0.65)", border:"none", color:"#fff", width:36, height:36, cursor:"pointer", fontSize:20, display:"flex", alignItems:"center", justifyContent:"center", backdropFilter:"blur(4px)" }}>×</button>
             {/* 48% para la foto, como en el modal del template (ahí es el mismo
                 número). A 50/50 la columna de comprar quedaba más angosta de lo
                 necesario y los chips de talle se apretaban en 768. */}
-            <div style={{ overflow:"auto", flex:1, minHeight:0, display:"grid", gridTemplateColumns: isMobile ? "1fr" : "48% 1fr" }}>
+            {/* En Urban Pulse la columna de compra se mide con `clamp` en vez de
+                dejarle el resto: 36% del modal, nunca menos de 300 ni más de 400 —
+                los mismos números que el template. Y `alignItems:start` para que el
+                panel no se estire al alto de la fila, que es lo que le permite
+                quedarse clavado. */}
+            <div style={{ overflow:"auto", flex:1, minHeight:0, display:"grid",
+                          gridTemplateColumns: isMobile ? "1fr" : (modalUP ? "minmax(0,1fr) clamp(300px, 36%, 400px)" : "48% 1fr"),
+                          ...(modalUP ? { alignItems:"start" as const } : {}) }}>
             {/* Galería — `alignSelf:start` para que no se estire al alto de la
                 columna de al lado y quede aire muerto abajo de las miniaturas. */}
             {/* El aire lo pone la COLUMNA, no cada bloque: asi la foto, las
                 miniaturas y los videos arrancan todos en la misma vertical. */}
             <div ref={colFotoRef} style={{ alignSelf: "start", boxSizing: "border-box",
-                                           padding: isMobile ? 0 : "28px 0 28px 28px" }}>
+                                           ...(modalUP ? { gridColumn: 1 } : {}),
+                                           padding: isMobile ? 0 : (modalUP ? "26px 26px 0" : "28px 0 28px 28px") }}>
+              {/* En Urban Pulse las miniaturas van en tira VERTICAL a la izquierda de
+                  la foto, y el hueco se lo hace este `paddingLeft`. Van en absoluto
+                  —adentro del bloque de abajo— a propósito: el alto de la fila lo
+                  tiene que fijar la FOTO, y si la tira fuera un hermano normal, diez
+                  miniaturas la estirarían y la foto se iría con ellas. */}
+              <div style={{ position:"relative", ...(modalUP && modalProduct.images.length > 1 ? { paddingLeft: 84 } : {}) }}>
+              {modalUP && modalProduct.images.length > 1 && (
+                <div style={{ position:"absolute", left:0, top:0, bottom:0, width:72, overflowY:"auto", scrollbarWidth:"none", display:"flex", flexDirection:"column", gap:8 }}>
+                  {modalProduct.images.map((img, i) => (
+                    <button key={i} onClick={() => elegirFoto(i)} aria-label={`Ver foto ${i+1}`}
+                      style={{ position:"relative", width:72, height:90, flexShrink:0, padding:0, cursor:"pointer", overflow:"hidden", background:BG,
+                               border: i === modalImg ? `3px solid ${T}` : `1px solid ${border}`, opacity: i === modalImg ? 1 : 0.5 }}>
+                      <FadeImage src={img} alt="" fill sizes="72px" style={{ objectFit:"cover" }} />
+                    </button>
+                  ))}
+                </div>
+              )}
               {/* `aspectRatio` acá arriba: la foto pasó a `fill`, que se mide
                   contra el contenedor. Antes el alto lo ponía la propia imagen. */}
               <div style={{ position:"relative", aspectRatio:"3/4" }} {...imgSwipe}>
@@ -1919,10 +2009,12 @@ function ProductosPageInner() {
                   </div>
                 </>)}
               </div>
-              {modalProduct.images.length > 1 && (
+              </div>
+              {!modalUP && modalProduct.images.length > 1 && (
                 /* 56×74 como en el modal del template: cuadradas de 48 recortaban
                    la prenda a un cuadrado y la miniatura no se parecía a la foto
-                   que abría. Misma proporción 3/4 que la foto grande. */
+                   que abría. Misma proporción 3/4 que la foto grande.
+                   En Urban Pulse no van acá: van en la tira vertical de arriba. */
                 <div style={{ display:"flex", gap:8, padding: isMobile ? "10px 14px 0" : "10px 0 0", overflowX:"auto", scrollbarWidth:"none" }}>
                   {modalProduct.images.map((img, i) => (
                     <button key={i} onClick={() => elegirFoto(i)} aria-label={`Ver foto ${i + 1}`}
@@ -1958,19 +2050,29 @@ function ProductosPageInner() {
                 donde arranca Reseñas; de ahí para abajo scrollea el modal, así que
                 los dos scrolls no compiten. En celular no aplica: columnas apiladas
                 y sin alto fijo, porque cortaría el contenido. */}
-            <div style={{ position:"relative", display:"flex", minWidth:0 }}>
+            {/* En Urban Pulse el panel se CLAVA y abarca todas las filas de la
+                grilla, así que la columna izquierda —foto, descripción, videos,
+                reseñas, similares— corre por debajo mientras el precio y el botón
+                de comprar quedan siempre a la vista. `span 8` cubre de sobra los
+                bloques que puede tener la izquierda; las filas implícitas que
+                sobren miden cero porque no tienen contenido ni hay `gap`.
+                Y no lleva el alto medido (`altoPanel`): ese es el otro mecanismo,
+                el de los tres templates restantes, donde el panel se ajusta al alto
+                de la foto y scrollea por dentro. Los dos juntos se pelean. */}
+            <div style={{ position:"relative", display:"flex", minWidth:0,
+                          ...(modalUP ? { gridColumn:2, gridRow:"1 / span 8", position:"sticky" as const, top:0, alignSelf:"start" as const, borderLeft:`3px solid ${T}`, maxHeight:"92vh", overflowY:"auto" as const } : {}) }}>
             {/* Degradados: reponen la señal que se perdió al ocultar la barra.
                 Aparecen solo si de verdad queda contenido de ese lado. */}
-            {sombraArriba && (
+            {!modalUP && sombraArriba && (
               <div style={{ position:"absolute", left:0, right:0, top:0, height:28, zIndex:2, pointerEvents:"none",
                             background:`linear-gradient(to top, transparent, ${S})` }} />
             )}
-            {sombraAbajo && (
+            {!modalUP && sombraAbajo && (
               <div style={{ position:"absolute", left:0, right:0, bottom:0, height:44, zIndex:2, pointerEvents:"none",
                             background:`linear-gradient(to bottom, transparent, ${S})` }} />
             )}
             <div ref={panelRef} className="st-sin-barra" style={{ flex:1, padding:"clamp(20px,4vw,36px) clamp(16px,3.5vw,32px)", display:"flex", flexDirection:"column", gap:18, minHeight:0,
-                          ...(altoPanel ? { maxHeight: altoPanel, overflowY:"auto" as const } : {}) }}>
+                          ...(!modalUP && altoPanel ? { maxHeight: altoPanel, overflowY:"auto" as const } : {}) }}>
               <div>
                 <p style={{ fontSize:10, letterSpacing:3, color:GT, textTransform:"uppercase", marginBottom:6 }}>
                   {modalProduct.category}{modalProduct.subcategory && <span style={{ opacity:0.6 }}> › {modalProduct.subcategory}</span>}
@@ -2107,50 +2209,10 @@ function ProductosPageInner() {
                 {selectedVariantStock === 0 ? "Sin stock" : `Agregar al carrito · ${fmt(nxmPaid != null ? nxmPaid * displayPrice : (modalPromo.hasPriceDrop ? modalPromo.effectivePrice : displayPrice) * qty)}`}
               </button>
 
-              {modalProduct.description && (
-                <div style={{ borderTop:`1px solid ${borderFaint}`, paddingTop:18 }}>
-                  <p style={tituloBloque}>Descripción</p>
-                  {/* Sin recortar: el panel tiene alto fijo y scrollea, así que un
-                      texto largo ya no deforma nada — se lee bajando acá adentro. */}
-                  <div className="product-rte" dangerouslySetInnerHTML={{ __html: modalProduct.description }} style={{ fontSize:13, color:MID, lineHeight:1.75 }} />
-                </div>
-              )}
-
-              {/* El cuadro de datos técnicos no tenía ningún título: aparecía una
-                  lista suelta después de la descripción y no se entendía qué era. */}
-              {(() => {
-                const attrs = modalProduct.attributes ?? [];
-                const condicionAttr = attrs.find(a => a.key === "Condición");
-                const serviciosAttr = attrs.find(a => a.key === "Servicios");
-                const otherAttrs = attrs.filter(a => a.key !== "Condición" && a.key !== "Servicios");
-                let servicios: string[] = [];
-                if (serviciosAttr) { try { servicios = Object.entries(JSON.parse(serviciosAttr.value)).filter(([, v]) => v).map(([k]) => k); } catch {} }
-                if (!condicionAttr && otherAttrs.length === 0 && servicios.length === 0) return null;
-                return (
-                  <div style={{ borderTop:`1px solid ${borderFaint}`, paddingTop:18 }}>
-                    <p style={tituloBloque}>Características</p>
-                    <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
-                      {condicionAttr && (
-                        <span style={{ alignSelf:"flex-start", fontSize:10, letterSpacing:2, textTransform:"uppercase", fontWeight:700, color:GT, border:`1px solid ${GT}`, padding:"4px 10px" }}>{condicionAttr.value}</span>
-                      )}
-                      {otherAttrs.length > 0 && (
-                        <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
-                          {otherAttrs.map(a => (
-                            <p key={a.key} style={{ fontSize:12, opacity:0.65, margin:0, color:T }}><span style={{ opacity:0.85 }}>{a.key}:</span> {a.value}</p>
-                          ))}
-                        </div>
-                      )}
-                      {servicios.length > 0 && (
-                        <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
-                          {servicios.map(k => (
-                            <span key={k} style={{ fontSize:10, letterSpacing:1, padding:"4px 10px", border:`1px solid ${border}`, color:T }}>✓ {k}</span>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })()}
+              {/* En Urban Pulse estos dos no van acá: bajan a la columna izquierda,
+                  debajo de la foto. El panel se queda SOLO con lo de comprar. */}
+              {!modalUP && bloqueDescripcion}
+              {!modalUP && bloqueCaracteristicas}
 
               {/* Compartir — al final: es lo que se hace DESPUÉS de decidir, no
                   antes de saber el precio, que es donde estaba. */}
@@ -2177,13 +2239,26 @@ function ProductosPageInner() {
             </div>
             </div>
 
+            {/* Urban Pulse: la descripción y las características bajan acá, en la
+                columna izquierda y abajo de la foto, en vez de ir apiladas adentro
+                del panel de compra. Es lo que le permite al panel quedarse corto y
+                clavado: si la descripción viviera ahí adentro, el panel volvería a
+                medir varias pantallas y el botón de comprar se iría de la vista con
+                el primer producto que tenga texto largo. */}
+            {modalUP && (bloqueDescripcion || bloqueCaracteristicas) && (
+              <div style={{ gridColumn:1, padding:"26px 26px 0", display:"flex", flexDirection:"column", gap:18 }}>
+                {bloqueDescripcion}
+                {bloqueCaracteristicas}
+              </div>
+            )}
+
             {/* ── Reseñas — a lo ANCHO, igual que en el template ──────────────
                 Adentro de la columna de detalles eran lo más largo del panel: la
                 estiraban muy por debajo de la foto y encima se leían en media
                 pantalla. Acá abajo entran a lo ancho y las tarjetas van de a dos
                 por fila (ver más abajo), que es donde el renglón queda en ~64
                 caracteres en vez de ~140. */}
-            <div style={{ gridColumn: isMobile ? undefined : "1 / -1", borderTop:`1px solid ${border}`, padding: isMobile ? "20px 16px" : "24px 32px" }}>
+            <div style={{ gridColumn: isMobile ? undefined : (modalUP ? 1 : "1 / -1"), borderTop:`1px solid ${border}`, padding: isMobile ? "20px 16px" : "24px 32px" }}>
                 <p style={{ ...tituloBloque, marginBottom: 20 }}>
                   Reseñas{resenasProd.total > 0 && ` (${resenasProd.total})`}
                 </p>
@@ -2298,7 +2373,7 @@ function ProductosPageInner() {
               const similar = [...sameSub, ...sameCat, ...rest].slice(0, 4);
               if (similar.length === 0) return null;
               return (
-                <div style={{ gridColumn: isMobile ? undefined : "1 / -1", padding: isMobile ? "0 16px 24px" : "0 32px 32px", borderTop:`1px solid ${border}`, paddingTop:20 }}>
+                <div style={{ gridColumn: isMobile ? undefined : (modalUP ? 1 : "1 / -1"), padding: isMobile ? "0 16px 24px" : "0 32px 32px", borderTop:`1px solid ${border}`, paddingTop:20 }}>
                   <p style={{ fontSize:10, letterSpacing:3, color:GT, textTransform:"uppercase", marginBottom:14 }}>Productos similares</p>
                   <div style={{ display:"grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(4,1fr)", gap:14 }}>
                     {similar.map(p => (

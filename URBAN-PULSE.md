@@ -39,7 +39,7 @@ templates y un arreglo ahí los toca a todos:
 |---|---|---|---|
 | ~~PL-1~~ | ~~El carrito y el checkout son una copia de 315 líneas, ya atrasada en dos cosas~~ | Alta | **hecho** 28/07 |
 | ~~PL-2~~ | ~~La paleta de Urban Pulse era azul y naranja, colores que el template no usa~~ | Alta | **hecho** 28/07 |
-| **PL-3** | **El modal del catálogo es el de Chic Paris para los diez templates** | Media | **pendiente** |
+| ~~PL-3~~ | ~~El modal del catálogo es el de Chic Paris, también para Urban Pulse~~ | Media | **hecho** 28/07 |
 | ~~PL-4~~ | ~~El acento se usa de relleno sin pasar por el helper en nueve lugares; con un acento claro desaparecen~~ | Alta | **hecho** 28/07 | Del UP-9 en adelante ya no salieron de la auditoría original:
 los reportó Flavio mirando su propia tienda o los pidió él. UP-9 lo vio con una captura, y UP-10 fue
 un pedido suyo — traer las reseñas de verdad
@@ -1650,28 +1650,6 @@ El acento no se toca a mano en ningún lado: `getReadableAccentText` y `getReada
 solos si el neón se puede usar como texto o como relleno contra el fondo claro, y si no, caen al color
 de texto del tema — que es justo lo que hace el template.
 
-### PL-3 — El modal todavía NO se replicó ⏳
-
-Es lo primero que pidió Flavio y **es lo único que quedó sin hacer**. No es un olvido: es el pedazo
-más grande de los tres y hacerlo a medias es peor que no hacerlo.
-
-**El problema.** Esta página tiene **un** modal para los diez templates, con la paleta cambiada. El de
-Urban Pulse, desde UP-12, tiene otra **estructura**, no otro color:
-
-| | esta página | Urban Pulse |
-|---|---|---|
-| ancho | 980 | **1080** |
-| columnas | `48% / 1fr` | `minmax(0,1fr) / clamp(300px,36%,400px)` |
-| columna de compra | scrollea con el resto | **clavada** (`sticky`), el precio y el botón siempre a la vista |
-| miniaturas | en fila, debajo de la foto (56×74) | en tira **vertical** al costado (72×90) |
-
-**Cómo habría que hacerlo.** No copiando el layout una tercera vez. Urban Pulse ya lo tiene escrito y
-lo correcto es sacarlo a un componente compartido que usen el template y esta página — igual que se
-hizo con el carrito en PL-1, y por el mismo motivo. Lo que complica es que los dos lados le dan de
-comer distinto: uno vive adentro de `EditContext` y el otro no.
-
-Mientras tanto el modal de esta página sigue funcionando y ahora al menos **tiene la paleta correcta**
-(PL-2), así que ya no desentona con el resto.
 
 ### PL-4 — El acento se usaba de relleno sin pasar por el helper, en nueve lugares ✅
 
@@ -1704,3 +1682,45 @@ Nueve lugares usaban `background: G` a pelo:
 
 Los nueve pasan por `chipBg`/`chipText`. Después del cambio no queda ni un `background: G` en el
 archivo.
+
+### PL-3 — El modal del catálogo era el de Chic Paris, también para Urban Pulse ✅
+
+Flavio lo diagnosticó solo: *"es como que usa el modal de productos pero del template de Chic Paris"*.
+Y era literal.
+
+**Cómo estaba.** Esta página tiene **un** modal, y lo usan los cuatro templates de moda (Fashion Noir,
+Boho Terra, Chic Paris y Urban Pulse). Entre ellos sólo cambia la paleta. Los otros seis no lo usan:
+Electro Prime, Tech Nova, Home Studio y Casa Clara tienen **página** de producto aparte
+(`/producto/[id]`), y las tiendas de autos ni entran acá — se van a `/vehiculos`.
+
+La forma de ese modal es la de Chic Paris: foto a la izquierda al 48%, miniaturas en fila abajo, y
+todo lo demás apilado en la columna derecha. Urban Pulse dejó de tener esa forma en **UP-12**, así que
+el mismo producto abierto desde el home y desde el catálogo daba dos fichas visiblemente distintas.
+
+**Lo que cambia, sólo para Urban Pulse y sólo en escritorio:**
+
+| | antes (Chic Paris) | ahora (Urban Pulse) |
+|---|---|---|
+| ancho | 980 | **1080** |
+| columnas | `48% / 1fr` | `minmax(0,1fr) / clamp(300px,36%,400px)` |
+| miniaturas | en fila abajo de la foto, 56×74 | tira **vertical** al costado, 72×90 |
+| descripción y características | adentro del panel de compra | **abajo de la foto**, en la columna izquierda |
+| panel de compra | se ajusta al alto de la foto y scrollea por dentro | **clavado**, abarca todas las filas |
+
+Lo importante es la última fila, y las dos anteriores existen para que sea posible: **el panel se
+queda corto porque la descripción se fue**. Si siguiera adentro, el panel volvería a medir varias
+pantallas y el botón de comprar se iría de la vista con el primer producto que tenga texto largo —
+que es exactamente el problema que UP-12 resolvió en el home.
+
+**Cómo se hizo sin escribir el contenido dos veces.** No se copió nada: la galería, los videos, la
+descripción, la ficha, las reseñas y los similares ya estaban escritos en esta página. Sólo se
+reacomodaron. Descripción y características salieron a dos variables, porque ahora se dibujan en dos
+lugares distintos según el template, y el panel abarca todas las filas de la grilla con `span 8` — de
+sobra para los bloques que puede tener la izquierda, y las filas implícitas que sobren miden cero
+porque no tienen contenido ni hay `gap`.
+
+**Los otros tres no se tocaron.** Siguen con la forma de siempre, incluido el mecanismo del alto
+medido (`altoPanel`), que es el otro camino al mismo problema y que con el panel clavado se pelearían.
+Cuando a cada uno le toque su auditoría se decidirá qué forma quiere.
+
+`tsc` y eslint limpios. Los cuatro templates de moda abren el catálogo en 200.
