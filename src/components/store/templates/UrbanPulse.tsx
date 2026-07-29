@@ -682,6 +682,22 @@ export default function UrbanPulse() {
     return (featuredElegidoId ? products.find(p => p.id === featuredElegidoId) : null) ?? products[0];
   }, [products, featuredElegidoId, featuredRotacionHs, relojFeatured]);
 
+  // El rótulo y el nombre del destacado, sacados aparte porque van en DOS lugares
+  // distintos según la pantalla: en escritorio adentro de la columna de texto, y en
+  // celular arriba de la foto. Se define una sola vez para que no haya dos copias
+  // que se puedan desincronizar, y sólo se dibuja una de las dos por vez, así el
+  // `EditableZone` de "featuredLabel" nunca aparece duplicado en el editor.
+  const encabezadoFeatured = featuredProduct && (
+    <>
+      <span style={{ color:accentSobre(featuredBg, featuredText), fontSize:10, letterSpacing:6, fontWeight:800, textTransform:"uppercase", display:"block", marginBottom:16 }}>
+        <EditableZone field="featuredLabel" label="Etiqueta featured">▶ Featured Drop</EditableZone>
+      </span>
+      <h2 style={{ color:featuredText, fontSize:"clamp(32px,4vw,50px)", fontWeight:900, textTransform:"uppercase", lineHeight:1.05, margin:"0 0 20px", letterSpacing:"-1px" }}>
+        {featuredProduct.name}
+      </h2>
+    </>
+  );
+
   const similarProducts = useMemo(() => {
     if (!modalProduct) return [];
     const others = products.filter(p => p.id !== modalProduct.id);
@@ -997,7 +1013,19 @@ export default function UrbanPulse() {
             )}
           </div>
         </div>
-        <div style={{ position:"relative", width:"100%", height:"100%", overflow:"hidden" }}>
+        {/* En celular esta columna medía CERO y la foto del hero no se veía nunca.
+            Adentro no hay más que cosas en absoluto —la imagen va con `fill` y los
+            controles del editor también—, así que no aporta nada de alto. En
+            escritorio no se notaba porque la fila la estira el `minHeight` de la
+            sección; en celular ese `minHeight` es `auto`, la fila se mide por su
+            contenido, y sin contenido con alto la fila queda en cero. O sea que la
+            dueña podía subir su foto de portada y no verla jamás en el celular,
+            que es de donde entra casi toda la gente.
+            El alto se lo damos acá. En `clamp` y no con `aspectRatio`: cuadrada se
+            veía bien a 360 pero a 767 —el último ancho antes de que vuelva el hero
+            de escritorio— habría medido 767px de alto, media pantalla de más. Así
+            va de 300px en el celular más chico a 460 como techo. */}
+        <div style={{ position:"relative", width:"100%", height: isMobile ? "clamp(300px, 80vw, 460px)" : "100%", overflow:"hidden" }}>
           <FadeImage src={storeConfig?.imageOverrides?.["heroImage"]?.url ?? "https://picsum.photos/seed/up_hero/800/900"} alt="Hero" fill sizes="(max-width: 768px) 100vw, 45vw" style={{ objectFit:"cover", objectPosition:`${storeConfig?.imageOverrides?.["heroImage"]?.posX ?? 50}% ${storeConfig?.imageOverrides?.["heroImage"]?.posY ?? 50}%` }} />
           <BgDragHandle imgKey="heroImage" />
           <EditableImageButton field="heroImage" label="Imagen hero" />
@@ -1306,7 +1334,26 @@ export default function UrbanPulse() {
             )}
           </div>
         )}
-        <div style={{ maxWidth:1100, margin:"0 auto", display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap:0, alignItems:"center" }}>
+        {/* ── En celular el rótulo y el nombre van ARRIBA de la foto ─────────────
+            En escritorio son dos columnas y se leen juntos, así que da igual el
+            orden. En celular se apilan, y arrancar por la foto dejaba una remera
+            negra suelta al principio del bloque: recién después de ~400px de foto
+            aparecía "▶ FEATURED DROP" y se entendía qué era esto. El rótulo es lo
+            único que convierte la foto en "el destacado" — sin él es una foto de
+            producto más, igual a las de la grilla de abajo.
+            Dos cosas más lo empujan: es el ÚNICO bloque del template que en celular
+            no abre con su título (Colección, Ofertas, Lo más visto, Nosotros y
+            Reseñas abren todos con el suyo), así que no se leía como una sección
+            nueva; y con UP-19 el hero ahora termina en una foto, así que quedaban
+            dos fotos pegadas sin una línea de texto en el medio.
+            No es intercambiar las dos columnas: así la foto habría quedado DEBAJO
+            del botón de comprar. Se parte en tres — rótulo y nombre, foto, y el
+            resto (descripción, ficha, precio y botón). Es el orden de la ficha de
+            producto y el del modal. */}
+        <div style={{ maxWidth:1100, margin:"0 auto", display:"grid", gridTemplateColumns: isMobile ? "minmax(0,1fr)" : "1fr 1fr", gap:0, alignItems:"center" }}>
+          {isMobile && (
+            <div style={{ padding:"28px 20px 0" }}>{encabezadoFeatured}</div>
+          )}
           <div style={{ position:"relative", width:"100%", aspectRatio:"3/4" }}>
             {featuredProduct.images[0] && <FadeImage src={featuredProduct.images[0]} alt={featuredProduct.name} fill sizes="(max-width: 768px) 100vw, 50vw" style={{ objectFit:"cover" }} />}
             {featuredProduct.badge && (
@@ -1316,12 +1363,7 @@ export default function UrbanPulse() {
             )}
           </div>
           <div style={{ padding: isMobile ? "28px 20px" : "60px 56px" }}>
-            <span style={{ color:accentSobre(featuredBg, featuredText), fontSize:10, letterSpacing:6, fontWeight:800, textTransform:"uppercase", display:"block", marginBottom:16 }}>
-              <EditableZone field="featuredLabel" label="Etiqueta featured">▶ Featured Drop</EditableZone>
-            </span>
-            <h2 style={{ color:featuredText, fontSize:"clamp(32px,4vw,50px)", fontWeight:900, textTransform:"uppercase", lineHeight:1.05, margin:"0 0 20px", letterSpacing:"-1px" }}>
-              {featuredProduct.name}
-            </h2>
+            {!isMobile && encabezadoFeatured}
             {/* ── La descripción, ahora del producto ──────────────────────────
                 Era un texto fijo sobre tecnología de compresión: un vestido se
                 anunciaba como ropa de gimnasio, y una tienda de muebles habría

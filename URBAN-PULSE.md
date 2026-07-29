@@ -26,10 +26,11 @@ Los números de línea son los del día de la revisión: se corren a medida que 
 | ~~UP-16~~ | ~~En celular la página entera es más ancha que el celular: dos grillas la empujan~~ | Alta | **hecho** 28/07 |
 | ~~UP-17~~ | ~~El banner muestra flechas en el celular, donde ya se pasa con el dedo~~ | Baja | **hecho** 28/07 |
 | ~~UP-18~~ | ~~En celular el segundo botón del hero se corta contra el borde~~ | Alta | **hecho** 28/07 |
-| **UP-19** | **En celular la foto del hero no se ve: la fila de la grilla queda en cero** | Alta | preguntado 28/07 |
+| ~~UP-19~~ | ~~En celular la foto del hero no se ve: la fila de la grilla queda en cero~~ | Alta | **hecho** 28/07 |
+| ~~UP-20~~ | ~~En celular el destacado abre con la foto, sin decir qué es~~ | Media | **hecho** 28/07 |
 
-**Cerrados dieciocho de diecinueve.** El UP-19 salió mirando el UP-18 y está esperando una decisión de
-diseño de Flavio — ver el final de UP-18. Del UP-9 en adelante ya no salieron de la auditoría original:
+**Los veinte puntos están cerrados.** El UP-19 salió mirando el UP-18, y el dónde va la foto lo eligió
+Flavio. Del UP-9 en adelante ya no salieron de la auditoría original:
 los reportó Flavio mirando su propia tienda o los pidió él. UP-9 lo vio con una captura, y UP-10 fue
 un pedido suyo — traer las reseñas de verdad
 al bloque de opiniones. Lo que queda anotado no es de este template: está en
@@ -1518,5 +1519,58 @@ exactamente los 48px del padding de abajo del bloque de texto. No hay foto en el
 No se arregló porque **dónde va y qué alto tiene es una decisión de diseño**, no un bug con una sola
 respuesta: puede ir arriba del título, abajo de los botones, o el bloque puede ser a propósito
 sólo-texto en celular. Preguntado a Flavio, sin tocar nada mientras tanto.
+
+`tsc` y eslint limpios. `/tienda/tiendaapps` y `/plantillas/urban-pulse` en 200.
+
+---
+
+### UP-19 — En celular la foto del hero no se veía nunca ✅
+
+Salió mirando el UP-18 y Flavio eligió dónde va: **abajo de los botones**.
+
+**Por qué medía cero.** La columna de la imagen es un `<div>` con `height: 100%` y adentro no hay más
+que cosas posicionadas en absoluto: el `FadeImage fill` y los controles del editor. Nada de eso aporta
+alto. En escritorio no se notaba porque la fila de la grilla la estira el `minHeight` de la sección;
+en celular ese `minHeight` es `auto`, la fila se mide por su contenido, y sin contenido con alto **la
+fila queda en cero**. La dueña podía subir su foto de portada y no verla jamás en el celular, que es
+de donde entra casi toda la gente.
+
+**El alto se lo damos nosotros:** `clamp(300px, 80vw, 460px)`. En `clamp` y no con `aspectRatio`
+—que sería lo natural para una foto— por el borde de arriba: cuadrada se ve bien a 360, pero a 767px
+—el último ancho antes de que vuelva el hero de escritorio— habría medido 767px de alto, media
+pantalla de más. Así va de 300px en el celular más chico hasta un techo de 460.
+
+**No hizo falta reordenar nada.** La columna de la imagen ya es el segundo hijo de la grilla, así que
+al apilarse cae sola debajo del texto y los botones, que es donde Flavio la quiso.
+
+---
+
+### UP-20 — En celular el destacado abría con la foto y no con el nombre ✅
+
+Flavio: *"este bloque donde mostramos el producto que queremos, ¿tendría que aparecer primero la foto
+o primero el título?"*.
+
+**Primero el título.** En escritorio son dos columnas y se leen juntos, así que el orden da igual. En
+celular se apilan, y arrancar por la foto dejaba una remera negra suelta al principio del bloque:
+recién después de ~400px de foto aparecía "▶ FEATURED DROP" y se entendía qué era esto. **El rótulo es
+lo único que convierte la foto en "el destacado"** — sin él es una foto de producto más, igual a las
+de la grilla de abajo.
+
+Dos cosas más empujan para el mismo lado:
+
+- Era el **único bloque del template que en celular no abría con su título**. Colección, Ofertas, Lo
+  más visto, Nosotros y Reseñas abren todos con el suyo, así que este no se leía como una sección
+  nueva sino como una continuación de lo de arriba.
+- Con UP-19 el hero ahora **termina en una foto**, así que quedaban dos fotos pegadas sin una línea de
+  texto en el medio.
+
+**No es intercambiar las dos columnas.** Así la foto habría quedado *debajo del botón de comprar*, que
+es peor que el problema. Se parte en tres: rótulo y nombre, foto, y el resto (descripción, ficha,
+precio y botón). Ese es el orden de la ficha de producto y el del modal, así que además el bloque pasa
+a leerse igual que el resto de la tienda.
+
+El rótulo y el nombre se sacaron a una variable porque ahora se dibujan en dos lugares distintos según
+la pantalla. Una sola definición, y sólo una de las dos se dibuja por vez — si no, el `EditableZone`
+de `featuredLabel` aparecería duplicado en el editor.
 
 `tsc` y eslint limpios. `/tienda/tiendaapps` y `/plantillas/urban-pulse` en 200.
