@@ -1013,19 +1013,26 @@ export default function UrbanPulse() {
             )}
           </div>
         </div>
-        {/* En celular esta columna medía CERO y la foto del hero no se veía nunca.
-            Adentro no hay más que cosas en absoluto —la imagen va con `fill` y los
+        {/* ── En celular el hero es SOLO TEXTO, a propósito ──────────────────────
+            Se probó con la foto abajo de los botones y a Flavio no le gustó, así
+            que vuelve a quedar como estaba. Pero queda escrito y no por accidente,
+            que es la diferencia con antes.
+            Antes esta columna se dibujaba igual y medía CERO: adentro no hay más
+            que cosas posicionadas en absoluto —la imagen va con `fill` y los
             controles del editor también—, así que no aporta nada de alto. En
-            escritorio no se notaba porque la fila la estira el `minHeight` de la
-            sección; en celular ese `minHeight` es `auto`, la fila se mide por su
-            contenido, y sin contenido con alto la fila queda en cero. O sea que la
-            dueña podía subir su foto de portada y no verla jamás en el celular,
-            que es de donde entra casi toda la gente.
-            El alto se lo damos acá. En `clamp` y no con `aspectRatio`: cuadrada se
-            veía bien a 360 pero a 767 —el último ancho antes de que vuelva el hero
-            de escritorio— habría medido 767px de alto, media pantalla de más. Así
-            va de 300px en el celular más chico a 460 como techo. */}
-        <div style={{ position:"relative", width:"100%", height: isMobile ? "clamp(300px, 80vw, 460px)" : "100%", overflow:"hidden" }}>
+            escritorio la fila la estira el `minHeight` de la sección; en celular
+            ese `minHeight` es `auto`, la fila se mide por su contenido, y sin
+            contenido con alto queda en cero. Se veía bien de casualidad: alcanzaba
+            con que alguien le pusiera un `minHeight` a la sección para que la foto
+            apareciera sola, con el alto que fuera.
+            Consecuencia, para tenerla presente: la foto del hero es de ESCRITORIO.
+            La dueña la sigue cargando y usando ahí, pero en el celular no se ve, y
+            el botón para cambiarla vive en esta columna — o sea que hay que editar
+            el hero desde una pantalla grande. Antes pasaba lo mismo, sólo que sin
+            que nadie lo supiera: con la columna en cero y su `overflow:hidden`, ese
+            botón ya quedaba recortado y no se podía tocar. */}
+        {!isMobile && (
+        <div style={{ position:"relative", width:"100%", height:"100%", overflow:"hidden" }}>
           <FadeImage src={storeConfig?.imageOverrides?.["heroImage"]?.url ?? "https://picsum.photos/seed/up_hero/800/900"} alt="Hero" fill sizes="(max-width: 768px) 100vw, 45vw" style={{ objectFit:"cover", objectPosition:`${storeConfig?.imageOverrides?.["heroImage"]?.posX ?? 50}% ${storeConfig?.imageOverrides?.["heroImage"]?.posY ?? 50}%` }} />
           <BgDragHandle imgKey="heroImage" />
           <EditableImageButton field="heroImage" label="Imagen hero" />
@@ -1034,6 +1041,7 @@ export default function UrbanPulse() {
             <EditableZone field="heroNewDropBadge" label="Badge hero">New Drop</EditableZone>
           </div>
         </div>
+        )}
       </section>
 
       <div style={{ display:"flex", flexDirection:"column" }}>
@@ -1341,11 +1349,10 @@ export default function UrbanPulse() {
             aparecía "▶ FEATURED DROP" y se entendía qué era esto. El rótulo es lo
             único que convierte la foto en "el destacado" — sin él es una foto de
             producto más, igual a las de la grilla de abajo.
-            Dos cosas más lo empujan: es el ÚNICO bloque del template que en celular
-            no abre con su título (Colección, Ofertas, Lo más visto, Nosotros y
-            Reseñas abren todos con el suyo), así que no se leía como una sección
-            nueva; y con UP-19 el hero ahora termina en una foto, así que quedaban
-            dos fotos pegadas sin una línea de texto en el medio.
+            Y es el ÚNICO bloque del template que en celular no abría con su título
+            (Colección, Ofertas, Lo más visto, Nosotros y Reseñas abren todos con el
+            suyo), así que no se leía como una sección nueva sino como una
+            continuación de lo de arriba.
             No es intercambiar las dos columnas: así la foto habría quedado DEBAJO
             del botón de comprar. Se parte en tres — rótulo y nombre, foto, y el
             resto (descripción, ficha, precio y botón). Es el orden de la ficha de

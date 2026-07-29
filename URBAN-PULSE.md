@@ -26,11 +26,11 @@ Los números de línea son los del día de la revisión: se corren a medida que 
 | ~~UP-16~~ | ~~En celular la página entera es más ancha que el celular: dos grillas la empujan~~ | Alta | **hecho** 28/07 |
 | ~~UP-17~~ | ~~El banner muestra flechas en el celular, donde ya se pasa con el dedo~~ | Baja | **hecho** 28/07 |
 | ~~UP-18~~ | ~~En celular el segundo botón del hero se corta contra el borde~~ | Alta | **hecho** 28/07 |
-| ~~UP-19~~ | ~~En celular la foto del hero no se ve: la fila de la grilla queda en cero~~ | Alta | **hecho** 28/07 |
+| ~~UP-19~~ | ~~En celular el hero se quedaba sin foto por accidente, no por decisión~~ | Alta | **hecho** 28/07 |
 | ~~UP-20~~ | ~~En celular el destacado abre con la foto, sin decir qué es~~ | Media | **hecho** 28/07 |
 
-**Los veinte puntos están cerrados.** El UP-19 salió mirando el UP-18, y el dónde va la foto lo eligió
-Flavio. Del UP-9 en adelante ya no salieron de la auditoría original:
+**Los veinte puntos están cerrados.** El UP-19 salió mirando el UP-18. Se probó con la foto abajo de
+los botones, a Flavio no le gustó y volvió a quedar sin foto — pero escrito, que es lo que faltaba. Del UP-9 en adelante ya no salieron de la auditoría original:
 los reportó Flavio mirando su propia tienda o los pidió él. UP-9 lo vio con una captura, y UP-10 fue
 un pedido suyo — traer las reseñas de verdad
 al bloque de opiniones. Lo que queda anotado no es de este template: está en
@@ -1524,24 +1524,31 @@ sólo-texto en celular. Preguntado a Flavio, sin tocar nada mientras tanto.
 
 ---
 
-### UP-19 — En celular la foto del hero no se veía nunca ✅
+### UP-19 — En celular el hero es sólo texto, ahora a propósito ✅
 
-Salió mirando el UP-18 y Flavio eligió dónde va: **abajo de los botones**.
+Salió mirando el UP-18. Se probó con la foto **abajo de los botones**, que es lo que Flavio eligió, y
+la vio: *"creo que no me gustó la imagen debajo de los dos botones, vamos a sacarlo como estaba antes"*.
+Así que vuelve a quedar como estaba — **pero escrito, y ésa es toda la diferencia.**
 
 **Por qué medía cero.** La columna de la imagen es un `<div>` con `height: 100%` y adentro no hay más
 que cosas posicionadas en absoluto: el `FadeImage fill` y los controles del editor. Nada de eso aporta
-alto. En escritorio no se notaba porque la fila de la grilla la estira el `minHeight` de la sección;
-en celular ese `minHeight` es `auto`, la fila se mide por su contenido, y sin contenido con alto **la
-fila queda en cero**. La dueña podía subir su foto de portada y no verla jamás en el celular, que es
-de donde entra casi toda la gente.
+alto. En escritorio no se nota porque la fila de la grilla la estira el `minHeight` de la sección; en
+celular ese `minHeight` es `auto`, la fila se mide por su contenido, y sin contenido con alto **la
+fila queda en cero**.
 
-**El alto se lo damos nosotros:** `clamp(300px, 80vw, 460px)`. En `clamp` y no con `aspectRatio`
-—que sería lo natural para una foto— por el borde de arriba: cuadrada se ve bien a 360, pero a 767px
-—el último ancho antes de que vuelva el hero de escritorio— habría medido 767px de alto, media
-pantalla de más. Así va de 300px en el celular más chico hasta un techo de 460.
+O sea que **se veía bien de casualidad**. Alcanzaba con que alguien le pusiera un `minHeight` a la
+sección, o con que la imagen dejara de ir en absoluto, para que la foto apareciera sola en el celular
+con el alto que fuera. Ahora la columna directamente no se dibuja abajo de 768: mismo resultado, pero
+por una decisión y no por un descuido.
 
-**No hizo falta reordenar nada.** La columna de la imagen ya es el segundo hijo de la grilla, así que
-al apilarse cae sola debajo del texto y los botones, que es donde Flavio la quiso.
+**Lo que hay que tener presente:** la foto del hero es **de escritorio**. La dueña la sigue cargando y
+usando ahí, pero en el celular no se ve — y el botón para cambiarla vive en esa columna, así que el
+hero se edita desde una pantalla grande. Antes pasaba exactamente lo mismo sin que nadie lo supiera:
+con la columna en cero y su `overflow: hidden`, ese botón ya quedaba recortado y no se podía tocar.
+
+Se probó `clamp(300px, 80vw, 460px)` para el alto —en `clamp` y no con `aspectRatio`, porque cuadrada
+se ve bien a 360 pero a 767px habría medido 767px de alto, media pantalla de más—. Queda anotado por
+si algún día se retoma.
 
 ---
 
@@ -1556,13 +1563,13 @@ recién después de ~400px de foto aparecía "▶ FEATURED DROP" y se entendía 
 lo único que convierte la foto en "el destacado"** — sin él es una foto de producto más, igual a las
 de la grilla de abajo.
 
-Dos cosas más empujan para el mismo lado:
+Y era el **único bloque del template que en celular no abría con su título**. Colección, Ofertas, Lo
+más visto, Nosotros y Reseñas abren todos con el suyo, así que este no se leía como una sección nueva
+sino como una continuación de lo de arriba.
 
-- Era el **único bloque del template que en celular no abría con su título**. Colección, Ofertas, Lo
-  más visto, Nosotros y Reseñas abren todos con el suyo, así que este no se leía como una sección
-  nueva sino como una continuación de lo de arriba.
-- Con UP-19 el hero ahora **termina en una foto**, así que quedaban dos fotos pegadas sin una línea de
-  texto en el medio.
+> Acá había una tercera razón —que con UP-19 el hero terminaba en una foto y quedaban dos fotos
+> pegadas— que **quedó sin efecto**: Flavio después sacó esa foto. Las otras dos se sostienen solas,
+> por eso el cambio queda.
 
 **No es intercambiar las dos columnas.** Así la foto habría quedado *debajo del botón de comprar*, que
 es peor que el problema. Se parte en tres: rótulo y nombre, foto, y el resto (descripción, ficha,
