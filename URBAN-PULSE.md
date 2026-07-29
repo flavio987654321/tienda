@@ -23,8 +23,9 @@ Los números de línea son los del día de la revisión: se corren a medida que 
 | ~~UP-13~~ | ~~El bloque destacado muestra el octavo producto de la lista, con una ficha inventada~~ | Alta | **hecho** 28/07 |
 | ~~UP-14~~ | ~~El precio se pinta de ocho maneras distintas, con dos rojos que nadie eligió juntos~~ | Alta | **hecho** 28/07 |
 | ~~UP-15~~ | ~~En celular el footer apila las tres columnas de links, y quedan casi dos pantallas~~ | Media | **hecho** 28/07 |
+| ~~UP-16~~ | ~~En celular la página entera es más ancha que el celular: dos grillas la empujan~~ | Alta | **hecho** 28/07 |
 
-**Los quince puntos están cerrados.** Del UP-9 en adelante ya no salieron de la auditoría original:
+**Los dieciséis puntos están cerrados.** Del UP-9 en adelante ya no salieron de la auditoría original:
 los reportó Flavio mirando su propia tienda o los pidió él. UP-9 lo vio con una captura, y UP-10 fue
 un pedido suyo — traer las reseñas de verdad
 al bloque de opiniones. Lo que queda anotado no es de este template: está en
@@ -741,6 +742,13 @@ El de `.product-rte` se arregló en `globals.css`, así que **vale para los diez
   de aire suelto en el footer de cualquier tienda que no cargó ninguna red — que son casi todas al
   empezar. Falta el `.some()` en **Fashion Noir** (`marginTop: 24`, agujero visible) y en **Boho
   Terra** (sin `marginTop`, cuesta sólo una separación de la grilla). Los otros ya lo tienen.
+- **`1fr` en una grilla es una trampa, y está en los diez templates.** Ver UP-16: `1fr` es
+  `minmax(AUTO,1fr)` y ese `auto` es el ancho mínimo del contenido, así que la columna nunca se achica
+  por debajo de la palabra más larga que tenga adentro — se estira, la grilla se pasa del contenedor y
+  el desborde sube hasta que la página entera queda más ancha que el celular. En Urban Pulse estaba en
+  dos lugares a la vez. Donde la columna lleve texto que carga la dueña va `minmax(0,1fr)`; es
+  idéntico cuando entra y es lo único que garantiza que no vuelva a pasar. Los otros nueve templates
+  no se revisaron.
 - Todo cambio visual se revisa en **360 / 768 / 1280**. 768 es donde más se rompe.
 
 ### El `accentText` estaba mal en seis templates ✅
@@ -1332,3 +1340,73 @@ templates todavía no entraron a revisión.
 
 `tsc` y eslint limpios. `/tienda/tiendaapps` y `/plantillas/urban-pulse` en 200 — verificados contra
 el servidor que ya tenía Flavio levantado, sin levantar ninguno propio.
+
+---
+
+### UP-16 — En celular la página entera era más ancha que el celular ✅
+
+Flavio, con una captura del catálogo en 360: *"el bloque donde mostramos los productos y está el
+botón para ver el catálogo completo está mal, ¿lo ves?"*. En la captura la segunda columna de
+tarjetas está cortada por el borde derecho — el precio de "Pantalón básico" se corta a la mitad.
+
+**No era un bloque desalineado: la página tenía scroll horizontal.** Y eso explica que se viera
+cortado *todo*, no sólo el catálogo — la barra de arriba también.
+
+#### El mecanismo, que es uno solo y aparecía en dos lugares
+
+`1fr` **no** quiere decir "una fracción del espacio". Quiere decir `minmax(auto, 1fr)`, y ese `auto`
+de mínimo es **el ancho mínimo del contenido**: una columna de grilla nunca se achica por debajo de
+la palabra más larga que tiene adentro. Si no entra, la columna se estira, la grilla se pasa del
+contenedor, y como ningún padre corta el desborde, se lo va pasando hacia arriba hasta que **el
+documento entero queda más ancho que la pantalla**. Es el "grid blowout" clásico.
+
+**1) El catálogo.** A 360, con 16px de padding a cada lado y 4 de separación, cada columna tiene
+162px. El mínimo de la tarjeta era ~180:
+
+| | |
+|---|---|
+| padding de la tarjeta (16 × 2) | 32px |
+| categoría — "PANTALONES", una palabra sola que no se puede partir | ~82px |
+| precio — `flexShrink: 0`, no podía encogerse ni un píxel | ~66px |
+| **mínimo** | **~180px** |
+
+Las dos columnas se estiraban a 180 y la grilla medía 364 contra 328 útiles: **36px afuera**.
+
+**2) Los tres números de "Nosotros"** (+5K Clientes / 98% Satisfacción / 48hs Envío promedio). Tres
+columnas `1fr` con 24 de separación dejan 90px cada una a 360. "SATISFACCIÓN" a 10px con 2 de
+espaciado mide ~102, y es una palabra sola. La grilla se iba a ~354 contra 320 útiles: **34px más**.
+
+Los dos estaban a la vez. Arreglar sólo el que se veía en la captura habría dejado la página igual de
+ancha y el catálogo se habría seguido viendo cortado.
+
+#### Lo que se hizo
+
+**El mínimo pasa a 0** (`minmax(0,1fr)`) en las siete grillas del template. Eso es lo estructural: una
+columna con mínimo 0 **no puede empujar**, y el desborde no puede volver a pasar por más largo que
+sea lo que cargue la dueña. Pero por sí solo no alcanza — mueve el problema adentro de la tarjeta, así
+que además:
+
+- **En la tarjeta del catálogo, el nombre y el precio van uno debajo del otro**, no enfrentados. En
+  138px útiles no entran la categoría (~82) más el precio (~66) juntos; apilados entra cualquiera de
+  los dos solo, y sigue entrando con precios largos tipo `$1.250.000`. En escritorio siguen
+  enfrentados como estaban.
+- **Los tres números**: separación de 24 a 12, espaciado de la etiqueta de 2 a 1 y el número de 40px
+  a 30 en celular. "SATISFACCIÓN" pasa a ~90 contra ~99 de columna, y "48HS" de ~94 a ~70.
+
+**El botón "Ver colección completa"** era el otro problema que marcó Flavio. El texto a 11px con 4 de
+espaciado mide ~253px, y los 52px de padding de cada lado lo llevan a ~363 contra 328 de pantalla:
+**se partía en dos renglones adentro de un botón con 52px de aire a los costados**. En celular pasa a
+ocupar el ancho entero, con el espaciado en 3 y menos padding: el texto queda en ~231px y entra en un
+renglón hasta en 320px, que es la pantalla más chica que se usa. De paso queda un blanco grande para
+tocar, y es la misma forma que ya tiene el botón del bloque destacado.
+
+#### Lo que no se verificó
+
+Los anchos de texto son **cuentas, no medidas de navegador**: salen del ancho promedio de glifo por
+tamaño de fuente más el espaciado entre letras. Sirven para decidir si algo entra con margen o no
+entra por 20px —que es el caso de los dos desbordes de acá—, pero no son exactos al píxel. En este
+entorno no hay navegador para medirlo de verdad. Los márgenes que quedan (99 contra 90, 282 contra
+231) son lo bastante amplios como para que el error de la estimación no cambie el resultado.
+
+`tsc` y eslint limpios. `/tienda/tiendaapps` y `/plantillas/urban-pulse` en 200, contra el servidor
+que ya tenía Flavio levantado.

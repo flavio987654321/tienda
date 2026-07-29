@@ -1029,7 +1029,7 @@ export default function UrbanPulse() {
             parecía el doble de ancho que los otros tres. Un damero solo se lee si
             los cuadros miden todos lo mismo, y para eso tiene que llegar al filo.
             Es además cómo está resuelto el hero, que también va a sangre. */}
-        <div style={{ display:"grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(4,1fr)" }}>
+        <div style={{ display:"grid", gridTemplateColumns: isMobile ? "repeat(2,minmax(0,1fr))" : "repeat(4,minmax(0,1fr))" }}>
           {GARANTIAS.map((g, i) => {
             const iconIdx = (Math.abs(parseInt(textOverrides[`garantia${i+1}Icon`]?.text ?? "0") || 0)) % UP_STRIP_ICONS[i].length;
             const nextIdx = (iconIdx + 1) % UP_STRIP_ICONS[i].length;
@@ -1401,7 +1401,18 @@ export default function UrbanPulse() {
           </h2>
           <p style={{ fontSize:12, color:productosTextUp, opacity:0.5, margin:"6px 0 0" }}>{allFiltered.length} piezas</p>
         </div>
-        <div style={{ display:"grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(3,1fr)", gap:4 }}>
+        {/* `minmax(0,1fr)` y no `1fr`: `1fr` es `minmax(AUTO,1fr)`, y ese `auto`
+            es el ancho mínimo del contenido — una columna de grilla NUNCA se
+            achica por debajo de eso. En celular la columna mide 162px pero la
+            tarjeta pedía ~180 de mínimo (la categoría "PANTALONES" no se parte,
+            y el precio tenía `flexShrink:0`), así que las dos columnas se
+            estiraban y la grilla se iba 36px afuera de la pantalla. Y como
+            ningún padre corta el desborde, era la PÁGINA ENTERA la que quedaba
+            más ancha que el celular: por eso se veía todo corrido y cortado a la
+            derecha, no sólo este bloque. Con el 0 de mínimo la columna puede
+            achicarse y el desborde no puede volver a pasar, entre nada que
+            metamos adentro. */}
+        <div style={{ display:"grid", gridTemplateColumns: isMobile ? "repeat(2,minmax(0,1fr))" : "repeat(3,minmax(0,1fr))", gap:4 }}>
           {filtered.map((product, idx) => {
             const big = !isMobile && (idx === 0 || idx === 5);
             const promo = resolveProductPromo(product, promotions);
@@ -1422,13 +1433,20 @@ export default function UrbanPulse() {
                     return <div style={{ position:"absolute", bottom:0, left:0, right:0, background:"rgba(0,0,0,0.72)", display:"flex", alignItems:"center", justifyContent:"center", padding:"9px 0", zIndex:2 }}><span style={{ color:"#fff", fontSize:9, fontWeight:900, letterSpacing:4, textTransform:"uppercase" }}>Sin stock</span></div>;
                   })()}
                 </div>
-                <div style={{ padding:"14px 16px" }}>
-                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
-                    <div>
+                <div style={{ padding: isMobile ? "12px 12px" : "14px 16px" }}>
+                  {/* En celular el nombre y el precio van uno debajo del otro, no
+                      enfrentados. Achicar la columna sin esto sólo mueve el
+                      desborde adentro de la tarjeta: en 138px útiles no entran la
+                      categoría (~82px, y "PANTALONES" es una palabra sola que no
+                      se puede partir) más el precio (~66px), que además no puede
+                      encogerse. Apilados entra cualquiera de los dos solo, y
+                      sigue entrando con precios largos tipo $1.250.000. */}
+                  <div style={{ display:"flex", flexDirection: isMobile ? "column" : "row", justifyContent:"space-between", alignItems:"flex-start", gap: isMobile ? 8 : 0 }}>
+                    <div style={{ minWidth:0, overflowWrap:"break-word" }}>
                       <p style={{ margin:0, fontSize:10, color:MID, fontWeight:800, letterSpacing:2, textTransform:"uppercase" }}>{product.category}</p>
                       <p style={{ margin:"4px 0 0", fontSize:14, fontWeight:800 }}>{product.name}</p>
                     </div>
-                    <div style={{ textAlign:"right", flexShrink:0 }}>
+                    <div style={{ textAlign: isMobile ? "left" : "right", flexShrink:0 }}>
                       {ocultarPrecios ? (
                         <p style={{ margin:0, fontSize:15, fontWeight:900, color:DARK }}>Consultá precio</p>
                       ) : promo.hasPriceDrop ? (
@@ -1467,9 +1485,15 @@ export default function UrbanPulse() {
             );
           })}
         </div>
+        {/* En celular el botón ocupa el ancho entero. Suelto no entraba: el texto
+            a 11px con 4 de espaciado mide ~253px y los 52px de padding de cada
+            lado lo llevan a ~363, contra 328 de pantalla útil a 360 — se partía
+            en dos renglones adentro de un botón con 52px de aire a los costados.
+            De lado a lado, con el espaciado en 3 y menos padding, el texto queda
+            en ~231px y entra en un renglón hasta en 320px. */}
         <div style={{ textAlign:"center", marginTop:48 }}>
           <a href={`/tienda/${storeConfig?.slug}/productos?t=urban-pulse${isPreview ? "&from=editor" : ""}`}
-            style={{ display:"inline-block", background:productosTextUp, color:productosBotonText, border:`3px solid ${productosTextUp}`, padding:"16px 52px", fontSize:11, fontWeight:900, letterSpacing:4, textTransform:"uppercase", textDecoration:"none", transition:"all 0.2s" }}
+            style={{ display: isMobile ? "block" : "inline-block", background:productosTextUp, color:productosBotonText, border:`3px solid ${productosTextUp}`, padding: isMobile ? "18px 20px" : "16px 52px", fontSize:11, fontWeight:900, letterSpacing: isMobile ? 3 : 4, textTransform:"uppercase", textDecoration:"none", transition:"all 0.2s" }}
             onMouseEnter={e=>{ e.currentTarget.style.background="transparent"; e.currentTarget.style.color=productosTextUp; }}
             onMouseLeave={e=>{ e.currentTarget.style.background=productosTextUp; e.currentTarget.style.color=productosBotonText; }}>
             Ver colección completa
@@ -1720,7 +1744,7 @@ export default function UrbanPulse() {
                   <p style={{ fontSize:9, letterSpacing:5, color:accentSobre(ofertasBgUp, ofertasTextUp), textTransform:"uppercase", fontWeight:900, margin:"0 0 8px" }}><EditableZone field="ofertasKicker" label="Texto sobre Ofertas">Aprovechá</EditableZone></p>
                   <h2 style={{ fontSize:"clamp(32px,4vw,44px)", fontWeight:900, textTransform:"uppercase", letterSpacing:"-1px", margin:0, color:ofertasTextUp }}><EditableZone field="ofertasTitle" label="Título Ofertas">Ofertas</EditableZone></h2>
                 </div>
-                <div style={{ display:"grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(4,1fr)", gap:2 }}>
+                <div style={{ display:"grid", gridTemplateColumns: isMobile ? "repeat(2,minmax(0,1fr))" : "repeat(4,minmax(0,1fr))", gap:2 }}>
                   {displayList.map(p => {
                     // El "-30%" tiene que coincidir con el precio: si hay promo de
                     // tienda manda ella, si no sale del comparePrice.
@@ -1785,7 +1809,7 @@ export default function UrbanPulse() {
                     {" "}{MIN_MAS_VISTOS} productos hayan sido vistos.
                   </p>
                 )}
-                <div style={{ display:"grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(4,1fr)", gap:2 }}>
+                <div style={{ display:"grid", gridTemplateColumns: isMobile ? "repeat(2,minmax(0,1fr))" : "repeat(4,minmax(0,1fr))", gap:2 }}>
                   {displayList.map((p) => (
                     <div key={p.id} onClick={() => openModal(p)} className="up-zoom" style={{ cursor:"pointer" }}>
                       {/* Sin el "#1, #2…" de antes: numerar sugiere un ranking firme
@@ -1833,11 +1857,22 @@ export default function UrbanPulse() {
           <p style={{ fontSize:15, color:nosotrosMidUp, lineHeight:1.8, marginBottom:40 }}>
             <EditableZone field="aboutParagraph2" label="Párrafo 2 'Nosotros'">Sin compromisos. Sin excusas. Solo movimiento.</EditableZone>
           </p>
-          <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:24 }}>
+          {/* Los tres números eran la SEGUNDA fuente del desborde horizontal de la
+              página, por lo mismo que el catálogo. Tres columnas `1fr` con 24 de
+              separación dejan 90px cada una a 360px de pantalla, y "SATISFACCIÓN"
+              a 10px con 2 de espaciado mide ~102: una palabra sola que no se puede
+              partir. La columna se estiraba a 102, la grilla se iba a ~354 contra
+              320 útiles, y de ahí para arriba arrastraba a la sección y a la página.
+              Ahora: mínimo 0 —la columna nunca puede empujar—, menos separación,
+              menos espaciado en la etiqueta y el número a 30px en celular. Con eso
+              "SATISFACCIÓN" mide ~90 y entra en los ~99 de columna sin partirse, y
+              "48HS" pasa de ~94 a ~70. El `anywhere` es el último recurso para el
+              texto que escriba la dueña: parte antes que desbordar. */}
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(3,minmax(0,1fr))", gap: isMobile ? 12 : 24 }}>
             {([["aboutStat1","aboutStatLabel1","+5K","Clientes"],["aboutStat2","aboutStatLabel2","98%","Satisfacción"],["aboutStat3","aboutStatLabel3","48hs","Envío promedio"]] as const).map(([fv,fl,n,l]) => (
-              <div key={l}>
-                <p style={{ fontSize:40, fontWeight:900, margin:"0 0 4px" }}><EditableZone field={fv} label={`Stat: ${n}`}>{n}</EditableZone></p>
-                <p style={{ fontSize:10, color:MID, fontWeight:800, letterSpacing:2, textTransform:"uppercase", margin:0 }}><EditableZone field={fl} label={`Etiqueta stat: ${l}`}>{l}</EditableZone></p>
+              <div key={l} style={{ minWidth:0 }}>
+                <p style={{ fontSize: isMobile ? 30 : 40, fontWeight:900, margin:"0 0 4px", overflowWrap:"anywhere" }}><EditableZone field={fv} label={`Stat: ${n}`}>{n}</EditableZone></p>
+                <p style={{ fontSize:10, color:MID, fontWeight:800, letterSpacing: isMobile ? 1 : 2, textTransform:"uppercase", margin:0, overflowWrap:"anywhere" }}><EditableZone field={fl} label={`Etiqueta stat: ${l}`}>{l}</EditableZone></p>
               </div>
             ))}
           </div>
@@ -1936,7 +1971,7 @@ export default function UrbanPulse() {
               columna (~148px a 360) se partiría en dos o tres renglones.
               A 360 cada columna da 148px y el link más largo ("Sustentabilidad",
               13px) mide ~93px, así que entra sin cortarse. */}
-          <div style={{ display:"grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "2fr 1fr 1fr 1fr", gap: isMobile ? "28px 24px" : 40, marginBottom:40 }}>
+          <div style={{ display:"grid", gridTemplateColumns: isMobile ? "repeat(2,minmax(0,1fr))" : "2fr 1fr 1fr 1fr", gap: isMobile ? "28px 24px" : 40, marginBottom:40 }}>
             <div style={ isMobile ? { gridColumn:"1 / -1" } : undefined }>
               <div style={{ fontWeight:900, fontSize:24, letterSpacing:4, textTransform:"uppercase", color:footerUpText, marginBottom:16 }}>
                 <EditableZone field="storeName" label="Nombre de la tienda">
@@ -2688,7 +2723,7 @@ export default function UrbanPulse() {
                 {similarProducts.length > 0 && (
                   <div>
                     {tituloModal("También te puede gustar")}
-                    <div style={{ display:"grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(4,1fr)", gap:14 }}>
+                    <div style={{ display:"grid", gridTemplateColumns: isMobile ? "repeat(2,minmax(0,1fr))" : "repeat(4,minmax(0,1fr))", gap:14 }}>
                       {similarProducts.map(p => (
                         <div key={p.id} onClick={() => openModal(p)} style={{ cursor:"pointer" }}>
                           <div style={{ position:"relative", width:"100%", aspectRatio:"3/4", background:BG }}>
