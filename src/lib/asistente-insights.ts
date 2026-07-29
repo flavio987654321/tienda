@@ -1,5 +1,10 @@
 import { prisma } from "@/lib/prisma";
 import { DEFAULT_LOW_STOCK_THRESHOLD } from "@/lib/stockMovements";
+import { ESTADOS_VENTA_CONFIRMADA_LISTA } from "@/lib/order-status";
+import { RUIDO_PCT } from "@/lib/resumen-mes";
+import {
+  getArgentinaDayKey, inicioDiaArgentino, sumarDiasCalendario,
+} from "@/lib/fechas-comerciales";
 
 /**
  * Tipos de tienda "de consultas" (sin pedidos/carrito, ej. autos) — debe coincidir
@@ -74,8 +79,17 @@ export function getChecklistEstado(args: {
 export async function getStoreSnapshot(storeId: string, tipoTienda: string): Promise<StoreSnapshot> {
   const esTipoConsultas = LEADS_STORE_TYPES.includes(tipoTienda);
   const now = new Date();
-  const hace30 = new Date(now.getTime() - 30 * 86_400_000);
-  const hace60 = new Date(now.getTime() - 60 * 86_400_000);
+
+  // Las mismas ventanas y los mismos cortes que la pantalla de Métricas.
+  //
+  // Antes esto eran 30×24 horas contadas desde este instante, y las ventas
+  // sumaban todos los pedidos no cancelados —PENDING incluido—. Métricas cuenta
+  // días argentinos y sólo lo confirmado. O sea que preguntarle a Sasha "¿cómo
+  // vengo?" y abrir Métricas daba dos números distintos para el mismo período,
+  // sacados de la misma base. Al que lo ve no le queda forma de saber cuál creer.
+  const hoyDia = getArgentinaDayKey();
+  const hace30 = inicioDiaArgentino(sumarDiasCalendario(hoyDia, -29));
+  const hace60 = inicioDiaArgentino(sumarDiasCalendario(hoyDia, -59));
 
   const [
     pedidosPendientes,
@@ -113,12 +127,16 @@ export async function getStoreSnapshot(storeId: string, tipoTienda: string): Pro
       }),
 
       prisma.order.aggregate({
-        where: { storeId, status: { not: "CANCELLED" }, createdAt: { gte: hace30 } },
+        where: { storeId, status: { in: ESTADOS_VENTA_CONFIRMADA_LISTA }, createdAt: { gte: hace30 } },
         _sum: { total: true },
       }),
 
       prisma.order.aggregate({
-        where: { storeId, status: { not: "CANCELLED" }, createdAt: { gte: hace60, lt: hace30 } },
+        where: {
+          storeId,
+          status: { in: ESTADOS_VENTA_CONFIRMADA_LISTA },
+          createdAt: { gte: hace60, lt: hace30 },
+        },
         _sum: { total: true },
       }),
 
@@ -128,9 +146,13 @@ export async function getStoreSnapshot(storeId: string, tipoTienda: string): Pro
         select: { createdAt: true },
       }),
 
+      // El más vendido también sale de ventas confirmadas: si no, un pedido
+      // pendiente que después se cancela puede poner un producto en el podio.
       prisma.orderItem.groupBy({
         by: ["productId"],
-        where: { order: { storeId, status: { not: "CANCELLED" }, createdAt: { gte: hace30 } } },
+        where: {
+          order: { storeId, status: { in: ESTADOS_VENTA_CONFIRMADA_LISTA }, createdAt: { gte: hace30 } },
+        },
         _sum: { quantity: true },
         orderBy: { _sum: { quantity: "desc" } },
         take: 1,
@@ -149,12 +171,16 @@ export async function getStoreSnapshot(storeId: string, tipoTienda: string): Pro
   const ventasUltimos30Dias = ventasRecientes._sum.total ?? 0;
   const ventasPrevios30Dias = ventasAnteriores._sum.total ?? 0;
 
+  // El mismo umbral que el resumen de Métricas (`RUIDO_PCT`). Estaba en 10% acá y
+  // en 5% allá: un mes que subía 7% le salía "estable" a Sasha y "7% arriba" a
+  // Métricas, las dos al mismo tiempo y las dos convencidas.
+  const margen = RUIDO_PCT / 100;
   let tendenciaVentas: StoreSnapshot["tendenciaVentas"] = "sin_datos";
   if (ventasUltimos30Dias === 0 && ventasPrevios30Dias === 0) {
     tendenciaVentas = "sin_datos";
-  } else if (ventasUltimos30Dias > ventasPrevios30Dias * 1.1) {
+  } else if (ventasUltimos30Dias > ventasPrevios30Dias * (1 + margen)) {
     tendenciaVentas = "subiendo";
-  } else if (ventasUltimos30Dias < ventasPrevios30Dias * 0.9) {
+  } else if (ventasUltimos30Dias < ventasPrevios30Dias * (1 - margen)) {
     tendenciaVentas = "bajando";
   } else {
     tendenciaVentas = "estable";
