@@ -24,8 +24,9 @@ Los números de línea son los del día de la revisión: se corren a medida que 
 | ~~UP-14~~ | ~~El precio se pinta de ocho maneras distintas, con dos rojos que nadie eligió juntos~~ | Alta | **hecho** 28/07 |
 | ~~UP-15~~ | ~~En celular el footer apila las tres columnas de links, y quedan casi dos pantallas~~ | Media | **hecho** 28/07 |
 | ~~UP-16~~ | ~~En celular la página entera es más ancha que el celular: dos grillas la empujan~~ | Alta | **hecho** 28/07 |
+| ~~UP-17~~ | ~~El banner muestra flechas en el celular, donde ya se pasa con el dedo~~ | Baja | **hecho** 28/07 |
 
-**Los dieciséis puntos están cerrados.** Del UP-9 en adelante ya no salieron de la auditoría original:
+**Los diecisiete puntos están cerrados.** Del UP-9 en adelante ya no salieron de la auditoría original:
 los reportó Flavio mirando su propia tienda o los pidió él. UP-9 lo vio con una captura, y UP-10 fue
 un pedido suyo — traer las reseñas de verdad
 al bloque de opiniones. Lo que queda anotado no es de este template: está en
@@ -1410,3 +1411,59 @@ entorno no hay navegador para medirlo de verdad. Los márgenes que quedan (99 co
 
 `tsc` y eslint limpios. `/tienda/tiendaapps` y `/plantillas/urban-pulse` en 200, contra el servidor
 que ya tenía Flavio levantado.
+
+---
+
+### UP-17 — Las flechas del banner en el celular ✅
+
+Flavio: *"el bloque de banner tiene las flechas en celular, ¿no solamente tiene que moverse con el
+dedo?"*.
+
+Tenía razón, y la mitad del trabajo ya estaba hecha: **el swipe existe desde antes**
+(`useTouchSwipe`, enganchado en el `<section>` del carrusel cuando hay más de una imagen). Está bien
+resuelto — pide 50px de movimiento y sólo dispara si el desplazamiento horizontal le gana al vertical
+por 1,5 a 1, así que no le roba el scroll a la página cuando alguien pasa el dedo en diagonal. Lo que
+sobraba eran las flechas encima de la foto.
+
+**Se esconden con una consulta de medios, no con JavaScript**, así no hay que pasarle `isMobile` a un
+componente que usan siete templates ni arriesgar un desajuste entre el servidor y el navegador.
+
+```css
+@media (hover: none) and (pointer: coarse), (max-width: 767px) { .promo-banner-arrow { display: none } }
+```
+
+La consulta apunta al **táctil** y no al ancho, porque eso es lo que decide si hay dedo: una tablet de
+1024 se pasa con el dedo, una ventana angosta de escritorio no. El `max-width` va **además** de eso
+por dos motivos: se puede probar achicando el navegador, sin emular un celular, y no se sale de los
+768px que usa todo el resto del proyecto.
+
+**No se pierde ninguna forma de navegar.** Los puntos de abajo siguen ahí y siguen siendo botones con
+su `aria-label`, así que quien use teclado o lector de pantalla cambia de slide igual — que es la
+parte que sí importaba conservar. Un lector de pantalla en un celular se come los gestos de swipe; si
+las flechas se iban y no quedaba ningún botón, esa persona se quedaba sin carrusel.
+
+**En el editor las flechas quedan siempre.** Ahí el swipe no está enganchado, y las flechas son la
+forma de pasar de un banner al otro para cargar los tres. La clase va sólo en la rama pública.
+
+#### Lo que arrastraba el cambio
+
+Sacadas las flechas, **los puntos pasan a ser el único botón del carrusel en el celular — y medían
+8px de alto**. Eso no se puede tocar con el dedo; la recomendación de Apple y de Google es 44. Así que
+el botón dejó de ser la barrita: ahora es una caja transparente de 16×32 con la barrita adentro.
+
+Se ve **exactamente igual** que antes: la separación de 8px entre puntos ahora la dan los 4px de
+padding de cada lado en vez del `gap`, y el `bottom` baja de 16 a 4 para compensar los 12px de padding
+de arriba, así el punto queda a los mismos 16px del borde. Cambia sólo lo que se puede tocar.
+
+#### Alcance
+
+`PromoBannerCarousel` lo usan **siete templates** (Urban Pulse, Fashion Noir, Boho Terra, Tech Nova,
+Home Studio, Electro Prime y Casa Clara). El cambio les llega a todos, y acá está bien que así sea: no
+es una decisión de diseño de un template, es cómo se maneja un carrusel con el dedo. Se verificó que
+las cinco páginas que lo usan y se pueden abrir sigan en 200.
+
+**Queda sin tocar la galería del modal de producto**, que también tiene flechas. Es otra situación:
+ahí son botones de 42×42 con fondo, no chevrones finitos sobre la foto, y están adentro de un modal
+que scrollea. No se tocó sin preguntar.
+
+`tsc` y eslint limpios.

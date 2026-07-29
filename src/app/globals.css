@@ -149,6 +149,25 @@ body {
 .product-rte pre { white-space: pre-wrap; overflow-x: auto; }
 .product-rte table { display: block; max-width: 100%; overflow-x: auto; }
 
+/* ── Carrusel de banner: donde hay dedo, no van las flechas ──────────────────
+   El carrusel ya se pasa con el dedo (`useTouchSwipe`: umbral de 50px y sólo si
+   el movimiento horizontal le gana al vertical, para no robarle el scroll a la
+   página). Donde el dedo funciona, las flechas encima de la foto sobran.
+   No se pierde ninguna forma de navegar: los puntos de abajo siguen ahí y siguen
+   siendo botones con su `aria-label`, así que quien use teclado o lector de
+   pantalla cambia de slide igual — que es la parte que sí importaba conservar.
+   La consulta apunta al TÁCTIL y no al ancho, porque eso es lo que decide si hay
+   dedo: una tablet de 1024 se pasa con el dedo y una ventana angosta de
+   escritorio no. El `max-width` va además de eso, por dos motivos: se puede
+   probar achicando el navegador sin emular un celular, y no se sale de los 768px
+   que usa todo el resto del proyecto.
+   Sólo afecta a la tienda: en el editor las flechas quedan siempre, porque ahí
+   el swipe no está enganchado y son la única forma de pasar de un banner a otro
+   para cargarlos. */
+@media (hover: none) and (pointer: coarse), (max-width: 767px) {
+  .promo-banner-arrow { display: none; }
+}
+
 /* ── Scroll reveal ── */
 [data-reveal] {
   opacity: 0;

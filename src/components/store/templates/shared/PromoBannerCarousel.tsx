@@ -26,6 +26,25 @@ function arrowStyle(side: "left" | "right"): React.CSSProperties {
   };
 }
 
+// Los puntos de abajo. Sin las flechas en el celular pasan a ser el único botón
+// del carrusel, y una barrita de 8px de alto es imposible de tocar con el dedo.
+// Así que el botón NO es la barrita: es una caja transparente de 16×32 con la
+// barrita adentro. Se ve exactamente igual que antes —la separación de 8px entre
+// puntos ahora la dan los 4px de padding de cada lado en vez del `gap`, y el
+// `bottom` baja de 16 a 4 para compensar los 12 de padding de arriba, así el
+// punto queda a los mismos 16px del borde— pero se puede tocar.
+const dotsRow: React.CSSProperties = {
+  position: "absolute", bottom: 4, left: "50%", transform: "translateX(-50%)",
+  display: "flex", gap: 0, zIndex: 10,
+};
+const dotHit: React.CSSProperties = {
+  border: "none", background: "none", padding: "12px 4px", cursor: "pointer", lineHeight: 0,
+};
+const dotStyle = (activo: boolean, accent: string): React.CSSProperties => ({
+  display: "block", width: activo ? 24 : 8, height: 8, borderRadius: 4,
+  background: activo ? accent : "rgba(255,255,255,0.5)", transition: "all 0.3s",
+});
+
 function Overlay({ ov }: { ov: ImageOverride | undefined }) {
   if (!ov?.url || !ov.overlayType || ov.overlayType === "none") return null;
   return (
@@ -119,12 +138,11 @@ export function PromoBannerCarousel({
             </div>
           );
         })}
-        <div style={{ position: "absolute", bottom: 16, left: "50%", transform: "translateX(-50%)", display: "flex", gap: 8, zIndex: 10 }}>
+        <div style={dotsRow}>
           {Array.from({ length: SLOT_COUNT }, (_, i) => (
-            <button key={i} onClick={() => setEditSlide(i)} aria-label={`Editar banner ${i + 1}`} style={{
-              width: editSlide === i ? 24 : 8, height: 8, borderRadius: 4, border: "none", padding: 0,
-              background: editSlide === i ? accent : "rgba(255,255,255,0.5)", cursor: "pointer", transition: "all 0.3s",
-            }} />
+            <button key={i} onClick={() => setEditSlide(i)} aria-label={`Editar banner ${i + 1}`} style={dotHit}>
+              <span style={dotStyle(editSlide === i, accent)} />
+            </button>
           ))}
         </div>
         {([[-1, "left"], [1, "right"]] as const).map(([dir, side]) => (
@@ -155,16 +173,17 @@ export function PromoBannerCarousel({
       })}
       {filled.length > 1 && (
         <>
-          <div style={{ position: "absolute", bottom: 16, left: "50%", transform: "translateX(-50%)", display: "flex", gap: 8, zIndex: 10 }}>
+          <div style={dotsRow}>
             {filled.map((_, idx) => (
-              <button key={idx} onClick={() => { setPublicSlide(idx); if (intervalRef.current) clearInterval(intervalRef.current); }} aria-label={`Banner ${idx + 1}`} style={{
-                width: publicSlide === idx ? 24 : 8, height: 8, borderRadius: 4, border: "none", padding: 0,
-                background: publicSlide === idx ? accent : "rgba(255,255,255,0.5)", cursor: "pointer", transition: "all 0.3s",
-              }} />
+              <button key={idx} onClick={() => { setPublicSlide(idx); if (intervalRef.current) clearInterval(intervalRef.current); }} aria-label={`Banner ${idx + 1}`} style={dotHit}>
+                <span style={dotStyle(publicSlide === idx, accent)} />
+              </button>
             ))}
           </div>
+          {/* `promo-banner-arrow` las esconde donde hay dedo — el porqué está en
+              globals.css. Va sólo acá, no en la rama de edición. */}
           {([[-1, "left"], [1, "right"]] as const).map(([dir, side]) => (
-            <button key={side} aria-label={dir === -1 ? "Banner anterior" : "Banner siguiente"}
+            <button key={side} className="promo-banner-arrow" aria-label={dir === -1 ? "Banner anterior" : "Banner siguiente"}
               onClick={() => { setPublicSlide(s => (s + dir + filled.length) % filled.length); if (intervalRef.current) clearInterval(intervalRef.current); }}
               style={arrowStyle(side)}>
               {dir === -1 ? "‹" : "›"}
