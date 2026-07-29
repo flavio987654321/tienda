@@ -1,6 +1,6 @@
 "use client";
 import { FadeImage } from "./FadeImage";
-import { getReadableAccentText } from "@/contexts/EditContext";
+import { getReadableAccentText, getReadableAccentFill, textoSobre } from "@/contexts/EditContext";
 import type { useCartLogic } from "@/hooks/useCartLogic";
 
 // Un solo componente de carrito reutilizado por todos los templates de un mismo
@@ -51,6 +51,18 @@ export function CartDrawer({
   // Ojo: `accent` a secas se sigue usando de RELLENO (el botón), donde no hay
   // problema de contraste porque `accentText` ya está calculado contra él.
   const accentTexto = getReadableAccentText(accent, BG, T);
+  // Y lo mismo para el acento usado de RELLENO, que era la mitad que faltaba.
+  // `accentTexto` ya cuidaba el acento como TEXTO —el total, el nombre de la
+  // promo—, pero el botón de "Finalizar compra" se seguía pintando con el acento
+  // crudo. Con un acento claro sobre el fondo claro del carrito, ese botón es
+  // blanco sobre blanco: la etiqueta se lee, pero no hay botón. Es el botón que
+  // lleva a la caja, así que el que no lo encuentra no compra.
+  // Cuando el acento SÍ se despega del fondo, `getReadableAccentFill` lo devuelve
+  // tal cual y se respeta el `accentText` que calculó el template, que sabe contra
+  // qué color lo eligió. Sólo cuando no se despega se cae al color de texto del
+  // tema y se recalcula la tinta encima.
+  const accentFill  = getReadableAccentFill(accent, BG, T);
+  const accentSobreFill = accentFill === accent ? accentText : textoSobre(accentFill);
   // El tachado se apoya en el color de texto del carrito, que ya contrasta con su
   // fondo, en vez de un gris fijo que se pierde en los carritos oscuros.
   const tachado = { color: MID || T, opacity: 0.75, textDecoration: "line-through" as const };
@@ -205,7 +217,7 @@ export function CartDrawer({
             )}
             <button onClick={blockBuy ? undefined : openCheckout} disabled={blockBuy}
               title={isOwner ? "No podés comprar en tu propia tienda" : isPreview ? "No disponible en modo edición" : undefined}
-              style={{ width:"100%", background: blockBuy ? `${accent}40` : accent, color: blockBuy ? `${accentText}80` : accentText, border:"none", padding:"15px", fontSize:12, fontWeight:700, letterSpacing:2, textTransform:"uppercase", cursor: blockBuy ? "not-allowed" : "pointer", marginBottom:10 }}>
+              style={{ width:"100%", background: blockBuy ? `${accentFill}40` : accentFill, color: blockBuy ? `${accentSobreFill}80` : accentSobreFill, border:"none", padding:"15px", fontSize:12, fontWeight:700, letterSpacing:2, textTransform:"uppercase", cursor: blockBuy ? "not-allowed" : "pointer", marginBottom:10 }}>
               {isOwner ? "No disponible para el dueño" : isPreview ? "Solo en la tienda real" : "Finalizar compra"}
             </button>
             <button onClick={() => setCartOpen(false)} style={{ width:"100%", background:"transparent", color:T, border:`1px solid ${border}`, padding:"12px", fontSize:11, letterSpacing:1, textTransform:"uppercase", cursor:"pointer" }}>

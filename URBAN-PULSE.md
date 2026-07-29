@@ -44,6 +44,7 @@ templates y un arreglo ahí los toca a todos:
 | ~~PL-5~~ | ~~Al modal le faltaban ocho detalles del panel del template, dos de ellos no cosméticos~~ | Media | **hecho** 28/07 |
 | ~~PL-6~~ | ~~A 768 el catálogo muestra un producto por fila al lado de la barra de filtros~~ | Alta | **hecho** 28/07 |
 | ~~PL-7~~ | ~~En pantalla chica los filtros tienen tres anchos distintos, y el buscador va tercero~~ | Media | **hecho** 28/07 |
+| ~~PL-8~~ | ~~"Finalizar compra" y "Confirmar pedido" se pintan con el acento crudo: invisibles con un acento claro, en los diez templates~~ | Alta | **hecho** 28/07 |
 
 Del UP-9 en adelante ya no salieron de la auditoría original:
 los reportó Flavio mirando su propia tienda o los pidió él. UP-9 lo vio con una captura, y UP-10 fue
@@ -1842,3 +1843,43 @@ quedaban dos `color: G`. Con el acento blanco de esta tienda, el rótulo era bla
 pasa por `getReadableAccentText`, igual que el resto. El otro era la categoría al lado del título.
 
 `tsc` y eslint limpios. Urban Pulse, Chic Paris y Boho Terra abren el catálogo en 200.
+
+### PL-8 — Los dos botones que cierran la compra podían ser invisibles ✅
+
+Flavio: *"el checkout, ¿lo revisaste?"*. **No lo había revisado** — lo cambié por el compartido en PL-1
+y verifiqué que compilara y que la página abriera, nada más. Revisado ahora, apareció esto.
+
+`CartDrawer` y `CheckoutModal` ya cuidaban el acento usado como **texto** (`accentTexto`, para el
+total, el cupón, el nombre de la promo). Lo que no cuidaban es el acento usado como **relleno**, y ahí
+están los dos botones más importantes de toda la tienda:
+
+| dónde | qué botón |
+|---|---|
+| `CartDrawer` | **Finalizar compra** — el que lleva del carrito a la caja |
+| `CheckoutModal` | **Confirmar pedido** — el que manda el pedido |
+| `CheckoutModal` | el de la pantalla de "listo" |
+
+Los tres iban con `background: accent` crudo. Con un acento claro sobre el fondo claro del panel eso
+es **blanco sobre blanco**: la etiqueta se lee, pero no hay botón — exactamente lo que Flavio vio en el
+modal del catálogo y que se arregló en PL-4. Acá el mismo bug estaba en los **componentes
+compartidos**, así que no era del catálogo: le pasaba a **los diez templates**.
+
+Y es el peor lugar posible. Un rótulo invisible se sortea; un botón invisible en el último paso de la
+compra es una venta que no se hace.
+
+Ahora pasan por `getReadableAccentFill`, con un cuidado: cuando el acento **sí** se despega del fondo
+se usa tal cual y se respeta el `accentText` que calculó el template, que sabe contra qué color lo
+eligió. Sólo cuando no se despega se cae al color de texto del tema y se recalcula la tinta encima.
+Para las tiendas con un acento normal no cambia absolutamente nada.
+
+**Lo que se revisó y estaba bien**, para que no se vuelva a mirar:
+
+- **El apilado.** Barra de arriba en 100, carrito en 150, modal de producto en 200, checkout en 300.
+  Ninguno se pisa.
+- **Agregar al carrito desde el modal.** Parecía un problema —el carrito abre en 150 y el modal está en
+  200, o sea que abriría por detrás— pero `addToCart` cierra el modal (`setModalProduct(null)`) antes
+  de abrir el carrito. No hay bug.
+- **El checkout en pantalla chica.** El panel es `width: min(480px, 100vw)` y `height: 100vh`: en
+  celular ocupa la pantalla entera, y los campos van al 100% del panel.
+
+`tsc` y eslint limpios. El catálogo, el home y una plantilla de otro rubro, los tres en 200.

@@ -3,7 +3,7 @@ import { HandHeart } from "lucide-react";
 import type { useCartLogic } from "@/hooks/useCartLogic";
 import type { CartTheme } from "./CartDrawer";
 import { FadeImage } from "./FadeImage";
-import { getReadableAccentText } from "@/contexts/EditContext";
+import { getReadableAccentText, getReadableAccentFill, textoSobre } from "@/contexts/EditContext";
 import { PROVINCIAS_ARGENTINA } from "@/lib/provincias";
 import { resolveVariantPrice } from "@/lib/variantPrice";
 import { resolveBasePrice, parseEscalones } from "@/lib/pricing";
@@ -27,6 +27,15 @@ export function CheckoutModal({
   // (total, cupon, links, precios). Con un acento claro esta pantalla quedaba
   // ilegible entera. `accent` se sigue usando de relleno en los botones.
   const accentTexto = getReadableAccentText(accent, BG, T);
+  // El acento como RELLENO, que faltaba. `accentTexto` ya cuidaba el acento como
+  // TEXTO (total, cupon, links), pero "Confirmar pedido" -el boton que MANDA el
+  // pedido- se seguia pintando con el acento crudo. Con un acento claro sobre el
+  // fondo claro del panel es blanco sobre blanco: se lee la etiqueta y no hay
+  // boton. Es el ultimo paso de la compra; peor lugar no hay.
+  // Si el acento se despega del fondo, se usa tal cual y se respeta el `accentText`
+  // que calculo el template. Si no, se cae al color de texto del tema.
+  const accentFill = getReadableAccentFill(accent, BG, T);
+  const accentSobreFill = accentFill === accent ? accentText : textoSobre(accentFill);
   const {
     checkoutOpen, setCheckoutOpen, checkoutStatus, setCheckoutStatus, checkoutError,
     cartItems, updateQty, buyerForm, setBuyerForm, rememberData, setRememberData,
@@ -86,7 +95,7 @@ export function CheckoutModal({
             <p style={{ fontSize:13, opacity:0.6, lineHeight:1.8, marginBottom:16, color:T }}>Te enviamos un email con el resumen. El vendedor te contactará para coordinar el envío.</p>
             <p style={{ fontSize:11, opacity:0.45, lineHeight:1.7, marginBottom:32, color:T }}>¿Algún inconveniente con tu pedido? Contactá directamente al vendedor. Tenés 10 días corridos para cancelar (Ley 24.240).</p>
             <button onClick={() => { setCheckoutOpen(false); setCheckoutStatus("idle"); }}
-              style={{ background:accent, color:accentText, border:"none", padding:"14px 32px", fontSize:11, fontWeight:700, letterSpacing:2, textTransform:"uppercase", cursor:"pointer" }}>
+              style={{ background:accentFill, color:accentSobreFill, border:"none", padding:"14px 32px", fontSize:11, fontWeight:700, letterSpacing:2, textTransform:"uppercase", cursor:"pointer" }}>
               Seguir comprando
             </button>
           </div>
@@ -323,7 +332,7 @@ export function CheckoutModal({
                 </span>
               </label>
               <button type="submit" disabled={checkoutStatus === "placing" || !acceptedTerms}
-                style={{ width:"100%", background:accent, color:accentText, border:"none", padding:"15px", fontSize:12, fontWeight:700, letterSpacing:2, textTransform:"uppercase", cursor: (!acceptedTerms || checkoutStatus === "placing") ? "not-allowed" : "pointer", opacity: (!acceptedTerms || checkoutStatus === "placing") ? 0.45 : 1 }}>
+                style={{ width:"100%", background:accentFill, color:accentSobreFill, border:"none", padding:"15px", fontSize:12, fontWeight:700, letterSpacing:2, textTransform:"uppercase", cursor: (!acceptedTerms || checkoutStatus === "placing") ? "not-allowed" : "pointer", opacity: (!acceptedTerms || checkoutStatus === "placing") ? 0.45 : 1 }}>
                 {checkoutStatus === "placing" ? "Procesando..." : "Crear pedido"}
               </button>
             </div>
