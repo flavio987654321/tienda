@@ -1900,7 +1900,7 @@ tenía es la otra mitad: el acento usado como **relleno**. Un acento claro pinta
 panel blanco no se lee mal — **no se ve, porque no hay botón**; queda la etiqueta flotando. Es
 exactamente lo de PL-4 y PL-8, ahora dentro del template.
 
-Se revisaron los **catorce** `background: ACC` del archivo. Siete estaban bien y siete no:
+Se revisaron los **catorce** `background: ACC` del archivo. Nueve estaban bien y cinco no:
 
 | dónde | veredicto |
 |---|---|
