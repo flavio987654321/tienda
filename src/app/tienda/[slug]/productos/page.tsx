@@ -967,7 +967,7 @@ function ProductosPageInner() {
     <div style={{ background:BG, minHeight:"100vh", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:16, fontFamily:sans, color:T }}>
       <p style={{ fontSize:18, fontWeight:600 }}>Algo salió mal</p>
       <p style={{ fontSize:13, opacity:0.5 }}>{error}</p>
-      <button onClick={() => window.location.reload()} style={{ background:G, color:accentDark?"#000":"#fff", border:"none", padding:"10px 24px", fontSize:12, fontWeight:700, cursor:"pointer", letterSpacing:2, textTransform:"uppercase" }}>
+      <button onClick={() => window.location.reload()} style={{ background:chipBg, color:chipText, border:"none", padding:"10px 24px", fontSize:12, fontWeight:700, cursor:"pointer", letterSpacing:2, textTransform:"uppercase" }}>
         Reintentar
       </button>
     </div>
@@ -1084,7 +1084,7 @@ function ProductosPageInner() {
                   <div className="product-overlay" style={{ position:"absolute", inset:0, background:"rgba(0,0,0,0.3)", display:"flex", alignItems:"center", justifyContent:"center", opacity:0, transition:"opacity 0.3s" }}
                     onMouseEnter={e => (e.currentTarget.style.opacity="1")}
                     onMouseLeave={e => (e.currentTarget.style.opacity="0")}>
-                    <span style={{ background:G, color:accentDark?"#000":"#fff", fontSize:10, fontWeight:800, letterSpacing:3, padding:"9px 20px", textTransform:"uppercase" }}>Ver detalle</span>
+                    <span style={{ background:chipBg, color:chipText, fontSize:10, fontWeight:800, letterSpacing:3, padding:"9px 20px", textTransform:"uppercase" }}>Ver detalle</span>
                   </div>
                 </div>
                 {/* Área de texto */}
@@ -1221,7 +1221,7 @@ function ProductosPageInner() {
             <div style={{ marginTop:14 }}>
               <div style={{ position:"relative", width:"100%", height:14 }}>
                 <div style={{ position:"absolute", top:6, left:0, right:0, height:2, background:border }} />
-                <div style={{ position:"absolute", top:6, height:2, background:G,
+                <div style={{ position:"absolute", top:6, height:2, background:chipBg,
                   left:`${((effectivePriceRange[0]-priceBounds[0])/(priceBounds[1]-priceBounds[0]))*100}%`,
                   right:`${100-((effectivePriceRange[1]-priceBounds[0])/(priceBounds[1]-priceBounds[0]))*100}%` }} />
                 <input type="range" className="pr-range" min={priceBounds[0]} max={priceBounds[1]} value={effectivePriceRange[0]}
@@ -1294,7 +1294,7 @@ function ProductosPageInner() {
           <span style={{ fontSize:10, letterSpacing:2, textTransform:"uppercase", opacity:0.5 }}>Precio</span>
           <div style={{ position:"relative", width: isCardLayout ? "100%" : 170, height:14 }}>
             <div style={{ position:"absolute", top:6, left:0, right:0, height:2, background:border }} />
-            <div style={{ position:"absolute", top:6, height:2, background:G,
+            <div style={{ position:"absolute", top:6, height:2, background:chipBg,
               left:`${((effectivePriceRange[0]-priceBounds[0])/(priceBounds[1]-priceBounds[0]))*100}%`,
               right:`${100-((effectivePriceRange[1]-priceBounds[0])/(priceBounds[1]-priceBounds[0]))*100}%` }} />
             <input type="range" className="pr-range" min={priceBounds[0]} max={priceBounds[1]} value={effectivePriceRange[0]}
@@ -1396,7 +1396,7 @@ function ProductosPageInner() {
               {CART_ICON_OPTIONS[cartIconIdx]}
             </svg>
             {cartCount > 0 && (
-              <span style={{ position:"absolute", top:-6, right:-6, background:G, color:accentDark?"#000":"#fff", borderRadius:"50%", width:18, height:18, fontSize:10, fontWeight:800, display:"flex", alignItems:"center", justifyContent:"center" }}>{cartCount}</span>
+              <span style={{ position:"absolute", top:-6, right:-6, background:chipBg, color:chipText, borderRadius:"50%", width:18, height:18, fontSize:10, fontWeight:800, display:"flex", alignItems:"center", justifyContent:"center" }}>{cartCount}</span>
             )}
           </button>
         </div>
@@ -1461,7 +1461,7 @@ function ProductosPageInner() {
                     <h1 style={{ fontFamily:serif, fontSize:"clamp(28px,4vw,42px)", margin:"0 0 10px", color:T, lineHeight:1.1, fontWeight:700 }}>
                       {heading}{sub && <span style={{ fontStyle:"italic", opacity:0.55 }}> › {sub}</span>}
                     </h1>
-                    <div style={{ width:40, height:2, background:G, marginBottom:8 }} />
+                    <div style={{ width:40, height:2, background:chipBg, marginBottom:8 }} />
                   </>
                 )}
                 {titleStyle === "organic" && (
@@ -1606,7 +1606,7 @@ function ProductosPageInner() {
                   style={{ display:"flex", alignItems:"center", gap:8, background:"none", border:`1px solid ${border}`, color:T, padding:"10px 18px", fontSize:11.5, letterSpacing:1, textTransform:"uppercase", cursor:"pointer", borderRadius:inputRadius }}>
                   Filtrar y ordenar
                   {(Object.keys(activeAttrFilters).length > 0 || priceRange) && (
-                    <span style={{ background:G, color: accentDark?"#000":"#fff", borderRadius:"50%", width:18, height:18, fontSize:10, display:"flex", alignItems:"center", justifyContent:"center", fontWeight:700 }}>
+                    <span style={{ background:chipBg, color:chipText, borderRadius:"50%", width:18, height:18, fontSize:10, display:"flex", alignItems:"center", justifyContent:"center", fontWeight:700 }}>
                       {Object.values(activeAttrFilters).filter(v => v.length > 0).length + (priceRange ? 1 : 0)}
                     </span>
                   )}
@@ -2090,9 +2090,20 @@ function ProductosPageInner() {
                 <p style={{ fontSize:12, color:"#fb923c", fontWeight:600, margin:0 }}>¡Últimas {selectedVariantStock} unidades!</p>
               )}
 
+              {/* El botón más importante del modal iba pintado con el acento CRUDO.
+                  Con un acento claro sobre un panel claro eso es un botón blanco
+                  sobre fondo blanco: quedaba el texto flotando, sin botón. Se ve en
+                  la captura de Flavio del 28/07 — "AGREGAR AL CARRITO · $48.000"
+                  suelto en el aire.
+                  Usa `chipBg`/`chipText`, que es el mismo par que ya usan los chips
+                  de talle y color tres líneas más arriba, en este mismo panel:
+                  `getReadableAccentFill` devuelve el acento cuando de verdad se
+                  despega del fondo como superficie, y cuando no, el color de texto
+                  del tema. Por eso en la captura los chips SÍ se veían y el botón
+                  no: los chips ya pasaban por el helper y el botón no. */}
               <button onClick={addToCart}
                 disabled={selectedVariantStock === 0}
-                style={{ background: selectedVariantStock === 0 ? `${G}40` : G, color:accentDark?"#000":"#fff", border:"none", padding:"15px", fontSize:11, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor: selectedVariantStock === 0 ? "not-allowed" : "pointer" }}>
+                style={{ background: selectedVariantStock === 0 ? `${chipBg}40` : chipBg, color:chipText, border:"none", padding:"15px", fontSize:11, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor: selectedVariantStock === 0 ? "not-allowed" : "pointer" }}>
                 {selectedVariantStock === 0 ? "Sin stock" : `Agregar al carrito · ${fmt(nxmPaid != null ? nxmPaid * displayPrice : (modalPromo.hasPriceDrop ? modalPromo.effectivePrice : displayPrice) * qty)}`}
               </button>
 
@@ -2219,7 +2230,7 @@ function ProductosPageInner() {
                               <div key={d.stars} style={{ display:"flex", alignItems:"center", gap:8 }}>
                                 <span style={{ fontSize:9, color:GT, minWidth:14, textAlign:"right", opacity:0.7 }}>{d.stars}★</span>
                                 <div style={{ flex:1, height:4, background: dark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.08)", borderRadius:2, overflow:"hidden" }}>
-                                  <div style={{ height:"100%", width:`${resenasProd.total ? (d.count / resenasProd.total) * 100 : 0}%`, background:G, borderRadius:2 }} />
+                                  <div style={{ height:"100%", width:`${resenasProd.total ? (d.count / resenasProd.total) * 100 : 0}%`, background:chipBg, borderRadius:2 }} />
                                 </div>
                                 <span style={{ fontSize:9, opacity:0.35, minWidth:12, textAlign:"right" }}>{d.count}</span>
                               </div>
@@ -2417,7 +2428,7 @@ function ProductosPageInner() {
 
       {/* ── TOAST ──────────────────────────────────────────────────────── */}
       {toastMsg && (
-        <div style={{ position:"fixed", bottom:28, left:"50%", transform:"translateX(-50%)", background:G, color:accentDark?"#000":"#fff", padding:"12px 24px", fontSize:13, fontWeight:700, zIndex:500, boxShadow:"0 4px 20px rgba(0,0,0,0.3)", whiteSpace:"nowrap" }}>
+        <div style={{ position:"fixed", bottom:28, left:"50%", transform:"translateX(-50%)", background:chipBg, color:chipText, padding:"12px 24px", fontSize:13, fontWeight:700, zIndex:500, boxShadow:"0 4px 20px rgba(0,0,0,0.3)", whiteSpace:"nowrap" }}>
           {toastMsg}
         </div>
       )}

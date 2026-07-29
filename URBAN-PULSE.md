@@ -39,7 +39,8 @@ templates y un arreglo ahí los toca a todos:
 |---|---|---|---|
 | ~~PL-1~~ | ~~El carrito y el checkout son una copia de 315 líneas, ya atrasada en dos cosas~~ | Alta | **hecho** 28/07 |
 | ~~PL-2~~ | ~~La paleta de Urban Pulse era azul y naranja, colores que el template no usa~~ | Alta | **hecho** 28/07 |
-| **PL-3** | **El modal no replica el de Urban Pulse: otro ancho, otras columnas, la compra no queda fija** | Media | **pendiente** | Del UP-9 en adelante ya no salieron de la auditoría original:
+| **PL-3** | **El modal del catálogo es el de Chic Paris para los diez templates** | Media | **pendiente** |
+| ~~PL-4~~ | ~~El acento se usa de relleno sin pasar por el helper en nueve lugares; con un acento claro desaparecen~~ | Alta | **hecho** 28/07 | Del UP-9 en adelante ya no salieron de la auditoría original:
 los reportó Flavio mirando su propia tienda o los pidió él. UP-9 lo vio con una captura, y UP-10 fue
 un pedido suyo — traer las reseñas de verdad
 al bloque de opiniones. Lo que queda anotado no es de este template: está en
@@ -1671,3 +1672,35 @@ comer distinto: uno vive adentro de `EditContext` y el otro no.
 
 Mientras tanto el modal de esta página sigue funcionando y ahora al menos **tiene la paleta correcta**
 (PL-2), así que ya no desentona con el resto.
+
+### PL-4 — El acento se usaba de relleno sin pasar por el helper, en nueve lugares ✅
+
+Lo destapó PL-2, y conviene decirlo así: **el cambio de paleta no creó este bug, lo hizo visible**.
+Con el tema azul oscuro de antes, un acento claro sobre fondo oscuro se veía igual; con el tema claro
+correcto, el mismo acento claro sobre fondo claro desaparece.
+
+Flavio lo vio en su captura del 28/07: en el modal del catálogo, **"AGREGAR AL CARRITO · $48.000"
+aparece como texto suelto en el aire**, sin botón. El botón estaba — pintado de blanco sobre blanco.
+
+Es la regla de UP-3 y UP-9 otra vez: **el acento crudo no se dibuja nunca**. Como texto pasa por
+`getReadableAccentText`, y como relleno por `getReadableAccentFill`, que devuelve el acento cuando de
+verdad se despega del fondo como superficie y, cuando no, el color de texto del tema. Esta página ya
+tenía los dos resueltos en `GT` y `chipBg`/`chipText` — los chips de talle y color ya pasaban por ahí,
+por eso en la misma captura **los chips sí se veían y el botón no**.
+
+Nueve lugares usaban `background: G` a pelo:
+
+| dónde | qué se veía con un acento claro |
+|---|---|
+| El botón "Agregar al carrito" del modal | Texto flotando, sin botón |
+| El globito con la cantidad del carrito | Un número casi invisible arriba del ícono |
+| El globito con la cantidad de filtros | Lo mismo |
+| El chip "Ver detalle" de la tarjeta | Se salvaba de casualidad, por el velo gris del hover |
+| Las dos barritas de 2px del subrayado de pestañas | Nada: la pestaña activa dejaba de marcarse |
+| La rayita de 40px de los títulos de bloque | Nada |
+| El relleno de las barras del gráfico de estrellas | Barras vacías |
+| El cartel flotante de aviso | Cartel blanco sobre página clara |
+| El botón "Reintentar" de la pantalla de error | Sin botón, en la única pantalla donde hace falta |
+
+Los nueve pasan por `chipBg`/`chipText`. Después del cambio no queda ni un `background: G` en el
+archivo.
