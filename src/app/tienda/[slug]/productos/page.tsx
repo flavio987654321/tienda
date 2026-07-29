@@ -1531,6 +1531,16 @@ function ProductosPageInner() {
               ? { background: active ? G : "transparent", color: active ? (accentDark?"#000":"#fff") : T, border:`2px solid ${active ? G : border}`, boxShadow: active ? `3px 3px 0 ${G}` : "none", padding:"9px 16px", fontSize:12, fontWeight:800, cursor:"pointer", whiteSpace:"nowrap" as const, transition:"border-color 0.15s, box-shadow 0.15s" }
               : { background: active ? G : "none", color: active ? (accentDark?"#000":"#fff") : T, border:`1px solid ${active ? G : border}`, padding:"10px 16px", fontSize:12, fontWeight:600, cursor:"pointer", whiteSpace:"nowrap" as const };
           // Estilos de input/select per-template
+          /* Lo que hay que sacarle a los filtros rápidos para que entren en media
+             columna. El `whiteSpace:"nowrap"` está puesto para que en escritorio no
+             se parta "Lo más buscado" en dos renglones, pero en una celda de 159px
+             —lo que da la mitad de una pantalla de 360— es lo que los obliga a
+             medir más que la celda y desalinear la grilla. Acá se les permite bajar
+             de renglón, se les achica el padding lateral y se centra el texto, así
+             los dos ocupan exactamente lo mismo aunque uno diga más que el otro. */
+          const togglePantallaChica: React.CSSProperties = isMobile
+            ? { whiteSpace:"normal", padding:"11px 8px", textAlign:"center", lineHeight:1.25 }
+            : {};
           const inputStyle: React.CSSProperties = tabStyle === "underline"
             ? { background:"transparent", border:"none", borderBottom:`1px solid ${border}`, color:T, padding:"11px 8px 11px 36px", fontSize:13, outline:"none", width:"clamp(160px,40vw,210px)", boxSizing:"border-box" as const }
             : tabStyle === "brutalist"
@@ -1546,7 +1556,7 @@ function ProductosPageInner() {
               <div>
                 {/* Kicker */}
                 {titleStyle === "bold" ? (
-                  <p style={{ fontSize:11, letterSpacing:3, color:G, textTransform:"uppercase", margin:"0 0 8px", fontWeight:700 }}>{"// "}{label}</p>
+                  <p style={{ fontSize:11, letterSpacing:3, color:GT, textTransform:"uppercase", margin:"0 0 8px", fontWeight:700 }}>{"// "}{label}</p>
                 ) : titleStyle === "organic" ? (
                   <p style={{ fontSize:11, fontStyle:"italic", color:MID, margin:"0 0 8px", fontFamily:serif }}>{label}</p>
                 ) : titleStyle === "minimal" ? (
@@ -1575,15 +1585,34 @@ function ProductosPageInner() {
                 )}
                 {titleStyle === "bold" && (
                   <h1 style={{ fontSize:"clamp(30px,5vw,50px)", margin:"0 0 8px", color:T, lineHeight:1.0, fontWeight:900, textTransform:"uppercase", letterSpacing:-1 }}>
-                    {heading}{sub && <span style={{ color:G }}> / {sub}</span>}
+                    {heading}{sub && <span style={{ color:GT }}> / {sub}</span>}
                   </h1>
                 )}
                 <p style={{ fontSize:12, opacity:0.35, margin:0, letterSpacing:2 }}>
                   {filtered.length} resultado{filtered.length !== 1 ? "s" : ""}
                 </p>
               </div>
-              <div style={{ display:"flex", gap:10, flexWrap:"wrap", alignItems:"center" }}>
-                <button onClick={() => { setOnlyDestacados(o => !o); setOnlyOfertas(false); setOnlyPromos(false); setPage(1); }} style={toggleBase(onlyDestacados)}>
+              {/* ── En pantalla chica esto es una GRILLA, no una fila que se dobla ──
+                  Con `flex` + `wrap` cada control ocupaba lo que medía su texto y se
+                  iba doblando solo. A 360 daba tres renglones de anchos distintos:
+                  los dos filtros juntos ocupaban 307 de 328, el buscador 180 —con
+                  148 de aire muerto al lado— y el ordenador 140 en un renglón para
+                  él solo. Tres bordes izquierdos alineados y tres derechos en
+                  lugares distintos: eso es lo que se lee como "no tiene diseño".
+
+                  Ahora son dos columnas iguales. El buscador y el ordenador ocupan
+                  las dos, los filtros una cada uno, y todos los bordes caen en las
+                  mismas dos verticales.
+
+                  Y cambia el ORDEN, que es la otra mitad: el buscador pasa a ir
+                  primero (`order:-1`). Es lo que más se usa en un catálogo y estaba
+                  en el medio, después de dos filtros que son atajos. En escritorio
+                  el orden se mantiene como estaba, porque ahí entra todo en una
+                  fila y lo primero que se lee es lo de la izquierda igual. */}
+              <div style={ isMobile
+                ? { display:"grid", gridTemplateColumns:"repeat(2,minmax(0,1fr))", gap:10, width:"100%" }
+                : { display:"flex", gap:10, flexWrap:"wrap", alignItems:"center" } }>
+                <button onClick={() => { setOnlyDestacados(o => !o); setOnlyOfertas(false); setOnlyPromos(false); setPage(1); }} style={{ ...toggleBase(onlyDestacados), ...togglePantallaChica }}>
                   ⭐ Lo más buscado
                 </button>
                 {/* Solo si de verdad hay alguna oferta. Este filtro SÍ filtra
@@ -1593,22 +1622,22 @@ function ProductosPageInner() {
                     el visitante no lee "no hay ofertas ahora", lee "no tienen
                     nada". El de promos, al lado, ya se cuidaba solo. */}
                 {hayOfertas && (
-                  <button onClick={() => { setOnlyOfertas(o => !o); setOnlyDestacados(false); setOnlyPromos(false); setPage(1); }} style={toggleBase(onlyOfertas)}>
+                  <button onClick={() => { setOnlyOfertas(o => !o); setOnlyDestacados(false); setOnlyPromos(false); setPage(1); }} style={{ ...toggleBase(onlyOfertas), ...togglePantallaChica }}>
                     🔥 En oferta
                   </button>
                 )}
                 {promotions.length > 0 && (
-                  <button onClick={() => { setOnlyPromos(o => !o); setOnlyOfertas(false); setOnlyDestacados(false); setPage(1); }} style={toggleBase(onlyPromos)}>
+                  <button onClick={() => { setOnlyPromos(o => !o); setOnlyOfertas(false); setOnlyDestacados(false); setPage(1); }} style={{ ...toggleBase(onlyPromos), ...togglePantallaChica }}>
                     {eventoNombraFiltro ? `🎁 ${eventoNombraFiltro}` : "🎁 En promoción"}
                   </button>
                 )}
-                <div style={{ position:"relative" }}>
+                <div style={ isMobile ? { position:"relative", gridColumn:"1 / -1", order:-1 } : { position:"relative" } }>
                   <input
                     value={search}
                     onChange={e => { setSearch(e.target.value); setPage(1); }}
                     placeholder="Buscar..."
                     aria-label="Buscar productos"
-                    style={inputStyle}
+                    style={ isMobile ? { ...inputStyle, width:"100%" } : inputStyle }
                     onFocus={e => (e.target.style.borderColor=G)}
                     onBlur={e => (e.target.style.borderColor=border)}
                   />
@@ -1620,7 +1649,7 @@ function ProductosPageInner() {
                       style={{ position:"absolute", right:10, top:"50%", transform:"translateY(-50%)", background:"none", border:"none", color:MID, cursor:"pointer", fontSize:16, padding:0 }}>×</button>
                   )}
                 </div>
-                <select value={sortBy} onChange={e => { setSortBy(e.target.value); setPage(1); }} aria-label="Ordenar por" style={selectStyle}>
+                <select value={sortBy} onChange={e => { setSortBy(e.target.value); setPage(1); }} aria-label="Ordenar por" style={ isMobile ? { ...selectStyle, gridColumn:"1 / -1", width:"100%" } : selectStyle }>
                   <option value="newest">Más recientes</option>
                   <option value="price_asc">Precio ↑</option>
                   <option value="price_desc">Precio ↓</option>

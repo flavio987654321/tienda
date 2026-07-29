@@ -43,6 +43,7 @@ templates y un arreglo ahí los toca a todos:
 | ~~PL-4~~ | ~~El acento se usa de relleno sin pasar por el helper en nueve lugares; con un acento claro desaparecen~~ | Alta | **hecho** 28/07 |
 | ~~PL-5~~ | ~~Al modal le faltaban ocho detalles del panel del template, dos de ellos no cosméticos~~ | Media | **hecho** 28/07 |
 | ~~PL-6~~ | ~~A 768 el catálogo muestra un producto por fila al lado de la barra de filtros~~ | Alta | **hecho** 28/07 |
+| ~~PL-7~~ | ~~En pantalla chica los filtros tienen tres anchos distintos, y el buscador va tercero~~ | Media | **hecho** 28/07 |
 
 Del UP-9 en adelante ya no salieron de la auditoría original:
 los reportó Flavio mirando su propia tienda o los pidió él. UP-9 lo vio con una captura, y UP-10 fue
@@ -1807,3 +1808,37 @@ descripción o tags?"*. Revisado uno por uno:
 Lo que **no** está verificado: nada de esto se probó con datos de verdad. La base no tiene ni una
 reseña, así que la paginación está comprobada por la lógica del hook y no abriendo un producto con 300
 opiniones cargadas.
+
+### PL-7 — En pantalla chica la barra de filtros no tenía forma ✅
+
+Flavio: *"lo que no me gusta son los filtros o botones, están disparejos, no tienen arquitectura ni
+diseño, hasta el buscador no tiene sentido... no sé, la jerarquía, algo está mal"*. Estaba señalando
+dos cosas distintas a la vez, y las dos eran ciertas.
+
+**Uno: los anchos.** La barra era `flex` con `wrap`, así que cada control ocupaba lo que medía su
+texto y se iba doblando solo. A 360, con 328 útiles, quedaba así:
+
+| renglón | qué entraba | cuánto sobraba |
+|---|---|---|
+| 1 | los dos filtros rápidos, 156 + 141 + 10 de aire | 21 |
+| 2 | el buscador, 180 (`clamp(180px,50vw,230px)`) | **148 de aire muerto** |
+| 3 | el ordenador, ~140, solo | **188** |
+
+Tres bordes izquierdos alineados y tres derechos en tres lugares distintos. **Eso es lo que se lee
+como "no tiene diseño"** — no es una impresión, es que no hay ninguna vertical que se repita.
+
+Ahora en celular es una **grilla de dos columnas iguales**: el buscador y el ordenador ocupan las dos,
+los filtros rápidos una cada uno. Todos los bordes caen en las mismas dos verticales. A los filtros
+rápidos hubo que sacarles el `whiteSpace:"nowrap"` —que está para que en escritorio no se parta "Lo
+más buscado"— porque en una celda de 159px es justamente lo que los hacía medir más que la celda.
+
+**Dos: el orden**, que es lo que Flavio llamó jerarquía. El buscador estaba **tercero**, después de dos
+filtros que son atajos, y a media pantalla. En un catálogo el buscador es lo que más se usa. Pasa a ir
+primero y a lo ancho. En escritorio el orden queda como estaba, porque ahí entra todo en una fila.
+
+**Y de paso, el `// COLECCIÓN COMPLETA` estaba casi invisible.** Iba pintado con el acento crudo como
+color de TEXTO — el mismo bug de PL-4, pero del otro lado: PL-4 arregló los nueve `background: G` y
+quedaban dos `color: G`. Con el acento blanco de esta tienda, el rótulo era blanco sobre blanco. Ahora
+pasa por `getReadableAccentText`, igual que el resto. El otro era la categoría al lado del título.
+
+`tsc` y eslint limpios. Urban Pulse, Chic Paris y Boho Terra abren el catálogo en 200.
