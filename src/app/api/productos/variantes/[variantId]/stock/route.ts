@@ -51,8 +51,14 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
     );
   }
 
-  if (result.lowStockItem) {
-    dispatchLowStockAlerts(auth.ownerId, auth.storeId, [result.lowStockItem]).catch((err) =>
+  // Los dos avisos, no sólo el de stock bajo: ajustar una variante a 0 desde el
+  // modal dejaba el producto fuera de venta sin notificar a nadie.
+  const alertas = [result.lowStockItem, result.outOfStockItem].filter(
+    (i): i is NonNullable<typeof i> => i !== null
+  );
+  // Sin email: lo puso en cero la dueña misma, desde el modal, recién.
+  if (alertas.length > 0) {
+    dispatchLowStockAlerts(auth.ownerId, auth.storeId, alertas, { email: false }).catch((err) =>
       console.error("[stock] dispatchLowStockAlerts failed:", err)
     );
   }

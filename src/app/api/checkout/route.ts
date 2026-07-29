@@ -8,7 +8,7 @@ import type { ShippingMethod } from "@/types/store-config";
 import { DEFAULT_SHIPPING_METHODS, LIVE_QUOTE_DOMICILIO_ID } from "@/types/store-config";
 import { cotizarEnvio } from "@/lib/enviopack";
 import { calculateGoalAmount, MIN_DONATION, MAX_DONATION_PCT_OF_GOAL } from "@/lib/canasta";
-import { recordStockMovement } from "@/lib/stockMovements";
+import { recordStockMovement, dispatchLowStockAlerts, type LowStockItem } from "@/lib/stockMovements";
 import { priceCart, resolveBasePrice, parseEscalones, type PricingItem, type ActivePromotion } from "@/lib/pricing";
 import { parseStringArray } from "@/lib/promotions";
 import { couponDiscountFor } from "@/lib/coupons";
@@ -248,6 +248,10 @@ export async function POST(req: NextRequest) {
 
   try {
     let usedRewardCouponId: string | null = null;
+    // Variantes que esta venta dejó en cero. Se juntan acá adentro y se avisan
+    // DESPUÉS de que la transacción confirme: si el pedido se cae, no se manda un
+    // "te quedaste sin stock" de algo que nunca se vendió.
+    const agotadosPorVenta: LowStockItem[] = [];
     const { createdOrder: order, promoSavings, appliedCouponCode, appliedPromos, freeShippingPromo } = await prisma.$transaction(async (tx) => {
       const store = await tx.store.findUnique({
         where: { id: storeId },
@@ -323,6 +327,25 @@ export async function POST(req: NextRequest) {
             select: { stock: true },
           });
           const stockAfterDecrement = postDecrement?.stock ?? variant.stock - item.quantity;
+
+          // Éste es EL punto donde un producto se agota vendiendo, y el único que
+          // detecta la transición sin ambigüedad: el decremento de arriba sólo se
+          // aplica si había suficiente, así que llegar a 0 acá significa que antes
+          // había más de 0 — y otro pedido ya no va a poder volver a bajarlo, así
+          // que el aviso sale una sola vez sin necesidad de una marca en la base.
+          //
+          // Antes esto se miraba recién al confirmar el pago, con la regla
+          // "stock <= umbral && !lowStockAlertSentAt": si ya se había avisado
+          // "quedan 3", el cero quedaba tapado y no se avisaba nunca.
+          if (stockAfterDecrement === 0) {
+            agotadosPorVenta.push({
+              productId: product.id,
+              name: product.name,
+              variant: variant.value,
+              stock: 0,
+            });
+          }
+
           await recordStockMovement(tx, {
             variantId: variant.id,
             productId: product.id,
@@ -709,6 +732,14 @@ export async function POST(req: NextRequest) {
         body: notifBody,
         url: `/dashboard/pedidos`,
       }).catch((err) => console.error("[push] new order:", err));
+
+      // Aviso de agotado por venta: campanita + email, igual que el de stock bajo.
+      // Va acá, con la transacción ya confirmada y el dueño ya resuelto.
+      if (agotadosPorVenta.length > 0) {
+        dispatchLowStockAlerts(storeOwner.ownerId, order.storeId, agotadosPorVenta).catch((err) =>
+          console.error("[stock] aviso de agotado por venta:", err)
+        );
+      }
     }
 
     // Emails de confirmación — no bloquean la respuesta si fallan

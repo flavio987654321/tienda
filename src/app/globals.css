@@ -73,6 +73,39 @@ body {
 .animate-pop-in     { animation: popIn 0.25s cubic-bezier(0.34,1.56,0.64,1) forwards; }
 .animate-fade-slide { animation: fadeSlideUp 0.2s ease forwards; }
 
+/* Producto señalado desde una notificación de stock.
+   Tres destellos y para. La marca ámbar se apaga sola a los 6 segundos desde el
+   componente; la animación sólo sirve para que el ojo lo encuentre al llegar —si
+   latiera todo el tiempo, molestaría mientras se trabaja en la lista.
+   `alternate` con 6 repeticiones da 3 idas y vueltas completas.
+
+   Son DOS animaciones porque el soporte no es el mismo en los dos lugares:
+
+   - `.animate-destacado` va en las tarjetas de la grilla, que son <div>: ahí la
+     sombra se dibuja sin problema y queda un halo alrededor.
+   - `.animate-destacado-fila` va en las filas de la tabla, que son <tr>. Con
+     `border-collapse: collapse` —el que pone Tailwind por defecto— el navegador
+     NO pinta `box-shadow` en un <tr>, así que ahí se anima el FONDO, que sí se
+     dibuja. Usar la de la sombra en la tabla no se veía en absoluto. */
+@keyframes destacadoPulso {
+  from { box-shadow: 0 0 0 0 rgba(245,158,11,0); }
+  to   { box-shadow: 0 0 0 6px rgba(245,158,11,0.35); }
+}
+.animate-destacado { animation: destacadoPulso 0.5s ease-in-out 6 alternate; }
+
+@keyframes destacadoPulsoFila {
+  from { background-color: rgb(255,251,235); } /* amber-50 */
+  to   { background-color: rgb(253,230,138); } /* amber-200 */
+}
+.animate-destacado-fila { animation: destacadoPulsoFila 0.5s ease-in-out 6 alternate; }
+
+/* Quien pidió menos movimiento no ve el latido: le quedan el fondo ámbar y la barra
+   del costado, que ya alcanzan para saber cuál es. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-destacado,
+  .animate-destacado-fila { animation: none; }
+}
+
 @keyframes slideInLeft {
   from { transform: translateX(-100%); }
   to   { transform: translateX(0); }

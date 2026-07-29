@@ -50,6 +50,7 @@ export async function POST(req: NextRequest) {
     parsedPreciosEscalonados, parsedSoloMayorista, parsedCuotas, normalizedVariants,
     parsedWeightKg, parsedWidthCm, parsedHeightCm, parsedDepthCm,
     parsedOfferBadge, parsedOfferNote, parsedOfferEndsAt,
+    parsedSeoTitle, parsedSeoDescription,
   } = validated;
 
   // Guard de seguridad: escalones y soloMayorista solo aplican a tiendas mayoristas
@@ -91,6 +92,8 @@ export async function POST(req: NextRequest) {
       widthCm: parsedWidthCm,
       heightCm: parsedHeightCm,
       depthCm: parsedDepthCm,
+      seoTitle: parsedSeoTitle,
+      seoDescription: parsedSeoDescription,
       publishAt: parsedPublishAt,
       isActive: scheduledInFuture ? false : true,
       storeId: store.id,

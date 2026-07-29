@@ -148,6 +148,8 @@ type ProductBodyRaw = {
   offerBadge?: unknown;
   offerNote?: unknown;
   offerEndsAt?: unknown;
+  seoTitle?: unknown;
+  seoDescription?: unknown;
 };
 
 type ValidatedProductBody = {
@@ -170,14 +172,39 @@ type ValidatedProductBody = {
   parsedOfferBadge: string | null;
   parsedOfferNote: string | null;
   parsedOfferEndsAt: Date | null;
+  parsedSeoTitle: string | null;
+  parsedSeoDescription: string | null;
 };
 
 const VALID_OFFER_BADGES = new Set(["OFERTA", "SALE", "PCT"]);
 
+/* ── Título y descripción para Google ────────────────────────────────────────
+   Los topes de acá NO son los 60/160 que recomienda Google: esos son cuánto
+   MUESTRA en el resultado, y pasarse no invalida nada —se corta y listo—. El
+   aviso de que se va a cortar va en el formulario, que es donde se puede
+   explicar; rebotar el guardado por eso sería frenar a la dueña por una
+   recomendación de estilo.
+
+   Lo que sí se corta acá es lo absurdo, para que nadie use estos campos como
+   depósito de texto: son etiquetas, no descripciones.                          */
+const MAX_SEO_TITLE = 200;
+const MAX_SEO_DESCRIPTION = 500;
+
+/** Texto opcional que se guarda como null cuando queda vacío.
+ *  null significa "armalo solo": es la diferencia entre no haberlo escrito nunca
+ *  y haberlo borrado a propósito, y las dos cosas tienen que volver al
+ *  automático. Guardar "" haría que la ficha saliera con el título en blanco. */
+function textoSeoOpcional(valor: unknown, tope: number): string | null {
+  if (typeof valor !== "string") return null;
+  const limpio = valor.trim();
+  if (!limpio) return null;
+  return limpio.slice(0, tope);
+}
+
 export function validateProductBody(
   body: ProductBodyRaw
 ): { error: NextResponse } | ValidatedProductBody {
-  const { name, price, comparePrice, costPrice, featured, precioMayorista, cantMinMayorista, preciosEscalonados, soloMayorista, cuotas, variants, reelUrls, weightKg, widthCm, heightCm, depthCm, offerBadge, offerNote, offerEndsAt } = body;
+  const { name, price, comparePrice, costPrice, featured, precioMayorista, cantMinMayorista, preciosEscalonados, soloMayorista, cuotas, variants, reelUrls, weightKg, widthCm, heightCm, depthCm, offerBadge, offerNote, offerEndsAt, seoTitle, seoDescription } = body;
 
   if (!name || typeof name !== "string" || name.trim().length < 2) {
     return { error: NextResponse.json({ error: "Nombre requerido (mínimo 2 caracteres)" }, { status: 400 }) };
@@ -433,6 +460,8 @@ export function validateProductBody(
     parsedOfferBadge,
     parsedOfferNote,
     parsedOfferEndsAt,
+    parsedSeoTitle: textoSeoOpcional(seoTitle, MAX_SEO_TITLE),
+    parsedSeoDescription: textoSeoOpcional(seoDescription, MAX_SEO_DESCRIPTION),
   };
 }
 

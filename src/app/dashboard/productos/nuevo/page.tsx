@@ -7,10 +7,11 @@ import { UnsavedChangesGuard } from "@/components/UnsavedChangesGuard";
 import {
   Plus, Trash2, Loader2, ArrowLeft, ChevronLeft, ChevronRight,
   X, Star, ShoppingCart, Heart, Tag, Package, HelpCircle, Calendar, Film,
+  Search, ChevronDown,
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
-import { getStoreType } from "@/lib/storeTypes";
+import { getStoreType, etiquetaCategoria } from "@/lib/storeTypes";
 import { calcMargin, calcVehicleCostTotal, formatFechaGasto } from "@/lib/margin";
 import StockHistoryPanel from "../StockHistoryPanel";
 import RichTextEditor from "@/components/RichTextEditor";
@@ -63,6 +64,10 @@ interface Attribute {
 }
 
 interface StoreConfig {
+  // El GET de /api/configuracion devuelve la fila entera de la tienda, así que el
+  // nombre ya venía — faltaba declararlo. Lo usa la vista previa de Google, que
+  // arma el título automático como "<producto> — <tienda>".
+  name?: string;
   primaryColor: string;
   accentColor: string;
   secondaryColor: string;
@@ -381,12 +386,34 @@ function prepareVariantsForSubmit(variants: Variant[]) {
   return prepared;
 }
 
-function formatCategoryLabel(value: string) {
-  return value
-    .split("-")
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
+// Delega en `etiquetaCategoria` (storeTypes) para que el formulario, la tienda y
+// cualquier otra pantalla escriban las categorías igual. La versión que estaba acá
+// capitalizaba TODAS las palabras y no tenía forma de arreglar los slugs sin ñ:
+// mostraba "Ropa Ninos", "Ropa Bebe" y "Short De Baño".
+const formatCategoryLabel = etiquetaCategoria;
+
+/* ── Optimización para Google ────────────────────────────────────────────────
+   Dos pares de números distintos, y la diferencia importa:
+
+   · Los VISIBLE son cuánto muestra Google antes de cortar con "…". Pasarse no es
+     un error —la página sigue siendo válida—, solo se lee menos. Por eso el aviso
+     es ámbar, informativo, y nunca frena el guardado.
+   · Los MAX son el tope duro del campo, para que nadie use estos casilleros como
+     depósito de texto. Coinciden con los de `validateProductBody` en el servidor;
+     si se cambia uno, cambiar el otro.                                          */
+const SEO_TITULO_VISIBLE = 60;
+const SEO_DESC_VISIBLE = 160;
+const SEO_TITULO_MAX = 200;
+const SEO_DESC_MAX = 500;
+
+/** Corta en el límite sin partir una palabra al medio. */
+function recortar(texto: string, limite: number): string {
+  if (texto.length <= limite) return texto;
+  const cortado = texto.slice(0, limite);
+  const ultimoEspacio = cortado.lastIndexOf(" ");
+  // Si la última palabra es larguísima y el espacio quedó muy atrás, se corta
+  // seco: mejor eso que devolver dos palabras cuando entraban diez.
+  return (ultimoEspacio > limite * 0.6 ? cortado.slice(0, ultimoEspacio) : cortado).trimEnd() + "…";
 }
 
 // optimizeImageForUpload usa la utilidad compartida con las mismas limitaciones de antes
@@ -442,8 +469,12 @@ function ProductoFormPage() {
     category: "ropa",
     subcategory: "",
     tags: "",
+    // Vacío = "armalo solo". Ver la sección "Optimización para Google" más abajo.
+    seoTitle: "",
+    seoDescription: "",
   });
   const [isOnSale, setIsOnSale] = useState(false);
+  const [seoAbierto, setSeoAbierto] = useState(false);
   const [featured, setFeatured] = useState(false);
   const [productCategories, setProductCategories] = useState<string[]>([]);
   const [productSubcategories, setProductSubcategories] = useState<Record<string, string[]>>({});
@@ -591,6 +622,8 @@ function ProductoFormPage() {
           category: knownCategory ? product.category : "otro",
           subcategory: product.subcategory ? (productSubcategories[product.category] || []).includes(product.subcategory) ? product.subcategory : "otro" : "",
           tags: safeJsonArray(product.tags).join(", "),
+          seoTitle: product.seoTitle || "",
+          seoDescription: product.seoDescription || "",
         });
         setGender((product.gender as "mujer" | "hombre" | "unisex") || "unisex");
         setFeatured(Boolean(product.featured));
@@ -973,7 +1006,7 @@ function ProductoFormPage() {
       ? [{ name: "Unidad", value: "Único", stock: "1", price: "", sku: "" }]
       : prepareVariantsForSubmit(variants);
     if (!category) {
-      setError("Escribi la categoria personalizada.");
+      setError("Escribí la categoría personalizada.");
       setLoading(false);
       return;
     }
@@ -1047,6 +1080,20 @@ function ProductoFormPage() {
   const cardShadow = SHADOW_MAP[store.cardShadow] || "shadow-sm";
   const storeTypeConfig = getStoreType(store.tipoTienda || "ROPA");
   const builderCfg = getBuilderConfig(store.tipoTienda || "ROPA");
+  // ── Optimización para Google ──────────────────────────────────────────────
+  // Lo que se armaría solo si estos campos quedan vacíos. Va como `placeholder` y
+  // como texto de la vista previa, para que se vea qué se está reemplazando ANTES
+  // de escribir nada. Replica exactamente lo que hace `tituloParaGoogle` /
+  // `descripcionParaGoogle` en la ficha pública — si allá cambia, acá también.
+  // El nombre de la tienda puede no haber llegado todavía (la config se pide
+  // async). Mientras tanto se muestra un texto neutro en vez de "undefined".
+  const nombreTienda = store.name?.trim() || "tu tienda";
+  const seoTituloAuto = `${form.name.trim() || "Nombre del producto"} — ${nombreTienda}`;
+  const seoDescripcionAuto =
+    form.description.trim().slice(0, 160) ||
+    `Comprá ${form.name.trim() || "este producto"} en ${nombreTienda}`;
+  const seoTocado = form.seoTitle.trim().length > 0 || form.seoDescription.trim().length > 0;
+
   const previewCategory = form.category === "otro" ? customCategory.trim() || "otro" : form.category;
   const previewSubcategory = form.subcategory === "otro" ? customSubcategory.trim() : form.subcategory;
   const availableSubcategories = form.category === "otro" ? [] : productSubcategories[form.category] || [];
@@ -1226,7 +1273,7 @@ function ProductoFormPage() {
               )}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Categoria</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Categoría</label>
                   <select
                     value={form.category}
                     onChange={(e) => setForm((prev) => ({ ...prev, category: e.target.value, subcategory: "" }))}
@@ -1235,30 +1282,30 @@ function ProductoFormPage() {
                     {productCategories.map((c) => (
                       <option key={c} value={c}>{formatCategoryLabel(c)}</option>
                     ))}
-                    <option value="otro">Otra categoria</option>
+                    <option value="otro">Otra categoría</option>
                   </select>
                   {form.category === "otro" && (
                     <input
                       type="text"
                       value={customCategory}
                       onChange={(e) => setCustomCategory(e.target.value)}
-                      placeholder="Escribi la categoria"
+                      placeholder="Escribí la categoría"
                       className="mt-3 w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     />
                   )}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Subcategoria</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Subcategoría</label>
                   <select
                     value={form.subcategory}
                     onChange={(e) => updateForm("subcategory", e.target.value)}
                     className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
                   >
-                    <option value="">Sin subcategoria</option>
+                    <option value="">Sin subcategoría</option>
                     {availableSubcategories.map((subcat) => (
                       <option key={subcat} value={subcat}>{formatCategoryLabel(subcat)}</option>
                     ))}
-                    <option value="otro">Otra subcategoria</option>
+                    <option value="otro">Otra subcategoría</option>
                   </select>
                   {form.subcategory === "otro" && (
                     <input
@@ -1947,8 +1994,12 @@ function ProductoFormPage() {
                   <p className="text-xs text-gray-400 mt-0.5">Los precios mayoristas aplican automáticamente cuando el comprador alcanza la cantidad mínima</p>
                 </div>
 
-                {/* Precio base + cantidad mínima */}
-                <div className="grid grid-cols-2 gap-4">
+                {/* Precio base + cantidad mínima.
+                    Una sola columna en celular: a 360px, dos columnas fijas dejaban
+                    cada campo en ~140px y el rótulo "Precio por mayor base *" se
+                    partía en dos renglones encima de un input donde el "$" ya se
+                    come parte del espacio. */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label htmlFor="precioMayorista" className="block text-sm font-medium text-gray-700 mb-1.5">Precio por mayor base *</label>
                     <div className="relative">
@@ -2097,13 +2148,20 @@ function ProductoFormPage() {
                   Solo se muestra si tenés Mercado Pago conectado. Es información para el comprador, no una conexión real con tu banco — el cálculo es simplemente precio ÷ cuotas. Las cuotas reales y si se aplica interés se definen en tu cuenta de Mercado Pago al momento del pago. Elegí solo lo que realmente puedas ofrecer para evitar reclamos.
                 </p>
               </div>
-              <div className="flex flex-wrap gap-2">
+              {/* 2×2 en celular, una sola fila de 4 en pantalla ancha.
+                  Antes era `flex-wrap` con `flex-1 min-w-[90px]`: a 368px entraban
+                  tres arriba y el cuarto quedaba solo, estirado a lo ancho de todo
+                  —tres botones de 101px y uno de 320—. Encima, en 101px con el
+                  padding no entraba "Sin cuotas" y se partía en dos renglones.
+                  Con la grilla los cuatro miden igual (~156px) y nada se parte. */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {[0, 3, 6, 12].map((opt) => (
                   <button
                     key={opt}
                     type="button"
                     onClick={() => { setCuotas(opt); markDirty(); }}
-                    className={`flex-1 min-w-[90px] py-2.5 px-2 rounded-xl text-sm font-semibold border-2 transition-all text-center ${
+                    aria-pressed={cuotas === opt}
+                    className={`py-2.5 px-2 rounded-xl text-sm font-semibold border-2 transition-all text-center ${
                       cuotas === opt
                         ? "border-indigo-500 bg-indigo-50 text-indigo-700"
                         : "border-gray-100 bg-gray-50 text-gray-500 hover:border-gray-300"
@@ -2423,6 +2481,153 @@ function ProductoFormPage() {
                     </button>
                   </div>
                 ))}
+            </div>
+
+            {/* ── Optimización para Google ──────────────────────────────────
+                Plegada y opcional. Si no se toca, el título y la descripción se
+                arman solos como siempre —el campo vacío se guarda como null, no
+                como ""— así que abrir esta sección y cerrarla sin escribir nada
+                no cambia absolutamente nada.
+
+                Los contadores avisan cuándo Google va a CORTAR el texto, que no
+                es lo mismo que un error: pasarse no rompe nada, solo se ve menos.
+                Por eso el aviso es ámbar y no rojo, y el guardado nunca se frena
+                por esto. */}
+            <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setSeoAbierto((v) => !v)}
+                aria-expanded={seoAbierto}
+                className="flex w-full items-center gap-2 p-6 text-left hover:bg-gray-50 transition-colors"
+              >
+                <Search className="h-4 w-4 text-indigo-500 shrink-0" />
+                <span className="font-semibold text-gray-900">Optimización para Google</span>
+                <span className="text-xs text-gray-400">(opcional)</span>
+                {seoTocado && (
+                  <span className="text-[10px] font-bold uppercase tracking-wide text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">
+                    Personalizado
+                  </span>
+                )}
+                <ChevronDown className={`ml-auto h-4 w-4 text-gray-400 shrink-0 transition-transform ${seoAbierto ? "rotate-180" : ""}`} />
+              </button>
+
+              {seoAbierto && (
+                <div className="px-6 pb-6 space-y-4 border-t border-gray-100 pt-4">
+                  <p className="text-xs text-gray-500 leading-relaxed">
+                    Esto es lo que se lee en el <strong>resultado de Google</strong>, no en tu tienda.
+                    Si lo dejás vacío se arma solo con el nombre y la descripción del producto — que
+                    para la mayoría alcanza. Sirve cuando el producto se llama distinto de lo que la
+                    gente busca: si le pusiste <em>&ldquo;Campera Modelo 47&rdquo;</em>, nadie va a
+                    buscar eso.
+                  </p>
+
+                  {/* Título */}
+                  <div>
+                    <div className="flex items-baseline justify-between gap-2 mb-1.5">
+                      <label htmlFor="seoTitle" className="block text-sm font-medium text-gray-700">
+                        Título en Google
+                      </label>
+                      <span className={`text-xs tabular-nums ${form.seoTitle.length > SEO_TITULO_VISIBLE ? "text-amber-600 font-semibold" : "text-gray-400"}`}>
+                        {form.seoTitle.length}/{SEO_TITULO_VISIBLE}
+                      </span>
+                    </div>
+                    <input
+                      id="seoTitle"
+                      type="text"
+                      value={form.seoTitle}
+                      onChange={(e) => { updateForm("seoTitle", e.target.value); markDirty(); }}
+                      placeholder={seoTituloAuto}
+                      maxLength={SEO_TITULO_MAX}
+                      className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                    {form.seoTitle.length > SEO_TITULO_VISIBLE && (
+                      <p className="text-xs text-amber-600 mt-1.5">
+                        Google muestra unos {SEO_TITULO_VISIBLE} caracteres — de acá en adelante lo va a cortar con &ldquo;…&rdquo;. Se guarda igual.
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Descripción */}
+                  <div>
+                    <div className="flex items-baseline justify-between gap-2 mb-1.5">
+                      <label htmlFor="seoDescription" className="block text-sm font-medium text-gray-700">
+                        Descripción en Google
+                      </label>
+                      <span className={`text-xs tabular-nums ${form.seoDescription.length > SEO_DESC_VISIBLE ? "text-amber-600 font-semibold" : "text-gray-400"}`}>
+                        {form.seoDescription.length}/{SEO_DESC_VISIBLE}
+                      </span>
+                    </div>
+                    <textarea
+                      id="seoDescription"
+                      value={form.seoDescription}
+                      onChange={(e) => { updateForm("seoDescription", e.target.value); markDirty(); }}
+                      placeholder={seoDescripcionAuto}
+                      maxLength={SEO_DESC_MAX}
+                      rows={3}
+                      className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-y"
+                    />
+                    {form.seoDescription.length > SEO_DESC_VISIBLE && (
+                      <p className="text-xs text-amber-600 mt-1.5">
+                        Google muestra unos {SEO_DESC_VISIBLE} caracteres — el resto no se va a ver. Se guarda igual.
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Cómo se vería */}
+                  <div>
+                    <p className="text-xs font-semibold text-gray-500 mb-2">Así se vería en Google</p>
+                    <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+                      <p className="text-[13px] text-emerald-700 truncate">
+                        tiendaapps.com › tienda › producto
+                      </p>
+                      <p className="text-[18px] text-[#1a0dab] leading-snug mt-0.5 break-words">
+                        {recortar(form.seoTitle.trim() || seoTituloAuto, SEO_TITULO_VISIBLE)}
+                      </p>
+                      <p className="text-[13px] text-gray-600 leading-snug mt-1 break-words">
+                        {recortar(form.seoDescription.trim() || seoDescripcionAuto, SEO_DESC_VISIBLE)}
+                      </p>
+                    </div>
+                    <p className="text-[11px] text-gray-400 mt-2 leading-relaxed">
+                      Es una referencia: Google arma el resultado como quiere y a veces usa otro texto
+                      de la página si le parece que responde mejor a lo que buscaron.
+                    </p>
+                  </div>
+
+                  {/* Avisos */}
+                  <div className="rounded-xl bg-amber-50 border border-amber-100 p-3.5 space-y-2">
+                    <p className="text-xs font-semibold text-amber-900">Tres cosas para tener en cuenta</p>
+                    <ul className="text-xs text-amber-800 space-y-1.5 leading-relaxed">
+                      <li>
+                        <strong>No es inmediato.</strong> Google tiene que volver a pasar por la página.
+                        Puede tardar de unos días a un par de semanas.
+                      </li>
+                      <li>
+                        <strong>Que no prometa lo que la ficha no tiene.</strong> Si el título dice
+                        &ldquo;envío gratis&rdquo; y en la tienda no lo hay, el que entra se va — y a
+                        Google eso le baja el producto.
+                      </li>
+                      <li>
+                        <strong>Un título por producto.</strong> Si dos fichas tienen el mismo, compiten
+                        entre sí y Google elige una sola.
+                      </li>
+                    </ul>
+                  </div>
+
+                  {seoTocado && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        updateForm("seoTitle", "");
+                        updateForm("seoDescription", "");
+                        markDirty();
+                      }}
+                      className="text-xs font-medium text-gray-500 hover:text-gray-700 underline underline-offset-2"
+                    >
+                      Volver al automático
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Programar publicación */}

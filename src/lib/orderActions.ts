@@ -62,8 +62,13 @@ export async function runOrderAction({ orderId: id, ownerId, action, trackingCod
         const variant = await tx.productVariant.findUnique({ where: { id: item.variantId } });
         if (!variant) continue;
         const threshold = variant.lowStockThreshold ?? DEFAULT_LOW_STOCK_THRESHOLD;
-        if (variant.stock <= threshold && !variant.lowStockAlertSentAt) {
+        // Sólo "stock bajo": el cero ya lo avisa el checkout, en el momento exacto
+        // en que se descuenta la última unidad. Sin el `> 0`, agotar vendiendo
+        // disparaba dos veces el mismo aviso —uno al comprar y otro al confirmar
+        // el pago—, porque acá `stock` ya viene decrementado y 0 <= umbral.
+        if (variant.stock > 0 && variant.stock <= threshold && !variant.lowStockAlertSentAt) {
           pendingStockAlerts.push({
+            productId: variant.productId,
             name: item.product.name,
             variant: variant.value,
             stock: variant.stock,

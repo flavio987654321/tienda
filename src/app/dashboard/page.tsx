@@ -6,10 +6,11 @@ import PublishToggle from "@/components/PublishToggle";
 import { getCurrentUser } from "@/lib/auth-session";
 import DashboardLayout from "@/components/DashboardLayout";
 import ActivityFeed from "@/components/dashboard/ActivityFeed";
+import OnboardingChecklist from "@/components/dashboard/OnboardingChecklist";
 import {
   ShoppingBag, Package, Users, TrendingUp,
-  Store, Star, BadgeCheck, CheckCircle2, Circle,
-  AlertTriangle, Eye,
+  Store, Star, BadgeCheck, CheckCircle2,
+  Eye,
 } from "lucide-react";
 export default async function DashboardPage() {
   const user = await getCurrentUser();
@@ -185,58 +186,13 @@ export default async function DashboardPage() {
           </p>
         </div>
 
-        {/* ── Onboarding checklist ── */}
+        {/* ── Onboarding checklist ──
+            La tarjeta vive en `OnboardingChecklist` (cliente): los pasos ya hechos
+            se pliegan detrás de una flecha, así lo que falta no queda enterrado
+            abajo de una lista de cosas tachadas. Los pasos se siguen calculando
+            acá, en el servidor. */}
         {!allDone ? (
-          <div className="mb-6 bg-white rounded-2xl border border-indigo-100 p-5 shadow-sm">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <AlertTriangle className="h-4 w-4 text-amber-500" />
-                <h2 className="font-bold text-gray-900 text-sm">Completá la configuración de tu tienda</h2>
-              </div>
-              <span className="text-xs font-semibold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-full">
-                {doneCount}/{onboardingSteps.length} pasos
-              </span>
-            </div>
-            {/* Progress bar */}
-            <div className="h-1.5 bg-gray-100 rounded-full mb-4 overflow-hidden">
-              <div
-                className="h-full bg-indigo-500 rounded-full transition-all duration-500"
-                style={{ width: `${(doneCount / onboardingSteps.length) * 100}%` }}
-              />
-            </div>
-            <div className="space-y-2">
-              {onboardingSteps.map((step) => (
-                <Link
-                  key={step.label}
-                  href={step.href}
-                  className={`flex items-center gap-3 p-3 rounded-xl transition-all group ${
-                    step.done
-                      ? "opacity-60 cursor-default pointer-events-none"
-                      : "hover:bg-indigo-50 hover:border-indigo-100 border border-transparent"
-                  }`}
-                >
-                  {step.done ? (
-                    <CheckCircle2 className="h-5 w-5 text-emerald-500 shrink-0" />
-                  ) : (
-                    <Circle className="h-5 w-5 text-gray-300 shrink-0 group-hover:text-indigo-400 transition-colors" />
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <p className={`text-sm font-medium ${step.done ? "line-through text-gray-400" : "text-gray-800"}`}>
-                      {step.label}
-                    </p>
-                    {!step.done && (
-                      <p className="text-xs text-gray-400 mt-0.5">{step.tip}</p>
-                    )}
-                  </div>
-                  {!step.done && (
-                    <span className="text-xs text-indigo-500 font-medium opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                      Ir →
-                    </span>
-                  )}
-                </Link>
-              ))}
-            </div>
-          </div>
+          <OnboardingChecklist steps={onboardingSteps} />
         ) : (
           <div className="mb-6 bg-emerald-50 border border-emerald-100 rounded-2xl p-4 flex items-center gap-3">
             <CheckCircle2 className="h-5 w-5 text-emerald-500 shrink-0" />

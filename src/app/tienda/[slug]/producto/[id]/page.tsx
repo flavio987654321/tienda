@@ -6,6 +6,11 @@ import { isDemoProductId } from "@/lib/demoProducts";
 import ProductDetailClient from "./ProductDetailClient";
 import { StoreTrackingScripts } from "@/components/store/StoreTrackingScripts";
 import type { StoreConfig } from "@/types/store-config";
+import {
+  construirProductSchema,
+  construirBreadcrumbSchema,
+  serializarSchema,
+} from "@/lib/structured-data";
 
 type ProductoPageProps = {
   params: Promise<{ slug: string; id: string }>;
@@ -19,9 +24,66 @@ async function findProduct(slug: string, id: string) {
     where: { id, isActive: true, deletedAt: null, store: { slug, isActive: true } },
     select: {
       id: true, name: true, description: true, price: true, images: true,
+      // Lo de acá abajo lo usan los datos estructurados (ver `structured-data.ts`).
+      // La categoría y la fecha de fin de oferta salen del producto; el precio y
+      // el stock por variante deciden si se declara un precio o un rango, y si
+      // figura como disponible o agotado.
+      category: true, offerEndsAt: true,
+      seoTitle: true, seoDescription: true,
+      variants: { select: { price: true, stock: true, sku: true } },
       store: { select: { name: true } },
     },
   });
+}
+
+/* ── Qué texto ve Google ─────────────────────────────────────────────────────
+   Si la dueña escribió el suyo, manda el suyo. Si no, se arma solo como siempre.
+   Las dos funciones están acá arriba y las usan TANTO `generateMetadata` como
+   los datos estructurados: si cada uno lo resolviera por su cuenta, un día el
+   título de la pestaña y el del bloque de Google dirían cosas distintas —y
+   declararle a Google algo que no está en la página es justo lo que penaliza. */
+type ProductoConSeo = {
+  name: string;
+  description: string | null;
+  seoTitle: string | null;
+  seoDescription: string | null;
+  store: { name: string };
+};
+
+const tituloParaGoogle = (p: ProductoConSeo) =>
+  p.seoTitle?.trim() || `${p.name} — ${p.store.name}`;
+
+const descripcionParaGoogle = (p: ProductoConSeo) =>
+  p.seoDescription?.trim() ||
+  p.description?.slice(0, 160) ||
+  `Comprá ${p.name} en ${p.store.name}`;
+
+/** Promedio y total de reseñas PUBLICADAS del producto — el mismo cálculo que hace
+ *  la API que alimenta la ficha, para que el puntaje que se le declara a Google
+ *  sea idéntico al que ve el comprador en pantalla. */
+async function findResenas(storeSlug: string, productId: string) {
+  const store = await prisma.store.findFirst({ where: { slug: storeSlug }, select: { id: true } });
+  if (!store) return { promedio: 0, total: 0 };
+
+  const agregado = await prisma.publicReview.aggregate({
+    where: { storeId: store.id, productId, status: "APPROVED" },
+    _avg: { rating: true },
+    _count: { _all: true },
+  });
+  return { promedio: agregado._avg.rating ?? 0, total: agregado._count._all };
+}
+
+/** Las imágenes vienen como JSON y con dos formas históricas: string suelto o
+ *  `{url}`. Se normalizan a URLs absolutas, que es lo único que Google acepta. */
+function imagenesAbsolutas(raw: string): string[] {
+  try {
+    const parsed = JSON.parse(raw || "[]") as (string | { url?: string })[];
+    return parsed
+      .map((img) => (typeof img === "string" ? img : img?.url ?? ""))
+      .filter((u) => u.startsWith("http"));
+  } catch {
+    return [];
+  }
 }
 
 export async function generateMetadata({ params, searchParams }: ProductoPageProps): Promise<Metadata> {
@@ -33,8 +95,8 @@ export async function generateMetadata({ params, searchParams }: ProductoPagePro
   const product = await findProduct(slug, id);
   if (!product) return {};
 
-  const title = `${product.name} — ${product.store.name}`;
-  const description = product.description?.slice(0, 160) || `Comprá ${product.name} en ${product.store.name}`;
+  const title = tituloParaGoogle(product);
+  const description = descripcionParaGoogle(product);
   let image: string | undefined;
   try {
     const images = JSON.parse(product.images || "[]");
@@ -76,8 +138,47 @@ export default async function ProductoPage({ params, searchParams }: ProductoPag
 
   const { analytics, currency } = await findStoreConfig(slug);
 
+  // ── Datos estructurados ────────────────────────────────────────────────────
+  // Sólo para productos REALES: los demo del editor no existen para nadie más y
+  // marcarlos sería declararle a Google un producto que no se puede comprar.
+  let schemas: string[] = [];
+  if (product) {
+    const resenas = await findResenas(slug, product.id);
+    const tienda = { nombre: product.store.name, slug };
+    schemas = [
+      serializarSchema(
+        construirProductSchema(
+          {
+            id: product.id,
+            name: product.name,
+            // La MISMA descripción que la metadata, resuelta con la misma
+            // función. Si acá fuera la del producto y arriba la escrita a mano,
+            // el bloque estructurado y la etiqueta <meta> dirían cosas distintas.
+            description: descripcionParaGoogle(product),
+            price: product.price,
+            category: product.category,
+            images: imagenesAbsolutas(product.images),
+            offerEndsAt: product.offerEndsAt,
+            variants: product.variants,
+          },
+          tienda,
+          currency,
+          resenas
+        )
+      ),
+      serializarSchema(construirBreadcrumbSchema({ id: product.id, name: product.name }, tienda)),
+    ];
+  }
+
   return (
     <>
+      {/* Va en el HTML del servidor, no desde el cliente: el robot de Google lee
+          la respuesta inicial, y un bloque agregado después con JavaScript se lo
+          puede perder. `dangerouslySetInnerHTML` es la forma que documenta React
+          para JSON-LD — el contenido está escapado en `serializarSchema`. */}
+      {schemas.map((json, i) => (
+        <script key={i} type="application/ld+json" dangerouslySetInnerHTML={{ __html: json }} />
+      ))}
       <StoreTrackingScripts
         googleAnalyticsId={analytics?.googleAnalyticsId}
         facebookPixelId={analytics?.facebookPixelId}

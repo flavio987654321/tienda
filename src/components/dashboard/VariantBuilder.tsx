@@ -117,8 +117,15 @@ export function VariantBuilder({
           </p>
         </div>
 
-        {/* Colores básicos */}
-        <div className="grid grid-cols-4 gap-2">
+        {/* Colores básicos.
+            `flex flex-wrap` y no `grid-cols-4`: la grilla le daba a los 16 chips el
+            MISMO ancho, y a 368px eso son 62px por chip — de los cuales 40 se los
+            llevan el círculo, el padding y el espacio. Con 22px para el texto,
+            "Blanco" se veía "Blanc…" y "Amarillo" "Amari…".
+            Dejándolos medir lo que necesitan, cada uno ocupa lo suyo y entran de a
+            tres o cuatro por fila según el largo del nombre. Es además el mismo
+            patrón que ya usan los chips de abajo (los colores ya elegidos). */}
+        <div className="flex flex-wrap gap-2">
           {BASIC_COLORS.map(c => (
             <button
               key={c.label}

@@ -69,6 +69,35 @@ export interface StoreTypeConfig {
   extraFieldsByCategory?: Record<string, ExtraField[]>;
 }
 
+/* ── Cómo se escribe cada categoría en pantalla ──────────────────────────────
+   Los slugs (`ropa-ninos`, `ropa-bebe`) van sin tildes ni ñ a propósito: se
+   guardan en la base y viajan en la URL, y ahí los caracteres especiales traen
+   problemas. Pero la etiqueta que ve la dueña salía de capitalizar el slug, así
+   que en el formulario se leía "Ropa Ninos" y "Ropa Bebe".
+
+   Acá van SÓLO las excepciones: las que pierden una letra que el slug no puede
+   llevar. El resto se arma solo.
+
+   Los slugs de subcategoría sí tienen tildes ("básica", "corpiños"), porque no
+   viajan en la URL — por eso casi ninguna necesita estar acá.                   */
+export const ETIQUETAS_CATEGORIA: Record<string, string> = {
+  "ropa-ninos": "Ropa niños",
+  "ropa-bebe": "Ropa bebé",
+  "escote-v": "Escote V", // la V va en mayúscula: es la forma del escote, no una palabra
+};
+
+/** Cómo mostrar una categoría o subcategoría.
+ *
+ *  Va en mayúscula sólo la primera palabra, no todas. Antes se capitalizaban
+ *  todas y quedaban cosas como "Short De Baño" y "Manga Larga"; en español lleva
+ *  mayúscula la primera y nada más. */
+export function etiquetaCategoria(valor: string): string {
+  const excepcion = ETIQUETAS_CATEGORIA[valor];
+  if (excepcion) return excepcion;
+  const texto = valor.split("-").filter(Boolean).join(" ");
+  return texto.charAt(0).toUpperCase() + texto.slice(1);
+}
+
 export const STORE_TYPES: StoreTypeConfig[] = [
   {
     id: "ROPA",
@@ -84,11 +113,22 @@ export const STORE_TYPES: StoreTypeConfig[] = [
     variantValuePlaceholder: "S, M, L, XL",
     namePlaceholder: "Ej: Remera oversize negra talle M",
     tagsPlaceholder: "negro, oversize, algodon",
-    categorias: ["remeras", "pantalones", "vestidos", "camperas", "buzos", "calzado", "joyas", "accesorios", "bolsos", "ropa-interior", "ropa-ninos", "ropa-bebe"],
+    // El orden es el del desplegable: primero lo de arriba del cuerpo, después lo
+    // de abajo, después calzado y accesorios, y al final las líneas de niños.
+    //
+    // `sweaters` va como CATEGORÍA propia y no dentro de `buzos`: un buzo es de
+    // frisa y un sweater es de punto o lana. Prenda distinta, tela distinta,
+    // temporada distinta — y nadie que busca un sweater entra a "Buzos".
+    // Lo mismo con `camisas`, que antes caían en "remeras".
+    categorias: ["remeras", "camisas", "sweaters", "buzos", "camperas", "pantalones", "polleras", "vestidos", "mallas", "calzado", "joyas", "accesorios", "bolsos", "ropa-interior", "ropa-ninos", "ropa-bebe"],
     subcategorias: {
       remeras: ["básica", "oversize", "estampada", "manga-larga"],
+      camisas: ["lisa", "estampada", "lino", "denim", "manga-corta", "oversize"],
+      sweaters: ["cárdigan", "cuello-alto", "escote-v", "hilo", "lana", "chaleco"],
       pantalones: ["jeans", "wide-leg", "cargo", "legging", "short"],
+      polleras: ["mini", "midi", "larga", "plisada", "denim", "tubo"],
       vestidos: ["casual", "fiesta", "midi", "maxi"],
+      mallas: ["bikini", "enteriza", "trikini", "short-de-baño", "salida-de-baño"],
       camperas: ["bomber", "cuero", "denim", "abrigo"],
       buzos: ["hoodie", "crewneck", "canguro"],
       calzado: ["zapatillas", "botas", "sandalias", "zapatos", "ojotas"],

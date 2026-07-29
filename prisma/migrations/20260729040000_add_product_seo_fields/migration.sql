@@ -1,0 +1,23 @@
+-- Título y descripción propios para Google, por producto.
+--
+-- Hasta ahora los dos se armaban solos: el título era "<nombre> — <tienda>" y la
+-- descripción, el arranque de la descripción del producto. Alcanza para la
+-- mayoría, pero no cuando el producto se llama distinto de lo que la gente busca
+-- ("Campera Modelo 47" contra "campera negra abrigo hombre"). Estas dos columnas
+-- dejan escribirlo a mano.
+--
+-- Las dos NULLABLE, sin default: null significa "no lo escribió nadie, armalo
+-- solo". Un string vacío por default obligaría a distinguir después entre "lo
+-- borró a propósito" y "nunca lo tocó", y las dos cosas terminan en lo mismo
+-- —volver al automático—, así que null solo es más simple y más honesto para los
+-- productos que ya existen.
+--
+-- TEXT y no VARCHAR(60)/VARCHAR(160): los límites de Google son recomendaciones
+-- de cuánto muestra, no reglas. Un título de 70 caracteres no es inválido, se
+-- corta en pantalla. El aviso va en el formulario, donde se puede explicar; en la
+-- base un límite duro solo haría fallar el guardado sin decir por qué.
+--
+-- ADD COLUMN IF NOT EXISTS, como el resto: idempotente y no depende de que la
+-- tabla tenga exactamente la forma esperada.
+ALTER TABLE "Product" ADD COLUMN IF NOT EXISTS "seoTitle" TEXT;
+ALTER TABLE "Product" ADD COLUMN IF NOT EXISTS "seoDescription" TEXT;

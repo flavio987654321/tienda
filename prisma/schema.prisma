@@ -388,6 +388,13 @@ model Product {
   // de Mercado Pago): 0 = no mostrar, o 3/6/12. Solo se muestra en la tienda
   // si además la tienda tiene Mercado Pago conectado.
   cuotas           Int       @default(0)
+  // Título y descripción propios para los resultados de Google. null = armarlos
+  // solos a partir del nombre y la descripción (ver `generateMetadata` en la
+  // ficha de producto). Sin límite de largo en la base a propósito: los 60/160
+  // de Google son cuánto MUESTRA, no un máximo válido — el aviso va en el
+  // formulario, que es donde se puede explicar.
+  seoTitle         String?
+  seoDescription   String?
   isActive         Boolean   @default(true)
   deletedAt        DateTime?
   publishAt        DateTime?

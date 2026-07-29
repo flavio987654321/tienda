@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { QRCodeCanvas } from "qrcode.react";
 import {
@@ -32,7 +32,7 @@ interface Product {
   expenses?: { monto: number }[];
 }
 
-interface Props { products: Product[]; storeSlug?: string; storeName?: string; storeType?: string; initialStockFilter?: string; promotedIds?: string[] }
+interface Props { products: Product[]; storeSlug?: string; storeName?: string; storeType?: string; initialStockFilter?: string; promotedIds?: string[]; highlightIds?: string[] }
 
 const PAGE_SIZE = 20;
 
@@ -47,16 +47,113 @@ function parseImages(raw: string): string[] {
 
 const VALID_STOCK_FILTERS = ["all", "out", "low", "critical"];
 
-export default function ProductsTable({ products: initialProducts, storeSlug = "", storeName = "", storeType = "", initialStockFilter = "all", promotedIds = [] }: Props) {
+/* ── Preferencia de vista: tabla o grilla ────────────────────────────────────
+   Vive fuera del componente, como un "store" chiquito que se lee con
+   `useSyncExternalStore`. Podría parecer mucho para un booleano, pero es la única
+   forma limpia de leer algo que SÓLO existe en el navegador —`localStorage` y
+   `window.innerWidth`— desde un componente que también se renderiza en el
+   servidor:
+
+     · Leerlo en el `useState` haría que el HTML del servidor no coincida con el
+       del navegador.
+     · Corregirlo con un `setState` dentro de un `useEffect` provoca un render en
+       cascada (y React lo desaconseja explícitamente).
+
+   `useSyncExternalStore` resuelve las dos: el servidor recibe "table" y el
+   navegador el valor real, sin parpadeo raro ni render de más.                */
+const CLAVE_VISTA = "tiendaapps:productos:vista";
+// El mismo corte que usa el resto del proyecto para "pantalla angosta".
+const ANCHO_ANGOSTO = 768;
+
+let escuchasVista: (() => void)[] = [];
+const suscribirVista = (cb: () => void) => {
+  escuchasVista.push(cb);
+  return () => { escuchasVista = escuchasVista.filter((f) => f !== cb); };
+};
+
+// El default por ancho se calcula UNA vez por sesión de página y queda cacheado.
+// Sin esto, cualquier re-render posterior a un cambio de tamaño podría devolver
+// otro valor y darla vuelta sola mientras se está trabajando.
+let vistaPorAncho: "table" | "grid" | null = null;
+
+const leerVista = (): "table" | "grid" => {
+  try {
+    const guardada = localStorage.getItem(CLAVE_VISTA);
+    if (guardada === "table" || guardada === "grid") return guardada;
+  } catch {
+    // Modo incógnito o almacenamiento bloqueado: se sigue sin preferencia.
+  }
+  vistaPorAncho ??= window.innerWidth < ANCHO_ANGOSTO ? "grid" : "table";
+  return vistaPorAncho;
+};
+
+// En el servidor no hay pantalla que medir: siempre "table". El navegador corrige.
+const leerVistaEnServidor = (): "table" | "grid" => "table";
+
+const guardarVista = (v: "table" | "grid") => {
+  try { localStorage.setItem(CLAVE_VISTA, v); } catch { /* ver arriba */ }
+  vistaPorAncho = v;
+  escuchasVista.forEach((f) => f());
+};
+
+// Conjunto vacío estable: si se creara uno nuevo en cada render, la fila cambiaría
+// de identidad todo el tiempo aunque no haya nada destacado.
+const SIN_DESTACADOS: ReadonlySet<string> = new Set();
+
+export default function ProductsTable({ products: initialProducts, storeSlug = "", storeName = "", storeType = "", initialStockFilter = "all", promotedIds = [], highlightIds = [] }: Props) {
   const showStock = storeType !== "AUTOS";
   const promotedSet = useMemo(() => new Set(promotedIds), [promotedIds]);
   const [products,      setProducts]      = useState(initialProducts);
+
+  // ── Productos señalados desde una notificación ────────────────────────────
+  // Venís de la campanita: el aviso hablaba de UN producto y acá hay una lista.
+  // Sin marca no había forma de saber cuál era —peor todavía cuando varios están
+  // en cero y se ven todos iguales—.
+  //
+  // La marca se apaga sola a los 6 segundos: es una ayuda para encontrarlo, no un
+  // estado del producto. Si quedara fija, al rato serían dos productos amarillos
+  // sin explicación.
+  const claveDestacado = highlightIds.join(",");
+  const highlightSet = useMemo(
+    () => new Set(claveDestacado ? claveDestacado.split(",") : []),
+    [claveDestacado]
+  );
+
+  // Se guarda cuál marca ya se apagó, en vez de copiar el conjunto al estado. Así
+  // `destacados` se deriva y no hace falta sincronizar nada: si llega otra
+  // notificación con otros ids, la clave cambia, deja de coincidir con la apagada y
+  // la marca vuelve a encenderse sola.
+  const [apagado, setApagado] = useState("");
+  const destacados = apagado === claveDestacado ? SIN_DESTACADOS : highlightSet;
+
+  useEffect(() => {
+    if (highlightSet.size === 0) return;
+    // Se busca por atributo en vez de con una ref: la marca la llevan tanto las
+    // filas de la lista como las tarjetas de la grilla, y se puede llegar desde la
+    // notificación con cualquiera de las dos vistas activa. Una sola consulta
+    // encuentra la primera de las dos, sea cual sea.
+    // El timeout deja que la tabla termine de pintar antes de medir dónde quedó.
+    const irA = setTimeout(() => {
+      document.querySelector("[data-destacado]")?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 150);
+    const apagar = setTimeout(() => setApagado(claveDestacado), 6000);
+    return () => { clearTimeout(irA); clearTimeout(apagar); };
+  }, [highlightSet, claveDestacado]);
   const [search,        setSearch]        = useState("");
   const [categoryFilter,setCategoryFilter]= useState("all");
   const [statusFilter,  setStatusFilter]  = useState("all");
   const [stockFilter,   setStockFilter]   = useState(VALID_STOCK_FILTERS.includes(initialStockFilter) ? initialStockFilter : "all");
   const [sortBy,        setSortBy]        = useState("newest");
-  const [viewMode,      setViewMode]      = useState<"table" | "grid">("table");
+  // ── Tabla o grilla ────────────────────────────────────────────────────────
+  // Arrancaba SIEMPRE en tabla, en cualquier pantalla. Y la tabla pide 640px de
+  // ancho mínimo: en un celular de 360 quedaban 312px escondidos —casi la mitad—,
+  // así que precio, stock, estado y todos los botones había que buscarlos
+  // arrastrando de costado. La grilla, que ya era responsive (2 columnas en 360),
+  // estaba a un toque, pero había que elegirla A MANO cada vez que se entraba.
+  //
+  // Ahora manda lo último que eligió la dueña; si nunca eligió, decide el ancho.
+  // La mecánica está arriba, en el bloque de `CLAVE_VISTA`.
+  const viewMode = useSyncExternalStore(suscribirVista, leerVista, leerVistaEnServidor);
   const [page,          setPage]          = useState(1);
   const [showBulk,      setShowBulk]      = useState(false);
   const [bulkCategory,  setBulkCategory]  = useState("all");
@@ -368,23 +465,104 @@ export default function ProductsTable({ products: initialProducts, storeSlug = "
     setStockModal(null);
   }
 
-  const bulkStockAffected = products.filter(p => bulkStockCategory === "all" || p.category === bulkStockCategory).length;
+  // ── Ajuste de stock en masa ───────────────────────────────────────────────
+  // El ajuste trabaja por VARIANTE, no por producto: la API le aplica el cambio a
+  // cada variante de cada producto que entre en la categoría. Es lo correcto —el
+  // stock vive en la variante, no en el producto— pero la pantalla contaba
+  // PRODUCTOS y decía "Aplicar a 3 productos" mientras le pegaba a 6 variantes.
+  // Con un pantalón de 4 talles, "sumar 10" sumaba 40 unidades y nada lo avisaba.
+  //
+  // Repartir el valor entre las variantes (que "sumar 10" al pantalón sume 10 en
+  // total) se descartó: no hay forma sensata de partir 10 entre 4 talles, y el
+  // resto habría que dárselo a alguno por un criterio inventado. Para precisión
+  // ya está el modal por producto; esta herramienta es para movidas amplias.
+  //
+  // Así que la cuenta no cambió: cambió lo que la pantalla dice y lo que valida.
+  const MAX_STOCK_BULK = 100_000;
+
+  const bulkStockScope = useMemo(() => {
+    const alcanzados = products.filter(p => bulkStockCategory === "all" || p.category === bulkStockCategory);
+    const variantes   = alcanzados.reduce((n, p) => n + p.variants.length, 0);
+    const stockActual = alcanzados.reduce((n, p) => n + p.variants.reduce((s, v) => s + v.stock, 0), 0);
+
+    const valor = bulkStockValue.trim() === "" ? NaN : Number(bulkStockValue);
+    const valorOk = Number.isInteger(valor) && valor >= 0 && valor <= MAX_STOCK_BULK;
+
+    // El resultado se simula acá con los mismos datos que ya tiene la tabla, para
+    // poder mostrar el total ANTES de aplicar. `Math.max(0, …)` replica el piso en
+    // cero que hace el servidor: restar 10 a una variante con 5 la deja en 0, no
+    // en −5. Si no se replicaba, la vista previa prometía un número imposible.
+    const stockDespues = !valorOk ? stockActual : alcanzados.reduce((n, p) =>
+      n + p.variants.reduce((s, v) =>
+        s + (bulkStockMode === "add"      ? v.stock + valor
+           : bulkStockMode === "subtract" ? Math.max(0, v.stock - valor)
+           :                                valor), 0), 0);
+
+    return { productos: alcanzados.length, variantes, stockActual, stockDespues, valor, valorOk };
+  }, [products, bulkStockCategory, bulkStockMode, bulkStockValue]);
+
+  // El error se calcula mientras se escribe, no recién al apretar el botón: así el
+  // "1.5" avisa en el momento en vez de guardarse como 1 sin decir nada (antes se
+  // hacía `parseInt`, que trunca en silencio y el servidor nunca veía el decimal).
+  const bulkStockValidacion = (() => {
+    if (bulkStockValue.trim() === "") return "";
+    const v = Number(bulkStockValue);
+    if (!Number.isFinite(v))          return "Escribí un número.";
+    if (!Number.isInteger(v))         return "Tiene que ser un número entero: no existe medio talle en stock.";
+    if (v < 0)                        return "No puede ser negativo. Para bajar stock usá “Restar”.";
+    if (v > MAX_STOCK_BULK)           return `Demasiado alto. El máximo es ${MAX_STOCK_BULK.toLocaleString("es-AR")} por variante.`;
+    return "";
+  })();
+
+  const bulkStockPuedeAplicar =
+    !bulkStockLoading && bulkStockScope.valorOk && bulkStockScope.variantes > 0;
 
   async function applyBulkStock() {
-    const value = parseInt(bulkStockValue);
-    if (isNaN(value) || value < 0) { setBulkStockError("Ingresá un número válido (>= 0)"); return; }
-    const modeLabel = bulkStockMode === "add" ? `sumar ${value}` : bulkStockMode === "subtract" ? `restar ${value}` : `fijar en ${value}`;
-    if (!confirm(`¿${modeLabel.charAt(0).toUpperCase() + modeLabel.slice(1)} unidades de stock a ${bulkStockAffected} producto${bulkStockAffected !== 1 ? "s" : ""}?`)) return;
+    const { valor, valorOk, variantes, productos, stockActual, stockDespues } = bulkStockScope;
+    if (!valorOk) { setBulkStockError(bulkStockValidacion || "Ingresá una cantidad válida."); return; }
+    if (variantes === 0) { setBulkStockError("No hay variantes en esa categoría."); return; }
+
+    // El aviso dice el número REAL: cuántas variantes se tocan y en cuánto queda el
+    // stock. El de antes decía "¿sumar 10 unidades a 3 productos?" para una
+    // operación que movía 60 unidades sobre 6 variantes.
+    const diferencia = stockDespues - stockActual;
+    const acciones: Record<typeof bulkStockMode, string> = {
+      add:      `Sumar ${valor} a cada una`,
+      subtract: `Restar ${valor} a cada una`,
+      set:      `Fijar todas en ${valor}`,
+    };
+    const alcance = `${variantes} variante${variantes !== 1 ? "s" : ""} de ${productos} producto${productos !== 1 ? "s" : ""}`;
+    const resumen = `Stock total: ${stockActual} → ${stockDespues} u. (${diferencia >= 0 ? "+" : ""}${diferencia})`;
+    // Vaciar el stock merece una advertencia aparte: es la única opción de acá que
+    // saca de la venta todo lo alcanzado de una, y no se deshace con un botón.
+    const aviso = bulkStockMode === "set" && valor === 0
+      ? `\n\n⚠ Esto deja SIN STOCK ${alcance} y los saca de la venta.`
+      : "";
+    if (!confirm(`${acciones[bulkStockMode]}.\n\nAlcance: ${alcance}\n${resumen}${aviso}\n\n¿Confirmás?`)) return;
+
     setBulkStockLoading(true); setBulkStockError(""); setBulkStockSuccess("");
     const res = await fetch("/api/productos/bulk-stock", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ mode: bulkStockMode, value, category: bulkStockCategory }),
+      body: JSON.stringify({ mode: bulkStockMode, value: valor, category: bulkStockCategory }),
     });
     const data = await res.json();
     setBulkStockLoading(false);
     if (!res.ok) { setBulkStockError(data.error || "Error al actualizar"); return; }
-    setBulkStockSuccess(`${data.updated} producto${data.updated !== 1 ? "s" : ""} actualizados`);
+    // `updated` y `skipped` vienen contados en VARIANTES. Antes se los mostraba
+    // como "productos": con 3 productos de 6 variantes decía "6 productos
+    // actualizados". Y `skipped` ni se miraba: si otra operación tocaba el stock al
+    // mismo tiempo, la variante se salteaba y nadie se enteraba.
+    const n  = (data.updated   as number) ?? 0;
+    const ig = (data.unchanged as number) ?? 0;
+    const om = (data.skipped   as number) ?? 0;
+    setBulkStockSuccess(
+      (n === 0
+        ? "Ninguna variante cambió"
+        : `${n} variante${n !== 1 ? "s" : ""} actualizada${n !== 1 ? "s" : ""}`) +
+      (ig > 0 ? ` · ${ig} ya estaba${ig !== 1 ? "n" : ""} en ese valor` : "") +
+      (om > 0 ? ` · ${om} se salteó (la modificaron al mismo tiempo — probá de nuevo)` : "")
+    );
     setBulkStockValue("");
     // Recargar para reflejar los nuevos valores de stock con precisión
     const refreshed = await fetch("/api/productos").then(r => r.json()).catch(() => null);
@@ -521,10 +699,14 @@ export default function ProductsTable({ products: initialProducts, storeSlug = "
             </button>
           )}
           <div className="shrink-0 flex border border-gray-200 rounded-xl overflow-hidden">
-            <button onClick={() => setViewMode("table")} className={`p-2.5 transition-colors ${viewMode === "table" ? "bg-indigo-50 text-indigo-600" : "bg-white text-gray-400 hover:text-gray-600"}`}>
+            {/* `cambiarVista` y no `setViewMode`: elegir a mano deja la preferencia
+                guardada, así no hay que volver a elegirla en cada visita. */}
+            <button type="button" onClick={() => guardarVista("table")} aria-pressed={viewMode === "table"} aria-label="Ver como lista"
+              className={`p-2.5 transition-colors ${viewMode === "table" ? "bg-indigo-50 text-indigo-600" : "bg-white text-gray-400 hover:text-gray-600"}`}>
               <List className="h-4 w-4" />
             </button>
-            <button onClick={() => setViewMode("grid")} className={`p-2.5 transition-colors ${viewMode === "grid" ? "bg-indigo-50 text-indigo-600" : "bg-white text-gray-400 hover:text-gray-600"}`}>
+            <button type="button" onClick={() => guardarVista("grid")} aria-pressed={viewMode === "grid"} aria-label="Ver como grilla"
+              className={`p-2.5 transition-colors ${viewMode === "grid" ? "bg-indigo-50 text-indigo-600" : "bg-white text-gray-400 hover:text-gray-600"}`}>
               <LayoutGrid className="h-4 w-4" />
             </button>
           </div>
@@ -647,14 +829,63 @@ export default function ProductsTable({ products: initialProducts, storeSlug = "
                 <div className="w-32">
                   <label className="mb-1 block text-xs font-semibold text-gray-500">Cantidad</label>
                   <input type="number" value={bulkStockValue} onChange={e => { setBulkStockValue(e.target.value); setBulkStockError(""); setBulkStockSuccess(""); }}
-                    placeholder="ej: 10" min={0}
-                    className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                    placeholder="ej: 10" min={0} max={MAX_STOCK_BULK} step={1}
+                    aria-invalid={!!bulkStockValidacion}
+                    className={`w-full rounded-xl border px-3 py-2 text-sm focus:outline-none focus:ring-2 ${
+                      bulkStockValidacion
+                        ? "border-red-300 focus:ring-red-400"
+                        : "border-gray-200 focus:ring-indigo-500"
+                    }`} />
                 </div>
-                <button type="button" onClick={applyBulkStock} disabled={bulkStockLoading || !bulkStockValue}
-                  className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-50">
-                  {bulkStockLoading ? "Aplicando..." : `Aplicar a ${bulkStockAffected} producto${bulkStockAffected !== 1 ? "s" : ""}`}
+                {/* El botón cuenta VARIANTES, que es lo que la operación toca de
+                    verdad. Decir "3 productos" para 6 variantes hacía que "sumar
+                    10" pareciera +30 cuando eran +60. */}
+                <button type="button" onClick={applyBulkStock} disabled={!bulkStockPuedeAplicar}
+                  className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                  {bulkStockLoading
+                    ? "Aplicando..."
+                    : `Aplicar a ${bulkStockScope.variantes} variante${bulkStockScope.variantes !== 1 ? "s" : ""}`}
                 </button>
               </div>
+
+              {/* ── Qué va a pasar, antes de que pase ──
+                  Se calcula con los datos que la tabla ya tiene en memoria, así que
+                  no cuesta una consulta. Es la única forma de que se vea que un
+                  producto con 4 talles se lleva 4 veces el valor escrito. */}
+              <div className="rounded-xl bg-gray-50 border border-gray-100 px-3 py-2.5 text-xs text-gray-600">
+                {bulkStockScope.variantes === 0 ? (
+                  <span className="text-gray-400">No hay variantes en esta categoría.</span>
+                ) : (
+                  <>
+                    <span className="font-semibold text-gray-700">
+                      {bulkStockScope.variantes} variante{bulkStockScope.variantes !== 1 ? "s" : ""}
+                    </span>
+                    {" de "}
+                    {bulkStockScope.productos} producto{bulkStockScope.productos !== 1 ? "s" : ""}
+                    {bulkStockScope.productos !== bulkStockScope.variantes && (
+                      <span className="text-gray-400"> · un producto con varios talles o colores recibe el cambio en cada uno</span>
+                    )}
+                    {bulkStockScope.valorOk && (
+                      <span className="block mt-1 text-gray-700">
+                        Stock total: <strong>{bulkStockScope.stockActual}</strong>
+                        {" → "}
+                        <strong className={
+                          bulkStockScope.stockDespues > bulkStockScope.stockActual ? "text-emerald-600"
+                          : bulkStockScope.stockDespues < bulkStockScope.stockActual ? "text-red-500"
+                          : "text-gray-700"
+                        }>{bulkStockScope.stockDespues}</strong>
+                        {" u. "}
+                        <span className="text-gray-400">
+                          ({bulkStockScope.stockDespues - bulkStockScope.stockActual >= 0 ? "+" : ""}
+                          {bulkStockScope.stockDespues - bulkStockScope.stockActual})
+                        </span>
+                      </span>
+                    )}
+                  </>
+                )}
+              </div>
+
+              {bulkStockValidacion && <p className="text-xs text-red-500">{bulkStockValidacion}</p>}
               {bulkStockError && <p className="text-xs text-red-500">{bulkStockError}</p>}
               {bulkStockSuccess && <p className="text-xs text-green-600 font-semibold">{bulkStockSuccess}</p>}
             </div>
@@ -692,8 +923,19 @@ export default function ProductsTable({ products: initialProducts, storeSlug = "
             const images = parseImages(product.images);
             const inPromo = promotedSet.has(product.id);
             const inOferta = !!product.comparePrice && product.comparePrice > product.price;
+            const destacado = destacados.has(product.id);
             return (
-              <div key={product.id} className="bg-white rounded-2xl border border-gray-100 overflow-hidden group hover:shadow-md transition-shadow">
+              // La vista de grilla lleva la misma marca que la de lista: se puede
+              // llegar desde la notificación con cualquiera de las dos activa.
+              <div
+                key={product.id}
+                data-destacado={destacado ? "" : undefined}
+                className={`bg-white rounded-2xl overflow-hidden group transition-shadow ${
+                  destacado
+                    ? "border-2 border-amber-400 ring-2 ring-amber-200 animate-destacado"
+                    : "border border-gray-100 hover:shadow-md"
+                }`}
+              >
                 <div className="relative aspect-square bg-gray-50">
                   {images[0] ? (
                     // Va <img> y no <Image>: la API guarda la URL de la imagen sin
@@ -803,9 +1045,20 @@ export default function ProductsTable({ products: initialProducts, storeSlug = "
                 const images = parseImages(product.images);
                 const inPromo = promotedSet.has(product.id);
                 const inOferta = !!product.comparePrice && product.comparePrice > product.price;
+                const destacado = destacados.has(product.id);
                 return (
-                  <tr key={product.id} className="hover:bg-gray-50/50 transition-colors">
-                    <td className="px-6 py-4">
+                  // OJO: nada de `ring` ni `box-shadow` acá. La tabla hereda
+                  // `border-collapse: collapse` de Tailwind, y con eso el navegador
+                  // NO pinta la sombra de un <tr> — la primera versión de esto se
+                  // veía igual que antes. Fondo y bordes sí se dibujan, así que la
+                  // marca es fondo ámbar animado + una barra en el borde izquierdo
+                  // de la primera celda.
+                  <tr
+                    key={product.id}
+                    data-destacado={destacado ? "" : undefined}
+                    className={destacado ? "bg-amber-50 animate-destacado-fila" : "hover:bg-gray-50/50 transition-colors"}
+                  >
+                    <td className={`px-6 py-4 ${destacado ? "border-l-4 border-amber-500" : ""}`}>
                       <div className="flex items-center gap-3">
                         <div className="relative w-12 h-12 bg-gray-100 rounded-xl overflow-hidden shrink-0">
                           <div className="absolute inset-0 flex items-center justify-center">

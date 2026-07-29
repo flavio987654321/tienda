@@ -13,9 +13,20 @@ export async function POST(req: NextRequest) {
   if (mode !== "add" && mode !== "subtract" && mode !== "set") {
     return NextResponse.json({ error: "Modo inválido" }, { status: 400 });
   }
+  // El tope existe también acá, no sólo en la pantalla: la validación del navegador
+  // se saltea con un fetch a mano, y sin techo un `set` con 9.999.999.999 entraba
+  // derecho a la base. El número tiene que coincidir con MAX_STOCK_BULK de
+  // `ProductsTable.tsx` — si se cambia uno, cambiar el otro.
+  const MAX_STOCK_BULK = 100_000;
   const numValue = Number(value);
   if (!Number.isFinite(numValue) || !Number.isInteger(numValue) || numValue < 0) {
     return NextResponse.json({ error: "Valor inválido" }, { status: 400 });
+  }
+  if (numValue > MAX_STOCK_BULK) {
+    return NextResponse.json(
+      { error: `El máximo es ${MAX_STOCK_BULK.toLocaleString("es-AR")} unidades por variante` },
+      { status: 400 }
+    );
   }
 
   const where = {
@@ -32,6 +43,11 @@ export async function POST(req: NextRequest) {
   const lowStockItems: LowStockItem[] = [];
   let updated = 0;
   let skipped = 0;
+  // Distinto de `skipped`: acá la variante SÍ se pudo tocar, pero el número le daba
+  // igual —restarle 10 a una que ya está en 0, o fijar en 5 una que ya tenía 5—.
+  // Iban contadas como actualizadas, así que "restar 10" con todo en cero informaba
+  // "6 variantes actualizadas" sin haber cambiado una sola unidad.
+  let unchanged = 0;
 
   // Operaciones secuenciales dentro de la misma transacción interactiva: Prisma no
   // soporta llamadas concurrentes sobre el mismo `tx`, así que no se puede paralelizar.
@@ -56,18 +72,28 @@ export async function POST(req: NextRequest) {
           skipped++;
           continue;
         }
+        if (result.stockAfter === result.stockBefore) {
+          unchanged++;
+          continue;
+        }
         updated++;
-        if (result.lowStockItem) lowStockItems.push(result.lowStockItem);
+        if (result.lowStockItem)   lowStockItems.push(result.lowStockItem);
+        // Un "fijar todo en 0" puede dejar la tienda entera sin stock sin que
+        // llegara un solo aviso. Ahora entra en la misma tanda.
+        if (result.outOfStockItem) lowStockItems.push(result.outOfStockItem);
       }
     },
     { timeout: 30_000 }
   );
 
+  // Sin email: éste es el caso más claro de todos. Un "fijar todo en 0" de fin de
+  // temporada puede vaciar la tienda entera, y mandarle un mail por una decisión
+  // que acaba de tomar en esta misma pantalla sería puro ruido.
   if (lowStockItems.length > 0) {
-    dispatchLowStockAlerts(auth.ownerId, auth.storeId, lowStockItems).catch((err) =>
+    dispatchLowStockAlerts(auth.ownerId, auth.storeId, lowStockItems, { email: false }).catch((err) =>
       console.error("[stock] dispatchLowStockAlerts failed:", err)
     );
   }
 
-  return NextResponse.json({ updated, skipped, lowStockTriggered: lowStockItems.length });
+  return NextResponse.json({ updated, skipped, unchanged, lowStockTriggered: lowStockItems.length });
 }

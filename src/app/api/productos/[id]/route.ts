@@ -49,6 +49,7 @@ export async function PATCH(req: NextRequest, ctx: ProductRouteContext) {
     parsedPreciosEscalonados, parsedSoloMayorista, parsedCuotas, normalizedVariants,
     parsedWeightKg, parsedWidthCm, parsedHeightCm, parsedDepthCm,
     parsedOfferBadge, parsedOfferNote, parsedOfferEndsAt,
+    parsedSeoTitle, parsedSeoDescription,
   } = validated;
 
   // Guard de seguridad: escalones y soloMayorista solo aplican a tiendas mayoristas.
@@ -115,9 +116,12 @@ export async function PATCH(req: NextRequest, ctx: ProductRouteContext) {
             type: "PRODUCT_EDIT",
             changedBy: auth.ownerId,
           });
-          if (crossedDown && !variant.lowStockAlertSentAt) {
-            lowStockItems.push({ name, variant: variant.value, stock: 0 });
-          }
+          // Acá el stock SIEMPRE termina en 0 viniendo de más de 0 (lo garantiza el
+          // `variant.stock !== 0` de arriba), así que es una transición a cero y se
+          // avisa siempre. Con la regla del cruce, una variante parada justo en el
+          // umbral —5, el valor por defecto— daba `5 > 5` = false y se apagaba en
+          // silencio.
+          lowStockItems.push({ productId: id, name, variant: variant.value, stock: 0 });
         }
       } else {
         await tx.productVariant.delete({ where: { id: variant.id } });
@@ -164,8 +168,16 @@ export async function PATCH(req: NextRequest, ctx: ProductRouteContext) {
             changedBy: auth.ownerId,
           });
         }
-        if (crossedDown && !existing.lowStockAlertSentAt) {
-          lowStockItems.push({ name, variant: v.value, stock: newStock });
+        // Misma regla que el resto del sistema: llegar a CERO se mide como
+        // transición (tenía algo → no tiene nada) y no depende de haber avisado
+        // antes; "stock bajo" sigue midiéndose por cruce de umbral y sólo mientras
+        // todavía quede algo. Sin el `newStock > 0` en la segunda, bajar de 10 a 0
+        // metía la misma variante dos veces en la lista.
+        const llegoACero = existing.stock > 0 && newStock === 0;
+        if (llegoACero) {
+          lowStockItems.push({ productId: id, name, variant: v.value, stock: 0 });
+        } else if (crossedDown && newStock > 0 && !existing.lowStockAlertSentAt) {
+          lowStockItems.push({ productId: id, name, variant: v.value, stock: newStock });
         }
       } else {
         // Variante recién creada: no hay un "antes" con el que comparar, así que
@@ -214,6 +226,8 @@ export async function PATCH(req: NextRequest, ctx: ProductRouteContext) {
         widthCm: parsedWidthCm,
         heightCm: parsedHeightCm,
         depthCm: parsedDepthCm,
+        seoTitle: parsedSeoTitle,
+        seoDescription: parsedSeoDescription,
         ...(parsedPublishAt !== undefined
           ? { publishAt: parsedPublishAt, ...(scheduledInFuture ? { isActive: false } : {}) }
           : {}),
@@ -222,18 +236,29 @@ export async function PATCH(req: NextRequest, ctx: ProductRouteContext) {
     });
   }, { timeout: 30000 });
 
-  if (lowStockItems.length > 0) {
-    dispatchLowStockAlerts(auth.ownerId, auth.storeId, lowStockItems).catch((err) =>
-      console.error("[stock] dispatchLowStockAlerts failed:", err)
-    );
-  }
-
   // Notificar a afiliados activos si cambió el precio o quedó sin stock
   const priceChanged = existing.price !== parsedPrice;
   const oldTotalStock = existing.variants.reduce((s, v) => s + v.stock, 0);
   const newTotalStock = product.variants.reduce((s, v) => s + v.stock, 0);
   const wentOutOfStock = oldTotalStock > 0 && newTotalStock === 0;
   const wentBackInStock = oldTotalStock === 0 && newTotalStock > 0;
+
+  // Este endpoint es el único que ya tenía aviso propio de "sin stock", y es a
+  // nivel PRODUCTO (más abajo, con el nombre adentro). Si además se dejara pasar
+  // el aviso por VARIANTE en cero, agotar un producto de un solo talle mandaba dos
+  // notificaciones por el mismo hecho. Cuando el producto entero se agota manda el
+  // de abajo, que es más claro; las variantes en cero sólo se avisan si el producto
+  // todavía tiene stock en otro talle o color —ahí sí es información nueva—.
+  const avisosDeStock = wentOutOfStock
+    ? lowStockItems.filter((i) => i.stock > 0)
+    : lowStockItems;
+
+  // Sin email: el stock lo cambió la dueña editando este producto.
+  if (avisosDeStock.length > 0) {
+    dispatchLowStockAlerts(auth.ownerId, auth.storeId, avisosDeStock, { email: false }).catch((err) =>
+      console.error("[stock] dispatchLowStockAlerts failed:", err)
+    );
+  }
 
   if (priceChanged || wentOutOfStock || wentBackInStock) {
     const activeAffiliates = await prisma.affiliate.findMany({

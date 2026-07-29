@@ -34,6 +34,12 @@ export async function POST(_req: NextRequest, ctx: Ctx) {
       precioMayorista:  source.precioMayorista,
       cantMinMayorista: source.cantMinMayorista,
       cuotas:           source.cuotas,
+      // El título para Google NO se copia: es específico del producto original y
+      // dos fichas con el mismo título compiten entre sí en los resultados. La
+      // copia arranca con el automático, que ya sale del nombre nuevo ("Copia
+      // de …") y obliga a repasarlo antes de publicar.
+      // La descripción sí se copia: describe el producto, que es el mismo.
+      seoDescription:   source.seoDescription,
       isActive:         false,
       variants: {
         create: source.variants.map(v => ({

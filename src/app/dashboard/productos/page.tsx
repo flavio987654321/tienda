@@ -12,13 +12,16 @@ import CsvImportButton from "./CsvImportButton";
 import { STORE_TYPES } from "@/lib/storeTypes";
 import { parseStringArray } from "@/lib/promotions";
 
-type Props = { searchParams: Promise<{ stock?: string }> };
+// `destacar` son los ids que manda el link de una notificación de stock, separados
+// por coma. No filtran nada: marcan. Ver el comentario de `LowStockItem`.
+type Props = { searchParams: Promise<{ stock?: string; destacar?: string }> };
 
 export default async function ProductosPage({ searchParams }: Props) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
-  const { stock: stockParam } = await searchParams;
+  const { stock: stockParam, destacar: destacarParam } = await searchParams;
+  const destacarIds = (destacarParam ?? "").split(",").map(s => s.trim()).filter(Boolean);
 
   const store = await prisma.store.findUnique({
     where: { ownerId: user.id },
@@ -117,7 +120,7 @@ export default async function ProductosPage({ searchParams }: Props) {
           </Link>
         </div>
       ) : (
-        <ProductsTable products={products} storeSlug={store?.slug ?? ""} storeName={store?.name ?? ""} storeType={store?.tipoTienda ?? ""} initialStockFilter={stockParam} promotedIds={promotedIds} />
+        <ProductsTable products={products} storeSlug={store?.slug ?? ""} storeName={store?.name ?? ""} storeType={store?.tipoTienda ?? ""} initialStockFilter={stockParam} promotedIds={promotedIds} highlightIds={destacarIds} />
       )}
     </DashboardLayout>
   );
