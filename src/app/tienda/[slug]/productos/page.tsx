@@ -7,7 +7,6 @@ import { useCartLogic } from "@/hooks/useCartLogic";
 import type { StorefrontProduct, StorefrontVariant, PlaceOrderParams } from "@/hooks/useStorefront";
 import { getDemoPool, fillTargetFor, parsePromotions } from "@/hooks/useStorefront";
 import type { ActivePromotion } from "@/lib/pricing";
-import { ENVIO_OPTIONS, PAGO_OPTIONS } from "@/components/store/shared/cartTypes";
 import { useTouchSwipe } from "@/hooks/useTouchSwipe";
 import { useResenasProducto, type ResenaProducto } from "@/hooks/useResenasProducto";
 // Las fotos pasan por `next/image` (vía `FadeImage`, el mismo que usan los diez
@@ -15,6 +14,11 @@ import { useResenasProducto, type ResenaProducto } from "@/hooks/useResenasProdu
 // que va a mostrar y en WebP, en vez del JPG original de la cámara. Esta página
 // dibuja el catálogo entero, que es donde más pesa.
 import { FadeImage } from "@/components/store/templates/shared/FadeImage";
+// El carrito y el checkout de esta página eran una COPIA escrita a mano de los
+// que usan los diez templates. Los dos salen del mismo `useCartLogic`, así que la
+// copia no aportaba nada — sólo se iba quedando atrás. Ver PL-1 en URBAN-PULSE.md.
+import { CartDrawer, type CartTheme } from "@/components/store/templates/shared/CartDrawer";
+import { CheckoutModal } from "@/components/store/templates/shared/CheckoutModal";
 import { getContrastColor, getReadableAccentText, getReadableAccentFill, textoSobre } from "@/contexts/EditContext";
 import { colorToSwatch } from "@/lib/colorSwatch";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
@@ -251,11 +255,19 @@ const THEMES: Record<string, Theme> = {
     serif:"Garamond, Georgia, serif", sans:"Inter, system-ui, sans-serif", dark:false,
     tabStyle:"underline", cardRadius:0, titleStyle:"minimal", inputRadius:0,
   },
+  // Los valores salen del template, uno por uno: DARK #0f0f0f, BG #f5f5f5,
+  // WHITE #ffffff, MID #777777 y el acento de fábrica #d4ff00 (que igual lo pisa
+  // el que haya elegido la dueña, vía `accentOverride`).
+  // Antes acá había una paleta azul marino con naranja —#0f172a, #1e293b,
+  // #f97316— que no sale de ningún lado de Urban Pulse: el template es negro,
+  // blanco y neón. El catálogo del home va sobre WHITE y las tarjetas son
+  // blancas, así que esta página, que muestra exactamente lo mismo, iba clara.
+  // Puestas una al lado de la otra parecían dos tiendas distintas.
   "urban-pulse": {
-    BG:"#0f172a", S:"#1e293b", T:"#f8fafc", G:"#f97316", MID:"#64748b",
-    border:"rgba(249,115,22,0.2)", borderFaint:"rgba(248,250,252,0.06)",
-    inputBorder:"rgba(249,115,22,0.2)", inputBg:"#1e293b",
-    serif:"Inter, system-ui, sans-serif", sans:"Inter, system-ui, sans-serif", dark:true,
+    BG:"#f5f5f5", S:"#ffffff", T:"#0f0f0f", G:"#d4ff00", MID:"#777777",
+    border:"rgba(15,15,15,0.14)", borderFaint:"rgba(15,15,15,0.07)",
+    inputBorder:"rgba(15,15,15,0.22)", inputBg:"#ffffff",
+    serif:"Inter, system-ui, sans-serif", sans:"Inter, system-ui, sans-serif", dark:false,
     tabStyle:"brutalist", cardRadius:0, titleStyle:"bold", inputRadius:0,
   },
   "electro-prime": {
@@ -424,27 +436,20 @@ function ProductosPageInner() {
   }, []);
 
   const cart = useCartLogic({ products, promotions, slug, isOwner, isPreview: fromEditor, resolveVariantId, validateCoupon, placeOrder });
+  // Sólo lo que dibuja ESTA página. Todo lo del carrito y el checkout —líneas con
+  // promo, cupón, envío, pago, datos del comprador, totales— se le pasa entero a
+  // `CartDrawer` y `CheckoutModal` en el objeto `cart`, así que no hace falta
+  // desarmarlo acá. Antes se desarmaban cuarenta campos para alimentar la copia
+  // escrita a mano.
   const {
-    cartItems, cartOpen, setCartOpen, cartCount, cartTotal, envioPrice, couponDiscount, orderTotal, couponsAllowed,
-    freeShipping, freeShippingGoal,
-    // El carrito y el checkout de esta página son una copia escrita a mano, anterior
-    // al motor de promociones: mostraban `product.price * qty` y no leían nada de
-    // esto. El total venía del motor y las líneas no, así que con una promo vigente
-    // el ítem decía $60.000 y el total $48.000 en la misma pantalla.
-    pricedLines, cartPromoSavings, appliedPromos,
+    cartOpen, setCartOpen, cartCount, checkoutOpen,
     modalProduct, setModalProduct, modalImg, setModalImg,
     selectedSize, setSelectedSize, selectedColor, setSelectedColor, qty, setQty,
-    checkoutOpen, setCheckoutOpen, checkoutStatus, checkoutError,
-    envioId, setEnvioId, pagoId, setPagoId,
-    coupon, setCoupon, couponError, setAppliedCoupon,
-    cuponAbierto, setCuponAbierto, cuponActivo, cuponBloqueado, motivoCupon,
-    notas, setNotas, rememberData, setRememberData, buyerForm, setBuyerForm,
     toastMsg, openModal, addToCart,
     // Esta pantalla no los usaba: ni el talle ni el color avisaban que estaban
     // agotados hasta despues de elegirlos.
     outOfStockSizes, outOfStockColors,
-    removeFromCart, updateQty,
-    openCheckout, handleApplyCoupon, handlePlaceOrder, toggleFavorite, favorites,
+    toggleFavorite, favorites,
   } = cart;
 
   // ── Carga de datos ──────────────────────────────────────────────────────────
@@ -907,6 +912,15 @@ function ProductosPageInner() {
   // (como en Urban Pulse donde ambos son #1e293b), los inputs desaparecen —
   // en ese caso usamos BG (el nivel más oscuro) para crear contraste visible.
   const modalInputBg = inputBg === S ? BG : inputBg;
+
+  // La paleta de esta página traducida a la que esperan `CartDrawer` y
+  // `CheckoutModal`. Ojo con los nombres, que no significan lo mismo de los dos
+  // lados: en esos componentes `BG` es el fondo del PANEL (acá es la superficie,
+  // `S`) y `S` es el fondo de los CAMPOS de texto.
+  const cartTheme: CartTheme = {
+    BG: S, S: modalInputBg, T, MID, border,
+    accent: G, accentText: accentDark ? "#000" : "#fff", serif,
+  };
 
   // Footer: mismo color que el dueño eligió para el footer del home (o el
   // default propio del template si no lo tocó), con texto/iconos recalculados
@@ -2379,321 +2393,27 @@ function ProductosPageInner() {
         </div>
       )}
 
-      {/* ── CARRITO ────────────────────────────────────────────────────── */}
-      <div style={{ position:"fixed", inset:0, zIndex:150, pointerEvents: cartOpen ? "auto" : "none" }}>
-        <div onClick={() => setCartOpen(false)} style={{ position:"absolute", inset:0, background:"rgba(0,0,0,0.55)", opacity: cartOpen?1:0, transition:"opacity 0.3s" }}/>
-        <div style={{ position:"absolute", top:0, right:0, bottom:0, left: isMobile ? 0 : "auto", width: isMobile ? "auto" : 420, background:S, transform: cartOpen?"translateX(0)":"translateX(100%)", transition:"transform 0.35s cubic-bezier(.4,0,.2,1)", display:"flex", flexDirection:"column" }}>
-          <div style={{ padding:"22px 22px 14px", borderBottom:`1px solid ${borderFaint}`, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-            <p style={{ fontFamily:serif, fontSize:18, margin:0, color:T }}>Tu carrito <span style={{ fontSize:13, color:MID }}>({cartCount})</span></p>
-            <button onClick={() => setCartOpen(false)} style={{ background:"none", border:"none", color:T, fontSize:24, cursor:"pointer", lineHeight:1 }}>×</button>
-          </div>
-          <div style={{ flex:1, overflowY:"auto", padding:"14px 22px" }}>
-            {cartItems.length === 0
-              ? <div style={{ textAlign:"center", padding:"60px 0", opacity:0.35 }}>
-                  <p style={{ fontSize:34, marginBottom:10 }}>🛍️</p>
-                  <p style={{ fontSize:13, lineHeight:1.8, color:T }}>Tu carrito está vacío.<br/>Explorá la colección.</p>
-                </div>
-              : cartItems.map((item, idx) => {
-                // ¿Esta línea se cobra al precio de lista del producto? Si mandó el
-                // precio de una variante, el mayorista o un escalón por cantidad,
-                // `comparePrice` deja de ser referencia válida y el tachado podría
-                // quedar por DEBAJO de lo que se paga. Mismo cuidado que el modal
-                // (CP-15) y que el carrito compartido.
-                const linea = pricedLines[idx];
-                const unitario = linea && item.qty > 0 ? (linea.lineTotal + linea.savings) / item.qty : item.product.price;
-                const enOferta = Math.abs(unitario - item.product.price) < 0.01
-                  && (item.product.comparePrice ?? 0) > item.product.price;
-                return (
-                <div key={idx} style={{ display:"flex", gap:12, padding:"14px 0", borderBottom:`1px solid ${borderFaint}` }}>
-                  {item.product.images[0] && <FadeImage src={item.product.images[0]} alt="" width={66} height={88} style={{ objectFit:"cover", flexShrink:0 }} />}
-                  <div style={{ flex:1 }}>
-                    <p style={{ fontSize:14, margin:"0 0 2px", fontWeight:500, color:T }}>{item.product.name}</p>
-                    <p style={{ fontSize:11, opacity:0.45, margin:"0 0 8px" }}>{[item.color, item.size && `Talle ${item.size}`].filter(Boolean).join(" · ")}</p>
-                    {/* Qué promo bajó este precio, igual que en el carrito de los
-                        templates. Sale de `pricedLines`, que es la misma cuenta que
-                        cobra el checkout — no se recalcula nada acá. */}
-                    {pricedLines[idx]?.promo ? (
-                      <p style={{ fontSize:11, margin:"0 0 8px", color:GT, fontWeight:700 }}>
-                        {pricedLines[idx].promo!.name
-                          ? `${pricedLines[idx].promo!.name} · ${pricedLines[idx].promo!.label}`
-                          : pricedLines[idx].promo!.label}
-                      </p>
-                    ) : enOferta ? (
-                      <p style={{ fontSize:11, margin:"0 0 8px", color:"#dc2626", fontWeight:700 }}>
-                        Oferta · {Math.round((1 - item.product.price / item.product.comparePrice!) * 100)}% OFF
-                      </p>
-                    ) : null}
-                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-                      <div style={{ display:"flex", alignItems:"center", border:`1px solid ${border}` }}>
-                        <button onClick={() => updateQty(idx,-1)} style={{ width:26, height:26, background:"none", border:"none", color:T, cursor:"pointer", fontSize:15 }}>−</button>
-                        <span style={{ width:22, textAlign:"center", fontSize:12, color:T }}>{item.qty}</span>
-                        <button onClick={() => updateQty(idx,1)} style={{ width:26, height:26, background:"none", border:"none", color:T, cursor:"pointer", fontSize:15 }}>+</button>
-                      </div>
-                      {(() => {
-                        const antes = linea?.promoApplied
-                          ? linea.lineTotal + linea.savings
-                          : enOferta
-                            ? item.product.comparePrice! * item.qty
-                            : null;
-                        return (
-                          <div style={{ textAlign:"right" }}>
-                            {antes != null && (
-                              <span style={{ fontSize:11, color:MID, opacity:0.75, textDecoration:"line-through", display:"block", lineHeight:1.3 }}>{fmt(antes)}</span>
-                            )}
-                            <span style={{ color:GT, fontWeight:700, fontSize:14 }}>{fmt(linea?.lineTotal ?? 0)}</span>
-                          </div>
-                        );
-                      })()}
-                    </div>
-                  </div>
-                  <button onClick={() => removeFromCart(idx)} style={{ background:"none", border:"none", color:MID, cursor:"pointer", fontSize:18, alignSelf:"flex-start", transition:"color 0.2s" }}
-                    onMouseEnter={e => (e.currentTarget.style.color=T)}
-                    onMouseLeave={e => (e.currentTarget.style.color=MID)}>×</button>
-                </div>
-                );
-              })
-            }
-          </div>
-          {cartItems.length > 0 && (
-            <div style={{ padding:"14px 22px 28px", borderTop:`1px solid ${borderFaint}` }}>
-              {/* El ahorro lo sumó el motor. Sin esta fila el comprador veía el
-                  total ya descontado pero sin ninguna señal de que la promo entró. */}
-              {cartPromoSavings > 0.01 && (
-                <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
-                  <span style={{ fontSize:12, color:"#16a34a", fontWeight:600 }}>Promoción aplicada</span>
-                  <span style={{ fontSize:12, color:"#16a34a", fontWeight:600 }}>-{fmt(cartPromoSavings)}</span>
-                </div>
-              )}
-              <div style={{ display:"flex", justifyContent:"space-between", marginBottom:20 }}>
-                <span style={{ fontSize:13, opacity:0.6, color:T }}>Total</span>
-                <span style={{ fontSize:20, fontWeight:700, color:GT }}>{fmt(cartTotal)}</span>
-              </div>
-              <button onClick={isOwner ? undefined : openCheckout} disabled={isOwner} title={isOwner ? "No podés comprar en tu propia tienda" : undefined}
-                style={{ width:"100%", background: isOwner ? "rgba(128,128,128,0.15)" : G, color: isOwner ? "rgba(128,128,128,0.5)" : accentDark?"#000":"#fff", border:"none", padding:"15px", fontSize:11, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor: isOwner ? "not-allowed" : "pointer", marginBottom:10 }}>
-                {isOwner ? "No disponible para el dueño" : "Finalizar compra"}
-              </button>
-              <button onClick={() => setCartOpen(false)}
-                style={{ width:"100%", background:"transparent", color:T, border:`1px solid ${border}`, padding:"11px", fontSize:11, letterSpacing:2, textTransform:"uppercase", cursor:"pointer" }}>
-                Seguir comprando
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
+      {/* ── CARRITO Y CHECKOUT ─────────────────────────────────────────
+          Los mismos componentes que usan los diez templates, no una copia.
+          Acá había 315 líneas escritas a mano que dibujaban lo mismo a partir del
+          MISMO `useCartLogic`, así que no aportaban nada propio: sólo se iban
+          quedando atrás cada vez que se le agregaba algo al compartido. Se habían
+          quedado atrás en dos cosas concretas, las dos invisibles hasta que un
+          comprador se choca con ellas:
 
-      {/* ── CHECKOUT ───────────────────────────────────────────────────── */}
-      {checkoutOpen && (
-        <div style={{ position:"fixed", inset:0, zIndex:300, display:"flex", alignItems:"flex-start", justifyContent:"flex-end" }}>
-          <div onClick={() => setCheckoutOpen(false)} style={{ position:"absolute", inset:0, background:"rgba(0,0,0,0.65)", backdropFilter:"blur(6px)" }}/>
-          <div style={{ position:"relative", width:480, maxWidth:"100vw", height:"100vh", background:dark?"#0e0e0e":BG, display:"flex", flexDirection:"column", overflowY:"auto", borderLeft:`1px solid ${border}` }}>
-            <div style={{ padding:"22px 26px 14px", borderBottom:`1px solid ${borderFaint}`, display:"flex", justifyContent:"space-between", alignItems:"center", flexShrink:0 }}>
-              <p style={{ fontFamily:serif, fontSize:20, margin:0, color:T }}>Checkout</p>
-              <button onClick={() => setCheckoutOpen(false)} style={{ background:"none", border:"none", color:T, fontSize:24, cursor:"pointer", lineHeight:1 }}>×</button>
-            </div>
+            · El aviso de envío gratis ("Agregá $X más y el envío es gratis") sólo
+              aparecía en el checkout. En el carrito, que es donde la persona
+              decide si sigue comprando, no estaba.
+            · Los mínimos de venta mayorista no se avisaban en ningún lado. El
+              comprador cargaba el carrito, iba al checkout y el pedido le
+              rebotaba sin que nada le hubiera dicho antes que faltaba mínimo.
 
-            {checkoutStatus === "done" ? (
-              <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:48, textAlign:"center" }}>
-                <div style={{ width:60, height:60, borderRadius:"50%", border:`2px solid ${G}`, display:"flex", alignItems:"center", justifyContent:"center", marginBottom:22 }}>
-                  <svg width={26} height={26} viewBox="0 0 24 24" fill="none" stroke={G} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                </div>
-                <p style={{ fontFamily:serif, fontSize:22, color:T, marginBottom:10 }}>¡Pedido recibido!</p>
-                <p style={{ fontSize:13, opacity:0.5, lineHeight:1.8, marginBottom:28 }}>Te contactamos a la brevedad para confirmar el envío o retiro.</p>
-                <button onClick={() => { setCheckoutOpen(false); }}
-                  style={{ background:G, color:accentDark?"#000":"#fff", border:"none", padding:"13px 32px", fontSize:11, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor:"pointer" }}>
-                  Seguir comprando
-                </button>
-              </div>
-            ) : (
-              <form onSubmit={handlePlaceOrder} style={{ flex:1, display:"flex", flexDirection:"column" }}>
-                <div style={{ flex:1, overflowY:"auto", padding:"22px 26px" }}>
-                  {/* Resumen */}
-                  <div style={{ marginBottom:24 }}>
-                    {cartItems.map((item, idx) => (
-                      <div key={idx} style={{ display:"flex", gap:12, padding:"10px 0", borderBottom:`1px solid ${borderFaint}` }}>
-                        {item.product.images[0] && <FadeImage src={item.product.images[0]} alt="" width={52} height={70} style={{ objectFit:"cover", flexShrink:0 }} />}
-                        <div style={{ flex:1 }}>
-                          <p style={{ fontSize:13, margin:"0 0 2px", fontWeight:500, color:T }}>{item.product.name}</p>
-                          <p style={{ fontSize:11, opacity:0.4, margin:"0 0 4px" }}>{[item.color, item.size && `Talle ${item.size}`].filter(Boolean).join(" · ")}</p>
-                          {(() => {
-                            // El unitario SIN promo (lo que la línea valdría sin ella),
-                            // que es lo que se detalla abajo promo por promo. Antes era
-                            // `product.price`, que además se saltea el precio de la
-                            // variante, el mayorista y los escalones por cantidad.
-                            const linea = pricedLines[idx];
-                            const base = linea ? (linea.lineTotal + linea.savings) / item.qty : item.product.price;
-                            return <p style={{ fontSize:13, color:GT, fontWeight:700, margin:0 }}>{fmt(base)} × {item.qty}</p>;
-                          })()}
-                          {pricedLines[idx]?.promo && (
-                            <p style={{ fontSize:11, margin:"4px 0 0", color:"#16a34a", fontWeight:600 }}>
-                              {pricedLines[idx].promo!.name
-                                ? `${pricedLines[idx].promo!.name} · ${pricedLines[idx].promo!.label}`
-                                : pricedLines[idx].promo!.label}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Datos comprador */}
-                  <p style={{ fontSize:12, fontWeight:700, color:T, marginBottom:12, letterSpacing:1, textTransform:"uppercase" }}>Tus datos</p>
-                  {([ ["nombre","Nombre y apellido","text"], ["email","Email","email"], ["telefono","Teléfono","tel"], ["direccion","Dirección","text"] ] as const).map(([field, ph, type]) => (
-                    <input key={field} required type={type} placeholder={ph}
-                      value={buyerForm[field]} onChange={e => setBuyerForm((f: typeof buyerForm) => ({...f, [field]:e.target.value}))}
-                      style={{ display:"block", width:"100%", marginBottom:8, background:inputBg, border:`1px solid ${inputBorder}`, color:T, padding:"10px 13px", fontSize:13, outline:"none", boxSizing:"border-box" as const }}
-                      onFocus={e => (e.target.style.borderColor=G)} onBlur={e => (e.target.style.borderColor=inputBorder)}/>
-                  ))}
-                  <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginBottom:8 }}>
-                    {([ ["ciudad","Ciudad"], ["provincia","Provincia"] ] as const).map(([field, ph]) => (
-                      <input key={field} required placeholder={ph}
-                        value={buyerForm[field]} onChange={e => setBuyerForm((f: typeof buyerForm) => ({...f, [field]:e.target.value}))}
-                        style={{ background:inputBg, border:`1px solid ${inputBorder}`, color:T, padding:"10px 13px", fontSize:13, outline:"none", boxSizing:"border-box" as const }}
-                        onFocus={e => (e.target.style.borderColor=G)} onBlur={e => (e.target.style.borderColor=inputBorder)}/>
-                    ))}
-                  </div>
-                  <input placeholder="Código postal" value={buyerForm.cp} onChange={e => setBuyerForm((f: typeof buyerForm) => ({...f, cp:e.target.value}))}
-                    style={{ display:"block", width:"100%", marginBottom:8, background:inputBg, border:`1px solid ${inputBorder}`, color:T, padding:"10px 13px", fontSize:13, outline:"none", boxSizing:"border-box" as const }}
-                    onFocus={e => (e.target.style.borderColor=G)} onBlur={e => (e.target.style.borderColor=inputBorder)}/>
-                  <label style={{ display:"flex", alignItems:"center", gap:8, fontSize:12, opacity:0.5, cursor:"pointer", marginBottom:24 }}>
-                    <input type="checkbox" checked={rememberData} onChange={e => setRememberData(e.target.checked)} style={{ accentColor:G }}/>
-                    Recordar mis datos
-                  </label>
-
-                  {/* Envío */}
-                  <p style={{ fontSize:12, fontWeight:700, color:T, marginBottom:10, letterSpacing:1, textTransform:"uppercase" }}>Envío</p>
-                  <div style={{ display:"flex", flexDirection:"column", gap:6, marginBottom:22 }}>
-                    {ENVIO_OPTIONS.map(opt => (
-                      <label key={opt.id} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"11px 14px", border:`1px solid ${envioId===opt.id ? G : border}`, cursor:"pointer" }}>
-                        <span style={{ display:"flex", alignItems:"center", gap:10 }}>
-                          <input type="radio" name="envio" value={opt.id} checked={envioId===opt.id} onChange={() => setEnvioId(opt.id)} style={{ accentColor:G }}/>
-                          <span style={{ fontSize:13, color:T }}>{opt.label}</span>
-                        </span>
-                        <span style={{ fontSize:13, fontWeight:700, color: opt.price===0?G:T }}>{opt.price===0?"Gratis":fmt(opt.price)}</span>
-                      </label>
-                    ))}
-                  </div>
-
-                  {/* Pago */}
-                  <p style={{ fontSize:12, fontWeight:700, color:T, marginBottom:10, letterSpacing:1, textTransform:"uppercase" }}>Pago</p>
-                  <div style={{ display:"flex", flexDirection:"column", gap:6, marginBottom:22 }}>
-                    {PAGO_OPTIONS.map(opt => (
-                      <label key={opt.id} style={{ display:"flex", alignItems:"center", gap:10, padding:"11px 14px", border:`1px solid ${pagoId===opt.id ? G : border}`, cursor:"pointer" }}>
-                        <input type="radio" name="pago" value={opt.id} checked={pagoId===opt.id} onChange={() => setPagoId(opt.id)} style={{ accentColor:G }}/>
-                        <span style={{ fontSize:13, color:T }}>{opt.label}</span>
-                      </label>
-                    ))}
-                  </div>
-
-                  {/* Notas */}
-                  <textarea placeholder="Notas para la tienda (opcional)" rows={3} value={notas} onChange={e => setNotas(e.target.value)}
-                    style={{ display:"block", width:"100%", marginBottom:18, background:inputBg, border:`1px solid ${inputBorder}`, color:T, padding:"10px 13px", fontSize:13, outline:"none", resize:"vertical", fontFamily:sans, boxSizing:"border-box" as const }}
-                    onFocus={e => (e.target.style.borderColor=G)} onBlur={e => (e.target.style.borderColor=inputBorder)}/>
-
-                  {/* Cupón — mismo criterio que el checkout compartido (CheckoutModal):
-                      plegado detrás de un link para no mandar al comprador a buscar
-                      códigos en Google en mitad de la compra, y visible aunque haya
-                      una promo que no combine, avisando por qué no entra. */}
-                  {cuponActivo ? (
-                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12, padding:"8px 12px", background:`${G}15`, border:`1px solid ${G}40` }}>
-                      <span style={{ fontSize:12, color:GT }}>Cupón {cuponActivo.code} aplicado</span>
-                      <button type="button" onClick={() => setAppliedCoupon(null)} aria-label="Quitar cupón" style={{ background:"none", border:"none", color:MID, cursor:"pointer" }}>✕</button>
-                    </div>
-                  ) : cuponBloqueado ? (
-                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", gap:10, marginBottom:12, padding:"8px 12px", background:"rgba(217,119,6,0.10)", border:"1px solid rgba(217,119,6,0.30)" }}>
-                      <span style={{ display:"flex", flexDirection:"column", lineHeight:1.3 }}>
-                        <span style={{ fontSize:12, color:"#d97706", fontWeight:700 }}>El cupón {cuponBloqueado.code} no se está aplicando</span>
-                        <span style={{ fontSize:10.5, color:MID }}>
-                          {motivoCupon === "minimo"
-                            ? `Es para compras desde ${fmt(cuponBloqueado.minOrderAmount)}.`
-                            : "La promoción de tu carrito no se combina con cupones."}
-                        </span>
-                      </span>
-                      <button type="button" onClick={() => setAppliedCoupon(null)} aria-label="Quitar cupón" style={{ background:"none", border:"none", color:MID, cursor:"pointer", flexShrink:0 }}>✕</button>
-                    </div>
-                  ) : !cuponAbierto ? (
-                    <button type="button" onClick={() => setCuponAbierto(true)}
-                      style={{ display:"block", background:"none", border:"none", padding:0, marginBottom:12, color:GT, fontSize:12, cursor:"pointer", textDecoration:"underline", textUnderlineOffset:3 }}>
-                      ¿Tenés un código de descuento?
-                    </button>
-                  ) : (
-                    <div style={{ marginBottom:12 }}>
-                      <div style={{ display:"flex" }}>
-                        <input placeholder="CÓDIGO DE CUPÓN" value={coupon} onChange={e => setCoupon(e.target.value)}
-                          style={{ flex:1, minWidth:0, background:inputBg, border:`1px solid ${inputBorder}`, borderRight:"none", color:T, padding:"10px 13px", fontSize:11, letterSpacing:2, outline:"none" }}
-                          onFocus={e => (e.target.style.borderColor=G)} onBlur={e => (e.target.style.borderColor=inputBorder)}/>
-                        <button type="button" onClick={handleApplyCoupon}
-                          style={{ background:"transparent", border:`1px solid ${inputBorder}`, color:GT, padding:"10px 16px", fontSize:11, letterSpacing:2, cursor:"pointer", flexShrink:0 }}>Aplicar</button>
-                      </div>
-                      {!couponsAllowed && (
-                        <p style={{ fontSize:11, opacity:0.75, margin:"8px 0 0", color:T }}>Tenés una promoción aplicada que no se combina con cupones.</p>
-                      )}
-                      {couponError && <p style={{ fontSize:11, color:"#f87171", margin:"8px 0 0" }}>{couponError}</p>}
-                    </div>
-                  )}
-
-                  {/* Envío gratis en vivo */}
-                  {freeShippingGoal ? (
-                    <div style={{ marginTop:16, padding:"10px 12px", background:"rgba(13,148,136,0.10)", border:"1px solid rgba(13,148,136,0.28)", borderRadius:8 }}>
-                      <p style={{ fontSize:12.5, margin:0, color:"#0d9488", fontWeight:700 }}>🚚 Agregá {fmt(freeShippingGoal.remaining)} más y el envío es gratis</p>
-                    </div>
-                  ) : freeShipping ? (
-                    <div style={{ marginTop:16, padding:"10px 12px", background:"rgba(22,163,74,0.10)", border:"1px solid rgba(22,163,74,0.28)", borderRadius:8 }}>
-                      <p style={{ fontSize:12.5, margin:0, color:"#16a34a", fontWeight:700 }}>🎉 ¡Tenés envío gratis!</p>
-                    </div>
-                  ) : null}
-
-                  {/* Totales */}
-                  <div style={{ borderTop:`1px solid ${borderFaint}`, paddingTop:18, marginTop:18 }}>
-                    <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
-                      <span style={{ fontSize:13, opacity:0.55, color:T }}>Subtotal</span>
-                      <span style={{ fontSize:13, opacity:0.55, color:T }}>{fmt(cartPromoSavings > 0.01 ? cartTotal + cartPromoSavings : cartTotal)}</span>
-                    </div>
-                    {/* Una fila POR promo con su nombre y cuánto aportó — la misma
-                        lista que sale después en el email del pedido, así que el
-                        resumen y el comprobante dicen lo mismo. Si no llegara el
-                        detalle, cae en una fila genérica: el ahorro siempre se ve. */}
-                    {cartPromoSavings > 0.01 && (
-                      appliedPromos?.length ? appliedPromos.map((p, i) => (
-                        <div key={i} style={{ display:"flex", justifyContent:"space-between", marginBottom:6, gap:12 }}>
-                          <span style={{ fontSize:13, color:"#16a34a", fontWeight:600 }}>{p.name ? `${p.name} · ${p.label}` : p.label}</span>
-                          <span style={{ fontSize:13, color:"#16a34a", fontWeight:600, whiteSpace:"nowrap" }}>-{fmt(p.savings)}</span>
-                        </div>
-                      )) : (
-                        <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
-                          <span style={{ fontSize:13, color:"#16a34a", fontWeight:600 }}>Promoción aplicada</span>
-                          <span style={{ fontSize:13, color:"#16a34a", fontWeight:600 }}>-{fmt(cartPromoSavings)}</span>
-                        </div>
-                      )
-                    )}
-                    {couponDiscount > 0 && (
-                      <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
-                        <span style={{ fontSize:13, color:GT }}>Descuento</span>
-                        <span style={{ fontSize:13, color:GT }}>-{fmt(couponDiscount)}</span>
-                      </div>
-                    )}
-                    <div style={{ display:"flex", justifyContent:"space-between", marginBottom:14 }}>
-                      <span style={{ fontSize:13, opacity:0.55, color:T }}>Envío</span>
-                      <span style={{ fontSize:13, opacity:0.55, color:T }}>{envioPrice===0?"Gratis":fmt(envioPrice)}</span>
-                    </div>
-                    <div style={{ display:"flex", justifyContent:"space-between" }}>
-                      <span style={{ fontSize:15, fontWeight:700, color:T }}>Total</span>
-                      <span style={{ fontSize:20, fontWeight:800, color:GT }}>{fmt(orderTotal)}</span>
-                    </div>
-                  </div>
-                  {checkoutError && <p style={{ fontSize:12, color:"#f87171", marginTop:10 }}>{checkoutError}</p>}
-                </div>
-
-                <div style={{ padding:"14px 26px 26px", borderTop:`1px solid ${borderFaint}`, flexShrink:0 }}>
-                  <button type="submit" disabled={checkoutStatus==="placing"}
-                    style={{ width:"100%", background:G, color:accentDark?"#000":"#fff", border:"none", padding:"15px", fontSize:11, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor:"pointer", opacity:checkoutStatus==="placing"?0.7:1 }}>
-                    {checkoutStatus==="placing" ? "Procesando..." : "Crear pedido"}
-                  </button>
-                </div>
-              </form>
-            )}
-          </div>
-        </div>
-      )}
+          El tema traduce la paleta de esta página a la del componente: en el
+          carrito `BG` es el fondo del panel, y en el checkout `S` es el fondo de
+          los campos. `modalInputBg` ya resuelve el caso de los templates donde el
+          fondo de campo coincide con la superficie y los inputs desaparecen. */}
+      <CartDrawer cart={cart} theme={cartTheme} isOwner={isOwner} isPreview={fromEditor} whatsapp={whatsapp ?? undefined} />
+      <CheckoutModal cart={cart} theme={cartTheme} isPreview={fromEditor} storeSlug={slug} />
 
       {/* ── TOAST ──────────────────────────────────────────────────────── */}
       {toastMsg && (

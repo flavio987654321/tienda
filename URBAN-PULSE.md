@@ -30,7 +30,16 @@ Los números de línea son los del día de la revisión: se corren a medida que 
 | ~~UP-20~~ | ~~En celular el destacado abre con la foto, sin decir qué es~~ | Media | **hecho** 28/07 |
 
 **Los veinte puntos están cerrados.** El UP-19 salió mirando el UP-18. Se probó con la foto abajo de
-los botones, a Flavio no le gustó y volvió a quedar sin foto — pero escrito, que es lo que faltaba. Del UP-9 en adelante ya no salieron de la auditoría original:
+los botones, a Flavio no le gustó y volvió a quedar sin foto — pero escrito, que es lo que faltaba.
+
+La página del catálogo (`/tienda/[slug]/productos`) se numera aparte, porque sirve a los diez
+templates y un arreglo ahí los toca a todos:
+
+| # | Qué pasa | Prioridad | Estado |
+|---|---|---|---|
+| ~~PL-1~~ | ~~El carrito y el checkout son una copia de 315 líneas, ya atrasada en dos cosas~~ | Alta | **hecho** 28/07 |
+| ~~PL-2~~ | ~~La paleta de Urban Pulse era azul y naranja, colores que el template no usa~~ | Alta | **hecho** 28/07 |
+| **PL-3** | **El modal no replica el de Urban Pulse: otro ancho, otras columnas, la compra no queda fija** | Media | **pendiente** | Del UP-9 en adelante ya no salieron de la auditoría original:
 los reportó Flavio mirando su propia tienda o los pidió él. UP-9 lo vio con una captura, y UP-10 fue
 un pedido suyo — traer las reseñas de verdad
 al bloque de opiniones. Lo que queda anotado no es de este template: está en
@@ -1581,3 +1590,84 @@ la pantalla. Una sola definición, y sólo una de las dos se dibuja por vez — 
 de `featuredLabel` aparecería duplicado en el editor.
 
 `tsc` y eslint limpios. `/tienda/tiendaapps` y `/plantillas/urban-pulse` en 200.
+
+---
+
+## La página del catálogo (`/tienda/[slug]/productos`)
+
+Flavio: *"vamos a la página de los productos, los modales, hay que replicarlos igual —mismo tamaño y
+todo— que el template general de Urban Pulse, y fijate si hay errores"*. Y después: *"el carrito, el
+checkout, fijate"*.
+
+Esta página es una sola pantalla que sirve a los diez templates, cambiando de paleta según el `?t=`.
+Por eso todo lo de acá se numera aparte (PL-n): un arreglo puede tocar a los diez a la vez.
+
+### PL-1 — El carrito y el checkout eran una copia escrita a mano ✅
+
+Los diez templates usan `CartDrawer` y `CheckoutModal` compartidos. Esta página tenía **315 líneas**
+que dibujaban lo mismo — y lo hacían **a partir del mismo `useCartLogic`**, así que no había nada
+propio ahí: sólo una copia que se iba quedando atrás cada vez que se le agregaba algo al compartido.
+
+**Ya se había quedado atrás en dos cosas**, las dos invisibles hasta que un comprador se las choca:
+
+| falta | dónde duele |
+|---|---|
+| El aviso de envío gratis (*"Agregá $X más y el envío es gratis"*) sólo estaba en el **checkout** | En el carrito, que es donde la persona decide si sigue comprando, no aparecía. El compartido lo muestra ahí. |
+| Los **mínimos de venta mayorista** no se avisaban en ningún lado | El comprador cargaba el carrito, iba al checkout y el pedido le rebotaba sin que nada le hubiera avisado antes. |
+
+Ahora usa los componentes compartidos. **No es que ahora se parezcan: son literalmente los mismos**,
+que es lo que pidió Flavio. Y no pueden volver a separarse.
+
+Se pasan de `useCartLogic` cuarenta campos menos: el objeto `cart` entero va a los dos componentes, y
+la página sólo desarma lo que dibuja ella. Neto: **−288 líneas**.
+
+El tema traduce la paleta de la página a la que esperan esos componentes. Ojo con los nombres, que no
+significan lo mismo de los dos lados: ahí `BG` es el fondo del **panel** (acá es la superficie, `S`) y
+`S` es el fondo de los **campos** de texto.
+
+### PL-2 — La paleta de Urban Pulse no era la de Urban Pulse ✅
+
+| | la página tenía | el template usa |
+|---|---|---|
+| fondo | `#0f172a` azul marino | `#f5f5f5` |
+| superficie | `#1e293b` azul | `#ffffff` |
+| texto | `#f8fafc` | `#0f0f0f` |
+| acento | `#f97316` naranja | el que eligió la dueña — de fábrica el neón `#d4ff00` |
+
+Ese azul con naranja **no sale de ningún lado de Urban Pulse**, que es negro, blanco y neón. Los otros
+nueve temas de esta página sí derivan del suyo (Chic Paris trae su verde salvia, Tech Nova su
+violeta); éste era el único inventado. Puestas una al lado de la otra parecían dos tiendas distintas.
+
+El catálogo del home va sobre `WHITE` y las tarjetas son blancas, así que esta página —que muestra
+exactamente lo mismo— va clara.
+
+De regalo, con la paleta corregida el `cartTheme` que se le pasa al carrito compartido queda **casi
+idéntico al que le pasa el template**: fondo blanco, campos `#f5f5f5`, texto `#0f0f0f`. O sea que el
+carrito de la página del catálogo y el del home ahora se ven igual, que era la mitad del pedido.
+
+El acento no se toca a mano en ningún lado: `getReadableAccentText` y `getReadableAccentFill` deciden
+solos si el neón se puede usar como texto o como relleno contra el fondo claro, y si no, caen al color
+de texto del tema — que es justo lo que hace el template.
+
+### PL-3 — El modal todavía NO se replicó ⏳
+
+Es lo primero que pidió Flavio y **es lo único que quedó sin hacer**. No es un olvido: es el pedazo
+más grande de los tres y hacerlo a medias es peor que no hacerlo.
+
+**El problema.** Esta página tiene **un** modal para los diez templates, con la paleta cambiada. El de
+Urban Pulse, desde UP-12, tiene otra **estructura**, no otro color:
+
+| | esta página | Urban Pulse |
+|---|---|---|
+| ancho | 980 | **1080** |
+| columnas | `48% / 1fr` | `minmax(0,1fr) / clamp(300px,36%,400px)` |
+| columna de compra | scrollea con el resto | **clavada** (`sticky`), el precio y el botón siempre a la vista |
+| miniaturas | en fila, debajo de la foto (56×74) | en tira **vertical** al costado (72×90) |
+
+**Cómo habría que hacerlo.** No copiando el layout una tercera vez. Urban Pulse ya lo tiene escrito y
+lo correcto es sacarlo a un componente compartido que usen el template y esta página — igual que se
+hizo con el carrito en PL-1, y por el mismo motivo. Lo que complica es que los dos lados le dan de
+comer distinto: uno vive adentro de `EditContext` y el otro no.
+
+Mientras tanto el modal de esta página sigue funcionando y ahora al menos **tiene la paleta correcta**
+(PL-2), así que ya no desentona con el resto.
