@@ -9,7 +9,7 @@
  * en realidad es un rango, y disponibilidad al revés).
  */
 
-import { construirProductSchema, construirBreadcrumbSchema, serializarSchema } from "./structured-data";
+import { construirProductSchema, construirBreadcrumbSchema, serializarSchema, aTextoPlano } from "./structured-data";
 
 const tienda = { nombre: "Tiendaapps", slug: "tiendaapps" };
 
@@ -139,6 +139,26 @@ chequear("no parte una palabra al medio",
   !recortar("Campera de abrigo negra para hombre talle grande importada", 30).includes("impo"));
 chequear("una palabra sola larguísima se corta seco igual",
   recortar("Camperadeabrigonegraparahombretallegrande", 20).length === 21);
+
+// ── 8. La descripción con HTML ───────────────────────────────────────────────
+// El bug que salió en producción: la descripción del producto es HTML del editor
+// de texto enriquecido y se publicaba con las etiquetas puestas.
+console.log("\n8) HTML de la descripción");
+const htmlReal = '<p style="text-align:center"><span style="color:#ef4444"><strong><u>Una remera básica es una prenda ligera</u></strong></span></p>';
+const plano = aTextoPlano(htmlReal);
+chequear("no queda ninguna etiqueta", !plano.includes("<") && !plano.includes(">"), plano);
+chequear("no quedan atributos sueltos", !plano.includes("text-align") && !plano.includes("#ef4444"), plano);
+chequear("conserva el texto", plano.includes("Una remera básica es una prenda ligera"), plano);
+chequear("no pega palabras de párrafos distintos",
+  aTextoPlano("<p>uno</p><p>dos</p>") === "uno dos", aTextoPlano("<p>uno</p><p>dos</p>"));
+chequear("no deja espacios de más", !plano.includes("  "), plano);
+chequear("traduce las entidades", aTextoPlano("Remera &amp; short &#39;nueva&#39;") === "Remera & short 'nueva'");
+
+// El caso que rompía el recorte: aplanar ANTES de cortar a 160.
+const recorteViejo = htmlReal.slice(0, 160);
+const recorteNuevo = aTextoPlano(htmlReal).slice(0, 160).trim();
+chequear("antes el recorte cortaba una etiqueta al medio", recorteViejo.includes("<span style="), recorteViejo.slice(-40));
+chequear("ahora el recorte es texto legible", !recorteNuevo.includes("<"), recorteNuevo);
 
 console.log(fallos === 0 ? "\nTodo bien.\n" : `\n${fallos} fallas.\n`);
 process.exit(fallos === 0 ? 0 : 1);

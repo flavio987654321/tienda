@@ -46,6 +46,36 @@ export type ResenasParaSchema = {
   total: number;
 };
 
+/**
+ * La descripción del producto se guarda como HTML (viene de un editor de texto
+ * enriquecido, con `<p>`, colores, negritas). Google —tanto acá como en la
+ * etiqueta `<meta>` y en el feed de Shopping— la quiere en TEXTO PLANO.
+ *
+ * Sin esto, la ficha publicaba literalmente:
+ *
+ *   "description": "<p style=\"text-align:center\"><span style=\"color:#ef4444\">…"
+ *
+ * y además el recorte a 160 caracteres cortaba a la mitad de una etiqueta.
+ *
+ * Esta función vivía sólo adentro del feed de Google Shopping, que era el único
+ * lugar donde alguien se había acordado. Ahora es compartida: los tres caminos
+ * que le mandan la descripción a Google usan el mismo.
+ */
+export function aTextoPlano(html: string): string {
+  return html
+    // Espacio y no vacío: "<p>uno</p><p>dos</p>" tiene que dar "uno dos" y no
+    // "unodos". El colapso de espacios de más abajo limpia lo que sobre.
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 const urlAbsoluta = (ruta: string) => `${SITE_URL}${ruta}`;
 
 /** Redondea a dos decimales sin arrastrar la basura del punto flotante. */

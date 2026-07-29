@@ -10,6 +10,7 @@ import {
   construirProductSchema,
   construirBreadcrumbSchema,
   serializarSchema,
+  aTextoPlano,
 } from "@/lib/structured-data";
 
 type ProductoPageProps = {
@@ -53,9 +54,13 @@ type ProductoConSeo = {
 const tituloParaGoogle = (p: ProductoConSeo) =>
   p.seoTitle?.trim() || `${p.name} — ${p.store.name}`;
 
+// La descripción del producto es HTML (editor de texto enriquecido), así que hay
+// que aplanarla ANTES de recortar: si no, entraba con las etiquetas puestas —
+// "<p style=..."— y encima el corte a 160 caracteres partía una etiqueta al medio.
+// La escrita a mano ya es texto plano, pero pasa por lo mismo por las dudas.
 const descripcionParaGoogle = (p: ProductoConSeo) =>
   p.seoDescription?.trim() ||
-  p.description?.slice(0, 160) ||
+  (p.description ? aTextoPlano(p.description).slice(0, 160).trim() : "") ||
   `Comprá ${p.name} en ${p.store.name}`;
 
 /** Promedio y total de reseñas PUBLICADAS del producto — el mismo cálculo que hace

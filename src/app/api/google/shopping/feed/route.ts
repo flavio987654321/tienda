@@ -4,6 +4,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { escapeXml, parseFirstImage } from "@/lib/metaFeed";
 import { getClientIp } from "@/lib/request-ip";
 import { SITE_URL } from "@/lib/site";
+import { aTextoPlano } from "@/lib/structured-data";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? SITE_URL;
 
@@ -13,18 +14,13 @@ const MAX_PRODUCTS_PER_STORE = 500;
 
 // La descripción se guarda como HTML sanitizado (editor de texto enriquecido),
 // pero Google la quiere en texto plano.
-function toPlainText(html: string): string {
-  return html
-    .replace(/<[^>]*>/g, " ")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/\s+/g, " ")
-    .trim();
-}
+//
+// La función se mudó a `lib/structured-data` y ahora es compartida: acá era el
+// único lugar que se acordaba de aplanarla, así que la ficha de producto —que le
+// manda la MISMA descripción a Google, por <meta> y por datos estructurados— la
+// publicaba con las etiquetas puestas. Dos copias del mismo criterio terminan
+// siempre igual: una se arregla y la otra no.
+const toPlainText = aTextoPlano;
 
 // GET /api/google/shopping/feed
 // Feed XML central de Google Shopping: junta los productos de TODAS las tiendas
