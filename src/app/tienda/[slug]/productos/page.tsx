@@ -1099,7 +1099,7 @@ function ProductosPageInner() {
             const onCardEnter = (e: React.MouseEvent<HTMLDivElement>) => {
               const el = e.currentTarget;
               if (tabStyle === "pill") { el.style.transform="translateY(-5px)"; el.style.boxShadow=`0 14px 32px ${dark?"rgba(0,0,0,0.3)":"rgba(44,34,24,0.14)"}`; }
-              else if (tabStyle === "brutalist") { el.style.borderColor=G; el.style.boxShadow=`4px 4px 0 ${G}`; }
+              else if (tabStyle === "brutalist") { el.style.borderColor=chipBg; el.style.boxShadow=`4px 4px 0 ${chipBg}`; }
               else if (tabStyle === "underline") { el.style.borderColor=T; el.style.transform="scale(1.015)"; }
               else { el.style.borderColor="rgba(201,168,76,0.4)"; }
             };
@@ -1176,7 +1176,7 @@ function ProductosPageInner() {
                     style={{ position:"absolute", bottom:10, right:10, background: dark ? "rgba(10,10,10,0.65)" : "rgba(255,255,255,0.9)", border:"none", borderRadius:"50%", width:32, height:32, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", transition:"transform 0.2s" }}
                     onMouseEnter={e => (e.currentTarget.style.transform="scale(1.1)")}
                     onMouseLeave={e => (e.currentTarget.style.transform="scale(1)")}>
-                    <svg width={14} height={14} viewBox="0 0 24 24" fill={isFav ? G : "none"} stroke={isFav ? G : MID} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                    <svg width={14} height={14} viewBox="0 0 24 24" fill={isFav ? chipBg : "none"} stroke={isFav ? chipBg : MID} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                       <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
                     </svg>
                   </button>
@@ -1239,7 +1239,7 @@ function ProductosPageInner() {
             if (n!==1 && n!==totalPages && Math.abs(n-page)>2) return null;
             return (
               <button key={n} onClick={() => { setPage(n); window.scrollTo({top:0,behavior:"smooth"}); }}
-                style={{ background: page===n?G:"transparent", color: page===n?(accentDark?"#000":"#fff"):T, border:`1px solid ${page===n?G:border}`, width:40, height:40, fontSize:13, fontWeight:700, cursor:"pointer", transition:"all 0.2s" }}>
+                style={{ background: page===n?chipBg:"transparent", color: page===n?chipText:T, border:`1px solid ${page===n?chipBg:border}`, width:40, height:40, fontSize:13, fontWeight:700, cursor:"pointer", transition:"all 0.2s" }}>
                 {n}
               </button>
             );
@@ -1290,7 +1290,7 @@ function ProductosPageInner() {
                     {subcats.map(sub => (
                       <button key={sub} onClick={() => changeCategory(cat, sub)}
                         style={{ textAlign:"left", background:"none", border:"none", padding:"5px 0", fontSize:11.5,
-                          color: activeSubcategory===sub ? G : MID, fontWeight: activeSubcategory===sub ? 700 : 400, cursor:"pointer" }}>
+                          color: activeSubcategory===sub ? GT : MID, fontWeight: activeSubcategory===sub ? 700 : 400, cursor:"pointer" }}>
                         {sub}
                       </button>
                     ))}
@@ -1418,9 +1418,9 @@ function ProductosPageInner() {
               return (
                 <button key={value} onClick={() => toggleAttrFilter(key, value)}
                   style={{
-                    background: isActive ? G : "transparent",
-                    color: isActive ? (accentDark ? "#000" : "#fff") : T,
-                    border: `1px solid ${isActive ? G : border}`,
+                    background: isActive ? chipBg : "transparent",
+                    color: isActive ? chipText : T,
+                    border: `1px solid ${isActive ? chipBg : border}`,
                     padding: "6px 14px", fontSize: 11, cursor: "pointer",
                     letterSpacing: 0.5, transition: "all 0.2s",
                   }}>
@@ -1451,13 +1451,13 @@ function ProductosPageInner() {
   .pr-range{position:absolute;top:0;left:0;width:100%;margin:0;background:none;pointer-events:none;-webkit-appearance:none;appearance:none}
   .pr-range::-webkit-slider-runnable-track{background:none}
   .pr-range::-moz-range-track{background:none}
-  .pr-range::-webkit-slider-thumb{-webkit-appearance:none;pointer-events:all;width:14px;height:14px;border-radius:50%;background:${G};border:2px solid ${BG};box-shadow:0 0 0 1px ${G};cursor:pointer;margin-top:0}
-  .pr-range::-moz-range-thumb{pointer-events:all;width:14px;height:14px;border-radius:50%;background:${G};border:2px solid ${BG};box-shadow:0 0 0 1px ${G};cursor:pointer}
+  .pr-range::-webkit-slider-thumb{-webkit-appearance:none;pointer-events:all;width:14px;height:14px;border-radius:50%;background:${chipBg};border:2px solid ${BG};box-shadow:0 0 0 1px ${chipBg};cursor:pointer;margin-top:0}
+  .pr-range::-moz-range-thumb{pointer-events:all;width:14px;height:14px;border-radius:50%;background:${chipBg};border:2px solid ${BG};box-shadow:0 0 0 1px ${chipBg};cursor:pointer}
   @media(hover:hover) and (pointer:fine){.pc-img:hover{transform:scale(1.05)}}.pc-img{transition:transform 0.5s ease}
   .pc-grid{display:grid;gap:16px;grid-template-columns:repeat(2,1fr);margin-bottom:56px}
   @media(min-width:560px){.pc-grid{gap:20px;grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}}
   @media(min-width:900px){.pc-grid{gap:24px}}
-  @media(hover:hover) and (pointer:fine){.cc-dropdown-item:hover{background:${G}1a !important}}
+  @media(hover:hover) and (pointer:fine){.cc-dropdown-item:hover{background:${chipBg}1a !important}}
 `}</style>
 
       {/* ── HEADER ─────────────────────────────────────────────────────── */}
@@ -1489,7 +1489,7 @@ function ProductosPageInner() {
           </div>
           <span style={{ fontFamily:serif, fontSize:20, fontWeight:700, letterSpacing:5, color:GT }}>{storeName}</span>
           <button onClick={() => setCartOpen(true)} style={{ position:"relative", background:"none", border:`1px solid ${border}`, color:T, width:44, height:44, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", transition:"border-color 0.2s" }}
-            onMouseEnter={e => (e.currentTarget.style.borderColor=G)}
+            onMouseEnter={e => (e.currentTarget.style.borderColor=chipBg)}
             onMouseLeave={e => (e.currentTarget.style.borderColor=border)}>
             <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
               {CART_ICON_OPTIONS[cartIconIdx]}
@@ -1518,7 +1518,7 @@ function ProductosPageInner() {
           // Estilos de toggle per-template
           const toggleBase = (active: boolean): React.CSSProperties =>
             tabStyle === "pill"
-              ? { background: active ? G : "rgba(44,34,24,0.06)", color: active ? (accentDark?"#000":"#fff") : T, border:`1px solid ${active ? G : "rgba(44,34,24,0.15)"}`, borderRadius:999, padding:"9px 18px", fontSize:12, fontWeight:600, cursor:"pointer", whiteSpace:"nowrap" as const, transition:"background 0.2s, border-color 0.2s" }
+              ? { background: active ? chipBg : "rgba(44,34,24,0.06)", color: active ? chipText : T, border:`1px solid ${active ? chipBg : "rgba(44,34,24,0.15)"}`, borderRadius:999, padding:"9px 18px", fontSize:12, fontWeight:600, cursor:"pointer", whiteSpace:"nowrap" as const, transition:"background 0.2s, border-color 0.2s" }
               : tabStyle === "underline"
               // El estilo "underline" no pinta fondo: el acento se usa como TEXTO,
               // así que va GT y no G crudo. Con G se volvía invisible cuando el
@@ -1528,8 +1528,8 @@ function ProductosPageInner() {
               // tema recién cuando ni como línea se distingue.
               ? { background:"none", color: active ? GT : T, border:"none", borderBottom:`2px solid ${active ? chipBg : "transparent"}`, padding:"9px 4px", fontSize:12, fontWeight:600, cursor:"pointer", whiteSpace:"nowrap" as const, transition:"border-color 0.2s, color 0.2s" }
               : tabStyle === "brutalist"
-              ? { background: active ? G : "transparent", color: active ? (accentDark?"#000":"#fff") : T, border:`2px solid ${active ? G : border}`, boxShadow: active ? `3px 3px 0 ${G}` : "none", padding:"9px 16px", fontSize:12, fontWeight:800, cursor:"pointer", whiteSpace:"nowrap" as const, transition:"border-color 0.15s, box-shadow 0.15s" }
-              : { background: active ? G : "none", color: active ? (accentDark?"#000":"#fff") : T, border:`1px solid ${active ? G : border}`, padding:"10px 16px", fontSize:12, fontWeight:600, cursor:"pointer", whiteSpace:"nowrap" as const };
+              ? { background: active ? chipBg : "transparent", color: active ? chipText : T, border:`2px solid ${active ? chipBg : border}`, boxShadow: active ? `3px 3px 0 ${chipBg}` : "none", padding:"9px 16px", fontSize:12, fontWeight:800, cursor:"pointer", whiteSpace:"nowrap" as const, transition:"border-color 0.15s, box-shadow 0.15s" }
+              : { background: active ? chipBg : "none", color: active ? chipText : T, border:`1px solid ${active ? chipBg : border}`, padding:"10px 16px", fontSize:12, fontWeight:600, cursor:"pointer", whiteSpace:"nowrap" as const };
           // Estilos de input/select per-template
           /* Lo que hay que sacarle a los filtros rápidos para que entren en media
              columna. El `whiteSpace:"nowrap"` está puesto para que en escritorio no
@@ -1638,7 +1638,7 @@ function ProductosPageInner() {
                     placeholder="Buscar..."
                     aria-label="Buscar productos"
                     style={ isMobile ? { ...inputStyle, width:"100%" } : inputStyle }
-                    onFocus={e => (e.target.style.borderColor=G)}
+                    onFocus={e => (e.target.style.borderColor=chipBg)}
                     onBlur={e => (e.target.style.borderColor=border)}
                   />
                   <svg style={{ position:"absolute", left:tabStyle==="underline"?8:13, top:"50%", transform:"translateY(-50%)", opacity:0.35, pointerEvents:"none" }} width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
@@ -1690,8 +1690,8 @@ function ProductosPageInner() {
                   const img = cat !== "Todos" ? products.find(p => p.category === cat && p.images[0])?.images[0] : null;
                   return (
                     <button key={cat} onClick={() => changeCategory(cat)}
-                      style={{ position:"relative", flexShrink:0, width:118, height:140, border:`1px solid ${isActive ? G : border}`,
-                        borderRadius: cardRadius > 0 ? cardRadius + 4 : 14, overflow:"hidden", cursor:"pointer", padding:0, background: img ? "#00000010" : (isActive ? G : "transparent") }}>
+                      style={{ position:"relative", flexShrink:0, width:118, height:140, border:`1px solid ${isActive ? chipBg : border}`,
+                        borderRadius: cardRadius > 0 ? cardRadius + 4 : 14, overflow:"hidden", cursor:"pointer", padding:0, background: img ? "#00000010" : (isActive ? chipBg : "transparent") }}>
                       {img && (
                         <>
                           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -1713,14 +1713,14 @@ function ProductosPageInner() {
             {activeCategory !== "Todos" && (subcategoriesFor[activeCategory] || []).length > 0 && (
               <div style={{ display:"flex", flexWrap:"wrap", gap:8, marginBottom:28 }}>
                 <button onClick={() => changeCategory(activeCategory)}
-                  style={{ background: !activeSubcategory ? G : "transparent", color: !activeSubcategory ? (accentDark?"#000":"#fff") : T,
-                    border:`1px solid ${!activeSubcategory ? G : border}`, padding:"7px 16px", fontSize:11, letterSpacing:1, textTransform:"uppercase", cursor:"pointer" }}>
+                  style={{ background: !activeSubcategory ? chipBg : "transparent", color: !activeSubcategory ? chipText : T,
+                    border:`1px solid ${!activeSubcategory ? chipBg : border}`, padding:"7px 16px", fontSize:11, letterSpacing:1, textTransform:"uppercase", cursor:"pointer" }}>
                   Todos
                 </button>
                 {(subcategoriesFor[activeCategory] || []).map(sub => (
                   <button key={sub} onClick={() => changeCategory(activeCategory, sub)}
-                    style={{ background: activeSubcategory===sub ? G : "transparent", color: activeSubcategory===sub ? (accentDark?"#000":"#fff") : T,
-                      border:`1px solid ${activeSubcategory===sub ? G : border}`, padding:"7px 16px", fontSize:11, letterSpacing:1, textTransform:"uppercase", cursor:"pointer" }}>
+                    style={{ background: activeSubcategory===sub ? chipBg : "transparent", color: activeSubcategory===sub ? chipText : T,
+                      border:`1px solid ${activeSubcategory===sub ? chipBg : border}`, padding:"7px 16px", fontSize:11, letterSpacing:1, textTransform:"uppercase", cursor:"pointer" }}>
                     {sub}
                   </button>
                 ))}
@@ -1877,20 +1877,20 @@ function ProductosPageInner() {
                   const isActive = activeCategory === cat;
                   // Wrapper del tab per-template
                   const tabWrapperStyle: React.CSSProperties = tabStyle === "pill"
-                    ? { display:"flex", alignItems:"stretch", border:`1px solid ${isActive ? G : border}`, borderRadius:999, overflow:"hidden", transition:"border-color 0.2s" }
+                    ? { display:"flex", alignItems:"stretch", border:`1px solid ${isActive ? chipBg : border}`, borderRadius:999, overflow:"hidden", transition:"border-color 0.2s" }
                     : tabStyle === "underline"
                     ? { display:"flex", alignItems:"stretch", border:"none", borderBottom:`2px solid ${isActive ? chipBg : "transparent"}`, paddingBottom:8, transition:"border-color 0.2s" }
                     : tabStyle === "brutalist"
-                    ? { display:"flex", alignItems:"stretch", border:`2px solid ${isActive ? G : border}`, boxShadow: isActive ? `3px 3px 0 ${G}` : "none", transition:"border-color 0.15s, box-shadow 0.15s" }
-                    : { display:"flex", alignItems:"stretch", border:`1px solid ${isActive ? G : border}`, transition:"border-color 0.2s" };
+                    ? { display:"flex", alignItems:"stretch", border:`2px solid ${isActive ? chipBg : border}`, boxShadow: isActive ? `3px 3px 0 ${chipBg}` : "none", transition:"border-color 0.15s, box-shadow 0.15s" }
+                    : { display:"flex", alignItems:"stretch", border:`1px solid ${isActive ? chipBg : border}`, transition:"border-color 0.2s" };
                   // Botón principal del tab per-template
                   const tabBtnStyle: React.CSSProperties = tabStyle === "pill"
-                    ? { background: isActive ? G : "transparent", color: isActive ? (accentDark?"#000":"#fff") : T, border:"none", padding:"8px 18px", fontSize:11, letterSpacing:1, cursor:"pointer", fontWeight:600, textTransform:"uppercase", whiteSpace:"nowrap" as const, transition:"background 0.2s, color 0.2s" }
+                    ? { background: isActive ? chipBg : "transparent", color: isActive ? (accentDark?"#000":"#fff") : T, border:"none", padding:"8px 18px", fontSize:11, letterSpacing:1, cursor:"pointer", fontWeight:600, textTransform:"uppercase", whiteSpace:"nowrap" as const, transition:"background 0.2s, color 0.2s" }
                     : tabStyle === "underline"
                     ? { background:"none", color: isActive ? GT : T, border:"none", padding:"8px 0", fontSize:12, letterSpacing:2, cursor:"pointer", fontWeight: isActive ? 700 : 400, textTransform:"uppercase", whiteSpace:"nowrap" as const, transition:"color 0.2s, font-weight 0.15s", fontFamily:serif }
                     : tabStyle === "brutalist"
-                    ? { background: isActive ? G : "transparent", color: isActive ? (accentDark?"#000":"#fff") : T, border:"none", padding:"9px 18px", fontSize:11, fontWeight:900, letterSpacing:1, cursor:"pointer", textTransform:"uppercase", whiteSpace:"nowrap" as const }
-                    : { background: isActive ? G : "transparent", color: isActive ? (accentDark?"#000":"#fff") : T, border:"none", padding:"9px 20px", fontSize:11, letterSpacing:2, cursor:"pointer", fontWeight:600, textTransform:"uppercase", whiteSpace:"nowrap" as const, fontFamily:serif, transition:"all 0.2s" };
+                    ? { background: isActive ? chipBg : "transparent", color: isActive ? (accentDark?"#000":"#fff") : T, border:"none", padding:"9px 18px", fontSize:11, fontWeight:900, letterSpacing:1, cursor:"pointer", textTransform:"uppercase", whiteSpace:"nowrap" as const }
+                    : { background: isActive ? chipBg : "transparent", color: isActive ? (accentDark?"#000":"#fff") : T, border:"none", padding:"9px 20px", fontSize:11, letterSpacing:2, cursor:"pointer", fontWeight:600, textTransform:"uppercase", whiteSpace:"nowrap" as const, fontFamily:serif, transition:"all 0.2s" };
                   return (
                     <div key={cat} ref={(el) => { catTabRefs.current[cat] = el; }} style={{ position:"relative", flexShrink:0 }}>
                       <div style={tabWrapperStyle}>
@@ -1903,7 +1903,7 @@ function ProductosPageInner() {
                               setHoveredCatMenu(cat);
                             }}
                             aria-label={`Subcategorías de ${cat}`}
-                            style={{ background: isActive ? G : "transparent", color: isActive ? (accentDark?"#000":"#fff") : T, border:"none", borderLeft: tabStyle==="underline" ? "none" : `1px solid ${isActive ? (dark?"rgba(0,0,0,0.25)":"rgba(255,255,255,0.3)") : border}`, padding: tabStyle==="underline" ? "8px 0 8px 6px" : "9px 12px", fontSize:13, fontWeight:700, lineHeight:1, cursor:"pointer", display:"flex", alignItems:"center" }}>
+                            style={{ background: isActive ? chipBg : "transparent", color: isActive ? (accentDark?"#000":"#fff") : T, border:"none", borderLeft: tabStyle==="underline" ? "none" : `1px solid ${isActive ? (dark?"rgba(0,0,0,0.25)":"rgba(255,255,255,0.3)") : border}`, padding: tabStyle==="underline" ? "8px 0 8px 6px" : "9px 12px", fontSize:13, fontWeight:700, lineHeight:1, cursor:"pointer", display:"flex", alignItems:"center" }}>
                             {hoveredCatMenu === cat ? "▴" : "▾"}
                           </button>
                         )}
@@ -1932,7 +1932,7 @@ function ProductosPageInner() {
                 <div style={{ borderTop:`1px solid ${borderFaint}`, margin:"2px 0" }}/>
                 {(subcategoriesFor[hoveredCatMenu] || []).map(sub => (
                   <button key={sub} onClick={() => { changeCategory(hoveredCatMenu, sub); setHoveredCatMenu(null); }}
-                    style={{ display:"block", width:"100%", background: activeSubcategory===sub ? `${G}18` : "none", border:"none", color: activeSubcategory===sub ? G : T, padding:"8px 16px 8px 24px", fontSize:11, textAlign:"left", cursor:"pointer", letterSpacing:1, textTransform:"uppercase", whiteSpace:"nowrap", opacity: activeSubcategory===sub ? 1 : 0.7 }}>
+                    style={{ display:"block", width:"100%", background: activeSubcategory===sub ? `${chipBg}18` : "none", border:"none", color: activeSubcategory===sub ? GT : T, padding:"8px 16px 8px 24px", fontSize:11, textAlign:"left", cursor:"pointer", letterSpacing:1, textTransform:"uppercase", whiteSpace:"nowrap", opacity: activeSubcategory===sub ? 1 : 0.7 }}>
                     {sub}
                   </button>
                 ))}
@@ -2549,12 +2549,12 @@ function ProductosPageInner() {
                 <input value={reviewForm.reviewer} onChange={e => !fromEditor && setReviewForm(p => ({ ...p, reviewer: e.target.value }))}
                   placeholder="Tu nombre" readOnly={fromEditor}
                   style={{ background:modalInputBg, border:`1px solid ${inputBorder}`, color:T, padding:"10px 12px", fontSize:13, outline:"none" }}
-                  onFocus={e => { if (!fromEditor) e.target.style.borderColor=G; }} onBlur={e => (e.target.style.borderColor=inputBorder)} />
+                  onFocus={e => { if (!fromEditor) e.target.style.borderColor=chipBg; }} onBlur={e => (e.target.style.borderColor=inputBorder)} />
                 <div>
                   <input value={reviewForm.email} onChange={e => !fromEditor && setReviewForm(p => ({ ...p, email: e.target.value }))}
                     placeholder="Tu email (opcional — verifica tu compra)" type="email" readOnly={fromEditor} autoComplete="email"
                     style={{ width:"100%", boxSizing:"border-box", background:modalInputBg, border:`1px solid ${inputBorder}`, color:T, padding:"10px 12px", fontSize:13, outline:"none" }}
-                    onFocus={e => { if (!fromEditor) e.target.style.borderColor=G; }} onBlur={e => (e.target.style.borderColor=inputBorder)} />
+                    onFocus={e => { if (!fromEditor) e.target.style.borderColor=chipBg; }} onBlur={e => (e.target.style.borderColor=inputBorder)} />
                   <p style={{ fontSize:10.5, color:MID, margin:"4px 0 0", lineHeight:1.4 }}>
                     Si compraste acá, tu reseña mostrará &ldquo;✓ Compra verificada&rdquo;. El email no se publica.
                   </p>
@@ -2569,7 +2569,7 @@ function ProductosPageInner() {
                 <textarea value={reviewForm.comment} onChange={e => !fromEditor && setReviewForm(p => ({ ...p, comment: e.target.value }))}
                   placeholder="Comentario (opcional)" rows={3} readOnly={fromEditor}
                   style={{ background:modalInputBg, border:`1px solid ${inputBorder}`, color:T, padding:"10px 12px", fontSize:13, resize:"none", outline:"none", fontFamily:sans }}
-                  onFocus={e => { if (!fromEditor) e.target.style.borderColor=G; }} onBlur={e => (e.target.style.borderColor=inputBorder)} />
+                  onFocus={e => { if (!fromEditor) e.target.style.borderColor=chipBg; }} onBlur={e => (e.target.style.borderColor=inputBorder)} />
                 {!fromEditor && reviewCaptcha.widget}
                 <button type="submit" disabled={fromEditor || reviewSubmitting || !reviewForm.reviewer.trim() || !reviewCaptcha.ready}
                   style={{ background: fromEditor || reviewSubmitting || !reviewForm.reviewer.trim() ? `${G}40` : G, color:accentDark?"#000":"#fff", border:"none", padding:"13px", fontSize:11, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor: fromEditor || reviewSubmitting || !reviewForm.reviewer.trim() ? "not-allowed" : "pointer" }}>

@@ -49,6 +49,7 @@ templates y un arreglo ahí los toca a todos:
 | ~~PL-6~~ | ~~A 768 el catálogo muestra un producto por fila al lado de la barra de filtros~~ | Alta | **hecho** 28/07 |
 | ~~PL-7~~ | ~~En pantalla chica los filtros tienen tres anchos distintos, y el buscador va tercero~~ | Media | **hecho** 28/07 |
 | ~~PL-8~~ | ~~"Finalizar compra" y "Confirmar pedido" se pintan con el acento crudo: invisibles con un acento claro, en los diez templates~~ | Alta | **hecho** 28/07 |
+| ~~PL-9~~ | ~~El acento crudo en veintiún lugares más del catálogo: foco, paginación, filtros activos, rango de precio~~ | Alta | **hecho** 29/07 |
 
 Del UP-9 en adelante ya no salieron de la auditoría original:
 los reportó Flavio mirando su propia tienda o los pidió él. UP-9 lo vio con una captura, y UP-10 fue
@@ -2039,3 +2040,35 @@ Verificado en los cinco casos, y **sólo cambia en el que importa**:
 **Lo que no está verificado, y hay que decirlo:** la compra no se probó de punta a punta con un pedido
 real. Todo lo de arriba sale de leer el código y de simular las cuentas. Un pedido de prueba de verdad
 —agregar, finalizar, confirmar— es la única forma de cerrarlo, y eso escribe en la base de producción.
+
+### PL-9 — El acento crudo en el catálogo, veintiuna veces más ✅
+
+Cuarta pasada: la página de productos entera. Y volvió a aparecer lo mismo, pero **mucho más
+extendido de lo que se había arreglado en PL-4**. Ahí se corrigieron nueve `background: G`; el barrido
+completo encontró **veintiuno** entre relleno, borde, sombra, ícono y tinte:
+
+| dónde | qué pasa con un acento claro |
+|---|---|
+| El número de la página actual en la paginación | No se sabe en qué página estás |
+| Los filtros rápidos activos (los tres estilos) | No se ve cuál está aplicado |
+| Los chips de subcategoría elegidos | Ídem |
+| Los chips de filtro por atributo activos | Ídem |
+| El ítem de subcategoría elegido en la barra lateral | Ídem |
+| **El borde de foco de los campos** (4 sitios) | Al tabular no se ve dónde estás parado |
+| Las manijas del rango de precio | Manijas invisibles: el control no se puede usar |
+| El corazón de favorito marcado | No se distingue de uno sin marcar |
+| El borde y la sombra de la tarjeta al pasarle por encima | Sin respuesta visual |
+| El tinte del hover en el desplegable de categorías | Ídem |
+| La tarjeta de categoría elegida | Ídem |
+
+Los veintiuno pasan por `chipBg`/`chipText` cuando son **superficie** (relleno, borde, sombra, ícono) y
+por `GT` cuando son **texto**. Después del barrido no queda ni un uso crudo de `G` en el archivo.
+
+**La lección, que ya es la tercera vez:** el acento no se dibuja nunca directo. `getReadableAccentText`
+si va de texto, `getReadableAccentFill` si va de superficie. Apareció en el template (UP-3, UP-11,
+UP-21), en el catálogo (PL-4, PL-9) y en los componentes compartidos (PL-8). **No es un bug: es una
+regla que no estaba escrita.**
+
+### Estado del build
+
+`npx next build` completo, sin errores. `tsc` y eslint limpios en todo el proyecto.
