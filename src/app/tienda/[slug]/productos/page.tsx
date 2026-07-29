@@ -2622,9 +2622,14 @@ function ProductosPageInner() {
       <CartDrawer cart={cart} theme={cartTheme} isOwner={isOwner} isPreview={fromEditor} whatsapp={whatsapp ?? undefined} />
       <CheckoutModal cart={cart} theme={cartTheme} isPreview={fromEditor} storeSlug={slug} />
 
-      {/* ── TOAST ──────────────────────────────────────────────────────── */}
+      {/* ── TOAST ──────────────────────────────────────────────────────────
+          `maxWidth` + `textAlign`, no `whiteSpace:"nowrap"`. Uno de los mensajes
+          es de largo variable —`${nombre} agregado al carrito`— y con un nombre
+          largo pasaba los 460px: centrado con translateX(-50%), se iba de
+          pantalla por los DOS lados en un celular de 360. Es el mismo par que ya
+          usan los diez templates; esta pantalla era la única afuera. */}
       {toastMsg && (
-        <div style={{ position:"fixed", bottom:28, left:"50%", transform:"translateX(-50%)", background:chipBg, color:chipText, padding:"12px 24px", fontSize:13, fontWeight:700, zIndex:500, boxShadow:"0 4px 20px rgba(0,0,0,0.3)", whiteSpace:"nowrap" }}>
+        <div style={{ position:"fixed", bottom:28, left:"50%", transform:"translateX(-50%)", background:chipBg, color:chipText, padding:"12px 24px", fontSize:13, fontWeight:700, zIndex:500, boxShadow:"0 4px 20px rgba(0,0,0,0.3)", maxWidth:"calc(100vw - 32px)", textAlign:"center" }}>
           {toastMsg}
         </div>
       )}

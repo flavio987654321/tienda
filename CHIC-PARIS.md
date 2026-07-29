@@ -325,3 +325,56 @@ y acá el ícono va pegado al texto, así que caía justo encima de las primeras
 movió a la izquierda, donde se mete en el aire que separa un beneficio del otro. (En Urban Pulse va a
 la derecha porque allá cada beneficio es un bloque con su propia esquina libre — la misma decisión no
 sirve para los dos.)
+
+---
+
+## Revisión posterior — el carrito compartido cambió DESPUÉS de cerrar este template
+
+Chic Paris se cerró el **28/07**. El carrito compartido se tocó el **28 y el 29**, o sea después. Como
+`ChicParis.tsx` usa `CartDrawer`, `CheckoutModal` y `useCartLogic` —los tres compartidos con los otros
+nueve templates—, había que confirmar que nada de eso lo hubiera roto. Se revisó punto por punto.
+
+**Los tres cambios de comportamiento le llegan, y le llegan bien.** Son agnósticos del template:
+
+| commit | qué hace | efecto en Chic Paris |
+|---|---|---|
+| `9d5047f` / `56a6c05` | la ficha abre en una pareja talle+color que tenga stock | mejora: antes podía abrir con el botón apagado |
+| `7f0e7ba` | el `+` no pasa del stock, y avisa | mejora, **y el aviso se ve** (ver abajo) |
+
+**El aviso se muestra.** `CartDrawer` no dibuja el `toastMsg` —lo dibuja cada template—, así que había
+que verificarlo acá: `ChicParis.tsx` lo tiene en `zIndex:99999` y el carrito va en `9700`, o sea que el
+aviso queda **por encima** del panel abierto. Se ve.
+
+**El arreglo del acento no le cambia ni un color.** `getReadableAccentFill` sólo reemplaza el acento si
+el contraste contra el fondo baja de 1.25. El acento de Chic Paris es `#5e7c6f` (verde salvia) sobre
+`#f0eeea`:
+
+```
+luminancia(#5e7c6f) = 0.1794      luminancia(#f0eeea) = 0.8562
+ratio = (0.8562 + 0.05) / (0.1794 + 0.05) = 3.95
+```
+
+**3.95 contra un mínimo de 1.25**: devuelve el acento tal cual. El salvia queda intacto. El arreglo sólo
+actuaría si la dueña eligiera un acento casi blanco — que es exactamente para lo que está.
+
+**El acento personalizado se respeta en las dos pantallas.** En el catálogo, `G = accentOverride ?? th.G`:
+si la dueña eligió un color, manda el suyo. No quedó clavado el de fábrica.
+
+`tsc --noEmit` limpio.
+
+### Lo único que apareció: el carrito se ve distinto en el home y en el catálogo
+
+No es un bug —los dos se leen bien— pero son dos paletas para el mismo carrito de la misma tienda:
+
+| | panel | campos | borde | tipografía |
+|---|---|---|---|---|
+| Home (`ChicParis.tsx:469`) | `#ffffff` | `#fafafa` | `#e5e5e5` gris | ninguna |
+| Catálogo (`productos/page.tsx:1019`) | `#f0eeea` beige | `#ffffff` | salvia al 20% | Garamond |
+
+Vienen de que el home tiene la paleta escrita a mano y el catálogo la deriva del tema del template.
+Están casi invertidas: el panel del home es blanco con campos grises, el del catálogo es beige con
+campos blancos.
+
+**Sin decidir.** La del catálogo es más "Chic Paris" (usa la paleta real y el Garamond); la del home ya
+está aprobada a la vista y tocarla es más riesgoso. Queda a criterio de Flavio si se unifican y hacia
+cuál.

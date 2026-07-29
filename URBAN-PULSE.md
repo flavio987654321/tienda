@@ -2071,6 +2071,31 @@ si va de texto, `getReadableAccentFill` si va de superficie. Apareció en el tem
 UP-21), en el catálogo (PL-4, PL-9) y en los componentes compartidos (PL-8). **No es un bug: es una
 regla que no estaba escrita.**
 
+### PL-10 — El aviso del carrito se iba de pantalla en un celular ✅
+
+Salió al revisar si Chic Paris seguía entero después de que le tocáramos el carrito compartido. No era
+de Chic Paris: era del catálogo, y de los diez templates a la vez.
+
+El aviso de abajo (`toastMsg`) estaba con `whiteSpace:"nowrap"` y **sin** `maxWidth`. Con los mensajes
+fijos no se notaba —"Solo quedan 5 unidades" mide unos 240px—, pero **uno de los mensajes es de largo
+variable**: `` `${nombre} agregado al carrito` ``. Con un nombre real de producto:
+
+| mensaje | ancho aprox. | en una pantalla de 360 |
+|---|---|---|
+| `Solo quedan 5 unidades` | ~240px | entra |
+| `¡Link copiado al portapapeles!` | ~290px | entra justo |
+| `Campera de jean oversize con capucha agregado al carrito` | **~460px** | **se va 50px por cada lado** |
+
+Y se va por los **dos** lados, no por uno: está centrado con `left:"50%"` + `translateX(-50%)`, así que
+el desborde se reparte simétrico. Con `nowrap` no tenía cómo cortar.
+
+El arreglo es el par que **ya usaban los diez templates** y `productDetail/shared.tsx`:
+`maxWidth:"calc(100vw - 32px)"` + `textAlign:"center"`. Esta pantalla era literalmente la única afuera
+—se verificó uno por uno—, así que no hubo que inventar nada: se la alineó con el resto.
+
+**La lección:** cuando diez archivos hacen algo igual y uno hace otra cosa, el distinto casi nunca tiene
+razón. Y un estilo que aguanta los textos fijos puede no aguantar el que se arma con datos del usuario.
+
 ### Estado del build
 
 `npx next build` completo, sin errores. `tsc` y eslint limpios en todo el proyecto.
