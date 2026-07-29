@@ -25,8 +25,11 @@ Los números de línea son los del día de la revisión: se corren a medida que 
 | ~~UP-15~~ | ~~En celular el footer apila las tres columnas de links, y quedan casi dos pantallas~~ | Media | **hecho** 28/07 |
 | ~~UP-16~~ | ~~En celular la página entera es más ancha que el celular: dos grillas la empujan~~ | Alta | **hecho** 28/07 |
 | ~~UP-17~~ | ~~El banner muestra flechas en el celular, donde ya se pasa con el dedo~~ | Baja | **hecho** 28/07 |
+| ~~UP-18~~ | ~~En celular el segundo botón del hero se corta contra el borde~~ | Alta | **hecho** 28/07 |
+| **UP-19** | **En celular la foto del hero no se ve: la fila de la grilla queda en cero** | Alta | preguntado 28/07 |
 
-**Los diecisiete puntos están cerrados.** Del UP-9 en adelante ya no salieron de la auditoría original:
+**Cerrados dieciocho de diecinueve.** El UP-19 salió mirando el UP-18 y está esperando una decisión de
+diseño de Flavio — ver el final de UP-18. Del UP-9 en adelante ya no salieron de la auditoría original:
 los reportó Flavio mirando su propia tienda o los pidió él. UP-9 lo vio con una captura, y UP-10 fue
 un pedido suyo — traer las reseñas de verdad
 al bloque de opiniones. Lo que queda anotado no es de este template: está en
@@ -1467,3 +1470,53 @@ ahí son botones de 42×42 con fondo, no chevrones finitos sobre la foto, y est�
 que scrollea. No se tocó sin preguntar.
 
 `tsc` y eslint limpios.
+
+---
+
+### UP-18 — En celular el segundo botón del hero se cortaba ✅
+
+Flavio: *"el primer bloque, ¿ves cómo el botón se corta?"*.
+
+**Los dos botones no entraban ni cerca.** A 368px de pantalla, con 20 de padding a cada lado, quedan
+328 útiles. Cada botón pide:
+
+| | |
+|---|---|
+| texto — "VER COLECCIÓN" / "FEATURED DROP", 13 caracteres a 11px con 3 de espaciado | ~136px |
+| padding (36 × 2) | 72px |
+| **cada botón** | **~208px** |
+| los dos más los 12 de separación | **~432px** |
+
+Son elementos de flex, así que **encogen** — pero se frenan en su ancho mínimo, que es la palabra más
+larga sin partir: "COLECCIÓN" ~94 + 72 de padding = 166, y el otro 160. Mínimo total con la
+separación: ~338, todavía por encima de 328. Por eso en la captura se ven **las dos cosas a la vez**:
+el texto partido en dos renglones ("VER" / "COLECCIÓN") *y* el segundo botón cortado.
+
+**Cortado, no desbordado** — y esa es la diferencia con UP-16. La sección del hero tiene
+`overflow: hidden`, así que el sobrante no ensanchaba la página: se recortaba contra el borde y ya.
+Es peor, en realidad, porque no dejaba ni una barra de scroll que avisara. Es el mismo `1fr` de
+siempre estirando la columna, sólo que acá alguien lo tapa.
+
+**Apilados.** En celular los dos botones van uno debajo del otro y ocupan el ancho entero: el texto
+entra en un renglón, el blanco para tocar pasa de ~170px a 328, y —lo que importa a futuro— aguanta
+que la dueña les cambie el texto por uno más largo, que es justo lo que rompía. En escritorio siguen
+al lado como estaban.
+
+La columna del hero pasa también a `minmax(0,1fr)`, por lo mismo que UP-16.
+
+#### Lo que apareció al mirar esto y NO se tocó
+
+**La foto del hero no se ve en el celular.** La columna de la imagen es un `<div>` con `height: 100%`
+y adentro sólo tiene cosas posicionadas en absoluto (`FadeImage fill` y los controles del editor). En
+escritorio funciona porque la fila de la grilla la estira el `minHeight` de la sección; en celular ese
+`minHeight` es `auto`, la fila se mide por su contenido, el contenido no ocupa alto **y la fila queda
+en cero**.
+
+Se puede confirmar en la captura sin medir nada: entre el último botón y la franja de garantías hay
+exactamente los 48px del padding de abajo del bloque de texto. No hay foto en el medio.
+
+No se arregló porque **dónde va y qué alto tiene es una decisión de diseño**, no un bug con una sola
+respuesta: puede ir arriba del título, abajo de los botones, o el bloque puede ser a propósito
+sólo-texto en celular. Preguntado a Flavio, sin tocar nada mientras tanto.
+
+`tsc` y eslint limpios. `/tienda/tiendaapps` y `/plantillas/urban-pulse` en 200.

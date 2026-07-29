@@ -953,7 +953,11 @@ export default function UrbanPulse() {
       )}
 
       {/* HERO — diagonal split */}
-      <section style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "55% 45%", minHeight: isMobile ? "auto" : "calc(100vh - 100px)", overflow:"hidden" }}>
+      {/* `minmax(0,1fr)` por lo mismo que UP-16: con `1fr` la columna no baja del
+          ancho mínimo de lo que tenga adentro, y acá adentro va texto que escribe
+          la dueña. La diferencia es que esta sección recorta (`overflow:hidden`),
+          así que en vez de ensanchar la página se comía el borde en silencio. */}
+      <section style={{ display:"grid", gridTemplateColumns: isMobile ? "minmax(0,1fr)" : "55% 45%", minHeight: isMobile ? "auto" : "calc(100vh - 100px)", overflow:"hidden" }}>
         <div style={{ background:heroLeftUpBg, display:"flex", flexDirection:"column", justifyContent:"flex-end", padding: isMobile ? "60px 20px 48px" : "80px 64px", clipPath: isMobile ? "none" : "polygon(0 0, 100% 0, 91% 100%, 0 100%)", position:"relative" }}>
           <EditableSectionBg field="bgHeroLeft" label="Fondo hero" />
           <span style={{ color:accentSobre(heroLeftUpBg, heroLeftUpText), fontSize:10, letterSpacing:6, fontWeight:800, textTransform:"uppercase", marginBottom:20, display:"block" }}>
@@ -965,7 +969,20 @@ export default function UrbanPulse() {
           <p style={{ color:heroLeftUpMid, fontSize:15, maxWidth:360, marginBottom:40, lineHeight:1.7 }}>
             <EditableZone field="heroSubtext" label="Subtítulo hero">Ropa deportiva de alta performance para quienes no conocen los límites.</EditableZone>
           </p>
-          <div style={{ display:"flex", gap:12 }}>
+          {/* En celular los dos botones van uno debajo del otro. Al lado no
+              entraban ni cerca: cada uno mide ~208px de texto más padding y con
+              los 12 de separación piden 432, contra 328 de pantalla útil a 368.
+              Encogen —son de flex— pero se frenan en su ancho mínimo, que sigue
+              siendo ~338: por eso en la captura se ve el título partido ("VER" /
+              "COLECCIÓN") Y ADEMÁS el segundo botón cortado.
+              Cortado, no desbordado: la sección del hero tiene `overflow:hidden`,
+              así que a diferencia de UP-16 esto no ensanchaba la página — se
+              comía el borde del botón y listo. Peor, en realidad: no había ni
+              barra de scroll que avisara.
+              Apilados ocupan el ancho entero, el texto entra en un renglón y el
+              blanco para tocar pasa de ~170px a 328. Y aguanta que la dueña les
+              cambie el texto por uno más largo, que es lo que antes rompía. */}
+          <div style={{ display:"flex", flexDirection: isMobile ? "column" : "row", gap:12 }}>
             {(editMode || !storeConfig?.textOverrides?.["heroCta"]?.hidden) && (
               <button onClick={() => scrollTo("productos")}
                 style={{ background:ACC, color:accentText, border:"none", padding:"16px 36px", fontSize:11, fontWeight:900, letterSpacing:3, textTransform:"uppercase", cursor:"pointer" }}>
