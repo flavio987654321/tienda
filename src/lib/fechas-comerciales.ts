@@ -41,12 +41,53 @@ function getArgentinaToday(): Date {
  * por día cosas como el historial de chat con Sasha.
  */
 export function getArgentinaDayKey(): string {
+  return diaArgentino(new Date());
+}
+
+/**
+ * A qué día del calendario argentino pertenece un instante, como "YYYY-MM-DD".
+ *
+ * Es la pieza que le faltaba a Métricas: ahí los días se calculaban en UTC, así
+ * que cada "día" iba de las 21:00 a las 21:00 hora de acá y una venta de las
+ * 22:00 de un martes figuraba como del miércoles. Justo las horas en que más se
+ * vende.
+ */
+export function diaArgentino(fecha: Date): string {
   return new Intl.DateTimeFormat("en-CA", {
     timeZone: AR_TZ,
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
-  }).format(new Date());
+  }).format(fecha);
+}
+
+/**
+ * El instante exacto en que arranca (00:00) un día argentino, para usar como
+ * corte en las consultas a la base.
+ *
+ * El offset se pregunta para esa fecha en vez de dar por sentado −03:00: hoy
+ * Argentina no cambia la hora, pero ya lo hizo antes y podría volver a hacerlo,
+ * y un corte de período equivocado por una hora se arrastra a todos los números.
+ */
+export function inicioDiaArgentino(dia: string): Date {
+  const referencia = new Date(`${dia}T12:00:00Z`);
+  const offset = new Intl.DateTimeFormat("en-US", {
+    timeZone: AR_TZ,
+    timeZoneName: "longOffset",
+  })
+    .formatToParts(referencia)
+    .find((p) => p.type === "timeZoneName")?.value;
+  return new Date(`${dia}T00:00:00${(offset ?? "GMT-03:00").replace("GMT", "")}`);
+}
+
+/**
+ * Suma (o resta) días a una clave "YYYY-MM-DD". Es aritmética de calendario
+ * pura —no interviene ninguna zona horaria— así que se hace en UTC a propósito.
+ */
+export function sumarDiasCalendario(dia: string, n: number): string {
+  const d = new Date(`${dia}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
 }
 
 function nthWeekday(year: number, monthIndex: number, weekday: number, nth: number): Date {

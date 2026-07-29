@@ -8,7 +8,10 @@
 // puede haber arrancado hace días y seguir corriendo, y eso rompía el filtro
 // viejo (`fecha >= hoy`), que lo hacía desaparecer justo cuando estaba pasando.
 
-import { getUpcomingDates, getEventNames, getEventRange } from "./fechas-comerciales";
+import {
+  getUpcomingDates, getEventNames, getEventRange,
+  diaArgentino, inicioDiaArgentino, sumarDiasCalendario,
+} from "./fechas-comerciales";
 
 let failed = 0;
 function check(id: string, ok: boolean, desc: string) {
@@ -105,6 +108,47 @@ const buscar = (fechas: ReturnType<typeof getUpcomingDates>, nombre: string) =>
   const largos = getEventNames().filter((n) => n.length > 24);
   check("CAL-M", largos.length === 0,
     `ningún nombre es tan largo que se corte en el cartelito${largos.length ? " — fallan: " + largos.join(", ") : ""}`);
+}
+
+// ── Días argentinos ─────────────────────────────────────────────────────────
+// Métricas contaba los días en UTC: cada "día" iba de las 21:00 a las 21:00 de
+// acá, y una venta de las 22:00 de un martes figuraba como del miércoles —justo
+// las horas en que más se vende—. Acá se fija el borde exacto, que es donde se
+// rompe.
+{
+  // 22:00 del 28 en Argentina = 01:00 UTC del 29. En UTC caía en el 29.
+  check("DIA-A", diaArgentino(new Date("2026-07-29T01:00:00Z")) === "2026-07-28",
+    "una venta de las 22:00 es del mismo día, no del siguiente");
+  check("DIA-B", diaArgentino(new Date("2026-07-29T02:59:59Z")) === "2026-07-28",
+    "el último segundo del día todavía es de ese día");
+  check("DIA-C", diaArgentino(new Date("2026-07-29T03:00:00Z")) === "2026-07-29",
+    "y el primero ya es del siguiente");
+}
+{
+  check("DIA-D", inicioDiaArgentino("2026-07-29").toISOString() === "2026-07-29T03:00:00.000Z",
+    "las 00:00 argentinas son las 03:00 UTC");
+
+  // La vuelta completa tiene que cerrar: el instante en que arranca un día
+  // pertenece a ese día, y el milisegundo anterior al día anterior.
+  const arranque = inicioDiaArgentino("2026-07-29");
+  check("DIA-E", diaArgentino(arranque) === "2026-07-29",
+    "el arranque del día pertenece a ese día");
+  check("DIA-F", diaArgentino(new Date(arranque.getTime() - 1)) === "2026-07-28",
+    "un milisegundo antes es del día anterior");
+
+  // Acá no se cambia la hora. Si algún día volviera el horario de verano, este
+  // caso avisa antes de que se corran todos los períodos.
+  const finDia = inicioDiaArgentino("2026-07-30");
+  check("DIA-G", finDia.getTime() - arranque.getTime() === 86_400_000,
+    "un día dura 24 horas exactas");
+}
+{
+  check("DIA-H", sumarDiasCalendario("2026-07-31", 1) === "2026-08-01", "cruza el fin de mes");
+  check("DIA-I", sumarDiasCalendario("2026-12-31", 1) === "2027-01-01", "cruza el fin de año");
+  check("DIA-J", sumarDiasCalendario("2026-01-01", -1) === "2025-12-31", "cruza hacia atrás");
+  check("DIA-K", sumarDiasCalendario("2028-02-28", 1) === "2028-02-29", "febrero de un año bisiesto");
+  check("DIA-L", sumarDiasCalendario("2026-02-28", 1) === "2026-03-01", "febrero de uno que no lo es");
+  check("DIA-M", sumarDiasCalendario("2026-07-29", -29) === "2026-06-30", "una ventana de 30 días");
 }
 
 console.log(failed === 0 ? "\n✅ El calendario da lo esperado." : `\n❌ ${failed} caso(s) fallan.`);
