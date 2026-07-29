@@ -374,7 +374,10 @@ export default function DashboardLayout({
   }
 
   return (
-    <div className="h-screen bg-gray-50 flex overflow-hidden text-gray-900 [color-scheme:light]">
+    // `data-panel-root`: al imprimir hay que devolverle el flujo normal a esta
+    // caja (ver el bloque @media print de globals.css). En pantalla es del alto
+    // de la ventana con el scroll adentro; en papel eso sería una sola hoja.
+    <div data-panel-root className="h-screen bg-gray-50 flex overflow-hidden text-gray-900 [color-scheme:light]">
 
       {/* ── DESKTOP Sidebar (lg+) ─────────────────────────────────────────── */}
       <aside className={`group hidden lg:flex fixed left-0 top-0 h-full bg-white border-r border-gray-100 flex-col z-[60] transition-[width] duration-200 overflow-hidden ${showTour ? "w-60 shadow-xl" : "w-14 hover:w-60 hover:shadow-xl"}`}>
@@ -574,7 +577,9 @@ export default function DashboardLayout({
       {/* ── Main content ─────────────────────────────────────────────────── */}
       <main className={`lg:ml-14 flex-1 flex flex-col bg-gray-50 pt-14 lg:pt-0 overflow-x-hidden ${fullHeight ? "overflow-hidden h-full" : "overflow-y-auto"}`}>
         {!hideHelp && !pathname.startsWith("/dashboard/configuracion") && (
-          <div className="hidden lg:flex justify-end items-center gap-1 px-4 pt-3 pb-0 shrink-0">
+          // Favoritos, ayuda y campanita son botones del panel, no del informe:
+          // impresos quedan tres iconos sueltos arriba de todo.
+          <div data-print="ocultar" className="hidden lg:flex justify-end items-center gap-1 px-4 pt-3 pb-0 shrink-0">
             <FavoritesDrawer buttonClassName="flex items-center justify-center w-9 h-9 rounded-xl hover:bg-gray-100 transition-colors text-gray-500" />
             <HelpButton onStartTour={() => setShowTour(true)} />
             {userId && <NotificationBell userId={userId} />}

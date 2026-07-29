@@ -255,7 +255,12 @@ export default function AsistenteIA({ userId }: { userId: string }) {
           setTimeout(() => { isDragging.current = false; }, 50);
           localStorage.setItem("sasha-pos", JSON.stringify({ x: dragX.get(), y: dragY.get() }));
         }}
-        className="fixed bottom-6 right-6 z-50 cursor-grab active:cursor-grabbing touch-none"
+        // `data-print`: el globo del chat se imprimía encima del informe, tapando
+        // la esquina de abajo a la derecha de la última hoja. Va también
+        // `print:hidden` —la clase propia de Tailwind— para que no dependa de
+        // que globals.css esté al día: son dos mecanismos distintos.
+        data-print="ocultar"
+        className="fixed bottom-6 right-6 z-50 cursor-grab active:cursor-grabbing touch-none print:hidden"
       >
         <motion.button
           type="button"
@@ -285,9 +290,11 @@ export default function AsistenteIA({ userId }: { userId: string }) {
 
       <AnimatePresence>
         {abierto && (
+          // `print:hidden` en los dos: si el chat quedó abierto y se manda a
+          // imprimir, el panel tapa el informe entero.
           <>
             <motion.div
-              className="fixed inset-0 z-[60] bg-black/30 md:hidden"
+              className="fixed inset-0 z-[60] bg-black/30 md:hidden print:hidden"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -300,7 +307,7 @@ export default function AsistenteIA({ userId }: { userId: string }) {
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={{ type: "spring", damping: 28, stiffness: 280 }}
-              className="fixed right-0 top-0 z-[60] flex h-full w-full flex-col bg-white shadow-2xl md:w-[380px] md:rounded-l-2xl"
+              className="fixed right-0 top-0 z-[60] flex h-full w-full flex-col bg-white shadow-2xl md:w-[380px] md:rounded-l-2xl print:hidden"
             >
               <div className="flex items-center gap-3 border-b border-gray-100 p-4">
                 <AsistentePersonaje estado={enviando ? "pensando" : "sonriente"} size={36} />
