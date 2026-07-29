@@ -485,11 +485,39 @@ export function useCartLogic({ products, promotions = [], storeId, affiliateId =
     setTimeout(() => setToastMsg(null), 2500);
   };
 
+  /* Al abrir la ficha se elige el primer talle y el primer color QUE TENGAN STOCK,
+     no el primero de la lista a secas.
+     Antes se preseleccionaba `p.sizes[0]` sin mirar nada. Si ese talle estaba
+     agotado —el 32 de una remera que sí tiene 34, 36 y 38— la ficha abría con el
+     talle agotado marcado, tachado, el cartel "Sin stock en esta combinación" y el
+     botón de comprar apagado. El producto se ve como si estuviera vendido, y el
+     comprador se va sin llegar a tocar los otros tres talles. No es un detalle de
+     forma: es una venta perdida en un producto que sí hay.
+     Misma cuenta que `outOfStockSizes` —que no se puede usar acá porque es un memo
+     que depende de que la ficha ya esté abierta—: un valor está agotado sólo si
+     tiene variantes que le correspondan Y todas están en cero. Si no se le puede
+     asociar ninguna variante, se lo trata como disponible, igual que allá. */
+  const primerConStock = (p: StorefrontProduct, valores: string[]): string => {
+    if (valores.length === 0) return "";
+    if (!p.variants.length) return valores[0];
+    const conStock = valores.find(val => {
+      const matching = p.variants.filter(v => {
+        const a = parseVariantAttrs(v.name);
+        if (a) return Object.values(a).map(x => String(x).toLowerCase()).includes(val.toLowerCase());
+        return v.value.includes(val);
+      });
+      return matching.length === 0 || matching.some(v => (v.stock ?? 0) > 0);
+    });
+    // Si están TODOS agotados no hay nada mejor que elegir: se deja el primero y el
+    // cartel de "sin stock" dice la verdad.
+    return conStock ?? valores[0];
+  };
+
   const openModal = (p: StorefrontProduct) => {
     setModalProduct(p);
     setModalImg(0);
-    setSelectedSize(p.sizes[0] ?? "");
-    setSelectedColor(p.colors[0] ?? "");
+    setSelectedSize(primerConStock(p, p.sizes));
+    setSelectedColor(primerConStock(p, p.colors));
     setQty(isWholesale && p.cantMinMayorista ? p.cantMinMayorista : 1);
     setSearchOpen(false);
     registrarVista(p.id, slug, isOwner, isPreview);

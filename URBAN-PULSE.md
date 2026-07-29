@@ -31,6 +31,7 @@ Los números de línea son los del día de la revisión: se corren a medida que 
 | ~~UP-21~~ | ~~El acento se usa de relleno sin medir contra el fondo en cinco lugares~~ | Alta | **hecho** 28/07 |
 | ~~UP-22~~ | ~~Las tres categorías de la portada están escritas a mano y llevan a un listado vacío~~ | Alta | **hecho** 28/07 |
 | ~~UP-23~~ | ~~El destacado y contacto usan padding de escritorio en el celular~~ | Media | **hecho** 28/07 |
+| ~~UP-24~~ | ~~La ficha abre con el talle agotado elegido y el botón apagado, en los diez templates~~ | Alta | **hecho** 28/07 |
 
 **Los veinte puntos están cerrados.** El UP-19 salió mirando el UP-18. Se probó con la foto abajo de
 los botones, a Flavio no le gustó y volvió a quedar sin foto — pero escrito, que es lo que faltaba.
@@ -1984,3 +1985,57 @@ veían visiblemente más angostos que el resto de la página, como metidos hacia
 | Contacto | ✓ se dibuja siempre, es un formulario |
 | Links muertos | ✓ ni un `href="#"` ni un `onClick` vacío en todo el archivo |
 | Valores de `sectionColors` fuera de `background:` | ✓ ninguno (la regla de UP-9 se sostiene) |
+
+### UP-24 — La ficha abría con el talle agotado elegido ✅
+
+Tercera pasada: la compra de punta a punta. Éste es el hallazgo, y **no es de Urban Pulse**: está en
+`useCartLogic`, o sea en **los diez templates**.
+
+Al abrir la ficha se preseleccionaba `p.sizes[0]` y `p.colors[0]` **a secas, sin mirar el stock**. Si
+ese primer talle está agotado —el 32 de una remera que sí tiene 34, 36 y 38— la ficha abre así:
+
+- el 32 marcado y tachado,
+- el cartel **"Sin stock en esta combinación"**,
+- y el botón de comprar **apagado**.
+
+El producto se ve como si estuviera vendido. El comprador se va sin llegar a tocar los otros tres
+talles, que sí están. **No es un detalle de forma: es una venta perdida en un producto que hay.**
+
+Ahora se elige el primer valor **que tenga stock**, con la misma cuenta que usa `outOfStockSizes`
+—que no se puede reutilizar acá porque es un memo que depende de que la ficha ya esté abierta—: un
+valor está agotado sólo si tiene variantes que le correspondan **y todas** están en cero. Si no se le
+puede asociar ninguna variante se lo trata como disponible, igual que allá.
+
+Verificado en los cinco casos, y **sólo cambia en el que importa**:
+
+| caso | antes | ahora | |
+|---|---|---|---|
+| 32 agotado, 34 y 36 con stock | 32 | **34** | ✅ cambia |
+| todos con stock | 32 | 32 | igual |
+| todos agotados | 32 | 32 | igual — el cartel dice la verdad |
+| sin variantes cargadas | S | S | igual |
+| producto sin talles | — | — | igual |
+
+### El resto del recorrido de compra
+
+| qué | estado |
+|---|---|
+| **Los precios** | Modal, carrito y checkout salen todos de `pricedLines`, la misma cuenta que cobra la caja. Desde PL-1 el carrito y el checkout son además los mismos componentes, así que no hay dónde se separen. |
+| **Agregar sin elegir talle** | No se puede: `openModal` siempre deja uno elegido. |
+| **Agregar sin stock** | El botón se apaga con `selectedVariantStock === 0`, en el template y en el catálogo. |
+| **Pasarse del stock** | `addToCart` recorta con `Math.min(qty, stock)`, también al sumar sobre una línea que ya estaba. |
+| **Doble clic en Agregar** | Cubierto con `addingToCartRef`. |
+| **Comprar en tu propia tienda** | Bloqueado en el carrito (`blockBuy`), con el botón deshabilitado y el motivo en el `title`. |
+| **Mínimos de mayorista** | Se avisan en el carrito desde PL-1. Antes el pedido rebotaba en la caja sin aviso previo. |
+
+### Anchos — barrido final, sin hallazgos
+
+- **Ningún ancho fijo de 320px o más** en todo el template.
+- Los dos paneles con ancho propio están cubiertos: el de favoritos es `width:400` con
+  `maxWidth:"100vw"`, y el de elegir producto destacado mide 270 y es sólo del editor.
+- El desplegable de categorías del navbar mide 446 —dos columnas de 200— pero vive dentro de
+  `{!isMobile && …}`: en el celular no existe.
+
+**Lo que no está verificado, y hay que decirlo:** la compra no se probó de punta a punta con un pedido
+real. Todo lo de arriba sale de leer el código y de simular las cuentas. Un pedido de prueba de verdad
+—agregar, finalizar, confirmar— es la única forma de cerrarlo, y eso escribe en la base de producción.
