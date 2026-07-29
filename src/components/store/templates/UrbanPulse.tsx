@@ -4,7 +4,7 @@ import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { usePushBell } from "@/contexts/PushBellContext";
 import { useAuth } from "@/components/AuthProvider";
 import StoreFollowButton from "@/components/store/StoreFollowButton";
-import { EditableZone, EditableImageButton, EditableSectionBg, BgDragHandle, getContrastColor, getReadableAccentText, textoSobre, contrasteWCAG, useEditContext } from "@/contexts/EditContext";
+import { EditableZone, EditableImageButton, EditableSectionBg, BgDragHandle, getContrastColor, getReadableAccentText, getReadableAccentFill, textoSobre, contrasteWCAG, useEditContext } from "@/contexts/EditContext";
 import { colorRepresentativo, extremo } from "@/lib/section-bg";
 import { useStorefront, type StorefrontProduct } from "@/hooks/useStorefront";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
@@ -274,6 +274,20 @@ export default function UrbanPulse() {
   const accentSobre = (bg: string, texto: string) => getReadableAccentText(ACC, bg, texto);
   // Los dos fondos que se repiten y no son de sección: el negro de la marca (botones,
   // barra flotante, logo) y el gris claro de adentro del modal (reseñas).
+  /* `accentSobre` resuelve el acento como TEXTO. Esto es la otra mitad, que
+     faltaba: el acento como RELLENO, medido contra la superficie que tiene
+     detras. Un acento claro pintando un boton sobre un panel blanco no se lee
+     mal: no se ve, porque no hay boton. La etiqueta queda flotando.
+     Si el acento se despega de esa superficie se usa tal cual, con el
+     `accentText` de siempre encima. Si no, se cae al color de texto del fondo y
+     se recalcula la tinta. Con un acento normal no cambia nada. */
+  const rellenoAcento = (fondo: string) => {
+    const solido = colorRepresentativo(fondo);
+    const bg = getReadableAccentFill(ACC, solido, textoSobre(solido));
+    return { bg, text: bg === ACC ? accentText : textoSobre(bg) };
+  };
+  // Los modales son blancos siempre, no dependen de ningun color editable.
+  const rellenoClaro = rellenoAcento(WHITE);
   const accSobreDark  = accentSobre(DARK, WHITE);
   const accSobreClaro = accentSobre(BG, DARK);
   // ── El color del precio REBAJADO ───────────────────────────────────────────
@@ -1246,7 +1260,7 @@ export default function UrbanPulse() {
               Precios exclusivos para revendedores y distribuidores. Completá el formulario de contacto y te respondemos con tu lista personalizada en menos de 24 hs.
             </p>
             <button onClick={() => scrollTo("contacto")}
-              style={{ background:ACC, color:accentText, border:"none", padding:"14px 44px", fontSize:10, fontWeight:900, letterSpacing:4, textTransform:"uppercase", cursor:"pointer", borderRadius:2, marginTop:4 }}>
+              style={{ ...(() => { const r = rellenoAcento(categoriesBgUp); return { background:r.bg, color:r.text }; })(), border:"none", padding:"14px 44px", fontSize:10, fontWeight:900, letterSpacing:4, textTransform:"uppercase", cursor:"pointer", borderRadius:2, marginTop:4 }}>
               CONSULTAR AHORA →
             </button>
           </div>
@@ -2002,7 +2016,7 @@ export default function UrbanPulse() {
                 gap: 14,
                 placeholders: { nombre: "Tu nombre *", email: "Tu email *", mensaje: "Tu mensaje *" },
                 buttonLabel: "Enviar Mensaje →",
-                buttonStyle: { background:ACC, color:accentText, padding:"18px", fontSize:11, fontWeight:900, letterSpacing:4, textTransform:"uppercase" },
+                buttonStyle: { background:rellenoAcento(contactUpBg).bg, color:rellenoAcento(contactUpBg).text, padding:"18px", fontSize:11, fontWeight:900, letterSpacing:4, textTransform:"uppercase" },
               }}
               renderSent={reset => (
                 <div style={{ height:"100%", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", textAlign:"center", border:`2px solid ${ACC}`, padding:40 }}>
@@ -2439,7 +2453,7 @@ export default function UrbanPulse() {
                   if (!cond) return null;
                   return (
                     <div style={{ marginBottom:18 }}>
-                      <span style={{ display:"inline-block", fontSize:9, letterSpacing:1.5, textTransform:"uppercase", fontWeight:900, color:accentText, background:ACC, padding:"5px 10px" }}>{cond.value}</span>
+                      <span style={{ display:"inline-block", fontSize:9, letterSpacing:1.5, textTransform:"uppercase", fontWeight:900, color:rellenoClaro.text, background:rellenoClaro.bg, padding:"5px 10px" }}>{cond.value}</span>
                     </div>
                   );
                 })()}
@@ -2854,7 +2868,7 @@ export default function UrbanPulse() {
                     La tienda la revisa antes de publicarla, así que todavía no la vas a ver acá.
                   </p>
                   <button type="button" onClick={resenas.cerrarModal}
-                    style={{ background:ACC, color:accentText, border:"none", padding:"12px 34px", fontSize:10, fontWeight:900, letterSpacing:3, textTransform:"uppercase", cursor:"pointer" }}>
+                    style={{ background:rellenoClaro.bg, color:rellenoClaro.text, border:"none", padding:"12px 34px", fontSize:10, fontWeight:900, letterSpacing:3, textTransform:"uppercase", cursor:"pointer" }}>
                     Cerrar
                   </button>
                 </div>
@@ -2929,7 +2943,7 @@ export default function UrbanPulse() {
                       </p>
                       <div style={{ display:"flex", gap:8 }}>
                         <button type="submit" disabled={resenas.enviando || !resenas.captcha.ready}
-                          style={{ flex:1, background:ACC, color:accentText, border:"none", padding:"13px", fontSize:10, fontWeight:900, letterSpacing:2, textTransform:"uppercase", cursor: resenas.enviando ? "default" : "pointer", opacity: resenas.enviando ? 0.6 : 1 }}>
+                          style={{ flex:1, background:rellenoClaro.bg, color:rellenoClaro.text, border:"none", padding:"13px", fontSize:10, fontWeight:900, letterSpacing:2, textTransform:"uppercase", cursor: resenas.enviando ? "default" : "pointer", opacity: resenas.enviando ? 0.6 : 1 }}>
                           {resenas.enviando ? "Enviando..." : "Sí, enviar"}
                         </button>
                         <button type="button" onClick={() => resenas.setConfirmando(false)} disabled={resenas.enviando}

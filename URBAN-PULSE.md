@@ -28,6 +28,7 @@ Los números de línea son los del día de la revisión: se corren a medida que 
 | ~~UP-18~~ | ~~En celular el segundo botón del hero se corta contra el borde~~ | Alta | **hecho** 28/07 |
 | ~~UP-19~~ | ~~En celular el hero se quedaba sin foto por accidente, no por decisión~~ | Alta | **hecho** 28/07 |
 | ~~UP-20~~ | ~~En celular el destacado abre con la foto, sin decir qué es~~ | Media | **hecho** 28/07 |
+| ~~UP-21~~ | ~~El acento se usa de relleno sin medir contra el fondo en cinco lugares~~ | Alta | **hecho** 28/07 |
 
 **Los veinte puntos están cerrados.** El UP-19 salió mirando el UP-18. Se probó con la foto abajo de
 los botones, a Flavio no le gustó y volvió a quedar sin foto — pero escrito, que es lo que faltaba.
@@ -1883,3 +1884,60 @@ Para las tiendas con un acento normal no cambia absolutamente nada.
   celular ocupa la pantalla entera, y los campos van al 100% del panel.
 
 `tsc` y eslint limpios. El catálogo, el home y una plantilla de otro rubro, los tres en 200.
+
+---
+
+## Auditoría de cierre del template
+
+Flavio pidió cerrar Urban Pulse con una pasada completa: funcionalidad, compra, vista y experiencia,
+bloque por bloque, más la página de productos. Se arranca por **clases de bug** —los patrones que ya
+aparecieron durante la auditoría— porque una vez que uno aparece dos veces, aparece diez.
+
+### UP-21 — El acento como relleno, cinco lugares más ✅
+
+El template ya tenía `accentSobre`, que resuelve el acento cuando se usa como **texto**. Lo que no
+tenía es la otra mitad: el acento usado como **relleno**. Un acento claro pintando un botón sobre un
+panel blanco no se lee mal — **no se ve, porque no hay botón**; queda la etiqueta flotando. Es
+exactamente lo de PL-4 y PL-8, ahora dentro del template.
+
+Se revisaron los **catorce** `background: ACC` del archivo. Siete estaban bien y siete no:
+
+| dónde | veredicto |
+|---|---|
+| Botón del hero, botón del destacado | ✓ van sobre fondos oscuros |
+| Badge "New Drop", "Desde 2021", el `-30%` de Ofertas, el badge del destacado | ✓ van arriba de una foto |
+| El puntito de favoritos del navbar | ✓ tiene borde negro propio |
+| Los ítems del menú de categorías | ✓ tienen borde negro propio |
+| **El chip de "Condición" del modal** | ✗ panel blanco, sin borde |
+| **El botón del modal de reseña** | ✗ panel blanco |
+| **El botón de enviar reseña** | ✗ panel blanco |
+| **El botón del bloque mayorista** | ✗ depende del fondo editable de Categorías |
+| **El botón del formulario de contacto** | ✗ depende del fondo editable de Contacto |
+
+Los cinco pasan ahora por `rellenoAcento(fondo)`, que mide contra la superficie real —convirtiendo el
+degradado a color sólido primero, por la regla de UP-9— y devuelve el acento cuando se despega, o el
+color de texto del fondo cuando no. Con un acento normal no cambia nada.
+
+**Queda uno sin tocar a propósito: el botón flotante del carrito.** Flota sobre secciones de colores
+distintos, así que no hay una superficie contra la cual medirlo; y tiene una sombra propia
+(`0 6px 18px`) que le da borde sobre cualquier fondo. Se anota y no se toca.
+
+### La rotación del producto destacado — verificada ✅
+
+Simulada con los tres productos de la tienda, en las tres frecuencias:
+
+| cada | secuencia | próximo cambio |
+|---|---|---|
+| 6h | Campera › Remera › Pantalón › Campera › … | en 4h 11m |
+| 12h | Pantalón › Campera › Remera › … | en 10h 11m |
+| 24h | Campera › Remera › Pantalón › … | en 22h 11m |
+
+- **Determinista**: dos visitantes en el mismo instante ven el mismo producto. No hay sorteo por
+  visitante.
+- **En ciclo**: en 100 franjas salen los 3 de 3. Ninguno se saltea ni se repite pegado.
+- **Sin productos** el bloque no se dibuja.
+
+**Lo que sí hay que saber, y no es un bug pero sorprende:** las franjas se cuentan desde el origen del
+reloj de la computadora (1/1/1970 a las 00:00 UTC), así que **la rotación de 24hs cambia a las 21:00
+de Argentina, no a medianoche**. Sigue siendo cada 24 horas exactas; lo que no es, es "un producto por
+día calendario". Si se quiere que caiga a medianoche hay que correr el cálculo tres horas. Preguntado.
