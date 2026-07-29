@@ -32,6 +32,7 @@ Los números de línea son los del día de la revisión: se corren a medida que 
 | ~~UP-22~~ | ~~Las tres categorías de la portada están escritas a mano y llevan a un listado vacío~~ | Alta | **hecho** 28/07 |
 | ~~UP-23~~ | ~~El destacado y contacto usan padding de escritorio en el celular~~ | Media | **hecho** 28/07 |
 | ~~UP-24~~ | ~~La ficha abre con el talle agotado elegido y el botón apagado, en los diez templates~~ | Alta | **hecho** 28/07 |
+| ~~UP-25~~ | ~~El "+" del carrito no tiene techo: se pueden cargar 65 unidades de un producto que tiene 5~~ | Alta | **hecho** 29/07 |
 
 **Los veinte puntos están cerrados.** El UP-19 salió mirando el UP-18. Se probó con la foto abajo de
 los botones, a Flavio no le gustó y volvió a quedar sin foto — pero escrito, que es lo que faltaba.
@@ -2104,3 +2105,32 @@ su propio documento (`PROMOCIONES.md`), lo usan las diez plantillas y **todas** 
 síntoma es de atribución, no de cobro. Meterle mano al final de una pasada de otro template, sin
 poder correr una compra real contra cada tipo de promo, es cambiar algo que hoy cobra bien. Merece su
 propia revisión.
+
+### UP-25 — El "+" del carrito no tenía techo ✅
+
+Lo encontró Flavio probando la compra: llegó a **65 unidades de un pantalón que tiene 5**.
+
+Y es un agujero de esta misma auditoría. En UP-24 se revisó el recorrido de compra y se dio por bueno
+*"pasarse del stock: `addToCart` recorta con `Math.min(qty, stock)`"* — **se miró `addToCart` y no
+`updateQty`**. Recortar al agregar no sirve de nada si después se puede seguir sumando de a uno desde
+el carrito. `updateQty` sólo ponía piso (`Math.max(1, …)`), techo nunca.
+
+**No se vendía de más**: la caja descuenta con `stock >= cantidad` en la misma operación, así que el
+pedido rebota. Pero rebotaba **en el último paso**: la persona llenaba el carrito, cargaba nombre,
+dirección y forma de pago, y recién ahí se enteraba. Con un medio de pago externo, todavía más tarde.
+
+Ahora el techo es el stock de esa variante, la misma cuenta que usa `addToCart`. Y **cuando el tope
+muerde se avisa** —"Solo quedan 5 unidades"—, porque un botón que deja de responder sin decir nada se
+lee como que la página se colgó.
+
+| caso | antes | ahora | |
+|---|---|---|---|
+| 5 en stock, está en 5, toca `+` | 6 | **5** | ✅ |
+| 5 en stock, está en 4, toca `+` | 5 | 5 | igual |
+| toca `−` | baja | baja | igual |
+| producto sin variantes (stock desconocido) | 21 | 21 | igual — no se inventa un tope |
+| se quedó sin stock con la línea ya cargada | 4 | **1** | ✅ |
+| 65 clics de `+` con 5 en stock | 65 | **5** | ✅ |
+
+Está en `useCartLogic`, así que le llega a **los diez templates** y también al `+` del checkout, que
+usa la misma función.

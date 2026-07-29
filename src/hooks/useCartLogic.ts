@@ -594,8 +594,32 @@ export function useCartLogic({ products, promotions = [], storeId, affiliateId =
   const removeFromCart = (idx: number) =>
     setCartItems(prev => prev.filter((_, i) => i !== idx));
 
+  /* El "+" del carrito no tenía techo. Sólo ponía piso con `Math.max(1, …)`, así
+     que se podía subir la cantidad sin límite: Flavio llegó a 65 unidades de un
+     pantalón que tiene 5. `addToCart` sí recortaba contra el stock, pero recortar
+     al agregar no sirve de nada si después se puede seguir sumando de a uno.
+
+     No se vendía de más —la caja descuenta con `stock >= cantidad` en la misma
+     operación, así que el pedido rebota—, pero rebotaba EN EL ÚLTIMO PASO: la
+     persona llenaba el carrito, cargaba nombre, dirección y forma de pago, y recién
+     ahí se enteraba. Y con un medio de pago externo el rechazo llega todavía más
+     tarde.
+
+     Ahora el techo es el stock de esa variante, la misma cuenta que usa
+     `addToCart`. Cuando el tope muerde se avisa, porque un botón que deja de hacer
+     efecto sin decir nada se lee como que la página se colgó. */
   const updateQty = (idx: number, delta: number) =>
-    setCartItems(prev => prev.map((item, i) => i === idx ? { ...item, qty: Math.max(1, item.qty + delta) } : item));
+    setCartItems(prev => prev.map((item, i) => {
+      if (i !== idx) return item;
+      const stock = resolveVariantStock(item.product, item.size, item.color);
+      const pedido = item.qty + delta;
+      const conTecho = stock !== null ? Math.min(pedido, stock) : pedido;
+      const final = Math.max(1, conTecho);
+      if (delta > 0 && final === item.qty && stock !== null) {
+        showToast(stock === 1 ? "Queda 1 unidad" : `Solo quedan ${stock} unidades`);
+      }
+      return { ...item, qty: final };
+    }));
 
   const openCheckout = () => {
     setCartOpen(false);
