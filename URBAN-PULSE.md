@@ -2134,3 +2134,36 @@ lee como que la página se colgó.
 
 Está en `useCartLogic`, así que le llega a **los diez templates** y también al `+` del checkout, que
 usa la misma función.
+
+### Las migraciones ya no corren fuera de producción ✅
+
+El `build` era `prisma migrate deploy && next build`, sin distinguir dónde estaba corriendo. Eso trajo
+dos problemas, y los dos ya habían mordido:
+
+**Uno.** Los tres deploys de preview de la rama `auditoria-urban-pulse` fallaron a los 6 segundos —
+antes de compilar nada— porque a Vercel le falta `DIRECT_URL` en el entorno de Preview. Y el arreglo
+obvio, cargarle las credenciales de producción, tiene una consecuencia fea: cada build de preview le
+aplicaría las migraciones **a la base real**. Un preview es para mirar, no para migrar.
+
+**Dos.** En la máquina de uno, `npm run build` hacía exactamente lo mismo. Por eso durante toda esta
+auditoría hubo que compilar con `npx next build` y acordarse de no usar el atajo. Una regla que hay que
+recordar es una regla que alguna vez se olvida.
+
+Ahora el `build` llama a `scripts/migrar-solo-en-produccion.mjs`, que migra **únicamente** cuando
+Vercel dice que es producción (`VERCEL_ENV === "production"`). Es a propósito conservador: si mañana el
+deploy sale desde otro lado, no migra solo — prefiere no hacer nada antes que tocar la base por las
+suyas. Si la migración falla, el build sigue fallando; eso no cambia.
+
+| dónde | antes | ahora |
+|---|---|---|
+| Vercel, producción | migra | **migra** (igual) |
+| Vercel, preview | migra contra la base real | **saltea** |
+| Tu máquina, `npm run build` | migra contra la base real | **saltea** |
+
+Probadas las dos ramas que no son producción, las dos saltean y devuelven 0. **La de producción no se
+ejecutó a propósito**: correrla habría aplicado migraciones contra la base real. Se verificó por otro
+lado que sería inofensiva igual — ninguno de los 44 commits agrega una migración, y la última del repo
+es del 23/07.
+
+`npm run build` completo, de punta a punta, sin errores. Es la primera vez en toda la auditoría que se
+puede correr sin tocar producción.
