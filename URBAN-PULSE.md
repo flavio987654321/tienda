@@ -40,7 +40,10 @@ templates y un arreglo ahí los toca a todos:
 | ~~PL-1~~ | ~~El carrito y el checkout son una copia de 315 líneas, ya atrasada en dos cosas~~ | Alta | **hecho** 28/07 |
 | ~~PL-2~~ | ~~La paleta de Urban Pulse era azul y naranja, colores que el template no usa~~ | Alta | **hecho** 28/07 |
 | ~~PL-3~~ | ~~El modal del catálogo es el de Chic Paris, también para Urban Pulse~~ | Media | **hecho** 28/07 |
-| ~~PL-4~~ | ~~El acento se usa de relleno sin pasar por el helper en nueve lugares; con un acento claro desaparecen~~ | Alta | **hecho** 28/07 | Del UP-9 en adelante ya no salieron de la auditoría original:
+| ~~PL-4~~ | ~~El acento se usa de relleno sin pasar por el helper en nueve lugares; con un acento claro desaparecen~~ | Alta | **hecho** 28/07 |
+| ~~PL-5~~ | ~~Al modal le faltaban ocho detalles del panel del template, dos de ellos no cosméticos~~ | Media | **hecho** 28/07 |
+
+Del UP-9 en adelante ya no salieron de la auditoría original:
 los reportó Flavio mirando su propia tienda o los pidió él. UP-9 lo vio con una captura, y UP-10 fue
 un pedido suyo — traer las reseñas de verdad
 al bloque de opiniones. Lo que queda anotado no es de este template: está en
@@ -1722,5 +1725,40 @@ porque no tienen contenido ni hay `gap`.
 **Los otros tres no se tocaron.** Siguen con la forma de siempre, incluido el mecanismo del alto
 medido (`altoPanel`), que es el otro camino al mismo problema y que con el panel clavado se pelearían.
 Cuando a cada uno le toque su auditoría se decidirá qué forma quiere.
+
+`tsc` y eslint limpios. Los cuatro templates de moda abren el catálogo en 200.
+
+### PL-5 — Al modal le faltaban ocho detalles del panel ✅
+
+Flavio, después de PL-3: *"no está del todo igual el modal de producto de Urban, faltan más cosas, más
+detalles del modal principal"*. Tenía razón: PL-3 arregló la **estructura** —dónde va cada cosa— y
+dejó sin tocar **cómo se ve** cada cosa adentro del panel. Comparados renglón por renglón contra el
+modal del template, faltaban ocho:
+
+| | antes | ahora |
+|---|---|---|
+| Títulos de sección | un renglón chico en gris | rayita gruesa del acento + texto + línea fina hasta el borde |
+| Nombre del producto | serif, peso normal, "Pantalón básico" | mayúsculas, peso 900, "PANTALON BASICO" |
+| Rubro | pintado con el acento | gris, en negrita |
+| Precio | 22px / peso 700 | **28px / peso 900** |
+| "% OFF" | verde sobre verde claro | blanco sobre el rojo del precio |
+| Botón de comprar | "Agregar al carrito · $48.000" | "Agregar · $48.000", peso 900 |
+| Guardar en favoritos | **no existía** | botón con borde abajo del de comprar |
+| Estrellas con el promedio | no existía | arriba del precio, lleva a las reseñas |
+| Botón de cerrar | redondeado y translúcido, despegado 10px | cuadrado macizo clavado en la esquina |
+
+Dos no son cosméticos:
+
+- **Guardar en favoritos no estaba en ningún lado.** Desde el catálogo sólo se podía marcar un
+  favorito con el corazoncito de la tarjeta, que es chico y está arriba de la foto. Con el producto
+  abierto —que es cuando alguien decide si lo quiere— no había forma.
+- **Las estrellas con el promedio.** Con PL-3 las reseñas bajaron al final de la columna izquierda, así
+  que sin este atajo no hay ninguna señal de que el producto tenga opiniones hasta scrollear medio
+  modal. Es el mismo botón del template y lleva al bloque.
+
+Los títulos de sección son cinco por modal (Descripción, Características, Videos, Reseñas, También te
+puede gustar), y salen de una sola función que devuelve una forma u otra según el template — no hay
+dos versiones que se puedan desincronizar. Lo mismo con "Talle: 32" y "Color: Beige", que en Urban
+Pulse llevan el valor elegido en el título y en los otros tres van a secas.
 
 `tsc` y eslint limpios. Los cuatro templates de moda abren el catálogo en 200.

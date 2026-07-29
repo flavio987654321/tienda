@@ -913,12 +913,27 @@ function ProductosPageInner() {
      Los otros tres siguen con la forma de siempre hasta que les toque su auditoría. */
   const modalUP = template === "urban-pulse" && !isMobile;
 
+  /* Los títulos de sección adentro del modal. Urban Pulse los dibuja con una
+     rayita gruesa del acento, el texto y una línea fina que llega hasta el borde;
+     los otros tres, con un renglón chico en gris. Era de las diferencias que más
+     se notaban, porque hay cinco por modal (Descripción, Características, Videos,
+     Reseñas, También te puede gustar). */
+  const tituloSeccion = (texto: string) => modalUP ? (
+    <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:16 }}>
+      <span style={{ width:24, height:4, background:chipBg, flexShrink:0 }} />
+      <span style={{ fontSize:11, fontWeight:900, letterSpacing:3, textTransform:"uppercase", color:T, whiteSpace:"nowrap" }}>{texto}</span>
+      <span style={{ flex:1, height:1, background:borderFaint, minWidth:0 }} />
+    </div>
+  ) : (
+    <p style={tituloBloque}>{texto}</p>
+  );
+
   /* Descripción y características salen acá afuera porque van en DOS lugares según
      el template: adentro del panel de compra en los otros tres, y abajo de la foto
      en Urban Pulse. Una sola definición para que no puedan quedar distintas. */
   const bloqueDescripcion = modalProduct?.description ? (
     <div style={{ borderTop:`1px solid ${borderFaint}`, paddingTop:18 }}>
-      <p style={tituloBloque}>Descripción</p>
+      {tituloSeccion("Descripción")}
       {/* Sin recortar: el panel tiene alto fijo y scrollea, así que un
           texto largo ya no deforma nada — se lee bajando acá adentro. */}
       <div className="product-rte" dangerouslySetInnerHTML={{ __html: modalProduct.description }} style={{ fontSize:13, color:MID, lineHeight:1.75 }} />
@@ -938,7 +953,7 @@ function ProductosPageInner() {
     if (!condicionAttr && otherAttrs.length === 0 && servicios.length === 0) return null;
     return (
       <div style={{ borderTop:`1px solid ${borderFaint}`, paddingTop:18 }}>
-        <p style={tituloBloque}>Características</p>
+        {tituloSeccion("Características")}
         <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
           {condicionAttr && (
             <span style={{ alignSelf:"flex-start", fontSize:10, letterSpacing:2, textTransform:"uppercase", fontWeight:700, color:GT, border:`1px solid ${GT}`, padding:"4px 10px" }}>{condicionAttr.value}</span>
@@ -1946,7 +1961,15 @@ function ProductosPageInner() {
               columna de compra se lleva entre 300 y 400, así que con 980 a la foto
               le quedaban ~600 y con 1080 le quedan ~700. */}
           <div style={{ position: isMobile ? "absolute" : "relative", ...(isMobile ? {top:0,right:0,bottom:0,left:0} : {maxWidth: modalUP ? 1080 : 980, width:"calc(100% - 32px)", maxHeight:"92vh"}), background:S, overflow:"hidden", display:"flex", flexDirection:"column" }} onClick={e => e.stopPropagation()}>
-            <button onClick={() => { setModalProduct(null); setLightboxSrc(null); }} style={{ position:"absolute", top:10, right:10, zIndex:10, background:"rgba(0,0,0,0.65)", border:"none", color:"#fff", width:36, height:36, cursor:"pointer", fontSize:20, display:"flex", alignItems:"center", justifyContent:"center", backdropFilter:"blur(4px)" }}>×</button>
+            {/* Urban Pulse cierra con un cuadrado macizo clavado en la esquina, sin
+                separación ni transparencia — el template no tiene una sola esquina
+                redondeada ni un solo fondo translúcido. */}
+            <button onClick={() => { setModalProduct(null); setLightboxSrc(null); }} aria-label="Cerrar"
+              style={ modalUP
+                ? { position:"absolute", top:0, right:0, zIndex:10, background:T, border:"none", color:S, width:40, height:40, cursor:"pointer", fontSize:18, display:"flex", alignItems:"center", justifyContent:"center" }
+                : { position:"absolute", top:10, right:10, zIndex:10, background:"rgba(0,0,0,0.65)", border:"none", color:"#fff", width:36, height:36, cursor:"pointer", fontSize:20, display:"flex", alignItems:"center", justifyContent:"center", backdropFilter:"blur(4px)" } }>
+              {modalUP ? "✕" : "×"}
+            </button>
             {/* 48% para la foto, como en el modal del template (ahí es el mismo
                 número). A 50/50 la columna de comprar quedaba más angosta de lo
                 necesario y los chips de talle se apretaban en 768. */}
@@ -2036,7 +2059,7 @@ function ProductosPageInner() {
                 lugar para arreglar cuando algo falle. */}
             {modalProduct.reelUrls.length > 0 && (
               <div style={{ padding: isMobile ? "18px 16px 0" : "22px 0 0" }}>
-                <p style={tituloBloque}>Videos del producto</p>
+                {tituloSeccion("Videos del producto")}
                 <StoreProductReels
                   reelUrls={modalProduct.reelUrls}
                   ancho={isMobile ? 120 : 160}
@@ -2071,32 +2094,62 @@ function ProductosPageInner() {
               <div style={{ position:"absolute", left:0, right:0, bottom:0, height:44, zIndex:2, pointerEvents:"none",
                             background:`linear-gradient(to bottom, transparent, ${S})` }} />
             )}
-            <div ref={panelRef} className="st-sin-barra" style={{ flex:1, padding:"clamp(20px,4vw,36px) clamp(16px,3.5vw,32px)", display:"flex", flexDirection:"column", gap:18, minHeight:0,
+            {/* 46px arriba y no 20: el botón de cerrar de Urban Pulse es un cuadrado
+                de 40 clavado en la esquina, y con el padding chico le caía justo
+                encima al rubro del producto. Los otros tres lo tienen despegado. */}
+            <div ref={panelRef} className="st-sin-barra" style={{ flex:1, padding: modalUP ? "46px 26px 30px" : "clamp(20px,4vw,36px) clamp(16px,3.5vw,32px)", display:"flex", flexDirection:"column", gap:18, minHeight:0, boxSizing:"border-box",
                           ...(!modalUP && altoPanel ? { maxHeight: altoPanel, overflowY:"auto" as const } : {}) }}>
               <div>
-                <p style={{ fontSize:10, letterSpacing:3, color:GT, textTransform:"uppercase", marginBottom:6 }}>
+                {/* En Urban Pulse el rubro va en gris y el nombre en mayúsculas y
+                    negrita máxima — el template no usa serif en ningún lado. Era la
+                    diferencia más visible del panel: el mismo producto decía
+                    "Pantalón básico" acá y "PANTALON BASICO" en el home. */}
+                <p style={{ fontSize:10, letterSpacing:3, color: modalUP ? MID : GT, fontWeight: modalUP ? 800 : 400, textTransform:"uppercase", marginBottom:6 }}>
                   {modalProduct.category}{modalProduct.subcategory && <span style={{ opacity:0.6 }}> › {modalProduct.subcategory}</span>}
                 </p>
-                <h2 style={{ fontFamily:serif, fontSize:24, margin:0, lineHeight:1.2, color:T }}>{modalProduct.name}</h2>
+                <h2 style={ modalUP
+                  ? { fontSize:24, margin:0, fontWeight:900, textTransform:"uppercase", letterSpacing:"-0.5px", lineHeight:1.15, color:T, overflowWrap:"anywhere" }
+                  : { fontFamily:serif, fontSize:24, margin:0, lineHeight:1.2, color:T } }>{modalProduct.name}</h2>
               </div>
+              {/* Atajo a las reseñas, igual que en el template: viven abajo de todo,
+                  y sin esto no hay ninguna señal de que el producto tenga opiniones
+                  hasta scrollear medio modal. */}
+              {modalUP && resenasProd.total > 0 && (
+                <button type="button" onClick={() => document.getElementById("pc-modal-resenas")?.scrollIntoView({ behavior:"smooth", block:"start" })}
+                  style={{ display:"flex", alignItems:"center", gap:7, background:"none", border:"none", padding:0, cursor:"pointer", marginTop:-8 }}>
+                  <span style={{ display:"flex", gap:1 }}>
+                    {[1,2,3,4,5].map(s => <span key={s} style={{ fontSize:13, color: s <= Math.round(resenasProd.promedio) ? STAR_ON : `${T}28` }}>★</span>)}
+                  </span>
+                  <span style={{ fontSize:11, fontWeight:900, color:T }}>{resenasProd.promedio.toFixed(1)}</span>
+                  <span style={{ fontSize:10, fontWeight:800, color:MID, letterSpacing:1, textTransform:"uppercase", textDecoration:"underline" }}>
+                    {resenasProd.total} reseña{resenasProd.total !== 1 ? "s" : ""}
+                  </span>
+                </button>
+              )}
               {/* El precio va pegado al título. Antes en el medio estaban los dos
                   botones de compartir, que son lo último que hace alguien que
                   todavía no sabe cuánto cuesta — bajaron al final del panel. */}
               <div style={{ display:"flex", gap:10, alignItems:"baseline", flexWrap:"wrap" }}>
+                {/* Urban Pulse escribe el precio más grande y más pesado (28/900
+                    contra 22/700), y el "% OFF" con el mismo color del precio
+                    rebajado de fondo en vez de verde sobre verde claro — que era un
+                    tercer color en el mismo renglón, sin relación con nada. */}
                 {modalPromo.hasPriceDrop ? (
                   <>
-                    <span style={{ fontSize:22, fontWeight:700, color:"#dc2626" }}>{fmt(modalPromo.effectivePrice)}</span>
-                    <span style={{ fontSize:14, color:MID, textDecoration:"line-through" }}>{fmt(modalPromo.originalPrice)}</span>
+                    <span style={{ fontSize: modalUP ? 28 : 22, fontWeight: modalUP ? 900 : 700, color:"#dc2626" }}>{fmt(modalPromo.effectivePrice)}</span>
+                    <span style={{ fontSize: modalUP ? 15 : 14, color:MID, textDecoration:"line-through" }}>{fmt(modalPromo.originalPrice)}</span>
                     {modalPromo.pctOff != null && (
-                      <span style={{ fontSize:12, fontWeight:800, color:"#16a34a", background:"#dcfce7", padding:"2px 8px", borderRadius:4, letterSpacing:0.3, whiteSpace:"nowrap" }}>
+                      <span style={ modalUP
+                        ? { fontSize:12, fontWeight:800, color:"#fff", background:"#dc2626", padding:"2px 8px", borderRadius:4, letterSpacing:0.3, whiteSpace:"nowrap" }
+                        : { fontSize:12, fontWeight:800, color:"#16a34a", background:"#dcfce7", padding:"2px 8px", borderRadius:4, letterSpacing:0.3, whiteSpace:"nowrap" } }>
                         {modalPromo.pctOff}% OFF
                       </span>
                     )}
                   </>
                 ) : (
                   <>
-                    <span style={{ fontSize:22, fontWeight:700, color:GT }}>{fmt(displayPrice)}</span>
-                    {!variantPrice && modalProduct.comparePrice && <span style={{ fontSize:14, color:MID, textDecoration:"line-through" }}>{fmt(modalProduct.comparePrice)}</span>}
+                    <span style={{ fontSize: modalUP ? 28 : 22, fontWeight: modalUP ? 900 : 700, color: modalUP ? ((!variantPrice && modalProduct.comparePrice) ? "#dc2626" : T) : GT }}>{fmt(displayPrice)}</span>
+                    {!variantPrice && modalProduct.comparePrice && <span style={{ fontSize: modalUP ? 15 : 14, color:MID, textDecoration:"line-through" }}>{fmt(modalProduct.comparePrice)}</span>}
                   </>
                 )}
               </div>
@@ -2118,7 +2171,7 @@ function ProductosPageInner() {
                   mismo, y el chip marcado ya lo dice. */}
               {modalProduct.sizes.length > 0 && (
                 <div>
-                  <p style={tituloBloque}>Talle</p>
+                  {tituloSeccion(modalUP && selectedSize ? `Talle: ${selectedSize}` : "Talle")}
                   <div style={{ display:"flex", gap:7, flexWrap:"wrap" }}>
                     {modalProduct.sizes.map(size => {
                       const sinStock = outOfStockSizes.has(size);
@@ -2135,7 +2188,7 @@ function ProductosPageInner() {
 
               {modalProduct.colors.length > 0 && (
                 <div>
-                  <p style={tituloBloque}>Color</p>
+                  {tituloSeccion(modalUP && selectedColor ? `Color: ${selectedColor}` : "Color")}
                   <div style={{ display:"flex", gap:7, flexWrap:"wrap" }}>
                     {/* Con el puntito de muestra, como en el modal del template:
                         "Petróleo" o "Arena" no le dicen nada a nadie hasta verlo. */}
@@ -2205,9 +2258,24 @@ function ProductosPageInner() {
                   no: los chips ya pasaban por el helper y el botón no. */}
               <button onClick={addToCart}
                 disabled={selectedVariantStock === 0}
-                style={{ background: selectedVariantStock === 0 ? `${chipBg}40` : chipBg, color:chipText, border:"none", padding:"15px", fontSize:11, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor: selectedVariantStock === 0 ? "not-allowed" : "pointer" }}>
-                {selectedVariantStock === 0 ? "Sin stock" : `Agregar al carrito · ${fmt(nxmPaid != null ? nxmPaid * displayPrice : (modalPromo.hasPriceDrop ? modalPromo.effectivePrice : displayPrice) * qty)}`}
+                style={{ background: selectedVariantStock === 0 ? `${chipBg}40` : chipBg, color:chipText, border:"none", padding: modalUP ? "16px" : "15px", fontSize:11, fontWeight: modalUP ? 900 : 800, letterSpacing:3, textTransform:"uppercase", cursor: selectedVariantStock === 0 ? "not-allowed" : "pointer" }}>
+                {/* "Agregar" a secas en Urban Pulse: el botón está adentro del panel
+                    de compra, con el precio al lado, así que "al carrito" no agrega
+                    información y sí un renglón partido en pantallas angostas. */}
+                {selectedVariantStock === 0 ? "Sin stock" : `${modalUP ? "Agregar" : "Agregar al carrito"} · ${fmt(nxmPaid != null ? nxmPaid * displayPrice : (modalPromo.hasPriceDrop ? modalPromo.effectivePrice : displayPrice) * qty)}`}
               </button>
+
+              {/* Guardar en favoritos: el panel del template lo tiene y este no lo
+                  tenía en ningún lado. Desde el catálogo sólo se podía marcar un
+                  favorito con el corazoncito de la tarjeta, que es chico y está
+                  arriba de la foto — abierto el producto, no había forma. */}
+              {modalUP && (
+                <button onClick={() => toggleFavorite(modalProduct.id)}
+                  style={{ width:"100%", background:"none", border:`2px solid ${T}`, color:T, padding:"12px", fontSize:10, fontWeight:900, letterSpacing:2, textTransform:"uppercase", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}>
+                  <svg width={14} height={14} viewBox="0 0 24 24" fill={favorites.includes(modalProduct.id) ? T : "none"} stroke={T} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                  {favorites.includes(modalProduct.id) ? "Guardado" : "Guardar en favoritos"}
+                </button>
+              )}
 
               {/* En Urban Pulse estos dos no van acá: bajan a la columna izquierda,
                   debajo de la foto. El panel se queda SOLO con lo de comprar. */}
@@ -2258,10 +2326,12 @@ function ProductosPageInner() {
                 pantalla. Acá abajo entran a lo ancho y las tarjetas van de a dos
                 por fila (ver más abajo), que es donde el renglón queda en ~64
                 caracteres en vez de ~140. */}
-            <div style={{ gridColumn: isMobile ? undefined : (modalUP ? 1 : "1 / -1"), borderTop:`1px solid ${border}`, padding: isMobile ? "20px 16px" : "24px 32px" }}>
-                <p style={{ ...tituloBloque, marginBottom: 20 }}>
-                  Reseñas{resenasProd.total > 0 && ` (${resenasProd.total})`}
-                </p>
+            <div id="pc-modal-resenas" style={{ gridColumn: isMobile ? undefined : (modalUP ? 1 : "1 / -1"), borderTop:`1px solid ${border}`, padding: isMobile ? "20px 16px" : "24px 32px" }}>
+                {modalUP ? tituloSeccion(`Reseñas${resenasProd.total > 0 ? ` (${resenasProd.total})` : ""}`) : (
+                  <p style={{ ...tituloBloque, marginBottom: 20 }}>
+                    Reseñas{resenasProd.total > 0 && ` (${resenasProd.total})`}
+                  </p>
+                )}
                 {/* Solo en el editor: aclara que lo de abajo es de mentira. Sin
                     esto el dueño cree que ya tiene reseñas. */}
                 {resenasDeEjemplo && (
