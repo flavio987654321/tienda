@@ -99,7 +99,10 @@ Un asistente conversacional dentro del panel de dueños (`/dashboard`) que:
 | S-06 | ✅ | 🟠 | **Salida del modelo renderizada como texto plano, nunca HTML.** Nunca `dangerouslySetInnerHTML` — previene XSS. |
 | S-07 | ✅ | 🟡 | **Instrucciones anti dark-patterns en el system prompt.** Sugerencias constructivas, nunca presión/urgencia falsa/manipulación hacia clientes finales. |
 | S-08 | ✅ | 🟡 | **Manejo de errores sin filtrar detalles internos.** Mensaje genérico al cliente, log real con `console.error`/Sentry. Configurar timeout explícito en el cliente de Anthropic (ej. 30s) y capturarlo puntualmente. |
-| S-09 | ✅ | 🟢 | **Limitación conocida del rate limiter en memoria** (no confiable en Vercel multi-instancia). Aceptado a la escala actual. Nota: en este endpoint el riesgo de un rate limit bypaseado por desincronización entre instancias es más caro que en `contacto`/`checkout`, porque cada request que se filtra paga tokens reales de IA. Si la alerta de gasto de console.anthropic.com se dispara sin explicación, esta es la primera hipótesis a revisar, no necesariamente un ataque. |
+| S-09 | ✅ | 🟢 | ~~**Limitación conocida del rate limiter en memoria** (no confiable en Vercel multi-instancia).~~ **Desactualizado:** el rate limiter pasó a Upstash Redis (`src/lib/rate-limit.ts`), así que el conteo ya es compartido entre instancias. Lo que quedó de este riesgo está en S-13, que es peor de lo que decía esta fila: no era desincronización, era que ante un error de Redis el límite desaparecía del todo. |
+| S-13 | ✅ | 🔴 | **El rate limit no puede fallar abierto.** El wrapper `checkRateLimitSeguro` devolvía `true` cuando Redis tiraba ("el costo de no limitar por un instante es bajo y acotado" — no lo era). Upstash corta por cuota de comandos, o sea que el limitador se cae **bajo carga**, justo cuando hace falta: con Redis caído, una sola cuenta logueada podía disparar en paralelo sin ningún techo (~US$1.300/hora a 20 req/s). Ahora `checkRateLimitConRespaldo` cae a contadores en memoria: 5/10min por usuario **y 20/10min para toda la instancia**. El global es el que importa — un contador por usuario no frena pedidos en paralelo, porque cada instancia nueva arranca en cero. Techo con Redis caído: ~US$2,16/hora por instancia. 12 chequeos en `rate-limit.check.ts`. |
+| S-14 | ✅ | 🟠 | **El prompt fijo se cacheaba: cero.** Son ~12.700 tokens idénticos para todas las tiendas (la guía de navegación sola son 36 KB) y se pagaban enteros en cada mensaje — como el 85% del costo. No se podía cachear porque el prompt arrancaba con la hora y el nombre de la tienda, y el caché de Anthropic corta en el primer token que cambia. `buildSystemPrompt` ahora devuelve `{ estatico, variable }` y el `system` va como dos bloques con `cache_control` en el primero. Costo por mensaje: ~US$0,018 → ~US$0,0075. |
+| S-15 | ⬜ | 🔴 | **Recarga automática (auto-reload) apagada en console.anthropic.com.** No es código: la cuenta es prepaga, que es un techo duro — no te pueden facturar más de lo que cargaste. Pero si el auto-reload está prendido, el saldo se rellena solo con la tarjeta y deja de ser un techo. **Esto es lo único que puede convertir una fuga en una factura.** Verificar a mano. |
 | S-10 | ✅ | 🔴 | **Tope de mensajes por día por usuario, no solo por ventana de 10 minutos.** El rate limit de S-04 no limita el gasto acumulado en 24hs — un usuario golpeando el límite de 30/10min sostenido todo el día puede generar hasta ~$2000/mes por sí solo. Agregar un segundo `checkRateLimit(\`asistente-dia:${user.id}\`, 150, 24*60*60_000)` (150-200/día, generoso para uso real, corta el abuso sostenido). |
 | S-11 | ✅ | 🟡 | **Instrucciones anti prompt-injection en el system prompt.** El modelo debe negarse a revelar su system prompt, ignorar instrucciones del usuario que intenten redefinirle el rol ("ignorá tus instrucciones anteriores y..."), y no asumir personas distintas a "asistente del panel de TiendaApps". Riesgo real bajo (no hay tools ni acceso a sistemas externos), pero barato de agregar y evita capturas de pantalla incómodas. |
 | S-12 | ✅ | 🔴 | **Verificación server-side de los gates, no solo en el frontend.** Revisado el código real de `SubscriptionGate`: con suscripción `ACTIVE`/`TRIAL`/`GRACE` el panel **no se bloquea** (solo banner) — el bloqueo real (que ocultaría la burbuja, D-06) es únicamente con `EXPIRED`/`CANCELLED`. El endpoint debe llamar a `getSubscriptionStatus()` y devolver 403 si está en esos dos estados, y también 403 si `tipoTiendaConfigurado: false` — igual que el frontend, pero sin confiar en que el cliente simplemente no muestre el botón (alguien podría seguir pegándole al endpoint por curl con la suscripción vencida). |
@@ -313,6 +316,85 @@ ofrecer primero la salida gratis del tope, y **nunca decir que creó algo** — 
   después de haber mandado todos los mails, con un reintento que los volvería a mandar.
 - **El historial no se limpiaba nunca.** La charla se resetea en pantalla cada día pero las filas
   quedaban para siempre. Ahora se borra lo de más de 90 días, menos los avisos sin leer.
+
+---
+
+## COSTO DE TOKENS — EL FRENO (29/07/2026)
+
+Sasha es la única parte del sistema que **cuesta plata por uso**. Todo lo de acá abajo
+existe por eso. Ver S-13, S-14 y S-15 en el BLOQUE S.
+
+### Qué protege el chat hoy
+
+El chat **no es público** y no hay ningún otro lugar que llame a Anthropic — verificado,
+`anthropic.messages` aparece sólo en `src/app/api/asistente/route.ts`. Para llegar hay
+que pasar: sesión válida → `role === "OWNER"` → tener tienda propia → `tipoTiendaConfigurado`
+→ suscripción no `EXPIRED`/`CANCELLED` → rate limit. Y `max_tokens: 600` acota cada respuesta.
+
+Los dos topes se chequean **antes** de leer el body y antes de tocar la base, así que un
+pedido rechazado no cuesta ni una consulta.
+
+### Los números
+
+| | |
+|---|---|
+| Prompt estático (cacheado) | ~12.700 tokens |
+| Historial máximo | 12.000 caracteres (~3.000 tokens) |
+| Salida máxima | 600 tokens |
+| Costo por mensaje, sin caché | ~US$0,018 |
+| Costo por mensaje, con caché | ~US$0,0075 |
+| Tope por usuario/día (150 msj) | ~US$1,10 |
+
+### El techo cuando Redis se cae
+
+Es el escenario que importa, porque es el que no se ve venir. Upstash corta por cuota de
+comandos: se cae **bajo carga**, exactamente cuando el freno hace falta.
+
+```
+Antes:   sin límite               →  ~US$1.300/hora a 20 req/s
+Ahora:   5/10min por usuario
+         20/10min por instancia   →  ~US$2,16/hora por instancia
+```
+
+El global por instancia es el que hace el trabajo. Un contador por usuario no frena a
+quien dispara en paralelo, porque cada instancia nueva arranca con los contadores en
+cero — el único multiplicador que le queda a un ataque es cuántas instancias levante.
+Los rechazados **también** gastan del presupuesto global, si no alguien quemaría el tope
+de un usuario y seguiría teniendo los 20 globales enteros.
+
+### La regla del caché (se rompe fácil y en silencio)
+
+El caché de Anthropic corta en el **primer token que cambia**. `buildSystemPrompt`
+devuelve `{ estatico, variable }` y el bloque estático tiene que ser idéntico, carácter
+por carácter, para cualquier tienda y a cualquier hora.
+
+**Si alguien mete un dato de la tienda en el bloque estático, todo sigue funcionando
+igual y el caché deja de pegar para siempre. El único síntoma es la factura.** Por eso
+`asistente-prompt.check.ts` arma el prompt con dos tiendas que no comparten nada y
+compara los estáticos con `===`. 44 chequeos.
+
+Efecto secundario del reordenamiento: los datos quedaron al final, así que cada
+referencia tipo "los datos de arriba" quedó apuntando al lado que no era. Ahora las
+secciones se nombran por su título ("Datos reales de la tienda") en vez de por su
+posición, que además aguanta el próximo reordenamiento. Hay chequeos que lo verifican.
+
+En los logs, `cacheLeido` es la prueba de que está pegando. Si viene en 0 mensaje tras
+mensaje, algo del bloque estático se volvió variable.
+
+### Registro de cuentas falsas (anotado, no urgente)
+
+`registro/route.ts` pide Turnstile y limita a 5 intentos/min por IP, pero usa
+`email_confirm: true` — no hace falta un mail real — y el trial de 7 días da acceso a
+Sasha. Cada cuenta falsa vale hasta ~US$19 en tokens. Acotado y caro de escalar (un
+captcha y una tienda configurada por cada una), así que queda anotado.
+
+### Lo que NO se hizo, y por qué
+
+- **Contador de gasto global entre todas las tiendas.** El techo de verdad es el saldo
+  prepago de la cuenta (S-15). Duplicarlo en código sería otro contador más para
+  mantener sincronizado.
+- **Fail closed** (503 si Redis no contesta). Descartado: apagaría a Sasha para todas
+  las tiendas cada vez que Upstash tiene un mal día, y Upstash corta por cuota.
 
 ---
 

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth-session";
 import { prisma } from "@/lib/prisma";
-import { checkRateLimit } from "@/lib/rate-limit";
+import { checkRateLimit, checkRateLimitConRespaldo } from "@/lib/rate-limit";
 import { getUserSubscription, getSubscriptionStatus } from "@/lib/subscription";
 import { getStoreSnapshot, getChecklistEstado } from "@/lib/asistente-insights";
 import { getUpcomingDates, getArgentinaAhora, getArgentinaDayKey } from "@/lib/fechas-comerciales";
@@ -17,14 +17,38 @@ const MAX_CHARS_TOTAL = 12_000;
 
 type ChatMessage = { role: "user" | "assistant"; content: string };
 
-// Si Redis no responde (caído, o sin credenciales en este entorno), preferimos
-// dejar pasar el mensaje antes que tirarle un error genérico al dueño por algo
-// que no depende de él. El costo de no limitar por un instante es bajo y acotado.
-async function checkRateLimitSeguro(key: string, limit: number, windowMs: number): Promise<boolean> {
+/**
+ * Cada mensaje de Sasha cuesta plata (tokens). Estos son los dos topes que
+ * evitan que alguien vacíe el crédito de Anthropic, y por eso se chequean ANTES
+ * de leer el body y antes de tocar la base.
+ */
+const LIMITE_RAFAGA = 30;
+const VENTANA_RAFAGA_MS = 10 * 60_000;
+const LIMITE_DIARIO = 150;
+
+/**
+ * Topes de emergencia para cuando Redis no contesta.
+ *
+ * El global (por instancia) es el que realmente frena: un contador por usuario
+ * no sirve contra pedidos en paralelo, porque cada instancia nueva arranca en
+ * cero. Con esto, el único multiplicador que le queda a un ataque es cuántas
+ * instancias logre levantar.
+ */
+const LIMITE_RAFAGA_SIN_REDIS = 5;
+const LIMITE_GLOBAL_SIN_REDIS = 20;
+
+/**
+ * El tope diario vive sólo en Redis, y a propósito.
+ *
+ * Un contador en memoria no puede sostener una ventana de 24hs: la instancia se
+ * recicla y el contador vuelve a cero. Si Redis no contestó, el respaldo de la
+ * ráfaga ya puso un techo — y volver a llamar al respaldo acá gastaría dos veces
+ * del presupuesto global por un solo mensaje, dejándolo en la mitad.
+ */
+async function dentroDelTopeDiario(userId: string): Promise<boolean> {
   try {
-    return await checkRateLimit(key, limit, windowMs);
-  } catch (err) {
-    console.error("[asistente] rate limiter no disponible, se deja pasar el mensaje", err);
+    return await checkRateLimit(`asistente-dia:${userId}`, LIMITE_DIARIO, 24 * 60 * 60_000);
+  } catch {
     return true;
   }
 }
@@ -88,10 +112,16 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  if (!(await checkRateLimitSeguro(`asistente:${user.id}`, 30, 10 * 60_000))) {
+  const rafaga = await checkRateLimitConRespaldo(
+    `asistente:${user.id}`,
+    LIMITE_RAFAGA,
+    VENTANA_RAFAGA_MS,
+    { limiteFallback: LIMITE_RAFAGA_SIN_REDIS, limiteFallbackGlobal: LIMITE_GLOBAL_SIN_REDIS }
+  );
+  if (!rafaga.permitido) {
     return NextResponse.json({ error: "Mandaste muchos mensajes, esperá un momento." }, { status: 429 });
   }
-  if (!(await checkRateLimitSeguro(`asistente-dia:${user.id}`, 150, 24 * 60 * 60_000))) {
+  if (rafaga.conRedis && !(await dentroDelTopeDiario(user.id))) {
     return NextResponse.json({ error: "Llegaste al límite de mensajes de hoy con Sasha." }, { status: 429 });
   }
 
@@ -172,7 +202,14 @@ export async function POST(req: NextRequest) {
         const anthropicStream = anthropic.messages.stream({
           model: "claude-haiku-4-5",
           max_tokens: 600,
-          system,
+          // El prompt va partido en dos bloques y el `cache_control` marca dónde
+          // corta el caché. El primero son ~11.000 tokens iguales para todas las
+          // tiendas: cachearlo baja el costo por mensaje a menos de la mitad.
+          // Si se vuelven a mezclar los dos bloques, el caché deja de pegar.
+          system: [
+            { type: "text", text: system.estatico, cache_control: { type: "ephemeral" } },
+            { type: "text", text: system.variable },
+          ],
           messages,
         });
 
@@ -181,11 +218,17 @@ export async function POST(req: NextRequest) {
         });
 
         const final = await anthropicStream.finalMessage();
+        // `cacheLeido` es la prueba de que el caché está pegando: si viene en 0
+        // mensaje tras mensaje, algo del bloque estático se volvió variable y se
+        // está pagando el prompt entero cada vez.
         console.log("[asistente] usage", {
           userId: user.id,
           storeId: store.id,
           input: final.usage.input_tokens,
           output: final.usage.output_tokens,
+          cacheEscrito: final.usage.cache_creation_input_tokens ?? 0,
+          cacheLeido: final.usage.cache_read_input_tokens ?? 0,
+          conRedis: rafaga.conRedis,
         });
 
         const textoFinal = final.content
