@@ -173,8 +173,20 @@ model Store {
   showWhatsappButton    Boolean   @default(false)
   // Footer
   footerText            String?
-  // Moneda y SEO
   currency              String    @default("ARS")
+  // OJO: estas dos NO son el SEO de la tienda. Están huérfanas.
+  //
+  // El SEO de la portada vive en `storeConfig.seo` (JSON): lo escribe el editor
+  // —Configuración → "🔍 SEO / Google"— y lo lee `generateMetadata` en
+  // `app/tienda/[slug]/page.tsx`. Ése es el camino que funciona.
+  //
+  // Estas columnas no las edita ninguna pantalla y no las lee ninguna página. El
+  // PUT de `/api/configuracion` las guarda, pero sus dos únicos llamadores hacen
+  // un GET antes y reenvían todo tal cual, así que se reescribe el null que ya
+  // tenían. Quedan por si algún día se migra el SEO del JSON a columnas de
+  // verdad; hasta entonces, no buscar acá.
+  //
+  // El SEO por PRODUCTO es otra cosa y sí funciona: `Product.seoTitle`.
   seoTitle              String?
   seoDescription        String?
   isActive              Boolean   @default(true)
