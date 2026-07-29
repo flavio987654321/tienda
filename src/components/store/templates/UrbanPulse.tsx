@@ -35,6 +35,9 @@ import { useTurnstile } from "@/components/Turnstile";
 
 type Product = StorefrontProduct;
 
+/* ── Redes del footer: sigla que se muestra + clave en socialLinks ── */
+const REDES_UP = [["IG","instagram"],["FB","facebook"],["TK","tiktok"],["YT","youtube"]] as const;
+
 /* ── Ícono de carrito flotante — variantes para elegir en modo edición ── */
 const CART_ICON_OPTIONS: React.ReactNode[] = [
   <Fragment key="bag"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></Fragment>,
@@ -1925,8 +1928,16 @@ export default function UrbanPulse() {
         )}
         <div style={{ padding: isMobile ? "40px 20px 20px" : "60px 40px 28px", position:"relative", zIndex:1 }}>
         <div style={{ maxWidth:1200, margin:"0 auto" }}>
-          <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "2fr 1fr 1fr 1fr", gap: isMobile ? 28 : 40, marginBottom:40 }}>
-            <div>
+          {/* En celular las columnas van de a dos, no apiladas. Son tres listas de
+              cuatro o cinco links: una abajo de la otra miden ~495px y el footer
+              entero pasa de 660px — casi dos pantallas de 360 sólo de footer. De a
+              dos, las listas quedan en ~313px.
+              La marca sí ocupa el ancho entero: su título es de 24px y en media
+              columna (~148px a 360) se partiría en dos o tres renglones.
+              A 360 cada columna da 148px y el link más largo ("Sustentabilidad",
+              13px) mide ~93px, así que entra sin cortarse. */}
+          <div style={{ display:"grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "2fr 1fr 1fr 1fr", gap: isMobile ? "28px 24px" : 40, marginBottom:40 }}>
+            <div style={ isMobile ? { gridColumn:"1 / -1" } : undefined }>
               <div style={{ fontWeight:900, fontSize:24, letterSpacing:4, textTransform:"uppercase", color:footerUpText, marginBottom:16 }}>
                 <EditableZone field="storeName" label="Nombre de la tienda">
                   {storeConfig?.storeName ?? <span>URBAN<span style={{ color:accentSobre(footerUpBg, footerUpText) }}>PULSE</span></span>}
@@ -1935,8 +1946,13 @@ export default function UrbanPulse() {
               <p style={{ color:footerUpMid, fontSize:13, lineHeight:1.8, maxWidth:260 }}>
                 <EditableZone field="footerDescription" label="Descripción footer">Ropa deportiva de alta performance. Para quienes van más rápido.</EditableZone>
               </p>
+              {/* El .some() del wrapper no estaba: con las cuatro redes vacías el
+                  .map() devolvía cuatro null pero el <div> se dibujaba igual y
+                  dejaba 18px de aire suelto abajo de la descripción, sin nada
+                  adentro. Mismo agujero que ya se tapó en Chic Paris. */}
+              {(isPreview || REDES_UP.some(([, k]) => storeConfig?.socialLinks?.[k])) && (
               <div style={{ display:"flex", gap:10, marginTop:18 }}>
-                {([["IG","instagram"],["FB","facebook"],["TK","tiktok"],["YT","youtube"]] as const).map(([label, key]) => {
+                {REDES_UP.map(([label, key]) => {
                   const url = storeConfig?.socialLinks?.[key];
                   if (!isPreview && !url) return null;
                   return (
@@ -1950,6 +1966,7 @@ export default function UrbanPulse() {
                   );
                 })}
               </div>
+              )}
             </div>
             {([
               { titleField:"footerCol1Title", titleDefault:"Tienda",   links:[["footerCol1Link1","Mujer"],["footerCol1Link2","Hombre"],["footerCol1Link3","Accesorios"],["footerCol1Link4","Novedades"],["footerCol1Link5","Sale"]] },

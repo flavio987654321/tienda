@@ -22,8 +22,9 @@ Los números de línea son los del día de la revisión: se corren a medida que 
 | ~~UP-12~~ | ~~La ficha de producto era la de Chic Paris con otra ropa~~ | Alta | **hecho** 28/07 |
 | ~~UP-13~~ | ~~El bloque destacado muestra el octavo producto de la lista, con una ficha inventada~~ | Alta | **hecho** 28/07 |
 | ~~UP-14~~ | ~~El precio se pinta de ocho maneras distintas, con dos rojos que nadie eligió juntos~~ | Alta | **hecho** 28/07 |
+| ~~UP-15~~ | ~~En celular el footer apila las tres columnas de links, y quedan casi dos pantallas~~ | Media | **hecho** 28/07 |
 
-**Los catorce puntos están cerrados.** Del UP-9 en adelante ya no salieron de la auditoría original:
+**Los quince puntos están cerrados.** Del UP-9 en adelante ya no salieron de la auditoría original:
 los reportó Flavio mirando su propia tienda o los pidió él. UP-9 lo vio con una captura, y UP-10 fue
 un pedido suyo — traer las reseñas de verdad
 al bloque de opiniones. Lo que queda anotado no es de este template: está en
@@ -735,6 +736,11 @@ El de `.product-rte` se arregló en `globals.css`, así que **vale para los diez
   reseñas del producto, que están escritos igual en los cuatro.
 - ~~**El `accentText` invertido (UP-3D) puede estar en más templates.**~~ **Revisado el 28/07: estaba
   en SEIS.** Ver abajo.
+- **El `<div>` de las redes sociales que se dibuja vacío sigue en dos templates.** Ver UP-15: el
+  contenedor se renderiza aunque el `.map()` de adentro devuelva todos `null`, y deja su `marginTop`
+  de aire suelto en el footer de cualquier tienda que no cargó ninguna red — que son casi todas al
+  empezar. Falta el `.some()` en **Fashion Noir** (`marginTop: 24`, agujero visible) y en **Boho
+  Terra** (sin `marginTop`, cuesta sólo una separación de la grilla). Los otros ya lo tienen.
 - Todo cambio visual se revisa en **360 / 768 / 1280**. 768 es donde más se rompe.
 
 ### El `accentText` estaba mal en seis templates ✅
@@ -1261,3 +1267,68 @@ solo lugar de todo el template: el fondo del sello "Sale", que es una etiqueta y
 
 `tsc` y eslint limpios. `/plantillas/urban-pulse`, `/plantillas/chic-paris` y `/tienda/tiendaapps` en
 200, verificados en un servidor propio que quedó apagado.
+
+---
+
+### UP-15 — En celular el footer apilaba las tres columnas de links ✅
+
+Flavio, mirando su tienda en 360: *"todo se pone en una fila y no me gusta, me gustaría que sea dos
+filas como hicimos con Chic Paris"*.
+
+**Lo que había.** El footer tiene cuatro bloques: la marca y tres listas de links (Tienda, Ayuda,
+Empresa — cinco, cinco y cuatro links). En escritorio van en `2fr 1fr 1fr 1fr`; en celular la grilla
+pasaba a `1fr` y los cuatro quedaban uno abajo del otro.
+
+Medido a 360px, con 20px de padding a cada lado (320px útiles):
+
+| Bloque | Alto |
+|---|---|
+| Marca (título 24px + descripción de dos renglones + redes) | ~136px |
+| Tienda — título + 5 links | ~155px |
+| Ayuda — título + 5 links | ~155px |
+| Empresa — título + 4 links | ~130px |
+| 3 separaciones de 28px | 84px |
+| **Total** | **~660px** |
+
+Casi dos pantallas de scroll de puro footer, y las tres listas leídas en fila daban la sensación de
+una sola lista larga de catorce links, porque lo único que las separaba era un título de 10px.
+
+**Lo que quedó.** Las tres listas van de a dos. La marca sí ocupa el ancho entero: su título es de
+24px y en media columna (~148px) se partiría en dos o tres renglones. La grilla queda:
+
+```
+┌─────────────────────────────┐
+│ MARCA                       │   ancho entero
+├──────────────┬──────────────┤
+│ TIENDA       │ AYUDA        │
+├──────────────┼──────────────┤
+│ EMPRESA      │              │
+└──────────────┴──────────────┘
+```
+
+De 660px a ~477px: 183px menos, casi media pantalla. La celda vacía de abajo a la derecha es a
+propósito — es lo que hace cualquier footer de tres listas en celular, y la alternativa (estirar
+"Empresa" a lo ancho y poner sus links en dos sub-columnas) la deja con una forma distinta a las
+otras dos sin ganar casi nada de alto.
+
+**Que entren los links.** A 360, con 24px de separación entre columnas, cada una da 148px. El link
+más largo es "Sustentabilidad": 15 caracteres a 13px, ~93px. A 320px —la pantalla más chica que se
+usa— las columnas dan 128px y sigue entrando. Ninguno se parte.
+
+**El agujero de al lado, el mismo de Chic Paris.** En la captura, entre la descripción y "TIENDA" hay
+un salto de aire que no es de ningún elemento. El `<div>` de las redes sociales se dibujaba siempre,
+aunque las cuatro estuvieran vacías: el `.map()` devolvía cuatro `null` pero el contenedor seguía ahí
+con su `marginTop: 18`. Es exactamente el bug que ya se había tapado en el footer de Chic Paris —
+Urban Pulse tenía la misma copia y nadie la había mirado. Ahora el contenedor sólo aparece si hay al
+menos una red cargada (o si es la vista previa del editor, donde se muestran las cuatro apagadas para
+que la dueña sepa que existen).
+
+Ojo con esto: **no es un bug de este footer, es un patrón copiado.** Se revisaron los diez templates
+y quedan **dos** sin el `.some()`: **Fashion Noir** (`marginTop: 24`, el mismo agujero exacto) y
+**Boho Terra** (sin `marginTop`, así que ahí sólo cuesta una separación de la grilla). Casa Clara,
+Electro Prime, Home Studio, Chic Paris y la ficha de producto compartida ya lo tienen. Anotado en
+[Notas para cuando se arregle](#notas-para-cuando-se-arregle); no se tocaron porque esos dos
+templates todavía no entraron a revisión.
+
+`tsc` y eslint limpios. `/tienda/tiendaapps` y `/plantillas/urban-pulse` en 200 — verificados contra
+el servidor que ya tenía Flavio levantado, sin levantar ninguno propio.
