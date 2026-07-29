@@ -8,6 +8,16 @@ import DashboardLayout from "@/components/DashboardLayout";
 import AutoRefresh from "@/components/AutoRefresh";
 import type { LucideIcon } from "lucide-react";
 import { statusLabel } from "@/lib/utils";
+import { parseOrderPromoSummary } from "@/lib/email";
+import {
+  resumirCarritos, resumirCupones, resumirPromos,
+  type CarritoCrudo, type CuponCrudo, type PedidoConCupon,
+} from "@/lib/metricas-marketing";
+import { armarResumen } from "@/lib/resumen-mes";
+import { ESTADOS_VENTA_CONFIRMADA_LISTA } from "@/lib/order-status";
+import {
+  getArgentinaDayKey, diaArgentino, inicioDiaArgentino, sumarDiasCalendario,
+} from "@/lib/fechas-comerciales";
 import {
   TrendingUp,
   ShoppingBag,
@@ -17,6 +27,9 @@ import {
   MessageSquare,
   Wallet,
   AlertTriangle,
+  ShoppingCart,
+  Ticket,
+  Percent,
 } from "lucide-react";
 import { ExportButtons } from "./ExportButtons";
 import ShareStatsButton from "./ShareStatsButton";
@@ -31,38 +44,38 @@ const RANGE_OPTIONS = [7, 30, 90] as const;
 type RangeDays = (typeof RANGE_OPTIONS)[number];
 const RANGE_LABELS: Record<RangeDays, string> = { 7: "7 días", 30: "30 días", 90: "90 días" };
 
-function utcDateStr(d: Date) {
-  return d.toISOString().slice(0, 10);
-}
+/**
+ * A partir de cuántos días un pedido cobrado y sin despachar deja de ser "lo
+ * estoy preparando" y pasa a ser un problema. 5 deja pasar el fin de semana
+ * largo sin llenar el resumen de avisos.
+ */
+const DIAS_SIN_DESPACHAR = 5;
 
-function utcDayLabel(dateStr: string) {
+function dayLabel(dateStr: string) {
   const [, m, day] = dateStr.split("-");
   return `${parseInt(day, 10)}/${parseInt(m, 10)}`;
 }
 
-function addUtcDays(d: Date, n: number) {
-  const r = new Date(d);
-  r.setUTCDate(r.getUTCDate() + n);
-  return r;
-}
-
-// Construye una serie diaria en UTC para cualquier colección con fecha + valor.
-// Se usa para ingresos, consultas y visitas — así los tres gráficos quedan
-// alineados al mismo eje de fechas (antes, visitas usaba UTC e ingresos/consultas
-// usaban la hora local del servidor, y podían desalinearse un día).
+// Construye una serie diaria para cualquier colección con fecha + valor. Se usa
+// para ingresos, consultas, ganancia y visitas — así los cuatro gráficos quedan
+// alineados al mismo eje de fechas.
+//
+// Las claves son días ARGENTINOS ("YYYY-MM-DD" del calendario de acá), no UTC.
+// Quien llame tiene que traer `dateStr` calculado con `diaArgentino()`, o el
+// valor cae en un día que no existe en el eje y se pierde en silencio.
 function buildDailySeries(
-  rangeStart: Date,
+  rangeStartDia: string,
   rangeDays: number,
   entries: { dateStr: string; value: number }[]
 ) {
   const map = new Map<string, number>();
   for (let i = 0; i < rangeDays; i++) {
-    map.set(utcDateStr(addUtcDays(rangeStart, i)), 0);
+    map.set(sumarDiasCalendario(rangeStartDia, i), 0);
   }
   for (const { dateStr, value } of entries) {
     if (map.has(dateStr)) map.set(dateStr, (map.get(dateStr) ?? 0) + value);
   }
-  return [...map.entries()].map(([dateStr, value]) => ({ label: utcDayLabel(dateStr), value }));
+  return [...map.entries()].map(([dateStr, value]) => ({ label: dayLabel(dateStr), value }));
 }
 
 function pctDiff(current: number, previous: number): number | null {
@@ -198,6 +211,64 @@ interface KPICardProps {
   iconBg: string;
 }
 
+/* ── Ranking con barras ──────────────────────────────────────────────────────
+   La lista corta ordenada que usan Cupones y Promociones: cada fila con su
+   etiqueta, el número, la plata y una barra proporcional.
+
+   Un solo color para todas las filas, no uno por fila. Acá se compara CUÁNTO
+   —una magnitud— entre cosas de la misma lista; darle a cada cupón su propio
+   color sugeriría que el color significa algo, y no significa nada. La longitud
+   de la barra ya es la comparación.
+
+   La barra se mide contra el MÁXIMO de la lista y no contra el total: con cinco
+   filas parejas, medir contra el total deja cinco barras de 20% que no se
+   distinguen entre sí. Contra el máximo, la primera llena y el resto se lee en
+   proporción a ella, que es la pregunta real ("¿cuánto más que el que le sigue?").
+
+   El número va SIEMPRE escrito al lado, no sólo en la barra: es lo que hace que
+   la tarjeta se pueda leer sin depender del color ni del largo. */
+function BarrasRanking({
+  filas, color, unidad,
+}: {
+  filas: { clave: string; titulo: string; sub: string | null; valor: number; pie: string }[];
+  color: string;
+  unidad: string;
+}) {
+  const maximo = Math.max(...filas.map((f) => f.valor), 1);
+  return (
+    <div className="space-y-3">
+      {filas.slice(0, 5).map((f) => {
+        const pct = Math.round((f.valor / maximo) * 100);
+        return (
+          <div key={f.clave}>
+            <div className="mb-1 flex items-baseline justify-between gap-3 text-sm">
+              <div className="min-w-0">
+                <span className="text-gray-700 font-medium break-words">{f.titulo}</span>
+                {f.sub && <span className="text-xs text-gray-400 ml-1.5">{f.sub}</span>}
+              </div>
+              <div className="shrink-0 text-right">
+                <span className="font-bold text-gray-900">{f.valor}</span>
+                <span className="text-xs text-gray-400 ml-1">
+                  {unidad}{f.valor !== 1 ? "s" : ""}
+                </span>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="h-1.5 flex-1 rounded-full bg-gray-100">
+                <div className={`h-1.5 rounded-full ${color}`} style={{ width: `${pct}%` }} />
+              </div>
+              <span className="text-xs text-gray-400 shrink-0 tabular-nums">{f.pie}</span>
+            </div>
+          </div>
+        );
+      })}
+      {filas.length > 5 && (
+        <p className="text-xs text-gray-400 pt-1">y {filas.length - 5} más</p>
+      )}
+    </div>
+  );
+}
+
 function KPICard({ label, value, sub, trend, icon: Icon, iconBg }: KPICardProps) {
   return (
     <div className="rounded-2xl border border-gray-100 bg-white p-6">
@@ -269,18 +340,28 @@ export default async function MetricasPage({
 
   const now = new Date();
 
-  // ── Ventanas de comparación: período actual vs. período anterior de igual duración ──
-  const todayUtc = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-  const periodStart = addUtcDays(todayUtc, -(rangeDays - 1));
-  const periodEndExclusive = addUtcDays(todayUtc, 1);
-  const prevPeriodStart = addUtcDays(periodStart, -rangeDays);
-  const prevPeriodEndExclusive = periodStart;
+  // ── Ventanas de comparación ──
+  // Los días son ARGENTINOS, no UTC. Calculados en UTC, cada "día" iba de las
+  // 21:00 a las 21:00 hora de acá: una venta de las 22:00 de un martes contaba
+  // como del miércoles, y son las horas en que más se vende.
+  const hoyDia = getArgentinaDayKey();
+  const periodStartStr = sumarDiasCalendario(hoyDia, -(rangeDays - 1));
+  const prevPeriodStartStr = sumarDiasCalendario(periodStartStr, -rangeDays);
+  const prevPeriodEndStr = sumarDiasCalendario(periodStartStr, -1);
 
-  const periodStartStr = utcDateStr(periodStart);
-  const prevPeriodStartStr = utcDateStr(prevPeriodStart);
-  const prevPeriodEndStr = utcDateStr(addUtcDays(prevPeriodEndExclusive, -1));
+  const periodStart = inicioDiaArgentino(periodStartStr);
+  const periodEndExclusive = inicioDiaArgentino(sumarDiasCalendario(hoyDia, 1));
+  const prevPeriodStart = inicioDiaArgentino(prevPeriodStartStr);
 
-  const CONFIRMED_ORDER_STATUSES = ["CONFIRMED", "SHIPPED", "DELIVERED"];
+  // El período actual llega hasta AHORA: hoy va por la mitad. El anterior estaba
+  // completo, así que la comparación siempre le jugaba en contra al presente —en
+  // el rango de 7 días, hasta un 7% de castigo, de sobra para dar vuelta el
+  // veredicto del resumen—. Se corta el período anterior en el mismo punto: si
+  // hoy son las 15:00, el anterior también llega hasta las 15:00 de su último día.
+  const transcurrido = now.getTime() - periodStart.getTime();
+  const prevPeriodEndExclusive = new Date(prevPeriodStart.getTime() + transcurrido);
+
+  const CONFIRMED_ORDER_STATUSES = ESTADOS_VENTA_CONFIRMADA_LISTA;
 
   // (queries compartidas eliminadas — Push/Reseñas/Afiliados tienen sus propios paneles)
 
@@ -334,9 +415,30 @@ export default async function MetricasPage({
   let ordersPrevCount = 0;
   let topProducts: { productId: string; _sum: { quantity: number | null } }[] = [];
   let ordersByStatus: { status: string; _count: number }[] = [];
+  // Los dos de abajo son sólo para el resumen en texto.
+  // `ordersPrevConfirmedCount` es el divisor del ticket promedio del período
+  // anterior: `ordersPrevCount` no sirve porque cuenta todos los no cancelados
+  // mientras que `revenuePrevAgg` suma sólo los confirmados —arriba unos, abajo
+  // otros, el mismo error que ya se había corregido en el período actual.
+  let ordersPrevConfirmedCount = 0;
+  let sinDespacharAgg: { _count: number; _sum: { total: number | null } } =
+    { _count: 0, _sum: { total: null } };
+
+  // ── Marketing: carritos abandonados, cupones y promociones ──
+  // Las cuentas viven en `lib/metricas-marketing` porque tienen trampas que se
+  // equivocan calladas (etapas que se pisan, pedidos con dos promas contados dos
+  // veces) y porque el CSV va a necesitar exactamente los mismos números.
+  let carritosRaw: CarritoCrudo[] = [];
+  let cuponesRaw: CuponCrudo[] = [];
+  let pedidosConCupon: PedidoConCupon[] = [];
+  let pedidosConPromoRaw: { promoSummary: string | null }[] = [];
 
   if (!isAutos) {
-    [ordersPeriod, revenuePrevAgg, ordersPrevCount, topProducts, ordersByStatus] = await Promise.all([
+    [
+      ordersPeriod, revenuePrevAgg, ordersPrevCount, topProducts, ordersByStatus,
+      carritosRaw, cuponesRaw, pedidosConCupon, pedidosConPromoRaw,
+      ordersPrevConfirmedCount, sinDespacharAgg,
+    ] = await Promise.all([
       prisma.order.findMany({
         where: { storeId: store.id, createdAt: { gte: periodStart, lt: periodEndExclusive }, status: { not: "CANCELLED" } },
         select: { total: true, status: true, createdAt: true },
@@ -353,16 +455,107 @@ export default async function MetricasPage({
       prisma.order.count({
         where: { storeId: store.id, createdAt: { gte: prevPeriodStart, lt: prevPeriodEndExclusive }, status: { not: "CANCELLED" } },
       }),
+      // Los dos de acá abajo NO filtraban por fecha: en una pantalla que dice
+      // "últimos N días" mostraban toda la historia de la tienda. Se notaba
+      // cambiando el selector de rango — eran los únicos dos bloques que no se
+      // movían. El más engañoso era el ranking: un producto que vendió mucho hace
+      // ocho meses y hoy no vende nada seguía apareciendo primero.
       prisma.orderItem.groupBy({
         by: ["productId"],
-        where: { order: { storeId: store.id, status: { in: CONFIRMED_ORDER_STATUSES } } },
+        where: {
+          order: {
+            storeId: store.id,
+            status: { in: CONFIRMED_ORDER_STATUSES },
+            createdAt: { gte: periodStart, lt: periodEndExclusive },
+          },
+        },
         _sum: { quantity: true },
         orderBy: { _sum: { quantity: "desc" } },
         take: 5,
       }),
-      prisma.order.groupBy({ by: ["status"], where: { storeId: store.id }, _count: true }),
+      prisma.order.groupBy({
+        by: ["status"],
+        where: {
+          storeId: store.id,
+          createdAt: { gte: periodStart, lt: periodEndExclusive },
+        },
+        _count: true,
+      }),
+
+      // Carritos abandonados del período. Se filtra por `lastActivityAt` y no por
+      // `createdAt`: la fila se crea la primera vez que esa persona deja algo en el
+      // carrito y después se va actualizando, así que `createdAt` puede ser de hace
+      // meses aunque el abandono sea de ayer.
+      prisma.abandonedCart.findMany({
+        where: { storeId: store.id, lastActivityAt: { gte: periodStart, lt: periodEndExclusive } },
+        select: { total: true, reminderSentAt: true, recoveredAt: true },
+      }),
+
+      prisma.coupon.findMany({
+        where: { storeId: store.id },
+        select: { id: true, code: true, label: true, discountType: true, discountValue: true, expiresAt: true },
+      }),
+
+      // Sólo pedidos CONFIRMADOS: un cupón usado en un pedido que después se cayó
+      // no descontó plata de verdad, y el resto de la pantalla también mide sobre
+      // confirmados. Si contáramos los pendientes, el bloque diría que resignaste
+      // plata que nunca resignaste.
+      prisma.order.findMany({
+        where: {
+          storeId: store.id,
+          createdAt: { gte: periodStart, lt: periodEndExclusive },
+          status: { in: CONFIRMED_ORDER_STATUSES },
+          couponId: { not: null },
+        },
+        select: { couponId: true, discountAmount: true },
+      }),
+
+      prisma.order.findMany({
+        where: {
+          storeId: store.id,
+          createdAt: { gte: periodStart, lt: periodEndExclusive },
+          status: { in: CONFIRMED_ORDER_STATUSES },
+          promoSummary: { not: null },
+        },
+        select: { promoSummary: true },
+      }),
+
+      // ── Sólo para el resumen en texto ──
+      prisma.order.count({
+        where: {
+          storeId: store.id,
+          createdAt: { gte: prevPeriodStart, lt: prevPeriodEndExclusive },
+          status: { in: CONFIRMED_ORDER_STATUSES },
+        },
+      }),
+      // Pedidos que ya se cobraron y siguen sin despacharse. A propósito NO se
+      // filtra por período: un pedido trabado hace dos meses es peor que uno de
+      // esta semana, y si sólo mirara la ventana elegida desaparecería del aviso
+      // justo cuando más viejo se pone.
+      prisma.order.aggregate({
+        where: {
+          storeId: store.id,
+          status: "CONFIRMED",
+          createdAt: { lt: inicioDiaArgentino(sumarDiasCalendario(hoyDia, -DIAS_SIN_DESPACHAR)) },
+        },
+        _count: true,
+        _sum: { total: true },
+      }),
     ]);
   }
+
+  const resumenCarritos = resumirCarritos(carritosRaw);
+  const resumenCupones = resumirCupones(cuponesRaw, pedidosConCupon);
+  const resumenPromos = resumirPromos(
+    pedidosConPromoRaw.map((o) => {
+      const { appliedPromos, freeShippingPromo } = parseOrderPromoSummary(o.promoSummary);
+      return { applied: appliedPromos, freeShipping: freeShippingPromo };
+    })
+  );
+  // El bloque entero se esconde si no hay NADA que contar. Tres tarjetas vacías
+  // seguidas no informan: sólo hacen scrollear.
+  const hayMarketing =
+    resumenCarritos.cantidad > 0 || resumenCupones.filas.length > 0 || resumenPromos.filas.length > 0;
 
   // ── Rentabilidad (no-AUTOS) ── Una sola query que cubre período actual + anterior
   // (misma ventana doble que ya usa el resto de la página) para no duplicar el pedido a la DB.
@@ -385,7 +578,7 @@ export default async function MetricasPage({
     const currentItems: ProfitOrderItem[] = [];
     const prevItems: ProfitOrderItem[] = [];
     for (const it of rawProfitItems) {
-      const dateStr = utcDateStr(it.order.createdAt);
+      const dateStr = diaArgentino(it.order.createdAt);
       const mapped: ProfitOrderItem = {
         productId: it.productId, quantity: it.quantity, price: it.price, lineTotal: it.lineTotal, costAtSale: it.costAtSale,
         orderSubtotal: it.order.subtotal, orderDiscount: it.order.discountAmount, dateStr,
@@ -463,31 +656,49 @@ export default async function MetricasPage({
   const nameMap = Object.fromEntries(productNames.map((p) => [p.id, p.name]));
 
   // ── Series diarias (todas en UTC, mismo eje de fechas) ──
+  // El gráfico se llama "Ingresos confirmados" y arriba muestra el total
+  // confirmado, pero la curva sumaba `ordersPeriod` entero —que incluye los
+  // PENDIENTES—. O sea que el número del título y la línea de abajo no eran la
+  // misma cuenta: la curva siempre iba por arriba, y cuanto más pedidos sin
+  // confirmar hubiera, más se separaban. El CSV ya filtraba bien, así que el
+  // archivo y la pantalla tampoco coincidían.
   const revenueChartData = buildDailySeries(
-    periodStart,
+    periodStartStr,
     rangeDays,
-    ordersPeriod.map((o) => ({ dateStr: utcDateStr(o.createdAt), value: o.total }))
+    ordersPeriod
+      .filter((o) => CONFIRMED_ORDER_STATUSES.includes(o.status))
+      .map((o) => ({ dateStr: diaArgentino(o.createdAt), value: o.total }))
   );
   const leadsChartData = buildDailySeries(
-    periodStart,
+    periodStartStr,
     rangeDays,
-    leadsPeriodRaw.map((l) => ({ dateStr: utcDateStr(l.createdAt), value: 1 }))
+    leadsPeriodRaw.map((l) => ({ dateStr: diaArgentino(l.createdAt), value: 1 }))
   );
+  // Las visitas ya vienen guardadas con la fecha hecha (`StoreView.date`), así que
+  // acá no hay nada que convertir. Las filas escritas antes del 29/07/2026 tienen
+  // el día calculado en UTC; de ahí en adelante, argentino. Ver METRICAS.md.
   const visitsChartData = buildDailySeries(
-    periodStart,
+    periodStartStr,
     rangeDays,
     viewsPeriodRaw.map((v) => ({ dateStr: v.date, value: v.count }))
   );
 
   // ── Métricas calculadas — tienda normal ──
   const totalOrdersPeriod = ordersPeriod.length;
-  const totalRevenuePeriod = ordersPeriod
-    .filter((o) => CONFIRMED_ORDER_STATUSES.includes(o.status))
-    .reduce((s, o) => s + o.total, 0);
+  const confirmedOrdersPeriod = ordersPeriod.filter((o) => CONFIRMED_ORDER_STATUSES.includes(o.status));
+  const totalRevenuePeriod = confirmedOrdersPeriod.reduce((s, o) => s + o.total, 0);
   const totalRevenuePrev = revenuePrevAgg._sum.total ?? 0;
   const revDiff = pctDiff(totalRevenuePeriod, totalRevenuePrev);
   const ordersDiff = pctDiff(totalOrdersPeriod, ordersPrevCount);
-  const avgTicket = totalOrdersPeriod > 0 ? totalRevenuePeriod / totalOrdersPeriod : 0;
+
+  // El ticket promedio divide plata confirmada por pedidos CONFIRMADOS. Antes el
+  // divisor eran todos los pedidos no cancelados —pendientes incluidos—, o sea que
+  // arriba se sumaba la plata de unos y abajo se contaban otros: con 10 pedidos de
+  // los cuales 5 confirmados, un ticket real de $100.000 se mostraba como $50.000.
+  // Y empeoraba solo: cuantos más pedidos pendientes hubiera, más se hundía.
+  const avgTicket = confirmedOrdersPeriod.length > 0
+    ? totalRevenuePeriod / confirmedOrdersPeriod.length
+    : 0;
 
   const totalViewsPeriod = visitsChartData.reduce((s, v) => s + v.value, 0);
   const totalViewsPrev = viewsPrevAgg._sum.count ?? 0;
@@ -496,11 +707,16 @@ export default async function MetricasPage({
   const conversionRate =
     totalViewsPeriod > 0 ? ((totalOrdersPeriod / totalViewsPeriod) * 100).toFixed(1) : null;
 
+  // Este total NO es el mismo que el KPI "Pedidos": el KPI excluye los
+  // cancelados y este bloque los muestra, porque cancelado es un estado y verlo
+  // sirve. Los dos números son correctos, pero puestos en la misma pantalla sin
+  // aclarar nada parecen un error — por eso el bloque dice de dónde sale.
   const totalOrdersAllStatuses = ordersByStatus.reduce((s, o) => s + o._count, 0);
+  const cancelledInPeriod = ordersByStatus.find((o) => o.status === "CANCELLED")?._count ?? 0;
 
   // ── Rentabilidad — tienda normal ──
   const profitChartData = buildDailySeries(
-    periodStart,
+    periodStartStr,
     rangeDays,
     [...profitCurrentAgg.dailyProfit.entries()].map(([dateStr, value]) => ({ dateStr, value }))
   );
@@ -517,6 +733,55 @@ export default async function MetricasPage({
     .slice(0, 8);
   const productsWithoutCostCount = [...profitCurrentAgg.byProduct.values()].filter((p) => p.profit === null).length;
 
+  // ── El resumen en texto ──
+  // Se arma acá abajo de todo, a propósito: recibe los números ya calculados y no
+  // vuelve a calcular ninguno. Si mañana se ajusta el ticket promedio o qué
+  // cuenta como venta confirmada, el texto se mueve solo y no puede quedar
+  // contradiciendo a las tarjetas de arriba.
+  const pedidosPendientesPeriodo = ordersPeriod.filter((o) => o.status === "PENDING");
+
+  // Cuánto del día de hoy todavía no pasó, medido en puntos porcentuales sobre el
+  // período. Los pedidos se comparan contra el mismo momento del período anterior
+  // —exacto—, pero las visitas se guardan por día entero y ahí hoy entra a medias
+  // contra un día completo. Este es el tamaño de esa diferencia; abajo de eso el
+  // resumen no habla de visitas.
+  const fraccionDiaSinTranscurrir =
+    1 - (now.getTime() - inicioDiaArgentino(hoyDia).getTime()) / 86_400_000;
+  const incertidumbreVisitasPct = (fraccionDiaSinTranscurrir / rangeDays) * 100;
+
+  const resumen = armarResumen({
+    dias: rangeDays,
+    incertidumbreVisitasPct,
+    actual: {
+      ingresos: totalRevenuePeriod,
+      pedidosConfirmados: confirmedOrdersPeriod.length,
+      visitas: totalViewsPeriod,
+    },
+    previo: {
+      ingresos: totalRevenuePrev,
+      pedidosConfirmados: ordersPrevConfirmedCount,
+      visitas: totalViewsPrev,
+    },
+    senales: {
+      carritosSinContactar: {
+        cantidad: resumenCarritos.sinContactar.cantidad,
+        monto: resumenCarritos.sinContactar.monto,
+      },
+      pedidosPendientes: {
+        cantidad: pedidosPendientesPeriodo.length,
+        monto: pedidosPendientesPeriodo.reduce((s, o) => s + o.total, 0),
+      },
+      confirmadosSinDespachar: {
+        cantidad: sinDespacharAgg._count,
+        dias: DIAS_SIN_DESPACHAR,
+        monto: sinDespacharAgg._sum.total ?? 0,
+      },
+      cuponesVencidos: resumenCupones.filas.filter((f) => f.vencido).length,
+      productosSinCosto: productsWithoutCostCount,
+      enviosBonificados: shippingWaivedPeriod,
+    },
+  });
+
   // ── Métricas calculadas — AUTOS ──
   const totalLeadsPeriod = leadsPeriodRaw.length;
   const leadsDiff = pctDiff(totalLeadsPeriod, leadsPrevCount);
@@ -530,15 +795,6 @@ export default async function MetricasPage({
     <DashboardLayout userName={user.name} userId={user.id}>
       {/* Las métricas salen de los pedidos: una venta nueva las recalcula sola */}
       <AutoRefresh tables={["Order"]} />
-      {/* Estilos de impresión — oculta sidebar y nav al guardar como PDF */}
-      <style>{`
-        @media print {
-          nav, aside, header, [data-sidebar], .print\\:hidden { display: none !important; }
-          body { background: white !important; }
-          .rounded-2xl { border-radius: 8px !important; }
-        }
-      `}</style>
-
       <div className="mx-auto w-full max-w-6xl space-y-6">
 
         {/* Header */}
@@ -548,8 +804,19 @@ export default async function MetricasPage({
             <p className="mt-1 text-sm text-gray-500">
               <strong>{store.name}</strong> — últimos {rangeDays} días vs. período anterior de igual duración
             </p>
+            {/* Sólo en el papel: un PDF que circula por mail o se archiva tiene que
+                decir de cuándo es. En pantalla la fecha sobra —es hoy— pero dentro
+                de tres meses, en un archivo suelto, es el único dato que lo ubica. */}
+            <p className="hidden print:block mt-1 text-xs text-gray-500">
+              Informe generado el {new Date().toLocaleDateString("es-AR", {
+                day: "2-digit", month: "long", year: "numeric",
+              })} · Período: {periodStartStr} a {hoyDia}
+            </p>
           </div>
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          {/* Los controles no son el informe: al imprimir se van. `data-print` en
+              vez de `print:hidden` en cada botón — así alcanza con marcar el
+              contenedor y sirve igual si mañana se agrega otro botón acá. */}
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center" data-print="ocultar">
             <RangeSelector active={rangeDays} />
             <div className="flex items-center gap-2">
               <ExportButtons range={rangeDays} storeSlug={store.slug} />
@@ -566,6 +833,60 @@ export default async function MetricasPage({
             </div>
           </div>
         </div>
+
+        {/* ── Resumen en texto ──
+            Va arriba de todo porque es la respuesta a "¿cómo me fue?"; las
+            tarjetas de abajo son el detalle para el que quiere verificarlo.
+            Sólo en tiendas con carrito: AUTOS vende por consulta y sus números
+            —leads, vehículos vendidos— no entran en esta cuenta. */}
+        {!isAutos && (
+          <div className={`rounded-2xl border bg-white p-6 border-l-4 ${
+            resumen.tono === "bien" ? "border-gray-100 border-l-emerald-500"
+            : resumen.tono === "mal" ? "border-gray-100 border-l-rose-500"
+            : resumen.tono === "atencion" ? "border-gray-100 border-l-amber-500"
+            : "border-gray-100 border-l-gray-300"
+          }`}>
+            <h2 className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+              Cómo te fue
+            </h2>
+
+            <p className="mt-2 text-lg font-bold leading-snug text-gray-900">
+              {resumen.titular}
+            </p>
+
+            {resumen.parrafos.map((parrafo) => (
+              <p key={parrafo} className="mt-3 text-sm leading-relaxed text-gray-600">
+                {parrafo}
+              </p>
+            ))}
+
+            {resumen.pendientes.length > 0 && (
+              <div className="mt-5 border-t border-gray-100 pt-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+                  Para revisar
+                </p>
+                <ul className="mt-2 space-y-2">
+                  {resumen.pendientes.map((pendiente) => (
+                    <li key={pendiente.texto} className="flex gap-2.5 text-sm leading-relaxed text-gray-600">
+                      <span aria-hidden className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-gray-300" />
+                      <span>
+                        {pendiente.texto}{" "}
+                        {pendiente.href && (
+                          <Link
+                            href={pendiente.href}
+                            className="font-semibold text-indigo-600 hover:underline print:hidden"
+                          >
+                            Ir →
+                          </Link>
+                        )}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* ── KPIs ── */}
         {isAutos ? (
@@ -696,12 +1017,18 @@ export default async function MetricasPage({
         ) : (
           <div className="grid gap-6 lg:grid-cols-2">
             <div className="rounded-2xl border border-gray-100 bg-white p-6">
-              <h2 className="mb-5 font-bold text-gray-900">Productos más vendidos</h2>
+              <h2 className="font-bold text-gray-900">Productos más vendidos</h2>
+              <p className="text-xs text-gray-400 mb-4">Últimos {rangeDays} días</p>
               {topProducts.length === 0 ? (
                 <div className="py-4">
-                  <p className="text-sm font-medium text-gray-600 mb-1">Sin ventas confirmadas aún</p>
+                  {/* "en estos N días" y no "aún": ahora el bloque mira el período,
+                      así que puede estar vacío en 7 días y tener datos en 90. Decir
+                      "aún" haría pensar que la tienda nunca vendió nada. */}
+                  <p className="text-sm font-medium text-gray-600 mb-1">
+                    Sin ventas confirmadas en estos {rangeDays} días
+                  </p>
                   <p className="text-xs text-gray-400 leading-relaxed">
-                    Los productos aparecen acá cuando tenés pedidos en estado Confirmado, Enviado o Entregado. Confirmá tus primeros pedidos para ver el ranking.
+                    Los productos aparecen acá cuando tenés pedidos en estado Confirmado, Enviado o Entregado. Probá con un período más largo.
                   </p>
                 </div>
               ) : (
@@ -733,12 +1060,22 @@ export default async function MetricasPage({
 
             <div className="rounded-2xl border border-gray-100 bg-white p-6">
               <div className="flex items-center justify-between mb-5">
-                <h2 className="font-bold text-gray-900">Pedidos por estado</h2>
-                <span className="text-sm font-semibold text-gray-400">{totalOrdersAllStatuses} total</span>
+                <div>
+                  <h2 className="font-bold text-gray-900">Pedidos por estado</h2>
+                  <p className="text-xs text-gray-400">Últimos {rangeDays} días</p>
+                </div>
+                <span className="text-sm font-semibold text-gray-400">
+                  {totalOrdersAllStatuses} total
+                  {cancelledInPeriod > 0 && (
+                    <span className="block text-right text-xs font-normal">incluye cancelados</span>
+                  )}
+                </span>
               </div>
               {ordersByStatus.length === 0 ? (
                 <div className="py-4">
-                  <p className="text-sm font-medium text-gray-600 mb-1">Sin pedidos aún</p>
+                  <p className="text-sm font-medium text-gray-600 mb-1">
+                    Sin pedidos en estos {rangeDays} días
+                  </p>
                   <p className="text-xs text-gray-400 leading-relaxed">
                     Cuando lleguen pedidos vas a ver acá cómo se distribuyen por estado — cuántos están pendientes, confirmados, enviados y entregados.
                   </p>
@@ -766,6 +1103,166 @@ export default async function MetricasPage({
                     );
                   })}
                 </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ── Marketing: carritos, cupones y promociones ─────────────────────
+            Tres tarjetas con la misma anatomía que el resto de la pantalla:
+            título, número grande a la derecha, y filas con etiqueta + valor +
+            barra. No son gráficos de línea porque no son series de tiempo: son
+            rankings cortos y un desglose de estados, y para eso la barra
+            horizontal con la etiqueta al lado se lee mejor que cualquier torta.
+
+            El color va de a UN tono por tarjeta —no un color por fila—: acá se
+            compara MAGNITUD entre filas de la misma tarjeta, no identidades
+            distintas. Pintar cada cupón de un color inventaría un significado
+            que no existe. La excepción es la de carritos, donde las tres etapas
+            sí son estados distintos (bien / a medias / nada) y llevan los colores
+            de estado, siempre con su texto al lado. */}
+        {!isAutos && hayMarketing && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+            {/* Carritos abandonados */}
+            <div className="rounded-2xl border border-gray-100 bg-white p-6">
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2 min-w-0">
+                  <ShoppingCart className="h-4 w-4 text-amber-500 shrink-0" />
+                  <h2 className="font-bold text-gray-900 truncate">Carritos abandonados</h2>
+                </div>
+                <span className="text-sm font-semibold text-gray-400 shrink-0">{resumenCarritos.cantidad}</span>
+              </div>
+
+              {resumenCarritos.cantidad === 0 ? (
+                <div className="py-2">
+                  <p className="text-sm font-medium text-gray-600 mb-1">Ninguno en el período</p>
+                  <p className="text-xs text-gray-400 leading-relaxed">
+                    Se registran cuando alguien deja datos y productos en el carrito pero no termina la compra.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <div className="mb-4">
+                    <p className="text-2xl font-bold text-gray-900">{money(resumenCarritos.montoPerdido)}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      sin recuperar, de {money(resumenCarritos.monto)} en total
+                    </p>
+                  </div>
+                  <div className="space-y-3">
+                    {[
+                      { etapa: "Recuperados",   dato: resumenCarritos.recuperados,  color: "bg-emerald-500" },
+                      { etapa: "Con recordatorio", dato: resumenCarritos.contactados, color: "bg-amber-500" },
+                      { etapa: "Sin contactar",  dato: resumenCarritos.sinContactar, color: "bg-gray-300" },
+                    ].map(({ etapa, dato, color }) => {
+                      const pct = Math.round((dato.cantidad / resumenCarritos.cantidad) * 100);
+                      return (
+                        <div key={etapa}>
+                          <div className="mb-1 flex items-center justify-between gap-2 text-sm">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className={`h-2.5 w-2.5 rounded-full shrink-0 ${color}`} />
+                              <span className="text-gray-700 truncate">{etapa}</span>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <span className="font-bold text-gray-900">{dato.cantidad}</span>
+                              <span className="w-8 text-right text-xs text-gray-400">{pct}%</span>
+                            </div>
+                          </div>
+                          <div className="h-1.5 rounded-full bg-gray-100">
+                            <div className={`h-1.5 rounded-full ${color}`} style={{ width: `${pct}%` }} />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {resumenCarritos.sinContactar.cantidad > 0 && (
+                    <Link href="/dashboard/carritos-abandonados" className="mt-4 inline-block text-xs font-semibold text-indigo-600 hover:text-indigo-700">
+                      Escribirle a los {resumenCarritos.sinContactar.cantidad} sin contactar →
+                    </Link>
+                  )}
+                </>
+              )}
+            </div>
+
+            {/* Cupones */}
+            <div className="rounded-2xl border border-gray-100 bg-white p-6">
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2 min-w-0">
+                  <Ticket className="h-4 w-4 text-indigo-500 shrink-0" />
+                  <h2 className="font-bold text-gray-900 truncate">Cupones</h2>
+                </div>
+                <span className="text-sm font-semibold text-gray-400 shrink-0">
+                  {resumenCupones.usosTotales} uso{resumenCupones.usosTotales !== 1 ? "s" : ""}
+                </span>
+              </div>
+
+              {resumenCupones.filas.length === 0 ? (
+                <div className="py-2">
+                  <p className="text-sm font-medium text-gray-600 mb-1">Sin usos en el período</p>
+                  <p className="text-xs text-gray-400 leading-relaxed">
+                    Acá vas a ver cuáles se usaron y cuánta plata resignaste con cada uno.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <div className="mb-4">
+                    <p className="text-2xl font-bold text-gray-900">−{money(resumenCupones.descuentoTotal)}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">descontado en pedidos confirmados</p>
+                  </div>
+                  <BarrasRanking
+                    filas={resumenCupones.filas.map((f) => ({
+                      clave: f.id,
+                      titulo: f.code,
+                      sub: f.vencido ? `${f.etiqueta} · vencido` : f.etiqueta,
+                      valor: f.usos,
+                      pie: `−${money(f.descuento)}`,
+                    }))}
+                    color="bg-indigo-500"
+                    unidad="uso"
+                  />
+                </>
+              )}
+            </div>
+
+            {/* Promociones */}
+            <div className="rounded-2xl border border-gray-100 bg-white p-6">
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2 min-w-0">
+                  <Percent className="h-4 w-4 text-emerald-500 shrink-0" />
+                  <h2 className="font-bold text-gray-900 truncate">Promociones</h2>
+                </div>
+                <span className="text-sm font-semibold text-gray-400 shrink-0">
+                  {resumenPromos.pedidosConPromo} pedido{resumenPromos.pedidosConPromo !== 1 ? "s" : ""}
+                </span>
+              </div>
+
+              {resumenPromos.filas.length === 0 ? (
+                <div className="py-2">
+                  <p className="text-sm font-medium text-gray-600 mb-1">Sin promos aplicadas</p>
+                  <p className="text-xs text-gray-400 leading-relaxed">
+                    Cuando una promo entre en un pedido vas a ver acá cuál fue y cuánto te costó.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <div className="mb-4">
+                    <p className="text-2xl font-bold text-gray-900">−{money(resumenPromos.ahorroTotal)}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      resignado en {resumenPromos.pedidosConPromo} pedido{resumenPromos.pedidosConPromo !== 1 ? "s" : ""}
+                    </p>
+                  </div>
+                  <BarrasRanking
+                    filas={resumenPromos.filas.map((f) => ({
+                      clave: f.clave,
+                      titulo: f.etiqueta,
+                      sub: null,
+                      valor: f.pedidos,
+                      pie: `−${money(f.ahorro)}`,
+                    }))}
+                    color="bg-emerald-500"
+                    unidad="pedido"
+                  />
+                </>
               )}
             </div>
           </div>
