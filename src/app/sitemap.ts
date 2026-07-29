@@ -42,8 +42,63 @@ async function getStoreEntries() {
   }
 }
 
+/* ── Los productos ───────────────────────────────────────────────────────────
+   El sitemap tenía las portadas pero no las fichas. Google llegaba a un producto
+   sólo si iba siguiendo links desde la portada, y a los que están más adentro del
+   catálogo podía tardar semanas en encontrarlos —o no encontrarlos nunca—.
+
+   Es lo que más mueve la aguja de todo el trabajo de SEO: los datos estructurados
+   de una ficha no sirven de nada si el robot nunca la visita.
+
+   Dos resguardos, que hoy no hacen falta pero después no se agregan solos:
+
+   · TOPE POR TIENDA. Una sola tienda con miles de productos no puede comerse el
+     lugar de las demás. El mismo número que usa el feed de Google Shopping.
+   · LÍMITE DE GOOGLE: 50.000 direcciones por archivo. Con ~26 productos por
+     tienda eso son unas 1.900 tiendas — muy lejos, pero cuando se acerque hay
+     que partir esto en un índice con varios archivos, no dejar que se corte solo.
+
+   Los filtros son los mismos que decide la ficha pública: un producto inactivo,
+   borrado o de una tienda despublicada no se le ofrece a Google.               */
+const MAX_PRODUCTS_PER_STORE = 500;
+
+async function getProductEntries() {
+  try {
+    const stores = await prisma.store.findMany({
+      where: { isActive: true, isPublished: true, closedAt: null },
+      select: {
+        slug: true,
+        products: {
+          where: { isActive: true, deletedAt: null },
+          select: { id: true, updatedAt: true },
+          // Los más nuevos primero: si alguna vez se llega al tope, que lo que
+          // quede afuera sea lo más viejo y no un recorte al azar.
+          orderBy: { updatedAt: "desc" },
+          take: MAX_PRODUCTS_PER_STORE,
+        },
+      },
+    });
+
+    return stores.flatMap((store) =>
+      store.products.map((p) => ({ slug: store.slug, id: p.id, updatedAt: p.updatedAt }))
+    );
+  } catch (e) {
+    // Mismo criterio que arriba: sin productos el sitemap sigue sirviendo el resto.
+    console.error("[sitemap] no se pudieron leer los productos:", e);
+    return [];
+  }
+}
+
+/* Cada cuánto se recalcula. Sin esto, cada visita del robot dispara la consulta
+   entera contra la base — y los robots pasan seguido. Una hora es de sobra: un
+   producto nuevo no necesita estar en el sitemap en el mismo minuto, y Google
+   igual no lo va a rastrear al instante. */
+export const revalidate = 3600;
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const stores = await getStoreEntries();
+  // En paralelo: son dos consultas independientes y encadenarlas sólo haría al
+  // robot esperar la suma de las dos.
+  const [stores, products] = await Promise.all([getStoreEntries(), getProductEntries()]);
 
   const storeRoutes: MetadataRoute.Sitemap = stores.map((store) => ({
     url: `${BASE_URL}/tienda/${store.slug}`,
@@ -54,5 +109,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.7,
   }));
 
-  return [...STATIC_ROUTES, ...storeRoutes];
+  const productRoutes: MetadataRoute.Sitemap = products.map((p) => ({
+    url: `${BASE_URL}/tienda/${p.slug}/producto/${p.id}`,
+    lastModified: p.updatedAt,
+    // "daily" sería mentir: un producto no cambia todos los días. Google usa esto
+    // como pista para decidir cada cuánto volver, y una pista falsa la termina
+    // ignorando para todo el sitio.
+    changeFrequency: "weekly",
+    // Menos que la portada (0.7) y más que las páginas fijas: la ficha es lo que
+    // se quiere que encuentren, pero la portada sigue siendo la entrada principal.
+    priority: 0.6,
+  }));
+
+  return [...STATIC_ROUTES, ...storeRoutes, ...productRoutes];
 }
