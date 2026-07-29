@@ -1224,11 +1224,31 @@ export default function UrbanPulse() {
           </button>
         </div>
         <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3,1fr)", gap:4 }}>
-          {[
-            { label:"Mujer",      cat:"Mujer",      img: storeConfig?.imageOverrides?.["catMujer"]?.url ?? "https://picsum.photos/seed/up_cat1/600/700",      field:"catMujer" },
-            { label:"Hombre",     cat:"Hombre",     img: storeConfig?.imageOverrides?.["catHombre"]?.url ?? "https://picsum.photos/seed/up_cat2/600/700",     field:"catHombre" },
-            { label:"Accesorios", cat:"Accesorios", img: storeConfig?.imageOverrides?.["catAccesorios"]?.url ?? "https://picsum.photos/seed/up_cat3/600/700", field:"catAccesorios" },
-          ].map(c => (
+          {/* ── Las categorías son las REALES de la tienda ─────────────────────
+              Estaban escritas a mano en el código: "Mujer", "Hombre" y
+              "Accesorios", con el link armado a `?categoria=Mujer`. Ninguna tienda
+              tiene esas categorías salvo por casualidad — la de Flavio tiene
+              remeras, pantalones y camperas—, así que las tres baldosas del bloque
+              más grande de la portada llevaban a un listado VACÍO. Tres callejones
+              sin salida, y encima con foto grande y "Ver colección" abajo.
+              Es el mismo bug que ya se había arreglado en el footer de Chic Paris,
+              acá en un lugar mucho más visible.
+              Salen de `categoryList`, que es el mismo del menú del navbar: si el
+              dueño marcó categorías destacadas manda esa lista, y si no, las que
+              salen de sus productos.
+              Las tres RANURAS de imagen siguen siendo las mismas (`catMujer`,
+              `catHombre`, `catAccesorios`) y se asignan por POSICIÓN. Los nombres
+              quedaron feos por dentro, pero son invisibles y así nadie pierde la
+              foto que ya subió. */}
+          {categoryList.slice(0, 3).map((cat, i) => {
+            const field = (["catMujer", "catHombre", "catAccesorios"] as const)[i];
+            const c = {
+              label: cat,
+              cat,
+              field,
+              img: storeConfig?.imageOverrides?.[field]?.url ?? `https://picsum.photos/seed/up_cat${i + 1}/600/700`,
+            };
+            return (
             <div key={c.label} className="up-cat" onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?t=urban-pulse${isPreview ? "&from=editor" : ""}&categoria=${encodeURIComponent(c.cat)}`; }}
               style={{ position:"relative", width:"100%", aspectRatio:"3/4", overflow:"hidden", cursor:"pointer" }}>
               <FadeImage src={c.img} alt={c.label} fill sizes="(max-width: 768px) 100vw, 33vw" style={{ objectFit:"cover", objectPosition:`${storeConfig?.imageOverrides?.[c.field]?.posX ?? 50}% ${storeConfig?.imageOverrides?.[c.field]?.posY ?? 50}%` }} />
@@ -1241,7 +1261,8 @@ export default function UrbanPulse() {
                 <p style={{ color:accentSobre(categoriesBgUp, categoriasText), fontSize:10, fontWeight:900, letterSpacing:3, textTransform:"uppercase", margin:0 }}>Ver colección →</p>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
         </div>
       </section>
@@ -1269,9 +1290,12 @@ export default function UrbanPulse() {
       </SectionBlock>
 
       <SectionBlock id="up-featured" label="Producto destacado" isPreview={isPreview} defaultOrder={UP_SECTION_IDS}>
-      {/* FEATURED DROP */}
+      {/* FEATURED DROP
+          El padding: 40px de costado en un celular de 360 dejan 280 útiles, y el
+          bloque quedaba visiblemente más angosto que todos los demás, que usan 16
+          o 20. */}
       {featuredProduct && (
-      <section id="featured" data-reveal style={{ background:featuredBg, padding:"80px 40px", position:"relative" }}>
+      <section id="featured" data-reveal style={{ background:featuredBg, padding: isMobile ? "48px 16px" : "80px 40px", position:"relative" }}>
         <EditableSectionBg field="bgFeatured" label="Fondo featured" />
 
         {/* ── Elegir qué producto se destaca ────────────────────────────────
@@ -1981,7 +2005,7 @@ export default function UrbanPulse() {
         {contactBgImg?.url && contactBgImg.overlayType !== "none" && (
           <div style={{ position:"absolute", inset:0, zIndex:0, pointerEvents:"none", background: contactBgImg.overlayType === "light" ? `rgba(255,255,255,${contactBgImg.overlayOpacity ?? 0.5})` : `rgba(0,0,0,${contactBgImg.overlayOpacity ?? 0.45})` }} />
         )}
-        <div style={{ position:"relative", zIndex:1, padding:"80px 40px" }}>
+        <div style={{ position:"relative", zIndex:1, padding: isMobile ? "56px 20px" : "80px 40px" }}>
         <div style={{ maxWidth:1100, margin:"0 auto", display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: isMobile ? 40 : 80 }}>
           <div>
             <span style={{ color:accentSobre(contactUpBg, contactUpText), fontSize:10, letterSpacing:6, fontWeight:800, textTransform:"uppercase", display:"block", marginBottom:16 }}><EditableZone field="contactKicker" label="Etiqueta contacto">▶ Contacto</EditableZone></span>

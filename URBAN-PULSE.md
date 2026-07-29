@@ -29,6 +29,8 @@ Los números de línea son los del día de la revisión: se corren a medida que 
 | ~~UP-19~~ | ~~En celular el hero se quedaba sin foto por accidente, no por decisión~~ | Alta | **hecho** 28/07 |
 | ~~UP-20~~ | ~~En celular el destacado abre con la foto, sin decir qué es~~ | Media | **hecho** 28/07 |
 | ~~UP-21~~ | ~~El acento se usa de relleno sin medir contra el fondo en cinco lugares~~ | Alta | **hecho** 28/07 |
+| ~~UP-22~~ | ~~Las tres categorías de la portada están escritas a mano y llevan a un listado vacío~~ | Alta | **hecho** 28/07 |
+| ~~UP-23~~ | ~~El destacado y contacto usan padding de escritorio en el celular~~ | Media | **hecho** 28/07 |
 
 **Los veinte puntos están cerrados.** El UP-19 salió mirando el UP-18. Se probó con la foto abajo de
 los botones, a Flavio no le gustó y volvió a quedar sin foto — pero escrito, que es lo que faltaba.
@@ -1941,3 +1943,44 @@ Simulada con los tres productos de la tienda, en las tres frecuencias:
 reloj de la computadora (1/1/1970 a las 00:00 UTC), así que **la rotación de 24hs cambia a las 21:00
 de Argentina, no a medianoche**. Sigue siendo cada 24 horas exactas; lo que no es, es "un producto por
 día calendario". Si se quiere que caiga a medianoche hay que correr el cálculo tres horas. Preguntado.
+
+### UP-22 — Las tres categorías de la portada llevaban a un listado vacío ✅
+
+Segunda pasada de la auditoría de cierre, bloque por bloque. Éste es el peor que apareció.
+
+Las tres baldosas grandes de "Explorá la tienda" —foto a toda altura, nombre en 26px y "Ver colección
+→" abajo— estaban **escritas a mano en el código**: `Mujer`, `Hombre`, `Accesorios`, con el link
+armado a `?categoria=Mujer`.
+
+**Ninguna tienda tiene esas categorías salvo por casualidad.** La de Flavio tiene *remeras*,
+*pantalones* y *camperas*. O sea que las tres baldosas del bloque más grande de la portada llevaban a
+un listado **vacío**. Tres callejones sin salida, con foto grande y una invitación a entrar.
+
+Es exactamente el mismo bug que ya se había arreglado en el footer de Chic Paris —donde también decía
+"Mujer / Hombre / Accesorios / Sale"— sólo que acá está en un lugar mucho más visible.
+
+Ahora salen de `categoryList`, que es **el mismo del menú del navbar**: si el dueño marcó categorías
+destacadas manda esa lista, y si no, las que salen de sus propios productos. Así el bloque no puede
+volver a apuntar a nada que no exista.
+
+Las tres **ranuras de imagen** siguen siendo las mismas (`catMujer`, `catHombre`, `catAccesorios`) y
+se asignan por **posición**. Los nombres quedaron feos por dentro, pero son invisibles desde el editor
+y así nadie pierde la foto que ya subió.
+
+### UP-23 — Dos bloques con padding de escritorio en el celular ✅
+
+`padding: "80px 40px"` sin adaptar, en **el destacado** y en **contacto**. A 360, 40px de costado
+dejan 280px útiles, contra los 328 de todos los demás bloques —que usan 16 o 20—, así que esos dos se
+veían visiblemente más angostos que el resto de la página, como metidos hacia adentro. Pasan a 16 y 20.
+
+### Lo demás del recorrido bloque por bloque — sin hallazgos
+
+| bloque | estado |
+|---|---|
+| Ofertas | ✓ `if (allOfertas.length === 0 && !isPreview) return null` — no se dibuja vacío |
+| Lo más visto | ✓ `if (displayList.length === 0) return null`, y con relleno sólo en el editor |
+| Mayorista | ✓ tiene su guarda |
+| Reseñas | ✓ se dibuja siempre a propósito: sin reseñas invita a dejar la primera |
+| Contacto | ✓ se dibuja siempre, es un formulario |
+| Links muertos | ✓ ni un `href="#"` ni un `onClick` vacío en todo el archivo |
+| Valores de `sectionColors` fuera de `background:` | ✓ ninguno (la regla de UP-9 se sostiene) |
