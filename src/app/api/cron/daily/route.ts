@@ -14,6 +14,11 @@ import { createNotification, createNotificationMany } from "@/lib/notifications"
 import { generarCuponesMensuales, expirarCuponesVencidos } from "@/lib/rewards";
 import { closureDeadline, CLOSURE_WARNING_DAYS } from "@/lib/subscription";
 import { applyStoreClosure } from "@/lib/store-closure";
+import { getStoreSnapshot } from "@/lib/asistente-insights";
+import { armarAvisos, filtrarRepetidos } from "@/lib/asistente-avisos";
+import {
+  getArgentinaDayKey, getUpcomingDates, sumarDiasCalendario, diasEntreDias,
+} from "@/lib/fechas-comerciales";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "";
 
@@ -178,7 +183,7 @@ export async function GET(req: NextRequest) {
     // confirmarse: el webhook solo toca las PENDING, así que borrar una viva
     // haría que un pago real no se registre nunca.
     const ago7d = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-    const [sessions, clicks, notifications, adminLogs, coupons, storeViews, oldCarts, staleDonations] = await Promise.all([
+    const [sessions, clicks, notifications, adminLogs, coupons, storeViews, oldCarts, staleDonations, chatSasha] = await Promise.all([
       prisma.session.deleteMany({ where: { expires: { lt: now } } }),
       prisma.affiliateClick.deleteMany({ where: { createdAt: { lt: ago90d } } }),
       prisma.notification.deleteMany({ where: { read: true, createdAt: { lt: ago30d } } }),
@@ -187,8 +192,23 @@ export async function GET(req: NextRequest) {
       prisma.storeView.deleteMany({ where: { date: { lt: ago1y.toISOString().slice(0, 10) } } }),
       prisma.abandonedCart.deleteMany({ where: { recoveredAt: null, lastActivityAt: { lt: new Date(now.getTime() - 45 * 24 * 60 * 60 * 1000) } } }),
       prisma.donation.deleteMany({ where: { status: "PENDING", createdAt: { lt: ago7d } } }),
+      // El historial de Sasha no se limpiaba nunca: la charla se resetea en
+      // PANTALLA cada día (se filtra por `day`) pero las filas quedaban para
+      // siempre. Con varias tiendas escribiendo todos los días, eso crece sin
+      // techo y nadie lo mira.
+      //
+      // Se borra todo lo de más de 90 días MENOS los avisos sin leer: ésos se
+      // quedan porque la regla es que esperan hasta que el dueño los lea, y
+      // borrarlos dejaría el contador del globito apuntando a mensajes que ya no
+      // existen.
+      prisma.asistenteMensaje.deleteMany({
+        where: {
+          createdAt: { lt: ago90d },
+          NOT: { esAviso: true, leidoAt: null },
+        },
+      }),
     ]);
-    result.cleanup = { sessions: sessions.count, clicks: clicks.count, notifications: notifications.count, adminLogs: adminLogs.count, coupons: coupons.count, storeViews: storeViews.count, oldCarts: oldCarts.count, staleDonations: staleDonations.count };
+    result.cleanup = { sessions: sessions.count, clicks: clicks.count, notifications: notifications.count, adminLogs: adminLogs.count, coupons: coupons.count, storeViews: storeViews.count, oldCarts: oldCarts.count, staleDonations: staleDonations.count, chatSasha: chatSasha.count };
   }
 
   // ── 6. PREMIOS MENSUALES (solo día 1 del mes) ──────────────────────────────
@@ -380,6 +400,96 @@ export async function GET(req: NextRequest) {
   }
 
   result.terminos = { version: CURRENT_TERMS_VERSION, pendientes: pendientesTerminos.length, avisados: avisosTerminos };
+
+  // ── AVISOS DE SASHA ────────────────────────────────────────────────────────
+  // Hasta acá Sasha sólo hablaba si se le abría el chat. Una vez por día escribe
+  // primero, y el globito del panel muestra cuántos mensajes hay sin leer.
+  //
+  // Los textos los arma `lib/asistente-avisos` con reglas: instantáneo, gratis y
+  // no puede inventar un dato porque no calcula ninguno. Y sobre todo, es
+  // testeable — un mensaje que afirma cosas es más peligroso que un número en una
+  // tarjeta, porque nadie duda de una frase en castellano.
+  //
+  // Todo el bloque va dentro de un try: es lo ÚLTIMO que corre, y si tirara
+  // dejaría al cron devolviendo 500 después de haber mandado todos los mails de
+  // arriba. Un reintento volvería a mandarlos. Que fallen los avisos de Sasha no
+  // puede costar mails duplicados.
+  const hoyAr = getArgentinaDayKey();
+  const fechasProximas = getUpcomingDates(7);
+  let avisosCreados = 0;
+  let tiendasRevisadas = 0;
+  let tiendasTotal = 0;
+
+  try {
+  const tiendasParaAvisar = await prisma.store.findMany({
+    where: { closedAt: null, isPublished: true, isActive: true },
+    select: { id: true, ownerId: true, tipoTienda: true },
+    // Tope de seguridad: cada tienda son ~11 consultas y esto corre en una función
+    // con límite de tiempo. Con las tiendas de hoy sobra; el día que sean miles hay
+    // que partirlo en tandas, y mientras tanto es mejor avisarle a 300 que quedarse
+    // sin tiempo y no avisarle a nadie.
+    take: 300,
+  });
+  tiendasTotal = tiendasParaAvisar.length;
+
+  for (const tienda of tiendasParaAvisar) {
+    try {
+      // `incluirMarketing: false` — los avisos no miran cupones ni promociones ni
+      // margen. Sin esto serían 5 consultas por tienda tiradas todos los días.
+      const snapshot = await getStoreSnapshot(tienda.id, tienda.tipoTienda, {
+        incluirMarketing: false,
+      });
+      const candidatos = armarAvisos({ snapshot, fechasProximas });
+      if (candidatos.length === 0) continue;
+
+      // Los avisos de los últimos 10 días, para no repetir. 10 alcanza: es más
+      // que el `repetirCadaDias` más largo que hay, así que ninguna regla puede
+      // quedar afuera de la ventana y colarse repetida.
+      const recientes = await prisma.asistenteMensaje.findMany({
+        where: {
+          userId: tienda.ownerId,
+          esAviso: true,
+          day: { gte: sumarDiasCalendario(hoyAr, -10) },
+          clave: { not: null },
+        },
+        select: { clave: true, day: true },
+      });
+
+      const aMandar = filtrarRepetidos(
+        candidatos,
+        recientes.map((r) => ({
+          clave: r.clave as string,
+          diasAtras: diasEntreDias(r.day, hoyAr),
+        }))
+      );
+      if (aMandar.length === 0) continue;
+
+      await prisma.asistenteMensaje.createMany({
+        data: aMandar.map((aviso) => ({
+          userId: tienda.ownerId,
+          role: "assistant",
+          // El link va pegado al texto y no en una columna aparte: el chat
+          // renderiza markdown, así que un link acá se ve igual que uno que Sasha
+          // escribe cuando le preguntás, y no hay que inventarle otro formato de
+          // burbuja sólo para los avisos.
+          content: aviso.link ? `${aviso.texto}\n\n[Ir →](${aviso.link})` : aviso.texto,
+          day: hoyAr,
+          esAviso: true,
+          clave: aviso.clave,
+        })),
+      });
+      avisosCreados += aMandar.length;
+      tiendasRevisadas++;
+    } catch (e) {
+      // Una tienda que falla no puede cortar el aviso de las demás.
+      console.error("[cron] avisos de Sasha, tienda", tienda.id, e);
+    }
+  }
+  } catch (e) {
+    console.error("[cron] avisos de Sasha, bloque entero:", e);
+  }
+
+  result.avisosSasha = { tiendas: tiendasTotal, conAvisos: tiendasRevisadas, mensajes: avisosCreados };
 
   return NextResponse.json(result);
 }

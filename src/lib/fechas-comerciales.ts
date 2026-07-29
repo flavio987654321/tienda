@@ -90,6 +90,17 @@ export function sumarDiasCalendario(dia: string, n: number): string {
   return d.toISOString().slice(0, 10);
 }
 
+/**
+ * Cuántos días de calendario hay entre dos claves "YYYY-MM-DD". Negativo si
+ * `hasta` es anterior a `desde`. Igual que `sumarDiasCalendario`, se hace en UTC
+ * porque es aritmética de calendario y no interviene ninguna zona horaria.
+ */
+export function diasEntreDias(desde: string, hasta: string): number {
+  const a = new Date(`${desde}T00:00:00Z`).getTime();
+  const b = new Date(`${hasta}T00:00:00Z`).getTime();
+  return Math.round((b - a) / 86_400_000);
+}
+
 function nthWeekday(year: number, monthIndex: number, weekday: number, nth: number): Date {
   const first = new Date(Date.UTC(year, monthIndex, 1));
   const day = 1 + ((weekday - first.getUTCDay() + 7) % 7) + (nth - 1) * 7;

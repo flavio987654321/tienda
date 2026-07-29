@@ -122,18 +122,21 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  // El plan se resuelve ANTES del snapshot: hace falta para saber si los topes de
+  // cupones y promociones aplican (Premium no tiene tope) y así Sasha no le dice
+  // "te quedan 2 lugares" a alguien que no tiene límite.
+  const planTier: "BASIC" | "PREMIUM" = sub?.tier === "PREMIUM" ? "PREMIUM" : "BASIC";
+
   let snapshot, upcomingDates;
   try {
     [snapshot, upcomingDates] = await Promise.all([
-      getStoreSnapshot(store.id, store.tipoTienda),
+      getStoreSnapshot(store.id, store.tipoTienda, { esPremium: planTier === "PREMIUM" }),
       Promise.resolve(getUpcomingDates(21)),
     ]);
   } catch (err) {
     console.error("[asistente] error leyendo datos de la tienda", err);
     return NextResponse.json({ error: "No pudimos cargar el asistente, intentá de nuevo." }, { status: 500 });
   }
-
-  const planTier: "BASIC" | "PREMIUM" = sub?.tier === "PREMIUM" ? "PREMIUM" : "BASIC";
 
   const checklist = getChecklistEstado({
     isPublished: store.isPublished,

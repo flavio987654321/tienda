@@ -101,6 +101,8 @@ export default function AsistenteIA({ userId }: { userId: string }) {
   // cualquier dispositivo. yaSaludoHoy evita saludar dos veces mientras carga.
   const [yaSaludoHoy, setYaSaludoHoy] = useState(false);
   const [historialListo, setHistorialListo] = useState(false);
+  // Avisos que Sasha mandó sola y todavía no se leyeron. Es el número del globito.
+  const [sinLeer, setSinLeer] = useState(0);
 
   const visKey = `asistente_visto_${userId}_${hoyKey()}`;
   const introKey = `asistente_intro_${userId}`;
@@ -123,9 +125,10 @@ export default function AsistenteIA({ userId }: { userId: string }) {
         if (!r.ok) throw new Error("historial no disponible");
         return r.json();
       })
-      .then((d: { messages?: Mensaje[]; yaSaludoHoy?: boolean }) => {
+      .then((d: { messages?: Mensaje[]; yaSaludoHoy?: boolean; sinLeer?: number }) => {
         if (d.messages) setMensajes(d.messages);
         setYaSaludoHoy(!!d.yaSaludoHoy);
+        setSinLeer(d.sinLeer ?? 0);
       })
       .catch(() => {
         // Si no se pudo traer el historial, no sabemos si ya saludó hoy desde otro
@@ -214,6 +217,16 @@ export default function AsistenteIA({ userId }: { userId: string }) {
 
   function abrirChat() {
     setAbierto(true);
+
+    // El contador se baja en el acto, sin esperar al servidor: el dueño ya está
+    // viendo los mensajes, y un número que sigue ahí dos segundos después de
+    // abrir se siente roto. Si el POST falla, el contador vuelve en la próxima
+    // carga del panel — que es exactamente lo correcto, porque quedaron sin marcar.
+    if (sinLeer > 0) {
+      setSinLeer(0);
+      fetch("/api/asistente/historial", { method: "POST" }).catch(() => {});
+    }
+
     if (!introVista) {
       setMostrarIntro(true);
       if (typeof window !== "undefined") localStorage.setItem(introKey, "1");
@@ -239,8 +252,14 @@ export default function AsistenteIA({ userId }: { userId: string }) {
   if (!novedad?.disponible) return null;
 
   const yaVistoHoy = typeof window !== "undefined" && localStorage.getItem(visKey) === "1";
+  // Un mensaje sin leer manda sobre todo lo demás, incluso sobre `yaVistoHoy`: con
+  // el contador en 2 y la cara en reposo, el globito se contradice solo. Y son
+  // mensajes que Sasha escribió de verdad, no una novedad deducida por reglas.
   const estadoBurbuja: EstadoSasha =
-    !yaVistoHoy && novedad.tipo === "alerta" ? "sorprendido" : !yaVistoHoy && novedad.tipo === "oportunidad" ? "guiño" : "reposo";
+    sinLeer > 0 ? "sorprendido"
+    : !yaVistoHoy && novedad.tipo === "alerta" ? "sorprendido"
+    : !yaVistoHoy && novedad.tipo === "oportunidad" ? "guiño"
+    : "reposo";
 
   return (
     <>
@@ -265,7 +284,11 @@ export default function AsistenteIA({ userId }: { userId: string }) {
         <motion.button
           type="button"
           onClick={() => { if (!isDragging.current) abrirChat(); }}
-          aria-label="Abrir asistente Sasha"
+          aria-label={
+            sinLeer > 0
+              ? `Abrir asistente Sasha — ${sinLeer} ${sinLeer === 1 ? "mensaje" : "mensajes"} sin leer`
+              : "Abrir asistente Sasha"
+          }
           title="Sasha — arrastrá para mover"
           initial={{ scale: 0 }}
           animate={{
@@ -282,9 +305,26 @@ export default function AsistenteIA({ userId }: { userId: string }) {
             y: { delay: 0.8, duration: 2.6, repeat: Infinity, ease: "easeInOut" },
             boxShadow: { delay: 0.8, duration: 2.6, repeat: Infinity, ease: "easeInOut" },
           }}
-          className="h-14 w-14 rounded-full hover:scale-110 transition-transform"
+          className="relative h-14 w-14 rounded-full hover:scale-110 transition-transform"
         >
           <AsistentePersonaje estado={estadoBurbuja} size={56} />
+
+          {/* El contador de mensajes sin leer. Rojo y arriba a la derecha porque es
+              donde todo el mundo ya sabe mirarlo — no hay nada que aprender acá.
+              El número también va en el aria-label: alguien con lector de pantalla
+              no ve el globito rojo. */}
+          {sinLeer > 0 && (
+            <motion.span
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ type: "spring", stiffness: 500, damping: 18 }}
+              className="absolute -right-0.5 -top-0.5 flex h-6 min-w-6 items-center justify-center rounded-full border-2 border-white bg-rose-500 px-1 text-xs font-bold text-white shadow"
+            >
+              {/* Con más de 9 el número no entra en el círculo, y el tope diario es
+                  3 — pero si quedaron varios días sin abrir, se acumulan. */}
+              {sinLeer > 9 ? "9+" : sinLeer}
+            </motion.span>
+          )}
         </motion.button>
       </motion.div>
 

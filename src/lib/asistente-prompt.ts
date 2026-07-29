@@ -72,6 +72,63 @@ function formatSnapshot(s: StoreSnapshot): string {
   return lineas.length > 0 ? lineas.join("\n") : "- Todavía no hay datos de actividad en esta tienda.";
 }
 
+/**
+ * Cupones, promociones y margen reales de esta tienda.
+ *
+ * Sin esto, "¿qué cupones me recomendás?" se contestaba con consejos de manual:
+ * podía sugerir armar un 20% OFF que ya estaba armado, o recomendar descuentos
+ * sobre productos que se venden casi sin margen. Con estos datos la respuesta
+ * cambia de categoría — pasa de "probá un 10% de bienvenida" a "tenés uno sin un
+ * solo uso hace 40 días y otro vencido todavía publicado; limpiá esos dos antes
+ * de crear otro, te están ocupando 2 de los 5 lugares de tu plan".
+ */
+function formatMarketing(m: StoreSnapshot["marketing"], esTipoConsultas: boolean): string {
+  if (esTipoConsultas) {
+    return "- Esta tienda es de tipo consultas: no tiene cupones ni promociones.";
+  }
+
+  const lineas: string[] = [];
+
+  lineas.push(
+    m.cuponesTope === null
+      ? `- Cupones propios activos: ${m.cuponesActivos} (plan sin límite).`
+      : `- Cupones propios activos: ${m.cuponesActivos} de ${m.cuponesTope} que permite el plan.`
+  );
+  if (m.cuponesVencidosActivos > 0) {
+    // OJO: los vencidos NO ocupan lugar del tope (el contador del panel ya los
+    // descuenta). Decir que liberan un lugar sería mentirle al dueño.
+    lineas.push(`- Además hay ${m.cuponesVencidosActivos} cupón/es vencido/s que siguen marcados como activos. No ocupan lugar del tope, pero ensucian la lista — conviene borrarlos.`);
+  }
+  if (m.cuponesSinUsoViejos > 0) {
+    lineas.push(`- ${m.cuponesSinUsoViejos} cupón/es vigente/s desde antes de este período sin un solo uso. Esos SÍ ocupan lugar del tope: apagarlos libera uno al toque.`);
+  }
+  lineas.push(
+    m.cuponMasUsado
+      ? `- El cupón más usado en los últimos 30 días: ${m.cuponMasUsado.code} — ${m.cuponMasUsado.usos} uso${m.cuponMasUsado.usos !== 1 ? "s" : ""}, $${Math.round(m.cuponMasUsado.descuento).toLocaleString("es-AR")} descontados.`
+      : `- Ningún cupón se usó en los últimos 30 días.`
+  );
+
+  lineas.push(
+    m.promosTope === null
+      ? `- Promociones vivas: ${m.promosVivas} (plan sin límite).`
+      : `- Promociones vivas: ${m.promosVivas} de ${m.promosTope} que permite el plan.`
+  );
+  if (m.promoMasUsada) {
+    lineas.push(`- La promoción que más se aplicó: "${m.promoMasUsada.nombre}" — en ${m.promoMasUsada.pedidos} pedido${m.promoMasUsada.pedidos !== 1 ? "s" : ""}, $${Math.round(m.promoMasUsada.ahorro).toLocaleString("es-AR")} resignados.`);
+  }
+
+  if (m.margenPromedio !== null) {
+    lineas.push(`- Margen promedio de lo vendido en 30 días: ${m.margenPromedio}%. Es el techo real de cualquier descuento: uno más grande que eso vende a pérdida.`);
+  } else {
+    lineas.push(`- Margen: NO se puede calcular, ningún producto vendido tiene el costo cargado. Si te piden recomendar un descuento, avisá primero que sin los costos no hay forma de saber si ese descuento deja ganancia.`);
+  }
+  if (m.productosSinCosto > 0) {
+    lineas.push(`- Productos vendidos sin costo cargado: ${m.productosSinCosto} (la ganancia que ve en pantalla es menor que la real).`);
+  }
+
+  return lineas.join("\n");
+}
+
 function formatFechas(fechas: FechaComercial[]): string {
   if (fechas.length === 0) return "No hay ninguna fecha comercial relevante en los próximos 21 días.";
   return fechas
@@ -401,6 +458,19 @@ ${formatChecklist(checklist, snapshot.esTipoConsultas)}
 
 ## Datos reales de la tienda (hoy)
 ${formatSnapshot(snapshot)}
+
+## Cupones, promociones y margen reales de esta tienda
+${formatMarketing(snapshot.marketing, snapshot.esTipoConsultas)}
+
+## Si te piden ideas de cupones o promociones
+SÍ, dáselas — es parte de tu trabajo y para eso tenés los datos de arriba. Pero con estas reglas:
+
+1. **Mirá primero lo que ya tiene.** Si hay cupones vigentes sin un solo uso, eso va PRIMERO: apagarlos libera lugar del tope y no cuesta nada. Recomendar crear algo nuevo cuando hay dos muertos ocupando lugar es un mal consejo. Los vencidos son distintos: conviene borrarlos para ordenar, pero NO liberan lugar — no se lo ofrezcas como si fuera una solución al tope.
+2. **Nunca propongas un descuento más grande que el margen.** Si el margen promedio es 25%, un 40% OFF vende a pérdida. Si el margen no se puede calcular porque faltan los costos, decilo antes de sugerir cualquier número — no adivines.
+3. **Una idea por mensaje, atada a un dato de esta tienda.** "Armá un 3x2 en pantalones" es de manual. "Los pantalones son lo que más vendés y tenés 42% de margen, ahí un 3x2 entra bien" es un consejo. Si no tenés el dato para atarla, preguntá antes de recomendar.
+4. **Decí bien dónde se hace, y no inventes botones.** Los cupones NO se crean sueltos: salen de la ruleta/raspadita en "Cupones", o de la recuperación por WhatsApp en "Carritos abandonados" (está explicado más abajo). Las promociones sí se crean a mano en "Promociones". Si la idea que estás dando no se puede armar con lo que existe, no la des.
+5. **Si está en el tope del plan**, ofrecé primero la salida gratis (apagar un cupón, archivar una promoción) y recién después mencioná Premium. Nunca al revés.
+6. **Vos no creás nada.** Podés recomendar y explicar el camino, pero el cupón o la promoción los arma el dueño. No digas "ya te lo creé" ni "te lo dejo armado".
 
 ## Fechas comerciales próximas (Argentina)
 ${formatFechas(upcomingDates)}

@@ -221,7 +221,102 @@ El endpoint `/api/asistente` llamaba a `checkRateLimit(...)` **sin `await`** —
 
 ---
 
-## FASE 2 (futuro — NO se construye en esta versión)
+## FASE 2 — LO QUE SE CONSTRUYÓ (29/07/2026)
+
+> Decisiones de Flavio: **V2-B (persistencia de historial) y V2-C (afiliados) DESCARTADOS.**
+> Lo que sí se hizo es una variante de V2-A: en vez de push al celular, Sasha escribe en el
+> chat y el globito muestra un contador de mensajes sin leer, como cualquier chat.
+
+### ✅ Avisos diarios + contador
+
+`src/lib/asistente-avisos.ts` + `asistente-avisos.check.ts` (**39 chequeos**).
+
+Reglas puras, **sin IA**: los textos se arman con plantillas a partir de números ya calculados.
+Es instantáneo, gratis, y no puede inventar un dato porque no calcula ninguno. Igual que el
+resumen de Métricas.
+
+Piezas: migración `20260729180000_add_asistente_avisos` (`esAviso`, `clave`, `leidoAt` en
+`AsistenteMensaje`), el bloque de avisos en el cron de las 09:00, `GET/POST
+/api/asistente/historial`, y el contador en el globito.
+
+### El reparto con la campanita — es TODO el diseño
+
+La campanita ya avisa en el momento (y manda push) cuando entra un pedido, cuando algo se agota
+y cuando el stock baja. **Si Sasha repitiera eso a la mañana, su contador sería un resumen de
+cosas que el dueño ya vio ayer, y a la tercera vez deja de mirarse.**
+
+| | Avisa |
+|---|---|
+| Campanita + push | que algo **pasó** — al instante |
+| Sasha, 09:00 | que algo **sigue sin resolverse** |
+
+Concretamente: un pedido de hace diez minutos no genera aviso; uno trabado hace más de un día
+sí. Que algo se agote hoy no genera aviso; que siga agotado hace 3 días sí. **Stock bajo no
+genera aviso nunca** — y el motivo está escrito en el código para que no vuelva por parecer una
+idea obvia.
+
+Los dos avisos que dan un dato que la campanita **no tiene**:
+- *"Se agotó X, y es uno de los que más vendiste este mes"* (cruza agotado × más vendido).
+- *"N pedidos ya están pagos y sin despachar hace más de 5 días"* — nadie avisaba esto, y es de
+  donde salen los reclamos.
+
+### Cómo se evita que sature
+
+- **Tope de 3 por día.** Una tienda con todo mal tenía 7 avisos.
+- **Cada aviso tiene su propio ritmo** (`repetirCadaDias`): los pedidos sin confirmar vuelven a
+  los 2 días —se resuelven apretando un botón—; "las ventas vienen bajando" no vuelve hasta 7,
+  porque la tendencia de 30 días no cambia de un día para el otro.
+- **La oportunidad nunca le gana a lo que cuesta plata**: la fecha comercial va última.
+- **La tienda recién abierta no recibe malas noticias inventadas.**
+
+> ⚠️ **El orden importa: primero se descartan los repetidos y DESPUÉS se corta en el tope.**
+> Al revés era un bug silencioso — si los tres más urgentes ya se habían mandado ayer, quedaban
+> los tres afuera por repetidos y el dueño no recibía NADA, aunque el cuarto y el quinto nunca
+> se hubieran mandado.
+
+### Tres decisiones del contador
+
+- **El aviso no desaparece al cambiar el día.** La charla sí se borra; un aviso sin leer
+  sobrevive. Si no, el contador diría "2", abrís, y no hay nada.
+- **Los avisos de hoy se muestran aunque estén leídos.** Si sólo se trajeran los sin leer,
+  leerlo de un vistazo y recargar la página lo hacía desaparecer.
+- **`leidoAt` es timestamp, no booleano.** Cuesta lo mismo y deja saber cuánto tardó en
+  mirarlos — la única forma de darse cuenta después si los avisos sirven o se ignoran.
+
+### ✅ Cupones, promociones y margen en el prompt
+
+Sasha no sabía nada de los cupones ni las promos reales de la tienda, así que "¿qué cupones me
+recomendás?" se contestaba con consejos de manual: podía sugerir armar un 20% OFF que ya estaba
+armado, o recomendar descuentos sobre productos que se venden casi sin margen.
+
+Ahora el prompt recibe: cupones activos contra el tope del plan, vencidos que siguen activos,
+vigentes sin un solo uso, el más usado con su descuento real, promociones vivas contra el tope,
+la más aplicada, y el **margen promedio** — que es el techo real de cualquier descuento.
+
+Y seis reglas para que las ideas sirvan: mirar primero lo que ya tiene, nunca proponer un
+descuento más grande que el margen (y si el margen no se puede calcular, decirlo antes de tirar
+un número), una idea por mensaje atada a un dato real, no inventar botones que no existen,
+ofrecer primero la salida gratis del tope, y **nunca decir que creó algo** — recomienda, no actúa.
+
+### ⚠️ Tres trampas que costaron un rato
+
+- **Los topes del plan tienen filtros canónicos** (`myActiveCouponsWhere`, `livePromotionsWhere`
+  en `planLimits.ts`) y los escribí a mano. Mi versión contaba vencidos y plantillas de la
+  ruleta, así que Sasha decía "5 de 10" mientras la pantalla decía "3 de 10". Y peor: el prompt
+  afirmaba que borrar un vencido **libera un lugar del tope**, que es falso — el filtro canónico
+  ya los descuenta. Le estaba haciendo mentir al usuario.
+- **El "más usado" tiene que salir de TODOS los cupones**, no sólo los activos: uno que se usó en
+  el período y después se apagó desaparecía, y ese número no coincidía con Métricas.
+- **El cron no necesita los datos de marketing** (los avisos no los miran) — sin
+  `incluirMarketing: false` eran 5 consultas por tienda tiradas a la basura todos los días. Y
+  todo el bloque va en un `try`: es lo último que corre, y si tirara dejaría el cron en 500
+  después de haber mandado todos los mails, con un reintento que los volvería a mandar.
+- **El historial no se limpiaba nunca.** La charla se resetea en pantalla cada día pero las filas
+  quedaban para siempre. Ahora se borra lo de más de 90 días, menos los avisos sin leer.
+
+---
+
+## FASE 2 (plan original — referencia)
 
 > Esta fase arranca solo después de que v1 esté en producción y validada con uso real (mínimo las 2 tiendas actuales). No se toca código de esta fase hasta que se decida explícitamente avanzar.
 

@@ -67,16 +67,37 @@ model User {
 // Historial de chat con Sasha (asistente IA del dashboard). Se guarda en la base
 // para que sea el mismo en cualquier dispositivo, y se filtra por `day` (zona Argentina)
 // para mantener el reseteo diario que ya tenía la versión basada en localStorage.
+//
+// Acá viven DOS cosas distintas y por eso está `esAviso`:
+//
+//   - La charla del día. Se borra sola: si hoy es 30, lo de ayer no se muestra.
+//   - Los avisos que manda Sasha sola cada mañana. Ésos NO pueden desaparecer al
+//     cambiar el día — si te escribe el martes y entrás el jueves, tiene que estar
+//     ahí. Se muestran mientras estén sin leer (de cualquier día) y además todo el
+//     día en que llegaron, aunque ya los hayas leído: si sólo se mostraran los sin
+//     leer, leerlo de un vistazo y recargar la página lo hacía desaparecer.
+//
+// Mezclarlos en la misma tabla es a propósito: en la pantalla son la misma
+// conversación, y separarlos en dos modelos obligaría a ordenarlos a mano cada vez.
 model AsistenteMensaje {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  role      String   // user | assistant
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      String // user | assistant
   content   String
-  day       String   // YYYY-MM-DD en zona Argentina
-  createdAt DateTime @default(now())
+  day       String // YYYY-MM-DD en zona Argentina
+  /// true = lo mandó Sasha sola, no es respuesta a nada. Sobrevive al cambio de día.
+  esAviso   Boolean   @default(false)
+  /// Qué clase de aviso es ("stock-agotado", "ventas-bajando"). Evita repetirlo
+  /// todos los días: si el stock sigue bajo el martes, ya lo dijo el lunes.
+  clave     String?
+  /// null = sin leer. Es lo que cuenta el globito.
+  leidoAt   DateTime?
+  createdAt DateTime  @default(now())
 
   @@index([userId, day])
+  // Para el contador: los sin leer de un usuario, sin escanear todo el historial.
+  @@index([userId, esAviso, leidoAt])
 }
 
 model PushSubscription {

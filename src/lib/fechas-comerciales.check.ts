@@ -10,7 +10,7 @@
 
 import {
   getUpcomingDates, getEventNames, getEventRange,
-  diaArgentino, inicioDiaArgentino, sumarDiasCalendario,
+  diaArgentino, inicioDiaArgentino, sumarDiasCalendario, diasEntreDias,
 } from "./fechas-comerciales";
 
 let failed = 0;
@@ -149,6 +149,14 @@ const buscar = (fechas: ReturnType<typeof getUpcomingDates>, nombre: string) =>
   check("DIA-K", sumarDiasCalendario("2028-02-28", 1) === "2028-02-29", "febrero de un año bisiesto");
   check("DIA-L", sumarDiasCalendario("2026-02-28", 1) === "2026-03-01", "febrero de uno que no lo es");
   check("DIA-M", sumarDiasCalendario("2026-07-29", -29) === "2026-06-30", "una ventana de 30 días");
+}
+{
+  // Lo usa el cron de avisos de Sasha para saber hace cuántos días mandó cada uno.
+  check("DIA-N", diasEntreDias("2026-07-29", "2026-07-29") === 0, "el mismo día da 0");
+  check("DIA-O", diasEntreDias("2026-07-28", "2026-07-29") === 1, "ayer da 1");
+  check("DIA-P", diasEntreDias("2026-07-29", "2026-07-28") === -1, "al revés da negativo");
+  check("DIA-Q", diasEntreDias("2026-06-30", "2026-07-29") === 29, "cruza el mes");
+  check("DIA-R", diasEntreDias("2025-12-31", "2026-01-01") === 1, "cruza el año");
 }
 
 console.log(failed === 0 ? "\n✅ El calendario da lo esperado." : `\n❌ ${failed} caso(s) fallan.`);
