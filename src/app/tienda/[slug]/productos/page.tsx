@@ -386,6 +386,9 @@ function ProductosPageInner() {
   const reviewCaptcha = useTurnstile("review");
   const [reviewDone,       setReviewDone]       = useState(false);
   const [isMobile,         setIsMobile]         = useState(false);
+  // Segundo corte, aparte de `isMobile`. La barra de filtros al costado necesita
+  // más ancho del que hay apenas se deja de ser celular — el porqué, donde se usa.
+  const [anchoAngosto,     setAnchoAngosto]     = useState(false);
   // Alto de la fila de dos columnas del modal. Manda la columna izquierda (foto +
   // miniaturas + videos), que tiene alto propio; la derecha se ajusta a ese alto y
   // scrollea por dentro. Sin esto, la derecha crecía con la descripción y dejaba un
@@ -518,7 +521,23 @@ function ProductosPageInner() {
   // Tech Nova y Urban Pulse usan sidebar de filtros a la izquierda (solo desktop).
   // En mobile caen al layout minimal (dropdown) que funciona bien en touch.
   const isSidebarTemplate = template === "tech-nova" || template === "urban-pulse";
-  const isSidebarLayout = isSidebarTemplate && !isMobile;
+  /* ── La barra de filtros al costado arranca en 1024, no en 768 ────────────────
+     Con `!isMobile` arrancaba apenas se dejaba de ser celular, y ahí no entra.
+     A 768 —que es un iPad de pie, no un caso raro— la cuenta daba así:
+
+       ancho de pantalla                                    768
+       menos el padding del contenedor (4vw a cada lado)    −61  → 707
+       menos la barra de filtros (230 fijos) y su aire (36) −266 → 441
+
+     y la grilla es `repeat(auto-fill, minmax(220px,1fr))` con 20 de separación, o
+     sea que en 441 entra UNA sola columna: floor((441+20)/(220+20)) = 1. El
+     catálogo mostraba un producto por fila, gigante, al lado de una barra de
+     filtros — en la pantalla donde más gente lo abre después del celular.
+
+     A 1024 quedan 694 para la grilla y entran dos columnas cómodas; a 1280, tres.
+     Abajo de eso cae al layout de filtros desplegables, que es el mismo que ya usa
+     el celular y que en esos anchos funciona bien. */
+  const isSidebarLayout = isSidebarTemplate && !anchoAngosto;
   // Home Studio y Boho Terra usan categorías como tarjetas con foto + panel de filtros.
   const isCardLayout = template === "home-studio" || template === "boho-terra";
   const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
@@ -535,7 +554,10 @@ function ProductosPageInner() {
   }
   // Casa Clara y Chic Paris usan navegación tipo "breadcrumb" minimalista.
   // En mobile, los templates de sidebar también caen aquí.
-  const isMinimalLayout = template === "casa-clara" || template === "chic-paris" || (isSidebarTemplate && isMobile);
+  // `anchoAngosto` y no `isMobile`: si la barra de filtros al costado ahora arranca
+  // recién en 1024, el tramo 768–1023 tiene que caer acá. Con `isMobile` se quedaba
+  // sin ninguno de los dos y el catálogo aparecía sin forma de filtrar.
+  const isMinimalLayout = template === "casa-clara" || template === "chic-paris" || (isSidebarTemplate && anchoAngosto);
   const [catDropdownOpen, setCatDropdownOpen] = useState(false);
   const [subDropdownOpen, setSubDropdownOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -799,7 +821,7 @@ function ProductosPageInner() {
 
   // ── isMobile ───────────────────────────────────────────────────────────────
   useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 768);
+    const check = () => { setIsMobile(window.innerWidth < 768); setAnchoAngosto(window.innerWidth < 1024); };
     check();
     window.addEventListener("resize", check);
     return () => window.removeEventListener("resize", check);

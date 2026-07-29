@@ -42,6 +42,7 @@ templates y un arreglo ahí los toca a todos:
 | ~~PL-3~~ | ~~El modal del catálogo es el de Chic Paris, también para Urban Pulse~~ | Media | **hecho** 28/07 |
 | ~~PL-4~~ | ~~El acento se usa de relleno sin pasar por el helper en nueve lugares; con un acento claro desaparecen~~ | Alta | **hecho** 28/07 |
 | ~~PL-5~~ | ~~Al modal le faltaban ocho detalles del panel del template, dos de ellos no cosméticos~~ | Media | **hecho** 28/07 |
+| ~~PL-6~~ | ~~A 768 el catálogo muestra un producto por fila al lado de la barra de filtros~~ | Alta | **hecho** 28/07 |
 
 Del UP-9 en adelante ya no salieron de la auditoría original:
 los reportó Flavio mirando su propia tienda o los pidió él. UP-9 lo vio con una captura, y UP-10 fue
@@ -1762,3 +1763,47 @@ dos versiones que se puedan desincronizar. Lo mismo con "Talle: 32" y "Color: Be
 Pulse llevan el valor elegido en el título y en los otros tres van a secas.
 
 `tsc` y eslint limpios. Los cuatro templates de moda abren el catálogo en 200.
+
+### PL-6 — A 768 el catálogo mostraba un producto por fila ✅
+
+Flavio: *"¿te fijaste si la página de productos aguanta todo tipo de pantallas?"*. No del todo. Se
+revisó y apareció esto, que es el peor de los anchos posibles para que pase.
+
+La barra de filtros al costado (Urban Pulse y Tech Nova) arrancaba con `!isMobile`, o sea **apenas se
+dejaba de ser celular**. Y ahí no entra. A 768 —que es un iPad de pie, no un caso raro— la cuenta daba:
+
+| | |
+|---|---|
+| ancho de pantalla | 768 |
+| menos el padding del contenedor (4vw a cada lado) | −61 → 707 |
+| menos la barra de filtros (230 fijos) y su aire (36) | −266 → **441** |
+
+Y la grilla es `repeat(auto-fill, minmax(220px,1fr))` con 20 de separación: en 441 entra **una sola
+columna**, porque `floor((441+20)/(220+20)) = 1`. El catálogo mostraba **un producto por fila,
+gigante, al lado de una barra de filtros**, en la pantalla donde más gente lo abre después del celular.
+
+Ahora la barra al costado arranca en **1024**: ahí quedan 694 para la grilla y entran dos columnas
+cómodas, y a 1280 entran tres. El tramo 768–1023 cae al layout de filtros desplegables, que es el
+mismo que ya usaba el celular y que en esos anchos funciona bien.
+
+Hizo falta un segundo corte de ancho aparte de `isMobile` — es el primero del proyecto, que hasta acá
+tenía uno solo en 768. Y hubo que mover **las dos** condiciones: si la barra al costado sube a 1024
+pero el layout desplegable sigue atado a `isMobile`, el tramo del medio se queda sin ninguno de los
+dos y el catálogo aparece **sin ninguna forma de filtrar**.
+
+### El modal con mucho contenido — revisado, aguanta
+
+La otra mitad de la pregunta de Flavio: *"¿está preparado para cuando se llene con muchas reseñas, más
+descripción o tags?"*. Revisado uno por uno:
+
+| qué se llena | qué lo aguanta |
+|---|---|
+| **Reseñas** | Paginadas. Se muestran de a una tanda y abajo queda "Ver más (N)" con las que faltan. Con 300 reseñas el modal mide lo mismo que con 5. |
+| **Descripción** | La escribe la dueña en un editor de texto rico y puede traer una imagen pegada, una tabla ancha o un link larguísimo sin espacios. La contención está en `globals.css` (`.product-rte`): imágenes y videos al 100%, tablas y bloques de código con scroll propio, palabras largas partidas. |
+| **Características** | Las filas son texto normal que baja de renglón, y los servicios van en chips que se acomodan en varias líneas. |
+| **Fotos** | La tira vertical de miniaturas va en `position:absolute` con `top:0 bottom:0`: mide exactamente lo que la foto y scrollea sola. Con veinte fotos la foto grande no cambia de tamaño. |
+| **Largo total** | Con PL-3 el panel de compra quedó clavado, así que por más que crezca la columna izquierda **el precio y el botón siguen a la vista**. Ése era justamente el punto. |
+
+Lo que **no** está verificado: nada de esto se probó con datos de verdad. La base no tiene ni una
+reseña, así que la paginación está comprobada por la lógica del hook y no abriendo un producto con 300
+opiniones cargadas.
