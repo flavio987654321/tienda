@@ -34,14 +34,44 @@ export default function StoreShell({ config, storeId, storeName, storeSlug, show
     }).catch(() => {});
   }, [storeId, storeSlug, showPushBell]);
 
-  // Registra una visita por día por sesión (dedup con sessionStorage).
-  // El dueño viendo su propia tienda no cuenta como visita.
+  // Registra UNA visita por día por persona. El dueño viendo su propia tienda no
+  // cuenta.
+  //
+  // Antes deduplicaba con `sessionStorage`, que es por PESTAÑA y se borra al
+  // cerrarla: la misma persona con tres pestañas abiertas contaba tres visitas, y
+  // volver más tarde el mismo día contaba otra. `localStorage` es del navegador
+  // entero y sobrevive al cierre, que es lo que "una visita por día" quiere decir.
+  //
+  // Y el día tiene que ser el ARGENTINO, el mismo que usa el servidor para
+  // guardar la fila. Con la fecha en UTC la clave del navegador cambiaba a las
+  // 21:00 mientras el servidor seguía en el mismo día: entre las 21:00 y las 00:00
+  // el visitante se contaba dos veces.
   useEffect(() => {
     if (config.isOwner) return;
-    const today = new Date().toISOString().slice(0, 10);
-    const key = `sv_${storeSlug}_${today}`;
-    if (sessionStorage.getItem(key)) return;
-    sessionStorage.setItem(key, "1");
+    // Un navegador manejado por un script (Puppeteer, Playwright, Selenium) lo
+    // declara acá. El filtro de bots del servidor mira el User-Agent, que estos
+    // suelen disfrazar; esta bandera es más difícil de sacar.
+    if (navigator.webdriver) return;
+
+    const hoy = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "America/Argentina/Buenos_Aires",
+      year: "numeric", month: "2-digit", day: "2-digit",
+    }).format(new Date());
+    const key = `sv_${storeSlug}_${hoy}`;
+
+    try {
+      if (localStorage.getItem(key)) return;
+      localStorage.setItem(key, "1");
+      // Las claves de días anteriores no sirven para nada y se acumularían para
+      // siempre en el navegador del visitante.
+      for (let i = localStorage.length - 1; i >= 0; i--) {
+        const k = localStorage.key(i);
+        if (k?.startsWith(`sv_${storeSlug}_`) && k !== key) localStorage.removeItem(k);
+      }
+    } catch {
+      // Modo incógnito con almacenamiento bloqueado: se cuenta igual, sin dedup.
+    }
+
     fetch(`/api/store-views/${storeSlug}`, { method: "POST" }).catch(() => {});
   }, [storeSlug, config.isOwner]);
 
