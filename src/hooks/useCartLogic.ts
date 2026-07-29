@@ -485,39 +485,52 @@ export function useCartLogic({ products, promotions = [], storeId, affiliateId =
     setTimeout(() => setToastMsg(null), 2500);
   };
 
-  /* Al abrir la ficha se elige el primer talle y el primer color QUE TENGAN STOCK,
-     no el primero de la lista a secas.
-     Antes se preseleccionaba `p.sizes[0]` sin mirar nada. Si ese talle estaba
-     agotado —el 32 de una remera que sí tiene 34, 36 y 38— la ficha abría con el
-     talle agotado marcado, tachado, el cartel "Sin stock en esta combinación" y el
-     botón de comprar apagado. El producto se ve como si estuviera vendido, y el
-     comprador se va sin llegar a tocar los otros tres talles. No es un detalle de
-     forma: es una venta perdida en un producto que sí hay.
-     Misma cuenta que `outOfStockSizes` —que no se puede usar acá porque es un memo
-     que depende de que la ficha ya esté abierta—: un valor está agotado sólo si
-     tiene variantes que le correspondan Y todas están en cero. Si no se le puede
-     asociar ninguna variante, se lo trata como disponible, igual que allá. */
-  const primerConStock = (p: StorefrontProduct, valores: string[]): string => {
-    if (valores.length === 0) return "";
-    if (!p.variants.length) return valores[0];
-    const conStock = valores.find(val => {
-      const matching = p.variants.filter(v => {
-        const a = parseVariantAttrs(v.name);
-        if (a) return Object.values(a).map(x => String(x).toLowerCase()).includes(val.toLowerCase());
-        return v.value.includes(val);
-      });
-      return matching.length === 0 || matching.some(v => (v.stock ?? 0) > 0);
-    });
-    // Si están TODOS agotados no hay nada mejor que elegir: se deja el primero y el
-    // cartel de "sin stock" dice la verdad.
-    return conStock ?? valores[0];
+  /* Al abrir la ficha se elige la primera COMBINACIÓN de talle y color con stock.
+
+     Versión 1 del arreglo: se preseleccionaba `p.sizes[0]` sin mirar nada, así que
+     un pantalón con el 32 agotado abría con el 32 marcado, tachado, el cartel "Sin
+     stock en esta combinación" y el botón apagado — se veía vendido teniendo 34.
+
+     Versión 2: se elegía el primer talle con stock Y el primer color con stock,
+     pero **cada uno por su lado**. Lo encontró Flavio probando: eso no garantiza
+     que la PAREJA tenga stock. Con este inventario —
+
+         Beige/32 = 0    Beige/34 = 5    Gris/32 = 5    Gris/34 = 0
+
+     — el talle 32 "tiene stock" (por Gris) y el color Beige "tiene stock" (por el
+     34), así que cada dimensión pasa su propio examen… y la ficha abre en
+     Beige/32, que es cero. Dos combinaciones vendibles y abre en la única muerta.
+
+     Ahora se busca la pareja directamente, y con `resolveVariantStock`, que es
+     **la misma función que usa la ficha** para decidir si prende el botón. Esa es
+     la parte que importa: no hay una segunda cuenta que pueda opinar distinto de
+     la que el comprador termina viendo. */
+  const primerComboConStock = (p: StorefrontProduct): { size: string; color: string } => {
+    const talles  = p.sizes.length  ? p.sizes  : [""];
+    const colores = p.colors.length ? p.colors : [""];
+    const porDefecto = { size: talles[0], color: colores[0] };
+    if (!p.variants.length) return porDefecto;
+    // Se recorre en el mismo orden en que la ficha muestra los chips —talles y,
+    // dentro de cada talle, colores— así que sale elegida la primera opción que el
+    // comprador vería disponible leyendo de arriba a abajo.
+    for (const size of talles) {
+      for (const color of colores) {
+        const stock = resolveVariantStock(p, size, color);
+        // `null` es "no se puede saber" (el producto no tiene variantes que casen).
+        // Se trata como disponible, igual que en el resto del carrito.
+        if (stock === null || stock > 0) return { size, color };
+      }
+    }
+    // Todo agotado: se deja el primero y el cartel de "sin stock" dice la verdad.
+    return porDefecto;
   };
 
   const openModal = (p: StorefrontProduct) => {
     setModalProduct(p);
     setModalImg(0);
-    setSelectedSize(primerConStock(p, p.sizes));
-    setSelectedColor(primerConStock(p, p.colors));
+    const combo = primerComboConStock(p);
+    setSelectedSize(combo.size);
+    setSelectedColor(combo.color);
     setQty(isWholesale && p.cantMinMayorista ? p.cantMinMayorista : 1);
     setSearchOpen(false);
     registrarVista(p.id, slug, isOwner, isPreview);

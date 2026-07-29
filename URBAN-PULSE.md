@@ -33,6 +33,7 @@ Los números de línea son los del día de la revisión: se corren a medida que 
 | ~~UP-23~~ | ~~El destacado y contacto usan padding de escritorio en el celular~~ | Media | **hecho** 28/07 |
 | ~~UP-24~~ | ~~La ficha abre con el talle agotado elegido y el botón apagado, en los diez templates~~ | Alta | **hecho** 28/07 |
 | ~~UP-25~~ | ~~El "+" del carrito no tiene techo: se pueden cargar 65 unidades de un producto que tiene 5~~ | Alta | **hecho** 29/07 |
+| ~~UP-26~~ | ~~El talle y el color se eligen por separado: la ficha puede abrir en una combinación sin stock~~ | Alta | **hecho** 29/07 |
 
 **Los veinte puntos están cerrados.** El UP-19 salió mirando el UP-18. Se probó con la foto abajo de
 los botones, a Flavio no le gustó y volvió a quedar sin foto — pero escrito, que es lo que faltaba.
@@ -2167,3 +2168,51 @@ es del 23/07.
 
 `npm run build` completo, de punta a punta, sin errores. Es la primera vez en toda la auditoría que se
 puede correr sin tocar producción.
+
+### UP-26 — El talle y el color se elegían por separado ✅
+
+Lo encontró Flavio probando el arreglo de UP-24: *"encontré el problema y no sé cómo explicarlo"*.
+Y el problema era **mi arreglo de UP-24**, que estaba a medias.
+
+UP-24 cambió "el primero de la lista" por "el primero **con stock**" — pero elegía el talle por un
+lado y el color por el otro. Eso no garantiza que **la pareja** tenga stock. Con este inventario:
+
+| | Beige | Gris |
+|---|---|---|
+| **32** | 0 | **5** |
+| **34** | **5** | 0 |
+
+- El talle 32 "tiene stock" (por Gris) → se elige 32 ✓
+- El color Beige "tiene stock" (por el 34) → se elige Beige ✓
+- La combinación **Beige/32 es cero** → la ficha abre con "Sin stock" y el botón apagado
+
+Dos combinaciones vendibles, y abre justo en la única muerta. Cada dimensión pasa su propio examen y
+el resultado es igual de malo que antes.
+
+Ahora se busca **la pareja** directamente, recorriendo talles y, dentro de cada talle, colores — el
+mismo orden en que la ficha muestra los chips, así que sale elegida la primera opción que el comprador
+vería disponible leyendo de arriba a abajo.
+
+Y se busca **con `resolveVariantStock`**, que es la misma función que usa la ficha para decidir si
+prende el botón. Ésa es la parte que importa: ya no hay una segunda cuenta que pueda opinar distinto
+de la que el comprador termina viendo. UP-24 replicaba la lógica de `outOfStockSizes` a mano, y dos
+implementaciones de la misma pregunta siempre terminan discrepando en algún caso.
+
+| inventario | abre en | |
+|---|---|---|
+| Todo con stock | Beige/32 | ✓ |
+| Beige agotado entero | Gris/32 | ✓ |
+| **Cruzado (el agujero)** | **Gris/32** | ✓ |
+| Sólo queda Gris/34 | Gris/34 | ✓ |
+| Todo agotado | Beige/32, sin stock | ✓ correcto: no hay nada vendible |
+
+### La foto sigue al color y no al talle — es a propósito
+
+Flavio, en la misma prueba: *"cuando selecciono color cambia la imagen, pero cuando selecciono el talle
+no"*. Está bien así, y es deliberado: hay una sincronización de ida y vuelta entre el color y la foto
+(`colorSyncingRef`), que busca la imagen etiquetada con esa variante y cambia a ella — y al revés,
+pasar de foto cambia el color.
+
+El talle no cambia la foto porque **no cambia cómo se ve la prenda**: un 32 y un 34 del mismo pantalón
+beige son la misma foto. Si el talle cambiara la imagen habría que cargar una foto por talle, que
+nadie hace.
