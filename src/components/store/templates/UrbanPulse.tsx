@@ -14,6 +14,7 @@ import { useResenasProducto } from "@/hooks/useResenasProducto";
 import { ResenaComentario } from "@/components/store/templates/shared/ResenaComentario";
 import { useTouchSwipe } from "@/hooks/useTouchSwipe";
 import { masVistos, MIN_MAS_VISTOS } from "@/lib/masVistos";
+import { ventanaArgentina } from "@/lib/fechas-comerciales";
 import { COMENTARIO_MAX, RESENADOR_MAX } from "@/lib/reviews";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
 import VerifiedIconButton from "@/components/store/VerifiedIconButton";
@@ -688,7 +689,12 @@ export default function UrbanPulse() {
       // Va en ciclo y no al azar de verdad: sorteando cada franja, el mismo
       // producto puede salir tres veces seguidas y otro no salir nunca. Así todos
       // tienen su turno y ninguno se repite pegado.
-      const franja = Math.floor(relojFeatured / (featuredRotacionHs * 3600_000));
+      //
+      // Las franjas se cuentan desde la medianoche ARGENTINA. Antes se dividía
+      // `Date.now()` derecho, que cuenta desde el 1/1/1970 a medianoche UTC: los
+      // cortes caían en horas redondas de Londres y con rotación de 24hs el
+      // producto del día cambiaba a las 21:00 de acá, en plena tarde de ventas.
+      const franja = ventanaArgentina(featuredRotacionHs, new Date(relojFeatured));
       return products[franja % products.length];
     }
     // Si el producto elegido se borró, cae al primero en vez de dejar el bloque

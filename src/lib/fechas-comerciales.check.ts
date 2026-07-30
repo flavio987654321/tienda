@@ -11,6 +11,7 @@
 import {
   getUpcomingDates, getEventNames, getEventRange,
   diaArgentino, inicioDiaArgentino, sumarDiasCalendario, diasEntreDias,
+  offsetArgentinaMin, ventanaArgentina,
 } from "./fechas-comerciales";
 
 let failed = 0;
@@ -157,6 +158,73 @@ const buscar = (fechas: ReturnType<typeof getUpcomingDates>, nombre: string) =>
   check("DIA-P", diasEntreDias("2026-07-29", "2026-07-28") === -1, "al revés da negativo");
   check("DIA-Q", diasEntreDias("2026-06-30", "2026-07-29") === 29, "cruza el mes");
   check("DIA-R", diasEntreDias("2025-12-31", "2026-01-01") === 1, "cruza el año");
+}
+
+// ── Las ventanas de rotación ────────────────────────────────────────────────
+//
+// Esto es lo que hace que el producto destacado cambie a medianoche argentina y
+// no a las 21:00. No se puede verificar a ojo: habría que quedarse despierto
+// hasta las 00:00, mirar la tienda, y volver a las 21:00 para confirmar que ahí
+// ya NO cambia. Por cada una de las tres opciones (6, 12 y 24 horas).
+//
+// `Date.now() / ventana` cuenta desde el 1/1/1970 a medianoche UTC, así que los
+// cortes caían en horas redondas de Londres.
+{
+  const ar = (iso: string) => new Date(`${iso}-03:00`);
+
+  check("ROT-A", offsetArgentinaMin(ar("2026-07-29T12:00:00")) === -180,
+    "Argentina está 180 minutos detrás de UTC");
+  check("ROT-B", offsetArgentinaMin(ar("2026-01-15T12:00:00")) === -180,
+    "en enero también: hoy no hay horario de verano");
+
+  // El caso que molestaba. 21:00 era el corte viejo, así que estas dos horas
+  // caían en franjas distintas y el destacado cambiaba en plena tarde.
+  check("ROT-C",
+    ventanaArgentina(24, ar("2026-07-29T20:59:00")) === ventanaArgentina(24, ar("2026-07-29T21:01:00")),
+    "con 24hs, las 21:00 ya NO parten el día");
+
+  check("ROT-D",
+    ventanaArgentina(24, ar("2026-07-29T23:59:00")) !== ventanaArgentina(24, ar("2026-07-30T00:01:00")),
+    "con 24hs, cambia en la medianoche argentina");
+
+  // Todo el día tiene que dar la misma ventana: si dos personas entran a la
+  // mañana y a la noche, ven el mismo destacado.
+  const delDia = [0, 3, 7, 11, 15, 19, 23].map((h) =>
+    ventanaArgentina(24, ar(`2026-07-29T${String(h).padStart(2, "0")}:30:00`))
+  );
+  check("ROT-E", new Set(delDia).size === 1,
+    "con 24hs, todas las horas del mismo día argentino dan la misma ventana");
+
+  // Y días seguidos tienen que dar ventanas seguidas, o el ciclo saltearía
+  // productos.
+  const d29 = ventanaArgentina(24, ar("2026-07-29T10:00:00"));
+  const d30 = ventanaArgentina(24, ar("2026-07-30T10:00:00"));
+  check("ROT-F", d30 - d29 === 1, "con 24hs, un día más es una ventana más");
+
+  // 12 horas: cortes a las 00:00 y 12:00 argentinas.
+  check("ROT-G",
+    ventanaArgentina(12, ar("2026-07-29T11:59:00")) !== ventanaArgentina(12, ar("2026-07-29T12:01:00")),
+    "con 12hs, corta al mediodía argentino");
+  check("ROT-H",
+    ventanaArgentina(12, ar("2026-07-29T12:01:00")) === ventanaArgentina(12, ar("2026-07-29T23:59:00")),
+    "con 12hs, del mediodía a la medianoche es una sola ventana");
+
+  // 6 horas: cortes en 00, 06, 12 y 18 argentinas.
+  const franjas6 = [1, 7, 13, 19].map((h) =>
+    ventanaArgentina(6, ar(`2026-07-29T${String(h).padStart(2, "0")}:00:00`))
+  );
+  check("ROT-I", new Set(franjas6).size === 4,
+    "con 6hs, el día argentino se parte en 4 ventanas distintas");
+  check("ROT-J",
+    ventanaArgentina(6, ar("2026-07-29T05:59:00")) !== ventanaArgentina(6, ar("2026-07-29T06:01:00")),
+    "con 6hs, corta a las 06:00 argentinas");
+
+  // Que la cuenta sea la de antes MÁS el corrimiento, no otra: la ventana de un
+  // instante tiene que ser la misma que la de 3 horas antes en UTC.
+  const instante = ar("2026-07-29T10:00:00");
+  const conOffset = Math.floor((instante.getTime() - 3 * 3_600_000) / (24 * 3_600_000));
+  check("ROT-K", ventanaArgentina(24, instante) === conOffset,
+    "la ventana es la de UTC corrida 3 horas, nada más");
 }
 
 console.log(failed === 0 ? "\n✅ El calendario da lo esperado." : `\n❌ ${failed} caso(s) fallan.`);

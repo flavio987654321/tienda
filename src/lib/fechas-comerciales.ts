@@ -81,6 +81,47 @@ export function inicioDiaArgentino(dia: string): Date {
 }
 
 /**
+ * Cuántos minutos está Argentina detrás de UTC en esa fecha. Hoy son −180.
+ *
+ * Se pregunta a `Intl` en vez de escribir −180 a mano por el mismo motivo que
+ * `inicioDiaArgentino`: Argentina ya tuvo horario de verano y podría volver a
+ * tenerlo. Un número clavado no falla el día del cambio, falla en silencio y
+ * corrido una hora.
+ */
+export function offsetArgentinaMin(fecha: Date = new Date()): number {
+  const texto = new Intl.DateTimeFormat("en-US", {
+    timeZone: AR_TZ,
+    timeZoneName: "longOffset",
+  })
+    .formatToParts(fecha)
+    .find((p) => p.type === "timeZoneName")?.value;
+
+  // Viene como "GMT-03:00". Si algún día no viniera, −180 es el valor de hoy.
+  const m = texto?.match(/GMT([+-])(\d{2}):(\d{2})/);
+  if (!m) return -180;
+  const signo = m[1] === "-" ? -1 : 1;
+  return signo * (Number(m[2]) * 60 + Number(m[3]));
+}
+
+/**
+ * Qué ventana de `horas` le toca a un instante, contando las ventanas desde la
+ * medianoche argentina.
+ *
+ * Existe porque `Math.floor(Date.now() / ventana)` cuenta desde el 1/1/1970 a
+ * medianoche UTC, así que los cortes caen en horas redondas de Londres: con una
+ * ventana de 24hs, el "producto del día" cambiaba a las 21:00 de acá — en plena
+ * tarde de ventas, y el día arrancaba mostrando el de ayer.
+ *
+ * El número que devuelve no significa nada por sí solo (no es un día ni una
+ * hora): sirve para que todos los que caen en la misma ventana obtengan el mismo
+ * valor, y uno distinto al pasar a la siguiente.
+ */
+export function ventanaArgentina(horas: number, ahora: Date = new Date()): number {
+  const offsetMs = offsetArgentinaMin(ahora) * 60_000;
+  return Math.floor((ahora.getTime() + offsetMs) / (horas * 3_600_000));
+}
+
+/**
  * Suma (o resta) días a una clave "YYYY-MM-DD". Es aritmética de calendario
  * pura —no interviene ninguna zona horaria— así que se hace en UTC a propósito.
  */
