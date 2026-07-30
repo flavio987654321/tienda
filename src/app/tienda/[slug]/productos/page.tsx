@@ -931,16 +931,40 @@ function ProductosPageInner() {
      Abrir el mismo producto desde el home y desde el catálogo daba dos fichas
      visiblemente distintas — lo vio Flavio: "es como que usa el modal de productos
      pero del template de Chic Paris".
-     Sólo en escritorio: en celular las dos formas son la misma columna apilada.
-     Los otros tres siguen con la forma de siempre hasta que les toque su auditoría. */
-  const modalUP = template === "urban-pulse" && !isMobile;
+     Los otros tres siguen con la forma de siempre hasta que les toque su auditoría.
+
+     Van DOS banderas, no una. Antes había una sola —`template === "urban-pulse" &&
+     !isMobile`— con el argumento de que "en celular las dos formas son la misma
+     columna apilada". Eso es cierto de la GRILLA y falso de todo lo demás: al caer
+     la bandera en celular se caía también la identidad (nombre en mayúsculas, precio
+     28/900, títulos con la rayita del acento, favoritos, la barra de comprar abajo),
+     y el catálogo volvía a abrir la ficha de Chic Paris con la ropa de Urban Pulse
+     — exactamente el bug de UP-12, pero sólo cuando la pantalla se angostaba.
+     · `esUP`     — el VESTIDO. Va en los 3 anchos.
+     · `modalUP`  — la FORMA de dos columnas con el panel clavado al costado, que
+                    necesita dos columnas para existir. Sólo escritorio; en celular
+                    la forma es la del template en celular: foto, panel apilado
+                    debajo, lo que se lee al final y la barra de comprar fija. */
+  const esUP = template === "urban-pulse";
+  const modalUP = esUP && !isMobile;
+  // La barra de comprar abajo de todo, fija, como en el modal del template en
+  // celular. Se usa en varios lugares (saca el botón de adentro del panel, lo
+  // agrega al pie, y esconde el globo de WhatsApp que le caía justo encima).
+  const barraCompraUP = esUP && isMobile;
+  // El total que dice el botón de agregar. Uno solo, porque hay DOS botones —el del
+  // panel y el de la barra del pie— y son excluyentes: si la cuenta viviera escrita
+  // en cada uno, el día que cambie una promo alcanza con tocar una sola para que el
+  // celular y el escritorio muestren precios distintos.
+  const totalAgregar = nxmPaid != null
+    ? nxmPaid * displayPrice
+    : (modalPromo.hasPriceDrop ? modalPromo.effectivePrice : displayPrice) * qty;
 
   /* Los títulos de sección adentro del modal. Urban Pulse los dibuja con una
      rayita gruesa del acento, el texto y una línea fina que llega hasta el borde;
      los otros tres, con un renglón chico en gris. Era de las diferencias que más
      se notaban, porque hay cinco por modal (Descripción, Características, Videos,
      Reseñas, También te puede gustar). */
-  const tituloSeccion = (texto: string) => modalUP ? (
+  const tituloSeccion = (texto: string) => esUP ? (
     <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:16 }}>
       <span style={{ width:24, height:4, background:chipBg, flexShrink:0 }} />
       <span style={{ fontSize:11, fontWeight:900, letterSpacing:3, textTransform:"uppercase", color:T, whiteSpace:"nowrap" }}>{texto}</span>
@@ -1985,8 +2009,13 @@ function ProductosPageInner() {
 
       {showReport && <ReportStoreModal slug={slug} onClose={() => setShowReport(false)} />}
 
-      {/* ── WHATSAPP FLOTANTE ─────────────────────────────────────────── */}
-      {!cartOpen && !checkoutOpen && whatsapp?.enabled && (
+      {/* ── WHATSAPP FLOTANTE ───────────────────────────────────────────
+          Se esconde con la ficha abierta, igual que ya se escondía con el carrito
+          y el checkout. El globo es `fixed` con zIndex 500 y la ficha vive en 200:
+          quedaba flotando ARRIBA del modal, tapándole la esquina —y en celular,
+          justo encima de la barra de comprar, que es el botón que hay que apretar.
+          Un botón de WhatsApp tapando el de agregar al carrito. */}
+      {!cartOpen && !checkoutOpen && !modalProduct && whatsapp?.enabled && (
         <>
           <style>{`
             @keyframes pp-wa-pulse { 0% { box-shadow:0 4px 20px rgba(37,211,102,0.4), 0 0 0 0 rgba(37,211,102,0.55); } 70% { box-shadow:0 4px 20px rgba(37,211,102,0.4), 0 0 0 14px rgba(37,211,102,0); } 100% { box-shadow:0 4px 20px rgba(37,211,102,0.4), 0 0 0 0 rgba(37,211,102,0); } }
@@ -2016,10 +2045,10 @@ function ProductosPageInner() {
                 separación ni transparencia — el template no tiene una sola esquina
                 redondeada ni un solo fondo translúcido. */}
             <button onClick={() => { setModalProduct(null); setLightboxSrc(null); }} aria-label="Cerrar"
-              style={ modalUP
+              style={ esUP
                 ? { position:"absolute", top:0, right:0, zIndex:10, background:T, border:"none", color:S, width:40, height:40, cursor:"pointer", fontSize:18, display:"flex", alignItems:"center", justifyContent:"center" }
                 : { position:"absolute", top:10, right:10, zIndex:10, background:"rgba(0,0,0,0.65)", border:"none", color:"#fff", width:36, height:36, cursor:"pointer", fontSize:20, display:"flex", alignItems:"center", justifyContent:"center", backdropFilter:"blur(4px)" } }>
-              {modalUP ? "✕" : "×"}
+              {esUP ? "✕" : "×"}
             </button>
             {/* 48% para la foto, como en el modal del template (ahí es el mismo
                 número). A 50/50 la columna de comprar quedaba más angosta de lo
@@ -2088,12 +2117,19 @@ function ProductosPageInner() {
                 /* 56×74 como en el modal del template: cuadradas de 48 recortaban
                    la prenda a un cuadrado y la miniatura no se parecía a la foto
                    que abría. Misma proporción 3/4 que la foto grande.
-                   En Urban Pulse no van acá: van en la tira vertical de arriba. */
-                <div style={{ display:"flex", gap:8, padding: isMobile ? "10px 14px 0" : "10px 0 0", overflowX:"auto", scrollbarWidth:"none" }}>
+                   En Urban Pulse de escritorio no van acá: van en la tira vertical
+                   de arriba. En celular sí —una columna al costado en 360px le come
+                   el ancho a la foto—, pero con la medida del template: 64×80, borde
+                   macizo de 3px en la elegida y las otras al 50%, no un borde fino
+                   del acento. */
+                <div style={{ display:"flex", gap: esUP ? 6 : 8, padding: isMobile ? (esUP ? "6px 12px 0" : "10px 14px 0") : "10px 0 0", overflowX:"auto", scrollbarWidth:"none" }}>
                   {modalProduct.images.map((img, i) => (
                     <button key={i} onClick={() => elegirFoto(i)} aria-label={`Ver foto ${i + 1}`}
-                      style={{ width:56, height:74, flexShrink:0, padding:0, overflow:"hidden", background:S, border: i===modalImg ? `2px solid ${GT}` : `1px solid ${border}`, cursor:"pointer", transition:"border-color 0.2s" }}>
-                      <FadeImage src={img} alt="" width={56} height={74} style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }} />
+                      style={{ width: esUP ? 64 : 56, height: esUP ? 80 : 74, flexShrink:0, padding:0, overflow:"hidden", background:S, cursor:"pointer", transition:"border-color 0.2s",
+                               ...(esUP
+                                 ? { border: i===modalImg ? `3px solid ${T}` : `1px solid ${border}`, opacity: i===modalImg ? 1 : 0.5 }
+                                 : { border: i===modalImg ? `2px solid ${GT}` : `1px solid ${border}` }) }}>
+                      <FadeImage src={img} alt="" width={esUP ? 64 : 56} height={esUP ? 80 : 74} style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }} />
                     </button>
                   ))}
                 </div>
@@ -2133,8 +2169,14 @@ function ProductosPageInner() {
                 Y no lleva el alto medido (`altoPanel`): ese es el otro mecanismo,
                 el de los tres templates restantes, donde el panel se ajusta al alto
                 de la foto y scrollea por dentro. Los dos juntos se pelean. */}
+            {/* En celular no hay costado del que clavarse, así que el panel es un
+                bloque más de la columna — pero conserva el corte macizo de 3px que
+                lo separa de la foto, que en el template es un borde de ARRIBA y no
+                de la izquierda. Sin eso la foto y el nombre quedaban pegados, sin
+                nada que marcara dónde empieza la ficha. */}
             <div style={{ position:"relative", display:"flex", minWidth:0,
-                          ...(modalUP ? { gridColumn:2, gridRow:"1 / span 8", position:"sticky" as const, top:0, alignSelf:"start" as const, borderLeft:`3px solid ${T}`, maxHeight:"92vh", overflowY:"auto" as const } : {}) }}>
+                          ...(modalUP ? { gridColumn:2, gridRow:"1 / span 8", position:"sticky" as const, top:0, alignSelf:"start" as const, borderLeft:`3px solid ${T}`, maxHeight:"92vh", overflowY:"auto" as const } : {}),
+                          ...(barraCompraUP ? { borderTop:`3px solid ${T}` } : {}) }}>
             {/* Degradados: reponen la señal que se perdió al ocultar la barra.
                 Aparecen solo si de verdad queda contenido de ese lado. */}
             {!modalUP && sombraArriba && (
@@ -2147,25 +2189,27 @@ function ProductosPageInner() {
             )}
             {/* 46px arriba y no 20: el botón de cerrar de Urban Pulse es un cuadrado
                 de 40 clavado en la esquina, y con el padding chico le caía justo
-                encima al rubro del producto. Los otros tres lo tienen despegado. */}
-            <div ref={panelRef} className="st-sin-barra" style={{ flex:1, padding: modalUP ? "46px 26px 30px" : "clamp(20px,4vw,36px) clamp(16px,3.5vw,32px)", display:"flex", flexDirection:"column", gap:18, minHeight:0, boxSizing:"border-box",
+                encima al rubro del producto. Los otros tres lo tienen despegado.
+                En celular el cuadrado de cerrar está sobre la FOTO, arriba de todo,
+                así que el panel no tiene que esquivarlo: van los 22/18 del template. */}
+            <div ref={panelRef} className="st-sin-barra" style={{ flex:1, padding: barraCompraUP ? "22px 18px 24px" : (modalUP ? "46px 26px 30px" : "clamp(20px,4vw,36px) clamp(16px,3.5vw,32px)"), display:"flex", flexDirection:"column", gap:18, minHeight:0, boxSizing:"border-box",
                           ...(!modalUP && altoPanel ? { maxHeight: altoPanel, overflowY:"auto" as const } : {}) }}>
               <div>
                 {/* En Urban Pulse el rubro va en gris y el nombre en mayúsculas y
                     negrita máxima — el template no usa serif en ningún lado. Era la
                     diferencia más visible del panel: el mismo producto decía
                     "Pantalón básico" acá y "PANTALON BASICO" en el home. */}
-                <p style={{ fontSize:10, letterSpacing:3, color: modalUP ? MID : GT, fontWeight: modalUP ? 800 : 400, textTransform:"uppercase", marginBottom:6 }}>
+                <p style={{ fontSize:10, letterSpacing:3, color: esUP ? MID : GT, fontWeight: esUP ? 800 : 400, textTransform:"uppercase", marginBottom:6 }}>
                   {modalProduct.category}{modalProduct.subcategory && <span style={{ opacity:0.6 }}> › {modalProduct.subcategory}</span>}
                 </p>
-                <h2 style={ modalUP
+                <h2 style={ esUP
                   ? { fontSize:24, margin:0, fontWeight:900, textTransform:"uppercase", letterSpacing:"-0.5px", lineHeight:1.15, color:T, overflowWrap:"anywhere" }
                   : { fontFamily:serif, fontSize:24, margin:0, lineHeight:1.2, color:T } }>{modalProduct.name}</h2>
               </div>
               {/* Atajo a las reseñas, igual que en el template: viven abajo de todo,
                   y sin esto no hay ninguna señal de que el producto tenga opiniones
                   hasta scrollear medio modal. */}
-              {modalUP && resenasProd.total > 0 && (
+              {esUP && resenasProd.total > 0 && (
                 <button type="button" onClick={() => document.getElementById("pc-modal-resenas")?.scrollIntoView({ behavior:"smooth", block:"start" })}
                   style={{ display:"flex", alignItems:"center", gap:7, background:"none", border:"none", padding:0, cursor:"pointer", marginTop:-8 }}>
                   <span style={{ display:"flex", gap:1 }}>
@@ -2187,10 +2231,10 @@ function ProductosPageInner() {
                     tercer color en el mismo renglón, sin relación con nada. */}
                 {modalPromo.hasPriceDrop ? (
                   <>
-                    <span style={{ fontSize: modalUP ? 28 : 22, fontWeight: modalUP ? 900 : 700, color:"#dc2626" }}>{fmt(modalPromo.effectivePrice)}</span>
-                    <span style={{ fontSize: modalUP ? 15 : 14, color:MID, textDecoration:"line-through" }}>{fmt(modalPromo.originalPrice)}</span>
+                    <span style={{ fontSize: esUP ? 28 : 22, fontWeight: esUP ? 900 : 700, color:"#dc2626" }}>{fmt(modalPromo.effectivePrice)}</span>
+                    <span style={{ fontSize: esUP ? 15 : 14, color:MID, textDecoration:"line-through" }}>{fmt(modalPromo.originalPrice)}</span>
                     {modalPromo.pctOff != null && (
-                      <span style={ modalUP
+                      <span style={ esUP
                         ? { fontSize:12, fontWeight:800, color:"#fff", background:"#dc2626", padding:"2px 8px", borderRadius:4, letterSpacing:0.3, whiteSpace:"nowrap" }
                         : { fontSize:12, fontWeight:800, color:"#16a34a", background:"#dcfce7", padding:"2px 8px", borderRadius:4, letterSpacing:0.3, whiteSpace:"nowrap" } }>
                         {modalPromo.pctOff}% OFF
@@ -2199,8 +2243,8 @@ function ProductosPageInner() {
                   </>
                 ) : (
                   <>
-                    <span style={{ fontSize: modalUP ? 28 : 22, fontWeight: modalUP ? 900 : 700, color: modalUP ? ((!variantPrice && modalProduct.comparePrice) ? "#dc2626" : T) : GT }}>{fmt(displayPrice)}</span>
-                    {!variantPrice && modalProduct.comparePrice && <span style={{ fontSize: modalUP ? 15 : 14, color:MID, textDecoration:"line-through" }}>{fmt(modalProduct.comparePrice)}</span>}
+                    <span style={{ fontSize: esUP ? 28 : 22, fontWeight: esUP ? 900 : 700, color: esUP ? ((!variantPrice && modalProduct.comparePrice) ? "#dc2626" : T) : GT }}>{fmt(displayPrice)}</span>
+                    {!variantPrice && modalProduct.comparePrice && <span style={{ fontSize: esUP ? 15 : 14, color:MID, textDecoration:"line-through" }}>{fmt(modalProduct.comparePrice)}</span>}
                   </>
                 )}
               </div>
@@ -2222,7 +2266,7 @@ function ProductosPageInner() {
                   mismo, y el chip marcado ya lo dice. */}
               {modalProduct.sizes.length > 0 && (
                 <div>
-                  {tituloSeccion(modalUP && selectedSize ? `Talle: ${selectedSize}` : "Talle")}
+                  {tituloSeccion(esUP && selectedSize ? `Talle: ${selectedSize}` : "Talle")}
                   <div style={{ display:"flex", gap:7, flexWrap:"wrap" }}>
                     {modalProduct.sizes.map(size => {
                       const sinStock = outOfStockSizes.has(size);
@@ -2239,7 +2283,7 @@ function ProductosPageInner() {
 
               {modalProduct.colors.length > 0 && (
                 <div>
-                  {tituloSeccion(modalUP && selectedColor ? `Color: ${selectedColor}` : "Color")}
+                  {tituloSeccion(esUP && selectedColor ? `Color: ${selectedColor}` : "Color")}
                   <div style={{ display:"flex", gap:7, flexWrap:"wrap" }}>
                     {/* Con el puntito de muestra, como en el modal del template:
                         "Petróleo" o "Arena" no le dicen nada a nadie hasta verlo. */}
@@ -2307,20 +2351,26 @@ function ProductosPageInner() {
                   despega del fondo como superficie, y cuando no, el color de texto
                   del tema. Por eso en la captura los chips SÍ se veían y el botón
                   no: los chips ya pasaban por el helper y el botón no. */}
+              {/* En celular Urban Pulse no lo lleva acá: se va a la barra fija del
+                  pie, con el total al lado. Metido en el panel quedaba a media
+                  pantalla —hay descripción, reseñas y similares abajo— y había que
+                  scrollear para atrás para comprar. */}
+              {!barraCompraUP && (
               <button onClick={addToCart}
                 disabled={selectedVariantStock === 0}
-                style={{ background: selectedVariantStock === 0 ? `${chipBg}40` : chipBg, color:chipText, border:"none", padding: modalUP ? "16px" : "15px", fontSize:11, fontWeight: modalUP ? 900 : 800, letterSpacing:3, textTransform:"uppercase", cursor: selectedVariantStock === 0 ? "not-allowed" : "pointer" }}>
+                style={{ background: selectedVariantStock === 0 ? `${chipBg}40` : chipBg, color:chipText, border:"none", padding: esUP ? "16px" : "15px", fontSize:11, fontWeight: esUP ? 900 : 800, letterSpacing:3, textTransform:"uppercase", cursor: selectedVariantStock === 0 ? "not-allowed" : "pointer" }}>
                 {/* "Agregar" a secas en Urban Pulse: el botón está adentro del panel
                     de compra, con el precio al lado, así que "al carrito" no agrega
                     información y sí un renglón partido en pantallas angostas. */}
-                {selectedVariantStock === 0 ? "Sin stock" : `${modalUP ? "Agregar" : "Agregar al carrito"} · ${fmt(nxmPaid != null ? nxmPaid * displayPrice : (modalPromo.hasPriceDrop ? modalPromo.effectivePrice : displayPrice) * qty)}`}
+                {selectedVariantStock === 0 ? "Sin stock" : `${esUP ? "Agregar" : "Agregar al carrito"} · ${fmt(totalAgregar)}`}
               </button>
+              )}
 
               {/* Guardar en favoritos: el panel del template lo tiene y este no lo
                   tenía en ningún lado. Desde el catálogo sólo se podía marcar un
                   favorito con el corazoncito de la tarjeta, que es chico y está
                   arriba de la foto — abierto el producto, no había forma. */}
-              {modalUP && (
+              {esUP && (
                 <button onClick={() => toggleFavorite(modalProduct.id)}
                   style={{ width:"100%", background:"none", border:`2px solid ${T}`, color:T, padding:"12px", fontSize:10, fontWeight:900, letterSpacing:2, textTransform:"uppercase", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}>
                   <svg width={14} height={14} viewBox="0 0 24 24" fill={favorites.includes(modalProduct.id) ? T : "none"} stroke={T} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>
@@ -2330,8 +2380,8 @@ function ProductosPageInner() {
 
               {/* En Urban Pulse estos dos no van acá: bajan a la columna izquierda,
                   debajo de la foto. El panel se queda SOLO con lo de comprar. */}
-              {!modalUP && bloqueDescripcion}
-              {!modalUP && bloqueCaracteristicas}
+              {!esUP && bloqueDescripcion}
+              {!esUP && bloqueCaracteristicas}
 
               {/* Compartir — al final: es lo que se hace DESPUÉS de decidir, no
                   antes de saber el precio, que es donde estaba. */}
@@ -2364,8 +2414,8 @@ function ProductosPageInner() {
                 clavado: si la descripción viviera ahí adentro, el panel volvería a
                 medir varias pantallas y el botón de comprar se iría de la vista con
                 el primer producto que tenga texto largo. */}
-            {modalUP && (bloqueDescripcion || bloqueCaracteristicas) && (
-              <div style={{ gridColumn:1, padding:"26px 26px 0", display:"flex", flexDirection:"column", gap:18 }}>
+            {esUP && (bloqueDescripcion || bloqueCaracteristicas) && (
+              <div style={{ gridColumn:1, padding: isMobile ? "26px 18px 0" : "26px 26px 0", display:"flex", flexDirection:"column", gap:18 }}>
                 {bloqueDescripcion}
                 {bloqueCaracteristicas}
               </div>
@@ -2378,7 +2428,7 @@ function ProductosPageInner() {
                 por fila (ver más abajo), que es donde el renglón queda en ~64
                 caracteres en vez de ~140. */}
             <div id="pc-modal-resenas" style={{ gridColumn: isMobile ? undefined : (modalUP ? 1 : "1 / -1"), borderTop:`1px solid ${border}`, padding: isMobile ? "20px 16px" : "24px 32px" }}>
-                {modalUP ? tituloSeccion(`Reseñas${resenasProd.total > 0 ? ` (${resenasProd.total})` : ""}`) : (
+                {esUP ? tituloSeccion(`Reseñas${resenasProd.total > 0 ? ` (${resenasProd.total})` : ""}`) : (
                   <p style={{ ...tituloBloque, marginBottom: 20 }}>
                     Reseñas{resenasProd.total > 0 && ` (${resenasProd.total})`}
                   </p>
@@ -2495,7 +2545,11 @@ function ProductosPageInner() {
               if (similar.length === 0) return null;
               return (
                 <div style={{ gridColumn: isMobile ? undefined : (modalUP ? 1 : "1 / -1"), padding: isMobile ? "0 16px 24px" : "0 32px 32px", borderTop:`1px solid ${border}`, paddingTop:20 }}>
-                  <p style={{ fontSize:10, letterSpacing:3, color:GT, textTransform:"uppercase", marginBottom:14 }}>Productos similares</p>
+                  {/* El único de los seis títulos del modal que se había quedado
+                      afuera de `tituloSeccion`: en Urban Pulse los otros cinco
+                      llevan la rayita del acento y este era un renglón gris. */}
+                  {esUP ? tituloSeccion("Productos similares")
+                        : <p style={{ fontSize:10, letterSpacing:3, color:GT, textTransform:"uppercase", marginBottom:14 }}>Productos similares</p>}
                   <div style={{ display:"grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(4,1fr)", gap:14 }}>
                     {similar.map(p => (
                       <div key={p.id} onClick={() => openModal(p)} style={{ cursor:"pointer" }}>
@@ -2523,6 +2577,36 @@ function ProductosPageInner() {
               );
             })()}
             </div>
+            {/* ── La barra de comprar, al pie y fija ────────────────────────────
+                Sólo Urban Pulse en celular, y es la pieza que más se notaba de
+                menos: en el modal del template la ficha ocupa la pantalla entera y
+                el total con el botón quedan siempre abajo, mientras el contenido
+                corre por detrás. Acá el botón estaba adentro del panel, o sea a
+                media pantalla y con la descripción, las reseñas y los similares
+                debajo — con la foto arriba, "agregar al carrito" no se veía nunca
+                sin scrollear.
+                Va como hermano del área que scrollea (que es `flex:1 minHeight:0`),
+                no en `position:fixed`: el modal ya es una columna flex a pantalla
+                completa, así que con `flexShrink:0` la barra se queda abajo sin
+                taparle nada al contenido, y en el celular no se pelea con la barra
+                de direcciones del navegador. */}
+            {barraCompraUP && (
+              <div style={{ borderTop:`2px solid ${T}`, padding:"12px 16px 16px", background:S, flexShrink:0 }}>
+                <div style={{ display:"flex", alignItems:"baseline", gap:10, marginBottom:10 }}>
+                  <span style={{ fontSize:20, fontWeight:900, color:T }}>{fmt(totalAgregar)}</span>
+                  {/* `!!` y no `comparePrice &&` a secas: con `comparePrice` en 0 el
+                      `&&` devuelve 0 y React dibuja un "0" suelto en la barra. Es el
+                      UP-7 ("Un `0` suelto arriba de la foto en Ofertas") esperando
+                      para pasar de nuevo. */}
+                  {!variantPrice && !!modalProduct.comparePrice && <span style={{ fontSize:12, color:MID, textDecoration:"line-through" }}>{fmt(modalProduct.comparePrice)}</span>}
+                  {qty > 1 && <span style={{ fontSize:11, color:MID }}>× {qty}</span>}
+                </div>
+                <button onClick={addToCart} disabled={selectedVariantStock === 0}
+                  style={{ width:"100%", background: selectedVariantStock === 0 ? `${chipBg}40` : chipBg, color:chipText, border:"none", padding:"16px", fontSize:11, fontWeight:900, letterSpacing:3, textTransform:"uppercase", cursor: selectedVariantStock === 0 ? "not-allowed" : "pointer" }}>
+                  {selectedVariantStock === 0 ? "Sin stock" : "Agregar al Carrito"}
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
