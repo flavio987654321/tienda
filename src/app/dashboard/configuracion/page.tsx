@@ -511,7 +511,6 @@ function ConfigModal({ config, update, onClose, onSave, onDelete, storeSlug, isP
         setAvailableCategories(cats);
       })
       .catch(() => {});
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [storeSlug]);
 
   function toggleFeaturedCategory(cat: string) {
@@ -1111,6 +1110,37 @@ function ImageFieldEditor({
     : "cuadrada"
     : null;
 
+  /* ── Título y aviso puestos por el template ────────────────────────────────
+     Algunos campos no pueden titularse desde `IMAGE_FIELD_INFO`, que es un mapa
+     fijo por nombre de campo: las baldosas de categoría de Urban Pulse guardan la
+     foto en ranuras que se llaman `catMujer`/`catHombre`/`catAccesorios` por
+     historia, pero muestran la categoría que el dueño eligió. El panel se titulaba
+     "Imagen categoría Hombre" arriba de una baldosa que decía "pantalones".
+     Se leen del mismo elemento que ya se mide dos efectos más arriba (por qué van
+     por el DOM y no por el contexto, que los dos cuelgan del mismo provider, está
+     explicado en `EditableImageButton`).
+     Con `MutationObserver` y no una lectura suelta: el dueño puede cambiar la
+     categoría de la baldosa CON el panel abierto, y ahí el título y el aviso tienen
+     que seguirla en vez de quedarse hablando de la categoría anterior. */
+  const [delTemplate, setDelTemplate] = useState<{ campo: string; label?: string; note?: string } | null>(null);
+  const puesto = delTemplate && delTemplate.campo === field ? delTemplate : null;
+  useEffect(() => {
+    const el = document.querySelector(`[data-edit-image="${CSS.escape(field)}"]`);
+    if (!el) return;
+    const leer = () => {
+      const label = el.getAttribute("data-edit-label") ?? undefined;
+      const note  = el.getAttribute("data-edit-note")  ?? undefined;
+      setDelTemplate(prev =>
+        (prev && prev.campo === field && prev.label === label && prev.note === note)
+          ? prev
+          : { campo: field, label, note });
+    };
+    leer();
+    const mo = new MutationObserver(leer);
+    mo.observe(el, { attributes: true, attributeFilter: ["data-edit-label", "data-edit-note"] });
+    return () => mo.disconnect();
+  }, [field]);
+
   // Se pide el doble del hueco para que no se vea pixelada en pantallas retina,
   // con techo: en un hero ancho, "el doble" serían 3000px y eso solo hace que la
   // tienda cargue lento.
@@ -1124,9 +1154,12 @@ function ImageFieldEditor({
 
   // La parte del tip escrita a mano que hablaba de medidas se cae cuando tenemos
   // la medida de verdad: dos consejos que se contradicen es peor que ninguno.
+  // El aviso que pone el template REEMPLAZA al tip del mapa, no se suma: cuando
+  // hay uno, el del mapa es justamente el que está equivocado.
+  const tipBase = puesto?.note ?? info?.tip;
   const tipSinMedidas = recomendado
-    ? (info?.tip ?? "").replace(/\s*Recomendad[oa]:[^.]*\.?/i, " ").trim()
-    : info?.tip;
+    ? (tipBase ?? "").replace(/\s*Recomendad[oa]:[^.]*\.?/i, " ").trim()
+    : tipBase;
 
   // ── Encuadre ───────────────────────────────────────────────────────────────
   // Los diez templates recortan las fotos con `cover` y ya leen `posX`/`posY`
@@ -1223,7 +1256,7 @@ function ImageFieldEditor({
       {/* ── Encabezado ── */}
       <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 18px", borderBottom: "1px solid #eef1f5", position: "sticky", top: 0, background: P.bg, zIndex: 2 }}>
         <span style={{ fontSize: 11, fontWeight: 700, color: P.accent, background: P.accentSoft, borderRadius: 20, padding: "3px 10px", whiteSpace: "nowrap" }}>
-          📷 {info?.label ?? field}
+          📷 {puesto?.label ?? info?.label ?? field}
         </span>
         <div style={{ flex: 1 }} />
         <button onClick={() => setActiveField(null)} aria-label="Cerrar editor"
@@ -2240,7 +2273,8 @@ export default function ConfiguracionPage() {
 
   const resetOverride = useCallback((field: string) => {
     setConfig(c => {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      // `[field]: _` se saca sólo para que NO entre en `rest`: así se borra ese
+      // override sin mutar el objeto.
       const { [field]: _, ...rest } = c.textOverrides;
       return { ...c, textOverrides: rest };
     });

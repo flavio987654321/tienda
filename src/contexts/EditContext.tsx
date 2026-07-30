@@ -316,12 +316,40 @@ export function EditableImageButton({
   field,
   label,
   compact = false,
+  panelLabel,
+  panelNote,
 }: {
   field: string;
   label: string;
   /** Solo el ícono de cámara, sin el texto — para tarjetas chicas donde el
    *  botón completo choca con otros controles (ej: el selector de categoría). */
   compact?: boolean;
+  /* ── Título y aviso del panel, cuando no se pueden escribir de antemano ───────
+     El panel se titula con `IMAGE_FIELD_INFO[field]`, un mapa fijo por nombre de
+     campo. Alcanza mientras el campo signifique siempre lo mismo, y dejó de
+     alcanzar en las baldosas de categoría de Urban Pulse: las ranuras se llaman
+     `catMujer`/`catHombre`/`catAccesorios` por razones históricas (hay tiendas con
+     fotos guardadas ahí), pero la categoría que muestran ahora la elige el dueño.
+     Resultado: elegía "pantalones" en la baldosa del medio y el panel se titulaba
+     "Imagen categoría Hombre" y le hablaba de la categoría Hombre.
+
+     Viajan por atributo en el DOM, y NO es porque el panel esté fuera del árbol:
+     `FloatingEditor` y `<TemplateComponent/>` son hermanos bajo el mismo
+     `EditContext.Provider` (`configuracion/page.tsx`), así que el contexto podría
+     llevarlos. El motivo es otro: por contexto habría que REGISTRARLOS, y registrar
+     desde un componente que se dibuja muchas veces significa un `setState` en un
+     efecto por cada botón de imagen de la página — un update por montaje, en la
+     clase de problema que el propio lint del repo marca como error
+     (`react-hooks/set-state-in-effect`). Un atributo es pasivo: no dispara nada, y
+     lo lee sólo el único panel que está abierto. Además el panel YA lee este mismo
+     elemento por `data-edit-image` para medir el hueco, así que no se inventa un
+     canal nuevo — se le agregan dos datos al que ya viajaba.
+     Los dos son opcionales — el que no los pasa se sigue titulando con el mapa. */
+  /** Reemplaza el título del panel. */
+  panelLabel?: string;
+  /** Reemplaza el texto de ayuda del panel. Para explicar algo que depende del
+   *  estado — ej: que la foto se está tomando sola de un producto. */
+  panelNote?: string;
 }) {
   const { editMode, activeField, setActiveField, imageLoading } = useEditContext();
   const [hovered, setHovered] = useState(false);
@@ -368,6 +396,8 @@ export function EditableImageButton({
         // recomendaba medidas fijas — y en las secciones verticales le estaba
         // diciendo al dueño justo lo contrario de lo que le convenía.
         data-edit-image={field}
+        data-edit-label={panelLabel}
+        data-edit-note={panelNote}
         style={compact ? {
           position: "absolute", top: 8, right: 8, zIndex: 9998,
           display: "flex", alignItems: "center", justifyContent: "center",

@@ -5,6 +5,8 @@ import { usePushBell } from "@/contexts/PushBellContext";
 import { useAuth } from "@/components/AuthProvider";
 import StoreFollowButton from "@/components/store/StoreFollowButton";
 import { EditableZone, EditableImageButton, EditableSectionBg, BgDragHandle, getContrastColor, getReadableAccentText, getReadableAccentFill, textoSobre, contrasteWCAG, useEditContext } from "@/contexts/EditContext";
+import { resolverBaldosas } from "@/lib/categoryTiles";
+import { isDemoProductId } from "@/lib/demoProducts";
 import { colorRepresentativo, extremo } from "@/lib/section-bg";
 import { useStorefront, type StorefrontProduct } from "@/hooks/useStorefront";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
@@ -190,6 +192,24 @@ export default function UrbanPulse() {
     const base = cats.length > 0 ? cats : defaultCategories.slice(0, 6);
     return featuredCategories.length > 0 ? base.filter(c => featuredCategories.includes(c)) : base;
   }, [products, defaultCategories, featuredCategories]);
+
+  /* Las categorías del bloque de baldosas: SOLO las que el dueño creó de verdad.
+     `categoryList` no sirve acá porque en el editor `products` viene con los
+     productos DEMO de relleno mezclados con los reales, y sus categorías entran a
+     la lista. El selector le ofrecía a Flavio "buzos" y "vestidos" cuando su tienda
+     tiene tres categorías: remeras, pantalones y camperas. Elegir una de esas no
+     hacía nada —en la tienda pública la categoría no existe y la baldosa caía al
+     relleno automático— así que era una opción que mentía.
+     `hayCategoriasReales` en false = tienda sin ningún producto. Ahí se dibuja con
+     `categoryList` (las de ejemplo) para que el bloque no quede vacío en el editor,
+     pero NO se muestra el selector: no hay nada real que elegir todavía. */
+  const categoriasBaldosa = useMemo(() => {
+    const reales = [...new Set(
+      products.filter(p => !isDemoProductId(p.id)).map(p => p.category).filter(c => c && c !== "general")
+    )];
+    return featuredCategories.length > 0 ? reales.filter(c => featuredCategories.includes(c)) : reales;
+  }, [products, featuredCategories]);
+  const hayCategoriasReales = categoriasBaldosa.length > 0;
 
   const DARK  = "#0f0f0f";
   const ACC   = storeConfig?.colors.accent ?? "#d4ff00";
@@ -1229,47 +1249,142 @@ export default function UrbanPulse() {
             <EditableZone field="categoryViewAll" label="Botón ver todo">Ver todo →</EditableZone>
           </button>
         </div>
-        <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3,1fr)", gap:4 }}>
-          {/* ── Las categorías son las REALES de la tienda ─────────────────────
-              Estaban escritas a mano en el código: "Mujer", "Hombre" y
-              "Accesorios", con el link armado a `?categoria=Mujer`. Ninguna tienda
-              tiene esas categorías salvo por casualidad — la de Flavio tiene
-              remeras, pantalones y camperas—, así que las tres baldosas del bloque
-              más grande de la portada llevaban a un listado VACÍO. Tres callejones
-              sin salida, y encima con foto grande y "Ver colección" abajo.
-              Es el mismo bug que ya se había arreglado en el footer de Chic Paris,
-              acá en un lugar mucho más visible.
-              Salen de `categoryList`, que es el mismo del menú del navbar: si el
-              dueño marcó categorías destacadas manda esa lista, y si no, las que
-              salen de sus productos.
-              Las tres RANURAS de imagen siguen siendo las mismas (`catMujer`,
-              `catHombre`, `catAccesorios`) y se asignan por POSICIÓN. Los nombres
-              quedaron feos por dentro, pero son invisibles y así nadie pierde la
-              foto que ya subió. */}
-          {categoryList.slice(0, 3).map((cat, i) => {
-            const field = (["catMujer", "catHombre", "catAccesorios"] as const)[i];
-            const c = {
-              label: cat,
-              cat,
-              field,
-              img: storeConfig?.imageOverrides?.[field]?.url ?? `https://picsum.photos/seed/up_cat${i + 1}/600/700`,
-            };
+        {/* ── Las categorías son las REALES de la tienda, y las ELIGE el dueño ──
+            Dos arreglos encimados, en dos etapas.
+
+            Primero (UP-22) estaban escritas a mano en el código: "Mujer",
+            "Hombre" y "Accesorios", con el link armado a `?categoria=Mujer`.
+            Ninguna tienda tiene esas categorías salvo por casualidad, así que las
+            tres baldosas del bloque más grande de la portada llevaban a un listado
+            VACÍO. Se cambiaron por las categorías reales.
+
+            Pero seguían siendo las 3 PRIMERAS de `categoryList`, que sale de
+            `[...new Set(products.map(p => p.category))]`: el orden en que vinieron
+            los productos. Con 3 categorías no se notaba —son justo 3—, con 10 se
+            veían 3 elegidas por nadie, y cargar un producto podía cambiar la
+            portada solo. Ahora manda `catTile0..2`, que el dueño elige en el
+            selector de cada baldosa. La cuenta la hace `resolverBaldosas`: acá
+            dentro no queda ni una decisión, sólo el dibujo. Está afuera para que
+            Fashion Noir —el único otro template con este bloque— lo adopte.
+
+            Las tres RANURAS de imagen siguen siendo las mismas (`catMujer`,
+            `catHombre`, `catAccesorios`) y se asignan por POSICIÓN. Los nombres
+            quedaron feos por dentro, pero son invisibles y así nadie pierde la foto
+            que ya subió. */}
+        {(() => {
+          const elegidas = [0, 1, 2].map(i => textOverrides[`catTile${i}`]?.text ?? "");
+          const paraElegir = hayCategoriasReales ? categoriasBaldosa : categoryList;
+          /* La foto también sale SOLO de productos reales cuando la tienda tiene
+             alguno. Si no, en el editor podía ganar la foto de un producto demo
+             —los de relleno compiten en el mismo orden— y el dueño veía en el
+             editor una foto que en su tienda no iba a estar. El editor tiene que
+             mostrar lo que se va a publicar; para eso se filtran igual que las
+             categorías. Con la tienda vacía sí entran los demos, que es lo único
+             que hay para dibujar. */
+          // `isPreview &&`: los productos demo SÓLO se mezclan en el editor
+          // (`useStorefront` los agrega cuando `previewFill`). En la tienda
+          // publicada el filtro no puede sacar nada, así que sin esta guarda copiaba
+          // el arreglo entero de productos —hasta 500— en cada render, para nada.
+          const paraFoto = (isPreview && hayCategoriasReales) ? products.filter(p => !isDemoProductId(p.id)) : products;
+          const baldosas = resolverBaldosas(elegidas, paraElegir, paraFoto, storeConfig?.imageOverrides);
+          if (baldosas.length === 0) {
+            // Antes acá quedaba el bloque con el título y una franja vacía de 40px.
+            // En el editor conviene decir por qué está vacío; en la tienda pública
+            // no hay nada que explicarle a nadie, así que no se dibuja.
+            return editMode
+              ? <p style={{ margin:0, fontSize:13, color:categoriasText, opacity:0.65 }}>Cargá productos con categoría y acá aparecen las baldosas.</p>
+              : null;
+          }
+          return (
+          // `repeat(N,1fr)` y no `repeat(3,1fr)`: con 3 fijas y 2 categorías
+          // quedaban dos baldosas de un tercio de ancho y un tercio vacío al
+          // costado. Ahora las columnas siguen a la cantidad.
+          <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : `repeat(${baldosas.length},1fr)`, gap:4 }}>
+          {baldosas.map(c => {
+            const ovr = storeConfig?.imageOverrides?.[c.field];
             return (
-            <div key={c.label} className="up-cat" onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?t=urban-pulse${isPreview ? "&from=editor" : ""}&categoria=${encodeURIComponent(c.cat)}`; }}
-              style={{ position:"relative", width:"100%", aspectRatio:"3/4", overflow:"hidden", cursor:"pointer" }}>
-              <FadeImage src={c.img} alt={c.label} fill sizes="(max-width: 768px) 100vw, 33vw" style={{ objectFit:"cover", objectPosition:`${storeConfig?.imageOverrides?.[c.field]?.posX ?? 50}% ${storeConfig?.imageOverrides?.[c.field]?.posY ?? 50}%` }} />
+            <div key={c.field} className="up-cat" onClick={() => { if (editMode) return; window.location.href = `/tienda/${storeConfig?.slug}/productos?t=urban-pulse${isPreview ? "&from=editor" : ""}&categoria=${encodeURIComponent(c.cat)}`; }}
+              style={{ position:"relative", width:"100%", aspectRatio:"3/4", overflow:"hidden", cursor: editMode ? "default" : "pointer",
+                       // Sin foto la baldosa va al negro del template con el nombre
+                       // en grande, que es de lo que está hecho Urban Pulse. Antes
+                       // caía en un `picsum.photos`: la portada de una tienda de
+                       // ropa mostraba el Empire State en "PANTALONES" y un señor
+                       // con gorro de lana en "REMERAS". Una foto de nada es mejor
+                       // que la foto equivocada de otra persona.
+                       background: DARK }}>
+              {c.img && (
+                <FadeImage src={c.img} alt={c.cat} fill sizes="(max-width: 768px) 100vw, 33vw" style={{ objectFit:"cover", objectPosition:`${ovr?.posX ?? 50}% ${ovr?.posY ?? 50}%` }} />
+              )}
               <BgDragHandle imgKey={c.field} />
-              <EditableImageButton field={c.field} label={`Imagen ${c.label}`} />
-              {(() => { const ov = storeConfig?.imageOverrides?.[c.field]; if (!ov?.overlayType || ov.overlayType === "none") return null; return <div style={{ position:"absolute", inset:0, pointerEvents:"none", background: ov.overlayType === "light" ? `rgba(255,255,255,${ov.overlayOpacity ?? 0.45})` : `rgba(0,0,0,${ov.overlayOpacity ?? 0.45})` }} />; })()}
+              {/* `compact`: el botón entero más el selector de categoría no entran
+                  juntos arriba de una baldosa. Es el caso para el que se hizo.
+                  `panelLabel` y `panelNote` son sólo para ESTE bloque: es el único
+                  donde la foto puede venir sola de un producto, así que es el único
+                  donde hay que avisar qué pasa si subís una. En los demás templates
+                  el panel sigue con su texto de siempre. */}
+              <EditableImageButton field={c.field} label={`Imagen de ${c.cat}`} compact
+                panelLabel={`Imagen de ${c.cat}`}
+                panelNote={
+                  c.origen === "subida"
+                    ? `Esta baldosa usa la imagen que subiste. Con "Restablecer" vuelve a mostrar sola la foto de un producto de "${c.cat}".`
+                    : c.origen === "producto"
+                    ? `Ahora la foto la toma sola de un producto de "${c.cat}". Si subís una acá, la reemplaza — y con "Restablecer" vuelve la del producto.`
+                    : `"${c.cat}" todavía no tiene ningún producto con foto, así que la baldosa se ve en negro con el nombre. Subí una imagen acá, o cargale una foto a un producto de esa categoría y aparece sola.`
+                } />
+              {ovr?.overlayType && ovr.overlayType !== "none" && (
+                <div style={{ position:"absolute", inset:0, pointerEvents:"none", background: ovr.overlayType === "light" ? `rgba(255,255,255,${ovr.overlayOpacity ?? 0.45})` : `rgba(0,0,0,${ovr.overlayOpacity ?? 0.45})` }} />
+              )}
               <div style={{ position:"absolute", inset:0, background:"linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 55%)" }} />
-              <div style={{ position:"absolute", bottom:24, left:24 }}>
-                <p style={{ color:WHITE, fontSize:26, fontWeight:900, textTransform:"uppercase", letterSpacing:2, margin:"0 0 6px" }}>{c.label}</p>
+              <div style={{ position:"absolute", bottom:24, left:24, right:24 }}>
+                <p style={{ color:WHITE, fontSize:26, fontWeight:900, textTransform:"uppercase", letterSpacing:2, margin:"0 0 6px", overflowWrap:"anywhere" }}>{c.cat}</p>
                 <p style={{ color:accentSobre(categoriesBgUp, categoriasText), fontSize:10, fontWeight:900, letterSpacing:3, textTransform:"uppercase", margin:0 }}>Ver colección →</p>
               </div>
+              {/* ── El selector, sólo en el editor ──────────────────────────────
+                  Mismo mecanismo que el mosaico de departamentos de Home Studio:
+                  la elección vive en `textOverrides`, que ya se persiste y ya viaja
+                  por el EditContext — no hizo falta ningún campo nuevo.
+                  Si el dueño elige una categoría que ya está en otra baldosa, las
+                  dos se INTERCAMBIAN en vez de quedar repetidas. */}
+              {editMode && (
+                <div style={{ position:"absolute", top:8, left:8, zIndex:9998, display:"flex", flexDirection:"column", gap:4, alignItems:"flex-start" }}>
+                  {/* Sin categorías propias no hay selector: las que se ven son de
+                      ejemplo y elegir una no haría nada. */}
+                  {hayCategoriasReales ? (
+                  <select value={c.cat} onClick={e => e.stopPropagation()}
+                    onChange={e => {
+                      const nueva = e.target.value;
+                      // `c.pos` / `b.pos` y NO el índice del `map`: una posición sin
+                      // categoría se saltea, así que el array puede venir corrido y
+                      // el índice apuntaría a otra baldosa.
+                      const ocupada = baldosas.find(b => b.pos !== c.pos && b.cat === nueva);
+                      if (ocupada) setOverride(`catTile${ocupada.pos}`, { text: c.cat });
+                      setOverride(`catTile${c.pos}`, { text: nueva });
+                    }}
+                    title="Qué categoría muestra esta baldosa"
+                    style={{ maxWidth:150, fontSize:11, fontWeight:700, border:"1.5px solid rgba(255,255,255,0.25)", borderRadius:8, background:"rgba(20,20,20,0.85)", color:"#fff", cursor:"pointer", padding:"5px 8px", backdropFilter:"blur(6px)", fontFamily:"system-ui, -apple-system, sans-serif" }}>
+                    {categoriasBaldosa.map(cat => <option key={cat} value={cat} style={{ background:"#1e1e1e" }}>{cat}</option>)}
+                  </select>
+                  ) : (
+                    <span style={{ fontSize:9.5, fontWeight:700, color:"#fff", background:"rgba(20,20,20,0.85)", border:"1.5px solid rgba(255,255,255,0.25)", borderRadius:7, padding:"3px 7px", backdropFilter:"blur(6px)", fontFamily:"system-ui, -apple-system, sans-serif" }}>
+                      Categoría de ejemplo
+                    </span>
+                  )}
+                  {/* Que la foto es prestada de un producto se dice, no se adivina:
+                      si no, el dueño no tiene forma de saber por qué aparece esa
+                      foto ni que puede poner la suya. */}
+                  {c.origen !== "subida" && (
+                    <span style={{ fontSize:9.5, fontWeight:700, color:"#fff", background:"rgba(20,20,20,0.85)", border:"1.5px solid rgba(255,255,255,0.25)", borderRadius:7, padding:"3px 7px", backdropFilter:"blur(6px)", fontFamily:"system-ui, -apple-system, sans-serif" }}>
+                      {c.origen === "producto" ? "Foto de un producto" : "Sin foto"}
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
             );
           })}
-        </div>
+          </div>
+          );
+        })()}
         </div>
       </section>
       </SectionBlock>
