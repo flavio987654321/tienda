@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
 
-export async function GET(req: NextRequest) {
+// `_req` con guión bajo: la firma la pide Next, pero este handler no lee nada del
+// request (no toma filtros ni query params). El guión bajo lo dice en voz alta.
+export async function GET(_req: NextRequest) {
   const user = await getCurrentUser();
   if (!user || user.role !== "ADMIN") {
     return NextResponse.json({ error: "No autorizado" }, { status: 403 });

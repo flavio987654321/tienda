@@ -100,7 +100,6 @@ export default async function ProductShortLinkPage({ params, searchParams }: Pro
   // El script redirige al usuario al instante; los bots no ejecutan JS y ven los OG tags.
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100vh", gap: "12px", fontFamily: "sans-serif" }}>
-      {/* eslint-disable-next-line react/no-danger */}
       <script dangerouslySetInnerHTML={{ __html: `(function(){window.location.replace(${JSON.stringify(dest)})})()` }} />
       <p style={{ color: "#6b7280", fontSize: "14px" }}>Redirigiendo al producto…</p>
       <Link href={dest} style={{ color: "#4f46e5", fontSize: "14px" }}>Ir al producto →</Link>

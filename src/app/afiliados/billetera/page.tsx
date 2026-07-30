@@ -83,7 +83,9 @@ type Movement =
 
 function LockoutBanner({ until }: { until: string }) {
   const date = new Date(until);
-  // eslint-disable-next-line react-hooks/purity -- estimación de horas restantes para mostrar en UI
+  // Estimación de horas restantes para mostrar en UI. Tenía un `eslint-disable` de
+  // `react-hooks/purity` que ya no tapaba nada —la regla no salta acá— así que el
+  // disable quedaba como warning. El motivo se queda escrito, que es lo que valía.
   const hoursLeft = Math.ceil((date.getTime() - Date.now()) / 3600000);
   return (
     <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm mt-3">
@@ -395,7 +397,7 @@ const withdrawalStatus: Record<string, { label: string; color: string }> = {
 // ── page ──────────────────────────────────────────────────────────────────────
 
 export default function BilleteraPage() {
-  const { status: sessionStatus, user } = useAuth();
+  const { status: sessionStatus } = useAuth();
   const [data, setData] = useState<PageData | null>(null);
   const [loading, setLoading] = useState(true);
   const [showBankForm, setShowBankForm] = useState(false);

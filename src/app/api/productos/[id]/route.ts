@@ -40,7 +40,9 @@ export async function PATCH(req: NextRequest, ctx: ProductRouteContext) {
   if (!existing) return NextResponse.json({ error: "Producto no encontrado" }, { status: 404 });
 
   const body = await req.json();
-  const { description, category, subcategory, gender, tags, images, reelUrls, attributes, publishAt } = body;
+  // Sin `description`: lo que se guarda es `sanitizedDescription`, que sale de
+  // `validateProductBody`. Igual que en el POST de `productos/route.ts`.
+  const { category, subcategory, gender, tags, images, reelUrls, attributes, publishAt } = body;
 
   const validated = validateProductBody(body);
   if ("error" in validated) return validated.error;

@@ -41,7 +41,11 @@ export async function POST(req: NextRequest) {
   if (!store) return NextResponse.json({ error: "Tienda no encontrada" }, { status: 404 });
 
   const body = await req.json();
-  const { description, category, subcategory, gender, tags, images, reelUrls, attributes, publishAt } = body;
+  // Sin `description`: lo que se guarda es `sanitizedDescription`, que sale de
+  // `validateProductBody` unas líneas más abajo. Sacar el crudo del destructuring no
+  // es sólo limpieza — mientras estaba a mano, era fácil escribirlo por error en el
+  // `create` y meter el HTML del usuario sin sanitizar.
+  const { category, subcategory, gender, tags, images, reelUrls, attributes, publishAt } = body;
 
   const validated = validateProductBody(body);
   if ("error" in validated) return validated.error;

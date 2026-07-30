@@ -37,7 +37,9 @@ export async function getCurrentUser(): Promise<AppSessionUser | null> {
 
   if (profile) {
     if (profile.banned) return null;
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars -- destructured only to omit `banned` from rest
+    // `banned: _` se destructura sólo para que NO entre en `rest`. Ya no necesita un
+    // `eslint-disable`: la regla ahora acepta el guión bajo como "esto no se usa a
+    // propósito", que es exactamente lo que este `_` quiso decir siempre.
     const { banned: _, ...rest } = profile;
     // Si el email es el admin y el role no es ADMIN, lo corrige automáticamente
     if (isAdminEmail && rest.role !== "ADMIN") {

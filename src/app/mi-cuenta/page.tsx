@@ -339,7 +339,6 @@ export default function MiCuentaPage() {
     }
   }
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { if (!loading) fetchTabData(tab); }, [tab, loading]);
 
   async function saveProfile() {

@@ -137,7 +137,12 @@ export default function LeadsAdmin() {
                   { icon: XCircle,    label: "Rechazados",  value: row.rejected,  color: "text-red-400" },
                   { icon: Clock,      label: "Pendientes",  value: row.pending,   color: "text-yellow-400" },
                   { icon: null,       label: "Total",       value: row.total,     color: "text-gray-300" },
-                ].map(({ icon: Icon, label, value, color }) => (
+                  /* Los `icon` de arriba NO se dibujan: las tarjetas muestran el
+                     número y la etiqueta, nada más. Se dejan en la lista —y por eso
+                     los imports siguen en pie— porque el día que se quieran mostrar
+                     ya están elegidos y asignados. Lo que se saca es el `icon: Icon`
+                     del destructuring, que era una variable declarada para nada. */
+                ].map(({ label, value, color }) => (
                   <div key={label} className="bg-white/5 rounded-lg p-3 text-center">
                     <p className={`text-xl font-bold ${color}`}>{value}</p>
                     <p className="text-gray-500 text-xs mt-0.5">{label}</p>

@@ -87,7 +87,7 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ success: true });
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars -- req required by Next.js route handler signature
+// `_req` no se usa: lo pide la firma del route handler de Next.
 export async function DELETE(_req: NextRequest) {
   const user = await getCurrentUser();
   if (!user || user.role !== "OWNER") return NextResponse.json({ error: "No autorizado" }, { status: 401 });

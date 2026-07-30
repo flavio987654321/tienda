@@ -2211,7 +2211,14 @@ function HelpModal({ onClose }: { onClose: () => void }) {
 }
 
 export default function VendedorasClient() {
-  const { user, status: sessionStatus, signOut } = useAuth();
+  /* De acá sale sólo el estado de la sesión.
+     `signOut` estaba destructurado sin usarse: el cerrar sesión de esta pantalla vive
+     adentro de `ProfileEditModal`, que lo pide por su cuenta — no falta ningún botón,
+     se verificó que no hay ningún "Salir" esperando un handler.
+     `user` alimentaba un `userName` que alimentaba un `userInitial` que no se dibujaba
+     en ninguna parte: una cadena de tres variables que terminaba en nada. Los datos
+     del perfil que sí se muestran salen de `/api/vendedoras/perfil`. */
+  const { status: sessionStatus } = useAuth();
   const [mounted, setMounted] = useState(false);
   const [stores, setStores] = useState<StoreItem[]>([]);
   const [, setLoadingStores] = useState(true);
@@ -2315,9 +2322,6 @@ export default function VendedorasClient() {
     setApplySuccessName(storeName);
     setTimeout(() => setApplySuccessName(null), 5000);
   }
-
-  const userName = user?.name ?? "Afiliado";
-  const userInitial = userName.charAt(0).toUpperCase();
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-[#030712]">

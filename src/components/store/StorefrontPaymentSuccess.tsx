@@ -11,7 +11,12 @@ export default function StorefrontPaymentSuccess() {
   // setState sincrónico en el efecto). El efecto solo limpia la URL (sin setState).
   const pagoOk = searchParams.get("pago") === "ok";
   const [orderId, setOrderId] = useState<string | null>(pagoOk ? searchParams.get("orden") : null);
-  const [donationId, setDonationId] = useState<string | null>(pagoOk ? searchParams.get("donacionId") : null);
+  // Sin el setter a propósito: el `useState` acá NO es para cambiar el valor, es para
+  // CONGELARLO. El efecto de abajo limpia la URL, así que `searchParams` deja de
+  // tener `donacionId` — con una constante derivada el id se volvería null justo
+  // después de montar y se cortaría el flujo de la donación. El estado guarda el
+  // valor que había al abrir.
+  const [donationId] = useState<string | null>(pagoOk ? searchParams.get("donacionId") : null);
   const [donationPaying, setDonationPaying] = useState(false);
   const [donationError, setDonationError] = useState("");
 

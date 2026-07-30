@@ -43,7 +43,7 @@ function scrub(value: unknown, depth = 0): unknown {
   return value;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars -- required by Sentry's beforeSend signature
+// `_hint` no se usa: lo pide la firma de `beforeSend` de Sentry.
 export function scrubPii(event: ErrorEvent, _hint: EventHint): ErrorEvent {
   if (event.request) {
     if (event.request.data) event.request.data = scrub(event.request.data) as typeof event.request.data;
