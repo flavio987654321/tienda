@@ -2384,14 +2384,17 @@ Detalles que quedaron:
   asignándose por POSICIÓN. Los nombres son horribles y son invisibles: renombrarlas le borra la foto
   de la vista a cualquier tienda que ya subió una.
 
-#### Sigue abierto
+#### Fashion Noir — cerrado aparte ✅
 
-Los otros tres templates de moda todavía no usan el helper. **Fashion Noir es el más urgente: tiene el
-bug de UP-22 sin arreglar** — en `FashionNoir.tsx:924-927` las categorías siguen escritas a mano
-("Mujer", "Hombre", "Accesorios") y linkean a `?categoria=Mujer`, así que las tres baldosas más grandes
-de esa portada llevan a un listado vacío salvo que la tienda tenga justo esas tres categorías. Chic
-Paris y Boho Terra tienen la versión intermedia (categorías reales, pero las 3 primeras del orden de
-los productos y con picsum de relleno).
+Quedó anotado acá que Fashion Noir tenía el bug de UP-22 sin arreglar: las categorías escritas a mano
+("Mujer", "Hombre", "Accesorios") linkeando a `?categoria=Mujer`, o sea las tres baldosas más grandes de
+esa portada llevando a un listado vacío. **Se arregló adoptando este mismo helper**; está escrito en
+`FASHION-NOIR.md` como FN-1.
+
+Corrección a lo que decía este párrafo antes: **no son "los otros tres templates"**. Fashion Noir era el
+único otro con este bloque y estas tres ranuras de imagen. Chic Paris tiene una tira de categorías sólo
+de texto, sin ranuras de foto, y Boho Terra no tiene bloque equivalente. Con Fashion Noir adentro, el
+helper ya cubre a todos los que lo necesitan.
 
 **La lección:** un bloque puede estar bien con los datos que tenés hoy y roto en los dos bordes. Tres
 categorías es el único caso en el que este bloque funcionaba, y era justo el que teníamos a la vista.
