@@ -2241,3 +2241,225 @@ pasar de foto cambia el color.
 El talle no cambia la foto porque **no cambia cómo se ve la prenda**: un 32 y un 34 del mismo pantalón
 beige son la misma foto. Si el talle cambiara la imagen habría que cargar una foto por talle, que
 nadie hace.
+
+### PL-11 — El modal del catálogo era de Urban Pulse sólo en pantalla grande ✅
+
+Flavio, con las cuatro capturas al lado: *"en pantallas grandes se ve bien pero cuando achico se ve
+mal, no son iguales"*. Y tenía razón: abrir el mismo producto desde la portada y desde el catálogo, en
+celular, daba dos fichas distintas — la del catálogo volvía a ser la de Chic Paris con la ropa de
+Urban Pulse. **Es UP-12 otra vez, pero escondido abajo de 768px.**
+
+La causa era **una sola línea**, y el error estaba en su comentario:
+
+```tsx
+// "Sólo en escritorio: en celular las dos formas son la misma columna apilada."
+const modalUP = template === "urban-pulse" && !isMobile;
+```
+
+La frase es cierta de la **grilla** y falsa de **todo lo demás**. `modalUP` se usaba en 18 lugares y
+mezclaba dos cosas que no tienen nada que ver: la forma de dos columnas (que efectivamente necesita dos
+columnas para existir) y el **vestido** del template, que no depende del ancho. Al caer la bandera en
+celular se caían juntas, y con ellas:
+
+| en celular se perdía | quedaba en su lugar |
+|---|---|
+| Nombre en mayúsculas, 900, sin serif | `Remera basica` en serif — el template no usa serif en ningún lado |
+| Precio 28/900 | 22/700 |
+| Los seis títulos con la rayita del acento | renglones grises |
+| `TALLE: S` / `COLOR: NEGRO` con el valor elegido | `TALLE` / `COLOR` a secas |
+| Guardar en favoritos | nada: sólo el corazoncito de la tarjeta |
+| El atajo a las reseñas | nada |
+| Cuadrado macizo de cerrar en la esquina | círculo translúcido despegado |
+| **La barra de comprar fija al pie** | el botón adentro del panel, a media pantalla |
+
+La última era la peor y es la que se ve en la captura: en el modal de la portada el total y "AGREGAR AL
+CARRITO" están siempre abajo a la vista; en el del catálogo el botón quedaba **arriba de la descripción,
+las reseñas y los similares**, o sea que con la foto ocupando la pantalla no se veía nunca sin
+scrollear.
+
+El arreglo es **partir la bandera en tres**, que era lo que faltaba desde el principio:
+
+| bandera | qué manda | anchos |
+|---|---|---|
+| `esUP` | el vestido | 360 · 768 · 1280 |
+| `modalUP` | la forma de dos columnas con el panel clavado | sólo ≥768 |
+| `barraCompraUP` | la barra de comprar al pie | sólo <768 |
+
+Los otros tres templates de moda no se tocan: todo lo que cambió está detrás de `esUP`. Las miniaturas
+en celular pasan a 64×80 con borde macizo de 3px (la medida del template) en vez de 56×74 con un borde
+fino del acento, y el corte de 3px que en escritorio separa el panel por la **izquierda** en celular
+pasa a ser un borde de **arriba**, que es lo que hace el template.
+
+Los dos modales cortan en el **mismo** ancho (`innerWidth < 768` en los dos archivos), así que no hay
+un tramo en el que uno ya cambió de forma y el otro no.
+
+**De paso, el globo de WhatsApp:** es `position:fixed` con `zIndex:500` y la ficha vive en 200, así que
+flotaba **arriba** del modal — se ve en las dos capturas del catálogo, tapando la esquina y, en celular,
+cayendo justo encima de donde ahora va la barra de comprar. Un botón de WhatsApp tapando el de agregar
+al carrito. Ya se escondía con el carrito y el checkout abiertos; ahora también con la ficha.
+
+**La lección:** una bandera que decide *dos* cosas distintas está mal aunque las dos coincidan hoy. El
+comentario decía "en celular las dos formas son la misma" y era verdad de la única de las dos cosas que
+el autor estaba mirando.
+
+### UP-27 — Las tres baldosas de categorías las elegía nadie ✅
+
+Flavio: *"tengo tres categorías creadas, ¿qué pasa cuando tenga 10? ¿se crean más de estas tarjetas?"*
+**No se creaban.** Y esa era la menor de las tres cosas que estaban mal.
+
+UP-22 ya había arreglado la mitad de este bloque: las categorías estaban escritas a mano ("Mujer",
+"Hombre", "Accesorios") y llevaban a un listado vacío. Se cambiaron por las reales, pero quedó
+`categoryList.slice(0, 3)` — y `categoryList` es:
+
+```ts
+[...new Set(products.map(p => p.category)...)]
+```
+
+O sea **el orden en que vinieron los productos**. Con tres categorías no se nota, porque son justo las
+tres. Los problemas aparecen en los bordes:
+
+| categorías | qué se veía |
+|---|---|
+| 10 | 3, elegidas por el orden de la consulta. Las otras 7 no existían en el bloque |
+| 3 | perfecto — el caso de Flavio, y por eso no se había visto |
+| 2 | dos baldosas de un tercio de ancho y **un tercio vacío** (el grid era `repeat(3,1fr)` fijo) |
+| 1 | una baldosa angosta y dos tercios de hueco |
+| 0 | el título y una franja vacía de 40px |
+
+Y encima **cargar un producto podía cambiar la portada solo**: si el producto nuevo traía una categoría
+que entraba antes en el `Set`, las baldosas se reordenaban sin que nadie tocara nada. Ni marcando
+categorías destacadas se podían ordenar, porque el filtro respeta el orden de `products` y no el orden
+en que el dueño las eligió.
+
+**La foto era el otro problema, y el más visible.** Si el dueño no había subido una, la baldosa mostraba
+un `picsum.photos`. En la portada de Flavio: el **Empire State** en "PANTALONES" y un **señor con gorro
+de lana** en "REMERAS". La tienda tiene fotos de su propia ropa y estaba mostrando el stock de un
+desconocido.
+
+#### Lo que se hizo
+
+Un helper compartido, `src/lib/categoryTiles.ts`, con su verificación ejecutable
+(`npx tsx src/lib/categoryTiles.check.ts`, 19 casos). **Los cuatro templates de moda tienen este mismo
+bloque con las mismas tres ranuras** y cada uno resolvía lo suyo; adentro de `UrbanPulse.tsx` ya no
+queda ninguna decisión, sólo el dibujo.
+
+La cascada de la foto, de arriba para abajo:
+
+| nivel | de dónde sale |
+|---|---|
+| 1 | la imagen que el dueño subió a esa baldosa |
+| 2 | la foto del producto **destacado** de esa categoría |
+| 3 | la de otro producto de la categoría, desempatando por `id` |
+| 4 | el negro del template con el nombre en grande — **nunca más picsum** |
+
+**Lo que el helper NO hace, a propósito: elegir la foto por "el primer producto" o por "el más visto".**
+Las dos se mueven solas — la primera con el orden de la consulta, la segunda con lo que hacen los
+visitantes — y una portada que cambia sin que nadie la toque es el destacado que rotaba a las 21:00,
+otra vez. El desempate va por `id`, que es arbitrario pero no se mueve nunca. Hay un caso de prueba que
+resuelve la misma lista al revés y exige el mismo resultado.
+
+El nivel 4 es negro con el nombre en tipografía grande y no un placeholder gris: es de lo que está hecho
+Urban Pulse, y **una foto de nada es mejor que la foto equivocada de otra persona**.
+
+#### El selector: no hizo falta ningún campo nuevo
+
+Cada baldosa tiene su `<select>` en el editor, y la elección vive en `textOverrides` (`catTile0..2`).
+Es **el mecanismo que ya usaban Home Studio y Tech Nova** en su mosaico de departamentos
+(`dept{i}Cat`) — y también el que usa este mismo template para el producto destacado
+(`featuredProductId`). Se empezó agregando un campo `categoryTiles` al schema y se revirtió al
+encontrarlo: el repo ya tenía una forma de hacer esto y una segunda hubiera sido la de PL-10 al revés,
+el archivo distinto siendo el nuevo.
+
+Detalles que quedaron:
+
+- Si el dueño elige una categoría que ya está en otra baldosa, **las dos se intercambian** en vez de
+  quedar repetidas (igual que Home Studio).
+- Las columnas siguen a la cantidad (`repeat(N,1fr)`): se fue el hueco de cuando hay menos de 3.
+- Una baldosa con una categoría **borrada** cae al relleno automático en vez de quedar muerta.
+- El editor avisa "Foto de un producto" / "Sin foto" cuando la imagen es prestada: si no, el dueño no
+  tiene forma de saber por qué aparece esa foto ni que puede poner la suya.
+- En el editor la baldosa **ya no navega** al catálogo al hacerle clic (se llevaba los cambios sin
+  guardar). El selector encima quedaba inclickeable.
+- Las tres ranuras de imagen siguen llamándose `catMujer` / `catHombre` / `catAccesorios` y siguen
+  asignándose por POSICIÓN. Los nombres son horribles y son invisibles: renombrarlas le borra la foto
+  de la vista a cualquier tienda que ya subió una.
+
+#### Sigue abierto
+
+Los otros tres templates de moda todavía no usan el helper. **Fashion Noir es el más urgente: tiene el
+bug de UP-22 sin arreglar** — en `FashionNoir.tsx:924-927` las categorías siguen escritas a mano
+("Mujer", "Hombre", "Accesorios") y linkean a `?categoria=Mujer`, así que las tres baldosas más grandes
+de esa portada llevan a un listado vacío salvo que la tienda tenga justo esas tres categorías. Chic
+Paris y Boho Terra tienen la versión intermedia (categorías reales, pero las 3 primeras del orden de
+los productos y con picsum de relleno).
+
+**La lección:** un bloque puede estar bien con los datos que tenés hoy y roto en los dos bordes. Tres
+categorías es el único caso en el que este bloque funcionaba, y era justo el que teníamos a la vista.
+
+### UP-28 — El editor ofrecía categorías que la tienda no tiene ✅
+
+Salió en la primera prueba de UP-27, con el editor abierto. Flavio: *"¿no tiene que aparecer las
+categorías que tengo creadas? Yo solamente tengo campera, pantalón y remera"*. El selector le ofrecía
+**cinco**: remeras, pantalones, camperas, **buzos** y **vestidos**.
+
+Las dos de más son de los **productos demo** que el editor usa de relleno. `useStorefront` con
+`previewFill` completa la lista hasta 8 productos (`[...real, ...demoPool]`), y `categoryList` se arma
+con `products.map(p => p.category)` — o sea que las categorías de los demos entran como si fueran de la
+tienda. Elegir "vestidos" no rompía nada, pero **no hacía nada**: en la tienda pública esa categoría no
+existe y la baldosa cae al relleno automático. Una opción que miente es peor que una opción que falta.
+
+Se arregló en tres lugares, porque el mismo error estaba repetido en tres formas — las tres son
+"el editor muestra algo que la tienda no va a mostrar":
+
+| qué | antes | ahora |
+|---|---|---|
+| Las opciones del selector | reales + demos | **sólo las reales** (`isDemoProductId`) |
+| La foto automática | podía ganar la de un demo | sólo de productos **reales** |
+| Tienda sin ningún producto | selector con categorías de ejemplo | sin selector, con el cartel "Categoría de ejemplo" |
+
+Lo de la foto no lo había reportado nadie y es el más traicionero: los demos compiten en el mismo orden
+que los reales, así que en el editor podía verse la foto de un demo y en la tienda publicada otra. El
+editor tiene que mostrar lo que se va a publicar.
+
+### UP-29 — El panel decía "Imagen categoría Hombre" arriba de una baldosa de pantalones ✅
+
+De la misma prueba, en la captura del panel abierto. La baldosa del medio decía **pantalones** y el panel
+se titulaba **"Imagen categoría Hombre"**, con el texto de ayuda *"Foto representativa de la categoría
+Hombre"*.
+
+Es el nombre interno de la ranura saliendo a la superficie. El panel se titula con
+`IMAGE_FIELD_INFO[field]`, un mapa fijo por nombre de campo, y las tres ranuras se llaman
+`catMujer`/`catHombre`/`catAccesorios` desde que el bloque tenía las categorías escritas a mano. Los
+nombres **no se pueden cambiar** —hay tiendas con fotos guardadas ahí y renombrarlos se las borra de la
+vista— así que un mapa por nombre de campo ya no puede saber qué muestra esa baldosa: lo elige el dueño.
+
+`EditableImageButton` tiene dos props nuevas, `panelLabel` y `panelNote`, que viajan como atributos
+`data-edit-label` / `data-edit-note`. Van por el DOM y no por el contexto porque **el panel vive en el
+dashboard, fuera del árbol del template**, y ya leía este mismo elemento por `data-edit-image` para medir
+el hueco: es el camino que ya existía, no uno nuevo. Las lee con `MutationObserver` porque el dueño puede
+cambiar la categoría con el panel abierto, y ahí el título tiene que seguirla.
+
+Las dos props son **opcionales y sólo las pasa este bloque**: era parte del pedido —*"solamente en esta
+parte, porque en los demás templates de moda y ropa no hay esto"*— y además es lo correcto, porque es el
+único bloque donde la foto puede venir sola de un producto. Los demás campos siguen titulándose con el
+mapa, sin tocar nada.
+
+#### Y el aviso de que la imagen reemplaza a la automática
+
+Era la otra mitad del pedido: *"¿no tendría que avisar que la imagen se va a reemplazar?"*. Sí, porque
+ahora la baldosa puede tener foto **sin que el dueño haya subido ninguna**, y sin avisar no hay forma de
+entender qué está pasando. El aviso lo escribe el template según de dónde salió la foto:
+
+| origen | qué dice el panel |
+|---|---|
+| `producto` | "Ahora la foto la toma sola de un producto de *pantalones*. Si subís una acá, la reemplaza — y con Restablecer vuelve la del producto." |
+| `subida` | "Esta baldosa usa la imagen que subiste. Con Restablecer vuelve a mostrar sola la foto de un producto de *pantalones*." |
+| `ninguna` | "*pantalones* todavía no tiene ningún producto con foto, así que la baldosa se ve en negro con el nombre." |
+
+El aviso **reemplaza** al tip del mapa en vez de sumarse: cuando hay uno puesto por el template, el del
+mapa es justamente el que está equivocado. La recomendación de medidas —que se mide del hueco real— se
+sigue mostrando, porque esa es correcta siempre.
+
+**La lección:** un mapa fijo `campo → texto` alcanza mientras el campo signifique siempre lo mismo. En el
+momento en que lo que muestra ese campo lo elige el dueño, el mapa pasa a ser una afirmación falsa, y
+tiene que poder hablar el que sabe — el template.
