@@ -7,7 +7,7 @@
 // un error de un factor de 10 en el crédito regala una suscripción entera, y no
 // se nota hasta que aparece en la facturación.
 
-import { cotizarCambioDePlan, PRICES } from "./subscription";
+import { cotizarCambioDePlan, getSubscriptionStatus, PRICES } from "./subscription";
 
 let failed = 0;
 function check(id: string, ok: boolean, desc: string) {
@@ -133,6 +133,48 @@ const aProMensual = { plan: "OWNER_BASIC", billing: "MONTHLY" } as const;
   ).filter((q) => q.aPagar < 0 || q.aPagar > q.precioLista || q.credito < 0);
   check("PAGO-M", malos.length === 0,
     "en las 16 combinaciones el total siempre queda entre cero y el precio de lista");
+}
+
+// ── El reloj: una sola fecha para toda la cuenta ────────────────────────────
+//
+// Todo este archivo congela el tiempo en HOY para que las cuentas den siempre
+// igual. Eso sólo sirve si TODAS las funciones respetan la fecha que se les pasa.
+//
+// `getSubscriptionStatus` no lo hacía: preguntaba el reloj por su cuenta. O sea
+// que `cotizarCambioDePlan` resolvía el estado en el día de hoy de verdad y el
+// crédito en HOY. En producción las dos fechas son la misma y no se veía, pero
+// PAGO-E empezó a fallar solo el día que su trial inventado venció en la vida
+// real — y un test que falla siempre enseña a ignorar el rojo.
+{
+  // Un trial que sigue vivo en HOY pero que hace rato venció en el mundo real.
+  const trialViejo = {
+    status: "TRIAL",
+    trialEndsAt: dentro(3),
+    currentPeriodEnd: null,
+    gracePeriodEndsAt: null,
+  };
+
+  check("RELOJ-A", getSubscriptionStatus(trialViejo, HOY) === "TRIAL",
+    "con la fecha puesta, un trial vigente en esa fecha da TRIAL");
+
+  // Sin el parámetro tiene que seguir usando el reloj real, que es de lo que
+  // dependen los 15 lugares que la llaman con un solo argumento.
+  check("RELOJ-B", getSubscriptionStatus(trialViejo) === "EXPIRED",
+    "sin fecha usa la hora real: ese mismo trial ya venció");
+
+  // El que importa: las dos mitades de la cuenta mirando el mismo momento.
+  const q = cotizarCambioDePlan(
+    { ...sub("BASIC", "MONTHLY", 2, 30), status: "TRIAL", trialEndsAt: dentro(5) },
+    aPremiumMensual,
+    HOY
+  );
+  check("RELOJ-C", q.motivoSinCredito === "TRIAL",
+    "cotizarCambioDePlan resuelve el estado con la fecha que recibe, no con hoy");
+
+  // Y que el congelado sirva de verdad: con una fecha bien en el futuro, el mismo
+  // trial tiene que estar vencido. Si `now` se ignorara, esto daría TRIAL.
+  check("RELOJ-D", getSubscriptionStatus(trialViejo, dentro(400)) === "EXPIRED",
+    "con una fecha futura, el mismo trial da vencido");
 }
 
 console.log(failed === 0 ? "\n✅ La cuenta da bien en todos los casos." : `\n❌ ${failed} caso(s) fallan.`);

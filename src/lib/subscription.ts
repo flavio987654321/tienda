@@ -64,13 +64,24 @@ export function periodFor(plan: string, from: Date = new Date()) {
   };
 }
 
+/**
+ * `now` es opcional y por defecto es la hora real, así que ningún llamador
+ * cambia de comportamiento por existir este parámetro.
+ *
+ * Está para que quien ya recibe una fecha se la pueda pasar. Antes esta función
+ * la ignoraba y preguntaba el reloj por su cuenta, o sea que `cotizarCambioDePlan`
+ * calculaba media cuenta en la fecha que le pasaron y la otra mitad en la de hoy.
+ * En producción las dos son la misma y no se notaba, pero hacía imposible testear
+ * cualquier cosa que dependa del tiempo: el chequeo PAGO-E armaba un trial que
+ * vencía 5 días después de su fecha fija y empezó a fallar solo el día que esa
+ * fecha quedó en el pasado de verdad.
+ */
 export function getSubscriptionStatus(sub: {
   status: string;
   trialEndsAt: Date;
   currentPeriodEnd: Date | null;
   gracePeriodEndsAt: Date | null;
-}): SubscriptionStatus {
-  const now = new Date();
+}, now: Date = new Date()): SubscriptionStatus {
 
   // CANCELLED es un estado terminal y acá no se interpreta: quien cierra su
   // tienda conservando días pagos vuelve a ACTIVE en /api/tienda/reactivar, o
@@ -266,7 +277,11 @@ export function cotizarCambioDePlan(
 
   if (!sub) return sinCredito("SIN_SUSCRIPCION");
 
-  const estado = getSubscriptionStatus(sub);
+  // Con `now`, no con la hora real: toda esta función tiene que mirar el mismo
+  // momento. Más abajo el crédito se calcula contra `now`, así que si el estado
+  // saliera de otro reloj se podría dar el caso de acreditar días de un período
+  // que, para la otra mitad de la cuenta, ya está vencido.
+  const estado = getSubscriptionStatus(sub, now);
   if (estado === "TRIAL") return sinCredito("TRIAL");
   if (estado !== "ACTIVE") return sinCredito("VENCIDA");
 
