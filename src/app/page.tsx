@@ -823,10 +823,19 @@ export default function Home() {
 
                 {/* Store banner */}
                 <div className="relative h-44">
+                  {/* `unoptimized` en todas las fotos de Unsplash de esta página:
+                      vienen de la URL ya redimensionadas y comprimidas por Unsplash
+                      (`w=600&q=80&auto=format`, que ya devuelve WebP). Pasarlas por el
+                      optimizador de Vercel es pagar una transformación por cada ancho
+                      para rehacer un trabajo que ya está hecho, y no se gana nitidez:
+                      nadie puede agregarle detalle a una foto de 600px.
+                      Son decorativas y de stock — las fotos que sí importan, las de los
+                      productos de cada tienda, se siguen optimizando. */}
                   <Image
                     src="https://images.unsplash.com/photo-1441984904996-e0b6ba687e04?auto=format&fit=crop&w=600&q=80"
                     alt=""
                     fill
+                    unoptimized
                     className="object-cover"
                     priority
                   />
@@ -857,7 +866,7 @@ export default function Home() {
                     ].map((p) => (
                       <div key={p.name} className="rounded-xl overflow-hidden bg-gray-50 border border-gray-100">
                         <div className="relative h-24">
-                          <Image src={p.img} alt={p.name} fill className="object-cover" />
+                          <Image src={p.img} alt={p.name} fill unoptimized className="object-cover" />
                         </div>
                         <div className="p-2">
                           <p className="text-gray-800 text-[10px] font-semibold truncate">{p.name}</p>
@@ -1072,6 +1081,7 @@ export default function Home() {
                     src={FEATURES[featureSlide[0]].img}
                     alt={FEATURES[featureSlide[0]].title}
                     fill
+                    unoptimized
                     className="object-cover"
                   />
                   <div className="absolute inset-0" style={{ background: `linear-gradient(135deg, ${FEATURES[featureSlide[0]].color}55 0%, transparent 55%)` }} />
@@ -1272,6 +1282,7 @@ export default function Home() {
                   src="https://images.unsplash.com/photo-1552960562-daf630e9278b?auto=format&fit=crop&w=900&q=80"
                   alt="Dos emprendedores diseñando su tienda online juntos frente a una laptop"
                   fill
+                  unoptimized
                   className="object-cover"
                   sizes="(max-width: 1024px) 100vw, 50vw"
                 />
@@ -1396,7 +1407,7 @@ export default function Home() {
                 <Image
                   src="https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?auto=format&fit=crop&w=600&q=80"
                   alt="Afiliado compartiendo en redes"
-                  fill className="object-cover"
+                  fill unoptimized className="object-cover"
                 />
               </motion.div>
 
@@ -1409,7 +1420,7 @@ export default function Home() {
                 <Image
                   src="https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?auto=format&fit=crop&w=600&q=80"
                   alt="Trabajando desde cualquier lugar"
-                  fill className="object-cover"
+                  fill unoptimized className="object-cover"
                 />
               </motion.div>
 
@@ -1422,7 +1433,7 @@ export default function Home() {
                 <Image
                   src="https://images.unsplash.com/photo-1523206489230-c012c64b2b48?auto=format&fit=crop&w=600&q=80"
                   alt="Ventas desde el celular"
-                  fill className="object-cover"
+                  fill unoptimized className="object-cover"
                 />
               </motion.div>
 

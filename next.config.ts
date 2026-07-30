@@ -95,6 +95,36 @@ const nextConfig: NextConfig = {
     ];
   },
   images: {
+    /* ── Cuánto vive una foto ya optimizada ────────────────────────────────────
+       El default de Next 16 son 14400 segundos: CUATRO HORAS. Pasado ese rato, una
+       foto que no cambió se vuelve a generar y a escribir en el caché, y las dos
+       cosas se pagan en Vercel (Transformations y Cache Writes). Con 31 días se
+       genera una vez y se deja de tocar.
+       El doc avisa que no hay forma de invalidar este caché, así que subirlo sería
+       peligroso si una foto pudiera cambiar SIN cambiar de URL. Acá no puede: cada
+       archivo sube con nombre único (`Date.now()-random.ext`, ver
+       `api/upload/route.ts`), así que reemplazar una foto genera una URL nueva y el
+       caché viejo simplemente deja de pedirse. */
+    minimumCacheTTL: 2678400, // 31 días
+
+    /* ── Cuántos anchos distintos se pueden generar por foto ───────────────────
+       Los defaults son 8 `deviceSizes` + 7 `imageSizes` = hasta 15 versiones de la
+       MISMA foto, y cada una es una transformación aparte. Con `sizes="100vw"` Next
+       arma el srcset con todos los deviceSizes y cada visitante pide el que le toca
+       según su pantalla — o sea que la variedad se paga de verdad.
+       Quedan 4 + 4. Los cortes:
+       · Afuera 2048 y 3840: son anchos de monitor 4K. Ninguna tienda necesita
+         mandar una foto de producto de 3840px, y son las transformaciones más caras.
+       · Afuera 750, 828 y 1080 de los intermedios, que estaban a un paso uno de
+         otro: entre 640 y 1200 la diferencia visible es nula y son 3 versiones menos
+         por foto.
+       · Los `imageSizes` que quedan cubren las miniaturas reales de los templates
+         (26 a 72px, que a 2x piden 128/256) y las fotos de ficha (hasta 520px).
+       Lo peor que pasa con un ancho de menos es que se manda una foto un poco más
+       grande de la necesaria. Lo que se gana es no multiplicar la cuota por 15. */
+    deviceSizes: [640, 828, 1200, 1920],
+    imageSizes: [64, 128, 256, 384],
+
     remotePatterns: [
       {
         protocol: "https",

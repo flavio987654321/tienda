@@ -17,6 +17,10 @@ export type StorefrontVariant = {
 // Escalón de precio mayorista: a partir de "desde" unidades, el precio es "precio".
 export type PrecioEscalonFront = { desde: number; precio: number };
 
+// Referencia estable para "esta tienda no marcó categorías destacadas". Ver dónde
+// se usa, abajo: existe para no romper los `useMemo` que dependen de ella.
+const SIN_DESTACADAS: string[] = [];
+
 export type StorefrontProduct = {
   id: string;
   name: string;
@@ -441,7 +445,13 @@ export function useStorefront() {
   const isWholesale        = config?.tieneVentaMayorista ?? false;
   const ocultarPrecios     = config?.ocultarPreciosPublico ?? false;
   const defaultCategories  = storeTypeConfig.categorias;
-  const featuredCategories = config?.featuredCategories ?? [];
+  // La constante compartida, y no un `?? []` suelto: un `[]` nuevo en cada render es
+  // una referencia nueva, y `featuredCategories` es dependencia del `useMemo` que
+  // arma `categoryList` en Urban Pulse, Boho Terra, Chic Paris y Fashion Noir. Con
+  // la tienda sin categorías destacadas —el caso normal— esos cuatro memos no
+  // acertaban NUNCA: recalculaban en cada render y encima pagaban el costo de
+  // memorizar. Nadie la muta (verificado), así que compartirla es seguro.
+  const featuredCategories = config?.featuredCategories ?? SIN_DESTACADAS;
   const hasMercadoPago     = config?.hasMercadoPago ?? false;
   const shippingMethods    = config?.shippingMethods ?? null;
 
