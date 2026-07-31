@@ -90,6 +90,17 @@ export async function createCatalog(token: string, businessId: string, name: str
   return graphPost(`/${businessId}/owned_product_catalogs`, token, { name });
 }
 
+// Un catálogo creado por API queda a nombre del negocio y sin ninguna persona
+// asignada: el dueño lo ve en Commerce Manager como "Sin acceso" y no puede
+// tocar ni la programación del feed, aunque tenga control total del portfolio.
+// Hay que asignarlo explícitamente. Usa business_management, ya aprobado.
+export async function assignCatalogToUser(token: string, catalogId: string, userId: string): Promise<{ success: boolean }> {
+  return graphPost(`/${catalogId}/assigned_users`, token, {
+    user: userId,
+    tasks: JSON.stringify(["MANAGE"]),
+  });
+}
+
 export async function listOwnedPixels(token: string, businessId: string): Promise<{ data: { id: string; name: string }[] }> {
   return graphGet(`/${businessId}/adspixels`, token, { fields: "id,name" });
 }

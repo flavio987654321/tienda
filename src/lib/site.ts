@@ -15,3 +15,19 @@ export const SITE_URL = "https://www.tiendaapps.com";
 export function siteUrl(path = ""): string {
   return path ? `${SITE_URL}${path.startsWith("/") ? path : `/${path}`}` : SITE_URL;
 }
+
+/**
+ * La dirección para las URLs que va a leer alguien de AFUERA — Meta yendo a
+ * buscar el feed, Google siguiendo un link de producto.
+ *
+ * NEXT_PUBLIC_APP_URL en desarrollo vale http://localhost:3000, que desde otra
+ * máquina no existe. Un feed registrado desde local le quedó a Meta apuntando
+ * ahí y fallaba todos los días con "error de autenticación HTTP", con el
+ * catálogo vacío y sin ninguna pista de por qué. Para afuera nunca sirve el
+ * localhost de nadie: se cae al dominio público.
+ */
+export const PUBLIC_APP_URL = (() => {
+  const configured = process.env.NEXT_PUBLIC_APP_URL;
+  if (!configured) return SITE_URL;
+  return /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:|\/|$)/i.test(configured) ? SITE_URL : configured;
+})();

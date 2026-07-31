@@ -2,9 +2,7 @@ import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth-session";
 import { prisma } from "@/lib/prisma";
 import { createProductFeed, decryptToken } from "@/lib/facebook";
-import { SITE_URL } from "@/lib/site";
-
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? SITE_URL;
+import { PUBLIC_APP_URL } from "@/lib/site";
 
 // POST /api/facebook/feed/connect
 // Registra el feed XML de la tienda como product feed programado del catálogo conectado.
@@ -23,7 +21,7 @@ export async function POST() {
   const token = decryptToken(store.fbAccessToken);
   if (!token) return NextResponse.json({ error: "Credenciales de Facebook inválidas" }, { status: 500 });
 
-  const feedUrl = `${APP_URL}/api/store/feed?store=${encodeURIComponent(store.slug)}`;
+  const feedUrl = `${PUBLIC_APP_URL}/api/store/feed?store=${encodeURIComponent(store.slug)}`;
 
   try {
     const feed = await createProductFeed(token, store.fbCatalogId, feedUrl, `${store.name} — Feed diario`);

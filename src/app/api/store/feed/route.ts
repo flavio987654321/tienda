@@ -3,9 +3,9 @@ import { prisma } from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { escapeXml, parseFirstImage } from "@/lib/metaFeed";
 import { getClientIp } from "@/lib/request-ip";
-import { SITE_URL } from "@/lib/site";
-
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? SITE_URL;
+// El feed lo lee Meta desde afuera: los links de producto tienen que apuntar al
+// dominio público, nunca al localhost del que generó el feed.
+import { PUBLIC_APP_URL as APP_URL } from "@/lib/site";
 
 // GET /api/store/feed?store=<slug>
 // Feed XML del catálogo completo de la tienda, para conectar en Meta Commerce Manager.

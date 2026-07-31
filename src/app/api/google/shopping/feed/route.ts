@@ -3,10 +3,10 @@ import { prisma } from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { escapeXml, parseFirstImage } from "@/lib/metaFeed";
 import { getClientIp } from "@/lib/request-ip";
-import { SITE_URL } from "@/lib/site";
+// Igual que el feed de Meta: lo descarga Google, así que los links van al
+// dominio público y no al localhost del que lo genera.
+import { PUBLIC_APP_URL as APP_URL } from "@/lib/site";
 import { aTextoPlano } from "@/lib/structured-data";
-
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? SITE_URL;
 
 // Tope por tienda para que el feed no crezca sin control si una tienda tiene
 // un catálogo enorme. Google admite feeds grandes, pero conviene acotarlo.

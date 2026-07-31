@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth-session";
 import { prisma } from "@/lib/prisma";
-import { listOwnedCatalogs, createCatalog, decryptToken } from "@/lib/facebook";
+import { listOwnedCatalogs, createCatalog, assignCatalogToUser, decryptToken } from "@/lib/facebook";
 
 // POST /api/facebook/catalogs/connect  { catalogId } | { name }
 // `catalogId`: usa un catálogo que el dueño eligió de la lista.
@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
 
   const store = await prisma.store.findUnique({
     where: { ownerId: user.id },
-    select: { id: true, fbAccessToken: true, fbBusinessId: true },
+    select: { id: true, fbAccessToken: true, fbBusinessId: true, fbUserId: true },
   });
   if (!store?.fbAccessToken) {
     return NextResponse.json({ error: "Facebook no está conectado" }, { status: 400 });
@@ -46,6 +46,17 @@ export async function POST(req: NextRequest) {
     } else {
       const created = await createCatalog(token, store.fbBusinessId, name);
       chosen = { id: created.id, name };
+
+      // Sin esto el dueño no puede administrar en Meta el catálogo que acaba de
+      // crear. No es motivo para cortar la conexión: si falla, el catálogo ya
+      // existe y quedó elegido, y el permiso se puede dar a mano después.
+      if (store.fbUserId) {
+        try {
+          await assignCatalogToUser(token, created.id, store.fbUserId);
+        } catch (err) {
+          console.warn("Facebook /catalogs/connect: no se pudo asignar el catálogo al dueño:", err);
+        }
+      }
     }
 
     await prisma.store.update({
