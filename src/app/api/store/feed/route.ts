@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { escapeXml, parseFirstImage } from "@/lib/metaFeed";
+import { aTextoPlano } from "@/lib/structured-data";
 import { getClientIp } from "@/lib/request-ip";
 // El feed lo lee Meta desde afuera: los links de producto tienen que apuntar al
 // dominio público, nunca al localhost del que generó el feed.
@@ -57,8 +58,13 @@ export async function GET(req: NextRequest) {
       if (!img) return null; // Meta requiere imagen — saltear si no tiene
 
       const link = `${APP_URL}/tienda/${store.slug}/producto/${encodeURIComponent(p.id)}`;
-      // Sin descripción propia, el nombre del producto informa más que el de la tienda.
-      const description = p.description ? p.description.slice(0, 500) : p.name;
+      // La descripción se guarda como HTML del editor y Meta la publica tal cual:
+      // en el catálogo se leía "<p>Chaleco estilo sastrero…</p>", etiquetas
+      // incluidas. Se aplana ANTES de recortar, si no el corte a 500 puede caer
+      // en la mitad de una etiqueta. Sin descripción propia, el nombre del
+      // producto informa más que el de la tienda.
+      const plano = p.description ? aTextoPlano(p.description) : "";
+      const description = plano ? plano.slice(0, 500) : p.name;
 
       // Si hay precio tachado, ese es el precio de lista y el actual es la
       // oferta. Meta espera g:price = lista y g:sale_price = promo, cada uno
