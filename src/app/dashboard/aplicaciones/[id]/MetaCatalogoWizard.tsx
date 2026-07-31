@@ -3,10 +3,11 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  CheckCircle, XCircle, Loader2, Lock, ChevronRight, ExternalLink, Unlink,
+  CheckCircle, XCircle, Loader2, Lock, ChevronRight, ExternalLink, Unlink, Plus,
 } from "lucide-react";
 
 type Business = { id: string; name: string };
+type Catalog = { id: string; name: string };
 
 type Props = {
   fbConnected: boolean;
@@ -20,21 +21,23 @@ type StepStatus = "done" | "active" | "locked";
 
 export default function MetaCatalogoWizard({ fbConnected, fbBusinessId, fbCatalogId, fbFeedId, fbStatus }: Props) {
   const step1Done = fbConnected;
-  const step2Done = !!fbBusinessId && !!fbCatalogId;
-  const [dataSharingOk, setDataSharingOk] = useState(step2Done);
-  const [termsOk, setTermsOk] = useState(step2Done);
-  const step3Done = dataSharingOk;
-  const step4Done = termsOk;
-  const step5Done = !!fbFeedId;
+  const step2Done = !!fbBusinessId;
+  const step3Done = step2Done && !!fbCatalogId;
+  const [dataSharingOk, setDataSharingOk] = useState(step3Done);
+  const [termsOk, setTermsOk] = useState(step3Done);
+  const step4Done = dataSharingOk;
+  const step5Done = termsOk;
+  const step6Done = !!fbFeedId;
 
   const statusOf = (done: boolean, prevDone: boolean): StepStatus => (done ? "done" : prevDone ? "active" : "locked");
 
   const steps: { key: string; title: string; status: StepStatus }[] = [
-    { key: "account",  title: "Cuenta de Facebook",     status: statusOf(step1Done, true) },
-    { key: "business", title: "Portfolio comercial",    status: statusOf(step2Done, step1Done) },
-    { key: "data",     title: "Uso compartido de datos", status: statusOf(step3Done, step2Done) },
-    { key: "terms",    title: "Condiciones",            status: statusOf(step4Done, step3Done) },
-    { key: "feed",     title: "Conectar catálogo",      status: statusOf(step5Done, step4Done) },
+    { key: "account",  title: "Cuenta de Facebook",       status: statusOf(step1Done, true) },
+    { key: "business", title: "Portfolio comercial",      status: statusOf(step2Done, step1Done) },
+    { key: "catalog",  title: "Catálogo de productos",    status: statusOf(step3Done, step2Done) },
+    { key: "data",     title: "Uso compartido de datos",  status: statusOf(step4Done, step3Done) },
+    { key: "terms",    title: "Condiciones",              status: statusOf(step5Done, step4Done) },
+    { key: "feed",     title: "Sincronizar tus productos", status: statusOf(step6Done, step5Done) },
   ];
 
   return (
@@ -58,14 +61,17 @@ export default function MetaCatalogoWizard({ fbConnected, fbBusinessId, fbCatalo
           {step.key === "business" && step.status !== "locked" && (
             <BusinessStep done={step2Done} businessId={fbBusinessId} />
           )}
+          {step.key === "catalog" && step.status !== "locked" && (
+            <CatalogStep done={step3Done} catalogId={fbCatalogId} />
+          )}
           {step.key === "data" && step.status !== "locked" && (
-            <DataSharingStep done={step3Done} onConfirm={() => setDataSharingOk(true)} />
+            <DataSharingStep done={step4Done} onConfirm={() => setDataSharingOk(true)} />
           )}
           {step.key === "terms" && step.status !== "locked" && (
-            <TermsStep done={step4Done} onConfirm={() => setTermsOk(true)} />
+            <TermsStep done={step5Done} onConfirm={() => setTermsOk(true)} />
           )}
           {step.key === "feed" && step.status !== "locked" && (
-            <FeedStep done={step5Done} />
+            <FeedStep done={step6Done} />
           )}
         </StepCard>
       ))}
@@ -213,6 +219,122 @@ function BusinessStep({ done, businessId }: { done: boolean; businessId: string 
   );
 }
 
+function CatalogStep({ done, catalogId }: { done: boolean; catalogId: string | null }) {
+  const router = useRouter();
+  const [catalogs, setCatalogs] = useState<Catalog[] | null>(null);
+  const [loadError, setLoadError] = useState(false);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [changing, setChanging] = useState(false);
+
+  const picking = !done || changing;
+
+  useEffect(() => {
+    if (!picking) return;
+    fetch("/api/facebook/catalogs")
+      .then((r) => (r.ok ? r.json() : Promise.reject()))
+      .then((d) => setCatalogs(d.catalogs ?? []))
+      .catch(() => setLoadError(true));
+  }, [picking]);
+
+  async function choose(body: { catalogId: string } | { name: string }) {
+    setBusyId("catalogId" in body ? body.catalogId : "nuevo");
+    const res = await fetch("/api/facebook/catalogs/connect", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (res.ok) {
+      setChanging(false);
+      router.refresh();
+    } else {
+      setBusyId(null);
+    }
+  }
+
+  if (!picking) {
+    return (
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-sm text-slate-500">
+          Catálogo conectado{catalogId ? <> (ID: <span className="font-mono">{catalogId}</span>)</> : ""}.
+        </p>
+        <button
+          onClick={() => { setLoadError(false); setChanging(true); }}
+          className="text-xs font-semibold text-indigo-600 hover:text-indigo-700 shrink-0"
+        >
+          Cambiar
+        </button>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return <p className="text-sm text-red-500">No se pudieron cargar tus catálogos de Meta. Recargá la página.</p>;
+  }
+
+  if (!catalogs) {
+    return <div className="flex items-center gap-2 text-sm text-slate-400"><Loader2 className="h-4 w-4 animate-spin" /> Cargando catálogos…</div>;
+  }
+
+  return (
+    <div>
+      <p className="text-sm text-slate-500 mb-3">
+        {catalogs.length > 0
+          ? "Elegí el catálogo de productos donde vamos a sincronizar tu tienda."
+          : "Tu portfolio comercial todavía no tiene ningún catálogo de productos. Creá uno para empezar."}
+      </p>
+
+      {catalogs.length > 0 && (
+        <div className="space-y-2 mb-3">
+          {catalogs.map((c) => (
+            <div key={c.id} className="flex items-center justify-between gap-3 border border-slate-200 rounded-lg px-4 py-3">
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-slate-800 truncate">{c.name}</p>
+                <p className="text-xs text-slate-400 font-mono truncate">ID: {c.id}</p>
+              </div>
+              <button
+                onClick={() => choose({ catalogId: c.id })}
+                disabled={busyId !== null}
+                className="inline-flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold px-3 py-1.5 rounded-md disabled:opacity-50 shrink-0"
+              >
+                {busyId === c.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <ChevronRight className="h-3 w-3" />}
+                {c.id === catalogId ? "En uso" : "Usar este catálogo"}
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {creating || catalogs.length === 0 ? (
+        <div className="flex items-center gap-2">
+          <input
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            placeholder="Nombre del catálogo nuevo"
+            className="flex-1 min-w-0 border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-300"
+          />
+          <button
+            onClick={() => choose({ name: newName.trim() })}
+            disabled={!newName.trim() || busyId !== null}
+            className="inline-flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold px-3 py-2 rounded-md disabled:opacity-40 shrink-0"
+          >
+            {busyId === "nuevo" ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
+            Crear catálogo
+          </button>
+        </div>
+      ) : (
+        <button
+          onClick={() => setCreating(true)}
+          className="inline-flex items-center gap-1.5 text-sm font-semibold text-indigo-600 hover:text-indigo-700"
+        >
+          <Plus className="h-3.5 w-3.5" /> Crear un catálogo nuevo
+        </button>
+      )}
+    </div>
+  );
+}
+
 function DataSharingStep({ done, onConfirm }: { done: boolean; onConfirm: () => void }) {
   if (done) return <p className="text-sm text-slate-500">Uso compartido de datos confirmado.</p>;
   return (
@@ -293,7 +415,7 @@ function FeedStep({ done }: { done: boolean }) {
       <div className="flex items-start gap-2.5 bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-3">
         <CheckCircle className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
         <div>
-          <p className="text-sm font-semibold text-emerald-800">¡Catálogo conectado!</p>
+          <p className="text-sm font-semibold text-emerald-800">¡Todo listo!</p>
           <p className="text-sm text-emerald-700 mt-0.5">
             La sincronización automática de tus productos se activará cuando Meta termine de revisar tu tienda (suele tardar unos días). No tenés que hacer nada más — te vamos avisando.
           </p>
@@ -321,16 +443,16 @@ function FeedStep({ done }: { done: boolean }) {
   return (
     <div>
       <p className="text-sm text-slate-500 mb-4">
-        Último paso: conectamos tu catálogo de productos al feed diario. Meta puede tardar unas horas en procesarlo y, según tu país, pedirte completar datos fiscales para activar la pestaña de Tienda.
+        Último paso: enviamos tus productos al catálogo que elegiste, con una actualización diaria. Meta puede tardar unas horas en procesarlo y, según tu país, pedirte completar datos fiscales para activar la pestaña de Tienda.
       </p>
-      {error && <p className="text-sm text-red-500 mb-3">No se pudo conectar el catálogo. Intentá de nuevo.</p>}
+      {error && <p className="text-sm text-red-500 mb-3">No se pudo activar la sincronización. Intentá de nuevo.</p>}
       <button
         onClick={connectFeed}
         disabled={connecting}
         className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold px-5 py-2.5 rounded-lg text-sm transition-colors disabled:opacity-50"
       >
         {connecting ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
-        Conectar catálogo
+        Sincronizar mis productos
       </button>
     </div>
   );

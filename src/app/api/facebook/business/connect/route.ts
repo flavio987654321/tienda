@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth-session";
 import { prisma } from "@/lib/prisma";
-import { listOwnedCatalogs, createCatalog, decryptToken } from "@/lib/facebook";
+import { decryptToken } from "@/lib/facebook";
 
 // POST /api/facebook/business/connect  { businessId }
-// Conecta el Business Portfolio elegido: reusa un catálogo existente o crea uno nuevo.
+// Guarda el Business Portfolio elegido. El catálogo NO se elige acá: lo elige el
+// dueño a mano en el paso siguiente (/api/facebook/catalogs). Meta rechazó el
+// App Review de catalog_management porque la app conectaba un catálogo sin
+// mostrarlo nunca en pantalla — el revisor tiene que ver la lista y la elección.
 export async function POST(req: NextRequest) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
@@ -16,7 +19,7 @@ export async function POST(req: NextRequest) {
 
   const store = await prisma.store.findUnique({
     where: { ownerId: user.id },
-    select: { id: true, name: true, fbAccessToken: true },
+    select: { id: true, fbAccessToken: true, fbBusinessId: true },
   });
   if (!store?.fbAccessToken) {
     return NextResponse.json({ error: "Facebook no está conectado" }, { status: 400 });
@@ -26,15 +29,18 @@ export async function POST(req: NextRequest) {
   if (!token) return NextResponse.json({ error: "Credenciales de Facebook inválidas" }, { status: 500 });
 
   try {
-    const { data: existing } = await listOwnedCatalogs(token, businessId);
-    const catalogId = existing[0]?.id ?? (await createCatalog(token, businessId, `${store.name} — Catálogo`)).id;
-
+    // Cambiar de portfolio invalida el catálogo elegido antes: pertenece al anterior.
     await prisma.store.update({
       where: { id: store.id },
-      data: { fbBusinessId: businessId, fbCatalogId: catalogId },
+      data: {
+        fbBusinessId: businessId,
+        ...(store.fbBusinessId && store.fbBusinessId !== businessId
+          ? { fbCatalogId: null, fbFeedId: null }
+          : {}),
+      },
     });
 
-    return NextResponse.json({ ok: true, catalogId });
+    return NextResponse.json({ ok: true, businessId });
   } catch (err) {
     console.error("Facebook /business/connect error:", err);
     return NextResponse.json({ error: "No se pudo conectar el portfolio comercial" }, { status: 502 });
