@@ -71,7 +71,7 @@ export default function MetaCatalogoWizard({ fbConnected, fbBusinessId, fbCatalo
             <TermsStep done={step5Done} onConfirm={() => setTermsOk(true)} />
           )}
           {step.key === "feed" && step.status !== "locked" && (
-            <FeedStep done={step6Done} />
+            <FeedStep done={step6Done} catalogId={fbCatalogId} />
           )}
         </StepCard>
       ))}
@@ -385,7 +385,15 @@ function TermsStep({ done, onConfirm }: { done: boolean; onConfirm: () => void }
   );
 }
 
-function FeedStep({ done }: { done: boolean }) {
+// Link al catálogo puntual dentro de Commerce Manager. Sin el ID solo se puede
+// mandar al listado general, donde el dueño tiene que buscar el suyo a mano.
+function catalogUrl(catalogId: string | null) {
+  return catalogId
+    ? `https://business.facebook.com/commerce/catalogs/${catalogId}/products`
+    : "https://business.facebook.com/commerce_manager";
+}
+
+function FeedStep({ done, catalogId }: { done: boolean; catalogId: string | null }) {
   const router = useRouter();
   const [connecting, setConnecting] = useState(false);
   const [error, setError] = useState(false);
@@ -419,6 +427,14 @@ function FeedStep({ done }: { done: boolean }) {
           <p className="text-sm text-emerald-700 mt-0.5">
             La sincronización automática de tus productos se activará cuando Meta termine de revisar tu tienda (suele tardar unos días). No tenés que hacer nada más — te vamos avisando.
           </p>
+          <a
+            href={catalogUrl(catalogId)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 mt-2 text-sm font-semibold text-emerald-800 hover:text-emerald-900"
+          >
+            Ver mi catálogo en Meta <ExternalLink className="h-3.5 w-3.5" />
+          </a>
         </div>
       </div>
     );
@@ -429,12 +445,12 @@ function FeedStep({ done }: { done: boolean }) {
       <div>
         <p className="text-sm text-slate-500 mb-3">Tu catálogo ya está sincronizando con Facebook e Instagram.</p>
         <a
-          href="https://business.facebook.com/commerce_manager"
+          href={catalogUrl(catalogId)}
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex items-center gap-1.5 text-sm font-semibold text-indigo-600 hover:text-indigo-700"
         >
-          Ver en Meta Commerce Manager <ExternalLink className="h-3.5 w-3.5" />
+          Ver mi catálogo en Meta <ExternalLink className="h-3.5 w-3.5" />
         </a>
       </div>
     );
