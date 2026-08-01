@@ -6,11 +6,12 @@ import { useRouter } from "next/navigation";
 import { ChevronLeft, ShoppingBag, MessageCircle, Check } from "lucide-react";
 import { useCartLogic } from "@/hooks/useCartLogic";
 import { registrarVista } from "@/lib/registrarVista";
-import { getDemoPool, isDemoProductId, parsePromotions, type StorefrontProduct, type StorefrontVariant, type PlaceOrderParams } from "@/hooks/useStorefront";
+import { getDemoPool, isDemoProductId, parsePromotions, type StorefrontProduct, type PlaceOrderParams } from "@/hooks/useStorefront";
 import type { ActivePromotion } from "@/lib/pricing";
 import { resolveProductPromo, describePromo } from "@/lib/promoDisplay";
 import { PromoTag, PromoBlock } from "@/components/store/PromoDisplay";
 import { resolveVariantPrice } from "@/lib/variantPrice";
+import { mapProduct } from "@/lib/productoStorefront";
 import type { ProductDetailViewProps } from "@/components/store/templates/productDetail/shared";
 import ElectroPrimeDetail from "@/components/store/templates/productDetail/ElectroPrimeDetail";
 import TechNovaDetail from "@/components/store/templates/productDetail/TechNovaDetail";
@@ -24,92 +25,29 @@ const THEMED_DETAIL: Record<string, React.ComponentType<{ view: ProductDetailVie
   "casa-clara": CasaClaraDetail,
 };
 
-type RawProduct = {
-  id: string;
-  name: string;
-  price: number;
-  comparePrice?: number | null;
-  precioMayorista?: number | null;
-  cantMinMayorista?: number | null;
-  preciosEscalonados?: string;
-  soloMayorista?: boolean;
-  cuotas?: number;
-  category?: string;
-  subcategory?: string;
-  gender?: string;
-  description?: string | null;
-  images?: string;
-  reelUrls?: string;
-  variants?: StorefrontVariant[];
-  attributes?: string;
-  offerBadge?: string | null;
-  offerNote?: string | null;
-  offerEndsAt?: string | null;
-};
-
-const SIZE_ATTRS  = ["talle","size","talla","talles","sizes","tamaño","tamano","almacenamiento","ram","versión","version","formato","variante","material","sabor","peso/tamaño","peso"];
-const COLOR_ATTRS = ["color","colour","colores","colors","tono"];
-
-function mapProduct(raw: RawProduct): StorefrontProduct {
-  const variants = raw.variants ?? [];
-  const sizesSet  = new Set<string>();
-  const colorsSet = new Set<string>();
-  variants.forEach((v) => {
-    let attrs: Record<string, string> = {};
-    try { const p = JSON.parse(v.name); if (p && typeof p === "object") attrs = p; } catch {}
-    if (Object.keys(attrs).length > 0) {
-      Object.entries(attrs).forEach(([k, val]) => {
-        if (SIZE_ATTRS.includes(k.toLowerCase())  && val) sizesSet.add(val as string);
-        if (COLOR_ATTRS.includes(k.toLowerCase()) && val) colorsSet.add(val as string);
-      });
-    } else {
-      if (SIZE_ATTRS.includes(v.name?.toLowerCase())  && v.value) sizesSet.add(v.value);
-      if (COLOR_ATTRS.includes(v.name?.toLowerCase()) && v.value) colorsSet.add(v.value);
-    }
-  });
-  let images: string[] = [];
-  let imageItems: { url: string; variantValue?: string }[] = [];
-  try {
-    const parsed = JSON.parse(raw.images || "[]");
-    imageItems = parsed
-      .map((img: string | { url?: string; variantValue?: string }) => typeof img === "string" ? { url: img } : { url: img?.url ?? "", variantValue: img?.variantValue })
-      .filter((x: { url: string }) => x.url);
-    images = imageItems.map((x) => x.url);
-  } catch {}
-  let reelUrls: string[] = [];
-  try {
-    const parsed = JSON.parse(raw.reelUrls || "[]");
-    reelUrls = Array.isArray(parsed) ? parsed.filter((u: unknown) => typeof u === "string") : [];
-  } catch {}
-  let attributes: { key: string; value: string }[] = [];
-  try {
-    const parsed = JSON.parse(raw.attributes || "[]");
-    attributes = Array.isArray(parsed) ? parsed.filter((a: unknown) => a && typeof a === "object") : [];
-  } catch {}
-  const offerActive = !raw.offerEndsAt || new Date(raw.offerEndsAt) > new Date();
-  return {
-    id: raw.id, name: raw.name, price: raw.price,
-    comparePrice: offerActive ? (raw.comparePrice ?? null) : null,
-    precioMayorista: raw.precioMayorista ?? null,
-    cantMinMayorista: raw.cantMinMayorista ?? null,
-    preciosEscalonados: (() => { try { const p = JSON.parse(raw.preciosEscalonados || "[]"); return Array.isArray(p) ? p : []; } catch { return []; } })(),
-    soloMayorista: raw.soloMayorista ?? false,
-    offerBadge: offerActive ? (raw.offerBadge ?? null) : null,
-    offerNote: offerActive ? (raw.offerNote ?? null) : null,
-    cuotas: raw.cuotas ?? 0,
-    category: raw.category ?? "general",
-    subcategory: raw.subcategory ?? undefined,
-    gender: raw.gender ?? "unisex",
-    description: raw.description ?? null,
-    images, imageItems, reelUrls,
-    sizes: [...sizesSet], colors: [...colorsSet], variants,
-    attributes,
-  };
-}
 
 const fmt = (n: number) => "$" + n.toLocaleString("es-AR");
 
-export default function ProductDetailClient({ slug, productId }: { slug: string; productId: string }) {
+export default function ProductDetailClient({ slug, productId, productoInicial = null }: {
+  slug: string;
+  productId: string;
+  /**
+   * El producto ya resuelto en el servidor.
+   *
+   * Con esto el HTML sale con el nombre, el precio, las fotos y la descripción
+   * adentro. Sin esto —como estaba— el servidor mandaba una cáscara vacía y el
+   * navegador pedía la tienda entera después: una persona veía un "Cargando…" de
+   * un instante, pero el robot de Google se quedaba con la página en blanco, o
+   * con el cartel de "Producto no disponible" si no esperaba a que el pedido
+   * volviera. Eso último fue lo que terminó indexado como descripción de los
+   * productos en el buscador.
+   *
+   * No reemplaza al pedido del navegador: ese sigue, y trae lo que esto no puede
+   * traer —promociones vivas, productos relacionados, el carrito—. Pasa de ser
+   * la única fuente a ser el refresco.
+   */
+  productoInicial?: StorefrontProduct | null;
+}) {
   const router = useRouter();
   const [products, setProducts] = useState<StorefrontProduct[]>([]);
   const [promotions, setPromotions] = useState<ActivePromotion[]>([]);
@@ -162,7 +100,13 @@ export default function ProductDetailClient({ slug, productId }: { slug: string;
       .finally(() => setLoading(false));
   }, [slug, productId, isPreview]);
 
-  const product = useMemo(() => products.find(p => p.id === productId) ?? null, [products, productId]);
+  // El del servidor vale hasta que llegue la lista del navegador, que trae más
+  // (promociones aplicadas, stock al día). El orden importa: si `productoInicial`
+  // fuera primero, nunca se actualizaría.
+  const product = useMemo(
+    () => products.find(p => p.id === productId) ?? productoInicial ?? null,
+    [products, productId, productoInicial]
+  );
 
   // Contar la vista también acá. Antes solo se contaba al abrir el modal de vista
   // rápida desde la home o el listado, así que quien llegaba directo a esta página
@@ -234,7 +178,10 @@ export default function ProductDetailClient({ slug, productId }: { slug: string;
     setSelectedColor(product.colors.length === 1 ? product.colors[0] : "");
   }
 
-  if (loading) {
+  // `&& !product`: con el producto del servidor ya hay algo que mostrar, así que
+  // no se tapa la pantalla con "Cargando…" mientras llega el resto. Es lo que
+  // hace que el HTML inicial tenga contenido en vez de un cartel.
+  if (loading && !product) {
     return <div className="min-h-screen flex items-center justify-center text-gray-400 text-sm">Cargando...</div>;
   }
   if (notFoundLocal || !product) {
@@ -409,7 +356,16 @@ export default function ProductDetailClient({ slug, productId }: { slug: string;
             {product.description && (
               <div className="mb-6">
                 <p className="text-sm font-semibold text-gray-900 mb-1.5">Descripción</p>
-                <p className="text-sm text-gray-600 whitespace-pre-line">{product.description}</p>
+                {/* La descripción viene del editor de texto enriquecido, o sea que
+                    es HTML. Puesta como texto —que es lo que había— el comprador
+                    leía literalmente "<p>Sweater con cuello simulando camisa.</p>",
+                    etiquetas incluidas, en la ficha del producto.
+                    Se dibuja igual que en los templates y en el modal del
+                    catálogo, que ya la tratan como HTML. */}
+                <div
+                  className="text-sm text-gray-600 leading-relaxed [&_p]:mb-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_strong]:font-semibold [&_a]:text-indigo-600 [&_a]:underline"
+                  dangerouslySetInnerHTML={{ __html: product.description }}
+                />
               </div>
             )}
 

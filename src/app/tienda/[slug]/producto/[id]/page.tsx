@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { mapProduct, type RawProduct } from "@/lib/productoStorefront";
 import { notFound } from "next/navigation";
 import { unstable_noStore as noStore } from "next/cache";
 import type { Metadata } from "next";
@@ -25,13 +26,25 @@ async function findProduct(slug: string, id: string) {
     where: { id, isActive: true, deletedAt: null, store: { slug, isActive: true } },
     select: {
       id: true, name: true, description: true, price: true, images: true,
+      // ── Lo de estas dos líneas es para el HTML, no para Google ──────────────
+      // La ficha se arma ahora también en el servidor, así que hacen falta los
+      // mismos campos que usa el navegador para dibujarla. Antes esta consulta
+      // traía sólo lo justo para los datos estructurados: el producto se leía de
+      // la base, se usaba para el bloque invisible de Google, y se tiraba — el
+      // navegador tenía que volver a pedirlo.
+      comparePrice: true, precioMayorista: true, cantMinMayorista: true,
+      preciosEscalonados: true, soloMayorista: true, cuotas: true,
+      subcategory: true, gender: true, reelUrls: true, attributes: true,
+      offerBadge: true, offerNote: true,
       // Lo de acá abajo lo usan los datos estructurados (ver `structured-data.ts`).
       // La categoría y la fecha de fin de oferta salen del producto; el precio y
       // el stock por variante deciden si se declara un precio o un rango, y si
       // figura como disponible o agotado.
       category: true, offerEndsAt: true,
       seoTitle: true, seoDescription: true,
-      variants: { select: { price: true, stock: true, sku: true } },
+      // `id`, `name` y `value` los agrega la ficha, no los datos estructurados:
+      // son los que arman los chips de talle y color.
+      variants: { select: { id: true, name: true, value: true, price: true, stock: true, sku: true } },
       store: { select: { name: true } },
     },
   });
@@ -189,7 +202,18 @@ export default async function ProductoPage({ params, searchParams }: ProductoPag
         facebookPixelId={analytics?.facebookPixelId}
         viewContent={product ? { contentId: product.id, value: product.price, currency } : undefined}
       />
-      <ProductDetailClient slug={slug} productId={id} />
+      {/* `productoInicial` es lo que arregla el SEO de esta pantalla.
+          Antes acá iba sólo `slug` y `productId`: el HTML que salía del servidor
+          no tenía ni el nombre ni el precio, y el navegador pedía todo después.
+          Google leía esa página vacía —o el cartel de "Producto no disponible"
+          si no llegaba a esperar el pedido— y eso fue lo que quedó indexado.
+          El dato ya estaba acá: se usaba para el bloque de datos estructurados y
+          se descartaba. */}
+      <ProductDetailClient
+        slug={slug}
+        productId={id}
+        productoInicial={product ? mapProduct(product as RawProduct) : null}
+      />
     </>
   );
 }
