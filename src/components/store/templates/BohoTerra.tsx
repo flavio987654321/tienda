@@ -4,21 +4,27 @@ import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { usePushBell } from "@/contexts/PushBellContext";
 import { useAuth } from "@/components/AuthProvider";
 import StoreFollowButton from "@/components/store/StoreFollowButton";
-import { useResenasProducto } from "@/hooks/useResenasProducto";
-import { EditableZone, EditableImageButton, EditableSectionBg, BgDragHandle, getContrastColor, textoSobre, useEditContext } from "@/contexts/EditContext";
+import { useResenasProducto, type ResenaProducto } from "@/hooks/useResenasProducto";
+import { EditableZone, EditableImageButton, EditableSectionBg, BgDragHandle, getContrastColor, getReadableAccentText, getReadableAccentFill, textoSobre, useEditContext } from "@/contexts/EditContext";
 import { useStorefront, type StorefrontProduct } from "@/hooks/useStorefront";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { useCartLogic } from "@/hooks/useCartLogic";
 import { useTouchSwipe } from "@/hooks/useTouchSwipe";
+import { useSombrasScroll } from "@/components/store/useSombrasScroll";
+import { useHomeReviews, type EjemplosDeResenas } from "@/hooks/useHomeReviews";
+import { COMENTARIO_MAX, RESENADOR_MAX } from "@/lib/reviews";
+import { tintaSobreFoto, sombraSobreFoto } from "@/lib/section-bg";
+import { DescripcionPlegable } from "@/components/store/templates/shared/DescripcionPlegable";
 import { masVistos, MIN_MAS_VISTOS } from "@/lib/masVistos";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
 import VerifiedIconButton from "@/components/store/VerifiedIconButton";
 import { CartDrawer, type CartTheme } from "@/components/store/templates/shared/CartDrawer";
 import { OfferBadge } from "@/components/store/OfferBadge";
-import { PromoTag, PromoBlock, PromoPrice } from "@/components/store/PromoDisplay";
+import { PromoTag, PromoBlock, PromoPrice, PALETA_PROMO_TIERRA } from "@/components/store/PromoDisplay";
 import { resolveProductPromo, describePromo } from "@/lib/promoDisplay";
 import { CheckoutModal } from "@/components/store/templates/shared/CheckoutModal";
 import { ContactForm } from "@/components/store/templates/shared/ContactForm";
+import { NewsletterForm } from "@/components/store/templates/shared/NewsletterForm";
 import { FadeImage } from "@/components/store/templates/shared/FadeImage";
 import StoreProductReels from "@/components/store/ProductReels";
 import { SectionBlock } from "@/components/store/templates/shared/SectionBlock";
@@ -52,19 +58,74 @@ const announcementMessages_DEFAULT = [
   "🌱 6 cuotas sin interés",
 ];
 
+/* ── Cómo habla esta tienda ──────────────────────────────────────────────────
+   El template ya dice "piezas" y "Ver pieza" en toda la portada, pero el carrito
+   es compartido y ahí volvía a decir "3 productos" y "Quitar del carrito". La
+   voz se cortaba justo en el paso donde el comprador decide.
+   Sólo son las palabras: la cuenta, el motor de precios y el checkout siguen
+   siendo exactamente los mismos que usan los otros ocho templates. */
+const VOCABULARIO_CARRITO = {
+  titulo: "Tu selección",
+  cerrar: "Cerrar la selección",
+  vacioIcono: "🌿",
+  vacio: "Todavía no elegiste ninguna pieza.",
+  vacioSub: "Recorré la colección.",
+  quitar: "Sacar de la selección",
+  unidad: "pieza",
+  unidades: "piezas",
+  finalizar: "Llevar estas piezas",
+  seguir: "Seguir mirando",
+};
+
+/* Las reseñas de ejemplo del editor, con la voz de ESTA tienda: fibras naturales,
+   tinturas vegetales, taller. Son propias y no compartidas a propósito — si los
+   diez templates mostraran los mismos textos, las previews se verían clonadas. */
+const EJEMPLOS_RESENAS: EjemplosDeResenas = {
+  producto: [
+    { id:"bt-p1", rating:5, reviewer:"Malena T.", verified:true,  verifiedBy:"auto",
+      comment:"El lino es hermoso de verdad, se siente distinto apenas lo tocás. Y el color no se movió después de varios lavados." },
+    { id:"bt-p2", rating:5, reviewer:"Josefina R.", verified:false, verifiedBy:null,
+      comment:"Me encantó saber de qué está hecha cada pieza. Se nota el trabajo a mano en las terminaciones." },
+    { id:"bt-p3", rating:4, reviewer:"Camila V.", verified:true,  verifiedBy:"owner",
+      comment:"La tela es preciosa y cae divino. Le saco una estrella porque me quedó un poco más larga de lo que esperaba." },
+  ],
+  tienda: [
+    { id:"bt-t1", rating:5, reviewer:"Delfina A.", verified:true,  verifiedBy:"auto",
+      comment:"Vino envuelto en papel, con una nota escrita a mano. Se nota que le ponen cuidado a cada envío." },
+    { id:"bt-t2", rating:5, reviewer:"Renata B.", verified:false, verifiedBy:null,
+      comment:"Les consulté por el talle y me respondieron con paciencia hasta que estuve segura. Volvería a comprar." },
+  ],
+};
+
+/* Las reseñas de EJEMPLO de la vista rápida, para el editor. Sin esto el bloque
+   aparecía vacío mientras la dueña acomoda la tienda y no había forma de ver cómo
+   queda lleno — que es justo para lo que sirve el editor.
+   Nunca se publican: el hook las muestra sólo con `isPreview` y desaparecen solas
+   en cuanto llega la primera de verdad. Y son propias de este template, con su
+   voz, por el mismo motivo que las de la portada. */
+const RESENAS_EJEMPLO: ResenaProducto[] = [
+  { id:"bt-ej-1", rating:5, comment:"El lino es tal cual la foto y el talle justo. Llegó envuelto en papel, con una nota a mano.", reviewer:"Malena T.", verified:true,  verifiedBy:"auto",  createdAt:"2026-07-18T14:00:00.000Z" },
+  { id:"bt-ej-2", rating:5, comment:"Se nota el trabajo artesanal en las terminaciones. El color no se movió después de varios lavados.", reviewer:"Josefina R.", verified:false, verifiedBy:null,   createdAt:"2026-07-11T14:00:00.000Z" },
+  { id:"bt-ej-3", rating:4, comment:"La tela es preciosa y cae divino. Me quedó un poco más larga de lo que esperaba, pero la recomiendo.", reviewer:"Camila V.", verified:true,  verifiedBy:"owner", createdAt:"2026-06-29T14:00:00.000Z" },
+];
+const PASO_RESENAS = 5;
+
 const scrollTo = (id:string) => document.getElementById(id)?.scrollIntoView({ behavior:"smooth" });
 
 const BT_SECTION_IDS = ["bt-mayorista", "bt-banner", "bt-coleccion", "bt-ofertas", "bt-masvisto", "bt-prueba-social", "bt-nosotros", "bt-contacto"];
 
 export default function BohoTerra() {
-  type PReview = { id: string; rating: number; comment: string | null; reviewer: string; verified: boolean; verifiedBy: string | null; createdAt: string; product?: { name: string; image: string | null } };
-  type HomeReview = PReview;
-  const [homeReviews,    setHomeReviews]    = useState<HomeReview[]>([]);
+  // El tipo local de las reseñas se fue con el fetch propio: ahora la forma la
+  // define `HomeReview`, en el hook compartido.
   const [reviewCarouselPage, setReviewCarouselPage] = useState(0);
   const [reviewForm,     setReviewForm]     = useState({ reviewer: "", rating: 5, comment: "", email: "" });
   const reviewCaptcha = useTurnstile("review");
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
   const [reviewDone,     setReviewDone]     = useState(false);
+  const [resenaModalOpen, setResenaModalOpen] = useState(false);
+  const [reviewError,    setReviewError]    = useState<string | null>(null);
+  /** Corta el doble envío en la misma vuelta, antes de que el estado se entere. */
+  const enviandoResena = useRef(false);
   const [reviewHoneypot, setReviewHoneypot] = useState("");
 
   const storeConfig = useStoreConfig();
@@ -86,6 +147,38 @@ export default function BohoTerra() {
     return featuredCategories.length > 0 ? base.filter(c => featuredCategories.includes(c)) : base;
   }, [products, defaultCategories, featuredCategories]);
   const A = storeConfig?.colors.accent ?? "#b5652a";
+  // El acento usado como TEXTO sobre el panel blanco del modal. El terracota de
+  // fábrica se lee perfecto, pero el acento lo elige la dueña: con uno claro
+  // —arena, crema, marfil— la ficha de materiales quedaba escrita en blanco
+  // sobre blanco. `getReadableAccentText` devuelve el acento tal cual cuando se
+  // despega del fondo y cae al color de texto del template cuando no.
+  const ATextoBlanco = getReadableAccentText(A, "#ffffff", T);
+  // Y la otra mitad: el acento usado para MARCAR (el borde del color y el talle
+  // elegidos, el de la miniatura activa). Es otra pregunta —ahí no importa si se
+  // lee, importa si se distingue como superficie—, por eso va con el helper de
+  // relleno y no con el de texto. Sin esto, con un acento claro el comprador no
+  // ve cuál talle tiene seleccionado.
+  const AMarcaBlanco = getReadableAccentFill(A, "#ffffff", T);
+  // La tinta ARRIBA del acento cuando se usa de relleno (el botón de comprar).
+  // Estaba clavada en "#fff": con un acento claro —arena, crema— era blanco sobre
+  // blanco en el botón que cierra la venta.
+  // Va con `getContrastColor` y no con `textoSobre`, a propósito y contra lo que
+  // parece: sobre el terracota de fábrica los dos candidatos empatan (4.32 el
+  // blanco, 4.37 el negro), así que `textoSobre` daría vuelta la tinta a negro
+  // ganando 0.05 de contraste y cambiándole el aspecto a todas las tiendas que
+  // no tocaron el acento. Este es además el criterio que usa el modal del
+  // catálogo para el mismo botón, y que las dos fichas coincidan es el punto.
+  const AMarcaTexto  = getContrastColor(AMarcaBlanco) === "light" ? "#fff" : "#111";
+  /* Un solo título de sección para TODO el modal (La pieza, Descripción, Videos,
+     Reseñas). Antes cada uno tenía el suyo —9px con opacidad 0.6, 9px sin peso,
+     Georgia itálica de 14— y leído de corrido no se veía dónde terminaba una
+     sección y empezaba la otra. Es además el mismo que usa el modal del catálogo
+     para este template, que es lo que hace que las dos fichas del mismo producto
+     se lean igual. */
+  const tituloModal: React.CSSProperties = {
+    margin: "0 0 12px", fontSize: 9, fontWeight: 600, letterSpacing: 3,
+    textTransform: "uppercase", color: MID, opacity: 0.75,
+  };
   const sc = storeConfig?.sectionColors ?? {};
   const heroLeftBg = sc["bgHeroLeft"] ?? BG;
   const heroLeftText = getContrastColor(heroLeftBg) === "light" ? "#faf7f2" : "#2c2218";
@@ -140,6 +233,11 @@ export default function BohoTerra() {
   const [announcementIdx,     setAnnouncementIdx]     = useState(0);
   const [showReport,          setShowReport]          = useState(false);
   const [isMobile,            setIsMobile]            = useState(false);
+  /* Segundo corte, sólo para los carruseles. `isMobile` (768) no alcanzaba: entre
+     768 y 1200 tres tarjetas ya entran cómodas, pero cuatro quedarían de ~210px y
+     la prenda no se ve. De 1200 para arriba entran las cuatro a ~273, que es la
+     medida de las de "Lo más visto". */
+  const [esAncho,             setEsAncho]             = useState(false);
   const [mobileMenuOpen,      setMobileMenuOpen]      = useState(false);
   const [mobileCatsOpen,      setMobileCatsOpen]      = useState(false);
   const [mobileOpenCat,       setMobileOpenCat]       = useState<string | null>(null);
@@ -175,7 +273,7 @@ export default function BohoTerra() {
     toastMsg,
     cartCount,
     searchResults, favoriteProducts,
-    fmt, showToast, openModal, addToCart,
+    fmt, showToast, openModal, addToCart, modalScrollRef,
     toggleFavorite,
   } = cart;
   // El texto que va ARRIBA de un relleno pintado con el acento. Estaba clavado en
@@ -195,6 +293,36 @@ export default function BohoTerra() {
     () => { if (modalProduct) setModalImg(i => (i + 1) % modalProduct.images.length); },
     () => { if (modalProduct) setModalImg(i => (i - 1 + modalProduct.images.length) % modalProduct.images.length); }
   );
+
+  // ── Alto de la columna de la foto ───────────────────────────────────────────
+  // El panel de compra se recorta al alto de la columna de la izquierda y scrollea
+  // por dentro, con la barra escondida. Sin esto, una descripción larga estiraba el
+  // modal entero: la columna de la foto quedaba con media pantalla de aire muerto
+  // abajo y el bloque de reseñas arrancaba en un lugar distinto según el producto.
+  // Se MIDE en vez de calcularse porque el alto depende de cuántas miniaturas y
+  // cuántos reels tenga cada uno. Sólo en escritorio: en celular las columnas se
+  // apilan y un alto fijo cortaría el contenido.
+  // Es el mismo mecanismo que ya usan Chic Paris y el modal del catálogo.
+  const colFotoRef = useRef<HTMLDivElement>(null);
+  const [altoColFoto, setAltoColFoto] = useState<number | null>(null);
+  useEffect(() => {
+    const el = colFotoRef.current;
+    if (isMobile || !modalProduct || !el) return;
+    const ro = new ResizeObserver(() => {
+      const alto = el.offsetHeight;
+      setAltoColFoto(prev => (prev === alto ? prev : alto));
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [isMobile, modalProduct]);
+  // Derivado y no un `setState(null)` adentro del efecto: apagarlo con estado
+  // dispara un render en cascada (y lo marca el lint). Al reabrir el modal el
+  // ResizeObserver mide de nuevo apenas observa, así que no queda un alto viejo.
+  const altoPanel = isMobile || !modalProduct ? null : altoColFoto;
+  // Con la barra escondida no queda ninguna señal de que hay más para leer. Los
+  // degradados la reponen, y sólo cuando de verdad falta contenido de ese lado.
+  const { ref: panelRef, arriba: sombraArriba, abajo: sombraAbajo } =
+    useSombrasScroll<HTMLDivElement>([altoPanel, modalProduct?.id]);
 
   const [inquiryMessage, setInquiryMessage] = useState("");
   function openInquiry(product: Product) {
@@ -226,15 +354,21 @@ export default function BohoTerra() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [products]);
 
-  // Cargar reseñas de la home (prueba social)
-  useEffect(() => {
-    const slug = storeConfig?.slug;
-    if (!slug) return;
-    fetch(`/api/public/${slug}/reviews`)
-      .then(r => r.ok ? r.json() : { reviews: [] })
-      .then(d => setHomeReviews(d.reviews ?? []))
-      .catch(() => {});
-  }, [storeConfig?.slug]);
+  // Las reseñas de la portada. La FUNCIÓN —qué sube, las dos pestañas, el
+  // promedio, borrar y publicar— es compartida; el diseño está más abajo y es de
+  // este template. Ver `useHomeReviews`.
+  //
+  // Antes acá había un fetch propio que traía SOLO `d.reviews`, o sea las de
+  // producto: las reseñas de TIENDA —las que hablan de la atención y del envío—
+  // llegaban en `storeReviews` y se tiraban a la basura sin que nadie lo supiera.
+  // Y no había forma de dejar una: el bloque se escondía con cero reseñas, así
+  // que una tienda nueva no tenía cómo conseguir la primera.
+  const resenas = useHomeReviews({
+    slug: storeConfig?.slug,
+    isPreview, isOwner,
+    productos: products,
+    ejemplos: EJEMPLOS_RESENAS,
+  });
 
   // Las reseñas del producto abierto: carga, paginado, promedio y total. Antes
   // esto estaba escrito acá a mano —igual que en los otros tres templates de moda
@@ -242,21 +376,34 @@ export default function BohoTerra() {
   // paginar (con 200 reseñas se llegaba a la 50 y las demás no existían), el
   // promedio calculado sobre las que habían llegado, y las reseñas del producto
   // anterior pegadas en la ficha si abrías dos seguidos.
-  const resenasProd = useResenasProducto({ slug: storeConfig?.slug, productId: modalProduct?.id });
+  const resenasProd = useResenasProducto({
+    slug: storeConfig?.slug, productId: modalProduct?.id,
+    paso: PASO_RESENAS, ejemplos: RESENAS_EJEMPLO, isPreview,
+  });
 
   useEffect(() => {
     if (!modalProduct) return;
     // eslint-disable-next-line react-hooks/set-state-in-effect -- depende de una interacción (abrir otra ficha), no se puede calcular durante el render
     setReviewDone(false);
+    // Y el formulario cerrado: si quedó abierto de la ficha anterior, al abrir otra
+    // aparecería el formulario encima antes de que se vea el producto.
+    setResenaModalOpen(false);
+    setReviewError(null);
     setReviewForm(p => ({ ...p, rating: 5, comment: "" }));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [modalProduct?.id]);
 
   async function submitReview(e: React.FormEvent) {
     e.preventDefault();
-    if (isPreview || isOwner || reviewHoneypot) return;
+    // `enviandoResena` es un REF y no el estado `reviewSubmitting`: poner estado no
+    // es inmediato, así que entre el primer submit y el re-render que apaga el
+    // botón entran dos envíos. Y el submit también sale con Enter desde un campo,
+    // que ni siquiera pasa por el botón deshabilitado. El ref se cierra en la misma
+    // vuelta y es lo único que corta de verdad el doble envío.
+    if (isPreview || isOwner || reviewHoneypot || enviandoResena.current) return;
     const slug = storeConfig?.slug;
     if (!modalProduct || !slug || !reviewForm.reviewer.trim()) return;
+    enviandoResena.current = true;
     setReviewSubmitting(true);
     try {
       const res = await fetch(`/api/public/${slug}/reviews`, {
@@ -268,9 +415,22 @@ export default function BohoTerra() {
         const data = await res.json();
         resenasProd.agregar(data.review);
         setReviewForm({ reviewer: "", rating: 5, comment: "", email: "" });
+        setReviewError(null);
+        // Se cierra el modal del formulario: si no, queda abierto y vacío tapando
+        // la reseña que la persona acaba de publicar, que es justo lo que quiere ver.
+        setResenaModalOpen(false);
         setReviewDone(true); setTimeout(() => setReviewDone(false), 4000);
+      } else {
+        // Antes esto era silencio: se apagaba el "Publicando...", el botón volvía a
+        // habilitarse y el comprador no sabía si se había publicado. El servidor
+        // manda el motivo —captcha vencido, nombre corto, demasiadas seguidas— y se
+        // muestra tal cual. Es el mismo arreglo que Chic Paris ya tenía (CP-12).
+        const d = await res.json().catch(() => null);
+        setReviewError(d?.error || "No se pudo publicar tu reseña. Probá de nuevo en un momento.");
       }
-    } catch {} finally { reviewCaptcha.reset(); setReviewSubmitting(false); }
+    } catch {
+      setReviewError("No se pudo conectar. Revisá tu internet y probá de nuevo.");
+    } finally { enviandoResena.current = false; reviewCaptcha.reset(); setReviewSubmitting(false); }
   }
 
   const ANNOUNCEMENT_BAR_H = 36;
@@ -290,7 +450,7 @@ export default function BohoTerra() {
   }, []);
 
   useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 768);
+    const check = () => { setIsMobile(window.innerWidth < 768); setEsAncho(window.innerWidth >= 1200); };
     check();
     window.addEventListener("resize", check);
     return () => window.removeEventListener("resize", check);
@@ -402,7 +562,7 @@ export default function BohoTerra() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [modalImg]);
 
-  const CARDS_PER_VIEW = isMobile ? 1 : 3;
+  const CARDS_PER_VIEW = isMobile ? 1 : esAncho ? 4 : 3;
   const CAROUSEL_LIMIT = 8;
   const subcategoriesFor = useMemo(() => {
     const map: Record<string, string[]> = {};
@@ -433,16 +593,23 @@ export default function BohoTerra() {
     return [...sameSub, ...sameCat, ...rest].slice(0, 4);
   }, [products, modalProduct]);
   const maxIdx      = Math.max(0, carouselProducts.length - CARDS_PER_VIEW);
-  const prevSlide   = () => setCarouselIdx(i => Math.max(0, i - 1));
-  const nextSlide   = () => setCarouselIdx(i => Math.min(maxIdx, i + 1));
+  /* Al ensancharse la ventana entran más tarjetas por vista y el tope baja: con 8
+     productos, en 3 por vista el último índice es 5 y en 4 es 4. Si el visitante
+     estaba en el 5 y agranda, el carrusel se corre de más y muestra un hueco al
+     final. Se acota acá, al dibujar, y no con un `setState` en un efecto: no hace
+     falta guardar el número corregido, sólo usarlo. */
+  const idxColeccion = Math.min(carouselIdx, maxIdx);
+  const prevSlide   = () => setCarouselIdx(() => Math.max(0, idxColeccion - 1));
+  const nextSlide   = () => setCarouselIdx(() => Math.min(maxIdx, idxColeccion + 1));
   const carouselSwipe = useTouchSwipe(nextSlide, prevSlide);
 
   const allOfertas = useMemo(() => products.filter(p => p.comparePrice && p.comparePrice > p.price), [products]);
   const ofertasProducts = (allOfertas.length > 0 ? allOfertas : products).slice(0, 8);
   const ofertasHasMore = allOfertas.length > 8;
   const ofertasMaxIdx = Math.max(0, ofertasProducts.length - CARDS_PER_VIEW);
-  const prevOferta = () => setOfertasIdx(i => Math.max(0, i - 1));
-  const nextOferta = () => setOfertasIdx(i => Math.min(ofertasMaxIdx, i + 1));
+  const idxOfertas = Math.min(ofertasIdx, ofertasMaxIdx);
+  const prevOferta = () => setOfertasIdx(() => Math.max(0, idxOfertas - 1));
+  const nextOferta = () => setOfertasIdx(() => Math.min(ofertasMaxIdx, idxOfertas + 1));
   const ofertasSwipe = useTouchSwipe(nextOferta, prevOferta);
 
   return (
@@ -453,6 +620,8 @@ export default function BohoTerra() {
         .bt-wa-fab:hover { animation-play-state:paused; }
         .bt-zoom-img { transition:transform 0.5s ease; }
         .bt-zoom:hover .bt-zoom-img { transform:scale(1.06); }
+        .bt-sin-barra::-webkit-scrollbar { display:none }
+        .bt-sin-barra { scrollbar-width:none; -ms-overflow-style:none }
       `}</style>
 
       {/* ── ANNOUNCEMENT BAR ───────────────────────────────── */}
@@ -522,7 +691,10 @@ export default function BohoTerra() {
 
       {/* ── NAVBAR */}
       <nav style={{ position: isPreview ? "sticky" : "fixed", top:announcementBarHeight, left: isPreview ? undefined : 0, right: isPreview ? undefined : 0, zIndex: isPreview ? 10000 : 100, background: scrolled ? "rgba(250,247,242,0.96)" : BG, borderBottom:`1px solid rgba(44,34,24,0.07)`, backdropFilter: scrolled ? "blur(10px)" : "none", transition:"all 0.3s" }}>
-        <div style={{ maxWidth:1280, margin:"0 auto", padding:"0 20px", height:60, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+        {/* Sin el `maxWidth:1280`: el nav va de borde a borde, como el hero que
+            tiene pegado abajo. Ver el comentario largo en `ChicParis.tsx`, que es la
+            misma decisión para los tres templates. */}
+        <div style={{ padding:"0 20px", height:60, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
           <div style={{ display:"flex", alignItems:"center", gap:6, flexShrink:0 }}>
             <button onClick={()=>scrollTo("inicio")} style={{ background:"none", border:"none", cursor:"pointer", fontFamily:"Georgia, serif", fontSize:20, fontStyle:"italic", color:T, letterSpacing:2, maxWidth:180, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
               <EditableZone field="storeName" label="Nombre de la tienda">{storeConfig?.storeName ?? "Terra"}</EditableZone>
@@ -852,17 +1024,73 @@ export default function BohoTerra() {
         <EditableSectionBg field="bgColeccion" label="Fondo colección" />
         {/* encabezado */}
         <div style={{ maxWidth:1280, margin:"0 auto", paddingLeft: isMobile ? 16 : 40, paddingRight: isMobile ? 16 : 40, paddingTop: 0, paddingBottom: 24, marginBottom:40, borderBottom:`1px solid rgba(44,34,24,0.1)` }}>
+          {/* El título del bloque más grande de la portada era el único que no se
+              podía editar. No estaba envuelto en `EditableZone` como el resto y no
+              había forma de tocarlo desde el editor.
+              Se puede editar SÓLO cuando dice el texto de fábrica. Cuando el
+              visitante filtra, el título pasa a ser el nombre del filtro —"Mujer",
+              "Camperas"— y eso es un dato, no una frase de la tienda: dejarlo
+              editable ahí sería ofrecerle a la dueña cambiar un texto que
+              desaparece apenas alguien toca un botón. */}
           <h2 style={{ fontFamily:"Georgia, serif", fontSize:"clamp(22px,2.5vw,32px)", fontWeight:400, fontStyle:"italic", margin:0, color:coleccionText }}>
-            {activeGender==="mujer" ? "Mujer" : activeGender==="hombre" ? "Hombre" : activeCategory==="Todos" ? "Toda la colección" : activeCategory}
+            {activeGender==="mujer" ? "Mujer"
+             : activeGender==="hombre" ? "Hombre"
+             : activeCategory!=="Todos" ? activeCategory
+             : <EditableZone field="coleccionTitle" label="Título colección">Toda la colección</EditableZone>}
           </h2>
-          <p style={{ fontSize:12, color:coleccionMid, margin:"6px 0 0" }}>{allFiltered.length} piezas</p>
+          {/* El número decía `allFiltered.length` pero el carrusel muestra
+              `slice(0, CAROUSEL_LIMIT)` = 8. Una tienda con 50 productos anunciaba
+              "50 piezas" al lado del título y el carrusel se plantaba en la octava,
+              sin ninguna señal de que ahí se acababa lo que este bloque muestra.
+              El número está pegado al título: se lee como una promesa DEL BLOQUE.
+              Ahora dice las dos cosas cuando no coinciden. */}
+          <p style={{ fontSize:12, color:coleccionMid, margin:"6px 0 0" }}>
+            {allFiltered.length > CAROUSEL_LIMIT
+              ? `${CAROUSEL_LIMIT} de ${allFiltered.length} piezas`
+              : `${allFiltered.length} ${allFiltered.length === 1 ? "pieza" : "piezas"}`}
+          </p>
         </div>
 
+        {/* Filtrar hasta dejarla vacía mostraba "0 piezas" y abajo el hueco del
+            carrusel, en blanco: ni un cartel, ni forma de volver. Se llega apretando
+            "Mujer" u "Hombre" en una tienda que carga género y vende para uno solo —
+            esos dos botones están siempre en el menú, sin chequear si hay algo detrás.
+            El botón de volver es lo importante: sin él hay que adivinar que se sale
+            tocando de nuevo el mismo filtro que te dejó acá. */}
+        {allFiltered.length === 0 ? (
+          <div style={{ textAlign:"center", padding: isMobile ? "48px 24px" : "72px 40px" }}>
+            <p style={{ fontFamily:"Georgia, serif", fontStyle:"italic", fontSize: isMobile ? 18 : 22, color:coleccionText, margin:"0 0 10px" }}>
+              No hay piezas en esta selección
+            </p>
+            <p style={{ fontSize:13, color:coleccionMid, margin:"0 0 24px" }}>
+              Probá con otra categoría, o mirá la colección completa.
+            </p>
+            <button onClick={() => { setActiveGender(null); setActiveCategory("Todos"); setCarouselIdx(0); }}
+              style={{ border:`1px solid ${coleccionText}`, color:coleccionText, background:"transparent", padding:"12px 32px", fontSize:11, letterSpacing:3, textTransform:"uppercase", cursor:"pointer", fontFamily:"Georgia, serif", fontStyle:"italic" }}>
+              Ver toda la colección
+            </button>
+          </div>
+        ) : (<>
         {/* carrusel — overflow visible para que se vean las tarjetas */}
-        <div style={{ position:"relative" }} {...carouselSwipe}>
+        {/* El `maxWidth:1280` no estaba, y el encabezado de esta misma sección SÍ
+            lo tiene: en una pantalla ancha la línea del título terminaba bastante
+            antes que las tarjetas, que se iban de borde a borde. Además las dejaba
+            enormes —tres repartiéndose 1700px son ~550 cada una, contra los ~300 de
+            "Lo más visto"— y el mismo producto se veía de dos tamaños muy distintos
+            según en qué bloque apareciera. Es el ancho que usa todo el resto. */}
+        {/* El espacio de las flechas es un PASILLO de este contenedor, no relleno
+            del carril de adentro. Estando adentro, las tarjetas se asomaban en esa
+            franja —el `overflow:hidden` recorta en el borde del padding, no antes—
+            y las flechas quedaban encima de la prenda. Acá afuera, el carril
+            termina donde termina la última tarjeta y las flechas viven al costado.
+            El pasillo se reserva aunque la flecha de ese lado no esté dibujada (en
+            la primera vista no hay "anterior"): si apareciera y desapareciera, el
+            carrusel entero se correría de lugar al pasar de página. */}
+        <div style={{ position:"relative", maxWidth:1280, margin:"0 auto", boxSizing:"border-box",
+                      padding: isMobile ? 0 : (maxIdx > 0 ? "0 56px" : 0) }} {...carouselSwipe}>
           {/* área deslizante */}
-          <div ref={carouselRef} style={{ overflow:"hidden", padding: isMobile ? "0 16px" : "0 40px" }}>
-            <div style={{ display:"flex", gap:20, transition:"transform 0.45s cubic-bezier(.4,0,.2,1)", transform: isMobile ? `translateX(calc(-${carouselIdx} * (85% + 20px)))` : `translateX(calc(-${carouselIdx} * (100% / ${CARDS_PER_VIEW} + 20px / ${CARDS_PER_VIEW})))` }}>
+          <div ref={carouselRef} style={{ overflow:"hidden", padding: isMobile ? "0 16px" : 0 }}>
+            <div style={{ display:"flex", gap:20, transition:"transform 0.45s cubic-bezier(.4,0,.2,1)", transform: isMobile ? `translateX(calc(-${idxColeccion} * (85% + 20px)))` : `translateX(calc(-${idxColeccion} * (100% / ${CARDS_PER_VIEW} + 20px / ${CARDS_PER_VIEW})))` }}>
               {carouselProducts.map(product=>{
                 const promo = resolveProductPromo(product, promotions);
                 return (
@@ -871,7 +1099,7 @@ export default function BohoTerra() {
                   onClick={()=>openModal(product)}>
                   {(() => {
                     // PROMO de tienda → tag naranja; OFERTA del producto → badge rojo.
-                    if (promo.primaryPromo) return <PromoTag tipo={promo.primaryPromo.type} label={describePromo(promo.primaryPromo).headline} size="md" />;
+                    if (promo.primaryPromo) return <PromoTag tipo={promo.primaryPromo.type} label={describePromo(promo.primaryPromo).headline} size="md" paleta={PALETA_PROMO_TIERRA} />;
                     const hasOffer = !!product.comparePrice && product.comparePrice > product.price;
                     if (!hasOffer) return null;
                     return <OfferBadge badge={product.offerBadge} pct={discountPercent(product.price, product.comparePrice)} size="md" />;
@@ -922,14 +1150,14 @@ export default function BohoTerra() {
           </div>
 
           {/* flechas */}
-          {carouselIdx > 0 && (
+          {idxColeccion > 0 && (
             <button onClick={prevSlide} style={{ position:"absolute", left:0, top:"38%", transform:"translateY(-50%)", background:BG, border:`1px solid rgba(44,34,24,0.18)`, width:44, height:44, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", transition:"all 0.2s", zIndex:10 }}
               onMouseEnter={e=>{ e.currentTarget.style.background=T; (e.currentTarget.querySelector("svg") as SVGElement).style.stroke=BG; }}
               onMouseLeave={e=>{ e.currentTarget.style.background=BG; (e.currentTarget.querySelector("svg") as SVGElement).style.stroke=T; }}>
               <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={T} strokeWidth={1.8} strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
             </button>
           )}
-          {carouselIdx < maxIdx && (
+          {idxColeccion < maxIdx && (
             <button onClick={nextSlide} style={{ position:"absolute", right:0, top:"38%", transform:"translateY(-50%)", background:BG, border:`1px solid rgba(44,34,24,0.18)`, width:44, height:44, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", transition:"all 0.2s", zIndex:10 }}
               onMouseEnter={e=>{ e.currentTarget.style.background=T; (e.currentTarget.querySelector("svg") as SVGElement).style.stroke=BG; }}
               onMouseLeave={e=>{ e.currentTarget.style.background=BG; (e.currentTarget.querySelector("svg") as SVGElement).style.stroke=T; }}>
@@ -943,18 +1171,20 @@ export default function BohoTerra() {
           <div style={{ display:"flex", justifyContent:"center", gap:8, marginTop:32 }}>
             {Array.from({ length: maxIdx + 1 }).map((_, i) => (
               <button key={i} onClick={()=>setCarouselIdx(i)}
-                style={{ width: i===carouselIdx ? 28 : 8, height:8, border:"none", borderRadius:4, background: i===carouselIdx ? A : "rgba(44,34,24,0.2)", cursor:"pointer", padding:0, transition:"all 0.3s" }}/>
+                style={{ width: i===idxColeccion ? 28 : 8, height:8, border:"none", borderRadius:4, background: i===idxColeccion ? A : "rgba(44,34,24,0.2)", cursor:"pointer", padding:0, transition:"all 0.3s" }}/>
             ))}
           </div>
         )}
+        </>)}
 
-        {/* Ver colección completa */}
+        {/* Ver colección completa — queda SIEMPRE, también con la selección vacía:
+            es la salida más útil que puede haber en ese momento. */}
         <div style={{ textAlign:"center", marginTop:48 }}>
           <a href={`/tienda/${storeConfig?.slug}/productos?t=boho-terra${isPreview ? "&from=editor" : ""}`}
             style={{ display:"inline-block", border:`1px solid ${coleccionText}`, color:coleccionText, background:"transparent", padding:"14px 40px", fontSize:11, letterSpacing:3, textTransform:"uppercase", textDecoration:"none", transition:"all 0.2s", fontFamily:"Georgia, serif", fontStyle:"italic" }}
             onMouseEnter={e=>{ e.currentTarget.style.background=coleccionText; e.currentTarget.style.color=coleccionBotonText; }}
             onMouseLeave={e=>{ e.currentTarget.style.background="transparent"; e.currentTarget.style.color=coleccionText; }}>
-            Ver colección completa
+            <EditableZone field="coleccionCta" label="Botón ver colección">Ver colección completa</EditableZone>
           </a>
         </div>
       </section>
@@ -969,9 +1199,13 @@ export default function BohoTerra() {
               <p style={{ fontSize:10, letterSpacing:5, color:A, textTransform:"uppercase", margin:"0 0 8px", fontFamily:"Georgia, serif", fontStyle:"italic" }}><EditableZone field="ofertasKicker" label="Texto sobre Ofertas">Aprovechá</EditableZone></p>
               <h2 style={{ fontFamily:"Georgia, serif", fontSize:"clamp(22px,2.5vw,32px)", fontWeight:400, fontStyle:"italic", margin:0, color:ofertasText }}><EditableZone field="ofertasTitle" label="Título Ofertas">Ofertas</EditableZone></h2>
             </div>
-            <div style={{ position:"relative" }} {...ofertasSwipe}>
-              <div style={{ overflow:"hidden", padding: ofertasMaxIdx > 0 ? (isMobile ? "0 60px" : "0 64px") : (isMobile ? "0 16px" : "0 40px") }}>
-                <div style={{ display:"flex", gap:20, transition:"transform 0.45s cubic-bezier(.4,0,.2,1)", transform: isMobile ? `translateX(calc(-${ofertasIdx} * (85% + 20px)))` : `translateX(calc(-${ofertasIdx} * (100% / ${CARDS_PER_VIEW} + 20px / ${CARDS_PER_VIEW})))` }}>
+            {/* Mismo caso que el carrusel de la colección: el encabezado va a 1280
+                y las tarjetas se iban de borde a borde. */}
+            {/* Mismo pasillo que el carrusel de la colección. */}
+            <div style={{ position:"relative", maxWidth:1280, margin:"0 auto", boxSizing:"border-box",
+                          padding: isMobile ? 0 : (ofertasMaxIdx > 0 ? "0 56px" : 0) }} {...ofertasSwipe}>
+              <div style={{ overflow:"hidden", padding: isMobile ? (ofertasMaxIdx > 0 ? "0 60px" : "0 16px") : 0 }}>
+                <div style={{ display:"flex", gap:20, transition:"transform 0.45s cubic-bezier(.4,0,.2,1)", transform: isMobile ? `translateX(calc(-${idxOfertas} * (85% + 20px)))` : `translateX(calc(-${idxOfertas} * (100% / ${CARDS_PER_VIEW} + 20px / ${CARDS_PER_VIEW})))` }}>
                   {ofertasProducts.map(p => {
                     // El "-30%" tiene que decir el MISMO descuento que el precio de
                     // abajo. Si hay promo de tienda vigente manda ella; si no, sale
@@ -997,12 +1231,12 @@ export default function BohoTerra() {
                   })}
                 </div>
               </div>
-              {ofertasIdx > 0 && (
+              {idxOfertas > 0 && (
                 <button onClick={prevOferta} style={{ position:"absolute", left:0, top:"38%", transform:"translateY(-50%)", background:BG, border:`1px solid rgba(44,34,24,0.18)`, width:44, height:44, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", zIndex:10 }}>
                   <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={T} strokeWidth={1.8} strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
                 </button>
               )}
-              {ofertasIdx < ofertasMaxIdx && (
+              {idxOfertas < ofertasMaxIdx && (
                 <button onClick={nextOferta} style={{ position:"absolute", right:0, top:"38%", transform:"translateY(-50%)", background:BG, border:`1px solid rgba(44,34,24,0.18)`, width:44, height:44, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", zIndex:10 }}>
                   <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={T} strokeWidth={1.8} strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg>
                 </button>
@@ -1072,31 +1306,45 @@ export default function BohoTerra() {
         })()}
       </SectionBlock>
 
-      <SectionBlock id="bt-prueba-social" label="Prueba social" isPreview={isPreview} defaultOrder={BT_SECTION_IDS}>
+      <SectionBlock id="bt-prueba-social" label="Prueba social" isPreview={isPreview} defaultOrder={BT_SECTION_IDS}
+        avisoAlOcultar="Si lo ocultás, tus clientes dejan de poder opinar sobre la TIENDA: el botón para dejar una opinión vive adentro de este bloque. Las reseñas de cada producto siguen funcionando desde su ficha. Las que ya tenés no se borran, pero dejan de verse.">
         {(() => {
-          const PREVIEW_REVIEWS: HomeReview[] = [
-            { id:"p1", rating:5, comment:"Calidad increíble y llegó rapidísimo. Ya compré tres veces y siempre perfecta.", reviewer:"María L.", verified:true, verifiedBy:"auto", createdAt:"", product:{ name:"Vestido lino", image:null } },
-            { id:"p2", rating:5, comment:"El diseño es exactamente como en las fotos. Me enamoré cuando lo vi puesto.", reviewer:"Sofía M.", verified:false, verifiedBy:null, createdAt:"", product:{ name:"Blazer oversize", image:null } },
-            { id:"p3", rating:5, comment:"Excelente atención y envío super rápido. La recomiendo sin dudarlo.", reviewer:"Valentina R.", verified:true, verifiedBy:"owner", createdAt:"", product:{ name:"Bolso tejido", image:null } },
-          ];
-          const allReviews = isPreview ? PREVIEW_REVIEWS : homeReviews;
-          if (allReviews.length === 0) return null;
-          const idx = Math.min(reviewCarouselPage, allReviews.length - 1);
+          const allReviews = resenas.lista;
+          // El bloque se dibuja SIEMPRE, aun sin una sola reseña: adentro está el
+          // botón para dejar la primera. Escondiéndolo con cero, una tienda nueva
+          // no tenía nunca cómo arrancar — el único lugar desde donde se deja una
+          // aparecía recién cuando ya había una.
+          const idx = allReviews.length ? Math.min(reviewCarouselPage, allReviews.length - 1) : 0;
           const r = allReviews[idx];
-          async function deleteHomeReview(reviewId: string) {
-            if (!storeConfig?.slug) return;
-            await fetch(`/api/public/${storeConfig.slug}/reviews`, {
-              method:"DELETE", headers:{"Content-Type":"application/json"},
-              body: JSON.stringify({ reviewId }),
-            });
-            setHomeReviews(prev => prev.filter(x => x.id !== reviewId));
-            setReviewCarouselPage(0);
-          }
+          const cambiarTab = (t: "tienda" | "producto") => { resenas.setTab(t); setReviewCarouselPage(0); };
           return (
             <section data-reveal style={{ position:"relative", background: sc["bgPruebaSocial"] ?? BG, padding: isMobile ? "64px 24px" : "96px 40px", borderTop:`1px solid rgba(44,34,24,0.08)`, textAlign:"center" }}>
               <EditableSectionBg field="bgPruebaSocial" label="Fondo prueba social" />
               <div style={{ maxWidth:720, margin:"0 auto" }}>
+                {/* Las dos pestañas. Las reseñas de TIENDA hablan de la atención y
+                    del envío, y no colgaban de ningún producto: antes se pedían al
+                    servidor y se descartaban, así que no había dónde verlas. */}
+                <div style={{ display:"flex", justifyContent:"center", gap:28, marginBottom:32 }}>
+                  {([["tienda","La tienda"],["producto","Los productos"]] as const).map(([id, texto]) => (
+                    <button key={id} onClick={() => cambiarTab(id)}
+                      style={{ background:"none", border:"none", padding:"0 0 6px", cursor:"pointer", fontSize:10, letterSpacing:3, textTransform:"uppercase",
+                               color: resenas.tab === id ? T : MID,
+                               borderBottom: resenas.tab === id ? `1px solid ${ATextoBlanco}` : "1px solid transparent" }}>
+                      {texto}
+                    </button>
+                  ))}
+                </div>
                 <p style={{ fontFamily:"Georgia, serif", fontSize:isMobile ? 52 : 72, color:A, lineHeight:0.6, margin:"0 0 16px", opacity:0.35 }}>&ldquo;</p>
+                {!r ? (
+                  /* Sin ninguna reseña el título no puede afirmar que los clientes
+                     dicen algo: invita a ser el primero, que es de lo único que se
+                     puede hablar en ese caso. */
+                  <p style={{ fontFamily:"Georgia, serif", fontStyle:"italic", fontSize: isMobile ? 17 : 20, color:MID, lineHeight:1.85, margin:"0 0 28px" }}>
+                    {resenas.tab === "tienda"
+                      ? "Todavía nadie contó cómo fue su compra acá. Puede ser tu historia la primera."
+                      : "Todavía no hay reseñas de las piezas. Cuando alguien cuente cómo le quedó, va a aparecer acá."}
+                  </p>
+                ) : (<>
                 <div style={{ display:"flex", justifyContent:"center", gap:4, marginBottom:20 }}>
                   {[1,2,3,4,5].map(s => <span key={s} style={{ color: s <= r.rating ? A : "rgba(44,34,24,0.12)", fontSize:14 }}>★</span>)}
                 </div>
@@ -1133,12 +1381,28 @@ export default function BohoTerra() {
                   </div>
                 )}
                 {isOwner && !isPreview && (
-                  <button onClick={() => deleteHomeReview(r.id)}
+                  /* `resenas.borrar` pregunta antes y saca la tarjeta RECIÉN con la
+                     confirmación del servidor. El borrado de acá no miraba si la
+                     respuesta había salido bien: con el fetch fallando, el dueño la
+                     veía desaparecer, se quedaba tranquilo, y al día siguiente
+                     seguía publicada. */
+                  <button onClick={() => { resenas.borrar(r.id); setReviewCarouselPage(0); }}
                     style={{ marginTop:16, background:"none", border:"none", color:"rgba(44,34,24,0.25)", cursor:"pointer", fontSize:11, letterSpacing:1 }}
                     onMouseEnter={e => (e.currentTarget.style.color="#dc2626")}
                     onMouseLeave={e => (e.currentTarget.style.color="rgba(44,34,24,0.25)")}>
                     Eliminar esta reseña
                   </button>
+                )}
+                </>)}
+                {/* Dejar la propia. Vive en la pestaña de tienda porque es la única
+                    reseña que se puede escribir sin haber abierto un producto. */}
+                {resenas.tab === "tienda" && (
+                  <div style={{ marginTop: r ? 36 : 8 }}>
+                    <button onClick={resenas.abrirModal}
+                      style={{ background:"none", border:`1px solid ${ATextoBlanco}`, color:ATextoBlanco, padding:"11px 26px", fontSize:10, fontWeight:700, letterSpacing:3, textTransform:"uppercase", cursor:"pointer" }}>
+                      Dejá tu opinión
+                    </button>
+                  </div>
                 )}
               </div>
             </section>
@@ -1188,11 +1452,26 @@ export default function BohoTerra() {
         <BgDragHandle imgKey="contactBackground" />
         <EditableImageButton field="contactBackground" label="Imagen fondo contacto" />
         <div style={{ position:"absolute", inset:0, background: contactBgOv?.overlayType === "none" ? "transparent" : contactBgOv?.overlayType === "dark" ? `rgba(0,0,0,${contactBgOv?.overlayOpacity ?? 0.88})` : `rgba(250,247,242,${contactBgOv?.overlayOpacity ?? 0.88})` }}/>
+        {/* La tinta la manda la CAPA, no el color de la sección. Antes este bloque
+            se pintaba con el marrón de siempre pase lo que pase: al bajar la capa
+            oscura al 10% sobre una foto, el título quedaba marrón sobre marrón y
+            se perdía. Con la capa en "ninguna" no hay ninguna señal, así que se
+            queda con los colores del template — adivinar sería peor. */}
+        {(() => {
+          const tinta = tintaSobreFoto(contactBgOv, !!(contactBgOv?.url ?? true));
+          const cT   = tinta === "clara" ? "#faf7f2" : tinta === "oscura" ? T : T;
+          const cMID = tinta === "clara" ? "rgba(250,247,242,0.75)" : MID;
+          const cA   = tinta === "clara" ? "#f0c9a8" : A;
+          const linea = tinta === "clara" ? "rgba(250,247,242,0.22)" : "rgba(44,34,24,0.08)";
+          // El halo es lo que salva la capa floja: con la foto a la vista, ningún
+          // color solo alcanza contra un farol encendido al lado de una sombra.
+          const sombra = tinta ? sombraSobreFoto(tinta) : undefined;
+          return (
         <div style={{ position:"relative", maxWidth:1280, margin:"0 auto", padding: isMobile ? "48px 20px" : "80px 40px", display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: isMobile ? 0 : 80, alignItems:"center", minHeight: isMobile ? "auto" : 500 }}>
           {/* izq — texto e info */}
-          <div>
-            <p style={{ fontSize:10, letterSpacing:5, color:A, textTransform:"uppercase", marginBottom:20 }}><EditableZone field="contactKicker" label="Etiqueta contacto">Escribinos</EditableZone></p>
-            <h2 style={{ fontFamily:"Georgia, serif", fontSize:"clamp(30px,4vw,56px)", fontStyle:"italic", fontWeight:400, margin:"0 0 28px", color:T, lineHeight:1.1 }}><EditableZone field="contactHeading" label="Título contacto" block>Estamos para ayudarte.</EditableZone></h2>
+          <div style={{ textShadow: sombra }}>
+            <p style={{ fontSize:10, letterSpacing:5, color:cA, textTransform:"uppercase", marginBottom:20 }}><EditableZone field="contactKicker" label="Etiqueta contacto">Escribinos</EditableZone></p>
+            <h2 style={{ fontFamily:"Georgia, serif", fontSize:"clamp(30px,4vw,56px)", fontStyle:"italic", fontWeight:400, margin:"0 0 28px", color:cT, lineHeight:1.1 }}><EditableZone field="contactHeading" label="Título contacto" block>Estamos para ayudarte.</EditableZone></h2>
             <div style={{ display:"flex", flexDirection:"column", gap:18 }}>
               {[
                 { label:"Email",     val:"hola@terra.com.ar",       field:"contactEmail" },
@@ -1200,9 +1479,9 @@ export default function BohoTerra() {
                 { label:"Instagram", val:"@terra.indumentaria",     field:"contactInstagram" },
                 { label:"Horario",   val:"Lun–Vie 9 a 18 hs",      field:"contactHorario" },
               ].map(item=>(
-                <div key={item.label} style={{ display:"flex", gap:20, alignItems:"baseline", borderBottom:`1px solid rgba(44,34,24,0.08)`, paddingBottom:14 }}>
-                  <span style={{ fontSize:10, letterSpacing:3, textTransform:"uppercase", color:A, minWidth:80 }}>{item.label}</span>
-                  <span style={{ fontSize:14, color:MID }}><EditableZone field={item.field} label={item.label}>{item.val}</EditableZone></span>
+                <div key={item.label} style={{ display:"flex", gap:20, alignItems:"baseline", borderBottom:`1px solid ${linea}`, paddingBottom:14 }}>
+                  <span style={{ fontSize:10, letterSpacing:3, textTransform:"uppercase", color:cA, minWidth:80 }}>{item.label}</span>
+                  <span style={{ fontSize:14, color:cMID }}><EditableZone field={item.field} label={item.label}>{item.val}</EditableZone></span>
                 </div>
               ))}
             </div>
@@ -1224,7 +1503,9 @@ export default function BohoTerra() {
                 intro: <p style={{ fontFamily:"Georgia, serif", fontStyle:"italic", fontSize:18, color:T, margin:"0 0 12px" }}><EditableZone field="contactFormHeading" label="Subtítulo formulario">Mandanos un mensaje</EditableZone></p>,
                 placeholders: { nombre: "Tu nombre", email: "tu@email.com", mensaje: "Tu mensaje" },
                 buttonLabel: "Enviar Mensaje",
-                buttonStyle: { width:"100%", background:A, color:"#fff", padding:"14px", fontSize:11, letterSpacing:4, textTransform:"uppercase" },
+                // El botón que manda el mensaje iba con el acento crudo y la tinta
+                // clavada en blanco: con un acento claro, blanco sobre blanco.
+                buttonStyle: { width:"100%", background:AMarcaBlanco, color:AMarcaTexto, padding:"14px", fontSize:11, letterSpacing:4, textTransform:"uppercase" },
               }}
               renderSent={reset => (
                 <div style={{ textAlign:"center", padding:"40px 0" }}>
@@ -1239,6 +1520,8 @@ export default function BohoTerra() {
             />
           </div>
         </div>
+          );
+        })()}
       </section>
       </SectionBlock>
       </div>
@@ -1258,9 +1541,25 @@ export default function BohoTerra() {
               <p style={{ fontFamily:"Georgia, serif", fontStyle:"italic", fontSize:20, color:newsletterText, margin:"0 0 4px" }}><EditableZone field="newsletterText" label="Título newsletter">Suscribite al newsletter</EditableZone></p>
               <p style={{ fontSize:12, color:newsletterMid, margin:0, letterSpacing:1 }}><EditableZone field="newsletterSubtext" label="Subtítulo newsletter">Novedades, lanzamientos y descuentos exclusivos</EditableZone></p>
             </div>
-            <div style={{ display:"flex", flexShrink:0 }}>
-              <input placeholder="tu@email.com" style={{ width: isMobile ? "100%" : 260, background:newsletterInputBg, border:`1px solid ${newsletterInputBorder}`, borderRight:"none", color:newsletterText, padding:"12px 16px", fontSize:13, outline:"none" }}/>
-              <button style={{ background:T, color:BG, border:"none", padding:"12px 24px", fontSize:11, letterSpacing:3, textTransform:"uppercase", cursor:"pointer", fontWeight:600 }}>Suscribirse</button>
+            <div style={{ flexShrink:0, width: isMobile ? "100%" : "auto" }}>
+              <NewsletterForm
+                slug={storeConfig?.slug} isPreview={isPreview}
+                theme={{
+                  // Apilados en celular: pegados, "SUSCRIBIRSE" con espaciado se
+                  // lleva la mitad del ancho y al input le quedan ~160px.
+                  form:  { display:"flex", flexDirection: isMobile ? "column" : "row", gap: isMobile ? 10 : 0 },
+                  // Los cuatro lados sueltos y ninguno con el atajo `border`:
+                  // mezclarlos hace que React tenga que sacar `borderRight` al
+                  // cambiar de ancho, y avisa por consola que eso da bugs de
+                  // estilo. Es el mismo choque que ya apareció en el modal.
+                  input: { width: isMobile ? "100%" : 260, minWidth:0, background:newsletterInputBg, borderTop:`1px solid ${newsletterInputBorder}`, borderBottom:`1px solid ${newsletterInputBorder}`, borderLeft:`1px solid ${newsletterInputBorder}`, borderRight: isMobile ? `1px solid ${newsletterInputBorder}` : "none", color:newsletterText, padding:"12px 16px", fontSize:13, outline:"none" },
+                  boton: { flexShrink:0, width: isMobile ? "100%" : undefined, background:T, color:BG, border:"none", padding:"12px 24px", fontSize:11, letterSpacing:3, textTransform:"uppercase", cursor:"pointer", fontWeight:600 },
+                  colorMensaje: newsletterText,
+                  // El rojo de fábrica puede desaparecer sobre un fondo de
+                  // acento oscuro. Se usa la tinta ya calculada para esta franja.
+                  colorError: newsletterText,
+                }}
+              />
             </div>
           </div>
           </div>
@@ -1349,15 +1648,24 @@ export default function BohoTerra() {
           <div style={{ position:"absolute", inset:0, background:"rgba(44,34,24,0.65)", backdropFilter:"blur(8px)" }}/>
           <div style={{ position:"relative", background:"#fff", maxWidth:920, width:"calc(100% - 32px)", maxHeight: isPreview ? "100%" : "92vh", overflow:"hidden", display:"flex", flexDirection:"column" }} onClick={e=>e.stopPropagation()}>
             <button onClick={()=>{ setModalProduct(null); setLightboxSrc(null); }} aria-label="Cerrar" style={{ position:"absolute", top:8, right:8, zIndex:10, background:"rgba(44,34,24,0.65)", border:"none", color:"#fff", width:36, height:36, cursor:"pointer", fontSize:20, display:"flex", alignItems:"center", justifyContent:"center" }}>×</button>
-            <div style={{ overflow:"auto", flex:1, minHeight:0, display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr" }}>
-            <div>
+            {/* El ref es el que `openModal` manda arriba al abrir otra ficha: los
+                "productos similares" están al final, así que el que toca uno está
+                siempre abajo de todo. */}
+            <div ref={modalScrollRef} style={{ overflow:"auto", flex:1, minHeight:0, display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr" }}>
+            {/* El aire de la columna de la foto lo pone la COLUMNA, no cada bloque:
+                así la foto, las miniaturas y los videos arrancan todos en la misma
+                vertical. Antes la foto iba pegada al borde del modal y la tira de
+                miniaturas se dibujaba sobre una banda arena a todo lo ancho — el
+                modal del catálogo la tiene metida 28px y sin banda, y era de las
+                diferencias que más se notaban al poner las dos fichas al lado. */}
+            <div ref={colFotoRef} style={{ alignSelf:"start", boxSizing:"border-box", padding: isMobile ? 0 : "28px 0 28px 28px" }}>
               <div style={{ position:"relative", width:"100%", aspectRatio:"3/4" }} {...imgSwipe}>
                 {modalProduct.images[modalImg] && (
                   <FadeImage src={modalProduct.images[modalImg]} alt="" fill sizes="(max-width: 768px) 100vw, 460px" style={{ objectFit:"cover", cursor:"zoom-in" }}
                     onClick={() => setLightboxSrc(modalProduct.images[modalImg])} />
                 )}
                 {(() => {
-                  if (modalPromo?.primaryPromo) return <PromoTag tipo={modalPromo.primaryPromo.type} label={describePromo(modalPromo.primaryPromo).headline} />;
+                  if (modalPromo?.primaryPromo) return <PromoTag tipo={modalPromo.primaryPromo.type} label={describePromo(modalPromo.primaryPromo).headline} paleta={PALETA_PROMO_TIERRA} />;
                   const hasOffer = !variantPrice && !!modalProduct.comparePrice && modalProduct.comparePrice > modalProduct.price;
                   if (!hasOffer) return null;
                   return <OfferBadge badge={modalProduct.offerBadge} pct={discountPercent(modalProduct.price, modalProduct.comparePrice)} size="md" />;
@@ -1371,47 +1679,53 @@ export default function BohoTerra() {
                     style={{ position:"absolute", right:8, top:"50%", transform:"translateY(-50%)", background:"rgba(255,255,255,0.85)", border:"none", width:32, height:32, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", fontSize:16 }}>›</button>
                 </>)}
               </div>
-              <div style={{ display:"flex", gap:8, padding:"10px 14px", background:S, overflowX:"auto" }}>
+              <div style={{ display:"flex", gap:8, padding: isMobile ? "10px 14px 0" : "10px 0 0", overflowX:"auto" }}>
                 {modalProduct.images.map((img,i)=>(
-                  <button key={i} onClick={()=>setModalImg(i)} style={{ position:"relative", width:52, height:52, flexShrink:0, padding:2, border:i===modalImg?`2px solid ${A}`:"2px solid transparent", background:"none", cursor:"pointer" }}>
+                  /* Contra blanco y no contra la banda arena, que ya no está. */
+                  <button key={i} onClick={()=>setModalImg(i)} style={{ position:"relative", width:52, height:52, flexShrink:0, padding:2, border:i===modalImg?`2px solid ${AMarcaBlanco}`:"2px solid transparent", background:"none", cursor:"pointer" }}>
                     <FadeImage src={img} alt="" fill sizes="52px" style={{ objectFit:"cover" }}/>
                   </button>
                 ))}
               </div>
               {modalProduct.reelUrls.length > 0 && (
-                <div style={{ padding:"14px 14px 18px", background:"#fff", borderTop:`1px solid rgba(44,34,24,0.08)` }}>
-                  <p style={{ fontSize:9, letterSpacing:3, textTransform:"uppercase", color:MID, margin:"0 0 10px" }}>Videos</p>
+                <div style={{ padding: isMobile ? "18px 16px 0" : "22px 0 0" }}>
+                  <p style={tituloModal}>Videos del producto</p>
+                  {/* `ancho` no se pasaba, así que caía en los 104px de fábrica —
+                      justo el caso que el propio componente documenta como "queda
+                      de estampilla al lado de una foto de 470". El modal del
+                      catálogo ya pasaba 160/120; van los mismos números. */}
                   <StoreProductReels
                     reelUrls={modalProduct.reelUrls}
-                    theme={{ accent: A, text: T, border: "rgba(44,34,24,0.14)", radius: 6 }}
+                    ancho={isMobile ? 120 : 160}
+                    theme={{ accent: A, text: T, border: "rgba(44,34,24,0.14)", radius: 8 }}
                   />
                 </div>
               )}
             </div>
-            <div style={{ padding: isMobile ? "20px 20px" : "40px 36px", display:"flex", flexDirection:"column", gap:18 }}>
+            {/* `minWidth:0` no estaba: una columna de grid mide por su contenido,
+                así que un nombre largo sin espacios o una tabla de atributos ancha
+                empujaban esta columna y le robaban ancho a la foto en vez de
+                partirse. El modal del catálogo ya lo tenía. */}
+            <div style={{ position:"relative", display:"flex", minWidth:0 }}>
+            {/* Degradados: reponen la señal que se perdió al esconder la barra.
+                Aparecen sólo si de verdad queda contenido de ese lado. */}
+            {sombraArriba && (
+              <div style={{ position:"absolute", left:0, right:0, top:0, height:28, zIndex:2, pointerEvents:"none",
+                            background:"linear-gradient(to top, transparent, #ffffff)" }} />
+            )}
+            {sombraAbajo && (
+              <div style={{ position:"absolute", left:0, right:0, bottom:0, height:44, zIndex:2, pointerEvents:"none",
+                            background:"linear-gradient(to bottom, transparent, #ffffff)" }} />
+            )}
+            <div ref={panelRef} className="bt-sin-barra" style={{ flex:1, padding: isMobile ? "20px 20px" : "40px 36px", display:"flex", flexDirection:"column", gap:18, minHeight:0, minWidth:0, boxSizing:"border-box",
+                          ...(altoPanel ? { maxHeight: altoPanel, overflowY:"auto" as const } : {}) }}>
               <div>
-                <p style={{ fontSize:10, letterSpacing:4, color:A, textTransform:"uppercase", marginBottom:6 }}>{modalProduct.category}</p>
+                <p style={{ fontSize:10, letterSpacing:4, color:ATextoBlanco, textTransform:"uppercase", marginBottom:6 }}>{modalProduct.category}</p>
                 <h2 style={{ fontFamily:"Georgia, serif", fontSize:24, fontStyle:"italic", margin:0, lineHeight:1.2, color:T }}>{modalProduct.name}</h2>
-              </div>
-              <div style={{ display:"flex", gap:6, marginTop:8 }}>
-                <button onClick={() => shareProduct(modalProduct)}
-                  style={{ display:"flex", alignItems:"center", gap:5, background:"none", border:`1px solid rgba(44,34,24,0.15)`, color:"rgba(44,34,24,0.4)", padding:"5px 12px", fontSize:10, letterSpacing:1, cursor:"pointer", transition:"color 0.2s" }}
-                  onMouseEnter={e=>(e.currentTarget.style.color=T)} onMouseLeave={e=>(e.currentTarget.style.color="rgba(44,34,24,0.4)")}>
-                  <svg width={11} height={11} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
-                  Copiar link
-                </button>
-                {hasWA && (
-                <button onClick={() => whatsappShare(modalProduct)}
-                  style={{ display:"flex", alignItems:"center", gap:5, background:"none", border:"1px solid rgba(37,211,102,0.3)", color:"rgba(37,211,102,0.7)", padding:"5px 12px", fontSize:10, letterSpacing:1, cursor:"pointer", transition:"color 0.2s" }}
-                  onMouseEnter={e=>(e.currentTarget.style.color="#25D366")} onMouseLeave={e=>(e.currentTarget.style.color="rgba(37,211,102,0.7)")}>
-                  <svg width={11} height={11} viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413z"/><path d="M11.897 0C5.395 0 .13 5.266.13 11.767c0 2.078.545 4.03 1.495 5.727L.057 24l6.7-1.757A11.71 11.71 0 0 0 11.897 23.534c6.503 0 11.768-5.265 11.768-11.767C23.67 5.266 18.4 0 11.897 0zm0 21.536h-.004a9.726 9.726 0 0 1-4.96-1.358l-.356-.211-3.678.965.982-3.581-.232-.368A9.73 9.73 0 0 1 2.158 11.767C2.158 6.355 6.551 2 11.897 2c2.581 0 5.007 1.007 6.831 2.831a9.604 9.604 0 0 1 2.828 6.83c0 5.347-4.393 9.875-9.659 9.875z"/></svg>
-                  WhatsApp
-                </button>
-                )}
               </div>
               <div style={{ display:"flex", gap:12, alignItems:"baseline", flexWrap:"wrap" }}>
                 {ocultarPrecios ? (
-                  <span style={{ fontSize:22, fontWeight:700, color:A }}>Consultá precio</span>
+                  <span style={{ fontSize:22, fontWeight:700, color:ATextoBlanco }}>Consultá precio</span>
                 ) : modalPromo?.hasPriceDrop ? (
                   <>
                     <span style={{ fontSize:22, fontWeight:700, color:"#dc2626" }}>{fmt(modalPromo.effectivePrice)}</span>
@@ -1420,63 +1734,50 @@ export default function BohoTerra() {
                   </>
                 ) : (
                   <>
-                    <span style={{ fontSize:22, fontWeight:700, color:A }}>{fmt(displayPrice)}</span>
+                    <span style={{ fontSize:22, fontWeight:700, color:ATextoBlanco }}>{fmt(displayPrice)}</span>
                     {!variantPrice && modalProduct.comparePrice && <span style={{ fontSize:14, color:MID, textDecoration:"line-through" }}>{fmt(modalProduct.comparePrice)}</span>}
                   </>
                 )}
               </div>
-              {modalPromo?.primaryPromo && <PromoBlock promo={modalPromo.primaryPromo} freeShippingExtra={modalPromo.freeShipping} />}
+              {modalPromo?.primaryPromo && <PromoBlock promo={modalPromo.primaryPromo} freeShippingExtra={modalPromo.freeShipping} paleta={PALETA_PROMO_TIERRA} />}
               {!ocultarPrecios && modalProduct.offerNote && (
                 <div style={{ fontSize:12, color:"#059669", background:"#f0fdf4", border:"1px solid #bbf7d0", borderRadius:4, padding:"5px 10px", display:"flex", alignItems:"center", gap:6 }}>
                   <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                   <span>{modalProduct.offerNote}</span>
                 </div>
               )}
-              <div style={{ borderTop:`1px solid rgba(44,34,24,0.07)`, paddingTop:14 }}>
-                <p style={{ fontSize:9, letterSpacing:2, textTransform:"uppercase", color:MID, margin:"0 0 8px", fontWeight:600, opacity:0.6 }}>Descripción</p>
-                <div className="product-rte" dangerouslySetInnerHTML={{ __html: modalProduct.description || "" }} style={{ fontSize:13, color:MID, lineHeight:1.8 }} />
-              </div>
-              {(() => {
-                const attrs = modalProduct.attributes ?? [];
-                const condicionAttr = attrs.find(a => a.key === "Condición");
-                const serviciosAttr = attrs.find(a => a.key === "Servicios");
-                const otherAttrs = attrs.filter(a => a.key !== "Condición" && a.key !== "Servicios");
-                let servicios: string[] = [];
-                if (serviciosAttr) { try { servicios = Object.entries(JSON.parse(serviciosAttr.value)).filter(([, v]) => v).map(([k]) => k); } catch {} }
-                if (!condicionAttr && otherAttrs.length === 0 && servicios.length === 0) return null;
-                return (
-                  <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
-                    {condicionAttr && (
-                      <span style={{ alignSelf:"flex-start", fontSize:10, letterSpacing:2, textTransform:"uppercase", fontWeight:600, color:A, border:`1px solid ${A}`, padding:"4px 10px", fontFamily:"Georgia, serif", fontStyle:"italic" }}>{condicionAttr.value}</span>
-                    )}
-                    {otherAttrs.length > 0 && (
-                      <div style={{ borderRadius:4, overflow:"hidden", border:`1px solid rgba(44,34,24,0.1)` }}>
-                        {otherAttrs.map((a, i) => (
-                          <div key={a.key} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"8px 12px", background: i%2===0 ? "rgba(44,34,24,0.025)" : "transparent", borderBottom: i < otherAttrs.length-1 ? `1px solid rgba(44,34,24,0.07)` : "none" }}>
-                            <span style={{ fontSize:10, fontWeight:700, color:T, opacity:0.5, textTransform:"uppercase", letterSpacing:0.5 }}>{a.key}</span>
-                            <span style={{ fontSize:12, color:T, fontWeight:500 }}>{a.value}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    {servicios.length > 0 && (
-                      <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
-                        {servicios.map(k => (
-                          <span key={k} style={{ fontSize:10, letterSpacing:1, padding:"4px 10px", border:`1px solid rgba(44,34,24,0.18)`, color:MID }}>✓ {k}</span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                );
-              })()}
+              {/* Talle primero y color después, el mismo orden que el modal del
+                  catálogo. Estaban al revés y era la diferencia más visible entre
+                  las dos fichas del mismo producto.
+                  Los títulos van a secas: repetir el valor elegido ("TALLE: 32")
+                  es decir dos veces lo mismo, y el chip marcado ya lo dice.
+                  El `length > 0` no estaba: sin talles cargados, el panel dibujaba
+                  el rótulo "TALLE" con la fila de chips vacía debajo. */}
+              {modalProduct.sizes.length > 0 && (
               <div>
-                <p style={{ fontSize:10, letterSpacing:3, textTransform:"uppercase", marginBottom:8, color:MID }}>Color: <strong style={{ color:T }}>{selectedColor}</strong></p>
+                <p style={{ fontSize:10, letterSpacing:3, textTransform:"uppercase", marginBottom:8, color:MID }}>Talle</p>
+                <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
+                  {modalProduct.sizes.map(s=>{
+                    const outOfStock = outOfStockSizes.has(s);
+                    return (
+                      <button key={s} onClick={()=>setSelectedSize(s)}
+                        style={{ width:46, height:46, fontSize:12, border:selectedSize===s?`1.5px solid ${AMarcaBlanco}`:"1px solid rgba(44,34,24,0.18)", background:selectedSize===s?`${AMarcaBlanco}14`:"transparent", color:T, cursor:"pointer", opacity: outOfStock ? 0.35 : 1, textDecoration: outOfStock ? "line-through" : "none" }}>
+                        {s}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              )}
+              {modalProduct.colors.length > 0 && (
+              <div>
+                <p style={{ fontSize:10, letterSpacing:3, textTransform:"uppercase", marginBottom:8, color:MID }}>Color</p>
                 <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
                   {modalProduct.colors.map(c=>{
                     const swatch = colorToSwatch(c);
                     return (
                       <button key={c} onClick={()=>setSelectedColor(c)}
-                        style={{ display:"flex", alignItems:"center", gap:7, padding:"6px 14px", fontSize:11, border:selectedColor===c?`1.5px solid ${A}`:"1px solid rgba(44,34,24,0.18)", background:selectedColor===c?"rgba(181,101,42,0.08)":"transparent", color:T, cursor:"pointer" }}>
+                        style={{ display:"flex", alignItems:"center", gap:7, padding:"6px 14px", fontSize:11, border:selectedColor===c?`1.5px solid ${AMarcaBlanco}`:"1px solid rgba(44,34,24,0.18)", background:selectedColor===c?`${AMarcaBlanco}14`:"transparent", color:T, cursor:"pointer" }}>
                         {swatch && <span style={{ width:14, height:14, borderRadius:"50%", background:swatch, border:"1px solid rgba(44,34,24,0.2)", flexShrink:0 }} />}
                         {c}
                       </button>
@@ -1484,20 +1785,7 @@ export default function BohoTerra() {
                   })}
                 </div>
               </div>
-              <div>
-                <p style={{ fontSize:10, letterSpacing:3, textTransform:"uppercase", marginBottom:8, color:MID }}>Talle: <strong style={{ color:T }}>{selectedSize}</strong></p>
-                <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
-                  {modalProduct.sizes.map(s=>{
-                    const outOfStock = outOfStockSizes.has(s);
-                    return (
-                      <button key={s} onClick={()=>setSelectedSize(s)}
-                        style={{ width:46, height:46, fontSize:12, border:selectedSize===s?`1.5px solid ${A}`:"1px solid rgba(44,34,24,0.18)", background:selectedSize===s?"rgba(181,101,42,0.08)":"transparent", color:T, cursor:"pointer", opacity: outOfStock ? 0.35 : 1, textDecoration: outOfStock ? "line-through" : "none" }}>
-                        {s}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
+              )}
               <div style={{ display:"flex", alignItems:"center", gap:14 }}>
                 <span style={{ fontSize:10, letterSpacing:3, textTransform:"uppercase", color:MID }}>Cantidad</span>
                 <div style={{ display:"flex", alignItems:"center", border:`1px solid rgba(44,34,24,0.18)` }}>
@@ -1529,21 +1817,143 @@ export default function BohoTerra() {
               {!isMobile && (
                 <div style={{ borderTop:`1px solid rgba(44,34,24,0.1)`, marginTop:4, paddingTop:16 }}>
                   {isInquiryMode ? (
-                <button onClick={() => openInquiry(modalProduct)} style={{ background:A, color:"#fff", border:"none", padding:"15px", fontSize:11, letterSpacing:4, textTransform:"uppercase", cursor:"pointer", width:"100%" }}>
+                <button onClick={() => openInquiry(modalProduct)} style={{ background:AMarcaBlanco, color:AMarcaTexto, border:"none", padding:"15px", fontSize:11, letterSpacing:4, textTransform:"uppercase", cursor:"pointer", width:"100%" }}>
                   Consultar disponibilidad
                 </button>
               ) : (
                 <button onClick={addToCart} disabled={selectedVariantStock === 0}
-                  style={{ background: selectedVariantStock === 0 ? "rgba(181,101,42,0.3)" : A, color:"#fff", border:"none", padding:"15px", fontSize:11, letterSpacing:4, textTransform:"uppercase", cursor: selectedVariantStock === 0 ? "not-allowed" : "pointer", width:"100%" }}>
+                  style={{ background: selectedVariantStock === 0 ? `${AMarcaBlanco}4d` : AMarcaBlanco, color:AMarcaTexto, border:"none", padding:"15px", fontSize:11, letterSpacing:4, textTransform:"uppercase", cursor: selectedVariantStock === 0 ? "not-allowed" : "pointer", width:"100%" }}>
                   {selectedVariantStock === 0 ? "Sin stock" : `Agregar al Carrito · ${fmt(nxmPaid != null ? nxmPaid*displayPrice : (modalPromo?.hasPriceDrop ? modalPromo.effectivePrice : displayPrice)*qty)}`}
                 </button>
               )}</div>)}
 
-              {/* Reseñas — D-04 */}
-              <div style={{ borderTop:`1px solid rgba(44,34,24,0.1)`, paddingTop:24, marginTop:20 }}>
-                <p style={{ fontFamily:"Georgia, serif", fontStyle:"italic", fontSize:14, color:T, margin:"0 0 20px" }}>
+              {/* ── Lo que se LEE: la ficha de la pieza y después la descripción ──
+                  Van juntas y debajo del botón, no arriba. Son dos criterios que
+                  parecen pelearse y no se pelean:
+
+                  · Comprar va PRIMERO. Talle, color, cantidad y el botón, todo
+                    junto y arriba de lo que se lee. Antes había que pasar la
+                    descripción entera para llegar a elegir el talle.
+                  · La ficha va antes que la DESCRIPCIÓN. En los tres templates de
+                    ropa los atributos se tratan como "datos técnicos" que se miran
+                    al final. Acá no: una tienda que vende fibras naturales y
+                    tinturas vegetales tiene el material, el origen y el taller como
+                    ARGUMENTO DE VENTA, que es la razón por la que alguien paga más
+                    que en fast fashion.
+
+                  Este es además el orden del modal del catálogo (`fichaPrimero` en
+                  su tabla de vestidos). Que las dos fichas del mismo producto se
+                  lean igual es el punto de todo esto.
+
+                  Los datos son los que la dueña ya carga en la ficha del producto
+                  —no hay campo nuevo— y si no cargó ninguno el bloque no se dibuja.
+                  El dibujo también es propio: Chic Paris y Fashion Noir usan la
+                  tabla rayada; acá van filas al aire con el valor en la serif
+                  itálica del template, que es como está escrito el resto. */}
+              {(() => {
+                const attrs = modalProduct.attributes ?? [];
+                const condicionAttr = attrs.find(a => a.key === "Condición");
+                const serviciosAttr = attrs.find(a => a.key === "Servicios");
+                const otherAttrs = attrs.filter(a => a.key !== "Condición" && a.key !== "Servicios");
+                let servicios: string[] = [];
+                if (serviciosAttr) { try { servicios = Object.entries(JSON.parse(serviciosAttr.value)).filter(([, v]) => v).map(([k]) => k); } catch {} }
+                if (!condicionAttr && otherAttrs.length === 0 && servicios.length === 0) return null;
+                return (
+                  <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+                    {condicionAttr && (
+                      <span style={{ alignSelf:"flex-start", fontSize:10, letterSpacing:2, textTransform:"uppercase", fontWeight:600, color:ATextoBlanco, border:`1px solid ${ATextoBlanco}`, padding:"4px 10px", fontFamily:"Georgia, serif", fontStyle:"italic" }}>{condicionAttr.value}</span>
+                    )}
+                    {otherAttrs.length > 0 && (
+                      <div>
+                        <p style={tituloModal}>La pieza</p>
+                        {otherAttrs.map(a => (
+                          <div key={a.key} style={{ display:"flex", justifyContent:"space-between", alignItems:"baseline", gap:16, padding:"9px 0", borderBottom:`1px solid rgba(44,34,24,0.07)` }}>
+                            <span style={{ fontSize:10, fontWeight:600, color:MID, textTransform:"uppercase", letterSpacing:1.5, flexShrink:0 }}>{a.key}</span>
+                            <span style={{ fontFamily:"Georgia, serif", fontStyle:"italic", fontSize:14, color:T, textAlign:"right", minWidth:0, overflowWrap:"anywhere" }}>{a.value}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {servicios.length > 0 && (
+                      <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
+                        {servicios.map(k => (
+                          <span key={k} style={{ fontSize:10, letterSpacing:1, padding:"4px 10px", border:`1px solid rgba(44,34,24,0.18)`, color:MID }}>✓ {k}</span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+              <div style={{ borderTop:`1px solid rgba(44,34,24,0.07)`, paddingTop:14 }}>
+                <p style={tituloModal}>Descripción</p>
+                <DescripcionPlegable
+                  html={modalProduct.description || ""}
+                  style={{ fontSize:13, color:MID, lineHeight:1.8 }}
+                  plegar={isMobile}
+                  fundido="#fff"
+                  boton={{ border:`1px solid ${ATextoBlanco}`, color:ATextoBlanco, padding:"8px 18px", fontSize:10, fontWeight:700, letterSpacing:2, textTransform:"uppercase", fontFamily:"Georgia, serif", fontStyle:"italic" }}
+                />
+              </div>
+              {/* ── Compartir ─────────────────────────────────────────────────
+                  Estaba ARRIBA, entre el nombre y el precio, empujando el precio
+                  fuera de la parte del panel que mas se mira. Compartir es lo que
+                  se hace DESPUES de decidir, no antes de saber cuanto cuesta: va
+                  al final, debajo del boton de comprar. Mismo criterio y mismo
+                  motivo que en el modal de Urban Pulse. */}
+              <div style={{ display:"flex", gap:6, marginTop:8 }}>
+                <button onClick={() => shareProduct(modalProduct)}
+                  style={{ display:"flex", alignItems:"center", gap:5, background:"none", border:`1px solid rgba(44,34,24,0.15)`, color:"rgba(44,34,24,0.4)", padding:"5px 12px", fontSize:10, letterSpacing:1, cursor:"pointer", transition:"color 0.2s" }}
+                  onMouseEnter={e=>(e.currentTarget.style.color=T)} onMouseLeave={e=>(e.currentTarget.style.color="rgba(44,34,24,0.4)")}>
+                  <svg width={11} height={11} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                  Copiar link
+                </button>
+                {hasWA && (
+                <button onClick={() => whatsappShare(modalProduct)}
+                  style={{ display:"flex", alignItems:"center", gap:5, background:"none", border:"1px solid rgba(37,211,102,0.3)", color:"rgba(37,211,102,0.7)", padding:"5px 12px", fontSize:10, letterSpacing:1, cursor:"pointer", transition:"color 0.2s" }}
+                  onMouseEnter={e=>(e.currentTarget.style.color="#25D366")} onMouseLeave={e=>(e.currentTarget.style.color="rgba(37,211,102,0.7)")}>
+                  <svg width={11} height={11} viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413z"/><path d="M11.897 0C5.395 0 .13 5.266.13 11.767c0 2.078.545 4.03 1.495 5.727L.057 24l6.7-1.757A11.71 11.71 0 0 0 11.897 23.534c6.503 0 11.768-5.265 11.768-11.767C23.67 5.266 18.4 0 11.897 0zm0 21.536h-.004a9.726 9.726 0 0 1-4.96-1.358l-.356-.211-3.678.965.982-3.581-.232-.368A9.73 9.73 0 0 1 2.158 11.767C2.158 6.355 6.551 2 11.897 2c2.581 0 5.007 1.007 6.831 2.831a9.604 9.604 0 0 1 2.828 6.83c0 5.347-4.393 9.875-9.659 9.875z"/></svg>
+                  WhatsApp
+                </button>
+                )}
+              </div>
+
+            </div>
+            </div>
+
+            {/* ── Reseñas — a lo ANCHO, no adentro del panel ──────────────────
+                Vivían dentro de la columna de compra, que en escritorio es la
+                mitad del modal: eran lo más largo del panel, lo estiraban muy por
+                debajo de la foto y encima se leían en media pantalla. Acá abajo
+                entran a lo ancho, igual que en el modal del catálogo. */}
+            <div style={{ gridColumn: isMobile ? undefined : "1 / -1", paddingTop:24, paddingLeft: isMobile ? 20 : 36, paddingRight: isMobile ? 20 : 36, paddingBottom: isMobile ? 28 : 36, borderTop:`1px solid rgba(44,34,24,0.08)` }}>
+                <p style={{ ...tituloModal, marginBottom:20 }}>
                   Reseñas{resenasProd.total > 0 && ` (${resenasProd.total})`}
                 </p>
+                {/* Sólo en el editor, y sólo si el producto no tiene ninguna real.
+                    Dice que son de mentira ANTES de que la dueña las lea: sin este
+                    cartel, tres reseñas con nombre y fecha en su propia tienda se
+                    leen como clientas de verdad. */}
+                {resenasProd.usandoEjemplos && (
+                  <div style={{ display:"flex", gap:9, margin:"0 0 16px", padding:"10px 13px", background:"#fffbeb", border:"1px solid #fde68a" }}>
+                    <span style={{ flexShrink:0, fontSize:13, lineHeight:1.4 }}>⚠️</span>
+                    <p style={{ margin:0, fontSize:11.5, color:"#92400e", lineHeight:1.55 }}>
+                      <strong>Estas reseñas son de ejemplo.</strong> Este producto todavía no tiene ninguna:
+                      están para que veas cómo queda el bloque. No se publican y desaparecen solas en cuanto
+                      llegue la primera de verdad.
+                    </p>
+                  </div>
+                )}
+                {/* El botón va ACÁ, arriba de la lista, y abre el formulario en su
+                    propio modal. Antes el formulario estaba escrito al final del
+                    bloque: con varias reseñas cargadas había que bajarlas todas
+                    para llegar a escribir la propia. Es el mismo cambio que ya
+                    tenía el modal del catálogo. */}
+                {!isOwner && !reviewDone && (
+                  <button type="button" onClick={() => { setReviewError(null); setResenaModalOpen(true); }}
+                    style={{ marginBottom:18, background:"none", border:`1px solid ${ATextoBlanco}`, color:ATextoBlanco, padding:"10px 22px", fontSize:10, fontWeight:700, letterSpacing:2, textTransform:"uppercase", cursor:"pointer" }}>
+                    Escribí tu reseña
+                  </button>
+                )}
                 {resenasProd.cargando ? (
                   <p style={{ fontSize:12, color:MID }}>Cargando...</p>
                 ) : resenasProd.lista.length > 0 ? (
@@ -1609,56 +2019,34 @@ export default function BohoTerra() {
                 ) : (
                   <p style={{ fontSize:12, color:MID, marginBottom:16 }}>Sé el primero en dejar una reseña.</p>
                 )}
-                {isOwner ? (
+                {isOwner && (
                   <p style={{ fontSize:11, color:MID, fontStyle:"italic" }}>El dueño no puede dejar reseñas en su propia tienda.</p>
-                ) : reviewDone ? (
-                  <p style={{ fontSize:12, color:A, fontWeight:600 }}>¡Gracias por tu reseña!</p>
-                ) : (
-                  <div style={{ position:"relative" }}>
-                    {isPreview && <div style={{ position:"absolute", inset:0, zIndex:10, cursor:"default" }} onClick={e => e.stopPropagation()} />}
-                    <form onSubmit={isPreview ? e => e.preventDefault() : submitReview} style={{ display:"flex", flexDirection:"column", gap:10, opacity: isPreview ? 0.55 : 1 }}>
-                      <input value={reviewHoneypot} onChange={e => setReviewHoneypot(e.target.value)} name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" style={{ opacity:0, height:0, position:"absolute", pointerEvents:"none" }} />
-                      <input value={reviewForm.reviewer} onChange={e => !isPreview && setReviewForm(p => ({ ...p, reviewer: e.target.value }))}
-                        placeholder="Tu nombre" readOnly={isPreview}
-                        style={{ border:`1px solid rgba(44,34,24,0.2)`, padding:"9px 12px", fontSize:12, outline:"none", background:"#faf7f2" }} />
-                      <div>
-                        <input value={reviewForm.email} onChange={e => !isPreview && setReviewForm(p => ({ ...p, email: e.target.value }))}
-                          placeholder="Tu email (opcional — verifica tu compra)" type="email" readOnly={isPreview} autoComplete="email"
-                          style={{ width:"100%", boxSizing:"border-box", border:`1px solid rgba(44,34,24,0.2)`, padding:"9px 12px", fontSize:12, outline:"none", background:"#faf7f2" }} />
-                        <p style={{ fontSize:10, color:"rgba(44,34,24,0.4)", margin:"3px 0 0", fontFamily:"Georgia, serif", fontStyle:"italic", lineHeight:1.4 }}>
-                          Si compraste acá, tu reseña aparecerá con el sello &ldquo;✓ Compra verificada&rdquo;. El email no se muestra.
-                        </p>
-                      </div>
-                      <div style={{ display:"flex", gap:4 }}>
-                        {[1,2,3,4,5].map(s => (
-                          <button key={s} type="button" onClick={() => !isPreview && setReviewForm(p => ({ ...p, rating: s }))}
-                            style={{ background:"none", border:"none", fontSize:20, cursor: isPreview ? "default" : "pointer", color: s <= reviewForm.rating ? A : "rgba(44,34,24,0.2)", padding:"2px" }}>★</button>
-                        ))}
-                      </div>
-                      <textarea value={reviewForm.comment} onChange={e => !isPreview && setReviewForm(p => ({ ...p, comment: e.target.value }))}
-                        placeholder="Comentario (opcional)" rows={3} readOnly={isPreview}
-                        style={{ border:`1px solid rgba(44,34,24,0.2)`, padding:"9px 12px", fontSize:12, resize:"none", outline:"none", background:"#faf7f2" }} />
-                      {!isPreview && reviewCaptcha.widget}
-                      <button type="submit" disabled={isPreview || reviewSubmitting || !reviewForm.reviewer.trim() || !reviewCaptcha.ready}
-                        style={{ background: isPreview || reviewSubmitting || !reviewForm.reviewer.trim() ? "rgba(181,101,42,0.3)" : A, color:"#fff", border:"none", padding:"12px", fontSize:11, letterSpacing:3, textTransform:"uppercase", cursor: isPreview ? "default" : "pointer" }}>
-                        {reviewSubmitting ? "Publicando..." : "Publicar reseña"}
-                      </button>
-                    </form>
-                    {isPreview && <p style={{ fontSize:10, color:MID, fontStyle:"italic", marginTop:6 }}>Vista previa — solo disponible en la tienda real.</p>}
-                  </div>
+                )}
+                {reviewDone && (
+                  <p style={{ fontSize:12, color:ATextoBlanco, fontWeight:600 }}>¡Gracias por tu reseña!</p>
                 )}
               </div>
-            </div>
             {(() => {
               if (similarProducts.length === 0) return null;
               return (
                 <div style={{ gridColumn: isMobile ? undefined : "1 / -1", paddingTop: 24, paddingLeft: isMobile ? 20 : 36, paddingRight: isMobile ? 20 : 36, paddingBottom: isMobile ? 28 : 36, borderTop:`1px solid rgba(44,34,24,0.08)` }}>
-                  <p style={{ fontSize:10, letterSpacing:4, color:MID, textTransform:"uppercase", margin:"0 0 16px" }}>Productos similares</p>
+                  <p style={{ fontSize:10, letterSpacing:3, color:ATextoBlanco, textTransform:"uppercase", margin:"0 0 14px" }}>Productos similares</p>
                   <div style={{ display:"grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(4,1fr)", gap:14 }}>
                     {similarProducts.map(p => (
                       <div key={p.id} onClick={() => openModal(p)} style={{ cursor:"pointer" }}>
                         <div style={{ position:"relative", width:"100%", aspectRatio:"3/4", background:S }}>
                           {p.images[0] && <FadeImage src={p.images[0]} alt={p.name} fill sizes="(max-width: 768px) 50vw, 25vw" style={{ objectFit:"cover" }} />}
+                          {/* Las tarjetas salían PELADAS: el mismo producto mostraba
+                              su 3×2 en la grilla y en el catálogo, y acá no. El precio
+                              de abajo ya venía descontado, así que el descuento estaba
+                              aplicado pero sin decir por qué. */}
+                          {(() => {
+                            const pr = resolveProductPromo(p, promotions);
+                            if (pr.primaryPromo) return <PromoTag tipo={pr.primaryPromo.type} label={describePromo(pr.primaryPromo).headline} size="sm" paleta={PALETA_PROMO_TIERRA} />;
+                            const enOferta = !!p.comparePrice && p.comparePrice > p.price;
+                            if (!enOferta && !p.offerBadge) return null;
+                            return <OfferBadge badge={p.offerBadge ?? null} pct={enOferta ? discountPercent(p.price, p.comparePrice) : null} size="sm" />;
+                          })()}
                         </div>
                         <p style={{ margin:"8px 0 2px", fontSize:12, color:T, overflow:"hidden", display:"-webkit-box", WebkitLineClamp:1, WebkitBoxOrient:"vertical" as const }}>{p.name}</p>
                         <PromoPrice product={p} promotions={promotions} fmt={fmt} accent={A}
@@ -1676,18 +2064,21 @@ export default function BohoTerra() {
                   {/* El total de mobile ignoraba las promos: mostraba precio × cantidad
                       mientras el botón de desktop ya descontaba. Ahora los dos usan la
                       misma cuenta (N×M primero, después baja de precio, después × qty). */}
-                  <span style={{ fontSize:20, fontWeight:700, color:A }}>{ocultarPrecios ? "Consultá precio" : fmt(nxmPaid != null ? nxmPaid*displayPrice : (modalPromo?.hasPriceDrop ? modalPromo.effectivePrice : displayPrice)*qty)}</span>
-                  {!variantPrice && !ocultarPrecios && modalProduct.comparePrice && <span style={{ fontSize:12, color:MID, textDecoration:"line-through" }}>{fmt(modalProduct.comparePrice)}</span>}
+                  <span style={{ fontSize:20, fontWeight:700, color:ATextoBlanco }}>{ocultarPrecios ? "Consultá precio" : fmt(nxmPaid != null ? nxmPaid*displayPrice : (modalPromo?.hasPriceDrop ? modalPromo.effectivePrice : displayPrice)*qty)}</span>
+                  {/* `!!` y no `comparePrice &&` a secas: con `comparePrice` en 0 el
+                      `&&` devuelve 0 y React dibuja un "0" suelto en la barra, al
+                      lado del precio. Es el mismo UP-7 que ya pasó en Ofertas. */}
+                  {!variantPrice && !ocultarPrecios && !!modalProduct.comparePrice && <span style={{ fontSize:12, color:MID, textDecoration:"line-through" }}>{fmt(modalProduct.comparePrice)}</span>}
                   {qty > 1 && <span style={{ fontSize:11, color:MID }}>× {qty}</span>}
                 </div>
                 {isInquiryMode ? (
                   <button onClick={() => openInquiry(modalProduct)}
-                    style={{ width:"100%", background:A, color:"#fff", border:"none", padding:"15px", fontSize:11, letterSpacing:4, textTransform:"uppercase", cursor:"pointer" }}>
+                    style={{ width:"100%", background:AMarcaBlanco, color:AMarcaTexto, border:"none", padding:"15px", fontSize:11, letterSpacing:4, textTransform:"uppercase", cursor:"pointer" }}>
                     Consultar disponibilidad
                   </button>
                 ) : (
                   <button onClick={addToCart} disabled={selectedVariantStock === 0}
-                    style={{ width:"100%", background: selectedVariantStock === 0 ? "rgba(181,101,42,0.3)" : A, color:"#fff", border:"none", padding:"15px", fontSize:11, letterSpacing:4, textTransform:"uppercase", cursor: selectedVariantStock === 0 ? "not-allowed" : "pointer" }}>
+                    style={{ width:"100%", background: selectedVariantStock === 0 ? `${AMarcaBlanco}4d` : AMarcaBlanco, color:AMarcaTexto, border:"none", padding:"15px", fontSize:11, letterSpacing:4, textTransform:"uppercase", cursor: selectedVariantStock === 0 ? "not-allowed" : "pointer" }}>
                     {selectedVariantStock === 0 ? "Sin stock" : "Agregar al Carrito"}
                   </button>
                 )}
@@ -1697,7 +2088,7 @@ export default function BohoTerra() {
         </div>
       )}
 
-      <CartDrawer cart={cart} theme={cartTheme} isOwner={isOwner} isPreview={isPreview} whatsapp={storeConfig?.whatsapp} />
+      <CartDrawer cart={cart} theme={cartTheme} isOwner={isOwner} isPreview={isPreview} whatsapp={storeConfig?.whatsapp} vocabulario={VOCABULARIO_CARRITO} />
 
       {/* ── FAVORITES DRAWER ───────────────────────────────── */}
       <div style={{ position:"fixed", inset:0, zIndex: isPreview ? 20000 : 155, pointerEvents: favoritesOpen ? "auto" : "none" }}>
@@ -1742,6 +2133,196 @@ export default function BohoTerra() {
       </div>
 
       <CheckoutModal cart={cart} theme={cartTheme} isPreview={isPreview} storeSlug={storeConfig?.slug ?? ""} />
+
+      {/* ── MODAL: reseña de la TIENDA ──────────────────────────────────────
+          Lo abre "Dejá tu opinión", en la pestaña "La tienda" de la portada. Es la
+          única reseña que se puede escribir sin haber abierto un producto: habla
+          de la atención, del envío y de cómo fue comprar acá.
+          La lógica es la compartida (`useHomeReviews`); el dibujo es de este
+          template. */}
+      {resenas.modalAbierto && (
+        <div onClick={resenas.cerrarModal}
+          style={{ position:"fixed", inset:0, background:"rgba(44,34,24,0.6)", backdropFilter:"blur(4px)", zIndex: isPreview ? 20000 : 900, display:"flex", alignItems: isMobile ? "flex-end" : "center", justifyContent:"center", padding: isMobile ? 0 : 20 }}>
+          <div onClick={e => e.stopPropagation()}
+            style={{ background:"#fff", width:"100%", maxWidth:460, maxHeight:"92vh", overflowY:"auto", position:"relative" }}>
+            <button onClick={resenas.cerrarModal} aria-label="Cerrar"
+              style={{ position:"absolute", top:10, right:10, zIndex:2, background:"none", border:"none", color:MID, width:32, height:32, cursor:"pointer", fontSize:22, lineHeight:1 }}>×</button>
+            <div style={{ padding: isMobile ? "28px 22px 26px" : "32px 30px 28px" }}>
+              {resenas.listo ? (
+                /* Nace pendiente de aprobación: si dijera "¡Publicada!" y no
+                   apareciera, la persona pensaría que se perdió y la escribiría
+                   de nuevo. */
+                <div style={{ textAlign:"center", padding:"8px 0" }}>
+                  <div style={{ fontSize:34, marginBottom:10, color:ATextoBlanco }}>✓</div>
+                  <p style={{ fontFamily:"Georgia, serif", fontStyle:"italic", fontSize:19, color:T, margin:"0 0 8px" }}>¡Gracias por tu opinión!</p>
+                  <p style={{ margin:"0 0 22px", fontSize:12.5, color:MID, lineHeight:1.6 }}>
+                    La tienda la revisa antes de publicarla, así que todavía no la vas a ver acá.
+                  </p>
+                  <button type="button" onClick={resenas.cerrarModal}
+                    style={{ background:AMarcaBlanco, color:AMarcaTexto, border:"none", padding:"12px 34px", fontSize:10, fontWeight:700, letterSpacing:3, textTransform:"uppercase", cursor:"pointer" }}>
+                    Cerrar
+                  </button>
+                </div>
+              ) : (
+                <form onSubmit={resenas.enviar} style={{ display:"flex", flexDirection:"column", gap:12 }}>
+                  <div>
+                    <p style={{ fontFamily:"Georgia, serif", fontStyle:"italic", fontSize:20, color:T, margin:"0 0 6px" }}>Contanos cómo te fue</p>
+                    <p style={{ margin:0, fontSize:12, color:MID, lineHeight:1.5 }}>
+                      Tu opinión sobre la atención, el envío y la experiencia de comprar acá.
+                    </p>
+                  </div>
+                  {resenas.error && (
+                    <p style={{ margin:0, fontSize:11.5, color:"#b91c1c", background:"#fef2f2", border:"1px solid #fecaca", padding:"9px 12px", lineHeight:1.5 }}>
+                      ⚠ {resenas.error}
+                    </p>
+                  )}
+                  {/* Trampa para bots: invisible para una persona, irresistible
+                      para un robot que completa todo lo que encuentra. */}
+                  <input value={resenas.honeypot} onChange={e => resenas.setHoneypot(e.target.value)}
+                    tabIndex={-1} autoComplete="off" aria-hidden="true"
+                    style={{ position:"absolute", left:-9999, width:1, height:1, opacity:0 }} />
+                  <div style={{ display:"flex", gap:4 }}>
+                    {[1,2,3,4,5].map(s => (
+                      <button key={s} type="button" onClick={() => resenas.setForm(p => ({ ...p, rating: s }))}
+                        aria-label={`${s} de 5 estrellas`}
+                        style={{ background:"none", border:"none", fontSize:26, lineHeight:1, padding:"2px", cursor:"pointer", color: s <= resenas.form.rating ? ATextoBlanco : "rgba(44,34,24,0.2)" }}>★</button>
+                    ))}
+                  </div>
+                  <input value={resenas.form.reviewer} maxLength={RESENADOR_MAX} required
+                    onChange={e => resenas.setForm(p => ({ ...p, reviewer: e.target.value }))}
+                    placeholder="Tu nombre"
+                    style={{ border:`1px solid rgba(44,34,24,0.2)`, padding:"10px 12px", fontSize:13, outline:"none", background:"#faf7f2", color:T }} />
+                  <div>
+                    <input value={resenas.form.email} type="email" maxLength={120} autoComplete="email"
+                      onChange={e => resenas.setForm(p => ({ ...p, email: e.target.value }))}
+                      placeholder="Tu email (opcional — verifica tu compra)"
+                      style={{ width:"100%", boxSizing:"border-box", border:`1px solid rgba(44,34,24,0.2)`, padding:"10px 12px", fontSize:13, outline:"none", background:"#faf7f2", color:T }} />
+                    <p style={{ fontSize:10.5, color:MID, margin:"4px 0 0", lineHeight:1.4 }}>
+                      Si compraste acá, tu reseña aparecerá con el sello &ldquo;✓ Compra verificada&rdquo;. El email no se muestra.
+                    </p>
+                  </div>
+                  <textarea value={resenas.form.comment} rows={3} maxLength={COMENTARIO_MAX}
+                    onChange={e => resenas.setForm(p => ({ ...p, comment: e.target.value }))}
+                    placeholder="Comentario (opcional)"
+                    style={{ border:`1px solid rgba(44,34,24,0.2)`, padding:"10px 12px", fontSize:13, resize:"none", outline:"none", background:"#faf7f2", color:T, fontFamily:"inherit" }} />
+                  {resenas.form.comment.length > COMENTARIO_MAX - 80 && (
+                    <p style={{ margin:"-6px 0 0", fontSize:10, color: resenas.form.comment.length >= COMENTARIO_MAX ? "#dc2626" : MID, textAlign:"right" }}>
+                      {resenas.form.comment.length} / {COMENTARIO_MAX}
+                    </p>
+                  )}
+                  {!isPreview && resenas.captcha.widget}
+                  {resenas.confirmando ? (
+                    <>
+                      <p style={{ margin:0, fontSize:12, color:MID, lineHeight:1.6 }}>
+                        Se publica con tu nombre, <strong style={{ color:T }}>{resenas.form.reviewer.trim()}</strong>, y {resenas.form.rating} de 5 estrellas. ¿La mandamos?
+                      </p>
+                      <div style={{ display:"flex", gap:8 }}>
+                        <button type="submit" disabled={resenas.enviando || !resenas.captcha.ready}
+                          style={{ flex:1, background:AMarcaBlanco, color:AMarcaTexto, border:"none", padding:"13px", fontSize:10, fontWeight:700, letterSpacing:2, textTransform:"uppercase", cursor: resenas.enviando ? "default" : "pointer", opacity: resenas.enviando ? 0.6 : 1 }}>
+                          {resenas.enviando ? "Enviando..." : "Sí, enviar"}
+                        </button>
+                        <button type="button" onClick={() => resenas.setConfirmando(false)} disabled={resenas.enviando}
+                          style={{ background:"none", border:`1px solid rgba(44,34,24,0.2)`, color:T, padding:"13px 20px", fontSize:10, letterSpacing:2, textTransform:"uppercase", cursor:"pointer" }}>
+                          Volver
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <button type="button" disabled={!resenas.puedeEnviar}
+                      onClick={() => resenas.setConfirmando(true)}
+                      title={resenas.bloqueo || resenas.valida ? undefined : "Escribí tu nombre y elegí cuántas estrellas"}
+                      style={{ background: resenas.puedeEnviar ? AMarcaBlanco : "#ededed", color: resenas.puedeEnviar ? AMarcaTexto : "#9a9a9a", border:"none", padding:"14px", fontSize:10, fontWeight:700, letterSpacing:3, textTransform:"uppercase", cursor: resenas.puedeEnviar ? "pointer" : "default" }}>
+                      Dejar mi reseña
+                    </button>
+                  )}
+                  {/* El botón se apaga por dos motivos distintos y ninguno se adivina
+                      mirándolo. Sin este aviso, el dueño escribía todo, apretaba y no
+                      pasaba nada. */}
+                  {resenas.bloqueo && (
+                    <p style={{ margin:0, fontSize:10.5, color:MID, fontStyle:"italic", textAlign:"center", lineHeight:1.5 }}>
+                      {resenas.bloqueo === "preview"
+                        ? "Vista previa — el formulario funciona en tu tienda publicada."
+                        : "Sos el dueño de esta tienda: las reseñas las dejan tus clientes."}
+                    </p>
+                  )}
+                </form>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL: reseña del producto ──────────────────────────────────────
+          Lo abre "Escribí tu reseña", que está arriba de la lista. Antes el
+          formulario era lo último de la ficha: con varias reseñas cargadas había
+          que bajarlas todas para llegar a escribir la propia.
+          El zIndex va entre medio a propósito: por encima de la ficha (600) y por
+          debajo del lightbox (700), que es el que siempre tiene que ganar. */}
+      {modalProduct && resenaModalOpen && (
+        <div style={{ position:"fixed", inset:0, zIndex: isPreview ? 20000 : 650, background:"rgba(44,34,24,0.6)", backdropFilter:"blur(4px)", display:"flex", alignItems: isMobile ? "flex-end" : "center", justifyContent:"center", padding: isMobile ? 0 : 20 }}
+          onClick={() => setResenaModalOpen(false)}>
+          <div style={{ background:"#fff", width:"100%", maxWidth:460, maxHeight:"92vh", overflowY:"auto", position:"relative" }}
+            onClick={e => e.stopPropagation()}>
+            <button onClick={() => setResenaModalOpen(false)} aria-label="Cerrar"
+              style={{ position:"absolute", top:10, right:10, background:"none", border:"none", color:MID, width:32, height:32, cursor:"pointer", fontSize:22, lineHeight:1 }}>×</button>
+            <div style={{ padding: isMobile ? "28px 22px 26px" : "30px 28px 26px" }}>
+              <p style={{ ...tituloModal, marginBottom:4 }}>Tu reseña</p>
+              {/* De qué producto es: este modal tapa la ficha. */}
+              <p style={{ margin:"0 0 16px", fontSize:12, color:MID, lineHeight:1.5 }}>
+                Sobre <strong style={{ color:T }}>{modalProduct.name}</strong>.
+              </p>
+              <div style={{ position:"relative" }}>
+                {isPreview && <div style={{ position:"absolute", inset:0, zIndex:10, cursor:"default" }} onClick={e => e.stopPropagation()} />}
+                <form onSubmit={isPreview ? e => e.preventDefault() : submitReview} style={{ display:"flex", flexDirection:"column", gap:10, opacity: isPreview ? 0.55 : 1 }}>
+                  {reviewError && (
+                    <p style={{ margin:0, fontSize:11.5, color:"#b91c1c", background:"#fef2f2", border:"1px solid #fecaca", padding:"9px 12px", lineHeight:1.5 }}>
+                      ⚠ {reviewError}
+                    </p>
+                  )}
+                  {/* Trampa para bots: invisible para una persona, irresistible para
+                      un robot que completa todo lo que encuentra. El servidor la
+                      mira y contesta un 201 falso, así el bot ni se entera. */}
+                  <input value={reviewHoneypot} onChange={e => setReviewHoneypot(e.target.value)} name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" style={{ opacity:0, height:0, position:"absolute", pointerEvents:"none" }} />
+                  <input value={reviewForm.reviewer} onChange={e => !isPreview && setReviewForm(p => ({ ...p, reviewer: e.target.value }))}
+                    placeholder="Tu nombre" readOnly={isPreview} maxLength={RESENADOR_MAX}
+                    style={{ border:`1px solid rgba(44,34,24,0.2)`, padding:"10px 12px", fontSize:13, outline:"none", background:"#faf7f2", color:T }} />
+                  <div>
+                    <input value={reviewForm.email} onChange={e => !isPreview && setReviewForm(p => ({ ...p, email: e.target.value }))}
+                      placeholder="Tu email (opcional — verifica tu compra)" type="email" readOnly={isPreview} autoComplete="email" maxLength={120}
+                      style={{ width:"100%", boxSizing:"border-box", border:`1px solid rgba(44,34,24,0.2)`, padding:"10px 12px", fontSize:13, outline:"none", background:"#faf7f2", color:T }} />
+                    <p style={{ fontSize:10.5, color:MID, margin:"4px 0 0", lineHeight:1.4 }}>
+                      Si compraste acá, tu reseña aparecerá con el sello &ldquo;✓ Compra verificada&rdquo;. El email no se muestra.
+                    </p>
+                  </div>
+                  <div style={{ display:"flex", gap:4 }}>
+                    {[1,2,3,4,5].map(s => (
+                      <button key={s} type="button" onClick={() => !isPreview && setReviewForm(p => ({ ...p, rating: s }))}
+                        aria-label={`${s} de 5 estrellas`}
+                        style={{ background:"none", border:"none", fontSize:24, lineHeight:1, cursor: isPreview ? "default" : "pointer", color: s <= reviewForm.rating ? ATextoBlanco : "rgba(44,34,24,0.2)", padding:"2px" }}>★</button>
+                    ))}
+                  </div>
+                  {/* El tope también está en el servidor, que es el que manda: este
+                      de acá sólo evita que alguien escriba de más y le recorten sin
+                      avisar. */}
+                  <textarea value={reviewForm.comment} onChange={e => !isPreview && setReviewForm(p => ({ ...p, comment: e.target.value }))}
+                    placeholder="Comentario (opcional)" rows={3} readOnly={isPreview} maxLength={COMENTARIO_MAX}
+                    style={{ border:`1px solid rgba(44,34,24,0.2)`, padding:"10px 12px", fontSize:13, resize:"none", outline:"none", background:"#faf7f2", color:T, fontFamily:"inherit" }} />
+                  {!isPreview && reviewCaptcha.widget}
+                  <button type="submit" disabled={isPreview || reviewSubmitting || !reviewForm.reviewer.trim() || !reviewCaptcha.ready}
+                    style={{ background: isPreview || reviewSubmitting || !reviewForm.reviewer.trim() ? `${AMarcaBlanco}4d` : AMarcaBlanco, color:AMarcaTexto, border:"none", padding:"13px", fontSize:11, fontWeight:700, letterSpacing:3, textTransform:"uppercase", cursor: isPreview ? "default" : "pointer" }}>
+                    {reviewSubmitting ? "Publicando..." : "Publicar reseña"}
+                  </button>
+                </form>
+                {isPreview && (
+                  <p style={{ margin:"10px 0 0", fontSize:10, color:MID, fontStyle:"italic", textAlign:"center" }}>
+                    Vista previa — el formulario funciona en tu tienda publicada.
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── LIGHTBOX ───────────────────────────────────────── */}
       {lightboxSrc && (

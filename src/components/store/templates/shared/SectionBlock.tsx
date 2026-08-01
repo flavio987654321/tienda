@@ -8,11 +8,27 @@ export function SectionBlock({
   label,
   isPreview = false,
   defaultOrder,
+  avisoAlOcultar,
   children,
 }: {
   id: string;
   label: string;
   isPreview?: boolean;
+  /**
+   * Qué se APAGA además de la sección, para los bloques donde esconder el
+   * contenido apaga también una función.
+   *
+   * No lleva ninguno por defecto, y es a propósito: ocultar es reversible, el
+   * bloque se queda a la vista en el editor con el cartel de "bloque oculto" y el
+   * botón se pone rojo. Preguntar "¿estás seguro?" en cada uno de los ocho
+   * bloques de cada uno de los diez templates sería ruido, y el ruido se aprende
+   * a ignorar — el día que el aviso importe, ya nadie lo lee.
+   *
+   * El de reseñas sí lo necesita: el botón para dejar una opinión vive ADENTRO
+   * del bloque, así que ocultarlo no esconde contenido, corta la entrada de
+   * reseñas nuevas. Eso no se deduce mirando la pantalla.
+   */
+  avisoAlOcultar?: string;
   /** Lista fija de ids del template, en su orden original de JSX. Misma
    *  referencia para todos los SectionBlock de un mismo template — se usa
    *  para calcular la posición CSS `order` de este bloque y la de sus
@@ -62,6 +78,15 @@ export function SectionBlock({
             <span style={{ fontSize: 28, lineHeight: 1 }}>⊘</span>
             <span style={{ color: "#fff", fontWeight: 700, fontSize: 12, letterSpacing: 1, textTransform: "uppercase" }}>Bloque oculto</span>
             <span style={{ color: "rgba(255,255,255,0.55)", fontSize: 11 }}>No aparece en la tienda</span>
+            {/* El aviso se repite acá, y no sólo antes de ocultar: al que abre el
+                editor una semana después, el cartel le tiene que explicar por qué
+                no le entran reseñas. Preguntarlo una vez y no decirlo más deja esa
+                consecuencia sin ninguna huella en pantalla. */}
+            {avisoAlOcultar && (
+              <span style={{ color: "#fca5a5", fontSize: 11, maxWidth: 320, textAlign: "center", lineHeight: 1.5 }}>
+                {avisoAlOcultar}
+              </span>
+            )}
           </div>
         </div>
       )}
@@ -70,7 +95,12 @@ export function SectionBlock({
           propios del editor (cambiar imagen, fondo de sección, etc.) */}
       <div style={{ position: "absolute", bottom: 10, right: 10, zIndex: 200 }}>
         <button
-          onClick={() => toggleHiddenSection(id)}
+          onClick={() => {
+            // Sólo al OCULTAR: volver a mostrarlo no rompe nada, así que preguntar
+            // ahí sería puro trámite.
+            if (!isHidden && avisoAlOcultar && !confirm(`${avisoAlOcultar}\n\n¿Ocultar "${label}" igual?`)) return;
+            toggleHiddenSection(id);
+          }}
           title={isHidden ? `Mostrar "${label}"` : `Ocultar "${label}"`}
           style={{
             background: isHidden ? "rgba(239,68,68,0.92)" : "rgba(0,0,0,0.72)",

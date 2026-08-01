@@ -20,14 +20,61 @@ export type CartTheme = {
   serif?: string;
 };
 
+// ── Cómo LLAMA cada template a las cosas ─────────────────────────────────────
+// El carrito es compartido a propósito (un solo lugar donde arreglar la cuenta),
+// pero eso hacía que la voz del template se cortara justo acá. Boho Terra dice
+// "piezas" y "Ver pieza" en toda la portada, y al abrir el carrito le aparecía
+// "Quitar del carrito · 3 productos": el comprador cambiaba de tienda a mitad de
+// la compra.
+//
+// Es vocabulario, no diseño: lo que se comparte sigue siendo la lógica —el
+// mismo motor de precios, la misma cuenta que cobra el checkout— y lo único que
+// cada template elige es cómo se llaman las cosas.
+//
+// Lo que NO entra acá a propósito: los avisos del sistema ("No disponible para
+// el dueño", "Solo en la tienda real", el mínimo mayorista). Esos no son la voz
+// de la marca, son la app hablando, y tienen que sonar igual en todas.
+export type CartVocabulario = {
+  titulo: string;
+  cerrar: string;
+  vacioIcono: string;
+  vacio: string;
+  vacioSub: string;
+  quitar: string;
+  /** Cómo se cuentan las unidades: "2 productos", "2 piezas". */
+  unidad: string;
+  unidades: string;
+  finalizar: string;
+  seguir: string;
+};
+
+const VOCABULARIO_BASE: CartVocabulario = {
+  titulo: "Tu carrito",
+  cerrar: "Cerrar carrito",
+  vacioIcono: "🛒",
+  vacio: "Tu carrito está vacío.",
+  vacioSub: "Explorá el catálogo.",
+  quitar: "Quitar del carrito",
+  unidad: "producto",
+  unidades: "productos",
+  finalizar: "Finalizar compra",
+  seguir: "Seguir comprando",
+};
+
 export function CartDrawer({
-  cart, theme, isOwner, isPreview, whatsapp, zIndex = 150,
+  cart, theme, isOwner, isPreview, whatsapp, zIndex = 150, vocabulario,
 }: {
   cart: ReturnType<typeof useCartLogic>;
   theme: CartTheme;
   isOwner: boolean;
   isPreview: boolean;
   whatsapp?: { enabled: boolean; number: string; message?: string };
+  /**
+   * Palabras propias del template. Es parcial: lo que no se pasa queda con el
+   * texto de siempre, así un template puede cambiar sólo "productos" por
+   * "piezas" sin tener que reescribir las diez.
+   */
+  vocabulario?: Partial<CartVocabulario>;
   /**
    * Por encima de qué tiene que quedar el carrito. El 150 de siempre alcanza para
    * los templates cuyo navbar vive en 100/110, pero no es universal: Chic Paris
@@ -38,6 +85,7 @@ export function CartDrawer({
   zIndex?: number;
 }) {
   const { BG, T, MID, border, accent, accentText, serif } = theme;
+  const voz = vocabulario ? { ...VOCABULARIO_BASE, ...vocabulario } : VOCABULARIO_BASE;
   const {
     cartItems, cartOpen, setCartOpen, cartCount, cartTotal, removeFromCart, updateQty,
     openCheckout, fmt, wholesaleWarnings, pricedLines, cartPromoSavings, freeShipping, freeShippingGoal,
@@ -76,14 +124,14 @@ export function CartDrawer({
       <div onClick={() => setCartOpen(false)} style={{ position:"absolute", inset:0, background:"rgba(10,10,10,0.55)", opacity: cartOpen ? 1 : 0, transition:"opacity 0.3s" }} />
       <div style={{ position:"absolute", top:0, right:0, bottom:0, width:"min(420px, 100vw)", background:BG, transform: cartOpen ? "translateX(0)" : "translateX(100%)", transition:"transform 0.35s cubic-bezier(.4,0,.2,1)", display:"flex", flexDirection:"column", borderLeft:`1px solid ${border}` }}>
         <div style={{ padding:"24px 24px 16px", borderBottom:`1px solid ${border}`, display:"flex", justifyContent:"space-between", alignItems:"center", flexShrink:0 }}>
-          <p style={{ fontFamily: serif ?? "inherit", fontSize:18, margin:0, color:T }}>Tu carrito <span style={{ fontSize:13, color:MID }}>({cartCount})</span></p>
-          <button onClick={() => setCartOpen(false)} aria-label="Cerrar carrito" style={{ background:"none", border:"none", color:T, fontSize:24, cursor:"pointer", lineHeight:1 }}>×</button>
+          <p style={{ fontFamily: serif ?? "inherit", fontSize:18, margin:0, color:T }}>{voz.titulo} <span style={{ fontSize:13, color:MID }}>({cartCount})</span></p>
+          <button onClick={() => setCartOpen(false)} aria-label={voz.cerrar} style={{ background:"none", border:"none", color:T, fontSize:24, cursor:"pointer", lineHeight:1 }}>×</button>
         </div>
         <div style={{ flex:1, overflowY:"auto", padding:"16px 24px" }}>
           {cartItems.length === 0 ? (
             <div style={{ textAlign:"center", padding:"60px 0", opacity:0.4 }}>
-              <p style={{ fontSize:36, marginBottom:12 }}>🛒</p>
-              <p style={{ fontSize:13, lineHeight:1.8, color:T }}>Tu carrito está vacío.<br/>Explorá el catálogo.</p>
+              <p style={{ fontSize:36, marginBottom:12 }}>{voz.vacioIcono}</p>
+              <p style={{ fontSize:13, lineHeight:1.8, color:T }}>{voz.vacio}<br/>{voz.vacioSub}</p>
             </div>
           ) : cartItems.map((item, idx) => {
             // ¿Esta línea se está cobrando al precio de lista del producto? Si no
@@ -171,7 +219,7 @@ export function CartDrawer({
                   })()}
                 </div>
               </div>
-              <button onClick={() => removeFromCart(idx)} aria-label="Quitar del carrito" style={{ background:"none", border:"none", color:MID, cursor:"pointer", fontSize:18, alignSelf:"flex-start" }}>×</button>
+              <button onClick={() => removeFromCart(idx)} aria-label={voz.quitar} style={{ background:"none", border:"none", color:MID, cursor:"pointer", fontSize:18, alignSelf:"flex-start" }}>×</button>
             </div>
             );
           })}
@@ -193,7 +241,7 @@ export function CartDrawer({
             ) : null}
             <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
               <span style={{ fontSize:11, opacity:0.6, letterSpacing:1, textTransform:"uppercase", color:T }}>Subtotal</span>
-              <span style={{ fontSize:11, opacity:0.6, color:T }}>{cartCount} {cartCount === 1 ? "producto" : "productos"}</span>
+              <span style={{ fontSize:11, opacity:0.6, color:T }}>{cartCount} {cartCount === 1 ? voz.unidad : voz.unidades}</span>
             </div>
             {promoSavings > 0.01 && (
               <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
@@ -218,10 +266,10 @@ export function CartDrawer({
             <button onClick={blockBuy ? undefined : openCheckout} disabled={blockBuy}
               title={isOwner ? "No podés comprar en tu propia tienda" : isPreview ? "No disponible en modo edición" : undefined}
               style={{ width:"100%", background: blockBuy ? `${accentFill}40` : accentFill, color: blockBuy ? `${accentSobreFill}80` : accentSobreFill, border:"none", padding:"15px", fontSize:12, fontWeight:700, letterSpacing:2, textTransform:"uppercase", cursor: blockBuy ? "not-allowed" : "pointer", marginBottom:10 }}>
-              {isOwner ? "No disponible para el dueño" : isPreview ? "Solo en la tienda real" : "Finalizar compra"}
+              {isOwner ? "No disponible para el dueño" : isPreview ? "Solo en la tienda real" : voz.finalizar}
             </button>
             <button onClick={() => setCartOpen(false)} style={{ width:"100%", background:"transparent", color:T, border:`1px solid ${border}`, padding:"12px", fontSize:11, letterSpacing:1, textTransform:"uppercase", cursor:"pointer" }}>
-              Seguir comprando
+              {voz.seguir}
             </button>
             {whatsapp?.enabled && whatsapp.number && (
               <a href={`https://wa.me/${whatsapp.number.replace(/\D/g, "")}${whatsapp.message ? "?text=" + encodeURIComponent(whatsapp.message) : ""}`}

@@ -23,6 +23,7 @@ import { useSombrasScroll } from "@/components/store/useSombrasScroll";
 import { resolveProductPromo, describePromo } from "@/lib/promoDisplay";
 import { CheckoutModal } from "@/components/store/templates/shared/CheckoutModal";
 import { ContactForm } from "@/components/store/templates/shared/ContactForm";
+import { NewsletterForm } from "@/components/store/templates/shared/NewsletterForm";
 import { FadeImage } from "@/components/store/templates/shared/FadeImage";
 import StoreProductReels from "@/components/store/ProductReels";
 import { SectionBlock } from "@/components/store/templates/shared/SectionBlock";
@@ -405,7 +406,7 @@ export default function ChicParis() {
     toastMsg,
     cartCount,
     searchResults, favoriteProducts,
-    fmt, showToast, openModal, addToCart,
+    fmt, showToast, openModal, addToCart, modalScrollRef,
     toggleFavorite,
   } = cart;
   const accentText = getContrastColor(ACC) === "light" ? "#fff" : "#111";
@@ -820,7 +821,15 @@ export default function ChicParis() {
         backdropFilter: (isPreview || scrolled) ? "blur(12px)" : "none",
         transition: "all 0.3s ease",
       }}>
-        <div style={{ maxWidth: 1280, margin: "0 auto", padding: "0 32px", height: 68, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        {/* El nav va de borde a borde, sin el `maxWidth: 1280` que tenía.
+            Estaba alineado con las SECCIONES (que también son 1280), pero lo que
+            tiene pegado abajo es el hero, que es de ancho completo — y ese contraste
+            es lo primero que se ve al abrir la tienda: el logo y los iconos quedaban
+            metidos ~300px hacia adentro contra una foto que llega al borde.
+            Con las secciones más abajo ya no coincide, pero eso está a medio scroll
+            de distancia y no se compara. Es el mismo trueque que ya hacía Urban
+            Pulse, decidido para los tres templates que quedaban. */}
+        <div style={{ padding: "0 32px", height: 68, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           {/* Nav left */}
           {!isMobile && <nav style={{ display: "flex", gap: 24, alignItems: "center" }}>
             {/* CATEGORÍAS dropdown — sin categorías no se muestra: el panel
@@ -1494,7 +1503,8 @@ export default function ChicParis() {
         })()}
       </SectionBlock>
 
-      <SectionBlock id="cp-prueba-social" label="Prueba social" isPreview={isPreview} defaultOrder={CP_SECTION_IDS}>
+      <SectionBlock id="cp-prueba-social" label="Prueba social" isPreview={isPreview} defaultOrder={CP_SECTION_IDS}
+        avisoAlOcultar="Si lo ocultás, tus clientes dejan de poder opinar sobre la TIENDA: el botón para dejar una opinión vive adentro de este bloque. Las reseñas de cada producto siguen funcionando desde su ficha. Las que ya tenés no se borran, pero dejan de verse.">
         {(() => {
           // Los datos y las reglas vienen de useHomeReviews (ver arriba). Solo
           // se listan los ejemplos del editor, que son propios de este template:
@@ -1894,7 +1904,11 @@ export default function ChicParis() {
         <EditableSectionBg field="bgFooter" label="Fondo footer" />
         <div style={{ maxWidth: 1280, margin: "0 auto" }}>
           {/* Dos columnas, no tres: la de "Legal" se sacó por duplicada. */}
-          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "2fr 1fr", gap: isMobile ? 32 : 40, marginBottom: 40, paddingBottom: 40, borderBottom: `1px solid ${footerText === "#fff" ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.08)"}` }}>
+          {/* La columna de novedades se suma acá y no como una franja aparte: el
+              footer de este template ya es una grilla de columnas, y una franja
+              nueva le agregaría un corte horizontal que no tiene. Con categorías
+              son tres columnas; sin ellas, dos. */}
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : (categoryList.length > 0 ? "2fr 1fr 1.2fr" : "2fr 1.2fr"), gap: isMobile ? 32 : 40, marginBottom: 40, paddingBottom: 40, borderBottom: `1px solid ${footerText === "#fff" ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.08)"}` }}>
             <div>
               <p style={{ margin: "0 0 12px", fontSize: 18, fontWeight: 900, color: footerText, letterSpacing: 3, textTransform: "uppercase" }}>
                 <EditableZone field="storeName" label="Nombre footer">{storeConfig?.storeName ?? "CHIC PARIS"}</EditableZone>
@@ -1933,6 +1947,36 @@ export default function ChicParis() {
             )}
             {/* La columna "Legal" que iba acá se sacó: repetía exactamente los mismos
                 tres links que la barra de abajo, en el mismo footer. */}
+            <div>
+              <p style={{ margin: "0 0 16px", fontSize: 10, fontWeight: 800, color: footerText, letterSpacing: 3, textTransform: "uppercase" }}>
+                <EditableZone field="newsletterText" label="Título newsletter">Novedades</EditableZone>
+              </p>
+              <p style={{ margin: "0 0 14px", fontSize: 13, color: footerText, opacity: 0.55, lineHeight: 1.7 }}>
+                <EditableZone field="newsletterSubtext" label="Subtítulo newsletter">Dejanos tu correo y enterate primero de los lanzamientos.</EditableZone>
+              </p>
+              <NewsletterForm
+                slug={storeConfig?.slug} isPreview={isPreview}
+                theme={{
+                  // Igual que en los otros: apilado en celular. Acá el ahogo es
+                  // menor porque la columna es más angosta y el botón también,
+                  // pero a 360 el input igual bajaba de 200px.
+                  form:  { display: "flex", flexDirection: isMobile ? "column" : "row", gap: isMobile ? 10 : 0, maxWidth: 320 },
+                  // Lados sueltos, sin el atajo `border`: mezclados, React tiene
+                  // que sacar `borderRight` al cambiar de ancho y avisa por
+                  // consola que eso da bugs de estilo.
+                  input: (() => {
+                    const linea = `1px solid ${footerText === "#fff" ? "rgba(255,255,255,0.16)" : "rgba(0,0,0,0.12)"}`;
+                    return { flex: 1, minWidth: 0, background: footerText === "#fff" ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.05)", borderTop: linea, borderBottom: linea, borderLeft: linea, borderRight: isMobile ? linea : "none", color: footerText, padding: "11px 14px", fontSize: 12, outline: "none" };
+                  })(),
+                  // El botón usa el acento pasado por `getReadableAccentFill`:
+                  // con un acento claro sobre el footer negro, el crudo se
+                  // perdía y la tinta blanca encima quedaba ilegible.
+                  boton: { flexShrink: 0, width: isMobile ? "100%" : undefined, background: accentRelleno, color: getContrastColor(accentRelleno) === "light" ? "#fff" : "#111", border: "none", padding: "11px 20px", fontSize: 10, fontWeight: 800, letterSpacing: 2, textTransform: "uppercase", cursor: "pointer" },
+                  colorMensaje: footerText,
+                  colorError: footerText,
+                }}
+              />
+            </div>
           </div>
           {/* Los paddings de 110/100 dejan lugar a los botones flotantes (carrito
               y WhatsApp) para que no tapen los links — pero eso es SOLO en
@@ -2031,7 +2075,10 @@ export default function ChicParis() {
           <div style={{ background: "#fff", width: "100%", maxWidth: 980, maxHeight: isPreview ? "100%" : "90vh", overflow: "hidden", display: "flex", flexDirection: "column", borderRadius: 4, boxShadow: "0 32px 80px rgba(0,0,0,0.35)", position:"relative" }}
             onClick={e => e.stopPropagation()}>
             <button onClick={() => { setModalProduct(null); setLightboxSrc(null); }} aria-label="Cerrar" style={{ position:"absolute", top:8, right:8, zIndex:10, background:"rgba(0,0,0,0.5)", border:"none", color:"#fff", width:36, height:36, borderRadius:"50%", cursor:"pointer", fontSize:20, display:"flex", alignItems:"center", justifyContent:"center" }}>×</button>
-            <div style={{ overflow:"auto", flex:1, minHeight:0, display:"flex", flexDirection:"column" }}>
+            {/* El ref lo manda arriba `openModal` al abrir otra ficha: los
+                "productos similares" están al final, así que el que toca uno está
+                siempre abajo de todo y la ficha nueva abría por el pie. */}
+            <div ref={modalScrollRef} style={{ overflow:"auto", flex:1, minHeight:0, display:"flex", flexDirection:"column" }}>
             <div style={{ display:"flex", flexDirection: isMobile ? "column" : "row" }}>
             {/* Images — la columna NO se estira al alto del panel de detalles
                 (`alignSelf:"flex-start"`). Sin eso, al ser hermana en una fila

@@ -12,7 +12,7 @@ import { useStorefront, type StorefrontProduct } from "@/hooks/useStorefront";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { useCartLogic } from "@/hooks/useCartLogic";
 import { useHomeReviews, type EjemplosDeResenas } from "@/hooks/useHomeReviews";
-import { useResenasProducto } from "@/hooks/useResenasProducto";
+import { useResenasProducto, type ResenaProducto } from "@/hooks/useResenasProducto";
 import { ResenaComentario } from "@/components/store/templates/shared/ResenaComentario";
 import { useTouchSwipe } from "@/hooks/useTouchSwipe";
 import { masVistos, MIN_MAS_VISTOS } from "@/lib/masVistos";
@@ -26,6 +26,7 @@ import { PromoTag, PromoBlock, PromoPrice, coloresPromo, PALETA_PROMO_NEON } fro
 import { resolveProductPromo, describePromo } from "@/lib/promoDisplay";
 import { CheckoutModal } from "@/components/store/templates/shared/CheckoutModal";
 import { ContactForm } from "@/components/store/templates/shared/ContactForm";
+import { NewsletterForm } from "@/components/store/templates/shared/NewsletterForm";
 import { FadeImage } from "@/components/store/templates/shared/FadeImage";
 import StoreProductReels from "@/components/store/ProductReels";
 import { SectionBlock } from "@/components/store/templates/shared/SectionBlock";
@@ -59,6 +60,18 @@ const SIZE_ATTRS =["talle","size","talla","talles","sizes","tamaño","tamano","a
 // escritos acá, y todas las tiendas con este template mostraban a las mismas
 // cuatro personas diciendo lo mismo. Chic Paris tiene las suyas, con su voz: si
 // se compartieran, las previews de los templates se verían clonadas.
+/* Las reseñas de EJEMPLO de la vista rápida, para el editor. Sin esto el bloque
+   aparecía vacío mientras el dueño acomoda la tienda y no había forma de ver cómo
+   queda lleno. Nunca se publican: el hook las muestra sólo con `isPreview`.
+   Son distintas de las de la portada de acá arriba a propósito: aquellas hablan de
+   la tienda y estas de una prenda puntual. */
+const RESENAS_EJEMPLO_UP: ResenaProducto[] = [
+  { id:"up-ej-1", rating:5, comment:"Calza tal cual el talle y el género no se transparenta. Lo uso para entrenar y para todos los días.", reviewer:"Valentina R.", verified:true,  verifiedBy:"auto",  createdAt:"2026-07-18T14:00:00.000Z" },
+  { id:"up-ej-2", rating:5, comment:"La calidad es otra cosa, se nota apenas lo agarrás. Llegó en dos días.", reviewer:"Marcos D.", verified:false, verifiedBy:null,   createdAt:"2026-07-11T14:00:00.000Z" },
+  { id:"up-ej-3", rating:4, comment:"Muy bueno el corte. Le saco una estrella porque me quedó un talle grande, pediría el anterior.", reviewer:"Ignacio M.", verified:true,  verifiedBy:"owner", createdAt:"2026-06-29T14:00:00.000Z" },
+];
+const PASO_RESENAS_UP = 5;
+
 const EJEMPLOS_RESENAS: EjemplosDeResenas = {
   producto: [
     { id:"up-p1", rating:5, reviewer:"Valentina R.", verified:true,  verifiedBy:"auto",
@@ -134,6 +147,7 @@ export default function UrbanPulse() {
   // completa todo lo que encuentra. El captcha ya cubre esto, pero es la segunda
   // llave y no cuesta nada — el formulario de la tienda y Chic Paris ya la tenían.
   const [reviewHoneypot, setReviewHoneypot] = useState("");
+  const [reviewError,    setReviewError]    = useState<string | null>(null);
   const reviewCaptcha = useTurnstile("review");
   const [reviewDone,     setReviewDone]     = useState(false);
   // La columna larga del modal arranca plegada en sus dos partes más pesadas. Sin
@@ -309,6 +323,9 @@ export default function UrbanPulse() {
   };
   // Los modales son blancos siempre, no dependen de ningun color editable.
   const rellenoClaro = rellenoAcento(WHITE);
+  // El botón de novedades del footer, medido contra el fondo del footer: ese
+  // fondo es editable y puede quedar del mismo tono que el acento.
+  const rellenoFooter = rellenoAcento(footerUpBg);
   const accSobreDark  = accentSobre(DARK, WHITE);
   const accSobreClaro = accentSobre(BG, DARK);
   // ── El color del precio REBAJADO ───────────────────────────────────────────
@@ -433,7 +450,7 @@ export default function UrbanPulse() {
     toastMsg,
     cartCount,
     searchResults, favoriteProducts,
-    fmt, showToast, openModal, addToCart,
+    fmt, showToast, openModal, addToCart, modalScrollRef,
     toggleFavorite,
   } = cart;
   // `accentText` se declaraba acá una segunda vez, solo para el carrito, y estaba
@@ -529,7 +546,10 @@ export default function UrbanPulse() {
   // Las reseñas del producto abierto: carga, paginado, promedio y total. Vive en
   // `useResenasProducto` porque esto mismo estaba escrito cinco veces —los cuatro
   // templates de moda y la página de listado— con el mismo bug en las cinco.
-  const resenasProd = useResenasProducto({ slug: storeConfig?.slug, productId: modalProduct?.id });
+  const resenasProd = useResenasProducto({
+    slug: storeConfig?.slug, productId: modalProduct?.id,
+    paso: PASO_RESENAS_UP, ejemplos: RESENAS_EJEMPLO_UP, isPreview,
+  });
 
   // Lo que se resetea acá es lo del TEMPLATE, no las reseñas: el formulario, el
   // aviso de "gracias" y los dos bloques plegables. Si quedaran abiertos, abrir un
@@ -647,9 +667,18 @@ export default function UrbanPulse() {
         // en la lista y el contador de arriba clavado en el número viejo.
         resenasProd.agregar(data.review);
         setReviewForm({ reviewer: "", rating: 5, comment: "", email: "" });
+        setReviewError(null);
         setReviewDone(true); setTimeout(() => setReviewDone(false), 4000);
+      } else {
+        // Antes esto era silencio: se apagaba el "Publicando...", el boton volvia
+        // a habilitarse y el comprador no sabia si se habia publicado. El servidor
+        // manda el motivo y se muestra tal cual.
+        const d = await res.json().catch(() => null);
+        setReviewError(d?.error || "No se pudo publicar tu resena. Proba de nuevo en un momento.");
       }
-    } catch {} finally { enviandoResenaProd.current = false; reviewCaptcha.reset(); setReviewSubmitting(false); }
+    } catch {
+      setReviewError("No se pudo conectar. Revisa tu internet y proba de nuevo.");
+    } finally { enviandoResenaProd.current = false; reviewCaptcha.reset(); setReviewSubmitting(false); }
   }
 
   const subcategoriesFor = useMemo(() => {
@@ -1737,7 +1766,8 @@ export default function UrbanPulse() {
           carrusel horizontal de tarjetas claras con Playfair en itálica; acá es la
           grilla dura del resto de Urban Pulse — bordes rectos, mayúsculas,
           estrellas dibujadas, sin curvas. */}
-      <SectionBlock id="up-testimonios" label="Reseñas" isPreview={isPreview} defaultOrder={UP_SECTION_IDS}>
+      <SectionBlock id="up-testimonios" label="Reseñas" isPreview={isPreview} defaultOrder={UP_SECTION_IDS}
+        avisoAlOcultar="Si lo ocultás, tus clientes dejan de poder opinar sobre la TIENDA: el botón para dejar una opinión vive adentro de este bloque. Las reseñas de cada producto siguen funcionando desde su ficha. Las que ya tenés no se borran, pero dejan de verse.">
       <section data-reveal style={{ background:testimonialsBgUp, padding:"80px 0", position:"relative" }}>
         <EditableSectionBg field="bgTestimonios" label="Fondo reseñas" />
         <div style={{ padding: isMobile ? "0 20px" : "0 40px", marginBottom:28, position:"relative", zIndex:1 }}>
@@ -2196,6 +2226,51 @@ export default function UrbanPulse() {
               columna (~148px a 360) se partiría en dos o tres renglones.
               A 360 cada columna da 148px y el link más largo ("Sustentabilidad",
               13px) mide ~93px, así que entra sin cortarse. */}
+          {/* ── Novedades ──────────────────────────────────────────────────
+              Va como franja propia y no como una quinta columna: la grilla de
+              abajo ya son cuatro (marca + tres listas) y a 1280 una más dejaría
+              el formulario en ~180px, más angosto que el propio input.
+              El recuadro duro con el borde del acento es el gesto que este
+              template repite en botones y tarjetas — así el bloque entra como
+              parte del footer y no como algo pegado encima. */}
+          <div style={{
+            display:"flex", flexDirection: isMobile ? "column" : "row",
+            alignItems: isMobile ? "stretch" : "center", justifyContent:"space-between",
+            gap: isMobile ? 16 : 32,
+            border:`2px solid ${footerUpMid}`, padding: isMobile ? "20px 18px" : "24px 28px",
+            marginBottom:40,
+          }}>
+            <div>
+              <p style={{ color:footerUpText, fontSize:14, fontWeight:900, letterSpacing:3, textTransform:"uppercase", margin:"0 0 6px" }}>
+                <EditableZone field="newsletterText" label="Título newsletter">No te pierdas nada</EditableZone>
+              </p>
+              <p style={{ color:footerUpMid, fontSize:13, lineHeight:1.7, margin:0 }}>
+                <EditableZone field="newsletterSubtext" label="Subtítulo newsletter">Drops, restocks y ofertas — directo a tu correo.</EditableZone>
+              </p>
+            </div>
+            <div style={{ flexShrink:0, width: isMobile ? "100%" : "auto" }}>
+              <NewsletterForm
+                slug={storeConfig?.slug} isPreview={isPreview}
+                theme={{
+                  // En celular se apilan. Pegados, el botón —"SUSCRIBIRSE" en
+                  // mayúsculas y con espaciado— se lleva la mitad del ancho y al
+                  // input le quedan ~130px: entra "tu@email.com" y nada más, así
+                  // que la persona escribe su dirección sin poder verla.
+                  form:  { display:"flex", flexDirection: isMobile ? "column" : "row", gap: isMobile ? 10 : 0 },
+                  // El borde derecho se saca sólo cuando van pegados: apilados,
+                  // un recuadro sin un lado se ve roto.
+                  // Los cuatro lados van sueltos, sin el atajo `border`: mezclar
+                  // atajo y lado suelto obliga a React a sacar uno al cambiar de
+                  // ancho, y avisa por consola que eso da bugs de estilo.
+                  input: { width: isMobile ? "100%" : 240, minWidth:0, background:"transparent", borderTop:`2px solid ${footerUpMid}`, borderBottom:`2px solid ${footerUpMid}`, borderLeft:`2px solid ${footerUpMid}`, borderRight: isMobile ? `2px solid ${footerUpMid}` : "none", color:footerUpText, padding:"12px 14px", fontSize:13, outline:"none" },
+                  boton: { flexShrink:0, width: isMobile ? "100%" : undefined, background:rellenoFooter.bg, color:rellenoFooter.text, border:"none", padding:"12px 22px", fontSize:11, fontWeight:900, letterSpacing:2, textTransform:"uppercase", cursor:"pointer" },
+                  colorMensaje: footerUpText,
+                  colorError: footerUpText,
+                }}
+              />
+            </div>
+          </div>
+
           <div style={{ display:"grid", gridTemplateColumns: isMobile ? "repeat(2,minmax(0,1fr))" : "2fr 1fr 1fr 1fr", gap: isMobile ? "28px 24px" : 40, marginBottom:40 }}>
             <div style={ isMobile ? { gridColumn:"1 / -1" } : undefined }>
               <div style={{ fontWeight:900, fontSize:24, letterSpacing:4, textTransform:"uppercase", color:footerUpText, marginBottom:16 }}>
@@ -2456,7 +2531,10 @@ export default function UrbanPulse() {
                   un editor de texto rico y puede traer una tabla ancha o un link
                   larguísimo sin espacios. Con `1fr` eso estira la columna y
                   descuadra el modal entero; con el mínimo en 0 manda la columna. */}
-              <div style={{ overflow:"auto", flex:1, minHeight:0,
+              {/* El ref lo manda arriba `openModal` al abrir otra ficha: los
+                  "productos similares" están al final, así que el que toca uno
+                  está siempre abajo de todo y la ficha nueva abría por el pie. */}
+              <div ref={modalScrollRef} style={{ overflow:"auto", flex:1, minHeight:0,
                             ...(isMobile
                               ? { display:"flex", flexDirection:"column" as const }
                               : { display:"grid", gridTemplateColumns:"minmax(0,1fr) clamp(300px, 36%, 400px)", alignItems:"start" }) }}>
@@ -2798,6 +2876,18 @@ export default function UrbanPulse() {
                 {/* Reseñas — D-04 */}
                 <div id="up-modal-resenas">
                   {tituloModal(resenasProd.total > 0 ? `Reseñas (${resenasProd.total})` : "Reseñas")}
+                  {/* Sólo en el editor, y sólo si el producto no tiene ninguna real.
+                      Dice que son de mentira ANTES de que la dueña las lea. */}
+                  {resenasProd.usandoEjemplos && (
+                    <div style={{ display:"flex", gap:9, margin:"0 0 16px", padding:"10px 13px", background:"#fffbeb", border:`2px solid #fde68a` }}>
+                      <span style={{ flexShrink:0, fontSize:13, lineHeight:1.4 }}>⚠️</span>
+                      <p style={{ margin:0, fontSize:11.5, color:"#92400e", lineHeight:1.55 }}>
+                        <strong>Estas reseñas son de ejemplo.</strong> Este producto todavía no tiene ninguna:
+                        están para que veas cómo queda el bloque. No se publican y desaparecen solas en cuanto
+                        llegue la primera de verdad.
+                      </p>
+                    </div>
+                  )}
                   {resenasProd.cargando ? (
                     <p style={{ fontSize:12, color:MID }}>Cargando...</p>
                   ) : resenasProd.lista.length > 0 ? (
@@ -2899,6 +2989,11 @@ export default function UrbanPulse() {
                     <div style={{ position:"relative" }}>
                       {isPreview && <div style={{ position:"absolute", inset:0, zIndex:10, cursor:"default" }} onClick={e => e.stopPropagation()} />}
                       <form onSubmit={isPreview ? e => e.preventDefault() : submitReview} style={{ display:"flex", flexDirection:"column", gap:10, opacity: isPreview ? 0.55 : 1 }}>
+                        {reviewError && (
+                          <p style={{ margin:0, fontSize:11.5, color:"#b91c1c", background:"#fef2f2", border:"2px solid #fecaca", padding:"9px 12px", lineHeight:1.5 }}>
+                            ⚠ {reviewError}
+                          </p>
+                        )}
                         {/* Trampa para bots: invisible para una persona. */}
                         <input value={reviewHoneypot} onChange={e => setReviewHoneypot(e.target.value)}
                           tabIndex={-1} autoComplete="off" aria-hidden="true"

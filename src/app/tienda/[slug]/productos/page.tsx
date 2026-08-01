@@ -14,6 +14,7 @@ import { useResenasProducto, type ResenaProducto } from "@/hooks/useResenasProdu
 // que va a mostrar y en WebP, en vez del JPG original de la cámara. Esta página
 // dibuja el catálogo entero, que es donde más pesa.
 import { FadeImage } from "@/components/store/templates/shared/FadeImage";
+import { DescripcionPlegable } from "@/components/store/templates/shared/DescripcionPlegable";
 // El carrito y el checkout de esta página eran una COPIA escrita a mano de los
 // que usan los diez templates. Los dos salen del mismo `useCartLogic`, así que la
 // copia no aportaba nada — sólo se iba quedando atrás. Ver PL-1 en URBAN-PULSE.md.
@@ -222,6 +223,137 @@ function mapProduct(raw: RawProduct): StorefrontProduct {
 }
 
 // ── Temas por template ───────────────────────────────────────────────────────
+/* ── El vestido del modal de producto ────────────────────────────────────────
+   Esta página tiene UN modal para los cuatro templates de moda. La forma de
+   fábrica es la de Chic Paris: foto a la izquierda al 48%, miniaturas en fila
+   abajo y todo lo demás apilado en la columna derecha.
+
+   Urban Pulse fue el primero en salirse de esa forma (UP-12), y se resolvió con
+   un booleano `esUP` repartido en unas treinta ternarias. Funcionó para uno.
+   Para el segundo no: cada `esUP ? A : B` habría que convertirla en una de tres
+   ramas, y para el cuarto en una de cinco. Es la clase de arreglo que se pone
+   más caro con cada template en vez de más barato.
+
+   Así que la diferencia se guarda como DATO, en la misma tabla que ya define el
+   tema de cada template. Lo que un template no dice, lo hereda de `VESTIDO_BASE`
+   —que es la forma de Chic Paris—, así que agregar el quinto es escribir lo que
+   cambia y nada más.
+
+   Dos advertencias para el que venga:
+   · `panelClavado` y `barraCompraCelular` son FORMA, no vestido: cambian dónde
+     vive cada bloque, no cómo se ve. Por eso se leen combinadas con el ancho de
+     pantalla y no solas.
+   · Lo que NO entra acá son los colores. Esos ya salen de `Theme` y del acento
+     que eligió la dueña, y clavarlos acá sería justo el bug que se viene
+     arreglando hace tres auditorías. */
+type VestidoModal = {
+  /** Ancho máximo en escritorio. */
+  ancho: number;
+  /** El velo detrás del modal. Vacío usa el negro de siempre del tema. */
+  velo?: string;
+  /** La superficie del modal. Vacío usa `S`, el fondo secundario del tema. Boho
+   *  Terra la quiere blanca: su `S` es un arena que en el template sólo pinta la
+   *  tira de miniaturas, no el panel entero. */
+  superficie?: string;
+  /** Corte macizo entre la foto y el panel EN CELULAR, en px. 0 = sin corte.
+   *  Es la marca de Urban Pulse, que en su template es un borde de arriba. */
+  cortePanelMovil: number;
+  /** La barra de comprar del pie: grosor de su corte y tamaño del total. Sólo las
+   *  mira quien enciende `barraCompraCelular`; el color del total sale de
+   *  `precioColor`, igual que el precio del panel. */
+  barraCorte: number;
+  barraPrecio: React.CSSProperties;
+  /** `gridTemplateColumns` en escritorio. En celular siempre es una columna. */
+  columnas: string;
+  /** El panel de compra queda clavado al costado mientras la foto corre. Sólo
+   *  escritorio: necesita dos columnas para existir. */
+  panelClavado: boolean;
+  /** En celular, el botón de comprar sale del panel y va a una barra fija abajo. */
+  barraCompraCelular: boolean;
+  /** La descripción y las características bajan debajo de la FOTO en vez de ir
+   *  adentro del panel. Es lo que le permite al panel quedarse corto. */
+  leerAbajoDeLaFoto: boolean;
+  /** La ficha de características va ANTES de la descripción. En una tienda que
+   *  vende por el material —Boho Terra— el "de qué está hecho" es el argumento
+   *  de venta y no la letra chica, y su modal del home ya lo pone primero (BT-6):
+   *  sin esto el catálogo mostraba los mismos dos bloques al revés. */
+  fichaPrimero: boolean;
+  /** El botón de cerrar y su glifo. */
+  cerrar: React.CSSProperties;
+  cerrarGlifo: string;
+  /** Relleno del panel de compra: sin barra, con panel clavado, y con barra. */
+  padPanel: string; padPanelClavado: string; padPanelBarra: string;
+  /** Rubro (arriba del nombre) y nombre del producto. Se mergean sobre la base.
+   *  El COLOR no va acá porque sale del acento que eligió la dueña, que no se
+   *  conoce hasta el render: se pide por nombre y se resuelve abajo. */
+  rubro: React.CSSProperties;
+  rubroEnGris: boolean;
+  nombre: React.CSSProperties;
+  /** El precio va con el acento de la tienda o con el color de texto del tema. */
+  precioColor: "acento" | "texto";
+  /** Con precio anterior, el precio actual se pinta de rojo en vez de tacharlo solo. */
+  precioRebajadoRojo: boolean;
+  /** Ajustes al título de sección (Descripción, Videos, Reseñas…). */
+  tituloSec?: React.CSSProperties;
+  /** El título de sección lleva la rayita gruesa del acento adelante. */
+  tituloRayita: boolean;
+  /** El título repite el valor elegido: "Talle: 32" en vez de "Talle". */
+  tituloConValor: boolean;
+  /** Precio. */
+  precioTam: number; precioPeso: number; tachadoTam: number;
+  /** El "% OFF" va macizo sobre el rojo del precio, o verde sobre verde claro. */
+  pctOffMacizo: boolean;
+  /** Miniaturas de la galería. `grueso` es el borde macizo con las otras al 50%,
+   *  contra el borde fino del acento; `padCel` es el relleno de la tira en celular. */
+  mini: { w: number; h: number; gap: number; grueso: boolean; padCel: string };
+  /** Lado del cuadrado de los chips de talle, y relleno de los de color. */
+  chipTalle: number; chipColorPad: string;
+  /** Botón de agregar. */
+  botonTexto: string; botonPeso: number; botonPad: string;
+  /** Cómo llama este template a la ficha de atributos. Boho Terra dice "La pieza"
+   *  en toda la tienda; con el rótulo genérico, la misma sección cambiaba de
+   *  nombre según desde dónde se abriera el producto. */
+  rotuloFicha: string;
+  /** Atajo a las reseñas arriba del todo, y botón de guardar en favoritos. */
+  atajoResenas: boolean; botonFavorito: boolean;
+};
+
+const VESTIDO_BASE: VestidoModal = {
+  ancho: 980,
+  // 48% para la foto, como en el modal del template. A 50/50 la columna de
+  // comprar quedaba más angosta de lo necesario y los chips de talle se
+  // apretaban en 768.
+  columnas: "48% 1fr",
+  panelClavado: false,
+  barraCompraCelular: false,
+  leerAbajoDeLaFoto: false,
+  fichaPrimero: false,
+  cortePanelMovil: 0,
+  barraCorte: 2,
+  barraPrecio: { fontSize: 20, fontWeight: 900 },
+  cerrar: { top:10, right:10, background:"rgba(0,0,0,0.65)", color:"#fff", width:36, height:36, fontSize:20, backdropFilter:"blur(4px)" },
+  cerrarGlifo: "×",
+  padPanel: "clamp(20px,4vw,36px) clamp(16px,3.5vw,32px)",
+  padPanelClavado: "46px 26px 30px",
+  padPanelBarra: "22px 18px 24px",
+  rubro: { fontSize:10, letterSpacing:3, fontWeight:400 },
+  rubroEnGris: false,
+  nombre: { fontSize:24, margin:0, lineHeight:1.2 },
+  precioColor: "acento",
+  precioRebajadoRojo: false,
+  tituloRayita: false,
+  tituloConValor: false,
+  precioTam: 22, precioPeso: 700, tachadoTam: 14,
+  pctOffMacizo: false,
+  // 56×74 y no cuadradas de 48: un cuadrado recorta la prenda y la miniatura no
+  // se parece a la foto que abre. Misma proporción 3/4 que la foto grande.
+  mini: { w: 56, h: 74, gap: 8, grueso: false, padCel: "10px 14px 0" },
+  chipTalle: 44, chipColorPad: "9px 14px",
+  botonTexto: "Agregar al carrito", botonPeso: 800, botonPad: "15px",
+  rotuloFicha: "Características",
+  atajoResenas: false, botonFavorito: false,
+};
+
 type Theme = {
   BG: string; S: string; T: string; G: string; MID: string;
   border: string; borderFaint: string; inputBorder: string; inputBg: string;
@@ -231,6 +363,8 @@ type Theme = {
   cardRadius?: number;
   titleStyle?: "editorial" | "organic" | "minimal" | "bold";
   inputRadius?: number;
+  /** Lo que este template cambia del modal. Lo que no diga, hereda de VESTIDO_BASE. */
+  modal?: Partial<VestidoModal>;
 };
 
 const THEMES: Record<string, Theme> = {
@@ -241,12 +375,43 @@ const THEMES: Record<string, Theme> = {
     serif:"Georgia, serif", sans:"'Helvetica Neue', Arial, sans-serif", dark:true,
     tabStyle:"default", cardRadius:0, titleStyle:"editorial", inputRadius:0,
   },
+  // Los tres primeros valores estaban CERCA de los del template pero no eran los
+  // suyos: BG #faf8f4 contra #faf7f2, S #f2ebe0 contra #f0e9df, y sobre todo MID
+  // en #999 —un gris neutro— cuando el template usa #9a8070, un topo cálido. MID
+  // pinta todo el texto secundario del modal, así que el catálogo abría la misma
+  // ficha con los subtítulos en otro color que el home.
   "boho-terra": {
-    BG:"#faf8f4", S:"#f2ebe0", T:"#2c2218", G:"#b56529", MID:"#999",
-    border:"rgba(181,101,41,0.2)", borderFaint:"rgba(44,34,24,0.06)",
-    inputBorder:"rgba(181,101,41,0.25)", inputBg:"#fff",
+    BG:"#faf7f2", S:"#f0e9df", T:"#2c2218", G:"#b5652a", MID:"#9a8070",
+    border:"rgba(181,101,42,0.2)", borderFaint:"rgba(44,34,24,0.06)",
+    inputBorder:"rgba(181,101,42,0.25)", inputBg:"#fff",
     serif:"Georgia, serif", sans:"Inter, system-ui, sans-serif", dark:false,
     tabStyle:"pill", cardRadius:10, titleStyle:"organic", inputRadius:8,
+    /* El modal del template: 920 de ancho, dos columnas iguales, el nombre en
+       Georgia itálica —que es como está escrito TODO el template— y miniaturas
+       cuadradas de 52 sobre el fondo arena. La forma no cambia respecto de la
+       base: Boho Terra apila igual que Chic Paris, lo que cambia es la ropa.
+       El overlay va en el marrón del template y no en negro, que es lo que hace
+       que el modal se sienta de esta tienda antes de leer una palabra. */
+    modal: {
+      ancho: 920,
+      columnas: "1fr 1fr",
+      velo: "rgba(44,34,24,0.65)",
+      superficie: "#fff",
+      // En celular el botón se va a una barra fija al pie, igual que en su modal
+      // del template. Sin esto el catálogo lo dejaba adentro del panel: a media
+      // pantalla, con la ficha, la descripción y las reseñas debajo.
+      barraCompraCelular: true,
+      barraCorte: 1,
+      barraPrecio: { fontSize: 20, fontWeight: 700 },
+      cerrar: { top:8, right:8, background:"rgba(44,34,24,0.65)", color:"#fff", width:36, height:36, fontSize:20 },
+      padPanel: "clamp(20px,4vw,40px) clamp(20px,3.5vw,36px)",
+      fichaPrimero: true,
+      rotuloFicha: "La pieza",
+      nombre: { fontStyle:"italic" },
+      tituloSec: { fontSize:9, letterSpacing:3, fontWeight:600, opacity:0.75 },
+      mini: { w: 52, h: 52, gap: 8, grueso: false, padCel: "10px 14px 0" },
+      chipTalle: 46, chipColorPad: "6px 14px",
+    },
   },
   "chic-paris": {
     BG:"#f9f9f7", S:"#f0eeea", T:"#1a1a1a", G:"#5e7c6f", MID:"#999",
@@ -269,6 +434,43 @@ const THEMES: Record<string, Theme> = {
     inputBorder:"rgba(15,15,15,0.22)", inputBg:"#ffffff",
     serif:"Inter, system-ui, sans-serif", sans:"Inter, system-ui, sans-serif", dark:false,
     tabStyle:"brutalist", cardRadius:0, titleStyle:"bold", inputRadius:0,
+    /* UP-12. Es el único que cambia la FORMA y no sólo la ropa: la columna
+       derecha lleva SOLO lo que hace falta para comprar y queda clavada mientras
+       la izquierda corre por debajo. Todo lo que se lee —descripción,
+       características— baja abajo de la foto, y en celular el botón de comprar
+       se va a una barra fija al pie.
+       1080 y no 980: la columna de compra se lleva entre 300 y 400, así que con
+       980 a la foto le quedaban ~600 y con 1080 le quedan ~700.
+       El vestido va en los TRES anchos. Antes colgaba de la misma bandera que la
+       forma, y al angostarse la pantalla se caía con ella: el catálogo volvía a
+       abrir la ficha de Chic Paris con la ropa de Urban Pulse. */
+    modal: {
+      ancho: 1080,
+      columnas: "minmax(0,1fr) clamp(300px, 36%, 400px)",
+      panelClavado: true,
+      barraCompraCelular: true,
+      leerAbajoDeLaFoto: true,
+      cortePanelMovil: 3,
+      // Cierra con un cuadrado macizo clavado en la esquina, sin separación ni
+      // transparencia: el template no tiene una sola esquina redondeada ni un
+      // solo fondo translúcido.
+      cerrar: { top:0, right:0, width:40, height:40, fontSize:18 },
+      cerrarGlifo: "✕",
+      rubro: { fontWeight:800 },
+      rubroEnGris: true,
+      nombre: { fontWeight:900, textTransform:"uppercase", letterSpacing:"-0.5px", lineHeight:1.15 },
+      precioColor: "texto",
+      precioRebajadoRojo: true,
+      precioTam: 28, precioPeso: 900, tachadoTam: 15,
+      pctOffMacizo: true,
+      tituloRayita: true,
+      tituloConValor: true,
+      // En escritorio no van en fila: van en tira vertical al costado de la foto.
+      // En celular sí, con la medida del template.
+      mini: { w: 64, h: 80, gap: 6, grueso: true, padCel: "6px 12px 0" },
+      botonTexto: "Agregar", botonPeso: 900, botonPad: "16px",
+      atajoResenas: true, botonFavorito: true,
+    },
   },
   "electro-prime": {
     BG:"#ffffff", S:"#f8fafc", T:"#111111", G:"#ea580c", MID:"#6b7280",
@@ -448,7 +650,7 @@ function ProductosPageInner() {
     cartOpen, setCartOpen, cartCount, checkoutOpen,
     modalProduct, setModalProduct, modalImg, setModalImg,
     selectedSize, setSelectedSize, selectedColor, setSelectedColor, qty, setQty,
-    toastMsg, openModal, addToCart,
+    toastMsg, openModal, addToCart, modalScrollRef,
     // Esta pantalla no los usaba: ni el talle ni el color avisaban que estaban
     // agotados hasta despues de elegirlos.
     outOfStockSizes, outOfStockColors,
@@ -892,6 +1094,12 @@ function ProductosPageInner() {
   const G = accentOverride ?? th.G;
   const { BG, S, T, MID, border, borderFaint, inputBorder, inputBg, serif, sans, dark,
     tabStyle = "default", cardRadius = 0, titleStyle = "editorial", inputRadius = 0 } = th;
+  // El vestido del modal de este template, con lo que no diga heredado de la
+  // base. Es un merge plano a propósito: un template que toca `mini` o `cerrar`
+  // reemplaza el objeto entero. Mezclar campo por campo dejaría a medio camino
+  // valores que sólo tienen sentido juntos (un alto de la base con un ancho
+  // nuevo deforma la miniatura), y esa mezcla no se ve leyendo la tabla.
+  const v: VestidoModal = { ...VESTIDO_BASE, ...(th.modal ?? {}) };
   // Texto blanco/negro sobre fondos pintados con el acento (G): se calcula según
   // el color real elegido, no según si el template en sí es claro u oscuro —
   // así un acento muy claro en un template claro sigue siendo legible.
@@ -912,7 +1120,7 @@ function ProductosPageInner() {
   // del template.
   const tituloBloque: React.CSSProperties = {
     margin: "0 0 12px", fontSize: 10, fontWeight: 700, letterSpacing: 2.5,
-    textTransform: "uppercase", color: MID,
+    textTransform: "uppercase", color: MID, ...v.tituloSec,
   };
   // El talle/color ELEGIDO va con relleno sólido, como en el modal del template:
   // con borde y un tinte apenas se distinguía del no elegido. Se usa el acento
@@ -922,35 +1130,22 @@ function ProductosPageInner() {
   const chipBg   = getReadableAccentFill(G, BG, T);
   const chipText = getContrastColor(chipBg) === "light" ? "#fff" : "#111";
 
-  /* ── El modal con la forma de Urban Pulse ────────────────────────────────────
-     Esta página tiene UN modal para los cuatro templates de moda, y su forma es la
-     de Chic Paris: foto a la izquierda al 48%, miniaturas en fila abajo, y todo lo
-     demás —descripción, características, compartir— apilado en la columna derecha.
-     Urban Pulse dejó de tener esa forma en UP-12: la derecha lleva SOLO lo que hace
-     falta para comprar y queda clavada, mientras la izquierda corre por debajo.
-     Abrir el mismo producto desde el home y desde el catálogo daba dos fichas
-     visiblemente distintas — lo vio Flavio: "es como que usa el modal de productos
-     pero del template de Chic Paris".
-     Los otros tres siguen con la forma de siempre hasta que les toque su auditoría.
+  /* ── Forma y vestido ─────────────────────────────────────────────────────────
+     El VESTIDO (`v`) va en los tres anchos: es lo que hace que el producto abierto
+     desde el catálogo se vea como el abierto desde el home. Antes colgaba de la
+     misma bandera que la forma y al angostarse la pantalla se caía con ella, así
+     que en celular el catálogo volvía a la ficha de Chic Paris con la ropa del
+     otro template — el bug que reportó Flavio: "en pantallas grandes se ve bien
+     pero cuando achico se ve mal, no son iguales".
 
-     Van DOS banderas, no una. Antes había una sola —`template === "urban-pulse" &&
-     !isMobile`— con el argumento de que "en celular las dos formas son la misma
-     columna apilada". Eso es cierto de la GRILLA y falso de todo lo demás: al caer
-     la bandera en celular se caía también la identidad (nombre en mayúsculas, precio
-     28/900, títulos con la rayita del acento, favoritos, la barra de comprar abajo),
-     y el catálogo volvía a abrir la ficha de Chic Paris con la ropa de Urban Pulse
-     — exactamente el bug de UP-12, pero sólo cuando la pantalla se angostaba.
-     · `esUP`     — el VESTIDO. Va en los 3 anchos.
-     · `modalUP`  — la FORMA de dos columnas con el panel clavado al costado, que
-                    necesita dos columnas para existir. Sólo escritorio; en celular
-                    la forma es la del template en celular: foto, panel apilado
-                    debajo, lo que se lee al final y la barra de comprar fija. */
-  const esUP = template === "urban-pulse";
-  const modalUP = esUP && !isMobile;
-  // La barra de comprar abajo de todo, fija, como en el modal del template en
-  // celular. Se usa en varios lugares (saca el botón de adentro del panel, lo
-  // agrega al pie, y esconde el globo de WhatsApp que le caía justo encima).
-  const barraCompraUP = esUP && isMobile;
+     La FORMA sí depende del ancho, porque necesita dos columnas para existir:
+     · `panelClavado` — el panel de compra quieto al costado mientras la foto
+                        corre por debajo. Sólo escritorio.
+     · `barraCompra`  — el botón de comprar sale del panel y va a una barra fija
+                        al pie. Sólo celular, que es donde el panel mide varias
+                        pantallas y había que scrollear para atrás para comprar. */
+  const panelClavado = v.panelClavado && !isMobile;
+  const barraCompra = v.barraCompraCelular && isMobile;
   // El total que dice el botón de agregar. Uno solo, porque hay DOS botones —el del
   // panel y el de la barra del pie— y son excluyentes: si la cuenta viviera escrita
   // en cada uno, el día que cambie una promo alcanza con tocar una sola para que el
@@ -961,10 +1156,10 @@ function ProductosPageInner() {
 
   /* Los títulos de sección adentro del modal. Urban Pulse los dibuja con una
      rayita gruesa del acento, el texto y una línea fina que llega hasta el borde;
-     los otros tres, con un renglón chico en gris. Era de las diferencias que más
-     se notaban, porque hay cinco por modal (Descripción, Características, Videos,
+     los demás, con un renglón chico en gris. Era de las diferencias que más se
+     notaban, porque hay cinco por modal (Descripción, Características, Videos,
      Reseñas, También te puede gustar). */
-  const tituloSeccion = (texto: string) => esUP ? (
+  const tituloSeccion = (texto: string) => v.tituloRayita ? (
     <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:16 }}>
       <span style={{ width:24, height:4, background:chipBg, flexShrink:0 }} />
       <span style={{ fontSize:11, fontWeight:900, letterSpacing:3, textTransform:"uppercase", color:T, whiteSpace:"nowrap" }}>{texto}</span>
@@ -980,9 +1175,17 @@ function ProductosPageInner() {
   const bloqueDescripcion = modalProduct?.description ? (
     <div style={{ borderTop:`1px solid ${borderFaint}`, paddingTop:18 }}>
       {tituloSeccion("Descripción")}
-      {/* Sin recortar: el panel tiene alto fijo y scrollea, así que un
-          texto largo ya no deforma nada — se lee bajando acá adentro. */}
-      <div className="product-rte" dangerouslySetInnerHTML={{ __html: modalProduct.description }} style={{ fontSize:13, color:MID, lineHeight:1.75 }} />
+      {/* En escritorio va entera: el panel tiene alto fijo y scrollea por dentro,
+          así que un texto largo no deforma nada. En celular no hay ese alto —el
+          panel es un bloque más de la columna— y una descripción de cuatro
+          párrafos empuja el precio y el botón de comprar varias pantallas abajo. */}
+      <DescripcionPlegable
+        html={modalProduct.description}
+        style={{ fontSize:13, color:MID, lineHeight:1.75 }}
+        plegar={isMobile}
+        fundido={v.superficie ?? S}
+        boton={{ border:`1px solid ${GT}`, color:GT, padding:"8px 18px", fontSize:10, fontWeight:800, letterSpacing:2, textTransform:"uppercase" }}
+      />
     </div>
   ) : null;
 
@@ -999,7 +1202,7 @@ function ProductosPageInner() {
     if (!condicionAttr && otherAttrs.length === 0 && servicios.length === 0) return null;
     return (
       <div style={{ borderTop:`1px solid ${borderFaint}`, paddingTop:18 }}>
-        {tituloSeccion("Características")}
+        {tituloSeccion(v.rotuloFicha)}
         <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
           {condicionAttr && (
             <span style={{ alignSelf:"flex-start", fontSize:10, letterSpacing:2, textTransform:"uppercase", fontWeight:700, color:GT, border:`1px solid ${GT}`, padding:"4px 10px" }}>{condicionAttr.value}</span>
@@ -1069,6 +1272,9 @@ function ProductosPageInner() {
         const data = await res.json();
         resenasProd.agregar(data.review);
         setReviewForm({ reviewer: "", rating: 5, comment: "", email: "" });
+        // Se cierra el modal del formulario: si no, queda abierto y vacío tapando
+        // la reseña que la persona acaba de publicar, que es justo lo que quiere ver.
+        setResenaModalOpen(false);
         setReviewDone(true);
       }
     } catch {}
@@ -1879,9 +2085,12 @@ function ProductosPageInner() {
             {hoveredCatMenu !== null && (
               <div style={{ position:"fixed", inset:0, zIndex:350 }} onClick={() => setHoveredCatMenu(null)} />
             )}
+            {/* El `paddingBottom` que había acá estaba MUERTO: el atajo de abajo
+                viene después, lo pisa, y encima repetía la misma cuenta. Tenerlos
+                juntos además hacía que React avisara en consola cada vez que el
+                atajo cambiaba (pasa al cruzar las 5 categorías). */}
             <div style={{ position:"relative", marginBottom:40,
               borderBottom: tabStyle === "underline" ? "none" : `1px solid ${borderFaint}`,
-              paddingBottom: tabStyle === "underline" ? 0 : 24,
               padding: `0 ${CATEGORIES.length > 5 ? 46 : 0}px ${tabStyle === "underline" ? 0 : 24}px` }}>
               {CATEGORIES.length > 5 && (
                 <>
@@ -2036,45 +2245,40 @@ function ProductosPageInner() {
       {/* ── MODAL PRODUCTO ─────────────────────────────────────────────── */}
       {modalProduct && (
         <div style={{ position:"fixed", inset:0, zIndex:200, display:"flex", alignItems:"center", justifyContent:"center" }} onClick={() => { setModalProduct(null); setLightboxSrc(null); }}>
-          <div style={{ position:"absolute", inset:0, background:overlayBg, backdropFilter:"blur(8px)" }}/>
-          {/* 1080 y no 980 en Urban Pulse: es el ancho del modal del template. La
-              columna de compra se lleva entre 300 y 400, así que con 980 a la foto
-              le quedaban ~600 y con 1080 le quedan ~700. */}
-          <div style={{ position: isMobile ? "absolute" : "relative", ...(isMobile ? {top:0,right:0,bottom:0,left:0} : {maxWidth: modalUP ? 1080 : 980, width:"calc(100% - 32px)", maxHeight:"92vh"}), background:S, overflow:"hidden", display:"flex", flexDirection:"column" }} onClick={e => e.stopPropagation()}>
-            {/* Urban Pulse cierra con un cuadrado macizo clavado en la esquina, sin
-                separación ni transparencia — el template no tiene una sola esquina
-                redondeada ni un solo fondo translúcido. */}
+          {/* El velo es lo primero que se ve al abrir, antes de leer una palabra:
+              en Boho Terra va en el marrón del template y no en el negro genérico. */}
+          <div style={{ position:"absolute", inset:0, background: v.velo ?? overlayBg, backdropFilter:"blur(8px)" }}/>
+          <div style={{ position: isMobile ? "absolute" : "relative", ...(isMobile ? {top:0,right:0,bottom:0,left:0} : {maxWidth: v.ancho, width:"calc(100% - 32px)", maxHeight:"92vh"}), background: v.superficie ?? S, overflow:"hidden", display:"flex", flexDirection:"column" }} onClick={e => e.stopPropagation()}>
+            {/* El fondo y la tinta de fábrica son los del TEMA, y la base los pisa
+                con el negro translúcido de siempre. Así el template que no dice
+                nada del botón de cerrar —como Urban Pulse, que lo quiere macizo—
+                lo recibe en su propio color sin repetir el hex en la tabla. */}
             <button onClick={() => { setModalProduct(null); setLightboxSrc(null); }} aria-label="Cerrar"
-              style={ esUP
-                ? { position:"absolute", top:0, right:0, zIndex:10, background:T, border:"none", color:S, width:40, height:40, cursor:"pointer", fontSize:18, display:"flex", alignItems:"center", justifyContent:"center" }
-                : { position:"absolute", top:10, right:10, zIndex:10, background:"rgba(0,0,0,0.65)", border:"none", color:"#fff", width:36, height:36, cursor:"pointer", fontSize:20, display:"flex", alignItems:"center", justifyContent:"center", backdropFilter:"blur(4px)" } }>
-              {esUP ? "✕" : "×"}
+              style={{ position:"absolute", zIndex:10, border:"none", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", background:T, color:S, ...v.cerrar }}>
+              {v.cerrarGlifo}
             </button>
-            {/* 48% para la foto, como en el modal del template (ahí es el mismo
-                número). A 50/50 la columna de comprar quedaba más angosta de lo
-                necesario y los chips de talle se apretaban en 768. */}
-            {/* En Urban Pulse la columna de compra se mide con `clamp` en vez de
-                dejarle el resto: 36% del modal, nunca menos de 300 ni más de 400 —
-                los mismos números que el template. Y `alignItems:start` para que el
-                panel no se estire al alto de la fila, que es lo que le permite
-                quedarse clavado. */}
-            <div style={{ overflow:"auto", flex:1, minHeight:0, display:"grid",
-                          gridTemplateColumns: isMobile ? "1fr" : (modalUP ? "minmax(0,1fr) clamp(300px, 36%, 400px)" : "48% 1fr"),
-                          ...(modalUP ? { alignItems:"start" as const } : {}) }}>
+            {/* El ref es el que `openModal` manda arriba al abrir otra ficha: los
+                "productos similares" están al final, así que el que toca uno está
+                siempre abajo de todo. */}
+            <div ref={modalScrollRef} style={{ overflow:"auto", flex:1, minHeight:0, display:"grid",
+                          gridTemplateColumns: isMobile ? "1fr" : v.columnas,
+                          // `alignItems:start` para que el panel no se estire al alto
+                          // de la fila, que es lo que le permite quedarse clavado.
+                          ...(panelClavado ? { alignItems:"start" as const } : {}) }}>
             {/* Galería — `alignSelf:start` para que no se estire al alto de la
                 columna de al lado y quede aire muerto abajo de las miniaturas. */}
             {/* El aire lo pone la COLUMNA, no cada bloque: asi la foto, las
                 miniaturas y los videos arrancan todos en la misma vertical. */}
             <div ref={colFotoRef} style={{ alignSelf: "start", boxSizing: "border-box",
-                                           ...(modalUP ? { gridColumn: 1 } : {}),
-                                           padding: isMobile ? 0 : (modalUP ? "26px 26px 0" : "28px 0 28px 28px") }}>
+                                           ...(panelClavado ? { gridColumn: 1 } : {}),
+                                           padding: isMobile ? 0 : (panelClavado ? "26px 26px 0" : "28px 0 28px 28px") }}>
               {/* En Urban Pulse las miniaturas van en tira VERTICAL a la izquierda de
                   la foto, y el hueco se lo hace este `paddingLeft`. Van en absoluto
                   —adentro del bloque de abajo— a propósito: el alto de la fila lo
                   tiene que fijar la FOTO, y si la tira fuera un hermano normal, diez
                   miniaturas la estirarían y la foto se iría con ellas. */}
-              <div style={{ position:"relative", ...(modalUP && modalProduct.images.length > 1 ? { paddingLeft: 84 } : {}) }}>
-              {modalUP && modalProduct.images.length > 1 && (
+              <div style={{ position:"relative", ...(panelClavado && modalProduct.images.length > 1 ? { paddingLeft: 84 } : {}) }}>
+              {panelClavado && modalProduct.images.length > 1 && (
                 <div style={{ position:"absolute", left:0, top:0, bottom:0, width:72, overflowY:"auto", scrollbarWidth:"none", display:"flex", flexDirection:"column", gap:8 }}>
                   {modalProduct.images.map((img, i) => (
                     <button key={i} onClick={() => elegirFoto(i)} aria-label={`Ver foto ${i+1}`}
@@ -2113,23 +2317,20 @@ function ProductosPageInner() {
                 </>)}
               </div>
               </div>
-              {!modalUP && modalProduct.images.length > 1 && (
-                /* 56×74 como en el modal del template: cuadradas de 48 recortaban
-                   la prenda a un cuadrado y la miniatura no se parecía a la foto
-                   que abría. Misma proporción 3/4 que la foto grande.
-                   En Urban Pulse de escritorio no van acá: van en la tira vertical
-                   de arriba. En celular sí —una columna al costado en 360px le come
-                   el ancho a la foto—, pero con la medida del template: 64×80, borde
-                   macizo de 3px en la elegida y las otras al 50%, no un borde fino
-                   del acento. */
-                <div style={{ display:"flex", gap: esUP ? 6 : 8, padding: isMobile ? (esUP ? "6px 12px 0" : "10px 14px 0") : "10px 0 0", overflowX:"auto", scrollbarWidth:"none" }}>
+              {!panelClavado && modalProduct.images.length > 1 && (
+                /* Con el panel clavado no van acá: van en la tira vertical de
+                   arriba. En celular sí —una columna al costado en 360px le come
+                   el ancho a la foto—, y ahí van con la medida del template.
+                   `grueso` es la marca maciza de 3px con las no elegidas al 50%,
+                   contra el borde fino del acento de la base. */
+                <div style={{ display:"flex", gap: v.mini.gap, padding: isMobile ? v.mini.padCel : "10px 0 0", overflowX:"auto", scrollbarWidth:"none" }}>
                   {modalProduct.images.map((img, i) => (
                     <button key={i} onClick={() => elegirFoto(i)} aria-label={`Ver foto ${i + 1}`}
-                      style={{ width: esUP ? 64 : 56, height: esUP ? 80 : 74, flexShrink:0, padding:0, overflow:"hidden", background:S, cursor:"pointer", transition:"border-color 0.2s",
-                               ...(esUP
+                      style={{ width: v.mini.w, height: v.mini.h, flexShrink:0, padding:0, overflow:"hidden", background:S, cursor:"pointer", transition:"border-color 0.2s",
+                               ...(v.mini.grueso
                                  ? { border: i===modalImg ? `3px solid ${T}` : `1px solid ${border}`, opacity: i===modalImg ? 1 : 0.5 }
                                  : { border: i===modalImg ? `2px solid ${GT}` : `1px solid ${border}` }) }}>
-                      <FadeImage src={img} alt="" width={esUP ? 64 : 56} height={esUP ? 80 : 74} style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }} />
+                      <FadeImage src={img} alt="" width={v.mini.w} height={v.mini.h} style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }} />
                     </button>
                   ))}
                 </div>
@@ -2175,41 +2376,41 @@ function ProductosPageInner() {
                 de la izquierda. Sin eso la foto y el nombre quedaban pegados, sin
                 nada que marcara dónde empieza la ficha. */}
             <div style={{ position:"relative", display:"flex", minWidth:0,
-                          ...(modalUP ? { gridColumn:2, gridRow:"1 / span 8", position:"sticky" as const, top:0, alignSelf:"start" as const, borderLeft:`3px solid ${T}`, maxHeight:"92vh", overflowY:"auto" as const } : {}),
-                          ...(barraCompraUP ? { borderTop:`3px solid ${T}` } : {}) }}>
+                          ...(panelClavado ? { gridColumn:2, gridRow:"1 / span 8", position:"sticky" as const, top:0, alignSelf:"start" as const, borderLeft:`3px solid ${T}`, maxHeight:"92vh", overflowY:"auto" as const } : {}),
+                          ...(barraCompra && v.cortePanelMovil ? { borderTop:`${v.cortePanelMovil}px solid ${T}` } : {}) }}>
             {/* Degradados: reponen la señal que se perdió al ocultar la barra.
                 Aparecen solo si de verdad queda contenido de ese lado. */}
-            {!modalUP && sombraArriba && (
+            {!panelClavado && sombraArriba && (
               <div style={{ position:"absolute", left:0, right:0, top:0, height:28, zIndex:2, pointerEvents:"none",
                             background:`linear-gradient(to top, transparent, ${S})` }} />
             )}
-            {!modalUP && sombraAbajo && (
+            {!panelClavado && sombraAbajo && (
               <div style={{ position:"absolute", left:0, right:0, bottom:0, height:44, zIndex:2, pointerEvents:"none",
                             background:`linear-gradient(to bottom, transparent, ${S})` }} />
             )}
-            {/* 46px arriba y no 20: el botón de cerrar de Urban Pulse es un cuadrado
-                de 40 clavado en la esquina, y con el padding chico le caía justo
-                encima al rubro del producto. Los otros tres lo tienen despegado.
-                En celular el cuadrado de cerrar está sobre la FOTO, arriba de todo,
-                así que el panel no tiene que esquivarlo: van los 22/18 del template. */}
-            <div ref={panelRef} className="st-sin-barra" style={{ flex:1, padding: barraCompraUP ? "22px 18px 24px" : (modalUP ? "46px 26px 30px" : "clamp(20px,4vw,36px) clamp(16px,3.5vw,32px)"), display:"flex", flexDirection:"column", gap:18, minHeight:0, boxSizing:"border-box",
-                          ...(!modalUP && altoPanel ? { maxHeight: altoPanel, overflowY:"auto" as const } : {}) }}>
+            {/* Tres rellenos y no uno porque la esquina de arriba a la derecha
+                cambia de dueño según la forma: con el panel clavado el botón de
+                cerrar cae DENTRO del panel y hay que despegarle el rubro (46 y no
+                20), mientras que en celular ese botón está sobre la foto y el panel
+                no tiene que esquivarlo. */}
+            <div ref={panelRef} className="st-sin-barra" style={{ flex:1, padding: barraCompra ? v.padPanelBarra : (panelClavado ? v.padPanelClavado : v.padPanel), display:"flex", flexDirection:"column", gap:18, minHeight:0, boxSizing:"border-box",
+                          ...(!panelClavado && altoPanel ? { maxHeight: altoPanel, overflowY:"auto" as const } : {}) }}>
               <div>
-                {/* En Urban Pulse el rubro va en gris y el nombre en mayúsculas y
-                    negrita máxima — el template no usa serif en ningún lado. Era la
-                    diferencia más visible del panel: el mismo producto decía
-                    "Pantalón básico" acá y "PANTALON BASICO" en el home. */}
-                <p style={{ fontSize:10, letterSpacing:3, color: esUP ? MID : GT, fontWeight: esUP ? 800 : 400, textTransform:"uppercase", marginBottom:6 }}>
+                {/* El rubro y el nombre eran la diferencia más visible del panel: el
+                    mismo producto decía "Pantalón básico" acá y "PANTALON BASICO" en
+                    el home de Urban Pulse.
+                    `overflowWrap` va para todos y no sólo para el que lo tenía: un
+                    nombre sin espacios desborda el panel en cualquier template, y que
+                    hasta ahora se notara en uno solo es casualidad, no diseño. */}
+                <p style={{ textTransform:"uppercase", marginBottom:6, ...v.rubro, color: v.rubroEnGris ? MID : GT }}>
                   {modalProduct.category}{modalProduct.subcategory && <span style={{ opacity:0.6 }}> › {modalProduct.subcategory}</span>}
                 </p>
-                <h2 style={ esUP
-                  ? { fontSize:24, margin:0, fontWeight:900, textTransform:"uppercase", letterSpacing:"-0.5px", lineHeight:1.15, color:T, overflowWrap:"anywhere" }
-                  : { fontFamily:serif, fontSize:24, margin:0, lineHeight:1.2, color:T } }>{modalProduct.name}</h2>
+                <h2 style={{ fontFamily:serif, color:T, overflowWrap:"anywhere", ...v.nombre }}>{modalProduct.name}</h2>
               </div>
               {/* Atajo a las reseñas, igual que en el template: viven abajo de todo,
                   y sin esto no hay ninguna señal de que el producto tenga opiniones
                   hasta scrollear medio modal. */}
-              {esUP && resenasProd.total > 0 && (
+              {v.atajoResenas && resenasProd.total > 0 && (
                 <button type="button" onClick={() => document.getElementById("pc-modal-resenas")?.scrollIntoView({ behavior:"smooth", block:"start" })}
                   style={{ display:"flex", alignItems:"center", gap:7, background:"none", border:"none", padding:0, cursor:"pointer", marginTop:-8 }}>
                   <span style={{ display:"flex", gap:1 }}>
@@ -2226,25 +2427,26 @@ function ProductosPageInner() {
                   todavía no sabe cuánto cuesta — bajaron al final del panel. */}
               <div style={{ display:"flex", gap:10, alignItems:"baseline", flexWrap:"wrap" }}>
                 {/* Urban Pulse escribe el precio más grande y más pesado (28/900
-                    contra 22/700), y el "% OFF" con el mismo color del precio
-                    rebajado de fondo en vez de verde sobre verde claro — que era un
-                    tercer color en el mismo renglón, sin relación con nada. */}
+                    contra 22/700), y el "% OFF" macizo sobre el rojo del precio en
+                    vez de verde sobre verde claro — que era un tercer color en el
+                    mismo renglón, sin relación con nada. */}
                 {modalPromo.hasPriceDrop ? (
                   <>
-                    <span style={{ fontSize: esUP ? 28 : 22, fontWeight: esUP ? 900 : 700, color:"#dc2626" }}>{fmt(modalPromo.effectivePrice)}</span>
-                    <span style={{ fontSize: esUP ? 15 : 14, color:MID, textDecoration:"line-through" }}>{fmt(modalPromo.originalPrice)}</span>
+                    <span style={{ fontSize: v.precioTam, fontWeight: v.precioPeso, color:"#dc2626" }}>{fmt(modalPromo.effectivePrice)}</span>
+                    <span style={{ fontSize: v.tachadoTam, color:MID, textDecoration:"line-through" }}>{fmt(modalPromo.originalPrice)}</span>
                     {modalPromo.pctOff != null && (
-                      <span style={ esUP
-                        ? { fontSize:12, fontWeight:800, color:"#fff", background:"#dc2626", padding:"2px 8px", borderRadius:4, letterSpacing:0.3, whiteSpace:"nowrap" }
-                        : { fontSize:12, fontWeight:800, color:"#16a34a", background:"#dcfce7", padding:"2px 8px", borderRadius:4, letterSpacing:0.3, whiteSpace:"nowrap" } }>
+                      <span style={{ fontSize:12, fontWeight:800, padding:"2px 8px", borderRadius:4, letterSpacing:0.3, whiteSpace:"nowrap",
+                                     ...(v.pctOffMacizo ? { color:"#fff", background:"#dc2626" } : { color:"#16a34a", background:"#dcfce7" }) }}>
                         {modalPromo.pctOff}% OFF
                       </span>
                     )}
                   </>
                 ) : (
                   <>
-                    <span style={{ fontSize: esUP ? 28 : 22, fontWeight: esUP ? 900 : 700, color: esUP ? ((!variantPrice && modalProduct.comparePrice) ? "#dc2626" : T) : GT }}>{fmt(displayPrice)}</span>
-                    {!variantPrice && modalProduct.comparePrice && <span style={{ fontSize: esUP ? 15 : 14, color:MID, textDecoration:"line-through" }}>{fmt(modalProduct.comparePrice)}</span>}
+                    <span style={{ fontSize: v.precioTam, fontWeight: v.precioPeso,
+                                   color: (v.precioRebajadoRojo && !variantPrice && modalProduct.comparePrice) ? "#dc2626"
+                                        : v.precioColor === "texto" ? T : GT }}>{fmt(displayPrice)}</span>
+                    {!variantPrice && modalProduct.comparePrice && <span style={{ fontSize: v.tachadoTam, color:MID, textDecoration:"line-through" }}>{fmt(modalProduct.comparePrice)}</span>}
                   </>
                 )}
               </div>
@@ -2266,13 +2468,13 @@ function ProductosPageInner() {
                   mismo, y el chip marcado ya lo dice. */}
               {modalProduct.sizes.length > 0 && (
                 <div>
-                  {tituloSeccion(esUP && selectedSize ? `Talle: ${selectedSize}` : "Talle")}
+                  {tituloSeccion(v.tituloConValor && selectedSize ? `Talle: ${selectedSize}` : "Talle")}
                   <div style={{ display:"flex", gap:7, flexWrap:"wrap" }}>
                     {modalProduct.sizes.map(size => {
                       const sinStock = outOfStockSizes.has(size);
                       return (
                         <button key={size} onClick={() => elegirTalle(size)}
-                          style={{ width:44, height:44, fontSize:12, fontWeight: selectedSize===size ? 800 : 600, border: `2px solid ${selectedSize===size ? chipBg : border}`, background: selectedSize===size ? chipBg : "transparent", color: selectedSize===size ? chipText : T, cursor:"pointer", transition:"all 0.2s", opacity: sinStock ? 0.35 : 1, textDecoration: sinStock ? "line-through" : "none" }}>
+                          style={{ width:v.chipTalle, height:v.chipTalle, fontSize:12, fontWeight: selectedSize===size ? 800 : 600, border: `2px solid ${selectedSize===size ? chipBg : border}`, background: selectedSize===size ? chipBg : "transparent", color: selectedSize===size ? chipText : T, cursor:"pointer", transition:"all 0.2s", opacity: sinStock ? 0.35 : 1, textDecoration: sinStock ? "line-through" : "none" }}>
                           {size}
                         </button>
                       );
@@ -2283,7 +2485,7 @@ function ProductosPageInner() {
 
               {modalProduct.colors.length > 0 && (
                 <div>
-                  {tituloSeccion(esUP && selectedColor ? `Color: ${selectedColor}` : "Color")}
+                  {tituloSeccion(v.tituloConValor && selectedColor ? `Color: ${selectedColor}` : "Color")}
                   <div style={{ display:"flex", gap:7, flexWrap:"wrap" }}>
                     {/* Con el puntito de muestra, como en el modal del template:
                         "Petróleo" o "Arena" no le dicen nada a nadie hasta verlo. */}
@@ -2292,7 +2494,7 @@ function ProductosPageInner() {
                       const sinStock = outOfStockColors.has(color);
                       return (
                         <button key={color} onClick={() => elegirColor(color)}
-                          style={{ display:"flex", alignItems:"center", gap:7, padding:"9px 14px", fontSize:11, border: `2px solid ${selectedColor===color ? chipBg : border}`, background: selectedColor===color ? chipBg : "transparent", color: selectedColor===color ? chipText : T, fontWeight: selectedColor===color ? 700 : 400, cursor:"pointer", transition:"all 0.2s", opacity: sinStock ? 0.35 : 1, textDecoration: sinStock ? "line-through" : "none" }}>
+                          style={{ display:"flex", alignItems:"center", gap:7, padding:v.chipColorPad, fontSize:11, border: `2px solid ${selectedColor===color ? chipBg : border}`, background: selectedColor===color ? chipBg : "transparent", color: selectedColor===color ? chipText : T, fontWeight: selectedColor===color ? 700 : 400, cursor:"pointer", transition:"all 0.2s", opacity: sinStock ? 0.35 : 1, textDecoration: sinStock ? "line-through" : "none" }}>
                           {/* El anillo del puntito usa el color del TEXTO del chip,
                               que por construcción contrasta con su fondo. Con un
                               anillo fijo oscuro, el color "Negro" elegido quedaba
@@ -2351,18 +2553,18 @@ function ProductosPageInner() {
                   despega del fondo como superficie, y cuando no, el color de texto
                   del tema. Por eso en la captura los chips SÍ se veían y el botón
                   no: los chips ya pasaban por el helper y el botón no. */}
-              {/* En celular Urban Pulse no lo lleva acá: se va a la barra fija del
-                  pie, con el total al lado. Metido en el panel quedaba a media
-                  pantalla —hay descripción, reseñas y similares abajo— y había que
-                  scrollear para atrás para comprar. */}
-              {!barraCompraUP && (
+              {/* Con barra al pie el botón no va acá: se va abajo, con el total al
+                  lado. Metido en el panel quedaba a media pantalla —hay descripción,
+                  reseñas y similares abajo— y había que scrollear para atrás para
+                  comprar. */}
+              {!barraCompra && (
               <button onClick={addToCart}
                 disabled={selectedVariantStock === 0}
-                style={{ background: selectedVariantStock === 0 ? `${chipBg}40` : chipBg, color:chipText, border:"none", padding: esUP ? "16px" : "15px", fontSize:11, fontWeight: esUP ? 900 : 800, letterSpacing:3, textTransform:"uppercase", cursor: selectedVariantStock === 0 ? "not-allowed" : "pointer" }}>
+                style={{ background: selectedVariantStock === 0 ? `${chipBg}40` : chipBg, color:chipText, border:"none", padding: v.botonPad, fontSize:11, fontWeight: v.botonPeso, letterSpacing:3, textTransform:"uppercase", cursor: selectedVariantStock === 0 ? "not-allowed" : "pointer" }}>
                 {/* "Agregar" a secas en Urban Pulse: el botón está adentro del panel
                     de compra, con el precio al lado, así que "al carrito" no agrega
                     información y sí un renglón partido en pantallas angostas. */}
-                {selectedVariantStock === 0 ? "Sin stock" : `${esUP ? "Agregar" : "Agregar al carrito"} · ${fmt(totalAgregar)}`}
+                {selectedVariantStock === 0 ? "Sin stock" : `${v.botonTexto} · ${fmt(totalAgregar)}`}
               </button>
               )}
 
@@ -2370,7 +2572,7 @@ function ProductosPageInner() {
                   tenía en ningún lado. Desde el catálogo sólo se podía marcar un
                   favorito con el corazoncito de la tarjeta, que es chico y está
                   arriba de la foto — abierto el producto, no había forma. */}
-              {esUP && (
+              {v.botonFavorito && (
                 <button onClick={() => toggleFavorite(modalProduct.id)}
                   style={{ width:"100%", background:"none", border:`2px solid ${T}`, color:T, padding:"12px", fontSize:10, fontWeight:900, letterSpacing:2, textTransform:"uppercase", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}>
                   <svg width={14} height={14} viewBox="0 0 24 24" fill={favorites.includes(modalProduct.id) ? T : "none"} stroke={T} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>
@@ -2378,10 +2580,12 @@ function ProductosPageInner() {
                 </button>
               )}
 
-              {/* En Urban Pulse estos dos no van acá: bajan a la columna izquierda,
-                  debajo de la foto. El panel se queda SOLO con lo de comprar. */}
-              {!esUP && bloqueDescripcion}
-              {!esUP && bloqueCaracteristicas}
+              {/* Con `leerAbajoDeLaFoto` estos dos no van acá: bajan a la columna
+                  izquierda, debajo de la foto. El panel se queda SOLO con lo de
+                  comprar. */}
+              {!v.leerAbajoDeLaFoto && (v.fichaPrimero
+                ? <>{bloqueCaracteristicas}{bloqueDescripcion}</>
+                : <>{bloqueDescripcion}{bloqueCaracteristicas}</>)}
 
               {/* Compartir — al final: es lo que se hace DESPUÉS de decidir, no
                   antes de saber el precio, que es donde estaba. */}
@@ -2408,13 +2612,13 @@ function ProductosPageInner() {
             </div>
             </div>
 
-            {/* Urban Pulse: la descripción y las características bajan acá, en la
-                columna izquierda y abajo de la foto, en vez de ir apiladas adentro
-                del panel de compra. Es lo que le permite al panel quedarse corto y
-                clavado: si la descripción viviera ahí adentro, el panel volvería a
-                medir varias pantallas y el botón de comprar se iría de la vista con
-                el primer producto que tenga texto largo. */}
-            {esUP && (bloqueDescripcion || bloqueCaracteristicas) && (
+            {/* La descripción y las características bajan acá, en la columna
+                izquierda y abajo de la foto, en vez de ir apiladas adentro del panel
+                de compra. Es lo que le permite al panel quedarse corto y clavado: si
+                la descripción viviera ahí adentro, el panel volvería a medir varias
+                pantallas y el botón de comprar se iría de la vista con el primer
+                producto que tenga texto largo. */}
+            {v.leerAbajoDeLaFoto && (bloqueDescripcion || bloqueCaracteristicas) && (
               <div style={{ gridColumn:1, padding: isMobile ? "26px 18px 0" : "26px 26px 0", display:"flex", flexDirection:"column", gap:18 }}>
                 {bloqueDescripcion}
                 {bloqueCaracteristicas}
@@ -2427,8 +2631,8 @@ function ProductosPageInner() {
                 pantalla. Acá abajo entran a lo ancho y las tarjetas van de a dos
                 por fila (ver más abajo), que es donde el renglón queda en ~64
                 caracteres en vez de ~140. */}
-            <div id="pc-modal-resenas" style={{ gridColumn: isMobile ? undefined : (modalUP ? 1 : "1 / -1"), borderTop:`1px solid ${border}`, padding: isMobile ? "20px 16px" : "24px 32px" }}>
-                {esUP ? tituloSeccion(`Reseñas${resenasProd.total > 0 ? ` (${resenasProd.total})` : ""}`) : (
+            <div id="pc-modal-resenas" style={{ gridColumn: isMobile ? undefined : (panelClavado ? 1 : "1 / -1"), borderTop:`1px solid ${border}`, padding: isMobile ? "20px 16px" : "24px 32px" }}>
+                {v.tituloRayita ? tituloSeccion(`Reseñas${resenasProd.total > 0 ? ` (${resenasProd.total})` : ""}`) : (
                   <p style={{ ...tituloBloque, marginBottom: 20 }}>
                     Reseñas{resenasProd.total > 0 && ` (${resenasProd.total})`}
                   </p>
@@ -2543,12 +2747,16 @@ function ProductosPageInner() {
               const rest = others.filter(p => !sameSub.includes(p) && !sameCat.includes(p));
               const similar = [...sameSub, ...sameCat, ...rest].slice(0, 4);
               if (similar.length === 0) return null;
+              // El 20 de arriba va DENTRO del atajo. Estaba como `paddingTop` aparte,
+              // y como el atajo abría con un 0, las dos propiedades definían lo mismo:
+              // React avisa en consola porque al re-renderizar no puede garantizar
+              // cuál gana. Se ve igual, ya no avisa.
               return (
-                <div style={{ gridColumn: isMobile ? undefined : (modalUP ? 1 : "1 / -1"), padding: isMobile ? "0 16px 24px" : "0 32px 32px", borderTop:`1px solid ${border}`, paddingTop:20 }}>
+                <div style={{ gridColumn: isMobile ? undefined : (panelClavado ? 1 : "1 / -1"), padding: isMobile ? "20px 16px 24px" : "20px 32px 32px", borderTop:`1px solid ${border}` }}>
                   {/* El único de los seis títulos del modal que se había quedado
                       afuera de `tituloSeccion`: en Urban Pulse los otros cinco
                       llevan la rayita del acento y este era un renglón gris. */}
-                  {esUP ? tituloSeccion("Productos similares")
+                  {v.tituloRayita ? tituloSeccion("Productos similares")
                         : <p style={{ fontSize:10, letterSpacing:3, color:GT, textTransform:"uppercase", marginBottom:14 }}>Productos similares</p>}
                   <div style={{ display:"grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(4,1fr)", gap:14 }}>
                     {similar.map(p => (
@@ -2590,10 +2798,10 @@ function ProductosPageInner() {
                 completa, así que con `flexShrink:0` la barra se queda abajo sin
                 taparle nada al contenido, y en el celular no se pelea con la barra
                 de direcciones del navegador. */}
-            {barraCompraUP && (
-              <div style={{ borderTop:`2px solid ${T}`, padding:"12px 16px 16px", background:S, flexShrink:0 }}>
+            {barraCompra && (
+              <div style={{ borderTop:`${v.barraCorte}px solid ${T}`, padding:"12px 16px 16px", background: v.superficie ?? S, flexShrink:0 }}>
                 <div style={{ display:"flex", alignItems:"baseline", gap:10, marginBottom:10 }}>
-                  <span style={{ fontSize:20, fontWeight:900, color:T }}>{fmt(totalAgregar)}</span>
+                  <span style={{ ...v.barraPrecio, color: v.precioColor === "texto" ? T : GT }}>{fmt(totalAgregar)}</span>
                   {/* `!!` y no `comparePrice &&` a secas: con `comparePrice` en 0 el
                       `&&` devuelve 0 y React dibuja un "0" suelto en la barra. Es el
                       UP-7 ("Un `0` suelto arriba de la foto en Ofertas") esperando

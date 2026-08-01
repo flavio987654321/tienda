@@ -67,6 +67,9 @@ export function useCartLogic({ products, promotions = [], storeId, affiliateId =
   const [cartOpen,       setCartOpen]       = useState(false);
   const [modalProduct,   setModalProduct]   = useState<StorefrontProduct | null>(null);
   const [modalImg,       setModalImg]       = useState(0);
+  /** El contenedor que scrollea adentro del modal de producto. Cada template le
+   *  cuelga este ref al suyo; `openModal` lo manda arriba al abrir otra ficha. */
+  const modalScrollRef = useRef<HTMLDivElement>(null);
   const [selectedSize,   setSelectedSize]   = useState("");
   const [selectedColor,  setSelectedColor]  = useState("");
   const [qty,            setQty]            = useState(1);
@@ -533,6 +536,15 @@ export function useCartLogic({ products, promotions = [], storeId, affiliateId =
     setSelectedColor(combo.color);
     setQty(isWholesale && p.cantMinMayorista ? p.cantMinMayorista : 1);
     setSearchOpen(false);
+    // La ficha nueva arranca ARRIBA. Los "productos similares" viven al final del
+    // modal, así que el que toca uno está siempre abajo de todo: cambiaba el
+    // producto y aparecía el pie de la ficha nueva —las reseñas, los similares de
+    // nuevo— sin ver nunca la foto, el nombre ni el precio. Se leía como si no
+    // hubiera pasado nada.
+    // Va acá y no en cada template porque es lo mismo que las cuatro líneas de
+    // arriba: lo que hay que dejar en cero al abrir otro producto. Suelto en los
+    // templates, hay que acordarse diez veces.
+    if (modalScrollRef.current) modalScrollRef.current.scrollTop = 0;
     registrarVista(p.id, slug, isOwner, isPreview);
   };
 
@@ -791,6 +803,7 @@ export function useCartLogic({ products, promotions = [], storeId, affiliateId =
     checkoutMode, isWholesale, wholesaleWarnings,
     pagoOptions: getPagoOptions(hasMercadoPago, !!affiliateId),
     fmtEnvioPrice, fmtLiveQuote,
+    modalScrollRef,
     // Functions
     fmt, showToast, openModal, addToCart,
     removeFromCart, updateQty,

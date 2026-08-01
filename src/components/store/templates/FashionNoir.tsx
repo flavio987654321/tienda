@@ -4,7 +4,7 @@ import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { usePushBell } from "@/contexts/PushBellContext";
 import { useAuth } from "@/components/AuthProvider";
 import StoreFollowButton from "@/components/store/StoreFollowButton";
-import { useResenasProducto } from "@/hooks/useResenasProducto";
+import { useResenasProducto, type ResenaProducto } from "@/hooks/useResenasProducto";
 import { EditableZone, EditableImageButton, EditableSectionBg, BgDragHandle, getContrastColor, useEditContext, textoSobre } from "@/contexts/EditContext";
 import { useStorefront, type StorefrontProduct } from "@/hooks/useStorefront";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
@@ -21,6 +21,7 @@ import { PromoTag, PromoBlock, PromoPrice } from "@/components/store/PromoDispla
 import { resolveProductPromo, describePromo } from "@/lib/promoDisplay";
 import { CheckoutModal } from "@/components/store/templates/shared/CheckoutModal";
 import { ContactForm } from "@/components/store/templates/shared/ContactForm";
+import { NewsletterForm } from "@/components/store/templates/shared/NewsletterForm";
 import { FadeImage } from "@/components/store/templates/shared/FadeImage";
 import StoreProductReels from "@/components/store/ProductReels";
 import { SectionBlock } from "@/components/store/templates/shared/SectionBlock";
@@ -32,6 +33,17 @@ import { resolveVariantPrice } from "@/lib/variantPrice";
 import { useTurnstile } from "@/components/Turnstile";
 
 const SIZE_ATTRS = ["talle","size","talla","talles","sizes","tamaño","tamano","almacenamiento","ram","versión","version","formato","variante","material","sabor","peso/tamaño","peso"];
+
+/* Las reseñas de EJEMPLO de la vista rápida, para el editor. Sin esto el bloque
+   aparecía vacío mientras el dueño acomoda la tienda y no había forma de ver cómo
+   queda lleno. Nunca se publican: el hook las muestra sólo con `isPreview`, y son
+   propias de este template para que las previews no se vean clonadas. */
+const RESENAS_EJEMPLO_FN: ResenaProducto[] = [
+  { id:"fn-ej-1", rating:5, comment:"La caída de la tela es impecable y el negro es negro de verdad. Lo usé para una boda y me preguntaron de dónde era.", reviewer:"Victoria S.", verified:true,  verifiedBy:"auto",  createdAt:"2026-07-18T14:00:00.000Z" },
+  { id:"fn-ej-2", rating:5, comment:"Las terminaciones son de otra categoría. Se nota que no es una prenda de producción masiva.", reviewer:"Federico L.", verified:false, verifiedBy:null,   createdAt:"2026-07-11T14:00:00.000Z" },
+  { id:"fn-ej-3", rating:4, comment:"Hermoso y muy bien embalado. Le saco una estrella porque tardó un par de días más de lo previsto.", reviewer:"Renata M.", verified:true,  verifiedBy:"owner", createdAt:"2026-06-29T14:00:00.000Z" },
+];
+const PASO_RESENAS_FN = 5;
 
 
 const announcementMessages_DEFAULT = [
@@ -122,6 +134,9 @@ export default function FashionNoir() {
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
   const [reviewDone,     setReviewDone]     = useState(false);
   const [reviewHoneypot, setReviewHoneypot] = useState("");
+  const [reviewError,    setReviewError]    = useState<string | null>(null);
+  /** Corta el doble envio en la misma vuelta, antes de que el estado se entere. */
+  const enviandoResenaProd = useRef(false);
   const [showReport,     setShowReport]     = useState(false);
   const [lightboxSrc,    setLightboxSrc]    = useState<string|null>(null);
   const ofertasScrollRef = useRef<HTMLDivElement>(null);
@@ -215,7 +230,7 @@ export default function FashionNoir() {
     toastMsg,
     cartCount,
     searchResults, favoriteProducts,
-    fmt, showToast, openModal, addToCart,
+    fmt, showToast, openModal, addToCart, modalScrollRef,
     toggleFavorite,
   } = cart;
   const imgSwipe = useTouchSwipe(
@@ -268,7 +283,10 @@ export default function FashionNoir() {
   // paginar (con 200 reseñas se llegaba a la 50 y las demás no existían), el
   // promedio calculado sobre las que habían llegado, y las reseñas del producto
   // anterior pegadas en la ficha si abrías dos seguidos.
-  const resenasProd = useResenasProducto({ slug: storeConfig?.slug, productId: modalProduct?.id });
+  const resenasProd = useResenasProducto({
+    slug: storeConfig?.slug, productId: modalProduct?.id,
+    paso: PASO_RESENAS_FN, ejemplos: RESENAS_EJEMPLO_FN, isPreview,
+  });
 
   useEffect(() => {
     if (!modalProduct) return;
@@ -280,9 +298,10 @@ export default function FashionNoir() {
 
   async function submitReview(e: React.FormEvent) {
     e.preventDefault();
-    if (isPreview || isOwner || reviewHoneypot) return;
+    if (isPreview || isOwner || reviewHoneypot || enviandoResenaProd.current) return;
     const slug = storeConfig?.slug;
     if (!modalProduct || !slug || !reviewForm.reviewer.trim()) return;
+    enviandoResenaProd.current = true;
     setReviewSubmitting(true);
     try {
       const res = await fetch(`/api/public/${slug}/reviews`, {
@@ -294,9 +313,15 @@ export default function FashionNoir() {
         const data = await res.json();
         resenasProd.agregar(data.review);
         setReviewForm({ reviewer: "", rating: 5, comment: "", email: "" });
+        setReviewError(null);
         setReviewDone(true); setTimeout(() => setReviewDone(false), 4000);
+      } else {
+        const d = await res.json().catch(() => null);
+        setReviewError(d?.error || "No se pudo publicar tu resena. Proba de nuevo en un momento.");
       }
-    } catch {} finally { reviewCaptcha.reset(); setReviewSubmitting(false); }
+    } catch {
+      setReviewError("No se pudo conectar. Revisa tu internet y proba de nuevo.");
+    } finally { enviandoResenaProd.current = false; reviewCaptcha.reset(); setReviewSubmitting(false); }
   }
 
   const ANNOUNCEMENT_BAR_H = 36;
@@ -615,7 +640,10 @@ export default function FashionNoir() {
 
       {/* ── NAVBAR ─────────────────────────────────────────── */}
       <nav style={{ position: isPreview ? "sticky" : "fixed", top:announcementBarHeight, left: isPreview ? undefined : 0, right: isPreview ? undefined : 0, zIndex: isPreview ? 10000 : 100, transition:"background 0.4s, top 0.3s", background: (isPreview || scrolled) ? "rgba(10,10,10,0.97)" : "transparent", backdropFilter: (isPreview || scrolled) ? "blur(12px)" : "none", borderBottom: (isPreview || scrolled) ? `1px solid rgba(201,168,76,0.15)` : "none" }}>
-        <div style={{ maxWidth:1280, margin:"0 auto", padding:"0 32px", height:72, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+        {/* Sin el `maxWidth:1280`: el nav va de borde a borde, como el hero que
+            tiene pegado abajo. Ver el comentario largo en `ChicParis.tsx`, que es la
+            misma decisión para los tres templates. */}
+        <div style={{ padding:"0 32px", height:72, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
           <div style={{ display:"flex", alignItems:"center", gap:8, flexShrink:0 }}>
             <button onClick={() => scrollTo("hero")} style={{ background:"none", border:"none", cursor:"pointer", fontFamily:"Georgia, serif", fontSize:26, fontWeight:700, letterSpacing:6, color:G, maxWidth:220, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
               <EditableZone field="storeName" label="Nombre de la tienda">{storeConfig?.storeName ?? "NOIR"}</EditableZone>
@@ -1173,7 +1201,11 @@ export default function FashionNoir() {
                 <h2 style={{ fontFamily:"Georgia, serif", fontSize:"clamp(24px,3vw,36px)", margin:0, color:ofertasText }}><EditableZone field="ofertasTitle" label="Título Ofertas">Ofertas</EditableZone></h2>
               </div>
               <div style={{ position:"relative" }}>
-                <div ref={ofertasScrollRef} className="fn-ofertas-row" style={{ display:"flex", gap:16, overflowX:"auto", scrollSnapType:"x mandatory", paddingBottom:8, padding: (ofertasCanLeft || ofertasCanRight) ? (isMobile ? "0 60px 8px" : "0 64px 8px") : (isMobile ? "0 16px 8px" : "0 32px 8px") }}>
+                {/* Sin `paddingBottom` aparte: el atajo de al lado ya termina en 8px
+                    y lo pisaba igual. Juntos hacían que React avisara en consola cada
+                    vez que el atajo cambia — y acá cambia con el SCROLL de la fila,
+                    o sea a cada rato. */}
+                <div ref={ofertasScrollRef} className="fn-ofertas-row" style={{ display:"flex", gap:16, overflowX:"auto", scrollSnapType:"x mandatory", padding: (ofertasCanLeft || ofertasCanRight) ? (isMobile ? "0 60px 8px" : "0 64px 8px") : (isMobile ? "0 16px 8px" : "0 32px 8px") }}>
                   {displayList.map(p => {
                     // El "-30%" tiene que coincidir con el precio de abajo: si hay
                     // promo de tienda manda ella, si no sale del comparePrice.
@@ -1502,9 +1534,18 @@ export default function FashionNoir() {
             <p style={{ fontSize:12, opacity:0.45, marginBottom:16, lineHeight:1.6 }}>
               <EditableZone field="newsletterText" label="Texto newsletter">Suscribite y recibí novedades antes que nadie. Sin spam.</EditableZone>
             </p>
-            <div style={{ display:"flex", maxWidth: isMobile ? "100%" : 340 }}>
-              <input placeholder="tu@email.com" style={{ flex:1, minWidth:0, background:footerInputBg, border:`1px solid ${footerSubtleBorder}`, borderRight:"none", color:footerText, padding:"11px 14px", fontSize:12, outline:"none" }}/>
-              <button style={{ flexShrink:0, background:G, color:BG, border:"none", padding:"11px 18px", fontSize:12, fontWeight:700, cursor:"pointer", letterSpacing:1 }}>OK</button>
+            <div style={{ maxWidth: isMobile ? "100%" : 340 }}>
+              <NewsletterForm
+                slug={storeConfig?.slug} isPreview={isPreview}
+                boton="OK" botonEnviando="…"
+                theme={{
+                  form:  { display:"flex" },
+                  input: { flex:1, minWidth:0, background:footerInputBg, border:`1px solid ${footerSubtleBorder}`, borderRight:"none", color:footerText, padding:"11px 14px", fontSize:12, outline:"none" },
+                  boton: { flexShrink:0, background:G, color:BG, border:"none", padding:"11px 18px", fontSize:12, fontWeight:700, cursor:"pointer", letterSpacing:1 },
+                  colorMensaje: footerText,
+                  colorError: G,
+                }}
+              />
             </div>
           </div>
         </div>
@@ -1612,7 +1653,10 @@ export default function FashionNoir() {
           <div style={{ position:"absolute", inset:0, background:"rgba(10,10,10,0.88)", backdropFilter:"blur(8px)" }}/>
           <div style={{ position:"relative", background:S, maxWidth:960, width:"calc(100% - 32px)", maxHeight: isPreview ? "100%" : "92vh", overflow:"hidden", display:"flex", flexDirection:"column" }} onClick={e => e.stopPropagation()}>
             <button onClick={() => { setModalProduct(null); setLightboxSrc(null); }} aria-label="Cerrar" style={{ position:"absolute", top:8, right:8, zIndex:10, background:"rgba(10,10,10,0.65)", border:"none", color:T, width:36, height:36, cursor:"pointer", fontSize:20, display:"flex", alignItems:"center", justifyContent:"center", backdropFilter:"blur(4px)" }}>×</button>
-            <div style={{ overflow:"auto", flex:1, minHeight:0, display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr" }}>
+            {/* El ref lo manda arriba `openModal` al abrir otra ficha: los
+                "productos similares" están al final, así que el que toca uno está
+                siempre abajo de todo y la ficha nueva abría por el pie. */}
+            <div ref={modalScrollRef} style={{ overflow:"auto", flex:1, minHeight:0, display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr" }}>
             <div>
               {/* Imagen principal con flechas */}
               <div style={{ position:"relative", width:"100%", aspectRatio:"3/4" }} {...imgSwipe}>
@@ -1841,6 +1885,18 @@ export default function FashionNoir() {
                 <p style={{ fontSize:10, letterSpacing:3, textTransform:"uppercase", opacity:0.5, margin:"0 0 20px" }}>
                   Reseñas{resenasProd.total > 0 && ` (${resenasProd.total})`}
                 </p>
+                {/* Sólo en el editor, y sólo si el producto no tiene ninguna real.
+                    Dice que son de mentira ANTES de que el dueño las lea. */}
+                {resenasProd.usandoEjemplos && (
+                  <div style={{ display:"flex", gap:9, margin:"0 0 16px", padding:"10px 13px", background:"rgba(253,230,138,0.12)", border:"1px solid rgba(253,230,138,0.35)" }}>
+                    <span style={{ flexShrink:0, fontSize:13, lineHeight:1.4 }}>⚠️</span>
+                    <p style={{ margin:0, fontSize:11.5, color:"#fde68a", lineHeight:1.55 }}>
+                      <strong>Estas reseñas son de ejemplo.</strong> Este producto todavía no tiene ninguna:
+                      están para que veas cómo queda el bloque. No se publican y desaparecen solas en cuanto
+                      llegue la primera de verdad.
+                    </p>
+                  </div>
+                )}
                 {resenasProd.cargando ? (
                   <p style={{ fontSize:12, opacity:0.4 }}>Cargando...</p>
                 ) : resenasProd.lista.length > 0 ? (
@@ -1914,6 +1970,11 @@ export default function FashionNoir() {
                   <div style={{ position:"relative" }}>
                     {isPreview && <div style={{ position:"absolute", inset:0, zIndex:10, cursor:"default" }} onClick={e => e.stopPropagation()} />}
                     <form onSubmit={isPreview ? e => e.preventDefault() : submitReview} style={{ display:"flex", flexDirection:"column", gap:10, opacity: isPreview ? 0.55 : 1 }}>
+                      {reviewError && (
+                        <p style={{ margin:0, fontSize:11.5, color:"#fca5a5", background:"rgba(220,38,38,0.12)", border:"1px solid rgba(220,38,38,0.35)", padding:"9px 12px", lineHeight:1.5 }}>
+                          ⚠ {reviewError}
+                        </p>
+                      )}
                       <input value={reviewHoneypot} onChange={e => setReviewHoneypot(e.target.value)} name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" style={{ opacity:0, height:0, position:"absolute", pointerEvents:"none" }} />
                       <input value={reviewForm.reviewer} onChange={e => !isPreview && setReviewForm(p => ({ ...p, reviewer: e.target.value }))}
                         placeholder="Tu nombre" readOnly={isPreview}

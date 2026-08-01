@@ -69,6 +69,32 @@ export const PALETA_PROMO_NEON: PaletaPromo = {
   FIXED:         "#fb51c2", // magenta        ( 6.97)
 };
 
+// ── Tierra — Boho Terra ──────────────────────────────────────────────────────
+// La clásica es la de una tienda que grita la oferta; Boho Terra vende fibras
+// naturales y tinturas vegetales, y su acento es un terracota. Con la clásica,
+// el 20% salía naranja peleando con ese terracota y el descuento en pesos salía
+// FUCSIA: el color más lejano que existe de lo que la tienda dice ser.
+//
+// Los mismos dos criterios de siempre, medidos:
+//   1) contraste contra el texto que les toca (todos van blanco): 7.02 el más
+//      justo, contra el mínimo de 5 que necesita texto chico
+//   2) repartidos por la rueda, con 52° o más entre vecinos
+//        arcilla 14 · oliva 76 · salvia 155 · índigo 214 · ciruela 322
+//
+// Y uno propio, que es el que los hace de esta casa: la SATURACIÓN va de 36% a
+// 60%, contra el 72–88% de la clásica. Un tono al 80% se lee como tinta
+// industrial por más terroso que sea el nombre que le pongamos; bajarlo es lo
+// que lo vuelve pigmento. Ese es todo el truco, y por eso están medidos: si
+// mañana alguien "corrige" uno subiéndole la saturación, rompe justo la única
+// propiedad que los distingue.
+export const PALETA_PROMO_TIERRA: PaletaPromo = {
+  PERCENT:       "#8a3b23", // arcilla (7.69 · 60%)
+  N_PAY_M:       "#4f5f22", // oliva   (7.02 · 47%)
+  FREE_SHIPPING: "#2d5f4a", // salvia  (7.38 · 36%)
+  MIX_N_PAY_M:   "#31527d", // índigo  (7.97 · 46%)
+  FIXED:         "#75325c", // ciruela (8.87 · 40%)
+};
+
 // Qué template usa qué paleta. Vive acá y no en cada pantalla porque la página de
 // LISTADO también dibuja promos y se pinta con los colores del template del que
 // viene (`?t=`): sin esta tabla, el mismo 3×2 se veía violeta en la portada de Urban
@@ -76,6 +102,7 @@ export const PALETA_PROMO_NEON: PaletaPromo = {
 // Los que no figuran usan la clásica.
 const PALETA_POR_TEMPLATE: Record<string, PaletaPromo> = {
   "urban-pulse": PALETA_PROMO_NEON,
+  "boho-terra":  PALETA_PROMO_TIERRA,
 };
 
 export function paletaDeTemplate(t?: string | null): PaletaPromo | undefined {

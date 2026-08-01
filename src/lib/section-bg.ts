@@ -168,3 +168,49 @@ export function colorRepresentativo(raw: string | undefined | null): string {
   }
   return n ? toHex({ r: r / n, g: g / n, b: b / n }) : s;
 }
+
+// ── Texto ARRIBA de una FOTO de fondo ────────────────────────────────────────
+// Las secciones con foto son el único caso donde el contraste NO se puede medir:
+// una foto tiene zonas claras y oscuras a la vez, cambia con cada tienda y el
+// navegador no nos deja leerla. Los templates resolvían esto ignorándolo: se
+// pintaban con el color de texto del COLOR de la sección —el que se usaría si no
+// hubiera foto— y ese color se quedaba fijo aunque la foto lo tapara. Subiendo la
+// capa al 10% sobre una foto oscura, el título en marrón desaparecía.
+//
+// Lo único que sí sabemos es la CAPA que el dueño puso encima, y eso es una
+// declaración de intención: si eligió capa OSCURA está empujando la superficie
+// hacia el negro, y el texto va claro. Si eligió CLARA, al revés.
+//
+// Con la capa en "ninguna" devolvemos null a propósito: ahí no hay ninguna señal
+// y adivinar sería peor que dejar que el template use la suya.
+//
+// Ojo con el porcentaje: la intención vale igual con la capa al 10% que al 90%,
+// pero al 10% la foto sigue mandando y NINGÚN color de texto alcanza solo. Por
+// eso va de la mano de `sombraSobreFoto`, que es lo que de verdad salva ese caso.
+
+export type CapaDeFoto = { overlayType?: "none" | "dark" | "light" } | undefined | null;
+
+/** "clara" = texto claro sobre superficie oscura. null = no hay señal, decidí vos. */
+export function tintaSobreFoto(capa: CapaDeFoto, hayFoto: boolean): "clara" | "oscura" | null {
+  if (!hayFoto) return null;
+  if (capa?.overlayType === "dark")  return "clara";
+  if (capa?.overlayType === "light") return "oscura";
+  return null;
+}
+
+/**
+ * El halo que sostiene al texto cuando la capa es floja y la foto se ve entera.
+ *
+ * Es lo que hace que el bloque siga siendo legible con la capa al 10%, que es
+ * justo donde elegir bien el color no alcanza: sobre una foto con un farol
+ * encendido al lado de una sombra, cualquier color pierde en alguna parte.
+ *
+ * Va en la dirección contraria a la tinta —halo oscuro detrás del texto claro y
+ * al revés— y con radio generoso y sin desplazamiento, para que se lea como
+ * profundidad y no como una sombra dura de los 2000.
+ */
+export function sombraSobreFoto(tinta: "clara" | "oscura"): string {
+  return tinta === "clara"
+    ? "0 1px 12px rgba(0,0,0,0.55), 0 1px 3px rgba(0,0,0,0.45)"
+    : "0 1px 12px rgba(255,255,255,0.65), 0 1px 3px rgba(255,255,255,0.55)";
+}
