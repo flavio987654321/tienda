@@ -68,6 +68,56 @@ function applyUserFilter(users: User[], filter: string): User[] {
   }
 }
 
+/**
+ * La confirmación del cambio de plan.
+ *
+ * Se renderiza PEGADA a los botones que la disparan. Antes era un bloque suelto
+ * al final del modal: tocabas "Tienda Premium" arriba de todo, el botón se ponía
+ * ámbar, y el recuadro que realmente guardaba quedaba fuera de la pantalla en un
+ * modal con scroll. El ámbar se lee como "aplicado", así que el admin cerraba
+ * convencido de haber cambiado el plan y no había pasado nada — sin error,
+ * porque efectivamente no se había intentado nada.
+ *
+ * Es un componente aparte y no una variable con JSX adentro del padre para que
+ * el `onClick` no quede declarado en el cuerpo del render del padre.
+ */
+function ConfirmacionPlan({ etiqueta, activa, guardando, onCancelar, onConfirmar }: {
+  etiqueta: string;
+  /** El cambio además saca la suscripción del trial. */
+  activa: boolean;
+  guardando: boolean;
+  onCancelar: () => void;
+  onConfirmar: () => void;
+}) {
+  return (
+    <div className="mt-2.5 p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl">
+      <p className="text-amber-300 text-xs font-semibold mb-2.5">
+        ¿Confirmar cambio a {etiqueta}?
+        {activa && (
+          <span className="block text-emerald-400 font-normal mt-1">
+            También activa la suscripción (sale del trial)
+          </span>
+        )}
+      </p>
+      <div className="flex gap-2">
+        <button
+          onClick={onCancelar}
+          className="flex-1 text-xs font-semibold py-2 rounded-lg border border-white/10 text-gray-400 hover:text-white hover:border-white/20 transition-all"
+        >
+          Cancelar
+        </button>
+        <button
+          onClick={onConfirmar}
+          disabled={guardando}
+          className="flex-1 text-xs font-semibold py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-black transition-all disabled:opacity-50"
+        >
+          {guardando ? "Guardando..." : "Confirmar"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function UsuariosAdmin({ users: initial, filter: activeFilter }: { users: User[]; filter: string }) {
   const baseUsers = useMemo(() => applyUserFilter(initial, activeFilter), [initial, activeFilter]);
   const [users, setUsers] = useState(baseUsers);
@@ -655,6 +705,7 @@ export default function UsuariosAdmin({ users: initial, filter: activeFilter }: 
                     );
                   })}
                 </div>
+                {pendingPlan?.tier && <ConfirmacionPlan etiqueta={pendingLabel} activa={willActivate} guardando={isLoading} onCancelar={() => setPendingPlan(null)} onConfirmar={() => { const body = willActivate ? { ...pendingPlan, status: "ACTIVE" } : pendingPlan; changeSub(subModal.id, body!); setPendingPlan(null); }} />}
               </div>
 
               {/* Cambiar facturación */}
@@ -685,40 +736,8 @@ export default function UsuariosAdmin({ users: initial, filter: activeFilter }: 
                     );
                   })}
                 </div>
+                {pendingPlan?.plan && <ConfirmacionPlan etiqueta={pendingLabel} activa={willActivate} guardando={isLoading} onCancelar={() => setPendingPlan(null)} onConfirmar={() => { const body = willActivate ? { ...pendingPlan, status: "ACTIVE" } : pendingPlan; changeSub(subModal.id, body!); setPendingPlan(null); }} />}
               </div>
-
-              {/* Confirmación de cambio de plan */}
-              {pendingPlan && (
-                <div className="mb-4 p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl">
-                  <p className="text-amber-300 text-xs font-semibold mb-2.5">
-                    ¿Confirmar cambio a {pendingLabel}?
-                    {willActivate && (
-                      <span className="block text-emerald-400 font-normal mt-1">
-                        También activa la suscripción (sale del trial)
-                      </span>
-                    )}
-                  </p>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => setPendingPlan(null)}
-                      className="flex-1 text-xs font-semibold py-2 rounded-lg border border-white/10 text-gray-400 hover:text-white hover:border-white/20 transition-all"
-                    >
-                      Cancelar
-                    </button>
-                    <button
-                      onClick={() => {
-                        const body = willActivate ? { ...pendingPlan, status: "ACTIVE" } : pendingPlan;
-                        changeSub(subModal.id, body!);
-                        setPendingPlan(null);
-                      }}
-                      disabled={isLoading}
-                      className="flex-1 text-xs font-semibold py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-black transition-all disabled:opacity-50"
-                    >
-                      Confirmar
-                    </button>
-                  </div>
-                </div>
-              )}
 
               {/* Acciones de estado (contextuales) */}
               <div className="space-y-2">
