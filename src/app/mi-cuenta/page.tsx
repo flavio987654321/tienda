@@ -26,6 +26,7 @@ import {
   Store,
   AlertCircle,
   RefreshCw,
+  ShieldAlert,
 } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
 import TermsUpdateBanner from "@/components/TermsUpdateBanner";
@@ -254,7 +255,7 @@ function ErrorState({ onRetry }: { onRetry: () => void }) {
 }
 
 export default function MiCuentaPage() {
-  const { signOut } = useAuth();
+  const { signOut, signOutTodosLosDispositivos } = useAuth();
   const [tab, setTab] = useState<Tab>("pedidos");
   const [profile, setProfile] = useState<Profile | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
@@ -1122,6 +1123,30 @@ export default function MiCuentaPage() {
                 <LogOut className="h-4 w-4" />
                 Cerrar sesión
               </button>
+              <p className="mt-2 text-[11px] text-gray-400 text-center leading-relaxed">
+                Cierra la sesión sólo en este dispositivo. Si entraste desde el celular, ahí seguís adentro.
+              </p>
+
+              {/* La opción de cerrar en todos lados existe pero no compite con la
+                  de arriba: la de arriba es la de todos los días, ésta es para
+                  cuando pasó algo. Como botón grande al lado, la mitad de la
+                  gente cerraría sesión en el celular sin querer. */}
+              <div className="mt-4 pt-4 border-t border-gray-100">
+                <button
+                  onClick={() => {
+                    if (!confirm(
+                      "Vas a cerrar la sesión en TODOS los dispositivos donde tengas esta cuenta abierta " +
+                      "— el celular, otra computadora, todo.\n\n" +
+                      "Sirve si perdiste un dispositivo o creés que alguien más entró a tu cuenta.\n\n¿Seguir?"
+                    )) return;
+                    signOutTodosLosDispositivos("/");
+                  }}
+                  className="w-full flex items-center justify-center gap-2 text-xs font-medium text-gray-400 hover:text-red-500 transition-colors py-1.5"
+                >
+                  <ShieldAlert className="h-3.5 w-3.5" />
+                  Cerrar sesión en todos los dispositivos
+                </button>
+              </div>
             </div>
           </div>
         )}

@@ -16,6 +16,14 @@ type AuthState = {
   status: "loading" | "authenticated" | "unauthenticated";
   refresh: () => Promise<void>;
   signOut: (callbackUrl?: string) => Promise<void>;
+  /**
+   * Cierra la sesión en TODOS los dispositivos, no sólo en este navegador.
+   *
+   * Va aparte del `signOut` de siempre porque son dos intenciones distintas:
+   * "me voy de esta computadora" y "alguien más tiene mi cuenta abierta".
+   * Mezclarlas en un solo botón obliga a que una de las dos se comporte mal.
+   */
+  signOutTodosLosDispositivos: (callbackUrl?: string) => Promise<void>;
 };
 
 const AuthContext = createContext<AuthState | null>(null);
@@ -43,10 +51,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await loadUser(!!data.session);
   }
 
+  /**
+   * Cierra la sesión SOLO en este navegador.
+   *
+   * `scope: "local"` explícito, porque el default de Supabase es `"global"` y
+   * revoca la sesión en todos los dispositivos. Con el default, cerrar sesión en
+   * la computadora del trabajo te sacaba también del celular — un dispositivo
+   * que no tocaste, sin ningún aviso.
+   *
+   * La expectativa de todo el mundo, y lo que hacen Google y el resto, es que
+   * cerrar sesión sea de este aparato. Cuando alguien quiere lo otro, lo quiere
+   * a propósito: para eso está `signOutTodosLosDispositivos`.
+   *
+   * Adentro del MISMO navegador sí se cierra en todas las pestañas, y eso no lo
+   * cambia el scope: la sesión vive en una cookie que comparten.
+   */
   async function signOut(callbackUrl = "/") {
     signingOut.current = true;
     setStatus("loading");
-    try { await supabase.auth.signOut(); } catch {}
+    try { await supabase.auth.signOut({ scope: "local" }); } catch {}
+    window.location.href = callbackUrl;
+  }
+
+  /** Revoca la sesión en todos lados. Ver el tipo de arriba. */
+  async function signOutTodosLosDispositivos(callbackUrl = "/") {
+    signingOut.current = true;
+    setStatus("loading");
+    try { await supabase.auth.signOut({ scope: "global" }); } catch {}
     window.location.href = callbackUrl;
   }
 
@@ -63,7 +94,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [signingOut, supabase]);
 
   return (
-    <AuthContext.Provider value={{ user, status, refresh, signOut }}>
+    <AuthContext.Provider value={{ user, status, refresh, signOut, signOutTodosLosDispositivos }}>
       {children}
     </AuthContext.Provider>
   );
