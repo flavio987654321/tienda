@@ -854,7 +854,7 @@ export default function UrbanPulse() {
                   const subs = subcategoriesFor[cat] || [];
                   return (
                     <div key={cat} style={{ border:`2px solid ${DARK}`, padding:"10px 12px", background:"#f5f5f5" }}>
-                      <button onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?t=urban-pulse${isPreview ? "&from=editor" : ""}&categoria=${encodeURIComponent(cat)}`; setHoveredNavCat(null); }}
+                      <button onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?${isPreview ? "t=urban-pulse&from=editor&" : ""}categoria=${encodeURIComponent(cat)}`; setHoveredNavCat(null); }}
                         style={{ display:"block", width:"100%", background:ACC, border:`2px solid ${DARK}`, color:accentText, padding:"6px 8px", marginBottom:8, fontSize:11, fontWeight:800, textAlign:"left", cursor:"pointer", letterSpacing:1, textTransform:"uppercase", transition:"transform 0.1s" }}
                         onMouseEnter={e => { e.currentTarget.style.transform = "translate(-2px,-2px)"; e.currentTarget.style.boxShadow = `2px 2px 0 ${DARK}`; }}
                         onMouseLeave={e => { e.currentTarget.style.transform = "translate(0,0)"; e.currentTarget.style.boxShadow = "none"; }}>
@@ -863,7 +863,7 @@ export default function UrbanPulse() {
                       {subs.length > 0 ? (
                         <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
                           {subs.map(sub => (
-                            <button key={sub} onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?t=urban-pulse${isPreview ? "&from=editor" : ""}&categoria=${encodeURIComponent(cat)}&subcategoria=${encodeURIComponent(sub)}`; setHoveredNavCat(null); }}
+                            <button key={sub} onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?${isPreview ? "t=urban-pulse&from=editor&" : ""}categoria=${encodeURIComponent(cat)}&subcategoria=${encodeURIComponent(sub)}`; setHoveredNavCat(null); }}
                               style={{ background:WHITE, border:`1.5px solid ${DARK}`, color:DARK, padding:"4px 8px", fontSize:9.5, fontWeight:700, textAlign:"left", cursor:"pointer", letterSpacing:0.5, textTransform:"uppercase" }}
                               onMouseEnter={e => { e.currentTarget.style.background = ACC; e.currentTarget.style.color = accentText; }}
                               onMouseLeave={e => { e.currentTarget.style.background = WHITE; e.currentTarget.style.color = DARK; }}>
@@ -1004,7 +1004,7 @@ export default function UrbanPulse() {
                     if (subs.length > 0) {
                       setMobileOpenCat(prev => prev === cat ? null : cat);
                     } else {
-                      window.location.href = `/tienda/${storeConfig?.slug}/productos?t=urban-pulse${isPreview ? "&from=editor" : ""}&categoria=${encodeURIComponent(cat)}`;
+                      window.location.href = `/tienda/${storeConfig?.slug}/productos?${isPreview ? "t=urban-pulse&from=editor&" : ""}categoria=${encodeURIComponent(cat)}`;
                       setMobileMenuOpen(false); setMobileCatsOpen(false);
                     }
                   }} style={{ display:"flex", width:"100%", background:"#f5f5f5", border:"none", borderBottom:`1px solid rgba(0,0,0,0.1)`, color: activeCategory===cat ? accSobreClaro : DARK, padding:"13px 24px 13px 40px", fontSize:11, textAlign:"left", cursor:"pointer", letterSpacing:3, fontWeight:800, textTransform:"uppercase", alignItems:"center", justifyContent:"space-between" }}>
@@ -1012,7 +1012,7 @@ export default function UrbanPulse() {
                     {subs.length > 0 && <span style={{ fontSize:12, opacity:0.5, transition:"transform 0.2s", transform: mobileOpenCat===cat ? "rotate(90deg)" : "none", display:"inline-block" }}>›</span>}
                   </button>
                   {subs.length > 0 && mobileOpenCat === cat && subs.map(sub => (
-                    <button key={sub} onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?t=urban-pulse${isPreview ? "&from=editor" : ""}&categoria=${encodeURIComponent(cat)}&subcategoria=${encodeURIComponent(sub)}`; setMobileMenuOpen(false); setMobileCatsOpen(false); setMobileOpenCat(null); }}
+                    <button key={sub} onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?${isPreview ? "t=urban-pulse&from=editor&" : ""}categoria=${encodeURIComponent(cat)}&subcategoria=${encodeURIComponent(sub)}`; setMobileMenuOpen(false); setMobileCatsOpen(false); setMobileOpenCat(null); }}
                       style={{ display:"block", width:"100%", background:"#ebebeb", border:"none", borderBottom:`1px solid rgba(0,0,0,0.07)`, color:"#555", padding:"11px 24px 11px 60px", fontSize:11, textAlign:"left", cursor:"pointer", letterSpacing:2, fontWeight:700, textTransform:"uppercase" }}>
                       {sub}
                     </button>
@@ -1332,7 +1332,7 @@ export default function UrbanPulse() {
           {baldosas.map(c => {
             const ovr = storeConfig?.imageOverrides?.[c.field];
             return (
-            <div key={c.field} className="up-cat" onClick={() => { if (editMode) return; window.location.href = `/tienda/${storeConfig?.slug}/productos?t=urban-pulse${isPreview ? "&from=editor" : ""}&categoria=${encodeURIComponent(c.cat)}`; }}
+            <div key={c.field} className="up-cat" onClick={() => { if (editMode) return; window.location.href = `/tienda/${storeConfig?.slug}/productos?${isPreview ? "t=urban-pulse&from=editor&" : ""}categoria=${encodeURIComponent(c.cat)}`; }}
               style={{ position:"relative", width:"100%", aspectRatio:"3/4", overflow:"hidden", cursor: editMode ? "default" : "pointer",
                        // Sin foto la baldosa va al negro del template con el nombre
                        // en grande, que es de lo que está hecho Urban Pulse. Antes
@@ -1746,7 +1746,7 @@ export default function UrbanPulse() {
             De lado a lado, con el espaciado en 3 y menos padding, el texto queda
             en ~231px y entra en un renglón hasta en 320px. */}
         <div style={{ textAlign:"center", marginTop:48 }}>
-          <a href={`/tienda/${storeConfig?.slug}/productos?t=urban-pulse${isPreview ? "&from=editor" : ""}`}
+          <a href={`/tienda/${storeConfig?.slug}/productos${isPreview ? "?t=urban-pulse&from=editor" : ""}`}
             style={{ display: isMobile ? "block" : "inline-block", background:productosTextUp, color:productosBotonText, border:`3px solid ${productosTextUp}`, padding: isMobile ? "18px 20px" : "16px 52px", fontSize:11, fontWeight:900, letterSpacing: isMobile ? 3 : 4, textTransform:"uppercase", textDecoration:"none", transition:"all 0.2s" }}
             onMouseEnter={e=>{ e.currentTarget.style.background="transparent"; e.currentTarget.style.color=productosTextUp; }}
             onMouseLeave={e=>{ e.currentTarget.style.background=productosTextUp; e.currentTarget.style.color=productosBotonText; }}>
@@ -2029,7 +2029,7 @@ export default function UrbanPulse() {
                 </div>
                 {hasMore && (
                   <div style={{ textAlign:"center", marginTop:36 }}>
-                    <button onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?t=urban-pulse${isPreview ? "&from=editor" : ""}&oferta=true`; }}
+                    <button onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?${isPreview ? "t=urban-pulse&from=editor&" : ""}oferta=true`; }}
                       style={{ background:"none", border:`2px solid ${ofertasTextUp}`, color:ofertasTextUp, padding:"12px 32px", fontSize:10, fontWeight:900, letterSpacing:3, textTransform:"uppercase", cursor:"pointer" }}><EditableZone field="ofertasCta" label="Botón ver todas las ofertas">Ver todas las ofertas</EditableZone></button>
                   </div>
                 )}
@@ -2084,7 +2084,7 @@ export default function UrbanPulse() {
                 </div>
                 {hasMore && (
                   <div style={{ textAlign:"center", marginTop:36 }}>
-                    <button onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?t=urban-pulse${isPreview ? "&from=editor" : ""}&destacado=true`; }}
+                    <button onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?${isPreview ? "t=urban-pulse&from=editor&" : ""}destacado=true`; }}
                       style={{ background:"none", border:`2px solid ${masVistoTextUp}`, color:masVistoTextUp, padding:"12px 32px", fontSize:10, fontWeight:900, letterSpacing:3, textTransform:"uppercase", cursor:"pointer" }}><EditableZone field="masVistoCta" label="Botón ver más">Ver más</EditableZone></button>
                   </div>
                 )}

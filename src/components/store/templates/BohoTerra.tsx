@@ -726,7 +726,7 @@ export default function BohoTerra() {
                           return (
                             <button key={cat} onClick={() => {
                               if (subs.length > 0) { setDesktopOpenCat(open ? null : cat); }
-                              else { window.location.href = `/tienda/${storeConfig?.slug}/productos?t=boho-terra${isPreview ? "&from=editor" : ""}&categoria=${encodeURIComponent(cat)}`; setHoveredNavCat(null); }
+                              else { window.location.href = `/tienda/${storeConfig?.slug}/productos?${isPreview ? "t=boho-terra&from=editor&" : ""}categoria=${encodeURIComponent(cat)}`; setHoveredNavCat(null); }
                             }}
                               style={{ background: open ? T : "rgba(44,34,24,0.06)", border:`1px solid ${open ? T : "rgba(44,34,24,0.1)"}`, borderRadius:999, color: open ? "#faf7f2" : T, padding:"7px 16px", fontSize:10.5, cursor:"pointer", letterSpacing:1.5, textTransform:"uppercase", transition:"background 0.2s, color 0.2s, border-color 0.2s, transform 0.15s", transform:"scale(1)" }}
                               onMouseEnter={e => { if (!open) { e.currentTarget.style.background = "rgba(44,34,24,0.12)"; e.currentTarget.style.borderColor = "rgba(44,34,24,0.3)"; } e.currentTarget.style.transform = "scale(1.05)"; }}
@@ -739,7 +739,7 @@ export default function BohoTerra() {
                       {desktopOpenCat && activeSubs.length > 0 && (
                         <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginTop:12, paddingTop:12, borderTop:"1px dashed rgba(44,34,24,0.15)" }}>
                           {activeSubs.map(sub => (
-                            <button key={sub} onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?t=boho-terra${isPreview ? "&from=editor" : ""}&categoria=${encodeURIComponent(activeCat)}&subcategoria=${encodeURIComponent(sub)}`; setHoveredNavCat(null); setDesktopOpenCat(null); }}
+                            <button key={sub} onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?${isPreview ? "t=boho-terra&from=editor&" : ""}categoria=${encodeURIComponent(activeCat)}&subcategoria=${encodeURIComponent(sub)}`; setHoveredNavCat(null); setDesktopOpenCat(null); }}
                               style={{ background:"none", border:"1px solid rgba(44,34,24,0.2)", borderRadius:999, color:MID, padding:"5px 12px", fontSize:10, cursor:"pointer", letterSpacing:0.5, textTransform:"uppercase", transition:"background 0.15s, color 0.15s" }}
                               onMouseEnter={e => { e.currentTarget.style.background = "rgba(44,34,24,0.06)"; e.currentTarget.style.color = T; }}
                               onMouseLeave={e => { e.currentTarget.style.background = "none"; e.currentTarget.style.color = MID; }}>
@@ -870,7 +870,7 @@ export default function BohoTerra() {
                       if (subs.length > 0) {
                         setMobileOpenCat(prev => prev === cat ? null : cat);
                       } else {
-                        window.location.href = `/tienda/${storeConfig?.slug}/productos?t=boho-terra${isPreview ? "&from=editor" : ""}&categoria=${encodeURIComponent(cat)}`;
+                        window.location.href = `/tienda/${storeConfig?.slug}/productos?${isPreview ? "t=boho-terra&from=editor&" : ""}categoria=${encodeURIComponent(cat)}`;
                         setMobileMenuOpen(false); setMobileCatsOpen(false);
                       }
                     }} style={{ display:"flex", width:"100%", background:"rgba(44,34,24,0.03)", border:"none", borderBottom:`1px solid rgba(44,34,24,0.04)`, color: activeCategory===cat ? A : T, padding:"13px 24px 13px 40px", fontSize:12, textAlign:"left", cursor:"pointer", letterSpacing:2, textTransform:"uppercase", alignItems:"center", justifyContent:"space-between" }}>
@@ -878,7 +878,7 @@ export default function BohoTerra() {
                       {subs.length > 0 && <span style={{ fontSize:12, opacity:0.5, transition:"transform 0.2s", transform: mobileOpenCat===cat ? "rotate(90deg)" : "none", display:"inline-block" }}>›</span>}
                     </button>
                     {subs.length > 0 && mobileOpenCat === cat && subs.map(sub => (
-                      <button key={sub} onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?t=boho-terra${isPreview ? "&from=editor" : ""}&categoria=${encodeURIComponent(cat)}&subcategoria=${encodeURIComponent(sub)}`; setMobileMenuOpen(false); setMobileCatsOpen(false); setMobileOpenCat(null); }}
+                      <button key={sub} onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?${isPreview ? "t=boho-terra&from=editor&" : ""}categoria=${encodeURIComponent(cat)}&subcategoria=${encodeURIComponent(sub)}`; setMobileMenuOpen(false); setMobileCatsOpen(false); setMobileOpenCat(null); }}
                         style={{ display:"block", width:"100%", background:"rgba(44,34,24,0.05)", border:"none", borderBottom:`1px solid rgba(44,34,24,0.03)`, color:MID, padding:"11px 24px 11px 60px", fontSize:11, textAlign:"left", cursor:"pointer", letterSpacing:2, textTransform:"uppercase" }}>
                         {sub}
                       </button>
@@ -1180,7 +1180,7 @@ export default function BohoTerra() {
         {/* Ver colección completa — queda SIEMPRE, también con la selección vacía:
             es la salida más útil que puede haber en ese momento. */}
         <div style={{ textAlign:"center", marginTop:48 }}>
-          <a href={`/tienda/${storeConfig?.slug}/productos?t=boho-terra${isPreview ? "&from=editor" : ""}`}
+          <a href={`/tienda/${storeConfig?.slug}/productos${isPreview ? "?t=boho-terra&from=editor" : ""}`}
             style={{ display:"inline-block", border:`1px solid ${coleccionText}`, color:coleccionText, background:"transparent", padding:"14px 40px", fontSize:11, letterSpacing:3, textTransform:"uppercase", textDecoration:"none", transition:"all 0.2s", fontFamily:"Georgia, serif", fontStyle:"italic" }}
             onMouseEnter={e=>{ e.currentTarget.style.background=coleccionText; e.currentTarget.style.color=coleccionBotonText; }}
             onMouseLeave={e=>{ e.currentTarget.style.background="transparent"; e.currentTarget.style.color=coleccionText; }}>
@@ -1244,7 +1244,7 @@ export default function BohoTerra() {
             </div>
             {ofertasHasMore && (
               <div style={{ textAlign:"center", marginTop:32 }}>
-                <button onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?t=boho-terra${isPreview ? "&from=editor" : ""}&oferta=true`; }}
+                <button onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?${isPreview ? "t=boho-terra&from=editor&" : ""}oferta=true`; }}
                   style={{ display:"inline-block", border:`1px solid ${ofertasText}`, color:ofertasText, background:"transparent", padding:"14px 40px", fontSize:11, letterSpacing:3, textTransform:"uppercase", fontFamily:"Georgia, serif", fontStyle:"italic", cursor:"pointer" }}><EditableZone field="ofertasCta" label="Botón ver todas las ofertas">Ver todas las ofertas</EditableZone></button>
               </div>
             )}
@@ -1296,7 +1296,7 @@ export default function BohoTerra() {
                 </div>
                 {hasMore && (
                   <div style={{ textAlign:"center", marginTop:32 }}>
-                    <button onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?t=boho-terra${isPreview ? "&from=editor" : ""}&destacado=true`; }}
+                    <button onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?${isPreview ? "t=boho-terra&from=editor&" : ""}destacado=true`; }}
                       style={{ display:"inline-block", border:`1px solid ${masVistoText}`, color:masVistoText, background:"transparent", padding:"14px 40px", fontSize:11, letterSpacing:3, textTransform:"uppercase", fontFamily:"Georgia, serif", fontStyle:"italic", cursor:"pointer" }}><EditableZone field="masVistoCta" label="Botón ver más">Ver más</EditableZone></button>
                   </div>
                 )}

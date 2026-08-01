@@ -672,7 +672,7 @@ export default function FashionNoir() {
                         return (
                           <button key={cat}
                             onMouseEnter={() => setHoveredNavCat(cat)}
-                            onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?t=fashion-noir${isPreview ? "&from=editor" : ""}&categoria=${encodeURIComponent(cat)}`; setHoveredNavCat(null); }}
+                            onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?${isPreview ? "t=fashion-noir&from=editor&" : ""}categoria=${encodeURIComponent(cat)}`; setHoveredNavCat(null); }}
                             style={{ display:"flex", alignItems:"center", justifyContent:"space-between", width:"100%", background: activeCat===cat ? "rgba(201,168,76,0.08)" : "none", border:"none", color: activeCat===cat ? G : T, padding:"9px 18px", fontSize:11, textAlign:"left", cursor:"pointer", letterSpacing:2, textTransform:"uppercase", transition:"background 0.15s" }}>
                             {cat}
                             {subs.length > 0 && <span style={{ opacity:0.5, fontSize:10 }}>›</span>}
@@ -685,7 +685,7 @@ export default function FashionNoir() {
                       <div style={{ minWidth:190, padding:"10px 0" }}>
                         <p style={{ margin:0, padding:"4px 18px 8px", fontSize:9, letterSpacing:2, textTransform:"uppercase", color:"rgba(201,168,76,0.55)" }}>{activeCat}</p>
                         {activeSubs.map(sub => (
-                          <button key={sub} onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?t=fashion-noir${isPreview ? "&from=editor" : ""}&categoria=${encodeURIComponent(activeCat ?? "")}&subcategoria=${encodeURIComponent(sub)}`; setHoveredNavCat(null); }}
+                          <button key={sub} onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?${isPreview ? "t=fashion-noir&from=editor&" : ""}categoria=${encodeURIComponent(activeCat ?? "")}&subcategoria=${encodeURIComponent(sub)}`; setHoveredNavCat(null); }}
                             style={{ display:"block", width:"100%", background:"none", border:"none", color:T, padding:"8px 18px", fontSize:11, textAlign:"left", cursor:"pointer", letterSpacing:1, textTransform:"uppercase", transition:"background 0.15s" }}
                             onMouseEnter={e => (e.currentTarget.style.background="rgba(201,168,76,0.08)")}
                             onMouseLeave={e => (e.currentTarget.style.background="none")}>
@@ -833,7 +833,7 @@ export default function FashionNoir() {
                       if (subs.length > 0) {
                         setMobileOpenCat(prev => prev === cat ? null : cat);
                       } else {
-                        window.location.href = `/tienda/${storeConfig?.slug}/productos?t=fashion-noir${isPreview ? "&from=editor" : ""}&categoria=${encodeURIComponent(cat)}`;
+                        window.location.href = `/tienda/${storeConfig?.slug}/productos?${isPreview ? "t=fashion-noir&from=editor&" : ""}categoria=${encodeURIComponent(cat)}`;
                         setMobileMenuOpen(false); setMobileCatsOpen(false);
                       }
                     }} style={{ display:"flex", width:"100%", background:"rgba(201,168,76,0.03)", border:"none", borderBottom:`1px solid rgba(201,168,76,0.07)`, color: activeCategory===cat ? G : T, padding:"13px 24px 13px 40px", fontSize:11, textAlign:"left", cursor:"pointer", letterSpacing:3, textTransform:"uppercase", alignItems:"center", justifyContent:"space-between" }}>
@@ -841,7 +841,7 @@ export default function FashionNoir() {
                       {subs.length > 0 && <span style={{ fontSize:12, opacity:0.5, transition:"transform 0.2s", transform: mobileOpenCat===cat ? "rotate(90deg)" : "none", display:"inline-block" }}>›</span>}
                     </button>
                     {subs.length > 0 && mobileOpenCat === cat && subs.map(sub => (
-                      <button key={sub} onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?t=fashion-noir${isPreview ? "&from=editor" : ""}&categoria=${encodeURIComponent(cat)}&subcategoria=${encodeURIComponent(sub)}`; setMobileMenuOpen(false); setMobileCatsOpen(false); setMobileOpenCat(null); }}
+                      <button key={sub} onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?${isPreview ? "t=fashion-noir&from=editor&" : ""}categoria=${encodeURIComponent(cat)}&subcategoria=${encodeURIComponent(sub)}`; setMobileMenuOpen(false); setMobileCatsOpen(false); setMobileOpenCat(null); }}
                         style={{ display:"block", width:"100%", background:"rgba(201,168,76,0.05)", border:"none", borderBottom:`1px solid rgba(201,168,76,0.05)`, color: activeSubcategory===sub ? G : "rgba(240,235,227,0.7)", padding:"11px 24px 11px 60px", fontSize:11, textAlign:"left", cursor:"pointer", letterSpacing:2, textTransform:"uppercase" }}>
                         {sub}
                       </button>
@@ -994,7 +994,7 @@ export default function FashionNoir() {
             {baldosas.map(c => {
               const ovr = storeConfig?.imageOverrides?.[c.field];
               return (
-              <div key={c.field} onClick={() => { if (editMode) return; window.location.href = `/tienda/${storeConfig?.slug}/productos?t=fashion-noir${isPreview ? "&from=editor" : ""}&categoria=${encodeURIComponent(c.cat)}`; }}
+              <div key={c.field} onClick={() => { if (editMode) return; window.location.href = `/tienda/${storeConfig?.slug}/productos?${isPreview ? "t=fashion-noir&from=editor&" : ""}categoria=${encodeURIComponent(c.cat)}`; }}
                 style={{ position:"relative", aspectRatio:"2/3", overflow:"hidden", background:S, cursor: editMode ? "default" : "pointer" }}>
                 {/* Sin foto queda la superficie del template con el degradado y el
                     nombre en serif — que es de lo que está hecho Fashion Noir.
@@ -1174,7 +1174,7 @@ export default function FashionNoir() {
             Mostrando {Math.min(visibleCount, allFiltered.length)} de {allFiltered.length} piezas
           </p>
           <div style={{ display:"flex", gap:12, justifyContent:"center", flexWrap:"wrap" }}>
-            <a href={`/tienda/${storeConfig?.slug ?? ""}/productos?t=fashion-noir${isPreview ? "&from=editor" : ""}`}
+            <a href={`/tienda/${storeConfig?.slug ?? ""}/productos${isPreview ? "?t=fashion-noir&from=editor" : ""}`}
               style={{ background:G, color:BG, border:`1px solid ${productosText}`, padding:"14px 36px", fontSize:11, letterSpacing:3, textTransform:"uppercase", fontWeight:700, cursor:"pointer", textDecoration:"none", display:"inline-block", transition:"opacity 0.2s" }}
               onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.opacity="0.85"; }}
               onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.opacity="1"; }}>
@@ -1242,7 +1242,7 @@ export default function FashionNoir() {
               </div>
               {hasMore && (
                 <div style={{ maxWidth:1280, margin:"0 auto", padding: isMobile ? "0 16px" : "0 32px", textAlign:"center", marginTop:32 }}>
-                  <button onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?t=fashion-noir${isPreview ? "&from=editor" : ""}&oferta=true`; }}
+                  <button onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?${isPreview ? "t=fashion-noir&from=editor&" : ""}oferta=true`; }}
                     style={{ background:"none", border:`1px solid rgba(201,168,76,0.4)`, color:G, padding:"12px 32px", fontSize:11, letterSpacing:3, textTransform:"uppercase", cursor:"pointer" }}><EditableZone field="ofertasCta" label="Botón ver todas las ofertas">Ver todas las ofertas</EditableZone></button>
                 </div>
               )}
@@ -1295,7 +1295,7 @@ export default function FashionNoir() {
                 </div>
                 {hasMore && (
                   <div style={{ textAlign:"center", marginTop:32 }}>
-                    <button onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?t=fashion-noir${isPreview ? "&from=editor" : ""}&destacado=true`; }}
+                    <button onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?${isPreview ? "t=fashion-noir&from=editor&" : ""}destacado=true`; }}
                       style={{ background:"none", border:`1px solid rgba(201,168,76,0.4)`, color:G, padding:"12px 32px", fontSize:11, letterSpacing:3, textTransform:"uppercase", cursor:"pointer" }}><EditableZone field="masVistoCta" label="Botón ver más">Ver más</EditableZone></button>
                   </div>
                 )}

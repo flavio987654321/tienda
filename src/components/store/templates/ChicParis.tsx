@@ -848,7 +848,7 @@ export default function ChicParis() {
                     const subs = subcategoriesFor[cat] || [];
                     return (
                       <div key={cat} style={{ minWidth: 140 }}>
-                        <button onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?t=chic-paris${isPreview ? "&from=editor" : ""}&categoria=${encodeURIComponent(cat)}`; setHoveredNavCat(null); }}
+                        <button onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?${isPreview ? "t=chic-paris&from=editor&" : ""}categoria=${encodeURIComponent(cat)}`; setHoveredNavCat(null); }}
                           style={{ display: "block", width: "100%", background: "none", border: "none", borderBottom: "1px solid #111", color: "#111", padding: "0 0 8px", marginBottom: 10, fontSize: 11, textAlign: "left", cursor: "pointer", letterSpacing: 2, textTransform: "uppercase", fontWeight: 700, whiteSpace: "nowrap", transition: "color 0.15s, border-color 0.15s" }}
                           onMouseEnter={e => { e.currentTarget.style.color = ACC; e.currentTarget.style.borderBottomColor = ACC; }}
                           onMouseLeave={e => { e.currentTarget.style.color = "#111"; e.currentTarget.style.borderBottomColor = "#111"; }}>
@@ -857,7 +857,7 @@ export default function ChicParis() {
                         {subs.length > 0 ? (
                           <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
                             {subs.map(sub => (
-                              <button key={sub} onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?t=chic-paris${isPreview ? "&from=editor" : ""}&categoria=${encodeURIComponent(cat)}&subcategoria=${encodeURIComponent(sub)}`; setHoveredNavCat(null); }}
+                              <button key={sub} onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?${isPreview ? "t=chic-paris&from=editor&" : ""}categoria=${encodeURIComponent(cat)}&subcategoria=${encodeURIComponent(sub)}`; setHoveredNavCat(null); }}
                                 style={{ display: "block", width: "100%", background: "none", border: "none", color: "#555", padding: "5px 0", fontSize: 11, textAlign: "left", cursor: "pointer", letterSpacing: 0.5, whiteSpace: "nowrap" }}
                                 onMouseEnter={e => (e.currentTarget.style.color = "#111")}
                                 onMouseLeave={e => (e.currentTarget.style.color = "#555")}>
@@ -866,7 +866,7 @@ export default function ChicParis() {
                             ))}
                           </div>
                         ) : (
-                          <button onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?t=chic-paris${isPreview ? "&from=editor" : ""}&categoria=${encodeURIComponent(cat)}`; setHoveredNavCat(null); }}
+                          <button onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?${isPreview ? "t=chic-paris&from=editor&" : ""}categoria=${encodeURIComponent(cat)}`; setHoveredNavCat(null); }}
                             style={{ display: "block", background: "none", border: "none", color: "#999", padding: "5px 0", fontSize: 11, textAlign: "left", cursor: "pointer", transition: "color 0.15s" }}
                             onMouseEnter={e => (e.currentTarget.style.color = "#111")}
                             onMouseLeave={e => (e.currentTarget.style.color = "#999")}>
@@ -1004,7 +1004,7 @@ export default function ChicParis() {
                       if (subs.length > 0) {
                         setMobileOpenCat(prev => prev === cat ? null : cat);
                       } else {
-                        window.location.href = `/tienda/${storeConfig?.slug}/productos?t=chic-paris${isPreview ? "&from=editor" : ""}&categoria=${encodeURIComponent(cat)}`;
+                        window.location.href = `/tienda/${storeConfig?.slug}/productos?${isPreview ? "t=chic-paris&from=editor&" : ""}categoria=${encodeURIComponent(cat)}`;
                         setMobileMenuOpen(false); setMobileCatsOpen(false);
                       }
                     }} style={{ display: "flex", width: "100%", background: "#fafafa", border: "none", borderBottom: "1px solid #f0f0f0", color: "#111", padding: "13px 24px 13px 40px", fontSize: 11, textAlign: "left", cursor: "pointer", letterSpacing: 2, fontWeight: 600, textTransform: "uppercase", alignItems: "center", justifyContent: "space-between" }}>
@@ -1012,7 +1012,7 @@ export default function ChicParis() {
                       {subs.length > 0 && <span style={{ fontSize: 12, opacity: 0.4, transition: "transform 0.2s", transform: mobileOpenCat===cat ? "rotate(90deg)" : "none", display: "inline-block" }}>›</span>}
                     </button>
                     {subs.length > 0 && mobileOpenCat === cat && subs.map(sub => (
-                      <button key={sub} onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?t=chic-paris${isPreview ? "&from=editor" : ""}&categoria=${encodeURIComponent(cat)}&subcategoria=${encodeURIComponent(sub)}`; setMobileMenuOpen(false); setMobileCatsOpen(false); setMobileOpenCat(null); }}
+                      <button key={sub} onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?${isPreview ? "t=chic-paris&from=editor&" : ""}categoria=${encodeURIComponent(cat)}&subcategoria=${encodeURIComponent(sub)}`; setMobileMenuOpen(false); setMobileCatsOpen(false); setMobileOpenCat(null); }}
                         style={{ display: "block", width: "100%", background: "#f5f5f5", border: "none", borderBottom: "1px solid #ebebeb", color: "#555", padding: "11px 24px 11px 60px", fontSize: 11, textAlign: "left", cursor: "pointer", letterSpacing: 1, fontWeight: 500, textTransform: "uppercase" }}>
                         {sub}
                       </button>
@@ -1306,7 +1306,7 @@ export default function ChicParis() {
                     Ver más ({allFiltered.length - filtered.length})
                   </button>
                 )}
-                <a href={`/tienda/${storeConfig?.slug}/productos?t=chic-paris${isPreview ? "&from=editor" : ""}`}
+                <a href={`/tienda/${storeConfig?.slug}/productos${isPreview ? "?t=chic-paris&from=editor" : ""}`}
                   style={{ display: "inline-block", background: ACC, color: accentText, border: `1px solid ${prodText}`, padding: "14px 44px", fontSize: 11, fontWeight: 700, letterSpacing: 3, textTransform: "uppercase", textDecoration: "none", transition: "opacity 0.2s" }}
                   onMouseEnter={e => (e.currentTarget.style.opacity = "0.85")}
                   onMouseLeave={e => (e.currentTarget.style.opacity = "1")}>
@@ -1439,7 +1439,7 @@ export default function ChicParis() {
                 )}
                 {hasMore && (
                   <div style={{ textAlign: "center", marginTop: 32 }}>
-                    <button onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?t=chic-paris${isPreview ? "&from=editor" : ""}&oferta=true`; }}
+                    <button onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?${isPreview ? "t=chic-paris&from=editor&" : ""}oferta=true`; }}
                       style={{ background: "none", border: `1px solid ${ACC}`, color: ACC, padding: "12px 32px", fontSize: 11, letterSpacing: 3, textTransform: "uppercase", cursor: "pointer" }}><EditableZone field="ofertasCta" label="Botón ver todas las ofertas">Ver todas las ofertas</EditableZone></button>
                   </div>
                 )}
@@ -1493,7 +1493,7 @@ export default function ChicParis() {
                 </div>
                 {hasMore && (
                   <div style={{ textAlign: "center", marginTop: 40 }}>
-                    <button onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?t=chic-paris${isPreview ? "&from=editor" : ""}&destacado=true`; }}
+                    <button onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?${isPreview ? "t=chic-paris&from=editor&" : ""}destacado=true`; }}
                       style={{ background: "none", border: `1px solid ${ACC}`, color: ACC, padding: "12px 32px", fontSize: 11, letterSpacing: 3, textTransform: "uppercase", cursor: "pointer" }}><EditableZone field="masVistoCta" label="Botón ver más">Ver más</EditableZone></button>
                   </div>
                 )}
@@ -1940,7 +1940,7 @@ export default function ChicParis() {
               <div>
                 <p style={{ margin: "0 0 16px", fontSize: 10, fontWeight: 800, color: footerText, letterSpacing: 3, textTransform: "uppercase" }}>Colecciones</p>
                 {categoryList.slice(0, 6).map(l => (
-                  <button key={l} onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?t=chic-paris${isPreview ? "&from=editor" : ""}&categoria=${encodeURIComponent(l!)}`; }}
+                  <button key={l} onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?${isPreview ? "t=chic-paris&from=editor&" : ""}categoria=${encodeURIComponent(l!)}`; }}
                     style={{ display: "block", background: "none", border: "none", color: footerText, opacity: 0.55, fontSize: 13, cursor: "pointer", padding: "4px 0", textAlign: "left", textTransform: "capitalize" }}>{l}</button>
                 ))}
               </div>
