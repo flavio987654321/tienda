@@ -311,6 +311,7 @@ model Store {
   milestones          StoreMilestone[]
   archives            StoreArchive[]
   promotions          StorePromotion[]
+  newsletter          NewsletterSubscriber[]
 }
 
 // Suscripciones push a tiendas. userId es null para suscriptores anónimos legacy;
@@ -349,6 +350,11 @@ model StoreFollow {
 
 // Historial de notificaciones push enviadas por una tienda.
 // Usado también para rate limiting (max 2 por semana).
+//
+// Desde el newsletter una campaña sale por DOS canales: push a los seguidores
+// registrados y mail a los suscriptores confirmados. El registro es uno solo
+// —un mensaje es un mensaje, y el límite semanal cuenta campañas, no envíos—
+// pero los conteos van separados porque los públicos no se superponen.
 model PushCampaign {
   id        String    @id @default(cuid())
   storeId   String
@@ -363,7 +369,88 @@ model PushCampaign {
   // historial del dueño hasta que él lo borre.
   expiresAt DateTime?
 
+  // ── Envío por mail ────────────────────────────────────────────────────────
+  // PENDIENTE → todavía no salió ningún mail
+  // ENVIANDO  → quedó a mitad de camino (se cortó la función, o falta una tanda)
+  // LISTO     → se recorrió toda la lista
+  // SIN_MAIL  → esta tienda no tiene suscriptores por mail; nunca hubo nada que hacer
+  /// Borrado blando: el dueño la sacó de su historial.
+  ///
+  /// No se borra la fila porque el límite de 3 por semana se cuenta sobre estas
+  /// filas. Con un DELETE de verdad, mandar tres y borrarlas devolvía el cupo —
+  /// se podían mandar nueve mensajes en una semana y el panel seguía diciendo
+  /// "te quedan 3". Y el tope existe justamente para no quemar la reputación
+  /// del dominio de envío, que comparten todas las tiendas.
+  ///
+  /// Lo que se deshace es el registro, no el envío: un push entregado no vuelve
+  /// del celular y un mail mandado no se recupera. Por eso el contador tiene que
+  /// seguir contándolo.
+  deletedAt DateTime?
+
+  emailStatus String  @default("SIN_MAIL")
+  sentEmail   Int     @default(0)
+
+  /// Hasta dónde llegó el envío por mail, recorriendo los suscriptores por
+  /// (createdAt, id) ascendente. Guarda el id del ÚLTIMO al que se le mandó.
+  ///
+  /// Es lo que hace que reintentar no duplique: sin cursor, un envío que se
+  /// corta en el 300 y se reintenta le manda de nuevo a esos 300. Va desde el
+  /// día uno aunque las listas sean chicas, porque el reintento es justamente
+  /// lo primero que hace el dueño cuando ve un error.
+  emailCursor String?
+
   @@index([storeId, createdAt(sort: Desc)])
+  // Para que el drenado (hoy manual, mañana por cron) encuentre lo que quedó
+  // a medias sin recorrer todo el historial.
+  @@index([emailStatus])
+}
+
+/// Suscriptor del newsletter de una tienda: alguien que dejó su mail en el
+/// bloque de suscripción del storefront.
+///
+/// No es lo mismo que un StoreFollow. El seguidor está registrado en la
+/// plataforma y recibe PUSH en su dispositivo; el suscriptor es una dirección
+/// de mail suelta, sin cuenta, y recibe MAIL. A un mail no se le puede mandar un
+/// push, así que son dos listas distintas que se muestran juntas.
+model NewsletterSubscriber {
+  id      String @id @default(cuid())
+  storeId String
+  store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  /// Siempre en minúsculas y sin espacios: se normaliza al darlo de alta, para
+  /// que el @@unique de abajo no deje entrar "Ana@X.com" y "ana@x.com" como dos.
+  email String
+
+  /// Doble opt-in. Mientras esté en false NO recibe nada.
+  ///
+  /// Cualquiera puede escribir el mail de otro en el formulario. Si contáramos
+  /// ese alta como buena, a esa persona le llegaría publicidad de una tienda que
+  /// no conoce, y su único botón a mano es "spam" — que en este proyecto lo
+  /// pagan TODAS las tiendas, porque comparten el dominio de envío.
+  confirmed   Boolean   @default(false)
+  confirmedAt DateTime?
+
+  /// Sirve para confirmar y para darse de baja. Es el mismo a propósito: son dos
+  /// links dentro de mails que ya van dirigidos a esta persona, y una segunda
+  /// columna no agregaría seguridad real, sólo otra cosa que puede desincronizar.
+  token String @unique
+
+  /// Apagado por rebote duro o por denuncia de spam (webhook de Resend), o
+  /// porque el dueño lo borró de la lista. Se apaga en vez de borrarse: si se
+  /// borrara, el mismo mail podría volver a entrar por el formulario y
+  /// seguiríamos escribiéndole a una casilla que ya nos denunció.
+  bajaEn     DateTime?
+  bajaMotivo String?
+
+  /// Para el rate limit y para rastrear un alta masiva si alguna vez pasa.
+  ip String?
+
+  createdAt DateTime @default(now())
+
+  @@unique([storeId, email])
+  // El envío recorre (confirmado, sin baja) ordenado por createdAt/id — el
+  // mismo orden que asume el cursor de la campaña.
+  @@index([storeId, confirmed, createdAt])
 }
 
 model VerificationRequest {

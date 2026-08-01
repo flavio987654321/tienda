@@ -27,6 +27,32 @@ const FROM_ADDRESS =
   "noreply@tiendaapps.com";
 
 /**
+ * Remitente para el correo de MARKETING (newsletters), separado del de arriba.
+ *
+ * Todas las tiendas del proyecto comparten un solo dominio de envío, así que
+ * para Gmail hay un único remitente: si una tienda se gana denuncias de spam, la
+ * reputación que baja es la de todas. Y lo que se cae con esa reputación no son
+ * sólo los newsletters — son las confirmaciones de pedido, los avisos de pago y
+ * el código de ingreso, o sea el correo del que depende que la tienda funcione.
+ *
+ * Gmail y el resto puntúan en buena medida POR SUBDOMINIO. Mandando las
+ * novedades desde `envios.` y lo transaccional desde el dominio pelado, una
+ * tienda que abusa quema el canal de marketing y deja intacto el otro. Es la
+ * diferencia entre perder una función y perder el negocio.
+ *
+ * Requiere verificar ese subdominio en Resend (uno más, aparte del principal).
+ * Mientras no esté verificado, `RESEND_FROM_MARKETING` sin definir lo deja
+ * cayendo al dominio de siempre: sigue andando, sin la protección.
+ */
+const MARKETING_FROM_ADDRESS = (() => {
+  const crudo = (process.env.RESEND_FROM_MARKETING ?? "").trim();
+  if (!crudo) return FROM_ADDRESS;
+  // Acepta las dos formas: "Novedades <novedades@envios.tiendaapps.com>" o la
+  // dirección pelada.
+  return crudo.match(/<([^>]+)>/)?.[1]?.trim() ?? crudo;
+})();
+
+/**
  * Adaptador con la misma forma que nodemailer (`sendMail`), para que las 25
  * funciones de abajo no cambien. Conserva el nombre visible que ya usaban
  * (ej. "Girly Store") pero reemplaza la dirección por la del dominio
@@ -2049,6 +2075,253 @@ export async function sendPlatformContactEmail({
         <div style="margin-top:24px;background:#1e293b;border-radius:12px;padding:20px">
           <p style="margin:0;color:#94a3b8;font-size:12px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px">Mensaje</p>
           <p style="margin:0;line-height:1.7;white-space:pre-wrap">${escapeHtml(message)}</p>
+        </div>
+      </div>
+    `,
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   NEWSLETTER
+   ═══════════════════════════════════════════════════════════════════════════
+
+   Estos dos mails salen por MARKETING_FROM_ADDRESS, no por el remitente de
+   siempre. El motivo está arriba, donde se define esa constante.
+
+   Los dos llevan link de baja. El de confirmación también, aunque suene raro:
+   si alguien escribió tu dirección sin permiso, el mail de confirmación es el
+   PRIMERO que te llega — y si ahí no hay salida, la salida que te queda es el
+   botón de spam.                                                              */
+
+/** Marca visible del remitente, saneada. Un `"` o un `<` en el nombre de la
+ *  tienda rompería la cabecera From. */
+function nombreRemitente(storeName: string): string {
+  return storeName.replace(/[<>"\r\n]/g, "").trim().slice(0, 60) || "Tienda";
+}
+
+/**
+ * Envío de marketing. No usa `transporter` porque necesita dos cosas que aquel
+ * no da: el remitente del subdominio de novedades y cabeceras propias.
+ */
+async function enviarMarketing(mail: {
+  to: string;
+  storeName: string;
+  subject: string;
+  html: string;
+  /** Página con el botón de baja: la que se pone en el pie, para una persona. */
+  bajaUrl: string;
+  /** Endpoint que acepta POST: la que va en la cabecera, para el cliente de correo. */
+  bajaPostUrl: string;
+  replyTo?: string;
+}) {
+  const { error } = await resend.emails.send({
+    from: `${nombreRemitente(mail.storeName)} <${MARKETING_FROM_ADDRESS}>`,
+    to: mail.to,
+    subject: mail.subject,
+    html: mail.html,
+    ...(mail.replyTo ? { replyTo: mail.replyTo } : {}),
+    headers: cabecerasBaja(mail.bajaPostUrl),
+  });
+  if (error) throw new Error(`Resend: ${error.name} — ${error.message}`);
+}
+
+/**
+ * Las cabeceras que hacen aparecer el "Cancelar suscripción" arriba de todo en
+ * Gmail, al lado del remitente.
+ *
+ * Ese botón importa más que el link del pie: es el que compite con el de spam.
+ * El que se cansó va a apretar el que tenga a mano, y si el único a mano es
+ * "spam", eso nos cuesta reputación de dominio — que acá pagan todas las
+ * tiendas.
+ *
+ * `List-Unsubscribe-Post` le avisa a Gmail que puede dar de baja con un POST
+ * automático, sin abrir nada. Va junto con el `POST` que acepta la ruta de baja.
+ */
+function cabecerasBaja(bajaPostUrl: string): Record<string, string> {
+  return {
+    "List-Unsubscribe": `<${bajaPostUrl}>`,
+    "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+  };
+}
+
+/** Pie común: quién manda, por qué le llega, y cómo salir. */
+function pieNewsletter(storeName: string, bajaUrl: string, motivo: string): string {
+  return `
+    <div style="border-top:1px solid #e5e7eb;margin-top:32px;padding-top:18px;text-align:center">
+      <p style="font-size:11px;color:#9ca3af;line-height:1.7;margin:0 0 8px">
+        ${escapeHtml(motivo)}
+      </p>
+      <p style="font-size:11px;color:#9ca3af;margin:0">
+        <a href="${bajaUrl}" style="color:#6b7280;text-decoration:underline">Cancelar suscripción</a>
+        &nbsp;·&nbsp; ${escapeHtml(storeName)}
+      </p>
+    </div>`;
+}
+
+/**
+ * Mail de confirmación (doble opt-in). Hasta que no toquen este botón, el
+ * suscriptor no recibe ninguna campaña.
+ */
+export async function sendNewsletterConfirmacionEmail({
+  to,
+  storeName,
+  confirmarUrl,
+  bajaUrl,
+  bajaPostUrl,
+}: {
+  to: string;
+  storeName: string;
+  confirmarUrl: string;
+  bajaUrl: string;
+  bajaPostUrl: string;
+}) {
+  if (!process.env.RESEND_API_KEY) return;
+
+  await enviarMarketing({
+    to,
+    storeName,
+    bajaUrl,
+    bajaPostUrl,
+    subject: `Confirmá tu suscripción a ${nombreRemitente(storeName)}`,
+    html: `
+      <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:520px;margin:0 auto;padding:32px 16px;color:#111827;background:#ffffff">
+        <p style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#9ca3af;margin:0 0 10px;font-weight:600">${escapeHtml(storeName)}</p>
+        <h1 style="font-size:21px;margin:0 0 16px;font-weight:800;letter-spacing:-.02em">Confirmá tu suscripción</h1>
+
+        <!-- Sin guiños. Este mail existe para que la persona confíe y apriete el
+             botón, y una broma acá resta — sobre todo en el caso que más importa,
+             que es el de alguien que NO se suscribió y necesita entender rápido
+             qué pasó. De eso se ocupa la línea de abajo, en serio. -->
+        <p style="font-size:15px;color:#374151;line-height:1.7;margin:0 0 24px">
+          Alguien cargó esta dirección para recibir las novedades y ofertas de
+          <strong>${escapeHtml(storeName)}</strong>. Tocá el botón y quedás suscripto.
+        </p>
+
+        <div style="text-align:center;margin-bottom:24px">
+          <a href="${confirmarUrl}"
+             style="display:inline-block;background:#111827;color:#ffffff;padding:14px 36px;border-radius:10px;font-weight:700;font-size:14px;text-decoration:none">
+            Sí, quiero suscribirme
+          </a>
+        </div>
+
+        <p style="font-size:13px;color:#6b7280;line-height:1.7;margin:0">
+          Si no fuiste vos, no hagas nada: sin confirmar no te vamos a escribir de nuevo.
+        </p>
+
+        ${pieNewsletter(storeName, bajaUrl, "Recibís este único mail porque esta dirección se cargó en el formulario de suscripción de la tienda.")}
+      </div>
+    `,
+  });
+}
+
+/** Una campaña, ya lista para mandarle a UN suscriptor. */
+export type CampanaNewsletter = {
+  storeName: string;
+  /** Link al que va el botón principal. */
+  storeUrl: string;
+  logo?: string | null;
+  title: string;
+  body: string;
+  /** Para que responder le llegue al dueño y no se pierda. */
+  ownerEmail?: string | null;
+  /**
+   * El acento de la tienda. Sin esto el mail salía en blanco y negro y era
+   * exactamente igual para las diez tiendas del proyecto — el suscriptor no
+   * tenía forma de reconocer de quién le estaba llegando salvo leyendo.
+   */
+  accent?: string | null;
+};
+
+/**
+ * Blanco o negro, el que se lea sobre `hex`.
+ *
+ * Es una copia chica de lo que hace `getContrastColor` en el editor, porque
+ * aquella vive en un componente de cliente y esto corre en el servidor. La regla
+ * es la misma: luminancia relativa con los coeficientes de la W3C.
+ *
+ * Un acento amarillo con tinta blanca encima no se lee, y en un mail no hay
+ * forma de arreglarlo después de mandarlo.
+ */
+function tintaSobre(hex: string): string {
+  const limpio = hex.replace("#", "").trim();
+  const completo = limpio.length === 3 ? limpio.split("").map((c) => c + c).join("") : limpio;
+  if (!/^[0-9a-f]{6}$/i.test(completo)) return "#ffffff";
+  const canal = (i: number) => {
+    const v = parseInt(completo.slice(i, i + 2), 16) / 255;
+    return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+  };
+  const luz = 0.2126 * canal(0) + 0.7152 * canal(2) + 0.0722 * canal(4);
+  return luz > 0.45 ? "#111827" : "#ffffff";
+}
+
+/** Un color válido para CSS, o el negro de siempre si vino cualquier cosa. */
+function acentoSeguro(hex?: string | null): string {
+  const v = (hex ?? "").trim();
+  return /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(v) ? v : "#111827";
+}
+
+/**
+ * Manda UNA campaña a UN suscriptor.
+ *
+ * Es de a uno a propósito: cada destinatario necesita su propia URL de baja
+ * —lleva su token— así que no hay nada que compartir entre dos mails. Quien
+ * llama se encarga de la concurrencia y del cursor.
+ */
+export async function sendNewsletterCampanaEmail({
+  to,
+  bajaUrl,
+  bajaPostUrl,
+  campana,
+}: {
+  to: string;
+  bajaUrl: string;
+  bajaPostUrl: string;
+  campana: CampanaNewsletter;
+}) {
+  if (!process.env.RESEND_API_KEY) return;
+
+  const { storeName, storeUrl, logo, title, body, ownerEmail, accent } = campana;
+
+  const acento = acentoSeguro(accent);
+  const tinta = tintaSobre(acento);
+
+  await enviarMarketing({
+    to,
+    storeName,
+    bajaUrl,
+    bajaPostUrl,
+    replyTo: ownerEmail ?? undefined,
+    subject: title,
+    // `table` y estilos en línea, no flexbox ni clases: Outlook y Gmail
+    // descartan buena parte del CSS moderno, y lo único que se puede dar por
+    // sentado en un mail es lo que anda desde hace veinte años.
+    html: `
+      <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f4f4f5;padding:24px 12px">
+        <div style="max-width:540px;margin:0 auto;background:#ffffff;border-radius:14px;overflow:hidden;border:1px solid #e5e7eb">
+
+          <!-- Franja de la marca. Es lo que hace que el mail se vea DE esta
+               tienda y no del sistema: sin ella los diez templates mandaban el
+               mismo mail blanco. -->
+          <div style="background:${acento};padding:22px 24px;text-align:center">
+            ${logo
+              ? `<img src="${escapeHtml(logo)}" alt="${escapeHtml(storeName)}" width="auto" style="max-height:52px;max-width:220px;height:auto;width:auto;display:inline-block;border:0">`
+              : `<p style="font-size:17px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;margin:0;color:${tinta}">${escapeHtml(storeName)}</p>`}
+          </div>
+
+          <div style="padding:30px 28px 24px">
+            <h1 style="font-size:22px;margin:0 0 14px;font-weight:800;letter-spacing:-.02em;line-height:1.35;color:#111827">${escapeHtml(title)}</h1>
+
+            <p style="font-size:15px;color:#374151;line-height:1.75;margin:0 0 28px;white-space:pre-wrap">${escapeHtml(body)}</p>
+
+            <div style="text-align:center">
+              <a href="${storeUrl}"
+                 style="display:inline-block;background:${acento};color:${tinta};padding:14px 38px;border-radius:10px;font-weight:700;font-size:14px;text-decoration:none">
+                Ver en la tienda
+              </a>
+            </div>
+
+            ${pieNewsletter(storeName, bajaUrl, `Recibís este mail porque confirmaste tu suscripción a las novedades de ${storeName}.`)}
+          </div>
         </div>
       </div>
     `,
