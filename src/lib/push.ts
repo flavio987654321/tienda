@@ -8,6 +8,19 @@ if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
   );
 }
 
+/**
+ * Si el push está configurado en este entorno.
+ *
+ * Sin las claves VAPID, las dos funciones de abajo devuelven 0 sin intentar
+ * nada — que es correcto, pero indistinguible de "mandé y no lo recibió nadie".
+ * El dueño ve "0 enviados" y se pone a buscar por qué sus seguidores no reciben,
+ * cuando el problema es una variable de entorno que falta. Quien llama necesita
+ * poder decir cuál de las dos cosas pasó.
+ */
+export function pushConfigurado(): boolean {
+  return !!(process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY);
+}
+
 export interface PushPayload {
   title: string;
   body: string;

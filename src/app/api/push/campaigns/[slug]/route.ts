@@ -55,6 +55,10 @@ export async function GET(
   const campaigns = await prisma.pushCampaign.findMany({
     where: {
       storeId: store.id,
+      // Sin esto, una campaña que el dueño borró de su historial seguiría
+      // apareciendo en el banner de novedades de la tienda: la borraría para
+      // sacarla de la vista del cliente y sería el único lugar donde quedaría.
+      deletedAt: null,
       OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
     },
     orderBy: { createdAt: "desc" },
