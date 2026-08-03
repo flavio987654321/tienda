@@ -877,7 +877,11 @@ export default function FashionNoir() {
           <div style={{ position:"absolute", inset:0, background:heroGradient }}/>
         )}
         <BgDragHandle imgKey="heroBackground" />
-        <EditableImageButton field="heroBackground" label="Cambiar imagen" />
+        {/* El botón dice una acción y no un lugar —es el único hero a pantalla
+            completa, ahí "Imagen de fondo del hero" no entra— así que el título del
+            panel va aparte. */}
+        <EditableImageButton field="heroBackground" label="Cambiar imagen"
+          panelLabel="Imagen de fondo del hero" />
         <div style={{ position:"relative", width:"100%", padding: isMobile ? "0 20px" : "0 80px", maxWidth:1280, margin:"0 auto" }}>
           <div style={{ maxWidth:520 }}>
             <p style={{ fontSize:11, letterSpacing:5, color:heroAccentColor, marginBottom:20, textTransform:"uppercase" }}>

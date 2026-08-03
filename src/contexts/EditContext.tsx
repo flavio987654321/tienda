@@ -6,7 +6,22 @@ import { colorRepresentativo } from "@/lib/section-bg";
 type EditContextType = {
   editMode: boolean;
   activeField: string | null;
-  setActiveField: (field: string | null) => void;
+  /* ── Cómo se titula el panel ───────────────────────────────────────────────
+     Lo pone la zona al abrirse, no un mapa del editor.
+     Antes el panel buscaba el título en `TEXT_FIELD_LABELS`, un Record fijo por
+     nombre de campo que vivía en `configuracion/page.tsx`. El problema no era la
+     duplicación —`EditableZone` ya recibe su `label` para el globito del hover—
+     sino que el mapa se podía olvidar: el fallback era el nombre crudo del campo,
+     así que un campo nuevo sin entrada titulaba el panel "aboutStatLabel3" en la
+     pantalla de alguien que vende ropa. Un template que no compila avisa; un mapa
+     incompleto no.
+     Viaja pegado a `activeField` y no por registro global —que es lo que
+     `EditableImageButton` explica más abajo que hay que evitar— porque el clic YA
+     hace un setState: mandar el título con él no cuesta ningún render de más.
+     Sigue siendo `null` cuando el campo se abre desde otro lado (el carrusel de
+     ChicParis, por ejemplo, que abre campos de imagen a mano). */
+  activeLabel: string | null;
+  setActiveField: (field: string | null, label?: string) => void;
   overrides: Record<string, TextOverride>;
   setOverride: (field: string, partial: Partial<TextOverride>) => void;
   resetOverride: (field: string) => void;
@@ -24,6 +39,7 @@ type EditContextType = {
 export const EditContext = createContext<EditContextType>({
   editMode: false,
   activeField: null,
+  activeLabel: null,
   setActiveField: () => {},
   overrides: {},
   setOverride: () => {},
@@ -209,9 +225,15 @@ export function EditableZone({
   if (isHidden) {
     return (
       <Tag
+        // También cuando está oculto, y no sólo en la rama de abajo: el panel sube
+        // por el DOM desde este elemento para leer el fondo real que tiene detrás y
+        // avisar si el color elegido no se lee. Sin la marca, ese aviso se apagaba
+        // justo en el campo que más lo necesita — el que estás por volver a mostrar
+        // y todavía no viste sobre su fondo.
+        data-edit-field={field}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
-        onClick={(e: React.MouseEvent) => { e.stopPropagation(); setActiveField(field); }}
+        onClick={(e: React.MouseEvent) => { e.stopPropagation(); setActiveField(field, label); }}
         style={{
           position: "relative",
           display: block ? "block" : "inline",
@@ -264,7 +286,7 @@ export function EditableZone({
       data-edit-field={field}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      onClick={(e: React.MouseEvent) => { e.stopPropagation(); setActiveField(field); }}
+      onClick={(e: React.MouseEvent) => { e.stopPropagation(); setActiveField(field, label); }}
       style={{
         position: "relative",
         display: block ? "block" : "inline",
@@ -324,28 +346,29 @@ export function EditableImageButton({
   /** Solo el ícono de cámara, sin el texto — para tarjetas chicas donde el
    *  botón completo choca con otros controles (ej: el selector de categoría). */
   compact?: boolean;
-  /* ── Título y aviso del panel, cuando no se pueden escribir de antemano ───────
-     El panel se titula con `IMAGE_FIELD_INFO[field]`, un mapa fijo por nombre de
-     campo. Alcanza mientras el campo signifique siempre lo mismo, y dejó de
-     alcanzar en las baldosas de categoría de Urban Pulse: las ranuras se llaman
-     `catMujer`/`catHombre`/`catAccesorios` por razones históricas (hay tiendas con
-     fotos guardadas ahí), pero la categoría que muestran ahora la elige el dueño.
-     Resultado: elegía "pantalones" en la baldosa del medio y el panel se titulaba
-     "Imagen categoría Hombre" y le hablaba de la categoría Hombre.
+  /* ── Título y aviso del panel ─────────────────────────────────────────────────
+     Los dos son opcionales: sin ellos el panel se titula con `label` (el texto del
+     botón) y no muestra ayuda. Se pasan cuando el botón no nombra el hueco, o
+     cuando hay algo que avisar que no se deduce mirando la pantalla.
 
-     Viajan por atributo en el DOM, y NO es porque el panel esté fuera del árbol:
-     `FloatingEditor` y `<TemplateComponent/>` son hermanos bajo el mismo
-     `EditContext.Provider` (`configuracion/page.tsx`), así que el contexto podría
-     llevarlos. El motivo es otro: por contexto habría que REGISTRARLOS, y registrar
-     desde un componente que se dibuja muchas veces significa un `setState` en un
-     efecto por cada botón de imagen de la página — un update por montaje, en la
-     clase de problema que el propio lint del repo marca como error
-     (`react-hooks/set-state-in-effect`). Un atributo es pasivo: no dispara nada, y
-     lo lee sólo el único panel que está abierto. Además el panel YA lee este mismo
-     elemento por `data-edit-image` para medir el hueco, así que no se inventa un
-     canal nuevo — se le agregan dos datos al que ya viajaba.
-     Los dos son opcionales — el que no los pasa se sigue titulando con el mapa. */
-  /** Reemplaza el título del panel. */
+     Van por atributo en el DOM y NO por el contexto, que es por donde viaja el
+     título de `EditableZone` (ver `activeLabel`). La diferencia no es el árbol
+     —`FloatingEditor` y `<TemplateComponent/>` cuelgan del mismo provider— sino que
+     acá el valor puede cambiar CON EL PANEL ABIERTO: en las baldosas de categoría de
+     Urban Pulse las ranuras se llaman `catMujer`/`catHombre`/`catAccesorios` por
+     historia (hay tiendas con fotos guardadas ahí) pero la categoría que muestran la
+     elige el dueño, y puede cambiarla sin cerrar el panel. Un título mandado en el
+     clic se quedaría hablando de la categoría anterior; el atributo lo sigue con un
+     `MutationObserver`. Lo mismo vale para el carrusel de banner, que mueve el campo
+     activo de slide sin que nadie toque un botón.
+
+     Por contexto además habría que REGISTRARLOS, y registrar desde un componente que
+     se dibuja muchas veces significa un `setState` en un efecto por cada botón de
+     imagen de la página — la clase de problema que el propio lint del repo marca
+     como error (`react-hooks/set-state-in-effect`). Un atributo es pasivo: no
+     dispara nada, y lo lee sólo el único panel que está abierto. Además el panel YA
+     lee este mismo elemento por `data-edit-image` para medir el hueco. */
+  /** Reemplaza el título del panel, que por defecto es el texto del botón. */
   panelLabel?: string;
   /** Reemplaza el texto de ayuda del panel. Para explicar algo que depende del
    *  estado — ej: que la foto se está tomando sola de un producto. */
@@ -396,7 +419,11 @@ export function EditableImageButton({
         // recomendaba medidas fijas — y en las secciones verticales le estaba
         // diciendo al dueño justo lo contrario de lo que le convenía.
         data-edit-image={field}
-        data-edit-label={panelLabel}
+        // Sin `panelLabel`, el panel se titula con el texto del botón. Alcanza en
+        // casi todos —"Imagen del hero", "Imagen sección Nosotros"— porque nombran
+        // el hueco. Cuando el botón dice una acción y no un lugar ("Cambiar
+        // imagen", en el hero de Fashion Noir), el template pasa `panelLabel`.
+        data-edit-label={panelLabel ?? label}
         data-edit-note={panelNote}
         style={compact ? {
           position: "absolute", top: 8, right: 8, zIndex: 9998,
@@ -499,7 +526,7 @@ export function EditableFixed({
         <div
           onMouseEnter={() => setHovered(true)}
           onMouseLeave={() => setHovered(false)}
-          onClick={() => setActiveField(field)}
+          onClick={() => setActiveField(field, label)}
           style={{
             position: "fixed", bottom, right,
             width: size, height: size, borderRadius: "50%",

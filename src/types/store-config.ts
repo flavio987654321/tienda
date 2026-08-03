@@ -224,6 +224,36 @@ export type StoreConfig = {
   sectionOrder?: string[];
 };
 
+// ── Qué templates dejan elegir el color de la barra de navegación ────────────
+// Estar en la lista = el panel ofrece el control; el valor es el color que el
+// template dibuja de fábrica. Los que no están pintan el nav con el color de su
+// diseño y no hay nada que elegir.
+//
+// El color de fábrica es tan necesario como la lista, y por eso van juntos: un
+// `<input type="color">` necesita SIEMPRE un color —con string vacío se pone
+// negro— así que sin él el selector arrancaba mostrando un color que no era el
+// que se veía en pantalla.
+//
+// Antes esto vivía suelto en el panel: una lista de ids escrita a mano en el JSX
+// y el color de fábrica como dos ternarios anidados ("¿es auto-motor? ¿es
+// home-studio? y si no, blanco"), repetidos en el selector y en el campo de texto.
+// Ese "y si no, blanco" ya se había equivocado con Tech Nova, que pinta el nav casi
+// negro: el dueño abría el panel y el selector le mostraba blanco arriba de una
+// barra negra. Un template nuevo entraba en la lista y salía blanco sin que nadie
+// lo decidiera — el error no era posible verlo hasta abrir esa pantalla.
+//
+// Cada valor sale del `sc["navBg"] ?? ...` del template. Si allá cambia, acá
+// también: son el mismo color escrito dos veces, y esta es la copia que miente
+// cuando se desincronizan.
+export const TEMPLATE_NAV_BG: Partial<Record<TemplateId, string>> = {
+  "auto-motor":    "#1b3f6e", // NAVY
+  "auto-drive":    "#ffffff",
+  "casa-clara":    "#ffffff",
+  "electro-prime": "#ffffff",
+  "home-studio":   "#faf8f4",
+  "tech-nova":     "#0f0f1a",
+};
+
 export const TEMPLATE_DEFAULTS: Record<TemplateId, { accent: string; storeName: string }> = {
   "fashion-noir": { accent: "#c9a84c", storeName: "FASHION NOIR" },
   "boho-terra":   { accent: "#b5652a", storeName: "BOHO TERRA"   },

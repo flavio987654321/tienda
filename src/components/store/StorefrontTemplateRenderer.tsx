@@ -37,6 +37,7 @@ export default function StorefrontTemplateRenderer({ config }: { config: StoreCo
       <EditContext.Provider value={{
         editMode: false,
         activeField: null,
+        activeLabel: null,
         setActiveField: () => {},
         overrides: config.textOverrides,
         setOverride: () => {},

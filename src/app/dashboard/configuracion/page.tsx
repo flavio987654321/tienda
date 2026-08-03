@@ -3,7 +3,7 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import DashboardLayout from "@/components/DashboardLayout";
 import type { StoreConfig, TextOverride, ImageOverride, TemplateId } from "@/types/store-config";
-import { DEFAULT_CONFIG, TEMPLATES_WITH_CAROUSEL, TEMPLATE_DEFAULTS, SECTION_BG_PHOTO } from "@/types/store-config";
+import { DEFAULT_CONFIG, TEMPLATES_WITH_CAROUSEL, TEMPLATE_DEFAULTS, TEMPLATE_NAV_BG, SECTION_BG_PHOTO } from "@/types/store-config";
 import { StoreConfigContext } from "@/contexts/StoreConfigContext";
 import { EditContext, useEditContext, getContrastColor } from "@/contexts/EditContext";
 import { parseColor, toHex, contrastRatio, nearestLegible, MIN_LEGIBLE, MIN_LEGIBLE_GRANDE } from "@/lib/contrast";
@@ -19,129 +19,38 @@ type Category = { id: string; name: string; templates: TemplateInfo[] };
 /* ── Template registry ─────────────────────────────────────── */
 const CATEGORIES: Category[] = TEMPLATE_CATEGORIES;
 
-/* ── Image field info ──────────────────────────────────────── */
-const IMAGE_FIELD_INFO: Record<string, { label: string; tip: string }> = {
-  heroBackground: {
-    label: "Imagen de fondo del hero",
-    tip: "Recomendado: 1920×1080px horizontal. Capa oscura para fotos claras, capa clara para fotos oscuras.",
-  },
-  heroImage: {
-    label: "Imagen del hero",
-    tip: "Foto principal junto al titular. Recomendado: 800×900px vertical.",
-  },
-  heroImage1: {
-    label: "Imagen hero izquierda",
-    tip: "Columna izquierda del hero (vertical). Recomendado: 600×900px.",
-  },
-  heroImage2: {
-    label: "Imagen hero superior",
-    tip: "Foto superior derecha del hero. Recomendado: 600×500px.",
-  },
-  heroImage3: {
-    label: "Imagen hero inferior",
-    tip: "Foto inferior derecha del hero. Recomendado: 600×500px.",
-  },
-  catMujer: {
-    label: "Imagen categoría Mujer",
-    tip: "Foto representativa de la categoría Mujer. Recomendado: 800×1200px vertical.",
-  },
-  catHombre: {
-    label: "Imagen categoría Hombre",
-    tip: "Foto representativa de la categoría Hombre. Recomendado: 800×1200px vertical.",
-  },
-  catAccesorios: {
-    label: "Imagen categoría Accesorios",
-    tip: "Foto representativa de la categoría Accesorios. Recomendado: 800×1200px vertical.",
-  },
-  nosotrosImage: {
-    label: "Imagen sección Nosotros",
-    tip: "Foto de tu equipo, taller o espacio. Recomendado: 900×700px horizontal.",
-  },
-  contactBackground: {
-    label: "Imagen de fondo contacto",
-    tip: "Fondo de la sección de contacto. Recomendado: 1920×700px horizontal.",
-  },
-  // Electro Prime / Tech Nova / Home Studio / Casa Clara (Hogar y Tecnología)
-  contactImage: {
-    label: "Imagen sección Contacto",
-    tip: "Foto junto al formulario de contacto. Recomendado: 900×700px.",
-  },
-  contactoImage: {
-    label: "Imagen de fondo (contacto)",
-    tip: "Fondo de la sección de contacto. Recomendado: 1920×700px horizontal.",
-  },
-  megaMenuImage: {
-    label: "Imagen del menú Departamentos",
-    tip: "Foto decorativa que se ve al abrir el menú de departamentos. Recomendado: 600×500px.",
-  },
-  ...Object.fromEntries(Array.from({ length: 7 }, (_, i) => [
-    `dept${i}Image`,
-    { label: `Departamento ${i + 1} — imagen`, tip: "Foto del departamento. Recomendado: 600×500px." },
+/* ── Consejos por campo de imagen ──────────────────────────────────────────────
+   Sólo consejos: los TÍTULOS los pone cada `<EditableImageButton>` y llegan por
+   `data-edit-label`. Antes este mapa titulaba además el panel, y esa parte se cayó
+   porque se olvidaba — `heroBanner1/2/3` de Chic Paris nunca tuvo entrada y el panel
+   se titulaba "heroBanner1" en la cara del dueño de la tienda.
+
+   Los consejos sí siguen acá, y a propósito: no dependen del template sino de qué
+   ES el campo. "Foto de tu equipo, taller o espacio" vale igual en los diez, y
+   repetirlo en cada uno sería la duplicación que acabamos de sacar, al revés.
+
+   Están sólo los que dicen algo que el título no dice ya. "Foto del departamento"
+   abajo de un panel titulado "Departamento 3 — imagen" no es ayuda, es relleno; y
+   el que aprende que la ayuda es relleno deja de leerla el día que importa.
+   Las medidas no hace falta escribirlas: el panel mide el hueco real y calcula la
+   recomendada solo (ver `recomendado`). Las que quedan acá son el respaldo por si
+   no llega a medir, y se descartan solas cuando sí. */
+const IMAGE_FIELD_TIPS: Record<string, string> = {
+  heroBackground: "Recomendado: 1920×1080px horizontal. Capa oscura para fotos claras, capa clara para fotos oscuras.",
+  nosotrosImage:  "Foto de tu equipo, taller o espacio. Recomendado: 900×700px horizontal.",
+  megaMenuImage:  "Foto decorativa que se ve al abrir el menú de departamentos. Recomendado: 600×500px.",
+  // El "sin texto" es una restricción real, no un adorno: el carrusel recorta el
+  // banner distinto en cada ancho y cualquier letra incrustada se corta sola.
+  ...Object.fromEntries(Array.from({ length: 3 }, (_, i) => [
+    `promoBanner${i + 1}`,
+    "Recomendado: 1920×600px horizontal (imagen panorámica, sin texto).",
   ])),
-  // Electro Prime / Tech Nova / Home Studio — carrusel de banner promocional (sin texto)
-  promoBanner1: { label: "Banner promocional 1", tip: "Recomendado: 1920×600px horizontal (imagen panorámica, sin texto)." },
-  promoBanner2: { label: "Banner promocional 2", tip: "Recomendado: 1920×600px horizontal (imagen panorámica, sin texto)." },
-  promoBanner3: { label: "Banner promocional 3", tip: "Recomendado: 1920×600px horizontal (imagen panorámica, sin texto)." },
 };
 
-/* ── Text field labels ─────────────────────────────────────── */
-const TEXT_FIELD_LABELS: Record<string, string> = {
-  announcementText:    "Barra de anuncios",
-  heroHeading:         "Título principal",
-  heroSubtext:         "Subtítulo hero",
-  heroCta:             "Botón principal",
-  heroCtaSecondary:    "Botón secundario",
-  featuredLabel:       "Etiqueta destacado",
-  featuredDescription: "Descripción destacado",
-  categoriesHeading:   "Sección categorías",
-  testimonialsHeading: "Sección testimonios",
-  quoteText:           "Frase destacada",
-  aboutKicker:         "Etiqueta 'Nosotros'",
-  aboutHeading:        "Título 'Nosotros'",
-  aboutParagraph1:     "Párrafo 1 'Nosotros'",
-  aboutParagraph2:     "Párrafo 2 'Nosotros'",
-  aboutStat1:          "Stat 1 (número)",
-  aboutStatLabel1:     "Stat 1 (etiqueta)",
-  aboutStat2:          "Stat 2 (número)",
-  aboutStatLabel2:     "Stat 2 (etiqueta)",
-  aboutStat3:          "Stat 3 (número)",
-  aboutStatLabel3:     "Stat 3 (etiqueta)",
-  aboutStat4:          "Stat 4 (número)",
-  aboutStatLabel4:     "Stat 4 (etiqueta)",
-  contactKicker:       "Etiqueta contacto",
-  contactHeading:      "Título contacto",
-  contactSubtext:      "Subtítulo contacto",
-  contactFormHeading:  "Subtítulo formulario",
-  newsletterText:      "Título newsletter",
-  newsletterSubtext:   "Subtítulo newsletter",
-  footerDescription:   "Descripción footer",
-  footerCopyright:     "Copyright",
-  footerMadeIn:        "Hecho en",
-  storeName:           "Nombre de la tienda",
-  storeTagline:        "Tagline",
-  // Garantías (compartido en los 3 templates)
-  garantia1Title:      "Garantía 1 — Título",
-  garantia1Desc:       "Garantía 1 — Descripción",
-  garantia2Title:      "Garantía 2 — Título",
-  garantia2Desc:       "Garantía 2 — Descripción",
-  garantia3Title:      "Garantía 3 — Título",
-  garantia3Desc:       "Garantía 3 — Descripción",
-  garantia4Title:      "Garantía 4 — Título",
-  garantia4Desc:       "Garantía 4 — Descripción",
-  // BohoTerra
-  navHistoriaLabel:    "Enlace Nuestra Historia",
-  footerBrandName:     "Nombre en footer",
-  contactEmail:        "Email de contacto",
-  contactUbicacion:    "Ubicación",
-  contactInstagram:    "Instagram",
-  contactHorario:      "Horario de atención",
-  // UrbanPulse
-  heroNewDropBadge:    "Badge hero",
-  categoryViewAll:     "Botón ver todo",
-  collectionHeading:   "Título sección productos",
-  contactDireccion:    "Dirección",
-  contactWhatsApp:     "WhatsApp de contacto",
-};
+/* Los títulos del editor de textos NO se listan acá: cada `<EditableZone>` trae el
+   suyo y lo manda al abrirse (ver `activeLabel` en EditContext). Un mapa en este
+   archivo se desincronizaba del template y no había forma de notarlo hasta verlo
+   en pantalla. */
 
 /* ── Thumbnail (real template scaled) ─────────────────────── */
 const THUMB_W = 230;
@@ -497,6 +406,10 @@ function ConfigModal({ config, update, onClose, onSave, onDelete, storeSlug, isP
 }) {
   const [availableCategories, setAvailableCategories] = useState<string[]>([]);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  // `undefined` = este template no deja tocar el nav, y entonces el bloque entero
+  // no se dibuja. Si deja, este es el color que muestra el selector mientras nadie
+  // haya elegido otro.
+  const navBgDeFabrica = TEMPLATE_NAV_BG[config.template];
 
   useEffect(() => {
     if (!storeSlug) return;
@@ -577,19 +490,19 @@ function ConfigModal({ config, update, onClose, onSave, onDelete, storeSlug, isP
             <p style={{ margin: "8px 0 0", fontSize: 11, color: P.muted }}>Afecta botones, precios y elementos destacados.</p>
           </div>
 
-          {/* Color nav — solo templates auto y Hogar/Tecnología */}
-          {["auto-motor", "auto-drive", "electro-prime", "tech-nova", "home-studio", "casa-clara"].includes(config.template) && (
+          {/* Color nav — sólo los templates que lo declaran en TEMPLATE_NAV_BG */}
+          {navBgDeFabrica && (
             <div style={sec}>
               <p style={{ margin: "0 0 12px", fontSize: 12, fontWeight: 700, color: "#0f172a", display: "flex", alignItems: "center", gap: 6 }}>
                 🧭 Color de la barra de navegación
               </p>
               <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
                 <input type="color"
-                  value={config.sectionColors?.["navBg"] ?? (config.template === "auto-motor" ? "#1b3f6e" : config.template === "home-studio" ? "#faf8f4" : "#ffffff")}
+                  value={config.sectionColors?.["navBg"] ?? navBgDeFabrica}
                   onChange={e => update("sectionColors", { ...config.sectionColors, navBg: e.target.value })}
                   style={{ width: 40, height: 38, padding: 2, border: "1px solid #e2e8f0", borderRadius: 8, cursor: "pointer", flexShrink: 0 }} />
                 <input style={{ ...inp, fontFamily: "monospace" }}
-                  value={config.sectionColors?.["navBg"] ?? (config.template === "auto-motor" ? "#1b3f6e" : config.template === "home-studio" ? "#faf8f4" : "#ffffff")}
+                  value={config.sectionColors?.["navBg"] ?? navBgDeFabrica}
                   onChange={e => update("sectionColors", { ...config.sectionColors, navBg: e.target.value })}
                   onFocus={e => (e.target.style.borderColor = "#6366f1")}
                   onBlur={e => (e.target.style.borderColor = "#e2e8f0")} />
@@ -1024,11 +937,11 @@ const panelBtnActive: React.CSSProperties = {
 const TEXTO_MAX = 500;
 
 function ImageFieldEditor({
-  field, ov, info, currentOverlay, hasChanges, base, setImageOverride, setActiveField,
+  field, ov, tip, currentOverlay, hasChanges, base, setImageOverride, setActiveField,
 }: {
   field: string;
   ov: ImageOverride;
-  info: { label: string; tip: string } | undefined;
+  tip: string | undefined;
   currentOverlay: string;
   hasChanges: boolean;
   base: React.CSSProperties;
@@ -1110,18 +1023,19 @@ function ImageFieldEditor({
     : "cuadrada"
     : null;
 
-  /* ── Título y aviso puestos por el template ────────────────────────────────
-     Algunos campos no pueden titularse desde `IMAGE_FIELD_INFO`, que es un mapa
-     fijo por nombre de campo: las baldosas de categoría de Urban Pulse guardan la
-     foto en ranuras que se llaman `catMujer`/`catHombre`/`catAccesorios` por
-     historia, pero muestran la categoría que el dueño eligió. El panel se titulaba
-     "Imagen categoría Hombre" arriba de una baldosa que decía "pantalones".
+  /* ── Título y aviso, puestos por el template ───────────────────────────────
+     El título del panel de imágenes SIEMPRE sale de acá: cada `EditableImageButton`
+     emite `data-edit-label` (su `panelLabel`, o el texto del botón si no lo pasa).
+     Antes lo ponía un mapa por nombre de campo en este mismo archivo, y se olvidaba:
+     `heroBanner1/2/3` de Chic Paris nunca tuvo entrada y el panel se titulaba
+     "heroBanner1" en la pantalla del dueño de la tienda.
      Se leen del mismo elemento que ya se mide dos efectos más arriba (por qué van
      por el DOM y no por el contexto, que los dos cuelgan del mismo provider, está
      explicado en `EditableImageButton`).
-     Con `MutationObserver` y no una lectura suelta: el dueño puede cambiar la
-     categoría de la baldosa CON el panel abierto, y ahí el título y el aviso tienen
-     que seguirla en vez de quedarse hablando de la categoría anterior. */
+     Con `MutationObserver` y no una lectura suelta: en las baldosas de categoría de
+     Urban Pulse el dueño puede cambiar la categoría CON el panel abierto, y ahí el
+     título y el aviso tienen que seguirla en vez de quedarse hablando de la
+     anterior. Lo mismo cuando el carrusel de banner mueve el campo activo de slide. */
   const [delTemplate, setDelTemplate] = useState<{ campo: string; label?: string; note?: string } | null>(null);
   const puesto = delTemplate && delTemplate.campo === field ? delTemplate : null;
   useEffect(() => {
@@ -1156,7 +1070,7 @@ function ImageFieldEditor({
   // la medida de verdad: dos consejos que se contradicen es peor que ninguno.
   // El aviso que pone el template REEMPLAZA al tip del mapa, no se suma: cuando
   // hay uno, el del mapa es justamente el que está equivocado.
-  const tipBase = puesto?.note ?? info?.tip;
+  const tipBase = puesto?.note ?? tip;
   const tipSinMedidas = recomendado
     ? (tipBase ?? "").replace(/\s*Recomendad[oa]:[^.]*\.?/i, " ").trim()
     : tipBase;
@@ -1256,7 +1170,7 @@ function ImageFieldEditor({
       {/* ── Encabezado ── */}
       <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 18px", borderBottom: "1px solid #eef1f5", position: "sticky", top: 0, background: P.bg, zIndex: 2 }}>
         <span style={{ fontSize: 11, fontWeight: 700, color: P.accent, background: P.accentSoft, borderRadius: 20, padding: "3px 10px", whiteSpace: "nowrap" }}>
-          📷 {puesto?.label ?? info?.label ?? field}
+          📷 {puesto?.label ?? field}
         </span>
         <div style={{ flex: 1 }} />
         <button onClick={() => setActiveField(null)} aria-label="Cerrar editor"
@@ -1823,8 +1737,8 @@ function BgFieldEditor({ field, base, setActiveField, aceptaFoto }: {
 }
 
 /* ── Floating editor (text + image) ─────────────────────────── */
-function FloatingEditor({ textFieldLabels, template }: { textFieldLabels: Record<string, string>; template: TemplateId }) {
-  const { activeField, setActiveField, overrides, setOverride, resetOverride, imageOverrides, setImageOverride } = useEditContext();
+function FloatingEditor({ template }: { template: TemplateId }) {
+  const { activeField, activeLabel, setActiveField, overrides, setOverride, resetOverride, imageOverrides, setImageOverride } = useEditContext();
 
   // Cerrar con Escape o tocando fuera del panel.
   //
@@ -1908,7 +1822,7 @@ function FloatingEditor({ textFieldLabels, template }: { textFieldLabels: Record
   if (isImageField) {
     const field = activeField.slice(4);
     const ov = imageOverrides[field] ?? {};
-    const info = IMAGE_FIELD_INFO[field];
+    const tip = IMAGE_FIELD_TIPS[field];
     const currentOverlay = ov.overlayType ?? "dark";
     // El encuadre cuenta como cambio: sin esto, mover la foto y no tocar nada más
     // dejaba el botón de restablecer escondido y no había forma de deshacerlo.
@@ -1919,7 +1833,7 @@ function FloatingEditor({ textFieldLabels, template }: { textFieldLabels: Record
     return <ImageFieldEditor
       field={field}
       ov={ov}
-      info={info}
+      tip={tip}
       currentOverlay={currentOverlay}
       hasChanges={hasChanges}
       base={base}
@@ -1929,7 +1843,10 @@ function FloatingEditor({ textFieldLabels, template }: { textFieldLabels: Record
   }
 
   /* ── Text editor ── */
-  const label = textFieldLabels[activeField] ?? activeField;
+  // El nombre crudo del campo queda sólo para los campos que se abren sin pasar por
+  // `EditableZone`. No debería verse nunca en la tienda de nadie; si aparece, el
+  // que abrió el campo se olvidó de decir cómo se llama.
+  const label = activeLabel ?? activeField;
   const ov = overrides[activeField] ?? {};
   const hasOverride = Object.entries(ov).some(([, v]) => v !== undefined);
   const isHidden = !!ov.hidden;
@@ -2209,7 +2126,17 @@ export default function ConfiguracionPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
-  const [activeField, setActiveField] = useState<string | null>(null);
+  // El campo abierto y su título van en UN solo estado, no en dos. Con dos
+  // `useState` separados, pasar de un texto a otro los actualiza en llamadas
+  // distintas y hay un render en el que el panel ya cambió de campo pero todavía
+  // se titula con el nombre del anterior. Juntos no puede pasar: o cambian los dos
+  // o no cambia ninguno.
+  const [active, setActive] = useState<{ field: string; label?: string } | null>(null);
+  const activeField = active?.field ?? null;
+  const activeLabel = active?.label ?? null;
+  const setActiveField = useCallback((field: string | null, label?: string) => {
+    setActive(field === null ? null : { field, label });
+  }, []);
   const [configModalOpen, setConfigModalOpen] = useState(false);
   const [isPremium, setIsPremium] = useState(false);
   const [loadingConfig, setLoadingConfig] = useState(true);
@@ -2824,6 +2751,7 @@ export default function ConfiguracionPage() {
         <EditContext.Provider value={{
           editMode: true,
           activeField,
+          activeLabel,
           setActiveField,
           overrides: config.textOverrides,
           setOverride,
@@ -2849,7 +2777,7 @@ export default function ConfiguracionPage() {
               </StoreConfigContext.Provider>
             </div>
           </div>
-          <FloatingEditor textFieldLabels={TEXT_FIELD_LABELS} template={config.template} />
+          <FloatingEditor template={config.template} />
         </EditContext.Provider>
 
       </div>
