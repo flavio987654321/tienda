@@ -26,7 +26,12 @@ export type TiendaDirectorio = {
   primaryColor: string;
   totalProducts: number;
   totalOrders: number;
-  categories: string[];
+  // Ojo: acá NO va una lista de categorías. Había una, y no podía funcionar: la
+  // consulta trae un solo producto por tienda (`take: 1`, para la foto de tapa),
+  // así que "las categorías" eran siempre a lo sumo una. Nadie la leía —ni el
+  // listado ni la imagen de OpenGraph— así que se fue en vez de arreglarse. Si
+  // alguna vez hace falta de verdad, va como consulta aparte (`distinct`), no
+  // sacada del producto de la tapa.
   coverImg: string | null;
   heroImg: string | null;
   isVerified: boolean;
@@ -65,7 +70,8 @@ export async function listarTiendas(filtros: FiltrosDirectorio = {}) {
         _count: { select: { products: true, orders: true } },
         products: {
           where: { isActive: true },
-          select: { images: true, category: true },
+          // Sólo la foto: es el último producto cargado y se usa de tapa.
+          select: { images: true },
           take: 1,
           orderBy: { createdAt: "desc" },
         },
@@ -103,8 +109,6 @@ export async function listarTiendas(filtros: FiltrosDirectorio = {}) {
         null;
     } catch {}
 
-    const categories = [...new Set(s.products.map((p) => p.category).filter(Boolean))];
-
     return {
       id: s.id,
       slug: s.slug,
@@ -115,7 +119,6 @@ export async function listarTiendas(filtros: FiltrosDirectorio = {}) {
       primaryColor: s.primaryColor,
       totalProducts: s._count.products,
       totalOrders: s._count.orders,
-      categories,
       coverImg,
       heroImg,
       isVerified: s.isVerified,

@@ -309,24 +309,52 @@ export function ProductDetailBody({ theme, view }: { theme: DetailTheme; view: P
   type PReview = { id: string; rating: number; comment: string | null; reviewer: string; createdAt: string };
   const [reviews, setReviews] = useState<PReview[]>([]);
   const [reviewsShown, setReviewsShown] = useState(5);
-  const [reviewsLoading, setReviewsLoading] = useState(false);
   const [reviewForm, setReviewForm] = useState({ reviewer: "", rating: 5, comment: "", email: "" });
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
   const [reviewDone, setReviewDone] = useState(false);
   const [reviewHoneypot, setReviewHoneypot] = useState("");
   const reviewCaptcha = useTurnstile("review");
 
-  useEffect(() => {
-    if (!slug || !product.id) return;
-    setReviewsLoading(true);
+  /* ── "Cargando reseñas" se deduce, no se avisa ──────────────────────────────
+     `reviewsDe` es de qué producto son las reseñas que hay en memoria, y se pone
+     recién cuando la respuesta llegó. Mientras no coincida con el que se está
+     mirando, se están trayendo.
+     Antes era un `setReviewsLoading(true)` adentro del efecto, que es lo que el
+     lint del repo marca como error (`react-hooks/set-state-in-effect`) y con
+     razón: obliga a un render entero sólo para anotar que se empezó a pedir, y
+     el pedido ni siquiera salió todavía. Derivado no hace falta ese render.
+     Las mismas dos condiciones que el efecto: si no hay slug o no hay producto no
+     se pide nada, y entonces tampoco se está cargando — sin esto quedaría girando
+     para siempre. */
+  const [reviewsDe, setReviewsDe] = useState<string | null>(null);
+  const reviewsLoading = !!slug && !!product.id && reviewsDe !== product.id;
+
+  /* ── Y el formulario se limpia al cambiar de producto ───────────────────────
+     Se puede pasar a otro producto sin recargar la página, tocando uno de los
+     similares. Sin esto, el "¡Gracias por tu reseña!" del anterior queda puesto
+     sobre el nuevo y parece que ya opinaste sobre éste.
+     Va en el render y no en un efecto a propósito: es el patrón que React
+     documenta para ajustar estado cuando cambia una prop. En un efecto, el estado
+     viejo alcanza a pintarse una vez antes de limpiarse. */
+  const [formDe, setFormDe] = useState(product.id);
+  if (formDe !== product.id) {
+    setFormDe(product.id);
     setReviewDone(false);
     setReviewsShown(5);
     setReviewForm(p => ({ ...p, rating: 5, comment: "" }));
+  }
+
+  useEffect(() => {
+    if (!slug || !product.id) return;
+    // Si se cambia de producto con el pedido en el aire, la respuesta del anterior
+    // llega después y pisaría las reseñas del que se está mirando.
+    let vigente = true;
     fetch(`/api/public/${slug}/reviews?productId=${product.id}`)
       .then(r => r.ok ? r.json() : { reviews: [] })
-      .then(d => setReviews(d.reviews ?? []))
-      .catch(() => setReviews([]))
-      .finally(() => setReviewsLoading(false));
+      .then(d => { if (vigente) setReviews(d.reviews ?? []); })
+      .catch(() => { if (vigente) setReviews([]); })
+      .finally(() => { if (vigente) setReviewsDe(product.id); });
+    return () => { vigente = false; };
   }, [slug, product.id]);
 
   async function submitReview(e: React.FormEvent) {
