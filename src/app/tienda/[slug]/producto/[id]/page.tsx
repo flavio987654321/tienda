@@ -134,9 +134,9 @@ async function findStoreConfig(slug: string) {
   const store = await prisma.store.findFirst({ where: { slug, isActive: true }, select: { storeConfig: true } });
   try {
     const parsed: Partial<StoreConfig> = JSON.parse(store?.storeConfig || "{}");
-    return { analytics: parsed.analytics, currency: parsed.currency || "ARS" };
+    return { analytics: parsed.analytics, currency: parsed.currency || "ARS", template: parsed.template ?? null };
   } catch {
-    return { analytics: undefined, currency: "ARS" as const };
+    return { analytics: undefined, currency: "ARS" as const, template: null };
   }
 }
 
@@ -154,7 +154,7 @@ export default async function ProductoPage({ params, searchParams }: ProductoPag
     if (!product) notFound();
   }
 
-  const { analytics, currency } = await findStoreConfig(slug);
+  const { analytics, currency, template } = await findStoreConfig(slug);
 
   // ── Datos estructurados ────────────────────────────────────────────────────
   // Sólo para productos REALES: los demo del editor no existen para nadie más y
@@ -213,6 +213,7 @@ export default async function ProductoPage({ params, searchParams }: ProductoPag
         slug={slug}
         productId={id}
         productoInicial={product ? mapProduct(product as RawProduct) : null}
+        templateInicial={template}
       />
     </>
   );

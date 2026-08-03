@@ -17,18 +17,20 @@ import ElectroPrimeDetail from "@/components/store/templates/productDetail/Elect
 import TechNovaDetail from "@/components/store/templates/productDetail/TechNovaDetail";
 import HomeStudioDetail from "@/components/store/templates/productDetail/HomeStudioDetail";
 import CasaClaraDetail from "@/components/store/templates/productDetail/CasaClaraDetail";
+import BohoTerraDetail from "@/components/store/templates/productDetail/BohoTerraDetail";
 
 const THEMED_DETAIL: Record<string, React.ComponentType<{ view: ProductDetailViewProps }>> = {
   "electro-prime": ElectroPrimeDetail,
   "tech-nova": TechNovaDetail,
   "home-studio": HomeStudioDetail,
   "casa-clara": CasaClaraDetail,
+  "boho-terra": BohoTerraDetail,
 };
 
 
 const fmt = (n: number) => "$" + n.toLocaleString("es-AR");
 
-export default function ProductDetailClient({ slug, productId, productoInicial = null }: {
+export default function ProductDetailClient({ slug, productId, productoInicial = null, templateInicial = null }: {
   slug: string;
   productId: string;
   /**
@@ -47,6 +49,14 @@ export default function ProductDetailClient({ slug, productId, productoInicial =
    * la única fuente a ser el refresco.
    */
   productoInicial?: StorefrontProduct | null;
+  /**
+   * El template de la tienda, resuelto en el servidor.
+   *
+   * Sin esto el HTML inicial salia con la ficha generica —el template se sabia
+   * recien cuando volvia el pedido del navegador— asi que Google veia la
+   * generica igual, y la persona veia un parpadeo al cambiar.
+   */
+  templateInicial?: string | null;
 }) {
   const router = useRouter();
   const [products, setProducts] = useState<StorefrontProduct[]>([]);
@@ -54,7 +64,7 @@ export default function ProductDetailClient({ slug, productId, productoInicial =
   const [storeId, setStoreId] = useState<string | null>(null);
   const [storeName, setStoreName] = useState("Tienda");
   const [whatsapp, setWhatsapp] = useState<string | null>(null);
-  const [template, setTemplate] = useState<string | null>(null);
+  const [template, setTemplate] = useState<string | null>(templateInicial);
   const [currency, setCurrency] = useState("ARS");
   const [hasMercadoPago, setHasMercadoPago] = useState(false);
   const [isPreview] = useState(() => typeof window !== "undefined" && new URLSearchParams(window.location.search).get("from") === "editor");

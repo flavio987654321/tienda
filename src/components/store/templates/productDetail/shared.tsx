@@ -9,6 +9,7 @@ import StoreProductReels from "@/components/store/ProductReels";
 import { getContrastColor, getReadableAccentText } from "@/contexts/EditContext";
 import { useTouchSwipe } from "@/hooks/useTouchSwipe";
 import { resolveVariantPrice } from "@/lib/variantPrice";
+import { colorToSwatch } from "@/lib/colorSwatch";
 import { useTurnstile } from "@/components/Turnstile";
 import { PromoTag, PromoBlock } from "@/components/store/PromoDisplay";
 import { describePromo, type ProductPromoDisplay } from "@/lib/promoDisplay";
@@ -63,6 +64,140 @@ export interface DetailTheme {
   font: string;
   headingFont: string;
   radius: number;
+
+  /**
+   * Cómo se VISTE esta ficha, además de con qué colores.
+   *
+   * Mismo criterio que el descriptor del modal del catálogo: cada template
+   * declara sólo lo que cambia y hereda el resto. La alternativa era un
+   * `if (template === "boho-terra")` repartido por las 755 líneas de este
+   * archivo, y ya sabemos cómo termina eso — pasó con `esUP` en el modal, y
+   * convertir treinta ternarias en condiciones de tres ramas no se puede.
+   *
+   * Todo opcional: sin nada, la ficha se ve exactamente como hasta ahora.
+   */
+  vestido?: VestidoFicha;
+}
+
+export type VestidoFicha = {
+  /** Los títulos de sección: "Descripción", "Reseñas", "También te puede…". */
+  tituloSeccion?: React.CSSProperties;
+  /** Una rayita debajo del título, como usa Boho Terra. */
+  tituloRayita?: boolean;
+  /** Cómo se llama la solapa de la ficha técnica. Boho Terra le dice "La pieza". */
+  rotuloDescripcion?: string;
+  rotuloEspecificaciones?: string;
+  /** El nombre del producto. */
+  nombre?: React.CSSProperties;
+
+  /* ── La columna de compra ────────────────────────────────────────────────
+     Lo que se mira para decidir: precio, talle, color, cantidad y el botón.
+     Es la parte de la ficha que más se parecía a "otra página": el modal del
+     template la tiene con mayúsculas espaciadas y esquinas rectas, y acá salía
+     con rótulos en negrita común y todo redondeado a 8px. */
+
+  /** "Tamaño" sirve para una heladera; para ropa es "Talle". */
+  rotuloTalle?: string;
+  /**
+   * La tipografía de los rótulos TALLE / COLOR / CANTIDAD.
+   *
+   * Los tres van juntos a propósito: son la misma clase de rótulo, y verlos con
+   * tres pesos distintos es lo que hace que una columna se lea desprolija.
+   */
+  rotuloOpcion?: React.CSSProperties;
+  /** Los chips de talle como cuadrados fijos, no como pastillas con el texto adentro. */
+  chipTalleCuadrado?: boolean;
+  /** El precio en el color de acento del template, no en el de texto. */
+  precioAcento?: boolean;
+  /**
+   * El botón de comprar a todo el ancho, en mayúsculas espaciadas y con el
+   * total adentro ("Agregar al carrito · $60.000").
+   *
+   * El precio adentro no es decoración: con cantidad 2 y una promo 3×2, el
+   * número de arriba ya no es lo que se va a cobrar. El modal lo muestra ahí
+   * desde siempre y la ficha no.
+   */
+  botonCompraDestacado?: boolean;
+  /** La inicial de quien dejó una reseña, en círculo. Boho Terra no redondea nada. */
+  avatarRedondo?: boolean;
+  /**
+   * El formulario de reseña arranca cerrado, detrás de un botón.
+   *
+   * Es lo que hace el modal de Boho Terra, y tiene razón: desplegado son seis
+   * campos ocupando media pantalla para algo que hace una de cada cien personas
+   * que miran el producto. Lo que la mayoría quiere es LEER las reseñas.
+   */
+  resenaFormPlegado?: boolean;
+  /**
+   * Y cuando se abre, lo hace en una ventana flotante encima de la ficha, no
+   * desplegándose abajo.
+   *
+   * Es lo que hace el modal del template. La diferencia importa: desplegado, la
+   * página se estira de golpe y quien venía leyendo reseñas pierde el lugar.
+   */
+  resenaFormModal?: boolean;
+  /** El botón que abre el formulario cuando está plegado. */
+  botonEscribirResena?: string;
+  /** Cuando el producto todavía no tiene ninguna. */
+  textoSinResenas?: string;
+  /** Boho Terra les dice "Productos similares". */
+  rotuloSimilares?: string;
+};
+
+/** Lo que rige cuando el template no dice nada. Es la ficha de siempre. */
+export const VESTIDO_FICHA_BASE: Required<Omit<VestidoFicha, "tituloSeccion" | "nombre">> & Pick<VestidoFicha, "tituloSeccion" | "nombre"> = {
+  tituloRayita: false,
+  rotuloDescripcion: "Descripción",
+  rotuloEspecificaciones: "Especificaciones",
+  tituloSeccion: { fontSize: 13, fontWeight: 700 },
+  nombre: undefined,
+  rotuloTalle: "Tamaño",
+  rotuloOpcion: { fontSize: 13, fontWeight: 600 },
+  chipTalleCuadrado: false,
+  precioAcento: false,
+  botonCompraDestacado: false,
+  avatarRedondo: true,
+  resenaFormPlegado: false,
+  resenaFormModal: false,
+  botonEscribirResena: "Escribí tu reseña",
+  textoSinResenas: "Todavía no hay reseñas para este producto.",
+  rotuloSimilares: "También te puede interesar",
+};
+
+/** El vestido resuelto de un tema: lo suyo sobre la base. */
+export function vestidoDe(theme: DetailTheme) {
+  return { ...VESTIDO_FICHA_BASE, ...(theme.vestido ?? {}) };
+}
+
+/**
+ * Un título de sección, con el vestido del template puesto.
+ *
+ * Estaba escrito a mano cinco veces con los mismos `fontSize: 13, fontWeight:
+ * 700`. Con cinco copias, vestirlo distinto en un template era encontrar las
+ * cinco — y la que se olvidara iba a quedar con la tipografía de otro.
+ */
+export function TituloSeccion({ theme, children, style }: { theme: DetailTheme; children: React.ReactNode; style?: React.CSSProperties }) {
+  const v = vestidoDe(theme);
+  return (
+    <div style={{ marginBottom: 12, ...style }}>
+      <p style={{ color: theme.text, margin: 0, fontFamily: theme.headingFont, ...v.tituloSeccion }}>{children}</p>
+      {v.tituloRayita && (
+        <span style={{ display: "block", width: 28, height: 1, background: theme.accentReadable, marginTop: 7 }} />
+      )}
+    </div>
+  );
+}
+
+/**
+ * El rótulo de una opción de compra: TALLE, COLOR, CANTIDAD.
+ *
+ * Es su propio componente por lo mismo que `TituloSeccion`: los tres estaban
+ * escritos a mano con los mismos `fontSize: 13, fontWeight: 600`, y vestirlos
+ * distinto en un template era acordarse de los tres.
+ */
+export function RotuloOpcion({ theme, children, style }: { theme: DetailTheme; children: React.ReactNode; style?: React.CSSProperties }) {
+  const v = vestidoDe(theme);
+  return <p style={{ color: theme.muted, margin: 0, ...v.rotuloOpcion, ...style }}>{children}</p>;
 }
 
 export interface ProductDetailViewProps {
@@ -125,7 +260,7 @@ function ProductReels({ theme, reelUrls }: { theme: DetailTheme; reelUrls: strin
 
   return (
     <div style={{ borderTop: `1px solid ${theme.cardBorder}`, paddingTop: 16, marginTop: 8 }}>
-      <p style={{ fontSize: 13, fontWeight: 700, color: theme.text, margin: "0 0 12px" }}>Videos del producto</p>
+      <TituloSeccion theme={theme}>Videos del producto</TituloSeccion>
       <StoreProductReels
         reelUrls={reelUrls}
         theme={{ accent: theme.accent, text: theme.text, border: theme.cardBorder, radius: theme.radius }}
@@ -163,6 +298,10 @@ export function ProductDetailBody({ theme, view }: { theme: DetailTheme; view: P
     needsSize, needsColor, canAdd, qty, setQty, addToCart, discount, promo } = view;
 
   const [tab, setTab] = useState<"desc" | "specs">("desc");
+  const vestido = vestidoDe(theme);
+  // Arranca abierto salvo que el template pida lo contrario: asi los que ya
+  // andaban no cambian de comportamiento.
+  const [formResenaAbierto, setFormResenaAbierto] = useState(!vestidoDe(theme).resenaFormPlegado);
   const [cp, setCp] = useState("");
   const [cpResult, setCpResult] = useState<string | null>(null);
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
@@ -214,6 +353,16 @@ export function ProductDetailBody({ theme, view }: { theme: DetailTheme; view: P
   const outOfStock = selectedVariantStock === 0;
   const variantPrice = resolveVariantPrice(product.variants, selectedSize, selectedColor);
   const displayPrice = variantPrice ?? product.price;
+
+  // Cuántas unidades se pagan de verdad con una promo N×M puesta: con 3×2 y
+  // cantidad 3 se pagan 2. Lo usa el aviso de la promo y el total del botón, y
+  // se calcula UNA vez: escrito en los dos lados, el día que cambie la regla
+  // uno de los dos números va a quedar viejo — y el que quede viejo es el que
+  // se cobra.
+  const nxmPagadas = promo.nxm ? qty - Math.floor(qty / promo.nxm.n) * (promo.nxm.n - promo.nxm.m) : null;
+  const totalCompra = nxmPagadas != null
+    ? nxmPagadas * displayPrice
+    : (promo.hasPriceDrop ? promo.effectivePrice : displayPrice) * qty;
 
   function goToImg(i: number) {
     setActiveImg((i + product.images.length) % product.images.length);
@@ -309,7 +458,7 @@ export function ProductDetailBody({ theme, view }: { theme: DetailTheme; view: P
           <p style={{ margin: "0 0 6px", fontSize: 11.5, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", color: theme.accentReadable }}>
             {product.attributes.find(a => a.key.toLowerCase() === "marca")?.value ?? catLabel}
           </p>
-          <h1 style={{ margin: "0 0 16px", fontSize: "clamp(22px,3vw,30px)", fontWeight: 700, color: theme.text, fontFamily: theme.headingFont, lineHeight: 1.2 }}>
+          <h1 style={{ margin: "0 0 16px", fontSize: "clamp(22px,3vw,30px)", fontWeight: 700, color: theme.text, fontFamily: theme.headingFont, lineHeight: 1.2, ...vestido.nombre }}>
             {product.name}
           </h1>
 
@@ -331,7 +480,7 @@ export function ProductDetailBody({ theme, view }: { theme: DetailTheme; view: P
                   <span style={{ background: theme.accent, color: theme.accentText, fontSize: 11, fontWeight: 800, padding: "2px 8px", borderRadius: 6 }}>{discount}%OFF</span>
                 )}
               </div>
-              <p style={{ margin: "0 0 6px", fontSize: 30, fontWeight: 800, color: theme.text }}>{fmtPrice(displayPrice, currency)}</p>
+              <p style={{ margin: "0 0 6px", fontSize: 30, fontWeight: 800, color: vestido.precioAcento ? theme.accentReadable : theme.text }}>{fmtPrice(displayPrice, currency)}</p>
             </>
           )}
           {promo.primaryPromo && <div style={{ marginBottom: 12 }}><PromoBlock promo={promo.primaryPromo} freeShippingExtra={promo.freeShipping} /></div>}
@@ -360,11 +509,17 @@ export function ProductDetailBody({ theme, view }: { theme: DetailTheme; view: P
 
           {needsSize && (
             <div style={{ marginBottom: 16 }}>
-              <p style={{ fontSize: 13, fontWeight: 600, color: theme.text, margin: "0 0 8px" }}>Tamaño</p>
+              <RotuloOpcion theme={theme} style={{ marginBottom: 8 }}>{vestido.rotuloTalle}</RotuloOpcion>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                 {product.sizes.map(s => (
                   <button key={s} onClick={() => setSelectedSize(s)}
-                    style={{ padding: "8px 16px", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer",
+                    style={{ borderRadius: theme.radius, fontSize: 13, fontWeight: 600, cursor: "pointer",
+                      // Cuadrado fijo o pastilla, según el template. Con talles de
+                      // largo distinto ("S" y "XXL") las pastillas quedan de anchos
+                      // salteados; el cuadrado los alinea en grilla.
+                      ...(vestido.chipTalleCuadrado
+                        ? { width: 46, height: 46, padding: 0 }
+                        : { padding: "8px 16px" }),
                       border: `1.5px solid ${selectedSize === s ? theme.accent : theme.cardBorder}`,
                       background: selectedSize === s ? `${theme.accent}14` : "transparent", color: theme.text }}>
                     {s}
@@ -375,20 +530,42 @@ export function ProductDetailBody({ theme, view }: { theme: DetailTheme; view: P
           )}
           {needsColor && (
             <div style={{ marginBottom: 16 }}>
-              <p style={{ fontSize: 13, fontWeight: 600, color: theme.text, margin: "0 0 8px" }}>Color</p>
+              <RotuloOpcion theme={theme} style={{ marginBottom: 8 }}>Color</RotuloOpcion>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                {product.colors.map(c => (
-                  <button key={c} onClick={() => pickColor(c)}
-                    style={{ padding: "8px 16px", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer",
-                      border: `1.5px solid ${selectedColor === c ? theme.accent : theme.cardBorder}`,
-                      background: selectedColor === c ? `${theme.accent}14` : "transparent", color: theme.text }}>
-                    {c}
-                  </button>
-                ))}
+                {/* El puntito del color va en las dos pantallas o en ninguna: en el
+                    modal está y acá faltaba, así que el mismo "Negro" se elegía
+                    mirando una muestra en el catálogo y leyendo una palabra en la
+                    ficha. Para los nombres que no se reconocen —"Petróleo"— la
+                    muestra es lo único que dice de qué color se trata. */}
+                {product.colors.map(c => {
+                  const swatch = colorToSwatch(c);
+                  return (
+                    <button key={c} onClick={() => pickColor(c)}
+                      style={{ display: "flex", alignItems: "center", gap: 7, padding: "8px 16px", borderRadius: theme.radius, fontSize: 13, fontWeight: 600, cursor: "pointer",
+                        border: `1.5px solid ${selectedColor === c ? theme.accent : theme.cardBorder}`,
+                        background: selectedColor === c ? `${theme.accent}14` : "transparent", color: theme.text }}>
+                      {swatch && <span style={{ width: 14, height: 14, borderRadius: "50%", background: swatch, border: `1px solid ${theme.cardBorder}`, flexShrink: 0 }} />}
+                      {c}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           )}
 
+          <div style={{ display: "flex", alignItems: "center", gap: 14, margin: "20px 0" }}>
+            <RotuloOpcion theme={theme}>Cantidad</RotuloOpcion>
+            <div style={{ display: "flex", alignItems: "center", border: `1.5px solid ${theme.cardBorder}`, borderRadius: theme.radius }}>
+              <button onClick={() => setQty(Math.max(1, qty - 1))} style={{ padding: "8px 14px", background: "none", border: "none", color: theme.text, cursor: "pointer", fontSize: 15 }}>−</button>
+              <span style={{ fontSize: 13, fontWeight: 600, color: theme.text, minWidth: 20, textAlign: "center" }}>{qty}</span>
+              <button onClick={() => setQty(qty + 1)} style={{ padding: "8px 14px", background: "none", border: "none", color: theme.text, cursor: "pointer", fontSize: 15 }}>+</button>
+            </div>
+          </div>
+
+          {/* El aviso de stock va DEBAJO de la cantidad, pegado al botón, no entre
+              los colores y el selector: es lo que limita cuánto se puede llevar, y
+              arriba quedaba lejos de la decisión que condiciona. Mismo orden que el
+              panel del modal. */}
           {selectedVariantStock !== null && outOfStock && (
             <p style={{ fontSize: 12.5, color: "#dc2626", fontWeight: 600, margin: "0 0 12px" }}>Sin stock en esta combinación</p>
           )}
@@ -396,39 +573,37 @@ export function ProductDetailBody({ theme, view }: { theme: DetailTheme; view: P
             <p style={{ fontSize: 12.5, color: "#d97706", fontWeight: 600, margin: "0 0 12px" }}>¡Últimas {selectedVariantStock} unidades!</p>
           )}
 
-          <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "20px 0" }}>
-            <div style={{ display: "flex", alignItems: "center", border: `1.5px solid ${theme.cardBorder}`, borderRadius: 8 }}>
-              <button onClick={() => setQty(Math.max(1, qty - 1))} style={{ padding: "8px 14px", background: "none", border: "none", color: theme.text, cursor: "pointer", fontSize: 15 }}>−</button>
-              <span style={{ fontSize: 13, fontWeight: 600, color: theme.text, minWidth: 20, textAlign: "center" }}>{qty}</span>
-              <button onClick={() => setQty(qty + 1)} style={{ padding: "8px 14px", background: "none", border: "none", color: theme.text, cursor: "pointer", fontSize: 15 }}>+</button>
-            </div>
-          </div>
-
           {/* 3×2 en vivo: progreso del beneficio N×M según la cantidad. */}
-          {promo.nxm && (() => {
+          {promo.nxm && nxmPagadas != null && (() => {
             const { n, m } = promo.nxm;
-            const paid = qty - Math.floor(qty / n) * (n - m);
-            const free = qty - paid;
+            const free = qty - nxmPagadas;
             const toNext = (n - (qty % n)) % n;
             return (
               <div style={{ fontSize: 12.5, fontWeight: 700, padding: "9px 12px", borderRadius: 8, margin: "0 0 20px", background: free > 0 ? "rgba(22,163,74,0.10)" : "#fff7ed", border: `1px solid ${free > 0 ? "rgba(22,163,74,0.28)" : "#fed7aa"}`, color: free > 0 ? "#16a34a" : "#c2410c" }}>
                 {free > 0
-                  ? `🎉 Llevás ${qty}, pagás ${paid} · ${free} gratis${toNext > 0 ? ` — sumá ${toNext} y llevás otra gratis` : ""}`
+                  ? `🎉 Llevás ${qty}, pagás ${nxmPagadas} · ${free} gratis${toNext > 0 ? ` — sumá ${toNext} y llevás otra gratis` : ""}`
                   : `Promo ${n}×${m} · sumá ${toNext} más y una te sale gratis`}
               </div>
             );
           })()}
 
+          {/* Destacado, el botón ocupa el ancho entero y WhatsApp pasa a la fila
+              de abajo: son dos cosas distintas —comprar y preguntar— y a la par
+              se leían como dos opciones del mismo peso. */}
           <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 24 }}>
             <button onClick={addToCart} disabled={!canAdd || outOfStock}
-              style={{ flex: "1 1 200px", background: (canAdd && !outOfStock) ? theme.accent : "#d1d5db", color: (canAdd && !outOfStock) ? theme.accentText : "#6b7280",
-                border: "none", padding: "14px 22px", fontWeight: 700, fontSize: 13.5, borderRadius: theme.radius, cursor: (canAdd && !outOfStock) ? "pointer" : "default" }}>
-              {outOfStock ? "Sin stock" : "Agregar al carrito"}
+              style={{ flex: vestido.botonCompraDestacado ? "1 1 100%" : "1 1 200px",
+                background: (canAdd && !outOfStock) ? theme.accent : "#d1d5db", color: (canAdd && !outOfStock) ? theme.accentText : "#6b7280",
+                border: "none", padding: "14px 22px", fontWeight: 700, fontSize: 13.5, borderRadius: theme.radius, cursor: (canAdd && !outOfStock) ? "pointer" : "default",
+                ...(vestido.botonCompraDestacado ? { padding: "15px 22px", fontSize: 11, fontWeight: 600, letterSpacing: 4, textTransform: "uppercase" as const } : {}) }}>
+              {outOfStock ? "Sin stock"
+                : vestido.botonCompraDestacado ? `Agregar al carrito · ${fmtPrice(totalCompra, currency)}`
+                : "Agregar al carrito"}
             </button>
             {whatsapp && (
               <a href={`https://wa.me/${whatsapp.replace(/\D/g, "")}?text=${encodeURIComponent(`Hola! Te consulto sobre ${product.name}`)}`}
                 target="_blank" rel="noopener noreferrer"
-                style={{ flex: "1 1 200px", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, border: `1.5px solid #25d366`, color: "#1a9e4f",
+                style={{ flex: vestido.botonCompraDestacado ? "1 1 100%" : "1 1 200px", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, border: `1.5px solid #25d366`, color: "#1a9e4f",
                   textDecoration: "none", padding: "14px 22px", fontWeight: 700, fontSize: 13.5, borderRadius: theme.radius }}>
                 Consultar por WhatsApp
               </a>
@@ -437,7 +612,7 @@ export function ProductDetailBody({ theme, view }: { theme: DetailTheme; view: P
 
           {/* Calculadora de envío */}
           <div style={{ border: `1px solid ${theme.cardBorder}`, borderRadius: theme.radius, padding: "16px 18px", marginBottom: 24 }}>
-            <p style={{ margin: "0 0 10px", fontSize: 13, fontWeight: 700, color: theme.text }}>Calcular envío</p>
+            <TituloSeccion theme={theme} style={{ marginBottom: 10 }}>Calcular envío</TituloSeccion>
             <div style={{ display: "flex", gap: 8 }}>
               <input value={cp} onChange={e => setCp(e.target.value)} placeholder="Código postal" maxLength={8}
                 style={{ flex: 1, border: `1px solid ${theme.cardBorder}`, borderRadius: 8, padding: "9px 12px", fontSize: 13, color: theme.text, background: "transparent" }} />
@@ -455,7 +630,9 @@ export function ProductDetailBody({ theme, view }: { theme: DetailTheme; view: P
       {/* Descripción / Especificaciones — ancho completo, debajo de la galería e info */}
       <div style={{ marginTop: 40 }}>
         <div style={{ borderBottom: `1px solid ${theme.cardBorder}`, display: "flex", gap: 24, marginBottom: 16 }}>
-          {([["desc", "Descripción"], ["specs", "Especificaciones"]] as const).map(([key, label]) => (
+          {/* Los rótulos salen del vestido: Boho Terra a la ficha técnica le
+              dice "La pieza", que es como habla el template en el modal. */}
+          {([["desc", vestido.rotuloDescripcion], ["specs", vestido.rotuloEspecificaciones]] as const).map(([key, label]) => (
             <button key={key} onClick={() => setTab(key)}
               style={{ background: "none", border: "none", cursor: "pointer", padding: "0 0 10px", fontSize: 13.5, fontWeight: 700,
                 color: tab === key ? theme.accent : theme.muted, borderBottom: tab === key ? `2px solid ${theme.accent}` : "2px solid transparent" }}>
@@ -487,9 +664,9 @@ export function ProductDetailBody({ theme, view }: { theme: DetailTheme; view: P
 
       {/* Reseñas */}
       <div style={{ marginTop: 40, borderTop: `1px solid ${theme.cardBorder}`, paddingTop: 32 }}>
-        <h2 style={{ margin: "0 0 20px", fontSize: 18, fontWeight: 700, color: theme.text, fontFamily: theme.headingFont }}>
+        <TituloSeccion theme={theme} style={{ marginBottom: 20 }}>
           Reseñas{reviews.length > 0 && ` (${reviews.length})`}
-        </h2>
+        </TituloSeccion>
         {reviewsLoading ? (
           <p style={{ fontSize: 13, color: theme.muted }}>Cargando...</p>
         ) : reviews.length > 0 ? (
@@ -523,7 +700,10 @@ export function ProductDetailBody({ theme, view }: { theme: DetailTheme; view: P
             <div style={{ display: "flex", flexDirection: "column" }}>
               {reviews.slice(0, reviewsShown).map((r, i) => (
                 <div key={r.id} style={{ display: "flex", gap: 14, padding: "18px 0", borderBottom: i < Math.min(reviewsShown, reviews.length) - 1 ? `1px solid ${theme.cardBorder}` : "none" }}>
-                  <div style={{ width: 38, height: 38, borderRadius: "50%", flexShrink: 0, background: `${theme.accent}18`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 700, color: theme.accentReadable }}>
+                  {/* La inicial de quien reseñó. Redonda o con el radio del
+                      template: en Boho Terra no hay una sola esquina redondeada
+                      en toda la tienda, y un círculo ahí canta. */}
+                  <div style={{ width: 38, height: 38, borderRadius: vestido.avatarRedondo ? "50%" : theme.radius, flexShrink: 0, background: `${theme.accent}18`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 700, color: theme.accentReadable }}>
                     {r.reviewer.charAt(0).toUpperCase()}
                   </div>
                   <div style={{ flex: 1 }}>
@@ -546,16 +726,59 @@ export function ProductDetailBody({ theme, view }: { theme: DetailTheme; view: P
             )}
           </div>
         ) : (
-          <p style={{ fontSize: 13, color: theme.muted, marginBottom: 24 }}>Todavía no hay reseñas para este producto.</p>
+          <p style={{ fontSize: 13, color: theme.muted, marginBottom: 24 }}>{vestido.textoSinResenas}</p>
         )}
         {isOwner ? (
           <p style={{ fontSize: 12, color: theme.muted, fontStyle: "italic" }}>El dueño no puede dejar reseñas en su propia tienda.</p>
         ) : reviewDone ? (
           <p style={{ fontSize: 13, color: theme.accent, fontWeight: 700 }}>¡Gracias por tu reseña!</p>
+        ) : !formResenaAbierto ? (
+          /* Plegado: sólo el botón. Los seis campos desplegados ocupan media
+             pantalla para algo que hace una de cada cien personas que miran el
+             producto — la mayoría viene a LEER las reseñas, no a escribir una. */
+          <button
+            onClick={() => setFormResenaAbierto(true)}
+            style={{
+              background: "none", border: `1.5px solid ${theme.accentReadable}`, color: theme.accentReadable,
+              padding: "12px 28px", fontSize: 11, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase",
+              cursor: "pointer", borderRadius: theme.radius, fontFamily: theme.font,
+            }}
+          >
+            {vestido.botonEscribirResena}
+          </button>
         ) : (
-          <div style={{ position: "relative", maxWidth: 480 }}>
+          /* Con `resenaFormModal`, el formulario vive en una ventana flotante
+             encima de la ficha — no desplegado abajo. Es lo que hace el modal
+             del template: la ficha no se estira, y quien está leyendo reseñas no
+             pierde el lugar donde iba.
+             El velo cierra al tocarlo; el contenido no, por el stopPropagation. */
+          <div
+            style={vestido.resenaFormModal ? {
+              position: "fixed", inset: 0, zIndex: 650,
+              background: "rgba(0,0,0,0.55)", backdropFilter: "blur(4px)",
+              display: "flex", alignItems: "center", justifyContent: "center", padding: 20,
+            } : undefined}
+            onClick={vestido.resenaFormModal ? () => setFormResenaAbierto(false) : undefined}
+          >
+          <div
+            style={vestido.resenaFormModal ? {
+              position: "relative", background: theme.pageBg, width: "100%", maxWidth: 460,
+              maxHeight: "92vh", overflowY: "auto", padding: "30px 28px 26px", borderRadius: theme.radius,
+            } : { position: "relative", maxWidth: 480 }}
+            onClick={vestido.resenaFormModal ? e => e.stopPropagation() : undefined}
+          >
             {isPreview && <div style={{ position: "absolute", inset: 0, zIndex: 10, cursor: "default" }} onClick={e => e.stopPropagation()} />}
-            <p style={{ fontSize: 13, fontWeight: 700, color: theme.text, margin: "0 0 12px" }}>Dejá tu reseña</p>
+            {vestido.resenaFormModal && (
+              <>
+                <button onClick={() => setFormResenaAbierto(false)} aria-label="Cerrar"
+                  style={{ position: "absolute", top: 10, right: 10, background: "none", border: "none", color: theme.muted, width: 32, height: 32, cursor: "pointer", fontSize: 22, lineHeight: 1 }}>×</button>
+                {/* De qué producto es: esta ventana tapa la ficha. */}
+                <p style={{ margin: "0 0 16px", fontSize: 12, color: theme.muted, lineHeight: 1.5 }}>
+                  Sobre <strong style={{ color: theme.text }}>{product.name}</strong>.
+                </p>
+              </>
+            )}
+            <TituloSeccion theme={theme}>{vestido.resenaFormModal ? "Tu reseña" : "Dejá tu reseña"}</TituloSeccion>
             <form onSubmit={isPreview ? e => e.preventDefault() : submitReview} style={{ display: "flex", flexDirection: "column", gap: 10, opacity: isPreview ? 0.55 : 1 }}>
               <input value={reviewHoneypot} onChange={e => setReviewHoneypot(e.target.value)} name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" style={{ opacity: 0, height: 0, position: "absolute", pointerEvents: "none" }} />
               <input value={reviewForm.reviewer} onChange={e => !isPreview && setReviewForm(p => ({ ...p, reviewer: e.target.value }))}
@@ -586,13 +809,14 @@ export function ProductDetailBody({ theme, view }: { theme: DetailTheme; view: P
             </form>
             {isPreview && <p style={{ fontSize: 10, color: theme.muted, fontStyle: "italic", marginTop: 6 }}>Vista previa — solo disponible en la tienda real.</p>}
           </div>
+          </div>
         )}
       </div>
 
       {/* Relacionados */}
       {related.length > 0 && (
         <div style={{ marginTop: 56, position: "relative" }}>
-          <h2 style={{ margin: "0 0 18px", fontSize: 19, fontWeight: 700, color: theme.text, fontFamily: theme.headingFont }}>También te puede interesar</h2>
+          <TituloSeccion theme={theme} style={{ marginBottom: 18 }}>{vestido.rotuloSimilares}</TituloSeccion>
           <button onClick={() => scrollCarousel(-1)} aria-label="Anterior"
             style={{ position: "absolute", left: -36, top: "38%", transform: "translateY(-50%)", width: 36,
               border: "none", background: "none", color: theme.text, opacity: 0.6, textShadow: "0 0 6px rgba(255,255,255,0.5), 0 0 6px rgba(0,0,0,0.5)", fontSize: 44, lineHeight: 1, cursor: "pointer", zIndex: 2,
