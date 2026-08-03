@@ -1,90 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { listarTiendas } from "@/lib/tiendasDirectorio";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const rawPage = parseInt(searchParams.get("page") ?? "1");
   const rawLimit = parseInt(searchParams.get("limit") ?? "12");
-  const page = Math.max(1, isNaN(rawPage) ? 1 : rawPage);
-  const limit = Math.min(48, Math.max(1, isNaN(rawLimit) ? 12 : rawLimit));
-  const category = searchParams.get("category") ?? "";
-  const tipoTienda = searchParams.get("tipoTienda") ?? "";
-  const featured = searchParams.get("featured") === "true";
-  const slugFilter = searchParams.get("slug") ?? "";
 
-  const where = {
-    isActive: true,
-    isPublished: true,
-    ...(slugFilter ? { slug: slugFilter } : {}),
-    ...(category ? { products: { some: { category, isActive: true } } } : {}),
-    ...(tipoTienda ? { tipoTienda } : {}),
-  };
-
-  const [stores, total] = await Promise.all([
-    prisma.store.findMany({
-      where,
-      include: {
-        _count: { select: { products: true, orders: true } },
-        products: {
-          where: { isActive: true },
-          select: { images: true, category: true },
-          take: 1,
-          orderBy: { createdAt: "desc" },
-        },
-      },
-      orderBy: featured
-        ? [{ orders: { _count: "desc" } }, { createdAt: "desc" }]
-        : [{ createdAt: "desc" }],
-      skip: (page - 1) * limit,
-      take: limit,
-    }),
-    prisma.store.count({ where }),
-  ]);
-
-  const result = stores.map((s) => {
-    const firstProduct = s.products[0];
-    let coverImg: string | null = null;
-    if (firstProduct) {
-      try {
-        const imgs = JSON.parse(firstProduct.images);
-        if (Array.isArray(imgs) && imgs[0]) {
-          const first = imgs[0];
-          coverImg = typeof first === "string" ? first : (first?.url ?? null);
-        }
-      } catch {}
-    }
-
-    let heroImg: string | null = null;
-    try {
-      const sc = JSON.parse(s.storeConfig);
-      heroImg =
-        sc?.imageOverrides?.heroBackground?.url ??
-        sc?.imageOverrides?.heroImage?.url ??
-        sc?.imageOverrides?.heroImage1?.url ??
-        sc?.imageOverrides?.heroBanner1?.url ??
-        null;
-    } catch {}
-
-    const categories = [...new Set(s.products.map((p) => p.category).filter(Boolean))];
-
-    return {
-      id: s.id,
-      slug: s.slug,
-      name: s.name,
-      description: s.description || s.tagline || null,
-      logo: s.logo,
-      banner: s.banner,
-      primaryColor: s.primaryColor,
-      totalProducts: s._count.products,
-      totalOrders: s._count.orders,
-      categories,
-      coverImg,
-      heroImg,
-      isVerified: s.isVerified,
-      tipoTienda: s.tipoTienda,
-      updatedAt: s.updatedAt.getTime(),
-    };
-  });
-
-  return NextResponse.json({ stores: result, total, page, limit, pages: Math.ceil(total / limit) });
+  return NextResponse.json(
+    await listarTiendas({
+      page: isNaN(rawPage) ? 1 : rawPage,
+      limit: isNaN(rawLimit) ? 12 : rawLimit,
+      category: searchParams.get("category") ?? "",
+      tipoTienda: searchParams.get("tipoTienda") ?? "",
+      featured: searchParams.get("featured") === "true",
+      slug: searchParams.get("slug") ?? "",
+    })
+  );
 }
