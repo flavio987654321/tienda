@@ -1,6 +1,7 @@
 "use client";
-import { useRef, useState } from "react";
+import { useContext, useRef, useState } from "react";
 import { useTurnstile } from "@/components/Turnstile";
+import { StoreConfigContext } from "@/contexts/StoreConfigContext";
 
 /**
  * El formulario de suscripción al newsletter.
@@ -68,6 +69,7 @@ export function NewsletterForm({
    * suscriptores.
    */
   const captcha = useTurnstile("newsletter");
+  const enDemoPublica = !!useContext(StoreConfigContext)?.demoPublica;
 
   async function enviar(e: React.FormEvent) {
     e.preventDefault();
@@ -160,7 +162,11 @@ export function NewsletterForm({
           {error}
         </p>
       )}
-      {isPreview && (
+      {/* La demo pública de `/plantillas/[id]` también entra en `isPreview` —lo
+          necesita para no mandar nada—, pero ahí no hay ningún "modo edición" del
+          que hablar: el que mira todavía no tiene tienda. Sigue sin enviar; lo
+          único que se calla es el cartel. */}
+      {isPreview && !enDemoPublica && (
         <p style={{ fontSize: 11, margin: "8px 0 0", opacity: 0.6, color: theme.colorMensaje ?? "inherit" }}>
           Vista previa — el formulario no envía en modo edición.
         </p>

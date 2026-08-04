@@ -179,6 +179,9 @@ export default function FashionNoir() {
   const panelHref = user?.role === "ADMIN" ? "/admin" : user?.role === "OWNER" ? "/dashboard" : user?.role === "SELLER" ? "/afiliados" : "/mi-cuenta";
   const panelLabel = user?.role === "ADMIN" ? "Admin" : user?.role === "OWNER" ? "Mi tienda" : user?.role === "SELLER" ? "Mi panel" : "Mi cuenta";
   const isPreview   = !!storeConfig?.previewFill;
+  /** Rellenar con ejemplos y hablarle a la dueña son dos cosas distintas: la demo
+   *  pública de `/plantillas/[id]` necesita lo primero y no lo segundo. */
+  const enEditor    = isPreview && !storeConfig?.demoPublica;
   const isOwner     = !!storeConfig?.isOwner;
   const hasWA       = !storeConfig || storeConfig.whatsapp.enabled;
   const storefront  = useStorefront();
@@ -738,7 +741,9 @@ export default function FashionNoir() {
                 {pushBell.hasNew && <span style={{ position:"absolute", top:2, right:2, width:10, height:10, background:"#ef4444", borderRadius:"50%", border:"2px solid #0a0a0a" }} />}
               </button>
             )}
-            {isPreview && (
+            {/* Maquetas de la campanita: solo en el editor. En la demo publica de
+                /plantillas no hay tienda que configurar. */}
+            {enEditor && (
               <>
                 {storeConfig?.showPushBell ? (
                   <button title="Los clientes pueden seguir tu tienda desde acá" style={{ position:"relative", padding:4, display:"flex", alignItems:"center", opacity:0.85, background:"none", border:"none", color:T, cursor:"default" }}>
@@ -1273,7 +1278,7 @@ export default function FashionNoir() {
                 </div>
                 {/* Solo el dueño, y solo en el editor: la sección se está viendo con
                     relleno porque la tienda todavía no juntó vistas. */}
-                {esRelleno && (
+                {esRelleno && enEditor && (
                   <p style={{ margin:"-24px 0 24px", fontSize:12, color:"#b45309", background:"#fffbeb", border:"1px solid #fde68a", borderRadius:6, padding:"8px 12px" }}>
                     Todavía no hay suficientes vistas de compradores, así que te mostramos productos de ejemplo
                     para que puedas darle formato. <b>En tu tienda esta sección aparece sola</b> cuando al menos
@@ -1891,7 +1896,7 @@ export default function FashionNoir() {
                 </p>
                 {/* Sólo en el editor, y sólo si el producto no tiene ninguna real.
                     Dice que son de mentira ANTES de que el dueño las lea. */}
-                {resenasProd.usandoEjemplos && (
+                {resenasProd.usandoEjemplos && enEditor && (
                   <div style={{ display:"flex", gap:9, margin:"0 0 16px", padding:"10px 13px", background:"rgba(253,230,138,0.12)", border:"1px solid rgba(253,230,138,0.35)" }}>
                     <span style={{ flexShrink:0, fontSize:13, lineHeight:1.4 }}>⚠️</span>
                     <p style={{ margin:0, fontSize:11.5, color:"#fde68a", lineHeight:1.55 }}>

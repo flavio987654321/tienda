@@ -50,6 +50,9 @@ export default function AutoMotor() {
   const { products, loadingProducts } = useStorefront();
   const { editMode }  = useEditContext();
   const isPreview     = !!config?.previewFill;
+  /** Rellenar con ejemplos y hablarle a la dueña son dos cosas distintas: la demo
+   *  pública de `/plantillas/[id]` necesita lo primero y no lo segundo. */
+  const enEditor      = isPreview && !config?.demoPublica;
   const isOwner       = !!config?.isOwner;
   const accent        = config?.colors.accent ?? "#e8a020";
   const currency      = config?.currency ?? "ARS";
@@ -305,7 +308,9 @@ export default function AutoMotor() {
                   background:"#ef4444", borderRadius:"50%", border:`2px solid ${navBg}` }} />}
               </button>
             )}
-            {isPreview && (config?.showPushBell ? (
+            {/* Maquetas de la campanita: solo en el editor. En la demo pública de
+                /plantillas no hay tienda que configurar. */}
+            {enEditor && (config?.showPushBell ? (
               <>
                 <button title="Los clientes pueden seguir tu tienda desde acá"
                   style={{ padding:4, display:"flex", alignItems:"center", color:navTextMid, background:"none", border:"none", cursor:"default", opacity:0.85 }}>

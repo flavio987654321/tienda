@@ -44,6 +44,9 @@ export default function PlantillaDemoPage() {
     storeTagline: info.desc,
     tipoTienda,
     previewFill: true,
+    // Los productos y reseñas de ejemplo sí, los avisos para la dueña no: acá
+    // mira gente que todavía no tiene tienda.
+    demoPublica: true,
     isOwner: false,
   };
 

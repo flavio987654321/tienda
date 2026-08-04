@@ -1,6 +1,7 @@
 "use client";
-import { useState } from "react";
+import { useContext, useState } from "react";
 import { useTurnstile } from "@/components/Turnstile";
+import { StoreConfigContext } from "@/contexts/StoreConfigContext";
 
 export type ContactFormTheme = {
   showLabels?: boolean;
@@ -18,6 +19,15 @@ export type ContactFormTheme = {
   buttonStyle?: React.CSSProperties;
   buttonHoverStyle?: React.CSSProperties;
   buttonFullWidth?: boolean; // default true (por flexbox stretch)
+  /**
+   * Alineación del botón cuando NO ocupa el ancho completo.
+   *
+   * Sin esto la única opción era el borde izquierdo: `alignSelf` se escribía al
+   * final del estilo del botón, así que ni pasándolo por `buttonStyle` se podía
+   * cambiar. En celular un botón suelto contra la izquierda deja medio ancho
+   * vacío al lado y se lee como desalineado.
+   */
+  buttonAlign?: React.CSSProperties["alignSelf"];
 };
 
 export function ContactForm({ storeId, accent, textColor, mutedColor, radius = 8, isPreview, variant = "boxed", buttonRadius, theme, renderSent, prefillMessage }: {
@@ -34,6 +44,11 @@ export function ContactForm({ storeId, accent, textColor, mutedColor, radius = 8
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const captcha = useTurnstile("contact");
   const t = theme ?? {};
+  // La demo pública de `/plantillas/[id]` también entra en `isPreview` —lo necesita
+  // para que el formulario no mande nada—, pero ahí no hay ningún "modo edición"
+  // del que hablar: el que mira todavía no tiene tienda. El formulario sigue sin
+  // enviar; lo único que se calla es el cartel.
+  const enDemoPublica = !!useContext(StoreConfigContext)?.demoPublica;
 
   // Sincroniza el mensaje precargado (ej: "Consultar disponibilidad" de un producto)
   // ajustando el estado durante el render en vez de en un efecto, siguiendo el patrón
@@ -119,7 +134,7 @@ export function ContactForm({ storeId, accent, textColor, mutedColor, radius = 8
   const mergedButtonStyle: React.CSSProperties = {
     ...defaultButtonStyle, ...t.buttonStyle,
     cursor: disabled ? "default" : "pointer", opacity: disabled ? 0.55 : 1,
-    alignSelf: fullWidth ? undefined : "flex-start",
+    alignSelf: fullWidth ? t.buttonAlign : (t.buttonAlign ?? "flex-start"),
   };
 
   return (
@@ -144,7 +159,7 @@ export function ContactForm({ storeId, accent, textColor, mutedColor, radius = 8
         {status === "sending" ? "Enviando..." : t.buttonLabel ?? (variant === "underline" ? "Enviar mensaje →" : "Enviar mensaje")}
       </button>
       {status === "error" && <p style={{ fontSize: 12, color: "#dc2626", margin: 0 }}>No se pudo enviar. Probá de nuevo.</p>}
-      {isPreview && <p style={{ fontSize: 11, color: mutedColor, margin: 0 }}>Vista previa — el formulario no envía en modo edición.</p>}
+      {isPreview && !enDemoPublica && <p style={{ fontSize: 11, color: mutedColor, margin: 0 }}>Vista previa — el formulario no envía en modo edición.</p>}
     </form>
   );
 }

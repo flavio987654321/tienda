@@ -192,6 +192,22 @@ export type StoreConfig = {
     messages?: string[];
   };
   previewFill?: boolean;
+  /**
+   * True solo en la demo pública de un diseño (`/plantillas/[id]`).
+   *
+   * Esa página necesita `previewFill` para tener productos y reseñas de ejemplo,
+   * pero los templates venían usando ESE MISMO flag para decidir si mostrar los
+   * avisos dirigidos a la dueña ("En tu tienda esta sección aparece sola…").
+   * Resultado: un visitante que entraba a mirar el diseño leía instrucciones para
+   * administrar una tienda que no es suya.
+   *
+   * Los dos usos son distintos: rellenar con ejemplos es una cosa, estar
+   * acomodando la propia tienda es otra. Esto separa la segunda.
+   *
+   * Nunca se guarda: lo pone la página de demo en memoria y no está en el schema
+   * que valida el `storeConfig` de la base.
+   */
+  demoPublica?: boolean;
   // True solo cuando el template actualmente mostrado ya fue persistido con
   // "Guardar cambios" — recién ahí el tipoTienda real en la base coincide con
   // el del editor, y los productos demo de relleno resuelven su página de
