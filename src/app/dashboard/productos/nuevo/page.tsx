@@ -662,7 +662,7 @@ function ProductoFormPage() {
                 lowStockThreshold: v.lowStockThreshold?.toString() || "",
               };
             })
-          : [makeDefaultVariant(getVariantOptions(store.tipoTienda || "ROPA").filter(o => o !== "Outro"))];
+          : [makeDefaultVariant(getVariantOptions(store.tipoTienda || "ROPA").filter(o => o !== "Otro"))];
         setVariants(loadedVariants);
 
         // Si la tienda usa builder, detectar colores y segunda dimensión de las variantes existentes

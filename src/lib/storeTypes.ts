@@ -55,7 +55,6 @@ export interface StoreTypeConfig {
   usesVehicleExpenses?: boolean;
   supportsFeatured?: boolean;
   condicionOptions?: string[];
-  defaultVariantName: string;
   checkoutMode: "cart" | "inquiry";
   namePlaceholder: string;
   variantValuePlaceholder: string;
@@ -109,7 +108,6 @@ export const STORE_TYPES: StoreTypeConfig[] = [
     hideVariants: false,
     hideTags: false,
     checkoutMode: "cart" as const,
-    defaultVariantName: "Talle",
     variantValuePlaceholder: "S, M, L, XL",
     namePlaceholder: "Ej: Remera oversize negra talle M",
     tagsPlaceholder: "negro, oversize, algodon",
@@ -157,7 +155,6 @@ export const STORE_TYPES: StoreTypeConfig[] = [
     showServiceHistory: true,
     usesVehicleExpenses: true,
     checkoutMode: "inquiry" as const,
-    defaultVariantName: "Color",
     variantValuePlaceholder: "Rojo, Blanco, Negro",
     namePlaceholder: "Ej: Toyota Corolla 2022 automático",
     tagsPlaceholder: "sedan, automatico, nafta",
@@ -202,7 +199,6 @@ export const STORE_TYPES: StoreTypeConfig[] = [
     hideGender: true,
     supportsFeatured: true,
     checkoutMode: "cart" as const,
-    defaultVariantName: "Color",
     variantValuePlaceholder: "Negro, Blanco, Gris",
     namePlaceholder: "Ej: Heladera Samsung No Frost 380L",
     tagsPlaceholder: "samsung, inverter, no-frost",
@@ -387,7 +383,6 @@ export const STORE_TYPES: StoreTypeConfig[] = [
     hideVariants: false,
     hideTags: false,
     checkoutMode: "cart" as const,
-    defaultVariantName: "Peso/Tamaño",
     variantValuePlaceholder: "500g, 1kg, 2kg",
     namePlaceholder: "Ej: Granola artesanal con frutas 500g",
     tagsPlaceholder: "organico, sin-tacc, vegano",
@@ -416,7 +411,6 @@ export const STORE_TYPES: StoreTypeConfig[] = [
     hideVariants: false,
     hideTags: false,
     checkoutMode: "cart" as const,
-    defaultVariantName: "Variante",
     variantValuePlaceholder: "Opción 1, Opción 2",
     namePlaceholder: "Ej: Nombre del producto",
     tagsPlaceholder: "oferta, nuevo, popular",
