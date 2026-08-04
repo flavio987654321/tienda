@@ -167,8 +167,6 @@ export type VestidoFicha = {
      template la tiene con mayúsculas espaciadas y esquinas rectas, y acá salía
      con rótulos en negrita común y todo redondeado a 8px. */
 
-  /** "Tamaño" sirve para una heladera; para ropa es "Talle". */
-  rotuloTalle?: string;
   /**
    * La tipografía de los rótulos TALLE / COLOR / CANTIDAD.
    *
@@ -236,7 +234,6 @@ export const VESTIDO_FICHA_BASE: Required<Omit<VestidoFicha, PerillaSinDefault>>
   rotuloEspecificaciones: "Especificaciones",
   tituloSeccion: { fontSize: 13, fontWeight: 700 },
   nombre: undefined,
-  rotuloTalle: "Tamaño",
   rotuloOpcion: { fontSize: 13, fontWeight: 600 },
   chipTalleCuadrado: false,
   precioAcento: false,

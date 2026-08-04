@@ -2,6 +2,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import { X, Plus, Camera } from "lucide-react";
+import { NombreOpcion } from "@/components/dashboard/NombreOpcion";
 
 export type VariantBuilderItem = {
   attrs: Record<string, string>;
@@ -52,9 +53,9 @@ export function VariantBuilder({
   images,
   stdSizes,
   sizeDim = "Talle",
-  sizeLabel = "Talles",
   sizePlaceholder = "ej: 44, 3XL",
   sizeHint = "Si no encontrás el talle podés crearlo. Escribilo y apretá Enter.",
+  onSizeDimChange,
   onColorsChange,
   onSizesChange,
   onVariantChange,
@@ -65,10 +66,12 @@ export function VariantBuilder({
   variants: VariantBuilderItem[];
   images: ImageItem[];
   stdSizes: string[];
+  /** El nombre de la segunda dimensión. Es lo que se guarda con la variante. */
   sizeDim?: string;
-  sizeLabel?: string;
   sizePlaceholder?: string;
   sizeHint?: string;
+  /** Sin esto el nombre es de sólo lectura y el bloque se comporta como antes. */
+  onSizeDimChange?: (nombre: string) => void;
   onColorsChange: (c: string[]) => void;
   onSizesChange: (s: string[]) => void;
   onVariantChange: (idx: number, field: "stock" | "price" | "sku" | "lowStockThreshold", val: string) => void;
@@ -191,9 +194,27 @@ export function VariantBuilder({
       {/* ── Segunda dimensión (Talles / Tamaños / etc.) ── */}
       <div className="bg-gray-50 rounded-xl p-4 space-y-3">
         <div>
-          <p className="text-sm font-semibold text-gray-700">{sizeLabel}</p>
-          <p className="text-xs text-gray-400 mt-0.5">{sizeHint}</p>
-          {stdSizes.length > 0 && <p className="text-xs text-gray-400">{sizeLabel} estándar:</p>}
+          {/* El nombre de la opción es EDITABLE. Antes era un título fijo por
+              rubro, así que un collar en una tienda de Moda se guardaba como
+              "Talle: 45cm". Se sugiere según la categoría y se puede cambiar. */}
+          {onSizeDimChange ? (
+            <div className="flex items-center gap-2">
+              <NombreOpcion
+                valor={sizeDim}
+                // La otra dimensión del builder es siempre el color: si acá se
+                // escribe "Color", las dos claves se pisan y se pierden los talles.
+                otros={["Color"]}
+                onCommit={onSizeDimChange}
+                ariaLabel="Nombre de la opción"
+                className="text-sm font-semibold text-gray-700 bg-white border border-gray-200 rounded-lg px-2.5 py-1 w-40 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+              <span className="text-xs text-gray-400">así lo va a ver el comprador</span>
+            </div>
+          ) : (
+            <p className="text-sm font-semibold text-gray-700">{sizeDim}</p>
+          )}
+          <p className="text-xs text-gray-400 mt-1.5">{sizeHint}</p>
+          {stdSizes.length > 0 && <p className="text-xs text-gray-400">Sugerencias:</p>}
         </div>
 
         {/* Grilla de talles estándar */}

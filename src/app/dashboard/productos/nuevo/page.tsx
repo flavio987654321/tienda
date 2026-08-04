@@ -12,10 +12,12 @@ import {
 import Link from "next/link";
 import Image from "next/image";
 import { getStoreType, etiquetaCategoria } from "@/lib/storeTypes";
+import { sugerirOpcion, opcionesIniciales, nombresDeOpciones, renombrarOpcion, agregarOpcion, quitarOpcion, MAX_OPCIONES } from "@/lib/opcionSugerida";
 import { calcMargin, calcVehicleCostTotal, formatFechaGasto } from "@/lib/margin";
 import StockHistoryPanel from "../StockHistoryPanel";
 import RichTextEditor from "@/components/RichTextEditor";
 import { VariantBuilder } from "@/components/dashboard/VariantBuilder";
+import { NombreOpcion } from "@/components/dashboard/NombreOpcion";
 import { OfferBadge, OfferBadgePreview, type OfferBadgeKey } from "@/components/store/OfferBadge";
 import { parseReel, isSafeReelUrl, playableReels, ReelPlayerModal } from "@/components/store/ProductReels";
 import { deepestFixedOnProduct, DEEP_DISCOUNT_PCT, MAX_FIXED_DISCOUNT_PCT } from "@/lib/promotions";
@@ -38,17 +40,11 @@ const AUTO_SERVICES = [
   { key: "caja",        label: "Caja de cambios" },
 ];
 
-function getVariantOptions(storeType: string): string[] {
-  const map: Record<string, string[]> = {
-    ROPA:      ["Talle", "Color"],
-    AUTOS:     ["Color", "Versión"],
-    HOGAR_TECH: ["Color", "Tamaño"],
-    GASTRONOMIA: ["Peso/Tamaño", "Sabor"],
-    GENERAL:   ["Variante", "Color", "Tamaño"],
-  };
-  const options = map[storeType] || ["Variante"];
-  return [...new Set([...options, "Otro"])];
-}
+// `getVariantOptions` vivía acá: una tabla fija de nombres por rubro, con un
+// "Otro" que los tres lugares que la llamaban filtraban. O sea que en Moda
+// siempre eran "Talle" y "Color", y no había forma de escribir otra cosa.
+// Ahora los nombres arrancan sugeridos por la CATEGORÍA (`opcionesIniciales`) y
+// son editables. Ver `lib/opcionSugerida.ts`.
 
 interface Variant {
   attrs: Record<string, string>;
@@ -150,25 +146,31 @@ function Tip({ text, align = "center" }: { text: string; align?: "center" | "rig
   );
 }
 
-function variantExample(tipoTienda: string): string {
-  const examples: Record<string, string> = {
-    ROPA:      "ej: Talle S + Color Negro",
-    AUTOS:     "ej: Color Blanco + Versión Full",
-    HOGAR_TECH: "ej: Color Blanco + Tamaño Grande",
-    GASTRONOMIA: "ej: 500g + Vainilla",
-    GENERAL:   "ej: Color Rojo + Tamaño Grande",
-  };
-  return examples[tipoTienda] || "ej: Variante 1 + Variante 2";
+// El ejemplo y la ayuda de variantes salían de dos tablas fijas por rubro que
+// decían "Talle S + Color Negro" aunque el dueño hubiera renombrado la opción.
+// Ahora se arman con los nombres que están puestos de verdad.
+function variantExample(dims: string[]): string {
+  if (dims.length === 0) return "ej: una fila por combinación";
+  return "ej: " + dims.map(d => `${d} ${variantEjemploValor(d)}`).join(" + ");
 }
 
-function variantTip(tipoTienda: string): string {
-  const tips: Record<string, string> = {
-    ROPA:      "Una fila por combinación. Ej: Talle S + Color Negro → fila 1, Talle M + Color Blanco → fila 2. Cada fila tiene su propio stock.",
-    HOGAR_TECH: "Una fila por combinación. Ej: Color Blanco + Tamaño Grande → fila 1, Color Negro + Tamaño Chico → fila 2. Si el producto varía por capacidad/almacenamiento, usá esos valores en vez de Color/Tamaño. Cada fila tiene su propio stock.",
-    GASTRONOMIA: "Una fila por combinación. Ej: 500g + Vainilla → fila 1, 1kg + Chocolate → fila 2.",
-    GENERAL:   "Una fila por combinación. Ej: Color Rojo + Tamaño Grande → fila 1. Cada fila tiene su propio stock.",
-  };
-  return tips[tipoTienda] || "Una fila por combinación de variantes. Cada fila tiene su propio stock.";
+function variantTip(dims: string[]): string {
+  if (dims.length === 0) return "Una fila por combinación de variantes. Cada fila tiene su propio stock.";
+  const ej = dims.map(d => `${d} ${variantEjemploValor(d)}`).join(" + ");
+  return `Una fila por combinación. Ej: ${ej} → fila 1. Cada fila tiene su propio stock.`;
+}
+
+function variantEjemploValor(nombre: string): string {
+  const n = nombre.toLowerCase();
+  if (n === "color" || n === "tono") return "Negro";
+  if (n === "talle") return "S";
+  if (n === "largo") return "45cm";
+  if (n === "tamaño" || n === "tamano") return "Grande";
+  if (n === "material") return "Algodón";
+  if (n === "sabor") return "Vainilla";
+  if (n === "versión" || n === "version") return "Full";
+  if (n === "peso/tamaño") return "500g";
+  return "1";
 }
 
 function tagsTip(tipoTienda: string): string {
@@ -308,32 +310,6 @@ function variantPlaceholder(name: string): string {
   return "ej: Valor";
 }
 
-function getTalleSuggestions(category: string, subcategory: string): string[] {
-  const c = category.toLowerCase().replace(/-/g, "");
-  const s = subcategory.toLowerCase().replace(/-/g, "");
-  const shoeSubcats = ["zapatillas", "botas", "sandalias", "zapatos", "ojotas", "running", "futbol", "basquet", "training", "trekking"];
-  const pantSubcats = ["jeans", "wideleg", "cargo", "legging", "short", "pantalon"];
-  if (c === "ropabebe") {
-    return ["0-3m", "3-6m", "6-9m", "9-12m", "12-18m", "18-24m"];
-  }
-  if (c === "ropaninos") {
-    return ["2", "3", "4", "5", "6", "7", "8", "10", "12", "14", "16"];
-  }
-  if (c === "joyas" || s === "anillos") {
-    if (s === "collares") return ["40cm", "45cm", "50cm", "55cm", "60cm", "70cm"];
-    if (s === "pulseras") return ["16cm", "17cm", "18cm", "19cm", "20cm"];
-    if (s === "anillos") return ["12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22"];
-    return ["Unitalla", "XS", "S", "M", "L", "XL"];
-  }
-  if (c === "calzado" || shoeSubcats.includes(s)) {
-    return ["35", "36", "37", "38", "39", "40", "41", "42", "43", "44", "45"];
-  }
-  if (c === "pantalones" || pantSubcats.includes(s)) {
-    return ["26", "28", "30", "32", "34", "36", "38", "40", "42", "44"];
-  }
-  return ["Único", "XS", "S", "M", "L", "XL", "XXL", "XXXL"];
-}
-
 function safeJsonArray(value: unknown) {
   if (Array.isArray(value)) return value;
   if (typeof value !== "string") return [];
@@ -345,28 +321,17 @@ function safeJsonArray(value: unknown) {
   }
 }
 
-function getBuilderConfig(tipoTienda: string): { sizeDim: string; sizeLabel: string; sizePlaceholder: string; sizeHint: string } {
-  const map: Record<string, { sizeDim: string; sizeLabel: string; sizePlaceholder: string; sizeHint: string }> = {
-    HOGAR_TECH: {
-      sizeDim: "Tamaño",
-      sizeLabel: "Tamaños / Capacidades",
-      sizePlaceholder: 'ej: 32", 128GB, 8kg',
-      sizeHint: "Ingresá el tamaño, capacidad o almacenamiento. Escribilo y apretá Enter.",
-    },
-  };
-  return map[tipoTienda] ?? {
-    sizeDim: "Talle",
-    sizeLabel: "Talles",
-    sizePlaceholder: "ej: 44, 3XL",
-    sizeHint: "Si no encontrás el talle podés crearlo. Escribilo y apretá Enter.",
-  };
-}
-
 function prepareVariantsForSubmit(variants: Variant[]) {
   const prepared = variants
     .map((v) => {
       const cleanAttrs = Object.fromEntries(
-        Object.entries(v.attrs).map(([k, val]) => [k, val.trim()])
+        Object.entries(v.attrs)
+          // Una opción sin nombre no se puede guardar: la tienda la lee por
+          // nombre, así que `{"": "S"}` se dibujaría como nada y el comprador
+          // vería un talle menos. La UI ya no deja dejarlo vacío; esto es la red
+          // por si alguna vez entra por otro lado.
+          .filter(([k]) => k.trim())
+          .map(([k, val]) => [k.trim(), val.trim()])
       );
       return {
         name: JSON.stringify(cleanAttrs),
@@ -486,6 +451,16 @@ function ProductoFormPage() {
   const [builderColors, setBuilderColors] = useState<string[]>([]);
   const [builderSizes, setBuilderSizes] = useState<string[]>([]);
   const [useBuilder, setUseBuilder] = useState(false);
+  /**
+   * El nombre de la segunda dimensión del builder: "Talle", "Largo", "Tamaño".
+   *
+   * Antes salía de una tabla fija por rubro, así que un collar en una tienda de
+   * Moda se guardaba como "Talle: 45cm". Ahora arranca sugerido por la categoría
+   * y el dueño lo puede cambiar.
+   */
+  const [opcionNombre, setOpcionNombre] = useState("Talle");
+  /** Si el dueño ya escribió el nombre a mano, la categoría deja de pisárselo. */
+  const nombreTocadoRef = useRef(false);
   const variantStockRef = useRef<Map<string, { stock: string; price: string; sku: string; threshold: string }>>(new Map());
   const [attributes, setAttributes] = useState<Attribute[]>([]);
   const [condicion, setCondicion] = useState<string>("Usado");
@@ -557,8 +532,7 @@ function ProductoFormPage() {
             setCondicion(typeConfig.condicionOptions[0]);
           }
           if (!supportsBuilder) {
-            const dims = getVariantOptions(d.store.tipoTienda || "ROPA").filter(o => o !== "Otro");
-            setVariants([makeDefaultVariant(dims)]);
+            setVariants([makeDefaultVariant(opcionesIniciales(d.store.tipoTienda || "ROPA", "", ""))]);
           } else {
             // El builder arranca sin combinaciones: las genera al elegir colores/talles.
             // Sin esto quedaría viva la variante default del useState y se enviaría vacía.
@@ -662,12 +636,25 @@ function ProductoFormPage() {
                 lowStockThreshold: v.lowStockThreshold?.toString() || "",
               };
             })
-          : [makeDefaultVariant(getVariantOptions(store.tipoTienda || "ROPA").filter(o => o !== "Otro"))];
+          : [makeDefaultVariant(opcionesIniciales(store.tipoTienda || "ROPA", product.category || "", product.subcategory || ""))];
         setVariants(loadedVariants);
+
+        // El nombre de la segunda dimensión sale del PRODUCTO, no de una tabla.
+        // Antes se asumía "Talle" para todo ROPA, así que al editar un collar
+        // guardado como "Largo" el builder leía `attrs["Talle"]`, no encontraba
+        // nada, y los largos desaparecían de la pantalla al abrir el producto.
+        const nombreGuardado = loadedVariants
+          .flatMap(v => Object.keys(v.attrs))
+          .find(k => k !== "Color" && k !== "Tono");
+        const sizeDim = nombreGuardado
+          ?? sugerirOpcion(store.tipoTienda || "ROPA", product.category || "", product.subcategory || "").nombre;
+        setOpcionNombre(sizeDim);
+        // Se respeta lo que ya está guardado: cambiar de categoría al editar no
+        // le puede renombrar las variantes que ya vendió.
+        nombreTocadoRef.current = true;
 
         // Si la tienda usa builder, detectar colores y segunda dimensión de las variantes existentes
         if (["ROPA", "HOGAR_TECH"].includes(store.tipoTienda || "")) {
-          const { sizeDim } = getBuilderConfig(store.tipoTienda || "ROPA");
           const stockMap = new Map<string, { stock: string; price: string; sku: string; threshold: string }>();
           const uniqueColors: string[] = [];
           const uniqueSizes: string[] = [];
@@ -754,11 +741,8 @@ function ProductoFormPage() {
       const updated = p.map((v, i) => (i === idx ? { ...v, [field]: value } : v));
       // Persiste en el ref para que el builder no pierda stock al agregar/quitar colores
       if (useBuilder) {
-        // getBuilderConfig inline (función pura de módulo) para no referenciar
-        // builderCfg, que se declara más abajo en el componente.
-        const sd = getBuilderConfig(store.tipoTienda || "ROPA").sizeDim;
         updated.forEach(v => {
-          const key = `${v.attrs["Color"] || ""}|||${v.attrs[sd] || ""}`;
+          const key = `${v.attrs["Color"] || ""}|||${v.attrs[opcionNombre] || ""}`;
           variantStockRef.current.set(key, { stock: v.stock, price: v.price, sku: v.sku, threshold: v.lowStockThreshold });
         });
       }
@@ -771,10 +755,8 @@ function ProductoFormPage() {
   // antes vivía en un effect, que además de encadenar renders se disparaba durante la
   // carga y había que frenarlo con un flag. Acá no corre si nadie la llama.
   // Con colores y talles vacíos devuelve [], que es lo que corresponde.
-  function buildVariantsFromBuilder(colors: string[], sizes: string[]): Variant[] {
-    // getBuilderConfig inline (función pura de módulo) para no referenciar
-    // builderCfg, que se declara más abajo en el componente.
-    const sd = getBuilderConfig(store.tipoTienda || "ROPA").sizeDim;
+  function buildVariantsFromBuilder(colors: string[], sizes: string[], nombre = opcionNombre): Variant[] {
+    const sd = nombre;
     const get = (key: string) => variantStockRef.current.get(key);
     const newVariants: Variant[] = [];
 
@@ -812,14 +794,45 @@ function ProductoFormPage() {
     markDirty();
   }, []);
 
+  /** Las opciones que tiene el producto ahora mismo, en orden. */
+  const dimsActuales = useMemo(() => nombresDeOpciones(variants), [variants]);
+
   function addVariant() {
-    const dims = getVariantOptions(store.tipoTienda || "ROPA").filter(o => o !== "Otro");
+    // La fila nueva lleva las MISMAS opciones que las que ya están. Antes salía de
+    // la tabla por rubro, así que si el dueño había renombrado algo, la fila nueva
+    // aparecía con los nombres viejos y se guardaban dos opciones distintas para
+    // el mismo producto.
+    const dims = dimsActuales.length > 0
+      ? dimsActuales
+      : opcionesIniciales(store.tipoTienda || "ROPA", form.category, form.subcategory);
     setVariants((p) => [...p, makeDefaultVariant(dims)]);
     markDirty();
   }
 
   function removeVariant(idx: number) {
     setVariants((p) => p.filter((_, i) => i !== idx));
+    markDirty();
+  }
+
+  /**
+   * Renombrar una opción: cambia la clave en TODAS las filas a la vez.
+   *
+   * Se rearma el objeto en orden en vez de borrar y agregar, para que la opción
+   * renombrada quede donde estaba. Si se agrega al final, las columnas se
+   * reordenan solas mientras el dueño escribe.
+   */
+  function renameDim(viejo: string, nuevo: string) {
+    setVariants((p) => renombrarOpcion(p, viejo, nuevo));
+    markDirty();
+  }
+
+  function addDim() {
+    setVariants((p) => agregarOpcion(p));
+    markDirty();
+  }
+
+  function removeDim(nombre: string) {
+    setVariants((p) => quitarOpcion(p, nombre));
     markDirty();
   }
 
@@ -1079,7 +1092,37 @@ function ProductoFormPage() {
   const cardRadius = RADIUS_MAP[store.cardRadius] || "rounded-xl";
   const cardShadow = SHADOW_MAP[store.cardShadow] || "shadow-sm";
   const storeTypeConfig = getStoreType(store.tipoTienda || "ROPA");
-  const builderCfg = getBuilderConfig(store.tipoTienda || "ROPA");
+  // La sugerencia sale de la CATEGORÍA elegida, no del rubro: dentro de Moda, un
+  // collar se sugiere como "Largo" con valores en centímetros, y una remera como
+  // "Talle" con S/M/L. El nombre es sólo una sugerencia — manda `opcionNombre`,
+  // que el dueño puede escribir.
+  const sugerida = sugerirOpcion(store.tipoTienda || "ROPA", form.category, form.subcategory);
+
+  /**
+   * Cambia el nombre de la opción del builder y renombra la clave en las filas
+   * que ya estén armadas. Sin lo segundo, cambiar "Talle" por "Largo" dejaba las
+   * combinaciones existentes guardadas con el nombre viejo.
+   */
+  function cambiarNombreOpcion(nuevo: string) {
+    const viejo = opcionNombre;
+    setOpcionNombre(nuevo);
+    if (viejo && nuevo && viejo !== nuevo) renameDim(viejo, nuevo);
+  }
+
+  // Al elegir una categoría, el nombre sugerido cambia: "collares" sugiere
+  // "Largo", "remeras" sugiere "Talle". Sólo se aplica si el dueño todavía no
+  // escribió el nombre a mano — lo suyo no se pisa nunca.
+  useEffect(() => {
+    if (nombreTocadoRef.current) return;
+    if (sugerida.nombre === opcionNombre) return;
+    // No se pisa una opción que ya existe con ese nombre: si el producto ya tiene
+    // un "Color" y la categoría sugiriera "Color", las dos claves se fundirían en
+    // una y se perderían los valores de la otra.
+    if (dimsActuales.some(d => d !== opcionNombre && d.toLowerCase() === sugerida.nombre.toLowerCase())) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- depende de que el dueño elija una categoría, no se puede calcular durante el render
+    cambiarNombreOpcion(sugerida.nombre);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sugerida.nombre]);
   // ── Optimización para Google ──────────────────────────────────────────────
   // Lo que se armaría solo si estos campos quedan vacíos. Va como `placeholder` y
   // como texto de la vista previa, para que se vea qué se está reemplazando ANTES
@@ -2233,10 +2276,12 @@ function ProductoFormPage() {
                 <div>
                   <div className="flex items-center gap-1">
                     <h2 className="font-semibold text-gray-900">Variantes y stock</h2>
-                    <Tip align="left" text={variantTip(store.tipoTienda || "ROPA")} />
+                    <Tip align="left" text={variantTip(useBuilder ? ["Color", opcionNombre] : dimsActuales)} />
                   </div>
                   <p className="text-xs text-gray-400 mt-0.5">
-                    {useBuilder ? `Elegí colores y ${builderCfg.sizeLabel.toLowerCase()} — las combinaciones se generan solas.` : `Una fila por combinación — ${variantExample(store.tipoTienda || "ROPA")}`}
+                    {useBuilder
+                      ? `Elegí colores y ${opcionNombre.toLowerCase()} — las combinaciones se generan solas.`
+                      : `Una fila por combinación — ${variantExample(dimsActuales)}`}
                   </p>
                 </div>
                 {/* Modo manual como escape hatch */}
@@ -2274,11 +2319,11 @@ function ProductoFormPage() {
                   sizes={builderSizes}
                   variants={variants}
                   images={images}
-                  stdSizes={getTalleSuggestions(form.category, form.subcategory)}
-                  sizeDim={builderCfg.sizeDim}
-                  sizeLabel={builderCfg.sizeLabel}
-                  sizePlaceholder={builderCfg.sizePlaceholder}
-                  sizeHint={builderCfg.sizeHint}
+                  stdSizes={sugerida.valores}
+                  sizeDim={opcionNombre}
+                  sizePlaceholder={sugerida.placeholder}
+                  sizeHint={sugerida.ayuda}
+                  onSizeDimChange={(n) => { nombreTocadoRef.current = true; cambiarNombreOpcion(n); markDirty(); }}
                   onColorsChange={(c) => { setBuilderColors(c); setVariants(buildVariantsFromBuilder(c, builderSizes)); markDirty(); }}
                   onSizesChange={(s) => { setBuilderSizes(s); setVariants(buildVariantsFromBuilder(builderColors, s)); markDirty(); }}
                   onVariantChange={updateVariantField}
@@ -2287,6 +2332,38 @@ function ProductoFormPage() {
               ) : (
                 /* ── MANUAL MODE ── */
                 <>
+                  {/* Los NOMBRES de las opciones, una sola vez para todas las filas.
+                      Antes salían de una tabla fija por rubro y no se podían tocar:
+                      en Moda siempre "Talle" y "Color". Acá se escriben, y el
+                      cambio se aplica a todas las filas de una. */}
+                  <div className="flex flex-wrap items-center gap-2 pb-1">
+                    <span className="text-xs font-medium text-gray-500">Opciones:</span>
+                    {/* `key` por POSICIÓN, no por nombre: si la clave fuera el nombre,
+                        confirmar el cambio remontaría el input y se perdería el foco. */}
+                    {dimsActuales.map((dim, i) => (
+                      <span key={i} className="inline-flex items-center gap-1 bg-gray-50 border border-gray-200 rounded-lg pl-2 pr-1 py-1">
+                        <NombreOpcion
+                          valor={dim}
+                          otros={dimsActuales.filter(d => d !== dim)}
+                          onCommit={(nuevo) => renameDim(dim, nuevo)}
+                          ariaLabel={`Nombre de la opción ${dim}`}
+                          className="w-24 bg-transparent text-sm font-medium text-gray-700 focus:outline-none"
+                        />
+                        {dimsActuales.length > 1 && (
+                          <button type="button" onClick={() => removeDim(dim)} aria-label={`Quitar la opción ${dim}`}
+                            className="text-gray-300 hover:text-red-500 transition-colors">
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                      </span>
+                    ))}
+                    {dimsActuales.length < MAX_OPCIONES && (
+                      <button type="button" onClick={addDim}
+                        className="inline-flex items-center gap-1 text-xs text-indigo-600 font-medium hover:text-indigo-800 transition-colors">
+                        <Plus className="h-3.5 w-3.5" /> Agregar opción
+                      </button>
+                    )}
+                  </div>
                   {variants.map((variant, idx) => (
                     <div key={idx} className="flex flex-wrap gap-3 items-end p-4 bg-gray-50 rounded-xl">
                       {Object.keys(variant.attrs).map(dim => {
@@ -2313,12 +2390,15 @@ function ProductoFormPage() {
                                 value={val}
                                 onChange={(e) => updateVariantAttr(idx, dim, e.target.value)}
                                 placeholder={variantPlaceholder(dim)}
-                                list={dim === "Talle" ? `talle-list-${idx}` : undefined}
+                                // Las sugerencias van en la opción que NO es el color,
+                                // sea como sea que se llame. Antes estaba clavado a
+                                // "Talle", así que renombrarla las hacía desaparecer.
+                                list={!isColor && sugerida.valores.length > 0 ? `sug-${idx}-${dim}` : undefined}
                                 className={`w-full border border-gray-200 rounded-lg py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 ${circle ? "pl-8 pr-3" : "px-3"}`}
                               />
-                              {dim === "Talle" && (
-                                <datalist id={`talle-list-${idx}`}>
-                                  {getTalleSuggestions(form.category, form.subcategory).map(s => (
+                              {!isColor && sugerida.valores.length > 0 && (
+                                <datalist id={`sug-${idx}-${dim}`}>
+                                  {sugerida.valores.map(s => (
                                     <option key={s} value={s} />
                                   ))}
                                 </datalist>
