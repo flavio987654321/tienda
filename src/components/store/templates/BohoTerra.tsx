@@ -18,7 +18,7 @@ import { DescripcionPlegable } from "@/components/store/templates/shared/Descrip
 import { masVistos, MIN_MAS_VISTOS } from "@/lib/masVistos";
 import { catalogoTieneGeneros } from "@/lib/generos";
 import { opcionesVisibles } from "@/lib/opciones";
-import { esOpcionDeColor } from "@/hooks/useStorefront";
+import { esOpcionDeColor, valoresElegidos } from "@/hooks/useStorefront";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
 import VerifiedIconButton from "@/components/store/VerifiedIconButton";
 import { CartDrawer, type CartTheme } from "@/components/store/templates/shared/CartDrawer";
@@ -292,7 +292,7 @@ export default function BohoTerra() {
   // el acento.
   const accentText = textoSobre(A);
   const cartTheme: CartTheme = { BG:"#ffffff", S, T, MID, border:"rgba(44,34,24,0.1)", accent:A, accentText, serif:"Georgia, serif" };
-  const variantPrice = modalProduct ? resolveVariantPrice(modalProduct.variants, selectedSize, selectedColor) : null;
+  const variantPrice = modalProduct ? resolveVariantPrice(modalProduct.variants, valoresElegidos(seleccion)) : null;
   const displayPrice = variantPrice ?? (modalProduct?.price ?? 0);
   // Promo de tienda del producto abierto en el modal (usa displayPrice para respetar variantes).
   const modalPromo = modalProduct ? resolveProductPromo({ id: modalProduct.id, price: displayPrice, category: modalProduct.category }, promotions) : null;
@@ -501,75 +501,6 @@ export default function BohoTerra() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showAnnouncement]);
 
-  const colorSyncingRef = useRef(false);
-
-  // Al cambiar color: sync imagen + talle disponible
-  useEffect(() => {
-    if (!modalProduct || !selectedColor) return;
-    const imgIdx = modalProduct.imageItems.findIndex(
-      img => img.variantValue && img.variantValue.toLowerCase() === selectedColor.toLowerCase()
-    );
-    if (imgIdx !== -1) { colorSyncingRef.current = true; setModalImg(imgIdx); }
-    const colorVariants = modalProduct.variants.filter(v => {
-      const a = parseVariantAttrs(v.name);
-      return !!a && Object.values(a).some((x: unknown) => String(x).toLowerCase() === selectedColor.toLowerCase());
-    });
-    if (!colorVariants.length) return;
-    const best = colorVariants.find(v => v.stock > 0) ?? colorVariants[0];
-    const bestAttrs = parseVariantAttrs(best.name);
-    if (bestAttrs) {
-      const sizeKey = Object.keys(bestAttrs).find(k => SIZE_ATTRS.includes(k.toLowerCase()));
-      if (sizeKey && bestAttrs[sizeKey] && bestAttrs[sizeKey] !== selectedSize) setSelectedSize(String(bestAttrs[sizeKey]));
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedColor, modalProduct?.id]);
-
-  // Al cambiar talle: sync color + imagen si el combo talle+color actual no existe
-  useEffect(() => {
-    if (!modalProduct || !selectedSize) return;
-    if (selectedColor) {
-      const hasCombo = modalProduct.variants.some(v => {
-        const a = parseVariantAttrs(v.name);
-        if (!a) return false;
-        const vals = Object.values(a).map((x: unknown) => String(x).toLowerCase());
-        return vals.includes(selectedSize.toLowerCase()) && vals.includes(selectedColor.toLowerCase());
-      });
-      if (hasCombo) return;
-    }
-    const sizeVariants = modalProduct.variants.filter(v => {
-      const a = parseVariantAttrs(v.name);
-      if (!a) return false;
-      return Object.entries(a).some(([k, val]: [string, unknown]) => SIZE_ATTRS.includes(k.toLowerCase()) && String(val).toLowerCase() === selectedSize.toLowerCase());
-    });
-    if (!sizeVariants.length) return;
-    const best = sizeVariants.find(v => v.stock > 0) ?? sizeVariants[0];
-    const bestAttrs = parseVariantAttrs(best.name);
-    if (bestAttrs) {
-      const colorKey = Object.keys(bestAttrs).find((k: string) => ["color","colour","colores","colors","tono"].includes(k.toLowerCase()));
-      if (colorKey && bestAttrs[colorKey]) {
-        const newColor = String(bestAttrs[colorKey]);
-        if (newColor !== selectedColor) {
-          setSelectedColor(newColor);
-          const imgIdx = modalProduct.imageItems.findIndex(
-            img => img.variantValue && img.variantValue.toLowerCase() === newColor.toLowerCase()
-          );
-          if (imgIdx !== -1) { colorSyncingRef.current = true; setModalImg(imgIdx); }
-        }
-      }
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedSize, modalProduct?.id]);
-
-  // Al cambiar de imagen (flechas/miniaturas): sync color si esa foto pertenece a otra variante
-  useEffect(() => {
-    if (!modalProduct) return;
-    if (colorSyncingRef.current) { colorSyncingRef.current = false; return; }
-    const img = modalProduct.imageItems[modalImg];
-    if (img?.variantValue && img.variantValue.toLowerCase() !== selectedColor?.toLowerCase()) {
-      setSelectedColor(img.variantValue);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [modalImg]);
 
   const CARDS_PER_VIEW = isMobile ? 1 : esAncho ? 4 : 3;
   const CAROUSEL_LIMIT = 8;

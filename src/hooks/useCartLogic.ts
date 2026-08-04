@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import type { StorefrontProduct, ValidatedCoupon, PlaceOrderParams, SeleccionOpciones, OpcionProducto } from "./useStorefront";
 import { valoresElegidos } from "./useStorefront";
+import { reacomodarSeleccion } from "@/lib/opciones";
 import { getEnvioOptions, fmtEnvioPrice, getPagoOptions, fmt as fmtFn, claveItem, type CartItem, type CheckoutStatus, type ShippingMethod } from "@/components/store/shared/cartTypes";
 import { useAuth } from "@/components/AuthProvider";
 import { LIVE_QUOTE_DOMICILIO_ID } from "@/types/store-config";
@@ -547,7 +548,19 @@ export function useCartLogic({ products, promotions = [], storeId, affiliateId =
    * identifica por su nombre, así que sirve para las que haya y como se llamen.
    */
   const setOpcion = (nombre: string, valor: string) =>
-    setSeleccion(prev => ({ ...prev, [nombre]: valor }));
+    setSeleccion(prev => {
+      const tentativa = { ...prev, [nombre]: valor };
+      if (!modalProduct) return tentativa;
+      // Si la combinación que queda no existe —Rojo sólo viene en L y estabas en
+      // S—, se mueven las OTRAS opciones a una que sí exista, respetando la que
+      // el comprador acaba de tocar. Sin esto el botón de comprar se apaga y nada
+      // explica por qué.
+      //
+      // Va acá, en el `setOpcion` compartido, y no en cada template: esto vivía
+      // como tres efectos duplicados en los cuatro de Moda, doce en total, y
+      // ninguno sabía manejar más de dos dimensiones.
+      return reacomodarSeleccion(modalProduct.variants, tentativa, nombre) ?? tentativa;
+    });
 
   const openModal = (p: StorefrontProduct) => {
     setModalProduct(p);

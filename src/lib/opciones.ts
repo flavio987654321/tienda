@@ -1,4 +1,6 @@
-import type { OpcionProducto } from "@/hooks/useStorefront";
+import type { OpcionProducto, SeleccionOpciones, StorefrontVariant } from "@/hooks/useStorefront";
+import { varianteTiene } from "@/lib/variantMatch";
+import { parseVariantAttrs } from "@/lib/variantAttrs";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Qué opciones se muestran y cómo.
@@ -65,4 +67,62 @@ export function opcionesAElegir(opciones: OpcionProducto[]) {
   return opcionesVisibles(opciones).filter(
     (o): o is Extract<OpcionVisible, { tipo: "elegir" }> => o.tipo === "elegir",
   );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Reacomodar la selección cuando la combinación elegida no existe.
+//
+// El caso: un vestido viene en Negro talles S y M, y en Rojo sólo L. Estás en
+// "Negro / S" y tocás Rojo. "Rojo / S" no existe, así que hay que mover el talle
+// a L solo — si no, el botón de comprar se apaga y nada explica por qué.
+//
+// Esto vivía DUPLICADO en los cuatro templates de Moda, como tres efectos por
+// archivo (color→talle, talle→color, foto→color), cada uno con su propia copia
+// de "cuál de estas claves es el talle" apoyada en la lista blanca. Doce efectos
+// que hacían lo mismo y que sólo sabían manejar exactamente dos dimensiones.
+//
+// Acá es una sola función, sin hooks, y funciona con las opciones que haya.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * La selección corregida, o `null` si la actual ya es válida.
+ *
+ * `fijada` es la opción que el comprador acaba de tocar: esa se respeta y se
+ * mueven las demás. Entre las combinaciones posibles gana la que tenga stock;
+ * si ninguna tiene, la primera, para que el cartel de "sin stock" diga la verdad
+ * en vez de dejar la pantalla en una combinación inexistente.
+ */
+export function reacomodarSeleccion(
+  variants: StorefrontVariant[],
+  seleccion: SeleccionOpciones,
+  fijada: string,
+): SeleccionOpciones | null {
+  if (!variants.length) return null;
+  const valorFijado = seleccion[fijada];
+  if (!valorFijado) return null;
+
+  const elegidos = Object.values(seleccion).filter(Boolean);
+  // Si lo elegido ya existe tal cual, no se toca nada.
+  if (variants.some(v => varianteTiene(v, elegidos))) return null;
+
+  // De las que respetan lo que acaba de tocar, la mejor con stock.
+  const candidatas = variants.filter(v => varianteTiene(v, [valorFijado]));
+  if (!candidatas.length) return null;
+  const mejor = candidatas.find(v => v.stock > 0) ?? candidatas[0];
+
+  const attrs = parseVariantAttrs(mejor.name);
+  if (!attrs) return null;
+  const nueva: SeleccionOpciones = {};
+  for (const [nombre, valor] of Object.entries(attrs)) {
+    if (valor) nueva[nombre] = String(valor);
+  }
+  // Sólo se avisa si algo cambió de verdad, para no disparar renders en vano.
+  const cambio = Object.keys(nueva).some(n => nueva[n] !== seleccion[n]);
+  return cambio ? nueva : null;
+}
+
+/** La opción a la que pertenece un valor — para saber qué acaba de tocar el comprador. */
+export function opcionDelValor(opciones: OpcionProducto[], valor: string): string | null {
+  const op = opciones.find(o => o.valores.some(v => v.toLowerCase() === valor.toLowerCase()));
+  return op?.nombre ?? null;
 }
