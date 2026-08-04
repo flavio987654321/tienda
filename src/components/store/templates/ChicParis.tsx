@@ -30,7 +30,6 @@ import { NewsletterForm } from "@/components/store/templates/shared/NewsletterFo
 import { FadeImage } from "@/components/store/templates/shared/FadeImage";
 import StoreProductReels from "@/components/store/ProductReels";
 import { SectionBlock } from "@/components/store/templates/shared/SectionBlock";
-import { parseVariantAttrs } from "@/lib/variantAttrs";
 import { colorToSwatch } from "@/lib/colorSwatch";
 import { discountPercent } from "@/lib/discount";
 import { resolveVariantPrice } from "@/lib/variantPrice";
@@ -72,27 +71,12 @@ const EJEMPLOS_RESENAS_CP: EjemplosDeResenas = {
   ],
 };
 
-const SIZE_ATTRS = ["talle","size","talla","talles","sizes","tamaño","tamano","almacenamiento","ram","versión","version","formato","variante","material","sabor","peso/tamaño","peso"];
-const COLOR_ATTRS = ["color","colour","colores","colors","tono"];
 
 /* ── Foto ↔ color ↔ talle ─────────────────────────────────────────────────────
    Las tres cosas están atadas: el dueño le asigna un color a cada foto en el
    editor de producto, y cada variante es un combo color+talle con su stock.
    Tocar cualquiera de las tres tiene que acomodar a las otras dos.
 ──────────────────────────────────────────────────────────────────────────────── */
-
-/** Valor de un atributo de variante buscando la clave por nombre (talle, color…). */
-function valorAttr(attrs: Record<string, unknown>, claves: string[]): string {
-  const k = Object.keys(attrs).find(x => claves.includes(x.toLowerCase()));
-  return k != null && attrs[k] != null ? String(attrs[k]) : "";
-}
-
-/** Las variantes con sus atributos ya parseados; las que no son JSON quedan afuera. */
-function variantesConAttrs(p: Product) {
-  return p.variants
-    .map(v => ({ v, a: parseVariantAttrs(v.name) }))
-    .filter((x): x is { v: Product["variants"][number]; a: Record<string, unknown> } => !!x.a);
-}
 
 /** Índice de la foto que el dueño le asignó a ese color, o -1 si ninguna. */
 function fotoDeColor(p: Product, color: string): number {
