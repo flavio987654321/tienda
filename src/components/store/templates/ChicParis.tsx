@@ -248,6 +248,12 @@ export default function ChicParis() {
   const panelHref = user?.role === "ADMIN" ? "/admin" : user?.role === "OWNER" ? "/dashboard" : user?.role === "SELLER" ? "/afiliados" : "/mi-cuenta";
   const panelLabel = user?.role === "ADMIN" ? "Admin" : user?.role === "OWNER" ? "Mi tienda" : user?.role === "SELLER" ? "Mi panel" : "Mi cuenta";
   const isPreview   = !!storeConfig?.previewFill;
+  /** La demo pública de un diseño (`/plantillas/[id]`): necesita el relleno de
+   *  ejemplos, pero nada de lo que le habla a la dueña de una tienda. */
+  const demoPublica = !!storeConfig?.demoPublica;
+  /** Rellenar con ejemplos y hablarle a la dueña son dos cosas distintas: en la
+   *  demo pública hace falta lo primero y no lo segundo. */
+  const enEditor    = isPreview && !demoPublica;
   const isOwner     = !!storeConfig?.isOwner;
   const storefront  = useStorefront();
   const { products, promotions, loadingProducts, checkoutMode, isWholesale, ocultarPrecios, defaultCategories, featuredCategories } = storefront;
@@ -914,7 +920,9 @@ export default function ChicParis() {
                 {pushBell.hasNew && <span style={{ position:"absolute", top:4, right:4, width:10, height:10, background:"#ef4444", borderRadius:"50%", border:"2px solid white" }} />}
               </button>
             )}
-            {isPreview && (
+            {/* Maquetas de la campanita: solo en el editor. En la demo publica de
+                /plantillas no hay tienda que configurar. */}
+            {enEditor && (
               <>
                 {storeConfig?.showPushBell ? (
                   <button title="Los clientes pueden seguir tu tienda desde acá" style={{ position:"relative", background:"none", border:"none", padding:6, display:"flex", color:"#555", opacity:0.85, cursor:"default" }}>
@@ -1102,7 +1110,10 @@ export default function ChicParis() {
                       son ~164px con su padding, más el gap), así que se achicaban y
                       el texto se partía adentro del botón. Ahora el segundo baja de
                       renglón entero. */}
-                  <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+                  {/* Centrados en celular: al envolver, cada botón queda solo en su
+                      renglón y pegado a la izquierda dejaba medio ancho vacío al
+                      lado. En escritorio siguen alineados con el título. */}
+                  <div style={{ display: "flex", gap: 12, flexWrap: "wrap", justifyContent: isMobile ? "center" : undefined }}>
                     {(editMode || !storeConfig?.textOverrides?.[`slide${i + 1}Cta`]?.hidden) && (
                       <button onClick={() => scrollTo("productos")} style={{ background: ACC, color: accentText, border: "none", padding: "14px 32px", fontSize: 11, fontWeight: 800, letterSpacing: 3, textTransform: "uppercase", cursor: "pointer" }}>
                         <EditableZone field={`slide${i + 1}Cta`} label={`Slide ${i + 1} — Botón`}>Ver Colección</EditableZone>
@@ -1467,7 +1478,7 @@ export default function ChicParis() {
                 </div>
                 {/* Solo el dueño, y solo en el editor: la sección se está viendo con
                     relleno porque la tienda todavía no juntó vistas. */}
-                {esRelleno && (
+                {esRelleno && enEditor && (
                   <p style={{ margin: "-24px 0 24px", fontSize: 12, color: "#b45309", background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 6, padding: "8px 12px" }}>
                     Todavía no hay suficientes vistas de compradores, así que te mostramos productos de ejemplo
                     para que puedas darle formato. <b>En tu tienda esta sección aparece sola</b> cuando al menos
@@ -1571,7 +1582,7 @@ export default function ChicParis() {
                     el del medio: hay reseñas pero ninguna califica, así que el
                     bloque NO aparece en la tienda publicada. Eso, sin este cartel,
                     es imposible de descubrir: en el editor se ve lleno. */}
-                {isPreview && (() => {
+                {enEditor && (() => {
                   const total = resenasHome.totalReal;
                   const enPortada = resenasHome.enPortadaReal;
                   // Este cartel MENTÍA en sus dos primeros casos: decía que el
@@ -1877,6 +1888,9 @@ export default function ChicParis() {
               placeholders: { nombre: "Tu nombre", email: "Tu email", mensaje: "¿En qué te podemos ayudar?" },
               buttonLabel: "Enviar mensaje →",
               buttonFullWidth: false,
+              // Centrado en celular: solo contra la izquierda quedaba medio panel
+              // vacío al lado. En escritorio arranca alineado con los campos.
+              buttonAlign: isMobile ? "center" : "flex-start",
               buttonStyle: { background:"#111", color:"#fff", padding:"15px 32px", fontSize:11, fontWeight:800, letterSpacing:3, textTransform:"uppercase", transition:"background 0.2s" },
               buttonHoverStyle: { background: ACC },
             }}
@@ -1908,7 +1922,12 @@ export default function ChicParis() {
               footer de este template ya es una grilla de columnas, y una franja
               nueva le agregaría un corte horizontal que no tiene. Con categorías
               son tres columnas; sin ellas, dos. */}
-          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : (categoryList.length > 0 ? "2fr 1fr 1.2fr" : "2fr 1.2fr"), gap: isMobile ? 32 : 40, marginBottom: 40, paddingBottom: 40, borderBottom: `1px solid ${footerText === "#fff" ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.08)"}` }}>
+          {/* `minmax(0,…)` en vez de `1fr` pelado: una columna de grilla no baja del
+              ancho mínimo de lo que tiene adentro, así que el formulario de
+              novedades (input + botón = 313px) la empujaba y con ella a la página
+              entera — 158px de más a 768px. Con `minmax(0,…)` la columna manda y
+              el contenido se acomoda. */}
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "minmax(0,1fr)" : (categoryList.length > 0 ? "minmax(0,2fr) minmax(0,1fr) minmax(0,1.2fr)" : "minmax(0,2fr) minmax(0,1.2fr)"), gap: isMobile ? 32 : 40, marginBottom: 40, paddingBottom: 40, borderBottom: `1px solid ${footerText === "#fff" ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.08)"}` }}>
             <div>
               <p style={{ margin: "0 0 12px", fontSize: 18, fontWeight: 900, color: footerText, letterSpacing: 3, textTransform: "uppercase" }}>
                 <EditableZone field="storeName" label="Nombre footer">{storeConfig?.storeName ?? "CHIC PARIS"}</EditableZone>
@@ -1920,8 +1939,11 @@ export default function ChicParis() {
                   la lista en cero pero el <div> se dibujaba igual y metía 20px de
                   aire suelto abajo de la descripción. Antes se disimulaba porque
                   las redes también estaban arriba; ahora este es el único lugar. */}
+              {/* La fila de redes envuelve: cinco en una sola línea (instagram ·
+                  facebook · tiktok · youtube · pinterest) piden ~380px y a 360 de
+                  pantalla se salían por la derecha, arrastrando a toda la página. */}
               {storeConfig?.socialLinks && (isPreview || Object.values(storeConfig.socialLinks).some(v => v)) && (
-                <div style={{ display: "flex", gap: 14, marginTop: 20 }}>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 14, marginTop: 20 }}>
                   {Object.entries(storeConfig.socialLinks).filter(([, v]) => isPreview || v).map(([net, url]) => (
                     <a key={net} href={url || "#"} target={url ? "_blank" : undefined} rel="noopener"
                       onClick={e => { if (!url) e.preventDefault(); }}
@@ -1984,9 +2006,12 @@ export default function ChicParis() {
               celular esos paddings dejaban ~130px de ancho util y apilaban todo
               en una columnita apretada; ahí se sacan (el footer ya tiene 88px de
               padding abajo para que los botones flotantes no pisen la ultima
-              linea) y las dos partes se apilan prolijas. */}
-          <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", justifyContent: "space-between", alignItems: isMobile ? "flex-start" : "center", flexWrap: "wrap", gap: isMobile ? 16 : "8px 24px", paddingLeft: isMobile ? 0 : (hasWA ? 110 : 0), paddingRight: isMobile ? 0 : 100 }}>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "0 16px" }}>
+              linea) y las dos partes se apilan prolijas.
+              Apiladas van CENTRADAS, igual que el pie de Boho Terra: contra la
+              izquierda, con renglones de largos distintos, quedaba desprolijo. En
+              escritorio se mantienen las dos puntas. */}
+          <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", justifyContent: isMobile ? "center" : "space-between", alignItems: "center", flexWrap: "wrap", gap: isMobile ? 16 : "8px 24px", paddingLeft: isMobile ? 0 : (hasWA ? 110 : 0), paddingRight: isMobile ? 0 : 100, textAlign: isMobile ? "center" : undefined }}>
+            <div style={{ display: "flex", flexWrap: "wrap", justifyContent: isMobile ? "center" : undefined, gap: "4px 16px" }}>
               {[
                 { label: "Política de devoluciones", tipo: "devoluciones" },
                 { label: "Política de envíos",       tipo: "envios" },
@@ -2011,7 +2036,7 @@ export default function ChicParis() {
                 )
               ))}
             </div>
-            <div style={{ display:"flex", flexWrap:"wrap", gap:"8px 20px", alignItems:"center" }}>
+            <div style={{ display:"flex", flexWrap:"wrap", justifyContent: isMobile ? "center" : undefined, gap:"8px 20px", alignItems:"center" }}>
               <p style={{ margin: 0, fontSize: 11, color: footerText, opacity: 0.4 }}>
                 <EditableZone field="footerCopyright" label="Copyright">© 2025 Chic Paris. Todos los derechos reservados.</EditableZone>
               </p>
@@ -2422,7 +2447,7 @@ export default function ChicParis() {
                 {/* Solo en el editor: aclara que lo de abajo es de mentira. Sin
                     esto el dueño cree que ya tiene reseñas — o peor, las busca en
                     el panel para contestarlas. */}
-                {resenasDeEjemplo && (
+                {resenasDeEjemplo && enEditor && (
                   <div style={{ display:"flex", gap:9, margin:"0 0 16px", padding:"10px 13px", background:"#fffbeb", border:"1px solid #fde68a", borderRadius:8 }}>
                     <span style={{ flexShrink:0, fontSize:13, lineHeight:1.4 }}>⚠️</span>
                     <p style={{ margin:0, fontSize:11.5, color:"#92400e", lineHeight:1.55 }}>
@@ -2692,7 +2717,7 @@ export default function ChicParis() {
                   {/* El botón se apaga por dos motivos distintos y ninguno se
                       adivina mirándolo. Antes solo se avisaba el de vista previa,
                       así que el dueño escribía todo, apretaba y no pasaba nada. */}
-                  {resenasHome.bloqueo && (
+                  {resenasHome.bloqueo && !demoPublica && (
                     <p style={{ margin: 0, fontSize: 10.5, color: "#999", fontStyle: "italic", textAlign: "center", lineHeight: 1.5 }}>
                       {resenasHome.bloqueo === "preview"
                         ? "Vista previa — el formulario funciona en tu tienda publicada."
@@ -2772,7 +2797,7 @@ export default function ChicParis() {
                   {reviewSubmitting ? "Publicando..." : "Publicar reseña"}
                 </button>
               </form>
-              {isPreview && (
+              {enEditor && (
                 <p style={{ margin: "10px 0 0", fontSize: 10, color: "#999", fontStyle: "italic", textAlign: "center" }}>
                   Vista previa — el formulario funciona en tu tienda publicada.
                 </p>

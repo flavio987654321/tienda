@@ -138,6 +138,8 @@ export default function UrbanPulse() {
   const [hoveredNavCat,    setHoveredNavCat]    = useState<string | null>(null);
   const [visibleCount,     setVisibleCount]     = useState(8);
   const [isMobile,         setIsMobile]         = useState(false);
+  /** Corte propio del menú, más alto que el de las grillas. Ver el efecto que lo calcula. */
+  const [navCompacto,      setNavCompacto]      = useState(false);
   const [mobileMenuOpen,   setMobileMenuOpen]   = useState(false);
   const [mobileCatsOpen,   setMobileCatsOpen]   = useState(false);
   const [mobileOpenCat,    setMobileOpenCat]    = useState<string | null>(null);
@@ -184,6 +186,12 @@ export default function UrbanPulse() {
   const panelHref = user?.role === "ADMIN" ? "/admin" : user?.role === "OWNER" ? "/dashboard" : user?.role === "SELLER" ? "/afiliados" : "/mi-cuenta";
   const panelLabel = user?.role === "ADMIN" ? "Admin" : user?.role === "OWNER" ? "Mi tienda" : user?.role === "SELLER" ? "Mi panel" : "Mi cuenta";
   const isPreview   = !!storeConfig?.previewFill;
+  /** La demo pública de un diseño (`/plantillas/[id]`): necesita el relleno de
+   *  ejemplos, pero nada de lo que le habla a la dueña de una tienda. */
+  const demoPublica = !!storeConfig?.demoPublica;
+  /** Rellenar con ejemplos y hablarle a la dueña son dos cosas distintas: en la
+   *  demo pública hace falta lo primero y no lo segundo. */
+  const enEditor    = isPreview && !demoPublica;
   const isOwner     = !!storeConfig?.isOwner;
   const hasWA       = !storeConfig || storeConfig.whatsapp.enabled;
   const storefront  = useStorefront();
@@ -405,7 +413,22 @@ export default function UrbanPulse() {
   }, []);
 
   useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 768);
+    const check = () => {
+      setIsMobile(window.innerWidth < 768);
+      // El menú tiene su propio corte, más alto que el de las grillas. Los cuatro
+      // enlaces de escritorio (CATEGORÍAS ▾ · MUJER · HOMBRE · NOSOTROS) miden
+      // ~440px en mayúsculas espaciadas; sumados al nombre de la tienda y a los
+      // íconos no entran abajo de ~900px, y a 768 —donde este template todavía se
+      // creía de escritorio— la barra se salía de la pantalla y arrastraba a toda
+      // la página con ella. Abajo de 900 va el menú hamburguesa, que tiene los
+      // mismos enlaces adentro.
+      const compacto = window.innerWidth < 900;
+      setNavCompacto(compacto);
+      // Al volver a escritorio el panel se desmonta solo, pero `mobileMenuOpen`
+      // se quedaba en true y con él el bloqueo de scroll del body: la página
+      // quedaba trabada, sin nada visible que explicara por qué.
+      if (!compacto) setMobileMenuOpen(false);
+    };
     check();
     window.addEventListener("resize", check);
     return () => window.removeEventListener("resize", check);
@@ -827,16 +850,32 @@ export default function UrbanPulse() {
       )}
 
       {/* NAVBAR */}
-      <nav style={{ position:"sticky", top:0, zIndex: isPreview ? 10000 : 100, background: scrolled ? WHITE : "rgba(245,245,245,0.95)", borderBottom: scrolled ? `3px solid ${DARK}` : "3px solid transparent", backdropFilter:"blur(8px)", transition:"all 0.3s", padding:"0 20px", height:64, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-        <div style={{ display:"flex", alignItems:"center", gap:6, fontWeight:900, fontSize:18, letterSpacing:4, textTransform:"uppercase", flexShrink:0 }}>
-          <span style={{ maxWidth:200, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+      <nav style={{ position:"sticky", top:0, zIndex: isPreview ? 10000 : 100, background: scrolled ? WHITE : "rgba(245,245,245,0.95)", borderBottom: scrolled ? `3px solid ${DARK}` : "3px solid transparent", backdropFilter:"blur(8px)", transition:"all 0.3s", padding: isMobile ? "0 12px" : "0 20px", height:64, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+        {/* La marca es lo ÚNICO que cede ancho. Antes tenía `flexShrink:0`, así que
+            se plantaba: cuando no entraba todo, el que se salía de la pantalla era
+            el grupo de íconos, y con él la página entera (74px de más a 360px,
+            63px a 768px). Ahora se achica y corta con puntos suspensivos.
+            `minWidth:0` es imprescindible: sin eso un ítem de flex se niega a bajar
+            del ancho de su contenido y el recorte nunca pasa.
+
+            Y en celular va más chica y menos espaciada, porque el lugar es poco:
+            los seis íconos ocupan ~204px fijos y a 360px de pantalla le dejan
+            ~110px, de los que 26 se los lleva el tilde de verificada. Con los 18px
+            y el espaciado 4 de escritorio, "Tiendaapps" pedía 200px y quedaba en
+            "TIE…"; a 14px con espaciado 1.5 llega a "TIENDAAP…". Que un nombre
+            largo se recorte en un celular está bien —lo que estaba mal era que se
+            recortara a tres letras—; para que entre entero habría que sacar un
+            ícono de la barra, y el candidato (cuenta) es hoy el único acceso al
+            login en celular, porque el menú hamburguesa no tiene esa sección. */}
+        <div style={{ display:"flex", alignItems:"center", gap:6, fontWeight:900, fontSize: isMobile ? 14 : 18, letterSpacing: isMobile ? 1.5 : 4, textTransform:"uppercase", minWidth:0, overflow:"hidden" }}>
+          <span style={{ maxWidth:200, minWidth:0, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
             <EditableZone field="storeName" label="Nombre de la tienda">
               {storeConfig?.storeName ?? <span>URBAN<span style={{ background:DARK, color:accSobreDark, padding:"3px 7px", marginLeft:2 }}>PULSE</span></span>}
             </EditableZone>
           </span>
           <VerifiedIconButton isVerified={storeConfig?.isVerified} info={storeConfig?.verifiedInfo} />
         </div>
-        {!isMobile && <div style={{ display:"flex", gap:28, alignItems:"center" }}>
+        {!navCompacto && <div style={{ display:"flex", gap:28, alignItems:"center", flexShrink:0 }}>
           {/* CATEGORÍAS dropdown */}
           <div style={{ position:"relative" }}
             onMouseEnter={() => setHoveredNavCat("__open__")}
@@ -902,7 +941,10 @@ export default function UrbanPulse() {
             Nosotros
           </button>
         </div>}
-        <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+        {/* Se achica la SEPARACIÓN, no los botones: 32px ya es poco para el dedo y
+            bajarlos más los volvería difíciles de tocar. Los 20px que se ganan van
+            a que se lea el nombre de la tienda. */}
+        <div style={{ display:"flex", gap: isMobile ? 4 : 8, alignItems:"center", flexShrink:0 }}>
           <button onClick={() => setSearchOpen(true)} aria-label="Buscar" style={iconBtn}>
             <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
           </button>
@@ -915,7 +957,11 @@ export default function UrbanPulse() {
               {pushBell.hasNew && <span style={{ position:"absolute", top:4, right:4, width:10, height:10, background:"#ef4444", borderRadius:"50%", border:`2px solid ${DARK}` }} />}
             </button>
           )}
-          {isPreview && (
+          {/* Maquetas de la campanita, para que la dueña vea dónde le va a quedar
+              y pueda tocarla para configurarla. Van solo en el editor: en la demo
+              pública de `/plantillas` no hay tienda que configurar, y encima
+              sumaban 80px que empujaban la barra fuera de la pantalla. */}
+          {enEditor && (
             <>
               {storeConfig?.showPushBell ? (
                 <button title="Los clientes pueden seguir tu tienda desde acá" style={{ ...iconBtn, position:"relative", opacity:0.85, cursor:"default" }}>
@@ -978,7 +1024,7 @@ export default function UrbanPulse() {
               </div>
             )}
           </div>
-          {isMobile && (
+          {navCompacto && (
             <button onClick={() => { setMobileMenuOpen(o => !o); setMobileCatsOpen(false); setMobileOpenCat(null); }} style={{ background:"none", border:"none", color:DARK, cursor:"pointer", padding:4, display:"flex", flexDirection:"column", gap:4, alignItems:"center" }}>
               <span style={{ display:"block", width:20, height:2.5, background:DARK, transition:"all 0.3s", transform: mobileMenuOpen ? "rotate(45deg) translate(3px,4px)" : "none" }}/>
               <span style={{ display:"block", width:20, height:2.5, background:DARK, transition:"all 0.3s", opacity: mobileMenuOpen ? 0 : 1 }}/>
@@ -987,7 +1033,7 @@ export default function UrbanPulse() {
           )}
         </div>
       </nav>
-      {isMobile && mobileMenuOpen && (
+      {navCompacto && mobileMenuOpen && (
         <div style={{ position:"fixed", top: scrolled || !promoBannerEnabled ? 64 : 100, left:0, right:0, bottom:0, background:WHITE, zIndex:99, overflowY:"auto", overscrollBehavior:"contain" }}>
           {/* Categorías — acordeón (siempre visible, igual que en desktop) */}
           <>
@@ -1804,7 +1850,7 @@ export default function UrbanPulse() {
 
           {/* Aviso, solo mientras se edita: que quede claro que esas cuatro no
               son reales y qué va a pasar en la tienda publicada. */}
-          {isPreview && (
+          {enEditor && (
             <div style={{ display:"flex", gap:9, marginTop:16, padding:"11px 14px", background:"#fffbeb", border:"2px solid #fde68a", maxWidth:640 }}>
               <span style={{ flexShrink:0, fontSize:13, lineHeight:1.4 }}>⚠️</span>
               <p style={{ margin:0, fontSize:11.5, color:"#92400e", lineHeight:1.55 }}>
@@ -2057,7 +2103,7 @@ export default function UrbanPulse() {
                 </div>
                 {/* Solo el dueño, y solo en el editor: la sección se está viendo con
                     relleno porque la tienda todavía no juntó vistas. */}
-                {esRelleno && (
+                {esRelleno && enEditor && (
                   <p style={{ margin:"-24px 0 24px", fontSize:12, color:"#b45309", background:"#fffbeb", border:"1px solid #fde68a", borderRadius:6, padding:"8px 12px" }}>
                     Todavía no hay suficientes vistas de compradores, así que te mostramos productos de ejemplo
                     para que puedas darle formato. <b>En tu tienda esta sección aparece sola</b> cuando al menos
@@ -2878,7 +2924,7 @@ export default function UrbanPulse() {
                   {tituloModal(resenasProd.total > 0 ? `Reseñas (${resenasProd.total})` : "Reseñas")}
                   {/* Sólo en el editor, y sólo si el producto no tiene ninguna real.
                       Dice que son de mentira ANTES de que la dueña las lea. */}
-                  {resenasProd.usandoEjemplos && (
+                  {resenasProd.usandoEjemplos && enEditor && (
                     <div style={{ display:"flex", gap:9, margin:"0 0 16px", padding:"10px 13px", background:"#fffbeb", border:`2px solid #fde68a` }}>
                       <span style={{ flexShrink:0, fontSize:13, lineHeight:1.4 }}>⚠️</span>
                       <p style={{ margin:0, fontSize:11.5, color:"#92400e", lineHeight:1.55 }}>
@@ -3204,7 +3250,7 @@ export default function UrbanPulse() {
                   {/* El botón se apaga por dos motivos distintos y ninguno se
                       adivina mirándolo. Antes solo se avisaba el de vista previa,
                       así que el dueño escribía todo, apretaba y no pasaba nada. */}
-                  {resenas.bloqueo && (
+                  {resenas.bloqueo && !demoPublica && (
                     <p style={{ margin:0, fontSize:10.5, color:MID, fontStyle:"italic", textAlign:"center", lineHeight:1.5 }}>
                       {resenas.bloqueo === "preview"
                         ? "Vista previa — el formulario funciona en tu tienda publicada."

@@ -134,6 +134,12 @@ export default function BohoTerra() {
   const panelHref = user?.role === "ADMIN" ? "/admin" : user?.role === "OWNER" ? "/dashboard" : user?.role === "SELLER" ? "/afiliados" : "/mi-cuenta";
   const panelLabel = user?.role === "ADMIN" ? "Admin" : user?.role === "OWNER" ? "Mi tienda" : user?.role === "SELLER" ? "Mi panel" : "Mi cuenta";
   const isPreview   = !!storeConfig?.previewFill;
+  /** La demo pública de un diseño (`/plantillas/[id]`): necesita el relleno de
+   *  ejemplos, pero nada de lo que le habla a la dueña de una tienda. */
+  const demoPublica = !!storeConfig?.demoPublica;
+  /** Rellenar con ejemplos y hablarle a la dueña son dos cosas distintas: en la
+   *  demo pública hace falta lo primero y no lo segundo. */
+  const enEditor    = isPreview && !demoPublica;
   const isOwner     = !!storeConfig?.isOwner;
   const hasWA       = !storeConfig || storeConfig.whatsapp.enabled;
   const storefront  = useStorefront();
@@ -773,7 +779,9 @@ export default function BohoTerra() {
                 {pushBell.hasNew && <span style={{ position:"absolute", top:2, right:2, width:10, height:10, background:"#ef4444", borderRadius:"50%", border:"2px solid #faf7f2" }} />}
               </button>
             )}
-            {isPreview && (
+            {/* Maquetas de la campanita: solo en el editor. En la demo publica de
+                /plantillas no hay tienda que configurar. */}
+            {enEditor && (
               <>
                 {storeConfig?.showPushBell ? (
                   <button title="Los clientes pueden seguir tu tienda desde acá" style={{ position:"relative", padding:4, display:"flex", alignItems:"center", opacity:0.85, background:"none", border:"none", color:T, cursor:"default" }}>
@@ -942,8 +950,12 @@ export default function BohoTerra() {
           <p style={{ fontSize:15, color:heroLeftMid, lineHeight:1.8, marginBottom:48, maxWidth:380 }}>
             <EditableZone field="heroSubtext" label="Subtítulo hero">Ropa hecha con fibras naturales y tinturas vegetales. Artesanal, local, consciente.</EditableZone>
           </p>
+          {/* En celular el botón va centrado: la columna ocupa todo el ancho y el
+              botón, que mide lo que dice, quedaba pegado a la izquierda con medio
+              renglón vacío al lado. En escritorio sigue arrancando a la izquierda,
+              alineado con el título y el subtítulo. */}
           {(editMode || !storeConfig?.textOverrides?.["heroCta"]?.hidden) && (
-            <button onClick={()=>scrollTo("coleccion")} style={{ alignSelf:"flex-start", background:"none", color:heroLeftText, border:`1.5px solid ${heroLeftText}`, padding:"14px 40px", fontSize:11, letterSpacing:4, textTransform:"uppercase", cursor:"pointer", transition:"all 0.25s" }}
+            <button onClick={()=>scrollTo("coleccion")} style={{ alignSelf: isMobile ? "center" : "flex-start", background:"none", color:heroLeftText, border:`1.5px solid ${heroLeftText}`, padding:"14px 40px", fontSize:11, letterSpacing:4, textTransform:"uppercase", cursor:"pointer", transition:"all 0.25s" }}
               onMouseEnter={e=>{ e.currentTarget.style.background=heroLeftText; e.currentTarget.style.color=heroLeftBotonText; }}
               onMouseLeave={e=>{ e.currentTarget.style.background="none"; e.currentTarget.style.color=heroLeftText; }}>
               <EditableZone field="heroCta" label="Botón principal">Ver Colección</EditableZone>
@@ -1270,7 +1282,7 @@ export default function BohoTerra() {
                 </div>
                 {/* Solo el dueño, y solo en el editor: la sección se está viendo con
                     relleno porque la tienda todavía no juntó vistas. */}
-                {esRelleno && (
+                {esRelleno && enEditor && (
                   <p style={{ margin:"-24px 0 24px", fontSize:12, color:"#b45309", background:"#fffbeb", border:"1px solid #fde68a", borderRadius:6, padding:"8px 12px" }}>
                     Todavía no hay suficientes vistas de compradores, así que te mostramos productos de ejemplo
                     para que puedas darle formato. <b>En tu tienda esta sección aparece sola</b> cuando al menos
@@ -1567,9 +1579,11 @@ export default function BohoTerra() {
         {/* links + copyright — este div es el fondo del footer propiamente dicho */}
         <div style={{ position:"relative" }}>
         <EditableSectionBg field="bgFooter" label="Fondo footer" />
-        <div style={{ maxWidth:1280, margin:"0 auto", padding: isMobile ? "20px 16px" : "28px 40px", display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:20 }}>
+        <div style={{ maxWidth:1280, margin:"0 auto", padding: isMobile ? "20px 16px" : "28px 40px", display:"flex", alignItems:"center", justifyContent: isMobile ? "center" : "space-between", flexWrap:"wrap", gap:20 }}>
           <span style={{ fontFamily:"Georgia, serif", fontStyle:"italic", fontSize:20, color:footerText, letterSpacing:2 }}><EditableZone field="footerBrandName" label="Nombre en footer">Terra</EditableZone></span>
-          <div style={{ display:"flex", gap:24 }}>
+          {/* Envuelve en celular: los cinco enlaces no entran en una línea de
+              360px y el último quedaba cortado contra el borde. */}
+          <div style={{ display:"flex", flexWrap:"wrap", justifyContent: isMobile ? "center" : undefined, gap: isMobile ? "10px 18px" : 24 }}>
             {[["Colección","coleccion"],["Nosotros","nosotros"],["Contacto","contacto"],["Envíos","contacto"],["Devoluciones","contacto"]].map(([l,t])=>(
               <button key={l} onClick={()=>scrollTo(t)} style={{ background:"none", border:"none", color:footerMid, fontSize:12, cursor:"pointer", transition:"color 0.2s" }}
                 onMouseEnter={e=>(e.currentTarget.style.color=footerText)}
@@ -1594,8 +1608,14 @@ export default function BohoTerra() {
             })}
           </div>
         </div>
-        <div style={{ borderTop:`1px solid rgba(44,34,24,0.07)`, paddingTop: 16, paddingBottom: 16, paddingLeft: hasWA ? (isMobile ? 90 : 110) : (isMobile ? 16 : 40), paddingRight: isMobile ? 90 : 110, maxWidth:1280, margin:"0 auto", display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:"8px 24px" }}>
-          <div style={{ display:"flex", flexWrap:"wrap", gap:"0 16px" }}>
+        {/* En escritorio los botones flotantes se esquivan por el costado, que ahí
+            sobra ancho. En celular no: 90px de cada lado dejaban 188px útiles a
+            360px de pantalla y cada política caía en su propio renglón. Como los
+            botones flotan sobre el BORDE INFERIOR de la pantalla, alcanza con
+            despejarlos por altura —van a 24px del piso y miden 52/56— y así la
+            barra recupera el ancho completo. */}
+        <div style={{ borderTop:`1px solid rgba(44,34,24,0.07)`, paddingTop: 16, paddingBottom: isMobile ? 92 : 16, paddingLeft: isMobile ? 16 : (hasWA ? 110 : 40), paddingRight: isMobile ? 16 : 110, maxWidth:1280, margin:"0 auto", display:"flex", alignItems:"center", justifyContent: isMobile ? "center" : "space-between", flexWrap:"wrap", gap:"8px 24px", textAlign: isMobile ? "center" : undefined }}>
+          <div style={{ display:"flex", flexWrap:"wrap", justifyContent: isMobile ? "center" : undefined, gap:"4px 16px" }}>
             {[
               { label: "Política de devoluciones", tipo: "devoluciones" },
               { label: "Política de envíos",       tipo: "envios" },
@@ -1620,7 +1640,7 @@ export default function BohoTerra() {
               )
             ))}
           </div>
-          <div style={{ display:"flex", flexWrap:"wrap", gap:"8px 16px", alignItems:"center" }}>
+          <div style={{ display:"flex", flexWrap:"wrap", justifyContent: isMobile ? "center" : undefined, gap:"8px 16px", alignItems:"center" }}>
             <p style={{ fontSize:11, color:footerMid, margin:0, opacity:0.6 }}>
               <EditableZone field="footerCopyright" label="Copyright">© 2025 Terra · Moda consciente · Mendoza, Argentina</EditableZone>
             </p>
@@ -1933,7 +1953,7 @@ export default function BohoTerra() {
                     Dice que son de mentira ANTES de que la dueña las lea: sin este
                     cartel, tres reseñas con nombre y fecha en su propia tienda se
                     leen como clientas de verdad. */}
-                {resenasProd.usandoEjemplos && (
+                {resenasProd.usandoEjemplos && enEditor && (
                   <div style={{ display:"flex", gap:9, margin:"0 0 16px", padding:"10px 13px", background:"#fffbeb", border:"1px solid #fde68a" }}>
                     <span style={{ flexShrink:0, fontSize:13, lineHeight:1.4 }}>⚠️</span>
                     <p style={{ margin:0, fontSize:11.5, color:"#92400e", lineHeight:1.55 }}>
@@ -2238,7 +2258,7 @@ export default function BohoTerra() {
                   {/* El botón se apaga por dos motivos distintos y ninguno se adivina
                       mirándolo. Sin este aviso, el dueño escribía todo, apretaba y no
                       pasaba nada. */}
-                  {resenas.bloqueo && (
+                  {resenas.bloqueo && !demoPublica && (
                     <p style={{ margin:0, fontSize:10.5, color:MID, fontStyle:"italic", textAlign:"center", lineHeight:1.5 }}>
                       {resenas.bloqueo === "preview"
                         ? "Vista previa — el formulario funciona en tu tienda publicada."
@@ -2313,7 +2333,7 @@ export default function BohoTerra() {
                     {reviewSubmitting ? "Publicando..." : "Publicar reseña"}
                   </button>
                 </form>
-                {isPreview && (
+                {enEditor && (
                   <p style={{ margin:"10px 0 0", fontSize:10, color:MID, fontStyle:"italic", textAlign:"center" }}>
                     Vista previa — el formulario funciona en tu tienda publicada.
                   </p>
