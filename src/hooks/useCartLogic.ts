@@ -7,7 +7,7 @@ import { getEnvioOptions, fmtEnvioPrice, getPagoOptions, fmt as fmtFn, type Cart
 import { useAuth } from "@/components/AuthProvider";
 import { LIVE_QUOTE_DOMICILIO_ID } from "@/types/store-config";
 import { PROVINCIAS_ARGENTINA } from "@/lib/provincias";
-import { parseVariantAttrs } from "@/lib/variantAttrs";
+import { buscarVariante, varianteTiene } from "@/lib/variantMatch";
 import { resolveVariantPrice } from "@/lib/variantPrice";
 import { priceCart, resolveBasePrice, parseEscalones, freeShippingProgress, type ActivePromotion } from "@/lib/pricing";
 import { couponDiscountFor } from "@/lib/coupons";
@@ -18,18 +18,7 @@ import { registrarVista } from "@/lib/registrarVista";
 // como `selectedVariantStock`) para que addToCart pueda topar la cantidad al
 // stock real, y los templates no necesiten reimplementarla cada uno.
 function resolveVariantStock(product: StorefrontProduct, selectedSize: string, selectedColor: string): number | null {
-  if (!product.variants.length) return null;
-  const v = product.variants.find(v => {
-    const a = parseVariantAttrs(v.name);
-    if (a) {
-      const vals = Object.values(a).map((x) => String(x).toLowerCase());
-      const sizeOk = !selectedSize || vals.includes(selectedSize.toLowerCase());
-      const colorOk = !selectedColor || vals.includes(selectedColor.toLowerCase());
-      return sizeOk && colorOk;
-    }
-    return v.value.includes(selectedSize) && v.value.includes(selectedColor);
-  }) ?? (product.variants.length === 1 ? product.variants[0] : null);
-  return v?.stock ?? null;
+  return buscarVariante(product.variants, [selectedSize, selectedColor])?.stock ?? null;
 }
 
 type StorefrontDeps = {
@@ -349,16 +338,7 @@ export function useCartLogic({ products, promotions = [], storeId, affiliateId =
     const set = new Set<string>();
     if (!modalProduct?.variants.length) return set;
     for (const size of modalProduct.sizes) {
-      const matching = modalProduct.variants.filter(v => {
-        const a = parseVariantAttrs(v.name);
-        if (a) {
-          const vals = Object.values(a).map((x) => String(x).toLowerCase());
-          const sizeOk = vals.includes(size.toLowerCase());
-          const colorOk = !selectedColor || vals.includes(selectedColor.toLowerCase());
-          return sizeOk && colorOk;
-        }
-        return v.value.includes(size) && (!selectedColor || v.value.includes(selectedColor));
-      });
+      const matching = modalProduct.variants.filter(v => varianteTiene(v, [size, selectedColor]));
       if (matching.length > 0 && matching.every(v => v.stock === 0)) set.add(size);
     }
     return set;
@@ -381,11 +361,7 @@ export function useCartLogic({ products, promotions = [], storeId, affiliateId =
     const set = new Set<string>();
     if (!modalProduct?.variants.length) return set;
     for (const color of modalProduct.colors) {
-      const matching = modalProduct.variants.filter(v => {
-        const a = parseVariantAttrs(v.name);
-        if (a) return Object.values(a).map(x => String(x).toLowerCase()).includes(color.toLowerCase());
-        return v.value.includes(color);
-      });
+      const matching = modalProduct.variants.filter(v => varianteTiene(v, [color]));
       if (matching.length > 0 && matching.every(v => v.stock === 0)) set.add(color);
     }
     return set;

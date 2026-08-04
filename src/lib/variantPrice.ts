@@ -1,5 +1,5 @@
 import type { StorefrontVariant } from "@/hooks/useStorefront";
-import { parseVariantAttrs } from "@/lib/variantAttrs";
+import { buscarVariante } from "@/lib/variantMatch";
 
 /**
  * Resuelve el precio propio de la variante seleccionada (si tiene uno).
@@ -18,17 +18,9 @@ export function resolveVariantPrice(
     const v = variants.find(v => v.id === variantId);
     if (v?.price != null && v.price > 0) return v.price;
   }
-  // Fallback por talle+color
-  const v = variants.find(v => {
-    const a = parseVariantAttrs(v.name);
-    if (a) {
-      const vals = Object.values(a).map((x) => String(x).toLowerCase());
-      const sizeOk = !size || vals.includes(size.toLowerCase());
-      const colorOk = !color || vals.includes(color.toLowerCase());
-      return sizeOk && colorOk;
-    }
-    return (!size || v.value.includes(size)) && (!color || v.value.includes(color));
-  }) ?? (variants.length === 1 ? variants[0] : null);
+  // Fallback por talle+color — mismo buscador que usan el stock y el id de la
+  // variante que se vende, así los tres no pueden volver a discrepar.
+  const v = buscarVariante(variants, [size, color]);
   if (v?.price != null && v.price > 0) return v.price;
   return null;
 }

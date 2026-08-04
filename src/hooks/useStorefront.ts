@@ -5,6 +5,7 @@ import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { getStoreType } from "@/lib/storeTypes";
 import type { ActivePromotion } from "@/lib/pricing";
 import { parseStringArray } from "@/lib/promotions";
+import { buscarVariante } from "@/lib/variantMatch";
 
 export type StorefrontVariant = {
   id: string;
@@ -397,15 +398,14 @@ export function useStorefront() {
   }, [slug, previewFill, config?.tipoTienda]);
 
   // Encuentra el variantId que coincide con el valor seleccionado
+  /**
+   * La variante que se va a vender. Ver `lib/variantMatch.ts`: acá vivía la
+   * versión rota de las tres, comparando `v.value` —que guarda `"M/L / Negro"`—
+   * contra el talle o el color sueltos. No coincidía nunca, caía en la primera
+   * variante, y así se descontaba stock de la fila equivocada.
+   */
   function resolveVariantId(product: StorefrontProduct, sizeValue: string, colorValue: string): string | null {
-    if (!product.variants.length) return null;
-    // Busca variante que coincida con size o color seleccionado
-    const match = product.variants.find(v =>
-      v.value === sizeValue || v.value === colorValue
-    );
-    // Si solo hay una variante, siempre la usamos
-    if (!match && product.variants.length === 1) return product.variants[0].id;
-    return match?.id ?? product.variants[0]?.id ?? null;
+    return buscarVariante(product.variants, [sizeValue, colorValue])?.id ?? null;
   }
 
   async function validateCoupon(code: string, subtotal: number, email?: string): Promise<{ coupon: ValidatedCoupon; discount: number } | { error: string }> {
