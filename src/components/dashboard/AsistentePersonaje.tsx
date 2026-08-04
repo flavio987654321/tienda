@@ -90,8 +90,18 @@ export default function AsistentePersonaje({
         cx="31" cy="42" fill="#fff" rx={rxBase} ry={ryBase}
         style={{ transformBox: "fill-box", transformOrigin: "center", transform: ojoIzqCerrado ? "scaleY(0.1)" : "scaleY(1)", transition: "transform 0.12s ease" }}
       />
+      {/* La pupila se corre con `translateX` y no animando `cx`, por lo mismo que
+          los ojos de acá arriba usan `scaleY`: framer-motion 12 escribe `undefined`
+          en el atributo durante el primer frame de cada montaje, y la consola se
+          llenaba de "attribute cx: Expected length, undefined".
+          Acá pegaba en cada parpadeo, no una sola vez: la pupila vive adentro de un
+          `{!ojoCerrado && ...}`, así que se desmonta y se vuelve a montar cada vez
+          que Sasha cierra el ojo — cada 4 a 6 segundos, para siempre.
+          `translateX` en un SVG se mide en unidades del viewBox, así que los píxeles
+          de PUPILA_DX significan lo mismo que cuando se sumaban a `cx`. */}
       {!ojoIzqCerrado && (
-        <motion.circle cx={31 + PUPILA_DX[estado]} r="2.5" fill="#1c1917" cy="42" animate={{ cx: 31 + PUPILA_DX[estado] }} transition={{ duration: 0.25 }} />
+        <circle cx="31" cy="42" r="2.5" fill="#1c1917"
+          style={{ transform: `translateX(${PUPILA_DX[estado]}px)`, transition: "transform 0.25s ease" }} />
       )}
 
       <ellipse
@@ -99,11 +109,22 @@ export default function AsistentePersonaje({
         style={{ transformBox: "fill-box", transformOrigin: "center", transform: ojoDerCerrado ? "scaleY(0.1)" : "scaleY(1)", transition: "transform 0.12s ease" }}
       />
       {!ojoDerCerrado && (
-        <motion.circle cx={57 + PUPILA_DX[estado]} r="2.5" fill="#1c1917" cy="42" animate={{ cx: 57 + PUPILA_DX[estado] }} transition={{ duration: 0.25 }} />
+        <circle cx="57" cy="42" r="2.5" fill="#1c1917"
+          style={{ transform: `translateX(${PUPILA_DX[estado]}px)`, transition: "transform 0.25s ease" }} />
       )}
 
+      {/* La boca sí se anima con framer-motion: es lo único que cambia de FORMA
+          entre un gesto y otro, y eso no se puede hacer con un transform.
+          Pero le hacían falta las dos cosas de abajo. El `d` suelto porque no tenía
+          ninguno: sólo el de `animate`, así que en el primer dibujo el atributo
+          salía en `undefined` y el navegador se quejaba de que un path tiene que
+          empezar con 'M'. Y `initial={false}` para que framer-motion arranque
+          directamente en la forma que corresponde en vez de animar hacia ella desde
+          un valor que todavía no conoce. */}
       <motion.path
+        d={BOCA[estado]}
         stroke="#7c2d12" strokeWidth="3" strokeLinecap="round" fill="none"
+        initial={false}
         animate={{ d: BOCA[estado] }}
         transition={{ duration: 0.25 }}
       />
