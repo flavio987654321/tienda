@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useSyncExternalStore } from "react";
 import type { StorefrontProduct } from "@/hooks/useStorefront";
+import { esOpcionDeColor } from "@/hooks/useStorefront";
 import { useTouchSwipe } from "@/hooks/useTouchSwipe";
 import StoreProductReels from "@/components/store/ProductReels";
 import { getContrastColor } from "@/contexts/EditContext";
@@ -120,7 +121,7 @@ export function VehicleModal({ product, accent, currency, whatsapp, products, on
     { label: "Combustible", value: attr(product, "Combustible") },
     { label: "Tracción",    value: attr(product, "Tracción") },
     { label: "Carrocería",  value: attr(product, "Carrocería") },
-    { label: "Color",       value: attr(product, "Color") || (product.colors[0] ?? "") },
+    { label: "Color",       value: attr(product, "Color") || (product.opciones.find(o => esOpcionDeColor(o.nombre))?.valores[0] ?? "") },
     { label: "Puertas",     value: attr(product, "Puertas") ? `${attr(product, "Puertas")} puertas` : "" },
   ].filter(s => s.value);
 
