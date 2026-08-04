@@ -1,14 +1,37 @@
-import type { StorefrontProduct } from "@/hooks/useStorefront";
+import type { StorefrontProduct, SeleccionOpciones } from "@/hooks/useStorefront";
 import type { ShippingMethod } from "@/types/store-config";
 import { DEFAULT_SHIPPING_METHODS } from "@/types/store-config";
 
 export type CartItem = {
   product: StorefrontProduct;
-  size: string;
-  color: string;
+  /**
+   * Lo que eligió el comprador, por nombre de opción: `{ Talle: "M", Color: "Negro" }`.
+   *
+   * Antes eran dos campos sueltos, `size` y `color`, que sólo podían representar
+   * exactamente dos opciones y siempre con esos nombres.
+   *
+   * Nunca viajó al backend y sigue sin viajar: el pedido se arma sólo con
+   * `variantId` (ver `PlaceOrderParams`). Esto es para mostrar en el carrito y
+   * para volver a encontrar la variante.
+   */
+  seleccion: SeleccionOpciones;
   variantId: string | null;
   qty: number;
 };
+
+/** Los valores elegidos, en una línea: "Negro · M". Para mostrar, no para comparar. */
+export function textoSeleccion(seleccion: SeleccionOpciones): string {
+  return Object.values(seleccion).filter(Boolean).join(" · ");
+}
+
+/** Clave estable de una línea del carrito: mismo producto y misma combinación. */
+export function claveItem(productId: string, seleccion: SeleccionOpciones): string {
+  return productId + "|" + Object.entries(seleccion)
+    .filter(([, v]) => v)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([n, v]) => `${n}=${v}`)
+    .join("|");
+}
 
 export type ContactStatus = "idle" | "sending" | "sent";
 export type CheckoutStatus = "idle" | "placing" | "done";

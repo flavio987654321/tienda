@@ -8,8 +8,8 @@ import { buscarVariante } from "@/lib/variantMatch";
  */
 export function resolveVariantPrice(
   variants: StorefrontVariant[],
-  size: string,
-  color: string,
+  /** Los valores elegidos, sin los nombres: `["M", "Negro"]`. */
+  elegidos: string[],
   variantId?: string | null,
 ): number | null {
   if (!variants.length) return null;
@@ -20,7 +20,7 @@ export function resolveVariantPrice(
   }
   // Fallback por talle+color — mismo buscador que usan el stock y el id de la
   // variante que se vende, así los tres no pueden volver a discrepar.
-  const v = buscarVariante(variants, [size, color]);
+  const v = buscarVariante(variants, elegidos);
   if (v?.price != null && v.price > 0) return v.price;
   return null;
 }

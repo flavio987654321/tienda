@@ -177,6 +177,48 @@ Archivos que leen `sizes`/`colors` hoy:
 **Ventaja de arranque:** Hogar & Tech y Autos **no tienen modal** — van directo a la ficha. Así
 que los modales a tocar son sólo los 4 de Moda, y la ficha se arregla una vez para los 10.
 
+#### La parte cara no es el producto, es la SELECCIÓN
+
+Esto salió recién al mapear (2026-08-05) y no estaba en la primera versión del plan. El
+producto pasa a tener `opciones`, pero además hay que cambiar **qué eligió el comprador**:
+
+`selectedSize` / `selectedColor` → una selección genérica, `Record<string, string>`
+(`{ Talle: "M/L", Color: "Negro" }`), más un `setOpcion(nombre, valor)`.
+
+**150 usos en 8 archivos.** La mayoría son de dos formas repetidas, y el resultado es MENOS
+código que hoy: dos bloques (talles y colores) se convierten en un solo `opciones.map(...)`.
+
+| Hoy | Después |
+|---|---|
+| `selectedSize === s` | `seleccion[op.nombre] === v` |
+| `setSelectedSize(s)` | `setOpcion(op.nombre, v)` |
+
+##### Lo que hay que tocar con cuidado
+
+1. **Restaurar carritos vivos.** `storefront_cart` en el localStorage del comprador guarda
+   `CartItem` con `size`/`color`. Hay gente con el carrito lleno AHORA. Al restaurar, un ítem
+   viejo se convierte a `{ Talle: size, Color: color }` — que es exactamente correcto para todo
+   lo que existe hoy, porque las 249 variantes usan esos dos nombres (ver 3.2).
+2. **`/api/cart/track`.** Mismo caso del lado del servidor, para el recordatorio de carrito
+   abandonado.
+3. **`primerComboConStock`** (`useCartLogic`) elige sola la primera combinación con stock.
+   Recorre talles y, dentro de cada talle, colores. Hay que rehacerla para N opciones.
+4. **La imagen por color.** `imageItems[].variantValue` se compara contra `item.color`. Pasa a
+   compararse contra CUALQUIER valor elegido, que además es más correcto.
+5. **Los tachados de sin stock.** `outOfStockSizes` + `outOfStockColors` → un solo
+   `valoresSinStock`. Ojo: hoy son asimétricos a propósito (los talles miran el color elegido,
+   los colores no miran el talle, por un tema de parpadeo). Al unificarlos hay que decidir eso
+   explícitamente — no dejarlo pasar sin mirar.
+
+##### Lo que NO hay que tocar (verificado)
+
+- **El backend del pedido.** `PlaceOrderParams.cartItems` manda sólo
+  `{ productId, variantId, quantity }`. El talle y el color nunca viajaron.
+- **El carrito abandonado.** `AbandonedCart.items` guarda `size`/`color`, pero **nadie los
+  lee**: `SnapshotItem` es `{ name, price, qty, image }`. El email nunca los mostró.
+- **`lib/variantMatch.ts`.** Ya se escribió genérico a propósito (commit `2eac7e8`): compara por
+  VALORES, sin mirar cómo se llaman las opciones. El refactor se apoya en él sin cambiarlo.
+
 #### Código que DESAPARECE con este cambio
 
 No es sólo agregar: este cambio **borra** cosas. Es parte del objetivo, no un efecto secundario.
