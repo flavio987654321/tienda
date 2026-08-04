@@ -430,8 +430,8 @@ export function useStorefront() {
    * contra el talle o el color sueltos. No coincidía nunca, caía en la primera
    * variante, y así se descontaba stock de la fila equivocada.
    */
-  function resolveVariantId(product: StorefrontProduct, sizeValue: string, colorValue: string): string | null {
-    return buscarVariante(product.variants, [sizeValue, colorValue])?.id ?? null;
+  function resolveVariantId(product: StorefrontProduct, seleccion: SeleccionOpciones): string | null {
+    return buscarVariante(product.variants, valoresElegidos(seleccion))?.id ?? null;
   }
 
   async function validateCoupon(code: string, subtotal: number, email?: string): Promise<{ coupon: ValidatedCoupon; discount: number } | { error: string }> {

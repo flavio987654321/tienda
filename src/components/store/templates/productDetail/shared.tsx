@@ -9,6 +9,9 @@ import StoreProductReels from "@/components/store/ProductReels";
 import { getContrastColor, getReadableAccentText } from "@/contexts/EditContext";
 import { useTouchSwipe } from "@/hooks/useTouchSwipe";
 import { resolveVariantPrice } from "@/lib/variantPrice";
+import { buscarVariante } from "@/lib/variantMatch";
+import { opcionesVisibles } from "@/lib/opciones";
+import { esOpcionDeColor, valoresElegidos, type SeleccionOpciones } from "@/hooks/useStorefront";
 import { colorToSwatch } from "@/lib/colorSwatch";
 import { useTurnstile } from "@/components/Turnstile";
 import { PromoTag, PromoBlock, type PaletaPromo } from "@/components/store/PromoDisplay";
@@ -298,12 +301,9 @@ export interface ProductDetailViewProps {
   cart: ReturnType<typeof useCartLogic>;
   activeImg: number;
   setActiveImg: (i: number) => void;
-  selectedSize: string;
-  setSelectedSize: (s: string) => void;
-  selectedColor: string;
-  setSelectedColor: (s: string) => void;
-  needsSize: boolean;
-  needsColor: boolean;
+  /** Lo elegido, por nombre de opción: `{ Talle: "M", Color: "Negro" }`. */
+  seleccion: SeleccionOpciones;
+  setOpcion: (nombre: string, valor: string) => void;
   canAdd: boolean;
   qty: number;
   setQty: (n: number) => void;
@@ -315,26 +315,19 @@ export interface ProductDetailViewProps {
   catalogHref: string;
 }
 
-// Stock de la combinación talle/color elegida, igual que en Ropa y Moda (D-06):
-// busca la variante cuyo `name` (JSON con los atributos) o `value` coincide con
-// lo seleccionado. Si el producto no tiene variantes cargadas, no se restringe.
-function useSelectedVariantStock(product: StorefrontProduct, selectedSize: string, selectedColor: string) {
-  return useMemo(() => {
-    if (!product.variants.length) return null;
-    const v = product.variants.find(v => {
-      try {
-        const a = JSON.parse(v.name);
-        if (a && typeof a === "object") {
-          const vals = Object.values(a).map((x) => String(x).toLowerCase());
-          const sizeOk = !selectedSize || vals.includes(selectedSize.toLowerCase());
-          const colorOk = !selectedColor || vals.includes(selectedColor.toLowerCase());
-          return sizeOk && colorOk;
-        }
-      } catch {}
-      return v.value.includes(selectedSize) && v.value.includes(selectedColor);
-    }) ?? (product.variants.length === 1 ? product.variants[0] : null);
-    return v?.stock ?? null;
-  }, [product, selectedSize, selectedColor]);
+/**
+ * Stock de la combinación elegida.
+ *
+ * Era una CUARTA copia del mismo buscador de variante —había otras tres, y una
+ * estaba rota (ver `lib/variantMatch.ts`)—. Ahora usa el compartido, así que las
+ * cuatro pantallas no pueden volver a opinar distinto sobre qué variante es la
+ * que el comprador está mirando.
+ */
+function useSelectedVariantStock(product: StorefrontProduct, seleccion: SeleccionOpciones) {
+  return useMemo(
+    () => buscarVariante(product.variants, valoresElegidos(seleccion))?.stock ?? null,
+    [product, seleccion],
+  );
 }
 
 function ProductReels({ theme, reelUrls }: { theme: DetailTheme; reelUrls: string[] }) {
@@ -376,8 +369,7 @@ export function resolveDetailTheme(theme: DetailTheme, accentOverride: string | 
 
 export function ProductDetailBody({ theme, view }: { theme: DetailTheme; view: ProductDetailViewProps }) {
   const { slug, currency, whatsapp, product, related, hasMercadoPago, isPreview, isOwner, activeImg, setActiveImg,
-    selectedSize, setSelectedSize, selectedColor, setSelectedColor,
-    needsSize, needsColor, canAdd, qty, setQty, addToCart, discount, promo } = view;
+    seleccion, setOpcion, canAdd, qty, setQty, addToCart, discount, promo } = view;
 
   const [tab, setTab] = useState<"desc" | "specs">("desc");
   const vestido = vestidoDe(theme);
@@ -459,9 +451,9 @@ export function ProductDetailBody({ theme, view }: { theme: DetailTheme; view: P
   }
   const carouselRef = useRef<HTMLDivElement>(null);
 
-  const selectedVariantStock = useSelectedVariantStock(product, selectedSize, selectedColor);
+  const selectedVariantStock = useSelectedVariantStock(product, seleccion);
   const outOfStock = selectedVariantStock === 0;
-  const variantPrice = resolveVariantPrice(product.variants, selectedSize, selectedColor);
+  const variantPrice = resolveVariantPrice(product.variants, valoresElegidos(seleccion));
   const displayPrice = variantPrice ?? product.price;
 
   // Cuántas unidades se pagan de verdad con una promo N×M puesta: con 3×2 y
@@ -482,9 +474,16 @@ export function ProductDetailBody({ theme, view }: { theme: DetailTheme; view: P
     () => goToImg(activeImg - 1)
   );
 
-  function pickColor(c: string) {
-    setSelectedColor(c);
-    const idx = product.imageItems.findIndex(img => img.variantValue?.toLowerCase() === c.toLowerCase());
+  /**
+   * Elegir un valor y, si hay una foto atada a ese valor, mostrarla.
+   *
+   * Antes era `pickColor` y sólo servía para el color. Ahora vale para cualquier
+   * opción: la foto se busca contra el valor elegido, sin preguntar de qué opción
+   * viene.
+   */
+  function elegirOpcion(nombre: string, valor: string) {
+    setOpcion(nombre, valor);
+    const idx = product.imageItems.findIndex(img => img.variantValue?.toLowerCase() === valor.toLowerCase());
     if (idx !== -1) setActiveImg(idx);
   }
 
@@ -648,51 +647,59 @@ export function ProductDetailBody({ theme, view }: { theme: DetailTheme; view: P
             )
           ) : null}
 
-          {needsSize && (
-            <div style={{ marginBottom: 16 }}>
-              <RotuloOpcion theme={theme} style={{ marginBottom: 8 }}>{vestido.rotuloTalle}</RotuloOpcion>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                {product.sizes.map(s => (
-                  <button key={s} onClick={() => setSelectedSize(s)}
-                    style={{ borderRadius: theme.radius, fontSize: 13, fontWeight: 600, cursor: "pointer",
-                      // Cuadrado fijo o pastilla, según el template. Con talles de
-                      // largo distinto ("S" y "XXL") las pastillas quedan de anchos
-                      // salteados; el cuadrado los alinea en grilla.
-                      ...(vestido.chipTalleCuadrado
-                        ? { width: 46, height: 46, padding: 0 }
-                        : { padding: "8px 16px" }),
-                      border: `1.5px solid ${selectedSize === s ? theme.accent : theme.cardBorder}`,
-                      background: selectedSize === s ? `${theme.accent}14` : "transparent", color: theme.text }}>
-                    {s}
-                  </button>
-                ))}
+          {/* Un bucle por las opciones que tenga el producto, en vez de un bloque
+              fijo para "Talle" y otro para "Color". Cada una se llama como la
+              llamó quien cargó el producto, así que un collar dice "Largo" y no
+              "Talle". La regla de qué se muestra y cómo está en `opcionesVisibles`
+              —una sola vez para las seis pantallas que dibujan opciones—. */}
+          {opcionesVisibles(product.opciones).map(op => {
+            // Un solo valor que informa algo ("45cm"): va como texto. No hay nada
+            // que elegir, y un botón que no puede cambiar nada se lee como que la
+            // página se colgó.
+            if (op.tipo === "dato") {
+              return (
+                <div key={op.nombre} style={{ marginBottom: 16 }}>
+                  <RotuloOpcion theme={theme} style={{ marginBottom: 8 }}>{op.nombre}</RotuloOpcion>
+                  <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: theme.text }}>{op.valor}</p>
+                </div>
+              );
+            }
+            const conMuestra = esOpcionDeColor(op.nombre);
+            return (
+              <div key={op.nombre} style={{ marginBottom: 16 }}>
+                <RotuloOpcion theme={theme} style={{ marginBottom: 8 }}>{op.nombre}</RotuloOpcion>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                  {op.valores.map(valor => {
+                    const elegido = seleccion[op.nombre] === valor;
+                    // El puntito del color va en las dos pantallas o en ninguna: en
+                    // el modal está y acá faltaba, así que el mismo "Negro" se
+                    // elegía mirando una muestra en el catálogo y leyendo una
+                    // palabra en la ficha. Para los nombres que no se reconocen
+                    // —"Petróleo"— la muestra es lo único que dice de qué color es.
+                    const swatch = conMuestra ? colorToSwatch(valor) : null;
+                    return (
+                      <button key={valor} onClick={() => elegirOpcion(op.nombre, valor)}
+                        style={{ borderRadius: theme.radius, fontSize: 13, fontWeight: 600, cursor: "pointer",
+                          border: `1.5px solid ${elegido ? theme.accent : theme.cardBorder}`,
+                          background: elegido ? `${theme.accent}14` : "transparent", color: theme.text,
+                          // Cuadrado fijo o pastilla, según el template. Con valores
+                          // de largo distinto ("S" y "XXL") las pastillas quedan de
+                          // anchos salteados; el cuadrado los alinea en grilla. El
+                          // cuadrado es para los que se leen de un vistazo, no para
+                          // los que llevan muestra de color al lado.
+                          ...(vestido.chipTalleCuadrado && !conMuestra
+                            ? { width: 46, height: 46, padding: 0 }
+                            : { display: "flex", alignItems: "center", gap: 7, padding: "8px 16px" }),
+                        }}>
+                        {swatch && <span style={{ width: 14, height: 14, borderRadius: "50%", background: swatch, border: `1px solid ${theme.cardBorder}`, flexShrink: 0 }} />}
+                        {valor}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          )}
-          {needsColor && (
-            <div style={{ marginBottom: 16 }}>
-              <RotuloOpcion theme={theme} style={{ marginBottom: 8 }}>Color</RotuloOpcion>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                {/* El puntito del color va en las dos pantallas o en ninguna: en el
-                    modal está y acá faltaba, así que el mismo "Negro" se elegía
-                    mirando una muestra en el catálogo y leyendo una palabra en la
-                    ficha. Para los nombres que no se reconocen —"Petróleo"— la
-                    muestra es lo único que dice de qué color se trata. */}
-                {product.colors.map(c => {
-                  const swatch = colorToSwatch(c);
-                  return (
-                    <button key={c} onClick={() => pickColor(c)}
-                      style={{ display: "flex", alignItems: "center", gap: 7, padding: "8px 16px", borderRadius: theme.radius, fontSize: 13, fontWeight: 600, cursor: "pointer",
-                        border: `1.5px solid ${selectedColor === c ? theme.accent : theme.cardBorder}`,
-                        background: selectedColor === c ? `${theme.accent}14` : "transparent", color: theme.text }}>
-                      {swatch && <span style={{ width: 14, height: 14, borderRadius: "50%", background: swatch, border: `1px solid ${theme.cardBorder}`, flexShrink: 0 }} />}
-                      {c}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
+            );
+          })}
 
           <div style={{ display: "flex", alignItems: "center", gap: 14, margin: "20px 0" }}>
             <RotuloOpcion theme={theme}>Cantidad</RotuloOpcion>
