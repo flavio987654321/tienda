@@ -21,6 +21,17 @@ const CEJA_Y: Record<EstadoSasha, number> = {
   sonriente: 27,
 };
 
+/**
+ * La altura con la que se dibujan las cejas en el SVG. Las de arriba se siguen
+ * escribiendo como altura absoluta —que es como se piensan— y el movimiento sale
+ * de restar: `CEJA_Y[estado] - CEJA_Y_BASE`.
+ *
+ * Hace falta una base fija porque las cejas se mueven con `translateY` en vez de
+ * animar el atributo `y`. Ver el comentario de los ojos: framer-motion 12 escribe
+ * `undefined` en los atributos de SVG en el primer frame de cada montaje.
+ */
+const CEJA_Y_BASE = CEJA_Y.reposo;
+
 const PUPILA_DX: Record<EstadoSasha, number> = {
   reposo: 0,
   pensando: 3,
@@ -68,15 +79,20 @@ export default function AsistentePersonaje({
 
       <rect x="4" y="4" width="80" height="80" rx="28" fill="url(#sashaGradient)" />
 
-      <motion.rect
-        x="24" y={CEJA_Y[estado]} width="14" height="4" rx="2" fill="#7c2d12"
-        animate={{ y: CEJA_Y[estado] }}
-        transition={{ duration: 0.25 }}
+      {/* Las cejas también se mueven con transform y no animando `y`.
+          Hoy no rompían nada: el bug de framer-motion salta al MONTAR, y estas dos
+          están siempre puestas, así que montan una sola vez y en ese momento el `y`
+          estático ya tiene un valor bueno. Pero es la misma trampa que las pupilas
+          —que sí viven adentro de un condicional— y basta con que algún día alguien
+          las meta en un `{estado !== "x" && ...}` para que vuelva a aparecer, sin
+          ninguna pista de por qué. Con transform el problema no puede pasar. */}
+      <rect
+        x="24" y={CEJA_Y_BASE} width="14" height="4" rx="2" fill="#7c2d12"
+        style={{ transform: `translateY(${CEJA_Y[estado] - CEJA_Y_BASE}px)`, transition: "transform 0.25s ease" }}
       />
-      <motion.rect
-        x="50" y={CEJA_Y[estado]} width="14" height="4" rx="2" fill="#7c2d12"
-        animate={{ y: CEJA_Y[estado] }}
-        transition={{ duration: 0.25 }}
+      <rect
+        x="50" y={CEJA_Y_BASE} width="14" height="4" rx="2" fill="#7c2d12"
+        style={{ transform: `translateY(${CEJA_Y[estado] - CEJA_Y_BASE}px)`, transition: "transform 0.25s ease" }}
       />
 
       {/* El parpadeo va por `transform: scaleY`, no animando `rx`/`ry`. En
