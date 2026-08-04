@@ -326,8 +326,14 @@ function TemplateGalleryCard({ item, onInfo, inView, thumbW: tw = 320 }: { item:
             )}
           </div>
 
-          {/* Overlay con acciones, aparece en hover */}
-          <div className="absolute inset-0 bg-gray-950/0 group-hover:bg-gray-950/55 transition-all flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
+          {/* Overlay con acciones, aparece en hover.
+              `hidden lg:flex`, no solo `opacity-0`: un elemento transparente sigue
+              recibiendo los toques. En celular y tablet no hay hover, así que
+              estos dos botones quedaban invisibles PERO tocables encima de la
+              miniatura — tocabas el diseño y se te abría la demo o la ficha según
+              en qué parte cayó el dedo, sin nada que lo explicara. Abajo de 1024
+              directamente no existe y las acciones van visibles en la tarjeta. */}
+          <div className="absolute inset-0 bg-gray-950/0 group-hover:bg-gray-950/55 transition-all hidden lg:flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
             <a
               href={`/plantillas/${item.id}`}
               target="_blank"
@@ -356,6 +362,29 @@ function TemplateGalleryCard({ item, onInfo, inView, thumbW: tw = 320 }: { item:
           </div>
           <h3 className="font-bold text-gray-950 text-base mb-1">{item.name}</h3>
           <p className="text-gray-500 text-xs">{item.desc}</p>
+
+          {/* Las mismas dos acciones del hover, visibles, para todo lo que se toca
+              con el dedo. La tarjeta mide 152px de ancho a 360px de pantalla, así
+              que "Ver demo" se lleva el lugar y la ficha queda como un botón
+              cuadrado con la "i" — con su `aria-label`, que sin texto al lado un
+              lector de pantalla no tendría cómo nombrarlo. */}
+          <div className="mt-3 flex items-stretch gap-2 lg:hidden">
+            <a
+              href={`/plantillas/${item.id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-1 min-w-0 flex items-center justify-center whitespace-nowrap bg-orange-600 active:bg-orange-700 text-white text-[11px] font-semibold px-2 py-2.5 rounded-xl transition-colors"
+            >
+              Ver demo
+            </a>
+            <button
+              onClick={onInfo}
+              aria-label={`Más información sobre ${item.name}`}
+              className="shrink-0 w-9 flex items-center justify-center border border-gray-200 text-gray-600 active:bg-gray-100 rounded-xl transition-colors"
+            >
+              <Info className="h-4 w-4" />
+            </button>
+          </div>
         </div>
       </div>
     </Card3D>
