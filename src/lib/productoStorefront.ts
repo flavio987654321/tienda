@@ -1,5 +1,5 @@
-import type { StorefrontProduct, StorefrontVariant, OpcionProducto } from "@/hooks/useStorefront";
-import { parseVariantAttrs } from "@/lib/variantAttrs";
+import type { StorefrontProduct, StorefrontVariant } from "@/hooks/useStorefront";
+import { opcionesDeVariantes } from "@/lib/opciones";
 
 /**
  * Pasa un producto crudo de la base a la forma que usa el storefront.
@@ -35,25 +35,11 @@ export type RawProduct = {
 
 export function mapProduct(raw: RawProduct): StorefrontProduct {
   const variants = raw.variants ?? [];
-  // Las opciones salen de las variantes con su nombre, igual que en el hook del
-  // navegador. Acá vivía la lista blanca ENTERA duplicada —los mismos 17 nombres
-  // permitidos, copiados—, así que este mapeo del servidor perdía una opción
-  // llamada "Largo" exactamente igual que el otro.
-  const porNombre = new Map<string, Set<string>>();
-  const sumar = (nombre: string, valor: string) => {
-    const n = (nombre ?? "").trim();
-    if (!n || !valor) return;
-    if (!porNombre.has(n)) porNombre.set(n, new Set());
-    porNombre.get(n)!.add(valor);
-  };
-  variants.forEach((v) => {
-    const attrs = parseVariantAttrs(v.name);
-    if (attrs) Object.entries(attrs).forEach(([n, val]) => sumar(n, String(val ?? "")));
-    else sumar(v.name, v.value);
-  });
-  const opciones: OpcionProducto[] = [...porNombre].map(([nombre, valores]) => ({
-    nombre, valores: [...valores],
-  }));
+  // Las opciones salen de las variantes con su nombre, con la MISMA función que
+  // usa el navegador. Acá vivía la lista blanca ENTERA duplicada —los mismos 17
+  // nombres permitidos, copiados—, así que este mapeo del servidor perdía una
+  // opción llamada "Largo" exactamente igual que el otro.
+  const opciones = opcionesDeVariantes(variants);
   let images: string[] = [];
   let imageItems: { url: string; variantValue?: string }[] = [];
   try {

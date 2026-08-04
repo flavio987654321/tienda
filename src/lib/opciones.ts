@@ -24,6 +24,33 @@ import { parseVariantAttrs } from "@/lib/variantAttrs";
 // ser la misma en todas.
 // ─────────────────────────────────────────────────────────────────────────────
 
+/**
+ * Las opciones de un producto, sacadas de sus variantes.
+ *
+ * El Map conserva el orden de inserción, así que "Talle" sigue apareciendo antes
+ * que "Color" si así se cargaron.
+ *
+ * Estaba escrito dos veces, palabra por palabra: en el hook del navegador y en
+ * el mapeo del servidor. Ahora lo llaman los dos, más la conversión de carritos
+ * guardados — tres lugares que tienen que leer las variantes igual.
+ */
+export function opcionesDeVariantes(variants: StorefrontVariant[]): OpcionProducto[] {
+  const porNombre = new Map<string, Set<string>>();
+  const sumar = (nombre: string, valor: string) => {
+    const n = (nombre ?? "").trim();
+    if (!n || !valor) return;
+    if (!porNombre.has(n)) porNombre.set(n, new Set());
+    porNombre.get(n)!.add(valor);
+  };
+  for (const v of variants) {
+    const attrs = parseVariantAttrs(v.name);
+    if (attrs) for (const [n, val] of Object.entries(attrs)) sumar(n, String(val ?? ""));
+    // Fila anterior al JSON: `name` era el nombre de la opción y `value` el valor.
+    else sumar(v.name, v.value);
+  }
+  return [...porNombre].map(([nombre, valores]) => ({ nombre, valores: [...valores] }));
+}
+
 /** Valores que sólo significan "no hay nada que elegir". */
 const VALORES_VACIOS = ["único", "unico", "unica", "única", "n/a", "-"];
 

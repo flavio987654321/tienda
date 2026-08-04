@@ -5,8 +5,10 @@ import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { getStoreType } from "@/lib/storeTypes";
 import type { ActivePromotion } from "@/lib/pricing";
 import { parseStringArray } from "@/lib/promotions";
-import { parseVariantAttrs } from "@/lib/variantAttrs";
 import { buscarVariante } from "@/lib/variantMatch";
+// `opciones.ts` sólo toma TIPOS de este archivo, así que en tiempo de ejecución
+// no hay ciclo: los `import type` se borran al compilar.
+import { opcionesDeVariantes } from "@/lib/opciones";
 
 export type StorefrontVariant = {
   id: string;
@@ -217,25 +219,8 @@ type RawProduct = {
 
 function mapProduct(raw: RawProduct): StorefrontProduct {
   const variants: StorefrontVariant[] = (raw.variants ?? []);
-  // Las opciones salen de las variantes tal como se guardaron, con su nombre. El
-  // Map conserva el orden de inserción, así que "Talle" sigue apareciendo antes
-  // que "Color" si así se cargaron.
-  const porNombre = new Map<string, Set<string>>();
-  const sumar = (nombre: string, valor: string) => {
-    const n = nombre.trim();
-    if (!n || !valor) return;
-    if (!porNombre.has(n)) porNombre.set(n, new Set());
-    porNombre.get(n)!.add(valor);
-  };
-  variants.forEach(v => {
-    const attrs = parseVariantAttrs(v.name);
-    if (attrs) Object.entries(attrs).forEach(([n, val]) => sumar(n, String(val ?? "")));
-    // Fila anterior al JSON: `name` era el nombre de la opción y `value` el valor.
-    else sumar(v.name, v.value);
-  });
-  const opciones: OpcionProducto[] = [...porNombre].map(([nombre, valores]) => ({
-    nombre, valores: [...valores],
-  }));
+  // Las opciones salen de las variantes tal como se guardaron, con su nombre.
+  const opciones = opcionesDeVariantes(variants);
   let images: string[] = [];
   let imageItems: { url: string; variantValue?: string }[] = [];
   try {

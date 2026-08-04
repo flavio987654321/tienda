@@ -2,9 +2,9 @@
 
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import type { StorefrontProduct, ValidatedCoupon, PlaceOrderParams, SeleccionOpciones, OpcionProducto } from "./useStorefront";
+import type { StorefrontProduct, StorefrontVariant, ValidatedCoupon, PlaceOrderParams, SeleccionOpciones, OpcionProducto } from "./useStorefront";
 import { valoresElegidos } from "./useStorefront";
-import { reacomodarSeleccion } from "@/lib/opciones";
+import { reacomodarSeleccion, opcionesDeVariantes } from "@/lib/opciones";
 import { getEnvioOptions, fmtEnvioPrice, getPagoOptions, fmt as fmtFn, claveItem, type CartItem, type CheckoutStatus, type ShippingMethod } from "@/components/store/shared/cartTypes";
 import { useAuth } from "@/components/AuthProvider";
 import { LIVE_QUOTE_DOMICILIO_ID } from "@/types/store-config";
@@ -54,6 +54,67 @@ function seleccionDesdeValores(p: StorefrontProduct, valores: (string | undefine
     if (op) sel[op.nombre] = valor;
   }
   return sel;
+}
+
+/**
+ * Convierte el carrito guardado en localStorage a la forma actual.
+ *
+ * Sin esto la tienda se caía entera —pantalla de error, no un ítem raro— para
+ * cualquiera que tuviera algo en el carrito al momento del cambio: los ítems
+ * viejos no tienen `seleccion`, y `Object.values(undefined)` revienta apenas se
+ * dibuja el carrito. El carrito se guarda desde siempre y no vence, así que eso
+ * alcanzaba a todos los compradores con una compra a medio hacer.
+ *
+ * Hay dos cosas que arreglar en cada ítem viejo:
+ *  - `size`/`color` sueltos → `seleccion` con los nombres reales de las opciones.
+ *  - el producto guardado tampoco tiene `opciones`: se rearman desde sus propias
+ *    variantes, que sí quedaron guardadas.
+ *
+ * `variantId` se respeta tal cual: es lo único que viaja al pedido, y ya estaba
+ * bien guardado. Lo que se recupera es cómo se muestra y cómo se vuelve a
+ * encontrar la variante.
+ */
+type ItemGuardado = {
+  product?: StorefrontProduct & { variants?: StorefrontVariant[] };
+  seleccion?: SeleccionOpciones;
+  /** Forma vieja: exactamente dos opciones, siempre con estos nombres. */
+  size?: string;
+  color?: string;
+  variantId?: string | null;
+  qty?: number;
+};
+
+function migrarCarritoGuardado(crudo: unknown): CartItem[] {
+  if (!Array.isArray(crudo)) return [];
+  const salida: CartItem[] = [];
+  for (const it of crudo as ItemGuardado[]) {
+    const product = it?.product;
+    if (!product?.id) continue;
+
+    // El producto guardado antes del cambio no trae `opciones`. Se rearman desde
+    // sus variantes con la misma función que usa el resto del storefront.
+    const conOpciones: StorefrontProduct = product.opciones
+      ? product
+      : { ...product, opciones: opcionesDeVariantes(product.variants ?? []) };
+
+    let seleccion = it.seleccion;
+    if (!seleccion) {
+      seleccion = seleccionDesdeValores(conOpciones, [it.size, it.color]);
+      // Si el producto ya no tiene esa variante cargada no hay contra qué buscar
+      // el nombre. `size` y `color` eran literalmente el talle y el color, así
+      // que ese es el nombre honesto — mejor que perder el dato.
+      if (it.size && !Object.values(seleccion).includes(it.size)) seleccion.Talle = it.size;
+      if (it.color && !Object.values(seleccion).includes(it.color)) seleccion.Color = it.color;
+    }
+
+    salida.push({
+      product: conOpciones,
+      seleccion,
+      variantId: it.variantId ?? null,
+      qty: typeof it.qty === "number" && it.qty > 0 ? it.qty : 1,
+    });
+  }
+  return salida;
 }
 
 type StorefrontDeps = {
@@ -162,7 +223,7 @@ export function useCartLogic({ products, promotions = [], storeId, affiliateId =
     try {
       const savedCart = localStorage.getItem("storefront_cart");
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      if (savedCart) setCartItems(JSON.parse(savedCart));
+      if (savedCart) setCartItems(migrarCarritoGuardado(JSON.parse(savedCart)));
       const savedBuyer = localStorage.getItem("storefront_buyer");
       if (savedBuyer) {
         const parsed = JSON.parse(savedBuyer);
