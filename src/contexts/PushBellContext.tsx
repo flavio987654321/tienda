@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useRef, useState, useCallback } from "react";
+import { createContext, useContext, useEffect, useRef, useState, useCallback, useSyncExternalStore } from "react";
 import {
   isPushSupported,
   subscribeToStore,
@@ -55,10 +55,33 @@ export function PushBellProvider({
   const [followState, setFollowState] = useState<FollowState>("checking");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
-  const [loadingCampaigns, setLoadingCampaigns] = useState(false);
   const [hasNew, setHasNew] = useState(false);
   const [needsPushActivation, setNeedsPushActivation] = useState(false);
-  const supported = useRef(false);
+
+  /* ── Si el navegador puede recibir notificaciones ───────────────────────────
+     Era un `useRef` que se llenaba adentro de un efecto y se leía en el render.
+     Eso no podía funcionar: escribir un ref no vuelve a dibujar nada, así que el
+     render siempre veía `false`. Y `pushSupported` es justo lo que mira el botón
+     de seguir para decidir qué mostrarle a alguien en iPhone — le quedaba en "no
+     soportado" salvo que otro cambio provocara un render más tarde, de casualidad.
+
+     Va con `useSyncExternalStore` y no con estado más efecto porque
+     `isPushSupported()` toca `navigator` y `window`, que en el servidor no
+     existen: la tercera función es la respuesta para el servidor, y React vuelve a
+     preguntar al hidratar. La suscripción no hace nada porque esto no cambia
+     mientras la página está abierta. */
+  const supported = useSyncExternalStore(
+    () => () => {},
+    () => isPushSupported(),
+    () => false,
+  );
+
+  /* Las campañas están cargando hasta que el pedido termina. Se deduce de si ya
+     volvió, en vez de un `setLoadingCampaigns(true)` al abrir el efecto — ese
+     costaba un render entero antes de que el pedido siquiera saliera, y es lo que
+     el lint del repo marca como error. */
+  const [campanasCargadas, setCampanasCargadas] = useState(false);
+  const loadingCampaigns = enabled && !campanasCargadas;
   const drawerOpenRef = useRef(false);
   const followingRef = useRef(false);
 
@@ -67,7 +90,6 @@ export function PushBellProvider({
   // Verificar estado inicial de follow (API + localStorage como fallback)
   useEffect(() => {
     if (!enabled) return;
-    supported.current = isPushSupported();
 
     async function checkFollowState() {
       try {
@@ -77,7 +99,7 @@ export function PushBellProvider({
           followingRef.current = !!data.following;
           setFollowState(data.following ? "following" : "not_following");
 
-          if (data.following && supported.current) {
+          if (data.following && supported) {
             if (Notification.permission === "granted") {
               // Registrar este dispositivo silenciosamente (ej: seguido en PC, ahora en celular)
               subscribeToStore(storeId, storeSlug).catch(() => {});
@@ -93,12 +115,11 @@ export function PushBellProvider({
     }
 
     checkFollowState();
-  }, [storeId, storeSlug, enabled]);
+  }, [storeId, storeSlug, enabled, supported]);
 
   // Cargar campañas al montar
   useEffect(() => {
     if (!enabled) return;
-    setLoadingCampaigns(true);
     fetch(`/api/push/campaigns/${storeSlug}`)
       .then((r) => (r.ok ? r.json() : { campaigns: [] }))
       .then((data) => {
@@ -110,7 +131,7 @@ export function PushBellProvider({
         }
       })
       .catch(() => {})
-      .finally(() => setLoadingCampaigns(false));
+      .finally(() => setCampanasCargadas(true));
   }, [storeId, storeSlug, enabled]);
 
   // Actualizar campañas cuando llega un push en tiempo real
@@ -172,7 +193,7 @@ export function PushBellProvider({
     }
 
     // Suscribir push si el browser lo soporta
-    if (supported.current && Notification.permission !== "denied") {
+    if (supported && Notification.permission !== "denied") {
       const pushOk = await subscribeToStore(storeId, storeSlug);
       // Si el usuario canceló el diálogo de permiso push, marcar que necesita activarlo
       if (!pushOk && Notification.permission !== "granted") {
@@ -183,7 +204,10 @@ export function PushBellProvider({
     followingRef.current = true;
     setFollowState("following");
     return "ok";
-  }, [storeId, storeSlug]);
+    // `supported` va en la lista: llega en false en el primer render (es lo que
+    // contesta el servidor) y pasa a true al hidratar. Sin recrear la función,
+    // seguir una tienda se quedaría con aquel false y nunca suscribiría al push.
+  }, [storeId, storeSlug, supported]);
 
   // Dejar de seguir: elimina StoreFollow en DB + cancela push
   const handleUnfollow = useCallback(async () => {
@@ -205,7 +229,7 @@ export function PushBellProvider({
   }, [storeId, storeSlug]);
 
   const activatePushOnDevice = useCallback(async () => {
-    if (!supported.current) return;
+    if (!supported) return;
     // Pedir permiso explícitamente primero (requerido por Safari y más claro en todos los browsers)
     if (Notification.permission === "default") {
       const permission = await Notification.requestPermission();
@@ -214,7 +238,7 @@ export function PushBellProvider({
     if (Notification.permission !== "granted") return;
     const ok = await subscribeToStore(storeId, storeSlug);
     if (ok) setNeedsPushActivation(false);
-  }, [storeId, storeSlug]);
+  }, [storeId, storeSlug, supported]);
 
   return (
     <PushBellContext.Provider value={{
@@ -223,7 +247,7 @@ export function PushBellProvider({
       campaigns,
       loadingCampaigns,
       drawerOpen,
-      pushSupported: supported.current,
+      pushSupported: supported,
       needsPushActivation,
       activatePushOnDevice,
       openDrawer,

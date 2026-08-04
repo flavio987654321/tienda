@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AppLogo } from "@/components/AppLogo";
@@ -77,16 +77,28 @@ const HELP_SEEN_KEY = "tiendaapps_affiliates_help_seen";
 export default function AfiliadosNav() {
   const { user, signOut } = useAuth();
   const { theme, setTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
-  const [helpSeen, setHelpSeen] = useState(true); // true hasta que se hidrate
   const pathname = usePathname();
 
-  useEffect(() => {
-    setMounted(true);
-    setHelpSeen(!!localStorage.getItem(HELP_SEEN_KEY));
-  }, []);
+  /* Ya hidratamos: en el servidor da false y en el navegador true. Tapa lo que no
+     puede dibujarse igual en los dos lados. Antes era un `useState(false)` con un
+     `setMounted(true)` adentro de un efecto, o sea un render entero de la barra
+     nada más que para anotar que había montado. */
+  const mounted = useSyncExternalStore(() => () => {}, () => true, () => false);
+
+  /* El puntito de "hay ayuda sin ver" sale de localStorage, que en el servidor no
+     existe: por eso allá contesta "visto". Al revés, el punto se pintaría un
+     instante en la pantalla de todos y desaparecería al hidratar. */
+  const ayudaVistaGuardada = useSyncExternalStore(
+    () => () => {},
+    () => !!localStorage.getItem(HELP_SEEN_KEY),
+    () => true,
+  );
+  // Y si la abre ahora, sin recargar. Escribir en localStorage no vuelve a
+  // preguntar solo, así que el cambio del momento se recuerda acá.
+  const [ayudaVistaAhora, setAyudaVistaAhora] = useState(false);
+  const helpSeen = ayudaVistaGuardada || ayudaVistaAhora;
 
   const isDark = theme === "dark";
   const userName = user?.name ?? "Afiliado";
@@ -164,7 +176,7 @@ export default function AfiliadosNav() {
             )}
             <div className="relative">
               <button
-                onClick={() => { setShowHelp(true); localStorage.setItem(HELP_SEEN_KEY, "1"); setHelpSeen(true); }}
+                onClick={() => { setShowHelp(true); localStorage.setItem(HELP_SEEN_KEY, "1"); setAyudaVistaAhora(true); }}
                 title="Cómo funciona"
                 className="w-9 h-9 flex items-center justify-center rounded-xl border border-gray-200 dark:border-white/10 bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-all"
               >

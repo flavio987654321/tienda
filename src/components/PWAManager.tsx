@@ -165,11 +165,16 @@ export default function PWAManager({ appVersion, versionKey, disableNotifPrompt 
 
   // ── Toast post-reload ────────────────────────────────────────────────────
   useEffect(() => {
-    if (sessionStorage.getItem("pwa_just_updated")) {
-      sessionStorage.removeItem("pwa_just_updated");
-      setShowUpdatedToast(true);
-      setTimeout(() => setShowUpdatedToast(false), 3500);
-    }
+    if (!sessionStorage.getItem("pwa_just_updated")) return;
+    sessionStorage.removeItem("pwa_just_updated");
+    // El cartel se prende en el tick siguiente y no en el acto: encenderlo derecho
+    // acá adentro obliga a rehacer el render entero (y es lo que el lint del repo
+    // marca como error). Un tick no se ve; el aviso igual queda 3,5 segundos.
+    const prender = setTimeout(() => setShowUpdatedToast(true), 0);
+    const apagar = setTimeout(() => setShowUpdatedToast(false), 3500);
+    // El de apagar no se limpiaba: si te ibas de la pantalla antes de los 3,5s,
+    // saltaba sobre un componente que ya no estaba.
+    return () => { clearTimeout(prender); clearTimeout(apagar); };
   }, []);
 
   // ── Handlers ─────────────────────────────────────────────────────────────

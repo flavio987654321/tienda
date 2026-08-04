@@ -399,7 +399,17 @@ const withdrawalStatus: Record<string, { label: string; color: string }> = {
 export default function BilleteraPage() {
   const { status: sessionStatus } = useAuth();
   const [data, setData] = useState<PageData | null>(null);
-  const [loading, setLoading] = useState(true);
+
+  /* "Cargando" se deduce: o todavía no se sabe quién entró, o se sabe y el pedido
+     de la billetera no volvió. Antes era un `useState(true)` que el efecto tenía
+     que apagar a mano en cada salida —sesión no iniciada, respuesta de error,
+     excepción—, y apagarlo desde ahí es un setState sincrónico dentro del efecto,
+     que es lo que el lint del repo marca como error. Con tres salidas a mano
+     además alcanzaba con olvidarse de una para dejar la pantalla girando para
+     siempre. */
+  const [pedidoTerminado, setPedidoTerminado] = useState(false);
+  const loading = sessionStatus === "loading" || (sessionStatus === "authenticated" && !pedidoTerminado);
+
   const [showBankForm, setShowBankForm] = useState(false);
   const [showWithdraw, setShowWithdraw] = useState(false);
   // OTP: "bankform" | "withdraw" | null — acción pendiente hasta que se verifique identidad
@@ -431,16 +441,14 @@ export default function BilleteraPage() {
     fetch("/api/vendedoras/wallet")
       .then((r) => r.json())
       .then((d) => {
-        if (!d.affiliates) { setLoading(false); return; } // respuesta de error (401, 500)
-        setData(d);
-        setLoading(false);
+        if (d.affiliates) setData(d); // si no vienen, fue error (401, 500)
       })
-      .catch(() => setLoading(false));
+      .catch(() => {})
+      .finally(() => setPedidoTerminado(true));
   }
 
   useEffect(() => {
-    if (sessionStatus === "loading") return;
-    if (sessionStatus !== "authenticated") { setLoading(false); return; }
+    if (sessionStatus !== "authenticated") return;
     loadData();
   }, [sessionStatus]);
 

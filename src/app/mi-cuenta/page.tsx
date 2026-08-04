@@ -268,9 +268,23 @@ export default function MiCuentaPage() {
   const [reviewDrafts, setReviewDrafts] = useState<Record<string, { rating: number; comment: string }>>({});
   const [submittingReview, setSubmittingReview] = useState<string | null>(null);
   const [reviewError, setReviewError] = useState<string | null>(null);
+  /* ── En qué anda cada solapa ────────────────────────────────────────────────
+     Un solo mapa en vez de `tabLoading` y `tabError` por separado, y sólo se
+     escribe cuando la respuesta LLEGÓ. Que no haya entrada significa que se está
+     trayendo (ver `estadoDe`).
+     Antes eran dos mapas y el efecto abría con `setTabLoading(true)`: un render
+     entero de la pantalla nada más que para anotar "empecé a pedir", antes de que
+     el pedido saliera. Es lo que el lint del repo marca como error
+     (`react-hooks/set-state-in-effect`). Deducido no hace falta ese render, y el
+     esqueleto aparece un toque antes.
+     `fetchedTabs` sigue siendo un ref y está bien que lo sea: es el candado para
+     no pedir dos veces lo mismo, y tiene que valer en el acto, no en el próximo
+     render. Lo que no puede hacer un ref es decidir lo que se DIBUJA — por eso el
+     numerito de cada solapa ahora mira este mapa y no aquel Set. */
   const fetchedTabs = useRef<Set<Tab>>(new Set());
-  const [tabLoading, setTabLoading] = useState<Partial<Record<Tab, boolean>>>({});
-  const [tabError, setTabError] = useState<Partial<Record<Tab, boolean>>>({});
+  type EstadoSolapa = "listo" | "error";
+  const [estadoSolapa, setEstadoSolapa] = useState<Partial<Record<Tab, EstadoSolapa>>>({});
+  const estadoDe = (t: Tab): EstadoSolapa | "cargando" => estadoSolapa[t] ?? "cargando";
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [editForm, setEditForm] = useState({ name: "", bio: "", city: "", phone: "", instagramHandle: "" });
@@ -307,37 +321,59 @@ export default function MiCuentaPage() {
       .catch(() => setLoading(false));
   }, []);
 
-  async function fetchTabData(t: Tab) {
+  /* Traer los datos de una solapa. Cada rama termina en su `set...`, y el estado
+     de la solapa lo marca `fetchTabData` una sola vez cuando esto termina.
+     Está separada de `fetchTabData` para que allá el `await` sea lo primero que
+     pasa: "perfil" no pide nada, y con el if/else adentro esa solapa salía sin
+     tocar la red y marcaba "listo" en el mismo tirón — un setState sincrónico
+     colgando del efecto, que es exactamente lo que se está sacando. Con el await
+     de por medio no hay camino que llegue a un setState sin pasar por una vuelta
+     del reloj. */
+  async function cargarSolapa(t: Tab) {
+    if (t === "pedidos") {
+      const r = await fetch("/api/mi-cuenta/pedidos");
+      if (!r.ok) throw new Error();
+      setOrders(await r.json());
+    } else if (t === "favoritos") {
+      const r = await fetch("/api/favoritos");
+      if (!r.ok) throw new Error();
+      setFavorites(await r.json());
+    } else if (t === "tiendas") {
+      const r = await fetch("/api/mi-cuenta/tiendas-seguidas");
+      if (!r.ok) throw new Error();
+      setFollowedStores(await r.json());
+    } else if (t === "resenas") {
+      const r = await fetch("/api/mi-cuenta/resenas");
+      if (!r.ok) throw new Error();
+      const data = await r.json();
+      setPendingReviews(data.pending || []);
+      setSubmittedReviews(data.submitted || []);
+    }
+  }
+
+  function fetchTabData(t: Tab) {
     if (fetchedTabs.current.has(t)) return;
     fetchedTabs.current.add(t);
-    setTabLoading((prev) => ({ ...prev, [t]: true }));
-    setTabError((prev) => ({ ...prev, [t]: false }));
-    try {
-      if (t === "pedidos") {
-        const r = await fetch("/api/mi-cuenta/pedidos");
-        if (!r.ok) throw new Error();
-        setOrders(await r.json());
-      } else if (t === "favoritos") {
-        const r = await fetch("/api/favoritos");
-        if (!r.ok) throw new Error();
-        setFavorites(await r.json());
-      } else if (t === "tiendas") {
-        const r = await fetch("/api/mi-cuenta/tiendas-seguidas");
-        if (!r.ok) throw new Error();
-        setFollowedStores(await r.json());
-      } else if (t === "resenas") {
-        const r = await fetch("/api/mi-cuenta/resenas");
-        if (!r.ok) throw new Error();
-        const data = await r.json();
-        setPendingReviews(data.pending || []);
-        setSubmittedReviews(data.submitted || []);
-      }
-    } catch {
-      fetchedTabs.current.delete(t);
-      setTabError((prev) => ({ ...prev, [t]: true }));
-    } finally {
-      setTabLoading((prev) => ({ ...prev, [t]: false }));
-    }
+    return cargarSolapa(t)
+      .then(() => setEstadoSolapa((prev) => ({ ...prev, [t]: "listo" })))
+      .catch(() => {
+        fetchedTabs.current.delete(t);
+        setEstadoSolapa((prev) => ({ ...prev, [t]: "error" }));
+      });
+  }
+
+  /** Volver a intentar una solapa que falló. */
+  function reintentarSolapa(t: Tab) {
+    fetchedTabs.current.delete(t);
+    // Sacarla del mapa la devuelve a "cargando", así el esqueleto aparece apenas
+    // se toca el botón. Sin esto el cartel de error se quedaría puesto hasta que
+    // volviera la respuesta, y parecería que el botón no hizo nada.
+    setEstadoSolapa((prev) => {
+      const next = { ...prev };
+      delete next[t];
+      return next;
+    });
+    fetchTabData(t);
   }
 
   useEffect(() => { if (!loading) fetchTabData(tab); }, [tab, loading]);
@@ -508,10 +544,13 @@ export default function MiCuentaPage() {
   }
 
   const tabs: { key: Tab; label: string; icon: React.ElementType; count?: number }[] = [
-    { key: "pedidos",   label: "Pedidos",   icon: Package, count: fetchedTabs.current.has("pedidos")   ? orders.length          : undefined },
-    { key: "favoritos", label: "Favoritos", icon: Heart,   count: fetchedTabs.current.has("favoritos") ? favorites.length        : undefined },
-    { key: "tiendas",   label: "Siguiendo", icon: Store,   count: fetchedTabs.current.has("tiendas")   ? followedStores.length   : undefined },
-    { key: "resenas",   label: "Reseñas",   icon: Star,    count: fetchedTabs.current.has("resenas")   ? submittedReviews.length : undefined },
+    // El numerito sale recién cuando la solapa terminó de cargar. Antes salía
+    // apenas se empezaba a pedir, así que mostraba 0 mientras traía los datos y
+    // después saltaba al número real.
+    { key: "pedidos",   label: "Pedidos",   icon: Package, count: estadoSolapa.pedidos   === "listo" ? orders.length          : undefined },
+    { key: "favoritos", label: "Favoritos", icon: Heart,   count: estadoSolapa.favoritos === "listo" ? favorites.length       : undefined },
+    { key: "tiendas",   label: "Siguiendo", icon: Store,   count: estadoSolapa.tiendas   === "listo" ? followedStores.length  : undefined },
+    { key: "resenas",   label: "Reseñas",   icon: Star,    count: estadoSolapa.resenas   === "listo" ? submittedReviews.length : undefined },
     { key: "perfil",    label: "Perfil",    icon: User },
   ];
 
@@ -680,9 +719,9 @@ export default function MiCuentaPage() {
 
         {/* Pedidos */}
         {tab === "pedidos" && (
-          tabLoading.pedidos ? <TabSkeleton /> :
-          tabError.pedidos ? (
-            <ErrorState onRetry={() => { fetchedTabs.current.delete("pedidos"); fetchTabData("pedidos"); }} />
+          estadoDe("pedidos") === "cargando" ? <TabSkeleton /> :
+          estadoDe("pedidos") === "error" ? (
+            <ErrorState onRetry={() => reintentarSolapa("pedidos")} />
           ) : orders.length === 0 ? (
             <EmptyState
               icon={Package}
@@ -769,9 +808,9 @@ export default function MiCuentaPage() {
 
         {/* Favoritos */}
         {tab === "favoritos" && (
-          tabLoading.favoritos ? <TabSkeleton /> :
-          tabError.favoritos ? (
-            <ErrorState onRetry={() => { fetchedTabs.current.delete("favoritos"); fetchTabData("favoritos"); }} />
+          estadoDe("favoritos") === "cargando" ? <TabSkeleton /> :
+          estadoDe("favoritos") === "error" ? (
+            <ErrorState onRetry={() => reintentarSolapa("favoritos")} />
           ) : favorites.length === 0 ? (
             <EmptyState
               icon={Heart}
@@ -831,9 +870,9 @@ export default function MiCuentaPage() {
 
         {/* Tiendas que sigo */}
         {tab === "tiendas" && (
-          tabLoading.tiendas ? <TabSkeleton /> :
-          tabError.tiendas ? (
-            <ErrorState onRetry={() => { fetchedTabs.current.delete("tiendas"); fetchTabData("tiendas"); }} />
+          estadoDe("tiendas") === "cargando" ? <TabSkeleton /> :
+          estadoDe("tiendas") === "error" ? (
+            <ErrorState onRetry={() => reintentarSolapa("tiendas")} />
           ) : followedStores.length === 0 ? (
             <EmptyState
               icon={Store}
@@ -914,9 +953,9 @@ export default function MiCuentaPage() {
 
         {/* Reseñas */}
         {tab === "resenas" && (
-          tabLoading.resenas ? <TabSkeleton /> :
-          tabError.resenas ? (
-            <ErrorState onRetry={() => { fetchedTabs.current.delete("resenas"); fetchTabData("resenas"); }} />
+          estadoDe("resenas") === "cargando" ? <TabSkeleton /> :
+          estadoDe("resenas") === "error" ? (
+            <ErrorState onRetry={() => reintentarSolapa("resenas")} />
           ) : pendingReviews.length === 0 && submittedReviews.length === 0 ? (
             <EmptyState
               icon={Star}

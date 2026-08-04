@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { Bell, BellOff, Loader2 } from "lucide-react";
 import {
   subscribeToPush,
@@ -12,31 +12,40 @@ import {
 type State = "unsupported" | "loading" | "subscribed" | "unsubscribed" | "error";
 
 export default function PushNotificationToggle() {
-  const [state, setState] = useState<State>("loading");
+  const [subState, setSubState] = useState<State>("loading");
+
+  /* Si el navegador soporta notificaciones. `null` = todavía no se sabe, que es
+     lo que contesta el servidor: `isPushSupported()` mira `navigator` y `window`.
+     Distinguir "no se sabe" de "no soporta" importa — con `false` a secas, el
+     primer pintado diría "tu navegador no soporta notificaciones" a todo el mundo
+     y recién después se corregiría. */
+  const supported = useSyncExternalStore<boolean | null>(
+    () => () => {},
+    () => isPushSupported(),
+    () => null,
+  );
+
+  const state: State = supported === null ? "loading" : supported === false ? "unsupported" : subState;
 
   // PWAManager (rendered higher in the tree) handles SW registration.
   // We just wait for serviceWorker.ready to check the current subscription.
   useEffect(() => {
-    if (!isPushSupported()) {
-      setState("unsupported");
-      return;
-    }
-
+    if (!supported) return;
     getPushSubscription()
-      .then((sub) => setState(sub ? "subscribed" : "unsubscribed"))
-      .catch(() => setState("error"));
-  }, []);
+      .then((sub) => setSubState(sub ? "subscribed" : "unsubscribed"))
+      .catch(() => setSubState("error"));
+  }, [supported]);
 
   async function subscribe() {
-    setState("loading");
+    setSubState("loading");
     const ok = await subscribeToPush();
-    setState(ok ? "subscribed" : "error");
+    setSubState(ok ? "subscribed" : "error");
   }
 
   async function unsubscribe() {
-    setState("loading");
+    setSubState("loading");
     const ok = await unsubscribeFromPush();
-    setState(ok ? "unsubscribed" : "error");
+    setSubState(ok ? "unsubscribed" : "error");
   }
 
   if (state === "unsupported") return null;

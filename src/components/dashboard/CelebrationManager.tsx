@@ -80,9 +80,17 @@ function Confetti() {
 export default function CelebrationManager({ storeId }: Props) {
   const instanceId = useId();
   const [queue, setQueue] = useState<Milestone[]>([]);
-  const [current, setCurrent] = useState<Milestone | null>(null);
   const [loading, setLoading] = useState(false);
   const dismissTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  /* El hito que se muestra es el primero de la cola, no una copia guardada aparte.
+     Antes eran dos estados —`queue` y `current`— con un efecto en el medio que
+     sacaba el primero de la cola y lo pasaba a `current`. Eso costaba dos renders
+     por cada hito (uno para acortar la cola, otro para mostrarlo) y encima el
+     efecto abría con dos setState sincrónicos, que es lo que el lint del repo
+     marca como error. Deducido, mostrar el siguiente es simplemente sacar el
+     primero: un render y sin efecto de por medio. */
+  const current = queue[0] ?? null;
 
   // Cargar hitos no mostrados al montar
   useEffect(() => {
@@ -123,18 +131,6 @@ export default function CelebrationManager({ storeId }: Props) {
     return () => { supabase.removeChannel(ch); };
   }, [storeId, instanceId]);
 
-  // Mostrar el primer hito de la cola cuando no hay ninguno activo
-  useEffect(() => {
-    if (current || queue.length === 0) return;
-    const [next, ...rest] = queue;
-    setQueue(rest);
-    setCurrent(next);
-    const timer = setTimeout(() => dismiss(next.type), 8000);
-    dismissTimer.current = timer;
-    return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [queue, current]);
-
   const dismiss = useCallback((type: string) => {
     if (dismissTimer.current) clearTimeout(dismissTimer.current);
     setLoading(true);
@@ -146,15 +142,31 @@ export default function CelebrationManager({ storeId }: Props) {
       .catch(() => {})
       .finally(() => {
         setLoading(false);
-        setCurrent(null);
+        // Sacar el primero descubre el siguiente, si hay.
+        setQueue((prev) => prev.slice(1));
       });
   }, []);
 
+  /* Se cierra solo a los 8 segundos.
+     El timer se guarda también en el ref para que `dismiss` pueda cortarlo: si
+     alguien toca "¡Genial!" y el pedido tarda, los 8 segundos podrían cumplirse
+     con la respuesta todavía en el aire, y entonces se descartarían DOS hitos —el
+     que cerró a mano y el que venía atrás, que nunca llegó a verse. */
+  useEffect(() => {
+    if (!current) return;
+    const timer = setTimeout(() => dismiss(current.type), 8000);
+    dismissTimer.current = timer;
+    return () => clearTimeout(timer);
+  }, [current, dismiss]);
+
+  // Afuera del JSX y no en una función que se llama sola adentro: esa forma hacía
+  // que el analizador leyera todo el bloque como código de render y se quejara de
+  // lo que toca `dismiss`.
+  const meta = current ? getMeta(current.type) : null;
+
   return (
     <AnimatePresence>
-      {current && (() => {
-        const meta = getMeta(current.type);
-        return (
+      {current && meta && (
           <motion.div
             key={current.id}
             initial={{ opacity: 0 }}
@@ -184,8 +196,7 @@ export default function CelebrationManager({ storeId }: Props) {
               </button>
             </motion.div>
           </motion.div>
-        );
-      })()}
+      )}
     </AnimatePresence>
   );
 }

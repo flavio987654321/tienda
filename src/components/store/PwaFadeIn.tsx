@@ -12,6 +12,18 @@ export default function PwaFadeIn() {
 
   useLayoutEffect(() => {
     if (!isPwa()) {
+      /* Acá el `setState` sincrónico es el punto, no un descuido, y por eso se
+         silencia la regla en vez de reescribirlo.
+         El componente arranca tapando (`phase: "cover"`) porque el servidor no
+         puede saber si esto se abrió como PWA: `isPwa()` mira el navegador. En una
+         pestaña común hay que destapar, y tiene que pasar ANTES de que se pinte,
+         que es exactamente lo que garantiza `useLayoutEffect` — corre después de
+         tocar el DOM y antes de que el navegador dibuje, así que nadie llega a ver
+         la tapa blanca.
+         Deducirlo con `useSyncExternalStore` no sirve: contestaría "no es PWA" en
+         el primer pintado, y entonces la PWA mostraría el layout deformado que
+         este componente existe para tapar. */
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setPhase("done");
       return;
     }

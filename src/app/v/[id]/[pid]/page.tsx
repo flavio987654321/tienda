@@ -40,6 +40,54 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
+/**
+ * Anota el click, como mucho uno por IP por hora para que un bot o un proxy no
+ * infle el contador del vendedor.
+ *
+ * Está afuera de la página y no adentro a propósito. Adentro, el `Date.now()` de
+ * la ventana de una hora quedaba en el cuerpo de algo que React lee como un
+ * componente, y ahí una función que devuelve algo distinto en cada llamada es
+ * error (`react-hooks/purity`). Acá es una función común y el reloj se puede
+ * mirar tranquilo.
+ *
+ * Nunca tira: si el tracking falla, el visitante tiene que llegar al producto
+ * igual. Perder un click contado es molesto; perder la venta, no.
+ */
+async function registrarClick(args: {
+  affiliateId: string;
+  storeId: string;
+  productId: string;
+  utmSource: string | null;
+}) {
+  try {
+    const rawIp = getClientIpFromHeaders(await headers());
+    const ip = rawIp !== "unknown" ? rawIp : null;
+    // Sin IP no se puede deduplicar, así que no se cuenta.
+    if (!ip) return;
+
+    const yaContado = await prisma.affiliateClick.findFirst({
+      where: {
+        affiliateId: args.affiliateId,
+        productId: args.productId,
+        ip,
+        createdAt: { gte: new Date(Date.now() - 60 * 60 * 1000) },
+      },
+      select: { id: true },
+    });
+    if (yaContado) return;
+
+    await prisma.affiliateClick.create({
+      data: {
+        affiliateId: args.affiliateId,
+        storeId: args.storeId,
+        productId: args.productId,
+        ip,
+        utmSource: args.utmSource,
+      },
+    });
+  } catch { /* no cortar el redirect si falla el tracking */ }
+}
+
 export default async function ProductShortLinkPage({ params, searchParams }: Props) {
   const { id, pid } = await params;
   const { utm_source } = await searchParams;
@@ -62,35 +110,12 @@ export default async function ProductShortLinkPage({ params, searchParams }: Pro
     redirect(`${baseUrl}/tienda/${affiliate.store.slug}?ref=${affiliate.id}`);
   }
 
-  // Registrar el click con productId (máximo 1 click por IP por hora para evitar inflación)
-  try {
-    const headersList = await headers();
-    const rawIp = getClientIpFromHeaders(headersList);
-    const ip = rawIp !== "unknown" ? rawIp : null;
-
-    // Sin IP no podemos deduplicar — saltear para no inflar el contador con bots/proxies
-    const shouldTrack = !!ip && !(await prisma.affiliateClick.findFirst({
-      where: {
-        affiliateId: affiliate.id,
-        productId: product.id,
-        ip,
-        createdAt: { gte: new Date(Date.now() - 60 * 60 * 1000) },
-      },
-      select: { id: true },
-    }));
-
-    if (shouldTrack) {
-      await prisma.affiliateClick.create({
-        data: {
-          affiliateId: affiliate.id,
-          storeId: affiliate.storeId,
-          productId: product.id,
-          ip,
-          utmSource: utm_source ?? null,
-        },
-      });
-    }
-  } catch { /* no cortar el redirect si falla el tracking */ }
+  await registrarClick({
+    affiliateId: affiliate.id,
+    storeId: affiliate.storeId,
+    productId: product.id,
+    utmSource: utm_source ?? null,
+  });
 
   const utmSuffix = utm_source ? `&utm_source=${encodeURIComponent(utm_source)}` : "";
   const dest = `${baseUrl}/tienda/${affiliate.store.slug}?ref=${affiliate.id}&p=${product.id}${utmSuffix}`;

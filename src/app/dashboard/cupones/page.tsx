@@ -1195,12 +1195,18 @@ export default function CuponesPage() {
 
   function showToast(msg: string) { setToast(msg); setTimeout(() => setToast(null), 3500); }
 
-  const loadWidget = useCallback(async () => {
-    try {
-      const res = await fetch("/api/gamification/widget").then((r) => r.json());
-      setStoreTemplateId(res.storeTemplateId ?? null);
-      setStoreLogo(res.storeLogo ?? null);
-      if (res.widget) {
+  /* Cadena de promesas y no `async/await`, aunque el resultado sea el mismo.
+     Con `async`, todo lo que sigue al `await` queda —para el analizador— dentro del
+     cuerpo de la función, así que llamarla desde un efecto cuenta como cambiar
+     estado ahí adentro y es error (`react-hooks/set-state-in-effect`). Lo que va en
+     un `.then` es una respuesta a algo que pasó después, que es lo que esto es. */
+  const loadWidget = useCallback(() => {
+    return fetch("/api/gamification/widget")
+      .then((r) => r.json())
+      .then((res) => {
+        setStoreTemplateId(res.storeTemplateId ?? null);
+        setStoreLogo(res.storeLogo ?? null);
+        if (!res.widget) return;
         const w = res.widget;
         setWidget({
           ...w,
@@ -1215,12 +1221,11 @@ export default function CuponesPage() {
             couponCode: p.coupon?.code ?? null,
           })),
         });
-      }
-    } catch {
-      // Error de red o API — mostrar empty state igual
-    } finally {
-      setLoading(false);
-    }
+      })
+      .catch(() => {
+        // Error de red o API — mostrar empty state igual
+      })
+      .finally(() => setLoading(false));
   }, []);
 
   useEffect(() => { loadWidget(); }, [loadWidget]);

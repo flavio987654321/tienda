@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef, useMemo } from "react";
+import { useEffect, useState, useRef, useMemo, useSyncExternalStore } from "react";
 import { X, ChevronRight, ChevronLeft } from "lucide-react";
 
 type Step = {
@@ -115,12 +115,22 @@ export default function TourGuide({ onDone, storeType }: { onDone: () => void; s
   const STEPS = useMemo(() => getSteps(storeType), [storeType]);
   const [step, setStep] = useState(0);
   const [rect, setRect] = useState<DOMRect | null>(null);
-  const [isMobile, setIsMobile] = useState(false);
   const frameRef = useRef<number | null>(null);
 
-  useEffect(() => {
-    setIsMobile(window.innerWidth < 1024);
-  }, []);
+  /* Se pregunta el ancho en vez de guardarlo al montar.
+     Era `useState(false)` más un efecto que lo corregía: un render entero de más,
+     y encima el valor quedaba clavado en el del momento de abrir el tour — si
+     girabas el teléfono o achicabas la ventana, el tour seguía dibujándose para el
+     tamaño anterior. Así se entera de los dos. El `false` del final es lo que
+     contesta el servidor, donde no hay `window`. */
+  const isMobile = useSyncExternalStore(
+    (avisar) => {
+      window.addEventListener("resize", avisar);
+      return () => window.removeEventListener("resize", avisar);
+    },
+    () => window.innerWidth < 1024,
+    () => false,
+  );
 
   // Track element position via rAF so tooltip follows sidebar animations (desktop only)
   useEffect(() => {

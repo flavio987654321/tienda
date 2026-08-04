@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useCallback, useEffect } from "react";
+import { useRef, useState, useCallback, useMemo, useSyncExternalStore } from "react";
 
 function ComingSoonMini({
   name,
@@ -126,19 +126,40 @@ export default function OwnerPreviewBadge({
   tagline: string | null;
 }) {
   const [minimized, setMinimized] = useState(false);
-  const [pos, setPos] = useState({ x: 0, y: 0 });
-  const [initialized, setInitialized] = useState(false);
   const dragging = useRef(false);
   const dragStart = useRef({ mx: 0, my: 0, px: 0, py: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    setPos({ x: window.innerWidth - 300, y: 80 });
-    setInitialized(true);
-  }, []);
+  /* Dónde aparece el cartel antes de que nadie lo mueva: pegado al borde derecho.
+     Se pregunta el ancho en vez de guardarlo al montar. `null` en el servidor, que
+     es donde no hay `window`, y sirve además de bandera: mientras no se sepa el
+     ancho no se dibuja nada — antes eso era un `initialized` aparte, para que el
+     cartel no apareciera un instante en la esquina (0,0) antes de saltar a su
+     lugar. Como escucha el resize, si achicás la ventana el cartel acompaña en vez
+     de quedarse afuera de la pantalla. */
+  const anchoVentana = useSyncExternalStore<number | null>(
+    (avisar) => {
+      window.addEventListener("resize", avisar);
+      return () => window.removeEventListener("resize", avisar);
+    },
+    () => window.innerWidth,
+    () => null,
+  );
+
+  // Dónde lo dejó el dueño arrastrándolo. Una vez que lo movió manda él y el
+  // cartel deja de seguir el borde.
+  const [posArrastrada, setPosArrastrada] = useState<{ x: number; y: number } | null>(null);
+  // Memoizado porque el `??` arma un objeto nuevo en cada render, y de `pos`
+  // depende el `useCallback` de arrastrar: sin esto se rehacía siempre y la
+  // memoización no servía de nada.
+  const pos = useMemo(
+    () => posArrastrada ?? (anchoVentana === null ? null : { x: anchoVentana - 300, y: 80 }),
+    [posArrastrada, anchoVentana],
+  );
 
   const onPointerDown = useCallback(
     (e: React.PointerEvent<HTMLDivElement>) => {
+      if (!pos) return;
       e.currentTarget.setPointerCapture(e.pointerId);
       dragging.current = true;
       dragStart.current = { mx: e.clientX, my: e.clientY, px: pos.x, py: pos.y };
@@ -150,14 +171,15 @@ export default function OwnerPreviewBadge({
     if (!dragging.current) return;
     const dx = e.clientX - dragStart.current.mx;
     const dy = e.clientY - dragStart.current.my;
-    setPos({ x: dragStart.current.px + dx, y: dragStart.current.py + dy });
+    setPosArrastrada({ x: dragStart.current.px + dx, y: dragStart.current.py + dy });
   }, []);
 
   const onPointerUp = useCallback(() => {
     dragging.current = false;
   }, []);
 
-  if (!initialized) return null;
+  // Hasta que no se sepa el ancho de la ventana no hay dónde ponerlo.
+  if (!pos) return null;
 
   return (
     <div
