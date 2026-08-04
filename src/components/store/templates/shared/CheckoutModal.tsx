@@ -6,6 +6,8 @@ import { FadeImage } from "./FadeImage";
 import { getReadableAccentText, getReadableAccentFill, textoSobre } from "@/contexts/EditContext";
 import { PROVINCIAS_ARGENTINA } from "@/lib/provincias";
 import { resolveVariantPrice } from "@/lib/variantPrice";
+import { valoresElegidos } from "@/hooks/useStorefront";
+import { textoSeleccion } from "@/components/store/shared/cartTypes";
 import { resolveBasePrice, parseEscalones } from "@/lib/pricing";
 
 // Checkout completo (datos del comprador, envío, pago, cupón, donación opcional
@@ -58,7 +60,7 @@ export function CheckoutModal({
   // aplicada" — atribuyéndole a una promo lo que era descuento por volumen (B-10).
   function itemEffectiveUnitPrice(item: typeof cartItems[number], qty: number): number {
     const product = item.product;
-    const vp = resolveVariantPrice(product.variants, item.size, item.color, item.variantId);
+    const vp = resolveVariantPrice(product.variants, valoresElegidos(item.seleccion), item.variantId);
     return resolveBasePrice({
       retailPrice: vp ?? product.price,
       precioMayorista: product.precioMayorista,
@@ -107,18 +109,21 @@ export function CheckoutModal({
                 {cartItems.map((item, idx) => (
                   <div key={idx} style={{ display:"flex", gap:14, padding:"12px 0", borderBottom:`1px solid ${border}` }}>
                     {(() => {
-                      const colorSrc = item.color
-                        ? item.product.imageItems.find(img => img.variantValue && img.variantValue.toLowerCase() === item.color.toLowerCase())?.url
+                      // La foto atada a un valor —normalmente el color— se busca
+                      // contra CUALQUIER valor elegido, sin mirar de qué opción viene.
+                      const elegidos = valoresElegidos(item.seleccion).map(v => v.toLowerCase());
+                      const propia = elegidos.length
+                        ? item.product.imageItems.find(img => img.variantValue && elegidos.includes(img.variantValue.toLowerCase()))?.url
                         : null;
-                      const src = colorSrc ?? item.product.images[0];
+                      const src = propia ?? item.product.images[0];
                       return src
                         ? <FadeImage src={src} alt="" width={56} height={56} style={{ objectFit:"cover", flexShrink:0, borderRadius:6 }} />
                         : <div style={{ width:56, height:56, flexShrink:0, borderRadius:6, background:S }} />;
                     })()}
                     <div style={{ flex:1, minWidth:0 }}>
                       <p style={{ fontSize:14, margin:"0 0 3px", fontWeight:500, color:T }}>{item.product.name}</p>
-                      {(item.size || item.color) && (
-                        <p style={{ fontSize:11, opacity:0.5, margin:"0 0 6px", color:T }}>{[item.color, item.size].filter(Boolean).join(" · ")}</p>
+                      {textoSeleccion(item.seleccion) && (
+                        <p style={{ fontSize:11, opacity:0.5, margin:"0 0 6px", color:T }}>{textoSeleccion(item.seleccion)}</p>
                       )}
                       <p style={{ fontSize:13, color:accentTexto, fontWeight:700, margin:0 }}>
                         {fmt(itemEffectiveUnitPrice(item, item.qty))} × {item.qty}

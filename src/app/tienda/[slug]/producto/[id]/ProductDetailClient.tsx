@@ -6,7 +6,9 @@ import { useRouter } from "next/navigation";
 import { ChevronLeft, ShoppingBag, MessageCircle, Check } from "lucide-react";
 import { useCartLogic } from "@/hooks/useCartLogic";
 import { registrarVista } from "@/lib/registrarVista";
-import { getDemoPool, isDemoProductId, parsePromotions, type StorefrontProduct, type PlaceOrderParams } from "@/hooks/useStorefront";
+import { getDemoPool, isDemoProductId, parsePromotions, valoresElegidos, type StorefrontProduct, type PlaceOrderParams, type SeleccionOpciones } from "@/hooks/useStorefront";
+import { buscarVariante } from "@/lib/variantMatch";
+import { opcionesVisibles, opcionesAElegir } from "@/lib/opciones";
 import type { ActivePromotion } from "@/lib/pricing";
 import { resolveProductPromo, describePromo } from "@/lib/promoDisplay";
 import { PromoTag, PromoBlock } from "@/components/store/PromoDisplay";
@@ -136,12 +138,20 @@ export default function ProductDetailClient({ slug, productId, productoInicial =
     [products, productId, product?.category]
   );
 
-  const resolveVariantId = useCallback((p: StorefrontProduct, sizeValue: string, colorValue: string): string | null => {
-    if (!p.variants.length) return null;
-    const match = p.variants.find((v) => v.value === sizeValue || v.value === colorValue);
-    if (!match && p.variants.length === 1) return p.variants[0].id;
-    return match?.id ?? p.variants[0]?.id ?? null;
-  }, []);
+  /**
+   * QUINTA copia del mismo buscador, y estaba rota igual que la de
+   * `useStorefront`: comparaba `v.value` —que guarda `"M/L / Negro"`— contra el
+   * talle o el color sueltos, no coincidía nunca y caía en la primera variante.
+   *
+   * El arreglo del commit `2eac7e8` cubrió la compra desde el MODAL, pero no
+   * esta: comprar desde la ficha de producto seguía descontando stock de la fila
+   * equivocada. Ahora las cinco usan `lib/variantMatch.ts`.
+   */
+  const resolveVariantId = useCallback(
+    (p: StorefrontProduct, sel: SeleccionOpciones): string | null =>
+      buscarVariante(p.variants, valoresElegidos(sel))?.id ?? null,
+    [],
+  );
 
   const validateCoupon = useCallback(async (code: string, subtotal: number, email?: string) => {
     if (!storeId) return { error: "Tienda no disponible" };
@@ -172,7 +182,7 @@ export default function ProductDetailClient({ slug, productId, productoInicial =
 
   const cart = useCartLogic({ products, promotions, storeId, resolveVariantId, validateCoupon, placeOrder, lockScrollOnModal: false });
   const {
-    selectedSize, setSelectedSize, selectedColor, setSelectedColor, qty, setQty,
+    seleccion, setSeleccion, setOpcion, qty, setQty,
     addToCart, cartCount, toastMsg, openModal,
   } = cart;
 
@@ -186,8 +196,11 @@ export default function ProductDetailClient({ slug, productId, productoInicial =
     // openModal carga el producto en el estado interno del carrito (sin esto,
     // addToCart no tenía ningún producto seleccionado y no hacía nada)
     openModal(product);
-    setSelectedSize(product.sizes.length === 1 ? product.sizes[0] : "");
-    setSelectedColor(product.colors.length === 1 ? product.colors[0] : "");
+    // La ficha NO preelige cuando hay varias opciones: el comprador tiene que
+    // elegir a propósito. Sólo se completa lo que no tiene alternativa.
+    setSeleccion(Object.fromEntries(
+      product.opciones.filter(o => o.valores.length === 1).map(o => [o.nombre, o.valores[0]]),
+    ));
   }
 
   // `&& !product`: con el producto del servidor ya hay algo que mostrar, así que
@@ -206,10 +219,10 @@ export default function ProductDetailClient({ slug, productId, productoInicial =
     );
   }
 
-  const needsSize = product.sizes.length > 0;
-  const needsColor = product.colors.length > 0;
-  const canAdd = (!needsSize || !!selectedSize) && (!needsColor || !!selectedColor);
-  const variantPrice = resolveVariantPrice(product.variants, selectedSize, selectedColor);
+  // Falta elegir algo si alguna opción CON alternativas quedó sin responder. Las
+  // que tienen un solo valor no cuentan: ahí no hay nada que elegir.
+  const canAdd = opcionesAElegir(product.opciones).every(o => !!seleccion[o.nombre]);
+  const variantPrice = resolveVariantPrice(product.variants, valoresElegidos(seleccion));
   const displayPrice = variantPrice ?? product.price;
   const discount = !variantPrice && product.comparePrice && product.comparePrice > product.price
     ? Math.round((1 - product.price / product.comparePrice) * 100) : null;
@@ -223,8 +236,8 @@ export default function ProductDetailClient({ slug, productId, productoInicial =
     const view: ProductDetailViewProps = {
       slug, storeName, currency, whatsapp, product, related, hasMercadoPago,
       isPreview, isOwner, socialLinks, accentOverride, footerBg, cart,
-      activeImg, setActiveImg, selectedSize, setSelectedSize, selectedColor, setSelectedColor,
-      needsSize, needsColor, canAdd, qty, setQty, addToCart, cartCount, toastMsg, discount, promo: detailPromo, catalogHref,
+      activeImg, setActiveImg, seleccion, setOpcion,
+      canAdd, qty, setQty, addToCart, cartCount, toastMsg, discount, promo: detailPromo, catalogHref,
     };
     return <ThemedDetail view={view} />;
   }
@@ -296,32 +309,26 @@ export default function ProductDetailClient({ slug, productId, productoInicial =
             )}
             <p className="text-xs text-gray-400 mb-6">Pagá en cuotas con tarjeta de crédito</p>
 
-            {needsSize && (
-              <div className="mb-4">
-                <p className="text-sm font-medium text-gray-700 mb-2">Opción</p>
-                <div className="flex flex-wrap gap-2">
-                  {product.sizes.map(s => (
-                    <button key={s} onClick={() => setSelectedSize(s)}
-                      className={`px-4 py-2 rounded-lg border text-sm font-medium ${selectedSize === s ? "border-indigo-600 bg-indigo-50 text-indigo-700" : "border-gray-200 text-gray-600"}`}>
-                      {s}
-                    </button>
-                  ))}
-                </div>
+            {/* Un bloque por opción, con el nombre que le puso quien cargó el
+                producto. Antes eran dos fijos, y el primero se titulaba "Opción"
+                a secas aunque el dato dijera "Talle". */}
+            {opcionesVisibles(product.opciones).map(op => (
+              <div key={op.nombre} className="mb-4">
+                <p className="text-sm font-medium text-gray-700 mb-2">{op.nombre}</p>
+                {op.tipo === "dato" ? (
+                  <p className="text-sm font-semibold text-gray-900">{op.valor}</p>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {op.valores.map(valor => (
+                      <button key={valor} onClick={() => setOpcion(op.nombre, valor)}
+                        className={`px-4 py-2 rounded-lg border text-sm font-medium ${seleccion[op.nombre] === valor ? "border-indigo-600 bg-indigo-50 text-indigo-700" : "border-gray-200 text-gray-600"}`}>
+                        {valor}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
-            )}
-            {needsColor && (
-              <div className="mb-4">
-                <p className="text-sm font-medium text-gray-700 mb-2">Color</p>
-                <div className="flex flex-wrap gap-2">
-                  {product.colors.map(c => (
-                    <button key={c} onClick={() => setSelectedColor(c)}
-                      className={`px-4 py-2 rounded-lg border text-sm font-medium ${selectedColor === c ? "border-indigo-600 bg-indigo-50 text-indigo-700" : "border-gray-200 text-gray-600"}`}>
-                      {c}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
+            ))}
 
             <div className="flex items-center gap-3 mb-6">
               <div className="flex items-center border border-gray-200 rounded-lg">
