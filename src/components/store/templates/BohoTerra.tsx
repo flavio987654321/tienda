@@ -17,6 +17,8 @@ import { tintaSobreFoto, sombraSobreFoto } from "@/lib/section-bg";
 import { DescripcionPlegable } from "@/components/store/templates/shared/DescripcionPlegable";
 import { masVistos, MIN_MAS_VISTOS } from "@/lib/masVistos";
 import { catalogoTieneGeneros } from "@/lib/generos";
+import { opcionesVisibles } from "@/lib/opciones";
+import { esOpcionDeColor } from "@/hooks/useStorefront";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
 import VerifiedIconButton from "@/components/store/VerifiedIconButton";
 import { CartDrawer, type CartTheme } from "@/components/store/templates/shared/CartDrawer";
@@ -272,8 +274,8 @@ export default function BohoTerra() {
   const {
     setCartOpen,
     modalProduct, setModalProduct, modalImg, setModalImg,
-    selectedSize, setSelectedSize, selectedColor, setSelectedColor,
-    qty, setQty, selectedVariantStock, outOfStockSizes,
+    seleccion, setOpcion,
+    qty, setQty, selectedVariantStock, sinStock,
     searchOpen, setSearchOpen, searchQuery, setSearchQuery,
     favorites, favoritesOpen, setFavoritesOpen,
     userDropdownOpen, setUserDropdownOpen, userDropdownRef,
@@ -1784,39 +1786,46 @@ export default function BohoTerra() {
                   es decir dos veces lo mismo, y el chip marcado ya lo dice.
                   El `length > 0` no estaba: sin talles cargados, el panel dibujaba
                   el rótulo "TALLE" con la fila de chips vacía debajo. */}
-              {modalProduct.sizes.length > 0 && (
-              <div>
-                <p style={{ fontSize:10, letterSpacing:3, textTransform:"uppercase", marginBottom:8, color:MID }}>Talle</p>
-                <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
-                  {modalProduct.sizes.map(s=>{
-                    const outOfStock = outOfStockSizes.has(s);
-                    return (
-                      <button key={s} onClick={()=>setSelectedSize(s)}
-                        style={{ width:46, height:46, fontSize:12, border:selectedSize===s?`1.5px solid ${AMarcaBlanco}`:"1px solid rgba(44,34,24,0.18)", background:selectedSize===s?`${AMarcaBlanco}14`:"transparent", color:T, cursor:"pointer", opacity: outOfStock ? 0.35 : 1, textDecoration: outOfStock ? "line-through" : "none" }}>
-                        {s}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-              )}
-              {modalProduct.colors.length > 0 && (
-              <div>
-                <p style={{ fontSize:10, letterSpacing:3, textTransform:"uppercase", marginBottom:8, color:MID }}>Color</p>
-                <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
-                  {modalProduct.colors.map(c=>{
-                    const swatch = colorToSwatch(c);
-                    return (
-                      <button key={c} onClick={()=>setSelectedColor(c)}
-                        style={{ display:"flex", alignItems:"center", gap:7, padding:"6px 14px", fontSize:11, border:selectedColor===c?`1.5px solid ${AMarcaBlanco}`:"1px solid rgba(44,34,24,0.18)", background:selectedColor===c?`${AMarcaBlanco}14`:"transparent", color:T, cursor:"pointer" }}>
-                        {swatch && <span style={{ width:14, height:14, borderRadius:"50%", background:swatch, border:"1px solid rgba(44,34,24,0.2)", flexShrink:0 }} />}
-                        {c}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-              )}
+              {/* Un bloque por opción, con el nombre que le puso quien cargó el
+                  producto: un collar dice "Largo" y no "Talle". Antes eran dos
+                  bloques fijos con las dos palabras escritas a mano. */}
+              {opcionesVisibles(modalProduct.opciones).map(op => {
+                // Un solo valor que informa algo ("45cm") va como texto: no hay
+                // nada que elegir y un chip que no cambia nada confunde.
+                if (op.tipo === "dato") return (
+                  <div key={op.nombre}>
+                    <p style={{ fontSize:10, letterSpacing:3, textTransform:"uppercase", marginBottom:8, color:MID }}>{op.nombre}</p>
+                    <p style={{ margin:0, fontSize:13, color:T }}>{op.valor}</p>
+                  </div>
+                );
+                const conMuestra = esOpcionDeColor(op.nombre);
+                return (
+                  <div key={op.nombre}>
+                    <p style={{ fontSize:10, letterSpacing:3, textTransform:"uppercase", marginBottom:8, color:MID }}>{op.nombre}</p>
+                    <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
+                      {op.valores.map(valor => {
+                        const elegido = seleccion[op.nombre] === valor;
+                        const agotado = sinStock(op.nombre, valor);
+                        const swatch = conMuestra ? colorToSwatch(valor) : null;
+                        return (
+                          <button key={valor} onClick={()=>setOpcion(op.nombre, valor)}
+                            style={{ fontSize: conMuestra ? 11 : 12, border: elegido ? `1.5px solid ${AMarcaBlanco}` : "1px solid rgba(44,34,24,0.18)", background: elegido ? `${AMarcaBlanco}14` : "transparent", color:T, cursor:"pointer",
+                              opacity: agotado ? 0.35 : 1, textDecoration: agotado ? "line-through" : "none",
+                              // El cuadrado es para los valores que se leen de un
+                              // vistazo; los que llevan muestra de color al lado
+                              // necesitan la pastilla para que entre el puntito.
+                              ...(conMuestra
+                                ? { display:"flex", alignItems:"center", gap:7, padding:"6px 14px" }
+                                : { width:46, height:46 }) }}>
+                            {swatch && <span style={{ width:14, height:14, borderRadius:"50%", background:swatch, border:"1px solid rgba(44,34,24,0.2)", flexShrink:0 }} />}
+                            {valor}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
               <div style={{ display:"flex", alignItems:"center", gap:14 }}>
                 <span style={{ fontSize:10, letterSpacing:3, textTransform:"uppercase", color:MID }}>Cantidad</span>
                 <div style={{ display:"flex", alignItems:"center", border:`1px solid rgba(44,34,24,0.18)` }}>
