@@ -11,7 +11,8 @@ import { useTouchSwipe } from "@/hooks/useTouchSwipe";
 import { resolveVariantPrice } from "@/lib/variantPrice";
 import { colorToSwatch } from "@/lib/colorSwatch";
 import { useTurnstile } from "@/components/Turnstile";
-import { PromoTag, PromoBlock } from "@/components/store/PromoDisplay";
+import { PromoTag, PromoBlock, type PaletaPromo } from "@/components/store/PromoDisplay";
+import { ResenaComentario } from "@/components/store/templates/shared/ResenaComentario";
 import { describePromo, type ProductPromoDisplay } from "@/lib/promoDisplay";
 import type { useCartLogic } from "@/hooks/useCartLogic";
 import type { StorefrontProduct } from "@/hooks/useStorefront";
@@ -90,6 +91,73 @@ export type VestidoFicha = {
   /** El nombre del producto. */
   nombre?: React.CSSProperties;
 
+  /**
+   * Los colores de los carteles de promoción (el chip sobre la foto y el cuadro
+   * de "¡3×2!").
+   *
+   * Sin esto salen con la paleta por defecto, que es violeta y azul. En una
+   * tienda negra con amarillo flúor ese azul no pertenece a nada: es el único
+   * color de la pantalla que no eligió nadie. Cada template pasa la misma paleta
+   * que ya usa en su catálogo, así el cartel de la ficha y el de la tarjeta del
+   * listado son el mismo cartel.
+   */
+  paletaPromo?: PaletaPromo;
+
+  /**
+   * La columna de compra como un panel aparte, en vez de apoyada sobre el mismo
+   * fondo que el resto.
+   *
+   * Es lo que más distingue a un template de otro y lo que más se mira: Urban
+   * Pulse la dibuja como una losa blanca con un filo negro grueso al costado, y
+   * sin eso la ficha queda con los colores del template pero con la forma de
+   * cualquier otra.
+   *
+   * No son `CSSProperties` sueltas porque el filo cambia de lado según el ancho:
+   * al costado mientras las dos columnas están una al lado de la otra, y arriba
+   * cuando se apilan —abajo de 860px— que es donde un filo a la izquierda se
+   * leería como una barra decorativa colgando de la nada. Es también lo que hace
+   * el modal del template en celular. Con un objeto de estilo no se puede
+   * expresar eso; con estos campos, el cuerpo compartido arma las dos reglas.
+   */
+  panelCompra?: {
+    fondo?: string;
+    filo?: string;
+    filoGrosor?: number;
+    padding?: string;
+  };
+
+  /** Cómo se marca la miniatura que se está viendo. */
+  miniaturaActiva?: { borde: string; grosor: number };
+
+  /** El precio grande. */
+  precio?: React.CSSProperties;
+
+  /**
+   * Cómo se muestra el comentario de una reseña.
+   *
+   * El recorte y el "Leer todo" los pone `ResenaComentario`, el mismo componente
+   * que ya usan los templates en su bloque de opiniones y en su vista rápida. La
+   * ficha antes imprimía el comentario entero por su cuenta: una sola reseña
+   * larga estiraba la página y empujaba para abajo todo lo que venía después,
+   * productos similares incluidos. En el template eso no podía pasar.
+   *
+   * Lo que se puede cambiar es cómo se VE, no cómo funciona: cada template
+   * recorta a la altura que le queda bien y escribe el botón como habla.
+   */
+  resenaComentario?: {
+    /** Cuántas líneas se muestran antes de recortar. */
+    lineas?: number;
+    /** El texto del botón que lo despliega. */
+    desplegar?: string;
+    /**
+     * Comillas alrededor del texto. Van apagadas por defecto: los dos templates
+     * que ya tienen reseñas de producto las apagan ahí y las usan sólo en los
+     * testimonios de la portada, que es otra cosa —ahí la frase se muestra como
+     * cita, acá es lo que alguien opinó del producto.
+     */
+    comillas?: boolean;
+  };
+
   /* ── La columna de compra ────────────────────────────────────────────────
      Lo que se mira para decidir: precio, talle, color, cantidad y el botón.
      Es la parte de la ficha que más se parecía a "otra página": el modal del
@@ -144,8 +212,22 @@ export type VestidoFicha = {
   rotuloSimilares?: string;
 };
 
+/* Las perillas que NO llevan un valor de fábrica: `undefined` significa "como
+   estaba siempre", y la ficha las esquiva del todo. Ponerles un default acá les
+   cambiaría el aspecto de golpe a las fichas que ya andaban.
+   Están juntas en un tipo para que agregar una perilla sea tocar un solo lugar en
+   vez de repetir la lista tres veces. */
+type PerillaSinDefault =
+  | "tituloSeccion" | "nombre" | "paletaPromo" | "panelCompra"
+  | "miniaturaActiva" | "precio" | "resenaComentario";
+
 /** Lo que rige cuando el template no dice nada. Es la ficha de siempre. */
-export const VESTIDO_FICHA_BASE: Required<Omit<VestidoFicha, "tituloSeccion" | "nombre">> & Pick<VestidoFicha, "tituloSeccion" | "nombre"> = {
+export const VESTIDO_FICHA_BASE: Required<Omit<VestidoFicha, PerillaSinDefault>> & Pick<VestidoFicha, PerillaSinDefault> = {
+  paletaPromo: undefined,
+  panelCompra: undefined,
+  miniaturaActiva: undefined,
+  precio: undefined,
+  resenaComentario: undefined,
   tituloRayita: false,
   rotuloDescripcion: "Descripción",
   rotuloEspecificaciones: "Especificaciones",
@@ -431,11 +513,21 @@ export function ProductDetailBody({ theme, view }: { theme: DetailTheme; view: P
           .pdb-gallery{display:flex; flex-direction:column; gap:10px}
           .pdb-thumbs{display:flex; flex-direction:row; gap:8px; overflow-x:auto; order:2}
           .pdb-main{order:1}
+          ${vestido.panelCompra ? `
+          .pdb-buy{
+            ${vestido.panelCompra.fondo ? `background:${vestido.panelCompra.fondo};` : ""}
+            ${vestido.panelCompra.padding ? `padding:${vestido.panelCompra.padding};` : ""}
+            ${vestido.panelCompra.filo ? `border-top:${vestido.panelCompra.filoGrosor ?? 3}px solid ${vestido.panelCompra.filo};` : ""}
+          }` : ""}
           @media(min-width:860px){
             .pdb-grid{grid-template-columns:minmax(360px,540px) 1fr; align-items:start}
             .pdb-gallery{flex-direction:row}
             .pdb-thumbs{flex-direction:column; overflow-x:visible; overflow-y:auto; order:0; width:76px; max-height:480px}
             .pdb-main{order:1; flex:1; min-width:0; max-width:460px}
+            ${vestido.panelCompra?.filo ? `
+            /* Con las dos columnas lado a lado el filo separa por el costado; al
+               apilarse (la regla de arriba) pasa a estar arriba. */
+            .pdb-buy{ border-top:none; border-left:${vestido.panelCompra.filoGrosor ?? 3}px solid ${vestido.panelCompra.filo}; }` : ""}
           }
         `}</style>
 
@@ -445,7 +537,21 @@ export function ProductDetailBody({ theme, view }: { theme: DetailTheme; view: P
             <div className="pdb-thumbs">
               {product.images.map((url, i) => (
                 <button key={url + i} onClick={() => goToImg(i)}
-                  style={{ flexShrink: 0, width: 72, height: 72, borderRadius: 8, overflow: "hidden", border: `2px solid ${i === activeImg ? theme.accent : "transparent"}`, padding: 0, cursor: "pointer", background: "none" }}>
+                  style={{
+                    flexShrink: 0, width: 72, height: 72, overflow: "hidden", padding: 0, cursor: "pointer", background: "none",
+                    // Con `miniaturaActiva` la marca es un filo grueso del color que
+                    // pida el template y la esquina la del tema; sin ella queda el
+                    // borde de acento redondeado de siempre.
+                    ...(vestido.miniaturaActiva
+                      ? {
+                          borderRadius: theme.radius,
+                          border: i === activeImg
+                            ? `${vestido.miniaturaActiva.grosor}px solid ${vestido.miniaturaActiva.borde}`
+                            : `1px solid ${theme.cardBorder}`,
+                          opacity: i === activeImg ? 1 : 0.55,
+                        }
+                      : { borderRadius: 8, border: `2px solid ${i === activeImg ? theme.accent : "transparent"}` }),
+                  }}>
                   <FadeImage src={url} alt="" width={72} height={72} style={{ objectFit: "cover" }} />
                 </button>
               ))}
@@ -454,7 +560,7 @@ export function ProductDetailBody({ theme, view }: { theme: DetailTheme; view: P
           <div className="pdb-main" style={{ aspectRatio: "1/1", background: "#f8f8fa", borderRadius: theme.radius, overflow: "hidden", position: "relative", border: `1px solid ${theme.cardBorder}` }}
             {...imgSwipe}>
             {promo.primaryPromo ? (
-              <PromoTag tipo={promo.primaryPromo.type} label={describePromo(promo.primaryPromo).headline} size="sm" />
+              <PromoTag tipo={promo.primaryPromo.type} label={describePromo(promo.primaryPromo).headline} size="sm" paleta={vestido.paletaPromo} />
             ) : discount ? (
               <div style={{ position: "absolute", top: 12, left: 12, zIndex: 1, background: "#dc2626", color: "#fff", fontSize: 11, fontWeight: 800, padding: "4px 10px", borderRadius: 100 }}>
                 {discount}% OFF
@@ -481,8 +587,11 @@ export function ProductDetailBody({ theme, view }: { theme: DetailTheme; view: P
           </div>
         </div>
 
-        {/* Info */}
-        <div>
+        {/* Info — con `panelCompra`, esta columna se dibuja como una losa aparte
+            (fondo propio, filo, respiro adentro) en vez de apoyarse sobre el
+            mismo fondo que el resto de la página. Las reglas están en el bloque
+            de estilos de arriba porque el filo cambia de lado según el ancho. */}
+        <div className="pdb-buy">
           <p style={{ margin: "0 0 6px", fontSize: 11.5, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", color: theme.accentReadable }}>
             {product.attributes.find(a => a.key.toLowerCase() === "marca")?.value ?? catLabel}
           </p>
@@ -496,7 +605,7 @@ export function ProductDetailBody({ theme, view }: { theme: DetailTheme; view: P
                 <span style={{ fontSize: 15, color: theme.muted, textDecoration: "line-through" }}>{fmtPrice(promo.originalPrice, currency)}</span>
                 {promo.pctOff != null && <span style={{ background: theme.accent, color: theme.accentText, fontSize: 11, fontWeight: 800, padding: "2px 8px", borderRadius: 6 }}>{promo.pctOff}%OFF</span>}
               </div>
-              <p style={{ margin: "0 0 6px", fontSize: 30, fontWeight: 800, color: "#dc2626" }}>{fmtPrice(promo.effectivePrice, currency)}</p>
+              <p style={{ margin: "0 0 6px", fontSize: 30, fontWeight: 800, ...vestido.precio, color: "#dc2626" }}>{fmtPrice(promo.effectivePrice, currency)}</p>
             </>
           ) : (
             <>
@@ -508,10 +617,14 @@ export function ProductDetailBody({ theme, view }: { theme: DetailTheme; view: P
                   <span style={{ background: theme.accent, color: theme.accentText, fontSize: 11, fontWeight: 800, padding: "2px 8px", borderRadius: 6 }}>{discount}%OFF</span>
                 )}
               </div>
-              <p style={{ margin: "0 0 6px", fontSize: 30, fontWeight: 800, color: vestido.precioAcento ? theme.accentReadable : theme.text }}>{fmtPrice(displayPrice, currency)}</p>
+              {/* El color va DESPUÉS del vestido a propósito: `precio` ajusta el
+                  tamaño y el peso, pero quién decide el color sigue siendo
+                  `precioAcento`, que ya tiene en cuenta si el acento se lee sobre
+                  el fondo de la página. */}
+              <p style={{ margin: "0 0 6px", fontSize: 30, fontWeight: 800, ...vestido.precio, color: vestido.precioAcento ? theme.accentReadable : theme.text }}>{fmtPrice(displayPrice, currency)}</p>
             </>
           )}
-          {promo.primaryPromo && <div style={{ marginBottom: 12 }}><PromoBlock promo={promo.primaryPromo} freeShippingExtra={promo.freeShipping} /></div>}
+          {promo.primaryPromo && <div style={{ marginBottom: 12 }}><PromoBlock promo={promo.primaryPromo} freeShippingExtra={promo.freeShipping} paleta={vestido.paletaPromo} /></div>}
           {product.offerNote && (
             <div style={{ fontSize: 13, color: "#059669", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 8, padding: "7px 12px", marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>
               <span>📋</span><span>{product.offerNote}</span>
@@ -742,7 +855,25 @@ export function ProductDetailBody({ theme, view }: { theme: DetailTheme; view: P
                     <div style={{ display: "flex", gap: 1, marginBottom: r.comment ? 8 : 0 }}>
                       {[1,2,3,4,5].map(s => <span key={s} style={{ fontSize: 13, color: s <= r.rating ? theme.accent : theme.cardBorder }}>★</span>)}
                     </div>
-                    {r.comment && <p style={{ fontSize: 13.5, color: theme.muted, margin: 0, lineHeight: 1.7 }}>{r.comment}</p>}
+                    {/* El mismo componente que usan los templates en su bloque de
+                        opiniones y en su vista rápida. Acá se imprimía el
+                        comentario entero: una reseña larga estiraba la ficha y
+                        empujaba para abajo todo lo que venía después.
+                        Sin `onVerMas`, el botón despliega el texto acá mismo — que
+                        es lo que corresponde: ya estás en la ficha del producto, no
+                        hay a dónde llevarte. */}
+                    {r.comment && (
+                      <ResenaComentario
+                        texto={r.comment}
+                        acento={theme.accentReadable}
+                        estiloTexto={{ fontSize: 13.5, color: theme.muted, lineHeight: 1.7 }}
+                        comillas={vestido.resenaComentario?.comillas ?? false}
+                        lineas={vestido.resenaComentario?.lineas ?? 6}
+                        // `irA` es el texto del botón cuando lleva a otra pantalla;
+                        // acá no lleva a ninguna, así que no se usa nunca.
+                        textoBoton={{ desplegar: vestido.resenaComentario?.desplegar ?? "Leer todo", irA: "" }}
+                      />
+                    )}
                   </div>
                 </div>
               ))}

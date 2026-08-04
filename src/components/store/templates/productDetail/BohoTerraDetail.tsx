@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { ChevronLeft, Heart, ShoppingBag, User } from "lucide-react";
+import { paletaDeTemplate } from "@/components/store/PromoDisplay";
 import { ProductDetailBody, ProductDetailFooter, ProductDetailOverlays, resolveDetailTheme, editorParam, type DetailTheme, type ProductDetailViewProps } from "./shared";
 
 /**
@@ -58,6 +59,10 @@ const themeBase: DetailTheme = {
     // resto de los títulos de la tienda. Con la serif derecha se leía como una
     // ficha de catálogo de otro sitio.
     nombre: { fontStyle: "italic", fontWeight: 400 },
+    // Boho Terra tiene su propia paleta de promos —terracota y tierras— y la
+    // ficha era la única pantalla que seguía pintándolas con la clásica: el mismo
+    // descuento salía terracota en la portada y FUCSIA al abrir el producto.
+    paletaPromo: paletaDeTemplate("boho-terra"),
     // La columna de compra, igual que el panel del modal ─────────────────────
     rotuloTalle: "Talle",
     rotuloOpcion: { fontSize: 10, letterSpacing: 3, textTransform: "uppercase" },

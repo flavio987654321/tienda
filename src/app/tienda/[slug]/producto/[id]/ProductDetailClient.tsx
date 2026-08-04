@@ -18,6 +18,7 @@ import TechNovaDetail from "@/components/store/templates/productDetail/TechNovaD
 import HomeStudioDetail from "@/components/store/templates/productDetail/HomeStudioDetail";
 import CasaClaraDetail from "@/components/store/templates/productDetail/CasaClaraDetail";
 import BohoTerraDetail from "@/components/store/templates/productDetail/BohoTerraDetail";
+import UrbanPulseDetail from "@/components/store/templates/productDetail/UrbanPulseDetail";
 
 const THEMED_DETAIL: Record<string, React.ComponentType<{ view: ProductDetailViewProps }>> = {
   "electro-prime": ElectroPrimeDetail,
@@ -25,6 +26,7 @@ const THEMED_DETAIL: Record<string, React.ComponentType<{ view: ProductDetailVie
   "home-studio": HomeStudioDetail,
   "casa-clara": CasaClaraDetail,
   "boho-terra": BohoTerraDetail,
+  "urban-pulse": UrbanPulseDetail,
 };
 
 
