@@ -16,6 +16,7 @@ import { COMENTARIO_MAX, RESENADOR_MAX } from "@/lib/reviews";
 import { tintaSobreFoto, sombraSobreFoto } from "@/lib/section-bg";
 import { DescripcionPlegable } from "@/components/store/templates/shared/DescripcionPlegable";
 import { masVistos, MIN_MAS_VISTOS } from "@/lib/masVistos";
+import { catalogoTieneGeneros } from "@/lib/generos";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
 import VerifiedIconButton from "@/components/store/VerifiedIconButton";
 import { CartDrawer, type CartTheme } from "@/components/store/templates/shared/CartDrawer";
@@ -583,11 +584,17 @@ export default function BohoTerra() {
 
   const changeGender = (g: string | null) => { setActiveGender(g); setActiveCategory("Todos"); setCarouselIdx(0); };
 
+  /** Ver `catalogoTieneGeneros`: el filtro Mujer/Hombre solo aparece si el
+   *  catálogo real tiene de los dos. Si no, son dos botones que no filtran. */
+  const hayGeneros = useMemo(() => catalogoTieneGeneros(products), [products]);
+
   const allFiltered = useMemo(() => products.filter(p => {
-    if (activeGender && p.gender !== activeGender && p.gender !== "unisex") return false;
+    // `hayGeneros` también acá: si el catálogo cambia y el filtro desaparece,
+    // un `activeGender` viejo dejaría la tienda filtrada sin nada que lo apague.
+    if (hayGeneros && activeGender && p.gender !== activeGender && p.gender !== "unisex") return false;
     if (activeCategory !== "Todos" && p.category !== activeCategory) return false;
     return true;
-  }), [products, activeGender, activeCategory]);
+  }), [products, hayGeneros, activeGender, activeCategory]);
   const carouselProducts = allFiltered.slice(0, CAROUSEL_LIMIT);
 
   const similarProducts = useMemo(() => {
@@ -759,10 +766,14 @@ export default function BohoTerra() {
                   );
                 })()}
               </div>
-              <button onClick={() => { changeGender(activeGender==="mujer" ? null : "mujer"); scrollTo("coleccion"); }}
-                style={{ background:"none", border:"none", fontSize:11, letterSpacing:2, textTransform:"uppercase", cursor:"pointer", color: activeGender==="mujer" ? A : MID }}>Mujer</button>
-              <button onClick={() => { changeGender(activeGender==="hombre" ? null : "hombre"); scrollTo("coleccion"); }}
-                style={{ background:"none", border:"none", fontSize:11, letterSpacing:2, textTransform:"uppercase", cursor:"pointer", color: activeGender==="hombre" ? A : MID }}>Hombre</button>
+              {hayGeneros && (
+                <>
+                  <button onClick={() => { changeGender(activeGender==="mujer" ? null : "mujer"); scrollTo("coleccion"); }}
+                    style={{ background:"none", border:"none", fontSize:11, letterSpacing:2, textTransform:"uppercase", cursor:"pointer", color: activeGender==="mujer" ? A : MID }}>Mujer</button>
+                  <button onClick={() => { changeGender(activeGender==="hombre" ? null : "hombre"); scrollTo("coleccion"); }}
+                    style={{ background:"none", border:"none", fontSize:11, letterSpacing:2, textTransform:"uppercase", cursor:"pointer", color: activeGender==="hombre" ? A : MID }}>Hombre</button>
+                </>
+              )}
             </div>
           )}
           <div style={{ display:"flex", gap:8, alignItems:"center" }}>
@@ -896,7 +907,7 @@ export default function BohoTerra() {
               })}
             </>
           )}
-          {[["Mujer","mujer"],["Hombre","hombre"]].map(([label, g]) => (
+          {hayGeneros && [["Mujer","mujer"],["Hombre","hombre"]].map(([label, g]) => (
             <button key={g} onClick={() => { changeGender(activeGender===g ? null : g); scrollTo("coleccion"); setMobileMenuOpen(false); }}
               style={{ display:"block", width:"100%", background:"none", border:"none", borderBottom:`1px solid rgba(44,34,24,0.06)`, color: activeGender===g ? A : T, padding:"16px 24px", fontSize:13, textAlign:"left", cursor:"pointer", letterSpacing:2, textTransform:"uppercase" }}>
               {label}

@@ -11,6 +11,7 @@ import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { useCartLogic } from "@/hooks/useCartLogic";
 import { useTouchSwipe } from "@/hooks/useTouchSwipe";
 import { masVistos, MIN_MAS_VISTOS } from "@/lib/masVistos";
+import { catalogoTieneGeneros } from "@/lib/generos";
 import { resolverBaldosas } from "@/lib/categoryTiles";
 import { isDemoProductId } from "@/lib/demoProducts";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
@@ -463,12 +464,18 @@ export default function FashionNoir() {
     setVisibleCount(8);
   };
 
+  /** Ver `catalogoTieneGeneros`: el filtro Mujer/Hombre solo aparece si el
+   *  catálogo real tiene de los dos. Si no, son dos botones que no filtran. */
+  const hayGeneros = useMemo(() => catalogoTieneGeneros(products), [products]);
+
   const allFiltered = useMemo(() => products.filter(p => {
-    if (activeGender && p.gender !== activeGender && p.gender !== "unisex") return false;
+    // `hayGeneros` también acá: si el catálogo cambia y el filtro desaparece,
+    // un `activeGender` viejo dejaría la tienda filtrada sin nada que lo apague.
+    if (hayGeneros && activeGender && p.gender !== activeGender && p.gender !== "unisex") return false;
     if (activeCategory !== "Todos" && p.category !== activeCategory) return false;
     if (activeSubcategory && p.subcategory !== activeSubcategory) return false;
     return true;
-  }), [products, activeGender, activeCategory, activeSubcategory]);
+  }), [products, hayGeneros, activeGender, activeCategory, activeSubcategory]);
   const filtered    = allFiltered.slice(0, visibleCount);
 
   const similarProducts = useMemo(() => {
@@ -701,20 +708,24 @@ export default function FashionNoir() {
                 );
               })()}
             </div>
-            {/* MUJER */}
-            <button onClick={() => { changeGender(activeGender === "mujer" ? null : "mujer"); scrollTo("productos"); }}
-              style={{ background:"none", border:"none", fontSize:11, letterSpacing:3, cursor:"pointer", fontWeight:500, textTransform:"uppercase", transition:"opacity 0.2s, color 0.2s", color: activeGender==="mujer" ? G : T, opacity: activeGender==="mujer" ? 1 : 0.8 }}
-              onMouseEnter={e => { e.currentTarget.style.opacity="1"; if(activeGender!=="mujer") e.currentTarget.style.color=G; }}
-              onMouseLeave={e => { e.currentTarget.style.opacity=activeGender==="mujer"?"1":"0.8"; if(activeGender!=="mujer") e.currentTarget.style.color=T; }}>
-              Mujer
-            </button>
-            {/* HOMBRE */}
-            <button onClick={() => { changeGender(activeGender === "hombre" ? null : "hombre"); scrollTo("productos"); }}
-              style={{ background:"none", border:"none", fontSize:11, letterSpacing:3, cursor:"pointer", fontWeight:500, textTransform:"uppercase", transition:"opacity 0.2s, color 0.2s", color: activeGender==="hombre" ? G : T, opacity: activeGender==="hombre" ? 1 : 0.8 }}
-              onMouseEnter={e => { e.currentTarget.style.opacity="1"; if(activeGender!=="hombre") e.currentTarget.style.color=G; }}
-              onMouseLeave={e => { e.currentTarget.style.opacity=activeGender==="hombre"?"1":"0.8"; if(activeGender!=="hombre") e.currentTarget.style.color=T; }}>
-              Hombre
-            </button>
+            {hayGeneros && (
+              <>
+                {/* MUJER */}
+                <button onClick={() => { changeGender(activeGender === "mujer" ? null : "mujer"); scrollTo("productos"); }}
+                  style={{ background:"none", border:"none", fontSize:11, letterSpacing:3, cursor:"pointer", fontWeight:500, textTransform:"uppercase", transition:"opacity 0.2s, color 0.2s", color: activeGender==="mujer" ? G : T, opacity: activeGender==="mujer" ? 1 : 0.8 }}
+                  onMouseEnter={e => { e.currentTarget.style.opacity="1"; if(activeGender!=="mujer") e.currentTarget.style.color=G; }}
+                  onMouseLeave={e => { e.currentTarget.style.opacity=activeGender==="mujer"?"1":"0.8"; if(activeGender!=="mujer") e.currentTarget.style.color=T; }}>
+                  Mujer
+                </button>
+                {/* HOMBRE */}
+                <button onClick={() => { changeGender(activeGender === "hombre" ? null : "hombre"); scrollTo("productos"); }}
+                  style={{ background:"none", border:"none", fontSize:11, letterSpacing:3, cursor:"pointer", fontWeight:500, textTransform:"uppercase", transition:"opacity 0.2s, color 0.2s", color: activeGender==="hombre" ? G : T, opacity: activeGender==="hombre" ? 1 : 0.8 }}
+                  onMouseEnter={e => { e.currentTarget.style.opacity="1"; if(activeGender!=="hombre") e.currentTarget.style.color=G; }}
+                  onMouseLeave={e => { e.currentTarget.style.opacity=activeGender==="hombre"?"1":"0.8"; if(activeGender!=="hombre") e.currentTarget.style.color=T; }}>
+                  Hombre
+                </button>
+              </>
+            )}
             {/* NOSOTROS / CONTACTO */}
             {[["Nosotros","nosotros"],["Contacto","contacto"]].map(([label, target]) => (
               <button key={label} onClick={() => scrollTo(target)}
@@ -856,7 +867,7 @@ export default function FashionNoir() {
               })}
             </>
           )}
-          {[["Mujer","mujer"],["Hombre","hombre"]].map(([label, g]) => (
+          {hayGeneros && [["Mujer","mujer"],["Hombre","hombre"]].map(([label, g]) => (
             <button key={g} onClick={() => { changeGender(activeGender===g ? null : g); scrollTo("productos"); setMobileMenuOpen(false); }}
               style={{ display:"block", width:"100%", background:"none", border:"none", borderBottom:`1px solid rgba(201,168,76,0.1)`, color: activeGender===g ? G : T, padding:"16px 24px", fontSize:12, textAlign:"left", cursor:"pointer", letterSpacing:3, textTransform:"uppercase" }}>
               {label}

@@ -13,6 +13,7 @@ import { useResenasProducto, type ResenaProducto } from "@/hooks/useResenasProdu
 import { ResenaComentario } from "@/components/store/templates/shared/ResenaComentario";
 import { useTouchSwipe } from "@/hooks/useTouchSwipe";
 import { masVistos, MIN_MAS_VISTOS } from "@/lib/masVistos";
+import { catalogoTieneGeneros } from "@/lib/generos";
 import { COMENTARIO_MAX, RESENADOR_MAX } from "@/lib/reviews";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
 import VerifiedIconButton from "@/components/store/VerifiedIconButton";
@@ -711,10 +712,16 @@ export default function ChicParis() {
 
   const changeGender = (g: string | null) => { setActiveGender(g); setVisibleCount(PASO_PRODUCTOS); };
 
+  /** Ver `catalogoTieneGeneros`: el filtro Mujer/Hombre solo aparece si el
+   *  catálogo real tiene de los dos. Si no, son dos botones que no filtran. */
+  const hayGeneros = useMemo(() => catalogoTieneGeneros(products), [products]);
+
   const allFiltered = useMemo(() => products.filter(p => {
-    if (activeGender && p.gender !== activeGender && p.gender !== "unisex") return false;
+    // `hayGeneros` también acá: si el catálogo cambia y el filtro desaparece,
+    // un `activeGender` viejo dejaría la tienda filtrada sin nada que lo apague.
+    if (hayGeneros && activeGender && p.gender !== activeGender && p.gender !== "unisex") return false;
     return true;
-  }), [products, activeGender]);
+  }), [products, hayGeneros, activeGender]);
   // Los productos ya vienen todos en la misma respuesta de /api/public/[slug],
   // así que "Ver más" no pide nada al servidor: solo deja de recortar la lista.
   const filtered    = allFiltered.slice(0, visibleCount);
@@ -886,16 +893,20 @@ export default function ChicParis() {
                 </>
               )}
             </div>}
-            {/* MUJER */}
-            <button onClick={() => { changeGender(activeGender === "mujer" ? null : "mujer"); scrollTo("productos"); }}
-              style={{ background: "none", border: "none", fontSize: 12, fontWeight: 600, letterSpacing: 2, textTransform: "uppercase", cursor: "pointer", padding: 0, color: activeGender === "mujer" ? ACC : (isPreview || scrolled) ? "#111" : "#fff" }}>
-              Mujer
-            </button>
-            {/* HOMBRE */}
-            <button onClick={() => { changeGender(activeGender === "hombre" ? null : "hombre"); scrollTo("productos"); }}
-              style={{ background: "none", border: "none", fontSize: 12, fontWeight: 600, letterSpacing: 2, textTransform: "uppercase", cursor: "pointer", padding: 0, color: activeGender === "hombre" ? ACC : (isPreview || scrolled) ? "#111" : "#fff" }}>
-              Hombre
-            </button>
+            {hayGeneros && (
+              <>
+                {/* MUJER */}
+                <button onClick={() => { changeGender(activeGender === "mujer" ? null : "mujer"); scrollTo("productos"); }}
+                  style={{ background: "none", border: "none", fontSize: 12, fontWeight: 600, letterSpacing: 2, textTransform: "uppercase", cursor: "pointer", padding: 0, color: activeGender === "mujer" ? ACC : (isPreview || scrolled) ? "#111" : "#fff" }}>
+                  Mujer
+                </button>
+                {/* HOMBRE */}
+                <button onClick={() => { changeGender(activeGender === "hombre" ? null : "hombre"); scrollTo("productos"); }}
+                  style={{ background: "none", border: "none", fontSize: 12, fontWeight: 600, letterSpacing: 2, textTransform: "uppercase", cursor: "pointer", padding: 0, color: activeGender === "hombre" ? ACC : (isPreview || scrolled) ? "#111" : "#fff" }}>
+                  Hombre
+                </button>
+              </>
+            )}
           </nav>}
 
           {/* Logo center */}
@@ -1030,7 +1041,7 @@ export default function ChicParis() {
               })}
             </>
           )}
-          {[["Mujer","mujer"],["Hombre","hombre"]].map(([label, g]) => (
+          {hayGeneros && [["Mujer","mujer"],["Hombre","hombre"]].map(([label, g]) => (
             <button key={g} onClick={() => { changeGender(activeGender===g ? null : g); scrollTo("productos"); setMobileMenuOpen(false); }}
               style={{ display: "block", width: "100%", background: "none", border: "none", borderBottom: "1px solid #f0f0f0", color: activeGender===g ? ACC : "#111", padding: "16px 24px", fontSize: 12, textAlign: "left", cursor: "pointer", letterSpacing: 2, fontWeight: 600, textTransform: "uppercase" }}>
               {label}

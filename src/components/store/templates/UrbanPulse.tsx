@@ -16,6 +16,7 @@ import { useResenasProducto, type ResenaProducto } from "@/hooks/useResenasProdu
 import { ResenaComentario } from "@/components/store/templates/shared/ResenaComentario";
 import { useTouchSwipe } from "@/hooks/useTouchSwipe";
 import { masVistos, MIN_MAS_VISTOS } from "@/lib/masVistos";
+import { catalogoTieneGeneros } from "@/lib/generos";
 import { ventanaArgentina } from "@/lib/fechas-comerciales";
 import { COMENTARIO_MAX, RESENADOR_MAX } from "@/lib/reviews";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
@@ -717,11 +718,17 @@ export default function UrbanPulse() {
 
   const changeGender = (g: string | null) => { setActiveGender(g); setActiveCategory("Todos"); setVisibleCount(8); };
 
+  /** Ver `catalogoTieneGeneros`: el filtro Mujer/Hombre solo aparece si el
+   *  catálogo real tiene de los dos. Si no, son dos botones que no filtran. */
+  const hayGeneros = useMemo(() => catalogoTieneGeneros(products), [products]);
+
   const allFiltered = useMemo(() => products.filter(p => {
-    if (activeGender && p.gender !== activeGender && p.gender !== "unisex") return false;
+    // `hayGeneros` también acá: si el catálogo cambia y el filtro desaparece,
+    // un `activeGender` viejo dejaría la tienda filtrada sin nada que lo apague.
+    if (hayGeneros && activeGender && p.gender !== activeGender && p.gender !== "unisex") return false;
     if (activeCategory !== "Todos" && p.category !== activeCategory) return false;
     return true;
-  }), [products, activeGender, activeCategory]);
+  }), [products, hayGeneros, activeGender, activeCategory]);
   const filtered    = allFiltered.slice(0, visibleCount);
   // ── Qué producto muestra el bloque destacado ───────────────────────────────
   // Era `products[7] ?? products[0]`: el OCTAVO de la lista. La dueña no podía
@@ -920,20 +927,24 @@ export default function UrbanPulse() {
               </>
             )}
           </div>
-          {/* MUJER */}
-          <button onClick={() => { changeGender(activeGender==="mujer" ? null : "mujer"); scrollTo("productos"); }}
-            style={{ background:"none", border:"none", borderBottom: activeGender==="mujer" ? `2px solid ${ACC}` : "2px solid transparent", fontSize:11, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor:"pointer", color: DARK, padding:"4px 0", transition:"border-color 0.2s" }}
-            onMouseEnter={e => { e.currentTarget.style.borderBottomColor = ACC; }}
-            onMouseLeave={e => { if(activeGender!=="mujer") e.currentTarget.style.borderBottomColor = "transparent"; }}>
-            Mujer
-          </button>
-          {/* HOMBRE */}
-          <button onClick={() => { changeGender(activeGender==="hombre" ? null : "hombre"); scrollTo("productos"); }}
-            style={{ background:"none", border:"none", borderBottom: activeGender==="hombre" ? `2px solid ${ACC}` : "2px solid transparent", fontSize:11, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor:"pointer", color: DARK, padding:"4px 0", transition:"border-color 0.2s" }}
-            onMouseEnter={e => { e.currentTarget.style.borderBottomColor = ACC; }}
-            onMouseLeave={e => { if(activeGender!=="hombre") e.currentTarget.style.borderBottomColor = "transparent"; }}>
-            Hombre
-          </button>
+          {hayGeneros && (
+            <>
+              {/* MUJER */}
+              <button onClick={() => { changeGender(activeGender==="mujer" ? null : "mujer"); scrollTo("productos"); }}
+                style={{ background:"none", border:"none", borderBottom: activeGender==="mujer" ? `2px solid ${ACC}` : "2px solid transparent", fontSize:11, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor:"pointer", color: DARK, padding:"4px 0", transition:"border-color 0.2s" }}
+                onMouseEnter={e => { e.currentTarget.style.borderBottomColor = ACC; }}
+                onMouseLeave={e => { if(activeGender!=="mujer") e.currentTarget.style.borderBottomColor = "transparent"; }}>
+                Mujer
+              </button>
+              {/* HOMBRE */}
+              <button onClick={() => { changeGender(activeGender==="hombre" ? null : "hombre"); scrollTo("productos"); }}
+                style={{ background:"none", border:"none", borderBottom: activeGender==="hombre" ? `2px solid ${ACC}` : "2px solid transparent", fontSize:11, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor:"pointer", color: DARK, padding:"4px 0", transition:"border-color 0.2s" }}
+                onMouseEnter={e => { e.currentTarget.style.borderBottomColor = ACC; }}
+                onMouseLeave={e => { if(activeGender!=="hombre") e.currentTarget.style.borderBottomColor = "transparent"; }}>
+                Hombre
+              </button>
+            </>
+          )}
           <button onClick={() => scrollTo("nosotros")}
             style={{ background:"none", border:"none", borderBottom:"2px solid transparent", fontSize:11, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor:"pointer", color:DARK, padding:"4px 0", transition:"border-color 0.2s" }}
             onMouseEnter={e => { e.currentTarget.style.borderBottomColor = ACC; }}
@@ -1070,7 +1081,7 @@ export default function UrbanPulse() {
               <p style={{ padding:"12px 40px", fontSize:11, color:MID, margin:0, fontStyle:"italic" }}>Sin categorías disponibles</p>
             )}
           </>
-          {[["Mujer","mujer"],["Hombre","hombre"]].map(([label, g]) => (
+          {hayGeneros && [["Mujer","mujer"],["Hombre","hombre"]].map(([label, g]) => (
             <button key={g} onClick={() => { changeGender(activeGender===g ? null : g); scrollTo("productos"); setMobileMenuOpen(false); }}
               style={{ display:"block", width:"100%", background: activeGender===g ? DARK : "none", border:"none", borderBottom:`2px solid ${DARK}`, color: activeGender===g ? accSobreDark : DARK, padding:"16px 24px", fontSize:12, textAlign:"left", cursor:"pointer", letterSpacing:3, fontWeight:800, textTransform:"uppercase" }}>
               {label}
