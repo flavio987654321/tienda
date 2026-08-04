@@ -131,7 +131,10 @@ que no sea Talle o Color.
 
 ## 5. QUÉ HAY QUE CAMBIAR
 
-### 🔲 5.1 — Que las opciones viajen con su nombre *(el cambio de fondo)*
+### ✅ 5.1 — Que las opciones viajen con su nombre *(el cambio de fondo)*
+
+> **HECHO** en la rama `refactor/opciones-con-nombre` (2026-08-04). Sin mergear todavía.
+> Ver el estado verificado al final, en la sección 8.
 
 Reemplazar `sizes[]` / `colors[]` por algo como:
 
@@ -265,7 +268,11 @@ precargado y puede escribir otra cosa.
 
 ---
 
-### 🔲 5.3 — Una sola opción no es una opción
+### ✅ 5.3 — Una sola opción no es una opción
+
+> **HECHO** en la misma rama. Vive en `lib/opciones.ts` (`opcionesVisibles`), una sola vez para
+> las seis pantallas que dibujan opciones. Toca 84 productos de las tiendas reales: 46 con
+> `Talle: "Único"` dejan de dibujar nada, y 84 más pasan de botón a texto.
 
 En los tres lugares:
 
@@ -404,9 +411,8 @@ Cada paso **termina cerrado**. Nada de "por ahora dejamos los dos y después lim
 
 ## 7. ORDEN PROPUESTO
 
-1. **5.1 + 5.3** — opciones con nombre y el selector de una sola opción. El cambio de fondo, y el
-   más barato de hacer *ahora* (sección 4).
-2. **5.2 + 5.6** — el formulario y los bugs sueltos.
+1. ~~**5.1 + 5.3** — opciones con nombre y el selector de una sola opción.~~ ✅ hecho, sin mergear.
+2. **5.2 + 5.6** — el formulario y los bugs sueltos. **← acá estamos**
 3. **5.4 + 5.5** — campos y textos por categoría.
 4. **6.1** — decidir el contenido demo.
 5. **6.2 + 6.3** — las dos estéticas y sus fichas.
@@ -422,6 +428,47 @@ nada.
 - ✅ **Filtro Mujer/Hombre según catálogo** (2026-08-04, commit `be98737`). Los cuatro templates
   tenían los dos botones fijos; con todo en `unisex` no filtraban nada. Ahora aparecen sólo si el
   catálogo tiene de los dos. `lib/generos.ts`.
+
+- ✅ **5.1 + 5.3 — opciones con nombre** (2026-08-04, rama `refactor/opciones-con-nombre`,
+  11 commits, **sin mergear**). `sizes`/`colors` ya no existen; en su lugar va
+  `opciones: { nombre, valores }[]`.
+
+  **Duplicación que desapareció:**
+
+  | Estaba escrito | Copias | Rotas |
+  |---|---|---|
+  | Aplanado a talles/colores, cada uno con su lista blanca | 7 | — |
+  | Buscador de variante | 7 | **3** |
+  | Sincronización entre opciones (12 efectos) | 4 versiones | — |
+
+  Quedan tres funciones: `buscarVariante`, `opcionesVisibles` y `reacomodarSeleccion`, más
+  `opcionesDeVariantes`.
+
+  **Las tres copias rotas del buscador vendían siempre la primera variante.** Comparaban
+  `v.value` —que guarda `"M/L / Negro"`— contra el talle o el color solos. Nunca matcheaba.
+  Estaban en el modal, en la ficha y en el listado: los tres caminos de compra. El arreglo del
+  commit `2eac7e8` sólo había cubierto el modal.
+
+  **Un bug de nivel caída encontrado al verificar:** el carrito guardado en localStorage se
+  restauraba con `JSON.parse` y nada más. Los carritos viejos no tienen `seleccion`, así que
+  `Object.values(undefined)` tiraba la tienda entera a pantalla de error — para todo comprador
+  con una compra a medio hacer el día del deploy. Arreglado en `migrarCarritoGuardado`.
+
+  **Verificado en el navegador contra la base de producción:**
+
+  | Prueba | Resultado |
+  |---|---|
+  | Páginas sin errores de JS (4 tiendas + 4 demos) | 16/16 |
+  | Compra desde la ficha | 4/4 |
+  | Compra desde el modal (home + catálogo) | 8/8 |
+  | Los 4 templates de Moda | 4/4 |
+  | Carritos guardados (viejo, sin variantes, nuevo, basura) | 4/4 |
+  | Todas las combinaciones de todos los productos | **0 mal de 230** |
+
+  `tsc` limpio · `eslint` 0 errores · `next build` compila.
+
+  **Lo que NO resuelve:** el formulario sigue sin dejar nombrar la opción. Ver 5.2 — sin eso, la
+  vitrina sabe dibujar "Largo" pero nadie puede cargarlo.
 
 ---
 
