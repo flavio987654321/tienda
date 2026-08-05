@@ -2479,6 +2479,16 @@ function ProductoFormPage() {
                           </div>
                         );
                       })}
+                      {/* SKU, igual que en el constructor: sólo de lg para arriba,
+                          donde la fila tiene lugar de sobra. Si estuviera acá y no
+                          allá, quién puede cargarlo dependería del modo. */}
+                      <div className="hidden lg:block w-28 shrink-0">
+                        <label className="block text-xs font-medium text-gray-500 mb-1 flex items-center">
+                          SKU
+                          <Tip align="right" text="Tu código interno para esta variante (ej: COL-40-BL). Es opcional. Sirve para encontrarla en tu depósito o cruzarla con la lista de tu proveedor, y se lo pasamos a Google para que sepa que la misma prenda vendida en dos lados es un solo producto." />
+                        </label>
+                        <input type="text" value={variant.sku} onChange={(e) => updateVariantField(idx, "sku", e.target.value)} placeholder="opcional" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                      </div>
                       <div className="w-20 shrink-0">
                         <label className="block text-xs font-medium text-gray-500 mb-1">Stock</label>
                         <input type="number" value={variant.stock} onChange={(e) => updateVariantField(idx, "stock", e.target.value)} min="0" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />

@@ -102,8 +102,13 @@ manda al guardar (`page.tsx:342`), lo valida el servidor y lo guarda Prisma.
 **No hay un solo input de SKU en toda la pantalla.** Ni en manual ni en el
 constructor. El dato viaja de ida y vuelta y nadie lo puede tocar.
 
-O se le pone un campo, o se borra del ciclo. Hoy es código que se mantiene sin
-que sirva a nadie — justo lo que dijimos que no queríamos dejar.
+> **Corrección (2026-08-05).** Acá decía que era código muerto y que había que
+> borrarlo. Era falso. El SKU **se manda a Google** en los datos estructurados
+> de cada ficha (`structured-data.ts:141`), y el comentario de ahí explica para
+> qué: *"le sirve a Google para juntar la misma prenda vendida en distintos
+> lados"*. No era código muerto sino una función a medio conectar — la salida
+> existía, la entrada no. **Resuelto**: se le dio la columna, de `lg` para
+> arriba, en el constructor y en el manual.
 
 ### 1.3 — La tabla del constructor se desborda en celular 🟠
 
@@ -320,7 +325,8 @@ Qué cambia esto:
 - **El "Coilar" de tiendaapps ya es el caso perdido.** Usa `Media` (40/50/70cm) +
   `Color`, y sus 2 fotos están asignadas a *Rojo* y *Blanco*. Un collar de 40cm y
   uno de 70cm se ven distinto, pero no hay forma de darle una foto a cada largo.
-- **El SKU no lo usa nadie** — 0 de todas las variantes. Se borra, no se completa.
+- **El SKU está en 0 variantes** — pero no porque no sirva: porque no hay dónde
+  escribirlo. Va a los datos estructurados de Google. Se le da el campo (ver 1.2).
 - **La tercera opción no la usa nadie** y **ningún rubro se quedó sin
   constructor**. Bajan de prioridad: son correctos, pero no urgentes.
 - **Las filas duplicadas y vacías nunca pasaron.** Los agujeros son reales, pero
@@ -335,7 +341,7 @@ Qué cambia esto:
 | A1 | Que cambiar a constructor **no borre**: recalcular `builderColors/Sizes` desde las filas | `page.tsx:2296` | Cualquiera, hoy |
 | A2 | Asignar foto a **cualquier valor**, no sólo a colores | `page.tsx:844,1458` | 98/107 productos |
 | A3 | Que la fila del constructor sea responsive (apilada < 640px) | `VariantBuilder.tsx:306` | Quien carga del celular |
-| A4 | **Borrar el SKU** del ciclo — 0 usos, sin input no va a tener ninguno | ambos | Código muerto |
+| A4 | **Darle la columna al SKU** — 0 usos porque no hay dónde escribirlo, y Google lo espera | ambos | SEO de fichas |
 
 ### Fase A′ — Los que todavía no mordieron (mismo viaje, baratos)
 

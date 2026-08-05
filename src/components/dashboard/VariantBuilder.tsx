@@ -278,24 +278,31 @@ export function VariantBuilder({
       </div>
 
       {/* ── Tabla de variantes generadas ──
-          `max-w-3xl` para que la fila no se estire con la pantalla: las columnas
-          de números están pegadas al borde derecho, así que en un monitor ancho
-          quedaban a 900px del nombre de la variante y había que barrer la vista
-          de una punta a la otra para saber a qué fila pertenecía el stock.
-          Con el tope, al nombre le quedan ~364px —de sobra para "Blanco · 40cm"—
-          y los números caen al lado. */}
+          El hueco de las pantallas anchas se llena con el SKU en vez de cortar la
+          tabla: cortarla dejaba el vacío del lado derecho, que es peor. El SKU no
+          era código muerto —va a los datos estructurados de Google
+          (`structured-data.ts`), que lo usa para saber que la misma prenda
+          vendida en dos lados es una sola— pero no había dónde escribirlo, así
+          que nunca se mandaba. Aparece sólo de `lg` para arriba: ahí el espacio
+          ya estaba vacío, y en el celular no suma un campo más que llenar. */}
       {variants.length > 0 && (
-        <div className="space-y-2 max-w-3xl">
+        <div className="space-y-2">
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
             Variantes creadas ({variants.length})
           </p>
 
           {/* Encabezado. Sólo de sm para arriba: abajo cada número lleva su
               propia etiqueta, porque la fila se parte en dos. */}
-          <div className="hidden sm:grid gap-3 px-3 pb-1 text-xs font-semibold text-gray-400 uppercase tracking-wide sm:grid-cols-[32px_56px_1fr_72px_88px_72px]">
+          <div className="hidden sm:grid gap-3 px-3 pb-1 text-xs font-semibold text-gray-400 uppercase tracking-wide sm:grid-cols-[32px_56px_1fr_72px_88px_72px] lg:grid-cols-[32px_56px_1fr_1.4fr_72px_88px_72px]">
             <span />
             <span>Foto</span>
             <span>Variante</span>
+            <span
+              className="hidden lg:block"
+              title="Tu código interno para esta variante (ej: COL-40-BL). Es opcional. Sirve para encontrarla en tu depósito o cruzarla con la lista de tu proveedor, y se lo pasamos a Google para que sepa que la misma prenda vendida en dos lados es un solo producto."
+            >
+              SKU
+            </span>
             <span className="text-center">Stock</span>
             <span>Precio propio</span>
             <span>Alerta</span>
@@ -327,7 +334,7 @@ export function VariantBuilder({
               // seis columnas, sin duplicar el marcado.
               <div
                 key={idx}
-                className="grid gap-3 items-center px-3 py-2.5 bg-gray-50 rounded-xl grid-cols-[28px_56px_1fr] sm:grid-cols-[32px_56px_1fr_72px_88px_72px]"
+                className="grid gap-3 items-center px-3 py-2.5 bg-gray-50 rounded-xl grid-cols-[28px_56px_1fr] sm:grid-cols-[32px_56px_1fr_72px_88px_72px] lg:grid-cols-[32px_56px_1fr_1.4fr_72px_88px_72px]"
               >
                 {/* Círculo de color */}
                 <span className="flex justify-center">
@@ -362,6 +369,17 @@ export function VariantBuilder({
                   {color && size && <span className="text-gray-400"> · </span>}
                   {size && <span>{size}</span>}
                 </p>
+
+                {/* SKU. `hidden lg:block`, así que abajo de lg no es ni un ítem de
+                    la grilla y las seis columnas de arriba siguen valiendo. */}
+                <input
+                  type="text"
+                  value={v.sku}
+                  onChange={e => onVariantChange(idx, "sku", e.target.value)}
+                  placeholder="opcional"
+                  aria-label={`SKU de ${[color, size].filter(Boolean).join(" · ")}`}
+                  className="hidden lg:block w-full border border-gray-200 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+                />
 
                 {/* Los tres números. En celular, fila propia con etiquetas. */}
                 <div className="col-span-3 grid grid-cols-3 gap-2 sm:contents">
