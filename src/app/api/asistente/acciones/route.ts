@@ -24,7 +24,9 @@ export async function GET() {
       logo: true,
       storeConfig: true,
       mpConnectedAt: true,
-      _count: { select: { products: true } },
+      // Sin los borrados, igual que en /api/asistente: las dos rutas deciden lo
+      // mismo y tienen que contar lo mismo.
+      _count: { select: { products: { where: { deletedAt: null } } } },
     },
   });
   if (!store) return NextResponse.json({ error: "No autorizado" }, { status: 403 });

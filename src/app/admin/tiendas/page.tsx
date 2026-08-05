@@ -14,7 +14,9 @@ export default async function AdminTiendasPage({
     orderBy: { createdAt: "desc" },
     include: {
       owner: { select: { name: true, email: true } },
-      _count: { select: { products: true, affiliates: true, orders: true } },
+      // Sin los borrados: el admin mira lo que la tienda tiene, no las filas que
+      // quedaron en la tabla después de un borrado lógico.
+      _count: { select: { products: { where: { deletedAt: null } }, affiliates: true, orders: true } },
     },
   });
 
