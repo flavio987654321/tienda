@@ -64,7 +64,6 @@ const themeBase: DetailTheme = {
     // descuento salía terracota en la portada y FUCSIA al abrir el producto.
     paletaPromo: paletaDeTemplate("boho-terra"),
     // La columna de compra, igual que el panel del modal ─────────────────────
-    rotuloTalle: "Talle",
     rotuloOpcion: { fontSize: 10, letterSpacing: 3, textTransform: "uppercase" },
     chipTalleCuadrado: true,
     precioAcento: true,

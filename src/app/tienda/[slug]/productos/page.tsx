@@ -4,8 +4,12 @@ import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { useState, useEffect, useMemo, useRef, useCallback, Suspense, Fragment } from "react";
 import Link from "next/link";
 import { useCartLogic } from "@/hooks/useCartLogic";
-import type { StorefrontProduct, StorefrontVariant, PlaceOrderParams } from "@/hooks/useStorefront";
-import { getDemoPool, fillTargetFor, parsePromotions } from "@/hooks/useStorefront";
+import type { StorefrontProduct, StorefrontVariant, PlaceOrderParams, OpcionProducto, SeleccionOpciones } from "@/hooks/useStorefront";
+import { getDemoPool, fillTargetFor, parsePromotions,  } from "@/hooks/useStorefront";
+import { esOpcionDeColor, valoresElegidos } from "@/lib/opciones";
+import { opcionesVisibles } from "@/lib/opciones";
+import { parseVariantAttrs } from "@/lib/variantAttrs";
+import { buscarVariante } from "@/lib/variantMatch";
 import type { ActivePromotion } from "@/lib/pricing";
 import { useTouchSwipe } from "@/hooks/useTouchSwipe";
 import { useResenasProducto, type ResenaProducto } from "@/hooks/useResenasProducto";
@@ -54,15 +58,6 @@ function SocialIcon({ network }: { network: string }) {
 }
 
 // ── Tipos extra ──────────────────────────────────────────────────────────────
-const SIZE_ATTRS  = [
-  "talle","size","talla","talles","sizes",
-  "tamaño","tamano",
-  "almacenamiento","ram",
-  "versión","version",
-  "formato","variante","material",
-  "sabor","peso/tamaño","peso",
-];
-const COLOR_ATTRS = ["color","colour","colores","colors","tono"];
 
 // Reseñas: cuántas se ven de entrada y cuántas suma cada "Ver más". No se paginan
 // a propósito — la lista vive adentro de un panel que scrollea, y con páginas
@@ -165,23 +160,23 @@ type RawProduct = {
 
 function mapProduct(raw: RawProduct): StorefrontProduct {
   const variants = raw.variants ?? [];
-  const sizesSet  = new Set<string>();
-  const colorsSet = new Set<string>();
+  // SÉPTIMA copia de lo mismo. Las opciones salen de las variantes con su nombre,
+  // sin lista blanca que decida cuáles sobreviven.
+  const porNombre = new Map<string, Set<string>>();
+  const sumar = (nombre: string, valor: string) => {
+    const n = (nombre ?? "").trim();
+    if (!n || !valor) return;
+    if (!porNombre.has(n)) porNombre.set(n, new Set());
+    porNombre.get(n)!.add(valor);
+  };
   variants.forEach((v) => {
-    let attrs: Record<string, string> = {};
-    try { const p = JSON.parse(v.name); if (p && typeof p === "object") attrs = p; } catch {}
-    if (Object.keys(attrs).length > 0) {
-      Object.entries(attrs).forEach(([k, val]) => {
-        if (SIZE_ATTRS.includes(k.toLowerCase())  && val) sizesSet.add(val as string);
-        if (COLOR_ATTRS.includes(k.toLowerCase()) && val) colorsSet.add(val as string);
-      });
-    } else {
-      if (SIZE_ATTRS.includes(v.name?.toLowerCase())  && v.value) sizesSet.add(v.value);
-      if (COLOR_ATTRS.includes(v.name?.toLowerCase()) && v.value) colorsSet.add(v.value);
-    }
+    const attrs = parseVariantAttrs(v.name);
+    if (attrs) Object.entries(attrs).forEach(([n, val]) => sumar(n, String(val ?? "")));
+    else sumar(v.name, v.value);
   });
-  const sizes  = [...sizesSet];
-  const colors = [...colorsSet];
+  const opciones: OpcionProducto[] = [...porNombre].map(([nombre, valores]) => ({
+    nombre, valores: [...valores],
+  }));
   let images: string[] = [];
   let imageItems: { url: string; variantValue?: string }[] = [];
   try {
@@ -217,7 +212,7 @@ function mapProduct(raw: RawProduct): StorefrontProduct {
     subcategory: raw.subcategory ?? undefined,
     gender: raw.gender ?? "unisex",
     description: raw.description ?? null,
-    images, imageItems, reelUrls, sizes, colors, variants,
+    images, imageItems, reelUrls, opciones, variants,
     attributes,
   };
 }
@@ -602,12 +597,17 @@ function ProductosPageInner() {
   const [lightboxSrc,      setLightboxSrc]      = useState<string|null>(null);
 
   // ── Funciones estables para useCartLogic ──────────────────────────────────
-  const resolveVariantId = useCallback((product: StorefrontProduct, sizeValue: string, colorValue: string): string | null => {
-    if (!product.variants.length) return null;
-    const match = product.variants.find((v) => v.value === sizeValue || v.value === colorValue);
-    if (!match && product.variants.length === 1) return product.variants[0].id;
-    return match?.id ?? product.variants[0]?.id ?? null;
-  }, []);
+  /**
+   * SEXTA copia del buscador de variante, y la TERCERA que estaba rota: comparaba
+   * `v.value` —que guarda "M/L / Negro"— contra el talle o el color sueltos, no
+   * coincidia nunca y caia en `variants[0]`. Comprar desde el catalogo vendia la
+   * primera variante, igual que pasaba desde el modal y desde la ficha.
+   */
+  const resolveVariantId = useCallback(
+    (product: StorefrontProduct, sel: SeleccionOpciones): string | null =>
+      buscarVariante(product.variants, valoresElegidos(sel))?.id ?? null,
+    [],
+  );
 
   const validateCoupon = useCallback(async (code: string, subtotal: number, email?: string) => {
     if (!storeIdRef.current) return { error: "Tienda no disponible" };
@@ -649,11 +649,11 @@ function ProductosPageInner() {
   const {
     cartOpen, setCartOpen, cartCount, checkoutOpen,
     modalProduct, setModalProduct, modalImg, setModalImg,
-    selectedSize, setSelectedSize, selectedColor, setSelectedColor, qty, setQty,
+    seleccion, setOpcion, qty, setQty,
     toastMsg, openModal, addToCart, modalScrollRef,
     // Esta pantalla no los usaba: ni el talle ni el color avisaban que estaban
     // agotados hasta despues de elegirlos.
-    outOfStockSizes, outOfStockColors,
+    sinStock,
     toggleFavorite, favorites,
   } = cart;
 
@@ -911,7 +911,7 @@ function ProductosPageInner() {
     setOpenGroups(prev => new Set([...prev].filter(k => !k.startsWith("attr:"))));
   };
 
-  const variantPrice = modalProduct ? resolveVariantPrice(modalProduct.variants, selectedSize, selectedColor) : null;
+  const variantPrice = modalProduct ? resolveVariantPrice(modalProduct.variants, valoresElegidos(seleccion)) : null;
   const displayPrice = variantPrice ?? (modalProduct?.price ?? 0);
   // Promo de tienda para el modal, sobre el precio efectivo (variante si hay).
   const modalPromo = resolveProductPromo({ id: modalProduct?.id ?? "", price: displayPrice, category: modalProduct?.category ?? null }, promotions);
@@ -921,22 +921,11 @@ function ProductosPageInner() {
   const nxmPaid = modalPromo.nxm ? qty - Math.floor(qty / modalPromo.nxm.n) * (modalPromo.nxm.n - modalPromo.nxm.m) : null;
 
   // ── Stock de la variante seleccionada en el modal ──────────────────────────
-  const selectedVariantStock = useMemo(() => {
-    if (!modalProduct || !modalProduct.variants.length) return null;
-    const match = modalProduct.variants.find((v) => {
-      try {
-        const a = JSON.parse(v.name);
-        if (a && typeof a === "object") {
-          const vals = Object.values(a).map((x) => String(x).toLowerCase());
-          const sizeOk  = !selectedSize  || vals.includes(selectedSize.toLowerCase());
-          const colorOk = !selectedColor || vals.includes(selectedColor.toLowerCase());
-          return sizeOk && colorOk;
-        }
-      } catch {}
-      return v.value.includes(selectedSize) && v.value.includes(selectedColor);
-    }) ?? (modalProduct.variants.length === 1 ? modalProduct.variants[0] : null);
-    return match?.stock ?? null;
-  }, [modalProduct, selectedSize, selectedColor]);
+  // Septima copia del mismo buscador. Ya usa el compartido.
+  const selectedVariantStock = useMemo(
+    () => modalProduct ? buscarVariante(modalProduct.variants, valoresElegidos(seleccion))?.stock ?? null : null,
+    [modalProduct, seleccion],
+  );
 
   /* ── Elegir foto / color / talle ─────────────────────────────────────────────
      Antes eran tres efectos que se disparaban entre sí. El de la foto, al ver una
@@ -950,76 +939,17 @@ function ProductosPageInner() {
      Ahora se resuelve en el click, igual que en el template: `elegirFoto` pone la
      foto que se pidió y punto; el color solo se toca si esa foto es de otro.
   ──────────────────────────────────────────────────────────────────────────── */
-  const attrsDe = (name: string): Record<string, unknown> | null => {
-    try { const a = JSON.parse(name); return a && typeof a === "object" && !Array.isArray(a) ? a : null; } catch { return null; }
-  };
-  const valorAttr = (a: Record<string, unknown>, claves: string[]): string => {
-    const k = Object.keys(a).find(x => claves.includes(x.toLowerCase()));
-    return k != null && a[k] != null ? String(a[k]) : "";
-  };
-  const variantesConAttrs = (p: StorefrontProduct) =>
-    p.variants.map(v => ({ v, a: attrsDe(v.name) }))
-      .filter((x): x is { v: StorefrontProduct["variants"][number]; a: Record<string, unknown> } => !!x.a);
-  const fotoDeColor = (p: StorefrontProduct, color: string) =>
-    p.imageItems.findIndex(img => !!img.variantValue && img.variantValue.toLowerCase() === color.toLowerCase());
-
-  // Si el talle puesto no existe en ese color, pasa al primero con stock.
-  function acomodarTalleA(color: string) {
-    if (!modalProduct) return;
-    const delColor = variantesConAttrs(modalProduct)
-      .filter(x => valorAttr(x.a, COLOR_ATTRS).toLowerCase() === color.toLowerCase());
-    if (!delColor.length) return;
-    if (selectedSize && delColor.some(x => valorAttr(x.a, SIZE_ATTRS).toLowerCase() === selectedSize.toLowerCase())) return;
-    const mejor = delColor.find(x => x.v.stock > 0) ?? delColor[0];
-    const talle = valorAttr(mejor.a, SIZE_ATTRS);
-    if (talle && talle !== selectedSize) setSelectedSize(talle);
-  }
-
-  function elegirColor(color: string) {
-    if (!modalProduct) return;
-    setSelectedColor(color);
-    const idx = fotoDeColor(modalProduct, color);
-    if (idx !== -1) setModalImg(idx);
-    acomodarTalleA(color);
-  }
+  // El acomodo de una opción cuando cambia otra, y el de la foto con lo elegido,
+  // vivían acá escritos a mano y sólo para talle y color. Ahora los hace
+  // `useCartLogic` para las opciones que haya y para las seis pantallas.
 
   // Acepta índices fuera de rango para que las flechas sean `elegirFoto(i ± 1)`.
   function elegirFoto(i: number) {
     if (!modalProduct) return;
     const total = modalProduct.images.length;
     if (!total) return;
-    const idx = ((i % total) + total) % total;
-    setModalImg(idx);
-    const color = modalProduct.imageItems[idx]?.variantValue;
-    if (!color || color.toLowerCase() === selectedColor.toLowerCase()) return;
-    setSelectedColor(color);
-    acomodarTalleA(color);
+    setModalImg(((i % total) + total) % total);
   }
-
-  function elegirTalle(talle: string) {
-    if (!modalProduct) return;
-    setSelectedSize(talle);
-    const conTalle = variantesConAttrs(modalProduct)
-      .filter(x => valorAttr(x.a, SIZE_ATTRS).toLowerCase() === talle.toLowerCase());
-    if (!conTalle.length) return;
-    // Si el color puesto viene en ese talle, no se toca: lo eligió el comprador.
-    if (selectedColor && conTalle.some(x => valorAttr(x.a, COLOR_ATTRS).toLowerCase() === selectedColor.toLowerCase())) return;
-    const mejor = conTalle.find(x => x.v.stock > 0) ?? conTalle[0];
-    const color = valorAttr(mejor.a, COLOR_ATTRS);
-    if (!color || color === selectedColor) return;
-    setSelectedColor(color);
-    const idx = fotoDeColor(modalProduct, color);
-    if (idx !== -1) setModalImg(idx);
-  }
-
-  // Lo único que sigue siendo un efecto: al ABRIR la ficha hay que mostrar la foto
-  // del color con el que abre, y ahí no hubo ningún click que lo resuelva.
-  useEffect(() => {
-    if (!modalProduct || !selectedColor) return;
-    const idx = fotoDeColor(modalProduct, selectedColor);
-    if (idx !== -1) setModalImg(idx);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [modalProduct?.id]);
 
   // ── isMobile ───────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -2462,53 +2392,50 @@ function ProductosPageInner() {
                   Color, talle, cantidad y el botón, todo junto y ARRIBA de la
                   descripción. Antes había que pasar la descripción entera y la
                   tabla de características para llegar a elegir el talle. */}
-              {/* Talle primero y color después, el mismo orden que el modal del
-                  template. Los títulos van a secas ("TALLE", no "TALLE: 32"):
-                  repetir el valor elegido en el título es decir dos veces lo
-                  mismo, y el chip marcado ya lo dice. */}
-              {modalProduct.sizes.length > 0 && (
-                <div>
-                  {tituloSeccion(v.tituloConValor && selectedSize ? `Talle: ${selectedSize}` : "Talle")}
-                  <div style={{ display:"flex", gap:7, flexWrap:"wrap" }}>
-                    {modalProduct.sizes.map(size => {
-                      const sinStock = outOfStockSizes.has(size);
-                      return (
-                        <button key={size} onClick={() => elegirTalle(size)}
-                          style={{ width:v.chipTalle, height:v.chipTalle, fontSize:12, fontWeight: selectedSize===size ? 800 : 600, border: `2px solid ${selectedSize===size ? chipBg : border}`, background: selectedSize===size ? chipBg : "transparent", color: selectedSize===size ? chipText : T, cursor:"pointer", transition:"all 0.2s", opacity: sinStock ? 0.35 : 1, textDecoration: sinStock ? "line-through" : "none" }}>
-                          {size}
-                        </button>
-                      );
-                    })}
+              {/* Un bloque por opción, con el nombre que le puso quien cargó el
+                  producto. Los títulos van a secas ("TALLE", no "TALLE: 32") salvo
+                  que el template pida lo contrario: repetir el valor elegido en el
+                  título es decir dos veces lo mismo, y el chip marcado ya lo dice. */}
+              {opcionesVisibles(modalProduct.opciones).map(op => {
+                if (op.tipo === "dato") return (
+                  <div key={op.nombre}>
+                    {tituloSeccion(op.nombre)}
+                    <p style={{ margin:0, fontSize:13, fontWeight:700, color:T }}>{op.valor}</p>
                   </div>
-                </div>
-              )}
-
-              {modalProduct.colors.length > 0 && (
-                <div>
-                  {tituloSeccion(v.tituloConValor && selectedColor ? `Color: ${selectedColor}` : "Color")}
-                  <div style={{ display:"flex", gap:7, flexWrap:"wrap" }}>
-                    {/* Con el puntito de muestra, como en el modal del template:
-                        "Petróleo" o "Arena" no le dicen nada a nadie hasta verlo. */}
-                    {modalProduct.colors.map(color => {
-                      const swatch = colorToSwatch(color);
-                      const sinStock = outOfStockColors.has(color);
-                      return (
-                        <button key={color} onClick={() => elegirColor(color)}
-                          style={{ display:"flex", alignItems:"center", gap:7, padding:v.chipColorPad, fontSize:11, border: `2px solid ${selectedColor===color ? chipBg : border}`, background: selectedColor===color ? chipBg : "transparent", color: selectedColor===color ? chipText : T, fontWeight: selectedColor===color ? 700 : 400, cursor:"pointer", transition:"all 0.2s", opacity: sinStock ? 0.35 : 1, textDecoration: sinStock ? "line-through" : "none" }}>
-                          {/* El anillo del puntito usa el color del TEXTO del chip,
-                              que por construcción contrasta con su fondo. Con un
-                              anillo fijo oscuro, el color "Negro" elegido quedaba
-                              como un puntito negro sobre un chip negro — invisible.
-                              Y en los templates oscuros pasaba lo mismo con
-                              "Blanco". */}
-                          {swatch && <span style={{ width:14, height:14, borderRadius:"50%", background:swatch, border:`1px solid ${selectedColor===color ? chipText : "rgba(0,0,0,0.25)"}`, flexShrink:0 }} />}
-                          {color}
-                        </button>
-                      );
-                    })}
+                );
+                const conMuestra = esOpcionDeColor(op.nombre);
+                const elegidoAhora = seleccion[op.nombre];
+                return (
+                  <div key={op.nombre}>
+                    {tituloSeccion(v.tituloConValor && elegidoAhora ? `${op.nombre}: ${elegidoAhora}` : op.nombre)}
+                    <div style={{ display:"flex", gap:7, flexWrap:"wrap" }}>
+                      {op.valores.map(valor => {
+                        const elegido = elegidoAhora === valor;
+                        const agotado = sinStock(op.nombre, valor);
+                        // Con el puntito de muestra, como en el modal del template:
+                        // "Petróleo" o "Arena" no le dicen nada a nadie hasta verlo.
+                        const swatch = conMuestra ? colorToSwatch(valor) : null;
+                        return (
+                          <button key={valor} onClick={() => setOpcion(op.nombre, valor)}
+                            style={{ fontSize: conMuestra ? 11 : 12, border: `2px solid ${elegido ? chipBg : border}`, background: elegido ? chipBg : "transparent", color: elegido ? chipText : T, cursor:"pointer", transition:"all 0.2s",
+                              opacity: agotado ? 0.35 : 1, textDecoration: agotado ? "line-through" : "none",
+                              ...(conMuestra
+                                ? { display:"flex", alignItems:"center", gap:7, padding:v.chipColorPad, fontWeight: elegido ? 700 : 400 }
+                                : { width:v.chipTalle, height:v.chipTalle, fontWeight: elegido ? 800 : 600 }) }}>
+                            {/* El anillo del puntito usa el color del TEXTO del chip,
+                                que por construcción contrasta con su fondo. Con un
+                                anillo fijo oscuro, "Negro" elegido quedaba como un
+                                puntito negro sobre un chip negro — invisible. Y en
+                                los templates oscuros pasaba lo mismo con "Blanco". */}
+                            {swatch && <span style={{ width:14, height:14, borderRadius:"50%", background:swatch, border:`1px solid ${elegido ? chipText : "rgba(0,0,0,0.25)"}`, flexShrink:0 }} />}
+                            {valor}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-              )}
+                );
+              })}
 
               {/* Apilada como talle y color, no en línea: eran tres controles del
                   mismo tipo puestos de dos formas distintas. */}

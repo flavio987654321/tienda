@@ -131,7 +131,10 @@ que no sea Talle o Color.
 
 ## 5. QUÉ HAY QUE CAMBIAR
 
-### 🔲 5.1 — Que las opciones viajen con su nombre *(el cambio de fondo)*
+### ✅ 5.1 — Que las opciones viajen con su nombre *(el cambio de fondo)*
+
+> **HECHO** en la rama `refactor/opciones-con-nombre` (2026-08-04). Sin mergear todavía.
+> Ver el estado verificado al final, en la sección 8.
 
 Reemplazar `sizes[]` / `colors[]` por algo como:
 
@@ -176,6 +179,48 @@ Archivos que leen `sizes`/`colors` hoy:
 
 **Ventaja de arranque:** Hogar & Tech y Autos **no tienen modal** — van directo a la ficha. Así
 que los modales a tocar son sólo los 4 de Moda, y la ficha se arregla una vez para los 10.
+
+#### La parte cara no es el producto, es la SELECCIÓN
+
+Esto salió recién al mapear (2026-08-05) y no estaba en la primera versión del plan. El
+producto pasa a tener `opciones`, pero además hay que cambiar **qué eligió el comprador**:
+
+`selectedSize` / `selectedColor` → una selección genérica, `Record<string, string>`
+(`{ Talle: "M/L", Color: "Negro" }`), más un `setOpcion(nombre, valor)`.
+
+**150 usos en 8 archivos.** La mayoría son de dos formas repetidas, y el resultado es MENOS
+código que hoy: dos bloques (talles y colores) se convierten en un solo `opciones.map(...)`.
+
+| Hoy | Después |
+|---|---|
+| `selectedSize === s` | `seleccion[op.nombre] === v` |
+| `setSelectedSize(s)` | `setOpcion(op.nombre, v)` |
+
+##### Lo que hay que tocar con cuidado
+
+1. **Restaurar carritos vivos.** `storefront_cart` en el localStorage del comprador guarda
+   `CartItem` con `size`/`color`. Hay gente con el carrito lleno AHORA. Al restaurar, un ítem
+   viejo se convierte a `{ Talle: size, Color: color }` — que es exactamente correcto para todo
+   lo que existe hoy, porque las 249 variantes usan esos dos nombres (ver 3.2).
+2. **`/api/cart/track`.** Mismo caso del lado del servidor, para el recordatorio de carrito
+   abandonado.
+3. **`primerComboConStock`** (`useCartLogic`) elige sola la primera combinación con stock.
+   Recorre talles y, dentro de cada talle, colores. Hay que rehacerla para N opciones.
+4. **La imagen por color.** `imageItems[].variantValue` se compara contra `item.color`. Pasa a
+   compararse contra CUALQUIER valor elegido, que además es más correcto.
+5. **Los tachados de sin stock.** `outOfStockSizes` + `outOfStockColors` → un solo
+   `valoresSinStock`. Ojo: hoy son asimétricos a propósito (los talles miran el color elegido,
+   los colores no miran el talle, por un tema de parpadeo). Al unificarlos hay que decidir eso
+   explícitamente — no dejarlo pasar sin mirar.
+
+##### Lo que NO hay que tocar (verificado)
+
+- **El backend del pedido.** `PlaceOrderParams.cartItems` manda sólo
+  `{ productId, variantId, quantity }`. El talle y el color nunca viajaron.
+- **El carrito abandonado.** `AbandonedCart.items` guarda `size`/`color`, pero **nadie los
+  lee**: `SnapshotItem` es `{ name, price, qty, image }`. El email nunca los mostró.
+- **`lib/variantMatch.ts`.** Ya se escribió genérico a propósito (commit `2eac7e8`): compara por
+  VALORES, sin mirar cómo se llaman las opciones. El refactor se apoya en él sin cambiarlo.
 
 #### Código que DESAPARECE con este cambio
 
@@ -223,7 +268,11 @@ precargado y puede escribir otra cosa.
 
 ---
 
-### 🔲 5.3 — Una sola opción no es una opción
+### ✅ 5.3 — Una sola opción no es una opción
+
+> **HECHO** en la misma rama. Vive en `lib/opciones.ts` (`opcionesVisibles`), una sola vez para
+> las seis pantallas que dibujan opciones. Toca 84 productos de las tiendas reales: 46 con
+> `Talle: "Único"` dejan de dibujar nada, y 84 más pasan de botón a texto.
 
 En los tres lugares:
 
@@ -252,7 +301,25 @@ compra.
 
 ---
 
-### 🔲 5.4 — Faltan campos por categoría en Moda
+### ✅ 5.4 — Faltan campos por categoría en Moda
+
+> **HECHO.** Decidido con Flavio el 2026-08-04: **dos campos por categoría y todos
+> opcionales** — el modelo de Shopify (atributos por categoría, opcionales) y no el de
+> MercadoLibre (ficha técnica larga con campos obligatorios, que hace que se saltee la
+> sección entera). Quedaron: joyas *(Material · Piedra)*, calzado *(Material · Suela)*,
+> bolsos *(Material · Medidas)*, lentes *(Protección UV · Tipo de lente)* y cinturones
+> *(Material · Ancho)*. **Mallas, ropa interior y bebé quedan sin campos propios**: no
+> hay uno que sumen que no sea ruido.
+>
+> Hubo que arreglar dos límites del mecanismo antes de poder cargar nada:
+> 1. Sólo miraba la **sub**categoría, así que los cuatro tipos de joya pedían repetir
+>    los mismos campos, y un producto en "Joyas" sin subcategoría no recibía ninguno.
+>    Ahora cae a la categoría (`camposPropios`).
+> 2. Los campos **se sumaban, nunca reemplazaban**: un collar pedía "Material: Algodón,
+>    poliéster..." además de lo suyo. Ahora el de la categoría pisa al del rubro y se
+>    queda en su lugar (`camposActivos`).
+
+#### La propuesta original, para referencia
 
 Moda pide un solo campo para todo: **Material**. Hogar & Tecnología pide Capacidad para una
 heladera y BTU para un aire.
@@ -271,7 +338,28 @@ El mecanismo (`extraFieldsByCategory`) ya existe y es genérico: **son datos, ce
 
 ---
 
-### 🔲 5.5 — Los ejemplos del formulario son todos de ropa
+### ✅ 5.5 — Los ejemplos del formulario son todos de ropa
+
+> **HECHO.** Los ejemplos del nombre y de los tags salen de la categoría
+> (`ejemploNombre` / `ejemploTags`), y caen a los del rubro si esa categoría no tiene.
+>
+> **La sospecha del párrafo de abajo era cierta y quedó comprobada:** el campo del
+> nombre está **arriba** de la categoría, así que el que carga de arriba hacia abajo no
+> llega a ver el ejemplo bueno; sólo sirve si vuelve a mirar o cambia de categoría. Los
+> tags sí están abajo y ahí funciona siempre.
+>
+> **No se movió la categoría arriba del nombre**, que sería el arreglo de fondo: ni
+> Shopify (título arriba, categoría en la barra lateral) ni Tiendanube ni MercadoLibre
+> lo hacen, y acá cambiaría el orden en los cinco rubros. Los dos primeros además
+> tienen un ejemplo genérico fijo, así que esto ya nos deja mejor que ellos — pero no
+> resuelto.
+>
+> **Un choque que casi se cuela:** los ejemplos arrancaron como un mapa suelto por
+> nombre de categoría. Moda y Autos tienen las dos una categoría `accesorios`, así que
+> una casa de repuestos habría visto "Ej: Lentes de sol polarizados negros". Por eso
+> viven **dentro de cada rubro**, igual que `extraFieldsByCategory`.
+
+#### El análisis original
 
 `storeTypes.ts:114-115`:
 
@@ -362,11 +450,10 @@ Cada paso **termina cerrado**. Nada de "por ahora dejamos los dos y después lim
 
 ## 7. ORDEN PROPUESTO
 
-1. **5.1 + 5.3** — opciones con nombre y el selector de una sola opción. El cambio de fondo, y el
-   más barato de hacer *ahora* (sección 4).
-2. **5.2 + 5.6** — el formulario y los bugs sueltos.
-3. **5.4 + 5.5** — campos y textos por categoría.
-4. **6.1** — decidir el contenido demo.
+1. ~~**5.1 + 5.3** — opciones con nombre y el selector de una sola opción.~~ ✅ hecho, sin mergear.
+2. ~~**5.2 + 5.6** — el formulario y los bugs sueltos.~~ ✅ hecho, sin mergear.
+3. ~~**5.4 + 5.5** — campos y textos por categoría.~~ ✅ hecho, sin mergear.
+4. **6.1** — decidir el contenido demo. **← acá estamos**
 5. **6.2 + 6.3** — las dos estéticas y sus fichas.
 
 Al revés no sirve: si armamos los diseños primero, salen con "Talle" clavado y pasamos de 4
@@ -380,6 +467,47 @@ nada.
 - ✅ **Filtro Mujer/Hombre según catálogo** (2026-08-04, commit `be98737`). Los cuatro templates
   tenían los dos botones fijos; con todo en `unisex` no filtraban nada. Ahora aparecen sólo si el
   catálogo tiene de los dos. `lib/generos.ts`.
+
+- ✅ **5.1 + 5.3 — opciones con nombre** (2026-08-04, rama `refactor/opciones-con-nombre`,
+  11 commits, **sin mergear**). `sizes`/`colors` ya no existen; en su lugar va
+  `opciones: { nombre, valores }[]`.
+
+  **Duplicación que desapareció:**
+
+  | Estaba escrito | Copias | Rotas |
+  |---|---|---|
+  | Aplanado a talles/colores, cada uno con su lista blanca | 7 | — |
+  | Buscador de variante | 7 | **3** |
+  | Sincronización entre opciones (12 efectos) | 4 versiones | — |
+
+  Quedan tres funciones: `buscarVariante`, `opcionesVisibles` y `reacomodarSeleccion`, más
+  `opcionesDeVariantes`.
+
+  **Las tres copias rotas del buscador vendían siempre la primera variante.** Comparaban
+  `v.value` —que guarda `"M/L / Negro"`— contra el talle o el color solos. Nunca matcheaba.
+  Estaban en el modal, en la ficha y en el listado: los tres caminos de compra. El arreglo del
+  commit `2eac7e8` sólo había cubierto el modal.
+
+  **Un bug de nivel caída encontrado al verificar:** el carrito guardado en localStorage se
+  restauraba con `JSON.parse` y nada más. Los carritos viejos no tienen `seleccion`, así que
+  `Object.values(undefined)` tiraba la tienda entera a pantalla de error — para todo comprador
+  con una compra a medio hacer el día del deploy. Arreglado en `migrarCarritoGuardado`.
+
+  **Verificado en el navegador contra la base de producción:**
+
+  | Prueba | Resultado |
+  |---|---|
+  | Páginas sin errores de JS (4 tiendas + 4 demos) | 16/16 |
+  | Compra desde la ficha | 4/4 |
+  | Compra desde el modal (home + catálogo) | 8/8 |
+  | Los 4 templates de Moda | 4/4 |
+  | Carritos guardados (viejo, sin variantes, nuevo, basura) | 4/4 |
+  | Todas las combinaciones de todos los productos | **0 mal de 230** |
+
+  `tsc` limpio · `eslint` 0 errores · `next build` compila.
+
+  **Lo que NO resuelve:** el formulario sigue sin dejar nombrar la opción. Ver 5.2 — sin eso, la
+  vitrina sabe dibujar "Largo" pero nadie puede cargarlo.
 
 ---
 

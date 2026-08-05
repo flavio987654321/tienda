@@ -17,6 +17,9 @@ import { ResenaComentario } from "@/components/store/templates/shared/ResenaCome
 import { useTouchSwipe } from "@/hooks/useTouchSwipe";
 import { masVistos, MIN_MAS_VISTOS } from "@/lib/masVistos";
 import { catalogoTieneGeneros } from "@/lib/generos";
+import { opcionesVisibles, opcionesAElegir } from "@/lib/opciones";
+import {  } from "@/hooks/useStorefront";
+import { esOpcionDeColor, valoresElegidos } from "@/lib/opciones";
 import { ventanaArgentina } from "@/lib/fechas-comerciales";
 import { COMENTARIO_MAX, RESENADOR_MAX } from "@/lib/reviews";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
@@ -32,7 +35,6 @@ import { FadeImage } from "@/components/store/templates/shared/FadeImage";
 import StoreProductReels from "@/components/store/ProductReels";
 import { SectionBlock } from "@/components/store/templates/shared/SectionBlock";
 import { PromoBannerCarousel } from "@/components/store/templates/shared/PromoBannerCarousel";
-import { parseVariantAttrs } from "@/lib/variantAttrs";
 import { colorToSwatch } from "@/lib/colorSwatch";
 import { discountPercent } from "@/lib/discount";
 import { resolveVariantPrice } from "@/lib/variantPrice";
@@ -50,7 +52,6 @@ const CART_ICON_OPTIONS: React.ReactNode[] = [
   <Fragment key="basket"><path d="M5 11 2 7h20l-3 4"/><path d="M4 11h16l-1.7 8.5a2 2 0 0 1-2 1.5H7.7a2 2 0 0 1-2-1.5L4 11Z"/><path d="M9 11V8a3 3 0 0 1 6 0v3"/></Fragment>,
 ];
 
-const SIZE_ATTRS =["talle","size","talla","talles","sizes","tamaño","tamano","almacenamiento","ram","versión","version","formato","variante","material","sabor","peso/tamaño","peso"];
 
 // ── Reseñas de ejemplo, SOLO para el editor y la galería de templates ────────
 // Sirven para diseñar el bloque con algo adentro. En la tienda publicada no
@@ -466,8 +467,8 @@ export default function UrbanPulse() {
   const {
     setCartOpen,
     modalProduct, setModalProduct, modalImg, setModalImg,
-    selectedSize, setSelectedSize, selectedColor, setSelectedColor,
-    qty, setQty, selectedVariantStock, outOfStockSizes,
+    seleccion, setOpcion,
+    qty, setQty, selectedVariantStock, sinStock,
     searchOpen, setSearchOpen, searchQuery, setSearchQuery,
     favorites, favoritesOpen, setFavoritesOpen,
     userDropdownOpen, setUserDropdownOpen, userDropdownRef,
@@ -527,7 +528,7 @@ export default function UrbanPulse() {
       <span style={{ flex:1, height:1, background:`${DARK}1f`, minWidth:0 }} />
     </div>
   );
-  const variantPrice = modalProduct ? resolveVariantPrice(modalProduct.variants, selectedSize, selectedColor) : null;
+  const variantPrice = modalProduct ? resolveVariantPrice(modalProduct.variants, valoresElegidos(seleccion)) : null;
   const displayPrice = variantPrice ?? (modalProduct?.price ?? 0);
   const modalPromo = modalProduct ? resolveProductPromo({ id: modalProduct.id, price: displayPrice, category: modalProduct.category }, promotions) : null;
   // 3×2 en vivo: unidades que se PAGAN a la cantidad elegida (misma cuenta que el motor).
@@ -586,84 +587,6 @@ export default function UrbanPulse() {
     setReviewForm(p => ({ ...p, rating: 5, comment: "" }));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [modalProduct?.id]);
-
-  const colorSyncingRef = useRef(false);
-
-  // Al cambiar color: sync imagen + talle disponible
-  useEffect(() => {
-    if (!modalProduct || !selectedColor) return;
-    const imgIdx = modalProduct.imageItems.findIndex(
-      (img) => img.variantValue && img.variantValue.toLowerCase() === selectedColor.toLowerCase()
-    );
-    // `imgIdx !== modalImg` es lo que evita que la bandera quede trabada. Si la foto
-    // que corresponde al color YA es la que se está viendo, React descarta el
-    // setState y el efecto de [modalImg] —el único que baja la bandera— no corre.
-    // Quedaba en true para siempre, y el próximo cambio de foto a mano se lo comía
-    // sin sincronizar el color. Peor todavía: al abrir el modal, modalImg es 0 y la
-    // foto del primer color suele ser la 0, así que se trababa desde el arranque y
-    // el PRIMER clic en una miniatura ya no funcionaba (UP-4).
-    if (imgIdx !== -1 && imgIdx !== modalImg) { colorSyncingRef.current = true; setModalImg(imgIdx); }
-    const colorVariants = modalProduct.variants.filter((v) => {
-      const a = parseVariantAttrs(v.name);
-      return !!a && Object.values(a).some((x) => String(x).toLowerCase() === selectedColor.toLowerCase());
-    });
-    if (!colorVariants.length) return;
-    const best = colorVariants.find((v) => v.stock > 0) ?? colorVariants[0];
-    const bestAttrs = parseVariantAttrs(best.name);
-    if (bestAttrs) {
-      const sizeKey = Object.keys(bestAttrs).find((k: string) => SIZE_ATTRS.includes(k.toLowerCase()));
-      if (sizeKey && bestAttrs[sizeKey] && bestAttrs[sizeKey] !== selectedSize) setSelectedSize(String(bestAttrs[sizeKey]));
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedColor, modalProduct?.id]);
-
-  // Al cambiar talle: sync color + imagen si el combo talle+color actual no existe
-  useEffect(() => {
-    if (!modalProduct || !selectedSize) return;
-    if (selectedColor) {
-      const hasCombo = modalProduct.variants.some((v) => {
-        const a = parseVariantAttrs(v.name);
-        if (!a) return false;
-        const vals = Object.values(a).map((x) => String(x).toLowerCase());
-        return vals.includes(selectedSize.toLowerCase()) && vals.includes(selectedColor.toLowerCase());
-      });
-      if (hasCombo) return;
-    }
-    const sizeVariants = modalProduct.variants.filter((v) => {
-      const a = parseVariantAttrs(v.name);
-      if (!a) return false;
-      return Object.entries(a).some(([k, val]) => SIZE_ATTRS.includes(k.toLowerCase()) && String(val).toLowerCase() === selectedSize.toLowerCase());
-    });
-    if (!sizeVariants.length) return;
-    const best = sizeVariants.find((v) => v.stock > 0) ?? sizeVariants[0];
-    const bestAttrs = parseVariantAttrs(best.name);
-    if (bestAttrs) {
-      const colorKey = Object.keys(bestAttrs).find((k: string) => ["color","colour","colores","colors","tono"].includes(k.toLowerCase()));
-      if (colorKey && bestAttrs[colorKey]) {
-        const newColor = String(bestAttrs[colorKey]);
-        if (newColor !== selectedColor) {
-          setSelectedColor(newColor);
-          const imgIdx = modalProduct.imageItems.findIndex(
-            (img) => img.variantValue && img.variantValue.toLowerCase() === newColor.toLowerCase()
-          );
-          // Mismo motivo que arriba: solo se levanta si la foto va a cambiar de verdad.
-          if (imgIdx !== -1 && imgIdx !== modalImg) { colorSyncingRef.current = true; setModalImg(imgIdx); }
-        }
-      }
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedSize, modalProduct?.id]);
-
-  // Al cambiar de imagen (flechas/miniaturas): sync color si esa foto pertenece a otra variante
-  useEffect(() => {
-    if (!modalProduct) return;
-    if (colorSyncingRef.current) { colorSyncingRef.current = false; return; }
-    const img = modalProduct.imageItems[modalImg];
-    if (img?.variantValue && img.variantValue.toLowerCase() !== selectedColor?.toLowerCase()) {
-      setSelectedColor(img.variantValue);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [modalImg]);
 
   // Guarda contra el doble envío. `reviewSubmitting` apaga el botón, pero es un
   // `setState`: no se aplica hasta el siguiente render, así que dos clics rápidos
@@ -1690,10 +1613,13 @@ export default function UrbanPulse() {
                 lo que el producto realmente pide elegir. */}
             <button onClick={() => isInquiryMode ? openInquiry(featuredProduct) : openModal(featuredProduct)}
               style={{ width:"100%", background:ACC, color:accentText, border:"none", padding:"18px", fontSize:11, fontWeight:900, letterSpacing:4, textTransform:"uppercase", cursor:"pointer" }}>
-              {isInquiryMode              ? "Consultar disponibilidad"
-               : featuredProduct.sizes.length  > 0 ? "Elegir talle y comprar"
-               : featuredProduct.colors.length > 0 ? "Elegir color y comprar"
-               : "Comprar"}
+              {/* El botón nombra la PRIMERA opción que hay que elegir, con la
+                  palabra que le puso la dueña: "Elegir largo y comprar" para un
+                  collar. Antes sólo sabía decir "talle" o "color". */}
+              {isInquiryMode ? "Consultar disponibilidad"
+               : opcionesAElegir(featuredProduct.opciones)[0]
+                 ? `Elegir ${opcionesAElegir(featuredProduct.opciones)[0].nombre.toLowerCase()} y comprar`
+                 : "Comprar"}
             </button>
           </div>
         </div>
@@ -2737,39 +2663,48 @@ export default function UrbanPulse() {
                     </div>
                   );
                 })()}
-                <div style={{ marginBottom:18 }}>
-                  <p style={{ margin:"0 0 8px", fontSize:10, fontWeight:900, letterSpacing:2, textTransform:"uppercase" }}>Talle: <span style={{ color:MID, fontWeight:600 }}>{selectedSize}</span></p>
-                  <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
-                    {modalProduct.sizes.map(s => {
-                      const outOfStock = outOfStockSizes.has(s);
-                      return (
-                        <button key={s} onClick={() => setSelectedSize(s)}
-                          // El talle elegido pinta el fondo de DARK y escribía el
-                          // número con el acento crudo: con un acento oscuro
-                          // quedaba negro sobre negro y el talle seleccionado era
-                          // justo el único que no se leía.
-                          style={{ border:`2px solid ${selectedSize === s ? DARK : "#ddd"}`, background: selectedSize === s ? DARK : WHITE, color: selectedSize === s ? accSobreDark : DARK, padding:"7px 13px", fontSize:11, fontWeight:800, cursor:"pointer", letterSpacing:1, opacity: outOfStock ? 0.35 : 1, textDecoration: outOfStock ? "line-through" : "none" }}>
-                          {s}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-                <div style={{ marginBottom:22 }}>
-                  <p style={{ margin:"0 0 8px", fontSize:10, fontWeight:900, letterSpacing:2, textTransform:"uppercase" }}>Color: <span style={{ color:MID, fontWeight:600 }}>{selectedColor}</span></p>
-                  <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
-                    {modalProduct.colors.map(c => {
-                      const swatch = colorToSwatch(c);
-                      return (
-                        <button key={c} onClick={() => setSelectedColor(c)}
-                          style={{ display:"flex", alignItems:"center", gap:7, border:`2px solid ${selectedColor === c ? DARK : "#ddd"}`, background:WHITE, color: selectedColor === c ? DARK : MID, padding:"6px 12px", fontSize:11, fontWeight:700, cursor:"pointer" }}>
-                          {swatch && <span style={{ width:14, height:14, borderRadius:"50%", background:swatch, border:"1px solid #ddd", flexShrink:0 }} />}
-                          {c}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
+                {/* Un bloque por opción, con el nombre que le puso quien cargó el
+                    producto. Antes eran dos fijos con "Talle" y "Color" a mano y
+                    SIN guarda, así que un producto sin talles igual dibujaba el
+                    rótulo "Talle:" con la fila vacía debajo. */}
+                {opcionesVisibles(modalProduct.opciones).map(op => {
+                  if (op.tipo === "dato") return (
+                    <div key={op.nombre} style={{ marginBottom:18 }}>
+                      <p style={{ margin:"0 0 8px", fontSize:10, fontWeight:900, letterSpacing:2, textTransform:"uppercase" }}>{op.nombre}: <span style={{ color:MID, fontWeight:600 }}>{op.valor}</span></p>
+                    </div>
+                  );
+                  const conMuestra = esOpcionDeColor(op.nombre);
+                  return (
+                    <div key={op.nombre} style={{ marginBottom:18 }}>
+                      <p style={{ margin:"0 0 8px", fontSize:10, fontWeight:900, letterSpacing:2, textTransform:"uppercase" }}>{op.nombre}: <span style={{ color:MID, fontWeight:600 }}>{seleccion[op.nombre]}</span></p>
+                      <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
+                        {op.valores.map(valor => {
+                          const elegido = seleccion[op.nombre] === valor;
+                          const agotado = sinStock(op.nombre, valor);
+                          const swatch = conMuestra ? colorToSwatch(valor) : null;
+                          return (
+                            <button key={valor} onClick={() => setOpcion(op.nombre, valor)}
+                              // El valor elegido pinta el fondo de DARK y escribía
+                              // el texto con el acento crudo: con un acento oscuro
+                              // quedaba negro sobre negro y el elegido era justo el
+                              // único que no se leía. Los que llevan muestra de
+                              // color mantienen el fondo blanco para que el puntito
+                              // se distinga.
+                              style={{ display:"flex", alignItems:"center", gap:7, border:`2px solid ${elegido ? DARK : "#ddd"}`,
+                                background: elegido && !conMuestra ? DARK : WHITE,
+                                color: elegido ? (conMuestra ? DARK : accSobreDark) : (conMuestra ? MID : DARK),
+                                padding: conMuestra ? "6px 12px" : "7px 13px", fontSize:11, fontWeight: conMuestra ? 700 : 800,
+                                cursor:"pointer", letterSpacing: conMuestra ? undefined : 1,
+                                opacity: agotado ? 0.35 : 1, textDecoration: agotado ? "line-through" : "none" }}>
+                              {swatch && <span style={{ width:14, height:14, borderRadius:"50%", background:swatch, border:"1px solid #ddd", flexShrink:0 }} />}
+                              {valor}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
                 <div style={{ display:"flex", alignItems:"center", gap:16, marginBottom:26 }}>
                   <span style={{ fontSize:10, fontWeight:900, letterSpacing:2, textTransform:"uppercase" }}>Cantidad</span>
                   <div style={{ display:"flex", alignItems:"center", border:`2px solid ${DARK}` }}>

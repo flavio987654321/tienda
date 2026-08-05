@@ -12,6 +12,9 @@ import { useCartLogic } from "@/hooks/useCartLogic";
 import { useTouchSwipe } from "@/hooks/useTouchSwipe";
 import { masVistos, MIN_MAS_VISTOS } from "@/lib/masVistos";
 import { catalogoTieneGeneros } from "@/lib/generos";
+import { opcionesVisibles } from "@/lib/opciones";
+import {  } from "@/hooks/useStorefront";
+import { esOpcionDeColor, valoresElegidos } from "@/lib/opciones";
 import { resolverBaldosas } from "@/lib/categoryTiles";
 import { isDemoProductId } from "@/lib/demoProducts";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
@@ -27,13 +30,11 @@ import { FadeImage } from "@/components/store/templates/shared/FadeImage";
 import StoreProductReels from "@/components/store/ProductReels";
 import { SectionBlock } from "@/components/store/templates/shared/SectionBlock";
 import { PromoBannerCarousel } from "@/components/store/templates/shared/PromoBannerCarousel";
-import { parseVariantAttrs } from "@/lib/variantAttrs";
 import { colorToSwatch } from "@/lib/colorSwatch";
 import { discountPercent } from "@/lib/discount";
 import { resolveVariantPrice } from "@/lib/variantPrice";
 import { useTurnstile } from "@/components/Turnstile";
 
-const SIZE_ATTRS = ["talle","size","talla","talles","sizes","tamaño","tamano","almacenamiento","ram","versión","version","formato","variante","material","sabor","peso/tamaño","peso"];
 
 /* Las reseñas de EJEMPLO de la vista rápida, para el editor. Sin esto el bloque
    aparecía vacío mientras el dueño acomoda la tienda y no había forma de ver cómo
@@ -226,8 +227,8 @@ export default function FashionNoir() {
   const {
     setCartOpen,
     modalProduct, setModalProduct, modalImg, setModalImg,
-    selectedSize, setSelectedSize, selectedColor, setSelectedColor,
-    qty, setQty, selectedVariantStock, outOfStockSizes,
+    seleccion, setOpcion,
+    qty, setQty, selectedVariantStock, sinStock,
     searchOpen, setSearchOpen, searchQuery, setSearchQuery,
     favorites, favoritesOpen, setFavoritesOpen,
     userDropdownOpen, setUserDropdownOpen, userDropdownRef,
@@ -387,76 +388,6 @@ export default function FashionNoir() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showAnnouncement]);
 
-  const colorSyncingRef = useRef(false);
-
-  // Al cambiar color: sync imagen + talle disponible
-  useEffect(() => {
-    if (!modalProduct || !selectedColor) return;
-    const imgIdx = modalProduct.imageItems.findIndex(
-      (img) => img.variantValue && img.variantValue.toLowerCase() === selectedColor.toLowerCase()
-    );
-    if (imgIdx !== -1) { colorSyncingRef.current = true; setModalImg(imgIdx); }
-    const colorVariants = modalProduct.variants.filter((v) => {
-      const a = parseVariantAttrs(v.name);
-      return !!a && Object.values(a).some((x) => String(x).toLowerCase() === selectedColor.toLowerCase());
-    });
-    if (!colorVariants.length) return;
-    const best = colorVariants.find((v) => v.stock > 0) ?? colorVariants[0];
-    const bestAttrs = parseVariantAttrs(best.name);
-    if (bestAttrs) {
-      const sizeKey = Object.keys(bestAttrs).find((k: string) => SIZE_ATTRS.includes(k.toLowerCase()));
-      if (sizeKey && bestAttrs[sizeKey] && bestAttrs[sizeKey] !== selectedSize) setSelectedSize(String(bestAttrs[sizeKey]));
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedColor, modalProduct?.id]);
-
-  // Al cambiar talle: sync color + imagen si el combo talle+color actual no existe
-  useEffect(() => {
-    if (!modalProduct || !selectedSize) return;
-    if (selectedColor) {
-      const hasCombo = modalProduct.variants.some((v) => {
-        const a = parseVariantAttrs(v.name);
-        if (!a) return false;
-        const vals = Object.values(a).map((x) => String(x).toLowerCase());
-        return vals.includes(selectedSize.toLowerCase()) && vals.includes(selectedColor.toLowerCase());
-      });
-      if (hasCombo) return;
-    }
-    const sizeVariants = modalProduct.variants.filter((v) => {
-      const a = parseVariantAttrs(v.name);
-      if (!a) return false;
-      return Object.entries(a).some(([k, val]) => SIZE_ATTRS.includes(k.toLowerCase()) && String(val).toLowerCase() === selectedSize.toLowerCase());
-    });
-    if (!sizeVariants.length) return;
-    const best = sizeVariants.find((v) => v.stock > 0) ?? sizeVariants[0];
-    const bestAttrs = parseVariantAttrs(best.name);
-    if (bestAttrs) {
-      const colorKey = Object.keys(bestAttrs).find((k: string) => ["color","colour","colores","colors","tono"].includes(k.toLowerCase()));
-      if (colorKey && bestAttrs[colorKey]) {
-        const newColor = String(bestAttrs[colorKey]);
-        if (newColor !== selectedColor) {
-          setSelectedColor(newColor);
-          const imgIdx = modalProduct.imageItems.findIndex(
-            (img) => img.variantValue && img.variantValue.toLowerCase() === newColor.toLowerCase()
-          );
-          if (imgIdx !== -1) { colorSyncingRef.current = true; setModalImg(imgIdx); }
-        }
-      }
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedSize, modalProduct?.id]);
-
-  // Al cambiar de imagen (flechas/miniaturas): sync color si esa foto pertenece a otra variante
-  useEffect(() => {
-    if (!modalProduct) return;
-    if (colorSyncingRef.current) { colorSyncingRef.current = false; return; }
-    const img = modalProduct.imageItems[modalImg];
-    if (img?.variantValue && img.variantValue.toLowerCase() !== selectedColor?.toLowerCase()) {
-      setSelectedColor(img.variantValue);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [modalImg]);
-
   const changeGender = (g: string | null) => {
     setActiveGender(g);
     setActiveCategory("Todos");
@@ -502,7 +433,7 @@ export default function FashionNoir() {
   // puede equivocarse de lado.
   const accentText = textoSobre(G);
   const cartTheme: CartTheme = { BG, S, T, MID:"#555555", border:"rgba(240,235,227,0.1)", accent:G, accentText, serif:"Georgia, serif" };
-  const variantPrice = modalProduct ? resolveVariantPrice(modalProduct.variants, selectedSize, selectedColor) : null;
+  const variantPrice = modalProduct ? resolveVariantPrice(modalProduct.variants, valoresElegidos(seleccion)) : null;
   const displayPrice = variantPrice ?? (modalProduct?.price ?? 0);
   const modalPromo = modalProduct ? resolveProductPromo({ id: modalProduct.id, price: displayPrice, category: modalProduct.category }, promotions) : null;
   // 3×2 en vivo: unidades que se PAGAN a la cantidad elegida (misma cuenta que el motor).
@@ -1821,36 +1752,41 @@ export default function FashionNoir() {
                 );
               })()}
 
-              <div>
-                <p style={{ fontSize:10, letterSpacing:3, textTransform:"uppercase", marginBottom:10, opacity:0.6 }}>Color: <strong style={{ color:T, opacity:1 }}>{selectedColor}</strong></p>
-                <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
-                  {modalProduct.colors.map(color => {
-                    const swatch = colorToSwatch(color);
-                    return (
-                      <button key={color} onClick={() => setSelectedColor(color)}
-                        style={{ display:"flex", alignItems:"center", gap:7, padding:"7px 16px", fontSize:11, border: selectedColor===color ? `1px solid ${G}` : "1px solid rgba(240,235,227,0.18)", background: selectedColor===color ? "rgba(201,168,76,0.12)" : "transparent", color:T, cursor:"pointer", transition:"all 0.2s" }}>
-                        {swatch && <span style={{ width:14, height:14, borderRadius:"50%", background:swatch, border:"1px solid rgba(240,235,227,0.3)", flexShrink:0 }} />}
-                        {color}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div>
-                <p style={{ fontSize:10, letterSpacing:3, textTransform:"uppercase", marginBottom:10, opacity:0.6 }}>Talle: <strong style={{ color:T, opacity:1 }}>{selectedSize}</strong></p>
-                <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
-                  {modalProduct.sizes.map(size => {
-                    const outOfStock = outOfStockSizes.has(size);
-                    return (
-                      <button key={size} onClick={() => setSelectedSize(size)}
-                        style={{ width:46, height:46, fontSize:12, fontWeight:600, border: selectedSize===size ? `1px solid ${G}` : "1px solid rgba(240,235,227,0.18)", background: selectedSize===size ? "rgba(201,168,76,0.12)" : "transparent", color:T, cursor:"pointer", transition:"all 0.2s", opacity: outOfStock ? 0.35 : 1, textDecoration: outOfStock ? "line-through" : "none" }}>
-                        {size}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
+              {/* Un bloque por opción, con el nombre que le puso quien cargó el
+                  producto. Antes eran dos fijos —Color primero, Talle después— y
+                  sin guarda, así que un producto sin colores dibujaba el rótulo
+                  "Color:" con la fila vacía debajo. */}
+              {opcionesVisibles(modalProduct.opciones).map(op => {
+                if (op.tipo === "dato") return (
+                  <div key={op.nombre}>
+                    <p style={{ fontSize:10, letterSpacing:3, textTransform:"uppercase", marginBottom:10, opacity:0.6 }}>{op.nombre}: <strong style={{ color:T, opacity:1 }}>{op.valor}</strong></p>
+                  </div>
+                );
+                const conMuestra = esOpcionDeColor(op.nombre);
+                return (
+                  <div key={op.nombre}>
+                    <p style={{ fontSize:10, letterSpacing:3, textTransform:"uppercase", marginBottom:10, opacity:0.6 }}>{op.nombre}: <strong style={{ color:T, opacity:1 }}>{seleccion[op.nombre]}</strong></p>
+                    <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+                      {op.valores.map(valor => {
+                        const elegido = seleccion[op.nombre] === valor;
+                        const agotado = sinStock(op.nombre, valor);
+                        const swatch = conMuestra ? colorToSwatch(valor) : null;
+                        return (
+                          <button key={valor} onClick={() => setOpcion(op.nombre, valor)}
+                            style={{ fontSize: conMuestra ? 11 : 12, border: elegido ? `1px solid ${G}` : "1px solid rgba(240,235,227,0.18)", background: elegido ? "rgba(201,168,76,0.12)" : "transparent", color:T, cursor:"pointer", transition:"all 0.2s",
+                              opacity: agotado ? 0.35 : 1, textDecoration: agotado ? "line-through" : "none",
+                              ...(conMuestra
+                                ? { display:"flex", alignItems:"center", gap:7, padding:"7px 16px" }
+                                : { width:46, height:46, fontWeight:600 }) }}>
+                            {swatch && <span style={{ width:14, height:14, borderRadius:"50%", background:swatch, border:"1px solid rgba(240,235,227,0.3)", flexShrink:0 }} />}
+                            {valor}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
 
               <div style={{ display:"flex", alignItems:"center", gap:16 }}>
                 <p style={{ fontSize:10, letterSpacing:3, textTransform:"uppercase", opacity:0.6, margin:0 }}>Cantidad</p>

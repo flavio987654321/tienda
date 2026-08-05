@@ -89,7 +89,6 @@ const themeBase: DetailTheme = {
 
     // ── La columna de compra ────────────────────────────────────────────────
     // "Tamaño" sirve para una heladera; esto es ropa deportiva.
-    rotuloTalle: "Talle",
     rotuloOpcion: { fontSize: 10, letterSpacing: 3, fontWeight: 800, textTransform: "uppercase" },
     chipTalleCuadrado: true,
     // El precio va en negro y no en el acento: el lima sobre el gris claro de la

@@ -17,6 +17,9 @@ import { tintaSobreFoto, sombraSobreFoto } from "@/lib/section-bg";
 import { DescripcionPlegable } from "@/components/store/templates/shared/DescripcionPlegable";
 import { masVistos, MIN_MAS_VISTOS } from "@/lib/masVistos";
 import { catalogoTieneGeneros } from "@/lib/generos";
+import { opcionesVisibles } from "@/lib/opciones";
+import {  } from "@/hooks/useStorefront";
+import { esOpcionDeColor, valoresElegidos } from "@/lib/opciones";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
 import VerifiedIconButton from "@/components/store/VerifiedIconButton";
 import { CartDrawer, type CartTheme } from "@/components/store/templates/shared/CartDrawer";
@@ -30,13 +33,11 @@ import { FadeImage } from "@/components/store/templates/shared/FadeImage";
 import StoreProductReels from "@/components/store/ProductReels";
 import { SectionBlock } from "@/components/store/templates/shared/SectionBlock";
 import { PromoBannerCarousel } from "@/components/store/templates/shared/PromoBannerCarousel";
-import { parseVariantAttrs } from "@/lib/variantAttrs";
 import { colorToSwatch } from "@/lib/colorSwatch";
 import { discountPercent } from "@/lib/discount";
 import { resolveVariantPrice } from "@/lib/variantPrice";
 import { useTurnstile } from "@/components/Turnstile";
 
-const SIZE_ATTRS = ["talle","size","talla","talles","sizes","tamaño","tamano","almacenamiento","ram","versión","version","formato","variante","material","sabor","peso/tamaño","peso"];
 
 const BG  = "#faf7f2";
 const S   = "#f0e9df";
@@ -272,8 +273,8 @@ export default function BohoTerra() {
   const {
     setCartOpen,
     modalProduct, setModalProduct, modalImg, setModalImg,
-    selectedSize, setSelectedSize, selectedColor, setSelectedColor,
-    qty, setQty, selectedVariantStock, outOfStockSizes,
+    seleccion, setOpcion,
+    qty, setQty, selectedVariantStock, sinStock,
     searchOpen, setSearchOpen, searchQuery, setSearchQuery,
     favorites, favoritesOpen, setFavoritesOpen,
     userDropdownOpen, setUserDropdownOpen, userDropdownRef,
@@ -290,7 +291,7 @@ export default function BohoTerra() {
   // el acento.
   const accentText = textoSobre(A);
   const cartTheme: CartTheme = { BG:"#ffffff", S, T, MID, border:"rgba(44,34,24,0.1)", accent:A, accentText, serif:"Georgia, serif" };
-  const variantPrice = modalProduct ? resolveVariantPrice(modalProduct.variants, selectedSize, selectedColor) : null;
+  const variantPrice = modalProduct ? resolveVariantPrice(modalProduct.variants, valoresElegidos(seleccion)) : null;
   const displayPrice = variantPrice ?? (modalProduct?.price ?? 0);
   // Promo de tienda del producto abierto en el modal (usa displayPrice para respetar variantes).
   const modalPromo = modalProduct ? resolveProductPromo({ id: modalProduct.id, price: displayPrice, category: modalProduct.category }, promotions) : null;
@@ -499,75 +500,6 @@ export default function BohoTerra() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showAnnouncement]);
 
-  const colorSyncingRef = useRef(false);
-
-  // Al cambiar color: sync imagen + talle disponible
-  useEffect(() => {
-    if (!modalProduct || !selectedColor) return;
-    const imgIdx = modalProduct.imageItems.findIndex(
-      img => img.variantValue && img.variantValue.toLowerCase() === selectedColor.toLowerCase()
-    );
-    if (imgIdx !== -1) { colorSyncingRef.current = true; setModalImg(imgIdx); }
-    const colorVariants = modalProduct.variants.filter(v => {
-      const a = parseVariantAttrs(v.name);
-      return !!a && Object.values(a).some((x: unknown) => String(x).toLowerCase() === selectedColor.toLowerCase());
-    });
-    if (!colorVariants.length) return;
-    const best = colorVariants.find(v => v.stock > 0) ?? colorVariants[0];
-    const bestAttrs = parseVariantAttrs(best.name);
-    if (bestAttrs) {
-      const sizeKey = Object.keys(bestAttrs).find(k => SIZE_ATTRS.includes(k.toLowerCase()));
-      if (sizeKey && bestAttrs[sizeKey] && bestAttrs[sizeKey] !== selectedSize) setSelectedSize(String(bestAttrs[sizeKey]));
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedColor, modalProduct?.id]);
-
-  // Al cambiar talle: sync color + imagen si el combo talle+color actual no existe
-  useEffect(() => {
-    if (!modalProduct || !selectedSize) return;
-    if (selectedColor) {
-      const hasCombo = modalProduct.variants.some(v => {
-        const a = parseVariantAttrs(v.name);
-        if (!a) return false;
-        const vals = Object.values(a).map((x: unknown) => String(x).toLowerCase());
-        return vals.includes(selectedSize.toLowerCase()) && vals.includes(selectedColor.toLowerCase());
-      });
-      if (hasCombo) return;
-    }
-    const sizeVariants = modalProduct.variants.filter(v => {
-      const a = parseVariantAttrs(v.name);
-      if (!a) return false;
-      return Object.entries(a).some(([k, val]: [string, unknown]) => SIZE_ATTRS.includes(k.toLowerCase()) && String(val).toLowerCase() === selectedSize.toLowerCase());
-    });
-    if (!sizeVariants.length) return;
-    const best = sizeVariants.find(v => v.stock > 0) ?? sizeVariants[0];
-    const bestAttrs = parseVariantAttrs(best.name);
-    if (bestAttrs) {
-      const colorKey = Object.keys(bestAttrs).find((k: string) => ["color","colour","colores","colors","tono"].includes(k.toLowerCase()));
-      if (colorKey && bestAttrs[colorKey]) {
-        const newColor = String(bestAttrs[colorKey]);
-        if (newColor !== selectedColor) {
-          setSelectedColor(newColor);
-          const imgIdx = modalProduct.imageItems.findIndex(
-            img => img.variantValue && img.variantValue.toLowerCase() === newColor.toLowerCase()
-          );
-          if (imgIdx !== -1) { colorSyncingRef.current = true; setModalImg(imgIdx); }
-        }
-      }
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedSize, modalProduct?.id]);
-
-  // Al cambiar de imagen (flechas/miniaturas): sync color si esa foto pertenece a otra variante
-  useEffect(() => {
-    if (!modalProduct) return;
-    if (colorSyncingRef.current) { colorSyncingRef.current = false; return; }
-    const img = modalProduct.imageItems[modalImg];
-    if (img?.variantValue && img.variantValue.toLowerCase() !== selectedColor?.toLowerCase()) {
-      setSelectedColor(img.variantValue);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [modalImg]);
 
   const CARDS_PER_VIEW = isMobile ? 1 : esAncho ? 4 : 3;
   const CAROUSEL_LIMIT = 8;
@@ -1784,39 +1716,46 @@ export default function BohoTerra() {
                   es decir dos veces lo mismo, y el chip marcado ya lo dice.
                   El `length > 0` no estaba: sin talles cargados, el panel dibujaba
                   el rótulo "TALLE" con la fila de chips vacía debajo. */}
-              {modalProduct.sizes.length > 0 && (
-              <div>
-                <p style={{ fontSize:10, letterSpacing:3, textTransform:"uppercase", marginBottom:8, color:MID }}>Talle</p>
-                <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
-                  {modalProduct.sizes.map(s=>{
-                    const outOfStock = outOfStockSizes.has(s);
-                    return (
-                      <button key={s} onClick={()=>setSelectedSize(s)}
-                        style={{ width:46, height:46, fontSize:12, border:selectedSize===s?`1.5px solid ${AMarcaBlanco}`:"1px solid rgba(44,34,24,0.18)", background:selectedSize===s?`${AMarcaBlanco}14`:"transparent", color:T, cursor:"pointer", opacity: outOfStock ? 0.35 : 1, textDecoration: outOfStock ? "line-through" : "none" }}>
-                        {s}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-              )}
-              {modalProduct.colors.length > 0 && (
-              <div>
-                <p style={{ fontSize:10, letterSpacing:3, textTransform:"uppercase", marginBottom:8, color:MID }}>Color</p>
-                <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
-                  {modalProduct.colors.map(c=>{
-                    const swatch = colorToSwatch(c);
-                    return (
-                      <button key={c} onClick={()=>setSelectedColor(c)}
-                        style={{ display:"flex", alignItems:"center", gap:7, padding:"6px 14px", fontSize:11, border:selectedColor===c?`1.5px solid ${AMarcaBlanco}`:"1px solid rgba(44,34,24,0.18)", background:selectedColor===c?`${AMarcaBlanco}14`:"transparent", color:T, cursor:"pointer" }}>
-                        {swatch && <span style={{ width:14, height:14, borderRadius:"50%", background:swatch, border:"1px solid rgba(44,34,24,0.2)", flexShrink:0 }} />}
-                        {c}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-              )}
+              {/* Un bloque por opción, con el nombre que le puso quien cargó el
+                  producto: un collar dice "Largo" y no "Talle". Antes eran dos
+                  bloques fijos con las dos palabras escritas a mano. */}
+              {opcionesVisibles(modalProduct.opciones).map(op => {
+                // Un solo valor que informa algo ("45cm") va como texto: no hay
+                // nada que elegir y un chip que no cambia nada confunde.
+                if (op.tipo === "dato") return (
+                  <div key={op.nombre}>
+                    <p style={{ fontSize:10, letterSpacing:3, textTransform:"uppercase", marginBottom:8, color:MID }}>{op.nombre}</p>
+                    <p style={{ margin:0, fontSize:13, color:T }}>{op.valor}</p>
+                  </div>
+                );
+                const conMuestra = esOpcionDeColor(op.nombre);
+                return (
+                  <div key={op.nombre}>
+                    <p style={{ fontSize:10, letterSpacing:3, textTransform:"uppercase", marginBottom:8, color:MID }}>{op.nombre}</p>
+                    <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
+                      {op.valores.map(valor => {
+                        const elegido = seleccion[op.nombre] === valor;
+                        const agotado = sinStock(op.nombre, valor);
+                        const swatch = conMuestra ? colorToSwatch(valor) : null;
+                        return (
+                          <button key={valor} onClick={()=>setOpcion(op.nombre, valor)}
+                            style={{ fontSize: conMuestra ? 11 : 12, border: elegido ? `1.5px solid ${AMarcaBlanco}` : "1px solid rgba(44,34,24,0.18)", background: elegido ? `${AMarcaBlanco}14` : "transparent", color:T, cursor:"pointer",
+                              opacity: agotado ? 0.35 : 1, textDecoration: agotado ? "line-through" : "none",
+                              // El cuadrado es para los valores que se leen de un
+                              // vistazo; los que llevan muestra de color al lado
+                              // necesitan la pastilla para que entre el puntito.
+                              ...(conMuestra
+                                ? { display:"flex", alignItems:"center", gap:7, padding:"6px 14px" }
+                                : { width:46, height:46 }) }}>
+                            {swatch && <span style={{ width:14, height:14, borderRadius:"50%", background:swatch, border:"1px solid rgba(44,34,24,0.2)", flexShrink:0 }} />}
+                            {valor}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
               <div style={{ display:"flex", alignItems:"center", gap:14 }}>
                 <span style={{ fontSize:10, letterSpacing:3, textTransform:"uppercase", color:MID }}>Cantidad</span>
                 <div style={{ display:"flex", alignItems:"center", border:`1px solid rgba(44,34,24,0.18)` }}>

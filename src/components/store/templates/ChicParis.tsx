@@ -14,6 +14,9 @@ import { ResenaComentario } from "@/components/store/templates/shared/ResenaCome
 import { useTouchSwipe } from "@/hooks/useTouchSwipe";
 import { masVistos, MIN_MAS_VISTOS } from "@/lib/masVistos";
 import { catalogoTieneGeneros } from "@/lib/generos";
+import { opcionesVisibles } from "@/lib/opciones";
+import {  } from "@/hooks/useStorefront";
+import { esOpcionDeColor, valoresElegidos } from "@/lib/opciones";
 import { COMENTARIO_MAX, RESENADOR_MAX } from "@/lib/reviews";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
 import VerifiedIconButton from "@/components/store/VerifiedIconButton";
@@ -28,7 +31,6 @@ import { NewsletterForm } from "@/components/store/templates/shared/NewsletterFo
 import { FadeImage } from "@/components/store/templates/shared/FadeImage";
 import StoreProductReels from "@/components/store/ProductReels";
 import { SectionBlock } from "@/components/store/templates/shared/SectionBlock";
-import { parseVariantAttrs } from "@/lib/variantAttrs";
 import { colorToSwatch } from "@/lib/colorSwatch";
 import { discountPercent } from "@/lib/discount";
 import { resolveVariantPrice } from "@/lib/variantPrice";
@@ -70,32 +72,16 @@ const EJEMPLOS_RESENAS_CP: EjemplosDeResenas = {
   ],
 };
 
-const SIZE_ATTRS = ["talle","size","talla","talles","sizes","tamaño","tamano","almacenamiento","ram","versión","version","formato","variante","material","sabor","peso/tamaño","peso"];
-const COLOR_ATTRS = ["color","colour","colores","colors","tono"];
 
-/* ── Foto ↔ color ↔ talle ─────────────────────────────────────────────────────
-   Las tres cosas están atadas: el dueño le asigna un color a cada foto en el
-   editor de producto, y cada variante es un combo color+talle con su stock.
-   Tocar cualquiera de las tres tiene que acomodar a las otras dos.
+/* ── Foto ↔ opciones ──────────────────────────────────────────────────────────
+   Están atadas: el dueño le asigna un valor a cada foto en el editor, y cada
+   variante es un combo de opciones con su stock. Tocar cualquiera de las dos
+   tiene que acomodar la otra.
+
+   Vivía acá y en el listado, escrito dos veces y sólo para el color. Ahora es
+   `useCartLogic`, que además lo da a los tres templates de Moda que no lo
+   tenían. — `indiceFotoDe` en `hooks/useCartLogic.ts`.
 ──────────────────────────────────────────────────────────────────────────────── */
-
-/** Valor de un atributo de variante buscando la clave por nombre (talle, color…). */
-function valorAttr(attrs: Record<string, unknown>, claves: string[]): string {
-  const k = Object.keys(attrs).find(x => claves.includes(x.toLowerCase()));
-  return k != null && attrs[k] != null ? String(attrs[k]) : "";
-}
-
-/** Las variantes con sus atributos ya parseados; las que no son JSON quedan afuera. */
-function variantesConAttrs(p: Product) {
-  return p.variants
-    .map(v => ({ v, a: parseVariantAttrs(v.name) }))
-    .filter((x): x is { v: Product["variants"][number]; a: Record<string, unknown> } => !!x.a);
-}
-
-/** Índice de la foto que el dueño le asignó a ese color, o -1 si ninguna. */
-function fotoDeColor(p: Product, color: string): number {
-  return p.imageItems.findIndex(img => !!img.variantValue && img.variantValue.toLowerCase() === color.toLowerCase());
-}
 
 const BANNER_COUNT = 3;
 
@@ -405,8 +391,8 @@ export default function ChicParis() {
   const {
     setCartOpen,
     modalProduct, setModalProduct, modalImg, setModalImg,
-    selectedSize, setSelectedSize, selectedColor, setSelectedColor,
-    qty, setQty, selectedVariantStock, outOfStockSizes, outOfStockColors,
+    seleccion, setOpcion,
+    qty, setQty, selectedVariantStock, sinStock,
     searchOpen, setSearchOpen, searchQuery, setSearchQuery,
     favorites, favoritesOpen, setFavoritesOpen,
     userDropdownOpen, setUserDropdownOpen, userDropdownRef,
@@ -475,7 +461,7 @@ export default function ChicParis() {
     );
   };
   const cartTheme: CartTheme = { BG:"#ffffff", S:"#fafafa", T:"#111111", MID:"#999999", border:"#e5e5e5", accent:ACC, accentText };
-  const variantPrice = modalProduct ? resolveVariantPrice(modalProduct.variants, selectedSize, selectedColor) : null;
+  const variantPrice = modalProduct ? resolveVariantPrice(modalProduct.variants, valoresElegidos(seleccion)) : null;
   const displayPrice = variantPrice ?? (modalProduct?.price ?? 0);
   const modalPromo = modalProduct ? resolveProductPromo({ id: modalProduct.id, price: displayPrice, category: modalProduct.category }, promotions) : null;
   // 3×2 en vivo: unidades que se PAGAN a la cantidad elegida (misma cuenta que el motor).
@@ -595,66 +581,22 @@ export default function ChicParis() {
      que se compra salen del mismo lugar.
   ──────────────────────────────────────────────────────────────────────────── */
 
-  // Si el talle puesto no existe en ese color, pasa al primero con stock.
-  function acomodarTalleA(color: string) {
-    if (!modalProduct) return;
-    const delColor = variantesConAttrs(modalProduct)
-      .filter(x => valorAttr(x.a, COLOR_ATTRS).toLowerCase() === color.toLowerCase());
-    if (!delColor.length) return;
-    if (selectedSize && delColor.some(x => valorAttr(x.a, SIZE_ATTRS).toLowerCase() === selectedSize.toLowerCase())) return;
-    const mejor = delColor.find(x => x.v.stock > 0) ?? delColor[0];
-    const talle = valorAttr(mejor.a, SIZE_ATTRS);
-    if (talle && talle !== selectedSize) setSelectedSize(talle);
-  }
-
-  function elegirColor(color: string) {
-    if (!modalProduct) return;
-    setSelectedColor(color);
-    const idx = fotoDeColor(modalProduct, color);
-    if (idx !== -1) setModalImg(idx);
-    acomodarTalleA(color);
-  }
+  // El acomodo de una opción cuando cambia otra vivía acá, escrito a mano para
+  // exactamente talle y color. Ahora lo hace `setOpcion` para las opciones que
+  // haya — ver `reacomodarSeleccion` en `lib/opciones.ts`.
 
   // Acepta índices fuera de rango para que las flechas sean `elegirFoto(i ± 1)`.
+  //
+  // Sólo mueve la foto. Que al mirar la foto del rojo quede el rojo elegido, y
+  // que al elegir el rojo salte a su foto, lo resuelve `useCartLogic` para las
+  // seis pantallas: acá estaba escrito a mano y en los otros tres templates de
+  // Moda directamente faltaba.
   function elegirFoto(i: number) {
     if (!modalProduct) return;
     const total = modalProduct.images.length;
     if (!total) return;
-    const idx = ((i % total) + total) % total;
-    setModalImg(idx);
-    const color = modalProduct.imageItems[idx]?.variantValue;
-    if (!color || color.toLowerCase() === selectedColor.toLowerCase()) return;
-    setSelectedColor(color);
-    acomodarTalleA(color);
+    setModalImg(((i % total) + total) % total);
   }
-
-  function elegirTalle(talle: string) {
-    if (!modalProduct) return;
-    setSelectedSize(talle);
-    const conTalle = variantesConAttrs(modalProduct)
-      .filter(x => valorAttr(x.a, SIZE_ATTRS).toLowerCase() === talle.toLowerCase());
-    if (!conTalle.length) return;
-    // Si el color puesto viene en ese talle, no se toca: el que eligió el color
-    // fue el comprador y cambiárselo solo porque cambió de talle es pisarle la
-    // decisión.
-    if (selectedColor && conTalle.some(x => valorAttr(x.a, COLOR_ATTRS).toLowerCase() === selectedColor.toLowerCase())) return;
-    const mejor = conTalle.find(x => x.v.stock > 0) ?? conTalle[0];
-    const color = valorAttr(mejor.a, COLOR_ATTRS);
-    if (!color || color === selectedColor) return;
-    setSelectedColor(color);
-    const idx = fotoDeColor(modalProduct, color);
-    if (idx !== -1) setModalImg(idx);
-  }
-
-  // Lo único que sigue siendo un efecto: al ABRIR la vista rápida hay que mostrar
-  // la foto del color con el que abre, y ahí no hubo ningún click que lo resuelva
-  // (`openModal` es del hook compartido por los 10 templates y deja la foto 0).
-  useEffect(() => {
-    if (!modalProduct || !selectedColor) return;
-    const idx = fotoDeColor(modalProduct, selectedColor);
-    if (idx !== -1) setModalImg(idx);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [modalProduct?.id]);
 
   // `reviewSubmitting` es estado: recién bloquea en el render siguiente, y con
   // Enter en un campo el envío ni pasa por el botón. Sin candado sincrónico, dos
@@ -2273,56 +2215,47 @@ export default function ChicParis() {
                   larga incluida— para encontrar dónde se agrega al carrito: el
                   que ya decidió comprar tenía que leer igual. */}
               <CpBloque>
-              {modalProduct.sizes.length > 0 && (
-                <div style={{ marginBottom: 16 }}>
-                  <p style={CP_MODAL_TITULO}>Talle</p>
-                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                    {modalProduct.sizes.map(s => {
-                      const outOfStock = outOfStockSizes.has(s);
-                      return (
-                        <button key={s} onClick={() => elegirTalle(s)} style={{
-                          padding: "8px 14px", border: selectedSize === s ? `2px solid ${accentRelleno}` : "2px solid #e0e0e0",
-                          background: selectedSize === s ? accentRelleno : "transparent",
-                          color: selectedSize === s ? accentRellenoText : "#333",
-                          fontSize: 12, fontWeight: 700, cursor: "pointer", transition: "all 0.15s",
-                          opacity: outOfStock ? 0.35 : 1, textDecoration: outOfStock ? "line-through" : "none",
-                        }}>{s}</button>
-                      );
-                    })}
+              {/* Un bloque por opción, con el nombre que le puso quien cargó el
+                  producto. Antes eran dos fijos con "Talle" y "Color" escritos a
+                  mano, más sus dos helpers de sincronización. */}
+              {opcionesVisibles(modalProduct.opciones).map(op => {
+                if (op.tipo === "dato") return (
+                  <div key={op.nombre} style={{ marginBottom: 16 }}>
+                    <p style={CP_MODAL_TITULO}>{op.nombre}</p>
+                    <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "#333" }}>{op.valor}</p>
                   </div>
-                </div>
-              )}
-              {modalProduct.colors.length > 0 && (
-                <div style={{ marginBottom: 16 }}>
-                  <p style={CP_MODAL_TITULO}>Color</p>
-                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                    {modalProduct.colors.map(c => {
-                      const swatch = colorToSwatch(c);
-                      // Agotado en TODOS sus talles: se atenúa y se tacha, igual que
-                      // el talle sin stock. Antes el color se ofrecía como cualquier
-                      // otro y el comprador se enteraba recién después de elegirlo.
-                      const sinStock = outOfStockColors.has(c);
-                      return (
-                        <button key={c} onClick={() => elegirColor(c)} style={{
-                          display: "flex", alignItems: "center", gap: 7,
-                          padding: "8px 14px", border: selectedColor === c ? `2px solid ${accentRelleno}` : "2px solid #e0e0e0",
-                          background: selectedColor === c ? accentRelleno : "transparent",
-                          color: selectedColor === c ? accentRellenoText : "#333",
-                          fontSize: 12, fontWeight: 700, cursor: "pointer", transition: "all 0.15s",
-                          opacity: sinStock ? 0.35 : 1, textDecoration: sinStock ? "line-through" : "none",
-                        }}>
-                          {/* El anillo usa el color del TEXTO del chip, que por
-                              construcción contrasta con su fondo. Con un anillo
-                              fijo oscuro, el color "Negro" elegido quedaba como un
-                              puntito negro sobre un chip negro — invisible. */}
-                          {swatch && <span style={{ width: 14, height: 14, borderRadius: "50%", background: swatch, border: `1px solid ${selectedColor === c ? accentRellenoText : "rgba(0,0,0,0.25)"}`, flexShrink: 0 }} />}
-                          {c}
-                        </button>
-                      );
-                    })}
+                );
+                const conMuestra = esOpcionDeColor(op.nombre);
+                return (
+                  <div key={op.nombre} style={{ marginBottom: 16 }}>
+                    <p style={CP_MODAL_TITULO}>{op.nombre}</p>
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                      {op.valores.map(valor => {
+                        const elegido = seleccion[op.nombre] === valor;
+                        const agotado = sinStock(op.nombre, valor);
+                        const swatch = conMuestra ? colorToSwatch(valor) : null;
+                        return (
+                          <button key={valor} onClick={() => setOpcion(op.nombre, valor)} style={{
+                            display: "flex", alignItems: "center", gap: 7,
+                            padding: "8px 14px", border: elegido ? `2px solid ${accentRelleno}` : "2px solid #e0e0e0",
+                            background: elegido ? accentRelleno : "transparent",
+                            color: elegido ? accentRellenoText : "#333",
+                            fontSize: 12, fontWeight: 700, cursor: "pointer", transition: "all 0.15s",
+                            opacity: agotado ? 0.35 : 1, textDecoration: agotado ? "line-through" : "none",
+                          }}>
+                            {/* El anillo usa el color del TEXTO del chip, que por
+                                construcción contrasta con su fondo. Con un anillo
+                                fijo oscuro, el valor "Negro" elegido quedaba como un
+                                puntito negro sobre un chip negro — invisible. */}
+                            {swatch && <span style={{ width: 14, height: 14, borderRadius: "50%", background: swatch, border: `1px solid ${elegido ? accentRellenoText : "rgba(0,0,0,0.25)"}`, flexShrink: 0 }} />}
+                            {valor}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-              )}
+                );
+              })}
 
               <div style={{ marginBottom: 16 }}>
                 <p style={CP_MODAL_TITULO}>Cantidad</p>

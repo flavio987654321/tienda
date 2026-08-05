@@ -1,4 +1,5 @@
 import type { StorefrontProduct, StorefrontVariant } from "@/hooks/useStorefront";
+import { opcionesDeVariantes } from "@/lib/opciones";
 
 /**
  * Pasa un producto crudo de la base a la forma que usa el storefront.
@@ -32,26 +33,13 @@ export type RawProduct = {
   offerEndsAt?: string | null;
 };
 
-const SIZE_ATTRS  = ["talle","size","talla","talles","sizes","tamaño","tamano","almacenamiento","ram","versión","version","formato","variante","material","sabor","peso/tamaño","peso"];
-const COLOR_ATTRS = ["color","colour","colores","colors","tono"];
-
 export function mapProduct(raw: RawProduct): StorefrontProduct {
   const variants = raw.variants ?? [];
-  const sizesSet  = new Set<string>();
-  const colorsSet = new Set<string>();
-  variants.forEach((v) => {
-    let attrs: Record<string, string> = {};
-    try { const p = JSON.parse(v.name); if (p && typeof p === "object") attrs = p; } catch {}
-    if (Object.keys(attrs).length > 0) {
-      Object.entries(attrs).forEach(([k, val]) => {
-        if (SIZE_ATTRS.includes(k.toLowerCase())  && val) sizesSet.add(val as string);
-        if (COLOR_ATTRS.includes(k.toLowerCase()) && val) colorsSet.add(val as string);
-      });
-    } else {
-      if (SIZE_ATTRS.includes(v.name?.toLowerCase())  && v.value) sizesSet.add(v.value);
-      if (COLOR_ATTRS.includes(v.name?.toLowerCase()) && v.value) colorsSet.add(v.value);
-    }
-  });
+  // Las opciones salen de las variantes con su nombre, con la MISMA función que
+  // usa el navegador. Acá vivía la lista blanca ENTERA duplicada —los mismos 17
+  // nombres permitidos, copiados—, así que este mapeo del servidor perdía una
+  // opción llamada "Largo" exactamente igual que el otro.
+  const opciones = opcionesDeVariantes(variants);
   let images: string[] = [];
   let imageItems: { url: string; variantValue?: string }[] = [];
   try {
@@ -87,7 +75,7 @@ export function mapProduct(raw: RawProduct): StorefrontProduct {
     gender: raw.gender ?? "unisex",
     description: raw.description ?? null,
     images, imageItems, reelUrls,
-    sizes: [...sizesSet], colors: [...colorsSet], variants,
+    opciones, variants,
     attributes,
   };
 }

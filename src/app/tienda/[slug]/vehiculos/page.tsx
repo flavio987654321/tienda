@@ -47,7 +47,7 @@ function mapVehicle(raw: RawVehicle): StorefrontProduct {
     gender: "unisex",
     description: raw.description ?? null,
     images, imageItems,
-    reelUrls, sizes: [], colors: [],
+    reelUrls, opciones: [],
     variants: raw.variants ?? [],
     attributes,
     badge: raw.badge ?? undefined,

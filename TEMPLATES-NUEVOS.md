@@ -19,7 +19,8 @@ dashboard, formulario de producto y storefront, no solo el diseño):
 | `hideTags` / `hideGender` | sí/no | Toggles menores de UI en el form de producto |
 | `supportsWholesale` | sí/no | Si existe precio mayorista |
 | `supportsCondicion` | sí/no + opciones | Selector de condición (0km, usado, como nuevo, etc.) |
-| `extraFields` | lista de campos tipados | **Son globales para todo el rubro, no cambian por categoría** — solo tiene sentido tipar campos universales (Marca, Modelo, Garantía); lo específico de cada categoría (litros, almacenamiento, dimensiones) queda como atributo libre que carga el dueño |
+| `extraFields` | lista de campos tipados | Los del rubro entero: campos universales (Marca, Modelo, Garantía) |
+| `extraFieldsByCategory` | campos por **subcategoría** | Se **suman** a los de arriba cuando el dueño elige esa subcategoría. Es lo que hay que usar para lo específico (litros de una heladera, BTU de un aire, piedra de un anillo). Ojo con el nombre: dice `Category` pero la clave es la **sub**categoría (`refrigeracion`, `tvs`), no la categoría. Lo que no entre en ninguno de los dos queda como atributo libre que carga el dueño |
 | categorías/subcategorías | taxonomía del catálogo | Categorías del form, filtros del storefront |
 | cantidad de templates visuales | 1, 2, 4... | Cuántos "looks" distintos para el mismo rubro (ROPA tiene 4, AUTOS tiene 2) |
 

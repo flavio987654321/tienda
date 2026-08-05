@@ -2,6 +2,8 @@
 import { FadeImage } from "./FadeImage";
 import { getReadableAccentText, getReadableAccentFill, textoSobre } from "@/contexts/EditContext";
 import type { useCartLogic } from "@/hooks/useCartLogic";
+import { valoresElegidos } from "@/lib/opciones";
+import { textoSeleccion } from "@/components/store/shared/cartTypes";
 
 // Un solo componente de carrito reutilizado por todos los templates de un mismo
 // tipo de negocio (hoy: Electro Prime, Tech Nova, Home Studio, Casa Clara) — así
@@ -148,19 +150,22 @@ export function CartDrawer({
             return (
             <div key={idx} style={{ display:"flex", gap:14, padding:"16px 0", borderBottom:`1px solid ${border}` }}>
               {(() => {
-                const colorSrc = item.color
-                  ? item.product.imageItems.find(img => img.variantValue && img.variantValue.toLowerCase() === item.color.toLowerCase())?.url
+                // La foto atada a un valor —normalmente el color— se busca contra
+                // CUALQUIER valor elegido, sin preguntar de qué opción viene.
+                const elegidos = valoresElegidos(item.seleccion).map(v => v.toLowerCase());
+                const propia = elegidos.length
+                  ? item.product.imageItems.find(img => img.variantValue && elegidos.includes(img.variantValue.toLowerCase()))?.url
                   : null;
-                const src = colorSrc ?? item.product.images[0];
+                const src = propia ?? item.product.images[0];
                 return src
                   ? <FadeImage src={src} alt="" width={70} height={70} style={{ objectFit:"cover", flexShrink:0, borderRadius:6 }} />
                   : <div style={{ width:70, height:70, flexShrink:0, borderRadius:6, background:"#f0f0f0" }} />;
               })()}
               <div style={{ flex:1, minWidth:0 }}>
                 <p style={{ fontSize:14, margin:"0 0 3px", fontWeight:500, color:T }}>{item.product.name}</p>
-                {(item.size || item.color) && (
+                {textoSeleccion(item.seleccion) && (
                   <p style={{ fontSize:11, opacity:0.6, margin:"0 0 10px", color:T }}>
-                    {[item.color, item.size].filter(Boolean).join(" · ")}
+                    {textoSeleccion(item.seleccion)}
                   </p>
                 )}
                 {/* F6-C6 — QUÉ promo bajó este precio. Antes el carrito tachaba el
