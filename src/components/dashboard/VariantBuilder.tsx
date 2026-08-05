@@ -277,9 +277,15 @@ export function VariantBuilder({
         )}
       </div>
 
-      {/* ── Tabla de variantes generadas ── */}
+      {/* ── Tabla de variantes generadas ──
+          `max-w-3xl` para que la fila no se estire con la pantalla: las columnas
+          de números están pegadas al borde derecho, así que en un monitor ancho
+          quedaban a 900px del nombre de la variante y había que barrer la vista
+          de una punta a la otra para saber a qué fila pertenecía el stock.
+          Con el tope, al nombre le quedan ~364px —de sobra para "Blanco · 40cm"—
+          y los números caen al lado. */}
       {variants.length > 0 && (
-        <div className="space-y-2">
+        <div className="space-y-2 max-w-3xl">
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
             Variantes creadas ({variants.length})
           </p>

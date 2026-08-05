@@ -2365,7 +2365,9 @@ function ProductoFormPage() {
                       // mostrar cualquier cosa que el constructor haya generado.
                       setUseBuilder(turningOn);
                     }}
-                    className="text-xs text-gray-400 hover:text-indigo-600 underline underline-offset-2 transition-colors"
+                    // `whitespace-nowrap` porque a 360 "Modo manual" se partía en dos
+                    // líneas y quedaba encimado con el texto de la izquierda.
+                    className="text-xs text-gray-400 hover:text-indigo-600 underline underline-offset-2 transition-colors whitespace-nowrap shrink-0"
                   >
                     {useBuilder ? "Modo manual" : "Modo constructor"}
                   </button>
