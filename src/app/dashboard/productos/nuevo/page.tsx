@@ -12,7 +12,7 @@ import {
 import Link from "next/link";
 import Image from "next/image";
 import { getStoreType, etiquetaCategoria, camposActivos, camposPropios, ejemploNombre, ejemploTags } from "@/lib/storeTypes";
-import { sugerirOpcion, opcionesIniciales, nombresDeOpciones, renombrarOpcion, agregarOpcion, quitarOpcion, estadoDelBuilder, claveDeCombinacion, MAX_OPCIONES } from "@/lib/opcionSugerida";
+import { sugerirOpcion, opcionesIniciales, nombresDeOpciones, renombrarOpcion, agregarOpcion, quitarOpcion, estadoDelBuilder, opcionesQueNoEntranEnElBuilder, claveDeCombinacion, MAX_OPCIONES } from "@/lib/opcionSugerida";
 import { esOpcionDeColor } from "@/lib/opciones";
 import { calcMargin, calcVehicleCostTotal, formatFechaGasto } from "@/lib/margin";
 import StockHistoryPanel from "../StockHistoryPanel";
@@ -2290,10 +2290,33 @@ function ProductoFormPage() {
                     type="button"
                     onClick={() => {
                       const turningOn = !useBuilder;
+                      if (turningOn) {
+                        // El estado del constructor sale de las filas que hay AHORA.
+                        //
+                        // Antes se rearmaba desde `builderColors`/`builderSizes`, que el
+                        // modo manual nunca toca: quedaban como estaban al cargar la
+                        // pantalla —vacíos, en un producto nuevo— y volver al constructor
+                        // borraba todo lo cargado a mano, sin avisar ni poder deshacer.
+                        const perdidas = opcionesQueNoEntranEnElBuilder(variants, opcionNombre);
+                        if (perdidas.length > 0) {
+                          // Lo único que el constructor no puede representar: maneja Color
+                          // más UNA opción. Antes también se perdía, nada más que callado.
+                          const cuales = perdidas.join(" y ");
+                          const verbo = perdidas.length > 1 ? "se pierden" : "se pierde";
+                          if (!confirm(
+                            `El constructor sólo maneja Color y ${opcionNombre}.\n\nSi seguís, ${verbo} ${cuales}.\n\n¿Seguir?`
+                          )) return;
+                        }
+                        const b = estadoDelBuilder(variants, opcionNombre);
+                        variantStockRef.current = b.stock;
+                        setBuilderColors(b.colores);
+                        setBuilderSizes(b.valores);
+                        setVariants(buildVariantsFromBuilder(b.colores, b.valores));
+                        markDirty();
+                      }
+                      // Al pasar a manual las filas quedan como están: el manual sabe
+                      // mostrar cualquier cosa que el constructor haya generado.
                       setUseBuilder(turningOn);
-                      // Al volver al constructor las combinaciones se rearman desde los
-                      // colores/talles elegidos; al pasar a manual, las filas quedan como están.
-                      if (turningOn) setVariants(buildVariantsFromBuilder(builderColors, builderSizes));
                     }}
                     className="text-xs text-gray-400 hover:text-indigo-600 underline underline-offset-2 transition-colors"
                   >

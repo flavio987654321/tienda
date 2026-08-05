@@ -260,3 +260,18 @@ export function estadoDelBuilder(
   }
   return { colores, valores, stock };
 }
+
+/**
+ * Las opciones que el constructor NO sabe representar.
+ *
+ * El constructor maneja "Color" más una segunda opción, y nada más. El modo
+ * manual permite hasta `MAX_OPCIONES`. Al pasar de manual a constructor, todo lo
+ * que sobre se pierde — y se perdía en silencio. Con esto se puede avisar antes,
+ * por nombre.
+ */
+export function opcionesQueNoEntranEnElBuilder<T extends ConAttrs>(
+  filas: T[],
+  nombreOpcion: string,
+): string[] {
+  return nombresDeOpciones(filas).filter(n => n !== "Color" && n !== nombreOpcion);
+}
