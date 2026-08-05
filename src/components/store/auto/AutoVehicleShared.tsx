@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useSyncExternalStore } from "react";
 import type { StorefrontProduct } from "@/hooks/useStorefront";
-import { esOpcionDeColor } from "@/hooks/useStorefront";
+import { esOpcionDeColor } from "@/lib/opciones";
 import { useTouchSwipe } from "@/hooks/useTouchSwipe";
 import StoreProductReels from "@/components/store/ProductReels";
 import { getContrastColor } from "@/contexts/EditContext";

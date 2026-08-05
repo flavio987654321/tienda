@@ -5,7 +5,8 @@ import { useState, useEffect, useMemo, useRef, useCallback, Suspense, Fragment }
 import Link from "next/link";
 import { useCartLogic } from "@/hooks/useCartLogic";
 import type { StorefrontProduct, StorefrontVariant, PlaceOrderParams, OpcionProducto, SeleccionOpciones } from "@/hooks/useStorefront";
-import { getDemoPool, fillTargetFor, parsePromotions, esOpcionDeColor, valoresElegidos } from "@/hooks/useStorefront";
+import { getDemoPool, fillTargetFor, parsePromotions,  } from "@/hooks/useStorefront";
+import { esOpcionDeColor, valoresElegidos } from "@/lib/opciones";
 import { opcionesVisibles } from "@/lib/opciones";
 import { parseVariantAttrs } from "@/lib/variantAttrs";
 import { buscarVariante } from "@/lib/variantMatch";

@@ -51,6 +51,26 @@ export function opcionesDeVariantes(variants: StorefrontVariant[]): OpcionProduc
   return [...porNombre].map(([nombre, valores]) => ({ nombre, valores: [...valores] }));
 }
 
+/**
+ * Nombres de opción que se dibujan con la muestra de color al lado del valor.
+ *
+ * Es lo único que sobrevive de la vieja lista blanca, y le cambió el rol por
+ * completo: antes decidía si el dato EXISTÍA —una opción llamada "Largo" se
+ * perdía entera—, ahora sólo decide si se pinta un puntito. Una opción con un
+ * nombre desconocido se ve igual, nada más que sin puntito.
+ */
+const NOMBRES_DE_COLOR = ["color", "colour", "colores", "colors", "tono"];
+
+/** ¿Esta opción se dibuja con muestra de color? */
+export function esOpcionDeColor(nombre: string): boolean {
+  return NOMBRES_DE_COLOR.includes((nombre ?? "").trim().toLowerCase());
+}
+
+/** Los valores elegidos, sin los nombres — que es lo que pide `buscarVariante`. */
+export function valoresElegidos(seleccion: SeleccionOpciones): string[] {
+  return Object.values(seleccion).filter(Boolean);
+}
+
 /** Valores que sólo significan "no hay nada que elegir". */
 const VALORES_VACIOS = ["único", "unico", "unica", "única", "n/a", "-"];
 
@@ -132,10 +152,26 @@ export function reacomodarSeleccion(
   // Si lo elegido ya existe tal cual, no se toca nada.
   if (variants.some(v => varianteTiene(v, elegidos))) return null;
 
-  // De las que respetan lo que acaba de tocar, la mejor con stock.
+  // De las que respetan lo que acaba de tocar, la que menos cambie lo demás.
+  //
+  // Con dos opciones da igual: si la combinación no existe, la otra opción se
+  // tiene que mover sí o sí. Con TRES importa: estando en "S / Negro / Algodón"
+  // y tocando "Lino", quedarse con el Negro es mejor que saltar a una
+  // combinación que además cambia el color sin motivo. Antes se agarraba la
+  // primera con stock y podía mover las dos.
   const candidatas = variants.filter(v => varianteTiene(v, [valorFijado]));
   if (!candidatas.length) return null;
-  const mejor = candidatas.find(v => v.stock > 0) ?? candidatas[0];
+  const otros = Object.entries(seleccion)
+    .filter(([nombre]) => nombre !== fijada)
+    .map(([, valor]) => valor)
+    .filter(Boolean);
+  const conserva = (v: StorefrontVariant) => otros.filter(o => varianteTiene(v, [o])).length;
+  // Primero las que tienen stock, y entre ésas la que conserve más. Si ninguna
+  // tiene stock, el mismo criterio sobre todas: la pantalla queda en una
+  // combinación que existe y el cartel de "sin stock" dice la verdad.
+  const conStock = candidatas.filter(v => v.stock > 0);
+  const pool = conStock.length ? conStock : candidatas;
+  const mejor = pool.reduce((a, b) => (conserva(b) > conserva(a) ? b : a));
 
   const attrs = parseVariantAttrs(mejor.name);
   if (!attrs) return null;

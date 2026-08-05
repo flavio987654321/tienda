@@ -13,6 +13,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { getStoreType, etiquetaCategoria, camposActivos, camposPropios, ejemploNombre, ejemploTags } from "@/lib/storeTypes";
 import { sugerirOpcion, opcionesIniciales, nombresDeOpciones, renombrarOpcion, agregarOpcion, quitarOpcion, MAX_OPCIONES } from "@/lib/opcionSugerida";
+import { esOpcionDeColor } from "@/lib/opciones";
 import { calcMargin, calcVehicleCostTotal, formatFechaGasto } from "@/lib/margin";
 import StockHistoryPanel from "../StockHistoryPanel";
 import RichTextEditor from "@/components/RichTextEditor";
@@ -2366,7 +2367,7 @@ function ProductoFormPage() {
                   {variants.map((variant, idx) => (
                     <div key={idx} className="flex flex-wrap gap-3 items-end p-4 bg-gray-50 rounded-xl">
                       {Object.keys(variant.attrs).map(dim => {
-                        const isColor = dim === "Color" || dim === "Tono";
+                        const isColor = esOpcionDeColor(dim);
                         const val = variant.attrs[dim] || "";
                         const circle = isColor ? colorPreview(val) : null;
                         return (
@@ -2932,7 +2933,7 @@ function ProductoFormPage() {
                   {!storeTypeConfig.hideVariants && Object.keys(attrPreviewGroups).length > 0 && (
                     <div className="space-y-1.5">
                       {Object.entries(attrPreviewGroups).map(([groupName, values]) => {
-                        const isColor = groupName === "Color" || groupName === "Tono";
+                        const isColor = esOpcionDeColor(groupName);
                         return (
                           <div key={groupName} className="flex flex-wrap gap-1 items-center">
                             {isColor ? (

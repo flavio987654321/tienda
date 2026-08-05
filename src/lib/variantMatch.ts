@@ -41,8 +41,18 @@ export function varianteTiene(
   const buscados = valores.filter((x): x is string => !!x).map(x => x.toLowerCase());
   const attrs = parseVariantAttrs(v.name);
   if (attrs) {
-    const vals = Object.values(attrs).map(x => String(x).toLowerCase());
-    return buscados.every(b => vals.includes(b));
+    // Cada valor buscado tiene que gastar UNA opción distinta. Con `includes` a
+    // secas, buscar ["único", "único"] —un producto con Talle Único y Color
+    // Único— daba `true` contra una variante que sólo tuviera un "único", y se
+    // resolvía la variante equivocada. Ahora el segundo no encuentra con qué
+    // casar y no coincide.
+    const libres = Object.values(attrs).map(x => String(x).toLowerCase());
+    return buscados.every(b => {
+      const i = libres.indexOf(b);
+      if (i === -1) return false;
+      libres.splice(i, 1);
+      return true;
+    });
   }
   // Fila vieja, anterior al JSON: `name` era el nombre de la opción y `value` el
   // valor, a veces con varios juntos. Se compara por contenido, como antes.

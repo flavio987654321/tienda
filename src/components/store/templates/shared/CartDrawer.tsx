@@ -2,7 +2,7 @@
 import { FadeImage } from "./FadeImage";
 import { getReadableAccentText, getReadableAccentFill, textoSobre } from "@/contexts/EditContext";
 import type { useCartLogic } from "@/hooks/useCartLogic";
-import { valoresElegidos } from "@/hooks/useStorefront";
+import { valoresElegidos } from "@/lib/opciones";
 import { textoSeleccion } from "@/components/store/shared/cartTypes";
 
 // Un solo componente de carrito reutilizado por todos los templates de un mismo

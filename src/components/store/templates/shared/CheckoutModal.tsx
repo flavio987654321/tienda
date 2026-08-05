@@ -6,7 +6,7 @@ import { FadeImage } from "./FadeImage";
 import { getReadableAccentText, getReadableAccentFill, textoSobre } from "@/contexts/EditContext";
 import { PROVINCIAS_ARGENTINA } from "@/lib/provincias";
 import { resolveVariantPrice } from "@/lib/variantPrice";
-import { valoresElegidos } from "@/hooks/useStorefront";
+import { valoresElegidos } from "@/lib/opciones";
 import { textoSeleccion } from "@/components/store/shared/cartTypes";
 import { resolveBasePrice, parseEscalones } from "@/lib/pricing";
 

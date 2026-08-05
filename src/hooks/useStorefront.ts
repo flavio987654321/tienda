@@ -8,7 +8,7 @@ import { parseStringArray } from "@/lib/promotions";
 import { buscarVariante } from "@/lib/variantMatch";
 // `opciones.ts` sólo toma TIPOS de este archivo, así que en tiempo de ejecución
 // no hay ciclo: los `import type` se borran al compilar.
-import { opcionesDeVariantes } from "@/lib/opciones";
+import { opcionesDeVariantes, valoresElegidos } from "@/lib/opciones";
 
 export type StorefrontVariant = {
   id: string;
@@ -36,25 +36,9 @@ export type OpcionProducto = { nombre: string; valores: string[] };
  */
 export type SeleccionOpciones = Record<string, string>;
 
-/**
- * Nombres de opción que se dibujan con la muestra de color al lado del valor.
- *
- * Es lo único que sobrevive de la vieja lista blanca, y le cambió el rol por
- * completo: antes decidía si el dato EXISTÍA —una opción llamada "Largo" se
- * perdía entera—, ahora sólo decide si se pinta un puntito. Una opción con un
- * nombre desconocido se ve igual, nada más que sin puntito.
- */
-const NOMBRES_DE_COLOR = ["color", "colour", "colores", "colors", "tono"];
-
-/** ¿Esta opción se dibuja con muestra de color? */
-export function esOpcionDeColor(nombre: string) {
-  return NOMBRES_DE_COLOR.includes(nombre.trim().toLowerCase());
-}
-
-/** Los valores elegidos, sin los nombres — que es lo que pide `buscarVariante`. */
-export function valoresElegidos(seleccion: SeleccionOpciones): string[] {
-  return Object.values(seleccion).filter(Boolean);
-}
+// `esOpcionDeColor` y `valoresElegidos` vivían acá. Son funciones puras sobre
+// opciones, no sobre el hook, y este archivo es "use client": desde el servidor
+// no se podían llamar. Se mudaron a `lib/opciones.ts`, con el resto.
 
 export type StorefrontProduct = {
   id: string;

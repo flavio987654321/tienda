@@ -18,7 +18,8 @@ import { DescripcionPlegable } from "@/components/store/templates/shared/Descrip
 import { masVistos, MIN_MAS_VISTOS } from "@/lib/masVistos";
 import { catalogoTieneGeneros } from "@/lib/generos";
 import { opcionesVisibles } from "@/lib/opciones";
-import { esOpcionDeColor, valoresElegidos } from "@/hooks/useStorefront";
+import {  } from "@/hooks/useStorefront";
+import { esOpcionDeColor, valoresElegidos } from "@/lib/opciones";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
 import VerifiedIconButton from "@/components/store/VerifiedIconButton";
 import { CartDrawer, type CartTheme } from "@/components/store/templates/shared/CartDrawer";

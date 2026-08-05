@@ -3,8 +3,16 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import type { StorefrontProduct, StorefrontVariant, ValidatedCoupon, PlaceOrderParams, SeleccionOpciones, OpcionProducto } from "./useStorefront";
-import { valoresElegidos } from "./useStorefront";
-import { reacomodarSeleccion, opcionesDeVariantes, opcionDelValor } from "@/lib/opciones";
+import { valoresElegidos, reacomodarSeleccion, opcionesDeVariantes, opcionDelValor } from "@/lib/opciones";
+import { getEnvioOptions, fmtEnvioPrice, getPagoOptions, fmt as fmtFn, claveItem, type CartItem, type CheckoutStatus, type ShippingMethod } from "@/components/store/shared/cartTypes";
+import { useAuth } from "@/components/AuthProvider";
+import { LIVE_QUOTE_DOMICILIO_ID } from "@/types/store-config";
+import { PROVINCIAS_ARGENTINA } from "@/lib/provincias";
+import { buscarVariante, varianteTiene } from "@/lib/variantMatch";
+import { resolveVariantPrice } from "@/lib/variantPrice";
+import { priceCart, resolveBasePrice, parseEscalones, freeShippingProgress, type ActivePromotion } from "@/lib/pricing";
+import { couponDiscountFor } from "@/lib/coupons";
+import { registrarVista } from "@/lib/registrarVista";
 
 /**
  * El índice de la foto asignada a un valor de opción, o -1.
@@ -19,15 +27,6 @@ function indiceFotoDe(p: StorefrontProduct, valor: string): number {
     img => !!img.variantValue && img.variantValue.toLowerCase() === valor.toLowerCase(),
   );
 }
-import { getEnvioOptions, fmtEnvioPrice, getPagoOptions, fmt as fmtFn, claveItem, type CartItem, type CheckoutStatus, type ShippingMethod } from "@/components/store/shared/cartTypes";
-import { useAuth } from "@/components/AuthProvider";
-import { LIVE_QUOTE_DOMICILIO_ID } from "@/types/store-config";
-import { PROVINCIAS_ARGENTINA } from "@/lib/provincias";
-import { buscarVariante, varianteTiene } from "@/lib/variantMatch";
-import { resolveVariantPrice } from "@/lib/variantPrice";
-import { priceCart, resolveBasePrice, parseEscalones, freeShippingProgress, type ActivePromotion } from "@/lib/pricing";
-import { couponDiscountFor } from "@/lib/coupons";
-import { registrarVista } from "@/lib/registrarVista";
 
 // Misma lógica de matching de variante por talle/color que usan los templates
 // para mostrar "Sin stock"/"Últimas unidades" — se centraliza acá (y se expone
@@ -155,7 +154,7 @@ type StorefrontDeps = {
   // real de la compra al evento Purchase del Pixel de Meta, si está conectado.
   currency?: string;
   // Las páginas de detalle de producto reusan `openModal` solo para cargar el producto
-  // en el estado del carrito (addToCart/selectedSize/etc.), sin mostrar ningún modal
+  // en el estado del carrito (addToCart, seleccion, qty), sin mostrar ningún modal
   // flotante encima — por eso no deben heredar el bloqueo de scroll del body pensado
   // para el quick-view modal del catálogo.
   lockScrollOnModal?: boolean;
