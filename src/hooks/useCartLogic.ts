@@ -17,9 +17,10 @@ import { registrarVista } from "@/lib/registrarVista";
 /**
  * El índice de la foto asignada a un valor de opción, o -1.
  *
- * Al cargar el producto se le puede colgar una foto a cada valor (hoy el
- * formulario lo ofrece para los colores). No mira sólo los colores a propósito:
- * si mañana se asignan fotos por "Material", esto ya funciona.
+ * Al cargar el producto se le puede colgar una foto a cada valor. No mira sólo
+ * los colores a propósito, y desde 2026-08-05 el formulario tampoco: se le asigna
+ * una foto a cualquier opción, así que un collar puede tener la del 40cm y la del
+ * 70cm. Hasta entonces esto ya funcionaba y el formulario era lo que no dejaba.
  */
 function indiceFotoDe(p: StorefrontProduct, valor: string): number {
   if (!valor) return -1;

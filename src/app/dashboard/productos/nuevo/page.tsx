@@ -785,11 +785,12 @@ function ProductoFormPage() {
     return newVariants;
   }
 
-  // Asignar foto a un color (desde el builder)
-  const assignPhotoToColor = useCallback((colorValue: string, imageUrl: string | undefined) => {
+  // Asignar una foto a un VALOR de opción, desde el constructor. No tiene por qué
+  // ser un color: en un producto sin colores es el largo, el talle o lo que haya.
+  const assignPhotoToValue = useCallback((valor: string, imageUrl: string | undefined) => {
     setImages(prev => prev.map(img => {
-      if (img.variantValue === colorValue) return { ...img, variantValue: undefined };
-      if (imageUrl && img.url === imageUrl) return { ...img, variantValue: colorValue };
+      if (img.variantValue === valor) return { ...img, variantValue: undefined };
+      if (imageUrl && img.url === imageUrl) return { ...img, variantValue: valor };
       return img;
     }));
     markDirty();
@@ -837,19 +838,56 @@ function ProductoFormPage() {
     markDirty();
   }
 
-  const colorValues = useMemo(() => {
-    const values = new Set<string>();
-    variants.forEach((v) => {
-      Object.entries(v.attrs).forEach(([key, val]) => {
-        if ((key.toLowerCase().includes("color") || key.toLowerCase().includes("tono")) && val.trim()) {
-          values.add(val.trim());
-        }
-      });
-    });
-    return Array.from(values);
+  /**
+   * A qué se le puede colgar una foto, agrupado por opción.
+   *
+   * Antes esto filtraba por `key.includes("color")`, así que sólo se podían
+   * asignar fotos a los colores. La tienda hace rato que sincroniza la foto con
+   * CUALQUIER valor —`indiceFotoDe` en useCartLogic ni mira cómo se llama la
+   * opción, y el comentario de ahí lo dice: "si mañana se asignan fotos por
+   * Material, esto ya funciona"—. El formulario era lo único que faltaba.
+   *
+   * Concreto: el collar de tiendaapps se vende por `Media` (40/50/70cm) y sus
+   * fotos están colgadas de Blanco y Rojo, porque no había otra opción. Un collar
+   * de 40cm y uno de 70cm se ven distinto.
+   *
+   * El color va primero: es el caso normal —98 de 107 productos activos tienen la
+   * foto colgada de un color— y así queda arriba en el desplegable.
+   */
+  const opcionesParaFoto = useMemo(() => {
+    const porNombre = new Map<string, string[]>();
+    for (const v of variants) {
+      for (const [nombre, valor] of Object.entries(v.attrs)) {
+        const n = nombre.trim(), val = valor.trim();
+        if (!n || !val) continue;
+        if (!porNombre.has(n)) porNombre.set(n, []);
+        const lista = porNombre.get(n)!;
+        if (!lista.includes(val)) lista.push(val);
+      }
+    }
+    return [...porNombre]
+      .map(([nombre, valores]) => ({ nombre, valores }))
+      .sort((a, b) => Number(esOpcionDeColor(b.nombre)) - Number(esOpcionDeColor(a.nombre)));
   }, [variants]);
 
-  function assignImageColor(idx: number, variantValue: string | undefined) {
+  /** Todos los valores sueltos — para saber si hay algo a lo que asignarle una foto. */
+  const valoresParaFoto = useMemo(
+    () => opcionesParaFoto.flatMap((o) => o.valores),
+    [opcionesParaFoto],
+  );
+
+  /**
+   * Cómo nombrar la asignación en los carteles: "su color", "su color o su talle".
+   *
+   * Se arma con "su" a propósito: sirve para cualquier género y evita tener que
+   * saber si va "un color" o "una medida".
+   */
+  const etiquetaFoto = useMemo(
+    () => opcionesParaFoto.map((o) => `su ${o.nombre.toLowerCase()}`).join(" o "),
+    [opcionesParaFoto],
+  );
+
+  function assignImageValue(idx: number, variantValue: string | undefined) {
     setImages((p) => p.map((img, i) => i === idx ? { ...img, variantValue: variantValue || undefined } : img));
     markDirty();
   }
@@ -1408,11 +1446,13 @@ function ProductoFormPage() {
                 <span className="text-xs text-gray-400">{images.length}/{MAX_PRODUCT_IMAGES}</span>
               </div>
 
-              {/* Hint de color arriba del grid: los selects viven adentro de cada cuadro */}
-              {images.length > 0 && colorValues.length > 0 && (
+              {/* Hint arriba del grid: los selects viven adentro de cada cuadro */}
+              {images.length > 0 && valoresParaFoto.length > 0 && (
                 <div className="flex items-start gap-2 bg-indigo-50 rounded-xl px-3 py-2.5 text-xs text-indigo-700">
                   <svg className="h-4 w-4 mt-0.5 shrink-0 text-indigo-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                  <span><strong>Asigná un color a cada foto</strong> para que el cliente vea la imagen correcta al elegir el color del producto.</span>
+                  {/* El texto nombra las opciones que tiene ESTE producto. Decía
+                      "un color" siempre, aunque el producto se vendiera por largo. */}
+                  <span><strong>Asigná cada foto a {etiquetaFoto}</strong> para que el cliente vea la imagen correcta al elegir.</span>
                 </div>
               )}
 
@@ -1455,10 +1495,10 @@ function ProductoFormPage() {
                         <div className="absolute top-1.5 left-1.5 bg-indigo-600/80 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-md">PORTADA</div>
                       )}
                     </div>
-                    {colorValues.length > 0 && (
+                    {valoresParaFoto.length > 0 && (
                       <select
                         value={img.variantValue || ""}
-                        onChange={(e) => assignImageColor(i, e.target.value || undefined)}
+                        onChange={(e) => assignImageValue(i, e.target.value || undefined)}
                         onClick={(e) => e.stopPropagation()}
                         className={`w-full text-xs border rounded-lg bg-white py-1.5 px-2 cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-400 ${
                           img.variantValue
@@ -1466,9 +1506,16 @@ function ProductoFormPage() {
                             : "border-gray-200 text-gray-400"
                         }`}
                       >
-                        <option value="">Sin color</option>
-                        {colorValues.map((v) => (
-                          <option key={v} value={v}>{v}</option>
+                        <option value="">Sin asignar</option>
+                        {/* Agrupado por opción: con Color y Talle juntos, una lista
+                            plana mezclaría "Negro" con "M" sin decir qué es cada uno.
+                            El `optgroup` lo resuelve sin agregar un control nuevo. */}
+                        {opcionesParaFoto.map((op) => (
+                          <optgroup key={op.nombre} label={op.nombre}>
+                            {op.valores.map((v) => (
+                              <option key={v} value={v}>{v}</option>
+                            ))}
+                          </optgroup>
                         ))}
                       </select>
                     )}
@@ -1503,11 +1550,11 @@ function ProductoFormPage() {
                 onChange={handleImageUpload}
               />
 
-              {/* Hint cuando no hay colores definidos */}
-              {!storeTypeConfig.hideVariants && colorValues.length === 0 && (
+              {/* Hint cuando todavía no hay variantes cargadas */}
+              {!storeTypeConfig.hideVariants && valoresParaFoto.length === 0 && (
                 <div className="flex items-start gap-2 bg-gray-50 rounded-xl px-3 py-2.5 text-xs text-gray-500">
                   <svg className="h-4 w-4 mt-0.5 shrink-0 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                  <span>Si tu producto tiene <strong>diferentes colores</strong>, primero agregá las variantes de color en <strong>Variantes y stock</strong> (más abajo) — después podrás asignar cada foto a su color.</span>
+                  <span>Si tu producto viene en <strong>varias versiones</strong> (colores, talles, largos), primero cargalas en <strong>Variantes y stock</strong> (más abajo) — después vas a poder asignarle una foto a cada una.</span>
                 </div>
               )}
             </div>
@@ -2350,7 +2397,7 @@ function ProductoFormPage() {
                   onColorsChange={(c) => { setBuilderColors(c); setVariants(buildVariantsFromBuilder(c, builderSizes)); markDirty(); }}
                   onSizesChange={(s) => { setBuilderSizes(s); setVariants(buildVariantsFromBuilder(builderColors, s)); markDirty(); }}
                   onVariantChange={updateVariantField}
-                  onAssignPhoto={assignPhotoToColor}
+                  onAssignPhoto={assignPhotoToValue}
                 />
               ) : (
                 /* ── MANUAL MODE ── */
@@ -2459,10 +2506,10 @@ function ProductoFormPage() {
                   ))}
 
                   {/* Hint: fotos sin color asignado */}
-                  {colorValues.length > 0 && images.length > 0 && images.some(img => !img.variantValue) && (
+                  {valoresParaFoto.length > 0 && images.length > 0 && images.some(img => !img.variantValue) && (
                     <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 text-xs text-amber-700">
                       <svg className="h-4 w-4 mt-0.5 shrink-0 text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                      <span>Tenés colores definidos pero tus fotos no tienen color asignado. Scrolleá a <strong>Imágenes del producto</strong> (arriba) para asignar cada foto a su color.</span>
+                      <span>Tenés variantes cargadas pero hay fotos sin asignar. Scrolleá a <strong>Imágenes del producto</strong> (arriba) para asignar cada foto a {etiquetaFoto}.</span>
                     </div>
                   )}
                 </>
