@@ -188,3 +188,75 @@ export function quitarOpcion<T extends ConAttrs>(filas: T[], nombre: string): T[
     return { ...f, attrs };
   });
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// El estado del constructor, derivado de las filas.
+//
+// El constructor no guarda las combinaciones: guarda los COLORES y los VALORES
+// de la otra opción por separado, y con eso las rearma. Ese estado se llenaba
+// adentro del `.then` del fetch del producto, detrás de un `if` que preguntaba
+// por `store.tipoTienda` — leído del closure, donde todavía no existe. O sea que
+// no se llenaba NUNCA:
+//
+//   · abrías una remera con Negro y Verde, y el selector aparecía sin nada
+//     marcado aunque abajo se vieran las 4 combinaciones;
+//   · al tocar cualquier color se rearmaba todo desde ese estado vacío, y la
+//     remera se quedaba sin variantes y con el stock en cero.
+//
+// Derivarlo de las filas es la única fuente que siempre está: para cuando esto
+// corre, las filas ya cargaron. No hace falta saber de qué rubro es la tienda —
+// si no usa constructor, el dato queda calculado y nadie lo mira.
+//
+// Vive acá y no adentro del formulario para poder probarlo: el panel está detrás
+// del login y no se puede recorrer con un script.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * La clave con la que el constructor recuerda el stock de cada combinación.
+ *
+ * Estaba escrita a mano en cinco lugares (`${color}|||${valor}`). Si una sola se
+ * desviaba, el stock cargado no se encontraba al rearmar y volvía a cero sin que
+ * nada avisara.
+ */
+export function claveDeCombinacion(color: string, valor: string): string {
+  return `${color}|||${valor}`;
+}
+
+/** Lo que el constructor recuerda de cada combinación mientras se la rearma. */
+export type DatosDeCombinacion = { stock: string; price: string; sku: string; threshold: string };
+
+type FilaDeVariante = ConAttrs & {
+  stock: string;
+  price: string;
+  sku: string;
+  lowStockThreshold: string;
+};
+
+/**
+ * Los colores, los valores de la otra opción y el stock de cada combinación,
+ * sacados de las filas que ya están cargadas.
+ *
+ * `nombreOpcion` es cómo se llama la segunda dimensión en ESTE producto
+ * ("Talle", "Largo", "Media"). Sale de las filas, no de una tabla por rubro.
+ */
+export function estadoDelBuilder(
+  filas: FilaDeVariante[],
+  nombreOpcion: string,
+): { colores: string[]; valores: string[]; stock: Map<string, DatosDeCombinacion> } {
+  const stock = new Map<string, DatosDeCombinacion>();
+  const colores: string[] = [];
+  const valores: string[] = [];
+  for (const f of filas) {
+    const color = f.attrs["Color"] || "";
+    const valor = f.attrs[nombreOpcion] || "";
+    stock.set(claveDeCombinacion(color, valor), {
+      stock: f.stock,
+      price: f.price,
+      sku: f.sku,
+      threshold: f.lowStockThreshold,
+    });
+    if (color && !colores.includes(color)) colores.push(color);
+    if (valor && !valores.includes(valor)) valores.push(valor);
+  }
+  return { colores, valores, stock };
+}

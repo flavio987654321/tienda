@@ -12,7 +12,7 @@ import {
 import Link from "next/link";
 import Image from "next/image";
 import { getStoreType, etiquetaCategoria, camposActivos, camposPropios, ejemploNombre, ejemploTags } from "@/lib/storeTypes";
-import { sugerirOpcion, opcionesIniciales, nombresDeOpciones, renombrarOpcion, agregarOpcion, quitarOpcion, MAX_OPCIONES } from "@/lib/opcionSugerida";
+import { sugerirOpcion, opcionesIniciales, nombresDeOpciones, renombrarOpcion, agregarOpcion, quitarOpcion, estadoDelBuilder, claveDeCombinacion, MAX_OPCIONES } from "@/lib/opcionSugerida";
 import { esOpcionDeColor } from "@/lib/opciones";
 import { calcMargin, calcVehicleCostTotal, formatFechaGasto } from "@/lib/margin";
 import StockHistoryPanel from "../StockHistoryPanel";
@@ -654,23 +654,23 @@ function ProductoFormPage() {
         // le puede renombrar las variantes que ya vendió.
         nombreTocadoRef.current = true;
 
-        // Si la tienda usa builder, detectar colores y segunda dimensión de las variantes existentes
-        if (["ROPA", "HOGAR_TECH"].includes(store.tipoTienda || "")) {
-          const stockMap = new Map<string, { stock: string; price: string; sku: string; threshold: string }>();
-          const uniqueColors: string[] = [];
-          const uniqueSizes: string[] = [];
-          for (const v of loadedVariants) {
-            const c = v.attrs["Color"] || "";
-            const s = v.attrs[sizeDim] || "";
-            const key = `${c}|||${s}`;
-            stockMap.set(key, { stock: v.stock, price: v.price, sku: v.sku, threshold: v.lowStockThreshold });
-            if (c && !uniqueColors.includes(c)) uniqueColors.push(c);
-            if (s && !uniqueSizes.includes(s)) uniqueSizes.push(s);
-          }
-          variantStockRef.current = stockMap;
-          setBuilderColors(uniqueColors);
-          setBuilderSizes(uniqueSizes);
-        }
+        // Los colores y los valores que el constructor va a mostrar marcados.
+        //
+        // Esto estaba detrás de `if (["ROPA","HOGAR_TECH"].includes(store.tipoTienda || ""))`,
+        // y `store` acá es el del closure: el fetch del producto sale ANTES que el
+        // de configuración, así que `tipoTienda` todavía no existe, el `includes("")`
+        // daba falso y el bloque no corría nunca. Abrías una remera con Negro y
+        // Verde y el selector aparecía en blanco; al tocar un color se rearmaban
+        // las combinaciones desde ese vacío y la remera perdía las variantes y el
+        // stock.
+        //
+        // Ya no se pregunta de qué rubro es la tienda: se deriva de las filas, que
+        // para este punto están cargadas. Si la tienda no usa constructor, el dato
+        // queda calculado y nadie lo mira.
+        const builder = estadoDelBuilder(loadedVariants, sizeDim);
+        variantStockRef.current = builder.stock;
+        setBuilderColors(builder.colores);
+        setBuilderSizes(builder.valores);
         const allAttrs = safeJsonArray(product.attributes).filter(
           (a: unknown): a is Attribute =>
             !!a && typeof a === "object" && typeof (a as Attribute).key === "string" && typeof (a as Attribute).value === "string"
@@ -743,7 +743,7 @@ function ProductoFormPage() {
       // Persiste en el ref para que el builder no pierda stock al agregar/quitar colores
       if (useBuilder) {
         updated.forEach(v => {
-          const key = `${v.attrs["Color"] || ""}|||${v.attrs[opcionNombre] || ""}`;
+          const key = claveDeCombinacion(v.attrs["Color"] || "", v.attrs[opcionNombre] || "");
           variantStockRef.current.set(key, { stock: v.stock, price: v.price, sku: v.sku, threshold: v.lowStockThreshold });
         });
       }
@@ -764,20 +764,20 @@ function ProductoFormPage() {
     if (colors.length > 0 && sizes.length > 0) {
       for (const color of colors) {
         for (const size of sizes) {
-          const key = `${color}|||${size}`;
+          const key = claveDeCombinacion(color, size);
           const prev = get(key);
           newVariants.push({ attrs: { Color: color, [sd]: size }, stock: prev?.stock ?? "0", price: prev?.price ?? "", sku: prev?.sku ?? "", lowStockThreshold: prev?.threshold ?? "" });
         }
       }
     } else if (colors.length > 0) {
       for (const color of colors) {
-        const key = `${color}|||`;
+        const key = claveDeCombinacion(color, "");
         const prev = get(key);
         newVariants.push({ attrs: { Color: color }, stock: prev?.stock ?? "0", price: prev?.price ?? "", sku: prev?.sku ?? "", lowStockThreshold: prev?.threshold ?? "" });
       }
     } else {
       for (const size of sizes) {
-        const key = `|||${size}`;
+        const key = claveDeCombinacion("", size);
         const prev = get(key);
         newVariants.push({ attrs: { [sd]: size }, stock: prev?.stock ?? "0", price: prev?.price ?? "", sku: prev?.sku ?? "", lowStockThreshold: prev?.threshold ?? "" });
       }
