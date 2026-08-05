@@ -62,10 +62,75 @@ export interface StoreTypeConfig {
   categorias: string[];
   subcategorias: Record<string, string[]>;
   extraFields: ExtraField[];
-  // Specs propias de cada subcategoría (ej: "Pulgadas" para tvs, "RAM" para notebooks).
-  // Se suman a extraFields cuando el vendedor elige esa subcategoría — así una
-  // heladera y un celular no piden los mismos campos.
+  /**
+   * Specs propias de una categoría o subcategoría (ej: "Pulgadas" para tvs,
+   * "Piedra" para joyas). Se resuelven con `camposActivos`.
+   *
+   * La clave puede ser una subcategoría ("tvs", "collares") o una categoría
+   * ("joyas"). Antes sólo se miraba la subcategoría: los mismos dos campos
+   * había que repetirlos en `collares`, `anillos`, `pulseras` y `aros`, y un
+   * producto cargado en "Joyas" sin subcategoría no recibía ninguno.
+   */
   extraFieldsByCategory?: Record<string, ExtraField[]>;
+  /** Ejemplos del nombre y de los tags por categoría. Ver `ejemploNombre`. */
+  ejemplosPorCategoria?: Record<string, { nombre: string; tags: string }>;
+}
+
+/**
+ * Los ejemplos del formulario para una categoría: el del nombre y el de los tags.
+ *
+ * Los del rubro son un solo par para todo Moda, y son de ropa: quien abre una
+ * joyería ve "Ej: Remera oversize negra talle M" y "negro, oversize, algodon".
+ * Es la primera señal de "esto no fue pensado para mí".
+ *
+ * OJO CON EL ALCANCE: el campo del nombre está ARRIBA de la categoría en el
+ * formulario, así que el que carga de arriba hacia abajo no llega a ver el
+ * ejemplo bueno. Sirve si vuelve a mirar o si cambia de categoría. Los tags sí
+ * están abajo y ahí funciona siempre.
+ *
+ * No se mueve la categoría arriba del nombre a propósito: ni Shopify ni
+ * Tiendanube ni MercadoLibre lo hacen, y acá cambiaría el orden en los cinco
+ * rubros, no sólo en Moda.
+ *
+ * Los ejemplos viven DENTRO de cada rubro y no en un mapa suelto porque los
+ * nombres de categoría se repiten entre rubros: Moda y Autos tienen las dos una
+ * categoría "accesorios", y un mapa suelto le pondría "Lentes de sol
+ * polarizados" a una casa de repuestos.
+ */
+/** El ejemplo del nombre: el de la categoría si hay, si no el del rubro. */
+export function ejemploNombre(config: StoreTypeConfig, category: string): string {
+  const propio = config.ejemplosPorCategoria?.[category]?.nombre;
+  return propio ? `Ej: ${propio}` : config.namePlaceholder;
+}
+
+/** El ejemplo de los tags: el de la categoría si hay, si no el del rubro. */
+export function ejemploTags(config: StoreTypeConfig, category: string): string {
+  return config.ejemplosPorCategoria?.[category]?.tags ?? config.tagsPlaceholder;
+}
+
+/**
+ * Los campos propios de lo que se está cargando. Manda la subcategoría; si no
+ * hay nada para ella, la categoría.
+ */
+export function camposPropios(config: StoreTypeConfig, category: string, subcategory: string): ExtraField[] {
+  const porSub = subcategory ? config.extraFieldsByCategory?.[subcategory] : undefined;
+  if (porSub?.length) return porSub;
+  return (category ? config.extraFieldsByCategory?.[category] : undefined) ?? [];
+}
+
+/**
+ * Todos los campos a mostrar: los del rubro más los de la categoría.
+ *
+ * Si comparten `key`, el de la categoría PISA al del rubro y se queda en su
+ * lugar. Antes sólo se sumaban, así que un collar pedía "Material: Algodón,
+ * poliéster..." —el ejemplo de todo Moda— además de lo suyo.
+ */
+export function camposActivos(config: StoreTypeConfig, category: string, subcategory: string): ExtraField[] {
+  const propios = camposPropios(config, category, subcategory);
+  return [
+    ...config.extraFields.map(f => propios.find(p => p.key === f.key) ?? f),
+    ...propios.filter(p => !config.extraFields.some(f => f.key === p.key)),
+  ];
 }
 
 /* ── Cómo se escribe cada categoría en pantalla ──────────────────────────────
@@ -140,6 +205,58 @@ export const STORE_TYPES: StoreTypeConfig[] = [
     extraFields: [
       { key: "material", label: "Material", placeholder: "Algodón, poliéster..." },
     ],
+    // Moda no es sólo ropa: adentro entran joyería, calzado, marroquinería y
+    // accesorios, y cada uno se describe distinto. Sin esto, una joyería pedía
+    // "Material: Algodón, poliéster..." para un collar de plata.
+    //
+    // Dos campos por categoría y todos opcionales, a propósito. Es el modelo de
+    // Shopify (atributos por categoría, opcionales) y no el de MercadoLibre
+    // (ficha técnica larga con campos obligatorios): la diferencia entre dos
+    // campos y cinco es la diferencia entre que se completen y que se saltee la
+    // sección entera.
+    //
+    // Van por CATEGORÍA, no por subcategoría: los cuatro tipos de joya piden lo
+    // mismo. Ver `camposPropios`, que cae a la categoría si no hay nada para la
+    // subcategoría.
+    extraFieldsByCategory: {
+      joyas: [
+        // Pisa al "material" del rubro: mismo `key`, mismo rótulo, otro ejemplo.
+        { key: "material", label: "Material", placeholder: "Plata 925, oro 18k, acero quirúrgico..." },
+        { key: "piedra", label: "Piedra", placeholder: "Circonia, perla, cuarzo rosa..." },
+      ],
+      calzado: [
+        { key: "material", label: "Material", placeholder: "Cuero, gamuza, lona, sintético..." },
+        { key: "suela", label: "Suela", placeholder: "Goma, EVA, cuero..." },
+      ],
+      bolsos: [
+        { key: "material", label: "Material", placeholder: "Cuero, lona, sintético..." },
+        { key: "medidas", label: "Medidas", placeholder: "30 x 25 x 12 cm" },
+      ],
+      // Éstas sí van por SUBCATEGORÍA: dentro de accesorios, unos lentes y un
+      // cinturón no tienen nada en común.
+      lentes: [
+        { key: "proteccionUv", label: "Protección UV", options: ["UV400", "UV380", "Sin protección"] },
+        { key: "tipoLente", label: "Tipo de lente", options: ["Polarizado", "Espejado", "Degradé", "Común"] },
+      ],
+      cinturones: [
+        { key: "material", label: "Material", placeholder: "Cuero, sintético..." },
+        { key: "ancho", label: "Ancho", placeholder: "3 cm" },
+      ],
+      // Mallas, ropa interior y bebé quedan con el "Material" del rubro y nada
+      // más: no hay un campo que sumen que no sea ruido, y campos de más es
+      // justo lo que hace que no se complete ninguno.
+    },
+    ejemplosPorCategoria: {
+      joyas:        { nombre: "Collar de plata 925 con dije de luna", tags: "plata, dorado, minimalista" },
+      calzado:      { nombre: "Zapatilla urbana de cuero blanca",     tags: "cuero, urbana, blanca" },
+      bolsos:       { nombre: "Cartera de cuero con manija corta",    tags: "cuero, negra, mano" },
+      accesorios:   { nombre: "Lentes de sol polarizados negros",     tags: "polarizado, negro, verano" },
+      vestidos:     { nombre: "Vestido midi floreado de gasa",        tags: "floreado, midi, verano" },
+      mallas:       { nombre: "Bikini triangulito lisa",              tags: "lisa, verano, playa" },
+      "ropa-interior": { nombre: "Corpiño sin aro de algodón",        tags: "algodon, sin aro, comodo" },
+      "ropa-bebe":  { nombre: "Body de algodón manga larga",          tags: "algodon, bebe, invierno" },
+      "ropa-ninos": { nombre: "Buzo de frisa con capucha",            tags: "frisa, capucha, abrigo" },
+    },
   },
   {
     id: "AUTOS",

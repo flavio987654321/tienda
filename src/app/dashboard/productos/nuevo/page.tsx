@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
-import { getStoreType, etiquetaCategoria } from "@/lib/storeTypes";
+import { getStoreType, etiquetaCategoria, camposActivos, camposPropios, ejemploNombre, ejemploTags } from "@/lib/storeTypes";
 import { sugerirOpcion, opcionesIniciales, nombresDeOpciones, renombrarOpcion, agregarOpcion, quitarOpcion, MAX_OPCIONES } from "@/lib/opcionSugerida";
 import { calcMargin, calcVehicleCostTotal, formatFechaGasto } from "@/lib/margin";
 import StockHistoryPanel from "../StockHistoryPanel";
@@ -1140,22 +1140,21 @@ function ProductoFormPage() {
   const previewCategory = form.category === "otro" ? customCategory.trim() || "otro" : form.category;
   const previewSubcategory = form.subcategory === "otro" ? customSubcategory.trim() : form.subcategory;
   const availableSubcategories = form.category === "otro" ? [] : productSubcategories[form.category] || [];
-  // Specs propias de la subcategoría elegida (ej: Pulgadas para TVs, RAM para notebooks),
-  // sumadas a las genéricas del tipo de tienda (Marca, Modelo, Garantía).
-  const activeExtraFields = [
-    ...storeTypeConfig.extraFields,
-    ...(storeTypeConfig.extraFieldsByCategory?.[previewSubcategory] ?? []),
-  ];
+  // Specs propias de lo que se está cargando (Pulgadas para TVs, Piedra para
+  // joyas), sumadas a las genéricas del rubro. Si comparten nombre, gana la de
+  // la categoría: un collar no pide "Material: Algodón, poliéster...".
+  const activeExtraFields = camposActivos(storeTypeConfig, previewCategory, previewSubcategory);
   // Tips que todavía no consumió ninguna foto. Cuando se acaban, el grid sigue
   // con un cuadro genérico: siempre queda uno libre hasta llegar al máximo.
   const remainingPhotoTips = photoTips(storeTypeConfig.hideVariants).slice(images.length);
 
-  // Al elegir una subcategoría con specs propias (ej: "tvs" → Pulgadas), agregamos
-  // esos campos vacíos a la ficha técnica para que el vendedor los vea y los complete.
-  // No borra nada de lo que ya haya escrito si cambia de subcategoría y vuelve.
+  // Al elegir una categoría con specs propias (ej: "tvs" → Pulgadas, "joyas" →
+  // Piedra), agregamos esos campos vacíos a la ficha técnica para que el vendedor
+  // los vea y los complete.
+  // No borra nada de lo que ya haya escrito si cambia de categoría y vuelve.
   useEffect(() => {
-    const suggested = storeTypeConfig.extraFieldsByCategory?.[previewSubcategory];
-    if (!suggested || suggested.length === 0) return;
+    const suggested = camposPropios(storeTypeConfig, previewCategory, previewSubcategory);
+    if (suggested.length === 0) return;
     // eslint-disable-next-line react-hooks/set-state-in-effect -- agrega los campos sugeridos de la subcategoría recién elegida, no se puede calcular durante el render porque depende de una interacción del usuario
     setAttributes((prev) => {
       const missing = suggested.filter((f) => !prev.some((a) => a.key === f.label));
@@ -1163,7 +1162,7 @@ function ProductoFormPage() {
       return [...prev, ...missing.map((f) => ({ key: f.label, value: "" }))];
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [previewSubcategory]);
+  }, [previewCategory, previewSubcategory]);
 
   const discount =
     form.comparePrice && form.price && parseFloat(form.comparePrice) > parseFloat(form.price)
@@ -1280,7 +1279,7 @@ function ProductoFormPage() {
                   value={form.name}
                   onChange={(e) => updateForm("name", e.target.value)}
                   required
-                  placeholder={storeLoaded ? storeTypeConfig.namePlaceholder : ""}
+                  placeholder={storeLoaded ? ejemploNombre(storeTypeConfig, previewCategory) : ""}
                   className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
@@ -1370,7 +1369,7 @@ function ProductoFormPage() {
                       type="text"
                       value={form.tags}
                       onChange={(e) => updateForm("tags", e.target.value)}
-                      placeholder={storeTypeConfig.tagsPlaceholder}
+                      placeholder={ejemploTags(storeTypeConfig, previewCategory)}
                       className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     />
                   </div>

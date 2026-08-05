@@ -301,7 +301,25 @@ compra.
 
 ---
 
-### 🔲 5.4 — Faltan campos por categoría en Moda
+### ✅ 5.4 — Faltan campos por categoría en Moda
+
+> **HECHO.** Decidido con Flavio el 2026-08-04: **dos campos por categoría y todos
+> opcionales** — el modelo de Shopify (atributos por categoría, opcionales) y no el de
+> MercadoLibre (ficha técnica larga con campos obligatorios, que hace que se saltee la
+> sección entera). Quedaron: joyas *(Material · Piedra)*, calzado *(Material · Suela)*,
+> bolsos *(Material · Medidas)*, lentes *(Protección UV · Tipo de lente)* y cinturones
+> *(Material · Ancho)*. **Mallas, ropa interior y bebé quedan sin campos propios**: no
+> hay uno que sumen que no sea ruido.
+>
+> Hubo que arreglar dos límites del mecanismo antes de poder cargar nada:
+> 1. Sólo miraba la **sub**categoría, así que los cuatro tipos de joya pedían repetir
+>    los mismos campos, y un producto en "Joyas" sin subcategoría no recibía ninguno.
+>    Ahora cae a la categoría (`camposPropios`).
+> 2. Los campos **se sumaban, nunca reemplazaban**: un collar pedía "Material: Algodón,
+>    poliéster..." además de lo suyo. Ahora el de la categoría pisa al del rubro y se
+>    queda en su lugar (`camposActivos`).
+
+#### La propuesta original, para referencia
 
 Moda pide un solo campo para todo: **Material**. Hogar & Tecnología pide Capacidad para una
 heladera y BTU para un aire.
@@ -320,7 +338,28 @@ El mecanismo (`extraFieldsByCategory`) ya existe y es genérico: **son datos, ce
 
 ---
 
-### 🔲 5.5 — Los ejemplos del formulario son todos de ropa
+### ✅ 5.5 — Los ejemplos del formulario son todos de ropa
+
+> **HECHO.** Los ejemplos del nombre y de los tags salen de la categoría
+> (`ejemploNombre` / `ejemploTags`), y caen a los del rubro si esa categoría no tiene.
+>
+> **La sospecha del párrafo de abajo era cierta y quedó comprobada:** el campo del
+> nombre está **arriba** de la categoría, así que el que carga de arriba hacia abajo no
+> llega a ver el ejemplo bueno; sólo sirve si vuelve a mirar o cambia de categoría. Los
+> tags sí están abajo y ahí funciona siempre.
+>
+> **No se movió la categoría arriba del nombre**, que sería el arreglo de fondo: ni
+> Shopify (título arriba, categoría en la barra lateral) ni Tiendanube ni MercadoLibre
+> lo hacen, y acá cambiaría el orden en los cinco rubros. Los dos primeros además
+> tienen un ejemplo genérico fijo, así que esto ya nos deja mejor que ellos — pero no
+> resuelto.
+>
+> **Un choque que casi se cuela:** los ejemplos arrancaron como un mapa suelto por
+> nombre de categoría. Moda y Autos tienen las dos una categoría `accesorios`, así que
+> una casa de repuestos habría visto "Ej: Lentes de sol polarizados negros". Por eso
+> viven **dentro de cada rubro**, igual que `extraFieldsByCategory`.
+
+#### El análisis original
 
 `storeTypes.ts:114-115`:
 
@@ -412,9 +451,9 @@ Cada paso **termina cerrado**. Nada de "por ahora dejamos los dos y después lim
 ## 7. ORDEN PROPUESTO
 
 1. ~~**5.1 + 5.3** — opciones con nombre y el selector de una sola opción.~~ ✅ hecho, sin mergear.
-2. **5.2 + 5.6** — el formulario y los bugs sueltos. **← acá estamos**
-3. **5.4 + 5.5** — campos y textos por categoría.
-4. **6.1** — decidir el contenido demo.
+2. ~~**5.2 + 5.6** — el formulario y los bugs sueltos.~~ ✅ hecho, sin mergear.
+3. ~~**5.4 + 5.5** — campos y textos por categoría.~~ ✅ hecho, sin mergear.
+4. **6.1** — decidir el contenido demo. **← acá estamos**
 5. **6.2 + 6.3** — las dos estéticas y sus fichas.
 
 Al revés no sirve: si armamos los diseños primero, salen con "Talle" clavado y pasamos de 4
