@@ -4,7 +4,21 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import type { StorefrontProduct, StorefrontVariant, ValidatedCoupon, PlaceOrderParams, SeleccionOpciones, OpcionProducto } from "./useStorefront";
 import { valoresElegidos } from "./useStorefront";
-import { reacomodarSeleccion, opcionesDeVariantes } from "@/lib/opciones";
+import { reacomodarSeleccion, opcionesDeVariantes, opcionDelValor } from "@/lib/opciones";
+
+/**
+ * El índice de la foto asignada a un valor de opción, o -1.
+ *
+ * Al cargar el producto se le puede colgar una foto a cada valor (hoy el
+ * formulario lo ofrece para los colores). No mira sólo los colores a propósito:
+ * si mañana se asignan fotos por "Material", esto ya funciona.
+ */
+function indiceFotoDe(p: StorefrontProduct, valor: string): number {
+  if (!valor) return -1;
+  return p.imageItems.findIndex(
+    img => !!img.variantValue && img.variantValue.toLowerCase() === valor.toLowerCase(),
+  );
+}
 import { getEnvioOptions, fmtEnvioPrice, getPagoOptions, fmt as fmtFn, claveItem, type CartItem, type CheckoutStatus, type ShippingMethod } from "@/components/store/shared/cartTypes";
 import { useAuth } from "@/components/AuthProvider";
 import { LIVE_QUOTE_DOMICILIO_ID } from "@/types/store-config";
@@ -196,6 +210,8 @@ export function useCartLogic({ products, promotions = [], storeId, affiliateId =
 
   const userDropdownRef = useRef<HTMLDivElement>(null);
   const addingToCartRef = useRef(false);
+  /** La última foto la movió el código, no el comprador. Ver `setOpcion`. */
+  const fotoAutomaticaRef = useRef(false);
   const { status } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
@@ -608,25 +624,80 @@ export function useCartLogic({ products, promotions = [], storeId, affiliateId =
    * de los viejos `setSelectedSize` / `setSelectedColor`: ahora la opción se
    * identifica por su nombre, así que sirve para las que haya y como se llamen.
    */
-  const setOpcion = (nombre: string, valor: string) =>
-    setSeleccion(prev => {
-      const tentativa = { ...prev, [nombre]: valor };
-      if (!modalProduct) return tentativa;
-      // Si la combinación que queda no existe —Rojo sólo viene en L y estabas en
-      // S—, se mueven las OTRAS opciones a una que sí exista, respetando la que
-      // el comprador acaba de tocar. Sin esto el botón de comprar se apaga y nada
-      // explica por qué.
-      //
-      // Va acá, en el `setOpcion` compartido, y no en cada template: esto vivía
-      // como tres efectos duplicados en los cuatro de Moda, doce en total, y
-      // ninguno sabía manejar más de dos dimensiones.
-      return reacomodarSeleccion(modalProduct.variants, tentativa, nombre) ?? tentativa;
-    });
+  const setOpcion = (nombre: string, valor: string) => {
+    const tentativa = { ...seleccion, [nombre]: valor };
+    // Si la combinación que queda no existe —Rojo sólo viene en L y estabas en
+    // S—, se mueven las OTRAS opciones a una que sí exista, respetando la que
+    // el comprador acaba de tocar. Sin esto el botón de comprar se apaga y nada
+    // explica por qué.
+    //
+    // Va acá, en el `setOpcion` compartido, y no en cada template: esto vivía
+    // como tres efectos duplicados en los cuatro de Moda, doce en total, y
+    // ninguno sabía manejar más de dos dimensiones.
+    const nueva = modalProduct
+      ? (reacomodarSeleccion(modalProduct.variants, tentativa, nombre) ?? tentativa)
+      : tentativa;
+    setSeleccion(nueva);
+
+    // Y la foto sigue a lo elegido. Gana la del valor que acaba de tocar; si esa
+    // no tiene foto propia, se busca entre los demás valores por si el reacomodo
+    // movió justo el que sí la tiene.
+    if (!modalProduct) return;
+    let idx = indiceFotoDe(modalProduct, valor);
+    if (idx === -1) {
+      for (const v of Object.values(nueva)) {
+        idx = indiceFotoDe(modalProduct, v);
+        if (idx !== -1) break;
+      }
+    }
+    if (idx !== -1 && idx !== modalImg) {
+      fotoAutomaticaRef.current = true;
+      setModalImg(idx);
+    }
+  };
+
+  // Y al revés: si el comprador pasa a una foto que es de otro valor, se elige
+  // ese valor. Es lo que hace que mirar la foto del rojo deje el rojo elegido.
+  //
+  // `fotoAutomaticaRef` corta el ida y vuelta: sin eso, elegir un color movía la
+  // foto, la foto volvía a elegir el color, y quedaban rebotando.
+  //
+  // Y ACÁ NO SE TOCA LA FOTO. Un producto puede tener varias fotos del mismo
+  // color; si esto la reacomodara, tocar la segunda foto del azul volvería sola
+  // a la primera. Verificado en su momento contra la base: 37 de 90 productos
+  // activos tienen dos o más fotos del mismo color, y hay uno con las cuatro en
+  // azul —ahí las flechas y las miniaturas no servían para nada—. La foto queda
+  // donde la puso el comprador; lo único que se mueve es lo elegido.
+  useEffect(() => {
+    if (fotoAutomaticaRef.current) { fotoAutomaticaRef.current = false; return; }
+    if (!modalProduct) return;
+    const valor = modalProduct.imageItems[modalImg]?.variantValue;
+    if (!valor) return;
+    const opcion = opcionDelValor(modalProduct.opciones, valor);
+    if (!opcion) return;
+    // Ya está elegido: no hay nada que hacer. Es lo que evita el rebote de arriba.
+    if (seleccion[opcion]?.toLowerCase() === valor.toLowerCase()) return;
+    const tentativa = { ...seleccion, [opcion]: valor };
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- responde a que el comprador cambió de foto, no se puede calcular durante el render
+    setSeleccion(reacomodarSeleccion(modalProduct.variants, tentativa, opcion) ?? tentativa);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [modalImg, modalProduct?.id]);
 
   const openModal = (p: StorefrontProduct) => {
     setModalProduct(p);
-    setModalImg(0);
-    setSeleccion(primerComboConStock(p));
+    const inicial = primerComboConStock(p);
+    // La ficha abre mostrando la foto del color que viene elegido, no la primera
+    // del carrete: si el producto abre en Rojo, se ve el rojo.
+    let idx = -1;
+    for (const v of Object.values(inicial)) {
+      idx = indiceFotoDe(p, v);
+      if (idx !== -1) break;
+    }
+    // Aunque quede en 0, se marca como automática: la foto 0 puede pertenecer a
+    // otro color, y sin esto el efecto de abajo la haría mandar sobre lo elegido.
+    fotoAutomaticaRef.current = true;
+    setModalImg(idx === -1 ? 0 : idx);
+    setSeleccion(inicial);
     setQty(isWholesale && p.cantMinMayorista ? p.cantMinMayorista : 1);
     setSearchOpen(false);
     // La ficha nueva arranca ARRIBA. Los "productos similares" viven al final del

@@ -14,7 +14,7 @@ import { ResenaComentario } from "@/components/store/templates/shared/ResenaCome
 import { useTouchSwipe } from "@/hooks/useTouchSwipe";
 import { masVistos, MIN_MAS_VISTOS } from "@/lib/masVistos";
 import { catalogoTieneGeneros } from "@/lib/generos";
-import { opcionesVisibles, opcionDelValor } from "@/lib/opciones";
+import { opcionesVisibles } from "@/lib/opciones";
 import { esOpcionDeColor, valoresElegidos } from "@/hooks/useStorefront";
 import { COMENTARIO_MAX, RESENADOR_MAX } from "@/lib/reviews";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
@@ -72,16 +72,15 @@ const EJEMPLOS_RESENAS_CP: EjemplosDeResenas = {
 };
 
 
-/* ── Foto ↔ color ↔ talle ─────────────────────────────────────────────────────
-   Las tres cosas están atadas: el dueño le asigna un color a cada foto en el
-   editor de producto, y cada variante es un combo color+talle con su stock.
-   Tocar cualquiera de las tres tiene que acomodar a las otras dos.
-──────────────────────────────────────────────────────────────────────────────── */
+/* ── Foto ↔ opciones ──────────────────────────────────────────────────────────
+   Están atadas: el dueño le asigna un valor a cada foto en el editor, y cada
+   variante es un combo de opciones con su stock. Tocar cualquiera de las dos
+   tiene que acomodar la otra.
 
-/** Índice de la foto que el dueño le asignó a ese color, o -1 si ninguna. */
-function fotoDeColor(p: Product, color: string): number {
-  return p.imageItems.findIndex(img => !!img.variantValue && img.variantValue.toLowerCase() === color.toLowerCase());
-}
+   Vivía acá y en el listado, escrito dos veces y sólo para el color. Ahora es
+   `useCartLogic`, que además lo da a los tres templates de Moda que no lo
+   tenían. — `indiceFotoDe` en `hooks/useCartLogic.ts`.
+──────────────────────────────────────────────────────────────────────────────── */
 
 const BANNER_COUNT = 3;
 
@@ -586,33 +585,17 @@ export default function ChicParis() {
   // haya — ver `reacomodarSeleccion` en `lib/opciones.ts`.
 
   // Acepta índices fuera de rango para que las flechas sean `elegirFoto(i ± 1)`.
+  //
+  // Sólo mueve la foto. Que al mirar la foto del rojo quede el rojo elegido, y
+  // que al elegir el rojo salte a su foto, lo resuelve `useCartLogic` para las
+  // seis pantallas: acá estaba escrito a mano y en los otros tres templates de
+  // Moda directamente faltaba.
   function elegirFoto(i: number) {
     if (!modalProduct) return;
     const total = modalProduct.images.length;
     if (!total) return;
-    const idx = ((i % total) + total) % total;
-    setModalImg(idx);
-    // Si la foto pertenece a un valor de alguna opción, se elige ese valor y
-    // `setOpcion` acomoda el resto solo.
-    const valor = modalProduct.imageItems[idx]?.variantValue;
-    if (!valor) return;
-    const nombre = opcionDelValor(modalProduct.opciones, valor);
-    if (nombre && seleccion[nombre]?.toLowerCase() !== valor.toLowerCase()) setOpcion(nombre, valor);
+    setModalImg(((i % total) + total) % total);
   }
-
-
-  // Lo único que sigue siendo un efecto: al ABRIR la vista rápida hay que mostrar
-  // la foto del color con el que abre, y ahí no hubo ningún click que lo resuelva
-  // (`openModal` es del hook compartido por los 10 templates y deja la foto 0).
-  useEffect(() => {
-    if (!modalProduct) return;
-    // La foto se busca contra cualquier valor elegido, no sólo contra el color.
-    const idx = valoresElegidos(seleccion)
-      .map(v => fotoDeColor(modalProduct, v))
-      .find(i => i !== -1);
-    if (idx !== undefined) setModalImg(idx);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [modalProduct?.id]);
 
   // `reviewSubmitting` es estado: recién bloquea en el render siguiente, y con
   // Enter en un campo el envío ni pasa por el botón. Sin candado sincrónico, dos

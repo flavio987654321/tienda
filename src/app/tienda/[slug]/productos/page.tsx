@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useCartLogic } from "@/hooks/useCartLogic";
 import type { StorefrontProduct, StorefrontVariant, PlaceOrderParams, OpcionProducto, SeleccionOpciones } from "@/hooks/useStorefront";
 import { getDemoPool, fillTargetFor, parsePromotions, esOpcionDeColor, valoresElegidos } from "@/hooks/useStorefront";
-import { opcionesVisibles, opcionDelValor } from "@/lib/opciones";
+import { opcionesVisibles } from "@/lib/opciones";
 import { parseVariantAttrs } from "@/lib/variantAttrs";
 import { buscarVariante } from "@/lib/variantMatch";
 import type { ActivePromotion } from "@/lib/pricing";
@@ -938,38 +938,17 @@ function ProductosPageInner() {
      Ahora se resuelve en el click, igual que en el template: `elegirFoto` pone la
      foto que se pidió y punto; el color solo se toca si esa foto es de otro.
   ──────────────────────────────────────────────────────────────────────────── */
-  const fotoDeColor = (p: StorefrontProduct, color: string) =>
-    p.imageItems.findIndex(img => !!img.variantValue && img.variantValue.toLowerCase() === color.toLowerCase());
-
-  // El acomodo de una opción cuando cambia otra vivía acá, escrito a mano para
-  // exactamente talle y color. Ahora lo hace `setOpcion` para las que haya —
-  // ver `reacomodarSeleccion` en `lib/opciones.ts`.
+  // El acomodo de una opción cuando cambia otra, y el de la foto con lo elegido,
+  // vivían acá escritos a mano y sólo para talle y color. Ahora los hace
+  // `useCartLogic` para las opciones que haya y para las seis pantallas.
 
   // Acepta índices fuera de rango para que las flechas sean `elegirFoto(i ± 1)`.
   function elegirFoto(i: number) {
     if (!modalProduct) return;
     const total = modalProduct.images.length;
     if (!total) return;
-    const idx = ((i % total) + total) % total;
-    setModalImg(idx);
-    // Si la foto pertenece al valor de alguna opción, se elige ese valor y
-    // `setOpcion` acomoda el resto solo.
-    const valor = modalProduct.imageItems[idx]?.variantValue;
-    if (!valor) return;
-    const nombre = opcionDelValor(modalProduct.opciones, valor);
-    if (nombre && seleccion[nombre]?.toLowerCase() !== valor.toLowerCase()) setOpcion(nombre, valor);
+    setModalImg(((i % total) + total) % total);
   }
-
-  // Lo único que sigue siendo un efecto: al ABRIR la ficha hay que mostrar la foto
-  // del valor con el que abre, y ahí no hubo ningún click que lo resuelva.
-  useEffect(() => {
-    if (!modalProduct) return;
-    const idx = valoresElegidos(seleccion)
-      .map(v => fotoDeColor(modalProduct, v))
-      .find(i => i !== -1);
-    if (idx !== undefined) setModalImg(idx);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [modalProduct?.id]);
 
   // ── isMobile ───────────────────────────────────────────────────────────────
   useEffect(() => {
