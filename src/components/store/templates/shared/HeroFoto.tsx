@@ -31,36 +31,55 @@ import { useCallback, useEffect, useRef, useState } from "react";
 //     controla nada es ruido.
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type Diapositiva = {
-  id: string;
-  imagen: string;
-  /** La linea chica de arriba, en mayusculas espaciadas. */
-  kicker?: string;
-  titulo: string;
-  texto?: string;
-  cta?: { texto: string; href: string };
-};
-
 const MS_AUTO = 7000;
 
 export function HeroFoto({
   nav,
-  diapositivas,
+  imagenes,
+  kicker,
+  titulo,
+  texto,
+  acciones,
   base,
   tinta,
   acento,
   alto = "min(78vh, 720px)",
+  posicion = "center",
+  margenNav = 0,
 }: {
   nav?: React.ReactNode;
-  diapositivas: Diapositiva[];
+  /**
+   * Las fotos que rota el hero. Es una lista de imágenes y NO una lista de
+   * diapositivas con texto propio, porque así son los datos de verdad: la tienda
+   * escribe UN mensaje en el editor y tiene varias fotos. Un texto por foto
+   * obligaría a inventar un campo que nadie va a llenar.
+   */
+  imagenes: string[];
+  /** Van como nodo y no como string: el editor los envuelve en su zona editable. */
+  kicker?: React.ReactNode;
+  titulo: React.ReactNode;
+  texto?: React.ReactNode;
+  acciones?: React.ReactNode;
   base: string;
   tinta: string;
   acento: string;
   alto?: string;
+  /**
+   * Encuadre de la foto. Es lo que hace que el arrastre del editor sirva de
+   * algo: sin esto la dueña mueve la imagen y no pasa nada.
+   */
+  posicion?: string;
+  /**
+   * Alto de la barra de navegación cuando el template la dibuja FUERA del hero y
+   * flotando encima. Sin esto el título arranca debajo del logo: en escritorio
+   * apenas se rozan, pero en un celular —donde el hero es más bajo y el texto
+   * más alto— el nav le cae justo arriba.
+   */
+  margenNav?: number;
 }) {
   const [activa, setActiva] = useState(0);
   const [quieto, setQuieto] = useState(false);
-  const total = diapositivas.length;
+  const total = imagenes.length;
   const pausa = useRef(false);
 
   useEffect(() => {
@@ -87,8 +106,6 @@ export function HeroFoto({
     return () => clearInterval(t);
   }, [quieto, total]);
 
-  const d = diapositivas[activa];
-
   return (
     <header
       onPointerEnter={() => (pausa.current = true)}
@@ -97,16 +114,16 @@ export function HeroFoto({
     >
       {/* Las fotos: todas montadas, se cruzan por opacidad. Montarlas y
           desmontarlas haria que cada cambio empiece con la imagen sin cargar. */}
-      {diapositivas.map((s, i) => (
+      {imagenes.map((src, i) => (
         <div
-          key={s.id}
+          key={src}
           aria-hidden={i !== activa}
           style={{
             position: "absolute",
             inset: 0,
-            backgroundImage: `url(${s.imagen})`,
+            backgroundImage: `url(${src})`,
             backgroundSize: "cover",
-            backgroundPosition: "center",
+            backgroundPosition: posicion,
             opacity: i === activa ? 1 : 0,
             // El acercamiento corre sólo en la que se ve, así arranca de cero
             // cada vez que le toca y no llega ya terminado.
@@ -118,6 +135,13 @@ export function HeroFoto({
           }}
         />
       ))}
+
+      {/* Un piso de oscuridad parejo, antes de los velos con dirección.
+          Los velos direccionales dejan el lado derecho limpio, y eso funciona
+          mientras la foto sea oscura. La tienda sube la que quiere: con una foto
+          clara, ese lado quedaba blanco encandilando al lado del texto. Esta capa
+          no tiene dirección y por eso no depende de la foto que toque. */}
+      <div aria-hidden="true" style={{ position: "absolute", inset: 0, background: `${base}59` }} />
 
       {/* El velo. De izquierda a derecha y de abajo hacia arriba, del color de
           la tienda y no de negro: sobre una foto clara el negro se ve como una
@@ -154,7 +178,7 @@ export function HeroFoto({
             maxWidth: 1180,
             width: "100%",
             margin: "0 auto",
-            padding: "0 26px",
+            padding: `${margenNav}px 26px 0`,
             gap: 24,
             // Sin `wrap`, en un celular las flechas se meten adentro del párrafo
             // y le comen dos palabras por renglón. Con la base de 340 en el
@@ -163,7 +187,7 @@ export function HeroFoto({
           }}
         >
           <div style={{ flex: "1 1 340px", maxWidth: 560, minWidth: 0 }}>
-            {d.kicker && (
+            {kicker && (
               <p
                 style={{
                   margin: "0 0 18px",
@@ -175,7 +199,7 @@ export function HeroFoto({
                   color: "rgba(242,242,247,.72)",
                 }}
               >
-                {d.kicker}
+                {kicker}
               </p>
             )}
             <h1
@@ -192,9 +216,9 @@ export function HeroFoto({
                 textShadow: "0 2px 30px rgba(0,0,0,.45)",
               }}
             >
-              {d.titulo}
+              {titulo}
             </h1>
-            {d.texto && (
+            {texto && (
               <p
                 style={{
                   margin: "22px 0 0",
@@ -204,28 +228,12 @@ export function HeroFoto({
                   color: "rgba(242,242,247,.78)",
                 }}
               >
-                {d.texto}
+                {texto}
               </p>
             )}
-            {d.cta && (
-              <a
-                href={d.cta.href}
-                style={{
-                  display: "inline-block",
-                  marginTop: 28,
-                  padding: "13px 26px",
-                  borderRadius: 999,
-                  fontSize: 13,
-                  fontWeight: 600,
-                  color: "#fff",
-                  textDecoration: "none",
-                  background: acento,
-                  boxShadow: `0 10px 30px ${acento}4d`,
-                }}
-              >
-                {d.cta.texto}
-              </a>
-            )}
+            {/* Los botones los pone el template: cada uno tiene los suyos, con
+                sus destinos y su zona editable. Acá sólo se les da el lugar. */}
+            {acciones && <div style={{ marginTop: 28, display: "flex", gap: 14, flexWrap: "wrap" }}>{acciones}</div>}
           </div>
 
           {/* Las flechas sólo existen si hay algo entre lo que moverse. */}
@@ -262,11 +270,11 @@ export function HeroFoto({
 
         {total > 1 && (
           <div style={{ display: "flex", gap: 7, justifyContent: "center", paddingBottom: 26 }}>
-            {diapositivas.map((s, i) => (
+            {imagenes.map((src, i) => (
               <button
-                key={s.id}
+                key={src}
                 type="button"
-                aria-label={`Ver ${s.titulo}`}
+                aria-label={`Ver la foto ${i + 1} de ${total}`}
                 aria-current={i === activa}
                 onClick={() => setActiva(i)}
                 style={{

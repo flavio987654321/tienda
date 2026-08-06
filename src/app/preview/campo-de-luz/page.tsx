@@ -6,7 +6,7 @@ import { Coverflow, type MazoCoverflow } from "@/components/store/templates/shar
 import { GrillaProfunda, PiezaQueLlega } from "@/components/store/templates/shared/GrillaProfunda";
 import { FichaEnVuelo, type Apertura, type PiezaFicha, type Seleccion } from "@/components/store/templates/shared/FichaEnVuelo";
 import { Contacto, Garantias, LuzDeFondo, Nosotros, PieDePagina } from "@/components/store/templates/shared/Cierre";
-import { HeroFoto, type Diapositiva } from "@/components/store/templates/shared/HeroFoto";
+import { HeroFoto } from "@/components/store/templates/shared/HeroFoto";
 import { Inclinable, vidrio } from "@/components/store/templates/shared/Materia";
 
 const BASE = "#06070d";
@@ -14,31 +14,10 @@ const TINTA = "#f2f2f7";
 const ACENTO = "#8b5cf6";
 const MID = "rgba(242,242,247,.45)";
 
-const DIAPOSITIVAS: Diapositiva[] = [
-  {
-    id: "h1",
-    imagen: "https://picsum.photos/seed/av-hero-1/1800/1100",
-    kicker: "Otoño invierno 2026",
-    titulo: "Lino",
-    texto: "Piezas que caen solas y no piden nada. Confección artesanal en Buenos Aires.",
-    cta: { texto: "Ver la colección", href: "#" },
-  },
-  {
-    id: "h2",
-    imagen: "https://picsum.photos/seed/av-hero-2/1800/1100",
-    kicker: "Hecho a mano",
-    titulo: "Taller",
-    texto: "Treinta artesanos, talleres locales, y una idea del oficio que no se negocia.",
-    cta: { texto: "Conocer el taller", href: "#" },
-  },
-  {
-    id: "h3",
-    imagen: "https://picsum.photos/seed/av-hero-3/1800/1100",
-    kicker: "Nueva temporada",
-    titulo: "Abrigos",
-    texto: "Lana y cuero para los meses en serio. Stock corto, sin reposición.",
-    cta: { texto: "Ver abrigos", href: "#" },
-  },
+const FOTOS_HERO = [
+  "https://picsum.photos/seed/av-hero-1/1800/1100",
+  "https://picsum.photos/seed/av-hero-2/1800/1100",
+  "https://picsum.photos/seed/av-hero-3/1800/1100",
 ];
 
 const OPCIONES = [
@@ -192,10 +171,18 @@ export default function BancoDePruebas() {
     <div style={{ background: BASE, minHeight: "100vh" }}>
       <HeroFoto
         nav={<NavDePrueba />}
-        diapositivas={DIAPOSITIVAS}
+        imagenes={FOTOS_HERO}
+        kicker="Otoño invierno 2026"
+        titulo="Lino"
+        texto="Piezas que caen solas y no piden nada. Confección artesanal en Buenos Aires."
         base={BASE}
         tinta={TINTA}
         acento={ACENTO}
+        acciones={
+          <button style={{ background: ACENTO, color: "#fff", border: 0, borderRadius: 999, padding: "13px 26px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+            Ver la colección
+          </button>
+        }
       />
       <Coverflow mazos={MAZOS} acento={ACENTO} base={BASE} tinta={TINTA} fundido />
 

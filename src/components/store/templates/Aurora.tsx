@@ -15,7 +15,6 @@ import { catalogoTieneGeneros } from "@/lib/generos";
 import { opcionesVisibles } from "@/lib/opciones";
 import {  } from "@/hooks/useStorefront";
 import { esOpcionDeColor, valoresElegidos } from "@/lib/opciones";
-import { resolverBaldosas } from "@/lib/categoryTiles";
 import { isDemoProductId } from "@/lib/demoProducts";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
 import VerifiedIconButton from "@/components/store/VerifiedIconButton";
@@ -27,7 +26,8 @@ import { CheckoutModal } from "@/components/store/templates/shared/CheckoutModal
 import { ContactForm } from "@/components/store/templates/shared/ContactForm";
 import { NewsletterForm } from "@/components/store/templates/shared/NewsletterForm";
 import { FadeImage } from "@/components/store/templates/shared/FadeImage";
-import { CampoDeLuz } from "@/components/store/templates/shared/CampoDeLuz";
+import { HeroFoto } from "@/components/store/templates/shared/HeroFoto";
+import { Coverflow } from "@/components/store/templates/shared/Coverflow";
 import { vidrio, sombra, Inclinable } from "@/components/store/templates/shared/Materia";
 import StoreProductReels from "@/components/store/ProductReels";
 import { SectionBlock } from "@/components/store/templates/shared/SectionBlock";
@@ -112,7 +112,10 @@ const GARANTIAS = [
   },
 ];
 
-const AU_SECTION_IDS = ["au-garantias", "au-mayorista", "au-categorias", "au-statement", "au-banner", "au-productos", "au-ofertas", "au-masvisto", "au-prueba-social", "au-nosotros", "au-contacto"];
+// Sin "au-categorias": las categorías ya no son una sección propia con tres
+// baldosas elegidas a mano, son el segundo mazo de la vidriera del hero — y
+// entran todas las que la tienda tenga, no tres.
+const AU_SECTION_IDS = ["au-garantias", "au-mayorista", "au-statement", "au-banner", "au-productos", "au-ofertas", "au-masvisto", "au-prueba-social", "au-nosotros", "au-contacto"];
 
 /* ── Component ─────────────────────────────────────────── */
 export default function Aurora() {
@@ -198,20 +201,16 @@ export default function Aurora() {
     return featuredCategories.length > 0 ? base.filter(c => featuredCategories.includes(c)) : base;
   }, [products, defaultCategories, featuredCategories]);
 
-  /* Las categorías que pueden ir en las baldosas: SÓLO las que el dueño creó de
+  /* Las categorías que van al mazo de la vidriera: SÓLO las que el dueño creó de
      verdad. `categoryList` no sirve porque en el editor `products` viene con los
-     productos demo de relleno mezclados, y sus categorías entrarían al selector como
-     si fueran de la tienda — ofrecerlas es ofrecer algo que no hace nada.
-     Con la tienda sin ningún producto se dibuja igual (con las de ejemplo) para que
-     el bloque no quede vacío en el editor, pero sin selector: no hay nada real que
-     elegir todavía. Mismo criterio que Urban Pulse. */
+     productos demo de relleno mezclados, y sus categorías entrarían a la pista
+     como si fueran de la tienda — llevarían a un catálogo filtrado vacío. */
   const categoriasBaldosa = useMemo(() => {
     const reales = [...new Set(
       products.filter(p => !isDemoProductId(p.id)).map(p => p.category).filter(c => c && c !== "general")
     )];
     return featuredCategories.length > 0 ? reales.filter(c => featuredCategories.includes(c)) : reales;
   }, [products, featuredCategories]);
-  const hayCategoriasReales = categoriasBaldosa.length > 0;
 
   const subcategoriesFor = useMemo(() => {
     const map: Record<string, string[]> = {};
@@ -436,29 +435,6 @@ export default function Aurora() {
   const accentText = textoSobre(G);
   const textoSobreAcento = accentText;
 
-  /* Los tres colores de la escena salen del ACENTO de la tienda, no están
-     clavados. Si la dueña elige turquesa, la luz del fondo es turquesa: el
-     template se adapta a su marca en vez de imponerle el violeta de la demo.
-
-     Los otros dos se derivan mezclando el acento hacia un azul y hacia un
-     magenta. Mezclar —en vez de usar dos colores fijos— es lo que mantiene la
-     escena armónica con cualquier acento: un acento verde da verde/azulado y
-     verde/cálido, no verde con magenta encima. */
-  const coloresEscena = useMemo<[string, string, string]>(() => {
-    const aRGB = (h: string) => {
-      const m = /^#?([0-9a-f]{6})$/i.exec(h.trim());
-      if (!m) return [139, 92, 246];
-      const n = parseInt(m[1], 16);
-      return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
-    };
-    const hex = (r: number, g: number, b: number) =>
-      "#" + [r, g, b].map(v => Math.round(Math.min(255, Math.max(0, v))).toString(16).padStart(2, "0")).join("");
-    const mezcla = (a: string, b: string, t: number) => {
-      const [r1, g1, b1] = aRGB(a), [r2, g2, b2] = aRGB(b);
-      return hex(r1 + (r2 - r1) * t, g1 + (g2 - g1) * t, b1 + (b2 - b1) * t);
-    };
-    return [G, mezcla(G, "#2563eb", 0.55), mezcla(G, "#db2777", 0.45)];
-  }, [G]);
   const cartTheme: CartTheme = { BG, S, T, MID:"#555555", border:"rgba(240,235,227,0.1)", accent:G, accentText, serif:"Georgia, serif" };
   const variantPrice = modalProduct ? resolveVariantPrice(modalProduct.variants, valoresElegidos(seleccion)) : null;
   const displayPrice = variantPrice ?? (modalProduct?.price ?? 0);
@@ -466,27 +442,68 @@ export default function Aurora() {
   // 3×2 en vivo: unidades que se PAGAN a la cantidad elegida (misma cuenta que el motor).
   const nxmPaid = modalPromo?.nxm ? qty - Math.floor(qty / modalPromo.nxm.n) * (modalPromo.nxm.n - modalPromo.nxm.m) : null;
 
-  /* El hero de este template NO lleva foto de fondo: lleva la escena de luz. Acá
-     vivían las siete variables que resolvían la imagen, el overlay y el contraste
-     del texto según ese overlay. Se borran enteras en vez de dejarlas "por si
-     acaso": ninguna la lee nadie, y la regla del plan es que lo que queda sin uso
-     se va en el mismo commit que lo dejó sin uso. */
-
-  /* Las tres baldosas de categoría salían de acá: tres `picsum.photos` fijos y, más
-     abajo, tres nombres escritos a mano ("Mujer", "Hombre", "Accesorios") con el
-     link armado a `?categoria=Mujer`. Ninguna tienda tiene esas categorías salvo por
-     casualidad, así que el bloque más grande de esta portada eran TRES CALLEJONES
-     SIN SALIDA con foto de stock. Es el mismo UP-22 que se arregló en Urban Pulse.
-     Ahora la cuenta la hace `resolverBaldosas` y no queda ninguna decisión acá. */
   const nosotrosImageOv  = storeConfig?.imageOverrides?.["nosotrosImage"];
   const nosotrosImageUrl = nosotrosImageOv?.url ?? "https://picsum.photos/seed/aurora-about/900/700";
   const nosotrosPosX     = nosotrosImageOv?.posX ?? 50;
   const nosotrosPosY     = nosotrosImageOv?.posY ?? 50;
 
   // Section background images (stored as "sectionbg_<field>" in imageOverrides)
+  const heroBgImg      = storeConfig?.imageOverrides?.["sectionbg_bgHero"];
   const statementBgImg = storeConfig?.imageOverrides?.["sectionbg_bgStatement"];
   const contactoBgImg  = storeConfig?.imageOverrides?.["sectionbg_bgContacto"];
   const footerBgImg    = storeConfig?.imageOverrides?.["sectionbg_bgFooter"];
+
+  /* ── Lo que come la vidriera ────────────────────────────────────────────────
+     Las fotos del hero: la que subió la tienda, y si no subió ninguna, las de
+     sus propios productos. Nunca una foto de stock — una imagen de un
+     desconocido haciéndose pasar por la colección es peor que no tener foto. */
+  const heroUrl = heroBgImg?.url;
+  const heroFotos = useMemo(() => {
+    if (heroUrl) return [heroUrl];
+    return products.map(p => p.images[0]).filter((u): u is string => !!u).slice(0, 3);
+  }, [heroUrl, products]);
+
+  /* Los dos mazos del coverflow. Antes esto eran TRES baldosas de categoría
+     elegidas a mano en el editor; ahora entran todas las que la tienda tenga de
+     verdad, y el mazo se baraja con los destacados. */
+  const mazosVidriera = useMemo(() => {
+    const conFoto = products.filter(p => p.images[0]);
+    const destacados = {
+      id: "destacados",
+      etiqueta: "Destacados",
+      onElegir: (id: string) => {
+        const p = products.find(x => x.id === id);
+        if (p) openModal(p);
+      },
+      piezas: conFoto.slice(0, 8).map(p => ({
+        id: p.id,
+        imagen: p.images[0],
+        titulo: p.name,
+        subtitulo: ocultarPrecios ? "Consultá precio" : fmt(p.price),
+        etiqueta: p.category && p.category !== "general" ? p.category : undefined,
+      })),
+    };
+    const categorias = {
+      id: "categorias",
+      etiqueta: "Categorías",
+      onElegir: (cat: string) => {
+        window.location.href = `/tienda/${storeConfig?.slug}/productos?${isPreview ? "t=aurora&from=editor&" : ""}categoria=${encodeURIComponent(cat)}`;
+      },
+      piezas: categoriasBaldosa
+        .map(cat => {
+          const dela = conFoto.find(p => p.category === cat);
+          const cuantos = products.filter(p => p.category === cat).length;
+          return dela
+            ? { id: cat, imagen: dela.images[0], titulo: cat, subtitulo: `${cuantos} ${cuantos === 1 ? "producto" : "productos"}` }
+            : null;
+        })
+        // Una categoría sin ninguna foto no puede estar en una pista que ES
+        // fotos: quedaría un panel gris en el medio de la fila.
+        .filter((x): x is NonNullable<typeof x> => x !== null),
+    };
+    // Un mazo vacío no se ofrece: el botón para cambiar de mazo llevaría a nada.
+    return [destacados, categorias].filter(m => m.piezas.length > 0);
+  }, [products, categoriasBaldosa, ocultarPrecios, openModal, storeConfig?.slug, isPreview, fmt]);
 
   const scn = storeConfig?.sectionColors ?? {};
   const garantiasBg    = scn["bgGarantias"]   ?? BG;
@@ -503,7 +520,6 @@ export default function Aurora() {
     : (getContrastColor(footerBg) === "light" ? T : "#06070d");
   const footerSubtleBorder = footerText === T ? "rgba(240,235,227,0.15)" : "rgba(0,0,0,0.15)";
   const footerInputBg  = footerText === T ? S : "rgba(0,0,0,0.06)";
-  const categoriasBg   = scn["bgCategorias"]  ?? BG;
   const productosBg    = scn["bgProductos"]   ?? BG;
   const productosText  = getContrastColor(productosBg)  === "light" ? T : "#06070d";
   const productosMid   = getContrastColor(productosBg)  === "light" ? "#888" : "#555";
@@ -833,62 +849,56 @@ export default function Aurora() {
         </div>
       )}
 
-      {/* ── HERO ───────────────────────────────────────────── */}
       {/* ── HERO ────────────────────────────────────────────────────────────
-          Acá no hay foto de fondo, y es la decisión que define el template: el
-          fondo ES la escena de luz. Por eso tampoco están `EditableImageButton`
-          ni `BgDragHandle` —los controles de foto del editor—: dejarlos sería
-          ofrecerle a la dueña subir una imagen que nunca se va a ver. Es la misma
-          razón por la que Aurora figura con la lista vacía en `SECTION_BG_PHOTO`.
+          Antes acá no había foto: el fondo ERA la escena de luz. Se veía bien
+          pero no vendía nada — la luz abstracta no muestra el producto, y una
+          tienda de ropa tiene fotos. Ahora la foto es el argumento del bloque, y
+          por eso Aurora pasó a figurar con `bgHero` en `SECTION_BG_PHOTO`: el
+          control de imagen del editor tiene que existir.
 
-          La composición es centrada y la tipografía liviana y ancha, al revés que
-          Fashion Noir —serif pesada, alineada a la izquierda—. Comparten el
-          cableado, no el aspecto. */}
-      <section id="hero" style={{ position:"relative", minHeight: isPreview ? `calc(100vh - ${announcementBarHeight + 72}px)` : "100vh", display:"flex", alignItems:"center", justifyContent:"center", padding:"60px 0", overflow:"hidden" }}>
-        <CampoDeLuz modo="oscuro" base={BG} colores={coloresEscena} />
-        {/* Velo entre la escena y el texto.
-            La luz se mueve, así que tarde o temprano pasa por detrás del título:
-            sin esto, el contraste del texto depende de en qué segundo mires la
-            página. Un radial oscuro centrado sobre el contenido garantiza que la
-            copia siempre se lea, y deja la luz visible alrededor — que es donde
-            de todos modos se aprecia. No depende del acento: sirva el color que
-            sirva, el texto sigue teniendo fondo. */}
-        <div aria-hidden="true" style={{ position:"absolute", inset:0, background:`radial-gradient(58% 46% at 50% 50%, ${BG}d9, ${BG}80 45%, transparent 72%)`, pointerEvents:"none" }} />
-        <div style={{ position:"relative", width:"100%", padding: isMobile ? "0 22px" : "0 40px", maxWidth:900, margin:"0 auto", textAlign:"center" }}>
-          {/* El tagline NO va con el acento: sobre una escena hecha del mismo
-              acento quedaba violeta sobre violeta, ilegible. Va en tinta apagada,
-              que se lee sobre cualquier color de luz. */}
-          <p style={{ fontSize:10, letterSpacing:6, color:"rgba(242,242,247,.66)", marginBottom:26, textTransform:"uppercase" }}>
-            <EditableZone field="storeTagline" label="Tagline">{storeConfig?.storeTagline ?? "Nueva Temporada · Otoño 2025"}</EditableZone>
-          </p>
-          {/* Peso 200 y tracking negativo: a este tamaño, una tipografía fina y
-              apretada se lee como algo caro. La misma frase en negrita se lee
-              como un cartel de liquidación. */}
-          <h1 style={{ fontSize:"clamp(38px,7vw,88px)", fontWeight:200, lineHeight:1.02, letterSpacing:"-0.035em", margin:"0 0 24px", color:T }}>
-            <EditableZone field="heroHeading" label="Título principal">Vestí tu esencia.</EditableZone>
-          </h1>
-          <p style={{ fontSize:16, lineHeight:1.75, margin:"0 auto 42px", maxWidth:460, color:"rgba(242,242,247,.62)" }}>
-            <EditableZone field="heroSubtext" label="Subtítulo hero">Piezas diseñadas para quienes eligen calidad sobre cantidad. Colecciones cápsula para cada estilo de vida.</EditableZone>
-          </p>
-          <div style={{ display:"flex", gap:14, flexWrap:"wrap", justifyContent:"center" }}>
-            {(editMode || !storeConfig?.textOverrides?.["heroCta"]?.hidden) && (
-              <button onClick={() => scrollTo("productos")} style={{ background:G, color:textoSobreAcento, border:"none", borderRadius:999, padding:"15px 38px", fontSize:11, letterSpacing:2.5, fontWeight:600, textTransform:"uppercase", cursor:"pointer", boxShadow:sombra("oscuro",2) }}>
-                <EditableZone field="heroCta" label="Botón principal">Ver Colección</EditableZone>
-              </button>
-            )}
-            {(editMode || !storeConfig?.textOverrides?.["heroCtaSecondary"]?.hidden) && (
-              // El secundario es de vidrio: deja ver la escena a través, así que
-              // se apoya en el fondo en vez de taparlo.
-              <button onClick={() => scrollTo("nosotros")} style={{ ...vidrio("oscuro"), color:T, borderRadius:999, padding:"15px 38px", fontSize:11, letterSpacing:2.5, fontWeight:500, textTransform:"uppercase", cursor:"pointer" }}>
-                <EditableZone field="heroCtaSecondary" label="Botón secundario">Nuestra Historia</EditableZone>
-              </button>
-            )}
-          </div>
-        </div>
-        <div style={{ position:"absolute", bottom:32, left:"50%", transform:"translateX(-50%)", display:"flex", flexDirection:"column", alignItems:"center", gap:8, opacity:0.4 }}>
-          <span style={{ fontSize:9, letterSpacing:3, textTransform:"uppercase", color:T }}>Scroll</span>
-          <div style={{ width:1, height:40, background:`linear-gradient(${T}, transparent)` }}/>
-        </div>
+          Si la tienda no subió ninguna, se usan las fotos de sus propios
+          productos. Nunca una de stock: una imagen de un desconocido haciéndose
+          pasar por la colección es peor que no tener foto. */}
+      <section id="hero" style={{ position:"relative" }}>
+        <BgDragHandle imgKey="sectionbg_bgHero" />
+        <EditableSectionBg field="bgHero" label="Fondo hero" />
+        <HeroFoto
+          imagenes={heroFotos}
+          posicion={heroBgImg ? `${heroBgImg.posX ?? 50}% ${heroBgImg.posY ?? 50}%` : "center"}
+          base={BG}
+          tinta={T}
+          acento={G}
+          alto={isPreview ? `calc(78vh - ${announcementBarHeight}px)` : "min(78vh, 720px)"}
+          // En la tienda publicada el nav va `fixed` y flota sobre el hero, así
+          // que hay que dejarle su alto libre. En el editor va `sticky` y ocupa
+          // su lugar en el flujo: reservarlo otra vez sería un hueco de 72px.
+          margenNav={isPreview ? 0 : 72}
+          kicker={<EditableZone field="storeTagline" label="Tagline">{storeConfig?.storeTagline ?? "Nueva Temporada · Otoño 2025"}</EditableZone>}
+          titulo={<EditableZone field="heroHeading" label="Título principal">Vestí tu esencia.</EditableZone>}
+          texto={<EditableZone field="heroSubtext" label="Subtítulo hero">Piezas diseñadas para quienes eligen calidad sobre cantidad.</EditableZone>}
+          acciones={
+            <>
+              {(editMode || !storeConfig?.textOverrides?.["heroCta"]?.hidden) && (
+                <button onClick={() => scrollTo("productos")} style={{ background:G, color:textoSobreAcento, border:"none", borderRadius:999, padding:"15px 38px", fontSize:11, letterSpacing:2.5, fontWeight:600, textTransform:"uppercase", cursor:"pointer", boxShadow:sombra("oscuro",2) }}>
+                  <EditableZone field="heroCta" label="Botón principal">Ver Colección</EditableZone>
+                </button>
+              )}
+              {(editMode || !storeConfig?.textOverrides?.["heroCtaSecondary"]?.hidden) && (
+                // El secundario es de vidrio: deja ver la foto a través, así que
+                // se apoya en el fondo en vez de taparlo.
+                <button onClick={() => scrollTo("nosotros")} style={{ ...vidrio("oscuro"), color:T, borderRadius:999, padding:"15px 38px", fontSize:11, letterSpacing:2.5, fontWeight:500, textTransform:"uppercase", cursor:"pointer" }}>
+                  <EditableZone field="heroCtaSecondary" label="Botón secundario">Nuestra Historia</EditableZone>
+                </button>
+              )}
+            </>
+          }
+        />
+        {/* La vidriera: destacados y categorías en la misma pista 3D. Va pegada
+            al hero y sin fondo propio, así la foto de arriba se sigue en el
+            teñido de la tarjeta elegida en vez de cortarse en un borde. */}
+        {mazosVidriera.length > 0 && (
+          <Coverflow mazos={mazosVidriera} acento={G} base={BG} tinta={T} fundido />
+        )}
       </section>
 
       <div style={{ display:"flex", flexDirection:"column" }}>
@@ -940,107 +950,6 @@ export default function Aurora() {
           </div>
         </section>
       )}
-      </SectionBlock>
-
-      <SectionBlock id="au-categorias" label="Categorías" isPreview={isPreview} defaultOrder={AU_SECTION_IDS}>
-      {/* ── CATEGORÍAS ─────────────────────────────────────── */}
-      <section id="categorias" data-reveal style={{ background:categoriasBg, position:"relative" }}>
-        <EditableSectionBg field="bgCategorias" label="Fondo categorías" />
-        <div style={{ padding: isMobile ? "48px 16px" : "80px 32px", maxWidth:1280, margin:"0 auto" }}>
-          <p style={{ fontSize:11, letterSpacing:5, color:G, textAlign:"center", marginBottom:48, textTransform:"uppercase" }}>
-            <EditableZone field="categoriesHeading" label="Título sección categorías">Colecciones</EditableZone>
-          </p>
-          {/* La LÓGICA es la misma que la de Urban Pulse —qué categoría va en cada
-              baldosa y de dónde sale la foto, todo en `resolverBaldosas`—, pero el
-              ASPECTO sigue siendo el de Aurora y tiene que seguir siéndolo:
-              proporción 2/3 y no 3/4, nombre en serif centrado abajo, "Ver más" en
-              dorado, y la foto que se agranda al pasar el mouse. Se comparte la
-              cuenta, no el vestido. */}
-          {(() => {
-            const elegidas = [0, 1, 2].map(i => textOverrides[`catTile${i}`]?.text ?? "");
-            const paraElegir = hayCategoriasReales ? categoriasBaldosa : categoryList;
-            // Los demos sólo existen en el editor, así que en la tienda publicada
-            // este filtro no puede sacar nada: sin la guarda copiaba el arreglo
-            // entero de productos en cada render para nada.
-            const paraFoto = (isPreview && hayCategoriasReales) ? products.filter(p => !isDemoProductId(p.id)) : products;
-            const baldosas = resolverBaldosas(elegidas, paraElegir, paraFoto, storeConfig?.imageOverrides);
-            if (baldosas.length === 0) {
-              return editMode
-                ? <p style={{ textAlign:"center", fontSize:13, color:T, opacity:0.6, margin:0 }}>Cargá productos con categoría y acá aparecen las colecciones.</p>
-                : null;
-            }
-            return (
-            // `repeat(N,1fr)` y no `repeat(3,1fr)`: con 3 fijas y 2 categorías
-            // quedaban dos baldosas de un tercio de ancho y un tercio vacío.
-            <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : `repeat(${baldosas.length},1fr)`, gap:16 }}>
-            {baldosas.map(c => {
-              const ovr = storeConfig?.imageOverrides?.[c.field];
-              return (
-              <div key={c.field} onClick={() => { if (editMode) return; window.location.href = `/tienda/${storeConfig?.slug}/productos?${isPreview ? "t=aurora&from=editor&" : ""}categoria=${encodeURIComponent(c.cat)}`; }}
-                style={{ position:"relative", aspectRatio:"2/3", overflow:"hidden", background:S, cursor: editMode ? "default" : "pointer" }}>
-                {/* Sin foto queda la superficie del template con el degradado y el
-                    nombre en serif — que es de lo que está hecho Aurora.
-                    Antes caía en un `picsum.photos`: una foto de stock de un
-                    desconocido haciéndose pasar por la colección de la tienda. */}
-                {c.img && (
-                  <FadeImage src={c.img} alt={c.cat} fill sizes="(max-width: 768px) 100vw, 33vw" style={{ objectFit:"cover", transition:"transform 0.6s ease" }}
-                    onMouseEnter={e => (e.currentTarget.style.transform="scale(1.06)")}
-                    onMouseLeave={e => (e.currentTarget.style.transform="scale(1)")}/>
-                )}
-                <EditableImageButton field={c.field} label={`Imagen de ${c.cat}`} compact
-                  panelLabel={`Imagen de ${c.cat}`}
-                  panelNote={
-                    c.origen === "subida"
-                      ? `Esta baldosa usa la imagen que subiste. Con "Restablecer" vuelve a mostrar sola la foto de un producto de "${c.cat}".`
-                      : c.origen === "producto"
-                      ? `Ahora la foto la toma sola de un producto de "${c.cat}". Si subís una acá, la reemplaza — y con "Restablecer" vuelve la del producto.`
-                      : `"${c.cat}" todavía no tiene ningún producto con foto, así que la baldosa queda con el fondo y el nombre. Subí una imagen acá, o cargale una foto a un producto de esa categoría y aparece sola.`
-                  } />
-                {ovr?.overlayType && ovr.overlayType !== "none" && (
-                  <div style={{ position:"absolute", inset:0, pointerEvents:"none", background: ovr.overlayType === "light" ? `rgba(255,255,255,${ovr.overlayOpacity ?? 0.45})` : `rgba(0,0,0,${ovr.overlayOpacity ?? 0.45})` }} />
-                )}
-                <div style={{ position:"absolute", inset:0, background:"linear-gradient(to top, rgba(10,10,10,0.75) 30%, transparent)" }}/>
-                <div style={{ position:"absolute", bottom:32, left:0, right:0, textAlign:"center", padding:"0 16px" }}>
-                  <p style={{ fontFamily:"Georgia, serif", fontSize:24, color:T, margin:0, fontWeight:700, overflowWrap:"anywhere" }}>{c.cat}</p>
-                  <p style={{ fontSize:10, letterSpacing:4, color:G, marginTop:8, textTransform:"uppercase" }}>{"Ver más"} →</p>
-                </div>
-                {/* El selector, sólo en el editor. `c.pos` y no el índice del `map`:
-                    una posición sin categoría se saltea, así que el array puede venir
-                    corrido y el índice apuntaría a otra baldosa. */}
-                {editMode && (
-                  <div style={{ position:"absolute", top:8, left:8, zIndex:9998, display:"flex", flexDirection:"column", gap:4, alignItems:"flex-start" }}>
-                    {hayCategoriasReales ? (
-                    <select value={c.cat} onClick={e => e.stopPropagation()}
-                      onChange={e => {
-                        const nueva = e.target.value;
-                        const ocupada = baldosas.find(b => b.pos !== c.pos && b.cat === nueva);
-                        if (ocupada) setOverride(`catTile${ocupada.pos}`, { text: c.cat });
-                        setOverride(`catTile${c.pos}`, { text: nueva });
-                      }}
-                      title="Qué categoría muestra esta baldosa"
-                      style={{ maxWidth:150, fontSize:11, fontWeight:700, border:"1.5px solid rgba(255,255,255,0.25)", borderRadius:8, background:"rgba(20,20,20,0.85)", color:"#fff", cursor:"pointer", padding:"5px 8px", backdropFilter:"blur(6px)", fontFamily:"system-ui, -apple-system, sans-serif" }}>
-                      {categoriasBaldosa.map(cat => <option key={cat} value={cat} style={{ background:"#1e1e1e" }}>{cat}</option>)}
-                    </select>
-                    ) : (
-                      <span style={{ fontSize:9.5, fontWeight:700, color:"#fff", background:"rgba(20,20,20,0.85)", border:"1.5px solid rgba(255,255,255,0.25)", borderRadius:7, padding:"3px 7px", backdropFilter:"blur(6px)", fontFamily:"system-ui, -apple-system, sans-serif" }}>
-                        Categoría de ejemplo
-                      </span>
-                    )}
-                    {c.origen !== "subida" && (
-                      <span style={{ fontSize:9.5, fontWeight:700, color:"#fff", background:"rgba(20,20,20,0.85)", border:"1.5px solid rgba(255,255,255,0.25)", borderRadius:7, padding:"3px 7px", backdropFilter:"blur(6px)", fontFamily:"system-ui, -apple-system, sans-serif" }}>
-                        {c.origen === "producto" ? "Foto de un producto" : "Sin foto"}
-                      </span>
-                    )}
-                  </div>
-                )}
-              </div>
-              );
-            })}
-            </div>
-            );
-          })()}
-        </div>
-      </section>
       </SectionBlock>
 
       <SectionBlock id="au-statement" label="Frase de marca" isPreview={isPreview} defaultOrder={AU_SECTION_IDS}>

@@ -30,7 +30,11 @@ export const SECTION_BG_PHOTO: Record<TemplateId, string[]> = {
   // Aurora no acepta foto de fondo en ninguna sección, y es a propósito: el
   // fondo ES la escena de luz. Una foto encima la tapa y el template pierde
   // exactamente aquello por lo que se elige.
-  "aurora":        [],
+  // El hero de Aurora ES una foto: la de la tienda si sube una, y si no la de
+  // sus propios productos. Antes iba vacío porque el fondo era la escena de luz
+  // y una foto encima la tapaba; ahora la foto es el argumento del bloque, así
+  // que el control tiene que estar.
+  "aurora":        ["bgHero"],
   "auto-drive":    ["bgCatalogo", "bgCategorias", "bgContacto", "bgFooter", "bgHero", "bgNosotros", "bgServicios", "bgStats"],
   "auto-motor":    ["bgCatalogo", "bgContacto", "bgFooter", "bgNosotros", "bgServicios"],
   "boho-terra":    ["bgNewsletter"],
