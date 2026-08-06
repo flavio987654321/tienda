@@ -653,7 +653,7 @@ function ProductosPageInner() {
     toastMsg, openModal, addToCart, modalScrollRef,
     // Esta pantalla no los usaba: ni el talle ni el color avisaban que estaban
     // agotados hasta despues de elegirlos.
-    sinStock,
+    sinStock, selectedVariantStock,
     toggleFavorite, favorites,
   } = cart;
 
@@ -921,11 +921,12 @@ function ProductosPageInner() {
   const nxmPaid = modalPromo.nxm ? qty - Math.floor(qty / modalPromo.nxm.n) * (modalPromo.nxm.n - modalPromo.nxm.m) : null;
 
   // ── Stock de la variante seleccionada en el modal ──────────────────────────
-  // Septima copia del mismo buscador. Ya usa el compartido.
-  const selectedVariantStock = useMemo(
-    () => modalProduct ? buscarVariante(modalProduct.variants, valoresElegidos(seleccion))?.stock ?? null : null,
-    [modalProduct, seleccion],
-  );
+  // Acá había un `useMemo` que rearmaba la cuenta con `buscarVariante`. Usaba el
+  // buscador compartido, sí, pero la CUENTA seguía siendo propia — y por eso se
+  // quedaba afuera de los arreglos del motor: cuando `resolveVariantStock` pasó a
+  // devolver 0 para las combinaciones que no existen, esta pantalla siguió
+  // devolviendo `null` y dejando comprar. Ahora sale del hook, como en los otros
+  // cinco lugares.
 
   /* ── Elegir foto / color / talle ─────────────────────────────────────────────
      Antes eran tres efectos que se disparaban entre sí. El de la foto, al ver una

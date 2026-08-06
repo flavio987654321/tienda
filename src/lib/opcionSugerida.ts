@@ -262,6 +262,44 @@ export function estadoDelBuilder(
 }
 
 /**
+ * Las filas que tienen una opción cargada y otra vacía.
+ *
+ * Es el agujero que dejaba vender sin descontar stock. Una fila así se guarda sin
+ * problema —`prepareVariantsForSubmit` filtra las CLAVES vacías, no los VALORES,
+ * y arma `value: "M"`; el servidor pide que `name` y `value` tengan algo, y los
+ * dos tienen—. Pero en la tienda esa variante no coincide con ninguna selección:
+ * el comprador elige `M / Negro`, ninguna variante casa, y el pedido salía con
+ * `variantId` en null. La caja sólo descuenta stock `if (variant)`, así que se
+ * cobraba sin tocar el stock.
+ *
+ * El motor ahora lo frena del lado de la tienda (`resolveVariantStock` devuelve 0
+ * cuando nada coincide). Esto es el otro candado: no dejar que se cree.
+ *
+ * Devuelve la posición en base 1 y lo que sí está cargado, para poder decir CUÁL
+ * fila está mal en vez de un cartel genérico arriba de todo.
+ */
+export function filasIncompletas<T extends ConAttrs>(
+  filas: T[],
+): { fila: number; falta: string[]; tiene: string }[] {
+  const salida: { fila: number; falta: string[]; tiene: string }[] = [];
+  filas.forEach((f, i) => {
+    const entradas = Object.entries(f.attrs);
+    const llenas = entradas.filter(([, v]) => (v ?? "").trim());
+    const vacias = entradas.filter(([, v]) => !(v ?? "").trim());
+    // Sólo molesta si hay mezcla: la fila vacía del todo ya la agarra otra
+    // validación, y una fila entera es válida.
+    if (llenas.length > 0 && vacias.length > 0) {
+      salida.push({
+        fila: i + 1,
+        falta: vacias.map(([k]) => k),
+        tiene: llenas.map(([, v]) => v.trim()).join(" / "),
+      });
+    }
+  });
+  return salida;
+}
+
+/**
  * Las opciones que el constructor NO sabe representar.
  *
  * El constructor maneja "Color" más una segunda opción, y nada más. El modo

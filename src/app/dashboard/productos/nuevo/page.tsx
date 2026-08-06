@@ -12,7 +12,7 @@ import {
 import Link from "next/link";
 import Image from "next/image";
 import { getStoreType, etiquetaCategoria, camposActivos, camposPropios, ejemploNombre, ejemploTags } from "@/lib/storeTypes";
-import { sugerirOpcion, opcionesIniciales, nombresDeOpciones, renombrarOpcion, agregarOpcion, quitarOpcion, estadoDelBuilder, opcionesQueNoEntranEnElBuilder, claveDeCombinacion, MAX_OPCIONES } from "@/lib/opcionSugerida";
+import { sugerirOpcion, opcionesIniciales, nombresDeOpciones, renombrarOpcion, agregarOpcion, quitarOpcion, estadoDelBuilder, opcionesQueNoEntranEnElBuilder, filasIncompletas, claveDeCombinacion, MAX_OPCIONES } from "@/lib/opcionSugerida";
 import { esOpcionDeColor } from "@/lib/opciones";
 import { calcMargin, calcVehicleCostTotal, formatFechaGasto } from "@/lib/margin";
 import StockHistoryPanel from "../StockHistoryPanel";
@@ -1071,6 +1071,23 @@ function ProductoFormPage() {
       setError("Cada combinación de variantes debe tener al menos un valor. Si es un producto simple, dejá una sola fila.");
       setLoading(false);
       return;
+    }
+    // Una fila a medio llenar —"Talle M" con el color en blanco— pasaba las dos
+    // validaciones de arriba y la del servidor, porque `value` queda en "M". Pero
+    // en la tienda esa variante no coincide con ninguna selección: el comprador
+    // podía comprar una combinación que no existe y la caja cobraba sin descontar
+    // stock, porque sólo descuenta cuando encontró la variante.
+    if (!isHideVariants) {
+      const incompletas = filasIncompletas(variants);
+      if (incompletas.length > 0) {
+        const { fila, falta, tiene } = incompletas[0];
+        setError(
+          `A la fila ${fila} (${tiene}) le falta ${falta.join(" y ")}. ` +
+          `Completala o borrá la fila — si no, esa combinación no se puede vender.`
+        );
+        setLoading(false);
+        return;
+      }
     }
 
     const baseAttrs = attributes.filter((a) => a.key.trim() && a.value.trim());

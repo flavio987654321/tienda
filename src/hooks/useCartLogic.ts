@@ -33,8 +33,29 @@ function indiceFotoDe(p: StorefrontProduct, valor: string): number {
 // para mostrar "Sin stock"/"Últimas unidades" — se centraliza acá (y se expone
 // como `selectedVariantStock`) para que addToCart pueda topar la cantidad al
 // stock real, y los templates no necesiten reimplementarla cada uno.
+//
+// Cuando NINGUNA variante coincide devuelve 0, no `null`. La diferencia era una
+// venta cobrada sin descontar stock:
+//
+//   · `buscarVariante` devuelve `null` si hay varias variantes y ninguna casa —
+//     y eso está bien, es lo que evita vender la equivocada.
+//   · Pero `null` se leía como "no se puede saber" y se trataba como DISPONIBLE:
+//     el botón quedaba prendido y sin techo de cantidad.
+//   · En la caja, `checkout/route.ts` sólo descuenta stock `if (variant)`. Con
+//     `variantId` en null no entra: el pedido se crea, se cobra, y el stock no se
+//     toca. Ni siquiera falla.
+//
+// Si hay varias variantes y ninguna coincide, esa combinación NO EXISTE, y cero
+// es la respuesta honesta. Además la entienden solas las seis pantallas: todas
+// apagan el botón y escriben "Sin stock" con `selectedVariantStock === 0`.
+//
+// Con una sola variante `buscarVariante` siempre la devuelve, así que el `null`
+// que queda es únicamente el del producto sin variantes — que se sigue tratando
+// como disponible, igual que antes.
 function resolveVariantStock(product: StorefrontProduct, seleccion: SeleccionOpciones): number | null {
-  return buscarVariante(product.variants, valoresElegidos(seleccion))?.stock ?? null;
+  const v = buscarVariante(product.variants, valoresElegidos(seleccion));
+  if (v) return v.stock;
+  return product.variants.length > 1 ? 0 : null;
 }
 
 /**
@@ -209,7 +230,11 @@ export function useCartLogic({ products, promotions = [], storeId, affiliateId =
   }>({ status: "idle", domicilio: null, sucursal: null });
 
   const userDropdownRef = useRef<HTMLDivElement>(null);
-  const addingToCartRef = useRef(false);
+  // `addingToCartRef` vivía acá como guarda contra el doble click. No podía
+  // dispararse nunca: se prendía y se apagaba dentro del mismo tick, sin nada
+  // asíncrono en el medio, así que para cuando llegaba el segundo click ya estaba
+  // apagada. Tampoco hacía falta — `setCartItems` junta por `claveItem`, así que
+  // dos clicks suman cantidad, que es lo que la persona pidió.
   /** La última foto la movió el código, no el comprador. Ver `setOpcion`. */
   const fotoAutomaticaRef = useRef(false);
   const { status } = useAuth();
@@ -764,11 +789,18 @@ export function useCartLogic({ products, promotions = [], storeId, affiliateId =
   }, [products, storeId]);
 
   const addToCart = () => {
-    if (!modalProduct || addingToCartRef.current) return;
-    addingToCartRef.current = true;
+    if (!modalProduct) return;
     const variantId = resolveVariantId(modalProduct, seleccion);
     const name = modalProduct.name;
     const stock = resolveVariantStock(modalProduct, seleccion);
+    // Segundo candado, por si alguna pantalla deja el botón prendido: sin stock
+    // —o con una combinación que no existe, que ahora también da 0— no se agrega.
+    // El primero es que las seis pantallas ya apagan el botón con stock 0; éste
+    // es el que igual protege la caja si mañana aparece una séptima.
+    if (stock === 0) {
+      showToast("Esa combinación no está disponible");
+      return;
+    }
     const clave = claveItem(modalProduct.id, seleccion);
     setCartItems(prev => {
       const ex = prev.find(i => claveItem(i.product.id, i.seleccion) === clave);
@@ -782,7 +814,6 @@ export function useCartLogic({ products, promotions = [], storeId, affiliateId =
     setModalProduct(null);
     showToast(`${name} agregado al carrito`);
     setCartOpen(true);
-    addingToCartRef.current = false;
   };
 
   const removeFromCart = (idx: number) =>
@@ -810,7 +841,14 @@ export function useCartLogic({ products, promotions = [], storeId, affiliateId =
       const conTecho = stock !== null ? Math.min(pedido, stock) : pedido;
       const final = Math.max(1, conTecho);
       if (delta > 0 && final === item.qty && stock !== null) {
-        showToast(stock === 1 ? "Queda 1 unidad" : `Solo quedan ${stock} unidades`);
+        // El cero llega por dos caminos: agotado de verdad, o una combinación que
+        // dejó de existir —un carrito viejo de un producto que se recargó—. En los
+        // dos casos "solo quedan 0 unidades" se lee como un error de la página.
+        showToast(
+          stock === 0 ? "Esa combinación ya no está disponible"
+          : stock === 1 ? "Queda 1 unidad"
+          : `Solo quedan ${stock} unidades`,
+        );
       }
       return { ...item, qty: final };
     }));
