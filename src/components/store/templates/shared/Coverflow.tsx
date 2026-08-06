@@ -37,28 +37,44 @@ export type PiezaCoverflow = {
   etiqueta?: string;
 };
 
+/**
+ * Un mazo: un conjunto de piezas con su etiqueta.
+ *
+ * La misma pista 3D sostiene VARIOS mazos —productos destacados y categorías— y
+ * el barajado los intercambia. No se duplica el bloque: cae, y vuelve a subir
+ * con otra cosa.
+ *
+ * Cada mazo lleva su propio `onElegir` porque van a lugares distintos: un
+ * producto abre la ficha, una categoría lleva al catálogo filtrado.
+ */
+export type MazoCoverflow = {
+  id: string;
+  etiqueta: string;
+  piezas: PiezaCoverflow[];
+  onElegir?: (id: string) => void;
+};
+
 /** Mínimo de piezas para que el coverflow se vea como corresponde. */
 export const MIN_COVERFLOW = 5;
 
 const MS_BAJADA = 260;
 
 export function Coverflow({
-  piezas,
+  mazos,
   acento,
   base,
   tinta,
-  onElegir,
   alturaMovil = 430,
   altura = 620,
 }: {
-  piezas: PiezaCoverflow[];
+  mazos: MazoCoverflow[];
   acento: string;
   base: string;
   tinta: string;
-  onElegir?: (id: string) => void;
   alturaMovil?: number;
   altura?: number;
 }) {
+  const [mazoIdx, setMazoIdx] = useState(0);
   const [activo, setActivo] = useState(0);
   const [barajando, setBarajando] = useState(false);
   const [chico, setChico] = useState(false);
@@ -83,9 +99,13 @@ export function Coverflow({
   // deja un setState apuntando a un componente que ya no existe.
   useEffect(() => () => { if (timerRef.current) window.clearTimeout(timerRef.current); }, []);
 
+  const mazo = mazos[mazoIdx];
+  const piezas = mazo?.piezas ?? [];
+
   const mover = useCallback((paso: number) => {
-    if (!piezas.length) return;
-    const siguiente = (i: number) => (i + paso + piezas.length) % piezas.length;
+    const n = mazos[mazoIdx]?.piezas.length ?? 0;
+    if (!n) return;
+    const siguiente = (i: number) => (i + paso + n) % n;
     if (quieto) { setActivo(siguiente); return; }
     if (timerRef.current) return; // ya hay un barajado en curso
     setBarajando(true);
@@ -94,7 +114,27 @@ export function Coverflow({
       setBarajando(false);
       timerRef.current = null;
     }, MS_BAJADA);
-  }, [piezas.length, quieto]);
+  }, [mazos, mazoIdx, quieto]);
+
+  /**
+   * Cambiar de mazo. Usa EL MISMO barajado que avanzar de pieza: el bloque cae,
+   * se desenfoca, y vuelve a subir con el otro mazo. Que sea el mismo movimiento
+   * es lo que hace que se lea como un solo objeto con dos caras, y no como dos
+   * carruseles pegados.
+   */
+  const cambiarMazo = useCallback((i: number) => {
+    if (i === mazoIdx) return;
+    if (quieto) { setMazoIdx(i); setActivo(0); return; }
+    if (timerRef.current) return;
+    setBarajando(true);
+    timerRef.current = window.setTimeout(() => {
+      setMazoIdx(i);
+      // Vuelve al principio: el índice de un mazo no significa nada en el otro.
+      setActivo(0);
+      setBarajando(false);
+      timerRef.current = null;
+    }, MS_BAJADA);
+  }, [mazoIdx, quieto]);
 
   // Swipe. En celular no hay flechas cómodas, y arrastrar es el gesto que la
   // gente ya prueba sola con algo que se ve como un carrusel.
@@ -114,7 +154,7 @@ export function Coverflow({
     if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy) * 1.5) mover(dx < 0 ? 1 : -1);
   };
 
-  if (!piezas.length) return null;
+  if (!mazo || !piezas.length) return null;
 
   const visibles = chico ? 1 : 2; // cuántas a cada lado
   const alto = chico ? alturaMovil : altura;
@@ -206,7 +246,7 @@ export function Coverflow({
               <button
                 key={p.id}
                 type="button"
-                onClick={() => { if (centro) onElegir?.(p.id); else mover(d); }}
+                onClick={() => { if (centro) mazo.onElegir?.(p.id); else mover(d); }}
                 aria-label={centro ? `Ver ${p.titulo}` : `Ir a ${p.titulo}`}
                 aria-hidden={fuera}
                 tabIndex={fuera ? -1 : 0}
@@ -274,6 +314,43 @@ export function Coverflow({
         </div>
       </div>
       </div>
+
+      {/* EL CONTROL DE MAZOS.
+          Con un solo mazo no aparece: no hay nada que elegir, y un control que
+          no puede cambiar nada es la misma clase de ruido que el selector de
+          "Talle: Único" que sacamos de las fichas.
+
+          Va afuera de la capa del barajado a propósito: mientras el bloque cae
+          y se desenfoca, el control queda nítido y en su lugar. Es lo que dice
+          "esto sigue siendo el mismo bloque, cambió lo que muestra". */}
+      {mazos.length > 1 && (
+        <div style={{ position: "absolute", top: chico ? 14 : 22, left: 0, right: 0, display: "flex", justifyContent: "center", gap: 4, zIndex: 4, padding: "0 12px" }}>
+          {mazos.map((m, i) => {
+            const activoMazo = i === mazoIdx;
+            return (
+              <button
+                key={m.id}
+                type="button"
+                onClick={() => cambiarMazo(i)}
+                aria-pressed={activoMazo}
+                style={{
+                  border: activoMazo ? "1px solid rgba(255,255,255,.2)" : "1px solid transparent",
+                  background: activoMazo ? "rgba(255,255,255,.1)" : "transparent",
+                  backdropFilter: activoMazo ? "blur(10px)" : undefined,
+                  WebkitBackdropFilter: activoMazo ? "blur(10px)" : undefined,
+                  color: activoMazo ? tinta : "rgba(255,255,255,.5)",
+                  fontSize: 10, letterSpacing: 2.5, textTransform: "uppercase", fontWeight: 500,
+                  padding: "7px 16px", borderRadius: 999, cursor: "pointer",
+                  transition: "color .3s ease, background .3s ease, border-color .3s ease",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {m.etiqueta}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {/* Flechas */}
       {([-1, 1] as const).map(dir => (
