@@ -4,6 +4,7 @@ import FashionNoir from "@/components/store/templates/FashionNoir";
 import BohoTerra from "@/components/store/templates/BohoTerra";
 import UrbanPulse from "@/components/store/templates/UrbanPulse";
 import ChicParis from "@/components/store/templates/ChicParis";
+import Aurora from "@/components/store/templates/Aurora";
 import AutoMotor from "@/components/store/templates/AutoMotor";
 import AutoDrive from "@/components/store/templates/AutoDrive";
 import ElectroPrime from "@/components/store/templates/ElectroPrime";
@@ -35,6 +36,7 @@ export const TEMPLATE_CATEGORIES: TemplateCategory[] = [
       { id: "boho-terra",   name: "Boho Terra",   desc: "Orgánico · Natural · Cálido",  blurb: "Ideal para marcas con identidad natural y artesanal, en tonos tierra y cálidos.", palette: ["#faf7f2", "#b5652a", "#2c2218"], component: BohoTerra,   tipoTiendas: TEMPLATE_TIPO_TIENDA["boho-terra"]   },
       { id: "urban-pulse",  name: "Urban Pulse",  desc: "Deportivo · Energético",        blurb: "Pensado para ropa deportiva y streetwear, con energía y contraste fuerte.", palette: ["#0f0f0f", "#d4ff00", "#f5f5f5"], component: UrbanPulse,  tipoTiendas: TEMPLATE_TIPO_TIENDA["urban-pulse"]  },
       { id: "chic-paris",   name: "Chic Paris",   desc: "Editorial · Carousel · Limpio", blurb: "Un diseño editorial y prolijo, con carrusel de producto destacado.", palette: ["#ffffff", "#c0392b", "#111111"], component: ChicParis,   tipoTiendas: TEMPLATE_TIPO_TIENDA["chic-paris"]   },
+      { id: "aurora",       name: "Aurora",       desc: "Oscuro · Luz · Profundidad",    blurb: "Fondo con luz viva calculada en tiempo real, vidrio y profundidad. Para marcas que quieren verse modernas sin gritar.", palette: ["#06070d", "#8b5cf6", "#f2f2f7"], component: Aurora,      tipoTiendas: TEMPLATE_TIPO_TIENDA["aurora"]       },
     ],
   },
   {

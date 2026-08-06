@@ -1,4 +1,4 @@
-export type TemplateId = "fashion-noir" | "boho-terra" | "urban-pulse" | "chic-paris" | "auto-motor" | "auto-drive" | "electro-prime" | "tech-nova" | "home-studio" | "casa-clara";
+export type TemplateId = "fashion-noir" | "boho-terra" | "urban-pulse" | "chic-paris" | "aurora" | "auto-motor" | "auto-drive" | "electro-prime" | "tech-nova" | "home-studio" | "casa-clara";
 
 export const TEMPLATES_WITH_CAROUSEL: TemplateId[] = ["chic-paris", "electro-prime", "tech-nova", "home-studio", "casa-clara"];
 
@@ -27,6 +27,10 @@ export const TEMPLATES_CON_RESENA_TIENDA: TemplateId[] = ["chic-paris"];
 // template se le agrega una sección con foto, hay que sumarla acá o el dueño no va
 // a poder cargarla.
 export const SECTION_BG_PHOTO: Record<TemplateId, string[]> = {
+  // Aurora no acepta foto de fondo en ninguna sección, y es a propósito: el
+  // fondo ES la escena de luz. Una foto encima la tapa y el template pierde
+  // exactamente aquello por lo que se elige.
+  "aurora":        [],
   "auto-drive":    ["bgCatalogo", "bgCategorias", "bgContacto", "bgFooter", "bgHero", "bgNosotros", "bgServicios", "bgStats"],
   "auto-motor":    ["bgCatalogo", "bgContacto", "bgFooter", "bgNosotros", "bgServicios"],
   "boho-terra":    ["bgNewsletter"],
@@ -262,6 +266,7 @@ export type StoreConfig = {
 // también: son el mismo color escrito dos veces, y esta es la copia que miente
 // cuando se desincronizan.
 export const TEMPLATE_NAV_BG: Partial<Record<TemplateId, string>> = {
+  "aurora":        "#06070d", // el fondo de la escena, casi negro
   "auto-motor":    "#1b3f6e", // NAVY
   "auto-drive":    "#ffffff",
   "casa-clara":    "#ffffff",
@@ -275,6 +280,7 @@ export const TEMPLATE_DEFAULTS: Record<TemplateId, { accent: string; storeName: 
   "boho-terra":   { accent: "#b5652a", storeName: "BOHO TERRA"   },
   "urban-pulse":  { accent: "#d4ff00", storeName: "URBAN PULSE"  },
   "chic-paris":   { accent: "#c0392b", storeName: "CHIC PARIS"   },
+  "aurora":       { accent: "#8b5cf6", storeName: "AURORA"       },
   "auto-motor":   { accent: "#e8a020", storeName: "AUTO MOTOR"   },
   "auto-drive":   { accent: "#2563eb", storeName: "AUTO DRIVE"   },
   "electro-prime": { accent: "#ea580c", storeName: "ELECTRO PRIME" },
@@ -288,6 +294,9 @@ export const TEMPLATE_TIPO_TIENDA: Record<TemplateId, string[]> = {
   "boho-terra":   ["ROPA", "GASTRONOMIA", "GENERAL"],
   "urban-pulse":  ["ROPA", "GENERAL"],
   "chic-paris":   ["ROPA", "GENERAL"],
+  // Aurora no está atada a un rubro: es una estética, no una categoría. Por eso
+  // aparece en los mismos tres que los templates más generales de Moda.
+  "aurora":       ["ROPA", "GASTRONOMIA", "GENERAL"],
   "auto-motor":   ["AUTOS"],
   "auto-drive":   ["AUTOS"],
   "electro-prime": ["HOGAR_TECH"],
