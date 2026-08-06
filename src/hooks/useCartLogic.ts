@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import type { StorefrontProduct, StorefrontVariant, ValidatedCoupon, PlaceOrderParams, SeleccionOpciones, OpcionProducto } from "./useStorefront";
-import { valoresElegidos, reacomodarSeleccion, opcionesDeVariantes, opcionDelValor } from "@/lib/opciones";
+import type { StorefrontProduct, StorefrontVariant, ValidatedCoupon, PlaceOrderParams, SeleccionOpciones } from "./useStorefront";
+import { valoresElegidos, reacomodarSeleccion, opcionesDeVariantes, opcionDelValor, opcionesAElegir, combinaciones } from "@/lib/opciones";
 import { getEnvioOptions, fmtEnvioPrice, getPagoOptions, fmt as fmtFn, claveItem, type CartItem, type CheckoutStatus, type ShippingMethod } from "@/components/store/shared/cartTypes";
 import { useAuth } from "@/components/AuthProvider";
 import { LIVE_QUOTE_DOMICILIO_ID } from "@/types/store-config";
@@ -59,20 +59,6 @@ function resolveVariantStock(product: StorefrontProduct, seleccion: SeleccionOpc
 }
 
 /**
- * Todas las combinaciones posibles, en el orden en que se muestran los chips: la
- * primera opción por fuera, la última por dentro. Con Talle y Color da
- * `S/Negro, S/Blanco, M/Negro…`, que es el orden en que el comprador las lee.
- */
-function combinaciones(opciones: OpcionProducto[]): SeleccionOpciones[] {
-  return opciones.reduce<SeleccionOpciones[]>(
-    (acc, op) => op.valores.length
-      ? acc.flatMap(base => op.valores.map(v => ({ ...base, [op.nombre]: v })))
-      : acc,
-    [{}],
-  );
-}
-
-/**
  * Reconstruye la selección a partir de valores sueltos, buscando a qué opción
  * pertenece cada uno.
  *
@@ -85,8 +71,11 @@ function seleccionDesdeValores(p: StorefrontProduct, valores: (string | undefine
   const sel: SeleccionOpciones = {};
   for (const valor of valores) {
     if (!valor) continue;
-    const op = p.opciones.find(o => o.valores.some(v => v.toLowerCase() === valor.toLowerCase()));
-    if (op) sel[op.nombre] = valor;
+    // Acá estaba escrito el mismo `find` que `opcionDelValor`, palabra por
+    // palabra. Las dos están en el camino del carrito guardado: si una cambiaba y
+    // la otra no, un carrito viejo se leía distinto según por dónde entrara.
+    const nombre = opcionDelValor(p.opciones, valor);
+    if (nombre) sel[nombre] = valor;
   }
   return sel;
 }
@@ -720,8 +709,15 @@ export function useCartLogic({ products, promotions = [], storeId, affiliateId =
     }
     // Aunque quede en 0, se marca como automática: la foto 0 puede pertenecer a
     // otro color, y sin esto el efecto de abajo la haría mandar sobre lo elegido.
-    fotoAutomaticaRef.current = true;
-    setModalImg(idx === -1 ? 0 : idx);
+    //
+    // Pero se marca SÓLO si el efecto va a correr de verdad. El efecto depende de
+    // `[modalImg, modalProduct?.id]`: si se reabre el mismo producto con la misma
+    // foto, no cambia ninguno de los dos, el efecto no corre, y la bandera quedaba
+    // prendida esperando. La consumía el próximo cambio de foto —uno del
+    // comprador—, y esa vez la selección no lo seguía.
+    const fotoNueva = idx === -1 ? 0 : idx;
+    fotoAutomaticaRef.current = fotoNueva !== modalImg || p.id !== modalProduct?.id;
+    setModalImg(fotoNueva);
     setSeleccion(inicial);
     setQty(isWholesale && p.cantMinMayorista ? p.cantMinMayorista : 1);
     setSearchOpen(false);
@@ -790,6 +786,21 @@ export function useCartLogic({ products, promotions = [], storeId, affiliateId =
 
   const addToCart = () => {
     if (!modalProduct) return;
+    // ¿Eligió todo lo que había para elegir?
+    //
+    // Esta guarda existía en UNA de las seis pantallas (`ProductDetailClient`).
+    // Poniéndola acá la tienen las seis, sin tocar ningún template.
+    //
+    // Y no la cubre el candado del stock: con una selección INCOMPLETA
+    // —sólo el talle, sin color— `buscarVariante` busca por los valores que hay,
+    // encuentra la primera variante con ese talle, y devuelve un stock mayor que
+    // cero. O sea que el botón queda prendido y el pedido sale con un color que el
+    // comprador nunca eligió. Son dos agujeros distintos.
+    const faltan = opcionesAElegir(modalProduct.opciones).filter(o => !seleccion[o.nombre]);
+    if (faltan.length > 0) {
+      showToast(`Elegí ${faltan.map(o => o.nombre.toLowerCase()).join(" y ")}`);
+      return;
+    }
     const variantId = resolveVariantId(modalProduct, seleccion);
     const name = modalProduct.name;
     const stock = resolveVariantStock(modalProduct, seleccion);

@@ -207,11 +207,11 @@ sin cerrar — por ejemplo si el efecto del deep link se redispara porque cambi�
 |---|---|---|---|
 | 1 | Venta sin descontar stock si ninguna variante casa | 🟠 | ✅ **cerrado** |
 | 2 | `addingToCartRef` no puede dispararse | ⚪ código muerto | ✅ **borrado** |
-| 3 | `seleccionDesdeValores` copia `opcionDelValor` | 🟡 | pendiente |
-| 4 | `reacomodarSeleccion` inlina `valoresElegidos` | ⚪ | pendiente |
-| 5 | `combinaciones` fuera de `lib/opciones.ts` | 🟡 no se puede probar | pendiente |
-| 6 | La guarda de "elegiste todo" en 1 de 6 pantallas | 🟡 | pendiente |
-| 7 | `fotoAutomaticaRef` se queda prendida | 🟡 | pendiente |
+| 3 | `seleccionDesdeValores` copia `opcionDelValor` | 🟡 | ✅ **cerrado** |
+| 4 | `reacomodarSeleccion` inlina `valoresElegidos` | ⚪ | ✅ **cerrado** |
+| 5 | `combinaciones` fuera de `lib/opciones.ts` | 🟡 no se puede probar | ✅ **cerrado** |
+| 6 | La guarda de "elegiste todo" en 1 de 6 pantallas | 🟡 | ✅ **cerrado** |
+| 7 | `fotoAutomaticaRef` se queda prendida | 🟡 | ✅ **cerrado** |
 
 Lo único que toca plata es el **1**. El resto es prolijidad — pero el 3 y el 5
 son justo lo que el refactor vino a sacar, así que dejarlos es dejar la puerta
@@ -247,3 +247,36 @@ ya no está disponible.
 
 16 pruebas nuevas, incluidas las que verifican que **no** se rompió lo que ya
 andaba: producto de una sola variante, producto sin variantes, y sin elegir nada.
+
+## Y la prolijidad (mismo día)
+
+**Las dos copias.** `seleccionDesdeValores` ahora llama a `opcionDelValor` en vez
+de reescribir su `find`. Y `reacomodarSeleccion` usa `valoresElegidos`, que estaba
+exportada veinte líneas más arriba en su mismo archivo.
+
+**`combinaciones` se mudó a `lib/opciones.ts`.** Era la única del motor que había
+quedado adentro del hook, donde no se podía probar. Se le escribieron 6 pruebas
+apenas llegó — entre ellas que una opción sin valores se saltea en vez de vaciar
+todo, que era el borde que nadie había mirado.
+
+**La guarda de "elegiste todo" se puso en `addToCart`.** Ahí la tienen las seis
+pantallas sin tocar un solo template.
+
+> **Corrección.** Antes acá se proponía SACARLA, con el argumento de que era
+> redundante porque `openModal` preselecciona todo. Estaba mal: cubre un caso que
+> el candado del stock **no** cubre. Con una selección incompleta —sólo el talle,
+> sin color— `buscarVariante` busca por los valores que hay, encuentra la primera
+> variante con ese talle y devuelve stock mayor que cero. El botón queda prendido
+> y el pedido sale con un color que el comprador nunca eligió. Son dos agujeros
+> distintos, y el segundo sólo lo tapa la guarda.
+
+**`fotoAutomaticaRef`.** `openModal` ahora la prende **sólo si el efecto va a
+correr**: `fotoNueva !== modalImg || p.id !== modalProduct?.id`. Si se reabre el
+mismo producto con la misma foto, ninguno de los dos cambia, el efecto no corre —
+y antes la bandera quedaba prendida esperando a que la consumiera el próximo
+cambio de foto del comprador, que esa vez no movía la selección.
+
+`OpcionProducto` quedó sin uso en `useCartLogic` al mudar `combinaciones`; lo
+levantó el lint.
+
+**59 pruebas en total, todas pasan.**
