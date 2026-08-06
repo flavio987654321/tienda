@@ -66,6 +66,7 @@ export function Coverflow({
   tinta,
   alturaMovil = 430,
   altura = 620,
+  fundido = false,
 }: {
   mazos: MazoCoverflow[];
   acento: string;
@@ -73,6 +74,11 @@ export function Coverflow({
   tinta: string;
   alturaMovil?: number;
   altura?: number;
+  /**
+   * Va adentro de la portada y comparte su luz: no pinta fondo propio y el
+   * teñido de la foto entra de a poco desde arriba en vez de arrancar de golpe.
+   */
+  fundido?: boolean;
 }) {
   const [mazoIdx, setMazoIdx] = useState(0);
   const [activo, setActivo] = useState(0);
@@ -164,7 +170,17 @@ export function Coverflow({
     <div
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
-      style={{ position: "relative", width: "100%", height: alto, overflow: "hidden", background: base }}
+      style={{
+        position: "relative",
+        width: "100%",
+        height: alto,
+        overflow: "hidden",
+        // Fundido: el bloque no pinta su propio fondo, se apoya en la luz de la
+        // portada. Sin esto quedaba una línea horizontal dura justo donde
+        // arrancaba el coverflow, y la "escena única" se leía como dos bloques
+        // pegados.
+        background: fundido ? "transparent" : base,
+      }}
     >
       {/* El fondo es LA MISMA foto, borroneada y oscurecida. Cambia junto con la
           pieza, así que la pantalla entera se tiñe del color de lo que estás
@@ -180,10 +196,29 @@ export function Coverflow({
             filter: "blur(38px) saturate(130%) brightness(.42)",
             opacity: i === activo ? 1 : 0,
             transition: "opacity .7s ease",
+            // Fundido: el teñido de la foto no empieza en el borde de arriba,
+            // aparece de a poco. El corte lo hace la máscara y no un degradado
+            // encima, porque encima habría que pintarlo del color del fondo — y
+            // el color del fondo acá es la luz de la portada, que se mueve.
+            ...(fundido
+              ? {
+                  maskImage: "linear-gradient(to bottom, transparent 0%, #000 26%)",
+                  WebkitMaskImage: "linear-gradient(to bottom, transparent 0%, #000 26%)",
+                }
+              : null),
           }}
         />
       ))}
-      <div aria-hidden="true" style={{ position: "absolute", inset: 0, background: `linear-gradient(180deg, ${base}cc, ${base}33 40%, ${base}dd)` }} />
+      <div
+        aria-hidden="true"
+        style={{
+          position: "absolute",
+          inset: 0,
+          background: fundido
+            ? `linear-gradient(180deg, transparent 18%, ${base}26 45%, ${base}c4)`
+            : `linear-gradient(180deg, ${base}cc, ${base}33 40%, ${base}dd)`,
+        }}
+      />
 
       {/* TRES CAPAS, y el orden importa:
             1. el barajado  → mueve y desenfoca

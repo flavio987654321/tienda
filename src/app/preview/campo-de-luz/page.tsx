@@ -6,6 +6,7 @@ import { Coverflow, type MazoCoverflow } from "@/components/store/templates/shar
 import { GrillaProfunda, PiezaQueLlega } from "@/components/store/templates/shared/GrillaProfunda";
 import { FichaEnVuelo, type Apertura, type PiezaFicha, type Seleccion } from "@/components/store/templates/shared/FichaEnVuelo";
 import { Contacto, Garantias, LuzDeFondo, Nosotros, PieDePagina } from "@/components/store/templates/shared/Cierre";
+import { Portada } from "@/components/store/templates/shared/Portada";
 import { Inclinable, vidrio } from "@/components/store/templates/shared/Materia";
 
 const BASE = "#06070d";
@@ -90,6 +91,16 @@ const VIAS = [
   { id: "mail", nombre: "Mail", detalle: "hola@latienda.com.ar", href: "#", icono: <Ico d="M3 7l9 6 9-6M3 6h18v12H3z" /> },
 ];
 
+/** Nav de mentira: en el template va la barra real, esto es sólo para ver el aire. */
+function NavDePrueba() {
+  return (
+    <nav style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 18, padding: "16px 26px", maxWidth: 1180, margin: "0 auto" }}>
+      <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: 2, color: TINTA, whiteSpace: "nowrap" }}>LA TIENDA</span>
+      <span style={{ fontSize: 12.5, color: TINTA, whiteSpace: "nowrap" }}>Carrito (0)</span>
+    </nav>
+  );
+}
+
 function Rotulo({ n, texto }: { n: number; texto: string }) {
   return (
     <p style={{ margin: "0 0 18px", fontSize: 10, letterSpacing: 5, textTransform: "uppercase", color: MID }}>
@@ -152,10 +163,18 @@ export default function BancoDePruebas() {
 
   return (
     <div style={{ background: BASE, minHeight: "100vh" }}>
-      <div style={{ padding: "22px 26px 10px" }}>
-        <Rotulo n={1} texto="Coverflow · dos mazos" />
-      </div>
-      <Coverflow mazos={MAZOS} acento={ACENTO} base={BASE} tinta={TINTA} />
+      <Portada
+        nav={<NavDePrueba />}
+        kicker="Otoño invierno 2026"
+        marca="LA TIENDA"
+        frase="Confección artesanal en Buenos Aires. Menos piezas, mejor hechas."
+        colores={[ACENTO, "#4c1d95", "#c084fc"]}
+        base={BASE}
+        tinta={TINTA}
+        acento={ACENTO}
+      >
+        <Coverflow mazos={MAZOS} acento={ACENTO} base={BASE} tinta={TINTA} fundido />
+      </Portada>
 
       <div style={{ padding: "70px 26px 120px", maxWidth: 1180, margin: "0 auto" }}>
         <Rotulo n={3} texto="Catálogo · las piezas llegan desde el fondo" />
