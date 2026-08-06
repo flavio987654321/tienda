@@ -28,6 +28,7 @@ import { NewsletterForm } from "@/components/store/templates/shared/NewsletterFo
 import { FadeImage } from "@/components/store/templates/shared/FadeImage";
 import { HeroFoto } from "@/components/store/templates/shared/HeroFoto";
 import { Coverflow } from "@/components/store/templates/shared/Coverflow";
+import { GrillaProfunda, PiezaQueLlega } from "@/components/store/templates/shared/GrillaProfunda";
 import { vidrio, sombra, Inclinable } from "@/components/store/templates/shared/Materia";
 import StoreProductReels from "@/components/store/ProductReels";
 import { SectionBlock } from "@/components/store/templates/shared/SectionBlock";
@@ -1005,8 +1006,17 @@ export default function Aurora() {
           </div>
         )}
 
-        <div style={{ display:"grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(auto-fill,minmax(260px,1fr))", gap: isMobile ? 12 : 24, marginBottom:48 }}>
-          {!loadingProducts && filtered.map(product => {
+        {/* Las piezas no aparecen ni suben: vienen desde lejos, giradas y
+            desenfocadas, y se enderezan al apoyarse. Es el mismo espacio 3D del
+            coverflow del hero aplicado al catálogo — que es lo que evita que la
+            página sea "un bloque espectacular y después una tienda cualquiera".
+
+            El mínimo de columna baja a 140 en celular para que sigan entrando
+            dos por fila: con 260 quedaba una sola y el catálogo se volvía una
+            tira infinita. */}
+        <div style={{ marginBottom:48 }}>
+        <GrillaProfunda min={isMobile ? 140 : 260} hueco={isMobile ? 12 : 24}>
+          {!loadingProducts && filtered.map((product, indiceEnGrilla) => {
             const promo = resolveProductPromo(product, promotions);
             return (
             /* La tarjeta es UNA pieza de vidrio: la foto y el texto van adentro
@@ -1016,7 +1026,8 @@ export default function Aurora() {
 
                `Inclinable` sólo hace algo con mouse; en celular la tarjeta queda
                quieta y el resto funciona igual. */
-            <Inclinable key={product.id} grados={5} style={{ borderRadius:18 }}>
+            <PiezaQueLlega key={product.id} indice={indiceEnGrilla}>
+            <Inclinable grados={5} style={{ borderRadius:18 }}>
             <div onClick={() => openModal(product)} onMouseEnter={() => setHoveredId(product.id)} onMouseLeave={() => setHoveredId(null)}
               style={{ ...vidrio("oscuro"), borderRadius:18, overflow:"hidden", cursor:"pointer", position:"relative" }}>
               {(() => {
@@ -1066,8 +1077,10 @@ export default function Aurora() {
               </div>
             </div>
             </Inclinable>
+            </PiezaQueLlega>
             );
           })}
+        </GrillaProfunda>
         </div>
 
         {/* Ver más / Ver toda la colección */}
