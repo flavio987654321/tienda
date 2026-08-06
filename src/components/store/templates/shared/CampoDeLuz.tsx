@@ -76,13 +76,14 @@ void main() {
   vec2 c2 = vec2(cos(t * 0.70) * 0.62, sin(t * 1.30) * 0.45);
   vec2 c3 = vec2(sin(t * 0.50 + 2.0) * 0.45, cos(t * 0.60 + 1.0) * 0.58);
 
-  // Radios grandes y caída larga: las luces se superponen casi siempre, que es
-  // lo que hace que se lean como UNA atmósfera y no como tres manchas. Antes los
-  // radios eran chicos y ademas se elevaba al cuadrado, que apreta el brillo
-  // contra el centro — de ahí el punto quemado.
-  float s1 = 1.0 - smoothstep(0.0, 1.25, length(p - c1));
-  float s2 = 1.0 - smoothstep(0.0, 1.35, length(p - c2));
-  float s3 = 1.0 - smoothstep(0.0, 1.15, length(p - c3));
+  // El radio es lo que decide cuánto respira el fondo. Con radios de 1.2+ la luz
+  // tapaba TODO el alto de una pantalla de 900px y quedaba una pared violeta en
+  // vez de luz entrando a una habitación oscura. Estos dejan las esquinas al
+  // fondo puro, que es de donde sale la sensación de profundidad: sin negro no
+  // hay contra qué brillar.
+  float s1 = 1.0 - smoothstep(0.0, 0.78, length(p - c1));
+  float s2 = 1.0 - smoothstep(0.0, 0.88, length(p - c2));
+  float s3 = 1.0 - smoothstep(0.0, 0.68, length(p - c3));
 
   float peso = s1 + s2 + s3;
 
@@ -93,7 +94,7 @@ void main() {
     // perdía el color justo en la parte más brillante. La compresión de Reinhard
     // —x/(1+x)— nunca llega a blanco puro, así que el centro de la luz sigue
     // teniendo tono.
-    vec3 hdr = uBase + (uA * s1 + uB * s2 + uC * s3) * 1.9;
+    vec3 hdr = uBase + (uA * s1 + uB * s2 + uC * s3) * 1.35;
     col = hdr / (1.0 + hdr);
   } else {
     // Sobre fondo claro no se suma NADA: se tiñe. El color es el promedio
@@ -106,7 +107,9 @@ void main() {
 
   // Viñeta: oscurece apenas los bordes y empuja la vista al centro, que es
   // donde va el contenido.
-  float vig = 1.0 - 0.25 * length(uv - 0.5);
+  // Viñeta más marcada en oscuro: empuja las esquinas al negro y encierra la
+  // luz en el centro, que es donde va el contenido.
+  float vig = 1.0 - 0.55 * pow(length(uv - 0.5), 1.6);
   col *= mix(1.0, vig, uOscuro);
 
   // Grano fino, más marcado en oscuro (donde el bandeado se nota).
