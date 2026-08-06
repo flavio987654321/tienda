@@ -116,6 +116,24 @@ export function opcionesAElegir(opciones: OpcionProducto[]) {
   );
 }
 
+/**
+ * Todas las combinaciones posibles, en el orden en que se muestran los chips: la
+ * primera opción por fuera, la última por dentro. Con Talle y Color da
+ * `S/Negro, S/Blanco, M/Negro…`, que es el orden en que el comprador las lee.
+ *
+ * Es la que decide con qué combinación abre cada ficha (vía `primerComboConStock`).
+ * Vivía adentro de `useCartLogic`, que es la única del motor que había quedado
+ * afuera de esta librería: siendo pura, ahí no se podía probar sin montar el hook.
+ */
+export function combinaciones(opciones: OpcionProducto[]): SeleccionOpciones[] {
+  return opciones.reduce<SeleccionOpciones[]>(
+    (acc, op) => op.valores.length
+      ? acc.flatMap(base => op.valores.map(v => ({ ...base, [op.nombre]: v })))
+      : acc,
+    [{}],
+  );
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Reacomodar la selección cuando la combinación elegida no existe.
 //
@@ -148,7 +166,7 @@ export function reacomodarSeleccion(
   const valorFijado = seleccion[fijada];
   if (!valorFijado) return null;
 
-  const elegidos = Object.values(seleccion).filter(Boolean);
+  const elegidos = valoresElegidos(seleccion);
   // Si lo elegido ya existe tal cual, no se toca nada.
   if (variants.some(v => varianteTiene(v, elegidos))) return null;
 

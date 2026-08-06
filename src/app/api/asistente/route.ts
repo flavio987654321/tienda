@@ -96,7 +96,9 @@ export async function POST(req: NextRequest) {
       logo: true,
       storeConfig: true,
       mpConnectedAt: true,
-      _count: { select: { products: true } },
+      // Sin los borrados: con esto el asistente decide si le falta cargar
+      // productos, y un producto borrado no cuenta como cargado.
+      _count: { select: { products: { where: { deletedAt: null } } } },
     },
   });
   if (!store) return NextResponse.json({ error: "No autorizado" }, { status: 403 });

@@ -67,7 +67,15 @@ export async function listarTiendas(filtros: FiltrosDirectorio = {}) {
     prisma.store.findMany({
       where,
       include: {
-        _count: { select: { products: true, orders: true } },
+        // Los MISMOS productos que va a encontrar el que entre, no todas las
+        // filas de la tabla. `_count` sin `where` cuenta los borrados: el borrado
+        // es lógico (`deletedAt`), la fila queda. Girly Store tenía dos productos
+        // borrados y la tarjeta prometía "46 productos" cuando adentro había 44.
+        //
+        // Un producto programado se guarda con `isActive: false` hasta que el cron
+        // lo publica, así que `isActive: true` ya lo deja afuera — no hace falta
+        // mirar `publishAt`.
+        _count: { select: { products: { where: { isActive: true, deletedAt: null } }, orders: true } },
         products: {
           where: { isActive: true },
           // Sólo la foto: es el último producto cargado y se usa de tapa.

@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import type { StorefrontProduct, StorefrontVariant, ValidatedCoupon, PlaceOrderParams, SeleccionOpciones, OpcionProducto } from "./useStorefront";
-import { valoresElegidos, reacomodarSeleccion, opcionesDeVariantes, opcionDelValor } from "@/lib/opciones";
+import type { StorefrontProduct, StorefrontVariant, ValidatedCoupon, PlaceOrderParams, SeleccionOpciones } from "./useStorefront";
+import { valoresElegidos, reacomodarSeleccion, opcionesDeVariantes, opcionDelValor, opcionesAElegir, combinaciones } from "@/lib/opciones";
 import { getEnvioOptions, fmtEnvioPrice, getPagoOptions, fmt as fmtFn, claveItem, type CartItem, type CheckoutStatus, type ShippingMethod } from "@/components/store/shared/cartTypes";
 import { useAuth } from "@/components/AuthProvider";
 import { LIVE_QUOTE_DOMICILIO_ID } from "@/types/store-config";
@@ -17,9 +17,10 @@ import { registrarVista } from "@/lib/registrarVista";
 /**
  * El índice de la foto asignada a un valor de opción, o -1.
  *
- * Al cargar el producto se le puede colgar una foto a cada valor (hoy el
- * formulario lo ofrece para los colores). No mira sólo los colores a propósito:
- * si mañana se asignan fotos por "Material", esto ya funciona.
+ * Al cargar el producto se le puede colgar una foto a cada valor. No mira sólo
+ * los colores a propósito, y desde 2026-08-05 el formulario tampoco: se le asigna
+ * una foto a cualquier opción, así que un collar puede tener la del 40cm y la del
+ * 70cm. Hasta entonces esto ya funcionaba y el formulario era lo que no dejaba.
  */
 function indiceFotoDe(p: StorefrontProduct, valor: string): number {
   if (!valor) return -1;
@@ -32,22 +33,29 @@ function indiceFotoDe(p: StorefrontProduct, valor: string): number {
 // para mostrar "Sin stock"/"Últimas unidades" — se centraliza acá (y se expone
 // como `selectedVariantStock`) para que addToCart pueda topar la cantidad al
 // stock real, y los templates no necesiten reimplementarla cada uno.
+//
+// Cuando NINGUNA variante coincide devuelve 0, no `null`. La diferencia era una
+// venta cobrada sin descontar stock:
+//
+//   · `buscarVariante` devuelve `null` si hay varias variantes y ninguna casa —
+//     y eso está bien, es lo que evita vender la equivocada.
+//   · Pero `null` se leía como "no se puede saber" y se trataba como DISPONIBLE:
+//     el botón quedaba prendido y sin techo de cantidad.
+//   · En la caja, `checkout/route.ts` sólo descuenta stock `if (variant)`. Con
+//     `variantId` en null no entra: el pedido se crea, se cobra, y el stock no se
+//     toca. Ni siquiera falla.
+//
+// Si hay varias variantes y ninguna coincide, esa combinación NO EXISTE, y cero
+// es la respuesta honesta. Además la entienden solas las seis pantallas: todas
+// apagan el botón y escriben "Sin stock" con `selectedVariantStock === 0`.
+//
+// Con una sola variante `buscarVariante` siempre la devuelve, así que el `null`
+// que queda es únicamente el del producto sin variantes — que se sigue tratando
+// como disponible, igual que antes.
 function resolveVariantStock(product: StorefrontProduct, seleccion: SeleccionOpciones): number | null {
-  return buscarVariante(product.variants, valoresElegidos(seleccion))?.stock ?? null;
-}
-
-/**
- * Todas las combinaciones posibles, en el orden en que se muestran los chips: la
- * primera opción por fuera, la última por dentro. Con Talle y Color da
- * `S/Negro, S/Blanco, M/Negro…`, que es el orden en que el comprador las lee.
- */
-function combinaciones(opciones: OpcionProducto[]): SeleccionOpciones[] {
-  return opciones.reduce<SeleccionOpciones[]>(
-    (acc, op) => op.valores.length
-      ? acc.flatMap(base => op.valores.map(v => ({ ...base, [op.nombre]: v })))
-      : acc,
-    [{}],
-  );
+  const v = buscarVariante(product.variants, valoresElegidos(seleccion));
+  if (v) return v.stock;
+  return product.variants.length > 1 ? 0 : null;
 }
 
 /**
@@ -63,8 +71,11 @@ function seleccionDesdeValores(p: StorefrontProduct, valores: (string | undefine
   const sel: SeleccionOpciones = {};
   for (const valor of valores) {
     if (!valor) continue;
-    const op = p.opciones.find(o => o.valores.some(v => v.toLowerCase() === valor.toLowerCase()));
-    if (op) sel[op.nombre] = valor;
+    // Acá estaba escrito el mismo `find` que `opcionDelValor`, palabra por
+    // palabra. Las dos están en el camino del carrito guardado: si una cambiaba y
+    // la otra no, un carrito viejo se leía distinto según por dónde entrara.
+    const nombre = opcionDelValor(p.opciones, valor);
+    if (nombre) sel[nombre] = valor;
   }
   return sel;
 }
@@ -208,7 +219,11 @@ export function useCartLogic({ products, promotions = [], storeId, affiliateId =
   }>({ status: "idle", domicilio: null, sucursal: null });
 
   const userDropdownRef = useRef<HTMLDivElement>(null);
-  const addingToCartRef = useRef(false);
+  // `addingToCartRef` vivía acá como guarda contra el doble click. No podía
+  // dispararse nunca: se prendía y se apagaba dentro del mismo tick, sin nada
+  // asíncrono en el medio, así que para cuando llegaba el segundo click ya estaba
+  // apagada. Tampoco hacía falta — `setCartItems` junta por `claveItem`, así que
+  // dos clicks suman cantidad, que es lo que la persona pidió.
   /** La última foto la movió el código, no el comprador. Ver `setOpcion`. */
   const fotoAutomaticaRef = useRef(false);
   const { status } = useAuth();
@@ -694,8 +709,15 @@ export function useCartLogic({ products, promotions = [], storeId, affiliateId =
     }
     // Aunque quede en 0, se marca como automática: la foto 0 puede pertenecer a
     // otro color, y sin esto el efecto de abajo la haría mandar sobre lo elegido.
-    fotoAutomaticaRef.current = true;
-    setModalImg(idx === -1 ? 0 : idx);
+    //
+    // Pero se marca SÓLO si el efecto va a correr de verdad. El efecto depende de
+    // `[modalImg, modalProduct?.id]`: si se reabre el mismo producto con la misma
+    // foto, no cambia ninguno de los dos, el efecto no corre, y la bandera quedaba
+    // prendida esperando. La consumía el próximo cambio de foto —uno del
+    // comprador—, y esa vez la selección no lo seguía.
+    const fotoNueva = idx === -1 ? 0 : idx;
+    fotoAutomaticaRef.current = fotoNueva !== modalImg || p.id !== modalProduct?.id;
+    setModalImg(fotoNueva);
     setSeleccion(inicial);
     setQty(isWholesale && p.cantMinMayorista ? p.cantMinMayorista : 1);
     setSearchOpen(false);
@@ -763,11 +785,33 @@ export function useCartLogic({ products, promotions = [], storeId, affiliateId =
   }, [products, storeId]);
 
   const addToCart = () => {
-    if (!modalProduct || addingToCartRef.current) return;
-    addingToCartRef.current = true;
+    if (!modalProduct) return;
+    // ¿Eligió todo lo que había para elegir?
+    //
+    // Esta guarda existía en UNA de las seis pantallas (`ProductDetailClient`).
+    // Poniéndola acá la tienen las seis, sin tocar ningún template.
+    //
+    // Y no la cubre el candado del stock: con una selección INCOMPLETA
+    // —sólo el talle, sin color— `buscarVariante` busca por los valores que hay,
+    // encuentra la primera variante con ese talle, y devuelve un stock mayor que
+    // cero. O sea que el botón queda prendido y el pedido sale con un color que el
+    // comprador nunca eligió. Son dos agujeros distintos.
+    const faltan = opcionesAElegir(modalProduct.opciones).filter(o => !seleccion[o.nombre]);
+    if (faltan.length > 0) {
+      showToast(`Elegí ${faltan.map(o => o.nombre.toLowerCase()).join(" y ")}`);
+      return;
+    }
     const variantId = resolveVariantId(modalProduct, seleccion);
     const name = modalProduct.name;
     const stock = resolveVariantStock(modalProduct, seleccion);
+    // Segundo candado, por si alguna pantalla deja el botón prendido: sin stock
+    // —o con una combinación que no existe, que ahora también da 0— no se agrega.
+    // El primero es que las seis pantallas ya apagan el botón con stock 0; éste
+    // es el que igual protege la caja si mañana aparece una séptima.
+    if (stock === 0) {
+      showToast("Esa combinación no está disponible");
+      return;
+    }
     const clave = claveItem(modalProduct.id, seleccion);
     setCartItems(prev => {
       const ex = prev.find(i => claveItem(i.product.id, i.seleccion) === clave);
@@ -781,7 +825,6 @@ export function useCartLogic({ products, promotions = [], storeId, affiliateId =
     setModalProduct(null);
     showToast(`${name} agregado al carrito`);
     setCartOpen(true);
-    addingToCartRef.current = false;
   };
 
   const removeFromCart = (idx: number) =>
@@ -809,7 +852,14 @@ export function useCartLogic({ products, promotions = [], storeId, affiliateId =
       const conTecho = stock !== null ? Math.min(pedido, stock) : pedido;
       const final = Math.max(1, conTecho);
       if (delta > 0 && final === item.qty && stock !== null) {
-        showToast(stock === 1 ? "Queda 1 unidad" : `Solo quedan ${stock} unidades`);
+        // El cero llega por dos caminos: agotado de verdad, o una combinación que
+        // dejó de existir —un carrito viejo de un producto que se recargó—. En los
+        // dos casos "solo quedan 0 unidades" se lee como un error de la página.
+        showToast(
+          stock === 0 ? "Esa combinación ya no está disponible"
+          : stock === 1 ? "Queda 1 unidad"
+          : `Solo quedan ${stock} unidades`,
+        );
       }
       return { ...item, qty: final };
     }));

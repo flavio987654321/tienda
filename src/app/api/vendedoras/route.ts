@@ -65,7 +65,9 @@ export async function GET(req: NextRequest) {
         acceptsRewardCoupons: true,
         mpAccessToken: true,
         owner: { select: { name: true } },
-        _count: { select: { products: true } },
+        // Los que la afiliada va a poder compartir de verdad: sin los borrados ni
+        // los pausados. Antes contaba las filas borradas y prometía de más.
+        _count: { select: { products: { where: { isActive: true, deletedAt: null } } } },
         affiliates: {
           where: { userId: user.id },
           select: { id: true, status: true, isActive: true },

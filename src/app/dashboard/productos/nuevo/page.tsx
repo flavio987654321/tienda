@@ -12,7 +12,7 @@ import {
 import Link from "next/link";
 import Image from "next/image";
 import { getStoreType, etiquetaCategoria, camposActivos, camposPropios, ejemploNombre, ejemploTags } from "@/lib/storeTypes";
-import { sugerirOpcion, opcionesIniciales, nombresDeOpciones, renombrarOpcion, agregarOpcion, quitarOpcion, MAX_OPCIONES } from "@/lib/opcionSugerida";
+import { sugerirOpcion, opcionesIniciales, nombresDeOpciones, renombrarOpcion, agregarOpcion, quitarOpcion, estadoDelBuilder, opcionesQueNoEntranEnElBuilder, filasIncompletas, claveDeCombinacion, MAX_OPCIONES } from "@/lib/opcionSugerida";
 import { esOpcionDeColor } from "@/lib/opciones";
 import { calcMargin, calcVehicleCostTotal, formatFechaGasto } from "@/lib/margin";
 import StockHistoryPanel from "../StockHistoryPanel";
@@ -654,23 +654,23 @@ function ProductoFormPage() {
         // le puede renombrar las variantes que ya vendió.
         nombreTocadoRef.current = true;
 
-        // Si la tienda usa builder, detectar colores y segunda dimensión de las variantes existentes
-        if (["ROPA", "HOGAR_TECH"].includes(store.tipoTienda || "")) {
-          const stockMap = new Map<string, { stock: string; price: string; sku: string; threshold: string }>();
-          const uniqueColors: string[] = [];
-          const uniqueSizes: string[] = [];
-          for (const v of loadedVariants) {
-            const c = v.attrs["Color"] || "";
-            const s = v.attrs[sizeDim] || "";
-            const key = `${c}|||${s}`;
-            stockMap.set(key, { stock: v.stock, price: v.price, sku: v.sku, threshold: v.lowStockThreshold });
-            if (c && !uniqueColors.includes(c)) uniqueColors.push(c);
-            if (s && !uniqueSizes.includes(s)) uniqueSizes.push(s);
-          }
-          variantStockRef.current = stockMap;
-          setBuilderColors(uniqueColors);
-          setBuilderSizes(uniqueSizes);
-        }
+        // Los colores y los valores que el constructor va a mostrar marcados.
+        //
+        // Esto estaba detrás de `if (["ROPA","HOGAR_TECH"].includes(store.tipoTienda || ""))`,
+        // y `store` acá es el del closure: el fetch del producto sale ANTES que el
+        // de configuración, así que `tipoTienda` todavía no existe, el `includes("")`
+        // daba falso y el bloque no corría nunca. Abrías una remera con Negro y
+        // Verde y el selector aparecía en blanco; al tocar un color se rearmaban
+        // las combinaciones desde ese vacío y la remera perdía las variantes y el
+        // stock.
+        //
+        // Ya no se pregunta de qué rubro es la tienda: se deriva de las filas, que
+        // para este punto están cargadas. Si la tienda no usa constructor, el dato
+        // queda calculado y nadie lo mira.
+        const builder = estadoDelBuilder(loadedVariants, sizeDim);
+        variantStockRef.current = builder.stock;
+        setBuilderColors(builder.colores);
+        setBuilderSizes(builder.valores);
         const allAttrs = safeJsonArray(product.attributes).filter(
           (a: unknown): a is Attribute =>
             !!a && typeof a === "object" && typeof (a as Attribute).key === "string" && typeof (a as Attribute).value === "string"
@@ -743,7 +743,7 @@ function ProductoFormPage() {
       // Persiste en el ref para que el builder no pierda stock al agregar/quitar colores
       if (useBuilder) {
         updated.forEach(v => {
-          const key = `${v.attrs["Color"] || ""}|||${v.attrs[opcionNombre] || ""}`;
+          const key = claveDeCombinacion(v.attrs["Color"] || "", v.attrs[opcionNombre] || "");
           variantStockRef.current.set(key, { stock: v.stock, price: v.price, sku: v.sku, threshold: v.lowStockThreshold });
         });
       }
@@ -764,20 +764,20 @@ function ProductoFormPage() {
     if (colors.length > 0 && sizes.length > 0) {
       for (const color of colors) {
         for (const size of sizes) {
-          const key = `${color}|||${size}`;
+          const key = claveDeCombinacion(color, size);
           const prev = get(key);
           newVariants.push({ attrs: { Color: color, [sd]: size }, stock: prev?.stock ?? "0", price: prev?.price ?? "", sku: prev?.sku ?? "", lowStockThreshold: prev?.threshold ?? "" });
         }
       }
     } else if (colors.length > 0) {
       for (const color of colors) {
-        const key = `${color}|||`;
+        const key = claveDeCombinacion(color, "");
         const prev = get(key);
         newVariants.push({ attrs: { Color: color }, stock: prev?.stock ?? "0", price: prev?.price ?? "", sku: prev?.sku ?? "", lowStockThreshold: prev?.threshold ?? "" });
       }
     } else {
       for (const size of sizes) {
-        const key = `|||${size}`;
+        const key = claveDeCombinacion("", size);
         const prev = get(key);
         newVariants.push({ attrs: { [sd]: size }, stock: prev?.stock ?? "0", price: prev?.price ?? "", sku: prev?.sku ?? "", lowStockThreshold: prev?.threshold ?? "" });
       }
@@ -785,11 +785,12 @@ function ProductoFormPage() {
     return newVariants;
   }
 
-  // Asignar foto a un color (desde el builder)
-  const assignPhotoToColor = useCallback((colorValue: string, imageUrl: string | undefined) => {
+  // Asignar una foto a un VALOR de opción, desde el constructor. No tiene por qué
+  // ser un color: en un producto sin colores es el largo, el talle o lo que haya.
+  const assignPhotoToValue = useCallback((valor: string, imageUrl: string | undefined) => {
     setImages(prev => prev.map(img => {
-      if (img.variantValue === colorValue) return { ...img, variantValue: undefined };
-      if (imageUrl && img.url === imageUrl) return { ...img, variantValue: colorValue };
+      if (img.variantValue === valor) return { ...img, variantValue: undefined };
+      if (imageUrl && img.url === imageUrl) return { ...img, variantValue: valor };
       return img;
     }));
     markDirty();
@@ -837,19 +838,56 @@ function ProductoFormPage() {
     markDirty();
   }
 
-  const colorValues = useMemo(() => {
-    const values = new Set<string>();
-    variants.forEach((v) => {
-      Object.entries(v.attrs).forEach(([key, val]) => {
-        if ((key.toLowerCase().includes("color") || key.toLowerCase().includes("tono")) && val.trim()) {
-          values.add(val.trim());
-        }
-      });
-    });
-    return Array.from(values);
+  /**
+   * A qué se le puede colgar una foto, agrupado por opción.
+   *
+   * Antes esto filtraba por `key.includes("color")`, así que sólo se podían
+   * asignar fotos a los colores. La tienda hace rato que sincroniza la foto con
+   * CUALQUIER valor —`indiceFotoDe` en useCartLogic ni mira cómo se llama la
+   * opción, y el comentario de ahí lo dice: "si mañana se asignan fotos por
+   * Material, esto ya funciona"—. El formulario era lo único que faltaba.
+   *
+   * Concreto: el collar de tiendaapps se vende por `Media` (40/50/70cm) y sus
+   * fotos están colgadas de Blanco y Rojo, porque no había otra opción. Un collar
+   * de 40cm y uno de 70cm se ven distinto.
+   *
+   * El color va primero: es el caso normal —98 de 107 productos activos tienen la
+   * foto colgada de un color— y así queda arriba en el desplegable.
+   */
+  const opcionesParaFoto = useMemo(() => {
+    const porNombre = new Map<string, string[]>();
+    for (const v of variants) {
+      for (const [nombre, valor] of Object.entries(v.attrs)) {
+        const n = nombre.trim(), val = valor.trim();
+        if (!n || !val) continue;
+        if (!porNombre.has(n)) porNombre.set(n, []);
+        const lista = porNombre.get(n)!;
+        if (!lista.includes(val)) lista.push(val);
+      }
+    }
+    return [...porNombre]
+      .map(([nombre, valores]) => ({ nombre, valores }))
+      .sort((a, b) => Number(esOpcionDeColor(b.nombre)) - Number(esOpcionDeColor(a.nombre)));
   }, [variants]);
 
-  function assignImageColor(idx: number, variantValue: string | undefined) {
+  /** Todos los valores sueltos — para saber si hay algo a lo que asignarle una foto. */
+  const valoresParaFoto = useMemo(
+    () => opcionesParaFoto.flatMap((o) => o.valores),
+    [opcionesParaFoto],
+  );
+
+  /**
+   * Cómo nombrar la asignación en los carteles: "su color", "su color o su talle".
+   *
+   * Se arma con "su" a propósito: sirve para cualquier género y evita tener que
+   * saber si va "un color" o "una medida".
+   */
+  const etiquetaFoto = useMemo(
+    () => opcionesParaFoto.map((o) => `su ${o.nombre.toLowerCase()}`).join(" o "),
+    [opcionesParaFoto],
+  );
+
+  function assignImageValue(idx: number, variantValue: string | undefined) {
     setImages((p) => p.map((img, i) => i === idx ? { ...img, variantValue: variantValue || undefined } : img));
     markDirty();
   }
@@ -1033,6 +1071,23 @@ function ProductoFormPage() {
       setError("Cada combinación de variantes debe tener al menos un valor. Si es un producto simple, dejá una sola fila.");
       setLoading(false);
       return;
+    }
+    // Una fila a medio llenar —"Talle M" con el color en blanco— pasaba las dos
+    // validaciones de arriba y la del servidor, porque `value` queda en "M". Pero
+    // en la tienda esa variante no coincide con ninguna selección: el comprador
+    // podía comprar una combinación que no existe y la caja cobraba sin descontar
+    // stock, porque sólo descuenta cuando encontró la variante.
+    if (!isHideVariants) {
+      const incompletas = filasIncompletas(variants);
+      if (incompletas.length > 0) {
+        const { fila, falta, tiene } = incompletas[0];
+        setError(
+          `A la fila ${fila} (${tiene}) le falta ${falta.join(" y ")}. ` +
+          `Completala o borrá la fila — si no, esa combinación no se puede vender.`
+        );
+        setLoading(false);
+        return;
+      }
     }
 
     const baseAttrs = attributes.filter((a) => a.key.trim() && a.value.trim());
@@ -1408,11 +1463,13 @@ function ProductoFormPage() {
                 <span className="text-xs text-gray-400">{images.length}/{MAX_PRODUCT_IMAGES}</span>
               </div>
 
-              {/* Hint de color arriba del grid: los selects viven adentro de cada cuadro */}
-              {images.length > 0 && colorValues.length > 0 && (
+              {/* Hint arriba del grid: los selects viven adentro de cada cuadro */}
+              {images.length > 0 && valoresParaFoto.length > 0 && (
                 <div className="flex items-start gap-2 bg-indigo-50 rounded-xl px-3 py-2.5 text-xs text-indigo-700">
                   <svg className="h-4 w-4 mt-0.5 shrink-0 text-indigo-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                  <span><strong>Asigná un color a cada foto</strong> para que el cliente vea la imagen correcta al elegir el color del producto.</span>
+                  {/* El texto nombra las opciones que tiene ESTE producto. Decía
+                      "un color" siempre, aunque el producto se vendiera por largo. */}
+                  <span><strong>Asigná cada foto a {etiquetaFoto}</strong> para que el cliente vea la imagen correcta al elegir.</span>
                 </div>
               )}
 
@@ -1455,10 +1512,10 @@ function ProductoFormPage() {
                         <div className="absolute top-1.5 left-1.5 bg-indigo-600/80 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-md">PORTADA</div>
                       )}
                     </div>
-                    {colorValues.length > 0 && (
+                    {valoresParaFoto.length > 0 && (
                       <select
                         value={img.variantValue || ""}
-                        onChange={(e) => assignImageColor(i, e.target.value || undefined)}
+                        onChange={(e) => assignImageValue(i, e.target.value || undefined)}
                         onClick={(e) => e.stopPropagation()}
                         className={`w-full text-xs border rounded-lg bg-white py-1.5 px-2 cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-400 ${
                           img.variantValue
@@ -1466,9 +1523,16 @@ function ProductoFormPage() {
                             : "border-gray-200 text-gray-400"
                         }`}
                       >
-                        <option value="">Sin color</option>
-                        {colorValues.map((v) => (
-                          <option key={v} value={v}>{v}</option>
+                        <option value="">Sin asignar</option>
+                        {/* Agrupado por opción: con Color y Talle juntos, una lista
+                            plana mezclaría "Negro" con "M" sin decir qué es cada uno.
+                            El `optgroup` lo resuelve sin agregar un control nuevo. */}
+                        {opcionesParaFoto.map((op) => (
+                          <optgroup key={op.nombre} label={op.nombre}>
+                            {op.valores.map((v) => (
+                              <option key={v} value={v}>{v}</option>
+                            ))}
+                          </optgroup>
                         ))}
                       </select>
                     )}
@@ -1503,11 +1567,11 @@ function ProductoFormPage() {
                 onChange={handleImageUpload}
               />
 
-              {/* Hint cuando no hay colores definidos */}
-              {!storeTypeConfig.hideVariants && colorValues.length === 0 && (
+              {/* Hint cuando todavía no hay variantes cargadas */}
+              {!storeTypeConfig.hideVariants && valoresParaFoto.length === 0 && (
                 <div className="flex items-start gap-2 bg-gray-50 rounded-xl px-3 py-2.5 text-xs text-gray-500">
                   <svg className="h-4 w-4 mt-0.5 shrink-0 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                  <span>Si tu producto tiene <strong>diferentes colores</strong>, primero agregá las variantes de color en <strong>Variantes y stock</strong> (más abajo) — después podrás asignar cada foto a su color.</span>
+                  <span>Si tu producto viene en <strong>varias versiones</strong> (colores, talles, largos), primero cargalas en <strong>Variantes y stock</strong> (más abajo) — después vas a poder asignarle una foto a cada una.</span>
                 </div>
               )}
             </div>
@@ -2290,12 +2354,37 @@ function ProductoFormPage() {
                     type="button"
                     onClick={() => {
                       const turningOn = !useBuilder;
+                      if (turningOn) {
+                        // El estado del constructor sale de las filas que hay AHORA.
+                        //
+                        // Antes se rearmaba desde `builderColors`/`builderSizes`, que el
+                        // modo manual nunca toca: quedaban como estaban al cargar la
+                        // pantalla —vacíos, en un producto nuevo— y volver al constructor
+                        // borraba todo lo cargado a mano, sin avisar ni poder deshacer.
+                        const perdidas = opcionesQueNoEntranEnElBuilder(variants, opcionNombre);
+                        if (perdidas.length > 0) {
+                          // Lo único que el constructor no puede representar: maneja Color
+                          // más UNA opción. Antes también se perdía, nada más que callado.
+                          const cuales = perdidas.join(" y ");
+                          const verbo = perdidas.length > 1 ? "se pierden" : "se pierde";
+                          if (!confirm(
+                            `El constructor sólo maneja Color y ${opcionNombre}.\n\nSi seguís, ${verbo} ${cuales}.\n\n¿Seguir?`
+                          )) return;
+                        }
+                        const b = estadoDelBuilder(variants, opcionNombre);
+                        variantStockRef.current = b.stock;
+                        setBuilderColors(b.colores);
+                        setBuilderSizes(b.valores);
+                        setVariants(buildVariantsFromBuilder(b.colores, b.valores));
+                        markDirty();
+                      }
+                      // Al pasar a manual las filas quedan como están: el manual sabe
+                      // mostrar cualquier cosa que el constructor haya generado.
                       setUseBuilder(turningOn);
-                      // Al volver al constructor las combinaciones se rearman desde los
-                      // colores/talles elegidos; al pasar a manual, las filas quedan como están.
-                      if (turningOn) setVariants(buildVariantsFromBuilder(builderColors, builderSizes));
                     }}
-                    className="text-xs text-gray-400 hover:text-indigo-600 underline underline-offset-2 transition-colors"
+                    // `whitespace-nowrap` porque a 360 "Modo manual" se partía en dos
+                    // líneas y quedaba encimado con el texto de la izquierda.
+                    className="text-xs text-gray-400 hover:text-indigo-600 underline underline-offset-2 transition-colors whitespace-nowrap shrink-0"
                   >
                     {useBuilder ? "Modo manual" : "Modo constructor"}
                   </button>
@@ -2327,7 +2416,7 @@ function ProductoFormPage() {
                   onColorsChange={(c) => { setBuilderColors(c); setVariants(buildVariantsFromBuilder(c, builderSizes)); markDirty(); }}
                   onSizesChange={(s) => { setBuilderSizes(s); setVariants(buildVariantsFromBuilder(builderColors, s)); markDirty(); }}
                   onVariantChange={updateVariantField}
-                  onAssignPhoto={assignPhotoToColor}
+                  onAssignPhoto={assignPhotoToValue}
                 />
               ) : (
                 /* ── MANUAL MODE ── */
@@ -2407,6 +2496,16 @@ function ProductoFormPage() {
                           </div>
                         );
                       })}
+                      {/* SKU, igual que en el constructor: sólo de lg para arriba,
+                          donde la fila tiene lugar de sobra. Si estuviera acá y no
+                          allá, quién puede cargarlo dependería del modo. */}
+                      <div className="hidden lg:block w-28 shrink-0">
+                        <label className="block text-xs font-medium text-gray-500 mb-1 flex items-center">
+                          SKU
+                          <Tip align="right" text="Tu código interno para esta variante (ej: COL-40-BL). Es opcional. Sirve para encontrarla en tu depósito o cruzarla con la lista de tu proveedor, y se lo pasamos a Google para que sepa que la misma prenda vendida en dos lados es un solo producto." />
+                        </label>
+                        <input type="text" value={variant.sku} onChange={(e) => updateVariantField(idx, "sku", e.target.value)} placeholder="opcional" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                      </div>
                       <div className="w-20 shrink-0">
                         <label className="block text-xs font-medium text-gray-500 mb-1">Stock</label>
                         <input type="number" value={variant.stock} onChange={(e) => updateVariantField(idx, "stock", e.target.value)} min="0" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
@@ -2436,10 +2535,10 @@ function ProductoFormPage() {
                   ))}
 
                   {/* Hint: fotos sin color asignado */}
-                  {colorValues.length > 0 && images.length > 0 && images.some(img => !img.variantValue) && (
+                  {valoresParaFoto.length > 0 && images.length > 0 && images.some(img => !img.variantValue) && (
                     <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 text-xs text-amber-700">
                       <svg className="h-4 w-4 mt-0.5 shrink-0 text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                      <span>Tenés colores definidos pero tus fotos no tienen color asignado. Scrolleá a <strong>Imágenes del producto</strong> (arriba) para asignar cada foto a su color.</span>
+                      <span>Tenés variantes cargadas pero hay fotos sin asignar. Scrolleá a <strong>Imágenes del producto</strong> (arriba) para asignar cada foto a {etiquetaFoto}.</span>
                     </div>
                   )}
                 </>

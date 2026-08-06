@@ -23,7 +23,9 @@ export default async function DashboardPage() {
   const store = await prisma.store.findUnique({
     where: { ownerId: userId },
     include: {
-      _count: { select: { products: true, orders: true, affiliates: true } },
+      // Sin los borrados. Los pausados SÍ se cuentan: son de la dueña y los ve en
+      // su lista de productos, así que el total del panel tiene que coincidir.
+      _count: { select: { products: { where: { deletedAt: null } }, orders: true, affiliates: true } },
       verificationRequest: { select: { status: true } },
     },
   });

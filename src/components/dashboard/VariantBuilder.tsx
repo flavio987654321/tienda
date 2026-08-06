@@ -75,7 +75,8 @@ export function VariantBuilder({
   onColorsChange: (c: string[]) => void;
   onSizesChange: (s: string[]) => void;
   onVariantChange: (idx: number, field: "stock" | "price" | "sku" | "lowStockThreshold", val: string) => void;
-  onAssignPhoto: (colorValue: string, imageUrl: string | undefined) => void;
+  /** `valor` es el valor de la opción, no necesariamente un color. */
+  onAssignPhoto: (valor: string, imageUrl: string | undefined) => void;
 }) {
   const [customColor, setCustomColor] = useState("");
   const [customSize, setCustomSize] = useState("");
@@ -105,8 +106,8 @@ export function VariantBuilder({
     setCustomSize("");
   }
 
-  function getVariantPhoto(color: string): string | undefined {
-    return photoImages.find(img => img.variantValue === color)?.url;
+  function getVariantPhoto(valor: string): string | undefined {
+    return photoImages.find(img => img.variantValue === valor)?.url;
   }
 
   return (
@@ -276,19 +277,32 @@ export function VariantBuilder({
         )}
       </div>
 
-      {/* ── Tabla de variantes generadas ── */}
+      {/* ── Tabla de variantes generadas ──
+          El hueco de las pantallas anchas se llena con el SKU en vez de cortar la
+          tabla: cortarla dejaba el vacío del lado derecho, que es peor. El SKU no
+          era código muerto —va a los datos estructurados de Google
+          (`structured-data.ts`), que lo usa para saber que la misma prenda
+          vendida en dos lados es una sola— pero no había dónde escribirlo, así
+          que nunca se mandaba. Aparece sólo de `lg` para arriba: ahí el espacio
+          ya estaba vacío, y en el celular no suma un campo más que llenar. */}
       {variants.length > 0 && (
         <div className="space-y-2">
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
             Variantes creadas ({variants.length})
           </p>
 
-          {/* Encabezado */}
-          <div className="hidden sm:grid gap-3 px-3 pb-1 text-xs font-semibold text-gray-400 uppercase tracking-wide"
-            style={{ gridTemplateColumns: "32px 56px 1fr 72px 88px 72px" }}>
+          {/* Encabezado. Sólo de sm para arriba: abajo cada número lleva su
+              propia etiqueta, porque la fila se parte en dos. */}
+          <div className="hidden sm:grid gap-3 px-3 pb-1 text-xs font-semibold text-gray-400 uppercase tracking-wide sm:grid-cols-[32px_56px_1fr_72px_88px_72px] lg:grid-cols-[32px_56px_1fr_1.4fr_72px_88px_72px]">
             <span />
             <span>Foto</span>
             <span>Variante</span>
+            <span
+              className="hidden lg:block"
+              title="Tu código interno para esta variante (ej: COL-40-BL). Es opcional. Sirve para encontrarla en tu depósito o cruzarla con la lista de tu proveedor, y se lo pasamos a Google para que sepa que la misma prenda vendida en dos lados es un solo producto."
+            >
+              SKU
+            </span>
             <span className="text-center">Stock</span>
             <span>Precio propio</span>
             <span>Alerta</span>
@@ -298,12 +312,29 @@ export function VariantBuilder({
             const color = v.attrs["Color"] || "";
             const size = v.attrs[sizeDim] || "";
             const hex = color ? resolveHex(color) : null;
-            const photo = color ? getVariantPhoto(color) : undefined;
+            // A qué valor se le cuelga la foto de esta fila. El color primero
+            // —es lo normal: 98 de 107 productos tienen la foto colgada de un
+            // color— pero si el producto no tiene colores se usa la otra opción.
+            // Antes era `v.attrs["Color"]` a secas, así que una joyería que vende
+            // por largo tenía el botón deshabilitado en todas las filas: no había
+            // forma de darle una foto al collar de 40cm y otra al de 70cm.
+            const valorFoto = color || size;
+            const photo = valorFoto ? getVariantPhoto(valorFoto) : undefined;
             return (
+              // Las columnas fijas sumaban 320px, más 60 de huecos y 24 de padding:
+              // 404px mínimos antes del nombre. En un celular de 360 el ancho útil
+              // adentro de la tarjeta es ~280, así que la tabla se desbordaba. El
+              // encabezado sí era responsive (`hidden sm:grid`) pero las filas no,
+              // o sea que en celular se escondían los títulos y la tabla seguía
+              // igual de ancha.
+              //
+              // Ahora abajo de sm la fila se parte: arriba el color, la foto y el
+              // nombre; abajo los tres números con su etiqueta. De sm para arriba
+              // `sm:contents` disuelve el envoltorio y todo vuelve a la grilla de
+              // seis columnas, sin duplicar el marcado.
               <div
                 key={idx}
-                className="grid gap-3 items-center px-3 py-2.5 bg-gray-50 rounded-xl"
-                style={{ gridTemplateColumns: "32px 56px 1fr 72px 88px 72px" }}
+                className="grid gap-3 items-center px-3 py-2.5 bg-gray-50 rounded-xl grid-cols-[28px_56px_1fr] sm:grid-cols-[32px_56px_1fr_72px_88px_72px] lg:grid-cols-[32px_56px_1fr_1.4fr_72px_88px_72px]"
               >
                 {/* Círculo de color */}
                 <span className="flex justify-center">
@@ -318,53 +349,75 @@ export function VariantBuilder({
                 {/* Foto / cámara */}
                 <button
                   type="button"
-                  onClick={() => color && setPhotoModal(color)}
-                  title={color ? `Asignar foto a ${color}` : ""}
-                  disabled={!color}
+                  onClick={() => valorFoto && setPhotoModal(valorFoto)}
+                  title={valorFoto ? `Asignar foto a ${valorFoto}` : ""}
+                  disabled={!valorFoto}
                   className="w-14 h-14 rounded-lg border-2 border-dashed border-gray-300 overflow-hidden flex items-center justify-center hover:border-indigo-400 transition-colors relative bg-white disabled:opacity-40"
                 >
                   {photo ? (
-                    <Image src={photo} alt={color} fill sizes="56px" style={{ objectFit: "cover" }} />
+                    <Image src={photo} alt={valorFoto} fill sizes="56px" style={{ objectFit: "cover" }} />
                   ) : (
                     <Camera className="h-5 w-5 text-gray-400" />
                   )}
                 </button>
 
-                {/* Nombre de variante */}
-                <p className="text-sm text-gray-700 truncate">
+                {/* Nombre de variante. `min-w-0` porque `1fr` es minmax(auto,1fr) y
+                    `truncate` no baja el mínimo por sí solo: sin esto un nombre
+                    largo ensancha la columna y vuelve el desborde. */}
+                <p className="text-sm text-gray-700 truncate min-w-0">
                   {color && <span className="font-medium">{color}</span>}
                   {color && size && <span className="text-gray-400"> · </span>}
                   {size && <span>{size}</span>}
                 </p>
 
-                {/* Stock */}
+                {/* SKU. `hidden lg:block`, así que abajo de lg no es ni un ítem de
+                    la grilla y las seis columnas de arriba siguen valiendo. */}
                 <input
-                  type="number"
-                  value={v.stock}
-                  onChange={e => onVariantChange(idx, "stock", e.target.value)}
-                  min="0"
-                  className="w-full border border-gray-200 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 text-center bg-white"
+                  type="text"
+                  value={v.sku}
+                  onChange={e => onVariantChange(idx, "sku", e.target.value)}
+                  placeholder="opcional"
+                  aria-label={`SKU de ${[color, size].filter(Boolean).join(" · ")}`}
+                  className="hidden lg:block w-full border border-gray-200 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
                 />
 
-                {/* Precio propio */}
-                <input
-                  type="number"
-                  value={v.price}
-                  onChange={e => onVariantChange(idx, "price", e.target.value)}
-                  min="0"
-                  placeholder="base"
-                  className="w-full border border-gray-200 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
-                />
+                {/* Los tres números. En celular, fila propia con etiquetas. */}
+                <div className="col-span-3 grid grid-cols-3 gap-2 sm:contents">
+                  <label className="sm:contents">
+                    <span className="block sm:hidden text-[10px] font-semibold uppercase tracking-wide text-gray-400 mb-0.5">Stock</span>
+                    <input
+                      type="number"
+                      value={v.stock}
+                      onChange={e => onVariantChange(idx, "stock", e.target.value)}
+                      min="0"
+                      className="w-full border border-gray-200 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 text-center bg-white"
+                    />
+                  </label>
 
-                {/* Alerta stock */}
-                <input
-                  type="number"
-                  value={v.lowStockThreshold}
-                  onChange={e => onVariantChange(idx, "lowStockThreshold", e.target.value)}
-                  min="0"
-                  placeholder="5"
-                  className="w-full border border-gray-200 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
-                />
+                  <label className="sm:contents">
+                    <span className="block sm:hidden text-[10px] font-semibold uppercase tracking-wide text-gray-400 mb-0.5">Precio</span>
+                    <input
+                      type="number"
+                      value={v.price}
+                      onChange={e => onVariantChange(idx, "price", e.target.value)}
+                      min="0"
+                      placeholder="base"
+                      className="w-full border border-gray-200 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+                    />
+                  </label>
+
+                  <label className="sm:contents">
+                    <span className="block sm:hidden text-[10px] font-semibold uppercase tracking-wide text-gray-400 mb-0.5">Alerta</span>
+                    <input
+                      type="number"
+                      value={v.lowStockThreshold}
+                      onChange={e => onVariantChange(idx, "lowStockThreshold", e.target.value)}
+                      min="0"
+                      placeholder="5"
+                      className="w-full border border-gray-200 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+                    />
+                  </label>
+                </div>
               </div>
             );
           })}
