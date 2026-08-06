@@ -5,6 +5,7 @@ import { useRef, useState } from "react";
 import { Coverflow, type MazoCoverflow } from "@/components/store/templates/shared/Coverflow";
 import { GrillaProfunda, PiezaQueLlega } from "@/components/store/templates/shared/GrillaProfunda";
 import { FichaEnVuelo, type Apertura, type PiezaFicha, type Seleccion } from "@/components/store/templates/shared/FichaEnVuelo";
+import { Contacto, Garantias, LuzDeFondo, Nosotros, PieDePagina } from "@/components/store/templates/shared/Cierre";
 import { Inclinable, vidrio } from "@/components/store/templates/shared/Materia";
 
 const BASE = "#06070d";
@@ -69,6 +70,25 @@ function stockDe(_p: PiezaFicha, s: Seleccion): number | null {
   const clave = `${s["Color"]}|${s["Talle"]}`;
   return STOCK[clave] ?? 0;
 }
+
+const Ico = ({ d }: { d: string }) => (
+  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d={d} />
+  </svg>
+);
+
+const GARANTIAS = [
+  { titulo: "Envío gratis", texto: "En compras desde $60.000 a todo el país. Llega en 3 a 5 días hábiles.", icono: <Ico d="M3 7h11v9H3zM14 10h4l3 3v3h-7zM6.5 19a1.5 1.5 0 100-3 1.5 1.5 0 000 3zM17.5 19a1.5 1.5 0 100-3 1.5 1.5 0 000 3z" /> },
+  { titulo: "Cambios sin vueltas", texto: "Tenés 30 días para cambiar el talle o devolver, sin explicar por qué.", icono: <Ico d="M3 12a9 9 0 0115-6.7L21 8M21 12a9 9 0 01-15 6.7L3 16M21 4v4h-4M3 20v-4h4" /> },
+  { titulo: "Pago protegido", texto: "Mercado Pago y todas las tarjetas. Nunca guardamos los datos.", icono: <Ico d="M12 3l7 3v6c0 4.4-3 8.2-7 9-4-.8-7-4.6-7-9V6zM9 12l2 2 4-4" /> },
+  { titulo: "Atención real", texto: "Te responde alguien del taller, de lunes a sábado.", icono: <Ico d="M21 12a8 8 0 10-3.2 6.4L21 20z" /> },
+];
+
+const VIAS = [
+  { id: "wa", nombre: "WhatsApp", detalle: "+54 9 11 5555-5555", href: "#", icono: <Ico d="M21 12a8 8 0 10-3.2 6.4L21 20z" /> },
+  { id: "ig", nombre: "Instagram", detalle: "@latienda", href: "#", icono: <Ico d="M4 8a4 4 0 014-4h8a4 4 0 014 4v8a4 4 0 01-4 4H8a4 4 0 01-4-4zM12 15a3 3 0 100-6 3 3 0 000 6zM17 7h.01" /> },
+  { id: "mail", nombre: "Mail", detalle: "hola@latienda.com.ar", href: "#", icono: <Ico d="M3 7l9 6 9-6M3 6h18v12H3z" /> },
+];
 
 function Rotulo({ n, texto }: { n: number; texto: string }) {
   return (
@@ -151,6 +171,58 @@ export default function BancoDePruebas() {
           ))}
         </GrillaProfunda>
       </div>
+
+      <LuzDeFondo base={BASE} acento={ACENTO}>
+        <div style={{ ...{ maxWidth: 1180, margin: "0 auto", padding: "0 26px" }, paddingTop: 40 }}>
+          <Rotulo n={5} texto="El cierre · una sola escena hasta el pie" />
+        </div>
+
+        <Garantias items={GARANTIAS} tinta={TINTA} />
+
+        <Nosotros
+          kicker="Nuestra historia"
+          titulo="Hechas para durar más que una temporada."
+          parrafos={[
+            "Nacimos en 2018 con una premisa simple: menos piezas, más valor. En un mundo saturado de ropa que dura tres lavados, apostamos por la confección artesanal y las telas de origen responsable.",
+            "Cada prenda pasa por selección de materiales y control de calidad. Trabajamos con talleres locales que comparten la misma idea del oficio.",
+          ]}
+          stats={[
+            { numero: "2018", etiqueta: "Fundación" },
+            { numero: "100%", etiqueta: "Producción local" },
+            { numero: "30+", etiqueta: "Artesanos" },
+            { numero: "8 años", etiqueta: "De trayectoria" },
+          ]}
+          foto="https://picsum.photos/seed/av-taller/900/1100"
+          tinta={TINTA}
+          acento={ACENTO}
+        />
+
+        <Contacto
+          kicker="Contacto"
+          titulo="Escribinos y te contesta alguien del taller."
+          vias={VIAS}
+          formulario={
+            <p style={{ margin: 0, fontSize: 12.5, lineHeight: 1.7, color: MID }}>
+              Acá va el formulario real del template, sin tocar. El bloque le presta el vidrio y el lugar.
+            </p>
+          }
+          tinta={TINTA}
+          acento={ACENTO}
+        />
+
+        <PieDePagina
+          marca="LA TIENDA"
+          bajada="Confección artesanal en Buenos Aires desde 2018."
+          columnas={[
+            { titulo: "Tienda", links: [{ texto: "Novedades", href: "#" }, { texto: "Vestidos", href: "#" }, { texto: "Abrigos", href: "#" }, { texto: "Ofertas", href: "#" }] },
+            { titulo: "Ayuda", links: [{ texto: "Envíos y devoluciones", href: "#" }, { texto: "Talles y medidas", href: "#" }, { texto: "Cómo comprar", href: "#" }] },
+            { titulo: "Legales", links: [{ texto: "Términos", href: "#" }, { texto: "Privacidad", href: "#" }, { texto: "Botón de arrepentimiento", href: "#" }] },
+          ]}
+          redes={[{ nombre: "Instagram", href: "#" }, { nombre: "Facebook", href: "#" }, { nombre: "TikTok", href: "#" }]}
+          legal="© 2026 La Tienda. Todos los derechos reservados."
+          tinta={TINTA}
+        />
+      </LuzDeFondo>
 
       <FichaEnVuelo
         apertura={apertura}
