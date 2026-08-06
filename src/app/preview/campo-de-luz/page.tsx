@@ -6,13 +6,40 @@ import { Coverflow, type MazoCoverflow } from "@/components/store/templates/shar
 import { GrillaProfunda, PiezaQueLlega } from "@/components/store/templates/shared/GrillaProfunda";
 import { FichaEnVuelo, type Apertura, type PiezaFicha, type Seleccion } from "@/components/store/templates/shared/FichaEnVuelo";
 import { Contacto, Garantias, LuzDeFondo, Nosotros, PieDePagina } from "@/components/store/templates/shared/Cierre";
-import { Portada } from "@/components/store/templates/shared/Portada";
+import { HeroFoto, type Diapositiva } from "@/components/store/templates/shared/HeroFoto";
 import { Inclinable, vidrio } from "@/components/store/templates/shared/Materia";
 
 const BASE = "#06070d";
 const TINTA = "#f2f2f7";
 const ACENTO = "#8b5cf6";
 const MID = "rgba(242,242,247,.45)";
+
+const DIAPOSITIVAS: Diapositiva[] = [
+  {
+    id: "h1",
+    imagen: "https://picsum.photos/seed/av-hero-1/1800/1100",
+    kicker: "Otoño invierno 2026",
+    titulo: "Lino",
+    texto: "Piezas que caen solas y no piden nada. Confección artesanal en Buenos Aires.",
+    cta: { texto: "Ver la colección", href: "#" },
+  },
+  {
+    id: "h2",
+    imagen: "https://picsum.photos/seed/av-hero-2/1800/1100",
+    kicker: "Hecho a mano",
+    titulo: "Taller",
+    texto: "Treinta artesanos, talleres locales, y una idea del oficio que no se negocia.",
+    cta: { texto: "Conocer el taller", href: "#" },
+  },
+  {
+    id: "h3",
+    imagen: "https://picsum.photos/seed/av-hero-3/1800/1100",
+    kicker: "Nueva temporada",
+    titulo: "Abrigos",
+    texto: "Lana y cuero para los meses en serio. Stock corto, sin reposición.",
+    cta: { texto: "Ver abrigos", href: "#" },
+  },
+];
 
 const OPCIONES = [
   {
@@ -163,18 +190,14 @@ export default function BancoDePruebas() {
 
   return (
     <div style={{ background: BASE, minHeight: "100vh" }}>
-      <Portada
+      <HeroFoto
         nav={<NavDePrueba />}
-        kicker="Otoño invierno 2026"
-        marca="LA TIENDA"
-        frase="Confección artesanal en Buenos Aires. Menos piezas, mejor hechas."
-        colores={[ACENTO, "#4c1d95", "#c084fc"]}
+        diapositivas={DIAPOSITIVAS}
         base={BASE}
         tinta={TINTA}
         acento={ACENTO}
-      >
-        <Coverflow mazos={MAZOS} acento={ACENTO} base={BASE} tinta={TINTA} fundido />
-      </Portada>
+      />
+      <Coverflow mazos={MAZOS} acento={ACENTO} base={BASE} tinta={TINTA} fundido />
 
       <div style={{ padding: "70px 26px 120px", maxWidth: 1180, margin: "0 auto" }}>
         <Rotulo n={3} texto="Catálogo · las piezas llegan desde el fondo" />
