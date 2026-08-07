@@ -58,11 +58,15 @@ export default function ShareStoreButton({
   storeSlug,
   storeLogo,
   isPublished,
+  className = "",
 }: {
   storeName: string;
   storeSlug: string;
   storeLogo: string | null;
   isPublished: boolean;
+  /** Extras para el botón que abre el panel — lo usa el panel de inicio para
+      que en pantallas angostas comparta el renglón a la par de "Ver". */
+  className?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [hint, setHint] = useState<string | null>(null); // inline tip for IG/TikTok
@@ -123,7 +127,7 @@ export default function ShareStoreButton({
     <>
       <button
         onClick={() => { setOpen(true); setHint(null); }}
-        className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700 transition-colors"
+        className={`inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700 transition-colors ${className}`}
       >
         <Share2 className="h-4 w-4" />
         Compartir
@@ -131,7 +135,7 @@ export default function ShareStoreButton({
 
       {open && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 z-[80] flex items-center justify-center p-4"
           onClick={() => setOpen(false)}
         >
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />

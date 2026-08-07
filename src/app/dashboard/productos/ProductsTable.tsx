@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useMemo, useEffect, useSyncExternalStore } from "react";
+import { useState, useMemo, useEffect, useCallback, useSyncExternalStore } from "react";
 import Link from "next/link";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { QRCodeCanvas } from "qrcode.react";
 import {
   Edit, Eye, EyeOff, Package, Search, X, Percent, ChevronDown,
@@ -32,9 +33,34 @@ interface Product {
   expenses?: { monto: number }[];
 }
 
-interface Props { products: Product[]; storeSlug?: string; storeName?: string; storeType?: string; initialStockFilter?: string; promotedIds?: string[]; highlightIds?: string[] }
+/* Búsqueda, filtros, orden y página viven en la URL y los resuelve el servidor.
+   Antes se hacía todo acá: la página mandaba hasta 200 productos y este
+   componente los filtraba, ordenaba y paginaba en memoria. Con eso el producto
+   201 no existía —ni buscándolo—, y el encabezado igual decía "200 productos en
+   tu tienda" aunque hubiera 350. Ahora cada cambio de filtro es una navegación y
+   lo que llega es exactamente la página que se ve. */
+type Filtros = { q: string; cat: string; estado: string; stock: string; orden: string };
+type Agregado = { productos: number; variantes: number; stock: number };
 
-const PAGE_SIZE = 20;
+interface Props {
+  products: Product[];
+  storeSlug?: string;
+  storeName?: string;
+  storeType?: string;
+  promotedIds?: string[];
+  highlightIds?: string[];
+  /** Todas las categorías de la tienda, no solo las de esta página. */
+  categorias: string[];
+  /** Resumen de la tienda entera por categoría: es el alcance real de las
+      acciones en masa, que no se puede contar sobre la página que se ve. */
+  porCategoria: Record<string, Agregado>;
+  totales: Agregado;
+  totalTienda: number;
+  totalFiltrado: number;
+  pagina: number;
+  totalPaginas: number;
+  filtros: Filtros;
+}
 
 function parseImages(raw: string): string[] {
   try {
@@ -100,10 +126,49 @@ const guardarVista = (v: "table" | "grid") => {
 // de identidad todo el tiempo aunque no haya nada destacado.
 const SIN_DESTACADOS: ReadonlySet<string> = new Set();
 
-export default function ProductsTable({ products: initialProducts, storeSlug = "", storeName = "", storeType = "", initialStockFilter = "all", promotedIds = [], highlightIds = [] }: Props) {
+export default function ProductsTable({
+  products: initialProducts, storeSlug = "", storeName = "", storeType = "",
+  promotedIds = [], highlightIds = [],
+  categorias, porCategoria, totales, totalTienda, totalFiltrado, pagina, totalPaginas, filtros,
+}: Props) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
   const showStock = storeType !== "AUTOS";
   const promotedSet = useMemo(() => new Set(promotedIds), [promotedIds]);
   const [products,      setProducts]      = useState(initialProducts);
+
+  /* La lista se sigue guardando en estado para poder sacar una fila apenas se
+     borra, sin esperar al servidor. Cuando llega una página nueva —otro filtro,
+     otra página, un refresh— se vuelve a sembrar. Se ajusta durante el render y
+     no con un efecto, para no encadenar un render de más. */
+  const [productosPrevios, setProductosPrevios] = useState(initialProducts);
+  if (initialProducts !== productosPrevios) {
+    setProductosPrevios(initialProducts);
+    setProducts(initialProducts);
+  }
+
+  /* Arma la URL del listado. Todo lo que no se pasa se mantiene como está, y
+     cualquier cambio de filtro vuelve a la página 1: quedarse en la página 7
+     después de achicar el resultado a dos productos deja la pantalla vacía sin
+     explicación. */
+  const urlCon = useCallback((cambios: Record<string, string>) => {
+    const params = new URLSearchParams(searchParams.toString());
+    for (const [clave, valor] of Object.entries(cambios)) {
+      if (valor) params.set(clave, valor);
+      else params.delete(clave);
+    }
+    if (!("page" in cambios)) params.delete("page");
+    // Una marca de notificación no tiene por qué sobrevivir a un filtro nuevo.
+    if (!("destacar" in cambios)) params.delete("destacar");
+    const qs = params.toString();
+    return qs ? `${pathname}?${qs}` : pathname;
+  }, [pathname, searchParams]);
+
+  const irA = useCallback((cambios: Record<string, string>) => {
+    router.push(urlCon(cambios), { scroll: false });
+  }, [router, urlCon]);
 
   // ── Productos señalados desde una notificación ────────────────────────────
   // Venís de la campanita: el aviso hablaba de UN producto y acá hay una lista.
@@ -139,11 +204,40 @@ export default function ProductsTable({ products: initialProducts, storeSlug = "
     const apagar = setTimeout(() => setApagado(claveDestacado), 6000);
     return () => { clearTimeout(irA); clearTimeout(apagar); };
   }, [highlightSet, claveDestacado]);
-  const [search,        setSearch]        = useState("");
-  const [categoryFilter,setCategoryFilter]= useState("all");
-  const [statusFilter,  setStatusFilter]  = useState("all");
-  const [stockFilter,   setStockFilter]   = useState(VALID_STOCK_FILTERS.includes(initialStockFilter) ? initialStockFilter : "all");
-  const [sortBy,        setSortBy]        = useState("newest");
+  /* El texto tipeado es lo único que sigue siendo estado local: navegar en cada
+     tecla sería una consulta por letra. Se espera a que la persona deje de
+     escribir y recién ahí se cambia la URL. `replace` y no `push` para que el
+     historial no quede lleno de búsquedas a medio escribir. */
+  const [search, setSearch] = useState(filtros.q);
+
+  // Si la búsqueda cambió desde afuera (atrás del navegador, limpiar filtros),
+  // el input se pone al día en vez de quedar mostrando lo viejo.
+  const [busquedaPrevia, setBusquedaPrevia] = useState(filtros.q);
+  if (filtros.q !== busquedaPrevia) {
+    setBusquedaPrevia(filtros.q);
+    setSearch(filtros.q);
+  }
+
+  useEffect(() => {
+    // Comparar contra la URL en vez de llevar la cuenta aparte: cuando la
+    // navegación termina, `filtros.q` ya es lo tipeado y el efecto no hace nada.
+    if (search.trim() === filtros.q) return;
+    const t = setTimeout(() => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (search.trim()) params.set("q", search.trim());
+      else params.delete("q");
+      params.delete("page");
+      params.delete("destacar");
+      const qs = params.toString();
+      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+    }, 350);
+    return () => clearTimeout(t);
+  }, [search, filtros.q, router, pathname, searchParams]);
+
+  const categoryFilter = filtros.cat || "all";
+  const statusFilter   = filtros.estado || "all";
+  const stockFilter    = VALID_STOCK_FILTERS.includes(filtros.stock) ? filtros.stock : "all";
+  const sortBy         = filtros.orden || "newest";
   // ── Tabla o grilla ────────────────────────────────────────────────────────
   // Arrancaba SIEMPRE en tabla, en cualquier pantalla. Y la tabla pide 640px de
   // ancho mínimo: en un celular de 360 quedaban 312px escondidos —casi la mitad—,
@@ -154,7 +248,6 @@ export default function ProductsTable({ products: initialProducts, storeSlug = "
   // Ahora manda lo último que eligió la dueña; si nunca eligió, decide el ancho.
   // La mecánica está arriba, en el bloque de `CLAVE_VISTA`.
   const viewMode = useSyncExternalStore(suscribirVista, leerVista, leerVistaEnServidor);
-  const [page,          setPage]          = useState(1);
   const [showBulk,      setShowBulk]      = useState(false);
   const [bulkCategory,  setBulkCategory]  = useState("all");
   const [bulkPct,       setBulkPct]       = useState("");
@@ -339,50 +432,25 @@ export default function ProductsTable({ products: initialProducts, storeSlug = "
     link.click();
   }
 
-  const categories = useMemo(
-    () => Array.from(new Set(products.map(p => p.category).filter(Boolean))).sort(),
-    [products]
-  );
-
-  const filtered = useMemo(() => {
-    const q = search.toLowerCase().trim();
-    let result = products.filter(p => {
-      const stock = p.variants.reduce((s, v) => s + v.stock, 0);
-      if (q && !p.name.toLowerCase().includes(q) && !p.category.toLowerCase().includes(q) && !(p.subcategory || "").toLowerCase().includes(q)) return false;
-      if (categoryFilter !== "all" && p.category !== categoryFilter) return false;
-      if (showStock) {
-        if (statusFilter === "active" && !p.isActive) return false;
-        if (statusFilter === "hidden" && p.isActive) return false;
-      } else {
-        const vs = p.vehicleStatus ?? "AVAILABLE";
-        if (statusFilter !== "all" && vs !== statusFilter) return false;
-      }
-      if (stockFilter === "out" && stock !== 0) return false;
-      if (stockFilter === "low" && (stock === 0 || stock > 4)) return false;
-      if (stockFilter === "critical" && stock >= 5) return false;
-      return true;
-    });
-    if (sortBy === "price_asc")  result = [...result].sort((a, b) => a.price - b.price);
-    if (sortBy === "price_desc") result = [...result].sort((a, b) => b.price - a.price);
-    if (sortBy === "name_az")    result = [...result].sort((a, b) => a.name.localeCompare(b.name));
-    if (sortBy === "stock_asc")  result = [...result].sort((a, b) =>
-      a.variants.reduce((s, v) => s + v.stock, 0) - b.variants.reduce((s, v) => s + v.stock, 0)
-    );
-    return result;
-  }, [products, search, categoryFilter, statusFilter, stockFilter, sortBy, showStock]);
-
-  const totalPages = Math.ceil(filtered.length / PAGE_SIZE) || 1;
-  const paginated  = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-  const hasFilters = search || categoryFilter !== "all" || statusFilter !== "all" || stockFilter !== "all";
+  const categories = categorias;
+  const paginated = products;
+  const page = pagina;
+  const totalPages = totalPaginas;
+  const hasFilters = Boolean(filtros.q || filtros.cat || filtros.estado || (filtros.stock && filtros.stock !== "all"));
 
   function clearFilters() {
-    setSearch(""); setCategoryFilter("all"); setStatusFilter("all"); setStockFilter("all");
-    setPage(1);
+    setSearch("");
+    irA({ q: "", cat: "", estado: "", stock: "" });
   }
 
-  function goPage(n: number) { setPage(Math.max(1, Math.min(totalPages, n))); }
+  function goPage(n: number) {
+    irA({ page: String(Math.max(1, Math.min(totalPages, n))) });
+  }
 
-  const bulkAffected = products.filter(p => bulkCategory === "all" || p.category === bulkCategory).length;
+  /* Cuántos productos toca la acción en masa. Antes se contaba sobre la lista
+     cargada; ahora que llegan de a veinte, el número lo manda el servidor —si
+     no, "Aplicar a 20 productos" mentiría en una tienda de 300. */
+  const bulkAffected = bulkCategory === "all" ? totalTienda : (porCategoria[bulkCategory]?.productos ?? 0);
 
   async function confirmDelete() {
     if (!pendingDelete) return;
@@ -394,7 +462,11 @@ export default function ProductsTable({ products: initialProducts, storeSlug = "
     const data = await res.json();
     setDeletingId(null);
     if (!res.ok) { setDeleteError(data.error || "Error al eliminar"); return; }
+    // Se saca al toque para que la fila desaparezca sin esperar, y se pide la
+    // página de nuevo: ahora que vienen de a veinte, borrar uno hace entrar al
+    // que estaba primero en la página siguiente, y los totales cambian.
     setProducts(prev => prev.filter(p => p.id !== id));
+    router.refresh();
   }
 
   async function duplicateProduct(product: Product) {
@@ -414,8 +486,10 @@ export default function ProductsTable({ products: initialProducts, storeSlug = "
       isActive:     data.product.isActive,
       variants:     data.product.variants,
     };
+    // La copia se muestra ya mismo arriba de todo; el refresh la deja donde
+    // realmente corresponde según el orden y los filtros que estén puestos.
     setProducts(prev => [copy, ...prev]);
-    setPage(1);
+    router.refresh();
   }
 
   function handleVehicleStatusSaved(data: VehicleStatusData) {
@@ -480,26 +554,35 @@ export default function ProductsTable({ products: initialProducts, storeSlug = "
   // Así que la cuenta no cambió: cambió lo que la pantalla dice y lo que valida.
   const MAX_STOCK_BULK = 100_000;
 
+  /* El alcance sale del resumen del servidor, no de la lista que se ve. Al pasar
+     a páginas de veinte, contar acá habría dicho "40 variantes" para una
+     operación que toca 600 — y es un número que se lee justo antes de confirmar
+     algo que no se deshace.
+     A cambio se pierde el stock variante por variante, y eso cambia una sola
+     cosa: en "restar", el piso en cero que hace el servidor (restar 10 a una
+     variante con 5 la deja en 0, no en −5) no se puede replicar con totales. Por
+     eso ahí el resultado se marca como estimado y el texto dice "aprox.": es
+     preferible a repetir un número exacto que puede no ser cierto. */
   const bulkStockScope = useMemo(() => {
-    const alcanzados = products.filter(p => bulkStockCategory === "all" || p.category === bulkStockCategory);
-    const variantes   = alcanzados.reduce((n, p) => n + p.variants.length, 0);
-    const stockActual = alcanzados.reduce((n, p) => n + p.variants.reduce((s, v) => s + v.stock, 0), 0);
+    const alcance = bulkStockCategory === "all"
+      ? totales
+      : (porCategoria[bulkStockCategory] ?? { productos: 0, variantes: 0, stock: 0 });
+    const { productos, variantes, stock: stockActual } = alcance;
 
     const valor = bulkStockValue.trim() === "" ? NaN : Number(bulkStockValue);
     const valorOk = Number.isInteger(valor) && valor >= 0 && valor <= MAX_STOCK_BULK;
 
-    // El resultado se simula acá con los mismos datos que ya tiene la tabla, para
-    // poder mostrar el total ANTES de aplicar. `Math.max(0, …)` replica el piso en
-    // cero que hace el servidor: restar 10 a una variante con 5 la deja en 0, no
-    // en −5. Si no se replicaba, la vista previa prometía un número imposible.
-    const stockDespues = !valorOk ? stockActual : alcanzados.reduce((n, p) =>
-      n + p.variants.reduce((s, v) =>
-        s + (bulkStockMode === "add"      ? v.stock + valor
-           : bulkStockMode === "subtract" ? Math.max(0, v.stock - valor)
-           :                                valor), 0), 0);
+    const stockDespues = !valorOk ? stockActual
+      : bulkStockMode === "add"      ? stockActual + valor * variantes
+      : bulkStockMode === "set"      ? valor * variantes
+      :                                Math.max(0, stockActual - valor * variantes);
 
-    return { productos: alcanzados.length, variantes, stockActual, stockDespues, valor, valorOk };
-  }, [products, bulkStockCategory, bulkStockMode, bulkStockValue]);
+    // En "restar" el número es un piso: el real es ese o más alto, según cuántas
+    // variantes toquen el cero.
+    const estimado = bulkStockMode === "subtract" && valorOk && valor > 0;
+
+    return { productos, variantes, stockActual, stockDespues, estimado, valor, valorOk };
+  }, [porCategoria, totales, bulkStockCategory, bulkStockMode, bulkStockValue]);
 
   // El error se calcula mientras se escribe, no recién al apretar el botón: así el
   // "1.5" avisa en el momento en vez de guardarse como 1 sin decir nada (antes se
@@ -518,7 +601,7 @@ export default function ProductsTable({ products: initialProducts, storeSlug = "
     !bulkStockLoading && bulkStockScope.valorOk && bulkStockScope.variantes > 0;
 
   async function applyBulkStock() {
-    const { valor, valorOk, variantes, productos, stockActual, stockDespues } = bulkStockScope;
+    const { valor, valorOk, variantes, productos, stockActual, stockDespues, estimado } = bulkStockScope;
     if (!valorOk) { setBulkStockError(bulkStockValidacion || "Ingresá una cantidad válida."); return; }
     if (variantes === 0) { setBulkStockError("No hay variantes en esa categoría."); return; }
 
@@ -532,7 +615,9 @@ export default function ProductsTable({ products: initialProducts, storeSlug = "
       set:      `Fijar todas en ${valor}`,
     };
     const alcance = `${variantes} variante${variantes !== 1 ? "s" : ""} de ${productos} producto${productos !== 1 ? "s" : ""}`;
-    const resumen = `Stock total: ${stockActual} → ${stockDespues} u. (${diferencia >= 0 ? "+" : ""}${diferencia})`;
+    const resumen = estimado
+      ? `Stock total: ${stockActual} → ${stockDespues} u. o más (las variantes que no lleguen quedan en 0)`
+      : `Stock total: ${stockActual} → ${stockDespues} u. (${diferencia >= 0 ? "+" : ""}${diferencia})`;
     // Vaciar el stock merece una advertencia aparte: es la única opción de acá que
     // saca de la venta todo lo alcanzado de una, y no se deshace con un botón.
     const aviso = bulkStockMode === "set" && valor === 0
@@ -613,7 +698,7 @@ export default function ProductsTable({ products: initialProducts, storeSlug = "
 
       {/* Confirm delete modal */}
       {pendingDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
           <div className="w-full max-w-sm rounded-2xl border border-gray-100 bg-white p-6 shadow-2xl">
             <div className="mb-1 flex h-10 w-10 items-center justify-center rounded-xl bg-red-100">
               <Trash2 className="h-5 w-5 text-red-600" />
@@ -632,7 +717,7 @@ export default function ProductsTable({ products: initialProducts, storeSlug = "
 
       {/* QR modal */}
       {qrProduct && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
           <div className="w-full max-w-xs rounded-2xl border border-gray-100 bg-white p-6 shadow-2xl flex flex-col items-center gap-4">
             <div className="flex items-center gap-2 self-stretch">
               <QrCode className="h-5 w-5 text-indigo-500 shrink-0" />
@@ -688,10 +773,10 @@ export default function ProductsTable({ products: initialProducts, storeSlug = "
         <div className="flex gap-2 items-center">
           <div className="relative flex-1 min-w-0">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
-            <input type="text" value={search} onChange={e => { setSearch(e.target.value); setPage(1); }}
+            <input type="text" value={search} onChange={e => setSearch(e.target.value)}
               placeholder="Buscar por nombre o categoría..."
               className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white" />
-            {search && <button onClick={() => { setSearch(""); setPage(1); }} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"><X className="h-3.5 w-3.5" /></button>}
+            {search && <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"><X className="h-3.5 w-3.5" /></button>}
           </div>
           {hasFilters && (
             <button onClick={clearFilters} className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-600 px-2 shrink-0">
@@ -714,13 +799,13 @@ export default function ProductsTable({ products: initialProducts, storeSlug = "
 
         {/* Fila 2: selects — 2 columnas en mobile, flex en desktop */}
         <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2">
-          <select value={categoryFilter} onChange={e => { setCategoryFilter(e.target.value); setPage(1); }}
+          <select value={categoryFilter} onChange={e => irA({ cat: e.target.value === "all" ? "" : e.target.value })}
             className="w-full sm:w-auto border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-600">
             <option value="all">Todas las categorías</option>
             {categories.map(c => <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>)}
           </select>
 
-          <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setPage(1); }}
+          <select value={statusFilter} onChange={e => irA({ estado: e.target.value === "all" ? "" : e.target.value })}
             className="w-full sm:w-auto border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-600">
             <option value="all">Todos los estados</option>
             {showStock ? (
@@ -738,7 +823,7 @@ export default function ProductsTable({ products: initialProducts, storeSlug = "
           </select>
 
           {showStock && (
-            <select value={stockFilter} onChange={e => { setStockFilter(e.target.value); setPage(1); }}
+            <select value={stockFilter} onChange={e => irA({ stock: e.target.value === "all" ? "" : e.target.value })}
               className="w-full sm:w-auto border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-600">
               <option value="all">Todo el stock</option>
               <option value="out">Sin stock (0 u.)</option>
@@ -747,7 +832,7 @@ export default function ProductsTable({ products: initialProducts, storeSlug = "
             </select>
           )}
 
-          <select value={sortBy} onChange={e => { setSortBy(e.target.value); setPage(1); }}
+          <select value={sortBy} onChange={e => irA({ orden: e.target.value === "newest" ? "" : e.target.value })}
             className="w-full sm:w-auto border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-600">
             <option value="newest">Más recientes</option>
             <option value="price_asc">Precio ↑</option>
@@ -893,23 +978,39 @@ export default function ProductsTable({ products: initialProducts, storeSlug = "
         </div>
       )}
 
-      {/* Stock legend */}
-      <div className="flex items-center gap-4 text-xs text-gray-400">
-        {showStock && <>
-          <span className="font-medium text-gray-500">Stock:</span>
-          <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-red-500 inline-block" />Sin stock</span>
-          <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-yellow-400 inline-block" />Bajo (1–4 u.)</span>
-          <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-green-500 inline-block" />Normal (5+ u.)</span>
-        </>}
-        <span className="ml-auto text-gray-400">
-          {filtered.length} producto{filtered.length !== 1 ? "s" : ""}
+      {/* ── Referencia de stock y cuántos hay ──────────────────────────────
+          Era un `flex` sin `flex-wrap`: al no entrar los cuatro textos, cada
+          uno se encogía y partía por dentro, y quedaba "Sin / stock" arriba de
+          "Bajo (1–4 / u.)". Ahora cada referencia es indivisible
+          (`whitespace-nowrap shrink-0`) y el renglón envuelve entre una y otra,
+          que es donde tiene que cortar.
+
+          En angosto el conteo se va arriba y solo: es el dato que se mira, y
+          con `ml-auto` terminaba empujado al final del renglón que le tocara. */}
+      <div className="flex flex-col gap-2 text-xs text-gray-400 sm:flex-row sm:items-center sm:justify-between">
+        <span className="order-first font-medium text-gray-500 sm:order-last sm:font-normal sm:text-gray-400">
+          {totalFiltrado} producto{totalFiltrado !== 1 ? "s" : ""}
           {hasFilters ? " encontrados" : ""}
           {totalPages > 1 && ` · Página ${page} de ${totalPages}`}
         </span>
+        {showStock && (
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <span className="font-medium text-gray-500">Stock:</span>
+            <span className="flex shrink-0 items-center gap-1 whitespace-nowrap">
+              <span className="h-2 w-2 shrink-0 rounded-full bg-red-500" />Sin stock
+            </span>
+            <span className="flex shrink-0 items-center gap-1 whitespace-nowrap">
+              <span className="h-2 w-2 shrink-0 rounded-full bg-yellow-400" />Bajo (1–4 u.)
+            </span>
+            <span className="flex shrink-0 items-center gap-1 whitespace-nowrap">
+              <span className="h-2 w-2 shrink-0 rounded-full bg-green-500" />Normal (5+ u.)
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Empty state */}
-      {filtered.length === 0 ? (
+      {totalFiltrado === 0 ? (
         <div className="bg-white rounded-2xl border border-gray-100 p-12 text-center">
           <Search className="h-8 w-8 text-gray-200 mx-auto mb-3" />
           <p className="text-gray-500 font-medium">Sin resultados</p>

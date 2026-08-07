@@ -3,6 +3,8 @@
 import { useEffect, useState, useCallback, useRef, Fragment } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import LimitePlanBanner from "@/components/dashboard/LimitePlanBanner";
+import Tip from "@/components/Tip";
+import CampoAuto from "@/components/CampoAuto";
 import {
   Plus, Loader2, Settings, Palette, Gift, X, AlertCircle,
   ToggleLeft, ToggleRight, Copy, Check, Search, ChevronDown, ChevronUp, Trash2,
@@ -272,23 +274,63 @@ function CouponHistory() {
 
       {stats && (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
+          {/* Cada rótulo lleva su ayuda porque son términos que no se explican
+              solos: "Agotado" y "Vencido" suenan parecido y son cosas distintas,
+              y el orden entre ellos importa para entender por qué un cupón está
+              contado de un lado y no del otro. */}
           {([
-            { label: "Vigentes",       value: String(stats.active),                icon: "✅" },
-            { label: "Agotados",       value: String(stats.exhausted),             icon: "🎯" },
-            { label: "Vencidos",       value: String(stats.expired),               icon: "⏰" },
-            { label: "Gamificación",   value: String(stats.gamification),          icon: "🎡" },
-            { label: "Descuento total otorgado", value: fmtARS(stats.totalDiscount), icon: "💰" },
-          ] as const).map(({ label, value, icon }) => (
-            <div key={label} className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
+            {
+              label: "Vigentes", value: String(stats.active), icon: "✅",
+              tip: "Se pueden canjear ahora mismo: no llegaron al límite de usos ni les pasó la fecha. Los que están en pausa no se cuentan acá.",
+            },
+            {
+              label: "Agotados", value: String(stats.exhausted), icon: "🎯",
+              tip: "Llegaron a su límite de usos. Si además se les pasó la fecha, se cuentan como vencidos y no acá — la fecha manda.",
+            },
+            {
+              label: "Vencidos", value: String(stats.expired), icon: "⏰",
+              tip: "Se les pasó la fecha de vencimiento. Un cupón sin fecha no vence nunca, así que nunca cae en este grupo.",
+            },
+            {
+              label: "Gamificación", value: String(stats.gamification), icon: "🎡",
+              tip: "Los que ganó alguien jugando a la ruleta o la raspadita. Quedan a nombre del email del ganador, por eso se distinguen del resto.",
+            },
+            {
+              label: "Descuento total otorgado", value: fmtARS(stats.totalDiscount), icon: "💰",
+              /* Sale de sumar `discountAmount` de los pedidos. Ese campo es solo
+                 de cupones —el de tienda y el de recompensa—: lo que descuentan
+                 las promociones viaja aparte, en `promoSavings`. Por eso el
+                 número es de cupones y de nada más. */
+              tip: "Cuánto descuento se canjeó en total sobre compras ya hechas. Cuenta los cupones de tu tienda y los de recompensa. Lo que descuentan las promociones no entra acá.",
+            },
+          ] as const).map(({ label, value, icon, tip }, i, todas) => (
+            <div
+              key={label}
+              /* Son cinco en dos columnas: la última quedaba sola con un hueco
+                 al lado. Con cantidad impar se lleva el renglón entero, y de
+                 paso "Descuento total otorgado" entra sin partirse. */
+              className={`rounded-xl border border-gray-100 bg-white p-4 shadow-sm ${
+                i === todas.length - 1 && todas.length % 2 === 1 ? "col-span-2 sm:col-span-1" : ""
+              }`}
+            >
               <p className="text-xl mb-1">{icon}</p>
-              <p className="text-xl font-bold text-gray-900">{value}</p>
-              <p className="text-xs text-gray-500">{label}</p>
+              <p className="text-xl font-bold text-gray-900 truncate" title={value}>{value}</p>
+              <p className="text-xs text-gray-500">
+                {label}
+                <Tip text={tip} align="left" />
+              </p>
             </div>
           ))}
         </div>
       )}
 
-      <div className="overflow-x-auto mb-4 -mx-4 px-4 sm:mx-0 sm:px-0">
+      {/* El buscador estaba DENTRO de la caja que scrollea de costado, con un
+          `flex-1` que no hacía nada porque el padre no era flex. Resultado: la
+          barra de scroll de las pestañas le pasaba por encima y el campo se
+          movía junto con ellas. Ahora la caja que scrollea contiene solo las
+          pestañas, y el buscador es su hermano. */}
+      <div className="mb-4 space-y-2 sm:flex sm:items-center sm:gap-3 sm:space-y-0">
+      <div className="min-w-0 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
         <div className="flex rounded-xl border border-gray-200 bg-gray-50 p-1 gap-0.5 w-max min-w-full sm:w-auto sm:min-w-0">
           {TABS.map(tab => (
             <button key={tab.id}
@@ -306,7 +348,8 @@ function CouponHistory() {
             </button>
           ))}
         </div>
-        <div className="relative flex-1 min-w-[180px]">
+      </div>
+        <div className="relative flex-1 sm:min-w-[180px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 pointer-events-none" />
           <input
             type="text"
@@ -339,16 +382,43 @@ function CouponHistory() {
             <Loader2 className="h-6 w-6 animate-spin text-gray-300" />
           </div>
         ) : coupons.length === 0 ? (
-          <div className="py-16 text-center">
-            <p className="text-2xl mb-2">🏷️</p>
-            <p className="text-sm font-semibold text-gray-700 mb-1">
-              {search || statusFilter !== "all" ? "Sin resultados para ese filtro" : "Todavía no hay cupones"}
-            </p>
-            {(search || statusFilter !== "all") && (
-              <button onClick={() => { setSearch(""); setStatusFilter("all"); setPage(0); }}
-                className="mt-2 text-xs text-indigo-500 hover:underline font-semibold">
-                Limpiar filtros
-              </button>
+          /* El vacío es el único momento en que alguien mira esta pantalla sin
+             saber qué está mirando, así que es donde tiene que estar la
+             explicación — y desaparece sola en cuanto hay un cupón, o sea que no
+             le ocupa un píxel al que ya entendió.
+             Lo importante que nadie decía: de esta pantalla NO se crean cupones.
+             Aparecen solos. Sin eso, el "Todavía no hay cupones" pelado dejaba a
+             la persona buscando un botón de "crear" que no existe. */
+          <div className="px-4 py-14 text-center">
+            <p className="text-3xl mb-3">🏷️</p>
+            {search || statusFilter !== "all" ? (
+              <>
+                <p className="text-sm font-semibold text-gray-700">Sin resultados para ese filtro</p>
+                <p className="mx-auto mt-1 max-w-sm text-xs text-gray-400">
+                  Probá con otro estado, o buscá por el código del cupón o el email de quien lo ganó.
+                </p>
+                <button onClick={() => { setSearch(""); setStatusFilter("all"); setPage(0); }}
+                  className="mt-3 text-xs text-indigo-500 hover:underline font-semibold">
+                  Limpiar filtros
+                </button>
+              </>
+            ) : (
+              <>
+                <p className="text-base font-semibold text-gray-800 mb-2">Todavía no hay cupones</p>
+                <p className="mx-auto max-w-md text-sm text-gray-500 leading-relaxed">
+                  Un cupón es un código que tu cliente escribe al pagar para llevarse un descuento.
+                  Acá no se crean a mano: <strong className="font-semibold text-gray-700">aparecen solos</strong> cuando
+                  alguien gana jugando a la ruleta o la raspadita, y cuando le mandás un recordatorio
+                  por WhatsApp a quien dejó el carrito por la mitad.
+                </p>
+                <p className="mx-auto mt-3 max-w-md text-sm text-gray-500 leading-relaxed">
+                  Cada uno es único, con su propio descuento, su límite de usos y su vencimiento.
+                  Cuando empiecen a salir vas a ver acá cuáles se canjearon y cuánto descuento entregaste.
+                </p>
+                <p className="mt-4 text-xs text-gray-400">
+                  Armá tu ruleta o tu raspadita más arriba para que empiecen a salir.
+                </p>
+              </>
             )}
           </div>
         ) : (
@@ -838,56 +908,72 @@ function WidgetEditor({ widget, onSave, onClose, saving, storeLogo, defaultTab =
   const sum = probSum(form.prizes);
 
   return (
-    <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/60 p-4">
-      <div className="relative flex w-full max-w-5xl max-h-[92vh] overflow-hidden rounded-none sm:rounded-2xl bg-white shadow-2xl flex-col">
+    <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/60 p-2 sm:p-4">
+      <div className="relative flex w-full max-w-5xl max-h-[95vh] sm:max-h-[92vh] overflow-hidden rounded-2xl bg-white shadow-2xl flex-col">
 
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4 shrink-0">
-          <div className="flex gap-2">
+        <div className="flex items-center justify-between gap-2 border-b border-gray-100 px-4 sm:px-6 py-4 shrink-0">
+          <div className="flex gap-2 min-w-0">
             {(["SPIN", "SCRATCH"] as const).map((t) => (
               <button key={t} onClick={() => set("type", t)}
-                className={`rounded-lg px-3 py-1.5 text-sm font-bold transition-colors ${form.type === t ? "bg-indigo-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}>
+                className={`shrink-0 rounded-lg px-3 py-1.5 text-sm font-bold transition-colors ${form.type === t ? "bg-indigo-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}>
                 {t === "SPIN" ? "🎡 Ruleta" : "🪙 Raspadita"}
               </button>
             ))}
           </div>
-          <button onClick={handleClose} className="text-gray-400 hover:text-gray-600"><X className="h-5 w-5" /></button>
+          <button onClick={handleClose} className="shrink-0 text-gray-400 hover:text-gray-600"><X className="h-5 w-5" /></button>
         </div>
 
-        {/* Tabs */}
+        {/* Tabs.
+            `shrink-0` y `whitespace-nowrap` en cada una: sin eso las tres se
+            encogían para entrar a la fuerza y "Premios y probabilidades" quedaba
+            cortado al medio contra el borde del modal. Ahora conservan su ancho y
+            el renglón scrollea, que es lo que el `overflow-x-auto` quería hacer
+            desde el principio. En angosto se abrevia el rótulo largo, así casi no
+            hace falta arrastrar. */}
         <div className="flex border-b border-gray-100 shrink-0 overflow-x-auto">
           {([
-            { id: "general", label: "General", icon: Settings },
-            { id: "styles",  label: "Estilos",  icon: Palette },
-            { id: "prizes",  label: "Premios y probabilidades", icon: Gift },
-          ] as const).map(({ id, label, icon: Icon }) => (
+            { id: "general", label: "General", corto: "General", icon: Settings },
+            { id: "styles",  label: "Estilos", corto: "Estilos", icon: Palette },
+            { id: "prizes",  label: "Premios y probabilidades", corto: "Premios", icon: Gift },
+          ] as const).map(({ id, label, corto, icon: Icon }) => (
             <button key={id} onClick={() => setTab(id)}
-              className={`flex items-center gap-2 px-5 py-3 text-sm font-semibold border-b-2 transition-colors ${tab === id ? "border-indigo-600 text-indigo-600" : "border-transparent text-gray-500 hover:text-gray-700"}`}>
-              <Icon className="h-4 w-4" />{label}
+              className={`flex shrink-0 items-center gap-2 whitespace-nowrap px-4 sm:px-5 py-3 text-sm font-semibold border-b-2 transition-colors ${tab === id ? "border-indigo-600 text-indigo-600" : "border-transparent text-gray-500 hover:text-gray-700"}`}>
+              <Icon className="h-4 w-4 shrink-0" />
+              <span className="sm:hidden">{corto}</span>
+              <span className="hidden sm:inline">{label}</span>
             </button>
           ))}
         </div>
 
         <div className="flex flex-1 overflow-hidden">
           {/* Form */}
-          <div className="flex-1 overflow-y-auto p-6">
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6">
 
             {/* ── GENERAL ── */}
             {tab === "general" && (
               <div className="space-y-4">
                 <div className="grid gap-4 sm:grid-cols-2">
+                  {/* Todos textos libres que el cliente va a leer, así que pueden
+                      ser largos: con un <input> se iban de vista hacia la derecha
+                      y no había forma de releer lo escrito. El legal es el caso
+                      extremo — dos renglones largos que antes se veían de a
+                      treinta caracteres. */}
                   {([["title","Título"],["subtitle","Subtítulo"],["buttonText","Texto del botón de girar"],["reclaimText","Texto del botón de reclamar"]] as const).map(([k,l]) => (
                     <div key={k}>
                       <label className="mb-1 block text-xs font-semibold text-gray-500">{l}</label>
-                      <input value={form[k]} onChange={(e) => set(k, e.target.value)}
-                        className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-400" />
+                      <CampoAuto value={form[k]} onChange={(v) => set(k, v)} ariaLabel={l} className="px-3 py-2" />
                     </div>
                   ))}
                   <div className="sm:col-span-2">
                     <label className="mb-1 block text-xs font-semibold text-gray-500">Texto legal (opcional)</label>
-                    <input value={form.legalText} onChange={(e) => set("legalText", e.target.value)}
+                    <CampoAuto
+                      value={form.legalText}
+                      onChange={(v) => set("legalText", v)}
+                      ariaLabel="Texto legal"
                       placeholder="Válido por tiempo limitado. No acumulable con otras promociones."
-                      className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-400" />
+                      className="px-3 py-2"
+                    />
                   </div>
                 </div>
                 <hr className="border-gray-100" />
@@ -903,8 +989,8 @@ function WidgetEditor({ widget, onSave, onClose, saving, storeLogo, defaultTab =
                       ))}
                     </div>
                     {form.centerType === "text" && (
-                      <input value={form.centerText} onChange={(e) => set("centerText", e.target.value)} placeholder="Tu marca"
-                        className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-400" />
+                      <CampoAuto value={form.centerText} onChange={(v) => set("centerText", v)} placeholder="Tu marca"
+                        ariaLabel="Texto del centro de la ruleta" className="px-3 py-2" />
                     )}
                   </div>
                 )}
@@ -1034,9 +1120,9 @@ function WidgetEditor({ widget, onSave, onClose, saving, storeLogo, defaultTab =
                           {/* Etiqueta — se arma sola con el % real; el guardado bloquea si no coincide */}
                           <div>
                             <label className="mb-1 block text-xs font-semibold text-gray-500">Etiqueta (se muestra en la ruleta)</label>
-                            <input value={p.label} onChange={(e) => updatePrize(idx, { label: e.target.value })}
+                            <CampoAuto value={p.label} onChange={(v) => updatePrize(idx, { label: v })}
                               placeholder={p.isNoPrize ? "Sin premio" : "Se completa sola con el %"}
-                              className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-400" />
+                              ariaLabel="Etiqueta del premio" className="px-3 py-2" />
                             {!p.isNoPrize && <p className="mt-1 text-xs text-gray-400">Se arma sola con el descuento. Si la cambiás, tiene que seguir coincidiendo con el %.</p>}
                           </div>
 
@@ -1154,21 +1240,29 @@ function WidgetEditor({ widget, onSave, onClose, saving, storeLogo, defaultTab =
         </div>
 
         {/* Footer */}
-        <div className="border-t border-gray-100 px-6 py-4 shrink-0">
+        {/* Pie.
+            Era una sola fila con la aclaración a la izquierda y los dos botones a
+            la derecha. A 360 no entra: la aclaración caía en cuatro renglones de
+            dos palabras y "Guardar widget" se partía en dos. Ahora en angosto la
+            aclaración va arriba, en su propio renglón, y los botones abajo
+            repartidos a la mitad — con el de guardar más ancho, que es el que se
+            aprieta. De `sm` para arriba vuelve la fila de siempre. */}
+        <div className="border-t border-gray-100 px-4 sm:px-6 py-4 shrink-0">
           {(generalError || probError) && (
-            <div className="flex items-center gap-2 rounded-xl bg-red-50 border border-red-200 px-4 py-2.5 text-sm text-red-600 mb-3">
-              <AlertCircle className="h-4 w-4 shrink-0" />
-              {generalError || probError}
+            <div className="flex items-start gap-2 rounded-xl bg-red-50 border border-red-200 px-4 py-2.5 text-sm text-red-600 mb-3">
+              <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+              <span className="min-w-0">{generalError || probError}</span>
             </div>
           )}
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-xs text-gray-400">Los códigos se generan automáticamente al guardar.</p>
-            <div className="flex gap-3">
-              <button onClick={handleClose} className="rounded-xl border border-gray-200 px-5 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50">
+            <div className="flex gap-3 shrink-0">
+              <button onClick={handleClose}
+                className="flex-1 rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-semibold text-gray-600 hover:bg-gray-50 sm:flex-none sm:py-2">
                 Cancelar
               </button>
               <button onClick={handleSave} disabled={saving}
-                className="flex items-center gap-2 rounded-xl bg-indigo-600 px-6 py-2 text-sm font-bold text-white hover:bg-indigo-700 disabled:opacity-50">
+                className="flex flex-[2] items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-indigo-600 px-6 py-2.5 text-sm font-bold text-white hover:bg-indigo-700 disabled:opacity-50 sm:flex-none sm:py-2">
                 {saving ? <><Loader2 className="h-4 w-4 animate-spin" /> Guardando…</> : "Guardar widget"}
               </button>
             </div>
@@ -1323,9 +1417,21 @@ export default function CuponesPage() {
       )}
 
       <div className="mx-auto w-full max-w-4xl">
+        {/* Un solo encabezado.
+            Había dos, pegados y los dos en `text-2xl font-bold`: "Cupones y
+            premios" acá y "Convertí visitas en ventas con un juego" unas líneas
+            más abajo. Al ser del mismo tamaño no había jerarquía —ninguno mandaba—
+            y encima explicaban lo mismo. El segundo era además un <p>, así que
+            para un lector de pantalla no existía como título.
+            Ahora manda el h1, la bajada se queda con la frase que mejor explica
+            para qué sirve, y todo alineado a la izquierda como en el resto del
+            panel: el h1 a la izquierda con un bloque centrado abajo era lo que se
+            veía desprolijo. */}
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-gray-900">Cupones y premios</h1>
-          <p className="mt-1 text-sm text-gray-500">Ruleta o raspadita que entrega descuentos automáticamente a tus clientes</p>
+          <p className="mt-1.5 max-w-xl text-base text-gray-600 leading-relaxed">
+            Convertí visitas en ventas con un juego: un descuento aburrido se ignora, un premio ganado se usa.
+          </p>
         </div>
 
         {!loading && storeTemplateId && GAMIFICATION_EXCLUDED_TEMPLATES.has(storeTemplateId) ? (
@@ -1348,31 +1454,36 @@ export default function CuponesPage() {
               .scratch-shine { animation: scratch-shimmer 2.5s ease-in-out infinite; }
             `}</style>
 
-            {/* Header */}
-            <div className="text-center mb-8">
-              <p className="text-2xl font-bold text-gray-900 mb-2">Convertí visitas en ventas con un juego</p>
-              <p className="text-sm text-gray-500 max-w-md mx-auto leading-relaxed">
-                Un descuento aburrido se ignora. Un premio ganado se usa. Elegí cómo querés que tus clientes lo descubran.
-              </p>
-            </div>
-
             {/* Por qué funciona — strip de valor */}
-            <div className="grid grid-cols-3 gap-3 max-w-2xl mx-auto mb-8">
+            {/* Tres columnas recién en `sm`. A 360 cada una medía unos 90px, y
+                ahí adentro "El cliente que ganó algo tiene mucho más incentivo
+                para comprar" caía en once renglones de dos palabras — el navegador
+                incluso partía "determina" al medio. En el teléfono va una debajo
+                de otra, con el ícono al costado para que no ocupen de más. */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-10">
               {[
                 { icon: "🎯", title: "Más conversión", desc: "El cliente que ganó algo tiene mucho más incentivo para comprar" },
                 { icon: "📧", title: "Captura emails", desc: "Requerís el email antes de jugar — crecés tu lista de forma orgánica" },
                 { icon: "🔒", title: "Sin trampas", desc: "El premio se determina en el servidor, nadie puede manipularlo" },
               ].map(({ icon, title, desc }) => (
-                <div key={title} className="rounded-2xl bg-gray-50 border border-gray-100 p-4 text-center">
-                  <span className="text-2xl block mb-2">{icon}</span>
-                  <p className="text-xs font-bold text-gray-800 mb-1">{title}</p>
-                  <p className="text-xs text-gray-500 leading-relaxed">{desc}</p>
+                <div key={title} className="flex items-start gap-3 rounded-2xl bg-gray-50 border border-gray-100 p-4 text-left sm:block sm:text-center">
+                  <span className="text-2xl shrink-0 leading-none sm:block sm:mb-2">{icon}</span>
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold text-gray-800 mb-1">{title}</p>
+                    <p className="text-xs text-gray-500 leading-relaxed">{desc}</p>
+                  </div>
                 </div>
               ))}
             </div>
 
+            {/* La consigna que estaba en el encabezado centrado vive acá, que es
+                donde hay que elegir de verdad. Como h2, además, la página pasa a
+                tener una jerarquía real: título → por qué sirve → qué elegir. */}
+            <h2 className="text-lg font-bold text-gray-900 mb-1">Elegí cómo lo descubren tus clientes</h2>
+            <p className="text-sm text-gray-500 mb-5">Los dos entregan el mismo cupón: cambia la forma de revelarlo.</p>
+
             {/* Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 max-w-2xl mx-auto mb-10">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-10">
 
               {/* ── RULETA ── */}
               <button

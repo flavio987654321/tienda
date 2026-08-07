@@ -13,6 +13,7 @@ import {
   Eye,
 } from "lucide-react";
 import { ESTADOS_VENTA_CONFIRMADA_LISTA } from "@/lib/order-status";
+import { statusLabel, statusClass } from "@/lib/orders";
 
 export default async function DashboardPage() {
   const user = await getCurrentUser();
@@ -210,27 +211,34 @@ export default async function DashboardPage() {
         {/* ── Store link & publish toggle ── */}
         {store && (
           <div className="mb-6 rounded-2xl border border-gray-100 bg-white shadow-sm overflow-hidden">
-            {/* Link row */}
-            <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100">
-              <div className="rounded-xl bg-indigo-50 p-2 text-indigo-600 shrink-0">
-                <Store className="h-4 w-4" />
+            {/* Link row
+                Se apila abajo de `sm`: "Compartir" y "Ver" no se encogen y suman
+                unos 180px, así que en 360 al texto le quedaban ~76 y el rótulo
+                —que además no truncaba— se partía en "TU TIE / NDA". Con los
+                botones en su propio renglón el link tiene el ancho completo. */}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 px-4 sm:px-5 py-4 border-b border-gray-100">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="rounded-xl bg-indigo-50 p-2 text-indigo-600 shrink-0">
+                  <Store className="h-4 w-4" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-0.5 whitespace-nowrap">Tu tienda</p>
+                  <p className="text-sm font-semibold text-gray-800 truncate">tiendaapps.com/tienda/{store.slug}</p>
+                </div>
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-0.5">Tu tienda</p>
-                <p className="text-sm font-semibold text-gray-800 truncate">tiendaapps.com/tienda/{store.slug}</p>
-              </div>
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex items-center gap-2 shrink-0 sm:ml-auto">
                 <ShareStoreButton
                   storeName={store.name}
                   storeSlug={store.slug}
                   storeLogo={store.logo}
                   isPublished={store.isPublished}
+                  className="flex-1 sm:flex-none justify-center"
                 />
                 <Link
                   href={`/tienda/${store.slug}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
+                  className="inline-flex flex-1 sm:flex-none items-center justify-center gap-1.5 rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
                 >
                   <Eye className="h-4 w-4" />
                   Ver
@@ -313,20 +321,24 @@ export default async function DashboardPage() {
             <Link
               key={label}
               href={href}
-              className="bg-white rounded-xl border border-gray-100 p-5 hover:border-indigo-200 hover:shadow-sm transition-all group"
+              className="bg-white rounded-xl border border-gray-100 p-4 sm:p-5 hover:border-indigo-200 hover:shadow-sm transition-all group"
             >
               <div className={`inline-flex p-2 rounded-lg ${color} mb-3`}>
                 <Icon className="h-5 w-5" />
               </div>
-              <p className="text-2xl font-bold text-gray-900">{value}</p>
-              <p className="text-sm text-gray-500 mt-0.5">{label}</p>
+              {/* En 360 cada tarjeta deja unos 116px útiles: un "Ingresos totales"
+                  de siete cifras no entra en `text-2xl` y desbordaba la grilla.
+                  Baja un punto en pantalla angosta, y el truncado es la red por
+                  si aun así se pasa. */}
+              <p className="text-xl sm:text-2xl font-bold text-gray-900 truncate" title={String(value)}>{value}</p>
+              <p className="text-sm text-gray-500 mt-0.5 truncate">{label}</p>
             </Link>
           ))}
         </div>
 
         {/* ── Recent reviews ── */}
         {recentReviews.length > 0 && (
-          <div className="bg-white rounded-xl border border-gray-100 p-6 mb-6">
+          <div className="bg-white rounded-xl border border-gray-100 p-4 sm:p-6 mb-6">
             <div className="flex items-center justify-between mb-5">
               <h2 className="font-bold text-gray-900">Reseñas recientes</h2>
               <div className="flex items-center gap-1 text-yellow-400">
@@ -362,7 +374,7 @@ export default async function DashboardPage() {
 
         {/* ── Recent orders / leads ── */}
         {isAutos ? (
-          <div className="bg-white rounded-xl border border-gray-100 p-6">
+          <div className="bg-white rounded-xl border border-gray-100 p-4 sm:p-6">
             <div className="flex items-center justify-between mb-5">
               <h2 className="font-bold text-gray-900">Últimas consultas</h2>
               <Link href="/dashboard/consultas" className="text-sm text-indigo-600 hover:underline">
@@ -400,7 +412,7 @@ export default async function DashboardPage() {
             )}
           </div>
         ) : (
-          <div className="bg-white rounded-xl border border-gray-100 p-6">
+          <div className="bg-white rounded-xl border border-gray-100 p-4 sm:p-6">
             <div className="flex items-center justify-between mb-5">
               <h2 className="font-bold text-gray-900">Últimos pedidos</h2>
               <Link href="/dashboard/pedidos" className="text-sm text-indigo-600 hover:underline">
@@ -418,19 +430,20 @@ export default async function DashboardPage() {
             ) : (
               <div className="space-y-3">
                 {recentOrders.map((order) => (
-                  <div key={order.id} className="flex items-center justify-between py-3 border-b border-gray-50 last:border-0">
-                    <div>
-                      <p className="font-medium text-gray-900 text-sm">{order.buyer.name || order.buyer.email}</p>
+                  <div key={order.id} className="flex items-center justify-between gap-3 py-3 border-b border-gray-50 last:border-0">
+                    {/* `min-w-0` + `truncate`: sin eso un mail largo empujaba el
+                        precio fuera de la tarjeta. La lista de consultas de acá
+                        al lado ya lo hacía bien; esta se había quedado atrás. */}
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-gray-900 text-sm truncate">{order.buyer.name || order.buyer.email}</p>
                       <p className="text-xs text-gray-400">{order.items.length} producto(s)</p>
                     </div>
-                    <div className="text-right">
+                    <div className="text-right shrink-0">
                       <p className="font-semibold text-gray-900 text-sm">${order.total.toLocaleString("es-AR")}</p>
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                        order.status === "DELIVERED" ? "bg-green-100 text-green-700" :
-                        order.status === "PENDING" ? "bg-yellow-100 text-yellow-700" :
-                        "bg-blue-100 text-blue-700"
-                      }`}>
-                        {order.status}
+                      {/* Los mismos rótulo y color que usa Pedidos: acá se
+                          mostraba el estado crudo de la base, en inglés. */}
+                      <span className={`inline-block text-xs px-2 py-0.5 rounded-full font-medium ${statusClass(order.status)}`}>
+                        {statusLabel(order.status)}
                       </span>
                     </div>
                   </div>

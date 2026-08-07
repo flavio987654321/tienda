@@ -66,7 +66,10 @@ export default function OnboardingChecklist({ steps }: { steps: OnboardingStep[]
               <p className="text-sm font-medium text-gray-800">{step.label}</p>
               <p className="text-xs text-gray-400 mt-0.5">{step.tip}</p>
             </div>
-            <span className="text-xs text-indigo-500 font-medium opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+            {/* En pantalla chica se muestra siempre: colgado de `group-hover` no
+                aparecía nunca en un teléfono, y era la única pista de que la
+                fila entera es un link. */}
+            <span className="text-xs text-indigo-500 font-medium shrink-0 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
               Ir →
             </span>
           </Link>

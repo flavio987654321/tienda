@@ -122,20 +122,24 @@ export function VariantBuilder({
         </div>
 
         {/* Colores básicos.
-            `flex flex-wrap` y no `grid-cols-4`: la grilla le daba a los 16 chips el
-            MISMO ancho, y a 368px eso son 62px por chip — de los cuales 40 se los
-            llevan el círculo, el padding y el espacio. Con 22px para el texto,
-            "Blanco" se veía "Blanc…" y "Amarillo" "Amari…".
-            Dejándolos medir lo que necesitan, cada uno ocupa lo suyo y entran de a
-            tres o cuatro por fila según el largo del nombre. Es además el mismo
-            patrón que ya usan los chips de abajo (los colores ya elegidos). */}
-        <div className="flex flex-wrap gap-2">
+            Grilla de TRES en pantalla angosta, y recién de `sm` para arriba se
+            los deja medir lo que necesiten.
+
+            Antes eran `flex flex-wrap` en todos lados, por una razón buena: con
+            `grid-cols-4` a 368px cada chip se quedaba con 62px, de los cuales 40
+            se los llevan el círculo, el padding y el espacio — con 22px para el
+            texto, "Blanco" se veía "Blanc…" y "Amarillo" "Amari…".
+            El problema era la cantidad de columnas, no la grilla: con tres, cada
+            celda mide ~101px y le quedan ~61 al texto, de sobra para el nombre
+            más largo. Y a cambio las filas dejan de quedar de 3, 3, 2, 3, 2 según
+            el largo de cada palabra, que es lo que se leía desprolijo. */}
+        <div className="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap">
           {BASIC_COLORS.map(c => (
             <button
               key={c.label}
               type="button"
               onClick={() => toggleColor(c.label)}
-              className={`flex items-center gap-2 px-2 py-1.5 rounded-lg border text-xs font-medium transition-all ${
+              className={`flex min-w-0 items-center gap-2 px-2 py-1.5 rounded-lg border text-xs font-medium transition-all ${
                 colors.includes(c.label)
                   ? "border-indigo-500 bg-indigo-50 text-indigo-700"
                   : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"
@@ -145,7 +149,7 @@ export function VariantBuilder({
                 className="w-4 h-4 rounded-full shrink-0 border border-gray-200"
                 style={{ backgroundColor: c.hex }}
               />
-              {c.label}
+              <span className="truncate">{c.label}</span>
             </button>
           ))}
         </div>
@@ -218,14 +222,16 @@ export function VariantBuilder({
           {stdSizes.length > 0 && <p className="text-xs text-gray-400">Sugerencias:</p>}
         </div>
 
-        {/* Grilla de talles estándar */}
-        <div className="flex flex-wrap gap-2">
+        {/* Grilla de talles estándar. Cuatro columnas en angosto: los nombres son
+            cortos ("Único" es el más largo) y así las filas quedan parejas en vez
+            de escalonadas, igual que arriba con los colores. */}
+        <div className="grid grid-cols-4 gap-2 sm:flex sm:flex-wrap">
           {stdSizes.map(s => (
             <button
               key={s}
               type="button"
               onClick={() => toggleSize(s)}
-              className={`px-3 py-1.5 rounded-lg border text-sm font-medium transition-all ${
+              className={`truncate px-3 py-1.5 rounded-lg border text-sm font-medium text-center transition-all ${
                 sizes.includes(s)
                   ? "border-indigo-500 bg-indigo-50 text-indigo-700"
                   : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"
@@ -427,12 +433,12 @@ export function VariantBuilder({
       {/* ── Modal de selección de foto ── */}
       {photoModal !== null && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 z-[80] flex items-center justify-center p-4"
           style={{ background: "rgba(0,0,0,0.55)" }}
           onClick={() => setPhotoModal(null)}
         >
           <div
-            className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl"
+            className="bg-white rounded-2xl p-6 max-w-sm w-full max-h-full overflow-y-auto shadow-2xl"
             onClick={e => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-4">

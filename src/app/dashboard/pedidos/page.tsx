@@ -9,7 +9,7 @@ import OrderCheckbox from "@/components/orders/OrderCheckbox";
 import BulkActionsBar from "@/components/orders/BulkActionsBar";
 import { BulkOrdersProvider, BulkModeToggle } from "@/components/orders/BulkOrdersContext";
 import { prisma } from "@/lib/prisma";
-import { ArrowUpRight, ChevronLeft, ChevronRight, Clock, Download, MessageSquare, Package, ShoppingBag, Star, Truck, UserRound } from "lucide-react";
+import { ArrowUpRight, ChevronDown, ChevronLeft, ChevronRight, Clock, Download, MessageSquare, Package, Search, ShoppingBag, Star, Truck, UserRound, X } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth-session";
 import { money } from "@/lib/utils";
 import { statusLabel, statusClass, statusBorderClass, parseAddress } from "@/lib/orders";
@@ -18,23 +18,43 @@ import { ESTADOS_VENTA_CONFIRMADA_LISTA } from "@/lib/order-status";
 const PAGE_SIZE = 15;
 const FILTERABLE_STATUSES = ["PENDING", "CONFIRMED", "SHIPPED", "DELIVERED", "CANCELLED"];
 
-type Props = { searchParams: Promise<{ page?: string; status?: string }> };
+type Props = { searchParams: Promise<{ page?: string; status?: string; q?: string }> };
 
 export default async function PedidosPage({ searchParams }: Props) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
   const userId = user.id;
-  const { page: pageParam, status: statusParam } = await searchParams;
+  const { page: pageParam, status: statusParam, q: qParam } = await searchParams;
   const page = Math.max(1, parseInt(pageParam ?? "1", 10) || 1);
   const statusFilter = FILTERABLE_STATUSES.includes(statusParam ?? "") ? statusParam : undefined;
+  const query = (qParam ?? "").trim();
 
   const store = await prisma.store.findUnique({
     where: { ownerId: userId },
     select: { id: true, name: true, slug: true },
   });
 
-  const where = store ? { storeId: store.id, ...(statusFilter ? { status: statusFilter } : {}) } : null;
+  /* Buscar mira los cuatro lugares donde alguien esperaría encontrar un pedido:
+     el nombre y el mail de la cuenta que compró, los datos de envío —donde va el
+     nombre real cuando compraron para otra persona, más el teléfono— y el número
+     que se muestra en la tarjeta. Ese número son los últimos seis caracteres del
+     id, en mayúscula: por eso se busca con `endsWith` sobre el id en minúscula,
+     que es como lo guarda cuid. */
+  const searchWhere = query
+    ? {
+        OR: [
+          { buyer: { name:  { contains: query, mode: "insensitive" as const } } },
+          { buyer: { email: { contains: query, mode: "insensitive" as const } } },
+          { shippingAddress: { contains: query, mode: "insensitive" as const } },
+          { id: { endsWith: query.toLowerCase() } },
+        ],
+      }
+    : {};
+
+  const where = store
+    ? { storeId: store.id, ...(statusFilter ? { status: statusFilter } : {}), ...searchWhere }
+    : null;
 
   const [orders, totalFiltered, totalAll, totalPending, totalConfirmed, revenueAgg, pendingAffiliateCount] = store
     ? await Promise.all([
@@ -49,7 +69,13 @@ export default async function PedidosPage({ searchParams }: Props) {
             commission: true,
             coupon: { select: { code: true } },
             reviews: { include: { product: { select: { name: true } } } },
-            statusLogs: { orderBy: { changedAt: "asc" } },
+            /* Con tope y por los más nuevos. Sin `take` se traía el historial
+               completo de cada pedido, por los 15 de la página: un pedido que
+               rebotó mucho de estado se llevaba puesta la consulta entera. Se
+               piden al revés para quedarse con los últimos, y se dan vuelta al
+               dibujarlos para que la línea de tiempo siga leyéndose de vieja a
+               nueva. */
+            statusLogs: { orderBy: { changedAt: "desc" }, take: 20 },
           },
           orderBy: { createdAt: "desc" },
           take: PAGE_SIZE,
@@ -70,9 +96,10 @@ export default async function PedidosPage({ searchParams }: Props) {
   const revenue = revenueAgg._sum.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(totalFiltered / PAGE_SIZE));
 
-  function pageHref(targetPage: number, targetStatus = statusFilter) {
+  function pageHref(targetPage: number, targetStatus = statusFilter, targetQuery = query) {
     const params = new URLSearchParams();
     if (targetStatus) params.set("status", targetStatus);
+    if (targetQuery) params.set("q", targetQuery);
     if (targetPage > 1) params.set("page", String(targetPage));
     const qs = params.toString();
     return qs ? `/dashboard/pedidos?${qs}` : "/dashboard/pedidos";
@@ -108,16 +135,71 @@ export default async function PedidosPage({ searchParams }: Props) {
           { label: "Pendientes", value: totalPending, icon: ShoppingBag, color: "bg-yellow-50 text-yellow-700" },
           { label: "Confirmados", value: totalConfirmed, icon: Package, color: "bg-green-50 text-green-700" },
           { label: "Ingresos confirmados", value: money(revenue), icon: Truck, color: "bg-indigo-50 text-indigo-700" },
-        ].map(({ label, value, icon: Icon, color }) => (
-          <div key={label} className="rounded-2xl border border-gray-100 bg-white p-5">
+        ].map(({ label, value, icon: Icon, color }, i, todas) => (
+          <div
+            key={label}
+            /* Son tres tarjetas en dos columnas: la última quedaba sola ocupando
+               media fila, con un hueco al lado. Cuando la cantidad es impar, la
+               última se lleva el ancho completo — y de paso "Ingresos
+               confirmados" entra en un renglón en vez de partirse en dos. */
+            className={`rounded-2xl border border-gray-100 bg-white p-4 sm:p-5 ${
+              i === todas.length - 1 && todas.length % 2 === 1 ? "col-span-2 sm:col-span-1" : ""
+            }`}
+          >
             <div className={`mb-3 inline-flex rounded-xl p-2 ${color}`}>
               <Icon className="h-5 w-5" />
             </div>
-            <p className="text-2xl font-bold text-gray-900">{value}</p>
-            <p className="text-sm text-gray-400">{label}</p>
+            <p className="text-xl sm:text-2xl font-bold text-gray-900 truncate" title={String(value)}>{value}</p>
+            <p className="text-sm text-gray-400 truncate">{label}</p>
           </div>
         ))}
       </div>
+
+      {/* Buscador. Es un <form method="get"> pelado a propósito: manda a esta
+          misma ruta con ?q=, así la página sigue siendo un Server Component y
+          anda sin JavaScript. Como `page` no está en el form, cada búsqueda
+          vuelve sola a la primera página. */}
+      {totalAll > 0 && (
+        <form method="get" action="/dashboard/pedidos" className="mb-4 flex gap-2">
+          {statusFilter && <input type="hidden" name="status" value={statusFilter} />}
+          <div className="relative flex-1 min-w-0">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <input
+              type="search"
+              name="q"
+              defaultValue={query}
+              placeholder="Buscar por nombre, email, teléfono o #pedido"
+              aria-label="Buscar pedidos"
+              className="w-full rounded-xl border border-gray-200 bg-white py-2.5 pl-9 pr-3 text-sm text-gray-800 placeholder:text-gray-400 focus:border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+            />
+          </div>
+          <button
+            type="submit"
+            className="shrink-0 rounded-xl bg-gray-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-gray-800 transition-colors"
+          >
+            Buscar
+          </button>
+          {query && (
+            <Link
+              href={pageHref(1, statusFilter, "")}
+              aria-label="Limpiar la búsqueda"
+              className="flex shrink-0 items-center justify-center rounded-xl border border-gray-200 bg-white px-3 text-gray-500 hover:bg-gray-50 transition-colors"
+            >
+              <X className="h-4 w-4" />
+            </Link>
+          )}
+        </form>
+      )}
+
+      {query && (
+        <p className="mb-4 text-sm text-gray-500">
+          {totalFiltered === 0
+            ? <>Sin resultados para <strong className="text-gray-700">{query}</strong>.</>
+            : <>{totalFiltered} {totalFiltered === 1 ? "pedido" : "pedidos"} para <strong className="text-gray-700">{query}</strong>.</>}
+          {" "}
+          <Link href={pageHref(1, statusFilter, "")} className="text-indigo-600 hover:underline">Ver todos</Link>
+        </p>
+      )}
 
       {totalAll > 0 && (
         <div className="mb-5 -mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [-webkit-overflow-scrolling:touch] sm:mx-0 sm:flex-wrap sm:justify-center sm:overflow-visible sm:px-0">
@@ -139,8 +221,11 @@ export default async function PedidosPage({ searchParams }: Props) {
         </div>
       )}
 
+      {/* El vacío va con `p-8` en angosto: con `p-16` a secas quedaban 200px de
+          texto en una pantalla de 360 y el mensaje caía en tres renglones
+          flaquitos. */}
       {orders.length === 0 ? (
-        <div className="rounded-2xl border border-gray-100 bg-white p-16 text-center">
+        <div className="rounded-2xl border border-gray-100 bg-white p-8 sm:p-16 text-center">
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-indigo-50">
             <ShoppingBag className="h-8 w-8 text-indigo-300" />
           </div>
@@ -148,6 +233,17 @@ export default async function PedidosPage({ searchParams }: Props) {
             <>
               <h2 className="text-lg font-semibold text-gray-900">Todavía no hay pedidos</h2>
               <p className="mt-1 text-sm text-gray-400">Cuando alguien compre desde tu tienda, los pedidos aparecen acá.</p>
+            </>
+          ) : query ? (
+            <>
+              <h2 className="text-lg font-semibold text-gray-900">Sin resultados</h2>
+              <p className="mt-1 text-sm text-gray-400">
+                No encontramos pedidos que coincidan con <strong className="text-gray-600">{query}</strong>.
+                Se busca por nombre, email, teléfono y número de pedido.
+              </p>
+              <Link href={pageHref(1, undefined, "")} className="mt-4 inline-block text-sm font-semibold text-indigo-600 hover:underline">
+                Ver todos los pedidos
+              </Link>
             </>
           ) : (
             <>
@@ -180,19 +276,34 @@ export default async function PedidosPage({ searchParams }: Props) {
                 key={order.id}
                 className={`rounded-2xl border border-gray-100 bg-white p-4 sm:p-5 ${statusBorderClass(order.status)} ${order.status === "CANCELLED" ? "opacity-60" : ""}`}
               >
-                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 border-b border-gray-50 pb-4">
-                  <div className="flex items-start gap-3">
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                  <div className="flex min-w-0 items-start gap-3">
                     <div className="pt-1">
                       <OrderCheckbox orderId={order.id} />
                     </div>
-                    <div>
+                    <div className="min-w-0">
                     <div className="mb-2 flex flex-wrap items-center gap-2">
                       <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${statusClass(order.status)}`}>{statusLabel(order.status)}</span>
                       <span className="text-xs text-gray-400">#{order.id.slice(-6).toUpperCase()}</span>
-                      <span className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-600">{order.createdAt.toLocaleString("es-AR")}</span>
+                      {/* Sin los segundos y con el año corto: la fecha larga
+                          ("7/8/2026, 10:25:33") se comía un renglón entero en
+                          360, y el segundo exacto de la compra no le sirve a
+                          nadie acá. */}
+                      <span className="whitespace-nowrap rounded-full bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-600">
+                        {order.createdAt.toLocaleString("es-AR", {
+                          day: "2-digit", month: "2-digit", year: "2-digit",
+                          hour: "2-digit", minute: "2-digit",
+                        })}
+                      </span>
                     </div>
                     <p className="text-lg font-bold text-gray-900">{money(order.total)}</p>
-                    <p className="text-sm text-gray-400">{itemCount} producto(s) - pago {order.payment?.provider ?? "manual"} / {order.payment?.status ?? "PENDING"}</p>
+                    {/* Quién compró, plegado. Sin esto la tarjeta cerrada mostraba
+                        plata y estado pero no de quién era el pedido, que es
+                        justo lo que uno busca al recorrer la lista. */}
+                    <p className="truncate text-sm font-medium text-gray-600">
+                      {address.name || order.buyer.name || order.buyer.email}
+                    </p>
+                    <p className="text-xs text-gray-400">{itemCount} producto(s) - pago {order.payment?.provider ?? "manual"} / {order.payment?.status ?? "PENDING"}</p>
                     </div>
                   </div>
                   <OrderActions
@@ -202,6 +313,18 @@ export default async function PedidosPage({ searchParams }: Props) {
                     paymentStatus={order.payment?.status}
                   />
                 </div>
+
+                {/* Todo el detalle va plegado. Antes cada tarjeta desplegaba
+                    productos, comprador, envío, comisión, reseñas e historial
+                    completo — por 15 pedidos por página, eso era una pantalla
+                    interminable, y en 360 directamente inusable. Es un <details>
+                    nativo justamente para no tener que volver cliente a toda la
+                    página por un abrir y cerrar. */}
+                <details className="group mt-3 border-t border-gray-50 pt-3">
+                  <summary className="flex cursor-pointer list-none items-center gap-1.5 text-sm font-semibold text-indigo-600 hover:text-indigo-700 [&::-webkit-details-marker]:hidden">
+                    Ver detalle
+                    <ChevronDown className="h-4 w-4 transition-transform duration-200 group-open:rotate-180" />
+                  </summary>
 
                 <div className="grid gap-5 pt-4 sm:grid-cols-2 lg:grid-cols-[1.1fr_1fr_1fr]">
                   <div>
@@ -319,19 +442,33 @@ export default async function PedidosPage({ searchParams }: Props) {
                       Historial de cambios
                     </p>
                     <ol className="relative ml-2 border-l border-gray-100">
-                      {order.statusLogs.map((log) => (
+                      {[...order.statusLogs].reverse().map((log) => (
                         <li key={log.id} className="mb-2 ml-4">
                           <span className="absolute -left-1.5 mt-1.5 h-3 w-3 rounded-full border-2 border-white bg-indigo-300" />
+                          {/* Los estados salían crudos de la base, en inglés
+                              ("PENDING → CONFIRMED"), en la única parte del
+                              archivo que no pasaba por `statusLabel`. */}
                           <p className="text-xs text-gray-500">
-                            <span className="font-semibold text-gray-700">{log.fromStatus} → {log.toStatus}</span>
+                            <span className="font-semibold text-gray-700">{statusLabel(log.fromStatus)} → {statusLabel(log.toStatus)}</span>
                             {" · "}
-                            {new Date(log.changedAt).toLocaleString("es-AR")}
+                            {new Date(log.changedAt).toLocaleString("es-AR", {
+                              day: "2-digit", month: "2-digit", year: "2-digit",
+                              hour: "2-digit", minute: "2-digit",
+                            })}
                           </p>
                         </li>
                       ))}
                     </ol>
                   </div>
                 )}
+
+                  <Link
+                    href={`/dashboard/pedidos/${order.id}`}
+                    className="mt-4 inline-block text-sm font-semibold text-indigo-600 hover:underline"
+                  >
+                    Abrir la ficha completa →
+                  </Link>
+                </details>
               </div>
             );
           })}

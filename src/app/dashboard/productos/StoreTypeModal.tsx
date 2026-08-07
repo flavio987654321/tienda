@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { STORE_TYPES } from "@/lib/storeTypes";
 import { Loader2, X, Check, AlertTriangle, Trash2, Download } from "lucide-react";
-import { TOUR_STORAGE_KEY } from "@/components/TourGuide";
+import { TOUR_PANEL_KEY } from "@/components/tours";
 
 export default function StoreTypeModal({
   isEditing = false,
@@ -104,7 +104,7 @@ export default function StoreTypeModal({
           throw new Error(data?.error || "No se pudo cambiar el tipo de tienda. Probá de nuevo.");
         }
         // Resetear tour para que aparezca de nuevo con el nuevo tipo
-        localStorage.removeItem(TOUR_STORAGE_KEY);
+        localStorage.removeItem(TOUR_PANEL_KEY);
       } else {
         // Primera configuración o mismo tipo
         const configRes = await fetch("/api/configuracion");
@@ -146,7 +146,7 @@ export default function StoreTypeModal({
   if (saving) {
     const toConfig = STORE_TYPES.find((t) => t.id === selected);
     return (
-      <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/70 backdrop-blur-md gap-6 animate-fade-slide">
+      <div className="fixed inset-0 z-[80] flex flex-col items-center justify-center bg-black/70 backdrop-blur-md gap-6 animate-fade-slide">
         <div className="relative flex items-center justify-center">
           <div className="w-24 h-24 rounded-full border-4 border-white/10 border-t-white animate-spin" />
           <span className="absolute text-4xl">{toConfig?.emoji}</span>
@@ -166,7 +166,7 @@ export default function StoreTypeModal({
     const fromConfig = STORE_TYPES.find((t) => t.id === currentType);
     const toConfig   = STORE_TYPES.find((t) => t.id === selected);
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+      <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
         <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col animate-fade-slide">
           <div className="bg-red-50 rounded-t-3xl px-7 py-6 border-b border-red-100 shrink-0">
             <div className="flex items-center gap-3 mb-1">
@@ -290,7 +290,7 @@ export default function StoreTypeModal({
 
   // ── Pantalla principal de selección ──
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
       <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
 
         {/* Header */}
