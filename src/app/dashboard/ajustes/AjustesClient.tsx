@@ -54,17 +54,28 @@ export default function AjustesClient({ slug, customDomain, isPremium, descripti
 
       {/* Descripción breve */}
       <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-        <div className="flex items-center gap-3 px-5 py-4 border-b border-slate-100">
-          <AlignLeft className="h-4 w-4 text-slate-400 shrink-0" />
-          <h2 className="text-sm font-semibold text-slate-900">Descripción breve</h2>
-          <span className="ml-auto text-xs text-slate-400">Se muestra en el listado de tiendas</span>
+        {/* La aclaración baja abajo del título en angosto. Peleando el mismo
+            renglón se partían las dos —"Descripción / breve" y "Se muestra en el
+            listado / de tiendas"— y quedaban dos bloques de texto del mismo peso
+            visual, sin que se entienda cuál es el título y cuál la aclaración.
+            Abajo, con el sangrado del ícono, se lee como lo que es. */}
+        <div className="flex flex-col gap-1 px-5 py-4 border-b border-slate-100 sm:flex-row sm:items-center sm:gap-3">
+          <div className="flex items-center gap-3">
+            <AlignLeft className="h-4 w-4 text-slate-400 shrink-0" />
+            <h2 className="text-sm font-semibold text-slate-900">Descripción breve</h2>
+          </div>
+          <span className="pl-7 text-xs text-slate-400 sm:ml-auto sm:pl-0">Se muestra en el listado de tiendas</span>
         </div>
         <div className="px-5 py-4 space-y-3">
           <textarea
             value={desc}
             onChange={(e) => setDesc(e.target.value)}
             maxLength={150}
-            rows={2}
+            /* 3 renglones y no 2: en un teléfono entran unos 45 caracteres por
+               renglón, así que los 150 que admite el campo ocupan más de tres.
+               Con 2 el texto scrolleaba adentro de la caja y no se podía releer
+               lo escrito de un vistazo, que es justo lo que hace falta acá. */
+            rows={3}
             placeholder={isAutos ? "Ej: Concesionaria oficial en Córdoba. Autos, motos y camionetas nuevos y usados." : "Ej: Ropa femenina para todas las tallas, con envíos a todo el país."}
             className="w-full border border-slate-200 rounded-lg px-4 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-400 focus:border-indigo-400 resize-none"
           />
@@ -97,26 +108,36 @@ export default function AjustesClient({ slug, customDomain, isPremium, descripti
           <p className="text-sm text-slate-500">
             Tu tienda está disponible en esta URL. Compartila con tus clientes y afiliados.
           </p>
-          <div className="flex items-center gap-2">
-            <div className="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 text-sm font-mono text-slate-700 truncate">
+          {/* La URL se lleva su propio renglón y se parte si hace falta, en vez
+              de truncarse. Compartía renglón con "Copiar" y "Ver", los dos
+              `shrink-0`, así que en 360 le quedaban unos 98px de ancho útil y
+              mostraba "https:/…" — la dirección de la tienda, que es el dato
+              para el que existe esta tarjeta, era justo lo que no se podía leer.
+              Truncar sirve para una etiqueta; para un valor que hay que copiar a
+              mano o dictar por teléfono, no. */}
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <div className="min-w-0 flex-1 bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 text-sm font-mono text-slate-700 break-all">
               https://{subdomain}
             </div>
-            <button
-              onClick={copySubdomain}
-              className="shrink-0 flex items-center gap-1.5 px-3 py-2.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition-colors"
-            >
-              {copied ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
-              {copied ? "Copiado" : "Copiar"}
-            </button>
-            <a
-              href={`https://${subdomain}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="shrink-0 flex items-center gap-1.5 px-3 py-2.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition-colors"
-            >
-              <ExternalLink className="h-3.5 w-3.5" />
-              Ver
-            </a>
+            {/* Los dos botones se reparten el renglón en angosto. */}
+            <div className="flex gap-2">
+              <button
+                onClick={copySubdomain}
+                className="flex flex-1 shrink-0 items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition-colors sm:flex-none"
+              >
+                {copied ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
+                {copied ? "Copiado" : "Copiar"}
+              </button>
+              <a
+                href={`https://${subdomain}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex flex-1 shrink-0 items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition-colors sm:flex-none"
+              >
+                <ExternalLink className="h-3.5 w-3.5" />
+                Ver
+              </a>
+            </div>
           </div>
         </div>
       </div>
@@ -129,12 +150,12 @@ export default function AjustesClient({ slug, customDomain, isPremium, descripti
             <h2 className="text-sm font-semibold text-slate-900">{isAutos ? "Tu sitio como app" : "Tu tienda como app"}</h2>
           </div>
           {isPremium ? (
-            <span className="text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-md flex items-center gap-1">
+            <span className="shrink-0 whitespace-nowrap text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-md flex items-center gap-1">
               <Crown className="h-3 w-3" /> Premium
             </span>
           ) : (
-            <span className="text-xs font-medium text-slate-400 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-md flex items-center gap-1">
-              <Lock className="h-3 w-3" /> Solo Premium
+            <span className="shrink-0 whitespace-nowrap text-xs font-medium text-slate-400 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-md flex items-center gap-1">
+              <Lock className="h-3 w-3 shrink-0" /> Solo Premium
             </span>
           )}
         </div>
@@ -192,12 +213,12 @@ export default function AjustesClient({ slug, customDomain, isPremium, descripti
             <h2 className="text-sm font-semibold text-slate-900">Dominio personalizado</h2>
           </div>
           {isPremium ? (
-            <span className="text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-md flex items-center gap-1">
+            <span className="shrink-0 whitespace-nowrap text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-md flex items-center gap-1">
               <Crown className="h-3 w-3" /> Premium
             </span>
           ) : (
-            <span className="text-xs font-medium text-slate-400 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-md flex items-center gap-1">
-              <Lock className="h-3 w-3" /> Solo Premium
+            <span className="shrink-0 whitespace-nowrap text-xs font-medium text-slate-400 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-md flex items-center gap-1">
+              <Lock className="h-3 w-3 shrink-0" /> Solo Premium
             </span>
           )}
         </div>
@@ -227,12 +248,12 @@ export default function AjustesClient({ slug, customDomain, isPremium, descripti
             <h2 className="text-sm font-semibold text-slate-900">Flyer de publicidad</h2>
           </div>
           {isPremium ? (
-            <span className="text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-md flex items-center gap-1">
+            <span className="shrink-0 whitespace-nowrap text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-md flex items-center gap-1">
               <Crown className="h-3 w-3" /> Premium
             </span>
           ) : (
-            <span className="text-xs font-medium text-slate-400 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-md flex items-center gap-1">
-              <Lock className="h-3 w-3" /> Solo Premium
+            <span className="shrink-0 whitespace-nowrap text-xs font-medium text-slate-400 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-md flex items-center gap-1">
+              <Lock className="h-3 w-3 shrink-0" /> Solo Premium
             </span>
           )}
         </div>
