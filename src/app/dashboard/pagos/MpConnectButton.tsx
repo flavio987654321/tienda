@@ -157,8 +157,8 @@ export default function MpConnectButton({ connected, connectedAt, mpSellerId, mp
       </div>
 
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full">
+        <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-full overflow-y-auto">
             <div className="flex items-center gap-3 px-6 pt-6 pb-4 border-b border-gray-100">
               <div className="w-9 h-9 rounded-xl bg-amber-100 flex items-center justify-center flex-shrink-0">
                 <AlertTriangle className="h-5 w-5 text-amber-600" />

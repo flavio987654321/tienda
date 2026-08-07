@@ -88,7 +88,7 @@ export default function VehicleStatusModal({ productId, productName, currentStat
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
       <div
         className="bg-white rounded-2xl shadow-2xl w-full max-w-md flex flex-col max-h-[90vh] animate-fade-slide"
         onClick={e => e.stopPropagation()}

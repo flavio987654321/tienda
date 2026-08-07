@@ -132,7 +132,7 @@ export default function PaymentModal({ plan, billing, onClose, onSuccess }: Prop
 
   if (success) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+      <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
         <div className="bg-white rounded-3xl shadow-2xl border border-gray-100 w-full max-w-sm overflow-hidden">
           {/* Header naranja */}
           <div className="bg-gradient-to-br from-orange-500 to-orange-600 px-6 py-8 text-center">
@@ -178,7 +178,7 @@ export default function PaymentModal({ plan, billing, onClose, onSuccess }: Prop
   // Pantalla QR
   if (checkoutUrl) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-100/90 backdrop-blur-md p-4">
+      <div className="fixed inset-0 z-[80] flex items-center justify-center bg-gray-100/90 backdrop-blur-md p-4">
         <div className="bg-white rounded-2xl shadow-xl border border-gray-200 w-full max-w-xs overflow-hidden">
           <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
             <button onClick={() => setCheckoutUrl(null)} className="flex items-center gap-1 text-sm text-gray-400 hover:text-gray-700 transition-colors">
@@ -223,8 +223,8 @@ export default function PaymentModal({ plan, billing, onClose, onSuccess }: Prop
 
   // Pantalla principal
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-100/90 backdrop-blur-md p-4">
-      <div className="bg-white rounded-2xl shadow-xl border border-gray-200 w-full max-w-sm overflow-hidden">
+    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-gray-100/90 backdrop-blur-md p-4">
+      <div className="bg-white rounded-2xl shadow-xl border border-gray-200 w-full max-w-sm max-h-full overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
           <div>

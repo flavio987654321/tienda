@@ -305,7 +305,7 @@ function FileInput({ label, file, onChange, error, onError, facingMode = "enviro
 
 function ConfirmDialog({ message, onConfirm, onCancel }: { message: string; onConfirm: () => void; onCancel: () => void }) {
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={onCancel}>
+    <div className="fixed inset-0 z-[80] bg-black/40 flex items-center justify-center p-4" onClick={onCancel}>
       <div className="bg-white rounded-2xl shadow-xl p-6 max-w-sm w-full" onClick={(e) => e.stopPropagation()}>
         <p className="text-sm font-semibold text-gray-800 mb-1">¿Estás seguro?</p>
         <p className="text-sm text-gray-500 mb-5">{message}</p>

@@ -63,7 +63,7 @@ export default function StoreClosedGate({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-100/90 backdrop-blur-md p-4 [color-scheme:light]">
+    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-gray-100/90 backdrop-blur-md p-4 [color-scheme:light]">
       <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-8 max-w-sm w-full text-center">
         <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
           <Power className="h-6 w-6 text-gray-500" />

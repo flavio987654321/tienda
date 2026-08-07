@@ -163,9 +163,13 @@ export default function DangerZone({
       )}
 
       {target && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full">
-            <div className="flex items-center gap-3 px-6 pt-6 pb-4 border-b border-gray-100">
+        /* La tarjeta se topea al alto de la pantalla y scrollea solo el medio:
+           entre la lista de lo que se borra, el aviso y el campo de confirmación
+           este modal se pasa largo de un teléfono, y sin tope se cortaba arriba
+           y abajo — con el botón de confirmar entre lo que no se alcanzaba. */
+        <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-full flex flex-col overflow-hidden">
+            <div className="shrink-0 flex items-center gap-3 px-4 sm:px-6 pt-6 pb-4 border-b border-gray-100">
               <div className="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center shrink-0">
                 <AlertTriangle className="h-5 w-5 text-red-600" />
               </div>
@@ -180,7 +184,7 @@ export default function DangerZone({
               </button>
             </div>
 
-            <div className="px-6 py-5 space-y-4">
+            <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-5 space-y-4">
               {loading ? (
                 <div className="flex items-center justify-center py-6">
                   <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
@@ -264,7 +268,7 @@ export default function DangerZone({
               )}
             </div>
 
-            <div className="px-6 pb-6 flex gap-3">
+            <div className="shrink-0 px-4 sm:px-6 pb-6 pt-4 flex gap-3">
               <button
                 onClick={handleCloseModal}
                 className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors"

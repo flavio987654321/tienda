@@ -621,7 +621,7 @@ export default function NotificacionesPage() {
             cuando abrió algo sin querer. */}
         {showConfirm && (
           <div
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-[2px]"
+            className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/40 backdrop-blur-[2px]"
             onClick={() => setShowConfirm(false)}
           >
             <div

@@ -335,7 +335,7 @@ export default function LogoUploadCard({ storeName, initialLogo, initialLogoColo
       {/* Share Modal */}
       {showShareModal && logo && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 z-[80] flex items-center justify-center p-4"
           onClick={() => setShowShareModal(false)}
         >
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
@@ -390,7 +390,7 @@ export default function LogoUploadCard({ storeName, initialLogo, initialLogoColo
       {/* Splash Modal */}
       {showSplashModal && logo && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 z-[80] flex items-center justify-center p-4"
           onClick={() => setShowSplashModal(false)}
         >
           <div className="absolute inset-0 bg-black/75 backdrop-blur-sm" />
