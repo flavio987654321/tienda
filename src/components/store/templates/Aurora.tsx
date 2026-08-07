@@ -1,5 +1,5 @@
 ﻿"use client";
-import { useState, useEffect, useMemo, useRef, Fragment } from "react";
+import { useState, useEffect, useLayoutEffect, useMemo, useRef, useCallback, Fragment } from "react";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { usePushBell } from "@/contexts/PushBellContext";
 import { useAuth } from "@/components/AuthProvider";
@@ -29,6 +29,7 @@ import { FadeImage } from "@/components/store/templates/shared/FadeImage";
 import { HeroFoto } from "@/components/store/templates/shared/HeroFoto";
 import { Coverflow } from "@/components/store/templates/shared/Coverflow";
 import { GrillaProfunda, PiezaQueLlega } from "@/components/store/templates/shared/GrillaProfunda";
+import { calcularVuelo, tarjetaVisible, MS_IDA, MS_VUELTA } from "@/components/store/templates/shared/vueloDeFicha";
 import { vidrio, sombra, Inclinable } from "@/components/store/templates/shared/Materia";
 import StoreProductReels from "@/components/store/ProductReels";
 import { SectionBlock } from "@/components/store/templates/shared/SectionBlock";
@@ -244,6 +245,70 @@ export default function Aurora() {
     () => { if (modalProduct) setModalImg(i => (i + 1) % modalProduct.images.length); },
     () => { if (modalProduct) setModalImg(i => (i - 1 + modalProduct.images.length) % modalProduct.images.length); }
   );
+
+  /* ── El vuelo de la ficha ──────────────────────────────────────────────────
+     La cuenta vive en `vueloDeFicha`; acá sólo están los tres nodos que hacen
+     falta para hacerla: de qué foto sale, cuál es la foto de la ficha, y cuál es
+     la ficha entera —que es lo que realmente se mueve, porque la foto sola la
+     recortaría el `overflow: hidden` del contenedor. */
+  const fichaRef      = useRef<HTMLDivElement>(null);
+  const fotoFichaRef  = useRef<HTMLDivElement>(null);
+  const origenRef     = useRef<HTMLElement | null>(null);
+  const [panelListo, setPanelListo] = useState(false);
+
+  /** Abre la ficha recordando de qué foto salió, para que pueda volver. */
+  const abrirFicha = useCallback((product: StorefrontProduct, e?: React.MouseEvent) => {
+    const tarjeta = e?.currentTarget as HTMLElement | undefined;
+    origenRef.current = tarjeta?.querySelector<HTMLElement>("[data-foto]") ?? null;
+    // El panel arranca apagado ACÁ y no en el efecto: apagarlo desde el efecto
+    // sería un setState en cascada, y además llegaría tarde — el primer cuadro
+    // ya se habría pintado con el fondo negro de la vez anterior.
+    setPanelListo(false);
+    openModal(product);
+  }, [openModal]);
+
+  // La ida. `useLayoutEffect` y no `useEffect`: corre después de que la ficha
+  // se montó pero ANTES de que el navegador pinte, así el primer cuadro que se
+  // ve ya está achicado sobre la tarjeta. Con `useEffect` se alcanzaría a ver un
+  // cuadro con la ficha entera abierta, que es el parpadeo que esto evita.
+  useLayoutEffect(() => {
+    if (!modalProduct) return;
+    const ficha = fichaRef.current, foto = fotoFichaRef.current, desde = origenRef.current;
+    const quieto = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+    const vuelo = (!quieto && ficha && foto && tarjetaVisible(desde))
+      ? calcularVuelo(desde!.getBoundingClientRect(), foto.getBoundingClientRect(), ficha.getBoundingClientRect())
+      : null;
+
+    if (!ficha || !vuelo) { setPanelListo(true); return; }
+
+    ficha.style.transition = "none";
+    ficha.style.transformOrigin = "0 0";
+    ficha.style.transform = vuelo.transform;
+    void ficha.getBoundingClientRect(); // fuerza el reflow: sin esto el navegador junta los dos estados y no hay animación
+    ficha.style.transition = `transform ${MS_IDA}ms cubic-bezier(.22,.9,.28,1)`;
+    ficha.style.transform = "none";
+    const t = setTimeout(() => setPanelListo(true), Math.round(MS_IDA * 0.45));
+    return () => clearTimeout(t);
+  }, [modalProduct]);
+
+  /** Cierra devolviendo la foto a su tarjeta. Si la tarjeta ya no está a la
+      vista —porque scrolleaste—, se desvanece: volar hacia afuera se lee como
+      un error. */
+  const cerrarFicha = useCallback(() => {
+    const ficha = fichaRef.current, foto = fotoFichaRef.current, desde = origenRef.current;
+    const quieto = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+    const vuelo = (!quieto && ficha && foto && tarjetaVisible(desde))
+      ? calcularVuelo(desde!.getBoundingClientRect(), foto.getBoundingClientRect(), ficha.getBoundingClientRect())
+      : null;
+
+    const terminar = () => { setModalProduct(null); setLightboxSrc(null); origenRef.current = null; };
+    if (!ficha || !vuelo) { terminar(); return; }
+
+    setPanelListo(false);
+    ficha.style.transition = `transform ${MS_VUELTA}ms cubic-bezier(.4,0,.7,.2)`;
+    ficha.style.transform = vuelo.transform;
+    setTimeout(terminar, MS_VUELTA);
+  }, [setModalProduct, setLightboxSrc]);
 
   function openInquiry(product: StorefrontProduct) {
     setModalProduct(null);
@@ -1028,7 +1093,7 @@ export default function Aurora() {
                quieta y el resto funciona igual. */
             <PiezaQueLlega key={product.id} indice={indiceEnGrilla}>
             <Inclinable grados={5} style={{ borderRadius:18 }}>
-            <div onClick={() => openModal(product)} onMouseEnter={() => setHoveredId(product.id)} onMouseLeave={() => setHoveredId(null)}
+            <div onClick={e => abrirFicha(product, e)} onMouseEnter={() => setHoveredId(product.id)} onMouseLeave={() => setHoveredId(null)}
               style={{ ...vidrio("oscuro"), borderRadius:18, overflow:"hidden", cursor:"pointer", position:"relative" }}>
               {(() => {
                 if (promo.primaryPromo) return <PromoTag tipo={promo.primaryPromo.type} label={describePromo(promo.primaryPromo).headline} size="sm" />;
@@ -1036,7 +1101,10 @@ export default function Aurora() {
                 if (!hasOffer) return null;
                 return <OfferBadge badge={product.offerBadge} pct={discountPercent(product.price, product.comparePrice)} size="sm" />;
               })()}
-              <div style={{ position:"relative", aspectRatio:"3/4", overflow:"hidden", background:S }}>
+              {/* `data-foto` marca de dónde sale el vuelo. Va en la foto y no en
+                  la tarjeta entera: es la foto la que crece, y tiene que salir
+                  del rectángulo exacto donde ya se estaba viendo. */}
+              <div data-foto style={{ position:"relative", aspectRatio:"3/4", overflow:"hidden", background:S }}>
                 {product.images[0] && <FadeImage src={product.images[0]} alt={product.name} fill sizes="(max-width: 768px) 50vw, 25vw" style={{ objectFit:"cover", transition:"transform 0.6s cubic-bezier(.2,.8,.2,1)", transform: hoveredId===product.id ? "scale(1.06)" : "scale(1)" }} onError={e => { e.currentTarget.style.opacity="0"; }}/>}
                 {(() => {
                   const isSoldOut = product.variants.length > 0 && product.variants.reduce((s, v) => s + (v.stock || 0), 0) === 0;
@@ -1564,17 +1632,23 @@ export default function Aurora() {
 
       {/* ── MODAL PRODUCTO ─────────────────────────────────── */}
       {modalProduct && (
-        <div style={{ position:"fixed", inset:0, zIndex: isPreview ? 20000 : 600, display:"flex", alignItems:"center", justifyContent:"center" }} onClick={() => { setModalProduct(null); setLightboxSrc(null); }}>
-          <div style={{ position:"absolute", inset:0, background:"rgba(10,10,10,0.88)", backdropFilter:"blur(8px)" }}/>
-          <div style={{ position:"relative", background:S, maxWidth:960, width:"calc(100% - 32px)", maxHeight: isPreview ? "100%" : "92vh", overflow:"hidden", display:"flex", flexDirection:"column" }} onClick={e => e.stopPropagation()}>
-            <button onClick={() => { setModalProduct(null); setLightboxSrc(null); }} aria-label="Cerrar" style={{ position:"absolute", top:8, right:8, zIndex:10, background:"rgba(10,10,10,0.65)", border:"none", color:T, width:36, height:36, cursor:"pointer", fontSize:20, display:"flex", alignItems:"center", justifyContent:"center", backdropFilter:"blur(4px)" }}>×</button>
+        <div style={{ position:"fixed", inset:0, zIndex: isPreview ? 20000 : 600, display:"flex", alignItems:"center", justifyContent:"center" }} onClick={cerrarFicha}>
+          {/* El fondo entra con la ficha, no de golpe: si aparece negro entero en
+              el primer cuadro, tapa la tarjeta justo cuando la foto sale de ella
+              y el pase deja de leerse. */}
+          <div style={{ position:"absolute", inset:0, background:"rgba(10,10,10,0.88)", backdropFilter:"blur(8px)", opacity: panelListo ? 1 : 0, transition:`opacity ${MS_IDA}ms ease` }}/>
+          <div ref={fichaRef} style={{ position:"relative", background:S, borderRadius:18, maxWidth:960, width:"calc(100% - 32px)", maxHeight: isPreview ? "100%" : "92vh", overflow:"hidden", display:"flex", flexDirection:"column", boxShadow:sombra("oscuro",3), willChange:"transform" }} onClick={e => e.stopPropagation()}>
+            <button onClick={cerrarFicha} aria-label="Cerrar" style={{ position:"absolute", top:8, right:8, zIndex:10, background:"rgba(10,10,10,0.65)", border:"none", color:T, width:36, height:36, cursor:"pointer", fontSize:20, display:"flex", alignItems:"center", justifyContent:"center", backdropFilter:"blur(4px)", borderRadius:999, opacity: panelListo ? 1 : 0, transition:"opacity .3s ease" }}>×</button>
             {/* El ref lo manda arriba `openModal` al abrir otra ficha: los
                 "productos similares" están al final, así que el que toca uno está
                 siempre abajo de todo y la ficha nueva abría por el pie. */}
             <div ref={modalScrollRef} style={{ overflow:"auto", flex:1, minHeight:0, display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr" }}>
             <div>
-              {/* Imagen principal con flechas */}
-              <div style={{ position:"relative", width:"100%", aspectRatio:"3/4" }} {...imgSwipe}>
+              {/* Imagen principal con flechas.
+                  Es el ancla del vuelo: la misma proporción 3/4 que la foto de
+                  la tarjeta, así la escala es una sola y la imagen no se estira
+                  en el camino. */}
+              <div ref={fotoFichaRef} style={{ position:"relative", width:"100%", aspectRatio:"3/4" }} {...imgSwipe}>
                 {modalProduct.images[modalImg] && (
                   <FadeImage src={modalProduct.images[modalImg]} alt="" fill sizes="(max-width: 768px) 100vw, 480px" style={{ objectFit:"cover", cursor:"zoom-in" }}
                     onError={e => { e.currentTarget.style.opacity="0"; }}
