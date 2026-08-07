@@ -10,6 +10,8 @@ import { parseColor, toHex, contrastRatio, nearestLegible, MIN_LEGIBLE, MIN_LEGI
 import { parseBg, serializeBg, extremo, extremosDe, DIR_LABELS, type SectionBg, type BgDir, type BgHacia } from "@/lib/section-bg";
 import { TEMPLATE_CATEGORIES, type TemplateInfo } from "@/lib/templateRegistry";
 import { UnsavedChangesGuard } from "@/components/UnsavedChangesGuard";
+import TourGuide from "@/components/TourGuide";
+import { GUION_PREVIEW, GUION_EDITOR, TOUR_PREVIEW_KEY, TOUR_EDITOR_KEY } from "@/components/tours";
 
 /* ── Types ─────────────────────────────────────────────────── */
 type Mode = "gallery" | "preview" | "editing";
@@ -2116,6 +2118,29 @@ function FloatingEditor({ template }: { template: TemplateId }) {
 }
 
 /* ── Main page ─────────────────────────────────────────────── */
+/* ── Botón de ayuda de esta pantalla ─────────────────────────
+   Vuelve a abrir la guía del paso en el que estás. Vive acá y no en la barra
+   del panel por dos razones: en Diseño esa barra está oculta, y cuál es la
+   guía que hace falta depende de si estás mirando el diseño o editándolo. */
+function BotonAyuda({ onClick, plano }: { onClick: () => void; plano?: boolean }) {
+  const fondo = plano ? "none" : "white";
+  return (
+    <button onClick={onClick} title="Ver la guía de esta pantalla" aria-label="Ver la guía de esta pantalla"
+      style={{ display: "flex", alignItems: "center", justifyContent: "center",
+        width: 32, height: 32, borderRadius: plano ? 6 : 8, background: fondo,
+        border: plano ? "none" : "1px solid #e2e8f0", color: P.muted,
+        cursor: "pointer", flexShrink: 0, transition: "background 0.12s, color 0.12s" }}
+      onMouseEnter={e => { e.currentTarget.style.background = "#f1f5f9"; e.currentTarget.style.color = "#475569"; }}
+      onMouseLeave={e => { e.currentTarget.style.background = fondo; e.currentTarget.style.color = P.muted; }}>
+      <svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="10"/>
+        <path d="M9.09 9a3 3 0 0 1 5.82 1c0 2-3 3-3 3"/>
+        <line x1="12" y1="17" x2="12.01" y2="17"/>
+      </svg>
+    </button>
+  );
+}
+
 export default function ConfiguracionPage() {
   const [mode, setMode] = useState<Mode>("gallery");
   const [selected, setSelected] = useState<TemplateInfo | null>(null);
@@ -2149,6 +2174,23 @@ export default function ConfiguracionPage() {
   const [imageLoadingFields, setImageLoadingFields] = useState<Record<string, boolean>>({});
   const [storeTipoTienda, setStoreTipoTienda] = useState<string>("GENERAL");
   const [isMobile, setIsMobile] = useState(false);
+
+  /* Las dos guías de esta pantalla, con su propia marca de "ya la vi" cada una.
+     Van separadas porque explican cosas distintas y se llega a cada una en un
+     momento distinto: la de `preview` es una bienvenida al abrir un diseño, y
+     la de `editing` —la que hacía falta— cuenta que la vista previa se toca y
+     que hay ajustes que solo viven en el modal de la ⚙. */
+  const [tour, setTour] = useState<Mode | null>(null);
+
+  useEffect(() => {
+    if (mode === "gallery") return;
+    const clave = mode === "preview" ? TOUR_PREVIEW_KEY : TOUR_EDITOR_KEY;
+    if (localStorage.getItem(clave)) return;
+    // La espera le da tiempo a la plantilla a dibujarse: sin ella el tour mide
+    // una vista previa a medio montar y el resaltado sale del tamaño equivocado.
+    const t = setTimeout(() => setTour(mode), 800);
+    return () => clearTimeout(t);
+  }, [mode]);
 
   /* Cargar config guardada al montar */
   const allTemplates = CATEGORIES.flatMap(c => c.templates);
@@ -2580,7 +2622,7 @@ export default function ConfiguracionPage() {
   if (mode === "preview") {
     return (
       <DashboardLayout fullHeight>
-        <div style={{ display: "flex", height: "100%", overflow: "hidden",
+        <div data-tour-scope="diseno-preview" style={{ display: "flex", height: "100%", overflow: "hidden",
           flexDirection: "column", background: "#0f172a" }}>
 
           {/* Barra paso 2 */}
@@ -2591,7 +2633,7 @@ export default function ConfiguracionPage() {
             position: "relative", zIndex: 50,
           }}>
             {/* Izquierda */}
-            <button onClick={handleBackToGallery}
+            <button onClick={handleBackToGallery} data-tour="pv-volver"
               style={{ display: "flex", alignItems: "center", gap: 5, padding: "6px 12px",
                 border: "1px solid #e2e8f0", borderRadius: 8, background: "white",
                 color: P.muted, fontSize: 12, fontWeight: 600, cursor: "pointer",
@@ -2618,7 +2660,8 @@ export default function ConfiguracionPage() {
             </div>
 
             {/* Derecha */}
-            <button onClick={handleUseTemplate}
+            <BotonAyuda onClick={() => setTour("preview")} />
+            <button onClick={handleUseTemplate} data-tour="pv-usar"
               style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 20px",
                 border: "none", borderRadius: 8, background: "#6366f1", color: "white",
                 fontSize: 13, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0,
@@ -2631,7 +2674,7 @@ export default function ConfiguracionPage() {
           </div>
 
           <div style={{ flex: 1, display: "flex", alignItems: "stretch", padding: "12px 20px 20px", minHeight: 0 }}>
-            <div style={{ flex: 1, borderRadius: 10, overflow: "hidden",
+            <div data-tour="pv-lienzo" style={{ flex: 1, borderRadius: 10, overflow: "hidden",
               boxShadow: "0 8px 40px rgba(0,0,0,0.5)", display: "flex", flexDirection: "column",
               transform: "translateZ(0)" }}>
               <StoreConfigContext.Provider value={{ ...config, previewFill: true, templateSaved: savedTemplateId === selected?.id, showPushBell: isPremium, onPreviewBellClick: handlePreviewBellClick }}>
@@ -2641,6 +2684,21 @@ export default function ConfiguracionPage() {
               </StoreConfigContext.Provider>
             </div>
           </div>
+
+          {tour === "preview" && (
+            <TourGuide
+              guion={GUION_PREVIEW}
+              ambito="diseno-preview"
+              storageKey={TOUR_PREVIEW_KEY}
+              orden="guion"
+              respaldo={{
+                title: "Estás viendo un diseño",
+                body: "Mirá cómo le queda a tu tienda. Si te gusta, el botón de arriba a la derecha te lleva a editarlo; si no, volvé a la galería y probá otro.",
+              }}
+              onDone={() => setTour(null)}
+              storeType={storeTipoTienda}
+            />
+          )}
         </div>
       </DashboardLayout>
     );
@@ -2649,7 +2707,7 @@ export default function ConfiguracionPage() {
   /* ── STEP 3: Editing ── */
   return (
     <DashboardLayout fullHeight hideHelp>
-      <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden", background: "#f1f5f9" }}>
+      <div data-tour-scope="diseno-editor" style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden", background: "#f1f5f9" }}>
 
         {/* Barra paso 3 */}
         <div style={{
@@ -2658,7 +2716,7 @@ export default function ConfiguracionPage() {
           height: 44, padding: "0 16px", flexShrink: 0, position: "relative", zIndex: 50,
         }}>
           {/* Izquierda */}
-          <button onClick={handleBackToGallery}
+          <button onClick={handleBackToGallery} data-tour="ed-cambiar"
             style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 10px",
               borderRadius: 6, background: "none", border: "none",
               color: P.muted, fontSize: 12, fontWeight: 500, cursor: "pointer",
@@ -2690,7 +2748,7 @@ export default function ConfiguracionPage() {
           <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
             {savedTemplateId && (
               <a href={`/tienda/${storeSlug ?? config.storeName.toLowerCase().replace(/\s+/g, "-")}`}
-                target="_blank" rel="noopener noreferrer"
+                target="_blank" rel="noopener noreferrer" data-tour="ed-ver"
                 title="Ver tienda en una pestaña nueva"
                 style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 10px",
                   borderRadius: 6, background: "none", border: "none",
@@ -2705,7 +2763,9 @@ export default function ConfiguracionPage() {
               </a>
             )}
 
-            <button onClick={() => setConfigModalOpen(true)} title="Configuración avanzada"
+            <BotonAyuda plano onClick={() => setTour("editing")} />
+
+            <button onClick={() => setConfigModalOpen(true)} title="Configuración avanzada" data-tour="ed-avanzada"
               style={{ display: "flex", alignItems: "center", justifyContent: "center",
                 width: 32, height: 32, borderRadius: 6, background: "none", border: "none",
                 color: P.muted, cursor: "pointer", transition: "background 0.12s, color 0.12s" }}
@@ -2725,7 +2785,7 @@ export default function ConfiguracionPage() {
                 ✕ {saveError}
               </span>
             ) : (
-              <button onClick={handleSave} disabled={saving}
+              <button onClick={handleSave} disabled={saving} data-tour="ed-guardar"
                 style={{ display: "flex", alignItems: "center", gap: 5, padding: "6px 16px",
                   border: "none", borderRadius: 6,
                   background: saved ? "#059669" : "#6366f1",
@@ -2767,7 +2827,7 @@ export default function ConfiguracionPage() {
           moveSection,
         }}>
           <div style={{ flex: 1, overflow: "hidden", position: "relative", padding: "12px 16px 0" }}>
-            <div style={{ height: "100%", borderRadius: "12px 12px 0 0", overflow: "hidden",
+            <div data-tour="ed-lienzo" style={{ height: "100%", borderRadius: "12px 12px 0 0", overflow: "hidden",
               boxShadow: "0 8px 40px rgba(0,0,0,0.2)", display: "flex", flexDirection: "column",
               transform: "translateZ(0)" }}>
               <StoreConfigContext.Provider value={{ ...config, previewFill: true, templateSaved: savedTemplateId === selected?.id, showPushBell: isPremium, onPreviewBellClick: handlePreviewBellClick }}>
@@ -2779,6 +2839,21 @@ export default function ConfiguracionPage() {
           </div>
           <FloatingEditor template={config.template} />
         </EditContext.Provider>
+
+        {tour === "editing" && (
+          <TourGuide
+            guion={GUION_EDITOR}
+            ambito="diseno-editor"
+            storageKey={TOUR_EDITOR_KEY}
+            orden="guion"
+            respaldo={{
+              title: "Estás editando tu tienda",
+              body: "Hacé clic en cualquier texto o imagen de la vista previa para cambiarlo. Nada se publica hasta que aprietes \"Guardar cambios\".",
+            }}
+            onDone={() => setTour(null)}
+            storeType={storeTipoTienda}
+          />
+        )}
 
       </div>
 

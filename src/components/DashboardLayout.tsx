@@ -16,7 +16,8 @@ import HelpButton from "@/components/HelpButton";
 import FavoritesDrawer from "@/components/FavoritesDrawer";
 import AsistenteIA from "@/components/dashboard/AsistenteIA";
 import CelebrationManager from "@/components/dashboard/CelebrationManager";
-import TourGuide, { TOUR_STORAGE_KEY } from "@/components/TourGuide";
+import TourGuide from "@/components/TourGuide";
+import { GUION_PANEL, TOUR_PANEL_KEY } from "@/components/tours";
 import TermsUpdateBanner from "@/components/TermsUpdateBanner";
 
 const LEADS_STORE_TYPES = ["AUTOS"];
@@ -86,8 +87,8 @@ const NAV_GROUPS: NavGroup[] = [
   {
     label: "Cuenta",
     items: [
-      { href: "/dashboard/metricas",  label: "Estadísticas", icon: BarChart2 },
-      { href: "/dashboard/mi-plan",   label: "Mi plan",      icon: CreditCard },
+      { href: "/dashboard/metricas",  label: "Estadísticas", icon: BarChart2,  tourId: "metricas" },
+      { href: "/dashboard/mi-plan",   label: "Mi plan",      icon: CreditCard, tourId: "mi-plan" },
     ],
   },
 ];
@@ -169,14 +170,19 @@ export default function DashboardLayout({
       .catch(() => {});
   }, []);
 
-  // Auto-start tour for first-time users on desktop — espera a que el tipo
-  // de tienda ya esté configurado, así no se superpone con ese modal.
+  // El tour de la primera vez espera a que el rubro esté elegido, así no se
+  // pisa con ese modal: `storeType` pasa de null a su valor cuando el usuario
+  // lo guarda (evento "store-type-changed") y recién ahí arranca. La espera le
+  // da lugar a que el modal termine de cerrarse.
+  //
+  // Sin distinguir el ancho: antes pedía >= 1024 y en teléfono no aparecía
+  // nunca, ni siquiera al elegir el rubro. Ahora abajo de 1024 el tour abre el
+  // menú lateral y resalta los links de verdad, así que corre igual en los tres.
   useEffect(() => {
     if (!storeType) return;
-    if (window.innerWidth >= 1024 && !localStorage.getItem(TOUR_STORAGE_KEY)) {
-      const t = setTimeout(() => setShowTour(true), 1200);
-      return () => clearTimeout(t);
-    }
+    if (localStorage.getItem(TOUR_PANEL_KEY)) return;
+    const t = setTimeout(() => setShowTour(true), 1400);
+    return () => clearTimeout(t);
   }, [storeType]);
 
 
@@ -345,7 +351,7 @@ export default function DashboardLayout({
   }
 
   function renderMobileLink(item: NavItem, onNavigate: () => void) {
-    const { href, icon: Icon, exact } = item;
+    const { href, icon: Icon, exact, tourId } = item;
     const label = resolveLabel(item);
     const active = isActive(href, exact);
     const { has, count, color } = getBadge(href);
@@ -354,6 +360,7 @@ export default function DashboardLayout({
       <Link
         key={href}
         href={href}
+        {...(tourId ? { "data-tour": tourId } : {})}
         onClick={onNavigate}
         className={`flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-colors active:scale-[0.98] ${
           active ? "bg-indigo-50 text-indigo-700" : "text-gray-600 hover:bg-gray-50 active:bg-gray-100"
@@ -380,7 +387,7 @@ export default function DashboardLayout({
     <div data-panel-root className="h-screen bg-gray-50 flex overflow-hidden text-gray-900 [color-scheme:light]">
 
       {/* ── DESKTOP Sidebar (lg+) ─────────────────────────────────────────── */}
-      <aside className={`group hidden lg:flex fixed left-0 top-0 h-full bg-white border-r border-gray-100 flex-col z-[60] transition-[width] duration-200 overflow-hidden ${showTour ? "w-60 shadow-xl" : "w-14 hover:w-60 hover:shadow-xl"}`}>
+      <aside data-tour-scope="panel-desktop" className={`group hidden lg:flex fixed left-0 top-0 h-full bg-white border-r border-gray-100 flex-col z-[60] transition-[width] duration-200 overflow-hidden ${showTour ? "w-60 shadow-xl" : "w-14 hover:w-60 hover:shadow-xl"}`}>
         <Link href="/" className="flex items-center gap-3 h-[61px] px-[15px] border-b border-gray-100 shrink-0 hover:bg-gray-50 transition-colors">
           <AppLogo size={52} className="shrink-0" />
           <span className={`font-bold text-gray-900 whitespace-nowrap overflow-hidden transition-[max-width] duration-200 ${showTour ? "max-w-xs" : "max-w-0 group-hover:max-w-xs"}`}>
@@ -475,7 +482,13 @@ export default function DashboardLayout({
 
         <div className="flex items-center gap-1">
           <FavoritesDrawer buttonClassName="flex items-center justify-center w-9 h-9 rounded-xl hover:bg-gray-100 transition-colors text-gray-500" />
-          <HelpButton onStartTour={() => setShowTour(true)} />
+          {/* En Diseño la pantalla trae su propia ayuda, con el tour del editor:
+              dos `?` pegados abriendo guías distintas confunden más de lo que
+              ayudan. En escritorio ya estaba escondido más abajo; acá faltaba
+              el mismo corte para mobile. */}
+          {!pathname.startsWith("/dashboard/configuracion") && (
+            <HelpButton onStartTour={() => setShowTour(true)} />
+          )}
           {userId && <NotificationBell userId={userId} />}
         </div>
       </header>
@@ -483,11 +496,15 @@ export default function DashboardLayout({
       {/* ── MOBILE Drawer (< lg) ─────────────────────────────────────────── */}
       {mobileOpen && (
         <div className="lg:hidden fixed inset-0 z-[70]">
+          {/* Durante el tour el velo lo pone el propio resaltado (el calado que
+              deja el ítem a pleno color): dos capas oscuras encimadas dejaban
+              todo casi negro. */}
           <div
-            className="absolute inset-0 bg-black/40 backdrop-blur-[2px]"
+            className={`absolute inset-0 ${showTour ? "" : "bg-black/40 backdrop-blur-[2px]"}`}
             onClick={() => setMobileOpen(false)}
           />
           <div
+            data-tour-scope="panel-mobile"
             className="relative w-72 max-w-[85vw] h-full bg-white flex flex-col shadow-2xl animate-slide-in-left"
             onTouchStart={onTouchStart}
             onTouchEnd={onTouchEnd}
@@ -572,7 +589,20 @@ export default function DashboardLayout({
       )}
 
       {/* ── Guided Tour ──────────────────────────────────────────────────── */}
-      {showTour && <TourGuide onDone={() => setShowTour(false)} storeType={storeType} />}
+      {showTour && (
+        <TourGuide
+          guion={GUION_PANEL}
+          ambito={{ desktop: "panel-desktop", mobile: "panel-mobile" }}
+          storageKey={TOUR_PANEL_KEY}
+          respaldo={{
+            title: "Bienvenido a tu panel",
+            body: "Desde el menú lateral llegás a tus productos, pedidos, cupones y al diseño de tu tienda. Abrilo cuando quieras y explorá con calma.",
+          }}
+          onDone={() => setShowTour(false)}
+          storeType={storeType}
+          onMenu={setMobileOpen}
+        />
+      )}
 
       {/* ── Main content ─────────────────────────────────────────────────── */}
       <main className={`lg:ml-14 flex-1 flex flex-col bg-gray-50 pt-14 lg:pt-0 overflow-x-hidden ${fullHeight ? "overflow-hidden h-full" : "overflow-y-auto"}`}>

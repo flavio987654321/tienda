@@ -1,129 +1,110 @@
 "use client";
 
-import { useEffect, useState, useRef, useMemo, useSyncExternalStore } from "react";
-import { X, ChevronRight, ChevronLeft } from "lucide-react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { X, ChevronRight, ChevronLeft, Compass } from "lucide-react";
+import type { Guion, Texto } from "@/components/tours";
 
-type Step = {
-  tourId: string;
-  title: string;
-  body: string;
-};
+/* Motor de los tours guiados. No sabe de qué pantalla habla: recibe un guion
+   —los textos, indexados por `data-tour`— y el nombre de un ámbito, y de ahí
+   en más trabaja mirando el DOM. Los pasos son los elementos `[data-tour]` que
+   estén dentro de `[data-tour-scope="<ámbito>"]`, así que un botón que no está
+   en pantalla no genera un paso que señale al vacío.
 
-const STEPS_DEFAULT: Step[] = [
-  {
-    tourId: "inicio",
-    title: "Panel principal",
-    body: "Acá ves el resumen de tu tienda: ventas, pedidos, afiliados y la guía de configuración inicial.",
-  },
-  {
-    tourId: "productos",
-    title: "Tus productos",
-    body: "Agregá, editá o importá productos desde un CSV. Con al menos uno ya podés compartir tu tienda.",
-  },
-  {
-    tourId: "pedidos",
-    title: "Pedidos",
-    body: "Cuando un cliente compre, el pedido aparece acá. Confirmá, marcá como enviado y entregado.",
-  },
-  {
-    tourId: "cupones",
-    title: "Cupones de descuento",
-    body: "Creá códigos de descuento para tus clientes: monto fijo o porcentaje, límite de usos y fecha de vencimiento.",
-  },
-  {
-    tourId: "carritos-abandonados",
-    title: "Carritos abandonados",
-    body: "Cuando alguien agrega productos pero no termina la compra, aparece acá. Podés enviarle un recordatorio automático por email.",
-  },
-  {
-    tourId: "pagos",
-    title: "Pagos y envíos",
-    body: "Configurá cómo cobrar (CBU, alias o efectivo) y definí tus opciones de envío — precio fijo o 'a coordinar'. Los clientes ven todo esto al finalizar su compra.",
-  },
-  {
-    tourId: "afiliados",
-    title: "Afiliados",
-    body: "Invitá vendedoras que promocionen tu tienda y cobrá por cada venta que generen. Requiere tener MercadoPago conectado — las comisiones se acreditan automáticamente.",
-  },
-  {
-    tourId: "notificaciones",
-    title: "Notificaciones push",
-    body: "Enviá mensajes directos a visitantes que activaron notificaciones en tu tienda. Disponible en plan Premium.",
-  },
-  {
-    tourId: "diseno",
-    title: "Diseño de tu tienda",
-    body: "Elegí una plantilla y personalizá colores, imágenes y textos para que tu tienda sea única.",
-  },
-  {
-    tourId: "configuracion",
-    title: "Configuración",
-    body: "Subí tu logo, configurá el subdominio y conectá tu dominio propio si tenés plan Premium.",
-  },
-];
+   Los guiones viven en `@/components/tours`. */
 
-const STEPS_AUTOS: Step[] = [
-  {
-    tourId: "inicio",
-    title: "Panel principal",
-    body: "Acá ves el resumen de tu concesionaria: consultas recibidas, vehículos disponibles y la guía de configuración inicial.",
-  },
-  {
-    tourId: "productos",
-    title: "Tus vehículos",
-    body: "Cargá autos, motos o camionetas con fotos, precio, ficha técnica y estado (Disponible / Reservado / Vendido).",
-  },
-  {
-    tourId: "consultas",
-    title: "Consultas de clientes",
-    body: "Cuando alguien complete el formulario de contacto, la consulta aparece acá. Podés responder por WhatsApp desde el panel.",
-  },
-  {
-    tourId: "pagos",
-    title: "Legal y políticas",
-    body: "Cargá tus términos y condiciones y política de devoluciones. Tus clientes pueden acceder desde el pie de página de tu sitio.",
-  },
-  {
-    tourId: "afiliados",
-    title: "Afiliados",
-    body: "Invitá vendedores externos que traigan clientes. Vos definís la comisión por venta concretada. La comisión se acredita automáticamente cuando confirmás la consulta en el panel.",
-  },
-  {
-    tourId: "notificaciones",
-    title: "Notificaciones push",
-    body: "Enviá novedades o alertas de nuevos vehículos a personas que activaron notificaciones en tu sitio. Disponible en plan Premium.",
-  },
-  {
-    tourId: "diseno",
-    title: "Diseño de tu sitio",
-    body: "Elegí plantilla y personalizá colores, banners y textos para mostrar tu flota de manera profesional.",
-  },
-  {
-    tourId: "configuracion",
-    title: "Configuración",
-    body: "Subí tu logo, configurá el subdominio y conectá tu dominio propio si tenés plan Premium.",
-  },
-];
+const ANCHO_MAX = 304;  // ancho del globo cuando hay lugar
+const AIRE = 14;        // separación entre el elemento resaltado y el globo
+const BORDE = 12;       // margen mínimo contra el borde de la ventana
+const GRACIA = 500;     // ms de espera antes de dar por perdida la pantalla
 
-function getSteps(storeType?: string | null): Step[] {
-  return storeType === "AUTOS" ? STEPS_AUTOS : STEPS_DEFAULT;
+function acotar(v: number, min: number, max: number) {
+  return Math.max(min, Math.min(v, max));
 }
 
-export const TOUR_STORAGE_KEY = "tiendaapps_tour_done";
+/* Dos rects se consideran iguales por debajo del medio píxel. El seguimiento
+   corre en cada cuadro para pegarse a la animación del menú; sin esta
+   comparación cada cuadro era un `setState` con un objeto nuevo, o sea un
+   re-render de todo el tour a 60 por segundo. */
+function mismoRect(a: DOMRect | null, b: DOMRect | null) {
+  if (!a || !b) return a === b;
+  return (
+    Math.abs(a.top - b.top) < 0.5 && Math.abs(a.left - b.left) < 0.5 &&
+    Math.abs(a.width - b.width) < 0.5 && Math.abs(a.height - b.height) < 0.5
+  );
+}
 
-export default function TourGuide({ onDone, storeType }: { onDone: () => void; storeType?: string | null }) {
-  const STEPS = useMemo(() => getSteps(storeType), [storeType]);
-  const [step, setStep] = useState(0);
+type Lado = "izq" | "arriba" | "abajo" | null;
+
+/* Dónde entra el globo, en orden de preferencia: al costado del elemento,
+   abajo, arriba, y si no entra en ningún lado, apoyado contra el pie de la
+   ventana. Es una sola regla para todos los anchos y sale distinta en cada uno
+   sin tener que preguntarlo: al costado del menú de escritorio sobra lugar, en
+   360 no y cae debajo del ítem, y contra un botón pegado al borde derecho
+   —como "Usar este diseño"— también cae debajo, que es donde tiene que ir. */
+function ubicar(r: DOMRect, ancho: number, alto: number, vw: number, vh: number) {
+  const izq = acotar(r.left, BORDE, Math.max(BORDE, vw - ancho - BORDE));
+
+  if (r.right + AIRE + ancho <= vw - BORDE) {
+    return {
+      left: r.right + AIRE,
+      top: acotar(r.top + r.height / 2 - alto / 2, BORDE, Math.max(BORDE, vh - alto - BORDE)),
+      lado: "izq" as Lado,
+    };
+  }
+  if (r.bottom + AIRE + alto <= vh - BORDE) {
+    return { left: izq, top: r.bottom + AIRE, lado: "arriba" as Lado };
+  }
+  if (r.top - AIRE - alto >= BORDE) {
+    return { left: izq, top: r.top - AIRE - alto, lado: "abajo" as Lado };
+  }
+  return { left: (vw - ancho) / 2, top: Math.max(BORDE, vh - alto - 16), lado: null as Lado };
+}
+
+export default function TourGuide({
+  guion,
+  ambito: ambitoProp,
+  storageKey,
+  orden = "dom",
+  respaldo,
+  onDone,
+  storeType,
+  onMenu,
+}: {
+  /** Textos de cada paso, indexados por el `data-tour` del elemento. */
+  guion: Guion;
+  /** Valor de `data-tour-scope` donde buscar. Con dos, elige según el ancho. */
+  ambito: string | { desktop: string; mobile: string };
+  /** Clave de localStorage donde queda marcado que este tour ya se vio. */
+  storageKey: string;
+  /** `dom`: los pasos van en el orden en que están en pantalla — sirve para el
+      menú, que así se sigue solo si mañana se reordena. `guion`: en el orden
+      del guion, para pantallas donde lo que hay que mirar primero no es lo
+      primero del DOM. */
+  orden?: "dom" | "guion";
+  /** Qué decir si no se encontró ni un elemento del ámbito. */
+  respaldo?: Texto;
+  onDone: () => void;
+  storeType?: string | null;
+  /** Abrir y cerrar el menú lateral mobile: abajo de 1024 el tour del panel lo
+      necesita desplegado para poder resaltar los links de verdad. */
+  onMenu?: (abierto: boolean) => void;
+}) {
+  const [paso, setPaso] = useState(0);
+  const [ids, setIds] = useState<string[]>([]);
   const [rect, setRect] = useState<DOMRect | null>(null);
-  const frameRef = useRef<number | null>(null);
+  const [alto, setAlto] = useState(230);
+  const [seRindio, setSeRindio] = useState(false);
 
-  /* Se pregunta el ancho en vez de guardarlo al montar.
-     Era `useState(false)` más un efecto que lo corregía: un render entero de más,
-     y encima el valor quedaba clavado en el del momento de abrir el tour — si
-     girabas el teléfono o achicabas la ventana, el tour seguía dibujándose para el
-     tamaño anterior. Así se entera de los dos. El `false` del final es lo que
-     contesta el servidor, donde no hay `window`. */
-  const isMobile = useSyncExternalStore(
+  const globoRef = useRef<HTMLDivElement>(null);
+  const cuadroRef = useRef<number | null>(null);
+  const idsRef = useRef<string[]>([]);
+  const rectRef = useRef<DOMRect | null>(null);
+  const altoRef = useRef(230);
+
+  /* Se pregunta el ancho en vez de guardarlo al montar, así el tour se entera
+     de que giraste el teléfono o achicaste la ventana. El `false` del final es
+     lo que contesta el servidor, donde no hay `window`. */
+  const esMobile = useSyncExternalStore(
     (avisar) => {
       window.addEventListener("resize", avisar);
       return () => window.removeEventListener("resize", avisar);
@@ -132,156 +113,278 @@ export default function TourGuide({ onDone, storeType }: { onDone: () => void; s
     () => false,
   );
 
-  // Track element position via rAF so tooltip follows sidebar animations (desktop only)
+  const ambito = typeof ambitoProp === "string"
+    ? ambitoProp
+    : esMobile ? ambitoProp.mobile : ambitoProp.desktop;
+
+  // Abajo de 1024 el menú del panel vive detrás del botón hamburguesa: el tour
+  // lo abre mientras dura y lo vuelve a cerrar al salir.
   useEffect(() => {
-    if (isMobile) return;
-    function track() {
-      const el = document.querySelector(`[data-tour="${STEPS[step].tourId}"]`);
-      if (el) setRect(el.getBoundingClientRect());
-      frameRef.current = requestAnimationFrame(track);
+    onMenu?.(esMobile);
+    return () => onMenu?.(false);
+  }, [esMobile, onMenu]);
+
+  /* Un solo lazo por cuadro que hace las tres cosas: leer qué pasos existen,
+     medir el elemento del paso actual y medir el alto real del globo. Va por
+     rAF y no por eventos porque tiene que seguir animaciones —el menú de
+     escritorio que se ensancha, el cajón mobile que entra deslizándose— que no
+     avisan cuadro a cuadro. Todo se escribe con `setState` solo si cambió. */
+  useEffect(() => {
+    function medir() {
+      cuadroRef.current = requestAnimationFrame(medir);
+
+      const raiz = document.querySelector<HTMLElement>(`[data-tour-scope="${ambito}"]`);
+      const presentes = raiz
+        ? Array.from(raiz.querySelectorAll<HTMLElement>("[data-tour]"))
+            .map((el) => el.dataset.tour ?? "")
+            .filter((id, i, todos) => id in guion && todos.indexOf(id) === i)
+        : [];
+      const leidos = orden === "guion"
+        ? Object.keys(guion).filter((id) => presentes.includes(id))
+        : presentes;
+
+      if (leidos.join("|") !== idsRef.current.join("|")) {
+        idsRef.current = leidos;
+        setIds(leidos);
+      }
+
+      const id = leidos[Math.min(paso, leidos.length - 1)];
+      const el = raiz && id ? raiz.querySelector<HTMLElement>(`[data-tour="${id}"]`) : null;
+      /* Cuando no aparece se limpia. Antes era `if (el) setRect(...)`: un paso
+         sin elemento en pantalla dejaba el resaltado clavado en el anterior,
+         señalando una cosa mientras el globo hablaba de otra. */
+      const medido = el ? el.getBoundingClientRect() : null;
+      if (!mismoRect(medido, rectRef.current)) {
+        rectRef.current = medido;
+        setRect(medido);
+      }
+
+      const altoGlobo = globoRef.current?.offsetHeight ?? 0;
+      if (altoGlobo > 0 && Math.abs(altoGlobo - altoRef.current) > 0.5) {
+        altoRef.current = altoGlobo;
+        setAlto(altoGlobo);
+      }
     }
-    frameRef.current = requestAnimationFrame(track);
-    return () => { if (frameRef.current) cancelAnimationFrame(frameRef.current); };
-  }, [step, isMobile, STEPS]);
+    cuadroRef.current = requestAnimationFrame(medir);
+    return () => { if (cuadroRef.current) cancelAnimationFrame(cuadroRef.current); };
+  }, [ambito, paso, guion, orden]);
 
-  function next() {
-    if (step < STEPS.length - 1) setStep(step + 1);
-    else finish();
-  }
+  /* Red de contención: si pasado medio segundo no se encontró un solo elemento
+     del ámbito, el tour se muestra igual como tarjeta suelta. Es la falla del
+     primer ingreso: antes, si la pantalla no estaba lista, `return null` no
+     dibujaba nada, el usuario nunca llegaba a "Listo" y como el "ya lo vi" se
+     guarda recién ahí, el tour fantasma volvía a intentarlo en cada recarga. */
+  useEffect(() => {
+    if (ids.length > 0) return;
+    const t = setTimeout(() => setSeRindio(true), GRACIA);
+    return () => clearTimeout(t);
+  }, [ids.length]);
 
-  function prev() {
-    if (step > 0) setStep(step - 1);
-  }
+  // La pantalla se desplaza sola hasta el paso: si no, en ventanas bajas el
+  // resaltado quedaba fuera de la vista.
+  useEffect(() => {
+    const raiz = document.querySelector<HTMLElement>(`[data-tour-scope="${ambito}"]`);
+    const id = ids[paso];
+    if (!raiz || !id) return;
+    raiz.querySelector<HTMLElement>(`[data-tour="${id}"]`)
+      ?.scrollIntoView({ block: "center", behavior: "smooth" });
+  }, [paso, ids, ambito]);
 
-  function finish() {
-    localStorage.setItem(TOUR_STORAGE_KEY, "1");
+  const total = ids.length;
+
+  // Si quedan menos pasos que el índice actual (cambió el ámbito al pasar de
+  // escritorio a mobile, o desapareció un botón), se corrige durante el render
+  // en vez de con un efecto, para no encadenar un re-render de más.
+  if (total > 0 && paso > total - 1) setPaso(total - 1);
+
+  const terminar = useCallback(() => {
+    localStorage.setItem(storageKey, "1");
     onDone();
-  }
+  }, [onDone, storageKey]);
 
-  const current = STEPS[step];
+  const siguiente = useCallback(() => {
+    if (paso < total - 1) setPaso(paso + 1);
+    else terminar();
+  }, [paso, total, terminar]);
 
-  // Shared step controls rendered inline (not a nested component to avoid hooks rule)
-  const controls = (
+  const anterior = useCallback(() => setPaso((p) => Math.max(0, p - 1)), []);
+
+  // Escape para salir y flechas para moverse: el tour tapa la pantalla entera,
+  // hay que poder sacárselo de encima sin buscar la cruz.
+  useEffect(() => {
+    function alTeclado(e: KeyboardEvent) {
+      if (e.key === "Escape") terminar();
+      else if (e.key === "ArrowRight") siguiente();
+      else if (e.key === "ArrowLeft") anterior();
+      else return;
+      e.preventDefault();
+    }
+    window.addEventListener("keydown", alTeclado);
+    return () => window.removeEventListener("keydown", alTeclado);
+  }, [terminar, siguiente, anterior]);
+
+  if (total === 0 && !seRindio) return null;
+
+  const actual = total > 0 ? guion[ids[Math.min(paso, total - 1)]] : null;
+  const texto: Texto = actual
+    ? (storeType && actual.porTipo?.[storeType]) || { title: actual.title, body: actual.body }
+    : respaldo ?? {
+        title: "Bienvenido",
+        body: "Explorá la pantalla con calma. Si algo no se entiende, el botón de ayuda vuelve a abrir esta guía cuando quieras.",
+      };
+  const Icono = actual?.icon ?? Compass;
+  const ultimo = total === 0 || paso >= total - 1;
+
+  const contenido = (
     <>
-      <div className="flex items-center justify-between mb-2.5">
-        <span className="text-[11px] font-semibold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">
-          {step + 1} / {STEPS.length}
-        </span>
-        <button onClick={finish} className="text-gray-400 hover:text-gray-600 transition-colors">
+      <div className="flex items-start gap-3">
+        <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-indigo-50 shrink-0">
+          <Icono className="h-[18px] w-[18px] text-indigo-600" />
+        </div>
+        <div className="flex-1 min-w-0 pt-0.5">
+          <h3 id="tour-titulo" className="font-bold text-gray-900 text-[15px] leading-tight">
+            {texto.title}
+          </h3>
+          {total > 0 && (
+            <span className="text-[11px] font-medium text-gray-400">
+              Paso {paso + 1} de {total}
+            </span>
+          )}
+        </div>
+        <button
+          onClick={terminar}
+          aria-label="Cerrar la guía"
+          className="-mt-1 -mr-1 flex items-center justify-center w-7 h-7 rounded-lg text-gray-300 hover:text-gray-600 hover:bg-gray-50 transition-colors shrink-0"
+        >
           <X className="h-4 w-4" />
         </button>
       </div>
-      <h3 className="font-bold text-gray-900 text-sm mb-1">{current.title}</h3>
-      <p className="text-xs text-gray-500 leading-relaxed">{current.body}</p>
-      <div className="flex items-center gap-1 mt-3 mb-3">
-        {STEPS.map((_, i) => (
-          <button
-            key={i}
-            onClick={() => setStep(i)}
-            className={`h-1.5 rounded-full transition-all duration-200 ${
-              i === step ? "bg-indigo-500 w-4" : "bg-gray-200 w-1.5 hover:bg-gray-300"
-            }`}
-          />
-        ))}
-      </div>
-      <div className="flex items-center justify-between">
+
+      <p className="text-[13px] text-gray-500 leading-relaxed mt-2.5">{texto.body}</p>
+
+      {total > 1 && (
+        <div className="flex items-center gap-1 mt-3.5" role="tablist" aria-label="Pasos de la guía">
+          {ids.map((id, i) => (
+            <button
+              key={id}
+              role="tab"
+              aria-selected={i === paso}
+              aria-label={`Paso ${i + 1}: ${guion[id].title}`}
+              onClick={() => setPaso(i)}
+              className={`h-1.5 rounded-full transition-all duration-200 ${
+                i === paso ? "bg-indigo-500 w-5" : i < paso ? "bg-indigo-200 w-1.5" : "bg-gray-200 w-1.5 hover:bg-gray-300"
+              }`}
+            />
+          ))}
+        </div>
+      )}
+
+      <div className="flex items-center justify-between gap-2 mt-4">
         <button
-          onClick={prev}
-          disabled={step === 0}
-          className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600 disabled:opacity-0 transition-all"
+          onClick={anterior}
+          disabled={paso === 0}
+          className="flex items-center gap-1 text-[13px] text-gray-400 hover:text-gray-600 disabled:invisible transition-colors py-1.5 pr-2"
         >
-          <ChevronLeft className="h-3.5 w-3.5" />
+          <ChevronLeft className="h-4 w-4" />
           Anterior
         </button>
-        <button
-          onClick={next}
-          className="flex items-center gap-1 text-xs font-semibold text-white bg-indigo-500 hover:bg-indigo-600 px-3 py-1.5 rounded-lg transition-colors"
-        >
-          {step === STEPS.length - 1 ? "Finalizar" : "Siguiente"}
-          {step < STEPS.length - 1 && <ChevronRight className="h-3.5 w-3.5" />}
-        </button>
+        <div className="flex items-center gap-1">
+          {!ultimo && (
+            <button
+              onClick={terminar}
+              className="text-[13px] text-gray-400 hover:text-gray-600 transition-colors px-2 py-1.5"
+            >
+              Saltar
+            </button>
+          )}
+          <button
+            onClick={siguiente}
+            className="flex items-center gap-1 text-[13px] font-semibold text-white bg-indigo-500 hover:bg-indigo-600 active:bg-indigo-700 px-3.5 py-2 rounded-xl shadow-sm shadow-indigo-500/30 transition-colors"
+          >
+            {ultimo ? "Listo" : "Siguiente"}
+            {!ultimo && <ChevronRight className="h-4 w-4" />}
+          </button>
+        </div>
       </div>
     </>
   );
 
-  // Mobile: centered bottom sheet (sidebar elements are hidden on mobile)
-  if (isMobile) {
+  const claseGlobo =
+    "bg-white rounded-2xl shadow-2xl shadow-slate-900/20 ring-1 ring-black/5 p-4 animate-fade-slide";
+
+  /* Sin elemento que señalar, el tour se planta en el medio con su propio
+     fondo oscuro. Nunca queda invisible. */
+  if (!rect) {
     return (
       <>
-        <div className="fixed inset-0 bg-black/50 z-[9998]" onClick={finish} />
-        <div className="fixed bottom-0 left-0 right-0 z-[9999] p-4 pb-6">
+        <div className="fixed inset-0 bg-slate-900/55 z-[9997]" onClick={terminar} />
+        <div className="fixed inset-0 z-[9998] flex items-center justify-center p-4 pointer-events-none">
           <div
-            className="bg-white rounded-2xl shadow-2xl border border-gray-100 p-4 w-full max-w-sm mx-auto"
-            onClick={(e) => e.stopPropagation()}
+            ref={globoRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="tour-titulo"
+            className={`${claseGlobo} w-full max-w-[304px] pointer-events-auto`}
           >
-            {controls}
+            {contenido}
           </div>
         </div>
       </>
     );
   }
 
-  // Desktop: anchored tooltip next to the highlighted sidebar element
-  if (!rect) return null;
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const ancho = Math.min(ANCHO_MAX, vw - BORDE * 2);
+  const { left, top, lado } = ubicar(rect, ancho, alto, vw, vh);
 
-  const TOOLTIP_W = 272;
-  const OFFSET = 14;
-  const tooltipLeft = rect.right + OFFSET;
-  const tooltipTopRaw = rect.top + rect.height / 2;
-  const tooltipTop = Math.max(12, Math.min(tooltipTopRaw, window.innerHeight - 220));
+  /* La flecha apunta al elemento, no al medio del globo: en un ítem alto o
+     pegado al borde de la ventana el globo se corre y una flecha fija al 50%
+     terminaba señalando al aire. */
+  const flecha: Record<string, React.CSSProperties> = {
+    izq:    { borderStyle: "solid", left: -6,   top:  acotar(rect.top + rect.height / 2 - top, 14, alto - 14),   borderLeftWidth: 1,  borderBottomWidth: 1 },
+    arriba: { borderStyle: "solid", top: -6,    left: acotar(rect.left + rect.width / 2 - left, 14, ancho - 14), borderLeftWidth: 1,  borderTopWidth: 1 },
+    abajo:  { borderStyle: "solid", bottom: -6, left: acotar(rect.left + rect.width / 2 - left, 14, ancho - 14), borderRightWidth: 1, borderBottomWidth: 1 },
+  };
 
   return (
     <>
-      {/* Backdrop */}
-      <div className="fixed inset-0 bg-black/50 z-[9998]" onClick={finish} />
+      {/* Atrapa el clic para salir. Transparente: la penumbra la pone el
+          recorte del resaltado, no una capa aparte. */}
+      <div className="fixed inset-0 z-[9997]" onClick={terminar} />
 
-      {/* Highlight ring */}
+      {/* El resaltado y la penumbra son la misma sombra: 3px de anillo índigo y
+          después un desborde enorme que oscurece el resto de la pantalla. Deja
+          el elemento calado y a pleno color en vez de gris abajo de un velo,
+          que era lo que lo hacía ver apagado. */}
       <div
-        className="fixed z-[9999] rounded-lg pointer-events-none transition-all duration-150"
+        aria-hidden
+        className="fixed z-[9998] rounded-xl pointer-events-none transition-[top,left,width,height] duration-150 ease-out"
         style={{
-          top: rect.top - 3,
-          left: rect.left - 3,
-          width: rect.width + 6,
-          height: rect.height + 6,
-          boxShadow: "0 0 0 3px #6366f1, 0 0 0 6px rgba(99,102,241,0.25)",
+          top: rect.top - 4,
+          left: rect.left - 4,
+          width: rect.width + 8,
+          height: rect.height + 8,
+          boxShadow: "0 0 0 3px #6366f1, 0 0 0 7px rgba(99,102,241,0.22), 0 0 0 9999px rgba(15,23,42,0.6)",
         }}
       />
 
-      {/* Tooltip bubble */}
       <div
-        className="fixed z-[9999] bg-white rounded-2xl shadow-2xl border border-gray-100 p-4 transition-all duration-150"
-        style={{ width: TOOLTIP_W, left: tooltipLeft, top: tooltipTop, transform: "translateY(-50%)" }}
+        ref={globoRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="tour-titulo"
+        className={`fixed z-[9999] ${claseGlobo} transition-[top,left] duration-150 ease-out`}
+        style={{ width: ancho, left, top }}
       >
-        {/* Arrow */}
-        <div
-          className="absolute"
-          style={{
-            left: -8,
-            top: "50%",
-            transform: "translateY(-50%)",
-            width: 0,
-            height: 0,
-            borderTop: "8px solid transparent",
-            borderBottom: "8px solid transparent",
-            borderRight: "8px solid white",
-          }}
-        />
-        {/* Arrow shadow layer */}
-        <div
-          className="absolute"
-          style={{
-            left: -10,
-            top: "50%",
-            transform: "translateY(-50%)",
-            width: 0,
-            height: 0,
-            borderTop: "9px solid transparent",
-            borderBottom: "9px solid transparent",
-            borderRight: "9px solid #f3f4f6",
-            zIndex: -1,
-          }}
-        />
-        {controls}
+        {lado && (
+          <div
+            aria-hidden
+            className="absolute w-3 h-3 bg-white border-black/5 rotate-45"
+            style={flecha[lado]}
+          />
+        )}
+        {contenido}
       </div>
     </>
   );
