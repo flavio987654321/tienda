@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useRef, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { getEventNames, getEventRange } from "@/lib/fechas-comerciales";
 import {
   Percent, Tag, Gift, Truck, Store, Folder, ListChecks, Check, Plus, X,
@@ -12,6 +13,8 @@ import {
   MAX_PROMO_PERCENT as MAX_PCT, MAX_EVENT_LABEL,
 } from "@/lib/promotions";
 import LimitePlanBanner from "@/components/dashboard/LimitePlanBanner";
+import CampoAuto from "@/components/CampoAuto";
+import ConfirmModal from "@/components/ConfirmModal";
 
 // Emojis para el nombre de la promo (lo ve solo el dueño; le ayuda a reconocerla de un vistazo).
 const PROMO_EMOJIS = [
@@ -114,29 +117,55 @@ function catSub(c: Category, products: Product[]) {
   return min === max ? `${cant} · ${money(min)}` : `${cant} · ${money(min)} a ${money(max)}`;
 }
 
+// El año aparece solo cuando NO es el actual. "hasta 14/1" no dice de qué año, y
+// justo las promos que cruzan diciembre —las de temporada, las más largas— son
+// las que más necesitan que se entienda. Ponerlo siempre sería ruido: el 90% de
+// las promos empiezan y terminan dentro del mismo año.
 function fmtDate(iso: string | null) {
   if (!iso) return null;
   const d = new Date(iso);
-  return d.toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit" });
+  const otroAnio = d.getFullYear() !== new Date().getFullYear();
+  return d.toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", ...(otroAnio && { year: "2-digit" }) });
+}
+
+// Cuántos productos deja de tocar una promoción, ya en palabras. Es el dato que
+// falta para decidir si archivarla: "2 productos" y "40 productos" son la misma
+// pregunta con dos respuestas muy distintas.
+function alcanceDe(p: Promotion, categories: Category[], products: Product[]) {
+  const n = p.scope === "ALL" ? products.length
+    : p.scope === "CATEGORY" ? categories.filter((c) => p.categories.includes(c.name)).reduce((s, c) => s + c.count, 0)
+    : p.productIds.length;
+  return n === 1 ? "1 producto vuelve" : `${n} productos vuelven`;
 }
 
 export default function PromocionesClient({
-  initialPromotions, categories, products, activeCount, maxPromotions,
+  initialPromotions, categories, products, maxPromotions,
   costoEnvio, ventasConPromo, ahorroDelMes,
 }: {
-  initialPromotions: Promotion[]; categories: Category[]; products: Product[]; activeCount: number;
+  initialPromotions: Promotion[]; categories: Category[]; products: Product[];
   maxPromotions: number | null;
   // Lo que costaron los envíos ya despachados. null = la tienda todavía no despachó
   // ninguno, y entonces no hay número real que mostrar (A-05).
   costoEnvio: CostoEnvio;
   ventasConPromo: number; ahorroDelMes: number;
 }) {
+  const router = useRouter();
   const [promos, setPromos] = useState<Promotion[]>(initialPromotions);
   const [tab, setTab] = useState<"act" | "hist">("act");
   const [wizOpen, setWizOpen] = useState(false);
   const [editing, setEditing] = useState<Promotion | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
+  const [aConfirmar, setAConfirmar] = useState<{ p: Promotion; accion: "archivar" | "eliminar" } | null>(null);
+
+  // Cuando el servidor vuelve a renderizar (`router.refresh()`), manda un array
+  // nuevo: esa identidad distinta es la señal de que hay que volver a tomar su
+  // versión como la buena y descartar lo que tengamos puesto de prepo acá.
+  const [ultimasDelServidor, setUltimasDelServidor] = useState(initialPromotions);
+  if (initialPromotions !== ultimasDelServidor) {
+    setUltimasDelServidor(initialPromotions);
+    setPromos(initialPromotions);
+  }
 
   const showToast = useCallback((msg: string, ok = true) => {
     setToast({ msg, ok });
@@ -147,55 +176,96 @@ export default function PromocionesClient({
   const shown = promos.filter((p) => (tab === "act" ? isLive(p) : !isLive(p)));
   const liveCount = promos.filter((p) => p.status === "active" || p.status === "scheduled").length;
 
+  // Cuántos productos deja bajo costo cada promoción, calculado UNA vez por
+  // cambio de lista y no en cada render.
+  //
+  // Estaba adentro del `map` de las filas, así que se rehacía entero cada vez que
+  // React redibujaba: al aparecer un cartel, al cambiar de pestaña, al apretar
+  // cualquier botón. Con 20 promociones y un catálogo de 800 productos eso son
+  // 16.000 recorridas de producto por render, para un dato que no cambió.
+  const bajoCosto = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const p of promos) {
+      // Las archivadas ya no aplican: no hay nada que avisar y no se gasta en ellas.
+      m.set(p.id, isLive(p) ? costFloorCheck(p, products).below.length : 0);
+    }
+    return m;
+  }, [promos, products]);
+
   // Cupo del plan. `isLive` es exactamente el criterio del servidor (no archivada
   // y no vencida), así que el número de acá es el que el POST va a aplicar.
   const slotsUsed = promos.filter(isLive).length;
   const atLimit = maxPromotions !== null && slotsUsed >= maxPromotions;
 
-  async function refresh() {
-    // El endpoint devuelve un tab por vez; traemos los dos y unimos, para que
-    // Activas e Historial queden frescos sin importar en cuál estás parado.
-    const [a, h] = await Promise.all([
-      fetch("/api/dashboard/promociones?tab=act&take=50").then((r) => r.json()).catch(() => null),
-      fetch("/api/dashboard/promociones?tab=hist&take=50").then((r) => r.json()).catch(() => null),
-    ]);
-    if (a?.promotions && h?.promotions) setPromos([...a.promotions, ...h.promotions]);
-  }
+  // El refresco lo hace el servidor y no un fetch propio.
+  //
+  // Antes se pedían las dos pestañas a `/api/dashboard/promociones` y se
+  // reemplazaba la lista entera con lo que volviera. El endpoint topea el `take`
+  // en 50 aunque le pidas más, así que la primera carga (que el servidor manda
+  // completa) alcanzaba para verlas todas, pero apenas archivabas una, la lista
+  // se reemplazaba por la recortada y las más viejas desaparecían de la pantalla
+  // sin ningún aviso. Las vivas están topeadas por el plan, pero el HISTORIAL
+  // crece para siempre: un par de temporadas de promos y pasás las 50.
+  //
+  // `router.refresh()` vuelve a correr la página del servidor, que las trae
+  // todas y además recalcula las tarjetas de arriba (ventas con promo, ahorro
+  // del mes) — que con el fetch viejo quedaban congeladas.
+  const refrescar = useCallback(() => router.refresh(), [router]);
 
   async function toggle(p: Promotion) {
     if (busyId) return;
+    const queda = !p.isActive;
     setBusyId(p.id);
-    setPromos((prev) => prev.map((x) => x.id === p.id ? { ...x, isActive: !x.isActive, status: !x.isActive ? liveStatus(x) : "paused" } : x));
+    setPromos((prev) => prev.map((x) => x.id === p.id ? { ...x, isActive: queda, status: queda ? liveStatus(x) : "paused" } : x));
     try {
-      await fetch(`/api/dashboard/promociones/${p.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ isActive: !p.isActive }) });
-    } catch { showToast("No se pudo actualizar", false); await refresh(); }
-    finally { setBusyId(null); }
+      const res = await fetch(`/api/dashboard/promociones/${p.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ isActive: queda }) });
+      // El `catch` solo salta si se cae la conexión. Sin este chequeo, un 500 o
+      // una sesión vencida dejaban el interruptor apagado en pantalla mientras la
+      // promoción SEGUÍA descontando en la tienda: el error más caro de los que
+      // había acá, porque es invisible y la plata se va igual.
+      if (!res.ok) throw new Error("rechazado");
+      refrescar();
+    } catch {
+      setPromos((prev) => prev.map((x) => x.id === p.id ? p : x));
+      showToast(queda ? "No se pudo activar la promoción" : "No se pudo pausar la promoción — sigue aplicándose", false);
+    } finally { setBusyId(null); }
   }
   async function archive(p: Promotion) {
     if (busyId) return;
-    if (!confirm(`¿Archivar “${p.name}”? Deja de aplicarse y va al historial. No se borra.`)) return;
     setBusyId(p.id);
     try {
       const res = await fetch(`/api/dashboard/promociones/${p.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ archive: true }) });
-      if (res.ok) { await refresh(); showToast("Promoción archivada"); }
-    } finally { setBusyId(null); }
+      // Los tres de abajo tenían un `if (res.ok)` sin `else`: cuando el servidor
+      // decía que no, no pasaba absolutamente nada —ni cartel ni cambio— y la
+      // lectura natural era "no le di bien al botón".
+      if (!res.ok) { showToast("No se pudo archivar la promoción", false); return; }
+      refrescar();
+      showToast("Promoción archivada");
+    } catch { showToast("No se pudo archivar la promoción", false); }
+    finally { setBusyId(null); }
   }
   async function unarchive(p: Promotion) {
     if (busyId) return;
     setBusyId(p.id);
     try {
       const res = await fetch(`/api/dashboard/promociones/${p.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ archive: false }) });
-      if (res.ok) { await refresh(); showToast("Promoción restaurada"); }
-    } finally { setBusyId(null); }
+      if (!res.ok) { showToast("No se pudo restaurar la promoción", false); return; }
+      refrescar();
+      showToast("Promoción restaurada");
+    } catch { showToast("No se pudo restaurar la promoción", false); }
+    finally { setBusyId(null); }
   }
   async function remove(p: Promotion) {
     if (busyId) return;
-    if (!confirm(`¿Eliminar “${p.name}” para siempre? Esto no se puede deshacer.`)) return;
     setBusyId(p.id);
     try {
       const res = await fetch(`/api/dashboard/promociones/${p.id}`, { method: "DELETE" });
-      if (res.ok) { setPromos((prev) => prev.filter((x) => x.id !== p.id)); showToast("Promoción eliminada"); }
-    } finally { setBusyId(null); }
+      if (!res.ok) { showToast("No se pudo eliminar la promoción", false); return; }
+      setPromos((prev) => prev.filter((x) => x.id !== p.id));
+      refrescar();
+      showToast("Promoción eliminada");
+    } catch { showToast("No se pudo eliminar la promoción", false); }
+    finally { setBusyId(null); }
   }
 
   function liveStatus(p: Promotion) {
@@ -246,10 +316,22 @@ export default function PromocionesClient({
       )}
 
       {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-        <StatCard tile="bg-indigo-50 text-indigo-600" Icon={Tag} value={String(liveCount || activeCount)} label="Promociones activas" />
+      {/* Dos columnas en angosto y no una: apiladas, las tres tarjetas se comían
+          la pantalla entera y había que scrollear para llegar a la lista, que es
+          a lo que se viene. La tercera se lleva el renglón completo para no
+          dejar un hueco al lado. */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 mb-6">
+        {/* `liveCount` solo. Antes era `liveCount || activeCount`, y 0 es falsy:
+            al archivar la última promoción el contador caía al número que había
+            mandado el servidor al cargar la página, así que quedaban 0 promos
+            activas y la tarjeta diciendo "1". El dato del servidor ya no hace
+            falta: ahora la lista se refresca desde el servidor y `liveCount`
+            sale siempre de la lista que se está viendo. */}
+        <StatCard tile="bg-indigo-50 text-indigo-600" Icon={Tag} value={String(liveCount)} label="Promociones activas" />
         <StatCard tile="bg-green-50 text-green-600" Icon={Check} value={String(ventasConPromo)} label="Ventas con promo este mes" />
-        <StatCard tile="bg-amber-50 text-amber-600" Icon={Gift} value={`$${Math.round(ahorroDelMes).toLocaleString("es-AR")}`} label="Ahorro dado este mes" />
+        <div className="col-span-2 sm:col-span-1">
+          <StatCard tile="bg-amber-50 text-amber-600" Icon={Gift} value={`$${Math.round(ahorroDelMes).toLocaleString("es-AR")}`} label="Ahorro dado este mes" />
+        </div>
       </div>
 
       {/* Tabs */}
@@ -260,17 +342,49 @@ export default function PromocionesClient({
 
       {/* Lista */}
       {shown.length === 0 ? (
-        <div className="bg-white border border-gray-100 rounded-2xl py-14 text-center text-gray-500 text-sm">
+        /* El estado vacío enseña, no decora. El que llega acá por primera vez no
+           sabe en qué se diferencia una promoción de un cupón —son la misma
+           palabra en la cabeza de casi todo el mundo— y esa es la duda que hace
+           que la pantalla se cierre sin crear nada. Así que se responde acá, con
+           los tres ejemplos que cubren el 90% de lo que la gente arma. */
+        <div className="bg-white border border-gray-100 rounded-2xl px-5 py-10 sm:px-8 sm:py-14 text-center text-gray-500 text-sm">
           {tab === "act" ? (
             <>
               <BadgeEmpty />
-              <p className="mt-3 font-medium text-gray-700">Todavía no tenés promociones activas</p>
-              <p className="mt-1">Creá la primera y se aplica sola en tu tienda.</p>
-              <button onClick={() => { setEditing(null); setWizOpen(true); }} className="mt-4 inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors">
-                <Plus className="h-4 w-4" /> Nueva promoción
+              <p className="mt-3 font-semibold text-gray-800 text-base">Todavía no tenés promociones</p>
+              <p className="mt-2 mx-auto max-w-md leading-relaxed">
+                Una promoción <b>baja el precio sola</b>, para todo el que entre a tu tienda y sin que
+                nadie tenga que escribir nada. Es lo contrario de un cupón, que hay que repartir y el
+                cliente tiene que acordarse de usar.
+              </p>
+              <div className="mt-5 mx-auto max-w-md text-left space-y-2">
+                {[
+                  ["20% en toda la categoría remeras", "Elegís la categoría una vez y vale para todas — también para las que cargues después."],
+                  ["Llevá 3, pagá 2", "El descuento aparece solo cuando el carrito llega a la cantidad."],
+                  ["Envío gratis desde $50.000", "Sube el ticket promedio: el cliente suma para llegar al mínimo."],
+                ].map(([que, porque]) => (
+                  <div key={que} className="flex gap-2.5 items-start rounded-xl bg-gray-50 px-3.5 py-2.5">
+                    <Check className="h-4 w-4 shrink-0 mt-0.5 text-indigo-500" />
+                    <span className="text-[12.5px] leading-snug"><b className="text-gray-800">{que}</b> — {porque}</span>
+                  </div>
+                ))}
+              </div>
+              <button onClick={() => { setEditing(null); setWizOpen(true); }} className="mt-5 inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors">
+                <Plus className="h-4 w-4" /> Crear mi primera promoción
               </button>
+              <p className="mt-3 text-xs text-gray-400">Te vamos guiando en 5 pasos. Podés apagarla cuando quieras.</p>
             </>
-          ) : <p>No hay promociones en el historial todavía.</p>}
+          ) : (
+            <>
+              <BadgeEmpty />
+              <p className="mt-3 font-semibold text-gray-800 text-base">El historial está vacío</p>
+              <p className="mt-2 mx-auto max-w-md leading-relaxed">
+                Acá van a caer las promociones que <b>archives</b> y las que se venzan solas al pasar su
+                fecha de fin. No se borran: podés mirar qué hiciste el año pasado y restaurar cualquiera
+                con un click. Y mientras están acá, <b>no ocupan lugar</b> en el cupo de tu plan.
+              </p>
+            </>
+          )}
         </div>
       ) : (
         <div className="space-y-3">
@@ -278,45 +392,64 @@ export default function PromocionesClient({
             const meta = TYPE_META[p.type] ?? TYPE_META.PERCENT;
             const archived = !isLive(p);
             // Piso de costo: ¿esta promo deja algún producto bajo su costo? Solo se
-            // señala en promos vivas (una archivada ya no aplica).
-            const belowCost = archived ? 0 : costFloorCheck(p, products).below.length;
+            // señala en promos vivas (una archivada ya no aplica). Sale del mapa
+            // memorizado de arriba.
+            const belowCost = bajoCosto.get(p.id) ?? 0;
             return (
-              <div key={p.id} className="bg-white border border-gray-100 rounded-2xl p-4 flex items-center gap-4 shadow-sm hover:shadow-md transition-shadow">
-                <div className={`w-11 h-11 rounded-xl grid place-items-center shrink-0 ${meta.tile}`}><meta.Icon className="h-5 w-5" /></div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-bold text-gray-900 text-[15px]">{p.name}</span>
-                    <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${meta.tile}`}>{discountLabel(p)}</span>
-                  </div>
-                  <div className="text-[12.5px] text-gray-500 flex gap-2 flex-wrap items-center mt-0.5">
-                    <span className="text-gray-700 font-medium">{scopeDetail(p, products)}</span>
-                    {p.minOrderAmount > 0 && <><span className="text-gray-300">/</span><span>mín. {money(p.minOrderAmount)}</span></>}
-                    {p.endsAt && <><span className="text-gray-300">/</span><span>hasta {fmtDate(p.endsAt)}</span></>}
-                    {p.startsAt && p.status === "scheduled" && <><span className="text-gray-300">/</span><span>desde {fmtDate(p.startsAt)}</span></>}
+              /* En angosto la tarjeta se parte en dos renglones.
+                 Era una sola fila con cuatro bloques y tres de ellos `shrink-0`:
+                 el ícono, las pastillas de estado y los botones sumaban unos
+                 280px fijos, así que al nombre y al detalle les quedaban ~44 en
+                 una pantalla de 360. Por eso se leía "San / Valentin" con una
+                 palabra por renglón y "Categorías · remeras" cortado en
+                 "Categorí". Ahora arriba va el ícono con el nombre, y abajo el
+                 estado a la izquierda y los botones a la derecha. */
+              <div key={p.id} className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+                <div className="flex items-start gap-3 min-w-0 sm:flex-1 sm:items-center sm:gap-4">
+                  <div className={`w-11 h-11 rounded-xl grid place-items-center shrink-0 ${meta.tile}`}><meta.Icon className="h-5 w-5" /></div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-bold text-gray-900 text-[15px]">{p.name}</span>
+                      <span className={`shrink-0 text-[11px] font-bold px-2 py-0.5 rounded-full ${meta.tile}`}>{discountLabel(p)}</span>
+                    </div>
+                    <div className="text-[12.5px] text-gray-500 flex gap-x-2 gap-y-0.5 flex-wrap items-center mt-0.5">
+                      <span className="text-gray-700 font-medium">{scopeDetail(p, products)}</span>
+                      {p.minOrderAmount > 0 && <><span className="text-gray-300">/</span><span className="whitespace-nowrap">mín. {money(p.minOrderAmount)}</span></>}
+                      {p.endsAt && <><span className="text-gray-300">/</span><span className="whitespace-nowrap">hasta {fmtDate(p.endsAt)}</span></>}
+                      {p.startsAt && p.status === "scheduled" && <><span className="text-gray-300">/</span><span className="whitespace-nowrap">desde {fmtDate(p.startsAt)}</span></>}
+                    </div>
                   </div>
                 </div>
-                <div className="flex flex-col items-end gap-2 shrink-0">
-                  {statusPill(p.status)}
-                  {belowCost > 0 && (
-                    <span title={`${belowCost} producto${belowCost !== 1 ? "s" : ""} por debajo de su costo`}
-                      className="text-[10.5px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 inline-flex items-center gap-1">
-                      <AlertTriangle className="h-3 w-3" /> bajo costo
-                    </span>
-                  )}
-                </div>
-                <div className="flex items-center gap-1 shrink-0">
-                  {!archived ? (
-                    <>
-                      <IconBtn title="Ver / editar" onClick={() => { setEditing(p); setWizOpen(true); }} disabled={busyId === p.id}><Pencil className="h-4 w-4" /></IconBtn>
-                      <Toggle on={p.isActive && p.status !== "paused" ? true : p.isActive} disabled={busyId === p.id} onClick={() => toggle(p)} />
-                      <IconBtn title="Archivar" onClick={() => archive(p)} disabled={busyId === p.id}><Archive className="h-4 w-4" /></IconBtn>
-                    </>
-                  ) : (
-                    <>
-                      <IconBtn title="Restaurar" onClick={() => unarchive(p)} disabled={busyId === p.id}><RotateCcw className="h-4 w-4" /></IconBtn>
-                      <IconBtn title="Eliminar" onClick={() => remove(p)} disabled={busyId === p.id} danger><Trash2 className="h-4 w-4" /></IconBtn>
-                    </>
-                  )}
+
+                <div className="flex items-center justify-between gap-2 sm:justify-end sm:gap-4">
+                  <div className="flex items-center gap-2 shrink-0 sm:flex-col sm:items-end">
+                    {statusPill(p.status)}
+                    {belowCost > 0 && (
+                      <span title={`${belowCost} producto${belowCost !== 1 ? "s" : ""} por debajo de su costo`}
+                        className="text-[10.5px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 inline-flex items-center gap-1 whitespace-nowrap">
+                        <AlertTriangle className="h-3 w-3 shrink-0" /> bajo costo
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    {!archived ? (
+                      <>
+                        <IconBtn title="Ver / editar" onClick={() => { setEditing(p); setWizOpen(true); }} disabled={busyId === p.id}><Pencil className="h-4 w-4" /></IconBtn>
+                        {/* `p.isActive` pelado. Lo que había era
+                            `p.isActive && p.status !== "paused" ? true : p.isActive`,
+                            que hagas la cuenta que hagas da siempre `p.isActive`:
+                            quedó a mitad de camino de algo que se quiso hacer con
+                            "paused" y no hacía nada. */}
+                        <Toggle on={p.isActive} disabled={busyId === p.id} onClick={() => toggle(p)} />
+                        <IconBtn title="Archivar" onClick={() => setAConfirmar({ p, accion: "archivar" })} disabled={busyId === p.id}><Archive className="h-4 w-4" /></IconBtn>
+                      </>
+                    ) : (
+                      <>
+                        <IconBtn title="Restaurar" onClick={() => unarchive(p)} disabled={busyId === p.id}><RotateCcw className="h-4 w-4" /></IconBtn>
+                        <IconBtn title="Eliminar" onClick={() => setAConfirmar({ p, accion: "eliminar" })} disabled={busyId === p.id} danger><Trash2 className="h-4 w-4" /></IconBtn>
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
             );
@@ -334,12 +467,42 @@ export default function PromocionesClient({
           costoEnvio={costoEnvio}
           editPromo={editing}
           onClose={() => { setWizOpen(false); setEditing(null); }}
-          onCreated={async () => { const wasEdit = !!editing; setWizOpen(false); setEditing(null); await refresh(); if (!wasEdit) setTab("act"); showToast(wasEdit ? "Promoción actualizada" : "Promoción creada"); }}
+          onCreated={() => { const wasEdit = !!editing; setWizOpen(false); setEditing(null); refrescar(); if (!wasEdit) setTab("act"); showToast(wasEdit ? "Promoción actualizada" : "Promoción creada"); }}
+        />
+      )}
+
+      {/* Reemplaza a los dos `confirm()` del navegador. El cuadrito del sistema
+          no podía decir CUÁNTOS productos dejan de tener descuento, que es el
+          único dato que hace falta para decidir. */}
+      {aConfirmar && (
+        <ConfirmModal
+          title={aConfirmar.accion === "archivar" ? `¿Archivar “${aConfirmar.p.name}”?` : `¿Eliminar “${aConfirmar.p.name}”?`}
+          body={aConfirmar.accion === "archivar" ? (
+            <>
+              Deja de aplicarse <b>ya mismo</b>: {alcanceDe(aConfirmar.p, categories, products)} vuelven a
+              mostrarse a precio de lista. No se borra — queda en el historial y la podés restaurar cuando
+              quieras, y mientras tanto no ocupa lugar en el cupo de tu plan.
+            </>
+          ) : (
+            <>
+              Esto <b>no se puede deshacer</b>. Se borra la promoción y su configuración; los pedidos que
+              ya se hicieron con ella no se tocan, siguen con el descuento que tuvieron. Si solo querés
+              que deje de aplicarse, mejor archivala.
+            </>
+          )}
+          confirmLabel={aConfirmar.accion === "archivar" ? "Archivar" : "Eliminar para siempre"}
+          confirmClass={aConfirmar.accion === "archivar" ? "bg-gray-900 hover:bg-gray-800" : "bg-red-600 hover:bg-red-700"}
+          onCancel={() => setAConfirmar(null)}
+          onConfirm={() => {
+            const { p, accion } = aConfirmar;
+            setAConfirmar(null);
+            if (accion === "archivar") archive(p); else remove(p);
+          }}
         />
       )}
 
       {toast && (
-        <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 px-5 py-3 rounded-xl text-sm font-medium shadow-lg z-[60] ${toast.ok ? "bg-gray-900 text-white" : "bg-red-600 text-white"}`}>{toast.msg}</div>
+        <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 px-5 py-3 rounded-xl text-sm font-medium shadow-lg z-[90] ${toast.ok ? "bg-gray-900 text-white" : "bg-red-600 text-white"}`}>{toast.msg}</div>
       )}
     </div>
   );
@@ -348,9 +511,11 @@ export default function PromocionesClient({
 // ── Subcomponentes de la lista ───────────────────────────────────────────────
 function StatCard({ tile, Icon, value, label }: { tile: string; Icon: typeof Percent; value: string; label: string }) {
   return (
-    <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
+    <div className="h-full bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
       <div className={`w-9 h-9 rounded-xl grid place-items-center mb-3 ${tile}`}><Icon className="h-4.5 w-4.5" /></div>
-      <div className="text-2xl font-extrabold text-gray-900">{value}</div>
+      {/* Truncado por si el ahorro del mes llega a siete cifras: en una tarjeta
+          de media pantalla, "$1.234.567" en `text-2xl` desbordaba la grilla. */}
+      <div className="text-xl sm:text-2xl font-extrabold text-gray-900 truncate" title={value}>{value}</div>
       <div className="text-xs text-gray-500 mt-0.5">{label}</div>
     </div>
   );
@@ -361,7 +526,7 @@ function TabBtn({ on, onClick, children }: { on: boolean; onClick: () => void; c
 function Toggle({ on, disabled, onClick }: { on: boolean; disabled?: boolean; onClick: () => void }) {
   return (
     <button onClick={onClick} disabled={disabled} aria-pressed={on}
-      className={`relative w-10 h-[23px] rounded-full transition-colors disabled:opacity-50 ${on ? "bg-indigo-600" : "bg-gray-300"}`}>
+      className={`relative w-10 h-[23px] shrink-0 rounded-full transition-colors disabled:opacity-50 ${on ? "bg-indigo-600" : "bg-gray-300"}`}>
       <span className={`absolute top-[2.5px] w-[18px] h-[18px] rounded-full bg-white shadow transition-all ${on ? "left-[19px]" : "left-[2.5px]"}`} />
     </button>
   );
@@ -375,6 +540,9 @@ function BadgeEmpty() {
 
 // ── Wizard de creación ───────────────────────────────────────────────────────
 const STEP_NAMES = ["Tipo", "Alcance", "Reglas", "Vigencia", "Confirmar"];
+// Tope de filas dibujadas en el selector de productos. Con 60 la caja ya scrollea
+// bastante y el navegador ni se entera; el buscador cubre el resto.
+const MAX_FILAS_PICKER = 60;
 
 function Wizard({ categories, products, existentes, costoEnvio, onClose, onCreated, editPromo }: {
   categories: Category[]; products: Product[]; existentes: Promotion[]; costoEnvio: CostoEnvio;
@@ -397,7 +565,7 @@ function Wizard({ categories, products, existentes, costoEnvio, onClose, onCreat
   const [prodIds, setProdIds] = useState<string[]>(editPromo?.scope === "PRODUCTS" ? editPromo.productIds : []);
   const [prodSearch, setProdSearch] = useState("");
   const [name, setName] = useState(editPromo?.name ?? "");
-  const nameRef = useRef<HTMLInputElement>(null);
+  const nameRef = useRef<HTMLTextAreaElement>(null);
   const [emojiOpen, setEmojiOpen] = useState(false);
   // `moneyInputValue` y no `String()`: al editar, un monto con decimales venía en
   // formato inglés ("5000.5") y el parseo argentino lo leería como 50005 (B-13).
@@ -439,6 +607,14 @@ function Wizard({ categories, products, existentes, costoEnvio, onClose, onCreat
   }
 
   const meta = type ? TYPE_META[type] : null;
+
+  // Las dos fechas vienen como "AAAA-MM-DD", así que compararlas como texto
+  // alcanza y da lo mismo que compararlas como fecha, sin zonas horarias de por
+  // medio. El servidor ya rechazaba esto (`promotions.ts`), pero recién al
+  // guardar: completabas el paso 5, escribías el nombre, apretabas Crear y ahí
+  // te enterabas. Es el mismo criterio que ya se había aplicado al porcentaje —
+  // frenar donde se toma la decisión, no dos pantallas después.
+  const fechasAlReves = !!startsAt && !!endsAt && endsAt < startsAt;
 
   // F6-C4 — qué le hace este monto al catálogo REAL, recalculado mientras se
   // tipea. Solo en `FIXED`: un porcentaje descuenta lo mismo en un producto de
@@ -513,7 +689,11 @@ function Wizard({ categories, products, existentes, costoEnvio, onClose, onCreat
       if (isNxM(type)) return parseInt(minQty) >= 2 && parseInt(payQty) >= 1 && parseInt(payQty) < parseInt(minQty);
       return true;
     }
-    if (step === 5) return name.trim().length >= 2;
+    if (step === 4) return !fechasAlReves;
+    // Al editar, el asistente abre directo en el paso 5: si las fechas quedaron
+    // mal desde antes, hay que frenar también acá o el botón de guardar pasa por
+    // arriba del paso 4 sin verlo nunca.
+    if (step === 5) return name.trim().length >= 2 && !fechasAlReves;
     return true;
   }
 
@@ -554,13 +734,30 @@ function Wizard({ categories, products, existentes, costoEnvio, onClose, onCreat
     : prodIds.length;
   const filteredProds = products.filter((p) => p.name.toLowerCase().includes(prodSearch.toLowerCase()));
 
+  // El asistente entero no entra en una pantalla de 360: el paso 5 con dos o
+  // tres avisos mide bastante más que el alto del teléfono. Antes crecía sin
+  // tope y scrolleaba la CAPA de atrás, así que al bajar se iban de vista el
+  // paso a paso y la cruz de cerrar. Ahora la tarjeta se topea al alto de la
+  // pantalla y el que scrollea es el cuerpo: el encabezado y el pie no se mueven.
+  //
+  // El tope es `max-h-full` y no un `calc(100dvh - …)`: el padre es `fixed
+  // inset-0`, así que su caja de contenido YA es la pantalla menos el margen, y
+  // el 100% se mide contra eso. Un calc a mano tiene que repetir el mismo número
+  // que el padding en dos lugares, y si no coinciden la tarjeta se pasa de largo.
+  //
+  // El z-index tiene que estar por ENCIMA de 60: en el teléfono la barra de
+  // arriba del panel es `fixed z-[60]` y es blanca opaca, así que con el z-[55]
+  // que tenía este modal, los primeros 56px de la tarjeta —justo donde viven el
+  // paso a paso y la cruz de cerrar— quedaban tapados por la barra.
   return (
-    <div className="fixed inset-0 z-[55] bg-black/45 backdrop-blur-[2px] flex items-start justify-center p-4 sm:p-7 overflow-auto" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="bg-white rounded-2xl w-full max-w-[540px] overflow-hidden shadow-2xl">
+    <div className="fixed inset-0 z-[80] bg-black/45 backdrop-blur-[2px] flex items-center justify-center p-4 sm:p-7" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="bg-white rounded-2xl w-full max-w-[540px] max-h-full flex flex-col overflow-hidden shadow-2xl">
         {/* Head + stepper */}
-        <div className="px-6 pt-5 pb-4 border-b border-gray-100 relative">
-          <button onClick={onClose} className="absolute right-4 top-4 w-7 h-7 grid place-items-center rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-700"><X className="h-4 w-4" /></button>
-          <div className="flex items-center">
+        {/* `px-4` en angosto: con `px-6` fijo se iban 48px de los 360 en padding,
+            y el paso a paso de cinco círculos quedaba pegado al borde. */}
+        <div className="shrink-0 px-4 sm:px-6 pt-5 pb-4 border-b border-gray-100 relative">
+          <button onClick={onClose} className="absolute right-3 top-3 sm:right-4 sm:top-4 w-7 h-7 grid place-items-center rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-700"><X className="h-4 w-4" /></button>
+          <div className="flex items-center pr-8 sm:pr-0">
             {STEP_NAMES.map((nm, i) => {
               const n = i + 1; const st = n < step ? "done" : n === step ? "now" : "";
               return (
@@ -571,15 +768,18 @@ function Wizard({ categories, products, existentes, costoEnvio, onClose, onCreat
                     </span>
                     <span className={`text-xs font-semibold hidden sm:block ${st === "now" ? "text-gray-900" : st === "done" ? "text-gray-500" : "text-gray-400"}`}>{nm}</span>
                   </div>
-                  {n < 5 && <span className="w-5 h-0.5 bg-gray-200 mx-1.5 rounded" />}
+                  {/* En 360 los cinco círculos con la rayita de 20px sumaban 258px
+                      de los 296 disponibles y quedaban tocando los bordes. La
+                      rayita achica solo en angosto: es decoración, no información. */}
+                  {n < 5 && <span className="w-3 sm:w-5 h-0.5 bg-gray-200 mx-1 sm:mx-1.5 rounded" />}
                 </div>
               );
             })}
           </div>
         </div>
 
-        {/* Body */}
-        <div className="px-6 py-5 min-h-[250px]">
+        {/* Body — el único que scrollea */}
+        <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-5 min-h-[250px]">
           {step === 1 && (
             <>
               {/* La aclaración del alcance va acá y no en cada tipo (F6-C1): vale
@@ -654,10 +854,22 @@ function Wizard({ categories, products, existentes, costoEnvio, onClose, onCreat
                       <input value={prodSearch} onChange={(e) => setProdSearch(e.target.value)} placeholder="Buscar producto…" className="w-full text-sm border border-gray-200 rounded-lg pl-9 pr-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400" />
                     </div>
                   </div>
+                  {/* Se dibujan como mucho 60 filas. Antes se dibujaban TODAS
+                      dentro de esta caja de 180px de alto: con un catálogo de 800
+                      productos eran 800 botones y unos 3.200 nodos creados de
+                      golpe... para mostrar cuatro a la vez. En el teléfono eso es
+                      un tirón de un segundo al abrir el selector. El corte no
+                      esconde nada: abajo dice cuántas quedaron y el buscador de
+                      arriba llega a cualquiera. */}
                   <div className="max-h-[180px] overflow-auto">
-                    {filteredProds.length === 0 ? <Empty>Sin resultados.</Empty> : filteredProds.map((p) => (
+                    {filteredProds.length === 0 ? <Empty>Sin resultados.</Empty> : filteredProds.slice(0, MAX_FILAS_PICKER).map((p) => (
                       <PkRow key={p.id} on={prodIds.includes(p.id)} onClick={() => setProdIds((prev) => prev.includes(p.id) ? prev.filter((x) => x !== p.id) : [...prev, p.id])} name={p.name} sub={money(p.price)} />
                     ))}
+                    {filteredProds.length > MAX_FILAS_PICKER && (
+                      <div className="px-3.5 py-2.5 text-[12px] text-gray-400 border-t border-gray-100">
+                        y {filteredProds.length - MAX_FILAS_PICKER} más — buscá por nombre para encontrarlos.
+                      </div>
+                    )}
                   </div>
                 </Picker>
               )}
@@ -766,7 +978,7 @@ function Wizard({ categories, products, existentes, costoEnvio, onClose, onCreat
                   quien pone un evento ya sabe cuál, no necesita explorar. Los
                   ejemplos del subtítulo cubren el descubrimiento que daban los chips. */}
               <div className="flex justify-between items-center gap-3 bg-gray-50 border border-gray-100 rounded-xl p-3.5 mb-3.5">
-                <div>
+                <div className="min-w-0">
                   <div className="font-semibold text-[13.5px] text-gray-900">¿Es parte de un evento?</div>
                   <div className="text-xs text-gray-500 mt-0.5 max-w-[34ch]">Black Friday, Día de la Madre, Hot Sale… Cambia cómo se ve en la tienda, no cuánto descuenta.</div>
                 </div>
@@ -796,13 +1008,14 @@ function Wizard({ categories, products, existentes, costoEnvio, onClose, onCreat
                   </select>
                 )}
                 {eventMode === "custom" && (
-                  <input
+                  <CampoAuto
                     value={eventLabel}
-                    onChange={(e) => setEventLabel(e.target.value.slice(0, MAX_EVENT_LABEL))}
+                    onChange={(v) => setEventLabel(v.slice(0, MAX_EVENT_LABEL))}
                     maxLength={MAX_EVENT_LABEL}
                     placeholder="Ej. Aniversario de la tienda"
+                    ariaLabel="Nombre del evento"
                     autoFocus
-                    className={inputCls + " mt-2"}
+                    className="mt-2"
                   />
                 )}
                 {eventMode !== "none" && eventLabel.trim() && (
@@ -819,12 +1032,23 @@ function Wizard({ categories, products, existentes, costoEnvio, onClose, onCreat
                   Elegiste <b>{eventLabel.trim()}</b> y completamos las fechas. Podés cambiarlas.
                 </p>
               )}
-              <div className="flex gap-3">
+              {/* Las dos fechas van una debajo de otra en angosto. Un input de
+                  fecha no es un campo de texto cualquiera: trae adentro el
+                  dd/mm/aaaa y el ícono del calendario, y tiene un ancho mínimo
+                  propio que no baja por más que le apretemos la caja. Con la
+                  pantalla partida en dos quedaban 141px cada uno y el contenido
+                  se salía. */}
+              <div className="sm:flex sm:gap-3">
                 <Field label="Desde"><input type="date" value={startsAt} onChange={(e) => { setStartsAt(e.target.value); setFechasAuto(false); }} className={inputCls} /></Field>
                 <Field label="Hasta (opcional)"><input type="date" value={endsAt} onChange={(e) => { setEndsAt(e.target.value); setFechasAuto(false); }} className={inputCls} /></Field>
               </div>
+              {fechasAlReves && (
+                <p className="text-[12px] text-red-600 -mt-1 mb-3.5">
+                  La fecha de fin es anterior a la de inicio: así la promoción no se aplicaría nunca.
+                </p>
+              )}
               <div className="flex justify-between items-center gap-3 bg-gray-50 border border-gray-100 rounded-xl p-3.5">
-                <div><div className="font-semibold text-[13.5px] text-gray-900">¿Se combina con cupones?</div><div className="text-xs text-gray-500 mt-0.5 max-w-[34ch]">En “No”, quien tenga esta promo no puede usar un cupón encima.</div></div>
+                <div className="min-w-0"><div className="font-semibold text-[13.5px] text-gray-900">¿Se combina con cupones?</div><div className="text-xs text-gray-500 mt-0.5 max-w-[34ch]">En “No”, quien tenga esta promo no puede usar un cupón encima.</div></div>
                 <Toggle on={combines} onClick={() => setCombines(!combines)} />
               </div>
               <div className="flex gap-2.5 items-start bg-amber-50 border border-amber-200 rounded-xl p-3 mt-3.5 text-[12.5px] text-amber-800">
@@ -841,21 +1065,28 @@ function Wizard({ categories, products, existentes, costoEnvio, onClose, onCreat
                   y desde F6-C6 también aparece en el carrito y en el checkout. */}
               <StepTitle t={isEdit ? "Detalle de la promoción" : "Revisá y creá"} d={isEdit ? "Editá lo que quieras con “Atrás”. Guardá para aplicar los cambios al instante." : "Ponele un nombre y confirmá. Lo van a ver tus clientes en el carrito y en el mail del pedido."} />
               <Field label="Nombre de la promoción">
+                {/* El nombre admite 60 caracteres y en 360 entran unos 30 en el
+                    renglón: con un input, la mitad de lo escrito quedaba fuera de
+                    vista hacia la derecha justo en la pantalla donde se revisa
+                    todo antes de guardar. CampoAuto suma renglones en vez de
+                    correr el texto. El botón de emoji se ancla arriba y no al
+                    medio, porque ahora la caja puede crecer. */}
                 <div className="relative">
-                  <input
-                    ref={nameRef}
+                  <CampoAuto
+                    innerRef={nameRef}
                     value={name}
-                    onChange={(e) => setName(e.target.value.slice(0, 60))}
+                    onChange={(v) => setName(v.slice(0, 60))}
                     maxLength={60}
                     placeholder="Ej. 🔥 Verano en remeras"
+                    ariaLabel="Nombre de la promoción"
                     autoFocus
-                    className={inputCls + " pr-11"}
+                    className="pr-11"
                   />
                   <button
                     type="button"
                     onClick={() => setEmojiOpen((o) => !o)}
                     aria-label="Agregar emoji"
-                    className="absolute right-1.5 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-indigo-50 hover:text-indigo-600"
+                    className="absolute right-1.5 top-1.5 flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-indigo-50 hover:text-indigo-600"
                   >
                     <Smile className="h-5 w-5" />
                   </button>
@@ -887,6 +1118,17 @@ function Wizard({ categories, products, existentes, costoEnvio, onClose, onCreat
                 <ReviewRow k="Vigencia" v={`${startsAt ? fmtDate(startsAt + "T00:00") : "desde hoy"} · ${endsAt ? "hasta " + fmtDate(endsAt + "T00:00") : "sin fin"}`} />
                 <ReviewRow k="Con cupones" v={combines ? "Se combinan" : "No combina"} last />
               </div>
+              {/* En edición el asistente abre acá, así que este es el único lugar
+                  donde se puede ver el problema sin ir para atrás a propósito. */}
+              {fechasAlReves && (
+                <div className="flex gap-2.5 items-start bg-red-50 border border-red-200 rounded-xl p-3 mt-3.5 text-[12.5px] text-red-700">
+                  <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+                  <span>
+                    La <b>fecha de fin es anterior a la de inicio</b>, así la promoción no se aplicaría nunca.
+                    Volvé a <b>Vigencia</b> con “Atrás” y corregilas.
+                  </span>
+                </div>
+              )}
               {(() => {
                 // Piso de costo (aviso, NO bloquea): ¿la promo deja algún producto bajo costo?
                 const cf = costFloorCheck({
@@ -988,11 +1230,11 @@ function Wizard({ categories, products, existentes, costoEnvio, onClose, onCreat
         </div>
 
         {/* Footer */}
-        <div className="flex justify-between gap-3 px-6 py-4 border-t border-gray-100">
-          <button onClick={() => step > 1 ? setStep(step - 1) : onClose()} className="text-sm font-semibold text-gray-500 hover:text-gray-800 border border-gray-200 hover:border-gray-300 rounded-xl px-4 py-2.5 transition-colors">
+        <div className="shrink-0 flex justify-between gap-3 px-4 sm:px-6 py-4 border-t border-gray-100">
+          <button onClick={() => step > 1 ? setStep(step - 1) : onClose()} className="shrink-0 whitespace-nowrap text-sm font-semibold text-gray-500 hover:text-gray-800 border border-gray-200 hover:border-gray-300 rounded-xl px-4 py-2.5 transition-colors">
             {step === 1 ? "Cancelar" : "Atrás"}
           </button>
-          <button onClick={next} disabled={!canNext() || saving} className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors">
+          <button onClick={next} disabled={!canNext() || saving} className="flex shrink-0 items-center justify-center gap-2 whitespace-nowrap bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors">
             {saving && <Loader2 className="h-4 w-4 animate-spin" />}
             {step === 5 ? (isEdit ? "Guardar cambios" : "Crear promoción") : "Continuar"}
           </button>
@@ -1079,8 +1321,12 @@ function ImpactoFijo({ imp }: { imp: FixedImpactResult }) {
 function Empty({ children }: { children: React.ReactNode }) {
   return <div className="px-4 py-4 text-[12.5px] text-gray-400">{children}</div>;
 }
+// La etiqueta no se parte y el valor sí: "Se aplica a" cortado en dos renglones
+// para que entre "Categoría · remeras, pantalones" deja la tabla ilegible. El
+// valor puede ser largo de verdad (una lista de categorías), así que se lo deja
+// crecer hacia abajo con `break-words` para que ninguna palabra se salga.
 function ReviewRow({ k, v, last }: { k: string; v: string; last?: boolean }) {
-  return <div className={`flex justify-between gap-4 px-4 py-2.5 text-[13px] ${last ? "" : "border-b border-gray-100"}`}><span className="text-gray-500">{k}</span><span className="font-semibold text-gray-900 text-right">{v}</span></div>;
+  return <div className={`flex justify-between gap-3 px-4 py-2.5 text-[13px] ${last ? "" : "border-b border-gray-100"}`}><span className="shrink-0 whitespace-nowrap text-gray-500">{k}</span><span className="min-w-0 break-words font-semibold text-gray-900 text-right">{v}</span></div>;
 }
 
 // El parseo de montos vive en la librería (B-13): "5.000" son cinco mil y no cinco.

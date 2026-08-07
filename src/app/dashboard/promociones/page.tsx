@@ -108,7 +108,6 @@ export default async function PromocionesPage() {
         initialPromotions={rows}
         categories={categories}
         products={products.map((p) => ({ id: p.id, name: p.name, price: p.price, category: p.category, costPrice: p.costPrice }))}
-        activeCount={rows.filter((r) => r.status === "active" || r.status === "scheduled").length}
         // null = sin tope (Premium). El cupo usado lo calcula el cliente con el
         // mismo criterio que el POST: vivas ocupan lugar, archivadas y vencidas no.
         maxPromotions={hasActivePremium(sub) ? null : PRO_MAX_LIVE_PROMOTIONS}

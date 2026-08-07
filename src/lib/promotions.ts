@@ -220,14 +220,33 @@ export function moneyInputValue(n: number): string {
 // lugares donde puede quedar desincronizada, que es exactamente lo que causó B-10.
 type ScopeFields = { scope: string; categories: string[]; productIds: string[] };
 
+// Devuelve una función que dice si un producto cae en el alcance, con los ids y
+// las categorías ya volcados en un `Set`.
+//
+// Existe por una cuestión de escala: preguntar con `array.includes()` recorre la
+// lista entera CADA VEZ. Adentro de `deadPromoCheck` esa pregunta se hace una vez
+// por producto y por promo rival, así que un catálogo de 800 productos con 5
+// promos vivas, una de ellas apuntando a 300 productos elegidos a mano, daba más
+// de un millón de comparaciones de texto — y todo eso se recalcula con cada tecla
+// que se aprieta en el monto del descuento. Con el `Set` armado una sola vez,
+// cada pregunta es una, y el total baja a unos pocos miles.
+export function alcanceMatcher(promo: ScopeFields): (p: { id: string; category: string | null }) => boolean {
+  if (promo.scope === "ALL") return () => true;
+  if (promo.scope === "CATEGORY") {
+    const cats = new Set(promo.categories);
+    return (p) => p.category != null && cats.has(p.category);
+  }
+  if (promo.scope === "PRODUCTS") {
+    const ids = new Set(promo.productIds);
+    return (p) => ids.has(p.id);
+  }
+  return () => false;
+}
+
 export function productsInScope<T extends { id: string; category: string | null }>(
   promo: ScopeFields, products: T[]
 ): T[] {
-  return products.filter((p) =>
-    promo.scope === "ALL" ? true :
-    promo.scope === "CATEGORY" ? (p.category != null && promo.categories.includes(p.category)) :
-    promo.scope === "PRODUCTS" ? promo.productIds.includes(p.id) : false
-  );
+  return products.filter(alcanceMatcher(promo));
 }
 
 // ── Impacto de un monto fijo, producto por producto (F6-C4) ──────────────────
@@ -406,19 +425,23 @@ export function deadPromoCheck(
   const enAlcance = productsInScope(nueva, products).filter((p) => p.price > 0);
   if (!enAlcance.length) return null; // sin productos que juzgar, no se afirma nada
 
+  // El matcher de cada rival se arma UNA vez, no una por producto: adentro del
+  // bucle esto se pregunta miles de veces (ver el comentario de `alcanceMatcher`).
+  const conAlcance = candidatas.map((r) => ({ r, alcanza: alcanceMatcher(r) }));
+
   const killers = new Set<string>();
   for (const p of enAlcance) {
     const conLaNueva = precioDirecto(nueva, p.price);
     if (conLaNueva == null) return null;
-    const tapa = candidatas.find((r) => {
-      if (!productsInScope(r, [p]).length) return false;
+    const tapa = conAlcance.find(({ r, alcanza }) => {
+      if (!alcanza(p)) return false;
       const conLaRival = precioDirecto(r, p.price);
       // `<=` y no `<`: si empatan, la nueva tampoco aporta nada (es el caso de
       // crear dos veces la misma promo sin darse cuenta).
       return conLaRival != null && conLaRival <= conLaNueva;
     });
     if (!tapa) return null; // gana en al menos un producto → está viva
-    killers.add(tapa.name);
+    killers.add(tapa.r.name);
   }
   return { killers: [...killers] };
 }

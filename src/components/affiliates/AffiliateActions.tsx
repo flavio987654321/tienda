@@ -2,52 +2,11 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Check, Loader2, PauseCircle, Play, Trash2, X, AlertTriangle } from "lucide-react";
-
-function ConfirmModal({
-  title,
-  body,
-  confirmLabel,
-  confirmClass,
-  onConfirm,
-  onCancel,
-}: {
-  title: string;
-  body: React.ReactNode;
-  confirmLabel: string;
-  confirmClass: string;
-  onConfirm: () => void;
-  onCancel: () => void;
-}) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full">
-        <div className="flex items-start gap-3 px-5 pt-5 pb-4 border-b border-gray-100">
-          <div className="w-9 h-9 rounded-xl bg-amber-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-            <AlertTriangle className="h-5 w-5 text-amber-600" />
-          </div>
-          <div className="flex-1">
-            <h3 className="font-bold text-gray-900 text-sm">{title}</h3>
-          </div>
-          <button onClick={onCancel} className="text-gray-400 hover:text-gray-600 flex-shrink-0">
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-        <div className="px-5 py-4 text-sm text-gray-600 leading-relaxed">{body}</div>
-        <div className="px-5 pb-5 flex gap-2">
-          <button onClick={onCancel}
-            className="flex-1 py-2 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors">
-            Cancelar
-          </button>
-          <button onClick={onConfirm}
-            className={`flex-1 py-2 rounded-xl text-white text-sm font-semibold transition-colors ${confirmClass}`}>
-            {confirmLabel}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
+import { Check, Loader2, PauseCircle, Play, Trash2, X } from "lucide-react";
+// El diálogo vivía acá adentro, así que el resto del panel siguió usando el
+// `confirm()` del navegador. Ahora es compartido — y de paso queda arriba de la
+// barra del teléfono, que con el `z-50` que tenía le tapaba el título.
+import ConfirmModal from "@/components/ConfirmModal";
 
 export default function AffiliateActions({
   affiliateId,
