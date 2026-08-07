@@ -8,7 +8,7 @@ import { Check, ShoppingBag, Zap, Store, Star, ArrowRight, PartyPopper, Shopping
 import { SiteNav } from "@/components/SiteNav";
 import { SiteFooter } from "@/components/SiteFooter";
 import PaymentModal from "@/components/subscription/PaymentModal";
-import { PRICES, PRO_MAX_ACTIVE_COUPONS, PRO_MAX_LIVE_PROMOTIONS, PRO_MAX_AFFILIATES, PUSH_CAMPAIGNS_PER_WEEK } from "@/lib/planLimits";
+import { PRICES, PRO_MAX_ACTIVE_COUPONS, PRO_MAX_LIVE_PROMOTIONS, PRO_MAX_AFFILIATES, PRO_MAX_PRODUCTS, MAX_PRODUCTS_POR_TIENDA, PUSH_CAMPAIGNS_PER_WEEK } from "@/lib/planLimits";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 function money(amount: number) {
@@ -332,7 +332,12 @@ function PreciosContent() {
               <ul className="space-y-3 mb-8 flex-1">
                 {[
                   { text: "Tienda con subdominio incluido", both: true },
-                  { text: "Productos y variantes ilimitados", both: true },
+                  // Decía "Productos y variantes ilimitados" para los dos planes,
+                  // y dejó de ser cierto el día que los productos pasaron a tener
+                  // tope. Las variantes siguen sin tope, así que la promesa se
+                  // parte en dos en vez de borrarse. Premium tampoco es infinito:
+                  // tiene el techo por tienda, que es técnico y no de plan.
+                  { text: `Hasta ${PRO_MAX_PRODUCTS.toLocaleString("es-AR")} productos, con variantes ilimitadas`, both: false, basic: true, premiumText: `Hasta ${MAX_PRODUCTS_POR_TIENDA.toLocaleString("es-AR")} productos, con variantes ilimitadas` },
                   { text: "Panel de pedidos y estadísticas", both: true },
                   { text: `Hasta ${PRO_MAX_AFFILIATES} afiliados`, both: false, basic: true, premiumText: "Afiliados ilimitados" },
                   { text: `Hasta ${PRO_MAX_ACTIVE_COUPONS} cupones activos`, both: false, basic: true, premiumText: "Cupones ilimitados" },

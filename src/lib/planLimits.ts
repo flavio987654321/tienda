@@ -29,6 +29,23 @@ export const PRICES = {
 export const PRO_MAX_ACTIVE_COUPONS = 10;
 export const PRO_MAX_LIVE_PROMOTIONS = 5;
 export const PRO_MAX_AFFILIATES = 6;
+export const PRO_MAX_PRODUCTS = 1000;
+
+/**
+ * Techo de productos por tienda que se aplica a TODOS los planes, Premium
+ * incluido. No es un límite comercial: es un freno anti-abuso.
+ *
+ * Por qué hace falta uno aparte y no alcanza con `PRO_MAX_PRODUCTS`: el tier se
+ * ELIGE en el formulario de registro (`tier === "PREMIUM" ? "PREMIUM" : "BASIC"`)
+ * y la prueba de 7 días no pide tarjeta. O sea que cualquiera que quiera pasar
+ * por arriba del tope de Pro solo tiene que marcar Premium al anotarse. Un tope
+ * que solo mira el plan no frena justo al que lo quiere evadir.
+ *
+ * El número es alto a propósito: tiene que ser imposible de alcanzar usando la
+ * app de verdad (hoy la tienda más grande tiene 58 productos) y molesto de
+ * alcanzar con un script. No es una promesa comercial y no va en los Términos.
+ */
+export const MAX_PRODUCTS_POR_TIENDA = 5000;
 
 /**
  * Notificaciones push por semana. No es un tope de Pro: la función entera es

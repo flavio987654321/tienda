@@ -103,7 +103,7 @@ function splitCsvLine(line: string): string[] {
   return result;
 }
 
-export default function CsvImportButton({ onImported, tipoTienda = "ROPA" }: { onImported?: () => void; tipoTienda?: string }) {
+export default function CsvImportButton({ onImported, tipoTienda = "ROPA", className = "" }: { onImported?: () => void; tipoTienda?: string; className?: string }) {
   const isAutos = tipoTienda === "AUTOS";
   const itemLabel = isAutos ? "vehículo" : "producto";
   const [open, setOpen] = useState(false);
@@ -149,9 +149,22 @@ export default function CsvImportButton({ onImported, tipoTienda = "ROPA" }: { o
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ rows, tipoTienda }),
       });
-      const data = await res.json();
-      setResult(data);
-      if (data.created > 0) onImported?.();
+      const data = await res.json().catch(() => null);
+      // El servidor tiene dos formas de contestar: el resumen de la importación
+      // (`created` + `errors`) o un rechazo suelto (`{ error }`) cuando ni
+      // siquiera arrancó — formato inválido, sin lugar en la tienda, demasiadas
+      // llamadas seguidas. Lo que se guardaba antes era `data` tal cual, así que
+      // en el segundo caso quedaba un resultado sin `errors` y el panel de abajo
+      // reventaba al hacer `result.errors.length` sobre un `undefined`.
+      if (!res.ok || !data || typeof data.created !== "number") {
+        setResult({
+          created: 0,
+          errors: [{ row: 0, error: data?.error || "No se pudo importar el archivo" }],
+        });
+      } else {
+        setResult(data);
+        if (data.created > 0) onImported?.();
+      }
     } catch {
       setResult({ created: 0, errors: [{ row: 0, error: "Error de red al importar" }] });
     }
@@ -169,14 +182,14 @@ export default function CsvImportButton({ onImported, tipoTienda = "ROPA" }: { o
     <>
       <button
         onClick={() => setOpen(true)}
-        className="flex items-center gap-2 bg-white border border-gray-200 text-gray-700 px-4 py-2.5 rounded-xl font-medium hover:bg-gray-50 transition-colors shadow-sm"
+        className={`flex items-center gap-2 bg-white border border-gray-200 text-gray-700 px-4 py-2.5 rounded-xl font-medium hover:bg-gray-50 transition-colors shadow-sm ${className}`}
       >
-        <Upload className="h-4 w-4" />
-        Importar CSV
+        <Upload className="h-4 w-4 shrink-0" />
+        <span className="truncate">Importar CSV</span>
       </button>
 
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+        <div className="fixed inset-0 z-[80] flex items-center justify-center p-4"
           style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}>
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden"
             onClick={e => e.stopPropagation()}>
@@ -210,8 +223,10 @@ export default function CsvImportButton({ onImported, tipoTienda = "ROPA" }: { o
                   </div>
                   {result.errors.length > 0 && (
                     <ul className="text-xs text-red-700 space-y-0.5 mt-2 pl-1">
+                      {/* `row: 0` es un rechazo de la importación entera, no de
+                          una fila: ahí "Fila 0:" adelante confunde más que ayuda. */}
                       {result.errors.slice(0, 8).map((e, i) => (
-                        <li key={i}>• Fila {e.row}: {e.error}</li>
+                        <li key={i}>• {e.row > 0 ? `Fila ${e.row}: ` : ""}{e.error}</li>
                       ))}
                       {result.errors.length > 8 && <li>...y {result.errors.length - 8} errores más</li>}
                     </ul>

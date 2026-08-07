@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ShoppingBag, ArrowLeft } from "lucide-react";
 import { TERMS_LAST_UPDATED } from "@/lib/legal";
-import { PRICES, PRO_MAX_ACTIVE_COUPONS, PRO_MAX_LIVE_PROMOTIONS, PRO_MAX_AFFILIATES } from "@/lib/planLimits";
+import { PRICES, PRO_MAX_ACTIVE_COUPONS, PRO_MAX_LIVE_PROMOTIONS, PRO_MAX_AFFILIATES, PRO_MAX_PRODUCTS, MAX_PRODUCTS_POR_TIENDA } from "@/lib/planLimits";
 import { siteUrl } from "@/lib/site";
 
 const DESCRIPTION =
@@ -24,6 +24,9 @@ export const metadata: Metadata = {
 // documento que la gente acepta, así que no puede estar desactualizado.
 // Si cambian, hay que subir CURRENT_TERMS_VERSION: es un cambio de contrato.
 const ars = (n: number) => "$" + n.toLocaleString("es-AR");
+// Los topes de productos son de cuatro cifras: sin separador de miles, "5000" se
+// lee peor que "5.000" en un párrafo largo.
+const miles = (n: number) => n.toLocaleString("es-AR");
 
 const CONTENT = {
   owner: {
@@ -53,9 +56,10 @@ const CONTENT = {
         title: "3. Planes disponibles",
         body: null,
         list: [
-          `Plan Tienda Pro: ${ars(PRICES.OWNER_BASIC.MONTHLY)} ARS/mes o ${ars(PRICES.OWNER_BASIC.ANNUAL)} ARS/año. Incluye subdominio propio (tutienda.tiendaapps.com), hasta ${PRO_MAX_AFFILIATES} afiliados activos, hasta ${PRO_MAX_ACTIVE_COUPONS} cupones vigentes, hasta ${PRO_MAX_LIVE_PROMOTIONS} promociones vigentes y soporte por email.`,
+          `Plan Tienda Pro: ${ars(PRICES.OWNER_BASIC.MONTHLY)} ARS/mes o ${ars(PRICES.OWNER_BASIC.ANNUAL)} ARS/año. Incluye subdominio propio (tutienda.tiendaapps.com), hasta ${PRO_MAX_AFFILIATES} afiliados activos, hasta ${PRO_MAX_ACTIVE_COUPONS} cupones vigentes, hasta ${PRO_MAX_LIVE_PROMOTIONS} promociones vigentes, hasta ${miles(PRO_MAX_PRODUCTS)} productos publicados y soporte por email.`,
           `Plan Tienda Premium: ${ars(PRICES.OWNER_PREMIUM.MONTHLY)} ARS/mes o ${ars(PRICES.OWNER_PREMIUM.ANNUAL)} ARS/año. Incluye todo lo del plan Pro más la posibilidad de conectar tu propio dominio, afiliados ilimitados, y cupones y promociones sin límite, con soporte prioritario.`,
-          "Los topes del plan Pro cuentan lo que está vigente en cada momento, no lo que creaste alguna vez: al desactivar, archivar o dejar vencer un cupón o una promoción, ese lugar queda libre de inmediato. Tampoco ocupan lugar los cupones que genera la ruleta o la raspadita (ni sus premios ganados), que no tienen tope.",
+          "Los topes del plan Pro cuentan lo que está vigente en cada momento, no lo que creaste alguna vez: al desactivar, archivar o dejar vencer un cupón o una promoción, ese lugar queda libre de inmediato, y lo mismo pasa con un producto al eliminarlo. Tampoco ocupan lugar los cupones que genera la ruleta o la raspadita (ni sus premios ganados), que no tienen tope.",
+          `Por razones técnicas y de seguridad, ninguna tienda puede superar los ${miles(MAX_PRODUCTS_POR_TIENDA)} productos, cualquiera sea su plan. No es un límite comercial: es un resguardo para que el uso automatizado o accidental de las herramientas de carga masiva no afecte el servicio del resto. Si tu catálogo real necesita más, escribinos y lo vemos.`,
           "Ambos planes incluyen 7 días de prueba gratuita sin tarjeta de crédito.",
           "Los pagos se procesan a través de Mercado Pago.",
           "Los pagos son por período: no hay débito automático ni renovación automática. Al vencer tu plan te avisamos por email y tenés que renovarlo vos desde 'Mi Plan'. Nunca te vamos a cobrar sin que lo confirmes.",

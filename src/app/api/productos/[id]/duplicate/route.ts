@@ -1,12 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getOwnerStore } from "@/lib/products";
+import { getOwnerStore, checkCupoDeProductos, checkRitmoDeCreacion } from "@/lib/products";
 
 type Ctx = { params: Promise<{ id: string }> };
 
 export async function POST(_req: NextRequest, ctx: Ctx) {
   const auth = await getOwnerStore();
   if ("error" in auth) return auth.error;
+
+  // Duplicar es la vía más barata de todas para el que quiere llenar la base:
+  // un POST sin cuerpo que copia un producto entero con sus variantes.
+  const ritmo = await checkRitmoDeCreacion(auth.ownerId, "duplicar", 60);
+  if (ritmo) return ritmo;
+  const cupo = await checkCupoDeProductos(auth.storeId, auth.ownerId, 1);
+  if (cupo) return cupo;
 
   const { id } = await ctx.params;
 

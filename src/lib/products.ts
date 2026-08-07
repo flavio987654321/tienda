@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
+import { checkRateLimitConRespaldo } from "@/lib/rate-limit";
+import { hasActivePremium, SUB_STATUS_SELECT } from "@/lib/subscription";
+import { PRO_MAX_PRODUCTS, MAX_PRODUCTS_POR_TIENDA } from "@/lib/planLimits";
 import sanitizeHtml from "sanitize-html";
 import { DESCRIPTION_TEXT_COLORS } from "@/lib/richTextColors";
 
@@ -478,4 +481,71 @@ export async function getOwnerStore(): Promise<
 
   if (!store) return { error: NextResponse.json({ error: "Tienda no encontrada" }, { status: 404 }) };
   return { storeId: store.id, ownerId: store.ownerId };
+}
+
+/* ── Freno anti-abuso de todo lo que crea productos ─────────────────────────
+   Las tres rutas que crean productos —alta suelta, importación de CSV y
+   duplicar— no tenían ni tope de cantidad ni límite de ritmo. Autenticadas sí
+   estaban, y siempre escriben en la tienda del que tiene la sesión, así que
+   nunca se le pudo meter un producto a la tienda de otro. El agujero era otro:
+   anotarse (la prueba es gratis y no pide tarjeta) y disparar el import en un
+   bucle, 500 productos por llamada, hasta llenar la base.
+
+   Son dos frenos distintos porque atajan dos cosas distintas: el TECHO acota el
+   total que puede llegar a existir, y el RITMO acota cuánto se puede escribir
+   por minuto — que es lo que protege a la base mientras el techo todavía no se
+   alcanzó. Los dos avisan con un texto que sirve también cuando el que lo choca
+   es alguien de verdad con un CSV mal armado. */
+
+/**
+ * ¿Entra una tanda de `cuantos` productos en lo que le queda a esta tienda?
+ * Devuelve la respuesta de error si no entra, o `null` si puede seguir.
+ *
+ * Los borrados lógicos (`deletedAt`) no se cuentan: liberan lugar al toque, con
+ * el mismo criterio que los cupones y las promociones —se cuenta lo que está
+ * vivo, no lo que se creó alguna vez—.
+ */
+export async function checkCupoDeProductos(
+  storeId: string, ownerId: string, cuantos: number
+): Promise<NextResponse | null> {
+  const sub = await prisma.subscription.findUnique({
+    where: { userId: ownerId },
+    select: SUB_STATUS_SELECT,
+  });
+  // Premium no tiene el tope comercial, pero sí el absoluto: ver el comentario
+  // de MAX_PRODUCTS_POR_TIENDA — el tier se elige solo al registrarse.
+  const techo = hasActivePremium(sub) ? MAX_PRODUCTS_POR_TIENDA : PRO_MAX_PRODUCTS;
+
+  const actuales = await prisma.product.count({ where: { storeId, deletedAt: null } });
+  if (actuales + cuantos <= techo) return null;
+
+  const libres = Math.max(0, techo - actuales);
+  return NextResponse.json({
+    error: libres === 0
+      ? `Llegaste al máximo de ${techo.toLocaleString("es-AR")} productos. Borrá alguno para hacer lugar.`
+      : `Te quedan ${libres.toLocaleString("es-AR")} lugares de ${techo.toLocaleString("es-AR")} productos y estás intentando cargar ${cuantos.toLocaleString("es-AR")}.`,
+  }, { status: 403 });
+}
+
+/**
+ * ¿Va a un ritmo de persona o de script? Cuenta LLAMADAS por minuto, no
+ * productos, así que cada ruta pasa su propio límite: dar de alta de a uno
+ * tolera muchas más llamadas que importar de a 500.
+ *
+ * Usa la versión con respaldo: si Upstash no contesta —y se cae justo bajo
+ * carga, que es cuando alguien está abusando— el techo pasa a ser local en vez
+ * de desaparecer.
+ */
+export async function checkRitmoDeCreacion(
+  ownerId: string, clave: string, porMinuto: number
+): Promise<NextResponse | null> {
+  const { permitido } = await checkRateLimitConRespaldo(
+    `productos:${clave}:${ownerId}`, porMinuto, 60_000,
+    { limiteFallback: porMinuto, limiteFallbackGlobal: porMinuto * 20 }
+  );
+  if (permitido) return null;
+  return NextResponse.json(
+    { error: "Estás cargando productos muy rápido. Esperá un minuto y seguí." },
+    { status: 429 }
+  );
 }

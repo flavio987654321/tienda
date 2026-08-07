@@ -3,6 +3,14 @@
 // el contenido cambie de forma sustantiva — dispara el banner de re-aceptación
 // para usuarios que aceptaron una versión anterior.
 //
+// 1.5 (07/08/2026) — topes de productos. El plan Pro pasa a tener uno (1.000
+// publicados), y aparece además un techo de 5.000 por tienda que corre para
+// cualquier plan, Premium incluido. Ese segundo no es comercial: las tres rutas
+// que crean productos (alta, importación de CSV y duplicar) no tenían ni tope de
+// cantidad ni límite de ritmo, y como el plan se elige solo al registrarse y la
+// prueba no pide tarjeta, un tope que mirara únicamente el plan no frenaba a
+// quien lo quisiera evadir. Se documenta porque el usuario se lo puede chocar.
+//
 // 1.4 (20/07/2026) — promociones de tienda: tope del plan Pro (5 vigentes, más el
 // de 10 cupones ahora bien definido), su borrado y respaldo en el cambio de rubro,
 // y el bloqueo del cambio cuando hay ofertas que un cliente todavía puede usar.
@@ -18,7 +26,7 @@
 // cambiaron seis veces (Meta, Google Analytics, cambio de rubro, entre otros), así
 // que el banner nunca se disparó por ninguno de esos cambios. El bump a 1.3
 // arrastró toda esa deuda de una.
-export const CURRENT_TERMS_VERSION = "1.4";
+export const CURRENT_TERMS_VERSION = "1.5";
 
 /**
  * Condiciones del diseño colaborativo (/diseno-propio). Versión aparte de
@@ -42,10 +50,9 @@ export const DESIGN_BRIEF_TERMS_VERSION = "1.0";
  * sección ni "conforme a lo dispuesto".
  */
 export const CURRENT_TERMS_SUMMARY: string[] = [
-  "Sumamos las promociones de tienda: cuántas podés tener según tu plan, y qué pasa con ellas si cambiás de rubro.",
-  "Aclaramos los topes del plan Pro: cuentan lo que tenés vigente, no lo que creaste alguna vez, y los cupones de la ruleta no ocupan lugar.",
-  "Ahora no se puede cambiar de rubro con cupones o promociones que tus clientes todavía puedan usar: los das de baja vos, para que no desaparezcan sin que te enteres.",
-  "Explicamos qué pasa con los carritos que alguien deja sin comprar: qué datos se guardan, para qué, y que se borran solos a los 45 días.",
+  "El plan Pro pasa a tener un tope de 1.000 productos publicados. Premium sigue sin tope de plan.",
+  "Sumamos un máximo de 5.000 productos por tienda, para cualquier plan. No es comercial: es para que nadie pueda llenar el sistema con carga automática y dejar el servicio lento para el resto.",
+  "Igual que con los cupones y las promociones, cuenta lo que tenés publicado: si borrás un producto, ese lugar queda libre en el momento.",
 ];
 
 /**
@@ -55,4 +62,4 @@ export const CURRENT_TERMS_SUMMARY: string[] = [
  * afirman que "la fecha de última actualización al inicio de esta página siempre
  * refleja la versión vigente". Si subís la versión, actualizá esto también.
  */
-export const TERMS_LAST_UPDATED = "julio 2026";
+export const TERMS_LAST_UPDATED = "agosto 2026";

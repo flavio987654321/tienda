@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
-import { sanitizeDescription } from "@/lib/products";
+import { sanitizeDescription, checkCupoDeProductos, checkRitmoDeCreacion } from "@/lib/products";
 
 type CsvRow = {
   nombre: string;
@@ -66,6 +66,16 @@ export async function POST(req: NextRequest) {
   const rows: CsvRow[] = body.rows;
   if (rows.length === 0) return NextResponse.json({ error: "El CSV no tiene filas" }, { status: 400 });
   if (rows.length > 500) return NextResponse.json({ error: "Máximo 500 productos por importación" }, { status: 400 });
+
+  // Las 500 filas por llamada ya estaban; lo que faltaba era el techo de cuántas
+  // LLAMADAS. Sin esto, "máximo 500 por importación" no limitaba nada: bastaba
+  // con mandar la misma importación en un bucle.
+  const ritmo = await checkRitmoDeCreacion(user.id, "import", 5);
+  if (ritmo) return ritmo;
+  // Se cuenta la tanda entera y no fila por fila: si no entra completa, conviene
+  // que se entere antes de que le queden 300 productos cargados a medias.
+  const cupo = await checkCupoDeProductos(store.id, user.id, rows.length);
+  if (cupo) return cupo;
 
   // El tipo de tienda se lee del lado del servidor (no de lo que mande el
   // cliente) para decidir si hay que armar los atributos de vehículo.

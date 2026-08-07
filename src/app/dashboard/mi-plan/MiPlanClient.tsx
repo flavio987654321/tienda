@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { CheckCircle, Clock, AlertTriangle, CreditCard, ArrowRight, RefreshCw, Zap, Crown, Star, Bell, Globe } from "lucide-react";
 import { getSubscriptionStatus, daysRemaining, getPriceForRole } from "@/lib/subscription";
-import { PRO_MAX_ACTIVE_COUPONS, PRO_MAX_LIVE_PROMOTIONS, PRO_MAX_AFFILIATES, PUSH_CAMPAIGNS_PER_WEEK } from "@/lib/planLimits";
+import { PRO_MAX_ACTIVE_COUPONS, PRO_MAX_LIVE_PROMOTIONS, PRO_MAX_AFFILIATES, PRO_MAX_PRODUCTS, MAX_PRODUCTS_POR_TIENDA, PUSH_CAMPAIGNS_PER_WEEK } from "@/lib/planLimits";
 import PaymentModal from "@/components/subscription/PaymentModal";
 
 type Sub = {
@@ -41,7 +41,9 @@ const PLAN_CONFIG = {
       // así que no pueden decir un número distinto al que se hace cumplir.
       features: [
         "Tienda con subdominio incluido",
-        "Productos y variantes ilimitados",
+        // Decía "Productos y variantes ilimitados" y dejó de ser cierto el día que
+        // los productos pasaron a tener tope. Las variantes siguen sin tope.
+        `Hasta ${PRO_MAX_PRODUCTS.toLocaleString("es-AR")} productos, con variantes ilimitadas`,
         "Panel de pedidos y estadísticas",
         `Hasta ${PRO_MAX_AFFILIATES} afiliados`,
         `Hasta ${PRO_MAX_ACTIVE_COUPONS} cupones activos`,
@@ -59,7 +61,11 @@ const PLAN_CONFIG = {
       // ninguna de las cuatro que sí lo son. Vender lo que no se cumple no suma:
       // el que se pasa por el badge después descubre que ya lo tenía.
       features: [
-        "Todo lo de Tienda Pro, sin topes",
+        // "Sin topes" a secas dejó de ser exacto: los de plan sí desaparecen, pero
+        // el techo de productos por tienda corre igual para Premium (es técnico,
+        // no comercial — está explicado en los Términos). Se dice el número acá y
+        // en /precios para que las dos pantallas cuenten lo mismo.
+        `Todo lo de Tienda Pro, sin topes de plan (hasta ${MAX_PRODUCTS_POR_TIENDA.toLocaleString("es-AR")} productos)`,
         "Tu tienda instalable como app en el celular",
         `Avisales novedades por notificación (${PUSH_CAMPAIGNS_PER_WEEK} por semana)`,
         "Conectá tu propio dominio",

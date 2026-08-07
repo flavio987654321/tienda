@@ -1,7 +1,7 @@
 ﻿import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
-import { validateProductBody, MAX_PRODUCT_REELS, MAX_PRODUCT_IMAGES } from "@/lib/products";
+import { validateProductBody, checkCupoDeProductos, checkRitmoDeCreacion, MAX_PRODUCT_REELS, MAX_PRODUCT_IMAGES } from "@/lib/products";
 import { createNotificationMany } from "@/lib/notifications";
 
 export async function GET(req: NextRequest) {
@@ -39,6 +39,13 @@ export async function POST(req: NextRequest) {
     where: { ownerId: user.id },
   });
   if (!store) return NextResponse.json({ error: "Tienda no encontrada" }, { status: 404 });
+
+  // 60 altas por minuto: una persona guardando el formulario no llega ni cerca,
+  // un bucle sí. Se chequea antes de leer el cuerpo para no gastar en parsear.
+  const ritmo = await checkRitmoDeCreacion(user.id, "alta", 60);
+  if (ritmo) return ritmo;
+  const cupo = await checkCupoDeProductos(store.id, user.id, 1);
+  if (cupo) return cupo;
 
   const body = await req.json();
   // Sin `description`: lo que se guarda es `sanitizedDescription`, que sale de
