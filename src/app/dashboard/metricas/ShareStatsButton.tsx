@@ -128,9 +128,9 @@ export default function ShareStatsButton({
         type="button"
         disabled={loading}
         onClick={handleShare}
-        className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-600 hover:border-indigo-200 hover:text-indigo-600 transition-all disabled:opacity-50 print:hidden"
+        className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-600 hover:border-indigo-200 hover:text-indigo-600 transition-all disabled:opacity-50 print:hidden"
       >
-        <Share2 className="h-3.5 w-3.5" />
+        <Share2 className="h-3.5 w-3.5 shrink-0" />
         {loading ? "Generando…" : "Compartir"}
       </button>
     </>

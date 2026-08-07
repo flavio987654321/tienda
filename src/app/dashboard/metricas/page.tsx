@@ -963,18 +963,18 @@ export default async function MetricasPage({
         <div className="grid gap-6 lg:grid-cols-2">
           {isAutos ? (
             <div className="rounded-2xl border border-gray-100 bg-white p-6">
-              <div className="flex items-center justify-between mb-0.5">
+              <div className="flex items-center justify-between gap-3 mb-0.5">
                 <h2 className="font-bold text-gray-900">Consultas diarias</h2>
-                <p className="text-xl font-black text-indigo-600">{totalLeadsPeriod}</p>
+                <p className="shrink-0 text-xl font-black text-indigo-600">{totalLeadsPeriod}</p>
               </div>
               <p className="text-xs text-gray-400 mb-4">Últimos {rangeDays} días</p>
               <LineChart data={leadsChartData} color="#6366f1" gradId="grad-indigo" formatter={shortNum} />
             </div>
           ) : (
             <div className="rounded-2xl border border-gray-100 bg-white p-6">
-              <div className="flex items-center justify-between mb-0.5">
+              <div className="flex items-center justify-between gap-3 mb-0.5">
                 <h2 className="font-bold text-gray-900">Ingresos confirmados</h2>
-                <p className="text-xl font-black text-green-600">{money(totalRevenuePeriod)}</p>
+                <p className="shrink-0 text-xl font-black text-green-600">{money(totalRevenuePeriod)}</p>
               </div>
               <p className="text-xs text-gray-400 mb-4">Últimos {rangeDays} días</p>
               <LineChart data={revenueChartData} color="#16a34a" gradId="grad-green" formatter={shortMoney} />
@@ -982,9 +982,9 @@ export default async function MetricasPage({
           )}
 
           <div className="rounded-2xl border border-gray-100 bg-white p-6">
-            <div className="flex items-center justify-between mb-0.5">
+            <div className="flex items-center justify-between gap-3 mb-0.5">
               <h2 className="font-bold text-gray-900">Visitas a tu tienda</h2>
-              <p className="text-xl font-black text-blue-600">{totalViewsPeriod.toLocaleString("es-AR")}</p>
+              <p className="shrink-0 text-xl font-black text-blue-600">{totalViewsPeriod.toLocaleString("es-AR")}</p>
             </div>
             <p className="text-xs text-gray-400 mb-4">
               {totalViewsPeriod === 0
@@ -1355,9 +1355,9 @@ export default async function MetricasPage({
 
             <div className="grid gap-6 lg:grid-cols-2">
               <div className="rounded-2xl border border-gray-100 bg-white p-6">
-                <div className="flex items-center justify-between mb-0.5">
+                <div className="flex items-center justify-between gap-3 mb-0.5">
                   <h2 className="font-bold text-gray-900">Ganancia diaria</h2>
-                  <p className="text-xl font-black text-violet-600">{money(profitCurrentAgg.totalProfit)}</p>
+                  <p className="shrink-0 text-xl font-black text-violet-600">{money(profitCurrentAgg.totalProfit)}</p>
                 </div>
                 <p className="text-xs text-gray-400 mb-4">Últimos {rangeDays} días — solo ventas con costo cargado</p>
                 <LineChart data={profitChartData} color="#7c3aed" gradId="grad-violet" formatter={shortMoney} />
