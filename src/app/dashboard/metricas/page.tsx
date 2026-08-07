@@ -147,7 +147,18 @@ function LineChart({
   gradId: string;
   formatter?: (n: number) => string;
 }) {
-  const W = 580, H = 180;
+  // El lienzo se achicó de 580 a 440 de ancho.
+  //
+  // Un `viewBox` no es un tamaño, es una proporción: el SVG entero se estira o
+  // se encoge para entrar en el ancho que le dé el contenedor, y el texto se
+  // achica con él. Con 580 metidos en la tarjeta de un teléfono —unos 296px—
+  // todo quedaba a poco más de la MITAD de tamaño, y por eso las fechas del eje
+  // se leían como motas por más que se les subiera la tipografía.
+  //
+  // Con 440 la reducción es mucho menor y el texto sobrevive. La única
+  // consecuencia es que el gráfico queda un poco menos apaisado en pantalla
+  // grande, que para una curva no cambia nada.
+  const W = 440, H = 180;
   const padL = 46, padR = 12, padT = 24, padB = 26;
   const innerW = W - padL - padR;
   const innerH = H - padT - padB;
@@ -187,8 +198,14 @@ function LineChart({
   const hasData = data.some((d) => d.value > 0);
 
   return (
-    <div className="overflow-x-auto">
-      <svg viewBox={`0 0 ${W} ${H}`} className="w-full min-w-[320px]">
+    /* Sin `min-w` y sin scroll lateral. El `min-w-[320px]` obligaba al SVG a
+       medir 320 dentro de una tarjeta de ~296 en un teléfono, así que el
+       gráfico se pasaba del ancho y había que arrastrarlo para ver la parte
+       derecha. Un gráfico que no entra en su tarjeta se lee como algo roto, y
+       arrastrarlo de costado es lo último que alguien va a intentar. Con
+       `w-full` a secas el SVG se adapta al ancho que haya, siempre. */
+    <div>
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full">
         <defs>
           <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor={color} stopOpacity="0.18" />
