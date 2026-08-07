@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { createSupabaseBrowserClient, hasSupabaseBrowserConfig } from "@/lib/supabase/client";
 import { Bell, X, Trash2 } from "lucide-react";
 import Link from "next/link";
@@ -23,6 +23,7 @@ const ICONS: Record<string, string> = {
   ORDER_DELIVERED: "🎉",
   ORDER_CANCELLED: "❌",
   NEW_REVIEW: "⭐",
+  ABANDONED_CART: "🛒",
   // Afiliados — estado en programa
   AFFILIATE_APPROVED: "🤝",
   AFFILIATE_REJECTED: "🚫",
@@ -77,14 +78,50 @@ export default function NotificationBell({ userId }: { userId: string }) {
   const ref = useRef<HTMLDivElement>(null);
   const instanceId = useId();
 
-  useEffect(() => {
+  // Trae el estado real del servidor. Sale del efecto de montaje para poder
+  // volver a llamarla cuando la pestaña vuelve al frente (ver más abajo).
+  const traer = useCallback(() => {
     fetch("/api/notifications")
       .then((r) => r.json())
       .then((data) => {
         setNotifications(data.notifications ?? []);
         setUnread(data.unreadCount ?? 0);
-      });
+      })
+      .catch(() => {});
   }, []);
+
+  useEffect(() => { traer(); }, [traer]);
+
+  // Realtime NO reenvía lo que se perdió: si el websocket se cortó mientras la
+  // pestaña estaba en segundo plano, ese aviso no llega nunca — recién aparece
+  // la próxima vez que se recargue la página. Y el panel se deja abierto en una
+  // pestaña durante horas, que es justo cuando el socket se cae.
+  //
+  // Volver a preguntar al mirar la pestaña pone al día sin depender de que el
+  // socket siga vivo. Si funcionó, esto no cambia nada: trae lo mismo que ya
+  // está en pantalla.
+  //
+  // Se escuchan los dos eventos porque cubren casos distintos: `visibilitychange`
+  // es volver de otra pestaña, `focus` es volver de otra aplicación con la
+  // pestaña siempre visible. El guard de 3 segundos evita la consulta doble
+  // cuando los dos se disparan juntos, que es lo normal al hacer alt-tab.
+  const ultimaConsulta = useRef(0);
+
+  useEffect(() => {
+    function alVolver() {
+      if (document.visibilityState !== "visible") return;
+      const ahora = Date.now();
+      if (ahora - ultimaConsulta.current < 3000) return;
+      ultimaConsulta.current = ahora;
+      traer();
+    }
+    document.addEventListener("visibilitychange", alVolver);
+    window.addEventListener("focus", alVolver);
+    return () => {
+      document.removeEventListener("visibilitychange", alVolver);
+      window.removeEventListener("focus", alVolver);
+    };
+  }, [traer]);
 
   useEffect(() => {
     if (!hasSupabaseBrowserConfig()) return;

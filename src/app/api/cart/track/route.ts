@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { getClientIp } from "@/lib/request-ip";
+import { createNotification } from "@/lib/notifications";
 
 type TrackItem = {
   productId: string;
@@ -42,7 +43,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false }, { status: 400 });
   }
 
-  const store = await prisma.store.findUnique({ where: { id: storeId }, select: { id: true } });
+  const store = await prisma.store.findUnique({ where: { id: storeId }, select: { id: true, ownerId: true } });
   if (!store) return NextResponse.json({ ok: false }, { status: 404 });
 
   const data = {
@@ -55,11 +56,43 @@ export async function POST(req: NextRequest) {
     recoveredAt: null,
   };
 
+  // Se pregunta si ya existía ANTES del upsert, porque después no hay forma de
+  // saber si creó o actualizó. Es el dato que decide si se avisa: mientras la
+  // persona sigue en el checkout, cada vez que toca algo se vuelve a llamar acá
+  // y el carrito se actualiza. Avisando en cada actualización, un solo visitante
+  // indeciso llenaría la campanita de avisos del mismo carrito.
+  const yaExistia = await prisma.abandonedCart.findUnique({
+    where: { storeId_customerEmail: { storeId, customerEmail: email } },
+    select: { id: true },
+  });
+
   await prisma.abandonedCart.upsert({
     where: { storeId_customerEmail: { storeId, customerEmail: email } },
     create: { storeId, customerEmail: email, ...data },
     update: data,
   });
+
+  // El puntito del menú solo se recalcula al navegar entre pantallas del panel,
+  // así que si la dueña está parada en una no se entera de nada hasta que se
+  // mueve. La campanita sí avisa. Y era una inconsistencia: llegaba aviso por una
+  // reseña y no por alguien que dejó su email con el carrito lleno, que vale
+  // bastante más.
+  //
+  // Va sin `await` a propósito: el visitante del storefront está esperando esta
+  // respuesta, y que le tarde el checkout por escribir un aviso del panel sería
+  // cambiar algo que importa por algo que no. `createNotification` ya se traga
+  // sus propios errores.
+  if (!yaExistia) {
+    const quien = data.customerName || email;
+    const cuanto = Math.round(data.total).toLocaleString("es-AR");
+    void createNotification({
+      userId: store.ownerId,
+      type: "ABANDONED_CART",
+      title: "Carrito abandonado",
+      body: `${quien} dejó su contacto con $${cuanto} en el carrito y no terminó la compra.`,
+      link: "/dashboard/carritos-abandonados",
+    });
+  }
 
   return NextResponse.json({ ok: true });
 }
