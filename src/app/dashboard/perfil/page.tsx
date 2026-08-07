@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
+import CampoAuto from "@/components/CampoAuto";
 import { BadgeCheck, Camera, Check, Clock, Loader2, Save, ShieldAlert, Upload, X } from "lucide-react";
 
 interface Profile {
@@ -462,11 +463,16 @@ export default function PerfilPage() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">Nombre y apellido</label>
                 <div className="flex gap-2 items-center">
-                  <input
-                    type="text" value={form.name}
-                    onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
+                  {/* Al lado hay un interruptor de ~44px, así que al campo le
+                      quedan unos 230px en un teléfono. Un nombre y apellido
+                      completo no entra, y en un input se iba corriendo hacia la
+                      derecha. */}
+                  <CampoAuto
+                    value={form.name}
+                    onChange={(v) => setForm((p) => ({ ...p, name: v }))}
+                    ariaLabel="Nombre y apellido"
                     placeholder="Tu nombre completo"
-                    className="flex-1 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="flex-1 py-3"
                   />
                   {verifStore && (
                     <div className="shrink-0" title={toggleDisabled && !isVerified ? "Solo disponible tras verificación" : ""}>
@@ -499,11 +505,12 @@ export default function PerfilPage() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">Ciudad</label>
                 <div className="flex gap-2 items-center">
-                  <input
-                    type="text" value={form.city}
-                    onChange={(e) => setForm((p) => ({ ...p, city: e.target.value }))}
+                  <CampoAuto
+                    value={form.city}
+                    onChange={(v) => setForm((p) => ({ ...p, city: v }))}
+                    ariaLabel="Ciudad"
                     placeholder="Buenos Aires"
-                    className="flex-1 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="flex-1 py-3"
                   />
                   {verifStore && (
                     <div className="shrink-0" title={toggleDisabled && !isVerified ? "Solo disponible tras verificación" : ""}>

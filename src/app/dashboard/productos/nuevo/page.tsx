@@ -2709,12 +2709,13 @@ function ProductoFormPage() {
                   <div key={idx} className="flex flex-col sm:flex-row gap-3 sm:items-end">
                     <div className="flex-1">
                       <label className="block text-xs font-medium text-gray-500 mb-1">Nombre del atributo</label>
-                      <input
-                        type="text"
+                      {/* El VALOR del atributo ya era CampoAuto; el nombre habia
+                          quedado como input y tiene el mismo problema. */}
+                      <CampoAuto
                         value={attr.key}
-                        onChange={(e) => updateAttribute(idx, "key", e.target.value)}
+                        onChange={(v) => updateAttribute(idx, "key", v)}
+                        ariaLabel="Nombre del atributo"
                         placeholder="Ej: Número de serie, Peso, Material"
-                        className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                       />
                     </div>
                     <div className="flex-1">
