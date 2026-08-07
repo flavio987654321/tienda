@@ -229,7 +229,11 @@ export function SuscriptoresModal({ onClose }: { onClose: () => void }) {
                         <button
                           onClick={() => darDeBaja(s.id)}
                           disabled={borrando === s.id}
-                          className="p-1.5 rounded-lg text-gray-300 hover:text-red-400 hover:bg-red-50 transition-colors disabled:opacity-50 opacity-0 group-hover:opacity-100"
+                          /* Visible siempre en angosto: en una pantalla táctil no
+                             hay hover, así que colgado de `group-hover` este
+                             botón no aparecía nunca y no había ninguna otra
+                             forma de sacar a alguien de la lista. */
+                          className="p-1.5 rounded-lg text-gray-300 hover:text-red-400 hover:bg-red-50 transition-colors disabled:opacity-50 sm:opacity-0 sm:group-hover:opacity-100"
                           title="Sacar de la lista"
                         >
                           {borrando === s.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}

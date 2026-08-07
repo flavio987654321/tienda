@@ -608,7 +608,10 @@ export default function MiCuentaPage() {
               onClick={() => bannerInputRef.current?.click()}
               disabled={uploadingBanner}
               title="Cambiar portada"
-              className="absolute bottom-2 right-2 flex items-center gap-1.5 bg-black/40 hover:bg-black/60 text-white text-xs font-semibold px-3 py-1.5 rounded-full backdrop-blur-sm transition-all opacity-0 group-hover:opacity-100 disabled:opacity-40 disabled:cursor-not-allowed"
+              /* Visible siempre en angosto: colgado de `group-hover` no había
+                 forma de cambiar la portada desde un teléfono — no hay hover en
+                 una pantalla táctil, y no existe otro camino para hacerlo. */
+              className="absolute bottom-2 right-2 flex items-center gap-1.5 bg-black/40 hover:bg-black/60 text-white text-xs font-semibold px-3 py-1.5 rounded-full backdrop-blur-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed sm:opacity-0 sm:group-hover:opacity-100"
             >
               {uploadingBanner
                 ? <Loader2 className="h-3 w-3 animate-spin" />

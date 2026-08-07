@@ -255,7 +255,10 @@ export default function NotificationBell({ userId }: { userId: string }) {
                     <div className="flex flex-col items-end gap-1 shrink-0">
                       <button
                         onClick={(e) => deleteOne(e, n.id, n.read)}
-                        className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-gray-200 dark:hover:bg-white/10"
+                        /* Visible siempre en angosto: en una pantalla táctil no
+                           hay hover, así que este botón no aparecía nunca y la
+                           única forma de sacar un aviso era borrarlos todos. */
+                        className="transition-opacity p-0.5 rounded hover:bg-gray-200 dark:hover:bg-white/10 sm:opacity-0 sm:group-hover:opacity-100"
                         title="Eliminar"
                       >
                         <X className="h-3.5 w-3.5 text-gray-400" />
