@@ -86,15 +86,17 @@ export default function AffiliateToggle({
   const isInquiryStore = storeType === "AUTOS";
 
   if (!hasMercadoPago && !isInquiryStore) {
+    // El ícono ocupa 44px más 16 de separación: en 360 eso es un sexto del ancho
+    // para una decoración. En angosto se achica el aire y el texto arranca antes.
     return (
-      <div className={`rounded-2xl border p-5 mb-6 flex items-start gap-4 ${enabled ? "border-amber-300 bg-amber-50" : "border-orange-200 bg-orange-50"}`}>
+      <div className={`rounded-2xl border p-4 sm:p-5 mb-6 flex items-start gap-3 sm:gap-4 ${enabled ? "border-amber-300 bg-amber-50" : "border-orange-200 bg-orange-50"}`}>
         <div className={`shrink-0 rounded-xl p-2.5 ${enabled ? "bg-amber-100" : "bg-orange-100"}`}>
           {enabled
             ? <AlertTriangle className="h-5 w-5 text-amber-600" />
             : <Lock className="h-5 w-5 text-orange-600" />
           }
         </div>
-        <div className="flex-1">
+        <div className="min-w-0 flex-1">
           {enabled ? (
             <>
               <p className="font-semibold text-amber-900">El programa de afiliados está pausado</p>
@@ -117,12 +119,15 @@ export default function AffiliateToggle({
               </p>
             </>
           )}
+          {/* El texto no se parte y el ícono no se achica. En 360 el botón entraba
+              justo y "Ir a Pagos → Conectar MercadoPago" salía en dos renglones,
+              con la flecha colgando sola. Dicho corto entra en uno. */}
           <Link
             href="/dashboard/pagos"
-            className={`inline-flex items-center gap-1.5 mt-3 text-sm font-semibold px-3 py-1.5 rounded-lg transition-colors ${enabled ? "text-amber-700 bg-amber-100 hover:bg-amber-200" : "text-orange-700 bg-orange-100 hover:bg-orange-200"}`}
+            className={`inline-flex items-center gap-1.5 mt-3 text-sm font-semibold px-3 py-2 rounded-lg transition-colors ${enabled ? "text-amber-700 bg-amber-100 hover:bg-amber-200" : "text-orange-700 bg-orange-100 hover:bg-orange-200"}`}
           >
-            <ExternalLink className="h-3.5 w-3.5" />
-            Ir a Pagos → Conectar MercadoPago
+            <ExternalLink className="h-3.5 w-3.5 shrink-0" />
+            <span className="whitespace-nowrap">Conectar MercadoPago</span>
           </Link>
         </div>
       </div>

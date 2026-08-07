@@ -357,35 +357,47 @@ export default function ResenasClient({
       </div>
 
       {/* Filtros */}
-      <div className="flex gap-2 mb-4 flex-wrap">
+      {/* En angosto van en grilla de 3 y no sueltos con `flex-wrap`.
+          Las siete fichitas miden cosas muy distintas —"Todas" unos 60px,
+          "✓ Verificadas (0)" unos 130, "★ (0)" unos 55—, así que dejándolas
+          fluir se acomodaban en tres renglones desparejos, cada uno terminando
+          en un lugar distinto. En columnas quedan alineadas.
+          Y en el teléfono se dicen cortas: "★★★★★" ocupa seis glifos para
+          decir lo mismo que "5★", y con las largas no entraban tres por
+          renglón. En `sm` vuelven las estrellas completas y la fila de siempre. */}
+      <div className="grid grid-cols-3 gap-2 mb-4 sm:flex sm:flex-wrap">
         {([
-          { key: "all",      label: "Todas" },
-          { key: "verified", label: `✓ Verificadas (${verifiedCount})` },
-          { key: 5, label: `${"★".repeat(5)} (${publicadas.filter(r => r.rating === 5).length})` },
-          { key: 4, label: `${"★".repeat(4)} (${publicadas.filter(r => r.rating === 4).length})` },
-          { key: 3, label: `${"★".repeat(3)} (${publicadas.filter(r => r.rating === 3).length})` },
-          { key: 2, label: `${"★".repeat(2)} (${publicadas.filter(r => r.rating === 2).length})` },
-          { key: 1, label: `${"★".repeat(1)} (${publicadas.filter(r => r.rating === 1).length})` },
-        ] as { key: typeof filter; label: string }[]).map(f => (
+          { key: "all",      corto: "Todas",   largo: "Todas" },
+          { key: "verified", corto: "✓ Verif.", largo: "✓ Verificadas", n: verifiedCount },
+          { key: 5, corto: "5★", largo: "★★★★★", n: publicadas.filter(r => r.rating === 5).length },
+          { key: 4, corto: "4★", largo: "★★★★",  n: publicadas.filter(r => r.rating === 4).length },
+          { key: 3, corto: "3★", largo: "★★★",   n: publicadas.filter(r => r.rating === 3).length },
+          { key: 2, corto: "2★", largo: "★★",    n: publicadas.filter(r => r.rating === 2).length },
+          { key: 1, corto: "1★", largo: "★",     n: publicadas.filter(r => r.rating === 1).length },
+        ] as { key: typeof filter; corto: string; largo: string; n?: number }[]).map(f => (
           <button
             key={String(f.key)}
             onClick={() => { setFilter(f.key); setPagina(1); }}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+            className={`truncate rounded-lg px-2 py-1.5 text-sm font-medium transition-colors sm:px-3 ${
               filter === f.key
                 ? "bg-indigo-600 text-white"
                 : "bg-white border border-gray-200 text-gray-600 hover:border-indigo-300"
             }`}
           >
-            {f.label}
+            <span className="sm:hidden">{f.corto}</span>
+            <span className="hidden sm:inline">{f.largo}</span>
+            {f.n !== undefined && ` (${f.n})`}
           </button>
         ))}
       </div>
 
       {/* Lista */}
       {buscadas.length === 0 ? (
-        <div className="bg-white rounded-xl border border-gray-100 p-12 text-center">
+        /* `p-8` en angosto: con 48px de padding de cada lado le quedaban 232px
+           al texto y salía partido en cinco renglones cortitos. */
+        <div className="bg-white rounded-xl border border-gray-100 p-8 sm:p-12 text-center">
           <Star className="w-10 h-10 text-gray-200 mx-auto mb-3" />
-          <p className="text-gray-400 text-sm">
+          <p className="mx-auto max-w-sm text-gray-400 text-sm">
             {q
               ? `No hay ninguna que diga “${busqueda.trim()}”.`
               : publicadas.length > 0
@@ -448,21 +460,25 @@ export default function ResenasClient({
                 )}
 
                 {/* De qué habla la reseña */}
-                <div className="flex items-center gap-1.5 text-xs text-gray-400">
+                <div className="flex min-w-0 items-center gap-1.5 text-xs text-gray-400">
                   {/* El nombre del producto era texto plano: leías una reseña
                       mala y tenías que ir a buscar el producto a mano. Ahora
                       lleva a la ficha, en otra pestaña para no perder el lugar
-                      en la lista que venías revisando. */}
+                      en la lista que venías revisando.
+                      Se trunca porque en 360 a esta columna le quedan unos 215px
+                      y un nombre largo se salía de la tarjeta arrastrando la
+                      flechita del link con él. */}
                   {r.product
                     ? (
                       <a
                         href={`/tienda/${slug}/producto/${r.product.id}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="font-medium text-gray-500 hover:text-indigo-600 hover:underline inline-flex items-center gap-1"
+                        title={r.product.name}
+                        className="font-medium text-gray-500 hover:text-indigo-600 hover:underline inline-flex min-w-0 items-center gap-1"
                       >
-                        {r.product.name}
-                        <ExternalLink className="w-3 h-3" />
+                        <span className="truncate">{r.product.name}</span>
+                        <ExternalLink className="w-3 h-3 shrink-0" />
                       </a>
                     )
                     : <span className="font-medium text-indigo-500">Sobre la tienda</span>}

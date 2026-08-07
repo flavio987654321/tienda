@@ -271,18 +271,20 @@ export default async function VendedorasPage() {
         </section>
       )}
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-8">
         {[
           { label: "Pendientes", value: pending.length, icon: Clock, color: "text-yellow-600 bg-yellow-50" },
           { label: "Activos", value: active.length, icon: UserCheck, color: "text-indigo-600 bg-indigo-50" },
           { label: isInquiryStore ? "Consultas vendidas" : "Ventas confirmadas", value: ventasConfirmadas, icon: TrendingUp, color: "text-green-600 bg-green-50" },
           { label: "Retiros en proceso", value: money(pendingWithdrawalsDetail.reduce((s, w) => s + w.amount, 0)), icon: DollarSign, color: "text-purple-600 bg-purple-50" },
         ].map(({ label, value, icon: Icon, color }) => (
-          <div key={label} className="bg-white rounded-xl border border-gray-100 p-5">
+          <div key={label} className="bg-white rounded-xl border border-gray-100 p-4 sm:p-5">
             <div className={`inline-flex p-2 rounded-lg ${color} mb-3`}>
               <Icon className="h-5 w-5" />
             </div>
-            <p className="text-2xl font-bold text-gray-900">{value}</p>
+            {/* Truncado por "Retiros en proceso", que es plata: en una tarjeta de
+                media pantalla, un monto de seis o siete cifras se desbordaba. */}
+            <p className="text-xl sm:text-2xl font-bold text-gray-900 truncate" title={String(value)}>{value}</p>
             <p className="text-sm text-gray-400 mt-0.5">{label}</p>
           </div>
         ))}
@@ -404,17 +406,21 @@ export default async function VendedorasPage() {
       )}
 
       <section>
-        <div className="mb-4 flex items-end justify-between gap-4">
-          <div>
+        {/* La fichita del total va abajo del título en angosto: al lado, entre el
+            subtítulo largo y el monto, no entraba ninguno de los dos cómodo. */}
+        <div className="mb-4 flex flex-col items-start gap-2 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
+          <div className="min-w-0">
             <h2 className="font-bold text-gray-900">Equipo de afiliados</h2>
             <p className="mt-1 text-sm text-gray-400">Controla permisos, links, ventas y pagos de cada persona.</p>
           </div>
-          <div className="rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-gray-500 ring-1 ring-gray-100">
+          <div className="shrink-0 whitespace-nowrap rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-gray-500 ring-1 ring-gray-100">
             {money(totalComisionesPagadas)} pagadas
           </div>
         </div>
         {teamAffiliates.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-gray-100 p-16 text-center">
+          /* `p-8` en angosto: con 64px de padding de cada lado, en 360 al texto le
+             quedaban 200px y el título salía partido en tres renglones. */
+          <div className="bg-white rounded-2xl border border-gray-100 p-8 sm:p-16 text-center">
             <div className="bg-purple-50 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4">
               <Users className="h-8 w-8 text-purple-400" />
             </div>

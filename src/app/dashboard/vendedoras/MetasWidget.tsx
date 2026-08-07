@@ -77,12 +77,16 @@ export default function MetasWidget() {
 
   return (
     <div className="bg-white rounded-2xl border border-gray-200 p-5 mb-6">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <Target className="h-4 w-4 text-indigo-500" />
+      {/* En angosto el titulo se lleva su propio renglon y los botones van abajo.
+          Compartiendo renglón, "Meta de ventas — agosto de 2026" se partía en dos
+          y encima a "Crear meta" le quedaba una columna tan finita que también se
+          partía, en "Crear / meta". */}
+      <div className="flex flex-col items-start gap-2 mb-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex min-w-0 items-center gap-2">
+          <Target className="h-4 w-4 shrink-0 text-indigo-500" />
           <h3 className="font-semibold text-gray-900">Meta de ventas — {monthLabel(month)}</h3>
         </div>
-        <div className="flex gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           {goal && !editing && (
             <button
               onClick={handleDelete}
@@ -128,7 +132,9 @@ export default function MetasWidget() {
 
       {editing && (
         <div className="space-y-3">
-          <div className="grid grid-cols-2 gap-3">
+          {/* Uno por renglón en angosto: partido en dos quedaban 150px por campo
+              y las dos etiquetas se cortaban a la mitad. */}
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Objetivo de ventas ($)</label>
               <div className="relative">
