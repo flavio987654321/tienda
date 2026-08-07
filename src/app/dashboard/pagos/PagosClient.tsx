@@ -391,8 +391,13 @@ export default function PagosClient({ initial }: Props) {
                 key={method.id}
                 className={`rounded-lg border p-4 space-y-3 transition-colors ${disabled ? "border-slate-150 bg-slate-50/50 opacity-60" : "border-slate-200 bg-white"}`}
               >
-                {/* Fila superior: toggle + etiqueta del método */}
-                <div className="flex items-center gap-3">
+                {/* Fila superior: toggle + etiqueta del método.
+                    En angosto envuelve: el interruptor y "Opción N" se quedan
+                    arriba —son chicos y de ancho fijo— y el nombre baja a un
+                    renglón propio a todo el ancho. Los tres en la misma fila le
+                    dejaban al nombre unos 92px de texto útil, así que "Envío
+                    estándar" ya salía partido en dos. */}
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
                   {method.isPickup ? (
                     <span className="shrink-0 text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md">
                       Siempre activo
@@ -407,7 +412,9 @@ export default function PagosClient({ initial }: Props) {
                         : <><ToggleLeft className="h-5 w-5 text-slate-300" /><span className="text-slate-400">Inactivo</span></>}
                     </button>
                   )}
-                  <div className="flex-1 min-w-0">
+                  {/* `order-last` + `w-full`: en angosto baja al segundo renglón,
+                      después de "Opción N", aunque en el código venga antes. */}
+                  <div className="order-last w-full min-w-0 sm:order-none sm:w-auto sm:flex-1">
                     {/* `estilo` y no `className`: esta pantalla tiene su propia
                         paleta y así reemplaza la de CampoAuto en vez de pelearse
                         con ella. El nombre admite 80 caracteres y en un teléfono
@@ -429,12 +436,12 @@ export default function PagosClient({ initial }: Props) {
 
                 {/* Costo cotizado en vivo — no editable, se calcula por CP + peso */}
                 {method.liveQuote && !disabled && (
-                  <p className="text-[11px] text-sky-600 pl-[72px]">Se cotiza automáticamente según el código postal y el peso del pedido (Correo Argentino / OCA / Andreani vía Envíopack).</p>
+                  <p className="text-[11px] text-sky-600 sm:pl-[72px]">Se cotiza automáticamente según el código postal y el peso del pedido (Correo Argentino / OCA / Andreani vía Envíopack).</p>
                 )}
 
                 {/* Costo — solo envíos fijos/a coordinar */}
                 {!method.isPickup && !method.liveQuote && !disabled && (
-                  <div className="space-y-2 pl-[72px]">
+                  <div className="space-y-2 sm:pl-[72px]">
                     <div className="flex gap-2">
                       <button
                         onClick={() => setShippingMethods(prev => prev.map((m, i) => i === idx ? { ...m, coordinar: true, price: 0 } : m))}
@@ -469,7 +476,7 @@ export default function PagosClient({ initial }: Props) {
                 )}
 
                 {method.isPickup && (
-                  <p className="text-[11px] text-slate-400 pl-[72px]">Siempre gratuito — el comprador retira en persona o coordinan directamente.</p>
+                  <p className="text-[11px] text-slate-400 sm:pl-[72px]">Siempre gratuito — el comprador retira en persona o coordinan directamente.</p>
                 )}
               </div>
             );
