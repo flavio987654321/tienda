@@ -28,7 +28,7 @@ import { useEffect, useRef } from "react";
    al final. */
 export default function CampoAuto({
   value, onChange, onEnter, onBlur, placeholder, className = "", id, maxLength, ariaLabel, disabled,
-  innerRef, autoFocus,
+  innerRef, autoFocus, required,
 }: {
   value: string;
   onChange: (v: string) => void;
@@ -42,6 +42,10 @@ export default function CampoAuto({
   disabled?: boolean;
   innerRef?: React.RefObject<HTMLTextAreaElement | null>;
   autoFocus?: boolean;
+  /** Un `<textarea>` soporta `required` igual que un `<input>`, así que al pasar
+   *  un campo obligatorio a este componente la validación del navegador se
+   *  mantiene tal cual — no hay que reemplazarla por un chequeo a mano. */
+  required?: boolean;
 }) {
   const propio = useRef<HTMLTextAreaElement>(null);
   // El de afuera manda si lo pasaron: así el autoajuste de alto y quien inserta
@@ -65,6 +69,7 @@ export default function CampoAuto({
       value={value}
       disabled={disabled}
       autoFocus={autoFocus}
+      required={required}
       aria-label={ariaLabel}
       maxLength={maxLength}
       onBlur={onBlur}

@@ -35,18 +35,18 @@ const GASTO_CONCEPTOS = ["Compra", "Lavado", "Pulido/Detailing", "Service", "Cam
 const AUTO_SERVICES = [
   { key: "aceite",      label: "Aceite y filtros" },
   { key: "frenos",      label: "Frenos" },
-  { key: "distribucion",label: "DistribuciÃ³n" },
+  { key: "distribucion",label: "Distribución" },
   { key: "cubiertas",   label: "Cubiertas" },
-  { key: "suspension",  label: "SuspensiÃ³n" },
-  { key: "electrico",   label: "Sist. elÃ©ctrico" },
+  { key: "suspension",  label: "Suspensión" },
+  { key: "electrico",   label: "Sist. eléctrico" },
   { key: "ac",          label: "Aire acondicionado" },
   { key: "caja",        label: "Caja de cambios" },
 ];
 
-// `getVariantOptions` vivÃ­a acÃ¡: una tabla fija de nombres por rubro, con un
+// `getVariantOptions` vivía acá: una tabla fija de nombres por rubro, con un
 // "Otro" que los tres lugares que la llamaban filtraban. O sea que en Moda
-// siempre eran "Talle" y "Color", y no habÃ­a forma de escribir otra cosa.
-// Ahora los nombres arrancan sugeridos por la CATEGORÃA (`opcionesIniciales`) y
+// siempre eran "Talle" y "Color", y no había forma de escribir otra cosa.
+// Ahora los nombres arrancan sugeridos por la CATEGORÍA (`opcionesIniciales`) y
 // son editables. Ver `lib/opcionSugerida.ts`.
 
 interface Variant {
@@ -63,9 +63,9 @@ interface Attribute {
 }
 
 interface StoreConfig {
-  // El GET de /api/configuracion devuelve la fila entera de la tienda, asÃ­ que el
-  // nombre ya venÃ­a â€” faltaba declararlo. Lo usa la vista previa de Google, que
-  // arma el tÃ­tulo automÃ¡tico como "<producto> â€” <tienda>".
+  // El GET de /api/configuracion devuelve la fila entera de la tienda, así que el
+  // nombre ya venía — faltaba declararlo. Lo usa la vista previa de Google, que
+  // arma el título automático como "<producto> — <tienda>".
   name?: string;
   primaryColor: string;
   accentColor: string;
@@ -103,8 +103,8 @@ const MAX_UPLOAD_IMAGE_SIZE_BYTES = MAX_UPLOAD_IMAGE_SIZE_MB * 1024 * 1024;
 const MAX_IMAGE_SIDE = 2400;
 const MAX_PRODUCT_IMAGES = 8;
 // Debe coincidir con MAX_PRODUCT_REELS de lib/products.ts, que lo valida en el
-// server. Antes el formulario no lo miraba: podÃ­as subir un 4to video de 50 MB y
-// reciÃ©n al guardar la API lo rechazaba, con el archivo ya subido y huerfano.
+// server. Antes el formulario no lo miraba: podías subir un 4to video de 50 MB y
+// recién al guardar la API lo rechazaba, con el archivo ya subido y huerfano.
 const MAX_PRODUCT_REELS = 3;
 // Debe coincidir con MAX_VIDEO_SIZE_MB de api/upload/route.ts
 const MAX_VIDEO_SIZE_MB = 50;
@@ -129,18 +129,18 @@ function colorPreview(val: string): string | null {
   return COLOR_PREVIEW[v.toLowerCase()] ?? null;
 }
 
-// El ejemplo y la ayuda de variantes salÃ­an de dos tablas fijas por rubro que
-// decÃ­an "Talle S + Color Negro" aunque el dueÃ±o hubiera renombrado la opciÃ³n.
-// Ahora se arman con los nombres que estÃ¡n puestos de verdad.
+// El ejemplo y la ayuda de variantes salían de dos tablas fijas por rubro que
+// decían "Talle S + Color Negro" aunque el dueño hubiera renombrado la opción.
+// Ahora se arman con los nombres que están puestos de verdad.
 function variantExample(dims: string[]): string {
-  if (dims.length === 0) return "ej: una fila por combinaciÃ³n";
+  if (dims.length === 0) return "ej: una fila por combinación";
   return "ej: " + dims.map(d => `${d} ${variantEjemploValor(d)}`).join(" + ");
 }
 
 function variantTip(dims: string[]): string {
-  if (dims.length === 0) return "Una fila por combinaciÃ³n de variantes. Cada fila tiene su propio stock.";
+  if (dims.length === 0) return "Una fila por combinación de variantes. Cada fila tiene su propio stock.";
   const ej = dims.map(d => `${d} ${variantEjemploValor(d)}`).join(" + ");
-  return `Una fila por combinaciÃ³n. Ej: ${ej} â†’ fila 1. Cada fila tiene su propio stock.`;
+  return `Una fila por combinación. Ej: ${ej} → fila 1. Cada fila tiene su propio stock.`;
 }
 
 function variantEjemploValor(nombre: string): string {
@@ -148,71 +148,71 @@ function variantEjemploValor(nombre: string): string {
   if (n === "color" || n === "tono") return "Negro";
   if (n === "talle") return "S";
   if (n === "largo") return "45cm";
-  if (n === "tamaÃ±o" || n === "tamano") return "Grande";
-  if (n === "material") return "AlgodÃ³n";
+  if (n === "tamaño" || n === "tamano") return "Grande";
+  if (n === "material") return "Algodón";
   if (n === "sabor") return "Vainilla";
-  if (n === "versiÃ³n" || n === "version") return "Full";
-  if (n === "peso/tamaÃ±o") return "500g";
+  if (n === "versión" || n === "version") return "Full";
+  if (n === "peso/tamaño") return "500g";
   return "1";
 }
 
 function tagsTip(tipoTienda: string): string {
   const tips: Record<string, string> = {
-    ROPA:      "Palabras clave para bÃºsqueda. Ej: negro, oversize, algodÃ³n. No afectan el precio ni el stock.",
-    HOGAR_TECH: "Palabras clave para bÃºsqueda. Ej: liberado, sin cargador, inverter, escandinavo.",
-    GASTRONOMIA: "Palabras clave para bÃºsqueda. Ej: sin tacc, vegano, artesanal.",
-    GENERAL:   "Palabras clave para bÃºsqueda separadas por coma. Ayudan a tus clientes a encontrar el producto.",
+    ROPA:      "Palabras clave para búsqueda. Ej: negro, oversize, algodón. No afectan el precio ni el stock.",
+    HOGAR_TECH: "Palabras clave para búsqueda. Ej: liberado, sin cargador, inverter, escandinavo.",
+    GASTRONOMIA: "Palabras clave para búsqueda. Ej: sin tacc, vegano, artesanal.",
+    GENERAL:   "Palabras clave para búsqueda separadas por coma. Ayudan a tus clientes a encontrar el producto.",
   };
   return tips[tipoTienda] || "Palabras clave separadas por coma para que tus clientes encuentren el producto.";
 }
 
 function extraFieldsTip(tipoTienda: string): string {
   const tips: Record<string, string> = {
-    ROPA:      "InformaciÃ³n extra sin stock. Ej: Material â†’ AlgodÃ³n, GÃ©nero â†’ Unisex. A diferencia de las variantes, los atributos son datos descriptivos que no tienen stock propio.",
-    AUTOS:     "InformaciÃ³n extra sin stock. Ej: Marca â†’ Toyota, AÃ±o â†’ 2022, Combustible â†’ Nafta. Son datos descriptivos del vehÃ­culo, no afectan precio ni stock.",
-    HOGAR_TECH: "InformaciÃ³n extra sin stock. Ej: Marca â†’ Samsung, Pulgadas â†’ 55, RAM â†’ 8GB. A diferencia de las variantes, los atributos son datos descriptivos que no tienen stock propio.",
-    GASTRONOMIA: "InformaciÃ³n extra sin stock. Ej: Ingredientes â†’ Harina, azÃºcar, manteca.",
-    GENERAL:   "InformaciÃ³n extra sin stock. Datos descriptivos que no afectan precio ni stock.",
+    ROPA:      "Información extra sin stock. Ej: Material → Algodón, Género → Unisex. A diferencia de las variantes, los atributos son datos descriptivos que no tienen stock propio.",
+    AUTOS:     "Información extra sin stock. Ej: Marca → Toyota, Año → 2022, Combustible → Nafta. Son datos descriptivos del vehículo, no afectan precio ni stock.",
+    HOGAR_TECH: "Información extra sin stock. Ej: Marca → Samsung, Pulgadas → 55, RAM → 8GB. A diferencia de las variantes, los atributos son datos descriptivos que no tienen stock propio.",
+    GASTRONOMIA: "Información extra sin stock. Ej: Ingredientes → Harina, azúcar, manteca.",
+    GENERAL:   "Información extra sin stock. Datos descriptivos que no afectan precio ni stock.",
   };
-  return tips[tipoTienda] || "InformaciÃ³n extra sin stock. A diferencia de las variantes, los atributos son datos descriptivos que no tienen stock propio.";
+  return tips[tipoTienda] || "Información extra sin stock. A diferencia de las variantes, los atributos son datos descriptivos que no tienen stock propio.";
 }
 
-// Sugerencias de quÃ© fotografiar, al estilo Tienda Nube â€” guÃ­an al vendedor
-// sobre quÃ© Ã¡ngulos/tomas suelen convertir mÃ¡s, en vez de una zona de drop vacÃ­a.
+// Sugerencias de qué fotografiar, al estilo Tienda Nube — guían al vendedor
+// sobre qué ángulos/tomas suelen convertir más, en vez de una zona de drop vacía.
 // Cada tip es la etiqueta de un cuadro libre: se van consumiendo a medida que
 // sube fotos, y la foto queda en el mismo cuadro donde estaba su consejo.
 function photoTips(hideVariants: boolean): string[] {
   return [
-    "SubÃ­ una foto del producto de frente",
-    "ProbÃ¡ diferentes Ã¡ngulos",
-    hideVariants ? "MostrÃ¡ detalles o el interior" : "MostrÃ¡ sus variantes",
-    "SugerÃ­ cÃ³mo usarlo",
+    "Subí una foto del producto de frente",
+    "Probá diferentes ángulos",
+    hideVariants ? "Mostrá detalles o el interior" : "Mostrá sus variantes",
+    "Sugerí cómo usarlo",
   ];
 }
 
-// QuÃ© grabar, segÃºn el rubro. El video es lo que mÃ¡s convence de comprar, pero
-// nadie sabe quÃ© filmar si no se lo decÃ­s.
+// Qué grabar, según el rubro. El video es lo que más convence de comprar, pero
+// nadie sabe qué filmar si no se lo decís.
 function reelTips(tipoTienda: string): string {
-  if (tipoTienda === "AUTOS") return "MostrÃ¡ el interior, el motor, el baÃºl y una vuelta alrededor.";
-  if (tipoTienda === "ROPA") return "MostrÃ¡ la prenda puesta, cÃ³mo cae y cÃ³mo se mueve.";
-  if (tipoTienda === "GASTRONOMIA") return "MostrÃ¡ la textura, el corte o el plato ya servido.";
-  return "MostrÃ¡ el producto en uso, de cerca y desde varios Ã¡ngulos.";
+  if (tipoTienda === "AUTOS") return "Mostrá el interior, el motor, el baúl y una vuelta alrededor.";
+  if (tipoTienda === "ROPA") return "Mostrá la prenda puesta, cómo cae y cómo se mueve.";
+  if (tipoTienda === "GASTRONOMIA") return "Mostrá la textura, el corte o el plato ya servido.";
+  return "Mostrá el producto en uso, de cerca y desde varios ángulos.";
 }
 
 // Tarjeta de un reel en el formulario. Usa el mismo parseReel y el mismo recorte
-// que la tienda: lo que ves acÃ¡ es lo que ve tu cliente. Antes el panel mostraba
-// el video entero (contain) y la tienda lo recortaba (cover), asÃ­ que nunca te
+// que la tienda: lo que ves acá es lo que ve tu cliente. Antes el panel mostraba
+// el video entero (contain) y la tienda lo recortaba (cover), así que nunca te
 // enterabas de que un video horizontal le llegaba mutilado al comprador.
 function ReelCard({ url, onRemove, onPlay }: { url: string; onRemove: () => void; onPlay: () => void }) {
   const reel = parseReel(url);
 
-  // Un link invÃ¡lido igual se muestra (con la X): si lo escondiÃ©ramos, el vendedor
-  // no tendrÃ­a cÃ³mo sacarlo y el guardado seguirÃ­a arrastrÃ¡ndolo.
+  // Un link inválido igual se muestra (con la X): si lo escondiéramos, el vendedor
+  // no tendría cómo sacarlo y el guardado seguiría arrastrándolo.
   if (!reel) {
     return (
       <div className="relative w-[116px] aspect-[9/16] rounded-xl overflow-hidden bg-red-50 border border-red-200 flex flex-col items-center justify-center gap-1.5 px-2 flex-shrink-0">
         <X className="h-5 w-5 text-red-400" />
-        <span className="text-[10px] font-medium text-red-600 text-center leading-snug">Link invÃ¡lido</span>
+        <span className="text-[10px] font-medium text-red-600 text-center leading-snug">Link inválido</span>
         <button
           type="button"
           onClick={onRemove}
@@ -227,8 +227,8 @@ function ReelCard({ url, onRemove, onPlay }: { url: string; onRemove: () => void
   const isLink = reel.kind === "link";
   return (
     <div className="relative w-[116px] aspect-[9/16] rounded-xl overflow-hidden bg-black border border-gray-200 group flex-shrink-0">
-      {/* Instagram y TikTok no se pueden reproducir acÃ¡: se abren en su app, igual
-          que le va a pasar al comprador. Los demÃ¡s abren el mismo modal de la tienda. */}
+      {/* Instagram y TikTok no se pueden reproducir acá: se abren en su app, igual
+          que le va a pasar al comprador. Los demás abren el mismo modal de la tienda. */}
       {isLink ? (
         <a
           href={reel.url}
@@ -266,7 +266,7 @@ function ReelCard({ url, onRemove, onPlay }: { url: string; onRemove: () => void
   );
 }
 
-// Cuadro vacÃ­o del grid de fotos. Mide igual que una foto para que el lugar que
+// Cuadro vacío del grid de fotos. Mide igual que una foto para que el lugar que
 // ocupa ahora sea el que va a ocupar la imagen.
 function PhotoAddCell({ label, onClick }: { label: string; onClick: () => void }) {
   return (
@@ -287,7 +287,7 @@ function variantPlaceholder(name: string): string {
   const n = name.toLowerCase();
   if (n === "color" || n === "tono") return "ej: Rojo o #FF0000";
   if (n === "talle" || n === "size") return "ej: S";
-  if (n === "material") return "ej: AlgodÃ³n";
+  if (n === "material") return "ej: Algodón";
   if (n === "sabor") return "ej: Vainilla";
   if (n === "almacenamiento" || n === "ram") return "ej: 128GB";
   return "ej: Valor";
@@ -309,9 +309,9 @@ function prepareVariantsForSubmit(variants: Variant[]) {
     .map((v) => {
       const cleanAttrs = Object.fromEntries(
         Object.entries(v.attrs)
-          // Una opciÃ³n sin nombre no se puede guardar: la tienda la lee por
-          // nombre, asÃ­ que `{"": "S"}` se dibujarÃ­a como nada y el comprador
-          // verÃ­a un talle menos. La UI ya no deja dejarlo vacÃ­o; esto es la red
+          // Una opción sin nombre no se puede guardar: la tienda la lee por
+          // nombre, así que `{"": "S"}` se dibujaría como nada y el comprador
+          // vería un talle menos. La UI ya no deja dejarlo vacío; esto es la red
           // por si alguna vez entra por otro lado.
           .filter(([k]) => k.trim())
           .map(([k, val]) => [k.trim(), val.trim()])
@@ -335,33 +335,33 @@ function prepareVariantsForSubmit(variants: Variant[]) {
 }
 
 // Delega en `etiquetaCategoria` (storeTypes) para que el formulario, la tienda y
-// cualquier otra pantalla escriban las categorÃ­as igual. La versiÃ³n que estaba acÃ¡
-// capitalizaba TODAS las palabras y no tenÃ­a forma de arreglar los slugs sin Ã±:
-// mostraba "Ropa Ninos", "Ropa Bebe" y "Short De BaÃ±o".
+// cualquier otra pantalla escriban las categorías igual. La versión que estaba acá
+// capitalizaba TODAS las palabras y no tenía forma de arreglar los slugs sin ñ:
+// mostraba "Ropa Ninos", "Ropa Bebe" y "Short De Baño".
 const formatCategoryLabel = etiquetaCategoria;
 
-/* â”€â”€ OptimizaciÃ³n para Google â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-   Dos pares de nÃºmeros distintos, y la diferencia importa:
+/* ── Optimización para Google ────────────────────────────────────────────────
+   Dos pares de números distintos, y la diferencia importa:
 
-   Â· Los VISIBLE son cuÃ¡nto muestra Google antes de cortar con "â€¦". Pasarse no es
-     un error â€”la pÃ¡gina sigue siendo vÃ¡lidaâ€”, solo se lee menos. Por eso el aviso
-     es Ã¡mbar, informativo, y nunca frena el guardado.
-   Â· Los MAX son el tope duro del campo, para que nadie use estos casilleros como
-     depÃ³sito de texto. Coinciden con los de `validateProductBody` en el servidor;
+   · Los VISIBLE son cuánto muestra Google antes de cortar con "…". Pasarse no es
+     un error —la página sigue siendo válida—, solo se lee menos. Por eso el aviso
+     es ámbar, informativo, y nunca frena el guardado.
+   · Los MAX son el tope duro del campo, para que nadie use estos casilleros como
+     depósito de texto. Coinciden con los de `validateProductBody` en el servidor;
      si se cambia uno, cambiar el otro.                                          */
 const SEO_TITULO_VISIBLE = 60;
 const SEO_DESC_VISIBLE = 160;
 const SEO_TITULO_MAX = 200;
 const SEO_DESC_MAX = 500;
 
-/** Corta en el lÃ­mite sin partir una palabra al medio. */
+/** Corta en el límite sin partir una palabra al medio. */
 function recortar(texto: string, limite: number): string {
   if (texto.length <= limite) return texto;
   const cortado = texto.slice(0, limite);
   const ultimoEspacio = cortado.lastIndexOf(" ");
-  // Si la Ãºltima palabra es larguÃ­sima y el espacio quedÃ³ muy atrÃ¡s, se corta
+  // Si la última palabra es larguísima y el espacio quedó muy atrás, se corta
   // seco: mejor eso que devolver dos palabras cuando entraban diez.
-  return (ultimoEspacio > limite * 0.6 ? cortado.slice(0, ultimoEspacio) : cortado).trimEnd() + "â€¦";
+  return (ultimoEspacio > limite * 0.6 ? cortado.slice(0, ultimoEspacio) : cortado).trimEnd() + "…";
 }
 
 // optimizeImageForUpload usa la utilidad compartida con las mismas limitaciones de antes
@@ -417,7 +417,7 @@ function ProductoFormPage() {
     category: "ropa",
     subcategory: "",
     tags: "",
-    // VacÃ­o = "armalo solo". Ver la secciÃ³n "OptimizaciÃ³n para Google" mÃ¡s abajo.
+    // Vacío = "armalo solo". Ver la sección "Optimización para Google" más abajo.
     seoTitle: "",
     seoDescription: "",
   });
@@ -429,7 +429,7 @@ function ProductoFormPage() {
   const [gender, setGender] = useState<"mujer" | "hombre" | "unisex">("unisex");
   const [customCategory, setCustomCategory] = useState("");
   const [customSubcategory, setCustomSubcategory] = useState("");
-  // Lo que se estÃ¡ tipeando en Tags, antes de convertirse en fichita.
+  // Lo que se está tipeando en Tags, antes de convertirse en fichita.
   const [tagInput, setTagInput] = useState("");
   const [variants, setVariants] = useState<Variant[]>([{ attrs: { Talle: "" }, stock: "0", price: "", sku: "", lowStockThreshold: "" }]);
   // Builder de variantes (ROPA / HOGAR_TECH)
@@ -437,14 +437,14 @@ function ProductoFormPage() {
   const [builderSizes, setBuilderSizes] = useState<string[]>([]);
   const [useBuilder, setUseBuilder] = useState(false);
   /**
-   * El nombre de la segunda dimensiÃ³n del builder: "Talle", "Largo", "TamaÃ±o".
+   * El nombre de la segunda dimensión del builder: "Talle", "Largo", "Tamaño".
    *
-   * Antes salÃ­a de una tabla fija por rubro, asÃ­ que un collar en una tienda de
-   * Moda se guardaba como "Talle: 45cm". Ahora arranca sugerido por la categorÃ­a
-   * y el dueÃ±o lo puede cambiar.
+   * Antes salía de una tabla fija por rubro, así que un collar en una tienda de
+   * Moda se guardaba como "Talle: 45cm". Ahora arranca sugerido por la categoría
+   * y el dueño lo puede cambiar.
    */
   const [opcionNombre, setOpcionNombre] = useState("Talle");
-  /** Si el dueÃ±o ya escribiÃ³ el nombre a mano, la categorÃ­a deja de pisÃ¡rselo. */
+  /** Si el dueño ya escribió el nombre a mano, la categoría deja de pisárselo. */
   const nombreTocadoRef = useRef(false);
   const variantStockRef = useRef<Map<string, { stock: string; price: string; sku: string; threshold: string }>>(new Map());
   const [attributes, setAttributes] = useState<Attribute[]>([]);
@@ -483,12 +483,12 @@ function ProductoFormPage() {
   const [isDirty, setIsDirty] = useState(false);
   const loadedRef = useRef(false);
   // Guarda category/subcategory crudos del producto cargado, para poder re-clasificar
-  // la subcategorÃ­a si productSubcategories termina de llenarse despuÃ©s de este fetch
+  // la subcategoría si productSubcategories termina de llenarse después de este fetch
   const loadedProductRef = useRef<{ category: string; subcategory: string } | null>(null);
 
   // Promos de monto fijo corriendo ahora, para avisar si ESTE producto cae bajo
-  // una que lo dejarÃ­a gratis o casi (F6-C9). Al crear la promo se chequea el
-  // catÃ¡logo del momento; esta es la otra puerta, la que se abre despuÃ©s.
+  // una que lo dejaría gratis o casi (F6-C9). Al crear la promo se chequea el
+  // catálogo del momento; esta es la otra puerta, la que se abre después.
   const [promosFijas, setPromosFijas] = useState<PromoFijaVigente[]>([]);
 
   useEffect(() => {
@@ -520,7 +520,7 @@ function ProductoFormPage() {
             setVariants([makeDefaultVariant(opcionesIniciales(d.store.tipoTienda || "ROPA", "", ""))]);
           } else {
             // El builder arranca sin combinaciones: las genera al elegir colores/talles.
-            // Sin esto quedarÃ­a viva la variante default del useState y se enviarÃ­a vacÃ­a.
+            // Sin esto quedaría viva la variante default del useState y se enviaría vacía.
             setVariants([]);
           }
         }
@@ -564,7 +564,7 @@ function ProductoFormPage() {
         return data.product;
       })
       .then((product) => {
-        if (loadedRef.current) return; // productCategories actualizÃ³ async despuÃ©s de la primera carga â€” no resetear estados del usuario
+        if (loadedRef.current) return; // productCategories actualizó async después de la primera carga — no resetear estados del usuario
         const knownCategory = productCategories.includes(product.category);
         loadedProductRef.current = { category: product.category || "", subcategory: product.subcategory || "" };
         setForm({
@@ -624,32 +624,32 @@ function ProductoFormPage() {
           : [makeDefaultVariant(opcionesIniciales(store.tipoTienda || "ROPA", product.category || "", product.subcategory || ""))];
         setVariants(loadedVariants);
 
-        // El nombre de la segunda dimensiÃ³n sale del PRODUCTO, no de una tabla.
-        // Antes se asumÃ­a "Talle" para todo ROPA, asÃ­ que al editar un collar
-        // guardado como "Largo" el builder leÃ­a `attrs["Talle"]`, no encontraba
-        // nada, y los largos desaparecÃ­an de la pantalla al abrir el producto.
+        // El nombre de la segunda dimensión sale del PRODUCTO, no de una tabla.
+        // Antes se asumía "Talle" para todo ROPA, así que al editar un collar
+        // guardado como "Largo" el builder leía `attrs["Talle"]`, no encontraba
+        // nada, y los largos desaparecían de la pantalla al abrir el producto.
         const nombreGuardado = loadedVariants
           .flatMap(v => Object.keys(v.attrs))
           .find(k => k !== "Color" && k !== "Tono");
         const sizeDim = nombreGuardado
           ?? sugerirOpcion(store.tipoTienda || "ROPA", product.category || "", product.subcategory || "").nombre;
         setOpcionNombre(sizeDim);
-        // Se respeta lo que ya estÃ¡ guardado: cambiar de categorÃ­a al editar no
-        // le puede renombrar las variantes que ya vendiÃ³.
+        // Se respeta lo que ya está guardado: cambiar de categoría al editar no
+        // le puede renombrar las variantes que ya vendió.
         nombreTocadoRef.current = true;
 
         // Los colores y los valores que el constructor va a mostrar marcados.
         //
-        // Esto estaba detrÃ¡s de `if (["ROPA","HOGAR_TECH"].includes(store.tipoTienda || ""))`,
-        // y `store` acÃ¡ es el del closure: el fetch del producto sale ANTES que el
-        // de configuraciÃ³n, asÃ­ que `tipoTienda` todavÃ­a no existe, el `includes("")`
-        // daba falso y el bloque no corrÃ­a nunca. AbrÃ­as una remera con Negro y
-        // Verde y el selector aparecÃ­a en blanco; al tocar un color se rearmaban
-        // las combinaciones desde ese vacÃ­o y la remera perdÃ­a las variantes y el
+        // Esto estaba detrás de `if (["ROPA","HOGAR_TECH"].includes(store.tipoTienda || ""))`,
+        // y `store` acá es el del closure: el fetch del producto sale ANTES que el
+        // de configuración, así que `tipoTienda` todavía no existe, el `includes("")`
+        // daba falso y el bloque no corría nunca. Abrías una remera con Negro y
+        // Verde y el selector aparecía en blanco; al tocar un color se rearmaban
+        // las combinaciones desde ese vacío y la remera perdía las variantes y el
         // stock.
         //
-        // Ya no se pregunta de quÃ© rubro es la tienda: se deriva de las filas, que
-        // para este punto estÃ¡n cargadas. Si la tienda no usa constructor, el dato
+        // Ya no se pregunta de qué rubro es la tienda: se deriva de las filas, que
+        // para este punto están cargadas. Si la tienda no usa constructor, el dato
         // queda calculado y nadie lo mira.
         const builder = estadoDelBuilder(loadedVariants, sizeDim);
         variantStockRef.current = builder.stock;
@@ -659,11 +659,11 @@ function ProductoFormPage() {
           (a: unknown): a is Attribute =>
             !!a && typeof a === "object" && typeof (a as Attribute).key === "string" && typeof (a as Attribute).value === "string"
         );
-        const condAttr = allAttrs.find((a) => a.key === "CondiciÃ³n");
+        const condAttr = allAttrs.find((a) => a.key === "Condición");
         if (condAttr) setCondicion(condAttr.value);
         const svcAttr = allAttrs.find((a) => a.key === "Servicios");
         if (svcAttr) { try { setServices(JSON.parse(svcAttr.value)); } catch {} }
-        setAttributes(allAttrs.filter((a) => a.key !== "CondiciÃ³n" && a.key !== "Servicios"));
+        setAttributes(allAttrs.filter((a) => a.key !== "Condición" && a.key !== "Servicios"));
         setPrecioMayorista(product.precioMayorista?.toString() || "");
         setCantMinMayorista(product.cantMinMayorista?.toString() || "");
         try {
@@ -672,7 +672,7 @@ function ProductoFormPage() {
           if (Array.isArray(parsed)) {
             setEscalones(parsed.map((e: { desde: number; precio: number }) => ({ desde: String(e.desde), precio: String(e.precio) })));
           }
-        } catch { /* si falla el parse dejamos el estado vacÃ­o inicial */ }
+        } catch { /* si falla el parse dejamos el estado vacío inicial */ }
         setSoloMayorista(product.soloMayorista === true);
         setIsOnSale(!!product.comparePrice);
         setCuotas(product.cuotas || 0);
@@ -688,14 +688,14 @@ function ProductoFormPage() {
       })
       .catch((err) => setError(err instanceof Error ? err.message : "No se pudo cargar el producto"))
       .finally(() => { setLoadingProduct(false); loadedRef.current = true; });
-    // productSubcategories/store.tipoTienda se leen al vuelo; incluirlas reharÃ­a el fetch del producto
-    // en cada actualizaciÃ³n. La reclasificaciÃ³n de subcategorÃ­a por carrera con esos datos la cubre
-    // el efecto de abajo, que sÃ­ depende de productSubcategories.
+    // productSubcategories/store.tipoTienda se leen al vuelo; incluirlas reharía el fetch del producto
+    // en cada actualización. La reclasificación de subcategoría por carrera con esos datos la cubre
+    // el efecto de abajo, que sí depende de productSubcategories.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editingId, productCategories]);
 
-  // Re-clasifica la subcategorÃ­a si productSubcategories termina de llenarse despuÃ©s
-  // de que el producto ya cargÃ³ (evita que quede mal clasificada como "otro" por una carrera
+  // Re-clasifica la subcategoría si productSubcategories termina de llenarse después
+  // de que el producto ya cargó (evita que quede mal clasificada como "otro" por una carrera
   // entre este fetch y el de /api/configuracion + /api/productos)
   useEffect(() => {
     if (isDirty) return;
@@ -716,17 +716,17 @@ function ProductoFormPage() {
     markDirty();
   }
 
-  /* â”€â”€ Tags â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  /* ── Tags ──────────────────────────────────────────────────────────────
      Se guardan igual que siempre: un solo texto separado por comas. Lo que
-     cambia es cÃ³mo se cargan. Era un campo de una lÃ­nea, y un campo de una
-     lÃ­nea NO puede pasar a renglÃ³n nuevo â€”es lo que el elemento es, no algo
-     que se arregle con CSSâ€”: al sexto tag ya no veÃ­as los primeros. Como
-     fichitas, envuelven en varias filas y se ve todo, que es el mismo patrÃ³n
-     que ya usan Colores y Talles mÃ¡s abajo en este formulario. */
+     cambia es cómo se cargan. Era un campo de una línea, y un campo de una
+     línea NO puede pasar a renglón nuevo —es lo que el elemento es, no algo
+     que se arregle con CSS—: al sexto tag ya no veías los primeros. Como
+     fichitas, envuelven en varias filas y se ve todo, que es el mismo patrón
+     que ya usan Colores y Talles más abajo en este formulario. */
   const listaTags = form.tags.split(",").map((t) => t.trim()).filter(Boolean);
 
   function agregarTags(crudo: string) {
-    // Se acepta pegar "rojo, verano, algodÃ³n" de una: cada coma es un tag.
+    // Se acepta pegar "rojo, verano, algodón" de una: cada coma es un tag.
     const entrantes = crudo.split(",").map((t) => t.trim()).filter(Boolean);
     if (entrantes.length === 0) return;
     const juntos = [...listaTags];
@@ -761,10 +761,10 @@ function ProductoFormPage() {
     markDirty();
   }
 
-  // Combinaciones del builder. La llaman los handlers que cambian colores/talles â€”
-  // antes vivÃ­a en un effect, que ademÃ¡s de encadenar renders se disparaba durante la
-  // carga y habÃ­a que frenarlo con un flag. AcÃ¡ no corre si nadie la llama.
-  // Con colores y talles vacÃ­os devuelve [], que es lo que corresponde.
+  // Combinaciones del builder. La llaman los handlers que cambian colores/talles —
+  // antes vivía en un effect, que además de encadenar renders se disparaba durante la
+  // carga y había que frenarlo con un flag. Acá no corre si nadie la llama.
+  // Con colores y talles vacíos devuelve [], que es lo que corresponde.
   function buildVariantsFromBuilder(colors: string[], sizes: string[], nombre = opcionNombre): Variant[] {
     const sd = nombre;
     const get = (key: string) => variantStockRef.current.get(key);
@@ -794,7 +794,7 @@ function ProductoFormPage() {
     return newVariants;
   }
 
-  // Asignar una foto a un VALOR de opciÃ³n, desde el constructor. No tiene por quÃ©
+  // Asignar una foto a un VALOR de opción, desde el constructor. No tiene por qué
   // ser un color: en un producto sin colores es el largo, el talle o lo que haya.
   const assignPhotoToValue = useCallback((valor: string, imageUrl: string | undefined) => {
     setImages(prev => prev.map(img => {
@@ -809,9 +809,9 @@ function ProductoFormPage() {
   const dimsActuales = useMemo(() => nombresDeOpciones(variants), [variants]);
 
   function addVariant() {
-    // La fila nueva lleva las MISMAS opciones que las que ya estÃ¡n. Antes salÃ­a de
-    // la tabla por rubro, asÃ­ que si el dueÃ±o habÃ­a renombrado algo, la fila nueva
-    // aparecÃ­a con los nombres viejos y se guardaban dos opciones distintas para
+    // La fila nueva lleva las MISMAS opciones que las que ya están. Antes salía de
+    // la tabla por rubro, así que si el dueño había renombrado algo, la fila nueva
+    // aparecía con los nombres viejos y se guardaban dos opciones distintas para
     // el mismo producto.
     const dims = dimsActuales.length > 0
       ? dimsActuales
@@ -826,11 +826,11 @@ function ProductoFormPage() {
   }
 
   /**
-   * Renombrar una opciÃ³n: cambia la clave en TODAS las filas a la vez.
+   * Renombrar una opción: cambia la clave en TODAS las filas a la vez.
    *
-   * Se rearma el objeto en orden en vez de borrar y agregar, para que la opciÃ³n
+   * Se rearma el objeto en orden en vez de borrar y agregar, para que la opción
    * renombrada quede donde estaba. Si se agrega al final, las columnas se
-   * reordenan solas mientras el dueÃ±o escribe.
+   * reordenan solas mientras el dueño escribe.
    */
   function renameDim(viejo: string, nuevo: string) {
     setVariants((p) => renombrarOpcion(p, viejo, nuevo));
@@ -848,20 +848,20 @@ function ProductoFormPage() {
   }
 
   /**
-   * A quÃ© se le puede colgar una foto, agrupado por opciÃ³n.
+   * A qué se le puede colgar una foto, agrupado por opción.
    *
-   * Antes esto filtraba por `key.includes("color")`, asÃ­ que sÃ³lo se podÃ­an
+   * Antes esto filtraba por `key.includes("color")`, así que sólo se podían
    * asignar fotos a los colores. La tienda hace rato que sincroniza la foto con
-   * CUALQUIER valor â€”`indiceFotoDe` en useCartLogic ni mira cÃ³mo se llama la
-   * opciÃ³n, y el comentario de ahÃ­ lo dice: "si maÃ±ana se asignan fotos por
-   * Material, esto ya funciona"â€”. El formulario era lo Ãºnico que faltaba.
+   * CUALQUIER valor —`indiceFotoDe` en useCartLogic ni mira cómo se llama la
+   * opción, y el comentario de ahí lo dice: "si mañana se asignan fotos por
+   * Material, esto ya funciona"—. El formulario era lo único que faltaba.
    *
    * Concreto: el collar de tiendaapps se vende por `Media` (40/50/70cm) y sus
-   * fotos estÃ¡n colgadas de Blanco y Rojo, porque no habÃ­a otra opciÃ³n. Un collar
+   * fotos están colgadas de Blanco y Rojo, porque no había otra opción. Un collar
    * de 40cm y uno de 70cm se ven distinto.
    *
-   * El color va primero: es el caso normal â€”98 de 107 productos activos tienen la
-   * foto colgada de un colorâ€” y asÃ­ queda arriba en el desplegable.
+   * El color va primero: es el caso normal —98 de 107 productos activos tienen la
+   * foto colgada de un color— y así queda arriba en el desplegable.
    */
   const opcionesParaFoto = useMemo(() => {
     const porNombre = new Map<string, string[]>();
@@ -879,16 +879,16 @@ function ProductoFormPage() {
       .sort((a, b) => Number(esOpcionDeColor(b.nombre)) - Number(esOpcionDeColor(a.nombre)));
   }, [variants]);
 
-  /** Todos los valores sueltos â€” para saber si hay algo a lo que asignarle una foto. */
+  /** Todos los valores sueltos — para saber si hay algo a lo que asignarle una foto. */
   const valoresParaFoto = useMemo(
     () => opcionesParaFoto.flatMap((o) => o.valores),
     [opcionesParaFoto],
   );
 
   /**
-   * CÃ³mo nombrar la asignaciÃ³n en los carteles: "su color", "su color o su talle".
+   * Cómo nombrar la asignación en los carteles: "su color", "su color o su talle".
    *
-   * Se arma con "su" a propÃ³sito: sirve para cualquier gÃ©nero y evita tener que
+   * Se arma con "su" a propósito: sirve para cualquier género y evita tener que
    * saber si va "un color" o "una medida".
    */
   const etiquetaFoto = useMemo(
@@ -974,15 +974,15 @@ function ProductoFormPage() {
     const url = reelUrlDraft.trim();
     if (!url) return;
     if (!isSafeReelUrl(url)) {
-      setError("PegÃ¡ un link completo que empiece con https:// (Instagram, TikTok o YouTube).");
+      setError("Pegá un link completo que empiece con https:// (Instagram, TikTok o YouTube).");
       return;
     }
     if (reelUrls.length >= MAX_PRODUCT_REELS) {
-      setError(`PodÃ©s agregar hasta ${MAX_PRODUCT_REELS} videos por producto.`);
+      setError(`Podés agregar hasta ${MAX_PRODUCT_REELS} videos por producto.`);
       return;
     }
-    // El tope se re-chequea adentro del updater: dos clicks rÃ¡pidos leerÃ­an el
-    // mismo largo viejo y meterÃ­an el link dos veces.
+    // El tope se re-chequea adentro del updater: dos clicks rápidos leerían el
+    // mismo largo viejo y meterían el link dos veces.
     setReelUrls((p) => (p.length >= MAX_PRODUCT_REELS || p.includes(url) ? p : [...p, url]));
     setReelUrlDraft("");
     setShowReelUrlInput(false);
@@ -992,10 +992,10 @@ function ProductoFormPage() {
   async function handleVideoFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    // El corte va ANTES de subir: si no, el archivo (hasta 50 MB) ya viajÃ³ al
-    // storage y queda huÃ©rfano cuando el server rechaza el cuarto reel.
+    // El corte va ANTES de subir: si no, el archivo (hasta 50 MB) ya viajó al
+    // storage y queda huérfano cuando el server rechaza el cuarto reel.
     if (reelUrls.length >= MAX_PRODUCT_REELS) {
-      setError(`PodÃ©s subir hasta ${MAX_PRODUCT_REELS} videos por producto.`);
+      setError(`Podés subir hasta ${MAX_PRODUCT_REELS} videos por producto.`);
       if (videoFileInputRef.current) videoFileInputRef.current.value = "";
       return;
     }
@@ -1009,14 +1009,14 @@ function ProductoFormPage() {
       if (!res.ok) throw new Error(data.error || "No se pudo subir el video");
       if (data.url) {
         // Re-chequeo adentro del updater y no contra el largo del render: mientras
-        // el video viajaba se pudo haber pegado un link, y sumar acÃ¡ a ciegas
-        // dejaba 4 reels que hacÃ­an fallar el guardado entero del producto.
+        // el video viajaba se pudo haber pegado un link, y sumar acá a ciegas
+        // dejaba 4 reels que hacían fallar el guardado entero del producto.
         let overflow = false;
         setReelUrls((p) => {
           if (p.length >= MAX_PRODUCT_REELS) { overflow = true; return p; }
           return [...p, data.url as string];
         });
-        if (overflow) setError(`PodÃ©s subir hasta ${MAX_PRODUCT_REELS} videos por producto.`);
+        if (overflow) setError(`Podés subir hasta ${MAX_PRODUCT_REELS} videos por producto.`);
         else markDirty();
       }
     } catch (err) {
@@ -1064,35 +1064,35 @@ function ProductoFormPage() {
     const subcategory = form.subcategory === "otro" ? customSubcategory.trim() : form.subcategory;
     const isHideVariants = storeTypeConfig.hideVariants;
     const preparedVariants = isHideVariants
-      ? [{ name: "Unidad", value: "Ãšnico", stock: "1", price: "", sku: "" }]
+      ? [{ name: "Unidad", value: "Único", stock: "1", price: "", sku: "" }]
       : prepareVariantsForSubmit(variants);
     if (!category) {
-      setError("EscribÃ­ la categorÃ­a personalizada.");
+      setError("Escribí la categoría personalizada.");
       setLoading(false);
       return;
     }
     if (images.length === 0) {
-      setError("AgregÃ¡ al menos una foto del producto.");
+      setError("Agregá al menos una foto del producto.");
       setLoading(false);
       return;
     }
     if (!isHideVariants && preparedVariants.some((variant) => !variant.value)) {
-      setError("Cada combinaciÃ³n de variantes debe tener al menos un valor. Si es un producto simple, dejÃ¡ una sola fila.");
+      setError("Cada combinación de variantes debe tener al menos un valor. Si es un producto simple, dejá una sola fila.");
       setLoading(false);
       return;
     }
-    // Una fila a medio llenar â€”"Talle M" con el color en blancoâ€” pasaba las dos
+    // Una fila a medio llenar —"Talle M" con el color en blanco— pasaba las dos
     // validaciones de arriba y la del servidor, porque `value` queda en "M". Pero
-    // en la tienda esa variante no coincide con ninguna selecciÃ³n: el comprador
-    // podÃ­a comprar una combinaciÃ³n que no existe y la caja cobraba sin descontar
-    // stock, porque sÃ³lo descuenta cuando encontrÃ³ la variante.
+    // en la tienda esa variante no coincide con ninguna selección: el comprador
+    // podía comprar una combinación que no existe y la caja cobraba sin descontar
+    // stock, porque sólo descuenta cuando encontró la variante.
     if (!isHideVariants) {
       const incompletas = filasIncompletas(variants);
       if (incompletas.length > 0) {
         const { fila, falta, tiene } = incompletas[0];
         setError(
           `A la fila ${fila} (${tiene}) le falta ${falta.join(" y ")}. ` +
-          `Completala o borrÃ¡ la fila â€” si no, esa combinaciÃ³n no se puede vender.`
+          `Completala o borrá la fila — si no, esa combinación no se puede vender.`
         );
         setLoading(false);
         return;
@@ -1104,7 +1104,7 @@ function ProductoFormPage() {
       ? [{ key: "Servicios", value: JSON.stringify(services) }]
       : [];
     const finalAttrs = storeTypeConfig.supportsCondicion
-      ? [{ key: "CondiciÃ³n", value: condicion }, ...baseAttrs, ...svcList]
+      ? [{ key: "Condición", value: condicion }, ...baseAttrs, ...svcList]
       : [...baseAttrs, ...svcList];
 
     const res = await fetch(isEditing ? `/api/productos/${editingId}` : "/api/productos", {
@@ -1157,15 +1157,15 @@ function ProductoFormPage() {
   const cardRadius = RADIUS_MAP[store.cardRadius] || "rounded-xl";
   const cardShadow = SHADOW_MAP[store.cardShadow] || "shadow-sm";
   const storeTypeConfig = getStoreType(store.tipoTienda || "ROPA");
-  // La sugerencia sale de la CATEGORÃA elegida, no del rubro: dentro de Moda, un
-  // collar se sugiere como "Largo" con valores en centÃ­metros, y una remera como
-  // "Talle" con S/M/L. El nombre es sÃ³lo una sugerencia â€” manda `opcionNombre`,
-  // que el dueÃ±o puede escribir.
+  // La sugerencia sale de la CATEGORÍA elegida, no del rubro: dentro de Moda, un
+  // collar se sugiere como "Largo" con valores en centímetros, y una remera como
+  // "Talle" con S/M/L. El nombre es sólo una sugerencia — manda `opcionNombre`,
+  // que el dueño puede escribir.
   const sugerida = sugerirOpcion(store.tipoTienda || "ROPA", form.category, form.subcategory);
 
   /**
-   * Cambia el nombre de la opciÃ³n del builder y renombra la clave en las filas
-   * que ya estÃ©n armadas. Sin lo segundo, cambiar "Talle" por "Largo" dejaba las
+   * Cambia el nombre de la opción del builder y renombra la clave en las filas
+   * que ya estén armadas. Sin lo segundo, cambiar "Talle" por "Largo" dejaba las
    * combinaciones existentes guardadas con el nombre viejo.
    */
   function cambiarNombreOpcion(nuevo: string) {
@@ -1174,53 +1174,53 @@ function ProductoFormPage() {
     if (viejo && nuevo && viejo !== nuevo) renameDim(viejo, nuevo);
   }
 
-  // Al elegir una categorÃ­a, el nombre sugerido cambia: "collares" sugiere
-  // "Largo", "remeras" sugiere "Talle". SÃ³lo se aplica si el dueÃ±o todavÃ­a no
-  // escribiÃ³ el nombre a mano â€” lo suyo no se pisa nunca.
+  // Al elegir una categoría, el nombre sugerido cambia: "collares" sugiere
+  // "Largo", "remeras" sugiere "Talle". Sólo se aplica si el dueño todavía no
+  // escribió el nombre a mano — lo suyo no se pisa nunca.
   useEffect(() => {
     if (nombreTocadoRef.current) return;
     if (sugerida.nombre === opcionNombre) return;
-    // No se pisa una opciÃ³n que ya existe con ese nombre: si el producto ya tiene
-    // un "Color" y la categorÃ­a sugiriera "Color", las dos claves se fundirÃ­an en
-    // una y se perderÃ­an los valores de la otra.
+    // No se pisa una opción que ya existe con ese nombre: si el producto ya tiene
+    // un "Color" y la categoría sugiriera "Color", las dos claves se fundirían en
+    // una y se perderían los valores de la otra.
     if (dimsActuales.some(d => d !== opcionNombre && d.toLowerCase() === sugerida.nombre.toLowerCase())) return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- depende de que el dueÃ±o elija una categorÃ­a, no se puede calcular durante el render
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- depende de que el dueño elija una categoría, no se puede calcular durante el render
     cambiarNombreOpcion(sugerida.nombre);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sugerida.nombre]);
-  // â”€â”€ OptimizaciÃ³n para Google â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  // Lo que se armarÃ­a solo si estos campos quedan vacÃ­os. Va como `placeholder` y
-  // como texto de la vista previa, para que se vea quÃ© se estÃ¡ reemplazando ANTES
+  // ── Optimización para Google ──────────────────────────────────────────────
+  // Lo que se armaría solo si estos campos quedan vacíos. Va como `placeholder` y
+  // como texto de la vista previa, para que se vea qué se está reemplazando ANTES
   // de escribir nada. Replica exactamente lo que hace `tituloParaGoogle` /
-  // `descripcionParaGoogle` en la ficha pÃºblica â€” si allÃ¡ cambia, acÃ¡ tambiÃ©n.
-  // El nombre de la tienda puede no haber llegado todavÃ­a (la config se pide
+  // `descripcionParaGoogle` en la ficha pública — si allá cambia, acá también.
+  // El nombre de la tienda puede no haber llegado todavía (la config se pide
   // async). Mientras tanto se muestra un texto neutro en vez de "undefined".
   const nombreTienda = store.name?.trim() || "tu tienda";
-  const seoTituloAuto = `${form.name.trim() || "Nombre del producto"} â€” ${nombreTienda}`;
+  const seoTituloAuto = `${form.name.trim() || "Nombre del producto"} — ${nombreTienda}`;
   const seoDescripcionAuto =
     form.description.trim().slice(0, 160) ||
-    `ComprÃ¡ ${form.name.trim() || "este producto"} en ${nombreTienda}`;
+    `Comprá ${form.name.trim() || "este producto"} en ${nombreTienda}`;
   const seoTocado = form.seoTitle.trim().length > 0 || form.seoDescription.trim().length > 0;
 
   const previewCategory = form.category === "otro" ? customCategory.trim() || "otro" : form.category;
   const previewSubcategory = form.subcategory === "otro" ? customSubcategory.trim() : form.subcategory;
   const availableSubcategories = form.category === "otro" ? [] : productSubcategories[form.category] || [];
-  // Specs propias de lo que se estÃ¡ cargando (Pulgadas para TVs, Piedra para
-  // joyas), sumadas a las genÃ©ricas del rubro. Si comparten nombre, gana la de
-  // la categorÃ­a: un collar no pide "Material: AlgodÃ³n, poliÃ©ster...".
+  // Specs propias de lo que se está cargando (Pulgadas para TVs, Piedra para
+  // joyas), sumadas a las genéricas del rubro. Si comparten nombre, gana la de
+  // la categoría: un collar no pide "Material: Algodón, poliéster...".
   const activeExtraFields = camposActivos(storeTypeConfig, previewCategory, previewSubcategory);
-  // Tips que todavÃ­a no consumiÃ³ ninguna foto. Cuando se acaban, el grid sigue
-  // con un cuadro genÃ©rico: siempre queda uno libre hasta llegar al mÃ¡ximo.
+  // Tips que todavía no consumió ninguna foto. Cuando se acaban, el grid sigue
+  // con un cuadro genérico: siempre queda uno libre hasta llegar al máximo.
   const remainingPhotoTips = photoTips(storeTypeConfig.hideVariants).slice(images.length);
 
-  // Al elegir una categorÃ­a con specs propias (ej: "tvs" â†’ Pulgadas, "joyas" â†’
-  // Piedra), agregamos esos campos vacÃ­os a la ficha tÃ©cnica para que el vendedor
+  // Al elegir una categoría con specs propias (ej: "tvs" → Pulgadas, "joyas" →
+  // Piedra), agregamos esos campos vacíos a la ficha técnica para que el vendedor
   // los vea y los complete.
-  // No borra nada de lo que ya haya escrito si cambia de categorÃ­a y vuelve.
+  // No borra nada de lo que ya haya escrito si cambia de categoría y vuelve.
   useEffect(() => {
     const suggested = camposPropios(storeTypeConfig, previewCategory, previewSubcategory);
     if (suggested.length === 0) return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- agrega los campos sugeridos de la subcategorÃ­a reciÃ©n elegida, no se puede calcular durante el render porque depende de una interacciÃ³n del usuario
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- agrega los campos sugeridos de la subcategoría recién elegida, no se puede calcular durante el render porque depende de una interacción del usuario
     setAttributes((prev) => {
       const missing = suggested.filter((f) => !prev.some((a) => a.key === f.label));
       if (missing.length === 0) return prev;
@@ -1236,11 +1236,11 @@ function ProductoFormPage() {
 
   const margin = calcMargin(parseFloat(form.price || "0"), form.costPrice ? parseFloat(form.costPrice) : null);
 
-  // F6-C9 â€” Â¿alguna promo de monto fijo vigente le pega fuerte a este producto?
-  // Se recalcula al tipear el precio y al cambiar la categorÃ­a, que son las dos
-  // cosas que deciden si cae en el alcance. Con `editingId` en el id, tambiÃ©n
+  // F6-C9 — ¿alguna promo de monto fijo vigente le pega fuerte a este producto?
+  // Se recalcula al tipear el precio y al cambiar la categoría, que son las dos
+  // cosas que deciden si cae en el alcance. Con `editingId` en el id, también
   // detecta las promos que apuntan a este producto por nombre propio; en un
-  // producto nuevo ese caso no existe todavÃ­a y el id vacÃ­o no matchea nada.
+  // producto nuevo ese caso no existe todavía y el id vacío no matchea nada.
   const promoRiesgo = useMemo(
     () => deepestFixedOnProduct(
       { id: editingId ?? "", price: parseFloat(form.price || "0"), category: form.category || null },
@@ -1253,9 +1253,9 @@ function ProductoFormPage() {
   async function handleAddGasto() {
     if (savingGasto || !editingId) return;
     const concepto = gastoConcepto === "Otro" ? gastoConceptoOtro.trim() : gastoConcepto;
-    if (!concepto) { setGastoError("IngresÃ¡ un concepto"); return; }
+    if (!concepto) { setGastoError("Ingresá un concepto"); return; }
     const monto = parseFloat(gastoMonto);
-    if (isNaN(monto) || monto <= 0) { setGastoError("IngresÃ¡ un monto vÃ¡lido"); return; }
+    if (isNaN(monto) || monto <= 0) { setGastoError("Ingresá un monto válido"); return; }
 
     setSavingGasto(true);
     setGastoError("");
@@ -1273,7 +1273,7 @@ function ProductoFormPage() {
       setGastoMonto("");
       setGastoFecha("");
     } catch {
-      setGastoError("No se pudo agregar el gasto. RevisÃ¡ tu conexiÃ³n e intentÃ¡ de nuevo.");
+      setGastoError("No se pudo agregar el gasto. Revisá tu conexión e intentá de nuevo.");
     } finally {
       setSavingGasto(false);
     }
@@ -1285,9 +1285,9 @@ function ProductoFormPage() {
     try {
       const res = await fetch(`/api/productos/${editingId}/gastos/${gastoId}`, { method: "DELETE" });
       if (res.ok) setGastos((prev) => prev.filter((g) => g.id !== gastoId));
-      else setGastoError("No se pudo borrar el gasto. IntentÃ¡ de nuevo.");
+      else setGastoError("No se pudo borrar el gasto. Intentá de nuevo.");
     } catch {
-      setGastoError("No se pudo borrar el gasto. RevisÃ¡ tu conexiÃ³n e intentÃ¡ de nuevo.");
+      setGastoError("No se pudo borrar el gasto. Revisá tu conexión e intentá de nuevo.");
     } finally {
       setDeletingGastoId(null);
     }
@@ -1339,27 +1339,34 @@ function ProductoFormPage() {
               <h2 className="font-semibold text-gray-900">Informacion basica</h2>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">Nombre del producto *</label>
-                <input
-                  type="text"
+                {/* El campo mas tipeado de la app, y era el que peor se portaba:
+                    un nombre real no entra en el ancho de un telefono y se iba
+                    corriendo hacia la derecha, asi que no se podia releer lo
+                    escrito sin ir moviendo el cursor. Sigue siendo un valor de
+                    una linea: los saltos se sacan al escribir y al pegar.
+                    El `required` va igual — un textarea lo soporta, y aca es la
+                    unica validacion que tiene el nombre. */}
+                <CampoAuto
                   value={form.name}
-                  onChange={(e) => updateForm("name", e.target.value)}
+                  onChange={(v) => updateForm("name", v)}
                   required
+                  ariaLabel="Nombre del producto"
                   placeholder={storeLoaded ? ejemploNombre(storeTypeConfig, previewCategory) : ""}
-                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="py-3"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">DescripciÃ³n</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Descripción</label>
                 <RichTextEditor
                   value={form.description}
                   onChange={(html) => { updateForm("description", html); markDirty(); }}
-                  placeholder="DescribÃ­ tu producto..."
+                  placeholder="Describí tu producto..."
                   maxLength={8000}
                 />
               </div>
               {!storeTypeConfig.hideGender && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">GÃ©nero</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Género</label>
                   <div className="flex gap-2">
                     {(["mujer", "hombre", "unisex"] as const).map((g) => (
                       <button
@@ -1380,7 +1387,7 @@ function ProductoFormPage() {
               )}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">CategorÃ­a</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Categoría</label>
                   <select
                     value={form.category}
                     onChange={(e) => setForm((prev) => ({ ...prev, category: e.target.value, subcategory: "" }))}
@@ -1389,38 +1396,38 @@ function ProductoFormPage() {
                     {productCategories.map((c) => (
                       <option key={c} value={c}>{formatCategoryLabel(c)}</option>
                     ))}
-                    <option value="otro">Otra categorÃ­a</option>
+                    <option value="otro">Otra categoría</option>
                   </select>
                   {form.category === "otro" && (
-                    <input
-                      type="text"
+                    <CampoAuto
                       value={customCategory}
-                      onChange={(e) => setCustomCategory(e.target.value)}
-                      placeholder="EscribÃ­ la categorÃ­a"
-                      className="mt-3 w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      onChange={setCustomCategory}
+                      ariaLabel="Categoría nueva"
+                      placeholder="Escribí la categoría"
+                      className="mt-3 py-3"
                     />
                   )}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">SubcategorÃ­a</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Subcategoría</label>
                   <select
                     value={form.subcategory}
                     onChange={(e) => updateForm("subcategory", e.target.value)}
                     className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
                   >
-                    <option value="">Sin subcategorÃ­a</option>
+                    <option value="">Sin subcategoría</option>
                     {availableSubcategories.map((subcat) => (
                       <option key={subcat} value={subcat}>{formatCategoryLabel(subcat)}</option>
                     ))}
-                    <option value="otro">Otra subcategorÃ­a</option>
+                    <option value="otro">Otra subcategoría</option>
                   </select>
                   {form.subcategory === "otro" && (
-                    <input
-                      type="text"
+                    <CampoAuto
                       value={customSubcategory}
-                      onChange={(e) => setCustomSubcategory(e.target.value)}
+                      onChange={setCustomSubcategory}
+                      ariaLabel="Subcategoría nueva"
                       placeholder="Ej: remeras, pantalones, camperas"
-                      className="mt-3 w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="mt-3 py-3"
                     />
                   )}
                 </div>
@@ -1431,7 +1438,7 @@ function ProductoFormPage() {
                       <Tip align="left" text={tagsTip(store.tipoTienda || "ROPA")} />
                     </label>
                     <p className="text-xs text-gray-400 mt-0.5 mb-1.5">
-                      EscribÃ­ uno y apretÃ¡ Enter. TambiÃ©n podÃ©s pegar varios separados por coma.
+                      Escribí uno y apretá Enter. También podés pegar varios separados por coma.
                     </p>
 
                     {listaTags.length > 0 && (
@@ -1458,8 +1465,8 @@ function ProductoFormPage() {
                     <div className="flex gap-2">
                       <div
                         className="min-w-0 flex-1"
-                        // Al salir del campo se toma lo tipeado: si no, escribÃ­as
-                        // el Ãºltimo tag, tocabas "Guardar" y ese se perdÃ­a.
+                        // Al salir del campo se toma lo tipeado: si no, escribías
+                        // el último tag, tocabas "Guardar" y ese se perdía.
                         onBlur={() => agregarTags(tagInput)}
                         onKeyDown={(e) => {
                           if (e.key === "Backspace" && !tagInput && listaTags.length > 0) {
@@ -1471,7 +1478,7 @@ function ProductoFormPage() {
                           id="tagInput"
                           value={tagInput}
                           // Al pegar "negro, oversize" se cierran los dos de una
-                          // en vez de esperar un Enter que quizÃ¡s no llega.
+                          // en vez de esperar un Enter que quizás no llega.
                           onChange={(v) => (v.includes(",") ? agregarTags(v) : setTagInput(v))}
                           onEnter={() => agregarTags(tagInput)}
                           placeholder={ejemploTags(storeTypeConfig, previewCategory)}
@@ -1493,10 +1500,10 @@ function ProductoFormPage() {
               </div>
             </div>
 
-            {/* CondiciÃ³n â€” solo para tipos que lo soportan (AUTOS, TECH) */}
+            {/* Condición — solo para tipos que lo soportan (AUTOS, TECH) */}
             {storeTypeConfig.supportsCondicion && (
               <div className="bg-white rounded-2xl border border-gray-100 p-6">
-                <h2 className="font-semibold text-gray-900 mb-3">{storeTypeConfig.showServiceHistory ? "CondiciÃ³n del vehÃ­culo" : "CondiciÃ³n del producto"}</h2>
+                <h2 className="font-semibold text-gray-900 mb-3">{storeTypeConfig.showServiceHistory ? "Condición del vehículo" : "Condición del producto"}</h2>
                 <div className="flex flex-wrap gap-2">
                   {(storeTypeConfig.condicionOptions ?? ["Nuevo", "Usado"]).map((opt) => (
                     <button
@@ -1527,15 +1534,15 @@ function ProductoFormPage() {
               {images.length > 0 && valoresParaFoto.length > 0 && (
                 <div className="flex items-start gap-2 bg-indigo-50 rounded-xl px-3 py-2.5 text-xs text-indigo-700">
                   <svg className="h-4 w-4 mt-0.5 shrink-0 text-indigo-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                  {/* El texto nombra las opciones que tiene ESTE producto. DecÃ­a
+                  {/* El texto nombra las opciones que tiene ESTE producto. Decía
                       "un color" siempre, aunque el producto se vendiera por largo. */}
-                  <span><strong>AsignÃ¡ cada foto a {etiquetaFoto}</strong> para que el cliente vea la imagen correcta al elegir.</span>
+                  <span><strong>Asigná cada foto a {etiquetaFoto}</strong> para que el cliente vea la imagen correcta al elegir.</span>
                 </div>
               )}
 
               {/* Un solo grid: la foto queda en el mismo cuadro que ocupaba su consejo.
-                  El drop de archivos va acÃ¡ y no en cada celda â€” cuando el drop viene de
-                  reordenar, dataTransfer.files estÃ¡ vacÃ­o y uploadImages corta solo. */}
+                  El drop de archivos va acá y no en cada celda — cuando el drop viene de
+                  reordenar, dataTransfer.files está vacío y uploadImages corta solo. */}
               <div
                 className="grid grid-cols-2 sm:grid-cols-4 gap-3"
                 onDragOver={(e) => e.preventDefault()}
@@ -1584,8 +1591,8 @@ function ProductoFormPage() {
                         }`}
                       >
                         <option value="">Sin asignar</option>
-                        {/* Agrupado por opciÃ³n: con Color y Talle juntos, una lista
-                            plana mezclarÃ­a "Negro" con "M" sin decir quÃ© es cada uno.
+                        {/* Agrupado por opción: con Color y Talle juntos, una lista
+                            plana mezclaría "Negro" con "M" sin decir qué es cada uno.
                             El `optgroup` lo resuelve sin agregar un control nuevo. */}
                         {opcionesParaFoto.map((op) => (
                           <optgroup key={op.nombre} label={op.nombre}>
@@ -1616,7 +1623,7 @@ function ProductoFormPage() {
               </div>
 
               <p className="text-xs text-gray-400 text-center">
-                Hasta {MAX_PRODUCT_IMAGES} fotos (podÃ©s elegir varias a la vez). JPG, PNG, WEBP - hasta {MAX_SOURCE_IMAGE_SIZE_MB} MB; se optimizan al subir
+                Hasta {MAX_PRODUCT_IMAGES} fotos (podés elegir varias a la vez). JPG, PNG, WEBP - hasta {MAX_SOURCE_IMAGE_SIZE_MB} MB; se optimizan al subir
               </p>
               <input
                 ref={fileInputRef}
@@ -1627,11 +1634,11 @@ function ProductoFormPage() {
                 onChange={handleImageUpload}
               />
 
-              {/* Hint cuando todavÃ­a no hay variantes cargadas */}
+              {/* Hint cuando todavía no hay variantes cargadas */}
               {!storeTypeConfig.hideVariants && valoresParaFoto.length === 0 && (
                 <div className="flex items-start gap-2 bg-gray-50 rounded-xl px-3 py-2.5 text-xs text-gray-500">
                   <svg className="h-4 w-4 mt-0.5 shrink-0 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                  <span>Si tu producto viene en <strong>varias versiones</strong> (colores, talles, largos), primero cargalas en <strong>Variantes y stock</strong> (mÃ¡s abajo) â€” despuÃ©s vas a poder asignarle una foto a cada una.</span>
+                  <span>Si tu producto viene en <strong>varias versiones</strong> (colores, talles, largos), primero cargalas en <strong>Variantes y stock</strong> (más abajo) — después vas a poder asignarle una foto a cada una.</span>
                 </div>
               )}
             </div>
@@ -1640,17 +1647,17 @@ function ProductoFormPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="font-semibold text-gray-900">Reels / Videos</h2>
-                  <p className="text-xs text-gray-400 mt-0.5">Un video muestra el producto en movimiento â€” es lo que mÃ¡s convence de comprar</p>
+                  <p className="text-xs text-gray-400 mt-0.5">Un video muestra el producto en movimiento — es lo que más convence de comprar</p>
                 </div>
                 <span className="text-xs text-gray-400">{reelUrls.length}/{MAX_PRODUCT_REELS}</span>
               </div>
 
-              {/* Ayuda visual: quÃ© grabar y cuÃ¡nto debe durar */}
+              {/* Ayuda visual: qué grabar y cuánto debe durar */}
               <div className="flex items-start gap-2 bg-gray-50 rounded-xl px-3 py-2.5 text-xs text-gray-500">
                 <svg className="h-4 w-4 mt-0.5 shrink-0 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
                 <span>
-                  GrabÃ¡ <strong>vertical</strong> (como una historia) y de <strong>15 a 30 segundos</strong>. {reelTips(store.tipoTienda || "ROPA")}{" "}
-                  Si el video te quedÃ³ horizontal no pasa nada: tu cliente lo abre a pantalla completa y lo ve entero.
+                  Grabá <strong>vertical</strong> (como una historia) y de <strong>15 a 30 segundos</strong>. {reelTips(store.tipoTienda || "ROPA")}{" "}
+                  Si el video te quedó horizontal no pasa nada: tu cliente lo abre a pantalla completa y lo ve entero.
                 </span>
               </div>
 
@@ -1661,8 +1668,8 @@ function ProductoFormPage() {
                 className="hidden"
                 onChange={handleVideoFileUpload}
               />
-              {/* Igual que las fotos: se ven los 3 lugares desde el arranque, asÃ­ se
-                  entiende cuÃ¡ntos videos entran sin tener que contarlos. Centrados para
+              {/* Igual que las fotos: se ven los 3 lugares desde el arranque, así se
+                  entiende cuántos videos entran sin tener que contarlos. Centrados para
                   que no queden pegados a la izquierda con un hueco a la derecha; en
                   celular hacen wrap y quedan centrados igual. */}
               <div className="flex flex-wrap justify-center gap-3">
@@ -1698,8 +1705,8 @@ function ProductoFormPage() {
                 ))}
               </div>
 
-              {/* Se esconde mientras sube un video: si no, se podÃ­a pegar un link
-                  durante la subida y terminar con un reel de mÃ¡s. */}
+              {/* Se esconde mientras sube un video: si no, se podía pegar un link
+                  durante la subida y terminar con un reel de más. */}
               {!showReelUrlInput && !uploadingVideo && reelUrls.length < MAX_PRODUCT_REELS && (
                 <button
                   type="button"
@@ -1707,11 +1714,11 @@ function ProductoFormPage() {
                   className="flex items-center gap-1.5 text-xs text-indigo-600 font-medium hover:text-indigo-800 transition-colors"
                 >
                   <Plus className="h-3.5 w-3.5" />
-                  o pegÃ¡ un link de Instagram, TikTok o YouTube
+                  o pegá un link de Instagram, TikTok o YouTube
                 </button>
               )}
 
-              {/* El link se agrega reciÃ©n cuando tiene contenido: antes se metia un
+              {/* El link se agrega recién cuando tiene contenido: antes se metia un
                   string vacio en la lista y, si guardabas asi, la tienda mostraba
                   una tarjeta de video rota que no llevaba a ningun lado. */}
               {showReelUrlInput && !uploadingVideo && reelUrls.length < MAX_PRODUCT_REELS && (
@@ -1748,7 +1755,7 @@ function ProductoFormPage() {
                 Hasta {MAX_PRODUCT_REELS} videos. MP4, WEBM o MOV de hasta {MAX_VIDEO_SIZE_MB} MB, o un link de Instagram, TikTok o YouTube
               </p>
 
-              {/* El mismo reproductor que ve el comprador, no una imitaciÃ³n */}
+              {/* El mismo reproductor que ve el comprador, no una imitación */}
               {previewReelIdx !== null && (
                 <ReelPlayerModal
                   reelUrls={reelUrls}
@@ -1758,12 +1765,12 @@ function ProductoFormPage() {
               )}
             </div>
 
-            {/* Historial de servicios â€” solo AUTOS */}
+            {/* Historial de servicios — solo AUTOS */}
             {storeTypeConfig.showServiceHistory && (
               <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
                 <div>
                   <h2 className="font-semibold text-gray-900">Historial de servicios</h2>
-                  <p className="text-xs text-gray-400 mt-0.5">MarcÃ¡ los servicios que estÃ¡n al dÃ­a. Se muestran con un tilde verde en la pÃ¡gina del vehÃ­culo.</p>
+                  <p className="text-xs text-gray-400 mt-0.5">Marcá los servicios que están al día. Se muestran con un tilde verde en la página del vehículo.</p>
                 </div>
                 <div className="grid grid-cols-2 gap-2.5">
                   {AUTO_SERVICES.map(svc => (
@@ -1780,7 +1787,7 @@ function ProductoFormPage() {
                       <span className={`flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold ${
                         services[svc.key] ? "bg-green-500 text-white" : "bg-gray-200 text-gray-400"
                       }`}>
-                        {services[svc.key] ? "âœ“" : "âœ•"}
+                        {services[svc.key] ? "✓" : "✕"}
                       </span>
                       <span className={`text-xs font-medium ${services[svc.key] ? "text-green-700" : "text-gray-400"}`}>
                         {svc.label}
@@ -1806,11 +1813,11 @@ function ProductoFormPage() {
                     className="w-full border border-gray-200 rounded-xl pl-8 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                 </div>
-                {/* F6-C9 â€” el candado del monto fijo protege el momento de CREAR
+                {/* F6-C9 — el candado del monto fijo protege el momento de CREAR
                     la promo. Este es el otro lado: un producto barato cargado
-                    despuÃ©s entra a una promo que ya estÃ¡ corriendo, y hasta acÃ¡
+                    después entra a una promo que ya está corriendo, y hasta acá
                     nadie revisaba nada. Avisa, no frena: el precio del producto
-                    es una decisiÃ³n del dueÃ±o, y la promo se puede arreglar del
+                    es una decisión del dueño, y la promo se puede arreglar del
                     otro lado. */}
                 {avisarPromo && promoRiesgo && (
                   <div className={`mt-2 flex gap-2 items-start rounded-xl border p-3 text-[12.5px] ${
@@ -1823,16 +1830,16 @@ function ProductoFormPage() {
                       {promoRiesgo.pct >= MAX_FIXED_DISCOUNT_PCT ? (
                         <>
                           <b>Con este precio, el producto se va a mostrar casi regalado.</b>{" "}
-                          La promociÃ³n â€œ{promoRiesgo.promoName}â€ descuenta ${promoRiesgo.value.toLocaleString("es-AR")} y
-                          este producto sale ${parseFloat(form.price || "0").toLocaleString("es-AR")} â€” se va a mostrar
-                          a <b>${Math.round(promoRiesgo.effective).toLocaleString("es-AR")}</b>, que es el mÃ­nimo que
+                          La promoción “{promoRiesgo.promoName}” descuenta ${promoRiesgo.value.toLocaleString("es-AR")} y
+                          este producto sale ${parseFloat(form.price || "0").toLocaleString("es-AR")} — se va a mostrar
+                          a <b>${Math.round(promoRiesgo.effective).toLocaleString("es-AR")}</b>, que es el mínimo que
                           permite el sistema ({100 - MAX_FIXED_DISCOUNT_PCT}% del precio).
-                          Subile el precio, o entrÃ¡ a Promociones y sacalo del alcance.
+                          Subile el precio, o entrá a Promociones y sacalo del alcance.
                         </>
                       ) : (
                         <>
-                          <b>Ojo:</b> la promociÃ³n â€œ{promoRiesgo.promoName}â€ le descuenta ${promoRiesgo.value.toLocaleString("es-AR")} a
-                          este producto â€” se va a mostrar a <b>${Math.round(promoRiesgo.effective).toLocaleString("es-AR")}</b>, un {promoRiesgo.pct}% menos.
+                          <b>Ojo:</b> la promoción “{promoRiesgo.promoName}” le descuenta ${promoRiesgo.value.toLocaleString("es-AR")} a
+                          este producto — se va a mostrar a <b>${Math.round(promoRiesgo.effective).toLocaleString("es-AR")}</b>, un {promoRiesgo.pct}% menos.
                         </>
                       )}
                     </div>
@@ -1840,7 +1847,7 @@ function ProductoFormPage() {
                 )}
               </div>
 
-              {/* Costo interno + margen â€” todos los rubros excepto Autos/Motos (que usan Gastos del vehÃ­culo) */}
+              {/* Costo interno + margen — todos los rubros excepto Autos/Motos (que usan Gastos del vehículo) */}
               {!storeTypeConfig.usesVehicleExpenses && (
                 <div className="border-t border-gray-100 pt-4">
                   <div className="flex items-center justify-between mb-1.5">
@@ -1849,7 +1856,7 @@ function ProductoFormPage() {
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
                         margin.kind === "loss" ? "bg-red-50 text-red-600" : "bg-green-50 text-green-700"
                       }`}>
-                        {margin.kind === "loss" ? "EstÃ¡s vendiendo a pÃ©rdida" : `Margen de ganancia: ${margin.marginPct.toFixed(0)}%`}
+                        {margin.kind === "loss" ? "Estás vendiendo a pérdida" : `Margen de ganancia: ${margin.marginPct.toFixed(0)}%`}
                       </span>
                     )}
                   </div>
@@ -1865,17 +1872,17 @@ function ProductoFormPage() {
                   </div>
                   <p className="mt-1.5 text-xs text-gray-400">
                     {margin.kind === "no-cost"
-                      ? "Cargalo para ver tu margen de ganancia. Es de uso interno, tus clientes no lo verÃ¡n en la tienda."
-                      : "Es de uso interno, tus clientes no lo verÃ¡n en la tienda."}
+                      ? "Cargalo para ver tu margen de ganancia. Es de uso interno, tus clientes no lo verán en la tienda."
+                      : "Es de uso interno, tus clientes no lo verán en la tienda."}
                   </p>
                 </div>
               )}
 
-              {/* Gastos del vehÃ­culo â€” solo Autos/Motos, reemplaza el campo Costo */}
+              {/* Gastos del vehículo — solo Autos/Motos, reemplaza el campo Costo */}
               {storeTypeConfig.usesVehicleExpenses && (
                 <div className="border-t border-gray-100 pt-4">
                   <div className="flex items-center justify-between mb-1.5">
-                    <label className="block text-sm font-medium text-gray-700">Gastos del vehÃ­culo</label>
+                    <label className="block text-sm font-medium text-gray-700">Gastos del vehículo</label>
                     {gastos.length > 0 && (
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-600">
                         Costo total: ${calcVehicleCostTotal(gastos).toLocaleString("es-AR")}
@@ -1883,12 +1890,12 @@ function ProductoFormPage() {
                     )}
                   </div>
                   <p className="text-xs text-gray-400 mb-3">
-                    Compra, lavado, service, cubiertas... Es de uso interno, tus clientes no lo verÃ¡n en la tienda.
+                    Compra, lavado, service, cubiertas... Es de uso interno, tus clientes no lo verán en la tienda.
                   </p>
 
                   {!isEditing ? (
                     <p className="text-xs text-amber-700 bg-amber-50 rounded-xl px-3 py-2.5">
-                      GuardÃ¡ el vehÃ­culo primero para poder cargarle gastos.
+                      Guardá el vehículo primero para poder cargarle gastos.
                     </p>
                   ) : (
                     <div className="space-y-2">
@@ -1963,15 +1970,15 @@ function ProductoFormPage() {
                 </div>
               )}
 
-              {/* Toggle Â¿En oferta? */}
+              {/* Toggle ¿En oferta? */}
               <div className="border-t border-gray-100 pt-4 space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-semibold text-gray-900">Â¿EstÃ¡ en oferta?</p>
+                    <p className="text-sm font-semibold text-gray-900">¿Está en oferta?</p>
                     <p className="text-xs text-gray-400 mt-0.5">
                       {isOnSale
-                        ? "Activa â€” el cliente ve el precio original tachado y el badge elegido"
-                        : "No â€” se muestra solo el precio de venta"}
+                        ? "Activa — el cliente ve el precio original tachado y el badge elegido"
+                        : "No — se muestra solo el precio de venta"}
                     </p>
                   </div>
                   <button
@@ -2019,7 +2026,7 @@ function ProductoFormPage() {
                           {cpInvalid && (
                             <p className="mt-1 text-xs text-red-500 flex items-center gap-1">
                               <svg className="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                              IngresÃ¡ un nÃºmero mayor a 0.
+                              Ingresá un número mayor a 0.
                             </p>
                           )}
                           {cpTooLow && (
@@ -2042,7 +2049,7 @@ function ProductoFormPage() {
                     {/* Badge picker */}
                     <div>
                       <p className="text-sm font-medium text-gray-700 mb-1">Badge en la imagen <span className="text-xs text-gray-400 font-normal">(opcional)</span></p>
-                      <p className="text-xs text-gray-400 mb-2">ElegÃ­ el estilo visual del badge. Si tenÃ©s una promo N llevÃ¡s M pagÃ¡s, el badge se genera automÃ¡ticamente.</p>
+                      <p className="text-xs text-gray-400 mb-2">Elegí el estilo visual del badge. Si tenés una promo N llevás M pagás, el badge se genera automáticamente.</p>
                       <div className="flex flex-wrap gap-2">
                         {(["OFERTA", "SALE", "PCT"] as const).map(key => (
                           <button
@@ -2052,7 +2059,7 @@ function ProductoFormPage() {
                             className={`relative flex flex-col items-center gap-1.5 p-2 rounded-xl border-2 transition-all ${form.offerBadge === key ? "border-indigo-600 bg-indigo-50" : "border-gray-100 bg-gray-50 hover:border-indigo-200"}`}
                           >
                             {form.offerBadge === key && (
-                              <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-indigo-600 flex items-center justify-center text-white text-[9px]">âœ“</span>
+                              <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-indigo-600 flex items-center justify-center text-white text-[9px]">✓</span>
                             )}
                             <OfferBadgePreview badge={key} pct={key === "PCT" ? discount || null : null} />
                             <span className="text-[10px] text-gray-500 font-medium">{key === "OFERTA" ? "Oferta" : key === "SALE" ? "Sale" : "% Off"}</span>
@@ -2064,7 +2071,7 @@ function ProductoFormPage() {
                             onClick={() => { updateForm("offerBadge", ""); markDirty(); }}
                             className="flex flex-col items-center justify-center gap-1 p-2 rounded-xl border-2 border-gray-100 bg-gray-50 hover:border-red-200 text-xs text-gray-400 hover:text-red-500 transition-all min-w-[48px]"
                           >
-                            <span className="text-base">âœ•</span>
+                            <span className="text-base">✕</span>
                             <span>Ninguno</span>
                           </button>
                         )}
@@ -2079,7 +2086,7 @@ function ProductoFormPage() {
                       <textarea
                         value={form.offerNote}
                         onChange={(e) => { updateForm("offerNote", e.target.value.slice(0, 200)); markDirty(); }}
-                        placeholder="Ej: VÃ¡lida hasta agotar stock Â· Solo talles M y L"
+                        placeholder="Ej: Válida hasta agotar stock · Solo talles M y L"
                         rows={2}
                         maxLength={200}
                         className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
@@ -2091,8 +2098,8 @@ function ProductoFormPage() {
                     {/* Fecha de vencimiento de la oferta */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                        VÃ¡lida hasta <span className="text-xs text-gray-400 font-normal">(opcional)</span>
-                        <Tip text="Cuando llegue esta fecha/hora la oferta se desactiva automÃ¡ticamente en la tienda: desaparece el precio tachado, el badge y la nota." align="right" />
+                        Válida hasta <span className="text-xs text-gray-400 font-normal">(opcional)</span>
+                        <Tip text="Cuando llegue esta fecha/hora la oferta se desactiva automáticamente en la tienda: desaparece el precio tachado, el badge y la nota." align="right" />
                       </label>
                       <div className="flex items-center gap-2">
                         <input
@@ -2113,12 +2120,12 @@ function ProductoFormPage() {
                           {(() => {
                             const end = new Date(form.offerEndsAt);
                             const now = new Date();
-                            if (end <= now) return <><span>âš ï¸</span><span>Esta fecha ya pasÃ³ â€” la oferta no se mostrarÃ¡ en la tienda.</span></>;
+                            if (end <= now) return <><span>⚠️</span><span>Esta fecha ya pasó — la oferta no se mostrará en la tienda.</span></>;
                             const diffMs = end.getTime() - now.getTime();
                             const diffH = Math.floor(diffMs / 3600000);
                             const diffD = Math.floor(diffH / 24);
-                            if (diffD >= 1) return <><span>â³</span><span>Vence en {diffD} dÃ­a{diffD !== 1 ? "s" : ""} ({end.toLocaleDateString("es-AR", { day:"2-digit", month:"2-digit", year:"numeric" })} a las {end.toLocaleTimeString("es-AR", { hour:"2-digit", minute:"2-digit" })})</span></>;
-                            return <><span>â³</span><span>Vence en {diffH} hora{diffH !== 1 ? "s" : ""}</span></>;
+                            if (diffD >= 1) return <><span>⏳</span><span>Vence en {diffD} día{diffD !== 1 ? "s" : ""} ({end.toLocaleDateString("es-AR", { day:"2-digit", month:"2-digit", year:"numeric" })} a las {end.toLocaleTimeString("es-AR", { hour:"2-digit", minute:"2-digit" })})</span></>;
+                            return <><span>⏳</span><span>Vence en {diffH} hora{diffH !== 1 ? "s" : ""}</span></>;
                           })()}
                         </p>
                       )}
@@ -2127,7 +2134,7 @@ function ProductoFormPage() {
                     {discount > 0 && (
                       <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 px-4 py-2 rounded-xl">
                         <Tag className="h-4 w-4" />
-                        Este producto aparecerÃ¡ automÃ¡ticamente en los bloques de <strong>&quot;Ofertas destacadas&quot;</strong> de tu tienda.
+                        Este producto aparecerá automáticamente en los bloques de <strong>&quot;Ofertas destacadas&quot;</strong> de tu tienda.
                       </div>
                     )}
                   </div>
@@ -2143,28 +2150,28 @@ function ProductoFormPage() {
                     className="mt-0.5 h-4 w-4 accent-indigo-600"
                   />
                   <span>
-                    <span className="block text-sm font-medium text-gray-800">Destacar en &quot;Lo mÃ¡s buscado&quot;</span>
+                    <span className="block text-sm font-medium text-gray-800">Destacar en &quot;Lo más buscado&quot;</span>
                     <span className="block text-xs text-gray-400 mt-0.5">
-                      MostrÃ¡ este producto en el bloque &quot;Lo mÃ¡s buscado&quot; de tu tienda. Si no destacÃ¡s ningÃºn producto, ese bloque muestra los mÃ¡s recientes.
+                      Mostrá este producto en el bloque &quot;Lo más buscado&quot; de tu tienda. Si no destacás ningún producto, ese bloque muestra los más recientes.
                     </span>
                   </span>
                 </label>
               )}
             </div>
 
-            {/* Precio mayorista â€” solo rubros que soportan mayorista Y tienda configurada como tal */}
+            {/* Precio mayorista — solo rubros que soportan mayorista Y tienda configurada como tal */}
             {store.tieneVentaMayorista && storeTypeConfig.supportsWholesale && (
               <div className="bg-white rounded-2xl border border-indigo-100 p-6 space-y-5">
                 {/* Cabecera */}
                 <div>
                   <h2 className="font-semibold text-gray-900">Venta mayorista</h2>
-                  <p className="text-xs text-gray-400 mt-0.5">Los precios mayoristas aplican automÃ¡ticamente cuando el comprador alcanza la cantidad mÃ­nima</p>
+                  <p className="text-xs text-gray-400 mt-0.5">Los precios mayoristas aplican automáticamente cuando el comprador alcanza la cantidad mínima</p>
                 </div>
 
-                {/* Precio base + cantidad mÃ­nima.
+                {/* Precio base + cantidad mínima.
                     Una sola columna en celular: a 360px, dos columnas fijas dejaban
-                    cada campo en ~140px y el rÃ³tulo "Precio por mayor base *" se
-                    partÃ­a en dos renglones encima de un input donde el "$" ya se
+                    cada campo en ~140px y el rótulo "Precio por mayor base *" se
+                    partía en dos renglones encima de un input donde el "$" ya se
                     come parte del espacio. */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
@@ -2183,35 +2190,35 @@ function ProductoFormPage() {
                     </div>
                   </div>
                   <div>
-                    <label htmlFor="cantMinMayorista" className="block text-sm font-medium text-gray-700 mb-1.5">Cantidad mÃ­nima *</label>
+                    <label htmlFor="cantMinMayorista" className="block text-sm font-medium text-gray-700 mb-1.5">Cantidad mínima *</label>
                     <input
                       id="cantMinMayorista"
                       type="number"
                       value={cantMinMayorista}
                       onChange={(e) => { setCantMinMayorista(e.target.value); markDirty(); }}
                       min="1" step="1" placeholder="Ej: 6"
-                      aria-label="Cantidad mÃ­nima para precio mayorista"
+                      aria-label="Cantidad mínima para precio mayorista"
                       className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     />
                   </div>
                 </div>
 
-                {/* Escalones de precio â€” solo aparecen si ya hay un precio base cargado */}
+                {/* Escalones de precio — solo aparecen si ya hay un precio base cargado */}
                 {precioMayorista && cantMinMayorista && (
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm font-medium text-gray-700">Escalones de precio</p>
-                        <p className="text-xs text-gray-400">Precio menor para quien compra mÃ¡s. MÃ¡ximo 3 escalones.</p>
+                        <p className="text-xs text-gray-400">Precio menor para quien compra más. Máximo 3 escalones.</p>
                       </div>
                       {escalones.length < 3 && (
                         <button
                           type="button"
                           onClick={() => { setEscalones([...escalones, { desde: "", precio: "" }]); markDirty(); }}
                           className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 border border-indigo-200 rounded-lg px-3 py-1.5 transition-colors"
-                          aria-label="Agregar escalÃ³n de precio mayorista"
+                          aria-label="Agregar escalón de precio mayorista"
                         >
-                          + Agregar escalÃ³n
+                          + Agregar escalón
                         </button>
                       )}
                     </div>
@@ -2228,7 +2235,7 @@ function ProductoFormPage() {
                                 min={parseInt(cantMinMayorista) + 1 || 2}
                                 step="1"
                                 placeholder={`> ${cantMinMayorista}`}
-                                aria-label={`EscalÃ³n ${idx + 1}: cantidad mÃ­nima`}
+                                aria-label={`Escalón ${idx + 1}: cantidad mínima`}
                                 onChange={(e) => {
                                   const next = [...escalones];
                                   next[idx] = { ...next[idx], desde: e.target.value };
@@ -2247,7 +2254,7 @@ function ProductoFormPage() {
                                   value={esc.precio}
                                   min="0" step="0.01"
                                   placeholder={`< $${precioMayorista}`}
-                                  aria-label={`EscalÃ³n ${idx + 1}: precio por unidad`}
+                                  aria-label={`Escalón ${idx + 1}: precio por unidad`}
                                   onChange={(e) => {
                                     const next = [...escalones];
                                     next[idx] = { ...next[idx], precio: e.target.value };
@@ -2259,11 +2266,11 @@ function ProductoFormPage() {
                             </div>
                             <button
                               type="button"
-                              aria-label={`Eliminar escalÃ³n ${idx + 1}`}
+                              aria-label={`Eliminar escalón ${idx + 1}`}
                               onClick={() => { setEscalones(escalones.filter((_, i) => i !== idx)); markDirty(); }}
                               className="mt-4 text-gray-400 hover:text-red-500 transition-colors text-lg leading-none"
                             >
-                              Ã—
+                              ×
                             </button>
                           </div>
                         ))}
@@ -2289,37 +2296,37 @@ function ProductoFormPage() {
               </div>
             )}
 
-            {/* PromociÃ³n por cantidad y Cuotas â€” no aplican a rubros con checkoutMode "inquiry" (ej. AUTOS): no hay compra online de varias unidades ni tarjeta de por medio */}
+            {/* Promoción por cantidad y Cuotas — no aplican a rubros con checkoutMode "inquiry" (ej. AUTOS): no hay compra online de varias unidades ni tarjeta de por medio */}
             {!storeTypeConfig.hidePromotions && <>
             <div className="bg-white rounded-2xl border border-gray-100 p-5">
               <div className="flex items-start gap-3">
-                <div className="text-2xl leading-none mt-0.5">ðŸŽ‰</div>
+                <div className="text-2xl leading-none mt-0.5">🎉</div>
                 <div className="flex-1">
                   <p className="text-sm font-semibold text-gray-900">Promociones</p>
                   <p className="text-xs text-gray-500 mt-1 leading-relaxed">
-                    Los descuentos (por cantidad, %, 3Ã—2, envÃ­o gratis) ahora se crean en la secciÃ³n <strong>Promociones</strong>. Desde ahÃ­ los aplicÃ¡s a este producto, a una categorÃ­a o a toda la tienda, con fechas y todo.
+                    Los descuentos (por cantidad, %, 3×2, envío gratis) ahora se crean en la sección <strong>Promociones</strong>. Desde ahí los aplicás a este producto, a una categoría o a toda la tienda, con fechas y todo.
                   </p>
                   <Link href="/dashboard/promociones" className="inline-flex items-center gap-1 mt-3 text-sm font-semibold text-indigo-600 hover:text-indigo-700">
                     Ir a Promociones
-                    <span aria-hidden>â†’</span>
+                    <span aria-hidden>→</span>
                   </Link>
                 </div>
               </div>
             </div>
 
-            {/* Cuotas sin interÃ©s â€” informativo, no conectado a ningÃºn banco ni a Mercado Pago */}
+            {/* Cuotas sin interés — informativo, no conectado a ningún banco ni a Mercado Pago */}
             <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-3">
               <div>
-                <h2 className="font-semibold text-gray-900">Cuotas sin interÃ©s</h2>
+                <h2 className="font-semibold text-gray-900">Cuotas sin interés</h2>
                 <p className="text-xs text-gray-400 mt-0.5">
-                  Solo se muestra si tenÃ©s Mercado Pago conectado. Es informaciÃ³n para el comprador, no una conexiÃ³n real con tu banco â€” el cÃ¡lculo es simplemente precio Ã· cuotas. Las cuotas reales y si se aplica interÃ©s se definen en tu cuenta de Mercado Pago al momento del pago. ElegÃ­ solo lo que realmente puedas ofrecer para evitar reclamos.
+                  Solo se muestra si tenés Mercado Pago conectado. Es información para el comprador, no una conexión real con tu banco — el cálculo es simplemente precio ÷ cuotas. Las cuotas reales y si se aplica interés se definen en tu cuenta de Mercado Pago al momento del pago. Elegí solo lo que realmente puedas ofrecer para evitar reclamos.
                 </p>
               </div>
-              {/* 2Ã—2 en celular, una sola fila de 4 en pantalla ancha.
+              {/* 2×2 en celular, una sola fila de 4 en pantalla ancha.
                   Antes era `flex-wrap` con `flex-1 min-w-[90px]`: a 368px entraban
                   tres arriba y el cuarto quedaba solo, estirado a lo ancho de todo
-                  â€”tres botones de 101px y uno de 320â€”. Encima, en 101px con el
-                  padding no entraba "Sin cuotas" y se partÃ­a en dos renglones.
+                  —tres botones de 101px y uno de 320—. Encima, en 101px con el
+                  padding no entraba "Sin cuotas" y se partía en dos renglones.
                   Con la grilla los cuatro miden igual (~156px) y nada se parte. */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {[0, 3, 6, 12].map((opt) => (
@@ -2341,12 +2348,12 @@ function ProductoFormPage() {
             </div>
             </>}
 
-            {/* EnvÃ­o â€” peso y dimensiones, oculto para rubros como AUTOS que no se mandan por correo */}
+            {/* Envío — peso y dimensiones, oculto para rubros como AUTOS que no se mandan por correo */}
             {!storeTypeConfig.hideShipping && <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
               <div>
                 <div className="flex items-center gap-1">
-                  <h2 className="font-semibold text-gray-900">EnvÃ­o</h2>
-                  <Tip align="left" text="Usado para cotizar el costo de envÃ­o real con el correo. Si lo dejÃ¡s vacÃ­o, el envÃ­o se coordina manualmente con el cliente." />
+                  <h2 className="font-semibold text-gray-900">Envío</h2>
+                  <Tip align="left" text="Usado para cotizar el costo de envío real con el correo. Si lo dejás vacío, el envío se coordina manualmente con el cliente." />
                 </div>
                 <p className="text-xs text-gray-400 mt-0.5">Peso y dimensiones del paquete (opcional)</p>
               </div>
@@ -2394,7 +2401,7 @@ function ProductoFormPage() {
               </div>
             </div>}
 
-            {/* Variantes â€” ocultas para tiendas como AUTOS donde no aplica */}
+            {/* Variantes — ocultas para tiendas como AUTOS donde no aplica */}
             {!storeTypeConfig.hideVariants && <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -2404,8 +2411,8 @@ function ProductoFormPage() {
                   </div>
                   <p className="text-xs text-gray-400 mt-0.5">
                     {useBuilder
-                      ? `ElegÃ­ colores y ${opcionNombre.toLowerCase()} â€” las combinaciones se generan solas.`
-                      : `Una fila por combinaciÃ³n â€” ${variantExample(dimsActuales)}`}
+                      ? `Elegí colores y ${opcionNombre.toLowerCase()} — las combinaciones se generan solas.`
+                      : `Una fila por combinación — ${variantExample(dimsActuales)}`}
                   </p>
                 </div>
                 {/* Modo manual como escape hatch */}
@@ -2419,16 +2426,16 @@ function ProductoFormPage() {
                         //
                         // Antes se rearmaba desde `builderColors`/`builderSizes`, que el
                         // modo manual nunca toca: quedaban como estaban al cargar la
-                        // pantalla â€”vacÃ­os, en un producto nuevoâ€” y volver al constructor
+                        // pantalla —vacíos, en un producto nuevo— y volver al constructor
                         // borraba todo lo cargado a mano, sin avisar ni poder deshacer.
                         const perdidas = opcionesQueNoEntranEnElBuilder(variants, opcionNombre);
                         if (perdidas.length > 0) {
-                          // Lo Ãºnico que el constructor no puede representar: maneja Color
-                          // mÃ¡s UNA opciÃ³n. Antes tambiÃ©n se perdÃ­a, nada mÃ¡s que callado.
+                          // Lo único que el constructor no puede representar: maneja Color
+                          // más UNA opción. Antes también se perdía, nada más que callado.
                           const cuales = perdidas.join(" y ");
                           const verbo = perdidas.length > 1 ? "se pierden" : "se pierde";
                           if (!confirm(
-                            `El constructor sÃ³lo maneja Color y ${opcionNombre}.\n\nSi seguÃ­s, ${verbo} ${cuales}.\n\nÂ¿Seguir?`
+                            `El constructor sólo maneja Color y ${opcionNombre}.\n\nSi seguís, ${verbo} ${cuales}.\n\n¿Seguir?`
                           )) return;
                         }
                         const b = estadoDelBuilder(variants, opcionNombre);
@@ -2438,12 +2445,12 @@ function ProductoFormPage() {
                         setVariants(buildVariantsFromBuilder(b.colores, b.valores));
                         markDirty();
                       }
-                      // Al pasar a manual las filas quedan como estÃ¡n: el manual sabe
+                      // Al pasar a manual las filas quedan como están: el manual sabe
                       // mostrar cualquier cosa que el constructor haya generado.
                       setUseBuilder(turningOn);
                     }}
-                    // `whitespace-nowrap` porque a 360 "Modo manual" se partÃ­a en dos
-                    // lÃ­neas y quedaba encimado con el texto de la izquierda.
+                    // `whitespace-nowrap` porque a 360 "Modo manual" se partía en dos
+                    // líneas y quedaba encimado con el texto de la izquierda.
                     className="text-xs text-gray-400 hover:text-indigo-600 underline underline-offset-2 transition-colors whitespace-nowrap shrink-0"
                   >
                     {useBuilder ? "Modo manual" : "Modo constructor"}
@@ -2461,7 +2468,7 @@ function ProductoFormPage() {
                 )}
               </div>
 
-              {/* â”€â”€ BUILDER MODE â”€â”€ */}
+              {/* ── BUILDER MODE ── */}
               {useBuilder ? (
                 <VariantBuilder
                   colors={builderColors}
@@ -2479,27 +2486,27 @@ function ProductoFormPage() {
                   onAssignPhoto={assignPhotoToValue}
                 />
               ) : (
-                /* â”€â”€ MANUAL MODE â”€â”€ */
+                /* ── MANUAL MODE ── */
                 <>
                   {/* Los NOMBRES de las opciones, una sola vez para todas las filas.
-                      Antes salÃ­an de una tabla fija por rubro y no se podÃ­an tocar:
-                      en Moda siempre "Talle" y "Color". AcÃ¡ se escriben, y el
+                      Antes salían de una tabla fija por rubro y no se podían tocar:
+                      en Moda siempre "Talle" y "Color". Acá se escriben, y el
                       cambio se aplica a todas las filas de una. */}
                   <div className="flex flex-wrap items-center gap-2 pb-1">
                     <span className="text-xs font-medium text-gray-500">Opciones:</span>
-                    {/* `key` por POSICIÃ“N, no por nombre: si la clave fuera el nombre,
-                        confirmar el cambio remontarÃ­a el input y se perderÃ­a el foco. */}
+                    {/* `key` por POSICIÓN, no por nombre: si la clave fuera el nombre,
+                        confirmar el cambio remontaría el input y se perdería el foco. */}
                     {dimsActuales.map((dim, i) => (
                       <span key={i} className="inline-flex items-center gap-1 bg-gray-50 border border-gray-200 rounded-lg pl-2 pr-1 py-1">
                         <NombreOpcion
                           valor={dim}
                           otros={dimsActuales.filter(d => d !== dim)}
                           onCommit={(nuevo) => renameDim(dim, nuevo)}
-                          ariaLabel={`Nombre de la opciÃ³n ${dim}`}
+                          ariaLabel={`Nombre de la opción ${dim}`}
                           className="w-24 bg-transparent text-sm font-medium text-gray-700 focus:outline-none"
                         />
                         {dimsActuales.length > 1 && (
-                          <button type="button" onClick={() => removeDim(dim)} aria-label={`Quitar la opciÃ³n ${dim}`}
+                          <button type="button" onClick={() => removeDim(dim)} aria-label={`Quitar la opción ${dim}`}
                             className="text-gray-300 hover:text-red-500 transition-colors">
                             <X className="h-3.5 w-3.5" />
                           </button>
@@ -2509,7 +2516,7 @@ function ProductoFormPage() {
                     {dimsActuales.length < MAX_OPCIONES && (
                       <button type="button" onClick={addDim}
                         className="inline-flex items-center gap-1 text-xs text-indigo-600 font-medium hover:text-indigo-800 transition-colors">
-                        <Plus className="h-3.5 w-3.5" /> Agregar opciÃ³n
+                        <Plus className="h-3.5 w-3.5" /> Agregar opción
                       </button>
                     )}
                   </div>
@@ -2524,7 +2531,7 @@ function ProductoFormPage() {
                             <label className="block text-xs font-medium text-gray-500 mb-1">
                               {dim}
                               {isColor && (
-                                <Tip text="EscribÃ­ el nombre del color (Rojo, Verde, Negro) o un cÃ³digo hex (#FF0000). Se muestra como cÃ­rculo de color en tu tienda." />
+                                <Tip text="Escribí el nombre del color (Rojo, Verde, Negro) o un código hex (#FF0000). Se muestra como círculo de color en tu tienda." />
                               )}
                             </label>
                             <div className="relative">
@@ -2539,9 +2546,9 @@ function ProductoFormPage() {
                                 value={val}
                                 onChange={(e) => updateVariantAttr(idx, dim, e.target.value)}
                                 placeholder={variantPlaceholder(dim)}
-                                // Las sugerencias van en la opciÃ³n que NO es el color,
+                                // Las sugerencias van en la opción que NO es el color,
                                 // sea como sea que se llame. Antes estaba clavado a
-                                // "Talle", asÃ­ que renombrarla las hacÃ­a desaparecer.
+                                // "Talle", así que renombrarla las hacía desaparecer.
                                 list={!isColor && sugerida.valores.length > 0 ? `sug-${idx}-${dim}` : undefined}
                                 className={`w-full border border-gray-200 rounded-lg py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 ${circle ? "pl-8 pr-3" : "px-3"}`}
                               />
@@ -2556,13 +2563,13 @@ function ProductoFormPage() {
                           </div>
                         );
                       })}
-                      {/* SKU, igual que en el constructor: sÃ³lo de lg para arriba,
-                          donde la fila tiene lugar de sobra. Si estuviera acÃ¡ y no
-                          allÃ¡, quiÃ©n puede cargarlo dependerÃ­a del modo. */}
+                      {/* SKU, igual que en el constructor: sólo de lg para arriba,
+                          donde la fila tiene lugar de sobra. Si estuviera acá y no
+                          allá, quién puede cargarlo dependería del modo. */}
                       <div className="hidden lg:block w-28 shrink-0">
                         <label className="block text-xs font-medium text-gray-500 mb-1 flex items-center">
                           SKU
-                          <Tip align="right" text="Tu cÃ³digo interno para esta variante (ej: COL-40-BL). Es opcional. Sirve para encontrarla en tu depÃ³sito o cruzarla con la lista de tu proveedor, y se lo pasamos a Google para que sepa que la misma prenda vendida en dos lados es un solo producto." />
+                          <Tip align="right" text="Tu código interno para esta variante (ej: COL-40-BL). Es opcional. Sirve para encontrarla en tu depósito o cruzarla con la lista de tu proveedor, y se lo pasamos a Google para que sepa que la misma prenda vendida en dos lados es un solo producto." />
                         </label>
                         <input type="text" value={variant.sku} onChange={(e) => updateVariantField(idx, "sku", e.target.value)} placeholder="opcional" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
                       </div>
@@ -2573,14 +2580,14 @@ function ProductoFormPage() {
                       <div className="w-24 shrink-0">
                         <label className="block text-xs font-medium text-gray-500 mb-1 flex items-center gap-1">
                           Precio propio
-                          <Tip align="right" text="Precio de esta variante especÃ­fica. Si lo completÃ¡s, reemplaza al precio base del producto. Dejalo vacÃ­o para usar el precio base." />
+                          <Tip align="right" text="Precio de esta variante específica. Si lo completás, reemplaza al precio base del producto. Dejalo vacío para usar el precio base." />
                         </label>
                         <input type="number" value={variant.price} onChange={(e) => updateVariantField(idx, "price", e.target.value)} min="0" placeholder="base" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
                       </div>
                       <div className="w-24 shrink-0">
                         <label className="block text-xs font-medium text-gray-500 mb-1 flex items-center">
                           Alerta stock
-                          <Tip align="right" text="Te avisamos por mail cuando el stock de esta variante baje a este nÃºmero o menos. Dejalo vacÃ­o para usar el valor por defecto (5)." />
+                          <Tip align="right" text="Te avisamos por mail cuando el stock de esta variante baje a este número o menos. Dejalo vacío para usar el valor por defecto (5)." />
                         </label>
                         <input type="number" value={variant.lowStockThreshold} onChange={(e) => updateVariantField(idx, "lowStockThreshold", e.target.value)} min="0" placeholder="5" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
                       </div>
@@ -2598,7 +2605,7 @@ function ProductoFormPage() {
                   {valoresParaFoto.length > 0 && images.length > 0 && images.some(img => !img.variantValue) && (
                     <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 text-xs text-amber-700">
                       <svg className="h-4 w-4 mt-0.5 shrink-0 text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                      <span>TenÃ©s variantes cargadas pero hay fotos sin asignar. ScrolleÃ¡ a <strong>ImÃ¡genes del producto</strong> (arriba) para asignar cada foto a {etiquetaFoto}.</span>
+                      <span>Tenés variantes cargadas pero hay fotos sin asignar. Scrolleá a <strong>Imágenes del producto</strong> (arriba) para asignar cada foto a {etiquetaFoto}.</span>
                     </div>
                   )}
                 </>
@@ -2607,20 +2614,20 @@ function ProductoFormPage() {
 
             {isEditing && editingId && <StockHistoryPanel productId={editingId} />}
 
-            {/* Ficha tÃ©cnica / Atributos */}
+            {/* Ficha técnica / Atributos */}
             <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
               <div className="flex items-center justify-between">
                 <div>
                   <div className="flex items-center gap-1">
                     <h2 className="font-semibold text-gray-900">
-                      {storeTypeConfig.hideVariants ? "Ficha tÃ©cnica" : activeExtraFields.length > 0 ? "Especificaciones" : "Atributos del producto"}
+                      {storeTypeConfig.hideVariants ? "Ficha técnica" : activeExtraFields.length > 0 ? "Especificaciones" : "Atributos del producto"}
                     </h2>
                     <Tip align="left" text={extraFieldsTip(store.tipoTienda || "ROPA")} />
                   </div>
                   <p className="text-xs text-gray-400 mt-0.5">
                     {activeExtraFields.length > 0
                       ? activeExtraFields.map((f) => f.label).join(", ")
-                      : "NÃºmero de serie, peso, material, dimensiones, etc."}
+                      : "Número de serie, peso, material, dimensiones, etc."}
                   </p>
                 </div>
                 <button
@@ -2633,7 +2640,7 @@ function ProductoFormPage() {
                 </button>
               </div>
 
-              {/* Campos tipados del store type (Marca, AÃ±o, Km, etc.) + specs de la subcategorÃ­a */}
+              {/* Campos tipados del store type (Marca, Año, Km, etc.) + specs de la subcategoría */}
               {activeExtraFields.length > 0 && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {activeExtraFields.map((field) => {
@@ -2659,15 +2666,15 @@ function ProductoFormPage() {
                             onChange={(e) => onChange(e.target.value)}
                             className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
                           >
-                            <option value="">SeleccionÃ¡...</option>
+                            <option value="">Seleccioná...</option>
                             {field.options.map((opt) => (
                               <option key={opt} value={opt}>{opt}</option>
                             ))}
                           </select>
                         ) : field.type && field.type !== "text" ? (
-                          // NÃºmeros y fechas se quedan como input: el teclado que
-                          // abre el telÃ©fono y los controles propios del tipo valen
-                          // mÃ¡s que envolver un valor que nunca es largo.
+                          // Números y fechas se quedan como input: el teclado que
+                          // abre el teléfono y los controles propios del tipo valen
+                          // más que envolver un valor que nunca es largo.
                           <input
                             type={field.type}
                             value={val}
@@ -2691,7 +2698,7 @@ function ProductoFormPage() {
               {/* Atributos personalizados (Agregar) */}
               {activeExtraFields.length === 0 && attributes.length === 0 && (
                 <p className="text-sm text-gray-400 text-center py-4">
-                  Sin atributos. UsÃ¡ esto para especificar datos tÃ©cnicos del producto.
+                  Sin atributos. Usá esto para especificar datos técnicos del producto.
                 </p>
               )}
 
@@ -2706,7 +2713,7 @@ function ProductoFormPage() {
                         type="text"
                         value={attr.key}
                         onChange={(e) => updateAttribute(idx, "key", e.target.value)}
-                        placeholder="Ej: NÃºmero de serie, Peso, Material"
+                        placeholder="Ej: Número de serie, Peso, Material"
                         className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                       />
                     </div>
@@ -2715,7 +2722,7 @@ function ProductoFormPage() {
                       <CampoAuto
                         value={attr.value}
                         onChange={(v) => updateAttribute(idx, "value", v)}
-                        placeholder="Ej: ABC-123, 2.5 kg, AlgodÃ³n"
+                        placeholder="Ej: ABC-123, 2.5 kg, Algodón"
                         ariaLabel="Valor del atributo"
                       />
                     </div>
@@ -2730,15 +2737,15 @@ function ProductoFormPage() {
                 ))}
             </div>
 
-            {/* â”€â”€ OptimizaciÃ³n para Google â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-                Plegada y opcional. Si no se toca, el tÃ­tulo y la descripciÃ³n se
-                arman solos como siempre â€”el campo vacÃ­o se guarda como null, no
-                como ""â€” asÃ­ que abrir esta secciÃ³n y cerrarla sin escribir nada
+            {/* ── Optimización para Google ──────────────────────────────────
+                Plegada y opcional. Si no se toca, el título y la descripción se
+                arman solos como siempre —el campo vacío se guarda como null, no
+                como ""— así que abrir esta sección y cerrarla sin escribir nada
                 no cambia absolutamente nada.
 
-                Los contadores avisan cuÃ¡ndo Google va a CORTAR el texto, que no
+                Los contadores avisan cuándo Google va a CORTAR el texto, que no
                 es lo mismo que un error: pasarse no rompe nada, solo se ve menos.
-                Por eso el aviso es Ã¡mbar y no rojo, y el guardado nunca se frena
+                Por eso el aviso es ámbar y no rojo, y el guardado nunca se frena
                 por esto. */}
             <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
               <button
@@ -2748,7 +2755,7 @@ function ProductoFormPage() {
                 className="flex w-full items-center gap-2 p-6 text-left hover:bg-gray-50 transition-colors"
               >
                 <Search className="h-4 w-4 text-indigo-500 shrink-0" />
-                <span className="font-semibold text-gray-900">OptimizaciÃ³n para Google</span>
+                <span className="font-semibold text-gray-900">Optimización para Google</span>
                 <span className="text-xs text-gray-400">(opcional)</span>
                 {seoTocado && (
                   <span className="text-[10px] font-bold uppercase tracking-wide text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">
@@ -2762,28 +2769,28 @@ function ProductoFormPage() {
                 <div className="px-6 pb-6 space-y-4 border-t border-gray-100 pt-4">
                   <p className="text-xs text-gray-500 leading-relaxed">
                     Esto es lo que se lee en el <strong>resultado de Google</strong>, no en tu tienda.
-                    Si lo dejÃ¡s vacÃ­o se arma solo con el nombre y la descripciÃ³n del producto â€” que
-                    para la mayorÃ­a alcanza. Sirve cuando el producto se llama distinto de lo que la
+                    Si lo dejás vacío se arma solo con el nombre y la descripción del producto — que
+                    para la mayoría alcanza. Sirve cuando el producto se llama distinto de lo que la
                     gente busca: si le pusiste <em>&ldquo;Campera Modelo 47&rdquo;</em>, nadie va a
                     buscar eso.
                   </p>
 
-                  {/* TÃ­tulo */}
+                  {/* Título */}
                   <div>
                     <div className="flex items-baseline justify-between gap-2 mb-1.5">
                       <label htmlFor="seoTitle" className="block text-sm font-medium text-gray-700">
-                        TÃ­tulo en Google
+                        Título en Google
                       </label>
                       <span className={`text-xs tabular-nums ${form.seoTitle.length > SEO_TITULO_VISIBLE ? "text-amber-600 font-semibold" : "text-gray-400"}`}>
                         {form.seoTitle.length}/{SEO_TITULO_VISIBLE}
                       </span>
                     </div>
                     {/* Textarea y no input: el campo admite 60 caracteres y en una
-                        pantalla de 360 un campo de una lÃ­nea muestra unos 30, asÃ­
-                        que la mitad del tÃ­tulo quedaba fuera de vista mientras se
-                        escribÃ­a. Dos renglones lo muestran entero.
-                        Los saltos de lÃ­nea se sacan â€”siguen sin tener sentido en un
-                        tÃ­tuloâ€” y Enter directamente no los inserta. */}
+                        pantalla de 360 un campo de una línea muestra unos 30, así
+                        que la mitad del título quedaba fuera de vista mientras se
+                        escribía. Dos renglones lo muestran entero.
+                        Los saltos de línea se sacan —siguen sin tener sentido en un
+                        título— y Enter directamente no los inserta. */}
                     <textarea
                       id="seoTitle"
                       value={form.seoTitle}
@@ -2796,16 +2803,16 @@ function ProductoFormPage() {
                     />
                     {form.seoTitle.length > SEO_TITULO_VISIBLE && (
                       <p className="text-xs text-amber-600 mt-1.5">
-                        Google muestra unos {SEO_TITULO_VISIBLE} caracteres â€” de acÃ¡ en adelante lo va a cortar con &ldquo;â€¦&rdquo;. Se guarda igual.
+                        Google muestra unos {SEO_TITULO_VISIBLE} caracteres — de acá en adelante lo va a cortar con &ldquo;…&rdquo;. Se guarda igual.
                       </p>
                     )}
                   </div>
 
-                  {/* DescripciÃ³n */}
+                  {/* Descripción */}
                   <div>
                     <div className="flex items-baseline justify-between gap-2 mb-1.5">
                       <label htmlFor="seoDescription" className="block text-sm font-medium text-gray-700">
-                        DescripciÃ³n en Google
+                        Descripción en Google
                       </label>
                       <span className={`text-xs tabular-nums ${form.seoDescription.length > SEO_DESC_VISIBLE ? "text-amber-600 font-semibold" : "text-gray-400"}`}>
                         {form.seoDescription.length}/{SEO_DESC_VISIBLE}
@@ -2822,17 +2829,17 @@ function ProductoFormPage() {
                     />
                     {form.seoDescription.length > SEO_DESC_VISIBLE && (
                       <p className="text-xs text-amber-600 mt-1.5">
-                        Google muestra unos {SEO_DESC_VISIBLE} caracteres â€” el resto no se va a ver. Se guarda igual.
+                        Google muestra unos {SEO_DESC_VISIBLE} caracteres — el resto no se va a ver. Se guarda igual.
                       </p>
                     )}
                   </div>
 
-                  {/* CÃ³mo se verÃ­a */}
+                  {/* Cómo se vería */}
                   <div>
-                    <p className="text-xs font-semibold text-gray-500 mb-2">AsÃ­ se verÃ­a en Google</p>
+                    <p className="text-xs font-semibold text-gray-500 mb-2">Así se vería en Google</p>
                     <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
                       <p className="text-[13px] text-emerald-700 truncate">
-                        tiendaapps.com â€º tienda â€º producto
+                        tiendaapps.com › tienda › producto
                       </p>
                       <p className="text-[18px] text-[#1a0dab] leading-snug mt-0.5 break-words">
                         {recortar(form.seoTitle.trim() || seoTituloAuto, SEO_TITULO_VISIBLE)}
@@ -2843,7 +2850,7 @@ function ProductoFormPage() {
                     </div>
                     <p className="text-[11px] text-gray-400 mt-2 leading-relaxed">
                       Es una referencia: Google arma el resultado como quiere y a veces usa otro texto
-                      de la pÃ¡gina si le parece que responde mejor a lo que buscaron.
+                      de la página si le parece que responde mejor a lo que buscaron.
                     </p>
                   </div>
 
@@ -2852,17 +2859,17 @@ function ProductoFormPage() {
                     <p className="text-xs font-semibold text-amber-900">Tres cosas para tener en cuenta</p>
                     <ul className="text-xs text-amber-800 space-y-1.5 leading-relaxed">
                       <li>
-                        <strong>No es inmediato.</strong> Google tiene que volver a pasar por la pÃ¡gina.
-                        Puede tardar de unos dÃ­as a un par de semanas.
+                        <strong>No es inmediato.</strong> Google tiene que volver a pasar por la página.
+                        Puede tardar de unos días a un par de semanas.
                       </li>
                       <li>
-                        <strong>Que no prometa lo que la ficha no tiene.</strong> Si el tÃ­tulo dice
-                        &ldquo;envÃ­o gratis&rdquo; y en la tienda no lo hay, el que entra se va â€” y a
+                        <strong>Que no prometa lo que la ficha no tiene.</strong> Si el título dice
+                        &ldquo;envío gratis&rdquo; y en la tienda no lo hay, el que entra se va — y a
                         Google eso le baja el producto.
                       </li>
                       <li>
-                        <strong>Un tÃ­tulo por producto.</strong> Si dos fichas tienen el mismo, compiten
-                        entre sÃ­ y Google elige una sola.
+                        <strong>Un título por producto.</strong> Si dos fichas tienen el mismo, compiten
+                        entre sí y Google elige una sola.
                       </li>
                     </ul>
                   </div>
@@ -2877,21 +2884,21 @@ function ProductoFormPage() {
                       }}
                       className="text-xs font-medium text-gray-500 hover:text-gray-700 underline underline-offset-2"
                     >
-                      Volver al automÃ¡tico
+                      Volver al automático
                     </button>
                   )}
                 </div>
               )}
             </div>
 
-            {/* Programar publicaciÃ³n */}
+            {/* Programar publicación */}
             <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-3">
               <div className="flex items-center gap-2">
                 <Calendar className="h-4 w-4 text-indigo-500" />
-                <h2 className="font-semibold text-gray-900">Programar publicaciÃ³n</h2>
+                <h2 className="font-semibold text-gray-900">Programar publicación</h2>
               </div>
               <p className="text-xs text-gray-400">
-                Si elegÃ­s una fecha futura, el producto se guardarÃ¡ oculto y se publicarÃ¡ automÃ¡ticamente en esa fecha y hora.
+                Si elegís una fecha futura, el producto se guardará oculto y se publicará automáticamente en esa fecha y hora.
               </p>
               <div className="flex items-center gap-3">
                 <input
@@ -2914,7 +2921,7 @@ function ProductoFormPage() {
               </div>
               {publishAt && new Date(publishAt) > new Date() && (
                 <p className="text-xs text-indigo-600 font-medium">
-                  Este producto se publicarÃ¡ el {new Date(publishAt).toLocaleString("es-AR", { day: "2-digit", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                  Este producto se publicará el {new Date(publishAt).toLocaleString("es-AR", { day: "2-digit", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" })}
                 </p>
               )}
             </div>
@@ -3000,7 +3007,7 @@ function ProductoFormPage() {
                     </div>
                   )}
 
-                  {/* Badge de oferta manual (si el producto estÃ¡ en oferta) */}
+                  {/* Badge de oferta manual (si el producto está en oferta) */}
                   {(() => {
                     const hasOffer = isOnSale && !!form.comparePrice && parseFloat(form.comparePrice) > parseFloat(form.price || "0");
                     if (hasOffer && form.offerBadge) return <OfferBadge badge={form.offerBadge as OfferBadgeKey} pct={discount || null} size="sm" />;
@@ -3076,7 +3083,7 @@ function ProductoFormPage() {
                     </div>
                   )}
 
-                  {/* CondiciÃ³n badge â€” solo para tipos que lo soportan */}
+                  {/* Condición badge — solo para tipos que lo soportan */}
                   {storeTypeConfig.supportsCondicion && (
                     <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full w-fit ${
                       condicion === "0 km" || condicion === "Nuevo"
@@ -3091,7 +3098,7 @@ function ProductoFormPage() {
                     </span>
                   )}
 
-                  {/* Attributes preview â€” para hideVariants (AUTOS), mostrar fichas */}
+                  {/* Attributes preview — para hideVariants (AUTOS), mostrar fichas */}
                   {storeTypeConfig.hideVariants && attributes.filter((a) => a.key && a.value).length > 0 && (
                     <div className="grid grid-cols-2 gap-1.5">
                       {attributes.filter((a) => a.key && a.value).slice(0, 6).map((a, i) => (
@@ -3103,7 +3110,7 @@ function ProductoFormPage() {
                     </div>
                   )}
 
-                  {/* Variants preview â€” colores como cÃ­rculos, talles como chips */}
+                  {/* Variants preview — colores como círculos, talles como chips */}
                   {!storeTypeConfig.hideVariants && Object.keys(attrPreviewGroups).length > 0 && (
                     <div className="space-y-1.5">
                       {Object.entries(attrPreviewGroups).map(([groupName, values]) => {
@@ -3138,7 +3145,7 @@ function ProductoFormPage() {
                     </div>
                   )}
 
-                  {/* Stock indicator â€” solo cuando no es hideVariants */}
+                  {/* Stock indicator — solo cuando no es hideVariants */}
                   {!storeTypeConfig.hideVariants && totalStock > 0 && totalStock <= 5 && (
                     <p className="text-xs text-orange-500 font-medium">Ultimas {totalStock} unidades!</p>
                   )}
