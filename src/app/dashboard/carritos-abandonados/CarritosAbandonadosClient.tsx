@@ -192,17 +192,20 @@ function WhatsAppModal({
       <div className="relative w-full sm:max-w-lg bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl flex flex-col max-h-[92dvh] overflow-hidden">
 
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 shrink-0">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-green-100 flex items-center justify-center">
+        {/* El encabezado muestra un mail cuando no hay nombre, y un mail largo
+            empujaba la cruz de cerrar fuera de la tarjeta. `min-w-0` + `truncate`
+            lo cortan en vez de correr el botón. */}
+        <div className="flex items-center justify-between gap-2 px-5 py-4 border-b border-gray-100 shrink-0">
+          <div className="flex min-w-0 items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-green-100 flex items-center justify-center shrink-0">
               <MessageCircle className="h-4 w-4 text-green-600" />
             </div>
-            <div>
-              <p className="font-bold text-gray-900 text-sm leading-tight">{cart.customerName || cart.customerEmail}</p>
-              <p className="text-xs text-gray-400">{phone ? `+${phone}` : cart.customerEmail}</p>
+            <div className="min-w-0">
+              <p className="font-bold text-gray-900 text-sm leading-tight truncate">{cart.customerName || cart.customerEmail}</p>
+              <p className="text-xs text-gray-400 truncate">{phone ? `+${phone}` : cart.customerEmail}</p>
             </div>
           </div>
-          <button onClick={onClose} className="rounded-xl p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors">
+          <button onClick={onClose} aria-label="Cerrar" className="shrink-0 rounded-xl p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors">
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -249,8 +252,10 @@ function WhatsAppModal({
             {generated ? (
               <div className="px-4 pb-4 pt-1 bg-green-50/50 border-t border-green-100">
                 <p className="text-xs text-gray-500 mb-2">Este cupón ya fue creado para este contacto y no se puede reemplazar.</p>
-                <div className="flex items-center gap-3">
-                  <code className="font-mono font-bold text-green-700 text-base tracking-wider bg-green-100 px-3 py-1.5 rounded-lg">
+                {/* El código no se parte y la letra chica pasa abajo si no entra:
+                    en 360 los dos en un renglón dejaban el detalle en tres. */}
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+                  <code className="font-mono font-bold text-green-700 text-base tracking-wider bg-green-100 px-3 py-1.5 rounded-lg shrink-0">
                     {generated.code}
                   </code>
                   <span className="text-xs text-gray-500">{fmtDiscount(generated.discountType, generated.discountValue)} · 1 uso · vence en 7 días</span>
@@ -459,11 +464,17 @@ export default function CarritosAbandonadosClient({
           { icon: <ShoppingCart className="h-4 w-4 text-amber-500" />, bg: "bg-amber-50", label: "Pendientes", value: stats.pending.toString() },
           { icon: <Check className="h-4 w-4 text-green-500" />, bg: "bg-green-50", label: "Recuperados", value: stats.recovered.toString() },
           { icon: <TrendingUp className="h-4 w-4 text-indigo-500" />, bg: "bg-indigo-50", label: "Tasa de recupero", value: `${recoveryRate}%` },
-          { icon: <ShoppingBag className="h-4 w-4 text-purple-500" />, bg: "bg-purple-50", label: "Revenue recuperado", value: money(stats.recoveredRevenue) },
+          // "Plata recuperada" y no "Ventas recuperadas": al lado hay una tarjeta
+          // que dice "Recuperados" y cuenta carritos, así que nombrar esta con
+          // "ventas" invitaba a leerla como otro conteo. "Plata" no se confunde
+          // con un número de cosas — y era la única etiqueta en inglés del panel.
+          { icon: <ShoppingBag className="h-4 w-4 text-purple-500" />, bg: "bg-purple-50", label: "Plata recuperada", value: money(stats.recoveredRevenue) },
         ] as const).map(({ icon, bg, label, value }) => (
           <div key={label} className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
             <div className={`w-8 h-8 rounded-xl ${bg} flex items-center justify-center mb-3`}>{icon}</div>
-            <p className="text-xl font-black text-gray-900 tabular-nums">{value}</p>
+            {/* Truncado por el revenue: en media pantalla, "$1.234.567" en
+                text-xl se desbordaba de la tarjeta. */}
+            <p className="text-xl font-black text-gray-900 tabular-nums truncate" title={value}>{value}</p>
             <p className="text-xs text-gray-400 mt-0.5">{label}</p>
           </div>
         ))}
@@ -489,8 +500,13 @@ export default function CarritosAbandonadosClient({
       </div>
 
       {/* Search */}
-      <form onSubmit={handleSearch} className="mb-5 flex gap-2">
-        <div className="relative flex-1 max-w-md">
+      {/* En angosto el campo se lleva un renglón entero y los botones van abajo.
+          Compartiendo renglón le quedaban unos 183px útiles y el texto de ayuda
+          se cortaba en "Buscar por nombre, email o te" — y con una búsqueda
+          activa aparece además "Limpiar", que lo dejaba en 160. El campo es lo
+          que se usa; los botones se aprietan una vez. */}
+      <form onSubmit={handleSearch} className="mb-5 flex flex-col gap-2 sm:flex-row">
+        <div className="relative sm:flex-1 sm:max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
           <input
             ref={searchRef}
@@ -501,19 +517,23 @@ export default function CarritosAbandonadosClient({
             className="w-full rounded-xl border border-gray-200 bg-white pl-9 pr-4 py-2.5 text-sm text-gray-700 placeholder:text-gray-400 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100"
           />
         </div>
-        <button type="submit" className="rounded-xl bg-gray-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-gray-700 transition-colors">
-          Buscar
-        </button>
-        {search && (
-          <Link href="/dashboard/carritos-abandonados" className="rounded-xl border border-gray-200 px-3 py-2.5 text-sm text-gray-500 hover:bg-gray-50 transition-colors">
-            Limpiar
-          </Link>
-        )}
+        <div className="flex gap-2">
+          <button type="submit" className="flex-1 shrink-0 whitespace-nowrap rounded-xl bg-gray-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-gray-700 transition-colors sm:flex-none">
+            Buscar
+          </button>
+          {search && (
+            <Link href="/dashboard/carritos-abandonados" className="flex-1 shrink-0 whitespace-nowrap rounded-xl border border-gray-200 px-3 py-2.5 text-center text-sm text-gray-500 hover:bg-gray-50 transition-colors sm:flex-none">
+              Limpiar
+            </Link>
+          )}
+        </div>
       </form>
 
       {/* List */}
       {carts.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-gray-100 p-16 text-center">
+        /* `p-8` en angosto: con 64px de padding de cada lado, en 360 al texto le
+           quedaban 200px y el título salía en tres renglones. */
+        <div className="bg-white rounded-2xl border border-gray-100 p-8 sm:p-16 text-center">
           <div className="bg-indigo-50 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4">
             {search ? <Search className="h-8 w-8 text-indigo-400" /> : <ShoppingCart className="h-8 w-8 text-indigo-400" />}
           </div>
@@ -576,8 +596,11 @@ export default function CarritosAbandonadosClient({
                       )}
                     </div>
                     <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-400">
-                      <a href={`mailto:${cart.customerEmail}`} className="inline-flex items-center gap-1 hover:text-indigo-600 transition-colors">
-                        <Mail className="h-3.5 w-3.5" /> {cart.customerEmail}
+                      {/* `break-all` en el mail: un correo largo es UNA palabra sin
+                          espacios, y `flex-wrap` no parte adentro de una palabra —
+                          se salía de la tarjeta en vez de pasar a otro renglón. */}
+                      <a href={`mailto:${cart.customerEmail}`} className="inline-flex max-w-full min-w-0 items-center gap-1 hover:text-indigo-600 transition-colors">
+                        <Mail className="h-3.5 w-3.5 shrink-0" /> <span className="break-all">{cart.customerEmail}</span>
                       </a>
                       {cart.customerPhone && (
                         <a href={`https://wa.me/${cart.customerPhone.replace(/\D/g, "")}`} target="_blank" rel="noreferrer"
