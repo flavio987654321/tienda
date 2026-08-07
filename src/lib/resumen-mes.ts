@@ -301,7 +301,7 @@ function armarPendientes(senales: Senales): Pendiente[] {
     lista.push({
       texto: `${plural(carritos.cantidad, "carrito quedó", "carritos quedaron")} sin que nadie escriba, por ${plata(carritos.monto)}.`,
       plata: carritos.monto,
-      href: "/dashboard/carritos",
+      href: "/dashboard/carritos-abandonados",
     });
   }
 

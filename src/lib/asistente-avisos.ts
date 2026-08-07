@@ -138,7 +138,7 @@ export function armarAvisos({ snapshot, fechasProximas }: DatosAvisos): Aviso[] 
       clave: "carritos-abandonados",
       texto: `${plural(snapshot.carritosAbandonadosPendientes, "persona dejó", "personas dejaron")} el carrito lleno sin comprar. Son los más fáciles de recuperar: ya eligieron.`,
       prioridad: 70,
-      link: "/dashboard/carritos",
+      link: "/dashboard/carritos-abandonados",
       repetirCadaDias: 4,
     });
   }
