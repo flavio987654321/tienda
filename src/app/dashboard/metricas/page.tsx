@@ -1284,7 +1284,11 @@ export default async function MetricasPage({
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-4">
+            /* Una por renglón en angosto. Estas dos no son como las tarjetas de
+               arriba: sus etiquetas son frases enteras ("Ganancia promedio por
+               vehículo vendido") y encima llevan una línea de detalle abajo. En
+               media pantalla la etiqueta sola se comía cuatro renglones. */
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <KPICard
                 label="Ganancia total del período"
                 value={money(totalVehicleProfit)}
@@ -1310,7 +1314,7 @@ export default async function MetricasPage({
           </div>
         ) : (
           <div className="space-y-6">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <KPICard
                 label={`Ganancia bruta (${RANGE_LABELS[rangeDays]})`}
                 value={money(profitCurrentAgg.totalProfit)}

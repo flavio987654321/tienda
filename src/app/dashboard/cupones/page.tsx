@@ -1441,7 +1441,7 @@ export default function CuponesPage() {
             <p className="text-sm text-gray-500 max-w-sm mx-auto">Los diseños de Auto Motor y Auto Drive no incluyen este juego. Podés seguir usando cupones manuales y de recuperación por WhatsApp más abajo.</p>
           </div>
         ) : loading ? (
-          <div className="rounded-2xl border border-gray-100 bg-white p-16 text-center text-sm text-gray-400 flex items-center justify-center gap-2">
+          <div className="rounded-2xl border border-gray-100 bg-white p-8 sm:p-16 text-center text-sm text-gray-400 flex items-center justify-center gap-2">
             <Loader2 className="h-4 w-4 animate-spin" /> Cargando…
           </div>
         ) : !widget ? (

@@ -145,7 +145,11 @@ export default function AjustesClient({ slug, customDomain, isPremium, descripti
                 ? "Tus clientes pueden instalar tu sitio en su celular como si fuera una app, sin pasar por el App Store ni Google Play."
                 : "Tus clientes pueden instalar tu tienda en su celular como si fuera una app, sin pasar por el App Store ni Google Play."}
             </p>
-            <div className="grid grid-cols-2 gap-3">
+            {/* Los dos instructivos van uno abajo del otro en angosto. Partidos
+                en dos quedaban 125px de texto útil por columna, y cada paso
+                ("Abrí tu tienda en Chrome") salía en dos o tres renglones — que
+                es justo donde se lee peor un instructivo numerado. */}
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="rounded-lg border border-slate-200 bg-slate-50 p-3.5">
                 <p className="text-xs font-semibold text-slate-700 mb-1.5">Android</p>
                 <ol className="text-xs text-slate-500 space-y-1 list-decimal list-inside">

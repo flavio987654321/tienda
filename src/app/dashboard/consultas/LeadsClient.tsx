@@ -159,7 +159,7 @@ export default function LeadsClient({
 
   if (leads.length === 0) {
     return (
-      <div className="bg-white rounded-2xl border border-gray-100 p-16 text-center">
+      <div className="bg-white rounded-2xl border border-gray-100 p-8 sm:p-16 text-center">
         <MessageCircle className="h-10 w-10 text-gray-200 mx-auto mb-4" />
         <p className="text-gray-500 font-medium">Todavía no tenés consultas</p>
         <p className="text-sm text-gray-400 mt-1">Cuando alguien consulte por un producto desde un link de afiliado, aparecerá acá.</p>

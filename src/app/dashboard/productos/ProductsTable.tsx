@@ -1011,7 +1011,7 @@ export default function ProductsTable({
 
       {/* Empty state */}
       {totalFiltrado === 0 ? (
-        <div className="bg-white rounded-2xl border border-gray-100 p-12 text-center">
+        <div className="bg-white rounded-2xl border border-gray-100 p-8 sm:p-12 text-center">
           <Search className="h-8 w-8 text-gray-200 mx-auto mb-3" />
           <p className="text-gray-500 font-medium">Sin resultados</p>
           <p className="text-gray-400 text-sm mt-1">Probá con otros filtros de búsqueda</p>
