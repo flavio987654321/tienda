@@ -9,6 +9,7 @@ import {
 import type { StorePaymentInfo, ShippingMethod } from "@/types/store-config";
 import { DEFAULT_PAYMENT_INFO, DEFAULT_SHIPPING_METHODS, LIVE_QUOTE_SHIPPING_METHODS } from "@/types/store-config";
 import { PROVINCIAS_ARGENTINA as PROVINCES } from "@/lib/provincias";
+import CampoAuto from "@/components/CampoAuto";
 import {
   generatePolicyShipping, generatePolicyReturns, generatePolicyTerms,
   generatePolicyDeliveryAutos, generatePolicyOperationAutos, generatePolicyTermsAutos,
@@ -407,14 +408,18 @@ export default function PagosClient({ initial }: Props) {
                     </button>
                   )}
                   <div className="flex-1 min-w-0">
-                    <input
-                      type="text"
+                    {/* `estilo` y no `className`: esta pantalla tiene su propia
+                        paleta y así reemplaza la de CampoAuto en vez de pelearse
+                        con ella. El nombre admite 80 caracteres y en un teléfono
+                        entran unos 37. */}
+                    <CampoAuto
                       value={method.label}
-                      onChange={e => setShippingMethods(prev => prev.map((m, i) => i === idx ? { ...m, label: e.target.value.slice(0, 80) } : m))}
+                      onChange={v => setShippingMethods(prev => prev.map((m, i) => i === idx ? { ...m, label: v.slice(0, 80) } : m))}
                       maxLength={80}
+                      ariaLabel="Nombre del método de envío"
                       placeholder={method.isPickup ? "Ej: Retiro en local / acordar" : "Ej: Envío a domicilio"}
                       disabled={disabled}
-                      className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400 focus:border-slate-400 transition-colors disabled:cursor-not-allowed"
+                      estilo="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400 focus:border-slate-400 transition-colors disabled:cursor-not-allowed"
                     />
                   </div>
                   {!method.isPickup && (
@@ -947,9 +952,29 @@ function Row({ label, required, children }: { label: string; required?: boolean;
   );
 }
 
+/* La paleta de esta pantalla, en un solo lugar: la usan el input nativo de acá
+   abajo y el CampoAuto del nombre del método de envío. */
+const ESTILO_CAMPO =
+  "rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400 focus:border-slate-400 transition-colors";
+
 function Input({ value, onChange, placeholder, maxLength, inputMode }: {
   value: string; onChange: (v: string) => void; placeholder?: string; maxLength?: number; inputMode?: "numeric" | "text";
 }) {
+  // Los numéricos siguen siendo un input nativo: ahí importa el teclado que abre
+  // el teléfono, y un CBU o un código postal nunca es largo. Los de texto libre
+  // —titular de la cuenta, calle de origen, ciudad— pasan a crecer en renglones
+  // en vez de correrse hacia la derecha.
+  if (inputMode !== "numeric") {
+    return (
+      <CampoAuto
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        maxLength={maxLength}
+        estilo={ESTILO_CAMPO}
+      />
+    );
+  }
   return (
     <input
       type="text"
@@ -958,7 +983,7 @@ function Input({ value, onChange, placeholder, maxLength, inputMode }: {
       placeholder={placeholder}
       maxLength={maxLength}
       inputMode={inputMode}
-      className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400 focus:border-slate-400 transition-colors"
+      className={`w-full ${ESTILO_CAMPO}`}
     />
   );
 }

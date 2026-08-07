@@ -26,9 +26,20 @@ import { useEffect, useRef } from "react";
    cursor, leer dónde está parado, enfocarlo a mano. El caso real es el botón de
    emoji del nombre de la promoción, que inserta en la posición del cursor y no
    al final. */
+/* Lo que hace que el campo crezca. Nunca se reemplaza: sin `resize-none` queda
+   la manija de arrastre encima del alto que calculamos, y sin `overflow-hidden`
+   aparece una barra de scroll interna que es justo lo que este componente viene
+   a evitar. */
+const COMPORTAMIENTO = "w-full resize-none overflow-hidden";
+
+/* El aspecto por defecto, que es el del resto del panel. Se reemplaza entero con
+   la prop `estilo` — ver el comentario de la prop. */
+const ESTILO_POR_DEFECTO =
+  "border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-50 disabled:text-gray-400";
+
 export default function CampoAuto({
   value, onChange, onEnter, onBlur, placeholder, className = "", id, maxLength, ariaLabel, disabled,
-  innerRef, autoFocus, required,
+  innerRef, autoFocus, required, estilo,
 }: {
   value: string;
   onChange: (v: string) => void;
@@ -46,6 +57,18 @@ export default function CampoAuto({
    *  un campo obligatorio a este componente la validación del navegador se
    *  mantiene tal cual — no hay que reemplazarla por un chequeo a mano. */
   required?: boolean;
+  /** REEMPLAZA el aspecto por defecto, en vez de sumarse a él.
+   *
+   *  Existe por una razón concreta: hay pantallas con su propia paleta —Pagos
+   *  usa borde `slate-200` y foco `slate-400` en vez del gris e índigo del
+   *  resto—, y pasar esas clases por `className` no alcanza. Las dos quedan
+   *  declaradas sobre la misma propiedad, así que cuál gana lo decide el orden
+   *  en que Tailwind emite las utilidades y no el orden en que se escriben.
+   *  Apilar y esperar no es una respuesta; con `estilo` no hay nada que apilar.
+   *
+   *  `className` sigue existiendo para lo de siempre: sumar un margen, un ancho,
+   *  un `flex-1`. Cosas que no chocan con nada. */
+  estilo?: string;
 }) {
   const propio = useRef<HTMLTextAreaElement>(null);
   // El de afuera manda si lo pasaron: así el autoajuste de alto y quien inserta
@@ -80,7 +103,7 @@ export default function CampoAuto({
         onEnter?.();
       }}
       placeholder={placeholder}
-      className={`w-full resize-none overflow-hidden border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-50 disabled:text-gray-400 ${className}`}
+      className={`${COMPORTAMIENTO} ${estilo ?? ESTILO_POR_DEFECTO} ${className}`}
     />
   );
 }
