@@ -115,6 +115,27 @@ function shortNum(n: number): string {
   return String(Math.round(n));
 }
 
+/* Techo y paso "lindos" para el eje vertical: el paso siempre es 1, 2, 2.5 o 5
+   por una potencia de diez, y el techo el primer múltiplo que cubra el pico.
+   Apunta a unos 4 escalones, pero deja que sean 3 o 5 antes que ensuciar los
+   números. Con el pico en 0 —una tienda sin ventas todavía— devuelve 0-1-2-3-4,
+   que es una escala honesta y legible en vez de cinco ceros. */
+function escalaLinda(pico: number): { max: number; paso: number } {
+  const OBJETIVO = 4;
+  if (!(pico > 0)) return { max: OBJETIVO, paso: 1 };
+
+  const bruto = pico / OBJETIVO;
+  const magnitud = Math.pow(10, Math.floor(Math.log10(bruto)));
+  const normalizado = bruto / magnitud;
+  const lindo = normalizado <= 1 ? 1 : normalizado <= 2 ? 2 : normalizado <= 2.5 ? 2.5 : normalizado <= 5 ? 5 : 10;
+  // Piso de 1: todo lo que se grafica acá son pesos y cantidades, o sea números
+  // enteros. Sin este piso, un pico de 1 daba un paso de 0,25 y el eje volvía a
+  // mostrar "0 · 0 · 1 · 1 · 1" — el mismo problema, por el otro lado.
+  const paso = Math.max(1, lindo * magnitud);
+
+  return { max: Math.ceil(pico / paso) * paso, paso };
+}
+
 function LineChart({
   data,
   color = "#6366f1",
@@ -131,8 +152,23 @@ function LineChart({
   const innerW = W - padL - padR;
   const innerH = H - padT - padB;
 
-  const max = Math.max(...data.map((d) => d.value), 1);
-  const GRID = 4;
+  // El eje arranca de un PASO redondo y el techo sale de ahí, en vez de partir
+  // el pico crudo en cuatro.
+  //
+  // Antes el techo era el pico y los cuatro escalones caían donde cayeran, así
+  // que el formateador los redondeaba y salían repetidos o desparejos: un mes
+  // sin ventas mostraba "$0 · $0 · $1 · $1 · $1" —cinco marcas, tres textos
+  // iguales y ninguno cierto— y un pico de 7 visitas daba "0 · 2 · 4 · 5 · 7".
+  // Un eje que repite valores o que no se puede leer de un vistazo es peor que
+  // no tener eje.
+  //
+  // El paso se elige entre 1, 2, 2.5 y 5 por la potencia de diez que
+  // corresponda, que son los saltos que la gente lee sin pensar. Después el
+  // techo es el primer múltiplo de ese paso que cubra el pico — por eso la
+  // cantidad de líneas varía entre 3 y 5, en vez de ser fija: forzar cinco es
+  // lo que obligaba a inventar escalones.
+  const { max, paso } = escalaLinda(Math.max(...data.map((d) => d.value), 0));
+  const lineas = Math.round(max / paso);
 
   const xs = data.map((_, i) =>
     data.length === 1 ? padL + innerW / 2 : padL + (i / (data.length - 1)) * innerW
@@ -142,7 +178,11 @@ function LineChart({
   const linePath = xs.map((x, i) => `${i === 0 ? "M" : "L"}${x.toFixed(1)},${ys[i].toFixed(1)}`).join(" ");
   const areaPath = `${linePath} L${xs[xs.length - 1].toFixed(1)},${(padT + innerH).toFixed(1)} L${xs[0].toFixed(1)},${(padT + innerH).toFixed(1)} Z`;
 
-  const labelStep = Math.max(1, Math.ceil(data.length / 9));
+  // Menos fechas en el eje de abajo. El SVG tiene 580 de ancho y en un teléfono
+  // se dibuja en unos 320, o sea que todo se achica a poco más de la mitad: con
+  // nueve fechas quedaban pegadas y de un tamaño ilegible. Con seis se separan y
+  // el texto respira; en pantalla grande tampoco se extraña ninguna.
+  const labelStep = Math.max(1, Math.ceil(data.length / 6));
   const peakIdx = data.reduce((best, d, i) => (d.value > data[best].value ? i : best), 0);
   const hasData = data.some((d) => d.value > 0);
 
@@ -157,14 +197,14 @@ function LineChart({
         </defs>
 
         {/* Grid horizontal */}
-        {Array.from({ length: GRID + 1 }, (_, i) => {
-          const v = (max / GRID) * i;
+        {Array.from({ length: lineas + 1 }, (_, i) => {
+          const v = paso * i;
           const y = padT + (1 - v / max) * innerH;
           return (
             <g key={i}>
               <line x1={padL} y1={y} x2={padL + innerW} y2={y}
                 stroke={i === 0 ? "#e5e7eb" : "#f3f4f6"} strokeWidth={i === 0 ? 1 : 0.5} />
-              <text x={padL - 5} y={y + 3.5} textAnchor="end" fontSize={8.5} fill="#9ca3af">
+              <text x={padL - 5} y={y + 3.5} textAnchor="end" fontSize={10.5} fill="#9ca3af">
                 {formatter(v)}
               </text>
             </g>
@@ -192,7 +232,7 @@ function LineChart({
         {/* Etiquetas eje X */}
         {data.map((d, i) =>
           i % labelStep === 0 ? (
-            <text key={i} x={xs[i]} y={H - 4} textAnchor="middle" fontSize={8.5} fill="#9ca3af">
+            <text key={i} x={xs[i]} y={H - 3} textAnchor="middle" fontSize={10.5} fill="#9ca3af">
               {d.label}
             </text>
           ) : null
