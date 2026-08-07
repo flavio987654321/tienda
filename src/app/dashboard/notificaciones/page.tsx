@@ -763,7 +763,13 @@ export default function NotificacionesPage() {
                           onChange={() => toggleSelect(c.id)}
                           className="mt-1 h-3.5 w-3.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 shrink-0"
                         />
-                        <div className="flex items-start justify-between gap-2 flex-1 min-w-0">
+                        {/* En angosto el titulo se lleva el ancho completo y los
+                            numeros bajan a su propio renglon. La columna de la
+                            derecha es `shrink-0` y mide unos 110px por la fecha,
+                            asi que al titulo le quedaban ~176px y se cortaba en
+                            "Llego la nueva colecc…" — justo lo unico que sirve
+                            para reconocer cual fue cada envio. */}
+                        <div className="flex flex-col gap-1.5 flex-1 min-w-0 sm:flex-row sm:items-start sm:justify-between sm:gap-2">
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-1.5">
                               <p className="text-xs font-semibold text-gray-800 truncate">{c.title}</p>
@@ -781,7 +787,7 @@ export default function NotificacionesPage() {
                               </p>
                             )}
                           </div>
-                          <div className="shrink-0 text-right flex items-start gap-2">
+                          <div className="flex items-start justify-between gap-2 sm:shrink-0 sm:justify-end sm:text-right">
                             <div>
                               <span className="text-[11px] font-medium text-indigo-600">
                                 {c.sentCount} push
@@ -790,8 +796,11 @@ export default function NotificacionesPage() {
                                 <span className="text-[11px] font-medium text-indigo-600"> · {c.sentEmail} mail</span>
                               )}
                               <p className="text-[10px] text-gray-400 mt-0.5">
+                                {/* 24 horas: "11:06 p. m." mide casi el doble que
+                                    "23:06" y no aporta nada — acá nadie usa el
+                                    reloj de 12. */}
                                 {new Date(c.createdAt).toLocaleDateString("es-AR", {
-                                  day: "numeric", month: "short", hour: "2-digit", minute: "2-digit",
+                                  day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hour12: false,
                                 })}
                               </p>
                               {/* La campaña que quedó a mitad de camino es la
@@ -813,7 +822,12 @@ export default function NotificacionesPage() {
                             <button
                               onClick={() => handleDelete(c.id)}
                               disabled={deletingId === c.id}
-                              className="mt-0.5 p-1.5 rounded-lg text-gray-300 hover:text-red-400 hover:bg-red-50 transition-colors disabled:opacity-50 opacity-0 group-hover:opacity-100"
+                              /* Visible siempre en angosto. Colgado de
+                                 `group-hover` no aparecía nunca en un teléfono
+                                 —no hay hover en una pantalla táctil— así que la
+                                 única forma de borrar del historial era el
+                                 seleccionar-y-eliminar de arriba. */
+                              className="mt-0.5 p-1.5 rounded-lg text-gray-300 hover:text-red-400 hover:bg-red-50 transition-colors disabled:opacity-50 sm:opacity-0 sm:group-hover:opacity-100"
                               title="Eliminar del historial"
                             >
                               {deletingId === c.id
