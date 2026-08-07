@@ -18,6 +18,9 @@ import {
   ExternalLink, Info, Bell, Tag, Shield, Clock,
 } from "lucide-react";
 import { TEMPLATE_CATEGORIES } from "@/lib/templateRegistry";
+// planLimits solo importa un `type` de Prisma, asi que se puede usar del lado
+// del navegador. La landing promete lo mismo que el sistema hace cumplir.
+import { PRO_MAX_PRODUCTS } from "@/lib/planLimits";
 import { SiteFooter } from "@/components/SiteFooter";
 
 /* ─── 3D Tilt Card ─── */
@@ -984,7 +987,7 @@ export default function Home() {
               {
                 icon: Store, color: "#ea580c", gradient: "from-orange-50 to-orange-50/40", border: "border-orange-200", metric: "+24 ventas este mes",
                 title: "Dueño", sub: "El motor de tu marca, sin armar un equipo en planilla.",
-                items: ["Tienda con subdominio propio incluido", "Productos y variantes ilimitados", "Sasha, tu asistente de IA, te avisa el estado de tu tienda", "Panel de pedidos, estadísticas y afiliados", "Vos aprobás quién representa tu marca", "Comisiones automáticas o con aprobación manual, según prefieras", "7 días de prueba gratis, sin tarjeta"],
+                items: ["Tienda con subdominio propio incluido", `Hasta ${PRO_MAX_PRODUCTS.toLocaleString("es-AR")} productos, con variantes ilimitadas`, "Sasha, tu asistente de IA, te avisa el estado de tu tienda", "Panel de pedidos, estadísticas y afiliados", "Vos aprobás quién representa tu marca", "Comisiones automáticas o con aprobación manual, según prefieras", "7 días de prueba gratis, sin tarjeta"],
                 cta: "Crear mi tienda gratis", href: "/registro",
               },
               {

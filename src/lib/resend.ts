@@ -1,4 +1,5 @@
 import { Resend } from "resend";
+import { PRO_MAX_PRODUCTS, PRO_MAX_AFFILIATES } from "@/lib/planLimits";
 
 const resend = new Resend(process.env.RESEND_API_KEY ?? "no-key");
 
@@ -377,10 +378,18 @@ export async function sendSubscriptionConfirmationEmail({
     day: "numeric", month: "long", year: "numeric", timeZone: AR_TZ,
   });
 
+  // Los números salen de las constantes que los aplican. "Hasta 6 afiliados"
+  // estaba escrito a mano —justo el mail que confirma un pago, o sea el peor
+  // lugar para prometer un número distinto al que después se hace cumplir.
   const isPremium = planKey === "OWNER_PREMIUM";
   const features = isPremium
     ? ["Afiliados ilimitados", "Dominio propio configurado por nosotros", "PWA + notificaciones push", "Flyer de bienvenida en la tienda", "Soporte prioritario"]
-    : ["Productos y variantes ilimitados", "Hasta 6 afiliados", "Panel de pedidos y estadísticas", "Soporte por email"];
+    : [
+        `Hasta ${PRO_MAX_PRODUCTS.toLocaleString("es-AR")} productos, con variantes ilimitadas`,
+        `Hasta ${PRO_MAX_AFFILIATES} afiliados`,
+        "Panel de pedidos y estadísticas",
+        "Soporte por email",
+      ];
 
   const txId = paymentId ? `#${String(paymentId).slice(-8).toUpperCase()}` : null;
 

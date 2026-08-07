@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { AppLogo } from "@/components/AppLogo";
 import { useTurnstile } from "@/components/Turnstile";
 import { isPwa } from "@/lib/pwa";
-import { PRICES as PLAN_PRICES, PRO_MAX_AFFILIATES, PRO_MAX_ACTIVE_COUPONS } from "@/lib/planLimits";
+import { PRICES as PLAN_PRICES, PRO_MAX_AFFILIATES, PRO_MAX_ACTIVE_COUPONS, PRO_MAX_PRODUCTS } from "@/lib/planLimits";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import {
@@ -42,7 +42,7 @@ const TYPES = [
     desc: "Creá tu tienda online y gestioná afiliados que vendan por vos.",
     perks: [
       "Tienda con subdominio incluido",
-      "Productos y variantes ilimitados",
+      `Hasta ${PRO_MAX_PRODUCTS.toLocaleString("es-AR")} productos, con variantes ilimitadas`,
       "Panel de pedidos y estadísticas",
       "Cupones de descuento",
       "Sistema de afiliados y comisiones automáticas",

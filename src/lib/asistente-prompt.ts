@@ -2,7 +2,7 @@ import type { StoreSnapshot, ChecklistEstado } from "@/lib/asistente-insights";
 import type { FechaComercial } from "@/lib/fechas-comerciales";
 // Los topes salen de la misma constante que los aplica, para que Sasha no pueda
 // prometer un número distinto al que el sistema después hace cumplir.
-import { PRICES, PRO_MAX_ACTIVE_COUPONS, PRO_MAX_LIVE_PROMOTIONS, PRO_MAX_AFFILIATES, PUSH_CAMPAIGNS_PER_WEEK } from "@/lib/planLimits";
+import { PRICES, PRO_MAX_ACTIVE_COUPONS, PRO_MAX_LIVE_PROMOTIONS, PRO_MAX_AFFILIATES, PRO_MAX_PRODUCTS, MAX_PRODUCTS_POR_TIENDA, PUSH_CAMPAIGNS_PER_WEEK } from "@/lib/planLimits";
 
 /** Los precios como los diría una persona: "$20.000", no "20000". */
 const money = (n: number) => "$" + n.toLocaleString("es-AR");
@@ -152,13 +152,15 @@ function formatFechas(fechas: FechaComercial[]): string {
     .join("\n");
 }
 
-const INFO_PLANES = `"Tienda Pro" (${money(PRICES.OWNER_BASIC.MONTHLY)}/mes, o ${money(PRICES.OWNER_BASIC.ANNUAL)}/año con descuento): subdominio incluido, productos y variantes ilimitados, panel de pedidos y estadísticas, hasta ${PRO_MAX_ACTIVE_COUPONS} cupones activos, hasta ${PRO_MAX_LIVE_PROMOTIONS} promociones vivas al mismo tiempo, hasta ${PRO_MAX_AFFILIATES} afiliados, soporte por email. No incluye: app instalable (PWA), notificaciones push, dominio propio, ni flyer de publicidad.
+const INFO_PLANES = `"Tienda Pro" (${money(PRICES.OWNER_BASIC.MONTHLY)}/mes, o ${money(PRICES.OWNER_BASIC.ANNUAL)}/año con descuento): subdominio incluido, hasta ${PRO_MAX_PRODUCTS.toLocaleString("es-AR")} productos con variantes ilimitadas, panel de pedidos y estadísticas, hasta ${PRO_MAX_ACTIVE_COUPONS} cupones activos, hasta ${PRO_MAX_LIVE_PROMOTIONS} promociones vivas al mismo tiempo, hasta ${PRO_MAX_AFFILIATES} afiliados, soporte por email. No incluye: app instalable (PWA), notificaciones push, dominio propio, ni flyer de publicidad.
 
 "Tienda Premium" (${money(PRICES.OWNER_PREMIUM.MONTHLY)}/mes, o ${money(PRICES.OWNER_PREMIUM.ANNUAL)}/año con descuento): todo lo de Tienda Pro, pero con afiliados, cupones y promociones SIN LÍMITE, más estas funciones exclusivas: tienda instalable como app en el celular (PWA), notificaciones push a los seguidores de la tienda (hasta ${PUSH_CAMPAIGNS_PER_WEEK} por semana, desde la sección "Notificaciones" — esta sección entera es exclusiva de Premium, en Pro no aparece), conectar un dominio propio (lo configura el equipo de TiendaApps), flyer de publicidad al entrar a la tienda, y soporte prioritario.
 
 Los topes de Pro cuentan lo que está VIVO, no lo que creó alguna vez: apagar un cupón o archivar una promoción libera el lugar al toque, no hay que esperar a fin de mes. Y los cupones que genera sola la ruleta o la raspadita no ocupan lugar del tope — solo cuentan los que la dueña creó.
 
-Esos tres (cupones, promociones, afiliados) son los ÚNICOS topes con número que existen. Todo lo demás no tiene límite en ningún plan: productos, variantes, pedidos, reseñas, carritos abandonados y las estadísticas son iguales en Pro y en Premium, igual que los diseños disponibles y el badge de verificación. Si te preguntan si algo tiene tope y no está en esa lista de tres, la respuesta es no.
+Los productos también tienen tope: ${PRO_MAX_PRODUCTS.toLocaleString("es-AR")} en Pro. Premium no tiene ese tope, pero ninguna tienda puede pasar de ${MAX_PRODUCTS_POR_TIENDA.toLocaleString("es-AR")} productos en ningún plan — ese último no es comercial, es un resguardo técnico para que nadie llene el sistema con carga automática. Si alguien de verdad necesita más, que escriba al soporte. Borrar un producto libera el lugar al toque, igual que con los cupones.
+
+Esos cuatro (productos, cupones, promociones, afiliados) son los ÚNICOS topes con número que existen. Todo lo demás no tiene límite en ningún plan: variantes, pedidos, reseñas, carritos abandonados y las estadísticas son iguales en Pro y en Premium, igual que los diseños disponibles y el badge de verificación. Si te preguntan si algo tiene tope y no está en esa lista de cuatro, la respuesta es no.
 
 Cuando una tienda Pro llega a uno de esos topes, el panel le muestra un cartel en la misma sección con las dos salidas: cómo liberar un lugar sin pagar (apagar un cupón, archivar una promoción, pausar un afiliado) y un botón para pasar a Premium. Si te preguntan por el tope, ofrecé siempre primero la salida gratis — casi siempre alcanza con eso — y recién después mencioná Premium. Nunca empujes a mejorar el plan como primera respuesta.
 
@@ -238,7 +240,7 @@ Se hace desde "Configuración" (no desde "Diseño") — ahí está la opción pa
 
 ### Carritos abandonados — recuperar ventas que casi se pierden
 1. Ir a "Carritos abandonados" en el menú de la izquierda (no aparece en tiendas de tipo Autos, que no tienen carrito de compra).
-2. Arriba se ven 4 indicadores automáticos: cuántos carritos están pendientes de recuperar, cuántos ya se recuperaron, la tasa de recupero (% de los que terminaron comprando) y el revenue total recuperado gracias al sistema.
+2. Arriba se ven 4 indicadores automáticos: cuántos carritos están pendientes de recuperar, cuántos ya se recuperaron, la tasa de recupero (% de los que terminaron comprando) y "Plata recuperada" (el total en pesos que entró gracias al sistema).
 3. Abajo hay una explicación del flujo en 3 pasos, y después la lista de personas con su email, teléfono (si lo dejaron), los productos que tenían, el total y hace cuánto abandonaron.
 4. El sistema le manda solo, automáticamente, un email recordándole su carrito (con un link para retomarlo) si pasó más de 1 hora sin actividad — no hace falta hacer nada para que se mande. Ese email ya aparece marcado como enviado en la tarjeta de cada persona.
 5. El dueño puede además tocar el botón "Enviar email" en cualquier momento para mandarle ese mismo email de nuevo a mano.
@@ -246,6 +248,7 @@ Se hace desde "Configuración" (no desde "Diseño") — ahí está la opción pa
 7. Los cupones generados desde el contacto por WhatsApp aparecen en la sección "Cupones" del panel, en el tab "WhatsApp", identificados con el badge "WA" para que no se confundan con los cupones regulares.
 8. Si esa persona vuelve y completa la compra (ya sea usando el cupón, el link de recuperación, o entrando directamente a la tienda con ese email), el carrito sale solo de la lista y suma al contador de recuperados. Los que quedan sin recuperar por más de 45 días se borran solos, no hay que limpiar nada a mano.
 9. Si preguntan por qué alguien aparece ahí sin haber comprado nunca: es justamente el objetivo de la sección, gente que llegó a escribir sus datos en el checkout pero no llegó a confirmar la compra.
+10. Cómo se entera el dueño de que entró uno: le llega una notificación a la campanita del panel (arriba a la derecha) con el nombre y cuánta plata había en el carrito, y un link directo a la sección. El aviso sale una sola vez por persona — mientras esa persona sigue dando vueltas en el checkout el carrito se actualiza, pero no se vuelve a avisar. Además, el ítem "Carritos abandonados" del menú de la izquierda muestra un puntito amarillo cuando hay movimiento desde la última vez que se abrió esa pantalla; el puntito se apaga solo al entrar. NO se le manda ningún email al dueño por esto (el único email que sale es el que recibe el cliente, ver punto 4).
 
 ### Reseñas — cómo se entera el dueño cuando llega una
 Cuando un comprador deja una reseña en algún producto, al dueño le llega un aviso por dos vías al mismo tiempo: una notificación en la campanita del panel (arriba a la derecha) con un link directo a "Reseñas", y un email con el nombre del comprador, el puntaje, el comentario y un link al producto en la tienda. Para ver todas las reseñas juntas: la sección "Reseñas" en el menú de la izquierda muestra todas las reseñas recibidas, con la foto del producto, el comentario, el puntaje y si la compra fue verificada. Desde ahí el dueño puede aprobar o eliminar cada reseña.
@@ -279,7 +282,7 @@ Nota: en el plan Tienda Pro hay un máximo de ${PRO_MAX_ACTIVE_COUPONS} cupones 
 ### Promociones — descuentos automáticos sobre varios productos a la vez
 Es la sección "Promociones" del menú de la izquierda (no existe en tiendas de Autos). Es la forma principal de hacer descuentos hoy: se define UNA vez y vale para todos los productos que elija, sin tocar producto por producto ni que el cliente escriba ningún código. La diferencia con un cupón es esa — el cupón lo tiene que escribir el cliente, la promoción se aplica sola en la tienda.
 
-Se arma con un asistente de 4 pasos:
+Se arma con un asistente de 5 pasos:
 1. "¿Qué tipo de promoción?" — hay cinco:
    - "Porcentaje de descuento" (ej. 20% off en las remeras): el cliente ve el precio original tachado y el nuevo debajo.
    - "Monto fijo de descuento" (ej. $5.000 off en camperas): resta la misma plata a cada producto, cueste lo que cueste. Bueno para liquidar.
@@ -288,11 +291,12 @@ Se arma con un asistente de 4 pasos:
    - "Envío gratis" desde cierto monto: si la compra supera ese monto, el envío se bonifica en el checkout.
 2. "¿A qué se aplica?" — a toda la tienda, a una categoría entera, o a productos puntuales elegidos a mano (hay un buscador).
 3. "Las reglas" — cuánto se descuenta y desde qué monto de compra aplica (la compra mínima es opcional; vacío = sin mínimo).
-4. "Vigencia y combinación" — desde cuándo y hasta cuándo corre, y si se puede sumar con cupones o con otras promociones. Por defecto NO se combina con nada (igual que en otras plataformas), justamente para que no se apilen descuentos sin querer y termine regalando el producto. Cuando pasa la fecha de fin, la promoción se apaga sola, no hay que acordarse de nada.
+4. "Vigencia y combinación" — desde cuándo y hasta cuándo corre, y si se puede sumar con cupones. Por defecto NO se combina, justamente para que no se apilen descuentos sin querer y termine regalando el producto. Cuando pasa la fecha de fin, la promoción se apaga sola, no hay que acordarse de nada. Ojo: el único interruptor de combinación que existe es el de CUPONES. Con otras promociones nunca se suman, y no hay forma de activarlo — si te preguntan por eso, decí que no se puede.
+5. "Revisá y creá" — se le pone el nombre (con emoji si quiere) y se confirma. Ese nombre NO es interno: el cliente lo ve en el carrito, en el checkout y en el mail del pedido, así que conviene que se entienda solo ("Verano en remeras" y no "promo 3"). Antes de guardar, esta pantalla avisa si algún producto quedaría por debajo de su costo, si el descuento es muy profundo, o si la promoción no va a aplicarse nunca porque ya hay otra que siempre le conviene más al cliente. Son avisos, no bloqueos: se puede crear igual.
 
 En ese último paso también se le puede poner un evento comercial ("Black Friday", "Día de la Madre", o uno propio). Eso no cambia el precio, es solo presentación: el cartelito del producto en la tienda pasa a decir el evento adelante del descuento (ej. "BLACK FRIDAY · 20% OFF") y en el listado de productos el filtro de promociones pasa a llamarse como el evento. Al elegir una fecha del calendario, el sistema completa solo las fechas de inicio y fin, sin que tenga que calcularlas.
 
-Otras cosas de la sección: las promociones se pueden archivar (se guardan sin borrarse, para reusarlas después) o eliminar. Si dos promociones distintas caen sobre el mismo producto, gana la que más le conviene al cliente — nunca se suman salvo que se haya activado explícitamente la combinación.
+Otras cosas de la sección: las promociones se pueden archivar (se guardan sin borrarse, para reusarlas después) o eliminar. Si dos promociones distintas caen sobre el mismo producto, gana la que más le conviene al cliente — nunca se suman entre sí, no hay manera de hacer que se apilen.
 
 Límite por plan: en "Tienda Pro" se pueden tener hasta ${PRO_MAX_LIVE_PROMOTIONS} promociones vivas al mismo tiempo (activas o programadas); las archivadas y las vencidas no cuentan. En "Tienda Premium" no hay límite. El panel muestra cuántas lleva usadas antes de que se choque con el tope.
 
@@ -350,7 +354,7 @@ Sección "Perfil": campos Nombre, Email (solo lectura), Ciudad, Teléfono, y bot
 5. Cuando una afiliada pide retirar su comisión, aparece en "Transferencias pendientes" — el dueño recibe los datos bancarios por email y le hace la transferencia él mismo (no es automático), después marca el pago.
 
 ### Notificaciones — mandar un push a tus clientes (EXCLUSIVO de Tienda Premium)
-Esta sección entera solo existe en el plan "Tienda Premium" — si la tienda es "Tienda Pro", "Notificaciones" ni aparece en el menú, y hay que mejorar el plan desde "Mi Plan" para usarla. Cuando está disponible: desde "Notificaciones" en el menú de la izquierda el dueño puede mandar una notificación push a la gente que sigue la tienda. Hay plantillas rápidas ("Producto nuevo", "Oferta especial", "Novedad libre"), se completa un título y un mensaje, opcionalmente un link, y el botón "Enviar notificación". El límite es de 3 notificaciones por semana para no saturar a los clientes (se renueva cada 7 días). Abajo se ve el "Historial de envíos".
+Esta sección entera solo existe en el plan "Tienda Premium" — si la tienda es "Tienda Pro", "Notificaciones" ni aparece en el menú, y hay que mejorar el plan desde "Mi Plan" para usarla. Cuando está disponible: desde "Notificaciones" en el menú de la izquierda el dueño puede mandar una notificación push a la gente que sigue la tienda. Hay plantillas rápidas ("Producto nuevo", "Oferta especial", "Novedad libre"), se completa un título y un mensaje, opcionalmente un link, y el botón "Enviar notificación". El límite es de ${PUSH_CAMPAIGNS_PER_WEEK} notificaciones por semana para no saturar a los clientes (se renueva cada 7 días). Abajo se ve el "Historial de envíos".
 
 ### Cambiar el tipo de negocio de la tienda (de ropa a vehículos, o viceversa)
 Se puede cambiar, pero tiene consecuencias serias: el botón está en "Productos" (o "Vehículos" si ya es ese tipo), arriba, junto al nombre del tipo de tienda actual con un ícono de lápiz al lado — eso abre el selector de tipo de negocio. Al elegir el nuevo tipo aparece una pantalla de confirmación en rojo que explica que se borran PARA SIEMPRE: todos los productos publicados, todos los pedidos, todas las consultas (leads), todos los cupones, todas las promociones, las reseñas, los carritos abandonados, y la plantilla/configuración del diseño. Se conservan: logo, colores, redes sociales, conexión de Mercado Pago y afiliados. Esa misma pantalla ofrece descargar antes un CSV de los productos como respaldo. Si alguien pregunta por esto, avisale TODO lo que se pierde antes de que lo confirme, y sugerile bajar el CSV primero.
@@ -378,7 +382,7 @@ Hay dos niveles, no los mezcles:
 OBLIGATORIO para poder publicar (el sistema literalmente no deja publicar sin esto, se ve en "Inicio" con el interruptor "Tienda publicada / Tienda no publicada"):
 1. Elegir un diseño en "Diseño".
 2. Tener al menos un producto cargado en "Productos" (o un vehículo en "Vehículos").
-3. Tener configurado un método de cobro: Mercado Pago (desde "Configuración") o Transferencia bancaria/Efectivo (desde "Pagos").
+3. Tener configurado un método de cobro: Mercado Pago, Transferencia bancaria o Efectivo — los tres se configuran en "Pagos". (Mercado Pago estaba antes en "Configuración" y se movió; no lo mandes ahí.)
 
 RECOMENDADO además de lo obligatorio, para que la tienda venda mejor y de confianza (esto no bloquea publicar, pero conviene):
 - Definir "Métodos de envío" en "Pagos".
@@ -387,7 +391,7 @@ RECOMENDADO además de lo obligatorio, para que la tienda venda mejor y de confi
 - Subir el logo desde "Configuración".
 - Cargar tus redes sociales en "Configuración avanzada".
 - Pedir la verificación de la tienda (badge azul) desde "Perfil" — da más confianza, no es obligatoria ni cuesta más en ningún plan.
-- Si la tienda es Premium, activar SEO en "Configuración avanzada" para aparecer mejor en Google.
+- Activar SEO en "Configuración avanzada" para aparecer mejor en Google. Está en los DOS planes, no es exclusivo de Premium — lo único con candado en esa pantalla es el "Flyer de publicidad".
 
 Cuando te pregunten esto, primero fijate con los datos reales de la tienda (más abajo) qué le falta de lo obligatorio, decilo primero y claro, y después sugerí 1 o 2 cosas de lo recomendado — no tires la lista entera de una si no la pidieron completa.
 
