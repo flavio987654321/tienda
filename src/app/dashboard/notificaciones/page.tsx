@@ -10,6 +10,8 @@ import Link from "next/link";
 import { SuscriptoresModal } from "./SuscriptoresModal";
 import { SelectorEmoji } from "./SelectorEmoji";
 import { largoVisible, recortar } from "@/lib/texto";
+import { PUSH_CAMPAIGNS_PER_WEEK } from "@/lib/planLimits";
+import CampoAuto from "@/components/CampoAuto";
 
 const TITLE_MAX = 50;
 const BODY_MAX = 150;
@@ -361,7 +363,10 @@ export default function NotificacionesPage() {
             ) : (
               <p className="text-2xl font-bold text-gray-900">
                 {stats?.weeklyUsed ?? 0}
-                <span className="text-base font-normal text-gray-400">/{stats?.weeklyLimit ?? 3}</span>
+                {/* El respaldo sale de la constante y no de un 3 a mano: es el
+                    número que se muestra mientras el servidor no contestó, y ya
+                    hubo una vez que este tope decía uno y se aplicaba otro. */}
+                <span className="text-base font-normal text-gray-400">/{stats?.weeklyLimit ?? PUSH_CAMPAIGNS_PER_WEEK}</span>
               </p>
             )}
             <p className="text-[11px] text-gray-400 mt-0.5">
@@ -373,13 +378,32 @@ export default function NotificacionesPage() {
         </div>}
 
         {/* Aviso de cómo funcionan */}
-        <div className="rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3">
-          <p className="text-xs text-blue-700 leading-relaxed">
-            <strong>¿Cómo funciona?</strong> Escribís el mensaje una vez y sale por dos vías.{" "}
-            <strong>Push:</strong> a los clientes registrados que tocan 👍 en tu tienda; les llega al celular o a la
-            computadora aunque tengan la tienda cerrada — en iPhone solo si instalaron la tienda en su pantalla de inicio.{" "}
-            <strong>Mail:</strong> a los que dejaron su correo en el bloque de novedades y lo confirmaron.{" "}
-            El límite de <strong>3 por semana</strong> cuenta mensajes, no envíos: mandar por las dos vías gasta uno solo.
+        {/* Numerado y no un párrafo corrido. Adentro hay tres cosas que se
+            descubren tarde y duelen, y las tres estaban enterradas en el mismo
+            bloque de texto: que push y mail son dos vías DISTINTAS (con "Tu
+            audiencia: 2" es fácil creer que son dos personas recibiendo lo
+            mismo), que en iPhone no llega salvo que hayan instalado la tienda
+            —limitación de Apple, y la pregunta inevitable es "¿por qué no le
+            llegó a mi hermana?"—, y que el tope cuenta mensajes y no envíos, que
+            es plata para el que lo entiende y estaba al final, donde ya nadie
+            llega. Mismo contenido; cada idea con su renglón, y la trampa del
+            iPhone pegada a "Push" en vez de perdida en el medio. */}
+        <div className="rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3.5">
+          <p className="text-xs font-bold text-blue-700 uppercase tracking-wide mb-2">¿Cómo funciona?</p>
+          <div className="grid gap-2.5 text-xs text-blue-800 sm:grid-cols-3">
+            {[
+              <>Escribís el mensaje <strong>una sola vez</strong> y sale por dos vías distintas.</>,
+              <><strong>Push</strong> al celular de los que tocan 👍 en tu tienda, aunque la tengan cerrada. En iPhone solo si instalaron la tienda en su pantalla de inicio.</>,
+              <><strong>Mail</strong> a los que dejaron su correo en el bloque de novedades y lo confirmaron.</>,
+            ].map((texto, i) => (
+              <div key={i} className="flex items-start gap-2">
+                <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-200 text-[10px] font-bold text-blue-700">{i + 1}</span>
+                <p>{texto}</p>
+              </div>
+            ))}
+          </div>
+          <p className="mt-3 border-t border-blue-100 pt-2.5 text-xs text-blue-800">
+            El límite de <strong>{PUSH_CAMPAIGNS_PER_WEEK} por semana</strong> cuenta mensajes, no envíos: mandar por las dos vías gasta uno solo.
           </p>
         </div>
 
@@ -412,13 +436,18 @@ export default function NotificacionesPage() {
             {/* Tipos predefinidos */}
             <div>
               <p className="text-xs text-gray-500 mb-2">Tipo de anuncio</p>
-              <div className="flex flex-wrap gap-2">
+              {/* En angosto van en dos columnas y no sueltas. Los tres nombres
+                  miden casi lo mismo pero no exactamente, así que dejándolas
+                  fluir entraban dos en el primer renglón y la tercera caía
+                  suelta y corrida — la típica fila desprolija. En columnas la
+                  tercera arranca alineada con la primera. */}
+              <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
                 {PRESET_TYPES.map((p, i) => (
                   <button
                     key={i}
                     type="button"
                     onClick={() => applyPreset(i)}
-                    className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                    className={`truncate px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
                       presetIdx === i
                         ? "bg-indigo-600 text-white border-indigo-600"
                         : "bg-white text-gray-600 border-gray-200 hover:border-indigo-300"
@@ -445,16 +474,28 @@ export default function NotificacionesPage() {
                     />
                   </div>
                 </div>
-                <input
-                  type="text"
+                {/* CampoAuto y no <input>: un input no puede pasar a renglón
+                    nuevo —es lo que el elemento es, no algo que se arregle con
+                    CSS— así que el título se corría hacia la derecha y en el
+                    teléfono se perdía de vista casi todo lo escrito. Justo acá
+                    importa el doble: es lo que va a leer el cliente en la
+                    pantalla del celular, y hay que poder mirarlo entero antes de
+                    mandarlo a todo el mundo. El de "Mensaje" ya era un textarea.
+
+                    Sin `maxLength`: ese atributo cuenta unidades de JavaScript,
+                    no caracteres, y con emojis cortaba antes de tiempo — y en el
+                    peor caso a la mitad de uno. El tope lo pone `recortar`.
+
+                    Se va el `required` nativo y no hace falta: `handleSubmitClick`
+                    ya frena con el título vacío. Lo que sí cambia es que Enter
+                    deja de mandar el formulario, y para algo irreversible como
+                    esto es mejor así — se manda con el botón, a propósito. */}
+                <CampoAuto
                   value={title}
-                  // Sin `maxLength`: ese atributo cuenta unidades de JavaScript,
-                  // no caracteres, y con emojis cortaba antes de tiempo — y en
-                  // el peor caso a la mitad de uno. El tope lo pone `recortar`.
-                  onChange={(e) => { setTitle(recortar(e.target.value, TITLE_MAX)); setResult(null); }}
+                  onChange={(v) => { setTitle(recortar(v, TITLE_MAX)); setResult(null); }}
                   placeholder="ej: ¡Nuevo producto disponible!"
-                  required
-                  className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-transparent"
+                  ariaLabel="Título de la notificación"
+                  className="text-gray-900 placeholder-gray-400"
                 />
               </div>
 
@@ -550,10 +591,14 @@ export default function NotificacionesPage() {
                     <div className="h-8 w-8 rounded-lg bg-indigo-600 flex items-center justify-center shrink-0 mt-0.5">
                       <Bell className="h-4 w-4 text-white" />
                     </div>
-                    <div>
-                      <p className="text-xs font-semibold text-gray-800 leading-tight">{title || "Título"}</p>
-                      <p className="text-[11px] text-gray-500 leading-tight mt-0.5">{message || "Mensaje..."}</p>
-                      {url && <p className="text-[10px] text-indigo-400 mt-0.5 truncate max-w-[260px]">{url}</p>}
+                    {/* `min-w-0` + ancho relativo: el link llevaba un tope fijo
+                        de 260px, y en 360 a esta columna le quedan unos 256 — o
+                        sea que el recorte se hacía DESPUÉS del borde de la
+                        tarjeta y el link se salía igual. */}
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-semibold text-gray-800 leading-tight break-words">{title || "Título"}</p>
+                      <p className="text-[11px] text-gray-500 leading-tight mt-0.5 break-words">{message || "Mensaje..."}</p>
+                      {url && <p className="text-[10px] text-indigo-400 mt-0.5 truncate">{url}</p>}
                     </div>
                   </div>
                 </div>
