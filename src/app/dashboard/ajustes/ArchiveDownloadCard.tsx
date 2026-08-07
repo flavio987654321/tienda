@@ -43,7 +43,12 @@ export default function ArchiveDownloadCard({ archives }: { archives: ArchiveIte
                 {a.ordersCount} pedido{a.ordersCount !== 1 ? "s" : ""} · ${a.totalFacturado.toLocaleString("es-AR")} facturados por Mercado Pago
               </p>
             </div>
-            <div className="flex gap-2">
+            {/* Grilla de dos en angosto. Son CUATRO botones en una fila sin
+                `flex-wrap`, asi que en 360 sumaban unos 400px dentro de una
+                tarjeta de 256: se salian por el costado y "Todo (JSON)" quedaba
+                tan afuera que no se veia nunca — una descarga que desde el
+                teléfono no existía. En dos columnas entran los cuatro. */}
+            <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto">
               {([
                 ["pedidos", "Pedidos"],
                 ["cupones", "Cupones"],
@@ -53,9 +58,9 @@ export default function ArchiveDownloadCard({ archives }: { archives: ArchiveIte
                 <a
                   key={tipo}
                   href={`/api/store/archives/${a.id}?tipo=${tipo}`}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-600 hover:bg-slate-50 transition-colors"
+                  className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-600 hover:bg-slate-50 transition-colors"
                 >
-                  <Download className="h-3 w-3" /> {label}
+                  <Download className="h-3 w-3 shrink-0" /> <span className="truncate">{label}</span>
                 </a>
               ))}
             </div>
