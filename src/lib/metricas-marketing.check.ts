@@ -59,17 +59,35 @@ chequear("sin carritos no divide por cero", vacio.tasaRecuperacion === 0 && vaci
 /* ── Cupones ──────────────────────────────────────────────────────────────── */
 console.log("\n2) Cupones");
 
+const cupon = (
+  id: string, code: string,
+  extra: Partial<CuponCrudo> = {}
+): CuponCrudo => ({
+  id, code, label: null, discountType: "percentage", discountValue: 10,
+  expiresAt: null, isActive: true, winnerEmail: null, ...extra,
+});
+
 const cupones: CuponCrudo[] = [
-  { id: "c1", code: "BIENVENIDA10", label: null, discountType: "percentage", discountValue: 10, expiresAt: null },
-  { id: "c2", code: "VERANO20", label: "20% OFF verano", discountType: "percentage", discountValue: 20, expiresAt: fecha("2026-01-01") },
-  { id: "c3", code: "SINUSO", label: null, discountType: "fixed", discountValue: 5000, expiresAt: null },
+  cupon("c1", "BIENVENIDA10"),
+  cupon("c2", "VERANO20", { label: "20% OFF verano", discountValue: 20, expiresAt: fecha("2026-01-01") }),
+  // Vigente y sin un solo uso: es el que la tarjeta escondía.
+  cupon("c3", "SINUSO", { discountType: "fixed", discountValue: 5000 }),
+  // Apagado y sin uso: NO es una campaña que falló, ya se decidió apagarla.
+  cupon("c4", "APAGADO", { isActive: false }),
+  // Vencido y sin uso: idem, ya terminó.
+  cupon("c5", "VIEJO", { expiresAt: fecha("2026-01-01") }),
+  // Premio de la ruleta, canjeado. Va aparte del ranking.
+  cupon("g1", "WIN-ABC123", { winnerEmail: "ana@example.com" }),
+  // Premio de la ruleta sin canjear: no es un cupón tuyo "sin usar".
+  cupon("g2", "WIN-XYZ789", { winnerEmail: "juan@example.com" }),
 ];
 const pedidosCupon = [
-  { couponId: "c1", discountAmount: 12000 },
-  { couponId: "c1", discountAmount: 12000 },
-  { couponId: "c1", discountAmount: 8000 },
-  { couponId: "c2", discountAmount: 18000 },
-  { couponId: null, discountAmount: 0 },  // sin cupón, no tiene que contar
+  { couponId: "c1", discountAmount: 12000, total: 108000 },
+  { couponId: "c1", discountAmount: 12000, total: 108000 },
+  { couponId: "c1", discountAmount: 8000,  total:  72000 },
+  { couponId: "c2", discountAmount: 18000, total:  22000 },
+  { couponId: "g1", discountAmount: 5000,  total:  45000 },
+  { couponId: null, discountAmount: 0,     total:  30000 },  // sin cupón, no tiene que contar
 ];
 const rcup = resumirCupones(cupones, pedidosCupon, fecha("2026-07-29"));
 
@@ -86,6 +104,33 @@ chequear("si no hay etiqueta, la arma del descuento",
   rcup.filas[0].etiqueta === "10%", rcup.filas[0].etiqueta);
 chequear("etiqueta de monto fijo", etiquetaDescuento("fixed", 5000) === "$5.000");
 
+// ── Lo que trajo cada cupón ──
+// LA razón de todo esto: los dos cupones de abajo cuestan parecido y son casos
+// opuestos. BIENVENIDA10 resignó $32.000 para entrar $288.000; VERANO20 resignó
+// $18.000 para entrar $22.000. Sin la columna `facturado` se ven iguales.
+chequear("facturado del primero = $288.000", rcup.filas[0].facturado === 288000, rcup.filas[0].facturado);
+chequear("facturado del segundo = $22.000",
+  rcup.filas.find(f => f.code === "VERANO20")?.facturado === 22000);
+chequear("facturado total $310.000", rcup.facturadoTotal === 310000, rcup.facturadoTotal);
+chequear("el pedido sin cupon no suma al facturado", rcup.facturadoTotal !== 340000);
+
+// ── Los premios de la ruleta, aparte ──
+chequear("el premio canjeado no ensucia el ranking",
+  !rcup.filas.some(f => f.code.startsWith("WIN-")), rcup.filas.map(f => f.code));
+chequear("la ruleta cuenta su uso aparte", rcup.ruleta.usos === 1, rcup.ruleta);
+chequear("y su descuento aparte", rcup.ruleta.descuento === 5000, rcup.ruleta.descuento);
+chequear("y lo que facturo", rcup.ruleta.facturado === 45000, rcup.ruleta.facturado);
+chequear("el descuento de la ruleta NO entra en el total propio",
+  rcup.descuentoTotal === 50000, rcup.descuentoTotal);
+
+// ── Los que no se usaron ──
+chequear("SINUSO aparece", rcup.sinUsar.some(c => c.code === "SINUSO"), rcup.sinUsar);
+chequear("el apagado no aparece", !rcup.sinUsar.some(c => c.code === "APAGADO"));
+chequear("el vencido no aparece", !rcup.sinUsar.some(c => c.code === "VIEJO"));
+chequear("el premio sin canjear no aparece", !rcup.sinUsar.some(c => c.code.startsWith("WIN-")));
+chequear("los usados no aparecen", !rcup.sinUsar.some(c => c.code === "BIENVENIDA10"));
+chequear("queda uno solo sin usar", rcup.sinUsar.length === 1, rcup.sinUsar.map(c => c.code));
+
 /* ── Promociones ──────────────────────────────────────────────────────────── */
 console.log("\n3) Promociones");
 
@@ -93,14 +138,14 @@ const p = (name: string | null, label: string, savings: number): PromoAplicada =
   ({ name, label, type: "PERCENT", savings });
 
 const pedidosPromo = [
-  { applied: [p("3x2 pantalones", "3x2", 60000)], freeShipping: null },
-  { applied: [p("3x2 pantalones", "3x2", 60000)], freeShipping: null },
+  { applied: [p("3x2 pantalones", "3x2", 60000)], freeShipping: null, total: 120000 },
+  { applied: [p("3x2 pantalones", "3x2", 60000)], freeShipping: null, total: 120000 },
   // UN pedido con DOS promos distintas: cuenta una vez como pedido, dos filas.
-  { applied: [p("3x2 pantalones", "3x2", 60000), p("20% camperas", "20% OFF", 9000)], freeShipping: null },
-  { applied: [p("20% camperas", "20% OFF", 9000)], freeShipping: p(null, "Envío gratis", 5000) },
-  { applied: [], freeShipping: null },  // sin promo
+  { applied: [p("3x2 pantalones", "3x2", 60000), p("20% camperas", "20% OFF", 9000)], freeShipping: null, total: 200000 },
+  { applied: [p("20% camperas", "20% OFF", 9000)], freeShipping: p(null, "Envío gratis", 5000), total: 40000 },
+  { applied: [], freeShipping: null, total: 15000 },  // sin promo
 ];
-const rp = resumirPromos(pedidosPromo);
+const rp = resumirPromos(pedidosPromo, ["3x2 pantalones", "20% camperas", "Nunca aplicada", "  "]);
 
 chequear("3 promos distintas", rp.filas.length === 3, rp.filas.map(f => f.clave));
 chequear("el 3x2 va primero con 3 pedidos", rp.filas[0].pedidos === 3, rp.filas[0]);
@@ -115,17 +160,38 @@ chequear("el envio gratis entra como una promo mas",
 chequear("ahorro total $203.000", rp.ahorroTotal === 203000, rp.ahorroTotal);
 chequear("los pedidos sin promo no cuentan", rp.pedidosConPromo !== 5);
 
+// ── Lo que facturaron ──
+chequear("el 3x2 facturo $440.000", rp.filas[0].facturado === 440000, rp.filas[0].facturado);
+chequear("el envio gratis facturo $40.000",
+  rp.filas.find(f => f.etiqueta === "Envío gratis")?.facturado === 40000);
+// LA trampa, otra vez: el pedido con dos promos suma su total entero en las dos
+// filas. El total tiene que contarse por PEDIDO o sale $720.000 sobre $480.000.
+chequear("facturado total $480.000, contado por pedido", rp.facturadoTotal === 480000, rp.facturadoTotal);
+chequear("la suma de la columna SI da mas que el total",
+  rp.filas.reduce((s, f) => s + f.facturado, 0) === 720000);
+chequear("el pedido sin promo no suma al facturado", rp.facturadoTotal !== 495000);
+
+// ── Las que no se aplicaron nunca ──
+chequear("la promo que nunca entro aparece",
+  rp.sinUsar.length === 1 && rp.sinUsar[0] === "Nunca aplicada", rp.sinUsar);
+chequear("las que si entraron no aparecen", !rp.sinUsar.includes("3x2 pantalones"));
+chequear("un nombre vacio no se cuela", !rp.sinUsar.some(n => n.trim() === ""));
+chequear("sin lista de activas no inventa nada",
+  resumirPromos(pedidosPromo).sinUsar.length === 0);
+
 // Misma promo repetida DENTRO de un pedido: es un pedido, no dos.
 const repetida = resumirPromos([
-  { applied: [p("2x1", "2x1", 1000), p("2x1", "2x1", 1500)], freeShipping: null },
+  { applied: [p("2x1", "2x1", 1000), p("2x1", "2x1", 1500)], freeShipping: null, total: 9000 },
 ]);
 chequear("promo repetida en un pedido cuenta 1 pedido", repetida.filas[0].pedidos === 1, repetida.filas[0]);
 chequear("pero suma los dos ahorros", repetida.filas[0].ahorro === 2500, repetida.filas[0].ahorro);
+chequear("y el total del pedido se cuenta una sola vez",
+  repetida.filas[0].facturado === 9000 && repetida.facturadoTotal === 9000, repetida.filas[0].facturado);
 
 // Dos campañas distintas con la MISMA etiqueta visible no se mezclan.
 const mismaEtiqueta = resumirPromos([
-  { applied: [p("Verano remeras", "20% OFF", 1000)], freeShipping: null },
-  { applied: [p("Invierno camperas", "20% OFF", 2000)], freeShipping: null },
+  { applied: [p("Verano remeras", "20% OFF", 1000)], freeShipping: null, total: 5000 },
+  { applied: [p("Invierno camperas", "20% OFF", 2000)], freeShipping: null, total: 8000 },
 ]);
 chequear("dos campañas con la misma etiqueta quedan separadas",
   mismaEtiqueta.filas.length === 2, mismaEtiqueta.filas.map(f => f.clave));
