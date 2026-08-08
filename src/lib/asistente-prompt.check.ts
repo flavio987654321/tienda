@@ -45,8 +45,8 @@ const snapshotA: StoreSnapshot = {
   agotadoQueMasVendias: "Jean recto",
   marketing: {
     cuponesActivos: 3, cuponesTope: 10, cuponesVencidosActivos: 1,
-    cuponesSinUsoViejos: 2, cuponMasUsado: { code: "VERANO20", usos: 14, descuento: 38_000, facturado: 420_000 },
-    promosVivas: 2, promosTope: 5, promoMasUsada: { nombre: "3x2 en remeras", pedidos: 8, ahorro: 51_000, facturado: 260_000 },
+    cuponesSinUsoViejos: 2, cuponMasUsado: { code: "VERANO20", usos: 14, descuento: 38_000, facturado: 420_000, ganancia: 150_000 },
+    promosVivas: 2, promosTope: 5, promoMasUsada: { nombre: "3x2 en remeras", pedidos: 8, ahorro: 51_000, facturado: 260_000, ganancia: 80_000 },
     margenPromedio: 42, productosSinCosto: 0,
   },
 };

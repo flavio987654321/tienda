@@ -73,6 +73,47 @@ export type ProfitOrderItem = {
   dateStr: string;
 };
 
+/** Un ítem con el pedido al que pertenece, para poder cerrar la cuenta por pedido. */
+export type ItemDePedido = {
+  orderId: string;
+  quantity: number;
+  price: number;
+  lineTotal: number | null;
+  costAtSale: number | null;
+  orderSubtotal: number;
+  orderDiscount: number;
+};
+
+/**
+ * Ganancia de cada pedido: lo que facturó menos el costo de sus productos, con
+ * el descuento del cupón ya prorrateado entre los ítems (lo hace
+ * `calcItemNetRevenue`) y con las promos por cantidad ya adentro de `lineTotal`.
+ *
+ * Existe porque "facturado" no alcanza para decidir: dos cupones que traen la
+ * misma plata dejan cosas muy distintas según el margen de lo que se llevaron.
+ *
+ * Un pedido vale `null` —no 0— cuando ninguno de sus ítems tiene el costo
+ * cargado. La diferencia es todo: mostrar "no sé" como "cero de ganancia" haría
+ * que un cupón bueno con los costos a medio cargar se viera peor que uno malo
+ * con todo cargado, que es exactamente al revés.
+ */
+export function gananciaPorPedido(items: ItemDePedido[]): Map<string, number | null> {
+  const acum = new Map<string, { suma: number; conCosto: boolean }>();
+
+  for (const it of items) {
+    const grossRevenue = it.lineTotal ?? it.price * it.quantity;
+    const netRevenue = calcItemNetRevenue(grossRevenue, it.orderSubtotal, it.orderDiscount);
+    const entry = acum.get(it.orderId) ?? { suma: 0, conCosto: false };
+    if (it.costAtSale != null) {
+      entry.suma += netRevenue - it.costAtSale * it.quantity;
+      entry.conCosto = true;
+    }
+    acum.set(it.orderId, entry);
+  }
+
+  return new Map([...acum].map(([orderId, e]) => [orderId, e.conCosto ? e.suma : null]));
+}
+
 export type ProductProfitSummary = {
   quantity: number;
   netRevenue: number;

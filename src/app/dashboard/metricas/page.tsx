@@ -10,8 +10,8 @@ import type { LucideIcon } from "lucide-react";
 import { statusLabel } from "@/lib/utils";
 import { parseOrderPromoSummary } from "@/lib/email";
 import {
-  resumirCarritos, resumirCupones, resumirPromos,
-  type CarritoCrudo, type CuponCrudo, type PedidoConCupon,
+  resumirCarritos, resumirCupones, resumirPromos, compararCompra, MINIMO_PARA_COMPARAR,
+  type CarritoCrudo, type CuponCrudo,
 } from "@/lib/metricas-marketing";
 import { armarResumen } from "@/lib/resumen-mes";
 import { ESTADOS_VENTA_CONFIRMADA_LISTA } from "@/lib/order-status";
@@ -33,7 +33,7 @@ import {
 } from "lucide-react";
 import { ExportButtons } from "./ExportButtons";
 import ShareStatsButton from "./ShareStatsButton";
-import { aggregateProfitability, calcVehicleProfit, type ProfitOrderItem } from "@/lib/margin";
+import { aggregateProfitability, calcVehicleProfit, gananciaPorPedido, type ProfitOrderItem } from "@/lib/margin";
 
 // ─── Rango de fechas ──────────────────────────────────────────────────────────
 // Todas las comparaciones usan ventanas de igual longitud (período actual vs.
@@ -286,18 +286,27 @@ interface KPICardProps {
    El número va SIEMPRE escrito al lado, no sólo en la barra: es lo que hace que
    la tarjeta se pueda leer sin depender del color ni del largo.
 
-   Los dos montos van en un renglón propio abajo de la barra, y no apretados a su
+   Los montos van en un renglón propio abajo de la barra, y no apretados a su
    derecha como estaba antes. Antes ahí iba un solo número —lo que el cupón
-   costó— y entraba justo; con dos, en una tarjeta de ~296px de un teléfono, la
+   costó— y entraba justo; con tres, en una tarjeta de ~296px de un teléfono, la
    barra se quedaba sin lugar y los montos se partían. En su propio renglón usan
    todo el ancho y de paso la barra queda entera, que es lo que se compara de un
    vistazo.
 
-   Y son DOS montos porque uno solo no responde nada. "−$12.000" puede ser el
-   mejor cupón del mes o el peor: sin lo que entró al lado, los dos casos se ven
-   idénticos. */
+   Y son TRES montos porque uno solo no responde nada, y dos tampoco alcanzan:
+
+     - "te costó $12.000" puede ser el mejor cupón del mes o el peor;
+     - "trajo $180.000" tampoco cierra, porque facturar mucho con margen chico
+       deja menos que facturar poco con margen grande.
+
+   El que decide es "te dejó", y por eso va primero y es el único en negro. Los
+   otros dos quedan al lado en gris: explican de dónde sale, sin competirle.
+
+   Cuando falta el costo de los productos, "te dejó" NO se muestra como cero: se
+   dice que falta el dato. Un cero se lee como "no ganaste nada", que es una
+   afirmación, y acá lo cierto es que no se sabe. */
 function BarrasRanking({
-  filas, color, unidad,
+  filas, color, unidad, href, cta,
 }: {
   filas: {
     clave: string; titulo: string; sub: string | null; valor: number;
@@ -305,13 +314,20 @@ function BarrasRanking({
     trajo: number;
     /** Lo que resignaste para que entrara. */
     costo: number;
+    /** Lo que quedó después del costo de los productos. `null` = no se sabe. */
+    dejo: number | null;
+    /** Pedidos del grupo sin costo cargado: con esto > 0, `dejo` se queda corto. */
+    pedidosSinCosto: number;
   }[];
   color: string;
   unidad: string;
+  /** A dónde mandar cuando la lista no entra. Sin esto el "y N más" es un callejón. */
+  href: string;
+  cta: string;
 }) {
   const maximo = Math.max(...filas.map((f) => f.valor), 1);
   return (
-    <div className="space-y-3.5">
+    <div className="space-y-4">
       {filas.slice(0, 5).map((f) => {
         const pct = Math.round((f.valor / maximo) * 100);
         return (
@@ -331,16 +347,57 @@ function BarrasRanking({
             <div className="h-1.5 rounded-full bg-gray-100">
               <div className={`h-1.5 rounded-full ${color}`} style={{ width: `${pct}%` }} />
             </div>
-            <p className="mt-1 text-xs text-gray-400 tabular-nums">
-              Trajo <span className="font-semibold text-gray-600">{money(f.trajo)}</span>
-              {" · te costó "}{money(f.costo)}
+            <p className="mt-1.5 text-xs leading-relaxed text-gray-400 tabular-nums">
+              {f.dejo !== null ? (
+                <>
+                  Te dejó <span className="font-bold text-gray-900">{money(f.dejo)}</span>
+                  {f.pedidosSinCosto > 0 && (
+                    <span className="text-amber-600">
+                      {" "}(de {f.valor - f.pedidosSinCosto} de {f.valor} — al resto le falta el costo)
+                    </span>
+                  )}
+                </>
+              ) : (
+                <span className="text-amber-600">Sin el costo cargado no se puede saber la ganancia</span>
+              )}
+              <br />
+              Trajo {money(f.trajo)} · descontaste {money(f.costo)}
             </p>
           </div>
         );
       })}
+      {/* El podio son 5 y el resto se ve en su pantalla. Antes acá decía "y N más"
+          y no llevaba a ningún lado: la tarjeta mide unos 296px en un teléfono,
+          así que meterle cuarenta filas no es una opción — pero dejar el número
+          suelto sin salida es peor, porque nombra algo que después no se puede
+          mirar. */}
       {filas.length > 5 && (
-        <p className="text-xs text-gray-400 pt-1">y {filas.length - 5} más</p>
+        <p className="pt-1 text-xs text-gray-400">
+          y {filas.length - 5} más ·{" "}
+          <Link href={href} className="font-semibold text-indigo-600 hover:text-indigo-700 print:hidden">
+            {cta} →
+          </Link>
+        </p>
       )}
+    </div>
+  );
+}
+
+/* ── Las tres palabras ───────────────────────────────────────────────────────
+   La aclaración de qué es cada monto, arriba del ranking y SIEMPRE visible.
+
+   No va como globito de ayuda: los tooltips de este panel se abren con el mouse
+   encima, y en un teléfono eso no existe. Una explicación que en el celular no
+   se puede abrir es una explicación que no está.
+
+   Es corta a propósito. Tres renglones que se leen una vez y no se vuelven a
+   mirar valen más que un párrafo que se saltea siempre. */
+function QueEsCada({ unidad }: { unidad: string }) {
+  return (
+    <div className="mb-4 rounded-xl bg-gray-50 px-3 py-2.5 text-xs leading-relaxed text-gray-500">
+      <p><span className="font-semibold text-gray-700">Trajo</span> — lo que facturaron esos {unidad}.</p>
+      <p><span className="font-semibold text-gray-700">Descontaste</span> — lo que resignaste para que entraran.</p>
+      <p><span className="font-semibold text-gray-700">Te dejó</span> — lo que quedó después del costo de los productos y del descuento. Es el que decide.</p>
     </div>
   );
 }
@@ -516,7 +573,10 @@ export default async function MetricasPage({
   }
 
   // ── Queries tienda normal (no AUTOS) ──
-  let ordersPeriod: { total: number; status: string; createdAt: Date }[] = [];
+  // `couponId` y `subtotal` son para comparar el tamaño de la compra con cupón
+  // contra sin cupón. Van acá y no en una query nueva: es la misma lista de
+  // pedidos del período que ya se estaba trayendo.
+  let ordersPeriod: { total: number; subtotal: number; couponId: string | null; status: string; createdAt: Date }[] = [];
   let revenuePrevAgg: { _sum: { total: number | null } } = { _sum: { total: null } };
   let ordersPrevCount = 0;
   let topProducts: { productId: string; _sum: { quantity: number | null } }[] = [];
@@ -536,19 +596,21 @@ export default async function MetricasPage({
   // veces) y porque el CSV va a necesitar exactamente los mismos números.
   let carritosRaw: CarritoCrudo[] = [];
   let cuponesRaw: CuponCrudo[] = [];
-  let pedidosConCupon: PedidoConCupon[] = [];
-  let pedidosConPromoRaw: { promoSummary: string | null; total: number }[] = [];
+  // En crudo: la ganancia de cada pedido no viene de estas queries sino de los
+  // ítems, así que se junta más abajo y recién ahí se arman los tipos finales.
+  let pedidosConCuponRaw: { id: string; couponId: string | null; discountAmount: number; total: number }[] = [];
+  let pedidosConPromoRaw: { id: string; promoSummary: string | null; total: number }[] = [];
   let promosActivasRaw: { name: string }[] = [];
 
   if (!isAutos) {
     [
       ordersPeriod, revenuePrevAgg, ordersPrevCount, topProducts, ordersByStatus,
-      carritosRaw, cuponesRaw, pedidosConCupon, pedidosConPromoRaw, promosActivasRaw,
+      carritosRaw, cuponesRaw, pedidosConCuponRaw, pedidosConPromoRaw, promosActivasRaw,
       ordersPrevConfirmedCount, sinDespacharAgg,
     ] = await Promise.all([
       prisma.order.findMany({
         where: { storeId: store.id, createdAt: { gte: periodStart, lt: periodEndExclusive }, status: { not: "CANCELLED" } },
-        select: { total: true, status: true, createdAt: true },
+        select: { total: true, subtotal: true, couponId: true, status: true, createdAt: true },
         orderBy: { createdAt: "asc" },
       }),
       prisma.order.aggregate({
@@ -624,7 +686,7 @@ export default async function MetricasPage({
           status: { in: CONFIRMED_ORDER_STATUSES },
           couponId: { not: null },
         },
-        select: { couponId: true, discountAmount: true, total: true },
+        select: { id: true, couponId: true, discountAmount: true, total: true },
       }),
 
       prisma.order.findMany({
@@ -634,7 +696,7 @@ export default async function MetricasPage({
           status: { in: CONFIRMED_ORDER_STATUSES },
           promoSummary: { not: null },
         },
-        select: { promoSummary: true, total: true },
+        select: { id: true, promoSummary: true, total: true },
       }),
 
       // Las promos que estuvieron vivas en el período — para saber cuáles NO se
@@ -679,31 +741,18 @@ export default async function MetricasPage({
   }
 
   const resumenCarritos = resumirCarritos(carritosRaw);
-  const resumenCupones = resumirCupones(cuponesRaw, pedidosConCupon);
-  const resumenPromos = resumirPromos(
-    pedidosConPromoRaw.map((o) => {
-      const { appliedPromos, freeShippingPromo } = parseOrderPromoSummary(o.promoSummary);
-      return { applied: appliedPromos, freeShipping: freeShippingPromo, total: o.total };
-    }),
-    promosActivasRaw.map((p) => p.name)
-  );
-  // El bloque entero se esconde si no hay NADA que contar. Tres tarjetas vacías
-  // seguidas no informan: sólo hacen scrollear.
-  //
-  // "Nada que contar" ahora incluye lo que NO pasó: un cupón vigente que nadie
-  // usó y una promo que no se aplicó nunca son motivo suficiente para mostrar el
-  // bloque. Antes, una tienda con tres campañas fallidas y cero usos veía la
-  // pantalla como si no tuviera marketing — justo el caso donde más hacía falta.
-  const hayMarketing =
-    resumenCarritos.cantidad > 0 ||
-    resumenCupones.filas.length > 0 || resumenCupones.sinUsar.length > 0 ||
-    resumenCupones.ruleta.usos > 0 ||
-    resumenPromos.filas.length > 0 || resumenPromos.sinUsar.length > 0;
+
+  // Los de cupones y promos van más abajo, después de la rentabilidad: necesitan
+  // la ganancia de cada pedido, y esa sale de los ítems.
 
   // ── Rentabilidad (no-AUTOS) ── Una sola query que cubre período actual + anterior
   // (misma ventana doble que ya usa el resto de la página) para no duplicar el pedido a la DB.
   let profitCurrentAgg = aggregateProfitability([]);
   let profitPrevTotalProfit = 0;
+  // Ganancia real de cada pedido, para poder decir cuánto DEJÓ cada cupón y cada
+  // promo y no sólo cuánto facturaron. Sale de los mismos ítems que ya se traen
+  // acá: no hay una query más por esto.
+  let gananciaDePedido = new Map<string, number | null>();
   if (!isAutos) {
     const rawProfitItems = await prisma.orderItem.findMany({
       where: {
@@ -714,6 +763,7 @@ export default async function MetricasPage({
         },
       },
       select: {
+        orderId: true,
         productId: true, quantity: true, price: true, lineTotal: true, costAtSale: true,
         order: { select: { subtotal: true, discountAmount: true, createdAt: true } },
       },
@@ -730,7 +780,58 @@ export default async function MetricasPage({
     }
     profitCurrentAgg = aggregateProfitability(currentItems);
     profitPrevTotalProfit = aggregateProfitability(prevItems).totalProfit;
+    gananciaDePedido = gananciaPorPedido(
+      rawProfitItems.map((it) => ({
+        orderId: it.orderId, quantity: it.quantity, price: it.price,
+        lineTotal: it.lineTotal, costAtSale: it.costAtSale,
+        orderSubtotal: it.order.subtotal, orderDiscount: it.order.discountAmount,
+      }))
+    );
   }
+
+  // ── Marketing, ahora sí: cupones y promociones con su ganancia ──
+  const resumenCupones = resumirCupones(
+    cuponesRaw,
+    pedidosConCuponRaw.map((o) => ({
+      couponId: o.couponId,
+      discountAmount: o.discountAmount,
+      total: o.total,
+      ganancia: gananciaDePedido.get(o.id) ?? null,
+    }))
+  );
+  const resumenPromos = resumirPromos(
+    pedidosConPromoRaw.map((o) => {
+      const { appliedPromos, freeShippingPromo } = parseOrderPromoSummary(o.promoSummary);
+      return {
+        applied: appliedPromos,
+        freeShipping: freeShippingPromo,
+        total: o.total,
+        ganancia: gananciaDePedido.get(o.id) ?? null,
+      };
+    }),
+    promosActivasRaw.map((p) => p.name)
+  );
+
+  // ¿La gente que usa cupón compra más que la que no? Sobre pedidos CONFIRMADOS,
+  // los mismos que cuenta el resto de la pantalla.
+  const comparacionCompra = compararCompra(
+    ordersPeriod
+      .filter((o) => CONFIRMED_ORDER_STATUSES.includes(o.status))
+      .map((o) => ({ couponId: o.couponId, subtotal: o.subtotal }))
+  );
+
+  // El bloque entero se esconde si no hay NADA que contar. Tres tarjetas vacías
+  // seguidas no informan: sólo hacen scrollear.
+  //
+  // "Nada que contar" ahora incluye lo que NO pasó: un cupón vigente que nadie
+  // usó y una promo que no se aplicó nunca son motivo suficiente para mostrar el
+  // bloque. Antes, una tienda con tres campañas fallidas y cero usos veía la
+  // pantalla como si no tuviera marketing — justo el caso donde más hacía falta.
+  const hayMarketing =
+    resumenCarritos.cantidad > 0 ||
+    resumenCupones.filas.length > 0 || resumenCupones.sinUsar.length > 0 ||
+    resumenCupones.ruleta.usos > 0 ||
+    resumenPromos.filas.length > 0 || resumenPromos.sinUsar.length > 0;
 
   // ── #7c — el envío que la tienda regaló en el período ──
   // Va APARTE de la ganancia por producto a propósito: es un costo por PEDIDO, y
@@ -1348,18 +1449,38 @@ export default async function MetricasPage({
                 </div>
               ) : (
                 <>
-                  {/* Arriba va lo que ENTRÓ, no lo que se resignó. El número grande
-                      era el descuento, y un titular en negativo hace leer la
-                      tarjeta como una pérdida: un cupón no es un gasto, es plata
-                      que dejás para que entre otra. El costo sigue estando, abajo
-                      y en la misma línea, que es donde se lee en contexto. */}
+                  {/* El titular es la GANANCIA, no lo facturado y mucho menos el
+                      descuento. Era el descuento, y un número grande en negativo
+                      hace leer la tarjeta como una pérdida: un cupón no es un
+                      gasto, es plata que dejás para que entre otra. Facturado y
+                      descuento pasan abajo, que es donde explican de dónde sale
+                      el de arriba en vez de competirle. */}
                   <div className="mb-4">
-                    <p className="text-2xl font-bold text-gray-900">{money(resumenCupones.facturadoTotal)}</p>
-                    <p className="text-xs text-gray-400 mt-0.5">
-                      facturado en {resumenCupones.usosTotales} pedido{resumenCupones.usosTotales !== 1 ? "s" : ""} con cupón
-                      {" · resignaste "}{money(resumenCupones.descuentoTotal)}
-                    </p>
+                    {resumenCupones.gananciaTotal !== null ? (
+                      <>
+                        <p className="text-2xl font-bold text-gray-900">
+                          Te dejó {money(resumenCupones.gananciaTotal)}
+                        </p>
+                        <p className="text-xs text-gray-400 mt-0.5">
+                          de {money(resumenCupones.facturadoTotal)} facturados en {resumenCupones.usosTotales} pedido{resumenCupones.usosTotales !== 1 ? "s" : ""},
+                          {" "}descontando {money(resumenCupones.descuentoTotal)}
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-2xl font-bold text-gray-900">{money(resumenCupones.facturadoTotal)}</p>
+                        <p className="text-xs text-gray-400 mt-0.5">
+                          facturado en {resumenCupones.usosTotales} pedido{resumenCupones.usosTotales !== 1 ? "s" : ""} con cupón
+                          {" · descontaste "}{money(resumenCupones.descuentoTotal)}
+                        </p>
+                        <p className="text-xs text-amber-600 mt-1.5 leading-relaxed">
+                          Cargá el costo de tus productos y acá vas a ver cuánto te dejaron de verdad.{" "}
+                          <Link href="/dashboard/productos" className="font-semibold underline print:hidden">Ir a Productos</Link>
+                        </p>
+                      </>
+                    )}
                   </div>
+                  <QueEsCada unidad="pedidos" />
                   <BarrasRanking
                     filas={resumenCupones.filas.map((f) => ({
                       clave: f.id,
@@ -1368,11 +1489,43 @@ export default async function MetricasPage({
                       valor: f.usos,
                       trajo: f.facturado,
                       costo: f.descuento,
+                      dejo: f.ganancia,
+                      pedidosSinCosto: f.pedidosSinCosto,
                     }))}
                     color="bg-indigo-500"
                     unidad="uso"
+                    href="/dashboard/cupones"
+                    cta="Ver todos los cupones"
                   />
                 </>
+              )}
+
+              {/* ¿El cupón hace que compren más, o se lo lleva quien ya compraba?
+                  Es lo más cerca que se puede estar de "vendí GRACIAS al cupón"
+                  sin hacer un experimento, y la única de las dos lecturas sobre
+                  la que se puede hacer algo. Sólo aparece con base suficiente de
+                  los dos lados: ver `MINIMO_PARA_COMPARAR`. */}
+              {comparacionCompra.diferenciaPct !== null && (
+                <div className="mt-5 border-t border-gray-100 pt-3.5">
+                  <p className="text-xs font-semibold text-gray-500">¿Compran más con cupón?</p>
+                  <p className="mt-1.5 text-sm leading-relaxed text-gray-600 tabular-nums">
+                    <span className="font-bold text-gray-900">{money(comparacionCompra.conCupon.promedio)}</span> con cupón
+                    {" contra "}
+                    <span className="font-bold text-gray-900">{money(comparacionCompra.sinCupon.promedio)}</span> sin cupón
+                    {" — "}
+                    <span className={comparacionCompra.diferenciaPct >= 0 ? "font-semibold text-emerald-600" : "font-semibold text-rose-600"}>
+                      {comparacionCompra.diferenciaPct >= 0 ? "+" : ""}{comparacionCompra.diferenciaPct}%
+                    </span>
+                  </p>
+                  <p className="mt-1 text-xs leading-relaxed text-gray-400">
+                    {comparacionCompra.diferenciaPct >= MINIMO_PARA_COMPARAR
+                      ? "Quien usa cupón se lleva más que el resto: el cupón está empujando la compra."
+                      : comparacionCompra.diferenciaPct <= -MINIMO_PARA_COMPARAR
+                        ? "Quien usa cupón se lleva menos que el resto: le estás descontando a gente que ya iba a comprar."
+                        : "Compran casi lo mismo con cupón que sin cupón."}
+                    {" "}Es el promedio de lo que se llevaron, sin contar el envío y antes del descuento — no es el ticket promedio de arriba, que va sobre el total del pedido.
+                  </p>
+                </div>
               )}
 
               {/* Los premios de la ruleta, aparte. Iban mezclados en el ranking de
@@ -1390,9 +1543,14 @@ export default async function MetricasPage({
                       {" canjeado"}{resumenCupones.ruleta.usos !== 1 ? "s" : ""}
                     </p>
                   </div>
-                  <p className="mt-1 text-xs text-gray-400 tabular-nums">
-                    Trajo <span className="font-semibold text-gray-600">{money(resumenCupones.ruleta.facturado)}</span>
-                    {" · te costó "}{money(resumenCupones.ruleta.descuento)}
+                  <p className="mt-1.5 text-xs leading-relaxed text-gray-400 tabular-nums">
+                    {resumenCupones.ruleta.ganancia !== null ? (
+                      <>Te dejó <span className="font-bold text-gray-900">{money(resumenCupones.ruleta.ganancia)}</span></>
+                    ) : (
+                      <span className="text-amber-600">Sin el costo cargado no se puede saber la ganancia</span>
+                    )}
+                    <br />
+                    Trajo {money(resumenCupones.ruleta.facturado)} · descontaste {money(resumenCupones.ruleta.descuento)}
                   </p>
                 </div>
               )}
@@ -1426,15 +1584,34 @@ export default async function MetricasPage({
                 </div>
               ) : (
                 <>
-                  {/* Mismo criterio que en Cupones: arriba lo que entró, y el costo
-                      al lado. Una promo tampoco es un gasto. */}
+                  {/* Mismo criterio que en Cupones: arriba la ganancia, y de dónde
+                      sale abajo. Una promo tampoco es un gasto. */}
                   <div className="mb-4">
-                    <p className="text-2xl font-bold text-gray-900">{money(resumenPromos.facturadoTotal)}</p>
-                    <p className="text-xs text-gray-400 mt-0.5">
-                      facturado en {resumenPromos.pedidosConPromo} pedido{resumenPromos.pedidosConPromo !== 1 ? "s" : ""} con promo
-                      {" · resignaste "}{money(resumenPromos.ahorroTotal)}
-                    </p>
+                    {resumenPromos.gananciaTotal !== null ? (
+                      <>
+                        <p className="text-2xl font-bold text-gray-900">
+                          Te dejó {money(resumenPromos.gananciaTotal)}
+                        </p>
+                        <p className="text-xs text-gray-400 mt-0.5">
+                          de {money(resumenPromos.facturadoTotal)} facturados en {resumenPromos.pedidosConPromo} pedido{resumenPromos.pedidosConPromo !== 1 ? "s" : ""},
+                          {" "}resignando {money(resumenPromos.ahorroTotal)}
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-2xl font-bold text-gray-900">{money(resumenPromos.facturadoTotal)}</p>
+                        <p className="text-xs text-gray-400 mt-0.5">
+                          facturado en {resumenPromos.pedidosConPromo} pedido{resumenPromos.pedidosConPromo !== 1 ? "s" : ""} con promo
+                          {" · resignaste "}{money(resumenPromos.ahorroTotal)}
+                        </p>
+                        <p className="text-xs text-amber-600 mt-1.5 leading-relaxed">
+                          Cargá el costo de tus productos y acá vas a ver cuánto te dejaron de verdad.{" "}
+                          <Link href="/dashboard/productos" className="font-semibold underline print:hidden">Ir a Productos</Link>
+                        </p>
+                      </>
+                    )}
                   </div>
+                  <QueEsCada unidad="pedidos" />
                   <BarrasRanking
                     filas={resumenPromos.filas.map((f) => ({
                       clave: f.clave,
@@ -1443,10 +1620,22 @@ export default async function MetricasPage({
                       valor: f.pedidos,
                       trajo: f.facturado,
                       costo: f.ahorro,
+                      dejo: f.ganancia,
+                      pedidosSinCosto: f.pedidosSinCosto,
                     }))}
                     color="bg-emerald-500"
                     unidad="pedido"
+                    href="/dashboard/promociones"
+                    cta="Ver todas las promos"
                   />
+                  {/* Un pedido con dos promos aparece en dos filas y suma su plata
+                      en las dos: sin este aviso, alguien suma la columna a mano y
+                      cree que la pantalla está mal. */}
+                  {resumenPromos.filas.reduce((s, f) => s + f.pedidos, 0) > resumenPromos.pedidosConPromo && (
+                    <p className="mt-3 text-xs leading-relaxed text-gray-400">
+                      Un pedido puede llevar dos promos: ahí aparece en las dos filas, así que la lista suma más que el total de arriba.
+                    </p>
+                  )}
                 </>
               )}
 

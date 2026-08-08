@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth-session";
 import { prisma } from "@/lib/prisma";
-import { aggregateProfitability, type ProfitOrderItem } from "@/lib/margin";
+import { aggregateProfitability, gananciaPorPedido, type ProfitOrderItem } from "@/lib/margin";
 import { parseOrderPromoSummary } from "@/lib/email";
-import { resumirCarritos, resumirCupones, resumirPromos } from "@/lib/metricas-marketing";
+import { resumirCarritos, resumirCupones, resumirPromos, compararCompra } from "@/lib/metricas-marketing";
 import { armarResumen } from "@/lib/resumen-mes";
 import { ESTADOS_VENTA_CONFIRMADA_LISTA } from "@/lib/order-status";
 import {
@@ -25,6 +25,14 @@ function csv(valor: string): string {
   const texto = String(valor ?? "");
   return /[",\r\n]/.test(texto) ? `"${texto.replace(/"/g, '""')}"` : texto;
 }
+
+/**
+ * Un monto que puede no saberse. Celda VACÍA cuando es `null`, nunca 0: en una
+ * planilla un 0 se suma, se promedia y se grafica como si fuera un dato, y ahí
+ * un cupón al que le falta el costo cargado arrastraría para abajo la ganancia
+ * de todos. Vacío es lo único que Excel y Sheets tratan como "no hay dato".
+ */
+const montoOVacio = (n: number | null) => (n === null ? "" : String(Math.round(n)));
 
 export async function GET(req: NextRequest) {
   const user = await getCurrentUser();
@@ -76,7 +84,9 @@ export async function GET(req: NextRequest) {
   ] = await Promise.all([
     prisma.order.findMany({
       where: { storeId: store.id, createdAt: { gte: startDate, lt: endDate }, status: { not: "CANCELLED" } },
-      select: { total: true, status: true, createdAt: true },
+      // `couponId` y `subtotal` son para comparar el tamaño de la compra con
+      // cupón contra sin cupón — la misma lista que ya se traía.
+      select: { total: true, subtotal: true, couponId: true, status: true, createdAt: true },
     }),
     prisma.storeView.findMany({
       where: { storeId: store.id, date: { gte: days[0].dateStr, lte: days[days.length - 1].dateStr } },
@@ -103,14 +113,14 @@ export async function GET(req: NextRequest) {
         storeId: store.id, createdAt: { gte: startDate, lt: endDate },
         status: { in: CONFIRMED }, couponId: { not: null },
       },
-      select: { couponId: true, discountAmount: true, total: true },
+      select: { id: true, couponId: true, discountAmount: true, total: true },
     }),
     prisma.order.findMany({
       where: {
         storeId: store.id, createdAt: { gte: startDate, lt: endDate },
         status: { in: CONFIRMED }, promoSummary: { not: null },
       },
-      select: { promoSummary: true, total: true },
+      select: { id: true, promoSummary: true, total: true },
     }),
     prisma.storePromotion.findMany({
       where: {
@@ -157,14 +167,8 @@ export async function GET(req: NextRequest) {
   ]);
 
   const resumenCarritos = resumirCarritos(carritosRaw);
-  const resumenCupones = resumirCupones(cuponesRaw, pedidosConCupon);
-  const resumenPromos = resumirPromos(
-    pedidosConPromoRaw.map((o) => {
-      const { appliedPromos, freeShippingPromo } = parseOrderPromoSummary(o.promoSummary);
-      return { applied: appliedPromos, freeShipping: freeShippingPromo, total: o.total };
-    }),
-    promosActivasRaw.map((p) => p.name)
-  );
+  // Cupones y promos se arman más abajo: necesitan la ganancia de cada pedido, y
+  // ésa sale de los ítems que se traen en el bloque de rentabilidad.
 
   for (const o of orders) {
     const dateStr = diaArgentino(o.createdAt);
@@ -193,12 +197,14 @@ export async function GET(req: NextRequest) {
     });
     shippingWaivedTotal = waived._sum.shippingWaived ?? 0;
   }
+  let gananciaDePedido = new Map<string, number | null>();
   if (!isAutos) {
     const rawProfitItems = await prisma.orderItem.findMany({
       where: {
         order: { storeId: store.id, status: { in: CONFIRMED }, createdAt: { gte: startDate, lt: endDate } },
       },
       select: {
+        orderId: true,
         productId: true, quantity: true, price: true, lineTotal: true, costAtSale: true,
         order: { select: { subtotal: true, discountAmount: true, createdAt: true } },
       },
@@ -215,7 +221,44 @@ export async function GET(req: NextRequest) {
       day.cost = profitAgg.dailyCost.get(day.dateStr) ?? 0;
       day.profit = profitAgg.dailyProfit.get(day.dateStr) ?? 0;
     }
+    gananciaDePedido = gananciaPorPedido(
+      rawProfitItems.map((it) => ({
+        orderId: it.orderId, quantity: it.quantity, price: it.price,
+        lineTotal: it.lineTotal, costAtSale: it.costAtSale,
+        orderSubtotal: it.order.subtotal, orderDiscount: it.order.discountAmount,
+      }))
+    );
   }
+
+  // ── Marketing, con la ganancia ya disponible ──
+  // De las mismas funciones que la pantalla y con los mismos números: si acá se
+  // recalculara algo, el archivo y la pantalla podrían decir cosas distintas.
+  const resumenCupones = resumirCupones(
+    cuponesRaw,
+    pedidosConCupon.map((o) => ({
+      couponId: o.couponId,
+      discountAmount: o.discountAmount,
+      total: o.total,
+      ganancia: gananciaDePedido.get(o.id) ?? null,
+    }))
+  );
+  const resumenPromos = resumirPromos(
+    pedidosConPromoRaw.map((o) => {
+      const { appliedPromos, freeShippingPromo } = parseOrderPromoSummary(o.promoSummary);
+      return {
+        applied: appliedPromos,
+        freeShipping: freeShippingPromo,
+        total: o.total,
+        ganancia: gananciaDePedido.get(o.id) ?? null,
+      };
+    }),
+    promosActivasRaw.map((p) => p.name)
+  );
+  const comparacionCompra = compararCompra(
+    orders
+      .filter((o) => CONFIRMED.includes(o.status))
+      .map((o) => ({ couponId: o.couponId, subtotal: o.subtotal })),
+  );
 
   const totalRevenue = days.reduce((s, d) => s + d.revenue, 0);
   const totalOrders = days.reduce((s, d) => s + d.orders, 0);
@@ -338,16 +381,30 @@ export async function GET(req: NextRequest) {
     // es la que se lee primero.
     ...(resumenCupones.filas.length > 0 || resumenCupones.ruleta.usos > 0 ? [
       `# CUPONES`,
-      `Codigo,Descuento,Usos,Facturado (ARS),Descontado (ARS),Vencido`,
+      `# Ganancia = lo facturado menos el costo de los productos y menos el descuento. Vacia = esos productos no tienen el costo cargado (no es cero)`,
+      `Codigo,Descuento,Usos,Facturado (ARS),Descontado (ARS),Ganancia (ARS),Pedidos sin costo cargado,Vencido`,
       ...resumenCupones.filas.map(f =>
-        `${csv(f.code)},${csv(f.etiqueta)},${f.usos},${Math.round(f.facturado)},${Math.round(f.descuento)},${f.vencido ? "si" : "no"}`),
-      `TOTAL,,${resumenCupones.usosTotales},${Math.round(resumenCupones.facturadoTotal)},${Math.round(resumenCupones.descuentoTotal)},`,
+        `${csv(f.code)},${csv(f.etiqueta)},${f.usos},${Math.round(f.facturado)},${Math.round(f.descuento)},${montoOVacio(f.ganancia)},${f.pedidosSinCosto},${f.vencido ? "si" : "no"}`),
+      `TOTAL,,${resumenCupones.usosTotales},${Math.round(resumenCupones.facturadoTotal)},${Math.round(resumenCupones.descuentoTotal)},${montoOVacio(resumenCupones.gananciaTotal)},${resumenCupones.pedidosSinCosto},`,
       // Aparte del TOTAL a propósito: si se sumaran juntos, no habría forma de
       // saber cuánto costó la ruleta y cuánto costaron los cupones propios.
       ...(resumenCupones.ruleta.usos > 0 ? [
         `# Los premios de la ruleta van aparte — cada ganador tiene su propio codigo de un solo uso`,
-        `Premios de la ruleta,,${resumenCupones.ruleta.usos},${Math.round(resumenCupones.ruleta.facturado)},${Math.round(resumenCupones.ruleta.descuento)},`,
+        `Premios de la ruleta,,${resumenCupones.ruleta.usos},${Math.round(resumenCupones.ruleta.facturado)},${Math.round(resumenCupones.ruleta.descuento)},${montoOVacio(resumenCupones.ruleta.ganancia)},${resumenCupones.ruleta.pedidosSinCosto},`,
       ] : []),
+      ``,
+    ] : []),
+
+    // ¿El cupón hace que compren más, o se lo lleva quien ya compraba? Es lo más
+    // cerca que se puede estar de "vendí gracias al cupón" sin un experimento.
+    ...(comparacionCompra.diferenciaPct !== null ? [
+      `# COMPRA PROMEDIO CON CUPON VS SIN CUPON`,
+      `# Sobre el subtotal y antes del descuento: mide lo que la persona se llevo, sin el envio de por medio`,
+      `# NO es el "Ticket promedio" de arriba, que va sobre el total del pedido`,
+      `Grupo,Pedidos,Compra promedio (ARS)`,
+      `Con cupon,${comparacionCompra.conCupon.pedidos},${Math.round(comparacionCompra.conCupon.promedio)}`,
+      `Sin cupon,${comparacionCompra.sinCupon.pedidos},${Math.round(comparacionCompra.sinCupon.promedio)}`,
+      `Diferencia (%),,${comparacionCompra.diferenciaPct}`,
       ``,
     ] : []),
 
@@ -362,14 +419,15 @@ export async function GET(req: NextRequest) {
 
     ...(resumenPromos.filas.length > 0 ? [
       `# PROMOCIONES`,
-      `Promocion,Pedidos,Facturado (ARS),Monto resignado (ARS)`,
+      `# Ganancia = lo facturado menos el costo de los productos y menos el descuento. Vacia = falta el costo de esos productos (no es cero)`,
+      `Promocion,Pedidos,Facturado (ARS),Monto resignado (ARS),Ganancia (ARS),Pedidos sin costo cargado`,
       ...resumenPromos.filas.map(f =>
-        `${csv(f.etiqueta)},${f.pedidos},${Math.round(f.facturado)},${Math.round(f.ahorro)}`),
-      // Ni el total de pedidos ni el facturado son la suma de su columna: un
-      // pedido con dos promos aparece en dos filas y suma su total en las dos. Se
-      // aclara para que nadie sume a mano y crea que hay un error en el archivo.
-      `# Un pedido con dos promos aparece en dos filas — por eso las columnas Pedidos y Facturado suman mas que el TOTAL`,
-      `TOTAL,${resumenPromos.pedidosConPromo} pedidos con promo,${Math.round(resumenPromos.facturadoTotal)},${Math.round(resumenPromos.ahorroTotal)}`,
+        `${csv(f.etiqueta)},${f.pedidos},${Math.round(f.facturado)},${Math.round(f.ahorro)},${montoOVacio(f.ganancia)},${f.pedidosSinCosto}`),
+      // Ni el total de pedidos ni el facturado ni la ganancia son la suma de su
+      // columna: un pedido con dos promos aparece en dos filas y suma su plata en
+      // las dos. Se aclara para que nadie sume a mano y crea que hay un error.
+      `# Un pedido con dos promos aparece en dos filas — por eso las columnas Pedidos, Facturado y Ganancia suman mas que el TOTAL`,
+      `TOTAL,${resumenPromos.pedidosConPromo} pedidos con promo,${Math.round(resumenPromos.facturadoTotal)},${Math.round(resumenPromos.ahorroTotal)},${montoOVacio(resumenPromos.gananciaTotal)},${resumenPromos.pedidosSinCosto}`,
       ``,
     ] : []),
 

@@ -104,7 +104,11 @@ function formatMarketing(m: StoreSnapshot["marketing"], esTipoConsultas: boolean
   }
   lineas.push(
     m.cuponMasUsado
-      ? `- El cupón más usado en los últimos 30 días: ${m.cuponMasUsado.code} — ${m.cuponMasUsado.usos} uso${m.cuponMasUsado.usos !== 1 ? "s" : ""}, $${Math.round(m.cuponMasUsado.descuento).toLocaleString("es-AR")} descontados sobre $${Math.round(m.cuponMasUsado.facturado).toLocaleString("es-AR")} facturados en esos pedidos. Los dos números juntos son los que dicen si convino: el descuento solo no distingue un cupón que trae de uno que regala.`
+      ? `- El cupón más usado en los últimos 30 días: ${m.cuponMasUsado.code} — ${m.cuponMasUsado.usos} uso${m.cuponMasUsado.usos !== 1 ? "s" : ""}, $${Math.round(m.cuponMasUsado.descuento).toLocaleString("es-AR")} descontados sobre $${Math.round(m.cuponMasUsado.facturado).toLocaleString("es-AR")} facturados en esos pedidos${
+          m.cuponMasUsado.ganancia !== null
+            ? `, y dejaron $${Math.round(m.cuponMasUsado.ganancia).toLocaleString("es-AR")} de ganancia después del costo de los productos`
+            : ` (la ganancia no se puede saber: esos productos no tienen el costo cargado)`
+        }. El descuento solo no distingue un cupón que trae de uno que regala — para eso está la ganancia.`
       : `- Ningún cupón se usó en los últimos 30 días.`
   );
 
@@ -114,7 +118,11 @@ function formatMarketing(m: StoreSnapshot["marketing"], esTipoConsultas: boolean
       : `- Promociones vivas: ${m.promosVivas} de ${m.promosTope} que permite el plan.`
   );
   if (m.promoMasUsada) {
-    lineas.push(`- La promoción que más se aplicó: "${m.promoMasUsada.nombre}" — en ${m.promoMasUsada.pedidos} pedido${m.promoMasUsada.pedidos !== 1 ? "s" : ""}, $${Math.round(m.promoMasUsada.ahorro).toLocaleString("es-AR")} resignados sobre $${Math.round(m.promoMasUsada.facturado).toLocaleString("es-AR")} facturados en esos pedidos.`);
+    lineas.push(`- La promoción que más se aplicó: "${m.promoMasUsada.nombre}" — en ${m.promoMasUsada.pedidos} pedido${m.promoMasUsada.pedidos !== 1 ? "s" : ""}, $${Math.round(m.promoMasUsada.ahorro).toLocaleString("es-AR")} resignados sobre $${Math.round(m.promoMasUsada.facturado).toLocaleString("es-AR")} facturados en esos pedidos${
+      m.promoMasUsada.ganancia !== null
+        ? `, y dejaron $${Math.round(m.promoMasUsada.ganancia).toLocaleString("es-AR")} de ganancia`
+        : ` (la ganancia no se puede saber: falta el costo de esos productos)`
+    }.`);
   }
 
   if (m.margenPromedio !== null) {

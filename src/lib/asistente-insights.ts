@@ -7,7 +7,7 @@ import {
 } from "@/lib/fechas-comerciales";
 import { resumirCupones, resumirPromos } from "@/lib/metricas-marketing";
 import { parseOrderPromoSummary } from "@/lib/email";
-import { aggregateProfitability } from "@/lib/margin";
+import { aggregateProfitability, gananciaPorPedido } from "@/lib/margin";
 import {
   PRO_MAX_ACTIVE_COUPONS, PRO_MAX_LIVE_PROMOTIONS,
   myActiveCouponsWhere, livePromotionsWhere,
@@ -91,13 +91,17 @@ export type StoreSnapshot = {
     cuponesVencidosActivos: number;
     /** Activos hace más de 30 días y sin un solo uso. */
     cuponesSinUsoViejos: number;
-    /** `facturado` = lo que entró en esos pedidos. Sin él, "descontó $38.000" no
-     *  se puede juzgar: puede ser el mejor cupón del mes o el peor. */
-    cuponMasUsado: { code: string; usos: number; descuento: number; facturado: number } | null;
+    /**
+     * `facturado` = lo que entró en esos pedidos; `ganancia` = lo que quedó
+     * después del costo de los productos y del descuento. Sin ellos, "descontó
+     * $38.000" no se puede juzgar: puede ser el mejor cupón del mes o el peor.
+     * `ganancia` en `null` = ningún pedido tenía el costo cargado (no es cero).
+     */
+    cuponMasUsado: { code: string; usos: number; descuento: number; facturado: number; ganancia: number | null } | null;
 
     promosVivas: number;
     promosTope: number | null;
-    promoMasUsada: { nombre: string; pedidos: number; ahorro: number; facturado: number } | null;
+    promoMasUsada: { nombre: string; pedidos: number; ahorro: number; facturado: number; ganancia: number | null } | null;
 
     /**
      * Margen promedio del período, en %. null = ningún producto vendido tiene el
@@ -200,14 +204,14 @@ async function getMarketingSnapshot(
         storeId, createdAt: { gte: desde, lt: hasta },
         status: { in: ESTADOS_VENTA_CONFIRMADA_LISTA }, couponId: { not: null },
       },
-      select: { couponId: true, discountAmount: true, total: true },
+      select: { id: true, couponId: true, discountAmount: true, total: true },
     }),
     prisma.order.findMany({
       where: {
         storeId, createdAt: { gte: desde, lt: hasta },
         status: { in: ESTADOS_VENTA_CONFIRMADA_LISTA }, promoSummary: { not: null },
       },
-      select: { promoSummary: true, total: true },
+      select: { id: true, promoSummary: true, total: true },
     }),
     prisma.orderItem.findMany({
       where: {
@@ -217,17 +221,43 @@ async function getMarketingSnapshot(
         },
       },
       select: {
+        orderId: true,
         productId: true, quantity: true, price: true, lineTotal: true, costAtSale: true,
         order: { select: { subtotal: true, discountAmount: true, createdAt: true } },
       },
     }),
   ]);
 
-  const resumenCupones = resumirCupones(cupones, pedidosConCupon, ahora);
+  // La ganancia de cada pedido, de los mismos ítems que ya se traen para el
+  // margen. Sin esto Sasha sólo sabe lo que un cupón descontó, que no alcanza
+  // para decir si convino.
+  const gananciaDePedido = gananciaPorPedido(
+    itemsMargen.map((it) => ({
+      orderId: it.orderId, quantity: it.quantity, price: it.price,
+      lineTotal: it.lineTotal, costAtSale: it.costAtSale,
+      orderSubtotal: it.order.subtotal, orderDiscount: it.order.discountAmount,
+    }))
+  );
+
+  const resumenCupones = resumirCupones(
+    cupones,
+    pedidosConCupon.map((o) => ({
+      couponId: o.couponId,
+      discountAmount: o.discountAmount,
+      total: o.total,
+      ganancia: gananciaDePedido.get(o.id) ?? null,
+    })),
+    ahora
+  );
   const resumenPromos = resumirPromos(
     promosRaw.map((o) => {
       const { appliedPromos, freeShippingPromo } = parseOrderPromoSummary(o.promoSummary);
-      return { applied: appliedPromos, freeShipping: freeShippingPromo, total: o.total };
+      return {
+        applied: appliedPromos,
+        freeShipping: freeShippingPromo,
+        total: o.total,
+        ganancia: gananciaDePedido.get(o.id) ?? null,
+      };
     })
   );
 
@@ -267,13 +297,19 @@ async function getMarketingSnapshot(
         (c.expiresAt === null || c.expiresAt > ahora)
     ).length,
     cuponMasUsado: filaTop
-      ? { code: filaTop.code, usos: filaTop.usos, descuento: filaTop.descuento, facturado: filaTop.facturado }
+      ? {
+          code: filaTop.code, usos: filaTop.usos, descuento: filaTop.descuento,
+          facturado: filaTop.facturado, ganancia: filaTop.ganancia,
+        }
       : null,
 
     promosVivas,
     promosTope: esPremium ? null : PRO_MAX_LIVE_PROMOTIONS,
     promoMasUsada: promoTop
-      ? { nombre: promoTop.etiqueta, pedidos: promoTop.pedidos, ahorro: promoTop.ahorro, facturado: promoTop.facturado }
+      ? {
+          nombre: promoTop.etiqueta, pedidos: promoTop.pedidos, ahorro: promoTop.ahorro,
+          facturado: promoTop.facturado, ganancia: promoTop.ganancia,
+        }
       : null,
 
     margenPromedio: margen.totalNetRevenueKnownCost > 0

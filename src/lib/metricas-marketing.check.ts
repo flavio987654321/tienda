@@ -10,6 +10,7 @@
 
 import {
   resumirCarritos, resumirCupones, resumirPromos, etiquetaDescuento,
+  compararCompra, MINIMO_PARA_COMPARAR,
   type CarritoCrudo, type CuponCrudo, type PromoAplicada,
 } from "./metricas-marketing";
 
@@ -82,12 +83,15 @@ const cupones: CuponCrudo[] = [
   cupon("g2", "WIN-XYZ789", { winnerEmail: "juan@example.com" }),
 ];
 const pedidosCupon = [
-  { couponId: "c1", discountAmount: 12000, total: 108000 },
-  { couponId: "c1", discountAmount: 12000, total: 108000 },
-  { couponId: "c1", discountAmount: 8000,  total:  72000 },
-  { couponId: "c2", discountAmount: 18000, total:  22000 },
-  { couponId: "g1", discountAmount: 5000,  total:  45000 },
-  { couponId: null, discountAmount: 0,     total:  30000 },  // sin cupón, no tiene que contar
+  { couponId: "c1", discountAmount: 12000, total: 108000, ganancia: 40000 },
+  { couponId: "c1", discountAmount: 12000, total: 108000, ganancia: 40000 },
+  { couponId: "c1", discountAmount: 8000,  total:  72000, ganancia: 25000 },
+  // Sin costo cargado: la ganancia de este pedido no se sabe. Es el caso que se
+  // equivoca callado — si "no sé" se tratara como 0, VERANO20 aparecería con
+  // ganancia cero, que es una afirmación, no una ausencia.
+  { couponId: "c2", discountAmount: 18000, total:  22000, ganancia: null },
+  { couponId: "g1", discountAmount: 5000,  total:  45000, ganancia: 15000 },
+  { couponId: null, discountAmount: 0,     total:  30000, ganancia: 9000 },  // sin cupón, no cuenta
 ];
 const rcup = resumirCupones(cupones, pedidosCupon, fecha("2026-07-29"));
 
@@ -131,6 +135,25 @@ chequear("el premio sin canjear no aparece", !rcup.sinUsar.some(c => c.code.star
 chequear("los usados no aparecen", !rcup.sinUsar.some(c => c.code === "BIENVENIDA10"));
 chequear("queda uno solo sin usar", rcup.sinUsar.length === 1, rcup.sinUsar.map(c => c.code));
 
+// ── La ganancia ──
+// Lo único de los tres números que se puede comparar sin pensar: facturar mucho
+// con margen chico deja menos que facturar poco con margen grande.
+chequear("ganancia del primero = $105.000", rcup.filas[0].ganancia === 105000, rcup.filas[0].ganancia);
+chequear("y todos sus pedidos tienen costo", rcup.filas[0].pedidosSinCosto === 0);
+// LA trampa: sin costo cargado la ganancia es null, NUNCA 0.
+const verano = rcup.filas.find(f => f.code === "VERANO20");
+chequear("sin costo cargado la ganancia es null, no 0", verano?.ganancia === null, verano?.ganancia);
+chequear("y se cuenta el pedido sin costo", verano?.pedidosSinCosto === 1, verano?.pedidosSinCosto);
+chequear("el total suma solo lo que se sabe", rcup.gananciaTotal === 105000, rcup.gananciaTotal);
+chequear("y avisa cuantos pedidos quedaron afuera", rcup.pedidosSinCosto === 1, rcup.pedidosSinCosto);
+chequear("la ganancia de la ruleta va aparte", rcup.ruleta.ganancia === 15000, rcup.ruleta.ganancia);
+chequear("y no entra en la ganancia propia", rcup.gananciaTotal !== 120000);
+
+// Sin ningún costo cargado en toda la tienda: null, no cero.
+const sinCostos = resumirCupones(cupones, pedidosCupon.map(p => ({ ...p, ganancia: null })), fecha("2026-07-29"));
+chequear("tienda sin costos: ganancia total null", sinCostos.gananciaTotal === null, sinCostos.gananciaTotal);
+chequear("y cada fila tambien", sinCostos.filas.every(f => f.ganancia === null));
+
 /* ── Promociones ──────────────────────────────────────────────────────────── */
 console.log("\n3) Promociones");
 
@@ -138,12 +161,12 @@ const p = (name: string | null, label: string, savings: number): PromoAplicada =
   ({ name, label, type: "PERCENT", savings });
 
 const pedidosPromo = [
-  { applied: [p("3x2 pantalones", "3x2", 60000)], freeShipping: null, total: 120000 },
-  { applied: [p("3x2 pantalones", "3x2", 60000)], freeShipping: null, total: 120000 },
+  { applied: [p("3x2 pantalones", "3x2", 60000)], freeShipping: null, total: 120000, ganancia: 50000 },
+  { applied: [p("3x2 pantalones", "3x2", 60000)], freeShipping: null, total: 120000, ganancia: 50000 },
   // UN pedido con DOS promos distintas: cuenta una vez como pedido, dos filas.
-  { applied: [p("3x2 pantalones", "3x2", 60000), p("20% camperas", "20% OFF", 9000)], freeShipping: null, total: 200000 },
-  { applied: [p("20% camperas", "20% OFF", 9000)], freeShipping: p(null, "Envío gratis", 5000), total: 40000 },
-  { applied: [], freeShipping: null, total: 15000 },  // sin promo
+  { applied: [p("3x2 pantalones", "3x2", 60000), p("20% camperas", "20% OFF", 9000)], freeShipping: null, total: 200000, ganancia: 70000 },
+  { applied: [p("20% camperas", "20% OFF", 9000)], freeShipping: p(null, "Envío gratis", 5000), total: 40000, ganancia: null },
+  { applied: [], freeShipping: null, total: 15000, ganancia: 5000 },  // sin promo
 ];
 const rp = resumirPromos(pedidosPromo, ["3x2 pantalones", "20% camperas", "Nunca aplicada", "  "]);
 
@@ -179,22 +202,82 @@ chequear("un nombre vacio no se cuela", !rp.sinUsar.some(n => n.trim() === ""));
 chequear("sin lista de activas no inventa nada",
   resumirPromos(pedidosPromo).sinUsar.length === 0);
 
+// ── La ganancia de cada promo ──
+chequear("el 3x2 dejo $170.000", rp.filas[0].ganancia === 170000, rp.filas[0].ganancia);
+chequear("y todos sus pedidos tienen costo", rp.filas[0].pedidosSinCosto === 0);
+const camperas = rp.filas.find(f => f.clave === "20% camperas");
+chequear("la de camperas suma solo el pedido con costo", camperas?.ganancia === 70000, camperas?.ganancia);
+chequear("y avisa que le falta uno", camperas?.pedidosSinCosto === 1, camperas?.pedidosSinCosto);
+chequear("el envio gratis no tiene ningun costo cargado",
+  rp.filas.find(f => f.etiqueta === "Envío gratis")?.ganancia === null);
+// Igual que el facturado: por PEDIDO. Sumando la columna daria $240.000.
+chequear("ganancia total $170.000, contada por pedido", rp.gananciaTotal === 170000, rp.gananciaTotal);
+chequear("el pedido sin promo no suma a la ganancia", rp.gananciaTotal !== 175000);
+chequear("avisa el pedido con promo sin costo", rp.pedidosSinCosto === 1, rp.pedidosSinCosto);
+
 // Misma promo repetida DENTRO de un pedido: es un pedido, no dos.
 const repetida = resumirPromos([
-  { applied: [p("2x1", "2x1", 1000), p("2x1", "2x1", 1500)], freeShipping: null, total: 9000 },
+  { applied: [p("2x1", "2x1", 1000), p("2x1", "2x1", 1500)], freeShipping: null, total: 9000, ganancia: 3000 },
 ]);
 chequear("promo repetida en un pedido cuenta 1 pedido", repetida.filas[0].pedidos === 1, repetida.filas[0]);
 chequear("pero suma los dos ahorros", repetida.filas[0].ahorro === 2500, repetida.filas[0].ahorro);
 chequear("y el total del pedido se cuenta una sola vez",
   repetida.filas[0].facturado === 9000 && repetida.facturadoTotal === 9000, repetida.filas[0].facturado);
+chequear("la ganancia tampoco se duplica",
+  repetida.filas[0].ganancia === 3000 && repetida.gananciaTotal === 3000, repetida.filas[0].ganancia);
 
 // Dos campañas distintas con la MISMA etiqueta visible no se mezclan.
 const mismaEtiqueta = resumirPromos([
-  { applied: [p("Verano remeras", "20% OFF", 1000)], freeShipping: null, total: 5000 },
-  { applied: [p("Invierno camperas", "20% OFF", 2000)], freeShipping: null, total: 8000 },
+  { applied: [p("Verano remeras", "20% OFF", 1000)], freeShipping: null, total: 5000, ganancia: 2000 },
+  { applied: [p("Invierno camperas", "20% OFF", 2000)], freeShipping: null, total: 8000, ganancia: 3000 },
 ]);
 chequear("dos campañas con la misma etiqueta quedan separadas",
   mismaEtiqueta.filas.length === 2, mismaEtiqueta.filas.map(f => f.clave));
+
+/* ── ¿Compran más con cupón? ──────────────────────────────────────────────── */
+console.log("\n4) Compra promedio con cupon vs sin cupon");
+
+const conCuponMasGrande = compararCompra([
+  { couponId: "c1", subtotal: 50000 },
+  { couponId: "c1", subtotal: 60000 },
+  { couponId: "c2", subtotal: 40000 },
+  { couponId: null, subtotal: 30000 },
+  { couponId: null, subtotal: 40000 },
+  { couponId: null, subtotal: 20000 },
+]);
+chequear("promedia bien con cupon", conCuponMasGrande.conCupon.promedio === 50000, conCuponMasGrande.conCupon);
+chequear("y sin cupon", conCuponMasGrande.sinCupon.promedio === 30000, conCuponMasGrande.sinCupon);
+chequear("la diferencia es +67%", conCuponMasGrande.diferenciaPct === 67, conCuponMasGrande.diferenciaPct);
+
+// El caso incómodo y el más importante: el cupón se lo lleva quien ya compraba.
+const conCuponMasChico = compararCompra([
+  { couponId: "c1", subtotal: 20000 },
+  { couponId: "c1", subtotal: 22000 },
+  { couponId: "c1", subtotal: 18000 },
+  { couponId: null, subtotal: 40000 },
+  { couponId: null, subtotal: 40000 },
+  { couponId: null, subtotal: 40000 },
+]);
+chequear("detecta cuando con cupon compran MENOS",
+  conCuponMasChico.diferenciaPct === -50, conCuponMasChico.diferenciaPct);
+
+// LA trampa: con dos pedidos de un lado, un solo cliente da vuelta el resultado.
+// Antes que afirmar cualquier cosa, no se afirma nada.
+const pocaBase = compararCompra([
+  { couponId: "c1", subtotal: 90000 },
+  { couponId: "c1", subtotal: 80000 },
+  { couponId: null, subtotal: 30000 },
+  { couponId: null, subtotal: 30000 },
+  { couponId: null, subtotal: 30000 },
+]);
+chequear(`con menos de ${MINIMO_PARA_COMPARAR} de un lado no afirma nada`,
+  pocaBase.diferenciaPct === null, pocaBase.diferenciaPct);
+chequear("pero los promedios se siguen pudiendo mostrar",
+  pocaBase.conCupon.pedidos === 2 && pocaBase.conCupon.promedio === 85000, pocaBase.conCupon);
+
+const sinNada = compararCompra([]);
+chequear("sin pedidos no divide por cero",
+  sinNada.diferenciaPct === null && sinNada.conCupon.promedio === 0 && sinNada.sinCupon.promedio === 0);
 
 console.log(fallos === 0 ? "\nTodo bien.\n" : `\n${fallos} fallas.\n`);
 process.exit(fallos === 0 ? 0 : 1);
