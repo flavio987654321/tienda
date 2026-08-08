@@ -84,6 +84,7 @@ export type CuponCrudo = {
   discountValue: number;
   expiresAt: Date | null;
   isActive: boolean;
+  createdAt: Date;
   /** Con valor = es un premio de la ruleta/raspadita, a nombre de quien lo ganó. */
   winnerEmail: string | null;
 };
@@ -166,11 +167,17 @@ export type ResumenCupones = {
    */
   ruleta: ResumenRuleta;
   /**
-   * Cupones propios vigentes que no se usaron ni una vez.
+   * Cupones propios vigentes, que ya existían al empezar el período, y que no se
+   * usaron ni una vez adentro de él.
    *
    * Es la pregunta que la tarjeta no sabía contestar. El ranking sólo muestra lo
    * que se usó, o sea que sólo sabe felicitar: el cupón que no funcionó
    * desaparecía de la pantalla justo cuando había que decidir si apagarlo.
+   *
+   * Lo de "ya existían al empezar" no es un detalle: sin ese corte, un cupón
+   * creado anteayer aparece como fracaso dentro de una ventana de 30 días,
+   * cuando todavía no tuvo tiempo de que lo usen. Es el mismo criterio que ya
+   * usaba `asistente-insights` para no acusar a un cupón recién nacido.
    */
   sinUsar: CuponSinUsar[];
 };
@@ -185,7 +192,14 @@ export function etiquetaDescuento(tipo: string, valor: number): string {
 export function resumirCupones(
   cupones: CuponCrudo[],
   pedidos: PedidoConCupon[],
-  ahora: Date = new Date()
+  ahora: Date = new Date(),
+  /**
+   * Arranque del período. Los cupones creados de acá en adelante no entran en
+   * `sinUsar`: todavía no tuvieron oportunidad. Sin esto, se listan como
+   * fracaso. Omitirlo hace que todos sean candidatos, que es lo correcto cuando
+   * no hay una ventana definida.
+   */
+  desde?: Date
 ): ResumenCupones {
   // Los usos se cuentan sobre los PEDIDOS del período, no sobre `Coupon.usedCount`
   // —que es histórico y no se puede recortar por fecha—. Así el bloque dice lo
@@ -257,10 +271,12 @@ export function resumirCupones(
       continue;
     }
 
-    // Sin usar, pero sólo si todavía puede usarse. Un cupón apagado o vencido no
-    // es una campaña que no funcionó: es una que terminó, y nombrarla sería
-    // pedirle a la dueña que revise algo que ya decidió.
-    if (c.isActive && !vencido) {
+    // Sin usar, pero sólo si todavía puede usarse y si ya existía cuando empezó
+    // el período. Un cupón apagado o vencido no es una campaña que no funcionó:
+    // es una que terminó, y nombrarla sería pedirle a la dueña que revise algo
+    // que ya decidió. Y uno creado adentro de la ventana tampoco falló: recién
+    // empieza.
+    if (c.isActive && !vencido && !(desde && c.createdAt >= desde)) {
       sinUsar.push({
         id: c.id,
         code: c.code,

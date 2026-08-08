@@ -27,13 +27,11 @@ export const TEMPLATES_CON_RESENA_TIENDA: TemplateId[] = ["chic-paris"];
 // template se le agrega una sección con foto, hay que sumarla acá o el dueño no va
 // a poder cargarla.
 export const SECTION_BG_PHOTO: Record<TemplateId, string[]> = {
-  // Aurora no acepta foto de fondo en ninguna sección, y es a propósito: el
-  // fondo ES la escena de luz. Una foto encima la tapa y el template pierde
-  // exactamente aquello por lo que se elige.
-  // El hero de Aurora ES una foto: la de la tienda si sube una, y si no la de
-  // sus propios productos. Antes iba vacío porque el fondo era la escena de luz
-  // y una foto encima la tapaba; ahora la foto es el argumento del bloque, así
-  // que el control tiene que estar.
+  // Sólo el hero. El resto de Aurora no acepta foto de fondo a propósito: el
+  // fondo ES la escena de luz, y una foto encima la tapa y le saca al template
+  // exactamente aquello por lo que se elige. El hero es la excepción porque ahí
+  // la foto no compite con la escena, es el bloque: va la de la tienda si sube
+  // una, y si no la de sus propios productos.
   "aurora":        ["bgHero"],
   "auto-drive":    ["bgCatalogo", "bgCategorias", "bgContacto", "bgFooter", "bgHero", "bgNosotros", "bgServicios", "bgStats"],
   "auto-motor":    ["bgCatalogo", "bgContacto", "bgFooter", "bgNosotros", "bgServicios"],

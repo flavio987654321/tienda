@@ -65,7 +65,7 @@ const cupon = (
   extra: Partial<CuponCrudo> = {}
 ): CuponCrudo => ({
   id, code, label: null, discountType: "percentage", discountValue: 10,
-  expiresAt: null, isActive: true, winnerEmail: null, ...extra,
+  expiresAt: null, isActive: true, createdAt: fecha("2026-01-01"), winnerEmail: null, ...extra,
 });
 
 const cupones: CuponCrudo[] = [
@@ -134,6 +134,19 @@ chequear("el vencido no aparece", !rcup.sinUsar.some(c => c.code === "VIEJO"));
 chequear("el premio sin canjear no aparece", !rcup.sinUsar.some(c => c.code.startsWith("WIN-")));
 chequear("los usados no aparecen", !rcup.sinUsar.some(c => c.code === "BIENVENIDA10"));
 chequear("queda uno solo sin usar", rcup.sinUsar.length === 1, rcup.sinUsar.map(c => c.code));
+
+// LA trampa: un cupón creado adentro de la ventana todavía no tuvo oportunidad.
+// Listarlo como "nadie lo usó" es acusarlo de algo que no pudo hacer.
+const conRecienNacido = [...cupones, cupon("c9", "RECIENCREADO", { createdAt: fecha("2026-07-20") })];
+const desdeElPrimero = fecha("2026-07-01");
+chequear("sin ventana, el recien creado es candidato",
+  resumirCupones(conRecienNacido, pedidosCupon, fecha("2026-07-29")).sinUsar.some(c => c.code === "RECIENCREADO"));
+chequear("con ventana, el creado adentro no se acusa",
+  !resumirCupones(conRecienNacido, pedidosCupon, fecha("2026-07-29"), desdeElPrimero)
+    .sinUsar.some(c => c.code === "RECIENCREADO"));
+chequear("pero el viejo sin usar se sigue mostrando",
+  resumirCupones(conRecienNacido, pedidosCupon, fecha("2026-07-29"), desdeElPrimero)
+    .sinUsar.some(c => c.code === "SINUSO"));
 
 // ── La ganancia ──
 // Lo único de los tres números que se puede comparar sin pensar: facturar mucho

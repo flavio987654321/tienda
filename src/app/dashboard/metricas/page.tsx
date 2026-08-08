@@ -667,7 +667,7 @@ export default async function MetricasPage({
         where: { storeId: store.id },
         select: {
           id: true, code: true, label: true, discountType: true, discountValue: true,
-          expiresAt: true, isActive: true, winnerEmail: true,
+          expiresAt: true, isActive: true, createdAt: true, winnerEmail: true,
         },
       }),
 
@@ -797,7 +797,9 @@ export default async function MetricasPage({
       discountAmount: o.discountAmount,
       total: o.total,
       ganancia: gananciaDePedido.get(o.id) ?? null,
-    }))
+    })),
+    now,
+    periodStart
   );
   const resumenPromos = resumirPromos(
     pedidosConPromoRaw.map((o) => {
@@ -1556,7 +1558,7 @@ export default async function MetricasPage({
               )}
 
               <SinUsar
-                titulo="Vigentes que nadie usó"
+                titulo={`Vigentes sin un solo uso en estos ${rangeDays} días`}
                 items={resumenCupones.sinUsar.map((c) => c.code)}
                 href="/dashboard/cupones"
                 cta="Ver cupones"

@@ -78,14 +78,20 @@ export async function POST(req: NextRequest) {
   // reseña y no por alguien que dejó su email con el carrito lleno, que vale
   // bastante más.
   //
-  // Va sin `await` a propósito: el visitante del storefront está esperando esta
-  // respuesta, y que le tarde el checkout por escribir un aviso del panel sería
-  // cambiar algo que importa por algo que no. `createNotification` ya se traga
-  // sus propios errores.
+  // Con `await`, no fire-and-forget. Es la misma lección que ya está escrita en
+  // `api/gamification/spin`: en serverless la función se puede congelar apenas
+  // devuelve la respuesta, y una promesa que quedó pendiente no se resuelve — el
+  // aviso se pierde, o aparece mucho después cuando el contenedor se reutiliza.
+  // Justamente el síntoma que se vio probando esto: el aviso del carrito tardó
+  // en llegar sin que nadie tocara nada.
+  //
+  // Lo que cuesta es un insert, y el visitante ya está esperando el upsert de
+  // arriba. Cambiar un aviso confiable por unos milisegundos es un mal negocio,
+  // sobre todo cuando el aviso es la única forma en que la dueña se entera.
   if (!yaExistia) {
     const quien = data.customerName || email;
     const cuanto = Math.round(data.total).toLocaleString("es-AR");
-    void createNotification({
+    await createNotification({
       userId: store.ownerId,
       type: "ABANDONED_CART",
       title: "Carrito abandonado",

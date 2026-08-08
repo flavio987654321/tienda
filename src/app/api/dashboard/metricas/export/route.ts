@@ -105,7 +105,7 @@ export async function GET(req: NextRequest) {
       where: { storeId: store.id },
       select: {
         id: true, code: true, label: true, discountType: true, discountValue: true,
-        expiresAt: true, isActive: true, winnerEmail: true,
+        expiresAt: true, isActive: true, createdAt: true, winnerEmail: true,
       },
     }),
     prisma.order.findMany({
@@ -240,7 +240,9 @@ export async function GET(req: NextRequest) {
       discountAmount: o.discountAmount,
       total: o.total,
       ganancia: gananciaDePedido.get(o.id) ?? null,
-    }))
+    })),
+    now,
+    startDate
   );
   const resumenPromos = resumirPromos(
     pedidosConPromoRaw.map((o) => {

@@ -247,7 +247,8 @@ async function getMarketingSnapshot(
       total: o.total,
       ganancia: gananciaDePedido.get(o.id) ?? null,
     })),
-    ahora
+    ahora,
+    desde
   );
   const resumenPromos = resumirPromos(
     promosRaw.map((o) => {
