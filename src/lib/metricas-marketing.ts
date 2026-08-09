@@ -306,6 +306,75 @@ export function resumirCupones(
   };
 }
 
+/* ── ¿Cuál sirvió y cuál no? ──────────────────────────────────────────────── */
+
+/**
+ * Cuántas veces tiene que haberse usado una campaña para nombrarla en el
+ * resumen. Con una o dos, un solo cliente decide el veredicto: llamar "la mejor"
+ * a un cupón que se usó una vez es una afirmación que el dato no aguanta.
+ */
+export const MINIMO_PARA_JUZGAR = 3;
+
+/** Una campaña —cupón o promo— lista para que el resumen la nombre. */
+export type Campana = {
+  nombre: string;
+  usos: number;
+  /** Lo que resignaste. */
+  costo: number;
+  facturado: number;
+  /** Lo que quedó después del costo de los productos. `null` = no se sabe. */
+  ganancia: number | null;
+};
+
+/**
+ * Elige, entre todos los cupones y promos, cuál nombrar como la que mejor
+ * funcionó y cuál como la que conviene revisar.
+ *
+ * Cupones y promos compiten en la misma bolsa a propósito: a la dueña no le
+ * importa de qué tipo es la campaña, le importa cuál le dejó más plata.
+ *
+ * - La mejor es la de mayor ganancia, y sólo si dejó algo.
+ * - La peor no es "la que menos dejó" —eso siempre existe y no dice nada— sino
+ *   una que resignó MÁS de lo que le quedó. Ahí sí hay algo para hacer: bajar el
+ *   descuento o apagarla. Sin ese corte, el resumen señalaría cada mes a la
+ *   última del ranking aunque estuvieran todas bien.
+ *
+ * Sin ganancia conocida no se juzga ninguna de las dos: comparar por facturado
+ * premiaría a la que más vende sin importar con qué margen.
+ */
+export function elegirCampanas(
+  cupones: FilaCupon[],
+  promos: FilaPromo[]
+): { mejor: Campana | null; peor: Campana | null } {
+  const todas: Campana[] = [
+    ...cupones.map((c) => ({
+      nombre: c.code, usos: c.usos, costo: c.descuento,
+      facturado: c.facturado, ganancia: c.ganancia,
+    })),
+    ...promos.map((p) => ({
+      nombre: p.etiqueta, usos: p.pedidos, costo: p.ahorro,
+      facturado: p.facturado, ganancia: p.ganancia,
+    })),
+  ].filter((c) => c.usos >= MINIMO_PARA_JUZGAR && c.ganancia !== null);
+
+  if (todas.length === 0) return { mejor: null, peor: null };
+
+  const porGanancia = [...todas].sort((a, b) => (b.ganancia ?? 0) - (a.ganancia ?? 0));
+  const mejor = (porGanancia[0].ganancia ?? 0) > 0 ? porGanancia[0] : null;
+
+  // De las que resignan más de lo que dejan, la que más plata resignó.
+  const malas = todas
+    .filter((c) => (c.ganancia ?? 0) < c.costo)
+    .sort((a, b) => b.costo - a.costo);
+  const candidata = malas[0] ?? null;
+
+  // Nunca la misma en los dos lados: con una sola campaña que dejó poco pero
+  // positivo, saldría felicitada y señalada en el mismo párrafo.
+  const peor = candidata && candidata.nombre !== mejor?.nombre ? candidata : null;
+
+  return { mejor, peor };
+}
+
 /* ── La ruleta / raspadita ────────────────────────────────────────────────── */
 
 /** Un giro guardado. `prizeLabel` viene en null cuando no ganó nada. */

@@ -3,7 +3,7 @@ import { getCurrentUser } from "@/lib/auth-session";
 import { prisma } from "@/lib/prisma";
 import { aggregateProfitability, gananciaPorPedido, type ProfitOrderItem } from "@/lib/margin";
 import { parseOrderPromoSummary } from "@/lib/email";
-import { resumirCarritos, resumirCupones, resumirPromos, compararCompra, resumirJuego } from "@/lib/metricas-marketing";
+import { resumirCarritos, resumirCupones, resumirPromos, compararCompra, resumirJuego, elegirCampanas } from "@/lib/metricas-marketing";
 import { armarResumen } from "@/lib/resumen-mes";
 import { ESTADOS_VENTA_CONFIRMADA_LISTA } from "@/lib/order-status";
 import {
@@ -327,6 +327,11 @@ export async function GET(req: NextRequest) {
       cuponesVencidos: resumenCupones.filas.filter((f) => f.vencido).length,
       productosSinCosto: productsWithoutCost,
       enviosBonificados: shippingWaivedTotal,
+    },
+    marketing: {
+      ...elegirCampanas(resumenCupones.filas, resumenPromos.filas),
+      cuponesSinUsar: resumenCupones.sinUsar.length,
+      promosSinUsar: resumenPromos.sinUsar.length,
     },
   });
 

@@ -11,7 +11,7 @@ import { statusLabel } from "@/lib/utils";
 import { parseOrderPromoSummary } from "@/lib/email";
 import {
   resumirCarritos, resumirCupones, resumirPromos, compararCompra, MINIMO_PARA_COMPARAR,
-  resumirJuego,
+  resumirJuego, elegirCampanas,
   type CarritoCrudo, type CuponCrudo, type GiroCrudo,
 } from "@/lib/metricas-marketing";
 import { armarResumen } from "@/lib/resumen-mes";
@@ -1060,6 +1060,14 @@ export default async function MetricasPage({
       cuponesVencidos: resumenCupones.filas.filter((f) => f.vencido).length,
       productosSinCosto: productsWithoutCostCount,
       enviosBonificados: shippingWaivedPeriod,
+    },
+    // El resumen hablaba de cómo te fue VENDIENDO y no decía nada de lo que
+    // hiciste para vender: la conclusión de las tarjetas de marketing había que
+    // sacarla a ojo, bajando y comparando. Ahora la dice.
+    marketing: {
+      ...elegirCampanas(resumenCupones.filas, resumenPromos.filas),
+      cuponesSinUsar: resumenCupones.sinUsar.length,
+      promosSinUsar: resumenPromos.sinUsar.length,
     },
   });
 

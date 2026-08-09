@@ -10,7 +10,7 @@
 
 import {
   resumirCarritos, resumirCupones, resumirPromos, etiquetaDescuento,
-  compararCompra, MINIMO_PARA_COMPARAR, resumirJuego,
+  compararCompra, MINIMO_PARA_COMPARAR, resumirJuego, elegirCampanas,
   type CarritoCrudo, type CuponCrudo, type PromoAplicada,
 } from "./metricas-marketing";
 
@@ -333,6 +333,53 @@ const anonimos = resumirJuego(
   new Set()
 );
 chequear("los giros sin email no inventan una persona", anonimos.emails === 0, anonimos.emails);
+
+
+/* ── ¿Cuál sirvió y cuál no? ──────────────────────────────────────────────── */
+console.log("\n6) Elegir la campana a nombrar");
+
+const cup = (code: string, usos: number, descuento: number, facturado: number, ganancia: number | null) =>
+  ({ id: code, code, etiqueta: "", usos, descuento, facturado, ganancia, pedidosSinCosto: 0, vencido: false });
+const pro = (etiqueta: string, pedidos: number, ahorro: number, facturado: number, ganancia: number | null) =>
+  ({ clave: etiqueta, etiqueta, pedidos, ahorro, facturado, ganancia, pedidosSinCosto: 0 });
+
+const ec = elegirCampanas(
+  [
+    cup("BIENVENIDA10", 8, 32_000, 288_000, 105_000),   // la buena
+    cup("VERANO20",     5, 60_000, 90_000,   12_000),   // resigna mas de lo que deja
+    cup("POQUITO",      1, 90_000, 100_000, 80_000),    // un solo uso: no se juzga
+    cup("SINCOSTO",     9, 10_000, 200_000, null),      // sin costo cargado: no se juzga
+  ],
+  [pro("3x2 remeras", 4, 20_000, 150_000, 60_000)]
+);
+
+chequear("la mejor es la de mayor ganancia", ec.mejor?.nombre === "BIENVENIDA10", ec.mejor?.nombre);
+chequear("cupones y promos compiten juntos", ec.mejor!.ganancia === 105_000);
+chequear("la peor resigna mas de lo que deja", ec.peor?.nombre === "VERANO20", ec.peor?.nombre);
+// LA trampa: con un solo uso, un cliente decide el veredicto.
+chequear("una campana de 1 uso no se nombra aunque sea la mejor",
+  ec.mejor?.nombre !== "POQUITO" && ec.peor?.nombre !== "POQUITO");
+chequear("sin costo cargado no se juzga", ec.mejor?.nombre !== "SINCOSTO" && ec.peor?.nombre !== "SINCOSTO");
+
+// Todas sanas: no hay que señalar a nadie. La "peor" del ranking siempre existe;
+// nombrarla igual convertiria el resumen en un reproche mensual sin motivo.
+const sanas = elegirCampanas([cup("A", 5, 10_000, 100_000, 50_000), cup("B", 5, 12_000, 90_000, 40_000)], []);
+chequear("si estan todas bien no se señala ninguna", sanas.peor === null, sanas.peor);
+chequear("pero si se felicita a la mejor", sanas.mejor?.nombre === "A");
+
+// Una sola campana, floja pero positiva: no puede salir felicitada y señalada.
+const unaSola = elegirCampanas([cup("UNICA", 4, 50_000, 80_000, 20_000)], []);
+chequear("la misma no sale en los dos lados",
+  !(unaSola.mejor?.nombre === "UNICA" && unaSola.peor?.nombre === "UNICA"),
+  [unaSola.mejor?.nombre, unaSola.peor?.nombre]);
+
+// Ganancia negativa: vendio a perdida. No puede ser "la mejor".
+const enRojo = elegirCampanas([cup("ROJO", 5, 40_000, 60_000, -5_000)], []);
+chequear("una campana en rojo no se felicita", enRojo.mejor === null, enRojo.mejor);
+chequear("y si se señala", enRojo.peor?.nombre === "ROJO");
+
+chequear("sin campanas no explota",
+  elegirCampanas([], []).mejor === null && elegirCampanas([], []).peor === null);
 
 console.log(fallos === 0 ? "\nTodo bien.\n" : `\n${fallos} fallas.\n`);
 process.exit(fallos === 0 ? 0 : 1);

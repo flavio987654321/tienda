@@ -218,6 +218,56 @@ chequear("el cupón vencido conjuga toda la frase, no solo el sustantivo",
   cuponVarios.pendientes[0].texto.includes("los vas a renovar, conviene borrarlos"),
   [cuponUno.pendientes[0].texto, cuponVarios.pendientes[0].texto]);
 
+/* ── Marketing ────────────────────────────────────────────────────────────── */
+console.log("\n5) Qué pasó con las campañas");
+
+const campana = (nombre: string, usos: number, costo: number, facturado: number, ganancia: number | null) =>
+  ({ nombre, usos, costo, facturado, ganancia });
+
+const conMarketing = armarResumen({
+  dias: 30,
+  actual: p(1_240_000, 110, 6_000),
+  previo: p(1_050_000, 125, 6_400),
+  marketing: {
+    mejor: campana("BIENVENIDA10", 8, 32_000, 288_000, 105_000),
+    peor: campana("VERANO20", 5, 60_000, 90_000, 12_000),
+    cuponesSinUsar: 2,
+    promosSinUsar: 1,
+  },
+});
+
+const textoMkt = conMarketing.parrafos.join(" ");
+chequear("felicita a la que funcionó, con nombre", textoMkt.includes("BIENVENIDA10"), textoMkt);
+chequear("y dice los dos números", textoMkt.includes("32.000") && textoMkt.includes("105.000"));
+chequear("la buena NO va en pendientes",
+  !conMarketing.pendientes.some((x) => x.texto.includes("BIENVENIDA10")));
+
+const pend = conMarketing.pendientes.map((x) => x.texto).join(" ");
+chequear("la que resigna de más va en pendientes", pend.includes("VERANO20"), pend);
+chequear("los cupones sin usar también", pend.includes("2 cupones vigentes"), pend);
+chequear("y las promos sin usar", pend.includes("1 promoción activa"), pend);
+// La plata en juego ordena: $60.000 resignados pesan más que los que no cuestan nada.
+chequear("la campaña cara va antes que las que no cuestan",
+  conMarketing.pendientes[0].texto.includes("VERANO20"),
+  conMarketing.pendientes.map((x) => x.texto));
+
+// Sin marketing, el resumen tiene que quedar igual que antes.
+const sinMkt = armarResumen({ dias: 30, actual: p(1_240_000, 110, 6_000), previo: p(1_050_000, 125, 6_400) });
+chequear("sin datos de marketing no inventa nada",
+  sinMkt.parrafos.length === subio.parrafos.length && sinMkt.pendientes.length === 0);
+
+// Ganancia desconocida: no se puede afirmar que funcionó.
+const sinGanancia = armarResumen({
+  dias: 30, actual: p(1, 1, 1), previo: p(1, 1, 1),
+  marketing: { mejor: campana("X", 5, 1_000, 10_000, null), peor: campana("Y", 5, 1_000, 10_000, null) },
+});
+chequear("sin ganancia conocida no felicita ni señala",
+  sinGanancia.parrafos.length === 0 && sinGanancia.pendientes.length === 0,
+  [sinGanancia.parrafos, sinGanancia.pendientes]);
+
+chequear("ningún texto de marketing sale con NaN o undefined",
+  !/NaN|undefined|null/.test(textoMkt + pend), textoMkt + pend);
+
 /* ── Muestra ──────────────────────────────────────────────────────────────── */
 console.log("\n─── Cómo se lee ───\n");
 for (const r of [subio, porTicket, sinNada]) {

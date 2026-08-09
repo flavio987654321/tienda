@@ -41,11 +41,41 @@ export type Senales = {
   enviosBonificados?: number;
 };
 
+/**
+ * Una campaña ya elegida por `metricas-marketing.elegirCampanas`. El tipo se
+ * declara acá y no se importa a propósito: este archivo no depende de nadie, y
+ * la forma alcanza para que encaje sola.
+ */
+export type CampanaResumen = {
+  nombre: string;
+  usos: number;
+  costo: number;
+  facturado: number;
+  ganancia: number | null;
+};
+
+/**
+ * Qué pasó con lo que la dueña hizo para vender.
+ *
+ * Iba aparte de `senales` porque no es lo mismo: una señal es algo que quedó
+ * pendiente, y acá hay una buena noticia (la campaña que funcionó) que merece
+ * un párrafo, no un ítem de "para revisar".
+ */
+export type MarketingResumen = {
+  mejor?: CampanaResumen | null;
+  peor?: CampanaResumen | null;
+  /** Vigentes que no se usaron ni una vez en el período. */
+  cuponesSinUsar?: number;
+  /** Activas que no entraron en ningún pedido. */
+  promosSinUsar?: number;
+};
+
 export type DatosResumen = {
   dias: number;
   actual: PeriodoResumen;
   previo: PeriodoResumen;
   senales?: Senales;
+  marketing?: MarketingResumen;
   /**
    * Cuánto puede estar corrido el porcentaje de visitas, en puntos, por cómo
    * están guardadas.
@@ -291,10 +321,39 @@ function armarExplicacion(
   return parrafos;
 }
 
+/* ── Lo que funcionó ──────────────────────────────────────────────────────── */
+
+/**
+ * El párrafo de la campaña que mejor anduvo.
+ *
+ * Es la única buena noticia accionable del resumen: saber cuál funcionó es lo
+ * que permite repetirla. Va con los dos números —lo que resignaste y lo que te
+ * quedó— porque "tu mejor cupón fue X" sin cifras no se puede comparar contra
+ * nada el mes que viene.
+ */
+function parrafoCampanaGanadora(mejor?: CampanaResumen | null): string[] {
+  if (!mejor || mejor.ganancia === null) return [];
+  return [
+    `Lo que mejor te funcionó fue ${mejor.nombre}: se usó en ${plural(mejor.usos, "pedido", "pedidos")}, resignaste ${plata(mejor.costo)} y te quedaron ${plata(mejor.ganancia)} después del costo de los productos. Si vas a repetir algo, repetí eso.`,
+  ];
+}
+
 /* ── Lo que quedó pendiente ───────────────────────────────────────────────── */
 
-function armarPendientes(senales: Senales): Pendiente[] {
+function armarPendientes(senales: Senales, marketing: MarketingResumen = {}): Pendiente[] {
   const lista: Pendiente[] = [];
+
+  // La campaña que resigna más de lo que deja. Va con la plata en juego para que
+  // compita en el orden con el resto: si estás regalando $80.000 en descuentos
+  // que no vuelven, eso pesa más que tres carritos sin contactar.
+  const peor = marketing.peor;
+  if (peor && peor.ganancia !== null) {
+    lista.push({
+      texto: `${peor.nombre} resignó ${plata(peor.costo)} y te dejó ${plata(peor.ganancia)}: estás dando más de lo que te queda. Convendría bajarle el descuento o apagarla.`,
+      plata: peor.costo,
+      href: "/dashboard/metricas",
+    });
+  }
 
   const carritos = senales.carritosSinContactar;
   if (carritos && carritos.cantidad > 0) {
@@ -343,6 +402,30 @@ function armarPendientes(senales: Senales): Pendiente[] {
     });
   }
 
+  // Lo que estuvo disponible y no entró en ningún pedido. Sin plata asociada —no
+  // costó nada— pero es lo más barato de arreglar: o no se ve, o no interesa.
+  const cuponesQuietos = marketing.cuponesSinUsar ?? 0;
+  if (cuponesQuietos > 0) {
+    lista.push({
+      texto: cuponesQuietos === 1
+        ? `1 cupón vigente no se usó ni una vez. O nadie lo conoce, o no entusiasma: convendría difundirlo o cambiarlo.`
+        : `${cuponesQuietos} cupones vigentes no se usaron ni una vez. O nadie los conoce, o no entusiasman: convendría difundirlos o cambiarlos.`,
+      plata: 0,
+      href: "/dashboard/cupones",
+    });
+  }
+
+  const promosQuietas = marketing.promosSinUsar ?? 0;
+  if (promosQuietas > 0) {
+    lista.push({
+      texto: promosQuietas === 1
+        ? `1 promoción activa no entró en ningún pedido. Fijate si el alcance o la compra mínima la están dejando afuera.`
+        : `${promosQuietas} promociones activas no entraron en ningún pedido. Fijate si el alcance o la compra mínima las están dejando afuera.`,
+      plata: 0,
+      href: "/dashboard/promociones",
+    });
+  }
+
   const vencidos = senales.cuponesVencidos ?? 0;
   if (vencidos > 0) {
     lista.push({
@@ -361,10 +444,14 @@ function armarPendientes(senales: Senales): Pendiente[] {
 
 export function armarResumen(datos: DatosResumen): ResumenMes {
   const { titular, tono } = armarTitular(datos.dias, datos.actual, datos.previo);
+  const marketing = datos.marketing ?? {};
   return {
     titular,
     tono,
-    parrafos: armarExplicacion(datos.actual, datos.previo, datos.incertidumbreVisitasPct ?? 0),
-    pendientes: armarPendientes(datos.senales ?? {}),
+    parrafos: [
+      ...armarExplicacion(datos.actual, datos.previo, datos.incertidumbreVisitasPct ?? 0),
+      ...parrafoCampanaGanadora(marketing.mejor),
+    ],
+    pendientes: armarPendientes(datos.senales ?? {}, marketing),
   };
 }
