@@ -3,6 +3,7 @@ import { sendReviewRequestEmail, sendCommissionEarnedEmail, sendOrderShippedEmai
 import { createNotification } from "@/lib/notifications";
 import { recordStockMovement, wentBackAboveThreshold, dispatchLowStockAlerts, DEFAULT_LOW_STOCK_THRESHOLD, type LowStockItem } from "@/lib/stockMovements";
 import { ORDER_ACTION_TRANSITIONS } from "@/lib/orders";
+import { despues } from "@/lib/despues";
 
 type RunOrderActionInput = {
   orderId: string;
@@ -21,6 +22,13 @@ export async function runOrderAction({ orderId: id, ownerId, action, trackingCod
   // para un estado que en los hechos nunca se confirmó.
   let pendingStoreId: string | null = null;
   const pendingStockAlerts: LowStockItem[] = [];
+  // Los mails van por la misma puerta, y hasta acá no lo hacían: se disparaban
+  // sueltos DESDE ADENTRO de la transacción, o sea antes de que comprometiera.
+  // Si después algo fallaba y se hacía rollback, al comprador ya le había
+  // llegado "tu pedido se envió" de un envío que en los hechos nunca pasó. La
+  // regla ya estaba escrita arriba para los avisos de stock; los mails quedaron
+  // afuera de la regla.
+  const mailsPendientes: { correr: () => Promise<unknown>; etiqueta: string }[] = [];
 
   // Timeout explícito (default de Prisma: 5000ms) — "confirmPayment" y "cancel" hacen varias
   // consultas secuenciales por ítem (stock, comisión, wallet); con pedidos de muchos ítems o
@@ -118,15 +126,19 @@ export async function runOrderAction({ orderId: id, ownerId, action, trackingCod
 
         const affiliateUser = order.affiliate?.user;
         if (affiliateUser?.email) {
-          sendCommissionEarnedEmail({
-            affiliateEmail: affiliateUser.email,
-            affiliateName: affiliateUser.name || "afiliada",
-            storeName: order.store.name,
-            commissionAmount: amount,
-            orderTotal: order.total,
-            commissionRate: rate,
-            newBalance: updatedWallet.balance,
-          }).catch((err) => console.error("[email] sendCommissionEarnedEmail failed:", err));
+          const destino = affiliateUser.email;
+          mailsPendientes.push({
+            etiqueta: "pedido: comisión ganada",
+            correr: () => sendCommissionEarnedEmail({
+              affiliateEmail: destino,
+              affiliateName: affiliateUser.name || "afiliada",
+              storeName: order.store.name,
+              commissionAmount: amount,
+              orderTotal: order.total,
+              commissionRate: rate,
+              newBalance: updatedWallet.balance,
+            }),
+          });
         }
 
       }
@@ -153,30 +165,33 @@ export async function runOrderAction({ orderId: id, ownerId, action, trackingCod
       // medio más usado en tiendas chicas.
       //
       // Nada de esto se recalcula: sale de la orden, tal como se cobró.
-      sendOrderPaymentConfirmedEmail({
-        buyerEmail: order.buyer.email,
-        buyerName: order.buyer.name || "",
-        orderId: order.id,
-        storeName: order.store.name,
-        storeSlug: order.store.slug,
-        total: order.total,
-        items: order.items.map((it) => ({
-          name: it.product.name,
-          variant: it.variant ? `${it.variant.name}: ${it.variant.value}` : null,
-          quantity: it.quantity,
-          // Las órdenes viejas no tienen lineTotal → se reconstruye con precio × cantidad.
-          lineTotal: it.lineTotal ?? it.price * it.quantity,
-        })),
-        subtotal: order.subtotal,
-        discountAmount: order.discountAmount,
-        couponCode: order.coupon?.code ?? null,
-        shippingCost: order.shippingCost,
-        shippingMethod: order.shippingMethod,
-        // Promos congeladas al momento de la venta: no se recalculan, la promo pudo
-        // haber cambiado desde entonces y el comprobante tiene que ser fiel.
-        ...parseOrderPromoSummary(order.promoSummary),
-        promoSavings: order.promoSavings,
-      }).catch((err) => console.error("[email] sendOrderPaymentConfirmedEmail failed:", err));
+      mailsPendientes.push({
+        etiqueta: "pedido: pago confirmado al comprador",
+        correr: () => sendOrderPaymentConfirmedEmail({
+          buyerEmail: order.buyer.email,
+          buyerName: order.buyer.name || "",
+          orderId: order.id,
+          storeName: order.store.name,
+          storeSlug: order.store.slug,
+          total: order.total,
+          items: order.items.map((it) => ({
+            name: it.product.name,
+            variant: it.variant ? `${it.variant.name}: ${it.variant.value}` : null,
+            quantity: it.quantity,
+            // Las órdenes viejas no tienen lineTotal → se reconstruye con precio × cantidad.
+            lineTotal: it.lineTotal ?? it.price * it.quantity,
+          })),
+          subtotal: order.subtotal,
+          discountAmount: order.discountAmount,
+          couponCode: order.coupon?.code ?? null,
+          shippingCost: order.shippingCost,
+          shippingMethod: order.shippingMethod,
+          // Promos congeladas al momento de la venta: no se recalculan, la promo pudo
+          // haber cambiado desde entonces y el comprobante tiene que ser fiel.
+          ...parseOrderPromoSummary(order.promoSummary),
+          promoSavings: order.promoSavings,
+        }),
+      });
 
       return confirmed;
     }
@@ -195,19 +210,22 @@ export async function runOrderAction({ orderId: id, ownerId, action, trackingCod
       await tx.orderStatusLog.create({
         data: { orderId: order.id, fromStatus: order.status, toStatus: "SHIPPED", changedBy: ownerId },
       });
-      sendOrderShippedEmail({
-        buyerEmail: order.buyer.email,
-        buyerName: order.buyer.name || "",
-        orderId: order.id,
-        storeName: order.store.name,
-        trackingCode: resolvedTracking ?? null,
-        shippingMethod: order.shippingMethod ?? "Envío estándar",
-        items: order.items.map((i) => ({
-          name: i.product.name,
-          variant: i.variant ? `${i.variant.name}: ${i.variant.value}` : null,
-          quantity: i.quantity,
-        })),
-      }).catch((err) => console.error("[email] sendOrderShippedEmail failed:", err));
+      mailsPendientes.push({
+        etiqueta: "pedido: enviado",
+        correr: () => sendOrderShippedEmail({
+          buyerEmail: order.buyer.email,
+          buyerName: order.buyer.name || "",
+          orderId: order.id,
+          storeName: order.store.name,
+          trackingCode: resolvedTracking ?? null,
+          shippingMethod: order.shippingMethod ?? "Envío estándar",
+          items: order.items.map((i) => ({
+            name: i.product.name,
+            variant: i.variant ? `${i.variant.name}: ${i.variant.value}` : null,
+            quantity: i.quantity,
+          })),
+        }),
+      });
       return shipped;
     }
 
@@ -224,13 +242,16 @@ export async function runOrderAction({ orderId: id, ownerId, action, trackingCod
       await tx.orderStatusLog.create({
         data: { orderId: order.id, fromStatus: order.status, toStatus: "DELIVERED", changedBy: ownerId },
       });
-      sendReviewRequestEmail({
-        buyerEmail: order.buyer.email,
-        buyerName: order.buyer.name || "",
-        storeName: order.store.name,
-        storeSlug: order.store.slug,
-        products: order.items.map((i) => ({ id: i.product.id, name: i.product.name })),
-      }).catch((err) => console.error("[email] sendReviewRequestEmail failed:", err));
+      mailsPendientes.push({
+        etiqueta: "pedido: pedir reseña",
+        correr: () => sendReviewRequestEmail({
+          buyerEmail: order.buyer.email,
+          buyerName: order.buyer.name || "",
+          storeName: order.store.name,
+          storeSlug: order.store.slug,
+          products: order.items.map((i) => ({ id: i.product.id, name: i.product.name })),
+        }),
+      });
       return delivered;
     }
 
@@ -325,13 +346,16 @@ export async function runOrderAction({ orderId: id, ownerId, action, trackingCod
         where: { id: ownerId },
         select: { email: true, phone: true },
       });
-      sendOrderCancelledEmail({
-        buyerEmail: order.buyer.email,
-        buyerName: order.buyer.name || "",
-        orderId: order.id,
-        storeName: order.store.name,
-        ownerContact: { email: ownerForCancel?.email, phone: ownerForCancel?.phone },
-      }).catch((err) => console.error("[email] sendOrderCancelledEmail failed:", err));
+      mailsPendientes.push({
+        etiqueta: "pedido: cancelado",
+        correr: () => sendOrderCancelledEmail({
+          buyerEmail: order.buyer.email,
+          buyerName: order.buyer.name || "",
+          orderId: order.id,
+          storeName: order.store.name,
+          ownerContact: { email: ownerForCancel?.email, phone: ownerForCancel?.phone },
+        }),
+      });
 
       return cancelled;
     }
@@ -354,85 +378,97 @@ export async function runOrderAction({ orderId: id, ownerId, action, trackingCod
     throw new Error("Accion no valida");
   }, { timeout: 15000 });
 
+  // La transacción comprometió: recién ahora salen los mails que se juntaron
+  // adentro. Si se hubiera caído, no sale ninguno — que es todo el punto.
+  for (const mail of mailsPendientes) despues(mail.correr, mail.etiqueta);
+
   // Notificaciones en tiempo real (fuera de la transacción para no bloquearla)
   if (action === "confirmPayment") {
     // Notificar al afiliado si ganó comisión
     if (result.commission && result.affiliateId) {
+      // El monto se copia acá afuera. Adentro del cierre TypeScript ya no puede
+      // garantizar que `result.commission` siga sin ser null —el cierre corre
+      // después—, y tiene razón en quejarse: el valor que se quiere avisar es el
+      // de este momento, no el que haya cuando el aviso salga.
+      const monto = result.commission.amount;
       const affiliateUser = await prisma.affiliate.findUnique({
         where: { id: result.affiliateId },
         select: { userId: true },
       });
       if (affiliateUser) {
-        createNotification({
+        despues(() => createNotification({
           userId: affiliateUser.userId,
           type: "COMMISSION_EARNED",
           title: "¡Ganaste una comisión!",
-          body: `Tu comisión de $${result.commission.amount.toLocaleString("es-AR")} fue acreditada.`,
+          body: `Tu comisión de $${monto.toLocaleString("es-AR")} fue acreditada.`,
           link: "/afiliados/billetera",
-        });
+        }), "pedido: campanita comision ganada");
       }
     }
     // Notificar al dueño
-    createNotification({
+    despues(() => createNotification({
       userId: ownerId,
       type: "ORDER_CONFIRMED",
       title: "Pago confirmado",
       body: `El pedido fue confirmado por $${result.total.toLocaleString("es-AR")}.`,
       link: `/dashboard/pedidos/${result.id}`,
-    });
+    }), "pedido: campanita pago confirmado");
   }
 
   if (action === "markShipped") {
     // Notificar al dueño
-    createNotification({
+    despues(() => createNotification({
       userId: ownerId,
       type: "ORDER_SHIPPED",
       title: "Pedido marcado como enviado",
       body: trackingCode ? `Código de seguimiento: ${trackingCode}` : undefined,
       link: `/dashboard/pedidos/${result.id}`,
-    });
+    }), "pedido: campanita enviado");
   }
 
   if (action === "markDelivered") {
-    createNotification({
+    despues(() => createNotification({
       userId: ownerId,
       type: "ORDER_DELIVERED",
       title: "Pedido entregado",
       body: `El pedido fue marcado como entregado.`,
       link: `/dashboard/pedidos/${result.id}`,
-    });
+    }), "pedido: campanita entregado");
   }
 
   if (action === "cancel") {
-    createNotification({
+    despues(() => createNotification({
       userId: ownerId,
       type: "ORDER_CANCELLED",
       title: "Pedido cancelado",
       body: `El pedido fue cancelado y el stock fue restaurado.`,
       link: `/dashboard/pedidos/${result.id}`,
-    });
+    }), "pedido: campanita cancelado");
 
     // Si se revirtió comisión, notificar a la afiliada
     if (result.commission && result.affiliateId) {
+      const monto = result.commission.amount;
       const affUser = await prisma.affiliate.findUnique({
         where: { id: result.affiliateId },
         select: { userId: true },
       });
       if (affUser) {
-        createNotification({
+        despues(() => createNotification({
           userId: affUser.userId,
           type: "COMMISSION_REVERSED",
           title: "Comisión revertida",
-          body: `La comisión de $${result.commission.amount.toLocaleString("es-AR")} fue revertida porque el dueño canceló el pedido.`,
+          body: `La comisión de $${monto.toLocaleString("es-AR")} fue revertida porque el dueño canceló el pedido.`,
           link: "/afiliados/billetera",
-        });
+        }), "pedido: campanita comision revertida");
       }
     }
   }
 
   if (pendingStockAlerts.length > 0 && pendingStoreId) {
-    dispatchLowStockAlerts(ownerId, pendingStoreId, pendingStockAlerts).catch((err) =>
-      console.error("[stock] dispatchLowStockAlerts failed:", err)
+    const storeId = pendingStoreId;
+    despues(
+      () => dispatchLowStockAlerts(ownerId, storeId, pendingStockAlerts),
+      "pedido: aviso de stock bajo"
     );
   }
 
