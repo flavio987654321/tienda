@@ -226,6 +226,9 @@ export async function POST(req: Request) {
     // ── Campañas push y visitas ──
     await tx.pushCampaign.deleteMany({ where: { storeId: store.id } });
     await tx.storeView.deleteMany({ where: { storeId: store.id } });
+    // El origen de esas mismas visitas. Si quedara, la tienda arrancaría de cero
+    // con un desglose de "de dónde vinieron" que ya no le corresponde a nadie.
+    await tx.storeViewSource.deleteMany({ where: { storeId: store.id } });
 
     // ── Ruleta: sus premios apuntaban a cupones que acabamos de borrar
     // (couponId queda en null por SetNull) — si el widget siguiera activo,

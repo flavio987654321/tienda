@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getArgentinaDayKey } from "@/lib/fechas-comerciales";
 import { esBot } from "@/lib/bots";
+import { clasificarOrigen } from "@/lib/origen-visita";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { getClientIp } from "@/lib/request-ip";
 
@@ -82,6 +83,31 @@ export async function POST(
     update: { count: { increment: 1 } },
     create: { storeId: store.id, date, count: 1 },
   });
+
+  // ── De dónde vino ──
+  // Va en su propio try y DESPUÉS del total, no antes y no en la misma
+  // transacción. El total es el número que no se puede perder: si esta escritura
+  // falla, la visita ya quedó contada y lo único que pasa es que no se sabe de
+  // dónde vino. Al revés —una transacción que abarque las dos— un problema
+  // clasificando haría perder la visita entera.
+  //
+  // La clasificación es del servidor y no del cliente: lo que sale de acá se
+  // escribe en la base y se compara con lo ya escrito, así que tiene que salir
+  // de una lista cerrada y no de lo que decida mandar un navegador.
+  try {
+    const cuerpo = await req.json().catch(() => null);
+    const referente = typeof cuerpo?.referente === "string" ? cuerpo.referente : null;
+    const utmSource = typeof cuerpo?.utmSource === "string" ? cuerpo.utmSource : null;
+    const source = clasificarOrigen(referente, utmSource, req.headers.get("host"));
+
+    await prisma.storeViewSource.upsert({
+      where: { storeId_date_source: { storeId: store.id, date, source } },
+      update: { count: { increment: 1 } },
+      create: { storeId: store.id, date, source, count: 1 },
+    });
+  } catch {
+    // Ver arriba: la visita ya está contada. Esto es información de más.
+  }
 
   return NextResponse.json({ ok: true, contada: true });
 }

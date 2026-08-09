@@ -72,7 +72,29 @@ export default function StoreShell({ config, storeId, storeName, storeSlug, show
       // Modo incógnito con almacenamiento bloqueado: se cuenta igual, sin dedup.
     }
 
-    fetch(`/api/store-views/${storeSlug}`, { method: "POST" }).catch(() => {});
+    // De dónde vino. Se manda crudo y lo clasifica el servidor: la lista de
+    // etiquetas es la que se escribe en la base, y no puede depender de lo que
+    // decida mandar un cliente que cualquiera puede editar.
+    //
+    // El `utm_source` va aparte del referente porque le gana: el navegador de
+    // WhatsApp casi nunca manda referente, así que sin utm esa visita cae en
+    // "directo". Cuando la dueña armó el link con `?utm_source=whatsapp`, eso es
+    // lo que hay que creerle.
+    let referente = "";
+    let utmSource = "";
+    try {
+      referente = document.referrer || "";
+      utmSource = new URLSearchParams(window.location.search).get("utm_source") || "";
+    } catch {
+      // Si algo de esto falla, la visita se cuenta igual y queda sin origen. El
+      // número total es el que no se puede perder.
+    }
+
+    fetch(`/api/store-views/${storeSlug}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ referente, utmSource }),
+    }).catch(() => {});
   }, [storeSlug, config.isOwner]);
 
   return (

@@ -36,6 +36,7 @@ import { ExportButtons } from "./ExportButtons";
 import ShareStatsButton from "./ShareStatsButton";
 import { aggregateProfitability, calcVehicleProfit, gananciaPorPedido, type ProfitOrderItem } from "@/lib/margin";
 import { resumirDias, diaDeLaSemana, fechaCorta, type DiaCrudo } from "@/lib/dia-a-dia";
+import { ordenarOrigenes, ORIGENES, NOMBRE_ORIGEN, type Origen } from "@/lib/origen-visita";
 
 // ─── Rango de fechas ──────────────────────────────────────────────────────────
 // Todas las comparaciones usan ventanas de igual longitud (período actual vs.
@@ -993,8 +994,10 @@ export default async function MetricasPage({
   // ── Queries de StoreView (requieren migración SQL — fallan silenciosamente si la tabla no existe) ──
   let viewsPrevAgg: { _sum: { count: number | null } } = { _sum: { count: null } };
   let viewsPeriodRaw: { date: string; count: number }[] = [];
+  /** De dónde vinieron, del período. Vacío hasta que corra la migración. */
+  let origenesRaw: { source: string; _sum: { count: number | null } }[] = [];
   try {
-    [viewsPrevAgg, viewsPeriodRaw] = await Promise.all([
+    [viewsPrevAgg, viewsPeriodRaw, origenesRaw] = await Promise.all([
       prisma.storeView.aggregate({
         where: { storeId: store.id, date: { gte: prevPeriodStartStr, lte: prevPeriodEndStr } },
         _sum: { count: true },
@@ -1003,6 +1006,13 @@ export default async function MetricasPage({
         where: { storeId: store.id, date: { gte: periodStartStr } },
         select: { date: true, count: true },
         orderBy: { date: "asc" },
+      }),
+      // Diez filas como mucho: `source` sale de una lista cerrada de diez
+      // etiquetas, así que el groupBy no puede crecer con el volumen.
+      prisma.storeViewSource.groupBy({
+        by: ["source"],
+        where: { storeId: store.id, date: { gte: periodStartStr } },
+        _sum: { count: true },
       }),
     ]);
   } catch (err) {
@@ -1098,6 +1108,29 @@ export default async function MetricasPage({
 
   const conversionRate =
     totalViewsPeriod > 0 ? ((totalOrdersPeriod / totalViewsPeriod) * 100).toFixed(1) : null;
+
+  // ── De dónde vino la gente ──
+  // Los porcentajes van sobre las visitas CON origen conocido y no sobre el
+  // total: durante el primer período después de este cambio, y en cualquier día
+  // en que la escritura del origen falle, el total es más grande. Dividir por él
+  // achicaría todos los canales a la vez y daría la impresión de que la tienda
+  // se cayó, cuando lo único que falta es la etiqueta.
+  //
+  // La diferencia entre los dos números no se esconde: la tarjeta la dice.
+  const origenes = ordenarOrigenes(
+    origenesRaw
+      .filter((o): o is typeof o & { source: Origen } => (ORIGENES as readonly string[]).includes(o.source))
+      .map((o) => ({ origen: o.source as Origen, visitas: o._sum.count ?? 0 }))
+      .filter((o) => o.visitas > 0)
+  );
+  const visitasConOrigen = origenes.reduce((s, o) => s + o.visitas, 0);
+  /**
+   * El canal más grande que se puede mover. "Directo" suele ser el más grande de
+   * todos y no sirve de titular: nadie decide invertir más en directo, y con el
+   * agujero de WhatsApp encima está inflado a propósito.
+   */
+  const canalPrincipal = origenes.find((o) => o.origen !== "directo" && o.origen !== "otro") ?? null;
+  const visitasDirectas = origenes.find((o) => o.origen === "directo")?.visitas ?? 0;
 
   // Este total NO es el mismo que el KPI "Pedidos": el KPI excluye los
   // cancelados y este bloque los muestra, porque cancelado es un estado y verlo
@@ -1397,6 +1430,117 @@ export default async function MetricasPage({
             <LineChart data={visitsChartData} color="#2563eb" gradId="grad-blue" formatter={shortNum} />
           </div>
         </div>
+
+        {/* ── De dónde viene la gente ─────────────────────────────────────────
+            La tarjeta que faltaba desde siempre. Hasta acá el panel sabía
+            cuántas visitas hubo y ninguna otra cosa: "¿esto lo trajo Instagram
+            o el WhatsApp que mandé?" no se podía contestar, y es la primera
+            pregunta que hace cualquiera que vende por internet.
+
+            Empieza a medir el día que se prende, así que los primeros días la
+            tarjeta va a estar casi vacía. Eso se dice, no se disimula: un
+            desglose de tres visitas presentado como si fuera el mapa de la
+            tienda hace tomar decisiones sobre nada. */}
+        {!isAutos && (
+          <div className="rounded-2xl border border-gray-100 bg-white p-6" data-print="largo">
+            <div className="flex items-center justify-between gap-3 mb-0.5">
+              <h2 className="font-bold text-gray-900">De dónde viene la gente</h2>
+              {visitasConOrigen > 0 && (
+                <p className="shrink-0 text-xl font-black text-blue-600">
+                  {visitasConOrigen.toLocaleString("es-AR")}
+                </p>
+              )}
+            </div>
+
+            {visitasConOrigen === 0 ? (
+              <>
+                <p className="mt-1 text-sm leading-relaxed text-gray-500">
+                  Todavía no hay ninguna visita con origen. Esto se empezó a medir hace poco:
+                  las visitas anteriores quedaron sin etiqueta y no se pueden recuperar.
+                </p>
+                <p className="mt-3 text-xs leading-relaxed text-gray-400">
+                  Va a llenarse solo a medida que entre gente. No hay nada para configurar.
+                </p>
+              </>
+            ) : (
+              <>
+                {/* La conclusión primero. El canal más grande que se puede mover,
+                    no el más grande a secas: "directo" casi siempre gana y no se
+                    puede hacer nada con eso. */}
+                <p className="mt-1 text-sm leading-relaxed text-gray-600">
+                  {canalPrincipal ? (
+                    <>
+                      Lo que más gente te trae es{" "}
+                      <span className="font-bold text-gray-900">{NOMBRE_ORIGEN[canalPrincipal.origen]}</span>
+                      {": "}
+                      <span className="font-bold text-gray-900">{canalPrincipal.visitas.toLocaleString("es-AR")}</span>
+                      {" "}de {visitasConOrigen.toLocaleString("es-AR")} visitas
+                      {" "}({Math.round((canalPrincipal.visitas / visitasConOrigen) * 100)}%).
+                    </>
+                  ) : (
+                    <>
+                      Toda la gente que entró llegó directo, sin pasar por ninguna red.
+                      Abajo está por qué eso casi nunca es del todo cierto.
+                    </>
+                  )}
+                </p>
+
+                <div className="mt-4 space-y-3">
+                  {origenes.map((o) => {
+                    const pct = Math.round((o.visitas / visitasConOrigen) * 100);
+                    const bolsa = o.origen === "directo" || o.origen === "otro";
+                    return (
+                      <div key={o.origen}>
+                        <div className="mb-1 flex items-baseline justify-between gap-3 text-sm">
+                          <span className={bolsa ? "text-gray-500" : "font-medium text-gray-700"}>
+                            {NOMBRE_ORIGEN[o.origen]}
+                          </span>
+                          <span className="shrink-0 text-xs text-gray-400 tabular-nums">
+                            <span className="font-bold text-gray-900">{o.visitas.toLocaleString("es-AR")}</span> · {pct}%
+                          </span>
+                        </div>
+                        <div className="h-1.5 rounded-full bg-gray-100">
+                          <div
+                            className={`h-1.5 rounded-full ${bolsa ? "bg-gray-300" : "bg-blue-500"}`}
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Los dos avisos que cambian cómo se lee todo lo de arriba. Van
+                    siempre visibles y no en un globito: en un teléfono el hover
+                    no existe, y una aclaración que no se puede abrir no está. */}
+                <div className="mt-5 space-y-2 border-t border-gray-100 pt-3.5 text-xs leading-relaxed text-gray-500">
+                  {totalViewsPeriod > visitasConOrigen && (
+                    <p>
+                      De las <span className="font-semibold text-gray-700">{totalViewsPeriod.toLocaleString("es-AR")}</span> visitas
+                      del período se sabe de dónde vinieron{" "}
+                      <span className="font-semibold text-gray-700">{visitasConOrigen.toLocaleString("es-AR")}</span>.
+                      Los porcentajes de arriba son sobre esas, no sobre el total.
+                    </p>
+                  )}
+                  {visitasDirectas > 0 && (
+                    <p>
+                      <span className="font-semibold text-gray-700">&quot;Directo&quot; está inflado, y conviene saberlo.</span>{" "}
+                      WhatsApp abre los links en un navegador que en la mayoría de los teléfonos
+                      no dice de dónde viene, así que buena parte de esas {visitasDirectas.toLocaleString("es-AR")} visitas
+                      salieron en realidad de un WhatsApp tuyo. Para que se cuenten bien, mandá
+                      el link de tu tienda con <span className="font-mono text-gray-600">?utm_source=whatsapp</span> al
+                      final. Lo mismo sirve para cualquier campaña.
+                    </p>
+                  )}
+                  <p>
+                    Esto cuenta <span className="font-semibold text-gray-700">visitas, no ventas</span>.
+                    Que un canal traiga más gente no quiere decir que traiga más plata.
+                  </p>
+                </div>
+              </>
+            )}
+          </div>
+        )}
 
         {/* ── Sección central: AUTOS = estado de flota | resto = productos + pedidos ── */}
         {isAutos ? (

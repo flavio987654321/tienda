@@ -304,6 +304,7 @@ model Store {
   storeSubscriptions  StoreSubscription[]
   pushCampaigns       PushCampaign[]
   storeViews          StoreView[]
+  storeViewSources    StoreViewSource[]
   storeFollows        StoreFollow[]
   abandonedCarts      AbandonedCart[]
   gamificationWidget  GamificationWidget?
@@ -1200,6 +1201,33 @@ model StoreView {
   count   Int    @default(0)
 
   @@unique([storeId, date])
+  @@index([storeId, date(sort: Desc)])
+}
+
+/// De dónde vinieron las visitas de un día. Una fila por (tienda, día, origen).
+///
+/// Va aparte de `StoreView` y no como una columna suya a propósito. Meterle el
+/// origen a `StoreView` obligaba a cambiarle la clave única, a rellenar todo el
+/// historial con un "desconocido" inventado y a tocar los seis lugares que hoy
+/// la leen. Así no se toca nada de lo que ya funciona.
+///
+/// El precio es que las dos cuentas pueden no dar iguales: `StoreView` tiene
+/// todas las visitas y acá están sólo las de después de este cambio. Eso no es
+/// un error a esconder — es el dato: la pantalla muestra la diferencia como
+/// "de N visitas sabemos de dónde vinieron M", que es la verdad.
+///
+/// `source` sale siempre de la lista cerrada de `src/lib/origen-visita.ts`. Si
+/// fuera el dominio crudo, una tienda linkeada desde cincuenta lados tendría
+/// cincuenta filas por día para siempre.
+model StoreViewSource {
+  id      String @id @default(cuid())
+  storeId String
+  store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  date    String // "2026-06-13", día del calendario argentino
+  source  String // una de ORIGENES
+  count   Int    @default(0)
+
+  @@unique([storeId, date, source])
   @@index([storeId, date(sort: Desc)])
 }
 

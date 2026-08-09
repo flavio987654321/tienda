@@ -393,11 +393,78 @@ Confundirlas y reemplazarlas sería el mismo error al revés.
 
 ---
 
+## ✅ 9. De dónde viene la gente (09/08/2026)
+
+Hasta acá el panel sabía **cuántas** visitas hubo y ninguna otra cosa. *"¿Esto lo trajo Instagram
+o el WhatsApp que mandé?"* —la primera pregunta que hace cualquiera que vende por internet— no se
+podía contestar.
+
+Va **primero de los cinco pendientes** por un motivo que no es el valor: nuevos vs. que vuelven,
+comparar contra el año pasado y el rango libre leen historia que ya está guardada y salen completos
+el día que se hagan. **Esto sólo mide desde el día que se prende.** Cada semana de demora es una
+semana de datos que no se recupera nunca.
+
+### Tabla aparte, no una columna
+
+`StoreViewSource(storeId, date, source, count)`. Meterle el origen a `StoreView` obligaba a cambiarle
+la clave única, a rellenar el historial con un "desconocido" inventado y a tocar los seis lugares que
+la leen.
+
+El precio es que las dos cuentas no dan iguales hasta que pase un período entero. **Eso no se
+esconde:** la tarjeta dice *"de las 1.240 visitas del período se sabe de dónde vinieron 890"*, y los
+porcentajes van sobre las 890. Dividir por el total achicaría todos los canales a la vez y daría la
+impresión de que la tienda se cayó cuando lo único que falta es la etiqueta.
+
+### La lista es cerrada
+
+Diez etiquetas fijas en `src/lib/origen-visita.ts`, no el dominio crudo del referente. Con el dominio,
+una tienda linkeada desde cincuenta agregadores tendría cincuenta filas por día **para siempre** —y
+`source` es parte de la clave de la tabla. Se pierde el detalle de quién es "otro"; sirve más saber
+que el 8% viene de afuera que tener el 8% repartido en treinta filas de 0,2%.
+
+**Clasifica el servidor, no el cliente.** Lo que sale de ahí se escribe en la base y se compara con lo
+ya escrito: tiene que salir de una lista cerrada y no de lo que decida mandar un navegador.
+
+### 🔴 El agujero de WhatsApp, que hay que decir en voz alta
+
+**WhatsApp abre los links en un navegador que en la mayoría de los teléfonos no manda el referente.**
+Buena parte de lo que vino de un WhatsApp cae en "directo". En Argentina, donde WhatsApp es *el*
+canal de una tienda chica, eso es la diferencia entre leer bien el número y sacar la conclusión al
+revés.
+
+No se puede arreglar desde el código: se arregla mandando el link con `?utm_source=whatsapp`. Por eso
+**los `utm_*` le ganan al referente** —cuando alguien se tomó el trabajo de decir de dónde viene, se
+le cree— y por eso la tarjeta lo explica en vez de esconderlo.
+
+### Tres decisiones que se ven en los chequeos
+
+- **Gmail no es Google.** `mail.google.com` engancha con la regla de Google. Con el orden al revés,
+  cada click desde un mail que la dueña mandó se le acreditaba al buscador.
+- **Un `utm_source` que no reconocemos NO es directo.** La dueña etiquetó el link a propósito: decir
+  "directo" borraría una campaña real. Va a "otro".
+- **"Directo" y "otro" van al final del ranking aunque sean los más grandes.** Son bolsas, no
+  canales: nadie decide invertir más en directo. Arriba tienen que quedar los que sí se pueden mover.
+
+### Qué NO hace
+
+Cuenta **visitas, no ventas**. Que un canal traiga más gente no quiere decir que traiga más plata, y
+hoy no hay forma de saberlo: el pedido no guarda de dónde venía la persona.
+
+### Retención
+
+El cron `cleanup` borra `StoreView` de más de 1 año, y ahora `StoreViewSource` **con el mismo corte**.
+Si el desglose sobreviviera al total, la pantalla tendría que mostrar "de 0 visitas, 40 vinieron de
+Instagram". Ojo: ese cron **no está en `vercel.json`**, así que hoy no corre nunca.
+
+---
+
 ## Cómo correr los chequeos
 
 ```
 npx tsx src/lib/fechas-comerciales.check.ts
 npx tsx src/lib/metricas-marketing.check.ts
 npx tsx src/lib/resumen-mes.check.ts
+npx tsx src/lib/dia-a-dia.check.ts
+npx tsx src/lib/origen-visita.check.ts
 npx tsx src/lib/bots.check.ts
 ```

@@ -9,6 +9,7 @@ import { ESTADOS_VENTA_CONFIRMADA_LISTA } from "@/lib/order-status";
 import {
   getArgentinaDayKey, diaArgentino, inicioDiaArgentino, sumarDiasCalendario,
 } from "@/lib/fechas-comerciales";
+import { ordenarOrigenes, ORIGENES, NOMBRE_ORIGEN, type Origen } from "@/lib/origen-visita";
 
 /**
  * Un valor listo para meter en una celda de CSV.
@@ -315,6 +316,25 @@ export async function GET(req: NextRequest) {
   const totalRevenue = days.reduce((s, d) => s + d.revenue, 0);
   const totalOrders = days.reduce((s, d) => s + d.orders, 0);
   const totalVisits = days.reduce((s, d) => s + d.visits, 0);
+
+  // ── De dónde vinieron ──
+  // Va en su propio await y no en el Promise.all de arriba: la tabla es nueva y
+  // en un entorno sin la migración corrida la query tira. El `.catch` la deja en
+  // vacío y el resto del archivo sale igual, que es lo mismo que ya hace la
+  // query de visitas.
+  const origenes = ordenarOrigenes(
+    (await prisma.storeViewSource
+      .groupBy({
+        by: ["source"],
+        where: { storeId: store.id, date: { gte: days[0].dateStr, lte: days[days.length - 1].dateStr } },
+        _sum: { count: true },
+      })
+      .catch(() => [] as { source: string; _sum: { count: number | null } }[]))
+      .filter((o) => (ORIGENES as readonly string[]).includes(o.source))
+      .map((o) => ({ origen: o.source as Origen, visitas: o._sum.count ?? 0 }))
+      .filter((o) => o.visitas > 0)
+  );
+  const visitasConOrigen = origenes.reduce((s, o) => s + o.visitas, 0);
   const totalCost = days.reduce((s, d) => s + d.cost, 0);
   const totalProfit = days.reduce((s, d) => s + d.profit, 0);
 
@@ -506,6 +526,24 @@ export async function GET(req: NextRequest) {
       `# PROMOCIONES ACTIVAS QUE NO ENTRARON EN NINGUN PEDIDO`,
       `Promocion`,
       ...resumenPromos.sinUsar.map(n => csv(n)),
+      ``,
+    ] : []),
+
+    // El porcentaje va sobre las visitas CON origen y no sobre el total: si se
+    // dividiera por el total, todos los canales se achicarían a la vez cada vez
+    // que falte una etiqueta y parecería que la tienda se cayó. La fila "SIN
+    // ORIGEN" deja la resta a la vista para que nadie tenga que hacerla a mano.
+    ...(visitasConOrigen > 0 ? [
+      `# DE DONDE VINO LA GENTE`,
+      `# Los porcentajes son sobre las ${visitasConOrigen} visitas con origen conocido, no sobre las ${totalVisits} del periodo`,
+      `# OJO: WhatsApp abre los links en un navegador que casi nunca dice de donde viene, asi que parte de "Directo" en realidad salio de un WhatsApp. Mandando el link con ?utm_source=whatsapp se cuenta bien`,
+      `# Esto cuenta VISITAS, no ventas`,
+      `Origen,Visitas,Porcentaje`,
+      ...origenes.map(o =>
+        `${csv(NOMBRE_ORIGEN[o.origen])},${o.visitas},${Math.round((o.visitas / visitasConOrigen) * 100)}`),
+      ...(totalVisits > visitasConOrigen
+        ? [`SIN ORIGEN,${totalVisits - visitasConOrigen},`]
+        : []),
       ``,
     ] : []),
 
