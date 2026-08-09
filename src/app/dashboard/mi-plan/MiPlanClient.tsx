@@ -255,33 +255,33 @@ export default function MiPlanClient({ sub, userRole, autoUpgrade = false }: Pro
             <div className="space-y-3">
               <a
                 href="/dashboard/ajustes"
-                className="flex items-center justify-between p-4 bg-white rounded-2xl border border-violet-100 hover:border-violet-300 transition-colors group shadow-sm"
+                className="flex items-center justify-between gap-3 p-4 bg-white rounded-2xl border border-violet-100 hover:border-violet-300 transition-colors group shadow-sm"
               >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-violet-100 rounded-xl flex items-center justify-center">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-10 h-10 bg-violet-100 rounded-xl flex items-center justify-center shrink-0">
                     <Zap className="h-5 w-5 text-violet-600" />
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <p className="text-sm font-bold text-gray-800">Tu tienda como app (PWA)</p>
                     <p className="text-xs text-gray-500">Los clientes pueden instalarla en su celular</p>
                   </div>
                 </div>
-                <ArrowRight className="h-4 w-4 text-violet-400 group-hover:translate-x-0.5 transition-transform" />
+                <ArrowRight className="h-4 w-4 shrink-0 text-violet-400 group-hover:translate-x-0.5 transition-transform" />
               </a>
               <a
                 href="/dashboard/configuracion"
-                className="flex items-center justify-between p-4 bg-white rounded-2xl border border-violet-100 hover:border-violet-300 transition-colors group shadow-sm"
+                className="flex items-center justify-between gap-3 p-4 bg-white rounded-2xl border border-violet-100 hover:border-violet-300 transition-colors group shadow-sm"
               >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-fuchsia-100 rounded-xl flex items-center justify-center">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-10 h-10 bg-fuchsia-100 rounded-xl flex items-center justify-center shrink-0">
                     <Star className="h-5 w-5 text-fuchsia-600" />
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <p className="text-sm font-bold text-gray-800">Flyers publicitarios</p>
                     <p className="text-xs text-gray-500">Popup automático al entrar a tu tienda</p>
                   </div>
                 </div>
-                <ArrowRight className="h-4 w-4 text-fuchsia-400 group-hover:translate-x-0.5 transition-transform" />
+                <ArrowRight className="h-4 w-4 shrink-0 text-fuchsia-400 group-hover:translate-x-0.5 transition-transform" />
               </a>
             </div>
           </div>
@@ -334,15 +334,15 @@ export default function MiPlanClient({ sub, userRole, autoUpgrade = false }: Pro
                 const planKey = planTier === "PREMIUM" ? "OWNER_PREMIUM" : "OWNER_BASIC";
                 setPayModal({ plan: planKey, billing: planBilling });
               }}
-              className="w-full flex items-center justify-between px-5 py-3.5 rounded-2xl border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 transition-colors group"
+              className="w-full flex items-center justify-between gap-3 px-5 py-3.5 rounded-2xl border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 transition-colors group"
             >
-              <div className="flex items-center gap-3 text-sm font-semibold text-indigo-700">
-                <div className="w-8 h-8 bg-indigo-100 rounded-xl flex items-center justify-center group-hover:bg-indigo-200 transition-colors">
+              <div className="flex min-w-0 items-center gap-3 text-left text-sm font-semibold text-indigo-700">
+                <div className="w-8 h-8 bg-indigo-100 rounded-xl flex items-center justify-center shrink-0 group-hover:bg-indigo-200 transition-colors">
                   <RefreshCw className="h-4 w-4 text-indigo-600" />
                 </div>
                 {status === "EXPIRED" || status === "CANCELLED" ? "Reactivar suscripción" : "Renovar ahora"}
               </div>
-              <ArrowRight className="h-4 w-4 text-indigo-400" />
+              <ArrowRight className="h-4 w-4 shrink-0 text-indigo-400" />
             </button>
           )}
 
@@ -352,44 +352,44 @@ export default function MiPlanClient({ sub, userRole, autoUpgrade = false }: Pro
                 const planKey = planTier === "PREMIUM" ? "OWNER_PREMIUM" : "OWNER_BASIC";
                 setPayModal({ plan: planKey, billing: "ANNUAL" });
               }}
-              className="w-full flex items-center justify-between px-5 py-3.5 rounded-2xl border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 transition-colors group"
+              className="w-full flex items-center justify-between gap-3 px-5 py-3.5 rounded-2xl border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 transition-colors group"
             >
-              <div className="flex items-center gap-3 text-sm font-semibold text-emerald-700">
-                <div className="w-8 h-8 bg-emerald-100 rounded-xl flex items-center justify-center group-hover:bg-emerald-200 transition-colors">
+              <div className="flex min-w-0 items-center gap-3 text-left text-sm font-semibold text-emerald-700">
+                <div className="w-8 h-8 bg-emerald-100 rounded-xl flex items-center justify-center shrink-0 group-hover:bg-emerald-200 transition-colors">
                   <Zap className="h-4 w-4 text-emerald-600" />
                 </div>
                 Cambiar a plan anual · 3 meses gratis
               </div>
-              <span className="text-xs font-bold text-emerald-600">{money(getPriceForRole("OWNER", planTier, "ANNUAL"))}/año</span>
+              <span className="shrink-0 text-right text-xs font-bold text-emerald-600">{money(getPriceForRole("OWNER", planTier, "ANNUAL"))}/año</span>
             </button>
           )}
 
           {isActive && planTier === "BASIC" && (
             <button
               onClick={() => setPayModal({ plan: "OWNER_PREMIUM", billing: planBilling })}
-              className="w-full flex items-center justify-between px-5 py-3.5 rounded-2xl border border-violet-200 bg-violet-50 hover:bg-violet-100 transition-colors group"
+              className="w-full flex items-center justify-between gap-3 px-5 py-3.5 rounded-2xl border border-violet-200 bg-violet-50 hover:bg-violet-100 transition-colors group"
             >
-              <div className="flex items-center gap-3 text-sm font-semibold text-violet-700">
-                <div className="w-8 h-8 bg-violet-100 rounded-xl flex items-center justify-center group-hover:bg-violet-200 transition-colors">
+              <div className="flex min-w-0 items-center gap-3 text-left text-sm font-semibold text-violet-700">
+                <div className="w-8 h-8 bg-violet-100 rounded-xl flex items-center justify-center shrink-0 group-hover:bg-violet-200 transition-colors">
                   <Crown className="h-4 w-4 text-violet-600" />
                 </div>
                 Mejorar a Premium
               </div>
-              <ArrowRight className="h-4 w-4 text-violet-400" />
+              <ArrowRight className="h-4 w-4 shrink-0 text-violet-400" />
             </button>
           )}
 
           <a
             href="/precios"
-            className="w-full flex items-center justify-between px-5 py-3.5 rounded-2xl border border-gray-100 hover:bg-gray-50 transition-colors group"
+            className="w-full flex items-center justify-between gap-3 px-5 py-3.5 rounded-2xl border border-gray-100 hover:bg-gray-50 transition-colors group"
           >
-            <div className="flex items-center gap-3 text-sm font-medium text-gray-600">
-              <div className="w-8 h-8 bg-gray-100 rounded-xl flex items-center justify-center group-hover:bg-gray-200 transition-colors">
+            <div className="flex min-w-0 items-center gap-3 text-left text-sm font-medium text-gray-600">
+              <div className="w-8 h-8 bg-gray-100 rounded-xl flex items-center justify-center shrink-0 group-hover:bg-gray-200 transition-colors">
                 <Star className="h-4 w-4 text-gray-500" />
               </div>
               Ver todos los planes
             </div>
-            <ArrowRight className="h-4 w-4 text-gray-400" />
+            <ArrowRight className="h-4 w-4 shrink-0 text-gray-400" />
           </a>
         </div>
       </div>
