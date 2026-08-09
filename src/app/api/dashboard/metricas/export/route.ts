@@ -3,7 +3,7 @@ import { getCurrentUser } from "@/lib/auth-session";
 import { prisma } from "@/lib/prisma";
 import { aggregateProfitability, gananciaPorPedido, type ProfitOrderItem } from "@/lib/margin";
 import { parseOrderPromoSummary } from "@/lib/email";
-import { resumirCarritos, resumirCupones, resumirPromos, compararCompra } from "@/lib/metricas-marketing";
+import { resumirCarritos, resumirCupones, resumirPromos, compararCompra, resumirJuego } from "@/lib/metricas-marketing";
 import { armarResumen } from "@/lib/resumen-mes";
 import { ESTADOS_VENTA_CONFIRMADA_LISTA } from "@/lib/order-status";
 import {
@@ -79,7 +79,7 @@ export async function GET(req: NextRequest) {
   const sinDespacharDesde = inicioDiaArgentino(sumarDiasCalendario(hoyDia, -5));
 
   const [
-    orders, views, carritosRaw, cuponesRaw, pedidosConCupon, pedidosConPromoRaw, promosActivasRaw,
+    orders, views, carritosRaw, cuponesRaw, pedidosConCupon, pedidosConPromoRaw, girosRaw, promosActivasRaw,
     revenuePrevAgg, ordersPrevConfirmedCount, viewsPrevAgg, sinDespacharAgg,
   ] = await Promise.all([
     prisma.order.findMany({
@@ -105,7 +105,7 @@ export async function GET(req: NextRequest) {
       where: { storeId: store.id },
       select: {
         id: true, code: true, label: true, discountType: true, discountValue: true,
-        expiresAt: true, isActive: true, createdAt: true, winnerEmail: true,
+        expiresAt: true, isActive: true, createdAt: true, winnerEmail: true, usedCount: true,
       },
     }),
     prisma.order.findMany({
@@ -121,6 +121,13 @@ export async function GET(req: NextRequest) {
         status: { in: CONFIRMED }, promoSummary: { not: null },
       },
       select: { id: true, promoSummary: true, total: true },
+    }),
+    prisma.gamificationSpin.findMany({
+      where: {
+        widget: { storeId: store.id },
+        createdAt: { gte: startDate, lt: endDate },
+      },
+      select: { email: true, prizeLabel: true, isNoPrize: true, couponId: true },
     }),
     prisma.storePromotion.findMany({
       where: {
@@ -255,6 +262,10 @@ export async function GET(req: NextRequest) {
       };
     }),
     promosActivasRaw.map((p) => p.name)
+  );
+  const resumenJuego = resumirJuego(
+    girosRaw,
+    new Set(cuponesRaw.filter((c) => c.usedCount > 0).map((c) => c.id))
   );
   const comparacionCompra = compararCompra(
     orders
@@ -430,6 +441,20 @@ export async function GET(req: NextRequest) {
       // las dos. Se aclara para que nadie sume a mano y crea que hay un error.
       `# Un pedido con dos promos aparece en dos filas — por eso las columnas Pedidos, Facturado y Ganancia suman mas que el TOTAL`,
       `TOTAL,${resumenPromos.pedidosConPromo} pedidos con promo,${Math.round(resumenPromos.facturadoTotal)},${Math.round(resumenPromos.ahorroTotal)},${montoOVacio(resumenPromos.gananciaTotal)},${resumenPromos.pedidosSinCosto}`,
+      ``,
+    ] : []),
+
+    // La ruleta. "Canjeados" se mide hoy y no dentro del período a proposito: un
+    // premio ganado el dia 28 se puede usar el 32.
+    ...(resumenJuego.jugadas > 0 ? [
+      `# RULETA / RASPADITA`,
+      `Jugadas,${resumenJuego.jugadas}`,
+      `Ganaron un premio,${resumenJuego.ganaron}`,
+      `Premios ya canjeados,${resumenJuego.canjeados}`,
+      `Emails distintos,${resumenJuego.emails}`,
+      ``,
+      `Premio,Veces`,
+      ...resumenJuego.premios.map(p => `${csv(p.etiqueta)},${p.veces}`),
       ``,
     ] : []),
 

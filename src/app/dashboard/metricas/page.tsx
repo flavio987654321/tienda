@@ -11,7 +11,8 @@ import { statusLabel } from "@/lib/utils";
 import { parseOrderPromoSummary } from "@/lib/email";
 import {
   resumirCarritos, resumirCupones, resumirPromos, compararCompra, MINIMO_PARA_COMPARAR,
-  type CarritoCrudo, type CuponCrudo,
+  resumirJuego,
+  type CarritoCrudo, type CuponCrudo, type GiroCrudo,
 } from "@/lib/metricas-marketing";
 import { armarResumen } from "@/lib/resumen-mes";
 import { ESTADOS_VENTA_CONFIRMADA_LISTA } from "@/lib/order-status";
@@ -595,17 +596,26 @@ export default async function MetricasPage({
   // equivocan calladas (etapas que se pisan, pedidos con dos promas contados dos
   // veces) y porque el CSV va a necesitar exactamente los mismos números.
   let carritosRaw: CarritoCrudo[] = [];
-  let cuponesRaw: CuponCrudo[] = [];
+  // `usedCount` va como extra y no adentro de `CuponCrudo`: lo usa la ruleta
+  // para saber qué premios terminaron en una compra, pero `resumirCupones` no lo
+  // necesita, y meterlo en el tipo obligaría a inventarlo en cada llamador.
+  let cuponesRaw: (CuponCrudo & { usedCount: number })[] = [];
   // En crudo: la ganancia de cada pedido no viene de estas queries sino de los
   // ítems, así que se junta más abajo y recién ahí se arman los tipos finales.
   let pedidosConCuponRaw: { id: string; couponId: string | null; discountAmount: number; total: number }[] = [];
   let pedidosConPromoRaw: { id: string; promoSummary: string | null; total: number }[] = [];
   let promosActivasRaw: { name: string }[] = [];
+  // Los giros de la ruleta del período. `GamificationSpin` se venía guardando en
+  // cada jugada y no se leía en ninguna pantalla: la ruleta era la única función
+  // del panel sin una sola medición.
+  let girosRaw: GiroCrudo[] = [];
+  let juegoWidget: { type: string; isActive: boolean } | null = null;
 
   if (!isAutos) {
     [
       ordersPeriod, revenuePrevAgg, ordersPrevCount, topProducts, ordersByStatus,
       carritosRaw, cuponesRaw, pedidosConCuponRaw, pedidosConPromoRaw, promosActivasRaw,
+      girosRaw, juegoWidget,
       ordersPrevConfirmedCount, sinDespacharAgg,
     ] = await Promise.all([
       prisma.order.findMany({
@@ -668,6 +678,8 @@ export default async function MetricasPage({
         select: {
           id: true, code: true, label: true, discountType: true, discountValue: true,
           expiresAt: true, isActive: true, createdAt: true, winnerEmail: true,
+          // Para saber qué premios de la ruleta terminaron en una compra.
+          usedCount: true,
         },
       }),
 
@@ -714,6 +726,20 @@ export default async function MetricasPage({
           ],
         },
         select: { name: true },
+      }),
+
+      // Se filtra por la tienda a través de la relación, así no hace falta
+      // buscar antes el id del widget: una query en vez de dos.
+      prisma.gamificationSpin.findMany({
+        where: {
+          widget: { storeId: store.id },
+          createdAt: { gte: periodStart, lt: periodEndExclusive },
+        },
+        select: { email: true, prizeLabel: true, isNoPrize: true, couponId: true },
+      }),
+      prisma.gamificationWidget.findUnique({
+        where: { storeId: store.id },
+        select: { type: true, isActive: true },
       }),
 
       // ── Sólo para el resumen en texto ──
@@ -814,6 +840,14 @@ export default async function MetricasPage({
     promosActivasRaw.map((p) => p.name)
   );
 
+  // La ruleta. `usedCount` es histórico y acá está bien que lo sea: un premio
+  // ganado el día 28 se puede canjear el 32, y recortarlo al período lo contaría
+  // como no canjeado para siempre.
+  const resumenJuego = resumirJuego(
+    girosRaw,
+    new Set(cuponesRaw.filter((c) => c.usedCount > 0).map((c) => c.id))
+  );
+
   // ¿La gente que usa cupón compra más que la que no? Sobre pedidos CONFIRMADOS,
   // los mismos que cuenta el resto de la pantalla.
   const comparacionCompra = compararCompra(
@@ -833,7 +867,8 @@ export default async function MetricasPage({
     resumenCarritos.cantidad > 0 ||
     resumenCupones.filas.length > 0 || resumenCupones.sinUsar.length > 0 ||
     resumenCupones.ruleta.usos > 0 ||
-    resumenPromos.filas.length > 0 || resumenPromos.sinUsar.length > 0;
+    resumenPromos.filas.length > 0 || resumenPromos.sinUsar.length > 0 ||
+    juegoWidget !== null;
 
   // ── #7c — el envío que la tienda regaló en el período ──
   // Va APARTE de la ganancia por producto a propósito: es un costo por PEDIDO, y
@@ -1367,8 +1402,12 @@ export default async function MetricasPage({
             que no existe. La excepción es la de carritos, donde las tres etapas
             sí son estados distintos (bien / a medias / nada) y llevan los colores
             de estado, siempre con su texto al lado. */}
+        {/* Dos columnas y no tres. Entró una tarjeta más —la ruleta— y con tres
+            quedaba una huérfana en la segunda fila. Además las de cupones y
+            promos crecieron: ahora cada fila lleva la ganancia y de dónde sale,
+            y a un tercio de 1152px eso se parte en demasiados renglones. */}
         {!isAutos && hayMarketing && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
             {/* Carritos abandonados */}
             <div className="rounded-2xl border border-gray-100 bg-white p-6">
@@ -1536,23 +1575,15 @@ export default async function MetricasPage({
                   uso" que empujaban afuera a los cupones de verdad; y el total
                   sumaba las dos cosas, así que no se podía saber cuánto costó la
                   ruleta y cuánto costaron tus cupones. */}
+              {/* Un puntero, no los números otra vez: ahora tienen su tarjeta al
+                  lado y repetirlos acá sería invitar a que un día no coincidan.
+                  Pero la línea tiene que estar igual, porque si no nadie entiende
+                  por qué los códigos WIN- no aparecen en el ranking de arriba. */}
               {resumenCupones.ruleta.usos > 0 && (
                 <div className="mt-5 border-t border-gray-100 pt-3.5">
-                  <div className="flex items-baseline justify-between gap-3">
-                    <p className="text-xs font-semibold text-gray-500">🎡 Premios de la ruleta</p>
-                    <p className="shrink-0 text-xs text-gray-400">
-                      <span className="font-bold text-gray-700">{resumenCupones.ruleta.usos}</span>
-                      {" canjeado"}{resumenCupones.ruleta.usos !== 1 ? "s" : ""}
-                    </p>
-                  </div>
-                  <p className="mt-1.5 text-xs leading-relaxed text-gray-400 tabular-nums">
-                    {resumenCupones.ruleta.ganancia !== null ? (
-                      <>Te dejó <span className="font-bold text-gray-900">{money(resumenCupones.ruleta.ganancia)}</span></>
-                    ) : (
-                      <span className="text-amber-600">Sin el costo cargado no se puede saber la ganancia</span>
-                    )}
-                    <br />
-                    Trajo {money(resumenCupones.ruleta.facturado)} · descontaste {money(resumenCupones.ruleta.descuento)}
+                  <p className="text-xs leading-relaxed text-gray-400">
+                    🎡 Los {resumenCupones.ruleta.usos} premio{resumenCupones.ruleta.usos !== 1 ? "s" : ""} de la ruleta
+                    {" "}que se canjearon van aparte y no entran en estos totales.
                   </p>
                 </div>
               )}
@@ -1648,6 +1679,107 @@ export default async function MetricasPage({
                 cta="Ver promociones"
               />
             </div>
+
+            {/* ── La ruleta / raspadita ──
+                Hasta acá no tenía una sola medición: cada jugada se venía
+                guardando y no se leía en ninguna pantalla. Lo único visible era
+                el contador de "Gamificación" en Cupones, que cuenta los que
+                GANARON — sin el denominador, no dice nada.
+
+                El número grande es la tasa de canje y no las jugadas, porque es
+                el único que contesta si el juego sirve. Jugadas y premios miden
+                entusiasmo; canjes mide si alguno volvió a comprar, que es todo
+                el negocio: estás cambiando un descuento por un email. */}
+            {juegoWidget && (
+              <div className="rounded-2xl border border-gray-100 bg-white p-6">
+                <div className="mb-4 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span aria-hidden className="shrink-0">{juegoWidget.type === "SCRATCH" ? "🪙" : "🎡"}</span>
+                    <h2 className="font-bold text-gray-900 truncate">
+                      {juegoWidget.type === "SCRATCH" ? "Raspadita" : "Ruleta"}
+                    </h2>
+                    {!juegoWidget.isActive && (
+                      <span className="shrink-0 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-semibold text-gray-500">
+                        Apagada
+                      </span>
+                    )}
+                  </div>
+                  <span className="shrink-0 text-sm font-semibold text-gray-400">
+                    {resumenJuego.jugadas} jugada{resumenJuego.jugadas !== 1 ? "s" : ""}
+                  </span>
+                </div>
+
+                {resumenJuego.jugadas === 0 ? (
+                  <div className="py-2">
+                    <p className="text-sm font-medium text-gray-600 mb-1">Nadie jugó en el período</p>
+                    <p className="text-xs text-gray-400 leading-relaxed">
+                      {juegoWidget.isActive
+                        ? "Cuando alguien juegue vas a ver acá cuántos ganaron y —lo que importa— cuántos volvieron a comprar con el premio."
+                        : "Está apagada, así que no aparece en tu tienda. Prendela desde Cupones para que empiece a juntar emails."}
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="mb-4">
+                      <p className="text-2xl font-bold text-gray-900">
+                        {resumenJuego.canjeados} de {resumenJuego.ganaron} usaron su premio
+                      </p>
+                      <p className="text-xs text-gray-400 mt-0.5">
+                        {resumenJuego.ganaron > 0
+                          ? `${Math.round((resumenJuego.canjeados / resumenJuego.ganaron) * 100)}% de los que ganaron volvió a comprar`
+                          : "Todavía nadie ganó un premio"}
+                        {" · "}{resumenJuego.emails} email{resumenJuego.emails !== 1 ? "s" : ""} que dejaron
+                      </p>
+                    </div>
+
+                    {/* Lo que costó sale del lado de los cupones, no de acá: el
+                        premio es un cupón, y esa cuenta ya está hecha. Repetirla
+                        con otra fuente sería invitar a que un día no coincidan. */}
+                    {resumenCupones.ruleta.usos > 0 && (
+                      <p className="mb-4 text-xs leading-relaxed text-gray-400 tabular-nums">
+                        {resumenCupones.ruleta.ganancia !== null ? (
+                          <>Te dejó <span className="font-bold text-gray-900">{money(resumenCupones.ruleta.ganancia)}</span>{" · "}</>
+                        ) : null}
+                        trajo {money(resumenCupones.ruleta.facturado)} · descontaste {money(resumenCupones.ruleta.descuento)}
+                      </p>
+                    )}
+
+                    <p className="mb-2 text-xs font-semibold text-gray-500">Qué salió</p>
+                    <div className="space-y-2">
+                      {resumenJuego.premios.slice(0, 5).map((p) => {
+                        const pct = Math.round((p.veces / resumenJuego.jugadas) * 100);
+                        const nada = p.etiqueta === "Sin premio";
+                        return (
+                          <div key={p.etiqueta}>
+                            <div className="mb-1 flex items-baseline justify-between gap-3 text-sm">
+                              <span className={`min-w-0 break-words ${nada ? "text-gray-400" : "text-gray-700 font-medium"}`}>
+                                {p.etiqueta}
+                              </span>
+                              <span className="shrink-0 text-xs text-gray-400 tabular-nums">
+                                <span className="font-bold text-gray-900">{p.veces}</span> · {pct}%
+                              </span>
+                            </div>
+                            <div className="h-1.5 rounded-full bg-gray-100">
+                              <div
+                                className={`h-1.5 rounded-full ${nada ? "bg-gray-300" : "bg-fuchsia-500"}`}
+                                style={{ width: `${pct}%` }}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    <Link
+                      href="/dashboard/cupones"
+                      className="mt-4 inline-block text-xs font-semibold text-indigo-600 hover:text-indigo-700 print:hidden"
+                    >
+                      Ver los premios entregados →
+                    </Link>
+                  </>
+                )}
+              </div>
+            )}
           </div>
         )}
 

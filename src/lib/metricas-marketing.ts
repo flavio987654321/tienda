@@ -306,6 +306,70 @@ export function resumirCupones(
   };
 }
 
+/* ── La ruleta / raspadita ────────────────────────────────────────────────── */
+
+/** Un giro guardado. `prizeLabel` viene en null cuando no ganó nada. */
+export type GiroCrudo = {
+  email: string | null;
+  prizeLabel: string | null;
+  isNoPrize: boolean;
+  couponId: string | null;
+};
+
+export type ResumenJuego = {
+  jugadas: number;
+  /** Giros que se llevaron un premio de verdad. */
+  ganaron: number;
+  /**
+   * De esos premios, cuántos ya se usaron en una compra. Se mide HOY, sin
+   * importar cuándo se canjearon: un premio ganado el día 28 puede usarse el 32,
+   * y recortarlo al período lo contaría como no canjeado para siempre.
+   *
+   * Es el único número que dice si la ruleta sirvió. Todo lo demás —jugadas,
+   * premios -mide entusiasmo; esto mide si alguno volvió a comprar.
+   */
+  canjeados: number;
+  /** Emails distintos que dejaron para jugar. Es lo que se compra con el descuento. */
+  emails: number;
+  /** Qué salió y cuántas veces, de más a menos. "Sin premio" incluido. */
+  premios: { etiqueta: string; veces: number }[];
+};
+
+/**
+ * @param usados ids de cupón que ya se usaron al menos una vez.
+ */
+export function resumirJuego(giros: GiroCrudo[], usados: Set<string>): ResumenJuego {
+  const porPremio = new Map<string, number>();
+  const emails = new Set<string>();
+  let ganaron = 0;
+  let canjeados = 0;
+
+  for (const g of giros) {
+    if (g.email) emails.add(g.email);
+
+    // `isNoPrize` es la verdad, no `prizeLabel`. Cuando el sorteo cae en un
+    // premio que resultó no entregable —la plantilla del cupón se borró, o se
+    // agotaron los cupos— el giro se guarda con isNoPrize en true y la etiqueta
+    // en null. Mirar sólo la etiqueta contaría eso como premio entregado.
+    const etiqueta = g.isNoPrize ? "Sin premio" : (g.prizeLabel?.trim() || "Premio");
+    porPremio.set(etiqueta, (porPremio.get(etiqueta) ?? 0) + 1);
+
+    if (g.isNoPrize) continue;
+    ganaron++;
+    if (g.couponId && usados.has(g.couponId)) canjeados++;
+  }
+
+  return {
+    jugadas: giros.length,
+    ganaron,
+    canjeados,
+    emails: emails.size,
+    premios: [...porPremio.entries()]
+      .map(([etiqueta, veces]) => ({ etiqueta, veces }))
+      .sort((a, b) => b.veces - a.veces || a.etiqueta.localeCompare(b.etiqueta, "es")),
+  };
+}
+
 /* ── ¿El cupón hace que compren más? ──────────────────────────────────────── */
 
 /**

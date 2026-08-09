@@ -10,7 +10,7 @@
 
 import {
   resumirCarritos, resumirCupones, resumirPromos, etiquetaDescuento,
-  compararCompra, MINIMO_PARA_COMPARAR,
+  compararCompra, MINIMO_PARA_COMPARAR, resumirJuego,
   type CarritoCrudo, type CuponCrudo, type PromoAplicada,
 } from "./metricas-marketing";
 
@@ -291,6 +291,48 @@ chequear("pero los promedios se siguen pudiendo mostrar",
 const sinNada = compararCompra([]);
 chequear("sin pedidos no divide por cero",
   sinNada.diferenciaPct === null && sinNada.conCupon.promedio === 0 && sinNada.sinCupon.promedio === 0);
+
+/* ── La ruleta ────────────────────────────────────────────────────────────── */
+console.log("\n5) Ruleta / raspadita");
+
+const giros = [
+  { email: "ana@x.com",  prizeLabel: "20% OFF",      isNoPrize: false, couponId: "w1" },
+  { email: "juan@x.com", prizeLabel: "20% OFF",      isNoPrize: false, couponId: "w2" },
+  { email: "eva@x.com",  prizeLabel: "Envío gratis", isNoPrize: false, couponId: "w3" },
+  { email: "leo@x.com",  prizeLabel: null,           isNoPrize: true,  couponId: null },
+  { email: "sol@x.com",  prizeLabel: null,           isNoPrize: true,  couponId: null },
+  // LA trampa: el sorteo cayó en un premio real que resultó no entregable —se
+  // borró la plantilla del cupón, o se agotaron los cupos—. Se guarda con
+  // isNoPrize en true y la etiqueta puesta. Si se mirara sólo la etiqueta, esto
+  // contaría como premio entregado y la tasa de canje saldría más baja de lo real.
+  { email: "ana@x.com",  prizeLabel: "20% OFF",      isNoPrize: true,  couponId: null },
+];
+// De los tres premios entregados, sólo w1 se usó.
+const rj = resumirJuego(giros, new Set(["w1"]));
+
+chequear("6 jugadas", rj.jugadas === 6, rj.jugadas);
+chequear("3 ganaron, no 4", rj.ganaron === 3, rj.ganaron);
+chequear("el premio no entregable cuenta como sin premio",
+  rj.premios.find(p => p.etiqueta === "Sin premio")?.veces === 3, rj.premios);
+chequear("1 canjeado", rj.canjeados === 1, rj.canjeados);
+// ana jugó dos veces con el mismo email: son 5 personas, no 6.
+chequear("cuenta emails distintos, no giros", rj.emails === 5, rj.emails);
+chequear("el premio mas frecuente va primero",
+  rj.premios[0].etiqueta === "Sin premio", rj.premios.map(p => p.etiqueta));
+chequear("un cupon usado que no salio de la ruleta no suma",
+  resumirJuego(giros, new Set(["otro-cupon"])).canjeados === 0);
+
+const juegoVacio = resumirJuego([], new Set());
+chequear("sin giros no explota",
+  juegoVacio.jugadas === 0 && juegoVacio.ganaron === 0 && juegoVacio.premios.length === 0);
+
+// Anónimos: el email puede ser null. No tienen que contarse como uno solo.
+const anonimos = resumirJuego(
+  [{ email: null, prizeLabel: null, isNoPrize: true, couponId: null },
+   { email: null, prizeLabel: null, isNoPrize: true, couponId: null }],
+  new Set()
+);
+chequear("los giros sin email no inventan una persona", anonimos.emails === 0, anonimos.emails);
 
 console.log(fallos === 0 ? "\nTodo bien.\n" : `\n${fallos} fallas.\n`);
 process.exit(fallos === 0 ? 0 : 1);
