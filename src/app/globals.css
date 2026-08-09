@@ -291,14 +291,36 @@ body {
   }
 
   /* Que una tarjeta no se parta entre dos hojas. `avoid` es una preferencia, no
-     una orden: si una tarjeta es más alta que la hoja igual se va a cortar, pero
-     las de este panel entran todas. */
+     una orden: si una tarjeta es más alta que la hoja igual se va a cortar. */
   .rounded-2xl {
     break-inside: avoid;
     page-break-inside: avoid;
     /* Las esquinas muy redondeadas de la pantalla en papel parecen un error de
        impresión; 8px se lee como un recuadro. */
     border-radius: 8px !important;
+  }
+
+  /* Las que sí pueden ser más altas que una hoja se marcan y se dejan cortar.
+     En pantalla estas tarjetas muestran un podio de cinco filas; en el PDF se
+     abren enteras, y el día a día en 90 días son noventa renglones. Con `avoid`
+     el navegador primero las empuja a una hoja nueva —gastando la anterior a
+     medio llenar— y después las corta igual, porque no le queda otra. Cortar
+     donde toca es mejor que cortar después de una página en blanco. */
+  [data-print="largo"] {
+    break-inside: auto !important;
+    page-break-inside: auto !important;
+  }
+
+  /* Si una tabla larga se parte, que cada hoja diga qué es cada columna. Sin
+     esto la segunda página son cuatro columnas de números sin encabezado. */
+  thead {
+    display: table-header-group;
+  }
+
+  /* El encabezado pegajoso es para el scroll de la pantalla. En papel no hay
+     scroll y `sticky` lo deja flotando encima de la primera fila. */
+  .sticky {
+    position: static !important;
   }
 
   /* Ahorra tinta y hace legible el gris claro sobre papel. */

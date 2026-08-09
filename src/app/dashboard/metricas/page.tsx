@@ -53,6 +53,37 @@ const RANGE_LABELS: Record<RangeDays, string> = { 7: "7 días", 30: "30 días", 
  */
 const DIAS_SIN_DESPACHAR = 5;
 
+/* ── Cuánto entra en pantalla y cuánto en el papel ────────────────────────────
+   En pantalla los rankings son un podio: cinco filas, y para el resto hay un
+   link a la pantalla de esa función. En una tarjeta de 296px en un teléfono no
+   hay otra.
+
+   En papel esa salida no existe. No hay adónde hacer clic ni dónde scrollear, y
+   un "y 12 más →" impreso es tinta muerta: el informe nombra doce campañas que
+   después no se pueden mirar. Peor todavía, el recorte es por ranking, así que
+   lo primero que se cae del PDF es lo que menos rindió — justo lo único sobre lo
+   que hay algo para hacer.
+
+   Por eso el papel se expande. No hasta el infinito: hasta TOPE_PAPEL, y después
+   se dice cuántas quedaron afuera. Un PDF de ochenta páginas tampoco lo lee
+   nadie. */
+const TOPE_PANTALLA = 5;
+const TOPE_PAPEL = 30;
+
+/** El de Rentabilidad por producto, que en pantalla siempre mostró 8. */
+const TOPE_PANTALLA_RENTABILIDAD = 8;
+
+/**
+ * Desde cuándo el "día" de una visita es el día argentino y no el UTC.
+ *
+ * Las filas de `StoreView` anteriores no se pueden reclasificar —guardan fecha y
+ * cantidad, sin hora, así que repartirlas sería inventar a qué hora pasó cada
+ * visita—. En pantalla no hace falta decirlo porque casi nadie mira tan atrás;
+ * en un PDF archivado sí, porque ahí el número queda solo y se lo va a comparar
+ * contra otro. Está documentado en METRICAS.md, sección 6.
+ */
+const INICIO_DIA_ARGENTINO = "2026-07-29";
+
 function dayLabel(dateStr: string) {
   const [, m, day] = dateStr.split("-");
   return `${parseInt(day, 10)}/${parseInt(m, 10)}`;
@@ -344,10 +375,13 @@ function BarrasRanking({
   const maximo = Math.max(...filas.map(magnitud), 1);
   return (
     <div className="space-y-4">
-      {filas.slice(0, 5).map((f) => {
+      {/* Cinco en pantalla, hasta TOPE_PAPEL al imprimir. El máximo de la barra
+          sale de la lista entera, así que las filas que sólo salen en el PDF
+          quedan a la misma escala que las de arriba y se pueden comparar. */}
+      {filas.slice(0, TOPE_PAPEL).map((f, i) => {
         const pct = Math.round((magnitud(f) / maximo) * 100);
         return (
-          <div key={f.clave}>
+          <div key={f.clave} className={i >= TOPE_PANTALLA ? "hidden print:block" : undefined}>
             <div className="mb-1 flex items-baseline justify-between gap-3 text-sm">
               <div className="min-w-0">
                 <span className="text-gray-700 font-medium break-words">{f.titulo}</span>
@@ -386,13 +420,22 @@ function BarrasRanking({
           y no llevaba a ningún lado: la tarjeta mide unos 296px en un teléfono,
           así que meterle cuarenta filas no es una opción — pero dejar el número
           suelto sin salida es peor, porque nombra algo que después no se puede
-          mirar. */}
-      {filas.length > 5 && (
-        <p className="pt-1 text-xs text-gray-400">
-          y {filas.length - 5} más ·{" "}
-          <Link href={href} className="font-semibold text-indigo-600 hover:text-indigo-700 print:hidden">
+          mirar.
+
+          El `print:hidden` va en el párrafo entero y no sólo en el link: si se
+          escondía nada más el link, el papel terminaba en "y 12 más ·" colgando
+          de un separador que no separa nada. */}
+      {filas.length > TOPE_PANTALLA && (
+        <p className="pt-1 text-xs text-gray-400 print:hidden">
+          y {filas.length - TOPE_PANTALLA} más ·{" "}
+          <Link href={href} className="font-semibold text-indigo-600 hover:text-indigo-700">
             {cta} →
           </Link>
+        </p>
+      )}
+      {filas.length > TOPE_PAPEL && (
+        <p className="hidden print:block pt-1 text-xs text-gray-400">
+          y {filas.length - TOPE_PAPEL} más, que no entraron en el informe.
         </p>
       )}
     </div>
@@ -438,8 +481,16 @@ function SinUsar({ titulo, items, href, cta }: {
     <div className="mt-5 border-t border-gray-100 pt-3.5">
       <p className="text-xs font-semibold text-gray-500">{titulo}</p>
       <p className="mt-1 text-xs leading-relaxed text-gray-400 break-words">
-        {items.slice(0, MOSTRAR).join(" · ")}
-        {items.length > MOSTRAR && ` · y ${items.length - MOSTRAR} más`}
+        <span className="print:hidden">
+          {items.slice(0, MOSTRAR).join(" · ")}
+          {items.length > MOSTRAR && ` · y ${items.length - MOSTRAR} más`}
+        </span>
+        {/* En papel la lista entera: acá lo que importa es justamente lo que
+            está de más, y "y 9 más" sin el link es un dato que no se puede usar. */}
+        <span className="hidden print:inline">
+          {items.slice(0, TOPE_PAPEL).join(" · ")}
+          {items.length > TOPE_PAPEL && ` · y ${items.length - TOPE_PAPEL} más`}
+        </span>
       </p>
       <Link href={href} className="mt-1.5 inline-block text-xs font-semibold text-indigo-600 hover:text-indigo-700 print:hidden">
         {cta} →
@@ -665,7 +716,10 @@ export default async function MetricasPage({
         },
         _sum: { quantity: true },
         orderBy: { _sum: { quantity: "desc" } },
-        take: 5,
+        // Se traen los del papel, no los de la pantalla: el PDF muestra la lista
+        // larga y con `take: 5` no había de dónde sacarla. Son 30 filas de un
+        // groupBy que ya se estaba haciendo, no una query más.
+        take: TOPE_PAPEL,
       }),
       prisma.order.groupBy({
         by: ["status"],
@@ -1065,10 +1119,13 @@ export default async function MetricasPage({
   const costCoveragePct = profitCurrentAgg.totalNetRevenueAll > 0
     ? Math.round((profitCurrentAgg.totalNetRevenueKnownCost / profitCurrentAgg.totalNetRevenueAll) * 100)
     : 0;
+  // Se cortan los del papel; la pantalla después esconde del 9 en adelante.
   const profitByProductRanked = [...profitCurrentAgg.byProduct.entries()]
     .filter(([, p]) => p.profit !== null)
     .sort((a, b) => (b[1].profit ?? 0) - (a[1].profit ?? 0))
-    .slice(0, 8);
+    .slice(0, TOPE_PAPEL);
+  /** Cuántos quedaron con ganancia conocida, cortados o no: para poder avisarlo. */
+  const profitByProductTotal = [...profitCurrentAgg.byProduct.values()].filter((p) => p.profit !== null).length;
   const productsWithoutCostCount = [...profitCurrentAgg.byProduct.values()].filter((p) => p.profit === null).length;
 
   // ── El resumen en texto ──
@@ -1362,7 +1419,7 @@ export default async function MetricasPage({
           </div>
         ) : (
           <div className="grid gap-6 lg:grid-cols-2">
-            <div className="rounded-2xl border border-gray-100 bg-white p-6">
+            <div className="rounded-2xl border border-gray-100 bg-white p-6" data-print="largo">
               <h2 className="font-bold text-gray-900">Productos más vendidos</h2>
               <p className="text-xs text-gray-400 mb-4">Últimos {rangeDays} días</p>
               {topProducts.length === 0 ? (
@@ -1385,7 +1442,7 @@ export default async function MetricasPage({
                       const qty = p._sum.quantity ?? 0;
                       const pct = Math.round((qty / maxQty) * 100);
                       return (
-                        <div key={p.productId}>
+                        <div key={p.productId} className={i >= TOPE_PANTALLA ? "hidden print:block" : undefined}>
                           <div className="mb-1.5 flex items-center justify-between text-sm">
                             <div className="flex items-center gap-2 min-w-0">
                               <span className="w-5 shrink-0 text-xs font-bold text-gray-400">#{i + 1}</span>
@@ -1401,6 +1458,15 @@ export default async function MetricasPage({
                     });
                   })()}
                 </div>
+              )}
+              {/* El corte hay que decirlo. "Productos más vendidos" con cinco
+                  filas y nada más se lee como que sólo se vendieron cinco: el
+                  sexto no aparece y parece que no existió. En el PDF salen
+                  todos y este aviso se va. */}
+              {topProducts.length > TOPE_PANTALLA && (
+                <p className="mt-4 text-xs text-gray-400 print:hidden">
+                  Se muestran los {TOPE_PANTALLA} que más unidades vendieron.
+                </p>
               )}
             </div>
 
@@ -1535,7 +1601,7 @@ export default async function MetricasPage({
             </div>
 
             {/* Cupones */}
-            <div className="rounded-2xl border border-gray-100 bg-white p-6">
+            <div className="rounded-2xl border border-gray-100 bg-white p-6" data-print="largo">
               <div className="mb-4 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2 min-w-0">
                   <Ticket className="h-4 w-4 text-indigo-500 shrink-0" />
@@ -1663,7 +1729,7 @@ export default async function MetricasPage({
             </div>
 
             {/* Promociones */}
-            <div className="rounded-2xl border border-gray-100 bg-white p-6">
+            <div className="rounded-2xl border border-gray-100 bg-white p-6" data-print="largo">
               <div className="mb-4 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2 min-w-0">
                   <Percent className="h-4 w-4 text-emerald-500 shrink-0" />
@@ -1758,7 +1824,7 @@ export default async function MetricasPage({
                 entusiasmo; canjes mide si alguno volvió a comprar, que es todo
                 el negocio: estás cambiando un descuento por un email. */}
             {juegoWidget && (
-              <div className="rounded-2xl border border-gray-100 bg-white p-6">
+              <div className="rounded-2xl border border-gray-100 bg-white p-6" data-print="largo">
                 <div className="mb-4 flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2 min-w-0">
                     <span aria-hidden className="shrink-0">{juegoWidget.type === "SCRATCH" ? "🪙" : "🎡"}</span>
@@ -1813,11 +1879,11 @@ export default async function MetricasPage({
 
                     <p className="mb-2 text-xs font-semibold text-gray-500">Qué salió</p>
                     <div className="space-y-2">
-                      {resumenJuego.premios.slice(0, 5).map((p) => {
+                      {resumenJuego.premios.slice(0, TOPE_PAPEL).map((p, i) => {
                         const pct = Math.round((p.veces / resumenJuego.jugadas) * 100);
                         const nada = p.etiqueta === "Sin premio";
                         return (
-                          <div key={p.etiqueta}>
+                          <div key={p.etiqueta} className={i >= TOPE_PANTALLA ? "hidden print:block" : undefined}>
                             <div className="mb-1 flex items-baseline justify-between gap-3 text-sm">
                               <span className={`min-w-0 break-words ${nada ? "text-gray-400" : "text-gray-700 font-medium"}`}>
                                 {p.etiqueta}
@@ -1839,10 +1905,17 @@ export default async function MetricasPage({
 
                     {/* Se corta en 5, y hay que decirlo. Sin esto los porcentajes
                         que quedan a la vista no suman 100 y parece una cuenta
-                        mal hecha, cuando en realidad faltan filas. */}
-                    {resumenJuego.premios.length > 5 && (
-                      <p className="mt-2 text-xs text-gray-400">
-                        y {resumenJuego.premios.length - 5} premio{resumenJuego.premios.length - 5 !== 1 ? "s" : ""} más
+                        mal hecha, cuando en realidad faltan filas. En el PDF
+                        salen todos, así que ahí el aviso sólo aparece si la
+                        ruleta tiene más de TOPE_PAPEL premios distintos. */}
+                    {resumenJuego.premios.length > TOPE_PANTALLA && (
+                      <p className="mt-2 text-xs text-gray-400 print:hidden">
+                        y {resumenJuego.premios.length - TOPE_PANTALLA} premio{resumenJuego.premios.length - TOPE_PANTALLA !== 1 ? "s" : ""} más
+                      </p>
+                    )}
+                    {resumenJuego.premios.length > TOPE_PAPEL && (
+                      <p className="mt-2 hidden print:block text-xs text-gray-400">
+                        y {resumenJuego.premios.length - TOPE_PAPEL} premio{resumenJuego.premios.length - TOPE_PAPEL !== 1 ? "s" : ""} más, que no entraron en el informe.
                       </p>
                     )}
 
@@ -1869,7 +1942,7 @@ export default async function MetricasPage({
             pantalla, pero al imprimir se suelta entera: el PDF es el informe y
             ahí no hay dónde scrollear. */}
         {!isAutos && (
-          <div className="rounded-2xl border border-gray-100 bg-white p-6">
+          <div className="rounded-2xl border border-gray-100 bg-white p-6" data-print="largo">
             <h2 className="font-bold text-gray-900">Día a día</h2>
 
             {resumenDias.mejor ? (
@@ -2046,14 +2119,19 @@ export default async function MetricasPage({
                 <LineChart data={profitChartData} color="#7c3aed" gradId="grad-violet" formatter={shortMoney} />
               </div>
 
-              <div className="rounded-2xl border border-gray-100 bg-white p-6">
+              <div className="rounded-2xl border border-gray-100 bg-white p-6" data-print="largo">
                 <h2 className="font-bold text-gray-900 mb-5">Rentabilidad por producto</h2>
                 {profitByProductRanked.length === 0 ? (
                   <p className="text-sm text-gray-500">Ningún producto vendido en el período tiene costo cargado todavía.</p>
                 ) : (
                   <div className="space-y-3">
-                    {profitByProductRanked.map(([productId, p]) => (
-                      <div key={productId} className="flex items-center justify-between gap-2 text-sm">
+                    {profitByProductRanked.map(([productId, p], i) => (
+                      <div
+                        key={productId}
+                        className={`${
+                          i >= TOPE_PANTALLA_RENTABILIDAD ? "hidden print:flex" : "flex"
+                        } items-center justify-between gap-2 text-sm`}
+                      >
                         <div className="flex items-center gap-1.5 min-w-0">
                           <span className="font-medium text-gray-800 truncate">{nameMap[productId] ?? "Producto eliminado"}</span>
                           {p.hasCoupon && (
@@ -2069,10 +2147,17 @@ export default async function MetricasPage({
                 )}
                 {/* El título dice "por producto", así que si la lista está
                     cortada hay que avisarlo: si no, un producto que no aparece
-                    se lee como que no dejó nada. */}
-                {profitCurrentAgg.byProduct.size > profitByProductRanked.length && (
-                  <p className="mt-4 text-xs text-gray-400">
-                    Se muestran los {profitByProductRanked.length} que más ganancia dejaron.
+                    se lee como que no dejó nada. Son dos cortes distintos —el de
+                    la pantalla y el del papel— y cada uno tiene que decir el
+                    suyo, porque el número que sigue no es el mismo. */}
+                {profitByProductTotal > TOPE_PANTALLA_RENTABILIDAD && (
+                  <p className="mt-4 text-xs text-gray-400 print:hidden">
+                    Se muestran los {TOPE_PANTALLA_RENTABILIDAD} que más ganancia dejaron, de {profitByProductTotal}.
+                  </p>
+                )}
+                {profitByProductTotal > TOPE_PAPEL && (
+                  <p className="mt-4 hidden print:block text-xs text-gray-400">
+                    Se muestran los {TOPE_PAPEL} que más ganancia dejaron, de {profitByProductTotal}.
                   </p>
                 )}
                 {productsWithoutCostCount > 0 && (
@@ -2084,6 +2169,67 @@ export default async function MetricasPage({
             </div>
           </div>
         )}
+
+        {/* ── El pie del informe, sólo en papel ───────────────────────────────
+            Un PDF se manda por mail, se archiva y se abre tres meses después
+            sin nadie al lado para explicarlo. En pantalla cada aclaración está
+            pegada al número que corrige y alcanza con eso; suelto en un
+            archivo, el que lo lee no tiene de dónde agarrarse y las cuatro
+            cosas de acá abajo son justo las que, mal entendidas, hacen sacar la
+            conclusión equivocada — sobre todo la de la ganancia, que si cubre
+            el 40% de lo facturado no es "lo que ganaste" sino "lo que ganaste
+            en la parte que se puede medir". */}
+        <div className="hidden print:block rounded-2xl border border-gray-200 p-6">
+          <h2 className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+            Cómo se calcularon estos números
+          </h2>
+          <dl className="mt-3 space-y-2.5 text-xs leading-relaxed text-gray-600">
+            <div>
+              <dt className="inline font-semibold text-gray-800">Venta confirmada. </dt>
+              <dd className="inline">
+                Sólo los pedidos en estado Confirmado, Enviado o Entregado. Los pendientes
+                de pago no suman a los ingresos ni a la ganancia: es plata que puede no
+                llegar nunca.
+              </dd>
+            </div>
+            {!isAutos && (
+              <div>
+                <dt className="inline font-semibold text-gray-800">Ganancia. </dt>
+                <dd className="inline">
+                  Lo que se cobró por el producto menos lo que costó, con el descuento del
+                  pedido repartido entre sus renglones. Sólo entran los productos que tienen
+                  el costo cargado
+                  {costCoveragePct > 0
+                    ? <>, que son el <strong>{costCoveragePct}%</strong> de lo facturado en el período. El {100 - costCoveragePct}% restante no está en ninguna cuenta de ganancia de este informe.</>
+                    : <>. En este período no hay ninguno, así que las cuentas de ganancia quedaron vacías.</>}
+                </dd>
+              </div>
+            )}
+            <div>
+              <dt className="inline font-semibold text-gray-800">Las comparaciones. </dt>
+              <dd className="inline">
+                Contra los {rangeDays} días inmediatamente anteriores, cortados a la misma
+                hora del día para que un período a medias no compita contra uno completo.
+              </dd>
+            </div>
+            <div>
+              <dt className="inline font-semibold text-gray-800">Las visitas. </dt>
+              <dd className="inline">
+                Se guardan por día entero y no por hora, así que el día de hoy entra a
+                medias y su comparación es aproximada. Los pedidos sí tienen hora exacta.
+                {periodStartStr < INICIO_DIA_ARGENTINO && (
+                  <> Además, las visitas anteriores al 29/07/2026 se registraron en horario
+                  UTC: las de ese tramo pueden estar corridas hasta tres horas y caer en el
+                  día de al lado.</>
+                )}
+              </dd>
+            </div>
+          </dl>
+          <p className="mt-4 text-xs text-gray-400">
+            {store.name} · Período {periodStartStr} a {hoyDia} · Generado el{" "}
+            {new Date().toLocaleDateString("es-AR", { day: "2-digit", month: "long", year: "numeric" })}
+          </p>
+        </div>
 
       </div>
     </DashboardLayout>

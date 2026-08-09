@@ -71,8 +71,16 @@ Ambos ganaron subtítulo `Últimos N días` y vacío que menciona el período.
 - En promociones se aclara por escrito que la columna Pedidos suma más que el total, porque un pedido
   con dos promos aparece en dos filas. Sin esa línea alguien suma a mano y cree que el archivo está mal.
 
-🔲 **Pendiente:** el resumen en texto todavía **no** va en el CSV. Necesitaría replicar las queries de
-período anterior en la ruta de export. Vale la pena, pero no está hecho.
+- ✅ **El resumen en texto ya va arriba de todo**, como líneas de comentario (`# …`). Metido en celdas,
+  cada coma de una frase abriría una columna nueva; como comentario, Excel y Sheets lo muestran en la
+  primera columna y las cuentas de abajo no se tocan.
+- ✅ **Todos los productos vendidos** (09/08/2026), con unidades, facturado y ganancia. En pantalla eso
+  son dos tarjetas cortadas —los 5 que más unidades vendieron y los 8 que más ganancia dejaron— y en
+  el PDF llegan a 30. **El archivo es el único de los tres formatos donde la lista puede estar
+  entera**, y es justamente en el que alguien va a hacer cuentas: un ranking cortado en una planilla
+  es una planilla que da mal. Se ordena por unidades y no por ganancia, porque la ganancia de la
+  mitad de las filas puede estar vacía y ordenar por una columna que a veces no existe deja un orden
+  que no se entiende — para ordenar por ganancia está la planilla, es un clic.
 
 ---
 
@@ -112,6 +120,45 @@ de ubicarse.
 - **Turbopack sirvió CSS viejo.** Los cambios de `globals.css` no se habían recompilado y el navegador
   cargaba una versión anterior. Se detecta así:
   `curl -s localhost:3000/_next/static/chunks/src_app_globals_*.css | grep data-print`
+
+### ✅ 4b. El PDF estaba cortado (09/08/2026)
+
+El paso 4 resolvió que el informe **se imprimiera bien**. Faltaba que fuera **el informe completo**.
+
+Cada ranking de la pantalla es un podio de cinco filas con un link al final: *"y 12 más → Ver
+cupones"*. En una tarjeta de 296px en un teléfono no hay otra. **En papel esa salida no existe:**
+no hay adónde hacer clic, y el PDF terminaba nombrando doce campañas que después no se podían
+mirar. Peor: el recorte es por ranking, así que lo primero que se caía del informe era lo que
+menos rindió — lo único sobre lo que hay algo para hacer.
+
+Ahora **el papel se expande hasta 30 filas** y recién ahí avisa cuántas quedaron afuera. Un PDF de
+ochenta páginas tampoco lo lee nadie. Alcanza a las seis listas: cupones, promociones, la ruleta,
+cupones y promos sin usar, productos más vendidos y rentabilidad por producto. `Productos más
+vendidos` traía `take: 5` de la base — se subió a 30, que son 30 filas de un `groupBy` que ya se
+estaba haciendo, no una query más.
+
+Tres detalles que se veían recién en el papel:
+
+- **El separador colgado.** El `print:hidden` estaba en el link y no en el párrafo: el papel
+  terminaba en *"y 12 más ·"* con un punto medio que no separa nada.
+- **Las tarjetas largas gastaban una hoja.** `break-inside: avoid` en una tarjeta más alta que la
+  página hace que el navegador primero la empuje a una hoja nueva —dejando la anterior a medio
+  llenar— y después la corte igual. Las que pueden ser largas se marcan `data-print="largo"` y se
+  dejan cortar. El día a día en 90 días son noventa renglones.
+- **El encabezado pegajoso flotaba.** El `sticky top-0` de la tabla del día a día es para el scroll
+  de la pantalla; en papel quedaba encima de la primera fila. En print, `.sticky` pasa a `static` y
+  `thead` a `table-header-group`, así el encabezado se repite en cada hoja.
+
+**Pie de informe sólo-papel: "Cómo se calcularon estos números".** En pantalla cada aclaración está
+pegada al número que corrige y con eso alcanza. Un PDF se manda por mail y se abre tres meses
+después sin nadie al lado. Son cuatro: qué cuenta como venta confirmada, **qué porcentaje de lo
+facturado cubre la ganancia** (si cubre el 40%, no es "lo que ganaste" sino "lo que ganaste en la
+parte que se puede medir"), contra qué se compara, y que las visitas se guardan por día entero —más
+el aviso del corte UTC del 29/07/2026 si el período lo cruza.
+
+> Verificado en el CSS compilado, no asumido: `.hidden{display:none}` está en el byte 27859 y
+> `.print\:block{display:block}` en el 209817, así que el print gana. Es el mismo chequeo que la
+> trampa de Turbopack de más arriba.
 
 ---
 

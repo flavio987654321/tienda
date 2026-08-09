@@ -206,6 +206,16 @@ export async function GET(req: NextRequest) {
     shippingWaivedTotal = waived._sum.shippingWaived ?? 0;
   }
   let gananciaDePedido = new Map<string, number | null>();
+  /**
+   * Un renglón por producto vendido en el período, sin recorte.
+   *
+   * En pantalla esto son dos tarjetas cortadas —los 5 que más unidades vendieron
+   * y los 8 que más ganancia dejaron— porque no entra más, y en el PDF llegan a
+   * 30. El archivo no tiene ese problema: es el único de los tres formatos donde
+   * la lista puede estar entera, y es justamente en el que alguien va a hacer
+   * cuentas. Un ranking cortado en una planilla es una planilla que da mal.
+   */
+  let productosCsv: { nombre: string; unidades: number; facturado: number; ganancia: number | null; conCupon: boolean }[] = [];
   if (!isAutos) {
     const rawProfitItems = await prisma.orderItem.findMany({
       where: {
@@ -236,6 +246,28 @@ export async function GET(req: NextRequest) {
         orderSubtotal: it.order.subtotal, orderDiscount: it.order.discountAmount,
       }))
     );
+
+    // Los nombres. Un producto borrado después de venderse ya no está en la
+    // tabla, y su fila igual tiene que salir: la venta ocurrió.
+    const nombres = new Map(
+      (await prisma.product.findMany({
+        where: { id: { in: [...profitAgg.byProduct.keys()] } },
+        select: { id: true, name: true },
+      })).map((p) => [p.id, p.name])
+    );
+    productosCsv = [...profitAgg.byProduct.entries()]
+      .map(([id, p]) => ({
+        nombre: nombres.get(id) ?? "Producto eliminado",
+        unidades: p.quantity,
+        facturado: Math.round(p.netRevenue),
+        ganancia: p.profit === null ? null : Math.round(p.profit),
+        conCupon: p.hasCoupon,
+      }))
+      // Por unidades y no por ganancia: la ganancia de la mitad puede estar
+      // vacía, y ordenar por una columna que a veces no existe deja la planilla
+      // con un orden que no se entiende. Para ordenar por ganancia está la
+      // planilla: es una columna, se hace con un clic.
+      .sort((a, b) => b.unidades - a.unidades);
   }
 
   // ── Marketing, con la ganancia ya disponible ──
@@ -474,6 +506,19 @@ export async function GET(req: NextRequest) {
       `# PROMOCIONES ACTIVAS QUE NO ENTRARON EN NINGUN PEDIDO`,
       `Promocion`,
       ...resumenPromos.sinUsar.map(n => csv(n)),
+      ``,
+    ] : []),
+
+    // Todos los productos vendidos, no un podio: es lo que la pantalla no puede
+    // dar y el motivo por el que alguien baja el archivo.
+    ...(productosCsv.length > 0 ? [
+      `# PRODUCTOS VENDIDOS`,
+      `# Facturado = lo que se cobro por ese producto, ya con el descuento del pedido repartido entre sus renglones`,
+      `# Ganancia vacia = ese producto no tiene el costo cargado (no es cero)`,
+      `# "Con cupon" = parte de esas ventas llevaban cupon, asi que su ganancia es en parte estimada`,
+      `Producto,Unidades,Facturado (ARS),Ganancia (ARS),Con cupon`,
+      ...productosCsv.map(p =>
+        `${csv(p.nombre)},${p.unidades},${p.facturado},${montoOVacio(p.ganancia)},${p.conCupon ? "si" : "no"}`),
       ``,
     ] : []),
 
