@@ -6,6 +6,7 @@ import { isSafeExternalUrl } from "@/lib/url-utils";
 import { sendPushToUser } from "@/lib/push";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { getClientIp } from "@/lib/request-ip";
+import { despues } from "@/lib/despues";
 
 // GET - afiliado: ver tiendas disponibles / tienda: ver sus afiliados
 export async function GET(req: NextRequest) {
@@ -207,27 +208,31 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  // Notificar a la dueña por email + push (fire-and-forget)
-  prisma.user.findUnique({ where: { id: store.ownerId }, select: { email: true, name: true } })
-    .then((owner) => {
-      if (owner?.email) {
-        sendNewAffiliateApplicationEmail({
-          ownerEmail: owner.email,
-          ownerName: owner.name || "vendedora",
-          storeName: store.name,
-          applicantName: user.name || "Una usuaria",
-          applicantEmail: user.email,
-          applicationMessage: appMsg,
-        }).catch((err) => console.error("[email] sendNewAffiliateApplicationEmail failed:", err));
-      }
-    })
-    .catch((err) => console.error("[notify] affiliate application owner lookup failed:", err));
+  // Avisarle a la dueña por mail y por push. Con `despues`: la solicitud ya
+  // quedó guardada y la postulante no tiene por qué esperar el mail, pero si el
+  // aviso se pierde la dueña no se entera de que alguien quiere sumarse — y esa
+  // solicitud se queda sin responder.
+  despues(async () => {
+    const owner = await prisma.user.findUnique({
+      where: { id: store.ownerId },
+      select: { email: true, name: true },
+    });
+    if (!owner?.email) return;
+    await sendNewAffiliateApplicationEmail({
+      ownerEmail: owner.email,
+      ownerName: owner.name || "vendedora",
+      storeName: store.name,
+      applicantName: user.name || "Una usuaria",
+      applicantEmail: user.email,
+      applicationMessage: appMsg,
+    });
+  }, "afiliada: mail de solicitud a la dueña");
 
-  sendPushToUser(store.ownerId, {
+  despues(() => sendPushToUser(store.ownerId, {
     title: "Nueva solicitud de afiliada",
     body: `${user.name || user.email} quiere unirse a ${store.name}`,
     url: "/dashboard/vendedoras",
-  }).catch((err) => console.error("[push] affiliate application:", err));
+  }), "afiliada: push de solicitud a la dueña");
 
   // El rol se asigna solo cuando la dueña aprueba, no al postular
   return NextResponse.json({ affiliate, message: "Solicitud enviada" });

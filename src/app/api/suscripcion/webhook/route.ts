@@ -3,6 +3,7 @@ import { createHmac, timingSafeEqual } from "crypto";
 import { prisma } from "@/lib/prisma";
 import { periodFor } from "@/lib/subscription";
 import { sendSubscriptionConfirmationEmail } from "@/lib/resend";
+import { despues } from "@/lib/despues";
 
 // Valores aceptados en metadata — cualquier otra cosa se rechaza
 const VALID_PLANS = new Set(["OWNER_BASIC", "OWNER_PREMIUM"]);
@@ -158,7 +159,7 @@ export async function POST(req: NextRequest) {
       // y con el de "Mi plan": son el mismo plan visto tres veces.
       const planLabel = plan === "OWNER_PREMIUM" ? "Tienda Premium" : "Tienda Pro";
       const billingLabel = billing === "MONTHLY" ? "Mensual" : "Anual";
-      sendSubscriptionConfirmationEmail({
+      despues(() => sendSubscriptionConfirmationEmail({
         to: userRecord.email,
         userName: userRecord.name ?? "",
         planLabel,
@@ -167,7 +168,7 @@ export async function POST(req: NextRequest) {
         periodEnd: period.currentPeriodEnd,
         paymentId: String(payment.id),
         planKey: plan,
-      }).catch(() => {});
+      }), "suscripción: mail de confirmación");
     }
 
     return NextResponse.json({ ok: true });

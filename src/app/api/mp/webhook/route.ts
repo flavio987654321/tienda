@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import MercadoPagoConfig, { Payment } from "mercadopago";
 import { createNotification } from "@/lib/notifications";
 import { sendOrderPaymentConfirmedEmail, sendCommissionEarnedEmail, parseOrderPromoSummary } from "@/lib/email";
+import { despues } from "@/lib/despues";
 
 type CommissionResult = { commissionId: string; amount: number; rate: number; newBalance: number };
 
@@ -249,7 +250,7 @@ async function processPaymentWebhook(paymentId: string) {
       }
 
       if (affEmail) {
-        sendCommissionEarnedEmail({
+        despues(() => sendCommissionEarnedEmail({
           affiliateEmail: affEmail,
           affiliateName: affName,
           storeName: order.store.name,
@@ -257,13 +258,13 @@ async function processPaymentWebhook(paymentId: string) {
           orderTotal: order.total,
           commissionRate: commissionResult.rate,
           newBalance: commissionResult.newBalance,
-        }).catch((err) => console.error("[email] sendCommissionEarnedEmail failed:", err));
+        }), "MP: mail de comisión ganada");
       }
     }
 
     // Notificar al comprador que el pago fue procesado por MP
     if (order.buyer?.email) {
-      sendOrderPaymentConfirmedEmail({
+      despues(() => sendOrderPaymentConfirmedEmail({
         buyerEmail: order.buyer.email,
         buyerName: order.buyer.name || "",
         orderId: order.id,
@@ -286,7 +287,7 @@ async function processPaymentWebhook(paymentId: string) {
         // haber cambiado desde entonces y el comprobante tiene que ser fiel).
         ...parseOrderPromoSummary(order.promoSummary),
         promoSavings: order.promoSavings,
-      }).catch((err) => console.error("[email] sendOrderPaymentConfirmedEmail (mp webhook) failed:", err));
+      }), "MP: comprobante de pago al comprador");
     }
 
     console.log(`[mp/webhook] pago confirmado — paymentId=${paymentId} orderId=${orderId}`);

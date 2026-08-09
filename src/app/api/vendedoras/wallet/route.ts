@@ -6,6 +6,7 @@ import { encryptIfNeeded, decryptIfNeeded } from "@/lib/crypto";
 import { sendWithdrawalRequestEmail } from "@/lib/email";
 import { createNotification } from "@/lib/notifications";
 import { verifyOtpToken } from "@/lib/otp-token";
+import { despues } from "@/lib/despues";
 
 const MIN_WITHDRAWAL = 100;
 const BANK_LOCKOUT_HOURS = 72;
@@ -373,7 +374,7 @@ export async function POST(req: NextRequest) {
   const admin = await prisma.user.findFirst({ where: { role: "ADMIN" }, select: { id: true, email: true, name: true } });
 
   if (admin?.email) {
-    sendWithdrawalRequestEmail({
+    despues(() => sendWithdrawalRequestEmail({
       ownerEmail: admin.email,
       ownerName: admin.name ?? "Admin",
       storeName: storeNames,
@@ -384,26 +385,26 @@ export async function POST(req: NextRequest) {
       alias: userBank?.affiliateAlias ?? null,
       cuil: rawCuilSnap ?? null,
       bankHolder: rawHolderSnap ?? null,
-    }).catch((err) => console.error("[email] sendWithdrawalRequestEmail failed:", err));
+    }), "retiro: mail al admin");
   }
 
   if (admin?.id) {
-    createNotification({
+    despues(() => createNotification({
       userId: admin.id,
       type: "WITHDRAWAL_REQUESTED",
       title: "Nueva solicitud de retiro",
       body: `${userBank?.name ?? "Una afiliada"} solicitó retirar $${amount.toLocaleString("es-AR")} — ${storeNames}`,
       link: "/admin/retiros",
-    }).catch((err) => console.error("[notify] admin withdrawal:", err));
+    }), "retiro: campanita al admin");
   }
 
-  createNotification({
+  despues(() => createNotification({
     userId,
     type: "WITHDRAWAL_REQUESTED",
     title: "Retiro en proceso",
     body: `Tu retiro de $${amount.toLocaleString("es-AR")} fue solicitado. Lo procesaremos en 1 a 3 días hábiles.`,
     link: "/afiliados/billetera",
-  }).catch((err) => console.error("[notify] affiliate withdrawal:", err));
+  }), "retiro: campanita a la afiliada");
 
   return NextResponse.json({
     withdrawals,

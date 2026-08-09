@@ -8,6 +8,7 @@ import { hasActivePremium, SUB_STATUS_SELECT } from "@/lib/subscription";
 import { sendNewStorePublishedEmail, sendStoreOfflineEmail, sendCommissionRateChangedEmail } from "@/lib/email";
 import { getClientIp } from "@/lib/request-ip";
 import { storeConfigSchema, mergeDesignConfig, resetStoreDesign } from "@/lib/store-config";
+import { despues } from "@/lib/despues";
 
 export async function GET() {
   const user = await getCurrentUser();
@@ -66,11 +67,11 @@ async function notifyAffiliatesStoreOffline(storeId: string, storeName: string) 
   })));
 
   for (const a of affiliates) {
-    sendStoreOfflineEmail({
+    despues(() => sendStoreOfflineEmail({
       affiliateEmail: a.user.email,
       affiliateName: a.user.name || "afiliado",
       storeName,
-    }).catch(console.error);
+    }), "tienda pausada: aviso a la afiliada");
   }
 }
 
@@ -453,12 +454,12 @@ export async function PATCH(req: NextRequest) {
 
     if (interested.length > 0) {
       for (const affiliate of interested) {
-        sendNewStorePublishedEmail({
+        despues(() => sendNewStorePublishedEmail({
           affiliateEmail: affiliate.email,
           affiliateName: affiliate.name || "afiliada",
           storeName: prevStore.name,
           commissionRate: prevStore.commissionRate,
-        }).catch((err) => console.error("[email] sendNewStorePublishedEmail failed:", err));
+        }), "tienda publicada: aviso a afiliadas interesadas");
       }
     }
   }

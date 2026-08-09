@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/auth-session";
 import { createNotification } from "@/lib/notifications";
 import { sendNewReviewToOwnerEmail } from "@/lib/email";
 import { ESTADOS_VENTA_CONFIRMADA_LISTA } from "@/lib/order-status";
+import { despues } from "@/lib/despues";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -108,15 +109,15 @@ export async function POST(req: NextRequest) {
     .then((product) => {
       if (!product) return;
       const reviewerName = review.user.name || "Una compradora";
-      createNotification({
+      despues(() => createNotification({
         userId: product.store.ownerId,
         type: "NEW_REVIEW",
         title: "Nueva reseña recibida",
         body: `${rating}★ en ${product.name} — ${reviewerName}`,
         link: `/tienda/${product.store.slug}/producto/${productId}`,
-      });
+      }), "reseña: campanita al dueño");
       if (product.store.owner?.email) {
-        sendNewReviewToOwnerEmail({
+        despues(() => sendNewReviewToOwnerEmail({
           ownerEmail: product.store.owner.email,
           storeName: product.store.name,
           storeSlug: product.store.slug,
@@ -125,7 +126,7 @@ export async function POST(req: NextRequest) {
           reviewerName,
           rating,
           comment,
-        }).catch((e) => console.error("[email] nueva reseña:", e));
+        }), "reseña: mail al dueño");
       }
 
       prisma.storeActivityEvent.create({

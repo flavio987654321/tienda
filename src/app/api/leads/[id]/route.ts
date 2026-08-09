@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
 import { createNotification } from "@/lib/notifications";
 import { sendAdminAlertEmail } from "@/lib/email";
+import { despues } from "@/lib/despues";
 
 // PATCH /api/leads/[id] — el dueño confirma o rechaza una consulta
 export async function PATCH(
@@ -70,13 +71,17 @@ export async function PATCH(
 
     // Notificar al afiliado (fuera de la transacción — no crítico)
     if (commissionAmount > 0 && lead.affiliate?.userId) {
-      createNotification({
-        userId: lead.affiliate.userId,
+      // Se copia acá afuera: adentro del cierre TypeScript ya no puede
+      // garantizar que `lead.affiliate` siga sin ser null, porque el cierre
+      // corre después. Tiene razón.
+      const afiliadaId = lead.affiliate.userId;
+      despues(() => createNotification({
+        userId: afiliadaId,
         type: "COMMISSION_EARNED",
         title: "¡Ganaste una comisión!",
         body: `Tu consulta sobre "${lead.productName}" fue confirmada. Comisión: $${commissionAmount.toLocaleString("es-AR")} acreditada en tu panel de comisiones.`,
         link: "/afiliados/billetera",
-      }).catch(() => {});
+      }), "consulta: campanita de comisión");
     }
   } else {
     await prisma.lead.update({
@@ -100,7 +105,7 @@ export async function PATCH(
       ]);
 
       if (rejected >= 5 && confirmed === 0) {
-        sendAdminAlertEmail({
+        despues(() => sendAdminAlertEmail({
           subject: `⚠️ Posible rechazo sistemático de leads — tienda "${store.name}"`,
           title: "Patrón de rechazo sistemático detectado",
           reason: `La tienda "${store.name}" rechazó ${rejected} consultas del mismo afiliado en los últimos 30 días sin confirmar ninguna. Esto puede indicar un intento de evadir el pago de comisiones.`,
@@ -109,7 +114,7 @@ export async function PATCH(
             "Contactar al dueño de la tienda para pedir explicación",
             "Si se confirma el patrón, suspender la tienda o mediar la disputa",
           ],
-        }).catch(() => {});
+        }), "consulta: alerta al admin");
       }
     }
   }

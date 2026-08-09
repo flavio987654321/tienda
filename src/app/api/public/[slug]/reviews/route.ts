@@ -7,6 +7,7 @@ import { getClientIp } from "@/lib/request-ip";
 import { verifyTurnstile } from "@/lib/turnstile";
 import { parseFirstImage } from "@/lib/metaFeed";
 import { COMENTARIO_MAX, RESENADOR_MAX } from "@/lib/reviews";
+import { despues } from "@/lib/despues";
 
 export async function GET(
   _req: NextRequest,
@@ -289,7 +290,7 @@ export async function POST(
 
   const reviewerTrimmed = reviewer.trim().slice(0, RESENADOR_MAX);
   const estrellas = Math.round(rating);
-  void Promise.all([
+  despues(() => Promise.all([
     prisma.notification.create({
       data: {
         userId:  store.ownerId,
@@ -315,7 +316,7 @@ export async function POST(
       comment:      comentario,
       pendiente:    esDeTienda,
     }),
-  ]).catch(() => {});
+  ]), "reseña pública: campanita y mail al dueño");
 
   return NextResponse.json({ review }, { status: 201 });
 }

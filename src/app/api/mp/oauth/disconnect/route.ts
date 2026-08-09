@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth-session";
 import { prisma } from "@/lib/prisma";
 import { sendMpDisconnectedEmail } from "@/lib/email";
+import { despues } from "@/lib/despues";
 
 export async function POST() {
   const user = await getCurrentUser();
@@ -32,11 +33,11 @@ export async function POST() {
 
   for (const affiliate of activeAffiliates) {
     if (affiliate.user.email) {
-      sendMpDisconnectedEmail({
+      despues(() => sendMpDisconnectedEmail({
         affiliateEmail: affiliate.user.email,
         affiliateName: affiliate.user.name ?? "afiliada",
         storeName: store.name,
-      }).catch((err) => console.error("[email] sendMpDisconnectedEmail failed:", err));
+      }), "MP desconectado: aviso a la afiliada");
     }
   }
 

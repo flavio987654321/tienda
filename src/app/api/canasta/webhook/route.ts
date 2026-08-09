@@ -3,6 +3,7 @@ import { createHmac, timingSafeEqual } from "crypto";
 import { prisma } from "@/lib/prisma";
 import { calculateGoalAmount } from "@/lib/canasta";
 import { sendCanastaDonationConfirmedEmail, sendCanastaCompletedAdminEmail } from "@/lib/resend";
+import { despues } from "@/lib/despues";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "";
 
@@ -114,13 +115,13 @@ export async function POST(req: NextRequest) {
         });
         const canastaSupportEmail = process.env.CANASTA_SUPPORT_EMAIL ?? process.env.ADMIN_EMAIL;
         if (closed.count > 0 && canastaSupportEmail) {
-          sendCanastaCompletedAdminEmail({
+          despues(() => sendCanastaCompletedAdminEmail({
             to: canastaSupportEmail,
             campaignName: campaign.name,
             totalRaised,
             goalAmount,
             campaignType: campaign.type === "LIBRE" ? "LIBRE" : "CANASTA",
-          }).catch((e) => console.error("[canasta/webhook] error mandando email al admin:", e));
+          }), "canasta: aviso de campaña completa al admin");
         }
       }
     }

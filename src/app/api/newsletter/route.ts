@@ -5,6 +5,7 @@ import { getClientIp } from "@/lib/request-ip";
 import { verifyTurnstile } from "@/lib/turnstile";
 import { sendNewsletterConfirmacionEmail } from "@/lib/email";
 import { normalizarEmail, nuevoToken, urlConfirmar, urlBaja, urlBajaUnClic } from "@/lib/newsletter";
+import { despues } from "@/lib/despues";
 
 /**
  * Alta en el newsletter de una tienda, desde el bloque de suscripción del
@@ -120,13 +121,13 @@ export async function POST(req: NextRequest) {
   // El mail no bloquea la respuesta: el alta ya quedó guardada, y si Resend
   // tarda o falla el visitante no tiene por qué esperarlo. Si no sale, la fila
   // queda sin confirmar y no recibe nada — que es el estado seguro.
-  sendNewsletterConfirmacionEmail({
+  despues(() => sendNewsletterConfirmacionEmail({
     to: email,
     storeName: store.name,
     confirmarUrl: urlConfirmar(suscriptor.token),
     bajaUrl: urlBaja(suscriptor.token),
     bajaPostUrl: urlBajaUnClic(suscriptor.token),
-  }).catch((e) => console.error("[newsletter] confirmación:", e));
+  }), "newsletter: mail de confirmación");
 
   return NextResponse.json(RESPUESTA_OK, { status: 201 });
 }

@@ -19,6 +19,7 @@ import { armarAvisos, filtrarRepetidos } from "@/lib/asistente-avisos";
 import {
   getArgentinaDayKey, getUpcomingDates, sumarDiasCalendario, diasEntreDias,
 } from "@/lib/fechas-comerciales";
+import { despues } from "@/lib/despues";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "";
 
@@ -122,7 +123,7 @@ export async function GET(req: NextRequest) {
     const aff = wd.wallet?.affiliate;
     if (!aff || !adminUser) continue;
     const daysOld = Math.floor((now.getTime() - new Date(wd.createdAt).getTime()) / 86_400_000);
-    createNotification({
+    despues(() => createNotification({
       userId: adminUser.id,
       type: daysOld >= 15 ? "WITHDRAWAL_REMINDER_URGENT" : "WITHDRAWAL_REMINDER",
       title: daysOld >= 15
@@ -130,8 +131,8 @@ export async function GET(req: NextRequest) {
         : `Recordatorio: retiro de ${aff.user.name || aff.user.email} hace ${daysOld} días`,
       body: `$${wd.amount.toLocaleString("es-AR")} — ${aff.store.name}`,
       link: "/admin/retiros",
-    }).catch((e) => console.error("[cron] withdrawal notification:", e));
-    sendWithdrawalReminderEmail({
+    }), "cron: campanita de recordatorio de retiro");
+    despues(() => sendWithdrawalReminderEmail({
       ownerEmail: adminUser.email!,
       ownerName: adminUser.name ?? "Admin",
       storeName: aff.store.name,
@@ -139,7 +140,7 @@ export async function GET(req: NextRequest) {
       amount: wd.amount,
       daysOld,
       dashboardUrl: `${APP_URL}/admin/retiros`,
-    }).catch((e) => console.error("[cron] withdrawal email:", e));
+    }), "cron: mail de recordatorio de retiro");
     withdrawalReminders++;
   }
   result.withdrawalReminders = withdrawalReminders;

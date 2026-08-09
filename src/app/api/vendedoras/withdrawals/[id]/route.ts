@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
 import { createNotification } from "@/lib/notifications";
 import { sendWithdrawalApprovedEmail } from "@/lib/email";
+import { despues } from "@/lib/despues";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -138,12 +139,12 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
         select: { name: true, email: true },
       });
       if (affiliateUser?.email) {
-        sendWithdrawalApprovedEmail({
+        despues(() => sendWithdrawalApprovedEmail({
           affiliateEmail: affiliateUser.email,
           affiliateName: affiliateUser.name ?? "Afiliada",
           storeName: withdrawal.wallet.affiliate.store.name ?? "la tienda",
           amount: result.amount,
-        }).catch((err) => console.error("[email] sendWithdrawalApprovedEmail failed:", err));
+        }), "retiro aprobado: mail a la afiliada");
       }
     }
 
