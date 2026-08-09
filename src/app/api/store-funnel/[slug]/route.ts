@@ -55,11 +55,20 @@ export async function POST(
   // medianoche, que son las horas de más venta.
   const date = getArgentinaDayKey();
 
-  await prisma.storeFunnelStep.upsert({
-    where: { storeId_date_step: { storeId: store.id, date, step: paso } },
-    update: { count: { increment: 1 } },
-    create: { storeId: store.id, date, step: paso, count: 1 },
-  });
+  // El try no es decorativo: entre que esto se mergea y que corre la migración,
+  // la tabla no existe. Sin él, cada persona que agrega algo al carrito se lleva
+  // un 500 en los logs por una métrica que a nadie le importa tanto. La compra
+  // no se toca —el cliente llama esto en fire-and-forget y no lee la respuesta—
+  // pero el ruido esconde los errores que sí hay que mirar.
+  try {
+    await prisma.storeFunnelStep.upsert({
+      where: { storeId_date_step: { storeId: store.id, date, step: paso } },
+      update: { count: { increment: 1 } },
+      create: { storeId: store.id, date, step: paso, count: 1 },
+    });
+  } catch {
+    return NextResponse.json({ ok: true, contado: false });
+  }
 
   return NextResponse.json({ ok: true, contado: true });
 }

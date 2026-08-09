@@ -1010,19 +1010,33 @@ export default async function MetricasPage({
         select: { date: true, count: true },
         orderBy: { date: "asc" },
       }),
+      // ── Las dos tablas nuevas, cada una con SU PROPIO catch ──
+      // No es prolijidad: `Promise.all` se cae entero si una sola promesa falla,
+      // así que sin esto una tabla que todavía no existe —entre que se mergea y
+      // que corre la migración— también se llevaba puestas las dos queries de
+      // arriba, y el gráfico de visitas y la comparación contra el período
+      // anterior aparecían en CERO. Un error de una función nueva apagando un
+      // número viejo que funcionaba bien, y sin nada en pantalla que lo dijera.
+      //
+      // Con el catch propio, lo único que falta es la tarjeta nueva.
+
       // Diez filas como mucho: `source` sale de una lista cerrada de diez
       // etiquetas, así que el groupBy no puede crecer con el volumen.
-      prisma.storeViewSource.groupBy({
-        by: ["source"],
-        where: { storeId: store.id, date: { gte: periodStartStr } },
-        _sum: { count: true },
-      }),
+      prisma.storeViewSource
+        .groupBy({
+          by: ["source"],
+          where: { storeId: store.id, date: { gte: periodStartStr } },
+          _sum: { count: true },
+        })
+        .catch(() => [] as typeof origenesRaw),
       // Dos filas: los pasos también salen de una lista cerrada.
-      prisma.storeFunnelStep.groupBy({
-        by: ["step"],
-        where: { storeId: store.id, date: { gte: periodStartStr } },
-        _sum: { count: true },
-      }),
+      prisma.storeFunnelStep
+        .groupBy({
+          by: ["step"],
+          where: { storeId: store.id, date: { gte: periodStartStr } },
+          _sum: { count: true },
+        })
+        .catch(() => [] as typeof pasosRaw),
     ]);
   } catch (err) {
     console.error("[metricas] StoreView aggregate falló — ¿falta la migración?", err);

@@ -181,7 +181,18 @@ export default function ProductDetailClient({ slug, productId, productoInicial =
     } catch { return { ok: false, error: "Error de conexión" }; }
   }, [storeId]);
 
-  const cart = useCartLogic({ products, promotions, storeId, resolveVariantId, validateCoupon, placeOrder, lockScrollOnModal: false });
+  // `slug`, `isOwner` e `isPreview` no se pasaban, y sin ellos el hook no puede
+  // registrar nada: el embudo se perdía justo los pasos de esta pantalla, que es
+  // por donde entra la gente de afuera —Google, un link compartido, una
+  // publicación—. Es el mismo agujero que ya había con las vistas de producto y
+  // que está documentado en `lib/registrarVista.ts`: se arregló ahí arriba
+  // (línea 135) llamando a la función a mano, pero la copia que vive adentro del
+  // hook seguía muda. Un carrito que arranca acá contaba como si no existiera.
+  //
+  // Acá no hace falta esperar a que `isOwner` resuelva, como sí hace el efecto de
+  // la vista: eso dispara solo al cargar, y esto dispara cuando la persona toca
+  // el botón. Para ese momento la página ya cargó y `isOwner` ya es el de verdad.
+  const cart = useCartLogic({ products, promotions, storeId, slug, isOwner, isPreview, resolveVariantId, validateCoupon, placeOrder, lockScrollOnModal: false });
   const {
     seleccion, setSeleccion, setOpcion, qty, setQty,
     addToCart, cartCount, toastMsg, openModal,
