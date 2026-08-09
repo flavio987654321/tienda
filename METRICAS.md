@@ -535,6 +535,49 @@ que enganchar cada llamada era garantizar que la próxima pantalla que se agregu
 
 ---
 
+## ✅ 11. Clientes nuevos y clientes que vuelven (09/08/2026)
+
+Para una tienda chica es *la* métrica y el panel no la tenía. **Una tienda que factura lo mismo todos
+los meses pero siempre con gente distinta está corriendo para quedarse en el mismo lugar**, y mirando
+sólo el total se ve idéntica a una que está construyendo clientela.
+
+No hizo falta guardar nada nuevo: `Order.buyerId` ya estaba, y sirve porque **el checkout busca el
+usuario por email antes de crear uno** (`findUnique({ where: { email } }) ?? create(...)`), así que la
+misma dirección siempre cae en la misma persona, compre logueada o como invitada. Eso se verificó
+antes de escribir una línea: si cada compra de invitado creara un usuario nuevo, "los que vuelven"
+sería siempre cero y toda la métrica sería mentira.
+
+### Se clasifica la PERSONA, no el pedido
+
+Quien compró por primera vez dentro del período es nuevo, y **todo** lo que gastó ahí cuenta como
+plata de cliente nuevo, aunque haya comprado tres veces. Quien ya te había comprado antes es de los
+que vuelven.
+
+Así los dos grupos no se pisan y **la plata suma exacto lo facturado** — se puede verificar contra
+"Ingresos totales". Clasificando pedido por pedido, una misma persona caería en los dos lados, la
+plata se contaría dos veces y "cuántos clientes nuevos tuve" se quedaría sin respuesta. Eso no se ve:
+los dos números son creíbles hasta que alguien los suma a mano.
+
+### El titular es el ticket
+
+Es el número que cambia una decisión: si el que vuelve gasta más por pedido, cada peso puesto en que
+la gente vuelva rinde más que uno puesto en traer gente nueva. Dos guardas para no inventarlo: mínimo
+3 pedidos de cada lado —con uno solo, el "ticket promedio" de ese grupo *es* ese pedido— y una
+diferencia de al menos 10%, porque anunciar que gastan "un 4% más" es presentar ruido como hallazgo.
+
+### El límite, dicho en pantalla
+
+Alguien que compra con un mail y vuelve con otro entra como nuevo. No hay forma de saberlo sin pedirle
+que se registre, y pedirle que se registre cuesta ventas.
+
+### La query
+
+Una sola más: `groupBy(['buyerId'], _min: createdAt)` con el `in` acotado **a los compradores del
+período**, no a todos los de la tienda. No se puede evitar — el dato de "cuándo compró por primera
+vez" está fuera de la ventana que se mira.
+
+---
+
 ## Cómo correr los chequeos
 
 ```
@@ -544,5 +587,6 @@ npx tsx src/lib/resumen-mes.check.ts
 npx tsx src/lib/dia-a-dia.check.ts
 npx tsx src/lib/origen-visita.check.ts
 npx tsx src/lib/embudo.check.ts
+npx tsx src/lib/clientes.check.ts
 npx tsx src/lib/bots.check.ts
 ```

@@ -11,6 +11,7 @@ import {
 } from "@/lib/fechas-comerciales";
 import { ordenarOrigenes, ORIGENES, NOMBRE_ORIGEN, type Origen } from "@/lib/origen-visita";
 import { armarEmbudo } from "@/lib/embudo";
+import { resumirClientes } from "@/lib/clientes";
 
 /**
  * Un valor listo para meter en una celda de CSV.
@@ -87,8 +88,9 @@ export async function GET(req: NextRequest) {
     prisma.order.findMany({
       where: { storeId: store.id, createdAt: { gte: startDate, lt: endDate }, status: { not: "CANCELLED" } },
       // `couponId` y `subtotal` son para comparar el tamaño de la compra con
-      // cupón contra sin cupón — la misma lista que ya se traía.
-      select: { total: true, subtotal: true, couponId: true, status: true, createdAt: true },
+      // cupón contra sin cupón — la misma lista que ya se traía. `buyerId` es
+      // para separar clientes nuevos de los que vuelven.
+      select: { total: true, subtotal: true, couponId: true, status: true, createdAt: true, buyerId: true },
     }),
     prisma.storeView.findMany({
       where: { storeId: store.id, date: { gte: days[0].dateStr, lte: days[days.length - 1].dateStr } },
@@ -353,6 +355,32 @@ export async function GET(req: NextRequest) {
   const confirmedOrdersCount = confirmedOrders.length;
   const avgTicket = confirmedOrdersCount > 0 ? Math.round(totalRevenue / confirmedOrdersCount) : 0;
 
+  // ── Clientes nuevos y los que vuelven ──
+  // De la misma función que la pantalla, con la misma query. El `in` va acotado
+  // a los compradores del período, no a todos los de la tienda.
+  let clientesResumen = resumirClientes([]);
+  {
+    const compradores = [...new Set(confirmedOrders.map((o) => o.buyerId))];
+    if (compradores.length > 0) {
+      const primeras = await prisma.order.groupBy({
+        by: ["buyerId"],
+        where: { storeId: store.id, buyerId: { in: compradores }, status: { in: CONFIRMED } },
+        _min: { createdAt: true },
+      });
+      const primeraDe = new Map(primeras.map((f) => [f.buyerId, f._min.createdAt]));
+      clientesResumen = resumirClientes(
+        confirmedOrders.map((o) => {
+          const primera = primeraDe.get(o.buyerId);
+          return {
+            buyerId: o.buyerId,
+            total: o.total,
+            primeraCompraEnElPeriodo: primera != null && primera >= startDate,
+          };
+        })
+      );
+    }
+  }
+
   // ── El embudo ──
   // Va acá abajo porque necesita los pedidos confirmados. Mismo `.catch` que el
   // desglose de origen y por lo mismo: la tabla es nueva y en un entorno sin la
@@ -555,6 +583,22 @@ export async function GET(req: NextRequest) {
       `# PROMOCIONES ACTIVAS QUE NO ENTRARON EN NINGUN PEDIDO`,
       `Promocion`,
       ...resumenPromos.sinUsar.map(n => csv(n)),
+      ``,
+    ] : []),
+
+    // Se cuenta la PERSONA y no el pedido, asi que las dos filas suman exacto
+    // lo facturado y se pueden verificar contra "Ingresos totales" de arriba.
+    ...(clientesResumen.nuevos.pedidos + clientesResumen.vuelven.pedidos > 0 ? [
+      `# CLIENTES NUEVOS Y CLIENTES QUE VUELVEN`,
+      `# Nuevo = su primera compra confirmada en esta tienda cayo dentro del periodo. Todo lo que gasto en el periodo cuenta como plata de cliente nuevo, aunque haya comprado varias veces`,
+      `# Se reconoce a la persona por el mail con el que compra: si vuelve con otro mail, entra como nueva`,
+      `# Solo pedidos confirmados`,
+      `Grupo,Personas,Pedidos,Facturado (ARS),Ticket promedio (ARS)`,
+      `Compraron por primera vez,${clientesResumen.nuevos.personas},${clientesResumen.nuevos.pedidos},${Math.round(clientesResumen.nuevos.facturado)},${Math.round(clientesResumen.nuevos.ticket)}`,
+      `Ya te habian comprado,${clientesResumen.vuelven.personas},${clientesResumen.vuelven.pedidos},${Math.round(clientesResumen.vuelven.facturado)},${Math.round(clientesResumen.vuelven.ticket)}`,
+      ...(clientesResumen.diferenciaTicketPct !== null
+        ? [`# El que ya te habia comprado gasta un ${Math.abs(clientesResumen.diferenciaTicketPct)}% ${clientesResumen.diferenciaTicketPct > 0 ? "mas" : "menos"} por pedido`]
+        : [`# No hay muestra suficiente de los dos lados para comparar los tickets`]),
       ``,
     ] : []),
 

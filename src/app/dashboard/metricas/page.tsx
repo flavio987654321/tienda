@@ -38,6 +38,7 @@ import { aggregateProfitability, calcVehicleProfit, gananciaPorPedido, type Prof
 import { resumirDias, diaDeLaSemana, fechaCorta, type DiaCrudo } from "@/lib/dia-a-dia";
 import { ordenarOrigenes, ORIGENES, NOMBRE_ORIGEN, type Origen } from "@/lib/origen-visita";
 import { armarEmbudo, MINIMO_PARA_SENALAR } from "@/lib/embudo";
+import { resumirClientes } from "@/lib/clientes";
 
 // ─── Rango de fechas ──────────────────────────────────────────────────────────
 // Todas las comparaciones usan ventanas de igual longitud (período actual vs.
@@ -645,7 +646,7 @@ export default async function MetricasPage({
   // `couponId` y `subtotal` son para comparar el tamaño de la compra con cupón
   // contra sin cupón. Van acá y no en una query nueva: es la misma lista de
   // pedidos del período que ya se estaba trayendo.
-  let ordersPeriod: { total: number; subtotal: number; couponId: string | null; status: string; createdAt: Date }[] = [];
+  let ordersPeriod: { total: number; subtotal: number; couponId: string | null; status: string; createdAt: Date; buyerId: string }[] = [];
   let revenuePrevAgg: { _sum: { total: number | null } } = { _sum: { total: null } };
   let ordersPrevCount = 0;
   let topProducts: { productId: string; _sum: { quantity: number | null } }[] = [];
@@ -688,7 +689,11 @@ export default async function MetricasPage({
     ] = await Promise.all([
       prisma.order.findMany({
         where: { storeId: store.id, createdAt: { gte: periodStart, lt: periodEndExclusive }, status: { not: "CANCELLED" } },
-        select: { total: true, subtotal: true, couponId: true, status: true, createdAt: true },
+        // `buyerId` es para separar clientes nuevos de los que vuelven. Sirve
+        // porque el checkout busca el usuario por email antes de crear uno: la
+        // misma dirección siempre cae en la misma persona, compre logueada o
+        // como invitada.
+        select: { total: true, subtotal: true, couponId: true, status: true, createdAt: true, buyerId: true },
         orderBy: { createdAt: "asc" },
       }),
       prisma.order.aggregate({
@@ -1040,6 +1045,46 @@ export default async function MetricasPage({
     ]);
   } catch (err) {
     console.error("[metricas] StoreView aggregate falló — ¿falta la migración?", err);
+  }
+
+  // ── Clientes nuevos y clientes que vuelven ──
+  //
+  // Se pregunta por la PRIMERA compra confirmada de cada uno en esta tienda, y
+  // se compara contra el arranque del período. Quien la tenga adentro es nuevo;
+  // quien la tenga antes ya te había comprado.
+  //
+  // El `in` está acotado a los compradores del período —no a todos los de la
+  // tienda—, así que la lista es como mucho la cantidad de gente distinta que
+  // compró en estos días. Es una query más y no hay forma de evitarla: el dato
+  // de "cuándo compró por primera vez" está fuera de la ventana que se mira.
+  let clientesResumen = resumirClientes([]);
+  {
+    const confirmados = ordersPeriod.filter((o) => CONFIRMED_ORDER_STATUSES.includes(o.status));
+    const compradores = [...new Set(confirmados.map((o) => o.buyerId))];
+    if (compradores.length > 0) {
+      const primeras = await prisma.order.groupBy({
+        by: ["buyerId"],
+        where: {
+          storeId: store.id,
+          buyerId: { in: compradores },
+          status: { in: CONFIRMED_ORDER_STATUSES },
+        },
+        _min: { createdAt: true },
+      });
+      const primeraDe = new Map(primeras.map((f) => [f.buyerId, f._min.createdAt]));
+      clientesResumen = resumirClientes(
+        confirmados.map((o) => {
+          const primera = primeraDe.get(o.buyerId);
+          return {
+            buyerId: o.buyerId,
+            total: o.total,
+            // Sin fecha de primera compra no puede ser nuevo: si el dato falta,
+            // tratarlo como nuevo inventaría un cliente que la tienda no ganó.
+            primeraCompraEnElPeriodo: primera != null && primera >= periodStart,
+          };
+        })
+      );
+    }
   }
 
   // ── Nombres de productos para el top y para la tabla de rentabilidad ──
@@ -1478,6 +1523,94 @@ export default async function MetricasPage({
             <LineChart data={visitsChartData} color="#2563eb" gradId="grad-blue" formatter={shortNum} />
           </div>
         </div>
+
+        {/* ── Nuevos y los que vuelven ────────────────────────────────────────
+            Para una tienda chica es *la* métrica, y no estaba. Una tienda que
+            factura lo mismo todos los meses pero siempre con gente distinta
+            está corriendo para quedarse en el mismo lugar, y mirando sólo el
+            total se ve idéntica a una que está construyendo clientela.
+
+            El titular es la comparación de tickets porque es la que cambia una
+            decisión: si el que vuelve gasta más, cada peso puesto en que la
+            gente vuelva rinde más que uno puesto en traer gente nueva. */}
+        {!isAutos && clientesResumen.nuevos.pedidos + clientesResumen.vuelven.pedidos > 0 && (
+          <div className="rounded-2xl border border-gray-100 bg-white p-6">
+            <h2 className="font-bold text-gray-900">Clientes nuevos y clientes que vuelven</h2>
+
+            <p className="mt-1 text-sm leading-relaxed text-gray-600">
+              {clientesResumen.vuelven.personas === 0 ? (
+                <>
+                  Los {clientesResumen.nuevos.personas} que te compraron en estos {rangeDays} días
+                  {" "}lo hicieron por primera vez. Todavía no volvió nadie
+                  {rangeDays < 90 && <> — probá con 90 días, que una segunda compra tarda</>}.
+                </>
+              ) : clientesResumen.diferenciaTicketPct !== null ? (
+                <>
+                  El que ya te había comprado gasta{" "}
+                  <span className="font-bold text-gray-900">
+                    {Math.abs(clientesResumen.diferenciaTicketPct)}%{" "}
+                    {clientesResumen.diferenciaTicketPct > 0 ? "más" : "menos"}
+                  </span>
+                  {" "}por pedido que el que llega nuevo
+                  {" "}({money(clientesResumen.vuelven.ticket)} contra {money(clientesResumen.nuevos.ticket)}).
+                  {clientesResumen.pctFacturadoDeVuelven !== null && (
+                    <> Volvieron {clientesResumen.vuelven.personas} personas y dejaron
+                    el {clientesResumen.pctFacturadoDeVuelven}% de lo que facturaste.</>
+                  )}
+                </>
+              ) : (
+                <>
+                  Volvieron <span className="font-bold text-gray-900">{clientesResumen.vuelven.personas}</span> de
+                  los que ya te habían comprado, y dejaron el {clientesResumen.pctFacturadoDeVuelven}% de
+                  lo que facturaste en estos {rangeDays} días.
+                </>
+              )}
+            </p>
+
+            <div className="mt-5 grid gap-4 sm:grid-cols-2">
+              {[
+                { titulo: "Compraron por primera vez", g: clientesResumen.nuevos, color: "text-indigo-600", barra: "bg-indigo-500" },
+                { titulo: "Ya te habían comprado", g: clientesResumen.vuelven, color: "text-emerald-600", barra: "bg-emerald-500" },
+              ].map(({ titulo, g, color, barra }) => {
+                const total = clientesResumen.nuevos.facturado + clientesResumen.vuelven.facturado;
+                const pct = total > 0 ? Math.round((g.facturado / total) * 100) : 0;
+                return (
+                  <div key={titulo} className="rounded-xl border border-gray-100 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">{titulo}</p>
+                    <p className={`mt-1 text-2xl font-black ${color} tabular-nums`}>
+                      {g.personas}
+                      <span className="ml-1.5 text-sm font-medium text-gray-400">
+                        {g.personas === 1 ? "persona" : "personas"}
+                      </span>
+                    </p>
+                    <div className="mt-2 h-1.5 rounded-full bg-gray-100">
+                      <div className={`h-1.5 rounded-full ${barra}`} style={{ width: `${pct}%` }} />
+                    </div>
+                    <p className="mt-2 text-xs leading-relaxed text-gray-500 tabular-nums">
+                      Dejaron <span className="font-bold text-gray-900">{money(g.facturado)}</span> ({pct}% del total)
+                      {" "}en {g.pedidos} pedido{g.pedidos !== 1 ? "s" : ""}.
+                      {g.pedidos > 0 && <> Ticket promedio {money(g.ticket)}.</>}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="mt-5 space-y-2 border-t border-gray-100 pt-3.5 text-xs leading-relaxed text-gray-500">
+              <p>
+                Se cuenta la <span className="font-semibold text-gray-700">persona</span>, no el pedido:
+                quien compró por primera vez en estos {rangeDays} días es nuevo, y todo lo que gastó
+                acá cuenta como plata de cliente nuevo aunque haya comprado varias veces. Por eso los
+                dos números suman exacto lo que facturaste.
+              </p>
+              <p>
+                Reconocemos a la persona por el mail con el que compra.{" "}
+                <span className="font-semibold text-gray-700">Si vuelve con otro mail, entra como nueva.</span>{" "}
+                Sólo cuenta lo confirmado: los pedidos pendientes de pago no están.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* ── El embudo ───────────────────────────────────────────────────────
             Hasta acá el panel tenía los dos extremos —visitas arriba, pedidos
