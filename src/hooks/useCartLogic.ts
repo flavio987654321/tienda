@@ -13,6 +13,7 @@ import { resolveVariantPrice } from "@/lib/variantPrice";
 import { priceCart, resolveBasePrice, parseEscalones, freeShippingProgress, type ActivePromotion } from "@/lib/pricing";
 import { couponDiscountFor } from "@/lib/coupons";
 import { registrarVista } from "@/lib/registrarVista";
+import { registrarPaso } from "@/lib/registrarPaso";
 
 /**
  * El índice de la foto asignada a un valor de opción, o -1.
@@ -303,6 +304,17 @@ export function useCartLogic({ products, promotions = [], storeId, affiliateId =
       else localStorage.removeItem("storefront_buyer");
     } catch {}
   }, [buyerForm, rememberData]);
+
+  // Embudo: abrió el checkout.
+  //
+  // Va como efecto sobre el estado y no pegado a los `setCheckoutOpen(true)`:
+  // el botón de finalizar está en seis templates y en el carrito compartido, así
+  // que enganchar cada llamada era garantizar que la próxima pantalla que se
+  // agregue no cuente. Lo que importa es que el checkout se abrió, y eso es
+  // exactamente lo que dice esta variable.
+  useEffect(() => {
+    if (checkoutOpen) registrarPaso("checkout", slug, isOwner, isPreview);
+  }, [checkoutOpen, slug, isOwner, isPreview]);
 
   // Carrito abandonado: si ya escribió un email válido en el checkout pero
   // todavía no completó la compra, guardamos un snapshot para poder mandarle
@@ -825,6 +837,10 @@ export function useCartLogic({ products, promotions = [], storeId, affiliateId =
     setModalProduct(null);
     showToast(`${name} agregado al carrito`);
     setCartOpen(true);
+    // El primero de los dos escalones del embudo que no se pueden sacar de
+    // ninguna tabla. Va acá y no en cada template porque las seis pantallas
+    // agregan al carrito por esta misma función.
+    registrarPaso("carrito", slug, isOwner, isPreview);
   };
 
   const removeFromCart = (idx: number) =>

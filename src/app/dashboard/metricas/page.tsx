@@ -37,6 +37,7 @@ import ShareStatsButton from "./ShareStatsButton";
 import { aggregateProfitability, calcVehicleProfit, gananciaPorPedido, type ProfitOrderItem } from "@/lib/margin";
 import { resumirDias, diaDeLaSemana, fechaCorta, type DiaCrudo } from "@/lib/dia-a-dia";
 import { ordenarOrigenes, ORIGENES, NOMBRE_ORIGEN, type Origen } from "@/lib/origen-visita";
+import { armarEmbudo, MINIMO_PARA_SENALAR } from "@/lib/embudo";
 
 // ─── Rango de fechas ──────────────────────────────────────────────────────────
 // Todas las comparaciones usan ventanas de igual longitud (período actual vs.
@@ -996,8 +997,10 @@ export default async function MetricasPage({
   let viewsPeriodRaw: { date: string; count: number }[] = [];
   /** De dónde vinieron, del período. Vacío hasta que corra la migración. */
   let origenesRaw: { source: string; _sum: { count: number | null } }[] = [];
+  /** Los dos pasos del embudo que se registran desde el navegador. */
+  let pasosRaw: { step: string; _sum: { count: number | null } }[] = [];
   try {
-    [viewsPrevAgg, viewsPeriodRaw, origenesRaw] = await Promise.all([
+    [viewsPrevAgg, viewsPeriodRaw, origenesRaw, pasosRaw] = await Promise.all([
       prisma.storeView.aggregate({
         where: { storeId: store.id, date: { gte: prevPeriodStartStr, lte: prevPeriodEndStr } },
         _sum: { count: true },
@@ -1011,6 +1014,12 @@ export default async function MetricasPage({
       // etiquetas, así que el groupBy no puede crecer con el volumen.
       prisma.storeViewSource.groupBy({
         by: ["source"],
+        where: { storeId: store.id, date: { gte: periodStartStr } },
+        _sum: { count: true },
+      }),
+      // Dos filas: los pasos también salen de una lista cerrada.
+      prisma.storeFunnelStep.groupBy({
+        by: ["step"],
         where: { storeId: store.id, date: { gte: periodStartStr } },
         _sum: { count: true },
       }),
@@ -1131,6 +1140,31 @@ export default async function MetricasPage({
    */
   const canalPrincipal = origenes.find((o) => o.origen !== "directo" && o.origen !== "otro") ?? null;
   const visitasDirectas = origenes.find((o) => o.origen === "directo")?.visitas ?? 0;
+
+  // ── El embudo ──
+  // Cuatro de los seis escalones ya estaban en la base y nadie los había puesto
+  // uno abajo del otro: las visitas, los carritos con email, los pedidos y los
+  // pedidos confirmados. Los dos del medio son los nuevos.
+  const pasoCarrito = pasosRaw.find((p) => p.step === "carrito")?._sum.count ?? 0;
+  const pasoCheckout = pasosRaw.find((p) => p.step === "checkout")?._sum.count ?? 0;
+  const embudo = armarEmbudo(
+    {
+      entro: totalViewsPeriod,
+      carrito: pasoCarrito,
+      checkout: pasoCheckout,
+      // `AbandonedCart` no es sólo "los que abandonaron": la fila se crea apenas
+      // escriben un email válido en el checkout y se le marca `recoveredAt` si
+      // después compran. O sea que son todos los que llegaron a dejar sus datos,
+      // que es justo el escalón que hace falta acá.
+      datos: carritosRaw.length,
+      pedido: totalOrdersPeriod,
+      pago: confirmedOrdersPeriod.length,
+    },
+    // Sin ninguno de los dos pasos nuevos el embudo tiene un agujero en el medio
+    // y hay que decirlo, en vez de mostrar un salto de visitas a datos como si
+    // fuera el recorrido completo.
+    pasoCarrito === 0 && pasoCheckout === 0
+  );
 
   // Este total NO es el mismo que el KPI "Pedidos": el KPI excluye los
   // cancelados y este bloque los muestra, porque cancelado es un estado y verlo
@@ -1430,6 +1464,99 @@ export default async function MetricasPage({
             <LineChart data={visitsChartData} color="#2563eb" gradId="grad-blue" formatter={shortNum} />
           </div>
         </div>
+
+        {/* ── El embudo ───────────────────────────────────────────────────────
+            Hasta acá el panel tenía los dos extremos —visitas arriba, pedidos
+            abajo— y una división entre los dos llamada "conversión". Con eso se
+            sabe que de cada cien compran dos, y nada sobre las otras noventa y
+            ocho: si no encontraron nada, si el envío las espantó, o si llenaron
+            todo el formulario y se cayeron al pagar. Son tres problemas
+            distintos y ninguno se arregla igual.
+
+            La conclusión va arriba y sólo cuando hay con qué. En un embudo
+            siempre hay un escalón que pierde más que los otros: nombrarlo
+            porque sí manda a la dueña a arreglar algo que no está roto. */}
+        {!isAutos && totalViewsPeriod > 0 && (
+          <div className="rounded-2xl border border-gray-100 bg-white p-6" data-print="largo">
+            <h2 className="font-bold text-gray-900">Dónde se te cae la gente</h2>
+
+            {embudo.peorCaida ? (
+              <p className="mt-1 text-sm leading-relaxed text-gray-600">
+                El escalón donde más gente se te cae de más es{" "}
+                <span className="font-bold text-gray-900">
+                  &quot;{embudo.peorCaida.titulo.toLowerCase()}&quot;
+                </span>
+                : llegaron{" "}
+                {(embudo.peorCaida.cantidad + embudo.peorCaida.perdidos).toLocaleString("es-AR")} y
+                siguieron <span className="font-bold text-gray-900">{embudo.peorCaida.cantidad.toLocaleString("es-AR")}</span>.
+                {" "}En una tienda parecida pasarían más o menos el {100 - embudo.peorCaida.caidaNormalPct}%,
+                {" "}y acá pasa el {embudo.peorCaida.pctDelAnterior}%.
+              </p>
+            ) : (
+              <p className="mt-1 text-sm leading-relaxed text-gray-500">
+                {totalViewsPeriod < MINIMO_PARA_SENALAR
+                  ? `Con ${totalViewsPeriod} visitas todavía no alcanza para decir dónde se cae la gente: cualquier diferencia de dos personas da un porcentaje enorme y no quiere decir nada.`
+                  : "Ningún escalón se cae mucho más de lo normal. El recorrido de abajo es el detalle."}
+              </p>
+            )}
+
+            <div className="mt-5 space-y-3">
+              {embudo.escalones.map((e) => {
+                const ancho = embudo.escalones[0].cantidad > 0
+                  ? Math.round((e.cantidad / embudo.escalones[0].cantidad) * 100)
+                  : 0;
+                const señalado = embudo.peorCaida?.clave === e.clave;
+                return (
+                  <div key={e.clave}>
+                    <div className="mb-1 flex items-baseline justify-between gap-3 text-sm">
+                      <span className={señalado ? "font-bold text-gray-900" : "font-medium text-gray-700"}>
+                        {e.titulo}
+                      </span>
+                      <span className="shrink-0 text-xs text-gray-400 tabular-nums">
+                        <span className="font-bold text-gray-900">{e.cantidad.toLocaleString("es-AR")}</span>
+                        {e.pctDelAnterior !== null && ` · ${e.pctDelAnterior}% de los de arriba`}
+                      </span>
+                    </div>
+                    {/* La barra se ve aunque sea diminuta: un escalón en 0,2% con
+                        ancho 0 se lee como que no existe, y existe. */}
+                    <div className="h-2 rounded-full bg-gray-100">
+                      <div
+                        className={`h-2 rounded-full ${señalado ? "bg-rose-500" : "bg-indigo-500"}`}
+                        style={{ width: e.cantidad > 0 ? `${Math.max(ancho, 1)}%` : "0%" }}
+                      />
+                    </div>
+                    <p className="mt-1 text-xs leading-relaxed text-gray-400">
+                      {e.detalle}
+                      {e.perdidos > 0 && (
+                        <span className={señalado ? "font-semibold text-rose-600" : ""}>
+                          {" "}Se cayeron {e.perdidos.toLocaleString("es-AR")}.
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Las dos cosas que cambian cómo se lee todo lo de arriba. */}
+            <div className="mt-5 space-y-2 border-t border-gray-100 pt-3.5 text-xs leading-relaxed text-gray-500">
+              {embudo.faltanPasosNuevos && (
+                <p>
+                  <span className="font-semibold text-gray-700">Los dos escalones del medio recién empezaron a medirse.</span>{" "}
+                  Hasta que pase gente nueva por la tienda van a estar en cero, y el salto de
+                  las visitas a los datos va a parecer más grande de lo que es.
+                </p>
+              )}
+              <p>
+                <span className="font-semibold text-gray-700">Los porcentajes son aproximados.</span>{" "}
+                Los tres primeros escalones cuentan una vez por navegador por día, los datos
+                una vez por persona, y los dos últimos una vez por pedido. Alguien que entra
+                el lunes y compra el jueves suma arriba un día y abajo otro. Sirve para ver
+                dónde está el problema, no para hacer cuentas exactas.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* ── De dónde viene la gente ─────────────────────────────────────────
             La tarjeta que faltaba desde siempre. Hasta acá el panel sabía

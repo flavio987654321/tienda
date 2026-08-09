@@ -229,6 +229,7 @@ export async function POST(req: Request) {
     // El origen de esas mismas visitas. Si quedara, la tienda arrancaría de cero
     // con un desglose de "de dónde vinieron" que ya no le corresponde a nadie.
     await tx.storeViewSource.deleteMany({ where: { storeId: store.id } });
+    await tx.storeFunnelStep.deleteMany({ where: { storeId: store.id } });
 
     // ── Ruleta: sus premios apuntaban a cupones que acabamos de borrar
     // (couponId queda en null por SetNull) — si el widget siguiera activo,

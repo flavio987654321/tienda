@@ -458,6 +458,83 @@ Instagram". Ojo: ese cron **no está en `vercel.json`**, así que hoy no corre n
 
 ---
 
+## ✅ 10. Dónde se te cae la gente (09/08/2026)
+
+El panel tenía los dos extremos —visitas arriba, pedidos abajo— y una división entre ellos llamada
+**"conversión"**. Con eso se sabe que de cada cien compran dos, y **nada** sobre las otras noventa y
+ocho: si no encontraron nada, si el envío las espantó, o si llenaron todo el formulario y se cayeron
+al pagar. Son tres problemas distintos y ninguno se arregla igual.
+
+Seis escalones. **Cuatro ya estaban en la base y nadie los había puesto uno abajo del otro:**
+
+| Escalón | De dónde sale |
+|---|---|
+| Entraron | `StoreView` |
+| Pusieron algo en el carrito | 🆕 `StoreFunnelStep` |
+| Abrieron el checkout | 🆕 `StoreFunnelStep` |
+| Escribieron sus datos | `AbandonedCart` |
+| Hicieron el pedido | `Order` |
+| Pagaron | `Order` confirmado |
+
+`AbandonedCart` no es sólo "los que abandonaron": la fila se crea apenas escriben un email válido en
+el checkout y se le marca `recoveredAt` si después compran. Son **todos** los que dejaron sus datos,
+que es justo el escalón que hacía falta.
+
+### 🔴 Señalar la caída correcta
+
+Ésta es la decisión que decide si la tarjeta sirve o estorba, porque manda a la dueña a mirar un lugar.
+
+**Por porcentaje crudo gana siempre el primer escalón.** En todas las tiendas del mundo la mayoría
+entra, mira y se va. Señalar eso todos los meses es no señalar nada. Por cabezas gana también el
+primero, porque tiene el denominador más grande.
+
+Cada escalón tiene su `caidaNormalPct` de referencia (90 / 50 / 35 / 30 / 20) y se señala **el que
+más se despega de lo normal para ese escalón**, no el que más pierde.
+
+**Y se compara la retención como proporción, no la caída como resta.** Lo descubrió un chequeo: 1000
+entraron y 5 pusieron algo en el carrito es perder el 99,5%, apenas **nueve puntos y medio** peor que
+el 90% normal — restando quedaba por debajo del umbral y el catálogo más inservible del mundo pasaba
+como "todo en orden". Cerca del 100% la resta se comprime y esconde justo los desastres. Por
+proporción da 5% de lo normal, que es lo que realmente pasó.
+
+Tres guardas para no inventar problemas: mínimo 50 visitas, mínimo 3 personas caídas, y retención por
+debajo del 60% de lo normal.
+
+### Un escalón nunca muestra más que el de arriba
+
+Los seis **no se cuentan igual** y no hay forma de que lo hagan sin ponerle una cookie de seguimiento
+a cada persona: los tres primeros van por navegador por día, los datos por email, y los dos últimos
+por pedido. En los bordes del período eso da vuelta el orden —alguien que entra el lunes y compra el
+jueves suma arriba un día y abajo otro—.
+
+Un embudo que se ensancha en el medio no se lee como "acá el conteo es aproximado": **se lee como que
+el panel está roto**, y arrastra la desconfianza a todo lo demás de la pantalla. Se recorta lo que se
+**muestra**, nunca el dato: en la base quedan los números crudos. Y la tarjeta dice que los
+porcentajes son aproximados en vez de presentarlos como una cuenta exacta.
+
+### Los guardas, ahora compartidos
+
+`src/lib/visita-legitima.ts` — bots, `origin` propio y límite por IP. Estaban adentro de
+`/api/store-views/[slug]`, que era el único endpoint de este tipo. Con el segundo, copiarlos era
+garantizar que un día se arregle un agujero en uno y no en el otro, **y el que quede abierto no avisa:
+una métrica inflada sale por pantalla como un número perfectamente creíble.**
+
+El embudo tiene su propio cupo por IP (10/hora) y no comparte clave con las visitas: si fuera el
+mismo, alguien mirando mucho la tienda se quedaría sin visitas contadas.
+
+### El dedup, del lado del cliente
+
+`src/lib/registrarPaso.ts`, mismo molde que `registrarVista`. Una vez por navegador por día, con el
+día **argentino** y no el del reloj del visitante. Que los pasos y las visitas usen la **misma** regla
+no es prolijidad: el embudo divide uno por el otro, y si las visitas fueran por día y el carrito por
+sesión el porcentaje no querría decir nada.
+
+`registrarPaso("checkout")` va como efecto sobre `checkoutOpen` y no pegado a cada
+`setCheckoutOpen(true)`: el botón de finalizar está en seis templates más el carrito compartido, así
+que enganchar cada llamada era garantizar que la próxima pantalla que se agregue no cuente.
+
+---
+
 ## Cómo correr los chequeos
 
 ```
@@ -466,5 +543,6 @@ npx tsx src/lib/metricas-marketing.check.ts
 npx tsx src/lib/resumen-mes.check.ts
 npx tsx src/lib/dia-a-dia.check.ts
 npx tsx src/lib/origen-visita.check.ts
+npx tsx src/lib/embudo.check.ts
 npx tsx src/lib/bots.check.ts
 ```

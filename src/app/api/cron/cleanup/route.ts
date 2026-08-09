@@ -21,6 +21,7 @@ export async function GET(req: NextRequest) {
     coupons,
     storeViews,
     storeViewSources,
+    funnelSteps,
     abandonedCarts,
   ] = await Promise.all([
     // Sesiones de NextAuth ya expiradas
@@ -53,6 +54,11 @@ export async function GET(req: NextRequest) {
     prisma.storeViewSource.deleteMany({
       where: { date: { lt: ago1y.toISOString().slice(0, 10) } },
     }),
+    // Los escalones del embudo, con el mismo corte por el mismo motivo: el
+    // primer escalón son las visitas de ese día.
+    prisma.storeFunnelStep.deleteMany({
+      where: { date: { lt: ago1y.toISOString().slice(0, 10) } },
+    }),
     // Carritos abandonados de hace más de 45 días sin recuperar — ya no
     // tiene sentido mandarles recordatorio ni dejarlos acumulados en el panel
     prisma.abandonedCart.deleteMany({
@@ -69,11 +75,12 @@ export async function GET(req: NextRequest) {
       rewardCoupons: coupons.count,
       storeViews:    storeViews.count,
       storeViewSources: storeViewSources.count,
+      funnelSteps:   funnelSteps.count,
       abandonedCarts: abandonedCarts.count,
     },
     total: sessions.count + clicks.count + notifications.count +
            adminLogs.count + coupons.count + storeViews.count +
-           storeViewSources.count + abandonedCarts.count,
+           storeViewSources.count + funnelSteps.count + abandonedCarts.count,
     ranAt: now.toISOString(),
   });
 }

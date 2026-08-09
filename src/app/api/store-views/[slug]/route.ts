@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getArgentinaDayKey } from "@/lib/fechas-comerciales";
-import { esBot } from "@/lib/bots";
 import { clasificarOrigen } from "@/lib/origen-visita";
-import { checkRateLimit } from "@/lib/rate-limit";
-import { getClientIp } from "@/lib/request-ip";
+import { visitaLegitima } from "@/lib/visita-legitima";
 
 export const runtime = "nodejs";
 
@@ -16,7 +14,6 @@ export const runtime = "nodejs";
  * misma IP— sin permitir que alguien infle el número a mano.
  */
 const MAX_VISITAS_POR_IP = 5;
-const VENTANA_MS = 60 * 60 * 1000;
 
 // POST /api/store-views/[slug]
 // Registra una visita a la tienda. Se llama desde el browser (fire-and-forget).
@@ -28,37 +25,11 @@ export async function POST(
 ) {
   const { slug } = await params;
 
-  // ── Bots ──
-  // Googlebot y compañía ejecutan JavaScript, así que llegaban hasta acá y
-  // entraban como visitas reales. Nunca compran: inflaban las visitas y hundían
-  // la conversión, que es visitas → ventas.
-  if (esBot(req.headers.get("user-agent"))) {
+  // Bots, visitas forjadas y el límite por IP. Están en `lib/visita-legitima`
+  // porque el embudo escribe métricas desde el navegador igual que esto: con los
+  // filtros copiados, un día se arregla un agujero en uno y no en el otro.
+  if (!(await visitaLegitima(req, `store-view:${slug}`, MAX_VISITAS_POR_IP))) {
     return NextResponse.json({ ok: true, contada: false });
-  }
-
-  // ── Visitas forjadas ──
-  // Éste es el agujero grande: el endpoint es público y no pedía nada. Cualquiera
-  // con la consola abierta podía mandar el POST en un bucle y ponerle a una tienda
-  // las visitas que quisiera. Y no es sólo un número feo: la conversión sale de
-  // ahí, y ahora también el resumen en texto.
-  //
-  // El `origin` tiene que ser el nuestro. No frena a alguien decidido —un header
-  // se falsifica— pero sí frena el bucle de una línea, y el límite por IP de abajo
-  // se encarga del resto.
-  const origin = req.headers.get("origin");
-  if (origin && new URL(origin).host !== req.headers.get("host")) {
-    return NextResponse.json({ ok: true, contada: false });
-  }
-
-  const ip = getClientIp(req);
-  try {
-    if (!(await checkRateLimit(`store-view:${slug}:${ip}`, MAX_VISITAS_POR_IP, VENTANA_MS))) {
-      return NextResponse.json({ ok: true, contada: false });
-    }
-  } catch {
-    // Si Redis no está disponible se cuenta igual. Esto son métricas, no un
-    // control de acceso: perder visitas reales durante una caída sería peor que
-    // dejar pasar algunas de más.
   }
 
   const store = await prisma.store.findFirst({

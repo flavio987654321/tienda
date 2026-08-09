@@ -305,6 +305,7 @@ model Store {
   pushCampaigns       PushCampaign[]
   storeViews          StoreView[]
   storeViewSources    StoreViewSource[]
+  storeFunnelSteps    StoreFunnelStep[]
   storeFollows        StoreFollow[]
   abandonedCarts      AbandonedCart[]
   gamificationWidget  GamificationWidget?
@@ -1228,6 +1229,31 @@ model StoreViewSource {
   count   Int    @default(0)
 
   @@unique([storeId, date, source])
+  @@index([storeId, date(sort: Desc)])
+}
+
+/// Los dos escalones del embudo que no se pueden sacar de ninguna otra tabla.
+///
+/// El recorrido completo es: entró → puso algo en el carrito → abrió el checkout
+/// → escribió sus datos → hizo el pedido → pagó. El primero sale de `StoreView`,
+/// los dos últimos de `Order` y el de los datos de `AbandonedCart`. Los dos del
+/// medio no los sabía nadie, y son justo donde más gente se cae.
+///
+/// Se cuenta como las visitas: una vez por navegador por día por tienda, con el
+/// dedup del lado del cliente. Así el denominador de arriba y el numerador de
+/// abajo miden lo mismo y el porcentaje quiere decir algo.
+///
+/// `step` sale de la lista cerrada de `src/lib/embudo.ts`, por lo mismo que
+/// `StoreViewSource.source`: es parte de la clave de la tabla.
+model StoreFunnelStep {
+  id      String @id @default(cuid())
+  storeId String
+  store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  date    String // "2026-06-13", día del calendario argentino
+  step    String // "carrito" | "checkout"
+  count   Int    @default(0)
+
+  @@unique([storeId, date, step])
   @@index([storeId, date(sort: Desc)])
 }
 

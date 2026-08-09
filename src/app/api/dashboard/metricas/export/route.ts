@@ -10,6 +10,7 @@ import {
   getArgentinaDayKey, diaArgentino, inicioDiaArgentino, sumarDiasCalendario,
 } from "@/lib/fechas-comerciales";
 import { ordenarOrigenes, ORIGENES, NOMBRE_ORIGEN, type Origen } from "@/lib/origen-visita";
+import { armarEmbudo } from "@/lib/embudo";
 
 /**
  * Un valor listo para meter en una celda de CSV.
@@ -352,6 +353,34 @@ export async function GET(req: NextRequest) {
   const confirmedOrdersCount = confirmedOrders.length;
   const avgTicket = confirmedOrdersCount > 0 ? Math.round(totalRevenue / confirmedOrdersCount) : 0;
 
+  // ── El embudo ──
+  // Va acá abajo porque necesita los pedidos confirmados. Mismo `.catch` que el
+  // desglose de origen y por lo mismo: la tabla es nueva y en un entorno sin la
+  // migración corrida la query tira.
+  //
+  // De la MISMA función que la pantalla. Si el archivo armara el embudo por su
+  // cuenta, el día que se ajuste un umbral los dos dirían cosas distintas.
+  const pasosRaw = await prisma.storeFunnelStep
+    .groupBy({
+      by: ["step"],
+      where: { storeId: store.id, date: { gte: days[0].dateStr, lte: days[days.length - 1].dateStr } },
+      _sum: { count: true },
+    })
+    .catch(() => [] as { step: string; _sum: { count: number | null } }[]);
+  const pasoCarrito = pasosRaw.find((p) => p.step === "carrito")?._sum.count ?? 0;
+  const pasoCheckout = pasosRaw.find((p) => p.step === "checkout")?._sum.count ?? 0;
+  const embudo = armarEmbudo(
+    {
+      entro: totalVisits,
+      carrito: pasoCarrito,
+      checkout: pasoCheckout,
+      datos: carritosRaw.length,
+      pedido: orders.length,
+      pago: confirmedOrdersCount,
+    },
+    pasoCarrito === 0 && pasoCheckout === 0
+  );
+
   // ── El resumen en texto ──
   // De la misma función que la pantalla, con los mismos números: si acá se
   // recalculara algo, el archivo y la pantalla podrían decir cosas distintas.
@@ -526,6 +555,25 @@ export async function GET(req: NextRequest) {
       `# PROMOCIONES ACTIVAS QUE NO ENTRARON EN NINGUN PEDIDO`,
       `Promocion`,
       ...resumenPromos.sinUsar.map(n => csv(n)),
+      ``,
+    ] : []),
+
+    // El recorrido completo, de arriba abajo. Es el bloque que contesta "de las
+    // cien personas que entraron, ¿dónde se me fueron las noventa y ocho?".
+    ...(totalVisits > 0 ? [
+      `# DONDE SE CAE LA GENTE`,
+      `# Los porcentajes son aproximados: los tres primeros escalones cuentan una vez por navegador por dia, los datos una vez por persona, y los dos ultimos una vez por pedido`,
+      `# Alguien que entra el lunes y compra el jueves suma arriba un dia y abajo otro`,
+      ...(embudo.faltanPasosNuevos
+        ? [`# OJO: "puso algo en el carrito" y "abrio el checkout" recien empezaron a medirse, por eso estan en cero`]
+        : []),
+      `# "Normal" son valores de referencia de comercio electronico, no una meta`,
+      `Escalon,Personas,% de los de arriba,% del total,Se cayeron,% que pasa normalmente`,
+      ...embudo.escalones.map(e =>
+        `${csv(e.titulo)},${e.cantidad},${e.pctDelAnterior ?? ""},${e.pctDelTotal ?? ""},${e.perdidos},${e.clave === "entro" ? "" : 100 - e.caidaNormalPct}`),
+      ...(embudo.peorCaida
+        ? [`# El que mas se despega de lo normal: ${embudo.peorCaida.titulo}`]
+        : []),
       ``,
     ] : []),
 
