@@ -6,8 +6,26 @@
 
 ## 📍 ESTADO ACTUAL
 
-Todo lo de abajo está **hecho y verificado (tsc + eslint + next build), sin pushear ni deployar**
-(pedido expreso de Flavio: "no pushees ni deployes porque tenemos que cambiar varias cosas").
+Secciones **1 a 10 deployadas el 09/08/2026** (`44c8e98 → ef30d88`, 8 commits). Las dos migraciones
+—`StoreViewSource` y `StoreFunnelStep`— corrieron y las tablas existen en producción.
+
+La 11 (clientes nuevos vs. que vuelven) está hecha y verificada **sin deployar todavía**.
+
+> ⚠️ **Nada de esto se vio funcionando con datos reales.** Compila, pasa tsc, eslint y las 8 suites de
+> chequeos, pero las tarjetas nuevas nunca se dibujaron con números de verdad: la tienda de prueba no
+> tiene tráfico, ni giros de ruleta, ni pedidos con cupón. Y las dos que miden desde el navegador
+> —origen del tráfico y embudo— arrancan vacías por definición: sólo cuentan de acá en adelante.
+
+### Lo que queda de la lista de cinco
+
+- ✅ De dónde viene la gente (sección 9)
+- ✅ Embudo del checkout (sección 10)
+- ✅ Clientes nuevos vs. que vuelven (sección 11)
+- 🔲 Comparar contra el año pasado — el dato está en la base, falta poder pedirlo
+- 🔲 Rango de fechas libre — hoy el selector sólo ofrece 7, 30 y 90 días
+
+Los dos que faltan son el mismo trabajo: hoy `RANGE_OPTIONS = [7, 30, 90]` y todo el resto de la
+pantalla deriva de ahí. Con un rango libre, comparar contra el año pasado es un caso más.
 
 ---
 
