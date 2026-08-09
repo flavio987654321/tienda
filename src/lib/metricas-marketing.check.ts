@@ -65,9 +65,11 @@ const cupon = (
   extra: Partial<CuponCrudo> = {}
 ): CuponCrudo => ({
   id, code, label: null, discountType: "percentage", discountValue: 10,
-  expiresAt: null, isActive: true, createdAt: fecha("2026-01-01"), winnerEmail: null, ...extra,
+  expiresAt: null, isActive: true, createdAt: fecha("2026-01-01"), ...extra,
 });
 
+// Sólo cupones PROPIOS. Los premios de la ruleta ya no se traen de la base —
+// crecían sin techo, uno por ganador— y ahora llegan marcados desde el pedido.
 const cupones: CuponCrudo[] = [
   cupon("c1", "BIENVENIDA10"),
   cupon("c2", "VERANO20", { label: "20% OFF verano", discountValue: 20, expiresAt: fecha("2026-01-01") }),
@@ -77,26 +79,23 @@ const cupones: CuponCrudo[] = [
   cupon("c4", "APAGADO", { isActive: false }),
   // Vencido y sin uso: idem, ya terminó.
   cupon("c5", "VIEJO", { expiresAt: fecha("2026-01-01") }),
-  // Premio de la ruleta, canjeado. Va aparte del ranking.
-  cupon("g1", "WIN-ABC123", { winnerEmail: "ana@example.com" }),
-  // Premio de la ruleta sin canjear: no es un cupón tuyo "sin usar".
-  cupon("g2", "WIN-XYZ789", { winnerEmail: "juan@example.com" }),
 ];
 const pedidosCupon = [
-  { couponId: "c1", discountAmount: 12000, total: 108000, ganancia: 40000 },
-  { couponId: "c1", discountAmount: 12000, total: 108000, ganancia: 40000 },
-  { couponId: "c1", discountAmount: 8000,  total:  72000, ganancia: 25000 },
+  { couponId: "c1", discountAmount: 12000, total: 108000, ganancia: 40000, esPremio: false },
+  { couponId: "c1", discountAmount: 12000, total: 108000, ganancia: 40000, esPremio: false },
+  { couponId: "c1", discountAmount: 8000,  total:  72000, ganancia: 25000, esPremio: false },
   // Sin costo cargado: la ganancia de este pedido no se sabe. Es el caso que se
   // equivoca callado — si "no sé" se tratara como 0, VERANO20 aparecería con
   // ganancia cero, que es una afirmación, no una ausencia.
-  { couponId: "c2", discountAmount: 18000, total:  22000, ganancia: null },
-  { couponId: "g1", discountAmount: 5000,  total:  45000, ganancia: 15000 },
-  { couponId: null, discountAmount: 0,     total:  30000, ganancia: 9000 },  // sin cupón, no cuenta
+  { couponId: "c2", discountAmount: 18000, total:  22000, ganancia: null,  esPremio: false },
+  // Premio de la ruleta canjeado: va al total de la ruleta, no al ranking.
+  { couponId: "g1", discountAmount: 5000,  total:  45000, ganancia: 15000, esPremio: true  },
+  { couponId: null, discountAmount: 0,     total:  30000, ganancia: 9000,  esPremio: false },  // sin cupón
 ];
 const rcup = resumirCupones(cupones, pedidosCupon, fecha("2026-07-29"));
 
 chequear("solo los usados aparecen", rcup.filas.length === 2, rcup.filas.map(f => f.code));
-chequear("el mas usado va primero", rcup.filas[0].code === "BIENVENIDA10", rcup.filas[0].code);
+chequear("el que mas dejo va primero", rcup.filas[0].code === "BIENVENIDA10", rcup.filas[0].code);
 chequear("3 usos del primero", rcup.filas[0].usos === 3, rcup.filas[0].usos);
 chequear("descuento $32.000", rcup.filas[0].descuento === 32000, rcup.filas[0].descuento);
 chequear("los pedidos sin cupon no cuentan", rcup.usosTotales === 4, rcup.usosTotales);
@@ -119,8 +118,7 @@ chequear("facturado total $310.000", rcup.facturadoTotal === 310000, rcup.factur
 chequear("el pedido sin cupon no suma al facturado", rcup.facturadoTotal !== 340000);
 
 // ── Los premios de la ruleta, aparte ──
-chequear("el premio canjeado no ensucia el ranking",
-  !rcup.filas.some(f => f.code.startsWith("WIN-")), rcup.filas.map(f => f.code));
+
 chequear("la ruleta cuenta su uso aparte", rcup.ruleta.usos === 1, rcup.ruleta);
 chequear("y su descuento aparte", rcup.ruleta.descuento === 5000, rcup.ruleta.descuento);
 chequear("y lo que facturo", rcup.ruleta.facturado === 45000, rcup.ruleta.facturado);
@@ -131,9 +129,48 @@ chequear("el descuento de la ruleta NO entra en el total propio",
 chequear("SINUSO aparece", rcup.sinUsar.some(c => c.code === "SINUSO"), rcup.sinUsar);
 chequear("el apagado no aparece", !rcup.sinUsar.some(c => c.code === "APAGADO"));
 chequear("el vencido no aparece", !rcup.sinUsar.some(c => c.code === "VIEJO"));
-chequear("el premio sin canjear no aparece", !rcup.sinUsar.some(c => c.code.startsWith("WIN-")));
+
 chequear("los usados no aparecen", !rcup.sinUsar.some(c => c.code === "BIENVENIDA10"));
 chequear("queda uno solo sin usar", rcup.sinUsar.length === 1, rcup.sinUsar.map(c => c.code));
+
+// ── El orden del ranking ──
+// LA trampa que motivó el cambio: el más usado no siempre es el que más deja.
+// Ordenando por usos, el resumen podía felicitar a un cupón que no entraba en
+// los cinco visibles — leías la conclusión y no estaba en la lista.
+const muchoUsoPocaGanancia = resumirCupones(
+  [cupon("x1", "MASUSADO"), cupon("x2", "MASGANANCIA"), cupon("x3", "SINCOSTOS")],
+  [
+    ...Array.from({ length: 9 }, () => ({ couponId: "x1", discountAmount: 9000, total: 30000, ganancia: 2000, esPremio: false })),
+    { couponId: "x2", discountAmount: 4000, total: 300000, ganancia: 120000, esPremio: false },
+    { couponId: "x2", discountAmount: 4000, total: 300000, ganancia: 120000, esPremio: false },
+    { couponId: "x2", discountAmount: 4000, total: 300000, ganancia: 120000, esPremio: false },
+    { couponId: "x3", discountAmount: 1000, total: 500000, ganancia: null, esPremio: false },
+  ],
+  fecha("2026-07-29")
+);
+chequear("gana el que mas dejo, no el mas usado",
+  muchoUsoPocaGanancia.filas[0].code === "MASGANANCIA", muchoUsoPocaGanancia.filas.map(f => f.code));
+chequear("el mas usado queda segundo", muchoUsoPocaGanancia.filas[1].code === "MASUSADO");
+// "No sé" no puede ganarle a un número real, por más que haya facturado medio millón.
+chequear("el que no tiene costo cargado va ultimo",
+  muchoUsoPocaGanancia.filas[2].code === "SINCOSTOS", muchoUsoPocaGanancia.filas.map(f => f.code));
+// Y el resumen tiene que coincidir con la lista, que es todo el punto.
+chequear("el resumen nombra al mismo que encabeza la lista",
+  elegirCampanas(muchoUsoPocaGanancia.filas, []).mejor?.nombre === muchoUsoPocaGanancia.filas[0].code);
+
+// Sin ningun costo cargado en toda la tienda, se cae al orden viejo por uso:
+// es lo unico que queda para ordenar.
+const todoSinCosto = resumirCupones(
+  [cupon("y1", "POCO"), cupon("y2", "MUCHO")],
+  [
+    { couponId: "y1", discountAmount: 1000, total: 10000, ganancia: null, esPremio: false },
+    { couponId: "y2", discountAmount: 1000, total: 10000, ganancia: null, esPremio: false },
+    { couponId: "y2", discountAmount: 1000, total: 10000, ganancia: null, esPremio: false },
+  ],
+  fecha("2026-07-29")
+);
+chequear("sin ningun costo cargado ordena por uso",
+  todoSinCosto.filas[0].code === "MUCHO", todoSinCosto.filas.map(f => f.code));
 
 // LA trampa: un cupón creado adentro de la ventana todavía no tuvo oportunidad.
 // Listarlo como "nadie lo usó" es acusarlo de algo que no pudo hacer.

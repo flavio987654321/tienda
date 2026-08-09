@@ -307,7 +307,7 @@ interface KPICardProps {
    dice que falta el dato. Un cero se lee como "no ganaste nada", que es una
    afirmación, y acá lo cierto es que no se sabe. */
 function BarrasRanking({
-  filas, color, unidad, href, cta,
+  filas, color, unidad, href, cta, medida,
 }: {
   filas: {
     clave: string; titulo: string; sub: string | null; valor: number;
@@ -322,15 +322,29 @@ function BarrasRanking({
   }[];
   color: string;
   unidad: string;
+  /**
+   * Qué mide la barra. Tiene que ser lo MISMO por lo que está ordenada la lista.
+   *
+   * Antes la barra medía siempre la cantidad de usos mientras el número en
+   * negrita de abajo era la ganancia: dos magnitudes distintas en la misma fila.
+   * La fila más larga no era la que más dejó, y la barra —que es lo que se lee
+   * de un vistazo— apuntaba al lado equivocado.
+   */
+  medida: "ganancia" | "usos";
   /** A dónde mandar cuando la lista no entra. Sin esto el "y N más" es un callejón. */
   href: string;
   cta: string;
 }) {
-  const maximo = Math.max(...filas.map((f) => f.valor), 1);
+  // La barra mide lo mismo por lo que está ordenada la lista. Con ganancia
+  // desconocida o negativa la barra queda vacía y no en algún largo inventado:
+  // la fila igual muestra su texto, que es donde dice qué pasó.
+  const magnitud = (f: { valor: number; dejo: number | null }) =>
+    medida === "ganancia" ? Math.max(0, f.dejo ?? 0) : f.valor;
+  const maximo = Math.max(...filas.map(magnitud), 1);
   return (
     <div className="space-y-4">
       {filas.slice(0, 5).map((f) => {
-        const pct = Math.round((f.valor / maximo) * 100);
+        const pct = Math.round((magnitud(f) / maximo) * 100);
         return (
           <div key={f.clave}>
             <div className="mb-1 flex items-baseline justify-between gap-3 text-sm">
@@ -596,13 +610,13 @@ export default async function MetricasPage({
   // equivocan calladas (etapas que se pisan, pedidos con dos promas contados dos
   // veces) y porque el CSV va a necesitar exactamente los mismos números.
   let carritosRaw: CarritoCrudo[] = [];
-  // `usedCount` va como extra y no adentro de `CuponCrudo`: lo usa la ruleta
-  // para saber qué premios terminaron en una compra, pero `resumirCupones` no lo
-  // necesita, y meterlo en el tipo obligaría a inventarlo en cada llamador.
-  let cuponesRaw: (CuponCrudo & { usedCount: number })[] = [];
+  let cuponesRaw: CuponCrudo[] = [];
   // En crudo: la ganancia de cada pedido no viene de estas queries sino de los
   // ítems, así que se junta más abajo y recién ahí se arman los tipos finales.
-  let pedidosConCuponRaw: { id: string; couponId: string | null; discountAmount: number; total: number }[] = [];
+  let pedidosConCuponRaw: {
+    id: string; couponId: string | null; discountAmount: number; total: number;
+    coupon: { winnerEmail: string | null } | null;
+  }[] = [];
   let pedidosConPromoRaw: { id: string; promoSummary: string | null; total: number }[] = [];
   let promosActivasRaw: { name: string }[] = [];
   // Los giros de la ruleta del período. `GamificationSpin` se venía guardando en
@@ -673,13 +687,18 @@ export default async function MetricasPage({
       // `isActive` y `winnerEmail` no son decorado: el primero decide si un cupón
       // sin usar es "una campaña que no funcionó" o "una que ya apagaste", y el
       // segundo separa tus cupones de los premios que entregó la ruleta.
+      // Sólo los cupones PROPIOS. Antes se traían todos, y los premios de la
+      // ruleta son uno por ganador y no vencen del listado nunca: una tienda con
+      // la ruleta andando junta miles, y se leían enteros en cada carga de esta
+      // pantalla. El plan acota los propios; los premios no los acota nadie.
+      //
+      // Lo único que hacía falta de ellos —si el pedido usó un premio— ahora
+      // viene marcado desde el pedido, que ya se estaba trayendo igual.
       prisma.coupon.findMany({
-        where: { storeId: store.id },
+        where: { storeId: store.id, winnerEmail: null },
         select: {
           id: true, code: true, label: true, discountType: true, discountValue: true,
-          expiresAt: true, isActive: true, createdAt: true, winnerEmail: true,
-          // Para saber qué premios de la ruleta terminaron en una compra.
-          usedCount: true,
+          expiresAt: true, isActive: true, createdAt: true,
         },
       }),
 
@@ -698,7 +717,7 @@ export default async function MetricasPage({
           status: { in: CONFIRMED_ORDER_STATUSES },
           couponId: { not: null },
         },
-        select: { id: true, couponId: true, discountAmount: true, total: true },
+        select: { id: true, couponId: true, discountAmount: true, total: true, coupon: { select: { winnerEmail: true } } },
       }),
 
       prisma.order.findMany({
@@ -823,6 +842,7 @@ export default async function MetricasPage({
       discountAmount: o.discountAmount,
       total: o.total,
       ganancia: gananciaDePedido.get(o.id) ?? null,
+      esPremio: o.coupon?.winnerEmail != null,
     })),
     now,
     periodStart
@@ -840,13 +860,21 @@ export default async function MetricasPage({
     promosActivasRaw.map((p) => p.name)
   );
 
-  // La ruleta. `usedCount` es histórico y acá está bien que lo sea: un premio
-  // ganado el día 28 se puede canjear el 32, y recortarlo al período lo contaría
-  // como no canjeado para siempre.
-  const resumenJuego = resumirJuego(
-    girosRaw,
-    new Set(cuponesRaw.filter((c) => c.usedCount > 0).map((c) => c.id))
-  );
+  // La ruleta. Se pregunta SÓLO por los cupones de los giros de este período, no
+  // por todos los premios que la tienda entregó en su vida: así la consulta queda
+  // acotada por la cantidad de jugadas y no crece para siempre.
+  //
+  // `usedCount` es histórico y acá está bien que lo sea: un premio ganado el día
+  // 28 se puede canjear el 32, y recortarlo al período lo contaría como no
+  // canjeado para siempre.
+  const idsPremiados = girosRaw.map((g) => g.couponId).filter((id): id is string => id !== null);
+  const premiosCanjeados = idsPremiados.length
+    ? await prisma.coupon.findMany({
+        where: { id: { in: idsPremiados }, usedCount: { gt: 0 } },
+        select: { id: true },
+      })
+    : [];
+  const resumenJuego = resumirJuego(girosRaw, new Set(premiosCanjeados.map((c) => c.id)));
 
   // ¿La gente que usa cupón compra más que la que no? Sobre pedidos CONFIRMADOS,
   // los mismos que cuenta el resto de la pantalla.
@@ -1545,6 +1573,7 @@ export default async function MetricasPage({
                     unidad="uso"
                     href="/dashboard/cupones"
                     cta="Ver todos los cupones"
+                    medida={resumenCupones.gananciaTotal !== null ? "ganancia" : "usos"}
                   />
                 </>
               )}
@@ -1668,6 +1697,7 @@ export default async function MetricasPage({
                     unidad="pedido"
                     href="/dashboard/promociones"
                     cta="Ver todas las promos"
+                    medida={resumenPromos.gananciaTotal !== null ? "ganancia" : "usos"}
                   />
                   {/* Un pedido con dos promos aparece en dos filas y suma su plata
                       en las dos: sin este aviso, alguien suma la columna a mano y
@@ -1777,6 +1807,15 @@ export default async function MetricasPage({
                         );
                       })}
                     </div>
+
+                    {/* Se corta en 5, y hay que decirlo. Sin esto los porcentajes
+                        que quedan a la vista no suman 100 y parece una cuenta
+                        mal hecha, cuando en realidad faltan filas. */}
+                    {resumenJuego.premios.length > 5 && (
+                      <p className="mt-2 text-xs text-gray-400">
+                        y {resumenJuego.premios.length - 5} premio{resumenJuego.premios.length - 5 !== 1 ? "s" : ""} más
+                      </p>
+                    )}
 
                     <Link
                       href="/dashboard/cupones"
@@ -1906,6 +1945,14 @@ export default async function MetricasPage({
                       </div>
                     ))}
                   </div>
+                )}
+                {/* El título dice "por producto", así que si la lista está
+                    cortada hay que avisarlo: si no, un producto que no aparece
+                    se lee como que no dejó nada. */}
+                {profitCurrentAgg.byProduct.size > profitByProductRanked.length && (
+                  <p className="mt-4 text-xs text-gray-400">
+                    Se muestran los {profitByProductRanked.length} que más ganancia dejaron.
+                  </p>
                 )}
                 {productsWithoutCostCount > 0 && (
                   <p className="mt-4 text-xs text-gray-400">

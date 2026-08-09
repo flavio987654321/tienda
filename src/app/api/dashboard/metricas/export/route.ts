@@ -101,11 +101,12 @@ export async function GET(req: NextRequest) {
       where: { storeId: store.id, lastActivityAt: { gte: startDate, lt: endDate } },
       select: { total: true, reminderSentAt: true, recoveredAt: true },
     }),
+    // Sólo los propios — ver el comentario largo en la pantalla de Métricas.
     prisma.coupon.findMany({
-      where: { storeId: store.id },
+      where: { storeId: store.id, winnerEmail: null },
       select: {
         id: true, code: true, label: true, discountType: true, discountValue: true,
-        expiresAt: true, isActive: true, createdAt: true, winnerEmail: true, usedCount: true,
+        expiresAt: true, isActive: true, createdAt: true,
       },
     }),
     prisma.order.findMany({
@@ -113,7 +114,7 @@ export async function GET(req: NextRequest) {
         storeId: store.id, createdAt: { gte: startDate, lt: endDate },
         status: { in: CONFIRMED }, couponId: { not: null },
       },
-      select: { id: true, couponId: true, discountAmount: true, total: true },
+      select: { id: true, couponId: true, discountAmount: true, total: true, coupon: { select: { winnerEmail: true } } },
     }),
     prisma.order.findMany({
       where: {
@@ -247,6 +248,7 @@ export async function GET(req: NextRequest) {
       discountAmount: o.discountAmount,
       total: o.total,
       ganancia: gananciaDePedido.get(o.id) ?? null,
+      esPremio: o.coupon?.winnerEmail != null,
     })),
     now,
     startDate
@@ -263,10 +265,15 @@ export async function GET(req: NextRequest) {
     }),
     promosActivasRaw.map((p) => p.name)
   );
-  const resumenJuego = resumirJuego(
-    girosRaw,
-    new Set(cuponesRaw.filter((c) => c.usedCount > 0).map((c) => c.id))
-  );
+  // Acotado a los giros del período, no a todos los premios de la historia.
+  const idsPremiados = girosRaw.map((g) => g.couponId).filter((id): id is string => id !== null);
+  const premiosCanjeados = idsPremiados.length
+    ? await prisma.coupon.findMany({
+        where: { id: { in: idsPremiados }, usedCount: { gt: 0 } },
+        select: { id: true },
+      })
+    : [];
+  const resumenJuego = resumirJuego(girosRaw, new Set(premiosCanjeados.map((c) => c.id)));
   const comparacionCompra = compararCompra(
     orders
       .filter((o) => CONFIRMED.includes(o.status))

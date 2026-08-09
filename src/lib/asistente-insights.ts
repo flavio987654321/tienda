@@ -182,15 +182,18 @@ async function getMarketingSnapshot(
     // Sasha decía "5 de 10" mientras la pantalla de Cupones decía "3 de 10".
     prisma.coupon.count({ where: myActiveCouponsWhere(storeId, ahora) }),
 
-    // Todos los cupones de la tienda, sin filtrar: es lo que recibe `resumirCupones`
-    // en Métricas. Si acá se pasaran sólo los activos, un cupón que se usó en el
+    // Los cupones PROPIOS, activos o no: es lo mismo que recibe `resumirCupones`
+    // en Métricas. Si acá se pasaran sólo los activos, uno que se usó en el
     // período y después se apagó desaparecería del "más usado" y ese dato no
     // coincidiría con el de la pantalla.
+    //
+    // Los premios de la ruleta quedan afuera: son uno por ganador y no los acota
+    // nadie. Lo único que hacía falta de ellos viene marcado desde el pedido.
     prisma.coupon.findMany({
-      where: { storeId },
+      where: { storeId, winnerEmail: null },
       select: {
         id: true, code: true, label: true, discountType: true, discountValue: true,
-        expiresAt: true, usedCount: true, createdAt: true, isActive: true, winnerEmail: true,
+        expiresAt: true, usedCount: true, createdAt: true, isActive: true,
       },
     }),
 
@@ -204,7 +207,7 @@ async function getMarketingSnapshot(
         storeId, createdAt: { gte: desde, lt: hasta },
         status: { in: ESTADOS_VENTA_CONFIRMADA_LISTA }, couponId: { not: null },
       },
-      select: { id: true, couponId: true, discountAmount: true, total: true },
+      select: { id: true, couponId: true, discountAmount: true, total: true, coupon: { select: { winnerEmail: true } } },
     }),
     prisma.order.findMany({
       where: {
@@ -246,6 +249,7 @@ async function getMarketingSnapshot(
       discountAmount: o.discountAmount,
       total: o.total,
       ganancia: gananciaDePedido.get(o.id) ?? null,
+      esPremio: o.coupon?.winnerEmail != null,
     })),
     ahora,
     desde
@@ -274,9 +278,10 @@ async function getMarketingSnapshot(
   const filaTop = resumenCupones.filas[0] ?? null;
   const promoTop = resumenPromos.filas[0] ?? null;
 
-  // Los propios de la dueña: los de la ruleta son personales del ganador y no se
-  // "limpian", así que no tiene sentido señalarlos como abandonados.
-  const cuponesPropios = cupones.filter((c) => c.winnerEmail === null);
+  // La query ya trae sólo los propios: los de la ruleta son personales del
+  // ganador y no se "limpian", así que no tiene sentido señalarlos como
+  // abandonados.
+  const cuponesPropios = cupones;
 
   return {
     cuponesActivos,

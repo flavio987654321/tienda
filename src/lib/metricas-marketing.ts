@@ -76,6 +76,11 @@ export function resumirCarritos(carritos: CarritoCrudo[]): ResumenCarritos {
 
 /* ── Cupones ──────────────────────────────────────────────────────────────── */
 
+/**
+ * Un cupón PROPIO de la tienda. Los premios de la ruleta no entran acá: son uno
+ * por ganador, crecen sin techo, y para lo único que hacen falta —cuánto se
+ * canjeó— alcanza con mirar los pedidos.
+ */
 export type CuponCrudo = {
   id: string;
   code: string;
@@ -85,8 +90,6 @@ export type CuponCrudo = {
   expiresAt: Date | null;
   isActive: boolean;
   createdAt: Date;
-  /** Con valor = es un premio de la ruleta/raspadita, a nombre de quien lo ganó. */
-  winnerEmail: string | null;
 };
 
 /**
@@ -109,6 +112,15 @@ export type PedidoConCupon = {
   discountAmount: number;
   total: number;
   ganancia: number | null;
+  /**
+   * Si el cupón de este pedido era un premio de la ruleta.
+   *
+   * Viene del pedido y no se deduce de la lista de cupones a propósito: antes
+   * había que traer TODOS los cupones de la tienda para saberlo, y cada ganador
+   * de la ruleta deja el suyo para siempre. Una tienda con la ruleta andando
+   * juntaba miles, y se leían enteros en cada carga de Estadísticas.
+   */
+  esPremio: boolean;
 };
 
 /** La parte de plata que comparten las filas de cupones y las de promociones. */
@@ -189,6 +201,35 @@ export function etiquetaDescuento(tipo: string, valor: number): string {
     : `$${Math.round(valor).toLocaleString("es-AR")}`;
 }
 
+/**
+ * Ordena un ranking por lo que DEJÓ, no por cuántas veces se usó.
+ *
+ * Importa porque el resumen en texto elige "la que mejor funcionó" por ganancia,
+ * y el ranking ordenaba por cantidad de usos. Con cinco filas o menos da igual
+ * —se ven todas—, pero con doce el resumen podía felicitar a un cupón que no
+ * aparecía en la lista de abajo: leías la conclusión, bajabas a verificarla, y
+ * no estaba. La lista y la conclusión tienen que mirar lo mismo.
+ *
+ * Las filas sin ganancia conocida van al final, no al principio: "no sé" no
+ * puede ganarle a un número real. Y si no se conoce NINGUNA —una tienda sin
+ * costos cargados— se cae al orden viejo por uso, que es lo único que queda.
+ */
+function ordenarPorLoQueDejo<T extends { ganancia: number | null }>(
+  filas: T[],
+  cantidad: (f: T) => number,
+  costo: (f: T) => number
+): T[] {
+  if (!filas.some((f) => f.ganancia !== null)) {
+    return filas.sort((a, b) => cantidad(b) - cantidad(a) || costo(b) - costo(a));
+  }
+  return filas.sort((a, b) => {
+    if (a.ganancia === null && b.ganancia === null) return cantidad(b) - cantidad(a);
+    if (a.ganancia === null) return 1;
+    if (b.ganancia === null) return -1;
+    return b.ganancia - a.ganancia || cantidad(b) - cantidad(a);
+  });
+}
+
 export function resumirCupones(
   cupones: CuponCrudo[],
   pedidos: PedidoConCupon[],
@@ -217,10 +258,7 @@ export function resumirCupones(
   };
   const nuevoAcum = (): Acum => ({ usos: 0, descuento: 0, facturado: 0, ganancia: 0, conCosto: 0 });
 
-  const porCupon = new Map<string, Acum>();
-  for (const p of pedidos) {
-    if (!p.couponId) continue;
-    const acum = porCupon.get(p.couponId) ?? nuevoAcum();
+  const sumar = (acum: Acum, p: PedidoConCupon) => {
     acum.usos++;
     acum.descuento += p.discountAmount;
     acum.facturado += p.total;
@@ -231,30 +269,28 @@ export function resumirCupones(
       acum.ganancia += p.ganancia;
       acum.conCosto++;
     }
+  };
+
+  // Los premios de la ruleta se acumulan DESDE EL PEDIDO, sin pasar por la lista
+  // de cupones: van a su propio total y nunca al ranking ni a los "sin usar". Un
+  // premio que nadie canjeó no es una campaña tuya que falló — es alguien que no
+  // volvió, y eso se mide en la tarjeta de la ruleta.
+  const ruletaAcum = nuevoAcum();
+  const porCupon = new Map<string, Acum>();
+  for (const p of pedidos) {
+    if (!p.couponId) continue;
+    if (p.esPremio) { sumar(ruletaAcum, p); continue; }
+    const acum = porCupon.get(p.couponId) ?? nuevoAcum();
+    sumar(acum, p);
     porCupon.set(p.couponId, acum);
   }
 
-  const ruletaAcum = nuevoAcum();
   const usados: FilaCupon[] = [];
   const sinUsar: CuponSinUsar[] = [];
 
   for (const c of cupones) {
     const uso = porCupon.get(c.id);
     const vencido = !!c.expiresAt && c.expiresAt < ahora;
-
-    // Premios de la ruleta: van al total de la ruleta y nunca al ranking ni a la
-    // lista de "sin usar". Un premio que nadie canjeó no es una campaña tuya que
-    // haya fallado — es alguien que no volvió, y eso se mide en la ruleta.
-    if (c.winnerEmail) {
-      if (uso) {
-        ruletaAcum.usos += uso.usos;
-        ruletaAcum.descuento += uso.descuento;
-        ruletaAcum.facturado += uso.facturado;
-        ruletaAcum.ganancia += uso.ganancia;
-        ruletaAcum.conCosto += uso.conCosto;
-      }
-      continue;
-    }
 
     if (uso && uso.usos > 0) {
       usados.push({
@@ -285,7 +321,7 @@ export function resumirCupones(
     }
   }
 
-  const filas = usados.sort((a, b) => b.usos - a.usos || b.descuento - a.descuento);
+  const filas = ordenarPorLoQueDejo(usados, (f) => f.usos, (f) => f.descuento);
   const conCostoTotal = filas.reduce((s, f) => s + (f.usos - f.pedidosSinCosto), 0);
 
   return {
@@ -615,13 +651,18 @@ export function resumirPromos(
   const usadas = new Set(porPromo.keys());
 
   return {
-    filas: [...porPromo.values()]
-      .sort((a, b) => b.pedidos - a.pedidos || b.ahorro - a.ahorro)
-      .map(({ conCosto, ...fila }) => ({
+    // Se normaliza la ganancia ANTES de ordenar: con `conCosto` en 0 la fila
+    // trae un 0 crudo que todavía no es null, y ordenar con eso pondría un "no
+    // sé" arriba de campañas que sí dejaron plata.
+    filas: ordenarPorLoQueDejo(
+      [...porPromo.values()].map(({ conCosto, ...fila }) => ({
         ...fila,
         ganancia: conCosto > 0 ? fila.ganancia : null,
         pedidosSinCosto: fila.pedidos - conCosto,
       })),
+      (f) => f.pedidos,
+      (f) => f.ahorro
+    ),
     pedidosConPromo,
     ahorroTotal,
     facturadoTotal,
