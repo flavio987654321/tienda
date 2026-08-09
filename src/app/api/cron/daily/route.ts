@@ -66,27 +66,35 @@ export async function GET(req: NextRequest) {
     include: { store: { select: { name: true, slug: true } } },
   });
 
-  let cartsSent = 0;
+  // Se juntan y se esperan al final. Sueltos, nada los esperaba —al volver el
+  // handler la plataforma puede congelar la función con los envíos a medio
+  // hacer— y además `cartsSent` contaba intentos, no envíos: el cron informaba
+  // "mandé N" sin saber si salió alguno. `Promise.all` no los serializa.
+  const enviosCarritos: Promise<boolean>[] = [];
   for (const cart of abandonedCarts) {
     let items: SnapshotItem[] = [];
     try { items = JSON.parse(cart.items); } catch { /* noop */ }
     if (items.length > 0) {
-      sendAbandonedCartEmail({
-        to: cart.customerEmail,
-        customerName: cart.customerName,
-        storeName: cart.store.name,
-        items,
-        total: cart.total,
-        recoveryUrl: `${APP_URL}/tienda/${cart.store.slug}?recuperar=${cart.id}`,
-      }).catch((e) => console.error("[cron] abandonedCart email:", e));
-      cartsSent++;
+      enviosCarritos.push(
+        sendAbandonedCartEmail({
+          to: cart.customerEmail,
+          customerName: cart.customerName,
+          storeName: cart.store.name,
+          items,
+          total: cart.total,
+          recoveryUrl: `${APP_URL}/tienda/${cart.store.slug}?recuperar=${cart.id}`,
+        }).then(() => true).catch((e) => {
+          console.error("[cron] abandonedCart email:", e);
+          return false;
+        })
+      );
     }
     await prisma.abandonedCart.update({
       where: { id: cart.id },
       data: { reminderSentAt: now },
     });
   }
-  result.abandonedCartsSent = cartsSent;
+  result.abandonedCartsSent = (await Promise.all(enviosCarritos)).filter(Boolean).length;
 
   // ── 3. RECORDATORIOS DE RETIROS PENDIENTES ─────────────────────────────────
   const halfDay = 12 * 60 * 60 * 1000;
@@ -146,7 +154,18 @@ export async function GET(req: NextRequest) {
       try {
         const res = await fetch("https://api.mercadopago.com/users/me", {
           headers: { Authorization: `Bearer ${mpToken}` },
-          signal: AbortSignal.timeout(10000),
+          // 3s, no 10s. Estamos en el plan gratis de Vercel, donde la función
+          // tiene un techo de duración corto, y este chequeo está en la mitad
+          // del cron: atrás vienen el cleanup, los premios del mes y —la que
+          // importa— los avisos de vencimiento y el cierre de tiendas por falta
+          // de pago. Con 10 segundos, una sola vez que MP no conteste se come el
+          // presupuesto entero y esas tres secciones no corren en todo el día,
+          // sin que nadie se entere.
+          //
+          // Además no se pierde nada: esto pregunta si MP está vivo. Una API que
+          // tarda más de 3 segundos en decir "estoy bien" ya es una señal, y el
+          // catch de abajo lo trata como caída, que es lo correcto.
+          signal: AbortSignal.timeout(3000),
         });
         if (res.status === 401 || res.status === 403) {
           mpApiOk = false;

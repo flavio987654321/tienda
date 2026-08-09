@@ -15,6 +15,7 @@ import { couponDiscountFor } from "@/lib/coupons";
 import { getClientIp } from "@/lib/request-ip";
 import { isSubscriptionActive } from "@/lib/subscription";
 import { ESTADOS_VENTA_CONFIRMADA_LISTA } from "@/lib/order-status";
+import { despues } from "@/lib/despues";
 
 type CheckoutItem = {
   productId: string;
@@ -721,24 +722,28 @@ export async function POST(req: NextRequest) {
     });
     if (storeOwner) {
       const notifBody = `$${order.total.toLocaleString("es-AR")} — ${order.items.length} producto${order.items.length !== 1 ? "s" : ""}`;
-      createNotification({
+      // Con `despues`, no sueltos: es la venta, el aviso no se puede perder.
+      // Ver `lib/despues` — la respuesta sale igual de rápido, pero la
+      // plataforma no mata la función hasta que estos terminen.
+      despues(() => createNotification({
         userId: storeOwner.ownerId,
         type: "NEW_ORDER",
         title: "Nuevo pedido recibido",
         body: notifBody,
         link: `/dashboard/pedidos/${order.id}`,
-      });
-      sendPushToUser(storeOwner.ownerId, {
+      }), "checkout: campanita al dueño");
+      despues(() => sendPushToUser(storeOwner.ownerId, {
         title: "Nuevo pedido recibido",
         body: notifBody,
         url: `/dashboard/pedidos`,
-      }).catch((err) => console.error("[push] new order:", err));
+      }), "checkout: push al dueño");
 
       // Aviso de agotado por venta: campanita + email, igual que el de stock bajo.
       // Va acá, con la transacción ya confirmada y el dueño ya resuelto.
       if (agotadosPorVenta.length > 0) {
-        dispatchLowStockAlerts(storeOwner.ownerId, order.storeId, agotadosPorVenta).catch((err) =>
-          console.error("[stock] aviso de agotado por venta:", err)
+        despues(
+          () => dispatchLowStockAlerts(storeOwner.ownerId, order.storeId, agotadosPorVenta),
+          "checkout: aviso de agotado por venta"
         );
       }
     }
@@ -825,8 +830,11 @@ export async function POST(req: NextRequest) {
         policies,
       };
 
+      // Estos dos son el peor caso de todo el proyecto si se pierden: alguien
+      // pagó y no le llega el comprobante, o el dueño nunca se entera de que
+      // tiene una venta esperando. Van con `despues` y no sueltos.
       if (customer.email) {
-        sendOrderConfirmationEmail({
+        despues(() => sendOrderConfirmationEmail({
           buyerEmail: customer.email,
           buyerName: customer.name,
           ownerContact: {
@@ -836,12 +844,12 @@ export async function POST(req: NextRequest) {
           },
           paymentProvider,
           ...emailPayload,
-        }).catch((e) => console.error("[email] buyer confirmation:", e));
+        }), "checkout: mail al comprador");
       }
 
       const ownerEmail = storeForEmail.owner?.email;
       if (ownerEmail) {
-        sendNewOrderToOwnerEmail({
+        despues(() => sendNewOrderToOwnerEmail({
           ownerEmail,
           customer: {
             name: customer.name,
@@ -853,7 +861,7 @@ export async function POST(req: NextRequest) {
           },
           paymentProvider,
           ...emailPayload,
-        }).catch((e) => console.error("[email] owner new order:", e));
+        }), "checkout: mail al dueño");
       }
     }
 
