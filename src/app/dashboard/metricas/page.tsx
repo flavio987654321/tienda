@@ -35,6 +35,7 @@ import {
 import { ExportButtons } from "./ExportButtons";
 import ShareStatsButton from "./ShareStatsButton";
 import { aggregateProfitability, calcVehicleProfit, gananciaPorPedido, type ProfitOrderItem } from "@/lib/margin";
+import { resumirDias, diaDeLaSemana, fechaCorta, type DiaCrudo } from "@/lib/dia-a-dia";
 
 // ─── Rango de fechas ──────────────────────────────────────────────────────────
 // Todas las comparaciones usan ventanas de igual longitud (período actual vs.
@@ -992,6 +993,34 @@ export default async function MetricasPage({
     viewsPeriodRaw.map((v) => ({ dateStr: v.date, value: v.count }))
   );
 
+  // ── El día a día ──
+  // Vivía sólo en el CSV. En pantalla estaban las curvas, que muestran la forma
+  // pero no dejan responder "¿cuánto vendí el 14?".
+  const pedidosPorDia = new Map<string, number>();
+  const ingresosPorDia = new Map<string, number>();
+  for (const o of ordersPeriod) {
+    const d = diaArgentino(o.createdAt);
+    pedidosPorDia.set(d, (pedidosPorDia.get(d) ?? 0) + 1);
+    if (CONFIRMED_ORDER_STATUSES.includes(o.status)) {
+      ingresosPorDia.set(d, (ingresosPorDia.get(d) ?? 0) + o.total);
+    }
+  }
+  const visitasPorDia = new Map(viewsPeriodRaw.map((v) => [v.date, v.count]));
+  const diasDelPeriodo: DiaCrudo[] = Array.from({ length: rangeDays }, (_, i) => {
+    const d = sumarDiasCalendario(periodStartStr, i);
+    return {
+      dia: d,
+      ingresos: ingresosPorDia.get(d) ?? 0,
+      pedidos: pedidosPorDia.get(d) ?? 0,
+      visitas: visitasPorDia.get(d) ?? 0,
+      // `has` y no `?? null`: un día con costo cargado y ganancia 0 es un dato,
+      // y tratarlo como "no se sabe" sería perderlo.
+      ganancia: profitCurrentAgg.dailyProfit.has(d) ? profitCurrentAgg.dailyProfit.get(d)! : null,
+    };
+  });
+  const resumenDias = resumirDias(diasDelPeriodo);
+
+
   // ── Métricas calculadas — tienda normal ──
   const totalOrdersPeriod = ordersPeriod.length;
   const confirmedOrdersPeriod = ordersPeriod.filter((o) => CONFIRMED_ORDER_STATUSES.includes(o.status));
@@ -1827,6 +1856,98 @@ export default async function MetricasPage({
                 )}
               </div>
             )}
+          </div>
+        )}
+
+        {/* ── Día a día ──
+            La conclusión ARRIBA y la tabla abajo, no la tabla sola. Treinta
+            filas puestas y listo son honestas y no las lee nadie; y el que las
+            lee saca la conclusión equivocada porque no sabe qué mirar. Primero
+            se le dice cuál fue el mejor día, y después se le deja verificarlo.
+
+            La tabla scrollea adentro de la tarjeta para no empujar media
+            pantalla, pero al imprimir se suelta entera: el PDF es el informe y
+            ahí no hay dónde scrollear. */}
+        {!isAutos && (
+          <div className="rounded-2xl border border-gray-100 bg-white p-6">
+            <h2 className="font-bold text-gray-900">Día a día</h2>
+
+            {resumenDias.mejor ? (
+              <p className="mt-1 text-sm leading-relaxed text-gray-600">
+                Tu mejor día fue el{" "}
+                <span className="font-bold text-gray-900">
+                  {diaDeLaSemana(resumenDias.mejor.dia)} {fechaCorta(resumenDias.mejor.dia)}
+                </span>
+                {" con "}
+                <span className="font-bold text-gray-900">{money(resumenDias.mejor.ingresos)}</span>.
+                {" "}Promediás {money(resumenDias.promedio)} por día
+                {resumenDias.sinVentas > 0 && (
+                  <> y {resumenDias.sinVentas} de estos {rangeDays} días cerraron sin ninguna venta</>
+                )}.
+                {resumenDias.mejorDiaSemana && (
+                  <>
+                    {" "}Los <span className="font-bold text-gray-900">{resumenDias.mejorDiaSemana.nombre}s</span>
+                    {" "}son tu mejor día: promedian {money(resumenDias.mejorDiaSemana.promedio)} sobre
+                    {" "}{resumenDias.mejorDiaSemana.veces} que cayeron en el período.
+                  </>
+                )}
+              </p>
+            ) : (
+              <p className="mt-1 text-sm leading-relaxed text-gray-500">
+                Sin ventas en estos {rangeDays} días. Abajo quedan igual las visitas de cada día.
+              </p>
+            )}
+
+            <div className="mt-4 max-h-96 overflow-y-auto print:max-h-none print:overflow-visible">
+              <table className="w-full text-sm">
+                <thead className="sticky top-0 bg-white">
+                  <tr className="border-b border-gray-100 text-xs uppercase tracking-wide text-gray-400">
+                    <th className="py-2 pr-2 text-left font-semibold">Día</th>
+                    <th className="py-2 px-1 text-right font-semibold">Ingresos</th>
+                    <th className="py-2 px-1 text-right font-semibold">Ped.</th>
+                    <th className="py-2 px-1 text-right font-semibold">Vis.</th>
+                    {profitCurrentAgg.totalNetRevenueKnownCost > 0 && (
+                      <th className="py-2 pl-1 text-right font-semibold">Ganancia</th>
+                    )}
+                  </tr>
+                </thead>
+                <tbody className="tabular-nums">
+                  {diasDelPeriodo.map((d) => {
+                    const esMejor = d.dia === resumenDias.mejor?.dia;
+                    return (
+                      <tr key={d.dia} className={`border-b border-gray-50 ${esMejor ? "bg-emerald-50/60" : ""}`}>
+                        <td className="py-1.5 pr-2 text-left text-gray-500 whitespace-nowrap">
+                          {fechaCorta(d.dia)}
+                          <span className="ml-1 text-xs text-gray-400">{diaDeLaSemana(d.dia).slice(0, 3)}</span>
+                        </td>
+                        <td className={`py-1.5 px-1 text-right ${d.ingresos > 0 ? "font-semibold text-gray-900" : "text-gray-300"}`}>
+                          {d.ingresos > 0 ? money(d.ingresos) : "—"}
+                        </td>
+                        <td className={`py-1.5 px-1 text-right ${d.pedidos > 0 ? "text-gray-700" : "text-gray-300"}`}>
+                          {d.pedidos || "—"}
+                        </td>
+                        <td className={`py-1.5 px-1 text-right ${d.visitas > 0 ? "text-gray-700" : "text-gray-300"}`}>
+                          {d.visitas || "—"}
+                        </td>
+                        {profitCurrentAgg.totalNetRevenueKnownCost > 0 && (
+                          <td className="py-1.5 pl-1 text-right text-gray-700">
+                            {d.ganancia !== null ? money(d.ganancia) : <span className="text-gray-300">—</span>}
+                          </td>
+                        )}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* El guion no es cero: es "no pasó nada ese día". La columna de
+                ganancia además tiene su propio "no se sabe", que es distinto. */}
+            <p className="mt-3 text-xs leading-relaxed text-gray-400">
+              El guion quiere decir que ese día no hubo nada.
+              {profitCurrentAgg.totalNetRevenueKnownCost > 0 &&
+                " En Ganancia, que ese día no se vendió nada con el costo cargado."}
+            </p>
           </div>
         )}
 
