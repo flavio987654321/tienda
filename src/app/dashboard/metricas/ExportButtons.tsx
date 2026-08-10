@@ -3,20 +3,33 @@
 import { useState } from "react";
 import { Download, FileText } from "lucide-react";
 
-export function ExportButtons({ range, storeSlug }: { range: number; storeSlug: string }) {
+export function ExportButtons({
+  desde, hasta, comparar, storeSlug,
+}: {
+  desde: string;
+  hasta: string;
+  comparar: string;
+  storeSlug: string;
+}) {
   const [loadingCsv, setLoadingCsv] = useState(false);
 
   async function downloadCsv() {
     if (loadingCsv) return;
     setLoadingCsv(true);
     try {
-      const res = await fetch(`/api/dashboard/metricas/export?range=${range}`);
+      // Las fechas ya resueltas, no el preset. Mandando "30 días" el archivo se
+      // armaba con su propia cuenta, y con un rango a medida eso era otro
+      // período que el de la pantalla — sin nada que lo delatara.
+      const qs = new URLSearchParams({ desde, hasta, comparar });
+      const res = await fetch(`/api/dashboard/metricas/export?${qs.toString()}`);
       if (!res.ok) throw new Error();
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `metricas-${storeSlug}-${range}d.csv`;
+      // El nombre del archivo lleva las fechas: bajando el de marzo y el de
+      // abril, dos archivos llamados "30d" se pisan en la carpeta de descargas.
+      a.download = `metricas-${storeSlug}-${desde}_a_${hasta}.csv`;
       a.click();
       URL.revokeObjectURL(url);
     } catch {

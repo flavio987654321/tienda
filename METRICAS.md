@@ -9,23 +9,26 @@
 Secciones **1 a 10 deployadas el 09/08/2026** (`44c8e98 → ef30d88`, 8 commits). Las dos migraciones
 —`StoreViewSource` y `StoreFunnelStep`— corrieron y las tablas existen en producción.
 
-La 11 (clientes nuevos vs. que vuelven) está hecha y verificada **sin deployar todavía**.
+Las **11 y 12** están hechas y verificadas **sin deployar todavía**.
 
-> ⚠️ **Nada de esto se vio funcionando con datos reales.** Compila, pasa tsc, eslint y las 8 suites de
-> chequeos, pero las tarjetas nuevas nunca se dibujaron con números de verdad: la tienda de prueba no
-> tiene tráfico, ni giros de ruleta, ni pedidos con cupón. Y las dos que miden desde el navegador
-> —origen del tráfico y embudo— arrancan vacías por definición: sólo cuentan de acá en adelante.
+> ⚠️ **La base de producción tiene UN pedido y está cancelado.** No hay una sola venta confirmada en
+> toda la plataforma, así que nada de lo que depende de pedidos —ingresos, ganancia, tickets, nuevos
+> vs. que vuelven, el embudo de la mitad para abajo— se pudo ver con datos reales. Está probado con
+> las 9 suites de chequeos, tsc, eslint y build, y nada más.
+>
+> Lo que sí se verificó contra producción: el filtrado por rango, con las 114 visitas de `StoreView`
+> (ver sección 12). Y las dos que miden desde el navegador —origen del tráfico y embudo— arrancan
+> vacías por definición: sólo cuentan de acá en adelante.
 
 ### Lo que queda de la lista de cinco
 
 - ✅ De dónde viene la gente (sección 9)
 - ✅ Embudo del checkout (sección 10)
 - ✅ Clientes nuevos vs. que vuelven (sección 11)
-- 🔲 Comparar contra el año pasado — el dato está en la base, falta poder pedirlo
-- 🔲 Rango de fechas libre — hoy el selector sólo ofrece 7, 30 y 90 días
+- ✅ Comparar contra el año pasado (sección 12)
+- ✅ Rango de fechas libre (sección 12)
 
-Los dos que faltan son el mismo trabajo: hoy `RANGE_OPTIONS = [7, 30, 90]` y todo el resto de la
-pantalla deriva de ahí. Con un rango libre, comparar contra el año pasado es un caso más.
+Los cinco están hechos.
 
 ---
 
@@ -596,6 +599,83 @@ vez" está fuera de la ventana que se mira.
 
 ---
 
+## ✅ 12. Rango de fechas libre y comparar contra el año pasado (10/08/2026)
+
+Los dos últimos de la lista de cinco son el mismo trabajo: eran tres botones fijos —7, 30 y 90— y una
+sola regla de comparación. Eso dejaba afuera las dos preguntas que más se hacen:
+
+> *"¿cómo me fue del 1 al 15 de marzo?"* — no había forma de pedirlo
+> *"¿cómo venimos contra el año pasado?"* — el dato está guardado y no se podía mirar
+
+La segunda es la que más duele: **una tienda de ropa comparando diciembre contra noviembre siempre va
+a parecer un éxito**, y no dice nada. Contra el diciembre anterior sí.
+
+### Toda la cuenta en un solo lugar
+
+`src/lib/rango-fechas.ts` + 55 chequeos. La pantalla deriva **todo** de estas fechas: las queries, el
+eje de los gráficos, el día a día, el resumen en texto, el CSV y el PDF. Con la cuenta desparramada,
+un rango a medida hubiera necesitado tocar veinte lugares y alguno se hubiera quedado con la vieja —
+y eso no avisa: muestra un número de otro período, perfectamente creíble.
+
+### 🔴 Cuatro cosas que un rango pasado rompía
+
+Todas asumían en silencio que el período **termina hoy**:
+
+1. **Tres queries de visitas tenían `gte: periodStartStr` y ningún tope superior.** Con los presets
+   daba igual —el período siempre llegaba a hoy—; con un rango de marzo hubieran traído marzo *y todo
+   lo posterior*. El gráfico de visitas y el desglose de origen habrían mostrado cinco meses de más.
+2. **El recorte del período anterior.** Está para no comparar un hoy a medias contra un día completo.
+   Con un rango cerrado del pasado los dos están enteros, y recortar el de atrás **le saca horas de
+   ventas que sí ocurrieron**.
+3. **`incertidumbreVisitasPct`** arrastraba una incertidumbre inventada, y por eso el resumen se
+   callaba movimientos de visitas que eran reales.
+4. **El pie del PDF decía `periodStartStr a hoyDia`** — un informe de marzo se archivaba diciendo que
+   llegaba hasta hoy.
+
+### El bisiesto
+
+El 29 de febrero no existe en un año común, y `new Date` lo empuja al 1 de marzo **sin decir nada**:
+un informe del 29/2 se compararía contra el 1/3 y nadie se enteraría. `mismoDiaElAnioPasado` cae al 28.
+
+Y el largo se conserva siempre: si un año trae un día más que el otro, la comparación **le regala una
+jornada de ventas a uno de los dos lados**.
+
+### Nunca falla, siempre avisa
+
+`resolverRango` no rechaza nada: fechas al revés se dan vuelta, el futuro se recorta a hoy, más de
+`MAX_DIAS` (366) se recorta por el principio, y cualquier basura cae en 30 días. Es una pantalla de
+sólo lectura y romperla porque alguien editó la barra de direcciones sería peor.
+
+**Pero corregir en silencio es peor que fallar**, así que devuelve un `aviso` y la pantalla lo muestra
+en una banda ámbar. El tope de 366 no es de la base: el día a día dibuja una fila por día, y el
+`cleanup` borra las visitas de más de un año — un rango más largo mostraría ingresos sin las visitas
+al lado y la conversión daría cualquier cosa.
+
+### Lo que arrastró
+
+- **El CSV recibe fechas, no un preset.** Tenía su propia cuenta; mientras hubo tres botones fijos las
+  dos daban lo mismo, pero con un rango a medida el archivo se hubiera armado con otro período que la
+  pantalla. Ahora usa `resolverRango`, y el nombre del archivo lleva las fechas (dos archivos "30d"
+  se pisan en la carpeta de descargas).
+- **La imagen de compartir recibe un texto y no un número de días.** Con un rango a medida "últimos
+  15 días" es falso: son quince días, pero no los últimos quince.
+- **El encabezado dice contra qué se compara.** Antes había una sola respuesta posible; ahora el mismo
+  "+40%" quiere decir cosas muy distintas según sea contra el mes pasado o contra el año pasado.
+- **El selector pasó a cliente** (`RangeSelector.tsx`): dejó de ser tres links y tiene estado. El
+  panel de fechas va detrás de un botón — siempre abierto empuja los números abajo del pliegue.
+
+### Verificado con datos reales
+
+Las 114 visitas de producción, misma tienda: 7 días → 13, 30 → 47, 90 → 114, y el día suelto del 26/6
+→ 7. El rango completo cierra exacto con las 114.
+
+> ⚠️ **Lo de ventas no se pudo verificar contra datos reales: la base de producción tiene UN pedido y
+> está cancelado.** No hay una sola venta confirmada en toda la plataforma. Todo lo que depende de
+> pedidos —ingresos, ganancia, tickets, nuevos vs. que vuelven, el embudo de la mitad para abajo—
+> está probado sólo con los chequeos.
+
+---
+
 ## Cómo correr los chequeos
 
 ```
@@ -606,5 +686,6 @@ npx tsx src/lib/dia-a-dia.check.ts
 npx tsx src/lib/origen-visita.check.ts
 npx tsx src/lib/embudo.check.ts
 npx tsx src/lib/clientes.check.ts
+npx tsx src/lib/rango-fechas.check.ts
 npx tsx src/lib/bots.check.ts
 ```

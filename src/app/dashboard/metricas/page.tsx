@@ -39,15 +39,19 @@ import { resumirDias, diaDeLaSemana, fechaCorta, type DiaCrudo } from "@/lib/dia
 import { ordenarOrigenes, ORIGENES, NOMBRE_ORIGEN, type Origen } from "@/lib/origen-visita";
 import { armarEmbudo, MINIMO_PARA_SENALAR } from "@/lib/embudo";
 import { resumirClientes } from "@/lib/clientes";
+import { resolverRango, etiquetaComparacion, fechaLarga } from "@/lib/rango-fechas";
+import { RangeSelector } from "./RangeSelector";
 
 // ─── Rango de fechas ──────────────────────────────────────────────────────────
-// Todas las comparaciones usan ventanas de igual longitud (período actual vs.
-// el período inmediatamente anterior de la misma cantidad de días). Así se evita
-// comparar un mes a medias contra un mes anterior completo.
-
-const RANGE_OPTIONS = [7, 30, 90] as const;
-type RangeDays = (typeof RANGE_OPTIONS)[number];
-const RANGE_LABELS: Record<RangeDays, string> = { 7: "7 días", 30: "30 días", 90: "90 días" };
+// La cuenta vive entera en `lib/rango-fechas`, y esta pantalla sólo la consume.
+// Todo acá adentro deriva de esas dos fechas —las queries, el eje de los
+// gráficos, el día a día, el resumen en texto, el CSV y el PDF—, así que con la
+// cuenta desparramada un rango a medida hubiera necesitado tocar veinte lugares
+// y alguno se hubiera quedado con la vieja. Y eso no avisa: muestra un número de
+// otro período, perfectamente creíble.
+//
+// Las comparaciones siguen usando ventanas de igual longitud, ahora también
+// cuando se compara contra el año pasado.
 
 /**
  * A partir de cuántos días un pedido cobrado y sin despachar deja de ser "lo
@@ -529,30 +533,16 @@ function KPICard({ label, value, sub, trend, icon: Icon, iconBg }: KPICardProps)
   );
 }
 
-function RangeSelector({ active }: { active: RangeDays }) {
-  return (
-    <div className="inline-flex rounded-xl border border-gray-200 bg-white p-1">
-      {RANGE_OPTIONS.map((r) => (
-        <Link
-          key={r}
-          href={r === 30 ? "/dashboard/metricas" : `/dashboard/metricas?range=${r}`}
-          className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors ${
-            r === active ? "bg-indigo-600 text-white" : "text-gray-500 hover:bg-gray-50"
-          }`}
-        >
-          {RANGE_LABELS[r]}
-        </Link>
-      ))}
-    </div>
-  );
-}
+// El selector se mudó a `./RangeSelector`: dejó de ser tres links y pasó a
+// tener estado —dos campos de fecha y la elección de contra qué comparar—, que
+// en un componente de servidor no existe.
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default async function MetricasPage({
   searchParams,
 }: {
-  searchParams: Promise<{ range?: string }>;
+  searchParams: Promise<{ range?: string; desde?: string; hasta?: string; comparar?: string }>;
 }) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
@@ -565,12 +555,6 @@ export default async function MetricasPage({
 
   const isAutos = store.tipoTienda === "AUTOS";
 
-  const { range } = await searchParams;
-  const parsedRange = Number(range);
-  const rangeDays: RangeDays = (RANGE_OPTIONS as readonly number[]).includes(parsedRange)
-    ? (parsedRange as RangeDays)
-    : 30;
-
   const now = new Date();
 
   // ── Ventanas de comparación ──
@@ -578,21 +562,30 @@ export default async function MetricasPage({
   // 21:00 a las 21:00 hora de acá: una venta de las 22:00 de un martes contaba
   // como del miércoles, y son las horas en que más se vende.
   const hoyDia = getArgentinaDayKey();
-  const periodStartStr = sumarDiasCalendario(hoyDia, -(rangeDays - 1));
-  const prevPeriodStartStr = sumarDiasCalendario(periodStartStr, -rangeDays);
-  const prevPeriodEndStr = sumarDiasCalendario(periodStartStr, -1);
+  const rango = resolverRango(await searchParams, hoyDia);
+
+  const rangeDays = rango.actual.dias;
+  const periodStartStr = rango.actual.desde;
+  const periodEndStr = rango.actual.hasta;
+  const prevPeriodStartStr = rango.anterior.desde;
+  const prevPeriodEndStr = rango.anterior.hasta;
 
   const periodStart = inicioDiaArgentino(periodStartStr);
-  const periodEndExclusive = inicioDiaArgentino(sumarDiasCalendario(hoyDia, 1));
+  const periodEndExclusive = inicioDiaArgentino(sumarDiasCalendario(periodEndStr, 1));
   const prevPeriodStart = inicioDiaArgentino(prevPeriodStartStr);
 
-  // El período actual llega hasta AHORA: hoy va por la mitad. El anterior estaba
-  // completo, así que la comparación siempre le jugaba en contra al presente —en
-  // el rango de 7 días, hasta un 7% de castigo, de sobra para dar vuelta el
-  // veredicto del resumen—. Se corta el período anterior en el mismo punto: si
-  // hoy son las 15:00, el anterior también llega hasta las 15:00 de su último día.
-  const transcurrido = now.getTime() - periodStart.getTime();
-  const prevPeriodEndExclusive = new Date(prevPeriodStart.getTime() + transcurrido);
+  // Cuando el período llega hasta hoy, hoy va por la mitad y el anterior estaba
+  // completo: la comparación siempre le jugaba en contra al presente —en 7 días,
+  // hasta un 7% de castigo, de sobra para dar vuelta el veredicto del resumen—.
+  // Se corta el anterior en el mismo punto: si son las 15:00, el anterior
+  // también llega hasta las 15:00 de su último día.
+  //
+  // Con un rango cerrado del pasado eso no aplica y sería un error: los dos
+  // períodos están enteros, y recortar el de atrás le sacaría horas de ventas
+  // que sí ocurrieron.
+  const prevPeriodEndExclusive = rango.incluyeHoy
+    ? new Date(prevPeriodStart.getTime() + (now.getTime() - periodStart.getTime()))
+    : inicioDiaArgentino(sumarDiasCalendario(prevPeriodEndStr, 1));
 
   const CONFIRMED_ORDER_STATUSES = ESTADOS_VENTA_CONFIRMADA_LISTA;
 
@@ -1011,7 +1004,7 @@ export default async function MetricasPage({
         _sum: { count: true },
       }),
       prisma.storeView.findMany({
-        where: { storeId: store.id, date: { gte: periodStartStr } },
+        where: { storeId: store.id, date: { gte: periodStartStr, lte: periodEndStr } },
         select: { date: true, count: true },
         orderBy: { date: "asc" },
       }),
@@ -1030,7 +1023,7 @@ export default async function MetricasPage({
       prisma.storeViewSource
         .groupBy({
           by: ["source"],
-          where: { storeId: store.id, date: { gte: periodStartStr } },
+          where: { storeId: store.id, date: { gte: periodStartStr, lte: periodEndStr } },
           _sum: { count: true },
         })
         .catch(() => [] as typeof origenesRaw),
@@ -1038,7 +1031,7 @@ export default async function MetricasPage({
       prisma.storeFunnelStep
         .groupBy({
           by: ["step"],
-          where: { storeId: store.id, date: { gte: periodStartStr } },
+          where: { storeId: store.id, date: { gte: periodStartStr, lte: periodEndStr } },
           _sum: { count: true },
         })
         .catch(() => [] as typeof pasosRaw),
@@ -1266,8 +1259,14 @@ export default async function MetricasPage({
   // —exacto—, pero las visitas se guardan por día entero y ahí hoy entra a medias
   // contra un día completo. Este es el tamaño de esa diferencia; abajo de eso el
   // resumen no habla de visitas.
-  const fraccionDiaSinTranscurrir =
-    1 - (now.getTime() - inicioDiaArgentino(hoyDia).getTime()) / 86_400_000;
+  //
+  // Con un rango cerrado del pasado esto es CERO: los dos períodos están
+  // enteros, no hay medio día colgando. Dejando la cuenta de siempre, un informe
+  // de marzo mirado en agosto arrastraría una incertidumbre inventada y el
+  // resumen se callaría movimientos de visitas que son reales.
+  const fraccionDiaSinTranscurrir = rango.incluyeHoy
+    ? 1 - (now.getTime() - inicioDiaArgentino(hoyDia).getTime()) / 86_400_000
+    : 0;
   const incertidumbreVisitasPct = (fraccionDiaSinTranscurrir / rangeDays) * 100;
 
   const resumen = armarResumen({
@@ -1330,8 +1329,17 @@ export default async function MetricasPage({
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Métricas</h1>
+            {/* Decir contra QUÉ se compara dejó de ser un detalle: antes había
+                una sola respuesta posible y alcanzaba con la frase fija. Ahora
+                el mismo "+40%" quiere decir cosas muy distintas según sea contra
+                el mes pasado o contra el año pasado, y sin esta línea no hay
+                forma de saber cuál de las dos se está mirando. */}
             <p className="mt-1 text-sm text-gray-500">
-              <strong>{store.name}</strong> — últimos {rangeDays} días vs. período anterior de igual duración
+              <strong>{store.name}</strong> —{" "}
+              {rango.preset !== null
+                ? `últimos ${rangeDays} días`
+                : `${fechaLarga(periodStartStr)} a ${fechaLarga(periodEndStr)} (${rangeDays} ${rangeDays === 1 ? "día" : "días"})`}
+              {" "}vs. {etiquetaComparacion(rango)}
             </p>
             {/* Sólo en el papel: un PDF que circula por mail o se archiva tiene que
                 decir de cuándo es. En pantalla la fecha sobra —es hoy— pero dentro
@@ -1339,19 +1347,34 @@ export default async function MetricasPage({
             <p className="hidden print:block mt-1 text-xs text-gray-500">
               Informe generado el {new Date().toLocaleDateString("es-AR", {
                 day: "2-digit", month: "long", year: "numeric",
-              })} · Período: {periodStartStr} a {hoyDia}
+              })} · Período: {fechaLarga(periodStartStr)} a {fechaLarga(periodEndStr)}
             </p>
           </div>
           {/* Los controles no son el informe: al imprimir se van. `data-print` en
               vez de `print:hidden` en cada botón — así alcanza con marcar el
               contenedor y sirve igual si mañana se agrega otro botón acá. */}
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center" data-print="ocultar">
-            <RangeSelector active={rangeDays} />
+            <RangeSelector
+              preset={rango.preset}
+              desde={periodStartStr}
+              hasta={periodEndStr}
+              comparacion={rango.comparacion}
+              hoy={hoyDia}
+              aMedida={rango.preset === null}
+            />
             <div className="flex items-center gap-2">
-              <ExportButtons range={rangeDays} storeSlug={store.slug} />
+              {/* El CSV recibe las fechas resueltas y no el preset: si le pasara
+                  "30 días", un rango a medida saldría con otro período que el
+                  que se ve en pantalla y nadie tendría cómo notarlo. */}
+              <ExportButtons
+                desde={periodStartStr}
+                hasta={periodEndStr}
+                comparar={rango.comparacion}
+                storeSlug={store.slug}
+              />
               <ShareStatsButton
                 storeName={store.name}
-                period={rangeDays}
+                periodo={rango.preset !== null ? `Últimos  días` : rango.etiqueta}
                 revenue={totalRevenuePeriod}
                 orders={totalOrdersPeriod}
                 visits={totalViewsPeriod}
@@ -1362,6 +1385,17 @@ export default async function MetricasPage({
             </div>
           </div>
         </div>
+
+        {/* Lo que se tuvo que corregir del rango que vino en la URL.
+            `resolverRango` nunca falla —cae en 30 días y sigue—, pero corregir
+            en silencio es peor que fallar: la pantalla mostraría los números de
+            un período distinto al que la persona pidió, y todos se ven igual de
+            creíbles. */}
+        {rango.aviso && (
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-relaxed text-amber-800">
+            {rango.aviso}
+          </div>
+        )}
 
         {/* ── Resumen en texto ──
             Va arriba de todo porque es la respuesta a "¿cómo me fue?"; las
@@ -1421,7 +1455,7 @@ export default async function MetricasPage({
         {isAutos ? (
           <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
             <KPICard
-              label={`Consultas (${RANGE_LABELS[rangeDays]})`}
+              label={`Consultas (${rango.etiqueta})`}
               value={totalLeadsPeriod}
               sub={`${leadsTotal} en total`}
               trend={leadsDiff}
@@ -1429,7 +1463,7 @@ export default async function MetricasPage({
               iconBg="bg-indigo-50 text-indigo-600"
             />
             <KPICard
-              label={`Ventas confirmadas (${RANGE_LABELS[rangeDays]})`}
+              label={`Ventas confirmadas (${rango.etiqueta})`}
               value={leadsConfirmedCurrent}
               sub={leadsConversionRate !== null ? `${leadsConversionRate}% de conversión histórica` : "Sin datos"}
               trend={leadsConfirmedDiff}
@@ -1444,7 +1478,7 @@ export default async function MetricasPage({
               iconBg="bg-amber-50 text-amber-600"
             />
             <KPICard
-              label={`Visitas (${RANGE_LABELS[rangeDays]})`}
+              label={`Visitas (${rango.etiqueta})`}
               value={totalViewsPeriod.toLocaleString("es-AR")}
               sub={viewsDiff === null ? "Sin datos del período anterior" : undefined}
               trend={viewsDiff}
@@ -1455,7 +1489,7 @@ export default async function MetricasPage({
         ) : (
           <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
             <KPICard
-              label={`Ingresos (${RANGE_LABELS[rangeDays]})`}
+              label={`Ingresos (${rango.etiqueta})`}
               value={money(totalRevenuePeriod)}
               sub={revDiff === null ? "Sin datos del período anterior" : undefined}
               trend={revDiff}
@@ -1463,7 +1497,7 @@ export default async function MetricasPage({
               iconBg="bg-green-50 text-green-600"
             />
             <KPICard
-              label={`Pedidos (${RANGE_LABELS[rangeDays]})`}
+              label={`Pedidos (${rango.etiqueta})`}
               value={totalOrdersPeriod}
               sub={`Ticket prom. ${money(avgTicket)}`}
               trend={ordersDiff}
@@ -1471,7 +1505,7 @@ export default async function MetricasPage({
               iconBg="bg-indigo-50 text-indigo-600"
             />
             <KPICard
-              label={`Visitas (${RANGE_LABELS[rangeDays]})`}
+              label={`Visitas (${rango.etiqueta})`}
               value={totalViewsPeriod.toLocaleString("es-AR")}
               sub={viewsDiff === null ? "Sin datos del período anterior" : undefined}
               trend={viewsDiff}
@@ -2490,7 +2524,7 @@ export default async function MetricasPage({
           <div className="space-y-6">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <KPICard
-                label={`Ganancia bruta (${RANGE_LABELS[rangeDays]})`}
+                label={`Ganancia bruta (${rango.etiqueta})`}
                 value={money(profitCurrentAgg.totalProfit)}
                 sub={profitDiff === null ? "Sin datos del período anterior" : undefined}
                 trend={profitDiff}
@@ -2644,7 +2678,7 @@ export default async function MetricasPage({
             </div>
           </dl>
           <p className="mt-4 text-xs text-gray-400">
-            {store.name} · Período {periodStartStr} a {hoyDia} · Generado el{" "}
+            {store.name} · Período {fechaLarga(periodStartStr)} a {fechaLarga(periodEndStr)} · Generado el{" "}
             {new Date().toLocaleDateString("es-AR", { day: "2-digit", month: "long", year: "numeric" })}
           </p>
         </div>

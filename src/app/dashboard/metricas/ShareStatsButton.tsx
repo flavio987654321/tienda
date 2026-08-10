@@ -6,7 +6,10 @@ import { Share2 } from "lucide-react";
 
 type Props = {
   storeName: string;
-  period: number;
+  /** Cómo se llama el período: "30 días" o "1/3/2026 a 15/3/2026". Es texto y no
+   * un número de días porque con un rango a medida "últimos 15 días" es falso:
+   * son quince días, pero no los últimos quince. */
+  periodo: string;
   revenue: number;
   orders: number;
   visits: number;
@@ -17,7 +20,7 @@ type Props = {
 
 export default function ShareStatsButton({
   storeName,
-  period,
+  periodo,
   revenue,
   orders,
   visits,
@@ -62,7 +65,7 @@ export default function ShareStatsButton({
         typeof navigator.canShare === "function" &&
         navigator.canShare({ files: [file] })
       ) {
-        await navigator.share({ title: `${storeName} — últimos ${period} días`, files: [file] });
+        await navigator.share({ title: `${storeName} — ${periodo}`, files: [file] });
       } else {
         const a = document.createElement("a");
         a.href = dataUrl;
@@ -100,7 +103,7 @@ export default function ShareStatsButton({
           {storeName}
         </div>
         <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 20 }}>
-          Últimos {period} días
+          {periodo}
         </div>
         <div style={{ display: "flex", gap: 10 }}>
           {stats.map((s) => (

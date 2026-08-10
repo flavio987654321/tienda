@@ -12,6 +12,7 @@ import {
 import { ordenarOrigenes, ORIGENES, NOMBRE_ORIGEN, type Origen } from "@/lib/origen-visita";
 import { armarEmbudo } from "@/lib/embudo";
 import { resumirClientes } from "@/lib/clientes";
+import { resolverRango, etiquetaComparacion, fechaLarga } from "@/lib/rango-fechas";
 
 /**
  * Un valor listo para meter en una celda de CSV.
@@ -49,34 +50,44 @@ export async function GET(req: NextRequest) {
   const isAutos = store.tipoTienda === "AUTOS";
 
   const { searchParams } = new URL(req.url);
-  const raw = parseInt(searchParams.get("range") ?? "30", 10);
-  const range = isNaN(raw) || raw < 7 ? 30 : Math.min(raw, 90);
-
   const now = new Date();
 
-  // Las mismas ventanas que la pantalla de Métricas, con los mismos cortes: días
-  // ARGENTINOS (en UTC, cada "día" iría de las 21:00 a las 21:00 de acá) y el
-  // período anterior recortado al mismo tiempo transcurrido, porque hoy va por la
-  // mitad. Si el archivo cortara distinto, exportar el mismo período daría números
-  // distintos a los de la pantalla.
+  // El MISMO resolvedor que la pantalla, y por eso recibe fechas y no un preset.
+  // Antes esto tenía su propia cuenta: mientras hubo tres botones fijos las dos
+  // daban lo mismo, pero con un rango a medida el archivo se hubiera armado con
+  // otro período que el de la pantalla y no habría nada que lo delatara.
   const hoyDia = getArgentinaDayKey();
+  const rango = resolverRango(
+    {
+      range: searchParams.get("range") ?? undefined,
+      desde: searchParams.get("desde") ?? undefined,
+      hasta: searchParams.get("hasta") ?? undefined,
+      comparar: searchParams.get("comparar") ?? undefined,
+    },
+    hoyDia
+  );
+  const range = rango.actual.dias;
 
   const days: { dateStr: string; revenue: number; orders: number; visits: number; cost: number; profit: number }[] = [];
   for (let i = range - 1; i >= 0; i--) {
     days.push({
-      dateStr: sumarDiasCalendario(hoyDia, -i),
+      dateStr: sumarDiasCalendario(rango.actual.hasta, -i),
       revenue: 0, orders: 0, visits: 0, cost: 0, profit: 0,
     });
   }
 
-  const startDate = inicioDiaArgentino(days[0].dateStr);
-  const endDate = inicioDiaArgentino(sumarDiasCalendario(hoyDia, 1));
+  const startDate = inicioDiaArgentino(rango.actual.desde);
+  const endDate = inicioDiaArgentino(sumarDiasCalendario(rango.actual.hasta, 1));
 
   const CONFIRMED = ESTADOS_VENTA_CONFIRMADA_LISTA;
 
-  const prevStartDia = sumarDiasCalendario(days[0].dateStr, -range);
-  const prevStartDate = inicioDiaArgentino(prevStartDia);
-  const prevEndDate = new Date(prevStartDate.getTime() + (now.getTime() - startDate.getTime()));
+  const prevStartDate = inicioDiaArgentino(rango.anterior.desde);
+  // El recorte al tiempo transcurrido sólo vale si el período llega hasta hoy.
+  // Con un rango cerrado del pasado los dos están enteros, y recortar el de
+  // atrás le sacaría horas de ventas que sí ocurrieron.
+  const prevEndDate = rango.incluyeHoy
+    ? new Date(prevStartDate.getTime() + (now.getTime() - startDate.getTime()))
+    : inicioDiaArgentino(sumarDiasCalendario(rango.anterior.hasta, 1));
 
   // Ver `DIAS_SIN_DESPACHAR` en la pantalla de Métricas: el mismo umbral.
   const sinDespacharDesde = inicioDiaArgentino(sumarDiasCalendario(hoyDia, -5));
@@ -164,7 +175,7 @@ export async function GET(req: NextRequest) {
     prisma.storeView.aggregate({
       where: {
         storeId: store.id,
-        date: { gte: prevStartDia, lt: days[0].dateStr },
+        date: { gte: rango.anterior.desde, lte: rango.anterior.hasta },
       },
       _sum: { count: true },
     }).catch(() => ({ _sum: { count: null } })),
@@ -413,8 +424,11 @@ export async function GET(req: NextRequest) {
   // De la misma función que la pantalla, con los mismos números: si acá se
   // recalculara algo, el archivo y la pantalla podrían decir cosas distintas.
   const pedidosPendientes = orders.filter((o) => o.status === "PENDING");
-  const fraccionDiaSinTranscurrir =
-    1 - (now.getTime() - inicioDiaArgentino(hoyDia).getTime()) / 86_400_000;
+  // Cero con un rango cerrado del pasado: no hay medio día colgando, los dos
+  // períodos están enteros. Igual que en la pantalla.
+  const fraccionDiaSinTranscurrir = rango.incluyeHoy
+    ? 1 - (now.getTime() - inicioDiaArgentino(hoyDia).getTime()) / 86_400_000
+    : 0;
   const resumen = armarResumen({
     dias: range,
     // Mismo margen que la pantalla: las visitas se guardan por día entero y hoy
@@ -474,8 +488,13 @@ export async function GET(req: NextRequest) {
   // rompen nada, pero un salto de línea sí partiría el comentario en dos.
   const safeName = store.name.replace(/[\r\n]/g, " ").trim();
   const lines = [
-    `# Métricas de ${safeName} — últimos ${range} días`,
+    // Las fechas exactas y contra qué se compara. Un archivo que sólo dice
+    // "últimos 30 días" no se puede ubicar tres meses después, y con la
+    // comparación contra el año pasado el mismo "+40%" quiere decir otra cosa.
+    `# Métricas de ${safeName} — ${fechaLarga(rango.actual.desde)} a ${fechaLarga(rango.actual.hasta)} (${range} ${range === 1 ? "dia" : "dias"})`,
+    `# Comparado contra ${csv(etiquetaComparacion(rango))}: ${fechaLarga(rango.anterior.desde)} a ${fechaLarga(rango.anterior.hasta)}`,
     `# Exportado el ${new Date().toLocaleDateString("es-AR")}`,
+    ...(rango.aviso ? [`# OJO: ${rango.aviso}`] : []),
     ``,
     ...lineasResumen,
     `# NÚMEROS`,
