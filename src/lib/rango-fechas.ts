@@ -33,15 +33,27 @@ export type Preset = (typeof PRESETS)[number];
 export const NOMBRE_PRESET: Record<Preset, string> = { 7: "7 días", 30: "30 días", 90: "90 días" };
 
 /**
- * El rango más largo que se acepta.
+ * El rango más largo que se acepta: tres años.
  *
- * No es una restricción de la base —los pedidos están todos— sino de la
- * pantalla: el día a día dibuja una fila por día, y arriba de un año son más de
- * 366 filas en una tarjeta. Además el `cleanup` borra las visitas de más de un
- * año, así que un rango más largo mostraría ingresos sin las visitas al lado y
- * la conversión daría cualquier cosa.
+ * Antes era 366, y estaba mal por dos motivos que ya no valen.
+ *
+ * El primero era la pantalla: el día a día dibujaba una fila por día y un año
+ * eran 366 filas —unas nueve hojas de PDF—. Eso lo resuelve el grano de
+ * `lib/serie-grafico`: arriba de 550 días las curvas y la tabla pasan a mes, así
+ * que tres años son 37 filas y una hoja.
+ *
+ * El segundo era la retención de visitas, que se subió a dos años justamente
+ * para que comparar contra el año pasado tenga visitas de los dos lados.
+ *
+ * Y el tope se notaba: con 455 días de ventas guardadas, 89 no se podían mirar.
+ * Los pedidos no se borran nunca, así que la pantalla no tiene por qué ser más
+ * corta que el historial.
+ *
+ * Tres y no más: por mes, tres años son 37 puntos y se leen mejor que los 90
+ * días de hoy. Cinco ya serían 61 y empiezan a apretarse, y cada rango se
+ * consulta dos veces —el actual y contra el que compara—.
  */
-export const MAX_DIAS = 366;
+export const MAX_DIAS = 1096;
 
 export type Periodo = {
   /** "YYYY-MM-DD" argentino, inclusive. */

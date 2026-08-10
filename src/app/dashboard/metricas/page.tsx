@@ -40,7 +40,8 @@ import { ordenarOrigenes, ORIGENES, NOMBRE_ORIGEN, type Origen } from "@/lib/ori
 import { armarEmbudo, MINIMO_PARA_SENALAR } from "@/lib/embudo";
 import { resumirClientes } from "@/lib/clientes";
 import { resolverRango, etiquetaComparacion, fechaLarga } from "@/lib/rango-fechas";
-import { convieneAgrupar, agruparPorSemana } from "@/lib/serie-grafico";
+import { granoPara, nombreGrano, serieParaGrafico, agrupar, etiquetaMes } from "@/lib/serie-grafico";
+import { AVISO_RETENCION, periodoExcedeRetencion } from "@/lib/retencion";
 import { RangeSelector } from "./RangeSelector";
 
 // ─── Rango de fechas ──────────────────────────────────────────────────────────
@@ -116,7 +117,9 @@ function buildDailySeries(
   for (const { dateStr, value } of entries) {
     if (map.has(dateStr)) map.set(dateStr, (map.get(dateStr) ?? 0) + value);
   }
-  return [...map.entries()].map(([dateStr, value]) => ({ label: dayLabel(dateStr), value }));
+  // El día crudo va ADEMÁS de la etiqueta: agrupando por "12/8" no se sabe de
+  // qué año es, y el 12/8 de dos años distintos caería en el mismo bloque.
+  return [...map.entries()].map(([dateStr, value]) => ({ dia: dateStr, label: dayLabel(dateStr), value }));
 }
 
 function pctDiff(current: number, previous: number): number | null {
@@ -613,11 +616,13 @@ export default async function MetricasPage({
    * Los tres presets no se tocan: el corte está en 120 días, así que sólo cambia
    * cuando se pide un rango a medida largo de verdad. Ver `lib/serie-grafico`.
    */
-  const porSemana = convieneAgrupar(rangeDays);
-  const conGrano = (d: { label: string; value: number }[]) =>
-    porSemana ? agruparPorSemana(d) : d;
-  /** El aclarador del subtítulo, para que nadie lea un pico semanal como diario. */
-  const granoPeriodo = porSemana ? `${subtituloPeriodo} — por semana` : subtituloPeriodo;
+  const grano = granoPara(rangeDays);
+  const conGrano = (d: { dia: string; label: string; value: number }[]) =>
+    serieParaGrafico(d, grano).puntos;
+  /** El aclarador del subtítulo, para que nadie lea un pico mensual como diario. */
+  const granoPeriodo = nombreGrano(grano)
+    ? `${subtituloPeriodo} — ${nombreGrano(grano)}`
+    : subtituloPeriodo;
 
   const CONFIRMED_ORDER_STATUSES = ESTADOS_VENTA_CONFIRMADA_LISTA;
 
@@ -1175,7 +1180,44 @@ export default async function MetricasPage({
       ganancia: profitCurrentAgg.dailyProfit.has(d) ? profitCurrentAgg.dailyProfit.get(d)! : null,
     };
   });
+  // La conclusión se saca SIEMPRE de los días sueltos, aunque la tabla de abajo
+  // se muestre agrupada. Agrupar primero borraría justamente lo que busca: "los
+  // sábados rinden más" no se puede sacar de totales semanales, y "tu mejor día
+  // fue el 16/5" tampoco de totales mensuales.
   const resumenDias = resumirDias(diasDelPeriodo);
+
+  /**
+   * Las filas de la tabla, con el mismo grano que las curvas.
+   *
+   * No es sólo el PDF —366 filas son unas nueve hojas y 1.096 son veintisiete—:
+   * una tabla de tres años día por día tampoco se puede leer en pantalla.
+   *
+   * En los tres presets no cambia nada: sigue una fila por día, que es
+   * exactamente lo que se quiere ver en un mes.
+   */
+  const filasDelDiaADia = agrupar(diasDelPeriodo, grano, (d) => d.dia).map((bloque) => {
+    const ganancias = bloque.filter((d) => d.ganancia !== null);
+    return {
+      clave: bloque[0].dia,
+      // Por semana el rango de fechas, por mes el nombre del mes. Por día, el
+      // día con su nombre — igual que siempre.
+      etiqueta:
+        grano === "mes" ? etiquetaMes(bloque[0].dia)
+        : grano === "semana" ? `${fechaCorta(bloque[0].dia)} al ${fechaCorta(bloque[bloque.length - 1].dia)}`
+        : fechaCorta(bloque[0].dia),
+      sufijo: grano === "dia" ? diaDeLaSemana(bloque[0].dia).slice(0, 3) : `${bloque.length} días`,
+      ingresos: bloque.reduce((s, d) => s + d.ingresos, 0),
+      pedidos: bloque.reduce((s, d) => s + d.pedidos, 0),
+      visitas: bloque.reduce((s, d) => s + d.visitas, 0),
+      // `null` sólo si NINGÚN día del bloque tiene el costo cargado. Con uno solo
+      // que lo tenga, el total es un dato aunque esté incompleto — y sumar los
+      // desconocidos como cero inventaría una ganancia más chica.
+      ganancia: ganancias.length > 0 ? ganancias.reduce((s, d) => s + (d.ganancia ?? 0), 0) : null,
+      // El mejor día se resalta sólo cuando la tabla va día por día: en un
+      // bloque de un mes, pintar la fila entera señalaría treinta días.
+      esMejor: grano === "dia" && bloque[0].dia === resumenDias.mejor?.dia,
+    };
+  });
 
 
   // ── Métricas calculadas — tienda normal ──
@@ -1426,6 +1468,20 @@ export default async function MetricasPage({
         {rango.aviso && (
           <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-relaxed text-amber-800">
             {rango.aviso}
+          </div>
+        )}
+
+        {/* El período pedido arranca antes de donde llegan las visitas.
+            No se puede callar: en ese tramo se ven los ingresos —los pedidos no
+            se borran nunca— y las visitas en cero, así que la conversión y el
+            embudo dan cualquier cosa. Sin este aviso parecería que la tienda
+            estuvo muerta, cuando lo único que pasó es que el dato ya no está. */}
+        {periodoExcedeRetencion(periodStartStr, hoyDia) && (
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-relaxed text-amber-800">
+            Estás mirando más atrás de lo que se guardan las visitas.{" "}
+            <span className="font-semibold">{AVISO_RETENCION}</span>{" "}
+            En la parte más vieja del período vas a ver las ventas, pero las visitas, la
+            conversión y el embudo van a estar en cero porque ese dato ya no existe.
           </div>
         )}
 
@@ -2459,7 +2515,9 @@ export default async function MetricasPage({
               <table className="w-full text-sm">
                 <thead className="sticky top-0 bg-white">
                   <tr className="border-b border-gray-100 text-xs uppercase tracking-wide text-gray-400">
-                    <th className="py-2 pr-2 text-left font-semibold">Día</th>
+                    <th className="py-2 pr-2 text-left font-semibold">
+                      {grano === "mes" ? "Mes" : grano === "semana" ? "Semana" : "Día"}
+                    </th>
                     <th className="py-2 px-1 text-right font-semibold">Ingresos</th>
                     <th className="py-2 px-1 text-right font-semibold">Ped.</th>
                     <th className="py-2 px-1 text-right font-semibold">Vis.</th>
@@ -2469,13 +2527,12 @@ export default async function MetricasPage({
                   </tr>
                 </thead>
                 <tbody className="tabular-nums">
-                  {diasDelPeriodo.map((d) => {
-                    const esMejor = d.dia === resumenDias.mejor?.dia;
+                  {filasDelDiaADia.map((d) => {
                     return (
-                      <tr key={d.dia} className={`border-b border-gray-50 ${esMejor ? "bg-emerald-50/60" : ""}`}>
+                      <tr key={d.clave} className={`border-b border-gray-50 ${d.esMejor ? "bg-emerald-50/60" : ""}`}>
                         <td className="py-1.5 pr-2 text-left text-gray-500 whitespace-nowrap">
-                          {fechaCorta(d.dia)}
-                          <span className="ml-1 text-xs text-gray-400">{diaDeLaSemana(d.dia).slice(0, 3)}</span>
+                          {d.etiqueta}
+                          <span className="ml-1 text-xs text-gray-400">{d.sufijo}</span>
                         </td>
                         <td className={`py-1.5 px-1 text-right ${d.ingresos > 0 ? "font-semibold text-gray-900" : "text-gray-300"}`}>
                           {d.ingresos > 0 ? money(d.ingresos) : "—"}
@@ -2501,9 +2558,9 @@ export default async function MetricasPage({
             {/* El guion no es cero: es "no pasó nada ese día". La columna de
                 ganancia además tiene su propio "no se sabe", que es distinto. */}
             <p className="mt-3 text-xs leading-relaxed text-gray-400">
-              El guion quiere decir que ese día no hubo nada.
+              El guion quiere decir que {grano === "dia" ? "ese día" : grano === "semana" ? "esa semana" : "ese mes"} no hubo nada.
               {profitCurrentAgg.totalNetRevenueKnownCost > 0 &&
-                " En Ganancia, que ese día no se vendió nada con el costo cargado."}
+                ` En Ganancia, que ${grano === "dia" ? "ese día" : grano === "semana" ? "esa semana" : "ese mes"} no se vendió nada con el costo cargado.`}
             </p>
           </div>
         )}
@@ -2695,6 +2752,10 @@ export default async function MetricasPage({
                 Contra los {rangeDays} días inmediatamente anteriores, cortados a la misma
                 hora del día para que un período a medias no compita contra uno completo.
               </dd>
+            </div>
+            <div>
+              <dt className="inline font-semibold text-gray-800">Cuánto se guarda. </dt>
+              <dd className="inline">{AVISO_RETENCION}</dd>
             </div>
             <div>
               <dt className="inline font-semibold text-gray-800">Las visitas. </dt>

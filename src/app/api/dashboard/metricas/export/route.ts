@@ -13,6 +13,7 @@ import { ordenarOrigenes, ORIGENES, NOMBRE_ORIGEN, type Origen } from "@/lib/ori
 import { armarEmbudo } from "@/lib/embudo";
 import { resumirClientes } from "@/lib/clientes";
 import { resolverRango, etiquetaComparacion, fechaLarga } from "@/lib/rango-fechas";
+import { AVISO_RETENCION } from "@/lib/retencion";
 
 /**
  * Un valor listo para meter en una celda de CSV.
@@ -508,6 +509,7 @@ export async function GET(req: NextRequest) {
     `# Métricas de ${safeName} — ${fechaLarga(rango.actual.desde)} a ${fechaLarga(rango.actual.hasta)} (${range} ${range === 1 ? "dia" : "dias"})`,
     `# Comparado contra ${csv(etiquetaComparacion(rango))}: ${fechaLarga(rango.anterior.desde)} a ${fechaLarga(rango.anterior.hasta)}`,
     `# Exportado el ${new Date().toLocaleDateString("es-AR")}`,
+    `# ${AVISO_RETENCION}`,
     ...(rango.aviso ? [`# OJO: ${rango.aviso}`] : []),
     ``,
     ...lineasResumen,

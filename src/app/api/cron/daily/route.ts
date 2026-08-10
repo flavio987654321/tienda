@@ -10,6 +10,7 @@ import {
 } from "@/lib/resend";
 import { CURRENT_TERMS_VERSION, CURRENT_TERMS_SUMMARY } from "@/lib/legal";
 import { sendWithdrawalReminderEmail, sendMpHealthAlertEmail } from "@/lib/email";
+import { limpiar } from "@/app/api/cron/cleanup/route";
 import { createNotification, createNotificationMany } from "@/lib/notifications";
 import { generarCuponesMensuales, expirarCuponesVencidos } from "@/lib/rewards";
 import { closureDeadline, CLOSURE_WARNING_DAYS } from "@/lib/subscription";
@@ -510,6 +511,24 @@ export async function GET(req: NextRequest) {
   }
 
   result.avisosSasha = { tiendas: tiendasTotal, conAvisos: tiendasRevisadas, mensajes: avisosCreados };
+
+  // ── La limpieza ──
+  // Va colgada de acá y no como su propio cron: en el plan gratis hay dos y no
+  // vale la pena gastar el segundo en algo que no tiene horario propio — sólo
+  // tiene que correr una vez por día. `/api/cron/cleanup` sigue existiendo para
+  // poder dispararla a mano.
+  //
+  // Hasta acá no la llamaba nadie: el archivo estaba escrito, con su regla de
+  // borrar las visitas viejas, y no estaba en `vercel.json`. O sea que el código
+  // decía una cosa y la base hacía otra.
+  //
+  // En su propio try y al final de todo: si la limpieza falla, los avisos y los
+  // mails de arriba ya salieron y no se pierden.
+  try {
+    result.limpieza = await limpiar();
+  } catch (e) {
+    console.error("[cron] limpieza:", e);
+  }
 
   return NextResponse.json(result);
 }

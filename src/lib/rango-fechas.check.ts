@@ -104,6 +104,9 @@ chequear("y se avisa", futuro.aviso !== null, futuro.aviso);
 
 const largo = resolverRango({ desde: "2020-01-01", hasta: "2026-08-09" }, HOY);
 chequear(`mas de ${MAX_DIAS} dias se recorta`, largo.actual.dias === MAX_DIAS, largo.actual.dias);
+const tresAnios = resolverRango({ desde: "2023-08-10", hasta: HOY }, HOY);
+chequear("tres años enteros entran sin recorte",
+  tresAnios.aviso === null && tresAnios.actual.dias === MAX_DIAS, [tresAnios.actual.dias, tresAnios.aviso]);
 chequear("recortando por el principio, no por el final",
   largo.actual.hasta === HOY, largo.actual.hasta);
 
