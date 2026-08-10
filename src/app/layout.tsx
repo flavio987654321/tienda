@@ -1,7 +1,9 @@
 import type { Metadata, Viewport } from "next";
+import { Suspense } from "react";
 import "./globals.css";
 import Providers from "@/components/Providers";
 import CrispWidget from "@/components/CrispWidget";
+import MetaPixel from "@/components/MetaPixel";
 import { SITE_URL } from "@/lib/site";
 
 export const viewport: Viewport = {
@@ -58,6 +60,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-full flex flex-col">
         <Providers>{children}</Providers>
         <CrispWidget />
+        {/* El <Suspense> es obligatorio: MetaPixel usa useSearchParams y sin
+            boundary el build de producción falla en toda página estática. */}
+        <Suspense fallback={null}>
+          <MetaPixel />
+        </Suspense>
       </body>
     </html>
   );

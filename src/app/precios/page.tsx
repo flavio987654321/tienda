@@ -90,10 +90,24 @@ function PreciosContent() {
   useEffect(() => {
     const supabase = createSupabaseBrowserClient();
     let channel: ReturnType<typeof supabase.channel> | null = null;
+    // El canal se crea DESPUÉS de que resuelve getUser(), así que hay una
+    // ventana en la que el efecto ya se limpió pero el canal todavía no
+    // existe: el cleanup ve `channel` en null y no limpia nada. Cuando la
+    // promesa resuelve igual, crea un canal huérfano.
+    //
+    // En dev salta siempre, porque el Strict Mode monta → desmonta → monta y
+    // deja dos getUser() en vuelo: el segundo pedía `supabase.channel()` con
+    // el mismo nombre, recibía el canal que el primero ya había suscrito, y
+    // el .on() sobre un canal suscrito revienta con "cannot add
+    // postgres_changes callbacks after subscribe()".
+    //
+    // En producción no hay doble montaje, pero si el usuario navega antes de
+    // que resuelva getUser() queda el canal huérfano abierto igual.
+    let cancelado = false;
 
     supabase.auth.getUser().then(({ data }) => {
       const userId = data.user?.id;
-      if (!userId) return;
+      if (!userId || cancelado) return;
 
       channel = supabase.channel("precios-sub-" + userId);
       channel.on(
@@ -104,7 +118,10 @@ function PreciosContent() {
       channel.subscribe();
     });
 
-    return () => { if (channel) supabase.removeChannel(channel); };
+    return () => {
+      cancelado = true;
+      if (channel) supabase.removeChannel(channel);
+    };
   }, []);
 
   // De la misma constante que usa el cobro. Estaban copiados acá con otro formato

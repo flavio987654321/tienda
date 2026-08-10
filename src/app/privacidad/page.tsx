@@ -142,6 +142,19 @@ const CONTENT = {
         ],
       },
       {
+        title: "2 septies. Meta Pixel propio de TiendaApps (publicidad de la plataforma)",
+        body: "TiendaApps hace publicidad en Facebook e Instagram para conseguir nuevos usuarios, y para medir si esa publicidad funciona usa un Meta Pixel propio en las páginas de la plataforma. Es distinto e independiente del Meta Pixel que vos podés configurar para tu tienda: aquel es tuyo y mide a tus compradores, este es nuestro y mide a quienes navegan TiendaApps.",
+        list: [
+          "Dónde funciona: en las páginas de la plataforma — inicio, precios, registro, planes, tu panel y demás secciones de TiendaApps.",
+          "Dónde NO funciona: dentro de las tiendas públicas de los usuarios (las direcciones /tienda/...), en la página pública de seguimiento de pedidos, en los links de afiliado compartidos, ni en ninguna página de la Canasta Solidaria. En esas páginas nuestro pixel no se carga. Es una decisión deliberada: no medimos a tus compradores, y así tampoco se le mezclan datos a la medición de tu propio pixel.",
+          "Qué recopila: las páginas de TiendaApps que visitás, y dos momentos concretos — cuando completás el registro (indicando solo el tipo de cuenta: dueño de tienda, afiliado o comprador) y cuando un alta de dueño de tienda inicia la prueba gratuita. Meta instala sus propias cookies (_fbp y, si llegaste desde un anuncio, _fbc) para reconocer el navegador.",
+          "Qué NO le mandamos: tu nombre, tu email, tu teléfono, tu contraseña, los datos de tu tienda, tus productos, tus ventas ni los datos de tus compradores. No usamos la función de 'coincidencias avanzadas' en este pixel.",
+          "Finalidad: saber qué campañas publicitarias traen usuarios que efectivamente abren una tienda, para no gastar en las que no funcionan y mostrar los anuncios a personas con intereses parecidos. Base legal: interés legítimo (art. 5 inc. 2 de la Ley 25.326).",
+          "Los datos que Meta recibe se rigen por su propia política de privacidad: facebook.com/privacy",
+          "Cómo evitarlo: podés bloquear estas cookies desde la configuración de tu navegador, usar cualquier extensión de bloqueo de rastreadores, o ajustar qué usa Meta para mostrarte anuncios en facebook.com/adpreferences. Bloquearlo no afecta en nada tu cuenta ni el funcionamiento de tu tienda.",
+        ],
+      },
+      {
         title: "3. Datos de tus clientes y potenciales compradores",
         body: "Como Dueño de tienda, tenés acceso a los datos de envío y contacto de tus compradores. Adicionalmente, cuando un potencial comprador hace una consulta por WhatsApp a través del link de un afiliado, la Plataforma registra el nombre, teléfono y mensaje del consultante y te lo muestra en el panel de Consultas para que puedas confirmar o rechazar la venta y gestionar la comisión correspondiente. Sos responsable de tratar esos datos de acuerdo con la legislación vigente (Ley 25.326 de Protección de Datos Personales) y no podés usarlos para fines distintos a la gestión del pedido o la consulta.",
         list: [
@@ -160,7 +173,7 @@ const CONTENT = {
           "Resend (resend.com): envío de emails transaccionales (confirmaciones, alertas). Solo se comparte el email necesario para cada mensaje. Política de privacidad: resend.com/legal/privacy-policy",
           "Anthropic (anthropic.com): procesa los datos agregados de tu tienda para el funcionamiento de Sasha, nuestro asistente con IA. Ver sección 2 ter para el detalle de qué le compartimos. Política de privacidad: anthropic.com/privacy",
           "Envíopack (enviopack.com): si activás la cotización automática de envío, le compartimos la dirección de origen de tu tienda y el peso de los productos para calcular tarifas con Correo Argentino, OCA y Andreani. Política de privacidad: enviopack.com",
-          "Meta Platforms (facebook.com): si conectás el Catálogo de Meta o Catálogo en WhatsApp desde la sección Aplicaciones, le compartimos los datos de tu catálogo de productos (ver sección 2 quinquies). Política de privacidad: facebook.com/privacy",
+          "Meta Platforms (facebook.com): si conectás el Catálogo de Meta o Catálogo en WhatsApp desde la sección Aplicaciones, le compartimos los datos de tu catálogo de productos (ver sección 2 quinquies). Además, recibe los datos de navegación por las páginas de la plataforma que recoge nuestro propio Meta Pixel, que funciona siempre (ver sección 2 septies). Política de privacidad: facebook.com/privacy",
           "Google LLC (google.com): si conectás Google Analytics desde la sección Aplicaciones, usamos tu autorización para configurar tu propiedad de Analytics (ver sección 2 sexies). Política de privacidad: policies.google.com/privacy",
           "Autoridades competentes cuando sea requerido por ley.",
         ],
@@ -257,12 +270,24 @@ const CONTENT = {
         body: "Tu link de afiliado incluye un identificador único que registra tanto las ventas como las consultas que generás. Cuando un potencial comprador hace clic en tu link y consulta al dueño de la tienda por WhatsApp, la Plataforma registra ese evento (consulta/lead) vinculado a tu cuenta. El nombre, teléfono y mensaje del consultante son compartidos con el dueño de la tienda para que pueda gestionar la consulta. Si el dueño confirma la venta, se acredita una comisión en tu billetera. Tus estadísticas son visibles solo para vos y para el dueño de la tienda a la que estás afiliado. No compartimos tu identidad ni datos con otros afiliados.",
       },
       {
+        title: "3 bis. Meta Pixel propio de TiendaApps (publicidad de la plataforma)",
+        body: "TiendaApps hace publicidad en Facebook e Instagram y usa un Meta Pixel propio para medir si funciona. No tiene nada que ver con tu actividad como afiliado ni con tus comisiones:",
+        list: [
+          "Dónde funciona: en las páginas de la plataforma — inicio, registro, precios y tu panel de afiliado.",
+          "Dónde NO funciona: dentro de las tiendas públicas (/tienda/...), en la página de seguimiento de pedidos, en los links de afiliado que compartís, ni en ninguna página de la Canasta Solidaria. Cuando alguien abre tu link, nuestro pixel no se carga: ni le medimos la navegación a esa persona, ni queda registrado nada tuyo ahí.",
+          "Qué recopila: las páginas de TiendaApps que visitás y si completás el registro (indicando solo el tipo de cuenta). Meta instala sus cookies _fbp y _fbc.",
+          "Qué NO le mandamos: tu nombre, email, teléfono, tus estadísticas de ventas, tus comisiones ni los datos de los compradores que consultan por tu link.",
+          "Los datos que Meta recibe se rigen por su política de privacidad: facebook.com/privacy. Podés bloquearlo desde tu navegador o ajustar tus preferencias en facebook.com/adpreferences, sin que afecte tu cuenta ni tus comisiones.",
+        ],
+      },
+      {
         title: "4. Compartir información",
         body: "No vendemos tus datos. Los compartimos únicamente con:",
         list: [
           "Los dueños de tiendas a las que estés afiliado (solo tus estadísticas de ventas, no tus datos personales).",
           "MercadoPago: procesamos cobros a través de la cuenta de MercadoPago del dueño de la tienda. TiendaApps no almacena tokens de acceso de MP de los afiliados.",
           "Supabase y Vercel como proveedores de infraestructura.",
+          "Meta Platforms: los datos de navegación por las páginas de la plataforma que recoge nuestro Meta Pixel (ver sección 3 bis).",
           "Autoridades competentes cuando sea requerido por ley.",
         ],
       },
@@ -377,7 +402,14 @@ const CONTENT = {
       },
       {
         title: "6. Cookies y tecnologías de seguimiento",
-        body: "TiendaApps (la plataforma) usa únicamente cookies de sesión estrictamente necesarias para mantenerte autenticado (cookies técnicas, gestionadas por NextAuth.js). TiendaApps no instala Google Analytics, Meta Pixel, TikTok Pixel, Hotjar, ni ninguna herramienta propia de analítica comportamental. Sin embargo, cada dueño de tienda puede configurar de forma opcional su propio Google Analytics (GA4) y/o Meta Pixel (Facebook Pixel) dentro de su tienda. Si una tienda tiene estos trackers activados, cuando visitás esa tienda los scripts de Google o Meta se ejecutan en tu navegador bajo las políticas de privacidad de esas empresas — no de TiendaApps. El dueño de la tienda es el único responsable de informar a sus compradores sobre el uso de esas herramientas en sus propios términos y política de privacidad. Si querés saber si una tienda específica usa trackers, consultá su política de privacidad o escribile directamente.",
+        body: "Hay que distinguir tres cosas, según dónde estés navegando:",
+        list: [
+          "Cookies técnicas: en toda la plataforma usamos cookies de sesión estrictamente necesarias para mantenerte autenticado (gestionadas por NextAuth.js). Sin estas el sitio no funciona.",
+          "Meta Pixel propio de TiendaApps, solo en las páginas de la plataforma: TiendaApps hace publicidad en Facebook e Instagram y usa un Meta Pixel propio para medir si funciona. Se carga en las páginas de TiendaApps —inicio, registro, tu cuenta, el directorio de tiendas— y registra qué páginas visitás y si completás el registro (indicando solo el tipo de cuenta, nunca tu nombre ni tu email). Meta instala sus cookies _fbp y _fbc. Los datos que recibe se rigen por su política: facebook.com/privacy",
+          "Ese pixel nuestro NO se carga dentro de las tiendas: cuando entrás a una tienda de la plataforma (las direcciones /tienda/...), cuando seguís un pedido, cuando abrís un link de afiliado compartido, ni en ninguna página de la Canasta Solidaria, nuestro pixel no se ejecuta. No medimos tu navegación ni tus compras dentro de las tiendas.",
+          "Trackers propios de cada tienda: cada dueño puede configurar de forma opcional su propio Google Analytics (GA4) y/o Meta Pixel dentro de su tienda. Si una tienda los tiene activados, esos scripts sí se ejecutan cuando la visitás, bajo las políticas de Google o Meta — no de TiendaApps. El dueño de la tienda es el único responsable de informarte sobre su uso en su propia política de privacidad. Si querés saber si una tienda específica usa trackers, consultá su política o escribile directamente.",
+          "Cómo evitar el rastreo publicitario: podés bloquear estas cookies desde la configuración de tu navegador, usar una extensión de bloqueo de rastreadores, o ajustar qué usa Meta para mostrarte anuncios en facebook.com/adpreferences. No afecta tu cuenta ni tus compras.",
+        ],
       },
       {
         title: "6 bis. Notificaciones push de tiendas",
@@ -468,6 +500,16 @@ const CONTENT = {
       {
         title: "4. Publicación de agradecimientos",
         body: "Si tu campaña se concreta y sos la familia beneficiaria elegida, podés compartir un mensaje, foto o video agradeciendo, que publicamos en la página de la campaña. Solo publicamos contenido que nos autorices expresamente a mostrar, y podés pedir que lo bajemos en cualquier momento.",
+      },
+      {
+        title: "4 bis. Cookies y publicidad en las páginas de la Canasta",
+        body: "En las páginas de la Canasta Solidaria no se carga ningún rastreador publicitario:",
+        list: [
+          "TiendaApps usa un Meta Pixel propio para medir su publicidad en Facebook e Instagram, pero está deliberadamente desactivado en toda la sección Canasta. Ni cuando donás, ni cuando mirás una campaña, ni cuando pedís ayuda.",
+          "El motivo: aunque ese pixel nunca recibe datos personales, dejaría marcado tu navegador como visitante de páginas de asistencia social. Nadie que pida o done ayuda tiene que quedar etiquetado en un sistema publicitario.",
+          "Lo único que se usa acá son las cookies técnicas necesarias para que el sitio funcione y para mantenerte autenticado si tenés cuenta.",
+          "Nunca le informamos a Meta, ni a ninguna otra plataforma de publicidad, que alguien pidió ayuda o hizo una donación.",
+        ],
       },
       {
         title: "5. Procesadores de datos (terceros que procesan tus datos)",

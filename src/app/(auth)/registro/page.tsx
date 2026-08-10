@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { AppLogo } from "@/components/AppLogo";
 import { useTurnstile } from "@/components/Turnstile";
 import { isPwa } from "@/lib/pwa";
+import { trackEvent } from "@/lib/meta-pixel";
 import { PRICES as PLAN_PRICES, PRO_MAX_AFFILIATES, PRO_MAX_ACTIVE_COUPONS, PRO_MAX_PRODUCTS } from "@/lib/planLimits";
 import Link from "next/link";
 import { motion } from "framer-motion";
@@ -247,6 +248,22 @@ function RegistroContent() {
       setLoading(false);
       return;
     }
+    // Conversión para el pixel de plataforma. Va acá y no en la pantalla de
+    // /login a la que redirigimos, porque este es el único punto donde consta
+    // que el alta salió bien: si el POST falla ya volvimos arriba, y a /login
+    // se llega también entrando de mil formas que no son un registro.
+    //
+    // Para un OWNER la tienda se crea en ESTE mismo request (el create anidado
+    // de `api/auth/registro`), así que no existe un segundo momento
+    // "tienda creada" que medir — sería contar dos veces lo mismo. Lo que sí
+    // se distingue es el tipo de cuenta, que es lo que después deja armar
+    // públicos parecidos solo con los que abren tienda.
+    trackEvent("CompleteRegistration", { content_name: accountType, status: true });
+    // El alta de un OWNER arranca la prueba gratis de 7 días. Es un evento
+    // estándar aparte para poder optimizar campañas directamente contra esto,
+    // que es la conversión que de verdad importa.
+    if (accountType === "owner") trackEvent("StartTrial");
+
     setRedirecting(true);
     if (accountType === "buyer") {
       router.push(`/login?registered=buyer${redirectParam ? `&redirect=${encodeURIComponent(redirectParam)}` : ""}`);
