@@ -761,5 +761,6 @@ npx tsx src/lib/embudo.check.ts
 npx tsx src/lib/clientes.check.ts
 npx tsx src/lib/rango-fechas.check.ts
 npx tsx src/lib/csv-seguro.check.ts
+npx tsx src/lib/serie-grafico.check.ts
 npx tsx src/lib/bots.check.ts
 ```

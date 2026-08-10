@@ -40,6 +40,7 @@ import { ordenarOrigenes, ORIGENES, NOMBRE_ORIGEN, type Origen } from "@/lib/ori
 import { armarEmbudo, MINIMO_PARA_SENALAR } from "@/lib/embudo";
 import { resumirClientes } from "@/lib/clientes";
 import { resolverRango, etiquetaComparacion, fechaLarga } from "@/lib/rango-fechas";
+import { convieneAgrupar, agruparPorSemana } from "@/lib/serie-grafico";
 import { RangeSelector } from "./RangeSelector";
 
 // ─── Rango de fechas ──────────────────────────────────────────────────────────
@@ -600,6 +601,23 @@ export default async function MetricasPage({
   const subtituloPeriodo = rango.preset !== null
     ? `Últimos ${rangeDays} días`
     : `${fechaLarga(periodStartStr)} a ${fechaLarga(periodEndStr)}`;
+
+  /**
+   * Si las curvas se dibujan por día o por semana.
+   *
+   * El lienzo reparte 382 unidades de ancho entre los días del período: con 90
+   * le tocan 4,3 a cada uno y se lee bien, pero con 366 le toca 1 —menos de un
+   * píxel en un teléfono— y los altibajos diarios se pisan hasta quedar una
+   * mancha llena. Con eso el gráfico parece decir algo y no dice nada.
+   *
+   * Los tres presets no se tocan: el corte está en 120 días, así que sólo cambia
+   * cuando se pide un rango a medida largo de verdad. Ver `lib/serie-grafico`.
+   */
+  const porSemana = convieneAgrupar(rangeDays);
+  const conGrano = (d: { label: string; value: number }[]) =>
+    porSemana ? agruparPorSemana(d) : d;
+  /** El aclarador del subtítulo, para que nadie lea un pico semanal como diario. */
+  const granoPeriodo = porSemana ? `${subtituloPeriodo} — por semana` : subtituloPeriodo;
 
   const CONFIRMED_ORDER_STATUSES = ESTADOS_VENTA_CONFIRMADA_LISTA;
 
@@ -1544,8 +1562,8 @@ export default async function MetricasPage({
                 <h2 className="font-bold text-gray-900">Consultas diarias</h2>
                 <p className="shrink-0 text-xl font-black text-indigo-600">{totalLeadsPeriod}</p>
               </div>
-              <p className="text-xs text-gray-400 mb-4">{subtituloPeriodo}</p>
-              <LineChart data={leadsChartData} color="#6366f1" gradId="grad-indigo" formatter={shortNum} />
+              <p className="text-xs text-gray-400 mb-4">{granoPeriodo}</p>
+              <LineChart data={conGrano(leadsChartData)} color="#6366f1" gradId="grad-indigo" formatter={shortNum} />
             </div>
           ) : (
             <div className="rounded-2xl border border-gray-100 bg-white p-6">
@@ -1553,8 +1571,8 @@ export default async function MetricasPage({
                 <h2 className="font-bold text-gray-900">Ingresos confirmados</h2>
                 <p className="shrink-0 text-xl font-black text-green-600">{money(totalRevenuePeriod)}</p>
               </div>
-              <p className="text-xs text-gray-400 mb-4">{subtituloPeriodo}</p>
-              <LineChart data={revenueChartData} color="#16a34a" gradId="grad-green" formatter={shortMoney} />
+              <p className="text-xs text-gray-400 mb-4">{granoPeriodo}</p>
+              <LineChart data={conGrano(revenueChartData)} color="#16a34a" gradId="grad-green" formatter={shortMoney} />
             </div>
           )}
 
@@ -1566,9 +1584,9 @@ export default async function MetricasPage({
             <p className="text-xs text-gray-400 mb-4">
               {totalViewsPeriod === 0
                 ? "Las visitas del propio dueño no se cuentan"
-                : `Últimos ${rangeDays} días`}
+                : granoPeriodo}
             </p>
-            <LineChart data={visitsChartData} color="#2563eb" gradId="grad-blue" formatter={shortNum} />
+            <LineChart data={conGrano(visitsChartData)} color="#2563eb" gradId="grad-blue" formatter={shortNum} />
           </div>
         </div>
 
@@ -2581,8 +2599,8 @@ export default async function MetricasPage({
                   <h2 className="font-bold text-gray-900">Ganancia diaria</h2>
                   <p className="shrink-0 text-xl font-black text-violet-600">{money(profitCurrentAgg.totalProfit)}</p>
                 </div>
-                <p className="text-xs text-gray-400 mb-4">{subtituloPeriodo} — solo ventas con costo cargado</p>
-                <LineChart data={profitChartData} color="#7c3aed" gradId="grad-violet" formatter={shortMoney} />
+                <p className="text-xs text-gray-400 mb-4">{granoPeriodo} — solo ventas con costo cargado</p>
+                <LineChart data={conGrano(profitChartData)} color="#7c3aed" gradId="grad-violet" formatter={shortMoney} />
               </div>
 
               <div className="rounded-2xl border border-gray-100 bg-white p-6" data-print="largo">
