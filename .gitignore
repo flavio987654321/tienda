@@ -56,3 +56,7 @@ next-env.d.ts
 .env*.local
 video-tiendaapps/
 stories/
+
+# Manifiesto de ids de datos de prueba. Es efimero (sirve para borrarlos
+# despues) y apunta a registros de la base real, asi que no va al repo.
+.borradores/datos-de-prueba.json
