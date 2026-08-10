@@ -36,13 +36,49 @@ console.log("\n1) Un escalon nunca muestra mas que el de arriba");
 // aproximado": se lee como que el panel esta roto.
 const invertido = armarEmbudo(datos({ entro: 100, carrito: 40, checkout: 60, datos: 30, pedido: 80, pago: 10 }), false);
 const cantidades = invertido.escalones.map((e) => e.cantidad);
-chequear("recorta el que se ensancha", cantidades.join(",") === "100,40,40,30,30,10", cantidades);
+// El esperado cambio al arreglar lo de 1b): `datos` primero sube a 80 —nadie
+// compra sin escribir su email— y recien despues entra el recorte, que los deja
+// a todos en los 40 del carrito. El resultado viejo era 100,40,40,30,30,10, y
+// esos 30 eran justamente el techo de mas que tapaba los pedidos.
+chequear("recorta el que se ensancha", cantidades.join(",") === "100,40,40,40,40,10", cantidades);
 chequear("y nunca sube", cantidades.every((c, i) => i === 0 || c <= cantidades[i - 1]), cantidades);
 
 const normal = armarEmbudo(datos({ entro: 1000, carrito: 100, checkout: 50, datos: 30, pedido: 20, pago: 18 }), false);
 chequear("un embudo sano no se toca",
   normal.escalones.map((e) => e.cantidad).join(",") === "1000,100,50,30,20,18",
   normal.escalones.map((e) => e.cantidad));
+
+/* ── Los pedidos no los puede tapar el escalon de arriba ──────────────────── */
+console.log("\n1b) 'Escribieron sus datos' no le pone techo a los pedidos");
+
+// Lo destapo cargar la tienda de prueba con datos de verdad, no un chequeo: con
+// la base vacia los seis escalones daban cero y el recorte no tenia de que
+// agarrarse.
+//
+// "Escribieron sus datos" sale de AbandonedCart, que solo se escribe si el
+// rastreador llego a dispararse antes de que la persona apretara comprar. O sea
+// que mide MENOS de lo que realmente paso, y como el recorte va de arriba hacia
+// abajo, le ponia techo a los dos escalones de abajo: salia "Hicieron el pedido:
+// 16" mientras los KPI de la MISMA pantalla decian 30.
+const datosCortos = armarEmbudo(datos({ entro: 2403, carrito: 372, checkout: 200, datos: 16, pedido: 33, pago: 30 }), false);
+const porClave = (c: string) => datosCortos.escalones.find((e) => e.clave === c)!.cantidad;
+
+chequear("los pedidos NO se recortan a los datos medidos", porClave("pedido") === 33, porClave("pedido"));
+chequear("ni los pagos", porClave("pago") === 30, porClave("pago"));
+// Nadie compra sin escribir su email: el checkout no deja. Asi que subir este
+// escalon hasta los pedidos no es maquillaje, es un hecho.
+chequear("y 'datos' sube hasta los pedidos, porque no se puede comprar sin email",
+  porClave("datos") === 33, porClave("datos"));
+chequear("el embudo sigue sin ensancharse",
+  datosCortos.escalones.every((e, i, a) => i === 0 || e.cantidad <= a[i - 1].cantidad),
+  datosCortos.escalones.map((e) => e.cantidad));
+
+// Cuando AbandonedCart mide MAS que los pedidos —lo normal: mucha gente deja el
+// mail y no compra— no se toca nada.
+const datosSanos = armarEmbudo(datos({ entro: 2000, carrito: 300, checkout: 150, datos: 80, pedido: 30, pago: 28 }), false);
+chequear("si los datos miden mas que los pedidos, quedan como estan",
+  datosSanos.escalones.find((e) => e.clave === "datos")!.cantidad === 80,
+  datosSanos.escalones.find((e) => e.clave === "datos")!.cantidad);
 
 /* ── Los porcentajes ──────────────────────────────────────────────────────── */
 console.log("\n2) Los porcentajes");

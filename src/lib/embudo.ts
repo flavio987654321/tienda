@@ -116,6 +116,25 @@ export const UMBRAL_RETENCION_PCT = 60;
 export const PERDIDOS_MINIMOS = 3;
 
 export function armarEmbudo(d: DatosEmbudo, faltanPasosNuevos: boolean): ResumenEmbudo {
+  /**
+   * Nadie puede haber hecho un pedido sin escribir sus datos.
+   *
+   * No es un ajuste para que quede lindo: es un hecho. El checkout no deja pasar
+   * sin un email, así que quien compró escribió sus datos, lo haya registrado o
+   * no `AbandonedCart` —que es de donde sale este escalón y que sólo se escribe
+   * si el rastreador llegó a dispararse antes de que la persona apretara comprar—.
+   *
+   * Sin esto el recorte de abajo hacía al revés: `datos` quedaba por debajo de
+   * los pedidos y le ponía techo a los dos escalones de abajo. Con datos reales
+   * salía "Hicieron el pedido: 16" mientras los KPI de la MISMA pantalla decían
+   * 30. Dos números que se contradicen a la vista es exactamente lo que hace
+   * desconfiar de todo lo demás.
+   *
+   * Se vio recién al llenar la tienda de prueba: con la base vacía, los seis
+   * escalones daban cero y el recorte no tenía de qué agarrarse.
+   */
+  const datos = Math.max(d.datos, d.pedido);
+
   // `caidaNormalPct` son valores de referencia de comercio electrónico, no una
   // medición de esta plataforma: sirven para no señalar como problema lo que le
   // pasa a todo el mundo. No hay que leerlos como una meta.
@@ -126,7 +145,7 @@ export function armarEmbudo(d: DatosEmbudo, faltanPasosNuevos: boolean): Resumen
     // todos los meses y el panel no diría nada.
     { clave: "carrito", titulo: "Pusieron algo en el carrito", detalle: "Agregaron por lo menos un producto.", cantidad: d.carrito, caidaNormalPct: 90 },
     { clave: "checkout", titulo: "Abrieron el checkout", detalle: "Llegaron a la pantalla de finalizar la compra.", cantidad: d.checkout, caidaNormalPct: 50 },
-    { clave: "datos", titulo: "Escribieron sus datos", detalle: "Dejaron un email válido en el formulario.", cantidad: d.datos, caidaNormalPct: 35 },
+    { clave: "datos", titulo: "Escribieron sus datos", detalle: "Dejaron un email válido en el formulario.", cantidad: datos, caidaNormalPct: 35 },
     { clave: "pedido", titulo: "Hicieron el pedido", detalle: "El pedido quedó registrado, esperando el pago o la confirmación.", cantidad: d.pedido, caidaNormalPct: 30 },
     // Acá ya eligieron todo y apretaron comprar. Perder mucha gente en este
     // escalón casi siempre es un problema de cobro, y es el más caro de todos.
