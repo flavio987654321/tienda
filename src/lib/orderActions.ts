@@ -16,7 +16,32 @@ type RunOrderActionInput = {
 // transacción de DB (stock, comisiones, pagos) y despacha emails/notificaciones después
 // de que la transacción comprometa. La usan tanto el endpoint individual (/api/pedidos/[id])
 // como el de lote (/api/pedidos/bulk) para no duplicar esta lógica en dos lugares.
-export async function runOrderAction({ orderId: id, ownerId, action, trackingCode }: RunOrderActionInput) {
+/**
+ * Cuánto se le acepta al código de seguimiento del correo.
+ *
+ * Los de Andreani, OCA y Correo Argentino no pasan de unos 30 caracteres. 64
+ * deja lugar de sobra para cualquier formato raro sin permitir que entre un
+ * texto de dos megas, que después se guarda, se muestra en la PÁGINA PÚBLICA de
+ * seguimiento y se manda por mail.
+ */
+const MAX_TRACKING = 64;
+
+/**
+ * Limpia el código de seguimiento. `null` si no quedó nada.
+ *
+ * No se valida el formato —cada correo tiene el suyo, y uno nuevo mañana puede
+ * tener otro— pero sí se le corta el largo y los saltos de línea: el código sale
+ * en el cuerpo de un mail y en un aviso de una sola línea, y ahí un salto rompe
+ * el formato de los dos.
+ */
+function limpiarTracking(crudo: string | undefined): string | undefined {
+  if (typeof crudo !== "string") return undefined;
+  const limpio = crudo.replace(/[\r\n\t]+/g, " ").trim().slice(0, MAX_TRACKING);
+  return limpio.length > 0 ? limpio : undefined;
+}
+
+export async function runOrderAction({ orderId: id, ownerId, action, trackingCode: trackingCrudo }: RunOrderActionInput) {
+  const trackingCode = limpiarTracking(trackingCrudo);
   // Se llenan dentro de la transacción y se despachan después de que comprometa —
   // así un rollback posterior (ej. error en comisión) no deja un aviso ya enviado
   // para un estado que en los hechos nunca se confirmó.

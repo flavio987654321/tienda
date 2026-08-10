@@ -11,7 +11,11 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
   if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
   const { id } = await context.params;
-  const { action, trackingCode } = await req.json();
+  // Sin el `catch`, un cuerpo mal formado tiraba un 500 sin manejar en vez del
+  // 400 que corresponde.
+  const body = await req.json().catch(() => null);
+  if (!body) return NextResponse.json({ error: "Pedido mal formado" }, { status: 400 });
+  const { action, trackingCode } = body;
 
   try {
     const order = await runOrderAction({ orderId: id, ownerId: user.id, action, trackingCode });

@@ -763,5 +763,6 @@ npx tsx src/lib/rango-fechas.check.ts
 npx tsx src/lib/csv-seguro.check.ts
 npx tsx src/lib/serie-grafico.check.ts
 npx tsx src/lib/retencion.check.ts
+npx tsx src/lib/codigo-pedido.check.ts
 npx tsx src/lib/bots.check.ts
 ```

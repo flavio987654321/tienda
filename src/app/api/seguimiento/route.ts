@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { getClientIp } from "@/lib/request-ip";
+import { normalizarCodigoPedido } from "@/lib/codigo-pedido";
 
 export async function GET(req: NextRequest) {
   const ip = getClientIp(req);
@@ -9,13 +10,22 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Demasiadas consultas. Esperá un momento." }, { status: 429 });
   }
 
-  const codigo = req.nextUrl.searchParams.get("codigo")?.trim().toUpperCase();
-  if (!codigo || codigo.length < 6) {
+  // Sólo letras y números. Antes se miraba nada más el largo, y eso dejaba
+  // pasar los comodines de `LIKE`: Prisma no los escapa en `endsWith`, así que
+  // `?codigo=______` armaba `LIKE '%______'` —seis "cualquier carácter"— y
+  // devolvía el primer pedido que encontrara la base, de cualquier tienda, con
+  // nombre, email, teléfono y dirección de una persona real. Ver `lib/codigo-pedido`.
+  const codigo = normalizarCodigoPedido(req.nextUrl.searchParams.get("codigo"));
+  if (!codigo) {
     return NextResponse.json({ error: "Código inválido" }, { status: 400 });
   }
 
   const orders = await prisma.order.findMany({
-    where: { id: { endsWith: codigo.toLowerCase() } },
+    where: { id: { endsWith: codigo } },
+    // Con un código corto puede haber más de un pedido que termine igual. Sin
+    // orden, `take: 1` devolvía uno cualquiera —el que la base tuviera más a
+    // mano— así que la misma búsqueda podía dar distinto de una vez a otra.
+    orderBy: { createdAt: "desc" },
     select: {
       id: true,
       status: true,
