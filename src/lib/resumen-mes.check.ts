@@ -57,6 +57,36 @@ chequear("con visitas y sin ventas lo dice", soloVisitas.titular.includes("230")
 const seCayo = armarResumen({ dias: 30, actual: p(0, 0, 4_000), previo: p(900_000, 90, 5_000) });
 chequear("dejar de vender del todo si es 'mal'", seCayo.tono === "mal", seCayo.tono);
 
+/* ── Que el verbo concuerde ───────────────────────────────────────────────── */
+console.log("\n1b) 'Los 90 dias cerraron', no 'cerro'");
+
+// Lo vio Flavio en pantalla, no ningun chequeo: el sujeto es plural en una de
+// las tres ramas y el verbo estaba escrito a mano en las seis frases. Es la
+// clase de error que no se ve leyendo el codigo y lo ve cualquiera en pantalla.
+//
+// Se recorren las SEIS ramas del titular con los tres sujetos posibles: alcanza
+// con que una sola frase nueva se escriba con el verbo pegado para que vuelva.
+const ramas: [string, Parameters<typeof armarResumen>[0]["actual"], Parameters<typeof armarResumen>[0]["previo"]][] = [
+  ["sin ventas, con visitas", p(0, 0, 45), p(0, 0, 0)],
+  ["sin ventas ni visitas",   p(0, 0, 0),  p(0, 0, 0)],
+  ["primera vez que compara", p(500_000, 40, 2_000), p(0, 0, 0)],
+  ["dejo de vender",          p(0, 0, 4_000), p(900_000, 90, 5_000)],
+  ["parejo",                  p(1_020_000, 100, 5_000), p(1_000_000, 100, 5_000)],
+  ["subio",                   p(1_240_000, 110, 6_000), p(1_050_000, 125, 6_400)],
+];
+
+for (const [nombre, actual, previo] of ramas) {
+  // 90 dias y 45 (un rango a medida) son plurales; 7 y 30 son singulares.
+  for (const dias of [90, 45]) {
+    const t = armarResumen({ dias, actual, previo }).titular;
+    chequear(`${dias}d, ${nombre}: "cerraron"`, t.includes("cerraron") && !t.includes("días cerró"), t);
+  }
+  for (const dias of [7, 30]) {
+    const t = armarResumen({ dias, actual, previo }).titular;
+    chequear(`${dias}d, ${nombre}: "cerró"`, t.includes("cerró") && !t.includes("cerraron"), t);
+  }
+}
+
 chequear("7 dias dice 'La semana'", subio.titular.length > 0 &&
   armarResumen({ dias: 7, actual: p(10, 1, 1), previo: p(0, 0, 0) }).titular.startsWith("La semana"));
 chequear("90 dias dice 'Los 90 días'",

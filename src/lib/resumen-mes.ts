@@ -137,31 +137,39 @@ const MINIMO_PARA_EXPLICAR = 5;
 /* ── El titular ───────────────────────────────────────────────────────────── */
 
 function armarTitular(dias: number, actual: PeriodoResumen, previo: PeriodoResumen): { titular: string; tono: Tono } {
+  // El sujeto y su verbo van juntos porque uno de los tres es PLURAL. Con el
+  // verbo escrito a mano en cada frase salía "Los 90 días cerró", que es la
+  // clase de error que nadie ve en el código y todo el mundo ve en pantalla.
+  //
+  // Empeoró con el rango libre: antes sólo el preset de 90 caía en esta rama, y
+  // ahora cae cualquier rango que no mida justo 7 o 30 días.
+  const esPlural = dias !== 7 && dias !== 30;
   const periodo = dias === 7 ? "La semana" : dias === 30 ? "El mes" : `Los ${dias} días`;
+  const cerro = esPlural ? "cerraron" : "cerró";
 
   // Todavía sin ventas: no hay nada que comparar y no hay que disfrazarlo de
   // mala noticia. Que no haya vendido en 7 días recién arrancando es normal.
   if (actual.ingresos === 0 && previo.ingresos === 0) {
     return actual.visitas > 0
       ? {
-          titular: `${periodo} cerró sin ventas, con ${plural(actual.visitas, "visita", "visitas")}.`,
+          titular: `${periodo} ${cerro} sin ventas, con ${plural(actual.visitas, "visita", "visitas")}.`,
           tono: "neutro",
         }
-      : { titular: `${periodo} cerró sin ventas ni visitas.`, tono: "neutro" };
+      : { titular: `${periodo} ${cerro} sin ventas ni visitas.`, tono: "neutro" };
   }
 
   // Sin período anterior no hay porcentaje posible: dividir por cero da infinito
   // y "subiste ∞%" no es información. Se informa el número solo.
   if (previo.ingresos === 0) {
     return {
-      titular: `${periodo} cerró con ${plata(actual.ingresos)} en ${plural(actual.pedidosConfirmados, "venta", "ventas")} — es la primera vez que hay con qué comparar.`,
+      titular: `${periodo} ${cerro} con ${plata(actual.ingresos)} en ${plural(actual.pedidosConfirmados, "venta", "ventas")} — es la primera vez que hay con qué comparar.`,
       tono: "bien",
     };
   }
 
   if (actual.ingresos === 0) {
     return {
-      titular: `${periodo} cerró sin ventas. En el período anterior habías facturado ${plata(previo.ingresos)}.`,
+      titular: `${periodo} ${cerro} sin ventas. En el período anterior habías facturado ${plata(previo.ingresos)}.`,
       tono: "mal",
     };
   }
@@ -170,14 +178,14 @@ function armarTitular(dias: number, actual: PeriodoResumen, previo: PeriodoResum
 
   if (Math.abs(cambio) < RUIDO_PCT) {
     return {
-      titular: `${periodo} cerró parejo: ${plata(actual.ingresos)} contra ${plata(previo.ingresos)} del período anterior.`,
+      titular: `${periodo} ${cerro} parejo: ${plata(actual.ingresos)} contra ${plata(previo.ingresos)} del período anterior.`,
       tono: "neutro",
     };
   }
 
   const direccion = cambio > 0 ? "arriba" : "abajo";
   return {
-    titular: `${periodo} cerró ${pct(cambio)} ${direccion} — ${plata(actual.ingresos)} contra ${plata(previo.ingresos)}.`,
+    titular: `${periodo} ${cerro} ${pct(cambio)} ${direccion} — ${plata(actual.ingresos)} contra ${plata(previo.ingresos)}.`,
     tono: cambio > 0 ? "bien" : "mal",
   };
 }

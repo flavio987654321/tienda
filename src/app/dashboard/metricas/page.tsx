@@ -587,6 +587,20 @@ export default async function MetricasPage({
     ? new Date(prevPeriodStart.getTime() + (now.getTime() - periodStart.getTime()))
     : inicioDiaArgentino(sumarDiasCalendario(prevPeriodEndStr, 1));
 
+  /**
+   * El subtítulo de las tarjetas.
+   *
+   * "Últimos 15 días" es FALSO en un rango a medida: son quince días, pero no
+   * los últimos quince. Con un preset se dice como siempre; con fechas elegidas,
+   * las fechas. Es la misma corrección que necesitó la imagen de compartir.
+   *
+   * Ojo con "en estos N días", que está en otras seis frases y NO se toca:
+   * "estos" señala los que se están mostrando, así que es correcto siempre.
+   */
+  const subtituloPeriodo = rango.preset !== null
+    ? `Últimos ${rangeDays} días`
+    : `${fechaLarga(periodStartStr)} a ${fechaLarga(periodEndStr)}`;
+
   const CONFIRMED_ORDER_STATUSES = ESTADOS_VENTA_CONFIRMADA_LISTA;
 
   // (queries compartidas eliminadas — Push/Reseñas/Afiliados tienen sus propios paneles)
@@ -1530,7 +1544,7 @@ export default async function MetricasPage({
                 <h2 className="font-bold text-gray-900">Consultas diarias</h2>
                 <p className="shrink-0 text-xl font-black text-indigo-600">{totalLeadsPeriod}</p>
               </div>
-              <p className="text-xs text-gray-400 mb-4">Últimos {rangeDays} días</p>
+              <p className="text-xs text-gray-400 mb-4">{subtituloPeriodo}</p>
               <LineChart data={leadsChartData} color="#6366f1" gradId="grad-indigo" formatter={shortNum} />
             </div>
           ) : (
@@ -1539,7 +1553,7 @@ export default async function MetricasPage({
                 <h2 className="font-bold text-gray-900">Ingresos confirmados</h2>
                 <p className="shrink-0 text-xl font-black text-green-600">{money(totalRevenuePeriod)}</p>
               </div>
-              <p className="text-xs text-gray-400 mb-4">Últimos {rangeDays} días</p>
+              <p className="text-xs text-gray-400 mb-4">{subtituloPeriodo}</p>
               <LineChart data={revenueChartData} color="#16a34a" gradId="grad-green" formatter={shortMoney} />
             </div>
           )}
@@ -1873,7 +1887,7 @@ export default async function MetricasPage({
           <div className="grid gap-6 lg:grid-cols-2">
             <div className="rounded-2xl border border-gray-100 bg-white p-6" data-print="largo">
               <h2 className="font-bold text-gray-900">Productos más vendidos</h2>
-              <p className="text-xs text-gray-400 mb-4">Últimos {rangeDays} días</p>
+              <p className="text-xs text-gray-400 mb-4">{subtituloPeriodo}</p>
               {topProducts.length === 0 ? (
                 <div className="py-4">
                   {/* "en estos N días" y no "aún": ahora el bloque mira el período,
@@ -1926,7 +1940,7 @@ export default async function MetricasPage({
               <div className="flex items-center justify-between mb-5">
                 <div>
                   <h2 className="font-bold text-gray-900">Pedidos por estado</h2>
-                  <p className="text-xs text-gray-400">Últimos {rangeDays} días</p>
+                  <p className="text-xs text-gray-400">{subtituloPeriodo}</p>
                 </div>
                 <span className="text-sm font-semibold text-gray-400">
                   {totalOrdersAllStatuses} total
@@ -2567,7 +2581,7 @@ export default async function MetricasPage({
                   <h2 className="font-bold text-gray-900">Ganancia diaria</h2>
                   <p className="shrink-0 text-xl font-black text-violet-600">{money(profitCurrentAgg.totalProfit)}</p>
                 </div>
-                <p className="text-xs text-gray-400 mb-4">Últimos {rangeDays} días — solo ventas con costo cargado</p>
+                <p className="text-xs text-gray-400 mb-4">{subtituloPeriodo} — solo ventas con costo cargado</p>
                 <LineChart data={profitChartData} color="#7c3aed" gradId="grad-violet" formatter={shortMoney} />
               </div>
 
