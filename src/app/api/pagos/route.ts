@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import type { StorePaymentInfo, ShippingMethod } from "@/types/store-config";
 import { DEFAULT_PAYMENT_INFO, DEFAULT_SHIPPING_METHODS } from "@/types/store-config";
 import { PROVINCIAS_ARGENTINA } from "@/lib/provincias";
+import { limpiarTextoLegal } from "@/lib/politicas-tienda";
 
 const MAX_TEXT = 2000;
 
@@ -75,9 +76,11 @@ export async function GET() {
       policyReturns: true,
       policyShipping: true,
       policyTerms: true,
+      policyPrivacy: true,
       policyReturnsActive: true,
       policyShippingActive: true,
       policyTermsActive: true,
+      policyPrivacyActive: true,
       originStreet: true,
       originCity: true,
       originProvince: true,
@@ -106,9 +109,11 @@ export async function GET() {
     policyReturns: store.policyReturns ?? "",
     policyShipping: store.policyShipping ?? "",
     policyTerms: store.policyTerms ?? "",
+    policyPrivacy: store.policyPrivacy ?? "",
     policyReturnsActive: store.policyReturnsActive,
     policyShippingActive: store.policyShippingActive,
     policyTermsActive: store.policyTermsActive,
+    policyPrivacyActive: store.policyPrivacyActive,
     originStreet: store.originStreet ?? "",
     originCity: store.originCity ?? "",
     originProvince: store.originProvince ?? "",
@@ -120,7 +125,12 @@ export async function PUT(req: NextRequest) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
-  const body = await req.json();
+  // Sin el `catch`, un cuerpo mal formado tiraba un 500 sin manejar en vez del
+  // 400 que corresponde.
+  const body = await req.json().catch(() => null);
+  if (!body || typeof body !== "object") {
+    return NextResponse.json({ error: "Pedido mal formado" }, { status: 400 });
+  }
 
   const paymentInfo = sanitizePaymentInfo(body.paymentInfo);
   const shippingMethods = sanitizeShippingMethods(body.shippingMethods);
@@ -133,16 +143,25 @@ export async function PUT(req: NextRequest) {
     );
   }
 
-  const policyReturns = sanitizeText(body.policyReturns);
-  const policyShipping = sanitizeText(body.policyShipping);
-  const policyTerms = sanitizeText(body.policyTerms);
+  // `limpiarTextoLegal` y no el `sanitizeText` de acá arriba: los mismos cuatro
+  // campos los escribían tres rutas con tres topes distintos (esta cortaba en
+  // 2000, `/api/configuracion` no cortaba nada). El tope ahora vive en un solo
+  // lugar, junto a la función que decide cuáles se publican.
+  const policyReturns = limpiarTextoLegal(body.policyReturns);
+  const policyShipping = limpiarTextoLegal(body.policyShipping);
+  const policyTerms = limpiarTextoLegal(body.policyTerms);
+  const policyPrivacy = limpiarTextoLegal(body.policyPrivacy);
   const policyReturnsActive = body.policyReturnsActive !== false;
   const policyShippingActive = body.policyShippingActive !== false;
   const policyTermsActive = body.policyTermsActive !== false;
+  const policyPrivacyActive = body.policyPrivacyActive !== false;
 
   const store = await prisma.store.findUnique({
     where: { ownerId: user.id },
-    select: { storeConfig: true, slug: true },
+    select: {
+      storeConfig: true, slug: true,
+      policyReturns: true, policyShipping: true, policyTerms: true, policyPrivacy: true,
+    },
   });
 
   if (!store) return NextResponse.json({ error: "Tienda no encontrada" }, { status: 404 });
@@ -153,6 +172,17 @@ export async function PUT(req: NextRequest) {
   config.paymentInfo = paymentInfo;
   config.shippingMethods = shippingMethods;
 
+  // La fecha se toca solo si cambió el TEXTO de alguna política. Esta pantalla
+  // guarda también CBU, envíos y dirección de origen: si la fecha se moviera en
+  // cada guardado, "Última actualización" diría que las políticas cambiaron un
+  // día en que solo se corrigió un alias bancario — y ese dato existe
+  // justamente para poder sostener qué decía la política y desde cuándo.
+  const cambioAlgunTexto =
+    (store.policyReturns ?? "") !== policyReturns ||
+    (store.policyShipping ?? "") !== policyShipping ||
+    (store.policyTerms ?? "") !== policyTerms ||
+    (store.policyPrivacy ?? "") !== policyPrivacy;
+
   await prisma.store.update({
     where: { ownerId: user.id },
     data: {
@@ -160,9 +190,12 @@ export async function PUT(req: NextRequest) {
       policyReturns: policyReturns || null,
       policyShipping: policyShipping || null,
       policyTerms: policyTerms || null,
+      policyPrivacy: policyPrivacy || null,
       policyReturnsActive,
       policyShippingActive,
       policyTermsActive,
+      policyPrivacyActive,
+      ...(cambioAlgunTexto ? { policiesUpdatedAt: new Date() } : {}),
       ...origin,
     },
   });

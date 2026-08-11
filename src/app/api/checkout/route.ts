@@ -16,6 +16,7 @@ import { getClientIp } from "@/lib/request-ip";
 import { isSubscriptionActive } from "@/lib/subscription";
 import { ESTADOS_VENTA_CONFIRMADA_LISTA } from "@/lib/order-status";
 import { despues } from "@/lib/despues";
+import { documentosPublicados, textoPublicado } from "@/lib/politicas-tienda";
 
 type CheckoutItem = {
   productId: string;
@@ -758,9 +759,11 @@ export async function POST(req: NextRequest) {
         policyReturns: true,
         policyShipping: true,
         policyTerms: true,
+        policyPrivacy: true,
         policyReturnsActive: true,
         policyShippingActive: true,
         policyTermsActive: true,
+        policyPrivacyActive: true,
         owner: { select: { email: true, name: true, phone: true } },
       },
     });
@@ -802,11 +805,17 @@ export async function POST(req: NextRequest) {
         const cfg = JSON.parse(storeForEmail.storeConfig || "{}");
         if (cfg.paymentInfo) paymentInfo = cfg.paymentInfo;
       } catch { /* noop */ }
-      if (storeForEmail.policyReturnsActive || storeForEmail.policyShippingActive || storeForEmail.policyTermsActive) {
+      // La misma función que la tienda y el pie de página: si el dueño apaga
+      // una política, desaparece de los tres lados a la vez. Antes acá había una
+      // copia de la regla y era el ÚNICO lugar donde el interruptor "Oculta"
+      // hacía algo — en la tienda pública no hacía nada.
+      const publicadas = documentosPublicados(storeForEmail);
+      if (publicadas.length > 0) {
         policies = {
-          returns: storeForEmail.policyReturnsActive ? (storeForEmail.policyReturns ?? undefined) : undefined,
-          shipping: storeForEmail.policyShippingActive ? (storeForEmail.policyShipping ?? undefined) : undefined,
-          terms: storeForEmail.policyTermsActive ? (storeForEmail.policyTerms ?? undefined) : undefined,
+          returns: textoPublicado(storeForEmail, "devoluciones") ?? undefined,
+          shipping: textoPublicado(storeForEmail, "envios") ?? undefined,
+          terms: textoPublicado(storeForEmail, "terminos") ?? undefined,
+          privacy: textoPublicado(storeForEmail, "privacidad") ?? undefined,
         };
       }
 

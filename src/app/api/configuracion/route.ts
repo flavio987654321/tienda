@@ -9,6 +9,7 @@ import { sendNewStorePublishedEmail, sendStoreOfflineEmail, sendCommissionRateCh
 import { getClientIp } from "@/lib/request-ip";
 import { storeConfigSchema, mergeDesignConfig, resetStoreDesign } from "@/lib/store-config";
 import { despues } from "@/lib/despues";
+import { limpiarTextoLegal } from "@/lib/politicas-tienda";
 
 export async function GET() {
   const user = await getCurrentUser();
@@ -269,12 +270,16 @@ export async function PUT(req: NextRequest) {
       tipoTienda:           b.tipoTienda || "ROPA",
       tipoTiendaConfigurado: Boolean(b.tipoTiendaConfigurado),
       tieneVentaMayorista:  Boolean(b.tieneVentaMayorista),
-      policyReturns:        typeof b.policyReturns === "string" ? (b.policyReturns || null) : undefined,
-      policyShipping:       typeof b.policyShipping === "string" ? (b.policyShipping || null) : undefined,
-      policyTerms:          typeof b.policyTerms === "string" ? (b.policyTerms || null) : undefined,
+      // Mismo tope que `/api/pagos`. Acá no había ninguno: los mismos campos se
+      // guardaban con dos reglas distintas según por qué pantalla se pasara.
+      policyReturns:        typeof b.policyReturns === "string" ? (limpiarTextoLegal(b.policyReturns) || null) : undefined,
+      policyShipping:       typeof b.policyShipping === "string" ? (limpiarTextoLegal(b.policyShipping) || null) : undefined,
+      policyTerms:          typeof b.policyTerms === "string" ? (limpiarTextoLegal(b.policyTerms) || null) : undefined,
+      policyPrivacy:        typeof b.policyPrivacy === "string" ? (limpiarTextoLegal(b.policyPrivacy) || null) : undefined,
       policyReturnsActive:  b.policyReturnsActive !== undefined ? Boolean(b.policyReturnsActive) : undefined,
       policyShippingActive: b.policyShippingActive !== undefined ? Boolean(b.policyShippingActive) : undefined,
       policyTermsActive:    b.policyTermsActive !== undefined ? Boolean(b.policyTermsActive) : undefined,
+      policyPrivacyActive:  b.policyPrivacyActive !== undefined ? Boolean(b.policyPrivacyActive) : undefined,
       footerDescription:    typeof b.footerDescription === "string" ? (b.footerDescription || null) : undefined,
       footerShowLegal:      b.footerShowLegal !== undefined ? Boolean(b.footerShowLegal) : undefined,
       // Si se apaga el programa completo, también se apagan los cupones

@@ -3,8 +3,10 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import DashboardLayout from "@/components/DashboardLayout";
 import PagosClient from "./PagosClient";
-import type { StorePaymentInfo, ShippingMethod } from "@/types/store-config";
-import { DEFAULT_PAYMENT_INFO, DEFAULT_SHIPPING_METHODS } from "@/types/store-config";
+import type { StorePaymentInfo, ShippingMethod, TemplateId } from "@/types/store-config";
+import { DEFAULT_PAYMENT_INFO, DEFAULT_SHIPPING_METHODS, TEMPLATES_CON_NEWSLETTER } from "@/types/store-config";
+import { GAMIFICATION_EXCLUDED_TEMPLATES } from "@/lib/gamification";
+import { hasActivePremium, SUB_STATUS_SELECT } from "@/lib/subscription";
 
 // `mp` lo setea el callback de OAuth de MercadoPago (?mp=connected | ?mp=error)
 // para poder mostrar el resultado de la conexión al volver.
@@ -27,9 +29,17 @@ export default async function PagosPage({ searchParams }: { searchParams: Promis
       policyReturns: true,
       policyShipping: true,
       policyTerms: true,
+      policyPrivacy: true,
       policyReturnsActive: true,
       policyShippingActive: true,
       policyTermsActive: true,
+      policyPrivacyActive: true,
+      // Para armar la política de privacidad con lo que la tienda de verdad
+      // tiene prendido, en vez de preguntárselo al dueño.
+      mpAccessToken: true,
+      affiliatesEnabled: true,
+      gamificationWidget: { select: { isActive: true, emailRequired: true, type: true } },
+      owner: { select: { subscription: { select: SUB_STATUS_SELECT } } },
       originStreet: true,
       originCity: true,
       originProvince: true,
@@ -50,6 +60,10 @@ export default async function PagosPage({ searchParams }: { searchParams: Promis
   let paymentInfo: StorePaymentInfo = DEFAULT_PAYMENT_INFO;
   let shippingMethods: ShippingMethod[] = DEFAULT_SHIPPING_METHODS;
   let shippingConfigured = false;
+  // Los trackers viven en el JSON de configuración, no en columnas propias.
+  let usaAnalytics = false;
+  let usaPixel = false;
+  let template: string | null = null;
   try {
     const config = JSON.parse(store?.storeConfig || "{}");
     if (config.paymentInfo) paymentInfo = config.paymentInfo;
@@ -57,7 +71,29 @@ export default async function PagosPage({ searchParams }: { searchParams: Promis
       shippingMethods = config.shippingMethods;
       shippingConfigured = true;
     }
+    usaAnalytics = !!config.analytics?.googleAnalyticsId?.trim();
+    usaPixel = !!config.analytics?.facebookPixelId?.trim();
+    template = typeof config.template === "string" ? config.template : null;
   } catch { /* noop */ }
+
+  /* Lo que la tienda junta de gente que todavía no compró. Sale de lo que está
+     prendido de verdad, no de preguntárselo al dueño: si se equivoca, la
+     política declara algo falso, que es peor que no tenerla. */
+  const juegoVisible =
+    !!store?.gamificationWidget?.isActive &&
+    !!store.gamificationWidget.emailRequired &&
+    !!template &&
+    // Autos no tiene ruleta: el renderer la excluye por template.
+    !GAMIFICATION_EXCLUDED_TEMPLATES.has(template);
+  const juegoConEmail: "ruleta" | "raspadita" | null = !juegoVisible
+    ? null
+    : store?.gamificationWidget?.type === "SCRATCH" ? "raspadita" : "ruleta";
+
+  const tieneNewsletter = !!template && TEMPLATES_CON_NEWSLETTER.includes(template as TemplateId);
+  // El seguimiento de la tienda y el push son exclusivos de Premium, y con la
+  // suscripción vencida dejan de funcionar — declarar algo que no corre sería
+  // igual de falso que callarlo.
+  const tienePushDeSeguidores = hasActivePremium(store?.owner?.subscription ?? null);
 
   return (
     <DashboardLayout
@@ -93,9 +129,21 @@ export default async function PagosPage({ searchParams }: { searchParams: Promis
                 policyReturns: store?.policyReturns ?? "",
                 policyShipping: store?.policyShipping ?? "",
                 policyTerms: store?.policyTerms ?? "",
+                policyPrivacy: store?.policyPrivacy ?? "",
                 policyReturnsActive: store?.policyReturnsActive ?? true,
                 policyShippingActive: store?.policyShippingActive ?? true,
                 policyTermsActive: store?.policyTermsActive ?? true,
+                policyPrivacyActive: store?.policyPrivacyActive ?? true,
+                hechosPrivacidad: {
+                  usaAnalytics,
+                  usaPixel,
+                  usaMercadoPago: !!store?.mpAccessToken,
+                  usaAfiliados: !!store?.affiliatesEnabled,
+                  esAutos: isAutos,
+                  juegoConEmail,
+                  tieneNewsletter,
+                  tienePushDeSeguidores,
+                },
                 originStreet: store?.originStreet ?? "",
                 originCity: store?.originCity ?? "",
                 originProvince: store?.originProvince ?? "",

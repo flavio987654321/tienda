@@ -1,6 +1,20 @@
+import type { ClaveLegal } from "@/lib/politicas-tienda";
+
 export type TemplateId = "fashion-noir" | "boho-terra" | "urban-pulse" | "chic-paris" | "aurora" | "auto-motor" | "auto-drive" | "electro-prime" | "tech-nova" | "home-studio" | "casa-clara";
 
 export const TEMPLATES_WITH_CAROUSEL: TemplateId[] = ["chic-paris", "electro-prime", "tech-nova", "home-studio", "casa-clara"];
+
+/**
+ * Qué templates dibujan el formulario de "suscribite a las novedades".
+ *
+ * No hay interruptor: el que lo tiene lo muestra siempre. Importa para la
+ * política de privacidad — ese formulario junta emails de gente que todavía no
+ * compró, y solo se puede declarar si de verdad está en pantalla.
+ *
+ * Auto Motor y Auto Drive no están, y no es un olvido: esas tiendas venden por
+ * consulta y no mandan novedades.
+ */
+export const TEMPLATES_CON_NEWSLETTER: TemplateId[] = ["aurora", "boho-terra", "chic-paris", "fashion-noir", "urban-pulse"];
 
 // Qué templates dibujan el formulario de "opiná sobre esta tienda".
 //
@@ -237,11 +251,19 @@ export type StoreConfig = {
   onPreviewBellClick?: () => void;
   paymentInfo?: StorePaymentInfo;
   shippingMethods?: ShippingMethod[];
-  policies?: {
-    returns?: string;
-    shipping?: string;
-    terms?: string;
-  };
+  /**
+   * Qué políticas legales están publicadas: tienen texto Y el interruptor de
+   * "Pagos" en Visible.
+   *
+   * Lo llena la página de la tienda desde la base (ver `documentosPublicados`
+   * en `lib/politicas-tienda`). Los pies de página listaban las tres siempre,
+   * así que una tienda recién hecha mostraba tres links que llevaban a "Esta
+   * tienda aún no publicó esta política".
+   *
+   * Acá van solo las claves, no el texto: el pie necesita saber cuáles linkear,
+   * no arrastrar el contenido de cuatro documentos en cada carga de la tienda.
+   */
+  legales?: ClaveLegal[];
   hiddenSections?: string[];
   sectionOrder?: string[];
 };

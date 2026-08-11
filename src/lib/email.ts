@@ -677,12 +677,26 @@ function payRow(label: string, value: string): string {
   </div>`;
 }
 
-function buildPoliciesBlock(policies?: { returns?: string; shipping?: string; terms?: string } | null): string {
+const RECORTE_POLITICA = 300;
+
+function buildPoliciesBlock(
+  policies?: { returns?: string; shipping?: string; terms?: string; privacy?: string } | null
+): string {
   if (!policies) return "";
-  const items: string[] = [];
-  if (policies.returns?.trim()) items.push(`<li style="margin-bottom:4px;"><strong>Devoluciones:</strong> ${escapeHtml(policies.returns.slice(0, 300))}${policies.returns.length > 300 ? "…" : ""}</li>`);
-  if (policies.shipping?.trim()) items.push(`<li style="margin-bottom:4px;"><strong>Envíos:</strong> ${escapeHtml(policies.shipping.slice(0, 300))}${policies.shipping.length > 300 ? "…" : ""}</li>`);
-  if (policies.terms?.trim()) items.push(`<li style="margin-bottom:4px;"><strong>Términos:</strong> ${escapeHtml(policies.terms.slice(0, 300))}${policies.terms.length > 300 ? "…" : ""}</li>`);
+  // El texto se recorta porque en el mail es un resumen, no el documento: el
+  // documento entero está en la página legal de la tienda, linkeada abajo.
+  const item = (titulo: string, texto?: string) => {
+    if (!texto?.trim()) return null;
+    const recortado = escapeHtml(texto.slice(0, RECORTE_POLITICA));
+    const puntos = texto.length > RECORTE_POLITICA ? "…" : "";
+    return `<li style="margin-bottom:4px;"><strong>${titulo}:</strong> ${recortado}${puntos}</li>`;
+  };
+  const items = [
+    item("Devoluciones", policies.returns),
+    item("Envíos", policies.shipping),
+    item("Términos", policies.terms),
+    item("Privacidad", policies.privacy),
+  ].filter((x): x is string => x !== null);
   if (!items.length) return "";
   return `
     <div style="margin-bottom:28px;">
@@ -729,7 +743,7 @@ export async function sendOrderConfirmationEmail({
     transferencia?: { enabled?: boolean; titular?: string; cbu?: string; cvu?: string; alias?: string; banco?: string; cuil?: string; instrucciones?: string };
     efectivo?: { enabled?: boolean; instrucciones?: string };
   } | null;
-  policies?: { returns?: string; shipping?: string; terms?: string } | null;
+  policies?: { returns?: string; shipping?: string; terms?: string; privacy?: string } | null;
   ownerContact?: { name: string | null; email: string | null; phone: string | null } | null;
   paymentProvider?: string | null;
 }) {

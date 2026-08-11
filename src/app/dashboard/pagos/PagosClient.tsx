@@ -11,10 +11,14 @@ import { DEFAULT_PAYMENT_INFO, DEFAULT_SHIPPING_METHODS, LIVE_QUOTE_SHIPPING_MET
 import { PROVINCIAS_ARGENTINA as PROVINCES } from "@/lib/provincias";
 import CampoAuto from "@/components/CampoAuto";
 import {
-  generatePolicyShipping, generatePolicyReturns, generatePolicyTerms,
+  generatePolicyShipping, generatePolicyReturns, generatePolicyTerms, generatePolicyPrivacy,
   generatePolicyDeliveryAutos, generatePolicyOperationAutos, generatePolicyTermsAutos,
+  acotarDiasExtra, acotarPorcentaje,
+  MAX_DIAS_EXTRA_DEVOLUCION, MAX_PORCENTAJE_CANCELACION, MAX_LARGO_DEMORA,
   type LegalWizardAnswers, type LegalWizardAnswersAutos, type LegalStoreInfo,
+  type HechosPrivacidad,
 } from "@/lib/legal-generator";
+import { MAX_LARGO_POLITICA } from "@/lib/politicas-tienda";
 import MpConnectButton from "./MpConnectButton";
 
 type Props = {
@@ -25,9 +29,13 @@ type Props = {
     policyReturns: string;
     policyShipping: string;
     policyTerms: string;
+    policyPrivacy: string;
     policyReturnsActive: boolean;
     policyShippingActive: boolean;
     policyTermsActive: boolean;
+    policyPrivacyActive: boolean;
+    /** Lo que la tienda ya tiene prendido: de acá sale la política de privacidad. */
+    hechosPrivacidad: HechosPrivacidad;
     originStreet: string;
     originCity: string;
     originProvince: string;
@@ -55,9 +63,11 @@ export default function PagosClient({ initial }: Props) {
   const [policyReturns, setPolicyReturns] = useState(initial.policyReturns);
   const [policyShipping, setPolicyShipping] = useState(initial.policyShipping);
   const [policyTerms, setPolicyTerms] = useState(initial.policyTerms);
+  const [policyPrivacy, setPolicyPrivacy] = useState(initial.policyPrivacy);
   const [policyReturnsActive, setPolicyReturnsActive] = useState(initial.policyReturnsActive);
   const [policyShippingActive, setPolicyShippingActive] = useState(initial.policyShippingActive);
   const [policyTermsActive, setPolicyTermsActive] = useState(initial.policyTermsActive);
+  const [policyPrivacyActive, setPolicyPrivacyActive] = useState(initial.policyPrivacyActive);
   const [originStreet, setOriginStreet] = useState(initial.originStreet);
   const [originCity, setOriginCity] = useState(initial.originCity);
   const [originProvince, setOriginProvince] = useState(initial.originProvince);
@@ -67,13 +77,21 @@ export default function PagosClient({ initial }: Props) {
   const storeInfo: LegalStoreInfo = { name: initial.storeName, contact: initial.contact };
   const isAutos = initial.isAutos;
 
+  // La de privacidad no se pregunta: sale de lo que la tienda ya tiene
+  // configurado (Analytics, Pixel, MercadoPago, afiliados). Pedirle al dueño
+  // que se acuerde de eso es pedirle que declare mal un tracker que sí está
+  // corriendo — el sistema lo sabe con certeza y él no tiene por qué.
+  const hechos = initial.hechosPrivacidad;
+
   function applyLegalWizard(answers: LegalWizardAnswers) {
     setPolicyShipping(generatePolicyShipping(storeInfo, answers));
     setPolicyReturns(generatePolicyReturns(storeInfo, answers));
     setPolicyTerms(generatePolicyTerms(storeInfo, answers));
+    setPolicyPrivacy(generatePolicyPrivacy(storeInfo, hechos));
     setPolicyShippingActive(true);
     setPolicyReturnsActive(true);
     setPolicyTermsActive(true);
+    setPolicyPrivacyActive(true);
     setLegalWizardOpen(false);
   }
 
@@ -81,11 +99,23 @@ export default function PagosClient({ initial }: Props) {
     setPolicyShipping(generatePolicyDeliveryAutos(storeInfo, answers));
     setPolicyReturns(generatePolicyOperationAutos(storeInfo, answers));
     setPolicyTerms(generatePolicyTermsAutos(storeInfo, answers));
+    setPolicyPrivacy(generatePolicyPrivacy(storeInfo, hechos));
     setPolicyShippingActive(true);
     setPolicyReturnsActive(true);
     setPolicyTermsActive(true);
+    setPolicyPrivacyActive(true);
     setLegalWizardOpen(false);
   }
+
+  // Las mismas dos condiciones que usa la tienda pública: texto Y activa. El
+  // badge de la sección decía "Activas" mirando solo los interruptores, así que
+  // una tienda sin una sola política escrita mostraba "Activas".
+  const publicadas = [
+    [policyReturns, policyReturnsActive],
+    [policyShipping, policyShippingActive],
+    [policyTerms, policyTermsActive],
+    [policyPrivacy, policyPrivacyActive],
+  ].filter(([texto, activa]) => (texto as string).trim() && activa).length;
 
   const hasFullOrigin = !!(originStreet.trim() && originCity.trim() && originProvince && originPostalCode.trim());
   const liveQuoteEnabled = shippingMethods.some((m) => m.liveQuote && m.enabled);
@@ -159,9 +189,11 @@ export default function PagosClient({ initial }: Props) {
           policyReturns,
           policyShipping,
           policyTerms,
+          policyPrivacy,
           policyReturnsActive,
           policyShippingActive,
           policyTermsActive,
+          policyPrivacyActive,
           originStreet,
           originCity,
           originProvince,
@@ -539,13 +571,31 @@ export default function PagosClient({ initial }: Props) {
         icon={<Shield className="h-4 w-4 text-slate-400" />}
         title="Políticas y términos legales"
         subtitle="Se muestran en el footer de tu tienda y en los emails de confirmación"
-        badge={policyTermsActive || policyReturnsActive || policyShippingActive ? "Activas" : undefined}
+        badge={publicadas > 0 ? `${publicadas} de 4 publicadas` : undefined}
         badgeVariant="neutral"
       >
         <div className="space-y-5">
-          <div className="text-xs text-slate-500 bg-slate-50 rounded-lg p-3 border border-slate-100">
-            Tus políticas aparecen como links en el footer de tu tienda. Los clientes las ven antes de comprar y también en los emails.
+          <div className="text-xs text-slate-500 bg-slate-50 rounded-lg p-3 border border-slate-100 leading-relaxed">
+            Cada política que escribas aparece como link en el pie de tu tienda y en los emails de confirmación.
+            Las que dejes vacías o marques como <strong className="font-semibold text-slate-600">Oculta</strong> no
+            se muestran en ningún lado — el link tampoco aparece.
           </div>
+
+          {/* El pixel y el analytics los cargó él mismo en "Aplicaciones", pero
+              es lo que más se olvida de declarar y es justo lo que la ley pide
+              informar. El aviso solo sale si de verdad hay algo corriendo. */}
+          {(hechos.usaAnalytics || hechos.usaPixel) && !policyPrivacy.trim() && (
+            <div className="flex items-start gap-2.5 rounded-lg border border-amber-200 bg-amber-50 p-3">
+              <AlertCircle className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
+              <p className="text-xs text-amber-800 leading-relaxed">
+                Tu tienda tiene {hechos.usaAnalytics && hechos.usaPixel
+                  ? "Google Analytics y Meta Pixel activos"
+                  : hechos.usaAnalytics ? "Google Analytics activo" : "Meta Pixel activo"}.
+                Estás obligado a informárselo a tus compradores en tu política de privacidad, y todavía no la
+                escribiste. El asistente te la arma con eso ya declarado.
+              </p>
+            </div>
+          )}
 
           <button
             type="button"
@@ -589,6 +639,17 @@ export default function PagosClient({ initial }: Props) {
             onChange={setPolicyTerms}
             placeholder={`Ej: Al realizar una compra en nuestra tienda, el cliente acepta estos términos. Los precios pueden cambiar sin previo aviso. Las imágenes son referenciales. En caso de inconvenientes, contactar a soporte antes de iniciar cualquier reclamo formal.`}
           />
+
+          <PolicyBlock
+            icon={<Shield className="h-3.5 w-3.5" />}
+            label="Política de privacidad"
+            active={policyPrivacyActive}
+            onToggle={() => setPolicyPrivacyActive((v) => !v)}
+            value={policyPrivacy}
+            onChange={setPolicyPrivacy}
+            nota="Qué datos de tus clientes recibís y para qué los usás. La exige la Ley 25.326."
+            placeholder={`Ej: Usamos tu nombre, email, teléfono y dirección únicamente para preparar y entregarte tu pedido. No vendemos ni cedemos tus datos a terceros.\n\nPodés pedirnos en cualquier momento que los borremos, sin costo.`}
+          />
         </div>
       </Section>
 
@@ -631,12 +692,14 @@ export default function PagosClient({ initial }: Props) {
         isAutos ? (
           <LegalWizardModalAutos
             storeInfo={storeInfo}
+            hechos={hechos}
             onClose={() => setLegalWizardOpen(false)}
             onApply={applyLegalWizardAutos}
           />
         ) : (
           <LegalWizardModal
             storeInfo={storeInfo}
+            hechos={hechos}
             onClose={() => setLegalWizardOpen(false)}
             onApply={applyLegalWizard}
           />
@@ -646,8 +709,9 @@ export default function PagosClient({ initial }: Props) {
   );
 }
 
-function LegalWizardModal({ storeInfo, onClose, onApply }: {
+function LegalWizardModal({ storeInfo, hechos, onClose, onApply }: {
   storeInfo: LegalStoreInfo;
+  hechos: HechosPrivacidad;
   onClose: () => void;
   onApply: (answers: LegalWizardAnswers) => void;
 }) {
@@ -655,7 +719,7 @@ function LegalWizardModal({ storeInfo, onClose, onApply }: {
   const [avgDeliveryDays, setAvgDeliveryDays] = useState("3 a 7");
   const [extraReturnDays, setExtraReturnDays] = useState(0);
   const [cancellationFeePercent, setCancellationFeePercent] = useState(0);
-  const [preview, setPreview] = useState<{ shipping: string; returns: string; terms: string } | null>(null);
+  const [preview, setPreview] = useState<{ shipping: string; returns: string; terms: string; privacy: string } | null>(null);
 
   const answers: LegalWizardAnswers = { shipsNationwide, avgDeliveryDays, extraReturnDays, cancellationFeePercent };
 
@@ -664,6 +728,7 @@ function LegalWizardModal({ storeInfo, onClose, onApply }: {
       shipping: generatePolicyShipping(storeInfo, answers),
       returns: generatePolicyReturns(storeInfo, answers),
       terms: generatePolicyTerms(storeInfo, answers),
+      privacy: generatePolicyPrivacy(storeInfo, hechos),
     });
   }
 
@@ -678,7 +743,9 @@ function LegalWizardModal({ storeInfo, onClose, onApply }: {
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X className="h-4 w-4" /></button>
         </div>
         <p className="text-xs text-slate-500 mb-5">
-          Completá esto y armamos las 3 políticas con las cláusulas que exige la ley argentina (derecho de arrepentimiento, garantía, datos personales) más lo que respondas. Después podés editar cualquier párrafo a mano.
+          Completá esto y armamos las 4 políticas con las cláusulas que exige la ley argentina (derecho de
+          arrepentimiento, garantía, datos personales) más lo que respondas. La de privacidad se arma sola con lo
+          que tu tienda ya tiene configurado. Después podés editar cualquier párrafo a mano.
         </p>
 
         {!preview ? (
@@ -703,6 +770,7 @@ function LegalWizardModal({ storeInfo, onClose, onApply }: {
                 <input
                   value={avgDeliveryDays}
                   onChange={(e) => setAvgDeliveryDays(e.target.value)}
+                  maxLength={MAX_LARGO_DEMORA}
                   placeholder="Ej: 3 a 7"
                   className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:border-indigo-300"
                 />
@@ -713,15 +781,22 @@ function LegalWizardModal({ storeInfo, onClose, onApply }: {
               <p className="text-xs font-semibold text-slate-700 mb-1.5">
                 Además de los 10 días que exige la ley, ¿le das más días al comprador para cambios por simple arrepentimiento?
               </p>
+              {/* El `max` del input no frena a quien tipea: el tope de verdad
+                  es `acotarDiasExtra`, la misma función que usa el generador.
+                  Sin eso salía "te damos un total de 100000009 días corridos"
+                  escrito como política legal de la tienda. */}
               <input
                 type="number"
                 min={0}
+                max={MAX_DIAS_EXTRA_DEVOLUCION}
                 value={extraReturnDays}
-                onChange={(e) => setExtraReturnDays(Math.max(0, Number(e.target.value) || 0))}
+                onChange={(e) => setExtraReturnDays(acotarDiasExtra(Number(e.target.value)))}
                 placeholder="0"
                 className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:border-indigo-300"
               />
-              <p className="text-[11px] text-slate-400 mt-1">Dejá 0 si solo aplicás el mínimo legal.</p>
+              <p className="text-[11px] text-slate-400 mt-1">
+                Dejá 0 si solo aplicás el mínimo legal. Máximo {MAX_DIAS_EXTRA_DEVOLUCION}.
+              </p>
             </div>
 
             <div>
@@ -731,13 +806,15 @@ function LegalWizardModal({ storeInfo, onClose, onApply }: {
               <input
                 type="number"
                 min={0}
-                max={100}
+                max={MAX_PORCENTAJE_CANCELACION}
                 value={cancellationFeePercent}
-                onChange={(e) => setCancellationFeePercent(Math.max(0, Number(e.target.value) || 0))}
+                onChange={(e) => setCancellationFeePercent(acotarPorcentaje(Number(e.target.value)))}
                 placeholder="0"
                 className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:border-indigo-300"
               />
-              <p className="text-[11px] text-slate-400 mt-1">Dejá 0 si no cobrás nada.</p>
+              <p className="text-[11px] text-slate-400 mt-1">
+                Dejá 0 si no cobrás nada. No puede pasar de {MAX_PORCENTAJE_CANCELACION}%.
+              </p>
             </div>
 
             <button
@@ -754,6 +831,7 @@ function LegalWizardModal({ storeInfo, onClose, onApply }: {
               { label: "Política de envíos", text: preview.shipping },
               { label: "Política de devoluciones y cambios", text: preview.returns },
               { label: "Términos y condiciones", text: preview.terms },
+              { label: "Política de privacidad", text: preview.privacy },
             ].map(({ label, text }) => (
               <div key={label} className="rounded-lg border border-slate-200 p-3">
                 <p className="text-xs font-bold text-slate-700 mb-1.5">{label}</p>
@@ -775,15 +853,16 @@ function LegalWizardModal({ storeInfo, onClose, onApply }: {
   );
 }
 
-function LegalWizardModalAutos({ storeInfo, onClose, onApply }: {
+function LegalWizardModalAutos({ storeInfo, hechos, onClose, onApply }: {
   storeInfo: LegalStoreInfo;
+  hechos: HechosPrivacidad;
   onClose: () => void;
   onApply: (answers: LegalWizardAnswersAutos) => void;
 }) {
   const [hasWarranty, setHasWarranty] = useState(false);
   const [requiresDeposit, setRequiresDeposit] = useState(false);
   const [depositRefundable, setDepositRefundable] = useState(true);
-  const [preview, setPreview] = useState<{ delivery: string; operation: string; terms: string } | null>(null);
+  const [preview, setPreview] = useState<{ delivery: string; operation: string; terms: string; privacy: string } | null>(null);
 
   const answers: LegalWizardAnswersAutos = { hasWarranty, requiresDeposit, depositRefundable };
 
@@ -792,6 +871,7 @@ function LegalWizardModalAutos({ storeInfo, onClose, onApply }: {
       delivery: generatePolicyDeliveryAutos(storeInfo, answers),
       operation: generatePolicyOperationAutos(storeInfo, answers),
       terms: generatePolicyTermsAutos(storeInfo, answers),
+      privacy: generatePolicyPrivacy(storeInfo, hechos),
     });
   }
 
@@ -869,6 +949,7 @@ function LegalWizardModalAutos({ storeInfo, onClose, onApply }: {
               { label: "Cómo se coordina la entrega", text: preview.delivery },
               { label: "Condiciones de la operación", text: preview.operation },
               { label: "Términos y condiciones", text: preview.terms },
+              { label: "Política de privacidad", text: preview.privacy },
             ].map(({ label, text }) => (
               <div key={label} className="rounded-lg border border-slate-200 p-3">
                 <p className="text-xs font-bold text-slate-700 mb-1.5">{label}</p>
@@ -1044,7 +1125,7 @@ function Textarea({ value, onChange, placeholder, maxLength }: {
   );
 }
 
-function PolicyBlock({ icon, label, active, onToggle, value, onChange, placeholder }: {
+function PolicyBlock({ icon, label, active, onToggle, value, onChange, placeholder, nota }: {
   icon: React.ReactNode;
   label: string;
   active: boolean;
@@ -1052,17 +1133,29 @@ function PolicyBlock({ icon, label, active, onToggle, value, onChange, placehold
   value: string;
   onChange: (v: string) => void;
   placeholder: string;
+  nota?: string;
 }) {
+  // Una política vacía no se publica aunque el interruptor diga "Visible". Sin
+  // decirlo, el dueño ve "Visible" en un campo en blanco y da por hecho que hay
+  // algo publicado.
+  const vacia = !value.trim();
   return (
     <div className="rounded-lg border border-slate-200 overflow-hidden">
       <div className="flex items-center gap-2.5 px-4 py-3 bg-slate-50 border-b border-slate-100">
         <span className="text-slate-400">{icon}</span>
-        <span className="text-xs font-bold text-slate-700 flex-1">{label}</span>
+        <div className="flex-1 min-w-0">
+          <span className="text-xs font-bold text-slate-700">{label}</span>
+          {nota && <p className="text-[11px] text-slate-400 mt-0.5 leading-snug">{nota}</p>}
+        </div>
         <button
           onClick={onToggle}
-          className="flex items-center gap-1.5 text-xs font-semibold"
+          disabled={vacia}
+          title={vacia ? "Escribí algo primero" : undefined}
+          className="flex items-center gap-1.5 text-xs font-semibold shrink-0 disabled:cursor-not-allowed"
         >
-          {active
+          {vacia
+            ? <><ToggleLeft className="h-5 w-5 text-slate-200" /><span className="text-slate-300">Sin escribir</span></>
+            : active
             ? <><ToggleRight className="h-5 w-5 text-indigo-500" /><span className="text-indigo-600">Visible</span></>
             : <><ToggleLeft className="h-5 w-5 text-slate-300" /><span className="text-slate-400">Oculta</span></>}
         </button>
@@ -1072,12 +1165,12 @@ function PolicyBlock({ icon, label, active, onToggle, value, onChange, placehold
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
-          maxLength={2000}
+          maxLength={MAX_LARGO_POLITICA}
           rows={4}
           className="w-full bg-transparent text-sm text-slate-700 placeholder:text-slate-300 focus:outline-none resize-none leading-relaxed"
         />
         <div className="text-right mt-1">
-          <span className="text-[10px] text-slate-300">{value.length}/2000</span>
+          <span className="text-[10px] text-slate-300">{value.length}/{MAX_LARGO_POLITICA}</span>
         </div>
       </div>
     </div>

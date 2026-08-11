@@ -231,9 +231,20 @@ model Store {
   policyReturns         String?
   policyShipping        String?
   policyTerms           String?
+  // La de privacidad es la cuarta y llegó última, pero no es opcional en la
+  // práctica: /terminos §5 bis y /privacidad §4 de la plataforma le dicen al
+  // dueño que "sos el único responsable de informarlo en tu política de
+  // privacidad". Sin este campo le exigíamos por escrito un documento que el
+  // panel no le daba forma de escribir.
+  policyPrivacy         String?
   policyReturnsActive   Boolean   @default(true)
   policyShippingActive  Boolean   @default(true)
   policyTermsActive     Boolean   @default(true)
+  policyPrivacyActive   Boolean   @default(true)
+  // Cuándo se tocó por última vez cualquiera de las cuatro. Se muestra al pie
+  // de la página legal pública: ante un reclamo, importa poder decir qué decía
+  // la política y desde cuándo.
+  policiesUpdatedAt     DateTime?
   // Footer
   footerDescription     String?
   footerShowLegal       Boolean   @default(true)
