@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
 import { ESTADOS_VENTA_CONFIRMADA_LISTA } from "@/lib/order-status";
+import { documentosPublicados } from "@/lib/politicas-tienda";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -75,11 +76,41 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ slug
   const isOwner = !!currentUser && currentUser.id === store.ownerId;
   const hasMercadoPago = !!store.mpAccessToken;
 
-  // El access/refresh token de Mercado Pago y la dirección física de
-  // despacho (usada server-side para cotizar envío) nunca deben llegar al
-  // navegador del visitante (este endpoint es público).
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { mpAccessToken, mpRefreshToken, originStreet, originCity, originProvince, originPostalCode, ...safeStore } = store;
+  // ── Lo que NO puede salir de acá ────────────────────────────────────────────
+  //
+  // Este endpoint es público: no pide sesión y devuelve la fila entera de la
+  // tienda con `include`, o sea que TODA columna nueva de `Store` sale al
+  // navegador de cualquier visitante salvo que alguien se acuerde de agregarla
+  // a esta lista. Así fue como pasó: la lista tenía los tokens de Mercado Pago
+  // y la dirección de despacho —lo que existía cuando se escribió— y los de
+  // Meta y Google, que llegaron después, nunca se agregaron.
+  //
+  // Verificado contra la base: había un `fbAccessToken`, un `gaRefreshToken` y
+  // dos `tcOwnerAcceptedIp` viajando en respuestas públicas. Los dos tokens
+  // salen cifrados (`encryptToken`), así que no servían para tomar la cuenta de
+  // nadie; la IP no, esa es el domicilio de conexión del dueño en limpio.
+  //
+  // `campos-publicos.check.ts` recorre el schema y falla si aparece una columna
+  // nueva que parezca sensible y no esté acá, para que la próxima no dependa de
+  // que alguien se acuerde.
+  const {
+    // Credenciales de terceros (van cifradas, pero cifrado no es motivo para publicarlas).
+    mpAccessToken, mpRefreshToken,
+    fbAccessToken, gaRefreshToken,
+    // Identificadores de las cuentas conectadas del dueño.
+    mpSellerId, fbUserId, fbBusinessId, fbCatalogId, fbFeedId, fbWabaId, gaAccountId, gaPropertyId,
+    // Dirección física de despacho: se usa server-side para cotizar el envío.
+    originStreet, originCity, originProvince, originPostalCode,
+    // La IP desde la que el dueño aceptó los términos. Dato personal suyo, y no
+    // le sirve absolutamente para nada a quien está mirando la tienda.
+    tcOwnerAcceptedIp,
+    ...safeStore
+  } = store;
+  void mpAccessToken; void mpRefreshToken; void fbAccessToken; void gaRefreshToken;
+  void mpSellerId; void fbUserId; void fbBusinessId; void fbCatalogId; void fbFeedId;
+  void fbWabaId; void gaAccountId; void gaPropertyId;
+  void originStreet; void originCity; void originProvince; void originPostalCode;
+  void tcOwnerAcceptedIp;
 
   // Productos marcados como "solo mayorista" no deben enviarse al navegador de
   // visitantes de tiendas que no tienen venta mayorista habilitada.
@@ -89,9 +120,14 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ slug
     ? store.products
     : store.products.filter((p) => !p.soloMayorista);
 
+  // Qué políticas legales linkea el pie de la ficha de producto. Se calcula acá
+  // —con la misma función que la tienda y el mail— para que el navegador no
+  // tenga que repetir la regla de "texto y además activa".
+  const legales = documentosPublicados(store);
+
   // Ranking de ventas — solo se calcula cuando se pide explícitamente (ej: panel de afiliadas)
   // para no sumar una consulta extra en cada visita normal de un comprador a la tienda.
-  if (!withSales) return NextResponse.json({ store: { ...safeStore, products: visibleProducts }, isOwner, hasMercadoPago });
+  if (!withSales) return NextResponse.json({ store: { ...safeStore, products: visibleProducts }, isOwner, hasMercadoPago, legales });
 
   const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
   const visibleProductIds = visibleProducts.map((p) => p.id);
@@ -115,5 +151,5 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ slug
       .sort((a, b) => b.salesCount - a.salesCount),
   };
 
-  return NextResponse.json({ store: storeWithSales, isOwner, hasMercadoPago });
+  return NextResponse.json({ store: storeWithSales, isOwner, hasMercadoPago, legales });
 }
