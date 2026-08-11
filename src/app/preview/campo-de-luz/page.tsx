@@ -29,15 +29,20 @@ const PRODUCTOS = [
   { id: "8", foto: "https://picsum.photos/seed/av-8/700/900", nombre: "Jean recto",         precio: "$46.000", cat: "Pantalones" },
 ];
 
+// Acá no hay adónde ir: el banco de pruebas no tiene ficha ni catálogo. En el
+// template real esto abre el producto; el `onElegir` está para que el bloque
+// siga siendo clickeable y se pueda ver la animación.
+const noVaANingunLado = () => {};
+
 const MAZOS: MazoCoverflow[] = [
   {
     id: "destacados", etiqueta: "Destacados",
-    onElegir: (id) => console.log("abrir ficha", id),
+    onElegir: noVaANingunLado,
     piezas: PRODUCTOS.slice(0, 6).map(p => ({ id: p.id, imagen: p.foto, titulo: p.nombre, subtitulo: p.precio, etiqueta: p.cat })),
   },
   {
     id: "categorias", etiqueta: "Categorías",
-    onElegir: (id) => console.log("catálogo filtrado", id),
+    onElegir: noVaANingunLado,
     piezas: [
       { id: "vestidos",   imagen: "https://picsum.photos/seed/av-1/700/900", titulo: "Vestidos",   subtitulo: "12 productos" },
       { id: "camisas",    imagen: "https://picsum.photos/seed/av-2/700/900", titulo: "Camisas",    subtitulo: "8 productos" },
