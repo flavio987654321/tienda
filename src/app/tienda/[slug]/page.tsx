@@ -17,6 +17,7 @@ import { StoreTrackingScripts } from "@/components/store/StoreTrackingScripts";
 import { STORE_VERSION } from "@/lib/app-versions";
 import { getCurrentUser } from "@/lib/auth-session";
 import { isSubscriptionActive } from "@/lib/subscription";
+import { documentosPublicados } from "@/lib/politicas-tienda";
 
 export const dynamic = "force-dynamic";
 
@@ -86,6 +87,14 @@ export default async function TiendaPage({ params, searchParams }: TiendaPagePro
         mpAccessToken: true,
         ownerId: true,
         isVerified: true,
+        policyReturns: true,
+        policyShipping: true,
+        policyTerms: true,
+        policyPrivacy: true,
+        policyReturnsActive: true,
+        policyShippingActive: true,
+        policyTermsActive: true,
+        policyPrivacyActive: true,
         verifiedShowName: true,
         verifiedShowCity: true,
         verifiedShowPhone: true,
@@ -198,6 +207,10 @@ export default async function TiendaPage({ params, searchParams }: TiendaPagePro
     tieneVentaMayorista: store.tieneVentaMayorista ?? false,
     hasMercadoPago: !!store.mpAccessToken,
     isOwner,
+    // Solo las que tienen texto y están en Visible: el pie de página linkea
+    // esto y nada más, así que una política vacía o apagada no genera un link
+    // que lleva a "esta tienda todavía no publicó sus políticas".
+    legales: documentosPublicados(store),
     isVerified: store.isVerified,
     verifiedInfo: {
       showName: store.verifiedShowName, name: store.owner?.name ?? null,

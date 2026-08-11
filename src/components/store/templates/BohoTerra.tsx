@@ -37,6 +37,7 @@ import { colorToSwatch } from "@/lib/colorSwatch";
 import { discountPercent } from "@/lib/discount";
 import { resolveVariantPrice } from "@/lib/variantPrice";
 import { useTurnstile } from "@/components/Turnstile";
+import { linksLegales } from "@/lib/politicas-tienda";
 
 
 const BG  = "#faf7f2";
@@ -1559,11 +1560,7 @@ export default function BohoTerra() {
             barra recupera el ancho completo. */}
         <div style={{ borderTop:`1px solid rgba(44,34,24,0.07)`, paddingTop: 16, paddingBottom: isMobile ? 92 : 16, paddingLeft: isMobile ? 16 : (hasWA ? 110 : 40), paddingRight: isMobile ? 16 : 110, maxWidth:1280, margin:"0 auto", display:"flex", alignItems:"center", justifyContent: isMobile ? "center" : "space-between", flexWrap:"wrap", gap:"8px 24px", textAlign: isMobile ? "center" : undefined }}>
           <div style={{ display:"flex", flexWrap:"wrap", justifyContent: isMobile ? "center" : undefined, gap:"4px 16px" }}>
-            {[
-              { label: "Política de devoluciones", tipo: "devoluciones" },
-              { label: "Política de envíos",       tipo: "envios" },
-              { label: "Términos y condiciones",   tipo: "terminos" },
-            ].map(({ label, tipo }) => (
+            {linksLegales(storeConfig?.slug, storeConfig?.legales, { enEditor: editMode }).map(({ clave: tipo, label }) => (
               editMode ? (
                 <button key={tipo} type="button" onClick={() => window.open("/dashboard/pagos", "_blank")}
                   title="Editar en Dashboard → Pagos"

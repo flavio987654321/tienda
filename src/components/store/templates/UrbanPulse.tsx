@@ -39,6 +39,7 @@ import { colorToSwatch } from "@/lib/colorSwatch";
 import { discountPercent } from "@/lib/discount";
 import { resolveVariantPrice } from "@/lib/variantPrice";
 import { useTurnstile } from "@/components/Turnstile";
+import { linksLegales } from "@/lib/politicas-tienda";
 
 type Product = StorefrontProduct;
 
@@ -216,6 +217,56 @@ export default function UrbanPulse() {
     const base = cats.length > 0 ? cats : defaultCategories.slice(0, 6);
     return featuredCategories.length > 0 ? base.filter(c => featuredCategories.includes(c)) : base;
   }, [products, defaultCategories, featuredCategories]);
+
+  /* ── Las columnas del pie ───────────────────────────────────────────────────
+     Acá había tres columnas de texto inventado: "Mujer / Hombre / Accesorios",
+     "Guía de talles / Envíos / Devoluciones / FAQ", "Nosotros / Prensa / Empleo /
+     Sustentabilidad". No eran links: eran `EditableZone` dentro de un `<div>`,
+     o sea texto con pinta de link que no llevaba a ningún lado. Un cliente los
+     tocaba y no pasaba nada.
+
+     Además dos de ellos —"Envíos" y "Devoluciones"— competían con las políticas
+     de verdad que están unos píxeles más abajo, y "Prensa", "Empleo" y
+     "Sustentabilidad" son secciones de una multinacional, no de una tienda de
+     alguien que vende ropa.
+
+     Ahora cada entrada sale de algo que existe y va a algún lado. Una columna
+     sin nada real adentro no se dibuja —mismo criterio que ya usaban los íconos
+     de redes sociales de este mismo pie— salvo en el editor, donde el dueño
+     tiene que poder ver la grilla completa aunque su tienda esté vacía. */
+  const columnasPie = useMemo(() => {
+    // Todo va como `<a href>`, no como `<button onClick>`. Con un botón el
+    // destino no existe en el HTML: Google no lo puede seguir, ctrl+click no
+    // abre en pestaña nueva y el navegador no muestra a dónde va al pasar el
+    // mouse. Hasta las dos anclas de scroll son `href="#seccion"`, que el
+    // navegador resuelve solo y sigue andando sin JavaScript.
+    const qs = isPreview ? "t=urban-pulse&from=editor&" : "";
+    const ocultas = storeConfig?.hiddenSections ?? [];
+
+    const catalogo = categoryList.slice(0, 5).map(cat => ({
+      label: cat,
+      href: `/tienda/${storeConfig?.slug ?? ""}/productos?${qs}categoria=${encodeURIComponent(cat)}`,
+      externo: false,
+    }));
+
+    const ayuda: { label: string; href: string; externo: boolean }[] = [];
+    // Existe siempre y es lo que más se busca en un pie después de comprar.
+    ayuda.push({ label: "Seguí tu pedido", href: "/seguimiento", externo: false });
+    // Estas dos son anclas: si el dueño escondió la sección, el ancla no existe
+    // y el link volvería a no llevar a ningún lado.
+    if (!ocultas.includes("up-nosotros")) ayuda.push({ label: "Nosotros", href: "#nosotros", externo: false });
+    if (!ocultas.includes("up-contacto")) ayuda.push({ label: "Contacto", href: "#contacto", externo: false });
+    if (hasWA && storeConfig?.whatsapp?.number) {
+      const tel = storeConfig.whatsapp.number.replace(/\D/g, "");
+      if (tel) ayuda.push({ label: "WhatsApp", href: `https://wa.me/${tel}`, externo: true });
+    }
+
+    const columnas = [
+      { titleField: "footerCol1Title", titleDefault: "Tienda", links: catalogo },
+      { titleField: "footerCol2Title", titleDefault: "Ayuda", links: ayuda },
+    ];
+    return editMode ? columnas : columnas.filter(c => c.links.length > 0);
+  }, [categoryList, storeConfig, isPreview, hasWA, editMode]);
 
   /* Las categorías del bloque de baldosas: SOLO las que el dueño creó de verdad.
      `categoryList` no sirve acá porque en el editor `products` viene con los
@@ -2254,7 +2305,11 @@ export default function UrbanPulse() {
             </div>
           </div>
 
-          <div style={{ display:"grid", gridTemplateColumns: isMobile ? "repeat(2,minmax(0,1fr))" : "2fr 1fr 1fr 1fr", gap: isMobile ? "28px 24px" : 40, marginBottom:40 }}>
+          {/* La grilla ya no es fija en cuatro: las columnas de la derecha son
+              las que tengan algo real adentro, así que pueden ser dos, una o
+              ninguna. Con `2fr` fijo y una sola columna, la marca se comía dos
+              tercios y el pie quedaba desbalanceado. */}
+          <div style={{ display:"grid", gridTemplateColumns: isMobile ? "repeat(2,minmax(0,1fr))" : `2fr ${columnasPie.map(() => "1fr").join(" ")}`.trim(), gap: isMobile ? "28px 24px" : 40, marginBottom:40 }}>
             <div style={ isMobile ? { gridColumn:"1 / -1" } : undefined }>
               <div style={{ fontWeight:900, fontSize:24, letterSpacing:4, textTransform:"uppercase", color:footerUpText, marginBottom:16 }}>
                 <EditableZone field="storeName" label="Nombre de la tienda">
@@ -2286,19 +2341,23 @@ export default function UrbanPulse() {
               </div>
               )}
             </div>
-            {([
-              { titleField:"footerCol1Title", titleDefault:"Tienda",   links:[["footerCol1Link1","Mujer"],["footerCol1Link2","Hombre"],["footerCol1Link3","Accesorios"],["footerCol1Link4","Novedades"],["footerCol1Link5","Sale"]] },
-              { titleField:"footerCol2Title", titleDefault:"Ayuda",    links:[["footerCol2Link1","Guía de talles"],["footerCol2Link2","Envíos"],["footerCol2Link3","Devoluciones"],["footerCol2Link4","FAQ"],["footerCol2Link5","Contacto"]] },
-              { titleField:"footerCol3Title", titleDefault:"Empresa",  links:[["footerCol3Link1","Nosotros"],["footerCol3Link2","Prensa"],["footerCol3Link3","Empleo"],["footerCol3Link4","Sustentabilidad"]] },
-            ] as const).map(col => (
+            {columnasPie.map(col => (
               <div key={col.titleField}>
                 <p style={{ color:footerUpText, fontSize:10, fontWeight:900, letterSpacing:3, textTransform:"uppercase", margin:"0 0 18px" }}>
                   <EditableZone field={col.titleField} label={`Footer — columna título`}>{col.titleDefault}</EditableZone>
                 </p>
-                {col.links.map(([f, def]) => (
-                  <div key={f} style={{ display:"block", color:footerUpMid, fontSize:13, marginBottom:10 }}>
-                    <EditableZone field={f} label={`Footer link`}>{def}</EditableZone>
-                  </div>
+                {col.links.map(({ label, href, externo }) => (
+                  <a key={label} href={href}
+                    {...(externo ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+                    // En el editor los links se ven pero no navegan: sacarían a
+                    // la dueña de la pantalla en la que está acomodando su pie.
+                    onClick={e => { if (editMode) e.preventDefault(); }}
+                    style={{ display:"block", color:footerUpMid, fontSize:13, marginBottom:10,
+                      textDecoration:"none", cursor: editMode ? "default" : "pointer" }}
+                    onMouseEnter={e => { if (!editMode) e.currentTarget.style.color = footerUpText; }}
+                    onMouseLeave={e => { e.currentTarget.style.color = footerUpMid; }}>
+                    {label}
+                  </a>
                 ))}
               </div>
             ))}
@@ -2307,11 +2366,7 @@ export default function UrbanPulse() {
             /* ── MOBILE: 2 filas centradas ── */
             <div style={{ borderTop:`1px solid ${footerUpMid}`, paddingTop:20, paddingBottom:80, display:"flex", flexDirection:"column", gap:10, alignItems:"center" }}>
               <div style={{ display:"flex", flexWrap:"wrap", gap:"4px 14px", justifyContent:"center" }}>
-                {[
-                  { label: "Devoluciones", tipo: "devoluciones" },
-                  { label: "Envíos",       tipo: "envios" },
-                  { label: "Términos",     tipo: "terminos" },
-                ].map(({ label, tipo }) => (
+                {linksLegales(storeConfig?.slug, storeConfig?.legales, { enEditor: editMode, cortos: true }).map(({ clave: tipo, label }) => (
                   editMode ? (
                     <button key={tipo} type="button" onClick={() => window.open("/dashboard/pagos", "_blank")}
                       title="Editar en Dashboard → Pagos"
@@ -2348,11 +2403,7 @@ export default function UrbanPulse() {
             /* ── DESKTOP: fila izq/der original ── */
             <div style={{ borderTop:`1px solid ${footerUpMid}`, paddingTop:22, paddingLeft: hasWA ? 110 : 0, paddingRight:110, display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:"8px 24px" }}>
               <div style={{ display:"flex", flexWrap:"wrap", gap:"0 16px" }}>
-                {[
-                  { label: "Devoluciones", tipo: "devoluciones" },
-                  { label: "Envíos",       tipo: "envios" },
-                  { label: "Términos",     tipo: "terminos" },
-                ].map(({ label, tipo }) => (
+                {linksLegales(storeConfig?.slug, storeConfig?.legales, { enEditor: editMode, cortos: true }).map(({ clave: tipo, label }) => (
                   editMode ? (
                     <button key={tipo} type="button" onClick={() => window.open("/dashboard/pagos", "_blank")}
                       title="Editar en Dashboard → Pagos"

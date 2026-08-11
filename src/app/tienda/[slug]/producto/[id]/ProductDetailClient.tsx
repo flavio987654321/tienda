@@ -22,6 +22,7 @@ import HomeStudioDetail from "@/components/store/templates/productDetail/HomeStu
 import CasaClaraDetail from "@/components/store/templates/productDetail/CasaClaraDetail";
 import BohoTerraDetail from "@/components/store/templates/productDetail/BohoTerraDetail";
 import UrbanPulseDetail from "@/components/store/templates/productDetail/UrbanPulseDetail";
+import type { ClaveLegal } from "@/lib/politicas-tienda";
 
 const THEMED_DETAIL: Record<string, React.ComponentType<{ view: ProductDetailViewProps }>> = {
   "electro-prime": ElectroPrimeDetail,
@@ -35,7 +36,7 @@ const THEMED_DETAIL: Record<string, React.ComponentType<{ view: ProductDetailVie
 
 const fmt = (n: number) => "$" + n.toLocaleString("es-AR");
 
-export default function ProductDetailClient({ slug, productId, productoInicial = null, templateInicial = null }: {
+export default function ProductDetailClient({ slug, productId, productoInicial = null, templateInicial = null, legalesInicial = null, esAutosInicial = false }: {
   slug: string;
   productId: string;
   /**
@@ -62,6 +63,9 @@ export default function ProductDetailClient({ slug, productId, productoInicial =
    * generica igual, y la persona veia un parpadeo al cambiar.
    */
   templateInicial?: string | null;
+  /** Qué políticas legales linkea el pie, resueltas en el servidor. */
+  legalesInicial?: ClaveLegal[] | null;
+  esAutosInicial?: boolean;
 }) {
   const router = useRouter();
   const [products, setProducts] = useState<StorefrontProduct[]>([]);
@@ -75,6 +79,12 @@ export default function ProductDetailClient({ slug, productId, productoInicial =
   const [isPreview] = useState(() => typeof window !== "undefined" && new URLSearchParams(window.location.search).get("from") === "editor");
   const [isOwner, setIsOwner] = useState(false);
   const [socialLinks, setSocialLinks] = useState<Record<string, string> | undefined>(undefined);
+  // Qué políticas legales linkea el pie: las que tienen texto y están en
+  // Visible. Arrancan con lo que resolvió el servidor — si esperaran al pedido
+  // del navegador, el pie saldría sin los links en el HTML inicial y
+  // aparecerían recién al hidratar, o sea nunca para Google.
+  const [legales, setLegales] = useState<ClaveLegal[] | undefined>(legalesInicial ?? undefined);
+  const [esAutos, setEsAutos] = useState(esAutosInicial ?? false);
   const [accentOverride, setAccentOverride] = useState<string | undefined>(undefined);
   const [footerBg, setFooterBg] = useState<string | undefined>(undefined);
   const [loading, setLoading] = useState(true);
@@ -92,6 +102,8 @@ export default function ProductDetailClient({ slug, productId, productoInicial =
         setStoreName(data.store.name ?? "Tienda");
         setHasMercadoPago(!!data.hasMercadoPago);
         setIsOwner(!!data.isOwner);
+        if (Array.isArray(data.legales)) setLegales(data.legales);
+        setEsAutos(data.store.tipoTienda === "AUTOS");
         try {
           const cfg = JSON.parse(data.store.storeConfig || "{}");
           if (cfg.whatsapp?.enabled && cfg.whatsapp?.number) setWhatsapp(cfg.whatsapp.number);
@@ -247,7 +259,7 @@ export default function ProductDetailClient({ slug, productId, productoInicial =
   if (ThemedDetail) {
     const view: ProductDetailViewProps = {
       slug, storeName, currency, whatsapp, product, related, hasMercadoPago,
-      isPreview, isOwner, socialLinks, accentOverride, footerBg, cart,
+      isPreview, isOwner, socialLinks, legales, esAutos, accentOverride, footerBg, cart,
       activeImg, setActiveImg, seleccion, setOpcion,
       canAdd, qty, setQty, addToCart, cartCount, toastMsg, discount, promo: detailPromo, catalogHref,
     };

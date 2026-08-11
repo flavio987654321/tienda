@@ -35,6 +35,7 @@ import { discountPercent } from "@/lib/discount";
 import { resolveProductPromo, describePromo, resolveStoreEvent, eventLabelOf } from "@/lib/promoDisplay";
 import { resolveVariantPrice } from "@/lib/variantPrice";
 import { useTurnstile } from "@/components/Turnstile";
+import { linksLegales, type ClaveLegal } from "@/lib/politicas-tienda";
 
 const SOCIAL_NETWORKS: ["instagram"|"facebook"|"tiktok"|"youtube"|"pinterest", string][] = [
   ["instagram", "Instagram"], ["facebook", "Facebook"], ["tiktok", "TikTok"], ["youtube", "YouTube"], ["pinterest", "Pinterest"],
@@ -556,6 +557,8 @@ function ProductosPageInner() {
   const [accentOverride, setAccentOverride] = useState<string | null>(null);
   const [isOwner,    setIsOwner]    = useState(false);
   const [socialLinks, setSocialLinks] = useState<Record<string, string>>({});
+  // Qué políticas legales linkea el pie. Ver `lib/politicas-tienda`.
+  const [legales, setLegales] = useState<ClaveLegal[] | undefined>(undefined);
   const [footerBg, setFooterBg] = useState<string | null>(null);
   const [whatsapp, setWhatsapp] = useState<{ enabled: boolean; number: string; message: string } | null>(null);
   const [cartIconIdx, setCartIconIdx] = useState(0);
@@ -668,6 +671,7 @@ function ProductosPageInner() {
         dbNameRef.current  = data.store.name ?? "Tienda";
         setIsOwner(data.isOwner ?? false);
         setStoreName(data.store.name ?? "Tienda");
+        if (Array.isArray(data.legales)) setLegales(data.legales);
         if (data.store.tipoTienda === "AUTOS") {
           const qs = fromEditor ? "?from=editor" : "";
           router.replace(`/tienda/${slug}/vehiculos${qs}`);
@@ -2137,8 +2141,8 @@ function ProductosPageInner() {
           </div>
         )}
         <div style={{ display:"flex", flexWrap:"wrap", justifyContent:"center", gap:"0 16px" }}>
-          {[["Política de devoluciones","devoluciones"],["Política de envíos","envios"],["Términos y condiciones","terminos"]].map(([label, tipo]) => (
-            <a key={tipo} href={`/tienda/${slug}/politicas?tipo=${tipo}`} style={{ fontSize:10, color:footerFg, opacity:0.6, textDecoration:"none" }}>{label}</a>
+          {linksLegales(slug, legales, { enEditor: fromEditor }).map(({ clave, label, href }) => (
+            <a key={clave} href={href} style={{ fontSize:10, color:footerFg, opacity:0.6, textDecoration:"none" }}>{label}</a>
           ))}
           <button onClick={() => setShowReport(true)}
             style={{ fontSize:10, color:footerFg, opacity:0.6, background:"none", border:"none", cursor:"pointer", padding:0, textDecoration:"underline" }}>

@@ -13,6 +13,7 @@ import VerifiedIconButton from "@/components/store/VerifiedIconButton";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
 import { WaIcon, VehicleCard, VehicleModal, AM_MODAL_CSS, fmtPrice } from "@/components/store/auto/AutoVehicleShared";
 import { SectionBlock } from "@/components/store/templates/shared/SectionBlock";
+import { linksLegales } from "@/lib/politicas-tienda";
 
 function smoothScrollTo(id: string) {
   document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
@@ -681,11 +682,7 @@ export default function AutoMotor() {
             </EditableZone>
           </p>
           <div style={{ display:"flex", flexWrap:"wrap", justifyContent:"center", gap:"0 16px" }}>
-            {[
-              { label:"Política de devoluciones", tipo:"devoluciones" },
-              { label:"Política de envíos",       tipo:"envios" },
-              { label:"Términos y condiciones",   tipo:"terminos" },
-            ].map(({ label, tipo }) => (
+            {linksLegales(config?.slug, config?.legales, { enEditor: isPreview, esAutos: true }).map(({ clave: tipo, label }) => (
               <a key={tipo} href={`/tienda/${config?.slug ?? ""}/politicas?tipo=${tipo}`}
                 style={{ fontSize:10, color:ftMid, opacity:0.45, textDecoration:"none", letterSpacing:0.5 }}
                 onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity="1"; }}

@@ -20,6 +20,7 @@ import { ResenaComentario } from "@/components/store/templates/shared/ResenaCome
 import { describePromo, type ProductPromoDisplay } from "@/lib/promoDisplay";
 import type { useCartLogic } from "@/hooks/useCartLogic";
 import type { StorefrontProduct } from "@/hooks/useStorefront";
+import { linksLegales, type ClaveLegal } from "@/lib/politicas-tienda";
 
 export function fmtPrice(n: number, currency: string) {
   return `${currency === "ARS" ? "$" : currency} ${n.toLocaleString("es-AR")}`;
@@ -294,6 +295,9 @@ export interface ProductDetailViewProps {
   isPreview: boolean;
   isOwner: boolean;
   socialLinks: Record<string, string> | undefined;
+  /** Qué políticas legales linkea el pie. Ver `lib/politicas-tienda`. */
+  legales: ClaveLegal[] | undefined;
+  esAutos?: boolean;
   accentOverride: string | undefined;
   footerBg: string | undefined;
   cart: ReturnType<typeof useCartLogic>;
@@ -1029,7 +1033,7 @@ function detailCartTheme(theme: DetailTheme): CartTheme {
 // copyright, redes sociales, políticas, reportar tienda) — un solo lugar
 // para los 4 templates en vez de un footer simplificado por archivo.
 export function ProductDetailFooter({ theme, bg: defaultBg = "#0a0a0a", view }: { theme: DetailTheme; bg?: string; view: ProductDetailViewProps }) {
-  const { slug, storeName, socialLinks, isPreview, footerBg } = view;
+  const { slug, storeName, socialLinks, isPreview, footerBg, legales, esAutos } = view;
   const [showReport, setShowReport] = useState(false);
   // El color de fondo lo elige el dueño en el editor (mismo campo que el footer
   // del home); si todavía no lo tocó, usamos el default propio del template.
@@ -1064,8 +1068,8 @@ export function ProductDetailFooter({ theme, bg: defaultBg = "#0a0a0a", view }: 
         </div>
       )}
       <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "0 16px" }}>
-        {[["Política de devoluciones", "devoluciones"], ["Política de envíos", "envios"], ["Términos y condiciones", "terminos"]].map(([label, tipo]) => (
-          <a key={tipo} href={`/tienda/${slug}/politicas?tipo=${tipo}`} style={{ fontSize: 10, color: fg, opacity: 0.55, textDecoration: "none" }}>{label}</a>
+        {linksLegales(slug, legales, { esAutos, enEditor: isPreview }).map(({ clave, label, href }) => (
+          <a key={clave} href={href} style={{ fontSize: 10, color: fg, opacity: 0.55, textDecoration: "none" }}>{label}</a>
         ))}
         {!isPreview && (
           <button onClick={() => setShowReport(true)}

@@ -7,6 +7,7 @@ import { isDemoProductId } from "@/lib/demoProducts";
 import ProductDetailClient from "./ProductDetailClient";
 import { StoreTrackingScripts } from "@/components/store/StoreTrackingScripts";
 import type { StoreConfig } from "@/types/store-config";
+import { documentosPublicados } from "@/lib/politicas-tienda";
 import {
   construirProductSchema,
   construirBreadcrumbSchema,
@@ -131,12 +132,26 @@ export async function generateMetadata({ params, searchParams }: ProductoPagePro
 }
 
 async function findStoreConfig(slug: string) {
-  const store = await prisma.store.findFirst({ where: { slug, isActive: true }, select: { storeConfig: true } });
+  const store = await prisma.store.findFirst({
+    where: { slug, isActive: true },
+    select: {
+      storeConfig: true, tipoTienda: true,
+      // Los links legales del pie: si sólo los resolviera el pedido del
+      // navegador, el pie saldría sin ellos en el HTML inicial y aparecerían
+      // recién al hidratar — invisibles para Google, igual que le pasaba a la
+      // ficha entera antes de que el producto se resolviera también acá.
+      policyReturns: true, policyShipping: true, policyTerms: true, policyPrivacy: true,
+      policyReturnsActive: true, policyShippingActive: true,
+      policyTermsActive: true, policyPrivacyActive: true,
+    },
+  });
+  const legales = documentosPublicados(store);
+  const esAutos = store?.tipoTienda === "AUTOS";
   try {
     const parsed: Partial<StoreConfig> = JSON.parse(store?.storeConfig || "{}");
-    return { analytics: parsed.analytics, currency: parsed.currency || "ARS", template: parsed.template ?? null };
+    return { analytics: parsed.analytics, currency: parsed.currency || "ARS", template: parsed.template ?? null, legales, esAutos };
   } catch {
-    return { analytics: undefined, currency: "ARS" as const, template: null };
+    return { analytics: undefined, currency: "ARS" as const, template: null, legales, esAutos };
   }
 }
 
@@ -154,7 +169,7 @@ export default async function ProductoPage({ params, searchParams }: ProductoPag
     if (!product) notFound();
   }
 
-  const { analytics, currency, template } = await findStoreConfig(slug);
+  const { analytics, currency, template, legales, esAutos } = await findStoreConfig(slug);
 
   // ── Datos estructurados ────────────────────────────────────────────────────
   // Sólo para productos REALES: los demo del editor no existen para nadie más y
@@ -214,6 +229,8 @@ export default async function ProductoPage({ params, searchParams }: ProductoPag
         productId={id}
         productoInicial={product ? mapProduct(product as RawProduct) : null}
         templateInicial={template}
+        legalesInicial={legales}
+        esAutosInicial={esAutos}
       />
     </>
   );

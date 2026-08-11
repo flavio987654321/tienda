@@ -34,6 +34,7 @@ import { colorToSwatch } from "@/lib/colorSwatch";
 import { discountPercent } from "@/lib/discount";
 import { resolveVariantPrice } from "@/lib/variantPrice";
 import { useTurnstile } from "@/components/Turnstile";
+import { linksLegales } from "@/lib/politicas-tienda";
 
 
 /* Las reseñas de EJEMPLO de la vista rápida, para el editor. Sin esto el bloque
@@ -1504,11 +1505,7 @@ export default function FashionNoir() {
           /* ── MOBILE: 2 filas centradas ── */
           <div style={{ borderTop:`1px solid rgba(240,235,227,0.05)`, paddingTop:20, paddingBottom:80, maxWidth:1280, margin:"0 auto", display:"flex", flexDirection:"column", gap:10, alignItems:"center" }}>
             <div style={{ display:"flex", flexWrap:"wrap", gap:"4px 16px", justifyContent:"center" }}>
-              {[
-                { label: "Política de devoluciones", tipo: "devoluciones" },
-                { label: "Política de envíos",       tipo: "envios" },
-                { label: "Términos y condiciones",   tipo: "terminos" },
-              ].map(({ label, tipo }) => (
+              {linksLegales(storeConfig?.slug, storeConfig?.legales, { enEditor: editMode }).map(({ clave: tipo, label }) => (
                 editMode ? (
                   <button key={tipo} type="button" onClick={() => window.open("/dashboard/pagos", "_blank")}
                     title="Editar en Dashboard → Pagos"
@@ -1549,11 +1546,7 @@ export default function FashionNoir() {
           /* ── DESKTOP: fila izq/der original ── */
           <div style={{ borderTop:`1px solid rgba(240,235,227,0.05)`, paddingTop:24, paddingLeft: hasWA ? 110 : 0, paddingRight:110, maxWidth:1280, margin:"0 auto", display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:"8px 24px" }}>
             <div style={{ display:"flex", flexWrap:"wrap", gap:"0 20px" }}>
-              {[
-                { label: "Política de devoluciones", tipo: "devoluciones" },
-                { label: "Política de envíos",       tipo: "envios" },
-                { label: "Términos y condiciones",   tipo: "terminos" },
-              ].map(({ label, tipo }) => (
+              {linksLegales(storeConfig?.slug, storeConfig?.legales, { enEditor: editMode }).map(({ clave: tipo, label }) => (
                 editMode ? (
                   <button key={tipo} type="button" onClick={() => window.open("/dashboard/pagos", "_blank")}
                     title="Editar en Dashboard → Pagos"

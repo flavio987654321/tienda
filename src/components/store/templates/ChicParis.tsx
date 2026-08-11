@@ -35,6 +35,7 @@ import { colorToSwatch } from "@/lib/colorSwatch";
 import { discountPercent } from "@/lib/discount";
 import { resolveVariantPrice } from "@/lib/variantPrice";
 import { useTurnstile } from "@/components/Turnstile";
+import { linksLegales } from "@/lib/politicas-tienda";
 
 type Product = StorefrontProduct;
 
@@ -1965,11 +1966,7 @@ export default function ChicParis() {
               escritorio se mantienen las dos puntas. */}
           <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", justifyContent: isMobile ? "center" : "space-between", alignItems: "center", flexWrap: "wrap", gap: isMobile ? 16 : "8px 24px", paddingLeft: isMobile ? 0 : (hasWA ? 110 : 0), paddingRight: isMobile ? 0 : 100, textAlign: isMobile ? "center" : undefined }}>
             <div style={{ display: "flex", flexWrap: "wrap", justifyContent: isMobile ? "center" : undefined, gap: "4px 16px" }}>
-              {[
-                { label: "Política de devoluciones", tipo: "devoluciones" },
-                { label: "Política de envíos",       tipo: "envios" },
-                { label: "Términos y condiciones",   tipo: "terminos" },
-              ].map(({ label, tipo }) => (
+              {linksLegales(storeConfig?.slug, storeConfig?.legales, { enEditor: editMode }).map(({ clave: tipo, label }) => (
                 editMode ? (
                   <button key={tipo} type="button" onClick={() => window.open("/dashboard/pagos", "_blank")}
                     title="Editar en Dashboard → Pagos"
