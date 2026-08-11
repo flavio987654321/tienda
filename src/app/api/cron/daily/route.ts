@@ -24,6 +24,20 @@ import { despues } from "@/lib/despues";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "";
 
+// El techo del plan gratis de Vercel. Sin declararlo, la función se queda con el
+// default de la plataforma —bastante más corto— y este cron hace mucho: mails de
+// carritos, salud de MercadoPago, premios del mes, avisos de vencimiento, cierre
+// de tiendas por falta de pago, avisos de Sasha y la limpieza.
+//
+// Importa el orden: si se corta a la mitad, lo que no corre es lo de ABAJO, y
+// abajo están el cierre por falta de pago y los avisos de términos. Se cortaría
+// sin ruido —no hay error, la plataforma simplemente mata la función— así que
+// nadie se enteraría de que hace días que no cierra una tienda.
+//
+// Si algún día no alcanzan los 60 s, la salida no es subir esto (no se puede en
+// el plan gratis) sino partir el cron en dos, o mover lo pesado a `after()`.
+export const maxDuration = 60;
+
 type SnapshotItem = { name: string; price: number; qty: number; image?: string | null };
 
 export async function GET(req: NextRequest) {

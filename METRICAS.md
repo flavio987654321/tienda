@@ -745,7 +745,7 @@ User-Agent**. Lo que frena el abuso de verdad no es el UA, que se falsifica escr
 | Entrada de la URL | Todo pasa por `resolverRango` (55 chequeos): fechas contra el calendario real, rangos recortados, basura al preset con aviso a la vista |
 | Texto ajeno | **Ningún texto que escriba un comprador llega a Métricas ni al CSV.** Todo lo que pasa por `csv()` lo escribió la dueña o es una constante |
 | SQL | Prisma en todo el camino, parametrizado. Nada de SQL crudo |
-| Escrituras públicas | Las 24 rutas que escriben sin sesión tienen `getOwnerStore()`, `CRON_SECRET`, webhook firmado o tope por IP |
+| Escrituras públicas | Toda ruta que escribe sin sesión tiene `getOwnerStore()`, `CRON_SECRET`, webhook firmado o tope por IP. Sin número a propósito: decía "las 24" y quedó viejo al borrar cuatro crons duplicados, y un número acá envejece solo |
 
 ---
 
