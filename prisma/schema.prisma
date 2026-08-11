@@ -416,6 +416,11 @@ model PushCampaign {
   // Para que el drenado (hoy manual, mañana por cron) encuentre lo que quedó
   // a medias sin recorrer todo el historial.
   @@index([emailStatus])
+  // El historial del panel y el banner de la tienda filtran por (tienda, no
+  // borrada). El índice existía en la base desde la migración del borrado
+  // blando, pero nunca se declaró acá: `prisma migrate diff` lo veía de más y
+  // proponía borrarlo, que era exactamente lo contrario de lo que hay que hacer.
+  @@index([storeId, deletedAt])
 }
 
 /// Suscriptor del newsletter de una tienda: alguien que dejó su mail en el
