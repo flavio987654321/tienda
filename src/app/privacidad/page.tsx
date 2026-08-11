@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import { ShoppingBag, ArrowLeft } from "lucide-react";
-import { TERMS_LAST_UPDATED } from "@/lib/legal";
 import { siteUrl } from "@/lib/site";
+import PaginaLegalPlataforma, { rolValido } from "@/components/legal/PaginaLegalPlataforma";
 
 const DESCRIPTION =
   "Política de privacidad de TiendaApps: qué datos guardamos, para qué los usamos, cuánto los conservamos y cómo pedir que los borremos.";
@@ -21,8 +19,6 @@ export const metadata: Metadata = {
 const CONTENT = {
   owner: {
     label: "Dueño de tienda",
-    color: "text-indigo-400",
-    badge: "bg-indigo-500/10 border-indigo-500/20 text-indigo-400",
     sections: [
       {
         title: "1. Información que recopilamos",
@@ -233,8 +229,6 @@ const CONTENT = {
   },
   seller: {
     label: "Vendedor/Afiliado",
-    color: "text-purple-400",
-    badge: "bg-purple-500/10 border-purple-500/20 text-purple-400",
     sections: [
       {
         title: "1. Información que recopilamos",
@@ -318,8 +312,6 @@ const CONTENT = {
   },
   buyer: {
     label: "Cliente",
-    color: "text-pink-400",
-    badge: "bg-pink-500/10 border-pink-500/20 text-pink-400",
     sections: [
       {
         title: "1. Información que recopilamos",
@@ -455,8 +447,6 @@ const CONTENT = {
   },
   donor: {
     label: "Donante / Comunidad Solidaria",
-    color: "text-amber-400",
-    badge: "bg-amber-500/10 border-amber-500/20 text-amber-400",
     sections: [
       {
         title: "1. Información que recopilamos",
@@ -552,81 +542,17 @@ export default async function PrivacidadPage({
   searchParams: Promise<{ role?: string }>;
 }) {
   const { role: roleParam } = await searchParams;
-  const role = (roleParam as keyof typeof CONTENT) ?? "buyer";
-  const content = CONTENT[role] ?? CONTENT.buyer;
+  // Ver `rolValido`: el `?? CONTENT.buyer` de antes no tapaba las claves
+  // heredadas de Object.prototype y `?role=constructor` devolvia un 500.
+  const role = rolValido(roleParam, CONTENT) ?? "buyer";
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white">
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-gray-950/90 backdrop-blur-xl border-b border-white/5">
-        <div className="max-w-4xl mx-auto px-6 py-4 flex items-center gap-4">
-          <Link href="/" className="flex items-center gap-2.5">
-            <div className="w-8 h-8 bg-indigo-600 rounded-xl flex items-center justify-center">
-              <ShoppingBag className="h-5 w-5 text-white" />
-            </div>
-            <span className="text-lg font-bold text-white">TiendaApps</span>
-          </Link>
-        </div>
-      </nav>
-
-      <div className="pt-28 pb-20 px-6">
-        <div className="max-w-3xl mx-auto">
-          <Link href="/registro" className="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors mb-8">
-            <ArrowLeft className="h-4 w-4" /> Volver al registro
-          </Link>
-
-          <div className="flex items-center gap-3 mb-4">
-            <span className={`text-xs font-bold px-3 py-1 rounded-full border ${content.badge}`}>
-              {content.label}
-            </span>
-          </div>
-
-          <h1 className="text-4xl font-black mb-2">Política de Privacidad</h1>
-          <p className="text-gray-500 text-sm mb-6">Última actualización: {TERMS_LAST_UPDATED}</p>
-
-          {/* Responsable del tratamiento */}
-          <div className="rounded-xl border border-white/10 bg-white/5 p-5 mb-8 text-sm text-gray-300 space-y-1">
-            <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">Responsable del tratamiento de datos</p>
-            <p><span className="text-gray-500">Nombre:</span> Flavio Cesar Soltero Legoas</p>
-            <p><span className="text-gray-500">CUIL:</span> 20-94992405-0</p>
-            <p><span className="text-gray-500">Domicilio:</span> Bacota 1833 (entre Apolo y Juno), Pinamar, Buenos Aires, CP 7167</p>
-            <p><span className="text-gray-500">Email:</span>{" "}
-              <a href="mailto:marketplacemitienda@gmail.com" className="text-indigo-400 hover:underline">marketplacemitienda@gmail.com</a>
-            </p>
-            <p><span className="text-gray-500">Plataforma:</span> TiendaApps</p>
-          </div>
-
-          {/* Tabs por tipo */}
-          <div className="flex gap-2 mb-10 flex-wrap">
-            {(Object.entries(CONTENT) as [keyof typeof CONTENT, typeof CONTENT.buyer][]).map(([key, val]) => (
-              <Link
-                key={key}
-                href={`/privacidad?role=${key}`}
-                className={`text-xs font-semibold px-3 py-1.5 rounded-full border transition-all ${
-                  role === key ? val.badge : "border-white/10 text-gray-500 hover:text-gray-300"
-                }`}
-              >
-                {val.label}
-              </Link>
-            ))}
-          </div>
-
-          <div className="space-y-8 text-gray-300">
-            {content.sections.map((s) => (
-              <section key={s.title}>
-                <h2 className={`text-xl font-bold mb-3 ${content.color}`}>{s.title}</h2>
-                {s.body && <p className="text-sm leading-relaxed">{s.body}</p>}
-                {s.list && (
-                  <ul className="list-disc list-inside space-y-1.5 mt-2 text-sm">
-                    {s.list.map((item) => (
-                      <li key={item}>{item}</li>
-                    ))}
-                  </ul>
-                )}
-              </section>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
+    <PaginaLegalPlataforma
+      titulo="Política de Privacidad"
+      ruta="/privacidad"
+      tituloResponsable="Responsable del tratamiento de datos"
+      roles={CONTENT}
+      rolActivo={role}
+    />
   );
 }

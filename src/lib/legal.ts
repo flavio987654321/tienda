@@ -3,6 +3,24 @@
 // el contenido cambie de forma sustantiva — dispara el banner de re-aceptación
 // para usuarios que aceptaron una versión anterior.
 //
+// 1.6 (11/08/2026) — tres arreglos que salieron de revisar el texto, no de un
+// cambio de producto:
+//   · La sección 5 del Dueño decía "sos responsable de las comisiones que
+//     acordés con tus afiliados" y la 6, en el mismo documento, "TiendaApps es
+//     el responsable directo del pago de comisiones". Un afiliado que no cobraba
+//     podía reclamarle al dueño con la 5 en la mano y el dueño mandarlo acá con
+//     la 6. Gana la 6, que es la que describe cómo funciona de verdad: la 5
+//     ahora habla solo de definir el porcentaje y avisar los cambios.
+//   · El borrado definitivo de cuenta no estaba documentado en los términos del
+//     Dueño. La sección 7 lo remitía a "la sección 8", que es Propiedad
+//     intelectual — el número venía copiado de los términos del Cliente, donde
+//     la 8 sí es cancelación de cuenta. Se agrega 7 quater con lo que el sistema
+//     hace de verdad (anonimizar los registros fiscales en vez de borrarlos,
+//     liberar el email, los bloqueos por pedidos y comisiones pendientes).
+//   · Faltaba la solapa "Donante", que sí existe en la Política de Privacidad.
+//     /comunidad manda a ?role=donor y quien venía de ahí caía en "Cliente" sin
+//     aviso, aunque donar no requiere cuenta ni haber comprado nada.
+//
 // 1.5 (07/08/2026) — topes de productos. El plan Pro pasa a tener uno (1.000
 // publicados), y aparece además un techo de 5.000 por tienda que corre para
 // cualquier plan, Premium incluido. Ese segundo no es comercial: las tres rutas
@@ -26,7 +44,7 @@
 // cambiaron seis veces (Meta, Google Analytics, cambio de rubro, entre otros), así
 // que el banner nunca se disparó por ninguno de esos cambios. El bump a 1.3
 // arrastró toda esa deuda de una.
-export const CURRENT_TERMS_VERSION = "1.5";
+export const CURRENT_TERMS_VERSION = "1.6";
 
 /**
  * Condiciones del diseño colaborativo (/diseno-propio). Versión aparte de
@@ -50,9 +68,9 @@ export const DESIGN_BRIEF_TERMS_VERSION = "1.0";
  * sección ni "conforme a lo dispuesto".
  */
 export const CURRENT_TERMS_SUMMARY: string[] = [
-  "El plan Pro pasa a tener un tope de 1.000 productos publicados. Premium sigue sin tope de plan.",
-  "Sumamos un máximo de 5.000 productos por tienda, para cualquier plan. No es comercial: es para que nadie pueda llenar el sistema con carga automática y dejar el servicio lento para el resto.",
-  "Igual que con los cupones y las promociones, cuenta lo que tenés publicado: si borrás un producto, ese lugar queda libre en el momento.",
+  "Aclaramos quién paga las comisiones de afiliados. Había dos partes del texto que decían cosas distintas: ahora queda escrito en un solo lugar que las paga TiendaApps directamente al afiliado, y que lo tuyo es definir el porcentaje y avisar si lo cambiás.",
+  "Escribimos qué pasa cuando eliminás tu cuenta, que antes no estaba explicado en ningún lado: qué se borra, qué queda anonimizado por obligación fiscal, y por qué conviene cerrar la tienda en vez de eliminarla si lo único que querés es dejar de pagar.",
+  "Si donaste a la Canasta Solidaria o a una Causa Libre, ahora tenés tu propia solapa en los términos. Antes te mandaba a la de Cliente, aunque para donar no hace falta tener cuenta ni haber comprado nunca.",
 ];
 
 /**

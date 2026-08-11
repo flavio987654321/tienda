@@ -1,9 +1,7 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import { ShoppingBag, ArrowLeft } from "lucide-react";
-import { TERMS_LAST_UPDATED } from "@/lib/legal";
 import { PRICES, PRO_MAX_ACTIVE_COUPONS, PRO_MAX_LIVE_PROMOTIONS, PRO_MAX_AFFILIATES, PRO_MAX_PRODUCTS, MAX_PRODUCTS_POR_TIENDA } from "@/lib/planLimits";
 import { siteUrl } from "@/lib/site";
+import PaginaLegalPlataforma, { rolValido } from "@/components/legal/PaginaLegalPlataforma";
 
 const DESCRIPTION =
   "Términos y condiciones de TiendaApps: qué incluye cada plan, cómo funcionan los cobros, las cancelaciones y el programa de afiliados.";
@@ -31,8 +29,6 @@ const miles = (n: number) => n.toLocaleString("es-AR");
 const CONTENT = {
   owner: {
     label: "Dueño de tienda",
-    color: "text-indigo-400",
-    badge: "bg-indigo-500/10 border-indigo-500/20 text-indigo-400",
     sections: [
       {
         title: "1. Aceptación de los términos",
@@ -84,7 +80,7 @@ const CONTENT = {
           "Sos responsable de que los productos que publiques sean legales y tengan información veraz (precios, stock, imágenes, descripción).",
           "Sos responsable de cumplir con los envíos y la atención al cliente.",
           "No podés publicar productos prohibidos, falsificados, ilegales o que infrinjan derechos de terceros.",
-          "Sos responsable de las comisiones que acordés con tus afiliados.",
+          "Sos responsable de definir el porcentaje de comisión de tu programa de afiliados y de respetar el aviso previo antes de modificarlo (ver sección 6). El pago de las comisiones no está a tu cargo: lo hace TiendaApps directamente al afiliado, como se detalla en esa sección.",
           "Sos responsable de cumplir con las obligaciones impositivas de tu actividad comercial. Sos el vendedor real frente a tus clientes y el emisor de los comprobantes de venta: la facturación y la conservación de la documentación comercial y fiscal de tus operaciones (conforme al art. 328 del Código Civil y Comercial y la normativa fiscal vigente) están a tu cargo. TiendaApps es un intermediario tecnológico y no emite comprobantes por tus ventas.",
         ],
       },
@@ -157,7 +153,7 @@ const CONTENT = {
           "Antes de cerrarte la tienda por falta de pago te avisamos por email dos veces: el día que vence tu plan y otra vez unos días antes del cierre.",
           "Acceso al panel tras el vencimiento: durante los primeros 4 días corridos desde que vence seguís entrando normalmente a tu panel, con un aviso. Pasado ese plazo el panel queda bloqueado hasta que renueves, aunque tu tienda siga online hasta la fecha de cierre.",
           "Mientras tu tienda esté cerrada no acepta pedidos nuevos, y quien entre a su dirección web va a ver un aviso de que no está disponible.",
-          "Eliminar tu cuenta es otra cosa y no tiene vuelta: ver la sección 8. Si lo que querés es dejar de pagar sin perder tu trabajo, lo que corresponde es cerrar la tienda.",
+          "Eliminar tu cuenta es otra cosa y no tiene vuelta: ver la sección 7 quater. Si lo que querés es dejar de pagar sin perder tu trabajo, lo que corresponde es cerrar la tienda.",
           "Las comisiones ya acreditadas en el panel de comisiones de tus afiliadas no se extinguen por cerrar tu tienda, ni por el cierre automático, ni por eliminar tu cuenta.",
         ],
       },
@@ -184,6 +180,20 @@ const CONTENT = {
           "Aviso a tus clientes: si difundiste un cupón o una promoción (por email, redes u otro medio) y lo das de baja para poder cambiar de rubro, sos responsable de avisar de esa baja por los mismos medios por los que lo difundiste (art. 7, Ley 24.240 — la oferta obliga a quien la emite), o de esperar a que venza antes de cambiar. Darlo de baja en el panel lo desactiva en la plataforma, pero no cancela por sí solo el anuncio que hiciste por fuera.",
           "Los cupones de premio que TiendaApps le entrega a los afiliados (sección 6) no se ven afectados por tu cambio de rubro ni te frenan el cambio: no son cupones de tu tienda, pertenecen al afiliado y puede usarlos en cualquier otra tienda que los acepte.",
           "Tu tienda pública queda despublicada (offline) desde el cambio hasta que configures y publiques el catálogo del nuevo rubro. La ruleta de premios, si la usabas, queda desactivada hasta que la configures con premios nuevos.",
+        ],
+      },
+      {
+        title: "7 quater. Eliminar tu cuenta",
+        body: "Eliminar tu cuenta es distinto de cerrar tu tienda (sección 7) y no tiene vuelta atrás. Se hace desde Configuración → Zona de peligro, escribiendo tu email para confirmar.",
+        list: [
+          "Antes de eliminarla, el sistema verifica lo mismo que para cerrar la tienda: no se permite mientras tengas pedidos sin entregar o cancelar, ni comisiones de afiliadas sin liquidar. Eliminar la cuenta no extingue ninguna de esas obligaciones.",
+          "Qué se borra: tus datos personales, los de tu tienda, tus imágenes y archivos, y tus datos bancarios cifrados (CBU/CUIL), que no se conservan. Tu email queda liberado, así que podés volver a registrarte con la misma dirección más adelante.",
+          "Qué NO se borra, y por qué: los pedidos, pagos y comisiones quedan anonimizados en lugar de eliminarse. No se conservan tus datos personales en ellos, pero sí el registro de la operación, porque son documentación comercial que la ley obliga a conservar (art. 328 del Código Civil y Comercial) y porque un comprador puede tener una garantía o un reclamo en curso (Ley 24.240 art. 10 bis).",
+          "También se conserva la constancia de qué versión de estos Términos aceptaste y cuándo. Es la prueba de tu propio consentimiento: sin ella no podríamos acreditar en qué condiciones operaste.",
+          "Los plazos exactos de conservación de cada tipo de dato están en la sección 6 de la Política de Privacidad.",
+          "Si tenés afiliadas activas, se les avisa que la tienda cerró y que los saldos ya acreditados en su panel siguen disponibles para retirar. Esas comisiones no se extinguen por eliminar tu cuenta.",
+          "No hay reembolso de los días que te quedaran del período abonado.",
+          "Si lo que buscás es dejar de pagar sin perder tu trabajo, no elimines la cuenta: cerrá la tienda (sección 7). Es reversible y no se borra nada.",
         ],
       },
       {
@@ -231,8 +241,6 @@ const CONTENT = {
   },
   seller: {
     label: "Vendedor/Afiliado",
-    color: "text-purple-400",
-    badge: "bg-purple-500/10 border-purple-500/20 text-purple-400",
     sections: [
       {
         title: "1. Aceptación de los términos",
@@ -318,8 +326,6 @@ const CONTENT = {
   },
   buyer: {
     label: "Cliente",
-    color: "text-pink-400",
-    badge: "bg-pink-500/10 border-pink-500/20 text-pink-400",
     sections: [
       {
         title: "1. Aceptación de los términos",
@@ -419,6 +425,63 @@ const CONTENT = {
       },
     ],
   },
+  /**
+   * El donante existía en /privacidad pero no acá, y /comunidad manda a
+   * `?role=donor`: quien venía de ahí a leer los términos caía en "Cliente"
+   * sin aviso — y donar no requiere tener cuenta ni haber comprado nada, así
+   * que ni siquiera es cliente.
+   *
+   * Es corto a propósito. El documento detallado de las donaciones es
+   * /canasta/terminos, y ese ya declara que "forma parte de los Términos y
+   * Condiciones generales". Repetir sus ocho puntos acá sería una cuarta copia
+   * de las mismas reglas, con una cuarta forma de quedar desactualizada.
+   */
+  donor: {
+    label: "Donante / Comunidad Solidaria",
+    sections: [
+      {
+        title: "1. Qué son estos términos",
+        body: "Si donás a una campaña de la Canasta Solidaria o a una Causa Libre, la donación se rige por los Términos de la donación, publicados en tiendaapps.com/canasta/terminos. Ese es el documento completo y forma parte de estos Términos y Condiciones generales. Acá está lo esencial.",
+      },
+      {
+        title: "1 bis. No hace falta tener cuenta",
+        body: "Podés donar sin registrarte en TiendaApps. Si donás con la sesión iniciada, vinculamos la donación a tu cuenta; si no, la donación es igual de válida. Para donar tenés que tener al menos 18 años.",
+      },
+      {
+        title: "2. Una donación no es una compra",
+        body: null,
+        list: [
+          "Es un aporte voluntario, separado de cualquier compra. No es el pago de un producto ni de un servicio, así que no aplican el derecho de arrepentimiento de la Ley 24.240 ni las garantías legales de productos.",
+          "Las donaciones son no reembolsables, salvo error de cobro comprobado.",
+          "Donar no te da derecho a recibir nada a cambio ni ningún premio. No es un sorteo.",
+        ],
+      },
+      {
+        title: "3. Adónde va la plata",
+        body: "El dinero donado va directo a la cuenta de TiendaApps y se destina exclusivamente al objetivo de la campaña correspondiente. Nunca va a la cuenta de una tienda, aunque hayas donado desde el carrito de una compra. El equipo de TiendaApps decide quién recibe lo recaudado en cada campaña — nunca es uno de los donantes.",
+      },
+      {
+        title: "4. Montos y límites",
+        body: "Hay un mínimo por donación y un tope por persona para que cada campaña sea un aporte de la comunidad y no la financie una sola persona, además de una donación confirmada por persona y por campaña. Los valores exactos están en tiendaapps.com/canasta/terminos, que es donde se mantienen actualizados.",
+      },
+      {
+        title: "5. Cambios en una campaña",
+        body: "TiendaApps puede modificar, pausar o cancelar una campaña en cualquier momento, informando a los donantes por email ante cambios relevantes.",
+      },
+      {
+        title: "6. Tus datos",
+        body: "El tratamiento de los datos que dejás al donar —y de la información que compartas si iniciás una solicitud de ayuda, que puede ser sensible— está detallado en la Política de Privacidad, solapa 'Donante / Comunidad Solidaria'.",
+      },
+      {
+        title: "7. Modificaciones",
+        body: "Podemos actualizar estos términos. Ante cambios significativos te avisaremos por el canal que consideremos más adecuado, con razonable anticipación. La fecha de 'última actualización' al inicio de esta página siempre refleja la versión vigente.",
+      },
+      {
+        title: "8. Contacto",
+        body: "Para consultas o reclamos sobre una donación escribinos a tiendaapps.solidaria@gmail.com. Para cualquier otro tema, a marketplacemitienda@gmail.com",
+      },
+    ],
+  },
 };
 
 export default async function TerminosPage({
@@ -427,81 +490,19 @@ export default async function TerminosPage({
   searchParams: Promise<{ role?: string }>;
 }) {
   const { role: roleParam } = await searchParams;
-  const role = (roleParam as keyof typeof CONTENT) ?? "buyer";
-  const content = CONTENT[role] ?? CONTENT.buyer;
+  // `rolValido` y no el `?? CONTENT.buyer` de antes: ese tapaba una clave que no
+  // existe, pero no una heredada de Object.prototype. `?role=constructor`
+  // devolvía la función `Object` —truthy, así que el `??` no la reemplazaba— y
+  // la página reventaba con un 500 al hacer `content.sections.map`.
+  const role = rolValido(roleParam, CONTENT) ?? "buyer";
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white">
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-gray-950/90 backdrop-blur-xl border-b border-white/5">
-        <div className="max-w-4xl mx-auto px-6 py-4 flex items-center gap-4">
-          <Link href="/" className="flex items-center gap-2.5">
-            <div className="w-8 h-8 bg-indigo-600 rounded-xl flex items-center justify-center">
-              <ShoppingBag className="h-5 w-5 text-white" />
-            </div>
-            <span className="text-lg font-bold text-white">TiendaApps</span>
-          </Link>
-        </div>
-      </nav>
-
-      <div className="pt-28 pb-20 px-6">
-        <div className="max-w-3xl mx-auto">
-          <Link href="/registro" className="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors mb-8">
-            <ArrowLeft className="h-4 w-4" /> Volver al registro
-          </Link>
-
-          <div className="flex items-center gap-3 mb-4">
-            <span className={`text-xs font-bold px-3 py-1 rounded-full border ${content.badge}`}>
-              {content.label}
-            </span>
-          </div>
-
-          <h1 className="text-4xl font-black mb-2">Términos y Condiciones</h1>
-          <p className="text-gray-500 text-sm mb-6">Última actualización: {TERMS_LAST_UPDATED}</p>
-
-          {/* Responsable */}
-          <div className="rounded-xl border border-white/10 bg-white/5 p-5 mb-8 text-sm text-gray-300 space-y-1">
-            <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">Datos del prestador del servicio</p>
-            <p><span className="text-gray-500">Nombre:</span> Flavio Cesar Soltero Legoas</p>
-            <p><span className="text-gray-500">CUIL:</span> 20-94992405-0</p>
-            <p><span className="text-gray-500">Domicilio:</span> Bacota 1833 (entre Apolo y Juno), Pinamar, Buenos Aires, CP 7167</p>
-            <p><span className="text-gray-500">Email:</span>{" "}
-              <a href="mailto:marketplacemitienda@gmail.com" className="text-indigo-400 hover:underline">marketplacemitienda@gmail.com</a>
-            </p>
-            <p><span className="text-gray-500">Plataforma:</span> TiendaApps</p>
-          </div>
-
-          {/* Tabs por tipo */}
-          <div className="flex gap-2 mb-10 flex-wrap">
-            {(Object.entries(CONTENT) as [keyof typeof CONTENT, typeof CONTENT.buyer][]).map(([key, val]) => (
-              <Link
-                key={key}
-                href={`/terminos?role=${key}`}
-                className={`text-xs font-semibold px-3 py-1.5 rounded-full border transition-all ${
-                  role === key ? val.badge : "border-white/10 text-gray-500 hover:text-gray-300"
-                }`}
-              >
-                {val.label}
-              </Link>
-            ))}
-          </div>
-
-          <div className="space-y-8 text-gray-300">
-            {content.sections.map((s) => (
-              <section key={s.title}>
-                <h2 className={`text-xl font-bold mb-3 ${content.color}`}>{s.title}</h2>
-                {s.body && <p className="text-sm leading-relaxed">{s.body}</p>}
-                {s.list && (
-                  <ul className="list-disc list-inside space-y-1.5 mt-2 text-sm">
-                    {s.list.map((item) => (
-                      <li key={item}>{item}</li>
-                    ))}
-                  </ul>
-                )}
-              </section>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
+    <PaginaLegalPlataforma
+      titulo="Términos y Condiciones"
+      ruta="/terminos"
+      tituloResponsable="Datos del prestador del servicio"
+      roles={CONTENT}
+      rolActivo={role}
+    />
   );
 }
