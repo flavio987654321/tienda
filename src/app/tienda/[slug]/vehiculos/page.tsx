@@ -4,7 +4,9 @@ import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Suspense } from "react";
 import { VehicleCard, VehicleModal, AM_MODAL_CSS } from "@/components/store/auto/AutoVehicleShared";
+import ReportStoreModal from "@/components/store/ReportStoreModal";
 import { getContrastColor } from "@/contexts/EditContext";
+import { linksLegales, type ClaveLegal } from "@/lib/politicas-tienda";
 import type { StorefrontProduct } from "@/hooks/useStorefront";
 
 type RawVehicle = {
@@ -188,6 +190,9 @@ function VehiculosPageInner() {
   const [selected,  setSelected]  = useState<StorefrontProduct | null>(null);
   const [imgErrors,    setImgErrors]    = useState<Record<string, boolean>>({});
   const [hoveredMarca, setHoveredMarca] = useState<string | null>(null);
+  // Qué políticas legales linkea el pie. Ver `lib/politicas-tienda`.
+  const [legales,    setLegales]    = useState<ClaveLegal[] | undefined>(undefined);
+  const [showReport, setShowReport] = useState(false);
 
   const [search,         setSearch]      = useState("");
   const [activeCategory, setActiveCat]   = useState("Todos");
@@ -212,6 +217,7 @@ function VehiculosPageInner() {
           if (cfg.templateId ?? cfg.template) setTemplateId(cfg.templateId ?? cfg.template);
           if (cfg.sectionColors?.navBg)    setNavBgColor(cfg.sectionColors.navBg);
         } catch {}
+        if (Array.isArray(data.legales)) setLegales(data.legales);
         setProducts((data.store.products ?? []).map(mapVehicle));
       })
       .catch(() => {})
@@ -299,13 +305,22 @@ function VehiculosPageInner() {
 
   return (
     <div style={{ background: BG, color: T, minHeight: "100vh", fontFamily: "'Inter','Segoe UI',system-ui,sans-serif" }}>
-      <style>{AM_MODAL_CSS}{`
+      {/* Un solo hijo, no dos.
+          Estaba escrito `<style>{AM_MODAL_CSS}{`…`}</style>`: dos expresiones
+          hermanas adentro del mismo <style>. React trata cada una como un nodo de
+          texto distinto y en el HTML del servidor las separa con un comentario
+          `<!-- -->`; al hidratar, el navegador ya había fundido el contenido del
+          <style> en uno solo, así que no coincidían y toda la página se volvía a
+          renderizar del lado del cliente ("Hydration failed").
+          Era el único de los tres pantallas públicas de la tienda con este error
+          —el listado y la portada arman su CSS en un solo literal— y venía de
+          antes de esta rama. */}
+      <style>{`${AM_MODAL_CSS}
         .st-scroll::-webkit-scrollbar{display:none}.st-scroll{scrollbar-width:none;-ms-overflow-style:none}
         .av-grid { display:grid; gap:20px; grid-template-columns:1fr }
         @media(min-width:560px){ .av-grid { grid-template-columns:repeat(2,1fr) } }
         @media(min-width:900px){ .av-grid { grid-template-columns:repeat(3,1fr) } }
         @media(min-width:1200px){ .av-grid { grid-template-columns:repeat(4,1fr) } }
-        .brand-chip { }
       `}</style>
 
       {/* ── HEADER ── */}
@@ -549,6 +564,34 @@ function VehiculosPageInner() {
         )}
 
       </div>
+
+      {/* ── PIE LEGAL ──
+          Era la única pantalla pública de una tienda sin políticas a la vista: la
+          portada, el listado y la ficha ya las linkeaban, y acá —donde se mira el
+          precio de un auto— no había nada. Los títulos van en versión autos
+          ("Condiciones de la operación", "Cómo se coordina la entrega"): esta
+          pantalla existe solo para tiendas de vehículos, que no envían ni aceptan
+          devoluciones, y prometer "Política de envíos" sería mentirle al que
+          compra. */}
+      <footer style={{ borderTop:`1px solid ${borderFaint}`, background:S,
+        padding:"28px clamp(16px,4vw,32px)", marginTop:8 }}>
+        <div style={{ maxWidth:1280, margin:"0 auto", display:"flex", flexWrap:"wrap",
+          justifyContent:"center", alignItems:"center", gap:"8px 18px" }}>
+          {linksLegales(slug, legales, { esAutos: true, enEditor: fromEditor }).map(({ clave, label, href }) => (
+            <a key={clave} href={href}
+              style={{ fontSize:11, color:MID, textDecoration:"none", letterSpacing:0.3 }}>
+              {label}
+            </a>
+          ))}
+          <button onClick={() => setShowReport(true)}
+            style={{ fontSize:11, color:MID, background:"none", border:"none",
+              cursor:"pointer", padding:0, textDecoration:"underline", letterSpacing:0.3 }}>
+            Reportar tienda
+          </button>
+        </div>
+      </footer>
+
+      {showReport && <ReportStoreModal slug={slug} onClose={() => setShowReport(false)} />}
 
       {selected && (
         <VehicleModal

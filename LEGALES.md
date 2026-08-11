@@ -174,13 +174,24 @@ El último bloque de `politicas-tienda.check.ts` recorre las 16 combinaciones
 posibles de políticas cargadas y verifica que la tienda, el pie y el mail digan
 exactamente lo mismo. Eran tres copias de la regla y una sola funcionaba.
 
-## 8. Lo que queda pendiente
+## 8. Lo que quedaba pendiente, y ya no
 
-- **`/tienda/<slug>/vehiculos` no tiene pie con links legales.** Las tiendas de
-  autos publican su catálogo ahí y esa página no ofrece ninguna política.
-- **Las columnas del pie de Urban Pulse** ("Guía de talles", "FAQ", "Empleo",
-  "Prensa", "Sustentabilidad") son texto editable, no links: se ven como links y
-  no llevan a ningún lado. Dos de ellas —"Envíos" y "Devoluciones"— compiten
-  visualmente con las políticas de verdad que están más abajo.
-- **`/api/public/[slug]` sigue con lista de exclusión, no de inclusión.** El
-  chequeo tapa el agujero pero el default sigue siendo público.
+- ~~**`/tienda/<slug>/vehiculos` no tiene pie con links legales.**~~ **Cerrado el
+  11/08/2026.** Tiene su pie, con los títulos en versión autos ("Condiciones de
+  la operación", "Cómo se coordina la entrega") y el botón de reportar tienda,
+  igual que el resto de las pantallas públicas.
+- ~~**Las columnas del pie de Urban Pulse** son texto editable, no links.~~
+  **Cerrado.** Ahora son `<a href>` reales: hasta 5 categorías de la tienda,
+  seguimiento de pedido, nosotros/contacto y WhatsApp.
+- ~~**`/api/public/[slug]` sigue con lista de exclusión.**~~ **Cerrado el
+  11/08/2026.** Pasó a lista blanca (`CAMPOS_PUBLICOS` + `select` de Prisma), así
+  que agregar una columna a `Store` ya no la publica. De paso dejaron de salir
+  diez campos que nadie leía y no tenían por qué ser públicos, entre ellos
+  `commissionRate` —el porcentaje que la tienda le paga a sus afiliadas— y
+  `ownerId`.
+
+### Lo que sigue abierto
+
+- **No hay ninguna tienda de autos en la base**, así que ese camino legal está
+  cubierto solo por los chequeos, nunca por un navegador. Cuando exista la
+  primera, mirar `/politicas` y el pie de `/vehiculos` de verdad.
