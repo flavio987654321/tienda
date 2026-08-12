@@ -21,10 +21,6 @@ export type StorefrontVariant = {
 // Escalón de precio mayorista: a partir de "desde" unidades, el precio es "precio".
 export type PrecioEscalonFront = { desde: number; precio: number };
 
-// Referencia estable para "esta tienda no marcó categorías destacadas". Ver dónde
-// se usa, abajo: existe para no romper los `useMemo` que dependen de ella.
-const SIN_DESTACADAS: string[] = [];
-
 /** Una opción de producto: cómo se llama y qué valores tiene. */
 export type OpcionProducto = { nombre: string; valores: string[] };
 
@@ -440,13 +436,6 @@ export function useStorefront() {
   const isWholesale        = config?.tieneVentaMayorista ?? false;
   const ocultarPrecios     = config?.ocultarPreciosPublico ?? false;
   const defaultCategories  = storeTypeConfig.categorias;
-  // La constante compartida, y no un `?? []` suelto: un `[]` nuevo en cada render es
-  // una referencia nueva, y `featuredCategories` es dependencia del `useMemo` que
-  // arma `categoryList` en Urban Pulse, Boho Terra, Chic Paris y Fashion Noir. Con
-  // la tienda sin categorías destacadas —el caso normal— esos cuatro memos no
-  // acertaban NUNCA: recalculaban en cada render y encima pagaban el costo de
-  // memorizar. Nadie la muta (verificado), así que compartirla es seguro.
-  const featuredCategories = config?.featuredCategories ?? SIN_DESTACADAS;
   const hasMercadoPago     = config?.hasMercadoPago ?? false;
   const shippingMethods    = config?.shippingMethods ?? null;
 
@@ -455,5 +444,5 @@ export function useStorefront() {
   // dashboard se arma desde DEFAULT_CONFIG y nunca setea isOwner, así que llega en
   // false aunque quien está mirando sea el dueño. `previewFill` es lo único que
   // distingue "estoy acomodando mi tienda" de "un comprador está navegando".
-  return { products, promotions, loadingProducts, affiliateId, storeId, slug, isOwner: config?.isOwner ?? false, isPreview: previewFill, resolveVariantId, validateCoupon, placeOrder, checkoutMode, isWholesale, ocultarPrecios, defaultCategories, featuredCategories, hasMercadoPago, shippingMethods };
+  return { products, promotions, loadingProducts, affiliateId, storeId, slug, isOwner: config?.isOwner ?? false, isPreview: previewFill, resolveVariantId, validateCoupon, placeOrder, checkoutMode, isWholesale, ocultarPrecios, defaultCategories, hasMercadoPago, shippingMethods };
 }

@@ -146,15 +146,15 @@ export default function BohoTerra() {
   const isOwner     = !!storeConfig?.isOwner;
   const hasWA       = !storeConfig || storeConfig.whatsapp.enabled;
   const storefront  = useStorefront();
-  const { products, promotions, checkoutMode, isWholesale, ocultarPrecios, defaultCategories, featuredCategories } = storefront;
+  const { products, promotions, checkoutMode, isWholesale, ocultarPrecios, defaultCategories } = storefront;
   const { editMode, overrides: textOverrides, setOverride } = useEditContext();
   const isInquiryMode = checkoutMode === "inquiry" || ocultarPrecios;
 
   const categoryList = useMemo(() => {
     const cats = [...new Set(products.map(p => p.category).filter(c => c && c !== "general"))];
     const base = cats.length > 0 ? cats : defaultCategories.slice(0, 6);
-    return featuredCategories.length > 0 ? base.filter(c => featuredCategories.includes(c)) : base;
-  }, [products, defaultCategories, featuredCategories]);
+    return base;
+  }, [products, defaultCategories]);
   const A = storeConfig?.colors.accent ?? "#b5652a";
   // El acento usado como TEXTO sobre el panel blanco del modal. El terracota de
   // fábrica se lee perfecto, pero el acento lo elige la dueña: con uno claro
@@ -648,7 +648,17 @@ export default function BohoTerra() {
             <VerifiedIconButton isVerified={storeConfig?.isVerified} info={storeConfig?.verifiedInfo} />
           </div>
           {!isMobile && (
-            <div style={{ display:"flex", gap:20, alignItems:"center" }}>
+            /* Cuando la tienda usa géneros, este grupo lleva Categorías + Mujer +
+               Hombre y el `space-between` del padre lo deja centrado, que es donde
+               va bien. Cuando NO los usa —el caso de la mayoría— queda "Categorías"
+               sola flotando en el medio de la barra, sin nada alrededor y lejos de
+               todo lo demás.
+               El `marginLeft:auto` se come todo el espacio libre antes de que el
+               `space-between` reparta, así que este grupo termina pegado al de la
+               derecha, al lado de Nuestra Historia. Es eso y no mover el JSX de
+               lugar: el menú es el mismo, cambia dónde se apoya. */
+            <div style={{ display:"flex", gap:20, alignItems:"center",
+              ...(hayGeneros ? {} : { marginLeft:"auto", marginRight:20 }) }}>
               {/* CATEGORÍAS dropdown */}
               <div style={{ position:"relative" }}
                 onMouseEnter={() => setHoveredNavCat("__open__")}

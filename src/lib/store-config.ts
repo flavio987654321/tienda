@@ -92,7 +92,9 @@ export const storeConfigSchema = z.object({
   tipoTienda: z.string().max(30).optional(),
   tieneVentaMayorista: z.boolean().optional(),
   ocultarPreciosPublico: z.boolean().optional(),
-  featuredCategories: z.array(z.string().max(80)).optional(),
+  // `featuredCategories` se elimino: filtraba el menu de navegacion, no solo el
+  // inicio como decia. Al no estar en el schema, el valor que haya quedado
+  // guardado en el JSON de una tienda se descarta en el proximo guardado.
   storeId: z.string().optional(),
   slug: z.string().optional(),
   flyerConfig: z.object({

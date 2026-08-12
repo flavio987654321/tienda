@@ -244,7 +244,7 @@ export default function ChicParis() {
   const enEditor    = isPreview && !demoPublica;
   const isOwner     = !!storeConfig?.isOwner;
   const storefront  = useStorefront();
-  const { products, promotions, loadingProducts, checkoutMode, isWholesale, ocultarPrecios, defaultCategories, featuredCategories } = storefront;
+  const { products, promotions, loadingProducts, checkoutMode, isWholesale, ocultarPrecios, defaultCategories } = storefront;
 
   // ── El bloque de prueba social ──────────────────────────────────────────────
   // Todo esto —de dónde salen las reseñas, las dos pestañas, el promedio, borrar
@@ -280,8 +280,8 @@ export default function ChicParis() {
     // las tiene, así que cada una sería un link a un listado vacío — y el
     // visitante lee "no tienen nada", no "todavía no cargaron categorías".
     const base = cats.length > 0 ? cats : (isPreview ? defaultCategories.slice(0, 6) : []);
-    return featuredCategories.length > 0 ? base.filter(c => featuredCategories.includes(c)) : base;
-  }, [products, defaultCategories, featuredCategories, isPreview]);
+    return base;
+  }, [products, defaultCategories, isPreview]);
 
   const ACC   = storeConfig?.colors.accent ?? "#c0392b";
   const sc    = storeConfig?.sectionColors ?? {};

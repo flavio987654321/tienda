@@ -195,14 +195,14 @@ export default function Aurora() {
   const isOwner     = !!storeConfig?.isOwner;
   const hasWA       = !storeConfig || storeConfig.whatsapp.enabled;
   const storefront  = useStorefront();
-  const { products, promotions, loadingProducts, checkoutMode, isWholesale, ocultarPrecios, defaultCategories, featuredCategories } = storefront;
+  const { products, promotions, loadingProducts, checkoutMode, isWholesale, ocultarPrecios, defaultCategories } = storefront;
   const isInquiryMode = checkoutMode === "inquiry" || ocultarPrecios;
 
   const categoryList = useMemo(() => {
     const cats = [...new Set(products.map(p => p.category).filter(c => c && c !== "general"))];
     const base = cats.length > 0 ? cats : defaultCategories.slice(0, 6);
-    return featuredCategories.length > 0 ? base.filter(c => featuredCategories.includes(c)) : base;
-  }, [products, defaultCategories, featuredCategories]);
+    return base;
+  }, [products, defaultCategories]);
 
   /* Las categorías que van al mazo de la vidriera: SÓLO las que el dueño creó de
      verdad. `categoryList` no sirve porque en el editor `products` viene con los
@@ -212,8 +212,8 @@ export default function Aurora() {
     const reales = [...new Set(
       products.filter(p => !isDemoProductId(p.id)).map(p => p.category).filter(c => c && c !== "general")
     )];
-    return featuredCategories.length > 0 ? reales.filter(c => featuredCategories.includes(c)) : reales;
-  }, [products, featuredCategories]);
+    return reales;
+  }, [products]);
 
   const subcategoriesFor = useMemo(() => {
     const map: Record<string, string[]> = {};
@@ -690,7 +690,14 @@ export default function Aurora() {
             </button>
             <VerifiedIconButton isVerified={storeConfig?.isVerified} info={storeConfig?.verifiedInfo} />
           </div>
-          {!isMobile && <div style={{ display:"flex", gap:28, alignItems:"center" }}>
+          {/* Con géneros este grupo lleva Categorías + Mujer + Hombre y el
+              `space-between` del padre lo deja centrado, que es donde va bien. Sin
+              géneros queda "Categorías" sola en el medio de la barra, lejos de
+              todo. El `marginLeft:auto` se come el espacio libre antes de que el
+              `space-between` reparta, así que el grupo termina pegado al de la
+              derecha. Cambia dónde se apoya el menú, no el menú. */}
+          {!isMobile && <div style={{ display:"flex", gap:28, alignItems:"center",
+            ...(hayGeneros ? {} : { marginLeft:"auto", marginRight:28 }) }}>
             {/* CATEGORÍAS dropdown */}
             <div style={{ position:"relative" }}
               onMouseEnter={() => setHoveredNavCat("__open__")}

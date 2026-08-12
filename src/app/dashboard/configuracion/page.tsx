@@ -397,42 +397,23 @@ function FlyerImageSlot({ url, slot, onUpload, onRemove }: {
 }
 
 /* ── Config avanzada modal ──────────────────────────────────── */
-function ConfigModal({ config, update, onClose, onSave, onDelete, storeSlug, isPremium }: {
+function ConfigModal({ config, update, onClose, onSave, onDelete, isPremium }: {
   config: StoreConfig;
   update: <K extends keyof StoreConfig>(key: K, value: StoreConfig[K]) => void;
   onClose: () => void;
   onSave: () => Promise<void>;
   onDelete: () => void;
-  storeSlug?: string | null;
   isPremium?: boolean;
 }) {
-  const [availableCategories, setAvailableCategories] = useState<string[]>([]);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   // `undefined` = este template no deja tocar el nav, y entonces el bloque entero
   // no se dibuja. Si deja, este es el color que muestra el selector mientras nadie
   // haya elegido otro.
   const navBgDeFabrica = TEMPLATE_NAV_BG[config.template];
 
-  useEffect(() => {
-    if (!storeSlug) return;
-    fetch(`/api/public/${storeSlug}`)
-      .then(r => r.ok ? r.json() : null)
-      .then(data => {
-        const cats: string[] = [...new Set(
-          (data?.store?.products ?? [])
-            .map((p: { category?: string }) => p.category)
-            .filter((c: string | undefined) => c && c !== "general")
-        )] as string[];
-        setAvailableCategories(cats);
-      })
-      .catch(() => {});
-  }, [storeSlug]);
-
-  function toggleFeaturedCategory(cat: string) {
-    const current = config.featuredCategories ?? [];
-    const next = current.includes(cat) ? current.filter(c => c !== cat) : [...current, cat];
-    update("featuredCategories", next);
-  }
+  // Se va con "Categorías destacadas": este fetch existía sólo para llenar esa
+  // lista de casillas. Era ademas la unica razon por la que abrir Configuración
+  // avanzada pedía la tienda entera al endpoint público.
 
   const inp: React.CSSProperties = {
     width: "100%", padding: "9px 12px", border: "1px solid #e2e8f0",
@@ -711,37 +692,19 @@ function ConfigModal({ config, update, onClose, onSave, onDelete, storeSlug, isP
             </div>
           )}
 
-          {/* Categorías destacadas */}
-          {availableCategories.length > 0 && (
-            <div style={sec}>
-              <p style={{ margin: "0 0 4px", fontSize: 12, fontWeight: 700, color: "#0f172a", display: "flex", alignItems: "center", gap: 6 }}>
-                📌 Categorías destacadas
-              </p>
-              <p style={{ margin: "0 0 12px", fontSize: 11, color: P.muted }}>
-                Elegí cuáles aparecen como secciones en el inicio. Si no seleccionás ninguna, se muestran todas.
-              </p>
-              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                {availableCategories.map(cat => {
-                  const active = (config.featuredCategories ?? []).includes(cat);
-                  return (
-                    <button key={cat} type="button" onClick={() => toggleFeaturedCategory(cat)}
-                      style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", borderRadius: 8, border: `1.5px solid ${active ? "#6366f1" : "#e2e8f0"}`, background: active ? "#eef2ff" : "white", cursor: "pointer", textAlign: "left", transition: "all 0.15s" }}>
-                      <span style={{ fontSize: 13, fontWeight: 600, color: active ? "#4338ca" : "#374151" }}>{cat}</span>
-                      <span style={{ width: 18, height: 18, borderRadius: 5, border: `2px solid ${active ? "#6366f1" : "#cbd5e1"}`, background: active ? "#6366f1" : "white", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                        {active && <svg width={10} height={10} viewBox="0 0 12 12" fill="none"><polyline points="2,6 5,9 10,3" stroke="white" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"/></svg>}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-              {(config.featuredCategories ?? []).length > 0 && (
-                <button type="button" onClick={() => update("featuredCategories", [])}
-                  style={{ marginTop: 8, width: "100%", padding: "6px", border: "1px solid #e2e8f0", borderRadius: 7, background: "white", color: P.muted, fontSize: 11, cursor: "pointer" }}>
-                  Mostrar todas las categorías
-                </button>
-              )}
-            </div>
-          )}
+          {/* Acá vivía "📌 Categorías destacadas".
+              Prometía elegir "cuáles aparecen como secciones en el inicio", pero la
+              misma lista filtraba el MENÚ de navegación, el menú de celular y las
+              columnas del pie. Tildar una categoría para destacarla en la portada
+              escondía todas las demás del único menú de la tienda, sin decirlo en
+              ningún lado.
+              Se vio en Amaranta: 9 categorías, 58 productos, y el menú mostraba
+              "vestidos" y nada más.
+              Se elimina en vez de arreglarse. Arreglado —que filtrara sólo el
+              inicio— seguía siendo un ajuste escondido en Configuración avanzada
+              cuyo efecto visible es que desaparecen categorías, o sea la misma
+              trampa con menos alcance. Sin él, el inicio muestra todas las
+              categorías reales, que es lo que una tienda quiere. */}
 
           {/* Flyer de publicidad — solo Premium */}
           <div style={sec}>
@@ -2859,7 +2822,7 @@ export default function ConfiguracionPage() {
 
       {/* Config modal */}
       {configModalOpen && (
-        <ConfigModal config={config} update={update} onClose={() => setConfigModalOpen(false)} onSave={handleSave} onDelete={() => { setConfigModalOpen(false); handleDelete(); }} storeSlug={storeSlug} isPremium={isPremium} />
+        <ConfigModal config={config} update={update} onClose={() => setConfigModalOpen(false)} onSave={handleSave} onDelete={() => { setConfigModalOpen(false); handleDelete(); }} isPremium={isPremium} />
       )}
 
       {/* Confirmar salir sin guardar */}

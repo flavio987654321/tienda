@@ -245,7 +245,6 @@ export type StoreConfig = {
   tieneVentaMayorista?: boolean;
   hasMercadoPago?: boolean;
   ocultarPreciosPublico?: boolean;
-  featuredCategories?: string[];
   flyerConfig?: FlyerConfig;
   showPushBell?: boolean;
   onPreviewBellClick?: () => void;
