@@ -15,7 +15,9 @@ export type Pantalla = { href: string; slug: string; titulo: string };
 export const PANTALLAS: Pantalla[] = [
   { href: "/dashboard/pedidos",              slug: "los-estados-de-un-pedido",         titulo: "Los estados de un pedido" },
   { href: "/dashboard/consultas",            slug: "consultas",                        titulo: "Las consultas de tus vehículos" },
-  { href: "/dashboard/productos",            slug: "que-muestra-google-de-tus-productos", titulo: "Qué muestra Google de tus productos" },
+  // El `?` de Productos abre el paso a paso, no el artículo de Google: el que
+  // está parado ahí y toca ayuda está cargando algo, no planificando su SEO.
+  { href: "/dashboard/productos",            slug: "como-cargar-un-producto",          titulo: "Cómo cargar un producto" },
   { href: "/dashboard/cupones",              slug: "cupones",                          titulo: "Cupones: cómo funcionan" },
   { href: "/dashboard/promociones",          slug: "como-armar-una-promocion",         titulo: "Cómo armar una promoción" },
   { href: "/dashboard/carritos-abandonados", slug: "carritos-abandonados",             titulo: "Carritos abandonados" },

@@ -1,5 +1,3 @@
-import type { StoreType } from "@/lib/storeTypes";
-
 /* ── El formato de un artículo de ayuda ──────────────────────────────────────
    El cuerpo NO es texto suelto como el de las políticas de la tienda. Ahí el
    texto lo escribe el dueño en un textarea y lo único que puede haber son
@@ -53,11 +51,23 @@ export interface Articulo {
   clase: Clase;
   /** La pantalla del panel de la que habla, cuando habla de una. */
   pantalla?: { label: string; href: string };
-  /** Rubros a los que aplica. Vacío = todos. Mismo criterio que el menú del
-   *  panel, que ya esconde Cupones y Promociones en los rubros de leads: si el
-   *  panel no muestra la pantalla, la ayuda no puede explicarla. */
-  soloPara?: StoreType[];
-  exceptoPara?: StoreType[];
+  /* A qué tiendas les aplica, por MODO DE VENTA y no por rubro. Sin esto, a todas.
+   *
+   * Mismo criterio que el menú del panel, que ya esconde Cupones y Promociones
+   * en las tiendas por consulta: si el panel no muestra la pantalla, la ayuda no
+   * puede explicarla — mandar a alguien a una pantalla que no tiene es peor que
+   * no decirle nada.
+   *
+   * Dice el MODO a propósito. La versión obvia era enumerar rubros —"todos menos
+   * AUTOS"—, y esa lista hay que ir a tocarla en cada artículo cada vez que entra
+   * un rubro nuevo. Inmobiliaria y servicios ya están anunciados; con listas de
+   * rubros, el día que entren habría que revisar los diecinueve artículos uno por
+   * uno, y el que se olvide de uno le va a estar explicando cupones a una
+   * inmobiliaria.
+   *
+   * `checkoutMode` ya vive en la config de cada rubro (`storeTypes.ts`), así que
+   * un rubro nuevo declara el suyo una vez y la ayuda entera lo hereda sola. */
+  checkout?: "cart" | "inquiry";
   cuerpo: Bloque[];
   /** Slugs. Acá se cruzan las dos mitades: la mecánica linkea a su criterio. */
   relacionados?: string[];

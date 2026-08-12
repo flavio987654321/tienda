@@ -1,4 +1,4 @@
-import type { StoreType } from "@/lib/storeTypes";
+import { getStoreType, type StoreType } from "@/lib/storeTypes";
 import { ARTICULOS } from "./articulos";
 import { PANTALLAS } from "./pantallas";
 import { GRUPOS, type Articulo, type Grupo } from "./tipos";
@@ -11,20 +11,16 @@ export function buscarArticulo(slug: string): Articulo | undefined {
   return ARTICULOS.find((a) => a.slug === slug);
 }
 
-/* Filtro por rubro, con la misma regla que el menú del panel: `onlyFor` y
- * `hiddenFor`. Si el panel no le muestra Promociones a una inmobiliaria, la
- * ayuda tampoco puede explicárselas — mandarla a una pantalla que no tiene es
- * peor que no decirle nada.
+/* Los artículos que le sirven a una tienda, según venda con carrito o por
+ * consulta. El modo sale de la config del rubro, no de una lista escrita acá.
  *
- * Sin rubro (la ayuda pública, donde el lector todavía no tiene tienda) devuelve
- * todo: ahí no hay a quién filtrarle nada. */
+ * Sin rubro —la ayuda pública, donde el lector todavía no tiene tienda—
+ * devuelve todo: ahí no hay a quién filtrarle nada, y esconderle la mitad a
+ * alguien que está evaluando la plataforma sería peor. */
 export function articulosDe(rubro?: StoreType): Articulo[] {
   if (!rubro) return ARTICULOS;
-  return ARTICULOS.filter((a) => {
-    if (a.soloPara && !a.soloPara.includes(rubro)) return false;
-    if (a.exceptoPara?.includes(rubro)) return false;
-    return true;
-  });
+  const modo = getStoreType(rubro).checkoutMode;
+  return ARTICULOS.filter((a) => !a.checkout || a.checkout === modo);
 }
 
 /* El índice agrupado. Se saltean los grupos vacíos: un título con nada abajo

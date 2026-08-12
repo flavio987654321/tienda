@@ -1,12 +1,48 @@
 import Link from "next/link";
-import { ArrowRight, LifeBuoy } from "lucide-react";
+import { ArrowRight, LifeBuoy, Store } from "lucide-react";
 import { SiteNav } from "@/components/SiteNav";
 import { SiteFooter } from "@/components/SiteFooter";
 import Chip from "@/components/ayuda/Chip";
 import { porGrupo } from "@/lib/ayuda";
+import { getCurrentUser } from "@/lib/auth-session";
+import { getStoreType, type StoreType } from "@/lib/storeTypes";
+import { prisma } from "@/lib/prisma";
 
-export default function AyudaIndexPage() {
-  const grupos = porGrupo();
+/* El ÍNDICE lee la sesión, así que se arma en cada pedido. Las fichas de cada
+   artículo NO: siguen generándose en el build, que es lo que las hace rápidas y
+   lo que Google rastrea. La sesión solo decide qué se LISTA acá.
+
+   Un visitante sin sesión —y el robot de Google, que nunca la tiene— ve los
+   diecinueve. */
+export const dynamic = "force-dynamic";
+
+/* El rubro de quien está mirando, si es dueño de una tienda.
+ *
+ * Nunca tira: la ayuda tiene que abrir aunque la base no conteste. Si algo
+ * falla, se cae para el lado de mostrar todo — de más nunca dejó a nadie sin
+ * la respuesta que buscaba. */
+async function rubroDelLector(): Promise<StoreType | undefined> {
+  try {
+    const user = await getCurrentUser();
+    if (!user || user.role !== "OWNER") return undefined;
+    const store = await prisma.store.findUnique({
+      where: { ownerId: user.id },
+      select: { tipoTienda: true },
+    });
+    return (store?.tipoTienda as StoreType | undefined) ?? undefined;
+  } catch (e) {
+    console.error("[ayuda] no se pudo leer el rubro del lector:", e);
+    return undefined;
+  }
+}
+
+type Props = { searchParams: Promise<{ todo?: string }> };
+
+export default async function AyudaIndexPage({ searchParams }: Props) {
+  const { todo } = await searchParams;
+  const rubro = todo === "1" ? undefined : await rubroDelLector();
+  const grupos = porGrupo(rubro);
+  const config = rubro ? getStoreType(rubro) : null;
 
   return (
     <div className="min-h-screen bg-white text-gray-950">
@@ -25,6 +61,25 @@ export default function AyudaIndexPage() {
             por lo que querés lograr, no por la pantalla donde se hace.
           </p>
         </header>
+
+        {/* Filtrar en silencio sería peor que no filtrar: el que ya leyó algo
+            sobre cupones y no lo encuentra más piensa que la ayuda se rompió.
+            Se dice qué se está viendo y se deja la puerta para ver el resto. */}
+        {config && (
+          <div className="mt-6 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3">
+            <Store className="h-4 w-4 shrink-0 text-gray-400" aria-hidden="true" />
+            <p className="text-sm text-gray-600">
+              Estás viendo la ayuda de una tienda de{" "}
+              <span className="font-semibold text-gray-950">{config.label}</span>.
+            </p>
+            <Link
+              href="/ayuda?todo=1"
+              className="text-sm font-semibold text-orange-700 underline underline-offset-2 hover:text-orange-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-600"
+            >
+              Ver todos los artículos
+            </Link>
+          </div>
+        )}
 
         <div className="mt-12 flex flex-col gap-14">
           {grupos.map((grupo) => (

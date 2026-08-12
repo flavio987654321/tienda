@@ -148,7 +148,7 @@ export const ARTICULOS: Articulo[] = [
     clase: "criterio",
     pantalla: { label: "Productos", href: "/dashboard/productos" },
     actualizado: "2026-08-11",
-    relacionados: ["publicar-la-tienda"],
+    relacionados: ["como-cargar-un-producto", "las-fotos-de-tus-productos"],
     cuerpo: [
       {
         t: "p",
@@ -230,7 +230,7 @@ export const ARTICULOS: Articulo[] = [
     grupo: "vender",
     clase: "mecanica",
     pantalla: { label: "Promociones", href: "/dashboard/promociones" },
-    exceptoPara: ["AUTOS"],
+    checkout: "cart",
     actualizado: "2026-08-11",
     relacionados: ["que-promocion-conviene"],
     cuerpo: [
@@ -294,7 +294,7 @@ export const ARTICULOS: Articulo[] = [
       "Envío gratis, 20% off o 3×2 no dan el mismo resultado. Cuál usar según lo que quieras lograr.",
     grupo: "vender",
     clase: "criterio",
-    exceptoPara: ["AUTOS"],
+    checkout: "cart",
     actualizado: "2026-08-11",
     relacionados: ["como-armar-una-promocion"],
     cuerpo: [
@@ -363,7 +363,7 @@ export const ARTICULOS: Articulo[] = [
     grupo: "vender",
     clase: "mecanica",
     pantalla: { label: "Cupones", href: "/dashboard/cupones" },
-    exceptoPara: ["AUTOS"],
+    checkout: "cart",
     actualizado: "2026-08-11",
     relacionados: ["cupon-o-promocion", "como-armar-una-promocion"],
     cuerpo: [
@@ -424,7 +424,7 @@ export const ARTICULOS: Articulo[] = [
       "Las dos descuentan, pero no sirven para lo mismo. Cuál usar según a quién le querés hacer el precio.",
     grupo: "vender",
     clase: "criterio",
-    exceptoPara: ["AUTOS"],
+    checkout: "cart",
     actualizado: "2026-08-11",
     relacionados: ["cupones", "que-promocion-conviene"],
     cuerpo: [
@@ -486,7 +486,7 @@ export const ARTICULOS: Articulo[] = [
     grupo: "vender",
     clase: "mecanica",
     pantalla: { label: "Reseñas", href: "/dashboard/resenas" },
-    exceptoPara: ["AUTOS"],
+    checkout: "cart",
     actualizado: "2026-08-11",
     relacionados: ["que-muestra-google-de-tus-productos"],
     cuerpo: [
@@ -558,7 +558,7 @@ export const ARTICULOS: Articulo[] = [
     grupo: "vender",
     clase: "mecanica",
     pantalla: { label: "Carritos abandonados", href: "/dashboard/carritos-abandonados" },
-    exceptoPara: ["AUTOS"],
+    checkout: "cart",
     actualizado: "2026-08-11",
     relacionados: ["que-promocion-conviene", "publicar-la-tienda"],
     cuerpo: [
@@ -629,7 +629,7 @@ export const ARTICULOS: Articulo[] = [
     grupo: "cobrar",
     clase: "mecanica",
     pantalla: { label: "Pedidos", href: "/dashboard/pedidos" },
-    exceptoPara: ["AUTOS"],
+    checkout: "cart",
     actualizado: "2026-08-11",
     relacionados: ["que-significan-los-avisos-del-panel"],
     cuerpo: [
@@ -752,7 +752,7 @@ export const ARTICULOS: Articulo[] = [
     grupo: "cobrar",
     clase: "mecanica",
     pantalla: { label: "Pagos", href: "/dashboard/pagos" },
-    exceptoPara: ["AUTOS"],
+    checkout: "cart",
     actualizado: "2026-08-11",
     relacionados: ["publicar-la-tienda", "los-estados-de-un-pedido"],
     cuerpo: [
@@ -816,7 +816,7 @@ export const ARTICULOS: Articulo[] = [
     grupo: "cobrar",
     clase: "mecanica",
     pantalla: { label: "Consultas", href: "/dashboard/consultas" },
-    soloPara: ["AUTOS"],
+    checkout: "inquiry",
     actualizado: "2026-08-11",
     relacionados: ["que-significan-los-avisos-del-panel"],
     cuerpo: [
@@ -1069,6 +1069,181 @@ export const ARTICULOS: Articulo[] = [
         tono: "dato",
         texto:
           "Si solo querés que la tienda deje de verse un tiempo, **despublicarla** alcanza y no toca tu plan ni tus datos.",
+      },
+    ],
+  },
+
+  {
+    slug: "envios",
+    titulo: "Cómo entregar",
+    resumen:
+      "Las formas de entrega que ve el cliente al pagar: retiro, precio fijo, a coordinar o cotización automática.",
+    grupo: "cobrar",
+    clase: "mecanica",
+    pantalla: { label: "Pagos", href: "/dashboard/pagos" },
+    checkout: "cart",
+    actualizado: "2026-08-12",
+    relacionados: ["medios-de-cobro", "que-promocion-conviene"],
+    cuerpo: [
+      {
+        t: "p",
+        texto:
+          "Las formas de entrega se configuran en **Pagos**, junto con los medios de cobro. Son las opciones que le aparecen al cliente cuando elige cómo recibir su compra.",
+      },
+      {
+        t: "p",
+        texto: "Venís con tres armadas y podés prender, apagar o renombrar las que quieras:",
+      },
+      {
+        t: "lista",
+        items: [
+          "**Retiro en local / acordar** — sin cargo, la persona pasa a buscarlo.",
+          "**Envío estándar** — el de tu zona.",
+          "**Envío nacional** — al resto del país.",
+        ],
+      },
+
+      { t: "h", texto: "Precio fijo o a coordinar" },
+      {
+        t: "p",
+        texto: "Cada opción de envío se cobra de una de dos maneras:",
+      },
+      {
+        t: "tabla",
+        cols: ["Modo", "Qué ve el cliente"],
+        filas: [
+          ["Precio fijo", "El monto exacto, sumado al total antes de pagar."],
+          [
+            "A coordinar",
+            "Las palabras *A coordinar* en vez de un precio. El costo lo arreglás vos después, por WhatsApp u otro medio.",
+          ],
+        ],
+      },
+      {
+        t: "aviso",
+        tono: "ojo",
+        texto:
+          "*A coordinar* es cómodo para vos y es una fricción para el que compra: no sabe cuánto va a terminar pagando, y esa es una de las razones más comunes por las que alguien abandona el carrito. Si podés poner un número, ponelo.",
+      },
+
+      { t: "h", texto: "Cotización automática" },
+      {
+        t: "p",
+        texto:
+          "Además podés activar que el envío se cotice solo, según el **código postal** del comprador y el **peso** del pedido. Calcula contra Correo Argentino, OCA y Andreani.",
+      },
+      {
+        t: "aviso",
+        tono: "ojo",
+        texto:
+          "Viene apagada y no se puede prender hasta que completes tu **dirección de origen**. Sin saber desde dónde sale el paquete no hay forma de cotizarlo.",
+      },
+      {
+        t: "aviso",
+        tono: "dato",
+        texto:
+          "Hoy la cotización automática es solo **a domicilio**. Envío a sucursal todavía no está.",
+      },
+      { t: "ruta", label: "Configurar mis envíos", href: "/dashboard/pagos" },
+
+      { t: "h", texto: "El envío gratis de una promoción" },
+      {
+        t: "p",
+        texto:
+          "Es aparte de todo esto. La promoción de envío gratis bonifica el costo en el checkout cuando la compra pasa cierto monto — no toca tus formas de entrega, se aplica arriba.",
+      },
+      {
+        t: "p",
+        texto:
+          "Y lo que el envío *habría* costado queda guardado, así que tus estadísticas no cuentan como ganancia la plata que regalaste.",
+      },
+    ],
+  },
+
+  {
+    slug: "como-cargar-un-producto",
+    titulo: "Cómo cargar un producto",
+    resumen:
+      "Los campos que importan, la diferencia entre variantes y atributos, y cómo dejarlo programado.",
+    grupo: "arrancar",
+    clase: "mecanica",
+    pantalla: { label: "Productos", href: "/dashboard/productos" },
+    actualizado: "2026-08-12",
+    relacionados: ["que-muestra-google-de-tus-productos", "las-fotos-de-tus-productos"],
+    cuerpo: [
+      {
+        t: "p",
+        texto:
+          "El formulario es largo, pero para publicar alcanza con **nombre, precio y una foto**. Todo lo demás se puede completar después, con el producto ya en la calle.",
+      },
+
+      { t: "h", texto: "Los tres campos de precio" },
+      {
+        t: "tabla",
+        cols: ["Campo", "Qué hace"],
+        filas: [
+          ["Precio", "Lo que paga el cliente. Es el único obligatorio."],
+          [
+            "Precio anterior",
+            "Solo si está en oferta. Sale **tachado** al lado del precio nuevo y el porcentaje de descuento se calcula solo.",
+          ],
+          [
+            "Costo",
+            "Lo que te salió a vos. **Nunca se le muestra a nadie**: sirve para que el panel te calcule el margen.",
+          ],
+        ],
+      },
+      {
+        t: "aviso",
+        tono: "dato",
+        texto:
+          "En tiendas de vehículos el campo Costo se reemplaza por **Gastos del vehículo**, que suma varios conceptos en vez de un número suelto.",
+      },
+
+      { t: "h", texto: "Variantes y atributos NO son lo mismo" },
+      {
+        t: "p",
+        texto: "Es la confusión más común del formulario, y la diferencia es una sola:",
+      },
+      {
+        t: "tabla",
+        cols: ["", "Tiene stock propio"],
+        filas: [
+          [
+            "Variantes",
+            "**Sí.** Una fila por combinación —talle M negro, talle L negro— y cada fila lleva su stock, su precio y su código.",
+          ],
+          [
+            "Atributos",
+            "**No.** Son datos descriptivos: Material → Algodón, Género → Unisex. Informan, no se venden por separado.",
+          ],
+        ],
+      },
+      {
+        t: "p",
+        texto:
+          "Regla para decidir: si se te puede **agotar por separado**, es una variante. Si no, es un atributo.",
+      },
+
+      { t: "h", texto: "El aviso de stock bajo" },
+      {
+        t: "p",
+        texto:
+          "Podés fijarle a cada producto —o a cada variante— un mínimo. Cuando el stock cae debajo de ese número, aparece el punto **naranja** en Productos, en el menú del panel. Sin mínimo cargado, ese aviso no salta nunca.",
+      },
+
+      { t: "h", texto: "Dejarlo programado" },
+      {
+        t: "p",
+        texto:
+          "No hace falta que estés despierto a la medianoche del lanzamiento: podés cargarlo hoy con fecha y hora futuras y se publica solo. Hasta ese momento no lo ve nadie más que vos.",
+      },
+      { t: "ruta", label: "Cargar un producto", href: "/dashboard/productos/nuevo" },
+      {
+        t: "aviso",
+        tono: "dato",
+        texto:
+          "Los campos de **título y descripción para Google** están al final del formulario. No son obligatorios y vacíos se arman solos — pero conviene saber con qué, porque a veces sale cualquier cosa.",
       },
     ],
   },
