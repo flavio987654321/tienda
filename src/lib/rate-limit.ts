@@ -13,11 +13,27 @@ function getRedis(): Redis {
 }
 
 export async function checkRateLimit(key: string, limit: number, windowMs: number): Promise<boolean> {
+  return (await contarConTope(key, limit, windowMs)).permitido;
+}
+
+/**
+ * Igual que `checkRateLimit`, pero además devuelve en cuánto va el contador.
+ *
+ * La cuenta hace falta cuando el tope protege algo que se paga: un tope que
+ * sólo dice sí o no se entera de que estaba corto el día que ya cortó, y ahí
+ * el que se quedó afuera es un cliente. Con la cuenta se puede avisar ANTES,
+ * cuando todavía se está a tiempo de subirlo.
+ */
+export async function contarConTope(
+  key: string,
+  limit: number,
+  windowMs: number
+): Promise<{ permitido: boolean; cuenta: number }> {
   const r = getRedis();
   const redisKey = `rl:${key}`;
-  const count = await r.incr(redisKey);
-  if (count === 1) await r.pexpire(redisKey, windowMs);
-  return count <= limit;
+  const cuenta = await r.incr(redisKey);
+  if (cuenta === 1) await r.pexpire(redisKey, windowMs);
+  return { permitido: cuenta <= limit, cuenta };
 }
 
 /* ── Respaldo en memoria, para cuando Redis no contesta ────────────────────── */

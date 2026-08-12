@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth-session";
 import { prisma } from "@/lib/prisma";
-import { checkRateLimit, checkRateLimitConRespaldo } from "@/lib/rate-limit";
+import { permitirMensaje } from "@/lib/asistente-limites";
 import { getUserSubscription, getSubscriptionStatus } from "@/lib/subscription";
 import { getStoreSnapshot, getChecklistEstado } from "@/lib/asistente-insights";
 import { getUpcomingDates, getArgentinaAhora, getArgentinaDayKey } from "@/lib/fechas-comerciales";
@@ -17,41 +17,9 @@ const MAX_CHARS_TOTAL = 12_000;
 
 type ChatMessage = { role: "user" | "assistant"; content: string };
 
-/**
- * Cada mensaje de Sasha cuesta plata (tokens). Estos son los dos topes que
- * evitan que alguien vacíe el crédito de Anthropic, y por eso se chequean ANTES
- * de leer el body y antes de tocar la base.
- */
-const LIMITE_RAFAGA = 30;
-const VENTANA_RAFAGA_MS = 10 * 60_000;
-const LIMITE_DIARIO = 150;
-
-/**
- * Topes de emergencia para cuando Redis no contesta.
- *
- * El global (por instancia) es el que realmente frena: un contador por usuario
- * no sirve contra pedidos en paralelo, porque cada instancia nueva arranca en
- * cero. Con esto, el único multiplicador que le queda a un ataque es cuántas
- * instancias logre levantar.
- */
-const LIMITE_RAFAGA_SIN_REDIS = 5;
-const LIMITE_GLOBAL_SIN_REDIS = 20;
-
-/**
- * El tope diario vive sólo en Redis, y a propósito.
- *
- * Un contador en memoria no puede sostener una ventana de 24hs: la instancia se
- * recicla y el contador vuelve a cero. Si Redis no contestó, el respaldo de la
- * ráfaga ya puso un techo — y volver a llamar al respaldo acá gastaría dos veces
- * del presupuesto global por un solo mensaje, dejándolo en la mitad.
- */
-async function dentroDelTopeDiario(userId: string): Promise<boolean> {
-  try {
-    return await checkRateLimit(`asistente-dia:${userId}`, LIMITE_DIARIO, 24 * 60 * 60_000);
-  } catch {
-    return true;
-  }
-}
+/* Los topes que frenan el gasto viven en `lib/asistente-limites.ts`, con el
+   porqué de cada uno. Acá sólo se aplican, y ANTES de leer el body o tocar la
+   base: un pedido rechazado no tiene que costar nada. */
 
 // Una conversación larga en el día no debe romperse: en vez de rechazar el pedido entero,
 // nos quedamos con los mensajes más recientes (recortando los más viejos primero) hasta
@@ -107,24 +75,38 @@ export async function POST(req: NextRequest) {
   }
 
   const sub = await getUserSubscription(user.id);
-  if (sub) {
-    const status = getSubscriptionStatus(sub);
-    if (status === "EXPIRED" || status === "CANCELLED") {
-      return NextResponse.json({ error: "Tu suscripción no está activa" }, { status: 403 });
-    }
+  const status = sub ? getSubscriptionStatus(sub) : null;
+  if (status === "EXPIRED" || status === "CANCELLED") {
+    return NextResponse.json({ error: "Tu suscripción no está activa" }, { status: 403 });
   }
 
-  const rafaga = await checkRateLimitConRespaldo(
-    `asistente:${user.id}`,
-    LIMITE_RAFAGA,
-    VENTANA_RAFAGA_MS,
-    { limiteFallback: LIMITE_RAFAGA_SIN_REDIS, limiteFallbackGlobal: LIMITE_GLOBAL_SIN_REDIS }
-  );
-  if (!rafaga.permitido) {
-    return NextResponse.json({ error: "Mandaste muchos mensajes, esperá un momento." }, { status: 429 });
+  /* Sin suscripción cuenta como prueba, o sea el tope más bajo. No debería
+     pasar —el registro de OWNER siempre crea una— y justamente por eso: si
+     aparece una cuenta que no figura pagando ni probando, no es la que tiene
+     que llevarse el techo alto. */
+  const enPrueba = status === null || status === "TRIAL";
+  const day = getArgentinaDayKey();
+
+  /* Si Redis no contesta, Sasha se apaga. Antes había un respaldo en memoria,
+     y el problema era que el tope diario no lo podía sostener: un contador de
+     24hs no sobrevive al reciclado de la instancia, así que se salteaba
+     entero. Quedaba un techo por instancia de 20 cada 10 minutos — casi 3.000
+     mensajes por día por instancia, y Upstash corta por cuota justo cuando hay
+     carga, o sea cuando alguien está abusando.
+     Decir "Sasha no está disponible un rato" es mejor negocio que eso. El
+     resto del panel sigue andando: esto apaga el chat, nada más. */
+  let veredicto;
+  try {
+    veredicto = await permitirMensaje({ userId: user.id, enPrueba, day });
+  } catch (err) {
+    console.error("[asistente] sin limitador (Redis no contesta), se apaga el chat", err);
+    return NextResponse.json(
+      { error: "Sasha no está disponible en este momento, probá de nuevo en un minuto." },
+      { status: 503 }
+    );
   }
-  if (rafaga.conRedis && !(await dentroDelTopeDiario(user.id))) {
-    return NextResponse.json({ error: "Llegaste al límite de mensajes de hoy con Sasha." }, { status: 429 });
+  if (!veredicto.permitido) {
+    return NextResponse.json({ error: veredicto.mensaje }, { status: 429 });
   }
 
   let body: unknown;
@@ -140,8 +122,6 @@ export async function POST(req: NextRequest) {
   if (!greet && historial.length === 0) {
     return NextResponse.json({ error: "Body inválido" }, { status: 400 });
   }
-
-  const day = getArgentinaDayKey();
 
   // Guarda el mensaje nuevo del usuario (el último del historial que mandó el cliente).
   // El saludo automático ("greet") no genera un mensaje de usuario visible en el chat.
@@ -230,7 +210,10 @@ export async function POST(req: NextRequest) {
           output: final.usage.output_tokens,
           cacheEscrito: final.usage.cache_creation_input_tokens ?? 0,
           cacheLeido: final.usage.cache_read_input_tokens ?? 0,
-          conRedis: rafaga.conRedis,
+          // Los mensajes de las cuentas en prueba son los que salen del
+          // presupuesto chico y aparte. Queda en el log para poder ver, si
+          // algún día el tope de pruebas empieza a cortar, si es uso real.
+          enPrueba,
         });
 
         const textoFinal = final.content

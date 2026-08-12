@@ -3,14 +3,19 @@
  *
  *   npx tsx src/lib/rate-limit.check.ts
  *
- * Esto existe porque es el freno de la única parte del sistema que cuesta plata
- * por uso (los tokens de Sasha). Antes, si Redis no contestaba, el código dejaba
- * pasar el mensaje — y Upstash corta justo por exceso de consultas, o sea que el
- * freno desaparecía exactamente cuando hacía falta.
+ * Este respaldo nació como freno de Sasha, y ESO YA NO ES ASÍ: el asistente
+ * pasó a apagarse cuando Redis no contesta, porque un contador en memoria no
+ * puede sostener un tope de 24hs —la instancia se recicla y vuelve a cero— y
+ * ahí el tope diario se salteaba entero. Sus topes viven ahora en
+ * `asistente-limites.ts`, con sus propios chequeos.
  *
- * No hay Redis acá y es a propósito: se fuerza el error para probar el camino de
- * respaldo, que es el que nunca se ejecuta en desarrollo y por eso es el que se
- * puede romper sin que nadie lo note hasta que llega la factura.
+ * El respaldo sigue vivo para lo que no cuesta por uso: el alta al newsletter
+ * y la búsqueda de productos. Ahí sí conviene degradar y no cortar — quedarse
+ * sin buscador porque se cayó Upstash sería peor que dejar pasar de más.
+ *
+ * No hay Redis acá y es a propósito: se fuerza el error para probar el camino
+ * de respaldo, que es el que nunca se ejecuta en desarrollo y por eso es el
+ * que se puede romper sin que nadie lo note.
  */
 
 import { checkRateLimitConRespaldo, _resetContadoresLocales } from "./rate-limit";
@@ -98,18 +103,12 @@ async function main() {
   chequear("el primero pasa", v1.permitido, v1);
   chequear("después de vencer, vuelve a pasar", v2.permitido, v2);
 
-  /* ── El techo, en números ───────────────────────────────────────────────── */
-  console.log("\n7) Cuánto se puede gastar con Redis caído");
-
-  // El punto de todo esto: que el techo sea un número y no "infinito".
-  const COSTO_POR_MENSAJE = 0.018; // USD, estimado con el prompt actual
-  const porInstanciaPorHora = OPCIONES.limiteFallbackGlobal * 6; // ventana de 10 min
-  const gastoPorInstanciaPorHora = porInstanciaPorHora * COSTO_POR_MENSAJE;
-  chequear(
-    `una instancia no pasa de ~US$${gastoPorInstanciaPorHora.toFixed(2)}/hora`,
-    gastoPorInstanciaPorHora < 3,
-    { porInstanciaPorHora, gastoPorInstanciaPorHora }
-  );
+  /* Acá había un chequeo de cuántos dólares se podían gastar por hora con
+     Redis caído. Se sacó porque su premisa dejó de ser cierta: ese cálculo
+     medía el techo de Sasha, y Sasha ya no pasa por este respaldo. Los que
+     quedan usándolo (newsletter, búsqueda de productos) no cuestan por uso,
+     así que no hay ningún número de dólares que chequear. El techo de gasto
+     del asistente se chequea en `asistente-limites.check.ts`. */
 
   console.log(fallos === 0 ? "\nTodo bien.\n" : `\n${fallos} fallas.\n`);
   process.exit(fallos === 0 ? 0 : 1);
