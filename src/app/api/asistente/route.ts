@@ -205,7 +205,7 @@ export async function POST(req: NextRequest) {
           model: "claude-haiku-4-5",
           max_tokens: 600,
           // El prompt va partido en dos bloques y el `cache_control` marca dónde
-          // corta el caché. El primero son ~11.000 tokens iguales para todas las
+          // corta el caché. El primero son ~14.600 tokens iguales para todas las
           // tiendas: cachearlo baja el costo por mensaje a menos de la mitad.
           // Si se vuelven a mezclar los dos bloques, el caché deja de pegar.
           system: [

@@ -1,5 +1,6 @@
 import { getStoreType, type StoreType } from "@/lib/storeTypes";
 import { ARTICULOS } from "./articulos";
+import { INDICE } from "./indice";
 import { PANTALLAS } from "./pantallas";
 import { GRUPOS, type Articulo, type Grupo } from "./tipos";
 
@@ -33,24 +34,41 @@ export function porGrupo(rubro?: StoreType) {
   })).filter((g) => g.articulos.length > 0);
 }
 
-/* Que la tabla liviana de `pantallas.ts` no se separe de los artículos.
+/* Que las dos tablas livianas no se separen de los artículos.
  *
- * Esa tabla existe para que el `?` del panel no se baje los diecisiete
- * artículos enteros, y el precio de tenerla es el slug y el título repetidos.
- * Repetido no es problema; repetido y desactualizado en silencio, sí — una
- * ayuda que promete un artículo y abre otro es peor que no ofrecer nada.
+ * `indice.ts` y `pantallas.ts` existen para que el navegador no se baje los
+ * veintidós artículos enteros con tal de mostrar un título. El precio es el
+ * slug y el título escritos dos veces. Repetido no es problema; repetido y
+ * desactualizado en silencio, sí — una ayuda que promete un artículo y abre
+ * otro es peor que no ofrecer nada.
  *
  * Corre solo fuera de producción, cuando se renderiza el centro de ayuda.
  * No tira: avisa por consola, que es lo que se ve mientras se trabaja. */
 function verificarPantallas() {
   if (process.env.NODE_ENV === "production") return;
+
+  /* El índice liviano contra los artículos de verdad, en los dos sentidos.
+     Que le falte uno no rompe nada visible, y por eso hay que avisarlo: ese
+     artículo simplemente no se lo puede ofrecer Sasha, para siempre. */
+  for (const entrada of INDICE) {
+    const articulo = buscarArticulo(entrada.slug);
+    if (!articulo) {
+      console.warn(`[ayuda] indice.ts nombra "${entrada.slug}", que no existe.`);
+    } else if (articulo.titulo !== entrada.titulo) {
+      console.warn(`[ayuda] el título de "${entrada.slug}" cambió — actualizá indice.ts.`);
+    }
+  }
+  for (const a of ARTICULOS) {
+    if (!INDICE.some((e) => e.slug === a.slug)) {
+      console.warn(`[ayuda] "${a.slug}" no está en indice.ts — Sasha no lo va a poder linkear.`);
+    }
+  }
+
+  /* Y las pantallas contra lo que cada artículo dice cubrir. El slug que no
+     existe ya lo avisa `pantallas.ts`, que es donde se cae la fila. */
   for (const p of PANTALLAS) {
     const articulo = buscarArticulo(p.slug);
-    if (!articulo) {
-      console.warn(`[ayuda] ${p.href} apunta a "${p.slug}", que no existe.`);
-    } else if (articulo.titulo !== p.titulo) {
-      console.warn(`[ayuda] el título de "${p.slug}" cambió — actualizá pantallas.ts.`);
-    } else if (articulo.pantalla?.href !== p.href) {
+    if (articulo && articulo.pantalla?.href !== p.href) {
       console.warn(`[ayuda] "${p.slug}" ya no declara la pantalla ${p.href}.`);
     }
   }

@@ -3,15 +3,19 @@
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence, useMotionValue } from "framer-motion";
 import Link from "next/link";
-import { X, Send, Loader2, ShoppingCart, ArrowRight, ShoppingBag, PackageSearch, Store, Package, Wallet } from "lucide-react";
+import { X, Send, Loader2, ShoppingCart, ArrowRight, ShoppingBag, PackageSearch, Store, Package, Wallet, BookOpen } from "lucide-react";
 import AsistentePersonaje, { type EstadoSasha } from "./AsistentePersonaje";
+// Solo el slug y el título de cada artículo. Está separado de `articulos.ts`
+// justamente para esto: importar la ayuda entera acá la bajaría al navegador
+// en todas las pantallas del panel, porque Sasha vive en todas.
+import { tituloDeAyuda } from "@/lib/ayuda/indice";
 
 type Mensaje = { role: "user" | "assistant"; content: string };
 type Novedad = { disponible: boolean; tieneNovedad: boolean; tipo: "oportunidad" | "alerta" | null };
 
 // Marca que Sasha agrega al final de un mensaje para pedir un botón de acción
 // concreto en vez de que el dueño tenga que ir a buscar la sección a mano.
-type Accion = { label: string; href: string; icon?: React.ElementType };
+type Accion = { label: string; href: string; icon?: React.ElementType; externo?: boolean };
 
 // Tiene que coincidir exactamente con lo que indica el system prompt (asistente-prompt.ts).
 const ACCIONES: Record<string, Accion> = {
@@ -46,15 +50,33 @@ type AccionesValidas = Record<string, boolean>;
    panel. `//` queda afuera aposta: es protocolo relativo, o sea otro dominio. */
 const RE_LINK_INTERNO = /\s*\[([^\]\n]+)\]\((\/[^/)][^)\s]*)\)\s*$/;
 
+/* Las dos marcas se despegan en el mismo barrido, y no en dos pasadas: Sasha
+   puede cerrar un mensaje con las dos (ir a la sección Y leer el artículo), y
+   una pasada por tipo las ordenaría por tipo en vez de por como las escribió. */
+const RE_MARCA = /\s*\[\[(ACCION|AYUDA):([A-Za-z0-9_-]+)\]\]\s*$/;
+
+/* Un artículo que no está en `indice.ts` se descarta sin dejar rastro. Los
+   slugs salen del modelo, y el modelo puede inventar uno que suene bien —
+   pintarlo igual sería mandar al dueño a un 404 desde un botón nuestro. */
+function accionDeAyuda(slug: string): Accion | null {
+  const titulo = tituloDeAyuda(slug);
+  if (!titulo) return null;
+  return { label: titulo, href: `/ayuda/${slug}`, icon: BookOpen, externo: true };
+}
+
 function parseAcciones(content: string, accionesValidas: AccionesValidas | null): { texto: string; acciones: Accion[] } {
   let texto = content;
   const acciones: Accion[] = [];
-  const re = /\s*\[\[ACCION:([A-Z_]+)\]\]\s*$/;
   let match: RegExpMatchArray | null;
-  while ((match = texto.match(re))) {
-    const key = match[1];
-    const accion = ACCIONES[key];
-    if (accion && accionesValidas?.[key]) acciones.unshift(accion);
+  while ((match = texto.match(RE_MARCA))) {
+    const [, tipo, key] = match;
+    if (tipo === "AYUDA") {
+      const ayuda = accionDeAyuda(key);
+      if (ayuda) acciones.unshift(ayuda);
+    } else {
+      const accion = ACCIONES[key];
+      if (accion && accionesValidas?.[key]) acciones.unshift(accion);
+    }
     texto = texto.slice(0, match.index);
   }
 
@@ -418,10 +440,16 @@ export default function AsistenteIA({ userId }: { userId: string }) {
                       {acciones.length > 0 && (
                         <div className="flex max-w-[85%] flex-wrap gap-2">
                           {acciones.map((accion, j) => (
+                            /* El artículo abre en una pestaña aparte y NO cierra
+                               el chat: no es una acción que resuelva algo en el
+                               panel, es lectura al costado. Cerrarle la charla
+                               a alguien que solo quiso mirar la ayuda lo obliga
+                               a arrancar de nuevo cuando vuelve. */
                             <Link
                               key={j}
                               href={accion.href}
-                              onClick={() => setAbierto(false)}
+                              target={accion.externo ? "_blank" : undefined}
+                              onClick={accion.externo ? undefined : () => setAbierto(false)}
                               className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-xl bg-orange-50 px-3.5 py-2 text-xs font-bold text-orange-700 hover:bg-orange-100"
                             >
                               {accion.icon && <accion.icon className="h-3.5 w-3.5 shrink-0" />}

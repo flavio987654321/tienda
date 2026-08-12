@@ -3,6 +3,9 @@ import type { FechaComercial } from "@/lib/fechas-comerciales";
 // Los topes salen de la misma constante que los aplica, para que Sasha no pueda
 // prometer un número distinto al que el sistema después hace cumplir.
 import { PRICES, PRO_MAX_ACTIVE_COUPONS, PRO_MAX_LIVE_PROMOTIONS, PRO_MAX_AFFILIATES, PRO_MAX_PRODUCTS, MAX_PRODUCTS_POR_TIENDA, PUSH_CAMPAIGNS_PER_WEEK } from "@/lib/planLimits";
+// El catálogo de la ayuda se ARMA con los artículos de verdad, no se escribe a
+// mano acá: un slug copiado que después cambia manda a Sasha a ofrecer un 404.
+import { ARTICULOS } from "@/lib/ayuda/articulos";
 
 /** Los precios como los diría una persona: "$20.000", no "20000". */
 const money = (n: number) => "$" + n.toLocaleString("es-AR");
@@ -431,10 +434,54 @@ NUNCA uses palabras en inglés o jerga de desarrollador para referirte a partes 
 }
 
 /**
+ * El catálogo del centro de ayuda, para que Sasha sepa qué hay escrito y pueda
+ * ofrecerlo.
+ *
+ * Sasha contesta en 2-4 oraciones; hay preguntas que no entran ahí ("cómo
+ * funcionan las promociones") y hasta ahora se resolvían resumiendo de más o
+ * dejando al dueño a mitad de camino. Los artículos son la continuación
+ * natural: los escribió el equipo, están verificados contra el código, y ya
+ * existían — lo único que faltaba era que Sasha supiera que están.
+ *
+ * Se genera desde `ARTICULOS`, así que es imposible que ofrezca un slug que no
+ * existe o un título viejo. Y sale IGUAL para todas las tiendas: es lo que le
+ * permite vivir en el bloque cacheado, donde cuesta una décima parte. Por eso
+ * NO se filtra por rubro acá — eso lo hace la regla de abajo, leyendo las
+ * secciones que sí tiene esta tienda.
+ */
+function catalogoDeAyuda(): string {
+  const filas = ARTICULOS.map((a) => {
+    // Único dato de rubro que se marca. El resto va sin marca porque aplica a
+    // todas: el modo de venta es lo único que cambia qué secciones existen.
+    const solo =
+      a.checkout === "cart"
+        ? " (SOLO tiendas con carrito)"
+        : a.checkout === "inquiry"
+          ? " (SOLO tiendas por consulta)"
+          : "";
+    return `- ${a.slug} — "${a.titulo}"${solo}: ${a.resumen}`;
+  }).join("\n");
+
+  return `## Centro de ayuda — artículos que podés ofrecer para seguir leyendo
+TiendaApps tiene una sección de ayuda con explicaciones largas de cada tema, escritas por el equipo y verificadas contra cómo funciona el panel de verdad. Vos seguís contestando corto; el artículo es para el que quiere el detalle completo.
+
+Para ofrecer uno, terminá el mensaje con [[AYUDA:slug]] usando exactamente el slug de esta lista. El panel lo convierte en un botón que abre el artículo — nunca escribas la dirección web a mano, nunca menciones el slug ni expliques qué es esa marca.
+
+${filas}
+
+Reglas:
+- **Contestá igual.** El artículo NUNCA reemplaza tu respuesta: primero resolvés lo que te preguntaron con lo que sabés, y recién después ofrecés seguir leyendo. "Está en la ayuda" a secas es una mala respuesta.
+- **Uno solo por mensaje**, y solo cuando de verdad suma: si la pregunta ya quedó resuelta en dos oraciones, no hace falta ninguno. No lo agregues de relleno.
+- **Solo estos slugs.** Si el tema que te preguntaron no está en la lista, no ofrezcas ningún artículo — no inventes uno que suene parecido.
+- **Fijate qué secciones tiene esta tienda** (están en "Secciones del panel de esta tienda"). Si un artículo dice "SOLO tiendas con carrito" y esta tienda es por consulta, no lo ofrezcas: habla de pantallas que esa dueña no tiene. Y al revés con el de consultas.
+- **No repitas el mismo artículo** que ya ofreciste antes en esta misma conversación.`;
+}
+
+/**
  * El prompt sale partido en dos, y el orden no es estético: es lo que permite
  * cachearlo.
  *
- * El bloque estático son ~11.000 tokens que son EXACTAMENTE iguales para todas
+ * El bloque estático son ~14.600 tokens que son EXACTAMENTE iguales para todas
  * las tiendas (la guía de navegación sola son 36 KB). Sin caché, eso se paga
  * entero en cada mensaje: es como el 85% del costo de Sasha, pagando mil veces
  * por el mismo texto.
@@ -502,6 +549,8 @@ Vos seguís hablando de UN solo tema principal por mensaje (no cambia la regla d
 - Si le decís que todavía le falta cargar al menos un producto (checklist obligatorio sin tildar "Al menos un producto cargado"): [[ACCION:FALTA_PRODUCTOS]]
 - Si le decís que todavía le falta configurar un método de cobro (checklist obligatorio sin tildar "Método de cobro configurado"): [[ACCION:FALTA_COBRO]]
 El panel convierte cada marca en un botón real para ir directo a la sección correspondiente — nunca expliques qué son esas marcas, nunca las menciones ni las describas, nunca inventes una marca distinta a estas, y usalas solo cuando ese tema sea realmente parte central del mensaje (no las agregues de relleno en cualquier respuesta, y no repitas la misma marca dos veces).
+
+${catalogoDeAyuda()}
 
 ## Reglas estrictas
 - Nunca inventes números, pedidos, productos o nombres que no estén en los datos de esta tienda que te pasamos al final. Si no tenés un dato (ej. facturación de hace un año), decilo claramente y derivá a la sección del panel donde sí puede verlo (ej. Estadísticas) — nunca lo inventes.

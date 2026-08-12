@@ -3,34 +3,51 @@
  * Esto está SEPARADO de `articulos.ts` a propósito, y la razón es el peso.
  * El `?` del panel es un componente de cliente: todo lo que importe viaja al
  * navegador. Si preguntara por la pantalla actual contra `ARTICULOS`, cada
- * pantalla del panel se bajaría los diecisiete artículos completos —el texto
+ * pantalla del panel se bajaría los veintidós artículos completos —el texto
  * entero, tablas y avisos incluidos— para terminar usando un título y un slug.
  *
- * Acá viven solo esos dos datos. `index.ts` compara esta tabla contra los
- * artículos de verdad y avisa por consola si se separan (ver `verificarPantallas`),
- * así que duplicar el título no puede quedar desactualizado en silencio. */
+ * Acá vive solo el par ruta → artículo. El título NO se repite: sale de
+ * `indice.ts`, que es la lista liviana de los veintidós y ya viajaba igual al
+ * navegador por los botones de Sasha. Repetido en dos lados era manejable con
+ * el chequeo de `index.ts`; en tres ya no valía la pena. */
+
+import { tituloDeAyuda } from "./indice";
 
 export type Pantalla = { href: string; slug: string; titulo: string };
 
-export const PANTALLAS: Pantalla[] = [
-  { href: "/dashboard/pedidos",              slug: "los-estados-de-un-pedido",         titulo: "Los estados de un pedido" },
-  { href: "/dashboard/consultas",            slug: "consultas",                        titulo: "Las consultas de tus vehículos" },
+const RUTAS: [href: string, slug: string][] = [
+  ["/dashboard/pedidos",              "los-estados-de-un-pedido"],
+  ["/dashboard/consultas",            "consultas"],
   // El `?` de Productos abre el paso a paso, no el artículo de Google: el que
   // está parado ahí y toca ayuda está cargando algo, no planificando su SEO.
-  { href: "/dashboard/productos",            slug: "como-cargar-un-producto",          titulo: "Cómo cargar un producto" },
-  { href: "/dashboard/cupones",              slug: "cupones",                          titulo: "Cupones: cómo funcionan" },
-  { href: "/dashboard/promociones",          slug: "como-armar-una-promocion",         titulo: "Cómo armar una promoción" },
-  { href: "/dashboard/carritos-abandonados", slug: "carritos-abandonados",             titulo: "Carritos abandonados" },
-  { href: "/dashboard/vendedoras",           slug: "afiliados",                        titulo: "Que otros vendan lo tuyo" },
-  { href: "/dashboard/resenas",              slug: "moderar-resenas",                  titulo: "Reseñas: cuáles se publican solas y cuáles no" },
-  { href: "/dashboard/notificaciones",       slug: "notificaciones",                   titulo: "Avisarle a tus clientes" },
-  { href: "/dashboard/configuracion",        slug: "elegir-y-editar-el-diseno",        titulo: "Elegir y editar el diseño" },
-  { href: "/dashboard/ajustes",              slug: "configuracion-de-la-tienda",       titulo: "La configuración de tu tienda" },
-  { href: "/dashboard/metricas",             slug: "leer-tus-estadisticas",            titulo: "Leer tus estadísticas" },
-  { href: "/dashboard/pagos",                slug: "medios-de-cobro",                  titulo: "Cómo cobrar" },
-  { href: "/dashboard/perfil",               slug: "verificar-tu-cuenta",              titulo: "Verificar tu identidad" },
-  { href: "/dashboard/mi-plan",              slug: "tu-plan",                          titulo: "Tu plan: prueba, activo y vencido" },
+  ["/dashboard/productos",            "como-cargar-un-producto"],
+  ["/dashboard/cupones",              "cupones"],
+  ["/dashboard/promociones",          "como-armar-una-promocion"],
+  ["/dashboard/carritos-abandonados", "carritos-abandonados"],
+  ["/dashboard/vendedoras",           "afiliados"],
+  ["/dashboard/resenas",              "moderar-resenas"],
+  ["/dashboard/notificaciones",       "notificaciones"],
+  ["/dashboard/configuracion",        "elegir-y-editar-el-diseno"],
+  ["/dashboard/ajustes",              "configuracion-de-la-tienda"],
+  ["/dashboard/metricas",             "leer-tus-estadisticas"],
+  ["/dashboard/pagos",                "medios-de-cobro"],
+  ["/dashboard/perfil",               "verificar-tu-cuenta"],
+  ["/dashboard/mi-plan",              "tu-plan"],
 ];
+
+/* Una ruta que apunte a un slug que no existe se descarta acá mismo. El `?` de
+   esa pantalla desaparece, que es molesto pero honesto; ofrecer ayuda y abrir
+   un 404 es peor. `verificarPantallas` avisa por consola cuál se cayó. */
+export const PANTALLAS: Pantalla[] = RUTAS.flatMap(([href, slug]) => {
+  const titulo = tituloDeAyuda(slug);
+  if (!titulo) {
+    if (process.env.NODE_ENV !== "production") {
+      console.warn(`[ayuda] ${href} apunta a "${slug}", que no está en indice.ts — se ocultó el "?" de esa pantalla.`);
+    }
+    return [];
+  }
+  return [{ href, slug, titulo }];
+});
 
 /* La pantalla en la que estás parado.
  *

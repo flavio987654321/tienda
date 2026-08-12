@@ -18,6 +18,8 @@
 import { buildSystemPrompt } from "./asistente-prompt";
 import type { StoreSnapshot, ChecklistEstado } from "./asistente-insights";
 import type { FechaComercial } from "./fechas-comerciales";
+import { ARTICULOS } from "./ayuda/articulos";
+import { INDICE } from "./ayuda/indice";
 
 let fallos = 0;
 const chequear = (titulo: string, condicion: boolean, detalle?: unknown) => {
@@ -214,6 +216,28 @@ chequear(`el estático son ~${tokensAprox.toLocaleString("es-AR")} tokens (>2048
 chequear("y es la mayor parte del prompt",
   A.estatico.length > A.variable.length * 3,
   { estatico: A.estatico.length, variable: A.variable.length });
+
+/* ── Los artículos que Sasha puede ofrecer ────────────────────────────────── */
+console.log("\n8) El catálogo de ayuda cierra con las dos puntas");
+
+// Sasha nombra un artículo por su slug, y el panel lo valida contra `indice.ts`
+// antes de pintar el botón. Si el prompt ofrece un slug que ahí no está, el
+// botón no aparece nunca y el mensaje queda cortado sin que nadie se entere.
+const slugsOfrecidos = [...A.estatico.matchAll(/^- ([a-z0-9-]+) — "/gm)].map((m) => m[1]);
+
+chequear(`ofrece los ${ARTICULOS.length} artículos`, slugsOfrecidos.length === ARTICULOS.length,
+  { ofrecidos: slugsOfrecidos.length, articulos: ARTICULOS.length });
+
+for (const slug of slugsOfrecidos) {
+  chequear(`"${slug}" está en indice.ts (si no, el botón no se pinta)`,
+    INDICE.some((e) => e.slug === slug));
+}
+
+// Y al revés: un artículo que no entró al catálogo es un artículo que Sasha no
+// va a ofrecer jamás, sin ningún síntoma visible.
+for (const a of ARTICULOS) {
+  chequear(`"${a.slug}" entró al catálogo`, slugsOfrecidos.includes(a.slug));
+}
 
 console.log(fallos === 0 ? "\nTodo bien.\n" : `\n${fallos} fallas.\n`);
 process.exit(fallos === 0 ? 0 : 1);
