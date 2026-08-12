@@ -11,8 +11,10 @@ type Novedad = { disponible: boolean; tieneNovedad: boolean; tipo: "oportunidad"
 
 // Marca que Sasha agrega al final de un mensaje para pedir un botón de acción
 // concreto en vez de que el dueño tenga que ir a buscar la sección a mano.
+type Accion = { label: string; href: string; icon?: React.ElementType };
+
 // Tiene que coincidir exactamente con lo que indica el system prompt (asistente-prompt.ts).
-const ACCIONES: Record<string, { label: string; href: string; icon: React.ElementType }> = {
+const ACCIONES: Record<string, Accion> = {
   CARRITOS_ABANDONADOS: { label: "Ver carritos abandonados", href: "/dashboard/carritos-abandonados", icon: ShoppingCart },
   PEDIDOS_PENDIENTES: { label: "Ver pedidos pendientes", href: "/dashboard/pedidos?status=PENDING", icon: ShoppingBag },
   STOCK_BAJO: { label: "Ver productos con stock bajo", href: "/dashboard/productos?stock=critical", icon: PackageSearch },
@@ -29,9 +31,24 @@ type AccionesValidas = Record<string, boolean>;
 // "accionesValidas" (traído de /api/asistente/acciones, datos reales de la
 // base) filtra cualquier marca que el modelo haya puesto sin que el problema
 // siga siendo cierto ahora mismo — nunca se confía ciegamente en el texto.
-function parseAcciones(content: string, accionesValidas: AccionesValidas | null): { texto: string; acciones: (typeof ACCIONES)[string][] } {
+/* Los avisos que arma el cron traen el link en markdown al final del texto
+   —`[Ir →](/dashboard/...)`— y no como marca `[[ACCION:...]]`. El comentario
+   del cron daba por sentado que el chat renderizaba markdown; nunca lo hizo,
+   así que el link se mostraba crudo, con corchetes y paréntesis a la vista.
+   Se convierte al mismo botón que las marcas.
+
+   No pasan por `accionesValidas` a propósito: un aviso lo escribe nuestro
+   código con datos que acaba de leer de la base, no el modelo, así que no hay
+   nada que desconfiar.
+
+   SÓLO RUTAS INTERNAS. El texto de un mensaje sí puede venir del modelo, y
+   pintar cualquier href dejaría que un link externo se disfrace de botón del
+   panel. `//` queda afuera aposta: es protocolo relativo, o sea otro dominio. */
+const RE_LINK_INTERNO = /\s*\[([^\]\n]+)\]\((\/[^/)][^)\s]*)\)\s*$/;
+
+function parseAcciones(content: string, accionesValidas: AccionesValidas | null): { texto: string; acciones: Accion[] } {
   let texto = content;
-  const acciones: (typeof ACCIONES)[string][] = [];
+  const acciones: Accion[] = [];
   const re = /\s*\[\[ACCION:([A-Z_]+)\]\]\s*$/;
   let match: RegExpMatchArray | null;
   while ((match = texto.match(re))) {
@@ -40,6 +57,16 @@ function parseAcciones(content: string, accionesValidas: AccionesValidas | null)
     if (accion && accionesValidas?.[key]) acciones.unshift(accion);
     texto = texto.slice(0, match.index);
   }
+
+  const link = texto.match(RE_LINK_INTERNO);
+  if (link) {
+    // La flecha del texto se saca porque el botón ya dibuja la suya: si no,
+    // quedaban dos, una escrita y otra de ícono.
+    const label = link[1].replace(/[\s→>-]+$/, "").trim();
+    if (label) acciones.push({ label, href: link[2] });
+    texto = texto.slice(0, link.index);
+  }
+
   return { texto: texto.trimEnd(), acciones };
 }
 
@@ -397,7 +424,7 @@ export default function AsistenteIA({ userId }: { userId: string }) {
                               onClick={() => setAbierto(false)}
                               className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-xl bg-orange-50 px-3.5 py-2 text-xs font-bold text-orange-700 hover:bg-orange-100"
                             >
-                              <accion.icon className="h-3.5 w-3.5 shrink-0" />
+                              {accion.icon && <accion.icon className="h-3.5 w-3.5 shrink-0" />}
                               {accion.label}
                               <ArrowRight className="h-3.5 w-3.5 shrink-0" />
                             </Link>
