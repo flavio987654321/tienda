@@ -93,8 +93,15 @@ export const storeConfigSchema = z.object({
   tieneVentaMayorista: z.boolean().optional(),
   ocultarPreciosPublico: z.boolean().optional(),
   // `featuredCategories` se elimino: filtraba el menu de navegacion, no solo el
-  // inicio como decia. Al no estar en el schema, el valor que haya quedado
-  // guardado en el JSON de una tienda se descarta en el proximo guardado.
+  // inicio como prometia el editor.
+  //
+  // Ojo con lo que NO pasa al sacarla de aca: `DESIGN_KEYS` se deriva de este
+  // schema, y `mergeDesignConfig` preserva todo lo que NO es clave de diseño. O
+  // sea que un `featuredCategories` que haya quedado en el JSON de una tienda no
+  // se descarta al guardar — pasa a contar como clave ajena y se queda. Queda
+  // inerte igual, porque ya no lo lee nadie.
+  // La unica tienda que lo tenia (amaranta, con ["vestidos"]) se limpio a mano el
+  // 11/08/2026. Si aparece en otra, se borra del JSON; no se va sola.
   storeId: z.string().optional(),
   slug: z.string().optional(),
   flyerConfig: z.object({
