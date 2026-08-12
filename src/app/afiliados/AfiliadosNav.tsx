@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useSyncExternalStore } from "react";
+import { useState, useEffect, useRef, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AppLogo } from "@/components/AppLogo";
@@ -12,7 +12,7 @@ import FavoritesDrawer from "@/components/FavoritesDrawer";
 import {
   ShoppingBag, Wallet, Award, BarChart3, Trophy, Store,
   X, XCircle, Menu, LogOut, HelpCircle, Sun, Moon,
-  Download, MessageSquare, Target, ShoppingCart, Share2, Home,
+  Download, MessageSquare, Target, ShoppingCart, Share2, Home, ChevronDown,
 } from "lucide-react";
 
 // ── Modal de ayuda para afiliados ─────────────────────────────────────────────
@@ -72,6 +72,39 @@ function HelpModal({ onClose }: { onClose: () => void }) {
   );
 }
 
+/* ── Las pantallas del panel, en UNA sola lista ──────────────────────────────
+ *
+ * Antes eran dos listas escritas aparte: una para la barra de arriba y otra
+ * para el menú del celular. La de la barra tenía cuatro y la del celular ocho,
+ * así que "Mis pedidos", "Plantillas", "Kit de contenido" y "Mis metas" —cuatro
+ * pantallas enteras, terminadas y andando— no tenían botón en la computadora.
+ * Se llegaba escribiendo la dirección a mano, y el `?` de ayuda las nombraba
+ * igual: prometía plantillas que no había forma de abrir.
+ *
+ * Con una sola lista eso no puede volver a pasar. La pantalla que se agregue
+ * acá aparece en los dos lados sola; lo único que decide `LINKS_EN_BARRA` es
+ * cuántas van sueltas arriba y cuántas quedan atrás de "Más".
+ *
+ * El color del ícono también vive acá. Solo se usa en el menú del celular —la
+ * barra los pinta grises para no quedar como un arcoíris— pero tenerlo en la
+ * lista evita la otra copia. */
+const LINKS: { href: string; label: string; Icon: React.ElementType; color: string }[] = [
+  { href: "/afiliados/billetera",    label: "Mis comisiones",   Icon: Wallet,         color: "text-indigo-500"  },
+  { href: "/afiliados/premios",      label: "Mis premios",      Icon: Award,          color: "text-amber-500"   },
+  { href: "/afiliados/estadisticas", label: "Estadísticas",     Icon: BarChart3,      color: "text-blue-500"    },
+  { href: "/afiliados/ranking",      label: "Ranking",          Icon: Trophy,         color: "text-amber-500"   },
+  { href: "/afiliados/pedidos",      label: "Mis pedidos",      Icon: ShoppingCart,   color: "text-green-500"   },
+  { href: "/afiliados/plantillas",   label: "Plantillas",       Icon: MessageSquare,  color: "text-purple-500"  },
+  { href: "/afiliados/kit",          label: "Kit de contenido", Icon: Download,       color: "text-indigo-500"  },
+  { href: "/afiliados/metas",        label: "Mis metas",        Icon: Target,         color: "text-orange-500"  },
+];
+
+/* Cuántas entran sueltas en la barra ancha. Cuatro, y no es al voleo: la barra
+ * son tres bloques que no se achican —logo, menú, íconos—, así que lo que no
+ * entra no se acomoda, se pisa. Con cinco vuelve a montarse el logo encima del
+ * primer link en pantallas de 1024 a 1200. */
+const LINKS_EN_BARRA = 4;
+
 const HELP_SEEN_KEY = "tiendaapps_affiliates_help_seen";
 
 export default function AfiliadosNav() {
@@ -79,7 +112,32 @@ export default function AfiliadosNav() {
   const { theme, setTheme } = useTheme();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
+  const [masOpen, setMasOpen] = useState(false);
+  const masRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
+
+  /* Las dos formas de cerrar "Más" sin elegir nada: tocar afuera y Escape.
+     Sin esto queda abierto tapando la página y el que lo abrió sin querer no
+     tiene salida obvia. Al elegir una opción lo cierra el propio link.
+
+     Van adentro de un efecto porque hay que escuchar al documento, pero lo que
+     llama a setState son los manejadores, no el efecto — que es lo que la regla
+     de hooks del repo pide. */
+  useEffect(() => {
+    if (!masOpen) return;
+    function afuera(e: MouseEvent) {
+      if (masRef.current && !masRef.current.contains(e.target as Node)) setMasOpen(false);
+    }
+    function escape(e: KeyboardEvent) {
+      if (e.key === "Escape") setMasOpen(false);
+    }
+    document.addEventListener("mousedown", afuera);
+    document.addEventListener("keydown", escape);
+    return () => {
+      document.removeEventListener("mousedown", afuera);
+      document.removeEventListener("keydown", escape);
+    };
+  }, [masOpen]);
 
   /* Ya hidratamos: en el servidor da false y en el navegador true. Tapa lo que no
      puede dibujarse igual en los dos lados. Antes era un `useState(false)` con un
@@ -104,23 +162,11 @@ export default function AfiliadosNav() {
   const userName = user?.name ?? "Afiliado";
   const userInitial = userName.charAt(0).toUpperCase();
 
-  const navLinks = [
-    { href: "/afiliados/billetera",    label: "Mis comisiones",icon: <Wallet className="h-4 w-4" /> },
-    { href: "/afiliados/premios",      label: "Mis premios",   icon: <Award className="h-4 w-4" /> },
-    { href: "/afiliados/estadisticas", label: "Estadísticas",  icon: <BarChart3 className="h-4 w-4" /> },
-    { href: "/afiliados/ranking",      label: "Ranking",       icon: <Trophy className="h-4 w-4" /> },
-  ];
-
-  const mobileLinks = [
-    { href: "/afiliados/billetera",    label: "Mis comisiones",  icon: <Wallet className="h-4 w-4 text-indigo-500" /> },
-    { href: "/afiliados/premios",      label: "Mis premios",     icon: <Award className="h-4 w-4 text-amber-500" /> },
-    { href: "/afiliados/pedidos",      label: "Mis pedidos",     icon: <ShoppingCart className="h-4 w-4 text-green-500" /> },
-    { href: "/afiliados/estadisticas", label: "Estadísticas",    icon: <BarChart3 className="h-4 w-4 text-blue-500" /> },
-    { href: "/afiliados/plantillas",   label: "Plantillas",      icon: <MessageSquare className="h-4 w-4 text-purple-500" /> },
-    { href: "/afiliados/kit",          label: "Kit de contenido",icon: <Download className="h-4 w-4 text-indigo-500" /> },
-    { href: "/afiliados/metas",        label: "Mis metas",       icon: <Target className="h-4 w-4 text-orange-500" /> },
-    { href: "/afiliados/ranking",      label: "Ranking",          icon: <Trophy className="h-4 w-4 text-amber-500" /> },
-  ];
+  /* Las cuatro primeras van sueltas en la barra ancha; el resto, adentro de
+     "Más". En el menú del celular se muestran las OCHO, siempre. */
+  const enLaBarra = LINKS.slice(0, LINKS_EN_BARRA);
+  const enElMas = LINKS.slice(LINKS_EN_BARRA);
+  const masActivo = enElMas.some((l) => l.href === pathname);
 
   return (
     <>
@@ -133,28 +179,80 @@ export default function AfiliadosNav() {
             <span className="text-lg font-bold text-gray-900 dark:text-white">TiendaApps</span>
           </Link>
 
-          {/* Desktop links */}
-          <div className="hidden sm:flex items-center gap-1">
-            {navLinks.map((l) => {
-              const active = pathname === l.href;
+          {/* Barra ancha — de 1024 para arriba.
+              Abajo de eso manda la hamburguesa, y el corte está en 1024 y no en
+              los 640 de antes porque este bloque no se achica: en 768 el logo
+              terminaba escrito encima del primer link. */}
+          <div className="hidden lg:flex items-center gap-1">
+            {enLaBarra.map(({ href, label, Icon }) => {
+              const active = pathname === href;
               return (
                 <Link
-                  key={l.href}
-                  href={l.href}
+                  key={href}
+                  href={href}
                   className={`flex items-center gap-2 whitespace-nowrap text-sm font-medium transition-colors px-3 py-2 rounded-lg ${
                     active
                       ? "bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400"
                       : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/5"
                   }`}
                 >
-                  {l.icon} {l.label}
+                  <Icon className="h-4 w-4" /> {label}
                 </Link>
               );
             })}
+
+            {/* "Más" — el resto de las pantallas. Se marca activo cuando estás
+                parado en alguna de las de adentro, si no la barra entera se ve
+                apagada mientras mirás, por ejemplo, Plantillas. */}
+            {enElMas.length > 0 && (
+              <div ref={masRef} className="relative">
+                <button
+                  type="button"
+                  onClick={() => setMasOpen((v) => !v)}
+                  aria-expanded={masOpen}
+                  aria-haspopup="menu"
+                  className={`flex items-center gap-1.5 whitespace-nowrap text-sm font-medium transition-colors px-3 py-2 rounded-lg ${
+                    masActivo
+                      ? "bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400"
+                      : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/5"
+                  }`}
+                >
+                  Más
+                  <ChevronDown className={`h-4 w-4 transition-transform ${masOpen ? "rotate-180" : ""}`} />
+                </button>
+
+                {masOpen && (
+                  <div
+                    role="menu"
+                    className="absolute right-0 top-11 z-50 w-56 rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#0f1629] shadow-xl p-2"
+                  >
+                    {enElMas.map(({ href, label, Icon, color }) => {
+                      const active = pathname === href;
+                      return (
+                        <Link
+                          key={href}
+                          href={href}
+                          role="menuitem"
+                          onClick={() => setMasOpen(false)}
+                          className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+                            active
+                              ? "bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400"
+                              : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5"
+                          }`}
+                        >
+                          <Icon className={`h-4 w-4 shrink-0 ${active ? "" : color}`} />
+                          {label}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
-          {/* Desktop íconos */}
-          <div className="hidden sm:flex items-center justify-end gap-1">
+          {/* Íconos — mismo corte que los links, si no en 900 quedan solos */}
+          <div className="hidden lg:flex items-center justify-end gap-1">
             <Link
               href="/"
               title="Ir al sitio principal"
@@ -198,9 +296,9 @@ export default function AfiliadosNav() {
             </button>
           </div>
 
-          {/* Mobile hamburguesa */}
+          {/* Hamburguesa — hasta 1024, no hasta 640 */}
           <button
-            className="sm:hidden col-start-3 justify-self-end w-9 h-9 flex items-center justify-center rounded-xl border border-gray-200 dark:border-white/10 bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-300"
+            className="lg:hidden col-start-3 justify-self-end w-9 h-9 flex items-center justify-center rounded-xl border border-gray-200 dark:border-white/10 bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-300"
             onClick={() => setMobileOpen((v) => !v)}
             aria-label="Menú"
           >
@@ -216,13 +314,13 @@ export default function AfiliadosNav() {
             <motion.div
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
-              className="sm:hidden fixed inset-0 z-50 bg-black/40 backdrop-blur-sm"
+              className="lg:hidden fixed inset-0 z-50 bg-black/40 backdrop-blur-sm"
               onClick={() => setMobileOpen(false)}
             />
             <motion.div
               initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }}
               transition={{ type: "spring", damping: 30, stiffness: 280 }}
-              className="sm:hidden fixed top-0 right-0 h-full w-72 z-50 bg-white dark:bg-[#0f1629] shadow-2xl flex flex-col"
+              className="lg:hidden fixed top-0 right-0 h-full w-72 z-50 bg-white dark:bg-[#0f1629] shadow-2xl flex flex-col"
             >
               {/* Header del panel */}
               <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-white/10">
@@ -243,12 +341,13 @@ export default function AfiliadosNav() {
 
               {/* Links */}
               <div className="flex-1 px-4 py-4 flex flex-col gap-1 overflow-y-auto">
-                {mobileLinks.map((l) => {
-                  const active = pathname === l.href;
+                {/* Las OCHO, sin "Más": acá la lista es vertical y hay lugar. */}
+                {LINKS.map(({ href, label, Icon, color }) => {
+                  const active = pathname === href;
                   return (
                     <Link
-                      key={l.href}
-                      href={l.href}
+                      key={href}
+                      href={href}
                       onClick={() => setMobileOpen(false)}
                       className={`flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-colors ${
                         active
@@ -256,7 +355,8 @@ export default function AfiliadosNav() {
                           : "text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5"
                       }`}
                     >
-                      {l.icon} {l.label}
+                      <Icon className={`h-4 w-4 shrink-0 ${active ? "" : color}`} />
+                      {label}
                     </Link>
                   );
                 })}
