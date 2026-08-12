@@ -57,6 +57,65 @@ function verificarPantallas() {
 }
 verificarPantallas();
 
+/* ── Buscar ──────────────────────────────────────────────────────────────────
+   Busca en el TEXTO COMPLETO, no solo en los títulos. Alguien que escribe
+   "envío gratis" está buscando la promoción, y esas dos palabras no están en
+   ningún título — están adentro de tres artículos distintos. Un buscador que
+   solo mira títulos le contesta "no hay resultados" a una pregunta que la
+   ayuda sí responde, y esa es la peor respuesta posible.
+
+   Corre en el servidor: el índice ya se arma en cada pedido para leer la
+   sesión, así que buscar no cuesta un viaje extra ni manda el texto de los
+   veintidós artículos al navegador. */
+
+/** Sin tildes y en minúscula. Nadie escribe "envío" con tilde en un buscador. */
+function normalizar(s: string): string {
+  return s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+}
+
+function textoDe(a: Articulo): string {
+  const cuerpo = a.cuerpo.map((b) => {
+    switch (b.t) {
+      case "p":
+      case "h":
+        return b.texto;
+      case "lista":
+      case "pasos":
+        return b.items.join(" ");
+      case "aviso":
+        return b.texto;
+      case "tabla":
+        return [...b.cols, ...b.filas.flat()].join(" ");
+      case "ruta":
+        return b.label;
+    }
+  });
+  return normalizar([a.titulo, a.resumen, ...cuerpo].join(" "));
+}
+
+export function buscar(consulta: string, rubro?: StoreType): Articulo[] {
+  const q = normalizar(consulta.trim());
+  if (q.length < 2) return [];
+
+  /* Todas las palabras tienen que aparecer, no cualquiera. Con "cupon vencido"
+     el que busca quiere el artículo que habla de las dos cosas, no los nueve
+     que mencionan alguna. No hace falta que estén juntas ni en orden. */
+  const palabras = q.split(/\s+/);
+
+  return articulosDe(rubro)
+    .map((a) => {
+      const texto = textoDe(a);
+      if (!palabras.every((p) => texto.includes(p))) return null;
+      /* Primero los que lo tienen en el título: si escribiste "cupones", el
+         artículo que se llama así va arriba de los que lo nombran al pasar. */
+      const enTitulo = palabras.every((p) => normalizar(a.titulo).includes(p));
+      return { a, peso: enTitulo ? 0 : 1 };
+    })
+    .filter((r): r is { a: Articulo; peso: number } => r !== null)
+    .sort((x, y) => x.peso - y.peso)
+    .map((r) => r.a);
+}
+
 export function relacionadosDe(articulo: Articulo): Articulo[] {
   return (articulo.relacionados ?? [])
     .map(buscarArticulo)

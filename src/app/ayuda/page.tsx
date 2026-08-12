@@ -1,9 +1,9 @@
 import Link from "next/link";
-import { ArrowRight, LifeBuoy, Store } from "lucide-react";
+import { ArrowRight, LifeBuoy, Store, Search, X } from "lucide-react";
 import { SiteNav } from "@/components/SiteNav";
 import { SiteFooter } from "@/components/SiteFooter";
 import Chip from "@/components/ayuda/Chip";
-import { porGrupo } from "@/lib/ayuda";
+import { porGrupo, buscar, type Articulo } from "@/lib/ayuda";
 import { getCurrentUser } from "@/lib/auth-session";
 import { getStoreType, type StoreType } from "@/lib/storeTypes";
 import { prisma } from "@/lib/prisma";
@@ -36,13 +36,39 @@ async function rubroDelLector(): Promise<StoreType | undefined> {
   }
 }
 
-type Props = { searchParams: Promise<{ todo?: string }> };
+/* Una fila del listado. La misma para el índice agrupado y para los
+   resultados de la búsqueda: si fueran dos, un día se ven distinto. */
+function Fila({ articulo }: { articulo: Articulo }) {
+  return (
+    <li>
+      <Link
+        href={`/ayuda/${articulo.slug}`}
+        className="group flex items-start gap-4 border-b border-gray-100 py-5 transition-colors last:border-0 hover:bg-orange-50/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-600"
+      >
+        <div className="flex min-w-0 flex-1 flex-col gap-1">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <h3 className="font-semibold tracking-tight text-gray-950">{articulo.titulo}</h3>
+            <Chip clase={articulo.clase} />
+          </div>
+          <p className="text-sm leading-6 text-gray-500">{articulo.resumen}</p>
+        </div>
+        <ArrowRight className="mt-1 h-4 w-4 shrink-0 text-gray-300 transition-all group-hover:translate-x-0.5 group-hover:text-orange-600" />
+      </Link>
+    </li>
+  );
+}
+
+type Props = { searchParams: Promise<{ todo?: string; q?: string }> };
 
 export default async function AyudaIndexPage({ searchParams }: Props) {
-  const { todo } = await searchParams;
+  const { todo, q } = await searchParams;
   const rubro = todo === "1" ? undefined : await rubroDelLector();
-  const grupos = porGrupo(rubro);
   const config = rubro ? getStoreType(rubro) : null;
+
+  const consulta = (q ?? "").trim();
+  const buscando = consulta.length > 0;
+  const resultados = buscando ? buscar(consulta, rubro) : [];
+  const grupos = buscando ? [] : porGrupo(rubro);
 
   return (
     <div className="min-h-screen bg-white text-gray-950">
@@ -81,38 +107,94 @@ export default async function AyudaIndexPage({ searchParams }: Props) {
           </div>
         )}
 
-        <div className="mt-12 flex flex-col gap-14">
-          {grupos.map((grupo) => (
-            <section key={grupo.key}>
-              <div className="flex flex-col gap-1 border-b border-gray-100 pb-4">
-                <h2 className="text-xl font-bold tracking-tight">{grupo.titulo}</h2>
-                <p className="text-sm text-gray-500">{grupo.bajada}</p>
-              </div>
+        {/* Un `<form>` de toda la vida, sin JavaScript. La búsqueda se resuelve
+            en el servidor, que ya está armando esta página para leer la sesión:
+            filtrar en el navegador obligaría a mandarle el texto de los
+            veintidós artículos a cada visita, para una búsqueda que la mayoría
+            no va a hacer. */}
+        <form action="/ayuda" method="get" className="mt-8 flex gap-2" role="search">
+          {todo === "1" && <input type="hidden" name="todo" value="1" />}
+          <div className="relative flex-1">
+            <Search
+              className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400"
+              aria-hidden="true"
+            />
+            <input
+              type="search"
+              name="q"
+              defaultValue={consulta}
+              placeholder="Buscar en la ayuda — ej. envío gratis, cupón vencido"
+              aria-label="Buscar en la ayuda"
+              className="w-full rounded-xl border border-gray-200 bg-white py-3 pl-10 pr-4 text-[15px] text-gray-950 placeholder:text-gray-400 focus:border-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-100"
+            />
+          </div>
+          <button
+            type="submit"
+            className="shrink-0 rounded-xl bg-gray-950 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-gray-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-600"
+          >
+            Buscar
+          </button>
+        </form>
 
+        {buscando ? (
+          <section className="mt-10">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 pb-4">
+              <h2 className="text-xl font-bold tracking-tight">
+                {resultados.length === 0
+                  ? "Sin resultados"
+                  : `${resultados.length} ${resultados.length === 1 ? "resultado" : "resultados"}`}{" "}
+                <span className="font-medium text-gray-400">para «{consulta}»</span>
+              </h2>
+              <Link
+                href={todo === "1" ? "/ayuda?todo=1" : "/ayuda"}
+                className="inline-flex items-center gap-1.5 text-sm font-semibold text-gray-500 transition-colors hover:text-gray-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-600"
+              >
+                <X className="h-3.5 w-3.5" />
+                Limpiar
+              </Link>
+            </div>
+
+            {resultados.length > 0 ? (
               <ul className="mt-2 flex flex-col">
-                {grupo.articulos.map((articulo) => (
-                  <li key={articulo.slug}>
-                    <Link
-                      href={`/ayuda/${articulo.slug}`}
-                      className="group flex items-start gap-4 border-b border-gray-100 py-5 transition-colors last:border-0 hover:bg-orange-50/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-600"
-                    >
-                      <div className="flex min-w-0 flex-1 flex-col gap-1">
-                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                          <h3 className="font-semibold tracking-tight text-gray-950">
-                            {articulo.titulo}
-                          </h3>
-                          <Chip clase={articulo.clase} />
-                        </div>
-                        <p className="text-sm leading-6 text-gray-500">{articulo.resumen}</p>
-                      </div>
-                      <ArrowRight className="mt-1 h-4 w-4 shrink-0 text-gray-300 transition-all group-hover:translate-x-0.5 group-hover:text-orange-600" />
-                    </Link>
-                  </li>
+                {resultados.map((a) => (
+                  <Fila key={a.slug} articulo={a} />
                 ))}
               </ul>
-            </section>
-          ))}
-        </div>
+            ) : (
+              /* Sin resultados no se deja al lector en una pared en blanco: se
+                 le dice qué probar y se le deja la salida de escribirnos. */
+              <div className="mt-6 flex flex-col gap-2 rounded-xl border border-gray-200 bg-gray-50 px-6 py-8">
+                <p className="text-sm font-semibold text-gray-950">
+                  No encontramos nada con esas palabras.
+                </p>
+                <p className="max-w-xl text-sm leading-6 text-gray-500">
+                  Probá con menos palabras, o con el nombre que usa el panel —{" "}
+                  <span className="font-medium text-gray-700">cupón</span>,{" "}
+                  <span className="font-medium text-gray-700">envío</span>,{" "}
+                  <span className="font-medium text-gray-700">pedido</span>. Si no está, escribinos
+                  y lo escribimos.
+                </p>
+              </div>
+            )}
+          </section>
+        ) : (
+          <div className="mt-12 flex flex-col gap-14">
+            {grupos.map((grupo) => (
+              <section key={grupo.key}>
+                <div className="flex flex-col gap-1 border-b border-gray-100 pb-4">
+                  <h2 className="text-xl font-bold tracking-tight">{grupo.titulo}</h2>
+                  <p className="text-sm text-gray-500">{grupo.bajada}</p>
+                </div>
+
+                <ul className="mt-2 flex flex-col">
+                  {grupo.articulos.map((articulo) => (
+                    <Fila key={articulo.slug} articulo={articulo} />
+                  ))}
+                </ul>
+              </section>
+            ))}
+          </div>
+        )}
 
         {/* Salida para lo que la ayuda no cubre. Sin esto, el que no encuentra su
             caso se queda sin nada — y la ayuda nunca va a cubrir todo. */}
