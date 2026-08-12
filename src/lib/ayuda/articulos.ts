@@ -1276,4 +1276,198 @@ export const ARTICULOS: Articulo[] = [
       },
     ],
   },
+
+  {
+    slug: "elegir-y-editar-el-diseno",
+    titulo: "Elegir y editar el diseño",
+    resumen:
+      "Los tres momentos de la pantalla de Diseño, y qué se puede cambiar sin romper nada.",
+    grupo: "arrancar",
+    clase: "mecanica",
+    pantalla: { label: "Diseño", href: "/dashboard/configuracion" },
+    actualizado: "2026-08-12",
+    relacionados: ["publicar-la-tienda", "las-fotos-de-tus-productos"],
+    cuerpo: [
+      {
+        t: "p",
+        texto:
+          "La pantalla de Diseño tiene tres momentos, y entender en cuál estás resuelve casi todas las dudas:",
+      },
+      {
+        t: "pasos",
+        items: [
+          "**La galería** — todos los diseños disponibles. Acá elegís cuál mirar.",
+          "**La vista previa** — el diseño aplicado a *tu* tienda, con tus productos de verdad. Todavía no cambiaste nada: si te vas, tu tienda queda como estaba.",
+          "**El editor** — recién cuando tocás *Usar este diseño*. Acá sí estás modificando lo que ve el público.",
+        ],
+      },
+      {
+        t: "aviso",
+        tono: "ojo",
+        texto:
+          "Mirar un diseño **no** lo aplica. Podés recorrer todos los que quieras con la tienda publicada y no le cambia nada a nadie hasta que entres al editor y guardes.",
+      },
+
+      { t: "h", texto: "Cambiar de diseño no borra tu trabajo" },
+      {
+        t: "p",
+        texto:
+          "Los productos, los pedidos, los cupones y la configuración no dependen del diseño. Cambiás la vidriera, no lo que hay adentro. Podés probar otro y volver.",
+      },
+
+      { t: "h", texto: "La guía de esta pantalla" },
+      {
+        t: "p",
+        texto:
+          "Diseño es la única pantalla del panel que trae su propia guía en vivo, porque tiene dos: una para la vista previa y otra para el editor. Están en el **?** de arriba, y te van señalando los controles sobre la pantalla real.",
+      },
+      {
+        t: "aviso",
+        tono: "dato",
+        texto:
+          "Al lado del **?** está el ícono de **libro**, que abre este centro de ayuda. Son dos cosas distintas: el `?` explica *esta* pantalla, el libro explica el resto.",
+      },
+      { t: "ruta", label: "Ir a Diseño", href: "/dashboard/configuracion" },
+    ],
+  },
+
+  {
+    slug: "configuracion-de-la-tienda",
+    titulo: "La configuración de tu tienda",
+    resumen:
+      "Tu dirección web, el dominio propio, el flyer de bienvenida y la tienda como app.",
+    grupo: "arrancar",
+    clase: "mecanica",
+    pantalla: { label: "Configuración", href: "/dashboard/ajustes" },
+    actualizado: "2026-08-12",
+    relacionados: ["publicar-la-tienda", "notificaciones"],
+    cuerpo: [
+      {
+        t: "p",
+        texto:
+          "Acá vive lo que no entra en ninguna otra pantalla: cómo se llega a tu tienda y qué pasa cuando alguien entra.",
+      },
+
+      { t: "h", texto: "Tu subdominio" },
+      {
+        t: "p",
+        texto:
+          "Es la dirección con la que arrancás y no cuesta nada. Es la que compartís por WhatsApp y la que Google indexa.",
+      },
+      {
+        t: "aviso",
+        tono: "ojo",
+        texto:
+          "Pensalo antes de fijarlo: esa dirección va a quedar en los mensajes que ya mandaste, en los links que otros compartieron y en lo que Google ya guardó. Cambiarla después significa que todo eso deja de funcionar.",
+      },
+
+      { t: "h", texto: "Dominio personalizado" },
+      {
+        t: "p",
+        texto:
+          "Si comprás tu propio dominio, se conecta desde acá. Es lo que hace que la tienda deje de parecer prestada.",
+      },
+      {
+        t: "p",
+        texto:
+          "No es instantáneo: después de conectarlo, internet tarda un rato en enterarse. Si al toque no anda, casi nunca está mal configurado — está tardando.",
+      },
+
+      { t: "h", texto: "Flyer de publicidad" },
+      {
+        t: "p",
+        texto:
+          "Una imagen que aparece al entrar a tu tienda. Sirve para anunciar algo puntual: una promo que arranca, un cambio de horario, una fecha especial.",
+      },
+      {
+        t: "aviso",
+        tono: "ojo",
+        texto:
+          "Un flyer que queda puesto tres meses deja de anunciar y pasa a ser un cartel que hay que cerrar para poder comprar. Si ya no dice nada nuevo, sacalo.",
+      },
+
+      { t: "h", texto: "Tu tienda como app" },
+      {
+        t: "p",
+        texto:
+          "Tus clientes pueden instalarla en el celular y les queda con ícono propio, como cualquier app, sin pasar por ninguna tienda de aplicaciones. Es una función del plan Premium.",
+      },
+      { t: "ruta", label: "Ir a Configuración", href: "/dashboard/ajustes" },
+    ],
+  },
+
+  {
+    slug: "leer-tus-estadisticas",
+    titulo: "Leer tus estadísticas",
+    resumen:
+      "Qué mide cada número, cuál mirar primero y por qué tus propias visitas no aparecen.",
+    grupo: "cuenta",
+    clase: "criterio",
+    pantalla: { label: "Estadísticas", href: "/dashboard/metricas" },
+    actualizado: "2026-08-12",
+    relacionados: ["los-estados-de-un-pedido", "carritos-abandonados"],
+    cuerpo: [
+      {
+        t: "p",
+        texto:
+          "La pantalla tira muchos números y no todos sirven para lo mismo. Estos son los que valen y en qué orden mirarlos.",
+      },
+
+      { t: "h", texto: "Los tres de arriba" },
+      {
+        t: "tabla",
+        cols: ["Número", "Qué te dice"],
+        filas: [
+          [
+            "Ingresos confirmados",
+            "La plata de los pedidos que salieron de Pendiente. Los pendientes no entran: pueden no llegar nunca.",
+          ],
+          ["Pedidos", "Cuántas ventas, no cuánta plata. Sirve para ver si el problema es volumen o es precio."],
+          [
+            "Conversión",
+            "De cada 100 que entraron, cuántos compraron. Es el más honesto de los tres.",
+          ],
+        ],
+      },
+      {
+        t: "aviso",
+        tono: "dato",
+        texto:
+          "**Tus propias visitas no se cuentan.** Entrar veinte veces por día a mirar tu tienda no te ensucia la conversión.",
+      },
+
+      { t: "h", texto: "Margen y rentabilidad" },
+      {
+        t: "p",
+        texto:
+          "Si cargaste el **Costo** de tus productos, aparecen el margen promedio y la ganancia real del período. Sin ese dato, la pantalla te puede decir cuánto facturaste pero no cuánto ganaste — y son cosas muy distintas.",
+      },
+      {
+        t: "p",
+        texto:
+          "**Rentabilidad por producto** es el cuadro que más cambia decisiones: casi siempre hay algo que vende mucho y deja poco, y algo que vende poco y deja mucho. Eso no se ve mirando solo los más vendidos.",
+      },
+
+      { t: "h", texto: "Comparar contra algo" },
+      {
+        t: "p",
+        texto:
+          "Un número solo no dice nada: $400.000 puede ser un mes excelente o uno malo. Por eso podés comparar el período con **el anterior** o con **el año pasado**.",
+      },
+      {
+        t: "aviso",
+        tono: "ojo",
+        texto:
+          "Contra el año pasado suele ser más justo que contra el mes anterior, porque casi todos los rubros tienen temporada. Diciembre siempre le gana a noviembre, y eso no significa que estés mejorando.",
+      },
+
+      { t: "h", texto: "Clientes nuevos y repetidos" },
+      {
+        t: "p",
+        texto:
+          "La pantalla separa a los que **compraron por primera vez** de los que **ya te habían comprado**. Si casi todos son nuevos, estás gastando en atraer gente que no vuelve; si casi ninguno lo es, vendés bien pero no estás creciendo.",
+      },
+      { t: "ruta", label: "Ver mis estadísticas", href: "/dashboard/metricas" },
+    ],
+  },
 ];
