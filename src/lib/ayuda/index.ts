@@ -37,7 +37,7 @@ export function porGrupo(rubro?: StoreType) {
 /* Que las dos tablas livianas no se separen de los artículos.
  *
  * `indice.ts` y `pantallas.ts` existen para que el navegador no se baje los
- * veintidós artículos enteros con tal de mostrar un título. El precio es el
+ * los artículos enteros con tal de mostrar un título. El precio es el
  * slug y el título escritos dos veces. Repetido no es problema; repetido y
  * desactualizado en silencio, sí — una ayuda que promete un artículo y abre
  * otro es peor que no ofrecer nada.
@@ -84,7 +84,7 @@ verificarPantallas();
 
    Corre en el servidor: el índice ya se arma en cada pedido para leer la
    sesión, así que buscar no cuesta un viaje extra ni manda el texto de los
-   veintidós artículos al navegador. */
+   los artículos al navegador. */
 
 /** Sin tildes y en minúscula. Nadie escribe "envío" con tilde en un buscador. */
 function normalizar(s: string): string {

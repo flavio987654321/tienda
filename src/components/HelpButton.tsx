@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { HelpCircle, Play, BookOpen, FileText } from "lucide-react";
 // Solo la tabla liviana, NO `@/lib/ayuda`: esto es cliente y de ahí se bajaría
-// el texto completo de los diecisiete artículos para usar un título y un slug.
+// el texto completo de todos los artículos para usar un título y un slug.
 import { pantallaDe } from "@/lib/ayuda/pantallas";
 
 /* El `?` del panel. Ofrece tres cosas, de la más específica a la más general:

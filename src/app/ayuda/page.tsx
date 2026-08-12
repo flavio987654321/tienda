@@ -12,8 +12,8 @@ import { prisma } from "@/lib/prisma";
    artículo NO: siguen generándose en el build, que es lo que las hace rápidas y
    lo que Google rastrea. La sesión solo decide qué se LISTA acá.
 
-   Un visitante sin sesión —y el robot de Google, que nunca la tiene— ve los
-   diecinueve. */
+   Un visitante sin sesión —y el robot de Google, que nunca la tiene— los ve
+   todos. */
 export const dynamic = "force-dynamic";
 
 /* El rubro de quien está mirando, si es dueño de una tienda.
@@ -109,8 +109,8 @@ export default async function AyudaIndexPage({ searchParams }: Props) {
 
         {/* Un `<form>` de toda la vida, sin JavaScript. La búsqueda se resuelve
             en el servidor, que ya está armando esta página para leer la sesión:
-            filtrar en el navegador obligaría a mandarle el texto de los
-            veintidós artículos a cada visita, para una búsqueda que la mayoría
+            filtrar en el navegador obligaría a mandarle el texto de todos los
+            artículos a cada visita, para una búsqueda que la mayoría
             no va a hacer. */}
         <form action="/ayuda" method="get" className="mt-8 flex gap-2" role="search">
           {todo === "1" && <input type="hidden" name="todo" value="1" />}

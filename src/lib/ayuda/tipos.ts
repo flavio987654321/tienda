@@ -61,9 +61,8 @@ export interface Articulo {
    * Dice el MODO a propósito. La versión obvia era enumerar rubros —"todos menos
    * AUTOS"—, y esa lista hay que ir a tocarla en cada artículo cada vez que entra
    * un rubro nuevo. Inmobiliaria y servicios ya están anunciados; con listas de
-   * rubros, el día que entren habría que revisar los diecinueve artículos uno por
-   * uno, y el que se olvide de uno le va a estar explicando cupones a una
-   * inmobiliaria.
+   * rubros, el día que entren habría que revisar los artículos uno por uno, y
+   * el que se olvide de uno le va a estar explicando cupones a una inmobiliaria.
    *
    * `checkoutMode` ya vive en la config de cada rubro (`storeTypes.ts`), así que
    * un rubro nuevo declara el suyo una vez y la ayuda entera lo hereda sola. */

@@ -3,11 +3,11 @@
  * Esto está SEPARADO de `articulos.ts` a propósito, y la razón es el peso.
  * El `?` del panel es un componente de cliente: todo lo que importe viaja al
  * navegador. Si preguntara por la pantalla actual contra `ARTICULOS`, cada
- * pantalla del panel se bajaría los veintidós artículos completos —el texto
+ * pantalla del panel se bajaría los artículos completos —el texto
  * entero, tablas y avisos incluidos— para terminar usando un título y un slug.
  *
  * Acá vive solo el par ruta → artículo. El título NO se repite: sale de
- * `indice.ts`, que es la lista liviana de los veintidós y ya viajaba igual al
+ * `indice.ts`, que es la lista liviana de todos y ya viajaba igual al
  * navegador por los botones de Sasha. Repetido en dos lados era manejable con
  * el chequeo de `index.ts`; en tres ya no valía la pena. */
 

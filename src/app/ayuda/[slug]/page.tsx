@@ -72,7 +72,7 @@ export default async function ArticuloPage({ params }: Props) {
               360. En móvil alcanza con el link de arriba, que vuelve al índice.
 
               NO lleva scroll propio. Lo tenía —pegajoso, con `overflow-y-auto`—
-              y con diecisiete artículos la lista pasaba el alto de la ventana:
+              y la lista ya pasaba el alto de la ventana:
               aparecía una segunda barra de scroll adentro de la página y, peor,
               se montaba encima de los títulos del índice, que quedaban cortados
               contra el borde. Suelto, el índice sube con la página y no le pisa

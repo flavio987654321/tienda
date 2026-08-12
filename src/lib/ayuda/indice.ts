@@ -3,11 +3,11 @@
  * Existe por el mismo motivo que `pantallas.ts`: hay dos partes del panel que
  * necesitan nombrar un artículo desde el NAVEGADOR —el `?` de cada pantalla y
  * los botones que arma Sasha— y las dos son componentes de cliente. Importar
- * `articulos.ts` desde ahí bajaría los veintidós artículos enteros, texto,
+ * `articulos.ts` desde ahí bajaría los artículos enteros, texto,
  * tablas y avisos incluidos, para terminar mostrando un título.
  *
  * Es la lista COMPLETA a propósito, no solo la de artículos con pantalla:
- * Sasha puede ofrecer cualquiera de los veintidós, y lo que no está acá no se
+ * Sasha puede ofrecer cualquiera de ellos, y lo que no está acá no se
  * puede validar — o sea que no se pinta como botón.
  *
  * `index.ts` compara esta tabla contra los artículos de verdad y avisa por
