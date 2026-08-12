@@ -1,5 +1,6 @@
 "use client";
 import { useState, useCallback, useRef, useEffect } from "react";
+import Link from "next/link";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import DashboardLayout from "@/components/DashboardLayout";
 import type { StoreConfig, TextOverride, ImageOverride, TemplateId } from "@/types/store-config";
@@ -2104,6 +2105,35 @@ function BotonAyuda({ onClick, plano }: { onClick: () => void; plano?: boolean }
   );
 }
 
+/* ── Centro de ayuda ─────────────────────────────────────────
+   Va al lado del `?` y no adentro de él. El motivo por el que Diseño esconde
+   la barra del panel sigue valiendo: dos `?` IGUALES abriendo guías distintas
+   confunden. Pero esto no es otro `?` — es un libro, con su propio tooltip, y
+   lleva a otra cosa: la guía explica ESTA pantalla, el centro de ayuda explica
+   el resto. Sin él, Diseño era la única pantalla del panel sin salida a la
+   ayuda escrita.
+
+   Se abre en otra pestaña: acá se está editando un diseño sin guardar y
+   `UnsavedChangesGuard` está montado. */
+function BotonCentroAyuda({ plano }: { plano?: boolean }) {
+  const fondo = plano ? "none" : "white";
+  return (
+    <Link href="/ayuda" target="_blank" rel="noopener noreferrer"
+      title="Centro de ayuda" aria-label="Abrir el centro de ayuda en otra pestaña"
+      style={{ display: "flex", alignItems: "center", justifyContent: "center",
+        width: 32, height: 32, borderRadius: plano ? 6 : 8, background: fondo,
+        border: plano ? "none" : "1px solid #e2e8f0", color: P.muted,
+        cursor: "pointer", flexShrink: 0, transition: "background 0.12s, color 0.12s" }}
+      onMouseEnter={e => { e.currentTarget.style.background = "#f1f5f9"; e.currentTarget.style.color = "#475569"; }}
+      onMouseLeave={e => { e.currentTarget.style.background = fondo; e.currentTarget.style.color = P.muted; }}>
+      <svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+        <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
+        <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+      </svg>
+    </Link>
+  );
+}
+
 export default function ConfiguracionPage() {
   const [mode, setMode] = useState<Mode>("gallery");
   const [selected, setSelected] = useState<TemplateInfo | null>(null);
@@ -2624,6 +2654,7 @@ export default function ConfiguracionPage() {
 
             {/* Derecha */}
             <BotonAyuda onClick={() => setTour("preview")} />
+            <BotonCentroAyuda />
             <button onClick={handleUseTemplate} data-tour="pv-usar"
               style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 20px",
                 border: "none", borderRadius: 8, background: "#6366f1", color: "white",
@@ -2727,6 +2758,7 @@ export default function ConfiguracionPage() {
             )}
 
             <BotonAyuda plano onClick={() => setTour("editing")} />
+            <BotonCentroAyuda plano />
 
             <button onClick={() => setConfigModalOpen(true)} title="Configuración avanzada" data-tour="ed-avanzada"
               style={{ display: "flex", alignItems: "center", justifyContent: "center",

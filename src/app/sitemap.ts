@@ -1,6 +1,7 @@
 import { MetadataRoute } from "next";
 import { prisma } from "@/lib/prisma";
 import { SITE_URL } from "@/lib/site";
+import { ARTICULOS } from "@/lib/ayuda";
 
 const BASE_URL = SITE_URL;
 
@@ -12,9 +13,28 @@ const STATIC_ROUTES: MetadataRoute.Sitemap = [
   { url: `${BASE_URL}/contacto`, lastModified: new Date(), changeFrequency: "yearly", priority: 0.5 },
   { url: `${BASE_URL}/comunidad`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.5 },
   { url: `${BASE_URL}/seguimiento`, lastModified: new Date(), changeFrequency: "yearly", priority: 0.4 },
+  { url: `${BASE_URL}/ayuda`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.7 },
   { url: `${BASE_URL}/terminos`, lastModified: new Date(), changeFrequency: "yearly", priority: 0.3 },
   { url: `${BASE_URL}/privacidad`, lastModified: new Date(), changeFrequency: "yearly", priority: 0.3 },
 ];
+
+/* Los artículos de ayuda.
+ *
+ * Van uno por uno y no solo el índice: cada artículo contesta una búsqueda
+ * distinta —"cómo poner envío gratis", "por qué no aparezco en Google"— y el
+ * que la hace tiene que caer en la respuesta, no en una lista donde después
+ * la busque. Es la única parte del sitio que puede traer a alguien que todavía
+ * no sabe que existimos.
+ *
+ * `lastModified` sale de la fecha del propio artículo, no de `new Date()`: si
+ * todo dice "modificado recién" en cada visita del robot, Google deja de
+ * creerle al dato para todo el sitio. */
+const AYUDA_ROUTES: MetadataRoute.Sitemap = ARTICULOS.map((a) => ({
+  url: `${BASE_URL}/ayuda/${a.slug}`,
+  lastModified: new Date(`${a.actualizado}T12:00:00`),
+  changeFrequency: "monthly",
+  priority: 0.5,
+}));
 
 /**
  * Las tiendas que se pueden mostrar hoy.
@@ -121,5 +141,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.6,
   }));
 
-  return [...STATIC_ROUTES, ...storeRoutes, ...productRoutes];
+  return [...STATIC_ROUTES, ...AYUDA_ROUTES, ...storeRoutes, ...productRoutes];
 }
