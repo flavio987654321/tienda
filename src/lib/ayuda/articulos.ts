@@ -645,18 +645,41 @@ export const ARTICULOS: Articulo[] = [
             "Pendiente",
             "La persona armó el pedido pero todavía no lo confirmó nadie. Puede no llegar nunca.",
           ],
-          ["Confirmado", "Lo diste por bueno. Acá arranca la venta de verdad."],
+          [
+            "En preparación",
+            "Lo diste por bueno y lo estás armando. Acá arranca la venta de verdad.",
+          ],
           ["Enviado", "Salió. Podés cargarle el código de seguimiento y el cliente lo ve."],
           ["Entregado", "Llegó. Cierra el ciclo."],
           ["Cancelado", "No va más, sea por vos o por el cliente."],
         ],
       },
 
+      { t: "h", texto: "Cómo se mueve de uno a otro" },
+      {
+        t: "p",
+        texto: "Cada pedido trae el botón del paso que le toca:",
+      },
+      {
+        t: "pasos",
+        items: [
+          "**Confirmar pago recibido** o **Pasar a preparación** — de Pendiente a En preparación.",
+          "**Marcar enviado** — y ahí le cargás el código de seguimiento.",
+          "**Marcar entregado** — cierra el pedido.",
+        ],
+      },
+      {
+        t: "aviso",
+        tono: "dato",
+        texto:
+          "Si tenés varios pedidos en el mismo estado, se pueden mover **de a varios** en vez de uno por uno.",
+      },
+
       { t: "h", texto: "Cuál cuenta como venta" },
       {
         t: "p",
         texto:
-          "Solo **Confirmado, Enviado y Entregado**. Un pedido pendiente no suma a tus estadísticas, y está bien que así sea: contar plata que puede no llegar nunca infla los números y te hace tomar decisiones sobre algo que no existe.",
+          "Solo **En preparación, Enviado y Entregado**. Un pedido pendiente no suma a tus estadísticas, y está bien que así sea: contar plata que puede no llegar nunca infla los números y te hace tomar decisiones sobre algo que no existe.",
       },
       {
         t: "aviso",
@@ -669,7 +692,7 @@ export const ARTICULOS: Articulo[] = [
       {
         t: "p",
         texto:
-          "Si el pedido ya estaba confirmado y lo trajo un afiliado, al cancelarlo **se le revierte la comisión**. Es automático. Tiene sentido —esa venta no ocurrió— pero conviene saberlo antes de cancelar en lote.",
+          "Si el pedido ya había salido de Pendiente y lo trajo un afiliado, al cancelarlo **se le revierte la comisión**. Es automático. Tiene sentido —esa venta no ocurrió— pero conviene saberlo antes de cancelar en lote.",
       },
       {
         t: "aviso",
@@ -950,13 +973,13 @@ export const ARTICULOS: Articulo[] = [
       {
         t: "p",
         texto:
-          "Arranca en **10%** y la definís vos por tienda. Se calcula sobre la venta y se acredita cuando el pedido queda confirmado.",
+          "Arranca en **10%** y la definís vos por tienda. Se calcula sobre la venta y se acredita cuando el pedido pasa a **En preparación**.",
       },
       {
         t: "aviso",
         tono: "dato",
         texto:
-          "Si después cancelás un pedido que ya estaba confirmado, la comisión se revierte sola. Esa venta no ocurrió.",
+          "Si después cancelás un pedido que ya había salido de Pendiente, la comisión se revierte sola. Esa venta no ocurrió.",
       },
       { t: "ruta", label: "Ver mis afiliados", href: "/dashboard/vendedoras" },
       {
@@ -1031,10 +1054,16 @@ export const ARTICULOS: Articulo[] = [
         t: "tabla",
         cols: ["Estado", "Qué significa"],
         filas: [
-          ["En prueba", "El período gratis del principio. Tenés todo funcionando."],
-          ["Activo", "Está pago y al día."],
-          ["En gracia", "Se venció pero todavía tenés unos días antes de que se corte. Es el momento de renovar."],
-          ["Vencido", "Se acabó la gracia."],
+          [
+            "Período de prueba",
+            "El tiempo gratis del principio. Tenés todo funcionando y la pantalla te muestra los días que quedan.",
+          ],
+          ["Activa", "Está paga y al día."],
+          [
+            "Período de gracia",
+            "Se venció pero todavía tenés unos días antes de que se corte, y también te los cuenta. Es el momento de renovar.",
+          ],
+          ["Vencida", "Se acabó la gracia."],
         ],
       },
 
@@ -1047,7 +1076,7 @@ export const ARTICULOS: Articulo[] = [
       {
         t: "p",
         texto:
-          "Te llegan avisos por mail antes de que se venza y cuando entrás en gracia, así que no depende de que te acuerdes de mirar. Pero el pago es siempre una acción tuya.",
+          "Te llegan avisos por mail antes de que se venza y cuando entrás en gracia, así que no depende de que te acuerdes de mirar. Pero el pago es siempre una acción tuya: el botón dice **Renovar ahora**, o **Reactivar suscripción** si ya se te venció.",
       },
       { t: "ruta", label: "Ver mi plan", href: "/dashboard/mi-plan" },
 
