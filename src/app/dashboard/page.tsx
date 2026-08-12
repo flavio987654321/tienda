@@ -24,9 +24,22 @@ export default async function DashboardPage() {
   const store = await prisma.store.findUnique({
     where: { ownerId: userId },
     include: {
-      // Sin los borrados. Los pausados SÍ se cuentan: son de la dueña y los ve en
-      // su lista de productos, así que el total del panel tiene que coincidir.
-      _count: { select: { products: { where: { deletedAt: null } }, orders: true, affiliates: true } },
+      // Productos: sin los borrados. Los pausados SÍ se cuentan: son de la dueña
+      // y los ve en su lista de productos, así que el total tiene que coincidir.
+      //
+      // Afiliados: sólo los aprobados y activos, que es EXACTAMENTE lo que cuenta
+      // la tarjeta "Activos" de la sección (ver dashboard/vendedoras/page.tsx).
+      // Sin este filtro entraban también los pendientes, los rechazados, los
+      // pausados y los dados de baja — así que dar de baja al único afiliado
+      // dejaba el cuadradito en 1, y los dos números del panel se contradecían
+      // entre sí. El que cuenta de menos se nota; el que cuenta de más, no.
+      _count: {
+        select: {
+          products: { where: { deletedAt: null } },
+          orders: true,
+          affiliates: { where: { status: "APPROVED", isActive: true } },
+        },
+      },
       verificationRequest: { select: { status: true } },
     },
   });
