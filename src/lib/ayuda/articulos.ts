@@ -364,7 +364,7 @@ export const ARTICULOS: Articulo[] = [
     clase: "mecanica",
     pantalla: { label: "Cupones", href: "/dashboard/cupones" },
     checkout: "cart",
-    actualizado: "2026-08-11",
+    actualizado: "2026-08-12",
     relacionados: ["cupon-o-promocion", "como-armar-una-promocion"],
     cuerpo: [
       {
@@ -412,6 +412,18 @@ export const ARTICULOS: Articulo[] = [
         t: "p",
         texto:
           "En el listado del panel cada cupón muestra en qué grupo cayó, así que no hace falta adivinar cuál de las cuatro es.",
+      },
+      { t: "h", texto: "Un cupón vencido no se borra solo" },
+      {
+        t: "p",
+        texto:
+          "Deja de funcionar, pero **se queda en la lista para siempre**, con la etiqueta «Vencido» — para eso está la pestaña Vencidos. Si querés sacarlo de ahí, lo borrás vos con el tacho.",
+      },
+      {
+        t: "aviso",
+        tono: "dato",
+        texto:
+          "Un vencido **no te ocupa lugar** del tope de tu plan: el contador del panel ya lo descuenta. Borrarlo ordena la lista, no libera nada. El que sí ocupa lugar es el que está vigente aunque no lo use nadie.",
       },
       { t: "ruta", label: "Ver mis cupones", href: "/dashboard/cupones" },
     ],
