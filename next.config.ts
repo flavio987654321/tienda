@@ -12,7 +12,17 @@ const csp = [
   `img-src 'self' data: blob: https: https://${supabaseHost} https://res.cloudinary.com https://lh3.googleusercontent.com https://avatars.githubusercontent.com https://client.crisp.chat`,
   `connect-src 'self' https://${supabaseHost} wss://${supabaseHost} https://api.mercadopago.com https://api.mercadolibre.com https://*.mercadolibre.com https://*.ingest.sentry.io https://*.crisp.chat wss://*.crisp.chat https://challenges.cloudflare.com https://www.facebook.com https://www.google-analytics.com https://*.google-analytics.com https://*.analytics.google.com`,
   "media-src 'self' blob: https: https://res.cloudinary.com https://www.youtube.com https://www.instagram.com https://*.cdninstagram.com",
-  "frame-src 'self' https://www.youtube.com https://www.instagram.com https://sdk.mercadopago.com https://www.mercadopago.com https://www.mercadolibre.com https://*.mercadolibre.com https://challenges.cloudflare.com",
+  // `www.facebook.com` está acá por el Pixel de Meta, y va SOLO en frame-src.
+  // El script se baja de `connect.facebook.net` (script-src), los eventos
+  // salen por `connect-src` y el `<img>` del noscript entra por `img-src https:`
+  // — todo eso ya andaba. Lo que faltaba es el iframe oculto que `fbevents.js`
+  // abre por su cuenta para sincronizar la cookie: sin esto el navegador lo
+  // bloquea y llena la consola de errores de CSP en cada carga.
+  //
+  // Los eventos NO se estaban perdiendo, y por eso el error parecía inofensivo:
+  // el Pixel tiene varios transportes y los otros pasaban. Es ruido, pero ruido
+  // que tapa los errores de CSP que sí importan.
+  "frame-src 'self' https://www.youtube.com https://www.instagram.com https://sdk.mercadopago.com https://www.mercadopago.com https://www.mercadolibre.com https://*.mercadolibre.com https://challenges.cloudflare.com https://www.facebook.com",
   `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""} https://sdk.mercadopago.com https://client.crisp.chat https://challenges.cloudflare.com https://connect.facebook.net https://www.googletagmanager.com`,
   "style-src 'self' 'unsafe-inline' https://client.crisp.chat",
   "font-src 'self' data: https://client.crisp.chat",
