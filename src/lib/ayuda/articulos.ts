@@ -23,6 +23,7 @@ export const ARTICULOS: Articulo[] = [
       "Qué te pide TiendaApps antes de dejarte publicar, y qué cambia el día que le das a publicar.",
     grupo: "arrancar",
     clase: "mecanica",
+    rol: "dueno",
     pantalla: { label: "Diseño", href: "/dashboard/configuracion" },
     actualizado: "2026-08-11",
     relacionados: ["que-significan-los-avisos-del-panel", "que-muestra-google-de-tus-productos"],
@@ -76,6 +77,7 @@ export const ARTICULOS: Articulo[] = [
       "Los números de colores y los triángulos del menú no son adornos: cada color quiere decir algo distinto.",
     grupo: "arrancar",
     clase: "mecanica",
+    rol: "dueno",
     actualizado: "2026-08-11",
     relacionados: ["publicar-la-tienda"],
     cuerpo: [
@@ -146,6 +148,7 @@ export const ARTICULOS: Articulo[] = [
       "Cinco cosas de tu panel deciden cómo se ve tu producto en Google y en WhatsApp. Ninguna es obvia.",
     grupo: "encontrar",
     clase: "criterio",
+    rol: "dueno",
     pantalla: { label: "Productos", href: "/dashboard/productos" },
     actualizado: "2026-08-11",
     relacionados: ["como-cargar-un-producto", "las-fotos-de-tus-productos"],
@@ -229,6 +232,7 @@ export const ARTICULOS: Articulo[] = [
       "Los cinco tipos de promoción que podés armar, qué hace cada uno y dónde se aplica.",
     grupo: "vender",
     clase: "mecanica",
+    rol: "dueno",
     pantalla: { label: "Promociones", href: "/dashboard/promociones" },
     checkout: "cart",
     actualizado: "2026-08-11",
@@ -294,6 +298,7 @@ export const ARTICULOS: Articulo[] = [
       "Envío gratis, 20% off o 3×2 no dan el mismo resultado. Cuál usar según lo que quieras lograr.",
     grupo: "vender",
     clase: "criterio",
+    rol: "dueno",
     checkout: "cart",
     actualizado: "2026-08-11",
     relacionados: ["como-armar-una-promocion"],
@@ -362,6 +367,7 @@ export const ARTICULOS: Articulo[] = [
       "Un cupón es un código que el cliente escribe. Cuándo se agota, cuándo vence, y por qué a veces no vence nunca.",
     grupo: "vender",
     clase: "mecanica",
+    rol: "dueno",
     pantalla: { label: "Cupones", href: "/dashboard/cupones" },
     checkout: "cart",
     actualizado: "2026-08-12",
@@ -436,6 +442,7 @@ export const ARTICULOS: Articulo[] = [
       "Las dos descuentan, pero no sirven para lo mismo. Cuál usar según a quién le querés hacer el precio.",
     grupo: "vender",
     clase: "criterio",
+    rol: "dueno",
     checkout: "cart",
     actualizado: "2026-08-11",
     relacionados: ["cupones", "que-promocion-conviene"],
@@ -497,6 +504,7 @@ export const ARTICULOS: Articulo[] = [
       "Las de producto salen publicadas, las de tu tienda esperan que las apruebes. Y las aprobadas van a Google.",
     grupo: "vender",
     clase: "mecanica",
+    rol: "dueno",
     pantalla: { label: "Reseñas", href: "/dashboard/resenas" },
     checkout: "cart",
     actualizado: "2026-08-11",
@@ -569,6 +577,7 @@ export const ARTICULOS: Articulo[] = [
       "Quién entra a esa lista, cuándo sale el mail automático y qué pasa si tocás el botón de recordar.",
     grupo: "vender",
     clase: "mecanica",
+    rol: "dueno",
     pantalla: { label: "Carritos abandonados", href: "/dashboard/carritos-abandonados" },
     checkout: "cart",
     actualizado: "2026-08-11",
@@ -640,6 +649,7 @@ export const ARTICULOS: Articulo[] = [
       "Qué significa cada estado, cuál cuenta como venta de verdad y qué pasa cuando cancelás.",
     grupo: "cobrar",
     clase: "mecanica",
+    rol: "dueno",
     pantalla: { label: "Pedidos", href: "/dashboard/pedidos" },
     checkout: "cart",
     actualizado: "2026-08-11",
@@ -724,6 +734,7 @@ export const ARTICULOS: Articulo[] = [
       "Qué documentos te pide, cuánto tarda y qué cambia en tu tienda cuando queda aprobada.",
     grupo: "cuenta",
     clase: "mecanica",
+    rol: "dueno",
     pantalla: { label: "Perfil", href: "/dashboard/perfil" },
     actualizado: "2026-08-11",
     relacionados: ["publicar-la-tienda"],
@@ -786,6 +797,7 @@ export const ARTICULOS: Articulo[] = [
       "Mercado Pago, transferencia y efectivo. Cuál conviene y por qué a veces parece activado y no cuenta.",
     grupo: "cobrar",
     clase: "mecanica",
+    rol: "dueno",
     pantalla: { label: "Pagos", href: "/dashboard/pagos" },
     checkout: "cart",
     actualizado: "2026-08-11",
@@ -850,6 +862,7 @@ export const ARTICULOS: Articulo[] = [
       "Qué es una consulta, en qué estados vive y cómo se convierte en una venta con comisión.",
     grupo: "cobrar",
     clase: "mecanica",
+    rol: "dueno",
     pantalla: { label: "Consultas", href: "/dashboard/consultas" },
     checkout: "inquiry",
     actualizado: "2026-08-11",
@@ -900,6 +913,7 @@ export const ARTICULOS: Articulo[] = [
       "El orden de las fotos decide qué se ve en WhatsApp. Y qué foto vende no es la más linda.",
     grupo: "encontrar",
     clase: "criterio",
+    rol: "dueno",
     actualizado: "2026-08-11",
     relacionados: ["que-muestra-google-de-tus-productos"],
     cuerpo: [
@@ -955,6 +969,7 @@ export const ARTICULOS: Articulo[] = [
       "Cómo funcionan los afiliados, cuánto se llevan y qué pasa cuando aprobás una solicitud.",
     grupo: "vender",
     clase: "mecanica",
+    rol: "dueno",
     pantalla: { label: "Afiliados", href: "/dashboard/vendedoras" },
     actualizado: "2026-08-11",
     relacionados: ["los-estados-de-un-pedido"],
@@ -1009,6 +1024,7 @@ export const ARTICULOS: Articulo[] = [
       "Dos canales que salen juntos: la notificación al celular y el mail. Quién recibe cada uno.",
     grupo: "vender",
     clase: "mecanica",
+    rol: "dueno",
     pantalla: { label: "Notificaciones", href: "/dashboard/notificaciones" },
     actualizado: "2026-08-11",
     relacionados: ["carritos-abandonados"],
@@ -1054,6 +1070,7 @@ export const ARTICULOS: Articulo[] = [
       "En qué estado está tu suscripción, qué pasa cuando se vence y por qué no se renueva sola.",
     grupo: "cuenta",
     clase: "mecanica",
+    rol: "dueno",
     pantalla: { label: "Mi plan", href: "/dashboard/mi-plan" },
     actualizado: "2026-08-11",
     relacionados: ["verificar-tu-cuenta"],
@@ -1121,6 +1138,7 @@ export const ARTICULOS: Articulo[] = [
       "Las formas de entrega que ve el cliente al pagar: retiro, precio fijo, a coordinar o cotización automática.",
     grupo: "cobrar",
     clase: "mecanica",
+    rol: "dueno",
     pantalla: { label: "Pagos", href: "/dashboard/pagos" },
     checkout: "cart",
     actualizado: "2026-08-12",
@@ -1208,6 +1226,7 @@ export const ARTICULOS: Articulo[] = [
       "Los campos que importan, la diferencia entre variantes y atributos, y cómo dejarlo programado.",
     grupo: "arrancar",
     clase: "mecanica",
+    rol: "dueno",
     pantalla: { label: "Productos", href: "/dashboard/productos" },
     actualizado: "2026-08-12",
     relacionados: ["que-muestra-google-de-tus-productos", "las-fotos-de-tus-productos"],
@@ -1296,6 +1315,7 @@ export const ARTICULOS: Articulo[] = [
       "Los tres momentos de la pantalla de Diseño, y qué se puede cambiar sin romper nada.",
     grupo: "arrancar",
     clase: "mecanica",
+    rol: "dueno",
     pantalla: { label: "Diseño", href: "/dashboard/configuracion" },
     actualizado: "2026-08-12",
     relacionados: ["publicar-la-tienda", "las-fotos-de-tus-productos"],
@@ -1350,6 +1370,7 @@ export const ARTICULOS: Articulo[] = [
       "Tu dirección web, el dominio propio, el flyer de bienvenida y la tienda como app.",
     grupo: "arrancar",
     clase: "mecanica",
+    rol: "dueno",
     pantalla: { label: "Configuración", href: "/dashboard/ajustes" },
     actualizado: "2026-08-12",
     relacionados: ["publicar-la-tienda", "notificaciones"],
@@ -1415,6 +1436,7 @@ export const ARTICULOS: Articulo[] = [
       "Qué mide cada número, cuál mirar primero y por qué tus propias visitas no aparecen.",
     grupo: "cuenta",
     clase: "criterio",
+    rol: "dueno",
     pantalla: { label: "Estadísticas", href: "/dashboard/metricas" },
     actualizado: "2026-08-12",
     relacionados: ["los-estados-de-un-pedido", "carritos-abandonados"],
@@ -1480,6 +1502,482 @@ export const ARTICULOS: Articulo[] = [
           "La pantalla separa a los que **compraron por primera vez** de los que **ya te habían comprado**. Si casi todos son nuevos, estás gastando en atraer gente que no vuelve; si casi ninguno lo es, vendés bien pero no estás creciendo.",
       },
       { t: "ruta", label: "Ver mis estadísticas", href: "/dashboard/metricas" },
+    ],
+  },
+
+  /* ═══════════════════════════════════════════════════════════════════════
+     AFILIADOS
+
+     Hasta acá todo estaba escrito para el dueño de una tienda. El afiliado
+     entraba a la ayuda y encontraba veintidós artículos sobre pantallas que
+     no tiene — incluido el que se llama "Afiliados", que también le habla al
+     dueño: explica cómo aprobar y cómo pagar comisiones, no cómo vender.
+
+     Estos siete son del otro lado del mostrador. Misma regla que arriba: cada
+     número sale de una constante del repo, no de la memoria.
+     ═══════════════════════════════════════════════════════════════════════ */
+
+  {
+    slug: "postularte-a-una-tienda",
+    titulo: "Postularte a una tienda",
+    resumen:
+      "Cómo pedir permiso para vender los productos de una tienda, qué mira quien te aprueba y qué pasa si te dicen que no.",
+    grupo: "arrancar",
+    clase: "mecanica",
+    rol: "afiliado",
+    pantalla: { label: "Tiendas", href: "/afiliados/tiendas" },
+    actualizado: "2026-08-13",
+    relacionados: ["tu-link-de-afiliado", "tu-cuenta-de-afiliado"],
+    cuerpo: [
+      {
+        t: "p",
+        texto:
+          "Como afiliado no vendés productos tuyos: vendés los de una tienda que ya existe, con un link propio, y cobrás una comisión por cada venta que entre por ese link. Para eso primero tenés que estar adentro de esa tienda.",
+      },
+      { t: "h", texto: "Elegir a dónde postularte" },
+      {
+        t: "p",
+        texto:
+          "En **Tiendas** aparecen las que tienen el programa de afiliados prendido. Las que no lo tienen no figuran: no es que te rechazaron, es que esa tienda todavía no abrió el programa.",
+      },
+      {
+        t: "p",
+        texto:
+          "De cada una ves el **porcentaje de comisión** antes de postularte. Ese número lo pone el dueño y puede cambiarlo después, pero nunca de forma retroactiva: una venta ya hecha conserva el porcentaje que estaba vigente cuando se hizo.",
+      },
+      { t: "ruta", label: "Ver tiendas con programa abierto", href: "/afiliados/tiendas" },
+      { t: "h", texto: "Qué te va a pedir la postulación" },
+      {
+        t: "lista",
+        items: [
+          "**Una presentación.** Quién sos y por qué querés vender eso.",
+          "**Tu experiencia**, si tenés. No es obligatoria.",
+          "**Tus redes**, como link o como @usuario. Es lo que más mira el dueño: quiere ver si tenés dónde mostrar los productos.",
+          "**Un CV**, opcional, si tenés uno para adjuntar.",
+        ],
+      },
+      {
+        t: "aviso",
+        tono: "dato",
+        texto:
+          "Todo eso es opcional salvo aceptar los términos. Pero una postulación vacía compite contra otras que sí contaron algo, y del otro lado hay una persona eligiendo.",
+      },
+      { t: "h", texto: "Y después" },
+      {
+        t: "pasos",
+        items: [
+          "Tu solicitud queda en **Pendiente**. El dueño la ve con un aviso rojo en su panel.",
+          "Cuando decide, te llega un mail y una notificación en la campanita.",
+          "Si te aprueban, tu link se genera en el momento y ya podés empezar.",
+        ],
+      },
+      {
+        t: "aviso",
+        tono: "ojo",
+        texto:
+          "Un dueño con plan Tienda Pro puede tener hasta 6 afiliados activos a la vez. Si esa tienda está llena, tu solicitud puede quedar esperando aunque le gustes — no es por vos.",
+      },
+      {
+        t: "p",
+        texto:
+          "Te podés postular a varias tiendas al mismo tiempo, y conviene: cada una tiene su propio saldo y sus propias comisiones. Si una se cierra o te pausan, seguís vendiendo en las otras.",
+      },
+    ],
+  },
+
+  {
+    slug: "tu-link-de-afiliado",
+    titulo: "Tu link de afiliado",
+    resumen:
+      "Qué es exactamente el link, dónde sacarlo, y la condición que tiene que cumplirse para que una venta cuente como tuya.",
+    grupo: "encontrar",
+    clase: "mecanica",
+    rol: "afiliado",
+    pantalla: { label: "Mi panel", href: "/afiliados" },
+    actualizado: "2026-08-13",
+    relacionados: ["cuando-cobras-una-comision", "vender-mas-como-afiliado"],
+    cuerpo: [
+      {
+        t: "p",
+        texto:
+          "Tu link es la tienda de siempre con una marca tuya al final. Se ve así:",
+      },
+      {
+        t: "p",
+        texto: "`tiendaapps.com/tienda/nombre-de-la-tienda?ref=tu-código`",
+      },
+      {
+        t: "p",
+        texto:
+          "Esa parte de `?ref=` es todo el sistema: es lo que le dice a la tienda que quien está mirando llegó por vos. Sin eso, la venta entra igual pero como si hubiera venido sola.",
+      },
+      { t: "h", texto: "Lo más importante de todo" },
+      {
+        t: "aviso",
+        tono: "ojo",
+        texto:
+          "La marca viaja en el link, no en la persona. Si alguien abre tu link, se va, y al otro día entra a la tienda escribiendo la dirección a mano, esa compra **no** cuenta como tuya. Por eso conviene que compartas el link cada vez, y no que le digas a la gente el nombre de la tienda.",
+      },
+      {
+        t: "p",
+        texto:
+          "Mientras la persona se quede navegando dentro de la tienda que abriste vos, la marca la acompaña: puede mirar productos, abrir fichas y comprar, y todo eso sigue siendo tuyo.",
+      },
+      { t: "h", texto: "Tu catálogo propio" },
+      {
+        t: "p",
+        texto:
+          "Además del link tenés una página tuya, con tu nombre y tu foto arriba y los productos de la tienda abajo. Todo lo que se toca ahí ya sale marcado con tu código, así que es más difícil equivocarse que compartiendo links sueltos.",
+      },
+      {
+        t: "aviso",
+        tono: "dato",
+        texto:
+          "Los precios y las fotos salen siempre de la tienda, en vivo. Vos no los podés cambiar — y eso te protege: nunca vas a estar mostrando un precio que ya no existe.",
+      },
+      { t: "ruta", label: "Ver mi link y mi catálogo", href: "/afiliados" },
+      { t: "h", texto: "Para pegar en otros lados" },
+      {
+        t: "p",
+        texto:
+          "En **Plantillas** hay textos ya escritos para WhatsApp, para la bio de Instagram y para mail, con tu link puesto. Son para copiar y pegar, o para arrancar y cambiarles lo que quieras.",
+      },
+      { t: "ruta", label: "Ver plantillas", href: "/afiliados/plantillas" },
+    ],
+  },
+
+  {
+    slug: "cuando-cobras-una-comision",
+    titulo: "Cuándo cobrás una comisión",
+    resumen:
+      "En qué momento exacto la plata pasa a ser tuya, con qué porcentaje se calcula y los tres casos en los que una venta no genera comisión.",
+    grupo: "cobrar",
+    clase: "mecanica",
+    rol: "afiliado",
+    pantalla: { label: "Mis pedidos", href: "/afiliados/pedidos" },
+    actualizado: "2026-08-13",
+    relacionados: ["pedir-un-retiro", "tu-link-de-afiliado"],
+    cuerpo: [
+      {
+        t: "p",
+        texto:
+          "Una venta por tu link no te paga en el momento en que entra. Te paga cuando el pedido queda confirmado.",
+      },
+      { t: "h", texto: "El momento exacto" },
+      {
+        t: "tabla",
+        cols: ["Estado del pedido", "Tu comisión"],
+        filas: [
+          ["Pendiente", "Todavía nada. Es un pedido armado que nadie pagó ni confirmó."],
+          ["Confirmado", "Se acredita en tu saldo, entera y de una vez."],
+          ["Enviado / Entregado", "Ya estaba acreditada desde que se confirmó. No se suma de nuevo."],
+        ],
+      },
+      {
+        t: "aviso",
+        tono: "dato",
+        texto:
+          "Cuando el pago entra por Mercado Pago, la confirmación es automática y la comisión aparece sola. Con transferencia o efectivo la confirma el dueño a mano, así que ahí puede tardar lo que tarde esa persona.",
+      },
+      { t: "ruta", label: "Ver mis pedidos", href: "/afiliados/pedidos" },
+      { t: "h", texto: "Con qué porcentaje se calcula" },
+      {
+        t: "p",
+        texto:
+          "Con el que estaba vigente **el día de la compra**, no con el de hoy. El porcentaje queda guardado en el pedido en el momento en que se hace. Si mañana el dueño lo baja, tus ventas viejas conservan el de antes.",
+      },
+      {
+        t: "p",
+        texto:
+          "Se calcula sobre el precio de los productos menos los descuentos, sin el envío. El envío nunca entra en la cuenta.",
+      },
+      { t: "h", texto: "Los tres casos en que no cobrás" },
+      {
+        t: "lista",
+        items: [
+          "**El pedido quedó en Pendiente.** Nunca se confirmó, así que no hay venta.",
+          "**Compraste vos.** Si el mail del comprador es el mismo que el tuyo, el sistema no genera comisión. Es a propósito.",
+          "**La compra no entró por tu link.** Aunque vos hayas recomendado esa tienda.",
+        ],
+      },
+      {
+        t: "aviso",
+        tono: "ojo",
+        texto:
+          "Si el comprador desconoce el pago en su tarjeta y Mercado Pago le da la razón, esa comisión se revierte. Es plata que la tienda tampoco cobró.",
+      },
+    ],
+  },
+
+  {
+    slug: "pedir-un-retiro",
+    titulo: "Pedir un retiro",
+    resumen:
+      "Cuánto necesitás juntar, qué datos hay que cargar, cuánto tarda y por qué a veces el botón está bloqueado.",
+    grupo: "cobrar",
+    clase: "mecanica",
+    rol: "afiliado",
+    pantalla: { label: "Mi billetera", href: "/afiliados/billetera" },
+    actualizado: "2026-08-13",
+    relacionados: ["cuando-cobras-una-comision"],
+    cuerpo: [
+      {
+        t: "p",
+        texto:
+          "Tus comisiones se juntan en tu billetera. Ahí quedan hasta que vos pidas retirarlas: no se transfieren solas ni tienen fecha de vencimiento.",
+      },
+      { t: "h", texto: "Lo que hace falta" },
+      {
+        t: "lista",
+        items: [
+          "**$100 de saldo como mínimo** para poder pedir el retiro.",
+          "**Tu CBU, CVU o alias** cargado en la billetera. Sin eso el botón no se destraba.",
+        ],
+      },
+      {
+        t: "aviso",
+        tono: "dato",
+        texto:
+          "Si vendés en varias tiendas, el saldo se suma. Pedís un monto y el sistema lo arma solo, empezando por la tienda donde más tenés.",
+      },
+      { t: "ruta", label: "Ir a mi billetera", href: "/afiliados/billetera" },
+      { t: "h", texto: "Cuánto tarda" },
+      {
+        t: "p",
+        texto:
+          "Entre **1 y 3 días hábiles**. Apenas lo pedís, el monto sale de tu saldo disponible y queda como *en proceso* — no desapareció, está reservado para esa transferencia.",
+      },
+      { t: "h", texto: "Por qué el botón puede estar bloqueado" },
+      {
+        t: "tabla",
+        cols: ["Qué ves", "Por qué"],
+        filas: [
+          [
+            "Falta cargar tu CBU o alias",
+            "No hay a dónde mandar la plata. Se carga en la misma pantalla.",
+          ],
+          [
+            "Bloqueado 72 horas",
+            "Cambiaste tus datos bancarios recién. La espera es a propósito: si alguien entrara a tu cuenta, no podría cambiar el CBU y retirar en el mismo rato.",
+          ],
+          [
+            "Ya tenés un retiro pendiente",
+            "Se procesa de a uno por tienda. Cuando ese se acredita, podés pedir el siguiente.",
+          ],
+        ],
+      },
+      {
+        t: "aviso",
+        tono: "ojo",
+        texto:
+          "Revisá el CBU antes de guardarlo. La transferencia sale a los datos que estaban cargados en el momento del pedido, y una vez enviada a una cuenta equivocada no hay forma de traerla de vuelta desde el panel.",
+      },
+    ],
+  },
+
+  {
+    slug: "premios-y-niveles",
+    titulo: "Premios y niveles",
+    resumen:
+      "Cada mes tu nivel se calcula solo según lo que generaste, y de Plata para arriba se convierte en cupones de descuento.",
+    grupo: "vender",
+    clase: "mecanica",
+    rol: "afiliado",
+    pantalla: { label: "Mis premios", href: "/afiliados/premios" },
+    actualizado: "2026-08-13",
+    relacionados: ["vender-mas-como-afiliado", "cuando-cobras-una-comision"],
+    cuerpo: [
+      {
+        t: "p",
+        texto:
+          "Además de tus comisiones, cada mes cerrado te da un nivel. De **Plata** para arriba, ese nivel se convierte en cupones de descuento para comprar en tiendas de TiendaApps.",
+      },
+      {
+        t: "tabla",
+        cols: ["Nivel", "Tu cupón"],
+        filas: [
+          ["Bronce", "Sin cupón. Es el punto de partida."],
+          ["Plata", "15% de descuento"],
+          ["Oro", "20% de descuento"],
+          ["Diamante", "25% de descuento"],
+        ],
+      },
+      {
+        t: "aviso",
+        tono: "dato",
+        texto:
+          "Tres meses seguidos en Diamante suman un cupón extra de **40%**, aparte del que te toca por el mes.",
+      },
+      { t: "h", texto: "Cuánto hay que generar" },
+      {
+        t: "p",
+        texto:
+          "Depende del tipo de tienda, y no es un capricho: en una tienda de ropa una comisión son unos pesos y en una de autos son muchos, así que el mismo número dejaría a la mitad de la gente sin poder llegar nunca. El sistema mira cuánto deja en promedio cada venta tuya y ajusta la vara solo.",
+      },
+      {
+        t: "tabla",
+        cols: ["Tipo de tienda", "Para llegar a Plata / Oro / Diamante"],
+        filas: [
+          ["Común (ropa, accesorios, consumo)", "$15.000 / $50.000 / $150.000 en el mes"],
+          ["Mayorista", "$75.000 / $250.000 / $750.000"],
+          ["Alto valor (autos, inmuebles)", "$500.000 / $1.500.000 / $5.000.000"],
+        ],
+      },
+      { t: "h", texto: "Dos cosas para tener en cuenta" },
+      {
+        t: "lista",
+        items: [
+          "**Los cupones vencen.** Tenés alrededor de un mes para usarlos desde que se generan.",
+          "**No todas las tiendas los aceptan.** Cada dueño decide si acepta cupones de premio en su tienda. En tu pantalla de premios ves dónde se pueden usar.",
+        ],
+      },
+      { t: "ruta", label: "Ver mis premios", href: "/afiliados/premios" },
+      {
+        t: "aviso",
+        tono: "ojo",
+        texto:
+          "El nivel se calcula solo con las comisiones del mes cerrado, y solo si tu cuenta estaba activa. Un mes con la afiliación pausada no genera nivel.",
+      },
+    ],
+  },
+
+  {
+    slug: "vender-mas-como-afiliado",
+    titulo: "Qué hace que un afiliado venda",
+    resumen:
+      "La diferencia entre los que venden y los que no casi nunca es cuánta gente los sigue. Es otra cosa, y se puede copiar.",
+    grupo: "vender",
+    clase: "criterio",
+    rol: "afiliado",
+    actualizado: "2026-08-13",
+    relacionados: ["tu-link-de-afiliado", "premios-y-niveles"],
+    cuerpo: [
+      {
+        t: "p",
+        texto:
+          "Este artículo no tiene botones. Es lo que conviene hacer, no dónde hacer clic.",
+      },
+      { t: "h", texto: "El link se comparte, no se dicta" },
+      {
+        t: "p",
+        texto:
+          "Es el error que más plata cuesta y el más fácil de arreglar. Decirle a alguien «entrá a tal tienda» te deja afuera de esa venta: sin tu link, la compra no es tuya. El link tiene que estar pegado, no dicho.",
+      },
+      { t: "h", texto: "Un producto le gana a un catálogo" },
+      {
+        t: "p",
+        texto:
+          "Mandar «mirá todo lo que tienen» obliga al otro a elegir, y elegir cansa. Mandar un producto puntual con el precio y una razón —«esto es lo que más se está llevando», «esto te queda bien»— convierte muchísimo más.",
+      },
+      {
+        t: "p",
+        texto:
+          "Tu página de catálogo sirve para la bio y para el estado, donde el link es uno solo. Para hablarle a una persona, andá al producto.",
+      },
+      { t: "h", texto: "Mirá qué se está mirando" },
+      {
+        t: "p",
+        texto:
+          "Tu panel te muestra cuántos clics recibió tu link y cuántos terminaron en venta. Esos dos números juntos dicen más que cualquiera de los dos solo:",
+      },
+      {
+        t: "tabla",
+        cols: ["Lo que ves", "Qué está pasando"],
+        filas: [
+          [
+            "Pocos clics, buena conversión",
+            "Sabés vender, te falta alcance. El problema está antes del link.",
+          ],
+          [
+            "Muchos clics, poca conversión",
+            "Llevás gente que no estaba buscando eso. El problema es a quién le hablás, no cuánto.",
+          ],
+        ],
+      },
+      { t: "ruta", label: "Ver mis estadísticas", href: "/afiliados/estadisticas" },
+      { t: "h", texto: "Vendé donde ya te conocen" },
+      {
+        t: "p",
+        texto:
+          "Los primeros pedidos casi nunca vienen de desconocidos: vienen de gente que ya te tiene confianza. Empezar por ahí no es hacer trampa, es el orden natural — y esas ventas son las que te dan el historial que después mira el resto.",
+      },
+      {
+        t: "aviso",
+        tono: "dato",
+        texto:
+          "Si la tienda tiene una meta del mes, en tu panel ves cuánto falta. Esas metas suman un bonus arriba de tu comisión normal, así que un mes con meta cerca vale más que uno sin ella.",
+      },
+      { t: "h", texto: "Nunca prometas lo que no controlás" },
+      {
+        t: "p",
+        texto:
+          "Los precios, el stock y los envíos son de la tienda, no tuyos. Prometer una entrega o un descuento que no está publicado te va a explotar a vos, que sos la cara que la persona conoce.",
+      },
+    ],
+  },
+
+  {
+    slug: "tu-cuenta-de-afiliado",
+    titulo: "Tu cuenta de afiliado",
+    resumen:
+      "Qué cuesta, por qué no podés usarla también como dueño de tienda, y qué pasa con tu plata si te pausan o si la tienda cierra.",
+    grupo: "cuenta",
+    clase: "mecanica",
+    rol: "afiliado",
+    // Sin `pantalla`: no habla de una pantalla sino de cómo funciona la cuenta.
+    // El `?` de /afiliados abre el artículo del link, que es lo que se busca
+    // estando parado ahí.
+    actualizado: "2026-08-13",
+    relacionados: ["postularte-a-una-tienda", "pedir-un-retiro"],
+    cuerpo: [
+      { t: "h", texto: "Es gratis, y no hay letra chica" },
+      {
+        t: "p",
+        texto:
+          "La cuenta de afiliado no tiene suscripción, ni prueba que se vence, ni costo por venta. Lo que cobra la plataforma lo paga la tienda con su plan. Vos cobrás tu comisión y listo.",
+      },
+      { t: "h", texto: "Una cuenta es una sola cosa" },
+      {
+        t: "p",
+        texto:
+          "Cuando te registrás elegís qué vas a ser: afiliado, dueño de tienda o cliente. Esa elección no se cambia después, y tampoco podés usar la misma cuenta para dos cosas.",
+      },
+      {
+        t: "aviso",
+        tono: "dato",
+        texto:
+          "No es una limitación técnica, es a propósito: los tres paneles muestran cosas distintas y cobran distinto. Si además querés tener tu propia tienda, se hace con otra cuenta y otro mail.",
+      },
+      { t: "h", texto: "Si te pausan o te dan de baja" },
+      {
+        t: "p",
+        texto:
+          "El dueño de una tienda puede pausarte o darte de baja cuando quiera. En los dos casos tu link de esa tienda deja de funcionar.",
+      },
+      {
+        t: "aviso",
+        tono: "ojo",
+        texto:
+          "Tu plata no se toca. El saldo que ya tenías acreditado sigue siendo tuyo y lo podés retirar igual — pausar o dar de baja no cancela ninguna comisión ya generada.",
+      },
+      {
+        t: "p",
+        texto:
+          "La diferencia entre las dos es que de una pausa se vuelve: el dueño te reactiva y seguís donde estabas. La baja es más definitiva y no te vas a poder postular de nuevo a esa tienda salvo que te vuelvan a dar acceso.",
+      },
+      { t: "h", texto: "Si la tienda cierra" },
+      {
+        t: "p",
+        texto:
+          "Te llega un mail avisando. Tu link queda pausado, pero tu saldo sigue disponible para retirar. Y si esa tienda vuelve a abrir, recuperás tu lugar automáticamente: no tenés que postularte otra vez.",
+      },
+      { t: "h", texto: "Tus datos bancarios" },
+      {
+        t: "p",
+        texto:
+          "El CBU y el CUIL se guardan cifrados y no los ve el dueño de la tienda. La transferencia la hace TiendaApps, no la tienda — el dueño nunca ve a dónde va tu plata.",
+      },
+      { t: "ruta", label: "Ver los términos del programa", href: "/afiliados/terminos" },
     ],
   },
 ];

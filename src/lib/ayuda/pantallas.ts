@@ -33,6 +33,12 @@ const RUTAS: [href: string, slug: string][] = [
   ["/dashboard/pagos",                "medios-de-cobro"],
   ["/dashboard/perfil",               "verificar-tu-cuenta"],
   ["/dashboard/mi-plan",              "tu-plan"],
+  // Panel del afiliado. Otro panel, otras pantallas, otros artículos.
+  ["/afiliados",                      "tu-link-de-afiliado"],
+  ["/afiliados/tiendas",              "postularte-a-una-tienda"],
+  ["/afiliados/billetera",            "pedir-un-retiro"],
+  ["/afiliados/pedidos",              "cuando-cobras-una-comision"],
+  ["/afiliados/premios",              "premios-y-niveles"],
 ];
 
 /* Una ruta que apunte a un slug que no existe se descarta acá mismo. El `?` de
@@ -55,14 +61,17 @@ export const PANTALLAS: Pantalla[] = RUTAS.flatMap(([href, slug]) => {
  *
  * · POR PREFIJO, no por igualdad. `/dashboard/productos/nuevo` sigue siendo la
  *   pantalla de Productos aunque la ruta no coincida carácter por carácter.
- * · `/dashboard` A SECAS sería la excepción: todo el panel empieza con eso, así
- *   que como prefijo el artículo de Inicio ganaría en TODAS las pantallas. Hoy
- *   ninguna entrada usa esa ruta; el corte queda escrito para cuando exista.
+ * · LAS RAÍCES DE CADA PANEL son la excepción, y sin esto se rompe de verdad:
+ *   todas las pantallas empiezan con la raíz de su panel, así que por prefijo
+ *   el artículo de la portada ganaría en TODAS. `/afiliados` ya está en la
+ *   tabla, y ahí se vería el artículo del link parado en la billetera.
  *
  * Si dos matchean, gana la ruta más larga —la más específica—. */
+const RAICES = ["/dashboard", "/afiliados"];
+
 export function pantallaDe(pathname: string): Pantalla | undefined {
   return PANTALLAS.filter((p) => {
-    if (p.href === "/dashboard") return pathname === "/dashboard";
+    if (RAICES.includes(p.href)) return pathname === p.href;
     return pathname === p.href || pathname.startsWith(`${p.href}/`);
   }).sort((a, b) => b.href.length - a.href.length)[0];
 }

@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "next-themes";
 import { useAuth } from "@/components/AuthProvider";
 import NotificationBell from "@/components/NotificationBell";
+import HelpButton from "@/components/HelpButton";
 import FavoritesDrawer from "@/components/FavoritesDrawer";
 import {
   ShoppingBag, Wallet, Award, BarChart3, Trophy, Store,
@@ -261,6 +262,10 @@ export default function AfiliadosNav() {
               <Home className="h-4 w-4" />
             </Link>
             <FavoritesDrawer buttonClassName="w-9 h-9 flex items-center justify-center rounded-xl border border-gray-200 dark:border-white/10 bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-all" />
+            {/* El `?` que el panel del dueño tenía desde siempre y este no.
+                Sin `onStartTour` porque acá no hay tour guiado: quedan la ayuda
+                de la pantalla en la que estás y el centro de ayuda entero. */}
+            <HelpButton />
             {user?.id && <NotificationBell userId={user.id} />}
             {mounted && (
               <button

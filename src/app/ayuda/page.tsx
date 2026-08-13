@@ -1,9 +1,9 @@
 import Link from "next/link";
-import { ArrowRight, LifeBuoy, Store, Search, X } from "lucide-react";
+import { ArrowRight, LifeBuoy, Store, Users, Search, X } from "lucide-react";
 import { SiteNav } from "@/components/SiteNav";
 import { SiteFooter } from "@/components/SiteFooter";
 import Chip from "@/components/ayuda/Chip";
-import { porGrupo, buscar, type Articulo } from "@/lib/ayuda";
+import { porGrupo, buscar, type Articulo, type Lector } from "@/lib/ayuda";
 import { getCurrentUser } from "@/lib/auth-session";
 import { getStoreType, type StoreType } from "@/lib/storeTypes";
 import { prisma } from "@/lib/prisma";
@@ -16,23 +16,30 @@ import { prisma } from "@/lib/prisma";
    todos. */
 export const dynamic = "force-dynamic";
 
-/* El rubro de quien está mirando, si es dueño de una tienda.
+/* Quién está mirando: su rol y, si es dueño, el rubro de su tienda.
  *
  * Nunca tira: la ayuda tiene que abrir aunque la base no conteste. Si algo
  * falla, se cae para el lado de mostrar todo — de más nunca dejó a nadie sin
- * la respuesta que buscaba. */
-async function rubroDelLector(): Promise<StoreType | undefined> {
+ * la respuesta que buscaba.
+ *
+ * ADMIN y BUYER quedan sin rol a propósito: no tienen artículos propios, así
+ * que filtrarles por rol les dejaría la ayuda vacía. Ven todo. */
+async function quienLee(): Promise<Lector> {
   try {
     const user = await getCurrentUser();
-    if (!user || user.role !== "OWNER") return undefined;
+    if (!user) return {};
+
+    if (user.role === "SELLER") return { rol: "afiliado" };
+    if (user.role !== "OWNER") return {};
+
     const store = await prisma.store.findUnique({
       where: { ownerId: user.id },
       select: { tipoTienda: true },
     });
-    return (store?.tipoTienda as StoreType | undefined) ?? undefined;
+    return { rol: "dueno", rubro: (store?.tipoTienda as StoreType | undefined) ?? undefined };
   } catch (e) {
-    console.error("[ayuda] no se pudo leer el rubro del lector:", e);
-    return undefined;
+    console.error("[ayuda] no se pudo leer quién está mirando:", e);
+    return {};
   }
 }
 
@@ -62,13 +69,13 @@ type Props = { searchParams: Promise<{ todo?: string; q?: string }> };
 
 export default async function AyudaIndexPage({ searchParams }: Props) {
   const { todo, q } = await searchParams;
-  const rubro = todo === "1" ? undefined : await rubroDelLector();
-  const config = rubro ? getStoreType(rubro) : null;
+  const lector: Lector = todo === "1" ? {} : await quienLee();
+  const config = lector.rubro ? getStoreType(lector.rubro) : null;
 
   const consulta = (q ?? "").trim();
   const buscando = consulta.length > 0;
-  const resultados = buscando ? buscar(consulta, rubro) : [];
-  const grupos = buscando ? [] : porGrupo(rubro);
+  const resultados = buscando ? buscar(consulta, lector) : [];
+  const grupos = buscando ? [] : porGrupo(lector);
 
   return (
     <div className="min-h-screen bg-white text-gray-950">
@@ -91,12 +98,24 @@ export default async function AyudaIndexPage({ searchParams }: Props) {
         {/* Filtrar en silencio sería peor que no filtrar: el que ya leyó algo
             sobre cupones y no lo encuentra más piensa que la ayuda se rompió.
             Se dice qué se está viendo y se deja la puerta para ver el resto. */}
-        {config && (
+        {lector.rol && (
           <div className="mt-6 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3">
-            <Store className="h-4 w-4 shrink-0 text-gray-400" aria-hidden="true" />
+            {lector.rol === "afiliado" ? (
+              <Users className="h-4 w-4 shrink-0 text-gray-400" aria-hidden="true" />
+            ) : (
+              <Store className="h-4 w-4 shrink-0 text-gray-400" aria-hidden="true" />
+            )}
             <p className="text-sm text-gray-600">
-              Estás viendo la ayuda de una tienda de{" "}
-              <span className="font-semibold text-gray-950">{config.label}</span>.
+              {lector.rol === "afiliado" ? (
+                <>Estás viendo la ayuda para <span className="font-semibold text-gray-950">afiliados</span>.</>
+              ) : config ? (
+                <>
+                  Estás viendo la ayuda de una tienda de{" "}
+                  <span className="font-semibold text-gray-950">{config.label}</span>.
+                </>
+              ) : (
+                <>Estás viendo la ayuda para <span className="font-semibold text-gray-950">dueños de tienda</span>.</>
+              )}
             </p>
             <Link
               href="/ayuda?todo=1"

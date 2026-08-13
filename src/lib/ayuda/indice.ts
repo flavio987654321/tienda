@@ -36,6 +36,14 @@ export const INDICE: { slug: string; titulo: string }[] = [
   { slug: "elegir-y-editar-el-diseno",           titulo: "Elegir y editar el diseño" },
   { slug: "configuracion-de-la-tienda",          titulo: "La configuración de tu tienda" },
   { slug: "leer-tus-estadisticas",               titulo: "Leer tus estadísticas" },
+  // Del lado del afiliado
+  { slug: "postularte-a-una-tienda",             titulo: "Postularte a una tienda" },
+  { slug: "tu-link-de-afiliado",                 titulo: "Tu link de afiliado" },
+  { slug: "cuando-cobras-una-comision",          titulo: "Cuándo cobrás una comisión" },
+  { slug: "pedir-un-retiro",                     titulo: "Pedir un retiro" },
+  { slug: "premios-y-niveles",                   titulo: "Premios y niveles" },
+  { slug: "vender-mas-como-afiliado",            titulo: "Qué hace que un afiliado venda" },
+  { slug: "tu-cuenta-de-afiliado",               titulo: "Tu cuenta de afiliado" },
 ];
 
 const POR_SLUG = new Map(INDICE.map((a) => [a.slug, a.titulo]));

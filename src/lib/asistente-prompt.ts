@@ -451,7 +451,12 @@ NUNCA uses palabras en inglés o jerga de desarrollador para referirte a partes 
  * secciones que sí tiene esta tienda.
  */
 function catalogoDeAyuda(): string {
-  const filas = ARTICULOS.map((a) => {
+  /* Solo los artículos del dueño. Sasha vive en /dashboard, o sea que del otro
+     lado siempre hay un dueño de tienda: ofrecerle "Pedir un retiro" o
+     "Postularte a una tienda" sería mandarlo a pantallas que no tiene. Y como
+     esto va en el bloque cacheado del prompt, cada artículo de más también se
+     paga en tokens en cada conversación. */
+  const filas = ARTICULOS.filter((a) => a.rol === "dueno" || a.rol === "ambos").map((a) => {
     // Único dato de rubro que se marca. El resto va sin marca porque aplica a
     // todas: el modo de venta es lo único que cambia qué secciones existen.
     const solo =

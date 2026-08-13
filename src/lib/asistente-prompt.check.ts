@@ -225,8 +225,18 @@ console.log("\n8) El catálogo de ayuda cierra con las dos puntas");
 // botón no aparece nunca y el mensaje queda cortado sin que nadie se entere.
 const slugsOfrecidos = [...A.estatico.matchAll(/^- ([a-z0-9-]+) — "/gm)].map((m) => m[1]);
 
-chequear(`ofrece los ${ARTICULOS.length} artículos`, slugsOfrecidos.length === ARTICULOS.length,
-  { ofrecidos: slugsOfrecidos.length, articulos: ARTICULOS.length });
+/* Sasha vive en /dashboard, así que del otro lado siempre hay un dueño de
+   tienda. Ofrece los artículos del dueño y NO los del afiliado: mandarlo a
+   "Pedir un retiro" sería mandarlo a una pantalla que no tiene.
+
+   Antes esto pedía los artículos ENTEROS, y estaba bien mientras todos fueran
+   del dueño. Ahora el que sobra también es un error, no solo el que falta. */
+const delDueno = ARTICULOS.filter((a) => a.rol === "dueno" || a.rol === "ambos");
+const delAfiliado = ARTICULOS.filter((a) => a.rol === "afiliado");
+
+chequear(`ofrece los ${delDueno.length} artículos del dueño`,
+  slugsOfrecidos.length === delDueno.length,
+  { ofrecidos: slugsOfrecidos.length, delDueno: delDueno.length });
 
 for (const slug of slugsOfrecidos) {
   chequear(`"${slug}" está en indice.ts (si no, el botón no se pinta)`,
@@ -235,9 +245,17 @@ for (const slug of slugsOfrecidos) {
 
 // Y al revés: un artículo que no entró al catálogo es un artículo que Sasha no
 // va a ofrecer jamás, sin ningún síntoma visible.
-for (const a of ARTICULOS) {
+for (const a of delDueno) {
   chequear(`"${a.slug}" entró al catálogo`, slugsOfrecidos.includes(a.slug));
 }
+
+// Que no se cuele ninguno del afiliado. Sin esto, agregar un artículo de
+// afiliado sin filtro se lo comería el chequeo de arriba con solo cambiar el
+// total, y Sasha empezaría a mandar dueños a la billetera del afiliado.
+for (const a of delAfiliado) {
+  chequear(`"${a.slug}" NO se le ofrece a un dueño`, !slugsOfrecidos.includes(a.slug));
+}
+chequear("hay artículos de afiliado que quedaron afuera", delAfiliado.length > 0);
 
 console.log(fallos === 0 ? "\nTodo bien.\n" : `\n${fallos} fallas.\n`);
 process.exit(fallos === 0 ? 0 : 1);

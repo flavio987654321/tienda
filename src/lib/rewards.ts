@@ -240,7 +240,10 @@ export async function generarCuponesMensuales(
     type: "REWARD_COUPON_EARNED",
     title: `¡Ganaste ${cupones.length === 1 ? "un cupón" : `${cupones.length} cupones`} de premio!`,
     body: `Tu rendimiento de ${mesLabel} generó ${cupones.length === 1 ? "un cupón" : `${cupones.length} cupones`}. Usálos en tus próximas compras.`,
-    link: "/vendedoras/premios",
+    // Decía "/vendedoras/premios", que no existe: el panel del afiliado vive en
+    // /afiliados. La campanita que avisa "¡ganaste un cupón!" llevaba a un 404,
+    // justo en el aviso que da más ganas de hacer clic.
+    link: "/afiliados/premios",
   });
 }
 

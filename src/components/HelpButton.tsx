@@ -17,7 +17,11 @@ import { pantallaDe } from "@/lib/ayuda/pantallas";
    lugar donde apareció la duda. Aparece sola: sale de la pantalla en la que
    estás parado y se esconde si esa pantalla todavía no tiene artículo escrito,
    en vez de ofrecer una puerta que da a la nada. */
-export default function HelpButton({ onStartTour }: { onStartTour: () => void }) {
+/* `onStartTour` es opcional porque el panel del afiliado no tiene tour guiado.
+   Sin él la fila del tour no se dibuja y quedan las otras dos, que son las que
+   de verdad importan. La alternativa era un segundo componente casi igual, o
+   pasarle una función vacía y mostrar un botón que no hace nada. */
+export default function HelpButton({ onStartTour }: { onStartTour?: () => void }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
@@ -44,21 +48,23 @@ export default function HelpButton({ onStartTour }: { onStartTour: () => void })
 
       {open && (
         <div className="absolute right-0 top-11 z-50 w-64 rounded-2xl border border-gray-100 bg-white shadow-xl p-2">
-          <button
-            onClick={() => {
-              setOpen(false);
-              onStartTour();
-            }}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-indigo-50 transition-colors text-left"
-          >
-            <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-indigo-50 shrink-0">
-              <Play className="h-3.5 w-3.5 text-indigo-600" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-gray-800">Tour guiado</p>
-              <p className="text-[11px] text-gray-400 leading-tight">Ver cómo usar el panel</p>
-            </div>
-          </button>
+          {onStartTour && (
+            <button
+              onClick={() => {
+                setOpen(false);
+                onStartTour();
+              }}
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-indigo-50 transition-colors text-left"
+            >
+              <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-indigo-50 shrink-0">
+                <Play className="h-3.5 w-3.5 text-indigo-600" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-gray-800">Tour guiado</p>
+                <p className="text-[11px] text-gray-400 leading-tight">Ver cómo usar el panel</p>
+              </div>
+            </button>
+          )}
 
           {/* Los dos links van a otra pestaña a propósito. La ayuda es una página
               pública, fuera del panel: si reemplazara la pantalla actual, el que

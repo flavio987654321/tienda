@@ -41,6 +41,20 @@ export type Grupo = "arrancar" | "encontrar" | "vender" | "cobrar" | "cuenta";
    aburre. Van enlazadas por `relacionados`, no fundidas en un mismo texto. */
 export type Clase = "mecanica" | "criterio";
 
+/* A quién le habla el artículo.
+ *
+ * Es un eje aparte del grupo, no un grupo más: un afiliado también quiere
+ * "arrancar", "vender" y "cobrar" — lo que cambia no es el objetivo, es el
+ * panel que tiene delante. Un dueño y un afiliado abriendo la misma pantalla
+ * de ayuda ven cosas distintas porque sus paneles son distintos.
+ *
+ * Va OBLIGATORIO y no opcional como `checkout`, y la diferencia importa: con
+ * "ausente = para todos", los 22 artículos que ya existían —todos escritos
+ * para el dueño— le habrían salido igual al afiliado sin que nadie lo
+ * decidiera. Al ser obligatorio, TypeScript no deja escribir un artículo sin
+ * contestar la pregunta. */
+export type Rol = "dueno" | "afiliado" | "ambos";
+
 export interface Articulo {
   slug: string;
   titulo: string;
@@ -49,6 +63,7 @@ export interface Articulo {
   resumen: string;
   grupo: Grupo;
   clase: Clase;
+  rol: Rol;
   /** La pantalla del panel de la que habla, cuando habla de una. */
   pantalla?: { label: string; href: string };
   /* A qué tiendas les aplica, por MODO DE VENTA y no por rubro. Sin esto, a todas.
@@ -74,10 +89,25 @@ export interface Articulo {
   actualizado: string;
 }
 
-export const GRUPOS: { key: Grupo; titulo: string; bajada: string }[] = [
-  { key: "arrancar",  titulo: "Arrancar",        bajada: "Dejar la tienda lista y entender lo que ves" },
+/* Los títulos de grupo sirven para los dos roles porque son objetivos, pero las
+   bajadas no: nombran cosas concretas, y las del dueño son de su panel. A un
+   afiliado, "Dejar la tienda lista" o "Plan y facturación" le hablan de una
+   pantalla que no tiene. Donde la bajada cambia, va la variante; donde sirve
+   igual para los dos —"Google, redes y el link que compartís"— no hay
+   variante y se usa la misma. */
+export const GRUPOS: {
+  key: Grupo;
+  titulo: string;
+  bajada: string;
+  bajadaAfiliado?: string;
+}[] = [
+  { key: "arrancar",  titulo: "Arrancar",        bajada: "Dejar la tienda lista y entender lo que ves",
+    bajadaAfiliado: "Entrar a una tienda y entender tu panel" },
   { key: "encontrar", titulo: "Que te encuentren", bajada: "Google, redes y el link que compartís" },
-  { key: "vender",    titulo: "Vender más",      bajada: "Promociones, cupones y clientes que se fueron" },
-  { key: "cobrar",    titulo: "Cobrar y entregar", bajada: "Medios de pago, envíos y lo legal" },
-  { key: "cuenta",    titulo: "Tu cuenta",       bajada: "Plan, facturación y afiliados" },
+  { key: "vender",    titulo: "Vender más",      bajada: "Promociones, cupones y clientes que se fueron",
+    bajadaAfiliado: "Tu link, tus premios y qué mueve la aguja" },
+  { key: "cobrar",    titulo: "Cobrar y entregar", bajada: "Medios de pago, envíos y lo legal",
+    bajadaAfiliado: "Cuándo se acredita una comisión y cómo retirarla" },
+  { key: "cuenta",    titulo: "Tu cuenta",       bajada: "Plan, facturación y afiliados",
+    bajadaAfiliado: "Tu cuenta, tus datos y las tiendas donde vendés" },
 ];

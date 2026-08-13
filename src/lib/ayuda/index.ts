@@ -2,34 +2,57 @@ import { getStoreType, type StoreType } from "@/lib/storeTypes";
 import { ARTICULOS } from "./articulos";
 import { INDICE } from "./indice";
 import { PANTALLAS } from "./pantallas";
-import { GRUPOS, type Articulo, type Grupo } from "./tipos";
+import { GRUPOS, type Articulo, type Grupo, type Rol } from "./tipos";
 
 export { ARTICULOS, GRUPOS };
-export type { Articulo, Grupo };
+export type { Articulo, Grupo, Rol };
 export type { Bloque, Clase } from "./tipos";
 
 export function buscarArticulo(slug: string): Articulo | undefined {
   return ARTICULOS.find((a) => a.slug === slug);
 }
 
-/* Los artículos que le sirven a una tienda, según venda con carrito o por
- * consulta. El modo sale de la config del rubro, no de una lista escrita acá.
+/* Quién está leyendo. Los dos filtros van juntos y no en dos funciones,
+ * porque se aplican al mismo listado y en cadena. */
+export type Lector = { rol?: Rol; rubro?: StoreType };
+
+/* Los artículos que le sirven a quien está leyendo. Dos filtros:
  *
- * Sin rubro —la ayuda pública, donde el lector todavía no tiene tienda—
- * devuelve todo: ahí no hay a quién filtrarle nada, y esconderle la mitad a
- * alguien que está evaluando la plataforma sería peor. */
-export function articulosDe(rubro?: StoreType): Articulo[] {
-  if (!rubro) return ARTICULOS;
-  const modo = getStoreType(rubro).checkoutMode;
-  return ARTICULOS.filter((a) => !a.checkout || a.checkout === modo);
+ * ROL — dueño de tienda o afiliado. Son dos paneles distintos: al afiliado,
+ * "cargá tu primer producto" le habla de una pantalla que no tiene, y al dueño
+ * "pedí un retiro" lo mismo. Sin rol declarado no se filtra: la ayuda pública
+ * la lee gente sin cuenta —y el robot de Google, que nunca la tiene—, y ahí
+ * esconder la mitad sería peor que mostrar de más.
+ *
+ * RUBRO — con carrito o por consulta. El modo sale de la config del rubro, no
+ * de una lista escrita acá.
+ *
+ * El orden no importa para el resultado, pero sí que sean dos preguntas
+ * separadas: un artículo de afiliado no tiene rubro, y uno de dueño no deja de
+ * serlo por el modo de venta. */
+export function articulosDe(lector: Lector = {}): Articulo[] {
+  const { rol, rubro } = lector;
+  let lista = ARTICULOS;
+
+  if (rol) {
+    lista = lista.filter((a) => a.rol === rol || a.rol === "ambos");
+  }
+  if (rubro) {
+    const modo = getStoreType(rubro).checkoutMode;
+    lista = lista.filter((a) => !a.checkout || a.checkout === modo);
+  }
+  return lista;
 }
 
 /* El índice agrupado. Se saltean los grupos vacíos: un título con nada abajo
  * hace pensar que la página se rompió. */
-export function porGrupo(rubro?: StoreType) {
-  const disponibles = articulosDe(rubro);
+export function porGrupo(lector: Lector = {}) {
+  const disponibles = articulosDe(lector);
   return GRUPOS.map((g) => ({
-    ...g,
+    key: g.key,
+    titulo: g.titulo,
+    // La bajada del dueño nombra pantallas que el afiliado no tiene.
+    bajada: lector.rol === "afiliado" ? (g.bajadaAfiliado ?? g.bajada) : g.bajada,
     articulos: disponibles.filter((a) => a.grupo === g.key),
   })).filter((g) => g.articulos.length > 0);
 }
@@ -111,7 +134,7 @@ function textoDe(a: Articulo): string {
   return normalizar([a.titulo, a.resumen, ...cuerpo].join(" "));
 }
 
-export function buscar(consulta: string, rubro?: StoreType): Articulo[] {
+export function buscar(consulta: string, lector: Lector = {}): Articulo[] {
   const q = normalizar(consulta.trim());
   if (q.length < 2) return [];
 
@@ -120,7 +143,7 @@ export function buscar(consulta: string, rubro?: StoreType): Articulo[] {
      que mencionan alguna. No hace falta que estén juntas ni en orden. */
   const palabras = q.split(/\s+/);
 
-  return articulosDe(rubro)
+  return articulosDe(lector)
     .map((a) => {
       const texto = textoDe(a);
       if (!palabras.every((p) => texto.includes(p))) return null;
