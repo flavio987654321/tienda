@@ -2019,6 +2019,18 @@ export const ARTICULOS: Articulo[] = [
         texto:
           "Cada uno viene además en un tono: **casual**, **profesional** o **urgente**. El mismo producto no se anuncia igual a una amiga que a una lista de clientes.",
       },
+      { t: "h", texto: "No todos mandan lo mismo" },
+      {
+        t: "p",
+        texto:
+          "Cada mensaje está escrito en tres versiones distintas, y a vos te toca una. Otra persona que venda la misma tienda tiene otra: si las dos le escriben al mismo contacto, no le llega el mismo texto calcado dos veces.",
+      },
+      {
+        t: "aviso",
+        tono: "dato",
+        texto:
+          "La tuya no cambia sola. Si encontraste una que te funciona, va a seguir siendo esa. Para probar las otras está el botón **Otra versión**, abajo a la izquierda del mensaje.",
+      },
       { t: "h", texto: "Los dos campos de arriba" },
       {
         t: "p",

@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft, Copy, Check, MessageCircle, Loader2,
-  Sparkles, ChevronDown, ChevronUp,
+  Sparkles, ChevronDown, ChevronUp, RefreshCw,
 } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/components/AuthProvider";
@@ -33,7 +33,46 @@ interface Template {
   platform: "whatsapp" | "instagram" | "telegram" | "general";
   tone: "casual" | "profesional" | "urgente";
   label: string;
-  text: (ctx: TemplateContext) => string;
+  /* Tres redacciones del MISMO mensaje, y no una sola.
+   *
+   * Antes había un texto por plantilla, o sea que todos los afiliados de todas
+   * las tiendas mandaban exactamente las mismas palabras. Con un afiliado por
+   * tienda no se nota; con tres, la misma persona recibe el mismo mensaje
+   * calcado dos veces y deja de parecer una recomendación.
+   *
+   * La otra salida era dejarlo escribir el suyo, y esa se descartó: la pantalla
+   * existe justamente para el que no sabe qué escribir. Pedirle que redacte es
+   * devolverle el problema con pasos de más.
+   *
+   * Cuál le toca lo decide el id de su afiliación, así que le queda SIEMPRE la
+   * misma: si encontró una que le funciona, no se la cambiamos por atrás. El
+   * botón de "otra versión" está para cuando lo decida él. */
+  variantes: ((ctx: TemplateContext) => string)[];
+}
+
+/* Qué variante ve cada uno.
+ *
+ * Se reparte por el id de la afiliación y no al azar: al azar cambiaría en cada
+ * render —el texto bailaría delante de la persona mientras lo lee— y no habría
+ * forma de volver a la de ayer. Con una suma de los caracteres del id alcanza:
+ * no hace falta que la repartija sea perfecta, hace falta que dos personas
+ * distintas caigan en lugares distintos y que la misma caiga siempre igual.
+ *
+ * `vuelta` es lo que suma el botón de "otra versión". Vive en la pantalla, así
+ * que al recargar se vuelve a la que le toca — y eso está bien: es la que va a
+ * ver siempre, la de al lado es para espiar. */
+function varianteDe(template: Template, afiliacionId: string, vuelta: number): (ctx: TemplateContext) => string {
+  /* Suma con posición (`× 31`) y no una suma pelada de caracteres.
+     Sumando a secas, dos ids cuya suma cae en el mismo resto chocan en TODAS
+     las plantillas de golpe: el que sumaba igual que vos veía tus diez textos
+     calcados, que es exactamente lo que esto viene a evitar. Con la posición
+     adentro, que dos coincidan en una plantilla no dice nada de las otras
+     nueve. Probado con ids de verdad en `plantillas-variantes.check.ts`. */
+  let hash = 0;
+  for (const caracter of afiliacionId + template.id) {
+    hash = (hash * 31 + caracter.charCodeAt(0)) % 2147483647;
+  }
+  return template.variantes[(hash + vuelta) % template.variantes.length];
 }
 
 interface TemplateContext {
@@ -43,6 +82,16 @@ interface TemplateContext {
   productPrice?: string;
 }
 
+/* El hashtag de la tienda, sin espacios ni tildes. Estaba escrito a mano con un
+   `.replace(/\s+/g, "")` en cada plantilla: "Café Martínez" salía como
+   #cafémartínez, que Instagram no toma como hashtag. */
+const hash = (nombre: string) =>
+  nombre.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
+
+/* Ojo al escribir una variante nueva: NADA de rubro.
+   Los textos decían "ropa y accesorios" y cerraban con #moda, en una pantalla
+   que también usan tiendas de autos, de comida y de electrónica. Una afiliada
+   de una concesionaria copiaba un mensaje que hablaba de ropa. */
 const TEMPLATES: Template[] = [
   // WhatsApp - Casual
   {
@@ -50,32 +99,56 @@ const TEMPLATES: Template[] = [
     platform: "whatsapp",
     tone: "casual",
     label: "Presentación de tienda",
-    text: ({ storeName, link }) =>
-      `Hola! 😊 Quería contarte que estoy vendiendo productos de ${storeName} y son una pasada!\n\nTenés ropa y accesorios buenísimos a precios re accesibles 💕\n\n¡Entrá y mirá! 👇\n${link}`,
+    variantes: [
+      ({ storeName, link }) =>
+        `Hola! 😊 Quería contarte que estoy vendiendo productos de ${storeName}.\n\nTienen cosas buenísimas y a precios re accesibles 💕\n\n¡Entrá y mirá! 👇\n${link}`,
+      ({ storeName, link }) =>
+        `Holaa! ¿Cómo andás? 🙌\n\nAhora estoy trabajando con ${storeName} y la verdad que me encantó todo lo que tienen.\n\nSi querés chusmear, es acá 👇\n${link}\n\nCualquier cosa preguntame sin drama.`,
+      ({ storeName, link }) =>
+        `Che, te cuento algo 👀\n\nEmpecé a vender productos de ${storeName} y quería que lo veas vos primero.\n\n${link}\n\nSi te gusta algo avisame y te ayudo con el pedido 💬`,
+    ],
   },
   {
     id: "wa-casual-2",
     platform: "whatsapp",
     tone: "casual",
     label: "Producto específico",
-    text: ({ storeName, link, productName, productPrice }) =>
-      `Mirá este producto de ${storeName} que encontré 👀\n\n✨ ${productName ?? "Producto destacado"}\n💰 $${productPrice ?? "Consultá"}\n\n¡Está hermoso y a buen precio! Te dejo el link 👇\n${link}`,
+    variantes: [
+      ({ storeName, link, productName, productPrice }) =>
+        `Mirá esto de ${storeName} que encontré 👀\n\n✨ ${productName ?? "Producto destacado"}\n💰 $${productPrice ?? "Consultá"}\n\n¡Está buenísimo y a buen precio! Te dejo el link 👇\n${link}`,
+      ({ link, productName, productPrice }) =>
+        `Esto te va a gustar 😍\n\n${productName ?? "Este producto"}${productPrice ? ` — $${productPrice}` : ""}\n\nEs de los que más se están llevando. Te paso el link antes de que se agote 👇\n${link}`,
+      ({ link, productName, productPrice }) =>
+        `Me acordé de vos con esto 🎯\n\n${productName ?? "Mirá este producto"}${productPrice ? `\nSale $${productPrice}` : ""}\n\n${link}\n\nSi lo querés decime y te lo reservo 💬`,
+    ],
   },
   {
     id: "wa-urgent-1",
     platform: "whatsapp",
     tone: "urgente",
     label: "Oferta por tiempo limitado",
-    text: ({ storeName, link }) =>
-      `🔥 ¡ÚLTIMAS UNIDADES en ${storeName}!\n\nNo dejes pasar esto, se están agotando rápido 😱\n\n⚡ Comprá ahora antes de que se acabe:\n${link}\n\n¡Cualquier consulta escribime! 💬`,
+    variantes: [
+      ({ storeName, link }) =>
+        `🔥 ¡ÚLTIMAS UNIDADES en ${storeName}!\n\nNo dejes pasar esto, se están agotando rápido 😱\n\n⚡ Entrá antes de que se acabe:\n${link}\n\n¡Cualquier consulta escribime! 💬`,
+      ({ storeName, link }) =>
+        `⚡ Aviso rápido\n\nQuedan pocas unidades de varias cosas en ${storeName} y no sé si reponen.\n\nSi tenías algo en la mira, es ahora 👇\n${link}`,
+      ({ link }) =>
+        `🚨 Esto vuela\n\nTe aviso a vos primero porque sé que lo venías mirando.\n\n${link}\n\nSi lo querés, decime YA y lo apartamos 🙌`,
+    ],
   },
   {
     id: "wa-prof-1",
     platform: "whatsapp",
     tone: "profesional",
     label: "Catálogo formal",
-    text: ({ storeName, link }) =>
-      `Buenas! Te comparto el catálogo actualizado de ${storeName} con todo lo disponible 📋\n\n✅ Envíos a todo el país\n✅ Múltiples medios de pago\n✅ Atención personalizada\n\nConsultá sin compromiso:\n${link}`,
+    variantes: [
+      ({ storeName, link }) =>
+        `Buenas! Te comparto el catálogo actualizado de ${storeName} con todo lo disponible 📋\n\n✅ Envíos a todo el país\n✅ Múltiples medios de pago\n✅ Atención personalizada\n\nConsultá sin compromiso:\n${link}`,
+      ({ storeName, link }) =>
+        `Hola, ¿cómo estás?\n\nTe dejo el catálogo de ${storeName}, donde vas a encontrar todo lo que tenemos disponible hoy:\n\n${link}\n\nSi buscás algo puntual escribime y te lo consigo. Saludos 🙌`,
+      ({ storeName, link }) =>
+        `Buen día 👋\n\nSoy tu contacto en ${storeName}. Cualquier consulta sobre productos, precios o envíos, me escribís directo por acá.\n\nCatálogo completo: ${link}\n\nQuedo a disposición.`,
+    ],
   },
   // Instagram
   {
@@ -83,24 +156,39 @@ const TEMPLATES: Template[] = [
     platform: "instagram",
     tone: "casual",
     label: "Caption para feed",
-    text: ({ storeName, productName }) =>
-      `¿Buscando algo lindo? 😍\n\n${productName ? `${productName} de @${storeName.toLowerCase().replace(/\s+/g, "")}` : `La tienda de ${storeName}`} tiene exactamente lo que necesitás ✨\n\nLink en bio para ver todo 👆\n\n#moda #estilo #compraonline #${storeName.toLowerCase().replace(/\s+/g, "")}`,
+    variantes: [
+      ({ storeName, productName }) =>
+        `¿Buscando algo lindo? 😍\n\n${productName ? `${productName} de @${hash(storeName)}` : `La tienda de ${storeName}`} tiene exactamente lo que necesitás ✨\n\nLink en bio para ver todo 👆\n\n#compraonline #${hash(storeName)}`,
+      ({ storeName, productName }) =>
+        `${productName ?? "Esto"} 🤍\n\nDe @${hash(storeName)}, y ya lo tengo disponible para vos.\n\nTe dejé el link en la bio ☝️\n\n#${hash(storeName)} #compraonline #argentina`,
+      ({ storeName, productName }) =>
+        `Guardá este posteo 📌\n\n${productName ?? "Todo esto"} está en @${hash(storeName)} y te lo consigo yo.\n\nLink en bio 👆 o escribime por privado.\n\n#${hash(storeName)} #recomendado`,
+    ],
   },
   {
     id: "ig-story-1",
     platform: "instagram",
     tone: "casual",
     label: "Texto para Story",
-    text: ({ storeName, link }) =>
-      `¡Mirá lo que encontré! 😍\n${storeName}\n\n👉 Deslizá o link en bio\n\n${link}`,
+    variantes: [
+      ({ storeName, link }) => `¡Mirá lo que encontré! 😍\n${storeName}\n\n👉 Deslizá o link en bio\n\n${link}`,
+      ({ storeName }) => `Nuevo en ${storeName} ✨\n\n¿Te muestro más?\n\n👆 Link arriba`,
+      ({ storeName }) => `Esto 👇\n${storeName}\n\nRespondeme esta historia y te paso el link 💬`,
+    ],
   },
   {
     id: "ig-caption-2",
     platform: "instagram",
     tone: "urgente",
     label: "Caption oferta",
-    text: ({ storeName, productName, productPrice }) =>
-      `🔥 PRECIO INCREÍBLE 🔥\n\n${productName ? `${productName}` : "Estos productos"} en ${storeName}\n${productPrice ? `Solo $${productPrice} 💸` : ""}\n\n⏰ Stock limitado — Link en bio!\n\n#oferta #descuento #${storeName.toLowerCase().replace(/\s+/g, "")} #moda`,
+    variantes: [
+      ({ storeName, productName, productPrice }) =>
+        `🔥 PRECIO INCREÍBLE 🔥\n\n${productName ?? "Estos productos"} en ${storeName}\n${productPrice ? `Solo $${productPrice} 💸` : ""}\n\n⏰ Stock limitado — Link en bio!\n\n#oferta #descuento #${hash(storeName)}`,
+      ({ storeName, productName, productPrice }) =>
+        `⚡ ${productName ?? "OFERTA"}${productPrice ? ` a $${productPrice}` : ""}\n\nQuedan pocas. Cuando se acaban, se acabaron.\n\nLink en bio 👆\n\n#oferta #${hash(storeName)}`,
+      ({ storeName, productName, productPrice }) =>
+        `Se está por terminar 😬\n\n${productName ?? "Lo que te mostré"}${productPrice ? ` — $${productPrice}` : ""}\n\nEscribime antes de que vuele 💬\n\n#ultimasunidades #${hash(storeName)}`,
+    ],
   },
   // Telegram
   {
@@ -108,8 +196,14 @@ const TEMPLATES: Template[] = [
     platform: "telegram",
     tone: "casual",
     label: "Mensaje para grupo",
-    text: ({ storeName, link }) =>
-      `Hola a todos 👋\n\nLes comparto ${storeName}, una tienda con productos increíbles a muy buen precio 💯\n\n🛍 Comprá con mi link y me ayudás:\n${link}\n\nCualquier duda, ¡pregunten!`,
+    variantes: [
+      ({ storeName, link }) =>
+        `Hola a todos 👋\n\nLes comparto ${storeName}, una tienda con productos increíbles a muy buen precio 💯\n\n🛍 Comprá con mi link y me ayudás:\n${link}\n\nCualquier duda, ¡pregunten!`,
+      ({ storeName, link }) =>
+        `Buenas gente 🙌\n\nDejo por acá ${storeName}, que es con quien estoy trabajando. Tienen envíos a todo el país.\n\n${link}\n\nSi alguien busca algo puntual, escríbanme y lo veo.`,
+      ({ storeName, link }) =>
+        `Aprovecho para compartirles esto 📦\n\n${storeName} — entrando por acá me dan una comisión a mí y a ustedes les sale igual:\n${link}\n\n¡Gracias a los que se prendan! 💛`,
+    ],
   },
   // General
   {
@@ -117,16 +211,25 @@ const TEMPLATES: Template[] = [
     platform: "general",
     tone: "profesional",
     label: "Bio / descripción de perfil",
-    text: ({ storeName, link }) =>
-      `Vendedor oficial de ${storeName} 🛍\n💌 Pedidos y consultas: escribime\n🔗 ${link}`,
+    variantes: [
+      ({ storeName, link }) => `Vendedor oficial de ${storeName} 🛍\n💌 Pedidos y consultas: escribime\n🔗 ${link}`,
+      ({ storeName, link }) => `${storeName} — tu contacto de confianza 🤝\n📦 Envíos a todo el país\n👇 Mirá el catálogo\n${link}`,
+      ({ storeName, link }) => `Te consigo lo de ${storeName} ✨\nPreguntame lo que quieras por privado 💬\n${link}`,
+    ],
   },
   {
     id: "gen-email-1",
     platform: "general",
     tone: "profesional",
     label: "Email a contactos",
-    text: ({ storeName, link }) =>
-      `Hola,\n\nTe escribo para contarte que estoy vendiendo productos de ${storeName}, una tienda con artículos de gran calidad.\n\nPodés ver el catálogo completo en el siguiente enlace:\n${link}\n\nCualquier consulta, estoy a tu disposición.\n\n¡Muchos saludos!`,
+    variantes: [
+      ({ storeName, link }) =>
+        `Hola,\n\nTe escribo para contarte que estoy vendiendo productos de ${storeName}, una tienda con artículos de gran calidad.\n\nPodés ver el catálogo completo en el siguiente enlace:\n${link}\n\nCualquier consulta, estoy a tu disposición.\n\n¡Muchos saludos!`,
+      ({ storeName, link }) =>
+        `Hola, ¿cómo estás?\n\nTe cuento que ahora represento a ${storeName}. Si alguna vez necesitás algo de lo que tienen, podés pedírmelo directamente a mí.\n\nAcá está todo lo disponible:\n${link}\n\nUn abrazo.`,
+      ({ storeName, link }) =>
+        `Buen día,\n\nTe comparto el catálogo de ${storeName} por si te sirve o conocés a alguien a quien le pueda interesar.\n\n${link}\n\nQuedo atento a cualquier consulta.\n\nSaludos cordiales.`,
+    ],
   },
 ];
 
@@ -160,10 +263,20 @@ function CopyButton({ text }: { text: string }) {
   );
 }
 
-function TemplateCard({ template, context }: { template: Template; context: TemplateContext }) {
+function TemplateCard({
+  template,
+  context,
+  afiliacionId,
+}: {
+  template: Template;
+  context: TemplateContext;
+  afiliacionId: string;
+}) {
   const [expanded, setExpanded] = useState(false);
-  const text = template.text(context);
+  const [vuelta, setVuelta] = useState(0);
+  const text = varianteDe(template, afiliacionId, vuelta)(context);
   const pCfg = PLATFORM_CONFIG[template.platform];
+  const cual = ((vuelta % template.variantes.length) + template.variantes.length) % template.variantes.length;
 
   return (
     <div className="bg-white dark:bg-gray-900/80 rounded-xl border border-gray-100 dark:border-white/10 overflow-hidden">
@@ -194,7 +307,21 @@ function TemplateCard({ template, context }: { template: Template; context: Temp
               <pre className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap font-sans bg-gray-50 dark:bg-white/5 rounded-lg p-3 leading-relaxed">
                 {text}
               </pre>
-              <div className="flex justify-end">
+              {/* "Otra versión" a la izquierda y "Copiar" a la derecha, separados
+                  a propósito: son la acción de probar y la de terminar, y
+                  pegados uno al lado del otro se toca el que no era. */}
+              <div className="flex items-center justify-between gap-3">
+                <button
+                  type="button"
+                  onClick={() => setVuelta((v) => v + 1)}
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 transition-colors"
+                >
+                  <RefreshCw className="h-3.5 w-3.5" />
+                  Otra versión
+                  <span className="text-gray-400 dark:text-gray-600">
+                    {cual + 1}/{template.variantes.length}
+                  </span>
+                </button>
                 <CopyButton text={text} />
               </div>
             </div>
@@ -328,12 +455,22 @@ export default function PlantillasPage() {
             {/* Plantillas */}
             <div className="space-y-2">
               {filtered.map((t) => (
-                <TemplateCard key={t.id} template={t} context={{ ...ctx, link: getLink(t.platform) }} />
+                <TemplateCard
+                  key={t.id}
+                  template={t}
+                  context={{ ...ctx, link: getLink(t.platform) }}
+                  // El id de la afiliación es lo que decide qué versión le toca.
+                  // Con el select vacío va el mismo para todos, pero ahí tampoco
+                  // hay link que compartir: la pantalla todavía no sirve.
+                  afiliacionId={selectedAffId}
+                />
               ))}
             </div>
 
             <p className="text-xs text-gray-400 text-center mt-6">
-              Tip: personalizá los textos antes de copiarlos para que suenen más auténticos.
+              Cada mensaje tiene varias versiones y a vos te toca una fija — dos personas
+              que venden la misma tienda no mandan lo mismo. Igual, dos frases tuyas
+              arriba siempre funcionan mejor que copiar y pegar.
             </p>
           </>
         )}
