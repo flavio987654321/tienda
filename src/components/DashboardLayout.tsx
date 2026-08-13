@@ -125,6 +125,9 @@ export default function DashboardLayout({
   const [pendingLeadsCount, setPendingLeadsCount] = useState(0);
   const [newCartsCount, setNewCartsCount] = useState(0);
   const [storeType, setStoreType] = useState<string | null>(null);
+  // Arranca en false, no en null: mientras no sepamos, el tour NO se abre.
+  // Al revés se abriría durante la espera del fetch, que es el escenario malo.
+  const [rubroElegido, setRubroElegido] = useState(false);
   // Estado online/offline vía useSyncExternalStore (patrón canónico de React para
   // suscribirse a una fuente externa del navegador). El snapshot de servidor es
   // "online" para no romper la hidratación; en el cliente lee navigator.onLine.
@@ -167,20 +170,28 @@ export default function DashboardLayout({
       .catch(() => {});
   }, []);
 
-  // El tour de la primera vez espera a que el rubro esté elegido, así no se
-  // pisa con ese modal: `storeType` pasa de null a su valor cuando el usuario
-  // lo guarda (evento "store-type-changed") y recién ahí arranca. La espera le
-  // da lugar a que el modal termine de cerrarse.
-  //
-  // Sin distinguir el ancho: antes pedía >= 1024 y en teléfono no aparecía
-  // nunca, ni siquiera al elegir el rubro. Ahora abajo de 1024 el tour abre el
-  // menú lateral y resalta los links de verdad, así que corre igual en los tres.
+  /* El tour de la primera vez espera a que el rubro esté ELEGIDO, para no
+     abrirse encima del modal que lo pregunta.
+     La espera estaba puesta sobre `storeType`, y ese era el bug: en la base
+     `tipoTienda` arranca con "ROPA" por defecto desde que se crea la tienda,
+     así que en una cuenta recién hecha /api/pedidos ya devuelve un rubro, esta
+     condición daba verdadera al instante y 1,4 s después el tour se abría
+     arriba del modal de "¿qué vendés?", que seguía abierto porque nadie había
+     elegido nada todavía. Los dos juntos, en la primera pantalla que ve una
+     dueña nueva.
+     Tener rubro y haberlo elegido son cosas distintas, y sólo la segunda la
+     sabe `tipoTiendaConfigurado`. Es esa la que hay que mirar.
+
+     Sin distinguir el ancho: antes pedía >= 1024 y en teléfono no aparecía
+     nunca, ni siquiera al elegir el rubro. Ahora abajo de 1024 el tour abre el
+     menú lateral y resalta los links de verdad, así que corre igual en los tres. */
   useEffect(() => {
-    if (!storeType) return;
+    if (!rubroElegido) return;
     if (localStorage.getItem(TOUR_PANEL_KEY)) return;
+    // Los 1,4 s le dan lugar al modal para guardar, refrescar y desmontarse.
     const t = setTimeout(() => setShowTour(true), 1400);
     return () => clearTimeout(t);
-  }, [storeType]);
+  }, [rubroElegido]);
 
 
   const fetchAffiliateCount = useCallback(() => {
@@ -209,6 +220,7 @@ export default function DashboardLayout({
       .then((data) => {
         setPendingOrderCount(data?.pendingCount ?? 0);
         if (data?.tipoTienda) setStoreType(data.tipoTienda);
+        if (data?.tipoTiendaConfigurado) setRubroElegido(true);
       })
       .catch(() => {});
   }, []);
@@ -217,6 +229,10 @@ export default function DashboardLayout({
     function onStoreTypeChanged(e: Event) {
       const newType = (e as CustomEvent<{ newType: string }>).detail?.newType;
       if (newType) setStoreType(newType);
+      // El modal sólo emite esto cuando la dueña confirmó: si estaba eligiendo
+      // por primera vez, acá es donde el rubro pasa a estar elegido de verdad
+      // y recién ahora el tour tiene permiso para arrancar.
+      setRubroElegido(true);
     }
     window.addEventListener("store-type-changed", onStoreTypeChanged);
     return () => window.removeEventListener("store-type-changed", onStoreTypeChanged);
