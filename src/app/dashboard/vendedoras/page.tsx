@@ -20,7 +20,6 @@ import {
   TrendingUp,
   UserCheck,
   Users,
-  Wallet,
 } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth-session";
 import { PRO_MAX_AFFILIATES } from "@/lib/planLimits";
@@ -39,11 +38,16 @@ function statusClass(status: string) {
   return "bg-yellow-100 text-yellow-700";
 }
 
+/* Estos carteles van pegados al nombre y la foto de una persona, así que
+   "Aprobada / Pausada / Dada de baja" le ponen género a alguien que puede no
+   tenerlo. Y "aprobado/a" con barra se lee mal.
+   La salida no es la barra: es no hablar de la persona. Estas palabras dicen en
+   qué situación está la afiliación, no cómo se llama quien la tiene. */
 function statusLabel(status: string) {
-  if (status === "APPROVED") return "Aprobada";
-  if (status === "REJECTED") return "Rechazada";
-  if (status === "PAUSED") return "Pausada";
-  if (status === "REMOVED") return "Dada de baja";
+  if (status === "APPROVED") return "En el equipo";
+  if (status === "REJECTED") return "Solicitud rechazada";
+  if (status === "PAUSED") return "En pausa";
+  if (status === "REMOVED") return "Fuera del equipo";
   return "Pendiente";
 }
 
@@ -179,6 +183,47 @@ export default async function VendedorasPage() {
         0
       );
 
+  /* Antecedentes de quien se postula.
+   *
+   * Al aprobar una solicitud lo único que se veía era lo que la persona
+   * escribió de sí misma: presentación, experiencia, un link a sus redes.
+   * Todo eso lo redacta quien pide entrar. No había ni un dato del sistema.
+   *
+   * Esto agrega tres, y los tres se pueden verificar solos: en cuántas tiendas
+   * ya la aprobaron, cuántas ventas confirmadas lleva, y desde cuándo tiene
+   * cuenta. Sin nombrar las tiendas — a la competencia no le importa cuáles
+   * son, le importa si la persona vende.
+   *
+   * Lo que a propósito NO se muestra son las bajas ni los rechazos. Dar de baja
+   * es una decisión de una sola persona y no siempre es por algo que se hizo
+   * mal: alcanza con que un dueño se enoje para que a alguien le quede una
+   * marca que arrastra a todas las tiendas siguientes. Antecedentes, sí; lista
+   * negra, no.
+   */
+  type Antecedentes = { tiendas: number; ventas: number; desde: Date | null };
+  const antecedentes = new Map<string, Antecedentes>();
+  if (pending.length > 0) {
+    const ids = [...new Set(pending.map((a) => a.userId))];
+    const [aprobadas, cuentas] = await Promise.all([
+      // status APPROVED deja afuera esta misma solicitud, que está en PENDING.
+      prisma.affiliate.findMany({
+        where: { userId: { in: ids }, status: "APPROVED" },
+        select: { userId: true, orders: { select: { status: true } } },
+      }),
+      prisma.user.findMany({ where: { id: { in: ids } }, select: { id: true, createdAt: true } }),
+    ]);
+    const altaPorUsuario = new Map(cuentas.map((u) => [u.id, u.createdAt]));
+    for (const id of ids) {
+      antecedentes.set(id, { tiendas: 0, ventas: 0, desde: altaPorUsuario.get(id) ?? null });
+    }
+    for (const fila of aprobadas) {
+      const dato = antecedentes.get(fila.userId);
+      if (!dato) continue;
+      dato.tiendas++;
+      dato.ventas += fila.orders.filter((o) => esVentaConfirmada(o.status)).length;
+    }
+  }
+
   // Retiros pendientes enriquecidos con antigüedad en días
   const pendingWithdrawalsDetail = affiliates
     .flatMap((a) =>
@@ -310,24 +355,61 @@ export default async function VendedorasPage() {
         <section className="mb-8">
           <h2 className="font-bold text-gray-900 mb-4">Solicitudes pendientes</h2>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {pending.map((affiliate) => (
+            {pending.map((affiliate) => {
+              const hoja = antecedentes.get(affiliate.userId);
+              return (
               <div key={affiliate.id} className="bg-white rounded-2xl border border-yellow-100 p-5">
                 <div className="flex items-start justify-between gap-4">
-                  <div>
+                  <div className="min-w-0">
                     <p className="font-bold text-gray-900">{affiliate.user.name}</p>
-                    <p className="text-sm text-gray-400">{affiliate.user.email}</p>
+                    <p className="truncate text-sm text-gray-400">{affiliate.user.email}</p>
                     <p className="text-xs text-gray-400 mt-1">
                       Solicitó permiso el {affiliate.requestedAt.toLocaleDateString("es-AR")}
                     </p>
                   </div>
-                  <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${statusClass(affiliate.status)}`}>
+                  <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${statusClass(affiliate.status)}`}>
                     {statusLabel(affiliate.status)}
                   </span>
                 </div>
 
+                {hoja && (
+                  <div className="mt-4 rounded-xl border border-gray-100 p-3">
+                    <p className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-gray-400">
+                      <UserCheck className="h-3.5 w-3.5" />
+                      Antecedentes
+                    </p>
+                    {hoja.tiendas === 0 ? (
+                      /* Sin historial NO es una advertencia: casi todo el mundo
+                         empieza en algún lado, y pintar esto de rojo haría que
+                         nadie apruebe a quien recién arranca. Es un dato gris. */
+                      <p className="text-sm text-gray-500">
+                        Todavía no vende en ninguna tienda — esta sería su primera.
+                      </p>
+                    ) : (
+                      <p className="text-sm text-gray-600">
+                        Ya vende en{" "}
+                        <strong className="text-gray-900">
+                          {hoja.tiendas} tienda{hoja.tiendas === 1 ? "" : "s"}
+                        </strong>
+                        {" · "}
+                        <strong className="text-gray-900">
+                          {hoja.ventas} venta{hoja.ventas === 1 ? "" : "s"}
+                        </strong>{" "}
+                        confirmada{hoja.ventas === 1 ? "" : "s"}
+                      </p>
+                    )}
+                    {hoja.desde && (
+                      <p className="mt-1 text-xs text-gray-400">
+                        Con cuenta en TiendaApps desde{" "}
+                        {hoja.desde.toLocaleDateString("es-AR", { month: "long", year: "numeric" })}
+                      </p>
+                    )}
+                  </div>
+                )}
+
                 {affiliate.applicationMessage && (
                   <div className="mt-4 rounded-xl bg-gray-50 p-3">
-                    <p className="text-xs font-semibold text-gray-400 uppercase mb-1">Presentacion</p>
+                    <p className="text-xs font-semibold text-gray-400 uppercase mb-1">Presentación</p>
                     <p className="text-sm text-gray-600">{affiliate.applicationMessage}</p>
                   </div>
                 )}
@@ -358,7 +440,8 @@ export default async function VendedorasPage() {
                   />
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         </section>
       )}
@@ -445,7 +528,13 @@ export default async function VendedorasPage() {
               return (
                 <article key={affiliate.id} className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
                   <div className="border-b border-gray-50 p-5">
-                    <div className="flex items-start justify-between gap-4">
+                    {/* En celular esto era una fila: a la izquierda el nombre,
+                        a la derecha las acciones. Con una solicitud pendiente
+                        "las acciones" son un recuadro azul con tres viñetas
+                        explicando qué pasa si la aprobás — o sea media pantalla
+                        de texto peleando por el ancho con el nombre. Apilado en
+                        celular y en fila recién desde `sm`. */}
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                       <div className="flex min-w-0 items-start gap-3">
                         <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-500 text-lg font-black text-white overflow-hidden">
                           {affiliate.user.image ? (
@@ -479,19 +568,24 @@ export default async function VendedorasPage() {
                           </div>
                         </div>
                       </div>
-                      <AffiliateActions
-                        affiliateId={affiliate.id}
-                        status={affiliate.status}
-                        affiliateName={affiliate.user.name || undefined}
-                        walletBalance={affiliate.wallet?.balance ?? 0}
-                      />
+                      {/* `shrink-0` + un ancho máximo: sin eso, en la grilla de
+                          dos columnas el recuadro de la solicitud pendiente se
+                          come el lugar del nombre y lo parte en tres renglones. */}
+                      <div className="w-full sm:w-auto sm:max-w-xs sm:shrink-0">
+                        <AffiliateActions
+                          affiliateId={affiliate.id}
+                          status={affiliate.status}
+                          affiliateName={affiliate.user.name || undefined}
+                          walletBalance={affiliate.wallet?.balance ?? 0}
+                        />
+                      </div>
                     </div>
 
                     {(affiliate.applicationMessage || affiliate.experience) && (
                       <div className="mt-4 grid gap-3 md:grid-cols-2">
                         {affiliate.applicationMessage && (
                           <div className="rounded-xl bg-gray-50 p-3">
-                            <p className="mb-1 text-xs font-bold uppercase tracking-wide text-gray-400">Presentacion</p>
+                            <p className="mb-1 text-xs font-bold uppercase tracking-wide text-gray-400">Presentación</p>
                             <p className="line-clamp-3 text-sm text-gray-600">{affiliate.applicationMessage}</p>
                           </div>
                         )}
@@ -505,53 +599,54 @@ export default async function VendedorasPage() {
                     )}
                   </div>
 
+                  {/* `truncate` + `title` en el número: sin eso un saldo de
+                      siete cifras se sale de la celda en celular, donde la tira
+                      es de dos columnas. */}
                   <div className="grid grid-cols-2 gap-px bg-gray-100 md:grid-cols-4">
                     {(isInquiryStore ? [
-                      { label: "Consultas", value: affLeads!.total },
-                      { label: "Ventas", value: affLeads!.confirmed },
-                      { label: "Comisiones", value: money(affLeads!.earned) },
-                      { label: "Saldo", value: money(walletBalance) },
+                      { label: "Consultas", value: affLeads!.total, aPagar: false },
+                      { label: "Ventas", value: affLeads!.confirmed, aPagar: false },
+                      { label: "Comisiones", value: money(affLeads!.earned), aPagar: false },
+                      { label: "A pagar", value: money(walletBalance), aPagar: true },
                     ] : [
-                      { label: "Ventas", value: affiliate._count.orders },
-                      { label: "Confirmadas", value: confirmedOrders.length },
-                      { label: "Generado", value: money(grossSales) },
-                      { label: "Saldo", value: money(walletBalance) },
+                      { label: "Ventas", value: affiliate._count.orders, aPagar: false },
+                      { label: "Confirmadas", value: confirmedOrders.length, aPagar: false },
+                      { label: "Generado", value: money(grossSales), aPagar: false },
+                      { label: "A pagar", value: money(walletBalance), aPagar: true },
                     ]).map((item) => (
                       <div key={item.label} className="bg-white p-4">
                         <p className="text-xs font-semibold text-gray-400">{item.label}</p>
-                        <p className="mt-1 text-lg font-black text-gray-950">{item.value}</p>
+                        <p
+                          title={String(item.value)}
+                          className={`mt-1 truncate text-base font-black sm:text-lg ${item.aPagar ? "text-purple-700" : "text-gray-950"}`}
+                        >
+                          {item.value}
+                        </p>
                       </div>
                     ))}
                   </div>
 
                   <div className="space-y-4 p-5">
-                    <div className="grid gap-3 md:grid-cols-3">
-                      <div className="rounded-xl border border-gray-100 p-3">
-                        <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-gray-400">
-                          <DollarSign className="h-3.5 w-3.5" />
-                          Saldo wallet
-                        </div>
-                        <p className="font-black text-purple-700">{money(walletBalance)}</p>
-                      </div>
-                      <div className="rounded-xl border border-gray-100 p-3">
-                        <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-gray-400">
-                          <Wallet className="h-3.5 w-3.5" />
-                          {isInquiryStore ? "Retirado" : "Pagado"}
-                        </div>
-                        <p className="font-black text-gray-950">
-                          {isInquiryStore
-                            ? money(affiliate.wallet?.totalWithdrawn ?? 0)
-                            : money(paidCommission)}
-                        </p>
-                      </div>
-                      <div className="rounded-xl border border-gray-100 p-3">
-                        <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-gray-400">
-                          <TrendingUp className="h-3.5 w-3.5" />
-                          Total ganado
-                        </div>
-                        <p className="font-black text-gray-950">{money(affiliate.wallet?.totalEarned ?? 0)}</p>
-                      </div>
-                    </div>
+                    {/* Acá había tres cajas del mismo tamaño: "Saldo wallet",
+                        "Pagado" y "Total ganado".
+                        La primera mostraba EXACTAMENTE el mismo número que la
+                        celda "Saldo" de la tira de arriba — el mismo dato dos
+                        veces en la misma tarjeta, a cuatro centímetros. Quedó
+                        una sola vez, arriba y en violeta, porque es el único de
+                        los siete que pide hacer algo: es plata que se debe.
+                        Los otros dos son historial. Van en un renglón: en
+                        celular esas tres cajas se apilaban y estiraban la
+                        tarjeta media pantalla para mostrar datos que no se
+                        miran todos los días. */}
+                    <p className="text-xs text-gray-400">
+                      Ya cobró{" "}
+                      <span className="font-semibold text-gray-600">
+                        {money(isInquiryStore ? (affiliate.wallet?.totalWithdrawn ?? 0) : paidCommission)}
+                      </span>
+                      {" · "}
+                      Ganó en total{" "}
+                      <span className="font-semibold text-gray-600">{money(affiliate.wallet?.totalEarned ?? 0)}</span>
+                    </p>
 
                     {affiliate.status === "APPROVED" && (
                       <div className="rounded-xl bg-indigo-50 p-3">

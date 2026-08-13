@@ -4,6 +4,7 @@ import { getUserSubscription, getSubscriptionStatus, daysRemaining, reactivation
 import { prisma } from "@/lib/prisma";
 import SubscriptionGate from "@/components/subscription/SubscriptionGate";
 import StoreClosedGate from "@/components/dashboard/StoreClosedGate";
+import CelebrationManager from "@/components/dashboard/CelebrationManager";
 import SubscriptionRealtimeRefresher from "@/components/subscription/SubscriptionRealtimeRefresher";
 import SubscriptionSuccessBanner from "@/components/subscription/SubscriptionSuccessBanner";
 import StoreTypeModal from "./productos/StoreTypeModal";
@@ -37,7 +38,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const store = isOwner
     ? await prisma.store.findUnique({
         where: { ownerId: user.id },
-        select: { tipoTiendaConfigurado: true, closedAt: true },
+        select: { id: true, tipoTiendaConfigurado: true, closedAt: true },
       })
     : null;
 
@@ -97,6 +98,16 @@ export default async function DashboardLayout({ children }: { children: React.Re
       <Suspense><SubscriptionSuccessBanner /></Suspense>
       {gate && <div className="pt-14 lg:pt-0 lg:pl-14 bg-gray-50 [color-scheme:light]">{gate}</div>}
       {storeTypeGate}
+      {/* Las celebraciones van acá y no adentro del componente DashboardLayout,
+          que es donde estaban.
+          Ese componente recibía `storeId` por prop, y de las 21 pantallas del
+          panel se lo pasaba UNA sola: /dashboard. En las otras veinte el
+          festejo directamente no existía — incluida /dashboard/vendedoras, que
+          es justo donde se aprueba a un afiliado. Por eso el cartel de
+          "primer afiliado" no aparecía al aceptarlo sino recién al volver al
+          inicio: no llegaba tarde, aparecía en otra pantalla.
+          Desde el layout cubre las 21 sin pasar nada por prop. */}
+      {store && <CelebrationManager storeId={store.id} />}
       {children}
     </>
   );

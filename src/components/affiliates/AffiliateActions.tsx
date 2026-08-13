@@ -24,7 +24,9 @@ export default function AffiliateActions({
   const [error, setError] = useState("");
   const [modal, setModal] = useState<"pause" | "remove" | null>(null);
 
-  const name = affiliateName || "esta afiliada";
+  // Sin nombre cargado decía "esta afiliada", o sea le inventaba el género a
+  // quien todavía no dijo el suyo. "Esta persona" sirve para cualquiera.
+  const name = affiliateName || "esta persona";
   const fmt = (n: number) => `$${n.toLocaleString("es-AR")}`;
   const hasPendingBalance = walletBalance > 0;
 
@@ -62,7 +64,7 @@ export default function AffiliateActions({
             <ul className="space-y-0.5 text-blue-700">
               <li>• Podrá compartir tus productos con un link propio y cobrar comisión por cada venta.</li>
               <li>• Podrá crear un catálogo en WhatsApp Business o Facebook con tus fotos y precios. <strong>No puede modificarlos</strong> — siempre se muestran los valores reales de tu tienda.</li>
-              <li>• Si la das de baja, su link y catálogo se desactivan en menos de 24 hs. Todas las ventas siguen llegando a vos.</li>
+              <li>• Si le das de baja, su link y catálogo se desactivan en menos de 24 hs. Todas las ventas siguen llegando a vos.</li>
             </ul>
           </div>
           <div className="flex gap-2">
@@ -131,10 +133,12 @@ export default function AffiliateActions({
           title={`¿Pausar a ${name}?`}
           body={
             <div className="space-y-2">
-              <p>Su link de afiliada dejará de funcionar hasta que la reactives.</p>
+              {/* El sujeto de la frase es el LINK, no la persona: así se dice
+                  lo mismo sin género y sin barras. */}
+              <p>Su link de afiliado deja de funcionar hasta que lo reactives.</p>
               {hasPendingBalance && (
                 <div className="bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 text-amber-800 text-xs font-medium">
-                  ⚠️ Tiene <strong>{fmt(walletBalance)}</strong> en comisiones pendientes de retiro. Pausarla no cancela ese saldo — seguís debiéndoselo.
+                  ⚠️ Tiene <strong>{fmt(walletBalance)}</strong> en comisiones pendientes de retiro. Pausar la cuenta no cancela ese saldo — seguís debiéndoselo.
                 </div>
               )}
             </div>
@@ -151,7 +155,7 @@ export default function AffiliateActions({
           title={`¿Dar de baja a ${name}?`}
           body={
             <div className="space-y-2">
-              <p>Su link quedará desactivado y no podrá postularse de nuevo a menos que la reincorpores.</p>
+              <p>Su link queda desactivado y no va a poder postularse de nuevo, salvo que vuelvas a darle acceso desde acá.</p>
               {hasPendingBalance && (
                 <div className="bg-red-50 border border-red-200 rounded-xl px-3 py-2.5 text-red-800 text-xs font-medium">
                   ⚠️ Tiene <strong>{fmt(walletBalance)}</strong> en comisiones pendientes de retiro. Dar de baja no cancela ese saldo — seguís debiéndoselo.

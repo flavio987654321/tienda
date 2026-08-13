@@ -20,11 +20,16 @@ type MilestoneMeta = {
   body: string;
 };
 
+/* Los textos NO llevan género.
+   Decían "¡Primera afiliada!" y "¡Bienvenida!", y a la mitad de la gente que
+   los lee eso le queda mal — quien se suma a vender puede ser cualquiera. Lo
+   mismo con "Un cliente dejó...". Se puede escribir sin género y sin barras
+   ("aceptado/a"), que quedan feas: alcanza con cambiar el sujeto de la frase. */
 function getMeta(type: string): MilestoneMeta {
   switch (type) {
     case "FIRST_ORDER":    return { emoji: "🎉", title: "¡Primer pedido!", body: "Recibiste tu primera venta. ¡Felicitaciones!" };
-    case "FIRST_REVIEW":   return { emoji: "⭐", title: "¡Primera reseña!", body: "Un cliente dejó su primera reseña en tu tienda." };
-    case "FIRST_AFFILIATE":return { emoji: "🤝", title: "¡Primera afiliada!", body: "Tu equipo de ventas arrancó. ¡Bienvenida!" };
+    case "FIRST_REVIEW":   return { emoji: "⭐", title: "¡Primera reseña!", body: "Te dejaron la primera reseña en tu tienda." };
+    case "FIRST_AFFILIATE":return { emoji: "🤝", title: "¡Ya tenés equipo!", body: "Se sumó la primera persona a vender tus productos." };
     case "REVENUE_1K":     return { emoji: "💰", title: "¡$1.000 en ventas!", body: "Cruzaste la barrera de los primeros $1.000 en ingresos." };
     case "REVENUE_10K":    return { emoji: "🚀", title: "¡$10.000 en ventas!", body: "Tu tienda está creciendo. ¡Seguí así!" };
     case "REVENUE_50K":    return { emoji: "🏆", title: "¡$50.000 en ventas!", body: "Un logro enorme. ¡Tu tienda vuela!" };

@@ -15,7 +15,6 @@ import NotificationBell from "@/components/NotificationBell";
 import HelpButton from "@/components/HelpButton";
 import FavoritesDrawer from "@/components/FavoritesDrawer";
 import AsistenteIA from "@/components/dashboard/AsistenteIA";
-import CelebrationManager from "@/components/dashboard/CelebrationManager";
 import TourGuide from "@/components/TourGuide";
 import { GUION_PANEL, TOUR_PANEL_KEY } from "@/components/tours";
 import TermsUpdateBanner from "@/components/TermsUpdateBanner";
@@ -97,7 +96,6 @@ export default function DashboardLayout({
   children,
   userName,
   userId,
-  storeId,
   initialPendingAffiliateCount = 0,
   initialLowStockCount = 0,
   fullHeight = false,
@@ -106,7 +104,6 @@ export default function DashboardLayout({
   children: React.ReactNode;
   userName?: string | null;
   userId?: string | null;
-  storeId?: string | null;
   initialPendingAffiliateCount?: number;
   initialLowStockCount?: number;
   fullHeight?: boolean;
@@ -622,7 +619,6 @@ export default function DashboardLayout({
       </main>
 
       {userId && <AsistenteIA userId={userId} />}
-      {storeId && <CelebrationManager storeId={storeId} />}
     </div>
   );
 }

@@ -5,6 +5,7 @@ import { sendAffiliateStatusEmail } from "@/lib/email";
 import { createNotification } from "@/lib/notifications";
 import { PRO_MAX_AFFILIATES } from "@/lib/planLimits";
 import { hasActivePremium, SUB_STATUS_SELECT } from "@/lib/subscription";
+import { despues } from "@/lib/despues";
 
 type RouteContext = {
   params: Promise<{ id: string }>;
@@ -84,38 +85,44 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       createNotification({
         userId: affiliate.userId,
         type: "AFFILIATE_APPROVED",
-        title: `¡Fuiste aceptado/a en ${affiliate.store.name}!`,
+        // "aceptado/a" con barra: se lee mal y encima no hace falta. Dándolo
+        // vuelta ("te aceptaron") la frase no tiene género y se lee mejor.
+        title: `¡Te aceptaron en ${affiliate.store.name}!`,
         body: "Ya podés compartir tu link de afiliado y empezar a ganar comisiones.",
         link: "/afiliados",
       }),
     ]);
 
-    // Actividad y milestone — fire-and-forget
-    ;(async () => {
-      try {
-        await prisma.storeActivityEvent.create({
-          data: {
-            storeId: affiliate.storeId,
-            type: "NEW_AFFILIATE",
-            data: JSON.stringify({
-              affiliateName: (affiliate.user.name || "Afiliada").slice(0, 40),
-            }),
-          },
+    /* Actividad y logro. Iba en un `;(async () => {...})()` suelto, sin esperar:
+       el mismo problema que documenta `despues()`. En serverless la función se
+       congela apenas sale la respuesta, así que esa promesa quedaba a medias y
+       la fila del logro podía no escribirse nunca — o escribirse mucho después,
+       cuando la plataforma reusa el contenedor. Con `despues()` (que por debajo
+       es `after` de Next, o sea `waitUntil`) la respuesta sale igual de rápido
+       pero el trabajo termina seguro. */
+    despues(async () => {
+      await prisma.storeActivityEvent.create({
+        data: {
+          storeId: affiliate.storeId,
+          type: "NEW_AFFILIATE",
+          data: JSON.stringify({
+            // "Afiliada" de fallback: si la persona no cargó nombre, la tienda
+            // veía un género inventado. Sin nombre, no se nombra el género.
+            affiliateName: (affiliate.user.name || "Alguien del equipo").slice(0, 40),
+          }),
+        },
+      });
+      const activeCount = await prisma.affiliate.count({
+        where: { storeId: affiliate.storeId, isActive: true },
+      });
+      if (activeCount === 1) {
+        await prisma.storeMilestone.upsert({
+          where: { storeId_type: { storeId: affiliate.storeId, type: "FIRST_AFFILIATE" } },
+          create: { storeId: affiliate.storeId, type: "FIRST_AFFILIATE" },
+          update: {},
         });
-        const activeCount = await prisma.affiliate.count({
-          where: { storeId: affiliate.storeId, isActive: true },
-        });
-        if (activeCount === 1) {
-          await prisma.storeMilestone.upsert({
-            where: { storeId_type: { storeId: affiliate.storeId, type: "FIRST_AFFILIATE" } },
-            create: { storeId: affiliate.storeId, type: "FIRST_AFFILIATE" },
-            update: {},
-          });
-        }
-      } catch (e) {
-        console.error("[activity/milestone] affiliate approve:", e);
       }
-    })();
+    }, "vendedoras: actividad y logro al aprobar");
 
     return NextResponse.json({ affiliate: updated });
   }

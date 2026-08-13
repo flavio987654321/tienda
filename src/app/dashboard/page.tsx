@@ -186,7 +186,6 @@ export default async function DashboardPage() {
       userName={user.name}
      
       userId={user.id}
-      storeId={store.id}
       initialPendingAffiliateCount={pendingAffiliateCount}
       initialLowStockCount={initialLowStockCount}
     >
