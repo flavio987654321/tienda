@@ -44,6 +44,8 @@ export const INDICE: { slug: string; titulo: string }[] = [
   { slug: "premios-y-niveles",                   titulo: "Premios y niveles" },
   { slug: "vender-mas-como-afiliado",            titulo: "Qué hace que un afiliado venda" },
   { slug: "tu-cuenta-de-afiliado",               titulo: "Tu cuenta de afiliado" },
+  { slug: "material-para-publicar",              titulo: "Plantillas y kit de contenido" },
+  { slug: "metas-y-ranking",                     titulo: "Metas y ranking" },
 ];
 
 const POR_SLUG = new Map(INDICE.map((a) => [a.slug, a.titulo]));

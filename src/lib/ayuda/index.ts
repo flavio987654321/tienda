@@ -88,11 +88,28 @@ function verificarPantallas() {
   }
 
   /* Y las pantallas contra lo que cada artículo dice cubrir. El slug que no
-     existe ya lo avisa `pantallas.ts`, que es donde se cae la fila. */
+     existe ya lo avisa `pantallas.ts`, que es donde se cae la fila.
+
+     Un artículo puede estar colgado de VARIAS pantallas —Plantillas y Kit
+     abren el mismo—, así que no se compara fila por fila: se junta la lista de
+     rutas de cada artículo y se pide que la que él declara esté entre ellas.
+     Comparando de a una, la segunda ruta siempre daría falso avisando de una
+     deriva que no existe, y un aviso que grita sin motivo se deja de leer.
+
+     El artículo SIN `pantalla` no se controla: es el caso de los de criterio,
+     que no hablan de una pantalla y se cuelgan de una por decisión editorial
+     (el `?` de Estadísticas abre "qué hace que un afiliado venda"). */
+  const rutasPorSlug = new Map<string, string[]>();
   for (const p of PANTALLAS) {
-    const articulo = buscarArticulo(p.slug);
-    if (articulo && articulo.pantalla?.href !== p.href) {
-      console.warn(`[ayuda] "${p.slug}" ya no declara la pantalla ${p.href}.`);
+    rutasPorSlug.set(p.slug, [...(rutasPorSlug.get(p.slug) ?? []), p.href]);
+  }
+  for (const [slug, rutas] of rutasPorSlug) {
+    const articulo = buscarArticulo(slug);
+    if (!articulo?.pantalla) continue;
+    if (!rutas.includes(articulo.pantalla.href)) {
+      console.warn(
+        `[ayuda] "${slug}" declara la pantalla ${articulo.pantalla.href}, que ya no lo abre (hoy lo abren: ${rutas.join(", ")}).`
+      );
     }
   }
 }

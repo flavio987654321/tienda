@@ -76,8 +76,11 @@ export default function TiendasPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-[#030712]">
-      {/* Navbar */}
-      <nav className="sticky top-0 z-40 bg-white/90 dark:bg-gray-950/90 backdrop-blur-xl border-b border-gray-200 dark:border-white/5">
+      {/* Mismo caso que Premios: era `sticky top-0 z-40` compitiendo con la
+          navegación del panel, que ya está pegada arriba con ese mismo z-index.
+          El que gana es el que va después en el HTML, así que esta barra le
+          tapaba los menús a la de arriba. */}
+      <nav className="bg-white/90 dark:bg-gray-950/90 border-b border-gray-200 dark:border-white/5">
         <div className="max-w-5xl mx-auto px-6 py-4 flex items-center gap-4">
           <Link href="/afiliados" className="flex items-center gap-2 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
             <ArrowLeft className="h-4 w-4" />

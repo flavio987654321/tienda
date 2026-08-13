@@ -1980,4 +1980,117 @@ export const ARTICULOS: Articulo[] = [
       { t: "ruta", label: "Ver los términos del programa", href: "/afiliados/terminos" },
     ],
   },
+
+  {
+    slug: "material-para-publicar",
+    titulo: "Plantillas y kit de contenido",
+    resumen:
+      "Dos pantallas que te dan lo que hay que publicar ya hecho: los textos por un lado, las imágenes por el otro.",
+    grupo: "encontrar",
+    clase: "mecanica",
+    rol: "afiliado",
+    pantalla: { label: "Plantillas", href: "/afiliados/plantillas" },
+    actualizado: "2026-08-13",
+    relacionados: ["tu-link-de-afiliado", "vender-mas-como-afiliado"],
+    cuerpo: [
+      {
+        t: "p",
+        texto:
+          "Lo que más frena a alguien que arranca no es no tener a quién venderle: es no saber **qué escribir**. Estas dos pantallas resuelven eso — una te da el texto, la otra la imagen.",
+      },
+      { t: "h", texto: "Plantillas: qué escribir" },
+      {
+        t: "p",
+        texto:
+          "Son 10 mensajes ya redactados, **con tu link adentro**, para copiar y pegar. Están separados por dónde los vas a mandar, porque un texto de WhatsApp no funciona en un caption de Instagram:",
+      },
+      {
+        t: "tabla",
+        cols: ["Canal", "Qué hay"],
+        filas: [
+          ["WhatsApp", "Presentar la tienda, un producto puntual, una oferta y un catálogo formal."],
+          ["Instagram", "Caption de feed, texto de historia y caption de oferta con hashtags."],
+          ["Telegram", "Un mensaje pensado para grupos."],
+          ["General", "Bio de perfil y un mail para mandarle a tus contactos."],
+        ],
+      },
+      {
+        t: "p",
+        texto:
+          "Cada uno viene además en un tono: **casual**, **profesional** o **urgente**. El mismo producto no se anuncia igual a una amiga que a una lista de clientes.",
+      },
+      { t: "h", texto: "Los dos campos de arriba" },
+      {
+        t: "p",
+        texto:
+          "Arriba de todo hay dos casilleros opcionales, **Producto** y **Precio**. Si los completás, los mensajes que hablan de un producto puntual se rellenan solos con ese nombre y ese precio.",
+      },
+      {
+        t: "aviso",
+        tono: "dato",
+        texto:
+          "Si los dejás vacíos las plantillas igual funcionan: en vez del producto dicen algo general. Pero un mensaje con nombre y precio convierte bastante más que uno que dice «mirá todo lo que tienen».",
+      },
+      { t: "ruta", label: "Ver las plantillas", href: "/afiliados/plantillas" },
+      { t: "h", texto: "Kit: qué mostrar" },
+      {
+        t: "p",
+        texto:
+          "El kit es lo mismo pero del lado visual. Elegís un producto de la tienda y te da sus fotos **con tu marca de agua** —para descargar y subir— más un texto listo y hashtags sugeridos para ese producto.",
+      },
+      {
+        t: "aviso",
+        tono: "ojo",
+        texto:
+          "Las plantillas y el kit son un punto de partida, no un guion. El que copia y pega igual que otros diez suena a folleto; dos frases tuyas arriba cambian el resultado.",
+      },
+      { t: "ruta", label: "Ver el kit de contenido", href: "/afiliados/kit" },
+    ],
+  },
+
+  {
+    slug: "metas-y-ranking",
+    titulo: "Metas y ranking",
+    resumen:
+      "Las dos pantallas que te muestran contra qué estás compitiendo: un objetivo que paga extra y tu posición entre los demás.",
+    grupo: "vender",
+    clase: "mecanica",
+    rol: "afiliado",
+    pantalla: { label: "Mis metas", href: "/afiliados/metas" },
+    actualizado: "2026-08-13",
+    relacionados: ["vender-mas-como-afiliado", "cuando-cobras-una-comision"],
+    cuerpo: [
+      { t: "h", texto: "Metas: plata extra por llegar" },
+      {
+        t: "p",
+        texto:
+          "Una tienda puede fijar un **objetivo de comisiones para el mes**. Si lo alcanzás, cobrás un porcentaje extra arriba de tu comisión normal.",
+      },
+      {
+        t: "p",
+        texto:
+          "El objetivo y el extra los pone el dueño de cada tienda: el extra va de **0,5% a 20%**. En tu pantalla ves cuánto llevás, cuánto falta y qué porcentaje está en juego.",
+      },
+      {
+        t: "aviso",
+        tono: "dato",
+        texto:
+          "Las metas son por mes y por tienda, no acumuladas. Si vendés en tres tiendas, cada una puede tener la suya — o ninguna. Cuando ninguna tiene meta activa, la pantalla te lo dice.",
+      },
+      { t: "ruta", label: "Ver mis metas", href: "/afiliados/metas" },
+      { t: "h", texto: "Ranking: dónde estás parado" },
+      {
+        t: "p",
+        texto:
+          "El ranking ordena a los afiliados de una tienda por **comisiones generadas en el mes**. Se reinicia cada mes, así que un mes flojo no te arrastra para siempre.",
+      },
+      {
+        t: "aviso",
+        tono: "ojo",
+        texto:
+          "Estar abajo no significa nada por sí solo: hay gente que arrancó hace más tiempo o que vende en un rubro de tickets más altos. El número que te conviene mirar es el tuyo del mes pasado, no el de arriba.",
+      },
+      { t: "ruta", label: "Ver el ranking", href: "/afiliados/ranking" },
+    ],
+  },
 ];

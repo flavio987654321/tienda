@@ -39,6 +39,18 @@ const RUTAS: [href: string, slug: string][] = [
   ["/afiliados/billetera",            "pedir-un-retiro"],
   ["/afiliados/pedidos",              "cuando-cobras-una-comision"],
   ["/afiliados/premios",              "premios-y-niveles"],
+  // Dos pantallas al mismo artículo: Plantillas y Kit son la misma pregunta
+  // ("¿qué publico?") resuelta con texto y con imagen. Separarlas daría dos
+  // artículos cortos que se linkean entre sí para decir lo mismo. Igual con
+  // Metas y Ranking.
+  ["/afiliados/plantillas",           "material-para-publicar"],
+  ["/afiliados/kit",                  "material-para-publicar"],
+  ["/afiliados/metas",                "metas-y-ranking"],
+  ["/afiliados/ranking",              "metas-y-ranking"],
+  // El `?` de Estadísticas abre el de criterio a propósito: al que está mirando
+  // sus números no hay que explicarle la pantalla, hay que decirle qué hacer
+  // con lo que ve.
+  ["/afiliados/estadisticas",         "vender-mas-como-afiliado"],
 ];
 
 /* Una ruta que apunte a un slug que no existe se descarta acá mismo. El `?` de

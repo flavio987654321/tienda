@@ -1,11 +1,9 @@
 ﻿"use client";
 
 import { useEffect, useState } from "react";
-import { useTheme } from "next-themes";
-import { ArrowLeft, Moon, Sun, Clock, CheckCircle, XCircle, ChevronRight } from "lucide-react";
+import { ArrowLeft, Clock, CheckCircle, XCircle, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/components/AuthProvider";
-import NotificationBell from "@/components/NotificationBell";
 
 interface RewardCoupon {
   id: string;
@@ -160,7 +158,6 @@ function CouponRow({ c }: { c: RewardCoupon }) {
 }
 
 export default function PremiosPage() {
-  const { theme, setTheme } = useTheme();
   const { user, status } = useAuth();
   const [data, setData] = useState<PageData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -200,8 +197,16 @@ export default function PremiosPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-white">
-      {/* Header */}
-      <header className="sticky top-0 z-40 bg-gray-50/80 dark:bg-gray-950/80 backdrop-blur-md border-b border-gray-200 dark:border-white/8">
+      {/* Esta barra era `sticky top-0 z-40`, igual que la navegación del panel.
+          Dos elementos pegados arriba con el MISMO z-index no empatan: gana el
+          que va después en el HTML, o sea este. Por eso el menú del "?" se abría
+          y quedaba tapado a la mitad — no era un problema del menú.
+
+          Deja de ser pegajosa. La que tiene que quedarse fija es la navegación,
+          que es la que te lleva a otro lado; este renglón es el título de la
+          pantalla y no pasa nada si sube con el scroll. De paso deja de comerse
+          56px de alto en el celular. */}
+      <header className="bg-gray-50/80 dark:bg-gray-950/80 border-b border-gray-200 dark:border-white/8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <Link href="/afiliados" className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-white/5 transition-colors text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
@@ -218,15 +223,10 @@ export default function PremiosPage() {
               </span>
             )}
           </div>
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-white/5 transition-colors text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
-            >
-              {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-            </button>
-            {user?.id && <NotificationBell userId={user.id} />}
-          </div>
+          {/* Acá había otra campanita y otra luna, tres centímetros abajo de la
+              campanita y la luna de la navegación. Los mismos dos botones dos
+              veces en la misma pantalla: quedaron de cuando esta página no
+              vivía adentro del panel y tenía que traerse su propia barra. */}
         </div>
       </header>
 
