@@ -59,8 +59,8 @@ export async function PATCH(
         userId: a.ownerId,
         type: isBanned ? "AFFILIATE_ADMIN_BANNED" : "AFFILIATE_ADMIN_UNBANNED",
         title: isBanned
-          ? `Tu afiliado ${affiliateName} fue suspendida por TiendaApps`
-          : `Tu afiliado ${affiliateName} fue reactivada por TiendaApps`,
+          ? `Tu afiliado ${affiliateName} fue suspendido por TiendaApps`
+          : `Tu afiliado ${affiliateName} fue reactivado por TiendaApps`,
         body: isBanned
           ? `El equipo de TiendaApps suspendió la cuenta de tu afiliado en ${a.store.name}. Su link de afiliado dejó de funcionar.`
           : `El equipo de TiendaApps reactivó la cuenta de tu afiliado en ${a.store.name}.`,

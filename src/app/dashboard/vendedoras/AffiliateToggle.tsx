@@ -371,7 +371,7 @@ export default function AffiliateToggle({
 
             <div className="px-6 py-5 space-y-3">
               <p className="text-sm text-gray-600">
-                Tenés <strong className="text-gray-900">{activeAffiliatesCount} afiliado{activeAffiliatesCount !== 1 ? "s" : ""} activa{activeAffiliatesCount !== 1 ? "s" : ""}</strong>. Al desactivar el programa:
+                Tenés <strong className="text-gray-900">{activeAffiliatesCount} afiliado{activeAffiliatesCount !== 1 ? "s" : ""} activo{activeAffiliatesCount !== 1 ? "s" : ""}</strong>. Al desactivar el programa:
               </p>
               <ul className="space-y-2 text-sm text-gray-600">
                 <li className="flex items-start gap-2">

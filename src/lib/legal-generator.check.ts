@@ -80,7 +80,13 @@ chequear("sin trackers: no nombra a Google", !limpia.includes("Google Analytics"
 chequear("sin trackers: no nombra a Meta", !limpia.includes("Meta Pixel"));
 chequear("sin trackers: dice que no hay cookies de publicidad", limpia.includes("No usamos cookies de publicidad"));
 chequear("sin MercadoPago: no lo nombra", !limpia.includes("Mercado Pago"));
-chequear("sin afiliados: no los nombra", !limpia.includes("afiliado"));
+/* El texto que busca es "persona afiliada" y NO "afiliado", que es lo que el
+   barrido de género había dejado acá. Ojo con esa diferencia: el generador
+   escribe "una persona afiliada a esta tienda", y "afiliada" no contiene la
+   cadena "afiliado" — así que buscando "afiliado" el chequeo pasaba SIEMPRE,
+   incluso si la política filtrara la frase con los afiliados apagados. Es
+   decir: seguía en verde sin mirar nada. Va la frase textual del generador. */
+chequear("sin afiliados: no los nombra", !limpia.includes("persona afiliada"));
 
 const conTodo = generatePolicyPrivacy(TIENDA, {
   usaAnalytics: true, usaPixel: true, usaMercadoPago: true, usaAfiliados: true, esAutos: false,
