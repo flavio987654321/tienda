@@ -118,6 +118,21 @@ export async function POST(req: NextRequest) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
+  /* Sólo se postula quien se registró como afiliado.
+   *
+   * La pantalla ya no deja llegar hasta acá a nadie más, pero el chequeo va
+   * igual: una pantalla se puede saltear escribiéndole a la API de una, y esto
+   * decide quién termina cobrando comisiones. La regla vive donde se aplica.
+   *
+   * Y no hay conversión: una cuenta es una sola cosa. Quien tiene tienda o
+   * compra y además quiere vender, se hace su cuenta de afiliado. */
+  if (user.role !== "SELLER") {
+    return NextResponse.json(
+      { error: "Para postularte necesitás una cuenta de afiliado." },
+      { status: 403 }
+    );
+  }
+
   const { storeId, applicationMessage, experience, cvUrl, socialUrl, tcAccepted } = await req.json();
   const userId = user.id;
 

@@ -59,11 +59,19 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       include: { wallet: true },
     });
 
-    // Rol SELLER se asigna aquí, cuando realmente se aprueba
-    await prisma.user.update({
-      where: { id: affiliate.userId },
-      data: { role: "SELLER" },
-    });
+    /* Acá se le reescribía el rol a SELLER a quien se aprobaba, sin mirar qué
+       rol tenía. Se sacó, y es el cambio más importante de este archivo.
+
+       Era una bomba de tiempo: si se aprobaba a una dueña de tienda, su rol
+       pasaba a SELLER y su PROPIO panel la echaba —`/dashboard` manda a
+       `/afiliados` a todo el que sea SELLER—. Perdía la entrada a su tienda,
+       más Sasha, la ayuda por rubro, el dominio propio y el botón de cerrar
+       tienda, que preguntan todos por ese rol. No le pasó a nadie porque hasta
+       hoy había una sola afiliación en la base.
+
+       Ya no hace falta ni como conversión: postularse exige ser SELLER, así
+       que el aprobado YA lo es y esto siempre sería escribir lo mismo. El rol
+       se elige una vez, al registrarse, y no lo cambia ninguna otra pantalla. */
 
     await Promise.all([
       sendAffiliateStatusEmail({

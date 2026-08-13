@@ -10,27 +10,51 @@ import { AppLogo } from "@/components/AppLogo";
 const PLATAFORMA = [
   { href: "/tiendas",         label: "Ver tiendas" },
   { href: "/#como-funciona",  label: "Cómo funciona" },
+  { href: "/precios",         label: "Precios" },
   { href: "/registro",        label: "Crear cuenta" },
   { href: "/login",           label: "Iniciar sesión" },
 ];
 
+/* Este footer lo lee gente SIN cuenta, y eso decide a dónde apunta cada link.
+ *
+ * "Postularme" mandaba a `/afiliados`, que es un panel de adentro: al que no
+ * tenía sesión le hacía un flash y lo pateaba al login, y a una dueña la metía
+ * en un panel que no es el suyo. Ahora va al registro de afiliado, que es lo
+ * que necesita el que lee esto: crearse la cuenta.
+ *
+ * "Mis comisiones" se sacó por lo mismo. Era un link directo a la billetera —
+ * una pantalla de adentro— colgado de un footer público. */
 const AFILIADOS = [
-  { href: "/afiliados",           label: "Postularme" },
-  { href: "/afiliados/billetera", label: "Mis comisiones" },
-  { href: "/quienes-somos",       label: "Quiénes somos" },
-  { href: "/contacto",            label: "Contacto" },
+  { href: "/registro?plan=seller", label: "Quiero ser afiliado" },
+  { href: "/quienes-somos",        label: "Quiénes somos" },
+  { href: "/contacto",             label: "Contacto" },
+];
+
+/* Los términos y la privacidad EXISTÍAN y no estaban linkeados en ningún lado:
+   se llegaba sabiéndose la dirección de memoria. Para una plataforma que cobra
+   suscripciones en Argentina eso no es un detalle de diseño.
+
+   La ayuda va acá también: es pública y la indexa Google, así que el footer es
+   su lugar natural — y de paso es la puerta para el que todavía no tiene
+   cuenta y está averiguando cómo funciona. */
+const AYUDA_Y_LEGAL = [
+  { href: "/ayuda",      label: "Centro de ayuda" },
+  { href: "/terminos",   label: "Términos y condiciones" },
+  { href: "/privacidad", label: "Política de privacidad" },
 ];
 
 export function SiteFooter() {
   return (
     <footer className="bg-white border-t border-gray-200 px-6 py-12">
       <div className="max-w-7xl mx-auto">
-        {/* En celular "Plataforma" y "Afiliados" iban apiladas: dejaba el footer
-            largo y con la mitad derecha vacía. Con dos columnas, la marca ocupa
-            el ancho completo arriba (col-span-2) y las dos listas de links quedan
-            lado a lado abajo. En desktop siguen siendo las cuatro columnas de
-            siempre (grid de 4: marca 2 + las dos listas). */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-10 md:gap-10 mb-10">
+        {/* En celular las listas iban apiladas: dejaba el footer largo y con la
+            mitad derecha vacía. Con dos columnas, la marca ocupa el ancho
+            completo arriba (col-span-2) y las listas quedan de a dos abajo.
+
+            En desktop la grilla pasó de 4 a 5 al entrar "Ayuda y legal": la
+            marca sigue ocupando 2 y cada lista una. Con 4 columnas, la tercera
+            lista se caía a un renglón nuevo ella sola. */}
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-x-6 gap-y-10 md:gap-10 mb-10">
           <div className="col-span-2">
             <div className="flex items-center gap-2.5 mb-4">
               <AppLogo size={32} />
@@ -59,6 +83,16 @@ export function SiteFooter() {
             <p className="text-gray-900 font-semibold text-sm mb-4">Afiliados</p>
             <ul className="space-y-2.5">
               {AFILIADOS.map(({ href, label }) => (
+                <li key={label}>
+                  <Link href={href} className="text-gray-500 hover:text-gray-900 text-sm transition-colors">{label}</Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div>
+            <p className="text-gray-900 font-semibold text-sm mb-4">Ayuda y legal</p>
+            <ul className="space-y-2.5">
+              {AYUDA_Y_LEGAL.map(({ href, label }) => (
                 <li key={label}>
                   <Link href={href} className="text-gray-500 hover:text-gray-900 text-sm transition-colors">{label}</Link>
                 </li>
