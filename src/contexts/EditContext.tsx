@@ -1,5 +1,5 @@
 "use client";
-import { createContext, useContext, useState, useEffect, useRef } from "react";
+import { createContext, useContext, useState } from "react";
 import type { TextOverride, ImageOverride } from "@/types/store-config";
 import { colorRepresentativo } from "@/lib/section-bg";
 
@@ -562,220 +562,37 @@ export function EditableFixed({
   );
 }
 
-/* ── DraggableImage ───────────────────────────────────────────
-   Wraps an <img objectFit="cover"> to allow drag-repositioning
-   when the image panel is open (activeField === "img:${field}").
-──────────────────────────────────────────────────────────────── */
-export function DraggableImage({
-  field,
-  src,
-  alt,
-  style,
-  className,
-}: {
-  field: string;
-  src: string;
-  alt?: string;
-  style?: React.CSSProperties;
-  className?: string;
-}) {
-  const { editMode, activeField, imageOverrides, setImageOverride, imageLoading } = useEditContext();
-  const imgKey = `img:${field}`;
-  const isActive = activeField === imgKey;
-  const ov = imageOverrides[field] ?? {};
-  const posX = ov.posX ?? 50;
-  const posY = ov.posY ?? 50;
-
-  const isLoadingImg = editMode && !!imageLoading[field];
-  const dragging = useRef(false);
-  const startPos = useRef({ x: 0, y: 0, px: posX, py: posY });
-  const [isDragging, setIsDragging] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!isActive) return;
-
-    const onMove = (e: MouseEvent) => {
-      if (!dragging.current) return;
-      const rect = containerRef.current?.getBoundingClientRect();
-      if (!rect) return;
-      const deltaX = e.clientX - startPos.current.x;
-      const deltaY = e.clientY - startPos.current.y;
-      const newX = Math.round(Math.max(0, Math.min(100, startPos.current.px - (deltaX / rect.width) * 100 * 1.5)));
-      const newY = Math.round(Math.max(0, Math.min(100, startPos.current.py - (deltaY / rect.height) * 100 * 1.5)));
-      setImageOverride(field, { posX: newX, posY: newY });
-    };
-
-    const onUp = () => {
-      dragging.current = false;
-      setIsDragging(false);
-    };
-
-    window.addEventListener("mousemove", onMove);
-    window.addEventListener("mouseup", onUp);
-    return () => {
-      window.removeEventListener("mousemove", onMove);
-      window.removeEventListener("mouseup", onUp);
-    };
-  }, [isActive, field, setImageOverride]);
-
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if (!isActive) return;
-    e.preventDefault();
-    dragging.current = true;
-    setIsDragging(true);
-    startPos.current = { x: e.clientX, y: e.clientY, px: posX, py: posY };
-  };
-
-  return (
-    <div
-      ref={containerRef}
-      style={{ position: "relative", overflow: "hidden", ...(style as React.CSSProperties) }}
-      className={className}
-    >
-      <img
-        src={src}
-        alt={alt ?? ""}
-        onMouseDown={handleMouseDown}
-        style={{
-          width: "100%",
-          height: "100%",
-          objectFit: "cover",
-          objectPosition: `${posX}% ${posY}%`,
-          display: "block",
-          cursor: editMode && isActive ? (isDragging ? "grabbing" : "grab") : undefined,
-          userSelect: "none",
-          draggable: false,
-        } as React.CSSProperties}
-      />
-      {isLoadingImg && (
-        <div style={{
-          position: "absolute", inset: 0, zIndex: 9997,
-          background: "rgba(15,23,42,0.55)",
-          backdropFilter: "blur(3px)",
-          display: "flex", alignItems: "center", justifyContent: "center",
-        }}>
-          <div style={{
-            display: "flex", alignItems: "center", gap: 9,
-            background: "rgba(30,41,59,0.95)", color: "#e2e8f0",
-            fontSize: 12, fontWeight: 700, padding: "10px 18px", borderRadius: 10,
-            border: "1px solid rgba(99,102,241,0.5)",
-            fontFamily: "system-ui, -apple-system, sans-serif",
-            boxShadow: "0 4px 20px rgba(0,0,0,0.5)",
-          }}>
-            <span style={{
-              display: "inline-block", width: 14, height: 14, borderRadius: "50%",
-              border: "2.5px solid rgba(129,140,248,0.3)", borderTopColor: "#818cf8",
-              animation: "imgSpin 0.75s linear infinite", flexShrink: 0,
-            }} />
-            Cargando imagen...
-          </div>
-          <style>{`@keyframes imgSpin { to { transform: rotate(360deg); } }`}</style>
-        </div>
-      )}
-      {editMode && isActive && !isDragging && !isLoadingImg && (
-        <div style={{
-          position: "absolute", bottom: 12, left: "50%", transform: "translateX(-50%)",
-          background: "rgba(20,20,20,0.75)", color: "white",
-          fontSize: 11, fontWeight: 700, padding: "5px 12px", borderRadius: 8,
-          pointerEvents: "none", whiteSpace: "nowrap", zIndex: 9990,
-          backdropFilter: "blur(4px)",
-          fontFamily: "system-ui, -apple-system, sans-serif",
-        }}>
-          ✋ Arrastrá para reposicionar
-        </div>
-      )}
-    </div>
-  );
-}
 
 /* ── BgDragHandle ─────────────────────────────────────────────
-   Transparent overlay inside a section with backgroundImage
-   that allows drag-repositioning. Active when the image/bg panel
-   is open. Place inside the section (position:relative).
+   Ya no hace nada, y esa es la corrección.
+
+   Era una capa invisible arriba de la foto que dejaba arrastrarla ahí mismo,
+   con un cartel abajo que decía "✋ Arrastrá para reposicionar". El encuadre
+   se mudó al panel de la derecha (sección ENCUADRE), y esta capa quedó de
+   antes — pero no quedó sólo de adorno: quedó mintiendo.
+
+   1) Escribía SIEMPRE `posX`/`posY`, que son los valores de la vista de PC.
+      El panel encuadra PC y celular por separado (`posXMobile`/`posYMobile`).
+      Entonces con el panel en "📱 Celular" uno arrastraba la foto grande
+      creyendo que acomodaba el celular, y en realidad estaba corriendo el
+      encuadre de PC. Sin ningún aviso, y desarmando lo que ya estaba bien.
+      El lienzo ni se entera de que existe el modo celular: `modoMobil` es
+      estado interno del panel y no sale de ahí.
+
+   2) No sabía qué eje se puede mover. El panel calcula si la foto entra justa
+      de ancho o de alto y apaga la barra que no tiene nada que correr —en la
+      captura, "De izquierda a derecha no hay nada que mover"—. Acá se
+      arrastraba para los cuatro lados igual: en el eje trabado no pasaba nada
+      y parecía que el editor estaba colgado.
+
+   El panel hace todo esto bien y además muestra la forma exacta del hueco y
+   tiene "Volver al centro". No hay nada que rescatar de esta capa.
+
+   Sigue exportada y devolviendo null a propósito: la usan once plantillas y
+   así ninguna se rompe. Las llamadas quedan para barrer en una sola pasada
+   cuando FashionNoir esté cerrado — hoy tocarlas sería meterse en trabajo que
+   está a medio hacer.
 ──────────────────────────────────────────────────────────────── */
-export function BgDragHandle({ imgKey }: { imgKey: string }) {
-  const { editMode, activeField, imageOverrides, setImageOverride } = useEditContext();
-
-  // activation key: "sectionbg_foo" → "bg:foo", otherwise "img:foo"
-  const activationKey = imgKey.startsWith("sectionbg_")
-    ? `bg:${imgKey.slice(10)}`
-    : `img:${imgKey}`;
-  const isActive = activeField === activationKey;
-
-  const ov = imageOverrides[imgKey] ?? {};
-  const hasImage = !!ov.url;
-
-  const posX = ov.posX ?? 50;
-  const posY = ov.posY ?? 50;
-
-  const dragging = useRef(false);
-  const startPos = useRef({ x: 0, y: 0, px: posX, py: posY });
-  const [isDragging, setIsDragging] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  // derive the field name for setImageOverride
-  const field = imgKey;
-
-  useEffect(() => {
-    if (!isActive || !hasImage) return;
-
-    const onMove = (e: MouseEvent) => {
-      if (!dragging.current) return;
-      const rect = containerRef.current?.getBoundingClientRect();
-      if (!rect) return;
-      const deltaX = e.clientX - startPos.current.x;
-      const deltaY = e.clientY - startPos.current.y;
-      const newX = Math.round(Math.max(0, Math.min(100, startPos.current.px - (deltaX / rect.width) * 100 * 1.5)));
-      const newY = Math.round(Math.max(0, Math.min(100, startPos.current.py - (deltaY / rect.height) * 100 * 1.5)));
-      setImageOverride(field, { posX: newX, posY: newY });
-    };
-
-    const onUp = () => {
-      dragging.current = false;
-      setIsDragging(false);
-    };
-
-    window.addEventListener("mousemove", onMove);
-    window.addEventListener("mouseup", onUp);
-    return () => {
-      window.removeEventListener("mousemove", onMove);
-      window.removeEventListener("mouseup", onUp);
-    };
-  }, [isActive, hasImage, field, setImageOverride]);
-
-  if (!editMode || !hasImage || !isActive) return null;
-
-  const handleMouseDown = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    dragging.current = true;
-    setIsDragging(true);
-    startPos.current = { x: e.clientX, y: e.clientY, px: posX, py: posY };
-  };
-
-  return (
-    <div
-      ref={containerRef}
-      onMouseDown={handleMouseDown}
-      style={{
-        position: "absolute", inset: 0,
-        zIndex: 9989,
-        cursor: isDragging ? "grabbing" : "grab",
-      }}
-    >
-      {!isDragging && (
-        <div style={{
-          position: "absolute", bottom: 16, left: "50%", transform: "translateX(-50%)",
-          background: "rgba(20,20,20,0.75)", color: "white",
-          fontSize: 11, fontWeight: 700, padding: "5px 12px", borderRadius: 8,
-          pointerEvents: "none", whiteSpace: "nowrap",
-          backdropFilter: "blur(4px)",
-          fontFamily: "system-ui, -apple-system, sans-serif",
-        }}>
-          ✋ Arrastrá para reposicionar
-        </div>
-      )}
-    </div>
-  );
+export function BgDragHandle(_: { imgKey: string }) {
+  return null;
 }
