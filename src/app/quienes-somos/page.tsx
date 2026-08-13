@@ -56,7 +56,7 @@ export default function QuienesSomosPage() {
               <Link href="/registro" className="group flex items-center gap-2 bg-orange-600 hover:bg-orange-500 text-white px-8 py-4 rounded-2xl font-semibold text-lg transition-all shadow-xl shadow-orange-500/25 hover:scale-105">
                 Crear mi tienda gratis <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
               </Link>
-              <Link href="/afiliados" className="flex items-center gap-2 border border-gray-200 hover:border-gray-300 text-gray-700 hover:text-gray-900 px-8 py-4 rounded-2xl font-semibold text-lg transition-all hover:bg-gray-50">
+              <Link href="/registro?plan=seller" className="flex items-center gap-2 border border-gray-200 hover:border-gray-300 text-gray-700 hover:text-gray-900 px-8 py-4 rounded-2xl font-semibold text-lg transition-all hover:bg-gray-50">
                 <Briefcase className="h-5 w-5" /> Quiero ser afiliado
               </Link>
             </motion.div>
@@ -280,7 +280,7 @@ export default function QuienesSomosPage() {
                   "Sin stock, sin pagos, sin envíos a su cargo",
                 ],
                 cta: "Postularme como afiliado",
-                href: "/afiliados",
+                href: "/registro?plan=seller",
               },
               {
                 icon: ShoppingCart,

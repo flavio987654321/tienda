@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth-session";
 import { getUserSubscription, getSubscriptionStatus, daysRemaining, reactivationCredit } from "@/lib/subscription";
 import { prisma } from "@/lib/prisma";
@@ -18,7 +19,18 @@ export const metadata: Metadata = {
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const user = await getCurrentUser();
 
-  const isOwner = user?.role === "OWNER";
+  /* La guarda va acá arriba, ANTES de cualquier consulta, por lo mismo que en
+     los otros tres paneles: si se decide más abajo, el layout ya empezó a
+     mandar HTML y Next no puede contestar un redirect de verdad — mete un
+     `<meta http-equiv="refresh" content="1;url=/login">` y la persona ve el
+     panel dibujado un segundo entero antes de que la pantalla salte.
+     Estaba en `page.tsx`, o sea después de todo esto. */
+  if (!user) redirect("/login");
+  if (user.role === "ADMIN") redirect("/admin");
+  if (user.role === "SELLER") redirect("/afiliados");
+  if (user.role === "BUYER") redirect("/mi-cuenta");
+
+  const isOwner = user.role === "OWNER";
 
   // Una sola query de tienda para los dos gates de abajo — antes eran dos
   // findUnique separados sobre la misma fila.

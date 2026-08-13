@@ -44,15 +44,9 @@ export default async function DashboardPage() {
     },
   });
 
-  /* Cada rol a su panel. El cliente estaba sin contemplar: caía en el `!store`
-     de abajo y terminaba en el login, ya logueado — que se lee como "tu sesión
-     se venció" cuando en realidad se equivocó de puerta. Ahora va a la suya.
-
-     El `!store` queda al final y ya no es el cajón de sastre: sólo lo alcanza
-     un OWNER sin tienda creada, que no debería existir. */
-  if (user.role === "ADMIN") redirect("/admin");
-  if (user.role === "SELLER") redirect("/afiliados");
-  if (user.role === "BUYER") redirect("/mi-cuenta");
+  /* El reparto por rol se hace en el layout, que corre antes que esto — acá
+     sólo llega un OWNER. Lo único que queda es el caso raro: un dueño sin
+     tienda creada, que no debería existir. */
   if (!store) redirect("/login");
 
   // Extra fields for onboarding checklist

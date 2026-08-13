@@ -280,8 +280,12 @@ function LoginForm() {
               <p className="text-xs text-gray-500 leading-relaxed">
                 Si tenes cuenta de afiliado inicia sesion arriba. Si queres postularte a una tienda, explora las activas.
               </p>
+              {/* A `/tiendas`, que es la lista pública. Iba a `/afiliados`, que
+                  es el panel: el que lee esto está PARADO en el login, sin
+                  sesión, así que el panel lo mandaba de vuelta al login. Un
+                  botón que te deja donde ya estabas. */}
               <Link
-                href="/afiliados"
+                href="/tiendas"
                 className="mt-2.5 inline-flex items-center gap-1.5 text-xs text-orange-600 font-semibold hover:text-orange-700 transition-colors"
               >
                 Ver tiendas activas <ArrowRight className="h-3 w-3" />

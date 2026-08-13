@@ -279,7 +279,12 @@ function PreciosContent() {
                 ))}
               </ul>
 
-              {userSub?.role === "OWNER" ? null : userName ? (
+              {/* "Ir a mi panel" es sólo para quien TIENE ese panel, o sea el
+                  afiliado. Antes bastaba con estar logueada y no ser dueña, así
+                  que a una clienta también se lo mostraba — y ese botón la
+                  manda a un panel que no es el suyo. Sin cuenta de afiliado, lo
+                  que corresponde es la invitación a crearse una. */}
+              {userSub?.role === "OWNER" ? null : userSub?.role === "SELLER" ? (
                 <Link
                   href="/afiliados"
                   className="flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl text-sm font-bold bg-amber-500 hover:bg-amber-400 text-white hover:scale-[1.02] transition-all shadow-lg shadow-amber-500/25"

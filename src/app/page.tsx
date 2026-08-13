@@ -786,7 +786,7 @@ export default function Home() {
                 <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
               </Link>
               <Link
-                href="/afiliados"
+                href="/registro?plan=seller"
                 className="flex items-center gap-2 border border-gray-200 hover:border-gray-300 text-gray-700 hover:text-gray-900 px-8 py-4 rounded-2xl font-semibold text-lg transition-all hover:bg-gray-50"
               >
                 <Users className="h-5 w-5" />
@@ -994,7 +994,7 @@ export default function Home() {
                 icon: Users, color: "#f59e0b", gradient: "from-amber-50 to-amber-50/40", border: "border-amber-200", metric: "$3.680 comisión cobrada",
                 title: "Afiliado", sub: "Plata por cada link que compartís, sin poner un peso.",
                 items: ["Elegís las tiendas que te interesan y te postulás", "Link propio con seguimiento de clics y ventas", "Sin stock, sin inversión, sin riesgo", "Metas mensuales con bono extra si las cumplís", "Panel de comisiones con historial de ventas", "Retirá cuando quieras, por transferencia bancaria", "100% gratis, para siempre"],
-                cta: "Quiero ser afiliado", href: "/afiliados",
+                cta: "Quiero ser afiliado", href: "/registro?plan=seller",
               },
               {
                 icon: ShoppingCart, color: "#e11d48", gradient: "from-rose-50 to-rose-50/40", border: "border-rose-200", metric: "Tiendas verificadas",
@@ -1422,7 +1422,7 @@ export default function Home() {
                   fotos está oculta en celular (`hidden lg:block`), así que el botón
                   quedaba solo contra el margen izquierdo debajo de los tres pasos. */}
               <motion.div variants={fadeUp} className="mt-10 text-center lg:text-left">
-                <Link href="/afiliados" className="inline-flex items-center gap-2 bg-orange-600 hover:bg-orange-500 text-white px-7 py-3.5 rounded-2xl font-semibold transition-all shadow-lg shadow-orange-500/25 hover:scale-105">
+                <Link href="/registro?plan=seller" className="inline-flex items-center gap-2 bg-orange-600 hover:bg-orange-500 text-white px-7 py-3.5 rounded-2xl font-semibold transition-all shadow-lg shadow-orange-500/25 hover:scale-105">
                   Quiero ser afiliado <ArrowRight className="h-4 w-4" />
                 </Link>
               </motion.div>
@@ -1680,7 +1680,7 @@ export default function Home() {
                 <ArrowRight className="h-6 w-6 group-hover:translate-x-1 transition-transform" />
               </Link>
               <Link
-                href="/afiliados"
+                href="/registro?plan=seller"
                 className="flex items-center justify-center gap-2 border border-white/40 hover:border-white text-white px-8 py-5 rounded-2xl font-bold text-lg transition-all hover:bg-white/10"
               >
                 <Users className="h-5 w-5" /> Quiero ser afiliado
