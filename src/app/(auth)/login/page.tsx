@@ -301,6 +301,19 @@ function LoginForm() {
               </Link>
             </p>
           )}
+
+          {/* El login no lleva el SiteFooter: es una pantalla de una sola cosa
+              y un footer de cinco columnas abajo de un formulario centrado
+              queda fuera de lugar. Pero los términos y la privacidad tienen que
+              poder leerse ANTES de entrar, no sólo desde el home, así que va
+              esta línea fina — que es como se resuelve en cualquier login. */}
+          <nav className="flex items-center justify-center gap-3 mt-8 text-xs text-gray-400">
+            <Link href="/ayuda" className="hover:text-gray-600 transition-colors">Ayuda</Link>
+            <span aria-hidden="true">·</span>
+            <Link href="/terminos" className="hover:text-gray-600 transition-colors">Términos</Link>
+            <span aria-hidden="true">·</span>
+            <Link href="/privacidad" className="hover:text-gray-600 transition-colors">Privacidad</Link>
+          </nav>
         </motion.div>
       </div>
     </div>

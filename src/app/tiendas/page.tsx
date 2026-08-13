@@ -1,5 +1,6 @@
 import { listarTiendas, LIMITE_MAXIMO } from "@/lib/tiendasDirectorio";
 import TiendasClient from "./TiendasClient";
+import { SiteFooter } from "@/components/SiteFooter";
 
 /**
  * El directorio se arma en el SERVIDOR.
@@ -27,5 +28,13 @@ export default async function TiendasPage() {
     ({ stores: tiendas } = await listarTiendas({ limit: LIMITE_MAXIMO }));
   } catch {}
 
-  return <TiendasClient tiendasIniciales={tiendas} />;
+  // El footer va acá y no adentro de TiendasClient a propósito: TiendasClient
+  // es `"use client"`, así que meterlo ahí arrastraría el footer al bundle de
+  // JavaScript sin ninguna razón — es HTML que no cambia nunca.
+  return (
+    <>
+      <TiendasClient tiendasIniciales={tiendas} />
+      <SiteFooter />
+    </>
+  );
 }
