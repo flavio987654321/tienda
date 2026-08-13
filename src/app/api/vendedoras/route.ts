@@ -66,7 +66,7 @@ export async function GET(req: NextRequest) {
         acceptsRewardCoupons: true,
         mpAccessToken: true,
         owner: { select: { name: true } },
-        // Los que la afiliada va a poder compartir de verdad: sin los borrados ni
+        // Los que el afiliado va a poder compartir de verdad: sin los borrados ni
         // los pausados. Antes contaba las filas borradas y prometía de más.
         _count: { select: { products: { where: { isActive: true, deletedAt: null } } } },
         affiliates: {
@@ -235,19 +235,19 @@ export async function POST(req: NextRequest) {
     if (!owner?.email) return;
     await sendNewAffiliateApplicationEmail({
       ownerEmail: owner.email,
-      ownerName: owner.name || "vendedora",
+      ownerName: owner.name || "vendedor",
       storeName: store.name,
       applicantName: user.name || "Una usuaria",
       applicantEmail: user.email,
       applicationMessage: appMsg,
     });
-  }, "afiliada: mail de solicitud a la dueña");
+  }, "afiliado: mail de solicitud a la dueña");
 
   despues(() => sendPushToUser(store.ownerId, {
-    title: "Nueva solicitud de afiliada",
+    title: "Nueva solicitud de afiliado",
     body: `${user.name || user.email} quiere unirse a ${store.name}`,
     url: "/dashboard/vendedoras",
-  }), "afiliada: push de solicitud a la dueña");
+  }), "afiliado: push de solicitud a la dueña");
 
   // El rol se asigna solo cuando la dueña aprueba, no al postular
   return NextResponse.json({ affiliate, message: "Solicitud enviada" });

@@ -378,7 +378,7 @@ export async function POST(req: NextRequest) {
       ownerEmail: admin.email,
       ownerName: admin.name ?? "Admin",
       storeName: storeNames,
-      affiliateName: userBank?.name ?? "Afiliada",
+      affiliateName: userBank?.name ?? "Afiliado",
       affiliateEmail: userBank?.email ?? "",
       amount,
       cbu: rawCbuSnap ?? null,
@@ -393,7 +393,7 @@ export async function POST(req: NextRequest) {
       userId: admin.id,
       type: "WITHDRAWAL_REQUESTED",
       title: "Nueva solicitud de retiro",
-      body: `${userBank?.name ?? "Una afiliada"} solicitó retirar $${amount.toLocaleString("es-AR")} — ${storeNames}`,
+      body: `${userBank?.name ?? "Un afiliado"} solicitó retirar $${amount.toLocaleString("es-AR")} — ${storeNames}`,
       link: "/admin/retiros",
     }), "retiro: campanita al admin");
   }
@@ -404,7 +404,7 @@ export async function POST(req: NextRequest) {
     title: "Retiro en proceso",
     body: `Tu retiro de $${amount.toLocaleString("es-AR")} fue solicitado. Lo procesaremos en 1 a 3 días hábiles.`,
     link: "/afiliados/billetera",
-  }), "retiro: campanita a la afiliada");
+  }), "retiro: campanita al afiliado");
 
   return NextResponse.json({
     withdrawals,

@@ -135,7 +135,7 @@ function PreciosContent() {
   const viewingBilling: "MONTHLY" | "ANNUAL" = isAnnual ? "ANNUAL" : "MONTHLY";
   const isOnAnnual = userSub?.plan === "ANNUAL";
 
-  // El plan de afiliadas es gratuito — estas funciones de precio sólo se usan para la tarjeta de OWNER
+  // El plan de afiliados es gratuito — estas funciones de precio sólo se usan para la tarjeta de OWNER
   function isCurrentPlan(cardRole: "OWNER", cardTier?: "BASIC" | "PREMIUM") {
     if (!userSub) return false;
     if (userSub.role !== cardRole) return false;

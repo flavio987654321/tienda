@@ -147,7 +147,7 @@ export async function POST(req: Request) {
       );
     }
 
-    // Comisiones acreditadas y retiros solicitados son deuda con las afiliadas:
+    // Comisiones acreditadas y retiros solicitados son deuda con los afiliados:
     // los términos garantizan ese pago, no se puede borrar sin liquidar antes.
     const walletsWithBalance = await tx.wallet.count({
       where: { affiliate: { storeId: store.id }, balance: { gt: 0 } },
@@ -158,13 +158,13 @@ export async function POST(req: Request) {
     if (walletsWithBalance > 0 || pendingWithdrawals > 0) {
       throw new ResetBlockedError(
         "PENDING_COMMISSIONS",
-        "Tenés afiliadas con comisiones acreditadas sin retirar o retiros pendientes de aprobar. Liquidá esos pagos desde la sección Pagos antes de cambiar de rubro."
+        "Tenés afiliados con comisiones acreditadas sin retirar o retiros pendientes de aprobar. Liquidá esos pagos desde la sección Pagos antes de cambiar de rubro."
       );
     }
 
     // ── Respaldo: antes de borrar nada, guardar copia completa de pedidos
     // (con items/pago/envío/comisión/cupón), cupones y saldos/retiros de
-    // afiliadas del ciclo anterior. Son registros de plata real ya cobrada —
+    // afiliados del ciclo anterior. Son registros de plata real ya cobrada —
     // se archivan por obligaciones contables del dueño y como respaldo ante
     // reclamos/contracargos de MP o disputas de comisiones.
     const ordersToArchive = await fetchStoreOrdersForArchive(tx, store.id);
@@ -186,7 +186,7 @@ export async function POST(req: Request) {
       },
     });
 
-    // ── Comisiones y panel de comisiones de afiliadas ──
+    // ── Comisiones y panel de comisiones de afiliados ──
     // Commission.orderId es RESTRICT: si queda una comisión viva, el delete
     // de Order de abajo falla — estas van primero sí o sí.
     await tx.commission.deleteMany({ where: { affiliate: { storeId: store.id } } });
@@ -302,7 +302,7 @@ export async function POST(req: Request) {
         userId,
         type: "STORE_RESET",
         title: "La tienda cambió de rubro",
-        body: "El catálogo y el historial de ventas se reiniciaron. Tus comisiones fueron liquidadas antes del cambio y tu link de afiliada sigue activo, pero la tienda va a estar offline hasta que publique su nuevo catálogo.",
+        body: "El catálogo y el historial de ventas se reiniciaron. Tus comisiones fueron liquidadas antes del cambio y tu link de afiliado sigue activo, pero la tienda va a estar offline hasta que publique su nuevo catálogo.",
         link: "/afiliados",
       }))
     );

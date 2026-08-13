@@ -15,7 +15,7 @@ type Props = {
   plan: "MONTHLY" | "ANNUAL";
 };
 
-// Esta pantalla sólo se usa para OWNER — el plan de afiliadas es gratuito y no tiene gate
+// Esta pantalla sólo se usa para OWNER — el plan de afiliados es gratuito y no tiene gate
 export default function SubscriptionGate({ status, daysLeft, tier, plan }: Props) {
   const planKey = tier === "PREMIUM" ? "OWNER_PREMIUM" : "OWNER_BASIC";
   const [payModal, setPayModal] = useState(false);

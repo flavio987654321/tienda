@@ -96,8 +96,7 @@ chequear(
 );
 chequear(
   "arranca en false: sin saber, el tour no abre",
-  /useState\(false\);?\s*$/m.test(layout.match(/const \[rubroElegido[^\n]*/)?.[0] + "\n" ?? "") ||
-    /const \[rubroElegido, setRubroElegido\] = useState\(false\)/.test(layout)
+  /const \[rubroElegido, setRubroElegido\] = useState\(false\)/.test(layout)
 );
 
 console.log("\n4) Al confirmar el rubro, el tour se destraba");

@@ -103,7 +103,7 @@ export default function AffiliateToggle({
               <p className="text-sm text-amber-700 mt-1">
                 Desconectaste MercadoPago.
                 {activeAffiliatesCount > 0 && (
-                  <> Tus <strong>{activeAffiliatesCount} afiliada{activeAffiliatesCount !== 1 ? "s" : ""}</strong> no {activeAffiliatesCount !== 1 ? "pueden" : "puede"} generar comisiones nuevas hasta que vuelvas a conectarlo.</>
+                  <> Tus <strong>{activeAffiliatesCount} afiliado{activeAffiliatesCount !== 1 ? "s" : ""}</strong> no {activeAffiliatesCount !== 1 ? "pueden" : "puede"} generar comisiones nuevas hasta que vuelvas a conectarlo.</>
                 )}
                 {pendingBalance > 0 && (
                   <> El saldo pendiente de <strong>${pendingBalance.toLocaleString("es-AR")}</strong> sigue disponible para retirar.</>
@@ -144,7 +144,7 @@ export default function AffiliateToggle({
             </p>
             <p className={`text-sm mt-0.5 ${enabled ? "text-green-600" : "text-gray-400"}`}>
               {enabled
-                ? "Otras personas pueden postularse como vendedoras"
+                ? "Otras personas pueden postularse como vendedores"
                 : "Activalo para que otros puedan vender en tu tienda"}
             </p>
           </div>
@@ -179,7 +179,7 @@ export default function AffiliateToggle({
             />
             <div className="flex justify-between text-xs text-green-600 mt-1">
               <span>1%</span>
-              <span className="text-green-700">Venta $10.000 → afiliada cobra ${(10000 * rate / 100).toLocaleString("es-AR")}</span>
+              <span className="text-green-700">Venta $10.000 → afiliado cobra ${(10000 * rate / 100).toLocaleString("es-AR")}</span>
               <span>50%</span>
             </div>
 
@@ -188,7 +188,7 @@ export default function AffiliateToggle({
                 <Ticket className="h-4 w-4 text-green-700 shrink-0" />
                 <div>
                   <p className="text-sm font-medium text-green-800">Aceptar cupones de premio</p>
-                  <p className="text-xs text-green-600">Las afiliadas podrán usar sus cupones ganados como clientes en tu tienda. El descuento sale de la venta.</p>
+                  <p className="text-xs text-green-600">Los afiliados podrán usar sus cupones ganados como clientes en tu tienda. El descuento sale de la venta.</p>
                 </div>
               </div>
               <button
@@ -223,7 +223,7 @@ export default function AffiliateToggle({
                 <ShieldCheck className="h-5 w-5 text-indigo-600" />
               </div>
               <div>
-                <h2 className="font-bold text-gray-900 text-base">Términos del programa de afiliadas</h2>
+                <h2 className="font-bold text-gray-900 text-base">Términos del programa de afiliados</h2>
                 <p className="text-xs text-gray-500">Leé y aceptá antes de activar</p>
               </div>
               <button onClick={() => setShowTcModal(false)} className="ml-auto text-gray-400 hover:text-gray-600">
@@ -233,26 +233,26 @@ export default function AffiliateToggle({
 
             <div className="overflow-y-auto px-6 py-4 flex-1 space-y-3 text-sm text-gray-600 leading-relaxed">
               <p><strong className="text-gray-900">¿Cómo funciona?</strong><br />
-                Al activar el programa, otras personas pueden postularse para vender tus productos a cambio de una comisión. Vos decidís quién entra, qué comisión pagás y podés pausar o dar de baja a cualquier afiliada cuando quieras.</p>
+                Al activar el programa, otras personas pueden postularse para vender tus productos a cambio de una comisión. Vos decidís quién entra, qué comisión pagás y podés pausar o dar de baja a cualquier afiliado cuando quieras.</p>
 
               <p><strong className="text-gray-900">Tus obligaciones como titular</strong></p>
               <ul className="list-disc pl-4 space-y-1.5">
                 {isInquiryStore ? (
-                  <li>Confirmar cada consulta como venta en <strong className="text-gray-800">Dashboard → Consultas</strong> para que la comisión se acredite automáticamente en el panel de comisiones de la afiliada.</li>
+                  <li>Confirmar cada consulta como venta en <strong className="text-gray-800">Dashboard → Consultas</strong> para que la comisión se acredite automáticamente en el panel de comisiones del afiliado.</li>
                 ) : (
-                  <li>Mantener tu cuenta de MercadoPago conectada. Las comisiones se descuentan automáticamente de cada venta y TiendaApps las acredita en el panel de comisiones de la afiliada — no tenés que hacer nada manualmente.</li>
+                  <li>Mantener tu cuenta de MercadoPago conectada. Las comisiones se descuentan automáticamente de cada venta y TiendaApps las acredita en el panel de comisiones del afiliado — no tenés que hacer nada manualmente.</li>
                 )}
-                <li>Los retiros los gestiona directamente TiendaApps. No tenés responsabilidad sobre la transferencia de fondos a las afiliadas.</li>
-                <li>No pausar ni dar de baja a una afiliada con el fin de no pagarle comisiones ya devengadas.</li>
-                <li>Notificar con al menos <strong className="text-gray-800">5 días corridos de anticipación</strong> antes de modificar la tasa de comisión, o con <strong className="text-gray-800">48 horas</strong> antes de dar de baja a una afiliada activa sin causa de fraude.</li>
-                <li>Informar a las afiliadas de cualquier cambio en la tasa de comisión. El nuevo porcentaje aplica a pedidos futuros, nunca de forma retroactiva.</li>
+                <li>Los retiros los gestiona directamente TiendaApps. No tenés responsabilidad sobre la transferencia de fondos a los afiliados.</li>
+                <li>No pausar ni dar de baja a un afiliado con el fin de no pagarle comisiones ya devengadas.</li>
+                <li>Notificar con al menos <strong className="text-gray-800">5 días corridos de anticipación</strong> antes de modificar la tasa de comisión, o con <strong className="text-gray-800">48 horas</strong> antes de dar de baja a un afiliado activo sin causa de fraude.</li>
+                <li>Informar a los afiliados de cualquier cambio en la tasa de comisión. El nuevo porcentaje aplica a pedidos futuros, nunca de forma retroactiva.</li>
               </ul>
 
               <p><strong className="text-gray-900">Responsabilidades de la plataforma</strong><br />
                 TiendaApps provee la infraestructura de tracking y panel de comisiones.{" "}
                 {isInquiryStore
-                  ? "Al confirmar una consulta como venta, TiendaApps acredita automáticamente la comisión en el panel de la afiliada."
-                  : "Al confirmarse cada venta por MercadoPago, TiendaApps retiene automáticamente la comisión y la acredita en el panel de la afiliada."
+                  ? "Al confirmar una consulta como venta, TiendaApps acredita automáticamente la comisión en el panel del afiliado."
+                  : "Al confirmarse cada venta por MercadoPago, TiendaApps retiene automáticamente la comisión y la acredita en el panel del afiliado."
                 }{" "}
                 <strong className="text-gray-800">TiendaApps es el responsable directo del pago de comisiones — no el titular de la tienda.</strong> TiendaApps no garantiza un volumen mínimo de ventas.</p>
 
@@ -260,10 +260,10 @@ export default function AffiliateToggle({
                 Podés cambiar el porcentaje de comisión en cualquier momento. El nuevo valor aplica a pedidos futuros. Los pedidos ya realizados conservan la tasa original.</p>
 
               <p><strong className="text-gray-900">Desactivación del programa</strong><br />
-                Si desactivás el programa, los links de afiliadas dejan de funcionar inmediatamente. Las comisiones pendientes siguen siendo válidas y debés honrarlas. Si cancelás tu suscripción a TiendaApps teniendo comisiones pendientes, las ya acreditadas siguen siendo exigibles.</p>
+                Si desactivás el programa, los links de afiliados dejan de funcionar inmediatamente. Las comisiones pendientes siguen siendo válidas y debés honrarlas. Si cancelás tu suscripción a TiendaApps teniendo comisiones pendientes, las ya acreditadas siguen siendo exigibles.</p>
 
               <p><strong className="text-gray-900">Acuerdos fuera de la plataforma</strong><br />
-                Queda prohibido acordar pagos o compensaciones con afiliadas por fuera de la plataforma. Toda comisión debe procesarse a través de TiendaApps.</p>
+                Queda prohibido acordar pagos o compensaciones con afiliados por fuera de la plataforma. Toda comisión debe procesarse a través de TiendaApps.</p>
 
               <Link href="/terminos?role=owner" target="_blank" className="inline-flex items-center gap-1 text-indigo-600 hover:text-indigo-700 text-xs font-medium mt-1">
                 Ver términos completos para dueños <ExternalLink className="h-3 w-3" />
@@ -279,7 +279,7 @@ export default function AffiliateToggle({
                   className="mt-0.5 accent-indigo-600 w-4 h-4 flex-shrink-0"
                 />
                 <span className="text-sm text-gray-600">
-                  Leí y acepto los términos del programa de afiliadas. Entiendo mis obligaciones como titular.
+                  Leí y acepto los términos del programa de afiliados. Entiendo mis obligaciones como titular.
                 </span>
               </label>
               <div className="flex gap-3">
@@ -317,12 +317,12 @@ export default function AffiliateToggle({
             </div>
 
             <div className="px-6 py-4 space-y-3 text-sm text-gray-600 leading-relaxed">
-              <p>Al activar esta opción, tus afiliadas podrán usar sus <strong className="text-gray-900">cupones de premio ganados</strong> como descuento al comprar en tu tienda.</p>
+              <p>Al activar esta opción, tus afiliados podrán usar sus <strong className="text-gray-900">cupones de premio ganados</strong> como descuento al comprar en tu tienda.</p>
               <ul className="list-disc pl-4 space-y-1.5">
                 <li>El descuento se aplica sobre el precio de venta y sale de tu margen, no de la plataforma.</li>
                 <li>El cupón se valida al momento del pago. No se puede combinar con otras promociones.</li>
                 <li>Podés desactivar esta opción en cualquier momento. Los cupones ya emitidos siguen siendo válidos para cuando vuelvas a habilitarlos.</li>
-                <li>Las afiliadas que tengan cupones disponibles serán notificadas si desactivás la opción.</li>
+                <li>Los afiliados que tengan cupones disponibles serán notificados si desactivás la opción.</li>
               </ul>
             </div>
 
@@ -371,16 +371,16 @@ export default function AffiliateToggle({
 
             <div className="px-6 py-5 space-y-3">
               <p className="text-sm text-gray-600">
-                Tenés <strong className="text-gray-900">{activeAffiliatesCount} afiliada{activeAffiliatesCount !== 1 ? "s" : ""} activa{activeAffiliatesCount !== 1 ? "s" : ""}</strong>. Al desactivar el programa:
+                Tenés <strong className="text-gray-900">{activeAffiliatesCount} afiliado{activeAffiliatesCount !== 1 ? "s" : ""} activa{activeAffiliatesCount !== 1 ? "s" : ""}</strong>. Al desactivar el programa:
               </p>
               <ul className="space-y-2 text-sm text-gray-600">
                 <li className="flex items-start gap-2">
                   <span className="text-amber-500 font-bold mt-0.5">•</span>
-                  Sus links de afiliada dejan de funcionar <strong>de inmediato</strong>.
+                  Sus links de afiliado dejan de funcionar <strong>de inmediato</strong>.
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-amber-500 font-bold mt-0.5">•</span>
-                  Los pedidos ya ingresados conservan su afiliada asignada.
+                  Los pedidos ya ingresados conservan su afiliado asignada.
                 </li>
                 {pendingBalance > 0 && (
                   <li className="flex items-start gap-2">

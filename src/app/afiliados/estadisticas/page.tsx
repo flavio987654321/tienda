@@ -156,7 +156,7 @@ export default function EstadisticasPage() {
           </Link>
           <div className="flex-1">
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Mis estadísticas</h1>
-            <p className="text-sm text-gray-500">Rendimiento de tus ventas como afiliada</p>
+            <p className="text-sm text-gray-500">Rendimiento de tus ventas como afiliado</p>
           </div>
         </div>
 
@@ -288,7 +288,7 @@ export default function EstadisticasPage() {
                   <div className="flex items-center justify-between mb-4">
                     <div>
                       <p className="font-semibold text-gray-900 dark:text-white text-sm">Clicks últimos 14 días</p>
-                      <p className="text-xs text-gray-400 mt-0.5">Visitas a tu link de afiliada</p>
+                      <p className="text-xs text-gray-400 mt-0.5">Visitas a tu link de afiliado</p>
                     </div>
                     <BarChart3 className="h-4 w-4 text-gray-300" />
                   </div>

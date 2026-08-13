@@ -25,7 +25,7 @@ export async function POST() {
     },
   });
 
-  // Notificar a afiliadas activas que el programa está pausado (fire-and-forget)
+  // Notificar a afiliados activos que el programa está pausado (fire-and-forget)
   const activeAffiliates = await prisma.affiliate.findMany({
     where: { storeId: store.id, status: "APPROVED", isActive: true },
     include: { user: { select: { email: true, name: true } } },
@@ -35,9 +35,9 @@ export async function POST() {
     if (affiliate.user.email) {
       despues(() => sendMpDisconnectedEmail({
         affiliateEmail: affiliate.user.email,
-        affiliateName: affiliate.user.name ?? "afiliada",
+        affiliateName: affiliate.user.name ?? "afiliado",
         storeName: store.name,
-      }), "MP desconectado: aviso a la afiliada");
+      }), "MP desconectado: aviso al afiliado");
     }
   }
 

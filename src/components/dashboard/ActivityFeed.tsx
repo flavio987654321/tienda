@@ -42,8 +42,8 @@ function formatEvent(type: string, data: Record<string, unknown>): EventMeta {
       };
     case "NEW_AFFILIATE":
       return {
-        label: "Nueva afiliada",
-        detail: String(data.affiliateName ?? "Afiliada"),
+        label: "Nuevo afiliado",
+        detail: String(data.affiliateName ?? "Afiliado"),
         dot: "bg-purple-500",
       };
     case "CART_RECOVERED":

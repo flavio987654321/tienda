@@ -145,7 +145,7 @@ export default function CerrarTiendaModal({
                   <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
                   <div>
                     <p className="text-sm font-semibold text-amber-800">
-                      {fmt(blockers!.pendingBalances)} sin pagar a tus afiliadas
+                      {fmt(blockers!.pendingBalances)} sin pagar a tus afiliados
                     </p>
                     <p className="text-xs text-amber-600 mt-0.5">
                       Esa plata es de ellas. Tienen que retirarla antes de que puedas cerrar.
@@ -162,7 +162,7 @@ export default function CerrarTiendaModal({
                   <li className="flex items-start gap-2"><Check className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" /> Tu diseño y tus bloques</li>
                   <li className="flex items-start gap-2"><Check className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" /> Tus productos y tus fotos</li>
                   <li className="flex items-start gap-2"><Check className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" /> Tu historial de pedidos</li>
-                  <li className="flex items-start gap-2"><Check className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" /> Tus afiliadas, que recuperan su lugar si volvés</li>
+                  <li className="flex items-start gap-2"><Check className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" /> Tus afiliados, que recuperan su lugar si volvés</li>
                 </ul>
               </div>
 
@@ -171,7 +171,7 @@ export default function CerrarTiendaModal({
                 <ul className="space-y-1.5 text-sm text-gray-600 list-disc list-inside marker:text-gray-300">
                   <li>Tu tienda sale de línea y deja de vender</li>
                   <li>Dejamos de cobrarte la suscripción</li>
-                  <li>El link de tus afiliadas queda pausado</li>
+                  <li>El link de tus afiliados queda pausado</li>
                   <li>Entrás a tu panel cuando quieras y la reactivás</li>
                 </ul>
               </div>

@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
     where: { userId: currentUser.id, store: { id: storeId }, isActive: true },
   });
   if (esAfiliado) {
-    return NextResponse.json({ error: "No podés usar un cupón de premio en la tienda donde sos afiliada" }, { status: 400 });
+    return NextResponse.json({ error: "No podés usar un cupón de premio en la tienda donde sos afiliado" }, { status: 400 });
   }
 
   const discount = Math.round((subtotal * coupon.discountValue) / 100);

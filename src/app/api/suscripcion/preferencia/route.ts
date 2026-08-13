@@ -33,9 +33,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Faltan datos del plan" }, { status: 400 });
   }
 
-  // El plan de afiliadas es gratuito — nunca debería llegar un pago para él
+  // El plan de afiliados es gratuito — nunca debería llegar un pago para él
   if (plan === "AFFILIATE") {
-    return NextResponse.json({ error: "El plan de afiliadas es gratuito, no requiere pago" }, { status: 400 });
+    return NextResponse.json({ error: "El plan de afiliados es gratuito, no requiere pago" }, { status: 400 });
   }
 
   // Se validan contra la lista de valores permitidos y no con un cast: `plan`

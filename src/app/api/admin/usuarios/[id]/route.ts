@@ -47,7 +47,7 @@ export async function PATCH(
     ip: getClientIp(req),
   });
 
-  // Si la cuenta afectada es afiliada, avisar a los dueños de las tiendas donde está afiliada
+  // Si la cuenta afectada es afiliado, avisar a los dueños de las tiendas donde está afiliado
   if (target.role === "SELLER") {
     const affiliations = await prisma.affiliate.findMany({
       where: { userId: id },
@@ -59,11 +59,11 @@ export async function PATCH(
         userId: a.ownerId,
         type: isBanned ? "AFFILIATE_ADMIN_BANNED" : "AFFILIATE_ADMIN_UNBANNED",
         title: isBanned
-          ? `Tu afiliada ${affiliateName} fue suspendida por TiendaApps`
-          : `Tu afiliada ${affiliateName} fue reactivada por TiendaApps`,
+          ? `Tu afiliado ${affiliateName} fue suspendida por TiendaApps`
+          : `Tu afiliado ${affiliateName} fue reactivada por TiendaApps`,
         body: isBanned
-          ? `El equipo de TiendaApps suspendió la cuenta de tu afiliada en ${a.store.name}. Su link de afiliado dejó de funcionar.`
-          : `El equipo de TiendaApps reactivó la cuenta de tu afiliada en ${a.store.name}.`,
+          ? `El equipo de TiendaApps suspendió la cuenta de tu afiliado en ${a.store.name}. Su link de afiliado dejó de funcionar.`
+          : `El equipo de TiendaApps reactivó la cuenta de tu afiliado en ${a.store.name}.`,
         link: "/dashboard/vendedoras",
       }))
     );
@@ -176,7 +176,7 @@ export async function DELETE(
     },
   });
 
-  // No se puede eliminar (de forma irreversible) una afiliada con saldo pendiente en su
+  // No se puede eliminar (de forma irreversible) un afiliado con saldo pendiente en su
   // panel de comisiones: esa plata quedaría huérfana, sin forma de cobrarse ni rastro de qué pasó con ella.
   const affiliationsWithBalance = (userData?.asAffiliate ?? []).filter(
     (a) => (a.wallet?.balance ?? 0) > 0
@@ -196,7 +196,7 @@ export async function DELETE(
   // Si es dueña de tienda, los mismos bloqueadores que se aplica ella a sí misma
   // desde su panel. Antes esta ruta no los tenía, así que desde el admin se podía
   // borrar una cuenta con pedidos en curso (dejando compradores esperando algo que
-  // ya no va a llegar) y debiéndole comisiones a sus afiliadas (dejando esa plata
+  // ya no va a llegar) y debiéndole comisiones a sus afiliados (dejando esa plata
   // huérfana) — cosas que su propia dueña no puede hacer. Mismo helper, así no se
   // vuelven a desincronizar.
   if (userData?.store) {
@@ -207,7 +207,7 @@ export async function DELETE(
         partes.push(`${blockers.pendingOrders} pedido${blockers.pendingOrders !== 1 ? "s" : ""} en curso`);
       }
       if (blockers.pendingBalances > 0) {
-        partes.push(`$${blockers.pendingBalances.toLocaleString("es-AR")} sin pagar a sus afiliadas`);
+        partes.push(`$${blockers.pendingBalances.toLocaleString("es-AR")} sin pagar a sus afiliados`);
       }
       return NextResponse.json(
         {
@@ -383,23 +383,23 @@ export async function DELETE(
     ip: getClientIp(req),
   });
 
-  // Si era afiliada, avisar a los dueños de las tiendas donde estaba afiliada
+  // Si era afiliado, avisar a los dueños de las tiendas donde estaba afiliado
   if (userData?.role === "SELLER" && userData.asAffiliate.length > 0) {
     const affiliateName = userData.name ?? userData.email;
     await createNotificationMany(
       userData.asAffiliate.map((a) => ({
         userId: a.ownerId,
         type: "AFFILIATE_ADMIN_DELETED",
-        title: `Tu afiliada ${affiliateName} eliminó su cuenta`,
-        body: `La cuenta de tu afiliada en ${a.store.name} fue eliminada. Su link de afiliado dejó de funcionar.`,
+        title: `Tu afiliado ${affiliateName} eliminó su cuenta`,
+        body: `La cuenta de tu afiliado en ${a.store.name} fue eliminada. Su link de afiliado dejó de funcionar.`,
         link: "/dashboard/vendedoras",
       }))
     );
   }
 
-  // Si era dueña de tienda, avisarle a SUS afiliadas que la tienda ya no existe.
-  // Antes esta ruta solo notificaba cuando la borrada era una afiliada: si el
-  // admin borraba a una dueña, sus afiliadas se quedaban con un link muerto y sin
+  // Si era dueña de tienda, avisarle a SUS afiliados que la tienda ya no existe.
+  // Antes esta ruta solo notificaba cuando la borrada era un afiliado: si el
+  // admin borraba a una dueña, sus afiliados se quedaban con un link muerto y sin
   // enterarse. El endpoint de la propia dueña sí las avisa (STORE_CLOSED).
   const ownStoreAffiliates = userData?.store?.affiliates ?? [];
   if (ownStoreAffiliates.length > 0 && userData?.store) {
@@ -408,7 +408,7 @@ export async function DELETE(
         userId: a.userId,
         type: "STORE_CLOSED",
         title: `${userData.store!.name} cerró su tienda`,
-        body: "Tu link de afiliada fue desactivado. Los saldos ya acreditados en tu panel de comisiones siguen disponibles para retirar.",
+        body: "Tu link de afiliado fue desactivado. Los saldos ya acreditados en tu panel de comisiones siguen disponibles para retirar.",
         link: "/afiliados",
       }))
     );

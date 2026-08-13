@@ -449,12 +449,12 @@ export async function sendNewAffiliateApplicationEmail({
   await transporter.sendMail({
     from: `"TiendaApps" <${FROM_ADDRESS}>`,
     to: ownerEmail,
-    subject: `Nueva solicitud de afiliada en ${storeName}`,
+    subject: `Nueva solicitud de afiliado en ${storeName}`,
     html: `
       <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 16px;color:#111827;">
         <div style="background:#6366f1;border-radius:12px;padding:24px;margin-bottom:24px;text-align:center;">
           <p style="color:rgba(255,255,255,0.8);font-size:13px;margin:0 0 4px;">${escapeHtml(storeName)}</p>
-          <h1 style="color:#fff;font-size:20px;margin:0;font-weight:700;">Nueva solicitud de afiliada</h1>
+          <h1 style="color:#fff;font-size:20px;margin:0;font-weight:700;">Nueva solicitud de afiliado</h1>
         </div>
 
         <p style="color:#374151;font-size:15px;margin-bottom:8px;">Hola <strong>${escapeHtml(ownerName) || "titular"}</strong>,</p>
@@ -517,7 +517,7 @@ export async function sendCommissionEarnedEmail({
           <h1 style="color:#fff;font-size:22px;margin:0;font-weight:800;">¡Comisión acreditada!</h1>
         </div>
 
-        <p style="color:#374151;font-size:15px;margin-bottom:8px;">Hola <strong>${escapeHtml(affiliateName) || "afiliada"}</strong>,</p>
+        <p style="color:#374151;font-size:15px;margin-bottom:8px;">Hola <strong>${escapeHtml(affiliateName) || "afiliado"}</strong>,</p>
         <p style="color:#374151;font-size:15px;margin-bottom:24px;">
           Una venta que generaste en <strong>${escapeHtml(storeName)}</strong> fue confirmada y tu comisión ya está disponible en tu panel de comisiones.
         </p>
@@ -1217,7 +1217,7 @@ export async function sendWithdrawalRequestEmail({
         </div>
 
         <p style="color:#6b7280;font-size:13px;background:#f9fafb;border-radius:8px;padding:12px;">
-          La afiliada ya ve su retiro como "en proceso". Una vez que realices la transferencia, el pago está completo. Si tenés algún inconveniente, contactá a soporte de TiendaApps.
+          El afiliado ya ve su retiro como "en proceso". Una vez que realices la transferencia, el pago está completo. Si tenés algún inconveniente, contactá a soporte de TiendaApps.
         </p>
       </div>
     `,
@@ -1263,7 +1263,7 @@ export async function sendWithdrawalReminderEmail({
         <p style="color:#374151;font-size:15px;margin-bottom:8px;">Hola <strong>${escapeHtml(ownerName) || "administrador"}</strong>,</p>
         <p style="color:#374151;font-size:15px;margin-bottom:24px;">
           <strong>${escapeHtml(affiliateName)}</strong> solicitó un retiro de <strong>${fmt(amount)}</strong> hace <strong>${daysOld} días</strong> y todavía no fue procesado.
-          ${isUrgent ? "Este es un recordatorio urgente — la afiliada está esperando hace más de 2 semanas." : "Por favor procesalo cuando puedas."}
+          ${isUrgent ? "Este es un recordatorio urgente — el afiliado está esperando hace más de 2 semanas." : "Por favor procesalo cuando puedas."}
         </p>
 
         <a href="${dashboardUrl}" style="display:block;text-align:center;background:${isUrgent ? "#dc2626" : "#d97706"};color:#fff;font-weight:700;font-size:15px;padding:14px 24px;border-radius:10px;text-decoration:none;margin-bottom:24px;">
@@ -1313,7 +1313,7 @@ export async function sendWithdrawalApprovedEmail({
           <p style="font-size:13px;color:#15803d;margin:0 0 4px;">Monto transferido</p>
           <p style="font-size:28px;font-weight:900;color:#16a34a;margin:0;">${fmt(amount)}</p>
         </div>
-        <p style="color:#6b7280;font-size:13px;">Si no recibís el dinero en 48hs hábiles, escribinos a soporte desde tu panel de afiliada.</p>
+        <p style="color:#6b7280;font-size:13px;">Si no recibís el dinero en 48hs hábiles, escribinos a soporte desde tu panel de afiliado.</p>
       </div>
     `,
   });
@@ -1687,13 +1687,13 @@ export async function sendNewStorePublishedEmail({
     html: `
       <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 16px;color:#111827;">
         <div style="background:#6366f1;border-radius:12px;padding:24px;margin-bottom:24px;text-align:center;">
-          <p style="color:#e0e7ff;font-size:13px;margin:0 0 4px;">TiendaApps · Programa de Afiliadas</p>
+          <p style="color:#e0e7ff;font-size:13px;margin:0 0 4px;">TiendaApps · Programa de Afiliados</p>
           <h1 style="color:#fff;font-size:20px;margin:0;font-weight:700;">Nueva tienda disponible</h1>
         </div>
 
-        <p style="color:#374151;font-size:15px;margin-bottom:8px;">Hola <strong>${escapeHtml(affiliateName) || "afiliada"}</strong>,</p>
+        <p style="color:#374151;font-size:15px;margin-bottom:8px;">Hola <strong>${escapeHtml(affiliateName) || "afiliado"}</strong>,</p>
         <p style="color:#374151;font-size:15px;margin-bottom:24px;">
-          La tienda <strong>${escapeHtml(storeName)}</strong> acaba de abrir su programa de afiliadas.
+          La tienda <strong>${escapeHtml(storeName)}</strong> acaba de abrir su programa de afiliados.
           Podés postularte ahora y empezar a ganar comisiones del <strong>${commissionRate}%</strong> por cada venta que generes.
         </p>
 
@@ -1735,7 +1735,7 @@ export async function sendMpDisconnectedEmail({
   await transporter.sendMail({
     from: `"TiendaApps" <${FROM_ADDRESS}>`,
     to: affiliateEmail,
-    subject: `El programa de afiliadas de ${storeName} está pausado`,
+    subject: `El programa de afiliados de ${storeName} está pausado`,
     html: `
       <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 16px;color:#111827;">
         <div style="background:#f59e0b;border-radius:12px;padding:24px;margin-bottom:24px;text-align:center;">
@@ -1743,10 +1743,10 @@ export async function sendMpDisconnectedEmail({
           <h1 style="color:#fff;font-size:20px;margin:0;font-weight:700;">Programa pausado temporalmente</h1>
         </div>
 
-        <p style="color:#374151;font-size:15px;margin-bottom:16px;">Hola <strong>${escapeHtml(affiliateName) || "afiliada"}</strong>,</p>
+        <p style="color:#374151;font-size:15px;margin-bottom:16px;">Hola <strong>${escapeHtml(affiliateName) || "afiliado"}</strong>,</p>
         <p style="color:#374151;font-size:15px;margin-bottom:24px;">
           La tienda <strong>${escapeHtml(storeName)}</strong> desconectó su cuenta de MercadoPago,
-          por lo que el programa de afiliadas está pausado temporalmente.
+          por lo que el programa de afiliados está pausado temporalmente.
           Tus links de referido no generarán nuevas comisiones hasta que la tienda reconecte MP.
         </p>
 
@@ -1767,7 +1767,7 @@ export async function sendMpDisconnectedEmail({
         </div>
 
         <p style="color:#9ca3af;font-size:12px;text-align:center;margin-top:24px;">
-          TiendaApps · Programa de Afiliadas
+          TiendaApps · Programa de Afiliados
         </p>
       </div>
     `,

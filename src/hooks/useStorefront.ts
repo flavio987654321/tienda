@@ -335,7 +335,7 @@ export function useStorefront() {
   const [loadingProducts, setLoadingProducts] = useState(true);
   const [affiliateId, setAffiliateId] = useState<string | null>(null);
 
-  // Lee ?ref= de la URL y registra el click de la afiliada (una vez por sesión de navegador)
+  // Lee ?ref= de la URL y registra el click del afiliado (una vez por sesión de navegador)
   useEffect(() => {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);

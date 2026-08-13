@@ -122,7 +122,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
           update: {},
         });
       }
-    }, "vendedoras: actividad y logro al aprobar");
+    }, "afiliados: actividad y logro al aprobar");
 
     return NextResponse.json({ affiliate: updated });
   }

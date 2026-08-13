@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Credenciales de MP inválidas" }, { status: 500 });
   }
 
-  // Calcular marketplace_fee = comisión de la afiliada (si existe)
+  // Calcular marketplace_fee = comisión del afiliado (si existe)
   const commissionBase = Math.max(0, (order.subtotal ?? order.total) - (order.discountAmount ?? 0));
   const marketplaceFee = order.affiliateId && order.lockedCommissionRate
     ? Math.round((commissionBase * order.lockedCommissionRate) / 100)

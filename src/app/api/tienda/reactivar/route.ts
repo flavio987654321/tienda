@@ -38,7 +38,7 @@ export async function POST() {
   });
   const credito = reactivationCredit(sub);
 
-  // Solo las que pausó el cierre. Una afiliada que la dueña había pausado a mano
+  // Solo las que pausó el cierre. Un afiliado que la dueña había pausado a mano
   // antes de cerrar sigue pausada: reabrir la tienda no le levanta la suspensión
   // a nadie. Por eso existe `pausedByClosure` y no alcanza con mirar `status`.
   const pausedByClosure = await prisma.affiliate.findMany({
@@ -80,7 +80,7 @@ export async function POST() {
         userId: a.userId,
         type: "AFFILIATE_APPROVED",
         title: `${store.name} volvió a abrir`,
-        body: "Tu link de afiliada está activo de nuevo. Podés volver a compartirlo.",
+        body: "Tu link de afiliado está activo de nuevo. Podés volver a compartirlo.",
         link: "/afiliados",
       }))
     );

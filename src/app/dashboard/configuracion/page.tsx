@@ -686,7 +686,7 @@ function ConfigModal({ config, update, onClose, onSave, onDelete, isPremium }: {
                 </div>
                 {(config.ocultarPreciosPublico) && (
                   <div style={{ background: "#fef3c7", borderRadius: 8, padding: "8px 12px", fontSize: 11, color: "#92400e" }}>
-                    Los botones de carrito cambian a &quot;Consultar precio&quot; y los visitantes son dirigidos al formulario de contacto. Las vendedoras afiliadas siguen siendo acreditadas por cada consulta generada.
+                    Los botones de carrito cambian a &quot;Consultar precio&quot; y los visitantes son dirigidos al formulario de contacto. Las comisiones de los afiliados se siguen acreditando por cada consulta generada.
                   </div>
                 )}
               </div>

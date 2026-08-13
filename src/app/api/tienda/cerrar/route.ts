@@ -83,7 +83,7 @@ export async function POST(req: NextRequest) {
 
   await prisma.$transaction(async (tx) => {
     // Compartido con el cierre automático del cron: mismas escrituras, un solo
-    // lugar. Deja la tienda offline y las afiliadas en PAUSED reversible.
+    // lugar. Deja la tienda offline y los afiliados en PAUSED reversible.
     await applyStoreClosure(tx, store.id);
 
     // Esto sí es propio del cierre voluntario: no se le sigue cobrando una tienda

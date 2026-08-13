@@ -27,8 +27,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   });
   if (!aff) return {};
   return {
-    title: `${aff.user.name ?? "Vendedora"} — ${aff.store.name}`,
-    description: `Comprá los productos de ${aff.store.name} con ${aff.user.name ?? "esta vendedora"}.`,
+    title: `${aff.user.name ?? "Vendedor"} — ${aff.store.name}`,
+    description: `Comprá los productos de ${aff.store.name} con ${aff.user.name ?? "esta persona"}.`,
   };
 }
 
@@ -73,7 +73,7 @@ export default async function VendedoraPage({ params, searchParams }: Props) {
           <div className="flex items-center gap-5">
             {user.image ? (
               <div className="relative h-20 w-20 rounded-full overflow-hidden ring-2 ring-indigo-300 ring-offset-2 shrink-0">
-                <Image src={user.image} alt={user.name ?? "vendedora"} fill className="object-cover" />
+                <Image src={user.image} alt={user.name ?? "vendedor"} fill className="object-cover" />
               </div>
             ) : (
               <div className="h-20 w-20 rounded-full bg-indigo-100 flex items-center justify-center shrink-0 ring-2 ring-indigo-200">
@@ -83,9 +83,9 @@ export default async function VendedoraPage({ params, searchParams }: Props) {
               </div>
             )}
             <div className="flex-1 min-w-0">
-              <h1 className="text-xl font-bold text-gray-900">{user.name ?? "Vendedora"}</h1>
+              <h1 className="text-xl font-bold text-gray-900">{user.name ?? "Vendedor"}</h1>
               <p className="text-sm text-gray-500 mt-0.5">
-                Vendedora oficial de{" "}
+                Vendedor oficial de{" "}
                 <span className="font-semibold" style={{ color: store.primaryColor }}>{store.name}</span>
               </p>
               {user.city && (
@@ -175,7 +175,7 @@ export default async function VendedoraPage({ params, searchParams }: Props) {
         {/* Footer */}
         <div className="text-center mt-10 pt-6 border-t border-gray-100">
           <p className="text-xs text-gray-400">
-            Este es el catálogo personal de <strong>{user.name ?? "esta vendedora"}</strong>.
+            Este es el catálogo personal de <strong>{user.name ?? "esta persona"}</strong>.
             Las compras se procesan en la tienda oficial de {store.name}.
           </p>
         </div>

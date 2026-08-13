@@ -7,7 +7,7 @@ function currentMonth() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
 
-// GET - obtiene la meta del mes actual para la tienda de la afiliada (vista afiliada)
+// GET - obtiene la meta del mes actual para la tienda del afiliado (vista afiliado)
 // o para la tienda del dueño (vista dueño, query param ?owner=1)
 export async function GET(req: NextRequest) {
   const user = await getCurrentUser();
@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ goal, month });
   }
 
-  // Vista afiliada: devuelve las metas de todas sus tiendas activas + progreso
+  // Vista afiliado: devuelve las metas de todas sus tiendas activas + progreso
   const affiliates = await prisma.affiliate.findMany({
     where: { userId: user.id, isActive: true, status: "APPROVED" },
     select: { id: true, storeId: true, store: { select: { name: true } } },

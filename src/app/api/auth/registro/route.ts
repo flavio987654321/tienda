@@ -122,7 +122,7 @@ export async function POST(req: NextRequest) {
                 },
               }
             : {}),
-          // El plan de afiliadas (SELLER) es gratuito — no se crea Subscription para ese rol
+          // El plan de afiliados (SELLER) es gratuito — no se crea Subscription para ese rol
           ...(type === "OWNER"
             ? {
                 subscription: {

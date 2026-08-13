@@ -11,7 +11,7 @@ export default function TerminosAfiliados() {
       <div className="max-w-3xl mx-auto px-6 py-16">
         <div className="mb-10">
           <Link href="/afiliados" className="text-indigo-400 hover:text-indigo-300 text-sm transition-colors">
-            ← Volver a Vendedoras
+            ← Volver a mi panel
           </Link>
         </div>
 
@@ -77,7 +77,7 @@ export default function TerminosAfiliados() {
               </li>
               <li>
                 Una vez acreditada, la comisión <strong className="text-gray-300">no se revierte</strong> aunque
-                el pedido sea cancelado con posterioridad por el/la Titular. La afiliada cumplió su función al generar
+                el pedido sea cancelado con posterioridad por el/la Titular. El afiliado cumplió su función al generar
                 la venta; cualquier cancelación posterior es responsabilidad del/la Titular.
                 <br />
                 <span className="text-gray-500">

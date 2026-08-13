@@ -122,7 +122,7 @@ export async function POST(req: NextRequest) {
     include: { variants: true },
   });
 
-  // Notificar a afiliadas activas sobre el nuevo producto (fire-and-forget)
+  // Notificar a afiliados activos sobre el nuevo producto (fire-and-forget)
   if (store.affiliatesEnabled) {
     prisma.affiliate.findMany({
       where: { storeId: store.id, isActive: true },

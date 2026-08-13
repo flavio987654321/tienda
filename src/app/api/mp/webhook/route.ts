@@ -194,7 +194,7 @@ async function processPaymentWebhook(paymentId: string) {
 
       let result: CommissionResult | null = null;
 
-      // Acreditar comisión en billetera si hay afiliada y rate bloqueado
+      // Acreditar comisión en billetera si hay afiliado y rate bloqueado
       if (order.affiliateId && order.lockedCommissionRate !== null && !order.commission) {
         const rate = order.lockedCommissionRate ?? order.store.commissionRate;
         const commissionBase = Math.max(0, (order.subtotal ?? order.total) - (order.discountAmount ?? 0));
@@ -233,11 +233,11 @@ async function processPaymentWebhook(paymentId: string) {
       return result;
     });
 
-    // Post-transacción: notificar a la afiliada que ganó comisión
+    // Post-transacción: notificar al afiliado que ganó comisión
     if (commissionResult !== null) {
       const affUserId = order.affiliate?.userId;
       const affEmail = order.affiliate?.user?.email;
-      const affName = order.affiliate?.user?.name || "afiliada";
+      const affName = order.affiliate?.user?.name || "afiliado";
 
       if (affUserId) {
         await createNotification({

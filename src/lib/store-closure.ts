@@ -21,9 +21,9 @@ export type ClosureBlockers = {
  * que desde el panel se podía borrar una cuenta con pedidos en curso y con plata
  * debida — cosa que su propia dueña no puede hacer.
  *
- * Cuenta el saldo de TODAS las afiliadas de la tienda, sin filtrar por
+ * Cuenta el saldo de TODAS los afiliados de la tienda, sin filtrar por
  * `isActive`. Antes se filtraba por activas, y eso dejaba un agujero: pausar a
- * una afiliada no chequea su saldo, así que con pausarla primero su plata se
+ * un afiliado no chequea su saldo, así que con pausarla primero su plata se
  * volvía invisible para el bloqueador y la cuenta se podía eliminar dejándola
  * huérfana. La plata que se le debe a alguien no deja de deberse porque esté
  * pausada.
@@ -46,7 +46,7 @@ export function isBlocked(blockers: ClosureBlockers): boolean {
 }
 
 /**
- * Saldo propio de una afiliada en todas las tiendas donde está afiliada. Es el
+ * Saldo propio de un afiliado en todas las tiendas donde está afiliado. Es el
  * bloqueador equivalente cuando quien elimina la cuenta no es dueña de tienda:
  * si se va con plata sin retirar, no queda forma de cobrarla.
  */
@@ -68,7 +68,7 @@ export async function getAffiliateOwnBalance(db: DbClient, userId: string): Prom
  * Cada llamador agrega lo suyo: el voluntario cancela la suscripción y guarda el
  * motivo; el del cron no toca la suscripción porque ya está vencida.
  *
- * Las afiliadas quedan PAUSED y marcadas con `pausedByClosure`, no REMOVED: el
+ * Los afiliados quedan PAUSED y marcadas con `pausedByClosure`, no REMOVED: el
  * cierre se puede deshacer y al reactivar tienen que volver — pero solo éstas, no
  * las que la dueña había pausado a mano.
  */

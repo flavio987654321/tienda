@@ -27,7 +27,7 @@ function money(n: number) {
   return new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(n);
 }
 
-// Esta pantalla sólo se renderiza para OWNER — las afiliadas (SELLER) salen antes por el early-return de arriba
+// Esta pantalla sólo se renderiza para OWNER — los afiliados (SELLER) salen antes por el early-return de arriba
 const PLAN_CONFIG = {
   OWNER: {
     BASIC: {
@@ -95,7 +95,7 @@ const STATUS_CONFIG: Record<string, { label: string; textColor: string; bgColor:
 export default function MiPlanClient({ sub, userRole, autoUpgrade = false }: Props) {
   // Inicializador perezoso en vez de un efecto: el modal tiene que estar abierto
   // en el primer render, no aparecer después de un parpadeo. Se ignora si ya es
-  // Premium (no hay nada que comprar) o si la cuenta es de afiliada (es gratis).
+  // Premium (no hay nada que comprar) o si la cuenta es de afiliado (es gratis).
   const [payModal, setPayModal] = useState<{ plan: "OWNER_BASIC" | "OWNER_PREMIUM"; billing: "MONTHLY" | "ANNUAL" } | null>(() => {
     if (!autoUpgrade || userRole !== "OWNER" || !sub) return null;
     if ((sub.tier ?? "BASIC") === "PREMIUM") return null;
@@ -113,7 +113,7 @@ export default function MiPlanClient({ sub, userRole, autoUpgrade = false }: Pro
     }
   }
 
-  // El plan de afiliadas es gratuito — nunca se le pide pagar, sin importar si tiene
+  // El plan de afiliados es gratuito — nunca se le pide pagar, sin importar si tiene
   // una suscripción vieja en la base (de antes de este cambio).
   if (userRole === "SELLER") {
     return (
@@ -121,8 +121,8 @@ export default function MiPlanClient({ sub, userRole, autoUpgrade = false }: Pro
         <div className="w-16 h-16 bg-emerald-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
           <CheckCircle className="h-8 w-8 text-emerald-500" />
         </div>
-        <p className="text-gray-900 font-bold text-lg mb-1">Tu cuenta de afiliada es gratis</p>
-        <p className="text-gray-500 text-sm">Acceso completo al panel de afiliadas, sin costo y sin límite de tiempo.</p>
+        <p className="text-gray-900 font-bold text-lg mb-1">Tu cuenta de afiliado es gratis</p>
+        <p className="text-gray-500 text-sm">Acceso completo al panel de afiliados, sin costo y sin límite de tiempo.</p>
       </div>
     );
   }

@@ -80,7 +80,7 @@ chequear("sin trackers: no nombra a Google", !limpia.includes("Google Analytics"
 chequear("sin trackers: no nombra a Meta", !limpia.includes("Meta Pixel"));
 chequear("sin trackers: dice que no hay cookies de publicidad", limpia.includes("No usamos cookies de publicidad"));
 chequear("sin MercadoPago: no lo nombra", !limpia.includes("Mercado Pago"));
-chequear("sin afiliados: no los nombra", !limpia.includes("afiliada"));
+chequear("sin afiliados: no los nombra", !limpia.includes("afiliado"));
 
 const conTodo = generatePolicyPrivacy(TIENDA, {
   usaAnalytics: true, usaPixel: true, usaMercadoPago: true, usaAfiliados: true, esAutos: false,

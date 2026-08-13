@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
 
   if (!storeId) return NextResponse.json({ error: "storeId requerido" }, { status: 400 });
 
-  // Verificar que el usuario pertenece a esa tienda como afiliada
+  // Verificar que el usuario pertenece a esa tienda como afiliado
   const myAffiliate = await prisma.affiliate.findFirst({
     where: { userId: user.id, storeId, isActive: true, status: "APPROVED" },
     select: { id: true },
@@ -51,15 +51,15 @@ export async function GET(req: NextRequest) {
   withEarnings.sort((a, b) => b.monthlyEarned - a.monthlyEarned);
   const topEarned = withEarnings[0]?.monthlyEarned ?? 0;
 
-  // A cada afiliada solo se le muestran sus propios números.
+  // A cada afiliado solo se le muestran sus propios números.
   // El resto solo ve su posición relativa y un nombre parcial sin datos financieros.
   const ranked = withEarnings.map(({ aff, isMe, monthlyEarned }, i) => ({
     affiliateId: aff.id,
     isMe,
     rank: i + 1,
-    name: isMe ? aff.user.name ?? "Vos" : `Vendedora #${i + 1}`,
+    name: isMe ? aff.user.name ?? "Vos" : `Vendedor #${i + 1}`,
     image: isMe ? aff.user.image : null,
-    // Datos financieros: solo para la propia afiliada
+    // Datos financieros: solo para la propia afiliado
     monthlyEarned: isMe ? monthlyEarned : null,
     totalOrders: isMe ? aff._count.orders : null,
     // Barra relativa sin revelar monto exacto de terceros

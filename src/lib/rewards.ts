@@ -33,7 +33,7 @@ export const LEVEL_THRESHOLDS: Record<StoreCategoria, { DIAMOND: number; GOLD: n
 };
 
 // ─── Cupones de tienda por nivel ──────────────────────────────────────────────
-// El plan de afiliadas es gratuito — el premio es siempre descuento en tiendas.
+// El plan de afiliados es gratuito — el premio es siempre descuento en tiendas.
 
 const STORE_DISCOUNT: Record<string, number> = {
   SILVER:  15,

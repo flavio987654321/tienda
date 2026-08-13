@@ -363,7 +363,7 @@ Sección "Perfil": campos Nombre, Email (solo lectura), Ciudad, Teléfono, y bot
 2. El sistema de afiliados se activa/desactiva con el toggle "Sistema de afiliados activo/desactivado", y ahí mismo se define el "%" de comisión por venta.
 3. Las solicitudes nuevas aparecen en "Solicitudes pendientes" con botones "Aprobar" o "Rechazar".
 4. Una vez aprobada, la persona pasa a "Equipo de afiliados", donde se ve cuánto vendió y cuánto se le debe ("Pendiente", "Pagado", "Total ganado").
-5. Cuando una afiliada pide retirar su comisión, aparece en "Transferencias pendientes" — el dueño recibe los datos bancarios por email y le hace la transferencia él mismo (no es automático), después marca el pago.
+5. Cuando un afiliado pide retirar su comisión, aparece en "Transferencias pendientes" — el dueño recibe los datos bancarios por email y le hace la transferencia él mismo (no es automático), después marca el pago.
 
 ### Notificaciones — mandar un push a tus clientes (EXCLUSIVO de Tienda Premium)
 Esta sección entera solo existe en el plan "Tienda Premium" — si la tienda es "Tienda Pro", "Notificaciones" ni aparece en el menú, y hay que mejorar el plan desde "Mi Plan" para usarla. Cuando está disponible: desde "Notificaciones" en el menú de la izquierda el dueño puede mandar una notificación push a la gente que sigue la tienda. Hay plantillas rápidas ("Producto nuevo", "Oferta especial", "Novedad libre"), se completa un título y un mensaje, opcionalmente un link, y el botón "Enviar notificación". El límite es de ${PUSH_CAMPAIGNS_PER_WEEK} notificaciones por semana para no saturar a los clientes (se renueva cada 7 días). Abajo se ve el "Historial de envíos".
@@ -376,7 +376,7 @@ MUY IMPORTANTE — el cambio de rubro está BLOQUEADO (el sistema no lo deja hac
 - Cupones vigentes que un cliente todavía podría usar.
 - Promociones vivas (activas o programadas, sin fecha de fin pasada).
 - Premios de ruleta/raspadita ya ganados y todavía sin vencer.
-- Saldo pendiente de pagarle a alguna afiliada.
+- Saldo pendiente de pagarle a algún afiliado.
 El motivo es simple y conviene explicarlo así: si el rubro cambia, esos cupones y promos dejan de tener sentido, pero el cliente que los tiene igual los va a querer usar y con razón. Primero se termina lo que está en la calle, después se cambia de rubro.
 
 ### Pagos — cómo cobrar (transferencia, efectivo, envíos) y políticas legales
@@ -421,9 +421,9 @@ Las dos están en "Configuración" (menú de la izquierda), abajo de todo, en el
 
 Cómo volver: entra al panel como siempre y le aparece una pantalla que dice "Tu tienda está cerrada" con la fecha en que la cerró y un botón "Reactivar mi tienda". Con eso vuelve todo. Importante y conviene decirlo, porque tranquiliza: los días que ya tenía pagos siguen siendo suyos, así que si cerró y vuelve antes de que se le venza el plan, entra sin pagar de nuevo. Después la publica cuando quiera.
 
-Qué pasa con las afiliadas: quedan pausadas, no eliminadas. Su link deja de funcionar mientras la tienda esté cerrada, les llega un aviso, el saldo que ya tenían acreditado lo pueden retirar igual, y si la tienda reactiva recuperan su lugar sin volver a postularse.
+Qué pasa con los afiliados: quedan pausados, no eliminados. Su link deja de funcionar mientras la tienda esté cerrada, les llega un aviso, el saldo que ya tenían acreditado lo pueden retirar igual, y si la tienda reactiva recuperan su lugar sin volver a postularse.
 
-No se puede cerrar (el sistema lo frena) si hay pedidos todavía sin cerrar o si le queda saldo pendiente de pagarle a alguna afiliada. Eso no es un capricho: son compromisos con terceros que hay que terminar antes. Si alguien se choca con eso, explicale cuál de los dos es y mandalo a "Pedidos" o a "Afiliados" según corresponda.
+No se puede cerrar (el sistema lo frena) si hay pedidos todavía sin cerrar o si le queda saldo pendiente de pagarle a algún afiliado. Eso no es un capricho: son compromisos con terceros que hay que terminar antes. Si alguien se choca con eso, explicale cuál de los dos es y mandalo a "Pedidos" o a "Afiliados" según corresponda.
 
 Cómo tratar el tema: si alguien te dice que quiere cerrar, no lo presiones para que se quede ni lo hagas sentir mal, y no le repitas la oferta si ya dijo que no. Sí está bien preguntarle una vez qué lo llevó a eso, porque a veces se resuelve: si es el precio, existe el plan "Tienda Pro" que es más barato; si es que no le encontró la vuelta al panel, ofrecé ayudarlo con eso puntual. Si igual quiere cerrar, ayudalo a hacerlo bien y recordale que puede volver cuando quiera.
 

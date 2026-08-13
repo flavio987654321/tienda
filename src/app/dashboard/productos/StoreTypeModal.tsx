@@ -77,7 +77,7 @@ export default function StoreTypeModal({
   const BLOCK_LINKS: Record<string, { href: string; label: string }> = {
     UNRESOLVED_ORDERS: { href: "/dashboard/pedidos", label: "Ver pedidos pendientes" },
     UNCLAIMED_PRIZES: { href: "/dashboard/cupones", label: "Ver cupones y premios" },
-    PENDING_COMMISSIONS: { href: "/dashboard/pagos", label: "Ver pagos a afiliadas" },
+    PENDING_COMMISSIONS: { href: "/dashboard/pagos", label: "Ver pagos a afiliados" },
     LIVE_COUPONS: { href: "/dashboard/cupones", label: "Ver mis cupones vigentes" },
     LIVE_PROMOTIONS: { href: "/dashboard/promociones", label: "Ver mis promociones" },
   };
@@ -191,7 +191,7 @@ export default function StoreTypeModal({
                 "Todas las promociones de la tienda",
                 "Los carritos abandonados",
                 "Las reseñas de productos",
-                "El historial de ventas y estadísticas de tus afiliadas",
+                "El historial de ventas y estadísticas de tus afiliados",
                 "La plantilla y configuración del diseño",
               ].map((item) => (
                 <li key={item} className="flex items-center gap-2.5 text-sm text-gray-600">
@@ -201,7 +201,7 @@ export default function StoreTypeModal({
               ))}
             </ul>
             <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-xs text-amber-700 font-medium space-y-1.5">
-              <p>Esta acción no se puede deshacer desde el panel. Se conservan: logo, colores, redes sociales, conexión Mercado Pago y tus afiliadas (sin su historial de ventas). La ruleta queda desactivada hasta que la configures con premios nuevos.</p>
+              <p>Esta acción no se puede deshacer desde el panel. Se conservan: logo, colores, redes sociales, conexión Mercado Pago y tus afiliados (sin su historial de ventas). La ruleta queda desactivada hasta que la configures con premios nuevos.</p>
               <p><strong>Antes de cambiar tenés que dar de baja las promociones y los cupones que estén vigentes.</strong> Si un cliente tiene uno en la mano, al cambiar de rubro deja de funcionar pero te lo va a reclamar igual — así que la baja la decidís vos, no el sistema por atrás.</p>
               <p>Tu tienda va a quedar <strong>offline</strong> hasta que configures y publiques el catálogo del nuevo rubro.</p>
               <p>TiendaApps guarda una copia interna de tus ventas como respaldo contable — podés descargarla después desde Configuración.</p>

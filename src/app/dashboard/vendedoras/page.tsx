@@ -283,7 +283,7 @@ export default async function VendedorasPage() {
               <AlertTriangle className="h-4 w-4 text-red-600 shrink-0 mt-0.5" />
               <p className="text-red-800">
                 <span className="font-bold">Hay retiros de más de 15 días sin procesar.</span>{" "}
-                Tu equipo de afiliadas está esperando — priorizá estas transferencias para mantener la confianza del equipo.
+                Tu equipo de afiliados está esperando — priorizá estas transferencias para mantener la confianza del equipo.
               </p>
             </div>
           )}
@@ -450,7 +450,7 @@ export default async function VendedorasPage() {
         <section className="mb-8">
           <h2 className="font-bold text-gray-900 mb-1">Ranking del mes</h2>
           <p className="text-sm text-gray-400 mb-4">
-            {now.toLocaleString("es-AR", { month: "long", year: "numeric" })} — comisiones pagadas por afiliada
+            {now.toLocaleString("es-AR", { month: "long", year: "numeric" })} — comisiones pagadas por afiliado
           </p>
           <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white">
             {rankingData.map((r, i) => (

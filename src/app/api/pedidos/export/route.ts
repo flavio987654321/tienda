@@ -4,7 +4,7 @@ import { getCurrentUser } from "@/lib/auth-session";
 
 /* El CSV se arma de a tandas y se va mandando mientras se arma.
    Antes era un `findMany` sin tope: traía TODOS los pedidos de la tienda con sus
-   productos, pagos, envíos y afiliadas, armaba el string entero en memoria y
+   productos, pagos, envíos y afiliados, armaba el string entero en memoria y
    recién ahí contestaba. Con una tienda chica no se nota; con unos miles de
    pedidos son cientos de miles de filas de relaciones juntas y el proceso se
    queda sin memoria o el request se corta por timeout — y justo le pasa a la
@@ -32,7 +32,7 @@ const HEADERS = [
   "Cliente", "Email cliente", "Teléfono", "Dirección", "Ciudad", "Provincia", "CP",
   "Productos", "Método de pago", "Estado pago",
   "Método envío", "Tracking",
-  "Afiliada", "Email afiliada",
+  "Afiliado", "Email afiliado",
 ];
 
 export async function GET() {

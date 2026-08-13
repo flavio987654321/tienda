@@ -114,7 +114,7 @@ function LoginForm() {
               Una plataforma,<br />tres formas de usarla
             </h2>
             <p className="text-orange-50/80 leading-relaxed text-sm">
-              Vendedoras, afiliados y clientes comparten el mismo acceso.
+              Vendedores, afiliados y clientes comparten el mismo acceso.
             </p>
           </div>
 

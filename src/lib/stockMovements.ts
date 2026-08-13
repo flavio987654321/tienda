@@ -144,7 +144,7 @@ export async function dispatchLowStockAlerts(
   if (mandarEmail && owner?.email) {
     await sendLowStockEmail({
       ownerEmail: owner.email,
-      ownerName: owner.name || "vendedora",
+      ownerName: owner.name || "vendedor",
       storeName: store?.name || "tu tienda",
       products: items,
     }).catch((err) => console.error("[email] sendLowStockEmail failed:", err));

@@ -171,7 +171,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ slug
   // tenga que repetir la regla de "texto y además activa".
   const legales = documentosPublicados(store);
 
-  // Ranking de ventas — solo se calcula cuando se pide explícitamente (ej: panel de afiliadas)
+  // Ranking de ventas — solo se calcula cuando se pide explícitamente (ej: panel de afiliados)
   // para no sumar una consulta extra en cada visita normal de un comprador a la tienda.
   if (!withSales) return NextResponse.json({ store: { ...safeStore, products: visibleProducts }, isOwner, hasMercadoPago, legales });
 

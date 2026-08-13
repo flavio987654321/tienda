@@ -1,5 +1,5 @@
 // Helpers compartidos para generar feeds XML compatibles con Meta Commerce Manager
-// (usados tanto por el feed de afiliadas como por el feed propio de cada tienda).
+// (usados tanto por el feed de afiliados como por el feed propio de cada tienda).
 
 export function escapeXml(str: string): string {
   return str

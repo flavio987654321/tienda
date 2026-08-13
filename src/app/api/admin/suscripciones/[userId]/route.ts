@@ -73,7 +73,7 @@ export async function PATCH(
 
   if (sub.role === "AFFILIATE") {
     return NextResponse.json(
-      { error: "Las cuentas de afiliada son gratuitas, no tienen suscripción para gestionar" },
+      { error: "Las cuentas de afiliado son gratuitas, no tienen suscripción para gestionar" },
       { status: 400 }
     );
   }

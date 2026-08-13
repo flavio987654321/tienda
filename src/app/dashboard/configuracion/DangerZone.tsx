@@ -13,7 +13,7 @@ type AccountInfo = {
 };
 
 // Solo la ve una dueña de tienda: /dashboard/ajustes redirige a cualquier otro
-// rol antes de renderizar. Por eso acá no hay ramas para afiliada/comprador —
+// rol antes de renderizar. Por eso acá no hay ramas para afiliado/comprador —
 // la baja de esas cuentas vive en su propio panel (VendedorasClient).
 export default function DangerZone({
   storeName,
@@ -75,8 +75,8 @@ export default function DangerZone({
     setErrorMsg("");
 
     // Dos endpoints distintos porque son dos cosas distintas: resetear el diseño
-    // no toca la cuenta ni a las afiliadas. Antes los dos entraban por
-    // /api/cuenta y el reset arrastraba el borrado de afiliadas de la baja.
+    // no toca la cuenta ni a los afiliados. Antes los dos entraban por
+    // /api/cuenta y el reset arrastraba el borrado de afiliados de la baja.
     const r =
       target === "store"
         ? await fetch("/api/configuracion", {
@@ -220,7 +220,7 @@ export default function DangerZone({
                         <>
                           <li className="flex items-center gap-2"><Trash2 className="h-3.5 w-3.5 text-red-400" /> El diseño y los bloques de tu página</li>
                           <li className="flex items-center gap-2"><Trash2 className="h-3.5 w-3.5 text-red-400" /> Tu tienda sale de línea hasta que la republiques</li>
-                          <li className="flex items-center gap-2 text-gray-400"><span className="h-3.5 w-3.5 text-green-500 flex-shrink-0">✓</span> Productos, pedidos y afiliadas se conservan</li>
+                          <li className="flex items-center gap-2 text-gray-400"><span className="h-3.5 w-3.5 text-green-500 flex-shrink-0">✓</span> Productos, pedidos y afiliados se conservan</li>
                           <li className="flex items-center gap-2 text-gray-400"><span className="h-3.5 w-3.5 text-green-500 flex-shrink-0">✓</span> Tus datos de cobro, envíos e integraciones también</li>
                         </>
                       ) : (

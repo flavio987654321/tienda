@@ -141,10 +141,10 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       if (affiliateUser?.email) {
         despues(() => sendWithdrawalApprovedEmail({
           affiliateEmail: affiliateUser.email,
-          affiliateName: affiliateUser.name ?? "Afiliada",
+          affiliateName: affiliateUser.name ?? "Afiliado",
           storeName: withdrawal.wallet.affiliate.store.name ?? "la tienda",
           amount: result.amount,
-        }), "retiro aprobado: mail a la afiliada");
+        }), "retiro aprobado: mail al afiliado");
       }
     }
 

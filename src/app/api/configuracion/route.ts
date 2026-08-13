@@ -72,14 +72,14 @@ async function notifyAffiliatesStoreOffline(storeId: string, storeName: string) 
       affiliateEmail: a.user.email,
       affiliateName: a.user.name || "afiliado",
       storeName,
-    }), "tienda pausada: aviso a la afiliada");
+    }), "tienda pausada: aviso al afiliado");
   }
 }
 
 // El único reset de diseño del proyecto. Antes había una segunda copia en
 // /api/cuenta (target: "store") para la Zona de peligro que además de divergir
-// —no despublicaba, no revalidaba el caché y no avisaba a las afiliadas— dejaba
-// a TODAS las afiliadas en REMOVED, irreversible, mientras el modal prometía que
+// —no despublicaba, no revalidaba el caché y no avisaba a los afiliados— dejaba
+// a TODAS los afiliados en REMOVED, irreversible, mientras el modal prometía que
 // se conservaban. Esa copia se eliminó y ahora los dos botones entran por acá.
 //
 // `confirm` es opcional: el reset del editor no lo manda (tiene su propio modal)
@@ -450,7 +450,7 @@ export async function PATCH(req: NextRequest) {
     notifyAffiliatesStoreOffline(prevStore.id, prevStore.name).catch(console.error);
   }
 
-  // Cuando una tienda se publica por primera vez (o se re-publica), notificar a afiliadas interesadas
+  // Cuando una tienda se publica por primera vez (o se re-publica), notificar a afiliados interesados
   if (isPublished && !prevStore?.isPublished && prevStore?.affiliatesEnabled) {
     const interested = await prisma.user.findMany({
       where: { notifyNewStores: true, id: { not: user.id } },
@@ -461,10 +461,10 @@ export async function PATCH(req: NextRequest) {
       for (const affiliate of interested) {
         despues(() => sendNewStorePublishedEmail({
           affiliateEmail: affiliate.email,
-          affiliateName: affiliate.name || "afiliada",
+          affiliateName: affiliate.name || "afiliado",
           storeName: prevStore.name,
           commissionRate: prevStore.commissionRate,
-        }), "tienda publicada: aviso a afiliadas interesadas");
+        }), "tienda publicada: aviso a afiliados interesados");
       }
     }
   }

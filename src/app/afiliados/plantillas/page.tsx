@@ -118,7 +118,7 @@ const TEMPLATES: Template[] = [
     tone: "profesional",
     label: "Bio / descripción de perfil",
     text: ({ storeName, link }) =>
-      `Vendedora oficial de ${storeName} 🛍\n💌 Pedidos y consultas: escribime\n🔗 ${link}`,
+      `Vendedor oficial de ${storeName} 🛍\n💌 Pedidos y consultas: escribime\n🔗 ${link}`,
   },
   {
     id: "gen-email-1",

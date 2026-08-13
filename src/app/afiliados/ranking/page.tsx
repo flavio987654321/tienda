@@ -134,7 +134,7 @@ export default function RankingPage() {
                     </div>
                     <div>
                       <p className="font-bold text-indigo-900 dark:text-indigo-100">Posición #{myRank.rank}</p>
-                      <p className="text-xs text-indigo-600 dark:text-indigo-400">{ranking.length} afiliadas activas</p>
+                      <p className="text-xs text-indigo-600 dark:text-indigo-400">{ranking.length} afiliados activos</p>
                     </div>
                   </div>
                   <div className="text-right">
@@ -152,12 +152,12 @@ export default function RankingPage() {
               <div className="bg-white dark:bg-gray-900/80 rounded-2xl border border-gray-100 dark:border-white/10 p-10 text-center">
                 <TrendingUp className="h-8 w-8 text-gray-200 dark:text-gray-700 mx-auto mb-2" />
                 <p className="text-gray-500 font-medium">Sola en el equipo</p>
-                <p className="text-gray-400 text-sm mt-1">No hay suficientes afiliadas para mostrar un ranking.</p>
+                <p className="text-gray-400 text-sm mt-1">No hay suficientes afiliados para mostrar un ranking.</p>
               </div>
             ) : (
               <div className="bg-white dark:bg-gray-900/80 rounded-2xl border border-gray-100 dark:border-white/10 overflow-hidden">
                 <div className="px-5 py-3 border-b border-gray-100 dark:border-white/5">
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Top vendedoras</p>
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Top vendedores</p>
                 </div>
                 <div className="divide-y divide-gray-50 dark:divide-white/5">
                   {ranking.map((entry, i) => {

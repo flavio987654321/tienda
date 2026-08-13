@@ -74,7 +74,7 @@ export default function StoreClosedGate({
         </p>
 
         <ul className="text-left bg-emerald-50 border border-emerald-200 rounded-xl p-3.5 mb-5 space-y-1.5">
-          {["Tu diseño y tus productos", "Tus fotos y tu historial", "Tus afiliadas recuperan su lugar"].map((t) => (
+          {["Tu diseño y tus productos", "Tus fotos y tu historial", "Tus afiliados recuperan su lugar"].map((t) => (
             <li key={t} className="flex items-start gap-2 text-[13px] text-gray-700">
               <Check className="h-3.5 w-3.5 text-emerald-600 shrink-0 mt-0.5" />
               {t}

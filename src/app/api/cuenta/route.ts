@@ -51,7 +51,7 @@ export async function GET() {
     });
   }
 
-  // Afiliada (u otro rol sin tienda): el saldo a revisar es el propio, en cada tienda donde está afiliada
+  // Afiliado (u otro rol sin tienda): el saldo a revisar es el propio, en cada tienda donde está afiliado
   const pendingBalances = await getAffiliateOwnBalance(prisma, user.id);
 
   return NextResponse.json({
@@ -72,9 +72,9 @@ export async function GET() {
 // Supabase Auth se elimina para liberar el email y permitir re-registro.
 //
 // Este endpoint ya no resetea el diseño: `target: "store"` vivía acá, compartía
-// la transacción con la baja de cuenta y arrastraba su updateMany de afiliadas,
+// la transacción con la baja de cuenta y arrastraba su updateMany de afiliados,
 // así que "Resetear diseño" dejaba a todas en REMOVED sin vuelta atrás. El reset
-// ahora es DELETE /api/configuracion y no toca afiliadas.
+// ahora es DELETE /api/configuracion y no toca afiliados.
 
 export async function DELETE(req: NextRequest) {
   const user = await getCurrentUser();
@@ -138,7 +138,7 @@ export async function DELETE(req: NextRequest) {
     }
   }
 
-  // ── Para afiliada eliminando su cuenta: verificar saldo pendiente propio ──
+  // ── Para afiliado eliminando su cuenta: verificar saldo pendiente propio ──
   if (!isOwner) {
     const pendingBalances = await getAffiliateOwnBalance(prisma, user.id);
     if (pendingBalances > 0) {
@@ -322,7 +322,7 @@ export async function DELETE(req: NextRequest) {
       });
     }
 
-    // Null out cvUrl y T&C en afiliaciones a otras tiendas, y desactivarlas (ya no puede operar como afiliada)
+    // Null out cvUrl y T&C en afiliaciones a otras tiendas, y desactivarlas (ya no puede operar como afiliado)
     await tx.affiliate.updateMany({
       where: { userId: user.id },
       data: { cvUrl: null, tcAcceptedAt: null, tcVersion: null, tcAcceptedIp: null, isActive: false, status: "REMOVED" },
@@ -338,15 +338,15 @@ export async function DELETE(req: NextRequest) {
     await tx.subscription.deleteMany({ where: { userId: user.id } });
   }, { timeout: 30_000 });
 
-  // Si era afiliada, avisar a los dueños de las tiendas donde estaba afiliada
+  // Si era afiliado, avisar a los dueños de las tiendas donde estaba afiliado
   if (!isOwner && userData?.asAffiliate.length) {
     const affiliateName = userData.name ?? userData.email;
     await createNotificationMany(
       userData.asAffiliate.map((a) => ({
         userId: a.ownerId,
         type: "AFFILIATE_LEFT",
-        title: `Tu afiliada ${affiliateName} eliminó su cuenta`,
-        body: `La cuenta de tu afiliada en ${a.store.name} fue eliminada. Su link de afiliado dejó de funcionar.`,
+        title: `Tu afiliado ${affiliateName} eliminó su cuenta`,
+        body: `La cuenta de tu afiliado en ${a.store.name} fue eliminada. Su link de afiliado dejó de funcionar.`,
         link: "/dashboard/vendedoras",
       }))
     );

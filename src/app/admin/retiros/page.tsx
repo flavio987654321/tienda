@@ -105,7 +105,7 @@ export default function AdminRetirosPage() {
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-white">Retiros pendientes</h1>
         <p className="text-gray-400 mt-1 text-sm">
-          Hacé la transferencia bancaria y marcá como enviado, o rechazá con un motivo. La afiliada recibe una notificación automática.
+          Hacé la transferencia bancaria y marcá como enviado, o rechazá con un motivo. El afiliado recibe una notificación automática.
         </p>
       </div>
 

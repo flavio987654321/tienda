@@ -895,11 +895,11 @@ export async function sendStoreClosedOwnerEmail({
 }
 
 /**
- * Aviso a cada afiliada de que la tienda donde vendía cerró.
+ * Aviso a cada afiliado de que la tienda donde vendía cerró.
  *
  * NO se reusa sendStoreOfflineEmail: ese dice "pausó temporalmente su actividad,
  * tu link sigue existiendo", que en un cierre es falso. Hasta ahora el cierre solo
- * generaba una notificación in-app, así que la afiliada que no abría la app nunca
+ * generaba una notificación in-app, así que el afiliado que no abría la app nunca
  * se enteraba de que había perdido una fuente de ingresos — mientras que por una
  * simple pausa sí le llegaba un mail. El evento más grave avisaba menos.
  */
@@ -925,7 +925,7 @@ export async function sendStoreClosedAffiliateEmail({
         </div>
         <p style="font-size:15px;color:#374151;margin-bottom:6px;">Hola <strong>${escapeHtml(affiliateName) || "ahí"}</strong>,</p>
         <p style="font-size:15px;color:#374151;margin-bottom:24px;">
-          Te avisamos que <strong>${escapeHtml(storeName)}</strong> cerró su tienda. Tu link de afiliada quedó pausado y por ahora no va a generar ventas nuevas.
+          Te avisamos que <strong>${escapeHtml(storeName)}</strong> cerró su tienda. Tu link de afiliado quedó pausado y por ahora no va a generar ventas nuevas.
         </p>
         <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:20px;margin-bottom:24px;">
           <p style="font-size:13px;color:#166534;margin:0 0 8px;font-weight:700;text-transform:uppercase;letter-spacing:0.03em;">Tu plata está intacta</p>
@@ -938,7 +938,7 @@ export async function sendStoreClosedAffiliateEmail({
           <a href="${APP_URL}/afiliados" style="display:inline-block;background:#4f46e5;color:#fff;text-decoration:none;font-weight:700;font-size:14px;padding:13px 28px;border-radius:12px;">Ir a mi panel</a>
         </div>` : ""}
         <p style="font-size:14px;color:#6b7280;margin-bottom:24px;">
-          Podés seguir vendiendo en las otras tiendas donde estés afiliada, o postularte a nuevas desde tu panel.
+          Podés seguir vendiendo en las otras tiendas donde estés afiliado, o postularte a nuevas desde tu panel.
         </p>
         <p style="color:#9ca3af;font-size:12px;text-align:center;">
           TiendaApps — tu tienda online profesional
@@ -953,7 +953,7 @@ export async function sendStoreClosedAffiliateEmail({
  * alta misma es el disparador, así llega en el momento y no al día siguiente.
  *
  * El contenido cambia según el rol porque los tres arrancan haciendo cosas
- * distintas — a una dueña le sirve "cargá tu primer producto" y a una afiliada
+ * distintas — a una dueña le sirve "cargá tu primer producto" y a un afiliado
  * no le dice nada.
  */
 export async function sendWelcomeEmail({
@@ -1012,7 +1012,7 @@ export async function sendWelcomeEmail({
       ${btn("/dashboard", "Ir a mi panel")}`;
   } else if (role === "SELLER") {
     titular = "Bienvenida a TiendaApps";
-    intro = "Tu cuenta de vendedora ya está lista. Es gratis y no vence.";
+    intro = "Tu cuenta de vendedor ya está lista. Es gratis y no vence.";
     cuerpo = `
       <p style="font-size:15px;color:#111827;font-weight:700;margin:0 0 14px;">Cómo funciona</p>
       <table style="width:100%;border-collapse:collapse;margin-bottom:20px;">

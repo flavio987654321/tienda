@@ -180,7 +180,7 @@ const CONTENT = {
         list: [
           "TiendaApps NO almacena datos de tarjetas de crédito o débito. Todo el procesamiento de pagos lo realiza Mercado Pago, certificado PCI-DSS nivel 1 (el estándar de seguridad más alto para pagos).",
           "Las comunicaciones entre tu navegador y nuestros servidores usan HTTPS con TLS 1.2 o superior.",
-          "Los datos de acceso bancario de las afiliadas (CBU, CUIL), los tokens de MercadoPago y los tokens de acceso de Meta/Facebook se almacenan cifrados con AES-256-GCM.",
+          "Los datos de acceso bancario de los afiliados (CBU, CUIL), los tokens de MercadoPago y los tokens de acceso de Meta/Facebook se almacenan cifrados con AES-256-GCM.",
           "Las contraseñas se almacenan con hash bcrypt. Nunca las vemos ni podemos recuperarlas.",
         ],
       },
@@ -291,7 +291,7 @@ const CONTENT = {
         list: [
           "Datos de cuenta: mientras esté activa + 90 días adicionales tras la cancelación.",
           "Historial de comisiones: 3 años a efectos impositivos (AFIP).",
-          "Si la tienda a la que estás afiliada cambia de rubro, el detalle de comisiones de ese ciclo deja de verse en tu panel (tu saldo pendiente se liquida antes del cambio — la plataforma no permite el cambio de rubro con comisiones sin pagar). El detalle queda archivado en un respaldo interno: podés pedir una copia por email durante los 3 años de retención.",
+          "Si la tienda a la que estás afiliado cambia de rubro, el detalle de comisiones de ese ciclo deja de verse en tu panel (tu saldo pendiente se liquida antes del cambio — la plataforma no permite el cambio de rubro con comisiones sin pagar). El detalle queda archivado en un respaldo interno: podés pedir una copia por email durante los 3 años de retención.",
           "Datos bancarios cifrados (CBU/CUIL): eliminados al cerrar la cuenta.",
           "Para solicitar eliminación escribí a marketplacemitienda@gmail.com con el asunto 'Eliminación de datos — [tu email]'.",
         ],

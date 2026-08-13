@@ -1939,7 +1939,7 @@ function ProfileEditModal({ profile, onClose, onSave }: { profile: UserProfile; 
                 <Store className="h-4 w-4 text-indigo-500 shrink-0" />
                 <div>
                   <p className="text-sm font-semibold text-gray-900 dark:text-white">Alertas de nuevas tiendas</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-500 mt-0.5">Te avisamos por email cuando una tienda active su programa de afiliadas</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-500 mt-0.5">Te avisamos por email cuando una tienda active su programa de afiliados</p>
                 </div>
               </div>
               <div className={`w-10 h-6 rounded-full transition-colors shrink-0 ${form.notifyNewStores ? "bg-indigo-600" : "bg-gray-300 dark:bg-white/15"}`}>
@@ -2010,7 +2010,7 @@ function ProfileEditModal({ profile, onClose, onSave }: { profile: UserProfile; 
                 <div className="bg-gray-50 dark:bg-white/5 rounded-xl p-4 space-y-1.5">
                   <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Qué pasa al eliminar</p>
                   <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2"><Trash2 className="h-3.5 w-3.5 text-red-400 shrink-0" /> Se borran tus datos personales (nombre, foto, bio, contacto)</p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2"><Trash2 className="h-3.5 w-3.5 text-red-400 shrink-0" /> Tus links de afiliada dejan de funcionar</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2"><Trash2 className="h-3.5 w-3.5 text-red-400 shrink-0" /> Tus links de afiliado dejan de funcionar</p>
                   <p className="text-xs text-gray-400 mt-2">El historial de comisiones se conserva por requisito legal (AFIP). Podés volver a registrarte con el mismo email.</p>
                 </div>
                 <div>
@@ -2156,11 +2156,11 @@ const STATUS: Record<string, { label: string; cls: string; dot: string }> = {
 /* ── Modal de ayuda — cómo funciona cada parte del panel ── */
 const HELP_SECTIONS: { icon: React.ElementType; iconColor: string; title: string; body: string }[] = [
   { icon: Store, iconColor: "text-indigo-500", title: "Tiendas disponibles", body: "Postulate a las tiendas que te interesen. Cuando el dueño te acepte, vas a poder compartir tus productos y ganar comisión por cada venta." },
-  { icon: Share2, iconColor: "text-purple-500", title: "Compartir", body: "Desde cada producto generás tu link de afiliada, un código QR o una placa lista para redes (Instagram, WhatsApp, etc). Todo lleva tu identificador para que la venta te quede asignada." },
+  { icon: Share2, iconColor: "text-purple-500", title: "Compartir", body: "Desde cada producto generás tu link de afiliado, un código QR o una placa lista para redes (Instagram, WhatsApp, etc). Todo lleva tu identificador para que la venta te quede asignada." },
   { icon: Wallet, iconColor: "text-emerald-500", title: "Mis comisiones", body: "Ahí ves tu saldo disponible y tus comisiones pendientes de aprobación. Podés pedir el retiro cuando quieras a tu cuenta bancaria." },
   { icon: Award, iconColor: "text-amber-500", title: "Mis premios", body: "Cupones de descuento que ganás automáticamente según tu nivel (Plata, Oro, Diamante) calculado por tus ventas del mes. Se usan en cualquier tienda de TiendaApps." },
   { icon: BarChart3, iconColor: "text-blue-500", title: "Estadísticas", body: "Pedidos generados, clicks en tus links y de qué canal vienen (WhatsApp, Instagram, etc), para que sepas qué te está funcionando mejor." },
-  { icon: Trophy, iconColor: "text-amber-500", title: "Ranking", body: "Tu posición comparada con las demás afiliadas de cada tienda, según comisiones generadas." },
+  { icon: Trophy, iconColor: "text-amber-500", title: "Ranking", body: "Tu posición comparada con los demás afiliados de cada tienda, según comisiones generadas." },
   { icon: MessageSquare, iconColor: "text-purple-500", title: "Plantillas", body: "Mensajes ya escritos para WhatsApp, Instagram y otras redes, con tu link incluido, listos para pegar y enviar." },
   { icon: Download, iconColor: "text-indigo-500", title: "Kit de contenido", body: "Fotos y videos de los productos de tus tiendas para usar en tus publicaciones, sin tener que pedírselos al dueño." },
   { icon: Target, iconColor: "text-orange-500", title: "Mis metas", body: "Objetivos mensuales de ventas que podés fijarte para hacer seguimiento de tu progreso." },

@@ -289,7 +289,7 @@ export default function AjustesClient({ slug, customDomain, isPremium, descripti
           <p className="text-sm text-slate-500">
             {isAutos
               ? "Recibí alertas en este dispositivo cuando llegue una nueva consulta o solicitud de afiliado, incluso con el panel cerrado."
-              : "Recibí alertas en este dispositivo cuando llegue un nuevo pedido o solicitud de afiliada, incluso con el panel cerrado."}
+              : "Recibí alertas en este dispositivo cuando llegue un nuevo pedido o solicitud de afiliado, incluso con el panel cerrado."}
           </p>
           <PushNotificationToggle />
         </div>

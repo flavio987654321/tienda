@@ -107,7 +107,7 @@ export default function MetasWidget() {
         <div className="text-center py-4">
           <p className="text-sm text-gray-400">No hay meta para este mes.</p>
           <p className="text-xs text-gray-300 mt-1">
-            Fijá un objetivo de ventas con bonus de comisión extra para motivar a tus afiliadas.
+            Fijá un objetivo de ventas con bonus de comisión extra para motivar a tus afiliados.
           </p>
         </div>
       )}
@@ -125,7 +125,7 @@ export default function MetasWidget() {
             </div>
           </div>
           <p className="text-xs text-gray-400 text-center">
-            Las afiliadas que superen este monto en comisiones reciben un {goal.bonusRate}% extra.
+            Los afiliados que superen este monto en comisiones reciben un {goal.bonusRate}% extra.
           </p>
         </div>
       )}

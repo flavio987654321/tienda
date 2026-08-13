@@ -15,7 +15,7 @@ const ORDER_ARCHIVE_INCLUDE = {
   payment: true,
   shipping: true,
   commission: {
-    // Affiliate.user es la afiliada; Affiliate.owner es el dueño de la tienda
+    // Affiliate.user es el afiliado; Affiliate.owner es el dueño de la tienda
     include: { affiliate: { include: { user: { select: { name: true, email: true } } } } },
   },
   coupon: { select: { code: true, discountType: true, discountValue: true } },
@@ -48,7 +48,7 @@ export function fetchStorePromotionsForArchive(db: DbClient, storeId: string) {
   return db.storePromotion.findMany({ where: { storeId }, orderBy: { createdAt: "desc" } });
 }
 
-// Saldos y retiros de afiliadas: el reset solo procede con balances en cero,
+// Saldos y retiros de afiliados: el reset solo procede con balances en cero,
 // pero el historial de retiros ya pagados (con snapshot bancario) es la prueba
 // de la plataforma de que esas transferencias existieron — se archiva siempre.
 export function fetchStoreWalletsForArchive(db: DbClient, storeId: string) {
@@ -76,7 +76,7 @@ export function ordersToCsv(orders: ArchivedOrder[]): string {
   const header = [
     "Fecha", "N° Pedido", "Estado", "Cliente", "Email", "Teléfono",
     "Productos", "Cupón", "Descuento", "Envío", "Total",
-    "Medio de pago", "Estado de pago", "ID de pago (MP)", "Comisión afiliada", "Afiliada",
+    "Medio de pago", "Estado de pago", "ID de pago (MP)", "Comisión afiliado", "Afiliado",
   ];
 
   const rows = orders.map((o) => {
@@ -100,7 +100,7 @@ export function ordersToCsv(orders: ArchivedOrder[]): string {
       escape(o.payment?.status),
       escape(o.payment?.externalId),
       o.commission?.amount ?? "",
-      // Nombre, no email: la privacidad de afiliadas promete que el dueño
+      // Nombre, no email: la privacidad de afiliados promete que el dueño
       // no accede a sus datos personales de contacto
       escape(o.commission?.affiliate?.user?.name),
     ].join(",");

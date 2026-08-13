@@ -74,9 +74,9 @@ export async function PATCH(
       // Se copia acá afuera: adentro del cierre TypeScript ya no puede
       // garantizar que `lead.affiliate` siga sin ser null, porque el cierre
       // corre después. Tiene razón.
-      const afiliadaId = lead.affiliate.userId;
+      const afiliadoId = lead.affiliate.userId;
       despues(() => createNotification({
-        userId: afiliadaId,
+        userId: afiliadoId,
         type: "COMMISSION_EARNED",
         title: "¡Ganaste una comisión!",
         body: `Tu consulta sobre "${lead.productName}" fue confirmada. Comisión: $${commissionAmount.toLocaleString("es-AR")} acreditada en tu panel de comisiones.`,

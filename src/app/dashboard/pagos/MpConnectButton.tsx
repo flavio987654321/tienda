@@ -80,7 +80,7 @@ export default function MpConnectButton({ connected, connectedAt, mpSellerId, mp
                 <strong className="text-slate-700">La plata entra a tu cuenta de MercadoPago</strong>, no a TiendaApps. Los plazos de acreditación los pone MercadoPago.
               </Bullet>
               <Bullet color="emerald">
-                Podés sumar afiliadas: la comisión se descuenta sola en cada venta que traigan.
+                Podés sumar afiliados: la comisión se descuenta sola en cada venta que traigan.
               </Bullet>
             </ul>
 
@@ -114,7 +114,7 @@ export default function MpConnectButton({ connected, connectedAt, mpSellerId, mp
                 a TiendaApps.
               </Bullet>
               <Bullet color="blue">
-                Se habilita el programa de afiliadas, que necesita MercadoPago para descontar la comisión en el momento.
+                Se habilita el programa de afiliados, que necesita MercadoPago para descontar la comisión en el momento.
               </Bullet>
             </ul>
 
@@ -147,7 +147,7 @@ export default function MpConnectButton({ connected, connectedAt, mpSellerId, mp
             <Bullet color="amber">
               MercadoPago te descuenta su comisión por procesar el pago —{" "}
               <strong className="text-slate-700">TiendaApps no te cobra nada por venta</strong>. Lo único que se
-              descuenta aparte es la comisión de tu afiliada, si la venta vino por el link de una.
+              descuenta aparte es la comisión de tu afiliado, si la venta vino por el link de una.
             </Bullet>
             <Bullet color="amber">
               Podés tener MercadoPago y transferencia activos a la vez: el comprador elige con cuál pagar.
@@ -177,7 +177,7 @@ export default function MpConnectButton({ connected, connectedAt, mpSellerId, mp
               {activeAffiliatesCount > 0 ? (
                 <>
                   <p className="text-sm text-gray-600">
-                    Además tenés <strong className="text-gray-900">{activeAffiliatesCount} afiliada{activeAffiliatesCount !== 1 ? "s" : ""} activa{activeAffiliatesCount !== 1 ? "s" : ""}</strong>. Al desconectar:
+                    Además tenés <strong className="text-gray-900">{activeAffiliatesCount} afiliado{activeAffiliatesCount !== 1 ? "s" : ""} activa{activeAffiliatesCount !== 1 ? "s" : ""}</strong>. Al desconectar:
                   </p>
                   <ul className="space-y-2 text-sm text-gray-600">
                     <li className="flex items-start gap-2">
@@ -194,7 +194,7 @@ export default function MpConnectButton({ connected, connectedAt, mpSellerId, mp
                     </li>
                   </ul>
                   <p className="text-xs text-gray-400 pt-1">
-                    Las afiliadas recibirán un email avisando que el programa está pausado.
+                    Los afiliados recibirán un email avisando que el programa está pausado.
                   </p>
                 </>
               ) : (

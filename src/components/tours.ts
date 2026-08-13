@@ -74,7 +74,7 @@ export const GUION_PANEL: Guion = {
   afiliados: {
     icon: Users,
     title: "Afiliados",
-    body: "Invitá vendedoras que promocionen tu tienda y cobrá por cada venta que generen. Necesita MercadoPago conectado: las comisiones se acreditan solas.",
+    body: "Invitá vendedores que promocionen tu tienda y cobrá por cada venta que generen. Necesita MercadoPago conectado: las comisiones se acreditan solas.",
     porTipo: {
       AUTOS: {
         title: "Afiliados",

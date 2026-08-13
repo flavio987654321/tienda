@@ -197,7 +197,7 @@ export function hasDesign(storeConfigRaw: string | null | undefined, pageBlocksR
 
 /**
  * El reset de diseño, en un solo lugar. Existían dos copias divergentes —la de
- * /api/configuracion despublicaba, revalidaba y avisaba a las afiliadas; la de
+ * /api/configuracion despublicaba, revalidaba y avisaba a los afiliados; la de
  * /api/cuenta (Zona de peligro) no hacía nada de eso y dejaba la tienda
  * publicada sin diseño ni forma de cobrar, un estado del que ni siquiera podía
  * salir porque publicar exige template y método de pago.

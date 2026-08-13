@@ -50,7 +50,7 @@ const PATRONES = [
   // Identificadores de cuentas conectadas de terceros.
   /^(mpSellerId|fbUserId|fbBusinessId|fbCatalogId|fbFeedId|fbWabaId|gaAccountId|gaPropertyId)$/,
   // Plata y tripa interna. `commissionRate` es el porcentaje que la tienda le
-  // paga a sus afiliadas: salía en cada respuesta pública, o sea que cualquier
+  // paga a sus afiliados: salía en cada respuesta pública, o sea que cualquier
   // competidor podía leer cuánto paga. `ownerId` es el id de usuario del dueño.
   /^(commissionRate|ownerId|abandonedCartsSeenAt|verificationBanned)$/,
   // Cuándo y desde dónde aceptó los términos el dueño.

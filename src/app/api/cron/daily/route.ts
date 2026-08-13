@@ -311,7 +311,7 @@ export async function GET(req: NextRequest) {
       // Se acabó el plazo: mismas escrituras que el cierre voluntario.
       // La suscripción NO se toca — ya está vencida, marcarla CANCELLED
       // borraría el motivo real por el que cerró.
-      const afiliadas = await prisma.affiliate.findMany({
+      const afiliados = await prisma.affiliate.findMany({
         where: { storeId: store.id, isActive: true },
         select: { userId: true, user: { select: { email: true, name: true } } },
       });
@@ -320,9 +320,9 @@ export async function GET(req: NextRequest) {
         await applyStoreClosure(tx, store.id);
       });
 
-      if (afiliadas.length > 0) {
+      if (afiliados.length > 0) {
         await createNotificationMany(
-          afiliadas.map((a) => ({
+          afiliados.map((a) => ({
             userId: a.userId,
             type: "STORE_CLOSED",
             title: `${store.name} cerró su tienda`,
@@ -331,12 +331,12 @@ export async function GET(req: NextRequest) {
           }))
         );
         await Promise.all(
-          afiliadas.map((a) =>
+          afiliados.map((a) =>
             sendStoreClosedAffiliateEmail({
               to: a.user.email,
               affiliateName: a.user.name ?? "",
               storeName: store.name,
-            }).catch((e) => console.error("[cron] mail cierre afiliada:", a.user.email, e))
+            }).catch((e) => console.error("[cron] mail cierre afiliado:", a.user.email, e))
           )
         );
       }

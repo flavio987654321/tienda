@@ -42,7 +42,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       })
     : null;
 
-  // El plan de afiliadas (SELLER) es gratuito — el gate de suscripción es solo para OWNER
+  // El plan de afiliados (SELLER) es gratuito — el gate de suscripción es solo para OWNER
   let gate = null;
   if (isOwner) {
     const sub = await getUserSubscription(user.id);

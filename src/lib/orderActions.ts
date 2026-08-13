@@ -156,7 +156,7 @@ export async function runOrderAction({ orderId: id, ownerId, action, trackingCod
             etiqueta: "pedido: comisión ganada",
             correr: () => sendCommissionEarnedEmail({
               affiliateEmail: destino,
-              affiliateName: affiliateUser.name || "afiliada",
+              affiliateName: affiliateUser.name || "afiliado",
               storeName: order.store.name,
               commissionAmount: amount,
               orderTotal: order.total,
@@ -470,7 +470,7 @@ export async function runOrderAction({ orderId: id, ownerId, action, trackingCod
       link: `/dashboard/pedidos/${result.id}`,
     }), "pedido: campanita cancelado");
 
-    // Si se revirtió comisión, notificar a la afiliada
+    // Si se revirtió comisión, notificar al afiliado
     if (result.commission && result.affiliateId) {
       const monto = result.commission.amount;
       const affUser = await prisma.affiliate.findUnique({
