@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   CheckCircle, XCircle, Loader2, Lock, ChevronRight, ExternalLink, Unlink, Plus,
+  AlertCircle, RefreshCw,
 } from "lucide-react";
 
 type Business = { id: string; name: string };
@@ -18,6 +19,39 @@ type Props = {
 };
 
 type StepStatus = "done" | "active" | "locked";
+
+/**
+ * POST al backend. Devuelve `null` si salió bien, o el mensaje a mostrar.
+ *
+ * El `catch` no es decorativo: `fetch` sólo rechaza cuando no hubo respuesta
+ * —se cortó internet, el servidor no contestó—, y sin atajarlo la línea que
+ * apaga el spinner nunca corre. Así quedaban los botones girando para siempre,
+ * sin forma de destrabarlos salvo recargando la página entera.
+ */
+async function postJson(url: string, body?: unknown): Promise<string | null> {
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      ...(body === undefined
+        ? {}
+        : { headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }),
+    });
+    if (res.ok) return null;
+    const d = await res.json().catch(() => ({}));
+    return typeof d?.error === "string" ? d.error : "No se pudo completar la acción. Probá de nuevo.";
+  } catch {
+    return "No pudimos conectarnos. Revisá tu internet y probá de nuevo.";
+  }
+}
+
+function AvisoError({ mensaje }: { mensaje: string }) {
+  return (
+    <div className="flex items-start gap-2.5 rounded-lg border border-red-200 bg-red-50 px-3.5 py-2.5 mb-3">
+      <XCircle className="h-4 w-4 text-red-500 shrink-0 mt-0.5" />
+      <p className="text-sm text-red-700 leading-relaxed">{mensaje}</p>
+    </div>
+  );
+}
 
 export default function MetaCatalogoWizard({ fbConnected, fbBusinessId, fbCatalogId, fbFeedId, fbStatus }: Props) {
   const step1Done = fbConnected;
@@ -99,29 +133,77 @@ function StepCard({ index, title, status, children }: { index: number; title: st
   );
 }
 
+// Error de un paso que no pudo cargar sus datos. Siempre con botón de
+// reintentar: los pasos se llenan solos por fetch, así que volver a pedir no
+// pierde nada, y mandar a recargar la página entera era pedirle al dueño que
+// arranque todo el wizard de nuevo por un error momentáneo de Facebook.
+function ErrorDePaso({ mensaje, onReintentar }: { mensaje: string; onReintentar: () => void }) {
+  // El botón se apaga apenas se toca: cada reintento dispara un pedido a la
+  // Graph API de Meta, que tiene cuota por app. Se reactiva cuando el paso
+  // vuelve a fallar (se remonta este componente con el mensaje nuevo).
+  const [reintentando, setReintentando] = useState(false);
+
+  return (
+    <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3.5">
+      <div className="flex items-start gap-2.5">
+        <AlertCircle className="h-4 w-4 text-red-500 shrink-0 mt-0.5" />
+        <div className="min-w-0">
+          <p className="text-sm text-red-800 leading-relaxed">{mensaje}</p>
+          <div className="flex flex-wrap items-center gap-3 mt-2.5">
+            <button
+              onClick={() => { setReintentando(true); onReintentar(); }}
+              disabled={reintentando}
+              className="inline-flex items-center gap-1.5 bg-red-600 hover:bg-red-500 text-white text-xs font-bold px-3.5 py-1.5 rounded-md transition-colors disabled:opacity-50"
+            >
+              {reintentando
+                ? <Loader2 className="h-3 w-3 animate-spin" />
+                : <RefreshCw className="h-3 w-3" />}
+              Reintentar
+            </button>
+            <a
+              href="https://business.facebook.com/settings"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-red-700 hover:text-red-800"
+            >
+              Abrir Meta Business <ExternalLink className="h-3 w-3" />
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function AccountStep({ done }: { done: boolean }) {
   const router = useRouter();
   const [disconnecting, setDisconnecting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function disconnect() {
     setDisconnecting(true);
-    await fetch("/api/facebook/oauth/disconnect", { method: "POST" });
-    router.refresh();
+    setError(null);
+    const err = await postJson("/api/facebook/oauth/disconnect");
     setDisconnecting(false);
+    if (err) { setError(err); return; }
+    router.refresh();
   }
 
   if (done) {
     return (
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-slate-500">Tu cuenta de Facebook está conectada.</p>
-        <button
-          onClick={disconnect}
-          disabled={disconnecting}
-          className="inline-flex items-center gap-1.5 text-xs text-red-500 hover:text-red-600 transition-colors disabled:opacity-50"
-        >
-          {disconnecting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Unlink className="h-3 w-3" />}
-          Desconectar
-        </button>
+      <div>
+        {error && <AvisoError mensaje={error} />}
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-sm text-slate-500">Tu cuenta de Facebook está conectada.</p>
+          <button
+            onClick={disconnect}
+            disabled={disconnecting}
+            className="inline-flex items-center gap-1.5 shrink-0 text-xs text-red-500 hover:text-red-600 transition-colors disabled:opacity-50"
+          >
+            {disconnecting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Unlink className="h-3 w-3" />}
+            Desconectar
+          </button>
+        </div>
       </div>
     );
   }
@@ -144,29 +226,48 @@ function AccountStep({ done }: { done: boolean }) {
 function BusinessStep({ done, businessId }: { done: boolean; businessId: string | null }) {
   const router = useRouter();
   const [businesses, setBusinesses] = useState<Business[] | null>(null);
-  const [loadError, setLoadError] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [connectingId, setConnectingId] = useState<string | null>(null);
+  // Cambiar este número vuelve a disparar el efecto: reintentar sin recargar.
+  const [intento, setIntento] = useState(0);
+
+  // Los reseteos van en `reintentar`, no acá: setState sincrónico dentro del
+  // efecto encadena renders de más (y lo marca el lint).
+  function reintentar() {
+    setBusinesses(null);
+    setLoadError(null);
+    setIntento((n) => n + 1);
+  }
 
   useEffect(() => {
     if (done) return;
+    let cancelado = false;
     fetch("/api/facebook/business")
-      .then((r) => (r.ok ? r.json() : Promise.reject()))
-      .then((d) => setBusinesses(d.businesses ?? []))
-      .catch(() => setLoadError(true));
-  }, [done]);
+      .then(async (r) => {
+        const d = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(d.error ?? "No pudimos traer tus portfolios de Meta.");
+        return d;
+      })
+      .then((d) => { if (!cancelado) setBusinesses(d.businesses ?? []); })
+      .catch((e: Error) => { if (!cancelado) setLoadError(e.message); });
+    return () => { cancelado = true; };
+  }, [done, intento]);
 
   async function connect(id: string) {
     setConnectingId(id);
-    const res = await fetch("/api/facebook/business/connect", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ businessId: id }),
-    });
-    if (res.ok) {
-      router.refresh();
-    } else {
+    setActionError(null);
+    const err = await postJson("/api/facebook/business/connect", { businessId: id });
+    if (err) {
+      // Va en `actionError` y no en `loadError` a propósito: el error de cargar
+      // reemplaza la pantalla del paso, pero si falla el clic hay que dejar la
+      // lista a la vista para poder reintentar sobre el mismo portfolio.
+      // Antes esto sólo apagaba el spinner y el dueño no se enteraba de nada.
       setConnectingId(null);
+      setActionError(err);
+      return;
     }
+    router.refresh();
   }
 
   if (done) {
@@ -174,31 +275,53 @@ function BusinessStep({ done, businessId }: { done: boolean; businessId: string 
   }
 
   if (loadError) {
-    return <p className="text-sm text-red-500">No se pudieron cargar tus portfolios de Meta. Recargá la página.</p>;
+    return <ErrorDePaso mensaje={loadError} onReintentar={reintentar} />;
   }
 
   if (!businesses) {
     return <div className="flex items-center gap-2 text-sm text-slate-400"><Loader2 className="h-4 w-4 animate-spin" /> Cargando portfolios…</div>;
   }
 
+  // Sin portfolio no hay catálogo posible: es la pared con la que más se choca
+  // la gente, así que en vez de un renglón gris va explicado y con el link bien
+  // visible. Antes decía "no encontramos ninguno" y quedaba ahí, sin decir qué
+  // es un portfolio ni por qué hace falta.
   if (businesses.length === 0) {
     return (
-      <div>
-        <p className="text-sm text-slate-500 mb-3">No encontramos ningún portfolio comercial en tu cuenta de Meta.</p>
-        <a
-          href="https://business.facebook.com/overview"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 text-sm font-semibold text-indigo-600 hover:text-indigo-700"
-        >
-          Crear uno en Meta Business <ExternalLink className="h-3.5 w-3.5" />
-        </a>
+      <div className="rounded-lg border border-amber-200 bg-amber-50/70 px-4 py-4">
+        <div className="flex items-start gap-2.5">
+          <AlertCircle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+          <div className="min-w-0">
+            <p className="text-sm font-bold text-amber-900">Todavía no tenés un portfolio comercial</p>
+            <p className="text-xs text-amber-900/80 mt-1.5 leading-relaxed">
+              Es la cuenta gratuita donde Meta guarda tu negocio: tu página, tus catálogos y tus
+              anuncios. Sin uno no se puede crear el catálogo. Se hace en dos minutos y es gratis.
+            </p>
+            <div className="flex flex-wrap items-center gap-3 mt-3">
+              <a
+                href="https://business.facebook.com/overview"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold px-4 py-2 rounded-md transition-colors"
+              >
+                Crear mi portfolio en Meta <ExternalLink className="h-3 w-3" />
+              </a>
+              <button
+                onClick={reintentar}
+                className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-800 hover:text-amber-900"
+              >
+                <RefreshCw className="h-3 w-3" /> Ya lo creé, buscar de nuevo
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
     <div>
+      {actionError && <AvisoError mensaje={actionError} />}
       <p className="text-sm text-slate-500 mb-3">Elegí a qué portfolio comercial pertenece tu catálogo.</p>
       <div className="space-y-2">
         {businesses.map((b) => (
@@ -222,35 +345,47 @@ function BusinessStep({ done, businessId }: { done: boolean; businessId: string 
 function CatalogStep({ done, catalogId }: { done: boolean; catalogId: string | null }) {
   const router = useRouter();
   const [catalogs, setCatalogs] = useState<Catalog[] | null>(null);
-  const [loadError, setLoadError] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("");
   const [changing, setChanging] = useState(false);
+  const [intento, setIntento] = useState(0);
 
   const picking = !done || changing;
 
+  function reintentar() {
+    setCatalogs(null);
+    setLoadError(null);
+    setIntento((n) => n + 1);
+  }
+
   useEffect(() => {
     if (!picking) return;
+    let cancelado = false;
     fetch("/api/facebook/catalogs")
-      .then((r) => (r.ok ? r.json() : Promise.reject()))
-      .then((d) => setCatalogs(d.catalogs ?? []))
-      .catch(() => setLoadError(true));
-  }, [picking]);
+      .then(async (r) => {
+        const d = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(d.error ?? "No pudimos traer tus catálogos de Meta.");
+        return d;
+      })
+      .then((d) => { if (!cancelado) setCatalogs(d.catalogs ?? []); })
+      .catch((e: Error) => { if (!cancelado) setLoadError(e.message); });
+    return () => { cancelado = true; };
+  }, [picking, intento]);
 
   async function choose(body: { catalogId: string } | { name: string }) {
     setBusyId("catalogId" in body ? body.catalogId : "nuevo");
-    const res = await fetch("/api/facebook/catalogs/connect", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    if (res.ok) {
-      setChanging(false);
-      router.refresh();
-    } else {
+    setActionError(null);
+    const err = await postJson("/api/facebook/catalogs/connect", body);
+    if (err) {
       setBusyId(null);
+      setActionError(err);
+      return;
     }
+    setChanging(false);
+    router.refresh();
   }
 
   if (!picking) {
@@ -260,7 +395,7 @@ function CatalogStep({ done, catalogId }: { done: boolean; catalogId: string | n
           Catálogo conectado{catalogId ? <> (ID: <span className="font-mono">{catalogId}</span>)</> : ""}.
         </p>
         <button
-          onClick={() => { setLoadError(false); setChanging(true); }}
+          onClick={() => { setCatalogs(null); setLoadError(null); setChanging(true); }}
           className="text-xs font-semibold text-indigo-600 hover:text-indigo-700 shrink-0"
         >
           Cambiar
@@ -270,7 +405,7 @@ function CatalogStep({ done, catalogId }: { done: boolean; catalogId: string | n
   }
 
   if (loadError) {
-    return <p className="text-sm text-red-500">No se pudieron cargar tus catálogos de Meta. Recargá la página.</p>;
+    return <ErrorDePaso mensaje={loadError} onReintentar={reintentar} />;
   }
 
   if (!catalogs) {
@@ -279,6 +414,7 @@ function CatalogStep({ done, catalogId }: { done: boolean; catalogId: string | n
 
   return (
     <div>
+      {actionError && <AvisoError mensaje={actionError} />}
       <p className="text-sm text-slate-500 mb-3">
         {catalogs.length > 0
           ? "Elegí el catálogo de productos donde vamos a sincronizar tu tienda."
@@ -396,48 +532,20 @@ function catalogUrl(catalogId: string | null) {
 function FeedStep({ done, catalogId }: { done: boolean; catalogId: string | null }) {
   const router = useRouter();
   const [connecting, setConnecting] = useState(false);
-  const [error, setError] = useState(false);
-  const [pendingReview, setPendingReview] = useState(false);
+  // `null` = sin error. El texto viene del backend porque distingue entre "hay
+  // que reconectar la cuenta" y una falla cualquiera de la Graph API.
+  const [error, setError] = useState<string | null>(null);
 
   async function connectFeed() {
     setConnecting(true);
-    setError(false);
-    setPendingReview(false);
-    const res = await fetch("/api/facebook/feed/connect", { method: "POST" });
-    const data = await res.json().catch(() => ({}));
-    if (res.ok && data.pendingReview) {
-      // Catálogo creado OK; el feed programado se activa cuando Meta apruebe el
-      // acceso avanzado (App Review). No es un error — se muestra como pendiente.
-      setPendingReview(true);
+    setError(null);
+    const err = await postJson("/api/facebook/feed/connect");
+    if (err) {
+      setError(err);
       setConnecting(false);
-    } else if (res.ok) {
-      router.refresh();
-    } else {
-      setError(true);
-      setConnecting(false);
+      return;
     }
-  }
-
-  if (pendingReview) {
-    return (
-      <div className="flex items-start gap-2.5 bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-3">
-        <CheckCircle className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
-        <div>
-          <p className="text-sm font-semibold text-emerald-800">¡Todo listo!</p>
-          <p className="text-sm text-emerald-700 mt-0.5">
-            La sincronización automática de tus productos se activará cuando Meta termine de revisar tu tienda (suele tardar unos días). No tenés que hacer nada más — te vamos avisando.
-          </p>
-          <a
-            href={catalogUrl(catalogId)}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 mt-2 text-sm font-semibold text-emerald-800 hover:text-emerald-900"
-          >
-            Ver mi catálogo en Meta <ExternalLink className="h-3.5 w-3.5" />
-          </a>
-        </div>
-      </div>
-    );
+    router.refresh();
   }
 
   if (done) {
@@ -461,7 +569,7 @@ function FeedStep({ done, catalogId }: { done: boolean; catalogId: string | null
       <p className="text-sm text-slate-500 mb-4">
         Último paso: enviamos tus productos al catálogo que elegiste, con una actualización diaria. Meta puede tardar unas horas en procesarlo y, según tu país, pedirte completar datos fiscales para activar la pestaña de Tienda.
       </p>
-      {error && <p className="text-sm text-red-500 mb-3">No se pudo activar la sincronización. Intentá de nuevo.</p>}
+      {error && <AvisoError mensaje={error} />}
       <button
         onClick={connectFeed}
         disabled={connecting}

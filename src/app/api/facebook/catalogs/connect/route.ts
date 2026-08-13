@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth-session";
 import { prisma } from "@/lib/prisma";
-import { listOwnedCatalogs, createCatalog, assignCatalogToUser, decryptToken } from "@/lib/facebook";
+import {
+  listOwnedCatalogs, createCatalog, assignCatalogToUser, decryptToken,
+  traducirErrorGraph, dentroDelTopeGraph,
+} from "@/lib/facebook";
+
+// Meta corta los nombres largos igual; el techo es para no mandarle basura y
+// para que un campo sin límite no sea una vía de abuso barata.
+const MAX_NOMBRE = 100;
 
 // POST /api/facebook/catalogs/connect  { catalogId } | { name }
 // `catalogId`: usa un catálogo que el dueño eligió de la lista.
@@ -10,9 +17,13 @@ export async function POST(req: NextRequest) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
+  if (!(await dentroDelTopeGraph(user.id))) {
+    return NextResponse.json({ error: "Demasiados intentos seguidos. Esperá un minuto." }, { status: 429 });
+  }
+
   const body = await req.json().catch(() => ({}));
   const catalogId = typeof body.catalogId === "string" ? body.catalogId.trim() : "";
-  const name = typeof body.name === "string" ? body.name.trim() : "";
+  const name = typeof body.name === "string" ? body.name.trim().slice(0, MAX_NOMBRE) : "";
   if (!catalogId && !name) {
     return NextResponse.json({ error: "Elegí un catálogo o poné un nombre para crear uno" }, { status: 400 });
   }
@@ -68,6 +79,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, catalog: chosen });
   } catch (err) {
     console.error("Facebook /catalogs/connect error:", err);
-    return NextResponse.json({ error: "No se pudo conectar el catálogo" }, { status: 502 });
+    const { error, status } = traducirErrorGraph(err, "catalogos");
+    return NextResponse.json({ error }, { status });
   }
 }

@@ -1,13 +1,17 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth-session";
 import { prisma } from "@/lib/prisma";
-import { listOwnedBusinesses, decryptToken } from "@/lib/facebook";
+import { listOwnedBusinesses, decryptToken, traducirErrorGraph, dentroDelTopeGraph } from "@/lib/facebook";
 
 // GET /api/facebook/business
 // Lista los Business Portfolios de Meta del dueño de tienda ya conectado por OAuth.
 export async function GET() {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+
+  if (!(await dentroDelTopeGraph(user.id))) {
+    return NextResponse.json({ error: "Demasiados intentos seguidos. Esperá un minuto." }, { status: 429 });
+  }
 
   const store = await prisma.store.findUnique({
     where: { ownerId: user.id },
@@ -25,6 +29,7 @@ export async function GET() {
     return NextResponse.json({ businesses: data });
   } catch (err) {
     console.error("Facebook /business error:", err);
-    return NextResponse.json({ error: "No se pudo obtener los portfolios de Meta" }, { status: 502 });
+    const { error, status } = traducirErrorGraph(err, "portfolios");
+    return NextResponse.json({ error }, { status });
   }
 }

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth-session";
 import { prisma } from "@/lib/prisma";
-import { createProductFeed, decryptToken } from "@/lib/facebook";
+import { createProductFeed, decryptToken, dentroDelTopeGraph } from "@/lib/facebook";
 import { PUBLIC_APP_URL } from "@/lib/site";
 
 // POST /api/facebook/feed/connect
@@ -9,6 +9,10 @@ import { PUBLIC_APP_URL } from "@/lib/site";
 export async function POST() {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+
+  if (!(await dentroDelTopeGraph(user.id))) {
+    return NextResponse.json({ error: "Demasiados intentos seguidos. Esperá un minuto." }, { status: 429 });
+  }
 
   const store = await prisma.store.findUnique({
     where: { ownerId: user.id },
@@ -34,14 +38,18 @@ export async function POST() {
     return NextResponse.json({ ok: true, feedId: feed.id });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    // "(#200) Permissions error": Meta bloquea registrar el feed programado
-    // mientras la app está en "Acceso estándar", es decir ANTES de que la
-    // Revisión de la app apruebe el acceso avanzado a catalog_management. El
-    // catálogo ya quedó creado; el feed se activa solo cuando Meta aprueba —
-    // no es un error del dueño, así que se devuelve como "pendiente de revisión".
+    // "(#200) Permissions error" solía significar "todavía no nos aprobaron el
+    // acceso avanzado a catalog_management", y se devolvía como pendiente. Meta
+    // lo aprobó el 12/08/2026, así que ese camino ya no existe: un #200 ahora es
+    // un permiso de verdad faltante — token vencido, el dueño revocó el acceso
+    // desde Facebook, o perdió el control del catálogo. Devolverlo como "todo
+    // listo" dejaba al dueño creyendo que sincronizaba cuando no sincronizaba nada.
     if (/#200|Permissions error/i.test(msg)) {
-      console.warn("Facebook /feed/connect: feed pendiente del acceso avanzado de Meta (#200)");
-      return NextResponse.json({ pendingReview: true });
+      console.error("Facebook /feed/connect: permiso rechazado por Meta (#200)", msg);
+      return NextResponse.json(
+        { error: "Facebook rechazó el permiso. Desconectá tu cuenta más arriba y volvé a conectarla." },
+        { status: 403 },
+      );
     }
     console.error("Facebook /feed/connect error:", err);
     return NextResponse.json({ error: "No se pudo conectar el catálogo con tu feed de productos" }, { status: 502 });

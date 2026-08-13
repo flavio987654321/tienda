@@ -1,4 +1,5 @@
 import { encryptIfNeeded, decryptIfNeeded } from "@/lib/crypto";
+import { checkRateLimitConRespaldo } from "@/lib/rate-limit";
 
 const GRAPH_VERSION = "v21.0";
 const GRAPH_URL = `https://graph.facebook.com/${GRAPH_VERSION}`;
@@ -132,3 +133,83 @@ export async function createProductFeed(token: string, catalogId: string, feedUr
 // Cifrar y descifrar tokens (reutiliza la crypto existente del proyecto)
 export const encryptToken = encryptIfNeeded;
 export const decryptToken = decryptIfNeeded;
+
+/* ── Errores de la Graph API en cristiano ───────────────────────────────────
+   Las pantallas mostraban siempre "No se pudieron cargar tus catálogos de Meta.
+   Recargá la página", que además de no ser cierto (recargar no arregla nada si
+   falta un permiso) escondía la causa real. Como el wizard se traba justo ahí,
+   el dueño no tiene forma de saber si le falta un rol en Meta Business, si se
+   le venció el token, o si de verdad fue un problema de red.
+
+   Solo traducimos los errores que tienen una acción concreta del otro lado.
+   El resto cae en el genérico, y el mensaje crudo de Meta queda en el log. */
+
+/* ── Tope de llamadas a la Graph API ────────────────────────────────────────
+   Ninguna ruta de /api/facebook tenía tope. Son endpoints con sesión, así que
+   no los puede tocar cualquiera, pero cada llamada consume cuota de la app
+   contra Meta — una sola cuota compartida por TODAS las tiendas. Un dueño
+   martillando "Reintentar" (o un script con su sesión) se come la cuota de
+   todos, y Meta responde cortando la app entera, no a esa tienda.
+
+   El tope va por usuario, no por IP: la sesión ya identifica a la persona, y
+   por IP se penalizaría a dos dueños atrás del mismo NAT.
+
+   30 por minuto es holgado para uso humano — el wizard hace 1 o 2 llamadas por
+   paso — y corta cualquier bucle. */
+const LIMITE_GRAPH = 30;
+const VENTANA_GRAPH_MS = 60_000;
+
+export async function dentroDelTopeGraph(userId: string): Promise<boolean> {
+  const { permitido } = await checkRateLimitConRespaldo(
+    `fb-graph:${userId}`,
+    LIMITE_GRAPH,
+    VENTANA_GRAPH_MS,
+    { limiteFallback: LIMITE_GRAPH, limiteFallbackGlobal: 300 },
+  );
+  return permitido;
+}
+
+export type ContextoGraph = "portfolios" | "catalogos";
+
+export function traducirErrorGraph(err: unknown, contexto: ContextoGraph): { error: string; status: number } {
+  const msg = err instanceof Error ? err.message : String(err);
+
+  // Token vencido, o el dueño le sacó el acceso a la app desde Facebook.
+  if (/expired|Session has been invalidated|Error validating access token/i.test(msg)) {
+    return {
+      error: "Tu conexión con Facebook venció. Desconectá tu cuenta más arriba y volvé a conectarla.",
+      status: 401,
+    };
+  }
+
+  // La cuenta entró bien pero no tiene el rol necesario sobre ese portfolio.
+  // Es el caso más común y el más confuso: la conexión "anduvo", pero Meta no
+  // deja listar nada porque la persona no es administradora del portfolio.
+  // `#200\b` y no `#200`: sin el borde también matchea #2000 y #2001, que son
+  // errores distintos de Meta.
+  if (/#200\b|Permissions error|do(es)? not have permission|requires .* permission/i.test(msg)) {
+    return {
+      error:
+        contexto === "catalogos"
+          ? "Tu cuenta de Facebook no tiene permiso para administrar catálogos en este portfolio comercial. Entrá a Meta Business, date acceso de administrador sobre el portfolio, y volvé a intentar."
+          : "Tu cuenta de Facebook no tiene permiso para ver portfolios comerciales. Revisá en Meta Business que seas administradora del portfolio.",
+      status: 403,
+    };
+  }
+
+  // El portfolio se borró, o dejó de estar accesible para esta cuenta.
+  if (/#803\b|does not exist|cannot be loaded|Unsupported get request/i.test(msg)) {
+    return {
+      error: "El portfolio comercial que elegiste ya no está disponible para tu cuenta. Elegí otro más arriba.",
+      status: 404,
+    };
+  }
+
+  return {
+    error:
+      contexto === "catalogos"
+        ? "No pudimos traer tus catálogos de Meta. Puede ser un problema momentáneo de Facebook."
+        : "No pudimos traer tus portfolios de Meta. Puede ser un problema momentáneo de Facebook.",
+    status: 502,
+  };
+}

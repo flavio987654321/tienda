@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth-session";
 import { prisma } from "@/lib/prisma";
-import { listOwnedCatalogs, decryptToken } from "@/lib/facebook";
+import { listOwnedCatalogs, decryptToken, traducirErrorGraph, dentroDelTopeGraph } from "@/lib/facebook";
 
 // GET /api/facebook/catalogs
 // Lista los catálogos de productos del portfolio comercial ya conectado, con su
@@ -9,6 +9,10 @@ import { listOwnedCatalogs, decryptToken } from "@/lib/facebook";
 export async function GET() {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+
+  if (!(await dentroDelTopeGraph(user.id))) {
+    return NextResponse.json({ error: "Demasiados intentos seguidos. Esperá un minuto." }, { status: 429 });
+  }
 
   const store = await prisma.store.findUnique({
     where: { ownerId: user.id },
@@ -29,6 +33,7 @@ export async function GET() {
     return NextResponse.json({ catalogs: data });
   } catch (err) {
     console.error("Facebook /catalogs error:", err);
-    return NextResponse.json({ error: "No se pudo obtener tus catálogos de Meta" }, { status: 502 });
+    const { error, status } = traducirErrorGraph(err, "catalogos");
+    return NextResponse.json({ error }, { status });
   }
 }
