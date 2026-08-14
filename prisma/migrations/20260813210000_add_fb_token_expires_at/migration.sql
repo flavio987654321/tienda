@@ -1,0 +1,27 @@
+-- Guarda cuándo vence el token de Meta de cada tienda.
+--
+-- ── El problema ──────────────────────────────────────────────────────────────
+-- El token de larga duración de Meta dura unos 60 días y NO se renueva solo.
+-- Guardábamos `fbConnectedAt` (cuándo se conectó) pero nunca el vencimiento, y
+-- nada en el proyecto lo vigilaba: el cron diario no tocaba Meta.
+--
+-- El resultado es una falla silenciosa de las peores: a los dos meses el token
+-- se muere, la pantalla de Aplicaciones sigue mostrando "Instalada" en verde
+-- porque ese cartel sale de `fbConnectedAt != null`, y el dueño se entera el día
+-- que entra al wizard y algo le falla. Puede pasar semanas creyendo que su
+-- catálogo sincroniza.
+--
+-- ── Por qué una columna y no dos ─────────────────────────────────────────────
+-- Se evaluó agregar también un "falló la renovación". No hace falta: si la fecha
+-- ya pasó, el token está muerto, y eso es todo lo que necesita saber la pantalla
+-- para avisar. Una columna que se puede derivar de otra es una columna que
+-- alguna vez va a quedar desincronizada.
+--
+-- Nullable a propósito: las tiendas ya conectadas no tienen este dato y no se
+-- puede inventar. El cron las trata como "vencimiento desconocido" y les fuerza
+-- una renovación, que es lo que devuelve la fecha real.
+--
+-- TIMESTAMP(3) para alinear con las otras ~115 columnas de fecha del proyecto
+-- (ver 20260811120000_alinear_fechas_newsletter_push).
+
+ALTER TABLE "Store" ADD COLUMN "fbTokenExpiresAt" TIMESTAMP(3);

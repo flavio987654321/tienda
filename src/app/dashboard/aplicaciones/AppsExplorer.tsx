@@ -2,13 +2,20 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Search, CheckCircle, ChevronRight, ChevronDown, Check } from "lucide-react";
+import { Search, CheckCircle, ChevronRight, ChevronDown, Check, AlertTriangle } from "lucide-react";
 import { APPS_REGISTRY, CATEGORY_LABELS, getAccent, type AppCategory } from "@/lib/apps/registry";
 import AppIcon from "@/components/apps/AppIcon";
 
 const INITIAL_VISIBLE = 6;
 
-export default function AppsExplorer({ installedById }: { installedById: Record<string, boolean> }) {
+export default function AppsExplorer({
+  installedById,
+  atencionById = {},
+}: {
+  installedById: Record<string, boolean>;
+  /** Instalada pero necesita que el dueño haga algo (ej: la conexión venció). */
+  atencionById?: Record<string, boolean>;
+}) {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<AppCategory | "todas">("todas");
   const [showAll, setShowAll] = useState(false);
@@ -58,6 +65,7 @@ export default function AppsExplorer({ installedById }: { installedById: Record<
           {visible.map((app) => {
             const accent = getAccent(app.id);
             const instalada = installedById[app.id];
+            const necesitaAtencion = atencionById[app.id];
             return (
               <Link
                 key={app.id}
@@ -76,11 +84,15 @@ export default function AppsExplorer({ installedById }: { installedById: Record<
                       <h3 className="text-sm font-bold text-slate-900 leading-tight">{app.name}</h3>
                       <p className="text-[11px] text-slate-400 mt-0.5">{app.providerName}</p>
                     </div>
-                    {instalada && (
+                    {necesitaAtencion ? (
+                      <span className="inline-flex items-center gap-1 shrink-0 text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5">
+                        <AlertTriangle className="h-2.5 w-2.5" /> Reconectar
+                      </span>
+                    ) : instalada ? (
                       <span className="inline-flex items-center gap-1 shrink-0 text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-0.5">
                         <CheckCircle className="h-2.5 w-2.5" /> Instalada
                       </span>
-                    )}
+                    ) : null}
                   </div>
 
                   <p className="text-xs text-slate-500 mt-3.5 leading-relaxed line-clamp-3">

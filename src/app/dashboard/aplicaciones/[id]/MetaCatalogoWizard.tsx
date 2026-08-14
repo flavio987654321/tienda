@@ -16,6 +16,8 @@ type Props = {
   fbCatalogId: string | null;
   fbFeedId: string | null;
   fbStatus?: "connected" | "error";
+  /** El token de Meta ya venció: los pasos de abajo no van a funcionar. */
+  fbVencido?: boolean;
 };
 
 type StepStatus = "done" | "active" | "locked";
@@ -53,7 +55,7 @@ function AvisoError({ mensaje }: { mensaje: string }) {
   );
 }
 
-export default function MetaCatalogoWizard({ fbConnected, fbBusinessId, fbCatalogId, fbFeedId, fbStatus }: Props) {
+export default function MetaCatalogoWizard({ fbConnected, fbBusinessId, fbCatalogId, fbFeedId, fbStatus, fbVencido }: Props) {
   const step1Done = fbConnected;
   const step2Done = !!fbBusinessId;
   const step3Done = step2Done && !!fbCatalogId;
@@ -86,6 +88,22 @@ export default function MetaCatalogoWizard({ fbConnected, fbBusinessId, fbCatalo
         <div className="flex items-center gap-2.5 bg-red-50 border border-red-200 rounded-lg px-4 py-3">
           <XCircle className="h-4 w-4 text-red-500 shrink-0" />
           <p className="text-sm font-semibold text-red-800">Hubo un error al conectar. Intentá de nuevo.</p>
+        </div>
+      )}
+
+      {/* Arriba de todo: si el token venció, cualquier paso de abajo va a fallar
+          con un error de permisos que no explica nada. */}
+      {fbVencido && (
+        <div className="flex items-start gap-2.5 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3.5">
+          <AlertCircle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-bold text-amber-900">Tu conexión con Facebook venció</p>
+            <p className="text-sm text-amber-900/80 mt-0.5 leading-relaxed">
+              Meta corta el permiso cada dos meses por seguridad. Tu catálogo y tus productos
+              siguen ahí — solo hay que volver a conectar la cuenta para que se sigan
+              actualizando. Desconectá abajo y conectá de nuevo.
+            </p>
+          </div>
         </div>
       )}
 

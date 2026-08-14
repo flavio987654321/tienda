@@ -46,6 +46,7 @@ export async function POST() {
       fbCatalogId:   null,
       fbFeedId:      null,
       fbConnectedAt: null,
+      fbTokenExpiresAt: null,
     },
   });
 

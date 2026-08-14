@@ -35,7 +35,7 @@ export default async function AplicacionesPage() {
 
   const store = await prisma.store.findUnique({
     where: { ownerId: user.id },
-    select: { id: true, fbConnectedAt: true, fbWabaId: true, gsEnabledAt: true, storeConfig: true },
+    select: { id: true, fbConnectedAt: true, fbWabaId: true, fbTokenExpiresAt: true, gsEnabledAt: true, storeConfig: true },
   });
 
   const [pendingAffiliateCount, lowStockCount] = store
@@ -58,6 +58,17 @@ export default async function AplicacionesPage() {
     "google-shopping": !!store?.gsEnabledAt,
   };
   const instaladas = APPS_REGISTRY.filter((a) => installedById[a.id]).length;
+
+  // La tarjeta decía "Instalada" en verde aunque el token de Meta estuviera
+  // vencido hace semanas, porque ese cartel salía de `fbConnectedAt != null`.
+  // Con esto la vidriera avisa sin que haya que entrar a la ficha.
+  const ahora = new Date();
+  const atencionById: Record<string, boolean> = {
+    "meta-catalogo":
+      !!store?.fbConnectedAt &&
+      !!store.fbTokenExpiresAt &&
+      store.fbTokenExpiresAt <= ahora,
+  };
 
   return (
     <DashboardLayout
@@ -142,7 +153,7 @@ export default async function AplicacionesPage() {
         {/* Librería */}
         <div className="px-6 py-8">
           <div className="max-w-3xl mx-auto">
-            <AppsExplorer installedById={installedById} />
+            <AppsExplorer installedById={installedById} atencionById={atencionById} />
           </div>
         </div>
       </div>

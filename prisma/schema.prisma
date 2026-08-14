@@ -266,6 +266,10 @@ model Store {
   fbFeedId              String?
   fbWabaId              String?
   fbConnectedAt         DateTime?
+  // Cuándo vence `fbAccessToken`. Los de larga duración de Meta duran ~60 días y
+  // no se renuevan solos: sin esta fecha no había forma de saber que una conexión
+  // estaba muerta, y la pantalla seguía diciendo "Instalada" en verde.
+  fbTokenExpiresAt      DateTime?
   // Google Analytics — vía OAuth (Google Analytics Admin API, refresh token cifrado)
   gaRefreshToken        String?
   gaAccountId           String?

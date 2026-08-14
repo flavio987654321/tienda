@@ -4,7 +4,7 @@ import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowLeft, ArrowDown, CheckCircle, Check, ChevronDown, ListChecks, ExternalLink,
-  RefreshCw, Tag, Store, Megaphone,
+  RefreshCw, Tag, Store, Megaphone, AlertTriangle,
 } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { getApp, getAccent, CATEGORY_LABELS, type UsageIcon } from "@/lib/apps/registry";
@@ -58,10 +58,19 @@ export default async function AppDetailPage({
       fbCatalogId: true,
       fbFeedId: true,
       fbWabaId: true,
+      fbTokenExpiresAt: true,
       gaConnectedAt: true,
       gsEnabledAt: true,
     },
   });
+
+  // El token de Meta dura ~60 días. Si se pasó, todos los pasos del wizard van a
+  // fallar con un error de permisos que no explica nada, así que hay que decirlo
+  // de entrada — y sobre todo, dejar de mostrar "Instalada" en verde.
+  const metaVencido =
+    !!store?.fbConnectedAt &&
+    !!store.fbTokenExpiresAt &&
+    store.fbTokenExpiresAt <= new Date();
 
   const [pendingAffiliateCount, lowStockCount] = store
     ? await Promise.all([
@@ -163,6 +172,10 @@ export default async function AppDetailPage({
                     {app.comingSoon ? (
                       <span className="inline-flex items-center gap-2 bg-amber-400/10 border border-amber-400/30 text-amber-300 font-bold px-6 py-2.5 rounded-lg text-sm">
                         Próximamente
+                      </span>
+                    ) : metaVencido && app.id === "meta-catalogo" ? (
+                      <span className="inline-flex items-center gap-2 bg-amber-400/10 border border-amber-400/30 text-amber-300 font-bold px-6 py-2.5 rounded-lg text-sm">
+                        <AlertTriangle className="h-4 w-4" /> Hay que reconectar
                       </span>
                     ) : installed ? (
                       <span className="inline-flex items-center gap-2 bg-emerald-400/10 border border-emerald-400/30 text-emerald-300 font-bold px-6 py-2.5 rounded-lg text-sm">
@@ -292,6 +305,7 @@ export default async function AppDetailPage({
                     fbCatalogId={store?.fbCatalogId ?? null}
                     fbFeedId={store?.fbFeedId ?? null}
                     fbStatus={fb === "connected" ? "connected" : fb === "error" ? "error" : undefined}
+                    fbVencido={metaVencido}
                   />
                 )}
                 {app.id === "google-analytics" && (

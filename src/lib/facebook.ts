@@ -55,8 +55,29 @@ async function graphDelete<T>(path: string, token: string): Promise<T> {
   return data as T;
 }
 
+/** `expires_in` viene en segundos. A veces Meta no lo manda: ver `vencimientoDe`. */
+export type TokenDeMeta = { access_token: string; expires_in?: number };
+
+/** Los de larga duración duran 60 días. Es el valor que usa Meta cuando no dice otra cosa. */
+const DIAS_TOKEN_LARGO = 60;
+
+/**
+ * Cuándo vence un token, a partir de lo que contestó Meta.
+ *
+ * `expires_in` no siempre viene —para algunas cuentas Meta devuelve un token sin
+ * vencimiento declarado— así que se cae a los 60 días de tabla. Preferimos una
+ * fecha conservadora antes que ninguna: si sobra, el cron renueva un poco antes
+ * de tiempo y no pasa nada; si falta, la conexión se muere sin que nadie mire.
+ */
+export function vencimientoDe(token: TokenDeMeta, desde = new Date()): Date {
+  const segundos = typeof token.expires_in === "number" && token.expires_in > 0
+    ? token.expires_in
+    : DIAS_TOKEN_LARGO * 24 * 60 * 60;
+  return new Date(desde.getTime() + segundos * 1000);
+}
+
 // Llamadas al endpoint de intercambio de tokens — no llevan `access_token` (todavía no hay uno).
-async function oauthTokenRequest(params: Record<string, string>): Promise<{ access_token: string }> {
+async function oauthTokenRequest(params: Record<string, string>): Promise<TokenDeMeta> {
   const res = await fetch(`${GRAPH_URL}/oauth/access_token?${new URLSearchParams(params).toString()}`);
   const data = await res.json();
   if (!res.ok) throw new Error(data?.error?.message ?? "Error al intercambiar el token de Facebook");
@@ -64,7 +85,7 @@ async function oauthTokenRequest(params: Record<string, string>): Promise<{ acce
 }
 
 // Intercambia el `code` de la redirección OAuth por un access token de corta duración.
-export async function exchangeOAuthCode(code: string): Promise<{ access_token: string }> {
+export async function exchangeOAuthCode(code: string): Promise<TokenDeMeta> {
   return oauthTokenRequest({
     client_id: FB_APP_ID,
     client_secret: FB_APP_SECRET,
@@ -73,13 +94,22 @@ export async function exchangeOAuthCode(code: string): Promise<{ access_token: s
   });
 }
 
-// Cambia el token corto por uno de larga duración (~60 días).
-export async function getLongLivedToken(shortToken: string): Promise<{ access_token: string }> {
+/**
+ * Cambia un token por uno de larga duración (~60 días).
+ *
+ * Sirve para las dos cosas: convertir el corto que sale del OAuth, y RENOVAR uno
+ * largo que está por vencer — Meta acepta el mismo intercambio con un token
+ * largo todavía vivo y devuelve otro con la cuenta de días desde cero. Por eso
+ * el cron puede mantener la conexión al día sin molestar al dueño, siempre que
+ * llegue antes del vencimiento. Después ya no hay vuelta: hay que reconectar a
+ * mano.
+ */
+export async function getLongLivedToken(token: string): Promise<TokenDeMeta> {
   return oauthTokenRequest({
     grant_type: "fb_exchange_token",
     client_id: FB_APP_ID,
     client_secret: FB_APP_SECRET,
-    fb_exchange_token: shortToken,
+    fb_exchange_token: token,
   });
 }
 

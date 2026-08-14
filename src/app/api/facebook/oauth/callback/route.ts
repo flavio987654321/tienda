@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
-import { exchangeOAuthCode, getLongLivedToken, getMe, encryptToken } from "@/lib/facebook";
+import { exchangeOAuthCode, getLongLivedToken, getMe, encryptToken, vencimientoDe } from "@/lib/facebook";
 import { SITE_URL } from "@/lib/site";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "";
@@ -100,16 +100,20 @@ export async function GET(req: NextRequest) {
     if (!shortToken.access_token) throw new Error("Sin access token");
 
     const longToken = await getLongLivedToken(shortToken.access_token);
-    const accessToken = longToken.access_token ?? shortToken.access_token;
+    // Si el intercambio a largo falló pero el corto sirve, se guarda ese: dura
+    // un par de horas, alcanza para terminar el wizard, y el cron lo renueva.
+    const conseguido = longToken.access_token ? longToken : shortToken;
+    const accessToken = conseguido.access_token;
 
     const me = await getMe(accessToken);
 
     await prisma.store.update({
       where: { id: sessionStore.id },
       data: {
-        fbAccessToken: encryptToken(accessToken),
-        fbUserId:      me.id,
-        fbConnectedAt: new Date(),
+        fbAccessToken:    encryptToken(accessToken),
+        fbUserId:         me.id,
+        fbConnectedAt:    new Date(),
+        fbTokenExpiresAt: vencimientoDe(conseguido),
       },
     });
 

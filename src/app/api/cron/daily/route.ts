@@ -21,6 +21,7 @@ import {
   getArgentinaDayKey, getUpcomingDates, sumarDiasCalendario, diasEntreDias,
 } from "@/lib/fechas-comerciales";
 import { despues } from "@/lib/despues";
+import { renovarTokensPorVencer } from "@/lib/facebook-token";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "";
 
@@ -63,6 +64,16 @@ export async function GET(req: NextRequest) {
     });
   }
   result.publishedProducts = scheduledProducts.length;
+
+  // ── 1 bis. RENOVAR TOKENS DE META ──────────────────────────────────────────
+  // Va arriba y no al final por lo que dice el comentario de `maxDuration`: si
+  // el cron se corta, lo que no corre es lo de abajo. Un token vencido deja una
+  // tienda sin sincronizar durante días sin que nadie se entere, así que no
+  // puede quedar en la parte que se pierde.
+  //
+  // Es barato igual: sólo toca las que vencen dentro de 10 días, con techo de 25
+  // por corrida. Hoy son cero o una.
+  result.metaTokens = await renovarTokensPorVencer(now);
 
   // ── 2. CARRITOS ABANDONADOS ────────────────────────────────────────────────
   const minAge = new Date(now.getTime() - 1 * 60 * 60 * 1000);
