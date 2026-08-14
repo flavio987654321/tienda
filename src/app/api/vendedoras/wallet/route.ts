@@ -5,7 +5,7 @@ import { getCurrentUser } from "@/lib/auth-session";
 import { encryptIfNeeded, decryptIfNeeded } from "@/lib/crypto";
 import { sendWithdrawalRequestEmail } from "@/lib/email";
 import { createNotification } from "@/lib/notifications";
-import { verifyOtpToken } from "@/lib/otp-token";
+import { otpTokenVigente, quemarOtpToken } from "@/lib/otp-token";
 import { despues } from "@/lib/despues";
 
 const MIN_WITHDRAWAL = 100;
@@ -136,7 +136,7 @@ export async function PUT(req: NextRequest) {
   if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
   const otpToken = req.headers.get("x-otp-token");
-  if (!verifyOtpToken(otpToken, user.id)) {
+  if (!(await otpTokenVigente(otpToken, user.id))) {
     return NextResponse.json({ error: "Se requiere verificación de identidad. Solicitá un código por email.", code: "OTP_REQUIRED" }, { status: 403 });
   }
 
@@ -180,6 +180,9 @@ export async function PUT(req: NextRequest) {
     },
   });
 
+  // Datos guardados: el token ya cumplió y no sirve para una segunda operación.
+  await quemarOtpToken(user.id, otpToken!);
+
   return NextResponse.json({
     ok: true,
     bankLocked: true,
@@ -193,7 +196,7 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
   const otpToken = req.headers.get("x-otp-token");
-  if (!verifyOtpToken(otpToken, user.id)) {
+  if (!(await otpTokenVigente(otpToken, user.id))) {
     return NextResponse.json({ error: "Se requiere verificación de identidad. Solicitá un código por email.", code: "OTP_REQUIRED" }, { status: 403 });
   }
 
@@ -369,6 +372,11 @@ export async function POST(req: NextRequest) {
     }
     throw e;
   }
+
+  /* Recién acá, con el retiro ya escrito. Si hubiera ido antes del `try`, un
+     "saldo insuficiente" —el error más común de esta pantalla— le costaría a la
+     persona pedir otro código por mail sólo para corregir el monto. */
+  await quemarOtpToken(userId, otpToken!);
 
   const storeNames = allocations.map((a) => a.storeName).join(" + ");
   const admin = await prisma.user.findFirst({ where: { role: "ADMIN" }, select: { id: true, email: true, name: true } });

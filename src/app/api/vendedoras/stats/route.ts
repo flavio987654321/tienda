@@ -2,10 +2,39 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
 import { ESTADOS_VENTA_CONFIRMADA_LISTA } from "@/lib/order-status";
+import { checkRateLimitConRespaldo } from "@/lib/rate-limit";
+
+const MAX_CONSULTAS = 20;
+const VENTANA_MS = 60_000;
 
 export async function GET() {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+
+  /* Esta pantalla es la más cara del panel: unas diez consultas POR TIENDA en la
+     que la persona esté afiliada, y una de ellas es SQL crudo agrupando por día.
+     No es un agujero de seguridad —cada quien ve lo suyo— pero es la puerta más
+     ancha que hay para hacerle doler la base a la aplicación entera, y la abre
+     cualquiera con una cuenta gratis y un `while (true)`.
+
+     Va por cuenta y no por IP: el costo lo genera la afiliación, no la red.
+
+     Con respaldo, porque acá no se paga nada por uso y quedarse sin la pantalla
+     de estadísticas durante una caída de Redis sería peor que dejar pasar de
+     más. Veinte por minuto es holgado para una persona —la pantalla hace una
+     sola consulta al abrirse— y corta en seco cualquier bucle. */
+  const { permitido } = await checkRateLimitConRespaldo(
+    `stats-afiliado:${user.id}`,
+    MAX_CONSULTAS,
+    VENTANA_MS,
+    { limiteFallback: MAX_CONSULTAS, limiteFallbackGlobal: 400 }
+  );
+  if (!permitido) {
+    return NextResponse.json(
+      { error: "Demasiadas consultas seguidas. Esperá un momento." },
+      { status: 429 }
+    );
+  }
 
   const affiliates = await prisma.affiliate.findMany({
     where: { userId: user.id },

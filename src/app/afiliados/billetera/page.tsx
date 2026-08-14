@@ -220,7 +220,9 @@ function OtpModal({ onVerified, onClose }: { onVerified: (token: string) => void
 
 // ── BankForm modal ────────────────────────────────────────────────────────────
 
-function BankForm({ otpToken, onClose, onSaved }: { otpToken: string; onClose: () => void; onSaved: () => void }) {
+function BankForm({ otpToken, onClose, onSaved, onTokenRechazado }: {
+  otpToken: string; onClose: () => void; onSaved: () => void; onTokenRechazado: () => void;
+}) {
   const [cbu, setCbu] = useState("");
   const [alias, setAlias] = useState("");
   const [cuil, setCuil] = useState("");
@@ -240,6 +242,7 @@ function BankForm({ otpToken, onClose, onSaved }: { otpToken: string; onClose: (
     });
     const data = await res.json();
     setSaving(false);
+    if (data?.code === "OTP_REQUIRED") { onTokenRechazado(); return; }
     if (!res.ok) { setError(data.error || "Error al guardar"); return; }
     onSaved();
   }
@@ -313,7 +316,8 @@ function BankForm({ otpToken, onClose, onSaved }: { otpToken: string; onClose: (
 
 // ── WithdrawModal ─────────────────────────────────────────────────────────────
 
-function WithdrawModal({ totalBalance, otpToken, onClose, onSuccess }: {
+function WithdrawModal({ totalBalance, otpToken, onClose, onSuccess, onTokenRechazado }: {
+  onTokenRechazado: () => void;
   totalBalance: number;
   otpToken: string;
   onClose: () => void;
@@ -336,6 +340,7 @@ function WithdrawModal({ totalBalance, otpToken, onClose, onSuccess }: {
     });
     const json = await res.json();
     setSubmitting(false);
+    if (json?.code === "OTP_REQUIRED") { onTokenRechazado(); return; }
     if (!res.ok) { setError(json.error || "Error al solicitar"); return; }
     onSuccess();
   }
@@ -435,6 +440,23 @@ export default function BilleteraPage() {
     setPendingAction(null);
     if (pendingAction === "bankform") setShowBankForm(true);
     else if (pendingAction === "withdraw") setShowWithdraw(true);
+  }
+
+  /* El servidor dice que el token no sirve más: se tira y se vuelve a pedir el
+     código, sin que la persona tenga que entender qué pasó.
+
+     Hace falta desde que el token se quema al usarse. El caso raro pero real:
+     la operación sale bien del lado del servidor y la respuesta se pierde en el
+     camino (se cortó el wifi justo). Acá quedaba un token guardado que ya no
+     vale, y como `getStoredOtpToken` sólo mira la fecha de vencimiento, cerrar
+     y volver a abrir devolvía el mismo token muerto. La pantalla quedaba
+     trabada media hora mostrando "solicitá un código" sin forma de solicitarlo. */
+  function onTokenRechazado(action: "bankform" | "withdraw") {
+    clearOtpToken();
+    setOtpToken(null);
+    setShowBankForm(false);
+    setShowWithdraw(false);
+    setPendingAction(action);
   }
 
   function loadData() {
@@ -745,10 +767,12 @@ export default function BilleteraPage() {
         )}
         {showBankForm && otpToken && (
           <BankForm otpToken={otpToken} onClose={() => setShowBankForm(false)}
+            onTokenRechazado={() => onTokenRechazado("bankform")}
             onSaved={() => { setShowBankForm(false); setOtpToken(""); clearOtpToken(); loadData(); }} />
         )}
         {showWithdraw && data && otpToken && (
           <WithdrawModal totalBalance={data.totalBalance} otpToken={otpToken} onClose={() => setShowWithdraw(false)}
+            onTokenRechazado={() => onTokenRechazado("withdraw")}
             onSuccess={() => { setShowWithdraw(false); setOtpToken(""); clearOtpToken(); loadData(); }} />
         )}
       </AnimatePresence>
