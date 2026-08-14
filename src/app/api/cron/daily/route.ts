@@ -22,6 +22,7 @@ import {
 } from "@/lib/fechas-comerciales";
 import { despues } from "@/lib/despues";
 import { renovarTokensPorVencer } from "@/lib/facebook-token";
+import { rechazoDeCron } from "@/lib/cron-auth";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "";
 
@@ -42,10 +43,8 @@ export const maxDuration = 60;
 type SnapshotItem = { name: string; price: number; qty: number; image?: string | null };
 
 export async function GET(req: NextRequest) {
-  const authHeader = req.headers.get("authorization");
-  if (process.env.CRON_SECRET && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const rechazo = rechazoDeCron(req);
+  if (rechazo) return rechazo;
 
   const now = new Date();
   const dayOfWeek = now.getUTCDay(); // 0=Dom, 1=Lun

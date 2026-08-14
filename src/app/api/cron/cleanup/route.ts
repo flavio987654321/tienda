@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { DIAS_RETENCION_VISITAS } from "@/lib/retencion";
+import { rechazoDeCron } from "@/lib/cron-auth";
 
 export async function GET(req: NextRequest) {
-  const authHeader = req.headers.get("authorization");
-  if (process.env.CRON_SECRET && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const rechazo = rechazoDeCron(req);
+  if (rechazo) return rechazo;
 
   return NextResponse.json(await limpiar());
 }
