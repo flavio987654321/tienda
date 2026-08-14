@@ -235,48 +235,61 @@ function VincularStep({ done }: { done: boolean }) {
       {error && <AvisoError mensaje={error} />}
 
       <p className="text-sm text-slate-500 mb-1">
-        Este último paso lo hacés vos, en el panel de Meta. Es una sola vez y son cuatro clics.
+        Este último paso lo hacés vos, del lado de Meta.
       </p>
       <p className="text-[11px] text-slate-400 mb-4 leading-relaxed">
         No lo podemos hacer desde acá: Meta le da ese permiso solo a las empresas que envían
         mensajes por WhatsApp, y nosotros armamos tu catálogo, no mandamos mensajes.
       </p>
 
-      <ol className="space-y-2.5 mb-4">
-        {[
-          "Abrí Meta Business Suite con el botón de abajo.",
-          "En el menú de la izquierda entrá a Cuentas y después a Cuentas de WhatsApp.",
-          "Elegí tu cuenta de WhatsApp y buscá la sección del catálogo.",
-          "Tocá “Elegir un catálogo” y seleccioná el que dice el nombre de tu tienda.",
-        ].map((texto, i) => (
-          <li key={i} className="flex items-start gap-2.5">
-            <span className="h-4 w-4 shrink-0 rounded-full bg-slate-900 text-white text-[9px] font-bold flex items-center justify-center mt-0.5">
-              {i + 1}
-            </span>
-            <span className="text-xs text-slate-600 leading-relaxed">{texto}</span>
-          </li>
-        ))}
-      </ol>
-
-      <div className="flex flex-wrap items-center gap-3">
-        <a
-          href="https://business.facebook.com/latest/settings/whatsapp_account"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 bg-[#25D366] hover:bg-[#1eb355] text-white font-semibold px-5 py-2.5 rounded-lg text-sm transition-colors"
-        >
-          Abrir Meta Business Suite <ExternalLink className="h-3.5 w-3.5" />
-        </a>
-        <button
-          onClick={() => cambiar("POST")}
-          disabled={guardando}
-          className="inline-flex items-center gap-1.5 border border-slate-300 hover:bg-slate-50 text-slate-700 font-semibold px-4 py-2.5 rounded-lg text-sm transition-colors disabled:opacity-50"
-        >
-          {guardando ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
-          Ya lo hice
-        </button>
+      <div className="rounded-lg border border-amber-200 bg-amber-50/70 px-4 py-3.5 mb-4">
+        <p className="text-xs text-amber-900 leading-relaxed">
+          <strong>Todavía no te damos el paso a paso.</strong> Dónde aparece la opción cambia según
+          cómo tengas configurada tu cuenta de WhatsApp, y hasta no confirmarlo en una cuenta real
+          preferimos no mandarte a buscar algo que capaz no está ahí. Abajo te dejamos los dos
+          lugares donde vive esto.
+        </p>
       </div>
+
+      <div className="space-y-2.5 mb-4">
+        <EnlaceMeta
+          href="https://business.facebook.com/commerce_manager"
+          titulo="Commerce Manager"
+          detalle="Acá vive el catálogo que te armamos, con todos tus productos."
+        />
+        <EnlaceMeta
+          href="https://business.facebook.com/latest/settings/whatsapp_account"
+          titulo="Tus cuentas de WhatsApp en Meta"
+          detalle="Acá figura el número que tenés conectado a tu negocio."
+        />
+      </div>
+
+      <button
+        onClick={() => cambiar("POST")}
+        disabled={guardando}
+        className="inline-flex items-center gap-1.5 border border-slate-300 hover:bg-slate-50 text-slate-700 font-semibold px-4 py-2.5 rounded-lg text-sm transition-colors disabled:opacity-50"
+      >
+        {guardando ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+        Ya lo vinculé
+      </button>
     </div>
+  );
+}
+
+function EnlaceMeta({ href, titulo, detalle }: { href: string; titulo: string; detalle: string }) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="flex items-start gap-3 rounded-lg border border-slate-200 px-4 py-3 hover:border-slate-300 hover:bg-slate-50 transition-colors"
+    >
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-semibold text-slate-800">{titulo}</p>
+        <p className="text-xs text-slate-500 leading-relaxed mt-0.5">{detalle}</p>
+      </div>
+      <ExternalLink className="h-3.5 w-3.5 text-slate-400 shrink-0 mt-0.5" />
+    </a>
   );
 }
 
