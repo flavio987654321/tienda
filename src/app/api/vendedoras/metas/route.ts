@@ -83,19 +83,32 @@ export async function PUT(req: NextRequest) {
   const body = await req.json();
   const month = body.month ?? currentMonth();
   const targetAmount = parseFloat(body.targetAmount);
-  const bonusRate = parseFloat(body.bonusRate);
 
   if (!targetAmount || targetAmount < 1000) {
     return NextResponse.json({ error: "La meta mínima es $1.000" }, { status: 400 });
   }
-  if (!bonusRate || bonusRate < 0.5 || bonusRate > 20) {
-    return NextResponse.json({ error: "El bonus debe estar entre 0.5% y 20%" }, { status: 400 });
-  }
 
+  /* `bonusRate` ya no se pide ni se actualiza, y se escribe en 0.
+   *
+   * Una meta prometía un porcentaje extra de comisión al que la superara, y ese
+   * extra NO lo acredita nadie: la columna se guardaba, se dibujaba en las dos
+   * pantallas y ahí terminaba. Prometer plata que no se paga es lo peor que
+   * puede hacer un panel de comisiones, y encima choca con los términos que el
+   * dueño acepta, que prohíben arreglar compensaciones por fuera de la
+   * plataforma.
+   *
+   * Para que el bonus exista de verdad hay que resolver antes de dónde sale la
+   * plata: la comisión normal se retiene de cada venta cuando entra el pago, y
+   * un premio de fin de mes no tiene venta de la cual retenerse. Eso es un
+   * mecanismo de cobro nuevo, no un campo más.
+   *
+   * La columna queda en la base —sigue siendo `Float` obligatorio, por eso el
+   * 0— para no migrar de ida y de vuelta si algún día se construye. Lo que se
+   * va es la promesa, no el lugar donde guardarla. */
   const goal = await prisma.affiliateGoal.upsert({
     where: { storeId_month: { storeId: store.id, month } },
-    create: { storeId: store.id, month, targetAmount, bonusRate },
-    update: { targetAmount, bonusRate },
+    create: { storeId: store.id, month, targetAmount, bonusRate: 0 },
+    update: { targetAmount },
   });
 
   return NextResponse.json({ goal });

@@ -1905,7 +1905,7 @@ export const ARTICULOS: Articulo[] = [
         t: "aviso",
         tono: "dato",
         texto:
-          "Si la tienda tiene una meta del mes, en tu panel ves cuánto falta. Esas metas suman un bonus arriba de tu comisión normal, así que un mes con meta cerca vale más que uno sin ella.",
+          "Si la tienda tiene una meta del mes, en tu panel ves cuánto te falta. No paga nada extra por llegar: sirve para saber si vas bien o venís flojo, que ya es bastante más de lo que sabe la mayoría.",
       },
       { t: "h", texto: "Nunca prometas lo que no controlás" },
       {
@@ -2064,7 +2064,7 @@ export const ARTICULOS: Articulo[] = [
     slug: "metas-y-ranking",
     titulo: "Metas y ranking",
     resumen:
-      "Las dos pantallas que te muestran contra qué estás compitiendo: un objetivo que paga extra y tu posición entre los demás.",
+      "Las dos pantallas que te muestran contra qué estás midiéndote: el objetivo del mes de cada tienda y tu posición entre los demás.",
     grupo: "vender",
     clase: "mecanica",
     rol: "afiliado",
@@ -2072,16 +2072,17 @@ export const ARTICULOS: Articulo[] = [
     actualizado: "2026-08-13",
     relacionados: ["vender-mas-como-afiliado", "cuando-cobras-una-comision"],
     cuerpo: [
-      { t: "h", texto: "Metas: plata extra por llegar" },
+      { t: "h", texto: "Metas: el objetivo del mes" },
       {
         t: "p",
         texto:
-          "Una tienda puede fijar un **objetivo de comisiones para el mes**. Si lo alcanzás, cobrás un porcentaje extra arriba de tu comisión normal.",
+          "Una tienda puede fijar un **objetivo de comisiones para el mes**. En tu pantalla ves cuánto llevás generado y cuánto te falta para llegar.",
       },
       {
-        t: "p",
+        t: "aviso",
+        tono: "ojo",
         texto:
-          "El objetivo y el extra los pone el dueño de cada tienda: el extra va de **0,5% a 20%**. En tu pantalla ves cuánto llevás, cuánto falta y qué porcentaje está en juego.",
+          "La meta es un objetivo, no un premio: llegar no te paga nada aparte. Lo que cobrás es tu comisión de siempre por cada venta. Si alguien te ofrece un extra por cumplirla, ese arreglo no pasa por TiendaApps y no lo podemos hacer cumplir.",
       },
       {
         t: "aviso",

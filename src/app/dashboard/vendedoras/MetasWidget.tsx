@@ -6,7 +6,6 @@ import { Target, Loader2, Check, X, Trash2 } from "lucide-react";
 interface GoalData {
   id: string;
   targetAmount: number;
-  bonusRate: number;
   month: string;
 }
 
@@ -25,7 +24,6 @@ export default function MetasWidget() {
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [targetAmount, setTargetAmount] = useState("");
-  const [bonusRate, setBonusRate] = useState("");
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState("");
@@ -45,7 +43,7 @@ export default function MetasWidget() {
     const res = await fetch("/api/vendedoras/metas", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ month, targetAmount, bonusRate }),
+      body: JSON.stringify({ month, targetAmount }),
     });
     const data = await res.json();
     setSaving(false);
@@ -68,7 +66,6 @@ export default function MetasWidget() {
 
   function startEdit() {
     setTargetAmount(goal ? String(goal.targetAmount) : "");
-    setBonusRate(goal ? String(goal.bonusRate) : "");
     setError("");
     setEditing(true);
   }
@@ -107,62 +104,50 @@ export default function MetasWidget() {
         <div className="text-center py-4">
           <p className="text-sm text-gray-400">No hay meta para este mes.</p>
           <p className="text-xs text-gray-300 mt-1">
-            Fijá un objetivo de ventas con bonus de comisión extra para motivar a tus afiliados.
+            Fijá un objetivo de comisiones del mes. Tus afiliados lo ven en su panel con
+            cuánto llevan.
           </p>
         </div>
       )}
 
       {!editing && goal && (
         <div className="space-y-3">
-          <div className="flex items-center justify-between p-3 bg-indigo-50 rounded-xl">
-            <div>
-              <p className="text-xs text-indigo-600 font-medium">Objetivo del mes</p>
-              <p className="text-xl font-bold text-indigo-700">${goal.targetAmount.toLocaleString("es-AR")}</p>
-            </div>
-            <div className="text-right">
-              <p className="text-xs text-indigo-600 font-medium">Bonus por cumplir</p>
-              <p className="text-xl font-bold text-indigo-700">+{goal.bonusRate}%</p>
-            </div>
+          {/* Acá había un segundo número, "Bonus por cumplir: +X%", y abajo la
+              frase "los afiliados que superen este monto reciben un X% extra".
+              Nadie paga ese extra: `bonusRate` no lo lee ningún proceso que
+              acredite plata. Se sacó porque prometer plata que no se acredita
+              es lo peor que puede hacer esta pantalla, y encima contra los
+              propios términos, que prohíben arreglar compensaciones por fuera.
+              Para que exista de verdad primero hay que resolver de dónde sale:
+              la comisión normal se retiene de la venta, y un premio de fin de
+              mes no tiene venta de la cual retenerse. */}
+          <div className="p-3 bg-indigo-50 rounded-xl">
+            <p className="text-xs text-indigo-600 font-medium">Objetivo del mes</p>
+            <p className="text-xl font-bold text-indigo-700">${goal.targetAmount.toLocaleString("es-AR")}</p>
           </div>
           <p className="text-xs text-gray-400 text-center">
-            Los afiliados que superen este monto en comisiones reciben un {goal.bonusRate}% extra.
+            Cada afiliado ve este objetivo en su panel, con cuánto lleva generado en el mes.
           </p>
         </div>
       )}
 
       {editing && (
         <div className="space-y-3">
-          {/* Uno por renglón en angosto: partido en dos quedaban 150px por campo
-              y las dos etiquetas se cortaban a la mitad. */}
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Objetivo de ventas ($)</label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">$</span>
-                <input
-                  type="number"
-                  value={targetAmount}
-                  onChange={(e) => setTargetAmount(e.target.value)}
-                  placeholder="50000"
-                  className="w-full border border-gray-200 rounded-xl pl-7 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-              </div>
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Bonus si cumplen (%)</label>
-              <div className="relative">
-                <input
-                  type="number"
-                  value={bonusRate}
-                  onChange={(e) => setBonusRate(e.target.value)}
-                  placeholder="2"
-                  step="0.5"
-                  min="0.5"
-                  max="20"
-                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 pr-8"
-                />
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">%</span>
-              </div>
+          {/* Queda un solo campo: se fue el de "Bonus si cumplen (%)". Pedirle
+              al dueño que escriba un porcentaje que después nadie liquida es
+              hacerle creer que se comprometió a algo que la plataforma no va a
+              ejecutar. */}
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Objetivo de comisiones del mes ($)</label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">$</span>
+              <input
+                type="number"
+                value={targetAmount}
+                onChange={(e) => setTargetAmount(e.target.value)}
+                placeholder="50000"
+                className="w-full border border-gray-200 rounded-xl pl-7 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
             </div>
           </div>
 
