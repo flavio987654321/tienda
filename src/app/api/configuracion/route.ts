@@ -1,6 +1,7 @@
 ﻿import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
+import { soportaAfiliados, MOTIVO_SIN_AFILIADOS } from "@/lib/storeTypes";
 import { revalidatePath } from "next/cache";
 import { createNotificationMany } from "@/lib/notifications";
 import { isSafeUrl } from "@/lib/url-utils";
@@ -218,8 +219,15 @@ export async function PUT(req: NextRequest) {
 
   const prevStore = await prisma.store.findUnique({
     where: { ownerId: user.id },
-    select: { id: true, commissionRate: true, affiliatesEnabled: true, acceptsRewardCoupons: true, mpAccessToken: true },
+    select: { id: true, commissionRate: true, affiliatesEnabled: true, acceptsRewardCoupons: true, mpAccessToken: true, tipoTienda: true },
   });
+
+  // Rubros donde el programa todavía no está habilitado (hoy: autos y motos).
+  // Va antes que el chequeo de MercadoPago porque es más de fondo: aunque
+  // tuviera MercadoPago conectado, en un rubro de consulta no se cobra online.
+  if (b.affiliatesEnabled && !soportaAfiliados(prevStore?.tipoTienda)) {
+    return NextResponse.json({ error: MOTIVO_SIN_AFILIADOS }, { status: 400 });
+  }
 
   if (b.affiliatesEnabled && !prevStore?.mpAccessToken) {
     return NextResponse.json(

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
+import { soportaAfiliados, MOTIVO_SIN_AFILIADOS, RUBROS_CON_AFILIADOS } from "@/lib/storeTypes";
 import { sendNewAffiliateApplicationEmail } from "@/lib/email";
 import { isSafeExternalUrl } from "@/lib/url-utils";
 import { sendPushToUser } from "@/lib/push";
@@ -48,8 +49,10 @@ export async function GET(req: NextRequest) {
     const stores = await prisma.store.findMany({
       where: {
         OR: [
-          // Tiendas activas con MP para descubrir
-          { isActive: true, isPublished: true, affiliatesEnabled: true, mpAccessToken: { not: null } },
+          // Tiendas activas con MP para descubrir. Se excluyen los rubros sin
+          // programa de afiliados: ofrecer postularse a una tienda que después
+          // rechaza la postulación es peor que no mostrarla.
+          { isActive: true, isPublished: true, affiliatesEnabled: true, mpAccessToken: { not: null }, tipoTienda: { in: RUBROS_CON_AFILIADOS } },
           // Tiendas donde el usuario ya tiene afiliación (siempre visibles aunque MP se desconecte)
           { isActive: true, affiliates: { some: { userId: user.id } } },
         ],
@@ -168,6 +171,14 @@ export async function POST(req: NextRequest) {
   const store = await prisma.store.findUnique({ where: { id: storeId } });
   if (!store || !store.affiliatesEnabled) {
     return NextResponse.json({ error: "Tienda no disponible" }, { status: 400 });
+  }
+
+  /* Rubro sin afiliados (hoy: autos y motos). El chequeo va igual aunque la
+     tienda ya no aparezca en el listado: una tienda pudo haber cambiado de rubro
+     con el programa prendido de antes, y a esta API se le puede escribir de una
+     sin pasar por ninguna pantalla. */
+  if (!soportaAfiliados(store.tipoTienda)) {
+    return NextResponse.json({ error: MOTIVO_SIN_AFILIADOS }, { status: 400 });
   }
 
   if (store.ownerId === userId) {

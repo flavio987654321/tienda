@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Loader2, AlertTriangle, X, ShieldCheck, ExternalLink, Ticket, Lock } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { soportaAfiliados, MOTIVO_SIN_AFILIADOS } from "@/lib/storeTypes";
 
 const TC_OWNER_VERSION = "1.0";
 
@@ -81,11 +82,42 @@ export default function AffiliateToggle({
     }
   }
 
-  // Tiendas de consulta (AUTOS, INMOB) no usan MP — las comisiones se acreditan
-  // manualmente cuando el dueño confirma una consulta en Dashboard → Consultas.
-  const isInquiryStore = storeType === "AUTOS";
+  /* Rubros donde el programa todavía no está abierto.
+   *
+   * Va PRIMERO, antes que el aviso de MercadoPago, porque es la razón de más
+   * arriba: a una tienda de autos no le sirve conectar MercadoPago para esto —
+   * el auto no se cobra online. El motivo está en `lib/storeTypes.ts`.
+   *
+   * Se muestra el estado en vez de esconder la sección: el menú lleva hasta acá,
+   * y una pantalla vacía se lee como que algo se rompió. */
+  if (!soportaAfiliados(storeType)) {
+    return (
+      <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4 sm:p-5 mb-6 flex items-start gap-3 sm:gap-4">
+        <div className="shrink-0 rounded-xl bg-gray-100 p-2.5">
+          <Lock className="h-5 w-5 text-gray-500" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="font-semibold text-gray-900">Todavía no disponible para tu rubro</p>
+          <p className="text-sm text-gray-600 mt-1">{MOTIVO_SIN_AFILIADOS}</p>
+          <p className="text-sm text-gray-500 mt-2">
+            Mientras tanto, las consultas de tus vehículos te siguen llegando normalmente en{" "}
+            <Link href="/dashboard/consultas" className="font-medium text-gray-700 underline underline-offset-2">
+              Consultas
+            </Link>.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
-  if (!hasMercadoPago && !isInquiryStore) {
+  /* Sin la excepción para tiendas de consulta que había acá.
+     Existía porque autos no usa MercadoPago, y le dejaba activar el programa sin
+     conectarlo. Ahora ese caso sale por el corte de arriba y nunca llega hasta
+     acá, así que la excepción era una rama que no se ejecutaba nunca — y el
+     texto legal que colgaba de ella tampoco.
+     Cuando se abra el programa para autos hay que volver a resolver esto: la
+     pregunta de fondo es de dónde sale la plata, no si pedir MercadoPago. */
+  if (!hasMercadoPago) {
     // El ícono ocupa 44px más 16 de separación: en 360 eso es un sexto del ancho
     // para una decoración. En angosto se achica el aire y el texto arranca antes.
     return (
@@ -237,11 +269,7 @@ export default function AffiliateToggle({
 
               <p><strong className="text-gray-900">Tus obligaciones como titular</strong></p>
               <ul className="list-disc pl-4 space-y-1.5">
-                {isInquiryStore ? (
-                  <li>Confirmar cada consulta como venta en <strong className="text-gray-800">Dashboard → Consultas</strong> para que la comisión se acredite automáticamente en el panel de comisiones del afiliado.</li>
-                ) : (
-                  <li>Mantener tu cuenta de MercadoPago conectada. Las comisiones se descuentan automáticamente de cada venta y TiendaApps las acredita en el panel de comisiones del afiliado — no tenés que hacer nada manualmente.</li>
-                )}
+                <li>Mantener tu cuenta de MercadoPago conectada. Las comisiones se descuentan automáticamente de cada venta y TiendaApps las acredita en el panel de comisiones del afiliado — no tenés que hacer nada manualmente.</li>
                 <li>Los retiros los gestiona directamente TiendaApps. No tenés responsabilidad sobre la transferencia de fondos a los afiliados.</li>
                 <li>No pausar ni dar de baja a un afiliado con el fin de no pagarle comisiones ya devengadas.</li>
                 <li>Notificar con al menos <strong className="text-gray-800">5 días corridos de anticipación</strong> antes de modificar la tasa de comisión, o con <strong className="text-gray-800">48 horas</strong> antes de dar de baja a un afiliado activo sin causa de fraude.</li>
@@ -250,10 +278,7 @@ export default function AffiliateToggle({
 
               <p><strong className="text-gray-900">Responsabilidades de la plataforma</strong><br />
                 TiendaApps provee la infraestructura de tracking y panel de comisiones.{" "}
-                {isInquiryStore
-                  ? "Al confirmar una consulta como venta, TiendaApps acredita automáticamente la comisión en el panel del afiliado."
-                  : "Al confirmarse cada venta por MercadoPago, TiendaApps retiene automáticamente la comisión y la acredita en el panel del afiliado."
-                }{" "}
+                Al confirmarse cada venta por MercadoPago, TiendaApps retiene automáticamente la comisión y la acredita en el panel del afiliado.{" "}
                 <strong className="text-gray-800">TiendaApps es el responsable directo del pago de comisiones — no el titular de la tienda.</strong> TiendaApps no garantiza un volumen mínimo de ventas.</p>
 
               <p><strong className="text-gray-900">Cambios en la comisión</strong><br />

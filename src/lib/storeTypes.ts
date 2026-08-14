@@ -56,6 +56,28 @@ export interface StoreTypeConfig {
   supportsFeatured?: boolean;
   condicionOptions?: string[];
   checkoutMode: "cart" | "inquiry";
+  /**
+   * Si el rubro puede tener programa de afiliados.
+   *
+   * Hoy sólo lo apaga AUTOS, y no por una limitación técnica: el cableado está
+   * entero y andando. Es una decisión sobre plata.
+   *
+   * La diferencia con los rubros de carrito: ahí la comisión la retiene
+   * MercadoPago de la venta misma (`marketplace_fee`), o sea que existe antes de
+   * que el afiliado la vea. En un rubro de consulta no pasa un peso por la
+   * plataforma —el auto se paga en la concesionaria— así que el saldo que se le
+   * acredita al afiliado no lo respalda nada, y el dueño tiene que transferirlo
+   * de su bolsillo.
+   *
+   * Con precios de auto, un porcentaje mal puesto son millones de comisión sobre
+   * una venta que nunca tocamos. Eso necesita su propio diseño (monto fijo por
+   * consulta, topes, y qué se le promete a cada lado), no heredar el de ropa.
+   *
+   * Se pausa ahora porque ahora es gratis: no hay ninguna tienda de autos ni
+   * ninguna consulta en producción. Con concesionarias adentro, sacarlo sería
+   * romperle el negocio a alguien.
+   */
+  supportsAffiliates: boolean;
   namePlaceholder: string;
   variantValuePlaceholder: string;
   tagsPlaceholder: string;
@@ -173,6 +195,7 @@ export const STORE_TYPES: StoreTypeConfig[] = [
     hideVariants: false,
     hideTags: false,
     checkoutMode: "cart" as const,
+    supportsAffiliates: true,
     variantValuePlaceholder: "S, M, L, XL",
     namePlaceholder: "Ej: Remera oversize negra talle M",
     tagsPlaceholder: "negro, oversize, algodon",
@@ -272,6 +295,7 @@ export const STORE_TYPES: StoreTypeConfig[] = [
     showServiceHistory: true,
     usesVehicleExpenses: true,
     checkoutMode: "inquiry" as const,
+    supportsAffiliates: false,
     variantValuePlaceholder: "Rojo, Blanco, Negro",
     namePlaceholder: "Ej: Toyota Corolla 2022 automático",
     tagsPlaceholder: "sedan, automatico, nafta",
@@ -316,6 +340,7 @@ export const STORE_TYPES: StoreTypeConfig[] = [
     hideGender: true,
     supportsFeatured: true,
     checkoutMode: "cart" as const,
+    supportsAffiliates: true,
     variantValuePlaceholder: "Negro, Blanco, Gris",
     namePlaceholder: "Ej: Heladera Samsung No Frost 380L",
     tagsPlaceholder: "samsung, inverter, no-frost",
@@ -500,6 +525,7 @@ export const STORE_TYPES: StoreTypeConfig[] = [
     hideVariants: false,
     hideTags: false,
     checkoutMode: "cart" as const,
+    supportsAffiliates: true,
     variantValuePlaceholder: "500g, 1kg, 2kg",
     namePlaceholder: "Ej: Granola artesanal con frutas 500g",
     tagsPlaceholder: "organico, sin-tacc, vegano",
@@ -528,6 +554,7 @@ export const STORE_TYPES: StoreTypeConfig[] = [
     hideVariants: false,
     hideTags: false,
     checkoutMode: "cart" as const,
+    supportsAffiliates: true,
     variantValuePlaceholder: "Opción 1, Opción 2",
     namePlaceholder: "Ej: Nombre del producto",
     tagsPlaceholder: "oferta, nuevo, popular",
@@ -543,3 +570,32 @@ export const STORE_TYPES: StoreTypeConfig[] = [
 export function getStoreType(id: string): StoreTypeConfig {
   return STORE_TYPES.find((t) => t.id === id) ?? STORE_TYPES[0];
 }
+
+/**
+ * Si este rubro puede tener afiliados. Ver `supportsAffiliates` arriba.
+ *
+ * Todo lo que decide sobre afiliados pregunta acá y no compara contra "AUTOS" a
+ * mano: cuando el modelo de comisión por consulta esté resuelto, se destraba
+ * cambiando UN booleano en la definición del rubro. Con la comparación repartida
+ * por seis archivos, destrabarlo a medias sería dejar una puerta abierta sin que
+ * se note.
+ */
+export function soportaAfiliados(tipoTienda: string | null | undefined): boolean {
+  return getStoreType(tipoTienda ?? "ROPA").supportsAffiliates;
+}
+
+/**
+ * Los rubros que sí lo tienen, para filtrar en la base.
+ *
+ * Sale de la misma definición que `soportaAfiliados` en vez de ser una lista
+ * escrita a mano: así una consulta SQL y un chequeo en código nunca pueden
+ * opinar distinto sobre el mismo rubro.
+ */
+export const RUBROS_CON_AFILIADOS: string[] = STORE_TYPES
+  .filter((t) => t.supportsAffiliates)
+  .map((t) => t.id);
+
+/** Por qué no se puede, para mostrarle a la dueña. */
+export const MOTIVO_SIN_AFILIADOS =
+  "El programa de afiliados todavía no está disponible para tiendas de autos y motos. " +
+  "Acá la venta no se cobra online, así que la comisión necesita otras reglas — lo estamos preparando.";
