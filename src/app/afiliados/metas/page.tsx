@@ -11,7 +11,9 @@ interface GoalResult {
   storeName: string;
   goal: {
     targetAmount: number;
-    bonusRate: number;
+    // `bonusRate` viene igual en la respuesta y no se declara a propósito: si
+    // no está en el tipo, TypeScript frena a quien intente volver a dibujarlo
+    // sin darse cuenta de que ese porcentaje no lo paga nadie.
     month: string;
   };
   earned: number;
@@ -68,7 +70,7 @@ export default function MetasPage() {
           </Link>
           <div className="flex-1">
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Mis metas</h1>
-            <p className="text-sm text-gray-500">Objetivos mensuales y bonus de comisión</p>
+            <p className="text-sm text-gray-500">El objetivo del mes de cada tienda, y cuánto llevás</p>
           </div>
           <Trophy className="h-5 w-5 text-amber-400" />
         </div>
@@ -104,8 +106,16 @@ export default function MetasPage() {
                         <Trophy className="h-3.5 w-3.5" /> ¡Meta cumplida!
                       </div>
                     ) : (
+                      /* Acá decía "+X% bonus". Ese porcentaje no lo paga nadie:
+                         `bonusRate` aparece en nueve lugares del código y los
+                         nueve son para mostrarlo en pantalla. No hay proceso
+                         que lo acredite, y no puede haberlo sin resolver antes
+                         de dónde sale esa plata — la comisión normal se retiene
+                         de la venta, y un premio de fin de mes no tiene venta
+                         de la cual retenerse.
+                         La meta queda como objetivo, sin promesa de plata. */
                       <div className="flex items-center gap-1.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 px-3 py-1.5 rounded-full text-xs font-medium">
-                        <Zap className="h-3.5 w-3.5" /> +{g.goal.bonusRate}% bonus
+                        <Zap className="h-3.5 w-3.5" /> Meta del mes
                       </div>
                     )}
                   </div>
@@ -127,19 +137,27 @@ export default function MetasPage() {
                     </div>
                   </div>
 
-                  {/* Info */}
+                  {/* Info.
+                      Las dos frases de acá prometían plata: "vas a recibir un
+                      +X% adicional" y "te faltan $X para ganar el bonus". El
+                      sistema no acredita ese extra en ningún lado, así que eran
+                      dos promesas que nadie iba a cumplir — y encima de plata,
+                      que es lo peor que se puede prometer de más.
+                      Ahora dicen lo que de verdad pasa: cuánto falta y cuánto
+                      llevás. */}
                   {reached ? (
                     <div className="flex items-center gap-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-500/30 rounded-xl p-3">
                       <CheckCircle className="h-4 w-4 text-amber-500 shrink-0" />
                       <p className="text-xs text-amber-700 dark:text-amber-300">
-                        ¡Superaste la meta! Vas a recibir un <strong>+{g.goal.bonusRate}%</strong> adicional en tus próximas comisiones.
+                        ¡Llegaste! Cerraste el objetivo del mes con{" "}
+                        <strong>${g.earned.toLocaleString("es-AR")}</strong> en comisiones.
                       </p>
                     </div>
                   ) : (
                     <div className="flex items-center gap-2 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-500/30 rounded-xl p-3">
                       <Target className="h-4 w-4 text-indigo-500 shrink-0" />
                       <p className="text-xs text-indigo-700 dark:text-indigo-300">
-                        Te faltan <strong>${(g.goal.targetAmount - g.earned).toLocaleString("es-AR")}</strong> en comisiones para ganar el bonus de +{g.goal.bonusRate}%.
+                        Te faltan <strong>${(g.goal.targetAmount - g.earned).toLocaleString("es-AR")}</strong> en comisiones para llegar al objetivo de este mes.
                       </p>
                     </div>
                   )}
