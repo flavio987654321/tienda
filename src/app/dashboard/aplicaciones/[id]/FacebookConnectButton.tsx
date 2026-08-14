@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Clock, XCircle } from "lucide-react";
+import { pedirFocoInstalacion } from "./instalacion-foco";
 
 // Abre el login de Facebook en un popup (como Shopify). Cuando el callback
 // termina, el popup avisa por postMessage y se cierra; acá refrescamos la
@@ -39,6 +40,10 @@ export default function FacebookConnectButton({ configured }: { configured: bool
       pararVigilancia();
       if (e.data.status === "connected") {
         listoRef.current = true;
+        // El refresh de abajo hace aparecer los pasos varias pantallas más
+        // abajo, y sin esto la ventana se queda arriba: lo único que cambiaba a
+        // la vista era este botón poniéndose verde, así que parecía terminado.
+        pedirFocoInstalacion();
         router.refresh();
       } else {
         setError("Facebook no pudo completar la conexión. Intentá de nuevo.");

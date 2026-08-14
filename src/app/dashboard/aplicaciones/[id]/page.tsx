@@ -3,8 +3,9 @@ import { prisma } from "@/lib/prisma";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import {
-  ArrowLeft, ArrowDown, CheckCircle, Check, ChevronDown, ListChecks, ExternalLink,
+  ArrowLeft, CheckCircle, Check, ChevronDown, ListChecks, ExternalLink,
   RefreshCw, Tag, Store, Megaphone, AlertTriangle, MessageCircle, ShoppingCart, Sparkles,
+  ArrowRight,
 } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { getApp, getAccent, CATEGORY_LABELS, type UsageIcon } from "@/lib/apps/registry";
@@ -13,6 +14,7 @@ import AppIcon from "@/components/apps/AppIcon";
 import MetaCatalogPreview, { type PreviewProduct } from "@/components/apps/MetaCatalogPreview";
 import WhatsAppCatalogPreview from "@/components/apps/WhatsAppCatalogPreview";
 import { whatsappVinculado } from "@/lib/apps/whatsapp-vinculo";
+import { SeccionInstalacion, BotonInstalar } from "./instalacion-foco";
 import MetaCatalogoWizard from "./MetaCatalogoWizard";
 import FacebookConnectButton from "./FacebookConnectButton";
 import FacebookPixelWizard from "./FacebookPixelWizard";
@@ -37,16 +39,21 @@ export default async function AppDetailPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ fb?: string }>;
+  searchParams: Promise<{ fb?: string; desde?: string }>;
 }) {
   // Sección oculta hasta el lanzamiento — ver NEXT_PUBLIC_APPS_ENABLED en .env
   if (process.env.NEXT_PUBLIC_APPS_ENABLED !== "1") redirect("/dashboard");
 
   const { id } = await params;
-  const { fb } = await searchParams;
+  const { fb, desde } = await searchParams;
 
   const app = getApp(id);
   if (!app) notFound();
+
+  // De qué otra aplicación vino el dueño. Se resuelve contra el registro y no se
+  // muestra tal cual: el valor llega de la URL, así que un id inventado tiene
+  // que morir acá y no terminar dibujado en pantalla ni en un href.
+  const origen = desde && desde !== id ? getApp(desde) : undefined;
 
   const user = await getCurrentUser();
   if (!user) redirect("/login");
@@ -148,6 +155,31 @@ export default async function AppDetailPage({
     >
       <div className="-m-4 -mt-2 bg-slate-50 min-h-screen">
 
+        {/* ── De dónde venís ──────────────────────────────────────────────────
+            Cuando otra aplicación te manda acá a resolver un requisito, esta
+            barra es el hilo que une las dos pantallas: sin ella se salía de una
+            ficha y se aparecía en otra igual, sin nada que recordara que aquello
+            había quedado a medias ni por dónde volver. */}
+        {origen && (
+          <div className="bg-indigo-600 px-6 py-2.5">
+            <div className="max-w-3xl mx-auto flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5">
+              <p className="text-xs text-indigo-100">
+                {installed ? (
+                  <>Listo, ya podés volver a <strong className="text-white">{origen.name}</strong> y seguir.</>
+                ) : (
+                  <>Lo estás instalando para <strong className="text-white">{origen.name}</strong>.</>
+                )}
+              </p>
+              <Link
+                href={`/dashboard/aplicaciones/${origen.id}`}
+                className="inline-flex items-center gap-1.5 rounded-md bg-white/15 hover:bg-white/25 px-3 py-1 text-xs font-bold text-white transition-colors"
+              >
+                Volver a {origen.name} <ArrowRight className="h-3 w-3" />
+              </Link>
+            </div>
+          </div>
+        )}
+
         {/* ── Hero ────────────────────────────────────────────────────────── */}
         <div className="relative overflow-hidden bg-gradient-to-br from-slate-900 via-slate-900 to-slate-800">
           {/* Franja con el color de la marca, arriba de todo */}
@@ -204,12 +236,7 @@ export default async function AppDetailPage({
                     ) : app.id === "google-shopping" ? (
                       <GoogleShoppingInstallButton />
                     ) : (
-                      <a
-                        href="#instalacion"
-                        className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-8 py-2.5 rounded-lg text-sm transition-colors"
-                      >
-                        Instalar <ArrowDown className="h-4 w-4" />
-                      </a>
+                      <BotonInstalar />
                     )}
                   </div>
                 </div>
@@ -309,7 +336,7 @@ export default async function AppDetailPage({
 
             {/* Instalación / Configuración */}
             {showInstall && (
-              <section id="instalacion" className="scroll-mt-6">
+              <SeccionInstalacion>
                 <div className="flex items-center gap-4 mb-4">
                   <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-slate-400 whitespace-nowrap">
                     {installed ? "Configuración" : "Instalación"}
@@ -350,7 +377,7 @@ export default async function AppDetailPage({
                     fbVencido={metaVencido}
                   />
                 )}
-              </section>
+              </SeccionInstalacion>
             )}
 
             {/* Preguntas frecuentes — <details> nativo: funciona sin JS */}

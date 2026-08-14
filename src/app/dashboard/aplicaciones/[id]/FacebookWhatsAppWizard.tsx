@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Loader2, ExternalLink, Unlink, Check } from "lucide-react";
+import { Loader2, ExternalLink, Unlink, Check, ArrowRight } from "lucide-react";
 import {
   StepCard, statusOf, postJson, AvisoError, ConfirmarDesconexion, AvisoTokenVencido,
   type StepStatus,
@@ -144,22 +144,35 @@ function AccountStep({ done }: { done: boolean }) {
   );
 }
 
-// El catálogo lo crea la app "Catálogo de Meta" — acá no se repite esa lógica,
-// solo se pide que exista antes de seguir.
+/**
+ * El catálogo lo crea la app "Catálogo de Meta" — acá no se repite esa lógica,
+ * solo se pide que exista antes de seguir.
+ *
+ * El link mandaba a la otra ficha de golpe, sin decir que era otra aplicación ni
+ * que había que volver. Se salía de una pantalla y se aparecía en otra parecida,
+ * y desde ahí no había ningún rastro de que esto había quedado a medias.
+ *
+ * Ahora se avisa antes de saltar, y el `?desde=` hace que la ficha de Meta
+ * muestre arriba de dónde venís y con qué volver.
+ */
 function CatalogStep({ done }: { done: boolean }) {
   if (done) {
     return <p className="text-sm text-slate-500">Ya tenés un catálogo de productos conectado.</p>;
   }
   return (
     <div>
-      <p className="text-sm text-slate-500 mb-3">
+      <p className="text-sm text-slate-500 mb-1">
         Todavía no conectaste un catálogo de productos — es el mismo que usa Facebook e Instagram.
       </p>
+      <p className="text-[11px] text-slate-400 mb-3.5 leading-relaxed">
+        Te llevamos a la aplicación <strong className="text-slate-500">Catálogo de Meta</strong> para
+        crearlo. Cuando termines ahí, arriba de todo vas a tener un botón para volver acá y seguir.
+      </p>
       <Link
-        href="/dashboard/aplicaciones/meta-catalogo"
-        className="inline-flex items-center gap-1.5 text-sm font-semibold text-indigo-600 hover:text-indigo-700"
+        href="/dashboard/aplicaciones/meta-catalogo?desde=whatsapp-catalogo"
+        className="inline-flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white font-semibold px-4 py-2.5 rounded-lg text-sm transition-colors"
       >
-        Ir a Catálogo de Meta <ExternalLink className="h-3.5 w-3.5" />
+        Ir a crear mi catálogo <ArrowRight className="h-3.5 w-3.5" />
       </Link>
     </div>
   );
