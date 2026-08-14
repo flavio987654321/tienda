@@ -141,6 +141,107 @@ export function StepCard({
   );
 }
 
+/**
+ * Lo que pasa —y lo que NO pasa— al desconectar la cuenta de Meta.
+ *
+ * Antes el botón desconectaba de una y sin decir nada, y la pregunta obvia del
+ * dueño quedaba sin respuesta: ¿pierdo el catálogo? ¿se borran mis productos de
+ * Facebook? ¿queda algo dado de alta a mi nombre?
+ *
+ * La primera frase afirma que el envío se corta, y eso se puede afirmar porque
+ * se probó: el 14/08/2026 se desconectó una cuenta real y Meta aceptó el borrado
+ * del feed. Antes de tener ese dato decía "vamos a intentar", que era feo pero
+ * honesto; prometer un corte que no ocurre es de las mentiras peores, porque el
+ * dueño no tiene cómo darse cuenta.
+ *
+ * Los links siguen igual: el catálogo y los productos SÍ quedan en Meta, y eso
+ * solo lo puede borrar él.
+ */
+export function ConfirmarDesconexion({
+  onCancelar, onConfirmar, desconectando,
+}: {
+  onCancelar: () => void;
+  onConfirmar: () => void;
+  desconectando: boolean;
+}) {
+  return (
+    <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-4">
+      <p className="text-sm font-bold text-slate-900 mb-3">¿Desconectar tu cuenta de Facebook?</p>
+
+      <ul className="space-y-2.5 mb-4">
+        <li className="flex items-start gap-2.5">
+          <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-slate-400" />
+          <span className="text-xs text-slate-600 leading-relaxed">
+            Se corta el envío diario de tus productos: Meta deja de leer tu tienda y tu catálogo
+            no se actualiza más.
+          </span>
+        </li>
+        <li className="flex items-start gap-2.5">
+          <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500" />
+          <span className="text-xs text-slate-600 leading-relaxed">
+            <strong className="text-slate-800">Tu catálogo y tus productos NO se borran.</strong>{" "}
+            Son tuyos y quedan en tu cuenta de Meta, tal como están hoy. Simplemente dejan de
+            actualizarse.
+          </span>
+        </li>
+        <li className="flex items-start gap-2.5">
+          <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-slate-400" />
+          <span className="text-xs text-slate-600 leading-relaxed">
+            Nada de tu tienda acá se pierde. Podés volver a conectarla cuando quieras.
+          </span>
+        </li>
+      </ul>
+
+      <div className="rounded-md border border-slate-200 bg-white px-3.5 py-3 mb-4">
+        <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-slate-400 mb-2">
+          Si querés borrar todo del lado de Meta
+        </p>
+        <p className="text-xs text-slate-500 leading-relaxed mb-2.5">
+          Eso se hace desde Meta, no desde acá — son tus datos y no los tocamos. En Commerce
+          Manager podés borrar el catálogo con todos sus productos. Y en tu Facebook podés
+          quitarle el permiso a la aplicación, que queda dado aunque desconectes.
+        </p>
+        <div className="flex flex-wrap gap-3">
+          <a
+            href="https://business.facebook.com/commerce_manager"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 text-[11px] font-bold text-indigo-600 hover:text-indigo-700"
+          >
+            Abrir Commerce Manager <ExternalLink className="h-3 w-3" />
+          </a>
+          <a
+            href="https://www.facebook.com/settings?tab=applications"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 text-[11px] font-bold text-indigo-600 hover:text-indigo-700"
+          >
+            Quitar el permiso en Facebook <ExternalLink className="h-3 w-3" />
+          </a>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-3">
+        <button
+          onClick={onConfirmar}
+          disabled={desconectando}
+          className="inline-flex items-center gap-1.5 bg-red-600 hover:bg-red-500 text-white text-xs font-bold px-4 py-2 rounded-md transition-colors disabled:opacity-50"
+        >
+          {desconectando && <Loader2 className="h-3 w-3 animate-spin" />}
+          Sí, desconectar
+        </button>
+        <button
+          onClick={onCancelar}
+          disabled={desconectando}
+          className="text-xs font-bold text-slate-500 hover:text-slate-700 disabled:opacity-50"
+        >
+          Cancelar
+        </button>
+      </div>
+    </div>
+  );
+}
+
 /** El aviso de arriba de todo cuando el token de Meta ya venció. */
 export function AvisoTokenVencido() {
   return (

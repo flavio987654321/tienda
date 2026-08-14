@@ -197,12 +197,14 @@ export async function buscarFeedPropio(token: string, catalogId: string, feedUrl
  * y que Meta falle no puede impedir ninguna de las dos cosas — el dueño pidió
  * desconectarse y tiene que poder hacerlo igual.
  *
- * Cuidado con lo que promete: no pude confirmar contra la documentación de Meta
- * que el nodo acepte DELETE (la página del nodo devuelve 500 y la del edge dice
- * que ahí no se puede). Puede que no borre nada. Por eso el que de verdad evita
- * los feeds duplicados es `buscarFeedPropio`, que no depende de esto, y por eso
- * el aviso al dueño no debería prometer que la sincronización se corta sola
- * hasta que lo veamos funcionar contra una cuenta real.
+ * CONFIRMADO el 14/08/2026 contra una cuenta real (girly-store): Meta acepta el
+ * DELETE sobre el nodo del feed y devuelve éxito. La documentación no servía
+ * —la página del nodo devuelve 500 y la del edge dice que ahí no se puede—, así
+ * que se probó desconectando de verdad y mirando la respuesta.
+ *
+ * Igual `buscarFeedPropio` sigue existiendo y no sobra: cubre los feeds que
+ * quedaron huérfanos ANTES de este arreglo, y el caso de que el borrado falle
+ * por una caída de Meta.
  */
 export async function borrarProductFeed(token: string, feedId: string): Promise<boolean> {
   try {

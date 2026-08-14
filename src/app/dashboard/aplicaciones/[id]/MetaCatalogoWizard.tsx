@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CheckCircle, XCircle, Loader2, ChevronRight, ExternalLink, Unlink, Plus, AlertCircle, RefreshCw } from "lucide-react";
 import {
-  StepCard, statusOf, postJson, getJson, AvisoError, ErrorDePaso, AvisoTokenVencido,
+  StepCard, statusOf, postJson, getJson, AvisoError, ErrorDePaso, AvisoTokenVencido, ConfirmarDesconexion,
   type StepStatus,
 } from "./wizard-comun";
 
@@ -86,6 +86,7 @@ export default function MetaCatalogoWizard({ fbConnected, fbBusinessId, fbCatalo
 function AccountStep({ done }: { done: boolean }) {
   const router = useRouter();
   const [disconnecting, setDisconnecting] = useState(false);
+  const [confirmando, setConfirmando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function disconnect() {
@@ -94,6 +95,7 @@ function AccountStep({ done }: { done: boolean }) {
     const err = await postJson("/api/facebook/oauth/disconnect");
     setDisconnecting(false);
     if (err) { setError(err); return; }
+    setConfirmando(false);
     router.refresh();
   }
 
@@ -101,17 +103,23 @@ function AccountStep({ done }: { done: boolean }) {
     return (
       <div>
         {error && <AvisoError mensaje={error} />}
-        <div className="flex items-center justify-between gap-3">
-          <p className="text-sm text-slate-500">Tu cuenta de Facebook está conectada.</p>
-          <button
-            onClick={disconnect}
-            disabled={disconnecting}
-            className="inline-flex items-center gap-1.5 shrink-0 text-xs text-red-500 hover:text-red-600 transition-colors disabled:opacity-50"
-          >
-            {disconnecting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Unlink className="h-3 w-3" />}
-            Desconectar
-          </button>
-        </div>
+        {confirmando ? (
+          <ConfirmarDesconexion
+            onCancelar={() => setConfirmando(false)}
+            onConfirmar={disconnect}
+            desconectando={disconnecting}
+          />
+        ) : (
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-sm text-slate-500">Tu cuenta de Facebook está conectada.</p>
+            <button
+              onClick={() => setConfirmando(true)}
+              className="inline-flex items-center gap-1.5 shrink-0 text-xs text-red-500 hover:text-red-600 transition-colors"
+            >
+              <Unlink className="h-3 w-3" /> Desconectar
+            </button>
+          </div>
+        )}
       </div>
     );
   }

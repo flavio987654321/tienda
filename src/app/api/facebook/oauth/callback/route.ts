@@ -27,7 +27,22 @@ const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "";
  * host sería un redirect abierto. Se acepta sólo si es un dominio nuestro —el
  * público, un preview de Vercel, o localhost— y si no, se cae al dominio real.
  */
+/**
+ * Un `Host` válido y nuestro.
+ *
+ * El chequeo mira el host ENTERO, no sólo lo de antes de los dos puntos. La
+ * primera versión hacía `host.split(":")[0]` y con eso alcanzaba para colar
+ * cualquier cosa después del puerto: `localhost:1"</script><script>…` pasaba la
+ * lista blanca por "localhost" y el resto se devolvía intacto dentro del origen,
+ * que abajo se inyecta en un <script>. Era un XSS reflejado en nuestro origen.
+ *
+ * Por eso primero se exige la FORMA (nombre de host y puerto numérico, nada
+ * más) y recién después el dominio. Cualquier carácter raro muere en el regex.
+ */
+const HOST_VALIDO = /^[a-z0-9.-]+(:\d{1,5})?$/i;
+
 function esHostPropio(host: string): boolean {
+  if (!HOST_VALIDO.test(host)) return false;
   const sinPuerto = host.split(":")[0].toLowerCase();
   return (
     sinPuerto === "tiendaapps.com" ||
@@ -36,6 +51,25 @@ function esHostPropio(host: string): boolean {
     sinPuerto === "localhost" ||
     sinPuerto === "127.0.0.1"
   );
+}
+
+/**
+ * JSON listo para meter adentro de un `<script>`.
+ *
+ * `JSON.stringify` escapa comillas y barras invertidas, pero NO el `<`, y el
+ * parser de HTML corta el `<script>` en cuanto ve `</script>` aunque esté en el
+ * medio de un string de JavaScript. Escapar el `<` como `<` lo evita sin
+ * cambiar el valor. Los separadores de línea U+2028/U+2029 van por lo mismo:
+ * son salto de línea para JavaScript y rompen el literal.
+ *
+ * Va además del filtro de host, no en lugar de él: dos capas para que un
+ * descuido en una no alcance para inyectar.
+ */
+function jsonParaScript(valor: unknown): string {
+  return JSON.stringify(valor)
+    .replace(/</g, "\\u003c")
+    .replace(/\u2028/g, "\\u2028")
+    .replace(/\u2029/g, "\\u2029");
 }
 
 function origenDelPedido(req: NextRequest): string {
@@ -61,10 +95,10 @@ function popupCloseResponse(status: "connected" | "error", origen: string) {
 <html><body>
 <script>
   if (window.opener) {
-    window.opener.postMessage({ type: "fb-oauth", status: ${JSON.stringify(status)} }, ${JSON.stringify(origen)});
+    window.opener.postMessage({ type: "fb-oauth", status: ${jsonParaScript(status)} }, ${jsonParaScript(origen)});
     window.close();
   } else {
-    window.location.replace(${JSON.stringify(target)});
+    window.location.replace(${jsonParaScript(target)});
   }
 </script>
 <p style="font-family:sans-serif;font-size:14px;color:#475569;text-align:center;margin-top:40px">
