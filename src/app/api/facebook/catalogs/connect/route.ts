@@ -3,7 +3,7 @@ import { getCurrentUser } from "@/lib/auth-session";
 import { prisma } from "@/lib/prisma";
 import {
   listOwnedCatalogs, createCatalog, assignCatalogToUser, decryptToken,
-  traducirErrorGraph, dentroDelTopeGraph,
+  traducirErrorGraph, dentroDelTopeGraph, borrarProductFeed,
 } from "@/lib/facebook";
 
 // Meta corta los nombres largos igual; el techo es para no mandarle basura y
@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
 
   const store = await prisma.store.findUnique({
     where: { ownerId: user.id },
-    select: { id: true, fbAccessToken: true, fbBusinessId: true, fbUserId: true },
+    select: { id: true, fbAccessToken: true, fbBusinessId: true, fbUserId: true, fbCatalogId: true, fbFeedId: true },
   });
   if (!store?.fbAccessToken) {
     return NextResponse.json({ error: "Facebook no está conectado" }, { status: 400 });
@@ -70,9 +70,17 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Cambiar de catálogo dejaba el feed anterior corriendo sobre el catálogo
+    // viejo: le poníamos `null` acá y nunca más lo veíamos. Se da de baja antes
+    // de soltarlo, igual que al desconectar la cuenta. Si el catálogo elegido es
+    // el mismo de antes no hay nada que dar de baja.
+    if (store.fbFeedId && store.fbCatalogId && store.fbCatalogId !== chosen.id) {
+      await borrarProductFeed(token, store.fbFeedId);
+    }
+
     await prisma.store.update({
       where: { id: store.id },
-      // El feed viejo apuntaba al catálogo anterior: se rearma en el último paso.
+      // El feed se rearma en el último paso del wizard, contra el catálogo nuevo.
       data: { fbCatalogId: chosen.id, fbFeedId: null },
     });
 

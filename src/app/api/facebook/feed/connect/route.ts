@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth-session";
 import { prisma } from "@/lib/prisma";
-import { createProductFeed, decryptToken, dentroDelTopeGraph } from "@/lib/facebook";
+import { createProductFeed, buscarFeedPropio, decryptToken, dentroDelTopeGraph } from "@/lib/facebook";
 import { PUBLIC_APP_URL } from "@/lib/site";
 
 // POST /api/facebook/feed/connect
@@ -28,14 +28,18 @@ export async function POST() {
   const feedUrl = `${PUBLIC_APP_URL}/api/store/feed?store=${encodeURIComponent(store.slug)}`;
 
   try {
-    const feed = await createProductFeed(token, store.fbCatalogId, feedUrl, `${store.name} — Feed diario`);
+    // Preguntar antes de crear: si el dueño ya se había conectado a este mismo
+    // catálogo, el feed sigue estando del lado de Meta aunque nosotros hayamos
+    // perdido el id. Crear a ciegas dejaba dos feeds tirando de la misma URL.
+    const existente = await buscarFeedPropio(token, store.fbCatalogId, feedUrl);
+    const feedId = existente ?? (await createProductFeed(token, store.fbCatalogId, feedUrl, `${store.name} — Feed diario`)).id;
 
     await prisma.store.update({
       where: { id: store.id },
-      data: { fbFeedId: feed.id },
+      data: { fbFeedId: feedId },
     });
 
-    return NextResponse.json({ ok: true, feedId: feed.id });
+    return NextResponse.json({ ok: true, feedId, reutilizado: existente !== null });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     // "(#200) Permissions error" solía significar "todavía no nos aprobaron el

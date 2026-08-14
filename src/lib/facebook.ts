@@ -47,6 +47,14 @@ async function graphPost<T>(path: string, token: string, body: Record<string, st
   return data as T;
 }
 
+async function graphDelete<T>(path: string, token: string): Promise<T> {
+  const params = new URLSearchParams({ access_token: token });
+  const res = await fetch(`${GRAPH_URL}${path}?${params.toString()}`, { method: "DELETE" });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data?.error?.message ?? `Graph API error borrando ${path}`);
+  return data as T;
+}
+
 // Llamadas al endpoint de intercambio de tokens — no llevan `access_token` (todavía no hay uno).
 async function oauthTokenRequest(params: Record<string, string>): Promise<{ access_token: string }> {
   const res = await fetch(`${GRAPH_URL}/oauth/access_token?${new URLSearchParams(params).toString()}`);
@@ -123,11 +131,57 @@ export async function connectCatalogToWaba(token: string, wabaId: string, catalo
   return graphPost(`/${wabaId}`, token, { whatsapp_business_catalog_id: catalogId });
 }
 
+type ProductFeed = { id: string; name?: string; schedule?: { url?: string } };
+
+export async function listProductFeeds(token: string, catalogId: string): Promise<{ data: ProductFeed[] }> {
+  return graphGet(`/${catalogId}/product_feeds`, token, { fields: "id,name,schedule" });
+}
+
 export async function createProductFeed(token: string, catalogId: string, feedUrl: string, name: string): Promise<{ id: string }> {
   return graphPost(`/${catalogId}/product_feeds`, token, {
     name,
     schedule: JSON.stringify({ interval: "DAILY", url: feedUrl, hour: 6 }),
   });
+}
+
+/**
+ * El feed que YA tenemos sobre este catálogo, si existe.
+ *
+ * Se busca por la URL programada y no por el nombre, porque el nombre lo puede
+ * cambiar el dueño desde Commerce Manager y la URL no: es nuestra.
+ *
+ * Existe para no crear un feed nuevo cada vez. Al desconectar borrábamos
+ * `fbFeedId` de nuestra base, así que al reconectar creábamos otro sobre el
+ * mismo catálogo y quedaban dos tirando de la misma URL. Preguntando primero,
+ * el flujo es idempotente aunque se repita.
+ */
+export async function buscarFeedPropio(token: string, catalogId: string, feedUrl: string): Promise<string | null> {
+  const { data } = await listProductFeeds(token, catalogId);
+  return data.find((f) => f.schedule?.url === feedUrl)?.id ?? null;
+}
+
+/**
+ * Intenta borrar el feed programado. Devuelve si lo logró.
+ *
+ * NUNCA tira: se usa mientras se desconecta una cuenta o se cambia de catálogo,
+ * y que Meta falle no puede impedir ninguna de las dos cosas — el dueño pidió
+ * desconectarse y tiene que poder hacerlo igual.
+ *
+ * Cuidado con lo que promete: no pude confirmar contra la documentación de Meta
+ * que el nodo acepte DELETE (la página del nodo devuelve 500 y la del edge dice
+ * que ahí no se puede). Puede que no borre nada. Por eso el que de verdad evita
+ * los feeds duplicados es `buscarFeedPropio`, que no depende de esto, y por eso
+ * el aviso al dueño no debería prometer que la sincronización se corta sola
+ * hasta que lo veamos funcionar contra una cuenta real.
+ */
+export async function borrarProductFeed(token: string, feedId: string): Promise<boolean> {
+  try {
+    await graphDelete(`/${feedId}`, token);
+    return true;
+  } catch (err) {
+    console.warn(`Facebook: no se pudo borrar el product feed ${feedId}:`, err);
+    return false;
+  }
 }
 
 // Cifrar y descifrar tokens (reutiliza la crypto existente del proyecto)
