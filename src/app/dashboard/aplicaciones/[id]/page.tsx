@@ -134,6 +134,16 @@ export default async function AppDetailPage({
   const necesitaAtencion =
     metaVencido && installed && (app.id === "meta-catalogo" || app.id === "whatsapp-catalogo");
 
+  // ¿Ya está lo que vino a buscar acá quien te mandó?
+  //
+  // No es lo mismo que "esta app está instalada". Hoy el único caso es Catálogo
+  // en WhatsApp mandando a Catálogo de Meta, y lo que WhatsApp necesita es que
+  // el catálogo EXISTA, no que la cuenta de Facebook esté conectada. Con
+  // `installed` la barra cantaba "listo, volvé" apenas terminaba el login, y del
+  // otro lado el paso 2 seguía pidiendo lo mismo que antes.
+  const origenSatisfecho =
+    origen?.id === "whatsapp-catalogo" ? !!store?.fbCatalogId : installed;
+
   const fbConfigured = !!process.env.FB_APP_ID && !!process.env.FB_APP_SECRET;
   const accent = getAccent(app.id);
 
@@ -164,7 +174,7 @@ export default async function AppDetailPage({
           <div className="bg-indigo-600 px-6 py-2.5">
             <div className="max-w-3xl mx-auto flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5">
               <p className="text-xs text-indigo-100">
-                {installed ? (
+                {origenSatisfecho ? (
                   <>Listo, ya podés volver a <strong className="text-white">{origen.name}</strong> y seguir.</>
                 ) : (
                   <>Lo estás instalando para <strong className="text-white">{origen.name}</strong>.</>
