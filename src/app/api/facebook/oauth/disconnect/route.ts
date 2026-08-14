@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth-session";
 import { prisma } from "@/lib/prisma";
-import { borrarProductFeed, decryptToken } from "@/lib/facebook";
+import { borrarProductFeed, decryptToken, dentroDelTopeGraph } from "@/lib/facebook";
 
 // POST /api/facebook/oauth/disconnect
 //
@@ -21,6 +21,12 @@ import { borrarProductFeed, decryptToken } from "@/lib/facebook";
 export async function POST() {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+
+  // Antes esto sólo escribía en nuestra base y no necesitaba techo. Ahora da de
+  // baja el feed contra Meta, así que entra al mismo tope que el resto.
+  if (!(await dentroDelTopeGraph(user.id))) {
+    return NextResponse.json({ error: "Demasiados intentos seguidos. Esperá un minuto." }, { status: 429 });
+  }
 
   const store = await prisma.store.findUnique({
     where: { ownerId: user.id },

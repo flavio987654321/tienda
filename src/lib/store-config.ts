@@ -230,3 +230,56 @@ export async function resetStoreDesign(storeId: string): Promise<{
 
   return { slug: store.slug, name: before.name, wasPublished: before.isPublished };
 }
+
+/**
+ * Modifica `storeConfig` sin pisar lo que haya escrito otro.
+ *
+ * `storeConfig` es un JSON en una columna de texto, así que cualquier cambio
+ * parcial es leer, modificar y escribir todo de vuelta. Ese patrón está repetido
+ * en media docena de rutas (checkout, pagos, los OAuth de Google y de Meta) y en
+ * todas tiene la misma grieta: entre el `findUnique` y el `update` puede colarse
+ * otra escritura, y la segunda pisa a la primera sin dejar rastro.
+ *
+ * Hace falta que el dueño toque dos cosas casi a la vez —conectar el píxel en
+ * una pestaña mientras guarda la configuración en otra— pero cuando pasa, lo que
+ * se pierde son ajustes que él cree guardados.
+ *
+ * Leer y escribir van adentro de una transacción `Serializable`: Postgres
+ * detecta que dos transacciones tocaron lo mismo y aborta una en vez de dejar
+ * que se pisen. Ese aborto se reintenta una vez, que alcanza porque el segundo
+ * intento ya lee el valor nuevo.
+ *
+ * Lo correcto de verdad sería que la columna fuera `jsonb` y actualizar sólo la
+ * rama que cambia, pero es una migración de tipo sobre una columna que usa medio
+ * proyecto. Esto cierra la grieta sin tocar el esquema.
+ *
+ * Hoy sólo lo usa el conector del píxel de Meta. Los otros llamadores siguen con
+ * el patrón viejo y conviene migrarlos, pero de a uno y probando cada uno.
+ */
+export async function actualizarStoreConfig(
+  storeId: string,
+  cambiar: (config: Record<string, unknown>) => Record<string, unknown>,
+): Promise<void> {
+  const intentar = () =>
+    prisma.$transaction(
+      async (tx) => {
+        const actual = await tx.store.findUnique({
+          where: { id: storeId },
+          select: { storeConfig: true },
+        });
+        await tx.store.update({
+          where: { id: storeId },
+          data: { storeConfig: JSON.stringify(cambiar(parseConfig(actual?.storeConfig))) },
+        });
+      },
+      { isolationLevel: "Serializable" },
+    );
+
+  try {
+    await intentar();
+  } catch {
+    // Reintento único: si chocó con otra escritura, ahora lee el valor nuevo.
+    // Si vuelve a fallar, que suba — el llamador decide qué mostrar.
+    await intentar();
+  }
+}

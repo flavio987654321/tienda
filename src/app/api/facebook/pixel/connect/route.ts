@@ -5,6 +5,7 @@ import {
   listOwnedPixels, createPixel, decryptToken,
   traducirErrorGraph, dentroDelTopeGraph,
 } from "@/lib/facebook";
+import { actualizarStoreConfig } from "@/lib/store-config";
 
 // POST /api/facebook/pixel/connect  { pixelId } | { name }
 //
@@ -67,22 +68,16 @@ export async function POST(req: NextRequest) {
     }
 
     // El píxel se guarda en storeConfig.analytics, el mismo campo de siempre,
-    // así `StoreTrackingScripts` no cambia. Se relee acá adentro y no antes para
-    // achicar la ventana entre leer y escribir: si el dueño estaba tocando otra
-    // cosa de la configuración en otra pestaña, una de las dos escrituras pisa a
-    // la otra. Sigue sin ser atómico — ver el arreglo 08.
-    const fresco = await prisma.store.findUnique({
-      where: { id: store.id },
-      select: { storeConfig: true },
-    });
-    let config: Record<string, unknown> = {};
-    try { config = JSON.parse(fresco?.storeConfig || "{}"); } catch { /* config inválido, se trata como vacío */ }
-    const analytics = { ...(config.analytics as Record<string, unknown> | undefined), facebookPixelId: elegido };
-
-    await prisma.store.update({
-      where: { id: store.id },
-      data: { storeConfig: JSON.stringify({ ...config, analytics }) },
-    });
+    // así `StoreTrackingScripts` no cambia. Va por el helper para que leer y
+    // escribir sean una sola operación: antes esto era un read-modify-write
+    // suelto y se podía perder lo que hubiera guardado otra pestaña en el medio.
+    await actualizarStoreConfig(store.id, (config) => ({
+      ...config,
+      analytics: {
+        ...(config.analytics as Record<string, unknown> | undefined),
+        facebookPixelId: elegido,
+      },
+    }));
 
     return NextResponse.json({ ok: true, pixelId: elegido });
   } catch (err) {

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { randomBytes } from "crypto";
 import { getCurrentUser } from "@/lib/auth-session";
 import { prisma } from "@/lib/prisma";
-import { getOAuthUrl, FB_APP_ID } from "@/lib/facebook";
+import { getOAuthUrl, FB_APP_ID, dentroDelTopeGraph } from "@/lib/facebook";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "";
 
@@ -18,6 +18,13 @@ export async function GET() {
 
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+
+  // Esta ruta no llama a la Graph API, pero cada visita planta una cookie y
+  // manda a Facebook. Sin techo, un bucle deja al dueño rebotando contra el
+  // diálogo de Meta, y Facebook empieza a ver la app como abusiva.
+  if (!(await dentroDelTopeGraph(user.id))) {
+    return NextResponse.json({ error: "Demasiados intentos seguidos. Esperá un minuto." }, { status: 429 });
+  }
 
   const store = await prisma.store.findUnique({
     where: { ownerId: user.id },

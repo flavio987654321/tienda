@@ -52,6 +52,11 @@ function origenDelPedido(req: NextRequest): string {
 // hay opener (se abrió como pestaña completa), cae al redirect tradicional.
 function popupCloseResponse(status: "connected" | "error", origen: string) {
   const target = `${origen}/dashboard/aplicaciones/meta-catalogo?fb=${status}`;
+  // La cookie del nonce se borra SIEMPRE, salga bien o mal. Antes sólo se
+  // limpiaba en el camino feliz, así que un intento fallido dejaba el nonce
+  // vivo quince minutos. No es explotable —el `code` de Facebook es de un solo
+  // uso y sin él el nonce no sirve para nada— pero un valor de un solo uso que
+  // sobrevive a su uso es una invitación a que alguna vez sí importe.
   const html = `<!DOCTYPE html>
 <html><body>
 <script>
@@ -66,12 +71,21 @@ function popupCloseResponse(status: "connected" | "error", origen: string) {
   Podés cerrar esta ventana.
 </p>
 </body></html>`;
-  return new NextResponse(html, { headers: { "Content-Type": "text/html; charset=utf-8" } });
+  const res = new NextResponse(html, { headers: { "Content-Type": "text/html; charset=utf-8" } });
+  res.cookies.delete("fb_oauth_state");
+  return res;
 }
 
 // GET /api/facebook/oauth/callback
 // Facebook redirige acá después de que el dueño autoriza.
 // Recibe ?code=...&state={nonce} — el storeId viene de la cookie firmada, no del parámetro público.
+//
+// Es la única ruta de /api/facebook SIN tope de llamadas, y es a propósito: acá
+// no entra el dueño, entra Facebook redirigiendo. Ponerle techo sería arriesgar
+// cortar una conexión legítima a mitad de camino. El abuso ya está acotado
+// aguas arriba: sin un `code` válido de Facebook y el nonce de la cookie, esto
+// no pasa de la primera línea, y quien reparte esos `code` es `oauth/connect`,
+// que sí tiene tope.
 export async function GET(req: NextRequest) {
   const origen = origenDelPedido(req);
   const { searchParams } = new URL(req.url);
@@ -117,10 +131,7 @@ export async function GET(req: NextRequest) {
       },
     });
 
-    const res = popupCloseResponse("connected", origen);
-    // Borrar la cookie de estado una vez usada
-    res.cookies.delete("fb_oauth_state");
-    return res;
+    return popupCloseResponse("connected", origen);
   } catch (err) {
     console.error("Facebook OAuth callback error:", err);
     return popupCloseResponse("error", origen);
