@@ -6,6 +6,7 @@ import { getStoreType } from "@/lib/storeTypes";
 import type { ActivePromotion } from "@/lib/pricing";
 import { parseStringArray } from "@/lib/promotions";
 import { buscarVariante } from "@/lib/variantMatch";
+import { recordarAfiliado, afiliadoDeEstaTienda } from "@/lib/atribucion-afiliado";
 // `opciones.ts` sólo toma TIPOS de este archivo, así que en tiempo de ejecución
 // no hay ciclo: los `import type` se borran al compilar.
 import { opcionesDeVariantes, valoresElegidos } from "@/lib/opciones";
@@ -340,9 +341,20 @@ export function useStorefront() {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
     const ref = params.get("ref");
-    if (!ref) return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- sincroniza con el query param ?ref= de la URL (sistema externo)
+
+    /* Sin ?ref= en la dirección, se busca el que quedó guardado de antes.
+       Ese es todo el arreglo: la persona entró por el link del afiliado, tocó
+       una categoría —y el navegador cargó una pantalla nueva, sin ?ref=— y
+       volvió a comprar. Antes acá se cortaba y la venta no era de nadie. */
+    if (!ref) {
+      const guardado = afiliadoDeEstaTienda();
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- recupera la atribución guardada en el navegador (sistema externo)
+      if (guardado) setAffiliateId(guardado);
+      return;
+    }
+
     setAffiliateId(ref);
+    recordarAfiliado(ref);
 
     const dedupeKey = `aff_click_${ref}`;
     if (sessionStorage.getItem(dedupeKey)) return;

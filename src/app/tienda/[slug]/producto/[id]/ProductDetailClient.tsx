@@ -23,6 +23,7 @@ import CasaClaraDetail from "@/components/store/templates/productDetail/CasaClar
 import BohoTerraDetail from "@/components/store/templates/productDetail/BohoTerraDetail";
 import UrbanPulseDetail from "@/components/store/templates/productDetail/UrbanPulseDetail";
 import type { ClaveLegal } from "@/lib/politicas-tienda";
+import { afiliadoDeEstaTienda } from "@/lib/atribucion-afiliado";
 
 const THEMED_DETAIL: Record<string, React.ComponentType<{ view: ProductDetailViewProps }>> = {
   "electro-prime": ElectroPrimeDetail,
@@ -76,6 +77,12 @@ export default function ProductDetailClient({ slug, productId, productoInicial =
   const [template, setTemplate] = useState<string | null>(templateInicial);
   const [currency, setCurrency] = useState("ARS");
   const [hasMercadoPago, setHasMercadoPago] = useState(false);
+  /* Igual que en la pantalla de productos: se lee una sola vez al montar para
+     que el pedido y las opciones de pago vean lo mismo. Ver la nota larga en
+     `lib/atribucion-afiliado.ts` sobre por qué hacía falta guardarlo. */
+  const [affiliateId, setAffiliateId] = useState<string | null>(null);
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- lee la atribución guardada en el navegador (sistema externo), sólo al montar
+  useEffect(() => { setAffiliateId(afiliadoDeEstaTienda()); }, []);
   const [isPreview] = useState(() => typeof window !== "undefined" && new URLSearchParams(window.location.search).get("from") === "editor");
   const [isOwner, setIsOwner] = useState(false);
   const [socialLinks, setSocialLinks] = useState<Record<string, string> | undefined>(undefined);
@@ -177,21 +184,25 @@ export default function ProductDetailClient({ slug, productId, productoInicial =
     } catch { return { error: "Error de conexión" }; }
   }, [storeId]);
 
-  const placeOrder = useCallback(async (params: PlaceOrderParams): Promise<{ ok: boolean; error?: string }> => {
+  const placeOrder = useCallback(async (params: PlaceOrderParams): Promise<{ ok: boolean; orderId?: string; donationId?: string; error?: string }> => {
     if (!storeId) return { ok: false, error: "Tienda no disponible" };
     try {
       const res = await fetch("/api/checkout", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          storeId, couponId: params.couponId ?? null, items: params.cartItems,
+          storeId, affiliateId: affiliateId ?? undefined,
+          couponId: params.couponId ?? null, items: params.cartItems,
           customer: params.customer, shippingMethod: params.shippingMethod, paymentProvider: params.paymentProvider,
         }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) return { ok: false, error: data?.error || "Error al procesar el pedido" };
-      return { ok: true };
+      // Sin `orderId` el carrito nunca manda a pagar por MercadoPago: crea el
+      // pedido, vacía el carrito y dice que salió bien. Ver la nota larga en la
+      // pantalla de productos.
+      return { ok: true, orderId: data.order?.id, donationId: data.donationId ?? undefined };
     } catch { return { ok: false, error: "Error de conexión" }; }
-  }, [storeId]);
+  }, [storeId, affiliateId]);
 
   // `slug`, `isOwner` e `isPreview` no se pasaban, y sin ellos el hook no puede
   // registrar nada: el embudo se perdía justo los pasos de esta pantalla, que es
@@ -204,7 +215,11 @@ export default function ProductDetailClient({ slug, productId, productoInicial =
   // Acá no hace falta esperar a que `isOwner` resuelva, como sí hace el efecto de
   // la vista: eso dispara solo al cargar, y esto dispara cuando la persona toca
   // el botón. Para ese momento la página ya cargó y `isOwner` ya es el de verdad.
-  const cart = useCartLogic({ products, promotions, storeId, slug, isOwner, isPreview, resolveVariantId, validateCoupon, placeOrder, lockScrollOnModal: false });
+  /* `hasMercadoPago` ya se pedía a la API pero no llegaba hasta acá, así que esta
+     pantalla nunca ofrecía MercadoPago: sólo transferencia y pago al retirar.
+     Sin él, sumar el afiliado dejaría la lista de pagos vacía, porque una venta
+     con comisión sólo puede cobrarse por MercadoPago. */
+  const cart = useCartLogic({ products, promotions, storeId, slug, isOwner, isPreview, affiliateId, hasMercadoPago, resolveVariantId, validateCoupon, placeOrder, lockScrollOnModal: false });
   const {
     seleccion, setSeleccion, setOpcion, qty, setQty,
     addToCart, cartCount, toastMsg, openModal,

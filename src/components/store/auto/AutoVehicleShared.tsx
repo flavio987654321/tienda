@@ -5,6 +5,7 @@ import { esOpcionDeColor } from "@/lib/opciones";
 import { useTouchSwipe } from "@/hooks/useTouchSwipe";
 import StoreProductReels from "@/components/store/ProductReels";
 import { getContrastColor } from "@/contexts/EditContext";
+import { afiliadoDeEstaTienda } from "@/lib/atribucion-afiliado";
 
 export function fmtPrice(n: number, currency: string) {
   return (currency === "USD" ? "USD " : "$") + n.toLocaleString("es-AR");
@@ -140,12 +141,27 @@ export function VehicleModal({ product, accent, currency, whatsapp, products, on
   const waNumber = whatsapp.number.replace(/\D/g, "");
   const waMsg = encodeURIComponent(`Hola! Me interesa el ${product.name}${año ? ` (${año})` : ""}. ¿Está disponible?`);
 
+  /* La consulta es la venta en las tiendas de autos: ahí no hay carrito, así que
+     la comisión del afiliado NO nace de un pedido sino de que el dueño confirme
+     esta consulta (ver `api/leads/[id]`, que acredita el saldo).
+
+     Este formulario nunca mandaba el afiliado. La API lo aceptaba y lo validaba
+     desde el principio, pero como nadie se lo mandaba, toda consulta se guardaba
+     sin dueño y con el porcentaje en null — o sea que la rama que paga la
+     comisión no podía ejecutarse nunca. En un rubro donde ESTE es el único
+     camino, el afiliado no iba a cobrar jamás. */
   function registerLead() {
     if (!storeId || isOwner || isPreview) return;
     fetch("/api/leads", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ storeId, productId: product.id, productName: product.name, productPrice: product.price }),
+      body: JSON.stringify({
+        storeId,
+        affiliateId: afiliadoDeEstaTienda() ?? undefined,
+        productId: product.id,
+        productName: product.name,
+        productPrice: product.price,
+      }),
     }).catch(() => {});
   }
 

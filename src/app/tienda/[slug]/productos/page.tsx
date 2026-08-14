@@ -36,6 +36,7 @@ import { resolveProductPromo, describePromo, resolveStoreEvent, eventLabelOf } f
 import { resolveVariantPrice } from "@/lib/variantPrice";
 import { useTurnstile } from "@/components/Turnstile";
 import { linksLegales, type ClaveLegal } from "@/lib/politicas-tienda";
+import { afiliadoDeEstaTienda } from "@/lib/atribucion-afiliado";
 
 const SOCIAL_NETWORKS: ["instagram"|"facebook"|"tiktok"|"youtube"|"pinterest", string][] = [
   ["instagram", "Instagram"], ["facebook", "Facebook"], ["tiktok", "TikTok"], ["youtube", "YouTube"], ["pinterest", "Pinterest"],
@@ -556,6 +557,20 @@ function ProductosPageInner() {
   const [template,   setTemplate]   = useState(tParam && THEMES[tParam] ? tParam : "fashion-noir");
   const [accentOverride, setAccentOverride] = useState<string | null>(null);
   const [isOwner,    setIsOwner]    = useState(false);
+  /* De quién es la venta si la persona llegó por el link de un afiliado.
+     Se lee UNA vez al montar y no se vuelve a mirar: `placeOrder` y las opciones
+     de pago tienen que ver exactamente lo mismo. Si se leyera del navegador en
+     cada uso, abrir un link de afiliado en OTRA pestaña cambiaría el valor a
+     mitad de la compra, y la pantalla podría ofrecer efectivo mientras el pedido
+     ya viaja con afiliado — que el servidor rechaza. */
+  const [affiliateId, setAffiliateId] = useState<string | null>(null);
+  const [hasMercadoPago, setHasMercadoPago] = useState(false);
+  // Va en un efecto y no en el valor inicial del useState a propósito: el
+  // servidor no tiene navegador, así que ahí siempre daría null, y el cliente
+  // daría el afiliado — dos HTML distintos para la misma pantalla. Leerlo
+  // después de montar evita ese choque al hidratar.
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- lee la atribución guardada en el navegador (sistema externo), sólo al montar
+  useEffect(() => { setAffiliateId(afiliadoDeEstaTienda()); }, []);
   const [socialLinks, setSocialLinks] = useState<Record<string, string>>({});
   // Qué políticas legales linkea el pie. Ver `lib/politicas-tienda`.
   const [legales, setLegales] = useState<ClaveLegal[] | undefined>(undefined);
@@ -623,13 +638,14 @@ function ProductosPageInner() {
     } catch { return { error: "Error de conexión" }; }
   }, []);
 
-  const placeOrder = useCallback(async (params: PlaceOrderParams): Promise<{ ok: boolean; error?: string }> => {
+  const placeOrder = useCallback(async (params: PlaceOrderParams): Promise<{ ok: boolean; orderId?: string; donationId?: string; error?: string }> => {
     if (!storeIdRef.current) return { ok: false, error: "Tienda no disponible" };
     try {
       const res = await fetch("/api/checkout", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           storeId: storeIdRef.current,
+          affiliateId: affiliateId ?? undefined,
           couponId: params.couponId ?? null,
           items: params.cartItems,
           customer: params.customer,
@@ -639,11 +655,24 @@ function ProductosPageInner() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) return { ok: false, error: data?.error || "Error al procesar el pedido" };
-      return { ok: true };
+      /* El `orderId` NO es opcional, aunque el tipo lo deje pasar: con él, el
+         carrito arma la preferencia de MercadoPago y manda a pagar; sin él, se
+         saltea ese paso, vacía el carrito y muestra "listo" — con el pedido
+         creado y sin cobrar un peso.
+         Acá se devolvía sólo `{ ok: true }`. No se notaba porque esta pantalla
+         no ofrecía MercadoPago; al habilitarlo para que la comisión del afiliado
+         se pueda retener, se habría vuelto la falla principal. */
+      return { ok: true, orderId: data.order?.id, donationId: data.donationId ?? undefined };
     } catch { return { ok: false, error: "Error de conexión" }; }
-  }, []);
+  }, [affiliateId]);
 
-  const cart = useCartLogic({ products, promotions, slug, isOwner, isPreview: fromEditor, resolveVariantId, validateCoupon, placeOrder });
+  /* `affiliateId` y `hasMercadoPago` van juntos o no van.
+     Con afiliado, el cobro EXIGE MercadoPago —es de donde se retiene la
+     comisión— y `getPagoOptions` devuelve la lista vacía si dice que hay
+     afiliado pero la tienda no tiene MercadoPago conectado. Mandar uno sin el
+     otro dejaría a la persona sin ningún medio de pago para elegir: se cambiaría
+     una comisión perdida por una venta perdida. */
+  const cart = useCartLogic({ products, promotions, slug, isOwner, isPreview: fromEditor, affiliateId, hasMercadoPago, resolveVariantId, validateCoupon, placeOrder });
   // Sólo lo que dibuja ESTA página. Todo lo del carrito y el checkout —líneas con
   // promo, cupón, envío, pago, datos del comprador, totales— se le pasa entero a
   // `CartDrawer` y `CheckoutModal` en el objeto `cart`, así que no hace falta
@@ -670,6 +699,7 @@ function ProductosPageInner() {
         storeIdRef.current = data.store.id ?? null;
         dbNameRef.current  = data.store.name ?? "Tienda";
         setIsOwner(data.isOwner ?? false);
+        setHasMercadoPago(!!data.hasMercadoPago);
         setStoreName(data.store.name ?? "Tienda");
         if (Array.isArray(data.legales)) setLegales(data.legales);
         if (data.store.tipoTienda === "AUTOS") {
