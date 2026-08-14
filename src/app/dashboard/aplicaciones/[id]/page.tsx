@@ -320,6 +320,7 @@ export default async function AppDetailPage({
                     fbConnected={!!store?.fbConnectedAt}
                     fbBusinessId={store?.fbBusinessId ?? null}
                     pixelId={analytics.facebookPixelId?.trim() || null}
+                    fbVencido={metaVencido}
                   />
                 )}
                 {app.id === "whatsapp-catalogo" && (

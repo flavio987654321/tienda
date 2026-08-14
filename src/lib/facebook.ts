@@ -253,7 +253,7 @@ export async function dentroDelTopeGraph(userId: string): Promise<boolean> {
   return permitido;
 }
 
-export type ContextoGraph = "portfolios" | "catalogos";
+export type ContextoGraph = "portfolios" | "catalogos" | "pixeles";
 
 export function traducirErrorGraph(err: unknown, contexto: ContextoGraph): { error: string; status: number } {
   const msg = err instanceof Error ? err.message : String(err);
@@ -272,13 +272,18 @@ export function traducirErrorGraph(err: unknown, contexto: ContextoGraph): { err
   // `#200\b` y no `#200`: sin el borde también matchea #2000 y #2001, que son
   // errores distintos de Meta.
   if (/#200\b|Permissions error|do(es)? not have permission|requires .* permission/i.test(msg)) {
-    return {
-      error:
-        contexto === "catalogos"
-          ? "Tu cuenta de Facebook no tiene permiso para administrar catálogos en este portfolio comercial. Entrá a Meta Business, date acceso de administrador sobre el portfolio, y volvé a intentar."
-          : "Tu cuenta de Facebook no tiene permiso para ver portfolios comerciales. Revisá en Meta Business que seas administradora del portfolio.",
-      status: 403,
+    const porContexto: Record<ContextoGraph, string> = {
+      catalogos:
+        "Tu cuenta de Facebook no tiene permiso para administrar catálogos en este portfolio comercial. Entrá a Meta Business, date acceso de administrador sobre el portfolio, y volvé a intentar.",
+      portfolios:
+        "Tu cuenta de Facebook no tiene permiso para ver portfolios comerciales. Revisá en Meta Business que seas administradora del portfolio.",
+      // Los píxeles viven del lado de publicidad y piden otro permiso que el
+      // catálogo, así que este error puede aparecer incluso con el portfolio
+      // bien configurado.
+      pixeles:
+        "Tu cuenta de Facebook no tiene permiso para administrar píxeles en este portfolio comercial. Entrá a Meta Business, date acceso de administrador sobre los orígenes de datos, y volvé a intentar.",
     };
+    return { error: porContexto[contexto], status: 403 };
   }
 
   // El portfolio se borró, o dejó de estar accesible para esta cuenta.
@@ -289,11 +294,13 @@ export function traducirErrorGraph(err: unknown, contexto: ContextoGraph): { err
     };
   }
 
+  const queNoVino: Record<ContextoGraph, string> = {
+    catalogos: "tus catálogos",
+    portfolios: "tus portfolios",
+    pixeles: "tus píxeles",
+  };
   return {
-    error:
-      contexto === "catalogos"
-        ? "No pudimos traer tus catálogos de Meta. Puede ser un problema momentáneo de Facebook."
-        : "No pudimos traer tus portfolios de Meta. Puede ser un problema momentáneo de Facebook.",
+    error: `No pudimos traer ${queNoVino[contexto]} de Meta. Puede ser un problema momentáneo de Facebook.`,
     status: 502,
   };
 }
