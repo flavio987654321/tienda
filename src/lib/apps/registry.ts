@@ -9,7 +9,7 @@ export type AppCategory = "ventas" | "analitica" | "marketing";
 
 /** Íconos permitidos en `usage`. Son nombres y no componentes para que el
     registro siga siendo un módulo de datos, sin importar nada de React. */
-export type UsageIcon = "auto" | "etiqueta" | "tienda" | "anuncio";
+export type UsageIcon = "auto" | "etiqueta" | "tienda" | "anuncio" | "chat" | "carrito" | "ia";
 
 export type AppDefinition = {
   id: string;
@@ -48,7 +48,7 @@ export type AppDefinition = {
   /** Dudas reales que frenan a alguien no técnico. */
   faq?: { q: string; a: string }[];
   /** Renderiza la maqueta de "así se va a ver" en la ficha. */
-  preview?: "meta-catalogo";
+  preview?: "meta-catalogo" | "whatsapp-catalogo";
 };
 
 /* Color de marca de cada app. Son clases completas (no interpoladas) para que
@@ -215,6 +215,71 @@ export const APPS_REGISTRY: AppDefinition[] = [
     price: "gratis",
     provider: "interno",
     providerName: "Meta",
+    tagline: "Que tus clientes vean tus productos sin salir del chat, con el mismo catálogo que ya usás en Facebook e Instagram.",
+    preview: "whatsapp-catalogo",
+    about: [
+      "Un catálogo en WhatsApp es tu vidriera adentro de la app. Cuando alguien te escribe, en vez de mandarle fotos sueltas y escribirle el precio a mano, toca el ícono de la tienda en tu perfil y ve todos tus productos con foto, nombre y precio.",
+      "Es el mismo catálogo que esta plataforma ya le manda a Meta para Facebook e Instagram: no es una lista aparte que tengas que cargar de nuevo. Si cambiás un precio o se te agota algo acá, al otro día se ve reflejado en los tres lados a la vez.",
+      "El último paso —decirle a Meta cuál de tus catálogos va en WhatsApp— lo hacés vos, una sola vez, desde el panel de Meta. Son cuatro clics y abajo te dejamos los pasos con el link. No lo podemos hacer nosotros: Meta reserva ese permiso para las empresas que envían mensajes por WhatsApp, y nosotros no enviamos mensajes.",
+    ],
+    usage: [
+      {
+        icon: "chat",
+        title: "Tu vidriera dentro del chat",
+        text: "En tu perfil de WhatsApp Business aparece un ícono de tienda. Quien te escriba puede tocarlo y recorrer tus productos ahí mismo, sin que vos le mandes nada.",
+      },
+      {
+        icon: "carrito",
+        title: "Te piden sin escribir",
+        text: "Tu cliente elige los productos que quiere, arma el pedido y te lo manda como un mensaje con todo detallado. Se terminan los “cuánto sale el segundo de la foto”.",
+      },
+      {
+        icon: "auto",
+        title: "Se actualiza solo",
+        text: "Es el mismo catálogo de Facebook e Instagram. Subís un producto acá y aparece en los tres lados. No hay que cargar nada dos veces ni acordarse de corregir precios en WhatsApp.",
+      },
+      {
+        icon: "ia",
+        title: "La IA de Meta, gratis",
+        text: "Con el catálogo vinculado podés activar el asistente de Meta, que le contesta a tus clientes las 24 horas usando tus productos. Se activa desde la app de WhatsApp Business y no te cobra nada.",
+      },
+    ],
+    requirements: [
+      {
+        text: "Tener instalada la app Catálogo de Meta acá. Es la que arma el catálogo y lo mantiene actualizado — sin eso no hay nada que vincular a WhatsApp.",
+        link: { label: "Ir a Catálogo de Meta", href: "/dashboard/aplicaciones/meta-catalogo" },
+      },
+      {
+        text: "La app WhatsApp Business en tu celular (la verde con la valijita, no el WhatsApp común). Es gratis y tu número puede ser el mismo que ya usás.",
+        link: { label: "Descargar WhatsApp Business", href: "https://business.whatsapp.com/products/business-app" },
+      },
+      {
+        text: "Tu WhatsApp Business vinculado a tu portfolio comercial de Meta. Es lo que hace que Meta sepa que ese número y ese catálogo son del mismo negocio. Se hace una vez, desde Meta Business Suite.",
+        link: { label: "Abrir Meta Business Suite", href: "https://business.facebook.com/latest/settings/whatsapp_account" },
+      },
+    ],
+    faq: [
+      {
+        q: "¿Por qué este último paso lo tengo que hacer yo?",
+        a: "Porque Meta le da ese permiso solo a las empresas que mandan mensajes por WhatsApp: los chatbots, los sistemas de atención al cliente. Nosotros no mandamos mensajes, armamos tu catálogo. Podríamos pedirlo igual y esperar meses una respuesta que probablemente sea que no, o dejarte los cuatro clics acá y que lo tengas funcionando hoy. Elegimos lo segundo.",
+      },
+      {
+        q: "¿Tengo que cargar mis productos de nuevo en WhatsApp?",
+        a: "No, y ese es el punto. WhatsApp va a mostrar el mismo catálogo que ya te armamos para Facebook e Instagram. Vos cargás los productos una sola vez, acá.",
+      },
+      {
+        q: "¿Pierdo mi WhatsApp normal?",
+        a: "No. WhatsApp Business es una app aparte y podés usar el mismo número. Tus chats se pasan cuando la instalás y seguís hablando con todo el mundo igual.",
+      },
+      {
+        q: "¿Mis clientes pagan por WhatsApp?",
+        a: "No. Arman el pedido y te lo mandan como mensaje, y vos cerrás la venta como siempre. Si querés que paguen online, el link de tu tienda sigue siendo el camino.",
+      },
+      {
+        q: "¿Puedo deshacerlo?",
+        a: "Sí, desde el mismo lugar de Meta donde lo vinculaste. Sacás el catálogo de tu cuenta de WhatsApp y listo. Tus productos no se borran de ningún lado.",
+      },
+    ],
   },
 ];
 

@@ -4,13 +4,15 @@ import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowLeft, ArrowDown, CheckCircle, Check, ChevronDown, ListChecks, ExternalLink,
-  RefreshCw, Tag, Store, Megaphone, AlertTriangle,
+  RefreshCw, Tag, Store, Megaphone, AlertTriangle, MessageCircle, ShoppingCart, Sparkles,
 } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { getApp, getAccent, CATEGORY_LABELS, type UsageIcon } from "@/lib/apps/registry";
 import { parseFirstImage } from "@/lib/metaFeed";
 import AppIcon from "@/components/apps/AppIcon";
 import MetaCatalogPreview, { type PreviewProduct } from "@/components/apps/MetaCatalogPreview";
+import WhatsAppCatalogPreview from "@/components/apps/WhatsAppCatalogPreview";
+import { whatsappVinculado } from "@/lib/apps/whatsapp-vinculo";
 import MetaCatalogoWizard from "./MetaCatalogoWizard";
 import FacebookConnectButton from "./FacebookConnectButton";
 import FacebookPixelWizard from "./FacebookPixelWizard";
@@ -25,6 +27,9 @@ const USAGE_ICONS: Record<UsageIcon, React.ComponentType<{ className?: string }>
   etiqueta: Tag,
   tienda: Store,
   anuncio: Megaphone,
+  chat: MessageCircle,
+  carrito: ShoppingCart,
+  ia: Sparkles,
 };
 
 export default async function AppDetailPage({
@@ -57,7 +62,6 @@ export default async function AppDetailPage({
       fbBusinessId: true,
       fbCatalogId: true,
       fbFeedId: true,
-      fbWabaId: true,
       fbTokenExpiresAt: true,
       gaConnectedAt: true,
       gsEnabledAt: true,
@@ -107,10 +111,22 @@ export default async function AppDetailPage({
     "meta-catalogo": !!store?.fbConnectedAt,
     "google-analytics": !!analytics.googleAnalyticsId?.trim(),
     "facebook-pixel": !!analytics.facebookPixelId?.trim(),
-    "whatsapp-catalogo": !!store?.fbWabaId,
+    // Declarado por la dueña, no comprobado contra Meta — ver lib/apps/whatsapp-vinculo.
+    "whatsapp-catalogo": whatsappVinculado(store?.storeConfig),
     "google-shopping": !!store?.gsEnabledAt,
   };
   const installed = installedById[app.id] ?? false;
+
+  // Instalada pero con la conexión de Meta vencida: el cartel verde tiene que
+  // dejar paso a "Hay que reconectar". Vale para las dos apps que dependen del
+  // envío diario del catálogo — el de WhatsApp es el MISMO catálogo, así que
+  // cuando el token muere la clienta ve precios viejos en el chat.
+  //
+  // El píxel no entra: su ID ya está en las páginas de la tienda y sigue
+  // midiendo aunque el token se venza.
+  const necesitaAtencion =
+    metaVencido && installed && (app.id === "meta-catalogo" || app.id === "whatsapp-catalogo");
+
   const fbConfigured = !!process.env.FB_APP_ID && !!process.env.FB_APP_SECRET;
   const accent = getAccent(app.id);
 
@@ -173,7 +189,7 @@ export default async function AppDetailPage({
                       <span className="inline-flex items-center gap-2 bg-amber-400/10 border border-amber-400/30 text-amber-300 font-bold px-6 py-2.5 rounded-lg text-sm">
                         Próximamente
                       </span>
-                    ) : metaVencido && app.id === "meta-catalogo" ? (
+                    ) : necesitaAtencion ? (
                       <span className="inline-flex items-center gap-2 bg-amber-400/10 border border-amber-400/30 text-amber-300 font-bold px-6 py-2.5 rounded-lg text-sm">
                         <AlertTriangle className="h-4 w-4" /> Hay que reconectar
                       </span>
@@ -209,6 +225,9 @@ export default async function AppDetailPage({
             {/* Maqueta: primero ver, después leer */}
             {app.preview === "meta-catalogo" && (
               <MetaCatalogPreview storeName={store?.name ?? "Tu tienda"} products={previewProducts} />
+            )}
+            {app.preview === "whatsapp-catalogo" && (
+              <WhatsAppCatalogPreview storeName={store?.name ?? "Tu tienda"} products={previewProducts} />
             )}
 
             {/* Para qué sirve */}
@@ -327,7 +346,8 @@ export default async function AppDetailPage({
                   <FacebookWhatsAppWizard
                     fbConnected={!!store?.fbConnectedAt}
                     fbCatalogId={store?.fbCatalogId ?? null}
-                    fbWabaId={store?.fbWabaId ?? null}
+                    vinculado={installed}
+                    fbVencido={metaVencido}
                   />
                 )}
               </section>

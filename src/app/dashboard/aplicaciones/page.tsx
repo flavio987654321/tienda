@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { MousePointerClick, Wand2, Rocket, ShieldCheck, Sparkles } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { APPS_REGISTRY } from "@/lib/apps/registry";
+import { whatsappVinculado } from "@/lib/apps/whatsapp-vinculo";
 import AppsExplorer from "./AppsExplorer";
 
 // Tres pasos, no cuatro: "podés desinstalarla" no es un paso del proceso, es una
@@ -35,7 +36,7 @@ export default async function AplicacionesPage() {
 
   const store = await prisma.store.findUnique({
     where: { ownerId: user.id },
-    select: { id: true, fbConnectedAt: true, fbWabaId: true, fbTokenExpiresAt: true, gsEnabledAt: true, storeConfig: true },
+    select: { id: true, fbConnectedAt: true, fbTokenExpiresAt: true, gsEnabledAt: true, storeConfig: true },
   });
 
   const [pendingAffiliateCount, lowStockCount] = store
@@ -54,7 +55,8 @@ export default async function AplicacionesPage() {
     "meta-catalogo": !!store?.fbConnectedAt,
     "google-analytics": !!analytics.googleAnalyticsId?.trim(),
     "facebook-pixel": !!analytics.facebookPixelId?.trim(),
-    "whatsapp-catalogo": !!store?.fbWabaId,
+    // Declarado por la dueña, no comprobado contra Meta — ver lib/apps/whatsapp-vinculo.
+    "whatsapp-catalogo": whatsappVinculado(store?.storeConfig),
     "google-shopping": !!store?.gsEnabledAt,
   };
   const instaladas = APPS_REGISTRY.filter((a) => installedById[a.id]).length;
@@ -63,11 +65,16 @@ export default async function AplicacionesPage() {
   // vencido hace semanas, porque ese cartel salía de `fbConnectedAt != null`.
   // Con esto la vidriera avisa sin que haya que entrar a la ficha.
   const ahora = new Date();
+  const metaVencido =
+    !!store?.fbConnectedAt &&
+    !!store.fbTokenExpiresAt &&
+    store.fbTokenExpiresAt <= ahora;
   const atencionById: Record<string, boolean> = {
-    "meta-catalogo":
-      !!store?.fbConnectedAt &&
-      !!store.fbTokenExpiresAt &&
-      store.fbTokenExpiresAt <= ahora,
+    "meta-catalogo": metaVencido,
+    // El catálogo que WhatsApp muestra es el mismo que sincroniza Catálogo de
+    // Meta: si el token venció deja de actualizarse, y la clienta ve precios
+    // viejos en el chat sin ningún aviso. Vale el mismo cartel que allá.
+    "whatsapp-catalogo": metaVencido && installedById["whatsapp-catalogo"],
   };
 
   return (

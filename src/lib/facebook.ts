@@ -148,18 +148,19 @@ export async function createPixel(token: string, businessId: string, name: strin
   return graphPost(`/${businessId}/adspixels`, token, { name });
 }
 
-export async function listOwnedWhatsAppAccounts(token: string, businessId: string): Promise<{ data: { id: string; name: string }[] }> {
-  return graphGet(`/${businessId}/owned_whatsapp_business_accounts`, token, { fields: "id,name" });
-}
-
-// Conecta el catálogo de productos ya existente (creado por Catálogo de Meta) a
-// una WhatsApp Business Account. A diferencia del resto de las llamadas de este
-// archivo, Meta no documenta con la misma claridad un único endpoint estable para
-// esto — queda a confirmar/ajustar contra developers.facebook.com apenas haya
-// acceso real para probarlo (recién ahí se puede validar contra una WABA real).
-export async function connectCatalogToWaba(token: string, wabaId: string, catalogId: string): Promise<{ success: boolean }> {
-  return graphPost(`/${wabaId}`, token, { whatsapp_business_catalog_id: catalogId });
-}
+// Acá vivían `listOwnedWhatsAppAccounts` y `connectCatalogToWaba`, que vinculaban
+// el catálogo a una cuenta de WhatsApp Business. Se borraron el 14/08/2026: las
+// dos necesitan `whatsapp_business_management` con acceso avanzado, que la app no
+// tiene, así que devolvían error #200 para todas las tiendas.
+//
+// No es que falte pedirlo. Meta da ese permiso por el carril de Tech Provider, y
+// esa revisión pide demostrar en video envío de mensajes y creación de plantillas
+// — cosas que esta plataforma no hace ni va a hacer. Encima el endpoint de
+// `connectCatalogToWaba` nunca estuvo confirmado en la documentación.
+//
+// El vínculo ahora lo hace la dueña desde el panel de Meta, guiada desde la ficha
+// de la app (ver `lib/apps/whatsapp-vinculo`). Si algún día Meta lo abre, esto
+// vuelve del historial de git.
 
 type ProductFeed = { id: string; name?: string; schedule?: { url?: string } };
 
