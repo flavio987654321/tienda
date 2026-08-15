@@ -309,6 +309,10 @@ export default function Home() {
   );
   const [realTestimonials, setRealTestimonials] = useState<RealTestimonial[]>([]);
   const [testimonioModal, setTestimonioModal] = useState(false);
+  // Qué historias están expandidas. Un Set y no un solo id: si fuera uno solo,
+  // abrir la segunda tarjeta cerraría la primera de golpe mientras se está
+  // leyendo.
+  const [historiasAbiertas, setHistoriasAbiertas] = useState<Set<string>>(new Set());
   const [comunidadHref, setComunidadHref] = useState("/comunidad");
   const [cloudNarrow, setCloudNarrow] = useState(false);
   const [rotatingWordIdx, setRotatingWordIdx] = useState(0);
@@ -1254,17 +1258,46 @@ export default function Home() {
           <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={stagger} className="text-center mb-14">
             <motion.p variants={fadeUp} className="text-orange-600 font-semibold text-sm uppercase tracking-widest mb-3">Resultados reales</motion.p>
             <motion.h2 variants={fadeUp} className="text-4xl font-black text-gray-950">La prueba está en quienes ya están adentro.</motion.h2>
-            <motion.p variants={fadeUp} className="text-gray-500 text-lg mt-3 max-w-xl mx-auto">Cuando haya historias reales de usuarios, las vas a ver acá. Por ahora, podés ser el primero.</motion.p>
+            {/* El subtítulo tiene que seguir a la grilla: mientras estuvo fijo,
+                decía que todavía no había historias con dos ya publicadas debajo. */}
+            <motion.p variants={fadeUp} className="text-gray-500 text-lg mt-3 max-w-xl mx-auto">
+              {realTestimonials.length > 0
+                ? "Historias de gente que ya está vendiendo con TiendaApps."
+                : "Cuando haya historias reales de usuarios, las vas a ver acá. Por ahora, podés ser el primero."}
+            </motion.p>
           </motion.div>
 
           {/* Solo historias reales y aprobadas. Antes había además una lista de
               relleno que estaba vacía desde siempre: todo el armado que la mezclaba
               con las reales, y las ramas de foto y de "Verificado" que servían para
               distinguirlas, no se ejecutaban nunca. Si no hay ninguna, la grilla no
-              se dibuja — el texto de arriba ya explica que todavía no hay. */}
+              se dibuja — el texto de arriba ya explica que todavía no hay.
+
+              `items-start` es lo que hace que al expandir una historia crezca
+              solo esa tarjeta y no toda la fila. Y el ancho se acomoda a cuántas
+              hay: con tres columnas fijas, dos testimonios dejaban un hueco.
+
+              (Este párrafo vivía abajo, entre el `&& (` y el `<motion.div>`. Ahí
+              no se puede: después del `&&` va una expresión, y un comentario JSX
+              en ese lugar JavaScript lo lee como el arranque de un objeto.
+              Rompía el parseo y dejaba todas las páginas en 500.) */}
           {realTestimonials.length > 0 && (
-            <motion.div initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.1 }} variants={stagger} className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-              {realTestimonials.slice(0, 3).map((t) => (
+            <motion.div
+              initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.1 }} variants={stagger}
+              className={`grid grid-cols-1 gap-6 mb-10 items-start ${
+                realTestimonials.length === 1 ? "max-w-md mx-auto"
+                : realTestimonials.length === 2 ? "md:grid-cols-2 max-w-3xl mx-auto"
+                : "md:grid-cols-3"
+              }`}
+            >
+              {realTestimonials.slice(0, 3).map((t) => {
+                const abierta = historiasAbiertas.has(t.id);
+                // El umbral es por caracteres y no por líneas porque las líneas
+                // reales dependen del ancho: a 360 px entran muchas menos que a
+                // 1280. 260 es lo que ocupan cinco líneas en la columna más ancha,
+                // así que por debajo de eso el "Ver más" no tendría nada que abrir.
+                const esLarga = t.text.length > 260;
+                return (
                 <motion.div key={t.id} variants={fadeUp}>
                   <Card3D className="h-full">
                     <div className="h-full bg-white rounded-3xl p-7 border border-gray-100 shadow-sm hover:shadow-lg transition-all flex flex-col">
@@ -1276,8 +1309,23 @@ export default function Home() {
                           <Star key={s} className={`h-4 w-4 ${s <= t.rating ? "fill-amber-400 text-amber-400" : "text-gray-300"}`} />
                         ))}
                       </div>
-                      <p className="text-gray-700 text-sm leading-relaxed mb-6 italic flex-1">&ldquo;{t.text}&rdquo;</p>
-                      <div className="flex items-center gap-3">
+                      <p className={`text-gray-700 text-sm leading-relaxed italic flex-1 ${abierta ? "" : "line-clamp-5"}`}>
+                        &ldquo;{t.text}&rdquo;
+                      </p>
+                      {esLarga && (
+                        <button
+                          type="button"
+                          onClick={() => setHistoriasAbiertas((prev) => {
+                            const next = new Set(prev);
+                            if (next.has(t.id)) next.delete(t.id); else next.add(t.id);
+                            return next;
+                          })}
+                          className="self-start mt-2 text-xs font-semibold text-orange-600 hover:text-orange-700 transition-colors"
+                        >
+                          {abierta ? "Ver menos" : "Ver más"}
+                        </button>
+                      )}
+                      <div className="flex items-center gap-3 mt-6">
                         <div className="w-11 h-11 rounded-full bg-orange-100 flex items-center justify-center flex-shrink-0">
                           <span className="text-orange-600 font-bold text-sm">{t.name[0]}</span>
                         </div>
@@ -1294,7 +1342,8 @@ export default function Home() {
                     </div>
                   </Card3D>
                 </motion.div>
-              ))}
+                );
+              })}
             </motion.div>
           )}
 
