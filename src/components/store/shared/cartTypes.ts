@@ -66,4 +66,22 @@ export function getPagoOptions(hasMercadoPago: boolean, hasAffiliate = false) {
 
 export const PAGO_OPTIONS = BASE_PAGO_OPTIONS;
 
-export const fmt = (n: number) => "$" + n.toLocaleString("es-AR");
+/**
+ * Formateador de precios de la tienda, armado con su moneda.
+ *
+ * Antes esto era una constante con el "$" escrito a mano, y era el camino por el
+ * que pasan los precios de los templates que no traen el suyo (Aurora, Chic
+ * Paris, Urban Pulse, Boho Terra y Fashion Noir). En esos cinco, elegir USD en
+ * el panel no cambiaba nada: se guardaba la preferencia y los precios seguían
+ * saliendo en pesos.
+ *
+ * El separador de miles sigue siendo el argentino en los dos casos: es el
+ * formato que lee quien compra acá, que es todo el público de la plataforma.
+ */
+export function crearFmt(currency?: string | null) {
+  const simbolo = currency === "USD" ? "USD " : "$";
+  return (n: number) => simbolo + n.toLocaleString("es-AR");
+}
+
+/** Formateador en pesos, para lo que formatea sin saber de qué tienda es. */
+export const fmt = crearFmt("ARS");

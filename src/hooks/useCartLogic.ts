@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import type { StorefrontProduct, StorefrontVariant, ValidatedCoupon, PlaceOrderParams, SeleccionOpciones } from "./useStorefront";
 import { valoresElegidos, reacomodarSeleccion, opcionesDeVariantes, opcionDelValor, opcionesAElegir, combinaciones } from "@/lib/opciones";
-import { getEnvioOptions, fmtEnvioPrice, getPagoOptions, fmt as fmtFn, claveItem, type CartItem, type CheckoutStatus, type ShippingMethod } from "@/components/store/shared/cartTypes";
+import { getEnvioOptions, fmtEnvioPrice, getPagoOptions, crearFmt, claveItem, type CartItem, type CheckoutStatus, type ShippingMethod } from "@/components/store/shared/cartTypes";
 import { useAuth } from "@/components/AuthProvider";
 import { LIVE_QUOTE_DOMICILIO_ID } from "@/types/store-config";
 import { PROVINCIAS_ARGENTINA } from "@/lib/provincias";
@@ -173,6 +173,12 @@ type StorefrontDeps = {
 };
 
 export function useCartLogic({ products, promotions = [], storeId, affiliateId = null, slug = null, isOwner = false, isPreview = false, resolveVariantId, validateCoupon, placeOrder, checkoutMode = "cart", isWholesale = false, hasMercadoPago = false, shippingMethods, lockScrollOnModal = true, currency = "ARS" }: StorefrontDeps) {
+  /* Va arriba de todo porque abajo lo usan `fmtLiveQuote` y el resto del hook.
+     Hasta acá `fmt` era la constante en pesos importada del módulo, así que la
+     moneda que este hook ya recibía sólo llegaba al evento Purchase del Pixel y
+     nunca a los precios en pantalla. */
+  const fmt = useMemo(() => crearFmt(currency), [currency]);
+
   const [cartItems,      setCartItems]      = useState<CartItem[]>([]);
   const [cartOpen,       setCartOpen]       = useState(false);
   const [modalProduct,   setModalProduct]   = useState<StorefrontProduct | null>(null);
@@ -459,7 +465,7 @@ export function useCartLogic({ products, promotions = [], storeId, affiliateId =
   function fmtLiveQuote(methodId: string): string {
     if (liveQuote.status === "loading") return "Calculando...";
     const price = getLiveQuotePrice(methodId);
-    if (price != null) return fmtFn(price);
+    if (price != null) return fmt(price);
     return "A coordinar"; // unavailable (Fase A) o sin CP todavía
   }
 
@@ -600,8 +606,6 @@ export function useCartLogic({ products, promotions = [], storeId, affiliateId =
   const favoriteProducts = products.filter(p => favorites.includes(p.id));
 
   // Functions
-  const fmt = fmtFn;
-
   const showToast = (msg: string) => {
     setToastMsg(msg);
     setTimeout(() => setToastMsg(null), 2500);

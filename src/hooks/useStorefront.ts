@@ -456,5 +456,12 @@ export function useStorefront() {
   // dashboard se arma desde DEFAULT_CONFIG y nunca setea isOwner, así que llega en
   // false aunque quien está mirando sea el dueño. `previewFill` es lo único que
   // distingue "estoy acomodando mi tienda" de "un comprador está navegando".
-  return { products, promotions, loadingProducts, affiliateId, storeId, slug, isOwner: config?.isOwner ?? false, isPreview: previewFill, resolveVariantId, validateCoupon, placeOrder, checkoutMode, isWholesale, ocultarPrecios, defaultCategories, hasMercadoPago, shippingMethods };
+  // La moneda viaja con el resto del contexto para que `useCartLogic` arme el
+  // formateador de precios con ella. Sin esto llegaba siempre el default "ARS":
+  // los templates que no traen su propio formateador —Aurora, Chic Paris, Urban
+  // Pulse, Boho Terra y Fashion Noir— mostraban "$" aunque la tienda estuviera
+  // configurada en dólares.
+  const currency = config?.currency ?? "ARS";
+
+  return { products, promotions, loadingProducts, affiliateId, storeId, slug, isOwner: config?.isOwner ?? false, isPreview: previewFill, resolveVariantId, validateCoupon, placeOrder, checkoutMode, isWholesale, ocultarPrecios, defaultCategories, hasMercadoPago, shippingMethods, currency };
 }
