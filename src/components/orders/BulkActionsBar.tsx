@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, AlertTriangle, X } from "lucide-react";
 import { useBulkOrders } from "./BulkOrdersContext";
@@ -27,6 +27,12 @@ export default function BulkActionsBar() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [toast, setToast] = useState("");
+  // Mismo par que en OrderActions: el ref corta el segundo click en el acto
+  // —acá cuesta más caro, porque un lote son N pedidos y N mails— y la
+  // transición mantiene la barra en "Guardando…" hasta que la lista se redibuja.
+  const enviando = useRef(false);
+  const [refrescando, startTransition] = useTransition();
+  const ocupado = loading || refrescando;
 
   if (!active || selected.size === 0) return null;
 
@@ -38,6 +44,8 @@ export default function BulkActionsBar() {
 
   async function runBulkAction(action: BulkOrderAction) {
     const eligibleIds = eligibleIdsFor(action);
+    if (enviando.current) return;
+    enviando.current = true;
     setLoading(true);
     setError("");
     try {
@@ -47,7 +55,7 @@ export default function BulkActionsBar() {
         body: JSON.stringify({ orderIds: eligibleIds, action }),
       });
       const data = await res.json();
-      if (!res.ok) { setError(data.error || "No se pudo procesar la selección"); setLoading(false); return; }
+      if (!res.ok) { setError(data.error || "No se pudo procesar la selección"); return; }
 
       setToast(
         data.failed > 0
@@ -57,10 +65,11 @@ export default function BulkActionsBar() {
       setTimeout(() => setToast(""), 4000);
       setPendingAction(null);
       clearSelection();
-      router.refresh();
+      startTransition(() => router.refresh());
     } catch {
       setError("Error de conexión. Intentá de nuevo.");
     } finally {
+      enviando.current = false;
       setLoading(false);
     }
   }
@@ -97,15 +106,15 @@ export default function BulkActionsBar() {
               <div className="flex gap-2 pb-1">
                 <button
                   onClick={() => runBulkAction(pendingAction)}
-                  disabled={loading}
-                  className="flex-1 sm:flex-none rounded-xl bg-gray-900 hover:bg-gray-700 px-5 py-2.5 text-sm font-bold text-white disabled:opacity-50 transition-colors flex items-center justify-center gap-1.5"
+                  disabled={ocupado}
+                  className="flex-1 sm:flex-none rounded-xl bg-gray-900 hover:bg-gray-700 px-5 py-2.5 text-sm font-bold text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-1.5"
                 >
-                  {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Sí, confirmar"}
+                  {ocupado ? <><Loader2 className="h-4 w-4 animate-spin" /> Guardando…</> : "Sí, confirmar"}
                 </button>
                 <button
                   onClick={() => { setPendingAction(null); setError(""); }}
-                  disabled={loading}
-                  className="flex-1 sm:flex-none rounded-xl bg-gray-100 hover:bg-gray-200 px-5 py-2.5 text-sm font-semibold text-gray-600 transition-colors"
+                  disabled={ocupado}
+                  className="flex-1 sm:flex-none rounded-xl bg-gray-100 hover:bg-gray-200 px-5 py-2.5 text-sm font-semibold text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   No, volver
                 </button>
