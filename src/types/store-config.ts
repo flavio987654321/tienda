@@ -193,7 +193,12 @@ export type StoreConfig = {
     pinterest: string;
   };
   currency: "ARS" | "USD";
-  language: "ES" | "EN";
+  /* `language` se eliminó el 15/08/2026. Era un selector ES/EN en el modal de
+     Configuración avanzada; una búsqueda por todo el proyecto mostró que las
+     únicas cuatro apariciones de la clave eran las líneas que dibujaban ese
+     mismo selector. Elegir "English" no cambiaba una palabra de la tienda.
+     El valor que haya quedado en el JSON de tiendas viejas se preserva como
+     clave ajena y no se lee. */
   seo: {
     enabled: boolean;
     title: string;
@@ -336,7 +341,6 @@ export const DEFAULT_CONFIG: StoreConfig = {
   whatsapp:      { enabled: true, number: "+54 9 11 0000-0000", message: "Hola! Me gustaría consultar sobre sus productos 😊" },
   socialLinks:   { instagram: "", facebook: "", tiktok: "", youtube: "", pinterest: "" },
   currency:      "ARS",
-  language:      "ES",
   seo:           { enabled: false, title: "", description: "" },
   analytics:     { googleAnalyticsId: "", facebookPixelId: "" },
   textOverrides: {},

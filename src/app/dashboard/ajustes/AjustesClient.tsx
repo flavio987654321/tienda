@@ -1,28 +1,31 @@
 "use client";
 
-import { useState } from "react";
-import { Globe, Smartphone, Crown, Copy, Check, ExternalLink, Info, Lock, Clock, Trash2, Bell, Sparkles, AlignLeft, Save, Loader2 } from "lucide-react";
+import { useRef, useState } from "react";
+import { Globe, Smartphone, Crown, Copy, Check, ExternalLink, Info, Lock, Clock, Trash2, Sparkles, AlignLeft, Save, Loader2 } from "lucide-react";
 import PushNotificationToggle from "@/components/PushNotificationToggle";
 import Link from "next/link";
 
-type Props = {
-  slug: string;
-  customDomain: string | null;
-  isPremium: boolean;
-  description: string;
-  tipoTienda?: string;
-};
+/* Cada ajuste es su propia tarjeta exportada, y no un bloque adentro de un
+   componente que los dibuja todos seguidos. El menú lateral de `ConfiguracionShell`
+   necesita poder poner cada uno en el grupo que le toca; mientras vivían en una
+   sola lista, el orden en pantalla era el orden en el archivo y no se podían
+   repartir sin partirlos igual. */
 
-export default function AjustesClient({ slug, customDomain, isPremium, description, tipoTienda }: Props) {
+/* ── Descripción breve ─────────────────────────────────────── */
+export function DescripcionCard({ description, tipoTienda }: { description: string; tipoTienda?: string }) {
   const isAutos = tipoTienda === "AUTOS";
-  const [copied, setCopied] = useState(false);
   const [desc, setDesc] = useState(description);
   const [savedDesc, setSavedDesc] = useState(description);
   const [descSaving, setDescSaving] = useState(false);
   const [descSaved, setDescSaved] = useState(false);
   const [descError, setDescError] = useState("");
+  // `descSaving` es estado: recién deshabilita el botón en el render siguiente,
+  // así que dos clicks rápidos mandaban los dos PATCH.
+  const enviando = useRef(false);
 
   async function saveDescription() {
+    if (enviando.current) return;
+    enviando.current = true;
     setDescSaving(true);
     setDescError("");
     try {
@@ -38,9 +41,62 @@ export default function AjustesClient({ slug, customDomain, isPremium, descripti
     } catch {
       setDescError("No se pudo guardar. Intentá de nuevo.");
     } finally {
+      enviando.current = false;
       setDescSaving(false);
     }
   }
+
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+      {/* La aclaración baja abajo del título en angosto. Peleando el mismo
+          renglón se partían las dos —"Descripción / breve" y "Se muestra en el
+          listado / de tiendas"— y quedaban dos bloques de texto del mismo peso
+          visual, sin que se entienda cuál es el título y cuál la aclaración.
+          Abajo, con el sangrado del ícono, se lee como lo que es. */}
+      <div className="flex flex-col gap-1 px-5 py-4 border-b border-slate-100 sm:flex-row sm:items-center sm:gap-3">
+        <div className="flex items-center gap-3">
+          <AlignLeft className="h-4 w-4 text-slate-400 shrink-0" />
+          <h2 className="text-sm font-semibold text-slate-900">Descripción breve</h2>
+        </div>
+        <span className="pl-7 text-xs text-slate-400 sm:ml-auto sm:pl-0">Se muestra en el listado de tiendas</span>
+      </div>
+      <div className="px-5 py-4 space-y-3">
+        <textarea
+          value={desc}
+          onChange={(e) => setDesc(e.target.value)}
+          maxLength={150}
+          /* 3 renglones y no 2: en un teléfono entran unos 45 caracteres por
+             renglón, así que los 150 que admite el campo ocupan más de tres.
+             Con 2 el texto scrolleaba adentro de la caja y no se podía releer
+             lo escrito de un vistazo, que es justo lo que hace falta acá. */
+          rows={3}
+          placeholder={isAutos ? "Ej: Concesionaria oficial en Córdoba. Autos, motos y camionetas nuevos y usados." : "Ej: Ropa femenina para todas las tallas, con envíos a todo el país."}
+          className="w-full border border-slate-200 rounded-lg px-4 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-400 focus:border-indigo-400 resize-none"
+        />
+        <div className="flex items-center justify-between">
+          <span className="text-xs text-slate-400">{desc.length}/150 caracteres</span>
+          <button
+            onClick={saveDescription}
+            disabled={descSaving || desc === savedDesc}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-indigo-600 text-white text-xs font-semibold hover:bg-indigo-500 transition-colors disabled:opacity-40"
+          >
+            {descSaving
+              ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              : descSaved
+              ? <Check className="h-3.5 w-3.5" />
+              : <Save className="h-3.5 w-3.5" />}
+            {descSaving ? "Guardando..." : descSaved ? "¡Guardado!" : "Guardar"}
+          </button>
+        </div>
+        {descError && <p className="text-xs text-red-500">{descError}</p>}
+      </div>
+    </div>
+  );
+}
+
+/* ── Subdominio ────────────────────────────────────────────── */
+export function SubdominioCard({ slug }: { slug: string }) {
+  const [copied, setCopied] = useState(false);
   const subdomain = `${slug}.tiendaapps.com`;
 
   function copySubdomain() {
@@ -50,252 +106,208 @@ export default function AjustesClient({ slug, customDomain, isPremium, descripti
   }
 
   return (
-    <div className="space-y-3">
-
-      {/* Descripción breve */}
-      <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-        {/* La aclaración baja abajo del título en angosto. Peleando el mismo
-            renglón se partían las dos —"Descripción / breve" y "Se muestra en el
-            listado / de tiendas"— y quedaban dos bloques de texto del mismo peso
-            visual, sin que se entienda cuál es el título y cuál la aclaración.
-            Abajo, con el sangrado del ícono, se lee como lo que es. */}
-        <div className="flex flex-col gap-1 px-5 py-4 border-b border-slate-100 sm:flex-row sm:items-center sm:gap-3">
-          <div className="flex items-center gap-3">
-            <AlignLeft className="h-4 w-4 text-slate-400 shrink-0" />
-            <h2 className="text-sm font-semibold text-slate-900">Descripción breve</h2>
+    <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+      <div className="flex items-center gap-3 px-5 py-4 border-b border-slate-100">
+        <Globe className="h-4 w-4 text-slate-400 shrink-0" />
+        <h2 className="text-sm font-semibold text-slate-900">Tu subdominio</h2>
+      </div>
+      <div className="px-5 py-4 space-y-3">
+        <p className="text-sm text-slate-500">
+          Tu tienda está disponible en esta URL. Compartila con tus clientes y afiliados.
+        </p>
+        {/* La URL se lleva su propio renglón y se parte si hace falta, en vez
+            de truncarse. Compartía renglón con "Copiar" y "Ver", los dos
+            `shrink-0`, así que en 360 le quedaban unos 98px de ancho útil y
+            mostraba "https:/…" — la dirección de la tienda, que es el dato
+            para el que existe esta tarjeta, era justo lo que no se podía leer.
+            Truncar sirve para una etiqueta; para un valor que hay que copiar a
+            mano o dictar por teléfono, no. */}
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <div className="min-w-0 flex-1 bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 text-sm font-mono text-slate-700 break-all">
+            https://{subdomain}
           </div>
-          <span className="pl-7 text-xs text-slate-400 sm:ml-auto sm:pl-0">Se muestra en el listado de tiendas</span>
-        </div>
-        <div className="px-5 py-4 space-y-3">
-          <textarea
-            value={desc}
-            onChange={(e) => setDesc(e.target.value)}
-            maxLength={150}
-            /* 3 renglones y no 2: en un teléfono entran unos 45 caracteres por
-               renglón, así que los 150 que admite el campo ocupan más de tres.
-               Con 2 el texto scrolleaba adentro de la caja y no se podía releer
-               lo escrito de un vistazo, que es justo lo que hace falta acá. */
-            rows={3}
-            placeholder={isAutos ? "Ej: Concesionaria oficial en Córdoba. Autos, motos y camionetas nuevos y usados." : "Ej: Ropa femenina para todas las tallas, con envíos a todo el país."}
-            className="w-full border border-slate-200 rounded-lg px-4 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-400 focus:border-indigo-400 resize-none"
-          />
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-slate-400">{desc.length}/150 caracteres</span>
+          {/* Los dos botones se reparten el renglón en angosto. */}
+          <div className="flex gap-2">
             <button
-              onClick={saveDescription}
-              disabled={descSaving || desc === savedDesc}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-indigo-600 text-white text-xs font-semibold hover:bg-indigo-500 transition-colors disabled:opacity-40"
+              onClick={copySubdomain}
+              className="flex flex-1 shrink-0 items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition-colors sm:flex-none"
             >
-              {descSaving
-                ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                : descSaved
-                ? <Check className="h-3.5 w-3.5" />
-                : <Save className="h-3.5 w-3.5" />}
-              {descSaving ? "Guardando..." : descSaved ? "¡Guardado!" : "Guardar"}
+              {copied ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
+              {copied ? "Copiado" : "Copiar"}
             </button>
-          </div>
-          {descError && <p className="text-xs text-red-500">{descError}</p>}
-        </div>
-      </div>
-
-      {/* Subdominio */}
-      <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-        <div className="flex items-center gap-3 px-5 py-4 border-b border-slate-100">
-          <Globe className="h-4 w-4 text-slate-400 shrink-0" />
-          <h2 className="text-sm font-semibold text-slate-900">Tu subdominio</h2>
-        </div>
-        <div className="px-5 py-4 space-y-3">
-          <p className="text-sm text-slate-500">
-            Tu tienda está disponible en esta URL. Compartila con tus clientes y afiliados.
-          </p>
-          {/* La URL se lleva su propio renglón y se parte si hace falta, en vez
-              de truncarse. Compartía renglón con "Copiar" y "Ver", los dos
-              `shrink-0`, así que en 360 le quedaban unos 98px de ancho útil y
-              mostraba "https:/…" — la dirección de la tienda, que es el dato
-              para el que existe esta tarjeta, era justo lo que no se podía leer.
-              Truncar sirve para una etiqueta; para un valor que hay que copiar a
-              mano o dictar por teléfono, no. */}
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            <div className="min-w-0 flex-1 bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 text-sm font-mono text-slate-700 break-all">
-              https://{subdomain}
-            </div>
-            {/* Los dos botones se reparten el renglón en angosto. */}
-            <div className="flex gap-2">
-              <button
-                onClick={copySubdomain}
-                className="flex flex-1 shrink-0 items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition-colors sm:flex-none"
-              >
-                {copied ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
-                {copied ? "Copiado" : "Copiar"}
-              </button>
-              <a
-                href={`https://${subdomain}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex flex-1 shrink-0 items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition-colors sm:flex-none"
-              >
-                <ExternalLink className="h-3.5 w-3.5" />
-                Ver
-              </a>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* PWA */}
-      <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
-          <div className="flex items-center gap-3">
-            <Smartphone className="h-4 w-4 text-slate-400 shrink-0" />
-            <h2 className="text-sm font-semibold text-slate-900">{isAutos ? "Tu sitio como app" : "Tu tienda como app"}</h2>
-          </div>
-          {isPremium ? (
-            <span className="shrink-0 whitespace-nowrap text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-md flex items-center gap-1">
-              <Crown className="h-3 w-3" /> Premium
-            </span>
-          ) : (
-            <span className="shrink-0 whitespace-nowrap text-xs font-medium text-slate-400 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-md flex items-center gap-1">
-              <Lock className="h-3 w-3 shrink-0" /> Solo Premium
-            </span>
-          )}
-        </div>
-        {isPremium ? (
-          <div className="px-5 py-4 space-y-4">
-            <p className="text-sm text-slate-500">
-              {isAutos
-                ? "Tus clientes pueden instalar tu sitio en su celular como si fuera una app, sin pasar por el App Store ni Google Play."
-                : "Tus clientes pueden instalar tu tienda en su celular como si fuera una app, sin pasar por el App Store ni Google Play."}
-            </p>
-            {/* Los dos instructivos van uno abajo del otro en angosto. Partidos
-                en dos quedaban 125px de texto útil por columna, y cada paso
-                ("Abrí tu tienda en Chrome") salía en dos o tres renglones — que
-                es justo donde se lee peor un instructivo numerado. */}
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <div className="rounded-lg border border-slate-200 bg-slate-50 p-3.5">
-                <p className="text-xs font-semibold text-slate-700 mb-1.5">Android</p>
-                <ol className="text-xs text-slate-500 space-y-1 list-decimal list-inside">
-                  <li>Abrí tu tienda en Chrome</li>
-                  <li>Tocá el menú (⋮)</li>
-                  <li>Seleccioná &quot;Instalar app&quot;</li>
-                </ol>
-              </div>
-              <div className="rounded-lg border border-slate-200 bg-slate-50 p-3.5">
-                <p className="text-xs font-semibold text-slate-700 mb-1.5">iPhone</p>
-                <ol className="text-xs text-slate-500 space-y-1 list-decimal list-inside">
-                  <li>Abrí tu tienda en Safari</li>
-                  <li>Tocá el ícono compartir</li>
-                  <li>Seleccioná &quot;Agregar a inicio&quot;</li>
-                </ol>
-              </div>
-            </div>
-            <div className="flex items-start gap-2.5 bg-blue-50 border border-blue-100 rounded-lg p-3.5">
-              <Info className="h-4 w-4 text-blue-400 shrink-0 mt-0.5" />
-              <p className="text-xs text-blue-600">
-                Compartí el link de tu tienda con tus clientes y pediles que la instalen. Una vez instalada aparece como un ícono en su pantalla de inicio.
-              </p>
-            </div>
-          </div>
-        ) : (
-          <div className="px-5 py-4">
-            <PremiumGate
-              title="Con Premium tus clientes instalan tu tienda como app"
-              description="Sin pasar por el App Store ni Google Play. Se instala directo desde el navegador."
-            />
-          </div>
-        )}
-      </div>
-
-      {/* Dominio personalizado */}
-      <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
-          <div className="flex items-center gap-3">
-            <Globe className="h-4 w-4 text-slate-400 shrink-0" />
-            <h2 className="text-sm font-semibold text-slate-900">Dominio personalizado</h2>
-          </div>
-          {isPremium ? (
-            <span className="shrink-0 whitespace-nowrap text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-md flex items-center gap-1">
-              <Crown className="h-3 w-3" /> Premium
-            </span>
-          ) : (
-            <span className="shrink-0 whitespace-nowrap text-xs font-medium text-slate-400 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-md flex items-center gap-1">
-              <Lock className="h-3 w-3 shrink-0" /> Solo Premium
-            </span>
-          )}
-        </div>
-        {isPremium ? (
-          <div className="px-5 py-4 space-y-3">
-            {customDomain ? (
-              <ActiveDomain domain={customDomain} />
-            ) : (
-              <CustomDomainForm />
-            )}
-          </div>
-        ) : (
-          <div className="px-5 py-4">
-            <PremiumGate
-              title="Conectá tu propio dominio"
-              description="Con Premium podés usar tu dominio (ej: tutienda.com). Lo comprás donde quieras y lo configuramos nosotros."
-            />
-          </div>
-        )}
-      </div>
-
-      {/* Flyer de publicidad */}
-      <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
-          <div className="flex items-center gap-3">
-            <Sparkles className="h-4 w-4 text-slate-400 shrink-0" />
-            <h2 className="text-sm font-semibold text-slate-900">Flyer de publicidad</h2>
-          </div>
-          {isPremium ? (
-            <span className="shrink-0 whitespace-nowrap text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-md flex items-center gap-1">
-              <Crown className="h-3 w-3" /> Premium
-            </span>
-          ) : (
-            <span className="shrink-0 whitespace-nowrap text-xs font-medium text-slate-400 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-md flex items-center gap-1">
-              <Lock className="h-3 w-3 shrink-0" /> Solo Premium
-            </span>
-          )}
-        </div>
-        {isPremium ? (
-          <div className="px-5 py-4 space-y-3">
-            <p className="text-sm text-slate-500">
-              Mostrá un flyer publicitario cada vez que alguien entra a tu tienda. Subí hasta 3 imágenes en formato vertical (tipo historia de Instagram).
-            </p>
-            <Link
-              href="/dashboard/configuracion"
-              className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-700 hover:text-slate-900 transition-colors"
+            <a
+              href={`https://${subdomain}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex flex-1 shrink-0 items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition-colors sm:flex-none"
             >
-              Configurar flyer en el diseño →
-            </Link>
+              <ExternalLink className="h-3.5 w-3.5" />
+              Ver
+            </a>
           </div>
-        ) : (
-          <div className="px-5 py-4">
-            <PremiumGate
-              title="Mostrá un flyer al entrar a tu tienda"
-              description="Perfecto para promociones, lanzamientos y novedades. Subí hasta 3 imágenes estilo historia."
-            />
-          </div>
-        )}
-      </div>
-
-      {/* Notificaciones push */}
-      <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-        <div className="flex items-center gap-3 px-5 py-4 border-b border-slate-100">
-          <Bell className="h-4 w-4 text-slate-400 shrink-0" />
-          <h2 className="text-sm font-semibold text-slate-900">Notificaciones push</h2>
         </div>
-        <div className="px-5 py-4 space-y-3">
+      </div>
+    </div>
+  );
+}
+
+/* ── Tu tienda como app (PWA) ──────────────────────────────── */
+export function AppCard({ isPremium, tipoTienda }: { isPremium: boolean; tipoTienda?: string }) {
+  const isAutos = tipoTienda === "AUTOS";
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+      <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+        <div className="flex items-center gap-3">
+          <Smartphone className="h-4 w-4 text-slate-400 shrink-0" />
+          <h2 className="text-sm font-semibold text-slate-900">{isAutos ? "Tu sitio como app" : "Tu tienda como app"}</h2>
+        </div>
+        <PremiumBadge isPremium={isPremium} />
+      </div>
+      {isPremium ? (
+        <div className="px-5 py-4 space-y-4">
           <p className="text-sm text-slate-500">
             {isAutos
-              ? "Recibí alertas en este dispositivo cuando llegue una nueva consulta o solicitud de afiliado, incluso con el panel cerrado."
-              : "Recibí alertas en este dispositivo cuando llegue un nuevo pedido o solicitud de afiliado, incluso con el panel cerrado."}
+              ? "Tus clientes pueden instalar tu sitio en su celular como si fuera una app, sin pasar por el App Store ni Google Play."
+              : "Tus clientes pueden instalar tu tienda en su celular como si fuera una app, sin pasar por el App Store ni Google Play."}
           </p>
-          <PushNotificationToggle />
+          {/* Los dos instructivos van uno abajo del otro en angosto. Partidos
+              en dos quedaban 125px de texto útil por columna, y cada paso
+              ("Abrí tu tienda en Chrome") salía en dos o tres renglones — que
+              es justo donde se lee peor un instructivo numerado. */}
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="rounded-lg border border-slate-200 bg-slate-50 p-3.5">
+              <p className="text-xs font-semibold text-slate-700 mb-1.5">Android</p>
+              <ol className="text-xs text-slate-500 space-y-1 list-decimal list-inside">
+                <li>Abrí tu tienda en Chrome</li>
+                <li>Tocá el menú (⋮)</li>
+                <li>Seleccioná &quot;Instalar app&quot;</li>
+              </ol>
+            </div>
+            <div className="rounded-lg border border-slate-200 bg-slate-50 p-3.5">
+              <p className="text-xs font-semibold text-slate-700 mb-1.5">iPhone</p>
+              <ol className="text-xs text-slate-500 space-y-1 list-decimal list-inside">
+                <li>Abrí tu tienda en Safari</li>
+                <li>Tocá el ícono compartir</li>
+                <li>Seleccioná &quot;Agregar a inicio&quot;</li>
+              </ol>
+            </div>
+          </div>
+          <div className="flex items-start gap-2.5 bg-blue-50 border border-blue-100 rounded-lg p-3.5">
+            <Info className="h-4 w-4 text-blue-400 shrink-0 mt-0.5" />
+            <p className="text-xs text-blue-600">
+              Compartí el link de tu tienda con tus clientes y pediles que la instalen. Una vez instalada aparece como un ícono en su pantalla de inicio.
+            </p>
+          </div>
         </div>
-      </div>
-
+      ) : (
+        <div className="px-5 py-4">
+          <PremiumGate
+            title="Con Premium tus clientes instalan tu tienda como app"
+            description="Sin pasar por el App Store ni Google Play. Se instala directo desde el navegador."
+          />
+        </div>
+      )}
     </div>
+  );
+}
+
+/* ── Dominio personalizado ─────────────────────────────────── */
+export function DominioCard({ customDomain, isPremium }: { customDomain: string | null; isPremium: boolean }) {
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+      <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+        <div className="flex items-center gap-3">
+          <Globe className="h-4 w-4 text-slate-400 shrink-0" />
+          <h2 className="text-sm font-semibold text-slate-900">Dominio personalizado</h2>
+        </div>
+        <PremiumBadge isPremium={isPremium} />
+      </div>
+      {isPremium ? (
+        <div className="px-5 py-4 space-y-3">
+          {customDomain ? <ActiveDomain domain={customDomain} /> : <CustomDomainForm />}
+        </div>
+      ) : (
+        <div className="px-5 py-4">
+          <PremiumGate
+            title="Conectá tu propio dominio"
+            description="Con Premium podés usar tu dominio (ej: tutienda.com). Lo comprás donde quieras y lo configuramos nosotros."
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── Flyer de publicidad (el ajuste vive en Diseño) ────────── */
+export function FlyerCard({ isPremium }: { isPremium: boolean }) {
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+      <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+        <div className="flex items-center gap-3">
+          <Sparkles className="h-4 w-4 text-slate-400 shrink-0" />
+          <h2 className="text-sm font-semibold text-slate-900">Flyer de publicidad</h2>
+        </div>
+        <PremiumBadge isPremium={isPremium} />
+      </div>
+      {isPremium ? (
+        <div className="px-5 py-4 space-y-3">
+          <p className="text-sm text-slate-500">
+            Mostrá un flyer publicitario cada vez que alguien entra a tu tienda. Subí hasta 3 imágenes en formato vertical (tipo historia de Instagram).
+          </p>
+          {/* El flyer es una imagen que se ve al entrar, así que se configura en
+              Diseño y no acá. El link lleva derecho al panel del flyer: mientras
+              apuntó a `/dashboard/configuracion` a secas, dejaba al dueño en la
+              galería de plantillas, tres pasos antes de lo que vino a buscar. */}
+          <Link
+            href="/dashboard/configuracion?abrir=flyer"
+            className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-700 hover:text-slate-900 transition-colors"
+          >
+            Configurar flyer en el diseño →
+          </Link>
+        </div>
+      ) : (
+        <div className="px-5 py-4">
+          <PremiumGate
+            title="Mostrá un flyer al entrar a tu tienda"
+            description="Perfecto para promociones, lanzamientos y novedades. Subí hasta 3 imágenes estilo historia."
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── Notificaciones push ───────────────────────────────────── */
+export function PushCard({ tipoTienda }: { tipoTienda?: string }) {
+  const isAutos = tipoTienda === "AUTOS";
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+      <div className="flex items-center gap-3 px-5 py-4 border-b border-slate-100">
+        <Info className="h-4 w-4 text-slate-400 shrink-0" />
+        <h2 className="text-sm font-semibold text-slate-900">Notificaciones push</h2>
+      </div>
+      <div className="px-5 py-4 space-y-3">
+        <p className="text-sm text-slate-500">
+          {isAutos
+            ? "Recibí alertas en este dispositivo cuando llegue una nueva consulta o solicitud de afiliado, incluso con el panel cerrado."
+            : "Recibí alertas en este dispositivo cuando llegue un nuevo pedido o solicitud de afiliado, incluso con el panel cerrado."}
+        </p>
+        <PushNotificationToggle />
+      </div>
+    </div>
+  );
+}
+
+/* ── Piezas compartidas ────────────────────────────────────── */
+function PremiumBadge({ isPremium }: { isPremium: boolean }) {
+  return isPremium ? (
+    <span className="shrink-0 whitespace-nowrap text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-md flex items-center gap-1">
+      <Crown className="h-3 w-3" /> Premium
+    </span>
+  ) : (
+    <span className="shrink-0 whitespace-nowrap text-xs font-medium text-slate-400 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-md flex items-center gap-1">
+      <Lock className="h-3 w-3 shrink-0" /> Solo Premium
+    </span>
   );
 }
 
@@ -317,9 +329,14 @@ function PremiumGate({ title, description }: { title: string; description: strin
 function ActiveDomain({ domain }: { domain: string }) {
   const [removing, setRemoving] = useState(false);
   const [copied, setCopied] = useState(false);
+  const quitando = useRef(false);
 
   async function handleRemove() {
+    if (quitando.current) return;
     if (!confirm("¿Querés quitar este dominio personalizado?")) return;
+    // El candado va DESPUÉS del confirm: puesto antes, cancelar el cartel dejaba
+    // el ref en `true` para siempre y el botón no volvía a funcionar nunca.
+    quitando.current = true;
     setRemoving(true);
     await fetch("/api/ajustes/dominio", { method: "DELETE" });
     window.location.reload();
@@ -361,6 +378,7 @@ function CustomDomainForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [copiedCname, setCopiedCname] = useState(false);
+  const conectando = useRef(false);
 
   async function handleConnect() {
     const cleaned = domain.trim().toLowerCase().replace(/^https?:\/\//, "").replace(/\/$/, "");
@@ -368,20 +386,31 @@ function CustomDomainForm() {
       setError("Ingresá un dominio válido, ej: mitienda.com");
       return;
     }
+    // Dos clicks rápidos mandaban dos altas del mismo dominio.
+    if (conectando.current) return;
+    conectando.current = true;
     setLoading(true);
     setError("");
-    const res = await fetch("/api/ajustes/dominio", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ domain: cleaned }),
-    });
-    const data = await res.json();
-    setLoading(false);
-    if (!res.ok) {
-      setError(data.error ?? "Error al conectar el dominio");
-      return;
+    try {
+      const res = await fetch("/api/ajustes/dominio", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ domain: cleaned }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        setError(data?.error ?? "Error al conectar el dominio");
+        return;
+      }
+      setStep("instructions");
+    } catch {
+      // Sin esto, una caída de red dejaba el botón en "Conectando…" para
+      // siempre: `setLoading(false)` estaba después del `await` y no corría.
+      setError("Error de conexión. Intentá de nuevo.");
+    } finally {
+      conectando.current = false;
+      setLoading(false);
     }
-    setStep("instructions");
   }
 
   if (step === "choice") {

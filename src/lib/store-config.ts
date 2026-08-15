@@ -27,17 +27,16 @@ export const storeConfigSchema = z.object({
   storeName: z.string().max(120),
   storeTagline: z.string().max(200),
   colors: z.object({ accent: z.string().regex(HEX_RE) }),
-  whatsapp: z.object({ enabled: z.boolean(), number: z.string().max(30) }),
-  socialLinks: z.object({
-    instagram: z.string().max(200),
-    facebook:  z.string().max(200),
-    tiktok:    z.string().max(200),
-    youtube:   z.string().max(200),
-    pinterest: z.string().max(200),
-  }),
-  currency: z.enum(["ARS", "USD"]),
-  language: z.enum(["ES", "EN"]),
-  seo: z.object({ enabled: z.boolean(), title: z.string().max(120), description: z.string().max(320) }),
+  /* `whatsapp`, `socialLinks`, `currency` y `seo` YA NO están acá: se editan en
+     /dashboard/ajustes y viajan por `storePreferencesSchema`. Al salir de este
+     schema salen de `DESIGN_KEYS`, y eso les da dos cosas gratis:
+       · `mergeDesignConfig` las preserva, así que guardar el diseño no puede
+         pisar un número de WhatsApp cambiado desde la otra pantalla;
+       · `stripDesignConfig` también, así que resetear el diseño ya no borra el
+         WhatsApp ni el SEO — que no eran diseño y se perdían igual.
+     `language` se fue del todo: era un selector que no leía nadie. El valor que
+     haya quedado en el JSON de una tienda vieja se preserva como clave ajena y
+     queda inerte, igual que `featuredCategories`. */
   analytics: z.object({
     googleAnalyticsId: z.string().max(30).optional(),
     facebookPixelId: z.string().max(30).optional(),
@@ -113,6 +112,52 @@ export const storeConfigSchema = z.object({
 });
 
 export type StoreConfigInput = z.infer<typeof storeConfigSchema>;
+
+/**
+ * Preferencias de la tienda que no son diseño: se editan desde
+ * /dashboard/ajustes y se guardan de a pedazos, sin mandar el config entero.
+ *
+ * Todas las claves son opcionales a propósito. Cada tarjeta de esa pantalla
+ * guarda lo suyo y nada más: el que toca el WhatsApp no manda —ni por lo tanto
+ * puede romper— el SEO, y una tienda que todavía no eligió diseño puede guardar
+ * su número igual. Con el schema del diseño eso era imposible: `template` es
+ * obligatorio ahí, así que sin plantilla elegida el guardado rebotaba entero.
+ */
+export const storePreferencesSchema = z.object({
+  whatsapp: z.object({
+    enabled: z.boolean(),
+    number: z.string().max(30),
+    message: z.string().max(300).optional(),
+  }).optional(),
+  socialLinks: z.object({
+    instagram: z.string().max(200),
+    facebook:  z.string().max(200),
+    tiktok:    z.string().max(200),
+    youtube:   z.string().max(200),
+    pinterest: z.string().max(200),
+  }).partial().optional(),
+  currency: z.enum(["ARS", "USD"]).optional(),
+  seo: z.object({
+    enabled: z.boolean(),
+    title: z.string().max(120),
+    description: z.string().max(320),
+  }).optional(),
+});
+
+export type StorePreferencesInput = z.infer<typeof storePreferencesSchema>;
+
+/**
+ * Config resultante de guardar preferencias: se pisan SOLO las claves que
+ * vinieron en el pedido. Todo lo demás —el diseño entero, cobros, envíos— queda
+ * exactamente como estaba.
+ */
+export function mergeStorePreferences(existingRaw: string | null | undefined, prefs: StorePreferencesInput): string {
+  const existing = parseConfig(existingRaw);
+  // `undefined` se descarta: mandar `{ whatsapp: undefined }` no puede
+  // significar "borrame el WhatsApp", significa "de eso no te estoy hablando".
+  const cambios = Object.fromEntries(Object.entries(prefs).filter(([, v]) => v !== undefined));
+  return JSON.stringify({ ...existing, ...cambios });
+}
 
 /**
  * Claves que el editor de diseño es dueño de escribir. Se derivan del schema y

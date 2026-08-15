@@ -503,43 +503,12 @@ function ConfigModal({ config, update, onClose, onSave, onDelete, isPremium }: {
 
           <p style={{ margin: "20px 0 10px", fontSize: 11, fontWeight: 700, color: P.muted, textTransform: "uppercase", letterSpacing: 1 }}>Contacto y comunicación</p>
 
-          {/* WhatsApp */}
-          <div style={sec}>
-            <p style={{ margin: "0 0 12px", fontSize: 12, fontWeight: 700, color: "#0f172a", display: "flex", alignItems: "center", gap: 6 }}>
-              💬 WhatsApp
-            </p>
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <div>
-                  <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: "#1e293b" }}>Botón flotante</p>
-                  <p style={{ margin: "2px 0 0", fontSize: 11, color: P.muted }}>Visible en todas las páginas</p>
-                </div>
-                <Toggle value={config.whatsapp.enabled}
-                  onChange={v => update("whatsapp", { ...config.whatsapp, enabled: v })} />
-              </div>
-              {config.whatsapp.enabled && (
-                <>
-                  <div>
-                    <label style={lbl}>Número</label>
-                    <input style={inp} value={config.whatsapp.number}
-                      placeholder="+54 9 11 0000-0000"
-                      onChange={e => update("whatsapp", { ...config.whatsapp, number: e.target.value })}
-                      onFocus={e => (e.target.style.borderColor = "#6366f1")}
-                      onBlur={e => (e.target.style.borderColor = "#e2e8f0")} />
-                  </div>
-                  <div>
-                    <label style={lbl}>Mensaje de bienvenida</label>
-                    <input style={inp} value={config.whatsapp.message ?? ""}
-                      placeholder="Hola! Me gustaría consultar sobre sus productos 😊"
-                      onChange={e => update("whatsapp", { ...config.whatsapp, message: e.target.value })}
-                      onFocus={e => (e.target.style.borderColor = "#6366f1")}
-                      onBlur={e => (e.target.style.borderColor = "#e2e8f0")} />
-                    <p style={{ margin: "4px 0 0", fontSize: 11, color: P.muted }}>Texto que se pre-carga cuando el cliente hace click en el botón</p>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
+          {/* WhatsApp, redes sociales, moneda, idioma y SEO ya no están acá.
+              Se editan en Configuración (/dashboard/ajustes). Ninguno de los
+              cinco necesitaba la vista previa al lado —son un número, cinco URLs
+              y un título de Google—, y meterlos acá los dejaba abajo de cuatro
+              pasos y detrás del bloqueo de celular del editor. "Idioma" no se
+              mudó: se eliminó, porque no lo leía nadie. */}
 
           {/* Barra de promoción */}
           <div style={sec}>
@@ -583,71 +552,7 @@ function ConfigModal({ config, update, onClose, onSave, onDelete, isPremium }: {
             </div>
           </div>
 
-          {/* Redes sociales */}
-          <div style={sec}>
-            <p style={{ margin: "0 0 12px", fontSize: 12, fontWeight: 700, color: "#0f172a", display: "flex", alignItems: "center", gap: 6 }}>
-              🔗 Redes sociales
-            </p>
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              {([
-                ["instagram", "📸 Instagram",  "https://instagram.com/tutienda"],
-                ["facebook",  "👤 Facebook",   "https://facebook.com/tutienda"],
-                ["tiktok",    "🎵 TikTok",     "https://tiktok.com/@tutienda"],
-                ["youtube",   "▶ YouTube",     "https://youtube.com/@tutienda"],
-                ["pinterest", "📌 Pinterest",  "https://pinterest.com/tutienda"],
-              ] as const).map(([key, label, ph]) => (
-                <div key={key}>
-                  <label style={lbl}>{label}</label>
-                  <input style={inp} value={config.socialLinks?.[key] ?? ""}
-                    placeholder={ph}
-                    onChange={e => update("socialLinks", { ...config.socialLinks, [key]: e.target.value })}
-                    onFocus={e => (e.target.style.borderColor = "#6366f1")}
-                    onBlur={e => (e.target.style.borderColor = "#e2e8f0")} />
-                </div>
-              ))}
-            </div>
-          </div>
-
           <p style={{ margin: "20px 0 10px", fontSize: 11, fontWeight: 700, color: P.muted, textTransform: "uppercase", letterSpacing: 1 }}>Configuración de la tienda</p>
-
-          {/* Moneda & Idioma */}
-          <div style={sec}>
-            <p style={{ margin: "0 0 12px", fontSize: 12, fontWeight: 700, color: "#0f172a", display: "flex", alignItems: "center", gap: 6 }}>
-              💱 Moneda &amp; Idioma
-            </p>
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              <div>
-                <label style={lbl}>Moneda</label>
-                <div style={{ display: "flex", gap: 8 }}>
-                  {(["ARS", "USD"] as const).map(c => (
-                    <button key={c} type="button" onClick={() => update("currency", c)}
-                      style={{ flex: 1, padding: "9px",
-                        border: `2px solid ${config.currency === c ? "#6366f1" : "#e2e8f0"}`,
-                        borderRadius: 8, background: config.currency === c ? "#f0f0ff" : "white",
-                        fontSize: 13, fontWeight: 700, cursor: "pointer",
-                        color: config.currency === c ? "#6366f1" : "#64748b" }}>
-                      {c}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <label style={lbl}>Idioma</label>
-                <div style={{ display: "flex", gap: 8 }}>
-                  {([["ES", "🇦🇷 Español"], ["EN", "🇺🇸 English"]] as const).map(([l, label]) => (
-                    <button key={l} type="button" onClick={() => update("language", l)}
-                      style={{ flex: 1, padding: "9px 6px",
-                        border: `2px solid ${config.language === l ? "#6366f1" : "#e2e8f0"}`,
-                        borderRadius: 8, background: config.language === l ? "#f0f0ff" : "white",
-                        fontSize: 12, fontWeight: 600, cursor: "pointer",
-                        color: config.language === l ? "#6366f1" : "#64748b" }}>
-                      {label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
 
           {/* Carrusel de banner — solo si el template lo tiene */}
           {TEMPLATES_WITH_CAROUSEL.includes(config.template) && (
@@ -786,45 +691,23 @@ function ConfigModal({ config, update, onClose, onSave, onDelete, isPremium }: {
             )}
           </div>
 
-          <p style={{ margin: "20px 0 10px", fontSize: 11, fontWeight: 700, color: P.muted, textTransform: "uppercase", letterSpacing: 1 }}>Marketing y descubribilidad</p>
-
-          {/* SEO */}
-          <div style={sec}>
-            <p style={{ margin: "0 0 12px", fontSize: 12, fontWeight: 700, color: "#0f172a", display: "flex", alignItems: "center", gap: 6 }}>
-              🔍 SEO / Google
-            </p>
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <div>
-                  <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: "#1e293b" }}>Activar SEO</p>
-                  <p style={{ margin: "2px 0 0", fontSize: 11, color: P.muted }}>Mejora la visibilidad en Google</p>
-                </div>
-                <Toggle value={config.seo.enabled}
-                  onChange={v => update("seo", { ...config.seo, enabled: v })} />
-              </div>
-              {config.seo.enabled && (
-                <>
-                  <div>
-                    <label style={lbl}>Título SEO</label>
-                    <input style={inp} value={config.seo.title}
-                      placeholder="Mi Tienda - Ropa y Accesorios"
-                      onChange={e => update("seo", { ...config.seo, title: e.target.value })}
-                      onFocus={e => (e.target.style.borderColor = "#6366f1")}
-                      onBlur={e => (e.target.style.borderColor = "#e2e8f0")} />
-                  </div>
-                  <div>
-                    <label style={lbl}>Descripción</label>
-                    <textarea style={{ ...inp, resize: "vertical" }} rows={3}
-                      value={config.seo.description}
-                      placeholder="Encontrá los mejores productos en nuestra tienda..."
-                      onChange={e => update("seo", { ...config.seo, description: e.target.value })}
-                      onFocus={e => (e.target.style.borderColor = "#6366f1")}
-                      onBlur={e => (e.target.style.borderColor = "#e2e8f0")} />
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
+          {/* Un enlace y no un bloque de campos: los ajustes que no se miran en
+              la vista previa viven ahora en Configuración, y desde acá sólo se
+              avisa dónde están para el que los venía buscando en este modal. */}
+          <a
+            href="/dashboard/ajustes"
+            style={{
+              display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10,
+              marginTop: 20, padding: "12px 16px", borderRadius: 12,
+              border: `1px solid ${P.border}`, background: P.bgSoft, textDecoration: "none",
+            }}
+          >
+            <span>
+              <span style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#0f172a" }}>WhatsApp, redes, moneda y SEO</span>
+              <span style={{ display: "block", marginTop: 2, fontSize: 11, color: P.muted }}>Se configuran en Configuración</span>
+            </span>
+            <span style={{ fontSize: 16, color: P.accent }}>→</span>
+          </a>
 
         </div>
 
@@ -2167,6 +2050,8 @@ export default function ConfiguracionPage() {
   const [imageLoadingFields, setImageLoadingFields] = useState<Record<string, boolean>>({});
   const [storeTipoTienda, setStoreTipoTienda] = useState<string>("GENERAL");
   const [isMobile, setIsMobile] = useState(false);
+  /** Candado sincrónico del guardado. Ver `handleSave`. */
+  const guardando = useRef(false);
 
   /* Las dos guías de esta pantalla, con su propia marca de "ya la vi" cada una.
      Van separadas porque explican cosas distintas y se llega a cada una en un
@@ -2211,7 +2096,15 @@ export default function ConfiguracionPage() {
             setConfig(loaded);
             setSavedConfig(loaded);
             setSavedTemplateId(saved.template);
-            setMode("gallery");
+            /* `?abrir=flyer` entra derecho al panel donde se sube el flyer.
+               Lo usa la tarjeta de Configuración, que antes linkeaba a esta
+               pantalla a secas y dejaba al dueño mirando la galería de
+               plantillas, tres pasos antes de lo que vino a hacer. Sólo se
+               puede si ya hay un diseño guardado: sin plantilla elegida el
+               modal no tiene sobre qué abrirse. */
+            const quiereFlyer = new URLSearchParams(window.location.search).get("abrir") === "flyer";
+            setMode(quiereFlyer ? "editing" : "gallery");
+            if (quiereFlyer) setConfigModalOpen(true);
           } else {
             // Sin template guardado aún: igual inyectamos storeId/slug para que
             // el preview muestre los productos reales al elegir un diseño
@@ -2358,11 +2251,15 @@ export default function ConfiguracionPage() {
   };
 
   const handleSave = async () => {
-    if (config.whatsapp.enabled && !config.whatsapp.number.trim()) {
-      setSaveError("Completá el número de WhatsApp o desactivalo antes de guardar.");
-      setTimeout(() => setSaveError(null), 4000);
-      return;
-    }
+    // El chequeo del WhatsApp se fue con el campo: ahora lo hace
+    // /api/configuracion/preferencias, del lado del servidor, que es donde se
+    // guarda ese dato.
+    //
+    // El candado es un ref y no `saving`: el estado recién bloquea el botón en
+    // el render siguiente, así que dos clicks rápidos mandaban dos POST del
+    // config entero, cada uno con su merge y su revalidación del caché.
+    if (guardando.current) return;
+    guardando.current = true;
     setSaving(true);
     setSaveError(null);
     try {
@@ -2397,6 +2294,7 @@ export default function ConfiguracionPage() {
       // Un error explicativo necesita más tiempo en pantalla que un "reintentá".
       setTimeout(() => setSaveError(null), msg.length > 45 ? 8000 : 3000);
     } finally {
+      guardando.current = false;
       setSaving(false);
     }
   };

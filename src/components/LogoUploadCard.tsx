@@ -33,6 +33,8 @@ export default function LogoUploadCard({ storeName, initialLogo, initialLogoColo
   const [splashFading, setSplashFading] = useState(false);
   const [splashMounted, setSplashMounted] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  /** Candado sincrónico de la subida y del borrado del logo. */
+  const subiendo = useRef(false);
   const splashTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   const initials = storeName
@@ -86,6 +88,12 @@ export default function LogoUploadCard({ storeName, initialLogo, initialLogoColo
       setError("La imagen no puede superar los 4 MB");
       return;
     }
+    // `uploading` es estado y recién bloquea en el render siguiente. Si se eligen
+    // dos imágenes rápido, arrancan las dos subidas y gana la que termina última
+    // —que puede ser la PRIMERA—: quedaba puesto un logo distinto del que se
+    // eligió, sin ningún error a la vista.
+    if (subiendo.current) return;
+    subiendo.current = true;
 
     setUploading(true);
     setError(null);
@@ -116,11 +124,14 @@ export default function LogoUploadCard({ storeName, initialLogo, initialLogoColo
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Error inesperado");
     } finally {
+      subiendo.current = false;
       setUploading(false);
     }
   }
 
   async function handleRemove() {
+    if (subiendo.current) return;
+    subiendo.current = true;
     setUploading(true);
     setError(null);
     try {
@@ -136,6 +147,7 @@ export default function LogoUploadCard({ storeName, initialLogo, initialLogoColo
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Error inesperado");
     } finally {
+      subiendo.current = false;
       setUploading(false);
     }
   }
