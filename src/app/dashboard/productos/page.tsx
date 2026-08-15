@@ -13,7 +13,11 @@ import { STORE_TYPES } from "@/lib/storeTypes";
 import { parseStringArray } from "@/lib/promotions";
 import type { Prisma } from "@prisma/client";
 
-export const PAGE_SIZE = 20;
+// Sin `export`: una página de Next sólo puede exportar cosas de una lista fija
+// (`default`, `metadata`, `dynamic`…), y cualquier otra rompe el chequeo de tipos
+// de la ruta. Nadie la importaba de acá — se usa sólo en este archivo, igual que
+// en las otras cinco páginas que tienen su propio PAGE_SIZE.
+const PAGE_SIZE = 20;
 
 /* Cuánto stock total tiene que sumar un producto para caer en cada filtro.
    Es el mismo criterio que mostraban los carteles de la lista. */
