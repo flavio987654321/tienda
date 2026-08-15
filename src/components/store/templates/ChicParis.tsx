@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef, useMemo, Fragment } from "react";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { usePushBell } from "@/contexts/PushBellContext";
-import { useAuth } from "@/components/AuthProvider";
+import { useSesion } from "@/components/AuthProvider";
 import StoreFollowButton from "@/components/store/StoreFollowButton";
 import { EditableZone, EditableImageButton, EditableSectionBg, getContrastColor, getReadableAccentText, getReadableAccentFill, useEditContext } from "@/contexts/EditContext";
 import { useStorefront, type StorefrontProduct } from "@/hooks/useStorefront";
@@ -232,9 +232,7 @@ export default function ChicParis() {
 
   const storeConfig = useStoreConfig();
   const pushBell = usePushBell();
-  const { user, signOut } = useAuth();
-  const panelHref = user?.role === "ADMIN" ? "/admin" : user?.role === "OWNER" ? "/dashboard" : user?.role === "SELLER" ? "/afiliados" : "/mi-cuenta";
-  const panelLabel = user?.role === "ADMIN" ? "Admin" : user?.role === "OWNER" ? "Mi tienda" : user?.role === "SELLER" ? "Mi panel" : "Mi cuenta";
+  const { cargando, logueado, nombreMostrado, panelHref, panelLabel, signOut } = useSesion();
   const isPreview   = !!storeConfig?.previewFill;
   /** La demo pública de un diseño (`/plantillas/[id]`): necesita el relleno de
    *  ejemplos, pero nada de lo que le habla a la dueña de una tienda. */
@@ -909,10 +907,10 @@ export default function ChicParis() {
               </button>
               {userDropdownOpen && (
                 <div style={{ position: "absolute", top: "calc(100% + 8px)", right: 0, background: "#fff", border: "1px solid #e8e8e8", borderRadius: 10, minWidth: 180, boxShadow: "0 8px 24px rgba(0,0,0,0.1)", zIndex: 2000, overflow: "hidden" }}>
-                  {user ? (
+                  {cargando ? (<p style={{ padding:"14px 16px", margin:0, fontSize:12, opacity:0.55 }}>Cargando…</p>) : logueado ? (
                     <>
                       <p style={{ padding: "10px 16px 4px", fontSize: 11, color: "#aaa", margin: 0, fontWeight: 600, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
-                        {user.name || user.email.split("@")[0]}
+                        {nombreMostrado}
                       </p>
                       <a href={panelHref} onClick={() => setUserDropdownOpen(false)}
                         style={{ display: "block", padding: "10px 16px", fontSize: 13, color: "#333", textDecoration: "none", borderBottom: "1px solid #f5f5f5" }}

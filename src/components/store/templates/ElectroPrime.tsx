@@ -4,7 +4,7 @@ import Link from "next/link";
 import { FadeImage } from "@/components/store/templates/shared/FadeImage";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { usePushBell } from "@/contexts/PushBellContext";
-import { useAuth } from "@/components/AuthProvider";
+import { useSesion } from "@/components/AuthProvider";
 import StoreFollowButton from "@/components/store/StoreFollowButton";
 import { EditableZone, EditableImageButton, EditableSectionBg, BgDragHandle, getContrastColor, getReadableAccentText, useEditContext, textoSobre } from "@/contexts/EditContext";
 import { useStorefront, isDemoProductId, type StorefrontProduct } from "@/hooks/useStorefront";
@@ -228,9 +228,7 @@ export default function ElectroPrime() {
   // antes de completar el número; en la tienda real hace falta el número sí o sí.
   const showWA    = whatsapp.enabled && (editMode || !!whatsapp.number);
 
-  const { user, signOut } = useAuth();
-  const panelHref = user?.role === "ADMIN" ? "/admin" : user?.role === "OWNER" ? "/dashboard" : user?.role === "SELLER" ? "/afiliados" : "/mi-cuenta";
-  const panelLabel = user?.role === "ADMIN" ? "Admin" : user?.role === "OWNER" ? "Mi tienda" : user?.role === "SELLER" ? "Mi panel" : "Mi cuenta";
+  const { cargando, logueado, nombreMostrado, panelHref, panelLabel, signOut } = useSesion();
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const userDropdownRef = useRef<HTMLDivElement>(null);
 
@@ -436,9 +434,9 @@ export default function ElectroPrime() {
               </button>
               {userDropdownOpen && (
                 <div style={{ position:"absolute", top:"calc(100% + 10px)", right:0, background:"#fff", border:`1px solid ${navBorder}`, minWidth:190, zIndex:300, boxShadow:"0 8px 28px rgba(0,0,0,0.18)", borderRadius:10, overflow:"hidden" }}>
-                  {user ? (
+                  {cargando ? (<p style={{ padding:"14px 16px", margin:0, fontSize:12, opacity:0.55 }}>Cargando…</p>) : logueado ? (
                     <>
-                      <p style={{ padding:"10px 16px 4px", fontSize:11, color:"#9ca3af", margin:0, fontWeight:600, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{user.name || user.email.split("@")[0]}</p>
+                      <p style={{ padding:"10px 16px 4px", fontSize:11, color:"#9ca3af", margin:0, fontWeight:600, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{nombreMostrado}</p>
                       <a href={panelHref} onClick={() => setUserDropdownOpen(false)} style={{ display:"block", padding:"10px 16px", fontSize:13, color:"#111827", textDecoration:"none", borderBottom:"1px solid #f1f1f1" }}>{panelLabel}</a>
                       <button onClick={() => { if (isPreview) return; setUserDropdownOpen(false); signOut("/"); }}
                         style={{ display:"block", width:"100%", padding:"10px 16px", fontSize:13, color:"#dc2626", background:"none", border:"none", textAlign:"left", cursor: isPreview ? "default" : "pointer" }}>Cerrar sesión</button>

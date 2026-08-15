@@ -2,14 +2,14 @@ import Link from "next/link";
 import { Mail } from "lucide-react";
 import { AppLogo } from "@/components/AppLogo";
 
-// Footer público único, extraído del home. Ojo con "Cómo funciona": vive en el
-// home, así que el href va con la barra (/#como-funciona) y no como ancla suelta
-// (#como-funciona) — si no, desde contacto o precios apuntaría a una sección que
-// esa página no tiene.
+// Footer público único, extraído del home.
+//
+// "Cómo funciona" salió de acá: era el ancla /#como-funciona de la galería de
+// plantillas de la home, que se sacó. Los diseños se muestran ahora en los
+// videos publicitarios.
 
 const PLATAFORMA = [
   { href: "/tiendas",         label: "Ver tiendas" },
-  { href: "/#como-funciona",  label: "Cómo funciona" },
   { href: "/precios",         label: "Precios" },
   { href: "/registro",        label: "Crear cuenta" },
   { href: "/login",           label: "Iniciar sesión" },

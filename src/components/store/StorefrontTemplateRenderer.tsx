@@ -29,10 +29,33 @@ const TEMPLATES: Record<string, React.ComponentType> = {
   "casa-clara":    CasaClara,
 };
 
+/* La tipografía de la plataforma NO entra a las tiendas.
+ *
+ * El layout raíz pasó a servir Figtree como fuente de la marca TiendaApps, y
+ * `body` la hereda. Sin esto, las tiendas de los comerciantes amanecían con
+ * otra letra de un día para el otro, sin que nadie se los hubiera avisado.
+ *
+ * Además sería un cambio a medias: la mayoría de los templates declaran su
+ * tipografía con `style={{ fontFamily }}` inline —que le gana a lo heredado—
+ * pero no en todos los textos. Se cambiaría solo la parte que no tiene estilo
+ * propio, y cada tienda quedaría con dos tipografías mezcladas.
+ *
+ * Va acá y no en un layout de ruta porque por este mismo componente pasan las
+ * tres vistas: la tienda publicada, la previa del editor y la del panel. Si se
+ * separara por ruta, la previa dejaría de coincidir con la tienda real.
+ *
+ * `display: contents` hace que este div no genere caja: no cambia ni el layout
+ * ni el posicionado de nada, pero la fuente igual se hereda a través suyo. */
+const SIN_FUENTE_DE_PLATAFORMA: React.CSSProperties = {
+  display: "contents",
+  fontFamily: "Arial, Helvetica, sans-serif",
+};
+
 export default function StorefrontTemplateRenderer({ config }: { config: StoreConfig }) {
   const Template = TEMPLATES[config.template];
   if (!Template) return null;
   return (
+    <div style={SIN_FUENTE_DE_PLATAFORMA}>
     <StoreConfigContext.Provider value={config}>
       <EditContext.Provider value={{
         editMode: false,
@@ -59,5 +82,6 @@ export default function StorefrontTemplateRenderer({ config }: { config: StoreCo
         {!GAMIFICATION_EXCLUDED_TEMPLATES.has(config.template) && <GamificationWidget />}
       </EditContext.Provider>
     </StoreConfigContext.Provider>
+    </div>
   );
 }

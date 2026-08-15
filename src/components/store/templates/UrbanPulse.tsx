@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef, useMemo, Fragment, cloneElement, isValidElement } from "react";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { usePushBell } from "@/contexts/PushBellContext";
-import { useAuth } from "@/components/AuthProvider";
+import { useSesion } from "@/components/AuthProvider";
 import StoreFollowButton from "@/components/store/StoreFollowButton";
 import { EditableZone, EditableImageButton, EditableSectionBg, BgDragHandle, getContrastColor, getReadableAccentText, getReadableAccentFill, textoSobre, contrasteWCAG, useEditContext } from "@/contexts/EditContext";
 import { resolverBaldosas } from "@/lib/categoryTiles";
@@ -185,9 +185,7 @@ export default function UrbanPulse() {
 
   const storeConfig = useStoreConfig();
   const pushBell = usePushBell();
-  const { user, signOut } = useAuth();
-  const panelHref = user?.role === "ADMIN" ? "/admin" : user?.role === "OWNER" ? "/dashboard" : user?.role === "SELLER" ? "/afiliados" : "/mi-cuenta";
-  const panelLabel = user?.role === "ADMIN" ? "Admin" : user?.role === "OWNER" ? "Mi tienda" : user?.role === "SELLER" ? "Mi panel" : "Mi cuenta";
+  const { cargando, logueado, nombreMostrado, panelHref, panelLabel, signOut } = useSesion();
   const isPreview   = !!storeConfig?.previewFill;
   /** La demo pública de un diseño (`/plantillas/[id]`): necesita el relleno de
    *  ejemplos, pero nada de lo que le habla a la dueña de una tienda. */
@@ -987,10 +985,10 @@ export default function UrbanPulse() {
             </button>
             {userDropdownOpen && (
               <div className="up-fade" style={{ position:"absolute", top:"calc(100% + 8px)", right:0, background:WHITE, border:`2px solid ${DARK}`, minWidth:190, zIndex:200 }}>
-                {user ? (
+                {cargando ? (<p style={{ padding:"14px 16px", margin:0, fontSize:12, opacity:0.55 }}>Cargando…</p>) : logueado ? (
                   <>
                     <p style={{ padding:"8px 16px 4px", fontSize:10, fontWeight:800, letterSpacing:2, textTransform:"uppercase", color:MID, margin:0, borderBottom:`1px solid ${BG}`, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
-                      {user.name || user.email.split("@")[0]}
+                      {nombreMostrado}
                     </p>
                     <a href={panelHref} onClick={() => setUserDropdownOpen(false)}
                       style={{ display:"block", width:"100%", padding:"10px 16px", textDecoration:"none", fontSize:11, fontWeight:800, letterSpacing:2, textTransform:"uppercase", color:DARK, borderBottom:`1px solid ${BG}` }}

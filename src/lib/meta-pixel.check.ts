@@ -66,7 +66,6 @@ for (const ruta of [
   "/login",
   "/registro",
   "/precios",
-  "/plantillas",
   "/preview/aurora",
   "/dashboard",
   "/dashboard/productos/nuevo",

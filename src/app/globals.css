@@ -10,8 +10,48 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: Arial, Helvetica, sans-serif;
+  /* `--font-marca` la define next/font en el layout raíz. El Arial de atrás no
+     es decorativo: es lo que se ve en el instante previo a que cargue la fuente
+     y si algún día falla la descarga. */
+  --font-sans: var(--font-marca), Arial, Helvetica, sans-serif;
   --font-mono: "Courier New", Courier, monospace;
+
+  /* ── El color de la marca ─────────────────────────────────────────────────
+     El naranja estaba escrito a mano 112 veces, en 23 archivos, como
+     `orange-600` y como `#ea580c`. Cambiar el color de la marca era buscar y
+     reemplazar por todo el proyecto y cruzar los dedos.
+
+     Se resolvió sin tocar esos 112 lugares. Abajo pasan dos cosas:
+
+     1. Se nombra el color de la marca y sus tonos. Código nuevo usa
+        `bg-marca`, `text-marca`, `border-marca`, `fill-marca` — que dicen qué
+        ES el color y no de qué color es.
+     2. Se redefine la escala `orange` de Tailwind para que APUNTE a esos
+        nombres. Así los 112 usos que ya existen quedan colgados de la marca
+        sin editarlos: el día que el naranja cambie, cambian todos solos.
+
+     Los valores son EXACTAMENTE los que traía Tailwind (salieron de
+     `node_modules/tailwindcss/theme.css`), así que hoy no cambia un pixel.
+     Están en oklch y no en hexadecimal a propósito: es lo que usa Tailwind, y
+     convertir a hexa mueve el color unas milésimas.
+
+     Para cambiar el color de la marca se tocan estas cinco líneas y nada más. */
+  --color-marca:        oklch(64.6% 0.222 41.116);
+  --color-marca-claro:  oklch(70.5% 0.213 47.604);
+  --color-marca-oscuro: oklch(55.3% 0.195 38.402);
+  --color-marca-suave:  oklch(95.4% 0.038 75.164);
+  --color-marca-tenue:  oklch(98%   0.016 73.684);
+  --color-marca-medio:  oklch(75%   0.183 55.934);
+
+  /* Los 112 usos que ya estaban, ahora siguiendo a la marca. Son los cinco
+     tonos que el proyecto realmente usa; el resto de la escala `orange` sigue
+     como viene de fábrica. */
+  --color-orange-50:  var(--color-marca-tenue);
+  --color-orange-100: var(--color-marca-suave);
+  --color-orange-400: var(--color-marca-medio);
+  --color-orange-500: var(--color-marca-claro);
+  --color-orange-600: var(--color-marca);
+  --color-orange-700: var(--color-marca-oscuro);
 }
 
 /* El overflow del elemento raíz se propaga al viewport, así que esto solo ya
@@ -38,7 +78,7 @@ html {
 body {
   background: #ffffff;
   color: #171717;
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-marca), Arial, Helvetica, sans-serif;
   overflow-wrap: break-word;
 }
 

@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { panelDeRol } from "@/lib/panel-de-rol";
 
 type AuthUser = {
   id: string;
@@ -104,4 +105,52 @@ export function useAuth() {
   const context = useContext(AuthContext);
   if (!context) throw new Error("useAuth debe usarse dentro de AuthProvider");
   return context;
+}
+
+/**
+ * La sesión tal como la necesita cualquier menú de cuenta.
+ *
+ * POR QUÉ EXISTE. `useAuth` devuelve `user` y `status` por separado, y trece
+ * lugares —la home, el nav compartido y los once templates de tienda— leían
+ * solo `user`. Mientras la sesión se resuelve `user` todavía es `null`, igual
+ * que si no hubiera nadie: los trece AFIRMABAN "no estás logueado" y mostraban
+ * "Iniciar sesión / Registrarse" durante los 2-3 segundos que tarda
+ * `/api/auth/me`, para recién después saltar a "Hola, X". No estaban esperando,
+ * estaban contestando mal.
+ *
+ * Que `user` sea `null` en dos situaciones distintas es la trampa. Este hook la
+ * saca del medio: devuelve los tres estados con nombre —`cargando`, `logueado`,
+ * `invitado`— así que quien escriba un menú nuevo tiene que elegir qué hace con
+ * cada uno. El que solo contemple dos ya no puede confundirlos sin darse cuenta.
+ *
+ * Trae también a dónde va el botón, porque esa decisión venía copiada en los
+ * mismos trece archivos (ver `panelDeRol`).
+ */
+export function useSesion() {
+  const { user, status, signOut } = useAuth();
+  const panel = panelDeRol(user?.role);
+  return {
+    /** Todavía no se sabe. No afirmar ninguna de las otras dos. */
+    cargando: status === "loading",
+    /** Hay sesión confirmada. */
+    logueado: status === "authenticated" && !!user,
+    /** Se confirmó que NO hay sesión. */
+    invitado: status === "unauthenticated",
+    user,
+    /** El nombre de pila, para saludar en el nav ("Hola, Flavio"). */
+    nombre: user?.name?.split(" ")[0] ?? null,
+    /**
+     * Cómo llamar a la persona en el menú de cuenta de una tienda: el nombre
+     * completo, y si no cargó ninguno, la parte del mail antes del arroba.
+     *
+     * Vive acá porque los once templates lo calculaban igual, y porque tenerlo
+     * ya resuelto evita que el menú tenga que tocar `user` —que es justo lo que
+     * llevaba a confundir "todavía no sé" con "no hay nadie"—.
+     */
+    nombreMostrado: user ? user.name || user.email.split("@")[0] : null,
+    panelHref: panel.href,
+    panelLabel: panel.label,
+    /** Se reexporta para que un menú de cuenta necesite un solo hook. */
+    signOut,
+  };
 }

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Menu, X, Package, MessageCircle } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { AppLogo } from "@/components/AppLogo";
-import { useAuth } from "@/components/AuthProvider";
+import { useSesion } from "@/components/AuthProvider";
 
 // Nav público único. Antes cada página pública se copiaba el nav a mano
 // (home, contacto, precios, seguimiento, quienes-somos) y las copias se
@@ -15,15 +15,16 @@ import { useAuth } from "@/components/AuthProvider";
 
 export type SiteNavKey =
   | "tiendas"
-  | "como-funciona"
   | "quienes-somos"
   | "precios"
   | "seguimiento"
   | "contacto";
 
+// "Cómo funciona" salió de acá: apuntaba a #como-funciona, el ancla de la
+// galería de plantillas de la home, que se sacó. Los diseños se muestran ahora
+// en los videos publicitarios.
 const LINKS: { key: SiteNavKey; href: string; label: string; icon?: LucideIcon }[] = [
   { key: "tiendas",       href: "/tiendas",          label: "Tiendas" },
-  { key: "como-funciona", href: "/#como-funciona",   label: "Cómo funciona" },
   { key: "quienes-somos", href: "/quienes-somos",    label: "Quiénes somos" },
   { key: "precios",       href: "/precios",          label: "Precios" },
   { key: "seguimiento",   href: "/seguimiento",      label: "Seguimiento", icon: Package },
@@ -32,12 +33,10 @@ const LINKS: { key: SiteNavKey; href: string; label: string; icon?: LucideIcon }
 
 export function SiteNav({ active, fixed = false }: { active?: SiteNavKey; fixed?: boolean }) {
   const [mobileMenu, setMobileMenu] = useState(false);
-  const { user } = useAuth();
-
-  const role = user?.role;
-  const panelHref  = role === "ADMIN" ? "/admin" : role === "OWNER" ? "/dashboard" : role === "SELLER" ? "/afiliados" : "/mi-cuenta";
-  const panelLabel = role === "ADMIN" ? "Admin"  : role === "OWNER" ? "Mi tienda" : role === "SELLER" ? "Mi panel"   : "Mi cuenta";
-  const userName = user?.name?.split(" ")[0] ?? null;
+  // Los tres estados con nombre, del mismo hook que usan la home y los once
+  // templates de tienda. Ver `useSesion`: leer solo `user` hacía que esto
+  // afirmara "no estás logueado" mientras todavía se estaba averiguando.
+  const { cargando: authCargando, logueado, nombre: userName, panelHref, panelLabel } = useSesion();
 
   return (
     <>
@@ -67,7 +66,15 @@ export function SiteNav({ active, fixed = false }: { active?: SiteNavKey; fixed?
         </div>
 
         <div className="hidden lg:flex items-center gap-3">
-          {user ? (
+          {/* El hueco mide lo mismo que los botones reales (px-5 py-2.5 sobre
+              texto de 14px = 42px de alto) para que al resolverse la sesión no
+              salte nada de lugar. */}
+          {authCargando ? (
+            <div aria-hidden className="flex items-center gap-3">
+              <div className="h-[42px] w-28 rounded-xl bg-gray-100 animate-pulse" />
+              <div className="h-[42px] w-32 rounded-xl bg-gray-100 animate-pulse" />
+            </div>
+          ) : logueado ? (
             <>
               <span className="text-gray-500 text-sm whitespace-nowrap">Hola, {userName ?? "!"}</span>
               <Link href={panelHref} className="bg-orange-600 hover:bg-orange-500 text-white text-sm font-semibold whitespace-nowrap px-5 py-2.5 rounded-xl transition-all">
@@ -125,7 +132,9 @@ export function SiteNav({ active, fixed = false }: { active?: SiteNavKey; fixed?
               </Link>
             ))}
             <div className="pt-3 border-t border-gray-200 flex flex-col gap-2 mt-2">
-              {user ? (
+              {authCargando ? (
+                <div aria-hidden className="h-[46px] rounded-xl bg-gray-100 animate-pulse" />
+              ) : logueado ? (
                 <Link href={panelHref} onClick={() => setMobileMenu(false)} className="text-center bg-orange-600 hover:bg-orange-500 rounded-xl py-3 text-sm font-semibold text-white transition-colors">
                   {panelLabel}
                 </Link>

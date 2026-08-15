@@ -1,10 +1,10 @@
-"use client";
+﻿"use client";
 
 import { useState, useRef, useEffect, useSyncExternalStore } from "react";
 import { useTouchSwipe } from "@/hooks/useTouchSwipe";
 import Link from "next/link";
 import Image from "next/image";
-import { useAuth } from "@/components/AuthProvider";
+import { useSesion } from "@/components/AuthProvider";
 import PromotionsCarousel from "@/components/PromotionsCarousel";
 import AsistentePersonaje from "@/components/dashboard/AsistentePersonaje";
 import { AppLogo } from "@/components/AppLogo";
@@ -15,12 +15,8 @@ import {
   ShoppingBag, Star, Send, MessageCircle, HeartHandshake,
   Package, ShoppingCart, ChevronRight, ChevronLeft, Menu,
   BadgeCheck, Sparkles,
-  ExternalLink, Info, Bell, Tag, Shield, Clock,
+  Bell, Tag, Shield, Clock,
 } from "lucide-react";
-import { TEMPLATE_CATEGORIES } from "@/lib/templateRegistry";
-// planLimits solo importa un `type` de Prisma, asi que se puede usar del lado
-// del navegador. La landing promete lo mismo que el sistema hace cumplir.
-import { PRO_MAX_PRODUCTS } from "@/lib/planLimits";
 import { SiteFooter } from "@/components/SiteFooter";
 
 /* ─── 3D Tilt Card ─── */
@@ -232,7 +228,7 @@ const SASHA_POS_NARROW: [number, number][] = [[6, 48], [23, 45], [40, 55], [57, 
 
 const FEATURES = [
   {
-    icon: Store, tab: "Tu tienda", color: "#ea580c",
+    icon: Store, tab: "Tu tienda", color: "var(--color-marca)",
     title: "Una tienda que enamora desde el primer click",
     desc: "Elegís entre 10 diseños profesionales, personalizás colores, logo y contenido — y en menos de una hora tenés tu tienda lista para vender.",
     bullets: ["10 plantillas listas para usar", "URL propia: tiendaapps.com/tutienda", "Galería de productos con variantes", "Optimizada para celular"],
@@ -289,155 +285,6 @@ const FEATURES = [
   },
 ];
 
-/* ─── Galería de plantillas ("Diseño según tu rubro") ─── */
-const TEMPLATE_ITEMS = TEMPLATE_CATEGORIES.flatMap((cat) =>
-  cat.templates.map((t) => ({ ...t, categoryId: cat.id, categoryName: cat.name }))
-);
-
-const THUMB_W = 320;
-const VIRTUAL_W = 1080;
-const THUMB_H = 210;
-
-function TemplateGalleryCard({ item, onInfo, inView, thumbW: tw = 320 }: { item: typeof TEMPLATE_ITEMS[number]; onInfo: () => void; inView: boolean; thumbW?: number }) {
-  const Component = item.component;
-  const scale = tw / VIRTUAL_W;
-  const thumbH = Math.round(THUMB_H * (tw / THUMB_W));
-  const virtualH = Math.round(thumbH / scale);
-  return (
-    <Card3D className="group">
-      <div style={{ width: tw }} className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300">
-        {/* Barra tipo navegador */}
-        <div className="flex items-center justify-between px-3 py-2 bg-gray-50 border-b border-gray-100">
-          <div className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-rose-400" />
-            <span className="w-2 h-2 rounded-full bg-amber-400" />
-            <span className="w-2 h-2 rounded-full bg-teal-400" />
-          </div>
-          <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Demo</span>
-        </div>
-
-        {/* Vista del template real, escalada y sin interacción */}
-        <div className="relative" style={{ width: tw, height: thumbH, overflow: "hidden", background: "#f8fafc" }}>
-          <div style={{
-            position: "absolute", top: 0, left: 0,
-            width: VIRTUAL_W, height: virtualH,
-            transform: `scale(${scale})`, transformOrigin: "top left",
-            pointerEvents: "none", userSelect: "none",
-          }}>
-            {inView ? <Component /> : (
-              <div style={{ width: "100%", height: "100%", background: item.palette[0] ? item.palette[0] + "18" : "#f3f4f6" }} />
-            )}
-          </div>
-
-          {/* Overlay con acciones, aparece en hover.
-              `hidden lg:flex`, no solo `opacity-0`: un elemento transparente sigue
-              recibiendo los toques. En celular y tablet no hay hover, así que
-              estos dos botones quedaban invisibles PERO tocables encima de la
-              miniatura — tocabas el diseño y se te abría la demo o la ficha según
-              en qué parte cayó el dedo, sin nada que lo explicara. Abajo de 1024
-              directamente no existe y las acciones van visibles en la tarjeta. */}
-          <div className="absolute inset-0 bg-gray-950/0 group-hover:bg-gray-950/55 transition-all hidden lg:flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
-            <a
-              href={`/plantillas/${item.id}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1.5 bg-orange-600 hover:bg-orange-500 text-white text-xs font-semibold px-3.5 py-2 rounded-xl shadow-lg transition-colors"
-            >
-              <ExternalLink className="h-3.5 w-3.5" /> Ver demostración
-            </a>
-            <button
-              onClick={onInfo}
-              className="flex items-center gap-1.5 bg-white hover:bg-gray-100 text-gray-800 text-xs font-semibold px-3.5 py-2 rounded-xl shadow-lg transition-colors"
-            >
-              <Info className="h-3.5 w-3.5" /> Más info
-            </button>
-          </div>
-        </div>
-
-        <div className="p-4">
-          <div className="flex items-center justify-between mb-1.5">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-orange-600">{item.categoryName}</span>
-            <div className="flex gap-1">
-              {item.palette.map((c, i) => (
-                <span key={i} className="w-3 h-3 rounded-full border border-black/10" style={{ backgroundColor: c }} />
-              ))}
-            </div>
-          </div>
-          <h3 className="font-bold text-gray-950 text-base mb-1">{item.name}</h3>
-          <p className="text-gray-500 text-xs">{item.desc}</p>
-
-          {/* Las mismas dos acciones del hover, visibles, para todo lo que se toca
-              con el dedo. La tarjeta mide 152px de ancho a 360px de pantalla, así
-              que "Ver demo" se lleva el lugar y la ficha queda como un botón
-              cuadrado con la "i" — con su `aria-label`, que sin texto al lado un
-              lector de pantalla no tendría cómo nombrarlo. */}
-          <div className="mt-3 flex items-stretch gap-2 lg:hidden">
-            <a
-              href={`/plantillas/${item.id}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex-1 min-w-0 flex items-center justify-center whitespace-nowrap bg-orange-600 active:bg-orange-700 text-white text-[11px] font-semibold px-2 py-2.5 rounded-xl transition-colors"
-            >
-              Ver demo
-            </a>
-            <button
-              onClick={onInfo}
-              aria-label={`Más información sobre ${item.name}`}
-              className="shrink-0 w-9 flex items-center justify-center border border-gray-200 text-gray-600 active:bg-gray-100 rounded-xl transition-colors"
-            >
-              <Info className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-      </div>
-    </Card3D>
-  );
-}
-
-function TemplateInfoModal({ item, onClose }: { item: typeof TEMPLATE_ITEMS[number]; onClose: () => void }) {
-  return (
-    <motion.div
-      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4"
-      onClick={onClose}
-    >
-      <div className="absolute inset-0 bg-gray-900/50 backdrop-blur-sm" />
-      <motion.div
-        initial={{ scale: 0.9, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0, y: 20 }}
-        transition={{ type: "spring", stiffness: 280, damping: 22 }}
-        onClick={(e) => e.stopPropagation()}
-        className="relative bg-white border border-gray-200 rounded-3xl p-7 w-full max-w-md shadow-2xl"
-      >
-        <button onClick={onClose} className="absolute top-5 right-5 text-gray-400 hover:text-gray-700 transition-colors">
-          <X className="h-5 w-5" />
-        </button>
-        <div className="flex items-center gap-2 mb-3">
-          {item.palette.map((c, i) => (
-            <span key={i} className="w-4 h-4 rounded-full border border-black/10" style={{ backgroundColor: c }} />
-          ))}
-        </div>
-        <p className="text-orange-600 text-xs font-bold uppercase tracking-widest mb-1">{item.categoryName}</p>
-        <h3 className="text-2xl font-black text-gray-950 mb-1">{item.name}</h3>
-        <p className="text-gray-400 text-sm mb-4">{item.desc}</p>
-        <p className="text-gray-600 text-sm leading-relaxed mb-6">{item.blurb}</p>
-        <div className="flex gap-3">
-          <a
-            href={`/plantillas/${item.id}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex-1 flex items-center justify-center gap-2 bg-orange-600 hover:bg-orange-500 text-white py-3 rounded-xl font-semibold text-sm transition-colors"
-          >
-            <ExternalLink className="h-4 w-4" /> Ver demostración
-          </a>
-          <button onClick={onClose} className="px-5 py-3 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 text-sm font-semibold transition-colors">
-            Cerrar
-          </button>
-        </div>
-      </motion.div>
-    </motion.div>
-  );
-}
-
 const ANNOUNCEMENT_H = 40;
 const ANNOUNCEMENT_KEY = "announcement_v2";
 const ANNOUNCEMENT_EVENT = "announcement-dismissed";
@@ -463,17 +310,13 @@ export default function Home() {
   const [realTestimonials, setRealTestimonials] = useState<RealTestimonial[]>([]);
   const [testimonioModal, setTestimonioModal] = useState(false);
   const [comunidadHref, setComunidadHref] = useState("/comunidad");
-  const [templateFilter, setTemplateFilter] = useState("todo");
-  const [templateInfoModal, setTemplateInfoModal] = useState<typeof TEMPLATE_ITEMS[number] | null>(null);
-  const [templatePage, setTemplatePage] = useState(0);
-  const [templateNavDir, setTemplateNavDir] = useState(1);
-  const [thumbW, setThumbW] = useState(320);
   const [cloudNarrow, setCloudNarrow] = useState(false);
   const [rotatingWordIdx, setRotatingWordIdx] = useState(0);
   const [featureSlide, setFeatureSlide] = useState<[number, number]>([0, 1]);
-  const [templatesInView, setTemplatesInView] = useState(false);
-  const templatesSectionRef = useRef<HTMLElement>(null);
-  const { user: sessionUser } = useAuth();
+  // Los tres estados con nombre, del mismo hook que usan el nav compartido y
+  // los once templates de tienda. Ver `useSesion`: leer solo `user` hacía que
+  // esto afirmara "no estás logueado" mientras todavía se estaba averiguando.
+  const { cargando: authCargando, logueado, nombre: userName, panelHref, panelLabel } = useSesion();
   const { scrollY } = useScroll();
   useMotionValueEvent(scrollY, "change", (v) => setNavScrolled(v > 50));
 
@@ -483,26 +326,9 @@ export default function Home() {
   const featureNext = () => setFeatureSlide(([i]) => [(i + 1) % FEATURES.length, 1]);
   const featurePrev = () => setFeatureSlide(([i]) => [i === 0 ? FEATURES.length - 1 : i - 1, -1]);
   // En celular y tablet no hay mouse: sin esto, las flechas y los puntitos eran
-  // la única forma de pasar de tarjeta, y en la galería de plantillas las flechas
-  // ni siquiera se muestran (`hidden md:flex`). El hook ya distingue el gesto
-  // horizontal del scroll vertical, así que no interfiere con bajar la página.
+  // la única forma de pasar de tarjeta. El hook ya distingue el gesto horizontal
+  // del scroll vertical, así que no interfiere con bajar la página.
   const featureSwipe = useTouchSwipe(featureNext, featurePrev);
-
-  // El filtrado y el total de páginas se calculan acá y no dentro del render de
-  // la galería, porque ahora hay tres cosas que necesitan saber en qué página
-  // estamos y cuántas hay: las flechas, los puntos y el deslizar. Una sola cuenta
-  // para las tres, y el movimiento no puede pasarse de los extremos.
-  const TEMPLATES_PAGE_SIZE = 6;
-  const templatesFiltered = TEMPLATE_ITEMS.filter((t) => templateFilter === "todo" || t.categoryId === templateFilter);
-  const templateTotalPages = Math.max(1, Math.ceil(templatesFiltered.length / TEMPLATES_PAGE_SIZE));
-  const templatePageSafe = Math.min(templatePage, templateTotalPages - 1);
-  const goTemplatePage = (dir: 1 | -1) => {
-    const destino = templatePageSafe + dir;
-    if (destino < 0 || destino > templateTotalPages - 1) return;
-    setTemplateNavDir(dir);
-    setTemplatePage(destino);
-  };
-  const templatesSwipe = useTouchSwipe(() => goTemplatePage(1), () => goTemplatePage(-1));
 
   function dismissAnnouncement() {
     localStorage.setItem(ANNOUNCEMENT_KEY, "1");
@@ -521,17 +347,6 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    const el = templatesSectionRef.current;
-    if (!el) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => { if (entry.isIntersecting) { setTemplatesInView(true); observer.disconnect(); } },
-      { rootMargin: "300px" }
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
-
-  useEffect(() => {
     const timer = setInterval(() => setRotatingWordIdx((i) => (i + 1) % ROTATING_WORDS.length), 2500);
     return () => clearInterval(timer);
   }, []);
@@ -546,39 +361,23 @@ export default function Home() {
   // setTimeout en vez de setInterval: ahora dispara una sola vez por ciclo y el
   // efecto lo vuelve a armar.
   useEffect(() => {
-    const timer = setTimeout(() => setFeatureSlide(([i]) => [(i + 1) % FEATURES.length, 1]), 12000);
+    const timer = setTimeout(() => setFeatureSlide(([i]) => [(i + 1) % FEATURES.length, 1]), 17000);
     return () => clearTimeout(timer);
   }, [featureSlide]);
 
   useEffect(() => {
     const update = () => {
       // clientWidth, NO innerWidth: innerWidth incluye la barra de scroll (en
-      // DevTools son ~15px reales), así que las dos tarjetas se pasaban por ese
-      // margen y caían a una por fila. clientWidth es el ancho real disponible
-      // —sin la barra— y en un celular de verdad da lo mismo (ahí la barra no
-      // ocupa espacio).
-      const w = document.documentElement.clientWidth;
-      setCloudNarrow(w < 640);
-      if (w < 640) {
-        // Dos por fila en celular. Antes era 160px fijo, pero con el gap (12px)
-        // dos tarjetas no entraban y caían a una sola, dejando la galería
-        // larguísima. El ancho se calcula para que entren exactamente dos:
-        // (pantalla − padding px-6 (48) − gap (12)) / 2, con 2px de aire para
-        // que un redondeo no las tire a la fila de abajo. Tope de 320.
-        setThumbW(Math.min(320, Math.floor((w - 48 - 12) / 2) - 2));
-      } else {
-        setThumbW(320);
-      }
+      // DevTools son ~15px reales) y acá se decide un corte por ancho, así que
+      // esos pixeles de más movían el resultado. clientWidth es el ancho real
+      // disponible —sin la barra— y en un celular de verdad da lo mismo (ahí la
+      // barra no ocupa espacio).
+      setCloudNarrow(document.documentElement.clientWidth < 640);
     };
     update();
     window.addEventListener("resize", update);
     return () => window.removeEventListener("resize", update);
   }, []);
-
-  const role = sessionUser?.role;
-  const panelHref = role === "ADMIN" ? "/admin" : role === "OWNER" ? "/dashboard" : role === "SELLER" ? "/afiliados" : "/mi-cuenta";
-  const panelLabel = role === "ADMIN" ? "Admin" : role === "OWNER" ? "Mi tienda" : role === "SELLER" ? "Mi panel" : "Mi cuenta";
-  const userName = sessionUser?.name?.split(" ")[0] ?? null;
 
   return (
     <div className="min-h-screen bg-white text-gray-900 overflow-x-hidden">
@@ -587,7 +386,7 @@ export default function Home() {
       {!announcementClosed && (
         <div
           className="fixed top-0 left-0 right-0 z-[60] flex items-center justify-center gap-2 sm:gap-4 px-10"
-          style={{ height: ANNOUNCEMENT_H, background: "linear-gradient(90deg,#ea580c,#e11d48)" }}
+          style={{ height: ANNOUNCEMENT_H, background: "linear-gradient(90deg,var(--color-marca),#e11d48)" }}
         >
           {/* `truncate` en vez de `whitespace-nowrap`: con dos textos que no
               admiten corte más el padding lateral, en un celular de 320-360 px no
@@ -626,7 +425,11 @@ export default function Home() {
         .fab-ring-orange { animation: fab-ring-orange 2.6s ease-in-out infinite; }
         .fab-ring-amber { animation: fab-ring-amber 2.6s ease-in-out infinite; }
         .gradient-text {
-          background: linear-gradient(135deg, #f97316, #f59e0b, #e11d48, #f97316);
+          /* El naranja sale del token de la marca (globals.css) y no escrito a
+             mano, así que si algún día cambia el color, esta palabra cambia con
+             él. El ámbar y el rosa son acompañantes del degradado, no la marca,
+             y por eso siguen fijos. */
+          background: linear-gradient(135deg, var(--color-marca-claro), #f59e0b, #e11d48, var(--color-marca-claro));
           background-size: 300% 300%;
           animation: gradient-shift 4s ease infinite;
           -webkit-background-clip: text;
@@ -656,7 +459,6 @@ export default function Home() {
               se parta a dos líneas. El gap arranca chico y crece en xl. */}
           <div className="hidden lg:flex items-center gap-6 xl:gap-8">
             <Link href="/tiendas" className="text-gray-500 hover:text-gray-900 text-sm font-medium whitespace-nowrap transition-colors">Tiendas</Link>
-            <a href="#como-funciona" className="text-gray-500 hover:text-gray-900 text-sm font-medium whitespace-nowrap transition-colors">Cómo funciona</a>
             <Link href="/quienes-somos" className="text-gray-500 hover:text-gray-900 text-sm font-medium whitespace-nowrap transition-colors">Quiénes somos</Link>
             <Link href="/precios" className="text-gray-500 hover:text-gray-900 text-sm font-medium whitespace-nowrap transition-colors">Precios</Link>
             <Link href="/seguimiento" className="text-gray-500 hover:text-gray-900 text-sm font-medium whitespace-nowrap transition-colors flex items-center gap-1.5">
@@ -668,7 +470,15 @@ export default function Home() {
           </div>
 
           <div className="hidden lg:flex items-center gap-3">
-            {sessionUser ? (
+            {/* El hueco mide lo mismo que los botones reales (px-5 py-2.5 sobre
+                texto de 14px = 42px de alto) para que al resolverse la sesión no
+                salte nada de lugar. */}
+            {authCargando ? (
+              <div aria-hidden className="flex items-center gap-3">
+                <div className="h-[42px] w-28 rounded-xl bg-gray-100 animate-pulse" />
+                <div className="h-[42px] w-32 rounded-xl bg-gray-100 animate-pulse" />
+              </div>
+            ) : logueado ? (
               <>
                 <span className="text-gray-500 text-sm whitespace-nowrap">Hola, {userName ?? "!"}</span>
                 <Link href={panelHref} className="bg-orange-600 hover:bg-orange-500 text-white text-sm font-semibold whitespace-nowrap px-5 py-2.5 rounded-xl transition-all shadow-lg shadow-orange-500/25 hover:shadow-orange-500/40 hover:scale-105">
@@ -714,13 +524,14 @@ export default function Home() {
               </div>
               <div className="flex flex-col gap-1 px-4 py-4 flex-1">
                 <Link href="/tiendas" onClick={() => setMobileMenu(false)} className="block text-gray-700 hover:text-gray-900 py-3 px-3 rounded-xl hover:bg-gray-50 transition-colors">Tiendas</Link>
-                <a href="#como-funciona" onClick={() => setMobileMenu(false)} className="block text-gray-700 hover:text-gray-900 py-3 px-3 rounded-xl hover:bg-gray-50 transition-colors">Cómo funciona</a>
                 <Link href="/quienes-somos" onClick={() => setMobileMenu(false)} className="block text-gray-700 hover:text-gray-900 py-3 px-3 rounded-xl hover:bg-gray-50 transition-colors">Quiénes somos</Link>
                 <Link href="/precios" onClick={() => setMobileMenu(false)} className="block text-gray-700 hover:text-gray-900 py-3 px-3 rounded-xl hover:bg-gray-50 transition-colors">Precios</Link>
                 <Link href="/seguimiento" onClick={() => setMobileMenu(false)} className="block text-gray-700 hover:text-gray-900 py-3 px-3 rounded-xl hover:bg-gray-50 transition-colors">Seguimiento</Link>
                 <Link href="/contacto" onClick={() => setMobileMenu(false)} className="block text-gray-700 hover:text-gray-900 py-3 px-3 rounded-xl hover:bg-gray-50 transition-colors">Contacto</Link>
                 <div className="pt-3 border-t border-gray-200 flex flex-col gap-2 mt-2">
-                  {sessionUser ? (
+                  {authCargando ? (
+                    <div aria-hidden className="h-[46px] rounded-xl bg-gray-100 animate-pulse" />
+                  ) : logueado ? (
                     <Link href={panelHref} onClick={() => setMobileMenu(false)} className="text-center bg-orange-600 hover:bg-orange-500 rounded-xl py-3 text-sm font-semibold text-white transition-colors">
                       {panelLabel}
                     </Link>
@@ -972,70 +783,12 @@ export default function Home() {
 
       <PromotionsCarousel />
 
-      {/* ── TRES CAMINOS ── */}
-      <section className="py-24 bg-gray-50 relative">
-        <div className="absolute inset-0 grid-bg opacity-40" />
-        <div className="relative max-w-7xl mx-auto px-6">
-          <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={stagger} className="text-center mb-14">
-            <motion.p variants={fadeUp} className="text-orange-600 font-semibold text-sm uppercase tracking-widest mb-3">Para todos</motion.p>
-            <motion.h2 variants={fadeUp} className="text-4xl lg:text-5xl font-black text-gray-950 mb-4">¿Cuál es tu lugar?</motion.h2>
-            <motion.p variants={fadeUp} className="text-gray-600 text-lg">Ya seas dueño, afiliado o comprador, acá hay un lugar para vos.</motion.p>
-          </motion.div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {[
-              {
-                icon: Store, color: "#ea580c", gradient: "from-orange-50 to-orange-50/40", border: "border-orange-200", metric: "+24 ventas este mes",
-                title: "Dueño", sub: "El motor de tu marca, sin armar un equipo en planilla.",
-                items: ["Tienda con subdominio propio incluido", `Hasta ${PRO_MAX_PRODUCTS.toLocaleString("es-AR")} productos, con variantes ilimitadas`, "Sasha, tu asistente de IA, te avisa el estado de tu tienda", "Panel de pedidos, estadísticas y afiliados", "Vos aprobás quién representa tu marca", "Comisiones automáticas o con aprobación manual, según prefieras", "7 días de prueba gratis, sin tarjeta"],
-                cta: "Crear mi tienda gratis", href: "/registro",
-              },
-              {
-                icon: Users, color: "#f59e0b", gradient: "from-amber-50 to-amber-50/40", border: "border-amber-200", metric: "$3.680 comisión cobrada",
-                title: "Afiliado", sub: "Plata por cada link que compartís, sin poner un peso.",
-                items: ["Elegís las tiendas que te interesan y te postulás", "Link propio con seguimiento de clics y ventas", "Sin stock, sin inversión, sin riesgo", "Metas mensuales con bono extra si las cumplís", "Panel de comisiones con historial de ventas", "Retirá cuando quieras, por transferencia bancaria", "100% gratis, para siempre"],
-                cta: "Quiero ser afiliado", href: "/registro?plan=seller",
-              },
-              {
-                icon: ShoppingCart, color: "#e11d48", gradient: "from-rose-50 to-rose-50/40", border: "border-rose-200", metric: "Tiendas verificadas",
-                title: "Comprador", sub: "Tiendas reales, con productos y precios reales.",
-                items: ["Tiendas activas y verificadas por nosotros", "Pagos seguros, sin comisiones extra", "Guardá favoritos y dejá reseñas", "Historial de compras siempre disponible"],
-                cta: "Explorar tiendas", href: "/tiendas",
-              },
-            ].map(({ icon: Icon, color, gradient, border, metric, title, sub, items, cta, href }) => (
-              <motion.div key={title} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5 }}>
-                <div className={`h-full bg-gradient-to-br ${gradient} bg-white border ${border} rounded-3xl p-8 flex flex-col shadow-sm`}>
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className="w-14 h-14 rounded-2xl flex items-center justify-center" style={{ backgroundColor: color + "1A" }}>
-                      <Icon className="h-7 w-7" style={{ color }} />
-                    </div>
-                    <span className="text-xs font-semibold px-2.5 py-1 rounded-full" style={{ backgroundColor: color + "14", color }}>
-                      {metric}
-                    </span>
-                  </div>
-                  <h3 className="text-2xl font-black text-gray-950 mb-1">{title}</h3>
-                  <p className="text-gray-500 text-sm mb-6">{sub}</p>
-                  <ul className="space-y-3 mb-8 flex-1">
-                    {items.map((item) => (
-                      <li key={item} className="flex items-start gap-3 text-sm text-gray-600">
-                        <CheckCircle className="h-4 w-4 mt-0.5 flex-shrink-0" style={{ color }} />
-                        {item}
-                      </li>
-                    ))}
-                  </ul>
-                  <Link
-                    href={href}
-                    className="flex items-center justify-center gap-2 py-3.5 rounded-2xl font-semibold text-white transition-all hover:opacity-90 hover:scale-[1.02]"
-                    style={{ backgroundColor: color }}
-                  >
-                    {cta} <ArrowRight className="h-4 w-4" />
-                  </Link>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
+      {/* La seccion "¿Cual es tu lugar?" (Dueño / Afiliado / Comprador) vivia
+          aca. Se saco: repetia el selector de tipo de cuenta que ya esta en
+          /registro, alargaba la home, y los badges ("+24 ventas este mes",
+          "$3.680 comision cobrada") eran numeros inventados. Los tres caminos
+          siguen accesibles: "Crear cuenta" en el nav, "Tiendas" en el nav y
+          "Quiero ser afiliado" en el footer y en el hero. */}
 
       {/* ── HERRAMIENTAS (Feature showcase) ── */}
       <section className="py-24 bg-white relative overflow-hidden">
@@ -1154,127 +907,23 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── RUBROS Y DISEÑOS (galería de plantillas) ── */}
-      <section id="como-funciona" ref={templatesSectionRef} className="relative py-24 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-6">
-          <motion.div initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.2 }} variants={stagger} className="text-center mb-10">
-            <motion.p variants={fadeUp} className="text-orange-600 font-semibold text-sm uppercase tracking-widest mb-3">Diseño según tu rubro</motion.p>
-            <motion.h2 variants={fadeUp} className="text-4xl lg:text-5xl font-black text-gray-950 mb-4">Tu tienda, con identidad propia.</motion.h2>
-            <motion.p variants={fadeUp} className="text-gray-500 text-lg max-w-2xl mx-auto mb-6">Diez diseños listos, navegables de verdad. Elegís el que más se parece a tu marca, editás colores, textos e imágenes a tu gusto, y arrancás a vender.</motion.p>
-            <motion.div variants={fadeUp} className="flex flex-wrap justify-center gap-2 max-w-2xl mx-auto">
-              {["Colores", "Logo", "Banner", "WhatsApp", "Redes sociales", "Envío y cobro", "SEO"].map((item) => (
-                <span key={item} className="text-xs font-medium text-gray-500 bg-white border border-gray-200 px-3 py-1.5 rounded-full">{item}</span>
-              ))}
-            </motion.div>
-          </motion.div>
-
-          {/* Filtro por categoría */}
-          <motion.div initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} className="flex flex-wrap justify-center gap-2 mb-10">
-            {[{ id: "todo", name: "Todo" }, ...TEMPLATE_CATEGORIES.map((c) => ({ id: c.id, name: c.name }))].map((cat) => (
-              <button
-                key={cat.id}
-                onClick={() => { setTemplateFilter(cat.id); setTemplatePage(0); }}
-                className={`text-sm font-semibold px-4 py-2 rounded-xl border transition-colors ${
-                  templateFilter === cat.id
-                    ? "bg-orange-600 border-orange-600 text-white"
-                    : "bg-white border-gray-200 text-gray-600 hover:border-orange-300 hover:text-orange-600"
-                }`}
-              >
-                {cat.name}
-              </button>
-            ))}
-          </motion.div>
-
-          {(() => {
-            // Las cuentas viven arriba, en el cuerpo del componente, para que las
-            // compartan las flechas, los puntos y el deslizar con el dedo.
-            const totalPages = templateTotalPages;
-            const page = templatePageSafe;
-            const pageItems = templatesFiltered.slice(page * TEMPLATES_PAGE_SIZE, page * TEMPLATES_PAGE_SIZE + TEMPLATES_PAGE_SIZE);
-            const slots: (typeof pageItems[number] | null)[] = [...pageItems];
-            while (slots.length < TEMPLATES_PAGE_SIZE) slots.push(null);
-
-            return (
-              <div className="px-0 md:px-14">
-                {/* relative: contexto para las flechas absolutas — sin overflow-hidden para no clipearlas */}
-                <div className="relative">
-                  {totalPages > 1 && (
-                    <button
-                      type="button"
-                      onClick={(e) => { e.preventDefault(); goTemplatePage(-1); }}
-                      aria-disabled={page === 0}
-                      aria-label="Bloque anterior"
-                      className={`hidden md:flex absolute left-0 top-1/2 -translate-y-1/2 z-10 w-9 items-center justify-center bg-transparent border-none text-gray-400 hover:text-orange-600 transition-colors ${page === 0 ? "opacity-20 pointer-events-none" : "cursor-pointer"}`}
-                      style={{ filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.15))" }}
-                    >
-                      <ChevronLeft className="h-11 w-11" strokeWidth={1.5} />
-                    </button>
-                  )}
-                  {totalPages > 1 && (
-                    <button
-                      type="button"
-                      onClick={(e) => { e.preventDefault(); goTemplatePage(1); }}
-                      aria-disabled={page === totalPages - 1}
-                      aria-label="Siguiente bloque"
-                      className={`hidden md:flex absolute right-0 top-1/2 -translate-y-1/2 z-10 w-9 items-center justify-center bg-transparent border-none text-gray-400 hover:text-orange-600 transition-colors ${page === totalPages - 1 ? "opacity-20 pointer-events-none" : "cursor-pointer"}`}
-                      style={{ filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.15))" }}
-                    >
-                      <ChevronRight className="h-11 w-11" strokeWidth={1.5} />
-                    </button>
-                  )}
-
-                  {/* overflow-hidden solo en el wrapper de la animación, no afecta las flechas.
-                      El gesto va acá: en celular las flechas están ocultas (`hidden md:flex`),
-                      así que sin esto los puntitos eran la única forma de pasar de bloque. */}
-                  <div {...templatesSwipe} className="overflow-hidden">
-                    <motion.div
-                      key={`${templateFilter}-${page}`}
-                      initial={{ opacity: 0, x: templateNavDir * 32 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ duration: 0.3, ease: "easeOut" }}
-                      className="flex flex-wrap justify-center gap-3 sm:gap-6 w-full"
-                    >
-                      {slots.map((item, i) =>
-                        item ? (
-                          <TemplateGalleryCard key={item.id} item={item} onInfo={() => setTemplateInfoModal(item)} inView={templatesInView} thumbW={thumbW} />
-                        ) : (
-                          <div key={`empty-${i}`} aria-hidden style={{ width: thumbW }} />
-                        )
-                      )}
-                    </motion.div>
-                  </div>
-                </div>
-
-                {totalPages > 1 && (
-                  <div className="flex items-center justify-center gap-2 mt-10">
-                    {Array.from({ length: totalPages }).map((_, i) => (
-                      <button
-                        key={i}
-                        type="button"
-                        onClick={() => { setTemplateNavDir(i >= page ? 1 : -1); setTemplatePage(i); }}
-                        aria-label={`Ir al bloque ${i + 1}`}
-                        className="h-2 rounded-full transition-all duration-300"
-                        style={{ width: i === page ? 26 : 8, backgroundColor: i === page ? "#ea580c" : "#e5e7eb" }}
-                      />
-                    ))}
-                  </div>
-                )}
-              </div>
-            );
-          })()}
-        </div>
-      </section>
-
-      <AnimatePresence>
-        {templateInfoModal && <TemplateInfoModal item={templateInfoModal} onClose={() => setTemplateInfoModal(null)} />}
-      </AnimatePresence>
+      {/* Aca vivia "Tu tienda, con identidad propia.": la galeria de las once
+          plantillas con filtro por rubro, carrusel y modal de detalle. Se saco
+          entera, junto con todo lo que llevaba a ella (el "Como funciona" del
+          nav, del SiteNav y del footer) y con la demo publica /plantillas/[id],
+          que ya no existe. Los diseños se muestran ahora en los videos
+          publicitarios, no en la home. */}
 
       {/* ── DISEÑO PROPIO ── */}
-      {/* Fondo blanco a propósito: la galería de arriba es gray-50, y con el
-          mismo gris las dos secciones se leían como una sola. Layout partido
-          (foto izquierda / texto derecha) que queda espejado con Afiliados,
-          justo debajo, que tiene el texto a la izquierda. */}
-      <section className="py-24 bg-white overflow-hidden">
+      {/* Fondo gris a propósito. Antes era blanco porque arriba tenía la galería
+          de plantillas en gray-50 y con el mismo gris las dos se leían como una
+          sola sección. Al sacarse la galería, el bloque de arriba pasó a ser
+          Herramientas —que es blanco—, así que el blanco produjo justamente lo
+          que evitaba: dos secciones seguidas sin corte visible. El gris devuelve
+          la alternancia. Layout partido (foto izquierda / texto derecha) que
+          queda espejado con Afiliados, justo debajo, que tiene el texto a la
+          izquierda. */}
+      <section className="py-24 bg-gray-50 overflow-hidden">
         <div className="max-w-6xl mx-auto px-6">
           {/* En celular las dos columnas colapsan a una, y el orden del código
               dejaba foto → título → descripción: se entraba a la sección por una
@@ -1295,8 +944,12 @@ export default function Home() {
               <p className="text-orange-600 font-semibold text-sm uppercase tracking-widest mb-4">
                 Tu propio diseño
               </p>
+              {/* Antes decía "¿Ninguna plantilla es la tuya?", que era la
+                  respuesta a la galería de plantillas que estaba justo arriba.
+                  Al sacarse la galería, la pregunta le hablaba a algo que el
+                  visitante nunca había visto. */}
               <h2 className="text-4xl sm:text-5xl font-black text-gray-950 mb-0 lg:mb-6 leading-tight">
-                ¿Ninguna plantilla es la tuya?
+                Tu propia tienda web, dentro de TiendaApps.
               </h2>
             </motion.div>
 
@@ -1334,8 +987,9 @@ export default function Home() {
             {/* El detalle: una frase que invita, sin listar pasos. */}
             <motion.div variants={fadeUp} className="order-3 lg:col-start-2 lg:row-start-2 lg:self-start">
               <p className="text-gray-500 text-lg leading-relaxed mb-4">
-                Contanos cómo imaginás tu tienda y la <strong className="text-gray-900 font-semibold">diseñamos
-                con vos</strong>, a tu gusto y sin que te cueste nada.
+                Contanos cómo la imaginás y la <strong className="text-gray-900 font-semibold">diseñamos
+                con vos</strong>, gratis. Queda con tu identidad, pero con la plataforma entera atrás:
+                pagos, pedidos, afiliados y una comunidad de comercios que ya está vendiendo.
               </p>
               <p className="text-gray-500 text-lg leading-relaxed mb-9">
                 No necesitás saber de diseño ni tener la tienda creada. Vos nos contás la idea, nosotros la hacemos realidad.

@@ -21,7 +21,9 @@ export default function QuienesSomosPage() {
       <style>{`
         @keyframes gradient-shift { 0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%} }
         .gradient-text {
-          background: linear-gradient(135deg, #f97316, #f59e0b, #e11d48, #f97316);
+          /* El naranja sale del token de la marca (globals.css). El ámbar y el
+             rosa acompañan el degradado y no son la marca, por eso van fijos. */
+          background: linear-gradient(135deg, var(--color-marca-claro), #f59e0b, #e11d48, var(--color-marca-claro));
           background-size: 300% 300%;
           animation: gradient-shift 4s ease infinite;
           -webkit-background-clip: text;
@@ -206,7 +208,10 @@ export default function QuienesSomosPage() {
 
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
             {[
-              { icon: Store,        label: "Tienda online",        color: "#ea580c", bg: "#ea580c12" },
+              // El fondo era `#ea580c12`: el mismo naranja con 7% de opacidad
+              // pegado como dos dígitos al final. Eso no se puede hacer con una
+              // variable, así que se dice lo mismo con `color-mix`.
+              { icon: Store,        label: "Tienda online",        color: "var(--color-marca)", bg: "color-mix(in oklab, var(--color-marca) 7%, transparent)" },
               { icon: ShoppingCart, label: "Pagos integrados",     color: "#0d9488", bg: "#0d948812" },
               { icon: Package,      label: "Gestión de pedidos",   color: "#e11d48", bg: "#e11d4812" },
               { icon: Sparkles,     label: "Sasha IA",             color: "#7c3aed", bg: "#7c3aed12" },
@@ -250,7 +255,7 @@ export default function QuienesSomosPage() {
             {[
               {
                 icon: Store,
-                color: "#ea580c",
+                color: "var(--color-marca)",
                 bg: "from-orange-50 to-orange-100/40",
                 border: "border-orange-200",
                 title: "El dueño de tienda",
@@ -409,8 +414,9 @@ export default function QuienesSomosPage() {
             {[
               {
                 icon: Store,
-                color: "#ea580c",
-                bg: "#ea580c10",
+                color: "var(--color-marca)",
+                // Era `#ea580c10`: el mismo naranja al 6%. Ver la nota de arriba.
+                bg: "color-mix(in oklab, var(--color-marca) 6%, transparent)",
                 title: "Herramientas reales",
                 desc: "No prometemos magia. Damos un panel completo con todo lo que un negocio online necesita para funcionar y crecer.",
               },

@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef, useMemo, Fragment } from "react";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { usePushBell } from "@/contexts/PushBellContext";
-import { useAuth } from "@/components/AuthProvider";
+import { useSesion } from "@/components/AuthProvider";
 import StoreFollowButton from "@/components/store/StoreFollowButton";
 import { useResenasProducto, type ResenaProducto } from "@/hooks/useResenasProducto";
 import { EditableZone, EditableImageButton, EditableSectionBg, BgDragHandle, getContrastColor, getReadableAccentText, getReadableAccentFill, textoSobre, useEditContext } from "@/contexts/EditContext";
@@ -133,9 +133,7 @@ export default function BohoTerra() {
 
   const storeConfig = useStoreConfig();
   const pushBell = usePushBell();
-  const { user, signOut } = useAuth();
-  const panelHref = user?.role === "ADMIN" ? "/admin" : user?.role === "OWNER" ? "/dashboard" : user?.role === "SELLER" ? "/afiliados" : "/mi-cuenta";
-  const panelLabel = user?.role === "ADMIN" ? "Admin" : user?.role === "OWNER" ? "Mi tienda" : user?.role === "SELLER" ? "Mi panel" : "Mi cuenta";
+  const { cargando, logueado, nombreMostrado, panelHref, panelLabel, signOut } = useSesion();
   const isPreview   = !!storeConfig?.previewFill;
   /** La demo pública de un diseño (`/plantillas/[id]`): necesita el relleno de
    *  ejemplos, pero nada de lo que le habla a la dueña de una tienda. */
@@ -773,10 +771,10 @@ export default function BohoTerra() {
                 </button>
                 {userDropdownOpen && (
                   <div style={{ position:"absolute", top:"calc(100% + 10px)", right:0, background:"#faf7f2", border:`1px solid rgba(44,34,24,0.12)`, borderRadius:10, minWidth:190, zIndex:200, boxShadow:"0 8px 28px rgba(44,34,24,0.12)", overflow:"hidden" }}>
-                    {user ? (
+                    {cargando ? (<p style={{ padding:"14px 16px", margin:0, fontSize:12, opacity:0.55 }}>Cargando…</p>) : logueado ? (
                       <>
                         <p style={{ padding:"10px 16px 4px", fontSize:11, color:"rgba(44,34,24,0.45)", margin:0, fontWeight:600, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
-                          {user.name || user.email.split("@")[0]}
+                          {nombreMostrado}
                         </p>
                         <a href={panelHref} onClick={() => setUserDropdownOpen(false)}
                           style={{ display:"block", padding:"10px 16px", fontSize:13, color:T, textDecoration:"none", borderBottom:`1px solid rgba(44,34,24,0.06)` }}
@@ -865,7 +863,7 @@ export default function BohoTerra() {
             Favoritos {favorites.length > 0 && `(${favorites.length})`}
           </button>
           {/* Cuenta — mismo contenido que el dropdown de escritorio, adaptado a lista */}
-          {user ? (
+          {cargando ? (<p style={{ padding:"14px 16px", margin:0, fontSize:12, opacity:0.55 }}>Cargando…</p>) : logueado ? (
             <>
               <a href={panelHref} onClick={() => setMobileMenuOpen(false)}
                 style={{ display:"block", width:"100%", background:"none", border:"none", color:T, padding:"16px 24px", fontSize:13, textAlign:"left", letterSpacing:2, textTransform:"uppercase", textDecoration:"none" }}>

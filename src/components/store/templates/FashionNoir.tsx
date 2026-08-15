@@ -2,7 +2,7 @@
 import { useState, useEffect, useMemo, useRef, Fragment } from "react";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { usePushBell } from "@/contexts/PushBellContext";
-import { useAuth } from "@/components/AuthProvider";
+import { useSesion } from "@/components/AuthProvider";
 import StoreFollowButton from "@/components/store/StoreFollowButton";
 import { useResenasProducto, type ResenaProducto } from "@/hooks/useResenasProducto";
 import { EditableZone, EditableImageButton, EditableSectionBg, BgDragHandle, getContrastColor, useEditContext, textoSobre } from "@/contexts/EditContext";
@@ -178,9 +178,7 @@ export default function FashionNoir() {
 
   const storeConfig = useStoreConfig();
   const pushBell = usePushBell();
-  const { user, signOut } = useAuth();
-  const panelHref = user?.role === "ADMIN" ? "/admin" : user?.role === "OWNER" ? "/dashboard" : user?.role === "SELLER" ? "/afiliados" : "/mi-cuenta";
-  const panelLabel = user?.role === "ADMIN" ? "Admin" : user?.role === "OWNER" ? "Mi tienda" : user?.role === "SELLER" ? "Mi panel" : "Mi cuenta";
+  const { cargando, logueado, nombreMostrado, panelHref, panelLabel, signOut } = useSesion();
   const isPreview   = !!storeConfig?.previewFill;
   /** Rellenar con ejemplos y hablarle a la dueña son dos cosas distintas: la demo
    *  pública de `/plantillas/[id]` necesita lo primero y no lo segundo. */
@@ -729,10 +727,10 @@ export default function FashionNoir() {
               </button>
               {userDropdownOpen && (
                 <div style={{ position:"absolute", top:"calc(100% + 10px)", right:0, background:"#1a1a1a", border:`1px solid rgba(201,168,76,0.2)`, minWidth:190, zIndex:200, boxShadow:"0 8px 32px rgba(0,0,0,0.5)" }}>
-                  {user ? (
+                  {cargando ? (<p style={{ padding:"14px 16px", margin:0, fontSize:12, opacity:0.55 }}>Cargando…</p>) : logueado ? (
                     <>
                       <p style={{ fontSize:10, letterSpacing:3, textTransform:"uppercase", color:"rgba(201,168,76,0.6)", padding:"10px 16px 4px", margin:0, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
-                        {user.name || user.email.split("@")[0]}
+                        {nombreMostrado}
                       </p>
                       <a href={panelHref} onClick={() => setUserDropdownOpen(false)}
                         style={{ display:"block", color:T, padding:"10px 16px", fontSize:13, textDecoration:"none", transition:"background 0.2s" }}

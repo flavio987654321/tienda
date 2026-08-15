@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { usePushBell } from "@/contexts/PushBellContext";
-import { useAuth } from "@/components/AuthProvider";
+import { useSesion } from "@/components/AuthProvider";
 import StoreFollowButton from "@/components/store/StoreFollowButton";
 import { EditableZone, EditableImageButton, EditableSectionBg, BgDragHandle, getContrastColor, useEditContext } from "@/contexts/EditContext";
 import { useStorefront, type StorefrontProduct } from "@/hooks/useStorefront";
@@ -106,10 +106,8 @@ export default function AutoMotor() {
   const navTextMid     = navDark ? "rgba(255,255,255,0.6)" : "rgba(0,0,0,0.45)";
   const navBorderColor = navDark ? "rgba(255,255,255,0.25)" : "rgba(0,0,0,0.12)";
 
-  const { user, status, signOut } = useAuth();
+  const { cargando, logueado, nombreMostrado, panelHref, panelLabel, signOut } = useSesion();
   const router = useRouter();
-  const panelHref = user?.role === "ADMIN" ? "/admin" : user?.role === "OWNER" ? "/dashboard" : user?.role === "SELLER" ? "/afiliados" : "/mi-cuenta";
-  const panelLabel = user?.role === "ADMIN" ? "Admin" : user?.role === "OWNER" ? "Mi tienda" : user?.role === "SELLER" ? "Mi panel" : "Mi cuenta";
   const [menuOpen,         setMenuOpen]         = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const userDropdownRef = useRef<HTMLDivElement>(null);
@@ -156,8 +154,8 @@ export default function AutoMotor() {
 
   // Cargar favoritos: desde API si está logueado, desde localStorage si no
   useEffect(() => {
-    if (status === "loading") return;
-    if (status === "authenticated") {
+    if (cargando) return;
+    if (logueado) {
       fetch("/api/favoritos")
         .then(r => r.ok ? r.json() : [])
         .then((data: { productId: string }[]) => setFavorites(data.map(f => f.productId)))
@@ -169,15 +167,15 @@ export default function AutoMotor() {
         if (savedFavs) setFavorites(JSON.parse(savedFavs));
       } catch {}
     }
-  }, [status]);
+  }, [cargando, logueado]);
 
   useEffect(() => {
-    if (status === "authenticated") return;
+    if (logueado) return;
     try { localStorage.setItem("storefront_favorites", JSON.stringify(favorites)); } catch {}
-  }, [favorites, status]);
+  }, [favorites, logueado]);
 
   async function toggleFavorite(id: string) {
-    if (status !== "authenticated") {
+    if (!logueado) {
       router.push(`/login?redirect=/tienda/${config?.slug}`);
       return;
     }
@@ -344,10 +342,10 @@ export default function AutoMotor() {
             </button>
             {userDropdownOpen && (
               <div style={{ position:"absolute", top:"calc(100% + 10px)", right:0, background:navBg, border:`1px solid ${navBorderColor}`, minWidth:190, zIndex:300, boxShadow:"0 8px 28px rgba(0,0,0,0.25)", overflow:"hidden" }}>
-                {user ? (
+                {cargando ? (<p style={{ padding:"14px 16px", margin:0, fontSize:12, opacity:0.55 }}>Cargando…</p>) : logueado ? (
                   <>
                     <p style={{ padding:"10px 16px 4px", fontSize:11, color:navTextMid, margin:0, fontWeight:600, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
-                      {user.name || user.email.split("@")[0]}
+                      {nombreMostrado}
                     </p>
                     <a href={panelHref} onClick={() => setUserDropdownOpen(false)}
                       style={{ display:"block", padding:"10px 16px", fontSize:13, color:navText, textDecoration:"none", borderBottom:`1px solid ${navBorderColor}` }}

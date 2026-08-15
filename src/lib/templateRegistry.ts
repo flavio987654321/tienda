@@ -24,9 +24,12 @@ export type TemplateInfo = {
 
 export type TemplateCategory = { id: string; name: string; templates: TemplateInfo[] };
 
-// Registro único de plantillas: lo usan la galería del editor (dashboard),
-// la demo pública de plantillas y la sección "Diseño según tu rubro" de la
-// home, para que las tres muestren siempre la misma info sin duplicarla.
+// Registro único de plantillas. Hoy lo usa solo la galería del editor
+// (dashboard/configuracion), que arma las miniaturas con el campo `component`.
+//
+// Tuvo otros dos consumidores que se sacaron: la sección "Diseño según tu
+// rubro" de la home y la demo pública `/plantillas/[id]`. Con la demo se fueron
+// `ALL_TEMPLATES` y `getTemplateInfo`, que eran solo para ella.
 export const TEMPLATE_CATEGORIES: TemplateCategory[] = [
   {
     id: "moda",
@@ -59,8 +62,3 @@ export const TEMPLATE_CATEGORIES: TemplateCategory[] = [
   },
 ];
 
-export const ALL_TEMPLATES: TemplateInfo[] = TEMPLATE_CATEGORIES.flatMap((c) => c.templates);
-
-export function getTemplateInfo(id: string): TemplateInfo | undefined {
-  return ALL_TEMPLATES.find((t) => t.id === id);
-}
