@@ -117,7 +117,7 @@ export const GUION_PANEL: Guion = {
   configuracion: {
     icon: Settings,
     title: "Configuración",
-    body: "Tu logo, el subdominio y —con plan Premium— tu dominio propio.",
+    body: "Todo lo que no es el diseño: tu logo, la dirección web, el WhatsApp, tus redes, la moneda y cómo aparecés en Google. Está dividida en secciones, con un buscador arriba.",
   },
   pagos: {
     icon: Wallet,
@@ -187,7 +187,7 @@ export const GUION_EDITOR: Guion = {
   "ed-avanzada": {
     icon: SlidersHorizontal,
     title: "Configuración avanzada",
-    body: "Acá está lo que no se toca haciendo clic en la página: los datos de tu tienda, el aviso de arriba, la velocidad del carrusel de banners y los flyers. Se guarda con \"Guardar y cerrar\".",
+    body: "Lo visual que no se toca haciendo clic en la página: el color de acento, la barra de avisos de arriba, la velocidad del carrusel y el flyer. Se guarda con \"Guardar y cerrar\". Tu WhatsApp, tus redes, la moneda y el SEO ya no están acá — se configuran en Configuración.",
   },
   "ed-guardar": {
     icon: Save,

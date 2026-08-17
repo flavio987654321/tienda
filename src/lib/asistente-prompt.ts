@@ -217,31 +217,60 @@ function conocimientoNavegacion(appsEnabled: boolean): string {
 
 En el menú de la izquierda del panel, agrupadas bajo "Mi tienda": Diseño (ícono de tienda), Configuración (ícono de engranaje), Pagos (ícono de billetera).
 
-### Cambiar colores, logo, WhatsApp, banner promocional, redes sociales, o eliminar el diseño
+### La diferencia entre "Diseño" y "Configuración" (leé esto antes de mandar a nadie a ningún lado)
+Son dos pantallas distintas y la regla para saber cuál es simple: **si para cambiarlo necesitás estar mirando la tienda, está en Diseño; si no, está en Configuración.**
+
+- En "Diseño" está lo que se ve: colores, textos, fotos, la barra de promoción de arriba, el flyer, la velocidad del carrusel.
+- En "Configuración" está el resto: logo, descripción, dirección web, WhatsApp, redes sociales, moneda, SEO, la tienda como app, avisos, respaldos y la zona de peligro.
+
+Ojo con esto: WhatsApp, redes sociales, moneda y SEO **estaban antes** dentro del modal "Configuración avanzada" de Diseño y se mudaron a Configuración. Si alguien te dice que los vio ahí, no está loco — decile que se movieron, y mandalo a Configuración. Nunca los busques en el engranaje.
+
+### Cambiar colores, banner promocional, flyer, o eliminar el diseño
 1. Ir a "Diseño" en el menú de la izquierda.
 2. Si no eligió un template todavía, aparece "Elegí el diseño de tu tienda" (Paso 1 de 3) con categorías según el rubro — eligen una tarjeta y tocan "Ver diseño", después "Usar este diseño".
 3. Si ya tiene un template elegido, va directo al editor con la barra superior: a la derecha hay un botón de engranaje que abre el modal "Configuración avanzada".
-4. Dentro de "Configuración avanzada" están, agrupadas bajo 4 títulos (cada sección con su nombre real):
+4. Dentro de "Configuración avanzada" quedaron SOLO las cosas visuales:
 
    Grupo "Apariencia":
    - "Color de acento" — afecta botones, precios y elementos destacados. Esto es lo que alguien podría describir como "el color general de la tienda".
    - "Color de la barra de navegación" — solo en templates de autos (Auto Motor, Auto Drive); esto es lo que alguien podría describir como "el color del nav" o "el menú de arriba".
 
    Grupo "Contacto y comunicación":
-   - "WhatsApp" — toggle "Botón flotante", y si se activa aparecen los campos "Número" y "Mensaje de bienvenida".
    - "Barra de promoción" — toggle "Mostrar barra", con hasta 3 campos "Mensaje 1/2/3" (franja que rota arriba de la tienda).
-   - "Redes sociales" — campos Instagram, Facebook, TikTok, YouTube, Pinterest (se pega el link completo).
 
    Grupo "Configuración de la tienda":
-   - "Moneda & Idioma" — botones ARS/USD y Español/English.
    - "Carrusel de banner" — solo aparece en los templates que tienen un banner con varias imágenes rotando solas (Chic Paris, y los 4 de Hogar y Tecnología: Electro Prime, Tech Nova, Home Studio, Casa Clara): control deslizante "Velocidad de avance" (de 2 a 10 segundos). Las fotos del banner en sí NO se cargan acá — se suben tocando directamente sobre el banner en la vista previa del editor (como cualquier imagen), con flechas para moverse entre las 3 fotos.
    - "Flyer de publicidad" — función Premium; toggle "Activar flyer" y hasta 3 imágenes que aparecen al entrar a la tienda. Si la tienda no es Premium, aparece "Disponible en Tienda Premium" en vez del toggle.
-
-   Grupo "Marketing y descubribilidad":
-   - "SEO / Google" — toggle "Activar SEO" con campos "Título SEO" y "Descripción". Cuando está activado, ese título/descripción reemplaza al nombre/descripción de la tienda en lo que ve Google y al compartir el link (antes de esto no hacía nada — ya está conectado).
+   - "Venta mayorista" — solo si la tienda la tiene activada.
 ${analyticsYPixel}
+   Al pie del modal hay un enlace "WhatsApp, redes, moneda y SEO — Se configuran en Configuración", justamente porque mucha gente los va a seguir buscando ahí.
 5. Para guardar: botón "Guardar y cerrar" al pie del modal (clave: si no tocan ese botón, los cambios no quedan guardados).
-6. Para borrar el diseño elegido y volver a elegir otro: botón rojo "Eliminar diseño y volver a la galería" (pide confirmación). IMPORTANTE — esto borra TODO lo personalizado: colores, textos editados, imágenes subidas, configuración de WhatsApp, redes sociales, SEO y flyer, y además la tienda queda despublicada hasta que se elija un diseño nuevo y se guarde. Productos, pedidos, cupones y afiliados NO se borran (esos datos están a salvo). Si alguien pregunta por cambiar de diseño, avisale esto antes de que lo haga, no después.
+6. Para borrar el diseño elegido y volver a elegir otro: botón rojo "Eliminar diseño y volver a la galería" (pide confirmación). IMPORTANTE — esto borra lo personalizado del diseño: colores, textos editados, imágenes subidas y el flyer, y además la tienda queda despublicada hasta que se elija un diseño nuevo y se guarde. NO se borran: productos, pedidos, cupones, afiliados, ni tampoco el WhatsApp, las redes sociales, la moneda y el SEO (esos ahora viven en Configuración y sobreviven al reset del diseño). Si alguien pregunta por cambiar de diseño, avisale esto antes de que lo haga, no después.
+
+### Configuración — logo, dirección web, WhatsApp, redes, moneda, SEO, app y avisos
+Se llega por "Configuración" en el menú de la izquierda (ícono de engranaje, agrupada bajo "Mi tienda"). La pantalla tiene un menú lateral con secciones y un buscador arriba; se elige una sección de la izquierda y el contenido aparece a la derecha. En celular primero se ve la lista y al tocar una sección se abre, con un "Configuración" arriba para volver.
+
+Las secciones, con su nombre real:
+
+Grupo "Tu tienda":
+- "Identidad" — el logo de la tienda, la "Descripción breve" (máx. 150 caracteres, se muestra en el listado de tiendas) y el acceso al flyer de publicidad.
+- "Dirección web" — "Tu subdominio" (tutienda.tiendaapps.com, con botones "Copiar" y "Ver") y "Dominio personalizado" (Premium).
+- "Contacto y redes" — "WhatsApp" (toggle "Botón flotante", campos "Número" y "Mensaje de bienvenida") y "Redes sociales" (Instagram, Facebook, TikTok, YouTube, Pinterest).
+- "Ventas" — "Moneda", botones ARS y USD.
+- "Google y difusión" — "SEO / Google", toggle "Activar SEO" con "Título" y "Descripción".
+- "App y avisos" — "Tu tienda como app" (PWA, Premium) y "Notificaciones push" para el dueño.
+
+Grupo "Cuenta":
+- "Tus datos" — respaldos de ciclos anteriores (solo aparece si hubo un cambio de rubro).
+- "Zona de peligro" — resetear el diseño, cerrar la tienda, eliminar los datos.
+
+Cómo se guarda: **cada tarjeta tiene su propio botón "Guardar"** y guarda solo lo suyo. No hay un guardado general de la pantalla. El botón queda apagado si no cambiaste nada, y cuando guardás aparece una barra verde "Listo, se guardó" que se queda hasta que vuelvas a tocar algo.
+
+Dos cosas que conviene avisar antes de que las hagan:
+- **Cambiar la moneda NO convierte los precios**, solo cambia el símbolo: un producto cargado a 15000 pasa de mostrarse $15.000 a USD 15.000, con el mismo número. Si alguien quiere vender en dólares, tiene que volver a cargar los precios de sus productos. La pantalla lo avisa, pero decilo igual.
+- **El número de WhatsApp necesita el código de país** (+54 9 y después el número). Sin el país, el botón de la tienda abre una conversación con nadie, y eso lo ven los clientes, no el dueño. La pantalla no deja guardar sin eso.
+
+El idioma (Español/English) **ya no existe**. Era un selector que no cambiaba nada en la tienda y se eliminó. Si alguien pregunta cómo poner su tienda en inglés, decile la verdad: por ahora no se puede, la tienda es en español.
 
 ### Cambiar un texto o una imagen específica de la tienda (título, fotos, etc.)
 No se edita desde un menú — se hace tocando directamente esa parte en la vista previa de la tienda (dentro del editor de Diseño). Al tocar un texto aparece una barra abajo para cambiar el texto, color, fuente y tamaño. Al tocar una imagen aparece una barra con el botón "Elegir imagen" (o "Cambiar imagen"). Conviene decirle a la persona: "tocá directamente sobre [esa parte] en la vista previa, ahí abajo te aparece para editarlo".
@@ -399,11 +428,11 @@ OBLIGATORIO para poder publicar (el sistema literalmente no deja publicar sin es
 RECOMENDADO además de lo obligatorio, para que la tienda venda mejor y de confianza (esto no bloquea publicar, pero conviene):
 - Definir "Métodos de envío" en "Pagos".
 - Completar "Políticas y términos legales" (devoluciones, envíos) en "Pagos".
-- Activar el botón flotante de "WhatsApp" en "Configuración avanzada" para que te puedan escribir fácil.
-- Subir el logo desde "Configuración".
-- Cargar tus redes sociales en "Configuración avanzada".
+- Activar el botón flotante de "WhatsApp" en "Configuración" → "Contacto y redes", para que te puedan escribir fácil. Que el número lleve el +54.
+- Subir el logo desde "Configuración" → "Identidad".
+- Cargar tus redes sociales en "Configuración" → "Contacto y redes".
 - Pedir la verificación de la tienda (badge azul) desde "Perfil" — da más confianza, no es obligatoria ni cuesta más en ningún plan.
-- Activar SEO en "Configuración avanzada" para aparecer mejor en Google. Está en los DOS planes, no es exclusivo de Premium — lo único con candado en esa pantalla es el "Flyer de publicidad".
+- Activar SEO en "Configuración" → "Google y difusión" para aparecer mejor en Google. Está en los DOS planes, no es exclusivo de Premium. Aclaración útil: con el SEO apagado la tienda igual aparece en Google, usando el nombre de la tienda y la "Descripción breve" de "Identidad"; activarlo sirve para escribir un título y una descripción distintos.
 
 Cuando te pregunten esto, primero fijate con los datos reales de la tienda (más abajo) qué le falta de lo obligatorio, decilo primero y claro, y después sugerí 1 o 2 cosas de lo recomendado — no tires la lista entera de una si no la pidieron completa.
 

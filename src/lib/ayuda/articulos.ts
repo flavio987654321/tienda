@@ -1317,8 +1317,8 @@ export const ARTICULOS: Articulo[] = [
     clase: "mecanica",
     rol: "dueno",
     pantalla: { label: "Diseño", href: "/dashboard/configuracion" },
-    actualizado: "2026-08-12",
-    relacionados: ["publicar-la-tienda", "las-fotos-de-tus-productos"],
+    actualizado: "2026-08-15",
+    relacionados: ["publicar-la-tienda", "las-fotos-de-tus-productos", "configuracion-de-la-tienda"],
     cuerpo: [
       {
         t: "p",
@@ -1347,6 +1347,19 @@ export const ARTICULOS: Articulo[] = [
           "Los productos, los pedidos, los cupones y la configuración no dependen del diseño. Cambiás la vidriera, no lo que hay adentro. Podés probar otro y volver.",
       },
 
+      { t: "h", texto: "Qué se toca acá y qué en Configuración" },
+      {
+        t: "p",
+        texto:
+          "Acá está lo que se mira: colores, textos, fotos, la barra de avisos de arriba, el flyer y la velocidad del carrusel. Todo lo demás —tu WhatsApp, tus redes, la moneda, el SEO, el logo y la dirección web— vive en **Configuración**.",
+      },
+      {
+        t: "aviso",
+        tono: "dato",
+        texto:
+          "Si venías buscando el WhatsApp, las redes, la moneda o el SEO dentro del engranaje de este editor: estaban ahí y se mudaron a Configuración. Al pie del engranaje quedó un enlace que te lleva.",
+      },
+
       { t: "h", texto: "La guía de esta pantalla" },
       {
         t: "p",
@@ -1367,18 +1380,38 @@ export const ARTICULOS: Articulo[] = [
     slug: "configuracion-de-la-tienda",
     titulo: "La configuración de tu tienda",
     resumen:
-      "Tu dirección web, el dominio propio, el flyer de bienvenida y la tienda como app.",
+      "Tu dirección web, el WhatsApp, las redes, la moneda, el SEO y el dominio propio.",
     grupo: "arrancar",
     clase: "mecanica",
     rol: "dueno",
     pantalla: { label: "Configuración", href: "/dashboard/ajustes" },
-    actualizado: "2026-08-12",
-    relacionados: ["publicar-la-tienda", "notificaciones"],
+    actualizado: "2026-08-15",
+    relacionados: ["publicar-la-tienda", "notificaciones", "elegir-y-editar-el-diseno"],
     cuerpo: [
       {
         t: "p",
         texto:
-          "Acá vive lo que no entra en ninguna otra pantalla: cómo se llega a tu tienda y qué pasa cuando alguien entra.",
+          "Acá vive todo lo que no es el diseño de tu tienda. La pantalla tiene un menú a la izquierda con las secciones y un buscador arriba: si no sabés dónde está algo, escribilo ahí. En el celular ves primero la lista y tocás la sección que querés.",
+      },
+
+      { t: "h", texto: "Qué está acá y qué está en Diseño" },
+      {
+        t: "p",
+        texto:
+          "La regla es una sola: **si para cambiarlo necesitás estar mirando tu tienda, está en Diseño. Si no, está acá.** Los colores, los textos, las fotos y la barra de avisos de arriba se tocan viendo la tienda, así que viven en el editor. Tu número de WhatsApp no: es un número.",
+      },
+      {
+        t: "aviso",
+        tono: "dato",
+        texto:
+          "El WhatsApp, las redes sociales, la moneda y el SEO **estaban antes** dentro del engranaje de Diseño. Se mudaron acá. Si los buscaste ahí y no los encontraste, era eso.",
+      },
+
+      { t: "h", texto: "Cada tarjeta se guarda sola" },
+      {
+        t: "p",
+        texto:
+          "No hay un botón que guarde la pantalla entera: cada tarjeta tiene el suyo y guarda solo lo suyo. El botón está apagado mientras no cambies nada, y cuando guardás aparece una barra verde que se queda hasta que vuelvas a tocar algo. Si no ves esa barra, no se guardó.",
       },
 
       { t: "h", texto: "Tu subdominio" },
@@ -1419,11 +1452,51 @@ export const ARTICULOS: Articulo[] = [
           "Un flyer que queda puesto tres meses deja de anunciar y pasa a ser un cartel que hay que cerrar para poder comprar. Si ya no dice nada nuevo, sacalo.",
       },
 
+      { t: "h", texto: "WhatsApp y redes sociales" },
+      {
+        t: "p",
+        texto:
+          "El botón flotante de WhatsApp aparece en todas las páginas de tu tienda, y el mensaje de bienvenida es el texto que le queda escrito al cliente antes de que toque enviar. Las redes van en el pie; las que dejes vacías no se muestran.",
+      },
+      {
+        t: "aviso",
+        tono: "ojo",
+        texto:
+          "El número tiene que llevar el código de país: **+54 9** y después tu número. Sin eso, el botón abre una conversación con nadie — y el que se lo come es el cliente que quiso escribirte, así que podés no enterarte nunca. Por eso la pantalla no te deja guardarlo sin el país.",
+      },
+
+      { t: "h", texto: "La moneda no convierte precios" },
+      {
+        t: "p",
+        texto:
+          "Elegir USD cambia el símbolo con el que se muestran los precios, nada más. Un producto que cargaste a 15.000 pasa de verse $15.000 a verse USD 15.000, con el mismo número.",
+      },
+      {
+        t: "aviso",
+        tono: "ojo",
+        texto:
+          "Si vas a vender en dólares, después de cambiar la moneda tenés que volver a cargar los precios de tus productos. Si no, estarías publicando tu lista de pesos como si fueran dólares.",
+      },
+
+      { t: "h", texto: "SEO: cómo aparecés en Google" },
+      {
+        t: "p",
+        texto:
+          "Con el SEO apagado tu tienda igual aparece en Google: usa el nombre de tu tienda y la **descripción breve** que cargaste en Identidad. Activarlo sirve para escribir un título y una descripción distintos de esos.",
+      },
+
       { t: "h", texto: "Tu tienda como app" },
       {
         t: "p",
         texto:
           "Tus clientes pueden instalarla en el celular y les queda con ícono propio, como cualquier app, sin pasar por ninguna tienda de aplicaciones. Es una función del plan Premium.",
+      },
+
+      { t: "h", texto: "Zona de peligro" },
+      {
+        t: "p",
+        texto:
+          "La última sección del menú, en rojo. Están las acciones que sacan tu tienda de línea o borran cosas: resetear el diseño, cerrar la tienda y eliminar tus datos. Está separada del resto justamente para que no te la cruces de casualidad mientras cambiás otra cosa.",
       },
       { t: "ruta", label: "Ir a Configuración", href: "/dashboard/ajustes" },
     ],
