@@ -28,7 +28,20 @@ const csp = [
   "font-src 'self' data: https://client.crisp.chat",
   "object-src 'none'",
   "base-uri 'self'",
-  "form-action 'self'",
+  // `www.facebook.com` es la contracara de lo de arriba, una directiva más allá.
+  // El Pixel tiene varios transportes para mandar un evento —imagen GET, fetch— y
+  // cuando el dato no entra en ninguno cae a enviar un formulario oculto a
+  // `facebook.com/tr/`. Con `form-action 'self'` a secas el navegador lo bloquea
+  // y tira un error rojo por cada intento: 24 en una sola sesión de edición.
+  //
+  // Igual que con el iframe, los eventos no se estaban perdiendo: los otros
+  // transportes pasan. El problema es la consola llena de rojo, que es donde uno
+  // mira el día que un error de CSP sí importa — y ese día ya no se ve.
+  //
+  // Se afloja poco y con nombre propio: se pasa de "ningún formulario sale de
+  // este dominio" a "ninguno salvo a facebook.com", que como destino para sacar
+  // datos no le sirve a nadie. Cualquier otro sigue bloqueado.
+  "form-action 'self' https://www.facebook.com",
   "frame-ancestors 'none'",
 ].join("; ");
 
