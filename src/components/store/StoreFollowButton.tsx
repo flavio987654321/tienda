@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { ThumbsUp, ThumbsDown, Loader2, X } from "lucide-react";
 import { usePushBell } from "@/contexts/PushBellContext";
+import { pedirTurno } from "@/lib/interrupcion-tienda";
+import { CAPAS } from "@/lib/capas-tienda";
 
 type AlertType = "follow" | "unfollow" | "login" | "ios" | "activate_push" | null;
 
@@ -23,12 +25,18 @@ export default function StoreFollowButton({ storeSlug, color = "currentColor", s
   const [hintPos, setHintPos] = useState({ top: 0, left: 0, arrowLeft: HINT_WIDTH - 20 });
   const pendingRef = useRef(false);
   const wrapRef = useRef<HTMLDivElement>(null);
+  const liberarHint = useRef<(() => void) | null>(null);
 
   const needsPushActivation = bell?.needsPushActivation ?? false;
 
   // Globo de aviso: solo la primera vez que abre la app instalada (PWA) en
   // este dispositivo y todavía no activó las notificaciones acá. Posición
   // calculada en base al botón real para no salirse de la pantalla en mobile.
+  //
+  // Pide turno como el resto de lo que aparece solo: es el último de la fila
+  // —solo lo ve quien YA sigue la tienda, así que es el que menos se pierde si
+  // espera— y sin esto salía encima del flyer o del cartel de instalar. Ver
+  // `lib/interrupcion-tienda`.
   useEffect(() => {
     if (!needsPushActivation) return;
     const isStandalone =
@@ -38,21 +46,58 @@ export default function StoreFollowButton({ storeSlug, color = "currentColor", s
     if (localStorage.getItem(HINT_SHOWN_KEY(storeSlug))) return;
     if (!wrapRef.current) return;
 
-    const rect = wrapRef.current.getBoundingClientRect();
-    const idealLeft = rect.right - HINT_WIDTH;
-    const left = Math.min(
-      Math.max(idealLeft, VIEWPORT_MARGIN),
-      window.innerWidth - HINT_WIDTH - VIEWPORT_MARGIN
-    );
-    const buttonCenter = rect.left + rect.width / 2;
-    const arrowLeft = Math.min(Math.max(buttonCenter - left - 6, 14), HINT_WIDTH - 26);
+    let t: ReturnType<typeof setTimeout> | undefined;
+    // La posición se mide cuando le toca aparecer, no ahora: entre el pedido y el
+    // turno el visitante pudo haber scrolleado, y el globo apunta a un botón que
+    // para entonces está en otro lado.
+    //
+    // `soltar` llega POR PARÁMETRO y no de la variable de afuera: cuando la
+    // pantalla está libre este callback corre de forma sincrónica, o sea antes de
+    // que `const liberar` termine de asignarse. Leerla acá adentro tiraba
+    // `ReferenceError` justo en el camino más común (tienda sin flyer).
+    //
+    // El tercer argumento dice que a este globo SE LO PUEDE SACAR si llega algo
+    // más importante: es un aviso pasivo que se va solo, y no tiene por qué
+    // hacerle esperar 7 segundos a la oferta del comerciante.
+    const liberar = pedirTurno("activar-push", (soltar) => {
+      liberarHint.current = soltar;
+      const wrap = wrapRef.current;
+      // Sin el botón en pantalla no hay dónde apuntar. Hay que soltar el turno
+      // igual: si no, la cola queda trabada por el resto de la sesión y no vuelve
+      // a aparecer ninguna otra interrupción.
+      if (!wrap) { soltar(); return; }
+      const rect = wrap.getBoundingClientRect();
+      const idealLeft = rect.right - HINT_WIDTH;
+      const left = Math.min(
+        Math.max(idealLeft, VIEWPORT_MARGIN),
+        window.innerWidth - HINT_WIDTH - VIEWPORT_MARGIN
+      );
+      const buttonCenter = rect.left + rect.width / 2;
+      const arrowLeft = Math.min(Math.max(buttonCenter - left - 6, 14), HINT_WIDTH - 26);
 
-    localStorage.setItem(HINT_SHOWN_KEY(storeSlug), "1");
-    setHintPos({ top: rect.bottom + 10, left, arrowLeft });
-    setShowHint(true);
-    const t = setTimeout(() => setShowHint(false), 7000);
-    return () => clearTimeout(t);
+      localStorage.setItem(HINT_SHOWN_KEY(storeSlug), "1");
+      setHintPos({ top: rect.bottom + 10, left, arrowLeft });
+      setShowHint(true);
+      t = setTimeout(() => { setShowHint(false); soltar(); }, 7000);
+    }, () => {
+      // Lo desaloja algo más importante: se esconde y vuelve a la cola solo.
+      clearTimeout(t);
+      setShowHint(false);
+    });
+
+    return () => { clearTimeout(t); liberar(); liberarHint.current = null; };
   }, [needsPushActivation, storeSlug]);
+
+  /* Esconder el globo tiene que soltar el turno siempre, se haya ido solo a los
+     7 s o lo haya cerrado el visitante. Si un camino se olvida de liberar, la
+     cola queda trabada y no vuelve a aparecer ninguna interrupción en toda la
+     sesión — el tipo de bug que no se nota hasta que alguien pregunta por qué el
+     flyer dejó de salir. */
+  const cerrarHint = useCallback(() => {
+    setShowHint(false);
+    liberarHint.current?.();
+    liberarHint.current = null;
+  }, []);
 
   if (!bell) return null;
 
@@ -62,7 +107,7 @@ export default function StoreFollowButton({ storeSlug, color = "currentColor", s
   const isIOS = typeof navigator !== "undefined" && /iPad|iPhone|iPod/.test(navigator.userAgent);
 
   function onClickButton() {
-    setShowHint(false);
+    cerrarHint();
     if (pendingRef.current || isLoading) return;
     if (isFollowing) {
       if (needsPushActivation) { setAlert("activate_push"); return; }
@@ -129,7 +174,7 @@ export default function StoreFollowButton({ storeSlug, color = "currentColor", s
             position: "fixed",
             top: hintPos.top,
             left: hintPos.left,
-            zIndex: 9998,
+            zIndex: CAPAS.entradaApp,
             width: HINT_WIDTH,
             maxWidth: `calc(100vw - ${VIEWPORT_MARGIN * 2}px)`,
             background: "#111827",
@@ -152,7 +197,7 @@ export default function StoreFollowButton({ storeSlug, color = "currentColor", s
             }}
           />
           <button
-            onClick={() => setShowHint(false)}
+            onClick={cerrarHint}
             aria-label="Cerrar"
             style={{
               position: "absolute", top: 4, right: 4,
@@ -259,7 +304,7 @@ function FollowAlert({
       style={{
         position: "fixed",
         inset: 0,
-        zIndex: 99999,
+        zIndex: CAPAS.critico,
         display: "flex",
         alignItems: "center",
         justifyContent: "center",

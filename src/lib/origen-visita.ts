@@ -42,6 +42,10 @@ export const ORIGENES = [
   "youtube",
   "email",
   "tiendaapps",
+  // Abrió la tienda desde la app instalada en su teléfono. Agregar una etiqueta
+  // es seguro para el historial ya escrito —las filas viejas siguen diciendo lo
+  // que decían—; lo que rompe es cambiarle el nombre a una que ya existe.
+  "pwa",
   "otro",
 ] as const;
 
@@ -58,6 +62,7 @@ export const NOMBRE_ORIGEN: Record<Origen, string> = {
   youtube: "YouTube",
   email: "Email",
   tiendaapps: "TiendaApps",
+  pwa: "App instalada",
   otro: "Otros sitios",
 };
 
@@ -134,11 +139,13 @@ const POR_UTM: Record<string, Origen> = {
  * @param referente  Lo que el navegador reportó como página anterior.
  * @param utmSource  El `utm_source` de la URL con la que entró.
  * @param hostPropio El host de la tienda, para no contarse a sí misma.
+ * @param desdePwa   La abrió desde la app instalada, no desde el navegador.
  */
 export function clasificarOrigen(
   referente: string | null | undefined,
   utmSource: string | null | undefined,
-  hostPropio?: string | null
+  hostPropio?: string | null,
+  desdePwa?: boolean
 ): Origen {
   // El utm le gana al referente. No es un desempate arbitrario: el referente lo
   // decide el navegador y falta la mitad de las veces (ver el comentario de
@@ -154,8 +161,23 @@ export function clasificarOrigen(
     if (limpio.length > 0) return "otro";
   }
 
+  /* "pwa" ocupa el lugar que ocupaba "directo": es lo que se contesta cuando NO
+   * hay ninguna otra pista, no algo que le gane a las pistas.
+   *
+   * Por qué importa: una app abierta desde la pantalla de inicio no manda
+   * referente, así que antes esas visitas caían todas en "directo". No era un dato
+   * que faltara, era uno MAL puesto — cuantas más instalaciones hubiera, más se
+   * inflaba la bolsa y peor leía la dueña su tablero.
+   *
+   * Pero la app tampoco puede taparle el crédito a quien trajo la visita. En
+   * Android un link de Instagram se puede abrir ADENTRO de la app instalada: ahí
+   * hay referente y hay standalone al mismo tiempo, y esa visita la trajo
+   * Instagram. La app es el envase, no el canal — el mismo motivo por el que el
+   * utm le gana, unas líneas más arriba. */
+  const enLaApp = desdePwa === true;
+
   const crudo = (referente ?? "").slice(0, LARGO_MAXIMO).trim();
-  if (crudo.length === 0) return "directo";
+  if (crudo.length === 0) return enLaApp ? "pwa" : "directo";
 
   const host = hostDe(crudo);
   // Un referente que no es una URL válida no dice nada. "directo" sería mentir
@@ -172,7 +194,9 @@ export function clasificarOrigen(
   // incógnito, donde el dedup no funciona.
   if (hostPropio) {
     const propio = hostPropio.toLowerCase().replace(/^(www|m|mobile)\./, "");
-    if (host === propio) return "directo";
+    // Venir de la tienda misma no es un canal: es alguien que ya estaba adentro.
+    // Si además está en la app instalada, eso sí es información y se conserva.
+    if (host === propio) return enLaApp ? "pwa" : "directo";
   }
   // Una tienda con dominio propio que recibe gente desde el listado de
   // TiendaApps: eso sí es tráfico que trajo la plataforma. En las que viven en

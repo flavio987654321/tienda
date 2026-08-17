@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, useCallback, useMemo, useSyncExternalStore } from "react";
+import { CAPAS } from "@/lib/capas-tienda";
 
 function ComingSoonMini({
   name,
@@ -188,7 +189,7 @@ export default function OwnerPreviewBadge({
         position: "fixed",
         left: pos.x,
         top: pos.y,
-        zIndex: 9999,
+        zIndex: CAPAS.modal,
         width: minimized ? "auto" : 264,
         boxShadow: "0 8px 40px rgba(0,0,0,0.22)",
         borderRadius: 12,

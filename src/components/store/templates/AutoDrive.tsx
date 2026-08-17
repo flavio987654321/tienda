@@ -14,6 +14,7 @@ import ReportStoreModal from "@/components/store/ReportStoreModal";
 import { WaIcon, VehicleCard, VehicleModal, AM_MODAL_CSS, fmtPrice } from "@/components/store/auto/AutoVehicleShared";
 import { SectionBlock } from "@/components/store/templates/shared/SectionBlock";
 import { linksLegales } from "@/lib/politicas-tienda";
+import { CAPAS } from "@/lib/capas-tienda";
 
 function smoothScrollTo(id: string) {
   document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
@@ -399,7 +400,7 @@ export default function AutoDrive() {
               <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
             </button>
             {userDropdownOpen && (
-              <div style={{ position:"absolute", top:"calc(100% + 10px)", right:0, background:navBg, border:`1px solid ${navBorderColor}`, minWidth:190, zIndex:300, boxShadow:"0 8px 28px rgba(0,0,0,0.25)", overflow:"hidden" }}>
+              <div style={{ position:"absolute", top:"calc(100% + 10px)", right:0, background:navBg, border:`1px solid ${navBorderColor}`, minWidth:190, zIndex:CAPAS.flotante, boxShadow:"0 8px 28px rgba(0,0,0,0.25)", overflow:"hidden" }}>
                 {cargando ? (<p style={{ padding:"14px 16px", margin:0, fontSize:12, opacity:0.55 }}>Cargando…</p>) : logueado ? (
                   <>
                     <p style={{ padding:"10px 16px 4px", fontSize:11, color:navTextMid, margin:0, fontWeight:600, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
@@ -984,7 +985,7 @@ export default function AutoDrive() {
 
       {/* ── SEARCH OVERLAY ── */}
       {searchOpen && (
-        <div style={{ position:"fixed", inset:0, zIndex:200, background:"rgba(255,255,255,0.97)", backdropFilter:"blur(8px)", display:"flex", flexDirection:"column", alignItems:"center", paddingTop:120 }}>
+        <div style={{ position:"fixed", inset:0, zIndex:CAPAS.nav, background:"rgba(255,255,255,0.97)", backdropFilter:"blur(8px)", display:"flex", flexDirection:"column", alignItems:"center", paddingTop:120 }}>
           <button onClick={() => { setSearchOpen(false); setSearchQuery(""); }} aria-label="Cerrar búsqueda"
             style={{ position:"absolute", top:24, right:32, background:"none", border:"none", color:"#111", fontSize:28, cursor:"pointer", lineHeight:1 }}>×</button>
           <div style={{ width:"100%", maxWidth:640, padding:"0 24px" }}>
@@ -1062,7 +1063,7 @@ export default function AutoDrive() {
       {!editMode && whatsapp.enabled && whatsapp.number && (
         <a href={`https://wa.me/${whatsapp.number.replace(/\D/g,"")}${whatsapp.message?"?text="+encodeURIComponent(whatsapp.message):""}`}
           target="_blank" rel="noopener noreferrer"
-          style={{ position:"fixed", bottom:24, right:24, zIndex:500,
+          style={{ position:"fixed", bottom:24, right:24, zIndex:CAPAS.panel,
             background:"#25d366", color:"white", width:56, height:56,
             borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center",
             boxShadow:"0 4px 24px rgba(37,211,102,0.45)", textDecoration:"none" }}>

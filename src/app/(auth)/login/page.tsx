@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { AppLogo } from "@/components/AppLogo";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { createSupabaseBrowserClient, hasSupabaseBrowserConfig } from "@/lib/supabase/client";
+import { useLoginForm } from "@/hooks/useLoginForm";
 import { isPwa } from "@/lib/pwa";
 import {
   Loader2, Eye, EyeOff, ArrowRight,
@@ -14,7 +14,6 @@ import {
 
 function LoginForm() {
   const searchParams = useSearchParams();
-  const supabase = createSupabaseBrowserClient();
   const registered = searchParams.get("registered");
   const redirectTo = searchParams.get("redirect");
   const [inPwa, setInPwa] = useState(false);
@@ -22,59 +21,25 @@ function LoginForm() {
   // eslint-disable-next-line react-hooks/set-state-in-effect -- sincroniza con el modo de visualización de la PWA (display-mode), no se puede leer en el render inicial sin desincronizar SSR/cliente
   useEffect(() => { setInPwa(isPwa()); }, []);
 
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPass, setShowPass] = useState(false);
-  const [error, setError] = useState("");
-  const [info, setInfo] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [resetting, setResetting] = useState(false);
-  const [redirecting, setRedirecting] = useState(false);
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
-    setInfo("");
-
-    if (!hasSupabaseBrowserConfig()) {
-      setError("Falta configurar Supabase en las variables de entorno.");
-      setLoading(false);
-      return;
-    }
-
-    const { error: loginError } = await supabase.auth.signInWithPassword({ email, password });
-    if (loginError) {
-      setError("Email o contraseña incorrectos");
-      setLoading(false);
-    } else {
-      setRedirecting(true);
-      const safeRedirect = redirectTo && redirectTo.startsWith("/") && !redirectTo.startsWith("//") ? redirectTo : null;
-      // Navegación completa (no router.push): la cookie de sesión recién
-      // escrita por el cliente de Supabase puede no estar lista todavía para
-      // una transición "soft" de Next — con un request HTTP real siempre llega.
-      window.location.href = safeRedirect || "/panel";
-    }
-  }
-
-  async function handleForgotPassword() {
-    setError("");
-    setInfo("");
-
-    if (!email.trim()) {
-      setError("Ingresa tu email primero para enviarte el link de recuperacion.");
-      return;
-    }
-
-    setResetting(true);
-    await fetch("/api/auth/reset-password", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: email.trim() }),
-    });
-    setInfo("Te enviamos un link para recuperar tu contraseña. Revisa tu email.");
-    setResetting(false);
-  }
+  /* El formulario en sí vive en `useLoginForm`, compartido con `PanelLogin` — el
+     login que dibuja el panel cuando la app instalada se queda sin sesión. Son
+     dos pantallas distintas a propósito (esta tiene el panel de marketing, esa no
+     tiene ni un link), pero una sola lógica: tener dos copias de
+     `signInWithPassword` era garantizar que un día se arreglara una sola. */
+  const {
+    email, setEmail,
+    password, setPassword,
+    showPass, setShowPass,
+    error, info, loading, resetting,
+    entrando: redirecting,
+    handleSubmit, handleForgotPassword,
+  } = useLoginForm(() => {
+    const safeRedirect = redirectTo && redirectTo.startsWith("/") && !redirectTo.startsWith("//") ? redirectTo : null;
+    // Navegación completa (no router.push): la cookie de sesión recién escrita
+    // por el cliente de Supabase puede no estar lista todavía para una transición
+    // "soft" de Next — con un request HTTP real siempre llega.
+    window.location.href = safeRedirect || "/panel";
+  });
 
   if (redirecting) {
     return (
@@ -284,8 +249,13 @@ function LoginForm() {
                   es el panel: el que lee esto está PARADO en el login, sin
                   sesión, así que el panel lo mandaba de vuelta al login. Un
                   botón que te deja donde ya estabas. */}
+              {/* Desde la app instalada se abre en el navegador. El listado de
+                  tiendas es de la web comercial, no del panel: adentro de la PWA
+                  lo reemplazaba por completo y dejaba a la persona navegando
+                  TiendaApps sin barra de direcciones ni forma de volver. */}
               <Link
                 href="/tiendas"
+                {...(inPwa ? { target: "_blank", rel: "noopener noreferrer" } : {})}
                 className="mt-2.5 inline-flex items-center gap-1.5 text-xs text-orange-600 font-semibold hover:text-orange-700 transition-colors"
               >
                 Ver tiendas activas <ArrowRight className="h-3 w-3" />

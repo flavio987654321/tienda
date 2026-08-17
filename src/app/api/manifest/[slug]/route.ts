@@ -30,13 +30,25 @@ export async function GET(
 
   const shortName = store.name.length > 14 ? store.name.slice(0, 14).trimEnd() + "…" : store.name;
 
-  const icons = store.logo
-    ? [
-        { src: store.logo, sizes: "192x192", type: "image/png", purpose: "any" },
-        { src: store.logo, sizes: "512x512", type: "image/png", purpose: "maskable" },
-        { src: store.logo, sizes: "180x180", type: "image/png", purpose: "any" },
-      ]
-    : [{ src: "/favicon.ico", sizes: "any", type: "image/x-icon" }];
+  /* Los íconos se componen en `/api/icons/tienda/[slug]`, no se sirve el archivo
+     del comerciante tal cual.
+     Antes acá se apuntaba a `store.logo` declarando `192x192`, `512x512` y
+     `image/png` sobre una imagen de medida y formato desconocidos —`/api/upload`
+     acepta jpeg, webp y gif— y encima se marcaba `maskable` un logo sin margen,
+     que Android recorta por los bordes. Las tres cosas eran mentira y las tres se
+     veían: ícono borroso, formato mal declarado y logo mordido.
+     Ahora salen en PNG, en la medida exacta y con la zona segura que la máscara
+     necesita. El detalle está en el comentario de esa ruta.
+     No va una entrada de 180x180: ese tamaño es para el `apple-touch-icon`, que
+     iOS lee del HTML y no del manifest, así que acá no hacía nada. */
+  const icono = (size: number, purpose: "any" | "maskable") => ({
+    src: `/api/icons/tienda/${slug}?size=${size}&purpose=${purpose}`,
+    sizes: `${size}x${size}`,
+    type: "image/png",
+    purpose,
+  });
+
+  const icons = [icono(192, "any"), icono(512, "any"), icono(512, "maskable")];
 
   const effectiveLogoColor = (() => {
     const c = store.logoColor;

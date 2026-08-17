@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { CAPAS } from "@/lib/capas-tienda";
 
 export type VerifiedInfo = {
   showName: boolean;
@@ -90,7 +91,7 @@ export default function VerifiedIconButton({
           boxShadow: "0 8px 32px rgba(0,0,0,0.14)",
           padding: "14px 18px",
           minWidth: 210,
-          zIndex: 9999,
+          zIndex: CAPAS.modal,
           whiteSpace: "nowrap",
           // reset herencia de estilos del template
           fontFamily: "'Inter', system-ui, sans-serif",

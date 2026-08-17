@@ -8,6 +8,7 @@ import ReportStoreModal from "@/components/store/ReportStoreModal";
 import { getContrastColor } from "@/contexts/EditContext";
 import { linksLegales, type ClaveLegal } from "@/lib/politicas-tienda";
 import type { StorefrontProduct } from "@/hooks/useStorefront";
+import { CAPAS } from "@/lib/capas-tienda";
 
 type RawVehicle = {
   id: string;
@@ -325,7 +326,7 @@ function VehiculosPageInner() {
 
       {/* ── HEADER ── */}
       <div style={{ background: headerBg, boxShadow: headerBoxShadow,
-        borderBottom: headerBorderLine, position:"sticky", top:0, zIndex:100 }}>
+        borderBottom: headerBorderLine, position:"sticky", top:0, zIndex:CAPAS.encabezadoListado }}>
         <div style={{ maxWidth:1280, margin:"0 auto", padding:"0 clamp(16px,4vw,32px)", height:64,
           display:"flex", alignItems:"center", justifyContent:"space-between" }}>
           <Link href={fromEditor ? "/dashboard/configuracion" : `/tienda/${slug}`}

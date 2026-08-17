@@ -1,25 +1,57 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import type { FlyerConfig } from "@/types/store-config";
+import { pedirTurno } from "@/lib/interrupcion-tienda";
+import { CAPAS } from "@/lib/capas-tienda";
 
 export default function FlyerPopup({ flyer }: { flyer: FlyerConfig }) {
   const [visible, setVisible] = useState(false);
   const [index, setIndex] = useState(0);
   const [dir, setDir] = useState<"next" | "prev">("next");
+  /* El flyer es la primera interrupción de la tienda y tiene la prioridad más
+     alta, así que en la práctica el turno se lo dan siempre en el acto. Pide
+     igual, porque lo importante es que AVISE cuando se cierra: de eso depende que
+     el cartel de instalar la app —que sale después y quedaba abajo del velo
+     negro— sepa que ya puede aparecer. Ver `lib/interrupcion-tienda`. */
+  const liberar = useRef<(() => void) | null>(null);
+
+  /* Las imágenes se filtran ACÁ ARRIBA, antes del efecto, y no después.
+     Estaban más abajo, con un `if (total === 0) return null` al dibujar: el
+     efecto ya había pedido el turno, así que un flyer configurado con las urls
+     vacías se quedaba con la pantalla para siempre sin mostrar nada, y ni el
+     cartel de instalar la app ni el globo de notificaciones volvían a aparecer.
+     El padre sólo chequea `images.length > 0`, que no alcanza: una lista de
+     strings vacíos pasa ese filtro. */
+  const images = flyer.images.filter(Boolean);
+  const total = images.length;
 
   useEffect(() => {
+    if (total === 0) return;
     const isPwa =
       new URLSearchParams(window.location.search).get("source") === "pwa" ||
       window.matchMedia("(display-mode: standalone)").matches;
-    const t = setTimeout(() => setVisible(true), isPwa ? 1200 : 400);
-    return () => clearTimeout(t);
+    const t = setTimeout(() => {
+      liberar.current = pedirTurno("flyer", () => setVisible(true));
+    }, isPwa ? 1200 : 400);
+    return () => {
+      clearTimeout(t);
+      // También al desmontarse: si el visitante se va de la página con el flyer
+      // abierto, el turno tiene que volver a la cola igual.
+      liberar.current?.();
+      liberar.current = null;
+    };
+  }, [total]);
+
+  /* Cerrar es esconderlo Y soltar el turno. Iban tres `setVisible(false)` sueltos
+     por el archivo; si mañana se agrega un cuarto y se olvida el `liberar`, la
+     cola queda trabada y no vuelve a aparecer ninguna interrupción. */
+  const cerrar = useCallback(() => {
+    setVisible(false);
+    liberar.current?.();
+    liberar.current = null;
   }, []);
 
-  if (!visible) return null;
-
-  const images = flyer.images.filter(Boolean);
-  const total = images.length;
-  if (total === 0) return null;
+  if (!visible || total === 0) return null;
 
   function prev() { setDir("prev"); setIndex(i => (i - 1 + total) % total); }
   function next() { setDir("next"); setIndex(i => (i + 1) % total); }
@@ -27,13 +59,13 @@ export default function FlyerPopup({ flyer }: { flyer: FlyerConfig }) {
   return (
     <div
       style={{
-        position: "fixed", inset: 0, zIndex: 99999,
+        position: "fixed", inset: 0, zIndex: CAPAS.critico,
         background: "rgba(0,0,0,0.78)", backdropFilter: "blur(6px)",
         display: "flex", alignItems: "center", justifyContent: "center",
         padding: "16px",
         animation: "flyerFadeIn 0.35s ease",
       }}
-      onClick={() => setVisible(false)}
+      onClick={cerrar}
     >
       <style>{`
         @keyframes flyerFadeIn {
@@ -63,7 +95,7 @@ export default function FlyerPopup({ flyer }: { flyer: FlyerConfig }) {
       >
         {/* Botón cerrar */}
         <button
-          onClick={() => setVisible(false)}
+          onClick={cerrar}
           aria-label="Cerrar flyer"
           style={{
             position: "absolute", top: -14, right: -6, zIndex: 2,

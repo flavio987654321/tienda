@@ -37,6 +37,7 @@ import { resolveVariantPrice } from "@/lib/variantPrice";
 import { useTurnstile } from "@/components/Turnstile";
 import { linksLegales, type ClaveLegal } from "@/lib/politicas-tienda";
 import { afiliadoDeEstaTienda } from "@/lib/atribucion-afiliado";
+import { CAPAS } from "@/lib/capas-tienda";
 
 const SOCIAL_NETWORKS: ["instagram"|"facebook"|"tiktok"|"youtube"|"pinterest", string][] = [
   ["instagram", "Instagram"], ["facebook", "Facebook"], ["tiktok", "TikTok"], ["youtube", "YouTube"], ["pinterest", "Pinterest"],
@@ -1656,7 +1657,7 @@ function ProductosPageInner() {
 `}</style>
 
       {/* ── HEADER ─────────────────────────────────────────────────────── */}
-      <div style={{ position:"sticky", top:0, zIndex:100, background:backdropNav, backdropFilter:"blur(12px)", borderBottom:`1px solid ${borderFaint}` }}>
+      <div style={{ position:"sticky", top:0, zIndex:CAPAS.encabezadoListado, background:backdropNav, backdropFilter:"blur(12px)", borderBottom:`1px solid ${borderFaint}` }}>
         <div style={{ maxWidth:1280, margin:"0 auto", padding:"0 clamp(16px,4vw,32px)", height:64, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
           <div style={{ visibility: isMobile ? "hidden" : "visible", pointerEvents: isMobile ? "none" : "auto", width: isMobile ? 44 : "auto" }}>
           {fromEditor ? (
@@ -1946,8 +1947,8 @@ function ProductosPageInner() {
             {/* ── PANEL "FILTRAR Y ORDENAR" ──────────────────────────────────── */}
             {filterDrawerOpen && (
               <>
-                <div style={{ position:"fixed", inset:0, background:overlayBg, zIndex:350 }} onClick={() => setFilterDrawerOpen(false)} />
-                <div style={{ position:"fixed", top:0, right:0, bottom:0, width:"min(360px, 92vw)", background:BG, zIndex:351,
+                <div style={{ position:"fixed", inset:0, background:overlayBg, zIndex:CAPAS.veloFiltros }} onClick={() => setFilterDrawerOpen(false)} />
+                <div style={{ position:"fixed", top:0, right:0, bottom:0, width:"min(360px, 92vw)", background:BG, zIndex:CAPAS.filtros,
                   overflowY:"auto", padding:"28px 28px 40px", boxShadow:"-12px 0 32px rgba(0,0,0,0.25)" }}>
                   <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:28 }}>
                     <h3 style={{ margin:0, fontFamily:serif, fontSize:20, color:T }}>Filtrar y ordenar</h3>
@@ -1965,11 +1966,11 @@ function ProductosPageInner() {
           <>
             {/* ── NAVEGACIÓN TIPO BREADCRUMB (Casa Clara) ───────────────────── */}
             {(catDropdownOpen || subDropdownOpen) && (
-              <div style={{ position:"fixed", inset:0, zIndex:40 }} onClick={() => { setCatDropdownOpen(false); setSubDropdownOpen(false); }} />
+              <div style={{ position:"fixed", inset:0, zIndex:CAPAS.contenido }} onClick={() => { setCatDropdownOpen(false); setSubDropdownOpen(false); }} />
             )}
             <div style={{ display:"flex", alignItems:"center", gap:24, flexWrap:"wrap", marginBottom:28, paddingBottom:20, borderBottom:`1px solid ${borderFaint}`, fontSize:12.5 }}>
               {/* Categoría */}
-              <div style={{ position:"relative", zIndex:41 }}>
+              <div style={{ position:"relative", zIndex:CAPAS.contenidoMedio }}>
                 <button onClick={() => { setCatDropdownOpen(o => !o); setSubDropdownOpen(false); }}
                   style={{ background:"none", border:"none", color:T, cursor:"pointer", padding:0, display:"flex", alignItems:"center", gap:5 }}>
                   <span style={{ opacity:0.5 }}>Categoría:</span>
@@ -1977,7 +1978,7 @@ function ProductosPageInner() {
                   <span style={{ fontSize:10 }}>{catDropdownOpen ? "▴" : "▾"}</span>
                 </button>
                 {catDropdownOpen && (
-                  <div style={{ position:"absolute", top:"100%", left:0, marginTop:8, background:S, border:`1px solid ${border}`, minWidth:170, zIndex:42, padding:"4px 0", boxShadow:"0 8px 24px rgba(0,0,0,0.12)" }}>
+                  <div style={{ position:"absolute", top:"100%", left:0, marginTop:8, background:S, border:`1px solid ${border}`, minWidth:170, zIndex:CAPAS.contenidoAlto, padding:"4px 0", boxShadow:"0 8px 24px rgba(0,0,0,0.12)" }}>
                     {CATEGORIES.map(cat => (
                       <button key={cat} className="cc-dropdown-item" onClick={() => { changeCategory(cat); setCatDropdownOpen(false); }}
                         style={{ display:"block", width:"100%", textAlign:"left", background: activeCategory===cat ? `${G}12` : "none", borderLeft: activeCategory===cat ? `3px solid ${G}` : "3px solid transparent", borderTop:"none", borderRight:"none", borderBottom:"none", padding:"8px 16px 8px 13px", fontSize:12, color:T, fontWeight: activeCategory===cat ? 700 : 400, cursor:"pointer", textTransform:"uppercase", letterSpacing:0.5, transition:"background 0.15s" }}>
@@ -1990,7 +1991,7 @@ function ProductosPageInner() {
 
               {/* Subcategoría — solo si la categoría activa tiene */}
               {activeCategory !== "Todos" && (subcategoriesFor[activeCategory] || []).length > 0 && (
-                <div style={{ position:"relative", zIndex:41 }}>
+                <div style={{ position:"relative", zIndex:CAPAS.contenidoMedio }}>
                   <button onClick={() => { setSubDropdownOpen(o => !o); setCatDropdownOpen(false); }}
                     style={{ background:"none", border:"none", color:T, cursor:"pointer", padding:0, display:"flex", alignItems:"center", gap:5 }}>
                     <span style={{ opacity:0.5 }}>Subcategoría:</span>
@@ -1998,7 +1999,7 @@ function ProductosPageInner() {
                     <span style={{ fontSize:10 }}>{subDropdownOpen ? "▴" : "▾"}</span>
                   </button>
                   {subDropdownOpen && (
-                    <div style={{ position:"absolute", top:"100%", left:0, marginTop:8, background:S, border:`1px solid ${border}`, minWidth:170, zIndex:42, padding:"4px 0", boxShadow:"0 8px 24px rgba(0,0,0,0.12)" }}>
+                    <div style={{ position:"absolute", top:"100%", left:0, marginTop:8, background:S, border:`1px solid ${border}`, minWidth:170, zIndex:CAPAS.contenidoAlto, padding:"4px 0", boxShadow:"0 8px 24px rgba(0,0,0,0.12)" }}>
                       <button className="cc-dropdown-item" onClick={() => { changeCategory(activeCategory); setSubDropdownOpen(false); }}
                         style={{ display:"block", width:"100%", textAlign:"left", background: !activeSubcategory ? `${G}12` : "none", borderLeft: !activeSubcategory ? `3px solid ${G}` : "3px solid transparent", borderTop:"none", borderRight:"none", borderBottom:"none", padding:"8px 16px 8px 13px", fontSize:12, color:T, fontWeight: !activeSubcategory ? 700 : 400, cursor:"pointer", textTransform:"uppercase", letterSpacing:0.5, transition:"background 0.15s" }}>
                         Todas
@@ -2048,7 +2049,7 @@ function ProductosPageInner() {
           <>
             {/* ── FILTROS DE CATEGORÍA ───────────────────────────────────── */}
             {hoveredCatMenu !== null && (
-              <div style={{ position:"fixed", inset:0, zIndex:350 }} onClick={() => setHoveredCatMenu(null)} />
+              <div style={{ position:"fixed", inset:0, zIndex:CAPAS.veloFiltros }} onClick={() => setHoveredCatMenu(null)} />
             )}
             {/* El `paddingBottom` que había acá estaba MUERTO: el atajo de abajo
                 viene después, lo pisa, y encima repetía la misma cuenta. Tenerlos
@@ -2122,7 +2123,7 @@ function ProductosPageInner() {
                 fuera del contenedor con scroll horizontal de las pestañas (si quedara
                 anidado ahí, el overflow-x lo recorta y nunca se llega a ver). */}
             {hoveredCatMenu !== null && catMenuPos && (subcategoriesFor[hoveredCatMenu] || []).length > 0 && (
-              <div style={{ position:"fixed", top:catMenuPos.top, left:catMenuPos.left, background:S, border:`1px solid ${border}`, minWidth:180, zIndex:400, padding:"4px 0", boxShadow:"0 8px 24px rgba(0,0,0,0.25)" }}>
+              <div style={{ position:"fixed", top:catMenuPos.top, left:catMenuPos.left, background:S, border:`1px solid ${border}`, minWidth:180, zIndex:CAPAS.buscador, padding:"4px 0", boxShadow:"0 8px 24px rgba(0,0,0,0.25)" }}>
                 <button onClick={() => { changeCategory(hoveredCatMenu); setHoveredCatMenu(null); }}
                   style={{ display:"block", width:"100%", background:"none", border:"none", color:T, padding:"9px 16px", fontSize:11, textAlign:"left", cursor:"pointer", letterSpacing:1, textTransform:"uppercase", whiteSpace:"nowrap" }}>
                   Todos en {hoveredCatMenu}
@@ -2199,7 +2200,7 @@ function ProductosPageInner() {
           <button
             className="pp-wa-fab"
             onClick={() => window.open(`https://wa.me/${(whatsapp.number ?? "5491100000000").replace(/\D/g,"")}${whatsapp.message ? "?text=" + encodeURIComponent(whatsapp.message) : ""}`, "_blank")}
-            style={{ position:"fixed", bottom:24, right:24, zIndex:500, width:52, height:52, borderRadius:"50%", border:"none", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", transition:"transform 0.2s" }}
+            style={{ position:"fixed", bottom:24, right:24, zIndex:CAPAS.panel, width:52, height:52, borderRadius:"50%", border:"none", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", transition:"transform 0.2s" }}
             onMouseEnter={e => (e.currentTarget.style.transform="scale(1.1)")}
             onMouseLeave={e => (e.currentTarget.style.transform="scale(1)")}>
             <svg width={28} height={28} viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
@@ -2209,7 +2210,7 @@ function ProductosPageInner() {
 
       {/* ── MODAL PRODUCTO ─────────────────────────────────────────────── */}
       {modalProduct && (
-        <div style={{ position:"fixed", inset:0, zIndex:200, display:"flex", alignItems:"center", justifyContent:"center" }} onClick={() => { setModalProduct(null); setLightboxSrc(null); }}>
+        <div style={{ position:"fixed", inset:0, zIndex:CAPAS.nav, display:"flex", alignItems:"center", justifyContent:"center" }} onClick={() => { setModalProduct(null); setLightboxSrc(null); }}>
           {/* El velo es lo primero que se ve al abrir, antes de leer una palabra:
               en Boho Terra va en el marrón del template y no en el negro genérico. */}
           <div style={{ position:"absolute", inset:0, background: v.velo ?? overlayBg, backdropFilter:"blur(8px)" }}/>
@@ -2787,7 +2788,7 @@ function ProductosPageInner() {
           que bajarlas todas para llegar a escribir la propia.
           zIndex 250: por encima de la ficha (200) y por debajo del lightbox (300). */}
       {modalProduct && resenaModalOpen && (
-        <div style={{ position:"fixed", inset:0, zIndex:250, background:"rgba(0,0,0,0.6)", backdropFilter:"blur(4px)", display:"flex", alignItems: isMobile ? "flex-end" : "center", justifyContent:"center", padding: isMobile ? 0 : 20 }}
+        <div style={{ position:"fixed", inset:0, zIndex:CAPAS.flotanteBajo, background:"rgba(0,0,0,0.6)", backdropFilter:"blur(4px)", display:"flex", alignItems: isMobile ? "flex-end" : "center", justifyContent:"center", padding: isMobile ? 0 : 20 }}
           onClick={() => setResenaModalOpen(false)}>
           <div style={{ background:S, width:"100%", maxWidth:460, maxHeight:"92vh", overflowY:"auto", position:"relative", borderRadius: isMobile ? "12px 12px 0 0" : 0 }}
             onClick={e => e.stopPropagation()}>
@@ -2842,7 +2843,7 @@ function ProductosPageInner() {
 
       {/* ── LIGHTBOX ──────────────────────────────────────────────────── */}
       {lightboxSrc && (
-        <div style={{ position:"fixed", inset:0, zIndex:300, background:"rgba(0,0,0,0.97)", display:"flex", alignItems:"center", justifyContent:"center" }}
+        <div style={{ position:"fixed", inset:0, zIndex:CAPAS.flotante, background:"rgba(0,0,0,0.97)", display:"flex", alignItems:"center", justifyContent:"center" }}
           onClick={() => setLightboxSrc(null)}>
           {/* Este SÍ se queda como <img>. Es la vista de zoom: se abre justamente
               para mirar la foto ENTERA, al tamaño original y con pinch-zoom.
@@ -2883,7 +2884,7 @@ function ProductosPageInner() {
           pantalla por los DOS lados en un celular de 360. Es el mismo par que ya
           usan los diez templates; esta pantalla era la única afuera. */}
       {toastMsg && (
-        <div style={{ position:"fixed", bottom:28, left:"50%", transform:"translateX(-50%)", background:chipBg, color:chipText, padding:"12px 24px", fontSize:13, fontWeight:700, zIndex:500, boxShadow:"0 4px 20px rgba(0,0,0,0.3)", maxWidth:"calc(100vw - 32px)", textAlign:"center" }}>
+        <div style={{ position:"fixed", bottom:28, left:"50%", transform:"translateX(-50%)", background:chipBg, color:chipText, padding:"12px 24px", fontSize:13, fontWeight:700, zIndex:CAPAS.panel, boxShadow:"0 4px 20px rgba(0,0,0,0.3)", maxWidth:"calc(100vw - 32px)", textAlign:"center" }}>
           {toastMsg}
         </div>
       )}

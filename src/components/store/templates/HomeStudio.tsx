@@ -21,6 +21,7 @@ import { SectionBlock } from "@/components/store/templates/shared/SectionBlock";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
 import type { ImageOverride } from "@/types/store-config";
 import { linksLegales } from "@/lib/politicas-tienda";
+import { CAPAS } from "@/lib/capas-tienda";
 
 function smoothScrollTo(id: string) {
   document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
@@ -320,7 +321,7 @@ export default function HomeStudio() {
                 Departamentos <span style={{ fontSize:9 }}>▾</span>
               </button>
               <div className="hs-megamenu" style={{ position:"absolute", top:"calc(100% + 14px)", left:"50%", transform:"translateX(-50%)",
-                background:"#fff", borderRadius:2, boxShadow:"0 18px 44px rgba(44,34,24,0.16)", zIndex:200, border:"1px solid rgba(181,101,41,0.15)",
+                background:"#fff", borderRadius:2, boxShadow:"0 18px 44px rgba(44,34,24,0.16)", zIndex:CAPAS.nav, border:"1px solid rgba(181,101,41,0.15)",
                 display:"flex", overflow:"hidden", width:460 }}>
                 <div style={{ width:160, flexShrink:0, position:"relative" }}>
                   <FadeImage src={iovr["megaMenuImage"]?.url ?? "https://images.unsplash.com/photo-1556911220-bff31c812dba?auto=format&fit=crop&w=300&q=70"} alt="" fill sizes="160px"
@@ -367,7 +368,7 @@ export default function HomeStudio() {
                 <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
               </button>
               {userDropdownOpen && (
-                <div style={{ position:"absolute", top:"calc(100% + 10px)", right:0, background:"#fff", border:`1px solid ${navBorder}`, minWidth:190, zIndex:300, boxShadow:"0 8px 28px rgba(44,34,24,0.16)", overflow:"hidden" }}>
+                <div style={{ position:"absolute", top:"calc(100% + 10px)", right:0, background:"#fff", border:`1px solid ${navBorder}`, minWidth:190, zIndex:CAPAS.flotante, boxShadow:"0 8px 28px rgba(44,34,24,0.16)", overflow:"hidden" }}>
                   {cargando ? (<p style={{ padding:"14px 16px", margin:0, fontSize:12, opacity:0.55 }}>Cargando…</p>) : logueado ? (
                     <>
                       <p style={{ padding:"10px 16px 4px", fontSize:11, color:"#9a8a76", margin:0, fontWeight:600, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{nombreMostrado}</p>
@@ -791,7 +792,7 @@ export default function HomeStudio() {
       <CheckoutModal cart={cart} theme={cartTheme} isPreview={isPreview} storeSlug={config?.slug ?? ""} />
 
       {toastMsg && (
-        <div style={{ position:"fixed", bottom:24, left:"50%", transform:"translateX(-50%)", background:"#2c2218", color:"#fff", padding:"12px 20px", fontSize:13, fontWeight:600, zIndex:600, boxShadow:"0 4px 20px rgba(0,0,0,0.35)", maxWidth:"calc(100vw - 32px)", textAlign:"center" }}>
+        <div style={{ position:"fixed", bottom:24, left:"50%", transform:"translateX(-50%)", background:"#2c2218", color:"#fff", padding:"12px 20px", fontSize:13, fontWeight:600, zIndex:CAPAS.sobrePanel, boxShadow:"0 4px 20px rgba(0,0,0,0.35)", maxWidth:"calc(100vw - 32px)", textAlign:"center" }}>
           {toastMsg}
         </div>
       )}
@@ -799,7 +800,7 @@ export default function HomeStudio() {
       {showWA && (
         <a href={`https://wa.me/${whatsapp.number.replace(/\D/g,"")}${whatsapp.message?"?text="+encodeURIComponent(whatsapp.message):""}`}
           target="_blank" rel="noopener noreferrer"
-          style={{ position:"fixed", bottom:24, right:24, zIndex:500, background:"#25d366", color:"white", width:56, height:56,
+          style={{ position:"fixed", bottom:24, right:24, zIndex:CAPAS.panel, background:"#25d366", color:"white", width:56, height:56,
             borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 4px 24px rgba(37,211,102,0.45)", textDecoration:"none" }}>
           <svg width={24} height={24} viewBox="0 0 24 24" fill="currentColor"><path d="M17.6 6.32A8.86 8.86 0 0 0 12.07 3a8.86 8.86 0 0 0-7.65 13.43L3 21l4.74-1.24a8.86 8.86 0 0 0 4.33 1.1h.01c4.9 0 8.87-3.97 8.87-8.86 0-2.37-.92-4.6-2.35-6.68zm-5.53 13.63a7.37 7.37 0 0 1-3.76-1.03l-.27-.16-2.8.73.75-2.73-.18-.28a7.36 7.36 0 0 1-1.13-3.93c0-4.07 3.31-7.38 7.39-7.38a7.34 7.34 0 0 1 5.22 2.17 7.34 7.34 0 0 1 2.16 5.22c0 4.07-3.31 7.39-7.38 7.39zm4.04-5.53c-.22-.11-1.3-.64-1.5-.71-.2-.08-.35-.11-.5.11-.15.22-.57.71-.7.86-.13.15-.26.16-.48.06-.22-.11-.93-.34-1.77-1.09-.65-.58-1.09-1.3-1.22-1.52-.13-.22-.01-.34.1-.45.1-.11.22-.28.33-.42.11-.14.15-.24.22-.4.08-.16.04-.3-.04-.42-.08-.11-.5-1.2-.69-1.65-.18-.43-.37-.37-.51-.38-.13-.01-.28-.01-.43-.01-.15 0-.39.06-.6.28-.21.22-.8.78-.8 1.9 0 1.12.81 2.2.93 2.35.11.15 1.55 2.37 3.76 3.23 1.87.73 2.25.59 2.66.55.41-.04 1.3-.53 1.49-1.04.18-.51.18-.94.13-1.04-.06-.1-.22-.16-.44-.27z"/></svg>
         </a>

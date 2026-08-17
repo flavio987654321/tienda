@@ -9,12 +9,17 @@ import SubscriptionRealtimeRefresher from "@/components/subscription/Subscriptio
 import SubscriptionSuccessBanner from "@/components/subscription/SubscriptionSuccessBanner";
 import StoreTypeModal from "./productos/StoreTypeModal";
 import PWAManager from "@/components/PWAManager";
+import LoginGate from "@/components/panel/LoginGate";
 import { DASHBOARD_VERSION } from "@/lib/app-versions";
 import { Suspense } from "react";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   manifest: "/api/manifest/dashboard",
+  // iOS saca el ícono de acá y no del manifest; sin esto usaba una captura de la
+  // pantalla. Ver el comentario largo en la metadata de la tienda.
+  icons: { apple: [{ url: "/api/icons/dashboard?size=180", sizes: "180x180" }] },
+  appleWebApp: { capable: true, title: "Panel", statusBarStyle: "default" },
 };
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -26,7 +31,28 @@ export default async function DashboardLayout({ children }: { children: React.Re
      `<meta http-equiv="refresh" content="1;url=/login">` y la persona ve el
      panel dibujado un segundo entero antes de que la pantalla salte.
      Estaba en `page.tsx`, o sea después de todo esto. */
-  if (!user) redirect("/login");
+  /* Sin sesión se DIBUJA el login acá, no se redirige a `/login`.
+     `/login` está fuera del `scope` del manifest (`/dashboard`), y como los
+     `<Link>` de Next navegan del lado del cliente, el panel instalado como app
+     terminaba mostrando la web comercial adentro de su propia ventana, sin barra
+     de direcciones ni forma de volver. Dibujándolo acá no hay ninguna navegación
+     que pueda salirse, y de paso quien entró a `/dashboard/pedidos` sin sesión
+     vuelve a `/dashboard/pedidos` al loguearse en vez de terminar en `/panel`.
+     El detalle largo está en el comentario de `PanelLogin`. */
+  if (!user) {
+    /* La web sigue yendo a `/login` y la app instalada se queda acá: lo decide
+       `LoginGate`, que es cliente porque el servidor no tiene forma de saberlo.
+       `PWAManager` va también acá: es lo único que puede avisar de una versión
+       nueva, y en standalone no hay F5 ni barra de direcciones. Sin esto, una app
+       que quedó en la pantalla de login se congelaba en su build para siempre.
+       Sí va sin el pedido de notificaciones: no hay a quién notificarle todavía. */
+    return (
+      <>
+        <PWAManager appVersion={DASHBOARD_VERSION} versionKey="pwa_dashboard_version" disableNotifPrompt />
+        <LoginGate />
+      </>
+    );
+  }
   if (user.role === "ADMIN") redirect("/admin");
   if (user.role === "SELLER") redirect("/afiliados");
   if (user.role === "BUYER") redirect("/mi-cuenta");

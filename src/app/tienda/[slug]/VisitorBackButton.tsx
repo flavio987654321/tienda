@@ -3,10 +3,20 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useIsPwa } from "@/hooks/useIsPwa";
+import { CAPAS } from "@/lib/capas-tienda";
 
 export default function VisitorBackButton() {
   const router = useRouter();
   const [isMobile, setIsMobile] = useState(false);
+  /* Adentro de la app instalada de la tienda esto no existe: ni el botón ni el
+     gesto. Lleva a `/tiendas`, el listado de TODAS las tiendas de la plataforma
+     — o sea que la app del comerciante mandaba a su propio cliente al catálogo de
+     la competencia. Afuera de la app está bien: ahí el visitante llegó navegando
+     TiendaApps y volver al listado es lo que quiere.
+     De paso saca un choque en Android: en standalone el desliz desde el borde es
+     el gesto de retroceso del sistema, y se pisaba con este. */
+  const inPwa = useIsPwa();
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth <= 768);
@@ -16,7 +26,7 @@ export default function VisitorBackButton() {
   }, []);
 
   useEffect(() => {
-    if (!isMobile) return;
+    if (!isMobile || inPwa) return;
     let startX = 0;
     let startY = 0;
     const onTouchStart = (e: TouchEvent) => {
@@ -36,9 +46,9 @@ export default function VisitorBackButton() {
       document.removeEventListener("touchstart", onTouchStart);
       document.removeEventListener("touchend", onTouchEnd);
     };
-  }, [isMobile, router]);
+  }, [isMobile, inPwa, router]);
 
-  if (isMobile) return null;
+  if (isMobile || inPwa) return null;
 
   return (
     <Link
@@ -47,7 +57,7 @@ export default function VisitorBackButton() {
         position: "fixed",
         top: 16,
         left: 16,
-        zIndex: 500,
+        zIndex: CAPAS.panel,
         width: 40,
         height: 40,
         borderRadius: "50%",

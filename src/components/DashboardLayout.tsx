@@ -10,6 +10,7 @@ import {
   CreditCard, Menu, X, Wallet, AlertTriangle, Bell, ShoppingCart, Star, LayoutGrid, BadgePercent,
 } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
+import { useIsPwa } from "@/hooks/useIsPwa";
 import { AppLogo } from "@/components/AppLogo";
 import NotificationBell from "@/components/NotificationBell";
 import HelpButton from "@/components/HelpButton";
@@ -154,7 +155,30 @@ export default function DashboardLayout({
     setLowStockCount(initialLowStockCount);
   }
 
-  useEffect(() => { if (status === "unauthenticated") router.push("/login"); }, [status, router]);
+  /* Adentro de la app instalada, el logo lleva al inicio DEL PANEL y no a la web
+     comercial. Afuera sigue yendo a la home, que es lo que se espera de un sitio.
+     Nadie instala el panel para visitar la página de ventas: con `href="/"` un
+     toque en el logo te dejaba navegando tiendaapps.com adentro de la app, sin
+     barra de direcciones y sin forma de volver (ver `useIsPwa`). */
+  const inPwa = useIsPwa();
+  const hrefLogo = inPwa ? "/dashboard" : "/";
+
+  /* Se perdió la sesión con el panel abierto: venció, o la cerraron en otra
+     pestaña del mismo navegador.
+     Afuera de la app se va a `/login`, como siempre. Adentro NO se puede:
+     `/login` está fuera del scope del manifest y la app se comería la página
+     comercial. Se recarga la misma url y el layout del servidor dibuja el login
+     en el lugar (ver `PanelLogin`).
+     El candado no es decorativo: si el servidor todavía viera la cookie que el
+     cliente ya dio por muerta, volvería a dibujar el panel y esto recargaría de
+     nuevo, dejando la app en un loop de recargas. Con el ref pasa una sola vez. */
+  const sesionPerdida = useRef(false);
+  useEffect(() => {
+    if (status !== "unauthenticated" || sesionPerdida.current) return;
+    sesionPerdida.current = true;
+    if (inPwa) window.location.reload();
+    else router.push("/login");
+  }, [status, inPwa, router]);
 
   useEffect(() => {
     fetch("/api/verificacion")
@@ -401,7 +425,7 @@ export default function DashboardLayout({
 
       {/* ── DESKTOP Sidebar (lg+) ─────────────────────────────────────────── */}
       <aside data-tour-scope="panel-desktop" className={`group hidden lg:flex fixed left-0 top-0 h-full bg-white border-r border-gray-100 flex-col z-[60] transition-[width] duration-200 overflow-hidden ${showTour ? "w-60 shadow-xl" : "w-14 hover:w-60 hover:shadow-xl"}`}>
-        <Link href="/" className="flex items-center gap-3 h-[61px] px-[15px] border-b border-gray-100 shrink-0 hover:bg-gray-50 transition-colors">
+        <Link href={hrefLogo} className="flex items-center gap-3 h-[61px] px-[15px] border-b border-gray-100 shrink-0 hover:bg-gray-50 transition-colors">
           <AppLogo size={52} className="shrink-0" />
           <span className={`font-bold text-gray-900 whitespace-nowrap overflow-hidden transition-[max-width] duration-200 ${showTour ? "max-w-xs" : "max-w-0 group-hover:max-w-xs"}`}>
             TiendaApps
@@ -435,7 +459,7 @@ export default function DashboardLayout({
 
         <div className="p-2 border-t border-gray-100 space-y-0.5 shrink-0">
           <button
-            onClick={async () => { setSigningOut(true); await signOut("/login"); }}
+            onClick={async () => { setSigningOut(true); await signOut(inPwa ? "/dashboard" : "/login"); }}
             disabled={signingOut}
             className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-red-500 hover:bg-red-50 transition-colors disabled:opacity-60"
           >
@@ -488,7 +512,7 @@ export default function DashboardLayout({
           )}
         </button>
 
-        <Link href="/" className="flex items-center gap-2">
+        <Link href={hrefLogo} className="flex items-center gap-2">
           <AppLogo size={52} />
           <span className="font-bold text-gray-900 text-sm">TiendaApps</span>
         </Link>
@@ -523,7 +547,7 @@ export default function DashboardLayout({
             onTouchEnd={onTouchEnd}
           >
             <div className="flex items-center justify-between h-14 px-4 border-b border-gray-100 shrink-0">
-              <Link href="/" className="flex items-center gap-2">
+              <Link href={hrefLogo} className="flex items-center gap-2">
                 <ShoppingBag className="h-5 w-5 text-indigo-600" />
                 <span className="font-bold text-gray-900 text-sm">TiendaApps</span>
               </Link>
@@ -561,7 +585,7 @@ export default function DashboardLayout({
 
             <div className="p-3 border-t border-gray-100 space-y-0.5 shrink-0">
               <button
-                onClick={async () => { setSigningOut(true); await signOut("/login"); }}
+                onClick={async () => { setSigningOut(true); await signOut(inPwa ? "/dashboard" : "/login"); }}
                 disabled={signingOut}
                 className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm text-red-500 hover:bg-red-50 active:bg-red-100 transition-colors disabled:opacity-60"
               >

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
 import { revalidatePath } from "next/cache";
-import { isSafeUrl } from "@/lib/url-utils";
+import { isSafeUrl, urlDeDescargaPermitida } from "@/lib/url-utils";
 import sharp from "sharp";
 
 export const runtime = "nodejs";
@@ -43,8 +43,18 @@ export async function PATCH(req: NextRequest) {
  * Si tienen color, devuelve el color promedio en hex.
  */
 async function extractLogoColor(logoUrl: string): Promise<string | null> {
+  /* Acá el servidor SALE A BUSCAR una url que mandó el comerciante, y esta es la
+     puerta más directa de las tres que hacen eso: no hay que esperar a que nadie
+     renderice nada, alcanza con un PATCH a esta ruta y el fetch sale al toque.
+     `isSafeUrl` de más arriba solo mira el protocolo, así que
+     `http://169.254.169.254/` le pasaba por al lado. Ver `urlDeDescargaPermitida`. */
+  const permitida = urlDeDescargaPermitida(logoUrl);
+  if (!permitida) return null;
+
   try {
-    const res = await fetch(logoUrl, { signal: AbortSignal.timeout(8000) });
+    // `redirect: "error"`: si no, una url pública que responde 302 hacia adentro
+    // esquiva la guarda de arriba, que solo llegó a ver la primera.
+    const res = await fetch(permitida, { signal: AbortSignal.timeout(8000), redirect: "error" });
     if (!res.ok) return null;
     const arrayBuffer = await res.arrayBuffer();
     const inputBuffer = Buffer.from(arrayBuffer);
