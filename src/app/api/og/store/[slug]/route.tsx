@@ -1,5 +1,6 @@
 import { ImageResponse } from "next/og";
 import { NextRequest } from "next/server";
+import { urlDeDescargaPermitida } from "@/lib/url-utils";
 
 export const runtime = "edge";
 
@@ -15,10 +16,22 @@ function darken(hex: string, amount = 50): string {
 const MAX_IMAGE_BYTES = 1.5 * 1024 * 1024; // 1.5 MB limit
 
 async function urlToDataUrl(url: string): Promise<string | null> {
+  /* La portada, el banner y la imagen de fondo las elige el comerciante, y acá el
+     servidor sale a buscarlas. Sin esta guarda, cualquiera que se registre podía
+     hacer que el servidor golpeara una dirección interna con solo pedir la imagen
+     de compartir de su propia tienda. Ver `urlDeDescargaPermitida`. */
+  const permitida = urlDeDescargaPermitida(url);
+  if (!permitida) return null;
+
   try {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 4000); // 4s max
-    const res = await fetch(url, { cache: "no-store", signal: controller.signal });
+    // `redirect: "error"`: un 302 hacia adentro esquivaría la guarda de arriba.
+    const res = await fetch(permitida, {
+      cache: "no-store",
+      signal: controller.signal,
+      redirect: "error",
+    });
     clearTimeout(timer);
     if (!res.ok) return null;
     const contentType = res.headers.get("content-type") || "image/jpeg";
