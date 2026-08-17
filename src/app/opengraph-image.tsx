@@ -1,4 +1,6 @@
 import { ImageResponse } from "next/og";
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
 
 /* La placa que se ve cuando alguien pega el link de TiendaApps en WhatsApp,
  * Instagram, Facebook o Telegram.
@@ -27,7 +29,25 @@ export const contentType = "image/png";
 
 const NARANJA = "#ea580c";
 
-export default function Image() {
+/* El logo de verdad, leído del mismo archivo que usa el sitio.
+ *
+ * Se lee `icon.svg` y no `icon.png` por dos razones: el SVG pesa 846 bytes
+ * contra 1,35 MB del PNG, y al ser vectorial entra nítido a cualquier tamaño.
+ *
+ * Va leído del disco en vez de pegado acá como texto para que haya un solo
+ * logo: si algún día cambia el ícono del sitio, esta placa cambia con él y no
+ * queda mostrando el anterior.
+ *
+ * `process.cwd()` es la raíz del proyecto, como indica el doc de
+ * `opengraph-image`. */
+async function logoComoDataUri() {
+  const svg = await readFile(join(process.cwd(), "src/app/icon.svg"));
+  return `data:image/svg+xml;base64,${svg.toString("base64")}`;
+}
+
+export default async function Image() {
+  const logo = await logoComoDataUri();
+
   return new ImageResponse(
     (
       <div
@@ -41,24 +61,13 @@ export default function Image() {
           background: "linear-gradient(135deg, #fff7ed 0%, #ffffff 55%, #fff1f2 100%)",
         }}
       >
-        {/* Marca */}
+        {/* Marca. El logo ya trae su fondo redondeado y su degradado propios,
+            así que va solo, sin ninguna caja de color atrás. */}
         <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
-          <div
-            style={{
-              width: 64,
-              height: 64,
-              borderRadius: 18,
-              background: NARANJA,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: 34,
-              fontWeight: 700,
-              color: "#ffffff",
-            }}
-          >
-            TA
-          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element -- ImageResponse
+              no corre en el navegador: no existe next/image acá, la unica forma
+              de meter una imagen es <img>. */}
+          <img src={logo} width={68} height={68} alt="" />
           <div style={{ fontSize: 38, fontWeight: 700, color: "#0a0a0a", letterSpacing: -0.5 }}>
             TiendaApps
           </div>

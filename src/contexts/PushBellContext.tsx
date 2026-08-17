@@ -53,6 +53,24 @@ export function PushBellProvider({
   enabled: boolean;
 }) {
   const [followState, setFollowState] = useState<FollowState>("checking");
+  /* De qué tienda confirmó la consulta inicial que la persona YA la seguía.
+   * `null` si no la seguía, o si todavía no contestó.
+   *
+   * Es distinto de `followState === "following"`, que también se pone en true
+   * cuando toca "seguir" recién ahora. Esa diferencia importa: `handleFollow` ya
+   * suscribe al push por su cuenta, así que si el efecto de abajo mirara
+   * `followState` volvería a suscribir por cada clic. Esto lo escribe solamente
+   * la consulta inicial.
+   *
+   * Guarda el id de la tienda y no un simple `true` porque `storeId` puede
+   * cambiar sin desmontar el provider. Con un booleano, al pasar de una tienda
+   * seguida a otra que no, el efecto de abajo volvía a correr con la bandera
+   * todavía prendida de la anterior —antes de que contestara la consulta
+   * nueva— y suscribía el aparato a los push de una tienda que la persona nunca
+   * siguió. Lo mismo si la consulta fallaba: esa rama no toca la bandera y se
+   * quedaba con el valor viejo. Comparando contra `storeId` las dos cosas se
+   * caen solas. */
+  const [seguidaEnStore, setSeguidaEnStore] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [hasNew, setHasNew] = useState(false);
@@ -87,35 +105,63 @@ export function PushBellProvider({
 
   useEffect(() => { drawerOpenRef.current = drawerOpen; }, [drawerOpen]);
 
-  // Verificar estado inicial de follow (API + localStorage como fallback)
+  /* Verificar estado inicial de follow.
+   *
+   * OJO CON LAS DEPENDENCIAS. Esto pedía `/api/store/follow` DOS VECES en cada
+   * carga de tienda. La causa: `supported` estaba en la lista, y esa bandera
+   * vale false en el render del servidor y pasa a true al hidratar (ver arriba,
+   * `useSyncExternalStore`). El efecto corría una vez por cada valor, y con él
+   * salía el pedido de nuevo.
+   *
+   * Ahora este efecto solo trae el dato. Lo que dependía de `supported` —decidir
+   * si suscribir este dispositivo— se fue al efecto de abajo, que sí puede
+   * volver a correr sin costo porque no habla con el servidor. */
   useEffect(() => {
     if (!enabled) return;
+    let cancelado = false;
 
     async function checkFollowState() {
       try {
         const res = await fetch(`/api/store/follow?storeId=${storeId}`);
         if (res.ok) {
           const data = await res.json();
+          if (cancelado) return;
           followingRef.current = !!data.following;
           setFollowState(data.following ? "following" : "not_following");
-
-          if (data.following && supported) {
-            if (Notification.permission === "granted") {
-              // Registrar este dispositivo silenciosamente (ej: seguido en PC, ahora en celular)
-              subscribeToStore(storeId, storeSlug).catch(() => {});
-            } else if (Notification.permission === "default") {
-              // Sigue en DB pero nunca activó push en este dispositivo
-              setNeedsPushActivation(true);
-            }
-          }
+          setSeguidaEnStore(data.following ? storeId : null);
           return;
         }
       } catch { /* noop */ }
-      setFollowState("not_following");
+      if (!cancelado) setFollowState("not_following");
     }
 
     checkFollowState();
-  }, [storeId, storeSlug, enabled, supported]);
+    // Si la tienda cambia antes de que conteste, la respuesta vieja no puede
+    // pisar el estado de la nueva.
+    return () => { cancelado = true; };
+  }, [storeId, enabled]);
+
+  /* Quien ya seguía la tienda, ¿tiene el push andando EN ESTE aparato?
+   *
+   * Va aparte del pedido de arriba a propósito: depende de `supported`, que
+   * cambia al hidratar, y así ese cambio no vuelve a disparar la consulta al
+   * servidor. No mira `followState` sino `seguidaEnStore`, porque el primero
+   * también se pone en "following" al tocar el botón — y en ese caso
+   * `handleFollow` ya suscribió, con lo cual acá se suscribiría de nuevo.
+   *
+   * La comparación es contra `storeId`, no un `!!`: la confirmación vale para la
+   * tienda que se consultó y para ninguna otra. */
+  useEffect(() => {
+    if (!enabled || !supported || seguidaEnStore !== storeId) return;
+    if (Notification.permission === "granted") {
+      // Registrar este dispositivo silenciosamente (ej: seguido en PC, ahora en celular)
+      subscribeToStore(storeId, storeSlug).catch(() => {});
+    } else if (Notification.permission === "default") {
+      // Sigue en DB pero nunca activó push en este dispositivo.
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- `Notification.permission` es del navegador: no existe en el render del servidor y no avisa cuando cambia, asi que no se puede calcular durante el render
+      setNeedsPushActivation(true);
+    }
+  }, [enabled, supported, seguidaEnStore, storeId, storeSlug]);
 
   // Cargar campañas al montar
   useEffect(() => {
