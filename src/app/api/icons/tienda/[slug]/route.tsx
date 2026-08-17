@@ -78,6 +78,16 @@ async function logoComoDataUrl(url: string): Promise<string | null> {
       return null;
     }
 
+    // Cortar por el `content-length` ANTES de bajar el cuerpo, como ya hacía la
+    // ruta de OG. Sin esto, el chequeo de tamaño de abajo recién actúa cuando la
+    // respuesta entera ya está en memoria — o sea que una url que devuelve un
+    // archivo enorme se carga igual, y recién después se descarta.
+    const declarado = res.headers.get("content-length");
+    if (declarado && Number(declarado) > MAX_IMAGE_BYTES) {
+      console.error("[icons/tienda] logo demasiado grande (declarado):", declarado, url);
+      return null;
+    }
+
     const buf = await res.arrayBuffer();
     if (buf.byteLength > MAX_IMAGE_BYTES) {
       console.error("[icons/tienda] logo demasiado grande:", buf.byteLength, url);
@@ -134,8 +144,13 @@ export async function GET(
   const ladoLogo = Math.round(size * (maskable ? 0.56 : 0.72));
   const radio = maskable ? 0 : Math.round(size * 0.22);
 
+  // El `.trim()` y el filtro no sobran: un nombre que empieza con espacio partía
+  // en un primer trozo vacío y la inicial salía en blanco — un ícono con el color
+  // de la tienda y nada adentro.
   const iniciales = store.name
-    .split(" ")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
     .slice(0, 2)
     .map((p) => p[0])
     .join("")

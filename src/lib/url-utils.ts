@@ -52,7 +52,19 @@ function apuntaAdentro(hostname: string): boolean {
   const h = hostname.toLowerCase().replace(/^\[|\]$/g, "");
 
   if (h === "localhost" || h.endsWith(".localhost") || h.endsWith(".internal")) return true;
-  if (h === "::1" || h === "0.0.0.0") return true;
+
+  /* Cualquier dirección IPv6 escrita a mano queda afuera, sin intentar entender
+     cuál es interna y cuál no.
+     La primera versión de esto listaba los rangos IPv6 igual que los IPv4, y se
+     le escapaba el peor caso: `http://[::ffff:169.254.169.254]/` es la ip de
+     metadatos de la nube escrita en forma IPv6, y el navegador la normaliza a
+     `::ffff:a9fe:a9fe` — que no empieza con `fc`, ni con `fe80`, ni parece una
+     IPv4. Pasaba limpio. `http://[::]/` también.
+     Enumerar rangos en IPv6 es pelearle a un formato que tiene demasiadas maneras
+     de escribir lo mismo. Y no hace falta: un logo legítimo se aloja en un dominio,
+     nunca en una IPv6 cruda. Rechazar todas cierra la familia entera de agujeros
+     sin romper ningún caso real. */
+  if (h.includes(":")) return true;
 
   const v4 = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(h);
   if (v4) {
@@ -64,9 +76,6 @@ function apuntaAdentro(hostname: string): boolean {
     if (a === 169 && b === 254) return true;                     // link-local (metadatos)
     if (a === 100 && b >= 64 && b <= 127) return true;           // carrier-grade NAT
   }
-
-  if (/^f[cd]/.test(h)) return true;   // IPv6 única local
-  if (/^fe80:/.test(h)) return true;   // IPv6 link-local
 
   return false;
 }

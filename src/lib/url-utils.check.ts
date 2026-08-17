@@ -43,6 +43,18 @@ rechaza("http://[::1]/");
 rechaza("http://[fd00::1]/");
 rechaza("http://[fe80::1]/");
 
+// La familia que se le escapaba a la primera version. `::ffff:169.254.169.254` es
+// la ip de metadatos escrita en IPv6, y el navegador la normaliza a
+// `::ffff:a9fe:a9fe` — no empieza con fc, ni con fe80, ni parece IPv4. Pasaba.
+rechaza("http://[::ffff:169.254.169.254]/latest/meta-data/");
+rechaza("http://[::ffff:a9fe:a9fe]/");
+rechaza("http://[::ffff:127.0.0.1]/");
+rechaza("http://[::ffff:10.0.0.1]/");
+rechaza("http://[::]/");
+rechaza("http://[0:0:0:0:0:0:0:1]/");
+rechaza("http://[2001:4860:4860::8888]/logo.png"); // hasta las publicas: un logo
+                                                    // real no vive en una IPv6 cruda
+
 console.log("\n2) Protocolos que no son http(s)");
 rechaza("file:///etc/passwd");
 rechaza("gopher://127.0.0.1:11211/");

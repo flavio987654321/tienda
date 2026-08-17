@@ -161,9 +161,15 @@ export async function GET(
   return new Response(html, {
     headers: {
       "Content-Type": "text/html; charset=utf-8",
-      // La guarda el service worker en su caché; el navegador no tiene por qué
-      // quedarse con una versión vieja del logo o del nombre.
-      "Cache-Control": "no-store",
+      /* Se deja cachear una hora, igual que el ícono.
+         Estaba en `no-store` pensando en que el service worker se quedara siempre
+         con lo último. Pero el que la guarda es la Cache API, que no mira este
+         header — así que lo único que hacía `no-store` era obligar a recomponer
+         todo, incluida una render de Satori para el ícono, cada vez que un service
+         worker arranca y pide refrescar. Y arrancan seguido.
+         Con una hora, el logo tarda a lo sumo eso en actualizarse y deja de haber
+         dos invocaciones caras por cada visita. */
+      "Cache-Control": "public, max-age=3600, stale-while-revalidate=86400",
     },
   });
 }

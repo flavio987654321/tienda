@@ -100,9 +100,13 @@ self.addEventListener("activate", (event) => {
  * cada página que se abre. */
 let yaRefresque = false;
 function refrescarPantallaOffline() {
-  if (yaRefresque) return;
+  if (yaRefresque) return Promise.resolve();
   yaRefresque = true;
-  caches
+  // DEVUELVE la promesa: sin esto el `waitUntil` de abajo mantenía vivo al worker
+  // un microtask y nada más, así que el navegador lo podía apagar en la mitad del
+  // guardado. Y como la bandera ya había quedado en true, no se reintentaba: el
+  // logo viejo se quedaba igual, que es justo lo que esto viene a evitar.
+  return caches
     .open(CACHE_NAME)
     .then((cache) => cache.add(OFFLINE_URL))
     .catch(() => {
@@ -123,7 +127,7 @@ self.addEventListener("fetch", (event) => {
   event.respondWith(
     fetch(event.request)
       .then((res) => {
-        event.waitUntil(Promise.resolve().then(refrescarPantallaOffline));
+        event.waitUntil(refrescarPantallaOffline());
         return res;
       })
       .catch(() =>

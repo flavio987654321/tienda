@@ -20,6 +20,11 @@ export const metadata: Metadata = {
   // pantalla. Ver el comentario largo en la metadata de la tienda.
   icons: { apple: [{ url: "/api/icons/dashboard?size=180", sizes: "180x180" }] },
   appleWebApp: { capable: true, title: "Panel", statusBarStyle: "default" },
+  // El prefijado de Apple va a mano, igual que en la tienda: `appleWebApp.capable`
+  // emite el nombre estándar, que entiende Safari 17.4 para arriba. Sin esta línea,
+  // en un iPhone más viejo el panel se instalaba como un simple marcador de Safari
+  // en vez de abrirse a pantalla completa.
+  other: { "apple-mobile-web-app-capable": "yes" },
 };
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {

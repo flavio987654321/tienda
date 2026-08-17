@@ -32,18 +32,25 @@ export function useLoginForm(alEntrar: () => void) {
   /** Ya entró y se está yendo. La pantalla puede tapar el formulario con esto. */
   const [entrando, setEntrando] = useState(false);
 
-  /* Candado sincrónico contra el doble clic, igual que el `pendingRef` del botón
+  /* Candados sincrónicos contra el doble clic, igual que el `pendingRef` del botón
      de seguir y el `subiendo` de la carga de logo.
+
      El `disabled={loading}` del botón no alcanza: ese estado recién bloquea en el
      render SIGUIENTE, y dos toques rápidos —o un Enter mantenido en el teclado del
      celular— entran los dos antes. Eran dos intentos de login en paralelo contra
-     Supabase por cada apuro. */
-  const enVuelo = useRef(false);
+     Supabase por cada apuro.
+
+     Son DOS candados y no uno compartido: con uno solo, alguien que tocaba
+     "¿olvidaste tu contraseña?" y enseguida intentaba entrar se encontraba con que
+     el botón de ingresar no hacía nada, sin ningún aviso, hasta que terminara el
+     pedido del mail. Son dos acciones distintas y cada una se cuida sola. */
+  const ingresando = useRef(false);
+  const recuperando = useRef(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (enVuelo.current) return;
-    enVuelo.current = true;
+    if (ingresando.current) return;
+    ingresando.current = true;
     setLoading(true);
     setError("");
     setInfo("");
@@ -53,7 +60,7 @@ export function useLoginForm(alEntrar: () => void) {
     const fallar = (msg: string) => {
       setError(msg);
       setLoading(false);
-      enVuelo.current = false;
+      ingresando.current = false;
     };
 
     if (!hasSupabaseBrowserConfig()) {
@@ -87,9 +94,9 @@ export function useLoginForm(alEntrar: () => void) {
   }
 
   async function handleForgotPassword() {
-    // El mismo candado: sin esto, dos toques seguidos mandaban dos mails de
+    // Su propio candado: sin esto, dos toques seguidos mandaban dos mails de
     // recuperación.
-    if (enVuelo.current) return;
+    if (recuperando.current) return;
     setError("");
     setInfo("");
 
@@ -98,7 +105,7 @@ export function useLoginForm(alEntrar: () => void) {
       return;
     }
 
-    enVuelo.current = true;
+    recuperando.current = true;
     setResetting(true);
     try {
       // Mismo motivo que arriba: sin red, `fetch` rechaza y `resetting` se
@@ -113,7 +120,7 @@ export function useLoginForm(alEntrar: () => void) {
       setError("No pudimos conectarnos. Revisá tu conexión e intentá de nuevo.");
     } finally {
       setResetting(false);
-      enVuelo.current = false;
+      recuperando.current = false;
     }
   }
 

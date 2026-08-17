@@ -2186,10 +2186,10 @@ function ProductosPageInner() {
 
       {/* ── WHATSAPP FLOTANTE ───────────────────────────────────────────
           Se esconde con la ficha abierta, igual que ya se escondía con el carrito
-          y el checkout. El globo es `fixed` con zIndex 500 y la ficha vive en 200:
-          quedaba flotando ARRIBA del modal, tapándole la esquina —y en celular,
-          justo encima de la barra de comprar, que es el botón que hay que apretar.
-          Un botón de WhatsApp tapando el de agregar al carrito. */}
+          y el checkout. El globo es `fixed` y vive en una capa más alta que la
+          ficha: quedaba flotando ARRIBA del modal, tapándole la esquina —y en
+          celular, justo encima de la barra de comprar, que es el botón que hay que
+          apretar. Un botón de WhatsApp tapando el de agregar al carrito. */}
       {!cartOpen && !checkoutOpen && !modalProduct && whatsapp?.enabled && (
         <>
           <style>{`
@@ -2786,7 +2786,7 @@ function ProductosPageInner() {
           Lo abre "Escribí tu reseña", que está arriba de la lista. Antes el
           formulario era lo último de la ficha: con muchas reseñas cargadas había
           que bajarlas todas para llegar a escribir la propia.
-          zIndex 250: por encima de la ficha (200) y por debajo del lightbox (300). */}
+          `flotanteBajo`: por encima de la ficha y por debajo del lightbox. */}
       {modalProduct && resenaModalOpen && (
         <div style={{ position:"fixed", inset:0, zIndex:CAPAS.flotanteBajo, background:"rgba(0,0,0,0.6)", backdropFilter:"blur(4px)", display:"flex", alignItems: isMobile ? "flex-end" : "center", justifyContent:"center", padding: isMobile ? 0 : 20 }}
           onClick={() => setResenaModalOpen(false)}>
