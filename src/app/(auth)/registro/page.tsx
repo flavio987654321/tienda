@@ -4,6 +4,7 @@ import { useState, Suspense, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AppLogo } from "@/components/AppLogo";
 import { useTurnstile } from "@/components/Turnstile";
+import { validarContrasena } from "@/lib/password-policy";
 import { isPwa } from "@/lib/pwa";
 import { trackEvent } from "@/lib/meta-pixel";
 import { PRICES as PLAN_PRICES, PRO_MAX_AFFILIATES, PRO_MAX_ACTIVE_COUPONS, PRO_MAX_PRODUCTS } from "@/lib/planLimits";
@@ -132,8 +133,11 @@ function validate(form: { name: string; email: string; password: string; storeNa
     return "El nombre no puede contener números.";
   if (!form.email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))
     return "Ingresá un email válido.";
-  if (!form.password || form.password.length < 6)
-    return "La contraseña debe tener al menos 6 caracteres.";
+  /* La misma regla que aplica el servidor, no una copia parecida: si acá
+     dijera algo distinto, el formulario dejaría pasar contraseñas que la API
+     rechaza —o al revés— y la persona vería un error recién al enviar. */
+  const problemaContrasena = validarContrasena(form.password);
+  if (problemaContrasena) return problemaContrasena;
   if (accountType === "owner") {
     if (!form.storeName.trim() || form.storeName.trim().length < 3)
       return "El nombre de tu tienda debe tener al menos 3 caracteres.";

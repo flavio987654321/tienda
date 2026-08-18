@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { validarContrasena } from "@/lib/password-policy";
 import { CURRENT_TERMS_VERSION } from "@/lib/legal";
 import { verifyTurnstile } from "@/lib/turnstile";
 import { getClientIp } from "@/lib/request-ip";
@@ -39,8 +40,15 @@ export async function POST(req: NextRequest) {
     if (typeof email !== "string" || email.length > 254) {
       return NextResponse.json({ error: "Email inválido" }, { status: 400 });
     }
-    if (typeof password !== "string" || password.length > 72) {
-      return NextResponse.json({ error: "La contraseña no puede superar 72 caracteres" }, { status: 400 });
+    /* Acá SOLO se miraba que fuera texto y que no fuera larguísima: no había
+       ningún mínimo. El formulario pedía 6 caracteres, pero eso corre en el
+       navegador, y quien quiere abrir cuentas a mansalva le pega directo a esta
+       ruta. Se podía registrar con una contraseña de un carácter.
+       La regla vive ahora en `password-policy`, que usan también los dos
+       formularios, así que no puede volver a quedar uno con una regla distinta. */
+    const problemaContrasena = validarContrasena(password);
+    if (problemaContrasena) {
+      return NextResponse.json({ error: problemaContrasena }, { status: 400 });
     }
     if (phone !== undefined) {
       if (typeof phone !== "string" || phone.length > 30) {

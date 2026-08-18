@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { CheckCircle, Eye, EyeOff, Loader2, Lock } from "lucide-react";
 import { createSupabaseBrowserClient, hasSupabaseBrowserConfig } from "@/lib/supabase/client";
+import { validarContrasena } from "@/lib/password-policy";
 
 function ResetPasswordForm() {
   const router = useRouter();
@@ -24,8 +25,13 @@ function ResetPasswordForm() {
       setError("Falta configurar Supabase en las variables de entorno.");
       return;
     }
-    if (password.length < 6) {
-      setError("La contrasena debe tener al menos 6 caracteres.");
+    /* La misma regla que el registro, del mismo archivo. Antes esta pantalla
+       pedía 6 y el registro también, pero eran dos números sueltos: subir uno y
+       olvidarse del otro dejaba la puerta de atrás abierta —quien no puede
+       registrarse con una contraseña débil igual podría ponérsela después, acá. */
+    const problemaContrasena = validarContrasena(password);
+    if (problemaContrasena) {
+      setError(problemaContrasena);
       return;
     }
     if (password !== confirmPassword) {
