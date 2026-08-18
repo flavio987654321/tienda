@@ -176,6 +176,33 @@ export async function createProductFeed(token: string, catalogId: string, feedUr
 }
 
 /**
+ * Pide a Meta que vaya a buscar el feed AHORA, sin esperar al barrido diario.
+ *
+ * `createProductFeed` sólo deja programado el horario, y Meta no trae nada hasta
+ * que ese horario llega. Sin esto, entre que la dueña termina el asistente y ve
+ * su primer producto en Commerce Manager pasaba de una hora a casi un día entero
+ * —según a qué hora hubiera instalado— con los seis pasos en verde todo ese
+ * rato. Encima el catálogo vacío rompe lo que viene después: WhatsApp no deja
+ * conectar un catálogo sin productos y contesta "No se puede establecer la
+ * conexión", sin decir por qué.
+ *
+ * NUNCA tira. Si Meta rechaza la carga, el feed programado ya quedó creado y los
+ * productos van a entrar igual en el próximo barrido: es una mejora de tiempos,
+ * no un paso necesario. Por eso devuelve un booleano en vez de propagar el error
+ * — hoy sólo viaja en la respuesta del endpoint para poder mirarlo desde afuera;
+ * la pantalla no se ramifica, su texto cubre los dos casos.
+ */
+export async function pedirCargaInmediata(token: string, feedId: string, feedUrl: string): Promise<boolean> {
+  try {
+    await graphPost(`/${feedId}/uploads`, token, { url: feedUrl });
+    return true;
+  } catch (err) {
+    console.warn(`Facebook: Meta no aceptó la carga inmediata del feed ${feedId}:`, err);
+    return false;
+  }
+}
+
+/**
  * El feed que YA tenemos sobre este catálogo, si existe.
  *
  * Se busca por la URL programada y no por el nombre, porque el nombre lo puede

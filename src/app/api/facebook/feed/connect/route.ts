@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth-session";
 import { prisma } from "@/lib/prisma";
-import { createProductFeed, buscarFeedPropio, decryptToken, dentroDelTopeGraph } from "@/lib/facebook";
+import { createProductFeed, buscarFeedPropio, pedirCargaInmediata, decryptToken, dentroDelTopeGraph } from "@/lib/facebook";
 import { PUBLIC_APP_URL } from "@/lib/site";
 
 // POST /api/facebook/feed/connect
@@ -34,12 +34,18 @@ export async function POST() {
     const existente = await buscarFeedPropio(token, store.fbCatalogId, feedUrl);
     const feedId = existente ?? (await createProductFeed(token, store.fbCatalogId, feedUrl, `${store.name} — Feed diario`)).id;
 
+    // El feed programado solo dice CUÁNDO, no trae nada todavía. Sin este pedido
+    // el catálogo queda vacío hasta el barrido de las 6 AM — ver `pedirCargaInmediata`.
+    // Va también cuando el feed se reutiliza: se llega acá reconectando, y ahí el
+    // catálogo puede estar tan vacío como la primera vez.
+    const cargaPedida = await pedirCargaInmediata(token, feedId, feedUrl);
+
     await prisma.store.update({
       where: { id: store.id },
       data: { fbFeedId: feedId },
     });
 
-    return NextResponse.json({ ok: true, feedId, reutilizado: existente !== null });
+    return NextResponse.json({ ok: true, feedId, reutilizado: existente !== null, cargaPedida });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     // "(#200) Permissions error" solía significar "todavía no nos aprobaron el

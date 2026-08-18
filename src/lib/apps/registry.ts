@@ -220,7 +220,7 @@ export const APPS_REGISTRY: AppDefinition[] = [
     about: [
       "Un catálogo en WhatsApp es tu vidriera adentro de la app. Cuando alguien te escribe, en vez de mandarle fotos sueltas y escribirle el precio a mano, toca el ícono de la tienda en tu perfil y ve todos tus productos con foto, nombre y precio.",
       "Es el mismo catálogo que esta plataforma ya le manda a Meta para Facebook e Instagram: no es una lista aparte que tengas que cargar de nuevo. Si cambiás un precio o se te agota algo acá, al otro día se ve reflejado en los tres lados a la vez.",
-      "El último paso —decirle a Meta cuál de tus catálogos va en WhatsApp— lo hacés vos, una sola vez, desde el panel de Meta. No lo podemos hacer nosotros: Meta reserva ese permiso para las empresas que envían mensajes por WhatsApp, y nosotros no enviamos mensajes. Abajo te dejamos los lugares donde se hace.",
+      "El último paso —decirle a WhatsApp cuál de tus catálogos mostrar— lo hacés vos, una sola vez, desde la app de WhatsApp Business en tu celular. No lo podemos hacer nosotros: Meta reserva ese permiso para las empresas que envían mensajes por WhatsApp, y nosotros no enviamos mensajes. Abajo te dejamos el paso a paso.",
     ],
     usage: [
       {

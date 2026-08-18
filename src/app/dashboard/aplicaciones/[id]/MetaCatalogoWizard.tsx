@@ -457,7 +457,18 @@ function FeedStep({ done, catalogId }: { done: boolean; catalogId: string | null
   if (done) {
     return (
       <div>
-        <p className="text-sm text-slate-500 mb-3">Tu catálogo ya está sincronizando con Facebook e Instagram.</p>
+        <p className="text-sm text-slate-500 mb-1.5">Tu catálogo ya está sincronizando con Facebook e Instagram.</p>
+        {/* Antes decía sólo la línea de arriba, y la dueña entraba a Commerce Manager
+            esperando ver sus productos ya. Meta tarda en procesar la carga aunque se
+            la pidamos al toque, y de ahí en más viaja una vez por día: si eso no está
+            escrito, cada demora normal parece que algo se rompió.
+
+            El texto no habla de "recién ahora" a propósito: esta tarjeta la sigue
+            viendo una tienda conectada hace meses. */}
+        <p className="text-[11px] text-slate-400 mb-3 leading-relaxed">
+          La primera vez, tus productos pueden tardar unos minutos en aparecer del lado de Meta.
+          Después, los cambios de precio o de stock viajan una vez por día.
+        </p>
         <a
           href={catalogUrl(catalogId)}
           target="_blank"
@@ -473,7 +484,7 @@ function FeedStep({ done, catalogId }: { done: boolean; catalogId: string | null
   return (
     <div>
       <p className="text-sm text-slate-500 mb-4">
-        Último paso: enviamos tus productos al catálogo que elegiste, con una actualización diaria. Meta puede tardar unas horas en procesarlo y, según tu país, pedirte completar datos fiscales para activar la pestaña de Tienda.
+        Último paso: enviamos tus productos al catálogo que elegiste y le pedimos a Meta que los vaya a buscar en el momento; de ahí en más se actualizan una vez por día. Meta puede tardar unos minutos en procesarlos y, según tu país, pedirte completar datos fiscales para activar la pestaña de Tienda.
       </p>
       {error && <AvisoError mensaje={error} />}
       <button

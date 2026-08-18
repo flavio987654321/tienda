@@ -134,6 +134,13 @@ export default async function AppDetailPage({
   const necesitaAtencion =
     metaVencido && installed && (app.id === "meta-catalogo" || app.id === "whatsapp-catalogo");
 
+  // El verde de "Instalada" afirma que lo comprobamos. Para Catálogo en WhatsApp
+  // no comprobamos nada: el último paso lo hace la dueña en Meta y la marca es
+  // suya (ver lib/apps/whatsapp-vinculo). Mostrar el mismo verde que las demás
+  // apps hizo que una tienda quedara "instalada" durante días con el catálogo sin
+  // vincular del otro lado — y no había en toda la pantalla nada que lo desmintiera.
+  const instaladoDeclarado = installed && app.id === "whatsapp-catalogo";
+
   // ¿Ya está lo que vino a buscar acá quien te mandó?
   //
   // No es lo mismo que "esta app está instalada". Hoy el único caso es Catálogo
@@ -234,6 +241,10 @@ export default async function AppDetailPage({
                     ) : necesitaAtencion ? (
                       <span className="inline-flex items-center gap-2 bg-amber-400/10 border border-amber-400/30 text-amber-300 font-bold px-6 py-2.5 rounded-lg text-sm">
                         <AlertTriangle className="h-4 w-4" /> Hay que reconectar
+                      </span>
+                    ) : instaladoDeclarado ? (
+                      <span className="inline-flex items-center gap-2 bg-white/5 border border-white/20 text-slate-300 font-bold px-6 py-2.5 rounded-lg text-sm">
+                        <CheckCircle className="h-4 w-4" /> Marcada por vos
                       </span>
                     ) : installed ? (
                       <span className="inline-flex items-center gap-2 bg-emerald-400/10 border border-emerald-400/30 text-emerald-300 font-bold px-6 py-2.5 rounded-lg text-sm">

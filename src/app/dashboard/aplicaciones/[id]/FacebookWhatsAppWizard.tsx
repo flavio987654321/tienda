@@ -235,32 +235,47 @@ function VincularStep({ done }: { done: boolean }) {
       {error && <AvisoError mensaje={error} />}
 
       <p className="text-sm text-slate-500 mb-1">
-        Este último paso lo hacés vos, del lado de Meta.
+        Este último paso lo hacés vos, desde la app de WhatsApp Business en tu celular.
       </p>
       <p className="text-[11px] text-slate-400 mb-4 leading-relaxed">
         No lo podemos hacer desde acá: Meta le da ese permiso solo a las empresas que envían
         mensajes por WhatsApp, y nosotros armamos tu catálogo, no mandamos mensajes.
       </p>
 
+      {/* Acá había un cartel que decía "todavía no te damos el paso a paso" y dos
+          links sueltos a Meta. El camino se confirmó el 18/08/2026 en un celular
+          real: la opción vive en la app de WhatsApp Business, no en la web de
+          Meta, y por eso los links de antes no llevaban a ningún lado útil. */}
+      <ol className="text-sm text-slate-600 space-y-2 mb-4 list-decimal pl-4 leading-relaxed">
+        <li>Abrí la app de <strong>WhatsApp Business</strong> en tu celular.</li>
+        <li>Entrá a <strong>Herramientas para la empresa</strong> → <strong>Catálogo</strong>.</li>
+        <li>Arriba de todo vas a ver <strong>Administrador de catálogos</strong>.</li>
+        <li>Tocá <strong>“Conectar un catálogo de Meta Business Suite”</strong>.</li>
+        <li>
+          Confirmá tu cuenta de Facebook. Tiene que ser <strong>la misma</strong> con la que
+          conectaste acá arriba, en el paso 1 — si en el celular tenés otra, WhatsApp no va a
+          encontrar tu catálogo.
+        </li>
+        <li>Elegí el catálogo de tu tienda de la lista.</li>
+      </ol>
+
+      {/* El error que devuelve Meta cuando el catálogo está vacío no dice nada:
+          "No se puede establecer la conexión. Se produjo un error." Sin esta
+          advertencia, la dueña lo lee como que la app está rota. */}
       <div className="rounded-lg border border-amber-200 bg-amber-50/70 px-4 py-3.5 mb-4">
         <p className="text-xs text-amber-900 leading-relaxed">
-          <strong>Todavía no te damos el paso a paso.</strong> Dónde aparece la opción cambia según
-          cómo tengas configurada tu cuenta de WhatsApp, y hasta no confirmarlo en una cuenta real
-          preferimos no mandarte a buscar algo que capaz no está ahí. Abajo te dejamos los dos
-          lugares donde vive esto.
+          <strong>Antes de intentarlo, fijate que tu catálogo tenga productos.</strong> Si todavía
+          está vacío, WhatsApp te va a contestar “No se puede establecer la conexión” sin explicarte
+          por qué. Los productos aparecen del lado de Meta a los pocos minutos de terminar la app
+          Catálogo de Meta — si recién la instalaste, dale un rato y volvé.
         </p>
       </div>
 
       <div className="space-y-2.5 mb-4">
         <EnlaceMeta
           href="https://business.facebook.com/commerce_manager"
-          titulo="Commerce Manager"
-          detalle="Acá vive el catálogo que te armamos, con todos tus productos."
-        />
-        <EnlaceMeta
-          href="https://business.facebook.com/latest/settings/whatsapp_account"
-          titulo="Tus cuentas de WhatsApp en Meta"
-          detalle="Acá figura el número que tenés conectado a tu negocio."
+          titulo="Ver si mi catálogo tiene productos"
+          detalle="Commerce Manager, con la misma cuenta de Facebook. Si acá no ves tus productos, WhatsApp tampoco los va a ver."
         />
       </div>
 

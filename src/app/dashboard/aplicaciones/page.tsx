@@ -77,6 +77,12 @@ export default async function AplicacionesPage() {
     "whatsapp-catalogo": metaVencido && installedById["whatsapp-catalogo"],
   };
 
+  // Apps cuya marca la puso el dueño y nosotros no pudimos comprobar. Llevan un
+  // cartel gris en vez del verde: ver el comentario largo en `[id]/page.tsx`.
+  const declaradoById: Record<string, boolean> = {
+    "whatsapp-catalogo": true,
+  };
+
   return (
     <DashboardLayout
       userName={user.name}
@@ -160,7 +166,7 @@ export default async function AplicacionesPage() {
         {/* Librería */}
         <div className="px-6 py-8">
           <div className="max-w-3xl mx-auto">
-            <AppsExplorer installedById={installedById} atencionById={atencionById} />
+            <AppsExplorer installedById={installedById} atencionById={atencionById} declaradoById={declaradoById} />
           </div>
         </div>
       </div>

@@ -11,10 +11,13 @@ const INITIAL_VISIBLE = 6;
 export default function AppsExplorer({
   installedById,
   atencionById = {},
+  declaradoById = {},
 }: {
   installedById: Record<string, boolean>;
   /** Instalada pero necesita que el dueño haga algo (ej: la conexión venció). */
   atencionById?: Record<string, boolean>;
+  /** Marcada por el dueño pero sin comprobar contra el servicio — no lleva el verde. */
+  declaradoById?: Record<string, boolean>;
 }) {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<AppCategory | "todas">("todas");
@@ -66,6 +69,7 @@ export default function AppsExplorer({
             const accent = getAccent(app.id);
             const instalada = installedById[app.id];
             const necesitaAtencion = atencionById[app.id];
+            const declarada = instalada && declaradoById[app.id];
             return (
               <Link
                 key={app.id}
@@ -87,6 +91,10 @@ export default function AppsExplorer({
                     {necesitaAtencion ? (
                       <span className="inline-flex items-center gap-1 shrink-0 text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5">
                         <AlertTriangle className="h-2.5 w-2.5" /> Reconectar
+                      </span>
+                    ) : declarada ? (
+                      <span className="inline-flex items-center gap-1 shrink-0 text-[10px] font-bold text-slate-600 bg-slate-50 border border-slate-200 rounded-full px-2 py-0.5">
+                        <CheckCircle className="h-2.5 w-2.5" /> Marcada por vos
                       </span>
                     ) : instalada ? (
                       <span className="inline-flex items-center gap-1 shrink-0 text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-0.5">
