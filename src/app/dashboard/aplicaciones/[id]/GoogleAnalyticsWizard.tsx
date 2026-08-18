@@ -140,13 +140,16 @@ function PropertyStep({ done }: { done: boolean }) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ accountId }),
     });
+    // Mismo arreglo que en los asistentes de Meta: el spinner se apaga en los dos
+    // caminos. Dejarlo prendido al salir bien apuesta a que el refresh cambie el
+    // paso de estado, y cuando no lo hace el botón queda girando sin salida.
+    setConnectingId(null);
     if (res.ok) {
       router.refresh();
     } else {
       const data = await res.json().catch(() => ({}));
       setError(true);
       setErrorDetail(typeof data.detail === "string" ? data.detail : null);
-      setConnectingId(null);
     }
   }
 

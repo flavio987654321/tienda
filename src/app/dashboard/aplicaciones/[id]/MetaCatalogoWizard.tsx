@@ -169,12 +169,17 @@ function BusinessStep({ done, businessId }: { done: boolean; businessId: string 
     setConnectingId(id);
     setActionError(null);
     const err = await postJson("/api/facebook/business/connect", { businessId: id });
+    // El spinner se apaga SIEMPRE, no sólo al fallar. Antes el camino exitoso lo
+    // dejaba prendido y confiaba en que `router.refresh()` trajera el paso ya
+    // hecho y desmontara la lista: si el refresh tardaba o no cambiaba nada, el
+    // botón quedaba girando para siempre y —porque los demás se deshabilitan con
+    // `connectingId !== null`— la lista entera quedaba muerta hasta recargar.
+    setConnectingId(null);
     if (err) {
       // Va en `actionError` y no en `loadError` a propósito: el error de cargar
       // reemplaza la pantalla del paso, pero si falla el clic hay que dejar la
       // lista a la vista para poder reintentar sobre el mismo portfolio.
       // Antes esto sólo apagaba el spinner y el dueño no se enteraba de nada.
-      setConnectingId(null);
       setActionError(err);
       return;
     }
@@ -285,8 +290,11 @@ function CatalogStep({ done, catalogId }: { done: boolean; catalogId: string | n
     setBusyId("catalogId" in body ? body.catalogId : "nuevo");
     setActionError(null);
     const err = await postJson("/api/facebook/catalogs/connect", body);
+    // Igual que en el paso del portfolio: apagarlo siempre. Acá pesa todavía más
+    // porque al "Cambiar" un catálogo ya conectado el paso sigue estando hecho,
+    // así que el estado no cambia solo y no hay nada que desmonte el spinner.
+    setBusyId(null);
     if (err) {
-      setBusyId(null);
       setActionError(err);
       return;
     }
@@ -441,16 +449,21 @@ function FeedStep({ done, catalogId }: { done: boolean; catalogId: string | null
   // `null` = sin error. El texto viene del backend porque distingue entre "hay
   // que reconectar la cuenta" y una falla cualquiera de la Graph API.
   const [error, setError] = useState<string | null>(null);
+  // Sólo para el reenvío: el paso ya estaba en verde antes de tocar, así que sin
+  // esto no cambia nada en pantalla y no hay forma de saber si pasó algo.
+  const [reenviado, setReenviado] = useState(false);
 
   async function connectFeed() {
     setConnecting(true);
     setError(null);
+    setReenviado(false);
     const err = await postJson("/api/facebook/feed/connect");
+    setConnecting(false);
     if (err) {
       setError(err);
-      setConnecting(false);
       return;
     }
+    setReenviado(true);
     router.refresh();
   }
 
@@ -469,14 +482,41 @@ function FeedStep({ done, catalogId }: { done: boolean; catalogId: string | null
           La primera vez, tus productos pueden tardar unos minutos en aparecer del lado de Meta.
           Después, los cambios de precio o de stock viajan una vez por día.
         </p>
-        <a
-          href={catalogUrl(catalogId)}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 text-sm font-semibold text-indigo-600 hover:text-indigo-700"
-        >
-          Ver mi catálogo en Meta <ExternalLink className="h-3.5 w-3.5" />
-        </a>
+        {error && <AvisoError mensaje={error} />}
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          <a
+            href={catalogUrl(catalogId)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 text-sm font-semibold text-indigo-600 hover:text-indigo-700"
+          >
+            Ver mi catálogo en Meta <ExternalLink className="h-3.5 w-3.5" />
+          </a>
+          {/* Con el paso hecho no había forma de volver a pedirle a Meta que
+              buscara el feed: para reintentar había que desconectar la cuenta y
+              rehacer los seis pasos. Importa porque el endpoint es idempotente
+              —reutiliza el feed que ya existe— y porque las tiendas conectadas
+              desde antes de la carga inmediata no se benefician de ella hasta
+              que alguien la dispare una vez. */}
+          <button
+            onClick={connectFeed}
+            disabled={connecting}
+            className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-500 hover:text-slate-700 transition-colors disabled:opacity-50"
+          >
+            {connecting && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+            {connecting ? "Enviando…" : "Volver a enviar mis productos"}
+          </button>
+        </div>
+        {reenviado ? (
+          <p className="text-[11px] text-emerald-600 font-semibold mt-2 leading-relaxed">
+            Listo, se lo pedimos a Meta. Tus productos deberían aparecer en unos minutos.
+          </p>
+        ) : (
+          <p className="text-[11px] text-slate-400 mt-2 leading-relaxed">
+            Usá “volver a enviar” si en Meta no ves tus productos y no querés esperar al envío de
+            mañana. No duplica nada: es el mismo catálogo, actualizado.
+          </p>
+        )}
       </div>
     );
   }

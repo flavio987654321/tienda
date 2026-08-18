@@ -138,7 +138,11 @@ function BusinessStep({ done, businessId }: { done: boolean; businessId: string 
     setConnectingId(id);
     setActionError(null);
     const err = await postJson("/api/facebook/business/connect", { businessId: id });
-    if (err) { setConnectingId(null); setActionError(err); return; }
+    // Apagar el spinner también al salir bien: si no, cuando `router.refresh()`
+    // tarda o no cambia el estado del paso, el botón gira para siempre y los
+    // demás quedan deshabilitados. Mismo arreglo que en MetaCatalogoWizard.
+    setConnectingId(null);
+    if (err) { setActionError(err); return; }
     router.refresh();
   }
 
@@ -223,7 +227,10 @@ function PixelStep({ done, pixelId }: { done: boolean; pixelId: string | null })
     setBusyId("pixelId" in body ? body.pixelId : "nuevo");
     setActionError(null);
     const err = await postJson("/api/facebook/pixel/connect", body);
-    if (err) { setBusyId(null); setActionError(err); return; }
+    // Al "Cambiar" un pixel ya conectado el paso sigue hecho, así que nada
+    // desmonta el spinner solo: hay que apagarlo acá.
+    setBusyId(null);
+    if (err) { setActionError(err); return; }
     setChanging(false);
     router.refresh();
   }
