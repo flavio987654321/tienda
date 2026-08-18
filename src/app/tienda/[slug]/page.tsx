@@ -270,6 +270,29 @@ export default async function TiendaPage({ params, searchParams }: TiendaPagePro
 
   return (
     <>
+      {/* Dónde queda la página al entrar desde otra pantalla.
+
+          Al navegar, el router busca a qué elemento llevar el scroll: agarra el
+          primero de la pantalla nueva y va probando hermanos hasta encontrar uno
+          que sirva. Saltea a propósito los `fixed` y los `sticky` —para no
+          quedarse con un nav pegado arriba y creer que ya está viendo el
+          contenido— y también los de tamaño cero.
+
+          En una tienda eso descarta TODO lo de arriba: los scripts de
+          seguimiento no ocupan lugar, la tapa de la PWA y el banner de instalar
+          son `fixed`, y el encabezado del template es `sticky`. Sin ningún
+          candidato válido, el router sigue caminando hermanos hasta el final del
+          documento y termina eligiendo la barrita de progreso de carga, que vive
+          abajo de todo. Resultado: entrabas a una tienda desde el listado y
+          aparecías en la mitad de la página.
+
+          Esto le da un candidato de verdad, arriba de todo: 1px absoluto, fuera
+          del flujo —no mueve nada ni se ve— y con posición 0. El router lo
+          encuentra, ve que ya está a la vista y no scrollea a ningún lado. */}
+      <div
+        aria-hidden="true"
+        style={{ position: "absolute", top: 0, left: 0, width: 1, height: 1 }}
+      />
       <StoreTrackingScripts
         googleAnalyticsId={config.analytics?.googleAnalyticsId}
         facebookPixelId={config.analytics?.facebookPixelId}
