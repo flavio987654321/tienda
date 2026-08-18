@@ -4,17 +4,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { pedirTurno } from "@/lib/interrupcion-tienda";
 import { CAPAS } from "@/lib/capas-tienda";
+import { esIOS } from "@/lib/pwa";
 import { X, Download, Share } from "lucide-react";
 
-/* iPhone y iPad. El iPad moderno se declara "MacIntel", así que sin mirar
-   `maxTouchPoints` se cuela como escritorio y nunca ve las instrucciones. */
-function esIOS(): boolean {
-  const ua = navigator.userAgent;
-  return (
-    /iPad|iPhone|iPod/.test(ua) ||
-    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
-  );
-}
+/* `esIOS` vivía acá. Se movió a `lib/pwa` cuando el panel necesitó hacer la
+   misma pregunta —en iPhone las notificaciones piden la app instalada—, para no
+   quedarnos con dos definiciones que un día digan cosas distintas. */
 
 /* Y tiene que ser Safari DE VERDAD.
  *

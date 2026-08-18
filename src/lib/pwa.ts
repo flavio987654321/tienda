@@ -52,3 +52,25 @@ export function isPwa(): boolean {
   if (esAppInstalada()) return true;
   return new URLSearchParams(window.location.search).get("source") === "pwa";
 }
+
+/**
+ * ¿Es un iPhone o un iPad?
+ *
+ * Importa más de lo que parece: en iOS las notificaciones web SOLO funcionan si
+ * la app está instalada en la pantalla de inicio (iOS 16.4+). Es una regla de
+ * Apple, no algo que podamos rodear. Sin instalar, pedir el permiso no sirve de
+ * nada: el navegador ni siquiera muestra el diálogo.
+ *
+ * El iPad moderno se declara "MacIntel" en el user agent, así que sin mirar
+ * `maxTouchPoints` se cuela como escritorio. Estaba escrito así dentro de
+ * `PwaInstallBanner`; se movió acá cuando el panel necesitó la misma pregunta,
+ * para no tener dos definiciones que un día digan cosas distintas.
+ */
+export function esIOS(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent;
+  return (
+    /iPad|iPhone|iPod/.test(ua) ||
+    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
+  );
+}

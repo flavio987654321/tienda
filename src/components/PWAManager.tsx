@@ -2,7 +2,8 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { RefreshCw, X, Bell, Loader2 } from "lucide-react";
-import { subscribeToPush, isPushSupported } from "@/lib/push-client";
+import { subscribeToPush, isPushSupported, asegurarSuscripcionDelPanel } from "@/lib/push-client";
+import { esIOS, esAppInstalada } from "@/lib/pwa";
 
 // ─── Notification sound via Web Audio API (no binary file needed) ───────────
 function playNotificationSound() {
@@ -44,15 +45,27 @@ interface Props {
   appVersion?: string;
   versionKey?: string;
   disableNotifPrompt?: boolean;
+  /* Dónde vive el service worker de esta app.
+     El panel pasa "/dashboard", que es el mismo `scope` que declara su
+     manifiesto. Tienen que coincidir: Android atribuye la notificación a la app
+     instalada solo si la suscripción nació bajo el service worker que coincide
+     con el scope del manifiesto. Registrándolo en la raíz —como estaba— las
+     notificaciones de pedidos llegaban como "Chrome · tiendaapps.com".
+     Sin este dato se registra en la raíz, que es lo que necesita la web
+     comercial para su pantalla de sin conexión. */
+  scope?: string;
 }
 
-export default function PWAManager({ appVersion, versionKey, disableNotifPrompt = false }: Props) {
+export default function PWAManager({ appVersion, versionKey, disableNotifPrompt = false, scope }: Props) {
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const [waitingWorker, setWaitingWorker] = useState<ServiceWorker | null>(null);
   const [updating, setUpdating] = useState(false);
   const [showUpdatedToast, setShowUpdatedToast] = useState(false);
   const [showNotifBanner, setShowNotifBanner] = useState(false);
   const [promptState, setPromptState] = useState<PromptState>("idle");
+  /* iPhone sin instalar: el cartel cambia de texto y esconde el boton de
+     activar, porque ahi ese boton no puede hacer nada. */
+  const [enIOSsinInstalar, setEnIOSsinInstalar] = useState(false);
   // Build que está sirviendo el servidor cuando detectamos que hay algo nuevo.
   // Se guarda para poder silenciar el aviso de ESE build si el usuario lo cierra.
   const [serverBuildId, setServerBuildId] = useState<string | null>(null);
@@ -112,8 +125,21 @@ export default function PWAManager({ appVersion, versionKey, disableNotifPrompt 
     let onVisibility: (() => void) | null = null;
 
     navigator.serviceWorker
-      .register("/sw.js", { updateViaCache: "none" })
+      .register("/sw.js", { updateViaCache: "none", ...(scope ? { scope } : {}) })
       .then((reg) => {
+        /* Si el service worker del scope quedó esperando —lo bloquean las
+           pestañas que todavía maneja el de la raíz— se lo activa ahora. Es
+           seguro: acá el service worker solo sirve para la atribución del push y
+           la pantalla de sin conexión, no dibuja nada que la persona esté
+           mirando. Es lo mismo que ya hace la tienda en `StoreShell`. */
+        if (scope && reg.waiting) reg.waiting.postMessage({ type: "SKIP_WAITING" });
+
+        /* Con el service worker en su lugar, reponer la suscripción si hace
+           falta. Ver el comentario largo en `asegurarSuscripcionDelPanel`: esto
+           es lo que devuelve los avisos a quien los perdió sin enterarse, y lo
+           que borra la dirección vieja que hacía llegar todo por duplicado. */
+        if (scope) asegurarSuscripcionDelPanel(scope);
+
         const handleWaiting = (worker: ServiceWorker | null) => {
           if (!worker) return;
           setWaitingWorker(worker);
@@ -151,14 +177,29 @@ export default function PWAManager({ appVersion, versionKey, disableNotifPrompt 
       if (onVisibility) document.removeEventListener("visibilitychange", onVisibility);
       navigator.serviceWorker.removeEventListener("message", onMessage);
     };
-  }, []);
+  }, [scope]);
 
   // ── Notification permission prompt (dashboard only) ──────────────────────
   useEffect(() => {
     if (disableNotifPrompt) return;
+    if (localStorage.getItem(NOTIF_PROMPT_KEY)) return;
+
+    /* iPhone sin la app instalada. Va ANTES del chequeo de soporte, y ese es todo
+       el punto: en iOS, fuera de la app instalada, `Notification` y `PushManager`
+       no existen, así que `isPushSupported()` da false y el cartel cortaba acá.
+       Resultado: al comerciante con iPhone no se le decía nada. Ni el permiso, ni
+       que instalando sí puede. Silencio, y avisos de pedidos que nunca llegan.
+       Ahora se le muestra lo único que le sirve: cómo instalarla. */
+    if (esIOS() && !esAppInstalada()) {
+      const t = setTimeout(() => {
+        setEnIOSsinInstalar(true);
+        setShowNotifBanner(true);
+      }, 4000);
+      return () => clearTimeout(t);
+    }
+
     if (!isPushSupported()) return;
     if (Notification.permission !== "default") return;
-    if (localStorage.getItem(NOTIF_PROMPT_KEY)) return;
     const t = setTimeout(() => setShowNotifBanner(true), 4000);
     return () => clearTimeout(t);
   }, [disableNotifPrompt]);
@@ -273,11 +314,19 @@ export default function PWAManager({ appVersion, versionKey, disableNotifPrompt 
               <Bell className="h-4 w-4 text-indigo-600" />
             </div>
             <div className="min-w-0 flex-1">
+              {/* En iPhone el texto es otro, y no es un detalle de redacción.
+                  Apple no permite notificaciones web salvo que la app esté en la
+                  pantalla de inicio: sin instalarla, tocar "Activar ahora" no
+                  hace nada —el diálogo del permiso ni siquiera aparece— y la
+                  persona queda esperando avisos que no van a llegar nunca.
+                  Antes se le pedía el permiso igual que en Android. */}
               <p className="text-sm font-bold text-gray-900">
-                Activá las notificaciones
+                {enIOSsinInstalar ? "Instalá el panel para recibir avisos" : "Activá las notificaciones"}
               </p>
               <p className="mt-0.5 text-xs leading-relaxed text-gray-500">
-                Te avisamos cuando recibís un pedido nuevo, incluso con el navegador cerrado.
+                {enIOSsinInstalar
+                  ? "En iPhone los avisos llegan solo con la app instalada. Tocá Compartir y después «Agregar a inicio»."
+                  : "Te avisamos cuando recibís un pedido nuevo, incluso con el navegador cerrado."}
               </p>
               {promptState === "error" && (
                 <p className="mt-1.5 text-xs font-medium text-red-500">
@@ -285,8 +334,12 @@ export default function PWAManager({ appVersion, versionKey, disableNotifPrompt 
                 </p>
               )}
               <div className="mt-3 flex items-center gap-2">
+                {/* En iPhone no hay botón que pueda hacer nada: instalar es un
+                    gesto del navegador que ninguna página puede disparar. Queda
+                    solo el "Entendido", que cierra. */}
                 <button
                   onClick={enableNotifications}
+                  hidden={enIOSsinInstalar}
                   disabled={promptState === "loading"}
                   className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-indigo-600 px-3 py-2 text-xs font-bold text-white transition-colors hover:bg-indigo-700 disabled:opacity-60"
                 >

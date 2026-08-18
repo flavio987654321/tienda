@@ -233,3 +233,93 @@ export async function migrateStoreSubscription(storeId: string, storeSlug: strin
     }
   } catch {}
 }
+
+/* ───────────────────────────────────────────────────────────────────────────
+ * El panel: una sola dirección de entrega, en la puerta correcta.
+ *
+ * Tres problemas que arregla esta función, y los tres se veían en la base:
+ *
+ *   1. LAS DIRECCIONES SE PERDÍAN Y NADIE HACÍA UNA NUEVA.
+ *      Cuando una suscripción vence, el servidor la borra al primer envío que
+ *      falla (410/404), y hace bien. Pero después nadie la reemplazaba: el
+ *      cartel de "activá las notificaciones" solo aparece si el permiso está en
+ *      `default`, y el de esta persona ya está en `granted`. O sea que dejaba de
+ *      recibir avisos de pedidos, para siempre, sin enterarse. Seguía viendo el
+ *      permiso dado y confiando en que le iban a llegar.
+ *
+ *   2. SE ACUMULABAN. `sendPushToUser` manda a TODAS las filas del usuario, y
+ *      cada re-suscripción crea una fila nueva porque el endpoint cambia. En la
+ *      base había alguien con cuatro para la misma tienda: cada novedad le
+ *      llegaba cuatro veces.
+ *
+ *   3. ESTABAN ANOTADAS EN LA PUERTA EQUIVOCADA. El manifiesto del panel declara
+ *      `/dashboard`, pero el service worker se registraba en la raíz. Android
+ *      atribuye la notificación a la app instalada solo si la suscripción nació
+ *      bajo el service worker que coincide con ese scope; si no, la muestra como
+ *      "Chrome · tiendaapps.com".
+ *
+ * No pide permiso ni muestra ningún diálogo: si el permiso no está dado, se va.
+ * Suscribir con el permiso ya concedido es silencioso.
+ * ─────────────────────────────────────────────────────────────────────────── */
+export async function asegurarSuscripcionDelPanel(scope: string): Promise<void> {
+  try {
+    if (!isPushSupported()) return;
+    // Sin permiso no hay nada que hacer acá: de eso se encarga el cartel.
+    if (Notification.permission !== "granted") return;
+
+    const reg = await navigator.serviceWorker.getRegistration(scope);
+    if (!reg?.active) return;
+
+    const keyRes = await fetch("/api/push/vapid-key");
+    if (!keyRes.ok) return;
+    const { publicKey } = await keyRes.json();
+
+    // La del scope correcto. Si no existe, se crea; si ya existe, se deja.
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub) {
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(publicKey),
+      });
+    }
+
+    const json = sub.toJSON();
+    const res = await fetch("/api/push/subscribe", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ endpoint: json.endpoint, keys: json.keys }),
+    });
+    if (!res.ok) return;
+
+    /* Y ahora la vieja, la de la raíz, la que hacía llegar todo por duplicado.
+       Se borra SOLO la de este mismo aparato: quien usa el panel en la
+       computadora y en el celular tiene una fila legítima por cada uno, y borrar
+       "todas las demás del usuario" le apagaría la otra.
+
+       Se borra la fila del servidor y NO se llama a `unsubscribe()`, aunque a
+       primera vista sea lo prolijo. El motivo: una registración de service worker
+       tiene UNA sola suscripción, y la de la raíz puede estar sirviendo también a
+       una tienda — `getStoreReg` cae a la raíz cuando el service worker de la
+       tienda todavía no terminó de activarse. Dándola de baja del navegador se
+       mataría de paso el aviso de novedades de esa tienda, que no tiene nada que
+       ver con el panel.
+
+       Dejarla viva del lado del navegador no cuesta nada: las repeticiones salen
+       de las FILAS de la base, que es a quien se le manda, y esa ya no está. Y
+       esta función solo mira la registración del scope, así que no la va a
+       registrar de nuevo. */
+    const raiz = await navigator.serviceWorker.getRegistration("/");
+    if (!raiz || raiz.scope === reg.scope) return;
+
+    const vieja = await raiz.pushManager.getSubscription();
+    if (!vieja || vieja.endpoint === sub.endpoint) return;
+
+    await fetch("/api/push/subscribe", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ endpoint: vieja.endpoint }),
+    }).catch(() => {});
+  } catch {
+    // Nunca romper el panel por esto: es una mejora de fondo, no una función.
+  }
+}

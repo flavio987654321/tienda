@@ -53,7 +53,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
        Sí va sin el pedido de notificaciones: no hay a quién notificarle todavía. */
     return (
       <>
-        <PWAManager appVersion={DASHBOARD_VERSION} versionKey="pwa_dashboard_version" disableNotifPrompt />
+        <PWAManager appVersion={DASHBOARD_VERSION} versionKey="pwa_dashboard_version" disableNotifPrompt scope="/dashboard" />
         <LoginGate />
       </>
     );
@@ -124,7 +124,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   return (
     <>
-      <PWAManager appVersion={DASHBOARD_VERSION} versionKey="pwa_dashboard_version" />
+      <PWAManager appVersion={DASHBOARD_VERSION} versionKey="pwa_dashboard_version" scope="/dashboard" />
       {user && <SubscriptionRealtimeRefresher userId={user.id} />}
       <Suspense><SubscriptionSuccessBanner /></Suspense>
       {gate && <div className="pt-14 lg:pt-0 lg:pl-14 bg-gray-50 [color-scheme:light]">{gate}</div>}
