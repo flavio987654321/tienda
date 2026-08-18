@@ -4,7 +4,7 @@ import { useState, Suspense, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AppLogo } from "@/components/AppLogo";
 import { useTurnstile } from "@/components/Turnstile";
-import { validarContrasena } from "@/lib/password-policy";
+import { validarContrasena, LARGO_MINIMO } from "@/lib/password-policy";
 import { isPwa } from "@/lib/pwa";
 import { trackEvent } from "@/lib/meta-pixel";
 import { PRICES as PLAN_PRICES, PRO_MAX_AFFILIATES, PRO_MAX_ACTIVE_COUPONS, PRO_MAX_PRODUCTS } from "@/lib/planLimits";
@@ -208,7 +208,11 @@ function RegistroContent() {
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) err = "Email inválido.";
     }
     if (name === "password" && value) {
-      if (value.length < 6) err = "Mínimo 6 caracteres.";
+      /* La misma regla que el envío y que el servidor. Era una CUARTA copia: acá
+         decía 6 y aprobaba el campo, y recién al enviar aparecía que el mínimo
+         era otro. El aviso mientras se escribe y el del envío tienen que salir
+         de la misma función o se contradicen entre ellos. */
+      err = validarContrasena(value) ?? "";
     }
     if (name === "storeName" && value && accountType === "owner") {
       if (value.trim().length < 3) err = "Mínimo 3 caracteres.";
@@ -596,7 +600,7 @@ function RegistroContent() {
                 <div className="relative">
                   <input
                     type={showPass ? "text" : "password"} name="password" value={form.password} onChange={handleChange} onBlur={handleBlur}
-                    placeholder="Mínimo 6 caracteres"
+                    placeholder={`Mínimo ${LARGO_MINIMO} caracteres`}
                     className={`w-full bg-gray-50 border rounded-2xl px-4 py-3.5 pr-12 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 ${colors.ring} text-sm hover:border-gray-300 transition-all ${fieldErrors.password ? "border-red-400" : "border-gray-300"}`}
                   />
                   <button
@@ -609,7 +613,7 @@ function RegistroContent() {
                 </div>
                 {fieldErrors.password
                   ? <p className="text-xs text-red-500 mt-1">{fieldErrors.password}</p>
-                  : <p className="text-xs text-gray-500 mt-1">Mínimo 6 caracteres.</p>
+                  : <p className="text-xs text-gray-500 mt-1">{`Mínimo ${LARGO_MINIMO} caracteres.`}</p>
                 }
               </div>
 
