@@ -238,7 +238,18 @@ function BusinessStep({ done, businessId }: { done: boolean; businessId: string 
   return (
     <div>
       {actionError && <AvisoError mensaje={actionError} />}
-      <p className="text-sm text-slate-500 mb-3">Elegí a qué portfolio comercial pertenece tu catálogo.</p>
+      <p className="text-sm text-slate-500 mb-1">Elegí a qué portfolio comercial pertenece tu catálogo.</p>
+      {/* Meta contesta TODOS los portfolios donde la cuenta figura, y no distingue
+          los propios de aquellos donde a uno lo agregaron. Una comerciante que
+          alguna vez entró al portfolio de una agencia, de un socio o de un familiar
+          ve el de esa otra persona como única opción, elige el único que hay, y su
+          catálogo termina viviendo adentro del negocio ajeno. Desde ahí su WhatsApp
+          no lo encuentra nunca, porque cuelga de ella y el catálogo cuelga del otro.
+          Pasó de verdad, y no había en la pantalla nada que lo insinuara. */}
+      <p className="text-[11px] text-slate-400 mb-3 leading-relaxed">
+        Tu catálogo va a vivir adentro del que elijas. Si alguno de estos es de otra persona
+        —una agencia, un socio, un familiar que te agregó—, mejor creá el tuyo abajo.
+      </p>
       <div className="space-y-2">
         {businesses.map((b) => (
           <div key={b.id} className="flex items-center justify-between border border-slate-200 rounded-lg px-4 py-3">
@@ -253,6 +264,26 @@ function BusinessStep({ done, businessId }: { done: boolean; businessId: string 
             </button>
           </div>
         ))}
+      </div>
+
+      {/* Antes esto sólo existía cuando la lista venía VACÍA: si Meta devolvía aunque
+          fuera un portfolio ajeno, no quedaba ninguna puerta para crear el propio.
+          Es el caso que dejó a una tienda enganchada al portfolio de otro. */}
+      <div className="mt-3 pt-3 border-t border-slate-100 flex flex-wrap items-center gap-x-4 gap-y-2">
+        <a
+          href="https://business.facebook.com/overview"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1.5 text-sm font-semibold text-indigo-600 hover:text-indigo-700"
+        >
+          <Plus className="h-3.5 w-3.5" /> Crear mi propio portfolio
+        </a>
+        <button
+          onClick={reintentar}
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-700"
+        >
+          <RefreshCw className="h-3 w-3" /> Ya lo creé, buscar de nuevo
+        </button>
       </div>
     </div>
   );

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, ChevronRight, ExternalLink, Unlink, Plus } from "lucide-react";
+import { Loader2, ChevronRight, ExternalLink, Unlink, Plus, RefreshCw } from "lucide-react";
 import {
   StepCard, statusOf, postJson, getJson, AvisoError, ErrorDePaso, AvisoTokenVencido, ConfirmarDesconexion,
   type StepStatus,
@@ -175,7 +175,16 @@ function BusinessStep({ done, businessId }: { done: boolean; businessId: string 
   return (
     <div>
       {actionError && <AvisoError mensaje={actionError} />}
-      <p className="text-sm text-slate-500 mb-3">Elegí a qué portfolio comercial pertenece tu píxel.</p>
+      <p className="text-sm text-slate-500 mb-1">Elegí a qué portfolio comercial pertenece tu píxel.</p>
+      {/* El portfolio es el MISMO dato que usa Catálogo de Meta (`fbBusinessId`),
+          así que el que se elija acá es el que después va a alojar el catálogo.
+          Ver el comentario largo en MetaCatalogoWizard: Meta lista también los
+          portfolios ajenos donde a uno lo agregaron, y sin esta salida el dueño
+          no tiene forma de crear el suyo. */}
+      <p className="text-[11px] text-slate-400 mb-3 leading-relaxed">
+        Es el mismo portfolio que va a usar tu catálogo. Si alguno de estos es de otra persona
+        —una agencia, un socio, un familiar que te agregó—, mejor creá el tuyo abajo.
+      </p>
       <div className="space-y-2">
         {businesses.map((b) => (
           <div key={b.id} className="flex items-center justify-between border border-slate-200 rounded-lg px-4 py-3">
@@ -190,6 +199,23 @@ function BusinessStep({ done, businessId }: { done: boolean; businessId: string 
             </button>
           </div>
         ))}
+      </div>
+
+      <div className="mt-3 pt-3 border-t border-slate-100 flex flex-wrap items-center gap-x-4 gap-y-2">
+        <a
+          href="https://business.facebook.com/overview"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1.5 text-sm font-semibold text-indigo-600 hover:text-indigo-700"
+        >
+          <Plus className="h-3.5 w-3.5" /> Crear mi propio portfolio
+        </a>
+        <button
+          onClick={reintentar}
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-700"
+        >
+          <RefreshCw className="h-3 w-3" /> Ya lo creé, buscar de nuevo
+        </button>
       </div>
     </div>
   );
