@@ -30,7 +30,7 @@ function LoginForm() {
     email, setEmail,
     password, setPassword,
     showPass, setShowPass,
-    error, info, loading, resetting,
+    error, info, loading, resetting, captcha,
     entrando: redirecting,
     handleSubmit, handleForgotPassword,
   } = useLoginForm(() => {
@@ -218,13 +218,19 @@ function LoginForm() {
               </div>
             </div>
 
+            {/* Managed: se resuelve solo y no se ve, salvo que Cloudflare sospeche. */}
+            {captcha.widget}
+
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || !captcha.ready}
               className="w-full bg-orange-600 hover:bg-orange-500 text-white py-4 rounded-2xl font-bold text-base transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-xl shadow-orange-500/25 hover:shadow-orange-500/40 hover:scale-[1.02]"
             >
-              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-              {loading ? "Ingresando..." : "Ingresar a mi cuenta"}
+              {loading || !captcha.ready ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+              {/* Mismo motivo que en `PanelLogin`: mientras el captcha se
+                  resuelve el botón está deshabilitado, y sin texto sería un
+                  botón que no hace nada sin explicar por qué. */}
+              {loading ? "Ingresando..." : !captcha.ready ? "Verificando..." : "Ingresar a mi cuenta"}
             </button>
           </form>
 

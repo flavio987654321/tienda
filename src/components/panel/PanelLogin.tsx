@@ -55,7 +55,7 @@ export default function PanelLogin({
     email, setEmail,
     password, setPassword,
     showPass, setShowPass,
-    error, info, loading, resetting,
+    error, info, loading, resetting, captcha,
     handleSubmit, handleForgotPassword,
   } = useLoginForm(() => window.location.reload());
 
@@ -137,13 +137,22 @@ export default function PanelLogin({
             </div>
           </div>
 
+          {/* En modo managed casi nunca le pide nada a la persona: se resuelve
+              solo y no se ve. Solo aparece si Cloudflare sospecha. */}
+          {captcha.widget}
+
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || !captcha.ready}
             className="w-full bg-orange-600 hover:bg-orange-500 text-white py-4 rounded-2xl font-bold text-base transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-xl shadow-orange-500/25 hover:shadow-orange-500/40"
           >
-            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-            {loading ? "Ingresando..." : "Ingresar"}
+            {loading || !captcha.ready ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+            {/* El captcha tarda entre 2 y 5 segundos en resolverse solo, y hasta
+                que termina el botón está deshabilitado. Sin decir nada es un
+                botón muerto: se toca, no pasa nada, y no hay ninguna pista de
+                por qué. Casi siempre se resuelve mientras se escribe el mail y
+                nadie llega a ver esto. */}
+            {loading ? "Ingresando..." : !captcha.ready ? "Verificando..." : "Ingresar"}
           </button>
         </form>
       </div>
