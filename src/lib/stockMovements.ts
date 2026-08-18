@@ -2,6 +2,7 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { createNotificationMany } from "@/lib/notifications";
 import { sendLowStockEmail } from "@/lib/email";
+import { sendPushToUser } from "@/lib/push";
 
 type TxClient = Prisma.TransactionClient;
 
@@ -60,6 +61,20 @@ const resumenItems = (items: LowStockItem[]) =>
   (items.length > 3 ? "…" : "");
 
 /**
+ * El texto del aviso de "sin stock", en un solo lugar.
+ *
+ * Lo usan la campanita del panel y la notificación que suena en el teléfono. Si
+ * cada una armara su frase, un día dirían cosas distintas para el mismo hecho.
+ */
+function avisoSinStock(items: LowStockItem[]) {
+  return {
+    title: `Sin stock: ${items.length} producto${items.length !== 1 ? "s" : ""}`,
+    body: `${resumenItems(items)} — no se pueden vender hasta reponer.`,
+    link: `/dashboard/productos?destacar=${[...new Set(items.map((i) => i.productId))].join(",")}`,
+  };
+}
+
+/**
  * Quedarse SIN stock y tener stock BAJO son dos avisos distintos, no uno con dos
  * títulos. Antes iban juntos como `LOW_STOCK`, y encima el aviso de cero casi
  * nunca llegaba: sólo lo emitía el PUT de editar producto, así que agotarse
@@ -84,13 +99,7 @@ export async function notifyOwnerLowStock(ownerId: string, items: LowStockItem[]
   const notifs: { userId: string; type: string; title: string; body: string; link: string }[] = [];
 
   if (sinStock.length > 0) {
-    notifs.push({
-      userId: ownerId,
-      type: "OUT_OF_STOCK",
-      title: `Sin stock: ${sinStock.length} producto${sinStock.length !== 1 ? "s" : ""}`,
-      body: `${resumenItems(sinStock)} — no se pueden vender hasta reponer.`,
-      link: linkA(sinStock),
-    });
+    notifs.push({ userId: ownerId, type: "OUT_OF_STOCK", ...avisoSinStock(sinStock) });
   }
   if (bajos.length > 0) {
     notifs.push({
@@ -106,18 +115,20 @@ export async function notifyOwnerLowStock(ownerId: string, items: LowStockItem[]
 }
 
 /**
- * Punto único de salida para los avisos de stock (notificación + email), usado por
- * todos los endpoints que pueden disparar una alerta. Centralizarlo evita que cada
- * endpoint repita el fetch de owner/store y se desincronice del resto.
+ * Punto único de salida para los avisos de stock (campanita + email + teléfono),
+ * usado por todos los endpoints que pueden disparar una alerta. Centralizarlo evita
+ * que cada endpoint repita el fetch de owner/store y se desincronice del resto — y
+ * es lo que hizo que sumar el aviso al teléfono fuera una sola línea acá en vez de
+ * cinco parches repartidos.
  *
- * `email` distingue quién provocó el cambio, que es lo que decide si vale la pena
- * escribirle a la casilla:
+ * `loHizoElDueno` distingue quién provocó el cambio, que es lo que decide si vale
+ * la pena salir del panel para avisar:
  *
- *   - Una VENTA la dueña no la ve venir → campanita + email.
+ *   - Una VENTA la dueña no la ve venir → campanita + email + push si quedó en 0.
  *   - Un ajuste que hizo ELLA (el modal de stock, el ajuste en masa, editar el
  *     producto) lo acaba de hacer con la pantalla delante → sólo campanita. Sin
- *     esto, un "fijar todo en 0" de fin de temporada le mandaba un mail avisándole
- *     de algo que decidió dos segundos antes.
+ *     esto, un "fijar todo en 0" de fin de temporada le mandaba un mail —y ahora
+ *     le haría sonar el teléfono— avisándole de algo que decidió dos segundos antes.
  *
  * La campanita queda siempre: sirve de registro de qué se quedó sin stock y cuándo.
  */
@@ -125,14 +136,25 @@ export async function dispatchLowStockAlerts(
   ownerId: string,
   storeId: string,
   items: LowStockItem[],
-  opciones: { email?: boolean } = {}
+  opciones: { loHizoElDueno?: boolean } = {}
 ) {
   if (items.length === 0) return;
-  const { email: mandarEmail = true } = opciones;
+  /* La opción se llamaba `email` y decidía solo si mandar el mail. Pero lo que
+     en realidad distingue es OTRA cosa: si el cambio de stock lo hizo el dueño
+     con sus propias manos —editando un producto, el ajuste en masa, el modal de
+     stock— o si se lo causó una venta.
+     Ahora que además suena el teléfono, esa diferencia pasó a importar mucho
+     más: avisarle por push "te quedaste sin stock" a quien acaba de escribir un
+     cero en la pantalla que está mirando es ruido puro, y el ruido termina en
+     que silencia las notificaciones y se pierde también las de pedidos.
+     El valor por defecto es "no lo hizo el dueño", que es el caso de las ventas:
+     ahí sí hay que avisar por todos los canales. */
+  const { loHizoElDueno = false } = opciones;
+  const avisarPorFuera = !loHizoElDueno;
 
   const [owner, store] = await Promise.all([
     prisma.user.findUnique({ where: { id: ownerId }, select: { email: true, name: true } }),
-    mandarEmail
+    avisarPorFuera
       ? prisma.store.findUnique({ where: { id: storeId }, select: { name: true } })
       : Promise.resolve(null),
   ]);
@@ -141,7 +163,21 @@ export async function dispatchLowStockAlerts(
     console.error("[notify] notifyOwnerLowStock failed:", err)
   );
 
-  if (mandarEmail && owner?.email) {
+  /* Al teléfono va SOLO el agotado, y solo si lo causó una venta.
+     "Stock bajo" queda en la campanita a propósito: es un "reponé cuando
+     puedas", y si suena por cada producto que cruza el umbral, en dos semanas
+     el comerciante silencia la app y deja de ver los avisos de pedidos, que son
+     los que le hacen ganar plata. Agotado es otra cosa: cada minuto que pasa
+     son ventas que no puede tomar. */
+  const sinStock = items.filter((i) => i.stock === 0);
+  if (avisarPorFuera && sinStock.length > 0) {
+    const { title, body, link } = avisoSinStock(sinStock);
+    await sendPushToUser(ownerId, { title, body, url: link }).catch((err) =>
+      console.error("[push] aviso de sin stock falló:", err)
+    );
+  }
+
+  if (avisarPorFuera && owner?.email) {
     await sendLowStockEmail({
       ownerEmail: owner.email,
       ownerName: owner.name || "vendedor",

@@ -739,8 +739,14 @@ export async function POST(req: NextRequest) {
         url: `/dashboard/pedidos`,
       }), "checkout: push al dueño");
 
-      // Aviso de agotado por venta: campanita + email, igual que el de stock bajo.
-      // Va acá, con la transacción ya confirmada y el dueño ya resuelto.
+      /* Aviso de agotado por venta: campanita + email + teléfono.
+         Va acá, con la transacción ya confirmada y el dueño ya resuelto.
+
+         Sí, en una compra que agota un producto suenan DOS avisos seguidos: el
+         del pedido, arriba, y este. Es a propósito — son dos hechos distintos y
+         cada uno pide algo diferente: uno hay que prepararlo, el otro hay que
+         reponerlo. Juntarlos en un solo mensaje escondería el segundo, que es el
+         que sigue costando ventas mientras nadie lo mire. */
       if (agotadosPorVenta.length > 0) {
         despues(
           () => dispatchLowStockAlerts(storeOwner.ownerId, order.storeId, agotadosPorVenta),

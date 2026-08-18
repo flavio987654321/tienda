@@ -4,12 +4,25 @@ import { createNotification } from "@/lib/notifications";
 import { recordStockMovement, wentBackAboveThreshold, dispatchLowStockAlerts, DEFAULT_LOW_STOCK_THRESHOLD, type LowStockItem } from "@/lib/stockMovements";
 import { ORDER_ACTION_TRANSITIONS } from "@/lib/orders";
 import { despues } from "@/lib/despues";
+import { sendPushToUser } from "@/lib/push";
 
 type RunOrderActionInput = {
   orderId: string;
   ownerId: string;
   action: string;
   trackingCode?: string;
+  /**
+   * Quién disparó la acción. Cambia el texto del aviso y si suena el teléfono.
+   *
+   * "dueño" es el caso normal: lo hizo desde el panel, con la pantalla delante.
+   * Ahí la campanita alcanza — hacerle sonar el celular por su propio clic es
+   * ruido, y el ruido termina en que silencia la app y se pierde los pedidos.
+   *
+   * "mercadopago" es cuando el pago se rechaza y la venta se cae sola. Eso pasa
+   * sin que el dueño esté mirando y le cambia el día: tenía una venta y ya no.
+   * Ese sí va al teléfono.
+   */
+  origen?: "dueño" | "mercadopago";
 };
 
 // Aplica una acción de cambio de estado a un pedido: valida la transición, corre la
@@ -40,7 +53,7 @@ function limpiarTracking(crudo: string | undefined): string | undefined {
   return limpio.length > 0 ? limpio : undefined;
 }
 
-export async function runOrderAction({ orderId: id, ownerId, action, trackingCode: trackingCrudo }: RunOrderActionInput) {
+export async function runOrderAction({ orderId: id, ownerId, action, trackingCode: trackingCrudo, origen = "dueño" }: RunOrderActionInput) {
   const trackingCode = limpiarTracking(trackingCrudo);
   // Se llenan dentro de la transacción y se despachan después de que comprometa —
   // así un rollback posterior (ej. error en comisión) no deja un aviso ya enviado
@@ -462,13 +475,39 @@ export async function runOrderAction({ orderId: id, ownerId, action, trackingCod
   }
 
   if (action === "cancel") {
+    /* El texto no puede ser el mismo para los dos casos. "El pedido fue
+       cancelado" describe bien lo que hizo el dueño desde el panel, pero cuando
+       lo cancela MercadoPago por un pago rechazado esa frase esconde justo lo
+       que hay que entender: nadie de la tienda lo canceló, se cayó el cobro. */
+    const porPagoRechazado = origen === "mercadopago";
+    const aviso = porPagoRechazado
+      ? {
+          title: "Se cayó una venta",
+          body: "El pago fue rechazado, el pedido se canceló y el stock volvió a tu inventario.",
+        }
+      : {
+          title: "Pedido cancelado",
+          body: "El pedido fue cancelado y el stock fue restaurado.",
+        };
+    const link = `/dashboard/pedidos/${result.id}`;
+
     despues(() => createNotification({
       userId: ownerId,
       type: "ORDER_CANCELLED",
-      title: "Pedido cancelado",
-      body: `El pedido fue cancelado y el stock fue restaurado.`,
-      link: `/dashboard/pedidos/${result.id}`,
+      ...aviso,
+      link,
     }), "pedido: campanita cancelado");
+
+    /* Al teléfono solo si NO lo hizo el dueño. Cancelar desde el panel es un clic
+       suyo, con la pantalla delante: avisarle ahí es sonar por algo que acaba de
+       decidir. Un pago rechazado es al revés — pasa mientras hace otra cosa, y
+       es plata que creía tener. */
+    if (porPagoRechazado) {
+      despues(
+        () => sendPushToUser(ownerId, { ...aviso, url: link }),
+        "pedido: push de venta caída"
+      );
+    }
 
     // Si se revirtió comisión, notificar al afiliado
     if (result.commission && result.affiliateId) {
@@ -482,7 +521,14 @@ export async function runOrderAction({ orderId: id, ownerId, action, trackingCod
           userId: affUser.userId,
           type: "COMMISSION_REVERSED",
           title: "Comisión revertida",
-          body: `La comisión de $${monto.toLocaleString("es-AR")} fue revertida porque el dueño canceló el pedido.`,
+          /* El motivo tiene que ser el de verdad. Hoy este aviso no se alcanza
+             desde el webhook —la comisión se acredita al confirmar el pago, y de
+             ahí solo se cancelan pedidos que todavía estaban pendientes— pero
+             dejar escrito "el dueño canceló" para un caso donde el dueño no hizo
+             nada es una mentira esperando a que alguien la haga alcanzable. */
+          body: porPagoRechazado
+            ? `La comisión de $${monto.toLocaleString("es-AR")} fue revertida porque se rechazó el pago del pedido.`
+            : `La comisión de $${monto.toLocaleString("es-AR")} fue revertida porque el dueño canceló el pedido.`,
           link: "/afiliados/billetera",
         }), "pedido: campanita comision revertida");
       }

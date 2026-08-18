@@ -4,6 +4,7 @@ import { waitUntil } from "@vercel/functions";
 import { prisma } from "@/lib/prisma";
 import MercadoPagoConfig, { Payment } from "mercadopago";
 import { createNotification } from "@/lib/notifications";
+import { runOrderAction } from "@/lib/orderActions";
 import { sendOrderPaymentConfirmedEmail, sendCommissionEarnedEmail, parseOrderPromoSummary } from "@/lib/email";
 import { despues } from "@/lib/despues";
 
@@ -50,24 +51,63 @@ async function processPaymentWebhook(paymentId: string) {
 
     if (payment.status === "cancelled" || payment.status === "rejected" || payment.status === "refunded") {
       // Cancelar la orden si todavía está pendiente
+      /* Acá había una cancelación propia, escrita a mano, y le faltaba lo más
+         importante: NO DEVOLVÍA EL STOCK.
+         El checkout descuenta el stock al crear el pedido, con el pago todavía
+         pendiente. Cancelar desde el panel lo devuelve —`runOrderAction` lo hace
+         unidad por unidad y deja su movimiento de CANCELLATION—. Este camino no.
+         O sea que al primer pago rechazado el comerciante quedaba con menos
+         inventario en el sistema del que tenía en la mano, para siempre y sin
+         ninguna señal: acá tampoco se avisaba a nadie.
+         Tampoco reponía el `lowStockAlertSentAt`, así que la variante quedaba
+         además muda para el próximo aviso de stock bajo.
+         Ahora se cancela por el MISMO camino que el panel. No es solo por el
+         stock: ahí adentro está también la reversión de comisión al afiliado, el
+         mail al comprador y los avisos, todo lo que una cancelación tiene que
+         hacer. Tener dos formas de cancelar donde una está incompleta es la
+         manera segura de que se sigan separando con cada cambio. */
       const orderId = payment.external_reference;
       if (orderId) {
         const order = await prisma.order.findUnique({
           where: { id: orderId },
-          select: { id: true, status: true, couponId: true },
+          select: { id: true, status: true, couponId: true, store: { select: { ownerId: true } } },
         });
-        if (order?.status === "PENDING") {
-          await prisma.$transaction(async (tx) => {
-            await tx.order.update({ where: { id: orderId }, data: { status: "CANCELLED" } });
-            await tx.orderStatusLog.create({ data: { orderId, fromStatus: "PENDING", toStatus: "CANCELLED", changedBy: "mp_webhook" } });
-            // Devolver el uso del cupón para que el ganador pueda intentar pagar de nuevo
+        if (order?.status === "PENDING" && order.store?.ownerId) {
+          try {
+            await runOrderAction({
+              orderId,
+              ownerId: order.store.ownerId,
+              action: "cancel",
+              // Cambia el texto del aviso y hace que suene el teléfono: esto no
+              // lo decidió el dueño, se le cayó una venta mientras hacía otra cosa.
+              origen: "mercadopago",
+            });
+
+            /* El cupón se devuelve acá y no adentro de `runOrderAction`: es propio
+               de este camino. El pago se rechazó pero la persona sigue queriendo
+               comprar, así que su cupón tiene que servirle para reintentar. Cuando
+               cancela el dueño, en cambio, la venta se termina ahí.
+
+               Va DESPUÉS del await y adentro del try, no al lado. Si la
+               cancelación falla, el pedido queda en PENDING y MercadoPago va a
+               reintentar este mismo aviso: con el cupón devuelto afuera, cada
+               reintento le restaba un uso más al cupón hasta dejarlo en cero
+               —regalando descuentos que nadie usó—. Devolviéndolo solo cuando la
+               cancelación salió bien, el reintento encuentra el pedido ya
+               cancelado y no vuelve a entrar. */
             if (order.couponId) {
-              await tx.coupon.updateMany({
+              await prisma.coupon.updateMany({
                 where: { id: order.couponId, usedCount: { gt: 0 } },
                 data: { usedCount: { decrement: 1 } },
-              });
+              }).catch((err) => console.error("[mp/webhook] no se pudo devolver el cupón", err));
             }
-          });
+          } catch (err) {
+            /* Que MercadoPago reciba un 200 igual. Si esto devuelve un error, MP
+               reintenta el mismo aviso una y otra vez, y un fallo que no se va a
+               arreglar solo se convierte en una repetición infinita. El pedido
+               queda en PENDING y se puede cancelar a mano desde el panel. */
+            console.error("[mp/webhook] no se pudo cancelar el pedido", orderId, err);
+          }
         }
       }
       return NextResponse.json({ ok: true });

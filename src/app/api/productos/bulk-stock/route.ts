@@ -90,7 +90,7 @@ export async function POST(req: NextRequest) {
   // temporada puede vaciar la tienda entera, y mandarle un mail por una decisión
   // que acaba de tomar en esta misma pantalla sería puro ruido.
   if (lowStockItems.length > 0) {
-    dispatchLowStockAlerts(auth.ownerId, auth.storeId, lowStockItems, { email: false }).catch((err) =>
+    dispatchLowStockAlerts(auth.ownerId, auth.storeId, lowStockItems, { loHizoElDueno: true }).catch((err) =>
       console.error("[stock] dispatchLowStockAlerts failed:", err)
     );
   }

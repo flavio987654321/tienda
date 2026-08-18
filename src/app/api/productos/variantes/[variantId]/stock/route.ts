@@ -58,7 +58,7 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
   );
   // Sin email: lo puso en cero la dueña misma, desde el modal, recién.
   if (alertas.length > 0) {
-    dispatchLowStockAlerts(auth.ownerId, auth.storeId, alertas, { email: false }).catch((err) =>
+    dispatchLowStockAlerts(auth.ownerId, auth.storeId, alertas, { loHizoElDueno: true }).catch((err) =>
       console.error("[stock] dispatchLowStockAlerts failed:", err)
     );
   }

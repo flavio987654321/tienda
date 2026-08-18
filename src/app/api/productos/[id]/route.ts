@@ -257,7 +257,7 @@ export async function PATCH(req: NextRequest, ctx: ProductRouteContext) {
 
   // Sin email: el stock lo cambió la dueña editando este producto.
   if (avisosDeStock.length > 0) {
-    dispatchLowStockAlerts(auth.ownerId, auth.storeId, avisosDeStock, { email: false }).catch((err) =>
+    dispatchLowStockAlerts(auth.ownerId, auth.storeId, avisosDeStock, { loHizoElDueno: true }).catch((err) =>
       console.error("[stock] dispatchLowStockAlerts failed:", err)
     );
   }
