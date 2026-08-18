@@ -58,7 +58,32 @@ export async function generateMetadata({ params }: TiendaPageProps): Promise<Met
   return {
     title,
     description,
-    ...(isPremium ? { manifest: `/api/manifest/${slug}` } : {}),
+    /* iOS no lee el manifest para esto: el ícono de "Agregar a pantalla de inicio"
+       lo saca del `apple-touch-icon` del HTML, y si no hay ninguno usa una captura
+       de la página. O sea que hasta acá, en iPhone, la tienda se instalaba con una
+       foto borrosa del sitio en vez del logo del comerciante — que es todo lo que
+       se vende con esto. 180x180 es la medida que pide iOS.
+       `appleWebApp.capable` es lo que hace que arranque en pantalla completa y no
+       como un atajo que abre Safari. */
+    ...(isPremium
+      ? {
+          manifest: `/api/manifest/${slug}`,
+          icons: {
+            apple: [{ url: `/api/icons/tienda/${slug}?size=180&purpose=any`, sizes: "180x180" }],
+          },
+          appleWebApp: { capable: true, title: baseName, statusBarStyle: "default" as const },
+          /* `appleWebApp.capable` emite `mobile-web-app-capable`, que es el nombre
+             estándar de hoy —está así en la doc de esta versión de Next, no es un
+             descuido—. Lo entiende Safari 17.4+, y de `display: standalone` del
+             manifest se encarga iOS 16.4+.
+             El prefijado de Apple va igual, a mano, para los iPhone por debajo de
+             esas versiones: ahí ninguno de los otros dos aplica y la tienda se
+             abriría como un simple marcador de Safari en vez de a pantalla
+             completa. Es una línea y cubre los teléfonos viejos, que en Argentina
+             no son un caso raro. */
+          other: { "apple-mobile-web-app-capable": "yes" },
+        }
+      : {}),
     openGraph: { title, description, type: "website", siteName: baseName },
     twitter: { card: "summary_large_image", title, description },
   };

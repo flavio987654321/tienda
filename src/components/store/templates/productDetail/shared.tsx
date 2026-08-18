@@ -21,6 +21,7 @@ import { describePromo, type ProductPromoDisplay } from "@/lib/promoDisplay";
 import type { useCartLogic } from "@/hooks/useCartLogic";
 import type { StorefrontProduct } from "@/hooks/useStorefront";
 import { linksLegales, type ClaveLegal } from "@/lib/politicas-tienda";
+import { CAPAS } from "@/lib/capas-tienda";
 
 export function fmtPrice(n: number, currency: string) {
   return `${currency === "ARS" ? "$" : currency} ${n.toLocaleString("es-AR")}`;
@@ -922,7 +923,7 @@ export function ProductDetailBody({ theme, view }: { theme: DetailTheme; view: P
              El velo cierra al tocarlo; el contenido no, por el stopPropagation. */
           <div
             style={vestido.resenaFormModal ? {
-              position: "fixed", inset: 0, zIndex: 650,
+              position: "fixed", inset: 0, zIndex: CAPAS.sobrePanelAlto,
               background: "rgba(0,0,0,0.55)", backdropFilter: "blur(4px)",
               display: "flex", alignItems: "center", justifyContent: "center", padding: 20,
             } : undefined}
@@ -1013,7 +1014,7 @@ export function ProductDetailBody({ theme, view }: { theme: DetailTheme; view: P
 
       {/* Lightbox — zoom de la imagen principal */}
       {lightboxSrc && (
-        <div style={{ position: "fixed", inset: 0, zIndex: 500, background: "rgba(10,10,10,0.92)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "zoom-out" }}
+        <div style={{ position: "fixed", inset: 0, zIndex: CAPAS.panel, background: "rgba(10,10,10,0.92)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "zoom-out" }}
           onClick={() => setLightboxSrc(null)}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={lightboxSrc} alt="" style={{ maxWidth: "94vw", maxHeight: "94vh", objectFit: "contain", touchAction: "pinch-zoom" }} onClick={e => e.stopPropagation()} />
@@ -1138,7 +1139,7 @@ export function ProductDetailOverlays({ theme, view }: { theme: DetailTheme; vie
       </div>
 
       {toastMsg && (
-        <div style={{ position: "fixed", bottom: 24, left: "50%", transform: "translateX(-50%)", background: theme.text, color: theme.pageBg, padding: "12px 20px", fontSize: 13, fontWeight: 600, zIndex: 600, boxShadow: "0 4px 20px rgba(0,0,0,0.35)", maxWidth:"calc(100vw - 32px)", textAlign:"center" }}>
+        <div style={{ position: "fixed", bottom: 24, left: "50%", transform: "translateX(-50%)", background: theme.text, color: theme.pageBg, padding: "12px 20px", fontSize: 13, fontWeight: 600, zIndex: CAPAS.sobrePanel, boxShadow: "0 4px 20px rgba(0,0,0,0.35)", maxWidth:"calc(100vw - 32px)", textAlign:"center" }}>
           {toastMsg}
         </div>
       )}

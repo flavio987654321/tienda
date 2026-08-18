@@ -5,6 +5,7 @@ import { X, Copy, Check, Mail } from "lucide-react";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { useTurnstile } from "@/components/Turnstile";
 import { readableTextOn, overlayOn, uprightAngle, wheelTextMaxWidth, fitWheelText } from "@/lib/gamification";
+import { CAPAS } from "@/lib/capas-tienda";
 
 // Se muestra cuando el dueño de la tienda no cargó su propio texto legal —
 // deja en claro que los sectores no tienen todos la misma chance de salir.
@@ -503,8 +504,8 @@ export default function GamificationWidget() {
         <button
           onClick={openPopup}
           aria-label={cfg.title}
-          className="fixed left-0 top-1/2 z-[9990] -translate-y-1/2 rounded-r-2xl px-2 py-2.5 sm:px-2.5 sm:py-5 shadow-xl transition-all duration-200 hover:translate-x-0.5 hover:brightness-110 active:scale-95"
-          style={{ background: s.buttonBg }}
+          className="fixed left-0 top-1/2 -translate-y-1/2 rounded-r-2xl px-2 py-2.5 sm:px-2.5 sm:py-5 shadow-xl transition-all duration-200 hover:translate-x-0.5 hover:brightness-110 active:scale-95"
+          style={{ background: s.buttonBg, zIndex: CAPAS.aviso }}
         >
           {/* En celular va solo el ícono: la barra con el título tapaba media
               pantalla (y abajo no hay lugar, están el carrito y WhatsApp). */}
@@ -521,8 +522,8 @@ export default function GamificationWidget() {
       {/* ── Popup overlay ── */}
       {isPopupOpen && (
         <div
-          className="fixed inset-0 z-[9995] flex items-center justify-center p-4"
-          style={{ background: "rgba(0,0,0,0.72)" }}
+          className="fixed inset-0 flex items-center justify-center p-4"
+          style={{ background: "rgba(0,0,0,0.72)", zIndex: CAPAS.modalPuntos }}
           onClick={(e) => { if (e.target === e.currentTarget) closePopup(); }}
         >
           <div

@@ -288,11 +288,16 @@ export default async function PoliticasPage({ params, searchParams }: Props) {
                   marketplacemitienda@gmail.com
                 </a>
                 {" · "}
-                <a href="/terminos" className="underline underline-offset-2 hover:text-slate-900">
+                {/* Los dos van a otra pestaña porque son documentos de la
+                    plataforma, fuera de la tienda. Sin `target`, en la tienda
+                    instalada como app reemplazaban la pantalla y dejaban a la
+                    persona navegando TiendaApps adentro de la app del comerciante,
+                    sin barra de direcciones y sin forma de volver. */}
+                <a href="/terminos" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-slate-900">
                   Términos de TiendaApps
                 </a>
                 {" · "}
-                <a href="/privacidad" className="underline underline-offset-2 hover:text-slate-900">
+                <a href="/privacidad" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-slate-900">
                   Privacidad de TiendaApps
                 </a>
               </p>

@@ -6,6 +6,7 @@ import StorePushBanner from "./StorePushBanner";
 import StorefrontTemplateRenderer from "./StorefrontTemplateRenderer";
 import StorefrontPaymentSuccess from "./StorefrontPaymentSuccess";
 import { migrateStoreSubscription } from "@/lib/push-client";
+import { esAppInstalada } from "@/lib/pwa";
 import type { StoreConfig } from "@/types/store-config";
 
 interface Props {
@@ -90,10 +91,19 @@ export default function StoreShell({ config, storeId, storeName, storeSlug, show
       // número total es el que no se puede perder.
     }
 
+    // Si entró desde la app instalada. Sin esto toda visita de la PWA caía en
+    // "directo" —una app abierta desde la pantalla de inicio no manda referente—
+    // y encima ensuciaba ese número: cuantas más instalaciones, más inflada la
+    // bolsa. El servidor decide igual: acá se manda el hecho, no la etiqueta.
+    //
+    // Va `esAppInstalada` y NO `isPwa`: la segunda le cree al `?source=pwa` de la
+    // url, que cualquiera puede pegar en un link. Compartido en un grupo, habría
+    // contado como "App instalada" a todo el que entrara desde ahí — inflando
+    // justo el número que mide si el premium sirve para algo.
     fetch(`/api/store-views/${storeSlug}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ referente, utmSource }),
+      body: JSON.stringify({ referente, utmSource, desdePwa: esAppInstalada() }),
     }).catch(() => {});
   }, [storeSlug, config.isOwner]);
 

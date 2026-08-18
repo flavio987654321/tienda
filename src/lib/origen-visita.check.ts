@@ -23,6 +23,10 @@ const da = (titulo: string, ref: string | null, esperado: Origen, utm?: string, 
   const r = clasificarOrigen(ref, utm ?? null, propio ?? null);
   chequear(`${titulo} → ${esperado}`, r === esperado, r);
 };
+const daPwa = (titulo: string, ref: string | null, esperado: Origen, utm?: string) => {
+  const r = clasificarOrigen(ref, utm ?? null, null, true);
+  chequear(`${titulo} → ${esperado}`, r === esperado, r);
+};
 
 /* ── Las redes ────────────────────────────────────────────────────────────── */
 console.log("\n1) Las redes, por el referente");
@@ -92,6 +96,42 @@ da("el utm le gana al referente", "https://www.google.com/", "instagram", "insta
 // asi que algo lo trajo. Decir "directo" seria borrar una campaña real.
 da("utm desconocido no es directo", null, "otro", "revista-del-barrio");
 
+/* ── La app instalada ─────────────────────────────────────────────────────── */
+console.log("\n5b) La app instalada");
+
+// Una app abierta desde la pantalla de inicio no manda referente. Sin esta
+// etiqueta caía en "directo", que no es un dato que falta sino uno mal puesto:
+// cuantas más instalaciones, más se infla la bolsa y peor se lee el tablero.
+daPwa("app sin referente ya no es directo", null, "pwa");
+
+// El envase no se lleva el crédito del canal: si tocó un link etiquetado y
+// Android lo abrió adentro de la app, esa visita la trajo WhatsApp.
+daPwa("el utm le gana a la app", null, "whatsapp", "whatsapp");
+daPwa("y tambien con utm desconocido", null, "otro", "revista-del-barrio");
+
+// Lo mismo con el referente, por el mismo motivo. En Android un link de Instagram
+// se puede abrir ADENTRO de la app instalada: hay standalone Y hay referente, y esa
+// visita la trajo Instagram. Contarla como "app" borraba el canal que la trajo.
+daPwa("el referente tambien le gana a la app", "https://www.instagram.com/", "instagram");
+daPwa("y un referente desconocido igual", "https://algunblog.com.ar/nota", "otro");
+
+// La tienda misma no es un canal, asi que ahi la app SI es el dato que queda.
+chequear("desde la tienda misma, adentro de la app, cuenta como app",
+  clasificarOrigen("https://mitienda.com/x", null, "mitienda.com", true) === "pwa");
+chequear("y sin la app, sigue siendo directo",
+  clasificarOrigen("https://mitienda.com/x", null, "mitienda.com", false) === "directo");
+
+// Sin la bandera nada cambia: es el camino de todo el mundo que entra por el
+// navegador, y no se puede haber movido.
+da("sin la bandera sigue siendo directo", null, "directo");
+
+// "pwa" es un canal de verdad, no una bolsa: tiene que poder subir en la lista.
+chequear("la app no es una bolsa",
+  ordenarOrigenes([
+    { origen: "directo" as Origen, visitas: 900 },
+    { origen: "pwa" as Origen, visitas: 5 },
+  ])[0].origen === "pwa");
+
 /* ── Basura ───────────────────────────────────────────────────────────────── */
 console.log("\n6) Lo que puede mandar cualquiera");
 
@@ -133,7 +173,11 @@ chequear("todos los origenes tienen nombre para mostrar",
 // en la base y se compara con lo ya escrito.
 const salidas = new Set<string>();
 for (const ref of [null, "", "x", "https://instagram.com", "https://raro.io", "javascript:x"]) {
-  for (const utm of [null, "ig", "loquesea", ""]) salidas.add(clasificarOrigen(ref, utm));
+  for (const utm of [null, "ig", "loquesea", ""]) {
+    // Las dos ramas, con y sin app: la de la app también escribe en la tabla.
+    salidas.add(clasificarOrigen(ref, utm));
+    salidas.add(clasificarOrigen(ref, utm, null, true));
+  }
 }
 chequear("nunca devuelve algo fuera de la lista",
   [...salidas].every((s) => (ORIGENES as readonly string[]).includes(s)), [...salidas]);

@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { Bell, X } from "lucide-react";
 import { usePushBell } from "@/contexts/PushBellContext";
+import { CAPAS } from "@/lib/capas-tienda";
 
 function timeAgo(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
@@ -46,7 +47,8 @@ export default function StorePushBanner({ storeName }: { storeName: string }) {
       {/* Backdrop */}
       {drawerOpen && (
         <div
-          className="fixed inset-0 bg-black/30 z-[9991] backdrop-blur-[1px]"
+          className="fixed inset-0 bg-black/30 backdrop-blur-[1px]"
+          style={{ zIndex: CAPAS.veloCajon }}
           onClick={closeDrawer}
         />
       )}
@@ -54,7 +56,8 @@ export default function StorePushBanner({ storeName }: { storeName: string }) {
       {/* Drawer */}
       <div
         ref={drawerRef}
-        className={`fixed bottom-0 left-0 right-0 z-[9992] w-full max-h-[80vh] bg-white rounded-t-3xl shadow-2xl transition-transform duration-300 ease-out flex flex-col
+        style={{ zIndex: CAPAS.cajon }}
+        className={`fixed bottom-0 left-0 right-0 w-full max-h-[80vh] bg-white rounded-t-3xl shadow-2xl transition-transform duration-300 ease-out flex flex-col
           sm:top-0 sm:bottom-0 sm:left-auto sm:right-0 sm:w-[420px] sm:max-h-none sm:rounded-none sm:rounded-l-2xl ${
           drawerOpen
             ? "translate-y-0 sm:translate-y-0 sm:translate-x-0"

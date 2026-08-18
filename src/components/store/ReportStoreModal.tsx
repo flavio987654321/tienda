@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { CAPAS } from "@/lib/capas-tienda";
 
 const REASONS = [
   "Estafa o fraude",
@@ -46,7 +47,7 @@ export default function ReportStoreModal({ slug, onClose }: Props) {
   return (
     <div
       style={{
-        position: "fixed", inset: 0, zIndex: 9999,
+        position: "fixed", inset: 0, zIndex: CAPAS.modal,
         background: "rgba(0,0,0,0.6)", display: "flex",
         alignItems: "center", justifyContent: "center", padding: "16px",
       }}

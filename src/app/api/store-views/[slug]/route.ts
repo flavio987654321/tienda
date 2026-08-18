@@ -69,7 +69,11 @@ export async function POST(
     const cuerpo = await req.json().catch(() => null);
     const referente = typeof cuerpo?.referente === "string" ? cuerpo.referente : null;
     const utmSource = typeof cuerpo?.utmSource === "string" ? cuerpo.utmSource : null;
-    const source = clasificarOrigen(referente, utmSource, req.headers.get("host"));
+    // `=== true` y no un truthy: esto viene de un navegador que cualquiera puede
+    // editar, igual que el referente. La regla de arriba vale también acá — la
+    // etiqueta la decide el servidor, del cliente sólo se acepta el hecho crudo.
+    const desdePwa = cuerpo?.desdePwa === true;
+    const source = clasificarOrigen(referente, utmSource, req.headers.get("host"), desdePwa);
 
     await prisma.storeViewSource.upsert({
       where: { storeId_date_source: { storeId: store.id, date, source } },

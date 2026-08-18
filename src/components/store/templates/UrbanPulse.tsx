@@ -40,6 +40,7 @@ import { discountPercent } from "@/lib/discount";
 import { resolveVariantPrice } from "@/lib/variantPrice";
 import { useTurnstile } from "@/components/Turnstile";
 import { linksLegales } from "@/lib/politicas-tienda";
+import { CAPAS } from "@/lib/capas-tienda";
 
 type Product = StorefrontProduct;
 
@@ -805,7 +806,7 @@ export default function UrbanPulse() {
 
       {/* TOAST */}
       {toastMsg && (
-        <div style={{ position:"fixed", bottom:90, left:"50%", transform:"translateX(-50%)", background:DARK, color:accSobreDark, padding:"12px 28px", fontSize:11, fontWeight:900, letterSpacing:2, textTransform:"uppercase", zIndex:9999, maxWidth:"calc(100vw - 32px)", textAlign:"center" }}>
+        <div style={{ position:"fixed", bottom:90, left:"50%", transform:"translateX(-50%)", background:DARK, color:accSobreDark, padding:"12px 28px", fontSize:11, fontWeight:900, letterSpacing:2, textTransform:"uppercase", zIndex:CAPAS.modal, maxWidth:"calc(100vw - 32px)", textAlign:"center" }}>
           {toastMsg}
         </div>
       )}
@@ -873,8 +874,8 @@ export default function UrbanPulse() {
             </button>
             {hoveredNavCat && (
               <>
-              <div style={{ position:"absolute", top:"100%", left:0, right:0, height:12, zIndex:499 }} />
-              <div style={{ position:"absolute", top:"calc(100% + 12px)", left:0, background:WHITE, border:`2px solid ${DARK}`, zIndex:500, padding:16, boxShadow:`6px 6px 0 ${DARK}`, display:"grid", gridTemplateColumns:"repeat(2, 200px)", gap:10 }}>
+              <div style={{ position:"absolute", top:"100%", left:0, right:0, height:12, zIndex:CAPAS.veloPanel }} />
+              <div style={{ position:"absolute", top:"calc(100% + 12px)", left:0, background:WHITE, border:`2px solid ${DARK}`, zIndex:CAPAS.panel, padding:16, boxShadow:`6px 6px 0 ${DARK}`, display:"grid", gridTemplateColumns:"repeat(2, 200px)", gap:10 }}>
                 {categoryList.map(cat => {
                   const subs = subcategoriesFor[cat] || [];
                   return (
@@ -984,7 +985,7 @@ export default function UrbanPulse() {
               <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
             </button>
             {userDropdownOpen && (
-              <div className="up-fade" style={{ position:"absolute", top:"calc(100% + 8px)", right:0, background:WHITE, border:`2px solid ${DARK}`, minWidth:190, zIndex:200 }}>
+              <div className="up-fade" style={{ position:"absolute", top:"calc(100% + 8px)", right:0, background:WHITE, border:`2px solid ${DARK}`, minWidth:190, zIndex:CAPAS.nav }}>
                 {cargando ? (<p style={{ padding:"14px 16px", margin:0, fontSize:12, opacity:0.55 }}>Cargando…</p>) : logueado ? (
                   <>
                     <p style={{ padding:"8px 16px 4px", fontSize:10, fontWeight:800, letterSpacing:2, textTransform:"uppercase", color:MID, margin:0, borderBottom:`1px solid ${BG}`, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
@@ -1024,7 +1025,7 @@ export default function UrbanPulse() {
         </div>
       </nav>
       {navCompacto && mobileMenuOpen && (
-        <div style={{ position:"fixed", top: scrolled || !promoBannerEnabled ? 64 : 100, left:0, right:0, bottom:0, background:WHITE, zIndex:99, overflowY:"auto", overscrollBehavior:"contain" }}>
+        <div style={{ position:"fixed", top: scrolled || !promoBannerEnabled ? 64 : 100, left:0, right:0, bottom:0, background:WHITE, zIndex:CAPAS.menuMobile, overflowY:"auto", overscrollBehavior:"contain" }}>
           {/* Categorías — acordeón (siempre visible, igual que en desktop) */}
           <>
             <button onClick={() => setMobileCatsOpen(o => !o)}
@@ -1242,7 +1243,7 @@ export default function UrbanPulse() {
                     Estaba encima de la marca de agua, invisible hasta que le
                     pegabas justo con el mouse. Dos problemas.
                     Uno de verdad: `SectionBlock` planta sus controles con
-                    `zIndex:200` —"Ocultar bloque" abajo a la derecha y las flechas
+                    `zIndex:CAPAS.nav` —"Ocultar bloque" abajo a la derecha y las flechas
                     de orden abajo al centro— y esta franja mide poco más de 100px
                     de alto, así que esos botones caían encima del ícono del cuarto
                     bloque y del segundo. Ahí el botón estaba TAPADO: no era que
@@ -1256,7 +1257,7 @@ export default function UrbanPulse() {
                 {editMode && (
                   <button onClick={() => setOverride(`garantia${i+1}Icon`, { text: String(nextIdx) })}
                     title={`Cambiar ícono (${iconIdx + 1} de ${UP_STRIP_ICONS[i].length})`}
-                    style={{ position:"absolute", top:6, right:6, zIndex:210, width:26, height:26,
+                    style={{ position:"absolute", top:6, right:6, zIndex:CAPAS.navMenu, width:26, height:26,
                              background:"rgba(99,102,241,0.92)", border:"1.5px solid rgba(255,255,255,0.45)", borderRadius:6,
                              color:"#fff", fontSize:14, lineHeight:1, cursor:"pointer",
                              display:"flex", alignItems:"center", justifyContent:"center",
@@ -1411,7 +1412,7 @@ export default function UrbanPulse() {
                   Si el dueño elige una categoría que ya está en otra baldosa, las
                   dos se INTERCAMBIAN en vez de quedar repetidas. */}
               {editMode && (
-                <div style={{ position:"absolute", top:8, left:8, zIndex:9998, display:"flex", flexDirection:"column", gap:4, alignItems:"flex-start" }}>
+                <div style={{ position:"absolute", top:8, left:8, zIndex:CAPAS.entradaApp, display:"flex", flexDirection:"column", gap:4, alignItems:"flex-start" }}>
                   {/* Sin categorías propias no hay selector: las que se ven son de
                       ejemplo y elegir una no haría nada. */}
                   {hayCategoriasReales ? (
@@ -1491,7 +1492,7 @@ export default function UrbanPulse() {
             `zIndex` por encima de 200, que es donde `SectionBlock` pone sus
             propios controles. */}
         {editMode && (
-          <div style={{ position:"absolute", top:14, right:14, zIndex:210 }}>
+          <div style={{ position:"absolute", top:14, right:14, zIndex:CAPAS.navMenu }}>
             <button onClick={() => setFeaturedPanel(o => !o)}
               title="Elegir qué producto se muestra acá"
               style={{ background: featuredPanel ? "rgba(99,102,241,0.95)" : "rgba(0,0,0,0.72)", color:"#fff",
@@ -2458,7 +2459,7 @@ export default function UrbanPulse() {
           <div onClick={() => { if (!editMode) { setCartOpen(true); setFavoritesOpen(false); } }}
             role="button" tabIndex={0} aria-label="Carrito"
             onKeyDown={e => { if ((e.key === "Enter" || e.key === " ") && !editMode) { e.preventDefault(); setCartOpen(true); setFavoritesOpen(false); } }}
-            style={{ position:"fixed", bottom:24, ...(hasWA ? {left:24} : {right:24}), zIndex:500, width:52, height:52, borderRadius:"50%", background:ACC, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 6px 18px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.3)", transition:"transform 0.2s" }}
+            style={{ position:"fixed", bottom:24, ...(hasWA ? {left:24} : {right:24}), zIndex:CAPAS.panel, width:52, height:52, borderRadius:"50%", background:ACC, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 6px 18px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.3)", transition:"transform 0.2s" }}
             onMouseEnter={e => (e.currentTarget.style.transform="scale(1.1)")}
             onMouseLeave={e => (e.currentTarget.style.transform="scale(1)")}>
             <svg width={26} height={26} viewBox="0 0 24 24" fill="none" stroke={accentText} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">{CART_ICON_OPTIONS[cartIconIdx]}</svg>
@@ -2477,14 +2478,14 @@ export default function UrbanPulse() {
         <a href={`https://wa.me/${(storeConfig?.whatsapp.number ?? "5491100000000").replace(/\D/g,"")}${storeConfig?.whatsapp?.message ? "?text=" + encodeURIComponent(storeConfig.whatsapp.message) : ""}`} target="_blank" rel="noopener noreferrer"
           onClick={e => { if (editMode) e.preventDefault(); }}
           className="up-wa-fab"
-          style={{ position:"fixed", bottom:24, right:24, width:56, height:56, borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", zIndex:500, textDecoration:"none", cursor: editMode ? "default" : "pointer" }}>
+          style={{ position:"fixed", bottom:24, right:24, width:56, height:56, borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", zIndex:CAPAS.panel, textDecoration:"none", cursor: editMode ? "default" : "pointer" }}>
           <svg viewBox="0 0 24 24" width={28} height={28} fill={WHITE}><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
         </a>
       )}
 
       {/* SEARCH OVERLAY */}
       {searchOpen && (
-        <div className="up-fade" style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.96)", zIndex:1000, padding: isMobile ? "72px 16px 32px" : "80px 40px 40px", overflowY:"auto" }}>
+        <div className="up-fade" style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.96)", zIndex:CAPAS.modalTemplate, padding: isMobile ? "72px 16px 32px" : "80px 40px 40px", overflowY:"auto" }}>
           <button onClick={() => { setSearchOpen(false); setSearchQuery(""); }} aria-label="Cerrar búsqueda" style={{ position:"absolute", top:24, right:28, background:"none", border:"none", color:WHITE, fontSize:28, cursor:"pointer" }}>✕</button>
           <div style={{ maxWidth:680, margin:"0 auto" }}>
             <p style={{ color:"rgba(255,255,255,0.4)", fontSize:10, letterSpacing:6, fontWeight:800, textTransform:"uppercase", marginBottom:20 }}>Buscar</p>

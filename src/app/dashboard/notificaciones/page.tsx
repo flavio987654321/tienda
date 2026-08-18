@@ -7,6 +7,7 @@ import {
   Clock, ChevronDown, ChevronUp, Crown, ArrowRight, Trash2, Link2,
 } from "lucide-react";
 import Link from "next/link";
+import { useIsPwa } from "@/hooks/useIsPwa";
 import { SuscriptoresModal } from "./SuscriptoresModal";
 import { SelectorEmoji } from "./SelectorEmoji";
 import { largoVisible, recortar } from "@/lib/texto";
@@ -73,6 +74,7 @@ const PRESET_TYPES = [
 ];
 
 export default function NotificacionesPage() {
+  const inPwa = useIsPwa();
   const [stats, setStats] = useState<Stats | null>(null);
   const [loadState, setLoadState] = useState<LoadState>("loading");
   const loadingStats = loadState === "loading";
@@ -419,8 +421,13 @@ export default function NotificacionesPage() {
                 Actualizate a Tienda Premium para enviar notificaciones push directamente al celular o computadora de tus visitantes, aunque tengan el navegador cerrado.
               </p>
             </div>
+            {/* `/precios` es de la web comercial, fuera del panel: desde la app
+                instalada se abre en el navegador. Sin esto reemplazaba la
+                pantalla y dejaba a la persona navegando tiendaapps.com adentro
+                de la app, sin barra de direcciones ni forma de volver. */}
             <Link
               href="/precios"
+              {...(inPwa ? { target: "_blank", rel: "noopener noreferrer" } : {})}
               className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold transition-colors"
             >
               Ver planes <ArrowRight className="h-3.5 w-3.5" />

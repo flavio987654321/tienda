@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { CheckCircle, X, ShoppingBag, HeartHandshake, Loader2 } from "lucide-react";
+import { CAPAS } from "@/lib/capas-tienda";
 
 export default function StorefrontPaymentSuccess() {
   const searchParams = useSearchParams();
@@ -51,7 +52,7 @@ export default function StorefrontPaymentSuccess() {
   if (!orderId) return null;
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 px-4">
+    <div className="fixed inset-0 flex items-center justify-center bg-black/50 px-4" style={{ zIndex: CAPAS.modal }}>
       <div className="relative w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
         <button
           onClick={() => setOrderId(null)}

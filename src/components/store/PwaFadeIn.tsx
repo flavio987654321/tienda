@@ -2,6 +2,7 @@
 
 import { useLayoutEffect, useState } from "react";
 import { isPwa } from "@/lib/pwa";
+import { CAPAS } from "@/lib/capas-tienda";
 
 type Phase = "cover" | "exiting" | "done";
 
@@ -49,7 +50,7 @@ export default function PwaFadeIn() {
       style={{
         position: "fixed",
         inset: 0,
-        zIndex: 9998,
+        zIndex: CAPAS.entradaApp,
         background: "#ffffff",
         pointerEvents: "none",
         willChange: "transform, opacity",

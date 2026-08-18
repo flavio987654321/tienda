@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useIsPwa } from "@/hooks/useIsPwa";
 import { CheckCircle, Clock, AlertTriangle, CreditCard, ArrowRight, RefreshCw, Zap, Crown, Star, Bell, Globe } from "lucide-react";
 import { getSubscriptionStatus, daysRemaining, getPriceForRole } from "@/lib/subscription";
 import { PRO_MAX_ACTIVE_COUPONS, PRO_MAX_LIVE_PROMOTIONS, PRO_MAX_AFFILIATES, PRO_MAX_PRODUCTS, MAX_PRODUCTS_POR_TIENDA, PUSH_CAMPAIGNS_PER_WEEK } from "@/lib/planLimits";
@@ -93,6 +94,7 @@ const STATUS_CONFIG: Record<string, { label: string; textColor: string; bgColor:
 };
 
 export default function MiPlanClient({ sub, userRole, autoUpgrade = false }: Props) {
+  const inPwa = useIsPwa();
   // Inicializador perezoso en vez de un efecto: el modal tiene que estar abierto
   // en el primer render, no aparecer después de un parpadeo. Se ignora si ya es
   // Premium (no hay nada que comprar) o si la cuenta es de afiliado (es gratis).
@@ -379,8 +381,13 @@ export default function MiPlanClient({ sub, userRole, autoUpgrade = false }: Pro
             </button>
           )}
 
+          {/* `/precios` es de la web comercial, fuera del panel: desde la app
+              instalada se abre en el navegador. Sin esto reemplazaba la pantalla
+              y dejaba a la persona navegando tiendaapps.com adentro de la app,
+              sin barra de direcciones ni forma de volver. */}
           <a
             href="/precios"
+            {...(inPwa ? { target: "_blank", rel: "noopener noreferrer" } : {})}
             className="w-full flex items-center justify-between gap-3 px-5 py-3.5 rounded-2xl border border-gray-100 hover:bg-gray-50 transition-colors group"
           >
             <div className="flex min-w-0 items-center gap-3 text-left text-sm font-medium text-gray-600">

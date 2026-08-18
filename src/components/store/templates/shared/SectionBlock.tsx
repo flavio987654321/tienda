@@ -2,6 +2,7 @@
 import { useMemo } from "react";
 import { useEditContext } from "@/contexts/EditContext";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
+import { CAPAS } from "@/lib/capas-tienda";
 
 export function SectionBlock({
   id,
@@ -66,7 +67,7 @@ export function SectionBlock({
       {/* Overlay "TV apagada" cuando está oculto */}
       {isHidden && (
         <div style={{
-          position: "absolute", inset: 0, zIndex: 90,
+          position: "absolute", inset: 0, zIndex: CAPAS.seccionOculta,
           display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
           gap: 8, pointerEvents: "none",
         }}>
@@ -93,7 +94,7 @@ export function SectionBlock({
 
       {/* Toggle en esquina inferior derecha — la superior ya la usan los controles
           propios del editor (cambiar imagen, fondo de sección, etc.) */}
-      <div style={{ position: "absolute", bottom: 10, right: 10, zIndex: 200 }}>
+      <div style={{ position: "absolute", bottom: 10, right: 10, zIndex: CAPAS.nav }}>
         <button
           onClick={() => {
             // Sólo al OCULTAR: volver a mostrarlo no rompe nada, así que preguntar
@@ -131,7 +132,7 @@ export function SectionBlock({
           que no se puede usar, la pastilla cambiaría de ancho al mover un bloque y
           la otra flecha se correría de abajo del mouse. */}
       <div style={{
-        position: "absolute", bottom: 4, left: "50%", transform: "translateX(-50%)", zIndex: 200,
+        position: "absolute", bottom: 4, left: "50%", transform: "translateX(-50%)", zIndex: CAPAS.nav,
         display: "flex", alignItems: "stretch", overflow: "hidden",
         background: "rgba(0,0,0,0.78)", border: "1px solid rgba(255,255,255,0.32)", borderRadius: 999,
         backdropFilter: "blur(8px)", boxShadow: "0 2px 8px rgba(0,0,0,0.45)",

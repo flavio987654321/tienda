@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTouchSwipe } from "@/hooks/useTouchSwipe";
+import { CAPAS } from "@/lib/capas-tienda";
 
 // Miniatura + modal de reels, uno solo para toda la tienda. Antes esto estaba
 // escrito 6 veces (la pagina de detalle, los 4 modales de Moda y autos), cada
@@ -167,7 +168,7 @@ function ReelModal({ reels, index, setIndex, onClose }: {
       aria-modal="true"
       aria-label="Video del producto"
       style={{
-        position: "fixed", inset: 0, zIndex: 100000, background: "rgba(0,0,0,0.93)",
+        position: "fixed", inset: 0, zIndex: CAPAS.pantallaCompleta, background: "rgba(0,0,0,0.93)",
         display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
         gap: 16, padding: 16,
       }}
