@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { Heart, Loader2, Package, X } from "lucide-react";
+import { useIsPwa } from "@/hooks/useIsPwa";
 
 type Favorite = {
   id: string;
@@ -34,6 +35,7 @@ function firstImage(raw: string | null | undefined): string | undefined {
 }
 
 export default function FavoritesDrawer({ buttonClassName }: { buttonClassName: string }) {
+  const inPwa = useIsPwa();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [favorites, setFavorites] = useState<Favorite[]>([]);
@@ -109,9 +111,19 @@ export default function FavoritesDrawer({ buttonClassName }: { buttonClassName: 
                     const product = fav.product!;
                     const img = firstImage(product.images);
                     return (
+                      /* Este cajón vive en los DOS paneles —el de tiendas y el de
+                         afiliados— y ninguno de los dos tiene `/tienda/...`
+                         adentro de su `scope`. Adentro de la app instalada, tocar
+                         un favorito abría la tienda encima del panel: sin barra
+                         de direcciones, sin forma de volver, y con toda la web
+                         navegable desde ahí. Se va al navegador de afuera, que
+                         además es donde uno quiere ver una tienda.
+                         `<Link>` respeta el `target`: cuando lo ve, deja que navegue
+                         el navegador en vez de hacerlo del lado del cliente. */
                       <Link
                         key={fav.id}
                         href={`/tienda/${product.store.slug}?producto=${product.id}`}
+                        {...(inPwa ? { target: "_blank", rel: "noopener noreferrer" } : {})}
                         onClick={() => setOpen(false)}
                         className="flex items-center gap-3 rounded-xl border border-gray-100 hover:border-gray-200 hover:bg-gray-50 transition-colors p-2.5"
                       >

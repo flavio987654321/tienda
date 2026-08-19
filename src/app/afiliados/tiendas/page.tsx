@@ -68,7 +68,18 @@ export default function TiendasPage() {
 
   function handleApply(store: StoreItem) {
     if (sessionStatus !== "authenticated") {
-      router.push("/login");
+      /* Recargar, no mandar a `/login`.
+         `/login` está fuera del `scope` del manifiesto (`/afiliados`), y un
+         `router.push` es navegación del lado del cliente: adentro de la app
+         instalada dejaba a la persona con la página comercial entera adentro de
+         su propia ventana, sin barra de direcciones ni forma de volver.
+         Con una recarga, el layout vuelve a resolverse en el servidor y él
+         decide: en la app dibuja el login del panel ahí mismo, y en la web
+         manda a `/login` como siempre. Un solo camino que funciona en los dos
+         lados y que además no puede quedar desincronizado con el layout.
+         Es una guarda defensiva: llegar acá sin sesión ya casi no pasa, porque
+         el layout la exige antes de dibujar nada. Casi. */
+      window.location.reload();
       return;
     }
     router.push(`/afiliados?apply=${store.id}`);

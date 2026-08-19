@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useIsPwa } from "@/hooks/useIsPwa";
 import { AppLogo } from "@/components/AppLogo";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "next-themes";
@@ -110,6 +111,20 @@ const HELP_SEEN_KEY = "tiendaapps_affiliates_help_seen";
 
 export default function AfiliadosNav() {
   const { user, signOut } = useAuth();
+  /* Adentro de la app instalada, el logo lleva al inicio DEL PANEL y no a la web
+     comercial. Afuera sigue yendo a la home, que es lo que se espera de un sitio.
+     Nadie instala el panel de afiliados para visitar la página de ventas: con
+     `href="/"` un toque en el logo te dejaba navegando tiendaapps.com adentro de
+     la app, sin barra de direcciones y sin forma de volver — el `scope` del
+     manifiesto no encierra a nadie, y los `<Link>` de Next navegan del lado del
+     cliente, así que el navegador ni se entera de que se salió.
+     Es la misma corrección que ya tiene `DashboardLayout`. */
+  const inPwa = useIsPwa();
+  const hrefLogo = inPwa ? "/afiliados" : "/";
+  /* Y al cerrar sesión, quedarse adentro: `/afiliados` sin sesión ahora dibuja el
+     login del panel (ver el layout). Mandarlo a la home lo sacaba del scope justo
+     cuando se queda sin sesión, que es el peor momento para perder la app. */
+  const destinoAlSalir = inPwa ? "/afiliados" : "/login";
   const { theme, setTheme } = useTheme();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
@@ -174,8 +189,8 @@ export default function AfiliadosNav() {
       <nav className="sticky top-0 z-40 bg-white/90 dark:bg-gray-950/90 backdrop-blur-xl border-b border-gray-200 dark:border-white/5">
         <div className="max-w-6xl mx-auto px-6 py-4 grid grid-cols-[1fr_auto_1fr] items-center gap-4">
 
-          {/* Logo → página principal */}
-          <Link href="/" className="flex items-center gap-1.5">
+          {/* Logo → la home afuera, el inicio del panel adentro de la app. */}
+          <Link href={hrefLogo} className="flex items-center gap-1.5">
             <AppLogo size={72} />
             <span className="text-lg font-bold text-gray-900 dark:text-white">TiendaApps</span>
           </Link>
@@ -254,8 +269,16 @@ export default function AfiliadosNav() {
 
           {/* Íconos — mismo corte que los links, si no en 900 quedan solos */}
           <div className="hidden lg:flex items-center justify-end gap-1">
+            {/* Este botón sí quiere llevar a la web, así que no se le cambia el
+                destino: se cambia DÓNDE se abre. Adentro de la app instalada va
+                al navegador de afuera; si no, reemplazaba la pantalla y dejaba a
+                la persona navegando tiendaapps.com adentro de la app, sin barra
+                de direcciones ni forma de volver.
+                `<Link>` respeta el `target`: cuando lo ve, deja que navegue el
+                navegador en vez de hacerlo del lado del cliente. */}
             <Link
               href="/"
+              {...(inPwa ? { target: "_blank", rel: "noopener noreferrer" } : {})}
               title="Ir al sitio principal"
               className="w-9 h-9 flex items-center justify-center rounded-xl border border-gray-200 dark:border-white/10 bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-all"
             >
@@ -293,7 +316,7 @@ export default function AfiliadosNav() {
               )}
             </div>
             <button
-              onClick={() => signOut("/")}
+              onClick={() => signOut(destinoAlSalir)}
               title="Cerrar sesión"
               className="w-9 h-9 flex items-center justify-center rounded-xl text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all border border-transparent hover:border-red-200 dark:hover:border-red-500/20"
             >
@@ -381,15 +404,18 @@ export default function AfiliadosNav() {
                 )}
 
                 <div className="mt-auto pt-4 border-t border-gray-100 dark:border-white/10 flex flex-col gap-1">
+                  {/* Mismo caso que el botón de la barra ancha: adentro de la app
+                      se abre en el navegador de afuera, no encima del panel. */}
                   <Link
                     href="/"
+                    {...(inPwa ? { target: "_blank", rel: "noopener noreferrer" } : {})}
                     onClick={() => setMobileOpen(false)}
                     className="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
                   >
                     <Home className="h-4 w-4 text-gray-400" /> Ir al sitio principal
                   </Link>
                   <button
-                    onClick={() => { signOut("/"); setMobileOpen(false); }}
+                    onClick={() => { signOut(destinoAlSalir); setMobileOpen(false); }}
                     className="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors w-full"
                   >
                     <LogOut className="h-4 w-4" /> Cerrar sesión
