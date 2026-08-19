@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { componerIconoDePanel, iconoDeRespaldo, type Color } from "@/lib/icono-panel";
+import { medidaPermitida } from "@/lib/medidas-icono";
 
 // `nodejs` y no `edge`: hay que leer el archivo del logo del disco, y el runtime
 // edge no tiene sistema de archivos.
@@ -19,8 +20,7 @@ export const runtime = "nodejs";
 const BLANCO: Color = { r: 255, g: 255, b: 255, alpha: 1 };
 
 export async function GET(req: NextRequest) {
-  const raw = parseInt(req.nextUrl.searchParams.get("size") ?? "512");
-  const size = Math.min(Math.max(raw, 16), 1024);
+  const size = medidaPermitida(req.nextUrl.searchParams.get("size"));
   const maskable = req.nextUrl.searchParams.get("purpose") === "maskable";
 
   try {

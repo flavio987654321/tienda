@@ -1,5 +1,6 @@
 import { ImageResponse } from "next/og";
 import { NextRequest } from "next/server";
+import { medidaPermitida } from "@/lib/medidas-icono";
 import { prisma } from "@/lib/prisma";
 import { urlDeDescargaPermitida } from "@/lib/url-utils";
 
@@ -125,8 +126,15 @@ export async function GET(
 ) {
   const { slug } = await params;
 
-  const crudo = parseInt(req.nextUrl.searchParams.get("size") ?? "512", 10);
-  const size = Math.min(Math.max(Number.isFinite(crudo) ? crudo : 512, 16), 1024);
+  /* Sólo las medidas que se piden de verdad, en vez de cualquier número entre 16
+     y 1024. El `NaN` ya estaba cubierto acá, pero quedaba lo otro: cada medida
+     distinta es una imagen distinta que la CDN no tiene guardada, así que hay que
+     componerla de cero — y en ESTA ruta componer incluye salir a la red a buscar
+     el logo del comerciante. Pidiendo `size=1023`, `1022`, `1021`… cualquiera
+     hace trabajar al servidor todo lo que quiera, sin sesión y sin límite.
+     Con la lista, el conjunto de respuestas es finito y la CDN las guarda todas.
+     Ver `medidaPermitida`. */
+  const size = medidaPermitida(req.nextUrl.searchParams.get("size"));
   const maskable = req.nextUrl.searchParams.get("purpose") === "maskable";
 
   const store = await prisma.store.findFirst({

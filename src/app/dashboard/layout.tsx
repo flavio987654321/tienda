@@ -77,6 +77,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     return (
       <>
         <PWAManager appVersion={DASHBOARD_VERSION} versionKey="pwa_dashboard_version" disableNotifPrompt scope="/dashboard" />
+        <PanelSplash nombre="TiendaApps Panel" />
         <PanelRolAjeno destino={destino} raiz="/dashboard" panel="el panel de tu tienda" cuenta={cuenta} />
       </>
     );

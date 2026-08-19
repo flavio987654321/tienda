@@ -87,6 +87,7 @@ export default async function AfiliadosLayout({ children }: { children: React.Re
     return (
       <>
         <PWAManager appVersion={AFILIADOS_VERSION} versionKey="pwa_afiliados_version" disableNotifPrompt scope="/afiliados" />
+        <PanelSplash nombre="TiendaApps Afiliados" />
         <PanelRolAjeno destino={destino} raiz="/afiliados" panel="el panel de afiliados" cuenta={cuenta} />
       </>
     );

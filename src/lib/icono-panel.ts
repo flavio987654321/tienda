@@ -38,10 +38,10 @@ export type Color = { r: number; g: number; b: number; alpha: number };
  *
  * El motivo es que el dibujo no reparte su peso parejo adentro de su caja. Las
  * líneas de velocidad son finas y tenues pero se extienden hacia la izquierda, y
- * el resplandor hacia arriba: las dos cosas agrandan la caja de un lado sin
- * poner casi nada de dibujo ahí. La masa sólida —la bolsa y la etiqueta— queda
- * abajo a la derecha. Medido sobre el archivo real: 9% a la derecha y 10,7%
- * abajo del centro geométrico.
+ * el resplandor hacia arriba: las dos cosas agrandan la caja de un lado sin poner
+ * casi nada de dibujo ahí. La masa sólida —la bolsa y la etiqueta— queda abajo a
+ * la derecha. Medido sobre el archivo real: 9% a la derecha y 10,7% abajo del
+ * centro geométrico.
  *
  * Se mide en cada llamada en vez de dejar esos números escritos, y no es
  * ceremonia: si mañana se cambia el logo por otro con otra composición, los
@@ -61,8 +61,8 @@ async function corrimientoVisual(imagen: Buffer): Promise<{ dx: number; dy: numb
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
       const a = data[(y * w + x) * ch + 3];
-      // Por debajo de 25 es resplandor, no dibujo: sin este piso el halo tira
-      // del centro hacia afuera y la corrección sale al revés.
+      // Por debajo de 25 es resplandor, no dibujo: sin este piso el halo tira del
+      // centro hacia afuera y la corrección sale al revés.
       if (a < 25) continue;
       sumaX += x * a;
       sumaY += y * a;
