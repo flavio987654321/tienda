@@ -416,7 +416,7 @@ export default function AfiliadosNav() {
                     sentado frente a una computadora.
                     El centro de ayuda va con `target="_blank"` porque `/ayuda`
                     está fuera del scope; abrirlo acá se comía el panel. */}
-                <div className="px-4 pb-2 flex flex-col gap-1">
+                <div className="pb-2 flex flex-col gap-1">
                   <button
                     onClick={() => {
                       setShowHelp(true);
