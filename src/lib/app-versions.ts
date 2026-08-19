@@ -18,3 +18,10 @@ const BUILD_ID = process.env.NEXT_PUBLIC_BUILD_ID ?? "dev";
 
 export const DASHBOARD_VERSION = BUILD_ID;
 export const STORE_VERSION = BUILD_ID;
+
+/* El panel de afiliados es una tercera superficie instalable, con su propio
+   manifiesto y su propio scope. Comparte el valor —sale del mismo build— pero va
+   con su propia clave de localStorage, igual que las otras dos: quien cierra el
+   aviso de "hay una versión nueva" en su tienda no tiene por qué dejar de verlo
+   en el panel de afiliados. */
+export const AFILIADOS_VERSION = BUILD_ID;

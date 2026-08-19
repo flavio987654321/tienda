@@ -31,7 +31,18 @@ import PanelLogin from "./PanelLogin";
  * sea el bug exacto que este archivo existe para no tener. Leído adentro del
  * efecto, `isPwa()` toca el navegador en el momento y no puede contestar de más.
  */
-export default function LoginGate() {
+/* Los textos entran por parámetro porque hay más de un panel usando esto: el de
+   tiendas y el de afiliados. Lo único que cambia entre ellos es qué dice el
+   encabezado —"tu cuenta de siempre" vs "tu cuenta de afiliado"—; el formulario,
+   la decisión de web-o-app y el comportamiento son los mismos. Los valores por
+   defecto son los del panel de tiendas, que fue el primero. */
+export default function LoginGate({
+  titulo,
+  subtitulo,
+}: {
+  titulo?: string;
+  subtitulo?: string;
+} = {}) {
   const enLaApp = useIsPwa();
 
   useEffect(() => {
@@ -45,7 +56,7 @@ export default function LoginGate() {
     window.location.href = "/login";
   }, []);
 
-  if (enLaApp) return <PanelLogin />;
+  if (enLaApp) return <PanelLogin titulo={titulo} subtitulo={subtitulo} />;
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center [color-scheme:light]">
