@@ -18,6 +18,11 @@ import { NextResponse } from "next/server";
  */
 export async function GET() {
   const manifest = {
+    /* La identidad de la app. Ver el comentario largo en el manifiesto del panel
+       de tiendas: sin `id`, el navegador identifica la app por su `start_url` y
+       las dos se pisaban — instalar ésta reemplazaba a la otra, y abrir el ícono
+       del panel de tiendas abría éste. */
+    id: "/afiliados",
     name: "TiendaApps Afiliados",
     short_name: "Afiliados",
     description: "Vendé para otras tiendas y seguí tus comisiones",
@@ -26,7 +31,7 @@ export async function GET() {
     display: "standalone",
     orientation: "portrait-primary",
     background_color: "#ffffff",
-    theme_color: "#4f46e5",
+    theme_color: "#0d0f1a",
     icons: [
       {
         src: "/api/icons/afiliados?size=192&purpose=any",

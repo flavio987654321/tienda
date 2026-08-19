@@ -28,6 +28,16 @@ import { NextResponse } from "next/server";
  */
 export async function GET() {
   const manifest = {
+    /* La identidad de la app, y sin esto se pisan entre ellas.
+       Cuando el manifiesto no declara `id`, el navegador identifica la app por
+       su `start_url`. Con dos paneles instalables en el mismo dominio eso ya no
+       alcanza: instalar el segundo REEMPLAZABA al primero, y abrir el ícono del
+       panel de tiendas terminaba abriendo el de afiliados. Pasó en el teléfono
+       de Flavio con las dos instaladas.
+       Declarándolo, cada app tiene un nombre propio y estable que no depende de
+       la url de arranque — así que mañana se puede cambiar el `start_url` sin
+       que el sistema crea que es otra app y duplique el ícono. */
+    id: "/dashboard",
     name: "TiendaApps Panel",
     short_name: "Panel",
     description: "Administrá tu tienda online desde cualquier lugar",

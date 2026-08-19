@@ -1,8 +1,9 @@
-import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { getCurrentUser } from "@/lib/auth-session";
 import TermsUpdateBanner from "@/components/TermsUpdateBanner";
 import PWAManager from "@/components/PWAManager";
+import PanelSplash from "@/components/panel/PanelSplash";
+import PanelRolAjeno from "@/components/panel/PanelRolAjeno";
 import LoginGate from "@/components/panel/LoginGate";
 import { AFILIADOS_VERSION } from "@/lib/app-versions";
 import AfiliadosNav from "./AfiliadosNav";
@@ -36,9 +37,13 @@ export const metadata: Metadata = {
  * alcanzaba con estar logueado, así que una dueña terminaba mirando un panel
  * que no es el suyo, con "Postularme" en su propia tienda.
  *
- * A cada uno se lo manda a SU panel, no a un error ni al login: el que se
- * equivocó de puerta necesita que le abran la correcta, no que le cierren
- * ésta. El login sólo es para el que no tiene sesión.
+ * En la web a cada uno se lo manda a SU panel, no a un error ni al login: el que
+ * se equivocó de puerta necesita que le abran la correcta, no que le cierren
+ * ésta. Adentro de la app instalada eso no se puede hacer —mandarlo al otro panel
+ * es meterlo fuera del scope de ESTA app—, así que ahí se le explica y se le
+ * ofrece salir. Lo decide `PanelRolAjeno`.
+ *
+ * El login sólo es para el que no tiene sesión.
  */
 export default async function AfiliadosLayout({ children }: { children: React.ReactNode }) {
   const user = await getCurrentUser();
@@ -65,14 +70,27 @@ export default async function AfiliadosLayout({ children }: { children: React.Re
     return (
       <>
         <PWAManager appVersion={AFILIADOS_VERSION} versionKey="pwa_afiliados_version" disableNotifPrompt scope="/afiliados" />
+        <PanelSplash nombre="TiendaApps Afiliados" />
         <LoginGate titulo="Ingresá a tu panel" subtitulo="Usá tu cuenta de afiliado." />
       </>
     );
   }
 
-  if (user.role === "ADMIN") redirect("/admin");
-  if (user.role === "OWNER") redirect("/dashboard");
-  if (user.role !== "SELLER") redirect("/mi-cuenta");
+  /* Mismo caso que el panel de tiendas, y por el mismo motivo: acá un `redirect`
+     metía el otro panel adentro de esta ventana, fuera de su `scope`. Ver el
+     comentario largo en `PanelRolAjeno`. */
+  if (user.role !== "SELLER") {
+    const destino =
+      user.role === "ADMIN" ? "/admin" : user.role === "OWNER" ? "/dashboard" : "/mi-cuenta";
+    const cuenta =
+      user.role === "ADMIN" ? "de administrador" : user.role === "OWNER" ? "de tienda" : "de cliente";
+    return (
+      <>
+        <PWAManager appVersion={AFILIADOS_VERSION} versionKey="pwa_afiliados_version" disableNotifPrompt scope="/afiliados" />
+        <PanelRolAjeno destino={destino} raiz="/afiliados" panel="el panel de afiliados" cuenta={cuenta} />
+      </>
+    );
+  }
 
   return (
     <>
@@ -84,6 +102,7 @@ export default async function AfiliadosLayout({ children }: { children: React.Re
           justifique interrumpirlo (una comisión acreditada, por ejemplo), se
           saca esta bandera y el cartel aparece solo. */}
       <PWAManager appVersion={AFILIADOS_VERSION} versionKey="pwa_afiliados_version" disableNotifPrompt scope="/afiliados" />
+      <PanelSplash nombre="TiendaApps Afiliados" />
       <AfiliadosNav />
       <div className="px-4 pt-3 max-w-5xl mx-auto"><TermsUpdateBanner /></div>
       {children}

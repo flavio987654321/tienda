@@ -1,4 +1,3 @@
-import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth-session";
 import { getUserSubscription, getSubscriptionStatus, daysRemaining, reactivationCredit } from "@/lib/subscription";
 import { prisma } from "@/lib/prisma";
@@ -9,6 +8,8 @@ import SubscriptionRealtimeRefresher from "@/components/subscription/Subscriptio
 import SubscriptionSuccessBanner from "@/components/subscription/SubscriptionSuccessBanner";
 import StoreTypeModal from "./productos/StoreTypeModal";
 import PWAManager from "@/components/PWAManager";
+import PanelSplash from "@/components/panel/PanelSplash";
+import PanelRolAjeno from "@/components/panel/PanelRolAjeno";
 import LoginGate from "@/components/panel/LoginGate";
 import { DASHBOARD_VERSION } from "@/lib/app-versions";
 import { Suspense } from "react";
@@ -54,13 +55,32 @@ export default async function DashboardLayout({ children }: { children: React.Re
     return (
       <>
         <PWAManager appVersion={DASHBOARD_VERSION} versionKey="pwa_dashboard_version" disableNotifPrompt scope="/dashboard" />
+        <PanelSplash nombre="TiendaApps Panel" />
         <LoginGate />
       </>
     );
   }
-  if (user.role === "ADMIN") redirect("/admin");
-  if (user.role === "SELLER") redirect("/afiliados");
-  if (user.role === "BUYER") redirect("/mi-cuenta");
+  /* Cuenta que no es de tienda: se DIBUJA el aviso, no se redirige.
+     Un `redirect` acá era correcto en la web y un desastre en la app instalada:
+     en Android las dos apps comparten las cookies, así que entrar a la app de
+     afiliados con una cuenta de afiliado dejaba esa sesión puesta para las dos, y
+     abrir el ícono del panel de tiendas terminaba mostrando el panel de
+     AFILIADOS adentro de esta ventana — fuera de su propio `scope`, sin barra de
+     direcciones y sin forma de volver.
+     `PanelRolAjeno` decide: en la web redirige igual que siempre, y adentro de la
+     app explica qué pasó y ofrece salir para entrar con la cuenta correcta. */
+  if (user.role !== "OWNER") {
+    const destino =
+      user.role === "ADMIN" ? "/admin" : user.role === "SELLER" ? "/afiliados" : "/mi-cuenta";
+    const cuenta =
+      user.role === "ADMIN" ? "de administrador" : user.role === "SELLER" ? "de afiliado" : "de cliente";
+    return (
+      <>
+        <PWAManager appVersion={DASHBOARD_VERSION} versionKey="pwa_dashboard_version" disableNotifPrompt scope="/dashboard" />
+        <PanelRolAjeno destino={destino} raiz="/dashboard" panel="el panel de tu tienda" cuenta={cuenta} />
+      </>
+    );
+  }
 
   const isOwner = user.role === "OWNER";
 
@@ -125,6 +145,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   return (
     <>
       <PWAManager appVersion={DASHBOARD_VERSION} versionKey="pwa_dashboard_version" scope="/dashboard" />
+      <PanelSplash nombre="TiendaApps Panel" />
       {user && <SubscriptionRealtimeRefresher userId={user.id} />}
       <Suspense><SubscriptionSuccessBanner /></Suspense>
       {gate && <div className="pt-14 lg:pt-0 lg:pl-14 bg-gray-50 [color-scheme:light]">{gate}</div>}

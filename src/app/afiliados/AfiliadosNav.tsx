@@ -14,7 +14,7 @@ import FavoritesDrawer from "@/components/FavoritesDrawer";
 import {
   ShoppingBag, Wallet, Award, BarChart3, Trophy, Store,
   X, XCircle, Menu, LogOut, HelpCircle, Sun, Moon,
-  Download, MessageSquare, Target, ShoppingCart, Share2, Home, ChevronDown,
+  Download, MessageSquare, Target, ShoppingCart, Share2, Home, ChevronDown, LifeBuoy,
 } from "lucide-react";
 
 // ── Modal de ayuda para afiliados ─────────────────────────────────────────────
@@ -269,21 +269,25 @@ export default function AfiliadosNav() {
 
           {/* Íconos — mismo corte que los links, si no en 900 quedan solos */}
           <div className="hidden lg:flex items-center justify-end gap-1">
-            {/* Este botón sí quiere llevar a la web, así que no se le cambia el
-                destino: se cambia DÓNDE se abre. Adentro de la app instalada va
-                al navegador de afuera; si no, reemplazaba la pantalla y dejaba a
-                la persona navegando tiendaapps.com adentro de la app, sin barra
-                de direcciones ni forma de volver.
-                `<Link>` respeta el `target`: cuando lo ve, deja que navegue el
-                navegador en vez de hacerlo del lado del cliente. */}
-            <Link
-              href="/"
-              {...(inPwa ? { target: "_blank", rel: "noopener noreferrer" } : {})}
-              title="Ir al sitio principal"
-              className="w-9 h-9 flex items-center justify-center rounded-xl border border-gray-200 dark:border-white/10 bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-all"
-            >
-              <Home className="h-4 w-4" />
-            </Link>
+            {/* Adentro de la app instalada este botón NO EXISTE, y se llegó acá
+                después de probar la solución de menos: primero se le puso
+                `target="_blank"` para que se abriera afuera en vez de encima del
+                panel. No alcanzó. En Android, un `target="_blank"` desde una app
+                instalada abre una pestaña de Chrome donde se puede navegar TODO
+                el sitio igual — probado en el teléfono, no supuesto.
+                Y no hay una tercera forma de "abrir la web sin poder navegarla".
+                Así que se saca: nadie instala el panel de afiliados para visitar
+                la página de ventas, y el que quiera entrar tiene el navegador.
+                Afuera de la app el botón sigue igual que siempre. */}
+            {!inPwa && (
+              <Link
+                href="/"
+                title="Ir al sitio principal"
+                className="w-9 h-9 flex items-center justify-center rounded-xl border border-gray-200 dark:border-white/10 bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-all"
+              >
+                <Home className="h-4 w-4" />
+              </Link>
+            )}
             <FavoritesDrawer buttonClassName="w-9 h-9 flex items-center justify-center rounded-xl border border-gray-200 dark:border-white/10 bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-all" />
             {/* El `?` que el panel del dueño tenía desde siempre y este no.
                 Sin `onStartTour` porque acá no hay tour guiado: quedan la ayuda
@@ -403,17 +407,55 @@ export default function AfiliadosNav() {
                   </button>
                 )}
 
-                <div className="mt-auto pt-4 border-t border-gray-100 dark:border-white/10 flex flex-col gap-1">
-                  {/* Mismo caso que el botón de la barra ancha: adentro de la app
-                      se abre en el navegador de afuera, no encima del panel. */}
-                  <Link
-                    href="/"
-                    {...(inPwa ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+                {/* La ayuda, que en el celular no existía.
+                    Los dos accesos —"Cómo funciona" y el centro de ayuda— vivían
+                    adentro del contenedor `hidden lg:flex` de la barra ancha, o
+                    sea que en un teléfono no aparecían por ningún lado. Y el
+                    teléfono es justo donde alguien que recién empieza necesita
+                    que le expliquen: el panel de afiliados se usa caminando, no
+                    sentado frente a una computadora.
+                    El centro de ayuda va con `target="_blank"` porque `/ayuda`
+                    está fuera del scope; abrirlo acá se comía el panel. */}
+                <div className="px-4 pb-2 flex flex-col gap-1">
+                  <button
+                    onClick={() => {
+                      setShowHelp(true);
+                      localStorage.setItem(HELP_SEEN_KEY, "1");
+                      setAyudaVistaAhora(true);
+                      setMobileOpen(false);
+                    }}
+                    className="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors w-full"
+                  >
+                    <HelpCircle className="h-4 w-4 text-indigo-500" />
+                    <span className="flex-1 text-left">Cómo funciona</span>
+                    {mounted && !helpSeen && (
+                      <span className="w-2 h-2 rounded-full bg-indigo-500 shrink-0" />
+                    )}
+                  </button>
+                  <a
+                    href="/ayuda"
+                    target="_blank"
+                    rel="noopener noreferrer"
                     onClick={() => setMobileOpen(false)}
                     className="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
                   >
-                    <Home className="h-4 w-4 text-gray-400" /> Ir al sitio principal
-                  </Link>
+                    <LifeBuoy className="h-4 w-4 text-gray-400" />
+                    <span className="flex-1">Centro de ayuda</span>
+                  </a>
+                </div>
+
+                <div className="mt-auto pt-4 border-t border-gray-100 dark:border-white/10 flex flex-col gap-1">
+                  {/* Mismo caso que el botón de la barra ancha: adentro de la app
+                      instalada no se muestra. */}
+                  {!inPwa && (
+                    <Link
+                      href="/"
+                      onClick={() => setMobileOpen(false)}
+                      className="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
+                    >
+                      <Home className="h-4 w-4 text-gray-400" /> Ir al sitio principal
+                    </Link>
+                  )}
                   <button
                     onClick={() => { signOut(destinoAlSalir); setMobileOpen(false); }}
                     className="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors w-full"
