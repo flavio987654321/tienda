@@ -33,9 +33,37 @@ type Fase = "tapando" | "saliendo" | "listo";
  *
  * ── Por qué no se queda pegada ───────────────────────────────────────────────
  * Se va con el evento de carga, y si la página ya había terminado igual se va
- * sola a los 150 ms. Nunca espera a que alguien la cierre: una pantalla de carga
- * que depende de un evento que puede no llegar es una app trabada.
+ * sola. Nunca espera a que alguien la cierre: una pantalla de carga que depende
+ * de un evento que puede no llegar es una app trabada.
+ *
+ * ── Y por qué tampoco se va enseguida ────────────────────────────────────────
+ * La primera versión esperaba 150 ms y arrancaba a desvanecerse. Cuando la
+ * página ya venía cargada —que es lo normal la segunda vez que abrís la app— el
+ * nombre aparecía y se iba en medio segundo, encadenado a la pantalla de
+ * arranque de Android: se veía un parpadeo entre el ícono del sistema y el
+ * panel, y no llegabas a leer nada. Flavio lo describió así: "el título ni se
+ * alcanza a ver de lo rápido que pasa".
+ *
+ * Una pantalla que no se alcanza a leer es peor que no tenerla: agrega un
+ * destello y no comunica. Así que hay un piso — `MINIMO_EN_PANTALLA` — y la tapa
+ * se queda al menos ese tiempo aunque no haya nada que esperar. Si la carga
+ * tarda más, manda la carga; el piso nunca la hace tardar más de lo que ya
+ * tardaba, sólo evita que se vaya antes de decir qué app es.
  */
+
+/* Cuánto se queda como mínimo, contado desde que se dibuja.
+   900 ms alcanza para leer dos palabras y no llega a sentirse como una espera;
+   por debajo de ~700 la lectura no entra, y por arriba de ~1200 empieza a
+   parecer que la app tarda en abrir. */
+const MINIMO_EN_PANTALLA = 900;
+
+/* Lo que dura el desvanecido, y cuánto se espera para sacar la tapa del DOM.
+   El segundo va después del primero a propósito: si se quitara justo al terminar
+   la transición, cualquier retraso del navegador la sacaría a mitad de camino y
+   el panel aparecería de golpe. Los dos salen de acá para que no se separen. */
+const DURACION_FUNDIDO = 380;
+const DURACION_SALIDA = DURACION_FUNDIDO + 40;
+
 export default function PanelSplash({ nombre }: { nombre: string }) {
   const [fase, setFase] = useState<Fase>("tapando");
 
@@ -50,19 +78,31 @@ export default function PanelSplash({ nombre }: { nombre: string }) {
       return;
     }
 
+    const desde = Date.now();
+    let salida: ReturnType<typeof setTimeout>;
+    let quitar: ReturnType<typeof setTimeout>;
+
+    /* Lo que falte para completar el mínimo. Si la carga ya se comió esos 900 ms
+       —una app que abre por primera vez, con la red lenta— da 0 y se va en el
+       acto: el piso es para que no se vaya ANTES, no para hacer esperar. */
     const revelar = () => {
-      setFase("saliendo");
-      setTimeout(() => setFase("listo"), 420);
+      salida = setTimeout(() => {
+        setFase("saliendo");
+        quitar = setTimeout(() => setFase("listo"), DURACION_SALIDA);
+      }, Math.max(0, MINIMO_EN_PANTALLA - (Date.now() - desde)));
     };
 
     if (document.readyState === "complete") {
-      const t = setTimeout(revelar, 150);
-      return () => clearTimeout(t);
+      revelar();
+      return () => { clearTimeout(salida); clearTimeout(quitar); };
     }
 
-    const alCargar = () => setTimeout(revelar, 150);
-    window.addEventListener("load", alCargar, { once: true });
-    return () => window.removeEventListener("load", alCargar);
+    window.addEventListener("load", revelar, { once: true });
+    return () => {
+      window.removeEventListener("load", revelar);
+      clearTimeout(salida);
+      clearTimeout(quitar);
+    };
   }, []);
 
   if (fase === "listo") return null;
@@ -105,7 +145,7 @@ export default function PanelSplash({ nombre }: { nombre: string }) {
           gap: 18,
           pointerEvents: "none",
           willChange: "opacity",
-          transition: "opacity 380ms cubic-bezier(0.4, 0, 0.2, 1)",
+          transition: `opacity ${DURACION_FUNDIDO}ms cubic-bezier(0.4, 0, 0.2, 1)`,
           opacity: fase === "saliendo" ? 0 : 1,
         }}
       >
