@@ -7,6 +7,7 @@ import { HelpCircle, Play, BookOpen, FileText } from "lucide-react";
 // Solo la tabla liviana, NO `@/lib/ayuda`: esto es cliente y de ahí se bajaría
 // el texto completo de todos los artículos para usar un título y un slug.
 import { pantallaDe } from "@/lib/ayuda/pantallas";
+import { hayCambiosSinGuardar } from "@/lib/cambios-sin-guardar";
 
 /* El `?` del panel. Ofrece tres cosas, de la más específica a la más general:
    la guía en pantalla, el artículo de ESTA pantalla, y el centro de ayuda
@@ -23,6 +24,9 @@ import { pantallaDe } from "@/lib/ayuda/pantallas";
    pasarle una función vacía y mostrar un botón que no hace nada. */
 export default function HelpButton({ onStartTour }: { onStartTour?: () => void }) {
   const [open, setOpen] = useState(false);
+  /* Se mira al ABRIR el menú y no en cada dibujo: es una lectura del DOM, y en
+     ese momento es cuando la respuesta es la que vale para el clic que sigue. */
+  const [hayBorrador, setHayBorrador] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
   const pantalla = pantallaDe(pathname ?? "");
@@ -30,6 +34,12 @@ export default function HelpButton({ onStartTour }: { onStartTour?: () => void }
   /* De qué panel es esta ayuda. Este botón vive en los dos —la barra del dueño y
      la del afiliado— y cada uno tiene la suya, adentro de su propio `scope`. */
   const base = (pathname ?? "").startsWith("/afiliados") ? "/afiliados/ayuda" : "/dashboard/ayuda";
+
+  /* Los dos links de ayuda comparten esto para que no se separen: si un día uno
+     abre aparte y el otro no, el guard frena uno de los dos y no el otro. */
+  const enOtraPestana = hayBorrador
+    ? ({ target: "_blank", rel: "noopener noreferrer" } as const)
+    : {};
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -42,7 +52,10 @@ export default function HelpButton({ onStartTour }: { onStartTour?: () => void }
   return (
     <div ref={ref} className="relative">
       <button
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => {
+          if (!open) setHayBorrador(hayCambiosSinGuardar());
+          setOpen((v) => !v);
+        }}
         className="relative flex items-center justify-center w-9 h-9 rounded-xl hover:bg-gray-100 transition-colors"
         aria-label="Ayuda"
         title="Ayuda"
@@ -79,14 +92,30 @@ export default function HelpButton({ onStartTour }: { onStartTour?: () => void }
               una pestaña de Chrome donde el sitio queda igual de navegable —lo
               comprobamos en el teléfono con el botón "Ir al sitio principal".
 
-              Ahora apuntan a la ayuda del propio panel, que es la misma ayuda
-              filtrada por rol y vive adentro del `scope`. Y van en la MISMA
-              pestaña, que en una app instalada es la única que hay; el motivo
-              original de abrir aparte —no pisar un formulario a medio llenar—
-              queda cubierto por el botón "atrás", que ahora vuelve al panel. */}
+              Ahora apuntan a la ayuda del propio panel: la misma ayuda, filtrada
+              por rol y adentro del `scope`. Y como está adentro, la pestaña ya
+              no decide si se puede escapar o no — decide otra cosa.
+
+              ── Cuándo va en la misma pestaña y cuándo no ────────────────────
+              Normalmente en la MISMA, que en una app instalada es la única que
+              hay, y el "atrás" del teléfono vuelve al panel.
+
+              La excepción es cuando hay un borrador sin guardar. Ahí abajo está
+              `UnsavedChangesGuard`, que frena los links para avisar que se
+              pierde lo escrito — y este es el link que no tiene que frenar:
+              alguien a mitad de cargar un producto que toca "Ayuda de esta
+              pantalla" no está abandonando el formulario, fue a buscar cómo
+              seguir llenándolo. En la misma pestaña le tocaba elegir entre leer
+              la ayuda y conservar su trabajo, justo cuando más la necesitaba.
+
+              Con `target="_blank"` el guard lo deja pasar solo, el borrador
+              queda intacto y lo que se abre es una pantalla del panel, no el
+              sitio. Es lo mismo que ya hacía `BotonCentroAyuda` en
+              `configuracion`, que estaba en esta misma situación. */}
           {pantalla && (
             <Link
               href={`${base}/${pantalla.slug}`}
+              {...enOtraPestana}
               onClick={() => setOpen(false)}
               className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-indigo-50 transition-colors text-left"
             >
@@ -102,6 +131,7 @@ export default function HelpButton({ onStartTour }: { onStartTour?: () => void }
 
           <Link
             href={base}
+            {...enOtraPestana}
             onClick={() => setOpen(false)}
             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-indigo-50 transition-colors text-left"
           >

@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { AlertTriangle } from "lucide-react";
+import { marcarCambiosSinGuardar } from "@/lib/cambios-sin-guardar";
 
 interface Props {
   isDirty: boolean;
@@ -11,6 +12,14 @@ interface Props {
 export function UnsavedChangesGuard({ isDirty }: Props) {
   const router = useRouter();
   const [pendingUrl, setPendingUrl] = useState<string | null>(null);
+
+  /* Que el resto del panel pueda enterarse. El `?` de la barra lo usa para
+     abrir la ayuda en otra pestaña en vez de hacer elegir entre leerla y
+     conservar el borrador. El porqué largo está en `cambios-sin-guardar`. */
+  useEffect(() => {
+    if (!isDirty) return;
+    return marcarCambiosSinGuardar();
+  }, [isDirty]);
 
   // Block browser close / refresh / URL bar navigation
   useEffect(() => {
