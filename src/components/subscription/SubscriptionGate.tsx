@@ -6,6 +6,7 @@ import Link from "next/link";
 import { AlertTriangle, Clock, CreditCard } from "lucide-react";
 import PaymentModal from "./PaymentModal";
 import { useAuth } from "@/components/AuthProvider";
+import { useIsPwa } from "@/hooks/useIsPwa";
 
 type Props = {
   status: "TRIAL" | "ACTIVE" | "GRACE" | "EXPIRED" | "CANCELLED";
@@ -21,6 +22,8 @@ export default function SubscriptionGate({ status, daysLeft, tier, plan }: Props
   const [payModal, setPayModal] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
   const { signOut } = useAuth();
+  // Adentro de la app instalada esta tapa no puede ofrecer salidas del `scope`.
+  const inPwa = useIsPwa();
   const pathname = usePathname();
   const showBanner = pathname === "/dashboard" || pathname === "/dashboard/mi-plan";
 
@@ -128,11 +131,20 @@ export default function SubscriptionGate({ status, daysLeft, tier, plan }: Props
               {cancelada ? "Suscribirme de nuevo" : "Renovar suscripción"}
             </button>
 
-            <Link href="/" className="block text-sm text-gray-400 hover:text-gray-600 transition-colors mb-3">
-              Volver al inicio
-            </Link>
+            {/* "Volver al inicio" es la home comercial, o sea fuera del `scope`.
+                Y esta tapa cubre la pantalla ENTERA, así que en la app instalada
+                era casi lo único que se podía tocar: se te vence la suscripción y
+                el botón que tenés a mano te saca del panel a la página de ventas,
+                sin barra de direcciones y sin forma de volver.
+                Adentro de la app no se muestra. Queda "Cerrar sesión", que lleva
+                al login del propio panel — un lugar del que sí se puede volver. */}
+            {!inPwa && (
+              <Link href="/" className="block text-sm text-gray-400 hover:text-gray-600 transition-colors mb-3">
+                Volver al inicio
+              </Link>
+            )}
             <button
-              onClick={() => { if (!signingOut) { setSigningOut(true); signOut("/"); } }}
+              onClick={() => { if (!signingOut) { setSigningOut(true); signOut(inPwa ? "/dashboard" : "/"); } }}
               disabled={signingOut}
               className="text-sm text-red-400 hover:text-red-500 transition-colors disabled:opacity-50"
             >

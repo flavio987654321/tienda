@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ShoppingBag, ArrowLeft } from "lucide-react";
 import { TERMS_LAST_UPDATED } from "@/lib/legal";
+import type { PanelId } from "./desde-el-panel";
 
 /**
  * La cáscara de /terminos y /privacidad.
@@ -72,34 +73,82 @@ export function rolValido<T extends object>(crudo: string | undefined, roles: T)
   return Object.prototype.hasOwnProperty.call(roles, crudo) ? (crudo as keyof T) : null;
 }
 
+/**
+ * Cuando este documento se abre DESDE UN PANEL instalado como app.
+ *
+ * Los dos paneles enlazan sus términos y su privacidad, como corresponde. Pero
+ * esta página vive fuera del `scope` de los manifiestos, así que abrirla desde
+ * la app dejaba a la persona en una pantalla que —por su encabezado— es una
+ * puerta al sitio comercial entero: el logo lleva a la home y al lado hay un
+ * "Volver al registro".
+ *
+ * Duplicar los documentos adentro de cada panel sería peor que la fuga: son mil
+ * líneas de texto legal que quedarían en dos copias, y dos versiones distintas
+ * de lo que la gente acepta es un problema de verdad, no de programación. Así
+ * que no se duplica nada y lo único que cambia es el encabezado: sin salidas al
+ * sitio, y con un "Volver al panel" que lleva de vuelta adentro del `scope`.
+ *
+ * El texto, los roles, las anclas y el resto de la página son los mismos.
+ */
 export default function PaginaLegalPlataforma({
-  titulo, ruta, tituloResponsable, roles, rolActivo,
+  titulo, ruta, tituloResponsable, roles, rolActivo, volverA, panel,
 }: {
   titulo: string;
   ruta: "/terminos" | "/privacidad";
   tituloResponsable: string;
   roles: Record<string, RolLegal>;
   rolActivo: string;
+  /** Si viene, el encabezado no ofrece ninguna salida al sitio: vuelve acá. */
+  volverA?: string;
+  /**
+   * La clave del panel, ya validada. Sólo sirve para VOLVER A PONERLA en los
+   * links que arma esta página: sin esto, la primera pestaña de rol que se
+   * tocaba llevaba a `?role=…` a secas, `volverA` llegaba vacío y el encabezado
+   * recuperaba el logo a la home y el "Volver al registro" — o sea la misma fuga
+   * de scope, a un clic de distancia.
+   *
+   * Va con `PanelId` y no con `string` por lo mismo que `ruta`: los dos únicos
+   * valores posibles ya están escritos en `desde-el-panel`, y acá se los pega
+   * dentro de una dirección. Con `string` nada impediría que un día llegue algo
+   * que no salió de `panelValido`, que es justo la validación que evita que este
+   * parámetro se convierta en un redirect abierto.
+   */
+  panel?: PanelId;
 }) {
   const contenido = roles[rolActivo];
   const color = COLOR_ROL[rolActivo] ?? COLOR_POR_DEFECTO;
+  const sufijoPanel = panel ? `&panel=${panel}` : "";
+
+  /* La marca, una sola vez. Abierta desde un panel va adentro de un `<span>` y
+     desde el sitio adentro de un `<Link>`; lo que cambia es el envoltorio, no el
+     contenido. Escrito dos veces era medio renglón de diferencia entre las dos
+     copias esperando a que alguien tocara una sola. */
+  const marca = (
+    <>
+      <span className="flex h-7 w-7 items-center justify-center rounded-md bg-indigo-600">
+        <ShoppingBag className="h-3.5 w-3.5 text-white" />
+      </span>
+      <span className="text-sm font-semibold tracking-tight">TiendaApps</span>
+    </>
+  );
 
   return (
     <div className="min-h-screen bg-white text-slate-900">
       <nav className="sticky top-0 z-50 border-b border-slate-200 bg-white/95 backdrop-blur">
         <div className="mx-auto flex max-w-5xl items-center gap-3 px-5 py-4 sm:px-8">
-          <Link href="/" className="flex items-center gap-2.5">
-            <span className="flex h-7 w-7 items-center justify-center rounded-md bg-indigo-600">
-              <ShoppingBag className="h-3.5 w-3.5 text-white" />
-            </span>
-            <span className="text-sm font-semibold tracking-tight">TiendaApps</span>
-          </Link>
+          {/* Abierto desde un panel, la marca NO es un link: ahí el logo era la
+              puerta a la home comercial. Ver el comentario de `volverA`. */}
+          {volverA ? (
+            <span className="flex items-center gap-2.5">{marca}</span>
+          ) : (
+            <Link href="/" className="flex items-center gap-2.5">{marca}</Link>
+          )}
           <Link
-            href="/registro"
+            href={volverA ?? "/registro"}
             className="ml-auto inline-flex shrink-0 items-center gap-1.5 text-xs font-medium text-slate-500 transition-colors hover:text-slate-900"
           >
             <ArrowLeft className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">Volver al registro</span>
+            <span className="hidden sm:inline">{volverA ? "Volver al panel" : "Volver al registro"}</span>
             <span className="sm:hidden">Volver</span>
           </Link>
         </div>
@@ -145,7 +194,7 @@ export default function PaginaLegalPlataforma({
             return (
               <Link
                 key={clave}
-                href={`${ruta}?role=${clave}`}
+                href={`${ruta}?role=${clave}${sufijoPanel}`}
                 aria-current={esActivo ? "page" : undefined}
                 className={`rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-colors ${
                   esActivo

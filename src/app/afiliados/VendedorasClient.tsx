@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/components/AuthProvider";
 import { QRCodeCanvas } from "qrcode.react";
 import { textoPlano, textoPlanoCorto } from "@/lib/texto-plano";
+import { esAppInstalada } from "@/lib/pwa";
 import {
   dibujarPlaca, fuentesListas, familiaDeMarca, money,
   FORMAT_SIZES, FORMAT_LABELS, PLACA_TEMPLATES,
@@ -1313,7 +1314,12 @@ function ProfileEditModal({ profile, onClose, onSave }: { profile: UserProfile; 
         body: JSON.stringify({ target: "account", confirm: deleteConfirmText }),
       });
       if (res.ok) {
-        await signOut("/");
+        /* Adentro de la app instalada se sale al login DEL PANEL, no a la home.
+           La home comercial esta fuera del `scope`: la cuenta se borraba bien
+           pero la app quedaba mostrando la pagina de ventas de TiendaApps en su
+           propia ventana, sin barra de direcciones. Mismo criterio que
+           `PanelRolAjeno`, que ya sale a `raiz` y no al destino. */
+        await signOut(esAppInstalada() ? "/afiliados" : "/");
         return;
       }
       const err = await res.json().catch(() => ({}));

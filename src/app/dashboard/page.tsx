@@ -1,4 +1,3 @@
-import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import ShareStoreButton from "@/components/ShareStoreButton";
@@ -17,7 +16,10 @@ import { statusLabel, statusClass } from "@/lib/orders";
 
 export default async function DashboardPage() {
   const user = await getCurrentUser();
-  if (!user) redirect("/login");
+  // Sin sesión NO se redirige a `/login`: esa ruta está fuera del `scope` del
+  // manifiesto, y desde el panel instalado abría el sitio comercial entero. La
+  // pantalla la dibuja el layout. El porqué largo está en `dashboard/layout.tsx`.
+  if (!user) return null;
 
   const userId = user.id;
 
@@ -46,8 +48,48 @@ export default async function DashboardPage() {
 
   /* El reparto por rol se hace en el layout, que corre antes que esto — acá
      sólo llega un OWNER. Lo único que queda es el caso raro: un dueño sin
-     tienda creada, que no debería existir. */
-  if (!store) redirect("/login");
+     tienda creada.
+     No debería existir: el registro crea la cuenta y la tienda en la MISMA
+     transacción, así que o están las dos o no está ninguna.
+
+     Pero lo que hacía si pasaba era `redirect("/login")`, y eso estaba mal por
+     dos motivos a la vez. Uno, `/login` está fuera del `scope`: en el panel
+     instalado se abría el sitio comercial entero. Y dos —peor—, quien llega acá
+     TIENE sesión, así que `/login` lo manda de vuelta al panel, que lo manda a
+     `/login`… un rebote sin salida, en una pantalla donde ni siquiera hay barra
+     de direcciones para escaparse.
+
+     Ahora se dice lo que pasa y se ofrece el único camino que sirve, que es
+     escribirnos. Y queda escrito en el log del servidor, porque un OWNER sin
+     tienda significa que algo se rompió en el registro y eso hay que verlo. */
+  if (!store) {
+    console.error("[dashboard] OWNER sin tienda:", userId);
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 [color-scheme:light] p-6">
+        <div className="max-w-md text-center">
+          <h1 className="text-xl font-black text-gray-900">No encontramos tu tienda</h1>
+          <p className="mt-3 text-sm leading-6 text-gray-600">
+            Tu cuenta está bien, pero la tienda asociada no aparece. Es un problema
+            nuestro y lo podemos resolver: escribinos y lo revisamos.
+          </p>
+          {/* Un `mailto:` y no un link a `/contacto`, que es la página que
+              usaría cualquiera para esto. `/contacto` está fuera del `scope` del
+              manifiesto, así que desde el panel instalado sería exactamente la
+              fuga que estamos cerrando en este mismo cambio. El correo abre la
+              app de mail y no navega a ningún lado, así que sirve igual en la
+              web y adentro de la app. */}
+          <a
+            href={`mailto:soporte@tiendaapps.com?subject=${encodeURIComponent(
+              "No aparece mi tienda"
+            )}&body=${encodeURIComponent(`Mi cuenta: ${userId}`)}`}
+            className="mt-6 inline-flex items-center justify-center rounded-xl bg-gray-900 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-gray-800"
+          >
+            Escribirnos
+          </a>
+        </div>
+      </div>
+    );
+  }
 
   // Extra fields for onboarding checklist
   const storeExtra = await prisma.store.findUnique({

@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import Link from "next/link";
 import { Power, Loader2, Check } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
+import { useIsPwa } from "@/hooks/useIsPwa";
 
 /**
  * Lo que ve la dueña en su panel cuando su tienda está cerrada.
@@ -33,6 +34,8 @@ export default function StoreClosedGate({
   const [errorMsg, setErrorMsg] = useState("");
   const [signingOut, setSigningOut] = useState(false);
   const { signOut } = useAuth();
+  // Ver `SubscriptionGate`: tapa bloqueante, nada que salga del `scope`.
+  const inPwa = useIsPwa();
   // Doble click: el estado solo no alcanza, dos clicks seguidos pueden pasar
   // los dos antes del primer re-render.
   const sending = useRef(false);
@@ -101,11 +104,15 @@ export default function StoreClosedGate({
             : "Al reactivarla vas a tener que elegir un plan para volver a publicarla."}
         </p>
 
-        <Link href="/" className="block text-sm text-gray-400 hover:text-gray-600 transition-colors mb-3">
-          Volver al inicio
-        </Link>
+        {/* Mismo caso que `SubscriptionGate`: tapa bloqueante, y este link
+            llevaba fuera del `scope`. El detalle está en el comentario de allá. */}
+        {!inPwa && (
+          <Link href="/" className="block text-sm text-gray-400 hover:text-gray-600 transition-colors mb-3">
+            Volver al inicio
+          </Link>
+        )}
         <button
-          onClick={() => { if (!signingOut) { setSigningOut(true); signOut("/"); } }}
+          onClick={() => { if (!signingOut) { setSigningOut(true); signOut(inPwa ? "/dashboard" : "/"); } }}
           disabled={signingOut}
           className="text-sm text-red-400 hover:text-red-500 transition-colors disabled:opacity-50"
         >

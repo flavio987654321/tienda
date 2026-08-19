@@ -13,7 +13,10 @@ import { hasActivePremium, SUB_STATUS_SELECT } from "@/lib/subscription";
 export default async function PagosPage({ searchParams }: { searchParams: Promise<{ mp?: string }> }) {
   const { mp } = await searchParams;
   const user = await getCurrentUser();
-  if (!user) redirect("/login");
+  // Sin sesión NO se redirige a `/login`: esa ruta está fuera del `scope` del
+  // manifiesto, y desde el panel instalado abría el sitio comercial entero. La
+  // pantalla la dibuja el layout. El porqué largo está en `dashboard/layout.tsx`.
+  if (!user) return null;
   if (user.role !== "OWNER") redirect("/dashboard");
 
   const store = await prisma.store.findUnique({

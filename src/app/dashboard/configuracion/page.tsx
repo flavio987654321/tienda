@@ -1997,11 +1997,17 @@ function BotonAyuda({ onClick, plano }: { onClick: () => void; plano?: boolean }
    ayuda escrita.
 
    Se abre en otra pestaña: acá se está editando un diseño sin guardar y
-   `UnsavedChangesGuard` está montado. */
+   `UnsavedChangesGuard` está montado.
+
+   Apunta a `/dashboard/ayuda` y no a `/ayuda`. Es la misma ayuda, pero adentro
+   del `scope` del manifiesto: `/ayuda` queda afuera, y desde el panel instalado
+   como app esa pestaña se convertía en el sitio comercial entero, navegable y
+   sin forma de volver. Con el prefijo del panel, lo peor que pasa es que se
+   abra una pestaña más con una pantalla del panel. */
 function BotonCentroAyuda({ plano }: { plano?: boolean }) {
   const fondo = plano ? "none" : "white";
   return (
-    <Link href="/ayuda" target="_blank" rel="noopener noreferrer"
+    <Link href="/dashboard/ayuda" target="_blank" rel="noopener noreferrer"
       title="Centro de ayuda" aria-label="Abrir el centro de ayuda en otra pestaña"
       style={{ display: "flex", alignItems: "center", justifyContent: "center",
         width: 32, height: 32, borderRadius: plano ? 6 : 8, background: fondo,

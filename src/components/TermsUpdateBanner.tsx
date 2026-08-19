@@ -2,11 +2,30 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { FileText, X, Loader2 } from "lucide-react";
 
 export default function TermsUpdateBanner() {
   const [visible, setVisible] = useState(false);
   const [accepting, setAccepting] = useState(false);
+
+  /* Este cartel vive en los DOS paneles, y cada uno tiene su propio `scope`.
+     Cuál es se le pasa al documento legal para que se dibuje sin el encabezado
+     que lleva a la home y al registro: sin eso, tocar "Términos" desde la app
+     instalada abría el sitio comercial entero. Ver `desde-el-panel`.
+
+     Pero también vive en `/mi-cuenta`, que NO es un panel instalable: ahí no va
+     ningún parámetro. Con un `else` que asumía "dashboard", el cliente terminaba
+     en un documento con un "Volver al panel" que lo mandaba a `/dashboard` —una
+     pantalla que le dice que su cuenta no es de tienda—, y de paso perdía el
+     link a la home estando en una pestaña común, donde nunca hubo problema. */
+  const pathname = usePathname() ?? "";
+  const panel = pathname.startsWith("/afiliados")
+    ? "afiliados"
+    : pathname.startsWith("/dashboard")
+      ? "dashboard"
+      : null;
+  const desdePanel = panel ? `?panel=${panel}` : "";
 
   useEffect(() => {
     // El mail de aviso linkea con ?terminos=1. Sin esto, quien cerró el cartel
@@ -45,9 +64,9 @@ export default function TermsUpdateBanner() {
       <FileText className="h-4 w-4 shrink-0 text-indigo-500" />
       <p className="flex-1 min-w-[200px]">
         Actualizamos nuestros{" "}
-        <Link href="/terminos" target="_blank" className="font-semibold underline">Términos y Condiciones</Link>{" "}
+        <Link href={`/terminos${desdePanel}`} target="_blank" className="font-semibold underline">Términos y Condiciones</Link>{" "}
         y{" "}
-        <Link href="/privacidad" target="_blank" className="font-semibold underline">Política de Privacidad</Link>.
+        <Link href={`/privacidad${desdePanel}`} target="_blank" className="font-semibold underline">Política de Privacidad</Link>.
       </p>
       <button
         type="button"

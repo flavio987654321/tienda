@@ -414,8 +414,11 @@ export default function AfiliadosNav() {
                     teléfono es justo donde alguien que recién empieza necesita
                     que le expliquen: el panel de afiliados se usa caminando, no
                     sentado frente a una computadora.
-                    El centro de ayuda va con `target="_blank"` porque `/ayuda`
-                    está fuera del scope; abrirlo acá se comía el panel. */}
+                    El centro de ayuda apunta a `/afiliados/ayuda` y no a `/ayuda`.
+                    La primera versión usaba `/ayuda` con `target="_blank"`, y no
+                    alcanzaba: esa ruta está fuera del scope, y desde la app
+                    instalada Flavio pudo salir del panel y navegar el sitio
+                    entero. Ver el comentario largo de `PanelAyuda`. */}
                 <div className="pb-2 flex flex-col gap-1">
                   <button
                     onClick={() => {
@@ -432,16 +435,14 @@ export default function AfiliadosNav() {
                       <span className="w-2 h-2 rounded-full bg-indigo-500 shrink-0" />
                     )}
                   </button>
-                  <a
-                    href="/ayuda"
-                    target="_blank"
-                    rel="noopener noreferrer"
+                  <Link
+                    href="/afiliados/ayuda"
                     onClick={() => setMobileOpen(false)}
                     className="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
                   >
                     <LifeBuoy className="h-4 w-4 text-gray-400" />
                     <span className="flex-1">Centro de ayuda</span>
-                  </a>
+                  </Link>
                 </div>
 
                 <div className="mt-auto pt-4 border-t border-gray-100 dark:border-white/10 flex flex-col gap-1">

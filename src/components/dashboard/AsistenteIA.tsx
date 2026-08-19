@@ -61,7 +61,11 @@ const RE_MARCA = /\s*\[\[(ACCION|AYUDA):([A-Za-z0-9_-]+)\]\]\s*$/;
 function accionDeAyuda(slug: string): Accion | null {
   const titulo = tituloDeAyuda(slug);
   if (!titulo) return null;
-  return { label: titulo, href: `/ayuda/${slug}`, icon: BookOpen, externo: true };
+  /* `/dashboard/ayuda/...` y no `/ayuda/...`: la segunda esta fuera del `scope`
+     del manifiesto, asi que un boton del asistente abria el sitio comercial
+     entero adentro del panel instalado. Es la misma ayuda, filtrada por rol.
+     Y por eso deja de ser `externo`: ahora es una pantalla mas del panel. */
+  return { label: titulo, href: `/dashboard/ayuda/${slug}`, icon: BookOpen, externo: false };
 }
 
 function parseAcciones(content: string, accionesValidas: AccionesValidas | null): { texto: string; acciones: Accion[] } {
@@ -440,11 +444,16 @@ export default function AsistenteIA({ userId }: { userId: string }) {
                       {acciones.length > 0 && (
                         <div className="flex max-w-[85%] flex-wrap gap-2">
                           {acciones.map((accion, j) => (
-                            /* El artículo abre en una pestaña aparte y NO cierra
-                               el chat: no es una acción que resuelva algo en el
-                               panel, es lectura al costado. Cerrarle la charla
-                               a alguien que solo quiso mirar la ayuda lo obliga
-                               a arrancar de nuevo cuando vuelve. */
+                            /* El artículo dejó de abrirse en otra pestaña: la
+                               ayuda ahora vive adentro del panel (`/dashboard/
+                               ayuda/...`), y en una app instalada la pestaña
+                               aparte es una ventana del navegador de la que no
+                               se vuelve. Así que va en la misma y el chat se
+                               cierra al navegar.
+                               No se pierde la charla: el historial vive en el
+                               servidor, así que al volver está donde estaba.
+                               Las acciones externas de verdad —si alguna vez hay
+                               una— siguen usando `externo`. */
                             <Link
                               key={j}
                               href={accion.href}

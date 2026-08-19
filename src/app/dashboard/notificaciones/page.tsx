@@ -623,7 +623,9 @@ export default function NotificacionesPage() {
                   Acepto usar las notificaciones solo para contenido relacionado con mi tienda
                   (productos, ofertas, novedades). El uso indebido puede resultar en la suspensión
                   del servicio según los{" "}
-                  <a href="/terminos" target="_blank" className="text-indigo-600 underline">
+                  {/* `?panel=dashboard`: el documento se abre sin el encabezado
+                      que lleva a la home y al registro. Ver `desde-el-panel`. */}
+                  <a href="/terminos?panel=dashboard" target="_blank" className="text-indigo-600 underline">
                     términos de uso
                   </a>
                   .

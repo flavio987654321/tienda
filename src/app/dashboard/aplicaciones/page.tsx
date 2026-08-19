@@ -31,7 +31,10 @@ export default async function AplicacionesPage() {
   // Sección oculta hasta el lanzamiento — ver NEXT_PUBLIC_APPS_ENABLED en .env
   if (process.env.NEXT_PUBLIC_APPS_ENABLED !== "1") redirect("/dashboard");
   const user = await getCurrentUser();
-  if (!user) redirect("/login");
+  // Sin sesión NO se redirige a `/login`: esa ruta está fuera del `scope` del
+  // manifiesto, y desde el panel instalado abría el sitio comercial entero. La
+  // pantalla la dibuja el layout. El porqué largo está en `dashboard/layout.tsx`.
+  if (!user) return null;
   if (user.role !== "OWNER") redirect("/dashboard");
 
   const store = await prisma.store.findUnique({

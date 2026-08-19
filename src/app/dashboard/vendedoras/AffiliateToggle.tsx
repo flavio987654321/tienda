@@ -290,7 +290,7 @@ export default function AffiliateToggle({
               <p><strong className="text-gray-900">Acuerdos fuera de la plataforma</strong><br />
                 Queda prohibido acordar pagos o compensaciones con afiliados por fuera de la plataforma. Toda comisión debe procesarse a través de TiendaApps.</p>
 
-              <Link href="/terminos?role=owner" target="_blank" className="inline-flex items-center gap-1 text-indigo-600 hover:text-indigo-700 text-xs font-medium mt-1">
+              <Link href="/terminos?role=owner&panel=dashboard" target="_blank" className="inline-flex items-center gap-1 text-indigo-600 hover:text-indigo-700 text-xs font-medium mt-1">
                 Ver términos completos para dueños <ExternalLink className="h-3 w-3" />
               </Link>
             </div>

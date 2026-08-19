@@ -1,6 +1,5 @@
 export const dynamic = "force-dynamic";
 
-import { redirect } from "next/navigation";
 import DashboardLayout from "@/components/DashboardLayout";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
@@ -13,7 +12,10 @@ type Props = { searchParams: Promise<{ page?: string; q?: string }> };
 
 export default async function CarritosAbandonadosPage({ searchParams }: Props) {
   const user = await getCurrentUser();
-  if (!user) redirect("/login");
+  // Sin sesión NO se redirige a `/login`: esa ruta está fuera del `scope` del
+  // manifiesto, y desde el panel instalado abría el sitio comercial entero. La
+  // pantalla la dibuja el layout. El porqué largo está en `dashboard/layout.tsx`.
+  if (!user) return null;
 
   const { page: pageParam, q: qParam } = await searchParams;
   const page = Math.max(1, parseInt(pageParam ?? "1", 10) || 1);

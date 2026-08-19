@@ -56,7 +56,10 @@ export default async function AppDetailPage({
   const origen = desde && desde !== id ? getApp(desde) : undefined;
 
   const user = await getCurrentUser();
-  if (!user) redirect("/login");
+  // Sin sesión NO se redirige a `/login`: esa ruta está fuera del `scope` del
+  // manifiesto, y desde el panel instalado abría el sitio comercial entero. La
+  // pantalla la dibuja el layout. El porqué largo está en `dashboard/layout.tsx`.
+  if (!user) return null;
   if (user.role !== "OWNER") redirect("/dashboard");
 
   const store = await prisma.store.findUnique({

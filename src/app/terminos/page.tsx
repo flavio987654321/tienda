@@ -2,11 +2,12 @@ import type { Metadata } from "next";
 import { PRICES, PRO_MAX_ACTIVE_COUPONS, PRO_MAX_LIVE_PROMOTIONS, PRO_MAX_AFFILIATES, PRO_MAX_PRODUCTS, MAX_PRODUCTS_POR_TIENDA } from "@/lib/planLimits";
 import { siteUrl } from "@/lib/site";
 import PaginaLegalPlataforma, { rolValido } from "@/components/legal/PaginaLegalPlataforma";
+import { volverAlPanel, panelValido, robotsDeDocumentoLegal } from "@/components/legal/desde-el-panel";
 
 const DESCRIPTION =
   "Términos y condiciones de TiendaApps: qué incluye cada plan, cómo funcionan los cobros, las cancelaciones y el programa de afiliados.";
 
-export const metadata: Metadata = {
+const META: Metadata = {
   title: "Términos y Condiciones",
   description: DESCRIPTION,
   alternates: { canonical: "/terminos" },
@@ -16,6 +17,18 @@ export const metadata: Metadata = {
     url: siteUrl("/terminos"),
   },
 };
+
+/* `generateMetadata` y no un `metadata` fijo por una sola cosa: la copia que se
+   abre desde un panel lleva `noindex`. Es la misma página con el encabezado
+   cambiado, y dos direcciones con el mismo texto compiten entre ellas. */
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<{ panel?: string }>;
+}): Promise<Metadata> {
+  const { panel } = await searchParams;
+  return { ...META, robots: robotsDeDocumentoLegal(panel) };
+}
 
 // Los precios y topes de la sección 3 salen de las constantes que los aplican.
 // Escritos a mano, este texto podía quedar diciendo un precio viejo — y es el
@@ -487,9 +500,9 @@ const CONTENT = {
 export default async function TerminosPage({
   searchParams,
 }: {
-  searchParams: Promise<{ role?: string }>;
+  searchParams: Promise<{ role?: string; panel?: string }>;
 }) {
-  const { role: roleParam } = await searchParams;
+  const { role: roleParam, panel } = await searchParams;
   // `rolValido` y no el `?? CONTENT.buyer` de antes: ese tapaba una clave que no
   // existe, pero no una heredada de Object.prototype. `?role=constructor`
   // devolvía la función `Object` —truthy, así que el `??` no la reemplazaba— y
@@ -503,6 +516,12 @@ export default async function TerminosPage({
       tituloResponsable="Datos del prestador del servicio"
       roles={CONTENT}
       rolActivo={role}
+      /* Abierto desde un panel, el encabezado se queda sin salidas al sitio.
+         Ver `desde-el-panel`. */
+      volverA={volverAlPanel(panel)}
+      /* Y el parámetro se vuelve a poner en las pestañas de rol: sin esto el
+         primer clic adentro del documento lo perdía y volvían las salidas. */
+      panel={panelValido(panel)}
     />
   );
 }

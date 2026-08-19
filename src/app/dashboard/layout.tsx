@@ -37,6 +37,29 @@ export default async function DashboardLayout({ children }: { children: React.Re
      `<meta http-equiv="refresh" content="1;url=/login">` y la persona ve el
      panel dibujado un segundo entero antes de que la pantalla salte.
      Estaba en `page.tsx`, o sea después de todo esto. */
+
+  /* ── Y por qué las páginas de abajo dicen `return null` y no `redirect` ─────
+   *
+   * Todas las pantallas del panel se guardan también a sí mismas, y está bien
+   * que lo hagan: este layout esconde la pantalla, pero NO evita que la página
+   * se ejecute. Comprobado pidiendo cualquier ruta sin sesión — la página corre
+   * igual y su resultado viaja en el payload de React aunque no se dibuje.
+   *
+   * Lo que hacían era `redirect("/login")`, dieciséis veces. Y `/login` está
+   * FUERA del `scope` del manifiesto, así que cada una de esas líneas era la
+   * misma fuga que este layout vino a cerrar, escrita una vez por pantalla: a la
+   * primera sesión vencida, el panel instalado se llenaba con el sitio comercial
+   * entero, sin barra de direcciones y sin forma de volver.
+   *
+   * Hoy no se disparaban —este layout les gana— pero eso es un detalle de cómo
+   * Next resuelve layout y página, no una decisión de nadie. Dieciséis fugas
+   * apagadas por accidente es una actualización de Next de distancia.
+   *
+   * Con `return null` la página no navega a ningún lado: deja de trabajar y
+   * manda el layout, que ya sabe mostrar el login adentro de la app. Los
+   * `redirect("/dashboard")` de las mismas páginas se quedan como estaban:
+   * ésos apuntan adentro del `scope` y no tienen este problema.
+   */
   /* Sin sesión se DIBUJA el login acá, no se redirige a `/login`.
      `/login` está fuera del `scope` del manifest (`/dashboard`), y como los
      `<Link>` de Next navegan del lado del cliente, el panel instalado como app

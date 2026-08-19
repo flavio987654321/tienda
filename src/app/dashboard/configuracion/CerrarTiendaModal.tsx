@@ -12,6 +12,19 @@ type Blockers = { pendingOrders: number; pendingBalances: number };
 // mayoría de las que cierran tienen un problema puntual que se puede resolver.
 // Los motivos sin salida —cierra el emprendimiento, se va a otra plataforma— no
 // llevan retención a propósito: insistirle a alguien que ya decidió es molesto.
+/* Un `mailto:` y no `/contacto`, que es la pagina que usaria cualquiera.
+   `/contacto` esta fuera del `scope` del manifiesto: desde el panel instalado,
+   el boton de "Escribinos" abria el sitio comercial entero adentro de la app.
+   El correo abre la app de mail y no navega a ningun lado, asi que sirve igual
+   en la web y adentro de la app. */
+const CORREO_SOPORTE = "mailto:soporte@tiendaapps.com?subject=Antes%20de%20cerrar%20mi%20tienda";
+
+/* La misma clase para las dos formas del boton de retencion, que abajo se
+   dibuja como `<a>` o como `<Link>` segun a donde vaya. Escrita una sola vez
+   para que las dos se vean igual. */
+const CLASE_CTA_RETENCION =
+  "inline-block mt-2.5 text-xs font-bold text-indigo-700 hover:text-indigo-900 underline underline-offset-2";
+
 const RETENTION: Partial<Record<ClosureReason, { text: string; cta?: { label: string; href: string } }>> = {
   PRICE: {
     text: "Si el plan Premium te quedó grande, Tienda Pro tiene lo esencial por menos. Podés cambiarte sin perder nada de lo que armaste.",
@@ -19,11 +32,11 @@ const RETENTION: Partial<Record<ClosureReason, { text: string; cta?: { label: st
   },
   NO_SALES: {
     text: "Nos pasa seguido que con unos ajustes en las fotos, los precios o la difusión la cosa cambia. Si querés, lo miramos juntos antes de que cierres.",
-    cta: { label: "Escribinos", href: "/contacto" },
+    cta: { label: "Escribinos", href: CORREO_SOPORTE },
   },
   TOO_HARD: {
     text: "Eso es culpa nuestra, no tuya. Contanos qué parte te trabó y te damos una mano — capaz se resuelve en cinco minutos.",
-    cta: { label: "Escribinos", href: "/contacto" },
+    cta: { label: "Escribinos", href: CORREO_SOPORTE },
   },
 };
 
@@ -212,14 +225,24 @@ export default function CerrarTiendaModal({
                     <MessageCircle className="h-4 w-4 text-indigo-600 shrink-0 mt-0.5" />
                     <div className="min-w-0">
                       <p className="text-sm text-indigo-900 leading-relaxed">{retention.text}</p>
-                      {retention.cta && (
-                        <Link
-                          href={retention.cta.href}
-                          className="inline-block mt-2.5 text-xs font-bold text-indigo-700 hover:text-indigo-900 underline underline-offset-2"
-                        >
-                          {retention.cta.label}
-                        </Link>
-                      )}
+                      {/* La tabla mezcla dos clases de destino: una pantalla
+                          del panel y un correo. El correo va en un `<a>` — hoy
+                          `next/link` se aparta solo cuando la direccion no es
+                          local, pero eso es un detalle interno del que no hace
+                          falta depender, y `dashboard/page.tsx` ya usa `<a>`
+                          para el mismo `mailto:`. Que las dos se comporten
+                          distinto estando en la misma tabla es lo que hay que
+                          evitar. */}
+                      {retention.cta &&
+                        (retention.cta.href.startsWith("mailto:") ? (
+                          <a href={retention.cta.href} className={CLASE_CTA_RETENCION}>
+                            {retention.cta.label}
+                          </a>
+                        ) : (
+                          <Link href={retention.cta.href} className={CLASE_CTA_RETENCION}>
+                            {retention.cta.label}
+                          </Link>
+                        ))}
                     </div>
                   </div>
                 </div>

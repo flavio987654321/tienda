@@ -1,7 +1,6 @@
 export const dynamic = "force-dynamic";
 
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import DashboardLayout from "@/components/DashboardLayout";
 import AutoRefresh from "@/components/AutoRefresh";
 import OrderActions from "@/components/orders/OrderActions";
@@ -22,7 +21,10 @@ type Props = { searchParams: Promise<{ page?: string; status?: string; q?: strin
 
 export default async function PedidosPage({ searchParams }: Props) {
   const user = await getCurrentUser();
-  if (!user) redirect("/login");
+  // Sin sesión NO se redirige a `/login`: esa ruta está fuera del `scope` del
+  // manifiesto, y desde el panel instalado abría el sitio comercial entero. La
+  // pantalla la dibuja el layout. El porqué largo está en `dashboard/layout.tsx`.
+  if (!user) return null;
 
   const userId = user.id;
   const { page: pageParam, status: statusParam, q: qParam } = await searchParams;

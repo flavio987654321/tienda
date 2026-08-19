@@ -27,6 +27,10 @@ export default function HelpButton({ onStartTour }: { onStartTour?: () => void }
   const pathname = usePathname();
   const pantalla = pantallaDe(pathname ?? "");
 
+  /* De qué panel es esta ayuda. Este botón vive en los dos —la barra del dueño y
+     la del afiliado— y cada uno tiene la suya, adentro de su propio `scope`. */
+  const base = (pathname ?? "").startsWith("/afiliados") ? "/afiliados/ayuda" : "/dashboard/ayuda";
+
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
@@ -66,16 +70,23 @@ export default function HelpButton({ onStartTour }: { onStartTour?: () => void }
             </button>
           )}
 
-          {/* Los dos links van a otra pestaña a propósito. La ayuda es una página
-              pública, fuera del panel: si reemplazara la pantalla actual, el que
-              está a mitad de un formulario —cargando un producto, por ejemplo—
-              chocaría con el aviso de cambios sin guardar justo cuando fue a
-              buscar ayuda para poder seguir. */}
+          {/* Los dos links iban a `/ayuda` en otra pestaña, y las dos cosas
+              estaban mal desde que el panel se instala como app.
+
+              `/ayuda` está fuera del `scope` del manifiesto, así que la app
+              instalada terminaba con el sitio comercial entero adentro de su
+              ventana. Y el `target="_blank"` no lo salvaba: en Android eso abre
+              una pestaña de Chrome donde el sitio queda igual de navegable —lo
+              comprobamos en el teléfono con el botón "Ir al sitio principal".
+
+              Ahora apuntan a la ayuda del propio panel, que es la misma ayuda
+              filtrada por rol y vive adentro del `scope`. Y van en la MISMA
+              pestaña, que en una app instalada es la única que hay; el motivo
+              original de abrir aparte —no pisar un formulario a medio llenar—
+              queda cubierto por el botón "atrás", que ahora vuelve al panel. */}
           {pantalla && (
             <Link
-              href={`/ayuda/${pantalla.slug}`}
-              target="_blank"
-              rel="noopener noreferrer"
+              href={`${base}/${pantalla.slug}`}
               onClick={() => setOpen(false)}
               className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-indigo-50 transition-colors text-left"
             >
@@ -90,9 +101,7 @@ export default function HelpButton({ onStartTour }: { onStartTour?: () => void }
           )}
 
           <Link
-            href="/ayuda"
-            target="_blank"
-            rel="noopener noreferrer"
+            href={base}
             onClick={() => setOpen(false)}
             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-indigo-50 transition-colors text-left"
           >

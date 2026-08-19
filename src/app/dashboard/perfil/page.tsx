@@ -663,9 +663,9 @@ export default function PerfilPage() {
                   <p className="text-[11px] text-gray-400 leading-relaxed">
                     Al enviar aceptás que TiendaApps trate tus documentos de identidad con fines exclusivos de verificación, conforme al art. 7 de la Ley 25.326.
                     Los documentos son privados y solo los ve el equipo de TiendaApps. Podés solicitar su eliminación en cualquier momento.{" "}
-                    <a href="/privacidad?role=owner" target="_blank" rel="noopener noreferrer" className="underline hover:text-indigo-600">Política de privacidad</a>
+                    <a href="/privacidad?role=owner&panel=dashboard" target="_blank" rel="noopener noreferrer" className="underline hover:text-indigo-600">Política de privacidad</a>
                     {" · "}
-                    <a href="/terminos?role=owner" target="_blank" rel="noopener noreferrer" className="underline hover:text-indigo-600">Términos</a>
+                    <a href="/terminos?role=owner&panel=dashboard" target="_blank" rel="noopener noreferrer" className="underline hover:text-indigo-600">Términos</a>
                   </p>
 
                   <button

@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import { siteUrl } from "@/lib/site";
 import PaginaLegalPlataforma, { rolValido } from "@/components/legal/PaginaLegalPlataforma";
+import { volverAlPanel, panelValido, robotsDeDocumentoLegal } from "@/components/legal/desde-el-panel";
 
 const DESCRIPTION =
   "Política de privacidad de TiendaApps: qué datos guardamos, para qué los usamos, cuánto los conservamos y cómo pedir que los borremos.";
 
-export const metadata: Metadata = {
+const META: Metadata = {
   title: "Política de Privacidad",
   description: DESCRIPTION,
   alternates: { canonical: "/privacidad" },
@@ -15,6 +16,16 @@ export const metadata: Metadata = {
     url: siteUrl("/privacidad"),
   },
 };
+
+/* Ver `terminos`: la copia que se abre desde un panel lleva `noindex`. */
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<{ panel?: string }>;
+}): Promise<Metadata> {
+  const { panel } = await searchParams;
+  return { ...META, robots: robotsDeDocumentoLegal(panel) };
+}
 
 const CONTENT = {
   owner: {
@@ -539,9 +550,9 @@ const CONTENT = {
 export default async function PrivacidadPage({
   searchParams,
 }: {
-  searchParams: Promise<{ role?: string }>;
+  searchParams: Promise<{ role?: string; panel?: string }>;
 }) {
-  const { role: roleParam } = await searchParams;
+  const { role: roleParam, panel } = await searchParams;
   // Ver `rolValido`: el `?? CONTENT.buyer` de antes no tapaba las claves
   // heredadas de Object.prototype y `?role=constructor` devolvia un 500.
   const role = rolValido(roleParam, CONTENT) ?? "buyer";
@@ -553,6 +564,10 @@ export default async function PrivacidadPage({
       tituloResponsable="Responsable del tratamiento de datos"
       roles={CONTENT}
       rolActivo={role}
+      // Ver `terminos`: sin salidas al sitio cuando se abre desde un panel, y el
+      // parámetro se vuelve a poner en las pestañas de rol para no perderlo.
+      volverA={volverAlPanel(panel)}
+      panel={panelValido(panel)}
     />
   );
 }
