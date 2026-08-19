@@ -1,12 +1,18 @@
 ﻿"use client";
 
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import Link from "next/link";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/components/AuthProvider";
 import { QRCodeCanvas } from "qrcode.react";
+import { textoPlano, textoPlanoCorto } from "@/lib/texto-plano";
+import {
+  dibujarPlaca, fuentesListas, familiaDeMarca, money,
+  FORMAT_SIZES, FORMAT_LABELS, PLACA_TEMPLATES,
+  type PlacaTemplateId, type PlacaFormat, type PlacaProduct,
+} from "@/lib/placas";
 import {
   CheckCircle, Clock, Loader2, Send, Store, Wallet,
   XCircle, Share2, Copy, Check, ExternalLink, ShoppingBag,
@@ -53,41 +59,6 @@ function parseImages(images: string): string[] {
   }
 }
 
-function money(value: number) {
-  return `$${value.toLocaleString("es-AR")}`;
-}
-
-function wrapCanvasText(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, maxWidth: number, lineHeight: number, maxLines: number) {
-  const words = text.split(" ");
-  const lines: string[] = [];
-  let line = "";
-  let truncated = false;
-
-  for (const word of words) {
-    const testLine = line ? `${line} ${word}` : word;
-    if (ctx.measureText(testLine).width > maxWidth && line) {
-      lines.push(line);
-      line = word;
-      if (lines.length === maxLines) { truncated = true; break; }
-    } else {
-      line = testLine;
-    }
-  }
-
-  if (!truncated && line) lines.push(line);
-
-  if (truncated && lines.length > 0) {
-    let last = lines[lines.length - 1];
-    while (last.length > 1 && ctx.measureText(last + "…").width > maxWidth) {
-      last = last.slice(0, -1).trimEnd();
-    }
-    lines[lines.length - 1] = last + "…";
-  }
-
-  lines.forEach((item, index) => ctx.fillText(item, x, y + index * lineHeight));
-  return lines.length;
-}
-
 function formatCategory(value: string) {
   return value.split("-").filter(Boolean).map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
 }
@@ -106,547 +77,10 @@ async function loadCardImage(src: string): Promise<HTMLImageElement> {
   });
 }
 
-/* ── Plantillas de placa ── */
-type PlacaTemplateId = "clasica" | "minimal" | "oferta" | "neon" | "luxury" | "duo";
-type PlacaFormat    = "portrait" | "story" | "square";
-
-const FORMAT_SIZES: Record<PlacaFormat, { w: number; h: number }> = {
-  portrait: { w: 1080, h: 1350 },
-  story:    { w: 1080, h: 1920 },
-  square:   { w: 1080, h: 1080 },
-};
-
-const FORMAT_LABELS: Record<PlacaFormat, { label: string; sub: string }> = {
-  portrait: { label: "4:5",  sub: "Feed IG"  },
-  story:    { label: "9:16", sub: "Stories"  },
-  square:   { label: "1:1",  sub: "Cuadrada" },
-};
-
-const PLACA_TEMPLATES: { id: PlacaTemplateId; label: string; description: string }[] = [
-  { id: "clasica", label: "Clásica", description: "Fondo oscuro, foto completa"       },
-  { id: "minimal", label: "Minimal", description: "Fondo blanco, estilo limpio"        },
-  { id: "oferta",  label: "Oferta",  description: "Colores cálidos, descuentos"        },
-  { id: "neon",    label: "Neon",    description: "Gradiente eléctrico, Gen-Z"         },
-  { id: "luxury",  label: "Luxury",  description: "Negro y dorado, premium"            },
-  { id: "duo",     label: "Duo",     description: "Collage de dos fotos"               },
-];
-
-type PlacaProduct = {
-  name: string;
-  price: number;
-  comparePrice: number | null;
-  description: string | null;
-  cuotas: number;
-  isNew: boolean;
-  isLowStock: boolean;
-  isBestSeller: boolean;
-};
-
-// ── Badge row helper ─────────────────────────────────────────────────────────
-function drawBadgesRow(
-  ctx: CanvasRenderingContext2D,
-  px: (n: number) => number,
-  product: PlacaProduct,
-  x: number,
-  y: number,
-) {
-  const badges: { text: string; bg: string }[] = [];
-  if (product.isBestSeller) badges.push({ text: "🔥 Más vendido",    bg: "#f97316" });
-  if (product.isNew)        badges.push({ text: "✨ Nuevo",           bg: "#6366f1" });
-  if (product.isLowStock)   badges.push({ text: "⚡ Últimas unidades", bg: "#dc2626" });
-  if (badges.length === 0) return;
-  const fontSize = px(22);
-  ctx.font = `700 ${fontSize}px Arial`;
-  let cx = x;
-  for (const badge of badges.slice(0, 2)) {
-    const tw = ctx.measureText(badge.text).width;
-    const ph = px(11); const pv = px(8);
-    const bw = tw + ph * 2; const bh = fontSize + pv * 2;
-    ctx.fillStyle = badge.bg;
-    ctx.beginPath(); ctx.roundRect(cx, y, bw, bh, px(20)); ctx.fill();
-    ctx.fillStyle = "#fff";
-    ctx.fillText(badge.text, cx + ph, y + bh - pv - px(2));
-    cx += bw + px(10);
-  }
-}
-
-// ── Cuotas helper — returns updated Y ────────────────────────────────────────
-function drawCuotas(
-  ctx: CanvasRenderingContext2D,
-  px: (n: number) => number,
-  product: PlacaProduct,
-  x: number,
-  y: number,
-  color: string,
-): number {
-  if (!product.cuotas || product.cuotas < 2) return y;
-  const amt = Math.round(product.price / product.cuotas).toLocaleString("es-AR");
-  ctx.fillStyle = color;
-  ctx.font = `400 ${px(26)}px Arial`;
-  ctx.fillText(`${product.cuotas} cuotas sin interés de $${amt}`, x, y);
-  return y + px(40);
-}
-
-// ── CLÁSICA ───────────────────────────────────────────────────────────────────
-function drawClasicaTemplate(
-  ctx: CanvasRenderingContext2D,
-  px: (n: number) => number,
-  size: { w: number; h: number },
-  image: HTMLImageElement | null,
-  product: PlacaProduct,
-  storeName: string
-) {
-  const isStory  = size.h >= 1800;
-  const isSquare = size.h <= 1100;
-  const imgH = isStory ? px(1100) : isSquare ? px(520) : px(790);
-
-  // Fondo oscuro para el área de texto
-  ctx.fillStyle = "#070b18";
-  ctx.fillRect(0, 0, size.w, size.h);
-
-  // Imagen limpia sin efecto — toda la ropa se ve
-  if (image) {
-    const s = Math.max(size.w / image.width, imgH / image.height);
-    ctx.drawImage(image, (size.w - image.width * s) / 2, 0, image.width * s, image.height * s);
-  } else {
-    ctx.fillStyle = "#111827"; ctx.fillRect(0, 0, size.w, imgH);
-  }
-
-  // Degradado solo en el borde inferior de la foto (último 15%)
-  const fadeH = px(120);
-  const fade = ctx.createLinearGradient(0, imgH - fadeH, 0, imgH);
-  fade.addColorStop(0, "rgba(7,11,24,0)");
-  fade.addColorStop(1, "#070b18");
-  ctx.fillStyle = fade;
-  ctx.fillRect(0, imgH - fadeH, size.w, fadeH);
-
-  drawBadgesRow(ctx, px, product, px(60), px(60));
-
-  let y = imgH + px(40);
-  ctx.fillStyle = "#a5b4fc";
-  ctx.font = `700 ${px(30)}px Arial`;
-  ctx.fillText(storeName.toUpperCase(), px(72), y);
-  y += px(52);
-
-  ctx.fillStyle = "#ffffff";
-  ctx.font = `900 ${px(70)}px Arial`;
-  const nameLines = wrapCanvasText(ctx, product.name, px(72), y, px(930), px(78), 2);
-  y += px(78) * nameLines + px(16);
-
-  const hasDisc = !!(product.comparePrice && product.comparePrice > product.price);
-  if (hasDisc) {
-    const oldTxt = money(product.comparePrice!);
-    ctx.fillStyle = "#64748b"; ctx.font = `500 ${px(32)}px Arial`;
-    ctx.fillText(oldTxt, px(72), y);
-    const ow = ctx.measureText(oldTxt).width;
-    ctx.strokeStyle = "#64748b"; ctx.lineWidth = px(2);
-    ctx.beginPath(); ctx.moveTo(px(72), y - px(11)); ctx.lineTo(px(72) + ow, y - px(11)); ctx.stroke();
-    y += px(46);
-  }
-  ctx.fillStyle = "#34d399"; ctx.font = `900 ${px(66)}px Arial`;
-  ctx.fillText(money(product.price), px(72), y);
-  y += px(76);
-
-  y = drawCuotas(ctx, px, product, px(72), y, "#94a3b8");
-
-  if (product.description && y < size.h - px(170)) {
-    ctx.fillStyle = "#cbd5e1"; ctx.font = `400 ${px(28)}px Arial`;
-    const dLines = wrapCanvasText(ctx, product.description, px(72), y, px(800), px(40), 2);
-    y += px(40) * dLines + px(14);
-  }
-
-  if (y < size.h - px(80)) {
-    ctx.fillStyle = "#4f46e5";
-    ctx.beginPath(); ctx.roundRect(px(72), y, px(310), px(62), px(31)); ctx.fill();
-    ctx.fillStyle = "#ffffff"; ctx.font = `800 ${px(26)}px Arial`;
-    ctx.fillText("Comprá ahora →", px(108), y + px(40));
-  }
-}
-
-// ── MINIMAL ───────────────────────────────────────────────────────────────────
-function drawMinimalTemplate(
-  ctx: CanvasRenderingContext2D,
-  px: (n: number) => number,
-  size: { w: number; h: number },
-  image: HTMLImageElement | null,
-  product: PlacaProduct,
-  storeName: string,
-) {
-  const isStory  = size.h >= 1800;
-  const isSquare = size.h <= 1100;
-  const imgH   = isStory ? px(1060) : isSquare ? px(490) : px(750);
-  const margin = px(56);
-  const imgW   = size.w - margin * 2;
-
-  ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, size.w, size.h);
-
-  ctx.save();
-  ctx.beginPath(); ctx.roundRect(margin, margin, imgW, imgH, px(28)); ctx.clip();
-  ctx.fillStyle = "#f1f5f9"; ctx.fillRect(margin, margin, imgW, imgH);
-  if (image) {
-    const s = Math.max(imgW / image.width, imgH / image.height);
-    ctx.drawImage(image, margin + (imgW - image.width * s) / 2, margin + (imgH - image.height * s) / 2, image.width * s, image.height * s);
-  }
-  ctx.restore();
-
-  drawBadgesRow(ctx, px, product, margin + px(14), margin + px(14));
-
-  let y = margin + imgH + px(50);
-
-  ctx.fillStyle = "#6366f1"; ctx.font = `700 ${px(26)}px Arial`;
-  ctx.fillText(storeName.toUpperCase(), margin, y);
-  y += px(46);
-
-  ctx.fillStyle = "#0f172a"; ctx.font = `900 ${px(62)}px Arial`;
-  const nameLines = wrapCanvasText(ctx, product.name, margin, y, size.w - margin * 2, px(70), 2);
-  y += px(70) * nameLines + px(16);
-
-  const hasDisc = !!(product.comparePrice && product.comparePrice > product.price);
-  if (hasDisc) {
-    const oldTxt = money(product.comparePrice!);
-    ctx.fillStyle = "#94a3b8"; ctx.font = `500 ${px(32)}px Arial`;
-    ctx.fillText(oldTxt, margin, y);
-    const ow = ctx.measureText(oldTxt).width;
-    ctx.strokeStyle = "#94a3b8"; ctx.lineWidth = px(2);
-    ctx.beginPath(); ctx.moveTo(margin, y - px(11)); ctx.lineTo(margin + ow, y - px(11)); ctx.stroke();
-    y += px(44);
-  }
-  ctx.fillStyle = "#0f172a"; ctx.font = `900 ${px(66)}px Arial`;
-  ctx.fillText(money(product.price), margin, y);
-  y += px(76);
-
-  y = drawCuotas(ctx, px, product, margin, y, "#475569");
-
-  if (product.description && y < size.h - px(170)) {
-    ctx.fillStyle = "#64748b"; ctx.font = `400 ${px(28)}px Arial`;
-    const dLines = wrapCanvasText(ctx, product.description, margin, y, size.w - margin * 2, px(40), 2);
-    y += px(40) * dLines + px(14);
-  }
-
-  if (y < size.h - px(70)) {
-    ctx.strokeStyle = "#0f172a"; ctx.lineWidth = px(3);
-    ctx.beginPath(); ctx.roundRect(margin, y, px(310), px(62), px(31)); ctx.stroke();
-    ctx.fillStyle = "#0f172a"; ctx.font = `800 ${px(26)}px Arial`;
-    ctx.fillText("Comprá ahora →", margin + px(36), y + px(40));
-  }
-}
-
-// ── OFERTA ────────────────────────────────────────────────────────────────────
-function drawOfertaTemplate(
-  ctx: CanvasRenderingContext2D,
-  px: (n: number) => number,
-  size: { w: number; h: number },
-  image: HTMLImageElement | null,
-  product: PlacaProduct,
-  storeName: string
-) {
-  const isStory  = size.h >= 1800;
-  const isSquare = size.h <= 1100;
-  const imgH = isStory ? px(1100) : isSquare ? px(520) : px(800);
-
-  ctx.fillStyle = "#1a0a05"; ctx.fillRect(0, 0, size.w, size.h);
-
-  // Imagen limpia — ropa completamente visible
-  if (image) {
-    const s = Math.max(size.w / image.width, imgH / image.height);
-    ctx.drawImage(image, (size.w - image.width * s) / 2, 0, image.width * s, image.height * s);
-  } else {
-    ctx.fillStyle = "#3f1d0a"; ctx.fillRect(0, 0, size.w, imgH);
-  }
-
-  // Degradado solo al borde inferior de la foto
-  const fadeH = px(110);
-  const fade = ctx.createLinearGradient(0, imgH - fadeH, 0, imgH);
-  fade.addColorStop(0, "rgba(26,10,5,0)");
-  fade.addColorStop(1, "#1a0a05");
-  ctx.fillStyle = fade;
-  ctx.fillRect(0, imgH - fadeH, size.w, fadeH);
-
-  const hasDisc = !!(product.comparePrice && product.comparePrice > product.price);
-  if (hasDisc) {
-    const pct = Math.round((1 - product.price / product.comparePrice!) * 100);
-    ctx.fillStyle = "#f97316";
-    ctx.beginPath(); ctx.roundRect(px(56), px(52), px(150), px(62), px(14)); ctx.fill();
-    ctx.fillStyle = "#ffffff"; ctx.font = `900 ${px(34)}px Arial`;
-    ctx.fillText(`-${pct}%`, px(76), px(98));
-  }
-  drawBadgesRow(ctx, px, product, hasDisc ? px(220) : px(56), px(52));
-
-  let y = imgH + px(38);
-  ctx.fillStyle = "#fdba74"; ctx.font = `800 ${px(30)}px Arial`;
-  ctx.fillText(storeName.toUpperCase(), px(72), y);
-  y += px(50);
-
-  ctx.fillStyle = "#ffffff"; ctx.font = `900 ${px(70)}px Arial`;
-  const nameLines = wrapCanvasText(ctx, product.name, px(72), y, px(930), px(78), 2);
-  y += px(78) * nameLines + px(18);
-
-  if (hasDisc) {
-    const oldTxt = money(product.comparePrice!);
-    ctx.fillStyle = "#94a3b8"; ctx.font = `500 ${px(32)}px Arial`;
-    ctx.fillText(oldTxt, px(72), y);
-    const ow = ctx.measureText(oldTxt).width;
-    ctx.strokeStyle = "#94a3b8"; ctx.lineWidth = px(2);
-    ctx.beginPath(); ctx.moveTo(px(72), y - px(11)); ctx.lineTo(px(72) + ow, y - px(11)); ctx.stroke();
-    y += px(48);
-  }
-  ctx.fillStyle = "#fb923c"; ctx.font = `900 ${px(68)}px Arial`;
-  ctx.fillText(money(product.price), px(72), y);
-  y += px(80);
-
-  y = drawCuotas(ctx, px, product, px(72), y, "#fdba74");
-
-  if (product.description && y < size.h - px(160)) {
-    ctx.fillStyle = "#d4846a"; ctx.font = `400 ${px(28)}px Arial`;
-    const dLines = wrapCanvasText(ctx, product.description, px(72), y, px(800), px(40), 2);
-    y += px(40) * dLines + px(14);
-  }
-
-  if (y < size.h - px(80)) {
-    ctx.fillStyle = "#f97316";
-    ctx.beginPath(); ctx.roundRect(px(72), y, px(300), px(62), px(31)); ctx.fill();
-    ctx.fillStyle = "#1a0a05"; ctx.font = `800 ${px(26)}px Arial`;
-    ctx.fillText("¡Aprovechá! →", px(106), y + px(40));
-  }
-}
-
-// ── NEON ──────────────────────────────────────────────────────────────────────
-function drawNeonTemplate(
-  ctx: CanvasRenderingContext2D,
-  px: (n: number) => number,
-  size: { w: number; h: number },
-  image: HTMLImageElement | null,
-  product: PlacaProduct,
-  storeName: string
-) {
-  const isStory  = size.h >= 1800;
-  const isSquare = size.h <= 1100;
-  const imgH = isStory ? px(1100) : isSquare ? px(520) : px(790);
-
-  ctx.fillStyle = "#07040f"; ctx.fillRect(0, 0, size.w, size.h);
-
-  // Imagen a opacidad completa — la ropa se ve clara
-  if (image) {
-    const s = Math.max(size.w / image.width, imgH / image.height);
-    ctx.drawImage(image, (size.w - image.width * s) / 2, 0, image.width * s, image.height * s);
-  } else {
-    ctx.fillStyle = "#1a0829"; ctx.fillRect(0, 0, size.w, imgH);
-  }
-
-  // Degradado solo en el borde inferior (último 15%)
-  const fadeH = px(120);
-  const fade = ctx.createLinearGradient(0, imgH - fadeH, 0, imgH);
-  fade.addColorStop(0, "rgba(7,4,15,0)");
-  fade.addColorStop(1, "#07040f");
-  ctx.fillStyle = fade;
-  ctx.fillRect(0, imgH - fadeH, size.w, fadeH);
-
-  // Línea neon divisoria
-  const lineGrad = ctx.createLinearGradient(0, 0, size.w, 0);
-  lineGrad.addColorStop(0, "transparent");
-  lineGrad.addColorStop(0.3, "#b026ff");
-  lineGrad.addColorStop(0.6, "#ff0099");
-  lineGrad.addColorStop(1, "transparent");
-  ctx.strokeStyle = lineGrad; ctx.lineWidth = px(3);
-  ctx.beginPath(); ctx.moveTo(0, imgH + px(6)); ctx.lineTo(size.w, imgH + px(6)); ctx.stroke();
-
-  drawBadgesRow(ctx, px, product, px(60), px(56));
-
-  let y = imgH + px(44);
-  const sg = ctx.createLinearGradient(px(72), 0, px(72) + px(400), 0);
-  sg.addColorStop(0, "#b026ff"); sg.addColorStop(1, "#ff0099");
-  ctx.fillStyle = sg; ctx.font = `800 ${px(30)}px Arial`;
-  ctx.fillText(storeName.toUpperCase(), px(72), y);
-  y += px(50);
-
-  ctx.fillStyle = "#ffffff"; ctx.font = `900 ${px(70)}px Arial`;
-  const nameLines = wrapCanvasText(ctx, product.name, px(72), y, px(930), px(78), 2);
-  y += px(78) * nameLines + px(18);
-
-  const hasDisc = !!(product.comparePrice && product.comparePrice > product.price);
-  if (hasDisc) {
-    const oldTxt = money(product.comparePrice!);
-    ctx.fillStyle = "#6b21a8"; ctx.font = `500 ${px(32)}px Arial`;
-    ctx.fillText(oldTxt, px(72), y);
-    const ow = ctx.measureText(oldTxt).width;
-    ctx.strokeStyle = "#6b21a8"; ctx.lineWidth = px(2);
-    ctx.beginPath(); ctx.moveTo(px(72), y - px(11)); ctx.lineTo(px(72) + ow, y - px(11)); ctx.stroke();
-    y += px(46);
-  }
-  const pg = ctx.createLinearGradient(px(72), 0, px(72) + px(500), 0);
-  pg.addColorStop(0, "#b026ff"); pg.addColorStop(1, "#ff0099");
-  ctx.fillStyle = pg; ctx.font = `900 ${px(68)}px Arial`;
-  ctx.fillText(money(product.price), px(72), y);
-  y += px(78);
-
-  y = drawCuotas(ctx, px, product, px(72), y, "#a855f7");
-
-  if (product.description && y < size.h - px(170)) {
-    ctx.fillStyle = "#c4b5fd"; ctx.font = `400 ${px(28)}px Arial`;
-    const dLines = wrapCanvasText(ctx, product.description, px(72), y, px(800), px(40), 2);
-    y += px(40) * dLines + px(14);
-  }
-
-  if (y < size.h - px(80)) {
-    const bg = ctx.createLinearGradient(px(72), 0, px(72) + px(310), 0);
-    bg.addColorStop(0, "#b026ff"); bg.addColorStop(1, "#ff0099");
-    ctx.fillStyle = bg;
-    ctx.beginPath(); ctx.roundRect(px(72), y, px(310), px(62), px(31)); ctx.fill();
-    ctx.fillStyle = "#ffffff"; ctx.font = `800 ${px(26)}px Arial`;
-    ctx.fillText("Comprá ahora →", px(108), y + px(40));
-  }
-}
-
-// ── LUXURY ────────────────────────────────────────────────────────────────────
-function drawLuxuryTemplate(
-  ctx: CanvasRenderingContext2D,
-  px: (n: number) => number,
-  size: { w: number; h: number },
-  image: HTMLImageElement | null,
-  product: PlacaProduct,
-  storeName: string
-) {
-  const isStory  = size.h >= 1800;
-  const isSquare = size.h <= 1100;
-  const imgH   = isStory ? px(1060) : isSquare ? px(490) : px(740);
-  const margin = px(56);
-  const imgW   = size.w - margin * 2;
-
-  ctx.fillStyle = "#000000"; ctx.fillRect(0, 0, size.w, size.h);
-
-  ctx.save();
-  ctx.beginPath(); ctx.roundRect(margin, margin, imgW, imgH, px(20)); ctx.clip();
-  ctx.fillStyle = "#111"; ctx.fillRect(margin, margin, imgW, imgH);
-  if (image) {
-    ctx.globalAlpha = 0.88;
-    const s = Math.max(imgW / image.width, imgH / image.height);
-    ctx.drawImage(image, margin + (imgW - image.width * s) / 2, margin + (imgH - image.height * s) / 2, image.width * s, image.height * s);
-  }
-  ctx.restore();
-
-  ctx.strokeStyle = "#C9A84C"; ctx.lineWidth = px(2);
-  ctx.beginPath(); ctx.roundRect(margin, margin, imgW, imgH, px(20)); ctx.stroke();
-
-  drawBadgesRow(ctx, px, product, margin + px(14), margin + px(14));
-
-  const sepY = margin + imgH + px(36);
-  ctx.strokeStyle = "#C9A84C"; ctx.lineWidth = px(1);
-  ctx.beginPath(); ctx.moveTo(margin, sepY); ctx.lineTo(size.w - margin, sepY); ctx.stroke();
-
-  let y = sepY + px(44);
-  ctx.fillStyle = "#C9A84C"; ctx.font = `400 ${px(24)}px Arial`;
-  ctx.letterSpacing = `${px(6)}px`;
-  ctx.fillText(storeName.toUpperCase(), margin, y);
-  ctx.letterSpacing = "0px";
-  y += px(48);
-
-  ctx.fillStyle = "#f5f0e8"; ctx.font = `700 ${px(60)}px Arial`;
-  const nameLines = wrapCanvasText(ctx, product.name, margin, y, size.w - margin * 2, px(68), 2);
-  y += px(68) * nameLines + px(20);
-
-  const hasDisc = !!(product.comparePrice && product.comparePrice > product.price);
-  if (hasDisc) {
-    const oldTxt = money(product.comparePrice!);
-    ctx.fillStyle = "#555544"; ctx.font = `400 ${px(30)}px Arial`;
-    ctx.fillText(oldTxt, margin, y);
-    const ow = ctx.measureText(oldTxt).width;
-    ctx.strokeStyle = "#555544"; ctx.lineWidth = px(1.5);
-    ctx.beginPath(); ctx.moveTo(margin, y - px(10)); ctx.lineTo(margin + ow, y - px(10)); ctx.stroke();
-    y += px(44);
-  }
-  ctx.fillStyle = "#C9A84C"; ctx.font = `700 ${px(64)}px Arial`;
-  ctx.fillText(money(product.price), margin, y);
-  y += px(76);
-
-  y = drawCuotas(ctx, px, product, margin, y, "#8a7540");
-
-  if (product.description && y < size.h - px(160)) {
-    ctx.fillStyle = "#8a8070"; ctx.font = `400 ${px(27)}px Arial`;
-    const dLines = wrapCanvasText(ctx, product.description, margin, y, size.w - margin * 2, px(38), 2);
-    y += px(38) * dLines + px(16);
-  }
-
-  if (y < size.h - px(70)) {
-    ctx.strokeStyle = "#C9A84C"; ctx.lineWidth = px(2);
-    ctx.beginPath(); ctx.roundRect(margin, y, px(300), px(58), px(4)); ctx.stroke();
-    ctx.fillStyle = "#C9A84C"; ctx.font = `700 ${px(23)}px Arial`;
-    ctx.letterSpacing = `${px(2)}px`;
-    ctx.fillText("COMPRÁ AHORA →", margin + px(28), y + px(37));
-    ctx.letterSpacing = "0px";
-  }
-}
-
-// ── DUO (collage 2 fotos) ─────────────────────────────────────────────────────
-function drawDuoTemplate(
-  ctx: CanvasRenderingContext2D,
-  px: (n: number) => number,
-  size: { w: number; h: number },
-  images: (HTMLImageElement | null)[],
-  product: PlacaProduct,
-  storeName: string
-) {
-  const isStory  = size.h >= 1800;
-  const isSquare = size.h <= 1100;
-  const collageH = isStory ? px(1060) : isSquare ? px(490) : px(730);
-  const gap      = px(6);
-  const halfW    = (size.w - gap) / 2;
-
-  ctx.fillStyle = "#111827"; ctx.fillRect(0, 0, size.w, size.h);
-
-  for (let i = 0; i < 2; i++) {
-    const ox = i === 0 ? 0 : halfW + gap;
-    const img = images[i] ?? images[0];
-    ctx.save();
-    ctx.beginPath(); ctx.rect(ox, 0, halfW, collageH); ctx.clip();
-    ctx.fillStyle = "#1f2937"; ctx.fillRect(ox, 0, halfW, collageH);
-    if (img) {
-      const s = Math.max(halfW / img.width, collageH / img.height);
-      ctx.drawImage(img, ox + (halfW - img.width * s) / 2, (collageH - img.height * s) / 2, img.width * s, img.height * s);
-    }
-    ctx.restore();
-  }
-
-  drawBadgesRow(ctx, px, product, px(20), px(20));
-
-  const pad = px(60);
-  let y = collageH + px(44);
-  ctx.fillStyle = "#6366f1"; ctx.font = `700 ${px(28)}px Arial`;
-  ctx.fillText(storeName.toUpperCase(), pad, y);
-  y += px(48);
-
-  ctx.fillStyle = "#ffffff"; ctx.font = `900 ${px(64)}px Arial`;
-  const nameLines = wrapCanvasText(ctx, product.name, pad, y, size.w - pad * 2, px(72), 2);
-  y += px(72) * nameLines + px(16);
-
-  const hasDisc = !!(product.comparePrice && product.comparePrice > product.price);
-  if (hasDisc) {
-    const oldTxt = money(product.comparePrice!);
-    ctx.fillStyle = "#4b5563"; ctx.font = `500 ${px(32)}px Arial`;
-    ctx.fillText(oldTxt, pad, y);
-    const ow = ctx.measureText(oldTxt).width;
-    ctx.strokeStyle = "#4b5563"; ctx.lineWidth = px(2);
-    ctx.beginPath(); ctx.moveTo(pad, y - px(11)); ctx.lineTo(pad + ow, y - px(11)); ctx.stroke();
-    y += px(46);
-  }
-  ctx.fillStyle = "#34d399"; ctx.font = `900 ${px(64)}px Arial`;
-  ctx.fillText(money(product.price), pad, y);
-  y += px(76);
-
-  y = drawCuotas(ctx, px, product, pad, y, "#9ca3af");
-
-  if (product.description && y < size.h - px(160)) {
-    ctx.fillStyle = "#9ca3af"; ctx.font = `400 ${px(28)}px Arial`;
-    const dLines = wrapCanvasText(ctx, product.description, pad, y, size.w - pad * 2, px(40), 2);
-    y += px(40) * dLines + px(14);
-  }
-
-  if (y < size.h - px(80)) {
-    ctx.fillStyle = "#4f46e5";
-    ctx.beginPath(); ctx.roundRect(pad, y, px(300), px(60), px(30)); ctx.fill();
-    ctx.fillStyle = "#ffffff"; ctx.font = `800 ${px(25)}px Arial`;
-    ctx.fillText("Comprá ahora →", pad + px(30), y + px(38));
-  }
-}
+/* Las plantillas de placa viven en `@/lib/placas`. Eran 540 lineas de canvas
+   adentro de este archivo, que no tienen nada de React; y sobre todo eran seis
+   copias de la misma funcion, que es lo que las tenia planas y desparejas.
+   El detalle esta en el comentario de cabecera de ese modulo. */
 
 const PREVIEW_W = 150;
 
@@ -679,15 +113,14 @@ function TemplatePreview({
       const loaded = await Promise.all([0, 1].map((i) =>
         imgs[i] ? loadCardImage(imgs[i]).catch(() => null) : Promise.resolve(null)
       ));
+      /* La tipografia va junto con las fotos, no despues.
+         Sin esperarla, la miniatura se dibujaba con la fuente de respaldo y ya
+         no se volvia a dibujar: el selector mostraba una placa en Arial y la
+         que se descargaba salia en Figtree. La vista previa tiene que mostrar
+         lo que se va a generar. */
+      await fuentesListas();
       if (cancelled) return;
-      switch (templateId) {
-        case "minimal": drawMinimalTemplate(ctx, px, sz, loaded[0], product, storeName); break;
-        case "oferta":  drawOfertaTemplate(ctx, px, sz, loaded[0], product, storeName); break;
-        case "neon":    drawNeonTemplate(ctx, px, sz, loaded[0], product, storeName);   break;
-        case "luxury":  drawLuxuryTemplate(ctx, px, sz, loaded[0], product, storeName); break;
-        case "duo":     drawDuoTemplate(ctx, px, sz, [loaded[0], loaded[1]], product, storeName); break;
-        default:        drawClasicaTemplate(ctx, px, sz, loaded[0], product, storeName);
-      }
+      dibujarPlaca(ctx, { template: templateId, size: sz, px, images: loaded, product, storeName });
     })();
     return () => { cancelled = true; };
   }, [templateId, format, previewH, product, storeName]);
@@ -715,12 +148,17 @@ function TemplatePickerModal({
   const [localSelected, setLocalSelected] = useState<PlacaTemplateId | null>(selected);
   const [confirmed, setConfirmed] = useState(false);
 
-  const pp: PlacaProduct & { images: string } = {
+  /* `useMemo` y no un objeto suelto: esto entra en las dependencias del efecto
+     de cada miniatura, así que un objeto nuevo por render volvía a disparar las
+     SEIS vistas previas —doce fotos a bajar y decodificar, la tipografía y seis
+     canvas de 1080 redibujados— cada vez que se tocaba un estilo o un formato.
+     En el teléfono se sentía. */
+  const pp: PlacaProduct & { images: string } = useMemo(() => ({
     name: product.name, price: product.price, comparePrice: product.comparePrice,
-    description: product.description, cuotas: product.cuotas ?? 0,
+    description: textoPlano(product.description), cuotas: product.cuotas ?? 0,
     isNew: false, isLowStock: false, isBestSeller: false,
     images: product.images,
-  };
+  }), [product.name, product.price, product.comparePrice, product.description, product.cuotas, product.images]);
 
   function handleConfirm() {
     if (!localSelected || confirmed) return;
@@ -909,7 +347,7 @@ function ShareModal({
       `Mira este producto de ${target.storeName}`,
       product.name,
       money(product.price),
-      product.description ? product.description.slice(0, 200) : "",
+      textoPlanoCorto(product.description, 200),
       url,
     ].filter(Boolean).join("\n");
   }
@@ -927,7 +365,15 @@ function ShareModal({
       ctx.drawImage(img, 0, 0);
       const fontSize = Math.max(18, Math.round(w * 0.04));
       const text = target.storeName;
-      ctx.font = `700 ${fontSize}px Arial`;
+      /* La misma tipografía que las placas, y por el mismo motivo. Esta función
+         no se tocó cuando se armó `lib/placas`, así que se quedó con `Arial`
+         escrito a mano — y lo que dibuja es el NOMBRE DE LA TIENDA sobre la foto
+         que el afiliado sube a Instagram. O sea que la placa salía en Figtree y
+         la foto con marca de agua, al lado, en otra tipografía.
+         Se espera la fuente antes de medir: `measureText` con la de respaldo
+         devuelve otro ancho y la pastilla queda corta o le sobra la mitad. */
+      await fuentesListas();
+      ctx.font = `700 ${fontSize}px ${familiaDeMarca()}`;
       const tw = ctx.measureText(text).width;
       const pad = fontSize * 0.55;
       const bx = w - tw - pad * 2 - 14;
@@ -977,7 +423,9 @@ function ShareModal({
       name: product.name,
       price: product.price,
       comparePrice: product.comparePrice,
-      description: product.description,
+      // Limpia ANTES de tocar el canvas: `fillText` escribe lo que le den, asi que
+      // el HTML crudo terminaba impreso sobre la foto que se sube a Instagram.
+      description: textoPlano(product.description),
       cuotas: product.cuotas ?? 0,
       isNew: new Date(product.createdAt).getTime() > thirtyDaysAgo,
       isLowStock: product.variants.length > 0 && product.variants.reduce((s, v) => s + v.stock, 0) < 5,
@@ -986,23 +434,27 @@ function ShareModal({
 
     const imgs = parseImages(product.images);
     if (template === "duo") {
+      /* La segunda foto del collage: la que sigue, y si no hay más vuelve a la
+         primera. La cuenta estaba escrita dos veces en el mismo renglón —una
+         para preguntar si existe y otra para cargarla—, así que cualquier ajuste
+         había que hacerlo dos veces y coincidir. */
+      const segunda = imgs[(imageIndex + 1) % Math.max(imgs.length, 1)];
       const [img1, img2] = await Promise.all([
         imgs[imageIndex] ? loadCardImage(imgs[imageIndex]).catch(() => null) : Promise.resolve(null),
-        imgs[(imageIndex + 1) % Math.max(imgs.length, 1)] ? loadCardImage(imgs[(imageIndex + 1) % Math.max(imgs.length, 1)]).catch(() => null) : Promise.resolve(null),
+        segunda ? loadCardImage(segunda).catch(() => null) : Promise.resolve(null),
       ]);
-      drawDuoTemplate(ctx, px, size, [img1, img2], pp, target.storeName);
+      await fuentesListas();
+      dibujarPlaca(ctx, { template, size, px, images: [img1, img2], product: pp, storeName: target.storeName });
     } else {
       let image: HTMLImageElement | null = null;
       if (imgs[imageIndex]) {
         try { image = await loadCardImage(imgs[imageIndex]); } catch { image = null; }
       }
-      switch (template) {
-        case "minimal": drawMinimalTemplate(ctx, px, size, image, pp, target.storeName); break;
-        case "oferta":  drawOfertaTemplate(ctx, px, size, image, pp, target.storeName);  break;
-        case "neon":    drawNeonTemplate(ctx, px, size, image, pp, target.storeName);    break;
-        case "luxury":  drawLuxuryTemplate(ctx, px, size, image, pp, target.storeName); break;
-        default:        drawClasicaTemplate(ctx, px, size, image, pp, target.storeName);
-      }
+      /* Esperar la tipografia ANTES de dibujar. El canvas no reintenta: si
+         Figtree no llego todavia, la placa sale en la fuente de respaldo y queda
+         asi para siempre. Ver `fuentesListas`. */
+      await fuentesListas();
+      dibujarPlaca(ctx, { template, size, px, images: [image], product: pp, storeName: target.storeName });
     }
 
     return new Promise<Blob>((resolve, reject) => {
@@ -1408,7 +860,12 @@ function ShareModal({
                           const isLoading = cardLoading === p.id;
                           const selectedIdx = selectedImages[p.id] ?? 0;
                           const isExpanded = expandedDescs.has(p.id);
-                          const descLong = (p.description?.length ?? 0) > 90;
+                          /* La descripción se guarda como HTML y acá se dibuja como TEXTO, así
+                             que hay que limpiarla. Además el largo se medía sobre el HTML:
+                             `<p>Hola</p>` son once caracteres y el texto tres, o sea que
+                             aparecía "Ver más" debajo de descripciones de un renglón. */
+                          const desc = textoPlano(p.description);
+                          const descLong = desc.length > 90;
 
                           function selectImg(i: number) {
                             setSelectedImages((prev) => ({ ...prev, [p.id]: i }));
@@ -1485,10 +942,10 @@ function ShareModal({
                                       <span className="flex-shrink-0 text-[10px] font-bold text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-500/10 px-1.5 py-0.5 rounded-full">🔥 Más vendido</span>
                                     )}
                                   </div>
-                                  {p.description && (
+                                  {desc && (
                                     <div className="mt-1">
                                       <p className={`text-gray-500 dark:text-gray-400 text-xs leading-relaxed ${isExpanded ? "" : "line-clamp-2"}`}>
-                                        {p.description}
+                                        {desc}
                                       </p>
                                       {descLong && (
                                         <button
@@ -1511,17 +968,29 @@ function ShareModal({
 
                                 {/* CTA placa */}
                                 <button onClick={() => handleGenerateClick(p)} disabled={isLoading}
-                                  className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 disabled:opacity-60 text-white font-black py-3 rounded-xl text-sm transition-all shadow-md shadow-purple-500/20 mt-auto">
+                                  className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 disabled:opacity-60 text-white font-black py-3 rounded-xl text-[13px] sm:text-sm leading-tight transition-all shadow-md shadow-purple-500/20 mt-auto">
                                   {isLoading
                                     ? <><Loader2 className="h-4 w-4 animate-spin" /> Generando...</>
-                                    : <><Star className="h-4 w-4" /> Generar placa{imgs.length > 1 ? ` · foto ${selectedIdx + 1}` : ""}</>
+                                    : <><Star className="h-4 w-4 shrink-0" /> Generar placa{imgs.length > 1 && (
+                                        /* En el telefono el "· foto 2" hacia que el boton
+                                           ocupara tres renglones. No se pierde nada: cual foto
+                                           esta elegida ya lo dicen el contador de arriba a la
+                                           izquierda de la imagen y los puntitos de abajo. */
+                                        <span className="hidden sm:inline">{` · foto ${selectedIdx + 1}`}</span>
+                                      )}</>
                                   }
                                 </button>
                                 {cardErrors[p.id] && <p className="text-xs text-red-400 text-center">{cardErrors[p.id]}</p>}
 
                                 {/* Link del producto — copiable */}
                                 <div className="flex items-center gap-1.5 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/8 rounded-xl px-3 py-2">
-                                  <p className="flex-1 text-[10px] text-indigo-600 dark:text-indigo-400 font-mono truncate">{shortUrl}</p>
+                                  {/* Sin el `https://` adelante. Con el protocolo, en el
+                                      telefono el corte dejaba "https:…" — ocho caracteres que
+                                      no dicen nada y son iguales en los cuarenta productos.
+                                      Sacandolo entra el dominio y el principio del codigo, que
+                                      es lo unico que sirve para reconocer el link. Se copia
+                                      completo igual: el boton de al lado usa `shortUrl`. */}
+                                  <p className="flex-1 text-[10px] text-indigo-600 dark:text-indigo-400 font-mono truncate">{shortUrl.replace(/^https?:\/\//, "")}</p>
                                   <button onClick={() => copy(shortUrl, `url-${p.id}`)}
                                     className="flex-shrink-0 flex items-center gap-1 text-[10px] font-bold text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
                                     {copied === `url-${p.id}` ? <Check className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
@@ -1530,31 +999,45 @@ function ShareModal({
                                 </div>
 
                                 {/* Acciones de compartir */}
+                                {/* Los cuatro de compartir.
+                                    Las etiquetas aparecen recien en `sm`, y no es una
+                                    preferencia: a 360px la tarjeta mide 156px, adentro
+                                    quedan 124px, y cuatro columnas con separacion dejan 26px
+                                    por boton. "WhatsApp" a 9px necesita 40. El texto se salia
+                                    del boton y pisaba al de al lado — que es lo que se veia
+                                    en el telefono, no un icono reemplazado por texto.
+                                    Sin etiqueta queda el icono solo, que a ese tamano es lo
+                                    unico que se lee; el nombre viaja en `title` y en
+                                    `aria-label` para el que no ve el icono. */}
                                 <div className="grid grid-cols-4 gap-1.5">
                                   <button onClick={() => {
                                     const waText = [
                                       `🛍️ *${p.name}*`,
                                       p.comparePrice ? `~~${money(p.comparePrice)}~~ → *${money(p.price)}*` : `*${money(p.price)}*`,
-                                      p.description ? p.description.slice(0, 100) + (p.description.length > 100 ? "…" : "") : "",
+                                      textoPlanoCorto(p.description, 100),
                                       `👉 ${shortUrl}`,
                                     ].filter(Boolean).join("\n");
                                     window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(waText)}`, "_blank");
                                   }}
-                                    className="flex flex-col items-center gap-1 py-2 bg-[#25D366]/10 hover:bg-[#25D366]/20 border border-[#25D366]/15 text-[#25D366] rounded-xl text-[9px] font-bold transition-all">
-                                    <WaIcon /> WhatsApp
+                                    title="Compartir por WhatsApp" aria-label="Compartir por WhatsApp"
+                                    className="flex flex-col items-center justify-center gap-1 py-2.5 sm:py-2 rounded-xl text-[9px] font-bold transition-all bg-[#25D366]/10 hover:bg-[#25D366]/20 border border-[#25D366]/15 text-[#25D366]">
+                                    <WaIcon /> <span className="hidden sm:block leading-none">WhatsApp</span>
                                   </button>
                                   <button onClick={() => copy(shortUrl, p.id)}
-                                    className="flex flex-col items-center gap-1 py-2 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 border border-gray-200 dark:border-white/8 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white rounded-xl text-[9px] font-bold transition-all">
+                                    title="Copiar el link para pegarlo con la placa" aria-label="Copiar el link para pegarlo con la placa"
+                                    className="flex flex-col items-center justify-center gap-1 py-2.5 sm:py-2 rounded-xl text-[9px] font-bold transition-all bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 border border-gray-200 dark:border-white/8 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                                     {copied === p.id ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
-                                    {copied === p.id ? "¡Listo!" : "Placa+Link"}
+                                    <span className="hidden sm:block leading-none">{copied === p.id ? "¡Listo!" : "Placa+Link"}</span>
                                   </button>
                                   <button onClick={() => window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shortUrl)}`, "_blank")}
-                                    className="flex flex-col items-center gap-1 py-2 bg-[#1877F2]/10 hover:bg-[#1877F2]/20 border border-[#1877F2]/15 text-[#1877F2] rounded-xl text-[9px] font-bold transition-all">
-                                    <FbIcon /> Facebook
+                                    title="Compartir en Facebook" aria-label="Compartir en Facebook"
+                                    className="flex flex-col items-center justify-center gap-1 py-2.5 sm:py-2 rounded-xl text-[9px] font-bold transition-all bg-[#1877F2]/10 hover:bg-[#1877F2]/20 border border-[#1877F2]/15 text-[#1877F2]">
+                                    <FbIcon /> <span className="hidden sm:block leading-none">Facebook</span>
                                   </button>
                                   <Link href={pUrl} target="_blank"
-                                    className="flex flex-col items-center gap-1 py-2 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 border border-gray-200 dark:border-white/8 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white rounded-xl text-[9px] font-bold transition-all">
-                                    <ExternalLink className="h-3.5 w-3.5" /> Ver
+                                    title="Ver el producto en la tienda" aria-label="Ver el producto en la tienda"
+                                    className="flex flex-col items-center justify-center gap-1 py-2.5 sm:py-2 rounded-xl text-[9px] font-bold transition-all bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 border border-gray-200 dark:border-white/8 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
+                                    <ExternalLink className="h-3.5 w-3.5" /> <span className="hidden sm:block leading-none">Ver</span>
                                   </Link>
                                 </div>
                               </div>
