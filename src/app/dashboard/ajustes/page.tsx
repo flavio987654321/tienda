@@ -10,6 +10,8 @@ import { DescripcionCard, SubdominioCard, AppCard, DominioCard, FlyerCard, PushC
 import { WhatsappCard, RedesCard, MonedaCard, SeoCard } from "./PreferenciasCards";
 import LogoUploadCard from "@/components/LogoUploadCard";
 import ArchiveDownloadCard from "./ArchiveDownloadCard";
+import AvisosDeSeccion from "@/components/dashboard/AvisosDeSeccion";
+import { avisosParaSeccion } from "@/lib/avisos-tienda";
 
 // La conexión con MercadoPago vive en /dashboard/pagos, junto al resto de los
 // medios de cobro (transferencia, efectivo). Acá quedan identidad, presencia y
@@ -22,7 +24,10 @@ export default async function AjustesPage({ searchParams }: Props) {
   // manifiesto, y desde el panel instalado abría el sitio comercial entero. La
   // pantalla la dibuja el layout. El porqué largo está en `dashboard/layout.tsx`.
   if (!user) return null;
+
   if (user.role !== "OWNER") redirect("/dashboard");
+
+  const avisos = await avisosParaSeccion(user.id, "/dashboard/ajustes");
 
   const [sub, store] = await Promise.all([
     getUserSubscription(user.id),
@@ -207,6 +212,7 @@ export default async function AjustesPage({ searchParams }: Props) {
       {/* Sin barra de encabezado: el título vive arriba del menú lateral, como en
           los ajustes de Instagram. */}
       <div className="-m-4 -mt-2 bg-slate-50 min-h-screen px-6 py-6">
+        <AvisosDeSeccion avisos={avisos} />
         <ConfiguracionShell titulo="Configuración" secciones={secciones} seccionInicial={seccionInicial} />
       </div>
     </DashboardLayout>

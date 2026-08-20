@@ -7,6 +7,8 @@ import type { StorePaymentInfo, ShippingMethod, TemplateId } from "@/types/store
 import { DEFAULT_PAYMENT_INFO, DEFAULT_SHIPPING_METHODS, TEMPLATES_CON_NEWSLETTER } from "@/types/store-config";
 import { GAMIFICATION_EXCLUDED_TEMPLATES } from "@/lib/gamification";
 import { hasActivePremium, SUB_STATUS_SELECT } from "@/lib/subscription";
+import AvisosDeSeccion from "@/components/dashboard/AvisosDeSeccion";
+import { avisosParaSeccion } from "@/lib/avisos-tienda";
 
 // `mp` lo setea el callback de OAuth de MercadoPago (?mp=connected | ?mp=error)
 // para poder mostrar el resultado de la conexión al volver.
@@ -59,6 +61,11 @@ export default async function PagosPage({ searchParams }: { searchParams: Promis
     : [0, 0, 0];
 
   const isAutos = store?.tipoTienda === "AUTOS";
+
+  /* Los avisos salen del mismo lugar que los del menú lateral (lib/avisos-tienda),
+     no de un cálculo propio de esta pantalla: es justamente lo que hacía que el
+     mismo pendiente se contara dos veces. */
+  const avisos = await avisosParaSeccion(user.id, "/dashboard/pagos");
 
   let paymentInfo: StorePaymentInfo = DEFAULT_PAYMENT_INFO;
   let shippingMethods: ShippingMethod[] = DEFAULT_SHIPPING_METHODS;
@@ -121,6 +128,12 @@ export default async function PagosPage({ searchParams }: { searchParams: Promis
 
         {/* Content */}
         <div className="px-6 py-10 space-y-12">
+
+          {/* Los avisos de ESTA sección, arriba de todo y con el texto a la vista.
+              El triángulo del menú lateral no puede decir más que "algo pasa acá";
+              este cartel dice qué, por qué importa y a dónde ir. Y es el único
+              lugar donde se ven los amarillos — ver lib/avisos-tienda. */}
+          <AvisosDeSeccion avisos={avisos} />
 
           <section>
             <SectionLabel>{isAutos ? "Información legal" : "Métodos de pago"}</SectionLabel>

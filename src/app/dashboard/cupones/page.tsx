@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef, Fragment } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
+import AvisosDeSeccionCliente from "@/components/dashboard/AvisosDeSeccionCliente";
 import LimitePlanBanner from "@/components/dashboard/LimitePlanBanner";
 import Tip from "@/components/Tip";
 import CampoAuto from "@/components/CampoAuto";
@@ -1393,6 +1394,9 @@ export default function CuponesPage() {
 
   return (
     <DashboardLayout>
+      {/* Versión cliente: esta pantalla es un componente de cliente y no puede
+          hacer el await del servidor. Pega al mismo endpoint que el menú. */}
+      <AvisosDeSeccionCliente seccion="/dashboard/cupones" />
       {toast && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[200] animate-fade-slide pointer-events-none">
           <div className="flex items-center gap-2 bg-gray-900 text-white text-sm font-medium px-5 py-3 rounded-2xl shadow-2xl">

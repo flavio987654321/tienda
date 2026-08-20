@@ -7,6 +7,8 @@ import { promotionStatus } from "@/lib/promotions";
 import { PRO_MAX_LIVE_PROMOTIONS } from "@/lib/planLimits";
 import { hasActivePremium, SUB_STATUS_SELECT } from "@/lib/subscription";
 import PromocionesClient from "./PromocionesClient";
+import AvisosDeSeccion from "@/components/dashboard/AvisosDeSeccion";
+import { avisosParaSeccion } from "@/lib/avisos-tienda";
 
 export default async function PromocionesPage() {
   const user = await getCurrentUser();
@@ -14,6 +16,8 @@ export default async function PromocionesPage() {
   // manifiesto, y desde el panel instalado abría el sitio comercial entero. La
   // pantalla la dibuja el layout. El porqué largo está en `dashboard/layout.tsx`.
   if (!user) return null;
+
+  const avisos = await avisosParaSeccion(user.id, "/dashboard/promociones");
 
   const store = await prisma.store.findUnique({
     where: { ownerId: user.id },
@@ -106,6 +110,7 @@ export default async function PromocionesPage() {
 
   return (
     <DashboardLayout userName={user.name} userId={user.id}>
+      <AvisosDeSeccion avisos={avisos} />
       <PromocionesClient
         initialPromotions={rows}
         categories={categories}

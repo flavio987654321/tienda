@@ -6,6 +6,8 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { APPS_REGISTRY } from "@/lib/apps/registry";
 import { whatsappVinculado } from "@/lib/apps/whatsapp-vinculo";
 import AppsExplorer from "./AppsExplorer";
+import AvisosDeSeccion from "@/components/dashboard/AvisosDeSeccion";
+import { avisosParaSeccion } from "@/lib/avisos-tienda";
 
 // Tres pasos, no cuatro: "podés desinstalarla" no es un paso del proceso, es una
 // garantía — y como garantía tranquiliza más abajo, al lado del candado.
@@ -35,7 +37,10 @@ export default async function AplicacionesPage() {
   // manifiesto, y desde el panel instalado abría el sitio comercial entero. La
   // pantalla la dibuja el layout. El porqué largo está en `dashboard/layout.tsx`.
   if (!user) return null;
+
   if (user.role !== "OWNER") redirect("/dashboard");
+
+  const avisos = await avisosParaSeccion(user.id, "/dashboard/aplicaciones");
 
   const store = await prisma.store.findUnique({
     where: { ownerId: user.id },
@@ -133,6 +138,16 @@ export default async function AplicacionesPage() {
             </div>
           </div>
         </div>
+
+        {/* Va después del hero y no antes: el aviso es de esta sección, no del
+            panel entero, y arriba del título se leería como una alarma global. */}
+        {avisos.length > 0 && (
+          <div className="px-6 pt-6">
+            <div className="max-w-3xl mx-auto">
+              <AvisosDeSeccion avisos={avisos} />
+            </div>
+          </div>
+        )}
 
         {/* Cómo funciona */}
         <div className="border-b border-slate-200 bg-white px-6 py-9">
