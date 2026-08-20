@@ -158,6 +158,25 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ slug
   const { ownerId: _ownerId, mpAccessToken: _mpAccessToken, ...safeStore } = store;
   void _ownerId; void _mpAccessToken;
 
+  /* ── Tienda que su dueño todavía no publicó ────────────────────────────────
+     El mismo corte que ya hace la página en `/tienda/[slug]` ("Próximamente"
+     salvo que mire el dueño), que acá faltaba: `isPublished` se devolvía como
+     dato pero no filtraba nada. O sea que la pantalla tapaba la tienda y esta
+     API la entregaba entera igual — catálogo, precios y promociones — a
+     cualquiera que supiera el slug, que se deduce del nombre del comercio.
+
+     Se devuelve la tienda igual, no un 404: la portada de "Próximamente" usa el
+     nombre, el logo y los colores para verse como la tienda. Lo que se vacía es
+     lo que todavía no salió a la venta. */
+  if (!safeStore.isPublished && !isOwner) {
+    return NextResponse.json({
+      store: { ...safeStore, products: [], promotions: [] },
+      isOwner: false,
+      hasMercadoPago,
+      legales: documentosPublicados(store),
+    });
+  }
+
   // Productos marcados como "solo mayorista" no deben enviarse al navegador de
   // visitantes de tiendas que no tienen venta mayorista habilitada.
   // El filtrado ocurre AQUÍ en el servidor, nunca en el cliente, para que el
