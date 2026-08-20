@@ -109,25 +109,28 @@ export async function middleware(request: NextRequest) {
       return NextResponse.next();
     }
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+    /* La búsqueda va contra nuestra propia API, no contra la REST de Supabase.
+       Antes le pegaba a `/rest/v1/Store` con la clave pública y eso NUNCA
+       funcionó: las tablas las creó Prisma y los roles de PostgREST no tienen
+       permiso sobre ellas, así que siempre volvía 42501. Con el `if (res.ok)` de
+       abajo fallaba en silencio y ningún dominio propio resolvió jamás.
+       Que PostgREST no llegue a las tablas es deseable y se deja como está; la
+       consulta se mudó a /api/public/dominio, que usa Prisma. Ver ese archivo. */
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL;
 
-    if (supabaseUrl && supabaseKey) {
+    if (appUrl) {
       try {
         const res = await fetch(
-          `${supabaseUrl}/rest/v1/Store?customDomain=eq.${encodeURIComponent(host)}&select=slug&limit=1`,
-          {
-            headers: {
-              apikey: supabaseKey,
-              Authorization: `Bearer ${supabaseKey}`,
-            },
-          }
+          `${appUrl}/api/public/dominio?host=${encodeURIComponent(host)}`,
+          // El dominio propio de una tienda no cambia nunca en la práctica; sin
+          // cache esto sería una consulta a la base por cada visita.
+          { next: { revalidate: 300 } }
         );
         if (res.ok) {
-          const [store] = await res.json() as Array<{ slug: string }>;
-          if (store?.slug) {
+          const { slug } = await res.json() as { slug: string | null };
+          if (slug) {
             const url = request.nextUrl.clone();
-            url.pathname = `/tienda/${store.slug}${pathname === "/" ? "" : pathname}`;
+            url.pathname = `/tienda/${slug}${pathname === "/" ? "" : pathname}`;
             return NextResponse.rewrite(url);
           }
         }
