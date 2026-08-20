@@ -1,19 +1,55 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createCheckoutPreference, decryptToken } from "@/lib/mp";
+import { checkRateLimit } from "@/lib/rate-limit";
+import { getClientIp } from "@/lib/request-ip";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "";
+
+// Mismo formato de id que valida /api/checkout: cuid de Prisma o UUID.
+const ID_RE = /^(c[a-z0-9]{20,30}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i;
 
 // POST /api/mp/checkout
 // Crea una preferencia de pago en MercadoPago para una orden ya existente.
 // La orden debe estar PENDING y la tienda debe tener MP conectado.
+//
+// No pide sesión a propósito: lo llama el comprador de una tienda pública, que
+// no tiene cuenta (ver useCartLogic, se dispara apenas /api/checkout devuelve la
+// orden). Lo que lo protege es que el orderId es un cuid que no se adivina, que
+// la orden tiene que seguir PENDING, y el límite por IP de acá abajo.
 export async function POST(req: NextRequest) {
-  const { orderId, donationId } = await req.json();
-  if (!orderId) return NextResponse.json({ error: "orderId requerido" }, { status: 400 });
+  // Era el único endpoint público de la cadena de pagos sin límite por IP
+  // (/api/checkout y /api/canasta/donation-checkout ya tenían el suyo). Sin esto,
+  // el endpoint le pide una preferencia a MercadoPago por cada request, con el
+  // token del comerciante y sin techo.
+  const ip = getClientIp(req);
+  if (!(await checkRateLimit(`mp-checkout:${ip}`, 10, 60_000))) {
+    return NextResponse.json({ error: "Demasiados intentos. Esperá un momento." }, { status: 429 });
+  }
+
+  let payload: { orderId?: unknown; donationId?: unknown };
+  try {
+    payload = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Formato de solicitud inválido" }, { status: 400 });
+  }
+  const { orderId, donationId } = payload;
+
+  if (typeof orderId !== "string" || !ID_RE.test(orderId)) {
+    return NextResponse.json({ error: "orderId requerido" }, { status: 400 });
+  }
+
   // donationId es opcional: si la compra incluyó una donación a la Canasta
   // Solidaria, lo llevamos a través de la ida y vuelta de MP para poder
   // ofrecer pagarla aparte apenas vuelva de pagar la compra.
-  const donationParam = typeof donationId === "string" && donationId ? `&donacionId=${donationId}` : "";
+  //
+  // Se valida el formato antes de pegarlo en las back_urls. Antes entraba crudo:
+  // cualquier texto que mandara el cliente terminaba dentro de la URL de retorno
+  // que se le pasa a MercadoPago, así que quien llamara a este endpoint elegía
+  // parte de la dirección a la que vuelve el comprador después de pagar.
+  const donationParam = typeof donationId === "string" && ID_RE.test(donationId)
+    ? `&donacionId=${encodeURIComponent(donationId)}`
+    : "";
 
   const order = await prisma.order.findUnique({
     where: { id: orderId },
