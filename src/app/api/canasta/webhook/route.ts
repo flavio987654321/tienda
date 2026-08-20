@@ -70,6 +70,31 @@ export async function POST(req: NextRequest) {
     // o nunca existió), no hacemos nada más.
     if (!donation || donation.status !== "PENDING") return NextResponse.json({ ok: true });
 
+    // ── Validar que lo pagado sea lo que la donación dice ─────────────────────
+    // Era el único de los tres webhooks de MP que no miraba el monto: alcanzaba
+    // con que el pago viniera "approved" para dar la donación por confirmada por
+    // el importe guardado en la base, sin comparar contra lo que entró de verdad.
+    //
+    // Hoy no se podía explotar —el precio lo fija el servidor al crear la
+    // preferencia (lib/canasta-checkout) y Checkout Pro no deja cambiarlo—, pero
+    // una donación confirmada de menos suma igual a la meta y cierra la campaña
+    // con plata que nunca llegó. Es el mismo criterio y la misma tolerancia del
+    // 5% que ya usan mp/webhook y suscripcion/webhook.
+    const pagado = payment.transaction_amount;
+    if (typeof pagado === "number" && donation.amount > 0) {
+      if (pagado < donation.amount * 0.95) {
+        console.error("[canasta/webhook] monto pagado MENOR al de la donación — no se confirma", {
+          paymentId, donationId: donation.id, recibido: pagado, esperado: donation.amount,
+        });
+        return NextResponse.json({ ok: true });
+      }
+      if (pagado > donation.amount * 1.05) {
+        console.warn("[canasta/webhook] monto pagado MAYOR al de la donación — se confirma igual", {
+          paymentId, donationId: donation.id, recibido: pagado, esperado: donation.amount,
+        });
+      }
+    }
+
     const campaign = await prisma.donationCampaign.findUnique({
       where: { id: donation.campaignId },
       include: { products: { orderBy: { sortOrder: "asc" } } },
