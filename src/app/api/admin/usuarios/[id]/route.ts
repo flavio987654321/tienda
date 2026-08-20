@@ -90,6 +90,27 @@ function extractStoragePaths(urls: (string | null | undefined)[], supabaseUrl: s
     .map(u => u.slice(prefix.length));
 }
 
+/**
+ * Gemela de la de /api/cuenta, y por el mismo motivo: los archivos de buckets
+ * privados se guardan como `supabase://bucket/ruta` y el extractor de arriba,
+ * que espera una dirección pública, los ignoraba. Sin esto el CV de un afiliado
+ * sobrevivía a que el admin le borrara la cuenta.
+ */
+function extractPrivateStoragePaths(urls: (string | null | undefined)[]): Map<string, string[]> {
+  const porBucket = new Map<string, string[]>();
+  for (const u of urls) {
+    if (!u || !u.startsWith("supabase://")) continue;
+    const resto = u.slice("supabase://".length);
+    const barra = resto.indexOf("/");
+    if (barra < 1) continue;
+    const bucket = resto.slice(0, barra);
+    const ruta = resto.slice(barra + 1);
+    if (!ruta) continue;
+    porBucket.set(bucket, [...(porBucket.get(bucket) ?? []), ruta]);
+  }
+  return porBucket;
+}
+
 // ── DELETE ───────────────────────────────────────────────────────────────────
 //
 // Estrategia: anonimizar en lugar de borrar.
@@ -423,6 +444,14 @@ export async function DELETE(
       const { error: storageError } = await supabase.storage.from(bucket).remove(paths);
       if (storageError) {
         console.error("DELETE USER: error eliminando archivos de storage", storageError.message);
+      }
+    }
+
+    // Buckets privados (CV de afiliados) — ver el comentario de la función.
+    for (const [bucketPrivado, rutas] of extractPrivateStoragePaths(allFileUrls)) {
+      const { error } = await supabase.storage.from(bucketPrivado).remove(rutas);
+      if (error) {
+        console.error("DELETE USER: error eliminando archivos privados", bucketPrivado, error.message);
       }
     }
   }

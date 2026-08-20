@@ -23,6 +23,30 @@ function extractStoragePaths(urls: (string | null | undefined)[], supabaseUrl: s
     .map(u => u.slice(prefix.length));
 }
 
+/**
+ * Los archivos de buckets privados no se guardan como dirección pública sino
+ * como `supabase://bucket/ruta` (ver /api/upload). `extractStoragePaths` solo
+ * entiende el formato público, así que sin esto el CV de un afiliado —su
+ * documento de identidad— sobrevivía al borrado de la cuenta.
+ *
+ * Devuelve las rutas agrupadas por bucket, porque cada bucket se limpia con su
+ * propia llamada.
+ */
+function extractPrivateStoragePaths(urls: (string | null | undefined)[]): Map<string, string[]> {
+  const porBucket = new Map<string, string[]>();
+  for (const u of urls) {
+    if (!u || !u.startsWith("supabase://")) continue;
+    const resto = u.slice("supabase://".length);
+    const barra = resto.indexOf("/");
+    if (barra < 1) continue;
+    const bucket = resto.slice(0, barra);
+    const ruta = resto.slice(barra + 1);
+    if (!ruta) continue;
+    porBucket.set(bucket, [...(porBucket.get(bucket) ?? []), ruta]);
+  }
+  return porBucket;
+}
+
 // ── GET — devuelve bloqueadores, rol y valor de confirmación ─────────────────
 //
 // El querystring `target` ya no se lee: la única rama que lo usaba era la del
@@ -369,6 +393,15 @@ export async function DELETE(req: NextRequest) {
       const { error: storageError } = await supabase.storage.from(bucket).remove(paths);
       if (storageError) {
         console.error("DELETE CUENTA: error eliminando archivos de storage", storageError.message);
+      }
+    }
+
+    // Buckets privados (CV de afiliados). Van aparte porque cada uno se limpia
+    // con su propia llamada y no comparten prefijo con los públicos.
+    for (const [bucketPrivado, rutas] of extractPrivateStoragePaths(allFileUrls)) {
+      const { error } = await supabase.storage.from(bucketPrivado).remove(rutas);
+      if (error) {
+        console.error("DELETE CUENTA: error eliminando archivos privados", bucketPrivado, error.message);
       }
     }
   }

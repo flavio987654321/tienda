@@ -428,7 +428,10 @@ export default async function VendedorasPage() {
                     </a>
                   )}
                   {affiliate.cvUrl && (
-                    <a href={affiliate.cvUrl} target="_blank" rel="noreferrer" className="rounded-full bg-purple-50 px-3 py-1 font-semibold text-purple-600">
+                    /* Nunca la dirección del archivo: el documento está en un bucket
+                       privado y este endpoint verifica que quien mira sea el dueño de
+                       la tienda antes de firmar un link de dos minutos. */
+                    <a href={`/api/vendedoras/cv/${affiliate.id}`} target="_blank" rel="noreferrer" className="rounded-full bg-purple-50 px-3 py-1 font-semibold text-purple-600">
                       Ver CV
                     </a>
                   )}
@@ -694,7 +697,9 @@ export default async function VendedorasPage() {
                           </a>
                         )}
                         {affiliate.cvUrl && (
-                          <a href={affiliate.cvUrl} target="_blank" rel="noreferrer" className="rounded-full bg-purple-50 px-3 py-1 font-semibold text-purple-700">
+                          // Ver el comentario del otro "Ver CV": va por el endpoint
+                          // que verifica permiso y firma, nunca por la url cruda.
+                          <a href={`/api/vendedoras/cv/${affiliate.id}`} target="_blank" rel="noreferrer" className="rounded-full bg-purple-50 px-3 py-1 font-semibold text-purple-700">
                             Ver CV
                           </a>
                         )}

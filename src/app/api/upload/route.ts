@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { writeFile, mkdir } from "fs/promises";
+import { randomUUID } from "crypto";
 import path from "path";
 import { fileTypeFromBuffer } from "file-type";
 import { getCurrentUser } from "@/lib/auth-session";
@@ -28,6 +29,16 @@ const ALLOWED_DOCUMENT_TYPES = new Set([
 ]);
 const DEFAULT_BUCKET = "product-images";
 
+/* Los documentos de identidad de los afiliados NO van con las fotos de producto.
+   Iban al mismo bucket, y ese bucket es público a propósito (las fotos tienen que
+   verse en la tienda sin login): un DNI ahí queda legible para cualquiera que
+   tenga la dirección, sin sesión y para siempre. Lo único que lo cubría era que
+   el nombre del archivo era difícil de adivinar, y encima se armaba con
+   `Math.random()`, que no es aleatoriedad criptográfica.
+   Ahora van a un bucket privado propio, y se leen con un link firmado y de vida
+   corta que emite /api/vendedoras/cv/[id] después de verificar quién pregunta. */
+const DOCS_BUCKET = process.env.SUPABASE_DOCS_BUCKET || "affiliate-docs";
+
 const RATE_LIMIT_MAX = 20;
 const RATE_LIMIT_WINDOW_MS = 60_000;
 
@@ -46,43 +57,56 @@ function extensionFor(file: File) {
   return file.type.split("/")[1] || "bin";
 }
 
-let bucketEnsured = false;
+const bucketsEnsured = new Set<string>();
 
-async function ensureBucketPublic(supabaseUrl: string, serviceRoleKey: string, bucket: string) {
-  if (bucketEnsured) return;
+async function ensureBucket(supabaseUrl: string, serviceRoleKey: string, bucket: string, isPublic: boolean) {
+  if (bucketsEnsured.has(bucket)) return;
   const headers = {
     apikey: serviceRoleKey,
     Authorization: `Bearer ${serviceRoleKey}`,
     "Content-Type": "application/json",
   };
-  // Try to update existing bucket to public
+  const body = JSON.stringify({ id: bucket, name: bucket, public: isPublic });
+  // Try to update existing bucket
   const updateRes = await fetch(`${supabaseUrl}/storage/v1/bucket/${bucket}`, {
     method: "PUT",
     headers,
-    body: JSON.stringify({ id: bucket, name: bucket, public: true }),
+    body,
   }).catch(() => null);
   if (!updateRes?.ok) {
     // Bucket might not exist yet — create it
     await fetch(`${supabaseUrl}/storage/v1/bucket`, {
       method: "POST",
       headers,
-      body: JSON.stringify({ id: bucket, name: bucket, public: true }),
+      body,
     }).catch((err) => console.error("[upload] bucket creation failed:", err));
   }
-  bucketEnsured = true;
+  bucketsEnsured.add(bucket);
 }
 
-async function uploadToSupabaseStorage(file: File, bytes: ArrayBuffer, folder = "products") {
+async function uploadToSupabaseStorage(
+  file: File,
+  bytes: ArrayBuffer,
+  folder = "products",
+  opts: { bucket?: string; isPublic?: boolean } = {}
+) {
   const config = getSupabaseStorageConfig();
   if (!config) {
     throw new Error("Falta configurar Supabase Storage en Vercel para subir archivos.");
   }
 
-  await ensureBucketPublic(config.supabaseUrl, config.serviceRoleKey, config.bucket);
+  const bucket = opts.bucket ?? config.bucket;
+  const isPublic = opts.isPublic ?? true;
+
+  await ensureBucket(config.supabaseUrl, config.serviceRoleKey, bucket, isPublic);
 
   const ext = extensionFor(file);
-  const filePath = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-  const uploadUrl = `${config.supabaseUrl}/storage/v1/object/${config.bucket}/${filePath}`;
+  // `randomUUID` en vez de `Math.random()`: el generador de JS es predecible a
+  // partir de unas pocas salidas del mismo proceso, y para un bucket privado el
+  // nombre dejó de ser lo único que protege el archivo — pero no hay motivo para
+  // seguir usando un dado cargado.
+  const filePath = `${folder}/${Date.now()}-${randomUUID()}.${ext}`;
+  const uploadUrl = `${config.supabaseUrl}/storage/v1/object/${bucket}/${filePath}`;
 
   const res = await fetch(uploadUrl, {
     method: "POST",
@@ -101,7 +125,11 @@ async function uploadToSupabaseStorage(file: File, bytes: ArrayBuffer, folder = 
     throw new Error(message);
   }
 
-  return `${config.supabaseUrl}/storage/v1/object/public/${config.bucket}/${filePath}`;
+  // Un bucket privado no tiene URL pública: se guarda la RUTA, y quien tenga
+  // permiso pide un link firmado. Ver /api/vendedoras/cv/[id].
+  if (!isPublic) return `supabase://${bucket}/${filePath}`;
+
+  return `${config.supabaseUrl}/storage/v1/object/public/${bucket}/${filePath}`;
 }
 
 export async function POST(req: NextRequest) {
@@ -155,7 +183,9 @@ export async function POST(req: NextRequest) {
 
     if (getSupabaseStorageConfig()) {
       const folder = isDocument ? "affiliate-docs" : isVideo ? "store-videos" : "products";
-      const url = await uploadToSupabaseStorage(file, bytes, folder);
+      const url = isDocument
+        ? await uploadToSupabaseStorage(file, bytes, folder, { bucket: DOCS_BUCKET, isPublic: false })
+        : await uploadToSupabaseStorage(file, bytes, folder);
       return NextResponse.json({ url });
     }
 
