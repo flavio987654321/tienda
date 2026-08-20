@@ -1,0 +1,36 @@
+-- Guarda cuándo la tienda terminó de configurarse por primera vez.
+--
+-- ── El problema ──────────────────────────────────────────────────────────────
+-- El panel tiene dos formas de avisar que falta algo: la barra de "7/8 pasos"
+-- del inicio y el triangulito del menú lateral. La regla que las ordena es que
+-- no hablen a la vez — mientras la barra esté en pantalla diciendo "conectá
+-- MercadoPago", el triángulo de Pagos se calla.
+--
+-- Pero sin esta columna esa regla se come a sí misma. Las condiciones que
+-- encienden un triángulo ROJO son las mismas que dejan la barra incompleta:
+--
+--     onboarding completo = logo + plantilla + productos + descripción
+--                           + publicada + MercadoPago + datos de cobro + envíos
+--     triángulo rojo      = despublicada / sin medio de cobro / sin envíos
+--
+-- O sea que despublicar la tienda apaga el aviso de "tu tienda está
+-- despublicada". Tres de los cuatro rojos no se mostraban nunca.
+--
+-- ── Por qué una fecha y no un booleano ───────────────────────────────────────
+-- Porque el dato que falta no es "¿está completo ahora?" —eso se calcula— sino
+-- "¿lo estuvo alguna vez?". Una tienda que se despublica hoy es indistinguible
+-- de una que nunca se publicó, y son dos situaciones que piden mensajes
+-- opuestos: a una hay que enseñarle, a la otra avisarle que se le rompió.
+-- La fecha además deja saber cuándo fue, que sirve para métricas de alta.
+--
+-- Se marca sola la primera vez que se cumplen los ocho pasos y NO se borra
+-- después. Ese es todo el punto: es una marca de "ya pasó por acá".
+--
+-- Nullable a propósito: las tiendas que ya existen no tienen este dato. Las que
+-- hoy están completas se marcan solas la próxima vez que entren al panel, y las
+-- que están a medio armar siguen viendo la barra, que es lo correcto.
+--
+-- TIMESTAMP(3) para alinear con las otras columnas de fecha del proyecto
+-- (ver 20260811120000_alinear_fechas_newsletter_push).
+
+ALTER TABLE "Store" ADD COLUMN "onboardingCompletedAt" TIMESTAMP(3);

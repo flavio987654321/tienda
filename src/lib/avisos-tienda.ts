@@ -1,0 +1,459 @@
+import { prisma } from "@/lib/prisma";
+import { getSubscriptionStatus } from "@/lib/subscription";
+
+/* ── El único lugar donde se decide qué le falta a una tienda ─────────────────
+   Antes esto vivía en dos lados que no se hablaban: la barra de "7/8 pasos"
+   (dashboard/page.tsx) y los tres booleanos de /api/dashboard/warnings. Cada uno
+   calculaba lo suyo leyendo la base por su cuenta, con su propio criterio, así
+   que el mismo pendiente se contaba dos veces: "conectá MercadoPago" salía en la
+   barra Y como triángulo en Pagos, al mismo tiempo. Y nada obligaba a que
+   siguieran de acuerdo — dos copias de una regla se separan solas.
+
+   Ahora las condiciones se calculan una vez, acá, y de ellas salen tanto los
+   pasos como los avisos. */
+
+export type NivelAviso = "rojo" | "amarillo";
+
+export type Aviso = {
+  /** Estable en el tiempo: con esto se silencian los amarillos. */
+  id: string;
+  nivel: NivelAviso;
+  /** href del item del menú al que pertenece — así el menú sabe dónde pintarlo. */
+  seccion: string;
+  /** Qué pasa, en una línea. */
+  titulo: string;
+  /** Por qué importa. */
+  detalle: string;
+  /** Dónde se arregla. */
+  href: string;
+};
+
+export type EstadoTienda = {
+  storeId: string;
+  tipoTienda: string | null;
+  logo: string | null;
+  descripcion: string | null;
+  isPublished: boolean;
+  isVerified: boolean;
+  mpConnectedAt: Date | null;
+  storeConfig: string | null;
+  cantidadProductos: number;
+  estadoSuscripcion: string | null;
+  /** Cuándo terminó de configurarse por primera vez. Null = nunca todavía. */
+  onboardingCompletedAt: Date | null;
+  /** Productos publicados sin una sola foto. */
+  productosSinFoto: number;
+  /** Cupones y promos que siguen encendidos pero ya vencieron. */
+  cuponesVencidos: number;
+  promosVencidas: number;
+  /** Vencimiento del token de Meta. Null = no hay Meta conectado, o se desconoce. */
+  fbTokenExpiresAt: Date | null;
+  tienePoliticas: boolean;
+};
+
+export async function cargarEstadoTienda(ownerId: string): Promise<EstadoTienda | null> {
+  const [store, sub] = await Promise.all([
+    prisma.store.findUnique({
+      where: { ownerId },
+      select: {
+        id: true,
+        tipoTienda: true,
+        logo: true,
+        description: true,
+        isPublished: true,
+        isVerified: true,
+        mpConnectedAt: true,
+        storeConfig: true,
+        onboardingCompletedAt: true,
+        fbTokenExpiresAt: true,
+        policyReturns: true,
+        policyShipping: true,
+        _count: { select: { products: { where: { deletedAt: null } } } },
+      },
+    }),
+    prisma.subscription.findUnique({
+      where: { userId: ownerId },
+      select: { status: true, trialEndsAt: true, currentPeriodEnd: true, gracePeriodEndsAt: true },
+    }),
+  ]);
+
+  if (!store) return null;
+
+  /* Los tres contadores de los avisos amarillos, en paralelo. Van en una segunda
+     tanda porque necesitan el `store.id` de arriba.
+
+     "Vencido" acá quiere decir vencido Y todavía encendido: un cupón apagado a
+     mano no es un problema, es una decisión. Lo que confunde es el que figura
+     activo en la lista y ya no le sirve a nadie. */
+  const ahora = new Date();
+  const [productosSinFoto, cuponesVencidos, promosVencidas] = await Promise.all([
+    prisma.product.count({
+      where: {
+        storeId: store.id,
+        deletedAt: null,
+        isActive: true,
+        // `images` es un JSON en texto: sin fotos queda "[]" (o vacío en filas viejas).
+        OR: [{ images: "[]" }, { images: "" }],
+      },
+    }),
+    prisma.coupon.count({
+      where: { storeId: store.id, isActive: true, expiresAt: { lt: ahora } },
+    }),
+    prisma.storePromotion.count({
+      where: { storeId: store.id, isActive: true, archivedAt: null, endsAt: { lt: ahora } },
+    }),
+  ]);
+
+  return {
+    storeId: store.id,
+    tipoTienda: store.tipoTienda,
+    logo: store.logo,
+    descripcion: store.description,
+    isPublished: store.isPublished,
+    isVerified: store.isVerified,
+    mpConnectedAt: store.mpConnectedAt,
+    storeConfig: store.storeConfig,
+    cantidadProductos: store._count.products,
+    // El plan de afiliados no crea Subscription: sin fila no hay nada vencido.
+    estadoSuscripcion: sub ? getSubscriptionStatus(sub) : null,
+    onboardingCompletedAt: store.onboardingCompletedAt,
+    productosSinFoto,
+    cuponesVencidos,
+    promosVencidas,
+    fbTokenExpiresAt: store.fbTokenExpiresAt,
+    // Alcanza con una de las dos para no estar "sin políticas". Las otras dos
+    // (términos y privacidad) las genera la plataforma, éstas las escribe quien
+    // vende y son las que el comprador busca antes de comprar.
+    tienePoliticas: !!(store.policyReturns?.trim() || store.policyShipping?.trim()),
+  };
+}
+
+/**
+ * Marca la tienda como "ya terminó de configurarse", si corresponde.
+ *
+ * Se llama al leer los avisos: la primera vez que estén los ocho pasos queda la
+ * fecha, y de ahí en más la barra desaparece para siempre y los triángulos pasan
+ * a ser los que avisan. `updateMany` con `onboardingCompletedAt: null` en el
+ * where hace de candado: dos pestañas a la vez no la pisan dos veces, y una
+ * tienda ya marcada no se vuelve a tocar aunque después se despublique.
+ *
+ * Devuelve el estado listo para usar, sin necesidad de releer la base.
+ */
+export async function marcarOnboardingSiCorresponde(estado: EstadoTienda): Promise<EstadoTienda> {
+  if (estado.onboardingCompletedAt) return estado;
+  if (!pasosTerminados(condicionesTienda(estado))) return estado;
+
+  const ahora = new Date();
+  await prisma.store
+    .updateMany({
+      where: { id: estado.storeId, onboardingCompletedAt: null },
+      data: { onboardingCompletedAt: ahora },
+    })
+    .catch((err) => console.error("[avisos] no se pudo marcar el onboarding", estado.storeId, err));
+
+  return { ...estado, onboardingCompletedAt: ahora };
+}
+
+export type CondicionesTienda = {
+  esAutos: boolean;
+  tieneLogo: boolean;
+  tienePlantilla: boolean;
+  tieneProductos: boolean;
+  tieneMercadoPago: boolean;
+  tieneDatosDeCobro: boolean;
+  tieneEnvios: boolean;
+  tieneDescripcion: boolean;
+  estaPublicada: boolean;
+  estaVerificada: boolean;
+  /** Sin NINGUNA forma de cobrar: ni MercadoPago, ni transferencia, ni efectivo. */
+  noPuedeCobrar: boolean;
+  suscripcionCaida: boolean;
+};
+
+/* Lo único que `condicionesTienda` mira. Pedir el `EstadoTienda` entero obligaba
+   a quien solo quiere los pasos del onboarding —la pantalla de inicio— a inventar
+   contadores que no usa: cinco campos de relleno con el único fin de conformar al
+   compilador, que es justo como se cuela un dato mentiroso. */
+export type DatosDeConfiguracion = Pick<
+  EstadoTienda,
+  "tipoTienda" | "logo" | "descripcion" | "isPublished" | "isVerified" | "mpConnectedAt" | "storeConfig" | "cantidadProductos" | "estadoSuscripcion"
+>;
+
+export function condicionesTienda(estado: DatosDeConfiguracion): CondicionesTienda {
+  const esAutos = estado.tipoTienda === "AUTOS";
+
+  let tienePlantilla = false;
+  let tieneEnvios = false;
+  let tieneDatosDeCobro = false;
+  try {
+    const cfg = JSON.parse(estado.storeConfig || "{}");
+    tienePlantilla = !!cfg.template;
+    tieneEnvios = Array.isArray(cfg.shippingMethods);
+    const pi = cfg.paymentInfo;
+    tieneDatosDeCobro = !!(
+      (pi?.transferencia?.enabled && (pi.transferencia.cbu?.length > 0 || pi.transferencia.alias?.length > 0)) ||
+      pi?.efectivo?.enabled
+    );
+  } catch { /* storeConfig roto: se trata como vacío, igual que antes */ }
+
+  const tieneMercadoPago = !!estado.mpConnectedAt;
+
+  return {
+    esAutos,
+    tieneLogo: !!estado.logo,
+    tienePlantilla,
+    tieneProductos: estado.cantidadProductos > 0,
+    tieneMercadoPago,
+    tieneDatosDeCobro,
+    tieneEnvios,
+    tieneDescripcion: !!estado.descripcion?.trim(),
+    estaPublicada: estado.isPublished,
+    estaVerificada: estado.isVerified,
+    // Las tiendas de autos no cobran por la plataforma: se contacta y se arregla
+    // aparte, así que no tener medio de cobro no les rompe nada.
+    noPuedeCobrar: !esAutos && !tieneMercadoPago && !tieneDatosDeCobro,
+    suscripcionCaida: estado.estadoSuscripcion === "GRACE" || estado.estadoSuscripcion === "EXPIRED",
+  };
+}
+
+/**
+ * ¿Están los ocho pasos hechos EN ESTE MOMENTO?
+ *
+ * Ojo: esto NO es "ya terminó el onboarding". Es una foto del ahora, y por eso
+ * sola no sirve para decidir si callar los avisos — ver `onboardingCompleto`.
+ */
+export function pasosTerminados(c: CondicionesTienda): boolean {
+  const basicos = c.tieneLogo && c.tienePlantilla && c.tieneProductos && c.tieneDescripcion && c.estaPublicada;
+  if (c.esAutos) return basicos;
+  return basicos && c.tieneMercadoPago && c.tieneDatosDeCobro && c.tieneEnvios;
+}
+
+/**
+ * ¿Ya pasó por el armado de la tienda alguna vez?
+ *
+ * Mientras esto sea `false`, la barra de pasos está en pantalla y los avisos de
+ * tienda se callan: no tiene sentido gritarle "no podés cobrar" a alguien que
+ * todavía está completando el paso de cobro y ya lo tiene ahí escrito.
+ *
+ * ── Por qué mira una fecha guardada y no las condiciones ─────────────────────
+ * Porque si mirara las condiciones, la regla se comería a sí misma. Lo que
+ * enciende un rojo es exactamente lo que deja los pasos incompletos:
+ * despublicar la tienda apagaba el aviso de "tu tienda está despublicada".
+ * Tres de los cuatro rojos no se mostraban nunca.
+ *
+ * La fecha se pone una vez, cuando `pasosTerminados` da true por primera vez, y
+ * no se borra. A partir de ahí "despublicada" ya no significa "todavía no la
+ * publicó" sino "la publicó y se le cayó", que es justo lo que hay que avisar.
+ */
+export function onboardingCompleto(estado: EstadoTienda): boolean {
+  return estado.onboardingCompletedAt !== null;
+}
+
+/**
+ * Los avisos de la tienda.
+ *
+ * ── Qué es rojo y qué es amarillo ────────────────────────────────────────────
+ * Una sola pregunta, que se responde sola: **¿esto impide vender ahora mismo?**
+ * Sí es rojo. No, pero se vende peor, es amarillo.
+ *
+ * Con ese criterio quedan cuatro rojos y nada más, y eso es a propósito: si hay
+ * diez rojos no hay ninguno. "Producto sin foto" duele, pero se vende igual —
+ * es amarillo.
+ *
+ * ── Dónde se ve cada uno ─────────────────────────────────────────────────────
+ * El rojo va en el menú lateral Y adentro de la sección. El amarillo SOLO
+ * adentro. El menú está siempre a la vista: cuatro triangulitos amarillos fijos
+ * se vuelven empapelado en una semana, y el día que aparezca uno rojo tampoco se
+ * va a ver. El amarillo igual aparece al entrar a la sección, que es cuando se
+ * puede hacer algo al respecto.
+ * Quien decide eso es el que dibuja (ver DashboardLayout); acá salen todos.
+ */
+export function avisosDeTienda(estado: EstadoTienda): Aviso[] {
+  const c = condicionesTienda(estado);
+  const avisos: Aviso[] = [];
+
+  /* La verificación NO es un paso del onboarding: es de la cuenta, no del armado
+     de la tienda. Por eso va antes del corte de abajo y se muestra siempre.
+     Vive pegada al nombre en la tarjeta de perfil, no colgada de un item del
+     menú, así que es la única excepción a "el amarillo no va en el menú": ahí no
+     compite con la navegación, acompaña al sello de verificado que ya está. */
+  if (!c.estaVerificada) {
+    avisos.push({
+      id: "cuenta-sin-verificar",
+      nivel: "amarillo",
+      seccion: "/dashboard/ajustes",
+      titulo: "Cuenta sin verificar",
+      detalle: "Las tiendas verificadas muestran un sello que da confianza a quien te compra.",
+      href: "/dashboard/ajustes",
+    });
+  }
+
+  // De acá para abajo, todo lo que la barra de pasos ya está diciendo mientras
+  // la tienda se arma por primera vez.
+  if (!onboardingCompleto(estado)) return avisos;
+
+  if (c.suscripcionCaida) {
+    avisos.push({
+      id: "suscripcion-caida",
+      nivel: "rojo",
+      seccion: "/dashboard/mi-plan",
+      titulo: "Tu suscripción venció",
+      detalle: "Si no la renovás se te bloquea el panel y tu tienda deja de estar visible.",
+      href: "/dashboard/mi-plan",
+    });
+  }
+
+  if (!c.estaPublicada) {
+    avisos.push({
+      id: "tienda-despublicada",
+      nivel: "rojo",
+      seccion: "/dashboard",
+      titulo: "Tu tienda está despublicada",
+      detalle: "Nadie puede entrar a comprarte hasta que la vuelvas a publicar.",
+      href: "/dashboard",
+    });
+  }
+
+  if (c.noPuedeCobrar) {
+    avisos.push({
+      id: "sin-medio-de-cobro",
+      nivel: "rojo",
+      seccion: "/dashboard/pagos",
+      titulo: "No tenés ningún medio de cobro",
+      detalle: "Ni MercadoPago, ni transferencia, ni efectivo: nadie puede pagarte.",
+      href: "/dashboard/pagos",
+    });
+  }
+
+  if (!c.esAutos && !c.tieneEnvios) {
+    avisos.push({
+      id: "sin-envios",
+      nivel: "rojo",
+      seccion: "/dashboard/pagos",
+      titulo: "No configuraste cómo entregás",
+      detalle: "Sin al menos un método de envío o retiro, el checkout no se puede terminar.",
+      href: "/dashboard/pagos",
+    });
+  }
+
+  /* ── Amarillos ──────────────────────────────────────────────────────────────
+     Se vende igual, pero se vende peor. No van al menú lateral: aparecen al
+     entrar a la sección, que es donde se pueden resolver. */
+
+  if (estado.productosSinFoto > 0) {
+    const uno = estado.productosSinFoto === 1;
+    avisos.push({
+      id: "productos-sin-foto",
+      nivel: "amarillo",
+      seccion: "/dashboard/productos",
+      titulo: uno ? "Tenés un producto sin foto" : `Tenés ${estado.productosSinFoto} productos sin foto`,
+      detalle: uno
+        ? "Está publicado y se ve vacío. Una foto es lo primero que mira quien compra."
+        : "Están publicados y se ven vacíos. La foto es lo primero que mira quien compra.",
+      href: "/dashboard/productos",
+    });
+  }
+
+  if (!estado.tienePoliticas) {
+    avisos.push({
+      id: "sin-politicas",
+      nivel: "amarillo",
+      seccion: "/dashboard/pagos",
+      titulo: "No escribiste tus políticas",
+      detalle: "Cómo se devuelve y cómo se envía: es lo que la gente busca antes de decidirse.",
+      href: "/dashboard/pagos",
+    });
+  }
+
+  if (!c.tieneDescripcion) {
+    avisos.push({
+      id: "sin-descripcion",
+      nivel: "amarillo",
+      seccion: "/dashboard/ajustes",
+      titulo: "Tu tienda no tiene descripción",
+      detalle: "Es lo que se lee de tu tienda en el listado público y en Google.",
+      href: "/dashboard/ajustes",
+    });
+  }
+
+  if (!c.tieneLogo) {
+    avisos.push({
+      id: "sin-logo",
+      nivel: "amarillo",
+      seccion: "/dashboard/ajustes",
+      titulo: "Tu tienda no tiene logo",
+      detalle: "Aparece en el encabezado de la tienda y en los emails a tus clientes.",
+      href: "/dashboard/ajustes",
+    });
+  }
+
+  if (estado.cuponesVencidos > 0) {
+    const uno = estado.cuponesVencidos === 1;
+    avisos.push({
+      id: "cupones-vencidos",
+      nivel: "amarillo",
+      seccion: "/dashboard/cupones",
+      titulo: uno ? "Tenés un cupón vencido activo" : `Tenés ${estado.cuponesVencidos} cupones vencidos activos`,
+      detalle: "Figuran encendidos en tu lista pero ya no se pueden usar. Conviene apagarlos.",
+      href: "/dashboard/cupones",
+    });
+  }
+
+  if (estado.promosVencidas > 0) {
+    const una = estado.promosVencidas === 1;
+    avisos.push({
+      id: "promos-vencidas",
+      nivel: "amarillo",
+      seccion: "/dashboard/promociones",
+      titulo: una ? "Tenés una promoción vencida activa" : `Tenés ${estado.promosVencidas} promociones vencidas activas`,
+      detalle: "Ya no aplican en el carrito, pero siguen figurando encendidas.",
+      href: "/dashboard/promociones",
+    });
+  }
+
+  /* Meta. El token de larga duración dura unos 60 días y NO se renueva solo.
+     Se avisa desde 7 días antes, porque una vez vencido el catálogo deja de
+     sincronizar sin que nada en pantalla lo diga (ver la migración
+     20260813210000_add_fb_token_expires_at). */
+  if (estado.fbTokenExpiresAt) {
+    const diasQueFaltan = Math.floor((estado.fbTokenExpiresAt.getTime() - Date.now()) / 86_400_000);
+    if (diasQueFaltan <= 7) {
+      avisos.push({
+        id: "token-meta-por-vencer",
+        nivel: "amarillo",
+        seccion: "/dashboard/aplicaciones",
+        titulo: diasQueFaltan < 0 ? "Tu conexión con Meta venció" : "Tu conexión con Meta está por vencer",
+        detalle: diasQueFaltan < 0
+          ? "Tu catálogo dejó de sincronizar con Instagram y Facebook. Volvé a conectarla."
+          : `Quedan ${diasQueFaltan} día${diasQueFaltan === 1 ? "" : "s"}. Después, el catálogo deja de sincronizar.`,
+        href: "/dashboard/aplicaciones",
+      });
+    }
+  }
+
+  return avisos;
+}
+
+/**
+ * Atajo para las pantallas del panel: los avisos de UNA sección, listos para
+ * pasarle a `<AvisosDeSeccion />`. Deja el enchufe en dos líneas para que
+ * agregarlo a una pantalla nueva no sea una excusa para no hacerlo.
+ */
+export async function avisosParaSeccion(ownerId: string, seccion: string): Promise<Aviso[]> {
+  const inicial = await cargarEstadoTienda(ownerId);
+  if (!inicial) return [];
+  const estado = await marcarOnboardingSiCorresponde(inicial);
+  return avisosDeSeccion(avisosDeTienda(estado), seccion);
+}
+
+/** Solo los que van al menú lateral. Ver el comentario de `avisosDeTienda`. */
+export function avisosDelMenu(avisos: Aviso[]): Aviso[] {
+  return avisos.filter((a) => a.nivel === "rojo");
+}
+
+/** Los de una sección concreta, para pintarlos adentro. Rojos primero. */
+export function avisosDeSeccion(avisos: Aviso[], seccion: string): Aviso[] {
+  return avisos
+    .filter((a) => a.seccion === seccion)
+    .sort((a, b) => (a.nivel === b.nivel ? 0 : a.nivel === "rojo" ? -1 : 1));
+}

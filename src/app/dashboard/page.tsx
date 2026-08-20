@@ -12,6 +12,7 @@ import {
   Eye,
 } from "lucide-react";
 import { ESTADOS_VENTA_CONFIRMADA_LISTA } from "@/lib/order-status";
+import { condicionesTienda } from "@/lib/avisos-tienda";
 import { statusLabel, statusClass } from "@/lib/orders";
 
 export default async function DashboardPage() {
@@ -94,7 +95,7 @@ export default async function DashboardPage() {
   // Extra fields for onboarding checklist
   const storeExtra = await prisma.store.findUnique({
     where: { id: store.id },
-    select: { logo: true, isPublished: true, mpConnectedAt: true, storeConfig: true, description: true },
+    select: { logo: true, isPublished: true, mpConnectedAt: true, storeConfig: true, description: true, isVerified: true, onboardingCompletedAt: true },
   });
 
   const isAutos = store.tipoTienda === "AUTOS";
@@ -151,21 +152,26 @@ export default async function DashboardPage() {
     where: { storeId: store.id, deletedAt: null, vehicleStatus: "SOLD" },
   }) : 0;
 
-  // Onboarding checklist
-  let hasTemplate = false;
-  let hasShippingConfigured = false;
-  let hasPaymentData = false;
-  const hasDescription = !!(storeExtra?.description?.trim());
-  try {
-    const cfg = JSON.parse(storeExtra?.storeConfig || "{}");
-    hasTemplate = !!cfg.template;
-    hasShippingConfigured = Array.isArray(cfg.shippingMethods);
-    const pi = cfg.paymentInfo;
-    hasPaymentData = !!(
-      (pi?.transferencia?.enabled && (pi.transferencia.cbu?.length > 0 || pi.transferencia.alias?.length > 0)) ||
-      (pi?.efectivo?.enabled)
-    );
-  } catch { /* noop */ }
+  /* Onboarding checklist — las condiciones ya NO se calculan acá.
+     Salen de lib/avisos-tienda, que es también de donde salen los triangulitos
+     del menú. Antes cada lado hacía su propia cuenta con su propio criterio, y
+     el resultado era que el mismo pendiente se contaba dos veces: "conectá
+     MercadoPago" aparecía acá y además como triángulo en Pagos, al mismo tiempo. */
+  const condiciones = condicionesTienda({
+    tipoTienda: store.tipoTienda,
+    logo: storeExtra?.logo ?? null,
+    descripcion: storeExtra?.description ?? null,
+    isPublished: !!storeExtra?.isPublished,
+    isVerified: !!storeExtra?.isVerified,
+    mpConnectedAt: storeExtra?.mpConnectedAt ?? null,
+    storeConfig: storeExtra?.storeConfig ?? null,
+    cantidadProductos: store._count.products,
+    estadoSuscripcion: null, // la barra de pasos no habla de la suscripción
+  });
+  const hasTemplate = condiciones.tienePlantilla;
+  const hasShippingConfigured = condiciones.tieneEnvios;
+  const hasPaymentData = condiciones.tieneDatosDeCobro;
+  const hasDescription = condiciones.tieneDescripcion;
 
   const onboardingSteps = [
     {
@@ -221,7 +227,12 @@ export default async function DashboardPage() {
   ];
 
   const doneCount = onboardingSteps.filter((s) => s.done).length;
-  const allDone = doneCount === onboardingSteps.length;
+  /* La barra se retira cuando la tienda YA pasó por el armado, no cuando los
+     pasos están todos en verde ahora mismo. Es lo mismo el primer día, y deja de
+     serlo el día que algo se rompe: una tienda andando que se despublica no
+     necesita volver al tutorial de "publicá tu tienda" — necesita el aviso rojo
+     de que se le cayó, y ese lo dan los triángulos. Ver lib/avisos-tienda. */
+  const allDone = !!storeExtra?.onboardingCompletedAt || doneCount === onboardingSteps.length;
 
   return (
     <DashboardLayout

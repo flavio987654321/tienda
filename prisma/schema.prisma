@@ -293,6 +293,10 @@ model Store {
   originCity            String?
   originProvince        String? // código de provincia (ej: "B", "X", "C")
   originPostalCode      String?
+  // Cuándo terminó de configurarse la tienda por primera vez. Se marca sola y no
+  // se borra nunca: distingue "nunca lo configuró" de "lo tenía y se le rompió".
+  // Ver lib/avisos-tienda.
+  onboardingCompletedAt DateTime?
   // Verificación de identidad
   isVerified              Boolean   @default(false)
   verificationBanned      Boolean   @default(false)

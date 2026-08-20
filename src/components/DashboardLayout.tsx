@@ -44,10 +44,18 @@ type NavItem = {
   tourId?: string;
 };
 
-type Warnings = {
-  noLogo: boolean;
-  noMercadoPago: boolean;
-  notVerified: boolean;
+/* Los avisos ya vienen clasificados y con texto desde lib/avisos-tienda. Antes
+   acá llegaban tres booleanos sueltos y este archivo decidía por su cuenta a qué
+   item del menú correspondía cada uno y qué tan grave era, con un mapeo escrito
+   a mano que había que mantener en sintonía con el endpoint. Ahora el aviso trae
+   su propia `seccion` y su propio `nivel`, y acá solo se dibuja. */
+type Aviso = {
+  id: string;
+  nivel: "rojo" | "amarillo";
+  seccion: string;
+  titulo: string;
+  detalle: string;
+  href: string;
 };
 
 type NavGroup = {
@@ -134,7 +142,7 @@ export default function DashboardLayout({
   // "online" para no romper la hidratación; en el cliente lee navigator.onLine.
   const isOnline = useSyncExternalStore(subscribeOnline, () => navigator.onLine, () => true);
   const [showTour, setShowTour] = useState(false);
-  const [warnings, setWarnings] = useState<Warnings | null>(null);
+  const [avisos, setAvisos] = useState<Aviso[]>([]);
 
   // Cerrar el menú mobile y resincronizar los contadores cuando cambian sus
   // fuentes (ruta / props del servidor) — ajuste durante el render en vez de
@@ -190,7 +198,7 @@ export default function DashboardLayout({
   useEffect(() => {
     fetch("/api/dashboard/warnings")
       .then((r) => r.ok ? r.json() : null)
-      .then((d) => { if (d) setWarnings(d); })
+      .then((d) => { if (Array.isArray(d?.avisos)) setAvisos(d.avisos); })
       .catch(() => {});
   }, []);
 
@@ -300,12 +308,15 @@ export default function DashboardLayout({
     return exact ? pathname === href : pathname.startsWith(href);
   }
 
-  function getWarning(href: string): boolean {
-    if (!warnings) return false;
-    if (href === "/dashboard/pagos") return warnings.noMercadoPago;
-    if (href === "/dashboard/ajustes") return warnings.noLogo;
-    return false;
+  /* Solo los ROJOS llegan al menú. El amarillo se ve al entrar a la sección.
+     El menú está siempre en pantalla: unos cuantos triangulitos amarillos fijos
+     se vuelven empapelado en una semana, y para cuando aparezca uno rojo de
+     verdad ya nadie mira los triángulos. */
+  function getWarning(href: string): Aviso | null {
+    return avisos.find((a) => a.nivel === "rojo" && a.seccion === href) ?? null;
   }
+
+  const avisoNoVerificada = avisos.find((a) => a.id === "cuenta-sin-verificar") ?? null;
 
   // Qué contador y de qué color lleva cada link, en un solo lugar. Rojo = alguien
   // espera que le contestes, naranja = alerta de stock, amarillo = entró algo
@@ -368,14 +379,17 @@ export default function DashboardLayout({
         <span className={`flex-1 whitespace-nowrap overflow-hidden transition-[max-width] duration-200 ${showTour ? "max-w-xs" : "max-w-0 group-hover:max-w-xs"}`}>
           {label}
         </span>
-        {/* Warning icon — visible only in expanded state */}
+        {/* Warning icon — visible only in expanded state.
+            `title` para que diga QUÉ pasa: hasta ahora era un ícono mudo. */}
         {hasWarning && !has && (
-          <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-amber-400 hidden group-hover:block" />
+          <span title={hasWarning.titulo} className="hidden group-hover:block shrink-0">
+            <AlertTriangle className="h-3.5 w-3.5 text-red-500" />
+          </span>
         )}
         {/* Numeric badge or warning dot */}
         {(has || hasWarning) && (
           <>
-            <span className={`absolute top-2 right-2 w-2 h-2 rounded-full ${has ? color : "bg-amber-400"} group-hover:hidden`} />
+            <span className={`absolute top-2 right-2 w-2 h-2 rounded-full ${has ? color : "bg-red-500"} group-hover:hidden`} />
             {has && (
               <span className={`hidden group-hover:inline-flex shrink-0 min-w-5 rounded-full ${color} px-1.5 py-0.5 text-center text-[11px] font-bold leading-none text-white`}>
                 {count > 9 ? "9+" : count}
@@ -404,9 +418,18 @@ export default function DashboardLayout({
         }`}
       >
         <Icon className="h-5 w-5 shrink-0" />
-        <span className="flex-1">{label}</span>
+        {/* En el celular hay ancho de sobra: el aviso dice qué pasa en vez de ser
+            un triángulo mudo como en el menú de escritorio, donde no entra. */}
+        <span className="flex-1 min-w-0">
+          {label}
+          {hasWarning && (
+            <span className="block text-[11px] font-normal leading-tight text-red-600 truncate">
+              {hasWarning.titulo}
+            </span>
+          )}
+        </span>
         {hasWarning && !has && (
-          <AlertTriangle className="h-4 w-4 text-amber-400 shrink-0" />
+          <AlertTriangle className="h-4 w-4 text-red-500 shrink-0" />
         )}
         {has && (
           <span className={`shrink-0 min-w-5 rounded-full ${color} px-1.5 py-0.5 text-center text-[11px] font-bold leading-none text-white`}>
@@ -482,8 +505,8 @@ export default function DashboardLayout({
             <div className={`flex-1 min-w-0 overflow-hidden transition-[max-width] duration-200 ${showTour ? "max-w-xs" : "max-w-0 group-hover:max-w-xs"}`}>
               <div className="flex items-center gap-1">
                 <p className="text-xs font-semibold text-gray-800 truncate whitespace-nowrap">{userName}</p>
-                {warnings?.notVerified && (
-                  <span title="Cuenta sin verificar"><AlertTriangle className="h-3 w-3 shrink-0 text-amber-400" /></span>
+                {avisoNoVerificada && (
+                  <span title={avisoNoVerificada.titulo}><AlertTriangle className="h-3 w-3 shrink-0 text-amber-400" /></span>
                 )}
               </div>
               <p className="text-[10px] text-indigo-400 font-medium whitespace-nowrap">Ver perfil →</p>
@@ -606,7 +629,7 @@ export default function DashboardLayout({
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1">
                     <p className="text-sm font-semibold text-gray-800 truncate">{userName}</p>
-                    {warnings?.notVerified && (
+                    {avisoNoVerificada && (
                       <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-amber-400" />
                     )}
                   </div>
