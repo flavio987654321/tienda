@@ -8,7 +8,7 @@ import { PRO_MAX_LIVE_PROMOTIONS } from "@/lib/planLimits";
 import { hasActivePremium, SUB_STATUS_SELECT } from "@/lib/subscription";
 import PromocionesClient from "./PromocionesClient";
 import AvisosDeSeccion from "@/components/dashboard/AvisosDeSeccion";
-import { avisosParaSeccion } from "@/lib/avisos-tienda";
+import { todosLosAvisos, avisosDeSeccion } from "@/lib/avisos-tienda";
 
 export default async function PromocionesPage() {
   const user = await getCurrentUser();
@@ -17,7 +17,8 @@ export default async function PromocionesPage() {
   // pantalla la dibuja el layout. El porqué largo está en `dashboard/layout.tsx`.
   if (!user) return null;
 
-  const avisos = await avisosParaSeccion(user.id, "/dashboard/promociones");
+  const avisos = await todosLosAvisos(user.id);
+  const avisosDeEstaSeccion = avisosDeSeccion(avisos, "/dashboard/promociones");
 
   const store = await prisma.store.findUnique({
     where: { ownerId: user.id },
@@ -109,8 +110,8 @@ export default async function PromocionesPage() {
     .sort((a, b) => a.name.localeCompare(b.name));
 
   return (
-    <DashboardLayout userName={user.name} userId={user.id}>
-      <AvisosDeSeccion avisos={avisos} />
+    <DashboardLayout userName={user.name} userId={user.id} avisosIniciales={avisos}>
+      <AvisosDeSeccion avisos={avisosDeEstaSeccion} />
       <PromocionesClient
         initialPromotions={rows}
         categories={categories}

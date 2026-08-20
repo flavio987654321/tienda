@@ -7,7 +7,7 @@ import { APPS_REGISTRY } from "@/lib/apps/registry";
 import { whatsappVinculado } from "@/lib/apps/whatsapp-vinculo";
 import AppsExplorer from "./AppsExplorer";
 import AvisosDeSeccion from "@/components/dashboard/AvisosDeSeccion";
-import { avisosParaSeccion } from "@/lib/avisos-tienda";
+import { todosLosAvisos, avisosDeSeccion } from "@/lib/avisos-tienda";
 
 // Tres pasos, no cuatro: "podés desinstalarla" no es un paso del proceso, es una
 // garantía — y como garantía tranquiliza más abajo, al lado del candado.
@@ -40,7 +40,8 @@ export default async function AplicacionesPage() {
 
   if (user.role !== "OWNER") redirect("/dashboard");
 
-  const avisos = await avisosParaSeccion(user.id, "/dashboard/aplicaciones");
+  const avisos = await todosLosAvisos(user.id);
+  const avisosDeEstaSeccion = avisosDeSeccion(avisos, "/dashboard/aplicaciones");
 
   const store = await prisma.store.findUnique({
     where: { ownerId: user.id },
@@ -96,7 +97,7 @@ export default async function AplicacionesPage() {
       userName={user.name}
       userId={user.id}
       initialPendingAffiliateCount={pendingAffiliateCount}
-      initialLowStockCount={lowStockCount}
+      initialLowStockCount={lowStockCount} avisosIniciales={avisos}
     >
       <div className="-m-4 -mt-2 bg-slate-50 min-h-screen">
 
@@ -141,10 +142,10 @@ export default async function AplicacionesPage() {
 
         {/* Va después del hero y no antes: el aviso es de esta sección, no del
             panel entero, y arriba del título se leería como una alarma global. */}
-        {avisos.length > 0 && (
+        {avisosDeEstaSeccion.length > 0 && (
           <div className="px-6 pt-6">
             <div className="max-w-3xl mx-auto">
-              <AvisosDeSeccion avisos={avisos} />
+              <AvisosDeSeccion avisos={avisosDeEstaSeccion} />
             </div>
           </div>
         )}

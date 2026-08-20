@@ -11,7 +11,7 @@ import { WhatsappCard, RedesCard, MonedaCard, SeoCard } from "./PreferenciasCard
 import LogoUploadCard from "@/components/LogoUploadCard";
 import ArchiveDownloadCard from "./ArchiveDownloadCard";
 import AvisosDeSeccion from "@/components/dashboard/AvisosDeSeccion";
-import { avisosParaSeccion } from "@/lib/avisos-tienda";
+import { todosLosAvisos, avisosDeSeccion } from "@/lib/avisos-tienda";
 
 // La conexión con MercadoPago vive en /dashboard/pagos, junto al resto de los
 // medios de cobro (transferencia, efectivo). Acá quedan identidad, presencia y
@@ -27,7 +27,8 @@ export default async function AjustesPage({ searchParams }: Props) {
 
   if (user.role !== "OWNER") redirect("/dashboard");
 
-  const avisos = await avisosParaSeccion(user.id, "/dashboard/ajustes");
+  const avisos = await todosLosAvisos(user.id);
+  const avisosDeEstaSeccion = avisosDeSeccion(avisos, "/dashboard/ajustes");
 
   const [sub, store] = await Promise.all([
     getUserSubscription(user.id),
@@ -207,12 +208,12 @@ export default async function AjustesPage({ searchParams }: Props) {
       userName={user.name}
       userId={user.id}
       initialPendingAffiliateCount={pendingAffiliateCount}
-      initialLowStockCount={lowStockCount}
+      initialLowStockCount={lowStockCount} avisosIniciales={avisos}
     >
       {/* Sin barra de encabezado: el título vive arriba del menú lateral, como en
           los ajustes de Instagram. */}
       <div className="-m-4 -mt-2 bg-slate-50 min-h-screen px-6 py-6">
-        <AvisosDeSeccion avisos={avisos} />
+        <AvisosDeSeccion avisos={avisosDeEstaSeccion} />
         <ConfiguracionShell titulo="Configuración" secciones={secciones} seccionInicial={seccionInicial} />
       </div>
     </DashboardLayout>

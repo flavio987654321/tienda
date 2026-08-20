@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { prisma } from "@/lib/prisma";
 import { getSubscriptionStatus } from "@/lib/subscription";
 
@@ -51,8 +52,21 @@ export type EstadoTienda = {
   tienePoliticas: boolean;
 };
 
-export async function cargarEstadoTienda(ownerId: string): Promise<EstadoTienda | null> {
-  const [store, sub] = await Promise.all([
+export const cargarEstadoTienda = cache(async (ownerId: string): Promise<EstadoTienda | null> => {
+  /* ── Las cinco consultas en UN solo viaje ──────────────────────────────────
+     Esto estaba en dos tandas: primero la tienda, y después los tres contadores,
+     que necesitaban el `store.id` que devolvía la primera. Parece inofensivo
+     —son cinco consultas o son cinco igual— pero lo que se paga no es la
+     consulta, es el VIAJE: medido contra la base de producción, una consulta
+     suelta tarda 853ms y las tres del segundo grupo, en paralelo, 862ms. O sea
+     que la cuenta es 850ms por tanda, no por consulta.
+
+     Los contadores se cuelgan de `store: { ownerId }` en vez de `storeId`. Es un
+     join más para Postgres —`Store.ownerId` es único— y a cambio ninguna
+     depende de la anterior: entran las cinco en el mismo `Promise.all` y el
+     tiempo total pasa de dos viajes a uno. */
+  const ahora = new Date();
+  const [store, sub, productosSinFoto, cuponesVencidos, promosVencidas] = await Promise.all([
     prisma.store.findUnique({
       where: { ownerId },
       select: {
@@ -75,21 +89,12 @@ export async function cargarEstadoTienda(ownerId: string): Promise<EstadoTienda 
       where: { userId: ownerId },
       select: { status: true, trialEndsAt: true, currentPeriodEnd: true, gracePeriodEndsAt: true },
     }),
-  ]);
-
-  if (!store) return null;
-
-  /* Los tres contadores de los avisos amarillos, en paralelo. Van en una segunda
-     tanda porque necesitan el `store.id` de arriba.
-
-     "Vencido" acá quiere decir vencido Y todavía encendido: un cupón apagado a
-     mano no es un problema, es una decisión. Lo que confunde es el que figura
-     activo en la lista y ya no le sirve a nadie. */
-  const ahora = new Date();
-  const [productosSinFoto, cuponesVencidos, promosVencidas] = await Promise.all([
+    /* "Vencido" acá quiere decir vencido Y todavía encendido: un cupón apagado a
+       mano no es un problema, es una decisión. Lo que confunde es el que figura
+       activo en la lista y ya no le sirve a nadie. */
     prisma.product.count({
       where: {
-        storeId: store.id,
+        store: { ownerId },
         deletedAt: null,
         isActive: true,
         // `images` es un JSON en texto: sin fotos queda "[]" (o vacío en filas viejas).
@@ -97,12 +102,14 @@ export async function cargarEstadoTienda(ownerId: string): Promise<EstadoTienda 
       },
     }),
     prisma.coupon.count({
-      where: { storeId: store.id, isActive: true, expiresAt: { lt: ahora } },
+      where: { store: { ownerId }, isActive: true, expiresAt: { lt: ahora } },
     }),
     prisma.storePromotion.count({
-      where: { storeId: store.id, isActive: true, archivedAt: null, endsAt: { lt: ahora } },
+      where: { store: { ownerId }, isActive: true, archivedAt: null, endsAt: { lt: ahora } },
     }),
   ]);
+
+  if (!store) return null;
 
   return {
     storeId: store.id,
@@ -126,7 +133,7 @@ export async function cargarEstadoTienda(ownerId: string): Promise<EstadoTienda 
     // vende y son las que el comprador busca antes de comprar.
     tienePoliticas: !!(store.policyReturns?.trim() || store.policyShipping?.trim()),
   };
-}
+});
 
 /**
  * Marca la tienda como "ya terminó de configurarse", si corresponde.
@@ -440,10 +447,22 @@ export function avisosDeTienda(estado: EstadoTienda): Aviso[] {
  * agregarlo a una pantalla nueva no sea una excusa para no hacerlo.
  */
 export async function avisosParaSeccion(ownerId: string, seccion: string): Promise<Aviso[]> {
+  return avisosDeSeccion(await todosLosAvisos(ownerId), seccion);
+}
+
+/**
+ * La lista completa, para quien la necesita entera: el menú lateral.
+ *
+ * Va aparte de `avisosParaSeccion` para que una pantalla pueda pedir las dos
+ * cosas —lo suyo para el cartel, y el total para pasárselo al menú— sin pagar
+ * dos veces: `cargarEstadoTienda` está envuelta en `cache()` de React, así que
+ * dentro de un mismo render las dos llamadas comparten una sola consulta.
+ */
+export async function todosLosAvisos(ownerId: string): Promise<Aviso[]> {
   const inicial = await cargarEstadoTienda(ownerId);
   if (!inicial) return [];
   const estado = await marcarOnboardingSiCorresponde(inicial);
-  return avisosDeSeccion(avisosDeTienda(estado), seccion);
+  return avisosDeTienda(estado);
 }
 
 /** Solo los que van al menú lateral. Ver el comentario de `avisosDeTienda`. */

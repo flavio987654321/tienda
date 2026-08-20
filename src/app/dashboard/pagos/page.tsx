@@ -8,7 +8,7 @@ import { DEFAULT_PAYMENT_INFO, DEFAULT_SHIPPING_METHODS, TEMPLATES_CON_NEWSLETTE
 import { GAMIFICATION_EXCLUDED_TEMPLATES } from "@/lib/gamification";
 import { hasActivePremium, SUB_STATUS_SELECT } from "@/lib/subscription";
 import AvisosDeSeccion from "@/components/dashboard/AvisosDeSeccion";
-import { avisosParaSeccion } from "@/lib/avisos-tienda";
+import { todosLosAvisos, avisosDeSeccion } from "@/lib/avisos-tienda";
 
 // `mp` lo setea el callback de OAuth de MercadoPago (?mp=connected | ?mp=error)
 // para poder mostrar el resultado de la conexión al volver.
@@ -65,7 +65,8 @@ export default async function PagosPage({ searchParams }: { searchParams: Promis
   /* Los avisos salen del mismo lugar que los del menú lateral (lib/avisos-tienda),
      no de un cálculo propio de esta pantalla: es justamente lo que hacía que el
      mismo pendiente se contara dos veces. */
-  const avisos = await avisosParaSeccion(user.id, "/dashboard/pagos");
+  const avisos = await todosLosAvisos(user.id);
+  const avisosDeEstaSeccion = avisosDeSeccion(avisos, "/dashboard/pagos");
 
   let paymentInfo: StorePaymentInfo = DEFAULT_PAYMENT_INFO;
   let shippingMethods: ShippingMethod[] = DEFAULT_SHIPPING_METHODS;
@@ -111,7 +112,7 @@ export default async function PagosPage({ searchParams }: { searchParams: Promis
      
       userId={user.id}
       initialPendingAffiliateCount={pendingAffiliateCount}
-      initialLowStockCount={lowStockCount}
+      initialLowStockCount={lowStockCount} avisosIniciales={avisos}
     >
       <div className="-m-4 -mt-2 bg-slate-50 min-h-screen">
 
@@ -133,7 +134,7 @@ export default async function PagosPage({ searchParams }: { searchParams: Promis
               El triángulo del menú lateral no puede decir más que "algo pasa acá";
               este cartel dice qué, por qué importa y a dónde ir. Y es el único
               lugar donde se ven los amarillos — ver lib/avisos-tienda. */}
-          <AvisosDeSeccion avisos={avisos} />
+          <AvisosDeSeccion avisos={avisosDeEstaSeccion} />
 
           <section>
             <SectionLabel>{isAutos ? "Información legal" : "Métodos de pago"}</SectionLabel>

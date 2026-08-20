@@ -107,6 +107,7 @@ export default function DashboardLayout({
   userId,
   initialPendingAffiliateCount = 0,
   initialLowStockCount = 0,
+  avisosIniciales,
   fullHeight = false,
   hideHelp = false,
 }: {
@@ -115,6 +116,10 @@ export default function DashboardLayout({
   userId?: string | null;
   initialPendingAffiliateCount?: number;
   initialLowStockCount?: number;
+  /* Los avisos ya calculados por la pantalla, para no volver a pedirlos. Cuando
+     no vienen, el layout los busca solo con el fetch de más abajo — así las
+     pantallas que todavía no los pasan siguen andando igual. */
+  avisosIniciales?: Aviso[];
   fullHeight?: boolean;
   hideHelp?: boolean;
 }) {
@@ -142,7 +147,7 @@ export default function DashboardLayout({
   // "online" para no romper la hidratación; en el cliente lee navigator.onLine.
   const isOnline = useSyncExternalStore(subscribeOnline, () => navigator.onLine, () => true);
   const [showTour, setShowTour] = useState(false);
-  const [avisos, setAvisos] = useState<Aviso[]>([]);
+  const [avisos, setAvisos] = useState<Aviso[]>(avisosIniciales ?? []);
 
   // Cerrar el menú mobile y resincronizar los contadores cuando cambian sus
   // fuentes (ruta / props del servidor) — ajuste durante el render en vez de
@@ -195,12 +200,18 @@ export default function DashboardLayout({
       .catch(() => {});
   }, []);
 
+  /* Solo si la pantalla no los trajo. Este fetch es una consulta entera a la
+     base por cada visita a cualquier pantalla del panel, y cuando la pantalla ya
+     los calculó en el servidor es el mismo trabajo hecho dos veces — medido,
+     unos 850ms de ida y vuelta que no hacían falta. */
+  const yaVinieron = avisosIniciales !== undefined;
   useEffect(() => {
+    if (yaVinieron) return;
     fetch("/api/dashboard/warnings")
       .then((r) => r.ok ? r.json() : null)
       .then((d) => { if (Array.isArray(d?.avisos)) setAvisos(d.avisos); })
       .catch(() => {});
-  }, []);
+  }, [yaVinieron]);
 
   /* El tour de la primera vez espera a que el rubro esté ELEGIDO, para no
      abrirse encima del modal que lo pregunta.

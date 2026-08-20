@@ -12,7 +12,7 @@ import { STORE_TYPES } from "@/lib/storeTypes";
 import { parseStringArray } from "@/lib/promotions";
 import type { Prisma } from "@prisma/client";
 import AvisosDeSeccion from "@/components/dashboard/AvisosDeSeccion";
-import { avisosParaSeccion } from "@/lib/avisos-tienda";
+import { todosLosAvisos, avisosDeSeccion } from "@/lib/avisos-tienda";
 
 // Sin `export`: una página de Next sólo puede exportar cosas de una lista fija
 // (`default`, `metadata`, `dynamic`…), y cualquier otra rompe el chequeo de tipos
@@ -82,7 +82,8 @@ export default async function ProductosPage({ searchParams }: Props) {
 
   const storeId = store.id;
 
-  const avisos = await avisosParaSeccion(user.id, "/dashboard/productos");
+  const avisos = await todosLosAvisos(user.id);
+  const avisosDeEstaSeccion = avisosDeSeccion(avisos, "/dashboard/productos");
 
   /* El filtro por stock es el único que no se puede escribir como condición de
      Prisma: depende de la SUMA del stock de las variantes, y `orderBy`/`where`
@@ -242,8 +243,8 @@ export default async function ProductosPage({ searchParams }: Props) {
   const totalPaginas = Math.max(1, Math.ceil(totalFiltrado / PAGE_SIZE));
 
   return (
-    <DashboardLayout userName={user.name} userId={user.id} initialPendingAffiliateCount={pendingAffiliateCount}>
-      <AvisosDeSeccion avisos={avisos} />
+    <DashboardLayout userName={user.name} userId={user.id} initialPendingAffiliateCount={pendingAffiliateCount} avisosIniciales={avisos}>
+      <AvisosDeSeccion avisos={avisosDeEstaSeccion} />
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">
