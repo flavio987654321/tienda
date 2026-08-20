@@ -378,7 +378,7 @@ async function readJsonResponse(res: Response) {
   const text = await res.text();
   if (!text) return {};
   try {
-    return JSON.parse(text) as { url?: string; error?: string };
+    return JSON.parse(text) as { url?: string; error?: string; aviso?: string };
   } catch {
     return { error: text };
   }
@@ -463,6 +463,10 @@ function ProductoFormPage() {
   const [images, setImages] = useState<ImageItem[]>([]);
   const [carouselIdx, setCarouselIdx] = useState(0);
   const [uploadingImg, setUploadingImg] = useState(false);
+  // Fotos que se van a ver borrosas. Va aparte de `error`: la foto se subió bien,
+  // no hay nada que corregir para poder guardar — es una sugerencia, y mezclarla
+  // con los errores rojos haría que se lea como "algo falló".
+  const [avisoFoto, setAvisoFoto] = useState("");
   const [uploadingVideo, setUploadingVideo] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoFileInputRef = useRef<HTMLInputElement>(null);
@@ -935,9 +939,15 @@ function ProductoFormPage() {
     }
 
     setError("");
+    setAvisoFoto("");
     setUploadingImg(true);
     try {
       const urls: string[] = [];
+      /* Fotos que van a verse borrosas. No frena nada —la foto se sube igual—
+         pero quien la sube es el único que puede cambiarla, y en su monitor se
+         ve bien: si no se lo decimos acá, se entera cuando le escriba una
+         clienta. Ver lib/medidas-imagen. */
+      const avisosDeFotos: string[] = [];
       for (const file of validFiles) {
         const uploadFile = await optimizeImageForUpload(file);
         const fd = new FormData();
@@ -946,7 +956,13 @@ function ProductoFormPage() {
         const data = await readJsonResponse(res);
         if (!res.ok) throw new Error(data.error || "No se pudo subir la imagen");
         if (data.url) urls.push(data.url);
+        if (data.aviso) avisosDeFotos.push(data.aviso);
       }
+      setAvisoFoto(
+        avisosDeFotos.length === 0 ? "" :
+        avisosDeFotos.length === 1 ? avisosDeFotos[0] :
+        `${avisosDeFotos.length} de las fotos que subiste se van a ver borrosas en celulares. Lo ideal son 800px de ancho o más.`
+      );
       setImages((p) => {
         const next = [...p, ...urls.map((u) => ({ url: u }))];
         setCarouselIdx(next.length - urls.length);
@@ -1621,6 +1637,18 @@ function ProductoFormPage() {
                   )
                 ) : null}
               </div>
+
+              {avisoFoto && (
+                <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs text-amber-900">
+                  <svg className="h-4 w-4 mt-0.5 shrink-0 text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                  <span>
+                    {avisoFoto}
+                    <button type="button" onClick={() => setAvisoFoto("")} className="ml-2 font-semibold underline underline-offset-2">
+                      Entendido
+                    </button>
+                  </span>
+                </div>
+              )}
 
               <p className="text-xs text-gray-400 text-center">
                 Hasta {MAX_PRODUCT_IMAGES} fotos (podés elegir varias a la vez). JPG, PNG, WEBP - hasta {MAX_SOURCE_IMAGE_SIZE_MB} MB; se optimizan al subir

@@ -101,6 +101,10 @@ export default function LogoUploadCard({ storeName, initialLogo, initialLogoColo
     try {
       const form = new FormData();
       form.append("file", file);
+      /* Un logo es chico a propósito: se muestra a 40-120px en el encabezado.
+         Sin esto le caería el aviso de "se va a ver borrosa", que está calibrado
+         para fotos de producto y banners. Ver lib/medidas-imagen. */
+      form.append("purpose", "logo");
       const uploadRes = await fetch("/api/upload", { method: "POST", body: form });
       if (!uploadRes.ok) {
         const data = await uploadRes.json().catch(() => ({}));

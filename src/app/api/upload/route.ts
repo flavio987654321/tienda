@@ -3,6 +3,7 @@ import { writeFile, mkdir } from "fs/promises";
 import { randomUUID } from "crypto";
 import path from "path";
 import { fileTypeFromBuffer } from "file-type";
+import { medirImagen, avisoDeFotoChica } from "@/lib/medidas-imagen";
 import { getCurrentUser } from "@/lib/auth-session";
 import { checkRateLimit } from "@/lib/rate-limit";
 
@@ -181,12 +182,22 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    /* Cuánto mide la foto, para poder avisar si va a verse borrosa.
+       NO bloquea la subida: hay imágenes que son chicas con razón —un logo, un
+       ícono— y rechazarlas sería peor que el problema. El aviso viaja junto a la
+       url y lo muestra quien subió, que es el único que puede cambiarla.
+       Sólo para imágenes: un video o un PDF no tienen este problema. */
+    const esLogo = purpose === "logo";
+    const aviso = !isDocument && !isVideo && !esLogo
+      ? avisoDeFotoChica(medirImagen(Buffer.from(bytes)))
+      : null;
+
     if (getSupabaseStorageConfig()) {
       const folder = isDocument ? "affiliate-docs" : isVideo ? "store-videos" : "products";
       const url = isDocument
         ? await uploadToSupabaseStorage(file, bytes, folder, { bucket: DOCS_BUCKET, isPublic: false })
         : await uploadToSupabaseStorage(file, bytes, folder);
-      return NextResponse.json({ url });
+      return NextResponse.json({ url, ...(aviso ? { aviso } : {}) });
     }
 
     if (process.env.NODE_ENV === "production") {
@@ -204,7 +215,7 @@ export async function POST(req: NextRequest) {
     await mkdir(uploadDir, { recursive: true });
     await writeFile(path.join(uploadDir, fileName), buffer);
 
-    return NextResponse.json({ url: `/uploads/${fileName}` });
+    return NextResponse.json({ url: `/uploads/${fileName}`, ...(aviso ? { aviso } : {}) });
   } catch (error) {
     console.error("UPLOAD ERROR:", error);
     return NextResponse.json(
