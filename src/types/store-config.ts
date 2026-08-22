@@ -222,6 +222,25 @@ export type StoreConfig = {
   };
   previewFill?: boolean;
   /**
+   * True mientras se MIRA un diseño que todavía no es el de la tienda.
+   *
+   * La galería del editor muestra cada diseño con `previewFill`, y eso hoy mezcla:
+   * primero los productos reales de la dueña y después los de ejemplo hasta
+   * completar ocho. O sea que eligiendo diseño se ven dos remeras propias al lado
+   * de seis prendas ajenas, con el color de la tienda encima de una paleta pensada
+   * para otra cosa. Ni se entiende cómo es el diseño ni cómo quedaría la tienda.
+   *
+   * Con esto prendido se muestran SÓLO los de ejemplo: el diseño se ve como fue
+   * pensado, que es lo que se está por elegir. Apenas el diseño pasa a ser el de la
+   * tienda, se apaga y entran los productos de verdad.
+   *
+   * Va aparte y no invirtiendo `previewFill` porque ese flag significa dos cosas a
+   * la vez —"rellená con ejemplos" y "esto es una previa"— y de la segunda dependen
+   * las fotos de ejemplo del hero, la del contacto y los avisos a la dueña en los
+   * diez templates. Apagarlo para mostrar el catálogo real apagaría todo eso.
+   */
+  previewDemoPuro?: boolean;
+  /**
    * True solo en la demo pública de un diseño (`/plantillas/[id]`).
    *
    * Esa página necesita `previewFill` para tener productos y reseñas de ejemplo,

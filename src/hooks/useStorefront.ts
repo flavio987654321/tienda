@@ -352,6 +352,7 @@ export function useStorefront() {
   const storeId    = config?.storeId ?? null;
   const slug       = config?.slug ?? null;
   const previewFill = config?.previewFill ?? false;
+  const demoPuro    = config?.previewDemoPuro ?? false;
 
   const [products, setProducts] = useState<StorefrontProduct[]>([]);
   const [promotions, setPromotions] = useState<ActivePromotion[]>([]);
@@ -412,6 +413,13 @@ export function useStorefront() {
           const tipoTienda = config?.tipoTienda ?? "ROPA";
           const demoPool = getDemoPool(tipoTienda);
           const fillTarget = fillTargetFor(tipoTienda);
+          /* Mirando un diseño que todavía no es el de la tienda: SÓLO ejemplos.
+             Mezclar los reales con los de ejemplo no muestra ni una cosa ni la
+             otra — ver `previewDemoPuro` en `types/store-config`. */
+          if (demoPuro) {
+            setProducts(demoPool.slice(0, fillTarget));
+            return;
+          }
           const needed = Math.max(0, fillTarget - real.length);
           setProducts([...real, ...demoPool.slice(0, needed)]);
         } else {
@@ -420,7 +428,7 @@ export function useStorefront() {
       })
       .catch(() => {})
       .finally(() => setLoadingProducts(false));
-  }, [slug, previewFill, config?.tipoTienda]);
+  }, [slug, previewFill, demoPuro, config?.tipoTienda]);
 
   // Encuentra el variantId que coincide con el valor seleccionado
   /**

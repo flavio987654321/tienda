@@ -2575,7 +2575,7 @@ export default function ConfiguracionPage() {
             <div data-tour="pv-lienzo" style={{ flex: 1, borderRadius: 10, overflow: "hidden",
               boxShadow: "0 8px 40px rgba(0,0,0,0.5)", display: "flex", flexDirection: "column",
               transform: "translateZ(0)" }}>
-              <StoreConfigContext.Provider value={{ ...config, previewFill: true, templateSaved: savedTemplateId === selected?.id, showPushBell: isPremium, onPreviewBellClick: handlePreviewBellClick }}>
+              <StoreConfigContext.Provider value={{ ...config, previewFill: true, previewDemoPuro: savedTemplateId !== selected?.id, templateSaved: savedTemplateId === selected?.id, showPushBell: isPremium, onPreviewBellClick: handlePreviewBellClick }}>
                 <BrowserFrame storeName={config.storeName}>
                   <TemplateComponent />
                 </BrowserFrame>
@@ -2729,7 +2729,7 @@ export default function ConfiguracionPage() {
             <div data-tour="ed-lienzo" style={{ height: "100%", borderRadius: "12px 12px 0 0", overflow: "hidden",
               boxShadow: "0 8px 40px rgba(0,0,0,0.2)", display: "flex", flexDirection: "column",
               transform: "translateZ(0)" }}>
-              <StoreConfigContext.Provider value={{ ...config, previewFill: true, templateSaved: savedTemplateId === selected?.id, showPushBell: isPremium, onPreviewBellClick: handlePreviewBellClick }}>
+              <StoreConfigContext.Provider value={{ ...config, previewFill: true, previewDemoPuro: savedTemplateId !== selected?.id, templateSaved: savedTemplateId === selected?.id, showPushBell: isPremium, onPreviewBellClick: handlePreviewBellClick }}>
                 <BrowserFrame storeName={config.storeName}>
                   <TemplateComponent />
                 </BrowserFrame>
