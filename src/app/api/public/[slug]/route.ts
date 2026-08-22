@@ -185,8 +185,18 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ slug
 
      Se devuelve la tienda igual, no un 404: la portada de "Próximamente" usa el
      nombre, el logo y los colores para verse como la tienda. Lo que se vacía es
-     lo que todavía no salió a la venta. */
-  if (!safeStore.isPublished && !isOwner) {
+     lo que todavía no salió a la venta.
+
+     Corriendo en LOCAL no se vacía nada, por lo mismo que la página de la tienda
+     no muestra "Próximamente" ahí (ver `app/tienda/[slug]/page.tsx`): esto
+     protege un catálogo de internet, y en `localhost` no hay internet del que
+     protegerlo. Sin esta salida el arreglo de allá queda a medias — la tienda se
+     dibuja pero llega vacía, y un template sin productos no se puede probar.
+     `NODE_ENV` lo pone Next: en `build` y `start` vale "production" y la puerta
+     vuelve a cerrarse sola. */
+  const enDesarrollo = process.env.NODE_ENV !== "production";
+
+  if (!safeStore.isPublished && !isOwner && !enDesarrollo) {
     return NextResponse.json({
       store: { ...safeStore, products: [], promotions: [] },
       isOwner: false,

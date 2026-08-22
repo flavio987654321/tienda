@@ -186,7 +186,27 @@ export default async function TiendaPage({ params, searchParams }: TiendaPagePro
     );
   }
 
-  if (!store.isPublished && !isOwner) {
+  /* "Próximamente" NO se muestra corriendo en local.
+   *
+   * Esta puerta existe para que a un comerciante no le vean la tienda a medio
+   * armar EN INTERNET. En `npm run dev` no protege de nada: es la misma persona,
+   * mirando su propia base, en `localhost`.
+   *
+   * Lo que sí hacía era dejar los templates sin forma de probarse. Para ver uno
+   * como lo ve un cliente hay que estar en una tienda publicada o entrar como
+   * dueño, y ninguna tienda publicada usa un template recién hecho — así que un
+   * template nuevo sólo se podía mirar en la vista previa. Y la vista previa
+   * MIENTE: corre con `editMode`, que apaga todos los clics a propósito para
+   * poder editar sin que la pantalla se escape, y varias pantallas se comportan
+   * distinto ahí que en la tienda de verdad. Se terminaba probando en producción,
+   * que es exactamente lo que no queremos.
+   *
+   * `NODE_ENV` lo pone Next, no nosotros: en `build` y `start` vale "production"
+   * y esta condición se apaga sola. No es una variable que alguien se pueda
+   * olvidar prendida en el servidor. */
+  const enDesarrollo = process.env.NODE_ENV !== "production";
+
+  if (!store.isPublished && !isOwner && !enDesarrollo) {
     return (
       <ComingSoonPage
         name={store.name}
