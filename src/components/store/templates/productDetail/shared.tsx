@@ -210,6 +210,16 @@ export type VestidoFicha = {
   resenaFormModal?: boolean;
   /** El botón que abre el formulario cuando está plegado. */
   botonEscribirResena?: string;
+  /**
+   * Y con qué forma se dibuja ese botón.
+   *
+   * El de fábrica es un rectángulo con el texto en mayúsculas y muy espaciado,
+   * que es como escriben los templates oscuros. En uno claro y redondeado eso se
+   * lee como de otro sitio: el mismo botón, en la portada, es una cápsula con el
+   * texto escrito como se habla. Se mezcla DESPUÉS del estilo base, así que
+   * alcanza con declarar lo que cambia.
+   */
+  botonEscribirResenaEstilo?: React.CSSProperties;
   /** Cuando el producto todavía no tiene ninguna. */
   textoSinResenas?: string;
   /** Boho Terra les dice "Productos similares". */
@@ -223,7 +233,8 @@ export type VestidoFicha = {
    vez de repetir la lista tres veces. */
 type PerillaSinDefault =
   | "tituloSeccion" | "nombre" | "paletaPromo" | "panelCompra"
-  | "miniaturaActiva" | "precio" | "resenaComentario";
+  | "miniaturaActiva" | "precio" | "resenaComentario"
+  | "botonEscribirResenaEstilo";
 
 /** Lo que rige cuando el template no dice nada. Es la ficha de siempre. */
 export const VESTIDO_FICHA_BASE: Required<Omit<VestidoFicha, PerillaSinDefault>> & Pick<VestidoFicha, PerillaSinDefault> = {
@@ -245,6 +256,7 @@ export const VESTIDO_FICHA_BASE: Required<Omit<VestidoFicha, PerillaSinDefault>>
   resenaFormPlegado: false,
   resenaFormModal: false,
   botonEscribirResena: "Escribí tu reseña",
+  botonEscribirResenaEstilo: undefined,
   textoSinResenas: "Todavía no hay reseñas para este producto.",
   rotuloSimilares: "También te puede interesar",
 };
@@ -512,8 +524,22 @@ export function ProductDetailBody({ theme, view }: { theme: DetailTheme; view: P
       <div style={{ display: "grid", gap: 40 }} className="pdb-grid">
         <style>{`
           .pdb-grid{grid-template-columns:1fr}
-          .pdb-gallery{display:flex; flex-direction:column; gap:10px}
-          .pdb-thumbs{display:flex; flex-direction:row; gap:8px; overflow-x:auto; order:2}
+          /* min-width:0 en las tres, y no es de adorno.
+
+             La fila de miniaturas mide lo que suman las miniaturas: con cinco
+             fotos son 5x72 mas cuatro separaciones = 392px. Como hija de un flex
+             en columna, su ancho minimo por defecto es su contenido, asi que
+             estiraba la galeria a 392 adentro de una pantalla de 360 y empujaba
+             la pagina entera. Medido: 56px de desplazamiento horizontal en un
+             telefono, en los CUATRO templates que ya usan esta ficha. El
+             overflow-x:auto de la fila no alcanzaba: no puede recortar si el
+             padre la deja crecer.
+
+             Con esto la fila se corre con el dedo, que es lo que se esperaba
+             desde el principio. */
+          .pdb-grid>*{min-width:0}
+          .pdb-gallery{display:flex; flex-direction:column; gap:10px; min-width:0}
+          .pdb-thumbs{display:flex; flex-direction:row; gap:8px; overflow-x:auto; order:2; min-width:0}
           .pdb-main{order:1}
           ${vestido.panelCompra ? `
           .pdb-buy{
@@ -911,6 +937,7 @@ export function ProductDetailBody({ theme, view }: { theme: DetailTheme; view: P
               background: "none", border: `1.5px solid ${theme.accentReadable}`, color: theme.accentReadable,
               padding: "12px 28px", fontSize: 11, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase",
               cursor: "pointer", borderRadius: theme.radius, fontFamily: theme.font,
+              ...vestido.botonEscribirResenaEstilo,
             }}
           >
             {vestido.botonEscribirResena}
@@ -994,7 +1021,13 @@ export function ProductDetailBody({ theme, view }: { theme: DetailTheme; view: P
             style={{ position: "absolute", right: -36, top: "38%", transform: "translateY(-50%)", width: 36,
               border: "none", background: "none", color: theme.text, opacity: 0.6, textShadow: "0 0 6px rgba(255,255,255,0.5), 0 0 6px rgba(0,0,0,0.5)", fontSize: 44, lineHeight: 1, cursor: "pointer", zIndex: 2,
               display: "none" }} className="pdb-arrow-r">›</button>
-          <style>{`@media(min-width:640px){.pdb-arrow-l,.pdb-arrow-r{display:flex!important;align-items:center;justify-content:center}}`}</style>
+          <style>{`@media(min-width:640px){.pdb-arrow-l,.pdb-arrow-r{display:flex!important;align-items:center;justify-content:center}}
+/* Las flechas viven FUERA del carrusel, en el margen. Pero margen hay solo si la
+   pantalla es mas ancha que el contenido (1200) mas sus 24 de aire a cada lado
+   mas los 36 que mide la flecha: 1320. Debajo de eso quedaban colgadas fuera de
+   la pantalla y empujaban la pagina entera — 12px de desplazamiento horizontal
+   medidos en 768, en todos los templates. Abajo de 1320 se meten adentro. */
+@media(max-width:1319px){.pdb-arrow-l{left:0!important}.pdb-arrow-r{right:0!important}}`}</style>
           <div ref={carouselRef} style={{ display: "flex", gap: 16, overflowX: "auto", scrollSnapType: "x mandatory", paddingBottom: 4 }}>
             {related.map(p => (
               <Link key={p.id} href={`/tienda/${slug}/producto/${p.id}${editorParam(isPreview)}`}

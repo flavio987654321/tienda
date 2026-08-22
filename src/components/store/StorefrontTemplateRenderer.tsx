@@ -2,7 +2,7 @@
 import { StoreConfigContext } from "@/contexts/StoreConfigContext";
 import { EditContext } from "@/contexts/EditContext";
 import type { StoreConfig } from "@/types/store-config";
-import FashionNoir from "./templates/FashionNoir";
+import Aire from "./templates/Aire";
 import BohoTerra from "./templates/BohoTerra";
 import UrbanPulse from "./templates/UrbanPulse";
 import ChicParis from "./templates/ChicParis";
@@ -17,7 +17,13 @@ import GamificationWidget from "./GamificationWidget";
 import { GAMIFICATION_EXCLUDED_TEMPLATES } from "@/lib/gamification";
 
 const TEMPLATES: Record<string, React.ComponentType> = {
-  "fashion-noir": FashionNoir,
+  "aire":         Aire,
+  /* Alias del id viejo. Aire REEMPLAZA a Fashion Noir, que ademas de ser un
+     template era el valor por defecto: cualquier tienda cuyo JSON haya quedado
+     con "fashion-noir" escrito seguiria entrando por aca. Sin esta linea,
+     `TEMPLATES[config.template]` da undefined y el componente devuelve null —
+     la tienda no muestra NADA, sin un error que lo explique. */
+  "fashion-noir": Aire,
   "boho-terra":   BohoTerra,
   "urban-pulse":  UrbanPulse,
   "chic-paris":   ChicParis,

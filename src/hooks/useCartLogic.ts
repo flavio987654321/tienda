@@ -847,6 +847,68 @@ export function useCartLogic({ products, promotions = [], storeId, affiliateId =
     registrarPaso("carrito", slug, isOwner, isPreview);
   };
 
+  /**
+   * Agregar al carrito desde la GRILLA, sin abrir la ficha.
+   *
+   * Devuelve `false` cuando el producto tiene algo para elegir —talle, color— y
+   * en ese caso el template tiene que abrir la ficha. Agregarlo igual, con la
+   * selección vacía, manda un pedido sin talle: es exactamente el agujero que
+   * describe la guarda de `addToCart` unas líneas más arriba, y no alcanza con
+   * el candado del stock para taparlo. Un clic de más es mucho más barato que
+   * un pedido que hay que cancelar por teléfono.
+   *
+   * Es una función aparte y no `addToCart` con un parámetro porque `addToCart`
+   * trabaja sobre `modalProduct` y `seleccion`, que son el estado de la ficha
+   * ABIERTA. Para llamarla desde una tarjeta habría que abrir la ficha primero,
+   * que es justo lo que este atajo evita.
+   *
+   * No abre el cajón del carrito, a diferencia de `addToCart`. Desde una grilla
+   * se agregan varias cosas seguidas, y un cajón que se abre solo en cada clic
+   * tapa la grilla y hay que cerrarlo para seguir mirando. Queda el aviso
+   * flotante, que confirma sin interrumpir.
+   */
+  const agregarDirecto = (product: StorefrontProduct): boolean => {
+    if (opcionesAElegir(product.opciones).length > 0) return false;
+    const seleccionVacia: SeleccionOpciones = {};
+    const stock = resolveVariantStock(product, seleccionVacia);
+    if (stock === 0) {
+      showToast("Ese producto está sin stock");
+      return true;
+    }
+    const variantId = resolveVariantId(product, seleccionVacia);
+    const clave = claveItem(product.id, seleccionVacia);
+
+    /* En una tienda mayorista se entra por el mínimo del producto, no por uno.
+
+       Abriendo la ficha esto ya pasaba (ver `openModal`), pero el atajo de la
+       grilla agregaba UNA unidad siempre: en una tienda con mínimo de 6, el
+       botón de comprar rápido dejaba el carrito en un estado que el checkout
+       rechaza —salta el aviso de cantidad mínima— y el comprador tenía que ir
+       a buscar el más para llegar a seis. El atajo no puede armar un pedido
+       que no se puede pagar.
+
+       Se respeta el stock igual: si hay menos que el mínimo, entra lo que hay
+       y el aviso de cantidad mínima aparece, que es lo correcto — el problema
+       ahí es de stock, no del botón. */
+    const arranque = isWholesale && product.cantMinMayorista ? product.cantMinMayorista : 1;
+    const primeraCantidad = stock !== null ? Math.min(arranque, stock) : arranque;
+
+    setCartItems(prev => {
+      const ex = prev.find(i => claveItem(i.product.id, i.seleccion) === clave);
+      if (ex) {
+        const total = stock !== null ? Math.min(ex.qty + 1, stock) : ex.qty + 1;
+        return prev.map(i => i === ex ? { ...i, qty: total } : i);
+      }
+      return [...prev, { product, seleccion: seleccionVacia, variantId, qty: primeraCantidad }];
+    });
+    showToast(`${product.name} agregado al carrito`);
+    // El mismo escalón del embudo que registra `addToCart`: si no se registrara
+    // acá, todo lo que se compre por el atajo desaparecería de las métricas y el
+    // embudo diría que la grilla no vende.
+    registrarPaso("carrito", slug, isOwner, isPreview);
+    return true;
+  };
+
   const removeFromCart = (idx: number) =>
     setCartItems(prev => prev.filter((_, i) => i !== idx));
 
@@ -1043,7 +1105,7 @@ export function useCartLogic({ products, promotions = [], storeId, affiliateId =
     fmtEnvioPrice, fmtLiveQuote,
     modalScrollRef,
     // Functions
-    fmt, showToast, openModal, addToCart,
+    fmt, showToast, openModal, addToCart, agregarDirecto,
     removeFromCart, updateQty,
     openCheckout, handleApplyCoupon, handlePlaceOrder, toggleFavorite,
   };

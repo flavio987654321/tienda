@@ -78,7 +78,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ slug
   const withSales = searchParams.get("withSales") === "1";
   const now = new Date();
 
-  const [store, currentUser] = await Promise.all([
+  const [store, currentUser, puntajes] = await Promise.all([
     prisma.store.findFirst({
       where: { slug, isActive: true },
       select: {
@@ -148,6 +148,24 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ slug
       },
     }),
     getCurrentUser(),
+    /* El promedio y el total de reseñas POR PRODUCTO, para la estrellita de la
+       grilla.
+
+       Va acá adentro y filtrada por `store: { slug }` en vez de por `storeId`,
+       aunque el storeId sea más directo: para usarlo habría que esperar a que la
+       consulta de la tienda termine, y eso convierte una ida a la base en dos.
+       Medido en este proyecto, lo que cuesta no es la consulta sino el VIAJE
+       —unos 850 ms— y esta es la pantalla más pedida de todo el sitio.
+
+       Sólo las APROBADAS, la misma regla que usa la ficha del producto: si la
+       portada promediara también las pendientes, mostraría una estrella que no
+       coincide con las reseñas que se ven al abrir el producto. */
+    prisma.publicReview.groupBy({
+      by: ["productId"],
+      where: { store: { slug, isActive: true }, status: "APPROVED", productId: { not: null } },
+      _avg: { rating: true },
+      _count: { _all: true },
+    }),
   ]);
   if (!store) return NextResponse.json({ error: "No encontrada" }, { status: 404 });
   const isOwner = !!currentUser && currentUser.id === store.ownerId;
@@ -181,9 +199,27 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ slug
   // visitantes de tiendas que no tienen venta mayorista habilitada.
   // El filtrado ocurre AQUÍ en el servidor, nunca en el cliente, para que el
   // dato nunca viaje al navegador de un comprador retail.
-  const visibleProducts = store.tieneVentaMayorista
+  const visiblesSinPuntaje = store.tieneVentaMayorista
     ? store.products
     : store.products.filter((p) => !p.soloMayorista);
+
+  /* La estrellita de cada producto. Un producto SIN reseñas no lleva `rating`:
+     va `null`, no cero. La diferencia importa porque el template decide con eso
+     si dibuja la estrella — y "0,0 ★" en un producto que nadie puntuó todavía no
+     se lee como "sin opiniones", se lee como "lo puntuaron pésimo". */
+  const puntajePorProducto = new Map(
+    puntajes.map((g) => [g.productId, { promedio: g._avg.rating ?? 0, total: g._count._all }])
+  );
+  const visibleProducts = visiblesSinPuntaje.map((p) => {
+    const s = puntajePorProducto.get(p.id);
+    return {
+      ...p,
+      // Redondeado a un decimal acá y no en el navegador: el número que muestra
+      // la grilla y el que muestra la ficha tienen que salir de la misma cuenta.
+      rating: s && s.total > 0 ? Math.round(s.promedio * 10) / 10 : null,
+      reviewCount: s?.total ?? 0,
+    };
+  });
 
   // Qué políticas legales linkea el pie de la ficha de producto. Se calcula acá
   // —con la misma función que la tienda y el mail— para que el navegador no

@@ -23,7 +23,18 @@ import { prisma } from "@/lib/prisma";
 const HEX_RE = /^#[0-9A-Fa-f]{6}$/;
 
 export const storeConfigSchema = z.object({
-  template: z.enum(["fashion-noir", "boho-terra", "urban-pulse", "chic-paris", "auto-motor", "auto-drive", "electro-prime", "tech-nova", "home-studio", "casa-clara"]),
+  /* "fashion-noir" sigue acá aunque el template ya no exista.
+   *
+   * Es el id viejo de Aire, y hay tiendas que lo tienen escrito en su JSON. El
+   * dibujado ya lo trata como alias, pero este validador no: sacarlo hacía que
+   * a esas tiendas les rebotara CUALQUIER cambio en el editor —cambiar un
+   * color, subir una foto— con un 400, porque el config que el editor manda de
+   * vuelta trae el template tal cual lo leyó. Y el aviso no diría "elegí otro
+   * template": diría que no se pudo guardar, sin más.
+   *
+   * Se acepta al entrar y no se ofrece en ningún lado, así que se apaga solo:
+   * la primera vez que esa dueña toque el template, queda en uno de los diez. */
+  template: z.enum(["aire", "fashion-noir", "boho-terra", "urban-pulse", "chic-paris", "auto-motor", "auto-drive", "electro-prime", "tech-nova", "home-studio", "casa-clara"]),
   storeName: z.string().max(120),
   storeTagline: z.string().max(200),
   colors: z.object({ accent: z.string().regex(HEX_RE) }),

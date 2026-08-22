@@ -1,6 +1,6 @@
 import type { TemplateId } from "@/types/store-config";
 import { TEMPLATE_TIPO_TIENDA } from "@/types/store-config";
-import FashionNoir from "@/components/store/templates/FashionNoir";
+import Aire from "@/components/store/templates/Aire";
 import BohoTerra from "@/components/store/templates/BohoTerra";
 import UrbanPulse from "@/components/store/templates/UrbanPulse";
 import ChicParis from "@/components/store/templates/ChicParis";
@@ -35,7 +35,7 @@ export const TEMPLATE_CATEGORIES: TemplateCategory[] = [
     id: "moda",
     name: "Moda & Ropa",
     templates: [
-      { id: "fashion-noir", name: "Fashion Noir", desc: "Lujo · Oscuro · Editorial",    blurb: "Para marcas de moda premium que buscan un aire editorial, con fondo oscuro y acentos dorados.", palette: ["#0a0a0a", "#c9a84c", "#f0ebe3"], component: FashionNoir, tipoTiendas: TEMPLATE_TIPO_TIENDA["fashion-noir"] },
+      { id: "aire",         name: "Aire",         desc: "Claro · Amplio · Moderno",     blurb: "Fondo claro, tarjetas redondeadas y mucho espacio. Para tiendas de ropa que quieren que se vea la prenda y no el decorado.", palette: ["#f4f4f1", "#1f5c3d", "#14161a"], component: Aire,        tipoTiendas: TEMPLATE_TIPO_TIENDA["aire"] },
       { id: "boho-terra",   name: "Boho Terra",   desc: "Orgánico · Natural · Cálido",  blurb: "Ideal para marcas con identidad natural y artesanal, en tonos tierra y cálidos.", palette: ["#faf7f2", "#b5652a", "#2c2218"], component: BohoTerra,   tipoTiendas: TEMPLATE_TIPO_TIENDA["boho-terra"]   },
       { id: "urban-pulse",  name: "Urban Pulse",  desc: "Deportivo · Energético",        blurb: "Pensado para ropa deportiva y streetwear, con energía y contraste fuerte.", palette: ["#0f0f0f", "#d4ff00", "#f5f5f5"], component: UrbanPulse,  tipoTiendas: TEMPLATE_TIPO_TIENDA["urban-pulse"]  },
       { id: "chic-paris",   name: "Chic Paris",   desc: "Editorial · Carousel · Limpio", blurb: "Un diseño editorial y prolijo, con carrusel de producto destacado.", palette: ["#ffffff", "#c0392b", "#111111"], component: ChicParis,   tipoTiendas: TEMPLATE_TIPO_TIENDA["chic-paris"]   },

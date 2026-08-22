@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronLeft, ShoppingBag, MessageCircle, Check } from "lucide-react";
 import { useCartLogic } from "@/hooks/useCartLogic";
 import { registrarVista } from "@/lib/registrarVista";
@@ -22,6 +22,7 @@ import HomeStudioDetail from "@/components/store/templates/productDetail/HomeStu
 import CasaClaraDetail from "@/components/store/templates/productDetail/CasaClaraDetail";
 import BohoTerraDetail from "@/components/store/templates/productDetail/BohoTerraDetail";
 import UrbanPulseDetail from "@/components/store/templates/productDetail/UrbanPulseDetail";
+import AireDetail from "@/components/store/templates/productDetail/AireDetail";
 import type { ClaveLegal } from "@/lib/politicas-tienda";
 import { afiliadoDeEstaTienda } from "@/lib/atribucion-afiliado";
 
@@ -32,6 +33,9 @@ const THEMED_DETAIL: Record<string, React.ComponentType<{ view: ProductDetailVie
   "casa-clara": CasaClaraDetail,
   "boho-terra": BohoTerraDetail,
   "urban-pulse": UrbanPulseDetail,
+  "aire": AireDetail,
+  // El id viejo de Aire: hay tiendas cuyo JSON todavia lo dice.
+  "fashion-noir": AireDetail,
 };
 
 
@@ -74,7 +78,17 @@ export default function ProductDetailClient({ slug, productId, productoInicial =
   const [storeId, setStoreId] = useState<string | null>(null);
   const [storeName, setStoreName] = useState("Tienda");
   const [whatsapp, setWhatsapp] = useState<string | null>(null);
-  const [template, setTemplate] = useState<string | null>(templateInicial);
+  /* Con qué template se dibuja la ficha.
+
+     El "t" de la dirección MANDA sobre lo que diga la tienda. Es lo mismo que
+     ya hacía la pantalla del catálogo, y sirve para lo mismo: poder ver cómo le
+     va a quedar la ficha con otro template ANTES de cambiárselo a la tienda. Sin
+     esto no había forma de mirar la ficha de un template que ninguna tienda
+     estuviera usando todavía.
+
+     No cambia nada de lo que se vende: es sólo el vestido. */
+  const tParam = useSearchParams().get("t");
+  const [template, setTemplate] = useState<string | null>(tParam ?? templateInicial);
   const [currency, setCurrency] = useState("ARS");
   const [hasMercadoPago, setHasMercadoPago] = useState(false);
   /* Igual que en la pantalla de productos: se lee una sola vez al montar para
@@ -114,7 +128,7 @@ export default function ProductDetailClient({ slug, productId, productoInicial =
         try {
           const cfg = JSON.parse(data.store.storeConfig || "{}");
           if (cfg.whatsapp?.enabled && cfg.whatsapp?.number) setWhatsapp(cfg.whatsapp.number);
-          if (cfg.template) setTemplate(cfg.template);
+          if (cfg.template && !tParam) setTemplate(cfg.template);
           if (cfg.currency) setCurrency(cfg.currency);
           if (cfg.colors?.accent) setAccentOverride(cfg.colors.accent);
           if (cfg.socialLinks) setSocialLinks(cfg.socialLinks);
@@ -132,7 +146,11 @@ export default function ProductDetailClient({ slug, productId, productoInicial =
       })
       .catch(() => setNotFoundLocal(true))
       .finally(() => setLoading(false));
-  }, [slug, productId, isPreview]);
+  // `tParam` entra porque el efecto lo lee: decide si la config de la tienda
+  // puede pisar el template. No hace más que eso — cambiar el `?t=` sin
+  // recargar no cambia el vestido, porque el valor sólo se toma al montar. Es
+  // un parámetro para mirar cómo queda, no un conmutador en vivo.
+  }, [slug, productId, isPreview, tParam]);
 
   // El del servidor vale hasta que llegue la lista del navegador, que trae más
   // (promociones aplicadas, stock al día). El orden importa: si `productoInicial`

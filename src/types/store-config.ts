@@ -1,6 +1,6 @@
 import type { ClaveLegal } from "@/lib/politicas-tienda";
 
-export type TemplateId = "fashion-noir" | "boho-terra" | "urban-pulse" | "chic-paris" | "aurora" | "auto-motor" | "auto-drive" | "electro-prime" | "tech-nova" | "home-studio" | "casa-clara";
+export type TemplateId = "aire" | "boho-terra" | "urban-pulse" | "chic-paris" | "aurora" | "auto-motor" | "auto-drive" | "electro-prime" | "tech-nova" | "home-studio" | "casa-clara";
 
 export const TEMPLATES_WITH_CAROUSEL: TemplateId[] = ["chic-paris", "electro-prime", "tech-nova", "home-studio", "casa-clara"];
 
@@ -14,7 +14,7 @@ export const TEMPLATES_WITH_CAROUSEL: TemplateId[] = ["chic-paris", "electro-pri
  * Auto Motor y Auto Drive no están, y no es un olvido: esas tiendas venden por
  * consulta y no mandan novedades.
  */
-export const TEMPLATES_CON_NEWSLETTER: TemplateId[] = ["aurora", "boho-terra", "chic-paris", "fashion-noir", "urban-pulse"];
+export const TEMPLATES_CON_NEWSLETTER: TemplateId[] = ["aurora", "boho-terra", "chic-paris", "aire", "urban-pulse"];
 
 // Qué templates dibujan el formulario de "opiná sobre esta tienda".
 //
@@ -26,7 +26,7 @@ export const TEMPLATES_CON_NEWSLETTER: TemplateId[] = ["aurora", "boho-terra", "
 // Sin esta lista sería exactamente el problema de la foto de fondo: prometer
 // algo que del otro lado no existe, y que no hay forma de descubrir salvo
 // esperando. Al portar el formulario a otro template, hay que sumarlo acá.
-export const TEMPLATES_CON_RESENA_TIENDA: TemplateId[] = ["chic-paris"];
+export const TEMPLATES_CON_RESENA_TIENDA: TemplateId[] = ["chic-paris", "aire"];
 
 // ── Qué secciones aceptan FOTO de fondo, por template ────────────────────────
 // El fondo de una sección es un COLOR. Algunos templates además saben dibujar una
@@ -53,7 +53,11 @@ export const SECTION_BG_PHOTO: Record<TemplateId, string[]> = {
   "casa-clara":    ["bgContacto", "bgFooter", "bgHero", "bgNosotros", "bgOfertas", "bgProductos"],
   "chic-paris":    [],
   "electro-prime": ["bgConfianza", "bgContacto", "bgDepartamentos", "bgFooter", "bgHero", "bgNosotros", "bgOfertas", "bgProductos"],
-  "fashion-noir":  ["bgContacto", "bgFooter", "bgStatement"],
+  /* Sólo la suscripción. La lista venía con "bgContacto", "bgFooter" y
+     "bgStatement" heredadas del template que Aire reemplazó, y esas tres
+     secciones YA NO EXISTEN: el editor le ofrecía a la dueña poner una foto de
+     fondo en tres bloques que no se dibujan en ningún lado. */
+  "aire":          ["bgNewsletter"],
   "home-studio":   ["bgConfianza", "bgContacto", "bgDepartamentos", "bgFooter", "bgHero", "bgNosotros", "bgOfertas", "bgProductos"],
   "tech-nova":     ["bgConfianza", "bgContacto", "bgDepartamentos", "bgFooter", "bgHero", "bgNosotros", "bgOfertas", "bgProductos"],
   "urban-pulse":   ["bgContacto", "bgFooter"],
@@ -294,6 +298,7 @@ export type StoreConfig = {
 // también: son el mismo color escrito dos veces, y esta es la copia que miente
 // cuando se desincronizan.
 export const TEMPLATE_NAV_BG: Partial<Record<TemplateId, string>> = {
+  "aire":          "#ffffff", // la barra de Aire es blanca, como el resto del template
   "aurora":        "#06070d", // el fondo de la escena, casi negro
   "auto-motor":    "#1b3f6e", // NAVY
   "auto-drive":    "#ffffff",
@@ -304,7 +309,7 @@ export const TEMPLATE_NAV_BG: Partial<Record<TemplateId, string>> = {
 };
 
 export const TEMPLATE_DEFAULTS: Record<TemplateId, { accent: string; storeName: string }> = {
-  "fashion-noir": { accent: "#c9a84c", storeName: "FASHION NOIR" },
+  "aire":         { accent: "#1f5c3d", storeName: "AIRE"         },
   "boho-terra":   { accent: "#b5652a", storeName: "BOHO TERRA"   },
   "urban-pulse":  { accent: "#d4ff00", storeName: "URBAN PULSE"  },
   "chic-paris":   { accent: "#c0392b", storeName: "CHIC PARIS"   },
@@ -318,7 +323,7 @@ export const TEMPLATE_DEFAULTS: Record<TemplateId, { accent: string; storeName: 
 };
 
 export const TEMPLATE_TIPO_TIENDA: Record<TemplateId, string[]> = {
-  "fashion-noir": ["ROPA", "GASTRONOMIA", "GENERAL"],
+  "aire":         ["ROPA", "GENERAL"],
   "boho-terra":   ["ROPA", "GASTRONOMIA", "GENERAL"],
   "urban-pulse":  ["ROPA", "GENERAL"],
   "chic-paris":   ["ROPA", "GENERAL"],
@@ -334,10 +339,10 @@ export const TEMPLATE_TIPO_TIENDA: Record<TemplateId, string[]> = {
 };
 
 export const DEFAULT_CONFIG: StoreConfig = {
-  template:      "fashion-noir",
+  template:      "aire",
   storeName:     "Mi Tienda",
   storeTagline:  "Tu tienda online",
-  colors:        { accent: "#c9a84c" },
+  colors:        { accent: "#1f5c3d" },
   whatsapp:      { enabled: true, number: "+54 9 11 0000-0000", message: "Hola! Me gustaría consultar sobre sus productos 😊" },
   socialLinks:   { instagram: "", facebook: "", tiktok: "", youtube: "", pinterest: "" },
   currency:      "ARS",
