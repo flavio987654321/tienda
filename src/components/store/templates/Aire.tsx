@@ -1,6 +1,6 @@
 ﻿"use client";
 import { useState, useEffect, useMemo, useRef, Fragment } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { usePushBell } from "@/contexts/PushBellContext";
 import { useSesion } from "@/components/AuthProvider";
@@ -27,6 +27,16 @@ import { ContactForm } from "@/components/store/templates/shared/ContactForm";
 import { FadeImage } from "@/components/store/templates/shared/FadeImage";
 import { SectionBlock } from "@/components/store/templates/shared/SectionBlock";
 import { discountPercent } from "@/lib/discount";
+/* La ficha de producto, para dibujarla adentro de la portada sin cambiar de
+   página. `ProductDetailBody` es el CUERPO compartido —galería, opciones,
+   carrito, descripción, reseñas, similares— y no dibuja ni barra ni pie, que es
+   justo lo que hace falta: la barra y el pie los pone Aire, los suyos. El vestido
+   sale de `AireDetail`, la misma ficha de la página suelta, para que las dos
+   entradas al producto se vean iguales. */
+import { ProductDetailBody, resolveDetailTheme, type ProductDetailViewProps } from "@/components/store/templates/productDetail/shared";
+import { themeBase as temaFichaAire } from "@/components/store/templates/productDetail/AireDetail";
+import { opcionesAElegir, valoresElegidos } from "@/lib/opciones";
+import { resolveVariantPrice } from "@/lib/variantPrice";
 import { CAPAS } from "@/lib/capas-tienda";
 import { COMENTARIO_MAX, RESENADOR_MAX } from "@/lib/reviews";
 
@@ -111,6 +121,9 @@ const AIRE_STRIP_ICONS: React.ReactNode[][] = [
 const RUTA_CONTACTO = /^\/tienda\/[^/]+\/contacto\/?$/;
 /* Y la del catálogo completo. Misma comparación entera por el mismo motivo. */
 const RUTA_CATALOGO = /^\/tienda\/[^/]+\/productos\/?$/;
+/* La de un producto. Ésta además CAPTURA el id, que es lo que se busca en el
+   catálogo ya cargado en memoria para saber qué ficha dibujar. */
+const RUTA_PRODUCTO = /^\/tienda\/[^/]+\/producto\/([^/]+)\/?$/;
 
 /* De a cuántos productos crece el catálogo cuando se toca "Ver más". */
 const PASO_CATALOGO = 24;
@@ -192,7 +205,7 @@ export default function Aire() {
   const enEditor    = isPreview && !storeConfig?.demoPublica;
   const isOwner     = !!storeConfig?.isOwner;
   const storefront  = useStorefront();
-  const { products, promotions, loadingProducts, checkoutMode, ocultarPrecios, defaultCategories } = storefront;
+  const { products, promotions, loadingProducts, checkoutMode, ocultarPrecios, defaultCategories, currency, hasMercadoPago } = storefront;
   const isInquiryMode = checkoutMode === "inquiry" || ocultarPrecios;
 
   /* ── Portada o pantalla de contacto ─────────────────────────────────────────
@@ -214,7 +227,6 @@ export default function Aire() {
      Se lee UNA vez al montar, que es cuando importa: la categoría llega en un
      link de entrada. Después manda lo que toque el visitante. */
   const [paramsUrl] = useState(() => new URLSearchParams(typeof window === "undefined" ? "" : window.location.search));
-  const router = useRouter();
   /* Qué pantalla se está mirando.
 
      En la tienda de verdad lo dice la DIRECCIÓN: la portada, /contacto y
@@ -226,14 +238,51 @@ export default function Aire() {
      un panel— así que ahí lo decide un estado. Lo cambian los MISMOS botones del
      menú, de modo que la dueña entra a editar cualquiera de las tres igual que
      entra a la portada, sin tener que aprender otra cosa. */
-  const [vistaEnPreview, setVistaEnPreview] = useState<"portada" | "contacto" | "catalogo">("portada");
+  const [vistaEnPreview, setVistaEnPreview] = useState<"portada" | "contacto" | "catalogo" | "producto">("portada");
+  /* Qué producto se está mirando en la vista previa. En la tienda de verdad esto
+     lo dice la dirección; en la previa no hay dirección que valga, así que el id
+     se guarda acá. */
+  const [productoEnPreview, setProductoEnPreview] = useState<string | null>(null);
   const enContacto = isPreview ? vistaEnPreview === "contacto" : RUTA_CONTACTO.test(rutaActual);
   const enCatalogo = isPreview ? vistaEnPreview === "catalogo" : RUTA_CATALOGO.test(rutaActual);
+  /* El id del producto abierto, o null si no hay ninguno. Es el id y no un
+     booleano porque de él sale QUÉ ficha dibujar, y porque cambiar de un producto
+     a otro —tocando un "similar"— tiene que notarse: con un booleano las dos
+     situaciones son la misma y la ficha no se enteraría de que cambió. */
+  const productoAbierto = isPreview
+    ? (vistaEnPreview === "producto" ? productoEnPreview : null)
+    : (RUTA_PRODUCTO.exec(rutaActual)?.[1] ?? null);
+  const enProducto = !!productoAbierto;
   const urlTienda  = `/tienda/${storeConfig?.slug ?? ""}`;
+  /* Cambiar de pantalla NO es irse a otra página.
+
+     Antes era `router.push(url)`: Aire se desmontaba entero, el servidor volvía a
+     dibujar la pantalla nueva y el visitante veía el parpadeo de una carga. Tres
+     pantallas que son el mismo template, y entre una y otra la tienda se apagaba
+     y se prendía.
+
+     Ahora se cambia SÓLO la dirección, con la History API del navegador. Next la
+     acepta a propósito y la sincroniza con `usePathname` —está documentado en
+     `01-getting-started/04-linking-and-navigating.md`— y de `usePathname` salen
+     justamente `enContacto` y `enCatalogo`, tres líneas más arriba. O sea: se
+     escribe la dirección nueva, `usePathname` la devuelve, y Aire se redibuja
+     como catálogo sin que haya viajado nada. El árbol no se desmonta: el carrito
+     con cosas adentro, lo que se venía filtrando y la posición del scroll siguen
+     en pie.
+
+     Y la dirección igual CAMBIA, que es la mitad que suele perderse cuando algo
+     "abre ahí mismo": el botón atrás vuelve como corresponde (`popstate` mueve
+     `usePathname` y la pantalla se va sola), y el link que el visitante copia de
+     la barra sigue siendo el de la pantalla que está mirando. Entrando de cero
+     por esa dirección la dibuja el servidor, como siempre.
+
+     Lo único que esto no mueve es el título de la pestaña, que lo pone el
+     servidor al entrar. */
   const irA = (vista: "portada" | "contacto" | "catalogo", url: string) => {
     if (editMode) return;
     if (isPreview) { setVistaEnPreview(vista); window.scrollTo({ top: 0 }); return; }
-    router.push(url);
+    window.history.pushState(null, "", url);
+    window.scrollTo({ top: 0 });
   };
   const irAContacto  = () => irA("contacto", `${urlTienda}/contacto`);
   const irAlCatalogo = () => irA("catalogo", `${urlTienda}/productos`);
@@ -281,14 +330,26 @@ export default function Aire() {
          de verdad. Se lo dice, en vez de quedarse mudo. */
   const abrirProducto = (product: StorefrontProduct) => {
     if (editMode) return;
+    /* Cargar el producto en el carrito ANTES de mostrar la ficha. `openModal` no
+       abre ninguna ventana —el nombre le quedó de cuando esto era un modal—: deja
+       elegido el producto, la foto del color que corresponde, las opciones que no
+       tienen alternativa y la cantidad. Sin esto la ficha se dibuja pero el botón
+       de agregar no tiene producto sobre el cual trabajar. */
+    openModal(product);
     const s = storeConfig?.slug;
-    if (!s) {
-      showToast("La ficha del producto se ve en tu tienda publicada");
+    /* Sin dirección de tienda —la previa del editor, o /preview/aire suelto— no
+       hay dirección que escribir, así que la pantalla la manda el estado. Antes
+       acá había un `window.open` a una pestaña nueva y, sin tienda, un aviso de
+       que la ficha se veía en la tienda publicada. Las dos cosas sobran: la ficha
+       ahora se dibuja acá mismo, con los datos que ya están en memoria. */
+    if (isPreview || !s) {
+      setVistaEnPreview("producto");
+      setProductoEnPreview(product.id);
+      window.scrollTo({ top: 0 });
       return;
     }
-    const url = `/tienda/${s}/producto/${product.id}${isPreview ? "?from=editor" : ""}`;
-    if (isPreview) { window.open(url, "_blank", "noopener,noreferrer"); return; }
-    router.push(url);
+    window.history.pushState(null, "", `/tienda/${s}/producto/${product.id}`);
+    window.scrollTo({ top: 0 });
   };
 
   /* Ir a una sección de la portada.
@@ -359,7 +420,17 @@ export default function Aire() {
     return map;
   }, [products]);
   const { editMode, overrides: textOverrides, setOverride } = useEditContext();
-  const cart = useCartLogic(storefront);
+  /* `lockScrollOnModal: false` — Aire NO tiene ventanita de producto.
+     El carrito trae un candado que congela el `<body>` (`overflow:hidden` +
+     `position:fixed`) mientras hay un producto elegido. Tiene sentido cuando la
+     ficha flota encima: lo de atrás no se tiene que mover. Acá la ficha ES la
+     página, así que ese candado congela la pantalla que el visitante está
+     leyendo — no se puede bajar a las reseñas ni a los similares. Y como el
+     producto elegido no se suelta al volver al catálogo, el congelamiento se
+     arrastra al resto del template.
+     La página suelta del producto ya lo apagaba por lo mismo (ver
+     `ProductDetailClient`); Aire dibuja esa misma ficha y necesita lo mismo. */
+  const cart = useCartLogic({ ...storefront, lockScrollOnModal: false });
   const {
     setCartOpen,
     searchOpen, setSearchOpen, searchQuery, setSearchQuery,
@@ -368,9 +439,41 @@ export default function Aire() {
     toastMsg,
     cartCount,
     searchResults, favoriteProducts,
-    fmt, showToast, agregarDirecto,
+    fmt, agregarDirecto,
     toggleFavorite,
+    /* Lo que necesita la ficha de producto dibujada acá adentro. Todo esto ya
+       estaba resuelto en `useCartLogic` y lo usan los otros templates; Aire
+       simplemente no se lo venía pidiendo. La foto activa de la galería es
+       `modalImg` y no un estado nuevo a propósito: el hook ya tiene el ida y
+       vuelta entre la foto y el color elegido, y con un estado propio esa
+       sincronización se rompería. */
+    openModal, modalImg, setModalImg,
+    seleccion, setOpcion, qty, setQty, addToCart,
   } = cart;
+
+  /* Cargar la ficha cuando el producto lo eligió la DIRECCIÓN y no un clic.
+     Pasa en tres situaciones y las tres son de verdad: alguien entra por un link
+     compartido, alguien vuelve con el botón "atrás", o alguien toca un producto
+     "similar" adentro de la ficha —esos son links y no pasan por `abrirProducto`—.
+     En todas, `abrirProducto` no corrió y sin esto la ficha se dibujaría con el
+     producto anterior, o sin ninguno.
+
+     Es un ajuste durante el dibujado y no un efecto, igual que el reinicio del
+     "Ver más" de más arriba: es el patrón de React para "poner el estado al día
+     cuando cambia algo de afuera", y evita el parpadeo de dibujar una vez con el
+     producto viejo antes de corregirlo.
+
+     `products` puede no haber llegado todavía: en ese caso no se marca nada y se
+     vuelve a intentar en el dibujado siguiente, cuando el catálogo esté. */
+  const [fichaCargada, setFichaCargada] = useState<string | null>(null);
+  if (enProducto && productoAbierto !== fichaCargada) {
+    const p = products.find(x => x.id === productoAbierto);
+    if (p) { setFichaCargada(productoAbierto); openModal(p); }
+  } else if (!enProducto && fichaCargada !== null) {
+    // Al salir de la ficha se olvida cuál era, para que volver a abrir ESE mismo
+    // producto la reconstruya en vez de mostrarla como quedó la vez pasada.
+    setFichaCargada(null);
+  }
 
 
   /* Acá había un efecto que leía `?p=<id>` de la dirección y abría el modal de
@@ -688,6 +791,55 @@ export default function Aire() {
      al revés, y por eso no se puede copiar la línea de uno a otro. */
   const cartTheme: CartTheme = { BG:S, S:BG, T, MID:T2, border:LN, accent:G, accentText, serif:"inherit" };
 
+  /* ── Lo que la ficha de producto necesita para dibujarse acá adentro ────────
+     El cuerpo compartido pide todo junto en un objeto. Nada de esto se calcula
+     de nuevo: sale del catálogo que Aire ya tiene en memoria y del carrito que
+     ya está andando, que es justamente por qué la ficha puede aparecer sin ir a
+     buscar nada al servidor.
+     `null` cuando no hay ficha abierta, o cuando el id de la dirección no existe
+     en el catálogo — un link viejo a un producto borrado. */
+  const fichaProducto = useMemo<ProductDetailViewProps | null>(() => {
+    if (!enProducto) return null;
+    const product = products.find(p => p.id === productoAbierto);
+    if (!product) return null;
+    const slug = storeConfig?.slug ?? "";
+    // Falta elegir algo si alguna opción CON alternativas quedó sin responder.
+    // Las de un solo valor no cuentan: ahí no hay nada que elegir.
+    const canAdd = opcionesAElegir(product.opciones).every(o => !!seleccion[o.nombre]);
+    const precioVariante = resolveVariantPrice(product.variants, valoresElegidos(seleccion));
+    const precioMostrado = precioVariante ?? product.price;
+    // Con una variante de precio propio el "antes" tachado no aplica: ese
+    // comparativo es del precio base y compararlo contra otro número miente.
+    const discount = !precioVariante && product.comparePrice && product.comparePrice > product.price
+      ? discountPercent(product.price, product.comparePrice) : null;
+    return {
+      slug,
+      storeName: storeConfig?.storeName ?? "",
+      currency,
+      whatsapp: storeConfig?.whatsapp?.enabled ? (storeConfig?.whatsapp?.number ?? null) : null,
+      product,
+      related: products.filter(p => p.id !== product.id && p.category === product.category).slice(0, 6),
+      hasMercadoPago,
+      isPreview, isOwner,
+      socialLinks: storeConfig?.socialLinks,
+      legales: storeConfig?.legales,
+      esAutos: false,   // Aire es de ropa
+      accentOverride: G,
+      footerBg: undefined,   // el pie lo dibuja Aire, no el cuerpo de la ficha
+      cart,
+      activeImg: modalImg, setActiveImg: setModalImg,
+      seleccion, setOpcion,
+      canAdd, qty, setQty, addToCart,
+      cartCount, toastMsg, discount,
+      promo: resolveProductPromo({ id: product.id, price: precioMostrado, category: product.category }, promotions),
+      catalogHref: `/tienda/${slug}/productos`,
+    };
+  }, [enProducto, productoAbierto, products, promotions, storeConfig, currency, hasMercadoPago,
+      isPreview, isOwner, G, cart, modalImg, setModalImg, seleccion, setOpcion, qty, setQty,
+      addToCart, cartCount, toastMsg]);
+
+  const temaFicha = useMemo(() => resolveDetailTheme(temaFichaAire, G), [G]);
+
   /* ─ Las fotos del hero ───────────────────────────────────────────────────────
      Hasta TRES, que rotan solas, con el numerito abajo para saltar entre ellas.
 
@@ -788,12 +940,21 @@ export default function Aire() {
   const contactoMid     = contactoText === T ? T2 : "rgba(255,255,255,0.72)";
   const contactoTarjeta = contactoText === T ? BG : "rgba(255,255,255,0.07)";
   const contactoBorde   = contactoText === T ? LN : "rgba(255,255,255,0.16)";
-  /* La foto la sube la dueña. En el editor se muestra una de ejemplo para que
-     sepa que el lugar existe; en la tienda publicada, si no subió ninguna, el
-     bloque no se dibuja y el formulario se queda con todo el ancho — mejor eso
-     que un recuadro gris del alto de la pantalla. */
+  /* La foto de la pantalla de contacto: la sube la dueña, y si no subió ninguna
+     queda una de ATENCIÓN — una persona, no una prenda.
+     Antes acá terminaba en null: sin foto no había segunda columna y el
+     formulario quedaba solo en el medio de la pantalla.
+     Se probó rellenar con la foto de un producto de la tienda —el criterio que
+     usan las baldosas de categorías— y queda mal: en la pantalla de escribirle a
+     alguien aparecía una campera recortada sobre blanco, que es una foto de
+     catálogo y no dice nada de contacto. La página de contacto habla de personas
+     que responden, así que la foto tiene que ser de eso.
+     Es la MISMA en el editor y en la tienda publicada: si la dueña la ve al
+     acomodar su tienda, es la que va a estar cuando publique. Y está el botón
+     para cambiarla por la suya —su local, su taller, ella— que es lo que
+     conviene y lo que dice el panel. */
   const contactoFoto = storeConfig?.imageOverrides?.["contactoFoto"]?.url
-    ?? (isPreview ? "https://images.unsplash.com/photo-1523381210434-271e8be1f52b?auto=format&fit=crop&w=1100&q=75" : null);
+    ?? "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&w=1100&q=75";
   const whatsappLimpio = storeConfig?.whatsapp?.number?.replace(/\D/g, "") ?? "";
   const hayWhatsappContacto = !!storeConfig?.whatsapp?.enabled && !!whatsappLimpio;
   /* ─ Reseñas ────────────────────────────────────────────────────────────────
@@ -1591,7 +1752,7 @@ export default function Aire() {
           esto: el hero, las secciones que la dueña reordena y la franja de
           categorías son de la portada, no de una página de contacto. Lo que sí
           queda de las dos son la barra de arriba y el pie, que están afuera. */}
-      {!enContacto && !enCatalogo && (<>
+      {!enContacto && !enCatalogo && !enProducto && (<>
 
       {/* ── HERO ───────────────────────────────────────────────────────────────
           Una TARJETA con esquinas redondeadas y aire alrededor, no una foto a
@@ -1901,18 +2062,29 @@ export default function Aire() {
         <div className="ai-colecciones ai-entrada" style={{ maxWidth:ANCHO, margin:"0 auto", ["--cols" as string]: colecciones.length }}>
           {colecciones.map(c => {
             const foto = c.lista.find(prod => prod.images[0])?.images[0] ?? null;
-            const elegida = modo === c.id;
+            /* Las baldosas ya NO son un interruptor: llevan al catálogo. `elegida`
+               marcaba cuál estaba filtrando la grilla de la portada, y esa grilla no
+               se filtra más desde acá — llegando a la portada `modo` está siempre en
+               nada, así que era una marca que no se encendía nunca. Cuál colección
+               está puesta ahora se ve en el catálogo, que es donde se aterriza. */
             return (
               <button key={c.id} className="ai-zoom ai-card"
                 onClick={() => {
                   if (editMode) return;
-                  setModo(elegida ? null : c.id);
+                  setModo(c.id);
                   setActiveCategory("Todos");
                   setActiveSubcategory(null);
-                  irASeccion("productos");
+                  /* Al CATÁLOGO, no a la grilla de la portada.
+                     Antes filtraba la grilla de arriba, y esa grilla muestra SEIS
+                     productos. Una tienda con cuarenta cosas en oferta abría
+                     "Ofertas" y veía seis: la baldosa prometía una colección y
+                     entregaba una muestra, sin decir que había más.
+                     Llevar al catálogo dejó de tener costo desde que el catálogo
+                     abre en el lugar: no se cambia de página, no parpadea, y allá
+                     entran todos con "Ver más" y con los filtros al costado. */
+                  irAlCatalogo();
                 }}
-                aria-pressed={elegida}
-                style={{ position:"relative", overflow:"hidden", borderRadius:RAD, background: foto ? BG : G, border: elegida ? `2px solid ${G}` : `1px solid ${LN}`, cursor: editMode ? "default" : "pointer", padding:0, textAlign:"left", display:"block" }}>
+                style={{ position:"relative", overflow:"hidden", borderRadius:RAD, background: foto ? BG : G, border: `1px solid ${LN}`, cursor: editMode ? "default" : "pointer", padding:0, textAlign:"left", display:"block" }}>
                 {foto && <FadeImage className="ai-zoom-img" src={foto} alt="" fill sizes="(max-width: 768px) 100vw, 33vw" style={{ objectFit:"cover" }}/>}
                 {/* El velo va SOLO si hay foto: sobre el panel del acento dejaba una
                     mancha oscura en la mitad de abajo, sin nada que oscurecer. */}
@@ -1921,7 +2093,7 @@ export default function Aire() {
                   <p style={{ fontSize: isMobile ? 18 : 20, fontWeight:800, letterSpacing:"-0.4px", color: foto ? "#ffffff" : accentText, margin:0, textTransform:"uppercase", lineHeight:1.1 }}>{c.titulo}</p>
                   <p style={{ fontSize:12, color: foto ? "rgba(255,255,255,0.82)" : accentText, opacity: foto ? 1 : 0.85, margin:"6px 0 0", lineHeight:1.35 }}>{c.bajada}</p>
                   <span style={{ display:"inline-flex", alignItems:"center", gap:7, marginTop:14, fontSize:12.5, fontWeight:700, padding:"9px 15px", borderRadius:999, background: foto ? "rgba(255,255,255,0.94)" : "rgba(255,255,255,0.18)", color: foto ? T : accentText }}>
-                    {elegida ? "Viendo" : "Ver"} <span aria-hidden>→</span>
+                    Ver <span aria-hidden>→</span>
                   </span>
                 </div>
               </button>
@@ -2230,7 +2402,13 @@ export default function Aire() {
             </EditableZone>
           </p>
 
-          <div className="ai-contacto" style={{ marginTop: isMobile ? 30 : 48, ["--cols" as string]: contactoFoto ? 2 : 1 }}>
+          {/* Hoy SIEMPRE hay foto —la sube la dueña o queda la de atención— así que
+              lo normal son dos columnas. La rama de una sola queda igual, de red:
+              si mañana se decide que alguna tienda no lleve foto, el formulario se
+              centra en un ancho de lectura en vez de estirarse. Estirado a 1360 los
+              campos miden 1230 y la pantalla se lee rota, como sin terminar. */}
+          <div className="ai-contacto" style={{ marginTop: isMobile ? 30 : 48, ["--cols" as string]: contactoFoto ? 2 : 1,
+                 ...(contactoFoto ? {} : { maxWidth: 620, marginLeft:"auto", marginRight:"auto" }) }}>
 
             {/* ── El formulario ── */}
             <div style={{ minWidth:0 }}>
@@ -2289,10 +2467,9 @@ export default function Aire() {
             </div>
 
             {/* ── La foto ──
-                La sube la dueña. En el editor se ve una de ejemplo para que sepa
-                que el lugar existe; en la tienda publicada, si no subió ninguna,
-                el bloque NO se dibuja y el formulario se queda con todo el ancho
-                — mejor eso que un recuadro gris del alto de la pantalla. */}
+                La sube la dueña, y hasta que lo haga queda una de atención al
+                cliente. Es la misma en el editor y en la tienda publicada, así que
+                lo que acomoda es lo que va a salir. */}
             {contactoFoto && (
               <div style={{ position:"relative", minWidth:0, borderRadius: isMobile ? RAD : RAD + 4, overflow:"hidden", background:BG }}>
                 <EditableImageButton field="contactoFoto" label="Cambiar imagen"
@@ -2321,6 +2498,62 @@ export default function Aire() {
       )}
 
 
+      {/* ── LA FICHA DE PRODUCTO, acá adentro ──────────────────────────────────
+          Tocar un producto NO cambia de página. La ficha aparece entre la barra y
+          el pie de Aire, que son los mismos de siempre y no se redibujan: el
+          carrito con cosas adentro y lo que se venía filtrando siguen en pie, y
+          cerrar la ficha devuelve la grilla como estaba.
+
+          El cuerpo es el COMPARTIDO, el mismo que usa la página suelta del
+          producto y los otros seis templates. Acá no se copió ni una línea de
+          galería, opciones, reseñas o similares: si se arregla algo allá, se
+          arregla en las dos entradas a la vez.
+
+          El pie que trae `AireDetail` NO viene, y está bien: ese archivo dibuja
+          una página entera porque allá no hay template alrededor. Acá el pie ya
+          está, abajo. Lo único que se comparte con él es el vestido.
+
+          `fichaProducto` en null con la ficha abierta es un link a un producto que
+          ya no existe. Se lo dice y se ofrece el catálogo, en vez de dejar la
+          pantalla en blanco. */}
+      {enProducto && (
+        <section style={{ background:BG, padding: `${isMobile ? 18 : 30}px ${MARGEN}px ${isMobile ? 30 : 52}px` }}>
+          <div style={{ maxWidth:ANCHO, margin:"0 auto" }}>
+            <button onClick={irAlCatalogo}
+              style={{ background:"none", border:"none", color:T2, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"inherit", padding:"0 0 14px", display:"inline-flex", alignItems:"center", gap:7 }}
+              onMouseEnter={e => (e.currentTarget.style.color = G)} onMouseLeave={e => (e.currentTarget.style.color = T2)}>
+              <span aria-hidden>←</span> Volver al catálogo
+            </button>
+            {fichaProducto ? (
+              /* Los "similares" del cuerpo compartido son links de verdad, para que
+                 se puedan copiar y abrir en otra pestaña. Pero un clic común no
+                 tiene que sacar de la página, así que se atiende acá: se mira si lo
+                 tocado fue un link a un producto de ESTA tienda y, si lo fue, se
+                 abre la ficha en el lugar. Se resuelve mirando el clic al vuelo y no
+                 tocando el cuerpo compartido, que es de los otros seis templates. */
+              <div onClick={e => {
+                const a = (e.target as HTMLElement).closest("a");
+                const href = a?.getAttribute("href");
+                const id = href && RUTA_PRODUCTO.exec(href.split("?")[0])?.[1];
+                const p = id && products.find(x => x.id === id);
+                if (!p) return;
+                e.preventDefault();
+                abrirProducto(p);
+              }}>
+                <ProductDetailBody theme={temaFicha} view={fichaProducto} />
+              </div>
+            ) : loadingProducts ? (
+              <p style={{ textAlign:"center", padding:"50px 0", color:T2, fontSize:14.5, margin:0 }}>Cargando…</p>
+            ) : (
+              <div style={{ textAlign:"center", padding:"46px 0" }}>
+                <p style={{ margin:"0 0 6px", fontSize:17, fontWeight:800, color:T }}>Producto no disponible</p>
+                <p style={{ margin:0, fontSize:13.5, color:T2 }}>Puede haber sido eliminado o ya no está a la venta.</p>
+              </div>
+            )}
+          </div>
+        </section>
+      )}
+
       {/* ── PANTALLA DE CATÁLOGO ───────────────────────────────────────────────
           La lista completa, con los filtros al costado. Es una PÁGINA aparte
           (/tienda/xxx/productos), no un bloque de la portada.
@@ -2343,7 +2576,14 @@ export default function Aire() {
         <div style={{ maxWidth:ANCHO, margin:"0 auto" }}>
 
           <h1 style={{ fontSize: isMobile ? 34 : 68, fontWeight:800, letterSpacing:"-0.04em", color:catalogoText, margin:"0 0 6px", textAlign:"center", lineHeight:1.03 }}>
-            <EditableZone field="catalogoTitulo" label="Título del catálogo">Todo el catálogo</EditableZone>
+            {/* Con una colección puesta, el título DICE cuál. Llegar desde la
+                baldosa "Ofertas" a una pantalla que sigue diciendo "Todo el
+                catálogo" mientras muestra la mitad de los productos se lee como
+                que faltan cosas, no como que hay un filtro. El título editable
+                vuelve apenas se saca la colección. */}
+            {modo
+              ? (colecciones.find(c => c.id === modo)?.titulo ?? "Catálogo")
+              : <EditableZone field="catalogoTitulo" label="Título del catálogo">Todo el catálogo</EditableZone>}
           </h1>
           <p style={{ margin:"0 0 28px", textAlign:"center", fontSize:13.5, color:catalogoMid }}>
             {loadingProducts
@@ -2355,6 +2595,41 @@ export default function Aire() {
 
             {/* ── Los filtros ── */}
             <aside style={{ minWidth:0 }}>
+
+              {/* ── Colecciones ──
+                  Las MISMAS tres de las baldosas de la portada: lo que está en
+                  oferta, lo que más miran, lo último que entró. Tocar una baldosa
+                  ahora trae acá, y si al llegar no hubiera dónde ver cuál está
+                  puesta —ni cómo sacarla— el catálogo se vería filtrado sin
+                  explicación y sin salida.
+                  Va ARRIBA de las categorías porque es el corte más grueso: una
+                  colección puede tener prendas de todas las categorías, no al revés.
+                  Sólo se dibuja si hay alguna: en una tienda sin ofertas, sin
+                  vistas suficientes y con menos de siete productos, las tres listas
+                  quedan vacías y serían tres filtros que no filtran nada. */}
+              {colecciones.length > 0 && (!isMobile || filtrosAbiertos) && (
+                <div style={{ marginBottom:14, background:catalogoTarjeta, border:`1px solid ${catalogoBorde}`, borderRadius:RAD, overflow:"hidden" }}>
+                  <p style={{ margin:0, padding:"16px 18px", fontSize:15, fontWeight:800, color:catalogoText, letterSpacing:"-0.3px" }}>Colecciones</p>
+                  {[{ id:null, titulo:"Todo el catálogo" }, ...colecciones.map(c => ({ id:c.id as string | null, titulo:c.titulo }))].map(op => {
+                    const elegida = modo === op.id;
+                    return (
+                      <button key={op.id ?? "todo"} type="button"
+                        onClick={() => { setModo(op.id as typeof modo); if (isMobile) setFiltrosAbiertos(false); }}
+                        style={{ width:"100%", display:"flex", alignItems:"center", justifyContent:"space-between", gap:10, padding:"13px 18px", background:"none", border:"none", borderTop:`1px solid ${catalogoBorde}`, cursor:"pointer", fontFamily:"inherit", fontSize:14, textAlign:"left", color: elegida ? catalogoText : catalogoMid, fontWeight: elegida ? 700 : 500 }}
+                        onMouseEnter={e => { if (!elegida) e.currentTarget.style.color = G; }}
+                        onMouseLeave={e => { if (!elegida) e.currentTarget.style.color = catalogoMid; }}>
+                        <span style={{ minWidth:0, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{op.titulo}</span>
+                        <span aria-hidden style={{ flexShrink:0, width:20, height:20, borderRadius:"50%", border:`1.5px solid ${elegida ? G : catalogoBorde}`, background: elegida ? G : "transparent", display:"grid", placeItems:"center" }}>
+                          {elegida && (
+                            <svg width={11} height={11} viewBox="0 0 24 24" fill="none" stroke={accentText} strokeWidth={3.4} strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                          )}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
               <div style={{ background:catalogoTarjeta, border:`1px solid ${catalogoBorde}`, borderRadius:RAD, overflow:"hidden" }}>
                 <button type="button"
                   onClick={() => { if (isMobile) setFiltrosAbiertos(v => !v); }}

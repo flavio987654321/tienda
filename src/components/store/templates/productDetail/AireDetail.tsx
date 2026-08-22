@@ -35,7 +35,12 @@ const LN = "#e5e5df";
 const RAD = 20;
 const ANCHO = 1360;
 
-const themeBase: DetailTheme = {
+/* Se exporta porque `Aire.tsx` dibuja esta MISMA ficha adentro de la portada,
+   sin cambiar de página. Las dos entradas al producto —la de acá, para el link
+   compartido y para Google, y la de allá, navegando por la tienda— tienen que
+   verse iguales, y con la paleta copiada en dos lados no hay forma de que sigan
+   iguales. */
+export const themeBase: DetailTheme = {
   pageBg: BG,
   text: T,
   muted: T2,
