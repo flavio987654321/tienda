@@ -56,6 +56,45 @@ export function Turnstile({ onVerify, apiRef, action }: {
     return () => obs.disconnect();
   }, [inView, siteKey]);
 
+  /* ── No esperar el aviso del <Script>: mirar si Turnstile ya está ───────────
+   *
+   * `onReady` es un aviso que da next/script cuando terminó de cargar. Medido en
+   * producción el 22/08/2026: el `<script>` estaba en la página y `window.turnstile`
+   * cargado, pero ese aviso NUNCA llegó — así que `scriptReady` se quedaba en false,
+   * el efecto de abajo nunca dibujaba el widget, y sin widget no hay token. En
+   * pantalla eso es el botón clavado en "Verificando…" para siempre, sin un error
+   * que lo explique. El ingreso a la plataforma estaba caído por esto.
+   *
+   * La causa del aviso perdido no importa acá, y ese es justamente el punto: lo que
+   * el widget necesita para dibujarse no es que alguien avise, es que
+   * `window.turnstile.render` exista. Preguntarlo directamente no puede fallar por
+   * un aviso que no llegó. Si `onReady` igual llega, mejor: pone `scriptReady` antes
+   * y este efecto sale por la primera línea.
+   *
+   * La primera consulta va en un timeout de 0 y no acá derecho: llamar a setState en
+   * el cuerpo de un efecto es lo que el lint del repo marca (`set-state-in-effect`).
+   *
+   * Y a los 15 segundos se corta. Antes, un script que no cargaba dejaba el
+   * formulario colgado en silencio; ahora dice que no se pudo verificar y que
+   * recargue, que es lo mismo que ya hacía cuando el script fallaba con error. */
+  useEffect(() => {
+    if (!inView || !siteKey || scriptReady) return;
+    let vivo = true;
+    let reintento: number | undefined;
+    const buscar = () => {
+      if (!vivo) return;
+      if (window.turnstile?.render) { setScriptReady(true); return; }
+      reintento = window.setTimeout(buscar, 150);
+    };
+    reintento = window.setTimeout(buscar, 0);
+    const corte = window.setTimeout(() => {
+      vivo = false;
+      window.clearTimeout(reintento);
+      setScriptFailed(true);
+    }, 15_000);
+    return () => { vivo = false; window.clearTimeout(reintento); window.clearTimeout(corte); };
+  }, [inView, siteKey, scriptReady]);
+
   useEffect(() => {
     if (!scriptReady || !siteKey || !containerRef.current || widgetIdRef.current) return;
     const id = window.turnstile!.render(containerRef.current, {
