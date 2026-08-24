@@ -49,10 +49,10 @@ const RUTA_CATALOGO = /^\/tienda\/[^/]+\/productos\/?$/;
 /* Ésta además CAPTURA el id: de él sale QUÉ ficha dibujar. */
 const RUTA_PRODUCTO = /^\/tienda\/[^/]+\/producto\/([^/]+)\/?$/;
 
-export function useVistaTemplate({ isPreview, editMode, slug, templateId }: {
+/* Sin `editMode`: lo recibía para apagar los clics editando, y eso era el bug.
+   Ver el comentario adentro de `irA`. */
+export function useVistaTemplate({ isPreview, slug, templateId }: {
   isPreview: boolean;
-  /** En modo edición los clics se ignoran: se está acomodando, no navegando. */
-  editMode: boolean;
   slug: string | null | undefined;
   /** El id del template, para que el `?t=` de los links diga QUÉ diseño mostrar
    *  y no se cuele el guardado en la base. */
@@ -75,8 +75,26 @@ export function useVistaTemplate({ isPreview, editMode, slug, templateId }: {
      dirección tiene que quedar limpia: es la que el visitante copia y comparte. */
   const sufijoEditor = isPreview ? `?t=${templateId}&from=editor` : "";
 
+  /* ── El candado del cambio de pantalla ──────────────────────────────────────
+   * Medido en Aire con el navegador: tocando dos veces seguidas un botón que
+   * cambia de pantalla se termina adentro de un producto CUALQUIERA. La pantalla
+   * cambia al instante, así que entre el primer toque y el segundo ya se dibujó
+   * la nueva y abajo del dedo quedó otra cosa, que se come el segundo toque.
+   * Antes no pasaba porque el link recargaba la página. O sea: lo trajo abrir en
+   * el lugar, y hay que devolverlo.
+   * Lo consume el template apagando los clics de su raíz mientras dure. */
+  const [cambiandoPantalla, setCambiandoPantalla] = useState(false);
+
   const irA = (vista: VistaTemplate, url: string, productoId?: string) => {
-    if (editMode) return;
+    /* Acá había un `if (editMode) return`, y dejaba el editor sin salida: tocar
+       "Ver colección completa", una categoría del menú o "Ver todas las ofertas"
+       mientras se editaba no hacía NADA. O sea que del template sólo se podía
+       mirar y acomodar la portada. Es el mismo agujero que ya se tapó en Aire, y
+       la razón por la que este archivo existe: para que se tape una vez.
+       Que el clic no haga nada nunca es una opción: la conclusión de quien toca
+       y no ve pasar nada es que está roto. */
+    setCambiandoPantalla(true);
+    setTimeout(() => setCambiandoPantalla(false), 400);
     if (isPreview) {
       setVistaEnPreview(vista);
       setProductoEnPreview(vista === "producto" ? (productoId ?? null) : null);
@@ -92,6 +110,8 @@ export function useVistaTemplate({ isPreview, editMode, slug, templateId }: {
     /** True cuando se está en la portada: ninguna de las otras. */
     enPortada: !enContacto && !enCatalogo && !enProducto,
     urlTienda, sufijoEditor,
+    /** True por 400ms después de cambiar de pantalla. Ver el candado, arriba. */
+    cambiandoPantalla,
     irA,
     irALaPortada: () => irA("portada", urlTienda + sufijoEditor),
     irAlCatalogo: () => irA("catalogo", `${urlTienda}/productos${sufijoEditor}`),

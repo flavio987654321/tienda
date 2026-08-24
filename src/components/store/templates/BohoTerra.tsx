@@ -167,7 +167,7 @@ export default function BohoTerra() {
      abría el catálogo de Aire.
      Ahora el catálogo se dibuja acá adentro, entre la barra y el pie de Boho
      Terra, con su vestido. Ver `useVistaTemplate`. */
-  const vista = useVistaTemplate({ isPreview, editMode, slug: storeConfig?.slug, templateId: "boho-terra" });
+  const vista = useVistaTemplate({ isPreview, slug: storeConfig?.slug, templateId: "boho-terra" });
   /** Con qué filtro entrar al catálogo. Lo ponen los links antes de abrirlo. */
   const [filtroCatalogo, setFiltroCatalogo] = useState<CatalogoEmbebido>({});
   const abrirCatalogo = (filtro: CatalogoEmbebido = {}) => {
@@ -594,7 +594,11 @@ export default function BohoTerra() {
   const ofertasSwipe = useTouchSwipe(nextOferta, prevOferta);
 
   return (
-    <div style={{ fontFamily:"'Helvetica Neue', Arial, sans-serif", background:BG, color:T, minHeight:"100vh" }}>
+    <div style={{ fontFamily:"'Helvetica Neue', Arial, sans-serif", background:BG, color:T, minHeight:"100vh",
+      /* Recién cambiada la pantalla, los clics no entran por 400ms: es lo que
+         evita que el segundo toque de un doble toque caiga sobre lo que quedó
+         abajo del dedo. Ver el candado en `useVistaTemplate`. */
+      pointerEvents: vista.cambiandoPantalla ? "none" : undefined }}>
       <style>{`
         @keyframes bt-wa-pulse { 0% { box-shadow:0 4px 20px rgba(37,211,102,0.4), 0 0 0 0 rgba(37,211,102,0.55); } 70% { box-shadow:0 4px 20px rgba(37,211,102,0.4), 0 0 0 14px rgba(37,211,102,0); } 100% { box-shadow:0 4px 20px rgba(37,211,102,0.4), 0 0 0 0 rgba(37,211,102,0); } }
         .bt-wa-fab { background:linear-gradient(135deg,#2be374,#1fae57); animation:bt-wa-pulse 2.4s ease-out infinite; }
@@ -1319,7 +1323,7 @@ export default function BohoTerra() {
                 </div>
                 {hasMore && (
                   <div style={{ textAlign:"center", marginTop:32 }}>
-                    <button onClick={() => { abrirCatalogo({ soloDestacados: true }); }}
+                    <button onClick={() => { abrirCatalogo({ masVistos: true }); }}
                       style={{ display:"inline-block", border:`1px solid ${masVistoText}`, color:masVistoText, background:"transparent", padding:"14px 40px", fontSize:11, letterSpacing:3, textTransform:"uppercase", fontFamily:"Georgia, serif", fontStyle:"italic", cursor:"pointer" }}><EditableZone field="masVistoCta" label="Botón ver más">Ver más</EditableZone></button>
                   </div>
                 )}

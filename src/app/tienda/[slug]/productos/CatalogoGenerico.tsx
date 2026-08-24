@@ -540,7 +540,12 @@ export type CatalogoEmbebido = {
   categoria?: string | null;
   subcategoria?: string | null;
   soloOfertas?: boolean;
-  soloDestacados?: boolean;
+  /** Ojo con el nombre viejo (`soloDestacados`): esto NO filtra, REORDENA. Es la
+   *  pantalla "Lo más buscado", que muestra el catálogo entero ordenado por
+   *  visitas. El nombre venía de cuando existía la casilla "Destacado" del
+   *  producto; el "sólo" no era cierto ni entonces, y desde que la casilla se
+   *  sacó mandaba a buscar un filtro que no existe en ningún lado. */
+  masVistos?: boolean;
   soloPromos?: boolean;
   /** Apaga el pie propio: adentro de un template el pie ya está. */
   sinPie?: boolean;
@@ -563,7 +568,7 @@ function ProductosPageInner({ embebido }: { embebido?: CatalogoEmbebido }) {
   const subCatParam  = embebido ? (embebido.subcategoria ?? null) : (searchParams?.get("subcategoria") ?? null);
   const ofertaParam  = embebido ? !!embebido.soloOfertas    : searchParams?.get("oferta") === "true";
   const [onlyOfertas, setOnlyOfertas] = useState(ofertaParam);
-  const destacadoParam  = embebido ? !!embebido.soloDestacados : searchParams?.get("destacado") === "true";
+  const destacadoParam  = embebido ? !!embebido.masVistos      : searchParams?.get("destacado") === "true";
   const [onlyDestacados, setOnlyDestacados] = useState(destacadoParam);
   const promoParam   = embebido ? !!embebido.soloPromos     : searchParams?.get("promo") === "true";
   const [onlyPromos, setOnlyPromos] = useState(promoParam);
