@@ -382,12 +382,42 @@ export default function Aire() {
     }
   };
 
+  /* ── El candado del cambio de pantalla ──────────────────────────────────────
+   *
+   * Medido con el navegador: tocando dos veces seguidas "Ver todo" se termina
+   * adentro de un producto CUALQUIERA. En celular, con doble toque, pasó todas
+   * las veces que se probó.
+   *
+   * No es un clic mal puesto. La pantalla ahora cambia AL INSTANTE, así que entre
+   * el primer toque y el segundo el catálogo ya se dibujó y abajo del dedo quedó
+   * una tarjeta de producto, que se come el segundo toque. Antes no pasaba: "Ver
+   * todo" era un link que recargaba la página, y el segundo clic caía sobre la
+   * página vieja sin hacer nada. O sea que esto lo trajo abrir en el lugar, y hay
+   * que devolverlo.
+   *
+   * Y el doble toque no es un accidente raro: es lo primero que hace cualquiera
+   * cuando algo parece que no responde.
+   *
+   * Se apagan los clics de TODO el template por un ratito, en vez de blindar
+   * botón por botón: el que se come el toque no es el botón que se tocó sino el
+   * que quedó abajo, y ése puede ser cualquiera de la pantalla nueva. Blindando
+   * de a uno siempre queda alguno afuera.
+   *
+   * 400ms: más que lo que separa los dos toques de un doble toque (~150ms) y
+   * bastante menos que lo que tarda una persona en apuntar a otra cosa. */
+  const [cambiandoPantalla, setCambiandoPantalla] = useState(false);
+  const trabarUnRatito = () => {
+    setCambiandoPantalla(true);
+    setTimeout(() => setCambiandoPantalla(false), 400);
+  };
+
   const irA = (vista: "portada" | "contacto" | "catalogo", url: string) => {
     /* Acá había un `if (editMode) return`, y dejaba el editor sin salida: tocar
        "Catálogo" o "Contacto" mientras se editaba no hacía NADA. O sea que las
        otras pantallas del template no se podían ni mirar ni acomodar — se editaba
        la portada y el resto quedaba a ciegas. Editando se navega igual que en la
        tienda: es lo que hay que poder hacer para editar el template entero. */
+    trabarUnRatito();
     if (isPreview) { setVistaEnPreview(vista); subirArriba(); return; }
     window.history.pushState(null, "", url);
     subirArriba();
@@ -441,6 +471,7 @@ export default function Aire() {
        elegido el producto, la foto del color que corresponde, las opciones que no
        tienen alternativa y la cantidad. Sin esto la ficha se dibuja pero el botón
        de agregar no tiene producto sobre el cual trabajar. */
+    trabarUnRatito();
     openModal(product);
     const s = storeConfig?.slug;
     /* Sin dirección de tienda —la previa del editor, o /preview/aire suelto— no
@@ -1342,7 +1373,11 @@ export default function Aire() {
   };
 
   return (
-    <div data-aire-raiz style={{ fontFamily:"system-ui, -apple-system, 'Segoe UI', Arial, sans-serif", background:BG, color:T, minHeight:"100vh" }}>
+    <div data-aire-raiz style={{ fontFamily:"system-ui, -apple-system, 'Segoe UI', Arial, sans-serif", background:BG, color:T, minHeight:"100vh",
+      /* Ver `trabarUnRatito`: recién cambiada la pantalla, los clics no entran
+         por 400ms. Es lo que evita que el segundo toque de un doble toque caiga
+         sobre lo que quedó abajo del dedo. */
+      pointerEvents: cambiandoPantalla ? "none" : undefined }}>
       <style>{`
         .ai-ofertas-row { scrollbar-width:none }
         .ai-ofertas-row::-webkit-scrollbar { display:none }
