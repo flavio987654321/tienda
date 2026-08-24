@@ -136,7 +136,6 @@ type ProductBodyRaw = {
   price?: unknown;
   comparePrice?: unknown;
   costPrice?: unknown;
-  featured?: unknown;
   precioMayorista?: unknown;
   cantMinMayorista?: unknown;
   preciosEscalonados?: unknown;
@@ -161,7 +160,6 @@ type ValidatedProductBody = {
   parsedPrice: number;
   parsedComparePrice: number | null;
   parsedCostPrice: number | null;
-  parsedFeatured: boolean;
   parsedPrecioMayorista: number | null;
   parsedCantMinMayorista: number | null;
   parsedPreciosEscalonados: PrecioEscalon[];
@@ -207,7 +205,7 @@ function textoSeoOpcional(valor: unknown, tope: number): string | null {
 export function validateProductBody(
   body: ProductBodyRaw
 ): { error: NextResponse } | ValidatedProductBody {
-  const { name, price, comparePrice, costPrice, featured, precioMayorista, cantMinMayorista, preciosEscalonados, soloMayorista, cuotas, variants, reelUrls, weightKg, widthCm, heightCm, depthCm, offerBadge, offerNote, offerEndsAt, seoTitle, seoDescription } = body;
+  const { name, price, comparePrice, costPrice, precioMayorista, cantMinMayorista, preciosEscalonados, soloMayorista, cuotas, variants, reelUrls, weightKg, widthCm, heightCm, depthCm, offerBadge, offerNote, offerEndsAt, seoTitle, seoDescription } = body;
 
   if (!name || typeof name !== "string" || name.trim().length < 2) {
     return { error: NextResponse.json({ error: "Nombre requerido (mínimo 2 caracteres)" }, { status: 400 }) };
@@ -449,7 +447,6 @@ export function validateProductBody(
     parsedPrice,
     parsedComparePrice,
     parsedCostPrice,
-    parsedFeatured: featured === true,
     parsedPrecioMayorista,
     parsedCantMinMayorista,
     parsedPreciosEscalonados,

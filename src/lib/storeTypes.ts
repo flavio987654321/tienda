@@ -53,7 +53,6 @@ export interface StoreTypeConfig {
   // en vez del campo único "Costo" — un vehículo se vende una sola vez y suele
   // acumular varios gastos, a diferencia de un producto de stock repetido.
   usesVehicleExpenses?: boolean;
-  supportsFeatured?: boolean;
   condicionOptions?: string[];
   checkoutMode: "cart" | "inquiry";
   /**
@@ -338,7 +337,6 @@ export const STORE_TYPES: StoreTypeConfig[] = [
     hideVariants: false,
     hideTags: false,
     hideGender: true,
-    supportsFeatured: true,
     checkoutMode: "cart" as const,
     supportsAffiliates: true,
     variantValuePlaceholder: "Negro, Blanco, Gris",

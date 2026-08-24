@@ -237,9 +237,12 @@ export default function CasaClara() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  const featuredProducts = products.filter(p => p.featured);
-  const showcased = (featuredProducts.length > 0 ? featuredProducts : products).slice(0, 9);
-  const hasMore   = (featuredProducts.length > 0 ? featuredProducts : products).length > 9;
+  /* Antes esto filtraba por la casilla "Destacado" del producto y caía a todos
+     si no había ninguno. La casilla se sacó —qué muestra un bloque de la portada
+     es una decisión de diseño, no de la ficha de cada producto— así que la rama
+     de destacados quedaba viva leyendo un dato que ya nadie puede cambiar. */
+  const showcased = products.slice(0, 9);
+  const hasMore   = products.length > 9;
   const allOfertas = products.filter(p => p.comparePrice && p.comparePrice > p.price);
   const ofertas    = allOfertas.slice(0, 6);
   const hasMoreOfertas = allOfertas.length > 6;

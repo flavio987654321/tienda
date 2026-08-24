@@ -34,7 +34,6 @@ export type ProductoParaBaldosa = {
   id: string;
   category: string;
   images: string[];
-  featured?: boolean;
 };
 
 export type BaldosaCategoria = {
@@ -68,22 +67,20 @@ export const MAX_BALDOSAS = RANURAS_BALDOSA.length;
 /**
  * La foto de una categoría sacada de sus propios productos.
  *
- * Orden: primero un producto marcado como destacado, después cualquiera, y entre
- * los que empatan gana el `id` más chico. Es arbitrario pero ESTABLE: la misma
- * tienda con los mismos productos da siempre la misma foto, sin importar en qué
- * orden vinieron ni cuántas visitas tenga cada uno.
+ * Orden: gana el `id` más chico. Es arbitrario pero ESTABLE: la misma tienda con
+ * los mismos productos da siempre la misma foto, sin importar en qué orden
+ * vinieron ni cuántas visitas tenga cada uno.
+ *
+ * Antes el desempate miraba primero la casilla "Destacado" del producto. Esa
+ * casilla se sacó del formulario, así que el criterio pasó a ser un dato que
+ * nadie puede cambiar: en una tienda que ya tenía destacados marcados, la foto de
+ * la baldosa seguiría saliendo de ellos para siempre y sin explicación. Se cae al
+ * desempate por `id`, que es el que ya se usaba cuando no había ninguno marcado.
  */
 export function fotoDesdeProductos(cat: string, products: ProductoParaBaldosa[]): string | null {
   const deLaCat = products
     .filter(p => p.category === cat && !!p.images[0])
-    .sort((a, b) => {
-      // `featured` primero. `Number(!!x)` y no `a.featured - b.featured` porque el
-      // campo es opcional: con `undefined` la resta da NaN y el sort se vuelve loco
-      // (deja el array en un orden que depende del algoritmo del motor).
-      const fa = Number(!!a.featured), fb = Number(!!b.featured);
-      if (fa !== fb) return fb - fa;
-      return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
-    });
+    .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
   return deLaCat[0]?.images[0] ?? null;
 }
 

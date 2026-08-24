@@ -18,13 +18,13 @@ function chk(nombre: string, real: unknown, esperado: unknown) {
   fallos++;
 }
 
-const p = (id: string, category: string, img: string | null, featured = false): ProductoParaBaldosa =>
-  ({ id, category, images: img ? [img] : [], featured });
+const p = (id: string, category: string, img: string | null): ProductoParaBaldosa =>
+  ({ id, category, images: img ? [img] : [] });
 
 const PRODUCTOS: ProductoParaBaldosa[] = [
   p("p3", "Remeras",    "/rem-c.jpg"),
   p("p1", "Remeras",    "/rem-a.jpg"),
-  p("p2", "Remeras",    "/rem-b.jpg", true),
+  p("p2", "Remeras",    "/rem-b.jpg"),
   p("p4", "Pantalones", "/pan-a.jpg"),
   p("p5", "Camperas",   null),
 ];
@@ -33,12 +33,12 @@ const cats = (bs: ReturnType<typeof resolverBaldosas>) => bs.map(b => b.cat);
 const imgs = (bs: ReturnType<typeof resolverBaldosas>) => bs.map(b => b.img);
 const orig = (bs: ReturnType<typeof resolverBaldosas>) => bs.map(b => b.origen);
 
-console.log("\nfotoDesdeProductos — estable y con el destacado adelante");
-// Gana p2 por `featured` aunque venga tercero en la lista: si ganara "el primero",
-// la foto cambiaría con el orden en que vino la consulta.
-chk("el destacado gana", fotoDesdeProductos("Remeras", PRODUCTOS), "/rem-b.jpg");
-chk("sin destacado, el id más chico", fotoDesdeProductos("Remeras", PRODUCTOS.map(x => ({ ...x, featured: false }))), "/rem-a.jpg");
-chk("mismo resultado con la lista al revés", fotoDesdeProductos("Remeras", [...PRODUCTOS].reverse()), "/rem-b.jpg");
+console.log("\nfotoDesdeProductos — estable, gana el id más chico");
+// Gana p1 por `id` aunque venga segundo en la lista: si ganara "el primero", la
+// foto cambiaría con el orden en que vino la consulta. El desempate por la casilla
+// "Destacado" se sacó junto con la casilla — ver `fotoDesdeProductos`.
+chk("gana el id más chico", fotoDesdeProductos("Remeras", PRODUCTOS), "/rem-a.jpg");
+chk("mismo resultado con la lista al revés", fotoDesdeProductos("Remeras", [...PRODUCTOS].reverse()), "/rem-a.jpg");
 chk("categoría sin fotos", fotoDesdeProductos("Camperas", PRODUCTOS), null);
 chk("categoría que no existe", fotoDesdeProductos("Zapatos", PRODUCTOS), null);
 
@@ -94,7 +94,7 @@ chk("y se sabe de dónde salió cada una",
 chk("la ranura es por posición, no por categoría",
   resolverBaldosas(["Camperas", "Remeras", "Pantalones"], LISTA, PRODUCTOS, SUBIDA)[0].img, "/mia.jpg");
 chk("sin overrides, todas de los productos",
-  imgs(resolverBaldosas(undefined, LISTA, PRODUCTOS, undefined)), ["/rem-b.jpg", "/pan-a.jpg", null]);
+  imgs(resolverBaldosas(undefined, LISTA, PRODUCTOS, undefined)), ["/rem-a.jpg", "/pan-a.jpg", null]);
 
 console.log(fallos === 0 ? "\n✓ todo en orden\n" : `\n✗ ${fallos} caso(s) mal\n`);
 process.exit(fallos === 0 ? 0 : 1);

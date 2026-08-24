@@ -47,7 +47,7 @@ export async function PATCH(req: NextRequest, ctx: ProductRouteContext) {
   const validated = validateProductBody(body);
   if ("error" in validated) return validated.error;
   const {
-    name, sanitizedDescription, parsedPrice, parsedComparePrice, parsedCostPrice, parsedFeatured, parsedPrecioMayorista, parsedCantMinMayorista,
+    name, sanitizedDescription, parsedPrice, parsedComparePrice, parsedCostPrice, parsedPrecioMayorista, parsedCantMinMayorista,
     parsedPreciosEscalonados, parsedSoloMayorista, parsedCuotas, normalizedVariants,
     parsedWeightKg, parsedWidthCm, parsedHeightCm, parsedDepthCm,
     parsedOfferBadge, parsedOfferNote, parsedOfferEndsAt,
@@ -208,7 +208,6 @@ export async function PATCH(req: NextRequest, ctx: ProductRouteContext) {
         price: parsedPrice,
         comparePrice: parsedComparePrice,
         costPrice: parsedCostPrice,
-        featured: parsedFeatured,
         category: category || "general",
         subcategory: subcategory || null,
         gender: gender || "unisex",

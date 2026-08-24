@@ -11,6 +11,10 @@
 // Destacado y más visto son dos cosas distintas: uno lo elige la dueña, el otro lo
 // eligen los compradores. Mezclarlos hacía que la sección afirmara algo que no
 // estaba midiendo.
+//
+// La casilla "Destacado" del formulario de producto ya no existe (se sacó entera:
+// qué muestra un bloque de la portada se decide desde el editor de diseño). Este
+// módulo no cambia por eso — nunca la miró, justamente.
 // ─────────────────────────────────────────────────────────────────────────────
 
 export type ProductoConVistas = { id: string; name: string; viewCount?: number };

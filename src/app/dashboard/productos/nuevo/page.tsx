@@ -423,7 +423,6 @@ function ProductoFormPage() {
   });
   const [isOnSale, setIsOnSale] = useState(false);
   const [seoAbierto, setSeoAbierto] = useState(false);
-  const [featured, setFeatured] = useState(false);
   const [productCategories, setProductCategories] = useState<string[]>([]);
   const [productSubcategories, setProductSubcategories] = useState<Record<string, string[]>>({});
   const [gender, setGender] = useState<"mujer" | "hombre" | "unisex">("unisex");
@@ -589,7 +588,6 @@ function ProductoFormPage() {
           seoDescription: product.seoDescription || "",
         });
         setGender((product.gender as "mujer" | "hombre" | "unisex") || "unisex");
-        setFeatured(Boolean(product.featured));
         setCustomCategory(knownCategory ? "" : product.category || "");
         setCustomSubcategory(product.subcategory && !((productSubcategories[product.category] || []).includes(product.subcategory)) ? product.subcategory : "");
         setImages(
@@ -1135,7 +1133,6 @@ function ProductoFormPage() {
         category,
         subcategory,
         gender,
-        featured: storeTypeConfig.supportsFeatured ? featured : false,
         tags: form.tags.split(",").map((t) => t.trim()).filter(Boolean),
         images: images.map((img) => img.variantValue ? img : img.url),
         reelUrls: reelUrls.map((u) => u.trim()).filter(Boolean),
@@ -2168,23 +2165,12 @@ function ProductoFormPage() {
                   </div>
                 )}
               </div>
-              {storeTypeConfig.supportsFeatured && (
-                <label className="flex items-start gap-3 p-3.5 rounded-xl border-2 cursor-pointer transition-all"
-                  style={{ borderColor: featured ? "#6366f1" : "#f3f4f6", background: featured ? "#eef2ff" : "#fafafa" }}>
-                  <input
-                    type="checkbox"
-                    checked={featured}
-                    onChange={(e) => { setFeatured(e.target.checked); markDirty(); }}
-                    className="mt-0.5 h-4 w-4 accent-indigo-600"
-                  />
-                  <span>
-                    <span className="block text-sm font-medium text-gray-800">Destacar en &quot;Lo más buscado&quot;</span>
-                    <span className="block text-xs text-gray-400 mt-0.5">
-                      Mostrá este producto en el bloque &quot;Lo más buscado&quot; de tu tienda. Si no destacás ningún producto, ese bloque muestra los más recientes.
-                    </span>
-                  </span>
-                </label>
-              )}
+              {/* Acá vivía la casilla "Destacar en Lo más buscado". Se sacó entera:
+                  qué productos muestra un bloque de la portada es una decisión de
+                  DISEÑO, y decidirla desde la ficha de cada producto obligaba a
+                  entrar producto por producto para armar una vitrina que se mira
+                  toda junta. Se elige desde el editor de diseño, donde se ve el
+                  bloque mientras se arma. */}
             </div>
 
             {/* Precio mayorista — solo rubros que soportan mayorista Y tienda configurada como tal */}

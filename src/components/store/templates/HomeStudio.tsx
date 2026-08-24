@@ -266,9 +266,10 @@ export default function HomeStudio() {
     return () => clearInterval(id);
   }, [showAnn, annMessages.length]);
 
-  const featuredProducts = products.filter(p => p.featured);
-  const showcased = (featuredProducts.length > 0 ? featuredProducts : products).slice(0, 6);
-  const hasMore   = (featuredProducts.length > 0 ? featuredProducts : products).length > 6;
+  /* Ver el comentario igual en Casa Clara: la casilla "Destacado" se sacó del
+     formulario, así que filtrar por ella era filtrar por algo inmutable. */
+  const showcased = products.slice(0, 6);
+  const hasMore   = products.length > 6;
   const allOfertas = products.filter(p => p.comparePrice && p.comparePrice > p.price);
   const ofertas    = allOfertas.slice(0, 6);
   const hasMoreOfertas = allOfertas.length > 6;
