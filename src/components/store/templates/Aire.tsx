@@ -42,6 +42,10 @@ import { CAPAS } from "@/lib/capas-tienda";
    sola para los cinco templates de moda) y el engranaje que la elige, que se
    dibuja sobre el bloque. */
 import { productosDeLaVitrina, leerModo, leerElegidos } from "@/lib/vitrina";
+/* El botón redondo de volver. Compartido con `AireDetail` —la ficha de la página
+   suelta, la que se abre desde el link que la dueña comparte— para que el atrás
+   sea el mismo se llegue por donde se llegue. */
+import { BotonVolver } from "@/components/store/templates/shared/BotonVolver";
 import { BotonVitrina } from "@/components/store/templates/shared/BotonVitrina";
 import { COMENTARIO_MAX, RESENADOR_MAX } from "@/lib/reviews";
 
@@ -129,44 +133,6 @@ const RUTA_CATALOGO = /^\/tienda\/[^/]+\/productos\/?$/;
 /* La de un producto. Ésta además CAPTURA el id, que es lo que se busca en el
    catálogo ya cargado en memoria para saber qué ficha dibujar. */
 const RUTA_PRODUCTO = /^\/tienda\/[^/]+\/producto\/([^/]+)\/?$/;
-
-/* ── El botón de volver ───────────────────────────────────────────────────────
- *
- * Redondo y ARRIBA A LA IZQUIERDA, que es donde se busca un "atrás". Antes era un
- * link de texto centrado al PIE de la pantalla: para volver había que recorrer
- * todo el catálogo hasta abajo, o usar el botón del navegador — que quien llegó
- * por un link compartido no tiene.
- *
- * Toma la forma del botón de "Explorar tiendas" (`VisitorBackButton`), que es el
- * atrás que la plataforma ya usa. Los COLORES no: aquel es oscuro y translúcido
- * porque vive encima de fotos; éste va sobre el papel claro de Aire, así que usa
- * la superficie y la línea del template. Misma forma, la ropa de acá.
- *
- * No va `fixed` como aquel: se pisarían, están los dos arriba a la izquierda.
- * Éste viaja con el contenido, arriba del título.
- *
- * `destino` es adónde vuelve, y NO es siempre la portada: desde la ficha de un
- * producto se vuelve al catálogo. Va en el `title` y en el `aria-label`, que es
- * lo único que lo dice — una flecha sola no distingue un atrás de otro. Por eso
- * el texto no se pierde al cambiar de forma: se muda al globito y al lector de
- * pantalla, en vez de desaparecer.
- */
-function BotonVolver({ onClick, destino, S, LN, T, G }: {
-  onClick: () => void; destino: string; S: string; LN: string; T: string; G: string;
-}) {
-  return (
-    <button type="button" onClick={onClick} title={destino} aria-label={destino}
-      style={{ width:40, height:40, borderRadius:"50%", background:S, border:`1px solid ${LN}`, color:T,
-        display:"grid", placeItems:"center", cursor:"pointer", padding:0, flexShrink:0,
-        boxShadow:"0 2px 10px rgba(20,22,26,0.06)", transition:"border-color 0.2s, color 0.2s, transform 0.2s" }}
-      onMouseEnter={e => { e.currentTarget.style.borderColor = G; e.currentTarget.style.color = G; e.currentTarget.style.transform = "scale(1.06)"; }}
-      onMouseLeave={e => { e.currentTarget.style.borderColor = LN; e.currentTarget.style.color = T; e.currentTarget.style.transform = "scale(1)"; }}>
-      <svg width={17} height={17} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
-        <polyline points="15 18 9 12 15 6" />
-      </svg>
-    </button>
-  );
-}
 
 /* De a cuántos productos crece el catálogo cuando se toca "Ver más". */
 const PASO_CATALOGO = 24;

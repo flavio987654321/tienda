@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { LinkVolver } from "@/components/store/templates/shared/BotonVolver";
 import { useState } from "react";
 import {
   ProductDetailBody, ProductDetailOverlays, resolveDetailTheme, editorParam,
@@ -167,10 +168,14 @@ export default function AireDetail({ view }: { view: ProductDetailViewProps }) {
 
       <div style={{ padding: "16px 24px 0" }}>
         <div style={{ maxWidth: ANCHO, margin: "0 auto" }}>
-          <Link href={catalogHref}
-            style={{ display: "inline-flex", alignItems: "center", gap: 7, fontSize: 13.5, color: T2, textDecoration: "none", fontWeight: 500 }}>
-            <span aria-hidden>←</span> Volver al catálogo
-          </Link>
+          {/* El MISMO botón redondo que se ve tocando un producto adentro de la
+              tienda. Acá había un link de texto chiquito, y esta es la pantalla
+              que se abre desde el link que la dueña comparte por WhatsApp: o sea
+              que quien todavía no le compró veía una versión más pobre de la
+              misma pantalla. Sigue siendo un link de verdad —se copia, se abre en
+              otra pestaña y Google lo sigue—: lo único que cambia es cómo se ve. */}
+          <LinkVolver href={catalogHref} destino="Volver al catálogo"
+            S={S} LN={LN} T={T} G={G} />
         </div>
       </div>
 
