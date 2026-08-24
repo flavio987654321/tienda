@@ -142,12 +142,43 @@ for (const veneno of ['no es json', '"texto"', "null", '{"girly-store":123}', '{
 console.log("\n8) Las cuatro pantallas que venden están conectadas");
 
 const raiz = join(__dirname, "..", "..");
-const leer = (p: string) => readFileSync(join(raiz, p), "utf8");
 
-const hook     = leer("src/hooks/useStorefront.ts");
-const listado  = leer("src/app/tienda/[slug]/productos/page.tsx");
-const ficha    = leer("src/app/tienda/[slug]/producto/[id]/ProductDetailClient.tsx");
-const autos    = leer("src/components/store/auto/AutoVehicleShared.tsx");
+/* Leer el archivo Y COMPROBAR QUE SIGUE SIENDO EL QUE CREEMOS.
+ *
+ * Sin esta comprobación, esta prueba se pudre en silencio, y ya pasó: el listado
+ * se mudó de `productos/page.tsx` a `productos/CatalogoGenerico.tsx` —la página
+ * quedó como una cáscara que sólo resuelve el template— y acá se siguió leyendo
+ * la cáscara. Todos los regex fallaban, y los cinco "FALLA" no decían la causa:
+ * parecían cinco agujeros en el cobro cuando en realidad el cobro estaba entero y
+ * la que apuntaba mal era la prueba. Media hora para descubrir que no pasaba nada.
+ *
+ * Peor todavía: si alguien lee cinco fallas que no entiende, la conclusión fácil
+ * es "esta prueba está rota" y se deja de correr. Y ahí sí el cobro queda sin
+ * nadie mirándolo.
+ *
+ * `señal` es algo que ese archivo TIENE que tener por lo que hace, no por cómo
+ * está escrito hoy. Si no está, cortamos acá con el motivo en castellano en vez
+ * de seguir y tirar fallas que hablan de otra cosa. */
+const leer = (p: string, señal: string) => {
+  const src = readFileSync(join(raiz, p), "utf8");
+  if (!src.includes(señal)) {
+    console.error(
+      `\n✗ ESTA PRUEBA ESTÁ APUNTANDO MAL, no hay nada roto en el cobro (todavía).\n` +
+      `  Buscaba "${señal}" adentro de ${p} y no está.\n` +
+      `  Lo más probable: ese código se mudó a otro archivo.\n` +
+      `  Buscá dónde vive ahora y corregí la ruta acá abajo, en 'const leer'.\n`
+    );
+    process.exit(1);
+  }
+  return src;
+};
+
+const hook     = leer("src/hooks/useStorefront.ts", "recordarAfiliado");
+// El listado NO es `productos/page.tsx`: esa página sólo resuelve qué template
+// usar y delega. El carrito, el checkout y el afiliado viven acá.
+const listado  = leer("src/app/tienda/[slug]/productos/CatalogoGenerico.tsx", "useCartLogic(");
+const ficha    = leer("src/app/tienda/[slug]/producto/[id]/ProductDetailClient.tsx", "useCartLogic(");
+const autos    = leer("src/components/store/auto/AutoVehicleShared.tsx", "affiliateId");
 
 chequear("la portada guarda el ref al entrar", /recordarAfiliado\(ref\)/.test(hook));
 chequear("y lo recupera cuando no viene en la URL", /const guardado = afiliadoDeEstaTienda\(\)/.test(hook));
