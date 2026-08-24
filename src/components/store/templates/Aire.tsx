@@ -2562,7 +2562,13 @@ export default function Aire() {
               {newsletterVelo !== "none" && <div style={{ position:"absolute", inset:0, background:newsletterVeloFondo, pointerEvents:"none" }}/>}
             </>
           )}
-          <EditableSectionBg field="bgNewsletter" label="Fondo de la suscripción" />
+          {/* A la DERECHA. Este bloque tiene dos fondos —el papel de alrededor y
+              esta tarjeta— o sea dos botones "Fondo", y los dos se apoyan sobre su
+              propia caja. Como la tarjeta arranca a 6px del filo de la sección,
+              con los dos a la izquierda éste caía justo encima del otro (se
+              cruzaban en y 23..40, x 32..88; en celular peor, porque el margen es
+              la mitad). De este lado no se pueden tocar nunca. */}
+          <EditableSectionBg field="bgNewsletter" label="Fondo de la suscripción" lado="derecha" />
           <div className="ai-suscripcion" style={{ position:"relative", padding: isMobile ? "28px 22px" : "40px 44px" }}>
 
           {/* TODO el texto cuelga de este borde izquierdo: título, explicación y

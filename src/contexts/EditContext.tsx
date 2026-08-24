@@ -461,7 +461,25 @@ export function EditableImageButton({
    owner to change the section background color. Smart contrast
    is computed automatically when bg changes.
 ──────────────────────────────────────────────────────────────── */
-export function EditableSectionBg({ field, label }: { field: string; label: string }) {
+export function EditableSectionBg({ field, label, lado = "izquierda" }: {
+  field: string;
+  label: string;
+  /* De qué lado del bloque se apoya.
+   *
+   * Existe por UN caso, y es el de un bloque con DOS fondos: la tarjeta de
+   * suscripción de Aire tiene el papel de alrededor y la tarjeta en sí, o sea
+   * dos botones "Fondo". Los dos se apoyan sobre su propia caja, y como la
+   * tarjeta arranca a 6px del filo de la sección, el de adentro caía justo
+   * encima del de afuera —medido: se cruzaban en y 23..40, x 32..88, y en
+   * celular peor todavía porque el margen es la mitad—.
+   *
+   * Mandando el de adentro a la derecha no se pueden tocar nunca, sea cual sea
+   * el margen del template. Se eligió esto y no bajarlo unos píxeles porque
+   * bajarlo es lo mismo que ya falló dos veces: correr un control para esquivar
+   * a otro lo termina apoyando sobre el contenido, y dónde aterriza depende de
+   * cada sección de cada template. */
+  lado?: "izquierda" | "derecha";
+}) {
   const { editMode, activeField, setActiveField, sectionColors } = useEditContext();
   const [hovered, setHovered] = useState(false);
   const bgKey = `bg:${field}`;
@@ -482,24 +500,6 @@ export function EditableSectionBg({ field, label }: { field: string; label: stri
       // sección que nunca se tocó la pintaba de negro de golpe.
       data-edit-bg={field}
       style={{
-        /* Pegado al vértice y CHICO, para caber en el margen de la sección.
-         *
-         * A 16px del filo y con 28px de alto, este botón terminaba a 44px del
-         * borde de arriba — y los templates arrancan su contenido a 40px, o a 28
-         * en pantalla angosta. O sea que se montaba sobre el título, y no por un
-         * caso raro: por cómo están hechas TODAS las secciones. En la tarjeta de
-         * suscripción se veía de una; en las demás, aparecía al achicar la
-         * ventana, que es lo que hace cualquiera que revisa cómo le queda.
-         *
-         * Antes se intentó al revés —bajarlo para esquivar la chapita del nombre—
-         * y fue peor: correr un control para esquivar a otro lo termina apoyando
-         * sobre el contenido, y dónde aterriza depende de cada sección de cada
-         * template. La única salida que vale para los diez es que ocupe MENOS y
-         * viva en el margen: a 8px del vértice y con 22px de alto, termina a 30 y
-         * entra hasta en el margen angosto.
-         *
-         * Se lee igual: es un botón oscuro sobre el papel del template, y el
-         * texto "Fondo" queda. Lo que se recorta es aire. */
         /* JUSTO DEBAJO de la chapita con el nombre del bloque.
          *
          * Los dos apilados arriba a la izquierda, que es donde se los busca, y con
@@ -519,7 +519,8 @@ export function EditableSectionBg({ field, label }: { field: string; label: stri
          * bloque en fila parecen dos controles distintos de dos cosas distintas.
          * Apilados se leen como lo que son — el nombre, y abajo lo que se puede
          * hacerle. */
-        position: "absolute", top: 17, left: 8, zIndex: 9998,
+        position: "absolute", top: 17, zIndex: 9998,
+        ...(lado === "derecha" ? { right: 8 } : { left: 8 }),
         display: "flex", alignItems: "center", gap: 4,
         padding: "4px 9px", borderRadius: 8, cursor: "pointer",
         fontSize: 10.5, fontWeight: 700, lineHeight: 1.2,
