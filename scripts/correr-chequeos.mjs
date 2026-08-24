@@ -56,8 +56,20 @@ for (const archivo of archivos) {
   /* Algunas piden variables de entorno (ej. el pixel de Meta) y no se pueden
      correr sin `.env.local`. Eso NO es una falla: es "no aplica acá". Se listan
      aparte para que se vean, en vez de contarlas como rotas —que sería el camino
-     más corto a que se ignore la salida entera— o esconderlas. */
-  if (r.status !== 0 && /Falta [A-Z_]+ —|corré con:/.test(salida)) {
+     más corto a que se ignore la salida entera— o esconderlas.
+
+     Las DOS condiciones hacen falta, y la segunda es la que importa. Decidirlo
+     sólo por el texto era un agujero justo en la herramienta que existe para que
+     nada falle en silencio: una prueba que se rompiera de verdad y que en algún
+     mensaje dijera "corré con:" se habría reportado como salteada, y nadie se
+     entera nunca.
+
+     Una prueba que falla SIEMPRE imprime "FALLA" —lo hace `chequear`, que es por
+     donde pasan las 41—, así que si aparece esa palabra no es una salteada, sea
+     lo que sea lo demás que diga. */
+  const pareceFalta = /Falta [A-Z_]+ —|corré con:/.test(salida);
+  const hayFallas = salida.includes("FALLA") || salida.includes("fallando");
+  if (r.status !== 0 && pareceFalta && !hayFallas) {
     saltadas.push({ nombre, motivo: salida.trim().split("\n")[0] });
     console.log(`—  ${nombre}  (necesita variables de entorno)`);
     continue;
