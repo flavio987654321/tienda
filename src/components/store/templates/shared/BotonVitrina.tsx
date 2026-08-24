@@ -85,6 +85,18 @@ export function BotonVitrina({ products, cuantos, acento = "#6366f1" }: {
    * pero acá manda el bloque. */
   const tope = Math.min(cuantos, MAX_ELEGIDOS);
   const lleno = elegidos.length >= tope;
+  /* Elegidos que NO entran en este bloque.
+   *
+   * Pasa cambiando de diseño: la vitrina es de la tienda, no del template, así
+   * que quien eligió ocho en un bloque de ocho y después se pasa a uno de seis
+   * llega acá con ocho guardados y seis lugares. El panel decía "8 de 6", que no
+   * quiere decir nada.
+   *
+   * No se recortan solos. Recortar sería tirarle dos elecciones a la basura por
+   * haber MIRADO otro diseño, y sin decírselo; y si vuelve al diseño anterior las
+   * quiere de vuelta. Se le muestra el número honesto y se le explica qué está
+   * pasando, que es lo único que le permite decidir. */
+  const sobran = Math.max(0, elegidos.length - tope);
 
   /* Tocar un producto lo agrega al final o lo saca. Al final y no al principio
      porque el orden ES la decisión: la dueña arma la vitrina de izquierda a
@@ -179,15 +191,22 @@ export function BotonVitrina({ products, cuantos, acento = "#6366f1" }: {
                 Cuáles
               </p>
               <span style={{ fontSize: 10.5, fontWeight: 700, color: lleno ? acento : "rgba(255,255,255,0.45)" }}>
-                {elegidos.length} de {tope}
+                {Math.min(elegidos.length, tope)} de {tope}
               </span>
             </div>
 
             {/* Con los lugares llenos, el resto de la lista se apaga. Se dice qué
                 hacer —sacar uno— en vez de dejar botones que no responden. */}
-            {lleno && (
+            {lleno && sobran === 0 && (
               <p style={{ margin: "0 0 8px", fontSize: 10.5, lineHeight: 1.45, color: "rgba(255,255,255,0.55)" }}>
                 Llenaste los {tope} lugares. Para cambiar uno, tocá el que quieras sacar.
+              </p>
+            )}
+            {sobran > 0 && (
+              <p style={{ margin: "0 0 8px", fontSize: 10.5, lineHeight: 1.45, color: "rgba(255,255,255,0.55)" }}>
+                Tenés {elegidos.length} elegidos y en este diseño entran <strong style={{ color: "#fff" }}>{tope}</strong>:
+                se muestran los primeros {tope}. Los otros {sobran === 1 ? "queda guardado" : "quedan guardados"} por si volvés
+                a un diseño más grande. Para cambiar cuáles se ven, sacá alguno de los primeros.
               </p>
             )}
             {elegidos.length > 0 && !lleno && (
