@@ -38,6 +38,11 @@ import { themeBase as temaFichaAire } from "@/components/store/templates/product
 import { opcionesAElegir, valoresElegidos } from "@/lib/opciones";
 import { resolveVariantPrice } from "@/lib/variantPrice";
 import { CAPAS } from "@/lib/capas-tienda";
+/* Qué productos van en la vitrina de la portada: la regla en `vitrina.ts` (una
+   sola para los cinco templates de moda) y el engranaje que la elige, que se
+   dibuja sobre el bloque. */
+import { productosDeLaVitrina, leerModo, leerElegidos } from "@/lib/vitrina";
+import { BotonVitrina } from "@/components/store/templates/shared/BotonVitrina";
 import { COMENTARIO_MAX, RESENADOR_MAX } from "@/lib/reviews";
 
 
@@ -124,6 +129,44 @@ const RUTA_CATALOGO = /^\/tienda\/[^/]+\/productos\/?$/;
 /* La de un producto. Ésta además CAPTURA el id, que es lo que se busca en el
    catálogo ya cargado en memoria para saber qué ficha dibujar. */
 const RUTA_PRODUCTO = /^\/tienda\/[^/]+\/producto\/([^/]+)\/?$/;
+
+/* ── El botón de volver ───────────────────────────────────────────────────────
+ *
+ * Redondo y ARRIBA A LA IZQUIERDA, que es donde se busca un "atrás". Antes era un
+ * link de texto centrado al PIE de la pantalla: para volver había que recorrer
+ * todo el catálogo hasta abajo, o usar el botón del navegador — que quien llegó
+ * por un link compartido no tiene.
+ *
+ * Toma la forma del botón de "Explorar tiendas" (`VisitorBackButton`), que es el
+ * atrás que la plataforma ya usa. Los COLORES no: aquel es oscuro y translúcido
+ * porque vive encima de fotos; éste va sobre el papel claro de Aire, así que usa
+ * la superficie y la línea del template. Misma forma, la ropa de acá.
+ *
+ * No va `fixed` como aquel: se pisarían, están los dos arriba a la izquierda.
+ * Éste viaja con el contenido, arriba del título.
+ *
+ * `destino` es adónde vuelve, y NO es siempre la portada: desde la ficha de un
+ * producto se vuelve al catálogo. Va en el `title` y en el `aria-label`, que es
+ * lo único que lo dice — una flecha sola no distingue un atrás de otro. Por eso
+ * el texto no se pierde al cambiar de forma: se muda al globito y al lector de
+ * pantalla, en vez de desaparecer.
+ */
+function BotonVolver({ onClick, destino, S, LN, T, G }: {
+  onClick: () => void; destino: string; S: string; LN: string; T: string; G: string;
+}) {
+  return (
+    <button type="button" onClick={onClick} title={destino} aria-label={destino}
+      style={{ width:40, height:40, borderRadius:"50%", background:S, border:`1px solid ${LN}`, color:T,
+        display:"grid", placeItems:"center", cursor:"pointer", padding:0, flexShrink:0,
+        boxShadow:"0 2px 10px rgba(20,22,26,0.06)", transition:"border-color 0.2s, color 0.2s, transform 0.2s" }}
+      onMouseEnter={e => { e.currentTarget.style.borderColor = G; e.currentTarget.style.color = G; e.currentTarget.style.transform = "scale(1.06)"; }}
+      onMouseLeave={e => { e.currentTarget.style.borderColor = LN; e.currentTarget.style.color = T; e.currentTarget.style.transform = "scale(1)"; }}>
+      <svg width={17} height={17} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+        <polyline points="15 18 9 12 15 6" />
+      </svg>
+    </button>
+  );
+}
 
 /* De a cuántos productos crece el catálogo cuando se toca "Ver más". */
 const PASO_CATALOGO = 24;
@@ -253,7 +296,39 @@ export default function Aire() {
     ? (vistaEnPreview === "producto" ? productoEnPreview : null)
     : (RUTA_PRODUCTO.exec(rutaActual)?.[1] ?? null);
   const enProducto = !!productoAbierto;
+  const enPortada  = !enContacto && !enCatalogo && !enProducto;
   const urlTienda  = `/tienda/${storeConfig?.slug ?? ""}`;
+
+  /* Llegar a la portada la deja como está cuando se entra de cero: sin filtrar.
+
+     El filtro de categoría es UNO SOLO y lo comparten dos pantallas: la franja
+     de la portada y la lista del costado del catálogo. Eso está bien mientras se
+     navega —tocar "Remeras" en el menú lleva al catálogo YA en remeras, que es
+     justo lo que se pidió—, pero se colaba de vuelta: al volver a la portada, el
+     bloque de productos seguía mostrando sólo remeras. Y el visitante nunca tocó
+     la franja: eligió una categoría para el CATÁLOGO, y le quedó cambiada la
+     pantalla de la que venía.
+
+     Se lee mal de las dos formas posibles: o parece que la tienda tiene cuatro
+     remeras y nada más, o parece que el bloque quedó trabado. La portada es la
+     puerta de entrada; tiene que mostrar todo, como la primera vez.
+
+     Se reinicia al ENTRAR, no mientras se está: quien filtra la franja estando
+     en la portada la ve filtrada, que es para lo que la tocó. Y va acá y no
+     adentro de `irALaPortada` para que valga por todos los caminos de vuelta —el
+     botón redondo, el logo, "atrás" del navegador— y no sólo por uno.
+
+     Se ajusta durante el dibujado, el patrón que recomienda React para esto. */
+  const [portadaPrevia, setPortadaPrevia] = useState(enPortada);
+  if (enPortada !== portadaPrevia) {
+    setPortadaPrevia(enPortada);
+    if (enPortada) {
+      setModo(null);
+      setActiveCategory("Todos");
+      setActiveSubcategory(null);
+      setActiveGender(null);
+    }
+  }
   /* Cambiar de pantalla NO es irse a otra página.
 
      Antes era `router.push(url)`: Aire se desmontaba entero, el servidor volvía a
@@ -278,11 +353,44 @@ export default function Aire() {
 
      Lo único que esto no mueve es el título de la pestaña, que lo pone el
      servidor al entrar. */
-  const irA = (vista: "portada" | "contacto" | "catalogo", url: string) => {
-    if (editMode) return;
-    if (isPreview) { setVistaEnPreview(vista); window.scrollTo({ top: 0 }); return; }
-    window.history.pushState(null, "", url);
+  /* Subir arriba del todo al cambiar de pantalla.
+
+     No alcanza con `window.scrollTo`. En la tienda de verdad la que scrollea es
+     la ventana y funciona; en el EDITOR el template vive adentro de un panel con
+     scroll propio (`overflowY:auto` en configuracion/page.tsx), y ahí la ventana
+     no se mueve un pixel porque no es la que está scrolleada. Se veía así: la
+     dueña tocaba "Ofertas", el catálogo aparecía —pero a mitad de página, con el
+     título arriba fuera de vista— y parecía que el clic había hecho cualquier
+     cosa.
+
+     Entonces se busca quién scrollea de verdad: se sube por los padres desde la
+     raíz del template hasta encontrar el primero que tenga scroll propio, y se
+     lo sube a él. Si no hay ninguno —la tienda publicada—, queda la ventana, que
+     es el caso de siempre.
+
+     La raíz se busca por `data-aire-raiz` y no con un `useRef`: el lint del repo
+     (`react-hooks/refs`) marca error si una función que lee un ref queda al
+     alcance del dibujado, y ésta la llaman handlers que se arman ahí. Buscarla
+     en el documento hace exactamente lo mismo y no arrastra esa regla. */
+  const subirArriba = () => {
     window.scrollTo({ top: 0 });
+    let n = document.querySelector<HTMLElement>("[data-aire-raiz]")?.parentElement ?? null;
+    while (n) {
+      const ov = getComputedStyle(n).overflowY;
+      if ((ov === "auto" || ov === "scroll") && n.scrollHeight > n.clientHeight) { n.scrollTop = 0; return; }
+      n = n.parentElement;
+    }
+  };
+
+  const irA = (vista: "portada" | "contacto" | "catalogo", url: string) => {
+    /* Acá había un `if (editMode) return`, y dejaba el editor sin salida: tocar
+       "Catálogo" o "Contacto" mientras se editaba no hacía NADA. O sea que las
+       otras pantallas del template no se podían ni mirar ni acomodar — se editaba
+       la portada y el resto quedaba a ciegas. Editando se navega igual que en la
+       tienda: es lo que hay que poder hacer para editar el template entero. */
+    if (isPreview) { setVistaEnPreview(vista); subirArriba(); return; }
+    window.history.pushState(null, "", url);
+    subirArriba();
   };
   const irAContacto  = () => irA("contacto", `${urlTienda}/contacto`);
   const irAlCatalogo = () => irA("catalogo", `${urlTienda}/productos`);
@@ -315,21 +423,19 @@ export default function Aire() {
      que caber en una cajita con scroll propio. La ficha entera existe desde
      antes y la usaban otros templates; Aire ahora también.
 
-     Hay tres situaciones y las tres tienen que hacer ALGO. Que el clic no haga
-     nada nunca es una opción: quien toca una foto de producto espera abrirla, y
-     si no pasa nada la conclusión es que la tienda está rota.
+     Y abre SIEMPRE, también editando. Acá había un `if (editMode) return` —el
+     tercero de la misma familia, después del de `irA` y el de las baldosas— con
+     la idea de que en el editor el clic sobre una tarjeta es para acomodar la
+     tarjeta y no para irse. Pero en la tarjeta no hay nada que acomodar: los
+     textos que la dueña escribe son los del producto y se editan en Productos,
+     no acá. Lo único que lograba era que la FICHA —una pantalla entera del
+     template, con sus fotos, sus medidas y sus reseñas— no se pudiera ni mirar
+     desde diseño. Y ya no hace falta que lo impida: desde que la ficha abre en
+     el lugar, tocar un producto no saca a nadie del editor.
 
-       · Tienda publicada → se va a la ficha, como corresponde.
-
-       · Vista previa del editor → se abre en una PESTAÑA NUEVA. Navegar acá
-         mismo sacaría al dueño del editor —la previa vive adentro de un marco—
-         y perdería de vista lo que estaba acomodando.
-
-       · Vista previa suelta, sin tienda (/preview/aire, la galería de
-         templates) → no hay ficha a la que ir, porque no hay tienda ni producto
-         de verdad. Se lo dice, en vez de quedarse mudo. */
+     Que el clic no haga nada nunca es una opción: quien toca una foto de
+     producto espera abrirla, y si no pasa nada la conclusión es que está roto. */
   const abrirProducto = (product: StorefrontProduct) => {
-    if (editMode) return;
     /* Cargar el producto en el carrito ANTES de mostrar la ficha. `openModal` no
        abre ninguna ventana —el nombre le quedó de cuando esto era un modal—: deja
        elegido el producto, la foto del color que corresponde, las opciones que no
@@ -345,11 +451,11 @@ export default function Aire() {
     if (isPreview || !s) {
       setVistaEnPreview("producto");
       setProductoEnPreview(product.id);
-      window.scrollTo({ top: 0 });
+      subirArriba();
       return;
     }
     window.history.pushState(null, "", `/tienda/${s}/producto/${product.id}`);
-    window.scrollTo({ top: 0 });
+    subirArriba();
   };
 
   /* Ir a una sección de la portada.
@@ -741,7 +847,27 @@ export default function Aire() {
     if (activeSubcategory && prod.subcategory !== activeSubcategory) return false;
     return true;
   }), [products, modo, enOferta, vistos.lista, novedades, hayGeneros, activeGender, activeCategory, activeSubcategory]);
-  const filtered = allFiltered.slice(0, EN_PORTADA);
+
+  /* Los seis que se ven. Antes era `allFiltered.slice(0, EN_PORTADA)` a secas —
+     siempre los últimos cargados, sin forma de tocarlo. Ahora lo decide la dueña
+     desde el engranaje del bloque (ver `vitrina.ts`).
+
+     El recorte va DESPUÉS de los filtros y no antes: con "Remeras" puesto en la
+     franja, la vitrina tiene que elegir entre las remeras, no elegir seis de todo
+     el catálogo y después tirar las que no son remeras —que dejaría el bloque
+     casi vacío sin explicación.
+
+     Y sólo manda cuando NO hay una colección puesta: si el comprador tocó
+     "Ofertas", lo que tiene que ver son ofertas, no la vitrina que armó la dueña.
+     Ahí el criterio ya lo eligió él. */
+  const filtered = useMemo(() => (
+    modo
+      ? allFiltered.slice(0, EN_PORTADA)
+      : productosDeLaVitrina(allFiltered, EN_PORTADA, {
+          modo: leerModo(textOverrides["vitrinaModo"]?.text),
+          elegidos: leerElegidos(textOverrides["vitrinaIds"]?.text),
+        })
+  ), [allFiltered, modo, textOverrides]);
 
   /* Acá se calculaban los "productos similares" del modal. Ahora los arma la
      página del producto, que tiene su propio bloque de relacionados. */
@@ -922,6 +1048,18 @@ export default function Aire() {
   const productosBg   = scn["bgProductos"] ?? BG;
   const productosText = tintaSobre(productosBg);
   const productosMid  = productosText === T ? T2 : "rgba(255,255,255,0.72)";
+  /* La franja de categorías no tenía fondo editable: era el único bloque de la
+     portada sin su botón "Fondo", así que quedaba clavada en el color del
+     template mientras los de arriba y abajo se podían pintar. Se notaba
+     justamente porque los vecinos sí cambian: la franja quedaba como una banda
+     ajena en el medio. */
+  const tiraBg   = scn["bgTira"] ?? BG;
+  /* Las colecciones y el PAPEL de alrededor de la tarjeta de suscripción: los
+     otros dos bloques que no tenían fondo propio. El de la tarjeta de suscripción
+     es aparte (`bgNewsletter`) — son dos superficies distintas y se pintan por
+     separado. */
+  const coleccionesBg      = scn["bgColecciones"] ?? BG;
+  const newsletterMarcoBg  = scn["bgNewsletterMarco"] ?? BG;
   const garantiasBg   = scn["bgGarantias"] ?? S;
   const garantiasText = tintaSobre(garantiasBg);
   /* ─ La pantalla de contacto ────────────────────────────────────────────────
@@ -1204,7 +1342,7 @@ export default function Aire() {
   };
 
   return (
-    <div style={{ fontFamily:"system-ui, -apple-system, 'Segoe UI', Arial, sans-serif", background:BG, color:T, minHeight:"100vh" }}>
+    <div data-aire-raiz style={{ fontFamily:"system-ui, -apple-system, 'Segoe UI', Arial, sans-serif", background:BG, color:T, minHeight:"100vh" }}>
       <style>{`
         .ai-ofertas-row { scrollbar-width:none }
         .ai-ofertas-row::-webkit-scrollbar { display:none }
@@ -1494,7 +1632,25 @@ export default function Aire() {
                     const activeCat = hoveredNavCat === "__open__" ? (categoryList[0] ?? null) : hoveredNavCat;
                     const activeSubs = activeCat ? (subcategoriesFor[activeCat] || []) : [];
                     return (
-                      <div style={{ position:"absolute", top:"calc(100% + 10px)", left:"50%", transform:"translateX(-50%)", display:"flex", background:S, border:`1px solid ${LN}`, borderRadius:16, overflow:"hidden", zIndex:CAPAS.panel, boxShadow:"0 18px 44px rgba(20,22,26,0.13)" }}>
+                      /* El hueco de 10px entre "Categorías" y el panel es parte del
+                         menú, no aire muerto. Antes el panel arrancaba en
+                         `calc(100% + 10px)`: bajando el mouse para elegir una
+                         categoría se cruzaban 10px sin nada, ahí se disparaba el
+                         "salió del menú" y el panel se cerraba en la cara. Nunca se
+                         llegaba a tocar una categoría.
+                         Ahora la caja de afuera empieza pegada al botón y separa lo
+                         visible con `paddingTop`: se ve idéntico, pero el camino
+                         entre el botón y las categorías está cubierto. */
+                      /* Anclado a la IZQUIERDA, no centrado.
+                         El panel cambia de ancho: con subcategorías son dos columnas
+                         (~400px), sin ellas es una sola (~210px). Centrado, ese cambio
+                         mueve TODO el panel de lugar — pasando de "camperas" (que tiene)
+                         a "buzos" (que no tiene) la lista saltaba unos 95px al costado,
+                         debajo del mouse, y lo que estabas por tocar se corría solo.
+                         Anclado a la izquierda, el borde izquierdo queda fijo: crece y
+                         se encoge sólo hacia la derecha, y la lista nunca se mueve. */
+                      <div style={{ position:"absolute", top:"100%", left:0, paddingTop:10, zIndex:CAPAS.panel }}>
+                      <div style={{ display:"flex", background:S, border:`1px solid ${LN}`, borderRadius:16, overflow:"hidden", boxShadow:"0 18px 44px rgba(20,22,26,0.13)" }}>
                         <div style={{ minWidth:210, padding:8, borderRight: activeSubs.length > 0 ? `1px solid ${LN}` : "none" }}>
                           {categoryList.map(cat => {
                             const subs = subcategoriesFor[cat] || [];
@@ -1522,6 +1678,7 @@ export default function Aire() {
                             ))}
                           </div>
                         )}
+                      </div>
                       </div>
                     );
                   })()}
@@ -1642,19 +1799,30 @@ export default function Aire() {
                 con el de WhatsApp y los dos se tapaban entre sí en un celular.
                 En celular queda sólo el ícono con el número: la palabra
                 "Carrito" no entra sin comerse el nombre de la tienda.        */}
+            {/* La caja existe para colgarle encima el cambiador de ícono del editor.
+                Antes ese botón vivía ADENTRO del botón del carrito, y HTML no
+                permite un botón dentro de otro: React lo marcaba como error de
+                hidratación en la consola del editor. Se veía igual, pero es de esas
+                cosas que un día rompen sin avisar.
+                Los otros cuatro templates que tienen este mismo cambiador nunca lo
+                sufrieron porque su carrito es un `<div role="button">`, que sí puede
+                contener uno. Acá el carrito es un `<button>` de verdad, así que el
+                cambiador se cuelga afuera y se apoya encima. */}
+            <div style={{ position:"relative", display:"inline-flex" }}>
             <button onClick={() => { if (editMode) return; setCartOpen(true); setFavoritesOpen(false); setUserDropdownOpen(false); }}
               aria-label={`Carrito${cartCount > 0 ? ` (${cartCount})` : ""}`}
               style={{ position:"relative", display:"flex", alignItems:"center", gap:9, background:G, color:accentText, border:"none", borderRadius:999, cursor: editMode ? "default" : "pointer", padding: isMobile ? "0" : "10px 15px 10px 14px", width: isMobile ? 40 : undefined, height: isMobile ? 40 : undefined, justifyContent:"center", fontSize:13.5, fontWeight:700, fontFamily:"inherit", transition:"opacity 0.2s" }}
               onMouseEnter={e => (e.currentTarget.style.opacity="0.9")} onMouseLeave={e => (e.currentTarget.style.opacity="1")}>
               <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">{CART_ICON_OPTIONS[cartIconIdx]}</svg>
               {!isMobile && <span>Carrito</span>}
-              {editMode && (
-                <button onClick={e => { e.stopPropagation(); setOverride("cartIcon", { text: String(nextCartIconIdx) }); }} title="Cambiar ícono del carrito"
-                  style={{ position:"absolute", inset:0, background:"rgba(99,102,241,0.9)", border:"none", borderRadius:999, cursor:"pointer", display:"grid", placeItems:"center", color:"#fff", fontSize:15, opacity:0, transition:"opacity 0.15s" }}
-                  onMouseEnter={e => (e.currentTarget.style.opacity="1")} onMouseLeave={e => (e.currentTarget.style.opacity="0")}>↻</button>
-              )}
               <span style={{ background: isMobile ? "#ef4444" : "rgba(0,0,0,0.22)", color: isMobile ? "#fff" : accentText, borderRadius:999, minWidth:20, height:20, fontSize:11, fontWeight:800, display:"grid", placeItems:"center", padding:"0 5px", ...(isMobile ? { position:"absolute", top:-3, right:-3, minWidth:18, height:18, fontSize:10 } : {}) }}>{cartCount}</span>
             </button>
+            {editMode && (
+              <button onClick={e => { e.stopPropagation(); setOverride("cartIcon", { text: String(nextCartIconIdx) }); }} title="Cambiar ícono del carrito"
+                style={{ position:"absolute", inset:0, background:"rgba(99,102,241,0.9)", border:"none", borderRadius:999, cursor:"pointer", display:"grid", placeItems:"center", color:"#fff", fontSize:15, opacity:0, transition:"opacity 0.15s" }}
+                onMouseEnter={e => (e.currentTarget.style.opacity="1")} onMouseLeave={e => (e.currentTarget.style.opacity="0")}>↻</button>
+            )}
+            </div>
 
             {isMobile && (
               <button onClick={() => { setMobileMenuOpen(o => !o); setMobileCatsOpen(false); setMobileOpenCat(null); }}
@@ -1752,7 +1920,7 @@ export default function Aire() {
           esto: el hero, las secciones que la dueña reordena y la franja de
           categorías son de la portada, no de una página de contacto. Lo que sí
           queda de las dos son la barra de arriba y el pie, que están afuera. */}
-      {!enContacto && !enCatalogo && !enProducto && (<>
+      {enPortada && (<>
 
       {/* ── HERO ───────────────────────────────────────────────────────────────
           Una TARJETA con esquinas redondeadas y aire alrededor, no una foto a
@@ -1884,7 +2052,8 @@ export default function Aire() {
           baldosas grandes, así que las dos muestran la misma foto para la misma
           categoría. Sin foto queda la inicial.                                 */}
       {categoryList.length > 1 && (
-      <section data-reveal style={{ background:BG, padding: `${isMobile ? 10 : 14}px ${MARGEN}px 0` }}>
+      <section data-reveal style={{ background:tiraBg, position:"relative", padding: `${isMobile ? 10 : 14}px ${MARGEN}px 0` }}>
+        <EditableSectionBg field="bgTira" label="Fondo de la franja de categorías" />
         <div className="ai-tira" style={{ maxWidth:ANCHO, margin:"0 auto", background:S, border:`1px solid ${LN}`, borderRadius: isMobile ? RAD - 4 : RAD, display:"flex", alignItems:"stretch", overflowX:"auto", scrollSnapType:"x proximity" }}>
           {(() => {
             const items: { clave: string; etiqueta: string; foto: string | null; activo: boolean; alTocar: () => void }[] = [
@@ -1899,11 +2068,17 @@ export default function Aire() {
                 alTocar: () => aplicarCategoria(cat),
               })),
             ];
+            /* Filtra estando en modo edición, igual que en la tienda. Antes no: la
+               franja quedaba pintada pero muerta, y como lo único que hace es
+               filtrar la grilla de abajo, no había forma de ver desde el editor
+               cómo queda la portada con una categoría puesta. No pisa nada
+               editable —las etiquetas son las categorías de los productos, no
+               textos que la dueña escriba— y se deshace tocando "Todo". */
             return items.map((it, i) => (
-              <button key={it.clave} onClick={() => { if (!editMode) it.alTocar(); }}
+              <button key={it.clave} onClick={it.alTocar}
                 aria-pressed={it.activo}
-                style={{ flex:"1 0 auto", display:"flex", alignItems:"center", justifyContent:"center", gap:10, background: it.activo ? "rgba(20,22,26,0.05)" : "none", border:"none", borderRight: i < items.length - 1 ? `1px solid ${LN}` : "none", padding: isMobile ? "12px 15px" : "13px 18px", cursor: editMode ? "default" : "pointer", fontFamily:"inherit", scrollSnapAlign:"start", transition:"background 0.18s", minWidth: isMobile ? 108 : 0, whiteSpace:"nowrap" }}
-                onMouseEnter={e => { if (!it.activo && !editMode) e.currentTarget.style.background="rgba(20,22,26,0.03)"; }}
+                style={{ flex:"1 0 auto", display:"flex", alignItems:"center", justifyContent:"center", gap:10, background: it.activo ? "rgba(20,22,26,0.05)" : "none", border:"none", borderRight: i < items.length - 1 ? `1px solid ${LN}` : "none", padding: isMobile ? "12px 15px" : "13px 18px", cursor:"pointer", fontFamily:"inherit", scrollSnapAlign:"start", transition:"background 0.18s", minWidth: isMobile ? 108 : 0, whiteSpace:"nowrap" }}
+                onMouseEnter={e => { if (!it.activo) e.currentTarget.style.background="rgba(20,22,26,0.03)"; }}
                 onMouseLeave={e => { if (!it.activo) e.currentTarget.style.background="none"; }}>
                 <span aria-hidden style={{ width:28, height:28, borderRadius:"50%", overflow:"hidden", flexShrink:0, background: it.foto ? BG : "rgba(20,22,26,0.05)", display:"grid", placeItems:"center", position:"relative", border: it.activo ? `1.5px solid ${G}` : "none" }}>
                   {it.clave === "__todos__" ? (
@@ -1955,6 +2130,12 @@ export default function Aire() {
                 : <EditableZone field="productsHeading" label="Título del catálogo">Elegí lo tuyo</EditableZone>}
               {!modo && activeCategory !== "Todos" && <span style={{ color:G }}> · {activeCategory}</span>}
             </h2>
+            {/* El "Ver todo" y el engranaje van JUNTOS y pegados a la derecha.
+                Sueltos como hermanos del `space-between`, el flex los repartía en
+                tres: título a la izquierda, "Ver todo" en el MEDIO de la nada y el
+                engranaje contra el borde. "Ver todo" flotando en el medio no se lee
+                como el par del título ni como parte de nada. */}
+            <div style={{ display:"flex", alignItems:"center", gap:12, flexShrink:0 }}>
             {modo ? (
               /* Con una coleccion elegida el link tiene que ser la SALIDA, no
                  "ver todo" a otra pagina: el comprador acaba de filtrar y lo que
@@ -1964,13 +2145,25 @@ export default function Aire() {
                 <span aria-hidden>←</span> Volver a todo
               </button>
             ) : (
-              <a href={`/tienda/${storeConfig?.slug ?? ""}/productos${isPreview ? "?t=aire&from=editor" : ""}`}
-                style={{ flexShrink:0, fontSize:13, fontWeight:500, color:productosMid, textDecoration:"none", display:"inline-flex", alignItems:"center", gap:7, whiteSpace:"nowrap" }}
-                onMouseEnter={e => ((e.currentTarget as HTMLAnchorElement).style.color = G)}
-                onMouseLeave={e => ((e.currentTarget as HTMLAnchorElement).style.color = productosMid)}>
+              /* Un BOTÓN, no un link. Era un `<a href>`, y un link se lleva al
+                 navegador a otra página aunque todo el resto del template ya no lo
+                 haga. En el editor eso era la única puerta que quedaba abierta: se
+                 tocaba "Ver todo" y la dueña terminaba fuera de Diseño, con la
+                 tienda publicada en pantalla. */
+              <button type="button" onClick={irAlCatalogo}
+                style={{ flexShrink:0, fontSize:13, fontWeight:500, color:productosMid, background:"none", border:"none", padding:0, fontFamily:"inherit", cursor:"pointer", display:"inline-flex", alignItems:"center", gap:7, whiteSpace:"nowrap" }}
+                onMouseEnter={e => (e.currentTarget.style.color = G)}
+                onMouseLeave={e => (e.currentTarget.style.color = productosMid)}>
                 Ver todo <span aria-hidden>→</span>
-              </a>
+              </button>
             )}
+            {/* El engranaje para elegir QUÉ productos van acá. Sólo en edición, y
+                pegado al "Ver todo" porque es la misma esquina donde ya se mira
+                este bloque. Con una colección puesta no aparece: ahí la grilla la
+                está eligiendo la colección, y dos criterios a la vez no se
+                entienden. */}
+            {!modo && <BotonVitrina products={products} cuantos={EN_PORTADA} acento={G} />}
+            </div>
           </div>
 
           {loadingProducts && (
@@ -2058,7 +2251,8 @@ export default function Aire() {
           desconocido presentando la oferta de la tienda. Si ningún producto de la
           colección tiene foto, queda el panel del acento con el nombre grande. */}
       {colecciones.length > 0 && (
-      <section data-reveal style={{ background:BG, padding: `${isMobile ? 8 : 12}px ${MARGEN}px ${isMobile ? 26 : 36}px` }}>
+      <section data-reveal style={{ background:coleccionesBg, position:"relative", padding: `${isMobile ? 8 : 12}px ${MARGEN}px ${isMobile ? 26 : 36}px` }}>
+        <EditableSectionBg field="bgColecciones" label="Fondo de las colecciones" />
         <div className="ai-colecciones ai-entrada" style={{ maxWidth:ANCHO, margin:"0 auto", ["--cols" as string]: colecciones.length }}>
           {colecciones.map(c => {
             const foto = c.lista.find(prod => prod.images[0])?.images[0] ?? null;
@@ -2070,7 +2264,13 @@ export default function Aire() {
             return (
               <button key={c.id} className="ai-zoom ai-card"
                 onClick={() => {
-                  if (editMode) return;
+                  /* Acá había un `if (editMode) return`, y era el mismo agujero que
+                     tenía `irA`: editando, las tres baldosas no hacían NADA. La
+                     pantalla a la que llevan —el catálogo mostrando esa colección—
+                     quedaba imposible de mirar y de acomodar desde el editor.
+                     Y no hay nada que editar en la baldosa misma que el clic pueda
+                     pisar: el título y la bajada los arma el template a partir de
+                     los productos, no son textos que la dueña escriba. */
                   setModo(c.id);
                   setActiveCategory("Todos");
                   setActiveSubcategory(null);
@@ -2084,7 +2284,7 @@ export default function Aire() {
                      entran todos con "Ver más" y con los filtros al costado. */
                   irAlCatalogo();
                 }}
-                style={{ position:"relative", overflow:"hidden", borderRadius:RAD, background: foto ? BG : G, border: `1px solid ${LN}`, cursor: editMode ? "default" : "pointer", padding:0, textAlign:"left", display:"block" }}>
+                style={{ position:"relative", overflow:"hidden", borderRadius:RAD, background: foto ? BG : G, border: `1px solid ${LN}`, cursor:"pointer", padding:0, textAlign:"left", display:"block" }}>
                 {foto && <FadeImage className="ai-zoom-img" src={foto} alt="" fill sizes="(max-width: 768px) 100vw, 33vw" style={{ objectFit:"cover" }}/>}
                 {/* El velo va SOLO si hay foto: sobre el panel del acento dejaba una
                     mancha oscura en la mitad de abajo, sin nada que oscurecer. */}
@@ -2189,9 +2389,9 @@ export default function Aire() {
                 return (
                   <article key={r.id}>
                     {foto ? (
-                      <div onClick={() => prodReal && !editMode && abrirProducto(prodReal)}
+                      <div onClick={() => prodReal && abrirProducto(prodReal)}
                         title={prodReal ? r.product?.name : undefined}
-                        style={{ position:"relative", flexShrink:0, width: isMobile ? 104 : 168, borderRadius:RAD, overflow:"hidden", background:BG, cursor: prodReal && !editMode ? "pointer" : "default" }}>
+                        style={{ position:"relative", flexShrink:0, width: isMobile ? 104 : 168, borderRadius:RAD, overflow:"hidden", background:BG, cursor: prodReal ? "pointer" : "default" }}>
                         <FadeImage src={foto} alt={r.product?.name ?? ""} fill sizes="180px" style={{ objectFit:"cover" }}/>
                       </div>
                     ) : (
@@ -2310,7 +2510,14 @@ export default function Aire() {
           el candado del doble click y la confirmación por mail.
 
           Y no se dibuja la tarjeta de socio: parecía una tarjeta física.       */}
-      <section data-reveal style={{ background:BG, padding: `${isMobile ? 4 : 6}px ${MARGEN}px ${isMobile ? 26 : 38}px` }}>
+      {/* DOS fondos, y son dos cosas distintas: la TARJETA negra y el PAPEL que
+          queda alrededor. El de la tarjeta ya estaba (adentro, con su foto y su
+          velo); el de alrededor no existía, así que la franja de papel a los
+          costados quedaba clavada en el color del template mientras la tarjeta se
+          podía pintar de cualquier cosa. Con la tarjeta en un color y el papel en
+          otro no había forma de acordarlos. */}
+      <section data-reveal style={{ background:newsletterMarcoBg, position:"relative", padding: `${isMobile ? 4 : 6}px ${MARGEN}px ${isMobile ? 26 : 38}px` }}>
+        <EditableSectionBg field="bgNewsletterMarco" label="Fondo alrededor de la tarjeta" />
         <BgDragHandle imgKey="sectionbg_bgNewsletter" />
         <div style={{ position:"relative", overflow:"hidden", maxWidth:ANCHO, margin:"0 auto", background:newsletterBg, borderRadius:RAD }}>
           {newsletterBgImg?.url && (
@@ -2391,8 +2598,14 @@ export default function Aire() {
         <div style={{ padding: `${isMobile ? 30 : 54}px ${MARGEN}px ${isMobile ? 40 : 64}px` }}>
         <div style={{ maxWidth:ANCHO, margin:"0 auto" }}>
 
+          <div style={{ marginBottom: isMobile ? 14 : 20 }}>
+            <BotonVolver onClick={irALaPortada} destino="Volver a la tienda"
+              S={contactoTarjeta} LN={contactoBorde} T={contactoText} G={G} />
+          </div>
+
           {/* El título grande, centrado. En esta pantalla no compite con nada:
               es lo único que hay arriba, así que puede ser grande de verdad. */}
+
           <h1 style={{ fontSize: isMobile ? 40 : 82, fontWeight:800, letterSpacing:"-0.04em", color:contactoText, margin:"0 0 6px", textAlign:"center", lineHeight:1.02 }}>
             <EditableZone field="contactoTitulo" label="Título de contacto">Escribinos</EditableZone>
           </h1>
@@ -2480,18 +2693,6 @@ export default function Aire() {
             )}
           </div>
 
-          {/* Volver. En una página aparte hace falta una salida que no sea el
-              botón del navegador: quien llegó por un link compartido no tiene
-              atrás a dónde volver. */}
-          <div style={{ marginTop: isMobile ? 30 : 44, textAlign:"center" }}>
-            <button type="button" onClick={irALaPortada}
-              style={{ background:"none", border:"none", color:contactoMid, fontSize:13.5, fontWeight:600, cursor:"pointer", fontFamily:"inherit", display:"inline-flex", alignItems:"center", gap:8, padding:0 }}
-              onMouseEnter={e => (e.currentTarget.style.color = G)}
-              onMouseLeave={e => (e.currentTarget.style.color = contactoMid)}>
-              <span aria-hidden>←</span> Volver a la tienda
-            </button>
-          </div>
-
         </div>
         </div>
       </section>
@@ -2519,11 +2720,15 @@ export default function Aire() {
       {enProducto && (
         <section style={{ background:BG, padding: `${isMobile ? 18 : 30}px ${MARGEN}px ${isMobile ? 30 : 52}px` }}>
           <div style={{ maxWidth:ANCHO, margin:"0 auto" }}>
-            <button onClick={irAlCatalogo}
-              style={{ background:"none", border:"none", color:T2, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"inherit", padding:"0 0 14px", display:"inline-flex", alignItems:"center", gap:7 }}
-              onMouseEnter={e => (e.currentTarget.style.color = G)} onMouseLeave={e => (e.currentTarget.style.color = T2)}>
-              <span aria-hidden>←</span> Volver al catálogo
-            </button>
+            {/* El mismo botón redondo del catálogo y de contacto, y no el link de
+                texto que había acá. Las tres pantallas tienen un atrás y tenían que
+                verse igual: dos flechas distintas para lo mismo se leen como dos
+                cosas distintas. Lo que cambia es adónde vuelve — desde la ficha se
+                vuelve al CATÁLOGO, no a la portada: es de donde se vino. */}
+            <div style={{ marginBottom:14 }}>
+              <BotonVolver onClick={irAlCatalogo} destino="Volver al catálogo"
+                S={S} LN={LN} T={T} G={G} />
+            </div>
             {fichaProducto ? (
               /* Los "similares" del cuerpo compartido son links de verdad, para que
                  se puedan copiar y abrir en otra pestaña. Pero un clic común no
@@ -2574,6 +2779,11 @@ export default function Aire() {
         <EditableSectionBg field="bgCatalogo" label="Fondo del catálogo" />
         <div style={{ padding: `${isMobile ? 26 : 44}px ${MARGEN}px ${isMobile ? 34 : 60}px` }}>
         <div style={{ maxWidth:ANCHO, margin:"0 auto" }}>
+
+          <div style={{ marginBottom: isMobile ? 14 : 20 }}>
+            <BotonVolver onClick={irALaPortada} destino="Volver a la tienda"
+              S={catalogoTarjeta} LN={catalogoBorde} T={catalogoText} G={G} />
+          </div>
 
           <h1 style={{ fontSize: isMobile ? 34 : 68, fontWeight:800, letterSpacing:"-0.04em", color:catalogoText, margin:"0 0 6px", textAlign:"center", lineHeight:1.03 }}>
             {/* Con una colección puesta, el título DICE cuál. Llegar desde la
@@ -2733,15 +2943,6 @@ export default function Aire() {
                 </>
               )}
             </div>
-          </div>
-
-          <div style={{ marginTop: isMobile ? 28 : 42, textAlign:"center" }}>
-            <button type="button" onClick={irALaPortada}
-              style={{ background:"none", border:"none", color:catalogoMid, fontSize:13.5, fontWeight:600, cursor:"pointer", fontFamily:"inherit", display:"inline-flex", alignItems:"center", gap:8, padding:0 }}
-              onMouseEnter={e => (e.currentTarget.style.color = G)}
-              onMouseLeave={e => (e.currentTarget.style.color = catalogoMid)}>
-              <span aria-hidden>←</span> Volver a la tienda
-            </button>
           </div>
 
         </div>
