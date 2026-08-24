@@ -1,5 +1,5 @@
 "use client";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useEditContext } from "@/contexts/EditContext";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { CAPAS } from "@/lib/capas-tienda";
@@ -38,6 +38,8 @@ export function SectionBlock({
   children: React.ReactNode;
 }) {
   const { editMode, hiddenSections, toggleHiddenSection, sectionOrder, moveSection } = useEditContext();
+  /** Sólo para resaltar ESTE bloque cuando el mouse está encima, en edición. */
+  const [encima, setEncima] = useState(false);
   const config = useStoreConfig();
   const isHidden = (config?.hiddenSections ?? hiddenSections).includes(id);
 
@@ -56,9 +58,118 @@ export function SectionBlock({
   // Sin modo edición: renderizar normal, pero respetando el orden guardado
   if (!editMode) return <div style={{ order: cssOrder }}>{children}</div>;
 
-  // Modo edición: mostrar siempre pero con overlay "apagado" si está oculto
+  /* ── Modo edición: el bloque tiene que VERSE como un bloque ─────────────────
+   *
+   * Antes no se veía nada: los controles —"Fondo", "Ocultar bloque", las
+   * flechas— flotaban sueltos sobre la tienda, y no había forma de saber a qué
+   * bloque pertenecía cada uno. Con dos secciones seguidas del mismo color de
+   * fondo era peor todavía: se leían como una sola, así que el botón de arriba
+   * parecía ser el de la de abajo. La dueña tocaba "Ocultar" y desaparecía otra
+   * cosa.
+   *
+   * Se resuelve con tres cosas, las tres sólo en edición:
+   *
+   *   · UNA LÍNEA llena arriba, de lado a lado. Es la que DIVIDE: el filo de
+   *     arriba de cada bloque es el filo de abajo del anterior, así que una línea
+   *     por bloque alcanza para separarlos todos. Va siempre visible, porque la
+   *     división tiene que leerse sin tener que ir a buscarla con el mouse — un
+   *     contorno punteado y flojito no alcanzaba: se confundía con el diseño.
+   *   · EL NOMBRE del bloque, apoyado sobre esa línea — el mismo `label` que ya
+   *     usan los avisos ("Reseñas", "Franja de categorías"). Sin el nombre, la
+   *     línea dice que ahí empieza otro bloque pero no cuál.
+   *   · EL CONTORNO entero, que aparece al pasar el mouse. La línea dice dónde
+   *     EMPIEZA; el contorno, hasta dónde LLEGA — que es lo que hace falta para
+   *     entender de quién son los botones de abajo.
+   *
+   * Todo con `outline` y con capas absolutas, NUNCA con `border`: un borde ocupa
+   * lugar y correría toda la tienda unos píxeles por bloque, o sea que el editor
+   * mostraría un diseño que no es el que se publica. */
+  /* El color de la línea NO puede ser uno solo, y ese es el punto.
+   *
+   * La dueña elige el fondo de cada sección: cualquier color que se elija para la
+   * línea se le puede pegar justo. Una línea negra desaparece sobre el fondo negro
+   * que ella acaba de poner, y la división se pierde justo mientras la está
+   * editando — que es el único momento en que esta línea existe.
+   *
+   * Medir el fondo tampoco sirve del todo: la sección puede tener una FOTO, con
+   * zonas claras y oscuras a la vez, así que no hay un color que gane en toda la
+   * franja (es el mismo problema que resuelve `tintaSobreFoto`).
+   *
+   * Entonces no se elige: se dibujan las DOS. Una línea del violeta del editor con
+   * un pelito blanco arriba y abajo. Sobre fondo claro se lee el violeta; sobre
+   * negro o sobre una foto oscura, se leen los pelitos blancos. Nunca puede pasar
+   * que los tres desaparezcan, porque no hay ningún color que sea a la vez igual
+   * al violeta y al blanco. */
+  const LINEA = "rgba(99,102,241,0.95)";
+  const HALO = "0 1px 0 rgba(255,255,255,0.9), 0 -1px 0 rgba(255,255,255,0.9)";
   return (
-    <div style={{ position: "relative", order: cssOrder }}>
+    <div
+      onMouseEnter={() => setEncima(true)}
+      onMouseLeave={() => setEncima(false)}
+      style={{
+        position: "relative", order: cssOrder,
+        outline: encima ? `1px dashed ${LINEA}` : "none",
+        outlineOffset: -1,
+        // El mismo truco para el contorno del hover: el `outline` sólo admite un
+        // color, así que el blanco lo pone una sombra pegada al filo de adentro.
+        boxShadow: encima ? "inset 0 0 0 2px rgba(255,255,255,0.45)" : "none",
+      }}>
+      {/* La línea divisoria. Es una capa absoluta y no un `borderTop` para no
+          empujar el contenido ni un pixel. */}
+      <div style={{
+        position: "absolute", top: 1, left: 0, right: 0, height: 2,
+        background: LINEA, boxShadow: HALO,
+        zIndex: CAPAS.nav, pointerEvents: "none",
+      }} />
+
+      {/* La chapita con el nombre: ADENTRO del bloque, colgada de la línea.
+       *
+       * Adentro y no afuera, aunque afuera no chocaba con nada: arriba de la
+       * línea el nombre cae en el territorio del bloque ANTERIOR, y se lee como
+       * si fuera el nombre de ése. Un cartel puesto en el lugar equivocado es
+       * peor que no tener cartel — dice algo, y dice algo falso.
+       *
+       * Entonces adentro, y el choque con el botón "Fondo" se resuelve haciendo
+       * entrar a los DOS en el margen: esta chapita mide 15px de alto y el botón
+       * arranca a 17, así que los dos apilados terminan a 38 — dos píxeles antes
+       * de donde los templates arrancan su contenido. Por eso los dos son chicos:
+       * los tamaños de acá y los del botón se tocan juntos.
+       *
+       * `pointerEvents:"none"` para que no le robe el clic a lo que haya abajo
+       * —un título editable, por ejemplo—: es un cartel, no un control. */}
+      <div style={{
+        position: "absolute", top: 0, left: 0, zIndex: CAPAS.nav,
+        pointerEvents: "none",
+        background: LINEA, color: "#fff",
+        /* Chiquita a propósito: 15px de alto justos. Abajo va el botón "Fondo"
+           de la sección (arranca a 17) y el contenido de los templates arranca a
+           40, así que los dos apilados tienen que entrar en esos 40. Agrandar la
+           letra o el padding de acá le empuja el botón encima del título. */
+        fontSize: 9, fontWeight: 800, letterSpacing: 0.6, lineHeight: 1.2,
+        textTransform: "uppercase", padding: "2px 8px",
+        // Colgada de la línea: en escuadra arriba y redondeada abajo a la
+        // derecha, se lee como una etiqueta que baja del filo hacia adentro.
+        borderRadius: "0 0 7px 0",
+        // La chapita es un bloque lleno de color con texto blanco: se lee sobre
+        // cualquier fondo por sí sola. El pelito blanco del borde es para que no
+        // se funda con un fondo violeta, que es el único que se le parece.
+        boxShadow: "0 0 0 1px rgba(255,255,255,0.75), 0 1px 4px rgba(0,0,0,0.25)",
+        maxWidth: "60%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+      }}>
+        {label}
+      </div>
+
+      {/* El último bloque no tiene ninguno abajo que le ponga su línea de arriba,
+          así que se cierra solo. Sin esto, el editor termina en un filo que no se
+          ve y el pie parece parte del bloque anterior. */}
+      {isLast && (
+        <div style={{
+          position: "absolute", bottom: 1, left: 0, right: 0, height: 2,
+          background: LINEA, boxShadow: HALO,
+          zIndex: CAPAS.nav, pointerEvents: "none",
+        }} />
+      )}
+
       {/* Contenido, dimmeado si oculto */}
       <div style={isHidden ? { opacity: 0.25, filter: "grayscale(1) brightness(0.5)", pointerEvents: "none", userSelect: "none" } : undefined}>
         {children}

@@ -482,10 +482,47 @@ export function EditableSectionBg({ field, label }: { field: string; label: stri
       // sección que nunca se tocó la pintaba de negro de golpe.
       data-edit-bg={field}
       style={{
-        position: "absolute", top: 16, left: 16, zIndex: 9998,
-        display: "flex", alignItems: "center", gap: 5,
-        padding: "6px 12px", borderRadius: 9, cursor: "pointer",
-        fontSize: 11, fontWeight: 700,
+        /* Pegado al vértice y CHICO, para caber en el margen de la sección.
+         *
+         * A 16px del filo y con 28px de alto, este botón terminaba a 44px del
+         * borde de arriba — y los templates arrancan su contenido a 40px, o a 28
+         * en pantalla angosta. O sea que se montaba sobre el título, y no por un
+         * caso raro: por cómo están hechas TODAS las secciones. En la tarjeta de
+         * suscripción se veía de una; en las demás, aparecía al achicar la
+         * ventana, que es lo que hace cualquiera que revisa cómo le queda.
+         *
+         * Antes se intentó al revés —bajarlo para esquivar la chapita del nombre—
+         * y fue peor: correr un control para esquivar a otro lo termina apoyando
+         * sobre el contenido, y dónde aterriza depende de cada sección de cada
+         * template. La única salida que vale para los diez es que ocupe MENOS y
+         * viva en el margen: a 8px del vértice y con 22px de alto, termina a 30 y
+         * entra hasta en el margen angosto.
+         *
+         * Se lee igual: es un botón oscuro sobre el papel del template, y el
+         * texto "Fondo" queda. Lo que se recorta es aire. */
+        /* JUSTO DEBAJO de la chapita con el nombre del bloque.
+         *
+         * Los dos apilados arriba a la izquierda, que es donde se los busca, y con
+         * la cuenta hecha para que entren en el margen del bloque en vez de caer
+         * sobre el contenido:
+         *
+         *     chapita   0 → 15    (arranca en el filo)
+         *     este     17 → 38
+         *     el contenido de las secciones arranca a 40
+         *
+         * Dos píxeles de aire. No es casualidad ni holgura de sobra: es la razón
+         * por la que los dos son chicos. Si alguno crece —más padding, letra más
+         * grande— vuelven a caer sobre el título, así que los tamaños de acá y los
+         * de la chapita (en `SectionBlock`) se tocan juntos.
+         *
+         * Se probó al costado, y funcionaba, pero se lee peor: dos cosas del mismo
+         * bloque en fila parecen dos controles distintos de dos cosas distintas.
+         * Apilados se leen como lo que son — el nombre, y abajo lo que se puede
+         * hacerle. */
+        position: "absolute", top: 17, left: 8, zIndex: 9998,
+        display: "flex", alignItems: "center", gap: 4,
+        padding: "4px 9px", borderRadius: 8, cursor: "pointer",
+        fontSize: 10.5, fontWeight: 700, lineHeight: 1.2,
         background: isActive ? "#6366f1" : hovered ? "rgba(20,20,20,0.9)" : "rgba(20,20,20,0.65)",
         color: "white",
         border: isActive ? "2px solid #6366f1" : "1.5px solid rgba(255,255,255,0.25)",
