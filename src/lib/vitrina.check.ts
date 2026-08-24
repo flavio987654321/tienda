@@ -72,9 +72,14 @@ chequearIgual("y con la lista vacía, también",
 
 console.log("\n3) Al azar: distinto cada día, igual todo el día");
 
-const HOY    = new Date(2026, 7, 24);
-const HOY_2  = new Date(2026, 7, 24, 23, 59);
-const MANANA = new Date(2026, 7, 25);
+/* En UTC, no en hora local: escritas con `new Date(2026, 7, 24)` estas fechas
+   significan cosas distintas según dónde corra la prueba, y el servidor de
+   Vercel no corre donde corre tu máquina.
+   HOY y HOY_2 son el MISMO día en Argentina (24 de agosto) pero dos días
+   distintos en UTC — que es exactamente el caso que rompía. */
+const HOY    = new Date("2026-08-24T12:00:00Z"); // 24/08 09:00 en Argentina
+const HOY_2  = new Date("2026-08-25T02:00:00Z"); // 24/08 23:00 en Argentina
+const MANANA = new Date("2026-08-25T12:00:00Z"); // 25/08 09:00 en Argentina
 
 const a = ids(productosDeLaVitrina(P(30), 6, { modo: "azar", hoy: HOY }));
 const b = ids(productosDeLaVitrina(P(30), 6, { modo: "azar", hoy: HOY_2 }));
@@ -94,20 +99,31 @@ chequear("con menos productos que lugares no se cuelga",
    que era justo el problema a resolver. */
 const vistos = new Set<string>();
 for (let d = 1; d <= 28; d++) {
-  for (const id of ids(productosDeLaVitrina(P(30), 6, { modo: "azar", hoy: new Date(2026, 1, d) }))) vistos.add(id);
+  for (const id of ids(productosDeLaVitrina(P(30), 6, { modo: "azar", hoy: new Date(Date.UTC(2026, 1, d, 15)) }))) vistos.add(id);
 }
 chequear("en un mes de sorteos aparecen casi todos los productos", vistos.size >= 27, vistos.size);
 
-console.log("\n4) La semilla es el día local, no la hora ni UTC");
+console.log("\n4) La semilla es el día EN ARGENTINA, lo calcule quien lo calcule");
+/* Los instantes se escriben en UTC a propósito. Escritos con
+   `new Date(2026, 7, 24)` estas pruebas dirían cosas distintas según la zona de
+   la máquina que las corre — y es justamente eso lo que se está probando. */
 
 chequear("misma fecha, distinta hora, misma semilla",
-  semillaDelDia(new Date(2026, 7, 24, 0, 1)) === semillaDelDia(new Date(2026, 7, 24, 23, 59)));
+  semillaDelDia(new Date("2026-08-24T12:00:00Z")) === semillaDelDia(new Date("2026-08-24T20:00:00Z")));
+/* EL BUG QUE ESTO CUIDA: los dos instantes caen el MISMO día en Argentina (el 23
+   de agosto), pero en UTC son dos días distintos. Con la fecha local, el servidor
+   en UTC contestaba 24 y el navegador argentino 23, así que el sorteo daba dos
+   vitrinas distintas para la misma carga y React tenía que redibujar. */
+chequear("mismo día argentino aunque en UTC sean dos días",
+  semillaDelDia(new Date("2026-08-24T01:00:00Z")) === semillaDelDia(new Date("2026-08-23T15:00:00Z")));
+chequear("el corte cae a la medianoche de Argentina, no a las 21",
+  semillaDelDia(new Date("2026-08-24T02:59:00Z")) !== semillaDelDia(new Date("2026-08-24T03:01:00Z")));
 chequear("días distintos, semillas distintas",
-  semillaDelDia(new Date(2026, 7, 24)) !== semillaDelDia(new Date(2026, 7, 25)));
+  semillaDelDia(new Date("2026-08-24T15:00:00Z")) !== semillaDelDia(new Date("2026-08-25T15:00:00Z")));
 /* 31 de diciembre a las 22: en UTC ya es el año que viene. Con UTC la vitrina
    cambiaría a las 21 de Argentina, no a la medianoche. */
 chequear("el corte es a la medianoche de acá",
-  semillaDelDia(new Date(2026, 11, 31, 22, 0)) === semillaDelDia(new Date(2026, 11, 31, 3, 0)));
+  semillaDelDia(new Date("2026-12-31T15:00:00Z")) === semillaDelDia(new Date("2026-12-31T06:00:00Z")));
 
 console.log("\n5) Guardar y leer la lista es ida y vuelta exacta");
 

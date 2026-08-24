@@ -60,6 +60,27 @@ export function leerModo(crudo: string | undefined | null): ModoVitrina {
   return crudo === "elegidos" || crudo === "azar" ? crudo : MODO_VITRINA_POR_DEFECTO;
 }
 
+/* La zona horaria de la tienda. NO la del que ejecuta el código.
+ *
+ * Acá había un bug fino y sólo de noche. La semilla salía de la fecha LOCAL, y
+ * eso da dos respuestas distintas según quién pregunte: el servidor de Vercel
+ * corre en UTC y el comprador está en Argentina (UTC-3). Entre las 21:00 y la
+ * medianoche de acá, para el servidor ya es mañana. O sea que el servidor dibuja
+ * una vitrina, el navegador dibuja otra, y React encuentra que el HTML que
+ * recibió no es el que iba: se queja y redibuja el árbol entero.
+ *
+ * Se fija la zona, así la fecha es la misma la calcule quien la calcule. Y es la
+ * correcta además por lo de siempre: la tienda es argentina y el corte del día
+ * tiene que caer a la medianoche de acá, no a las 21.
+ *
+ * Argentina no cambia de hora, así que no hay verano ni invierno que atender. */
+const ZONA_TIENDA = "America/Argentina/Buenos_Aires";
+/* Se arma UNA vez: construir un Intl.DateTimeFormat es caro y esto lo llama cada
+   render de la portada. "en-CA" porque escribe la fecha como AAAA-MM-DD. */
+const FECHA_EN_LA_TIENDA = new Intl.DateTimeFormat("en-CA", {
+  timeZone: ZONA_TIENDA, year: "numeric", month: "2-digit", day: "2-digit",
+});
+
 /* La semilla del sorteo: el día de hoy.
  *
  * "Al azar" tenía que ser al azar PERO ESTABLE. Sorteando en cada carga, la dueña
@@ -72,7 +93,8 @@ export function leerModo(crudo: string | undefined | null): ModoVitrina {
  *
  * Se puede pasar una fecha para poder probarlo sin esperar a mañana. */
 export function semillaDelDia(hoy: Date = new Date()): number {
-  return hoy.getFullYear() * 10000 + (hoy.getMonth() + 1) * 100 + hoy.getDate();
+  const [a, m, d] = FECHA_EN_LA_TIENDA.format(hoy).split("-").map(Number);
+  return a * 10000 + m * 100 + d;
 }
 
 /* Un revoltijo determinista.
