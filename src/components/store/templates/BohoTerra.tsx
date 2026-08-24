@@ -39,6 +39,16 @@ import { resolveVariantPrice } from "@/lib/variantPrice";
 import { useTurnstile } from "@/components/Turnstile";
 import { linksLegales } from "@/lib/politicas-tienda";
 import { CAPAS } from "@/lib/capas-tienda";
+/* Qué productos van en el carrusel de la portada: la regla compartida con los
+   otros templates de moda, y el engranaje que la elige sobre el bloque. */
+import { productosDeLaVitrina, leerModo, leerElegidos } from "@/lib/vitrina";
+import { BotonVitrina } from "@/components/store/templates/shared/BotonVitrina";
+/* El catálogo, para dibujarlo acá adentro en vez de mandar al navegador a otra
+   página. Es EL MISMO que ya se veía: mismo componente, mismo vestido de Boho
+   Terra. Lo único que cambia es dónde vive — adentro del template, con su barra
+   y su pie— y que por eso funciona sin salirse del editor. */
+import CatalogoGenerico, { type CatalogoEmbebido } from "@/app/tienda/[slug]/productos/CatalogoGenerico";
+import { useVistaTemplate } from "@/components/store/templates/shared/useVistaTemplate";
 
 
 const BG  = "#faf7f2";
@@ -148,6 +158,22 @@ export default function BohoTerra() {
   const { products, promotions, checkoutMode, isWholesale, ocultarPrecios, defaultCategories } = storefront;
   const { editMode, overrides: textOverrides, setOverride } = useEditContext();
   const isInquiryMode = checkoutMode === "inquiry" || ocultarPrecios;
+
+  /* ── Portada o catálogo, SIN irse a otra página ─────────────────────────────
+     Los siete links al catálogo eran `window.location.href`, que recarga todo.
+     En la tienda publicada eso es un parpadeo; en el EDITOR sacaba a la dueña de
+     Diseño, y encima le mostraba el catálogo del template GUARDADO en vez del que
+     estaba mirando — con Aire elegido y Boho Terra en la previa, tocar "catálogo"
+     abría el catálogo de Aire.
+     Ahora el catálogo se dibuja acá adentro, entre la barra y el pie de Boho
+     Terra, con su vestido. Ver `useVistaTemplate`. */
+  const vista = useVistaTemplate({ isPreview, editMode, slug: storeConfig?.slug, templateId: "boho-terra" });
+  /** Con qué filtro entrar al catálogo. Lo ponen los links antes de abrirlo. */
+  const [filtroCatalogo, setFiltroCatalogo] = useState<CatalogoEmbebido>({});
+  const abrirCatalogo = (filtro: CatalogoEmbebido = {}) => {
+    setFiltroCatalogo(filtro);
+    vista.irAlCatalogo();
+  };
 
   const categoryList = useMemo(() => {
     const cats = [...new Set(products.map(p => p.category).filter(c => c && c !== "general"))];
@@ -527,7 +553,17 @@ export default function BohoTerra() {
     if (activeCategory !== "Todos" && p.category !== activeCategory) return false;
     return true;
   }), [products, hayGeneros, activeGender, activeCategory]);
-  const carouselProducts = allFiltered.slice(0, CAROUSEL_LIMIT);
+  /* Las ocho del carrusel. Antes era el `slice` a secas —siempre las últimas
+     cargadas— y una tienda con cincuenta piezas tenía cuarenta y dos que no
+     aparecían nunca en la portada. Ahora lo elige la dueña desde el engranaje del
+     bloque; la regla es la misma que usa Aire, en `vitrina.ts`.
+
+     El recorte va DESPUÉS de los filtros: con "Mujer" puesto, la vitrina elige
+     entre lo de mujer y no ocho de todo el catálogo para después tirar la mitad. */
+  const carouselProducts = useMemo(() => productosDeLaVitrina(allFiltered, CAROUSEL_LIMIT, {
+    modo: leerModo(textOverrides["vitrinaModo"]?.text),
+    elegidos: leerElegidos(textOverrides["vitrinaIds"]?.text),
+  }), [allFiltered, textOverrides]);
 
   const similarProducts = useMemo(() => {
     if (!modalProduct) return [];
@@ -681,7 +717,7 @@ export default function BohoTerra() {
                           return (
                             <button key={cat} onClick={() => {
                               if (subs.length > 0) { setDesktopOpenCat(open ? null : cat); }
-                              else { window.location.href = `/tienda/${storeConfig?.slug}/productos?${isPreview ? "t=boho-terra&from=editor&" : ""}categoria=${encodeURIComponent(cat)}`; setHoveredNavCat(null); }
+                              else { abrirCatalogo({ categoria: cat }); setHoveredNavCat(null); }
                             }}
                               style={{ background: open ? T : "rgba(44,34,24,0.06)", border:`1px solid ${open ? T : "rgba(44,34,24,0.1)"}`, borderRadius:999, color: open ? "#faf7f2" : T, padding:"7px 16px", fontSize:10.5, cursor:"pointer", letterSpacing:1.5, textTransform:"uppercase", transition:"background 0.2s, color 0.2s, border-color 0.2s, transform 0.15s", transform:"scale(1)" }}
                               onMouseEnter={e => { if (!open) { e.currentTarget.style.background = "rgba(44,34,24,0.12)"; e.currentTarget.style.borderColor = "rgba(44,34,24,0.3)"; } e.currentTarget.style.transform = "scale(1.05)"; }}
@@ -694,7 +730,7 @@ export default function BohoTerra() {
                       {desktopOpenCat && activeSubs.length > 0 && (
                         <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginTop:12, paddingTop:12, borderTop:"1px dashed rgba(44,34,24,0.15)" }}>
                           {activeSubs.map(sub => (
-                            <button key={sub} onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?${isPreview ? "t=boho-terra&from=editor&" : ""}categoria=${encodeURIComponent(activeCat)}&subcategoria=${encodeURIComponent(sub)}`; setHoveredNavCat(null); setDesktopOpenCat(null); }}
+                            <button key={sub} onClick={() => { abrirCatalogo({ categoria: activeCat, subcategoria: sub }); setHoveredNavCat(null); setDesktopOpenCat(null); }}
                               style={{ background:"none", border:"1px solid rgba(44,34,24,0.2)", borderRadius:999, color:MID, padding:"5px 12px", fontSize:10, cursor:"pointer", letterSpacing:0.5, textTransform:"uppercase", transition:"background 0.15s, color 0.15s" }}
                               onMouseEnter={e => { e.currentTarget.style.background = "rgba(44,34,24,0.06)"; e.currentTarget.style.color = T; }}
                               onMouseLeave={e => { e.currentTarget.style.background = "none"; e.currentTarget.style.color = MID; }}>
@@ -831,7 +867,7 @@ export default function BohoTerra() {
                       if (subs.length > 0) {
                         setMobileOpenCat(prev => prev === cat ? null : cat);
                       } else {
-                        window.location.href = `/tienda/${storeConfig?.slug}/productos?${isPreview ? "t=boho-terra&from=editor&" : ""}categoria=${encodeURIComponent(cat)}`;
+                        abrirCatalogo({ categoria: cat });
                         setMobileMenuOpen(false); setMobileCatsOpen(false);
                       }
                     }} style={{ display:"flex", width:"100%", background:"rgba(44,34,24,0.03)", border:"none", borderBottom:`1px solid rgba(44,34,24,0.04)`, color: activeCategory===cat ? A : T, padding:"13px 24px 13px 40px", fontSize:12, textAlign:"left", cursor:"pointer", letterSpacing:2, textTransform:"uppercase", alignItems:"center", justifyContent:"space-between" }}>
@@ -839,7 +875,7 @@ export default function BohoTerra() {
                       {subs.length > 0 && <span style={{ fontSize:12, opacity:0.5, transition:"transform 0.2s", transform: mobileOpenCat===cat ? "rotate(90deg)" : "none", display:"inline-block" }}>›</span>}
                     </button>
                     {subs.length > 0 && mobileOpenCat === cat && subs.map(sub => (
-                      <button key={sub} onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?${isPreview ? "t=boho-terra&from=editor&" : ""}categoria=${encodeURIComponent(cat)}&subcategoria=${encodeURIComponent(sub)}`; setMobileMenuOpen(false); setMobileCatsOpen(false); setMobileOpenCat(null); }}
+                      <button key={sub} onClick={() => { abrirCatalogo({ categoria: cat, subcategoria: sub }); setMobileMenuOpen(false); setMobileCatsOpen(false); setMobileOpenCat(null); }}
                         style={{ display:"block", width:"100%", background:"rgba(44,34,24,0.05)", border:"none", borderBottom:`1px solid rgba(44,34,24,0.03)`, color:MID, padding:"11px 24px 11px 60px", fontSize:11, textAlign:"left", cursor:"pointer", letterSpacing:2, textTransform:"uppercase" }}>
                         {sub}
                       </button>
@@ -889,6 +925,23 @@ export default function BohoTerra() {
           )}
         </div>
       )}
+
+      {/* ── EL CATÁLOGO, acá adentro ───────────────────────────────────────────
+          Es EL MISMO catálogo que se veía antes: mismo componente, mismo vestido
+          de Boho Terra. No se rediseñó nada. Lo único que cambió es dónde vive.
+
+          Antes era una página aparte y llegar ahí recargaba el navegador entero.
+          Ahora se dibuja entre la barra y el pie de Boho Terra, que son los suyos
+          y ya están puestos — por eso va `sinPie`, o quedarían dos pies pegados.
+
+          `template` va a mano y no sale de la base: eso es justamente lo que
+          estaba mal. Con Aire guardado y Boho Terra en la previa, el catálogo se
+          dibujaba con el vestido de Aire. Acá el template ya sabe cuál es. */}
+      {vista.enCatalogo && (
+        <CatalogoGenerico embebido={{ ...filtroCatalogo, slug: storeConfig?.slug ?? "", template: "boho-terra", sinPie: true }} />
+      )}
+
+      {vista.enPortada && (<>
 
       {/* ── HERO — fondo crema con tipografía grande + foto al costado */}
       <section id="inicio" style={{ paddingTop: isPreview ? 0 : 60 + announcementBarHeight, minHeight: isMobile ? "auto" : "100vh", display:"flex", alignItems:"stretch", flexDirection: isMobile ? "column" : "row" }}>
@@ -1014,6 +1067,11 @@ export default function BohoTerra() {
               ? `${CAROUSEL_LIMIT} de ${allFiltered.length} piezas`
               : `${allFiltered.length} ${allFiltered.length === 1 ? "pieza" : "piezas"}`}
           </p>
+          {/* El engranaje para elegir QUÉ ocho van acá. Sólo en edición, y sobre el
+              bloque: es una decisión que se toma mirando el carrusel lleno. */}
+          <div style={{ marginTop:10 }}>
+            <BotonVitrina products={products} cuantos={CAROUSEL_LIMIT} acento={A} />
+          </div>
         </div>
 
         {/* Filtrar hasta dejarla vacía mostraba "0 piezas" y abajo el hueco del
@@ -1145,12 +1203,12 @@ export default function BohoTerra() {
         {/* Ver colección completa — queda SIEMPRE, también con la selección vacía:
             es la salida más útil que puede haber en ese momento. */}
         <div style={{ textAlign:"center", marginTop:48 }}>
-          <a href={`/tienda/${storeConfig?.slug}/productos${isPreview ? "?t=boho-terra&from=editor" : ""}`}
-            style={{ display:"inline-block", border:`1px solid ${coleccionText}`, color:coleccionText, background:"transparent", padding:"14px 40px", fontSize:11, letterSpacing:3, textTransform:"uppercase", textDecoration:"none", transition:"all 0.2s", fontFamily:"Georgia, serif", fontStyle:"italic" }}
+          <button type="button" onClick={() => abrirCatalogo()}
+            style={{ display:"inline-block", border:`1px solid ${coleccionText}`, color:coleccionText, background:"transparent", padding:"14px 40px", fontSize:11, letterSpacing:3, textTransform:"uppercase", textDecoration:"none", transition:"all 0.2s", fontFamily:"Georgia, serif", fontStyle:"italic", cursor:"pointer" }}
             onMouseEnter={e=>{ e.currentTarget.style.background=coleccionText; e.currentTarget.style.color=coleccionBotonText; }}
             onMouseLeave={e=>{ e.currentTarget.style.background="transparent"; e.currentTarget.style.color=coleccionText; }}>
             <EditableZone field="coleccionCta" label="Botón ver colección">Ver colección completa</EditableZone>
-          </a>
+          </button>
         </div>
       </section>
       </SectionBlock>
@@ -1209,7 +1267,7 @@ export default function BohoTerra() {
             </div>
             {ofertasHasMore && (
               <div style={{ textAlign:"center", marginTop:32 }}>
-                <button onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?${isPreview ? "t=boho-terra&from=editor&" : ""}oferta=true`; }}
+                <button onClick={() => { abrirCatalogo({ soloOfertas: true }); }}
                   style={{ display:"inline-block", border:`1px solid ${ofertasText}`, color:ofertasText, background:"transparent", padding:"14px 40px", fontSize:11, letterSpacing:3, textTransform:"uppercase", fontFamily:"Georgia, serif", fontStyle:"italic", cursor:"pointer" }}><EditableZone field="ofertasCta" label="Botón ver todas las ofertas">Ver todas las ofertas</EditableZone></button>
               </div>
             )}
@@ -1261,7 +1319,7 @@ export default function BohoTerra() {
                 </div>
                 {hasMore && (
                   <div style={{ textAlign:"center", marginTop:32 }}>
-                    <button onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?${isPreview ? "t=boho-terra&from=editor&" : ""}destacado=true`; }}
+                    <button onClick={() => { abrirCatalogo({ soloDestacados: true }); }}
                       style={{ display:"inline-block", border:`1px solid ${masVistoText}`, color:masVistoText, background:"transparent", padding:"14px 40px", fontSize:11, letterSpacing:3, textTransform:"uppercase", fontFamily:"Georgia, serif", fontStyle:"italic", cursor:"pointer" }}><EditableZone field="masVistoCta" label="Botón ver más">Ver más</EditableZone></button>
                   </div>
                 )}
@@ -1490,6 +1548,8 @@ export default function BohoTerra() {
       </section>
       </SectionBlock>
       </div>
+
+      </>)}
 
       {/* ── FOOTER — franja mínima con newsletter prominente */}
       <footer style={{ background:footerBg, borderTop:`1px solid rgba(44,34,24,0.1)` }}>

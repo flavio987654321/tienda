@@ -142,7 +142,6 @@ type RawProduct = {
   name: string;
   price: number;
   comparePrice?: number | null;
-  featured?: boolean;
   viewCount?: number;
   precioMayorista?: number | null;
   cantMinMayorista?: number | null;
@@ -203,7 +202,6 @@ function mapProduct(raw: RawProduct): StorefrontProduct {
   return {
     id: raw.id, name: raw.name, price: raw.price,
     comparePrice: offerActive ? (raw.comparePrice ?? null) : null,
-    featured: raw.featured ?? false,
     viewCount: raw.viewCount ?? 0,
     precioMayorista: raw.precioMayorista ?? null,
     cantMinMayorista: raw.cantMinMayorista ?? null,
@@ -517,24 +515,57 @@ const FOOTER_BG_DEFAULTS: Record<string, string> = {
   "casa-clara": "#ffffff",
 };
 
+/* ── De dónde saca el catálogo lo que tiene que mostrar ───────────────────────
+ *
+ * Hasta acá, SIEMPRE de la dirección del navegador. Eso alcanzaba mientras el
+ * catálogo fuera una página, pero lo dejaba imposible de dibujar adentro del
+ * EDITOR: ahí la dirección es `/dashboard/configuracion` y no hay slug, ni `t`,
+ * ni categoría que leer. Por eso los templates tenían que hacer
+ * `window.location.href` para llegar al catálogo — y eso recarga todo y saca a la
+ * dueña del editor, mostrándole además el catálogo del template GUARDADO en vez
+ * del que estaba mirando.
+ *
+ * Con esto lo mismo se puede pedir por parámetro. La dirección sigue siendo el
+ * valor por defecto, así que la página de siempre no cambia en nada: sólo se usa
+ * cuando el catálogo se dibuja adentro de un template.
+ *
+ * `sinPie` existe porque este componente trae su propio pie y no trae barra.
+ * Metido adentro de un template, la barra y el pie ya están puestos y son los
+ * suyos; dejar el de acá deja dos pies distintos uno abajo del otro.
+ */
+export type CatalogoEmbebido = {
+  slug?: string;
+  /** Qué diseño usar. Le gana al `?t=` y al guardado en la base. */
+  template?: string;
+  categoria?: string | null;
+  subcategoria?: string | null;
+  soloOfertas?: boolean;
+  soloDestacados?: boolean;
+  soloPromos?: boolean;
+  /** Apaga el pie propio: adentro de un template el pie ya está. */
+  sinPie?: boolean;
+};
+
 // ── Componente interno (necesita useSearchParams dentro de Suspense) ──────────
-function ProductosPageInner() {
+function ProductosPageInner({ embebido }: { embebido?: CatalogoEmbebido }) {
   const params       = useParams();
   const searchParams = useSearchParams();
   const router       = useRouter();
-  const slug         = params?.slug as string;
-  const tParam       = searchParams?.get("t") ?? null;
+  const slug         = (embebido?.slug ?? params?.slug) as string;
+  const tParam       = embebido?.template ?? searchParams?.get("t") ?? null;
   // Los colores de las promos siguen al template del que se viene: si no, el mismo
   // 3x2 se ve de un color en la portada y de otro una pantalla despues.
   const paletaPromo  = paletaDeTemplate(tParam);
-  const fromEditor   = searchParams?.get("from") === "editor";
-  const catParam     = searchParams?.get("categoria") ?? null;
-  const subCatParam  = searchParams?.get("subcategoria") ?? null;
-  const ofertaParam  = searchParams?.get("oferta") === "true";
+  /* Dibujado adentro de un template, el editor es el editor: no hay que llegar
+     con `from=editor` en la dirección para saberlo. */
+  const fromEditor   = !!embebido || searchParams?.get("from") === "editor";
+  const catParam     = embebido ? (embebido.categoria ?? null)    : (searchParams?.get("categoria") ?? null);
+  const subCatParam  = embebido ? (embebido.subcategoria ?? null) : (searchParams?.get("subcategoria") ?? null);
+  const ofertaParam  = embebido ? !!embebido.soloOfertas    : searchParams?.get("oferta") === "true";
   const [onlyOfertas, setOnlyOfertas] = useState(ofertaParam);
-  const destacadoParam  = searchParams?.get("destacado") === "true";
+  const destacadoParam  = embebido ? !!embebido.soloDestacados : searchParams?.get("destacado") === "true";
   const [onlyDestacados, setOnlyDestacados] = useState(destacadoParam);
-  const promoParam   = searchParams?.get("promo") === "true";
+  const promoParam   = embebido ? !!embebido.soloPromos     : searchParams?.get("promo") === "true";
   const [onlyPromos, setOnlyPromos] = useState(promoParam);
 
   const [products,   setProducts]   = useState<StorefrontProduct[]>([]);
@@ -1256,6 +1287,20 @@ function ProductosPageInner() {
   const backdropNav = dark ? "rgba(10,10,10,0.97)" : "rgba(249,249,247,0.97)";
 
   // ── Estados de carga y error ─────────────────────────────────────────────────
+  /* Sin tienda a la que pedirle nada, "Cargando..." no termina NUNCA.
+     Pasa en la galería de diseños suelta (`/preview/<template>`), donde se mira
+     cómo es un template sin que haya todavía una tienda detrás. Antes no se veía
+     porque el catálogo era otra página y llegar ahí sin slug daba un 404; ahora
+     que se dibuja acá adentro hay que decirlo, en vez de dejar el cartel girando
+     para siempre. */
+  if (!slug) return (
+    <div style={{ background:BG, minHeight:"60vh", display:"flex", alignItems:"center", justifyContent:"center", padding:"60px 24px", fontFamily:sans }}>
+      <p style={{ color:GT, fontSize:13, textAlign:"center", maxWidth:420, lineHeight:1.7 }}>
+        Así se ve el catálogo de este diseño. Con tu tienda elegida vas a ver acá tus productos.
+      </p>
+    </div>
+  );
+
   if (loading) return (
     <div style={{ background:BG, minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center", fontFamily:sans }}>
       <p style={{ color:GT, fontSize:12, letterSpacing:4, textTransform:"uppercase" }}>Cargando...</p>
@@ -2154,7 +2199,10 @@ function ProductosPageInner() {
       </div>
 
       {/* ── FOOTER — misma info que el footer del home de cada template
-          (nombre, redes, políticas, reportar tienda), con la paleta del tema activo ── */}
+          (nombre, redes, políticas, reportar tienda), con la paleta del tema activo.
+          Dibujado adentro de un template NO va: el pie del template ya está abajo,
+          es el suyo, y dejar los dos deja dos pies pegados uno al otro. ── */}
+      {!embebido?.sinPie && (
       <footer style={{ background: resolvedFooterBg ?? undefined, borderTop: resolvedFooterBg ? undefined : `1px solid ${borderFaint}`, padding:"32px 24px", textAlign:"center" }}>
         <p style={{ margin:"0 0 6px", fontWeight:700, fontSize:14, color:footerBrandColor, fontFamily:serif }}>{storeName}</p>
         <p style={{ margin:"0 0 12px", fontSize:11, color:footerFg, opacity:0.6 }}>
@@ -2185,6 +2233,7 @@ function ProductosPageInner() {
           </button>
         </div>
       </footer>
+      )}
 
       {showReport && <ReportStoreModal slug={slug} onClose={() => setShowReport(false)} />}
 
@@ -2902,10 +2951,10 @@ function ProductosPageInner() {
  * cuerpo, para que el page.tsx nuevo pueda ser de servidor y elegir
  * quién dibuja: Aire trae su propio catálogo —con su barra y su pie— y el resto
  * sigue con este, que es el que ya tenían. */
-export default function CatalogoGenerico() {
+export default function CatalogoGenerico({ embebido }: { embebido?: CatalogoEmbebido } = {}) {
   return (
     <Suspense>
-      <ProductosPageInner />
+      <ProductosPageInner embebido={embebido} />
     </Suspense>
   );
 }

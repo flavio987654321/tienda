@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
+import { DEFAULT_CONFIG } from "@/types/store-config";
 import TiendaPage from "../page";
 import CatalogoGenerico from "./CatalogoGenerico";
 
@@ -52,8 +53,24 @@ export default async function ProductosPage(props: Props) {
 
   let template = "";
   try {
-    template = (JSON.parse(store?.storeConfig || "{}") as { template?: string }).template ?? "";
+    /* El DEFECTO, no cadena vacía. Casi ninguna tienda tiene escrita la clave
+       `template`: sólo aparece cuando la dueña eligió uno a mano. Sin el defecto,
+       todas esas caían al catálogo genérico mientras su PORTADA se dibujaba con
+       Aire —que sí aplica el defecto—, así que la tienda cambiaba de idioma de
+       diseño al entrar al catálogo. Las dos preguntas tienen que contestar igual. */
+    template = (JSON.parse(store?.storeConfig || "{}") as { template?: string }).template
+      ?? DEFAULT_CONFIG.template;
   } catch { /* config rota: se cae al catálogo genérico, que anda para cualquiera */ }
+
+  /* Mirando OTRO diseño desde el editor, manda el de la dirección.
+     Los templates linkean al catálogo con `?t=<su-id>&from=editor`, y esa
+     convención ya la respeta el catálogo genérico, que tiene un vestido por
+     template. Acá no se miraba, y por eso: con Aire guardado y Boho Terra en la
+     previa, tocar "catálogo" mostraba el catálogo DE AIRE. Se veía el diseño
+     equivocado justo cuando se estaba por elegir uno. */
+  const sp = await props.searchParams;
+  const tDeLaUrl = typeof sp?.t === "string" ? sp.t : null;
+  if (tDeLaUrl) template = tDeLaUrl;
 
   /* El template lo dibuja la misma página de la tienda, que además decide si está
      publicada, si está cerrada y si quien mira es el dueño. Adentro, Aire mira la
