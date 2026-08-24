@@ -67,8 +67,18 @@ export function NewsletterForm({
    * El `action` viaja adentro del token y el endpoint exige el mismo nombre, así
    * un token resuelto en el formulario de contacto no sirve para dar de alta
    * suscriptores.
+   *
+   * En la VISTA PREVIA no se dibuja. Acá no hay nada que asegurar —`enviar` sale
+   * en la primera línea, no viaja nada— y estaba costando dos cosas: la caja de
+   * Cloudflare aparecía metida en el medio del diseño de la dueña, y el botón
+   * quedaba apagado esperando un token que no le sirve a nadie. O sea que la
+   * dueña, en la pantalla que existe justamente para ver cómo le queda su
+   * bloque, no lo veía como lo van a ver sus clientes: veía un botón gris y una
+   * caja que ahí no va. El cartel de abajo ya explica que no envía.
    */
   const captcha = useTurnstile("newsletter");
+  /** Sin captcha delante, el botón se muestra como en la tienda de verdad. */
+  const esperandoCaptcha = !isPreview && !captcha.ready;
   const enDemoPublica = !!useContext(StoreConfigContext)?.demoPublica;
 
   async function enviar(e: React.FormEvent) {
@@ -145,8 +155,8 @@ export function NewsletterForm({
         />
         <button
           type="submit"
-          disabled={estado === "yendo" || !captcha.ready}
-          style={{ ...theme.boton, ...(estado === "yendo" || !captcha.ready ? { opacity: 0.65, cursor: "default" } : null) }}
+          disabled={estado === "yendo" || esperandoCaptcha}
+          style={{ ...theme.boton, ...(estado === "yendo" || esperandoCaptcha ? { opacity: 0.65, cursor: "default" } : null) }}
         >
           {estado === "yendo" ? botonEnviando : boton}
         </button>
@@ -154,8 +164,9 @@ export function NewsletterForm({
 
       {/* El widget va abajo del campo y sólo aparece si hay clave configurada
           (`useTurnstile` devuelve null si no) — en local, donde no está, el
-          bloque se ve exactamente igual que antes. */}
-      {captcha.configured && <div style={{ marginTop: 10 }}>{captcha.widget}</div>}
+          bloque se ve exactamente igual que antes. En la previa tampoco: ver el
+          comentario del captcha, arriba. */}
+      {!isPreview && captcha.configured && <div style={{ marginTop: 10 }}>{captcha.widget}</div>}
 
       {error && (
         <p style={{ fontSize: 12, margin: "8px 0 0", lineHeight: 1.5, color: theme.colorError ?? "#dc2626" }}>
