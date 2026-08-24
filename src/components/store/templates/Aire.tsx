@@ -1,5 +1,5 @@
 ﻿"use client";
-import { useState, useEffect, useMemo, useRef, Fragment } from "react";
+import { useState, useEffect, useMemo, useRef, useSyncExternalStore, Fragment } from "react";
 import { usePathname } from "next/navigation";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { usePushBell } from "@/contexts/PushBellContext";
@@ -234,8 +234,43 @@ export default function Aire() {
      la ficha del producto).
 
      Se lee UNA vez al montar, que es cuando importa: la categoría llega en un
-     link de entrada. Después manda lo que toque el visitante. */
-  const [paramsUrl] = useState(() => new URLSearchParams(typeof window === "undefined" ? "" : window.location.search));
+     link de entrada. Después manda lo que toque el visitante.
+
+     Y se lee DESPUÉS de montar, no mientras se dibuja. Esa es la parte que
+     costó: acá había un `typeof window === "undefined" ? "" : ...`, o sea la
+     rama servidor/navegador que la propia advertencia de React nombra primero.
+     El servidor no tiene dirección que leer, así que dibujaba el catálogo sin
+     filtrar; el navegador, en su primer dibujado, ya tenía el `?categoria=` y
+     dibujaba la lista con la categoría marcada. React comparaba, no le cerraba,
+     y redibujaba el árbol entero — un parpadeo justo al abrir el link que arma
+     el pie de la tienda (`/productos?categoria=remeras`), que es el que se
+     comparte y se guarda en favoritos.
+
+     Se resuelve con `useSyncExternalStore`, que es la herramienta que React
+     documenta para exactamente esto: leer algo que sólo existe en el navegador
+     sin que el primer dibujado deje de coincidir. Se le dan las dos respuestas
+     por separado —la del servidor, vacía, y la del navegador— y React usa la del
+     servidor también para el primer dibujado del navegador. Recién cuando la
+     hidratación terminó lee la de verdad. O sea: coinciden siempre, y la
+     categoría entra un instante después.
+
+     Se probó antes con un `useEffect` que escribía el estado, y el lint del repo
+     lo rechaza con razón (`react-hooks/set-state-in-effect`): encadena dibujados.
+
+     Y sigue sin usarse `useSearchParams`: ese hook obliga a envolver el árbol en
+     un <Suspense> y sin eso el template rompe con error 500 (medido: se cayó
+     /preview/aire entero al agregarlo).
+
+     `suscribir` no hace nada a propósito. La dirección sí cambia sola —los
+     botones del template la escriben con la History API— pero el `?categoria=`
+     de acá es el de ENTRADA: una sola lectura, al llegar. Después manda lo que
+     toque el visitante, y eso ya vive en `activeCategory`. */
+  const busquedaDeLaUrl = useSyncExternalStore(
+    () => () => {},
+    () => window.location.search,
+    () => "",
+  );
+  const paramsUrl = useMemo(() => new URLSearchParams(busquedaDeLaUrl), [busquedaDeLaUrl]);
   /* Qué pantalla se está mirando.
 
      En la tienda de verdad lo dice la DIRECCIÓN: la portada, /contacto y
