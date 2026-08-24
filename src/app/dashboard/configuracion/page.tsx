@@ -785,73 +785,26 @@ const panelBtnActive: React.CSSProperties = {
 /** Mismo tope que `textOverrides.text` en el esquema de zod. Los dos se tocan juntos. */
 const TEXTO_MAX = 500;
 
-function ImageFieldEditor({
-  field, ov, tip, currentOverlay, hasChanges, base, setImageOverride, setActiveField,
-}: {
-  field: string;
-  ov: ImageOverride;
-  tip: string | undefined;
-  currentOverlay: string;
-  hasChanges: boolean;
-  base: React.CSSProperties;
-  setImageOverride: (field: string, partial: Partial<ImageOverride>) => void;
-  setActiveField: (f: string | null) => void;
-}) {
-  const fileRef = useRef<HTMLInputElement>(null);
-  const [uploading, setUploading] = useState(false);
-  const [uploadError, setUploadError] = useState<string | null>(null);
-
-  // `uploading` es estado: recién bloquea en el render siguiente. Si se eligen dos
-  // fotos rápido, las dos subidas arrancan, y la que termina última gana — que
-  // puede ser la PRIMERA. Quedaba puesta una foto distinta de la última elegida,
-  // sin ningún error a la vista. El candado tiene que ser sincrónico.
-  const subiendo = useRef(false);
-
-  const handleFile = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || subiendo.current) return;
-    subiendo.current = true;
-    setUploading(true);
-    setUploadError(null);
-    try {
-      const supabase = createSupabaseBrowserClient();
-      const ext = file.name.split(".").pop() ?? "jpg";
-      const path = `tienda-imagenes/${field}-${Date.now()}.${ext}`;
-      const { error } = await supabase.storage.from("tienda-imagenes").upload(path, file, { upsert: true });
-      if (error) throw error;
-      const { data } = supabase.storage.from("tienda-imagenes").getPublicUrl(path);
-      setImageOverride(field, { url: data.publicUrl });
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Error al subir la imagen";
-      setUploadError(msg);
-    } finally {
-      subiendo.current = false;
-      setUploading(false);
-      if (fileRef.current) fileRef.current.value = "";
-    }
-  }, [field, setImageOverride]);
-
-  const dk = { color: P.text };
-  const dkMuted = { color: P.muted };
-  const dkBtn = panelBtn;
-  const dkBtnActive = panelBtnActive;
-
-  // ── El hueco real donde va esta foto ───────────────────────────────────────
-  // El consejo de medidas estaba escrito a mano y era el mismo siempre, pero el
-  // hueco NO es siempre el mismo: cambia según el template y según la pantalla.
-  // En una sección vertical el panel recomendaba "horizontal" — justo al revés.
-  // Así que en vez de afirmar, se mide.
-  //
-  // Con ResizeObserver y no con una medición suelta: alcanza con que el dueño
-  // pase de escritorio a celular, o achique la ventana, para que el hueco cambie
-  // de forma. Si se midiera una sola vez, el consejo quedaría viejo enseguida.
-  // Guarda de qué campo es la medida. Al pasar de una imagen a otra, si la nueva
-  // no se puede medir, sin esto el panel seguía mostrando —con total seguridad—
-  // la recomendación del hueco anterior.
+/* ── Medir el hueco donde va una foto ─────────────────────────────────────────
+ *
+ * El hueco NO es siempre el mismo: cambia según el template y según el ancho de
+ * la ventana. Por eso se mide en vivo en vez de afirmarlo, y con ResizeObserver
+ * y no con una medición suelta: alcanza con que el dueño achique la ventana para
+ * que el hueco cambie de forma, y una medida vieja miente.
+ *
+ * `selector` cambia según quién pregunta: el editor de imágenes mide el hueco de
+ * la foto (`data-edit-image`), el de fondos mide el de la SECCIÓN entera
+ * (`data-edit-bg`). En los dos casos el que interesa es el PADRE del botón: el
+ * botón es la marca, el padre es el hueco.
+ *
+ * Guarda de qué campo es la medida: al pasar de una foto a otra, si la nueva no
+ * se puede medir todavía, sin esto el panel seguiría mostrando —con total
+ * seguridad— la forma del hueco anterior.
+ */
+function useHueco(field: string, selector: "data-edit-image" | "data-edit-bg") {
   const [medido, setMedido] = useState<{ campo: string; w: number; h: number } | null>(null);
-  const hueco = medido && medido.campo === field ? medido : null;
   useEffect(() => {
-    const slot = document.querySelector(`[data-edit-image="${CSS.escape(field)}"]`)?.parentElement;
+    const slot = document.querySelector(`[${selector}="${CSS.escape(field)}"]`)?.parentElement;
     if (!slot) return;
     // `observe` dispara una primera vez con el tamaño actual, así que no hace
     // falta medir a mano acá (que además encadenaría un render de más).
@@ -864,81 +817,50 @@ function ImageFieldEditor({
     });
     ro.observe(slot);
     return () => ro.disconnect();
-  }, [field]);
+  }, [field, selector]);
+  return medido && medido.campo === field ? medido : null;
+}
 
-  const forma = hueco
-    ? hueco.w / hueco.h > 1.25 ? "horizontal"
-    : hueco.w / hueco.h < 0.8  ? "vertical"
-    : "cuadrada"
-    : null;
+/* ── Encuadre ─────────────────────────────────────────────────────────────────
+ *
+ * Elegir qué parte de la foto queda a la vista. Los diez templates recortan con
+ * `cover` y ya leen `posX`/`posY`, pero el panel lo ofrecía en un solo lado.
+ *
+ * Vive acá, suelto, porque lo necesitan DOS paneles y hasta ahora sólo lo tenía
+ * uno: el de imágenes (el banner, la foto de "Nosotros") lo tenía desde antes, y
+ * el de FONDOS —el que se abre con el botón "Fondo" de cada sección— no lo tuvo
+ * nunca. Ahí se podía elegir una foto de fondo y no había ninguna forma de
+ * correrla: entraba recortada por el centro y era eso o nada. Antes existió una
+ * capa para arrastrarla sobre el lienzo (`BgDragHandle`), pero se sacó por
+ * mentirosa y su reemplazo se agregó sólo en el panel de imágenes; el de fondos
+ * quedó sin nada, que es de donde sale este archivo compartido.
+ *
+ * Duplicarlo no era opción: son doscientas líneas con la parte difícil adentro
+ * —cuánto se puede mover de verdad—, y dos copias se despegan a la primera
+ * corrección.
+ */
+function EncuadreFoto({ imgKey, ov, hueco, capa, ofreceMobil, setImageOverride }: {
+  imgKey: string;
+  ov: ImageOverride;
+  /** La forma real del hueco, medida. `null` = no se pudo medir. */
+  hueco: { w: number; h: number } | null;
+  /** La capa que el dueño puso encima, para que la muestra se vea como la sección. */
+  capa: string;
+  /** ¿Se ofrece un encuadre aparte para celular? Sólo donde el template lo lee. */
+  ofreceMobil: boolean;
+  setImageOverride: (field: string, partial: Partial<ImageOverride>) => void;
+}) {
+  const dk = { color: P.text };
+  const dkMuted = { color: P.muted };
 
-  /* ── Título y aviso, puestos por el template ───────────────────────────────
-     El título del panel de imágenes SIEMPRE sale de acá: cada `EditableImageButton`
-     emite `data-edit-label` (su `panelLabel`, o el texto del botón si no lo pasa).
-     Antes lo ponía un mapa por nombre de campo en este mismo archivo, y se olvidaba:
-     `heroBanner1/2/3` de Chic Paris nunca tuvo entrada y el panel se titulaba
-     "heroBanner1" en la pantalla del dueño de la tienda.
-     Se leen del mismo elemento que ya se mide dos efectos más arriba (por qué van
-     por el DOM y no por el contexto, que los dos cuelgan del mismo provider, está
-     explicado en `EditableImageButton`).
-     Con `MutationObserver` y no una lectura suelta: en las baldosas de categoría de
-     Urban Pulse el dueño puede cambiar la categoría CON el panel abierto, y ahí el
-     título y el aviso tienen que seguirla en vez de quedarse hablando de la
-     anterior. Lo mismo cuando el carrusel de banner mueve el campo activo de slide. */
-  const [delTemplate, setDelTemplate] = useState<{ campo: string; label?: string; note?: string } | null>(null);
-  const puesto = delTemplate && delTemplate.campo === field ? delTemplate : null;
-  useEffect(() => {
-    const el = document.querySelector(`[data-edit-image="${CSS.escape(field)}"]`);
-    if (!el) return;
-    const leer = () => {
-      const label = el.getAttribute("data-edit-label") ?? undefined;
-      const note  = el.getAttribute("data-edit-note")  ?? undefined;
-      setDelTemplate(prev =>
-        (prev && prev.campo === field && prev.label === label && prev.note === note)
-          ? prev
-          : { campo: field, label, note });
-    };
-    leer();
-    const mo = new MutationObserver(leer);
-    mo.observe(el, { attributes: true, attributeFilter: ["data-edit-label", "data-edit-note"] });
-    return () => mo.disconnect();
-  }, [field]);
-
-  // Se pide el doble del hueco para que no se vea pixelada en pantallas retina,
-  // con techo: en un hero ancho, "el doble" serían 3000px y eso solo hace que la
-  // tienda cargue lento.
-  const recomendado = hueco
-    ? (() => {
-        const escala = Math.max(1, Math.min(2, 1800 / hueco.w));
-        const r = (n: number) => Math.round((n * escala) / 50) * 50;
-        return { w: r(hueco.w), h: r(hueco.h) };
-      })()
-    : null;
-
-  // La parte del tip escrita a mano que hablaba de medidas se cae cuando tenemos
-  // la medida de verdad: dos consejos que se contradicen es peor que ninguno.
-  // El aviso que pone el template REEMPLAZA al tip del mapa, no se suma: cuando
-  // hay uno, el del mapa es justamente el que está equivocado.
-  const tipBase = puesto?.note ?? tip;
-  const tipSinMedidas = recomendado
-    ? (tipBase ?? "").replace(/\s*Recomendad[oa]:[^.]*\.?/i, " ").trim()
-    : tipBase;
-
-  // ── Encuadre ───────────────────────────────────────────────────────────────
-  // Los diez templates recortan las fotos con `cover` y ya leen `posX`/`posY`
-  // para decidir qué parte se ve. El panel nunca lo ofreció: una foto vertical
-  // metida en un hero panorámico se recortaba por el centro y no había forma de
-  // correrla. Se arrastra sobre la muestra, y las barras quedan para el ajuste
-  // fino (y para quien no puede arrastrar).
-  // ── Foco por dispositivo (Nivel 2) ─────────────────────────────────────────
-  // El banner es a pantalla completa: su recorte cambia mucho entre celular
-  // (alto y angosto) y PC (ancho y bajo), y con un solo punto de foco no se puede
-  // controlar el recorte en los dos. Para esas imágenes se ofrece un encuadre
-  // aparte para celular. En el resto (forma fija, ej. la foto de "Nosotros" 4:5)
-  // el toggle no aparece: el recorte es el mismo en celular y PC.
-  const esHero = field.startsWith("heroBanner");
+  /* ── Foco por dispositivo ──────────────────────────────────────────────────
+     El banner es a pantalla completa: su recorte cambia mucho entre celular
+     (alto y angosto) y PC (ancho y bajo), y con un solo punto de foco no se
+     puede controlar el recorte en los dos. Para esas imágenes se ofrece un
+     encuadre aparte para celular. En el resto (forma fija, ej. la foto de
+     "Nosotros" 4:5) el toggle no aparece: el recorte es el mismo en los dos. */
   const [modoMobil, setModoMobil] = useState(false);
-  const mobil = esHero && modoMobil;
+  const mobil = ofreceMobil && modoMobil;
   // En celular el valor arranca del de PC (que es lo que hoy se ve en el celu por
   // el fallback) y se vuelve propio recién cuando se mueve.
   const posX = mobil ? (ov.posXMobile ?? ov.posX ?? 50) : (ov.posX ?? 50);
@@ -1006,13 +928,244 @@ function ImageFieldEditor({
     // 50/50 igual: la tienda quedaba marcada como "con cambios sin guardar" por
     // algo que no cambió nada.
     if (nx === posX && ny === posY) return;
-    setImageOverride(field, mobil ? { posXMobile: nx, posYMobile: ny } : { posX: nx, posY: ny });
+    setImageOverride(imgKey, mobil ? { posXMobile: nx, posYMobile: ny } : { posX: nx, posY: ny });
   };
 
-  const capaMuestra = currentOverlay === "none" ? null
-    : currentOverlay === "light"
+  const capaMuestra = capa === "none" ? null
+    : capa === "light"
       ? `rgba(255,255,255,${ov.overlayOpacity ?? 0.6})`
       : `rgba(0,0,0,${ov.overlayOpacity ?? 0.6})`;
+
+  return (
+    <div style={{ padding: "14px 18px", borderBottom: "1px solid #eef1f5" }}>
+      <p style={{ margin: 0, fontSize: 10, fontWeight: 700, color: P.hint, letterSpacing: 1, textTransform: "uppercase" }}>Encuadre</p>
+
+      {/* Toggle PC / Celular — sólo donde cada uno guarda su propio foco. */}
+      {ofreceMobil && (
+        <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
+          {[{ k: false, label: "🖥️ PC" }, { k: true, label: "📱 Celular" }].map(({ k, label }) => (
+            <button key={String(k)} onClick={() => setModoMobil(k)}
+              style={{ flex: 1, padding: "7px 0", borderRadius: 7, border: `1px solid ${modoMobil === k ? "#6366f1" : P.border}`, background: modoMobil === k ? "#6366f1" : "transparent", color: modoMobil === k ? "#fff" : P.text, fontSize: 11.5, fontWeight: 700, cursor: "pointer" }}>
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+      {mobil && (
+        <p style={{ margin: "8px 0 0", fontSize: 10.5, color: P.muted, lineHeight: 1.45 }}>
+          Estás encuadrando cómo se ve <strong>en celular</strong> (pantalla alta y angosta).
+          La muestra tiene forma de celular. En PC se encuadra por separado.
+        </p>
+      )}
+
+      <div
+        onPointerDown={e => {
+          const r = e.currentTarget.getBoundingClientRect();
+          arrastre.current = { x: e.clientX, y: e.clientY, px: posX, py: posY, w: r.width, h: r.height };
+          e.currentTarget.setPointerCapture(e.pointerId);
+        }}
+        onPointerMove={alArrastrar}
+        // Se suelta solo si de verdad se había agarrado: liberar una captura que
+        // nunca se tomó tira excepción y mata el render del panel entero.
+        onPointerUp={e => {
+          if (!arrastre.current) return;
+          arrastre.current = null;
+          if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId);
+        }}
+        onPointerCancel={() => { arrastre.current = null; }}
+        style={{
+          position: "relative", marginTop: 8,
+          // La muestra copia la forma del hueco de verdad. Dibujarla siempre
+          // apaisada mentía justo donde más importa: en un hueco vertical uno
+          // encuadra mirando una franja ancha que no existe.
+          aspectRatio: mobil ? "390 / 844" : (hueco ? `${hueco.w} / ${hueco.h}` : "16 / 9"),
+          // Una muestra alta (celular, o un hueco vertical) se manda por el alto y
+          // no por el ancho: si se fijara el ancho al 100%, saldría larguísima,
+          // empujaría las barras fuera de la pantalla y habría que scrollear.
+          ...((mobil || (hueco && hueco.h > hueco.w))
+            ? { height: 260, width: "auto", maxWidth: "100%", marginLeft: "auto", marginRight: "auto" }
+            : { width: "100%" }),
+          borderRadius: 8, border: "1px solid #e2e8f0", overflow: "hidden",
+          backgroundImage: `url(${ov.url})`, backgroundSize: "cover",
+          backgroundPosition: `${posX}% ${posY}%`, backgroundRepeat: "no-repeat",
+          cursor: "grab",
+          // Sin esto, arrastrar hacia abajo en un celular scrollea el panel en
+          // vez de mover la foto.
+          touchAction: "none", userSelect: "none",
+        }}
+      >
+        {capaMuestra && <div style={{ position: "absolute", inset: 0, background: capaMuestra, pointerEvents: "none" }} />}
+        <span style={{
+          position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-50%)",
+          fontSize: 10.5, fontWeight: 700, color: "#fff", background: "rgba(15,23,42,0.55)",
+          padding: "4px 9px", borderRadius: 20, pointerEvents: "none", whiteSpace: "nowrap",
+        }}>
+          ✥ Arrastrá la foto
+        </span>
+      </div>
+
+      {/* Una barra apagada dice más que una barra que se mueve sin efecto: si
+          está viva, se puede mover; si no, se explica por qué no. */}
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 10, opacity: mueveX ? 1 : 0.4 }}>
+        <span style={{ fontSize: 11, ...dkMuted, width: 66, flexShrink: 0 }}>Izq. / Der.</span>
+        <input type="range" min={0} max={100} step={1} value={posX} disabled={!mueveX}
+          onChange={e => setImageOverride(imgKey, mobil ? { posXMobile: Number(e.target.value) } : { posX: Number(e.target.value) })}
+          style={{ flex: 1, minWidth: 0, accentColor: "#6366f1" }} />
+        <span style={{ fontSize: 12, fontWeight: 700, ...dk, width: 36, textAlign: "right" }}>{posX}%</span>
+      </div>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6, opacity: mueveY ? 1 : 0.4 }}>
+        <span style={{ fontSize: 11, ...dkMuted, width: 66, flexShrink: 0 }}>Arr. / Abajo</span>
+        <input type="range" min={0} max={100} step={1} value={posY} disabled={!mueveY}
+          onChange={e => setImageOverride(imgKey, mobil ? { posYMobile: Number(e.target.value) } : { posY: Number(e.target.value) })}
+          style={{ flex: 1, minWidth: 0, accentColor: "#6366f1" }} />
+        <span style={{ fontSize: 12, fontWeight: 700, ...dk, width: 36, textAlign: "right" }}>{posY}%</span>
+      </div>
+
+      {medidas && (!mueveX || !mueveY) && (
+        <p style={{ margin: "7px 0 0", fontSize: 10.5, color: P.muted, lineHeight: 1.45 }}>
+          {!mueveX && !mueveY
+            ? "Esta foto tiene justo la forma del hueco: entra entera y no hay nada que correr."
+            : !mueveX
+              ? "De izquierda a derecha no hay nada que mover: la foto entra justa de ancho. Lo que sobra es alto — usá la barra de arriba/abajo."
+              : "De arriba a abajo no hay nada que mover: la foto entra justa de alto. Lo que sobra es ancho — usá la barra de izquierda/derecha."}
+        </p>
+      )}
+
+      {focoModificado && (
+        <button onClick={() => setImageOverride(imgKey, mobil ? { posXMobile: undefined, posYMobile: undefined } : { posX: undefined, posY: undefined })}
+          style={{ ...panelBtn, marginTop: 8, width: "100%" }}>↺ Volver al centro{mobil ? " (celular)" : ""}</button>
+      )}
+
+      <p style={{ margin: "8px 0 0", fontSize: 10.5, color: P.muted, lineHeight: 1.45 }}>
+        La sección recorta la foto para llenarla. Con esto elegís qué parte queda a la vista —
+        útil cuando lo importante no está justo en el centro.
+        {hueco
+          ? " La muestra tiene la forma exacta del hueco, así que lo que ves acá es lo que va a salir."
+          : " La sección real puede ser más alta o más ancha que esta muestra; mirá la tienda al lado para confirmar."}
+      </p>
+    </div>
+  );
+}
+
+function ImageFieldEditor({
+  field, ov, tip, currentOverlay, hasChanges, base, setImageOverride, setActiveField,
+}: {
+  field: string;
+  ov: ImageOverride;
+  tip: string | undefined;
+  currentOverlay: string;
+  hasChanges: boolean;
+  base: React.CSSProperties;
+  setImageOverride: (field: string, partial: Partial<ImageOverride>) => void;
+  setActiveField: (f: string | null) => void;
+}) {
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
+  // `uploading` es estado: recién bloquea en el render siguiente. Si se eligen dos
+  // fotos rápido, las dos subidas arrancan, y la que termina última gana — que
+  // puede ser la PRIMERA. Quedaba puesta una foto distinta de la última elegida,
+  // sin ningún error a la vista. El candado tiene que ser sincrónico.
+  const subiendo = useRef(false);
+
+  const handleFile = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || subiendo.current) return;
+    subiendo.current = true;
+    setUploading(true);
+    setUploadError(null);
+    try {
+      const supabase = createSupabaseBrowserClient();
+      const ext = file.name.split(".").pop() ?? "jpg";
+      const path = `tienda-imagenes/${field}-${Date.now()}.${ext}`;
+      const { error } = await supabase.storage.from("tienda-imagenes").upload(path, file, { upsert: true });
+      if (error) throw error;
+      const { data } = supabase.storage.from("tienda-imagenes").getPublicUrl(path);
+      setImageOverride(field, { url: data.publicUrl });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Error al subir la imagen";
+      setUploadError(msg);
+    } finally {
+      subiendo.current = false;
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  }, [field, setImageOverride]);
+
+  const dk = { color: P.text };
+  const dkMuted = { color: P.muted };
+  const dkBtn = panelBtn;
+  const dkBtnActive = panelBtnActive;
+
+  // El hueco real donde va esta foto. Ver `useHueco`: se mide, no se afirma —
+  // el consejo de medidas escrito a mano recomendaba "horizontal" en secciones
+  // verticales, justo al revés.
+  const hueco = useHueco(field, "data-edit-image");
+
+  const forma = hueco
+    ? hueco.w / hueco.h > 1.25 ? "horizontal"
+    : hueco.w / hueco.h < 0.8  ? "vertical"
+    : "cuadrada"
+    : null;
+
+  /* ── Título y aviso, puestos por el template ───────────────────────────────
+     El título del panel de imágenes SIEMPRE sale de acá: cada `EditableImageButton`
+     emite `data-edit-label` (su `panelLabel`, o el texto del botón si no lo pasa).
+     Antes lo ponía un mapa por nombre de campo en este mismo archivo, y se olvidaba:
+     `heroBanner1/2/3` de Chic Paris nunca tuvo entrada y el panel se titulaba
+     "heroBanner1" en la pantalla del dueño de la tienda.
+     Se leen del mismo elemento que ya se mide dos efectos más arriba (por qué van
+     por el DOM y no por el contexto, que los dos cuelgan del mismo provider, está
+     explicado en `EditableImageButton`).
+     Con `MutationObserver` y no una lectura suelta: en las baldosas de categoría de
+     Urban Pulse el dueño puede cambiar la categoría CON el panel abierto, y ahí el
+     título y el aviso tienen que seguirla en vez de quedarse hablando de la
+     anterior. Lo mismo cuando el carrusel de banner mueve el campo activo de slide. */
+  const [delTemplate, setDelTemplate] = useState<{ campo: string; label?: string; note?: string } | null>(null);
+  const puesto = delTemplate && delTemplate.campo === field ? delTemplate : null;
+  useEffect(() => {
+    const el = document.querySelector(`[data-edit-image="${CSS.escape(field)}"]`);
+    if (!el) return;
+    const leer = () => {
+      const label = el.getAttribute("data-edit-label") ?? undefined;
+      const note  = el.getAttribute("data-edit-note")  ?? undefined;
+      setDelTemplate(prev =>
+        (prev && prev.campo === field && prev.label === label && prev.note === note)
+          ? prev
+          : { campo: field, label, note });
+    };
+    leer();
+    const mo = new MutationObserver(leer);
+    mo.observe(el, { attributes: true, attributeFilter: ["data-edit-label", "data-edit-note"] });
+    return () => mo.disconnect();
+  }, [field]);
+
+  // Se pide el doble del hueco para que no se vea pixelada en pantallas retina,
+  // con techo: en un hero ancho, "el doble" serían 3000px y eso solo hace que la
+  // tienda cargue lento.
+  const recomendado = hueco
+    ? (() => {
+        const escala = Math.max(1, Math.min(2, 1800 / hueco.w));
+        const r = (n: number) => Math.round((n * escala) / 50) * 50;
+        return { w: r(hueco.w), h: r(hueco.h) };
+      })()
+    : null;
+
+  // La parte del tip escrita a mano que hablaba de medidas se cae cuando tenemos
+  // la medida de verdad: dos consejos que se contradicen es peor que ninguno.
+  // El aviso que pone el template REEMPLAZA al tip del mapa, no se suma: cuando
+  // hay uno, el del mapa es justamente el que está equivocado.
+  const tipBase = puesto?.note ?? tip;
+  const tipSinMedidas = recomendado
+    ? (tipBase ?? "").replace(/\s*Recomendad[oa]:[^.]*\.?/i, " ").trim()
+    : tipBase;
+
+  /* El encuadre lo dibuja `EncuadreFoto`, compartido con el panel de fondos.
+     `esHero` decide si se ofrece foco aparte para celular: el banner es la
+     imagen a pantalla completa, la única cuyo recorte cambia tanto entre celular
+     y PC que con un solo punto no se pueden controlar los dos. */
+  const esHero = field.startsWith("heroBanner");
 
   return (
     <div data-editor-panel style={{ ...base, display: "flex", flexDirection: "column" }}>
@@ -1055,114 +1208,8 @@ function ImageFieldEditor({
 
       {/* ── Encuadre ── */}
       {ov.url && (
-      <div style={{ padding: "14px 18px", borderBottom: "1px solid #eef1f5" }}>
-        <p style={{ margin: 0, fontSize: 10, fontWeight: 700, color: P.hint, letterSpacing: 1, textTransform: "uppercase" }}>Encuadre</p>
-
-        {/* Toggle PC / Celular — solo en el banner, que es la imagen cuya forma
-            cambia entre dispositivos. Cada uno guarda su propio foco. */}
-        {esHero && (
-          <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
-            {[{ k: false, label: "🖥️ PC" }, { k: true, label: "📱 Celular" }].map(({ k, label }) => (
-              <button key={String(k)} onClick={() => setModoMobil(k)}
-                style={{ flex: 1, padding: "7px 0", borderRadius: 7, border: `1px solid ${modoMobil === k ? "#6366f1" : P.border}`, background: modoMobil === k ? "#6366f1" : "transparent", color: modoMobil === k ? "#fff" : P.text, fontSize: 11.5, fontWeight: 700, cursor: "pointer" }}>
-                {label}
-              </button>
-            ))}
-          </div>
-        )}
-        {mobil && (
-          <p style={{ margin: "8px 0 0", fontSize: 10.5, color: P.muted, lineHeight: 1.45 }}>
-            Estás encuadrando cómo se ve el banner <strong>en celular</strong> (pantalla alta y angosta).
-            La muestra tiene forma de celular. En PC se encuadra por separado.
-          </p>
-        )}
-
-        <div
-          onPointerDown={e => {
-            const r = e.currentTarget.getBoundingClientRect();
-            arrastre.current = { x: e.clientX, y: e.clientY, px: posX, py: posY, w: r.width, h: r.height };
-            e.currentTarget.setPointerCapture(e.pointerId);
-          }}
-          onPointerMove={alArrastrar}
-          // Se suelta solo si de verdad se había agarrado: liberar una captura que
-          // nunca se tomó tira excepción y mata el render del panel entero.
-          onPointerUp={e => {
-            if (!arrastre.current) return;
-            arrastre.current = null;
-            if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId);
-          }}
-          onPointerCancel={() => { arrastre.current = null; }}
-          style={{
-            position: "relative", marginTop: 8,
-            // La muestra copia la forma del hueco de verdad. Dibujarla siempre
-            // apaisada mentía justo donde más importa: en un hueco vertical uno
-            // encuadra mirando una franja ancha que no existe.
-            aspectRatio: mobil ? "390 / 844" : (hueco ? `${hueco.w} / ${hueco.h}` : "16 / 9"),
-            // Una muestra alta (celular, o un hueco vertical) se manda por el alto y
-            // no por el ancho: si se fijara el ancho al 100%, saldría larguísima,
-            // empujaría las barras fuera de la pantalla y habría que scrollear.
-            ...((mobil || (hueco && hueco.h > hueco.w))
-              ? { height: 260, width: "auto", maxWidth: "100%", marginLeft: "auto", marginRight: "auto" }
-              : { width: "100%" }),
-            borderRadius: 8, border: "1px solid #e2e8f0", overflow: "hidden",
-            backgroundImage: `url(${ov.url})`, backgroundSize: "cover",
-            backgroundPosition: `${posX}% ${posY}%`, backgroundRepeat: "no-repeat",
-            cursor: "grab",
-            // Sin esto, arrastrar hacia abajo en un celular scrollea el panel en
-            // vez de mover la foto.
-            touchAction: "none", userSelect: "none",
-          }}
-        >
-          {capaMuestra && <div style={{ position: "absolute", inset: 0, background: capaMuestra, pointerEvents: "none" }} />}
-          <span style={{
-            position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-50%)",
-            fontSize: 10.5, fontWeight: 700, color: "#fff", background: "rgba(15,23,42,0.55)",
-            padding: "4px 9px", borderRadius: 20, pointerEvents: "none", whiteSpace: "nowrap",
-          }}>
-            ✥ Arrastrá la foto
-          </span>
-        </div>
-
-        {/* Una barra apagada dice más que una barra que se mueve sin efecto: si
-            está viva, se puede mover; si no, se explica por qué no. */}
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 10, opacity: mueveX ? 1 : 0.4 }}>
-          <span style={{ fontSize: 11, ...dkMuted, width: 66, flexShrink: 0 }}>Izq. / Der.</span>
-          <input type="range" min={0} max={100} step={1} value={posX} disabled={!mueveX}
-            onChange={e => setImageOverride(field, mobil ? { posXMobile: Number(e.target.value) } : { posX: Number(e.target.value) })}
-            style={{ flex: 1, minWidth: 0, accentColor: "#6366f1" }} />
-          <span style={{ fontSize: 12, fontWeight: 700, ...dk, width: 36, textAlign: "right" }}>{posX}%</span>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6, opacity: mueveY ? 1 : 0.4 }}>
-          <span style={{ fontSize: 11, ...dkMuted, width: 66, flexShrink: 0 }}>Arr. / Abajo</span>
-          <input type="range" min={0} max={100} step={1} value={posY} disabled={!mueveY}
-            onChange={e => setImageOverride(field, mobil ? { posYMobile: Number(e.target.value) } : { posY: Number(e.target.value) })}
-            style={{ flex: 1, minWidth: 0, accentColor: "#6366f1" }} />
-          <span style={{ fontSize: 12, fontWeight: 700, ...dk, width: 36, textAlign: "right" }}>{posY}%</span>
-        </div>
-
-        {medidas && (!mueveX || !mueveY) && (
-          <p style={{ margin: "7px 0 0", fontSize: 10.5, color: P.muted, lineHeight: 1.45 }}>
-            {!mueveX && !mueveY
-              ? "Esta foto tiene justo la forma del hueco: entra entera y no hay nada que correr."
-              : !mueveX
-                ? "De izquierda a derecha no hay nada que mover: la foto entra justa de ancho. Lo que sobra es alto — usá la barra de arriba/abajo."
-                : "De arriba a abajo no hay nada que mover: la foto entra justa de alto. Lo que sobra es ancho — usá la barra de izquierda/derecha."}
-          </p>
-        )}
-
-        {focoModificado && (
-          <button onClick={() => setImageOverride(field, mobil ? { posXMobile: undefined, posYMobile: undefined } : { posX: undefined, posY: undefined })}
-            style={{ ...dkBtn, marginTop: 8, width: "100%" }}>↺ Volver al centro{mobil ? " (celular)" : ""}</button>
-        )}
-
-        <p style={{ margin: "8px 0 0", fontSize: 10.5, color: P.muted, lineHeight: 1.45 }}>
-          La sección recorta la foto para llenarla. Con esto elegís qué parte queda a la vista —
-          útil cuando lo importante no está justo en el centro.
-          {hueco
-            ? " La muestra tiene la forma exacta del hueco, así que lo que ves acá es lo que va a salir."
-            : " La sección real puede ser más alta o más ancha que esta muestra; mirá la tienda al lado para confirmar."}
-        </p>
-      </div>
+        <EncuadreFoto imgKey={field} ov={ov} hueco={hueco} capa={currentOverlay}
+          ofreceMobil={esHero} setImageOverride={setImageOverride} />
       )}
 
       {/* ── Capa + extras ── */}
@@ -1233,7 +1280,7 @@ function ImageFieldEditor({
               ]
             : [
                 "Arrastrá la foto para elegir qué parte se ve. Si lo importante está arriba (una cara, un cartel), subí la barra de Arr./Abajo.",
-                capaMuestra
+                currentOverlay !== "none"
                   ? "La capa existe para que el texto se lea. Bajala hasta donde el texto todavía se distinga: cuanta menos capa, más se ve tu foto."
                   : "Sin capa la foto se ve tal cual, pero si tiene zonas claras y oscuras el texto encima va a costar leerlo en alguna.",
                 "El hueco cambia de forma entre escritorio y celular. Encuadrá en uno y después pasate al otro para ver si sigue bien.",
@@ -1266,11 +1313,18 @@ function BgFieldEditor({ field, base, setActiveField, aceptaFoto }: {
   // rápido lanzaban dos subidas y ganaba la que terminaba última, no la última
   // elegida. Ver el comentario largo allá.
   const subiendo = useRef(false);
+  /** Con foto, la parte del color arranca plegada. Ver el comentario del bloque. */
+  const [colorAbierto, setColorAbierto] = useState(false);
 
   const imgKey = `sectionbg_${field}`;
   const ov: ImageOverride = imageOverrides[imgKey] ?? {};
   const currentOverlay = ov.overlayType ?? "dark";
   const hasImage = !!ov.url;
+
+  // La forma real de ESTA sección, para que la muestra del encuadre no invente:
+  // acá el hueco no es una foto sino la sección entera, así que se mide el padre
+  // del botón "Fondo". Ver `useHueco`.
+  const hueco = useHueco(field, "data-edit-bg");
 
   // Lo guardado puede ser un color o un degradado. Se lee siempre de vuelta al
   // mismo objeto para que las barras aparezcan donde quedaron la última vez.
@@ -1389,9 +1443,32 @@ function BgFieldEditor({ field, base, setActiveField, aceptaFoto }: {
       </div>
 
       {/* ── Color ── */}
+      {/* Con foto puesta, el color se PLIEGA — no se apaga.
+          Apagarlo sería mentir por el otro lado: el color se sigue viendo, es lo
+          que ocupa la sección mientras la foto viaja por la red, y es lo que
+          queda si la foto no llega. En un celular con mala señal eso no es un
+          parpadeo, son segundos. Y si se apagara, tampoco habría forma de
+          entender que quitando la foto vuelve.
+          Pero dejarlo abierto arriba de todo también estaba mal: es lo primero
+          que se ve en un panel donde ya no manda, con un aviso de contraste que
+          además es falso —con foto, el color del texto lo decide la CAPA, no el
+          color—. Plegado queda: fuera del camino, a un clic, y diciendo la
+          verdad de por qué. El difuminado, en cambio, sí desaparece: ese no se
+          ve nunca abajo de una foto. */}
       <div style={{ padding: "14px 18px", borderBottom: "1px solid #eef1f5" }}>
-        <p style={{ margin: 0, fontSize: 10, fontWeight: 700, color: P.hint, letterSpacing: 1, textTransform: "uppercase" }}>Color</p>
+        {hasImage ? (
+          <button onClick={() => setColorAbierto(v => !v)}
+            style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", background: "none", border: "none", padding: 0, cursor: "pointer", textAlign: "left" }}>
+            <span style={{ width: 16, height: 16, borderRadius: 4, background: currentColor, border: "1px solid rgba(0,0,0,0.15)", flexShrink: 0 }} />
+            <span style={{ fontSize: 10, fontWeight: 700, color: P.hint, letterSpacing: 1, textTransform: "uppercase" }}>Color</span>
+            <span style={{ fontSize: 10.5, color: P.muted, flex: 1 }}>· lo tapa la foto</span>
+            <span style={{ fontSize: 10.5, fontWeight: 700, color: P.accent }}>{colorAbierto ? "Ocultar" : "Ver"}</span>
+          </button>
+        ) : (
+          <p style={{ margin: 0, fontSize: 10, fontWeight: 700, color: P.hint, letterSpacing: 1, textTransform: "uppercase" }}>Color</p>
+        )}
 
+        {(!hasImage || colorAbierto) && (<>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8 }}>
           {/* El picker nativo solo entiende #rrggbb: si le llega el degradado
               entero se queda en negro y engaña. Por eso todo esto trabaja contra
@@ -1424,12 +1501,21 @@ function BgFieldEditor({ field, base, setActiveField, aceptaFoto }: {
           ))}
         </div>
 
-        {/* Consecuencia, no solo el dato: se dice qué le pasa al texto. */}
+        {/* Consecuencia, no solo el dato: se dice qué le pasa al texto.
+            Con foto es OTRA consecuencia: el color del texto ahí lo decide la
+            capa (ver `tintaSobreFoto`), así que repetir el aviso del contraste
+            sería informar mal justo cuando ya no gobierna. */}
         <p style={{ margin: "10px 0 0", fontSize: 10.5, color: P.muted, lineHeight: 1.45 }}>
-          Con este fondo, los textos de la sección se muestran en{" "}
-          <strong style={{ color: P.text }}>{contrast === "light" ? "claro" : "oscuro"}</strong>.
-          Se ajusta solo — no hace falta que cambies cada texto.
+          {hasImage ? (<>
+            Con la foto puesta, este color sólo se ve <strong style={{ color: P.text }}>mientras la foto carga</strong>
+            {" "}— y es el que queda si no llega a cargar. El color del texto lo decide la capa, no éste.
+          </>) : (<>
+            Con este fondo, los textos de la sección se muestran en{" "}
+            <strong style={{ color: P.text }}>{contrast === "light" ? "claro" : "oscuro"}</strong>.
+            Se ajusta solo — no hace falta que cambies cada texto.
+          </>)}
         </p>
+        </>)}
       </div>
 
       {/* ── Difuminado ── */}
@@ -1546,6 +1632,19 @@ function BgFieldEditor({ field, base, setActiveField, aceptaFoto }: {
             : "Opcional. Sin foto se usa el color de arriba, que es lo más liviano y lo que más rápido carga."}
         </p>
       </div>
+      )}
+
+      {/* ── Encuadre ── */}
+      {/* Lo que faltaba: elegida la foto, no había NINGUNA forma de moverla. La
+          sección la recorta para llenarse y entraba cortada por el centro; si lo
+          que importaba estaba a un costado, era eso o nada.
+          Sin foco aparte para celular: el template no lo lee todavía en las fotos
+          de fondo (sí en el banner), y ofrecer un control que no cambia nada es
+          peor que no tenerlo. La muestra usa la forma REAL de esta sección, que
+          se mide en vivo — si achicás la ventana, cambia con ella. */}
+      {aceptaFoto && ov.url && (
+        <EncuadreFoto imgKey={imgKey} ov={ov} hueco={hueco} capa={currentOverlay}
+          ofreceMobil={false} setImageOverride={setImageOverride} />
       )}
 
       {/* Fila 2: capa (solo si hay imagen) + reset color */}
