@@ -1,6 +1,7 @@
 "use client";
 import { useContext, useState } from "react";
 import { useTurnstile } from "@/components/Turnstile";
+import { NOMBRE_MAX, EMAIL_MAX, MENSAJE_MAX } from "@/lib/contacto-limites";
 import { StoreConfigContext } from "@/contexts/StoreConfigContext";
 
 export type ContactFormTheme = {
@@ -40,7 +41,8 @@ export function ContactForm({ storeId, accent, textColor, mutedColor, radius = 8
   // Permite precargar el campo mensaje desde afuera (ej: botón "Consultar disponibilidad" de un producto puntual).
   prefillMessage?: string;
 }) {
-  const [form, setForm] = useState({ nombre: "", email: "", mensaje: "" });
+  /* `website` es el honeypot: siempre vacio para una persona. Ver el campo. */
+  const [form, setForm] = useState({ nombre: "", email: "", mensaje: "", website: "" });
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const captcha = useTurnstile("contact");
   const t = theme ?? {};
@@ -68,7 +70,7 @@ export function ContactForm({ storeId, accent, textColor, mutedColor, radius = 8
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ storeId, ...form, turnstileToken: captcha.token }),
       });
-      if (res.ok) { setStatus("sent"); setForm({ nombre: "", email: "", mensaje: "" }); }
+      if (res.ok) { setStatus("sent"); setForm({ nombre: "", email: "", mensaje: "", website: "" }); }
       else setStatus("error");
     } catch { setStatus("error"); }
     captcha.reset();
@@ -112,13 +114,13 @@ export function ContactForm({ storeId, accent, textColor, mutedColor, radius = 8
       <div>
         {t.showLabels && <label style={t.labelStyle}>Nombre</label>}
         <input value={form.nombre} onChange={e => setForm(f => ({ ...f, nombre: e.target.value }))}
-          placeholder={ph.nombre} required readOnly={isPreview} style={baseInputStyle}
+          placeholder={ph.nombre} required readOnly={isPreview} maxLength={NOMBRE_MAX} style={baseInputStyle}
           onFocus={handleFocus} onBlur={handleBlur} />
       </div>
       <div>
         {t.showLabels && <label style={t.labelStyle}>Email</label>}
         <input value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
-          placeholder={ph.email} type="email" required readOnly={isPreview} style={baseInputStyle}
+          placeholder={ph.email} type="email" required readOnly={isPreview} maxLength={EMAIL_MAX} style={baseInputStyle}
           onFocus={handleFocus} onBlur={handleBlur} />
       </div>
     </>
@@ -149,9 +151,28 @@ export function ContactForm({ storeId, accent, textColor, mutedColor, radius = 8
       <div>
         {t.showLabels && <label style={t.labelStyle}>Mensaje</label>}
         <textarea value={form.mensaje} onChange={e => setForm(f => ({ ...f, mensaje: e.target.value }))}
-          placeholder={ph.mensaje} required rows={4} readOnly={isPreview}
+          placeholder={ph.mensaje} required rows={4} readOnly={isPreview} maxLength={MENSAJE_MAX}
           style={{ ...baseInputStyle, resize: "vertical" }} onFocus={handleFocus} onBlur={handleBlur} />
+        {/* El contador aparece recien cerca del tope. Puesto desde el
+            principio es ruido —nadie escribe 2000 letras sin querer— pero
+            llegar al tope sin aviso se siente como que el teclado se rompio. */}
+        {form.mensaje.length > MENSAJE_MAX - 200 && (
+          <p style={{ fontSize: 11, color: form.mensaje.length >= MENSAJE_MAX ? "#dc2626" : mutedColor, margin: "4px 0 0" }}>
+            {form.mensaje.length >= MENSAJE_MAX
+              ? "Llegaste al máximo. Si te falta contar algo, escribinos de nuevo."
+              : `Te quedan ${MENSAJE_MAX - form.mensaje.length} letras.`}
+          </p>
+        )}
       </div>
+      {/* Honeypot: escondido para una persona, visible para un bot que llena
+          todo lo que encuentra. Si viene con algo, el servidor contesta que
+          salio bien y no manda nada. Es lo que frena al bot ANTES del captcha,
+          sin molestar a nadie. Va con `aria-hidden` y fuera del orden de
+          tabulacion para que un lector de pantalla tampoco lo ofrezca. */}
+      <input type="text" name="website" value={form.website}
+        onChange={e => setForm(f => ({ ...f, website: e.target.value }))}
+        tabIndex={-1} autoComplete="off" aria-hidden="true"
+        style={{ position: "absolute", left: "-9999px", width: 1, height: 1, opacity: 0 }} />
       {!isPreview && captcha.widget}
       <button type="submit" disabled={disabled} style={mergedButtonStyle}
         onMouseEnter={t.buttonHoverStyle ? e => Object.assign(e.currentTarget.style, t.buttonHoverStyle) : undefined}

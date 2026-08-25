@@ -1,6 +1,7 @@
 "use client";
 import { useContext, useRef, useState } from "react";
 import { useTurnstile } from "@/components/Turnstile";
+import { EMAIL_MAX } from "@/lib/contacto-limites";
 import { StoreConfigContext } from "@/contexts/StoreConfigContext";
 
 /**
@@ -150,6 +151,7 @@ export function NewsletterForm({
           placeholder={placeholder}
           value={email}
           onChange={(e) => { setEmail(e.target.value); if (error) setError(null); }}
+          maxLength={EMAIL_MAX}
           aria-label="Tu correo electrónico"
           style={theme.input}
         />

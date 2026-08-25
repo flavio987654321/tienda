@@ -1341,7 +1341,19 @@ export default function Aire() {
         .ai-suscripcion > :last-child { width:100% }
         @media (min-width:1024px) {
           .ai-suscripcion { flex-direction:row; align-items:center; justify-content:space-between; gap:40px }
-          .ai-suscripcion > :last-child { width:370px; flex-shrink:0 }
+          /* 460 y no 370. Medido: con 370, adentro entra el boton "Suscribirme"
+             (~110px) y al campo le quedaban 215px utiles — un mail comun como
+             maria.fernanda.gonzalez@gmail.com ocupa 228 y se perdia por la
+             izquierda mientras se escribia. Con 460 quedan ~305 y entra holgado. */
+          .ai-suscripcion > :last-child { width:460px; flex-shrink:0 }
+        }
+        /* En pantalla angosta el boton se va ABAJO y el campo se queda con todo
+           el ancho. Pegados en una fila, en un celular de 390 al campo le
+           quedaban 167px utiles: no entraba ni medio mail. */
+        @media (max-width:560px) {
+          .ai-suscripcion form > div { flex-direction:column; border-radius:22px; gap:6px }
+          .ai-suscripcion form input[type=email] { padding-left:16px }
+          .ai-suscripcion form button { width:100% }
         }
         .ai-colecciones { display:grid; gap:12px; grid-template-columns:1fr }
         .ai-colecciones > button { height:190px }
