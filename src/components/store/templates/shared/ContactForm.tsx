@@ -106,7 +106,20 @@ export function ContactForm({ storeId, accent, textColor, mutedColor, radius = 8
     e.currentTarget.style.borderColor = borderColorDefault;
   }
 
-  const disabled = status === "sending" || isPreview || !captcha.ready;
+  /* En la VISTA PREVIA el botón se ve NORMAL, no apagado.
+ *
+ * Acá el botón quedaba gris mientras que el de la suscripción, en la misma
+ * pantalla, ya se veía normal. O sea que la dueña, en el lugar que existe
+ * justamente para ver cómo le queda su tienda, tenía dos bloques parecidos
+ * mostrando cosas distintas — y ninguno de los dos como lo van a ver sus
+ * clientas.
+ *
+ * No se pierde nada apagándolo: `handleSubmit` sale en la primera línea cuando
+ * es previa, así que tocarlo no manda nada. Y el cartel de abajo ya lo dice.
+ *
+ * `sending` y el captcha SIGUEN apagándolo en la tienda de verdad, que es donde
+ * apagarlo significa algo. */
+  const disabled = status === "sending" || (!isPreview && !captcha.ready);
   const btnRadius = buttonRadius ?? (variant === "underline" ? 0 : radius);
 
   const nameEmailFields = (

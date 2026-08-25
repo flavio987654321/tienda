@@ -289,6 +289,14 @@ export default function Aire() {
     irALaPortada, irAlCatalogo, irAContacto, irANosotros, irAlProducto,
   } = useVistaTemplate({ isPreview, slug: storeConfig?.slug, templateId: "aire" });
 
+  /* Adónde vuelve el "atrás" de la ficha de producto.
+     Volvía SIEMPRE al catálogo, aunque hubieras tocado el producto en la portada:
+     te dejaba en una pantalla en la que nunca estuviste.
+     Arranca en "catalogo" porque ese es el caso de quien entra POR EL LINK
+     COMPARTIDO, sin haber pasado por la tienda — mandarlo al catálogo es lo más
+     útil que se le puede ofrecer ahí. */
+  const [volverDesdeFicha, setVolverDesdeFicha] = useState<"portada" | "catalogo">("catalogo");
+
   /* Llegar a la portada la deja como está cuando se entra de cero: sin filtrar.
 
      El filtro de categoría es UNO SOLO y lo comparten dos pantallas: la franja
@@ -364,6 +372,8 @@ export default function Aire() {
        elegido el producto, la foto del color que corresponde, las opciones que no
        tienen alternativa y la cantidad. Sin esto la ficha se dibuja pero el botón
        de agregar no tiene producto sobre el cual trabajar. */
+    /* De dónde se vino, para que el "atrás" vuelva ahí. */
+    setVolverDesdeFicha(enCatalogo ? "catalogo" : "portada");
     openModal(product);
     /* Y después la pantalla. Sin dirección de tienda —la previa del editor, o
        /preview/aire suelto— no hay dirección que escribir y la manda el estado;
@@ -2832,7 +2842,9 @@ export default function Aire() {
                 cosas distintas. Lo que cambia es adónde vuelve — desde la ficha se
                 vuelve al CATÁLOGO, no a la portada: es de donde se vino. */}
             <div style={{ marginBottom:14 }}>
-              <BotonVolver onClick={irAlCatalogo} destino="Volver al catálogo"
+              <BotonVolver
+                onClick={volverDesdeFicha === "catalogo" ? irAlCatalogo : irALaPortada}
+                destino={volverDesdeFicha === "catalogo" ? "Volver al catálogo" : "Volver a la tienda"}
                 S={S} LN={LN} T={T} G={G} />
             </div>
             {fichaProducto ? (
