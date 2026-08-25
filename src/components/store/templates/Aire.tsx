@@ -1005,6 +1005,28 @@ export default function Aire() {
     ?? "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=900&q=80";
   const nosotrosFotoOv = storeConfig?.imageOverrides?.["nosotrosImage"];
 
+  /* Los tres datos que dan confianza.
+   *
+   * Se muestran SOLO si la dueña los cargó. Traerlos escritos de fábrica —"+5
+   * años", "240 productos"— sería la tienda afirmando algo falso en su nombre, y
+   * encima en el único lugar de la pantalla que existe para dar confianza: una
+   * tienda abierta ayer diciendo que hace cinco años que vende.
+   *
+   * Editando se ven igual, con el ejemplo puesto, porque si no la dueña no se
+   * entera de que existen. Es el mismo criterio que las reseñas de ejemplo. */
+  const DATOS_NOSOTROS = [
+    { valor: "+5",   rotulo: "años vendiendo" },
+    { valor: "240",  rotulo: "productos" },
+    { valor: "24 h", rotulo: "para despachar" },
+  ] as const;
+  const datosNosotros = DATOS_NOSOTROS.map((_, i) => ({
+    cargado: !!(textOverrides[`nosotrosDato${i + 1}`]?.text?.trim()
+              || textOverrides[`nosotrosDato${i + 1}Rotulo`]?.text?.trim()),
+  }));
+  const hayDatosNosotros = datosNosotros.some(d => d.cargado);
+  /* En el editor y en la previa se muestra todo, para poder acomodarlo. */
+  const puedeEditar = editMode || isPreview;
+
   const contactoBg      = scn["bgContacto"] ?? S;
   const contactoText    = tintaSobre(contactoBg);
   const contactoMid     = contactoText === T ? T2 : "rgba(255,255,255,0.72)";
@@ -1280,8 +1302,8 @@ export default function Aire() {
          sobre lo que quedó abajo del dedo. */
       pointerEvents: cambiandoPantalla ? "none" : undefined }}>
       <style>{`
-        .ai-nosotros { display:grid; grid-template-columns:1fr; gap:26px; align-items:start }
-        @media(min-width:900px){ .ai-nosotros { grid-template-columns:minmax(0,440px) minmax(0,1fr); gap:52px; align-items:center } }
+        .ai-nos-datos { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin-top:26px }
+        @media(max-width:560px){ .ai-nos-datos { gap:8px } }
         .ai-ofertas-row { scrollbar-width:none }
         .ai-ofertas-row::-webkit-scrollbar { display:none }
         /* Las columnas de la grilla: 2 en celular, 3 en tablet, 6 en pantalla
@@ -2565,79 +2587,96 @@ export default function Aire() {
       {/* ── NOSOTROS ───────────────────────────────────────────────────────────
           Una PANTALLA, no un bloque de la portada. Tiene su dirección propia
           (/tienda/<slug>/nosotros), así que se comparte, se guarda en favoritos,
-          el botón atrás del navegador vuelve bien y Google la indexa. Un
-          "Nosotros" que viviera sólo dentro de la portada no tendría nada de eso.
+          el botón atrás del navegador vuelve bien y Google la indexa.
 
-          Todo lo que se ve acá lo escribe la dueña: el título, la bajada, los dos
-          párrafos y la foto. Lo que viene de fábrica son textos de ejemplo que se
-          leen como un borrador honesto —no promesas inventadas sobre su negocio,
-          que es lo peor que puede traer un template: si no los cambia, su tienda
-          estaría diciendo algo falso en su nombre. */}
+          El orden es a propósito: primero QUIÉN sos (el texto), después los DATOS
+          que lo respaldan, después la cara, y recién ahí las salidas. Los números
+          van en el medio y no al final porque son lo que hace que lo de arriba
+          deje de ser una promesa: "elegimos bien" no dice nada, "hace 5 años" sí.
+
+          Todo lo escribe la dueña. Los textos que vienen puestos le dicen QUÉ
+          contar en vez de inventarle una historia — un template que trae
+          promesas escritas sobre un negocio que no conoce deja a la tienda
+          diciendo algo falso en nombre de ella si no las cambia. */}
       {enNosotros && (
       <section data-reveal style={{ background:nosotrosBg, position:"relative" }}>
         <EditableSectionBg field="bgNosotros" label="Fondo de Nosotros" nombreBloque="Pantalla de Nosotros" />
-        <div style={{ padding: `${isMobile ? 30 : 54}px ${MARGEN}px ${isMobile ? 40 : 64}px` }}>
-        <div style={{ maxWidth:ANCHO, margin:"0 auto" }}>
+        <div style={{ padding: `${isMobile ? 30 : 54}px ${MARGEN}px ${isMobile ? 40 : 70}px` }}>
+        <div style={{ maxWidth: 900, margin:"0 auto" }}>
 
-          <div style={{ marginBottom: isMobile ? 14 : 20 }}>
+          <div style={{ marginBottom: isMobile ? 18 : 26 }}>
             <BotonVolver onClick={irALaPortada} destino="Volver a la tienda"
               S={nosotrosTarjeta} LN={nosotrosBorde} T={nosotrosText} G={G} />
           </div>
 
-          <h1 style={{ fontSize: isMobile ? 40 : 82, fontWeight:800, letterSpacing:"-0.04em", color:nosotrosText, margin:"0 0 6px", textAlign:"center", lineHeight:1.02 }}>
-            <EditableZone field="nosotrosTitulo" label="Título de Nosotros">Nosotros</EditableZone>
+          {/* Alineado a la IZQUIERDA y no centrado. Son dos párrafos de texto
+              corrido: centrados, cada renglón arranca en otro lado y la lectura
+              se traba. El título va con ellos para que se lea como una sola cosa
+              que baja, en vez de un cartel arriba y un texto suelto abajo. */}
+          <p style={{ margin:"0 0 10px", fontSize:11.5, fontWeight:800, letterSpacing:2.5, textTransform:"uppercase", color:G }}>
+            <EditableZone field="nosotrosKicker" label="Palabra de arriba">Nosotros</EditableZone>
+          </p>
+          <h1 style={{ fontSize: isMobile ? 34 : 56, fontWeight:800, letterSpacing:"-0.035em", color:nosotrosText, margin:"0 0 18px", lineHeight:1.05 }}>
+            <EditableZone field="nosotrosTitulo" label="Título de Nosotros">Ropa elegida de a una</EditableZone>
           </h1>
-          <p style={{ margin:"0 auto", maxWidth:520, textAlign:"center", fontSize: isMobile ? 14 : 15.5, color:nosotrosMid, lineHeight:1.65 }}>
-            <EditableZone field="nosotrosBajada" label="Bajada de Nosotros">
-              Quiénes somos y cómo elegimos lo que vendemos.
+          <p style={{ margin:"0 0 14px", fontSize: isMobile ? 15 : 17, color:nosotrosMid, lineHeight:1.75, maxWidth:640 }}>
+            <EditableZone field="nosotrosParrafo1" label="Primer párrafo">
+              Contá acá cómo empezó tu tienda: cuándo, por qué, y qué te llevó a elegir lo que vendés. La gente compra mucho más fácil cuando sabe quién está del otro lado.
+            </EditableZone>
+          </p>
+          <p style={{ margin:0, fontSize: isMobile ? 15 : 17, color:nosotrosMid, lineHeight:1.75, maxWidth:640 }}>
+            <EditableZone field="nosotrosParrafo2" label="Segundo párrafo">
+              Y acá, cómo trabajás: cómo elegís los productos, de dónde vienen, cuánto tardás en despachar. Lo concreto tranquiliza más que las promesas.
             </EditableZone>
           </p>
 
-          {/* La foto a la izquierda y el texto a la derecha, y uno abajo del otro
-              en celular. La foto va PRIMERA en el orden del código para que en
-              celular aparezca arriba: es lo que hace que la pantalla se lea como
-              una presentación y no como un texto suelto. */}
-          <div className="ai-nosotros" style={{ marginTop: isMobile ? 26 : 44 }}>
-            <div style={{ position:"relative", borderRadius:RAD, overflow:"hidden", background:nosotrosTarjeta, border:`1px solid ${nosotrosBorde}`, aspectRatio: isMobile ? "4/3" : "4/5" }}>
-              <FadeImage src={nosotrosFoto} alt="" fill sizes="(max-width: 768px) 100vw, 460px"
-                style={{ objectFit:"cover", objectPosition:`${nosotrosFotoOv?.posX ?? 50}% ${nosotrosFotoOv?.posY ?? 50}%` }}/>
-              <EditableImageButton field="nosotrosImage" label="Foto de Nosotros" />
+          {/* ── Los tres datos ──────────────────────────────────────────────
+              Aparecen SÓLO si la dueña los cargó. Un dato inventado de fábrica
+              —"+5 años", "240 productos"— sería la tienda afirmando algo falso
+              en su nombre, y justo en el único lugar de la pantalla que existe
+              para dar confianza. Editando se ven igual, con el ejemplo puesto,
+              para que sepa que están y los pueda llenar. */}
+          {(hayDatosNosotros || puedeEditar) && (
+            <div className="ai-nos-datos">
+              {DATOS_NOSOTROS.map((ej, i) => (
+                (datosNosotros[i].cargado || puedeEditar) ? (
+                  <div key={i} style={{ background:nosotrosTarjeta, border:`1px solid ${nosotrosBorde}`, borderRadius:RAD - 6, padding: isMobile ? "16px 14px" : "20px 18px", textAlign:"center" }}>
+                    <p style={{ margin:"0 0 5px", fontSize: isMobile ? 26 : 34, fontWeight:800, letterSpacing:"-0.03em", color:nosotrosText, lineHeight:1 }}>
+                      <EditableZone field={`nosotrosDato${i + 1}`} label={`Dato ${i + 1} — el número`}>{ej.valor}</EditableZone>
+                    </p>
+                    <p style={{ margin:0, fontSize: isMobile ? 12 : 13, color:nosotrosMid, lineHeight:1.4 }}>
+                      <EditableZone field={`nosotrosDato${i + 1}Rotulo`} label={`Dato ${i + 1} — qué es`}>{ej.rotulo}</EditableZone>
+                    </p>
+                  </div>
+                ) : null
+              ))}
             </div>
+          )}
 
-            <div>
-              <h2 style={{ fontSize: isMobile ? 22 : 30, fontWeight:800, letterSpacing:"-0.02em", color:nosotrosText, margin:"0 0 14px", lineHeight:1.2 }}>
-                <EditableZone field="nosotrosSubtitulo" label="Subtítulo de Nosotros">
-                  Ropa elegida de a una
-                </EditableZone>
-              </h2>
-              <p style={{ margin:"0 0 16px", fontSize: isMobile ? 14.5 : 16, color:nosotrosMid, lineHeight:1.8 }}>
-                <EditableZone field="nosotrosParrafo1" label="Primer párrafo de Nosotros">
-                  Contá acá cómo empezó tu tienda: cuándo, por qué, y qué te llevó a elegir lo que vendés. La gente compra mucho más fácil cuando sabe quién está del otro lado.
-                </EditableZone>
-              </p>
-              <p style={{ margin:"0 0 22px", fontSize: isMobile ? 14.5 : 16, color:nosotrosMid, lineHeight:1.8 }}>
-                <EditableZone field="nosotrosParrafo2" label="Segundo párrafo de Nosotros">
-                  Y acá, cómo trabajás: cómo elegís los productos, de dónde vienen, cuánto tardás en despachar. Lo concreto tranquiliza más que las promesas.
-                </EditableZone>
-              </p>
+          {/* La cara, después de los datos: apaisada y ancha. Vertical y al
+              costado quedaba enorme —440 de ancho por 550 de alto— y empujaba
+              todo lo demás fuera de la pantalla. */}
+          <div style={{ position:"relative", marginTop: isMobile ? 24 : 34, borderRadius:RAD, overflow:"hidden", background:nosotrosTarjeta, border:`1px solid ${nosotrosBorde}`, aspectRatio: isMobile ? "4/3" : "21/9" }}>
+            <FadeImage src={nosotrosFoto} alt="" fill sizes="(max-width: 768px) 100vw, 900px"
+              style={{ objectFit:"cover", objectPosition:`${nosotrosFotoOv?.posX ?? 50}% ${nosotrosFotoOv?.posY ?? 50}%` }}/>
+            <EditableImageButton field="nosotrosImage" label="Foto de Nosotros" />
+          </div>
 
-              {/* Las dos salidas de esta pantalla. Quien terminó de leer quiere
-                  una de dos cosas: ver lo que vendés, o escribirte. Sin esto la
-                  pantalla es un callejón sin salida y hay que volver a la barra. */}
-              <div style={{ display:"flex", gap:10, flexWrap:"wrap" }}>
-                <button type="button" onClick={irAlCatalogo}
-                  style={{ background:G, color:accentText, border:"none", borderRadius:999, padding:"13px 26px", fontSize:14, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}
-                  onMouseEnter={e => (e.currentTarget.style.opacity="0.9")} onMouseLeave={e => (e.currentTarget.style.opacity="1")}>
-                  <EditableZone field="nosotrosCta" label="Botón de Nosotros">Ver los productos</EditableZone>
-                </button>
-                <button type="button" onClick={irAContacto}
-                  style={{ background:"none", color:nosotrosText, border:`1px solid ${nosotrosBorde}`, borderRadius:999, padding:"13px 26px", fontSize:14, fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}
-                  onMouseEnter={e => { e.currentTarget.style.borderColor = G; e.currentTarget.style.color = G; }}
-                  onMouseLeave={e => { e.currentTarget.style.borderColor = nosotrosBorde; e.currentTarget.style.color = nosotrosText; }}>
-                  Escribinos
-                </button>
-              </div>
-            </div>
+          {/* Las dos salidas. Quien terminó de leer quiere una de dos cosas: ver
+              lo que vendés, o escribirte. Sin esto la pantalla es un callejón sin
+              salida y hay que volver a la barra a buscar. */}
+          <div style={{ display:"flex", gap:10, flexWrap:"wrap", marginTop: isMobile ? 22 : 30 }}>
+            <button type="button" onClick={irAlCatalogo}
+              style={{ background:G, color:accentText, border:"none", borderRadius:999, padding:"14px 28px", fontSize:14.5, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}
+              onMouseEnter={e => (e.currentTarget.style.opacity="0.9")} onMouseLeave={e => (e.currentTarget.style.opacity="1")}>
+              <EditableZone field="nosotrosCta" label="Botón de Nosotros">Ver los productos</EditableZone>
+            </button>
+            <button type="button" onClick={irAContacto}
+              style={{ background:"none", color:nosotrosText, border:`1px solid ${nosotrosBorde}`, borderRadius:999, padding:"14px 28px", fontSize:14.5, fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = G; e.currentTarget.style.color = G; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = nosotrosBorde; e.currentTarget.style.color = nosotrosText; }}>
+              Escribinos
+            </button>
           </div>
 
         </div>
