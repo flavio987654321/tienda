@@ -1,9 +1,11 @@
+import { cache } from "react";
 import { prisma } from "@/lib/prisma";
 import { mapProduct, type RawProduct } from "@/lib/productoStorefront";
 import { notFound } from "next/navigation";
 import { unstable_noStore as noStore } from "next/cache";
 import type { Metadata } from "next";
 import { isDemoProductId } from "@/lib/demoProducts";
+import ComingSoonPage from "../../ComingSoonPage";
 import ProductDetailClient from "./ProductDetailClient";
 import { StoreTrackingScripts } from "@/components/store/StoreTrackingScripts";
 import type { StoreConfig } from "@/types/store-config";
@@ -26,7 +28,7 @@ type ProductoPageProps = {
 
 // Resuelve el producto siempre filtrado por la tienda del slug + activo + no borrado,
 // para que no se pueda ver (ni indexar) un producto de otra tienda cambiando el id en la URL.
-async function findProduct(slug: string, id: string) {
+const findProduct = cache(async (slug: string, id: string) => {
   return prisma.product.findFirst({
     where: { id, isActive: true, deletedAt: null, store: { slug, isActive: true } },
     select: {
@@ -53,7 +55,7 @@ async function findProduct(slug: string, id: string) {
       store: { select: { name: true } },
     },
   });
-}
+});
 
 /* ── Qué texto ve Google ─────────────────────────────────────────────────────
    Si la dueña escribió el suyo, manda el suyo. Si no, se arma solo como siempre.
@@ -109,11 +111,72 @@ function imagenesAbsolutas(raw: string): string[] {
   }
 }
 
+/* ── ¿Esta tienda está tapada para quien mira? ────────────────────────────────
+ *
+ * Es la MISMA regla que aplica la portada, y está acá porque esta pantalla no la
+ * aplicaba: en una tienda sin publicar, la portada, el catálogo, `/contacto` y
+ * `/nosotros` mostraban "PRÓXIMAMENTE" y la ficha de producto se veía ENTERA —
+ * con el precio, y con el bloque de datos estructurados para Google.
+ *
+ * O sea que la dueña que todavía no abrió tenía igual su mercadería a la vista
+ * para cualquiera con el link. Medido el 25/08/26 sobre la base de producción,
+ * eran 4 fichas en 2 tiendas, las dos de prueba nuestras — pero el flujo normal
+ * es cargar los productos y DESPUÉS publicar, así que se arma sola en cuanto
+ * entre gente de verdad.
+ *
+ * Los tres pedazos de la regla, y por qué cada uno:
+ *   · `isPublished`  — lo que la dueña decidió.
+ *   · `isOwner`      — ella tiene que poder ver su propia tienda antes de abrir.
+ *   · `enDesarrollo` — en local se ve todo, que es como se prueban los templates
+ *                      sin tener que publicar una tienda. `NODE_ENV` lo pone
+ *                      Next: en `build`/`start` vale "production" y esto se
+ *                      apaga solo, no es una variable que alguien se olvide.
+ *
+ * Escrita una vez y usada por `generateMetadata` y por la página: si cada una
+ * decidiera por su cuenta, la etiqueta y el contenido podrían contestar cosas
+ * distintas — y la etiqueta es justo la que se ve en la previa de WhatsApp.
+ */
+const tiendaTapada = cache(async (slug: string) => {
+  const [store, currentUser] = await Promise.all([
+    prisma.store.findFirst({
+      where: { slug, isActive: true },
+      select: {
+        ownerId: true, isPublished: true,
+        name: true, logo: true, logoColor: true, primaryColor: true, tagline: true,
+      },
+    }),
+    getCurrentUser(),
+  ]);
+  if (!store) return { tapada: false, store: null };
+  const isOwner = !!currentUser && currentUser.id === store.ownerId;
+  const enDesarrollo = process.env.NODE_ENV !== "production";
+  return { tapada: !store.isPublished && !isOwner && !enDesarrollo, store };
+});
+
 export async function generateMetadata({ params, searchParams }: ProductoPageProps): Promise<Metadata> {
   const { slug, id } = await params;
   const { from } = await searchParams;
   // Los productos demo del editor no existen en la base — no hay metadata real que generar.
   if (from === "editor" && isDemoProductId(id)) return {};
+
+  /* Tienda sin abrir: la etiqueta no puede contar el producto.
+     Sin esto, la página decía "Próximamente" pero la etiqueta seguía mandando el
+     nombre, la descripción y la FOTO — así que pegando el link en un chat, la
+     previa mostraba la mercadería igual. El arreglo de la página sin éste queda
+     a medias, porque la previa es lo que la gente ve primero.
+     Va con `noindex`, que la portada no necesita —"Próximamente" con el nombre de
+     la marca es una página razonable— pero una dirección de producto que todavía
+     no existe para nadie no tiene ningún motivo para estar en Google. */
+  const { tapada, store: tienda } = await tiendaTapada(slug);
+  if (tapada) {
+    const nombre = tienda?.name ?? "Tienda";
+    return {
+      title: `${nombre} — Próximamente`,
+      description: `${nombre} está preparando algo especial. ¡Volvé pronto!`,
+      robots: { index: false, follow: false },
+      openGraph: { title: `${nombre} — Próximamente`, type: "website", siteName: nombre },
+    };
+  }
 
   const product = await findProduct(slug, id);
   if (!product) return {};
@@ -236,6 +299,24 @@ export default async function ProductoPage({ params, searchParams }: ProductoPag
   noStore();
   const { slug, id } = await params;
   const { from } = await searchParams;
+
+  /* Tienda sin abrir: la misma pantalla que da la portada, y ANTES que nada.
+     Va antes de buscar el producto y antes de armar los datos estructurados a
+     propósito: lo que no se resuelve no se puede filtrar por accidente. Es
+     también la razón de que el JSON-LD quede afuera — se armaba más abajo y se
+     mandaba igual, o sea que se le declaraba a Google un producto de una tienda
+     que todavía no abrió. */
+  const { tapada, store: tienda } = await tiendaTapada(slug);
+  if (tapada && tienda) {
+    return (
+      <ComingSoonPage
+        name={tienda.name}
+        logo={tienda.logo ?? null}
+        color={tienda.logoColor || tienda.primaryColor || "#6366f1"}
+        tagline={tienda.tagline ?? null}
+      />
+    );
+  }
 
   // Los productos demo del editor (ej. "hogar-2") nunca existen en la base —
   // se resuelven en el cliente con datos de muestra en vez de buscarlos ahí.
