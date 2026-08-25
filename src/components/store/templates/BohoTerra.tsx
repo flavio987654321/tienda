@@ -950,7 +950,7 @@ export default function BohoTerra() {
       {/* ── HERO — fondo crema con tipografía grande + foto al costado */}
       <section id="inicio" style={{ paddingTop: isPreview ? 0 : 60 + announcementBarHeight, minHeight: isMobile ? "auto" : "100vh", display:"flex", alignItems:"stretch", flexDirection: isMobile ? "column" : "row" }}>
         <div style={{ flex:1, display:"flex", flexDirection:"column", justifyContent: isMobile ? "flex-start" : "center", padding: isMobile ? "40px 20px 48px" : "80px 80px 80px 80px", maxWidth: isMobile ? "100%" : 600, background:heroLeftBg, position:"relative" }}>
-          <EditableSectionBg field="bgHeroLeft" label="Fondo hero" />
+          <EditableSectionBg field="bgHeroLeft" label="Fondo hero" nombreBloque="Banner principal" />
           <p style={{ fontSize:11, letterSpacing:5, color:A, textTransform:"uppercase", marginBottom:24 }}>
             <EditableZone field="storeTagline" label="Tagline">{storeConfig?.storeTagline ?? "Nueva temporada · 2025"}</EditableZone>
           </p>
@@ -1560,7 +1560,7 @@ export default function BohoTerra() {
         {/* newsletter strip */}
         <div style={{ position:"relative", ...(newsletterBgImg?.url ? { backgroundImage:`url(${newsletterBgImg.url})`, backgroundSize:"cover", backgroundPosition:`${newsletterBgImg.posX ?? 50}% ${newsletterBgImg.posY ?? 50}%` } : { background:newsletterBg }) }}>
           <BgDragHandle imgKey="sectionbg_bgNewsletter" />
-          <EditableSectionBg field="bgNewsletter" label="Fondo newsletter" />
+          <EditableSectionBg field="bgNewsletter" label="Fondo newsletter" nombreBloque="Suscripción" />
           {newsletterBgImg?.url && newsletterBgImg.overlayType !== "none" && (
             <div style={{ position:"absolute", inset:0, zIndex:0, pointerEvents:"none", background: newsletterBgImg.overlayType === "light" ? `rgba(255,255,255,${newsletterBgImg.overlayOpacity ?? 0.5})` : `rgba(0,0,0,${newsletterBgImg.overlayOpacity ?? 0.45})` }} />
           )}
@@ -1595,7 +1595,7 @@ export default function BohoTerra() {
         </div>
         {/* links + copyright — este div es el fondo del footer propiamente dicho */}
         <div style={{ position:"relative" }}>
-        <EditableSectionBg field="bgFooter" label="Fondo footer" />
+        <EditableSectionBg field="bgFooter" label="Fondo footer" nombreBloque="Pie de la tienda" />
         <div style={{ maxWidth:1280, margin:"0 auto", padding: isMobile ? "20px 16px" : "28px 40px", display:"flex", alignItems:"center", justifyContent: isMobile ? "center" : "space-between", flexWrap:"wrap", gap:20 }}>
           <span style={{ fontFamily:"Georgia, serif", fontStyle:"italic", fontSize:20, color:footerText, letterSpacing:2 }}><EditableZone field="footerBrandName" label="Nombre en footer">Terra</EditableZone></span>
           {/* Envuelve en celular: los cinco enlaces no entran en una línea de

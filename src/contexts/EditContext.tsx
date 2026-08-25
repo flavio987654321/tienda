@@ -1,5 +1,6 @@
 "use client";
 import { createContext, useContext, useState } from "react";
+import { ChapitaBloque } from "@/components/store/templates/shared/ChapitaBloque";
 import type { TextOverride, ImageOverride } from "@/types/store-config";
 import { colorRepresentativo } from "@/lib/section-bg";
 
@@ -461,9 +462,23 @@ export function EditableImageButton({
    owner to change the section background color. Smart contrast
    is computed automatically when bg changes.
 ──────────────────────────────────────────────────────────────── */
-export function EditableSectionBg({ field, label, lado = "izquierda" }: {
+export function EditableSectionBg({ field, label, lado = "izquierda", nombreBloque }: {
   field: string;
   label: string;
+  /* El nombre de la superficie, para dibujarle su chapita.
+   *
+   * Sólo lo llevan las que NO son un bloque: el pie de la tienda, la pantalla de
+   * contacto y la del catálogo. Ésas no se pueden mover ni ocultar —el pie tiene
+   * las políticas, y contacto y catálogo son pantallas enteras, no bloques de la
+   * portada— así que nunca pasaron por `SectionBlock`, que es quien pone el
+   * nombre. Resultado: su botón "Fondo" aparecía flotando solo, sin nada que
+   * dijera de quién era. Es el mismo problema que los bloques ya tenían resuelto,
+   * y se había arreglado sólo para ellos.
+   *
+   * Va la chapita y NADA MÁS: ni flechas para mover ni "Ocultar bloque", porque
+   * estas tres cosas no se mueven ni se ocultan. Ofrecerlo sería ofrecer algo que
+   * no existe. */
+  nombreBloque?: string;
   /* De qué lado del bloque se apoya.
    *
    * Existe por UN caso, y es el de un bloque con DOS fondos: la tarjeta de
@@ -489,6 +504,8 @@ export function EditableSectionBg({ field, label, lado = "izquierda" }: {
   if (!editMode) return null;
 
   return (
+    <>
+    {nombreBloque && <ChapitaBloque nombre={nombreBloque} />}
     <button
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
@@ -540,6 +557,7 @@ export function EditableSectionBg({ field, label, lado = "izquierda" }: {
       )}
       Fondo
     </button>
+    </>
   );
 }
 

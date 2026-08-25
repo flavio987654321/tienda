@@ -1081,7 +1081,7 @@ export default function UrbanPulse() {
           así que en vez de ensanchar la página se comía el borde en silencio. */}
       <section style={{ display:"grid", gridTemplateColumns: isMobile ? "minmax(0,1fr)" : "55% 45%", minHeight: isMobile ? "auto" : "calc(100vh - 100px)", overflow:"hidden" }}>
         <div style={{ background:heroLeftUpBg, display:"flex", flexDirection:"column", justifyContent:"flex-end", padding: isMobile ? "60px 20px 48px" : "80px 64px", clipPath: isMobile ? "none" : "polygon(0 0, 100% 0, 91% 100%, 0 100%)", position:"relative" }}>
-          <EditableSectionBg field="bgHeroLeft" label="Fondo hero" />
+          <EditableSectionBg field="bgHeroLeft" label="Fondo hero" nombreBloque="Banner principal" />
           <span style={{ color:accentSobre(heroLeftUpBg, heroLeftUpText), fontSize:10, letterSpacing:6, fontWeight:800, textTransform:"uppercase", marginBottom:20, display:"block" }}>
             <EditableZone field="storeTagline" label="Tagline">{storeConfig?.storeTagline ?? "▶ Nueva Colección 2025"}</EditableZone>
           </span>
@@ -2252,7 +2252,7 @@ export default function UrbanPulse() {
       {/* FOOTER */}
       <footer style={{ position:"relative", borderTop:`3px solid ${ACC}`, ...(footerBgImg?.url ? { backgroundImage:`url(${footerBgImg.url})`, backgroundSize:"cover", backgroundPosition:`${footerBgImg.posX ?? 50}% ${footerBgImg.posY ?? 50}%` } : { background:footerUpBg }) }}>
         <BgDragHandle imgKey="sectionbg_bgFooter" />
-        <EditableSectionBg field="bgFooter" label="Fondo footer" />
+        <EditableSectionBg field="bgFooter" label="Fondo footer" nombreBloque="Pie de la tienda" />
         {footerBgImg?.url && footerBgImg.overlayType !== "none" && (
           <div style={{ position:"absolute", inset:0, zIndex:0, pointerEvents:"none", background: footerBgImg.overlayType === "light" ? `rgba(255,255,255,${footerBgImg.overlayOpacity ?? 0.5})` : `rgba(0,0,0,${footerBgImg.overlayOpacity ?? 0.45})` }} />
         )}

@@ -671,7 +671,7 @@ export default function AutoMotor() {
         ...secBg(footerImg, footerBg), borderTop:"1px solid rgba(255,255,255,0.07)" }}>
         <BgDragHandle imgKey="sectionbg_bgFooter" />
         <SectionOverlay ov={footerImg} />
-        <EditableSectionBg field="bgFooter" label="Fondo footer" />
+        <EditableSectionBg field="bgFooter" label="Fondo footer" nombreBloque="Pie de la tienda" />
         <div style={{ position:"relative", zIndex:1 }}>
           <p style={{ margin:"0 0 6px", fontWeight:900, fontSize:12,
             color:accent, letterSpacing:5, textTransform:"uppercase" }}>{storeName}</p>

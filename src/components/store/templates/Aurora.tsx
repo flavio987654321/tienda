@@ -934,7 +934,7 @@ export default function Aurora() {
           pasar por la colección es peor que no tener foto. */}
       <section id="hero" style={{ position:"relative" }}>
         <BgDragHandle imgKey="sectionbg_bgHero" />
-        <EditableSectionBg field="bgHero" label="Fondo hero" />
+        <EditableSectionBg field="bgHero" label="Fondo hero" nombreBloque="Banner principal" />
         <HeroFoto
           imagenes={heroFotos}
           posicion={heroBgImg ? `${heroBgImg.posX ?? 50}% ${heroBgImg.posY ?? 50}%` : "center"}
@@ -1477,7 +1477,7 @@ export default function Aurora() {
       {/* ── FOOTER ─────────────────────────────────────────── */}
       <footer style={{ borderTop:`1px solid rgba(201,168,76,0.12)`, marginTop:0, position:"relative", color:footerText, ...(footerBgImg?.url ? { backgroundImage:`url(${footerBgImg.url})`, backgroundSize:"cover", backgroundPosition:`${footerBgImg.posX ?? 50}% ${footerBgImg.posY ?? 50}%` } : { background:footerBg }) }}>
         <BgDragHandle imgKey="sectionbg_bgFooter" />
-        <EditableSectionBg field="bgFooter" label="Fondo footer" />
+        <EditableSectionBg field="bgFooter" label="Fondo footer" nombreBloque="Pie de la tienda" />
         {footerBgImg?.url && footerBgImg.overlayType !== "none" && (
           <div style={{ position:"absolute", inset:0, zIndex:0, pointerEvents:"none", background: footerBgImg.overlayType === "light" ? `rgba(255,255,255,${footerBgImg.overlayOpacity ?? 0.5})` : `rgba(0,0,0,${footerBgImg.overlayOpacity ?? 0.45})` }} />
         )}

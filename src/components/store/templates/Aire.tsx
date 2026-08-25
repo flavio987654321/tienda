@@ -2519,7 +2519,9 @@ export default function Aire() {
           hay dos pies que se puedan desincronizar. */}
       {enContacto && (
       <section data-reveal style={{ background:contactoBg, position:"relative" }}>
-        <EditableSectionBg field="bgContacto" label="Fondo del contacto" />
+        {/* Con nombre: contacto es una PANTALLA entera, no un bloque de la
+            portada, así que tampoco pasa por `SectionBlock`. */}
+        <EditableSectionBg field="bgContacto" label="Fondo del contacto" nombreBloque="Pantalla de contacto" />
         <div style={{ padding: `${isMobile ? 30 : 54}px ${MARGEN}px ${isMobile ? 40 : 64}px` }}>
         <div style={{ maxWidth:ANCHO, margin:"0 auto" }}>
 
@@ -2701,7 +2703,8 @@ export default function Aire() {
           costado, así que la misma lista se pliega detrás de su título. */}
       {enCatalogo && (
       <section id="productos" data-reveal style={{ background:catalogoBg, position:"relative" }}>
-        <EditableSectionBg field="bgCatalogo" label="Fondo del catálogo" />
+        {/* Con nombre, por lo mismo que contacto: es una pantalla, no un bloque. */}
+        <EditableSectionBg field="bgCatalogo" label="Fondo del catálogo" nombreBloque="Pantalla del catálogo" />
         <div style={{ padding: `${isMobile ? 26 : 44}px ${MARGEN}px ${isMobile ? 34 : 60}px` }}>
         <div style={{ maxWidth:ANCHO, margin:"0 auto" }}>
 
@@ -2887,7 +2890,10 @@ export default function Aire() {
           Las columnas que no tienen nada NO se dibujan. Una tienda sin políticas
           cargadas no tiene por qué mostrar un título "Ayuda" con nada debajo. */}
       <footer style={{ background:footerBg, borderTop:`1px solid ${LN}`, color:footerText, position:"relative" }}>
-        <EditableSectionBg field="bgFooter" label="Fondo del pie" />
+        {/* Con nombre: el pie no es un bloque de la portada —no se mueve ni se
+            oculta, ahí viven las políticas— así que no pasa por `SectionBlock` y
+            su botón "Fondo" quedaba flotando sin decir de quién era. */}
+        <EditableSectionBg field="bgFooter" label="Fondo del pie" nombreBloque="Pie de la tienda" />
         <div style={{ padding: `${isMobile ? 34 : 52}px ${MARGEN}px ${isMobile ? 22 : 28}px` }}>
         <div style={{ maxWidth:ANCHO, margin:"0 auto" }}>
 

@@ -478,7 +478,7 @@ export default function TechNova() {
       <section style={{ paddingTop: isPreview ? 0 : (showAnn ? PROMO_H + NAV_H : NAV_H), position:"relative", ...secBg(heroImg, heroBg) }}>
         <BgDragHandle imgKey="sectionbg_bgHero" />
         <SectionOverlay ov={heroImg} />
-        <EditableSectionBg field="bgHero" label="Fondo hero" />
+        <EditableSectionBg field="bgHero" label="Fondo hero" nombreBloque="Banner principal" />
         <div style={{ position:"relative", zIndex:1, maxWidth:1240, margin:"0 auto", display:"flex", flexWrap:"wrap", alignItems:"center", minHeight: isPreview ? 460 : "calc(80vh - 64px)" }}>
           <div style={{ flex:"1 1 380px", padding:"56px 24px" }}>
             <p style={{ margin:"0 0 16px", fontSize:11, color:accentOn(heroBg, heroText), textTransform:"uppercase", letterSpacing:3, fontWeight:700 }}>
@@ -837,7 +837,7 @@ export default function TechNova() {
       <footer style={{ position:"relative", ...secBg(footerImg, footerBg), color:ftText, padding:"32px 24px", textAlign:"center" }}>
         <BgDragHandle imgKey="sectionbg_bgFooter" />
         <SectionOverlay ov={footerImg} />
-        <EditableSectionBg field="bgFooter" label="Fondo footer" />
+        <EditableSectionBg field="bgFooter" label="Fondo footer" nombreBloque="Pie de la tienda" />
         <div style={{ position:"relative", zIndex:1 }}>
         <p style={{ margin:"0 0 6px", fontWeight:900, fontSize:14, color:accentOn(footerBg, ftText) }}>{storeName}</p>
         <p style={{ margin:"0 0 12px", fontSize:11, color:ftMid }}>© {new Date().getFullYear()} {storeName}. Todos los derechos reservados.</p>

@@ -462,7 +462,7 @@ export default function AutoDrive() {
         position:"relative", ...secBg(heroImg, heroBg) }}>
         <BgDragHandle imgKey="sectionbg_bgHero" />
         <SectionOverlay ov={heroImg} />
-        <EditableSectionBg field="bgHero" label="Fondo hero" />
+        <EditableSectionBg field="bgHero" label="Fondo hero" nombreBloque="Banner principal" />
         <div className="ad-hero" style={{ display:"flex", position:"relative", zIndex:1 }}>
 
           {/* panel izquierdo — texto */}
@@ -950,7 +950,7 @@ export default function AutoDrive() {
         ...secBg(footerImg, footerBg), borderTop:"1px solid rgba(255,255,255,0.06)" }}>
         <BgDragHandle imgKey="sectionbg_bgFooter" />
         <SectionOverlay ov={footerImg} />
-        <EditableSectionBg field="bgFooter" label="Fondo footer" />
+        <EditableSectionBg field="bgFooter" label="Fondo footer" nombreBloque="Pie de la tienda" />
         <div style={{ position:"relative", zIndex:1 }}>
           <p style={{ margin:"0 0 6px", fontWeight:900, fontSize:14,
             color:accent, letterSpacing:-0.3 }}>{storeName}</p>

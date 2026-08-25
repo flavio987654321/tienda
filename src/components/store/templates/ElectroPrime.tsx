@@ -481,7 +481,7 @@ export default function ElectroPrime() {
       <section style={{ paddingTop: isPreview ? 0 : (showAnn ? PROMO_H + NAV_H : NAV_H), position:"relative", ...secBg(heroImg, heroBg), minHeight: isPreview ? undefined : "70vh" }}>
         <BgDragHandle imgKey="sectionbg_bgHero" />
         <SectionOverlay ov={heroImg} />
-        <EditableSectionBg field="bgHero" label="Fondo hero" />
+        <EditableSectionBg field="bgHero" label="Fondo hero" nombreBloque="Banner principal" />
         <div style={{ position:"relative", zIndex:1, display:"flex", minHeight: isPreview ? 480 : "calc(70vh - 64px)" }}>
           <div style={{ flex:1, display:"flex", flexDirection:"column", justifyContent:"center", padding:"56px 28px", maxWidth:540 }}>
             <span style={{ display:"inline-flex", alignItems:"center", gap:8, background:`${accent}25`, border:`1px solid ${accent}`, color:accent, borderRadius:100, padding:"6px 16px", fontSize:12, fontWeight:700, marginBottom:24, width:"fit-content" }}>
@@ -826,7 +826,7 @@ export default function ElectroPrime() {
       <footer style={{ position:"relative", ...secBg(footerImg, footerBg), color:ftText, padding:"32px 24px", textAlign:"center" }}>
         <BgDragHandle imgKey="sectionbg_bgFooter" />
         <SectionOverlay ov={footerImg} />
-        <EditableSectionBg field="bgFooter" label="Fondo footer" />
+        <EditableSectionBg field="bgFooter" label="Fondo footer" nombreBloque="Pie de la tienda" />
         <div style={{ position:"relative", zIndex:1 }}>
         <p style={{ margin:"0 0 6px", fontWeight:900, fontSize:14, color:accentOn(footerBg, ftText) }}>{storeName}</p>
         <p style={{ margin:"0 0 12px", fontSize:11, color:ftMid }}>

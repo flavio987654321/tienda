@@ -418,7 +418,7 @@ export default function HomeStudio() {
         )}
         <div style={{ position:"absolute", inset:0, background:"linear-gradient(to top, rgba(20,15,8,0.78), rgba(20,15,8,0.15) 55%)" }} />
         <SectionOverlay ov={heroImg} />
-        <EditableSectionBg field="bgHero" label="Fondo hero" />
+        <EditableSectionBg field="bgHero" label="Fondo hero" nombreBloque="Banner principal" />
         <EditableImageButton field="heroImage" label="Imagen del hero" />
         <div style={{ position:"relative", zIndex:1, maxWidth:680, margin:"0 auto", padding:"0 24px 64px", textAlign:"center" }}>
           <p style={{ margin:"0 0 14px", fontSize:11, color:"#e8cba8", textTransform:"uppercase", letterSpacing:4, fontWeight:600 }}>
@@ -710,7 +710,7 @@ export default function HomeStudio() {
       <footer style={{ position:"relative", ...secBg(footerImg, footerBg), color:ftText, padding:"32px 24px", textAlign:"center" }}>
         <BgDragHandle imgKey="sectionbg_bgFooter" />
         <SectionOverlay ov={footerImg} />
-        <EditableSectionBg field="bgFooter" label="Fondo footer" />
+        <EditableSectionBg field="bgFooter" label="Fondo footer" nombreBloque="Pie de la tienda" />
         <div style={{ position:"relative", zIndex:1 }}>
         <p style={{ margin:"0 0 6px", fontWeight:600, fontSize:15, color:accentOn(footerBg, ftText), fontFamily:"Georgia, serif" }}>{storeName}</p>
         <p style={{ margin:"0 0 12px", fontSize:11, color:ftMid }}>© {new Date().getFullYear()} {storeName}. Todos los derechos reservados.</p>

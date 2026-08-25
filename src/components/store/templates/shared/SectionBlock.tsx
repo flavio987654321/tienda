@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { useEditContext } from "@/contexts/EditContext";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { CAPAS } from "@/lib/capas-tienda";
+import { ChapitaBloque, LINEA_EDITOR, HALO_EDITOR } from "@/components/store/templates/shared/ChapitaBloque";
 
 export function SectionBlock({
   id,
@@ -100,8 +101,8 @@ export function SectionBlock({
    * negro o sobre una foto oscura, se leen los pelitos blancos. Nunca puede pasar
    * que los tres desaparezcan, porque no hay ningún color que sea a la vez igual
    * al violeta y al blanco. */
-  const LINEA = "rgba(99,102,241,0.95)";
-  const HALO = "0 1px 0 rgba(255,255,255,0.9), 0 -1px 0 rgba(255,255,255,0.9)";
+  const LINEA = LINEA_EDITOR;
+  const HALO = HALO_EDITOR;
   return (
     <div
       onMouseEnter={() => setEncima(true)}
@@ -122,42 +123,12 @@ export function SectionBlock({
         zIndex: CAPAS.nav, pointerEvents: "none",
       }} />
 
-      {/* La chapita con el nombre: ADENTRO del bloque, colgada de la línea.
-       *
-       * Adentro y no afuera, aunque afuera no chocaba con nada: arriba de la
-       * línea el nombre cae en el territorio del bloque ANTERIOR, y se lee como
-       * si fuera el nombre de ése. Un cartel puesto en el lugar equivocado es
-       * peor que no tener cartel — dice algo, y dice algo falso.
-       *
-       * Entonces adentro, y el choque con el botón "Fondo" se resuelve haciendo
-       * entrar a los DOS en el margen: esta chapita mide 15px de alto y el botón
-       * arranca a 17, así que los dos apilados terminan a 38 — dos píxeles antes
-       * de donde los templates arrancan su contenido. Por eso los dos son chicos:
-       * los tamaños de acá y los del botón se tocan juntos.
-       *
-       * `pointerEvents:"none"` para que no le robe el clic a lo que haya abajo
-       * —un título editable, por ejemplo—: es un cartel, no un control. */}
-      <div style={{
-        position: "absolute", top: 0, left: 0, zIndex: CAPAS.nav,
-        pointerEvents: "none",
-        background: LINEA, color: "#fff",
-        /* Chiquita a propósito: 15px de alto justos. Abajo va el botón "Fondo"
-           de la sección (arranca a 17) y el contenido de los templates arranca a
-           40, así que los dos apilados tienen que entrar en esos 40. Agrandar la
-           letra o el padding de acá le empuja el botón encima del título. */
-        fontSize: 9, fontWeight: 800, letterSpacing: 0.6, lineHeight: 1.2,
-        textTransform: "uppercase", padding: "2px 8px",
-        // Colgada de la línea: en escuadra arriba y redondeada abajo a la
-        // derecha, se lee como una etiqueta que baja del filo hacia adentro.
-        borderRadius: "0 0 7px 0",
-        // La chapita es un bloque lleno de color con texto blanco: se lee sobre
-        // cualquier fondo por sí sola. El pelito blanco del borde es para que no
-        // se funda con un fondo violeta, que es el único que se le parece.
-        boxShadow: "0 0 0 1px rgba(255,255,255,0.75), 0 1px 4px rgba(0,0,0,0.25)",
-        maxWidth: "60%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-      }}>
-        {label}
-      </div>
+      {/* El nombre del bloque, colgado de la línea. Adentro y no arriba de ella:
+          arriba cae en el territorio del bloque ANTERIOR y se lee como si fuera
+          el nombre de ése — un cartel en el lugar equivocado dice algo, y dice
+          algo falso. Ver `ChapitaBloque`, que lo comparte con el botón "Fondo"
+          de las superficies que no son bloques (el pie, contacto, catálogo). */}
+      <ChapitaBloque nombre={label} />
 
       {/* El último bloque no tiene ninguno abajo que le ponga su línea de arriba,
           así que se cierra solo. Sin esto, el editor termina en un filo que no se

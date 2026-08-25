@@ -356,7 +356,7 @@ export default function CasaClara() {
       <section style={{ paddingTop: isPreview ? 24 : NAV_H, position:"relative", ...secBg(heroImg, heroBg) }}>
         <BgDragHandle imgKey="sectionbg_bgHero" />
         <SectionOverlay ov={heroImg} />
-        <EditableSectionBg field="bgHero" label="Fondo hero" />
+        <EditableSectionBg field="bgHero" label="Fondo hero" nombreBloque="Banner principal" />
         <div style={{ position:"relative", zIndex:1, maxWidth:1100, margin:"0 auto", padding:"64px 24px 0", textAlign:"center" }}>
           <p style={{ margin:"0 0 18px", fontSize:11, color:heroMid, textTransform:"uppercase", letterSpacing:3 }}>
             <EditableZone field="heroKicker" label="Etiqueta hero">Hogar y Tecnología</EditableZone>
@@ -589,7 +589,7 @@ export default function CasaClara() {
       <footer style={{ position:"relative", ...secBg(footerImg, footerBg), color:ftText, padding:"28px 24px", textAlign:"center", borderTop: footerImg?.url ? "none" : "1px solid #f0f0f0" }}>
         <BgDragHandle imgKey="sectionbg_bgFooter" />
         <SectionOverlay ov={footerImg} />
-        <EditableSectionBg field="bgFooter" label="Fondo footer" />
+        <EditableSectionBg field="bgFooter" label="Fondo footer" nombreBloque="Pie de la tienda" />
         <div style={{ position:"relative", zIndex:1 }}>
         <p style={{ margin:"0 0 10px", fontSize:11, color:ftMid }}>© {new Date().getFullYear()} {storeName}</p>
         {(editMode || isPreview || SOCIAL_NETWORKS.some(([key]) => config?.socialLinks?.[key])) && (

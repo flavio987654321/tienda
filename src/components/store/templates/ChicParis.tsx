@@ -1868,7 +1868,7 @@ export default function ChicParis() {
 
       {/* ── FOOTER ── */}
       <footer style={{ background: footerBg, padding: isMobile ? "40px 20px 88px" : "48px 40px 32px", position: "relative" }}>
-        <EditableSectionBg field="bgFooter" label="Fondo footer" />
+        <EditableSectionBg field="bgFooter" label="Fondo footer" nombreBloque="Pie de la tienda" />
         <div style={{ maxWidth: 1280, margin: "0 auto" }}>
           {/* Dos columnas, no tres: la de "Legal" se sacó por duplicada. */}
           {/* La columna de novedades se suma acá y no como una franja aparte: el
