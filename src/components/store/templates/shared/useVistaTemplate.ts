@@ -47,10 +47,36 @@ export type VistaTemplate = "portada" | "catalogo" | "contacto" | "producto";
 const RUTA_CONTACTO = /^\/tienda\/[^/]+\/contacto\/?$/;
 const RUTA_CATALOGO = /^\/tienda\/[^/]+\/productos\/?$/;
 /* Ésta además CAPTURA el id: de él sale QUÉ ficha dibujar. */
-const RUTA_PRODUCTO = /^\/tienda\/[^/]+\/producto\/([^/]+)\/?$/;
+export const RUTA_PRODUCTO = /^\/tienda\/[^/]+\/producto\/([^/]+)\/?$/;
 
 /* Sin `editMode`: lo recibía para apagar los clics editando, y eso era el bug.
    Ver el comentario adentro de `irA`. */
+/* Subir arriba del todo al cambiar de pantalla.
+ *
+ * No alcanza con `window.scrollTo`. En la tienda de verdad la que scrollea es la
+ * ventana y funciona; en el EDITOR el template vive adentro de un panel con
+ * scroll propio, y ahi la ventana no se mueve un pixel porque no es la que esta
+ * scrolleada. Se veia asi: la dueña tocaba "Ofertas", el catalogo aparecia —pero
+ * a mitad de pagina, con el titulo arriba fuera de vista— y parecia que el clic
+ * habia hecho cualquier cosa.
+ *
+ * Entonces se busca quien scrollea de verdad: se sube por los padres desde la
+ * raiz del template hasta el primero que tenga scroll propio. Si no hay ninguno
+ * —la tienda publicada—, queda la ventana, que es el caso de siempre.
+ *
+ * La raiz se busca en el documento y no con un `useRef` porque el lint del repo
+ * (`react-hooks/refs`) marca error si una funcion que lee un ref queda al alcance
+ * del dibujado, y a esta la llaman handlers que se arman ahi. Cada template marca
+ * su raiz con `data-template-raiz`. */
+function subirArriba() {
+  window.scrollTo({ top: 0 });
+  let n = document.querySelector<HTMLElement>("[data-template-raiz]")?.parentElement ?? null;
+  while (n) {
+    const ov = getComputedStyle(n).overflowY;
+    if ((ov === "auto" || ov === "scroll") && n.scrollHeight > n.clientHeight) { n.scrollTop = 0; return; }
+    n = n.parentElement;
+  }
+}
 export function useVistaTemplate({ isPreview, slug, templateId }: {
   isPreview: boolean;
   slug: string | null | undefined;
@@ -95,14 +121,19 @@ export function useVistaTemplate({ isPreview, slug, templateId }: {
        y no ve pasar nada es que está roto. */
     setCambiandoPantalla(true);
     setTimeout(() => setCambiandoPantalla(false), 400);
-    if (isPreview) {
+    /* Sin slug tampoco hay dirección que escribir. Pasa en la galería suelta
+       (`/preview/<template>`), donde se mira cómo es un diseño sin que haya
+       todavía una tienda detrás: escribir la dirección ahí daría
+       `/tienda//producto/xxx`, que no lleva a ningún lado. La pantalla la manda
+       el estado, igual que en la previa del editor. */
+    if (isPreview || !slug) {
       setVistaEnPreview(vista);
       setProductoEnPreview(vista === "producto" ? (productoId ?? null) : null);
-      window.scrollTo({ top: 0 });
+      subirArriba();
       return;
     }
     window.history.pushState(null, "", url);
-    window.scrollTo({ top: 0 });
+    subirArriba();
   };
 
   return {

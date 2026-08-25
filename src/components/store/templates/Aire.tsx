@@ -1,6 +1,5 @@
 ﻿"use client";
 import { useState, useEffect, useMemo, useRef, useSyncExternalStore, Fragment } from "react";
-import { usePathname } from "next/navigation";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { usePushBell } from "@/contexts/PushBellContext";
 import { useSesion } from "@/components/AuthProvider";
@@ -46,6 +45,8 @@ import { productosDeLaVitrina, leerModo, leerElegidos } from "@/lib/vitrina";
    suelta, la que se abre desde el link que la dueña comparte— para que el atrás
    sea el mismo se llegue por donde se llegue. */
 import { BotonVolver } from "@/components/store/templates/shared/BotonVolver";
+/* La regla de "qué pantalla se está mirando", compartida con Boho Terra. */
+import { useVistaTemplate, RUTA_PRODUCTO } from "@/components/store/templates/shared/useVistaTemplate";
 import { BotonVitrina } from "@/components/store/templates/shared/BotonVitrina";
 import { COMENTARIO_MAX, RESENADOR_MAX } from "@/lib/reviews";
 
@@ -127,12 +128,9 @@ const AIRE_STRIP_ICONS: React.ReactNode[][] = [
  * fuera justamente "contacto" tiene su portada en /tienda/contacto, que también
  * termina así — y le habríamos abierto la pantalla de contacto en lugar de su
  * portada, para siempre y sin que se entienda por qué. */
-const RUTA_CONTACTO = /^\/tienda\/[^/]+\/contacto\/?$/;
 /* Y la del catálogo completo. Misma comparación entera por el mismo motivo. */
-const RUTA_CATALOGO = /^\/tienda\/[^/]+\/productos\/?$/;
 /* La de un producto. Ésta además CAPTURA el id, que es lo que se busca en el
    catálogo ya cargado en memoria para saber qué ficha dibujar. */
-const RUTA_PRODUCTO = /^\/tienda\/[^/]+\/producto\/([^/]+)\/?$/;
 
 /* De a cuántos productos crece el catálogo cuando se toca "Ver más". */
 const PASO_CATALOGO = 24;
@@ -226,7 +224,6 @@ export default function Aire() {
      un panel— así que ahí lo decide un estado. Lo cambia el MISMO botón
      "Contacto", de modo que la dueña entra a editar esta pantalla igual que
      entra a la portada, sin tener que aprender otra cosa. */
-  const rutaActual = usePathname() ?? "";
   /* Los parámetros de la dirección se leen del navegador y NO con
      `useSearchParams`. Ese hook obliga a envolver el árbol en un <Suspense>, y
      sin eso el template rompe con error 500 — medido: se cayó /preview/aire
@@ -271,34 +268,26 @@ export default function Aire() {
     () => "",
   );
   const paramsUrl = useMemo(() => new URLSearchParams(busquedaDeLaUrl), [busquedaDeLaUrl]);
-  /* Qué pantalla se está mirando.
-
-     En la tienda de verdad lo dice la DIRECCIÓN: la portada, /contacto y
-     /productos son tres páginas con su propio título de pestaña, que se pueden
-     compartir sueltas y a las que el botón "atrás" del navegador vuelve como
-     corresponde.
-
-     En el editor no hay direcciones que valgan —la vista previa vive adentro de
-     un panel— así que ahí lo decide un estado. Lo cambian los MISMOS botones del
-     menú, de modo que la dueña entra a editar cualquiera de las tres igual que
-     entra a la portada, sin tener que aprender otra cosa. */
-  const [vistaEnPreview, setVistaEnPreview] = useState<"portada" | "contacto" | "catalogo" | "producto">("portada");
-  /* Qué producto se está mirando en la vista previa. En la tienda de verdad esto
-     lo dice la dirección; en la previa no hay dirección que valga, así que el id
-     se guarda acá. */
-  const [productoEnPreview, setProductoEnPreview] = useState<string | null>(null);
-  const enContacto = isPreview ? vistaEnPreview === "contacto" : RUTA_CONTACTO.test(rutaActual);
-  const enCatalogo = isPreview ? vistaEnPreview === "catalogo" : RUTA_CATALOGO.test(rutaActual);
-  /* El id del producto abierto, o null si no hay ninguno. Es el id y no un
-     booleano porque de él sale QUÉ ficha dibujar, y porque cambiar de un producto
-     a otro —tocando un "similar"— tiene que notarse: con un booleano las dos
-     situaciones son la misma y la ficha no se enteraría de que cambió. */
-  const productoAbierto = isPreview
-    ? (vistaEnPreview === "producto" ? productoEnPreview : null)
-    : (RUTA_PRODUCTO.exec(rutaActual)?.[1] ?? null);
-  const enProducto = !!productoAbierto;
-  const enPortada  = !enContacto && !enCatalogo && !enProducto;
-  const urlTienda  = `/tienda/${storeConfig?.slug ?? ""}`;
+  /* Qué pantalla se está mirando, y cómo se cambia de una a otra.
+   *
+   * Todo esto vivía acá adentro, copiado. Se fue a `useVistaTemplate`, que es el
+   * mismo que usa Boho Terra — y no por prolijidad: ya se habían despegado. El
+   * candado del doble toque hubo que escribirlo DOS VECES el mismo día, una de
+   * cada lado, y el subir-arriba-adentro-del-editor existía sólo acá, así que en
+   * Boho Terra el catálogo aparecía a mitad de página.
+   *
+   * Es exactamente lo que ya había pasado con las baldosas de categoría: se
+   * arregla en uno y el mismo agujero queda vivo en el otro. Ahora se arregla una
+   * vez.
+   *
+   * Los nombres se dejan tal cual estaban a propósito: el resto del archivo —200
+   * lugares— sigue diciendo `enPortada`, `irAlCatalogo` y `enCatalogo` como
+   * siempre. Lo que cambió es de dónde salen, no cómo se llaman. */
+  const {
+    enContacto, enCatalogo, enProducto, productoAbierto, enPortada,
+    cambiandoPantalla,
+    irALaPortada, irAlCatalogo, irAContacto, irAlProducto,
+  } = useVistaTemplate({ isPreview, slug: storeConfig?.slug, templateId: "aire" });
 
   /* Llegar a la portada la deja como está cuando se entra de cero: sin filtrar.
 
@@ -330,103 +319,6 @@ export default function Aire() {
       setActiveGender(null);
     }
   }
-  /* Cambiar de pantalla NO es irse a otra página.
-
-     Antes era `router.push(url)`: Aire se desmontaba entero, el servidor volvía a
-     dibujar la pantalla nueva y el visitante veía el parpadeo de una carga. Tres
-     pantallas que son el mismo template, y entre una y otra la tienda se apagaba
-     y se prendía.
-
-     Ahora se cambia SÓLO la dirección, con la History API del navegador. Next la
-     acepta a propósito y la sincroniza con `usePathname` —está documentado en
-     `01-getting-started/04-linking-and-navigating.md`— y de `usePathname` salen
-     justamente `enContacto` y `enCatalogo`, tres líneas más arriba. O sea: se
-     escribe la dirección nueva, `usePathname` la devuelve, y Aire se redibuja
-     como catálogo sin que haya viajado nada. El árbol no se desmonta: el carrito
-     con cosas adentro, lo que se venía filtrando y la posición del scroll siguen
-     en pie.
-
-     Y la dirección igual CAMBIA, que es la mitad que suele perderse cuando algo
-     "abre ahí mismo": el botón atrás vuelve como corresponde (`popstate` mueve
-     `usePathname` y la pantalla se va sola), y el link que el visitante copia de
-     la barra sigue siendo el de la pantalla que está mirando. Entrando de cero
-     por esa dirección la dibuja el servidor, como siempre.
-
-     Lo único que esto no mueve es el título de la pestaña, que lo pone el
-     servidor al entrar. */
-  /* Subir arriba del todo al cambiar de pantalla.
-
-     No alcanza con `window.scrollTo`. En la tienda de verdad la que scrollea es
-     la ventana y funciona; en el EDITOR el template vive adentro de un panel con
-     scroll propio (`overflowY:auto` en configuracion/page.tsx), y ahí la ventana
-     no se mueve un pixel porque no es la que está scrolleada. Se veía así: la
-     dueña tocaba "Ofertas", el catálogo aparecía —pero a mitad de página, con el
-     título arriba fuera de vista— y parecía que el clic había hecho cualquier
-     cosa.
-
-     Entonces se busca quién scrollea de verdad: se sube por los padres desde la
-     raíz del template hasta encontrar el primero que tenga scroll propio, y se
-     lo sube a él. Si no hay ninguno —la tienda publicada—, queda la ventana, que
-     es el caso de siempre.
-
-     La raíz se busca por `data-aire-raiz` y no con un `useRef`: el lint del repo
-     (`react-hooks/refs`) marca error si una función que lee un ref queda al
-     alcance del dibujado, y ésta la llaman handlers que se arman ahí. Buscarla
-     en el documento hace exactamente lo mismo y no arrastra esa regla. */
-  const subirArriba = () => {
-    window.scrollTo({ top: 0 });
-    let n = document.querySelector<HTMLElement>("[data-aire-raiz]")?.parentElement ?? null;
-    while (n) {
-      const ov = getComputedStyle(n).overflowY;
-      if ((ov === "auto" || ov === "scroll") && n.scrollHeight > n.clientHeight) { n.scrollTop = 0; return; }
-      n = n.parentElement;
-    }
-  };
-
-  /* ── El candado del cambio de pantalla ──────────────────────────────────────
-   *
-   * Medido con el navegador: tocando dos veces seguidas "Ver todo" se termina
-   * adentro de un producto CUALQUIERA. En celular, con doble toque, pasó todas
-   * las veces que se probó.
-   *
-   * No es un clic mal puesto. La pantalla ahora cambia AL INSTANTE, así que entre
-   * el primer toque y el segundo el catálogo ya se dibujó y abajo del dedo quedó
-   * una tarjeta de producto, que se come el segundo toque. Antes no pasaba: "Ver
-   * todo" era un link que recargaba la página, y el segundo clic caía sobre la
-   * página vieja sin hacer nada. O sea que esto lo trajo abrir en el lugar, y hay
-   * que devolverlo.
-   *
-   * Y el doble toque no es un accidente raro: es lo primero que hace cualquiera
-   * cuando algo parece que no responde.
-   *
-   * Se apagan los clics de TODO el template por un ratito, en vez de blindar
-   * botón por botón: el que se come el toque no es el botón que se tocó sino el
-   * que quedó abajo, y ése puede ser cualquiera de la pantalla nueva. Blindando
-   * de a uno siempre queda alguno afuera.
-   *
-   * 400ms: más que lo que separa los dos toques de un doble toque (~150ms) y
-   * bastante menos que lo que tarda una persona en apuntar a otra cosa. */
-  const [cambiandoPantalla, setCambiandoPantalla] = useState(false);
-  const trabarUnRatito = () => {
-    setCambiandoPantalla(true);
-    setTimeout(() => setCambiandoPantalla(false), 400);
-  };
-
-  const irA = (vista: "portada" | "contacto" | "catalogo", url: string) => {
-    /* Acá había un `if (editMode) return`, y dejaba el editor sin salida: tocar
-       "Catálogo" o "Contacto" mientras se editaba no hacía NADA. O sea que las
-       otras pantallas del template no se podían ni mirar ni acomodar — se editaba
-       la portada y el resto quedaba a ciegas. Editando se navega igual que en la
-       tienda: es lo que hay que poder hacer para editar el template entero. */
-    trabarUnRatito();
-    if (isPreview) { setVistaEnPreview(vista); subirArriba(); return; }
-    window.history.pushState(null, "", url);
-    subirArriba();
-  };
-  const irAContacto  = () => irA("contacto", `${urlTienda}/contacto`);
-  const irAlCatalogo = () => irA("catalogo", `${urlTienda}/productos`);
-  const irALaPortada = () => irA("portada", urlTienda);
-
   /* Ir al catálogo YA filtrado por una categoría.
 
      Los cuatro lugares del menú que llevan a una categoría hacían
@@ -472,22 +364,13 @@ export default function Aire() {
        elegido el producto, la foto del color que corresponde, las opciones que no
        tienen alternativa y la cantidad. Sin esto la ficha se dibuja pero el botón
        de agregar no tiene producto sobre el cual trabajar. */
-    trabarUnRatito();
     openModal(product);
-    const s = storeConfig?.slug;
-    /* Sin dirección de tienda —la previa del editor, o /preview/aire suelto— no
-       hay dirección que escribir, así que la pantalla la manda el estado. Antes
-       acá había un `window.open` a una pestaña nueva y, sin tienda, un aviso de
-       que la ficha se veía en la tienda publicada. Las dos cosas sobran: la ficha
-       ahora se dibuja acá mismo, con los datos que ya están en memoria. */
-    if (isPreview || !s) {
-      setVistaEnPreview("producto");
-      setProductoEnPreview(product.id);
-      subirArriba();
-      return;
-    }
-    window.history.pushState(null, "", `/tienda/${s}/producto/${product.id}`);
-    subirArriba();
+    /* Y después la pantalla. Sin dirección de tienda —la previa del editor, o
+       /preview/aire suelto— no hay dirección que escribir y la manda el estado;
+       eso lo resuelve el hook. Antes acá había un `window.open` a una pestaña
+       nueva y, sin tienda, un aviso de que la ficha se veía en la tienda
+       publicada: las dos cosas sobran desde que la ficha se dibuja acá mismo. */
+    irAlProducto(product.id);
   };
 
   /* Ir a una sección de la portada.
@@ -1374,7 +1257,7 @@ export default function Aire() {
   };
 
   return (
-    <div data-aire-raiz style={{ fontFamily:"system-ui, -apple-system, 'Segoe UI', Arial, sans-serif", background:BG, color:T, minHeight:"100vh",
+    <div data-template-raiz style={{ fontFamily:"system-ui, -apple-system, 'Segoe UI', Arial, sans-serif", background:BG, color:T, minHeight:"100vh",
       /* Ver `trabarUnRatito`: recién cambiada la pantalla, los clics no entran
          por 400ms. Es lo que evita que el segundo toque de un doble toque caiga
          sobre lo que quedó abajo del dedo. */

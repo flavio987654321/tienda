@@ -594,7 +594,7 @@ export default function BohoTerra() {
   const ofertasSwipe = useTouchSwipe(nextOferta, prevOferta);
 
   return (
-    <div style={{ fontFamily:"'Helvetica Neue', Arial, sans-serif", background:BG, color:T, minHeight:"100vh",
+    <div data-template-raiz style={{ fontFamily:"'Helvetica Neue', Arial, sans-serif", background:BG, color:T, minHeight:"100vh",
       /* Recién cambiada la pantalla, los clics no entran por 400ms: es lo que
          evita que el segundo toque de un doble toque caiga sobre lo que quedó
          abajo del dedo. Ver el candado en `useVistaTemplate`. */
