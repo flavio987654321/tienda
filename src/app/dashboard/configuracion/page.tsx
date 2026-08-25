@@ -1054,6 +1054,7 @@ function EncuadreFoto({ imgKey, ov, hueco, capa, ofreceMobil, setImageOverride }
 
 function ImageFieldEditor({
   field, ov, tip, currentOverlay, hasChanges, base, setImageOverride, setActiveField,
+  msCarrusel, setMsCarrusel,
 }: {
   field: string;
   ov: ImageOverride;
@@ -1063,6 +1064,10 @@ function ImageFieldEditor({
   base: React.CSSProperties;
   setImageOverride: (field: string, partial: Partial<ImageOverride>) => void;
   setActiveField: (f: string | null) => void;
+  /** Cada cuántos ms se pasa sola esta foto. Solo se usa si el template marcó
+   *  el campo como parte de un carrusel. */
+  msCarrusel: number;
+  setMsCarrusel: (ms: number) => void;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
@@ -1127,7 +1132,7 @@ function ImageFieldEditor({
      Urban Pulse el dueño puede cambiar la categoría CON el panel abierto, y ahí el
      título y el aviso tienen que seguirla en vez de quedarse hablando de la
      anterior. Lo mismo cuando el carrusel de banner mueve el campo activo de slide. */
-  const [delTemplate, setDelTemplate] = useState<{ campo: string; label?: string; note?: string } | null>(null);
+  const [delTemplate, setDelTemplate] = useState<{ campo: string; label?: string; note?: string; carrusel?: boolean } | null>(null);
   const puesto = delTemplate && delTemplate.campo === field ? delTemplate : null;
   useEffect(() => {
     const el = document.querySelector(`[data-edit-image="${CSS.escape(field)}"]`);
@@ -1135,14 +1140,17 @@ function ImageFieldEditor({
     const leer = () => {
       const label = el.getAttribute("data-edit-label") ?? undefined;
       const note  = el.getAttribute("data-edit-note")  ?? undefined;
+      /* Lo pone el template cuando ESTA foto se pasa sola. Ver `esCarrusel` en
+         EditableImageButton: no hay lista central de qué campo rota. */
+      const carrusel = el.getAttribute("data-edit-carrusel") === "1";
       setDelTemplate(prev =>
-        (prev && prev.campo === field && prev.label === label && prev.note === note)
+        (prev && prev.campo === field && prev.label === label && prev.note === note && prev.carrusel === carrusel)
           ? prev
-          : { campo: field, label, note });
+          : { campo: field, label, note, carrusel });
     };
     leer();
     const mo = new MutationObserver(leer);
-    mo.observe(el, { attributes: true, attributeFilter: ["data-edit-label", "data-edit-note"] });
+    mo.observe(el, { attributes: true, attributeFilter: ["data-edit-label", "data-edit-note", "data-edit-carrusel"] });
     return () => mo.disconnect();
   }, [field]);
 
@@ -1210,6 +1218,40 @@ function ImageFieldEditor({
 
         {tipSinMedidas && <p style={{ margin: "7px 0 0", fontSize: 10.5, color: P.muted, lineHeight: 1.45 }}>{tipSinMedidas}</p>}
       </div>
+
+      {/* ── Cada cuánto pasa ──
+          Solo cuando el template avisó que esta foto rota (`data-edit-carrusel`).
+
+          El mismo ajuste vive también en Configuración avanzada, y no es una
+          copia: los dos escriben `bannerInterval`, así que tocar uno mueve el
+          otro. Está repetido acá a propósito — el de allá está detrás de un
+          engranaje, adentro de un modal que se llama "Configuración avanzada", y
+          nadie que esté cambiando la foto del hero va a ir hasta ahí a buscar
+          cada cuánto pasa. Ni se le va a ocurrir que exista.
+
+          El texto dice "las fotos", en plural, y a propósito: el panel se titula
+          "Foto 2 del hero", así que un "cada 6 segundos" suelto se leería como
+          que ESA foto dura 6 segundos. El número es de todas. */}
+      {puesto?.carrusel && (
+        <div style={{ padding: "14px 18px", borderBottom: "1px solid #eef1f5" }}>
+          <p style={{ margin: 0, fontSize: 10, fontWeight: 700, color: P.hint, letterSpacing: 1, textTransform: "uppercase" }}>Cada cuánto pasa</p>
+          <p style={{ margin: "8px 0 0", fontSize: 11.5, color: P.text, lineHeight: 1.5 }}>
+            Las fotos se pasan solas cada <strong>{(msCarrusel / 1000).toFixed(0)} segundos</strong>.
+          </p>
+          <input type="range" min={CARRUSEL_MS_MIN} max={CARRUSEL_MS_MAX} step={CARRUSEL_MS_PASO}
+            value={msCarrusel}
+            onChange={e => setMsCarrusel(Number(e.target.value))}
+            aria-label="Cada cuántos segundos se pasa la foto"
+            style={{ width: "100%", marginTop: 8, accentColor: "#6366f1" }} />
+          <div style={{ display: "flex", justifyContent: "space-between" }}>
+            <span style={{ fontSize: 10, color: P.muted }}>{CARRUSEL_MS_MIN / 1000}s (rápido)</span>
+            <span style={{ fontSize: 10, color: P.muted }}>{CARRUSEL_MS_MAX / 1000}s (lento)</span>
+          </div>
+          <p style={{ margin: "7px 0 0", fontSize: 10, color: P.muted, lineHeight: 1.45 }}>
+            Mientras estás editando no se pasan, para que no se te mueva la foto de abajo del panel.
+          </p>
+        </div>
+      )}
 
       {/* ── Encuadre ── */}
       {ov.url && (
@@ -1690,7 +1732,7 @@ function BgFieldEditor({ field, base, setActiveField, aceptaFoto }: {
 }
 
 /* ── Floating editor (text + image) ─────────────────────────── */
-function FloatingEditor({ template }: { template: TemplateId }) {
+function FloatingEditor({ template, msCarrusel, setMsCarrusel }: { template: TemplateId; msCarrusel: number; setMsCarrusel: (ms: number) => void }) {
   const { activeField, activeLabel, setActiveField, overrides, setOverride, resetOverride, imageOverrides, setImageOverride } = useEditContext();
 
   // Cerrar con Escape o tocando fuera del panel.
@@ -1792,6 +1834,8 @@ function FloatingEditor({ template }: { template: TemplateId }) {
       base={base}
       setImageOverride={setImageOverride}
       setActiveField={setActiveField}
+      msCarrusel={msCarrusel}
+      setMsCarrusel={setMsCarrusel}
     />;
   }
 
@@ -2853,7 +2897,9 @@ export default function ConfiguracionPage() {
               </StoreConfigContext.Provider>
             </div>
           </div>
-          <FloatingEditor template={config.template} />
+          <FloatingEditor template={config.template}
+            msCarrusel={carruselMs(config.template, config.bannerInterval)}
+            setMsCarrusel={ms => update("bannerInterval", ms)} />
         </EditContext.Provider>
 
         {tour === "editing" && (

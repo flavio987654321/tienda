@@ -368,6 +368,7 @@ export function EditableImageButton({
   compact = false,
   panelLabel,
   panelNote,
+  esCarrusel = false,
 }: {
   field: string;
   label: string;
@@ -401,6 +402,18 @@ export function EditableImageButton({
   /** Reemplaza el texto de ayuda del panel. Para explicar algo que depende del
    *  estado — ej: que la foto se está tomando sola de un producto. */
   panelNote?: string;
+  /**
+   * Esta foto se pasa sola, junto con sus hermanas.
+   *
+   * Con esto el panel ofrece el control de cada cuántos segundos. Lo dice el
+   * TEMPLATE y no una lista central de "qué campo rota en cada diseño", porque
+   * esa lista se desactualiza al primer template que se agregue —y en silencio,
+   * que es lo peor—. Además no habría un patrón que la salve: Aire rota
+   * `heroBackground`, Chic Paris `heroBanner1`, y Aurora/Boho/Urban rotan
+   * `promoBanner1`, que ni siquiera es el hero sino una franja de más abajo.
+   * El template es el único que sabe cuál de sus fotos rota.
+   */
+  esCarrusel?: boolean;
 }) {
   const { editMode, activeField, setActiveField, imageLoading } = useEditContext();
   const [hovered, setHovered] = useState(false);
@@ -453,6 +466,7 @@ export function EditableImageButton({
         // imagen", en el hero de Fashion Noir), el template pasa `panelLabel`.
         data-edit-label={panelLabel ?? label}
         data-edit-note={panelNote}
+        data-edit-carrusel={esCarrusel ? "1" : undefined}
         style={compact ? {
           position: "absolute", top: 8, right: 8, zIndex: 9998,
           display: "flex", alignItems: "center", justifyContent: "center",

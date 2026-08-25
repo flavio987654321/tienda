@@ -1969,8 +1969,12 @@ export default function Aire() {
             <div style={{ position:"absolute", inset:0, background:heroGradient }}/>
           )}
           <BgDragHandle imgKey={heroCampoActual} />
+          {/* `esCarrusel` solo con MÁS DE UNA foto: con una sola no rota nada, y
+              ofrecerle ahí "cada cuántos segundos pasa" sería un control que no
+              hace absolutamente nada. */}
           <EditableImageButton field={heroCampoActual} label="Cambiar imagen"
             panelLabel={`Foto ${heroIdxSeguro + 1} del hero`}
+            esCarrusel={heroSlides.length > 1}
             panelNote="El hero admite hasta tres fotos, que rotan solas. Elegí el número de abajo a la izquierda para cambiar cada una." />
 
           <div style={{ position:"relative", width:"100%", padding: isMobile ? "30px 20px 58px" : "44px 52px 58px", display:"flex", alignItems:"center", justifyContent:"space-between", gap:36 }}>
