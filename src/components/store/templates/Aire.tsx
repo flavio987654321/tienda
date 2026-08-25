@@ -42,6 +42,7 @@ import { CAPAS } from "@/lib/capas-tienda";
    sola para los cinco templates de moda) y el engranaje que la elige, que se
    dibuja sobre el bloque. */
 import { productosDeLaVitrina, leerModo, leerElegidos } from "@/lib/vitrina";
+import { rangosDePrecio, entraEnRango } from "@/lib/rangos-precio";
 /* El botón redondo de volver. Compartido con `AireDetail` —la ficha de la página
    suelta, la que se abre desde el link que la dueña comparte— para que el atrás
    sea el mismo se llegue por donde se llegue. */
@@ -185,6 +186,8 @@ export default function Aire() {
    *  camperas" que casi siempre salen vacíos, y una grilla vacía después de tocar
    *  algo se lee como que la tienda no anda. */
   const [modo,               setModo]               = useState<null | "ofertas" | "masvisto" | "nuevos">(null);
+  /** Qué tramo de precio eligió la clienta en el catálogo. `null` = todos. */
+  const [rangoPrecio,        setRangoPrecio]        = useState<number | null>(null);
   /** Corta el doble envio en la misma vuelta, antes de que el estado se entere. */
   const [showReport,     setShowReport]     = useState(false);
   useEffect(() => {
@@ -777,6 +780,42 @@ export default function Aire() {
     if (activeSubcategory && prod.subcategory !== activeSubcategory) return false;
     return true;
   }), [products, modo, enOferta, vistos.lista, novedades, hayGeneros, activeGender, activeCategory, activeSubcategory]);
+
+  /* ── El filtro de precio ────────────────────────────────────────────────────
+   * Los tramos salen de `allFiltered`, o sea de lo que la clienta está mirando
+   * DESPUÉS de los otros filtros: entrando a "Camperas" tiene que ver los cortes
+   * de las camperas, no los de toda la tienda. Con los de toda la tienda, en una
+   * tienda que va de $2.000 a $300.000, las camperas caerían todas en el mismo
+   * tramo y el filtro no filtraría nada justo donde más se necesita.
+   *
+   * El precio es el que se VE: `effectivePrice` ya trae la promo aplicada. Con el
+   * precio de lista, un producto de $25.000 al 30% —que en la tarjeta dice
+   * $17.500— desaparecería al pedir "hasta $20.000", en la misma pantalla que lo
+   * muestra a $17.500.
+   *
+   * Si la tienda esconde los precios no hay filtro: no se puede filtrar por algo
+   * que no se muestra. */
+  const preciosVisibles = useMemo(
+    () => allFiltered.map(prod => resolveProductPromo(prod, promotions).effectivePrice),
+    [allFiltered, promotions],
+  );
+  const tramosPrecio = useMemo(
+    () => (ocultarPrecios ? [] : rangosDePrecio(preciosVisibles, fmt)),
+    [preciosVisibles, ocultarPrecios, fmt],
+  );
+  /* Si cambian los tramos —porque cambió la categoría— el elegido puede quedar
+     apuntando a uno que ya no existe, y el catálogo se veria vacio sin que se
+     entienda por que. Se corrige durante el dibujado, que es lo que React
+     recomienda para "resetear estado cuando cambia una prop". */
+  const [tramosVistos, setTramosVistos] = useState<string>("");
+  const huellaTramos = tramosPrecio.map(r => r.etiqueta).join("|");
+  if (huellaTramos !== tramosVistos) { setTramosVistos(huellaTramos); if (rangoPrecio !== null) setRangoPrecio(null); }
+
+  const conPrecio = useMemo(() => {
+    const r = rangoPrecio !== null ? tramosPrecio[rangoPrecio] : null;
+    if (!r) return allFiltered;
+    return allFiltered.filter(prod => entraEnRango(resolveProductPromo(prod, promotions).effectivePrice, r));
+  }, [allFiltered, rangoPrecio, tramosPrecio, promotions]);
 
   /* Los seis que se ven. Antes era `allFiltered.slice(0, EN_PORTADA)` a secas —
      siempre los últimos cargados, sin forma de tocarlo. Ahora lo decide la dueña
@@ -2961,7 +3000,7 @@ export default function Aire() {
           <p style={{ margin:"0 0 28px", textAlign:"center", fontSize:13.5, color:catalogoMid }}>
             {loadingProducts
               ? "Cargando…"
-              : `${allFiltered.length} ${allFiltered.length === 1 ? "producto" : "productos"}${activeCategory !== "Todos" ? ` en ${activeCategory}` : ""}`}
+              : `${conPrecio.length} ${conPrecio.length === 1 ? "producto" : "productos"}${activeCategory !== "Todos" ? ` en ${activeCategory}` : ""}`}
           </p>
 
           <div className="ai-catalogo">
@@ -3044,6 +3083,42 @@ export default function Aire() {
                 )}
               </div>
 
+              {/* ── Precio ──
+                  Los tramos los arma `rangos-precio.ts` con los precios que la
+                  tienda tiene HOY, y con los que se VEN (promo aplicada). No hay
+                  nada que configurar y no hay tramos fijos: "$0 – $100" no filtra
+                  nada en una tienda donde una remera son $30.000.
+                  `tramosPrecio` viene vacío —y entonces no se dibuja nada— cuando
+                  el filtro no serviría: precios escondidos, catálogo de menos de
+                  cuatro productos, o todo al mismo precio. */}
+              {tramosPrecio.length > 0 && (!isMobile || filtrosAbiertos) && (
+                <div style={{ marginTop:14, background:catalogoTarjeta, border:`1px solid ${catalogoBorde}`, borderRadius:RAD, overflow:"hidden" }}>
+                  <p style={{ margin:0, padding:"16px 18px", fontSize:15, fontWeight:800, color:catalogoText, letterSpacing:"-0.3px" }}>Precio</p>
+                  {[{ i:null as number | null, texto:"Cualquier precio" },
+                    ...tramosPrecio.map((r, i) => ({ i: i as number | null, texto:r.etiqueta }))].map(op => {
+                    const elegido = rangoPrecio === op.i;
+                    return (
+                      <button key={op.i ?? "todos"} type="button"
+                        onClick={() => { setRangoPrecio(op.i); if (isMobile) setFiltrosAbiertos(false); }}
+                        style={{ width:"100%", display:"flex", alignItems:"center", justifyContent:"space-between", gap:10, padding:"13px 18px", background:"none", border:"none", borderTop:`1px solid ${catalogoBorde}`, cursor:"pointer", fontFamily:"inherit", fontSize:14, textAlign:"left", color: elegido ? catalogoText : catalogoMid, fontWeight: elegido ? 700 : 500 }}
+                        onMouseEnter={e => { if (!elegido) e.currentTarget.style.color = G; }}
+                        onMouseLeave={e => { if (!elegido) e.currentTarget.style.color = catalogoMid; }}>
+                        {/* `overflowWrap` y no `nowrap`: un tramo como
+                            "$100.000 – $199.999" no entra en la columna de un
+                            celular, y cortado con puntos suspensivos deja de decir
+                            hasta cuánto llega — que es justo el dato. */}
+                        <span style={{ minWidth:0, overflowWrap:"anywhere" }}>{op.texto}</span>
+                        <span aria-hidden style={{ flexShrink:0, width:20, height:20, borderRadius:"50%", border:`1.5px solid ${elegido ? G : catalogoBorde}`, background: elegido ? G : "transparent", display:"grid", placeItems:"center" }}>
+                          {elegido && (
+                            <svg width={11} height={11} viewBox="0 0 24 24" fill="none" stroke={accentText} strokeWidth={3.4} strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                          )}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
               {/* El filtro de género sólo si el catálogo tiene de los dos. Ver
                   `catalogoTieneGeneros`: con todo de un solo género son tres
                   botones que no filtran nada. */}
@@ -3072,7 +3147,7 @@ export default function Aire() {
             <div style={{ minWidth:0 }}>
               {loadingProducts ? (
                 <p style={{ textAlign:"center", padding:"60px 0", color:catalogoMid, fontSize:14.5, margin:0 }}>Cargando productos…</p>
-              ) : allFiltered.length === 0 ? (
+              ) : conPrecio.length === 0 ? (
                 <div style={{ textAlign:"center", padding:"60px 20px", background:catalogoTarjeta, border:`1px solid ${catalogoBorde}`, borderRadius:RAD }}>
                   <p style={{ margin:"0 0 6px", fontSize:15, fontWeight:700, color:catalogoText }}>
                     {activeCategory === "Todos" ? "Todavía no hay productos cargados." : `No hay nada en "${activeCategory}".`}
@@ -3087,19 +3162,19 @@ export default function Aire() {
               ) : (
                 <>
                   <div className="ai-grilla-catalogo ai-entrada">
-                    {allFiltered.slice(0, mostrados).map(tarjetaProducto)}
+                    {conPrecio.slice(0, mostrados).map(tarjetaProducto)}
                   </div>
 
                   {/* De a 24. Una tienda con 500 productos no puede dibujarlos
                       todos de una: son 500 fotos pedidas al mismo tiempo y el
                       celular se arrastra. */}
-                  {allFiltered.length > mostrados && (
+                  {conPrecio.length > mostrados && (
                     <div style={{ textAlign:"center", marginTop:26 }}>
                       <button type="button" onClick={() => setMostrados(n => n + PASO_CATALOGO)}
                         style={{ background:"transparent", color:catalogoText, border:`1px solid ${catalogoBorde}`, borderRadius:999, padding:"13px 30px", fontSize:13.5, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}
                         onMouseEnter={e => { e.currentTarget.style.background = G; e.currentTarget.style.color = accentText; e.currentTarget.style.borderColor = G; }}
                         onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = catalogoText; e.currentTarget.style.borderColor = catalogoBorde; }}>
-                        Ver más ({allFiltered.length - mostrados} {allFiltered.length - mostrados === 1 ? "restante" : "restantes"})
+                        Ver más ({conPrecio.length - mostrados} {conPrecio.length - mostrados === 1 ? "restante" : "restantes"})
                       </button>
                     </div>
                   )}
