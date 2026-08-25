@@ -2,7 +2,56 @@ import type { ClaveLegal } from "@/lib/politicas-tienda";
 
 export type TemplateId = "aire" | "boho-terra" | "urban-pulse" | "chic-paris" | "aurora" | "auto-motor" | "auto-drive" | "electro-prime" | "tech-nova" | "home-studio" | "casa-clara";
 
-export const TEMPLATES_WITH_CAROUSEL: TemplateId[] = ["chic-paris", "electro-prime", "tech-nova", "home-studio", "casa-clara"];
+/**
+ * Qué templates tienen una portada con fotos que se pasan solas.
+ *
+ * De esta lista sale UNA sola cosa: si en el editor se ve el control de "cada
+ * cuántos segundos pasa". El que rota y no está acá, rota igual — pero con el
+ * número de fábrica y sin manera de cambiarlo.
+ *
+ * Faltaban cuatro. `aurora`, `boho-terra` y `urban-pulse` ya leían
+ * `bannerInterval` (los tres dibujan el carrusel compartido), así que la dueña
+ * tenía el ajuste guardado, funcionando, y escondido: quedaban clavados en los
+ * 4 segundos de fábrica para siempre. Y `aire` ni siquiera lo leía — tenía sus
+ * propios 6 segundos escritos a mano.
+ *
+ * OJO: esto no es la barra de anuncios de arriba de todo. Esa rota cada 3,5
+ * segundos, se configura en su propio bloque y no pasa por acá.
+ */
+export const TEMPLATES_WITH_CAROUSEL: TemplateId[] = [
+  "aire", "aurora", "boho-terra", "urban-pulse",
+  "chic-paris", "electro-prime", "tech-nova", "home-studio", "casa-clara",
+];
+
+/** Los topes del control de segundos del editor. Viven acá para que la prueba
+ *  pueda comprobar que todos los valores de fábrica caen adentro. */
+export const CARRUSEL_MS_MIN = 2000;
+export const CARRUSEL_MS_MAX = 10000;
+export const CARRUSEL_MS_PASO = 500;
+
+/** Cada cuántos milisegundos pasa la foto si la dueña nunca lo tocó. */
+export const CARRUSEL_MS_BASE = 4000;
+
+/** Los que respiran distinto. Aire va más lento a propósito: sus fotos ocupan
+ *  media pantalla y con 4 segundos se siente apurado. */
+const CARRUSEL_MS_PROPIO: Partial<Record<TemplateId, number>> = {
+  aire: 6000,
+};
+
+/**
+ * Cada cuánto pasa la foto de la portada.
+ *
+ * Existe para que el TEMPLATE y el CONTROL DEL EDITOR no puedan contestar
+ * distinto. Antes cada uno escribía su propio número: los templates ponían
+ * `?? 4000` a mano y el control del editor ponía otro `?? 4000` por su cuenta.
+ * Mientras coincidieran no se notaba — pero Aire usaba 6000, así que en cuanto
+ * apareciera su control iba a mostrar "4s" para una portada que pasaba cada 6.
+ * O sea: el editor mintiéndole a la dueña sobre su propia tienda.
+ */
+export function carruselMs(template: string | null | undefined, guardado?: number | null): number {
+  if (typeof guardado === "number" && guardado > 0) return guardado;
+  return CARRUSEL_MS_PROPIO[template as TemplateId] ?? CARRUSEL_MS_BASE;
+}
 
 /**
  * Qué templates dibujan el formulario de "suscribite a las novedades".

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import DashboardLayout from "@/components/DashboardLayout";
 import type { StoreConfig, TextOverride, ImageOverride, TemplateId } from "@/types/store-config";
-import { DEFAULT_CONFIG, TEMPLATES_WITH_CAROUSEL, TEMPLATE_DEFAULTS, TEMPLATE_NAV_BG, SECTION_BG_PHOTO } from "@/types/store-config";
+import { DEFAULT_CONFIG, TEMPLATES_WITH_CAROUSEL, TEMPLATE_DEFAULTS, TEMPLATE_NAV_BG, SECTION_BG_PHOTO, carruselMs, CARRUSEL_MS_MIN, CARRUSEL_MS_MAX, CARRUSEL_MS_PASO } from "@/types/store-config";
 import { StoreConfigContext } from "@/contexts/StoreConfigContext";
 import { EditContext, useEditContext, getContrastColor } from "@/contexts/EditContext";
 import { parseColor, toHex, contrastRatio, nearestLegible, MIN_LEGIBLE, MIN_LEGIBLE_GRANDE } from "@/lib/contrast";
@@ -562,9 +562,9 @@ function ConfigModal({ config, update, onClose, onSave, onDelete, isPremium }: {
                 🎠 Carrusel de banner
               </p>
               <div>
-                <label style={lbl}>Velocidad de avance: {((config.bannerInterval ?? 4000) / 1000).toFixed(0)}s</label>
-                <input type="range" min={2000} max={10000} step={500}
-                  value={config.bannerInterval ?? 4000}
+                <label style={lbl}>Velocidad de avance: {(carruselMs(config.template, config.bannerInterval) / 1000).toFixed(0)}s</label>
+                <input type="range" min={CARRUSEL_MS_MIN} max={CARRUSEL_MS_MAX} step={CARRUSEL_MS_PASO}
+                  value={carruselMs(config.template, config.bannerInterval)}
                   onChange={e => update("bannerInterval", Number(e.target.value))}
                   style={{ width: "100%", accentColor: "#6366f1" }} />
                 <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>

@@ -1,6 +1,7 @@
 ﻿"use client";
 import { useState, useEffect, useMemo, useRef, useSyncExternalStore, Fragment } from "react";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
+import { carruselMs } from "@/types/store-config";
 import { usePushBell } from "@/contexts/PushBellContext";
 import { useSesion } from "@/components/AuthProvider";
 import StoreFollowButton from "@/components/store/StoreFollowButton";
@@ -1165,14 +1166,31 @@ export default function Aire() {
      opcion si, y borrarla le sacaria un ajuste que ya podia tocar. */
   const cartIconIdx = (Math.abs(parseInt(textOverrides["cartIcon"]?.text ?? "0") || 0)) % CART_ICON_OPTIONS.length;
   const nextCartIconIdx = (cartIconIdx + 1) % CART_ICON_OPTIONS.length;
-  /* El carrusel del hero. Con una sola foto NO se arma el intervalo: un
-     `setInterval` que cada seis segundos vuelve a poner el mismo cero fuerza
-     un render de la portada entera para siempre, sin que cambie nada. */
+  /* ── El carrusel del hero ───────────────────────────────────────────────────
+   *
+   * Con una sola foto NO se arma el intervalo: un `setInterval` que cada tantos
+   * segundos vuelve a poner el mismo cero fuerza un render de la portada entera
+   * para siempre, sin que cambie nada.
+   *
+   * `editMode` lo FRENA, y ésa era la parte rota. Editando, la foto se pasaba
+   * sola a los seis segundos: la dueña abría el panel para cambiar la primera,
+   * se le iba a la segunda en la mitad, y terminaba editando otra foto sin
+   * haberlo pedido. Los otros ocho templates ya lo frenaban —el carrusel
+   * compartido `PromoBannerCarousel` y Chic Paris tienen el mismo `if`—; Aire
+   * tiene su propio carrusel escrito a mano y le faltaba.
+   * No hace falta nada a cambio: los números 01 02 03 de abajo a la izquierda ya
+   * dejan elegir a mano cuál se está editando.
+   *
+   * Y los segundos ahora los decide la dueña (`bannerInterval`, el mismo ajuste
+   * que ya usaban los otros ocho) en vez de estar clavados en seis. Ojo que NO
+   * es el de la barra de anuncios de arriba de todo: ése rota cada 3,5 segundos
+   * y se maneja aparte. */
+  const heroMs = carruselMs("aire", storeConfig?.bannerInterval);
   useEffect(() => {
-    if (heroSlides.length < 2) return;
-    const t = setInterval(() => setHeroIdx(i => (i + 1) % heroSlides.length), 6000);
+    if (editMode || heroSlides.length < 2) return;
+    const t = setInterval(() => setHeroIdx(i => (i + 1) % heroSlides.length), heroMs);
     return () => clearInterval(t);
-  }, [heroSlides.length]);
+  }, [heroSlides.length, heroMs, editMode]);
 
   /* La tarjeta de un producto.
 
