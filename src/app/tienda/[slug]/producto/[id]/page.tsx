@@ -147,10 +147,14 @@ const tiendaTapada = cache(async (slug: string) => {
     }),
     getCurrentUser(),
   ]);
-  if (!store) return { tapada: false, store: null };
+  if (!store) return { tapada: false, isOwner: false, store: null };
   const isOwner = !!currentUser && currentUser.id === store.ownerId;
   const enDesarrollo = process.env.NODE_ENV !== "production";
-  return { tapada: !store.isPublished && !isOwner && !enDesarrollo, store };
+  /* `isOwner` sale de acá y no se vuelve a calcular en ningún otro lado de este
+     archivo: `getCurrentUser()` es una llamada a Supabase MÁS una consulta a la
+     base, y calculándolo dos veces se paga dos veces por visita — en la página
+     que más se comparte, y para gente que en su mayoría ni sesión tiene. */
+  return { tapada: !store.isPublished && !isOwner && !enDesarrollo, isOwner, store };
 });
 
 export async function generateMetadata({ params, searchParams }: ProductoPageProps): Promise<Metadata> {
@@ -203,8 +207,11 @@ async function findStoreConfig(slug: string) {
      qué tienda es, así que esperar la primera para recién arrancar la segunda le
      suma el tiempo de una a la otra. Y ésta es la página que más se comparte —la
      que abre alguien desde WhatsApp, muchas veces con datos móviles— así que cada
-     viaje de ida y vuelta que se ahorra se nota. */
-  const [store, currentUser] = await Promise.all([
+     viaje de ida y vuelta que se ahorra se nota.
+
+     La segunda no vuelve a preguntar quién mira: `tiendaTapada` ya lo resolvió y
+     va con `cache`, así que esto es la MISMA respuesta y no un pedido nuevo. */
+  const [store, { isOwner }] = await Promise.all([
     prisma.store.findFirst({
     where: { slug, isActive: true },
     select: {
@@ -239,12 +246,10 @@ async function findStoreConfig(slug: string) {
       },
     },
     }),
-    getCurrentUser(),
+    tiendaTapada(slug),
   ]);
   const legales = documentosPublicados(store);
   const esAutos = store?.tipoTienda === "AUTOS";
-
-  const isOwner = !!currentUser && !!store && currentUser.id === store.ownerId;
 
   /* La MISMA regla de "es premium" que la portada: tier + suscripción viva.
      Escrita distinta, la campanita aparecería en una pantalla y no en la otra
