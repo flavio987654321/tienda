@@ -905,21 +905,39 @@ export default function Aire() {
         panel del acento. El template del que salió esta ranura caía en un
         `picsum.photos` fijo: la foto de un desconocido haciéndose pasar por la
         campaña de la tienda, en el lugar más visible de la página.             */
+  /* Se declara acá arriba y no se usa `puedeEditar` (que está más abajo) porque
+     las ranuras del hero se arman antes. Es el mismo par de condiciones. */
+  const puedeEditarHero = editMode || isPreview;
   const HERO_RANURAS = ["heroBackground", "heroBackground2", "heroBackground3"] as const;
   const HERO_DEMOS = [
     "https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=1920&q=80",
     "https://images.unsplash.com/photo-1445205170230-053b83016050?auto=format&fit=crop&w=1920&q=80",
     "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=1920&q=80",
   ];
-  const heroSubidas = HERO_RANURAS
-    .map(campo => ({ campo, ov: storeConfig?.imageOverrides?.[campo] }))
-    .filter(s => !!s.ov?.url);
-  const heroSlides =
-    heroSubidas.length > 0
-      ? heroSubidas.map(s => ({ campo: s.campo, ov: s.ov, url: s.ov!.url! }))
-      : isPreview
-      ? HERO_RANURAS.map((campo, i) => ({ campo, ov: undefined, url: HERO_DEMOS[i] }))
-      : [];
+  /* ── Las tres ranuras del hero ──────────────────────────────────────────────
+   *
+   * EDITANDO están SIEMPRE las tres, tenga fotos o no. Ésa era la trampa: antes
+   * la lista se armaba filtrando las que tenían foto, así que
+   *
+   *     0 fotos subidas  →  las 3 de muestra   →  se ven los números 01 02 03
+   *     1 foto subida    →  1 sola             →  los números desaparecen
+   *
+   * y los números son lo ÚNICO que lleva a la ranura 2 y a la 3. O sea: subías
+   * la primera y las otras dos quedaban inalcanzables para siempre. El hero
+   * acepta tres fotos y por esa puerta se podía cargar una.
+   *
+   * La ranura vacía se dibuja con la foto de muestra, igual que ya se hacía
+   * cuando no había ninguna: sirve para ver cómo va a quedar y deja claro que el
+   * lugar existe.
+   *
+   * PUBLICADA sigue mostrando sólo las que la dueña subió — una ranura vacía en
+   * la tienda de verdad sería la foto de un desconocido haciéndose pasar por su
+   * campaña, que es justo lo que evita todo este bloque. */
+  const heroRanuras = HERO_RANURAS
+    .map((campo, i) => ({ campo, ov: storeConfig?.imageOverrides?.[campo], demo: HERO_DEMOS[i] }));
+  const heroSlides = puedeEditarHero
+    ? heroRanuras.map(s => ({ campo: s.campo, ov: s.ov, url: s.ov?.url ?? s.demo }))
+    : heroRanuras.filter(s => !!s.ov?.url).map(s => ({ campo: s.campo, ov: s.ov, url: s.ov!.url! }));
 
   /* `% length` y no el índice pelado: si la dueña borra una foto mientras el
      carrusel está en la tercera, el índice queda apuntando a una que ya no está
