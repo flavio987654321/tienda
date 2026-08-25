@@ -20,6 +20,8 @@ import { ResenaComentario } from "@/components/store/templates/shared/ResenaCome
 import { describePromo, type ProductPromoDisplay } from "@/lib/promoDisplay";
 import type { useCartLogic } from "@/hooks/useCartLogic";
 import type { StorefrontProduct } from "@/hooks/useStorefront";
+import type { ActivePromotion } from "@/lib/pricing";
+import type { VerifiedInfo } from "@/components/store/VerifiedIconButton";
 import { linksLegales, type ClaveLegal } from "@/lib/politicas-tienda";
 import { CAPAS } from "@/lib/capas-tienda";
 
@@ -328,6 +330,26 @@ export interface ProductDetailViewProps {
   discount: number | null;
   promo: ProductPromoDisplay;
   catalogHref: string;
+
+  /* ── Lo que necesita una BARRA de arriba completa ───────────────────────────
+   * Todo opcional: lo llena la página suelta del producto (`ProductDetailClient`),
+   * que es la que entra por un link compartido y por Google y necesita dibujar la
+   * misma barra que la tienda. Aire dibuja esta ficha adentro de su portada
+   * también, y ahí la barra es la del template, así que no manda nada de esto.
+   * Un `*Detail.tsx` que no lo use no se entera. */
+  /** Todo el catálogo — para el buscador de la barra y el menú de categorías. */
+  products?: StorefrontProduct[];
+  /** Las promos vivas, para poder mostrar precio en los resultados del buscador. */
+  promotions?: ActivePromotion[];
+  /** La tienda esconde los precios al público. */
+  ocultarPrecios?: boolean;
+  /** El dueño tiene Plan Plus y quien mira no es él: se puede seguir la tienda. */
+  showPushBell?: boolean;
+  isVerified?: boolean;
+  verifiedInfo?: VerifiedInfo;
+  promoBanner?: { enabled: boolean; messages?: string[] } | null;
+  /** La bajada del logo. Cadena vacía = la dueña la apagó. */
+  navTagline?: string | null;
 }
 
 /**

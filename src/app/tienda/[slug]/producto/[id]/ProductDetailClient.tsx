@@ -25,6 +25,7 @@ import UrbanPulseDetail from "@/components/store/templates/productDetail/UrbanPu
 import AireDetail from "@/components/store/templates/productDetail/AireDetail";
 import type { ClaveLegal } from "@/lib/politicas-tienda";
 import { afiliadoDeEstaTienda } from "@/lib/atribucion-afiliado";
+import type { VerifiedInfo } from "@/components/store/VerifiedIconButton";
 
 const THEMED_DETAIL: Record<string, React.ComponentType<{ view: ProductDetailViewProps }>> = {
   "electro-prime": ElectroPrimeDetail,
@@ -41,7 +42,13 @@ const THEMED_DETAIL: Record<string, React.ComponentType<{ view: ProductDetailVie
 
 const fmt = (n: number) => "$" + n.toLocaleString("es-AR");
 
-export default function ProductDetailClient({ slug, productId, productoInicial = null, templateInicial = null, legalesInicial = null, esAutosInicial = false }: {
+export default function ProductDetailClient({
+  slug, productId, productoInicial = null, templateInicial = null,
+  legalesInicial = null, esAutosInicial = false,
+  storeIdInicial = null, isOwnerInicial = false, showPushBell = false,
+  isVerified = false, verifiedInfo, promoBanner = null,
+  navTagline = null, storeNameInicial = null, esEditor = false,
+}: {
   slug: string;
   productId: string;
   /**
@@ -71,12 +78,34 @@ export default function ProductDetailClient({ slug, productId, productoInicial =
   /** Qué políticas legales linkea el pie, resueltas en el servidor. */
   legalesInicial?: ClaveLegal[] | null;
   esAutosInicial?: boolean;
+  /* ── Lo que necesita la BARRA de arriba ────────────────────────────────────
+     Todo esto se resuelve en el servidor y llega puesto, igual que el producto,
+     y por el mismo motivo: si esperara al pedido del navegador, la barra saldría
+     recortada en el HTML inicial y se completaría sola un segundo después — un
+     salto justo arriba de todo, en la pantalla por la que entra la gente que
+     llega de un link compartido. */
+  storeIdInicial?: string | null;
+  isOwnerInicial?: boolean;
+  showPushBell?: boolean;
+  isVerified?: boolean;
+  verifiedInfo?: VerifiedInfo;
+  promoBanner?: { enabled: boolean; messages?: string[] } | null;
+  /** El texto de la bajada del logo, si la dueña lo cambió. Cadena vacía = apagado. */
+  navTagline?: string | null;
+  /** El nombre de la tienda, resuelto en el servidor. Sin esto el HTML inicial
+   *  dice "Tienda" y se corrige solo al llegar el pedido del navegador. */
+  storeNameInicial?: string | null;
+  /** Se está mirando desde el editor (`?from=editor`). Lo resuelve el servidor. */
+  esEditor?: boolean;
 }) {
   const router = useRouter();
   const [products, setProducts] = useState<StorefrontProduct[]>([]);
   const [promotions, setPromotions] = useState<ActivePromotion[]>([]);
-  const [storeId, setStoreId] = useState<string | null>(null);
-  const [storeName, setStoreName] = useState("Tienda");
+  const [storeId, setStoreId] = useState<string | null>(storeIdInicial);
+  const [storeName, setStoreName] = useState(storeNameInicial || "Tienda");
+  /* Si la tienda esconde los precios al publico, el buscador de la barra tiene
+     que esconderlos tambien: si no, los muestra justo ahi. */
+  const [ocultarPrecios, setOcultarPrecios] = useState(false);
   const [whatsapp, setWhatsapp] = useState<string | null>(null);
   /* Con qué template se dibuja la ficha.
 
@@ -97,8 +126,15 @@ export default function ProductDetailClient({ slug, productId, productoInicial =
   const [affiliateId, setAffiliateId] = useState<string | null>(null);
   // eslint-disable-next-line react-hooks/set-state-in-effect -- lee la atribución guardada en el navegador (sistema externo), sólo al montar
   useEffect(() => { setAffiliateId(afiliadoDeEstaTienda()); }, []);
-  const [isPreview] = useState(() => typeof window !== "undefined" && new URLSearchParams(window.location.search).get("from") === "editor");
-  const [isOwner, setIsOwner] = useState(false);
+  /* Lo dice el SERVIDOR, que ya tiene el `?from=editor` en las manos.
+     Antes se leía sólo del navegador: el servidor dibujaba la página como
+     tienda pública (todos los links sin `from=editor`) y el navegador la volvía
+     a dibujar como previa (todos con él). React lo veía como un HTML que no
+     coincide, tiraba "Hydration failed" en la consola y REHACÍA el árbol
+     entero — o sea que abrir un producto desde el editor costaba dibujar la
+     ficha dos veces. Con el dato del servidor las dos dibujan lo mismo. */
+  const [isPreview] = useState(esEditor);
+  const [isOwner, setIsOwner] = useState(isOwnerInicial);
   const [socialLinks, setSocialLinks] = useState<Record<string, string> | undefined>(undefined);
   // Qué políticas legales linkea el pie: las que tienen texto y están en
   // Visible. Arrancan con lo que resolvió el servidor — si esperaran al pedido
@@ -133,6 +169,7 @@ export default function ProductDetailClient({ slug, productId, productoInicial =
           if (cfg.colors?.accent) setAccentOverride(cfg.colors.accent);
           if (cfg.socialLinks) setSocialLinks(cfg.socialLinks);
           if (cfg.sectionColors?.bgFooter) setFooterBg(cfg.sectionColors.bgFooter);
+          setOcultarPrecios(!!cfg.ocultarPreciosPublico);
         } catch {}
         setPromotions(parsePromotions(data.store.promotions));
         const real = (data.store.products ?? []).map(mapProduct);
@@ -295,6 +332,9 @@ export default function ProductDetailClient({ slug, productId, productoInicial =
       isPreview, isOwner, socialLinks, legales, esAutos, accentOverride, footerBg, cart,
       activeImg, setActiveImg, seleccion, setOpcion,
       canAdd, qty, setQty, addToCart, cartCount, toastMsg, discount, promo: detailPromo, catalogHref,
+      /* Para la barra de arriba. Ver la nota en `ProductDetailViewProps`. */
+      products, promotions, ocultarPrecios, showPushBell, isVerified, verifiedInfo,
+      promoBanner, navTagline,
     };
     return <ThemedDetail view={view} />;
   }

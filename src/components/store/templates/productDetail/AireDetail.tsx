@@ -1,5 +1,4 @@
 "use client";
-import Link from "next/link";
 import { LinkVolver } from "@/components/store/templates/shared/BotonVolver";
 import { useState } from "react";
 import {
@@ -10,6 +9,7 @@ import { linksLegales } from "@/lib/politicas-tienda";
 import { getContrastColor } from "@/contexts/EditContext";
 import ReportStoreModal from "@/components/store/ReportStoreModal";
 import { CAPAS } from "@/lib/capas-tienda";
+import AireNav from "./AireNav";
 
 /* ── La ficha de producto de Aire ─────────────────────────────────────────────
  *
@@ -81,12 +81,11 @@ export const themeBase: DetailTheme = {
 };
 
 export default function AireDetail({ view }: { view: ProductDetailViewProps }) {
-  const { slug, storeName, cartCount, catalogHref, whatsapp, product, cart, isPreview,
+  const { slug, storeName, catalogHref, whatsapp, product, isPreview,
           accentOverride, socialLinks, legales, footerBg, esAutos } = view;
   const theme = resolveDetailTheme(themeBase, accentOverride);
   const G = theme.accent;
   const accentText = theme.accentText;
-  const homeHref = `/tienda/${slug}${editorParam(isPreview)}`;
 
   const [showReport, setShowReport] = useState(false);
   const [ANIO] = useState(() => new Date().getFullYear());
@@ -125,46 +124,15 @@ export default function AireDetail({ view }: { view: ProductDetailViewProps }) {
       `}</style>
 
       {/* ── La barra ──
-          Es la de Aire en versión corta: la marca, el catálogo y el carrito. No
-          lleva el menú entero —categorías, géneros, buscador, favoritos— porque
-          todos ésos filtran o abren cosas de la portada, y desde acá no hay nada
-          que filtrar: quien está mirando un producto ya eligió. */}
-      <nav style={{ borderBottom: `1px solid ${LN}`, background: S, position: "sticky", top: 0, zIndex: CAPAS.navFicha }}>
-        <div style={{ padding: "0 24px" }}>
-          <div style={{ maxWidth: ANCHO, margin: "0 auto", height: 64, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14 }}>
-            <Link href={homeHref} style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none", minWidth: 0 }}>
-              <span aria-hidden style={{ width: 32, height: 32, borderRadius: 10, background: G, display: "grid", placeItems: "center", flexShrink: 0 }}>
-                <svg width={17} height={17} viewBox="0 0 24 24" fill="none" stroke={accentText} strokeWidth={2.1} strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M3 14h9a3 3 0 1 0-3-3"/><path d="M3 9h6"/><path d="M3 19h13a3 3 0 1 0-3-3"/>
-                </svg>
-              </span>
-              <span style={{ fontSize: 17, fontWeight: 800, letterSpacing: "-0.4px", textTransform: "uppercase", color: T, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                {storeName}
-              </span>
-            </Link>
-
-            <div style={{ display: "flex", alignItems: "center", gap: 14, flexShrink: 0 }}>
-              <Link href={catalogHref} style={{ fontSize: 14, fontWeight: 500, color: T, textDecoration: "none", whiteSpace: "nowrap" }}>
-                Catálogo
-              </Link>
-              {/* El carrito como cápsula verde, igual que en la portada: es el
-                  único botón de la barra que hace algo irreversible, y tiene que
-                  verse distinto de un link. */}
-              <button onClick={() => { cart.setCartOpen(true); cart.setFavoritesOpen(false); }}
-                aria-label="Carrito"
-                style={{ display: "inline-flex", alignItems: "center", gap: 9, background: G, color: accentText, border: "none", borderRadius: 999, padding: "10px 16px", cursor: "pointer", fontFamily: "inherit", fontSize: 13.5, fontWeight: 700 }}>
-                <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/>
-                </svg>
-                Carrito
-                <span style={{ background: accentText === "#ffffff" ? "rgba(255,255,255,0.22)" : "rgba(0,0,0,0.14)", borderRadius: 999, minWidth: 20, height: 20, display: "grid", placeItems: "center", fontSize: 11.5, fontWeight: 800, padding: "0 6px" }}>
-                  {cartCount}
-                </span>
-              </button>
-            </div>
-          </div>
-        </div>
-      </nav>
+          La MISMA que se ve entrando por la tienda. Acá había una versión corta
+          —marca, "Catálogo" y carrito— con el argumento de que "quien está
+          mirando un producto ya eligió". Era al revés: por esta dirección entra
+          justamente el que NO conoce la tienda, porque es la que se comparte por
+          WhatsApp y la que devuelve Google, y se encontraba con una tienda sin
+          buscador, sin categorías y sin salida más que el catálogo.
+          Todo lo que necesita se resuelve en el servidor y llega en `view`; el
+          detalle está en `AireNav.tsx`. */}
+      <AireNav view={view} paleta={{ BG, S, T, T2, LN, G, accentText, RAD, ANCHO }} />
 
       <div style={{ padding: "16px 24px 0" }}>
         <div style={{ maxWidth: ANCHO, margin: "0 auto" }}>

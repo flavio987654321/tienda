@@ -8,6 +8,10 @@ import ProductDetailClient from "./ProductDetailClient";
 import { StoreTrackingScripts } from "@/components/store/StoreTrackingScripts";
 import type { StoreConfig } from "@/types/store-config";
 import { documentosPublicados } from "@/lib/politicas-tienda";
+import { getCurrentUser } from "@/lib/auth-session";
+import { isSubscriptionActive } from "@/lib/subscription";
+import { PushBellProvider } from "@/contexts/PushBellContext";
+import StorePushBanner from "@/components/store/StorePushBanner";
 import {
   construirProductSchema,
   construirBreadcrumbSchema,
@@ -132,7 +136,13 @@ export async function generateMetadata({ params, searchParams }: ProductoPagePro
 }
 
 async function findStoreConfig(slug: string) {
-  const store = await prisma.store.findFirst({
+  /* Las dos JUNTAS y no una después de la otra: quién está mirando no depende de
+     qué tienda es, así que esperar la primera para recién arrancar la segunda le
+     suma el tiempo de una a la otra. Y ésta es la página que más se comparte —la
+     que abre alguien desde WhatsApp, muchas veces con datos móviles— así que cada
+     viaje de ida y vuelta que se ahorra se nota. */
+  const [store, currentUser] = await Promise.all([
+    prisma.store.findFirst({
     where: { slug, isActive: true },
     select: {
       storeConfig: true, tipoTienda: true,
@@ -143,15 +153,82 @@ async function findStoreConfig(slug: string) {
       policyReturns: true, policyShipping: true, policyTerms: true, policyPrivacy: true,
       policyReturnsActive: true, policyShippingActive: true,
       policyTermsActive: true, policyPrivacyActive: true,
+      /* ── Lo de acá abajo es para la BARRA de arriba ─────────────────────────
+         Esta pantalla dibujaba una barra recortada: la marca, "Catálogo" y el
+         carrito, y nada más. Se justificaba con que "quien está mirando un
+         producto ya eligió", y es al revés: ésta es justo la dirección que la
+         dueña comparte por WhatsApp y la que devuelve Google, o sea la primera
+         que ve alguien que todavía no le compró nunca. Medido en el navegador,
+         entrando por el link se perdían la barra de anuncios, Categorías,
+         Nosotros, Contacto, el buscador, favoritos, "Entrar", el sello de
+         verificada y la bajada del logo — todo lo que sí ve quien entró por la
+         portada, aunque la dirección sea idéntica.
+         Nada de esto viajaba hasta acá, por eso la barra no podía dibujarlo. */
+      id: true, ownerId: true,
+      isVerified: true,
+      verifiedShowName: true, verifiedShowCity: true,
+      verifiedShowPhone: true, verifiedShowSince: true,
+      owner: {
+        select: {
+          name: true, city: true, phone: true, createdAt: true,
+          subscription: { select: { tier: true, status: true, trialEndsAt: true, currentPeriodEnd: true, gracePeriodEndsAt: true } },
+        },
+      },
     },
-  });
+    }),
+    getCurrentUser(),
+  ]);
   const legales = documentosPublicados(store);
   const esAutos = store?.tipoTienda === "AUTOS";
+
+  const isOwner = !!currentUser && !!store && currentUser.id === store.ownerId;
+
+  /* La MISMA regla de "es premium" que la portada: tier + suscripción viva.
+     Escrita distinta, la campanita aparecería en una pantalla y no en la otra
+     para la misma tienda — que es exactamente el bug que este archivo viene a
+     cerrar, sólo que al revés. */
+  const sub = store?.owner?.subscription;
+  const ownerIsPremium =
+    sub?.tier === "PREMIUM" && sub.status != null && isSubscriptionActive(sub as Parameters<typeof isSubscriptionActive>[0]);
+
+  const memberSince = store?.owner?.createdAt
+    ? new Date(store.owner.createdAt).toLocaleDateString("es-AR", { month: "long", year: "numeric" })
+    : null;
+
+  const barra = {
+    storeId: store?.id ?? null,
+    isOwnerInicial: isOwner,
+    showPushBell: ownerIsPremium && !isOwner,
+    isVerified: store?.isVerified ?? false,
+    verifiedInfo: {
+      showName: store?.verifiedShowName ?? false, name: store?.owner?.name ?? null,
+      showCity: store?.verifiedShowCity ?? false, city: store?.owner?.city ?? null,
+      showPhone: store?.verifiedShowPhone ?? false, phone: store?.owner?.phone ?? null,
+      showSince: store?.verifiedShowSince ?? false, memberSince,
+    },
+  };
+
   try {
     const parsed: Partial<StoreConfig> = JSON.parse(store?.storeConfig || "{}");
-    return { analytics: parsed.analytics, currency: parsed.currency || "ARS", template: parsed.template ?? null, legales, esAutos };
+    return {
+      analytics: parsed.analytics, currency: parsed.currency || "ARS",
+      template: parsed.template ?? null, legales, esAutos, ...barra,
+      promoBanner: parsed.promoBanner ?? null,
+      /* La bajada del logo ("TIENDA ONLINE") es un texto que la dueña puede
+         cambiar, y vive en los overrides como cualquier otro. Se lee sólo el
+         TEXTO: el resto del override (color, tamaño, tipografía) lo aplica
+         `EditableZone`, que necesita el contexto del editor y en esta ruta no
+         existe. Si lo apagó, no se dibuja. */
+      navTagline: parsed.textOverrides?.navTagline?.hidden
+        ? "" : (parsed.textOverrides?.navTagline?.text ?? null),
+      storeNameOverride: parsed.textOverrides?.storeName?.text ?? null,
+    };
   } catch {
-    return { analytics: undefined, currency: "ARS" as const, template: null, legales, esAutos };
+    return {
+      analytics: undefined, currency: "ARS" as const,
+      template: null, legales, esAutos, ...barra,
+      promoBanner: null, navTagline: null, storeNameOverride: null,
+    };
   }
 }
 
@@ -169,7 +246,11 @@ export default async function ProductoPage({ params, searchParams }: ProductoPag
     if (!product) notFound();
   }
 
-  const { analytics, currency, template, legales, esAutos } = await findStoreConfig(slug);
+  const {
+    analytics, currency, template, legales, esAutos,
+    storeId, isOwnerInicial, showPushBell, isVerified, verifiedInfo,
+    promoBanner, navTagline, storeNameOverride,
+  } = await findStoreConfig(slug);
 
   // ── Datos estructurados ────────────────────────────────────────────────────
   // Sólo para productos REALES: los demo del editor no existen para nadie más y
@@ -224,14 +305,33 @@ export default async function ProductoPage({ params, searchParams }: ProductoPag
           si no llegaba a esperar el pedido— y eso fue lo que quedó indexado.
           El dato ya estaba acá: se usaba para el bloque de datos estructurados y
           se descartaba. */}
-      <ProductDetailClient
-        slug={slug}
-        productId={id}
-        productoInicial={product ? mapProduct(product as RawProduct) : null}
-        templateInicial={template}
-        legalesInicial={legales}
-        esAutosInicial={esAutos}
-      />
+      {/* El MISMO envoltorio que la portada (ver `StoreShell`).
+          Sin él, `usePushBell()` devuelve null en toda esta rama y los dos
+          botones de la barra —seguir la tienda y la campanita— no se pueden
+          dibujar. `StorePushBanner` va porque es quien dibuja el cajón de
+          novedades: sin él la campanita abriría la nada.
+          `enabled` decide si se conecta a nada: en una tienda sin Plan Plus el
+          proveedor queda inerte, igual que en la portada. */}
+      <PushBellProvider storeId={storeId ?? ""} storeSlug={slug} enabled={showPushBell}>
+        {showPushBell && <StorePushBanner storeName={product?.store.name ?? "la tienda"} />}
+        <ProductDetailClient
+          slug={slug}
+          productId={id}
+          productoInicial={product ? mapProduct(product as RawProduct) : null}
+          templateInicial={template}
+          legalesInicial={legales}
+          esAutosInicial={esAutos}
+          storeIdInicial={storeId}
+          isOwnerInicial={isOwnerInicial}
+          showPushBell={showPushBell}
+          isVerified={isVerified}
+          verifiedInfo={verifiedInfo}
+          promoBanner={promoBanner}
+          navTagline={navTagline}
+          storeNameInicial={storeNameOverride || product?.store.name || null}
+          esEditor={from === "editor"}
+        />
+      </PushBellProvider>
     </>
   );
 }
