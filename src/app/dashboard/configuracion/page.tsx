@@ -4,7 +4,7 @@ import Link from "next/link";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import DashboardLayout from "@/components/DashboardLayout";
 import type { StoreConfig, TextOverride, ImageOverride, TemplateId } from "@/types/store-config";
-import { DEFAULT_CONFIG, TEMPLATES_WITH_CAROUSEL, TEMPLATE_DEFAULTS, TEMPLATE_NAV_BG, SECTION_BG_PHOTO, carruselMs, CARRUSEL_MS_MIN, CARRUSEL_MS_MAX, CARRUSEL_MS_PASO } from "@/types/store-config";
+import { DEFAULT_CONFIG, TEMPLATE_DEFAULTS, TEMPLATE_NAV_BG, SECTION_BG_PHOTO, carruselMs, barraMs, CARRUSEL_MS_MIN, CARRUSEL_MS_MAX, CARRUSEL_MS_PASO } from "@/types/store-config";
 import { StoreConfigContext } from "@/contexts/StoreConfigContext";
 import { EditContext, useEditContext, getContrastColor } from "@/contexts/EditContext";
 import { parseColor, toHex, contrastRatio, nearestLegible, MIN_LEGIBLE, MIN_LEGIBLE_GRANDE } from "@/lib/contrast";
@@ -547,33 +547,38 @@ function ConfigModal({ config, update, onClose, onSave, onDelete, isPremium }: {
                         onBlur={e => (e.target.style.borderColor = "#e2e8f0")} />
                     </div>
                   ))}
-                  <p style={{ margin: 0, fontSize: 11, color: P.muted }}>Los mensajes vacíos no se muestran. Se rotan automáticamente cada 3.5 seg.</p>
+                  <p style={{ margin: 0, fontSize: 11, color: P.muted }}>Los mensajes vacíos no se muestran.</p>
+
+                  {/* La velocidad, al lado de los mensajes que acelera.
+                      Acá decía "Se rotan automáticamente cada 3.5 seg", como un
+                      hecho de la naturaleza: esos 3,5 segundos estaban escritos a
+                      mano en los nueve templates que dibujan la barra y no había
+                      forma de tocarlos.
+                      El deslizador de las FOTOS ya no vive en esta pantalla: se
+                      fue al panel de la foto, que es donde se la está mirando. */}
+                  {(config.promoBanner?.messages?.filter(m => m.trim()).length ?? 0) > 1 && (
+                    <div style={{ marginTop: 4 }}>
+                      <label style={lbl}>Cambia de mensaje cada: {(barraMs(config.promoBanner?.intervalMs) / 1000).toFixed(1)}s</label>
+                      <input type="range" min={CARRUSEL_MS_MIN} max={CARRUSEL_MS_MAX} step={CARRUSEL_MS_PASO}
+                        value={barraMs(config.promoBanner?.intervalMs)}
+                        onChange={e => update("promoBanner", {
+                          enabled: config.promoBanner?.enabled !== false,
+                          ...config.promoBanner,
+                          intervalMs: Number(e.target.value),
+                        })}
+                        style={{ width: "100%", accentColor: "#6366f1" }} />
+                      <div style={{ display: "flex", justifyContent: "space-between" }}>
+                        <span style={{ fontSize: 11, color: P.muted }}>{CARRUSEL_MS_MIN / 1000}s (rápido)</span>
+                        <span style={{ fontSize: 11, color: P.muted }}>{CARRUSEL_MS_MAX / 1000}s (lento)</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
           </div>
 
           <p style={{ margin: "20px 0 10px", fontSize: 11, fontWeight: 700, color: P.muted, textTransform: "uppercase", letterSpacing: 1 }}>Configuración de la tienda</p>
-
-          {/* Carrusel de banner — solo si el template lo tiene */}
-          {TEMPLATES_WITH_CAROUSEL.includes(config.template) && (
-            <div style={sec}>
-              <p style={{ margin: "0 0 12px", fontSize: 12, fontWeight: 700, color: "#0f172a", display: "flex", alignItems: "center", gap: 6 }}>
-                🎠 Carrusel de banner
-              </p>
-              <div>
-                <label style={lbl}>Velocidad de avance: {(carruselMs(config.template, config.bannerInterval) / 1000).toFixed(0)}s</label>
-                <input type="range" min={CARRUSEL_MS_MIN} max={CARRUSEL_MS_MAX} step={CARRUSEL_MS_PASO}
-                  value={carruselMs(config.template, config.bannerInterval)}
-                  onChange={e => update("bannerInterval", Number(e.target.value))}
-                  style={{ width: "100%", accentColor: "#6366f1" }} />
-                <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
-                  <span style={{ fontSize: 11, color: P.muted }}>2s (rápido)</span>
-                  <span style={{ fontSize: 11, color: P.muted }}>10s (lento)</span>
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* Mayorista — solo si la tienda tiene ventaMayorista */}
           {config.tieneVentaMayorista && (

@@ -1,4 +1,5 @@
 ﻿"use client";
+import { barraMs } from "@/types/store-config";
 import { useState, useEffect, useLayoutEffect, useMemo, useRef, useCallback, Fragment } from "react";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { usePushBell } from "@/contexts/PushBellContext";
@@ -446,14 +447,18 @@ export default function Aurora() {
     };
   }, [mobileMenuOpen]);
 
+  /* Cada cuanto rota el MENSAJE de la barra de promocion. Lo elige la duena;
+     antes eran 3,5 segundos escritos a mano en los nueve templates que la
+     dibujan. Ojo que NO es el carrusel de fotos: ese es `carruselMs`. */
+  const msBarra = barraMs(storeConfig?.promoBanner?.intervalMs);
   useEffect(() => {
     if (!showAnnouncement) return;
     const interval = setInterval(() => {
       setAnnouncementIdx(i => (i + 1) % announcementMessages.length);
-    }, 3500);
+    }, msBarra);
     return () => clearInterval(interval);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showAnnouncement]);
+  }, [showAnnouncement, msBarra]);
 
   const changeGender = (g: string | null) => {
     setActiveGender(g);

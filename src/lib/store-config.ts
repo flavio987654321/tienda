@@ -97,7 +97,7 @@ export const storeConfigSchema = z.object({
   // NADA hasta sacarlo a mano de la base.
   sectionColors: z.record(z.string(), z.string().max(200)),
   bannerInterval: z.number().optional(),
-  promoBanner: z.object({ enabled: z.boolean(), messages: z.array(z.string().max(120)).max(3).optional() }).optional(),
+  promoBanner: z.object({ enabled: z.boolean(), messages: z.array(z.string().max(120)).max(3).optional(), intervalMs: z.number().min(1000).max(60000).optional() }).optional(),
   previewFill: z.boolean().optional(),
   tipoTienda: z.string().max(30).optional(),
   tieneVentaMayorista: z.boolean().optional(),

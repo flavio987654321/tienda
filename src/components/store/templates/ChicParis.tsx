@@ -1,4 +1,5 @@
 "use client";
+import { barraMs } from "@/types/store-config";
 import { useState, useEffect, useRef, useMemo, Fragment } from "react";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { usePushBell } from "@/contexts/PushBellContext";
@@ -288,7 +289,7 @@ export default function ChicParis() {
   const PROMO_BAR_H = 36;
   const hasWA = !storeConfig || storeConfig.whatsapp.enabled;
   const promoBannerEnabled = storeConfig?.promoBanner?.enabled !== false;
-  const CP_DEFAULTS = ["🚚 Envío gratis en compras mayores a $30.000", "🔄 Cambios sin cargo hasta 30 días", "💳 6 cuotas sin interés"];
+  const CP_DEFAULTS = ["🚚 Envío gratis en compras mayores a showAnnouncement, announcementMessages.length0.000", "🔄 Cambios sin cargo hasta 30 días", "💳 6 cuotas sin interés"];
   const announcementMessages = (storeConfig?.promoBanner?.messages?.filter(m => m.trim()) ?? []).length > 0
     ? storeConfig!.promoBanner!.messages!.filter(m => m.trim())
     : CP_DEFAULTS;
@@ -314,11 +315,15 @@ export default function ChicParis() {
     return () => window.removeEventListener("scroll", fn);
   }, []);
 
+  /* Cada cuanto rota el MENSAJE de la barra de promocion. Lo elige la duena;
+     antes eran 3,5 segundos escritos a mano en los nueve templates que la
+     dibujan. Ojo que NO es el carrusel de fotos: ese es `carruselMs`. */
+  const msBarra = barraMs(storeConfig?.promoBanner?.intervalMs);
   useEffect(() => {
     if (!showAnnouncement || announcementMessages.length <= 1) return;
-    const id = setInterval(() => setAnnouncementIdx(i => (i + 1) % announcementMessages.length), 3500);
+    const id = setInterval(() => setAnnouncementIdx(i => (i + 1) % announcementMessages.length), msBarra);
     return () => clearInterval(id);
-  }, [showAnnouncement, announcementMessages.length]);
+  }, [showAnnouncement, announcementMessages.length, msBarra]);
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
@@ -1081,7 +1086,7 @@ export default function ChicParis() {
                 </div>
                 </>
               )}
-              {isActive && <EditableImageButton field={`heroBanner${i + 1}`} label={`Imagen banner ${i + 1}`} />}
+              {isActive && <EditableImageButton field={`heroBanner${i + 1}`} label={`Imagen banner ${i + 1}`} esCarrusel />}
             </div>
           );
         })}

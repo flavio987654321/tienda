@@ -2,27 +2,6 @@ import type { ClaveLegal } from "@/lib/politicas-tienda";
 
 export type TemplateId = "aire" | "boho-terra" | "urban-pulse" | "chic-paris" | "aurora" | "auto-motor" | "auto-drive" | "electro-prime" | "tech-nova" | "home-studio" | "casa-clara";
 
-/**
- * Qué templates tienen una portada con fotos que se pasan solas.
- *
- * De esta lista sale UNA sola cosa: si en el editor se ve el control de "cada
- * cuántos segundos pasa". El que rota y no está acá, rota igual — pero con el
- * número de fábrica y sin manera de cambiarlo.
- *
- * Faltaban cuatro. `aurora`, `boho-terra` y `urban-pulse` ya leían
- * `bannerInterval` (los tres dibujan el carrusel compartido), así que la dueña
- * tenía el ajuste guardado, funcionando, y escondido: quedaban clavados en los
- * 4 segundos de fábrica para siempre. Y `aire` ni siquiera lo leía — tenía sus
- * propios 6 segundos escritos a mano.
- *
- * OJO: esto no es la barra de anuncios de arriba de todo. Esa rota cada 3,5
- * segundos, se configura en su propio bloque y no pasa por acá.
- */
-export const TEMPLATES_WITH_CAROUSEL: TemplateId[] = [
-  "aire", "aurora", "boho-terra", "urban-pulse",
-  "chic-paris", "electro-prime", "tech-nova", "home-studio", "casa-clara",
-];
-
 /** Los topes del control de segundos del editor. Viven acá para que la prueba
  *  pueda comprobar que todos los valores de fábrica caen adentro. */
 export const CARRUSEL_MS_MIN = 2000;
@@ -32,9 +11,12 @@ export const CARRUSEL_MS_PASO = 500;
 /** Cada cuántos milisegundos pasa la foto si la dueña nunca lo tocó. */
 export const CARRUSEL_MS_BASE = 4000;
 
+/* Se exporta para que la prueba pueda recorrerlo: lo que se comprueba es que
+   TODO valor de fabrica caiga en un paso del control, porque uno que no caiga
+   hace que el editor muestre un numero y la tienda haga otro. */
 /** Los que respiran distinto. Aire va más lento a propósito: sus fotos ocupan
  *  media pantalla y con 4 segundos se siente apurado. */
-const CARRUSEL_MS_PROPIO: Partial<Record<TemplateId, number>> = {
+export const CARRUSEL_MS_PROPIO: Partial<Record<TemplateId, number>> = {
   aire: 6000,
 };
 
@@ -51,6 +33,26 @@ const CARRUSEL_MS_PROPIO: Partial<Record<TemplateId, number>> = {
 export function carruselMs(template: string | null | undefined, guardado?: number | null): number {
   if (typeof guardado === "number" && guardado > 0) return guardado;
   return CARRUSEL_MS_PROPIO[template as TemplateId] ?? CARRUSEL_MS_BASE;
+}
+
+/** Lo que rotaba la barra antes de que se pudiera elegir. */
+export const BARRA_MS_BASE = 3500;
+
+/**
+ * Cada cuantos milisegundos rota el mensaje de la barra de promocion.
+ *
+ * NO es el carrusel de fotos: son dos cosas distintas, y hasta ahora se
+ * confundian justamente porque una tenia control y la otra no. La barra es la
+ * franja de una linea arriba de todo ("Envio gratis en compras mayores a
+ * $30.000"); el carrusel son las fotos grandes. Ver `carruselMs`.
+ *
+ * Los 3,5 segundos estaban escritos a mano en NUEVE templates y no habia forma
+ * de cambiarlos: el editor te dejaba escribir los tres mensajes y abajo te
+ * avisaba "se rotan cada 3.5 seg", como si fuera un hecho de la naturaleza.
+ */
+export function barraMs(guardado?: number | null): number {
+  if (typeof guardado === "number" && guardado > 0) return guardado;
+  return BARRA_MS_BASE;
 }
 
 /**
@@ -268,6 +270,8 @@ export type StoreConfig = {
   promoBanner?: {
     enabled: boolean;
     messages?: string[];
+    /** Cada cuantos ms rota el mensaje. Ver `barraMs`. */
+    intervalMs?: number;
   };
   previewFill?: boolean;
   /**

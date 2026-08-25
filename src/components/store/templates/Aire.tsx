@@ -1,7 +1,7 @@
 ﻿"use client";
 import { useState, useEffect, useMemo, useRef, useSyncExternalStore, Fragment } from "react";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
-import { carruselMs } from "@/types/store-config";
+import { carruselMs, barraMs } from "@/types/store-config";
 import { usePushBell } from "@/contexts/PushBellContext";
 import { useSesion } from "@/components/AuthProvider";
 import StoreFollowButton from "@/components/store/StoreFollowButton";
@@ -660,14 +660,18 @@ export default function Aire() {
     };
   }, [mobileMenuOpen]);
 
+  /* Cada cuanto rota el MENSAJE de la barra de promocion. Lo elige la duena;
+     antes eran 3,5 segundos escritos a mano en los nueve templates que la
+     dibujan. Ojo que NO es el carrusel de fotos: ese es `carruselMs`. */
+  const msBarra = barraMs(storeConfig?.promoBanner?.intervalMs);
   useEffect(() => {
     if (!showAnnouncement) return;
     const interval = setInterval(() => {
       setAnnouncementIdx(i => (i + 1) % announcementMessages.length);
-    }, 3500);
+    }, msBarra);
     return () => clearInterval(interval);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showAnnouncement]);
+  }, [showAnnouncement, msBarra]);
 
   /* Filtrar por categoria SIN cambiar de pagina, que es lo que hace la franja
      de arriba. Ademas de la categoria hay que limpiar la subcategoria y volver

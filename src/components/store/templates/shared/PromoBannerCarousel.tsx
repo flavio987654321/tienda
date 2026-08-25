@@ -132,7 +132,10 @@ export function PromoBannerCarousel({
               {isActive && (
                 <>
                   <BgDragHandle imgKey={`promoBanner${i + 1}`} />
-                  <EditableImageButton field={`promoBanner${i + 1}`} label={`Banner promocional ${i + 1}`} />
+                  {/* Este bloque ES un carrusel: sus tres fotos se pasan solas. Con
+                      esto el panel de la foto ofrece cada cuantos segundos, al lado
+                      de la foto y no escondido en Configuracion avanzada. */}
+                  <EditableImageButton field={`promoBanner${i + 1}`} label={`Banner promocional ${i + 1}`} esCarrusel />
                 </>
               )}
             </div>

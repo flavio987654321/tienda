@@ -1,4 +1,5 @@
 "use client";
+import { barraMs } from "@/types/store-config";
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -130,11 +131,15 @@ export default function AutoMotor() {
   const PROMO_H = 36;
   const NAV_H   = 64;
 
+  /* Cada cuanto rota el MENSAJE de la barra de promocion. Lo elige la duena;
+     antes eran 3,5 segundos escritos a mano en los nueve templates que la
+     dibujan. Ojo que NO es el carrusel de fotos: ese es `carruselMs`. */
+  const msBarra = barraMs(config?.promoBanner?.intervalMs);
   useEffect(() => {
     if (!showAnn || annMessages.length <= 1) return;
-    const id = setInterval(() => setAnnIdx(i => (i + 1) % annMessages.length), 3500);
+    const id = setInterval(() => setAnnIdx(i => (i + 1) % annMessages.length), msBarra);
     return () => clearInterval(id);
-  }, [showAnn, annMessages.length]);
+  }, [showAnn, annMessages.length, msBarra]);
 
   useEffect(() => {
     if (!products.length) return;
