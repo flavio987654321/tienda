@@ -10,6 +10,7 @@ import { EditContext, useEditContext, getContrastColor } from "@/contexts/EditCo
 import { parseColor, toHex, contrastRatio, nearestLegible, MIN_LEGIBLE, MIN_LEGIBLE_GRANDE } from "@/lib/contrast";
 import { parseBg, serializeBg, extremo, extremosDe, DIR_LABELS, type SectionBg, type BgDir, type BgHacia } from "@/lib/section-bg";
 import { TEMPLATE_CATEGORIES, type TemplateInfo } from "@/lib/templateRegistry";
+import { topeDelTexto, nombreDelTope } from "@/lib/topes-texto";
 import { UnsavedChangesGuard } from "@/components/UnsavedChangesGuard";
 import TourGuide from "@/components/TourGuide";
 import { GUION_PREVIEW, GUION_EDITOR, TOUR_PREVIEW_KEY, TOUR_EDITOR_KEY } from "@/components/tours";
@@ -783,6 +784,10 @@ const panelBtnActive: React.CSSProperties = {
 };
 
 /** Mismo tope que `textOverrides.text` en el esquema de zod. Los dos se tocan juntos. */
+/* El tope de ARRIBA, el que impide el abuso: es el del esquema del servidor y
+   vale para cualquier campo. Los dos se tocan juntos.
+   El tope de cada campo en particular —un botón no acepta lo mismo que un
+   párrafo— sale de `topeDelTexto`, que es una guía de diseño, no una defensa. */
 const TEXTO_MAX = 500;
 
 /* ── Medir el hueco donde va una foto ─────────────────────────────────────────
@@ -1796,6 +1801,12 @@ function FloatingEditor({ template }: { template: TemplateId }) {
   // que abrió el campo se olvidó de decir cómo se llama.
   const label = activeLabel ?? activeField;
   const ov = overrides[activeField] ?? {};
+  /* Cuantas letras entran en ESTE campo. Un boton no acepta lo mismo que un
+     parrafo — ver `topes-texto.ts`, donde estan las medidas y el porque. */
+  /* Nunca por encima del tope del servidor: si algun dia alguien sube un tope de
+     campo arriba de 500, el formulario dejaria escribir algo que el guardado
+     rechaza entero, y el aviso hablaria de otra cosa. */
+  const topeDeEsteCampo = Math.min(topeDelTexto(activeField), TEXTO_MAX);
   const hasOverride = Object.entries(ov).some(([, v]) => v !== undefined);
   const isHidden = !!ov.hidden;
 
@@ -1883,7 +1894,7 @@ function FloatingEditor({ template }: { template: TemplateId }) {
           value={ov.text ?? ""}
           placeholder={label}
           rows={3}
-          maxLength={TEXTO_MAX}
+          maxLength={topeDeEsteCampo}
           onChange={e => setOverride(activeField, { text: e.target.value || undefined })}
           style={{
             width: "100%", boxSizing: "border-box", marginTop: 7,
@@ -1894,10 +1905,17 @@ function FloatingEditor({ template }: { template: TemplateId }) {
           onFocus={e => (e.target.style.borderColor = "#6366f1")}
           onBlur={e => (e.target.style.borderColor = "#e2e8f0")}
         />
-        {ov.text && ov.text.length > TEXTO_MAX - 60 && (
-          <p style={{ margin: "5px 0 0", fontSize: 10.5, color: ov.text.length >= TEXTO_MAX ? P.danger : P.muted }}>
-            {ov.text.length} de {TEXTO_MAX} caracteres
-            {ov.text.length >= TEXTO_MAX ? " — llegaste al máximo." : ""}
+        {/* El contador aparece recién cerca del tope, y el tope depende de QUÉ
+            es este campo: un botón no acepta lo mismo que un párrafo. Antes era
+            500 para todo, y medido en el navegador eso dejaba poner 500 letras
+            en el título de la portada —un título de 1763px de alto— o en un
+            botón, que quedaba de 156px. */}
+        {ov.text && ov.text.length > topeDeEsteCampo * 0.75 && (
+          <p style={{ margin: "5px 0 0", fontSize: 10.5, color: ov.text.length >= topeDeEsteCampo ? P.danger : P.muted }}>
+            {ov.text.length} de {topeDeEsteCampo} caracteres
+            {ov.text.length >= topeDeEsteCampo
+              ? ` — es el máximo para ${nombreDelTope(topeDeEsteCampo)}.`
+              : ""}
           </p>
         )}
         {ayuda(ov.text

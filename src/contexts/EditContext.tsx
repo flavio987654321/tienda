@@ -212,13 +212,35 @@ export function EditableZone({
 
   const displayContent = ov.text !== undefined ? ov.text : children;
   const hasStyle = Object.keys(overrideStyle).length > 0;
+
+  /* Que una palabra larguísima CORTE en vez de salirse de la pantalla.
+   *
+   * Medido en Aire, en un celular de 390: con una sola palabra sin espacios
+   * —"Sudaderaoversizedealgodonorganicopremium…"— de título de la portada, el
+   * texto se iba fuera de la pantalla; y en el título del catálogo la página
+   * entera se estiraba 444px a la derecha, o sea scroll horizontal en toda la
+   * tienda. Pasa sin mala intención: alguien pega una dirección web larga o
+   * escribe un nombre de producto todo junto. El navegador sólo corta donde
+   * hay un espacio; `anywhere` le da permiso de partir la palabra.
+   *
+   * Va acá y no en cada template porque este es el único lugar donde los
+   * ajustes se vuelven CSS: lo heredan los once de una, y los que vengan.
+   *
+   * Se suma acá abajo y NO adentro de `overrideStyle` a propósito: ahí haría
+   * que `hasStyle` diera true siempre, y entonces los ~80 textos de los once
+   * templates pasarían a llevar un <span> alrededor aunque la dueña no haya
+   * tocado nada. Sólo envuelve cuando ya iba a envolver. */
+  const estiloConCorte: React.CSSProperties = {
+    overflowWrap: "anywhere", wordBreak: "break-word", maxWidth: "100%",
+    ...overrideStyle,
+  };
   const isHidden = !!ov.hidden;
 
   if (!editMode) {
     if (isHidden) return null;
     if (!hasStyle && ov.text === undefined) return <>{children}</>;
     const Tag = block ? "div" : ("span" as React.ElementType);
-    return <Tag style={overrideStyle}>{displayContent}</Tag>;
+    return <Tag style={estiloConCorte}>{displayContent}</Tag>;
   }
 
   const Tag = block ? "div" : ("span" as React.ElementType);
@@ -303,7 +325,12 @@ export function EditableZone({
           : "none",
         borderRadius: 3,
         transition: "outline-color 0.15s, box-shadow 0.15s",
-        overflowWrap: "break-word",
+        /* `anywhere` y no `break-word`: los dos parten la palabra, pero sólo
+           `anywhere` achica además la caja cuando el texto está adentro de un
+           flex, que es donde se escapaba. Igual que en la tienda publicada —
+           tenerlos distintos era lo que hacía que se viera bien editando y se
+           rompiera en vivo. */
+        overflowWrap: "anywhere",
         wordBreak: "break-word",
         maxWidth: "100%",
         ...overrideStyle,
