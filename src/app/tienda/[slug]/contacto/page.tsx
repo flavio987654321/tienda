@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { DEFAULT_CONFIG } from "@/types/store-config";
 import TiendaPage from "../page";
 
 /* ── La página de contacto de una tienda ──────────────────────────────────────
@@ -62,7 +63,14 @@ export default async function ContactoPage(props: Props) {
 
   let template = "";
   try {
-    template = (JSON.parse(store?.storeConfig || "{}") as { template?: string }).template ?? "";
+    /* El DEFECTO, no cadena vacia. Casi ninguna tienda tiene escrita la clave
+       `template`: aparece solo cuando la dueña eligio uno a mano. Con cadena
+       vacia, todas esas quedaban fuera de la lista y se las mandaba de vuelta a
+       la portada — o sea que su pantalla de contacto era inalcanzable, mientras
+       su portada se dibujaba con Aire, que si aplica el defecto. Mismo error que
+       tenia la ruta del catalogo. */
+    template = (JSON.parse(store?.storeConfig || "{}") as { template?: string }).template
+      ?? DEFAULT_CONFIG.template;
   } catch { /* config rota: se trata como si no tuviera la pantalla */ }
 
   // Se va a la portada y no a un 404: la tienda existe, lo que no existe es esta

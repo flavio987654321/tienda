@@ -38,13 +38,14 @@ import { usePathname } from "next/navigation";
  * servidor al entrar.
  */
 
-export type VistaTemplate = "portada" | "catalogo" | "contacto" | "producto";
+export type VistaTemplate = "portada" | "catalogo" | "contacto" | "nosotros" | "producto";
 
 /* Se comparan ENTERAS y no con un "termina en /contacto": una tienda cuyo slug
    fuera justamente "contacto" tiene su portada en /tienda/contacto, que también
    termina así — y le habríamos abierto la pantalla de contacto en lugar de su
    portada, para siempre y sin que se entienda por qué. */
 const RUTA_CONTACTO = /^\/tienda\/[^/]+\/contacto\/?$/;
+const RUTA_NOSOTROS = /^\/tienda\/[^/]+\/nosotros\/?$/;
 const RUTA_CATALOGO = /^\/tienda\/[^/]+\/productos\/?$/;
 /* Ésta además CAPTURA el id: de él sale QUÉ ficha dibujar. */
 export const RUTA_PRODUCTO = /^\/tienda\/[^/]+\/producto\/([^/]+)\/?$/;
@@ -90,6 +91,7 @@ export function useVistaTemplate({ isPreview, slug, templateId }: {
   const [productoEnPreview, setProductoEnPreview] = useState<string | null>(null);
 
   const enContacto = isPreview ? vistaEnPreview === "contacto" : RUTA_CONTACTO.test(rutaActual);
+  const enNosotros = isPreview ? vistaEnPreview === "nosotros" : RUTA_NOSOTROS.test(rutaActual);
   const enCatalogo = isPreview ? vistaEnPreview === "catalogo" : RUTA_CATALOGO.test(rutaActual);
   const productoAbierto = isPreview
     ? (vistaEnPreview === "producto" ? productoEnPreview : null)
@@ -137,9 +139,9 @@ export function useVistaTemplate({ isPreview, slug, templateId }: {
   };
 
   return {
-    enContacto, enCatalogo, enProducto, productoAbierto,
+    enContacto, enCatalogo, enNosotros, enProducto, productoAbierto,
     /** True cuando se está en la portada: ninguna de las otras. */
-    enPortada: !enContacto && !enCatalogo && !enProducto,
+    enPortada: !enContacto && !enCatalogo && !enNosotros && !enProducto,
     urlTienda, sufijoEditor,
     /** True por 400ms después de cambiar de pantalla. Ver el candado, arriba. */
     cambiandoPantalla,
@@ -147,6 +149,7 @@ export function useVistaTemplate({ isPreview, slug, templateId }: {
     irALaPortada: () => irA("portada", urlTienda + sufijoEditor),
     irAlCatalogo: () => irA("catalogo", `${urlTienda}/productos${sufijoEditor}`),
     irAContacto:  () => irA("contacto", `${urlTienda}/contacto${sufijoEditor}`),
+    irANosotros:  () => irA("nosotros", `${urlTienda}/nosotros${sufijoEditor}`),
     irAlProducto: (id: string) => irA("producto", `${urlTienda}/producto/${id}${sufijoEditor}`, id),
   };
 }

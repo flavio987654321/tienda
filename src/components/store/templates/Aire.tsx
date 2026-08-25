@@ -284,9 +284,9 @@ export default function Aire() {
    * lugares— sigue diciendo `enPortada`, `irAlCatalogo` y `enCatalogo` como
    * siempre. Lo que cambió es de dónde salen, no cómo se llaman. */
   const {
-    enContacto, enCatalogo, enProducto, productoAbierto, enPortada,
+    enContacto, enCatalogo, enNosotros, enProducto, productoAbierto, enPortada,
     cambiandoPantalla,
-    irALaPortada, irAlCatalogo, irAContacto, irAlProducto,
+    irALaPortada, irAlCatalogo, irAContacto, irANosotros, irAlProducto,
   } = useVistaTemplate({ isPreview, slug: storeConfig?.slug, templateId: "aire" });
 
   /* Llegar a la portada la deja como está cuando se entra de cero: sin filtrar.
@@ -988,6 +988,23 @@ export default function Aire() {
   const catalogoMid     = catalogoText === T ? T2 : "rgba(255,255,255,0.72)";
   const catalogoTarjeta = catalogoText === T ? S : "rgba(255,255,255,0.07)";
   const catalogoBorde   = catalogoText === T ? LN : "rgba(255,255,255,0.16)";
+  /* ─ La pantalla "Nosotros" ────────────────────────────────────────────────
+     Misma mecanica que la de contacto: el fondo lo elige la dueña y de ahi sale
+     todo lo demas, para que ponga el color que ponga el texto se lea. */
+  const nosotrosBg      = scn["bgNosotros"] ?? BG;
+  const nosotrosText    = tintaSobre(nosotrosBg);
+  const nosotrosMid     = nosotrosText === T ? T2 : "rgba(255,255,255,0.72)";
+  const nosotrosTarjeta = nosotrosText === T ? S : "rgba(255,255,255,0.07)";
+  const nosotrosBorde   = nosotrosText === T ? LN : "rgba(255,255,255,0.16)";
+  /* La foto: la sube la dueña y, si no subio ninguna, queda una de un espacio de
+     trabajo — no una prenda. Mismo criterio que la de contacto: esta pantalla
+     habla de QUIENES son, asi que una foto de catalogo no dice nada. Y es la
+     MISMA en el editor y en la tienda publicada, para que lo que acomoda sea lo
+     que sale. */
+  const nosotrosFoto = storeConfig?.imageOverrides?.["nosotrosImage"]?.url
+    ?? "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=900&q=80";
+  const nosotrosFotoOv = storeConfig?.imageOverrides?.["nosotrosImage"];
+
   const contactoBg      = scn["bgContacto"] ?? S;
   const contactoText    = tintaSobre(contactoBg);
   const contactoMid     = contactoText === T ? T2 : "rgba(255,255,255,0.72)";
@@ -1263,6 +1280,8 @@ export default function Aire() {
          sobre lo que quedó abajo del dedo. */
       pointerEvents: cambiandoPantalla ? "none" : undefined }}>
       <style>{`
+        .ai-nosotros { display:grid; grid-template-columns:1fr; gap:26px; align-items:start }
+        @media(min-width:900px){ .ai-nosotros { grid-template-columns:minmax(0,440px) minmax(0,1fr); gap:52px; align-items:center } }
         .ai-ofertas-row { scrollbar-width:none }
         .ai-ofertas-row::-webkit-scrollbar { display:none }
         /* Las columnas de la grilla: 2 en celular, 3 en tablet, 6 en pantalla
@@ -1626,9 +1645,18 @@ export default function Aire() {
                 </button>
               ))}
 
-              {/* "Nosotros" no está: apuntaba a una sección que se borró al
-                  rediseñar el template y no hacía nada. Un link que no lleva a
-                  ningún lado es peor que un link menos. */}
+              {/* "Nosotros" VOLVIÓ, y ahora sí lleva a algún lado.
+                  Antes se había sacado con razón: apuntaba a una sección que se
+                  borró al rediseñar el template, así que era un link que no hacía
+                  nada — peor que un link menos. Ahora tiene pantalla propia, con
+                  su dirección de verdad (/nosotros), así que se puede compartir,
+                  guardar en favoritos y encontrar en Google.
+                  Va ANTES de Contacto: primero quién sos, después cómo escribirte. */}
+              <button onClick={irANosotros}
+                style={{ background:"none", border:"none", color: enNosotros ? G : T, fontSize:14, cursor:"pointer", fontWeight: enNosotros ? 700 : 500, padding:"6px 2px", fontFamily:"inherit", whiteSpace:"nowrap" }}
+                onMouseEnter={e => (e.currentTarget.style.color=G)} onMouseLeave={e => (e.currentTarget.style.color = enNosotros ? G : T)}>
+                Nosotros
+              </button>
               <button onClick={irAContacto}
                 style={{ background:"none", border:"none", color: enContacto ? G : T, fontSize:14, cursor:"pointer", fontWeight: enContacto ? 700 : 500, padding:"6px 2px", fontFamily:"inherit", whiteSpace:"nowrap" }}
                 onMouseEnter={e => (e.currentTarget.style.color=G)} onMouseLeave={e => (e.currentTarget.style.color = enContacto ? G : T)}>
@@ -1835,6 +1863,10 @@ export default function Aire() {
             <button onClick={() => { irAlCatalogo(); setMobileMenuOpen(false); }}
               style={{ display:"block", width:"100%", background:"none", border:"none", borderTop:`1px solid ${LN}`, color: enCatalogo ? G : T, padding:"16px 18px", fontSize:15, fontWeight: enCatalogo ? 700 : 500, textAlign:"left", cursor:"pointer", fontFamily:"inherit" }}>
               Catálogo
+            </button>
+            <button onClick={() => { irANosotros(); setMobileMenuOpen(false); }}
+              style={{ display:"block", width:"100%", background:"none", border:"none", borderTop:`1px solid ${LN}`, color: enNosotros ? G : T, padding:"16px 18px", fontSize:15, fontWeight: enNosotros ? 700 : 500, textAlign:"left", cursor:"pointer", fontFamily:"inherit" }}>
+              Nosotros
             </button>
             <button onClick={() => { irAContacto(); setMobileMenuOpen(false); }}
               style={{ display:"block", width:"100%", background:"none", border:"none", borderTop:`1px solid ${LN}`, color: enContacto ? G : T, padding:"16px 18px", fontSize:15, fontWeight: enContacto ? 700 : 500, textAlign:"left", cursor:"pointer", fontFamily:"inherit" }}>
@@ -2530,6 +2562,89 @@ export default function Aire() {
           este bloque vive adentro del template y todo lo de alrededor ya está
           dibujado. Así el carrito sigue lleno, los colores son los mismos y no
           hay dos pies que se puedan desincronizar. */}
+      {/* ── NOSOTROS ───────────────────────────────────────────────────────────
+          Una PANTALLA, no un bloque de la portada. Tiene su dirección propia
+          (/tienda/<slug>/nosotros), así que se comparte, se guarda en favoritos,
+          el botón atrás del navegador vuelve bien y Google la indexa. Un
+          "Nosotros" que viviera sólo dentro de la portada no tendría nada de eso.
+
+          Todo lo que se ve acá lo escribe la dueña: el título, la bajada, los dos
+          párrafos y la foto. Lo que viene de fábrica son textos de ejemplo que se
+          leen como un borrador honesto —no promesas inventadas sobre su negocio,
+          que es lo peor que puede traer un template: si no los cambia, su tienda
+          estaría diciendo algo falso en su nombre. */}
+      {enNosotros && (
+      <section data-reveal style={{ background:nosotrosBg, position:"relative" }}>
+        <EditableSectionBg field="bgNosotros" label="Fondo de Nosotros" nombreBloque="Pantalla de Nosotros" />
+        <div style={{ padding: `${isMobile ? 30 : 54}px ${MARGEN}px ${isMobile ? 40 : 64}px` }}>
+        <div style={{ maxWidth:ANCHO, margin:"0 auto" }}>
+
+          <div style={{ marginBottom: isMobile ? 14 : 20 }}>
+            <BotonVolver onClick={irALaPortada} destino="Volver a la tienda"
+              S={nosotrosTarjeta} LN={nosotrosBorde} T={nosotrosText} G={G} />
+          </div>
+
+          <h1 style={{ fontSize: isMobile ? 40 : 82, fontWeight:800, letterSpacing:"-0.04em", color:nosotrosText, margin:"0 0 6px", textAlign:"center", lineHeight:1.02 }}>
+            <EditableZone field="nosotrosTitulo" label="Título de Nosotros">Nosotros</EditableZone>
+          </h1>
+          <p style={{ margin:"0 auto", maxWidth:520, textAlign:"center", fontSize: isMobile ? 14 : 15.5, color:nosotrosMid, lineHeight:1.65 }}>
+            <EditableZone field="nosotrosBajada" label="Bajada de Nosotros">
+              Quiénes somos y cómo elegimos lo que vendemos.
+            </EditableZone>
+          </p>
+
+          {/* La foto a la izquierda y el texto a la derecha, y uno abajo del otro
+              en celular. La foto va PRIMERA en el orden del código para que en
+              celular aparezca arriba: es lo que hace que la pantalla se lea como
+              una presentación y no como un texto suelto. */}
+          <div className="ai-nosotros" style={{ marginTop: isMobile ? 26 : 44 }}>
+            <div style={{ position:"relative", borderRadius:RAD, overflow:"hidden", background:nosotrosTarjeta, border:`1px solid ${nosotrosBorde}`, aspectRatio: isMobile ? "4/3" : "4/5" }}>
+              <FadeImage src={nosotrosFoto} alt="" fill sizes="(max-width: 768px) 100vw, 460px"
+                style={{ objectFit:"cover", objectPosition:`${nosotrosFotoOv?.posX ?? 50}% ${nosotrosFotoOv?.posY ?? 50}%` }}/>
+              <EditableImageButton field="nosotrosImage" label="Foto de Nosotros" />
+            </div>
+
+            <div>
+              <h2 style={{ fontSize: isMobile ? 22 : 30, fontWeight:800, letterSpacing:"-0.02em", color:nosotrosText, margin:"0 0 14px", lineHeight:1.2 }}>
+                <EditableZone field="nosotrosSubtitulo" label="Subtítulo de Nosotros">
+                  Ropa elegida de a una
+                </EditableZone>
+              </h2>
+              <p style={{ margin:"0 0 16px", fontSize: isMobile ? 14.5 : 16, color:nosotrosMid, lineHeight:1.8 }}>
+                <EditableZone field="nosotrosParrafo1" label="Primer párrafo de Nosotros">
+                  Contá acá cómo empezó tu tienda: cuándo, por qué, y qué te llevó a elegir lo que vendés. La gente compra mucho más fácil cuando sabe quién está del otro lado.
+                </EditableZone>
+              </p>
+              <p style={{ margin:"0 0 22px", fontSize: isMobile ? 14.5 : 16, color:nosotrosMid, lineHeight:1.8 }}>
+                <EditableZone field="nosotrosParrafo2" label="Segundo párrafo de Nosotros">
+                  Y acá, cómo trabajás: cómo elegís los productos, de dónde vienen, cuánto tardás en despachar. Lo concreto tranquiliza más que las promesas.
+                </EditableZone>
+              </p>
+
+              {/* Las dos salidas de esta pantalla. Quien terminó de leer quiere
+                  una de dos cosas: ver lo que vendés, o escribirte. Sin esto la
+                  pantalla es un callejón sin salida y hay que volver a la barra. */}
+              <div style={{ display:"flex", gap:10, flexWrap:"wrap" }}>
+                <button type="button" onClick={irAlCatalogo}
+                  style={{ background:G, color:accentText, border:"none", borderRadius:999, padding:"13px 26px", fontSize:14, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}
+                  onMouseEnter={e => (e.currentTarget.style.opacity="0.9")} onMouseLeave={e => (e.currentTarget.style.opacity="1")}>
+                  <EditableZone field="nosotrosCta" label="Botón de Nosotros">Ver los productos</EditableZone>
+                </button>
+                <button type="button" onClick={irAContacto}
+                  style={{ background:"none", color:nosotrosText, border:`1px solid ${nosotrosBorde}`, borderRadius:999, padding:"13px 26px", fontSize:14, fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = G; e.currentTarget.style.color = G; }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = nosotrosBorde; e.currentTarget.style.color = nosotrosText; }}>
+                  Escribinos
+                </button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+        </div>
+      </section>
+      )}
+
       {enContacto && (
       <section data-reveal style={{ background:contactoBg, position:"relative" }}>
         {/* Con nombre: contacto es una PANTALLA entera, no un bloque de la
