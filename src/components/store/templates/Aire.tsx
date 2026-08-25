@@ -1298,7 +1298,10 @@ export default function Aire() {
                 perdería, así que lleva una sombra blanca en vez de una caja. */}
             <button onClick={e => { e.stopPropagation(); toggleFavorite(product.id); }}
               aria-label={esFav ? "Quitar de favoritos" : "Agregar a favoritos"}
-              style={{ position:"absolute", top:9, right:9, background:"none", border:"none", padding:3, cursor:"pointer", zIndex:3, lineHeight:0, transition:"transform 0.2s", filter:"drop-shadow(0 1px 3px rgba(255,255,255,0.95))" }}
+              /* Blanco de 30px con el corazon de 18 adentro: medido en un celular
+                     de 360 el boton era de 24×24 con padding 3, y agregar a favoritos
+                     es una accion de verdad, no un adorno. El dibujo no cambia. */
+              style={{ position:"absolute", top:6, right:6, background:"none", border:"none", padding:6, cursor:"pointer", zIndex:3, lineHeight:0, display:"grid", placeItems:"center", transition:"transform 0.2s", filter:"drop-shadow(0 1px 3px rgba(255,255,255,0.95))" }}
               onMouseEnter={e => (e.currentTarget.style.transform = "scale(1.15)")}
               onMouseLeave={e => (e.currentTarget.style.transform = "scale(1)")}>
               <svg width={18} height={18} viewBox="0 0 24 24" fill={esFav ? G : "none"} stroke={esFav ? G : T} strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
@@ -1557,13 +1560,22 @@ export default function Aire() {
             <EditableZone field="announcementText" label="Barra de anuncios" noBadge>{announcementMessages[announcementIdx]}</EditableZone>
           </span>
           <div style={{ position:"absolute", bottom:5, left:"50%", transform:"translateX(-50%)", display:"flex", gap:5 }}>
+            {/* El BLANCO es de 26px aunque la rayita mida 3.
+                Medido en un celular de 360: el boton era de 6×3 px —tres pixeles
+                de alto—, o sea que cambiar de anuncio con el dedo era cuestion de
+                suerte. Lo que se VE no cambia: la rayita sigue igual, adentro de
+                un boton transparente que se puede tocar. Es lo mismo que ya hacia
+                el carrusel compartido con sus puntitos (`dotHit`). */}
             {announcementMessages.map((_, i) => (
               <button key={i} onClick={() => setAnnouncementIdx(i)} aria-label={`Anuncio ${i + 1}`}
-                style={{ width: i === announcementIdx ? 16 : 6, height:3, border:"none", borderRadius:999, background:accentText, opacity: i === announcementIdx ? 0.95 : 0.4, cursor:"pointer", padding:0, transition:"all 0.3s" }}/>
+                style={{ background:"none", border:"none", padding:0, width:28, height:28, display:"grid", placeItems:"center", cursor:"pointer" }}>
+                <span aria-hidden style={{ display:"block", width: i === announcementIdx ? 16 : 6, height:3, borderRadius:999, background:accentText, opacity: i === announcementIdx ? 0.95 : 0.4, transition:"all 0.3s" }}/>
+
+              </button>
             ))}
           </div>
           <button onClick={() => setAnnouncementVisible(false)} aria-label="Cerrar anuncio"
-            style={{ position:"absolute", right:12, top:"50%", transform:"translateY(-50%)", background:"none", border:"none", color:accentText, cursor:"pointer", fontSize:16, lineHeight:1, opacity:0.75 }}>×</button>
+            style={{ position:"absolute", right:6, top:"50%", transform:"translateY(-50%)", background:"none", border:"none", color:accentText, cursor:"pointer", fontSize:16, lineHeight:1, opacity:0.75, width:30, height:30, display:"grid", placeItems:"center", padding:0 }}>×</button>
         </div>
       )}
 
@@ -2242,7 +2254,10 @@ export default function Aire() {
                  tocaba "Ver todo" y la dueña terminaba fuera de Diseño, con la
                  tienda publicada en pantalla. */
               <button type="button" onClick={irAlCatalogo}
-                style={{ flexShrink:0, fontSize:13, fontWeight:500, color:productosMid, background:"none", border:"none", padding:0, fontFamily:"inherit", cursor:"pointer", display:"inline-flex", alignItems:"center", gap:7, whiteSpace:"nowrap" }}
+                /* padding vertical: medido en un celular de 360 el boton era de 20px
+                    de alto. Es el link que lleva al catalogo completo desde la
+                    portada — vale que se pueda tocar sin apuntar. */
+                style={{ flexShrink:0, fontSize:13, fontWeight:500, color:productosMid, background:"none", border:"none", padding:"5px 0", fontFamily:"inherit", cursor:"pointer", display:"inline-flex", alignItems:"center", gap:7, whiteSpace:"nowrap" }}
                 onMouseEnter={e => (e.currentTarget.style.color = G)}
                 onMouseLeave={e => (e.currentTarget.style.color = productosMid)}>
                 Ver todo <span aria-hidden>→</span>
@@ -3271,7 +3286,12 @@ export default function Aire() {
                           a la que la abrio. */}
                       <a href={it.href}
                         {...(it.href.startsWith("http") ? { target: "_blank", rel: "noopener noreferrer" } : null)}
-                        style={{ fontSize:13, color:footerText, opacity:0.72, textDecoration:"none", lineHeight:1.4, overflowWrap:"anywhere", cursor:"pointer" }}
+                        /* `inline-block` + padding vertical: el link medía 17px de alto —
+                            el alto de la letra— y en un celular hay que acertarle a eso
+                            con el dedo. Con esto el blanco pasa a ~29px sin que se mueva
+                            nada de lugar: el hueco entre links ya estaba, ahora es
+                            tocable. */
+                        style={{ fontSize:13, color:footerText, opacity:0.72, textDecoration:"none", lineHeight:1.4, overflowWrap:"anywhere", cursor:"pointer", display:"inline-block", padding:"6px 0" }}
                         onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.opacity = "1"; (e.currentTarget as HTMLAnchorElement).style.color = G; }}
                         onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.opacity = "0.72"; (e.currentTarget as HTMLAnchorElement).style.color = footerText; }}>
                         {it.label}
@@ -3299,7 +3319,7 @@ export default function Aire() {
                   estaría reportando a sí misma. */}
               {!editMode && (
                 <button onClick={() => setShowReport(true)}
-                  style={{ fontSize:12, opacity:0.35, background:"none", border:"none", cursor:"pointer", color:"inherit", padding:0, fontFamily:"inherit" }}
+                  style={{ fontSize:12, opacity:0.35, background:"none", border:"none", cursor:"pointer", color:"inherit", padding:"6px 4px", fontFamily:"inherit" }}
                   onMouseEnter={e => { e.currentTarget.style.opacity = "0.75"; }}
                   onMouseLeave={e => { e.currentTarget.style.opacity = "0.35"; }}>
                   Reportar tienda

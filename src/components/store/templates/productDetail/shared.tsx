@@ -536,9 +536,13 @@ export function ProductDetailBody({ theme, view }: { theme: DetailTheme; view: P
     <div style={{ maxWidth: 1200, margin: "0 auto", padding: "20px 24px 64px" }}>
       {/* Breadcrumb */}
       <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 6, fontSize: 12.5, color: theme.muted, marginBottom: 22 }}>
-        <Link href={`/tienda/${slug}${editorParam(isPreview)}`} style={{ color: theme.muted, textDecoration: "none" }}>Inicio</Link>
+        {/* Los dos links llevan padding vertical: medidos en un celular de 360
+            eran de 19px de alto —el alto de la letra— y son la forma de volver a
+            la categoría desde la ficha. El `gap` de la fila ya separaba lo
+            suficiente, así que el blanco crece sin que se mueva nada de lugar. */}
+        <Link href={`/tienda/${slug}${editorParam(isPreview)}`} style={{ color: theme.muted, textDecoration: "none", display: "inline-block", padding: "5px 0" }}>Inicio</Link>
         <span>›</span>
-        <Link href={`/tienda/${slug}/productos?categoria=${product.category}${editorParam(isPreview, "&")}`} style={{ color: theme.muted, textDecoration: "none" }}>{catLabel}</Link>
+        <Link href={`/tienda/${slug}/productos?categoria=${product.category}${editorParam(isPreview, "&")}`} style={{ color: theme.muted, textDecoration: "none", display: "inline-block", padding: "5px 0" }}>{catLabel}</Link>
         <span>›</span>
         <span style={{ color: theme.text }}>{product.name}</span>
       </div>

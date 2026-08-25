@@ -56,9 +56,17 @@ export default function VerifiedIconButton({
           border: "none",
           padding: 0,
           cursor: isVerified ? "pointer" : "default",
-          display: "flex",
-          alignItems: "center",
+          /* El BLANCO es de 30px aunque el tilde mida 16. Medido en un celular
+             de 360, el botón entero era de 16×16: para abrir los datos de la
+             tienda verificada había que acertarle con el dedo a un cuadradito de
+             dieciséis píxeles. El dibujo no cambia de tamaño — sólo el área que
+             responde al toque. */
+          width: 30,
+          height: 30,
+          display: "grid",
+          placeItems: "center",
           lineHeight: 1,
+          flexShrink: 0,
         }}
         aria-label={isVerified ? "Ver datos verificados" : undefined}
         tabIndex={isVerified ? 0 : -1}

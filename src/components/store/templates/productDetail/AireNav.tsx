@@ -216,14 +216,18 @@ export default function AireNav({ view, paleta }: { view: ProductDetailViewProps
           </span>
           {anuncios.length > 1 && (
             <div style={{ position: "absolute", bottom: 5, left: "50%", transform: "translateX(-50%)", display: "flex", gap: 5 }}>
+              {/* Blanco de 26px con la rayita de 3 adentro — ver la misma barra en
+                  `Aire.tsx`: tocar tres píxeles de alto en un celular es suerte. */}
               {anuncios.map((_, i) => (
                 <button key={i} onClick={() => setAnuncioIdx(i)} aria-label={`Anuncio ${i + 1}`}
-                  style={{ width: i === anuncioIdx ? 16 : 6, height: 3, border: "none", borderRadius: 999, background: accentText, opacity: i === anuncioIdx ? 0.95 : 0.4, cursor: "pointer", padding: 0, transition: "all 0.3s" }}/>
+                  style={{ background: "none", border: "none", padding: 0, width: 28, height: 28, display: "grid", placeItems: "center", cursor: "pointer" }}>
+                  <span aria-hidden style={{ display: "block", width: i === anuncioIdx ? 16 : 6, height: 3, borderRadius: 999, background: accentText, opacity: i === anuncioIdx ? 0.95 : 0.4, transition: "all 0.3s" }}/>
+                </button>
               ))}
             </div>
           )}
           <button onClick={() => setAnuncioVisible(false)} aria-label="Cerrar anuncio"
-            style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: accentText, cursor: "pointer", fontSize: 16, lineHeight: 1, opacity: 0.75 }}>×</button>
+            style={{ position: "absolute", right: 6, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: accentText, cursor: "pointer", fontSize: 16, lineHeight: 1, opacity: 0.75, width: 30, height: 30, display: "grid", placeItems: "center", padding: 0 }}>×</button>
         </div>
       )}
 

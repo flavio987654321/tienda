@@ -189,7 +189,8 @@ export default function AireDetail({ view }: { view: ProductDetailViewProps }) {
                         <li key={it.label}>
                           <a href={it.href}
                             {...(it.externo ? { target: "_blank", rel: "noopener noreferrer" } : {})}
-                            style={{ fontSize: 13, color: pieText, opacity: 0.72, textDecoration: "none", lineHeight: 1.4, overflowWrap: "anywhere" }}>
+                            /* Blanco tocable, no el alto de la letra — ver el mismo pie en `Aire.tsx`. */
+                            style={{ fontSize: 13, color: pieText, opacity: 0.72, textDecoration: "none", lineHeight: 1.4, overflowWrap: "anywhere", display: "inline-block", padding: "6px 0" }}>
                             {it.label}
                           </a>
                         </li>
@@ -206,7 +207,7 @@ export default function AireDetail({ view }: { view: ProductDetailViewProps }) {
                 <p style={{ fontSize: 12, opacity: 0.5, margin: 0 }}>Hecho con ♥ en Argentina</p>
                 {!isPreview && (
                   <button onClick={() => setShowReport(true)}
-                    style={{ fontSize: 12, opacity: 0.35, background: "none", border: "none", cursor: "pointer", color: "inherit", padding: 0, fontFamily: "inherit" }}>
+                    style={{ fontSize: 12, opacity: 0.35, background: "none", border: "none", cursor: "pointer", color: "inherit", padding: "6px 4px", fontFamily: "inherit" }}>
                     Reportar tienda
                   </button>
                 )}

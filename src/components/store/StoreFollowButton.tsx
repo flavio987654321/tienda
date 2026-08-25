@@ -149,9 +149,13 @@ export default function StoreFollowButton({ storeSlug, color = "currentColor", s
             border: "none",
             color,
             cursor: isLoading ? "default" : "pointer",
-            padding: 4,
-            display: "flex",
-            alignItems: "center",
+            /* De 4px de padding a 6, para que el blanco llegue a 30px con el
+               ícono de 19: medido en un celular de 360 quedaba en 27×27, justo
+               abajo del mínimo que se puede tocar sin errarle. El dibujo mide lo
+               mismo que antes. */
+            padding: 6,
+            display: "grid",
+            placeItems: "center",
             opacity: isLoading ? 0.5 : 1,
             transition: "opacity 0.2s",
           }}
