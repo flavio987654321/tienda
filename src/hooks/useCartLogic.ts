@@ -372,13 +372,34 @@ export function useCartLogic({ products, promotions = [], storeId, affiliateId =
     return () => document.removeEventListener("mousedown", handler);
   }, [userDropdownOpen]);
 
+  /* ── Escape cierra lo que esté abierto ─────────────────────────────────────
+   *
+   * Antes cerraba SÓLO el buscador y la ficha. Medido en la tienda: el carrito,
+   * el cajón de favoritos y el menú de la cuenta se quedaban abiertos.
+   *
+   * Y estaba justo al revés de lo otro: el buscador cierra con Escape pero NO
+   * con un clic afuera, y esos tres cierran con un clic afuera pero NO con
+   * Escape. O sea que ninguno cerraba de las dos formas, y cuál servía dependía
+   * de cuál hubieras abierto. Nadie puede aprender eso.
+   *
+   * Se cierra UNO POR VEZ, el de más arriba, en vez de todos de una: si algún día
+   * se abren dos cosas superpuestas, un Escape tiene que sacar la de encima y
+   * dejar la de abajo, que es lo que hace cualquier programa.
+   *
+   * La última línea es la de antes, tal cual: el buscador y la ficha juntos. Son
+   * los dos que nunca están abiertos a la vez, y así el cambio no toca lo que ya
+   * andaba en los diez templates. */
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") { setSearchOpen(false); setModalProduct(null); }
+      if (e.key !== "Escape") return;
+      if (userDropdownOpen) { setUserDropdownOpen(false); return; }
+      if (cartOpen)         { setCartOpen(false);         return; }
+      if (favoritesOpen)    { setFavoritesOpen(false);    return; }
+      setSearchOpen(false); setModalProduct(null);
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, []);
+  }, [userDropdownOpen, cartOpen, favoritesOpen]);
 
   const savedScrollY = useRef(0);
   // true solo mientras el modal estuvo abierto en esta instancia — evita

@@ -1435,8 +1435,21 @@ export default function Aire() {
       {/* ── BUSCADOR ───────────────────────────────────────────────────────────
           El velo va en papel y no en negro. Con un velo oscuro sobre un template
           claro, abrir el buscador apaga la tienda entera y se siente otro sitio. */}
+      {/* El buscador va a SU capa, no a la de la barra.
+
+          Estaban las dos en `CAPAS.nav`, y al empatar gana la que se dibuja
+          ultima — que es la barra. O sea que la barra le quedaba ENCIMA al
+          buscador, y como la × del buscador va arriba a la derecha, terminaba
+          justo abajo del boton del carrito: se la tocaba y el clic se lo comia
+          la barra. Medido con el navegador: el clic sobre la × no llegaba nunca.
+          `CAPAS.buscador` existe para esto exactamente y no la usaba nadie.
+
+          Y ahora cierra tocando afuera. Antes no, asi que con la × tapada la
+          unica salida era Escape — que nadie adivina. Se compara `target` con
+          `currentTarget` para que tocar el campo o un resultado no cuente como
+          "afuera". */}
       {searchOpen && (
-        <div style={{ position:"fixed", inset:0, zIndex:CAPAS.nav, background:"rgba(244,244,241,0.94)", backdropFilter:"blur(10px)", display:"flex", flexDirection:"column", alignItems:"center", paddingTop:110 }}>
+        <div onClick={e => { if (e.target === e.currentTarget) setSearchOpen(false); }} style={{ position:"fixed", inset:0, zIndex:CAPAS.buscador, background:"rgba(244,244,241,0.94)", backdropFilter:"blur(10px)", display:"flex", flexDirection:"column", alignItems:"center", paddingTop:110 }}>
           <button onClick={() => setSearchOpen(false)} aria-label="Cerrar búsqueda"
             style={{ position:"absolute", top:20, right:24, width:40, height:40, borderRadius:999, background:S, border:`1px solid ${LN}`, color:T, fontSize:22, cursor:"pointer", lineHeight:1, display:"grid", placeItems:"center" }}>×</button>
           <div style={{ width:"100%", maxWidth:660, padding:"0 24px" }}>

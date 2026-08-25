@@ -705,8 +705,21 @@ export default function AutoMotor() {
       {showReport && <ReportStoreModal slug={config?.slug ?? ""} onClose={() => setShowReport(false)} />}
 
       {/* ── SEARCH OVERLAY ── */}
+      {/* El buscador va a SU capa, no a la de la barra.
+
+          Estaban las dos en `CAPAS.nav`, y al empatar gana la que se dibuja
+          ultima — que es la barra. O sea que la barra le quedaba ENCIMA al
+          buscador, y como la × del buscador va arriba a la derecha, terminaba
+          justo abajo del boton del carrito: se la tocaba y el clic se lo comia
+          la barra. Medido con el navegador: el clic sobre la × no llegaba nunca.
+          `CAPAS.buscador` existe para esto exactamente y no la usaba nadie.
+
+          Y ahora cierra tocando afuera. Antes no, asi que con la × tapada la
+          unica salida era Escape — que nadie adivina. Se compara `target` con
+          `currentTarget` para que tocar el campo o un resultado no cuente como
+          "afuera". */}
       {searchOpen && (
-        <div style={{ position:"fixed", inset:0, zIndex:CAPAS.nav, background:"rgba(255,255,255,0.97)", backdropFilter:"blur(8px)", display:"flex", flexDirection:"column", alignItems:"center", paddingTop:120 }}>
+        <div onClick={e => { if (e.target === e.currentTarget) setSearchOpen(false); }} style={{ position:"fixed", inset:0, zIndex:CAPAS.buscador, background:"rgba(255,255,255,0.97)", backdropFilter:"blur(8px)", display:"flex", flexDirection:"column", alignItems:"center", paddingTop:120 }}>
           <button onClick={() => { setSearchOpen(false); setSearchQuery(""); }} aria-label="Cerrar búsqueda"
             style={{ position:"absolute", top:24, right:32, background:"none", border:"none", color:"#111", fontSize:28, cursor:"pointer", lineHeight:1 }}>×</button>
           <div style={{ width:"100%", maxWidth:640, padding:"0 24px" }}>
