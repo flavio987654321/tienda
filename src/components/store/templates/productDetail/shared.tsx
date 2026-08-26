@@ -25,8 +25,15 @@ import type { VerifiedInfo } from "@/components/store/VerifiedIconButton";
 import { linksLegales, type ClaveLegal } from "@/lib/politicas-tienda";
 import { CAPAS } from "@/lib/capas-tienda";
 
+// `maximumFractionDigits: 0` y no el valor de fábrica, que son TRES decimales.
+// Casi todo lo que llega acá ya viene entero —`pricing.ts` redondea a peso en
+// `roundMoney`, y ahí está escrito el porqué: en Argentina los precios se
+// muestran y se cobran en pesos enteros—, pero la cuota se calcula dividiendo
+// acá nomás y ninguna división cae redonda: la ficha decía "3 cuotas sin interés
+// de $ 63.333,333". El redondeo va en el formateador y no en cada cuenta para
+// que el próximo número que se divida no tenga que acordarse.
 export function fmtPrice(n: number, currency: string) {
-  return `${currency === "ARS" ? "$" : currency} ${n.toLocaleString("es-AR")}`;
+  return `${currency === "ARS" ? "$" : currency} ${n.toLocaleString("es-AR", { maximumFractionDigits: 0 })}`;
 }
 
 const SOCIAL_NETWORKS: ["instagram"|"facebook"|"tiktok"|"youtube"|"pinterest", string][] = [
@@ -499,9 +506,23 @@ export function ProductDetailBody({ theme, view }: { theme: DetailTheme; view: P
   // uno de los dos números va a quedar viejo — y el que quede viejo es el que
   // se cobra.
   const nxmPagadas = promo.nxm ? qty - Math.floor(qty / promo.nxm.n) * (promo.nxm.n - promo.nxm.m) : null;
+  // El precio de UNA unidad que el comprador paga de verdad: con una promo que
+  // baja el precio es el rebajado, si no el de lista (o el de la variante).
+  //
+  // Tiene nombre porque estaba escrito dos veces y una de las dos estaba mal. El
+  // total del botón lo tenía bien; el renglón de las cuotas dividía `displayPrice`
+  // —el precio SIN la promo— y quedaba así, con un 20% puesto:
+  //
+  //     $ 190.000  20%OFF
+  //     $ 152.000                      ← lo que se cobra
+  //     3 cuotas sin interés de $ 63.333   ← × 3 = 190.000, o sea el precio viejo
+  //
+  // Las cuotas sumaban más que el precio, abajo del precio. Ahora sale de acá y
+  // no puede volver a separarse.
+  const precioUnitarioReal = promo.hasPriceDrop ? promo.effectivePrice : displayPrice;
   const totalCompra = nxmPagadas != null
     ? nxmPagadas * displayPrice
-    : (promo.hasPriceDrop ? promo.effectivePrice : displayPrice) * qty;
+    : precioUnitarioReal * qty;
 
   function goToImg(i: number) {
     setActiveImg((i + product.images.length) % product.images.length);
@@ -688,7 +709,7 @@ export function ProductDetailBody({ theme, view }: { theme: DetailTheme; view: P
             product.cuotas ? (
               <div style={{ margin: "0 0 24px" }}>
                 <p style={{ margin: "0 0 6px", fontSize: 14, fontWeight: 700, color: theme.text }}>
-                  {product.cuotas} cuotas sin interés de {fmtPrice(displayPrice / product.cuotas, currency)}
+                  {product.cuotas} cuotas sin interés de {fmtPrice(precioUnitarioReal / product.cuotas, currency)}
                 </p>
                 <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
                   {["VISA", "MASTERCARD", "AMEX"].map(card => (
