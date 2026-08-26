@@ -1099,27 +1099,43 @@ export default function BohoTerra() {
               "Camperas"— y eso es un dato, no una frase de la tienda: dejarlo
               editable ahí sería ofrecerle a la dueña cambiar un texto que
               desaparece apenas alguien toca un botón. */}
-          <h2 style={{ fontFamily:"Georgia, serif", fontSize:"clamp(22px,2.5vw,32px)", fontWeight:400, fontStyle:"italic", margin:0, color:coleccionText }}>
-            {activeGender==="mujer" ? "Mujer"
-             : activeGender==="hombre" ? "Hombre"
-             : activeCategory!=="Todos" ? activeCategory
-             : <EditableZone field="coleccionTitle" label="Título colección">Toda la colección</EditableZone>}
-          </h2>
-          {/* El número decía `allFiltered.length` pero el carrusel muestra
-              `slice(0, CAROUSEL_LIMIT)` = 8. Una tienda con 50 productos anunciaba
-              "50 piezas" al lado del título y el carrusel se plantaba en la octava,
-              sin ninguna señal de que ahí se acababa lo que este bloque muestra.
-              El número está pegado al título: se lee como una promesa DEL BLOQUE.
-              Ahora dice las dos cosas cuando no coinciden. */}
-          <p style={{ fontSize:12, color:coleccionMid, margin:"6px 0 0" }}>
-            {allFiltered.length > CAROUSEL_LIMIT
-              ? `${CAROUSEL_LIMIT} de ${allFiltered.length} piezas`
-              : `${allFiltered.length} ${allFiltered.length === 1 ? "pieza" : "piezas"}`}
-          </p>
-          {/* El engranaje para elegir QUÉ ocho van acá. Sólo en edición, y sobre el
-              bloque: es una decisión que se toma mirando el carrusel lleno. */}
-          <div style={{ marginTop:10 }}>
-            <BotonVitrina products={products} cuantos={CAROUSEL_LIMIT} acento={A} />
+          {/* El título con el número a la izquierda y el engranaje a la DERECHA,
+              en la misma línea. Estaba abajo del número, contra el margen
+              izquierdo, y ahí no se leía como una herramienta del bloque: se leía
+              como un tercer renglón del encabezado, abajo del título de la
+              tienda, como si fuera algo que ve el cliente.
+              A la derecha es donde ya está en Aire —pegado al "Ver todo"— y es la
+              esquina donde uno mira cuando quiere hacerle algo al bloque, no
+              cuando lo está leyendo.
+              El título se encoge y el engranaje no (`flexShrink:0`), así que
+              queda a la derecha en cualquier ancho en vez de caerse abajo. */}
+          <div style={{ display:"flex", alignItems:"flex-end", justifyContent:"space-between", gap:16 }}>
+            <div style={{ minWidth:0 }}>
+              <h2 style={{ fontFamily:"Georgia, serif", fontSize:"clamp(22px,2.5vw,32px)", fontWeight:400, fontStyle:"italic", margin:0, color:coleccionText }}>
+                {activeGender==="mujer" ? "Mujer"
+                 : activeGender==="hombre" ? "Hombre"
+                 : activeCategory!=="Todos" ? activeCategory
+                 : <EditableZone field="coleccionTitle" label="Título colección">Toda la colección</EditableZone>}
+              </h2>
+              {/* El número decía `allFiltered.length` pero el carrusel muestra
+                  `slice(0, CAROUSEL_LIMIT)` = 8. Una tienda con 50 productos anunciaba
+                  "50 piezas" al lado del título y el carrusel se plantaba en la octava,
+                  sin ninguna señal de que ahí se acababa lo que este bloque muestra.
+                  El número está pegado al título: se lee como una promesa DEL BLOQUE.
+                  Ahora dice las dos cosas cuando no coinciden. */}
+              <p style={{ fontSize:12, color:coleccionMid, margin:"6px 0 0" }}>
+                {allFiltered.length > CAROUSEL_LIMIT
+                  ? `${CAROUSEL_LIMIT} de ${allFiltered.length} piezas`
+                  : `${allFiltered.length} ${allFiltered.length === 1 ? "pieza" : "piezas"}`}
+              </p>
+            </div>
+            {/* El engranaje para elegir QUÉ ocho van acá. Sólo en edición —fuera
+                del editor devuelve `null` y esta fila queda con un solo hijo, así
+                que la tienda publicada no cambia un pixel— y sobre el bloque: es
+                una decisión que se toma mirando el carrusel lleno. */}
+            <div style={{ flexShrink:0 }}>
+              <BotonVitrina products={products} cuantos={CAROUSEL_LIMIT} acento={A} />
+            </div>
           </div>
         </div>
 
