@@ -549,6 +549,26 @@ export type CatalogoEmbebido = {
   soloPromos?: boolean;
   /** Apaga el pie propio: adentro de un template el pie ya está. */
   sinPie?: boolean;
+  /**
+   * Si esto es el EDITOR (o la galería de diseños) y no una tienda de verdad.
+   *
+   * Hay que preguntarlo. Antes se daba por sentado —"dibujado adentro de un
+   * template, el editor es el editor"— y era cierto mientras el único que
+   * embebía este catálogo era la previa. Boho Terra lo embebe también en la
+   * tienda PUBLICADA: es su catálogo de verdad, el que se abre al tocar "Ver
+   * colección completa". Ahí adentro había clientes reales tratados como si
+   * fueran la dueña acomodando la vidriera, y eso apagaba tres cosas:
+   *
+   *   · las vistas de producto y los pasos del embudo no se registraban
+   *     (`registrarVista` y `registrarPaso` cortan con `isPreview`), así que la
+   *     tienda vendía y las métricas decían que de ahí no miró nadie;
+   *   · el formulario de reseñas quedaba de sólo lectura, con el enviar
+   *     anulado — desde el catálogo no se podía opinar;
+   *   · cada link a un producto salía con `?from=editor` pegado, así que la
+   *     ficha a la que llegaba el cliente también se creía el editor, y encima
+   *     ese parámetro se copiaba y se compartía.
+   */
+  enEditor?: boolean;
 };
 
 // ── Componente interno (necesita useSearchParams dentro de Suspense) ──────────
@@ -561,9 +581,9 @@ function ProductosPageInner({ embebido }: { embebido?: CatalogoEmbebido }) {
   // Los colores de las promos siguen al template del que se viene: si no, el mismo
   // 3x2 se ve de un color en la portada y de otro una pantalla despues.
   const paletaPromo  = paletaDeTemplate(tParam);
-  /* Dibujado adentro de un template, el editor es el editor: no hay que llegar
-     con `from=editor` en la dirección para saberlo. */
-  const fromEditor   = !!embebido || searchParams?.get("from") === "editor";
+  /* Embebido, lo dice quien embebe —ver `enEditor` en el tipo, que explica qué
+     se rompía cuando esto se daba por sentado—. Suelto, lo dice la dirección. */
+  const fromEditor   = embebido ? !!embebido.enEditor : searchParams?.get("from") === "editor";
   const catParam     = embebido ? (embebido.categoria ?? null)    : (searchParams?.get("categoria") ?? null);
   const subCatParam  = embebido ? (embebido.subcategoria ?? null) : (searchParams?.get("subcategoria") ?? null);
   const ofertaParam  = embebido ? !!embebido.soloOfertas    : searchParams?.get("oferta") === "true";

@@ -625,6 +625,133 @@ decimales) y que ninguno de los cuatro templates vuelva a repartir un `?p=`,
 sin dejar de entenderlos. Probado al revés: devolviéndole los bugs a mano, falla
 en los tres puntos.
 
+### BT-25 — El menú de arriba saltaba 382 píxeles al entrar ✅
+
+Lo reportó Flavio: entrando a Amaranta, "Categorías / Mujer / Hombre" aparecían a
+la derecha y un segundo después se corrían al centro. Medido cuadro a cuadro:
+
+```
+   113ms   Categorías en x=830  (derecha)   sin botones de género
+  3301ms   Categorías en x=448  (centro)    con botones de género
+           ── 382 píxeles ──
+```
+
+El menú se acomoda según si la tienda tiene mujer **y** hombre: cuando no los
+tiene, el grupo se va contra la derecha con un `marginLeft:auto`. Esa pregunta la
+contestaba el template con `catalogoTieneGeneros(products)` — y los productos
+llegan por `fetch` **después** del primer dibujado. O sea que durante ese rato la
+respuesta es "no hay géneros" en TODAS las tiendas, incluida una que sí los tiene.
+
+**El arreglo son dos mitades**, y la segunda apareció midiendo: con la primera
+sola el salto bajaba de 382px a 74px, pero seguía moviéndose.
+
+1. **La respuesta la da el servidor**, que tiene el catálogo en la mano antes de
+   dibujar nada. `tieneGeneros` viaja en el `StoreConfig` que arma la página. Es
+   una consulta más pero de las baratas: un `groupBy` que devuelve los géneros
+   DISTINTOS, o sea a lo sumo tres filas. El `where` copia el de
+   `/api/public/[slug]` —activos, no borrados, sin sólo-mayorista cuando la
+   tienda no vende mayorista— porque si el servidor contara productos que el
+   navegador no va a recibir, reservaría lugar para botones que no aparecen.
+
+2. **Los botones ocupan su lugar desde el primer dibujado**, invisibles
+   (`esperandoGeneros`), y se encienden cuando los productos confirman. Sin esto
+   el grupo se ensancha al aparecer y, como el menú se reparte con
+   `space-between`, "Categorías" igual se corría.
+
+**Lo que NO cambió, a propósito:** los botones y el filtro siguen colgados de
+`hayGeneros`, o sea de los productos que el navegador tiene de verdad. El
+servidor sólo decide **dónde se apoya** el menú. Si los dos no coincidieran, lo
+peor que pasa es que quede un hueco — nunca dos botones que filtran la nada.
+
+Lo tenían igual **Aurora y Urban Pulse**. Los tres arreglados.
+
+### BT-26 — La misma dirección mostraba dos catálogos distintos ✅
+
+`/tienda/amaranta/productos`, según cómo llegaras:
+
+```
+tocando "Ver colección completa"  →  20% Off por Transferencia
+                                     AMARANTA ✓  CATEGORÍAS ▾ MUJER HOMBRE
+                                     NUESTRA HISTORIA 🔍 👍 🔔 ♡ 👤
+
+entrando por el link, o de Google →  ← VOLVER A LA TIENDA   Amaranta   🛒
+```
+
+De la mitad para abajo eran idénticas: los mismos 64 productos, los mismos
+filtros. Lo que se perdía era la barra entera —la promo, las categorías, el
+filtro de género, el buscador, la campanita, favoritos y la cuenta— justo para el
+que llega de afuera, que es el que menos sabe dónde está.
+
+El catálogo propio de Boho Terra ya estaba escrito; lo que faltaba era anotarlo
+en `CON_CATALOGO_PROPIO`, la lista que la ruta consulta para decidir si delega en
+el template o dibuja el genérico. Decía `["aire", "fashion-noir"]`.
+
+Es el mismo agujero que se tapó en la ficha de producto y por el mismo lado: lo
+que ve quien navega y lo que ve quien abre el link tienen que ser la misma
+pantalla. Verificado control por control después del arreglo:
+
+```
+                   por clic   por link   ¿igual?
+  barra de promo   sí         sí         sí
+  marca            sí         sí         sí
+  Categorías       sí         sí         sí
+  Mujer / Hombre   2          2          sí
+  Nuestra Historia sí         sí         sí
+  buscador         sí         sí         sí
+  resultados       64         64         sí
+  productos        48         48         sí
+```
+
+### BT-27 — El catálogo de la tienda publicada se creía el editor ✅
+
+**Apareció al arreglar BT-26, y era el peor de los tres.** No lo trajo ese
+cambio: pasaba desde que Boho Terra tiene su catálogo, en el camino del clic. Lo
+que hizo BT-26 fue ponerlo también en el camino del link.
+
+`CatalogoGenerico` daba por sentado que estar embebido adentro de un template
+significaba estar en el editor:
+
+```tsx
+/* Dibujado adentro de un template, el editor es el editor: no hay que llegar
+   con `from=editor` en la dirección para saberlo. */
+const fromEditor = !!embebido || searchParams?.get("from") === "editor";
+```
+
+Era cierto **mientras el único que lo embebía era la previa**. Boho Terra lo
+embebe en la tienda PUBLICADA: es su catálogo de verdad. Así que a los clientes
+reales de Amaranta se los trataba como a la dueña acomodando la vidriera, y eso
+apagaba tres cosas:
+
+- **Las métricas.** `registrarVista` y `registrarPaso` cortan con `isPreview`, y
+  el carrito recibe `isPreview: fromEditor`. Medido: abrir un producto desde ese
+  catálogo disparaba **cero** llamadas a `product-view`. Después del arreglo,
+  **una**. La tienda vendía y el panel decía que de ahí no miró nadie.
+- **Las reseñas.** El formulario quedaba de sólo lectura y el enviar anulado:
+  desde el catálogo no se podía opinar.
+- **Los links a producto** salían con `?from=editor` pegado, así que la ficha a
+  la que llegaba el cliente también se creía el editor — y ese parámetro se
+  copiaba y se compartía.
+
+Ahora `enEditor` viaja explícito adentro de `embebido`, y el template lo
+contesta con su `isPreview`. Probado de los dos lados: la tienda publicada
+registra la visita, la galería de diseños no.
+
+Es el mismo tipo de error que BT-25: **una pregunta contestada por deducción en
+vez de por dato.** Las dos deducciones eran ciertas cuando se escribieron y
+dejaron de serlo cuando apareció un segundo caso.
+
+### Verificación de BT-25, BT-26 y BT-27
+
+`npx tsx src/lib/generos.check.ts` — 29 chequeos. La regla del filtro (hace falta
+mujer Y hombre) en ocho catálogos distintos; que las dos puertas que la contestan
+—el template con productos, el servidor con una consulta— coincidan; que cada
+template siga usando la variable correcta en cada lugar; y que el `where` del
+servidor no se separe del que usa el endpoint público.
+
+`npx tsx src/lib/catalogo-embebido.check.ts` — 12 chequeos. Que un template que
+dibuja su propio catálogo esté anotado en la ruta (y al revés), y que nadie
+vuelva a **deducir** si está en el editor.
+
 ## Pendiente de revisar
 
 Lo que todavía no se miró, en orden de sospecha:

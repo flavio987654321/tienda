@@ -980,9 +980,14 @@ export default function BohoTerra() {
 
           `template` va a mano y no sale de la base: eso es justamente lo que
           estaba mal. Con Aire guardado y Boho Terra en la previa, el catálogo se
-          dibujaba con el vestido de Aire. Acá el template ya sabe cuál es. */}
+          dibujaba con el vestido de Aire. Acá el template ya sabe cuál es.
+
+          `enEditor` va explícito por lo mismo. El catálogo lo daba por sentado
+          —"si me embeben, es el editor"— y acá eso es falso: éste es el catálogo
+          de la tienda PUBLICADA. El porqué largo, con lo que se apagaba, está en
+          el tipo `CatalogoEmbebido`. */}
       {vista.enCatalogo && (
-        <CatalogoGenerico embebido={{ ...filtroCatalogo, slug: storeConfig?.slug ?? "", template: "boho-terra", sinPie: true }} />
+        <CatalogoGenerico embebido={{ ...filtroCatalogo, slug: storeConfig?.slug ?? "", template: "boho-terra", sinPie: true, enEditor: isPreview }} />
       )}
 
       {vista.enPortada && (<>

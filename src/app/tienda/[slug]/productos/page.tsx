@@ -15,14 +15,35 @@ import CatalogoGenerico from "./CatalogoGenerico";
  * carrito y el pie de la tienda, y volvías a una pantalla que parecía de otro
  * sitio. El de Aire lo dibuja el propio template, así que todo eso viene puesto.
  *
- * Los otros diez siguen exactamente con la página que ya tenían: se movió entera
- * a `CatalogoGenerico.tsx` sin tocarle una línea del cuerpo.
+ * Los otros siguen exactamente con la página que ya tenían: se movió entera a
+ * `CatalogoGenerico.tsx` sin tocarle una línea del cuerpo.
  *
  * "fashion-noir" está por lo mismo que en el registro de templates: es el id
- * viejo de Aire y hay tiendas cuyo JSON todavía lo dice. */
+ * viejo de Aire y hay tiendas cuyo JSON todavía lo dice.
+ *
+ * ── Por qué entró Boho Terra ─────────────────────────────────────────────────
+ * Su catálogo propio ya estaba hecho —lo dibuja el template, entre su barra y su
+ * pie, y es lo que se ve al tocar "Ver colección completa"— pero faltaba anotarlo
+ * acá. O sea que la MISMA dirección mostraba dos páginas distintas según cómo
+ * llegaras. Medido en Amaranta, `/tienda/amaranta/productos`:
+ *
+ *   tocando "Ver colección completa"  →  20% Off por Transferencia
+ *                                        AMARANTA ✓  CATEGORÍAS ▾ MUJER HOMBRE
+ *                                        NUESTRA HISTORIA 🔍 👍 🔔 ♡ 👤
+ *
+ *   entrando por el link, o de Google →  ← VOLVER A LA TIENDA   Amaranta   🛒
+ *
+ * De la mitad para abajo eran idénticas: los mismos productos, los mismos
+ * filtros. Lo que se perdía era la barra entera —la promo, las categorías, el
+ * filtro de género, el buscador, la campanita, favoritos y la cuenta— justo para
+ * el que llega de afuera, que es el que menos sabe dónde está.
+ *
+ * Es el mismo agujero que se tapó en la ficha de producto y por el mismo lado:
+ * lo que ve quien navega y lo que ve quien abre el link tienen que ser la misma
+ * pantalla. */
 export const dynamic = "force-dynamic";
 
-const CON_CATALOGO_PROPIO = new Set(["aire", "fashion-noir"]);
+const CON_CATALOGO_PROPIO = new Set(["aire", "fashion-noir", "boho-terra"]);
 
 type Props = {
   params: Promise<{ slug: string }>;
