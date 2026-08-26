@@ -266,7 +266,7 @@ export default function CasaClara() {
       `}</style>
 
       <nav style={{ position: isPreview ? "sticky" : "fixed", top:0,
-        left: isPreview ? undefined : 0, right: isPreview ? undefined : 0, zIndex: isPreview ? 10000 : 100,
+        left: isPreview ? undefined : 0, right: isPreview ? undefined : 0, zIndex: isPreview ? CAPAS.previaNav : 100,
         background:navBg, borderBottom: `1px solid ${navBorder}`,
         boxShadow: scrolled ? "0 1px 0 rgba(0,0,0,0.03)" : "none", transition:"all 0.3s", padding:"0 24px" }}>
         <div style={{ maxWidth:1100, margin:"0 auto", height:NAV_H, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
@@ -626,7 +626,7 @@ export default function CasaClara() {
       )}
 
       {/* ── FAVORITOS DRAWER ── */}
-      <div style={{ position:"fixed", inset:0, zIndex: isPreview ? 20000 : 205, pointerEvents: favoritesOpen ? "auto" : "none" }}>
+      <div style={{ position:"fixed", inset:0, zIndex: isPreview ? CAPAS.previaModal : 205, pointerEvents: favoritesOpen ? "auto" : "none" }}>
         <div onClick={() => setFavoritesOpen(false)} style={{ position:"absolute", inset:0, background:"rgba(0,0,0,0.4)", opacity: favoritesOpen ? 1 : 0, transition:"opacity 0.3s" }} />
         <div style={{ position:"absolute", top:0, right:0, bottom:0, width:380, maxWidth:"100vw", background:"#fff", transform: favoritesOpen ? "translateX(0)" : "translateX(100%)", transition:"transform 0.35s cubic-bezier(.4,0,.2,1)", display:"flex", flexDirection:"column", borderLeft:"1px solid #f0f0f0" }}>
           <div style={{ padding:"18px 22px 12px", borderBottom:"1px solid #f0f0f0", display:"flex", justifyContent:"space-between", alignItems:"center" }}>

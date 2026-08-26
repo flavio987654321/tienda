@@ -641,7 +641,7 @@ export default function Aurora() {
 
       {/* ── ANNOUNCEMENT BAR ───────────────────────────────── */}
       {showAnnouncement && (
-        <div style={{ position: isPreview ? "sticky" : "fixed", top:0, left: isPreview ? undefined : 0, right: isPreview ? undefined : 0, zIndex: isPreview ? 10001 : 110, height:ANNOUNCEMENT_BAR_H, background:G, display:"flex", alignItems:"center", justifyContent:"center" }}>
+        <div style={{ position: isPreview ? "sticky" : "fixed", top:0, left: isPreview ? undefined : 0, right: isPreview ? undefined : 0, zIndex: isPreview ? CAPAS.previaNavAlto : 110, height:ANNOUNCEMENT_BAR_H, background:G, display:"flex", alignItems:"center", justifyContent:"center" }}>
           <span style={{ fontSize:12, fontWeight:600, color:BG, letterSpacing:1 }}>
             <EditableZone field="announcementText" label="Barra de anuncios" noBadge>{announcementMessages[announcementIdx]}</EditableZone>
           </span>
@@ -718,7 +718,7 @@ export default function Aurora() {
       )}
 
       {/* ── NAVBAR ─────────────────────────────────────────── */}
-      <nav style={{ position: isPreview ? "sticky" : "fixed", top:announcementBarHeight, left: isPreview ? undefined : 0, right: isPreview ? undefined : 0, zIndex: isPreview ? 10000 : 100, transition:"background 0.4s, top 0.3s", background: (isPreview || scrolled) ? "rgba(6,7,13,0.86)" : "transparent", backdropFilter: (isPreview || scrolled) ? "blur(16px) saturate(140%)" : "none", borderBottom: (isPreview || scrolled) ? `1px solid rgba(255,255,255,0.08)` : "none" }}>
+      <nav style={{ position: isPreview ? "sticky" : "fixed", top:announcementBarHeight, left: isPreview ? undefined : 0, right: isPreview ? undefined : 0, zIndex: isPreview ? CAPAS.previaNav : 100, transition:"background 0.4s, top 0.3s", background: (isPreview || scrolled) ? "rgba(6,7,13,0.86)" : "transparent", backdropFilter: (isPreview || scrolled) ? "blur(16px) saturate(140%)" : "none", borderBottom: (isPreview || scrolled) ? `1px solid rgba(255,255,255,0.08)` : "none" }}>
         {/* Sin el `maxWidth:1280`: el nav va de borde a borde, como el hero que
             tiene pegado abajo. Ver el comentario largo en `ChicParis.tsx`, que es la
             misma decisión para los tres templates. */}
@@ -1671,7 +1671,7 @@ export default function Aurora() {
 
       {/* ── MODAL PRODUCTO ─────────────────────────────────── */}
       {modalProduct && (
-        <div style={{ position:"fixed", inset:0, zIndex: isPreview ? 20000 : 600, display:"flex", alignItems:"center", justifyContent:"center" }} onClick={cerrarFicha}>
+        <div style={{ position:"fixed", inset:0, zIndex: isPreview ? CAPAS.previaModal : 600, display:"flex", alignItems:"center", justifyContent:"center" }} onClick={cerrarFicha}>
           {/* El fondo entra con la ficha, no de golpe: si aparece negro entero en
               el primer cuadro, tapa la tarjeta justo cuando la foto sale de ella
               y el pase deja de leerse. */}
@@ -2089,7 +2089,7 @@ export default function Aurora() {
       <CartDrawer cart={cart} theme={cartTheme} isOwner={isOwner} isPreview={isPreview} whatsapp={storeConfig?.whatsapp} />
 
       {/* ── FAVORITES DRAWER ───────────────────────────────── */}
-      <div style={{ position:"fixed", inset:0, zIndex: isPreview ? 20000 : 155, pointerEvents: favoritesOpen ? "auto" : "none" }}>
+      <div style={{ position:"fixed", inset:0, zIndex: isPreview ? CAPAS.previaModal : 155, pointerEvents: favoritesOpen ? "auto" : "none" }}>
         <div onClick={() => setFavoritesOpen(false)} style={{ position:"absolute", inset:0, background:"rgba(10,10,10,0.6)", opacity: favoritesOpen ? 1 : 0, transition:"opacity 0.3s" }}/>
         <div style={{ position:"absolute", top:0, right:0, bottom:0, width:420, background:S, transform: favoritesOpen ? "translateX(0)" : "translateX(100%)", transition:"transform 0.35s cubic-bezier(.4,0,.2,1)", display:"flex", flexDirection:"column" }}>
           <div style={{ padding:"24px 24px 16px", borderBottom:`1px solid rgba(240,235,227,0.07)`, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
@@ -2132,7 +2132,7 @@ export default function Aurora() {
 
       {/* ── LIGHTBOX ───────────────────────────────────────── */}
       {lightboxSrc && (
-        <div style={{ position:"fixed", inset:0, zIndex: isPreview ? 20001 : 700, background:"rgba(0,0,0,0.97)", display:"flex", alignItems:"center", justifyContent:"center" }}
+        <div style={{ position:"fixed", inset:0, zIndex: isPreview ? CAPAS.previaModalAlto : 700, background:"rgba(0,0,0,0.97)", display:"flex", alignItems:"center", justifyContent:"center" }}
           onClick={() => setLightboxSrc(null)}>
           {/* eslint-disable-next-line @next/next/no-img-element -- el lightbox es la foto a pantalla completa con zoom de dos dedos: necesita el <img> nativo. next/image pide medidas fijas o un padre posicionado, y ninguna de las dos cosas conviven con maxWidth/maxHeight en viewport + touchAction pinch-zoom. */}
           <img src={lightboxSrc} alt="" style={{ maxWidth:"100vw", maxHeight:"100vh", objectFit:"contain", touchAction:"pinch-zoom" }} onClick={e => e.stopPropagation()} />

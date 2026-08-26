@@ -741,7 +741,7 @@ export default function ChicParis() {
       {/* ── PROMO BAR ── */}
       {showAnnouncement && (
         <div style={{
-          position: isPreview ? "sticky" : "fixed", top: 0, left: isPreview ? undefined : 0, right: isPreview ? undefined : 0, zIndex: isPreview ? 10001 : 1001,
+          position: isPreview ? "sticky" : "fixed", top: 0, left: isPreview ? undefined : 0, right: isPreview ? undefined : 0, zIndex: isPreview ? CAPAS.previaNavAlto : 1001,
           height: PROMO_BAR_H, background: "#111", overflow: "hidden",
           display: "flex", alignItems: "center", justifyContent: "center",
         }}>
@@ -780,7 +780,7 @@ export default function ChicParis() {
 
       {/* ── NAVBAR ── */}
       <header style={{
-        position: isPreview ? "sticky" : "fixed", top: showAnnouncement ? PROMO_BAR_H : 0, left: isPreview ? undefined : 0, right: isPreview ? undefined : 0, zIndex: isPreview ? 10000 : 1000,
+        position: isPreview ? "sticky" : "fixed", top: showAnnouncement ? PROMO_BAR_H : 0, left: isPreview ? undefined : 0, right: isPreview ? undefined : 0, zIndex: isPreview ? CAPAS.previaNav : 1000,
         background: (isPreview || scrolled) ? "rgba(255,255,255,0.97)" : "transparent",
         borderBottom: (isPreview || scrolled) ? "1px solid #e8e8e8" : "none",
         backdropFilter: (isPreview || scrolled) ? "blur(12px)" : "none",
@@ -2054,7 +2054,7 @@ export default function ChicParis() {
 
       {/* ── PRODUCT MODAL ── */}
       {modalProduct && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: isPreview ? 20000 : 9000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20, backdropFilter: "blur(4px)" }}
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: isPreview ? CAPAS.previaModal : 9000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20, backdropFilter: "blur(4px)" }}
           onClick={() => setModalProduct(null)}>
           <div style={{ background: "#fff", width: "100%", maxWidth: 980, maxHeight: isPreview ? "100%" : "90vh", overflow: "hidden", display: "flex", flexDirection: "column", borderRadius: 4, boxShadow: "0 32px 80px rgba(0,0,0,0.35)", position:"relative" }}
             onClick={e => e.stopPropagation()}>
@@ -2559,7 +2559,7 @@ export default function ChicParis() {
           blanca centrada), y cierra tocando afuera, el ✕, o Escape no —queda
           el tocar-afuera, que es el gesto natural en celular. */}
       {tiendaModalOpen && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: isPreview ? 20000 : 9000, display: "flex", alignItems: isMobile ? "flex-end" : "center", justifyContent: "center", padding: isMobile ? 0 : 20, backdropFilter: "blur(4px)" }}
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: isPreview ? CAPAS.previaModal : 9000, display: "flex", alignItems: isMobile ? "flex-end" : "center", justifyContent: "center", padding: isMobile ? 0 : 20, backdropFilter: "blur(4px)" }}
           onClick={cerrarTiendaModal}>
           <div style={{ background: "#fff", width: "100%", maxWidth: 480, maxHeight: "92vh", overflowY: "auto", borderRadius: isMobile ? "12px 12px 0 0" : 4, boxShadow: "0 24px 64px rgba(0,0,0,0.3)", position: "relative" }}
             onClick={e => e.stopPropagation()}>
@@ -2689,7 +2689,7 @@ export default function ChicParis() {
           Va DESPUÉS del modal de producto en el DOM y con z-index mayor, porque
           se abre estando ese abierto y tiene que quedar por encima. */}
       {modalProduct && resenaProdOpen && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: isPreview ? 20002 : 9600, display: "flex", alignItems: isMobile ? "flex-end" : "center", justifyContent: "center", padding: isMobile ? 0 : 20, backdropFilter: "blur(4px)" }}
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: isPreview ? CAPAS.previaModalSobreModal : 9600, display: "flex", alignItems: isMobile ? "flex-end" : "center", justifyContent: "center", padding: isMobile ? 0 : 20, backdropFilter: "blur(4px)" }}
           onClick={() => setResenaProdOpen(false)}>
           <div style={{ background: "#fff", width: "100%", maxWidth: 460, maxHeight: "92vh", overflowY: "auto", borderRadius: isMobile ? "12px 12px 0 0" : 4, boxShadow: "0 24px 64px rgba(0,0,0,0.3)", position: "relative" }}
             onClick={e => e.stopPropagation()}>
@@ -2765,7 +2765,7 @@ export default function ChicParis() {
 
       {/* ── FAVORITES ── */}
       {favoritesOpen && (
-        <div style={{ position: "fixed", inset: 0, zIndex: isPreview ? 20000 : 9500, display: "flex" }} onClick={() => setFavoritesOpen(false)}>
+        <div style={{ position: "fixed", inset: 0, zIndex: isPreview ? CAPAS.previaModal : 9500, display: "flex" }} onClick={() => setFavoritesOpen(false)}>
           <div style={{ flex: 1 }} />
           <div style={{ width: 380, background: "#fff", height: "100%", display: "flex", flexDirection: "column", boxShadow: "-8px 0 32px rgba(0,0,0,0.15)" }} onClick={e => e.stopPropagation()}>
             <div style={{ padding: "20px 24px", borderBottom: "1px solid #f0f0f0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -2799,7 +2799,7 @@ export default function ChicParis() {
 
       {/* ── LIGHTBOX ───────────────────────────────────────── */}
       {lightboxSrc && (
-        <div style={{ position:"fixed", inset:0, zIndex: isPreview ? 20001 : 9500, background:"rgba(0,0,0,0.97)", display:"flex", alignItems:"center", justifyContent:"center" }}
+        <div style={{ position:"fixed", inset:0, zIndex: isPreview ? CAPAS.previaModalAlto : 9500, background:"rgba(0,0,0,0.97)", display:"flex", alignItems:"center", justifyContent:"center" }}
           onClick={() => setLightboxSrc(null)}>
           {/* eslint-disable-next-line @next/next/no-img-element -- el lightbox es la foto a pantalla completa con zoom de dos dedos: necesita el <img> nativo. next/image pide medidas fijas o un padre posicionado, y ninguna de las dos cosas conviven con maxWidth/maxHeight en viewport + touchAction pinch-zoom. */}
           <img src={lightboxSrc} alt="" style={{ maxWidth:"100vw", maxHeight:"100vh", objectFit:"contain", touchAction:"pinch-zoom" }} onClick={e => e.stopPropagation()} />

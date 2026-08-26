@@ -115,6 +115,41 @@ export const CAPAS = {
   critico: 500,
   /** Pantalla completa de verdad: reels, visor de fotos del vehículo. */
   pantallaCompleta: 510,
+
+  // ── El template dibujado ADENTRO del editor ───────────────────────────────
+  //
+  // Esta parte de la escala existe por una razón que no se adivina: los botones
+  // de edición NO están en el marco del editor, están dibujados adentro del
+  // template, por `EditableZone` y compañía. O sea que compiten con las capas de
+  // arriba, en el mismo contexto de apilado, y por eso hay números tan grandes.
+  //
+  // La historia, del commit que los trajo: "en el editor, los botones de edición
+  // flotaban sobre el nav sticky al scrollear mínimamente". Se subió el nav por
+  // encima de ellos, y desde ahí cada cosa del template que tenía que verse en la
+  // previa se fue sumando números a mano. Al escribir esto había **45 lugares en
+  // los once templates** con literales tipo `isPreview ? 20000 : 600`, y ninguno
+  // decía contra qué estaba compitiendo.
+  //
+  // Los valores son EXACTAMENTE los que ya estaban: esto los nombra, no los
+  // mueve. Nada cambia de orden.
+
+  /** Velo de una zona editable, sobre su propio contenido. */
+  edicionVelo: 9997,
+  /** Los botones de editar: cambiar imagen, cambiar fondo. */
+  edicionBoton: 9998,
+  /** Globitos y etiquetas del editor. Van arriba de todo lo suyo. */
+  edicionGlobito: 99999,
+
+  /** La barra del template, en la previa: por encima de los botones de edición. */
+  previaNav: 10000,
+  /** Lo que cuelga de esa barra —la de anuncios— en la previa. */
+  previaNavAlto: 10001,
+  /** Los modales que abre el visitante, en la previa. */
+  previaModal: 20000,
+  /** La foto ampliada en la previa, que siempre gana. */
+  previaModalAlto: 20001,
+  /** Un modal que se abre ESTANDO otro abierto: la reseña sobre la ficha. */
+  previaModalSobreModal: 20002,
 } as const;
 
 export type Capa = keyof typeof CAPAS;

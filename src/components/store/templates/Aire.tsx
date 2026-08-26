@@ -1555,7 +1555,7 @@ export default function Aire() {
 
       {/* ── BARRA DE ANUNCIOS ──────────────────────────────── */}
       {showAnnouncement && (
-        <div style={{ position: isPreview ? "sticky" : "fixed", top:0, left: isPreview ? undefined : 0, right: isPreview ? undefined : 0, zIndex: isPreview ? 10001 : 110, height:ANNOUNCEMENT_BAR_H, background:G, display:"flex", alignItems:"center", justifyContent:"center" }}>
+        <div style={{ position: isPreview ? "sticky" : "fixed", top:0, left: isPreview ? undefined : 0, right: isPreview ? undefined : 0, zIndex: isPreview ? CAPAS.previaNavAlto : 110, height:ANNOUNCEMENT_BAR_H, background:G, display:"flex", alignItems:"center", justifyContent:"center" }}>
           <span style={{ fontSize:12, fontWeight:600, color:accentText, letterSpacing:0.3 }}>
             <EditableZone field="announcementText" label="Barra de anuncios" noBadge>{announcementMessages[announcementIdx]}</EditableZone>
           </span>
@@ -1653,7 +1653,7 @@ export default function Aire() {
           Los links se escriben como se habla: "Catálogo", no "C A T Á L O G O".
           El interletrado grande era la firma del template de lujo que este
           reemplaza, y es lo que más lo delataba aunque el fondo fuera blanco. */}
-      <nav ref={barraRef} style={{ position: isPreview ? "sticky" : "fixed", top:announcementBarHeight, left: isPreview ? undefined : 0, right: isPreview ? undefined : 0, zIndex: isPreview ? 10000 : 100, transition:"border-color 0.3s", background:"rgba(255,255,255,0.94)", backdropFilter:"blur(12px)", borderBottom:`1px solid ${scrolled ? LN : "transparent"}` }}>
+      <nav ref={barraRef} style={{ position: isPreview ? "sticky" : "fixed", top:announcementBarHeight, left: isPreview ? undefined : 0, right: isPreview ? undefined : 0, zIndex: isPreview ? CAPAS.previaNav : 100, transition:"border-color 0.3s", background:"rgba(255,255,255,0.94)", backdropFilter:"blur(12px)", borderBottom:`1px solid ${scrolled ? LN : "transparent"}` }}>
         {/* DOS cajas y no una: la de afuera pone el margen lateral, la de adentro
             el ancho maximo. Con las dos cosas en la misma caja el maxWidth recorta
             primero y el padding come 24px mas para adentro, asi que en un monitor
@@ -3484,7 +3484,7 @@ export default function Aire() {
       <CartDrawer cart={cart} theme={cartTheme} isOwner={isOwner} isPreview={isPreview} whatsapp={storeConfig?.whatsapp} />
 
       {/* ── FAVORITES DRAWER ───────────────────────────────── */}
-      <div style={{ position:"fixed", inset:0, zIndex: isPreview ? 20000 : 155, pointerEvents: favoritesOpen ? "auto" : "none" }}>
+      <div style={{ position:"fixed", inset:0, zIndex: isPreview ? CAPAS.previaModal : 155, pointerEvents: favoritesOpen ? "auto" : "none" }}>
         <div onClick={() => setFavoritesOpen(false)} style={{ position:"absolute", inset:0, background:"rgba(10,10,10,0.6)", opacity: favoritesOpen ? 1 : 0, transition:"opacity 0.3s" }}/>
         <div style={{ position:"absolute", top:0, right:0, bottom:0, width:"min(420px, 100vw)", background:S, transform: favoritesOpen ? "translateX(0)" : "translateX(100%)", transition:"transform 0.35s cubic-bezier(.4,0,.2,1)", display:"flex", flexDirection:"column" }}>
           <div style={{ padding:"24px 24px 16px", borderBottom:`1px solid rgba(20,22,26,0.07)`, display:"flex", justifyContent:"space-between", alignItems:"center" }}>

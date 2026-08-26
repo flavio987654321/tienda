@@ -669,7 +669,7 @@ export default function BohoTerra() {
 
       {/* ── ANNOUNCEMENT BAR ───────────────────────────────── */}
       {showAnnouncement && (
-        <div style={{ position: isPreview ? "sticky" : "fixed", top:0, left: isPreview ? undefined : 0, right: isPreview ? undefined : 0, zIndex: isPreview ? 10001 : 110, height:ANNOUNCEMENT_BAR_H, background:A, display:"flex", alignItems:"center", justifyContent:"center" }}>
+        <div style={{ position: isPreview ? "sticky" : "fixed", top:0, left: isPreview ? undefined : 0, right: isPreview ? undefined : 0, zIndex: isPreview ? CAPAS.previaNavAlto : 110, height:ANNOUNCEMENT_BAR_H, background:A, display:"flex", alignItems:"center", justifyContent:"center" }}>
           <span style={{ fontSize:12, fontWeight:600, color:"#fff", letterSpacing:1 }}>
             <EditableZone field="announcementText" label="Barra de anuncios" noBadge>{announcementMessages[announcementIdx]}</EditableZone>
           </span>
@@ -746,7 +746,7 @@ export default function BohoTerra() {
       )}
 
       {/* ── NAVBAR */}
-      <nav style={{ position: isPreview ? "sticky" : "fixed", top:announcementBarHeight, left: isPreview ? undefined : 0, right: isPreview ? undefined : 0, zIndex: isPreview ? 10000 : 100, background: scrolled ? "rgba(250,247,242,0.96)" : BG, borderBottom:`1px solid rgba(44,34,24,0.07)`, backdropFilter: scrolled ? "blur(10px)" : "none", transition:"all 0.3s" }}>
+      <nav style={{ position: isPreview ? "sticky" : "fixed", top:announcementBarHeight, left: isPreview ? undefined : 0, right: isPreview ? undefined : 0, zIndex: isPreview ? CAPAS.previaNav : 100, background: scrolled ? "rgba(250,247,242,0.96)" : BG, borderBottom:`1px solid rgba(44,34,24,0.07)`, backdropFilter: scrolled ? "blur(10px)" : "none", transition:"all 0.3s" }}>
         {/* Sin el `maxWidth:1280`: el nav va de borde a borde, como el hero que
             tiene pegado abajo. Ver el comentario largo en `ChicParis.tsx`, que es la
             misma decisión para los tres templates. */}
@@ -1041,11 +1041,15 @@ export default function BohoTerra() {
               S={BG} LN="rgba(44,34,24,0.18)" T={T} G={A} />
           </div>
         <CatalogoGenerico embebido={{ ...filtroCatalogo, slug: storeConfig?.slug ?? "", template: "boho-terra", sinPie: true, sinBarra: true, enEditor: isPreview, acento: A,
-          /* La MISMA capa que usa este template para su propia ficha, unas líneas
-             más abajo. Los modales del catálogo comparten pantalla con esta barra,
-             así que tienen que jugar en su escala: con la de ellos —`CAPAS.nav`,
-             o sea 100— la barra les tapaba la × de cerrar. */
-          capaModal: isPreview ? 20000 : 600 }} />
+          /* Los modales del catálogo comparten pantalla con esta barra, así que
+             tienen que quedar por encima de ella: con la capa que traían
+             —`CAPAS.nav`, o sea 100— la barra les tapaba la × de cerrar.
+             Va `modalTemplate`, que es literalmente "modales que abre el visitante
+             desde un template", y NO el 600 que este template usa a mano para los
+             suyos. La diferencia importa: 600 los dejaba por encima del flyer y de
+             los carteles de la plataforma; 310 les gana a la barra y pierde contra
+             esos, que es el orden que corresponde. */
+          capaModal: isPreview ? CAPAS.previaModal : CAPAS.modalTemplate }} />
         </div>
       )}
 
@@ -1797,7 +1801,7 @@ export default function BohoTerra() {
 
       {/* ── MODAL PRODUCTO */}
       {modalProduct && (
-        <div style={{ position:"fixed", inset:0, zIndex: isPreview ? 20000 : 600, display:"flex", alignItems:"center", justifyContent:"center" }} onClick={()=>{ setModalProduct(null); setLightboxSrc(null); }}>
+        <div style={{ position:"fixed", inset:0, zIndex: isPreview ? CAPAS.previaModal : 600, display:"flex", alignItems:"center", justifyContent:"center" }} onClick={()=>{ setModalProduct(null); setLightboxSrc(null); }}>
           <div style={{ position:"absolute", inset:0, background:"rgba(44,34,24,0.65)", backdropFilter:"blur(8px)" }}/>
           {/* ── Por qué `92%` y no `92vh` ─────────────────────────────────────
               `vh` es el alto de la VENTANA, y adentro del editor el template no
@@ -2269,7 +2273,7 @@ export default function BohoTerra() {
       <CartDrawer cart={cart} theme={cartTheme} isOwner={isOwner} isPreview={isPreview} whatsapp={storeConfig?.whatsapp} vocabulario={VOCABULARIO_CARRITO} />
 
       {/* ── FAVORITES DRAWER ───────────────────────────────── */}
-      <div style={{ position:"fixed", inset:0, zIndex: isPreview ? 20000 : 155, pointerEvents: favoritesOpen ? "auto" : "none" }}>
+      <div style={{ position:"fixed", inset:0, zIndex: isPreview ? CAPAS.previaModal : 155, pointerEvents: favoritesOpen ? "auto" : "none" }}>
         <div onClick={() => setFavoritesOpen(false)} style={{ position:"absolute", inset:0, background:"rgba(44,34,24,0.4)", opacity: favoritesOpen ? 1 : 0, transition:"opacity 0.3s" }}/>
         <div style={{ position:"absolute", top:0, right:0, bottom:0, width:400, background:"#fff", transform: favoritesOpen ? "translateX(0)" : "translateX(100%)", transition:"transform 0.35s cubic-bezier(.4,0,.2,1)", display:"flex", flexDirection:"column", borderLeft:`1px solid rgba(44,34,24,0.08)` }}>
           <div style={{ padding:"20px 24px 14px", borderBottom:`1px solid rgba(44,34,24,0.06)`, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
@@ -2320,7 +2324,7 @@ export default function BohoTerra() {
           template. */}
       {resenas.modalAbierto && (
         <div onClick={resenas.cerrarModal}
-          style={{ position:"fixed", inset:0, background:"rgba(44,34,24,0.6)", backdropFilter:"blur(4px)", zIndex: isPreview ? 20000 : 900, display:"flex", alignItems: isMobile ? "flex-end" : "center", justifyContent:"center", padding: isMobile ? 0 : 20 }}>
+          style={{ position:"fixed", inset:0, background:"rgba(44,34,24,0.6)", backdropFilter:"blur(4px)", zIndex: isPreview ? CAPAS.previaModal : 900, display:"flex", alignItems: isMobile ? "flex-end" : "center", justifyContent:"center", padding: isMobile ? 0 : 20 }}>
           <div onClick={e => e.stopPropagation()}
             style={{ background:"#fff", width:"100%", maxWidth:460, maxHeight:"92%", overflowY:"auto", position:"relative" }}>
             <button onClick={resenas.cerrarModal} aria-label="Cerrar"
@@ -2437,7 +2441,7 @@ export default function BohoTerra() {
           El zIndex va entre medio a propósito: por encima de la ficha (600) y por
           debajo del lightbox (700), que es el que siempre tiene que ganar. */}
       {modalProduct && resenaModalOpen && (
-        <div style={{ position:"fixed", inset:0, zIndex: isPreview ? 20000 : 650, background:"rgba(44,34,24,0.6)", backdropFilter:"blur(4px)", display:"flex", alignItems: isMobile ? "flex-end" : "center", justifyContent:"center", padding: isMobile ? 0 : 20 }}
+        <div style={{ position:"fixed", inset:0, zIndex: isPreview ? CAPAS.previaModal : 650, background:"rgba(44,34,24,0.6)", backdropFilter:"blur(4px)", display:"flex", alignItems: isMobile ? "flex-end" : "center", justifyContent:"center", padding: isMobile ? 0 : 20 }}
           onClick={() => setResenaModalOpen(false)}>
           <div style={{ background:"#fff", width:"100%", maxWidth:460, maxHeight:"92%", overflowY:"auto", position:"relative" }}
             onClick={e => e.stopPropagation()}>
@@ -2504,7 +2508,7 @@ export default function BohoTerra() {
 
       {/* ── LIGHTBOX ───────────────────────────────────────── */}
       {lightboxSrc && (
-        <div style={{ position:"fixed", inset:0, zIndex: isPreview ? 20001 : 700, background:"rgba(0,0,0,0.97)", display:"flex", alignItems:"center", justifyContent:"center" }}
+        <div style={{ position:"fixed", inset:0, zIndex: isPreview ? CAPAS.previaModalAlto : 700, background:"rgba(0,0,0,0.97)", display:"flex", alignItems:"center", justifyContent:"center" }}
           onClick={() => setLightboxSrc(null)}>
           {/* eslint-disable-next-line @next/next/no-img-element -- el lightbox es la foto a pantalla completa con zoom de dos dedos: necesita el <img> nativo. next/image pide medidas fijas o un padre posicionado, y ninguna de las dos cosas conviven con maxWidth/maxHeight en viewport + touchAction pinch-zoom. */}
           <img src={lightboxSrc} alt="" style={{ maxWidth:"100%", maxHeight:"100%", objectFit:"contain", touchAction:"pinch-zoom" }} onClick={e => e.stopPropagation()} />

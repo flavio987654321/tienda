@@ -901,3 +901,80 @@ Lo que todavía no se miró, en orden de sospecha:
 - **Ocho `picsum`** de relleno. Ya no cuestan cuota de Vercel (desde el arreglo de
   `FadeImage`), pero siguen siendo fotos de stock en una tienda real.
 - El recorrido de compra completo y el barrido de anchos (360 / 768 / 1280).
+
+## Dos que salieron revisando el diff, y se hicieron ✅
+
+Aparecieron mirando el diff antes de deployar, el 26/08/2026. Se anotaron como
+"pendientes con disparador" y Flavio dijo que no, que se arreglaran ahora. Tenía
+razón: las dos tenían una versión acotada y verificable.
+
+### BT-31 — `Product` no tenía índice por tienda ✅
+
+Sólo había índice por `deletedAt` y la clave primaria. Y todo lo que se le pide a
+esa tabla arranca por la tienda: el catálogo del endpoint público, los géneros
+del menú, el panel, las métricas. Cada una leía la tabla entera.
+
+Medido contra la base real:
+
+```
+Seq Scan on "Product"  (actual time=0.014..0.091 rows=64)
+  Rows Removed by Filter: 52
+Execution Time: 0.142 ms
+```
+
+**Hoy no acelera nada, y se hizo igual.** Con 116 filas Postgres va a seguir
+eligiendo el escaneo aunque el índice exista: leerlas todas sale más barato que
+ir al índice y volver. Lo que crece no es cada tienda sino el total de productos
+de todas juntas, y el costo del escaneo crece con ÉL. El día que se note, se nota
+en cada visita a cualquier tienda al mismo tiempo — y a esa altura agregar un
+índice es una migración apurada sobre una tabla grande. Ahora es instantánea.
+
+La migración está escrita a mano, sin correr el CLI contra la base: `prisma
+migrate deploy` la aplica sola en el próximo deploy de producción. Se verificó
+antes que ese índice no exista.
+
+### BT-32 — Las capas del editor no estaban en el registro ✅
+
+`CAPAS` existe para que nadie invente un z-index, pero quedaba media escala
+afuera: la del template dibujado adentro del editor. Al revisar había **45
+lugares en los once templates** con literales tipo `isPreview ? 20000 : 600`.
+
+El porqué de esos números no se adivina leyendo el código, y sin él son magia.
+Está en el commit que los trajo: *"en el editor, los botones de edición flotaban
+sobre el nav sticky al scrollear mínimamente"*. La clave es que **los botones de
+edición se dibujan ADENTRO del template**, no en el marco del editor, así que
+compiten con las capas de la tienda en el mismo contexto de apilado.
+
+Ahora esa escala tiene nombre y el porqué escrito al lado: `edicionVelo`,
+`edicionBoton`, `edicionGlobito`, `previaNav`, `previaNavAlto`, `previaModal`,
+`previaModalAlto`, `previaModalSobreModal`.
+
+**Ningún número cambió.** Se verificó a máquina, no a ojo: un script comparó
+archivo por archivo las capas de los 13 archivos tocados contra las de
+producción, resolviendo los nombres nuevos a su valor. *13 archivos comparados,
+ninguna capa cambió de número.*
+
+Lo único que sí se movió es lo que quedó marcado en BT-28: los modales del
+catálogo embebido estaban colgados del 600 que Boho Terra usa a mano, y eso los
+dejaba **por encima del flyer y de los carteles de la plataforma**. Pasaron a
+`CAPAS.modalTemplate`, que es literalmente "modales que abre el visitante desde
+un template". Medido en la tienda publicada:
+
+```
+capa del modal del catálogo   310
+capa de la barra              100     → el modal le gana a la barra
+avisos 400 · plataforma 430 · crítico 500  → y pierde contra ellos
+la × se puede tocar: sí       la × cierra: sí
+```
+
+`capas-tienda.check.ts` cuida las tres cosas: que el orden de la escala del
+editor siga resolviendo el bug original, que un modal de template le gane a la
+barra y pierda contra los carteles, y que nadie vuelva a escribir un número de
+cuatro cifras a mano en un template.
+
+**Lo que NO se hizo, y es distinto de lo anterior:** los números propios de Boho
+Terra en la tienda publicada (600, 650, 700, 900, 155) siguen escritos a mano.
+Mudarlos al registro cambia el orden de todo lo que se apila en el template
+—menú, carrito, buscador, avisos— y eso hay que verlo en el editor, que hoy no
+se puede abrir porque el ingreso está roto por el captcha. Nombrar la escala sin
+mover un número era la mitad segura; ésta es la otra mitad y pide ojos.

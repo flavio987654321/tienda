@@ -3,6 +3,7 @@ import { createContext, useContext, useState } from "react";
 import { ChapitaBloque } from "@/components/store/templates/shared/ChapitaBloque";
 import type { TextOverride, ImageOverride } from "@/types/store-config";
 import { colorRepresentativo } from "@/lib/section-bg";
+import { CAPAS } from "@/lib/capas-tienda";
 
 type EditContextType = {
   editMode: boolean;
@@ -287,7 +288,7 @@ export function EditableZone({
             fontSize: 10, fontWeight: 700, lineHeight: 1.5,
             padding: "3px 8px", borderRadius: "4px 4px 4px 0",
             display: "inline-flex", alignItems: "center", gap: 4,
-            zIndex: 99999, whiteSpace: "nowrap", pointerEvents: "none",
+            zIndex: CAPAS.edicionGlobito, whiteSpace: "nowrap", pointerEvents: "none",
             boxShadow: "0 2px 10px rgba(239,68,68,0.35)",
             fontFamily: "system-ui, -apple-system, sans-serif",
             letterSpacing: 0,
@@ -345,7 +346,7 @@ export function EditableZone({
           fontSize: 10, fontWeight: 700, lineHeight: 1.5,
           padding: "3px 8px", borderRadius: "4px 4px 4px 0",
           display: "inline-flex", alignItems: "center", gap: 4,
-          zIndex: 99999, whiteSpace: "nowrap", pointerEvents: "none",
+          zIndex: CAPAS.edicionGlobito, whiteSpace: "nowrap", pointerEvents: "none",
           boxShadow: "0 2px 10px rgba(99,102,241,0.45)",
           fontFamily: "system-ui, -apple-system, sans-serif",
           letterSpacing: 0,
@@ -427,7 +428,7 @@ export function EditableImageButton({
     <>
       {isLoading && (
         <div style={{
-          position: "absolute", inset: 0, zIndex: 9997,
+          position: "absolute", inset: 0, zIndex: CAPAS.edicionVelo,
           background: "rgba(15,23,42,0.55)",
           backdropFilter: "blur(3px)",
           display: "flex", alignItems: "center", justifyContent: "center",
@@ -468,7 +469,7 @@ export function EditableImageButton({
         data-edit-note={panelNote}
         data-edit-carrusel={esCarrusel ? "1" : undefined}
         style={compact ? {
-          position: "absolute", top: 8, right: 8, zIndex: 9998,
+          position: "absolute", top: 8, right: 8, zIndex: CAPAS.edicionBoton,
           display: "flex", alignItems: "center", justifyContent: "center",
           width: 28, height: 28, borderRadius: "50%", cursor: "pointer",
           background: isActive ? "#6366f1" : hovered ? "rgba(20,20,20,0.9)" : "rgba(20,20,20,0.65)",
@@ -477,7 +478,7 @@ export function EditableImageButton({
           backdropFilter: "blur(6px)",
           transition: "all 0.15s",
         } : {
-          position: "absolute", top: 16, right: 16, zIndex: 9998,
+          position: "absolute", top: 16, right: 16, zIndex: CAPAS.edicionBoton,
           display: "flex", alignItems: "center", gap: 6,
           padding: "7px 14px", borderRadius: 9, cursor: "pointer",
           fontSize: 12, fontWeight: 700,
@@ -577,7 +578,7 @@ export function EditableSectionBg({ field, label, lado = "izquierda", nombreBloq
          * bloque en fila parecen dos controles distintos de dos cosas distintas.
          * Apilados se leen como lo que son — el nombre, y abajo lo que se puede
          * hacerle. */
-        position: "absolute", top: 17, zIndex: 9998,
+        position: "absolute", top: 17, zIndex: CAPAS.edicionBoton,
         ...(lado === "derecha" ? { right: 8 } : { left: 8 }),
         display: "flex", alignItems: "center", gap: 4,
         padding: "4px 9px", borderRadius: 8, cursor: "pointer",
@@ -627,7 +628,7 @@ export function EditableFixed({
           style={{
             position: "fixed", bottom, right,
             width: size, height: size, borderRadius: "50%",
-            zIndex: 99999, cursor: "pointer",
+            zIndex: CAPAS.edicionGlobito, cursor: "pointer",
             outline: isActive
               ? "3px solid #6366f1"
               : hovered ? "3px dashed rgba(99,102,241,0.8)"

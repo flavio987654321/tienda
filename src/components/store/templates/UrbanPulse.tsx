@@ -852,7 +852,7 @@ export default function UrbanPulse() {
       )}
 
       {/* NAVBAR */}
-      <nav style={{ position:"sticky", top:0, zIndex: isPreview ? 10000 : 100, background: scrolled ? WHITE : "rgba(245,245,245,0.95)", borderBottom: scrolled ? `3px solid ${DARK}` : "3px solid transparent", backdropFilter:"blur(8px)", transition:"all 0.3s", padding: isMobile ? "0 12px" : "0 20px", height:64, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+      <nav style={{ position:"sticky", top:0, zIndex: isPreview ? CAPAS.previaNav : 100, background: scrolled ? WHITE : "rgba(245,245,245,0.95)", borderBottom: scrolled ? `3px solid ${DARK}` : "3px solid transparent", backdropFilter:"blur(8px)", transition:"all 0.3s", padding: isMobile ? "0 12px" : "0 20px", height:64, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
         {/* La marca es lo ÚNICO que cede ancho. Antes tenía `flexShrink:0`, así que
             se plantaba: cuando no entraba todo, el que se salía de la pantalla era
             el grupo de íconos, y con él la página entera (74px de más a 360px,
@@ -2534,7 +2534,7 @@ export default function UrbanPulse() {
 
       {/* FAVORITES DRAWER */}
       {favoritesOpen && (
-        <div className="up-fade" style={{ position:"fixed", inset:0, zIndex: isPreview ? 20000 : 500 }}>
+        <div className="up-fade" style={{ position:"fixed", inset:0, zIndex: isPreview ? CAPAS.previaModal : 500 }}>
           <div onClick={() => setFavoritesOpen(false)} style={{ position:"absolute", inset:0, background:"rgba(0,0,0,0.5)" }} />
           <div style={{ position:"absolute", right:0, top:0, bottom:0, width:400, maxWidth:"100vw", background:WHITE, display:"flex", flexDirection:"column" }}>
             <div style={{ padding:"20px 24px", borderBottom:`3px solid ${DARK}`, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
@@ -2567,7 +2567,7 @@ export default function UrbanPulse() {
 
       {/* PRODUCT MODAL */}
       {modalProduct && (
-        <div className="up-fade" style={{ position:"fixed", inset:0, zIndex: isPreview ? 20000 : 600 }}>
+        <div className="up-fade" style={{ position:"fixed", inset:0, zIndex: isPreview ? CAPAS.previaModal : 600 }}>
           <div onClick={() => setModalProduct(null)} style={{ position:"absolute", inset:0, background:"rgba(0,0,0,0.7)" }} />
           <div style={{ position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center", padding: isMobile ? 0 : 24 }}>
             {/* ── La ficha de producto de Urban Pulse ───────────────────────────
@@ -3162,7 +3162,7 @@ export default function UrbanPulse() {
           el vestido de Urban Pulse — bordes rectos de 3px, mayúsculas, sin curvas. */}
       {resenas.modalAbierto && (
         <div className="up-fade" onClick={resenas.cerrarModal}
-          style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.9)", zIndex: isPreview ? 20000 : 900, display:"flex", alignItems: isMobile ? "flex-end" : "center", justifyContent:"center", padding: isMobile ? 0 : 20 }}>
+          style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.9)", zIndex: isPreview ? CAPAS.previaModal : 900, display:"flex", alignItems: isMobile ? "flex-end" : "center", justifyContent:"center", padding: isMobile ? 0 : 20 }}>
           <div onClick={e => e.stopPropagation()}
             style={{ background:WHITE, width:"100%", maxWidth:480, maxHeight:"92vh", overflowY:"auto", border:`3px solid ${DARK}`, position:"relative" }}>
             <button onClick={resenas.cerrarModal} aria-label="Cerrar"
@@ -3294,7 +3294,7 @@ export default function UrbanPulse() {
 
       {/* ── LIGHTBOX ───────────────────────────────────────── */}
       {lightboxSrc && (
-        <div style={{ position:"fixed", inset:0, zIndex: isPreview ? 20001 : 700, background:"rgba(0,0,0,0.97)", display:"flex", alignItems:"center", justifyContent:"center" }}
+        <div style={{ position:"fixed", inset:0, zIndex: isPreview ? CAPAS.previaModalAlto : 700, background:"rgba(0,0,0,0.97)", display:"flex", alignItems:"center", justifyContent:"center" }}
           onClick={() => setLightboxSrc(null)}>
           {/* eslint-disable-next-line @next/next/no-img-element -- el lightbox es la foto a pantalla completa con zoom de dos dedos: necesita el <img> nativo. next/image pide medidas fijas o un padre posicionado, y ninguna de las dos cosas conviven con maxWidth/maxHeight en viewport + touchAction pinch-zoom. */}
           <img src={lightboxSrc} alt="" style={{ maxWidth:"100vw", maxHeight:"100vh", objectFit:"contain", touchAction:"pinch-zoom" }} onClick={e => e.stopPropagation()} />

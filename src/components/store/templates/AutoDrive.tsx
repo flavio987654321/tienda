@@ -280,7 +280,7 @@ export default function AutoDrive() {
       {showAnn && (
         <div style={{ position: isPreview ? "sticky" : "fixed", top:0,
           left: isPreview ? undefined : 0, right: isPreview ? undefined : 0,
-          zIndex: isPreview ? 10001 : 110, height:PROMO_H, background:accent,
+          zIndex: isPreview ? CAPAS.previaNavAlto : 110, height:PROMO_H, background:accent,
           display:"flex", alignItems:"center", justifyContent:"center" }}>
           {(() => {
             const bannerText = getContrastColor(accent) === "light" ? "#ffffff" : "#111111";
@@ -312,7 +312,7 @@ export default function AutoDrive() {
       <nav style={{ position: isPreview ? "sticky" : "fixed",
         top: showAnn ? PROMO_H : 0,
         left: isPreview ? undefined : 0, right: isPreview ? undefined : 0,
-        zIndex: isPreview ? 10000 : 100,
+        zIndex: isPreview ? CAPAS.previaNav : 100,
         background: navBg,
         borderBottom: scrolled ? `1px solid ${navBorderColor}` : "1px solid transparent",
         backdropFilter: "blur(20px)",
@@ -1034,7 +1034,7 @@ export default function AutoDrive() {
       )}
 
       {/* ── FAVORITOS DRAWER ── */}
-      <div style={{ position:"fixed", inset:0, zIndex: isPreview ? 20000 : 205, pointerEvents: favoritesOpen ? "auto" : "none" }}>
+      <div style={{ position:"fixed", inset:0, zIndex: isPreview ? CAPAS.previaModal : 205, pointerEvents: favoritesOpen ? "auto" : "none" }}>
         <div onClick={() => setFavoritesOpen(false)} style={{ position:"absolute", inset:0, background:"rgba(0,0,0,0.4)", opacity: favoritesOpen ? 1 : 0, transition:"opacity 0.3s" }} />
         <div style={{ position:"absolute", top:0, right:0, bottom:0, width:400, maxWidth:"100vw", background:"#fff", transform: favoritesOpen ? "translateX(0)" : "translateX(100%)", transition:"transform 0.35s cubic-bezier(.4,0,.2,1)", display:"flex", flexDirection:"column", borderLeft:"1px solid #e5e5e5" }}>
           <div style={{ padding:"20px 24px 14px", borderBottom:"1px solid #f0f0f0", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
