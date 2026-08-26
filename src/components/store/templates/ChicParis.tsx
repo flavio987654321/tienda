@@ -289,7 +289,10 @@ export default function ChicParis() {
   const PROMO_BAR_H = 36;
   const hasWA = !storeConfig || storeConfig.whatsapp.enabled;
   const promoBannerEnabled = storeConfig?.promoBanner?.enabled !== false;
-  const CP_DEFAULTS = ["🚚 Envío gratis en compras mayores a showAnnouncement, announcementMessages.length0.000", "🔄 Cambios sin cargo hasta 30 días", "💳 6 cuotas sin interés"];
+  /* Decía "compras mayores a showAnnouncement, announcementMessages.length0.000":
+     un buscar-y-reemplazar se comió el `$3` de "$30.000" tomándolo por un grupo
+     de captura. Es el mismo texto que traen Aire, Aurora y Boho Terra. */
+  const CP_DEFAULTS = ["🚚 Envío gratis en compras mayores a $30.000", "🔄 Cambios sin cargo hasta 30 días", "💳 6 cuotas sin interés"];
   const announcementMessages = (storeConfig?.promoBanner?.messages?.filter(m => m.trim()) ?? []).length > 0
     ? storeConfig!.promoBanner!.messages!.filter(m => m.trim())
     : CP_DEFAULTS;

@@ -378,3 +378,19 @@ campos blancos.
 **Sin decidir.** La del catálogo es más "Chic Paris" (usa la paleta real y el Garamond); la del home ya
 está aprobada a la vista y tocarla es más riesgoso. Queda a criterio de Flavio si se unifican y hacia
 cuál.
+
+## 26/08/2026 — El mensaje por defecto de la barra tenía código pegado
+
+Salió auditando Boho Terra. `CP_DEFAULTS`, el primero de los tres mensajes que la
+barra de promociones muestra cuando la tienda no escribió los suyos, decía:
+
+> 🚚 Envío gratis en compras mayores a **showAnnouncement, announcementMessages.length**0.000
+
+Ahí iba `$30.000`. Un buscar-y-reemplazar con expresión regular tomó el `$3` por
+un grupo de captura y lo cambió por nombres de variables que andaban cerca. Es el
+mismo texto que traen Aire, Aurora y Boho Terra, que estaban bien: Chic Paris es
+el único que lo tiene escrito adentro de la función en vez de como constante
+arriba del archivo, y por eso fue el único que agarró el reemplazo.
+
+Le salía a cualquier tienda de Chic Paris con la barra prendida y sin mensajes
+propios — o sea, a una tienda recién hecha.
