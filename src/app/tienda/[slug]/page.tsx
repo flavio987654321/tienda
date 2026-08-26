@@ -110,6 +110,24 @@ export default async function TiendaPage({ params, searchParams }: TiendaPagePro
         tagline: true,
         tipoTienda: true,
         tieneVentaMayorista: true,
+        /* Los géneros que hay en el catálogo, para saber si el menú lleva Mujer y
+           Hombre. El porqué está abajo, en `tieneGeneros`.
+           Va acá adentro y no en una consulta aparte: `distinct` hace que vuelvan
+           a lo sumo tres filas —"mujer", "hombre", "unisex"— y viaja pegado a la
+           consulta que ya se hacía igual. Aparte serían dos idas y vueltas en
+           serie contra la base en cada visita a una tienda, para un dato que se
+           necesita antes de dibujar el primer pixel.
+           El `where` es el mismo que usa `/api/public/[slug]` para decidir qué
+           productos salen. Tiene que ser el mismo: si acá se contaran productos
+           que el navegador no va a recibir, el menú reservaría lugar para dos
+           botones que después no aparecen. Lo de sólo-mayorista no se puede
+           preguntar acá —depende de `tieneVentaMayorista`, que sale de esta misma
+           consulta— así que se filtra abajo, con la lista ya en la mano. */
+        products: {
+          where: { isActive: true, deletedAt: null },
+          select: { gender: true, soloMayorista: true },
+          distinct: ["gender", "soloMayorista"],
+        },
         mpAccessToken: true,
         ownerId: true,
         isVerified: true,
@@ -233,27 +251,20 @@ export default async function TiendaPage({ params, searchParams }: TiendaPagePro
    * centro cuando llegaban los productos. Un salto de esos, en la barra de
    * arriba, es lo primero que ve el que entra.
    *
-   * Es una consulta más, pero de las baratas: pide la lista de géneros
-   * DISTINTOS, o sea a lo sumo tres filas, no el catálogo.
+   * No cuesta una consulta: los géneros vienen `distinct` adentro de la consulta
+   * de la tienda, que se hacía igual. Ver el `select` de arriba.
    *
-   * El `where` es el mismo que usa `/api/public/[slug]` para decidir qué
-   * productos salen —activos, no borrados, y sin los de sólo-mayorista cuando la
-   * tienda no vende mayorista—. Tiene que ser el mismo: si el servidor contara
-   * productos que el navegador no va a recibir, reservaría lugar para dos
-   * botones que después no aparecen.
+   * Lo único que falta hacer acá es sacar los de sólo-mayorista cuando la tienda
+   * no vende mayorista, que es lo que hace `/api/public/[slug]` para decidir qué
+   * productos salen. No se puede filtrar en la consulta porque depende de
+   * `tieneVentaMayorista`, que sale de esa misma consulta.
    *
    * La regla de cuándo el filtro sirve —hace falta mujer Y hombre— no se
    * reescribe acá: sale de `generosDanFiltro`, la misma que usa el template. */
-  const generosVisibles = await prisma.product.groupBy({
-    by: ["gender"],
-    where: {
-      storeId: store.id,
-      isActive: true,
-      deletedAt: null,
-      ...(store.tieneVentaMayorista ? {} : { soloMayorista: false }),
-    },
-  });
-  const tieneGeneros = generosDanFiltro(generosVisibles.map(g => g.gender));
+  const generosVisibles = store.products
+    .filter(p => store.tieneVentaMayorista || !p.soloMayorista)
+    .map(p => p.gender);
+  const tieneGeneros = generosDanFiltro(generosVisibles);
 
   // El try/catch solo protege el parseo del JSON — el JSX de ComingSoonPage
   // se construye después, afuera, para que un eventual error de render no

@@ -115,18 +115,29 @@ for (const t of TEMPLATES) {
 
 console.log("\n4) El servidor pregunta por los mismos productos que se publican");
 
-/* `/api/public/[slug]` decide que productos ve el navegador. La consulta de
-   generos de la pagina tiene que filtrar igual, o contaria productos que el
-   navegador no va a recibir. */
+/* `/api/public/[slug]` decide que productos ve el navegador: activos, no
+   borrados, y sin los de solo-mayorista cuando la tienda no vende mayorista. La
+   pagina tiene que mirar exactamente esos, o el menu reservaria lugar para dos
+   botones que despues no aparecen. */
 const pagina = leer("src/app/tienda/[slug]/page.tsx");
-chequear("la pagina pide los generos con groupBy",
-  /groupBy\(\{\s*by: \["gender"\]/.test(pagina));
-for (const filtro of ["isActive: true", "deletedAt: null", "soloMayorista: false"]) {
-  chequear(`y filtra por \`${filtro}\`, igual que el endpoint publico`,
-    new RegExp(filtro.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).test(pagina));
-}
+
+/* Y tiene que salir de la consulta que ya se hacia, no de una aparte: son dos
+   idas y vueltas contra la base en cada visita a una tienda, para un dato que se
+   necesita antes de dibujar el primer pixel. `distinct` hace que vuelvan a lo
+   sumo unas pocas filas en vez del catalogo entero. */
+chequear("los generos viajan pegados a la consulta de la tienda",
+  /products: \{\s*where: \{ isActive: true, deletedAt: null \},\s*select: \{ gender: true, soloMayorista: true \},\s*distinct: \["gender", "soloMayorista"\],\s*\}/.test(pagina),
+  "volvio a ser una consulta aparte: eso agrega un viaje a la base en cada visita");
+
+chequear("no quedo una consulta suelta de generos",
+  !/groupBy\(\{\s*by: \["gender"\]/.test(pagina));
+
+chequear("y saca los de solo-mayorista cuando la tienda no vende mayorista",
+  /\.filter\(p => store\.tieneVentaMayorista \|\| !p\.soloMayorista\)/.test(pagina),
+  "sin esto se cuentan productos que el navegador nunca va a recibir");
+
 chequear("y usa la regla compartida, no una copia",
-  /generosDanFiltro\(generosVisibles\.map/.test(pagina));
+  /generosDanFiltro\(generosVisibles\)/.test(pagina));
 
 console.log(fallos === 0
   ? "\nTodo bien: la regla es una sola y el menu no salta al cargar.\n"
