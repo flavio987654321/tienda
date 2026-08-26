@@ -573,6 +573,14 @@ model Product {
   expenses        VehicleExpense[]
 
   @@index([deletedAt])
+  // Todo lo que se le pide a esta tabla arranca por la tienda: el catálogo que
+  // sirve `/api/public/[slug]`, los géneros que decide el menú, el panel, las
+  // métricas. Sin este índice cada una de esas consultas lee la tabla ENTERA.
+  // Hoy no se nota —116 filas, y con tan pocas Postgres elige el escaneo igual
+  // porque sale más barato que ir al índice y volver— pero el que crece es
+  // justamente el número de productos de todas las tiendas juntas, y el día que
+  // se note ya va a estar doliendo en cada visita.
+  @@index([storeId])
 }
 
 // Gastos asociados a un vehículo (Autos/Motos): compra, lavado, service,

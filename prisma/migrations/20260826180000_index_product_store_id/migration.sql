@@ -1,0 +1,39 @@
+-- Índice por tienda en la tabla de productos.
+--
+-- ── Qué faltaba ──────────────────────────────────────────────────────────────
+-- `Product` tenía índice por `deletedAt` y la clave primaria, y nada más. Pero
+-- TODO lo que se le pide a esta tabla arranca por la tienda:
+--
+--     el catálogo que sirve /api/public/[slug]
+--     los géneros que deciden si el menú lleva Mujer y Hombre
+--     el panel del comerciante
+--     las métricas
+--
+-- Sin índice, cada una de esas consultas lee la tabla entera y descarta lo que
+-- no es de esa tienda. Medido contra la base real, con EXPLAIN ANALYZE:
+--
+--     Seq Scan on "Product"  (actual time=0.014..0.091 rows=64)
+--       Rows Removed by Filter: 52
+--     Execution Time: 0.142 ms
+--
+-- ── Por qué se agrega ahora, si hoy no cambia nada ───────────────────────────
+-- Hoy la tabla tiene 116 filas y con tan pocas Postgres va a seguir eligiendo el
+-- escaneo completo aunque el índice exista: leer 116 filas sale más barato que
+-- ir al índice y volver a la tabla. O sea que este cambio, hoy, no acelera nada.
+--
+-- Se hace igual porque lo que crece es justamente el número de productos de
+-- todas las tiendas juntas, y el costo del escaneo crece con ÉL, no con el
+-- tamaño de cada tienda. El día que se note, se va a notar en cada visita a
+-- cualquier tienda al mismo tiempo — y a esa altura agregar un índice es una
+-- migración apurada sobre una tabla grande. Ahora es instantánea.
+--
+-- ── Por qué sólo `storeId` y no también isActive/deletedAt ───────────────────
+-- Porque `storeId` es la columna que separa: cada tienda es una fracción chica
+-- del total. `isActive` y `deletedAt` casi siempre valen lo mismo en todas las
+-- filas, así que agregarlas al índice ocupa lugar y no descarta casi nada.
+--
+-- CREATE INDEX a secas y no CONCURRENTLY: Prisma corre cada migración adentro de
+-- una transacción y CONCURRENTLY no puede vivir ahí. Sobre esta tabla el bloqueo
+-- dura microsegundos.
+
+CREATE INDEX "Product_storeId_idx" ON "Product"("storeId");
