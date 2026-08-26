@@ -49,7 +49,7 @@ import { BotonVitrina } from "@/components/store/templates/shared/BotonVitrina";
    Terra. Lo único que cambia es dónde vive — adentro del template, con su barra
    y su pie— y que por eso funciona sin salirse del editor. */
 import CatalogoGenerico, { type CatalogoEmbebido } from "@/app/tienda/[slug]/productos/CatalogoGenerico";
-import { useVistaTemplate } from "@/components/store/templates/shared/useVistaTemplate";
+import { useVistaTemplate, urlParaCompartirProducto } from "@/components/store/templates/shared/useVistaTemplate";
 
 
 const BG  = "#faf7f2";
@@ -365,9 +365,11 @@ export default function BohoTerra() {
     setInquiryMessage(`Hola, me interesa "${product.name}". ¿Me podés dar más información?`);
     setTimeout(() => scrollTo("contacto"), 100);
   }
+  /* La dirección de verdad del producto, no `?p=<id>`. El porqué está escrito en
+     `urlParaCompartirProducto`. La ficha que contesta esa dirección es
+     `BohoTerraDetail`, con el menú y el pie de este mismo template. */
   function shareProduct(product: Product) {
-    const url = `${window.location.origin}${window.location.pathname}?p=${product.id}`;
-    navigator.clipboard.writeText(url).catch(() => {});
+    navigator.clipboard.writeText(urlParaCompartirProducto(storeConfig?.slug, product.id)).catch(() => {});
     showToast("¡Link copiado al portapapeles!");
   }
   function whatsappShare(product: Product) {

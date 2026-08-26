@@ -50,6 +50,35 @@ const RUTA_CATALOGO = /^\/tienda\/[^/]+\/productos\/?$/;
 /* Ésta además CAPTURA el id: de él sale QUÉ ficha dibujar. */
 export const RUTA_PRODUCTO = /^\/tienda\/[^/]+\/producto\/([^/]+)\/?$/;
 
+/* ── El link de un producto para COMPARTIR ────────────────────────────────────
+ *
+ * Cuatro templates —Aurora, Boho Terra, Chic Paris y Urban Pulse— tenían escrito
+ * a mano `<la pantalla donde estoy>?p=<id>` y los cuatro con el mismo error.
+ *
+ * Esa dirección la entiende el navegador, no el servidor: pegada en WhatsApp o en
+ * Instagram, la vista previa la arma el chat pidiéndole la página al servidor, y
+ * el servidor en esa dirección contesta la PORTADA. El link de un vestido salía
+ * con el nombre y la foto de la tienda. La ventanita del producto la abre después
+ * el navegador, cuando la previa ya se dibujó y nadie la está mirando.
+ *
+ * `/tienda/<slug>/producto/<id>` sí es una dirección de verdad: el servidor la
+ * contesta con el nombre, la foto y el precio del producto, y cada template ya
+ * tiene su ficha hecha para esa ruta.
+ *
+ * Sin slug no hay dirección que armar. Pasa en la galería suelta
+ * (`/preview/<template>`), donde se mira un diseño sin tienda detrás: ahí queda
+ * el `?p=`, que adentro de esa pantalla al menos abre lo que corresponde.
+ *
+ * Los `?p=` que ya andan dando vueltas se siguen entendiendo: cada template
+ * conserva el efecto que los abre. Lo que se dejó de hacer es REPARTIRLOS.
+ */
+export function urlParaCompartirProducto(slug: string | null | undefined, productoId: string) {
+  const origen = window.location.origin;
+  return slug
+    ? `${origen}/tienda/${slug}/producto/${productoId}`
+    : `${origen}${window.location.pathname}?p=${productoId}`;
+}
+
 /* Sin `editMode`: lo recibía para apagar los clics editando, y eso era el bug.
    Ver el comentario adentro de `irA`. */
 /* Subir arriba del todo al cambiar de pantalla.

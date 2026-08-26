@@ -524,6 +524,82 @@ mostró dos cosas:
   todavía usa un `deleteHomeReview` propio en vez de `useHomeReviews`, como estaba
   Boho Terra antes de BT-12.
 
+### BT-22 — Las cuotas se calculaban sobre el precio SIN la promo ✅
+
+Encontrado mirando la ficha de Amaranta en producción. Con el 20% de liquidación
+puesto, la ficha decía:
+
+```
+$ 190.000  20%OFF
+$ 152.000                              ← lo que se cobra
+3 cuotas sin interés de $ 63.333,333   ← × 3 = 190.000, el precio VIEJO
+```
+
+Dos renglones abajo del precio, las cuotas sumaban **más que el precio**.
+
+El precio grande usaba `promo.effectivePrice`; el renglón de las cuotas dividía
+`displayPrice`, que es el de lista. La misma cuenta estaba escrita dos veces
+—el total del botón la tenía bien— y la copia se quedó vieja. Ahora sale una
+sola vez, con nombre: `precioUnitarioReal`.
+
+Y el número salía con **tres decimales**: `toLocaleString` sin opciones trae tres
+de fábrica. Casi nada llega con decimales a la ficha —`pricing.ts` redondea a
+peso entero en `roundMoney`, y ahí está escrito el porqué— pero la cuota se
+divide en el mismo renglón que se dibuja. El redondeo va en `fmtPrice` y no en la
+cuenta, para que el próximo número que se divida no tenga que acordarse.
+
+**No es de Boho Terra:** el cuerpo de la ficha es compartido, así que estaba en
+los ocho templates a la vez. Sólo se ve con una promoción puesta, que es
+justamente lo que casi nunca hay cuando uno prueba.
+
+### BT-23 — El botón de compartir repartía un link que no era una dirección ✅
+
+Copiaba `<la pantalla donde estoy>?p=<id>`. Esa dirección la entiende el
+navegador, no el servidor: pegada en WhatsApp o en Instagram, la vista previa la
+arma el chat pidiéndole la página al servidor, y ahí el servidor contesta la
+**portada**. El link de un vestido salía con la foto y el nombre de la tienda. La
+ventanita del producto la abre después el navegador, cuando la previa ya se
+dibujó y nadie la está mirando.
+
+Y arrastraba el pathname de donde estabas parada: desde el catálogo salía
+`/tienda/amaranta/productos?p=id`.
+
+`/tienda/<slug>/producto/<id>` sí es una dirección de verdad, y la ficha que la
+contesta —`BohoTerraDetail`, con el menú y el pie de este mismo template— ya
+estaba hecha; no llegaba nadie. Medido después del arreglo:
+
+```
+LINK COPIADO: /tienda/amaranta/producto/cmsy3f4kf00013347iasqgpmv
+  respuesta: 200
+  <title>:  Vestido Maxie Beige con Bordado Boho Chic — Amaranta
+  og:title: Vestido Maxie Beige con Bordado Boho Chic — Amaranta
+  og:image: …/product-images/…
+```
+
+Lo tenían igual **Aurora, Chic Paris y Urban Pulse**, escrito a mano en los
+cuatro. Se arregló en un solo lugar, `urlParaCompartirProducto`, al lado de las
+otras rutas de las pantallas del template.
+
+Los `?p=` que ya andan dando vueltas se siguen entendiendo: cada template
+conserva el efecto que los abre, y está verificado. Lo que se dejó de hacer es
+**repartirlos**.
+
+**Se decidió NO cambiar la ventanita por una pantalla.** Boho Terra es un diseño
+de una sola página y el modal va con eso; lo que estaba mal era el link, no el
+modal. Queda anotado el costo aceptado: quien toca un producto ve la ventanita y
+quien abre el link compartido ve la página entera — dos pantallas para lo mismo.
+
+### BT-24 — Chic Paris tenía un texto roto pegado en la barra ✅
+
+Salió de paso. El mensaje por defecto de la barra de promociones decía:
+
+> 🚚 Envío gratis en compras mayores a **showAnnouncement, announcementMessages.length**0.000
+
+Un buscar-y-reemplazar con expresión regular se comió el `$3` de "$30.000"
+tomándolo por un grupo de captura, y le metió nombres de variables. Le salía a
+cualquier tienda de Chic Paris que no hubiera escrito sus propios mensajes. Es el
+mismo texto que traen Aire, Aurora y Boho Terra, que estaban bien.
+
 ### Verificación
 
 `npx tsx src/lib/promoPaletas.check.ts` — audita las tres paletas contra las
@@ -540,6 +616,14 @@ Encontró dos cosas de la **clásica**, que ya estaba en la calle:
   tolerada, con el motivo, en vez de bajarle el umbral a todos.
 - el teal contra el azul da **49° exactos**, justo el mínimo. No es un problema:
   era comparación en flotante (48.999…) contra un valor anotado en enteros.
+
+### Verificación de BT-22, BT-23 y BT-24
+
+`npx tsx src/lib/ficha-producto.check.ts` — 21 chequeos. Ata las dos cuentas que
+se separaron (que la cuota salga del precio que se cobra, que la plata no lleve
+decimales) y que ninguno de los cuatro templates vuelva a repartir un `?p=`,
+sin dejar de entenderlos. Probado al revés: devolviéndole los bugs a mano, falla
+en los tres puntos.
 
 ## Pendiente de revisar
 

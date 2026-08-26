@@ -1,4 +1,5 @@
 ﻿"use client";
+import { urlParaCompartirProducto } from "@/components/store/templates/shared/useVistaTemplate";
 import { barraMs } from "@/types/store-config";
 import { useState, useEffect, useLayoutEffect, useMemo, useRef, useCallback, Fragment } from "react";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
@@ -317,8 +318,9 @@ export default function Aurora() {
     setTimeout(() => scrollTo("contacto"), 100);
   }
   function shareProduct(product: StorefrontProduct) {
-    const url = `${window.location.origin}${window.location.pathname}?p=${product.id}`;
-    navigator.clipboard.writeText(url).catch(() => {});
+    /* La dirección de verdad del producto, no `?p=<id>`. El porqué está escrito
+       en `urlParaCompartirProducto`. */
+    navigator.clipboard.writeText(urlParaCompartirProducto(storeConfig?.slug, product.id)).catch(() => {});
     showToast("¡Link copiado al portapapeles!");
   }
   function whatsappShare(product: StorefrontProduct) {
