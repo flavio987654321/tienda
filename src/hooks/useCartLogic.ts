@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef, useSyncExternalStore } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import type { StorefrontProduct, StorefrontVariant, ValidatedCoupon, PlaceOrderParams, SeleccionOpciones } from "./useStorefront";
 import { valoresElegidos, reacomodarSeleccion, opcionesDeVariantes, opcionDelValor, opcionesAElegir, combinaciones } from "@/lib/opciones";
@@ -109,6 +109,74 @@ type ItemGuardado = {
   qty?: number;
 };
 
+/* ── El carrito es UNO por pestaña, no uno por copia de este hook ─────────────
+ *
+ * Este hook lo llaman varias pantallas, y algunas conviven en la MISMA. Boho
+ * Terra dibuja el catálogo adentro del template: ahí quedaban dos copias vivas al
+ * mismo tiempo, cada una con su propio `useState`, cada una con su carrito.
+ *
+ * Medido en Amaranta, agregando un vestido desde el catálogo:
+ *
+ *     guardado en el navegador ............. 1 producto
+ *     numerito del carrito de la barra ..... (ninguno)
+ *
+ * O sea: el cliente cargaba cosas y la barra de la tienda le seguía mostrando el
+ * carrito vacío. Las dos copias sólo se ponían de acuerdo al RECARGAR la página,
+ * porque las dos leen `localStorage` al montar. Y se notaba también en cómo
+ * hablan: el carrito de Boho Terra dice "Tu selección" y el del catálogo "Tu
+ * carrito", así que la voz propia del template se perdía a mitad de camino.
+ *
+ * La regla verdadera es "hay UN carrito por pestaña", así que el estado sale de
+ * los `useState` y pasa a vivir acá, en el módulo. Todas las copias del hook
+ * miran el mismo, y cuando una lo cambia se enteran todas en el acto.
+ *
+ * `useSyncExternalStore` y no un `useState` con eventos: es la forma que React
+ * tiene para exactamente esto —estado que vive afuera de React— y evita la
+ * carrera que tendría el bus a mano (una copia leyendo el valor viejo mientras
+ * otra ya lo cambió). Es la misma mecánica que ya usa `PushBellContext`.
+ *
+ * `localStorage` sigue igual y sigue haciendo falta: esto comparte entre las
+ * copias que están vivas AHORA; `localStorage` es lo que hace que el carrito
+ * siga estando mañana. */
+let carritoDelModulo: CartItem[] = [];
+const oyentesDelCarrito = new Set<() => void>();
+
+function leerCarrito(): CartItem[] {
+  return carritoDelModulo;
+}
+/* El servidor no tiene carrito. Devuelve SIEMPRE la misma lista vacía —la
+   constante, no un `[]` nuevo— porque `useSyncExternalStore` compara por
+   identidad y un array nuevo en cada llamada sería un bucle infinito. */
+const CARRITO_VACIO: CartItem[] = [];
+function leerCarritoEnElServidor(): CartItem[] {
+  return CARRITO_VACIO;
+}
+/* El carrito guardado se lee UNA vez por carga de página.
+ *
+ * Antes cada copia del hook lo leía al montar, y estaba bien porque cada una
+ * tenía el suyo. Ahora que el carrito es compartido, una copia que monta tarde
+ * —el catálogo al abrirse adentro del template— estaría pisando el carrito VIVO
+ * con lo último que se alcanzó a guardar. En el caso normal es lo mismo, pero
+ * "en el caso normal" no es una garantía cuando lo que está en juego es lo que
+ * el cliente cargó para comprar. */
+let carritoYaRestaurado = false;
+function marcarCarritoRestaurado(): boolean {
+  if (carritoYaRestaurado) return false;
+  carritoYaRestaurado = true;
+  return true;
+}
+function suscribirseAlCarrito(avisar: () => void): () => void {
+  oyentesDelCarrito.add(avisar);
+  return () => { oyentesDelCarrito.delete(avisar); };
+}
+/** Misma firma que un `setState`: acepta el valor o una función que lo calcula. */
+function guardarCarrito(v: CartItem[] | ((prev: CartItem[]) => CartItem[])): void {
+  const siguiente = typeof v === "function" ? (v as (p: CartItem[]) => CartItem[])(carritoDelModulo) : v;
+  if (siguiente === carritoDelModulo) return;
+  carritoDelModulo = siguiente;
+  for (const avisar of oyentesDelCarrito) avisar();
+}
+
 function migrarCarritoGuardado(crudo: unknown): CartItem[] {
   if (!Array.isArray(crudo)) return [];
   const salida: CartItem[] = [];
@@ -179,7 +247,15 @@ export function useCartLogic({ products, promotions = [], storeId, affiliateId =
      nunca a los precios en pantalla. */
   const fmt = useMemo(() => crearFmt(currency), [currency]);
 
-  const [cartItems,      setCartItems]      = useState<CartItem[]>([]);
+  /* Ver el comentario largo arriba de `carritoDelModulo`: el carrito es uno por
+     pestaña y no uno por copia de este hook. Todo lo demás de acá abajo sí es de
+     cada pantalla —qué ficha está abierta, qué talle se eligió, si el cajón está
+     desplegado— y sigue en `useState`. */
+  const cartItems = useSyncExternalStore(suscribirseAlCarrito, leerCarrito, leerCarritoEnElServidor);
+  /* Sin `useCallback`: `guardarCarrito` vive en el módulo, así que ya es la misma
+     función siempre. Envolverla no la haría más estable y además el lint marca
+     `useCallback` sobre una función que no se escribe ahí mismo. */
+  const setCartItems = guardarCarrito;
   const [cartOpen,       setCartOpen]       = useState(false);
   const [modalProduct,   setModalProduct]   = useState<StorefrontProduct | null>(null);
   const [modalImg,       setModalImg]       = useState(0);
@@ -258,8 +334,11 @@ export function useCartLogic({ products, promotions = [], storeId, affiliateId =
   // el render en el servidor), así que corresponde hacerlo en un efecto.
   useEffect(() => {
     try {
-      const savedCart = localStorage.getItem("storefront_cart");
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+      // Sólo la primera copia que monta. Ver `marcarCarritoRestaurado`.
+      const savedCart = marcarCarritoRestaurado() ? localStorage.getItem("storefront_cart") : null;
+      /* Sin `eslint-disable` acá: desde que el carrito vive en el módulo, esto ya
+         no es un `setState` de React y la regla no aplica. El de abajo sí lo es y
+         lo lleva. */
       if (savedCart) setCartItems(migrarCarritoGuardado(JSON.parse(savedCart)));
       const savedBuyer = localStorage.getItem("storefront_buyer");
       if (savedBuyer) {
@@ -271,6 +350,7 @@ export function useCartLogic({ products, promotions = [], storeId, affiliateId =
         if (parsed?.provincia && !PROVINCIAS_ARGENTINA.some((p) => p.code === parsed.provincia)) {
           parsed.provincia = "";
         }
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- lectura de localStorage al montar, no hay otra forma
         setBuyerForm(parsed);
         setRememberData(true);
       }
