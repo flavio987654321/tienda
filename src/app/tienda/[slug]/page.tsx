@@ -6,6 +6,7 @@ import { unstable_noStore as noStore } from "next/cache";
 import type { Metadata } from "next";
 import type { StoreConfig } from "@/types/store-config";
 import { DEFAULT_CONFIG } from "@/types/store-config";
+import { generosDanFiltro } from "@/lib/generos";
 import ComingSoonPage from "./ComingSoonPage";
 import ClosedStorePage from "./ClosedStorePage";
 import OwnerPreviewBadge from "./OwnerPreviewBadge";
@@ -221,6 +222,39 @@ export default async function TiendaPage({ params, searchParams }: TiendaPagePro
     ? new Date(store.owner.createdAt).toLocaleDateString("es-AR", { month: "long", year: "numeric" })
     : null;
 
+  /* ── ¿El menú lleva Mujer y Hombre? ─────────────────────────────────────────
+   *
+   * Se contesta ACÁ, en el servidor, y no en el template. El template lo sabe
+   * calcular solo, pero con los productos, y los productos llegan por `fetch`
+   * después del primer dibujado. O sea que durante ese rato la respuesta es
+   * "no" en todas las tiendas — y tres templates acomodan el menú según esa
+   * respuesta. Medido en Amaranta, que sí tiene mujer y hombre: el botón
+   * "Categorías" se dibujaba contra la derecha y se corría **382 píxeles** al
+   * centro cuando llegaban los productos. Un salto de esos, en la barra de
+   * arriba, es lo primero que ve el que entra.
+   *
+   * Es una consulta más, pero de las baratas: pide la lista de géneros
+   * DISTINTOS, o sea a lo sumo tres filas, no el catálogo.
+   *
+   * El `where` es el mismo que usa `/api/public/[slug]` para decidir qué
+   * productos salen —activos, no borrados, y sin los de sólo-mayorista cuando la
+   * tienda no vende mayorista—. Tiene que ser el mismo: si el servidor contara
+   * productos que el navegador no va a recibir, reservaría lugar para dos
+   * botones que después no aparecen.
+   *
+   * La regla de cuándo el filtro sirve —hace falta mujer Y hombre— no se
+   * reescribe acá: sale de `generosDanFiltro`, la misma que usa el template. */
+  const generosVisibles = await prisma.product.groupBy({
+    by: ["gender"],
+    where: {
+      storeId: store.id,
+      isActive: true,
+      deletedAt: null,
+      ...(store.tieneVentaMayorista ? {} : { soloMayorista: false }),
+    },
+  });
+  const tieneGeneros = generosDanFiltro(generosVisibles.map(g => g.gender));
+
   // El try/catch solo protege el parseo del JSON — el JSX de ComingSoonPage
   // se construye después, afuera, para que un eventual error de render no
   // quede (falsamente) capturado por este catch.
@@ -250,6 +284,7 @@ export default async function TiendaPage({ params, searchParams }: TiendaPagePro
     slug,
     tipoTienda: store.tipoTienda ?? "GENERAL",
     tieneVentaMayorista: store.tieneVentaMayorista ?? false,
+    tieneGeneros,
     hasMercadoPago: !!store.mpAccessToken,
     isOwner,
     // Solo las que tienen texto y están en Visible: el pie de página linkea

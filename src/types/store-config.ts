@@ -325,6 +325,27 @@ export type StoreConfig = {
   tipoTienda?: string;
   tieneVentaMayorista?: boolean;
   hasMercadoPago?: boolean;
+  /**
+   * Si el catálogo da para el filtro Mujer / Hombre. Lo contesta el SERVIDOR,
+   * antes de dibujar nada.
+   *
+   * Los templates ya lo saben calcular solos con `catalogoTieneGeneros`, pero
+   * los productos llegan por `fetch` después del primer dibujado, así que
+   * durante ese rato la respuesta es "no" en TODAS las tiendas. Tres templates
+   * acomodan el menú según esa respuesta —sin género, el grupo de "Categorías"
+   * se va contra la derecha— y el resultado era un salto: medido en Amaranta,
+   * el botón "Categorías" aparecía a la derecha y se corría **382 píxeles** al
+   * centro cuando llegaban los productos.
+   *
+   * Sirve SÓLO para acomodar. Los botones y el filtro siguen saliendo de los
+   * productos que el navegador tiene de verdad: si esto dijera que sí y el
+   * catálogo llegara sin géneros, lo peor que pasa es que quede un hueco, no
+   * dos botones que filtran la nada.
+   *
+   * Sin valor —la previa del editor, la galería suelta— cada template cae a lo
+   * que calcula por su cuenta, que es como venía funcionando.
+   */
+  tieneGeneros?: boolean;
   ocultarPreciosPublico?: boolean;
   flyerConfig?: FlyerConfig;
   showPushBell?: boolean;

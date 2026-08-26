@@ -472,6 +472,26 @@ export default function Aurora() {
   /** Ver `catalogoTieneGeneros`: el filtro Mujer/Hombre solo aparece si el
    *  catálogo real tiene de los dos. Si no, son dos botones que no filtran. */
   const hayGeneros = useMemo(() => catalogoTieneGeneros(products), [products]);
+  /* Y el que decide DÓNDE se apoya el menú, que es una pregunta distinta.
+     `hayGeneros` sale de los productos, y los productos llegan por `fetch`
+     después del primer dibujado: hasta que lleguen contesta "no" en todas las
+     tiendas. Como sin género el grupo de "Categorías" se va contra la derecha,
+     el menú se dibujaba a la derecha y se corría al centro un segundo después.
+     Medido en Amaranta: 382 píxeles, en la barra de arriba, apenas entrás.
+     `tieneGeneros` lo contesta el SERVIDOR, que tiene el catálogo en la mano
+     antes de dibujar nada. Los botones y el filtro siguen colgados de
+     `hayGeneros`: si los dos no coincidieran, lo peor que pasa es que quede un
+     hueco: nunca dos botones que filtran la nada.
+     Sin respuesta del servidor —la previa del editor, la galería suelta— cae a
+     lo de siempre. */
+  const generosParaElMenu = storeConfig?.tieneGeneros ?? hayGeneros;
+  /* Mientras el navegador todavía no confirmó los géneros, los dos botones
+     ocupan su lugar pero no se ven ni se pueden tocar. Reservar el hueco es la
+     otra mitad del arreglo: sin esto el grupo entero se ensancha cuando
+     aparecen, y como el menú se reparte con `space-between`, "Categorías"
+     igual se corría —medido, 74px—. Con el hueco puesto no se mueve nada:
+     los botones se encienden donde ya estaban. */
+  const esperandoGeneros: React.CSSProperties = hayGeneros ? {} : { opacity: 0, pointerEvents: "none" };
 
   const allFiltered = useMemo(() => products.filter(p => {
     // `hayGeneros` también acá: si el catálogo cambia y el filtro desaparece,
@@ -716,7 +736,7 @@ export default function Aurora() {
               `space-between` reparta, así que el grupo termina pegado al de la
               derecha. Cambia dónde se apoya el menú, no el menú. */}
           {!isMobile && <div style={{ display:"flex", gap:28, alignItems:"center",
-            ...(hayGeneros ? {} : { marginLeft:"auto", marginRight:28 }) }}>
+            ...(generosParaElMenu ? {} : { marginLeft:"auto", marginRight:28 }) }}>
             {/* CATEGORÍAS dropdown */}
             <div style={{ position:"relative" }}
               onMouseEnter={() => setHoveredNavCat("__open__")}
@@ -764,18 +784,18 @@ export default function Aurora() {
                 );
               })()}
             </div>
-            {hayGeneros && (
+            {generosParaElMenu && (
               <>
                 {/* MUJER */}
                 <button onClick={() => { changeGender(activeGender === "mujer" ? null : "mujer"); scrollTo("productos"); }}
-                  style={{ background:"none", border:"none", fontSize:11, letterSpacing:3, cursor:"pointer", fontWeight:500, textTransform:"uppercase", transition:"opacity 0.2s, color 0.2s", color: activeGender==="mujer" ? G : T, opacity: activeGender==="mujer" ? 1 : 0.8 }}
+                  style={{ background:"none", border:"none", fontSize:11, letterSpacing:3, cursor:"pointer", fontWeight:500, textTransform:"uppercase", transition:"opacity 0.2s, color 0.2s", color: activeGender==="mujer" ? G : T, opacity: activeGender==="mujer" ? 1 : 0.8, ...esperandoGeneros }}
                   onMouseEnter={e => { e.currentTarget.style.opacity="1"; if(activeGender!=="mujer") e.currentTarget.style.color=G; }}
                   onMouseLeave={e => { e.currentTarget.style.opacity=activeGender==="mujer"?"1":"0.8"; if(activeGender!=="mujer") e.currentTarget.style.color=T; }}>
                   Mujer
                 </button>
                 {/* HOMBRE */}
                 <button onClick={() => { changeGender(activeGender === "hombre" ? null : "hombre"); scrollTo("productos"); }}
-                  style={{ background:"none", border:"none", fontSize:11, letterSpacing:3, cursor:"pointer", fontWeight:500, textTransform:"uppercase", transition:"opacity 0.2s, color 0.2s", color: activeGender==="hombre" ? G : T, opacity: activeGender==="hombre" ? 1 : 0.8 }}
+                  style={{ background:"none", border:"none", fontSize:11, letterSpacing:3, cursor:"pointer", fontWeight:500, textTransform:"uppercase", transition:"opacity 0.2s, color 0.2s", color: activeGender==="hombre" ? G : T, opacity: activeGender==="hombre" ? 1 : 0.8, ...esperandoGeneros }}
                   onMouseEnter={e => { e.currentTarget.style.opacity="1"; if(activeGender!=="hombre") e.currentTarget.style.color=G; }}
                   onMouseLeave={e => { e.currentTarget.style.opacity=activeGender==="hombre"?"1":"0.8"; if(activeGender!=="hombre") e.currentTarget.style.color=T; }}>
                   Hombre

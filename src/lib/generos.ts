@@ -41,12 +41,26 @@ export type ProductoConGenero = { id: string; gender?: string };
 export function catalogoTieneGeneros(products: ProductoConGenero[]): boolean {
   const reales = products.filter(p => !isDemoProductId(p.id));
   const base = reales.length > 0 ? reales : products;
+  return generosDanFiltro(base.map(p => p.gender));
+}
 
+/**
+ * La regla sola: hace falta mujer **y** hombre. Todo lo demás —unisex, vacío,
+ * cualquier otra cosa— no parte el catálogo en dos.
+ *
+ * Está separada de `catalogoTieneGeneros` porque hay un segundo lugar que tiene
+ * que contestar lo mismo y no tiene la lista de productos en la mano: el
+ * servidor, cuando dibuja la tienda. Ver `tieneGeneros` en la página de la
+ * tienda y el porqué en el nav de Boho Terra.
+ *
+ * Escrito dos veces se separa; lo vimos con el precio de las cuotas.
+ */
+export function generosDanFiltro(generos: (string | null | undefined)[]): boolean {
   let hayMujer = false;
   let hayHombre = false;
-  for (const p of base) {
-    if (p.gender === "mujer") hayMujer = true;
-    else if (p.gender === "hombre") hayHombre = true;
+  for (const g of generos) {
+    if (g === "mujer") hayMujer = true;
+    else if (g === "hombre") hayHombre = true;
     if (hayMujer && hayHombre) return true;
   }
   return false;
