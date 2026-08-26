@@ -599,6 +599,25 @@ export type CatalogoEmbebido = {
    * número, +1 y +2, para conservar el orden entre ellos.
    */
   capaModal?: number;
+  /**
+   * El color de acento, dicho por el template.
+   *
+   * Suelto, este catálogo se trae el acento de la base —`cfg.colors.accent`— con
+   * un fetch propio, y está bien: ahí no hay nadie más que se lo pueda decir.
+   *
+   * Embebido, eso es justamente lo que estaba mal. En el editor, mirando Boho
+   * Terra con Aire guardado en la base, la portada se dibujaba con el terracota
+   * de Boho —que es lo que el editor tiene en el config— y el catálogo, dos
+   * clics después, se pintaba con el VERDE de Aire, porque se lo traía él solo
+   * de la tienda guardada. La barra de arriba de un color y las baldosas de
+   * categorías de otro, en la misma pantalla.
+   *
+   * Cada diseño tiene que verse como es, y quien sabe cuál es el color de ahora
+   * es el template que está dibujando. En la tienda publicada los dos valores
+   * coinciden, así que no cambia nada; en el editor, además, el catálogo ahora
+   * sigue el color en vivo mientras la dueña lo cambia.
+   */
+  acento?: string;
 };
 
 // ── Componente interno (necesita useSearchParams dentro de Suspense) ──────────
@@ -1153,7 +1172,9 @@ function ProductosPageInner({ embebido }: { embebido?: CatalogoEmbebido }) {
 
   // ── Tema activo ─────────────────────────────────────────────────────────────
   const th: Theme = THEMES[template] ?? THEMES["aire"];
-  const G = accentOverride ?? th.G;
+  /* Embebido manda el template (ver `acento`); suelto, lo que trajo de la base; y
+     si no hay nada, el color de fábrica del diseño. */
+  const G = embebido?.acento ?? accentOverride ?? th.G;
   const { BG, S, T, MID, border, borderFaint, inputBorder, inputBg, serif, sans, dark,
     tabStyle = "default", cardRadius = 0, titleStyle = "editorial", inputRadius = 0 } = th;
   // El vestido del modal de este template, con lo que no diga heredado de la

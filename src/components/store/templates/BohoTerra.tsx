@@ -1040,7 +1040,7 @@ export default function BohoTerra() {
             <BotonVolver onClick={vista.irALaPortada} destino="Volver a la tienda"
               S={BG} LN="rgba(44,34,24,0.18)" T={T} G={A} />
           </div>
-        <CatalogoGenerico embebido={{ ...filtroCatalogo, slug: storeConfig?.slug ?? "", template: "boho-terra", sinPie: true, sinBarra: true, enEditor: isPreview,
+        <CatalogoGenerico embebido={{ ...filtroCatalogo, slug: storeConfig?.slug ?? "", template: "boho-terra", sinPie: true, sinBarra: true, enEditor: isPreview, acento: A,
           /* La MISMA capa que usa este template para su propia ficha, unas líneas
              más abajo. Los modales del catálogo comparten pantalla con esta barra,
              así que tienen que jugar en su escala: con la de ellos —`CAPAS.nav`,
