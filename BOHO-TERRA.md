@@ -752,6 +752,142 @@ servidor no se separe del que usa el endpoint público.
 dibuja su propio catálogo esté anotado en la ruta (y al revés), y que nadie
 vuelva a **deducir** si está en el editor.
 
+### BT-28 — En el editor, los modales se cortaban contra el borde del marco ✅
+
+Lo reportó Flavio: "los modales dentro del contenedor de donde se diseña se
+cortan, en el template y en la página del template".
+
+Eran **dos causas distintas** con el mismo síntoma.
+
+**La primera: `vh` no mide lo que uno cree adentro del editor.** La previa vive
+en la pantalla de un navegador falso, que es más chica que la ventana. Medido con
+la ventana en 900px:
+
+```
+la ventana ....................... 900px
+la pantalla del marco falso ...... 820px   ← acá vive el modal
+92vh vale ........................ 828px   ← 8px MÁS que su propia caja
+100vh vale ....................... 900px   ← 80px más
+```
+
+Y el lienzo tiene `overflow:hidden`. Peor cuanto más baja la ventana: la pantalla
+mide siempre unos 80px menos, así que a 700px de alto `92vh` se pasa por 24.
+
+Había un parche en la ficha —`isPreview ? "100%" : "92vh"`— que tapaba el corte
+pero dejaba el modal pegado a los cuatro bordes, sin un pixel de aire: se leía
+como contenido cortado, no como una ventana flotando sobre la tienda.
+
+El arreglo es un **porcentaje**, que no necesita saber dónde está. Estos paneles
+cuelgan de un `position:fixed; inset:0`, y ese padre mide la ventana en la tienda
+publicada y la pantalla del marco en el editor. `92%` es lo mismo que `92vh`
+afuera y lo correcto adentro. Un solo valor, sin condicionales. Cambiado en nueve
+lugares entre `BohoTerra.tsx` y `CatalogoGenerico.tsx`: la ficha, las dos ventanas
+de reseña, la foto ampliada, el buscador y los dos avisos flotantes.
+
+**La segunda: en el catálogo, la barra le tapaba la × al modal.** La barra de Boho
+Terra en la previa está en capa `10000` —un número puesto a mano para ganarle al
+marco del editor, que no sale del registro de `CAPAS`— y el modal del catálogo
+estaba en `CAPAS.nav`, o sea 100. Medido: el clic sobre la × se lo comía un botón
+del menú. Ahora el template le dice al catálogo en qué capa jugar
+(`capaModal`), que es la misma que usa para su propia ficha.
+
+Verificado en los cuatro casos, abriendo el modal y cerrándolo con la ×:
+
+```
+editor · portada            abre: sí   cierra con la ×: sí
+editor · catálogo           abre: sí   cierra con la ×: sí
+publicada · portada         abre: sí   cierra con la ×: sí
+publicada · catálogo        abre: sí   cierra con la ×: sí
+```
+
+Para poder medir esto se armó una copia exacta del marco del editor en una página
+local y se borró al terminar: al editor de verdad no se llega sin sesión, y el
+ingreso está roto por el captcha.
+
+### BT-29 — Había DOS carritos en la misma pantalla ✅
+
+Apareció tirando del hilo de BT-28, y era el peor de todos.
+
+`useCartLogic` guardaba el carrito en un `useState`, o sea **uno por cada copia
+del hook**. Alcanzaba mientras hubiera una sola copia por pantalla. Dejó de
+alcanzar cuando Boho Terra empezó a dibujar el catálogo adentro del template: ahí
+quedan dos copias vivas al mismo tiempo. Medido en Amaranta, agregando un vestido
+desde el catálogo:
+
+```
+guardado en el navegador ............. 1 producto
+numerito del carrito de la barra ..... (ninguno)
+```
+
+El cliente cargaba cosas y la barra de la tienda le seguía mostrando el carrito
+vacío. Las dos copias sólo se ponían de acuerdo al RECARGAR, porque las dos leen
+`localStorage` al montar. Se notaba también en cómo hablan: el carrito de Boho
+Terra dice **"Tu selección"** (BT-5) y el del catálogo **"Tu carrito"**, así que
+la voz propia del template se perdía a mitad de camino.
+
+**En el editor esto ya pasaba antes.** Lo que lo puso en la tienda PUBLICADA fue
+BT-26: hasta ese commit `/tienda/<slug>/productos` era el catálogo suelto, con un
+carrito y nada más. Se avisó antes de subir nada.
+
+La regla verdadera es **un carrito por pestaña**, así que el estado salió de los
+`useState` y pasó a vivir en el módulo, compartido con `useSyncExternalStore` —la
+herramienta que React tiene para estado que vive afuera de React, y la misma
+mecánica que ya usaba `PushBellContext`—. `localStorage` queda igual y sigue
+haciendo falta: esto comparte entre las copias vivas AHORA; `localStorage` es lo
+que hace que el carrito siga estando mañana.
+
+Medido después:
+
+```
+inicio         barra:0  guardado:0
++ producto 1   barra:1  guardado:1
++ producto 2   barra:2  guardado:2
+tras recargar  barra:2  guardado:2
+```
+
+Y como el hook lo usan los diez templates, se probó aparte que no se rompiera
+nada: Aire portada, Aire catálogo y Boho Terra portada agregan, guardan y abren
+el checkout sin errores. (No se mandó ninguna orden: la base es la de producción.)
+
+Un detalle que el carrito compartido obliga a agregar: **lo guardado se lee una
+sola vez por carga**. Antes cada copia leía `localStorage` al montar y estaba
+bien, porque cada una tenía el suyo. Ahora una copia que monta tarde —el catálogo
+al abrirse— estaría pisando el carrito VIVO con lo último que se alcanzó a
+guardar. En el caso normal da lo mismo, pero "el caso normal" no es una garantía
+cuando lo que está en juego es lo que el cliente cargó para comprar.
+
+### BT-30 — El catálogo embebido dibujaba una segunda barra, con un botón muerto ✅
+
+Se ve en la captura de Flavio: la barra de Boho Terra con su marca y sus
+categorías, y abajo otra con el nombre de la tienda otra vez, otro carrito y un
+"← Volver al editor".
+
+Ese botón **no hacía nada**: es un link a `/dashboard/configuracion`, o sea a la
+pantalla en la que ya estás cuando el catálogo se dibuja adentro del editor.
+
+El pie ya tenía su interruptor (`sinPie`) por este mismo motivo; a la barra le
+faltaba el equivalente. Ahora existe `sinBarra` y Boho Terra se lo pide. El
+catálogo **suelto** —Chic Paris, Urban Pulse, Aurora— la sigue dibujando, y ahí el
+botón de volver sí lleva a algún lado.
+
+**No se sacó antes de BT-29 a propósito:** esa barra tenía el carrito que SÍ
+funcionaba. Sacarla primero habría dejado en pantalla sólo el que mentía.
+
+Al sacarla apareció un detalle: el título "Todos los productos" quedaba metido
+abajo del menú, porque la barra vieja tapaba ese hueco sin querer. La barra del
+template es `fixed` y no ocupa lugar, así que el catálogo embebido lleva ahora el
+mismo `paddingTop` que la portada.
+
+### Verificación de BT-28, BT-29 y BT-30
+
+`npx tsx src/lib/carrito-compartido.check.ts` — 14 chequeos. Que el carrito no
+vuelva a un `useState`, que el catálogo embebido no repita la barra ni el pie, y
+—la más importante— que el valor que se le da al servidor siga siendo **siempre el
+mismo objeto**: si volviera a ser un `[]` nuevo en cada llamada,
+`useSyncExternalStore` lo compara por identidad, nunca coincide, y la tienda
+entera se cuelga en un bucle de dibujado. Eso no falla en ningún tipo ni en
+ninguna pantalla hasta que pasa.
+
 ## Pendiente de revisar
 
 Lo que todavía no se miró, en orden de sospecha:

@@ -550,6 +550,19 @@ export type CatalogoEmbebido = {
   /** Apaga el pie propio: adentro de un template el pie ya está. */
   sinPie?: boolean;
   /**
+   * Apaga la barra de arriba propia. Mismo motivo que `sinPie`, y hacía falta por
+   * lo mismo: adentro de un template la barra ya está, así que quedaban DOS
+   * pegadas — la de Boho Terra con su marca y sus categorías, y abajo ésta con el
+   * nombre de la tienda otra vez y otro carrito.
+   *
+   * Y la de acá tenía además un botón que no hacía nada: "← Volver al editor" es
+   * un link a `/dashboard/configuracion`, o sea a la pantalla en la que ya estás
+   * cuando el catálogo se dibuja adentro del editor. Se tocaba y no pasaba nada.
+   * Fuera del editor, "← Volver a la tienda" lleva a la portada — que es
+   * exactamente lo que hace tocar la marca en la barra del template.
+   */
+  sinBarra?: boolean;
+  /**
    * Si esto es el EDITOR (o la galería de diseños) y no una tienda de verdad.
    *
    * Hay que preguntarlo. Antes se daba por sentado —"dibujado adentro de un
@@ -569,6 +582,23 @@ export type CatalogoEmbebido = {
    *     ese parámetro se copiaba y se compartía.
    */
   enEditor?: boolean;
+  /**
+   * Sobre qué capa flotan los modales que abre este catálogo.
+   *
+   * Suelto, este catálogo es toda la pantalla y sus números propios alcanzan.
+   * Embebido, comparte pantalla con la barra del template, y ahí no alcanzan: la
+   * barra de Boho Terra en el editor está en `10000` —un número que se puso para
+   * ganarle al marco del editor y que no sale del registro de `CAPAS`—, y el
+   * modal de este catálogo estaba en `CAPAS.nav`, o sea 100. Resultado medido: la
+   * × de cerrar quedaba ABAJO de la barra, y el clic se lo comía un botón del
+   * menú. El modal se veía cortado por arriba y no había forma de cerrarlo desde
+   * la ×.
+   *
+   * Lo contesta el template, que es el único que sabe en qué escala está
+   * jugando. Los otros dos modales —la reseña y la foto ampliada— salen de este
+   * número, +1 y +2, para conservar el orden entre ellos.
+   */
+  capaModal?: number;
 };
 
 // ── Componente interno (necesita useSearchParams dentro de Suspense) ──────────
@@ -584,6 +614,12 @@ function ProductosPageInner({ embebido }: { embebido?: CatalogoEmbebido }) {
   /* Embebido, lo dice quien embebe —ver `enEditor` en el tipo, que explica qué
      se rompía cuando esto se daba por sentado—. Suelto, lo dice la dirección. */
   const fromEditor   = embebido ? !!embebido.enEditor : searchParams?.get("from") === "editor";
+  /* Las capas de los tres modales. Embebido las manda el template (ver `capaModal`);
+     suelto, valen las de siempre. El orden entre ellos se conserva: la foto
+     ampliada arriba de la resena, y la resena arriba de la ficha. */
+  const capaFicha    = embebido?.capaModal ?? CAPAS.nav;
+  const capaResena   = embebido?.capaModal != null ? embebido.capaModal + 1 : CAPAS.flotanteBajo;
+  const capaFoto     = embebido?.capaModal != null ? embebido.capaModal + 2 : CAPAS.flotante;
   const catParam     = embebido ? (embebido.categoria ?? null)    : (searchParams?.get("categoria") ?? null);
   const subCatParam  = embebido ? (embebido.subcategoria ?? null) : (searchParams?.get("subcategoria") ?? null);
   const ofertaParam  = embebido ? !!embebido.soloOfertas    : searchParams?.get("oferta") === "true";
@@ -1731,6 +1767,9 @@ function ProductosPageInner({ embebido }: { embebido?: CatalogoEmbebido }) {
 `}</style>
 
       {/* ── HEADER ─────────────────────────────────────────────────────── */}
+      {/* La barra de arriba no va cuando el catálogo se dibuja adentro de un
+          template: ese ya puso la suya. Ver `sinBarra`. */}
+      {!embebido?.sinBarra && (<>
       <div style={{ position:"sticky", top:0, zIndex:CAPAS.encabezadoListado, background:backdropNav, backdropFilter:"blur(12px)", borderBottom:`1px solid ${borderFaint}` }}>
         <div style={{ maxWidth:1280, margin:"0 auto", padding:"0 clamp(16px,4vw,32px)", height:64, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
           <div style={{ visibility: isMobile ? "hidden" : "visible", pointerEvents: isMobile ? "none" : "auto", width: isMobile ? 44 : "auto" }}>
@@ -1770,6 +1809,7 @@ function ProductosPageInner({ embebido }: { embebido?: CatalogoEmbebido }) {
           </button>
         </div>
       </div>
+      </>)}
 
       <div style={{ maxWidth:1280, margin:"0 auto", padding:"clamp(32px,5vw,48px) clamp(16px,4vw,32px)" }}>
 
@@ -2288,11 +2328,11 @@ function ProductosPageInner({ embebido }: { embebido?: CatalogoEmbebido }) {
 
       {/* ── MODAL PRODUCTO ─────────────────────────────────────────────── */}
       {modalProduct && (
-        <div style={{ position:"fixed", inset:0, zIndex:CAPAS.nav, display:"flex", alignItems:"center", justifyContent:"center" }} onClick={() => { setModalProduct(null); setLightboxSrc(null); }}>
+        <div style={{ position:"fixed", inset:0, zIndex:capaFicha, display:"flex", alignItems:"center", justifyContent:"center" }} onClick={() => { setModalProduct(null); setLightboxSrc(null); }}>
           {/* El velo es lo primero que se ve al abrir, antes de leer una palabra:
               en Boho Terra va en el marrón del template y no en el negro genérico. */}
           <div style={{ position:"absolute", inset:0, background: v.velo ?? overlayBg, backdropFilter:"blur(8px)" }}/>
-          <div style={{ position: isMobile ? "absolute" : "relative", ...(isMobile ? {top:0,right:0,bottom:0,left:0} : {maxWidth: v.ancho, width:"calc(100% - 32px)", maxHeight:"92vh"}), background: v.superficie ?? S, overflow:"hidden", display:"flex", flexDirection:"column" }} onClick={e => e.stopPropagation()}>
+          <div style={{ position: isMobile ? "absolute" : "relative", ...(isMobile ? {top:0,right:0,bottom:0,left:0} : {maxWidth: v.ancho, width:"calc(100% - 32px)", maxHeight:"92%"}), background: v.superficie ?? S, overflow:"hidden", display:"flex", flexDirection:"column" }} onClick={e => e.stopPropagation()}>
             {/* El fondo y la tinta de fábrica son los del TEMA, y la base los pisa
                 con el negro translúcido de siempre. Así el template que no dice
                 nada del botón de cerrar —como Urban Pulse, que lo quiere macizo—
@@ -2866,9 +2906,9 @@ function ProductosPageInner({ embebido }: { embebido?: CatalogoEmbebido }) {
           que bajarlas todas para llegar a escribir la propia.
           `flotanteBajo`: por encima de la ficha y por debajo del lightbox. */}
       {modalProduct && resenaModalOpen && (
-        <div style={{ position:"fixed", inset:0, zIndex:CAPAS.flotanteBajo, background:"rgba(0,0,0,0.6)", backdropFilter:"blur(4px)", display:"flex", alignItems: isMobile ? "flex-end" : "center", justifyContent:"center", padding: isMobile ? 0 : 20 }}
+        <div style={{ position:"fixed", inset:0, zIndex:capaResena, background:"rgba(0,0,0,0.6)", backdropFilter:"blur(4px)", display:"flex", alignItems: isMobile ? "flex-end" : "center", justifyContent:"center", padding: isMobile ? 0 : 20 }}
           onClick={() => setResenaModalOpen(false)}>
-          <div style={{ background:S, width:"100%", maxWidth:460, maxHeight:"92vh", overflowY:"auto", position:"relative", borderRadius: isMobile ? "12px 12px 0 0" : 0 }}
+          <div style={{ background:S, width:"100%", maxWidth:460, maxHeight:"92%", overflowY:"auto", position:"relative", borderRadius: isMobile ? "12px 12px 0 0" : 0 }}
             onClick={e => e.stopPropagation()}>
             <button onClick={() => setResenaModalOpen(false)} aria-label="Cerrar"
               style={{ position:"absolute", top:10, right:10, background:"none", border:"none", color:MID, width:32, height:32, cursor:"pointer", fontSize:22, lineHeight:1 }}>×</button>
@@ -2921,14 +2961,14 @@ function ProductosPageInner({ embebido }: { embebido?: CatalogoEmbebido }) {
 
       {/* ── LIGHTBOX ──────────────────────────────────────────────────── */}
       {lightboxSrc && (
-        <div style={{ position:"fixed", inset:0, zIndex:CAPAS.flotante, background:"rgba(0,0,0,0.97)", display:"flex", alignItems:"center", justifyContent:"center" }}
+        <div style={{ position:"fixed", inset:0, zIndex:capaFoto, background:"rgba(0,0,0,0.97)", display:"flex", alignItems:"center", justifyContent:"center" }}
           onClick={() => setLightboxSrc(null)}>
           {/* Este SÍ se queda como <img>. Es la vista de zoom: se abre justamente
               para mirar la foto ENTERA, al tamaño original y con pinch-zoom.
               Pasarla por `next/image` la redimensionaría al alto de la pantalla,
               que es lo contrario de lo que la persona pidió al abrirla. */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={lightboxSrc} alt="" style={{ maxWidth:"100vw", maxHeight:"100vh", objectFit:"contain", touchAction:"pinch-zoom" }} onClick={e => e.stopPropagation()} />
+          <img src={lightboxSrc} alt="" style={{ maxWidth:"100%", maxHeight:"100%", objectFit:"contain", touchAction:"pinch-zoom" }} onClick={e => e.stopPropagation()} />
           <button onClick={() => setLightboxSrc(null)} style={{ position:"absolute", top:16, right:16, background:"rgba(255,255,255,0.15)", border:"none", color:"#fff", width:44, height:44, borderRadius:"50%", fontSize:22, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>×</button>
         </div>
       )}
@@ -2962,7 +3002,7 @@ function ProductosPageInner({ embebido }: { embebido?: CatalogoEmbebido }) {
           pantalla por los DOS lados en un celular de 360. Es el mismo par que ya
           usan los diez templates; esta pantalla era la única afuera. */}
       {toastMsg && (
-        <div style={{ position:"fixed", bottom:28, left:"50%", transform:"translateX(-50%)", background:chipBg, color:chipText, padding:"12px 24px", fontSize:13, fontWeight:700, zIndex:CAPAS.panel, boxShadow:"0 4px 20px rgba(0,0,0,0.3)", maxWidth:"calc(100vw - 32px)", textAlign:"center" }}>
+        <div style={{ position:"fixed", bottom:28, left:"50%", transform:"translateX(-50%)", background:chipBg, color:chipText, padding:"12px 24px", fontSize:13, fontWeight:700, zIndex:CAPAS.panel, boxShadow:"0 4px 20px rgba(0,0,0,0.3)", maxWidth:"calc(100% - 32px)", textAlign:"center" }}>
           {toastMsg}
         </div>
       )}

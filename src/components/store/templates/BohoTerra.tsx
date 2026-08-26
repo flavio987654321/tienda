@@ -657,7 +657,7 @@ export default function BohoTerra() {
 
       {/* TOAST */}
       {toastMsg && (
-        <div style={{ position:"fixed", bottom:28, left:"50%", transform:"translateX(-50%)", background:T, color:BG, padding:"10px 24px", fontSize:12, fontWeight:600, zIndex:CAPAS.barraAccion, maxWidth:"calc(100vw - 32px)", textAlign:"center", letterSpacing:1 }}>
+        <div style={{ position:"fixed", bottom:28, left:"50%", transform:"translateX(-50%)", background:T, color:BG, padding:"10px 24px", fontSize:12, fontWeight:600, zIndex:CAPAS.barraAccion, maxWidth:"calc(100% - 32px)", textAlign:"center", letterSpacing:1 }}>
           ✓ {toastMsg}
         </div>
       )}
@@ -690,7 +690,7 @@ export default function BohoTerra() {
             />
           </div>
           {searchResults.length > 0 && (
-            <div style={{ width:"100%", maxWidth:640, padding:"24px 24px 0", overflowY:"auto", maxHeight:"calc(100vh - 260px)" }}>
+            <div style={{ width:"100%", maxWidth:640, padding:"24px 24px 0", overflowY:"auto", maxHeight:"calc(100% - 260px)" }}>
               <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:16 }}>
                 {searchResults.map(p => (
                   <button key={p.id} onClick={() => openModal(p)}
@@ -987,7 +987,20 @@ export default function BohoTerra() {
           de la tienda PUBLICADA. El porqué largo, con lo que se apagaba, está en
           el tipo `CatalogoEmbebido`. */}
       {vista.enCatalogo && (
-        <CatalogoGenerico embebido={{ ...filtroCatalogo, slug: storeConfig?.slug ?? "", template: "boho-terra", sinPie: true, enEditor: isPreview }} />
+        /* El hueco de la barra, que es `fixed` y por lo tanto no ocupa lugar.
+           Antes lo tapaba sin querer la barra propia del catálogo; al sacarla, el
+           título "Todos los productos" quedaba metido abajo del menú. Es el mismo
+           `paddingTop` que se le pone al hero unas líneas más abajo, y con la
+           misma excepción: en el editor la barra va `sticky` y sí ocupa lugar, así
+           que ahí el hueco sobra. */
+        <div style={{ paddingTop: isPreview ? 0 : 60 + announcementBarHeight }}>
+        <CatalogoGenerico embebido={{ ...filtroCatalogo, slug: storeConfig?.slug ?? "", template: "boho-terra", sinPie: true, sinBarra: true, enEditor: isPreview,
+          /* La MISMA capa que usa este template para su propia ficha, unas líneas
+             más abajo. Los modales del catálogo comparten pantalla con esta barra,
+             así que tienen que jugar en su escala: con la de ellos —`CAPAS.nav`,
+             o sea 100— la barra les tapaba la × de cerrar. */
+          capaModal: isPreview ? 20000 : 600 }} />
+        </div>
       )}
 
       {vista.enPortada && (<>
@@ -1740,7 +1753,25 @@ export default function BohoTerra() {
       {modalProduct && (
         <div style={{ position:"fixed", inset:0, zIndex: isPreview ? 20000 : 600, display:"flex", alignItems:"center", justifyContent:"center" }} onClick={()=>{ setModalProduct(null); setLightboxSrc(null); }}>
           <div style={{ position:"absolute", inset:0, background:"rgba(44,34,24,0.65)", backdropFilter:"blur(8px)" }}/>
-          <div style={{ position:"relative", background:"#fff", maxWidth:920, width:"calc(100% - 32px)", maxHeight: isPreview ? "100%" : "92vh", overflow:"hidden", display:"flex", flexDirection:"column" }} onClick={e=>e.stopPropagation()}>
+          {/* ── Por qué `92%` y no `92vh` ─────────────────────────────────────
+              `vh` es el alto de la VENTANA, y adentro del editor el template no
+              vive en la ventana: vive en la pantalla del navegador falso, que es
+              más chica. Medido con la ventana en 900px: esa pantalla mide 820 y
+              `92vh` da 828 — ocho píxeles MÁS que la caja que lo contiene, que
+              además tiene `overflow:hidden`. Se cortaba. Y cuanto más baja la
+              ventana, peor: la pantalla siempre mide unos 80px menos que la
+              ventana, así que a 700px de alto `92vh` se pasa por 24.
+
+              Acá había un parche —`isPreview ? "100%" : "92vh"`— que tapaba el
+              corte pero dejaba el modal pegado a los cuatro bordes, sin un solo
+              pixel de aire: se leía como contenido cortado, no como una ventana
+              flotando sobre la tienda.
+
+              El porcentaje no necesita saber dónde está. Este panel cuelga de un
+              `position:fixed; inset:0`, y ese padre mide la ventana en la tienda
+              publicada y la pantalla del marco en el editor. `92%` es lo mismo
+              que `92vh` afuera, y lo correcto adentro. Un solo valor. */}
+          <div style={{ position:"relative", background:"#fff", maxWidth:920, width:"calc(100% - 32px)", maxHeight:"92%", overflow:"hidden", display:"flex", flexDirection:"column" }} onClick={e=>e.stopPropagation()}>
             <button onClick={()=>{ setModalProduct(null); setLightboxSrc(null); }} aria-label="Cerrar" style={{ position:"absolute", top:8, right:8, zIndex:10, background:"rgba(44,34,24,0.65)", border:"none", color:"#fff", width:36, height:36, cursor:"pointer", fontSize:20, display:"flex", alignItems:"center", justifyContent:"center" }}>×</button>
             {/* El ref es el que `openModal` manda arriba al abrir otra ficha: los
                 "productos similares" están al final, así que el que toca uno está
@@ -2245,7 +2276,7 @@ export default function BohoTerra() {
         <div onClick={resenas.cerrarModal}
           style={{ position:"fixed", inset:0, background:"rgba(44,34,24,0.6)", backdropFilter:"blur(4px)", zIndex: isPreview ? 20000 : 900, display:"flex", alignItems: isMobile ? "flex-end" : "center", justifyContent:"center", padding: isMobile ? 0 : 20 }}>
           <div onClick={e => e.stopPropagation()}
-            style={{ background:"#fff", width:"100%", maxWidth:460, maxHeight:"92vh", overflowY:"auto", position:"relative" }}>
+            style={{ background:"#fff", width:"100%", maxWidth:460, maxHeight:"92%", overflowY:"auto", position:"relative" }}>
             <button onClick={resenas.cerrarModal} aria-label="Cerrar"
               style={{ position:"absolute", top:10, right:10, zIndex:2, background:"none", border:"none", color:MID, width:32, height:32, cursor:"pointer", fontSize:22, lineHeight:1 }}>×</button>
             <div style={{ padding: isMobile ? "28px 22px 26px" : "32px 30px 28px" }}>
@@ -2362,7 +2393,7 @@ export default function BohoTerra() {
       {modalProduct && resenaModalOpen && (
         <div style={{ position:"fixed", inset:0, zIndex: isPreview ? 20000 : 650, background:"rgba(44,34,24,0.6)", backdropFilter:"blur(4px)", display:"flex", alignItems: isMobile ? "flex-end" : "center", justifyContent:"center", padding: isMobile ? 0 : 20 }}
           onClick={() => setResenaModalOpen(false)}>
-          <div style={{ background:"#fff", width:"100%", maxWidth:460, maxHeight:"92vh", overflowY:"auto", position:"relative" }}
+          <div style={{ background:"#fff", width:"100%", maxWidth:460, maxHeight:"92%", overflowY:"auto", position:"relative" }}
             onClick={e => e.stopPropagation()}>
             <button onClick={() => setResenaModalOpen(false)} aria-label="Cerrar"
               style={{ position:"absolute", top:10, right:10, background:"none", border:"none", color:MID, width:32, height:32, cursor:"pointer", fontSize:22, lineHeight:1 }}>×</button>
@@ -2430,7 +2461,7 @@ export default function BohoTerra() {
         <div style={{ position:"fixed", inset:0, zIndex: isPreview ? 20001 : 700, background:"rgba(0,0,0,0.97)", display:"flex", alignItems:"center", justifyContent:"center" }}
           onClick={() => setLightboxSrc(null)}>
           {/* eslint-disable-next-line @next/next/no-img-element -- el lightbox es la foto a pantalla completa con zoom de dos dedos: necesita el <img> nativo. next/image pide medidas fijas o un padre posicionado, y ninguna de las dos cosas conviven con maxWidth/maxHeight en viewport + touchAction pinch-zoom. */}
-          <img src={lightboxSrc} alt="" style={{ maxWidth:"100vw", maxHeight:"100vh", objectFit:"contain", touchAction:"pinch-zoom" }} onClick={e => e.stopPropagation()} />
+          <img src={lightboxSrc} alt="" style={{ maxWidth:"100%", maxHeight:"100%", objectFit:"contain", touchAction:"pinch-zoom" }} onClick={e => e.stopPropagation()} />
           <button onClick={() => setLightboxSrc(null)} aria-label="Cerrar" style={{ position:"absolute", top:16, right:16, background:"rgba(255,255,255,0.15)", border:"none", color:"#fff", width:44, height:44, borderRadius:"50%", fontSize:22, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>×</button>
         </div>
       )}
