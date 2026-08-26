@@ -176,6 +176,36 @@ export default function BohoTerra() {
     vista.irAlCatalogo();
   };
 
+  /* ── Ir a una sección de la portada, se esté donde se esté ───────────────────
+   *
+   * `scrollTo` es un `getElementById(...).scrollIntoView()` y nada más. Desde el
+   * CATÁLOGO no encuentra nada, porque esas secciones son de la portada y la
+   * portada no está dibujada. O sea que estando en el catálogo el menú entero no
+   * hacía nada: la marca, "Mujer", "Hombre", "Nuestra Historia", los links del
+   * pie y el "consultar" de la ficha.
+   *
+   * Se disimulaba porque el catálogo traía su propia barra con un "volver". Al
+   * sacarla —era una segunda barra arriba de la del template— quedó sin salida.
+   * Lo reportó Flavio en el acto: "¿cómo vuelvo, si sacaste la flecha?".
+   *
+   * Ahora vuelve a la portada primero y recién ahí busca la sección. La sección
+   * queda anotada porque todavía no existe: se dibuja en el render siguiente, y
+   * el `useEffect` de abajo es el que la va a buscar cuando ya esté. */
+  const [seccionPendiente, setSeccionPendiente] = useState<string | null>(null);
+  const irASeccion = (id: string) => {
+    if (vista.enPortada) { scrollTo(id); return; }
+    setSeccionPendiente(id);
+    vista.irALaPortada();
+  };
+  useEffect(() => {
+    if (!seccionPendiente || !vista.enPortada) return;
+    /* El respiro es para que el navegador termine de dibujar la portada. Sin él
+       `getElementById` corre contra el árbol viejo y devuelve null, que es
+       exactamente el bug que esto arregla. */
+    const t = setTimeout(() => { scrollTo(seccionPendiente); setSeccionPendiente(null); }, 80);
+    return () => clearTimeout(t);
+  }, [seccionPendiente, vista.enPortada]);
+
   const categoryList = useMemo(() => {
     const cats = [...new Set(products.map(p => p.category).filter(c => c && c !== "general"))];
     const base = cats.length > 0 ? cats : defaultCategories.slice(0, 6);
@@ -363,7 +393,7 @@ export default function BohoTerra() {
   function openInquiry(product: Product) {
     setModalProduct(null);
     setInquiryMessage(`Hola, me interesa "${product.name}". ¿Me podés dar más información?`);
-    setTimeout(() => scrollTo("contacto"), 100);
+    setTimeout(() => irASeccion("contacto"), 100);
   }
   /* La dirección de verdad del producto, no `?p=<id>`. El porqué está escrito en
      `urlParaCompartirProducto`. La ficha que contesta esa dirección es
@@ -721,7 +751,7 @@ export default function BohoTerra() {
             misma decisión para los tres templates. */}
         <div style={{ padding:"0 20px", height:60, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
           <div style={{ display:"flex", alignItems:"center", gap:6, flexShrink:0 }}>
-            <button onClick={()=>scrollTo("inicio")} style={{ background:"none", border:"none", cursor:"pointer", fontFamily:"Georgia, serif", fontSize:20, fontStyle:"italic", color:T, letterSpacing:2, maxWidth:180, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+            <button onClick={()=>irASeccion("inicio")} style={{ background:"none", border:"none", cursor:"pointer", fontFamily:"Georgia, serif", fontSize:20, fontStyle:"italic", color:T, letterSpacing:2, maxWidth:180, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
               <EditableZone field="storeName" label="Nombre de la tienda">{storeConfig?.storeName ?? "Terra"}</EditableZone>
             </button>
             <VerifiedIconButton isVerified={storeConfig?.isVerified} info={storeConfig?.verifiedInfo} />
@@ -790,16 +820,16 @@ export default function BohoTerra() {
               </div>
               {generosParaElMenu && (
                 <>
-                  <button onClick={() => { changeGender(activeGender==="mujer" ? null : "mujer"); scrollTo("coleccion"); }}
+                  <button onClick={() => { changeGender(activeGender==="mujer" ? null : "mujer"); irASeccion("coleccion"); }}
                     style={{ background:"none", border:"none", fontSize:11, letterSpacing:2, textTransform:"uppercase", cursor:"pointer", color: activeGender==="mujer" ? A : MID, ...esperandoGeneros }}>Mujer</button>
-                  <button onClick={() => { changeGender(activeGender==="hombre" ? null : "hombre"); scrollTo("coleccion"); }}
+                  <button onClick={() => { changeGender(activeGender==="hombre" ? null : "hombre"); irASeccion("coleccion"); }}
                     style={{ background:"none", border:"none", fontSize:11, letterSpacing:2, textTransform:"uppercase", cursor:"pointer", color: activeGender==="hombre" ? A : MID, ...esperandoGeneros }}>Hombre</button>
                 </>
               )}
             </div>
           )}
           <div style={{ display:"flex", gap:8, alignItems:"center" }}>
-            {!isMobile && <button onClick={()=>scrollTo("nosotros")} style={{ background:"none", border:"none", color:MID, fontSize:11, letterSpacing:2, textTransform:"uppercase", cursor:"pointer" }}><EditableZone field="navHistoriaLabel" label="Enlace Nuestra Historia">Nuestra Historia</EditableZone></button>}
+            {!isMobile && <button onClick={()=>irASeccion("nosotros")} style={{ background:"none", border:"none", color:MID, fontSize:11, letterSpacing:2, textTransform:"uppercase", cursor:"pointer" }}><EditableZone field="navHistoriaLabel" label="Enlace Nuestra Historia">Nuestra Historia</EditableZone></button>}
             <button onClick={() => setSearchOpen(true)} aria-label="Buscar" style={{ background:"none", border:"none", color:T, cursor:"pointer", padding:4, display:"flex", alignItems:"center" }}>
               <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
             </button>
@@ -930,12 +960,12 @@ export default function BohoTerra() {
             </>
           )}
           {hayGeneros && [["Mujer","mujer"],["Hombre","hombre"]].map(([label, g]) => (
-            <button key={g} onClick={() => { changeGender(activeGender===g ? null : g); scrollTo("coleccion"); setMobileMenuOpen(false); }}
+            <button key={g} onClick={() => { changeGender(activeGender===g ? null : g); irASeccion("coleccion"); setMobileMenuOpen(false); }}
               style={{ display:"block", width:"100%", background:"none", border:"none", borderBottom:`1px solid rgba(44,34,24,0.06)`, color: activeGender===g ? A : T, padding:"16px 24px", fontSize:13, textAlign:"left", cursor:"pointer", letterSpacing:2, textTransform:"uppercase" }}>
               {label}
             </button>
           ))}
-          <button onClick={() => { scrollTo("nosotros"); setMobileMenuOpen(false); }}
+          <button onClick={() => { irASeccion("nosotros"); setMobileMenuOpen(false); }}
             style={{ display:"block", width:"100%", background:"none", border:"none", borderBottom:`1px solid rgba(44,34,24,0.06)`, color:MID, padding:"16px 24px", fontSize:13, textAlign:"left", cursor:"pointer", letterSpacing:2, textTransform:"uppercase" }}>
             Nuestra Historia
           </button>
@@ -1023,7 +1053,7 @@ export default function BohoTerra() {
               renglón vacío al lado. En escritorio sigue arrancando a la izquierda,
               alineado con el título y el subtítulo. */}
           {(editMode || !storeConfig?.textOverrides?.["heroCta"]?.hidden) && (
-            <button onClick={()=>scrollTo("coleccion")} style={{ alignSelf: isMobile ? "center" : "flex-start", background:"none", color:heroLeftText, border:`1.5px solid ${heroLeftText}`, padding:"14px 40px", fontSize:11, letterSpacing:4, textTransform:"uppercase", cursor:"pointer", transition:"all 0.25s" }}
+            <button onClick={()=>irASeccion("coleccion")} style={{ alignSelf: isMobile ? "center" : "flex-start", background:"none", color:heroLeftText, border:`1.5px solid ${heroLeftText}`, padding:"14px 40px", fontSize:11, letterSpacing:4, textTransform:"uppercase", cursor:"pointer", transition:"all 0.25s" }}
               onMouseEnter={e=>{ e.currentTarget.style.background=heroLeftText; e.currentTarget.style.color=heroLeftBotonText; }}
               onMouseLeave={e=>{ e.currentTarget.style.background="none"; e.currentTarget.style.color=heroLeftText; }}>
               <EditableZone field="heroCta" label="Botón principal">Ver Colección</EditableZone>
@@ -1072,7 +1102,7 @@ export default function BohoTerra() {
             <p style={{ fontSize:14, color:MID, maxWidth:480, margin:0, lineHeight:1.7 }}>
               Precios exclusivos para revendedores y distribuidores. Completá el formulario de contacto y te respondemos con tu lista personalizada en menos de 24 hs.
             </p>
-            <button onClick={() => scrollTo("contacto")}
+            <button onClick={() => irASeccion("contacto")}
               style={{ background:A, color:"#fff", border:"none", padding:"13px 36px", fontSize:12, fontWeight:700, letterSpacing:2, textTransform:"uppercase", cursor:"pointer", borderRadius:30, marginTop:4 }}>
               Consultar ahora
             </button>
@@ -1676,7 +1706,7 @@ export default function BohoTerra() {
               360px y el último quedaba cortado contra el borde. */}
           <div style={{ display:"flex", flexWrap:"wrap", justifyContent: isMobile ? "center" : undefined, gap: isMobile ? "10px 18px" : 24 }}>
             {[["Colección","coleccion"],["Nosotros","nosotros"],["Contacto","contacto"],["Envíos","contacto"],["Devoluciones","contacto"]].map(([l,t])=>(
-              <button key={l} onClick={()=>scrollTo(t)} style={{ background:"none", border:"none", color:footerMid, fontSize:12, cursor:"pointer", transition:"color 0.2s" }}
+              <button key={l} onClick={()=>irASeccion(t)} style={{ background:"none", border:"none", color:footerMid, fontSize:12, cursor:"pointer", transition:"color 0.2s" }}
                 onMouseEnter={e=>(e.currentTarget.style.color=footerText)}
                 onMouseLeave={e=>(e.currentTarget.style.color=footerMid)}>
                 {l}

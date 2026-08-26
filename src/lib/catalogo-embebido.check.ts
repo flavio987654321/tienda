@@ -114,6 +114,36 @@ chequear("las del embudo (`registrarPaso`), también",
 chequear("el carrito del catálogo recibe `isPreview: fromEditor`",
   /isPreview: fromEditor/.test(catalogo));
 
+console.log("\n4) Desde el catálogo se puede volver");
+
+/* Sacar la barra propia del catálogo dejó al menú del template como única salida
+   — y ese menú no servía desde ahí. `scrollTo` es un `getElementById` y nada más,
+   y esas secciones son de la PORTADA, que en la vista de catálogo no está
+   dibujada. O sea que estando en el catálogo la marca, "Mujer", "Hombre",
+   "Nuestra Historia" y los links del pie no hacían NADA.
+
+   Se disimulaba porque el catálogo traía su propio "volver". Al sacarlo quedó sin
+   salida, y Flavio lo vio en el acto: "¿cómo vuelvo, si sacaste la flecha?".
+
+   Ahora `irASeccion` vuelve a la portada primero y busca la sección después,
+   cuando ya existe. */
+const boho = leer("src/components/store/templates/BohoTerra.tsx");
+
+chequear("vuelve a la portada antes de buscar la sección",
+  /const irASeccion = \(id: string\) => \{\s*if \(vista\.enPortada\) \{ scrollTo\(id\); return; \}/.test(boho),
+  "volvió el `scrollTo` directo: desde el catálogo no encuentra nada y el menú queda muerto");
+
+chequear("y espera a que la portada esté dibujada",
+  /setTimeout\(\(\) => \{ scrollTo\(seccionPendiente\); setSeccionPendiente\(null\); \}/.test(boho),
+  "sin el respiro, `getElementById` corre contra el árbol viejo y devuelve null");
+
+/* Los únicos `scrollTo(` que pueden quedar sueltos son los dos de adentro de
+   `irASeccion`. Cualquier otro es un botón del menú que se olvidó de volver. */
+const sueltos = (boho.match(/(?<![.\w])scrollTo\(/g) ?? []).length;
+chequear(`ningún \`scrollTo\` fuera de \`irASeccion\` (hay ${sueltos}, tienen que ser 2)`,
+  sueltos === 2,
+  "quedó un botón del menú llamando a `scrollTo` derecho");
+
 console.log(fallos === 0
   ? "\nTodo bien: una dirección, una pantalla, y la tienda publicada no se cree el editor.\n"
   : `\n${fallos} chequeo(s) fallando.\n`);
