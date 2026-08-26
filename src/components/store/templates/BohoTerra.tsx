@@ -44,6 +44,7 @@ import { CAPAS } from "@/lib/capas-tienda";
    otros templates de moda, y el engranaje que la elige sobre el bloque. */
 import { productosDeLaVitrina, leerModo, leerElegidos } from "@/lib/vitrina";
 import { BotonVitrina } from "@/components/store/templates/shared/BotonVitrina";
+import { BotonVolver } from "@/components/store/templates/shared/BotonVolver";
 /* El catálogo, para dibujarlo acá adentro en vez de mandar al navegador a otra
    página. Es EL MISMO que ya se veía: mismo componente, mismo vestido de Boho
    Terra. Lo único que cambia es dónde vive — adentro del template, con su barra
@@ -1024,6 +1025,21 @@ export default function BohoTerra() {
            misma excepción: en el editor la barra va `sticky` y sí ocupa lugar, así
            que ahí el hueco sobra. */
         <div style={{ paddingTop: isPreview ? 0 : 60 + announcementBarHeight }}>
+          {/* ── El atrás del catálogo ───────────────────────────────────────────
+              Va acá, dibujado por el template, y no alcanzaba con el menú.
+              EDITANDO, tocar la marca NO navega: `EditableZone` se queda con el
+              clic para abrir el editor de texto, así que el `onClick` del botón
+              nunca corre. Lo mismo "Nuestra Historia", que también es editable.
+              O sea que adentro del editor, desde el catálogo, no había salida —
+              y es justo donde más molesta, porque la dueña queda encerrada en una
+              pantalla mientras acomoda su tienda.
+              Se dibuja siempre y no sólo editando: es el mismo botón redondo que
+              Aire usa en su catálogo y en su ficha, y un "atrás" explícito arriba
+              a la izquierda se busca igual con o sin editor. */}
+          <div style={{ maxWidth:1280, margin:"0 auto", padding:`18px clamp(16px,4vw,32px) 0` }}>
+            <BotonVolver onClick={vista.irALaPortada} destino="Volver a la tienda"
+              S={BG} LN="rgba(44,34,24,0.18)" T={T} G={A} />
+          </div>
         <CatalogoGenerico embebido={{ ...filtroCatalogo, slug: storeConfig?.slug ?? "", template: "boho-terra", sinPie: true, sinBarra: true, enEditor: isPreview,
           /* La MISMA capa que usa este template para su propia ficha, unas líneas
              más abajo. Los modales del catálogo comparten pantalla con esta barra,
