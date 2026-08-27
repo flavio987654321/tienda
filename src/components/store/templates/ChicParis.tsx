@@ -1,7 +1,9 @@
 "use client";
-import { urlParaCompartirProducto } from "@/components/store/templates/shared/useVistaTemplate";
+import { useVistaTemplate, urlParaCompartirProducto } from "@/components/store/templates/shared/useVistaTemplate";
+import CatalogoGenerico, { type CatalogoEmbebido } from "@/app/tienda/[slug]/productos/CatalogoGenerico";
+import { BotonVolver } from "@/components/store/templates/shared/BotonVolver";
 import { barraMs } from "@/types/store-config";
-import { useState, useEffect, useRef, useMemo, Fragment } from "react";
+import { useState, useEffect, useRef, useMemo, useSyncExternalStore, Fragment } from "react";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { usePushBell } from "@/contexts/PushBellContext";
 import { useSesion } from "@/components/AuthProvider";
@@ -274,6 +276,78 @@ export default function ChicParis() {
   const { editMode, activeField, setActiveField, overrides: textOverrides, setOverride } = useEditContext();
   const isInquiryMode = checkoutMode === "inquiry" || ocultarPrecios;
 
+  /* ── El catálogo deja de ser otra página ─────────────────────────────────────
+   *
+   * Los nueve links al catálogo eran `window.location.href`, que recarga todo. En
+   * la tienda publicada es un parpadeo; en el EDITOR sacaba a la dueña de Diseño
+   * por completo, y encima le mostraba el catálogo del template GUARDADO en vez
+   * del que estaba mirando.
+   *
+   * Es el mismo cambio que ya tienen Aire, Boho Terra y Urban Pulse, con el mismo
+   * hook: el catálogo se dibuja acá adentro, entre la barra y el pie de Chic
+   * Paris. Su vestido ya existe —`CatalogoGenerico` tiene tema propio para este
+   * template— así que embebido se ve igual que suelto.
+   *
+   * La ficha del producto NO cambia: acá es un modal, no una pantalla, y un modal
+   * nunca fue una página que se abre. */
+  const vista = useVistaTemplate({ isPreview, slug: storeConfig?.slug, templateId: "chic-paris" });
+  /** Con qué filtro entrar al catálogo. Lo ponen los links antes de abrirlo. */
+  const [filtroCatalogo, setFiltroCatalogo] = useState<CatalogoEmbebido>({});
+  const abrirCatalogo = (filtro: CatalogoEmbebido = {}) => {
+    setFiltroCatalogo(filtro);
+    vista.irAlCatalogo();
+  };
+
+  /* El filtro del que LLEGA por la dirección: un link compartido, uno abierto en
+     pestaña nueva o uno seguido desde Google. Suelto, el catálogo lo leía de la
+     URL; embebido no puede, porque adentro de un template la dirección es la del
+     template. Sin esto el filtro se perdía justo para el que no navegó, que es el
+     único que no puede volver a ponerlo. Explicado largo en UrbanPulse.tsx. */
+  const busquedaDeLaUrl = useSyncExternalStore(() => () => {}, () => window.location.search, () => "");
+  const filtroDeLaUrl = useMemo<CatalogoEmbebido>(() => {
+    const p = new URLSearchParams(busquedaDeLaUrl);
+    const f: CatalogoEmbebido = {};
+    const cat = p.get("categoria");     if (cat) f.categoria = cat;
+    const sub = p.get("subcategoria");  if (sub) f.subcategoria = sub;
+    if (p.get("oferta") === "true")    f.soloOfertas = true;
+    if (p.get("destacado") === "true") f.masVistos = true;
+    if (p.get("promo") === "true")     f.soloPromos = true;
+    return f;
+  }, [busquedaDeLaUrl]);
+  /* Manda el filtro que puso un clic de acá adentro; si no hay, el de la
+     dirección. Navegando adentro la URL queda en `/productos` sin nada colgando,
+     así que no hay filtro viejo que pueda pisar al nuevo. */
+  const filtroEfectivo = useMemo<CatalogoEmbebido>(
+    () => ({ ...filtroDeLaUrl, ...filtroCatalogo }),
+    [filtroDeLaUrl, filtroCatalogo]
+  );
+  /* `key` del catálogo: guarda el filtro en un `useState`, o sea que sólo mira lo
+     que le llega en su PRIMER dibujado, y en la hidratación la dirección todavía
+     no se puede leer. Con una clave hecha del filtro, cambiar de filtro es montar
+     otro catálogo. */
+  const claveCatalogo = [
+    filtroEfectivo.categoria ?? "", filtroEfectivo.subcategoria ?? "",
+    filtroEfectivo.soloOfertas ? "of" : "", filtroEfectivo.masVistos ? "mv" : "",
+    filtroEfectivo.soloPromos ? "pr" : "",
+  ].join("|");
+
+  /* ── Ir a una sección de la portada, se esté donde se esté ───────────────────
+     `scrollTo` busca una sección de la portada, y desde el CATÁLOGO la portada no
+     está dibujada: el menú entero dejaría de hacer nada. Vuelve a la portada
+     primero y recién ahí busca la sección, que se dibuja en el render siguiente
+     — por eso queda anotada y la va a buscar el efecto de abajo. */
+  const [seccionPendiente, setSeccionPendiente] = useState<string | null>(null);
+  const irASeccion = (id: string) => {
+    if (vista.enPortada) { scrollTo(id); return; }
+    setSeccionPendiente(id);
+    vista.irALaPortada();
+  };
+  useEffect(() => {
+    if (!seccionPendiente || !vista.enPortada) return;
+    const t = setTimeout(() => { scrollTo(seccionPendiente); setSeccionPendiente(null); }, 80);
+    return () => clearTimeout(t);
+  }, [seccionPendiente, vista.enPortada]);
+
   const categoryList = useMemo(() => {
     const cats = [...new Set(products.map(p => p.category).filter(c => c && c !== "general"))];
     // Las genéricas del rubro son relleno del EDITOR, para que el navbar no se
@@ -523,7 +597,7 @@ export default function ChicParis() {
   function openInquiry(product: Product) {
     setModalProduct(null);
     setInquiryMessage(`Hola, me interesa "${product.name}". ¿Me podés dar más información?`);
-    setTimeout(() => scrollTo("contacto"), 100);
+    setTimeout(() => irASeccion("contacto"), 100);
   }
   function shareProduct(product: Product) {
     /* La dirección de verdad del producto, no `?p=<id>`. El porqué está escrito
@@ -710,7 +784,15 @@ export default function ChicParis() {
   useScrollReveal();
 
   return (
-    <div style={{ fontFamily: "'Inter','Helvetica Neue',Arial,sans-serif", background: "#fff", color: "#111", minHeight: "100vh" }}>
+    /* `data-template-raiz`: de acá arranca `useVistaTemplate` para encontrar quién
+       scrollea de verdad. En la tienda es la ventana; en el EDITOR el template vive
+       adentro de un panel con scroll propio, y sin esto el catálogo aparecía a
+       mitad de página, con el título arriba fuera de vista. */
+    <div data-template-raiz style={{ fontFamily: "'Inter','Helvetica Neue',Arial,sans-serif", background: "#fff", color: "#111", minHeight: "100vh",
+      /* Dos toques seguidos en un botón que cambia de pantalla terminaban adentro
+         de cualquier cosa: la pantalla cambia al instante y abajo del dedo queda
+         otra. Ver el candado en `useVistaTemplate`. */
+      pointerEvents: vista.cambiandoPantalla ? "none" : undefined }}>
       <style>{`
         /* Panel derecho del modal: scrollea pero sin dibujar su barra. Al lado de
            la del modal quedaban dos barras pegadas y no se entendía cuál movía qué.
@@ -794,7 +876,9 @@ export default function ChicParis() {
             Con las secciones más abajo ya no coincide, pero eso está a medio scroll
             de distancia y no se compara. Es el mismo trueque que ya hacía Urban
             Pulse, decidido para los tres templates que quedaban. */}
-        <div style={{ padding: "0 32px", height: 68, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        {/* En celular 32px de cada lado se comen 64 de los 360, y lo que se achica
+            con eso es el nombre de la tienda: los iconos no se achican. */}
+        <div style={{ padding: isMobile ? "0 14px" : "0 32px", height: 68, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           {/* Nav left */}
           {!isMobile && <nav style={{ display: "flex", gap: 24, alignItems: "center" }}>
             {/* CATEGORÍAS dropdown — sin categorías no se muestra: el panel
@@ -813,7 +897,7 @@ export default function ChicParis() {
                     const subs = subcategoriesFor[cat] || [];
                     return (
                       <div key={cat} style={{ minWidth: 140 }}>
-                        <button onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?${isPreview ? "t=chic-paris&from=editor&" : ""}categoria=${encodeURIComponent(cat)}`; setHoveredNavCat(null); }}
+                        <button onClick={() => { abrirCatalogo({ categoria: cat }); setHoveredNavCat(null); }}
                           style={{ display: "block", width: "100%", background: "none", border: "none", borderBottom: "1px solid #111", color: "#111", padding: "0 0 8px", marginBottom: 10, fontSize: 11, textAlign: "left", cursor: "pointer", letterSpacing: 2, textTransform: "uppercase", fontWeight: 700, whiteSpace: "nowrap", transition: "color 0.15s, border-color 0.15s" }}
                           onMouseEnter={e => { e.currentTarget.style.color = ACC; e.currentTarget.style.borderBottomColor = ACC; }}
                           onMouseLeave={e => { e.currentTarget.style.color = "#111"; e.currentTarget.style.borderBottomColor = "#111"; }}>
@@ -822,7 +906,7 @@ export default function ChicParis() {
                         {subs.length > 0 ? (
                           <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
                             {subs.map(sub => (
-                              <button key={sub} onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?${isPreview ? "t=chic-paris&from=editor&" : ""}categoria=${encodeURIComponent(cat)}&subcategoria=${encodeURIComponent(sub)}`; setHoveredNavCat(null); }}
+                              <button key={sub} onClick={() => { abrirCatalogo({ categoria: cat, subcategoria: sub }); setHoveredNavCat(null); }}
                                 style={{ display: "block", width: "100%", background: "none", border: "none", color: "#555", padding: "5px 0", fontSize: 11, textAlign: "left", cursor: "pointer", letterSpacing: 0.5, whiteSpace: "nowrap" }}
                                 onMouseEnter={e => (e.currentTarget.style.color = "#111")}
                                 onMouseLeave={e => (e.currentTarget.style.color = "#555")}>
@@ -831,7 +915,7 @@ export default function ChicParis() {
                             ))}
                           </div>
                         ) : (
-                          <button onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?${isPreview ? "t=chic-paris&from=editor&" : ""}categoria=${encodeURIComponent(cat)}`; setHoveredNavCat(null); }}
+                          <button onClick={() => { abrirCatalogo({ categoria: cat }); setHoveredNavCat(null); }}
                             style={{ display: "block", background: "none", border: "none", color: "#999", padding: "5px 0", fontSize: 11, textAlign: "left", cursor: "pointer", transition: "color 0.15s" }}
                             onMouseEnter={e => (e.currentTarget.style.color = "#111")}
                             onMouseLeave={e => (e.currentTarget.style.color = "#999")}>
@@ -848,12 +932,12 @@ export default function ChicParis() {
             {hayGeneros && (
               <>
                 {/* MUJER */}
-                <button onClick={() => { changeGender(activeGender === "mujer" ? null : "mujer"); scrollTo("productos"); }}
+                <button onClick={() => { changeGender(activeGender === "mujer" ? null : "mujer"); irASeccion("productos"); }}
                   style={{ background: "none", border: "none", fontSize: 12, fontWeight: 600, letterSpacing: 2, textTransform: "uppercase", cursor: "pointer", padding: 0, color: activeGender === "mujer" ? ACC : (isPreview || scrolled) ? "#111" : "#fff" }}>
                   Mujer
                 </button>
                 {/* HOMBRE */}
-                <button onClick={() => { changeGender(activeGender === "hombre" ? null : "hombre"); scrollTo("productos"); }}
+                <button onClick={() => { changeGender(activeGender === "hombre" ? null : "hombre"); irASeccion("productos"); }}
                   style={{ background: "none", border: "none", fontSize: 12, fontWeight: 600, letterSpacing: 2, textTransform: "uppercase", cursor: "pointer", padding: 0, color: activeGender === "hombre" ? ACC : (isPreview || scrolled) ? "#111" : "#fff" }}>
                   Hombre
                 </button>
@@ -862,15 +946,29 @@ export default function ChicParis() {
           </nav>}
 
           {/* Logo center */}
-          <a onClick={() => scrollTo("hero")} style={{ cursor: "pointer", textDecoration: "none", display: "flex", alignItems: "center", gap: 6 }}>
-            <span style={{ fontSize: 22, fontWeight: 900, letterSpacing: 4, textTransform: "uppercase", color: (isPreview || scrolled) ? "#111" : "#fff", transition: "color 0.3s" }}>
+          {/* ── El nombre no se puede apilar ────────────────────────────────────
+              En un celular a los iconos de la derecha les quedan 222px de los 296
+              utiles, asi que a la marca le sobran 74. Sin `nowrap`, "AMARANTA" a
+              22px con 4 de espaciado no entra y el navegador la parte LETRA POR
+              LETRA: medido, el link quedaba de 74x180 adentro de una barra de 68,
+              desbordando 56px hacia abajo.
+              Eso no se ve —la barra es transparente sobre el hero— pero se toca:
+              esos 56px son una zona muerta que se come los clics de lo que haya
+              abajo. Con el catalogo dibujado acá adentro se hizo visible, porque
+              ahi cae el boton de volver y a 360 no respondia.
+              La letra baja en celular para que entre mas nombre, y lo que no entra
+              se corta con puntos suspensivos: cortar es feo, apilar es un bug. */}
+          <a onClick={() => irASeccion("hero")} style={{ cursor: "pointer", textDecoration: "none", display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+            <span style={{ fontSize: isMobile ? 15 : 22, fontWeight: 900, letterSpacing: isMobile ? 1.5 : 4, textTransform: "uppercase", color: (isPreview || scrolled) ? "#111" : "#fff", transition: "color 0.3s", whiteSpace: "nowrap" }}>
               <EditableZone field="storeName" label="Nombre de la tienda">{storeConfig?.storeName ?? "CHIC PARIS"}</EditableZone>
             </span>
             <VerifiedIconButton isVerified={storeConfig?.isVerified} info={storeConfig?.verifiedInfo} />
           </a>
 
-          {/* Nav right */}
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          {/* Nav right — seis iconos con 8 de separación son 40px de aire que le
+              faltan al nombre de la tienda. En celular van más juntos; en
+              escritorio sobra lugar y quedan como estaban. */}
+          <div style={{ display: "flex", gap: isMobile ? 2 : 8, alignItems: "center" }}>
             <button onClick={() => setSearchOpen(true)} aria-label="Buscar" style={{ background: "none", border: "none", cursor: "pointer", color: (isPreview || scrolled) ? "#555" : "#fff", padding: 6, display: "flex", transition: "color 0.3s" }}>
               <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
             </button>
@@ -975,7 +1073,7 @@ export default function ChicParis() {
                       if (subs.length > 0) {
                         setMobileOpenCat(prev => prev === cat ? null : cat);
                       } else {
-                        window.location.href = `/tienda/${storeConfig?.slug}/productos?${isPreview ? "t=chic-paris&from=editor&" : ""}categoria=${encodeURIComponent(cat)}`;
+                        abrirCatalogo({ categoria: cat });
                         setMobileMenuOpen(false); setMobileCatsOpen(false);
                       }
                     }} style={{ display: "flex", width: "100%", background: "#fafafa", border: "none", borderBottom: "1px solid #f0f0f0", color: "#111", padding: "13px 24px 13px 40px", fontSize: 11, textAlign: "left", cursor: "pointer", letterSpacing: 2, fontWeight: 600, textTransform: "uppercase", alignItems: "center", justifyContent: "space-between" }}>
@@ -983,7 +1081,7 @@ export default function ChicParis() {
                       {subs.length > 0 && <span style={{ fontSize: 12, opacity: 0.4, transition: "transform 0.2s", transform: mobileOpenCat===cat ? "rotate(90deg)" : "none", display: "inline-block" }}>›</span>}
                     </button>
                     {subs.length > 0 && mobileOpenCat === cat && subs.map(sub => (
-                      <button key={sub} onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?${isPreview ? "t=chic-paris&from=editor&" : ""}categoria=${encodeURIComponent(cat)}&subcategoria=${encodeURIComponent(sub)}`; setMobileMenuOpen(false); setMobileCatsOpen(false); setMobileOpenCat(null); }}
+                      <button key={sub} onClick={() => { abrirCatalogo({ categoria: cat, subcategoria: sub }); setMobileMenuOpen(false); setMobileCatsOpen(false); setMobileOpenCat(null); }}
                         style={{ display: "block", width: "100%", background: "#f5f5f5", border: "none", borderBottom: "1px solid #ebebeb", color: "#555", padding: "11px 24px 11px 60px", fontSize: 11, textAlign: "left", cursor: "pointer", letterSpacing: 1, fontWeight: 500, textTransform: "uppercase" }}>
                         {sub}
                       </button>
@@ -994,13 +1092,17 @@ export default function ChicParis() {
             </>
           )}
           {hayGeneros && [["Mujer","mujer"],["Hombre","hombre"]].map(([label, g]) => (
-            <button key={g} onClick={() => { changeGender(activeGender===g ? null : g); scrollTo("productos"); setMobileMenuOpen(false); }}
+            <button key={g} onClick={() => { changeGender(activeGender===g ? null : g); irASeccion("productos"); setMobileMenuOpen(false); }}
               style={{ display: "block", width: "100%", background: "none", border: "none", borderBottom: "1px solid #f0f0f0", color: activeGender===g ? ACC : "#111", padding: "16px 24px", fontSize: 12, textAlign: "left", cursor: "pointer", letterSpacing: 2, fontWeight: 600, textTransform: "uppercase" }}>
               {label}
             </button>
           ))}
         </div>
       )}
+
+      {/* Desde acá hasta el pie es la PORTADA. El catálogo se dibuja en su lugar,
+          más abajo, entre la misma barra y el mismo pie. */}
+      {vista.enPortada && (<>
 
       {/* ── HERO CAROUSEL ── */}
       {/* CP-4. El hero mide la pantalla entera, así que "pausar al pasar el mouse"
@@ -1280,12 +1382,14 @@ export default function ChicParis() {
                     Ver más ({allFiltered.length - filtered.length})
                   </button>
                 )}
-                <a href={`/tienda/${storeConfig?.slug}/productos${isPreview ? "?t=chic-paris&from=editor" : ""}`}
-                  style={{ display: "inline-block", background: ACC, color: accentText, border: `1px solid ${prodText}`, padding: "14px 44px", fontSize: 11, fontWeight: 700, letterSpacing: 3, textTransform: "uppercase", textDecoration: "none", transition: "opacity 0.2s" }}
+                {/* Botón y no `<a href>`: el link iba a otra página y recargaba
+                    todo. Queda al lado del "Ver más", que ya era un botón. */}
+                <button onClick={() => abrirCatalogo()}
+                  style={{ display: "inline-block", background: ACC, color: accentText, border: `1px solid ${prodText}`, padding: "14px 44px", fontSize: 11, fontWeight: 700, letterSpacing: 3, textTransform: "uppercase", cursor: "pointer", fontFamily: "inherit", transition: "opacity 0.2s" }}
                   onMouseEnter={e => (e.currentTarget.style.opacity = "0.85")}
                   onMouseLeave={e => (e.currentTarget.style.opacity = "1")}>
                   Ver colección completa
-                </a>
+                </button>
               </div>
             </>
           )}
@@ -1413,7 +1517,7 @@ export default function ChicParis() {
                 )}
                 {hasMore && (
                   <div style={{ textAlign: "center", marginTop: 32 }}>
-                    <button onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?${isPreview ? "t=chic-paris&from=editor&" : ""}oferta=true`; }}
+                    <button onClick={() => { abrirCatalogo({ soloOfertas: true }); }}
                       style={{ background: "none", border: `1px solid ${ACC}`, color: ACC, padding: "12px 32px", fontSize: 11, letterSpacing: 3, textTransform: "uppercase", cursor: "pointer" }}><EditableZone field="ofertasCta" label="Botón ver todas las ofertas">Ver todas las ofertas</EditableZone></button>
                   </div>
                 )}
@@ -1467,7 +1571,7 @@ export default function ChicParis() {
                 </div>
                 {hasMore && (
                   <div style={{ textAlign: "center", marginTop: 40 }}>
-                    <button onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?${isPreview ? "t=chic-paris&from=editor&" : ""}destacado=true`; }}
+                    <button onClick={() => { abrirCatalogo({ masVistos: true }); }}
                       style={{ background: "none", border: `1px solid ${ACC}`, color: ACC, padding: "12px 32px", fontSize: 11, letterSpacing: 3, textTransform: "uppercase", cursor: "pointer" }}><EditableZone field="masVistoCta" label="Botón ver más">Ver más</EditableZone></button>
                   </div>
                 )}
@@ -1876,6 +1980,43 @@ export default function ChicParis() {
       </SectionBlock>
       </div>
 
+      </>)}
+
+      {/* ── EL CATÁLOGO, acá adentro ────────────────────────────────────────────
+          Antes esto era otra página. Ahora se dibuja entre la barra y el pie de
+          Chic Paris, con su propio vestido: `CatalogoGenerico` ya tiene tema para
+          este template, así que embebido se ve igual que suelto, menos las dos
+          cosas que acá sobran —su barra y su pie— que ya están puestas arriba y
+          abajo. */}
+      {vista.enCatalogo && (
+        /* El aire de arriba no es decorativo, tapa un bug medido: en la tienda
+           publicada la barra de Chic Paris es `position: fixed`, o sea que NO
+           ocupa lugar. El hero está debajo de ella a propósito —es el diseño— pero
+           el catálogo también quedaba debajo, y el botón de volver aparecía en
+           y=18, tapado por la barra: se veía, y el clic se lo comía la barra.
+           En la previa del editor la barra es `sticky`, ahí sí ocupa su lugar y no
+           hace falta nada. Los números son los mismos que usa la barra: 68 de alto
+           más la franja de anuncios cuando está. */
+        <div style={{ background: "#fff", paddingTop: isPreview ? 0 : 68 + (showAnnouncement ? PROMO_BAR_H : 0) }}>
+          {/* Un "atrás" explícito. Editando hace más falta todavía: tocar la marca
+              de la barra NO vuelve, porque `EditableZone` se queda con el clic para
+              abrir el editor de texto y el `onClick` del botón nunca corre. Sin
+              esto, desde el catálogo no hay salida. */}
+          <div style={{ maxWidth: 1280, margin: "0 auto", padding: "18px clamp(16px,4vw,32px) 0" }}>
+            <BotonVolver onClick={vista.irALaPortada} destino="Volver a la tienda"
+              S="#fff" LN="rgba(17,17,17,0.15)" T="#111" G={ACC} />
+          </div>
+          <CatalogoGenerico key={claveCatalogo} embebido={{ ...filtroEfectivo, slug: storeConfig?.slug ?? "", template: "chic-paris",
+            sinPie: true, sinBarra: true, enEditor: isPreview, acento: ACC,
+            /* Los modales del catálogo comparten pantalla con la barra de este
+               template, así que tienen que quedar por encima de ella. Con la capa
+               que traían de fábrica —`CAPAS.nav`, o sea 100— la barra les tapaba la
+               × de cerrar. En el editor la barra sube para ganarle al marco, así
+               que ahí el modal tiene que subir también. */
+            capaModal: isPreview ? CAPAS.previaModal : CAPAS.modalTemplate }} />
+        </div>
+      )}
+
       {/* ── FOOTER ── */}
       <footer style={{ background: footerBg, padding: isMobile ? "40px 20px 88px" : "48px 40px 32px", position: "relative" }}>
         <EditableSectionBg field="bgFooter" label="Fondo footer" nombreBloque="Pie de la tienda" />
@@ -1925,7 +2066,7 @@ export default function ChicParis() {
               <div>
                 <p style={{ margin: "0 0 16px", fontSize: 10, fontWeight: 800, color: footerText, letterSpacing: 3, textTransform: "uppercase" }}>Colecciones</p>
                 {categoryList.slice(0, 6).map(l => (
-                  <button key={l} onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?${isPreview ? "t=chic-paris&from=editor&" : ""}categoria=${encodeURIComponent(l!)}`; }}
+                  <button key={l} onClick={() => { abrirCatalogo({ categoria: l! }); }}
                     style={{ display: "block", background: "none", border: "none", color: footerText, opacity: 0.55, fontSize: 13, cursor: "pointer", padding: "4px 0", textAlign: "left", textTransform: "capitalize" }}>{l}</button>
                 ))}
               </div>

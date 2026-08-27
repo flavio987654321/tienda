@@ -394,3 +394,71 @@ arriba del archivo, y por eso fue el único que agarró el reemplazo.
 
 Le salía a cualquier tienda de Chic Paris con la barra prendida y sin mensajes
 propios — o sea, a una tienda recién hecha.
+
+---
+
+### CP — Ir al catálogo era irse a otra página ✅
+
+Chic Paris tenía **nueve** entradas al catálogo y las nueve recargaban la página entera: ocho
+`window.location.href` (las categorías de los dos menús, "ver todas las ofertas", "lo más visto" y las del
+pie) y un `<a href>` en "Ver colección completa".
+
+En la tienda publicada eso se ve como un parpadeo. En el **editor** es peor: la previa vive adentro de un
+panel, así que navegar saca a la dueña de Diseño por completo — y le muestra el catálogo del template
+**guardado**, no el que estaba mirando.
+
+Es el mismo cambio que ya tienen Aire, Boho Terra y Urban Pulse, con el mismo hook. El catálogo se dibuja
+entre la barra y el pie de Chic Paris. No hubo que vestirlo: `CatalogoGenerico` ya tenía tema propio para
+este template.
+
+Vino con lo mismo que en Urban Pulse: botón de volver (al catálogo embebido se le apaga su barra, y con
+ella el único "atrás"), el menú resuelto desde el catálogo (`scrollTo` busca secciones de la portada, que
+ahí no está dibujada) y el filtro del que llega por la dirección, con `key` en el catálogo porque guarda
+el filtro en un `useState` y en la hidratación la URL todavía no se puede leer.
+
+**Medido** en 360 / 768 / 1280, con una marca en `window` que no sobrevive a una recarga: ida y vuelta
+**sin recargar**, 24 productos, sin errores de consola y sin scroll horizontal. Entrando de cero por
+`/productos` en la tienda vacía (`importadosmalena`, 0 productos): dice *"0 resultados — Sin resultados"*
+con la barra y el botón de volver, sin huecos.
+
+#### El aire de arriba del catálogo no es decorativo
+
+En la tienda publicada la barra de Chic Paris es `position: fixed`, o sea que **no ocupa lugar**. El hero
+está debajo de ella a propósito —es el diseño— pero el catálogo también quedaba debajo: el botón de volver
+aparecía en **y=18**, tapado por la barra. Se veía, y el clic se lo comía la barra. Lleva el mismo alto
+que la barra (68 + la franja de anuncios) y sólo fuera del editor, donde la barra es `sticky` y ya ocupa
+su lugar.
+
+#### Y un bug de antes que salió a la luz: el nombre de la tienda se apilaba
+
+Con el aire puesto, el botón quedaba en y=122 y **a 360 seguía sin responder**. El culpable no era el
+catálogo:
+
+```
+barra:      68px de alto
+la marca:   <a> de 74x180, desde y=-20 hasta y=160
+desborde:   56px por debajo de la barra
+```
+
+En un celular a los seis iconos de la derecha les quedan 222px de los 296 útiles, así que a la marca le
+sobran 74. Sin `nowrap`, "AMARANTA" a 22px con 4 de espaciado no entra y el navegador la parte **letra por
+letra**. Eso no se ve —la barra es transparente sobre el hero— pero **se toca**: son 56px de zona muerta
+que se come los clics de lo que haya abajo. Estaba desde antes; el catálogo sólo lo hizo visible, porque
+ahí cae el botón de volver.
+
+Se arregló sin sacar ningún icono: `whiteSpace: nowrap` y `flexShrink: 0` para que no se apile ni se
+achique, letra más chica en celular (15 en vez de 22, espaciado 1.5 en vez de 4), padding de la barra de
+32 a 14 y separación entre iconos de 8 a 2 — los dos últimos **sólo en celular**.
+
+Medido contra la versión que está en producción:
+
+| ancho | producción | ahora |
+|---|---|---|
+| 1280 | barra 68, desborde 0, marca 154x30 | **idéntico** |
+| 768 | barra 68, desborde 0, marca 154x30 | **idéntico** |
+| 360 | barra 68, **desborde 56**, marca **38x180** | barra 68, **desborde 0**, marca **134x30** |
+
+El nombre entra entero en un renglón y no hay scroll horizontal en ningún ancho.
+
+**Lo que falta de este template** (mismo camino que Urban Pulse, sin hacer todavía): el engranaje para
+elegir qué productos van en el bloque de la portada, y salir de los modales con Escape o tocando afuera.
