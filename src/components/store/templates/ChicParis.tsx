@@ -2,6 +2,10 @@
 import { useVistaTemplate, urlParaCompartirProducto } from "@/components/store/templates/shared/useVistaTemplate";
 import CatalogoGenerico, { type CatalogoEmbebido } from "@/app/tienda/[slug]/productos/CatalogoGenerico";
 import { BotonVolver } from "@/components/store/templates/shared/BotonVolver";
+/* Qué productos van en la vitrina de la portada: la regla vive en `vitrina.ts`,
+   una sola vez, y la comparten Aire, Boho Terra y Urban Pulse. */
+import { productosDeLaVitrina, leerModo, leerElegidos } from "@/lib/vitrina";
+import { BotonVitrina } from "@/components/store/templates/shared/BotonVitrina";
 import { barraMs } from "@/types/store-config";
 import { useState, useEffect, useRef, useMemo, useSyncExternalStore, Fragment } from "react";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
@@ -748,9 +752,39 @@ export default function ChicParis() {
     if (hayGeneros && activeGender && p.gender !== activeGender && p.gender !== "unisex") return false;
     return true;
   }), [products, hayGeneros, activeGender]);
-  // Los productos ya vienen todos en la misma respuesta de /api/public/[slug],
-  // así que "Ver más" no pide nada al servidor: solo deja de recortar la lista.
-  const filtered    = allFiltered.slice(0, visibleCount);
+  /* ── Qué productos muestra el bloque, y en qué orden ─────────────────────────
+   *
+   * Antes era `allFiltered.slice(0, visibleCount)` a secas: siempre los últimos
+   * cargados, sin forma de tocarlo. Ahora los primeros los decide la dueña desde
+   * el engranaje del bloque, con la misma regla que Aire, Boho Terra y Urban
+   * Pulse (`vitrina.ts`).
+   *
+   * ── La diferencia con los otros tres ─────────────────────────────────────────
+   * Los otros tienen un bloque de tamaño FIJO. Éste tiene "Ver más", que agranda
+   * `visibleCount` de a 8. Si la vitrina se aplicara sobre `visibleCount`, una
+   * dueña que elige 8 productos dejaría "Ver más" mostrando siempre los mismos 8
+   * —`elegidos` no crece— y el contador "Ver más (32)" estaría mintiendo.
+   *
+   * Por eso la vitrina decide sólo la PRIMERA tanda, la que se ve sin tocar nada,
+   * y el resto va detrás en el orden de siempre. Así "Ver más" sigue revelando
+   * productos nuevos y el contador sigue siendo cierto.
+   *
+   * Con un filtro puesto por el visitante —un género— la vitrina no manda: ahí el
+   * criterio ya lo eligió él.
+   *
+   * Los productos ya vienen todos en la misma respuesta de /api/public/[slug],
+   * así que "Ver más" no pide nada al servidor: sólo deja de recortar la lista. */
+  const hayFiltroDelVisitante = hayGeneros && activeGender !== null;
+  const ordenados = useMemo(() => {
+    if (hayFiltroDelVisitante) return allFiltered;
+    const primeros = productosDeLaVitrina(allFiltered, PASO_PRODUCTOS, {
+      modo: leerModo(textOverrides["vitrinaModo"]?.text),
+      elegidos: leerElegidos(textOverrides["vitrinaIds"]?.text),
+    });
+    const yaEstan = new Set(primeros.map(p => p.id));
+    return [...primeros, ...allFiltered.filter(p => !yaEstan.has(p.id))];
+  }, [allFiltered, hayFiltroDelVisitante, textOverrides]);
+  const filtered    = ordenados.slice(0, visibleCount);
   const quedanMas   = allFiltered.length > filtered.length;
 
   const similarProducts = useMemo(() => {
@@ -1318,7 +1352,18 @@ export default function ChicParis() {
       <section id="productos" data-reveal style={{ background: prodBg, padding: isMobile ? "48px 16px" : "72px 40px", position: "relative" }}>
         <EditableSectionBg field="bgProductos" label="Fondo productos" />
         <div style={{ maxWidth: 1280, margin: "0 auto" }}>
-          <div style={{ textAlign: "center", marginBottom: 40 }}>
+          {/* El engranaje para elegir QUÉ productos van acá.
+              Va flotando arriba a la derecha y no en una fila con el título,
+              porque acá el título está CENTRADO: meterlo en un flex correría el
+              título de su eje. Sólo aparece editando —lo decide `BotonVitrina`,
+              que fuera del editor devuelve null— así que en la tienda publicada
+              esto no dibuja nada y el bloque queda exactamente como estaba. */}
+          <div style={{ textAlign: "center", marginBottom: 40, position: "relative" }}>
+            {!hayFiltroDelVisitante && (
+              <div style={{ position: "absolute", top: 0, right: 0, zIndex: CAPAS.contenido }}>
+                <BotonVitrina products={products} cuantos={PASO_PRODUCTOS} acento={ACC} />
+              </div>
+            )}
             <span style={{ fontSize: 10, letterSpacing: 5, fontWeight: 700, color: ACC, textTransform: "uppercase" }}>
               <EditableZone field="productsKicker" label="Kicker productos">Temporada</EditableZone>
             </span>

@@ -462,3 +462,38 @@ El nombre entra entero en un renglón y no hay scroll horizontal en ningún anch
 
 **Lo que falta de este template** (mismo camino que Urban Pulse, sin hacer todavía): el engranaje para
 elegir qué productos van en el bloque de la portada, y salir de los modales con Escape o tocando afuera.
+
+---
+
+### CP — Elegir qué productos van en el bloque de la portada ✅
+
+Era `allFiltered.slice(0, visibleCount)` a secas: siempre los últimos cargados. El engranaje ya existía
+—lo usan Aire, Boho Terra y Urban Pulse, y la regla vive una sola vez en `vitrina.ts`— así que esto fue
+engancharlo.
+
+**Una diferencia con los otros tres, y no es cosmética.** Los otros tienen un bloque de tamaño fijo. Éste
+tiene **"Ver más"**, que agranda la lista de a 8. Si la vitrina se aplicara sobre el total visible, una
+dueña que elige 8 productos dejaría "Ver más" mostrando siempre los mismos 8 —`elegidos` no crece— y el
+contador *"Ver más (56)"* estaría mintiendo.
+
+Por eso acá la vitrina decide sólo la **primera tanda**, la que se ve sin tocar nada, y el resto va detrás
+en el orden de siempre. Medido:
+
+| modo | qué mostró |
+|---|---|
+| por defecto | los 8 últimos, en el orden de la base |
+| **elegidos** (3 a mano) | **esos 3 primeros, en el orden elegido**, y el bloque se completa detrás |
+| **al azar** | otros 8, distintos de "los últimos" |
+| al azar otra vez | **idéntico** — el mismo día da lo mismo |
+| **"Ver más"** con la vitrina puesta | 8 → 16, y los 3 elegidos siguen adelante |
+
+El botón va **flotando arriba a la derecha** y no en una fila con el título, porque acá el título está
+centrado: meterlo en un flex lo correría de su eje. Sólo aparece editando —`BotonVitrina` devuelve `null`
+fuera del editor— así que en la tienda publicada esto **no dibuja nada**. Verificado en 360 / 768 / 1280:
+aparece, nada lo tapa, no pisa el título, el panel dice *"Este bloque tiene 8 lugares"* y no hay desborde
+horizontal.
+
+**Ojo con esto:** el panel dice *"Con menos, el bloque se achica"*. En los otros tres es cierto; **acá no**,
+porque el bloque se completa. El texto es compartido y cambiarlo tocaría los otros tres, donde sí es
+verdad. Queda anotado.
+
