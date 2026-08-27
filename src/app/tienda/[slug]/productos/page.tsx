@@ -43,7 +43,7 @@ import CatalogoGenerico from "./CatalogoGenerico";
  * pantalla. */
 export const dynamic = "force-dynamic";
 
-const CON_CATALOGO_PROPIO = new Set(["aire", "fashion-noir", "boho-terra"]);
+const CON_CATALOGO_PROPIO = new Set(["aire", "fashion-noir", "boho-terra", "urban-pulse"]);
 
 type Props = {
   params: Promise<{ slug: string }>;

@@ -2466,3 +2466,89 @@ sigue mostrando, porque esa es correcta siempre.
 **La lección:** un mapa fijo `campo → texto` alcanza mientras el campo signifique siempre lo mismo. En el
 momento en que lo que muestra ese campo lo elige el dueño, el mapa pasa a ser una afirmación falsa, y
 tiene que poder hablar el que sabe — el template.
+
+---
+
+### UP-30 — Ir al catálogo era irse a otra página ✅
+
+Urban Pulse tenía **ocho** entradas al catálogo y las ocho recargaban la página entera: siete
+`window.location.href` (las categorías del menú de escritorio y las del menú del celular, las tres
+baldosas, "ver todas las ofertas" y "lo más visto") y un `<a href>` en "Ver colección completa".
+
+En la tienda publicada eso se ve como un parpadeo. En el **editor** es peor, y es el motivo real: la
+previa vive adentro de un panel, así que navegar **saca a la dueña de Diseño por completo** — y lo que le
+muestra después es el catálogo del template **guardado**, no el que estaba mirando. Con Aire elegido y
+Urban Pulse en la previa, tocar una categoría abría el catálogo de Aire, justo cuando estaba por elegir
+diseño.
+
+Es el mismo cambio que ya se hizo en Aire y en Boho Terra, con el mismo hook. El catálogo ahora se dibuja
+entre la barra y el pie de Urban Pulse. No hubo que vestirlo: `CatalogoGenerico` ya tenía tema propio para
+este template —y layout con barra lateral— así que embebido se ve igual que suelto, menos las dos cosas
+que adentro sobran, su barra y su pie, que ya están puestos arriba y abajo.
+
+**Lo que vino de arrastre, y no es accesorio:**
+
+- **Un "atrás".** Al catálogo embebido se le apaga su propia barra, y con ella se va el único botón de
+  volver. Editando hace más falta todavía: tocar la marca **no** vuelve, porque `EditableZone` se queda
+  con el clic para abrir el editor de texto y el `onClick` del botón nunca corre. Sin el botón, desde el
+  catálogo no había salida. Es la misma queja que en Boho Terra: *"¿cómo vuelvo, si sacaste la flecha?"*.
+- **El menú, desde el catálogo.** `scrollTo` busca una sección de la portada, y desde el catálogo la
+  portada no está dibujada, así que no encontraba nada: "Nosotros", los géneros y los links del pie
+  dejaban de hacer nada. Ahora vuelven a la portada primero y recién ahí buscan la sección.
+- **La baldosa editando.** Tenía un `if (editMode) return` —el mismo que ya se sacó de Aire— así que en el
+  editor tocarla no hacía **nada**. Lo que se acomoda en la baldosa tiene su propio control: la foto se
+  cambia con el botón de imagen y la categoría con el selector, que además frena el clic. Y ya no hace
+  falta impedirlo: desde que el catálogo abre acá adentro, tocar una baldosa no saca a nadie del editor.
+- **El pie sigue teniendo links de verdad.** Las categorías del pie siguen siendo `<a href>` —Google los
+  sigue, ctrl+click abre en pestaña nueva, el navegador muestra a dónde van— pero el clic normal lo
+  atiende el template. Por eso se miran las teclas y el botón del mouse: con ctrl, shift o el del medio,
+  el navegador tiene que hacer lo suyo.
+
+**Medido**, con una marca puesta en `window` que sobrevive a un cambio de pantalla y **no** a una recarga,
+en 360 / 768 / 1280:
+
+| camino | URL | ¿recargó? | resultado |
+|---|---|---|---|
+| "Ver colección completa" | `/productos` | **no** | 24 productos, barra y pie del template |
+| baldosa "Sweaters" | `/productos` | **no** | 11 productos, sólo Sweaters |
+| categoría del pie | `/productos` | **no** | 11 productos, sólo Sweaters |
+| "Volver a la tienda" | `/tienda/amaranta` | **no** | vuelve a la portada |
+| "Nosotros" del pie, **desde el catálogo** | `/tienda/amaranta` | **no** | vuelve y scrollea a la sección |
+| entrando **de cero** por `/productos` | — | — | el catálogo, en los tres anchos |
+
+Sin errores de consola y sin scroll horizontal en ningún ancho.
+
+Queda un chequeo que lo cuida: `src/lib/catalogo-en-el-lugar.check.ts` lee `CON_CATALOGO_PROPIO` de la
+ruta y exige que ninguno de esos templates tenga una navegación de verdad al catálogo. Se verificó al
+revés también: con el Urban Pulse viejo, falla.
+
+**Lo que falta y el chequeo cuenta solo:** Aurora (8) y Chic Paris (9) todavía se van a otra página.
+
+#### El filtro del que llega por la dirección
+
+Esto apareció releyendo el diff, no probándolo, y era una regresión de verdad. Los links de categoría del
+pie llevan el filtro escrito (`/productos?categoria=sweaters`). **Suelto**, el catálogo lo leía de la
+dirección. **Embebido** ya no puede: adentro de un template la dirección es la del template, y el filtro
+se lo pasa el que abre. O sea que un link compartido, uno abierto en pestaña nueva o uno seguido desde
+Google llegaba al catálogo **completo** — y justo al que no navegó, que es el único que no puede volver a
+ponerlo.
+
+El template ahora lee la dirección y la usa como filtro cuando no hay uno puesto por un clic. Y lleva una
+vuelta más: `CatalogoGenerico` guarda el filtro en un `useState`, o sea que sólo mira lo que le llega en
+su **primer** dibujado. Navegando adentro alcanza —se monta recién al entrar, con el filtro ya puesto—
+pero entrando por la dirección no, porque en la hidratación `window.location.search` todavía no se puede
+leer: el servidor no la tiene. Se resolvió dándole al catálogo una `key` hecha del filtro, así cambiar de
+filtro es montar otro catálogo y el `useState` arranca con el valor correcto.
+
+Medido contra la base, que es lo que lo vuelve una prueba y no una impresión:
+
+| dirección | productos | título | en la base |
+|---|---|---|---|
+| `/productos` | 24 | Todos los productos | (una página) |
+| `/productos?categoria=sweaters` | **11** | Sweaters | sweaters: **11** |
+| `/productos?categoria=vestidos` | **24** | Vestidos | vestidos: **24** |
+
+Antes del arreglo las tres daban 24 y "Todos los productos".
+
+**Ojo con esto:** Boho Terra tiene el mismo agujero y quedó sin tocar — es otro template y no era este
+trabajo, pero está acá anotado para que no se descubra de nuevo desde cero.

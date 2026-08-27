@@ -1,6 +1,8 @@
 "use client";
-import { urlParaCompartirProducto } from "@/components/store/templates/shared/useVistaTemplate";
-import { useState, useEffect, useRef, useMemo, Fragment, cloneElement, isValidElement } from "react";
+import { useVistaTemplate, urlParaCompartirProducto } from "@/components/store/templates/shared/useVistaTemplate";
+import CatalogoGenerico, { type CatalogoEmbebido } from "@/app/tienda/[slug]/productos/CatalogoGenerico";
+import { BotonVolver } from "@/components/store/templates/shared/BotonVolver";
+import { useState, useEffect, useRef, useMemo, useSyncExternalStore, Fragment, cloneElement, isValidElement } from "react";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { usePushBell } from "@/contexts/PushBellContext";
 import { useSesion } from "@/components/AuthProvider";
@@ -136,6 +138,10 @@ const scrollTo = (id: string) => document.getElementById(id)?.scrollIntoView({ b
 
 const UP_SECTION_IDS = ["up-garantias", "up-banner", "up-categorias", "up-mayorista", "up-featured", "up-productos", "up-testimonios", "up-ofertas", "up-masvisto", "up-nosotros", "up-contacto"];
 
+/** Qué hace un link del pie con un clic normal. El `href` sigue siendo el de
+ *  verdad: esto sólo evita el viaje cuando el destino se puede dibujar acá. */
+type AccionPie = { tipo: "catalogo" | "seccion"; valor: string };
+
 export default function UrbanPulse() {
   const [scrolled,         setScrolled]         = useState(false);
   const [activeCategory,   setActiveCategory]   = useState("Todos");
@@ -202,6 +208,110 @@ export default function UrbanPulse() {
   const { editMode, overrides: textOverrides, setOverride } = useEditContext();
   const isInquiryMode = checkoutMode === "inquiry" || ocultarPrecios;
 
+  /* ── El catálogo deja de ser otra página ─────────────────────────────────────
+   *
+   * Los ocho links al catálogo eran `window.location.href`, que recarga todo. En
+   * la tienda publicada es un parpadeo; en el EDITOR sacaba a la dueña de Diseño
+   * por completo, y encima le mostraba el catálogo del template GUARDADO en vez
+   * del que estaba mirando — con Aire elegido y Urban Pulse en la previa, tocar
+   * una categoría abría el catálogo de Aire.
+   *
+   * Es el mismo cambio que ya se hizo en Aire y en Boho Terra, con el mismo hook:
+   * el catálogo se dibuja acá adentro, entre la barra y el pie de Urban Pulse.
+   * Su vestido ya existe —`CatalogoGenerico` tiene tema propio para este
+   * template, y con barra lateral— así que embebido se ve igual que suelto.
+   *
+   * Lo que este template NO cambia es la ficha del producto: acá es un modal, no
+   * una pantalla, y un modal nunca fue una página que se abre. */
+  const vista = useVistaTemplate({ isPreview, slug: storeConfig?.slug, templateId: "urban-pulse" });
+  /** Con qué filtro entrar al catálogo. Lo ponen los links antes de abrirlo. */
+  const [filtroCatalogo, setFiltroCatalogo] = useState<CatalogoEmbebido>({});
+  const abrirCatalogo = (filtro: CatalogoEmbebido = {}) => {
+    setFiltroCatalogo(filtro);
+    vista.irAlCatalogo();
+  };
+
+  /* ── El filtro del que LLEGA por la dirección ────────────────────────────────
+   *
+   * Los links de categoría del pie son `<a href>` de verdad —a propósito, para
+   * que Google los siga y ctrl+click abra en pestaña nueva— así que llevan el
+   * filtro escrito: `/productos?categoria=Sweaters`. Suelto, el catálogo lo leía
+   * de ahí. Embebido ya no puede: adentro de un template la dirección es la del
+   * template, y el filtro se lo pasa el que abre.
+   *
+   * O sea que sin esto, un link compartido, uno abierto en pestaña nueva o uno
+   * seguido desde Google llegaba al catálogo COMPLETO. El filtro se perdía justo
+   * para el que no navegó, que es el único que no puede volver a ponerlo.
+   *
+   * Se lee con `useSyncExternalStore` y no con `useSearchParams` porque este
+   * template se dibuja también en el editor y en la galería de diseños, donde no
+   * hay una ruta de Next debajo. El tercer argumento es lo que ve el servidor:
+   * una cadena vacía, que es un valor estable — devolver algo nuevo cada vez deja
+   * la página dando vueltas para siempre.
+   *
+   * Navegando adentro gana `filtroCatalogo`: al abrir el catálogo en el lugar la
+   * dirección queda en `/productos` sin nada colgando, así que no hay filtro
+   * viejo en la URL que pueda pisar al nuevo. */
+  const busquedaDeLaUrl = useSyncExternalStore(() => () => {}, () => window.location.search, () => "");
+  const filtroDeLaUrl = useMemo<CatalogoEmbebido>(() => {
+    const p = new URLSearchParams(busquedaDeLaUrl);
+    const f: CatalogoEmbebido = {};
+    const cat = p.get("categoria");      if (cat) f.categoria = cat;
+    const sub = p.get("subcategoria");   if (sub) f.subcategoria = sub;
+    if (p.get("oferta") === "true")    f.soloOfertas = true;
+    if (p.get("destacado") === "true") f.masVistos = true;
+    if (p.get("promo") === "true")     f.soloPromos = true;
+    return f;
+  }, [busquedaDeLaUrl]);
+
+  /* El filtro que finalmente va: manda el que puso el link que se tocó acá
+     adentro, y si no hay, el que venía en la dirección. */
+  const filtroEfectivo = useMemo<CatalogoEmbebido>(
+    () => ({ ...filtroDeLaUrl, ...filtroCatalogo }),
+    [filtroDeLaUrl, filtroCatalogo]
+  );
+
+  /* ── Por qué el catálogo lleva `key` ─────────────────────────────────────────
+   *
+   * `CatalogoGenerico` guarda el filtro en un `useState(...)`, o sea que sólo mira
+   * lo que le llega en su PRIMER dibujado. Navegando acá adentro eso alcanza —el
+   * catálogo se monta recién cuando se entra, con el filtro ya puesto—, pero
+   * entrando por la dirección no: en la hidratación `window.location.search`
+   * todavía no se puede leer (el servidor no la tiene), así que el catálogo se
+   * montaba sin filtro y cuando la dirección llegaba ya era tarde.
+   *
+   * Con una clave hecha del filtro, cambiar de filtro es montar otro catálogo, y
+   * el `useState` vuelve a arrancar con el valor correcto. Medido: sin esto,
+   * `?categoria=sweaters` mostraba los 24 productos igual que sin filtro. */
+  const claveCatalogo = [
+    filtroEfectivo.categoria ?? "", filtroEfectivo.subcategoria ?? "",
+    filtroEfectivo.soloOfertas ? "of" : "", filtroEfectivo.masVistos ? "mv" : "",
+    filtroEfectivo.soloPromos ? "pr" : "",
+  ].join("|");
+
+  /* ── Ir a una sección de la portada, se esté donde se esté ───────────────────
+   *
+   * `scrollTo` es un `getElementById(...).scrollIntoView()` y nada más. Desde el
+   * CATÁLOGO no encuentra nada, porque esas secciones son de la portada y la
+   * portada no está dibujada. O sea que estando en el catálogo el menú entero
+   * dejaría de hacer nada: "Nosotros", los géneros y los links del pie.
+   *
+   * Es exactamente lo que pasó en Boho Terra al sacarle la barra propia al
+   * catálogo, y se arregla igual: primero vuelve a la portada y recién ahí busca
+   * la sección. Queda anotada porque todavía no existe — se dibuja en el render
+   * siguiente, y el efecto de abajo la va a buscar cuando ya esté. */
+  const [seccionPendiente, setSeccionPendiente] = useState<string | null>(null);
+  const irASeccion = (id: string) => {
+    if (vista.enPortada) { scrollTo(id); return; }
+    setSeccionPendiente(id);
+    vista.irALaPortada();
+  };
+  useEffect(() => {
+    if (!seccionPendiente || !vista.enPortada) return;
+    const t = setTimeout(() => { scrollTo(seccionPendiente); setSeccionPendiente(null); }, 80);
+    return () => clearTimeout(t);
+  }, [seccionPendiente, vista.enPortada]);
+
   // Las reseñas de la portada. La lógica —qué sube, las dos pestañas, el promedio,
   // borrar y publicar— es compartida; el diseño está más abajo y es de este
   // template. Ver `useHomeReviews`.
@@ -243,19 +353,24 @@ export default function UrbanPulse() {
     const qs = isPreview ? "t=urban-pulse&from=editor&" : "";
     const ocultas = storeConfig?.hiddenSections ?? [];
 
+    /* `accion` dice qué hacer con un clic normal, sin tocar el `href`.
+       Es un dato y no una función a propósito: este `useMemo` se recalcularía en
+       cada dibujado si adentro guardara closures, porque `abrirCatalogo` y
+       `irASeccion` son nuevas cada vez. Quién la ejecuta es el pie, más abajo. */
     const catalogo = categoryList.slice(0, 5).map(cat => ({
       label: cat,
       href: `/tienda/${storeConfig?.slug ?? ""}/productos?${qs}categoria=${encodeURIComponent(cat)}`,
       externo: false,
+      accion: { tipo: "catalogo", valor: cat } as AccionPie,
     }));
 
-    const ayuda: { label: string; href: string; externo: boolean }[] = [];
+    const ayuda: { label: string; href: string; externo: boolean; accion?: AccionPie }[] = [];
     // Existe siempre y es lo que más se busca en un pie después de comprar.
     ayuda.push({ label: "Seguí tu pedido", href: "/seguimiento", externo: false });
     // Estas dos son anclas: si el dueño escondió la sección, el ancla no existe
     // y el link volvería a no llevar a ningún lado.
-    if (!ocultas.includes("up-nosotros")) ayuda.push({ label: "Nosotros", href: "#nosotros", externo: false });
-    if (!ocultas.includes("up-contacto")) ayuda.push({ label: "Contacto", href: "#contacto", externo: false });
+    if (!ocultas.includes("up-nosotros")) ayuda.push({ label: "Nosotros", href: "#nosotros", externo: false, accion: { tipo: "seccion", valor: "nosotros" } });
+    if (!ocultas.includes("up-contacto")) ayuda.push({ label: "Contacto", href: "#contacto", externo: false, accion: { tipo: "seccion", valor: "contacto" } });
     if (hasWA && storeConfig?.whatsapp?.number) {
       const tel = storeConfig.whatsapp.number.replace(/\D/g, "");
       if (tel) ayuda.push({ label: "WhatsApp", href: `https://wa.me/${tel}`, externo: true });
@@ -593,7 +708,7 @@ export default function UrbanPulse() {
   function openInquiry(product: Product) {
     setModalProduct(null);
     setInquiryMessage(`Hola, me interesa "${product.name}". ¿Me podés dar más información?`);
-    setTimeout(() => scrollTo("contacto"), 100);
+    setTimeout(() => irASeccion("contacto"), 100);
   }
   function shareProduct(product: Product) {
     /* La dirección de verdad del producto, no `?p=<id>`. El porqué está escrito
@@ -806,7 +921,15 @@ export default function UrbanPulse() {
   useScrollReveal();
 
   return (
-    <div style={{ fontFamily:"'Inter','Helvetica Neue',Arial,sans-serif", background:BG, color:DARK, minHeight:"100vh" }}>
+    /* `data-template-raiz`: de acá arranca `useVistaTemplate` para encontrar quién
+       scrollea de verdad. En la tienda es la ventana; en el EDITOR el template vive
+       adentro de un panel con scroll propio, y sin esto el catálogo aparecía a
+       mitad de página, con el título arriba fuera de vista. */
+    <div data-template-raiz style={{ fontFamily:"'Inter','Helvetica Neue',Arial,sans-serif", background:BG, color:DARK, minHeight:"100vh",
+      /* Dos toques seguidos en un botón que cambia de pantalla terminaban adentro
+         de cualquier cosa: la pantalla cambia al instante y abajo del dedo queda
+         otra. Ver el candado en `useVistaTemplate`. */
+      pointerEvents: vista.cambiandoPantalla ? "none" : undefined }}>
       <style>{`
         @keyframes up-ticker { from { transform:translateX(0); } to { transform:translateX(-50%); } }
         .up-ticker { display:inline-flex; white-space:nowrap; animation:up-ticker 28s linear infinite; }
@@ -902,7 +1025,7 @@ export default function UrbanPulse() {
                   const subs = subcategoriesFor[cat] || [];
                   return (
                     <div key={cat} style={{ border:`2px solid ${DARK}`, padding:"10px 12px", background:"#f5f5f5" }}>
-                      <button onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?${isPreview ? "t=urban-pulse&from=editor&" : ""}categoria=${encodeURIComponent(cat)}`; setHoveredNavCat(null); }}
+                      <button onClick={() => { abrirCatalogo({ categoria: cat }); setHoveredNavCat(null); }}
                         style={{ display:"block", width:"100%", background:ACC, border:`2px solid ${DARK}`, color:accentText, padding:"6px 8px", marginBottom:8, fontSize:11, fontWeight:800, textAlign:"left", cursor:"pointer", letterSpacing:1, textTransform:"uppercase", transition:"transform 0.1s" }}
                         onMouseEnter={e => { e.currentTarget.style.transform = "translate(-2px,-2px)"; e.currentTarget.style.boxShadow = `2px 2px 0 ${DARK}`; }}
                         onMouseLeave={e => { e.currentTarget.style.transform = "translate(0,0)"; e.currentTarget.style.boxShadow = "none"; }}>
@@ -911,7 +1034,7 @@ export default function UrbanPulse() {
                       {subs.length > 0 ? (
                         <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
                           {subs.map(sub => (
-                            <button key={sub} onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?${isPreview ? "t=urban-pulse&from=editor&" : ""}categoria=${encodeURIComponent(cat)}&subcategoria=${encodeURIComponent(sub)}`; setHoveredNavCat(null); }}
+                            <button key={sub} onClick={() => { abrirCatalogo({ categoria: cat, subcategoria: sub }); setHoveredNavCat(null); }}
                               style={{ background:WHITE, border:`1.5px solid ${DARK}`, color:DARK, padding:"4px 8px", fontSize:9.5, fontWeight:700, textAlign:"left", cursor:"pointer", letterSpacing:0.5, textTransform:"uppercase" }}
                               onMouseEnter={e => { e.currentTarget.style.background = ACC; e.currentTarget.style.color = accentText; }}
                               onMouseLeave={e => { e.currentTarget.style.background = WHITE; e.currentTarget.style.color = DARK; }}>
@@ -932,14 +1055,14 @@ export default function UrbanPulse() {
           {generosParaElMenu && (
             <>
               {/* MUJER */}
-              <button onClick={() => { changeGender(activeGender==="mujer" ? null : "mujer"); scrollTo("productos"); }}
+              <button onClick={() => { changeGender(activeGender==="mujer" ? null : "mujer"); irASeccion("productos"); }}
                 style={{ background:"none", border:"none", borderBottom: activeGender==="mujer" ? `2px solid ${ACC}` : "2px solid transparent", fontSize:11, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor:"pointer", color: DARK, padding:"4px 0", transition:"border-color 0.2s", ...esperandoGeneros }}
                 onMouseEnter={e => { e.currentTarget.style.borderBottomColor = ACC; }}
                 onMouseLeave={e => { if(activeGender!=="mujer") e.currentTarget.style.borderBottomColor = "transparent"; }}>
                 Mujer
               </button>
               {/* HOMBRE */}
-              <button onClick={() => { changeGender(activeGender==="hombre" ? null : "hombre"); scrollTo("productos"); }}
+              <button onClick={() => { changeGender(activeGender==="hombre" ? null : "hombre"); irASeccion("productos"); }}
                 style={{ background:"none", border:"none", borderBottom: activeGender==="hombre" ? `2px solid ${ACC}` : "2px solid transparent", fontSize:11, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor:"pointer", color: DARK, padding:"4px 0", transition:"border-color 0.2s", ...esperandoGeneros }}
                 onMouseEnter={e => { e.currentTarget.style.borderBottomColor = ACC; }}
                 onMouseLeave={e => { if(activeGender!=="hombre") e.currentTarget.style.borderBottomColor = "transparent"; }}>
@@ -947,7 +1070,7 @@ export default function UrbanPulse() {
               </button>
             </>
           )}
-          <button onClick={() => scrollTo("nosotros")}
+          <button onClick={() => irASeccion("nosotros")}
             style={{ background:"none", border:"none", borderBottom:"2px solid transparent", fontSize:11, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor:"pointer", color:DARK, padding:"4px 0", transition:"border-color 0.2s" }}
             onMouseEnter={e => { e.currentTarget.style.borderBottomColor = ACC; }}
             onMouseLeave={e => { e.currentTarget.style.borderBottomColor = "transparent"; }}>
@@ -1063,7 +1186,7 @@ export default function UrbanPulse() {
                     if (subs.length > 0) {
                       setMobileOpenCat(prev => prev === cat ? null : cat);
                     } else {
-                      window.location.href = `/tienda/${storeConfig?.slug}/productos?${isPreview ? "t=urban-pulse&from=editor&" : ""}categoria=${encodeURIComponent(cat)}`;
+                      abrirCatalogo({ categoria: cat });
                       setMobileMenuOpen(false); setMobileCatsOpen(false);
                     }
                   }} style={{ display:"flex", width:"100%", background:"#f5f5f5", border:"none", borderBottom:`1px solid rgba(0,0,0,0.1)`, color: activeCategory===cat ? accSobreClaro : DARK, padding:"13px 24px 13px 40px", fontSize:11, textAlign:"left", cursor:"pointer", letterSpacing:3, fontWeight:800, textTransform:"uppercase", alignItems:"center", justifyContent:"space-between" }}>
@@ -1071,7 +1194,7 @@ export default function UrbanPulse() {
                     {subs.length > 0 && <span style={{ fontSize:12, opacity:0.5, transition:"transform 0.2s", transform: mobileOpenCat===cat ? "rotate(90deg)" : "none", display:"inline-block" }}>›</span>}
                   </button>
                   {subs.length > 0 && mobileOpenCat === cat && subs.map(sub => (
-                    <button key={sub} onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?${isPreview ? "t=urban-pulse&from=editor&" : ""}categoria=${encodeURIComponent(cat)}&subcategoria=${encodeURIComponent(sub)}`; setMobileMenuOpen(false); setMobileCatsOpen(false); setMobileOpenCat(null); }}
+                    <button key={sub} onClick={() => { abrirCatalogo({ categoria: cat, subcategoria: sub }); setMobileMenuOpen(false); setMobileCatsOpen(false); setMobileOpenCat(null); }}
                       style={{ display:"block", width:"100%", background:"#ebebeb", border:"none", borderBottom:`1px solid rgba(0,0,0,0.07)`, color:"#555", padding:"11px 24px 11px 60px", fontSize:11, textAlign:"left", cursor:"pointer", letterSpacing:2, fontWeight:700, textTransform:"uppercase" }}>
                       {sub}
                     </button>
@@ -1084,17 +1207,21 @@ export default function UrbanPulse() {
             )}
           </>
           {hayGeneros && [["Mujer","mujer"],["Hombre","hombre"]].map(([label, g]) => (
-            <button key={g} onClick={() => { changeGender(activeGender===g ? null : g); scrollTo("productos"); setMobileMenuOpen(false); }}
+            <button key={g} onClick={() => { changeGender(activeGender===g ? null : g); irASeccion("productos"); setMobileMenuOpen(false); }}
               style={{ display:"block", width:"100%", background: activeGender===g ? DARK : "none", border:"none", borderBottom:`2px solid ${DARK}`, color: activeGender===g ? accSobreDark : DARK, padding:"16px 24px", fontSize:12, textAlign:"left", cursor:"pointer", letterSpacing:3, fontWeight:800, textTransform:"uppercase" }}>
               {label}
             </button>
           ))}
-          <button onClick={() => { scrollTo("nosotros"); setMobileMenuOpen(false); }}
+          <button onClick={() => { irASeccion("nosotros"); setMobileMenuOpen(false); }}
             style={{ display:"block", width:"100%", background:"none", border:"none", borderBottom:`2px solid ${DARK}`, color:DARK, padding:"16px 24px", fontSize:12, textAlign:"left", cursor:"pointer", letterSpacing:3, fontWeight:800, textTransform:"uppercase" }}>
             Nosotros
           </button>
         </div>
       )}
+
+      {/* Desde acá hasta el pie es la PORTADA. El catálogo se dibuja en su lugar,
+          más abajo, entre la misma barra y el mismo pie. */}
+      {vista.enPortada && (<>
 
       {/* HERO — diagonal split */}
       {/* `minmax(0,1fr)` por lo mismo que UP-16: con `1fr` la columna no baja del
@@ -1391,8 +1518,18 @@ export default function UrbanPulse() {
           {baldosas.map(c => {
             const ovr = storeConfig?.imageOverrides?.[c.field];
             return (
-            <div key={c.field} className="up-cat" onClick={() => { if (editMode) return; window.location.href = `/tienda/${storeConfig?.slug}/productos?${isPreview ? "t=urban-pulse&from=editor&" : ""}categoria=${encodeURIComponent(c.cat)}`; }}
-              style={{ position:"relative", width:"100%", aspectRatio:"3/4", overflow:"hidden", cursor: editMode ? "default" : "pointer",
+            /* Abre SIEMPRE, también editando. Acá había un `if (editMode) return`
+               —el mismo que ya se sacó de las baldosas de Aire— con la idea de que
+               en el editor el clic sobre la baldosa es para acomodarla. Pero lo
+               que se acomoda tiene su propio control: la foto se cambia con el
+               botón de imagen y la categoría con el selector, que además frena el
+               clic. El fondo de la baldosa no editaba nada, así que tocarlo
+               editando no hacía NADA, y la pantalla a la que lleva quedaba
+               imposible de mirar desde Diseño.
+               Ya tampoco hace falta impedirlo: desde que el catálogo abre acá
+               adentro, tocar una baldosa no saca a nadie del editor. */
+            <div key={c.field} className="up-cat" onClick={() => abrirCatalogo({ categoria: c.cat })}
+              style={{ position:"relative", width:"100%", aspectRatio:"3/4", overflow:"hidden", cursor:"pointer",
                        // Sin foto la baldosa va al negro del template con el nombre
                        // en grande, que es de lo que está hecho Urban Pulse. Antes
                        // caía en un `picsum.photos`: la portada de una tienda de
@@ -1808,12 +1945,15 @@ export default function UrbanPulse() {
             De lado a lado, con el espaciado en 3 y menos padding, el texto queda
             en ~231px y entra en un renglón hasta en 320px. */}
         <div style={{ textAlign:"center", marginTop:48 }}>
-          <a href={`/tienda/${storeConfig?.slug}/productos${isPreview ? "?t=urban-pulse&from=editor" : ""}`}
-            style={{ display: isMobile ? "block" : "inline-block", background:productosTextUp, color:productosBotonText, border:`3px solid ${productosTextUp}`, padding: isMobile ? "18px 20px" : "16px 52px", fontSize:11, fontWeight:900, letterSpacing: isMobile ? 3 : 4, textTransform:"uppercase", textDecoration:"none", transition:"all 0.2s" }}
+          {/* Botón y no `<a href>`: el link iba a otra página y recargaba todo.
+              `width:100%` en mobile porque un `<button>` no se estira solo como
+              lo hacía el `display:block` del link. */}
+          <button onClick={() => abrirCatalogo()}
+            style={{ display: isMobile ? "block" : "inline-block", width: isMobile ? "100%" : undefined, background:productosTextUp, color:productosBotonText, border:`3px solid ${productosTextUp}`, padding: isMobile ? "18px 20px" : "16px 52px", fontSize:11, fontWeight:900, letterSpacing: isMobile ? 3 : 4, textTransform:"uppercase", cursor:"pointer", fontFamily:"inherit", transition:"all 0.2s" }}
             onMouseEnter={e=>{ e.currentTarget.style.background="transparent"; e.currentTarget.style.color=productosTextUp; }}
             onMouseLeave={e=>{ e.currentTarget.style.background=productosTextUp; e.currentTarget.style.color=productosBotonText; }}>
             Ver colección completa
-          </a>
+          </button>
         </div>
         </div>
       </section>
@@ -2091,7 +2231,7 @@ export default function UrbanPulse() {
                 </div>
                 {hasMore && (
                   <div style={{ textAlign:"center", marginTop:36 }}>
-                    <button onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?${isPreview ? "t=urban-pulse&from=editor&" : ""}oferta=true`; }}
+                    <button onClick={() => { abrirCatalogo({ soloOfertas: true }); }}
                       style={{ background:"none", border:`2px solid ${ofertasTextUp}`, color:ofertasTextUp, padding:"12px 32px", fontSize:10, fontWeight:900, letterSpacing:3, textTransform:"uppercase", cursor:"pointer" }}><EditableZone field="ofertasCta" label="Botón ver todas las ofertas">Ver todas las ofertas</EditableZone></button>
                   </div>
                 )}
@@ -2146,7 +2286,7 @@ export default function UrbanPulse() {
                 </div>
                 {hasMore && (
                   <div style={{ textAlign:"center", marginTop:36 }}>
-                    <button onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?${isPreview ? "t=urban-pulse&from=editor&" : ""}destacado=true`; }}
+                    <button onClick={() => { abrirCatalogo({ masVistos: true }); }}
                       style={{ background:"none", border:`2px solid ${masVistoTextUp}`, color:masVistoTextUp, padding:"12px 32px", fontSize:10, fontWeight:900, letterSpacing:3, textTransform:"uppercase", cursor:"pointer" }}><EditableZone field="masVistoCta" label="Botón ver más">Ver más</EditableZone></button>
                   </div>
                 )}
@@ -2271,6 +2411,36 @@ export default function UrbanPulse() {
       </SectionBlock>
       </div>
 
+      </>)}
+
+      {/* ── EL CATÁLOGO, acá adentro ────────────────────────────────────────────
+          Antes esto era otra página. Ahora se dibuja entre la barra y el pie de
+          Urban Pulse, con su propio vestido: `CatalogoGenerico` ya tiene tema para
+          este template —y layout con barra lateral— así que embebido se ve igual
+          que suelto, menos las dos cosas que acá sobran: su barra y su pie, que
+          ya están puestos arriba y abajo. */}
+      {vista.enCatalogo && (
+        <div style={{ background:BG }}>
+          {/* Un "atrás" explícito. Editando hace más falta todavía: tocar la marca
+              de la barra NO vuelve, porque `EditableZone` se queda con el clic para
+              abrir el editor de texto y el `onClick` del botón nunca corre. Sin
+              esto, desde el catálogo no hay salida. Es el mismo botón que usan Aire
+              y Boho Terra. */}
+          <div style={{ maxWidth:1280, margin:"0 auto", padding:"18px clamp(16px,4vw,32px) 0" }}>
+            <BotonVolver onClick={vista.irALaPortada} destino="Volver a la tienda"
+              S={WHITE} LN={DARK} T={DARK} G={ACC} />
+          </div>
+          <CatalogoGenerico key={claveCatalogo} embebido={{ ...filtroEfectivo, slug: storeConfig?.slug ?? "", template: "urban-pulse",
+            sinPie: true, sinBarra: true, enEditor: isPreview, acento: ACC,
+            /* Los modales del catálogo comparten pantalla con la barra de este
+               template, así que tienen que quedar por encima de ella. Con la capa
+               que traían de fábrica —`CAPAS.nav`, o sea 100— la barra les tapaba la
+               × de cerrar. En el editor la barra sube a `previaNav` (10000) para
+               ganarle al marco, así que ahí el modal tiene que subir también. */
+            capaModal: isPreview ? CAPAS.previaModal : CAPAS.modalTemplate }} />
+        </div>
+      )}
+
       {/* FOOTER */}
       <footer style={{ position:"relative", borderTop:`3px solid ${ACC}`, ...(footerBgImg?.url ? { backgroundImage:`url(${footerBgImg.url})`, backgroundSize:"cover", backgroundPosition:`${footerBgImg.posX ?? 50}% ${footerBgImg.posY ?? 50}%` } : { background:footerUpBg }) }}>
         <BgDragHandle imgKey="sectionbg_bgFooter" />
@@ -2374,12 +2544,24 @@ export default function UrbanPulse() {
                 <p style={{ color:footerUpText, fontSize:10, fontWeight:900, letterSpacing:3, textTransform:"uppercase", margin:"0 0 18px" }}>
                   <EditableZone field={col.titleField} label={`Footer — columna título`}>{col.titleDefault}</EditableZone>
                 </p>
-                {col.links.map(({ label, href, externo }) => (
+                {col.links.map(({ label, href, externo, accion }) => (
                   <a key={label} href={href}
                     {...(externo ? { target: "_blank", rel: "noopener noreferrer" } : {})}
-                    // En el editor los links se ven pero no navegan: sacarían a
-                    // la dueña de la pantalla en la que está acomodando su pie.
-                    onClick={e => { if (editMode) e.preventDefault(); }}
+                    /* Sigue siendo un link de verdad —Google lo sigue, ctrl+click
+                       abre en pestaña nueva, el navegador muestra a dónde va— pero
+                       el clic normal lo resuelve acá adentro en vez de recargar la
+                       página entera. Por eso se miran las teclas y el botón: con
+                       ctrl, con shift o con el del medio, el navegador tiene que
+                       hacer lo suyo y nosotros no metemos mano.
+                       En el editor no navega ni abre nada: sacaría a la dueña de la
+                       pantalla en la que está acomodando su pie. */
+                    onClick={e => {
+                      if (editMode) { e.preventDefault(); return; }
+                      if (!accion || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+                      e.preventDefault();
+                      if (accion.tipo === "catalogo") abrirCatalogo({ categoria: accion.valor });
+                      else irASeccion(accion.valor);
+                    }}
                     style={{ display:"block", color:footerUpMid, fontSize:13, marginBottom:10,
                       textDecoration:"none", cursor: editMode ? "default" : "pointer" }}
                     onMouseEnter={e => { if (!editMode) e.currentTarget.style.color = footerUpText; }}
