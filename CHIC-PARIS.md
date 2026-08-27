@@ -497,3 +497,34 @@ horizontal.
 porque el bloque se completa. El texto es compartido y cambiarlo tocaría los otros tres, donde sí es
 verdad. Queda anotado.
 
+---
+
+### CP — Salir de los modales con Escape ✅
+
+Medido capa por capa antes de tocar nada. A diferencia de Urban Pulse, acá **todas cerraban tocando
+afuera** —los `onClick` están en la capa que recibe el clic, no debajo de otra— pero **ninguna de las
+propias cerraba con Escape**.
+
+`useCartLogic` ya cerraba con Escape el menú de la cuenta, el carrito, los favoritos, el buscador y la
+ficha. Lo que faltaba son las de este template: la reseña del producto, la reseña de la tienda, la foto
+ampliada, reportar y el menú del celular.
+
+Después: ficha, buscador, reportar y reseña de la tienda cierran **con las dos**; el menú del celular con
+Escape (no tiene "afuera": ocupa toda la pantalla debajo de la barra).
+
+#### Escape cierra una por vez, la de más arriba
+
+La reseña del producto (`9600`) y la foto ampliada (`9500`) se abren **estando abierta** la ficha
+(`9000`). El efecto va en fase de captura y corta el evento con `stopImmediatePropagation`, porque si no
+el mismo Escape lo atiende también `useCartLogic`, que cierra la ficha — y saldrías de las dos de un
+saque. Medido:
+
+```
+con la ficha:            9000
+con la foto ampliada:    9000  9500
+tras UN Escape:          9000          ← se fue la foto, quedó la ficha
+tras el segundo:         (ninguna)
+
+con la reseña del producto:  9000  9600
+tras UN Escape:              9000      ← quedó la ficha
+```

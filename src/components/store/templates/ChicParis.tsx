@@ -280,6 +280,37 @@ export default function ChicParis() {
   const { editMode, activeField, setActiveField, overrides: textOverrides, setOverride } = useEditContext();
   const isInquiryMode = checkoutMode === "inquiry" || ocultarPrecios;
 
+  /* ── Escape cierra lo que este template abre por su cuenta ───────────────────
+   *
+   * `useCartLogic` ya cierra con Escape el menú de la cuenta, el carrito, los
+   * favoritos, el buscador y la ficha — eso lo comparten los once templates. Lo
+   * que quedaba afuera son las capas que abre Chic Paris: la reseña del producto,
+   * la reseña de la tienda, la foto ampliada, reportar y el menú del celular.
+   * Todas cierran tocando afuera, ninguna cerraba con Escape.
+   *
+   * Va en captura y corta el evento (`stopImmediatePropagation`) por una razón
+   * concreta: la reseña del producto y la foto ampliada se abren ESTANDO ABIERTA
+   * la ficha. Sin cortar, el mismo Escape lo atendería también el hook, que
+   * cierra la ficha — y ampliar una foto y apretar Escape te sacaba de las dos.
+   * Se cierra UNA POR VEZ, la de más arriba.
+   *
+   * El orden es el de las capas, de arriba para abajo. Lo que este efecto no
+   * atiende sigue cayendo en el hook, intacto. */
+  useEffect(() => {
+    const alApretar = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      const cerrar = (fn: () => void) => { e.stopImmediatePropagation(); fn(); };
+      if (resenaProdOpen)  return cerrar(() => setResenaProdOpen(false));
+      if (lightboxSrc)     return cerrar(() => setLightboxSrc(null));
+      if (tiendaModalOpen) return cerrar(cerrarTiendaModal);
+      if (showReport)      return cerrar(() => setShowReport(false));
+      if (mobileMenuOpen)  return cerrar(() => setMobileMenuOpen(false));
+      /* Lo demás —carrito, favoritos, buscador, ficha— lo cierra `useCartLogic`. */
+    };
+    window.addEventListener("keydown", alApretar, true);
+    return () => window.removeEventListener("keydown", alApretar, true);
+  }, [resenaProdOpen, lightboxSrc, tiendaModalOpen, cerrarTiendaModal, showReport, mobileMenuOpen]);
+
   /* ── El catálogo deja de ser otra página ─────────────────────────────────────
    *
    * Los nueve links al catálogo eran `window.location.href`, que recarga todo. En
