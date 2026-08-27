@@ -1021,8 +1021,13 @@ export default function ChicParis() {
               esos 56px son una zona muerta que se come los clics de lo que haya
               abajo. Con el catalogo dibujado acá adentro se hizo visible, porque
               ahi cae el boton de volver y a 360 no respondia.
-              La letra baja en celular para que entre mas nombre, y lo que no entra
-              se corta con puntos suspensivos: cortar es feo, apilar es un bug. */}
+              La letra baja en celular para que entre mas nombre. Los puntos
+              suspensivos se probaron primero y eran PEOR: `minWidth:0` con
+              `ellipsis` truncaba en todos los anchos —a 1280 mostraba 124 de los
+              154px del nombre, y a 360 no dejaba ni una letra—, asi que se volvio
+              a `nowrap` con `flexShrink:0`. Un nombre bastante mas largo que
+              "AMARANTA" se va a ir a lo ancho, y se acepta: ancho no se come los
+              clics de nadie, apilado si. */}
           <a onClick={() => irASeccion("hero")} style={{ cursor: "pointer", textDecoration: "none", display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
             <span style={{ fontSize: isMobile ? 15 : 22, fontWeight: 900, letterSpacing: isMobile ? 1.5 : 4, textTransform: "uppercase", color: (isPreview || scrolled) ? "#111" : "#fff", transition: "color 0.3s", whiteSpace: "nowrap" }}>
               <EditableZone field="storeName" label="Nombre de la tienda">{storeConfig?.storeName ?? "CHIC PARIS"}</EditableZone>
