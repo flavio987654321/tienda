@@ -2596,3 +2596,68 @@ la grilla, no uno escrito a mano. Sin desborde horizontal en ningún ancho.
 `vitrinaIds`, y se verificó por separado que el bloque lee exactamente esas dos claves y las respeta; lo
 que quedó sin ejercitar es el "Guardar cambios" del editor, que pide entrar al panel y el ingreso sigue
 roto por el captcha. Es plomería compartida con Aire y Boho Terra, que ya la usan.
+
+---
+
+### UP-32 — La mitad de los modales no cerraba con Escape y la otra mitad no cerraba tocando afuera ✅
+
+Pedido de Flavio: *"fijate también que cuando se abre el modal se pueda salir con Esc o apretando afuera"*.
+
+Antes de tocar nada se midió cada capa en el navegador, abriéndola y probando las dos salidas. El resultado
+no era "falta Escape": era que **cuál servía dependía de cuál hubieras abierto**, que es lo que hace
+imposible aprenderlo.
+
+| capa | Escape | tocar afuera | | Escape | afuera |
+|---|---|---|---|---|---|
+| ficha de producto | sí | **no** | → | sí | **sí** |
+| buscador | sí | **no** | → | sí | **sí** |
+| favoritos | sí | sí | → | sí | sí |
+| foto ampliada | **no** | sí | → | **sí** | sí |
+| reseña de la tienda | **no** | sí | → | **sí** | sí |
+| reportar tienda | **no** | sí | → | **sí** | sí |
+| menú del celular | **no** | — | → | **sí** | — |
+
+`useCartLogic` ya cerraba con Escape el menú de la cuenta, el carrito, los favoritos, el buscador y la
+ficha —eso lo comparten los once templates— así que lo que faltaba eran las capas que Urban Pulse abre por
+su cuenta.
+
+#### El `onClick` que estaba escrito y no se podía tocar
+
+La ficha **sí tenía** el handler para cerrar al tocar afuera, en el fondo oscuro:
+
+```jsx
+<div onClick={() => setModalProduct(null)} style={{ position:"absolute", inset:0, background:"rgba(0,0,0,0.7)" }} />
+<div style={{ position:"absolute", inset:0, display:"flex", ... }}>   ← este va después y ocupa lo mismo
+```
+
+El segundo div ocupa exactamente la misma superficie, va después y no deja pasar nada: **el handler estaba
+muerto**. Leyendo el archivo parecía resuelto; medido, el clic en el borde izquierdo no hacía nada. El
+cierre se movió al div que recibe el clic de verdad, con `e.target === e.currentTarget` para separar "toqué
+afuera" de "toqué la ficha" — sin eso, elegir un talle o sumar cantidad la cerraría.
+
+Se revisaron los otros diez templates buscando el mismo patrón: **ninguno lo tiene**.
+
+#### Escape cierra una por vez, la de más arriba
+
+La foto ampliada se abre **estando abierta** la ficha. El efecto nuevo va en fase de captura y corta el
+evento con `stopImmediatePropagation`, porque si no el mismo Escape lo atiende también `useCartLogic`, que
+cierra la ficha: ampliar una foto y apretar Escape te sacaba de las dos y te dejaba en la portada.
+
+Medido, con las capas fijas visibles en pantalla:
+
+```
+con la ficha abierta:    600
+con la foto ampliada:    600  700
+tras UN Escape:          600          ← se fue la foto, QUEDÓ la ficha
+tras el segundo:         (ninguna)
+```
+
+#### El menú del celular no lleva "tocar afuera"
+
+Medido a 360: mide **360x700 y arranca en y=100**, o sea toda la pantalla debajo de la barra. No hay
+"afuera" donde tocar — lo único que queda arriba es la barra, que tiene la ✕ que lo cierra. Escape es la
+salida que faltaba y es la que se agregó.
+
+**Sin chequeo automático, a propósito.** Esto es comportamiento en el navegador, no una regla que se pueda
+leer del archivo — y de hecho el archivo *decía* que la ficha cerraba al tocar afuera. Un chequeo estático
+habría dado verde sobre el bug. Lo que lo encontró fue medirlo.

@@ -304,6 +304,8 @@ export default function UrbanPulse() {
    * catálogo, y se arregla igual: primero vuelve a la portada y recién ahí busca
    * la sección. Queda anotada porque todavía no existe — se dibuja en el render
    * siguiente, y el efecto de abajo la va a buscar cuando ya esté. */
+
+
   const [seccionPendiente, setSeccionPendiente] = useState<string | null>(null);
   const irASeccion = (id: string) => {
     if (vista.enPortada) { scrollTo(id); return; }
@@ -325,6 +327,38 @@ export default function UrbanPulse() {
     productos: products,
     ejemplos: EJEMPLOS_RESENAS,
   });
+
+  /* ── Escape cierra lo que este template abre por su cuenta ───────────────────
+   *
+   * `useCartLogic` ya cierra con Escape el menú de la cuenta, el carrito, los
+   * favoritos, el buscador y la ficha — eso lo comparten los once templates. Lo
+   * que quedaba afuera son las capas que este template abre solo, y medido en el
+   * navegador ninguna cerraba: la foto ampliada, el modal de reseña, el de
+   * reportar y el menú del celular.
+   *
+   * Va en captura y corta el evento (`stopImmediatePropagation`) por una razón
+   * concreta, no por prolijidad: la foto ampliada se abre ESTANDO ABIERTA la
+   * ficha. Sin cortar, el mismo Escape lo atendería también el hook, que cierra
+   * la ficha — o sea que ampliar una foto y apretar Escape te sacaba de las dos y
+   * te dejaba en la portada. Se cierra UNA POR VEZ, la de más arriba, que es lo
+   * que hace cualquier programa.
+   *
+   * El orden es el de las capas, de arriba para abajo. Lo que este efecto no
+   * atiende sigue cayendo en el hook, intacto. */
+  useEffect(() => {
+    const alApretar = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      const cerrar = (fn: () => void) => { e.stopImmediatePropagation(); fn(); };
+      if (resenas.modalAbierto) return cerrar(resenas.cerrarModal);
+      if (lightboxSrc)          return cerrar(() => setLightboxSrc(null));
+      if (showReport)           return cerrar(() => setShowReport(false));
+      if (mobileMenuOpen)       return cerrar(() => setMobileMenuOpen(false));
+      /* Lo demás —carrito, favoritos, buscador, ficha— lo cierra `useCartLogic`. */
+    };
+    window.addEventListener("keydown", alApretar, true);
+    return () => window.removeEventListener("keydown", alApretar, true);
+  }, [resenas, lightboxSrc, showReport, mobileMenuOpen]);
+
 
   const categoryList = useMemo(() => {
     const cats = [...new Set(products.map(p => p.category).filter(c => c && c !== "general"))];
@@ -2734,9 +2768,14 @@ export default function UrbanPulse() {
         </a>
       )}
 
-      {/* SEARCH OVERLAY */}
+      {/* SEARCH OVERLAY
+          El buscador cerraba con Escape y con la ✕, pero no tocando afuera: era
+          el único al revés que los demás, y cuál servía dependía de cuál hubieras
+          abierto. `e.target === e.currentTarget` cierra sólo si el clic cayó en el
+          fondo y no en el campo ni en un resultado. */}
       {searchOpen && (
-        <div className="up-fade" style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.96)", zIndex:CAPAS.modalTemplate, padding: isMobile ? "72px 16px 32px" : "80px 40px 40px", overflowY:"auto" }}>
+        <div className="up-fade" onClick={e => { if (e.target === e.currentTarget) { setSearchOpen(false); setSearchQuery(""); } }}
+          style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.96)", zIndex:CAPAS.modalTemplate, padding: isMobile ? "72px 16px 32px" : "80px 40px 40px", overflowY:"auto" }}>
           <button onClick={() => { setSearchOpen(false); setSearchQuery(""); }} aria-label="Cerrar búsqueda" style={{ position:"absolute", top:24, right:28, background:"none", border:"none", color:WHITE, fontSize:28, cursor:"pointer" }}>✕</button>
           <div style={{ maxWidth:680, margin:"0 auto" }}>
             <p style={{ color:"rgba(255,255,255,0.4)", fontSize:10, letterSpacing:6, fontWeight:800, textTransform:"uppercase", marginBottom:20 }}>Buscar</p>
@@ -2797,8 +2836,19 @@ export default function UrbanPulse() {
       {/* PRODUCT MODAL */}
       {modalProduct && (
         <div className="up-fade" style={{ position:"fixed", inset:0, zIndex: isPreview ? CAPAS.previaModal : 600 }}>
-          <div onClick={() => setModalProduct(null)} style={{ position:"absolute", inset:0, background:"rgba(0,0,0,0.7)" }} />
-          <div style={{ position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center", padding: isMobile ? 0 : 24 }}>
+          <div style={{ position:"absolute", inset:0, background:"rgba(0,0,0,0.7)" }} />
+          {/* Cerrar tocando afuera.
+              El `onClick` estaba en el fondo oscuro de arriba, y NO SE PODÍA
+              TOCAR: este div ocupa exactamente lo mismo (`inset:0`), va después y
+              no dejaba pasar nada — o sea que el handler estaba escrito pero
+              muerto, y la ficha sólo cerraba con la ✕ o con Escape. Medido en el
+              navegador: clic en el borde izquierdo y la ficha seguía abierta.
+              Va acá, que es la capa que recibe el clic de verdad. `e.target ===
+              e.currentTarget` es lo que separa "toqué afuera" de "toqué la
+              ficha": sin eso, cualquier clic adentro —elegir un talle, sumar
+              cantidad— la cerraría. */}
+          <div onClick={e => { if (e.target === e.currentTarget) setModalProduct(null); }}
+            style={{ position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center", padding: isMobile ? 0 : 24 }}>
             {/* ── La ficha de producto de Urban Pulse ───────────────────────────
                 Chic Paris apila TODO en la columna derecha: descripción, ficha,
                 videos, reseñas y el formulario. Con un producto real esa columna
