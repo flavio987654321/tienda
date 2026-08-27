@@ -2552,3 +2552,47 @@ Antes del arreglo las tres daban 24 y "Todos los productos".
 
 **Ojo con esto:** Boho Terra tiene el mismo agujero y quedó sin tocar — es otro template y no era este
 trabajo, pero está acá anotado para que no se descubra de nuevo desde cero.
+
+---
+
+### UP-31 — El bloque de productos mostraba siempre los últimos ocho, y nadie podía tocarlo ✅
+
+`allFiltered.slice(0, 8)` a secas. La dueña no elegía nada: la vitrina de su portada la armaba el orden en
+que hubiera cargado los productos, y se le daba vuelta sola cada vez que subía uno nuevo.
+
+El engranaje ya existía —lo usan Aire y Boho Terra, y la regla vive una sola vez en `vitrina.ts`— así que
+esto fue engancharlo, no escribirlo. Tres modos: **los últimos que cargué**, **los que yo elija** (en el
+orden en que los toca) y **al azar**, que cambia por día y no dentro del día, así el que vuelve encuentra
+lo que vio.
+
+**Acá pesa más que en los otros dos templates.** Esta grilla le da el **doble de ancho** al primero y al
+sexto (`big`, `span 2`): no se elige sólo qué se muestra, se elige **qué se muestra grande**. Medido, las
+tarjetas 1 y 6 miden 745px contra 371px de las otras. Hasta ahora esos dos lugares se los llevaba lo
+último que se hubiera cargado.
+
+**Dos decisiones, las dos copiadas de Aire porque ya estaban pensadas:**
+
+- El recorte va **después** de los filtros. Con "Mujer" puesto, la vitrina elige entre lo de mujer; al
+  revés elegiría ocho de todo el catálogo y después tiraría lo que no es, dejando el bloque casi vacío sin
+  explicación.
+- Con un filtro puesto por el **visitante** —un género o una categoría— la vitrina no manda y el engranaje
+  no aparece: ahí el criterio ya lo eligió él, y dos criterios a la vez no se entienden.
+
+**Medido** contra la tienda de Amaranta, inyectando los ajustes por la dirección en local (sin tocar la
+base):
+
+| modo | qué mostró |
+|---|---|
+| por defecto | los 8 últimos, en el mismo orden que la base |
+| **los que yo elija** (3 a mano) | exactamente esos 3, **en el orden en que los elegí** |
+| **al azar** | otros 8, distintos de "los últimos" |
+| al azar, otra vez | **idéntico** — el mismo día da lo mismo |
+
+Y el botón, en 360 / 768 / 1280: aparece dentro del bloque, **a la derecha del título y en su misma
+fila**, nada lo tapa, abre el panel, y el panel dice *"Este bloque tiene 8 lugares"* — el número real de
+la grilla, no uno escrito a mano. Sin desborde horizontal en ningún ancho.
+
+**Lo que no se pudo probar y por qué:** el guardado del editor. El engranaje escribe en `vitrinaModo` y
+`vitrinaIds`, y se verificó por separado que el bloque lee exactamente esas dos claves y las respeta; lo
+que quedó sin ejercitar es el "Guardar cambios" del editor, que pide entrar al panel y el ingreso sigue
+roto por el captcha. Es plomería compartida con Aire y Boho Terra, que ya la usan.

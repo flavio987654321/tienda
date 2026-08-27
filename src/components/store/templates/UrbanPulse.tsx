@@ -2,6 +2,10 @@
 import { useVistaTemplate, urlParaCompartirProducto } from "@/components/store/templates/shared/useVistaTemplate";
 import CatalogoGenerico, { type CatalogoEmbebido } from "@/app/tienda/[slug]/productos/CatalogoGenerico";
 import { BotonVolver } from "@/components/store/templates/shared/BotonVolver";
+/* Qué productos van en la vitrina de la portada: la regla vive en `vitrina.ts`,
+   una sola vez, y la comparten Aire, Boho Terra y este. */
+import { productosDeLaVitrina, leerModo, leerElegidos } from "@/lib/vitrina";
+import { BotonVitrina } from "@/components/store/templates/shared/BotonVitrina";
 import { useState, useEffect, useRef, useMemo, useSyncExternalStore, Fragment, cloneElement, isValidElement } from "react";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { usePushBell } from "@/contexts/PushBellContext";
@@ -839,7 +843,33 @@ export default function UrbanPulse() {
     if (activeCategory !== "Todos" && p.category !== activeCategory) return false;
     return true;
   }), [products, hayGeneros, activeGender, activeCategory]);
-  const filtered    = allFiltered.slice(0, visibleCount);
+  /* ── Los ocho que se ven ─────────────────────────────────────────────────────
+   *
+   * Antes era `allFiltered.slice(0, visibleCount)` a secas: siempre los últimos
+   * cargados, sin forma de tocarlo. Ahora lo decide la dueña desde el engranaje
+   * del bloque, con la misma regla que ya usan Aire y Boho Terra (`vitrina.ts`).
+   *
+   * Acá pesa más que en los otros dos: esta grilla le da el DOBLE DE ANCHO al
+   * primero y al sexto (`big`, `span 2`). O sea que no se elige sólo qué se
+   * muestra, se elige qué se muestra grande — y hasta ahora esos dos lugares se
+   * los llevaba lo último que se hubiera cargado.
+   *
+   * El recorte va DESPUÉS de los filtros y no antes: con "Mujer" puesto, la
+   * vitrina tiene que elegir entre lo de mujer, no elegir ocho de todo el
+   * catálogo y después tirar lo que no es.
+   *
+   * Y sólo manda cuando el que mira NO puso ningún filtro: si tocó "Hombre" o una
+   * categoría, lo que tiene que ver es eso, no la vitrina que armó la dueña. Ahí
+   * el criterio ya lo eligió él. */
+  const hayFiltroDelVisitante = (hayGeneros && activeGender !== null) || activeCategory !== "Todos";
+  const filtered = useMemo(() => (
+    hayFiltroDelVisitante
+      ? allFiltered.slice(0, visibleCount)
+      : productosDeLaVitrina(allFiltered, visibleCount, {
+          modo: leerModo(textOverrides["vitrinaModo"]?.text),
+          elegidos: leerElegidos(textOverrides["vitrinaIds"]?.text),
+        })
+  ), [allFiltered, hayFiltroDelVisitante, visibleCount, textOverrides]);
   // ── Qué producto muestra el bloque destacado ───────────────────────────────
   // Era `products[7] ?? products[0]`: el OCTAVO de la lista. La dueña no podía
   // elegirlo, y cambiaba solo —sin avisar— cada vez que agregaba o borraba un
@@ -1848,11 +1878,28 @@ export default function UrbanPulse() {
       <section id="productos" data-reveal style={{ background:productosBgUp, position:"relative" }}>
         <EditableSectionBg field="bgProductos" label="Fondo productos" />
         <div style={{ padding: isMobile ? "48px 16px" : "80px 40px", maxWidth:1200, margin:"0 auto" }}>
-        <div style={{ marginBottom:40 }}>
-          <h2 style={{ fontSize:"clamp(32px,4vw,44px)", fontWeight:900, textTransform:"uppercase", letterSpacing:"-1px", margin:0, color:productosTextUp }}>
-            {activeGender==="mujer" ? "Mujer" : activeGender==="hombre" ? "Hombre" : activeCategory==="Todos" ? <EditableZone field="collectionHeading" label="Título sección productos">Colección</EditableZone> : activeCategory}
-          </h2>
-          <p style={{ fontSize:12, color:productosTextUp, opacity:0.5, margin:"6px 0 0" }}>{allFiltered.length} piezas</p>
+        {/* El título a la izquierda y el engranaje a la derecha, en la misma
+            línea. `minWidth:0` en el bloque del título porque el texto lo escribe
+            la dueña y sin eso una palabra larga empuja al botón afuera; el botón
+            no se achica (`flexShrink:0`) porque lo que lleva adentro es texto que
+            no se puede partir. Con `alignItems:"flex-start"` el engranaje queda a
+            la altura del renglón del título y no centrado contra las dos líneas. */}
+        <div style={{ marginBottom:40, display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:16 }}>
+          <div style={{ minWidth:0 }}>
+            <h2 style={{ fontSize:"clamp(32px,4vw,44px)", fontWeight:900, textTransform:"uppercase", letterSpacing:"-1px", margin:0, color:productosTextUp }}>
+              {activeGender==="mujer" ? "Mujer" : activeGender==="hombre" ? "Hombre" : activeCategory==="Todos" ? <EditableZone field="collectionHeading" label="Título sección productos">Colección</EditableZone> : activeCategory}
+            </h2>
+            <p style={{ fontSize:12, color:productosTextUp, opacity:0.5, margin:"6px 0 0" }}>{allFiltered.length} piezas</p>
+          </div>
+          {/* El engranaje para elegir QUÉ productos van acá. Sólo en edición —lo
+              decide `BotonVitrina`— y sólo sin filtro puesto: con "Hombre" o una
+              categoría, la grilla la está eligiendo el filtro, y dos criterios a
+              la vez no se entienden. */}
+          {!hayFiltroDelVisitante && (
+            <div style={{ flexShrink:0 }}>
+              <BotonVitrina products={products} cuantos={visibleCount} acento={ACC} />
+            </div>
+          )}
         </div>
         {/* `minmax(0,1fr)` y no `1fr`: `1fr` es `minmax(AUTO,1fr)`, y ese `auto`
             es el ancho mínimo del contenido — una columna de grilla NUNCA se
