@@ -688,6 +688,14 @@ export default function Aurora() {
     },
   ].filter(m => m.piezas.length > 0);
 
+  /* Que mostrar en el pie: un link a un filtro vacio es un link que miente.
+     En el editor se muestran igual, para que la duenia vea que existen. */
+  const hayOfertas = isPreview || products.some(p => p.comparePrice && p.comparePrice > p.price);
+  const hayPromos  = isPreview || products.some(p => {
+    const d = resolveProductPromo(p, promotions);
+    return d.hasPriceDrop || d.nxm || d.freeShipping || d.pctOff != null;
+  });
+
   const scn = storeConfig?.sectionColors ?? {};
   const garantiasBg    = scn["bgGarantias"]   ?? BG;
   const garantiasText  = getContrastColor(garantiasBg)   === "light" ? T : "#06070d";
@@ -1481,14 +1489,52 @@ export default function Aurora() {
               })}
             </div>
           </div>
-          {[
-            { title:"Tienda",  links:[["Nueva temporada","productos"],["Más vendidos","productos"],["Ofertas","productos"],["Gift cards","contacto"]] },
-            { title:"Ayuda",   links:[["Envíos y devoluciones","contacto"],["Talle y medidas","contacto"],["Cómo comprar","contacto"],["Contacto","contacto"]] },
-          ].map(col => (
+          {/* ── Los links del pie llevan a donde dicen ──────────────────────────
+              Eran ocho y todos iban a DOS lugares: o bajaban al bloque de
+              productos, o abrían Contacto. O sea que "Ofertas", "Más vendidos" y
+              "Nueva temporada" hacían exactamente lo mismo, y cuatro de ellos
+              —"Gift cards", "Envíos y devoluciones", "Talle y medidas" y "Cómo
+              comprar"— prometían pantallas que no existen en ningún lado.
+
+              Ahora cada uno abre el catálogo con SU filtro. "Nueva temporada" lo
+              abre sin filtrar y eso es honesto: el catálogo llega ordenado por
+              fecha (`createdAt: desc` en `/api/public/[slug]`), o sea que lo
+              primero que se ve es lo último que entró.
+
+              Esto ademas devuelve el acceso a las ofertas y a lo más vendido, que
+              hasta recién eran dos bloques de la portada y se sacaron.
+
+              Los cuatro links inventados se van en vez de apuntar a cualquier
+              lado: un link que miente es peor que un link que no está. Cuando
+              existan la guía de talles y las preguntas frecuentes, vuelven acá
+              apuntando a ellas de verdad. "Envíos y devoluciones" no vuelve: sus
+              documentos ya están en la barra de abajo, en este mismo pie. */}
+          {([
+            { title:"Tienda", links: [
+              ["Nueva temporada", () => abrirCatalogo()] as [string, () => void],
+              ["Más vendidos",    () => abrirCatalogo({ masVistos: true })] as [string, () => void],
+              /* "Ofertas" es el precio TACHADO (`comparePrice`), y "Promociones" son
+                 las promos vigentes (2x1, % off, envío gratis). En el catálogo son
+                 dos filtros distintos, así que acá son dos links distintos — y cada
+                 uno aparece solo si tiene algo detrás.
+                 No es un detalle: medido en una tienda real, los tres productos
+                 mostraban descuento en pantalla y NINGUNO tenía `comparePrice`. El
+                 descuento venía de una promo. Un link "Ofertas" fijo habría llevado
+                 a "0 resultados" con la tienda llena de precios rebajados.
+                 Es la misma regla que ya usaba el bloque de ofertas que se sacó de
+                 la portada: sin ofertas, no se ofrece. */
+              ...(hayOfertas ? [["Ofertas", () => abrirCatalogo({ soloOfertas: true })] as [string, () => void]] : []),
+              ...(hayPromos  ? [["Promociones", () => abrirCatalogo({ soloPromos: true })] as [string, () => void]] : []),
+            ] },
+            { title:"Ayuda", links: [
+              ["Nuestra historia", () => vista.irANosotros()],
+              ["Contacto",         () => vista.irAContacto()],
+            ] },
+          ] as { title: string; links: [string, () => void][] }[]).map(col => (
             <div key={col.title}>
               <p style={{ fontSize:10, letterSpacing:4, color:G, textTransform:"uppercase", marginBottom:20, fontWeight:700 }}>{col.title}</p>
-              {col.links.map(([label, target]) => (
-                <p key={label} onClick={() => irAPantalla(target)} style={{ fontSize:13, opacity:0.45, marginBottom:10, cursor:"pointer", transition:"opacity 0.2s" }}
+              {col.links.map(([label, ir]) => (
+                <p key={label} onClick={ir} style={{ fontSize:13, opacity:0.45, marginBottom:10, cursor:"pointer", transition:"opacity 0.2s" }}
                   onMouseEnter={e => (e.currentTarget.style.opacity="0.9")}
                   onMouseLeave={e => (e.currentTarget.style.opacity="0.45")}>
                   {label}
