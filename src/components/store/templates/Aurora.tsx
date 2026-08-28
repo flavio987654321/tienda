@@ -14,7 +14,6 @@ import { useStorefront, type StorefrontProduct } from "@/hooks/useStorefront";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { useCartLogic } from "@/hooks/useCartLogic";
 import { useTouchSwipe } from "@/hooks/useTouchSwipe";
-import { masVistos, MIN_MAS_VISTOS } from "@/lib/masVistos";
 import { catalogoTieneGeneros } from "@/lib/generos";
 import { opcionesVisibles } from "@/lib/opciones";
 import {  } from "@/hooks/useStorefront";
@@ -37,7 +36,6 @@ import { calcularVuelo, tarjetaVisible, MS_IDA, MS_VUELTA } from "@/components/s
 import { vidrio, sombra, Inclinable } from "@/components/store/templates/shared/Materia";
 import StoreProductReels from "@/components/store/ProductReels";
 import { SectionBlock } from "@/components/store/templates/shared/SectionBlock";
-import { PromoBannerCarousel } from "@/components/store/templates/shared/PromoBannerCarousel";
 import { colorToSwatch } from "@/lib/colorSwatch";
 import { discountPercent } from "@/lib/discount";
 import { resolveVariantPrice } from "@/lib/variantPrice";
@@ -126,7 +124,13 @@ const GARANTIAS = [
 /* Nosotros y Contacto NO están: dejaron de ser secciones de la portada para ser
    pantallas propias, como en Aire. Una pantalla no se reordena ni se oculta desde
    el editor — se entra a ella. */
-const AU_SECTION_IDS = ["au-garantias", "au-mayorista", "au-statement", "au-banner", "au-productos", "au-ofertas", "au-masvisto", "au-prueba-social"];
+/* Nosotros y Contacto NO estan: son pantallas propias, y una pantalla no se
+   reordena ni se oculta desde el editor — se entra a ella.
+   Tampoco estan el banner horizontal, las ofertas, lo mas visto ni la prueba
+   social: se sacaron de la portada por decision de disenio, para que la home sea
+   mas corta. Los productos en oferta y los mas vistos siguen estando en el
+   catalogo, que tiene sus filtros. */
+const AU_SECTION_IDS = ["au-garantias", "au-mayorista", "au-statement", "au-productos"];
 
 /* ── Component ─────────────────────────────────────────── */
 export default function Aurora() {
@@ -143,10 +147,6 @@ export default function Aurora() {
   const [announcementVisible, setAnnouncementVisible] = useState(true);
   const [announcementIdx,    setAnnouncementIdx]    = useState(0);
   const [activeSubcategory,  setActiveSubcategory]  = useState<string | null>(null);
-  type PReview = { id: string; rating: number; comment: string | null; reviewer: string; verified: boolean; verifiedBy: string | null; createdAt: string; product?: { name: string; image: string | null } };
-  type HomeReview = PReview;
-  const [homeReviews,    setHomeReviews]    = useState<HomeReview[]>([]);
-  const [reviewCarouselPage, setReviewCarouselPage] = useState(0);
   const [reviewForm,     setReviewForm]     = useState({ reviewer: "", rating: 5, comment: "", email: "" });
   const reviewCaptcha = useTurnstile("review");
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
@@ -157,23 +157,6 @@ export default function Aurora() {
   const enviandoResenaProd = useRef(false);
   const [showReport,     setShowReport]     = useState(false);
   const [lightboxSrc,    setLightboxSrc]    = useState<string|null>(null);
-  const ofertasScrollRef = useRef<HTMLDivElement>(null);
-  const scrollOfertas = (dir: 1 | -1) => { ofertasScrollRef.current?.scrollBy({ left: dir * 240, behavior: "smooth" }); };
-  const [ofertasCanLeft, setOfertasCanLeft] = useState(false);
-  const [ofertasCanRight, setOfertasCanRight] = useState(false);
-  useEffect(() => {
-    const el = ofertasScrollRef.current;
-    if (!el) return;
-    const update = () => {
-      setOfertasCanLeft(el.scrollLeft > 4);
-      setOfertasCanRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
-    };
-    update();
-    el.addEventListener("scroll", update);
-    const ro = new ResizeObserver(update);
-    ro.observe(el);
-    return () => { el.removeEventListener("scroll", update); ro.disconnect(); };
-  });
   useEffect(() => {
     const allowsPinch = (el: Element | null) => {
       while (el) { if ((el as HTMLElement).style?.touchAction?.includes("pinch-zoom")) return true; el = el.parentElement; }
@@ -427,16 +410,6 @@ export default function Aurora() {
     if (found) openModal(found);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [products]);
-
-  // Cargar reseñas de la home (prueba social)
-  useEffect(() => {
-    const slug = storeConfig?.slug;
-    if (!slug) return;
-    fetch(`/api/public/${slug}/reviews`)
-      .then(r => r.ok ? r.json() : { reviews: [] })
-      .then(d => setHomeReviews(d.reviews ?? []))
-      .catch(() => {});
-  }, [storeConfig?.slug]);
 
   // Las reseñas del producto abierto: carga, paginado, promedio y total. Antes
   // esto estaba escrito acá a mano —igual que en los otros tres templates de moda
@@ -733,10 +706,6 @@ export default function Aurora() {
   const productosBg    = scn["bgProductos"]   ?? BG;
   const productosText  = getContrastColor(productosBg)  === "light" ? T : "#06070d";
   const productosMid   = getContrastColor(productosBg)  === "light" ? "#888" : "#555";
-  const ofertasBg      = scn["bgOfertas"]     ?? S;
-  const ofertasText    = getContrastColor(ofertasBg)    === "light" ? T : "#06070d";
-  const masVistoBg     = scn["bgMasVisto"]    ?? BG;
-  const masVistoText   = getContrastColor(masVistoBg)   === "light" ? T : "#06070d";
   const contactoBg     = scn["bgContacto"]    ?? BG;
   const contactoText   = contactoBgImg?.url
     ? (contactoBgImg.overlayType === "light" ? "#06070d" : T)
@@ -1211,23 +1180,6 @@ export default function Aurora() {
       </section>
       </SectionBlock>
 
-      {/* ── BANNER HORIZONTAL ──────────────────────────────── */}
-      <SectionBlock id="au-banner" label="Banner horizontal" isPreview={isPreview} defaultOrder={AU_SECTION_IDS}>
-        <PromoBannerCarousel
-          images={[storeConfig?.imageOverrides?.["promoBanner1"], storeConfig?.imageOverrides?.["promoBanner2"], storeConfig?.imageOverrides?.["promoBanner3"]]}
-          demoImages={[
-            "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?auto=format&fit=crop&w=1920&q=80",
-            "https://images.unsplash.com/photo-1445205170230-053b83016050?auto=format&fit=crop&w=1920&q=80",
-            "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=1920&q=80",
-          ]}
-          intervalMs={storeConfig?.bannerInterval ?? 4000}
-          editMode={editMode}
-          isPreview={isPreview}
-          accent={G}
-          bg={BG}
-        />
-      </SectionBlock>
-
       {/* ── PRODUCTOS ──────────────────────────────────────── */}
       <SectionBlock id="au-productos" label="Catálogo de productos" isPreview={isPreview} defaultOrder={AU_SECTION_IDS}>
       <section id="productos" data-reveal style={{ background:productosBg, position:"relative" }}>
@@ -1345,216 +1297,6 @@ export default function Aurora() {
         </div>
         </div>
       </section>
-      </SectionBlock>
-
-      {/* ── OFERTAS ────────────────────────────────────────── */}
-      <SectionBlock id="au-ofertas" label="Ofertas" isPreview={isPreview} defaultOrder={AU_SECTION_IDS}>
-        {(() => {
-          const allOfertas = products.filter(p => p.comparePrice && p.comparePrice > p.price);
-          if (allOfertas.length === 0 && !isPreview) return null;
-          const displayList = (allOfertas.length > 0 ? allOfertas : products).slice(0, 8);
-          const hasMore = allOfertas.length > 8;
-          return (
-            <section data-reveal style={{ position:"relative", background:ofertasBg, padding: isMobile ? "48px 0" : "80px 0", borderTop:`1px solid rgba(201,168,76,0.1)` }}>
-              <EditableSectionBg field="bgOfertas" label="Fondo ofertas" />
-              <div style={{ maxWidth:1280, margin:"0 auto", padding: isMobile ? "0 16px" : "0 32px", marginBottom:32 }}>
-                <p style={{ fontSize:10, letterSpacing:5, color:G, textTransform:"uppercase", margin:"0 0 8px" }}><EditableZone field="ofertasKicker" label="Texto sobre Ofertas">Aprovechá</EditableZone></p>
-                <h2 style={{ fontFamily:"Georgia, serif", fontSize:"clamp(24px,3vw,36px)", margin:0, color:ofertasText }}><EditableZone field="ofertasTitle" label="Título Ofertas">Ofertas</EditableZone></h2>
-              </div>
-              <div style={{ position:"relative" }}>
-                {/* Sin `paddingBottom` aparte: el atajo de al lado ya termina en 8px
-                    y lo pisaba igual. Juntos hacían que React avisara en consola cada
-                    vez que el atajo cambia — y acá cambia con el SCROLL de la fila,
-                    o sea a cada rato. */}
-                <div ref={ofertasScrollRef} className="au-ofertas-row" style={{ display:"flex", gap:16, overflowX:"auto", scrollSnapType:"x mandatory", padding: (ofertasCanLeft || ofertasCanRight) ? (isMobile ? "0 60px 8px" : "0 64px 8px") : (isMobile ? "0 16px 8px" : "0 32px 8px") }}>
-                  {displayList.map(p => {
-                    // El "-30%" tiene que coincidir con el precio de abajo: si hay
-                    // promo de tienda manda ella, si no sale del comparePrice.
-                    const promoP = resolveProductPromo(p, promotions);
-                    const pct = promoP.hasPriceDrop
-                      ? promoP.pctOff
-                      : (p.comparePrice && p.comparePrice > p.price ? Math.round((1 - p.price / p.comparePrice) * 100) : null);
-                    return (
-                      <div key={p.id} onClick={() => openModal(p)} className="au-zoom" style={{ cursor:"pointer", flex:"0 0 auto", width: isMobile ? "62vw" : 220, scrollSnapAlign:"start" }}>
-                        <div style={{ position:"relative", width:"100%", aspectRatio:"3/4", background:S, overflow:"hidden" }}>
-                          {p.images[0] && <FadeImage src={p.images[0]} alt={p.name} fill sizes="(max-width: 768px) 62vw, 220px" className="au-zoom-img" style={{ objectFit:"cover" }} />}
-                          {pct && <span style={{ position:"absolute", top:10, left:10, background:G, color:BG, fontSize:10, fontWeight:800, letterSpacing:2, padding:"4px 10px" }}>-{pct}%</span>}
-                        </div>
-                        <div style={{ padding:"10px 0 0" }}>
-                          <p style={{ margin:"0 0 4px", fontSize:12, color:ofertasText, overflow:"hidden", display:"-webkit-box", WebkitLineClamp:1, WebkitBoxOrient:"vertical" as const }}>{p.name}</p>
-                          <PromoPrice product={p} promotions={promotions} fmt={fmt} accent={G}
-                            priceSize={14} compareSize={12} weight={700} ocultarPrecios={ocultarPrecios}
-                            consultaLabel="Consultá" gap={8} align="center" />
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-                {ofertasCanLeft && (
-                  <button onClick={() => scrollOfertas(-1)} aria-label="Anterior" style={{ position:"absolute", left:0, top:"38%", transform:"translateY(-50%)", background:ofertasBg, border:`1px solid rgba(201,168,76,0.3)`, color:G, width:44, height:44, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", zIndex:10 }}>
-                  <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
-                </button>
-                )}
-                {ofertasCanRight && (
-                  <button onClick={() => scrollOfertas(1)} aria-label="Siguiente" style={{ position:"absolute", right:0, top:"38%", transform:"translateY(-50%)", background:ofertasBg, border:`1px solid rgba(201,168,76,0.3)`, color:G, width:44, height:44, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", zIndex:10 }}>
-                  <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg>
-                </button>
-                )}
-              </div>
-              {hasMore && (
-                <div style={{ maxWidth:1280, margin:"0 auto", padding: isMobile ? "0 16px" : "0 32px", textAlign:"center", marginTop:32 }}>
-                  <button onClick={() => { abrirCatalogo({ soloOfertas: true }); }}
-                    style={{ background:"none", border:`1px solid rgba(201,168,76,0.4)`, color:G, padding:"12px 32px", fontSize:11, letterSpacing:3, textTransform:"uppercase", cursor:"pointer" }}><EditableZone field="ofertasCta" label="Botón ver todas las ofertas">Ver todas las ofertas</EditableZone></button>
-                </div>
-              )}
-            </section>
-          );
-        })()}
-      </SectionBlock>
-
-      {/* ── LO MÁS VISTO ───────────────────────────────────── */}
-      <SectionBlock id="au-masvisto" label="Lo más visto" isPreview={isPreview} defaultOrder={AU_SECTION_IDS}>
-        {(() => {
-          // Vistas reales de compradores. En el editor se rellena para poder
-          // configurar la sección; en la tienda real, si no hay datos no se muestra.
-          const { lista: displayList, conVistas, esRelleno } = masVistos(products, { relleno: isPreview });
-          const hasMore = conVistas > displayList.length;
-          if (displayList.length === 0) return null;
-          return (
-            <section data-reveal style={{ position:"relative", background:masVistoBg, padding: isMobile ? "48px 16px" : "80px 32px", borderTop:`1px solid rgba(201,168,76,0.1)` }}>
-              <EditableSectionBg field="bgMasVisto" label="Fondo lo más visto" />
-              <div style={{ maxWidth:1280, margin:"0 auto" }}>
-                <div style={{ marginBottom:40 }}>
-                  <p style={{ fontSize:10, letterSpacing:5, color:G, textTransform:"uppercase", margin:"0 0 8px" }}><EditableZone field="masVistoKicker" label="Texto sobre Lo más visto">Tendencia</EditableZone></p>
-                  <h2 style={{ fontFamily:"Georgia, serif", fontSize:"clamp(24px,3vw,36px)", margin:0, color:masVistoText }}><EditableZone field="masVistoTitle" label="Título Lo más visto">Lo más visto</EditableZone></h2>
-                </div>
-                {/* Solo el dueño, y solo en el editor: la sección se está viendo con
-                    relleno porque la tienda todavía no juntó vistas. */}
-                {esRelleno && enEditor && (
-                  <p style={{ margin:"-24px 0 24px", fontSize:12, color:"#b45309", background:"#fffbeb", border:"1px solid #fde68a", borderRadius:6, padding:"8px 12px" }}>
-                    Todavía no hay suficientes vistas de compradores, así que te mostramos productos de ejemplo
-                    para que puedas darle formato. <b>En tu tienda esta sección aparece sola</b> cuando al menos
-                    {" "}{MIN_MAS_VISTOS} productos hayan sido vistos.
-                  </p>
-                )}
-                <div style={{ display:"grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(4,1fr)", gap:16 }}>
-                  {displayList.map((p) => (
-                    <div key={p.id} onClick={() => openModal(p)} className="au-zoom" style={{ cursor:"pointer" }}>
-                      {/* Sin el "#1, #2…" de antes: numerar sugiere un ranking firme
-                          donde la diferencia real suele ser de una sola visita. */}
-                      <div style={{ position:"relative", width:"100%", aspectRatio:"3/4", background:S, overflow:"hidden" }}>
-                        {p.images[0] && <FadeImage src={p.images[0]} alt={p.name} fill sizes="(max-width: 768px) 50vw, 25vw" className="au-zoom-img" style={{ objectFit:"cover" }} />}
-                      </div>
-                      <div style={{ padding:"10px 0 0" }}>
-                        <p style={{ margin:"0 0 4px", fontSize:12, color:masVistoText, overflow:"hidden", display:"-webkit-box", WebkitLineClamp:1, WebkitBoxOrient:"vertical" as const }}>{p.name}</p>
-                        <PromoPrice product={p} promotions={promotions} fmt={fmt} accent={G}
-                          priceSize={14} compareSize={11} weight={700} ocultarPrecios={ocultarPrecios}
-                          consultaLabel="Consultá" />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                {hasMore && (
-                  <div style={{ textAlign:"center", marginTop:32 }}>
-                    <button onClick={() => { abrirCatalogo({ masVistos: true }); }}
-                      style={{ background:"none", border:`1px solid rgba(201,168,76,0.4)`, color:G, padding:"12px 32px", fontSize:11, letterSpacing:3, textTransform:"uppercase", cursor:"pointer" }}><EditableZone field="masVistoCta" label="Botón ver más">Ver más</EditableZone></button>
-                  </div>
-                )}
-              </div>
-            </section>
-          );
-        })()}
-      </SectionBlock>
-
-      <SectionBlock id="au-prueba-social" label="Prueba social" isPreview={isPreview} defaultOrder={AU_SECTION_IDS}>
-        {(() => {
-          const PREVIEW_REVIEWS: HomeReview[] = [
-            { id:"p1", rating:5, comment:"Calidad increíble y llegó rapidísimo. Ya compré tres veces y siempre perfecta.", reviewer:"María L.", verified:true, verifiedBy:"auto", createdAt:"", product:{ name:"Vestido lino", image:null } },
-            { id:"p2", rating:5, comment:"El diseño es exactamente como en las fotos. Me enamoré cuando lo vi puesto.", reviewer:"Sofía M.", verified:false, verifiedBy:null, createdAt:"", product:{ name:"Blazer oversize", image:null } },
-            { id:"p3", rating:5, comment:"Excelente atención y envío super rápido. La recomiendo sin dudarlo.", reviewer:"Valentina R.", verified:true, verifiedBy:"owner", createdAt:"", product:{ name:"Jeans wide leg", image:null } },
-          ];
-          const allReviews = isPreview ? PREVIEW_REVIEWS : homeReviews;
-          if (allReviews.length === 0) return null;
-          const perPage = isMobile ? 1 : 3;
-          const totalPages = Math.ceil(allReviews.length / perPage);
-          const safePage = Math.min(reviewCarouselPage, totalPages - 1);
-          const pageReviews = allReviews.slice(safePage * perPage, (safePage + 1) * perPage);
-          async function deleteHomeReview(reviewId: string) {
-            if (!storeConfig?.slug) return;
-            await fetch(`/api/public/${storeConfig.slug}/reviews`, {
-              method:"DELETE", headers:{"Content-Type":"application/json"},
-              body: JSON.stringify({ reviewId }),
-            });
-            setHomeReviews(prev => prev.filter(r => r.id !== reviewId));
-            setReviewCarouselPage(0);
-          }
-          return (
-            <section data-reveal style={{ position:"relative", background: scn["bgPruebaSocial"] ?? BG, padding: isMobile ? "56px 20px" : "80px 32px", borderTop:`1px solid rgba(201,168,76,0.1)` }}>
-              <EditableSectionBg field="bgPruebaSocial" label="Fondo prueba social" />
-              <div style={{ maxWidth:1280, margin:"0 auto" }}>
-                <div style={{ display:"flex", alignItems:"flex-end", justifyContent:"space-between", marginBottom:44, flexWrap:"wrap", gap:16 }}>
-                  <div>
-                    <p style={{ fontSize:12, letterSpacing:5, color:G, margin:"0 0 12px" }}>{"★ ★ ★ ★ ★"}</p>
-                    <h2 style={{ fontFamily:"'Playfair Display', Georgia, serif", fontSize:"clamp(24px,3vw,38px)", fontWeight:400, fontStyle:"italic", margin:0, color:T }}>
-                      <EditableZone field="pruebaSocialTitle" label="Título prueba social">Lo dicen nuestras clientas</EditableZone>
-                    </h2>
-                  </div>
-                  {totalPages > 1 && (
-                    <div style={{ display:"flex", alignItems:"center", gap:12 }}>
-                      <button onClick={() => setReviewCarouselPage(p => Math.max(0, p - 1))} disabled={safePage === 0}
-                        style={{ width:36, height:36, background:"none", border:`1px solid rgba(201,168,76,0.3)`, color:G, cursor: safePage === 0 ? "default" : "pointer", opacity: safePage === 0 ? 0.3 : 1, fontSize:18, display:"flex", alignItems:"center", justifyContent:"center" }}>‹</button>
-                      <span style={{ fontSize:12, color:"rgba(240,235,227,0.4)", letterSpacing:1 }}>{safePage + 1} / {totalPages}</span>
-                      <button onClick={() => setReviewCarouselPage(p => Math.min(totalPages - 1, p + 1))} disabled={safePage === totalPages - 1}
-                        style={{ width:36, height:36, background:"none", border:`1px solid rgba(201,168,76,0.3)`, color:G, cursor: safePage === totalPages - 1 ? "default" : "pointer", opacity: safePage === totalPages - 1 ? 0.3 : 1, fontSize:18, display:"flex", alignItems:"center", justifyContent:"center" }}>›</button>
-                    </div>
-                  )}
-                </div>
-                <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3,1fr)", gap:20 }}>
-                  {pageReviews.map(r => (
-                    <div key={r.id} style={{ background:S, border:`1px solid rgba(201,168,76,0.12)`, padding:28, display:"flex", flexDirection:"column", gap:14, position:"relative" }}>
-                      {isOwner && !isPreview && (
-                        <button onClick={() => deleteHomeReview(r.id)}
-                          style={{ position:"absolute", top:10, right:10, background:"none", border:"none", color:"rgba(240,235,227,0.25)", cursor:"pointer", fontSize:16, lineHeight:1, padding:4 }}
-                          onMouseEnter={e => (e.currentTarget.style.color="#f87171")}
-                          onMouseLeave={e => (e.currentTarget.style.color="rgba(240,235,227,0.25)")}
-                          title="Eliminar reseña">×</button>
-                      )}
-                      <div style={{ display:"flex", gap:3 }}>
-                        {[1,2,3,4,5].map(s => <span key={s} style={{ color: s <= r.rating ? G : "rgba(201,168,76,0.2)", fontSize:15 }}>★</span>)}
-                      </div>
-                      {r.comment && <p style={{ fontFamily:"Georgia, serif", fontStyle:"italic", fontSize:14, color:T, lineHeight:1.8, margin:0, flex:1 }}>&ldquo;{r.comment}&rdquo;</p>}
-                      <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-                        {r.product?.image && (
-                          <FadeImage src={r.product.image} alt={r.product?.name ?? ""} width={38} height={38} style={{ objectFit:"cover", borderRadius:4, border:"1px solid rgba(201,168,76,0.18)", flexShrink:0 }} />
-                        )}
-                        <div>
-                          <p style={{ fontSize:11, fontWeight:700, color:G, margin:"0 0 2px", letterSpacing:1, textTransform:"uppercase" }}>{r.reviewer}</p>
-                          {r.product?.name && <p style={{ fontSize:11, color:"rgba(240,235,227,0.35)", margin:0 }}>{r.product.name}</p>}
-                          {/* Ver el comentario largo en BohoTerra: "auto" lo verificó
-                              el sistema contra un pedido entregado, "owner" lo marcó
-                              el dueño. No son lo mismo y no pueden decir lo mismo. */}
-                          {r.verified && (
-                            <p style={{ fontSize:10, fontWeight:700, color: r.verifiedBy === "auto" ? "#34d399" : "rgba(240,235,227,0.55)", margin:"4px 0 0", letterSpacing:0.3 }}>
-                              {r.verifiedBy === "auto" ? "✓ Compra verificada" : "✓ Verificada por la tienda"}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                {totalPages > 1 && (
-                  <div style={{ display:"flex", justifyContent:"center", gap:6, marginTop:28 }}>
-                    {Array.from({length:totalPages}).map((_,i) => (
-                      <button key={i} onClick={() => setReviewCarouselPage(i)}
-                        style={{ width:6, height:6, borderRadius:"50%", background: i === safePage ? G : "rgba(201,168,76,0.2)", border:"none", cursor:"pointer", padding:0, transition:"background 0.2s" }} />
-                    ))}
-                  </div>
-                )}
-              </div>
-            </section>
-          );
-        })()}
       </SectionBlock>
       {/* Cierra el `flex column` que abre despues del hero y que le da el orden a
           los bloques. Antes cerraba despues de Contacto; ahora Contacto y Nosotros
