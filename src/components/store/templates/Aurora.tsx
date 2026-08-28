@@ -1,7 +1,9 @@
 ﻿"use client";
-import { urlParaCompartirProducto } from "@/components/store/templates/shared/useVistaTemplate";
+import { useVistaTemplate, urlParaCompartirProducto } from "@/components/store/templates/shared/useVistaTemplate";
+import CatalogoGenerico, { type CatalogoEmbebido } from "@/app/tienda/[slug]/productos/CatalogoGenerico";
+import { BotonVolver } from "@/components/store/templates/shared/BotonVolver";
 import { barraMs } from "@/types/store-config";
-import { useState, useEffect, useLayoutEffect, useMemo, useRef, useCallback, Fragment } from "react";
+import { useState, useEffect, useLayoutEffect, useMemo, useRef, useCallback, useSyncExternalStore, Fragment } from "react";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { usePushBell } from "@/contexts/PushBellContext";
 import { useSesion } from "@/components/AuthProvider";
@@ -121,7 +123,10 @@ const GARANTIAS = [
 // Sin "au-categorias": las categorías ya no son una sección propia con tres
 // baldosas elegidas a mano, son el segundo mazo de la vidriera del hero — y
 // entran todas las que la tienda tenga, no tres.
-const AU_SECTION_IDS = ["au-garantias", "au-mayorista", "au-statement", "au-banner", "au-productos", "au-ofertas", "au-masvisto", "au-prueba-social", "au-nosotros", "au-contacto"];
+/* Nosotros y Contacto NO están: dejaron de ser secciones de la portada para ser
+   pantallas propias, como en Aire. Una pantalla no se reordena ni se oculta desde
+   el editor — se entra a ella. */
+const AU_SECTION_IDS = ["au-garantias", "au-mayorista", "au-statement", "au-banner", "au-productos", "au-ofertas", "au-masvisto", "au-prueba-social"];
 
 /* ── Component ─────────────────────────────────────────── */
 export default function Aurora() {
@@ -198,6 +203,85 @@ export default function Aurora() {
   const storefront  = useStorefront();
   const { products, promotions, loadingProducts, checkoutMode, isWholesale, ocultarPrecios, defaultCategories } = storefront;
   const isInquiryMode = checkoutMode === "inquiry" || ocultarPrecios;
+
+  /* ── Las pantallas dejan de ser otras páginas ────────────────────────────────
+   *
+   * Aurora era la última que se iba de verdad: ocho links al catálogo con
+   * `window.location.href`, que recarga todo. En la tienda publicada es un
+   * parpadeo; en el EDITOR sacaba a la dueña de Diseño y encima le mostraba el
+   * catálogo del template GUARDADO en vez del que estaba mirando.
+   *
+   * Mismo hook que ya usan Aire, Boho Terra, Urban Pulse y Chic Paris. El
+   * catálogo, Nosotros y Contacto se dibujan acá adentro, entre la barra y el pie
+   * de Aurora, y la dirección se acomoda sola para que el link se pueda compartir.
+   *
+   * La ficha del producto NO cambia: acá es un modal, y un modal nunca fue una
+   * página que se abre. */
+  const vista = useVistaTemplate({ isPreview, slug: storeConfig?.slug, templateId: "aurora" });
+  /** Con qué filtro entrar al catálogo. Lo ponen los links antes de abrirlo. */
+  const [filtroCatalogo, setFiltroCatalogo] = useState<CatalogoEmbebido>({});
+  const abrirCatalogo = (filtro: CatalogoEmbebido = {}) => {
+    setFiltroCatalogo(filtro);
+    vista.irAlCatalogo();
+  };
+
+  /* El filtro del que LLEGA por la dirección: un link compartido, uno abierto en
+     pestaña nueva o uno seguido desde Google. Suelto, el catálogo lo leía de la
+     URL; embebido no puede, porque adentro de un template la dirección es la del
+     template. Sin esto el filtro se perdía justo para el que no navegó, que es el
+     único que no puede volver a ponerlo. Explicado largo en `UrbanPulse.tsx`. */
+  const busquedaDeLaUrl = useSyncExternalStore(() => () => {}, () => window.location.search, () => "");
+  const filtroDeLaUrl = useMemo<CatalogoEmbebido>(() => {
+    const p = new URLSearchParams(busquedaDeLaUrl);
+    const f: CatalogoEmbebido = {};
+    const cat = p.get("categoria");     if (cat) f.categoria = cat;
+    const sub = p.get("subcategoria");  if (sub) f.subcategoria = sub;
+    if (p.get("oferta") === "true")    f.soloOfertas = true;
+    if (p.get("destacado") === "true") f.masVistos = true;
+    if (p.get("promo") === "true")     f.soloPromos = true;
+    return f;
+  }, [busquedaDeLaUrl]);
+  /* Manda el filtro que puso un clic de acá adentro; si no hay, el de la
+     dirección. Navegando adentro la URL queda en `/productos` sin nada colgando,
+     así que no hay filtro viejo que pueda pisar al nuevo. */
+  const filtroEfectivo = useMemo<CatalogoEmbebido>(
+    () => ({ ...filtroDeLaUrl, ...filtroCatalogo }),
+    [filtroDeLaUrl, filtroCatalogo]
+  );
+  /* `key` del catálogo: guarda el filtro en un `useState`, o sea que sólo mira lo
+     que le llega en su PRIMER dibujado, y en la hidratación la dirección todavía
+     no se puede leer. Con una clave hecha del filtro, cambiar de filtro es montar
+     otro catálogo. */
+  const claveCatalogo = [
+    filtroEfectivo.categoria ?? "", filtroEfectivo.subcategoria ?? "",
+    filtroEfectivo.soloOfertas ? "of" : "", filtroEfectivo.masVistos ? "mv" : "",
+    filtroEfectivo.soloPromos ? "pr" : "",
+  ].join("|");
+
+  /* ── Ir a una sección de la portada, se esté donde se esté ───────────────────
+     `scrollTo` busca una sección de la portada, y desde el catálogo la portada no
+     está dibujada: el menú entero dejaría de hacer nada. Vuelve a la portada
+     primero y recién ahí busca la sección, que se dibuja en el render siguiente
+     — por eso queda anotada y la va a buscar el efecto de abajo. */
+  const [seccionPendiente, setSeccionPendiente] = useState<string | null>(null);
+  /** El menú nombra las dos pantallas propias y las secciones de la portada con
+   *  la misma lista. Acá se separa: Nosotros y Contacto son pantallas; el resto,
+   *  scroll. */
+  const irAPantalla = (destino: string) => {
+    if (destino === "nosotros") return vista.irANosotros();
+    if (destino === "contacto") return vista.irAContacto();
+    irASeccion(destino);
+  };
+  const irASeccion = (id: string) => {
+    if (vista.enPortada) { scrollTo(id); return; }
+    setSeccionPendiente(id);
+    vista.irALaPortada();
+  };
+  useEffect(() => {
+    if (!seccionPendiente || !vista.enPortada) return;
+    const t = setTimeout(() => { scrollTo(seccionPendiente); setSeccionPendiente(null); }, 80);
+    return () => clearTimeout(t);
+  }, [seccionPendiente, vista.enPortada]);
 
   const categoryList = useMemo(() => {
     const cats = [...new Set(products.map(p => p.category).filter(c => c && c !== "general"))];
@@ -315,7 +399,9 @@ export default function Aurora() {
   function openInquiry(product: StorefrontProduct) {
     setModalProduct(null);
     setInquiryMessage(`Hola, me interesa "${product.name}". ¿Me podés dar más información?`);
-    setTimeout(() => scrollTo("contacto"), 100);
+    /* La consulta se contesta en la pantalla de Contacto, que ya no es una
+       sección de la portada: no alcanza con scrollear. */
+    setTimeout(() => vista.irAContacto(), 100);
   }
   function shareProduct(product: StorefrontProduct) {
     /* La dirección de verdad del producto, no `?p=<id>`. El porqué está escrito
@@ -415,8 +501,24 @@ export default function Aurora() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  /* Dos medidas, no una.
+
+     `isMobile` (<768) decide el DISEÑO de todo el template: las grillas, los
+     paddings, si el menú es hamburguesa. `navApretada` decide solo el aire DE LA
+     BARRA, y existe por una franja medida: entre 768 y 819 de ancho la barra usa
+     el diseño de escritorio y NO ENTRA. Medido en la Aurora de origin/main a 768:
+     el grupo de íconos de la derecha terminaba en 819 —51px afuera de la pantalla—
+     y dos botones quedaban inalcanzables: Favoritos y la cuenta.
+
+     No se sube el corte de `isMobile`: eso cambiaría el layout entero del template
+     en toda esa franja, que es la de una tablet parada. Lo que no entra es la
+     barra, así que se achica la barra. */
+  const [navApretada, setNavApretada] = useState(false);
   useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 768);
+    const check = () => {
+      setIsMobile(window.innerWidth < 768);
+      setNavApretada(window.innerWidth < 980);
+    };
     check();
     window.addEventListener("resize", check);
     return () => window.removeEventListener("resize", check);
@@ -559,30 +661,25 @@ export default function Aurora() {
   /* Los dos mazos del coverflow. Antes esto eran TRES baldosas de categoría
      elegidas a mano en el editor; ahora entran todas las que la tienda tenga de
      verdad, y el mazo se baraja con los destacados. */
-  const mazosVidriera = useMemo(() => {
+  /* Las FOTOS van memorizadas; los botones se atan afuera.
+     Están separados porque lo que cuesta es armar las piezas —recorrer los
+     productos y contar por categoría— y eso sólo cambia cuando cambia el
+     catálogo. En cambio `onElegir` ahora llama a `abrirCatalogo`, que nace de
+     nuevo en cada render (el hook de pantallas devuelve funciones nuevas cada
+     vez): metido adentro del memo lo obligaría a rehacerse siempre, y el aviso
+     del lint sería correcto. Atando el botón afuera, el memo mantiene su lista de
+     dependencias honesta y el trabajo caro se sigue salteando. */
+  const piezasVidriera = useMemo(() => {
     const conFoto = products.filter(p => p.images[0]);
-    const destacados = {
-      id: "destacados",
-      etiqueta: "Destacados",
-      onElegir: (id: string) => {
-        const p = products.find(x => x.id === id);
-        if (p) openModal(p);
-      },
-      piezas: conFoto.slice(0, 8).map(p => ({
+    return {
+      destacados: conFoto.slice(0, 8).map(p => ({
         id: p.id,
         imagen: p.images[0],
         titulo: p.name,
         subtitulo: ocultarPrecios ? "Consultá precio" : fmt(p.price),
         etiqueta: p.category && p.category !== "general" ? p.category : undefined,
       })),
-    };
-    const categorias = {
-      id: "categorias",
-      etiqueta: "Categorías",
-      onElegir: (cat: string) => {
-        window.location.href = `/tienda/${storeConfig?.slug}/productos?${isPreview ? "t=aurora&from=editor&" : ""}categoria=${encodeURIComponent(cat)}`;
-      },
-      piezas: categoriasBaldosa
+      categorias: categoriasBaldosa
         .map(cat => {
           const dela = conFoto.find(p => p.category === cat);
           const cuantos = products.filter(p => p.category === cat).length;
@@ -594,9 +691,29 @@ export default function Aurora() {
         // fotos: quedaría un panel gris en el medio de la fila.
         .filter((x): x is NonNullable<typeof x> => x !== null),
     };
-    // Un mazo vacío no se ofrece: el botón para cambiar de mazo llevaría a nada.
-    return [destacados, categorias].filter(m => m.piezas.length > 0);
-  }, [products, categoriasBaldosa, ocultarPrecios, openModal, storeConfig?.slug, isPreview, fmt]);
+  }, [products, categoriasBaldosa, ocultarPrecios, fmt]);
+
+  /* Un arreglo nuevo por render no le mueve nada a `Coverflow`: en qué mazo y en
+     qué tarjeta está parado lo guarda en `useState`, y sus dos efectos van con
+     lista de dependencias vacía. Se miró antes de dejarlo así.
+     Un mazo vacío no se ofrece: el botón para cambiar de mazo llevaría a nada. */
+  const mazosVidriera = [
+    {
+      id: "destacados",
+      etiqueta: "Destacados",
+      onElegir: (id: string) => {
+        const p = products.find(x => x.id === id);
+        if (p) openModal(p);
+      },
+      piezas: piezasVidriera.destacados,
+    },
+    {
+      id: "categorias",
+      etiqueta: "Categorías",
+      onElegir: (cat: string) => abrirCatalogo({ categoria: cat }),
+      piezas: piezasVidriera.categorias,
+    },
+  ].filter(m => m.piezas.length > 0);
 
   const scn = storeConfig?.sectionColors ?? {};
   const garantiasBg    = scn["bgGarantias"]   ?? BG;
@@ -628,7 +745,15 @@ export default function Aurora() {
   const contactoInputBorder = contactoText === T ? "rgba(201,168,76,0.2)" : "rgba(0,0,0,0.12)";
 
   return (
-    <div style={{ fontFamily:"'Helvetica Neue', Arial, sans-serif", background:BG, color:T, minHeight:"100vh" }}>
+    /* `data-template-raiz`: de acá arranca `useVistaTemplate` para encontrar quién
+       scrollea de verdad. En la tienda es la ventana; en el EDITOR el template vive
+       adentro de un panel con scroll propio, y sin esto el catálogo aparecía a
+       mitad de página, con el título arriba fuera de vista. */
+    <div data-template-raiz style={{ fontFamily:"'Helvetica Neue', Arial, sans-serif", background:BG, color:T, minHeight:"100vh",
+      /* Dos toques seguidos en un botón que cambia de pantalla terminaban adentro
+         de cualquier cosa: la pantalla cambia al instante y abajo del dedo queda
+         otra. Ver el candado en `useVistaTemplate`. */
+      pointerEvents: vista.cambiandoPantalla ? "none" : undefined }}>
       <style>{`
         .au-ofertas-row { scrollbar-width:none }
         .au-ofertas-row::-webkit-scrollbar { display:none }
@@ -722,9 +847,9 @@ export default function Aurora() {
         {/* Sin el `maxWidth:1280`: el nav va de borde a borde, como el hero que
             tiene pegado abajo. Ver el comentario largo en `ChicParis.tsx`, que es la
             misma decisión para los tres templates. */}
-        <div style={{ padding:"0 32px", height:72, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+        <div style={{ padding: navApretada ? "0 14px" : "0 32px", height:72, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
           <div style={{ display:"flex", alignItems:"center", gap:8, flexShrink:0 }}>
-            <button onClick={() => scrollTo("hero")} style={{ background:"none", border:"none", cursor:"pointer", fontFamily:"inherit", fontSize:22, fontWeight:300, letterSpacing:7, color:T, maxWidth:220, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+            <button onClick={() => irASeccion("hero")} style={{ background:"none", border:"none", cursor:"pointer", fontFamily:"inherit", fontSize: navApretada ? 17 : 22, fontWeight:300, letterSpacing: navApretada ? 3 : 7, color:T, maxWidth: navApretada ? 150 : 220, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
               <EditableZone field="storeName" label="Nombre de la tienda">{storeConfig?.storeName ?? "AURORA"}</EditableZone>
             </button>
             <VerifiedIconButton isVerified={storeConfig?.isVerified} info={storeConfig?.verifiedInfo} />
@@ -735,7 +860,7 @@ export default function Aurora() {
               todo. El `marginLeft:auto` se come el espacio libre antes de que el
               `space-between` reparta, así que el grupo termina pegado al de la
               derecha. Cambia dónde se apoya el menú, no el menú. */}
-          {!isMobile && <div style={{ display:"flex", gap:28, alignItems:"center",
+          {!isMobile && <div style={{ display:"flex", gap: navApretada ? 16 : 28, alignItems:"center", minWidth:0,
             ...(generosParaElMenu ? {} : { marginLeft:"auto", marginRight:28 }) }}>
             {/* CATEGORÍAS dropdown */}
             <div style={{ position:"relative" }}
@@ -758,7 +883,7 @@ export default function Aurora() {
                         return (
                           <button key={cat}
                             onMouseEnter={() => setHoveredNavCat(cat)}
-                            onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?${isPreview ? "t=aurora&from=editor&" : ""}categoria=${encodeURIComponent(cat)}`; setHoveredNavCat(null); }}
+                            onClick={() => { abrirCatalogo({ categoria: cat }); setHoveredNavCat(null); }}
                             style={{ display:"flex", alignItems:"center", justifyContent:"space-between", width:"100%", background: activeCat===cat ? "rgba(201,168,76,0.08)" : "none", border:"none", color: activeCat===cat ? G : T, padding:"9px 18px", fontSize:11, textAlign:"left", cursor:"pointer", letterSpacing:2, textTransform:"uppercase", transition:"background 0.15s" }}>
                             {cat}
                             {subs.length > 0 && <span style={{ opacity:0.5, fontSize:10 }}>›</span>}
@@ -771,7 +896,7 @@ export default function Aurora() {
                       <div style={{ minWidth:190, padding:"10px 0" }}>
                         <p style={{ margin:0, padding:"4px 18px 8px", fontSize:9, letterSpacing:2, textTransform:"uppercase", color:"rgba(201,168,76,0.55)" }}>{activeCat}</p>
                         {activeSubs.map(sub => (
-                          <button key={sub} onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?${isPreview ? "t=aurora&from=editor&" : ""}categoria=${encodeURIComponent(activeCat ?? "")}&subcategoria=${encodeURIComponent(sub)}`; setHoveredNavCat(null); }}
+                          <button key={sub} onClick={() => { abrirCatalogo({ categoria: activeCat ?? "", subcategoria: sub }); setHoveredNavCat(null); }}
                             style={{ display:"block", width:"100%", background:"none", border:"none", color:T, padding:"8px 18px", fontSize:11, textAlign:"left", cursor:"pointer", letterSpacing:1, textTransform:"uppercase", transition:"background 0.15s" }}
                             onMouseEnter={e => (e.currentTarget.style.background="rgba(201,168,76,0.08)")}
                             onMouseLeave={e => (e.currentTarget.style.background="none")}>
@@ -787,14 +912,14 @@ export default function Aurora() {
             {generosParaElMenu && (
               <>
                 {/* MUJER */}
-                <button onClick={() => { changeGender(activeGender === "mujer" ? null : "mujer"); scrollTo("productos"); }}
+                <button onClick={() => { changeGender(activeGender === "mujer" ? null : "mujer"); irASeccion("productos"); }}
                   style={{ background:"none", border:"none", fontSize:11, letterSpacing:3, cursor:"pointer", fontWeight:500, textTransform:"uppercase", transition:"opacity 0.2s, color 0.2s", color: activeGender==="mujer" ? G : T, opacity: activeGender==="mujer" ? 1 : 0.8, ...esperandoGeneros }}
                   onMouseEnter={e => { e.currentTarget.style.opacity="1"; if(activeGender!=="mujer") e.currentTarget.style.color=G; }}
                   onMouseLeave={e => { e.currentTarget.style.opacity=activeGender==="mujer"?"1":"0.8"; if(activeGender!=="mujer") e.currentTarget.style.color=T; }}>
                   Mujer
                 </button>
                 {/* HOMBRE */}
-                <button onClick={() => { changeGender(activeGender === "hombre" ? null : "hombre"); scrollTo("productos"); }}
+                <button onClick={() => { changeGender(activeGender === "hombre" ? null : "hombre"); irASeccion("productos"); }}
                   style={{ background:"none", border:"none", fontSize:11, letterSpacing:3, cursor:"pointer", fontWeight:500, textTransform:"uppercase", transition:"opacity 0.2s, color 0.2s", color: activeGender==="hombre" ? G : T, opacity: activeGender==="hombre" ? 1 : 0.8, ...esperandoGeneros }}
                   onMouseEnter={e => { e.currentTarget.style.opacity="1"; if(activeGender!=="hombre") e.currentTarget.style.color=G; }}
                   onMouseLeave={e => { e.currentTarget.style.opacity=activeGender==="hombre"?"1":"0.8"; if(activeGender!=="hombre") e.currentTarget.style.color=T; }}>
@@ -804,7 +929,7 @@ export default function Aurora() {
             )}
             {/* NOSOTROS / CONTACTO */}
             {[["Nosotros","nosotros"],["Contacto","contacto"]].map(([label, target]) => (
-              <button key={label} onClick={() => scrollTo(target)}
+              <button key={label} onClick={() => irAPantalla(target)}
                 style={{ background:"none", border:"none", color:T, fontSize:11, letterSpacing:3, cursor:"pointer", fontWeight:500, textTransform:"uppercase", opacity:0.8, transition:"opacity 0.2s, color 0.2s" }}
                 onMouseEnter={e => { e.currentTarget.style.opacity="1"; e.currentTarget.style.color=G; }}
                 onMouseLeave={e => { e.currentTarget.style.opacity="0.8"; e.currentTarget.style.color=T; }}>
@@ -812,7 +937,7 @@ export default function Aurora() {
               </button>
             ))}
           </div>}
-          <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+          <div style={{ display:"flex", alignItems:"center", gap: navApretada ? 4 : 12, flexShrink:0 }}>
             {/* Search icon */}
             <button onClick={() => setSearchOpen(true)} aria-label="Buscar" style={{ background:"none", border:"none", color:T, cursor:"pointer", padding:4, display:"flex", alignItems:"center" }}>
               <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
@@ -925,7 +1050,7 @@ export default function Aurora() {
                       if (subs.length > 0) {
                         setMobileOpenCat(prev => prev === cat ? null : cat);
                       } else {
-                        window.location.href = `/tienda/${storeConfig?.slug}/productos?${isPreview ? "t=aurora&from=editor&" : ""}categoria=${encodeURIComponent(cat)}`;
+                        abrirCatalogo({ categoria: cat });
                         setMobileMenuOpen(false); setMobileCatsOpen(false);
                       }
                     }} style={{ display:"flex", width:"100%", background:"rgba(201,168,76,0.03)", border:"none", borderBottom:`1px solid rgba(201,168,76,0.07)`, color: activeCategory===cat ? G : T, padding:"13px 24px 13px 40px", fontSize:11, textAlign:"left", cursor:"pointer", letterSpacing:3, textTransform:"uppercase", alignItems:"center", justifyContent:"space-between" }}>
@@ -933,7 +1058,7 @@ export default function Aurora() {
                       {subs.length > 0 && <span style={{ fontSize:12, opacity:0.5, transition:"transform 0.2s", transform: mobileOpenCat===cat ? "rotate(90deg)" : "none", display:"inline-block" }}>›</span>}
                     </button>
                     {subs.length > 0 && mobileOpenCat === cat && subs.map(sub => (
-                      <button key={sub} onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?${isPreview ? "t=aurora&from=editor&" : ""}categoria=${encodeURIComponent(cat)}&subcategoria=${encodeURIComponent(sub)}`; setMobileMenuOpen(false); setMobileCatsOpen(false); setMobileOpenCat(null); }}
+                      <button key={sub} onClick={() => { abrirCatalogo({ categoria: cat, subcategoria: sub }); setMobileMenuOpen(false); setMobileCatsOpen(false); setMobileOpenCat(null); }}
                         style={{ display:"block", width:"100%", background:"rgba(201,168,76,0.05)", border:"none", borderBottom:`1px solid rgba(201,168,76,0.05)`, color: activeSubcategory===sub ? G : "rgba(240,235,227,0.7)", padding:"11px 24px 11px 60px", fontSize:11, textAlign:"left", cursor:"pointer", letterSpacing:2, textTransform:"uppercase" }}>
                         {sub}
                       </button>
@@ -944,13 +1069,13 @@ export default function Aurora() {
             </>
           )}
           {hayGeneros && [["Mujer","mujer"],["Hombre","hombre"]].map(([label, g]) => (
-            <button key={g} onClick={() => { changeGender(activeGender===g ? null : g); scrollTo("productos"); setMobileMenuOpen(false); }}
+            <button key={g} onClick={() => { changeGender(activeGender===g ? null : g); irASeccion("productos"); setMobileMenuOpen(false); }}
               style={{ display:"block", width:"100%", background:"none", border:"none", borderBottom:`1px solid rgba(201,168,76,0.1)`, color: activeGender===g ? G : T, padding:"16px 24px", fontSize:12, textAlign:"left", cursor:"pointer", letterSpacing:3, textTransform:"uppercase" }}>
               {label}
             </button>
           ))}
           {[["Nosotros","nosotros"],["Contacto","contacto"]].map(([label, target]) => (
-            <button key={target} onClick={() => { scrollTo(target); setMobileMenuOpen(false); }}
+            <button key={target} onClick={() => { irAPantalla(target); setMobileMenuOpen(false); }}
               style={{ display:"block", width:"100%", background:"none", border:"none", borderBottom:`1px solid rgba(201,168,76,0.1)`, color:"rgba(240,235,227,0.6)", padding:"16px 24px", fontSize:12, textAlign:"left", cursor:"pointer", letterSpacing:3, textTransform:"uppercase" }}>
               {label}
             </button>
@@ -972,6 +1097,10 @@ export default function Aurora() {
           Si la tienda no subió ninguna, se usan las fotos de sus propios
           productos. Nunca una de stock: una imagen de un desconocido haciéndose
           pasar por la colección es peor que no tener foto. */}
+      {/* Desde acá hasta el pie es la PORTADA. El catálogo, Nosotros y Contacto
+          se dibujan más abajo, entre la misma barra y el mismo pie. */}
+      {vista.enPortada && (<>
+
       <section id="hero" style={{ position:"relative" }}>
         <BgDragHandle imgKey="sectionbg_bgHero" />
         <EditableSectionBg field="bgHero" label="Fondo hero" nombreBloque="Banner principal" />
@@ -992,14 +1121,14 @@ export default function Aurora() {
           acciones={
             <>
               {(editMode || !storeConfig?.textOverrides?.["heroCta"]?.hidden) && (
-                <button onClick={() => scrollTo("productos")} style={{ background:G, color:textoSobreAcento, border:"none", borderRadius:999, padding:"15px 38px", fontSize:11, letterSpacing:2.5, fontWeight:600, textTransform:"uppercase", cursor:"pointer", boxShadow:sombra("oscuro",2) }}>
+                <button onClick={() => irASeccion("productos")} style={{ background:G, color:textoSobreAcento, border:"none", borderRadius:999, padding:"15px 38px", fontSize:11, letterSpacing:2.5, fontWeight:600, textTransform:"uppercase", cursor:"pointer", boxShadow:sombra("oscuro",2) }}>
                   <EditableZone field="heroCta" label="Botón principal">Ver Colección</EditableZone>
                 </button>
               )}
               {(editMode || !storeConfig?.textOverrides?.["heroCtaSecondary"]?.hidden) && (
                 // El secundario es de vidrio: deja ver la foto a través, así que
                 // se apoya en el fondo en vez de taparlo.
-                <button onClick={() => scrollTo("nosotros")} style={{ ...vidrio("oscuro"), color:T, borderRadius:999, padding:"15px 38px", fontSize:11, letterSpacing:2.5, fontWeight:500, textTransform:"uppercase", cursor:"pointer" }}>
+                <button onClick={vista.irANosotros} style={{ ...vidrio("oscuro"), color:T, borderRadius:999, padding:"15px 38px", fontSize:11, letterSpacing:2.5, fontWeight:500, textTransform:"uppercase", cursor:"pointer" }}>
                   <EditableZone field="heroCtaSecondary" label="Botón secundario">Nuestra Historia</EditableZone>
                 </button>
               )}
@@ -1056,7 +1185,7 @@ export default function Aurora() {
             <p style={{ fontSize:14, color:"rgba(240,235,227,0.55)", maxWidth:480, margin:0, lineHeight:1.7 }}>
               Precios exclusivos para revendedores y distribuidores. Completá el formulario de contacto y te respondemos con tu lista personalizada en menos de 24 hs.
             </p>
-            <button onClick={() => scrollTo("contacto")}
+            <button onClick={vista.irAContacto}
               style={{ background:G, color:BG, border:"none", padding:"14px 40px", fontSize:11, fontWeight:700, letterSpacing:4, textTransform:"uppercase", cursor:"pointer", borderRadius:2, marginTop:4 }}>
               Consultar ahora →
             </button>
@@ -1204,12 +1333,14 @@ export default function Aurora() {
             Mostrando {Math.min(visibleCount, allFiltered.length)} de {allFiltered.length} piezas
           </p>
           <div style={{ display:"flex", gap:12, justifyContent:"center", flexWrap:"wrap" }}>
-            <a href={`/tienda/${storeConfig?.slug ?? ""}/productos${isPreview ? "?t=aurora&from=editor" : ""}`}
-              style={{ background:G, color:BG, border:`1px solid ${productosText}`, padding:"14px 36px", fontSize:11, letterSpacing:3, textTransform:"uppercase", fontWeight:700, cursor:"pointer", textDecoration:"none", display:"inline-block", transition:"opacity 0.2s" }}
-              onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.opacity="0.85"; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.opacity="1"; }}>
+            {/* Botón y no `<a href>`: el link iba a otra página y recargaba todo.
+                Queda al lado del "Ver más", que ya era un botón. */}
+            <button onClick={() => abrirCatalogo()}
+              style={{ background:G, color:BG, border:`1px solid ${productosText}`, padding:"14px 36px", fontSize:11, letterSpacing:3, textTransform:"uppercase", fontWeight:700, cursor:"pointer", fontFamily:"inherit", display:"inline-block", transition:"opacity 0.2s" }}
+              onMouseEnter={e => { e.currentTarget.style.opacity="0.85"; }}
+              onMouseLeave={e => { e.currentTarget.style.opacity="1"; }}>
               Ver toda la colección →
-            </a>
+            </button>
           </div>
         </div>
         </div>
@@ -1272,7 +1403,7 @@ export default function Aurora() {
               </div>
               {hasMore && (
                 <div style={{ maxWidth:1280, margin:"0 auto", padding: isMobile ? "0 16px" : "0 32px", textAlign:"center", marginTop:32 }}>
-                  <button onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?${isPreview ? "t=aurora&from=editor&" : ""}oferta=true`; }}
+                  <button onClick={() => { abrirCatalogo({ soloOfertas: true }); }}
                     style={{ background:"none", border:`1px solid rgba(201,168,76,0.4)`, color:G, padding:"12px 32px", fontSize:11, letterSpacing:3, textTransform:"uppercase", cursor:"pointer" }}><EditableZone field="ofertasCta" label="Botón ver todas las ofertas">Ver todas las ofertas</EditableZone></button>
                 </div>
               )}
@@ -1325,7 +1456,7 @@ export default function Aurora() {
                 </div>
                 {hasMore && (
                   <div style={{ textAlign:"center", marginTop:32 }}>
-                    <button onClick={() => { window.location.href = `/tienda/${storeConfig?.slug}/productos?${isPreview ? "t=aurora&from=editor&" : ""}destacado=true`; }}
+                    <button onClick={() => { abrirCatalogo({ masVistos: true }); }}
                       style={{ background:"none", border:`1px solid rgba(201,168,76,0.4)`, color:G, padding:"12px 32px", fontSize:11, letterSpacing:3, textTransform:"uppercase", cursor:"pointer" }}><EditableZone field="masVistoCta" label="Botón ver más">Ver más</EditableZone></button>
                   </div>
                 )}
@@ -1425,8 +1556,42 @@ export default function Aurora() {
           );
         })()}
       </SectionBlock>
+      {/* Cierra el `flex column` que abre despues del hero y que le da el orden a
+          los bloques. Antes cerraba despues de Contacto; ahora Contacto y Nosotros
+          son pantallas propias y no bloques, asi que cierra con el ultimo bloque. */}
+      </div>
 
-      <SectionBlock id="au-nosotros" label="Nuestra historia" isPreview={isPreview} defaultOrder={AU_SECTION_IDS}>
+      </>)}
+
+      {/* ── EL CATÁLOGO, acá adentro ────────────────────────────────────────────
+          Antes esto era otra página. Ahora se dibuja entre la barra y el pie de
+          Aurora, con su propio vestido: `CatalogoGenerico` ya tiene tema para este
+          template, así que embebido se ve igual que suelto, menos las dos cosas que
+          acá sobran —su barra y su pie— que ya están puestas arriba y abajo. */}
+      {vista.enCatalogo && (
+        <div style={{ paddingTop: isPreview ? 0 : 72 + announcementBarHeight }}>
+          <div style={{ maxWidth:1280, margin:"0 auto", padding:"18px clamp(16px,4vw,32px) 0" }}>
+            <BotonVolver onClick={vista.irALaPortada} destino="Volver a la tienda"
+              S={S} LN="rgba(201,168,76,0.2)" T={T} G={G} />
+          </div>
+          <CatalogoGenerico key={claveCatalogo} embebido={{ ...filtroEfectivo, slug: storeConfig?.slug ?? "", template: "aurora",
+            sinPie: true, sinBarra: true, enEditor: isPreview, acento: G,
+            /* Los modales del catálogo comparten pantalla con la barra de este
+               template, así que tienen que quedar por encima de ella. */
+            capaModal: isPreview ? CAPAS.previaModal : CAPAS.modalTemplate }} />
+        </div>
+      )}
+
+      {/* ── NOSOTROS, acá adentro ─────────────────────────────────────────
+          Antes era una sección más de la portada, a la que se llegaba scrolleando.
+          Ahora es su propia pantalla, con su dirección, igual que en Aire: se puede
+          compartir el link y se puede volver. */}
+      {vista.enNosotros && (
+        <div style={{ paddingTop: isPreview ? 0 : 72 + announcementBarHeight }}>
+          <div style={{ maxWidth:1280, margin:"0 auto", padding:"18px clamp(16px,4vw,32px) 0" }}>
+            <BotonVolver onClick={vista.irALaPortada} destino="Volver a la tienda"
+              S={S} LN="rgba(201,168,76,0.2)" T={T} G={G} />
+          </div>
       {/* ── NOSOTROS ───────────────────────────────────────── */}
       <section id="nosotros" data-reveal style={{ borderTop:`1px solid rgba(201,168,76,0.1)` }}>
         <div style={{ maxWidth:1280, margin:"0 auto", display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr" }}>
@@ -1463,9 +1628,19 @@ export default function Aurora() {
           </div>
         </div>
       </section>
-      </SectionBlock>
+        </div>
+      )}
 
-      <SectionBlock id="au-contacto" label="Contacto" isPreview={isPreview} defaultOrder={AU_SECTION_IDS}>
+      {/* ── CONTACTO, acá adentro ─────────────────────────────────────────
+          Antes era una sección más de la portada, a la que se llegaba scrolleando.
+          Ahora es su propia pantalla, con su dirección, igual que en Aire: se puede
+          compartir el link y se puede volver. */}
+      {vista.enContacto && (
+        <div style={{ paddingTop: isPreview ? 0 : 72 + announcementBarHeight }}>
+          <div style={{ maxWidth:1280, margin:"0 auto", padding:"18px clamp(16px,4vw,32px) 0" }}>
+            <BotonVolver onClick={vista.irALaPortada} destino="Volver a la tienda"
+              S={S} LN="rgba(201,168,76,0.2)" T={T} G={G} />
+          </div>
       {/* ── CONTACTO ───────────────────────────────────────── */}
       <section id="contacto" data-reveal style={{ position:"relative", borderTop:`1px solid rgba(201,168,76,0.1)`, color:contactoText, ...(contactoBgImg?.url ? { backgroundImage:`url(${contactoBgImg.url})`, backgroundSize:"cover", backgroundPosition:`${contactoBgImg.posX ?? 50}% ${contactoBgImg.posY ?? 50}%` } : { background:contactoBg }) }}>
         <BgDragHandle imgKey="sectionbg_bgContacto" />
@@ -1511,10 +1686,9 @@ export default function Aurora() {
           />
         </div>
       </section>
-      </SectionBlock>
-      </div>
+        </div>
+      )}
 
-      {/* ── FOOTER ─────────────────────────────────────────── */}
       <footer style={{ borderTop:`1px solid rgba(201,168,76,0.12)`, marginTop:0, position:"relative", color:footerText, ...(footerBgImg?.url ? { backgroundImage:`url(${footerBgImg.url})`, backgroundSize:"cover", backgroundPosition:`${footerBgImg.posX ?? 50}% ${footerBgImg.posY ?? 50}%` } : { background:footerBg }) }}>
         <BgDragHandle imgKey="sectionbg_bgFooter" />
         <EditableSectionBg field="bgFooter" label="Fondo footer" nombreBloque="Pie de la tienda" />
@@ -1522,9 +1696,30 @@ export default function Aurora() {
           <div style={{ position:"absolute", inset:0, zIndex:0, pointerEvents:"none", background: footerBgImg.overlayType === "light" ? `rgba(255,255,255,${footerBgImg.overlayOpacity ?? 0.5})` : `rgba(0,0,0,${footerBgImg.overlayOpacity ?? 0.45})` }} />
         )}
         <div style={{ padding: isMobile ? "40px 20px 20px" : "60px 32px 32px", position:"relative", zIndex:1 }}>
-        <div style={{ maxWidth:1280, margin:"0 auto", display:"grid", gridTemplateColumns: isMobile ? "1fr" : "2fr 1fr 1fr 1.5fr", gap: isMobile ? 28 : 48, marginBottom:40 }}>
+        {/* El pie se acomoda solo, en vez de tener proporciones fijas.
+              Eran cuatro columnas de 2fr 1fr 1fr 1.5fr y no entraban: medido, la pagina se
+              podia arrastrar de costado 96px a 768 de ancho y 57px a 980. Cada vez que se
+              corregia el corte aparecia otro ancho roto, que es lo que pasa cuando se tapa
+              un desborde con un numero en vez de dejar que el contenido mande.
+              `auto-fit` con un minimo de 210px pone las columnas que entren: cuatro en un
+              monitor, dos en una tablet, una en el celular, sin que nadie elija el ancho.
+              Se pierde el enfasis que tenia la columna de la marca (era mas ancha) y se
+              gana que no se rompe.
+              QUEDA ABIERTO: entre 1099 y 1101 de ancho, y SOLO en la pantalla de Contacto,
+              la pagina todavia se arrastra 39px. Se aislo hasta esta primera columna —
+              escondiendola el arrastre da cero, y escondiendo cualquiera de sus tres hijos
+              por separado no—, pero no se encontro que la desborda: medida por medida sus
+              cajas entran en la pista de 229px. Antes de este cambio esa franja arrastraba
+              25px, o sea que empeoro 14px ahi y mejoro 96 y 57 en dos anchos comunes. */}
+        <div style={{ maxWidth:1280, margin:"0 auto", display:"grid", gridTemplateColumns: isMobile ? "minmax(0,1fr)" : "repeat(auto-fit, minmax(210px, 1fr))", gap: isMobile ? 28 : 40, marginBottom:40 }}>
           <div>
-            <span style={{ fontFamily:"Georgia, serif", fontSize:28, fontWeight:700, letterSpacing:6, color:G, display:"block", marginBottom:16 }}><EditableZone field="footerBrandName" label="Nombre en footer">AURORA</EditableZone></span>
+            {/* `overflowWrap:"anywhere"`: el nombre de la tienda es UNA palabra y a 28px con 6
+                de espaciado mide mas que la columna que le toca. Una palabra sola no se parte
+                por su cuenta, asi que empujaba la grilla y la pagina se arrastraba de
+                costado: medido, 39px a 1100 de ancho. Ahora se parte antes que romper la
+                pagina. Un nombre largo va a quedar en dos renglones, que es feo pero se lee;
+                arrastrar la pagina para el costado no se lee. */}
+            <span style={{ fontFamily:"Georgia, serif", fontSize:28, fontWeight:700, letterSpacing:6, color:G, display:"block", marginBottom:16, maxWidth:"100%", overflowWrap:"anywhere" }}><EditableZone field="footerBrandName" label="Nombre en footer">AURORA</EditableZone></span>
             <p style={{ fontSize:13, opacity:0.45, lineHeight:1.8, maxWidth:260 }}>
               <EditableZone field="footerDescription" label="Descripción del footer">Piezas de calidad para personas que saben lo que quieren. Diseño atemporal, confección impecable.</EditableZone>
             </p>
@@ -1551,7 +1746,7 @@ export default function Aurora() {
             <div key={col.title}>
               <p style={{ fontSize:10, letterSpacing:4, color:G, textTransform:"uppercase", marginBottom:20, fontWeight:700 }}>{col.title}</p>
               {col.links.map(([label, target]) => (
-                <p key={label} onClick={() => scrollTo(target)} style={{ fontSize:13, opacity:0.45, marginBottom:10, cursor:"pointer", transition:"opacity 0.2s" }}
+                <p key={label} onClick={() => irAPantalla(target)} style={{ fontSize:13, opacity:0.45, marginBottom:10, cursor:"pointer", transition:"opacity 0.2s" }}
                   onMouseEnter={e => (e.currentTarget.style.opacity="0.9")}
                   onMouseLeave={e => (e.currentTarget.style.opacity="0.45")}>
                   {label}
@@ -2089,9 +2284,14 @@ export default function Aurora() {
       <CartDrawer cart={cart} theme={cartTheme} isOwner={isOwner} isPreview={isPreview} whatsapp={storeConfig?.whatsapp} />
 
       {/* ── FAVORITES DRAWER ───────────────────────────────── */}
-      <div style={{ position:"fixed", inset:0, zIndex: isPreview ? CAPAS.previaModal : 155, pointerEvents: favoritesOpen ? "auto" : "none" }}>
+      {/* `overflow:hidden`: el panel de favoritos vive corrido a la derecha cuando esta
+          cerrado (`translateX(100%)`), y asi estirava el ancho de la pagina. Medido en
+          la pantalla de Contacto a 768: 96px de arrastre lateral. Recortarlo no tapa
+          nada — abierto el panel entra entero — y el cajon del carrito, que es
+          compartido, ya usa `min(420px,100vw)` por lo mismo. */}
+      <div style={{ position:"fixed", inset:0, overflow:"hidden", zIndex: isPreview ? CAPAS.previaModal : 155, pointerEvents: favoritesOpen ? "auto" : "none" }}>
         <div onClick={() => setFavoritesOpen(false)} style={{ position:"absolute", inset:0, background:"rgba(10,10,10,0.6)", opacity: favoritesOpen ? 1 : 0, transition:"opacity 0.3s" }}/>
-        <div style={{ position:"absolute", top:0, right:0, bottom:0, width:420, background:S, transform: favoritesOpen ? "translateX(0)" : "translateX(100%)", transition:"transform 0.35s cubic-bezier(.4,0,.2,1)", display:"flex", flexDirection:"column" }}>
+        <div style={{ position:"absolute", top:0, right:0, bottom:0, width:"min(420px, 100vw)", background:S, transform: favoritesOpen ? "translateX(0)" : "translateX(100%)", transition:"transform 0.35s cubic-bezier(.4,0,.2,1)", display:"flex", flexDirection:"column" }}>
           <div style={{ padding:"24px 24px 16px", borderBottom:`1px solid rgba(240,235,227,0.07)`, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
             <p style={{ fontFamily:"Georgia, serif", fontSize:18, margin:0 }}>{"Favoritos"} <span style={{ fontSize:13, color:"#555" }}>({favorites.length})</span></p>
             <button onClick={() => setFavoritesOpen(false)} style={{ background:"none", border:"none", color:T, fontSize:24, cursor:"pointer", lineHeight:1 }}>×</button>

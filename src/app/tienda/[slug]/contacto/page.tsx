@@ -52,7 +52,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
  *
  * "fashion-noir" está por lo mismo que en el registro de templates: es el id
  * viejo de Aire y hay tiendas cuyo JSON todavía lo dice. */
-const CON_PANTALLA_DE_CONTACTO = new Set(["aire", "fashion-noir"]);
+const CON_PANTALLA_DE_CONTACTO = new Set(["aire", "fashion-noir", "aurora"]);
 
 export default async function ContactoPage(props: Props) {
   const { slug } = await props.params;
