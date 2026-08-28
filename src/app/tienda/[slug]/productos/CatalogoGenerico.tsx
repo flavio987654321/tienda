@@ -355,7 +355,7 @@ type Theme = {
   border: string; borderFaint: string; inputBorder: string; inputBg: string;
   serif: string; sans: string; dark: boolean;
   // Estilo visual per-template para los elementos diferenciadores (Moda)
-  tabStyle?: "default" | "pill" | "underline" | "brutalist";
+  tabStyle?: "default" | "pill" | "underline" | "brutalist" | "vidrio";
   cardRadius?: number;
   titleStyle?: "editorial" | "organic" | "minimal" | "bold";
   inputRadius?: number;
@@ -412,6 +412,26 @@ const THEMES: Record<string, Theme> = {
       mini: { w: 52, h: 52, gap: 8, grueso: false, padCel: "10px 14px 0" },
       chipTalle: 46, chipColorPad: "6px 14px",
     },
+  },
+  /* Aurora NO TENÍA TEMA, y es el bug más silencioso de esta tabla:
+     `THEMES[template] ?? THEMES["aire"]` hace que un template sin entrada abra su
+     catálogo con la ropa de Aire. Aurora es el template OSCURO —fondo #06070d— y
+     su catálogo salía en el beige claro de Aire (#f4f4f1), con la tinta casi negra
+     y el verde de Aire de acento.
+
+     Medido: la barra de Aurora en rgb(6,7,13) y, tres píxeles más abajo, el
+     catálogo en beige. La misma tienda cambiaba de color a mitad de pantalla.
+
+     Los valores salen de `Aurora.tsx` uno por uno, no unos parecidos: BG #06070d,
+     S #0e0f1a, T #f2f2f7 y el violeta #8b5cf6 de fábrica (que igual lo pisa el
+     acento que haya elegido la dueña). Los bordes van con el dorado del template
+     —rgba(201,168,76,…)—, que es su hilo fino de siempre. */
+  "aurora": {
+    BG:"#06070d", S:"#0e0f1a", T:"#f2f2f7", G:"#8b5cf6", MID:"#8b8f9a",
+    border:"rgba(201,168,76,0.18)", borderFaint:"rgba(242,242,247,0.07)",
+    inputBorder:"rgba(201,168,76,0.25)", inputBg:"rgba(255,255,255,0.05)",
+    serif:"Georgia, serif", sans:"'Helvetica Neue', Arial, sans-serif", dark:true,
+    tabStyle:"vidrio", cardRadius:18, titleStyle:"editorial", inputRadius:14,
   },
   "chic-paris": {
     BG:"#f9f9f7", S:"#f0eeea", T:"#1a1a1a", G:"#5e7c6f", MID:"#999",
@@ -1415,7 +1435,16 @@ function ProductosPageInner({ embebido }: { embebido?: CatalogoEmbebido }) {
             const useDetailPage = DETAIL_PAGE_TEMPLATES.includes(template);
 
             // ── Estilos per-template del wrapper de tarjeta ──────────────────
-            const cardWrapperBase: React.CSSProperties = tabStyle === "pill"
+            const cardWrapperBase: React.CSSProperties = tabStyle === "vidrio"
+              /* Sin borde y sin caja: la foto ES la tarjeta. El único cuerpo es un
+                 vidrio apenas levantado del fondo, que es de lo que está hecho
+                 Aurora entero. Los otros cuatro dibujan un rectángulo con la foto
+                 arriba y el texto abajo; acá no hay rectángulo que dibujar. */
+              ? { borderRadius:cardRadius, overflow:"hidden", position:"relative",
+                  background:"rgba(255,255,255,0.04)",
+                  boxShadow:"0 10px 30px rgba(0,0,0,0.45)",
+                  transition:"transform 0.35s cubic-bezier(.2,.8,.2,1), box-shadow 0.35s" }
+              : tabStyle === "pill"
               ? { borderRadius:cardRadius, overflow:"hidden", transition:"transform 0.3s, box-shadow 0.3s" }
               : tabStyle === "brutalist"
               ? { border:`2px solid ${border}`, overflow:"hidden", transition:"border-color 0.15s, box-shadow 0.15s" }
@@ -1425,14 +1454,17 @@ function ProductosPageInner({ embebido }: { embebido?: CatalogoEmbebido }) {
 
             const onCardEnter = (e: React.MouseEvent<HTMLDivElement>) => {
               const el = e.currentTarget;
-              if (tabStyle === "pill") { el.style.transform="translateY(-5px)"; el.style.boxShadow=`0 14px 32px ${dark?"rgba(0,0,0,0.3)":"rgba(44,34,24,0.14)"}`; }
+              /* Se levanta y la sombra se abre: la pieza se acerca en el espacio,
+                 no cambia de color. Es el mismo gesto que la vidriera del hero. */
+              if (tabStyle === "vidrio") { el.style.transform="translateY(-6px)"; el.style.boxShadow="0 22px 50px rgba(0,0,0,0.6)"; }
+              else if (tabStyle === "pill") { el.style.transform="translateY(-5px)"; el.style.boxShadow=`0 14px 32px ${dark?"rgba(0,0,0,0.3)":"rgba(44,34,24,0.14)"}`; }
               else if (tabStyle === "brutalist") { el.style.borderColor=chipBg; el.style.boxShadow=`4px 4px 0 ${chipBg}`; }
               else if (tabStyle === "underline") { el.style.borderColor=T; el.style.transform="scale(1.015)"; }
               else { el.style.borderColor="rgba(201,168,76,0.4)"; }
             };
             const onCardLeave = (e: React.MouseEvent<HTMLDivElement>) => {
               const el = e.currentTarget;
-              if (tabStyle === "pill") { el.style.transform=""; el.style.boxShadow=""; }
+              if (tabStyle === "vidrio" || tabStyle === "pill") { el.style.transform=""; el.style.boxShadow=""; }
               else if (tabStyle === "brutalist") { el.style.borderColor=border; el.style.boxShadow=""; }
               else { el.style.borderColor="transparent"; el.style.transform=""; }
             };
@@ -1452,7 +1484,9 @@ function ProductosPageInner({ embebido }: { embebido?: CatalogoEmbebido }) {
 
             // ── Contenedor de texto per-template ─────────────────────────────
             const textPad = (tabStyle === "pill" || tabStyle === "brutalist") ? "10px 14px 14px" : "0";
-            const nameStyle: React.CSSProperties = tabStyle === "pill"
+            const nameStyle: React.CSSProperties = tabStyle === "vidrio"
+              ? { fontSize:16, color:T, margin:"0 0 5px", fontWeight:400, fontFamily:serif, lineHeight:1.25 }
+              : tabStyle === "pill"
               ? { fontSize:14, color:T, margin:"0 0 6px", fontWeight:400, fontStyle:"italic", fontFamily:serif, lineHeight:1.35 }
               : tabStyle === "underline"
               ? { fontSize:13, color:T, margin:"0 0 6px", fontWeight:300, fontFamily:serif, lineHeight:1.35 }
@@ -1466,55 +1500,37 @@ function ProductosPageInner({ embebido }: { embebido?: CatalogoEmbebido }) {
             // en chic-paris (fondo #f9f9f7) desaparecía entero y en la tarjeta solo
             // quedaba visible el precio TACHADO, que va en gris. O sea que se veía
             // el precio viejo y no el que se cobra.
-            const priceStyle: React.CSSProperties = tabStyle === "brutalist"
+            const priceStyle: React.CSSProperties = tabStyle === "vidrio"
+              ? { fontSize:17, fontWeight:600, color:GT, letterSpacing:0.3 }
+              : tabStyle === "brutalist"
               ? { fontSize:16, fontWeight:900, color:GT }
               : tabStyle === "underline"
               ? { fontSize:15, fontWeight:600, color:GT }
               : { fontSize:16, fontWeight:700, color:GT };
 
             // ── Imagen mb: 0 cuando el wrapper maneja el overflow ────────────
-            const imgMb = (tabStyle === "pill" || tabStyle === "brutalist") ? 0 : 14;
+            const imgMb = (tabStyle === "pill" || tabStyle === "brutalist" || tabStyle === "vidrio") ? 0 : 14;
 
-            const cardInner = (
-              <>
-                <div style={{ position:"relative", aspectRatio:"3/4", overflow:"hidden", background:S, marginBottom:imgMb }}>
-                  {product.images[0] ? (
-                    <FadeImage src={product.images[0]} alt={product.name}
-                      fill sizes="(max-width: 768px) 50vw, (max-width: 1280px) 33vw, 25vw"
-                      className="pc-img"
-                      // La transición va también acá y no solo en el CSS de
-                      // `.pc-img`: `FadeImage` escribe su fundido en el `style`
-                      // inline, que le gana a la hoja de estilos. Sin esto el
-                      // acercamiento al pasar el mouse pasaba a ser un salto.
-                      style={{ objectFit:"cover", transition:"transform 0.5s ease" }} />
-                  ) : (
-                    <div style={{ width:"100%", height:"100%", display:"flex", alignItems:"center", justifyContent:"center", opacity:0.15 }}>
-                      <svg width={48} height={48} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={0.8}><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-                    </div>
-                  )}
-                  {ofertaBadge}
-                  {(product.subcategory || product.category !== "general") && (
-                    <div style={{ position:"absolute", top:10, right:10, background: dark ? "rgba(10,10,10,0.7)" : "rgba(255,255,255,0.85)", color:T, fontSize:9, letterSpacing:2, padding:"3px 8px", textTransform:"uppercase" }}>
-                      {product.subcategory ?? product.category}
-                    </div>
-                  )}
-                  <button onClick={e => { e.stopPropagation(); toggleFavorite(product.id); }}
-                    aria-label={isFav ? "Quitar de favoritos" : "Agregar a favoritos"}
-                    style={{ position:"absolute", bottom:10, right:10, background: dark ? "rgba(10,10,10,0.65)" : "rgba(255,255,255,0.9)", border:"none", borderRadius:"50%", width:32, height:32, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", transition:"transform 0.2s" }}
-                    onMouseEnter={e => (e.currentTarget.style.transform="scale(1.1)")}
-                    onMouseLeave={e => (e.currentTarget.style.transform="scale(1)")}>
-                    <svg width={14} height={14} viewBox="0 0 24 24" fill={isFav ? chipBg : "none"} stroke={isFav ? chipBg : MID} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
-                    </svg>
-                  </button>
-                  <div className="product-overlay" style={{ position:"absolute", inset:0, background:"rgba(0,0,0,0.3)", display:"flex", alignItems:"center", justifyContent:"center", opacity:0, transition:"opacity 0.3s" }}
-                    onMouseEnter={e => (e.currentTarget.style.opacity="1")}
-                    onMouseLeave={e => (e.currentTarget.style.opacity="0")}>
-                    <span style={{ background:chipBg, color:chipText, fontSize:10, fontWeight:800, letterSpacing:3, padding:"9px 20px", textTransform:"uppercase" }}>Ver detalle</span>
-                  </div>
-                </div>
-                {/* Área de texto */}
-                <div style={{ padding:textPad }}>
+            /* ── El texto, una vez, y en dos lugares distintos ─────────────────
+               En los otros cuatro templates el texto va DEBAJO de la foto, en su
+               propia área. En Aurora va ADENTRO, en un panel de vidrio apoyado
+               sobre el pie de la foto: la tarjeta deja de ser "foto arriba, datos
+               abajo" —que es la forma que comparten los otros cuatro— y pasa a ser
+               una sola pieza.
+
+               El panel está SIEMPRE, no aparece al pasar el mouse. En un catálogo
+               el precio se compara de un vistazo, y un dato que hay que ir a buscar
+               con el dedo no se compara. El vidrio es la diferencia, no un juego. */
+            const panelDeVidrio: React.CSSProperties = {
+              position:"absolute", left:0, right:0, bottom:0,
+              padding:"12px 14px 13px",
+              background:"rgba(6,7,13,0.72)",
+              backdropFilter:"blur(14px) saturate(140%)",
+              WebkitBackdropFilter:"blur(14px) saturate(140%)",
+              borderTop:"1px solid rgba(255,255,255,0.10)",
+            };
+            const bloqueTexto = (
+              <div style={tabStyle === "vidrio" ? panelDeVidrio : { padding:textPad }}>
                   <p style={{ fontSize:10, color:MID, letterSpacing:2, textTransform:"uppercase", margin:"0 0 4px" }}>{product.category}</p>
                   <p style={nameStyle}>{product.name}</p>
                   <div style={{ display:"flex", gap:8, alignItems:"center", flexWrap:"wrap" }}>
@@ -1534,7 +1550,55 @@ function ProductosPageInner({ embebido }: { embebido?: CatalogoEmbebido }) {
                   {cardPromo.nxm && <p style={{ margin:"4px 0 0", fontSize:11, color:"#16a34a", fontWeight:700 }}>Llevá {cardPromo.nxm.n}, pagá {cardPromo.nxm.m}</p>}
                   {cardPromo.pctOff != null && cardPromo.minOrder != null && <p style={{ margin:"4px 0 0", fontSize:11, color:"#dc2626", fontWeight:700 }}>{cardPromo.pctOff}% desde {fmt(cardPromo.minOrder)}</p>}
                   {cardPromo.freeShipping && !cardPromo.nxm && !cardPromo.hasPriceDrop && cardPromo.pctOff == null && <p style={{ margin:"4px 0 0", fontSize:11, color:"#0d9488", fontWeight:700 }}>{cardPromo.minOrder ? `Envío gratis desde ${fmt(cardPromo.minOrder)}` : "Envío gratis"}</p>}
+              </div>
+            );
+
+            const cardInner = (
+              <>
+                {/* Más alta en Aurora: 4/5 en vez de 3/4. El panel de vidrio se
+                    apoya sobre el pie de la foto, y con 3/4 le tapaba la prenda. */}
+                <div style={{ position:"relative", aspectRatio: tabStyle === "vidrio" ? "4/5" : "3/4", overflow:"hidden", background:S, marginBottom:imgMb }}>
+                  {product.images[0] ? (
+                    <FadeImage src={product.images[0]} alt={product.name}
+                      fill sizes="(max-width: 768px) 50vw, (max-width: 1280px) 33vw, 25vw"
+                      className="pc-img"
+                      // La transición va también acá y no solo en el CSS de
+                      // `.pc-img`: `FadeImage` escribe su fundido en el `style`
+                      // inline, que le gana a la hoja de estilos. Sin esto el
+                      // acercamiento al pasar el mouse pasaba a ser un salto.
+                      style={{ objectFit:"cover", transition:"transform 0.5s ease" }} />
+                  ) : (
+                    <div style={{ width:"100%", height:"100%", display:"flex", alignItems:"center", justifyContent:"center", opacity:0.15 }}>
+                      <svg width={48} height={48} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={0.8}><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                    </div>
+                  )}
+                  {ofertaBadge}
+                  {/* En "vidrio" este chip no va: el rubro ya está escrito en el panel
+                      de abajo, y arriba sólo servía para chocar con la etiqueta de la
+                      promo. Medido con "SAN VALENTÍN · $10.000 OFF", que ocupa dos
+                      renglones: se montaba encima y del chip se leía "…ICA". */}
+                  {tabStyle !== "vidrio" && (product.subcategory || product.category !== "general") && (
+                    <div style={{ position:"absolute", top:10, right:10, background: dark ? "rgba(10,10,10,0.7)" : "rgba(255,255,255,0.85)", color:T, fontSize:9, letterSpacing:2, padding:"3px 8px", textTransform:"uppercase" }}>
+                      {product.subcategory ?? product.category}
+                    </div>
+                  )}
+                  <button onClick={e => { e.stopPropagation(); toggleFavorite(product.id); }}
+                    aria-label={isFav ? "Quitar de favoritos" : "Agregar a favoritos"}
+                    style={{ position:"absolute", bottom:10, right:10, background: dark ? "rgba(10,10,10,0.65)" : "rgba(255,255,255,0.9)", border:"none", borderRadius:"50%", width:32, height:32, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", transition:"transform 0.2s" }}
+                    onMouseEnter={e => (e.currentTarget.style.transform="scale(1.1)")}
+                    onMouseLeave={e => (e.currentTarget.style.transform="scale(1)")}>
+                    <svg width={14} height={14} viewBox="0 0 24 24" fill={isFav ? chipBg : "none"} stroke={isFav ? chipBg : MID} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                    </svg>
+                  </button>
+                  <div className="product-overlay" style={{ position:"absolute", inset:0, background:"rgba(0,0,0,0.3)", display:"flex", alignItems:"center", justifyContent:"center", opacity:0, transition:"opacity 0.3s" }}
+                    onMouseEnter={e => (e.currentTarget.style.opacity="1")}
+                    onMouseLeave={e => (e.currentTarget.style.opacity="0")}>
+                    <span style={{ background:chipBg, color:chipText, fontSize:10, fontWeight:800, letterSpacing:3, padding:"9px 20px", textTransform:"uppercase" }}>Ver detalle</span>
+                  </div>
+                  {tabStyle === "vidrio" && bloqueTexto}
                 </div>
+                {tabStyle !== "vidrio" && bloqueTexto}
               </>
             );
 
