@@ -6,6 +6,7 @@ import Aire from "./templates/Aire";
 import BohoTerra from "./templates/BohoTerra";
 import UrbanPulse from "./templates/UrbanPulse";
 import ChicParis from "./templates/ChicParis";
+import Aurora from "./templates/Aurora";
 import AutoMotor from "./templates/AutoMotor";
 import AutoDrive from "./templates/AutoDrive";
 import ElectroPrime from "./templates/ElectroPrime";
@@ -27,6 +28,13 @@ const TEMPLATES: Record<string, React.ComponentType> = {
   "boho-terra":   BohoTerra,
   "urban-pulse":  UrbanPulse,
   "chic-paris":   ChicParis,
+  /* Faltaba. Aurora estaba en el selector de templates —con su componente y todo—
+     pero no en ESTA lista, que es la que dibuja la tienda publicada. O sea que la
+     duenia lo podia elegir, ver la previa, guardar, y su tienda quedaba en BLANCO:
+     `TEMPLATES["aurora"]` daba undefined y el componente de arriba devuelve null.
+     Es exactamente lo que avisa el comentario de "fashion-noir" cuatro lineas mas
+     arriba, y volvio a pasar. Ahora hay un chequeo que lo cuida. */
+  "aurora":       Aurora,
   "auto-motor":   AutoMotor,
   "auto-drive":   AutoDrive,
   "electro-prime": ElectroPrime,
