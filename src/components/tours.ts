@@ -1,7 +1,7 @@
 import {
   TrendingUp, ShoppingBag, MessageCircle, Package, Tag, BadgePercent, ShoppingCart,
   Users, Star, Bell, Store, Settings, LayoutGrid, Wallet, BarChart2, CreditCard,
-  Eye, ArrowRight, MousePointerClick, SlidersHorizontal, Save, ExternalLink,
+  Eye, ArrowRight, MousePointerClick, SlidersHorizontal, Save, ExternalLink, Download,
 } from "lucide-react";
 
 export type Texto = { title: string; body: string };
@@ -73,6 +73,13 @@ export const GUION_PANEL: Guion = {
         body: "Cargá cada producto con sus fotos, su precio y el archivo que se descarga el comprador. Sin archivo no se puede publicar: sería vender algo que no se puede entregar.",
       },
     },
+  },
+  /* Sólo existe en los rubros que entregan un archivo, así que no necesita
+     variante por tipo: si el botón no está, el paso se saltea solo. */
+  descargas: {
+    icon: Download,
+    title: "Descargas",
+    body: "Quién compró cada archivo, si ya lo bajó y cuántas veces. Si a alguien no le llegó el mail —suele caer en spam— desde acá le reenviás el link.",
   },
   cupones: {
     icon: Tag,

@@ -51,6 +51,20 @@ export type EstadoTienda = {
   /** Vencimiento del token de Meta. Null = no hay Meta conectado, o se desconoce. */
   fbTokenExpiresAt: Date | null;
   tienePoliticas: boolean;
+  /**
+   * Productos publicados a los que les falta el archivo que se vende.
+   *
+   * Hoy la ruta que guarda un producto NO deja publicar sin archivo en este
+   * rubro. Esto igual hace falta, porque hay una puerta que no pasa por ahí:
+   * cambiar el rubro de una tienda que ya tenía productos cargados. Ahí quedan
+   * publicados, se pueden comprar, y no hay nada que entregar.
+   *
+   * Sólo se cuenta en los rubros que entregan un archivo — ver el porqué del
+   * viaje aparte en `cargarEstadoTienda`.
+   */
+  productosDigitalesSinArchivo: number;
+  /** Compras entregadas cuyo comprador nunca bajó el archivo, con el link todavía vivo. */
+  compradoresSinDescargar: number;
 };
 
 export const cargarEstadoTienda = cache(async (ownerId: string): Promise<EstadoTienda | null> => {
@@ -112,6 +126,37 @@ export const cargarEstadoTienda = cache(async (ownerId: string): Promise<EstadoT
 
   if (!store) return null;
 
+  /* ── El viaje de más, y por qué se paga sólo acá ────────────────────────────
+     Estas dos cuentas son de un rubro solo. Meterlas arriba costaría dos
+     consultas a TODA tienda —incluida cada tienda de ropa, que nunca las va a
+     mirar— y arriba no se puede saltear: el `tipoTienda` viene justamente de
+     la consulta que está adentro de ese mismo `Promise.all`.
+
+     Así que se hace un segundo viaje, y sólo para las tiendas que entregan por
+     descarga, que son una minoría. Las dos van juntas en un `Promise.all`, así
+     el viaje es uno y no dos. */
+  const entregaPorDescarga = getStoreType(store.tipoTienda ?? "ROPA").requiereArchivo === true;
+  let productosDigitalesSinArchivo = 0;
+  let compradoresSinDescargar = 0;
+  if (entregaPorDescarga) {
+    [productosDigitalesSinArchivo, compradoresSinDescargar] = await Promise.all([
+      prisma.product.count({
+        where: { storeId: store.id, deletedAt: null, isActive: true, archivoPath: null },
+      }),
+      /* Sólo los que TODAVÍA pueden bajarlo. Un permiso vencido y sin usar
+         también es un problema, pero ya no tiene arreglo desde acá: reenviar el
+         mail manda el mismo link, que sigue vencido. Un aviso que no se puede
+         resolver es ruido. */
+      prisma.digitalDownload.count({
+        where: {
+          descargas: 0,
+          expiresAt: { gt: ahora },
+          orderItem: { order: { storeId: store.id } },
+        },
+      }),
+    ]);
+  }
+
   return {
     storeId: store.id,
     tipoTienda: store.tipoTienda,
@@ -133,6 +178,8 @@ export const cargarEstadoTienda = cache(async (ownerId: string): Promise<EstadoT
     // (términos y privacidad) las genera la plataforma, éstas las escribe quien
     // vende y son las que el comprador busca antes de comprar.
     tienePoliticas: !!(store.policyReturns?.trim() || store.policyShipping?.trim()),
+    productosDigitalesSinArchivo,
+    compradoresSinDescargar,
   };
 });
 
@@ -365,9 +412,43 @@ export function avisosDeTienda(estado: EstadoTienda): Aviso[] {
     });
   }
 
+  /* Rojo de verdad: el producto está publicado, se puede comprar, y no hay nada
+     que entregar. La compradora paga y espera un mail que no puede llegar.
+     Es el único rojo que no se enciende por algo que falta configurar sino por
+     algo que ya se puede vender mal. */
+  if (c.entregaPorDescarga && estado.productosDigitalesSinArchivo > 0) {
+    const uno = estado.productosDigitalesSinArchivo === 1;
+    avisos.push({
+      id: "productos-sin-archivo",
+      nivel: "rojo",
+      seccion: "/dashboard/descargas",
+      titulo: uno
+        ? "Tenés un producto publicado sin archivo"
+        : `Tenés ${estado.productosDigitalesSinArchivo} productos publicados sin archivo`,
+      detalle: uno
+        ? "Se puede comprar y no hay nada que entregar: quien lo pague va a esperar un mail que no llega."
+        : "Se pueden comprar y no hay nada que entregar: quien los pague va a esperar un mail que no llega.",
+      href: "/dashboard/productos",
+    });
+  }
+
   /* ── Amarillos ──────────────────────────────────────────────────────────────
      Se vende igual, pero se vende peor. No van al menú lateral: aparecen al
      entrar a la sección, que es donde se pueden resolver. */
+
+  if (c.entregaPorDescarga && estado.compradoresSinDescargar > 0) {
+    const uno = estado.compradoresSinDescargar === 1;
+    avisos.push({
+      id: "compras-sin-descargar",
+      nivel: "amarillo",
+      seccion: "/dashboard/descargas",
+      titulo: uno ? "Hay una compra sin descargar" : `Hay ${estado.compradoresSinDescargar} compras sin descargar`,
+      detalle: uno
+        ? "Pagó y nunca bajó el archivo. Puede que el mail le haya caído en spam: desde acá se lo reenviás."
+        : "Pagaron y nunca bajaron el archivo. Puede que el mail les haya caído en spam: desde acá se los reenviás.",
+      href: "/dashboard/descargas",
+    });
+  }
 
   if (estado.productosSinFoto > 0) {
     const uno = estado.productosSinFoto === 1;

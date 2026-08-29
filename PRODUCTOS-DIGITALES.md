@@ -398,26 +398,73 @@ tienda no puede cumplir**.
 
 ---
 
-## FASE 4 — La sección "Descargas" en el panel
+## FASE 4 — La sección "Descargas" en el panel — HECHA (29/08)
 
-- 🔲 **Item en el menú** (`src/components/DashboardLayout.tsx`, primer grupo, abajo
+**Para verla hay que prender la bandera.** En `.env.local`:
+
+    NEXT_PUBLIC_DIGITALES_ENABLED="1"
+
+Sin eso no aparece ni el item del menú ni la pantalla: se puede mergear el rubro
+entero sin que ninguna dueña lo vea todavía.
+
+### El agujero que apareció haciéndola
+
+La barra de armado le pedía a una tienda de descargas que configurara sus métodos
+de envío. Ese paso **no se puede tildar nunca** — y mientras quede uno sin tildar,
+el onboarding no se marca terminado; y mientras no se marque, `avisosDeTienda`
+corta antes de los amarillos.
+
+O sea que ese único paso de más apagaba, para el rubro entero: la barra clavada
+en 7 de 8 para siempre, **ningún aviso amarillo jamás**, y encima un rojo
+permanente ("no configuraste cómo entregás") por algo que no estaba roto.
+Arreglado, con casos nuevos en `avisos-tienda.check.ts` por los dos lados. De
+paso, la pantalla de Pagos deja de mostrarle la franja "Cómo se entrega" entera.
+
+### Lo que se hizo
+
+- ✅ **Item en el menú** (`src/components/DashboardLayout.tsx`, primer grupo, abajo
   de Productos): `{ href: "/dashboard/descargas", label: "Descargas", icon: Download,
-  tourId: "descargas", onlyFor: ["DIGITAL"] }`. Con `onlyFor` no le aparece a nadie
-  más — es el mismo mecanismo que usa "Consultas" para AUTOS.
-- 🔲 **Escondida hasta que esté lista**: envolverla en
-  `process.env.NEXT_PUBLIC_DIGITALES_ENABLED === "1"`, igual que Aplicaciones
-  (`DashboardLayout.tsx:87-91`). Así se puede mergear sin que ninguna dueña la vea.
-- 🔲 **La página** (`/dashboard/descargas`): copiar la forma de
+  tourId: "descargas", onlyFor: ARCHIVO_STORE_TYPES }`. `ARCHIVO_STORE_TYPES` sale
+  de la bandera del rubro, no de una lista a mano: un rubro nuevo que entregue por
+  descarga aparece solo.
+- ✅ **Escondida hasta que esté lista**: la bandera se chequea en el menú **y en la
+  pantalla**. Esconder un botón no cierra una URL.
+- ✅ **La página** (`/dashboard/descargas`): copiada de
   `dashboard/productos/page.tsx` — server component, `force-dynamic`,
   `getCurrentUser()`, `if (!user) return null`, su `PAGE_SIZE`, tabla en un client
-  component al lado, `AvisosDeSeccion` arriba. Muestra: qué archivos hay subidos,
-  quién compró, quién descargó y cuántas veces, y **botón de reenviar link**
-  (el caso de soporte más común).
-- 🔲 **Avisos propios** en `src/lib/avisos-tienda.ts` con
+  component al lado, `AvisosDeSeccion` arriba. Muestra: cuántos productos tienen
+  archivo, quién compró, quién descargó y cuántas veces, y **botón de reenviar
+  link** (el caso de soporte más común).
+- ✅ **El token NO viaja a la pantalla.** El token ES el archivo: traerlo al panel
+  lo dejaría escrito en el HTML, en el historial del navegador y en cualquier
+  captura. El botón manda el id de la fila y el token lo busca el servidor.
+- ✅ **Reenviar manda el MISMO permiso**, con lo que le quede de sus 5 descargas y
+  su vencimiento original. Emitir uno nuevo sería un botón que regala cinco
+  descargas por clic y deja vivo el link viejo. Un permiso vencido no se reenvía:
+  el mail llevaría el mismo link, que sigue vencido.
+- ✅ **Dos topes de envío**: 20 por hora por tienda (que el panel no sea un cañón
+  de mails) y 3 por hora por permiso (que veinte clics nerviosos no sean veinte
+  mails al mismo buzón).
+- ✅ **Avisos propios** en `src/lib/avisos-tienda.ts` con
   `seccion: "/dashboard/descargas"`:
-  - rojo: *"tenés un producto digital sin archivo subido"* (se está vendiendo algo
-    que no se puede entregar)
-  - amarillo: *"hay N compradores que nunca descargaron"*
+  - rojo: *"tenés un producto publicado sin archivo"*. La ruta que guarda un
+    producto ya no deja publicar sin archivo en este rubro, pero hay una puerta
+    que no pasa por ahí: **cambiar el rubro** de una tienda que ya tenía productos
+    cargados. Quedan publicados, comprables, sin nada que entregar.
+  - amarillo: *"hay N compras sin descargar"*, sólo las que todavía pueden bajarse
+    — un permiso vencido y sin usar ya no tiene arreglo desde acá.
+  - Las dos cuentas se piden en un viaje aparte y **sólo** para los rubros que
+    entregan un archivo: arriba costarían dos consultas a toda tienda de ropa.
+- ✅ **Chequeo propio**: `src/lib/descargas-panel.check.ts`. Vigila las cuatro
+  cosas que pueden salir mal sin verse — el token colándose en el HTML, reenviar
+  emitiendo un permiso nuevo, la condición de dueña cayéndose del `where`, y la
+  sección destapándose antes de tiempo.
+
+**Chequeos (29/08):** ✅ `npx tsc --noEmit` limpio · ✅ `npm run check` 56/56 ·
+✅ eslint sin errores. **Sin build de producción y sin deploy.**
+
+- 🔲 **Probarla con datos de verdad.** Nunca corrió: hace falta una compra
+  entregada, o sea la prueba de punta a punta que sigue pendiente.
 
 ---
 
