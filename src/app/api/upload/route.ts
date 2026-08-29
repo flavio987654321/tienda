@@ -6,7 +6,6 @@ import { fileTypeFromBuffer } from "file-type";
 import { medirImagen, avisoDeFotoChica } from "@/lib/medidas-imagen";
 import { getCurrentUser } from "@/lib/auth-session";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { DIGITAL_BUCKET, MAX_ARCHIVO_DIGITAL_MB, MAX_ARCHIVO_DIGITAL_BYTES } from "@/lib/descargas";
 
 export const runtime = "nodejs";
 
@@ -33,14 +32,6 @@ const ALLOWED_DOCUMENT_TYPES = new Set([
   "text/plain",
   ...ALLOWED_IMAGE_TYPES,
 ]);
-// Lo que se puede vender como producto digital. Es lo mismo que un documento
-// más ZIP, que es como viaja un pack de plantillas (varios archivos juntos).
-const ALLOWED_DIGITAL_TYPES = new Set([
-  ...ALLOWED_DOCUMENT_TYPES,
-  "application/zip",
-  "application/x-zip-compressed",
-  "application/epub+zip",
-]);
 const DEFAULT_BUCKET = "product-images";
 
 /* Los documentos de identidad de los afiliados NO van con las fotos de producto.
@@ -53,21 +44,10 @@ const DEFAULT_BUCKET = "product-images";
    corta que emite /api/vendedoras/cv/[id] después de verificar quién pregunta. */
 const DOCS_BUCKET = process.env.SUPABASE_DOCS_BUCKET || "affiliate-docs";
 
-/* El archivo que se vende tampoco va con las fotos de producto, y por el mismo
-   motivo que el DNI de un afiliado: ese bucket es público a propósito. Un PDF
-   pago ahí queda descargable por cualquiera que tenga la dirección, sin sesión y
-   para siempre — o sea, el producto se regala solo.
-
-   Bucket propio y privado. Se guarda la RUTA (`supabase://…`), no una URL, y
-   quien compró la pide con un link firmado y de vida corta. Bucket aparte del de
-   afiliados a propósito: son dos cosas con permisos distintos —un DNI lo mira el
-   admin, un producto lo baja el comprador— y mezclarlas sería un lío el día que
-   haya que dar acceso a uno sin dar el otro.
-
-   El nombre y el tope se importan de lib/descargas, que es de donde también los
-   leen la validación del producto y la ruta de entrega: con una copia en cada
-   lado, cambiar el bucket en uno solo dejaba archivos que se suben pero no se
-   pueden entregar. */
+/* El archivo que se VENDE no pasa por esta ruta: va directo del navegador al
+   bucket privado, con un permiso que firma /api/upload/firma-digital. Se hizo
+   así porque el archivo viajando por acá chocaba contra el techo del cuerpo del
+   pedido —10 MB en Next, menos en producción— y llegaba cortado. */
 
 const RATE_LIMIT_MAX = 20;
 const RATE_LIMIT_WINDOW_MS = 60_000;
@@ -178,23 +158,9 @@ export async function POST(req: NextRequest) {
     const file = formData.get("file") as File;
     const purpose = String(formData.get("purpose") || "image");
     const isDocument = purpose === "affiliate-doc";
-    /* El archivo que se vende. Se mira el `purpose` y NO el tipo del archivo:
-       un PDF puede ser tanto un producto digital como el DNI de un afiliado, y
-       cada uno va a un bucket distinto. Es quien llama el que sabe cuál es. */
-    const isArchivoDigital = purpose === "producto-digital";
     const isVideo = ALLOWED_VIDEO_TYPES.has(file?.type);
     if (!file) return NextResponse.json({ error: "No se recibio archivo" }, { status: 400 });
-    if (isArchivoDigital) {
-      if (!ALLOWED_DIGITAL_TYPES.has(file.type)) {
-        return NextResponse.json({ error: "Solo se permiten PDF, Word, Excel, PowerPoint, ZIP, EPUB, TXT o imagenes" }, { status: 400 });
-      }
-      if (file.size > MAX_ARCHIVO_DIGITAL_BYTES) {
-        return NextResponse.json(
-          { error: `El archivo no puede superar ${MAX_ARCHIVO_DIGITAL_MB} MB. Para algo más pesado —un curso en video— conviene subirlo a YouTube o Vimeo y vender el acceso.` },
-          { status: 413 }
-        );
-      }
-    } else if (isDocument) {
+    if (isDocument) {
       if (!ALLOWED_DOCUMENT_TYPES.has(file.type)) {
         return NextResponse.json({ error: "Solo se permiten PDF, Word, Excel, PowerPoint, TXT o imagenes" }, { status: 400 });
       }
@@ -217,7 +183,7 @@ export async function POST(req: NextRequest) {
     // Se saltea para documentos y para el archivo digital: un .docx, un .xlsx o
     // un .txt no tienen una firma que este validador reconozca, y rechazarlos
     // sería romper justo los formatos que el rubro existe para vender.
-    if (!isDocument && !isArchivoDigital) {
+    if (!isDocument) {
       const detected = await fileTypeFromBuffer(Buffer.from(bytes));
       const allowedSet = isVideo ? ALLOWED_VIDEO_TYPES : ALLOWED_IMAGE_TYPES;
       if (!detected || !allowedSet.has(detected.mime)) {
@@ -234,20 +200,15 @@ export async function POST(req: NextRequest) {
        url y lo muestra quien subió, que es el único que puede cambiarla.
        Sólo para imágenes: un video o un PDF no tienen este problema. */
     const esLogo = purpose === "logo";
-    const aviso = !isDocument && !isArchivoDigital && !isVideo && !esLogo
+    const aviso = !isDocument && !isVideo && !esLogo
       ? avisoDeFotoChica(medirImagen(Buffer.from(bytes)))
       : null;
 
     if (getSupabaseStorageConfig()) {
-      const folder = isDocument ? "affiliate-docs"
-        : isArchivoDigital ? "producto-digital"
-        : isVideo ? "store-videos"
-        : "products";
-      // Los dos privados devuelven `supabase://bucket/path`, no una URL.
+      const folder = isDocument ? "affiliate-docs" : isVideo ? "store-videos" : "products";
+      // El bucket privado devuelve `supabase://bucket/path`, no una URL.
       const url = isDocument
         ? await uploadToSupabaseStorage(file, bytes, folder, { bucket: DOCS_BUCKET, isPublic: false })
-        : isArchivoDigital
-        ? await uploadToSupabaseStorage(file, bytes, folder, { bucket: DIGITAL_BUCKET, isPublic: false })
         : await uploadToSupabaseStorage(file, bytes, folder);
       return NextResponse.json({ url, ...(aviso ? { aviso } : {}) });
     }
@@ -259,19 +220,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    /* El respaldo local escribe en `public/uploads`, que Next sirve en abierto:
-       ahí adentro no hay privado que valga. Para las fotos da igual —son
-       públicas de todos modos— pero un archivo que se vende quedaría descargable
-       por cualquiera que adivine el nombre. Se corta acá y en TODOS los
-       entornos, no sólo en producción: el hueco se abre igual si alguien levanta
-       esto en una máquina que otro puede alcanzar. */
-    if (isArchivoDigital) {
-      return NextResponse.json(
-        { error: "Falta configurar Supabase Storage: el archivo del producto necesita el bucket privado y no se puede guardar en disco." },
-        { status: 500 }
-      );
-    }
+    /* Acá abajo se escribe en `public/uploads`, que Next sirve en abierto. Para
+       fotos y videos da igual —son públicos de todos modos—, y los documentos de
+       afiliados nunca llegan hasta este punto sin Supabase configurado.
 
+       El archivo que se VENDE no pasa por esta ruta en absoluto: va directo del
+       navegador al bucket privado (ver /api/upload/firma-digital), justamente
+       para que no exista un camino donde termine en una carpeta pública. */
     const ext = extensionFor(file);
     const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
     const uploadDir = path.join(process.cwd(), "public", "uploads");

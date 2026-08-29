@@ -21,9 +21,55 @@ export const MAX_DESCARGAS = 5;
 export const DIGITAL_BUCKET = process.env.SUPABASE_DIGITAL_BUCKET || "producto-digital";
 export const PREFIJO_ARCHIVO_DIGITAL = `supabase://${DIGITAL_BUCKET}/`;
 
-/** Tope del archivo que se vende. Debe coincidir con `/api/upload`. */
-export const MAX_ARCHIVO_DIGITAL_MB = 15;
+/* Tope del archivo que se vende.
+   Sube a 50 MB porque el archivo ya NO pasa por nuestro servidor: el navegador
+   lo manda directo a Supabase con un permiso firmado (ver
+   /api/upload/firma-digital). Los dos techos que había —10 MB de Next y el más
+   bajo de la plataforma en producción— se aplicaban al cuerpo de un pedido
+   nuestro, y ahora no hay tal pedido.
+   Este número también se le configura AL BUCKET: es Supabase quien lo aplica
+   sobre los bytes reales, no un `if` de este lado. */
+/* 50 MB NO es un número elegido: es el tope global de subida del proyecto de
+   Supabase, medido. Un bucket no puede pedir más que eso — al crearlo con 150 MB
+   contesta 413 "The object exceeded the maximum allowed size" y el bucket
+   directamente no se crea, así que la subida falla con un 502 que no explica
+   nada. Probado: 50 entra, 100 no.
+   Para subirlo hay que levantar el límite global en el panel de Supabase, y eso
+   depende del plan. Si algún día se levanta, este número acompaña. */
+export const MAX_ARCHIVO_DIGITAL_MB = 50;
 export const MAX_ARCHIVO_DIGITAL_BYTES = MAX_ARCHIVO_DIGITAL_MB * 1024 * 1024;
+
+/* A partir de acá se avisa, pero NO se frena.
+   El caso real que lo motivó: una guía de 46 páginas exportada a calidad de
+   imprenta pesaba 117 MB. Se puede vender igual, pero quien la compra tiene que
+   bajarse esos 117 MB —muchas veces desde el celular con datos— y el permiso
+   sólo da 5 intentos: tres cortes y se quedó sin lo que pagó. Además el tráfico
+   de cada descarga lo paga la plataforma.
+   Avisar y no bloquear es el mismo criterio que usan las fotos que van a salir
+   borrosas: quien sube es el único que puede arreglarlo, y en su compu el
+   archivo abre al instante — si no se lo decimos, se entera por un reclamo. */
+export const ARCHIVO_PESADO_MB = 25;
+
+/* Qué se puede vender. Se le configura al bucket como `allowed_mime_types`, así
+   que Supabase rechaza lo que no esté acá aunque el navegador insista.
+   Sin videos a propósito: el rubro es de archivos que se descargan, y un curso
+   en video se mira online — ver PRODUCTOS-DIGITALES.md. */
+export const TIPOS_ARCHIVO_DIGITAL = new Set([
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "application/vnd.ms-powerpoint",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  "text/plain",
+  "application/zip",
+  "application/x-zip-compressed",
+  "application/epub+zip",
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+]);
 
 /**
  * ¿Esta ruta guardada apunta de verdad a un archivo del bucket de productos

@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
-import { getStoreType, etiquetaCategoria, camposActivos, camposPropios, ejemploNombre, ejemploTags } from "@/lib/storeTypes";
+import { getStoreType, etiquetaCategoria, camposActivos, camposPropios, ejemploNombre, ejemploTags, type StoreTypeConfig } from "@/lib/storeTypes";
 import { sugerirOpcion, opcionesIniciales, nombresDeOpciones, renombrarOpcion, agregarOpcion, quitarOpcion, estadoDelBuilder, opcionesQueNoEntranEnElBuilder, filasIncompletas, claveDeCombinacion, MAX_OPCIONES } from "@/lib/opcionSugerida";
 import { esOpcionDeColor } from "@/lib/opciones";
 import { calcMargin, calcVehicleCostTotal, formatFechaGasto } from "@/lib/margin";
@@ -108,8 +108,13 @@ const MAX_PRODUCT_IMAGES = 8;
 const MAX_PRODUCT_REELS = 3;
 // Debe coincidir con MAX_VIDEO_SIZE_MB de api/upload/route.ts
 const MAX_VIDEO_SIZE_MB = 50;
-// Debe coincidir con MAX_DIGITAL_SIZE_MB de api/upload/route.ts
-const MAX_ARCHIVO_MB = 15;
+/* Debe coincidir con MAX_ARCHIVO_DIGITAL_MB de lib/descargas.ts.
+   No se importa de ahí porque ese módulo trae Prisma, y esto es un componente
+   de cliente: importarlo arrastraría el cliente de base de datos al navegador. */
+const MAX_ARCHIVO_MB = 50;
+// Debe coincidir con ARCHIVO_PESADO_MB de lib/descargas.ts. A partir de acá se
+// avisa que al comprador le va a costar bajarlo, pero se sube igual.
+const ARCHIVO_PESADO_MB = 25;
 
 /* El peso del archivo en algo que se lea de un vistazo. Se muestra al lado del
    nombre para que la dueña reconozca cuál subió. */
@@ -171,6 +176,7 @@ function tagsTip(tipoTienda: string): string {
     ROPA:      "Palabras clave para búsqueda. Ej: negro, oversize, algodón. No afectan el precio ni el stock.",
     HOGAR_TECH: "Palabras clave para búsqueda. Ej: liberado, sin cargador, inverter, escandinavo.",
     GASTRONOMIA: "Palabras clave para búsqueda. Ej: sin tacc, vegano, artesanal.",
+    DIGITAL:   "Palabras clave para búsqueda. Ej: canva, editable, imprimible, a4.",
     GENERAL:   "Palabras clave para búsqueda separadas por coma. Ayudan a tus clientes a encontrar el producto.",
   };
   return tips[tipoTienda] || "Palabras clave separadas por coma para que tus clientes encuentren el producto.";
@@ -182,6 +188,9 @@ function extraFieldsTip(tipoTienda: string): string {
     AUTOS:     "Información extra sin stock. Ej: Marca → Toyota, Año → 2022, Combustible → Nafta. Son datos descriptivos del vehículo, no afectan precio ni stock.",
     HOGAR_TECH: "Información extra sin stock. Ej: Marca → Samsung, Pulgadas → 55, RAM → 8GB. A diferencia de las variantes, los atributos son datos descriptivos que no tienen stock propio.",
     GASTRONOMIA: "Información extra sin stock. Ej: Ingredientes → Harina, azúcar, manteca.",
+    // Sin mencionar stock ni variantes: en este rubro no existe ninguna de las
+    // dos, y nombrarlas para decir que "no afectan" confunde más de lo que aclara.
+    DIGITAL:   "Los datos del archivo, para que el comprador sepa qué se lleva. Ej: Formato → PDF, Programa necesario → Canva, Páginas → 24.",
     GENERAL:   "Información extra sin stock. Datos descriptivos que no afectan precio ni stock.",
   };
   return tips[tipoTienda] || "Información extra sin stock. A diferencia de las variantes, los atributos son datos descriptivos que no tienen stock propio.";
@@ -191,11 +200,23 @@ function extraFieldsTip(tipoTienda: string): string {
 // sobre qué ángulos/tomas suelen convertir más, en vez de una zona de drop vacía.
 // Cada tip es la etiqueta de un cuadro libre: se van consumiendo a medida que
 // sube fotos, y la foto queda en el mismo cuadro donde estaba su consejo.
-function photoTips(hideVariants: boolean): string[] {
+function photoTips(config: StoreTypeConfig): string[] {
+  /* En un rubro que vende archivos las fotos NO son el producto: son la vidriera
+     del producto. "De frente", "diferentes ángulos" y "el interior" no aplican a
+     un PDF —no tiene lados— y encima desorientan: la dueña busca qué fotografiar
+     cuando lo que tiene que hacer es mostrar cómo se ve por dentro y en uso. */
+  if (config.requiereArchivo) {
+    return [
+      "Mostrá la portada o la tapa",
+      "Mostrá algunas páginas por dentro",
+      "Mostralo usado en la vida real (impreso, en el celu)",
+      "Contá qué incluye: cuántas páginas, qué trae",
+    ];
+  }
   return [
     "Subí una foto del producto de frente",
     "Probá diferentes ángulos",
-    hideVariants ? "Mostrá detalles o el interior" : "Mostrá sus variantes",
+    config.hideVariants ? "Mostrá detalles o el interior" : "Mostrá sus variantes",
     "Sugerí cómo usarlo",
   ];
 }
@@ -206,6 +227,9 @@ function reelTips(tipoTienda: string): string {
   if (tipoTienda === "AUTOS") return "Mostrá el interior, el motor, el baúl y una vuelta alrededor.";
   if (tipoTienda === "ROPA") return "Mostrá la prenda puesta, cómo cae y cómo se mueve.";
   if (tipoTienda === "GASTRONOMIA") return "Mostrá la textura, el corte o el plato ya servido.";
+  // Un archivo no se filma "desde varios ángulos": lo que vende es verlo por
+  // dentro y entender qué se lleva.
+  if (tipoTienda === "DIGITAL") return "Pasá las páginas en pantalla y mostrá qué incluye por dentro.";
   return "Mostrá el producto en uso, de cerca y desde varios ángulos.";
 }
 
@@ -475,6 +499,8 @@ function ProductoFormPage() {
   const [archivoNombre, setArchivoNombre] = useState<string>("");
   const [archivoPeso, setArchivoPeso] = useState<number | null>(null);
   const [uploadingArchivo, setUploadingArchivo] = useState(false);
+  // Aviso de archivo pesado: no frena la subida, sólo explica el costo.
+  const [avisoArchivo, setAvisoArchivo] = useState("");
   const [publishAt, setPublishAt] = useState<string>("");
   const [images, setImages] = useState<ImageItem[]>([]);
   const [carouselIdx, setCarouselIdx] = useState(0);
@@ -1062,33 +1088,81 @@ function ProductoFormPage() {
     }
   }
 
-  /* El archivo que el comprador se descarga. Va con `purpose` propio: el server
-     lo manda a un bucket privado y devuelve una RUTA, no una url — si devolviera
-     una url servible, el producto pago se bajaría sin comprarlo.
+  /* El archivo que el comprador se descarga.
+     Va DIRECTO del navegador a Supabase, sin pasar por nuestro servidor: se le
+     pide un permiso firmado a /api/upload/firma-digital y se sube contra la url
+     que devuelve. Antes viajaba por el servidor y ahí lo cortaba el techo del
+     cuerpo del pedido (10 MB en Next, menos en producción): un archivo más
+     pesado llegaba partido y terminaba en un 500 sin explicación.
 
      Reemplaza al anterior sin preguntar: es un archivo por producto, y el que
      estaba deja de estar referenciado. */
   async function subirArchivoDigital(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file || uploadingArchivo) return;
+
+    /* El peso se mira ACÁ, antes de mandar nada. No es sólo por comodidad: el
+       cuerpo del pedido tiene un techo (10 MB en Next, más bajo en producción) y
+       un archivo que lo pasa llega CORTADO al servidor, que ya no lo puede leer
+       y contesta un 500 sin explicación. O sea que sin este chequeo el aviso
+       nunca dice el motivo real, y encima se sube el archivo entero al pedo. */
+    if (file.size > MAX_ARCHIVO_MB * 1024 * 1024) {
+      const pesa = (file.size / (1024 * 1024)).toFixed(1);
+      setError(`El archivo pesa ${pesa} MB y el máximo es ${MAX_ARCHIVO_MB} MB. Si es un PDF, exportalo en calidad para pantalla en vez de para imprenta — suele bajar muchísimo sin que se note.`);
+      if (archivoInputRef.current) archivoInputRef.current.value = "";
+      return;
+    }
+
     setUploadingArchivo(true);
     setError("");
     try {
-      const fd = new FormData();
-      fd.append("file", file);
-      fd.append("purpose", "producto-digital");
-      const res = await fetch("/api/upload", { method: "POST", body: fd });
-      const data = await readJsonResponse(res);
-      if (!res.ok) throw new Error(data.error || "No se pudo subir el archivo");
-      if (data.url) {
-        setArchivoPath(data.url as string);
-        // El nombre y el peso salen del archivo local, no de la respuesta: son
-        // para mostrarle a la dueña cuál subió, y la ruta del bucket es un uuid
-        // que no le dice nada.
-        setArchivoNombre(file.name);
-        setArchivoPeso(file.size);
-        markDirty();
+      // 1) Pedir permiso. El servidor elige la ruta —nunca el cliente— y deja el
+      //    bucket configurado con su tope y sus tipos permitidos.
+      const permiso = await fetch("/api/upload/firma-digital", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nombre: file.name, tipo: file.type, peso: file.size }),
+      });
+      // Sin `readJsonResponse`: ese helper devuelve la forma de /api/upload
+      // (`url`/`aviso`), y esta ruta contesta otra cosa.
+      const datos = (await permiso.json().catch(() => ({}))) as {
+        urlDeSubida?: string; archivoPath?: string; error?: string;
+      };
+      if (!permiso.ok || !datos.urlDeSubida || !datos.archivoPath) {
+        throw new Error(datos.error || "No se pudo preparar la subida");
       }
+
+      // 2) Mandar el archivo a Supabase. Acá no hay servidor nuestro en el medio.
+      const subida = await fetch(datos.urlDeSubida, {
+        method: "PUT",
+        headers: { "Content-Type": file.type },
+        body: file,
+      });
+      if (!subida.ok) {
+        /* 413 es el tope del bucket, que lo aplica Supabase sobre los bytes de
+           verdad. Puede saltar aunque el chequeo de arriba haya pasado, si el
+           navegador declaró un peso que no era. */
+        throw new Error(
+          subida.status === 413
+            ? `El archivo supera los ${MAX_ARCHIVO_MB} MB permitidos.`
+            : "No se pudo subir el archivo. Revisá tu conexión y probá de nuevo."
+        );
+      }
+
+      // 3) Recién con la subida confirmada se guarda la ruta. Si se guardara
+      //    antes, un corte a mitad de camino dejaba el producto apuntando a un
+      //    archivo que no existe.
+      setArchivoPath(datos.archivoPath);
+      // El nombre y el peso salen del archivo local: son para mostrarle a la
+      // dueña cuál subió, y la ruta del bucket es un uuid que no le dice nada.
+      setArchivoNombre(file.name);
+      setArchivoPeso(file.size);
+      setAvisoArchivo(
+        file.size > ARCHIVO_PESADO_MB * 1024 * 1024
+          ? `Ojo: pesa ${(file.size / (1024 * 1024)).toFixed(0)} MB. Se vende igual, pero a tu cliente le va a tardar bastante desde el celular y tiene 5 intentos de descarga. Si es un PDF, exportalo en calidad para pantalla en vez de para imprenta: suele bajar muchísimo sin que se note.`
+          : ""
+      );
+      markDirty();
     } catch (err) {
       setError(err instanceof Error ? err.message : "No se pudo subir el archivo");
     } finally {
@@ -1290,7 +1364,7 @@ function ProductoFormPage() {
   const activeExtraFields = camposActivos(storeTypeConfig, previewCategory, previewSubcategory);
   // Tips que todavía no consumió ninguna foto. Cuando se acaban, el grid sigue
   // con un cuadro genérico: siempre queda uno libre hasta llegar al máximo.
-  const remainingPhotoTips = photoTips(storeTypeConfig.hideVariants).slice(images.length);
+  const remainingPhotoTips = photoTips(storeTypeConfig).slice(images.length);
 
   // Al elegir una categoría con specs propias (ej: "tvs" → Pulgadas, "joyas" →
   // Piedra), agregamos esos campos vacíos a la ficha técnica para que el vendedor
@@ -1757,7 +1831,7 @@ function ProductoFormPage() {
                     </div>
                     <button
                       type="button"
-                      onClick={() => { setArchivoPath(""); setArchivoNombre(""); setArchivoPeso(null); markDirty(); }}
+                      onClick={() => { setArchivoPath(""); setArchivoNombre(""); setArchivoPeso(null); setAvisoArchivo(""); markDirty(); }}
                       className="text-xs font-medium text-gray-400 hover:text-red-600 transition-colors shrink-0"
                     >
                       Quitar
@@ -1792,10 +1866,16 @@ function ProductoFormPage() {
                   className="hidden"
                 />
 
-                {/* El aviso más importante de la pantalla: hasta que la entrega
-                    automática exista (Fase 3), y con transferencia siempre, el
-                    mail lo manda la dueña. Mejor decirlo acá que dejar que se
-                    entere por un comprador enojado. */}
+                {/* Avisa, no bloquea — mismo criterio que las fotos borrosas.
+                    Quien sube es la única que puede achicarlo, y en su compu el
+                    archivo abre al instante: si no se lo decimos acá, se entera
+                    cuando una clienta no pueda bajarlo. */}
+                {avisoArchivo && (
+                  <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 text-xs text-amber-800">
+                    <span>{avisoArchivo}</span>
+                  </div>
+                )}
+
                 <p className="text-xs text-gray-400">
                   El archivo queda guardado en privado: solo lo puede descargar quien lo compre.
                 </p>
@@ -2452,7 +2532,12 @@ function ProductoFormPage() {
                 <div className="flex-1">
                   <p className="text-sm font-semibold text-gray-900">Promociones</p>
                   <p className="text-xs text-gray-500 mt-1 leading-relaxed">
-                    Los descuentos (por cantidad, %, 3×2, envío gratis) ahora se crean en la sección <strong>Promociones</strong>. Desde ahí los aplicás a este producto, a una categoría o a toda la tienda, con fechas y todo.
+                    {/* En un rubro que entrega por descarga, "3×2" y "envío gratis"
+                        no existen: se vende de a una unidad y no hay envío. Nombrarlos
+                        sería mandarla a crear una promo que nunca se va a aplicar. */}
+                    {storeTypeConfig.requiereArchivo
+                      ? <>Los descuentos por porcentaje ahora se crean en la sección <strong>Promociones</strong>. Desde ahí los aplicás a este producto, a una categoría o a toda la tienda, con fechas y todo.</>
+                      : <>Los descuentos (por cantidad, %, 3×2, envío gratis) ahora se crean en la sección <strong>Promociones</strong>. Desde ahí los aplicás a este producto, a una categoría o a toda la tienda, con fechas y todo.</>}
                   </p>
                   <Link href="/dashboard/promociones" className="inline-flex items-center gap-1 mt-3 text-sm font-semibold text-indigo-600 hover:text-indigo-700">
                     Ir a Promociones
