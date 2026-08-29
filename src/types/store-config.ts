@@ -415,23 +415,31 @@ export const TEMPLATE_DEFAULTS: Record<TemplateId, { accent: string; storeName: 
   "casa-clara":    { accent: "#0f172a", storeName: "CASA CLARA"    },
 };
 
+// Qué diseños puede elegir cada rubro. Sumar un rubro a una lista de acá es
+// habilitar el diseño, y es tan fácil que se olvida la otra mitad del trabajo:
+// los textos "de fábrica" del template. Casi todos abren prometiendo envío
+// gratis y cambios sin cargo, y en una tienda que entrega por descarga eso es
+// mentira. Por eso el chequeo beneficios-rubro.check.ts cruza esta tabla con el
+// código de cada template: si figura acá para un rubro sin envío y no está
+// leyendo los textos del rubro, el chequeo falla y dice cuál es.
 export const TEMPLATE_TIPO_TIENDA: Record<TemplateId, string[]> = {
-  // Los tres neutros llevan además DIGITAL: un archivo descargable se muestra
-  // igual que cualquier producto —foto, nombre, precio, botón— y sin esto el
-  // rubro nuevo se quedaría SIN NINGÚN diseño para elegir, o sea sin tienda.
+  // Los nueve de tiendas de productos llevan además DIGITAL: un archivo
+  // descargable se muestra igual que cualquier producto —foto, nombre, precio,
+  // botón— y lo único que cambia son esos textos de la vidriera. Los dos de
+  // Autos no: ese rubro no vende con carrito, muestra fichas y recibe consultas.
   "aire":         ["ROPA", "GENERAL", "DIGITAL"],
   "boho-terra":   ["ROPA", "GASTRONOMIA", "GENERAL", "DIGITAL"],
-  "urban-pulse":  ["ROPA", "GENERAL"],
-  "chic-paris":   ["ROPA", "GENERAL"],
+  "urban-pulse":  ["ROPA", "GENERAL", "DIGITAL"],
+  "chic-paris":   ["ROPA", "GENERAL", "DIGITAL"],
   // Aurora no está atada a un rubro: es una estética, no una categoría. Por eso
   // aparece en los mismos tres que los templates más generales de Moda.
   "aurora":       ["ROPA", "GASTRONOMIA", "GENERAL", "DIGITAL"],
   "auto-motor":   ["AUTOS"],
   "auto-drive":   ["AUTOS"],
-  "electro-prime": ["HOGAR_TECH"],
-  "tech-nova":     ["HOGAR_TECH"],
-  "home-studio":   ["HOGAR_TECH"],
-  "casa-clara":    ["HOGAR_TECH"],
+  "electro-prime": ["HOGAR_TECH", "DIGITAL"],
+  "tech-nova":     ["HOGAR_TECH", "DIGITAL"],
+  "home-studio":   ["HOGAR_TECH", "DIGITAL"],
+  "casa-clara":    ["HOGAR_TECH", "DIGITAL"],
 };
 
 export const DEFAULT_CONFIG: StoreConfig = {

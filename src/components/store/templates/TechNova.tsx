@@ -1,5 +1,6 @@
 "use client";
 import { barraMs } from "@/types/store-config";
+import { anunciosDeRubro, garantiasDeRubro, entregaPorDescarga } from "@/lib/beneficios-rubro";
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { FadeImage } from "@/components/store/templates/shared/FadeImage";
@@ -153,12 +154,22 @@ function ProductCard({ product, href, currency, isFavorite, onToggleFavorite, ed
   );
 }
 
-const CONFIANZA = [
-  { fv: "trust1Title", fl: "trust1Desc", iconDefault: 0, t: "Cuotas", d: "Con tu tarjeta de crédito" },
-  { fv: "trust2Title", fl: "trust2Desc", iconDefault: 1, t: "Garantía", d: "Oficial en todo el catálogo" },
-  { fv: "trust3Title", fl: "trust3Desc", iconDefault: 4, t: "Stock real", d: "Lo que ves es lo que hay" },
-  { fv: "trust4Title", fl: "trust4Desc", iconDefault: 3, t: "Envíos", d: "A todo el país" },
+/* Las cuatro tarjetas de confianza. Cuál va en cada una depende del rubro (ver
+   lib/beneficios-rubro): la última —"Envíos: a todo el país"— es imposible en
+   una tienda que entrega por descarga, y "Stock real" tampoco significa nada
+   cuando un archivo se puede vender infinitas veces. El nombre del campo
+   editable no cambió: lo que la dueña ya editó sigue en su lugar. */
+const CONFIANZA_PROPIA = [
+  { title: "Cuotas",     desc: "Con tu tarjeta de crédito" },
+  { title: "Garantía",   desc: "Oficial en todo el catálogo" },
+  { title: "Stock real", desc: "Lo que ves es lo que hay" },
+  { title: "Envíos",     desc: "A todo el país" },
 ];
+
+/* Con qué ícono abre cada tarjeta. La cuarta abría en el CAMIÓN, que arriba de
+   "Atención personalizada" no dice nada, y la primera necesita el rayo. */
+const ICONOS_DE_FABRICA         = [0, 1, 4, 3]; // tarjeta, escudo, rayo, camión
+const ICONOS_DE_FABRICA_DIGITAL = [4, 8, 1, 7]; // rayo, sobre, escudo, chat
 
 // Íconos cambiables con el botón "↻" en modo edición (mismo patrón que FashionNoir/AutoDrive)
 const TRUST_ICONS: React.ReactNode[] = [
@@ -170,8 +181,16 @@ const TRUST_ICONS: React.ReactNode[] = [
   <svg key="gift" width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>,
   <svg key="swap" width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>,
   <svg key="chat" width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>,
+  // El sobre entró para "Te llega por mail". Va AL FINAL a propósito: el
+  // override guarda el NÚMERO de ícono, así que meterlo en el medio le
+  // cambiaría el dibujo a toda tienda que ya lo hubiera elegido.
+  <svg key="mail" width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg>,
 ];
-const BENEF_ICON_DEFAULTS = [4, 6, 7, 1]; // bolt, swap, chat, shield
+const BENEF_ICON_DEFAULTS         = [4, 6, 7, 1]; // rayo, cambio, chat, escudo
+/* El segundo beneficio pasa de "cambios sin cargo" a "te llega el link por
+   mail": con el ícono de cambio puesto, el dibujo seguiría hablando de una
+   devolución que en una descarga no existe. */
+const BENEF_ICON_DEFAULTS_DIGITAL = [4, 8, 7, 1]; // rayo, sobre, chat, escudo
 
 function SocialIcon({ network }: { network: string }) {
   const common = { width: 16, height: 16, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.8, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
@@ -312,7 +331,32 @@ export default function TechNova() {
   const promoBannerEnabled = config?.promoBanner?.enabled !== false;
   const annMessages = (config?.promoBanner?.messages?.filter(m => m.trim()) ?? []).length > 0
     ? config!.promoBanner!.messages!.filter(m => m.trim())
-    : DEFAULTS;
+    : anunciosDeRubro(config?.tipoTienda, DEFAULTS);
+
+  const esDigital = entregaPorDescarga(config?.tipoTienda);
+  /* Las tarjetas de confianza, con los textos y los íconos del rubro. */
+  const iconosDeFabrica = esDigital ? ICONOS_DE_FABRICA_DIGITAL : ICONOS_DE_FABRICA;
+  const CONFIANZA = garantiasDeRubro(config?.tipoTienda, CONFIANZA_PROPIA).map((g, i) => ({
+    fv: `trust${i + 1}Title`, fl: `trust${i + 1}Desc`, iconDefault: iconosDeFabrica[i], t: g.title, d: g.desc,
+  }));
+  /* Los cuatro "beneficios de comprar acá". No tienen la forma de los sellos
+     —son una frase suelta cada uno— así que la versión digital se escribe acá,
+     con la voz de este diseño, y sólo la PREGUNTA de cuál usar es compartida.
+     El segundo es el que miente: no hay cambios que hacer sobre una descarga. */
+  const benefIconos = esDigital ? BENEF_ICON_DEFAULTS_DIGITAL : BENEF_ICON_DEFAULTS;
+  const BENEFICIOS = esDigital
+    ? [
+        { field:"benef1", def:"El archivo se descarga apenas se acredita el pago" },
+        { field:"benef2", def:"Te llega el link por mail, a tu nombre" },
+        { field:"benef3", def:"Asesoramiento antes de comprar por WhatsApp" },
+        { field:"benef4", def:"Compra protegida con Mercado Pago" },
+      ]
+    : [
+        { field:"benef1", def:"Entrega inmediata en productos con stock" },
+        { field:"benef2", def:"Cambios sin cargo dentro de los primeros 10 días" },
+        { field:"benef3", def:"Asesoramiento antes de comprar por WhatsApp" },
+        { field:"benef4", def:"Compra protegida con Mercado Pago" },
+      ];
   const showAnn = promoBannerEnabled && annVisible;
   const PROMO_H = 36;
   const NAV_H   = 64;
@@ -751,13 +795,8 @@ export default function TechNova() {
             <EditableZone field="benefHeading" label="Título beneficios">Beneficios de comprar acá</EditableZone>
           </h2>
           <div className="tn-benef-grid" style={{ display:"grid", gap:18 }}>
-            {[
-              { field:"benef1", def:"Entrega inmediata en productos con stock" },
-              { field:"benef2", def:"Cambios sin cargo dentro de los primeros 10 días" },
-              { field:"benef3", def:"Asesoramiento antes de comprar por WhatsApp" },
-              { field:"benef4", def:"Compra protegida con Mercado Pago" },
-            ].map(({ field, def }, i) => {
-              const iconIdx = Math.abs(parseInt(overrides[`${field}IconIdx`]?.text ?? String(BENEF_ICON_DEFAULTS[i])) || 0) % TRUST_ICONS.length;
+            {BENEFICIOS.map(({ field, def }, i) => {
+              const iconIdx = Math.abs(parseInt(overrides[`${field}IconIdx`]?.text ?? String(benefIconos[i])) || 0) % TRUST_ICONS.length;
               const nextIdx = (iconIdx + 1) % TRUST_ICONS.length;
               return (
                 <div key={field} style={{ display:"flex", alignItems:"flex-start", gap:14 }}>

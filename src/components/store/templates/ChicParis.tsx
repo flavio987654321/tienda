@@ -7,6 +7,7 @@ import { BotonVolver } from "@/components/store/templates/shared/BotonVolver";
 import { productosDeLaVitrina, leerModo, leerElegidos } from "@/lib/vitrina";
 import { BotonVitrina } from "@/components/store/templates/shared/BotonVitrina";
 import { barraMs } from "@/types/store-config";
+import { anunciosDeRubro, garantiasDeRubro, entregaPorDescarga } from "@/lib/beneficios-rubro";
 import { useState, useEffect, useRef, useMemo, useSyncExternalStore, Fragment } from "react";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { usePushBell } from "@/contexts/PushBellContext";
@@ -119,6 +120,9 @@ const STRIP_ICONS: React.ReactNode[][] = [
     <svg key="undo" width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.51"/></svg>,
     <svg key="check-circle" width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>,
     <svg key="arrows-lr" width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>,
+    // El sobre acompaña a "Te llega por mail": en este casillero sólo había
+    // flechas de cambio y de devolución, que en una descarga no aplican.
+    <svg key="mail-2" width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>,
   ],
   [ // Slot 2: pago seguro
     <svg key="shield" width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>,
@@ -134,12 +138,24 @@ const STRIP_ICONS: React.ReactNode[][] = [
   ],
 ];
 
-const STRIP_ITEMS = [
-  { slot: 0, titleField: "garantia1Title", titleDefault: "Envío gratis",    descField: "garantia1Desc", descDefault: "En compras mayores a $30.000" },
-  { slot: 1, titleField: "garantia2Title", titleDefault: "Cambios sin cargo", descField: "garantia2Desc", descDefault: "Hasta 30 días después de la compra" },
-  { slot: 2, titleField: "garantia3Title", titleDefault: "Pago seguro",      descField: "garantia3Desc", descDefault: "Todos los medios de pago protegidos" },
-  { slot: 3, titleField: "garantia4Title", titleDefault: "Atención rápida",  descField: "garantia4Desc", descDefault: "Respondemos en menos de 24hs" },
+/* Los textos de la franja. Antes estaban acá con el nombre del campo editable
+   al lado; ahora sólo están los textos, porque cuál va en cada casillero pasó a
+   depender del rubro (ver lib/beneficios-rubro): una tienda que entrega por
+   descarga no puede abrir prometiendo envío gratis ni cambios sin cargo. El
+   nombre del campo lo arma el render, y NO cambió — lo que la dueña ya editó
+   sigue en su lugar. */
+const STRIP_PROPIO = [
+  { title: "Envío gratis",      desc: "En compras mayores a $30.000" },
+  { title: "Cambios sin cargo", desc: "Hasta 30 días después de la compra" },
+  { title: "Pago seguro",       desc: "Todos los medios de pago protegidos" },
+  { title: "Atención rápida",   desc: "Respondemos en menos de 24hs" },
 ];
+
+/* Con qué ícono abre cada casillero. Sin esto los cuatro arrancaban en el 0, o
+   sea un CAMIÓN arriba de "Descarga inmediata": el texto diría una cosa y el
+   dibujo la contraria. La dueña los sigue cambiando con el botón ↻. */
+const ICONOS_DE_FABRICA         = [0, 0, 0, 0]; // camión, flechas, escudo, chat
+const ICONOS_DE_FABRICA_DIGITAL = [2, 4, 0, 0]; // rayo, sobre, escudo, chat
 
 // Cuántos productos muestra la home de entrada, y cuántos suma cada "Ver más".
 const PASO_PRODUCTOS = 8;
@@ -405,7 +421,19 @@ export default function ChicParis() {
   const CP_DEFAULTS = ["🚚 Envío gratis en compras mayores a $30.000", "🔄 Cambios sin cargo hasta 30 días", "💳 6 cuotas sin interés"];
   const announcementMessages = (storeConfig?.promoBanner?.messages?.filter(m => m.trim()) ?? []).length > 0
     ? storeConfig!.promoBanner!.messages!.filter(m => m.trim())
-    : CP_DEFAULTS;
+    : anunciosDeRubro(storeConfig?.tipoTienda, CP_DEFAULTS);
+
+  /* La franja de garantías, ya con los textos del rubro. El campo editable no
+     cambia (`garantia1Title`…): lo único distinto es qué dice cuando la dueña
+     todavía no lo tocó. */
+  const stripItems = garantiasDeRubro(storeConfig?.tipoTienda, STRIP_PROPIO).map((g, i) => ({
+    slot: i,
+    titleField: `garantia${i + 1}Title`, titleDefault: g.title,
+    descField:  `garantia${i + 1}Desc`,  descDefault:  g.desc,
+  }));
+  const iconosDeFabrica = entregaPorDescarga(storeConfig?.tipoTienda)
+    ? ICONOS_DE_FABRICA_DIGITAL
+    : ICONOS_DE_FABRICA;
   const showAnnouncement = promoBannerEnabled && announcementVisible;
 
   const stripBg   = sc["bgStrip"]    ?? "#f5f5f3";
@@ -1307,8 +1335,8 @@ export default function ChicParis() {
             ancho completo de su celda y el texto entra bien. En escritorio siguen
             en fila (ícono a la izquierda), repartidos con space-between. */}
         <div style={{ maxWidth: 1100, margin: "0 auto", display: isMobile ? "grid" : "flex", gridTemplateColumns: isMobile ? "1fr 1fr" : undefined, justifyContent: isMobile ? undefined : "space-between", flexWrap: isMobile ? undefined : "wrap", gap: isMobile ? 24 : 16 }}>
-          {STRIP_ITEMS.map(({ slot, titleField, titleDefault, descField, descDefault }) => {
-            const iconIdx = (Math.abs(parseInt(textOverrides[`garantia${slot + 1}Icon`]?.text ?? "0") || 0)) % STRIP_ICONS[slot].length;
+          {stripItems.map(({ slot, titleField, titleDefault, descField, descDefault }) => {
+            const iconIdx = (Math.abs(parseInt(textOverrides[`garantia${slot + 1}Icon`]?.text ?? String(iconosDeFabrica[slot])) || 0)) % STRIP_ICONS[slot].length;
             const nextIdx = (iconIdx + 1) % STRIP_ICONS[slot].length;
             return (
               <div key={titleField} style={{ display: "flex", flexDirection: isMobile ? "column" : "row", alignItems: "center", textAlign: isMobile ? "center" : "left", gap: isMobile ? 8 : 14, flex: isMobile ? undefined : "1 1 200px" }}>

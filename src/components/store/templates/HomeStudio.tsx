@@ -1,5 +1,6 @@
 "use client";
 import { barraMs } from "@/types/store-config";
+import { anunciosDeRubro, entregaPorDescarga } from "@/lib/beneficios-rubro";
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { FadeImage } from "@/components/store/templates/shared/FadeImage";
@@ -250,7 +251,26 @@ export default function HomeStudio() {
   const promoBannerEnabled = config?.promoBanner?.enabled !== false;
   const annMessages = (config?.promoBanner?.messages?.filter(m => m.trim()) ?? []).length > 0
     ? config!.promoBanner!.messages!.filter(m => m.trim())
-    : DEFAULTS;
+    : anunciosDeRubro(config?.tipoTienda, DEFAULTS);
+
+  /* La línea de confianza. Son cuatro frases sueltas —no tienen la forma de las
+     fichas de otros templates— así que la versión digital se escribe acá, con
+     la voz de este diseño; sólo la PREGUNTA de cuál usar es compartida (ver
+     lib/beneficios-rubro). Dos de las cuatro son imposibles en una tienda que
+     entrega por descarga: no hay envío ni local donde retirar. */
+  const CONFIANZA = entregaPorDescarga(config?.tipoTienda)
+    ? [
+        { field:"trustLine1", def:"Cuotas con tarjeta" },
+        { field:"trustLine2", def:"Descarga inmediata" },
+        { field:"trustLine3", def:"Te llega el link por mail" },
+        { field:"trustLine4", def:"Pago protegido" },
+      ]
+    : [
+        { field:"trustLine1", def:"Cuotas con tarjeta" },
+        { field:"trustLine2", def:"Garantía oficial" },
+        { field:"trustLine3", def:"Envíos a todo el país" },
+        { field:"trustLine4", def:"Retiro sin cargo en local" },
+      ];
   const showAnn = promoBannerEnabled && annVisible;
   const PROMO_H = 36;
   const NAV_H   = 68;
@@ -518,12 +538,7 @@ export default function HomeStudio() {
         <SectionOverlay ov={trustImg} />
         <EditableSectionBg field="bgConfianza" label="Fondo confianza" />
         <div style={{ position:"relative", zIndex:1, maxWidth:1000, margin:"0 auto", display:"flex", flexWrap:"wrap", justifyContent:"center", gap:22, fontSize:12.5, color:trustMid, fontWeight:500, letterSpacing:0.3 }}>
-          {[
-            { field:"trustLine1", def:"Cuotas con tarjeta" },
-            { field:"trustLine2", def:"Garantía oficial" },
-            { field:"trustLine3", def:"Envíos a todo el país" },
-            { field:"trustLine4", def:"Retiro sin cargo en local" },
-          ].map(({ field, def }) => (
+          {CONFIANZA.map(({ field, def }) => (
             <span key={field} style={{ display:"flex", alignItems:"center", gap:8 }}>
               <span style={{ width:5, height:5, borderRadius:"50%", background:accent, flexShrink:0 }} />
               <EditableZone field={field} label="Frase de confianza">{def}</EditableZone>

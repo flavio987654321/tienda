@@ -1,5 +1,6 @@
 import type { TemplateId } from "@/types/store-config";
 import { TEMPLATE_TIPO_TIENDA } from "@/types/store-config";
+import { getStoreType } from "@/lib/storeTypes";
 import Aire from "@/components/store/templates/Aire";
 import BohoTerra from "@/components/store/templates/BohoTerra";
 import UrbanPulse from "@/components/store/templates/UrbanPulse";
@@ -61,4 +62,42 @@ export const TEMPLATE_CATEGORIES: TemplateCategory[] = [
     ],
   },
 ];
+
+/**
+ * Las categorías que ve la dueña, según el rubro de su tienda.
+ *
+ * ── Por qué no alcanzaba con las tres de arriba ──────────────────────────────
+ *
+ * Están agrupadas por el rubro para el que se diseñaron: Moda, Autos, Hogar &
+ * Tecnología. La galería las muestra todas y apaga las tarjetas que el rubro no
+ * habilita. Con eso, una tienda de productos digitales entraba y veía once
+ * diseños repartidos en tres títulos que hablan de otra cosa, dos de ellos
+ * enteros en gris.
+ *
+ * Un rubro que entrega por descarga no es "moda" ni "hogar": puede usar
+ * cualquiera de los nueve diseños de tienda, porque un archivo se muestra igual
+ * que cualquier otro producto. Así que en ese caso la galería deja de agrupar
+ * por el rubro de origen y muestra UNA sola sección con los que puede usar.
+ *
+ * ── Por qué se arma sola y no a mano ─────────────────────────────────────────
+ *
+ * La lista sale de TEMPLATE_TIPO_TIENDA, la misma tabla que decide si la
+ * tarjeta se puede clickear. Con una segunda lista escrita a mano, habilitar un
+ * diseño y olvidarse de agregarlo acá daría una tarjeta que existe pero que
+ * nadie encuentra — o peor al revés: una que aparece y está apagada.
+ *
+ * El nombre de la sección tampoco se escribe acá: es el del rubro, el mismo que
+ * la dueña eligió en el modal de "¿qué vendés?".
+ */
+export function categoriasParaRubro(tipoTienda: string | null | undefined): TemplateCategory[] {
+  const rubro = getStoreType(tipoTienda ?? "GENERAL");
+  if (!rubro.requiereArchivo) return TEMPLATE_CATEGORIES;
+  return [{
+    id: rubro.id.toLowerCase(),
+    name: rubro.label,
+    templates: TEMPLATE_CATEGORIES
+      .flatMap(c => c.templates)
+      .filter(t => t.tipoTiendas.includes(rubro.id)),
+  }];
+}
 

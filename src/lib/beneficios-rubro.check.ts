@@ -88,5 +88,48 @@ for (const [templateId, rubros] of Object.entries(TEMPLATE_TIPO_TIENDA)) {
   );
 }
 
+/* ── La galería: el rubro sin envío tiene su propio lugar ────────────────────
+   Las tres categorías del selector están agrupadas por el rubro para el que se
+   diseñó cada plantilla —Moda, Autos, Hogar & Tecnología— y la galería las
+   muestra TODAS, apagando las tarjetas que el rubro no habilita.
+
+   Para una tienda de productos digitales eso daba once diseños repartidos en
+   tres títulos que hablan de otra cosa, dos de ellos enteros en gris. Por eso
+   `categoriasParaRubro` arma una sola sección con los que sí puede usar.
+
+   No se puede importar `templateRegistry` acá: trae los componentes de React y
+   este chequeo corre en Node pelado. Así que se mira el código. Vale la pena
+   igual, porque las dos mitades se rompen por separado y en silencio: si
+   alguien deja de llamar a la función, la galería vuelve a las tres categorías
+   y nadie se entera hasta que una dueña abre esa pantalla. */
+console.log("\nLa galería agrupa aparte al rubro sin envío\n");
+
+const registro = leer("src/lib/templateRegistry.ts");
+const galeria  = leer("src/app/dashboard/configuracion/page.tsx");
+
+chequear("templateRegistry exporta categoriasParaRubro", /export function categoriasParaRubro/.test(registro));
+chequear(
+  "y la arma desde TEMPLATE_TIPO_TIENDA, no de una lista aparte",
+  /categoriasParaRubro[\s\S]{0,900}TEMPLATE_CATEGORIES[\s\S]{0,300}tipoTiendas\.includes\(rubro\.id\)/.test(registro),
+);
+chequear(
+  'decide por requiereArchivo y no comparando contra "DIGITAL"',
+  /categoriasParaRubro[\s\S]{0,400}requiereArchivo/.test(registro) &&
+    !/categoriasParaRubro[\s\S]{0,400}=== "DIGITAL"/.test(registro),
+);
+chequear("la galería la usa para dibujar", /categoriasParaRubro\(storeTipoTienda\)\.map/.test(galeria));
+chequear(
+  "y sigue teniendo la lista completa para BUSCAR la plantilla guardada",
+  /const CATEGORIES: Category\[\] = TEMPLATE_CATEGORIES;/.test(galeria) &&
+    /CATEGORIES\.flatMap\(c => c\.templates\)/.test(galeria),
+);
+
+/* Y que no se quede sin diseños: si mañana alguien saca el rubro de las listas,
+   la tienda no tiene qué elegir y la galería le queda vacía. */
+for (const rubro of RUBROS_SIN_ENVIO) {
+  const habilitados = Object.entries(TEMPLATE_TIPO_TIENDA).filter(([, rs]) => rs.includes(rubro));
+  chequear(`${rubro}: tiene diseños para elegir (${habilitados.length})`, habilitados.length > 0, habilitados.map(([id]) => id));
+}
+
 console.log(fallos === 0 ? "\n✓ todo bien\n" : `\n✗ ${fallos} falla(s)\n`);
 process.exit(fallos === 0 ? 0 : 1);

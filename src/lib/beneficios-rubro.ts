@@ -56,8 +56,16 @@ const GARANTIAS_DIGITAL: FichaDeGarantia[] = [
   { title: "Pago seguro",        desc: "Todos los medios de pago protegidos" },
 ];
 
-/** ¿Este rubro entrega por descarga? Se pregunta al rubro, no a una lista. */
-function entregaPorDescarga(tipoTienda: string | null | undefined): boolean {
+/**
+ * ¿Este rubro entrega por descarga? Se pregunta al rubro, no a una lista.
+ *
+ * Se exporta porque hay textos que no tienen la forma de los de acá y viven en
+ * un solo template: los cuatro "beneficios" de Tech Nova, la línea de confianza
+ * de Casa Clara. Esos se escriben allá, con la voz de ese diseño, pero la
+ * pregunta de cuándo usarlos se contesta en un solo lugar — si mañana entra
+ * otro rubro que entrega por descarga, no hay que acordarse de once archivos.
+ */
+export function entregaPorDescarga(tipoTienda: string | null | undefined): boolean {
   return getStoreType(tipoTienda ?? "ROPA").requiereArchivo === true;
 }
 
@@ -82,7 +90,34 @@ export function anunciosDeRubro(
   return entregaPorDescarga(tipoTienda) ? ANUNCIOS_DIGITAL : propiosDelTemplate;
 }
 
+/* La cuarta ficha. Varios templates muestran CUATRO y no tres, y la que sobra
+   es siempre del mismo tipo: "Soporte 24/7", "Atención rápida". Vale para
+   cualquier rubro, pero no puede quedarse la del template cuando el rubro es
+   digital, porque en tres de ellos esa cuarta es justamente "Envío a todo el
+   país" o "Retiro en local". */
+const GARANTIA_ATENCION: FichaDeGarantia = {
+  title: "Atención personalizada",
+  desc:  "Respondemos en menos de 24 hs",
+};
+
 /** Los títulos de las tres fichas de garantía. Los íconos los pone el template. */
 export function garantiasPorDefecto(tipoTienda: string | null | undefined): FichaDeGarantia[] {
   return entregaPorDescarga(tipoTienda) ? GARANTIAS_DIGITAL : GARANTIAS_FISICO;
+}
+
+/**
+ * Igual que `garantiasPorDefecto`, pero para los templates que muestran cuatro
+ * fichas en vez de tres y con textos propios distintos en cada uno.
+ *
+ * Devuelve **la misma cantidad** de fichas que recibe: cada template dibuja un
+ * número fijo de casilleros y una lista más corta le dejaría uno vacío. Cuando
+ * el rubro sí envía, las suyas vuelven intactas.
+ */
+export function garantiasDeRubro(
+  tipoTienda: string | null | undefined,
+  propias: FichaDeGarantia[],
+): FichaDeGarantia[] {
+  if (!entregaPorDescarga(tipoTienda)) return propias;
+  const digitales = [...GARANTIAS_DIGITAL, GARANTIA_ATENCION];
+  return propias.map((propia, i) => digitales[i] ?? propia);
 }

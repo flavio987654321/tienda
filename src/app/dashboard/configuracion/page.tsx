@@ -9,7 +9,7 @@ import { StoreConfigContext } from "@/contexts/StoreConfigContext";
 import { EditContext, useEditContext, getContrastColor } from "@/contexts/EditContext";
 import { parseColor, toHex, contrastRatio, nearestLegible, MIN_LEGIBLE, MIN_LEGIBLE_GRANDE } from "@/lib/contrast";
 import { parseBg, serializeBg, extremo, extremosDe, DIR_LABELS, type SectionBg, type BgDir, type BgHacia } from "@/lib/section-bg";
-import { TEMPLATE_CATEGORIES, type TemplateInfo } from "@/lib/templateRegistry";
+import { TEMPLATE_CATEGORIES, categoriasParaRubro, type TemplateInfo } from "@/lib/templateRegistry";
 import { topeDelTexto, nombreDelTope } from "@/lib/topes-texto";
 import { UnsavedChangesGuard } from "@/components/UnsavedChangesGuard";
 import TourGuide from "@/components/TourGuide";
@@ -21,6 +21,9 @@ type Mode = "gallery" | "preview" | "editing";
 type Category = { id: string; name: string; templates: TemplateInfo[] };
 
 /* ── Template registry ─────────────────────────────────────── */
+/* TODAS las plantillas, agrupadas como vienen. Sirve para BUSCAR: la que la
+   tienda tiene guardada tiene que encontrarse siempre, aunque hoy no aparezca
+   en la galería. Lo que se DIBUJA lo decide `categoriasParaRubro`. */
 const CATEGORIES: Category[] = TEMPLATE_CATEGORIES;
 
 /* ── Consejos por campo de imagen ──────────────────────────────────────────────
@@ -2610,7 +2613,7 @@ export default function ConfiguracionPage() {
                   Hacé click en un diseño para verlo en detalle.
                 </p>
 
-                {CATEGORIES.map(cat => (
+                {categoriasParaRubro(storeTipoTienda).map(cat => (
                   <div key={cat.id} style={{ marginBottom: 44 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
                       <span style={{ fontSize: 11, fontWeight: 800, color: "#0f172a",

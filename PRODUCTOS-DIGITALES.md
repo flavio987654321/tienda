@@ -92,9 +92,10 @@ precedente explícito: el comentario de Aurora dice *"no está atada a un rubro:
 una estética, no una categoría"*. El diseño propio se evalúa después, cuando se
 sepa si el rubro se usa.
 
-- 🔲 Sumar `"DIGITAL"` a los diseños neutros en `TEMPLATE_TIPO_TIENDA`
+- ✅ Sumar `"DIGITAL"` a los diseños neutros en `TEMPLATE_TIPO_TIENDA`
   (candidatos: `aire`, `aurora`, `boho-terra`) y verificar que el selector de
-  diseño muestre al menos uno.
+  diseño muestre al menos uno. **Terminado el 29/08 con los NUEVE**, no tres: ver
+  "Los nueve diseños" abajo.
 
 ---
 
@@ -123,7 +124,7 @@ entregue nada.
     los artículos correctos solo.
 - ✅ **`TEMPLATE_TIPO_TIENDA`** (`src/types/store-config.ts`) — `"DIGITAL"` sumado
   a los tres neutros: `aire`, `boho-terra`, `aurora`. Sin esto el rubro se quedaba
-  sin ningún diseño para elegir.
+  sin ningún diseño para elegir. **Ampliado a nueve el 29/08** — ver abajo.
 - 🔲 **Probar a mano**: crear una tienda de prueba con el rubro nuevo y mirar que
   el selector, el directorio y el panel no se rompan. Ver en los tres anchos
   (360 / 768 / 1280).
@@ -329,6 +330,71 @@ Eso **hay que decirlo en la tienda antes de comprar**, no dejar que el comprador
 lo descubra esperando un mail que no llega.
 
 - 🔲 Definir el texto y dónde va.
+
+---
+
+## Los nueve diseños y su propia categoría (29/08)
+
+Los tres del arranque alcanzaban para que la tienda tuviera cara, no para que la
+dueña pudiera elegir. Ahora están habilitados **los nueve diseños de tienda**:
+los cuatro de Moda (`aire`, `boho-terra`, `urban-pulse`, `chic-paris`), los
+cuatro de Hogar & Tecnología (`electro-prime`, `tech-nova`, `home-studio`,
+`casa-clara`) y `aurora`. Los dos de Autos no: ese rubro no vende con carrito.
+
+### Habilitar no era sumar una palabra
+
+Cada diseño trae sus textos "de fábrica" escritos adentro, y **todos abrían
+prometiendo algo que esta tienda no hace**: "Envío gratis en compras mayores a
+$30.000", "Cambios sin cargo hasta 30 días", "Retiro en local", "Envío a todo el
+país", "Stock real". No rompen nada — la tienda carga, se ve linda y vende.
+Solamente mienten, que es peor, porque nadie lo va a reportar como error.
+
+- ✅ **`src/lib/beneficios-rubro.ts`** — sumó `garantiasDeRubro()` para los que
+  muestran CUATRO fichas y no tres, y exporta `entregaPorDescarga()` para los
+  textos que no tienen forma de ficha (los cuatro "beneficios" de Tech Nova, la
+  línea de confianza de Casa Clara). Esos se escriben en su template, con la voz
+  de ese diseño; lo único compartido es la pregunta de cuándo usarlos.
+- ✅ **Los seis templates nuevos** — `UrbanPulse`, `ChicParis`, `ElectroPrime`,
+  `TechNova`, `HomeStudio`, `CasaClara`: barra de anuncios, fichas de garantía,
+  ticker y líneas de confianza, todo por rubro.
+- ✅ **Los íconos también** — un CAMIÓN arriba de "Descarga inmediata" desmiente
+  el texto. Cada template define con qué ícono abre cada casillero según el
+  rubro. Los íconos nuevos (sobre, chat) se agregaron **al final** de cada lista:
+  el override guarda el NÚMERO, así que meterlos en el medio le cambiaría el
+  dibujo a toda tienda que ya lo hubiera elegido.
+- ✅ **Nada de lo que la dueña ya editó se movió** — los nombres de los campos
+  (`garantia1Title`, `trust2Desc`…) son los de siempre. Lo único que cambia es
+  qué dicen cuando todavía no los tocó.
+
+### La galería tiene una sección propia
+
+`categoriasParaRubro()` en `src/lib/templateRegistry.ts`. Las tres categorías
+del selector están agrupadas por el rubro para el que se diseñó cada plantilla, y
+la galería las muestra todas apagando las que no se pueden usar: una tienda
+digital entraba y veía once diseños repartidos en tres títulos que hablan de otra
+cosa, dos de ellos enteros en gris. Ahora ve **una sola sección, "Productos
+digitales"**, con los nueve que puede usar.
+
+Se arma sola desde `TEMPLATE_TIPO_TIENDA` —la misma tabla que decide si la
+tarjeta se puede clickear— y el título sale del nombre del rubro. Con una segunda
+lista a mano, habilitar un diseño y olvidarse de agregarlo acá daría una tarjeta
+que existe y que nadie encuentra.
+
+**Chequeo:** `beneficios-rubro.check.ts` cruza `TEMPLATE_TIPO_TIENDA` con el
+código de cada template: si un diseño figura habilitado para un rubro sin envío y
+no está leyendo los textos del rubro, falla y dice cuál es. Más las dos mitades de
+la galería, que se rompen por separado y en silencio.
+
+**Chequeos (29/08):** ✅ `npx tsc --noEmit` limpio · ✅ `npm run check` 55/55 ·
+✅ eslint sin errores en los 11 archivos. **Sin build de producción y sin deploy.**
+
+### Lo que NO se tocó, a propósito
+
+El texto que **describe los productos** de cada diseño: el subtítulo del hero de
+Electro Prime ("Electrodomésticos, celulares, informática y muebles…"), los
+párrafos de "Nosotros". Eso es relleno de ejemplo que toda dueña reescribe con lo
+suyo, sea cual sea el rubro. Lo que se arregló es distinto: una **promesa que la
+tienda no puede cumplir**.
 
 ---
 
