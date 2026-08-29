@@ -773,6 +773,44 @@ model OrderItem {
 
   variantId String?
   variant   ProductVariant? @relation(fields: [variantId], references: [id])
+
+  descargas DigitalDownload[]
+}
+
+/// El permiso de descarga de un producto digital, emitido cuando el pago se
+/// acredita. Es una fila por línea comprada, no por producto: dos personas que
+/// compran el mismo PDF tienen cada una su token, su vencimiento y su cuenta.
+///
+/// El token NO es la ubicación del archivo: es una llave que se canjea en
+/// /api/descargas/[token], que recién ahí —y después de mirar vencimiento y
+/// tope— le pide a Supabase un link firmado de vida corta. Así el mail nunca
+/// lleva una dirección que sirva sola, y el permiso se puede vencer o agotar sin
+/// tener que mover el archivo.
+model DigitalDownload {
+  id    String @id @default(cuid())
+  /// Se canjea en la URL, así que va indexado y único. Se genera con
+  /// `randomUUID`, nunca con `Math.random()`: el generador de JS es predecible a
+  /// partir de unas pocas salidas del mismo proceso, y acá el token es lo ÚNICO
+  /// que separa a un comprador del archivo de otro.
+  token String @unique
+
+  /// Cuándo deja de servir. 30 días desde la compra.
+  expiresAt DateTime
+  /// Cuántas veces se usó y cuántas se permiten. El tope corta el reenvío del
+  /// link a diez amigos sin castigar al que lo baja en el celular y en la compu.
+  descargas    Int @default(0)
+  maxDescargas Int @default(5)
+  /// Para que la dueña vea en el panel si el comprador lo bajó o nunca entró.
+  ultimaDescarga DateTime?
+
+  orderItemId String
+  orderItem   OrderItem @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([orderItemId])
+  /// Para la limpieza de los vencidos en el cron diario.
+  @@index([expiresAt])
 }
 
 model Payment {

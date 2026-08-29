@@ -190,6 +190,7 @@ export async function POST(req: NextRequest) {
       storeConfig: true,
       isActive: true,
       closedAt: true,
+      tipoTienda: true,
       owner: {
         select: {
           banned: true,
@@ -233,22 +234,37 @@ export async function POST(req: NextRequest) {
     }
   } catch { /* noop */ }
 
-  const foundShippingMethod = findShippingMethod(shippingMethod, storeShippingMethods);
-  if (foundShippingMethod?.liveQuote && (!customer?.postalCode?.trim() || !customer?.province?.trim())) {
-    return NextResponse.json(
-      { error: "Ingresá tu código postal y provincia para cotizar el envío" },
-      { status: 400 }
+  /* En un rubro que entrega por descarga no hay envío que resolver ni código
+     postal que pedir: el archivo llega por mail. Se decide por el rubro y no por
+     los productos del carrito porque una tienda tiene UN rubro — no existe el
+     carrito mixto con algo para mandar por correo.
+
+     Va antes de `findShippingMethod` a propósito: si no, una tienda digital sin
+     métodos configurados caía en `DEFAULT_SHIPPING_METHODS` y le cobraba al
+     comprador un envío de un paquete que no existe. */
+  const entregaDigital = getStoreType(store.tipoTienda || "ROPA").requiereArchivo === true;
+
+  let shipping: { label: string; cost: number };
+  if (entregaDigital) {
+    shipping = { label: "Descarga online", cost: 0 };
+  } else {
+    const foundShippingMethod = findShippingMethod(shippingMethod, storeShippingMethods);
+    if (foundShippingMethod?.liveQuote && (!customer?.postalCode?.trim() || !customer?.province?.trim())) {
+      return NextResponse.json(
+        { error: "Ingresá tu código postal y provincia para cotizar el envío" },
+        { status: 400 }
+      );
+    }
+
+    shipping = await resolveShipping(
+      foundShippingMethod,
+      storeShippingMethods,
+      storeId,
+      customer?.postalCode ?? "",
+      customer?.province ?? "",
+      items.map((i) => ({ productId: i.productId, quantity: Math.max(1, Math.floor(Number(i.quantity) || 1)) }))
     );
   }
-
-  const shipping = await resolveShipping(
-    foundShippingMethod,
-    storeShippingMethods,
-    storeId,
-    customer?.postalCode ?? "",
-    customer?.province ?? "",
-    items.map((i) => ({ productId: i.productId, quantity: Math.max(1, Math.floor(Number(i.quantity) || 1)) }))
-  );
 
   try {
     let usedRewardCouponId: string | null = null;

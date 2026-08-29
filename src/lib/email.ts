@@ -2341,3 +2341,82 @@ export async function sendNewsletterCampanaEmail({
     `,
   });
 }
+
+/**
+ * El mail con los links de descarga, después de que el pago se acredita.
+ *
+ * Los links son tokens que se canjean en /api/descargas/[token]: el mail NUNCA
+ * lleva la dirección del archivo. Un mail se reenvía sin pensarlo, y una
+ * dirección directa al bucket serviría para siempre y para cualquiera.
+ */
+export async function sendDigitalDownloadEmail({
+  buyerEmail,
+  buyerName,
+  storeName,
+  archivos,
+  venceEl,
+  maxDescargas,
+}: {
+  buyerEmail: string;
+  buyerName: string;
+  storeName: string;
+  archivos: { nombre: string; token: string }[];
+  venceEl: Date;
+  maxDescargas: number;
+}) {
+  if (!process.env.RESEND_API_KEY) return;
+  if (archivos.length === 0) return;
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "";
+  const vence = venceEl.toLocaleDateString("es-AR", { day: "numeric", month: "long", year: "numeric" });
+
+  const filas = archivos
+    .map(
+      (a) => `
+        <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:16px;margin-bottom:12px;">
+          <p style="font-size:15px;color:#111827;margin:0 0 12px;font-weight:600;">${escapeHtml(a.nombre)}</p>
+          <a href="${appUrl}/api/descargas/${a.token}"
+             style="display:inline-block;background:#6366f1;color:#fff;padding:10px 24px;border-radius:10px;font-weight:600;font-size:14px;text-decoration:none;">
+            Descargar
+          </a>
+        </div>`
+    )
+    .join("");
+
+  await transporter.sendMail({
+    from: `"TiendaApps" <${FROM_ADDRESS}>`,
+    to: buyerEmail,
+    subject: `Tu compra en ${storeName} está lista para descargar`,
+    html: `
+      <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 16px;color:#111827;">
+        <div style="background:#4f46e5;border-radius:12px;padding:24px;margin-bottom:24px;text-align:center;">
+          <p style="color:rgba(255,255,255,0.8);font-size:13px;margin:0 0 4px;">${escapeHtml(storeName)}</p>
+          <h1 style="color:#fff;font-size:20px;margin:0;font-weight:700;">Ya podés descargar tu compra</h1>
+        </div>
+
+        <p style="color:#374151;font-size:15px;margin-bottom:8px;">Hola <strong>${escapeHtml(buyerName) || "!"}</strong>,</p>
+        <p style="color:#374151;font-size:15px;margin-bottom:24px;">
+          Recibimos tu pago. Acá abajo está lo que compraste:
+        </p>
+
+        ${filas}
+
+        <div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:12px;padding:16px;margin:24px 0;">
+          <p style="font-size:14px;color:#92400e;margin:0;">
+            <strong>Guardá el archivo apenas lo bajes.</strong> El link funciona hasta el
+            <strong>${vence}</strong> y se puede usar hasta <strong>${maxDescargas} veces</strong>,
+            así que conviene descargarlo y guardarlo en tu compu o tu celular.
+          </p>
+        </div>
+
+        <p style="color:#6b7280;font-size:14px;margin-bottom:24px;">
+          ¿No te funciona el link o se te venció? Escribile a <strong>${escapeHtml(storeName)}</strong> y te lo vuelven a mandar.
+        </p>
+
+        <p style="color:#9ca3af;font-size:12px;text-align:center;margin-top:24px;">
+          Este mail se generó automáticamente · TiendaApps
+        </p>
+      </div>
+    `,
+  });
+}
