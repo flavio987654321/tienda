@@ -9,6 +9,7 @@ import { GAMIFICATION_EXCLUDED_TEMPLATES } from "@/lib/gamification";
 import { hasActivePremium, SUB_STATUS_SELECT } from "@/lib/subscription";
 import AvisosDeSeccion from "@/components/dashboard/AvisosDeSeccion";
 import { todosLosAvisos, avisosDeSeccion } from "@/lib/avisos-tienda";
+import { getStoreType } from "@/lib/storeTypes";
 
 // `mp` lo setea el callback de OAuth de MercadoPago (?mp=connected | ?mp=error)
 // para poder mostrar el resultado de la conexión al volver.
@@ -61,6 +62,10 @@ export default async function PagosPage({ searchParams }: { searchParams: Promis
     : [0, 0, 0];
 
   const isAutos = store?.tipoTienda === "AUTOS";
+  /* Si el rubro entrega un archivo que se descarga, no hay envíos que
+     configurar: el checkout los saltea a propósito. Sale de la bandera del
+     rubro y no de comparar contra un nombre, igual que en el resto. */
+  const entregaPorDescarga = getStoreType(store?.tipoTienda ?? "ROPA").requiereArchivo === true;
 
   /* Los avisos salen del mismo lugar que los del menú lateral (lib/avisos-tienda),
      no de un cálculo propio de esta pantalla: es justamente lo que hacía que el
@@ -168,6 +173,7 @@ export default async function PagosPage({ searchParams }: { searchParams: Promis
                 storeName: store?.name ?? "",
                 contact: store?.whatsappNumber ?? "",
                 isAutos,
+                entregaPorDescarga,
                 mpConnected: !!store?.mpConnectedAt,
                 mpConnectedAt: store?.mpConnectedAt?.toISOString() ?? null,
                 mpSellerId: store?.mpSellerId ?? null,

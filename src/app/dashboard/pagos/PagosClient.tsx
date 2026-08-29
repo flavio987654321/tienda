@@ -43,6 +43,8 @@ type Props = {
     storeName: string;
     contact: string;
     isAutos: boolean;
+    /** El rubro entrega un archivo: no hay envíos que configurar. */
+    entregaPorDescarga: boolean;
     mpConnected: boolean;
     mpConnectedAt: string | null;
     mpSellerId: string | null;
@@ -76,6 +78,7 @@ export default function PagosClient({ initial }: Props) {
 
   const storeInfo: LegalStoreInfo = { name: initial.storeName, contact: initial.contact };
   const isAutos = initial.isAutos;
+  const entregaPorDescarga = initial.entregaPorDescarga;
 
   // La de privacidad no se pregunta: sale de lo que la tienda ya tiene
   // configurado (Analytics, Pixel, MercadoPago, afiliados). Pedirle al dueño
@@ -237,7 +240,9 @@ export default function PagosClient({ initial }: Props) {
             <div>
               <p className="text-sm font-semibold text-blue-900">¿Para qué sirve esto?</p>
               <p className="text-xs text-blue-700 mt-0.5 leading-relaxed">
-                Esta pantalla junta dos cosas distintas: <strong>cómo te cobran</strong> (MercadoPago, transferencia, efectivo) y <strong>cómo se entrega</strong> el pedido (retiro, envío). No hace falta activar todo — elegís solo las opciones que usás en tu negocio. Lo que actives le llega al cliente en el email de confirmación del pedido.
+                {entregaPorDescarga
+                  ? <>Acá definís <strong>cómo te cobran</strong>. En tu rubro esto no es un detalle más: <strong>con Mercado Pago el archivo se entrega solo</strong> apenas se acredita el pago. Con transferencia o efectivo vas a tener que mandarlo vos a mano, cada vez.</>
+                  : <>Esta pantalla junta dos cosas distintas: <strong>cómo te cobran</strong> (MercadoPago, transferencia, efectivo) y <strong>cómo se entrega</strong> el pedido (retiro, envío). No hace falta activar todo — elegís solo las opciones que usás en tu negocio. Lo que actives le llega al cliente en el email de confirmación del pedido.</>}
               </p>
             </div>
           </div>
@@ -399,6 +404,13 @@ export default function PagosClient({ initial }: Props) {
         </div>
       </Section>
 
+      {/* ── Cómo se entrega ────────────────────────────────────────────────
+          No aparece cuando el rubro entrega por descarga. Se ESCONDE y no se
+          deshabilita: una sección que se puede completar y no hace nada es peor
+          que una que no está — la dueña configuraría métodos de envío y
+          esperaría que el checkout se los ofrezca al comprador, y el checkout
+          los saltea. */}
+      {!entregaPorDescarga && <>
       <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 pt-2">Cómo se entrega</p>
 
       {/* MÉTODOS DE ENVÍO */}
@@ -559,6 +571,7 @@ export default function PagosClient({ initial }: Props) {
           </div>
         </div>
       </Section>
+      </>}
       </>
       )}
 
@@ -620,13 +633,15 @@ export default function PagosClient({ initial }: Props) {
 
           <PolicyBlock
             icon={<Truck className="h-3.5 w-3.5" />}
-            label={isAutos ? "Cómo se coordina la entrega" : "Política de envíos"}
+            label={isAutos ? "Cómo se coordina la entrega" : entregaPorDescarga ? "Política de entrega y descarga" : "Política de envíos"}
             active={policyShippingActive}
             onToggle={() => setPolicyShippingActive((v) => !v)}
             value={policyShipping}
             onChange={setPolicyShipping}
             placeholder={isAutos
               ? "Ej: La entrega se coordina en persona por WhatsApp una vez acordados los detalles de la operación. Recomendamos revisar la documentación antes de cerrar la compra."
+              : entregaPorDescarga
+              ? `Ej: No enviamos nada por correo: lo que comprás es un archivo que se descarga. Apenas se acredita el pago te llega un mail con tu link de descarga privado.\n\nEl link vence a los 30 días y se puede usar hasta 5 veces. Si tenés algún problema para bajarlo, escribinos y te lo reenviamos.`
               : `Ej: Enviamos por correo y transporte a todo el país. Los tiempos de entrega son de 3 a 7 días hábiles. El costo de envío se calcula según destino.\n\nRetiro en local sin cargo, coordinar por WhatsApp.`}
           />
 

@@ -268,6 +268,51 @@ console.log("\n── Casos borde ───────────────�
   );
 }
 
+/* ── El rubro que entrega por descarga ──────────────────────────────────────
+   No es un caso borde más: era un paso IMPOSIBLE de tildar. "Configurá tus
+   métodos de envío" nunca se iba a poder completar en una tienda que no envía
+   nada, y mientras quede un paso sin tildar el onboarding no se marca terminado.
+   Y mientras no se marque, `avisosDeTienda` corta antes de los amarillos.
+
+   O sea que un solo paso de más apagaba, para ese rubro entero: la barra de
+   pasos (que no se iba nunca de la pantalla), TODOS los avisos amarillos, y
+   encima encendía un rojo permanente por algo que no estaba roto. */
+{
+  const digital = { ...tiendaSana(), tipoTienda: "DIGITAL" };
+  // Una tienda de descargas no configura envíos: no tiene qué configurar.
+  digital.storeConfig = JSON.stringify({
+    template: "aire",
+    paymentInfo: { transferencia: { enabled: true, alias: "mi.alias" } },
+  });
+  const c = condicionesTienda(digital);
+  afirmar(c.entregaPorDescarga, "el rubro se reconoce por la bandera, no por el nombre");
+  afirmar(!c.tieneEnvios, "y efectivamente no tiene envíos configurados");
+  afirmar(pasosTerminados(c), "→ sus pasos NO exigen envíos: se pueden terminar");
+
+  const avisos = avisosDeTienda(digital);
+  afirmar(!avisos.some((a) => a.id === "sin-envios"), "no le sale el rojo de envíos");
+  afirmar(
+    avisosDelMenu(avisos).length === 0,
+    "y el menú le queda limpio: no hay nada roto que arreglar"
+  );
+}
+
+{
+  // El otro lado del mismo arreglo: donde SÍ hay que despachar, el rojo sigue.
+  const fisica = tiendaSana();
+  fisica.storeConfig = JSON.stringify({
+    template: "aire",
+    paymentInfo: { transferencia: { enabled: true, alias: "mi.alias" } },
+  });
+  const c = condicionesTienda(fisica);
+  afirmar(!c.entregaPorDescarga, "una tienda de ropa no entrega por descarga");
+  afirmar(!pasosTerminados(c), "sus pasos SIGUEN exigiendo envíos");
+  afirmar(
+    avisosDeTienda(fisica).some((a) => a.id === "sin-envios"),
+    "→ y le sale el rojo de envíos, como antes"
+  );
+}
+
 {
   const roto = { ...tiendaSana(), storeConfig: "{ esto no es json" };
   const c = condicionesTienda(roto);

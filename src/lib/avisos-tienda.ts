@@ -1,6 +1,7 @@
 import { cache } from "react";
 import { prisma } from "@/lib/prisma";
 import { getSubscriptionStatus } from "@/lib/subscription";
+import { getStoreType } from "@/lib/storeTypes";
 
 /* ── El único lugar donde se decide qué le falta a una tienda ─────────────────
    Antes esto vivía en dos lados que no se hablaban: la barra de "7/8 pasos"
@@ -174,6 +175,13 @@ export type CondicionesTienda = {
   estaVerificada: boolean;
   /** Sin NINGUNA forma de cobrar: ni MercadoPago, ni transferencia, ni efectivo. */
   noPuedeCobrar: boolean;
+  /**
+   * El rubro entrega un archivo que se descarga: no hay nada que despachar.
+   *
+   * Sale de la bandera del rubro y no de comparar contra un nombre, igual que
+   * el resto: el día que haya un segundo rubro sin envío, esto lo acompaña solo.
+   */
+  entregaPorDescarga: boolean;
   suscripcionCaida: boolean;
 };
 
@@ -188,6 +196,7 @@ export type DatosDeConfiguracion = Pick<
 
 export function condicionesTienda(estado: DatosDeConfiguracion): CondicionesTienda {
   const esAutos = estado.tipoTienda === "AUTOS";
+  const entregaPorDescarga = getStoreType(estado.tipoTienda ?? "ROPA").requiereArchivo === true;
 
   let tienePlantilla = false;
   let tieneEnvios = false;
@@ -219,6 +228,7 @@ export function condicionesTienda(estado: DatosDeConfiguracion): CondicionesTien
     // Las tiendas de autos no cobran por la plataforma: se contacta y se arregla
     // aparte, así que no tener medio de cobro no les rompe nada.
     noPuedeCobrar: !esAutos && !tieneMercadoPago && !tieneDatosDeCobro,
+    entregaPorDescarga,
     suscripcionCaida: estado.estadoSuscripcion === "GRACE" || estado.estadoSuscripcion === "EXPIRED",
   };
 }
@@ -232,7 +242,15 @@ export function condicionesTienda(estado: DatosDeConfiguracion): CondicionesTien
 export function pasosTerminados(c: CondicionesTienda): boolean {
   const basicos = c.tieneLogo && c.tienePlantilla && c.tieneProductos && c.tieneDescripcion && c.estaPublicada;
   if (c.esAutos) return basicos;
-  return basicos && c.tieneMercadoPago && c.tieneDatosDeCobro && c.tieneEnvios;
+  /* Sin el paso de envíos cuando no hay nada que despachar. Esto no es un
+     detalle cosmético: era un paso IMPOSIBLE de tildar, y mientras quede uno
+     sin tildar el onboarding nunca se marca terminado. Y mientras no se marque,
+     `avisosDeTienda` corta antes de los amarillos: una tienda de descargas no
+     iba a ver JAMÁS ninguno de ellos, ni la barra de pasos se le iba a ir de la
+     pantalla. Un solo paso de más apagaba media pantalla. */
+  const cobro = c.tieneMercadoPago && c.tieneDatosDeCobro;
+  if (c.entregaPorDescarga) return basicos && cobro;
+  return basicos && cobro && c.tieneEnvios;
 }
 
 /**
@@ -332,7 +350,11 @@ export function avisosDeTienda(estado: EstadoTienda): Aviso[] {
     });
   }
 
-  if (!c.esAutos && !c.tieneEnvios) {
+  /* El rojo de envíos no va donde no hay envío: en un rubro que entrega por
+     descarga el checkout se termina igual —lo saltea a propósito— así que este
+     aviso sería un rojo permanente por algo que no está roto. Y un rojo que no
+     se puede apagar deja de leerse, incluidos los que sí importan. */
+  if (!c.esAutos && !c.entregaPorDescarga && !c.tieneEnvios) {
     avisos.push({
       id: "sin-envios",
       nivel: "rojo",
