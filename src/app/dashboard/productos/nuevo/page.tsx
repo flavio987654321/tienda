@@ -9,7 +9,7 @@ import CampoAuto from "@/components/CampoAuto";
 import {
   Plus, Trash2, Loader2, ArrowLeft, ChevronLeft, ChevronRight,
   X, Star, ShoppingCart, Heart, Tag, Package, Calendar, Film,
-  Search, ChevronDown,
+  Search, ChevronDown, FileText, Upload,
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -108,6 +108,16 @@ const MAX_PRODUCT_IMAGES = 8;
 const MAX_PRODUCT_REELS = 3;
 // Debe coincidir con MAX_VIDEO_SIZE_MB de api/upload/route.ts
 const MAX_VIDEO_SIZE_MB = 50;
+// Debe coincidir con MAX_DIGITAL_SIZE_MB de api/upload/route.ts
+const MAX_ARCHIVO_MB = 15;
+
+/* El peso del archivo en algo que se lea de un vistazo. Se muestra al lado del
+   nombre para que la dueña reconozca cuál subió. */
+function pesoLegible(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
 function makeDefaultVariant(dimensions: string[]): Variant {
   const attrs: Record<string, string> = {};
   dimensions.forEach(d => { attrs[d] = ""; });
@@ -458,6 +468,13 @@ function ProductoFormPage() {
   const [widthCm, setWidthCm] = useState("");
   const [heightCm, setHeightCm] = useState("");
   const [depthCm, setDepthCm] = useState("");
+  // El archivo que se vende (rubro con `requiereArchivo`). `archivoPath` no es
+  // una URL: es la ruta en el bucket privado. No se puede previsualizar ni
+  // linkear desde acá — para eso hace falta un link firmado.
+  const [archivoPath, setArchivoPath] = useState<string>("");
+  const [archivoNombre, setArchivoNombre] = useState<string>("");
+  const [archivoPeso, setArchivoPeso] = useState<number | null>(null);
+  const [uploadingArchivo, setUploadingArchivo] = useState(false);
   const [publishAt, setPublishAt] = useState<string>("");
   const [images, setImages] = useState<ImageItem[]>([]);
   const [carouselIdx, setCarouselIdx] = useState(0);
@@ -469,6 +486,7 @@ function ProductoFormPage() {
   const [uploadingVideo, setUploadingVideo] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoFileInputRef = useRef<HTMLInputElement>(null);
+  const archivoInputRef = useRef<HTMLInputElement>(null);
   const [reelUrls, setReelUrls] = useState<string[]>([]);
   const [reelUrlDraft, setReelUrlDraft] = useState("");
   const [showReelUrlInput, setShowReelUrlInput] = useState(false);
@@ -682,6 +700,9 @@ function ProductoFormPage() {
         setWidthCm(product.widthCm?.toString() || "");
         setHeightCm(product.heightCm?.toString() || "");
         setDepthCm(product.depthCm?.toString() || "");
+        setArchivoPath(product.archivoPath || "");
+        setArchivoNombre(product.archivoNombre || "");
+        setArchivoPeso(product.archivoPeso ?? null);
         if (product.publishAt) {
           const d = new Date(product.publishAt);
           const pad = (n: number) => String(n).padStart(2, "0");
@@ -1041,6 +1062,41 @@ function ProductoFormPage() {
     }
   }
 
+  /* El archivo que el comprador se descarga. Va con `purpose` propio: el server
+     lo manda a un bucket privado y devuelve una RUTA, no una url — si devolviera
+     una url servible, el producto pago se bajaría sin comprarlo.
+
+     Reemplaza al anterior sin preguntar: es un archivo por producto, y el que
+     estaba deja de estar referenciado. */
+  async function subirArchivoDigital(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || uploadingArchivo) return;
+    setUploadingArchivo(true);
+    setError("");
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("purpose", "producto-digital");
+      const res = await fetch("/api/upload", { method: "POST", body: fd });
+      const data = await readJsonResponse(res);
+      if (!res.ok) throw new Error(data.error || "No se pudo subir el archivo");
+      if (data.url) {
+        setArchivoPath(data.url as string);
+        // El nombre y el peso salen del archivo local, no de la respuesta: son
+        // para mostrarle a la dueña cuál subió, y la ruta del bucket es un uuid
+        // que no le dice nada.
+        setArchivoNombre(file.name);
+        setArchivoPeso(file.size);
+        markDirty();
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No se pudo subir el archivo");
+    } finally {
+      setUploadingArchivo(false);
+      if (archivoInputRef.current) archivoInputRef.current.value = "";
+    }
+  }
+
   const [dragIdx, setDragIdx] = useState<number | null>(null);
 
   function moveImage(from: number, to: number) {
@@ -1087,6 +1143,13 @@ function ProductoFormPage() {
     }
     if (images.length === 0) {
       setError("Agregá al menos una foto del producto.");
+      setLoading(false);
+      return;
+    }
+    // El server lo rechaza igual; esto es para no hacerla llenar todo y enterarse
+    // al final, con el mismo criterio que la foto de acá arriba.
+    if (storeTypeConfig.requiereArchivo && !archivoPath) {
+      setError("Subí el archivo que se va a descargar el comprador.");
       setLoading(false);
       return;
     }
@@ -1150,6 +1213,9 @@ function ProductoFormPage() {
         widthCm: widthCm || null,
         heightCm: heightCm || null,
         depthCm: depthCm || null,
+        archivoPath: archivoPath || null,
+        archivoNombre: archivoNombre || null,
+        archivoPeso: archivoPeso ?? null,
       }),
     });
 
@@ -1667,6 +1733,74 @@ function ProductoFormPage() {
                 </div>
               )}
             </div>
+
+            {/* Archivo del producto digital — solo en rubros con `requiereArchivo`.
+                Va pegado abajo de las fotos porque es el producto en sí: las
+                imágenes acá son la portada, no la mercadería. */}
+            {storeTypeConfig.requiereArchivo && (
+              <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
+                <div>
+                  <h2 className="font-semibold text-gray-900">Archivo del producto *</h2>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    Esto es lo que se descarga el comprador. Hasta {MAX_ARCHIVO_MB} MB — PDF, Word, Excel, PowerPoint, ZIP o EPUB.
+                  </p>
+                </div>
+
+                {archivoPath ? (
+                  <div className="flex items-center gap-3 bg-gray-50 rounded-xl px-4 py-3">
+                    <FileText className="h-5 w-5 text-indigo-500 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate">{archivoNombre || "Archivo subido"}</p>
+                      {archivoPeso != null && (
+                        <p className="text-xs text-gray-400">{pesoLegible(archivoPeso)}</p>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => { setArchivoPath(""); setArchivoNombre(""); setArchivoPeso(null); markDirty(); }}
+                      className="text-xs font-medium text-gray-400 hover:text-red-600 transition-colors shrink-0"
+                    >
+                      Quitar
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => archivoInputRef.current?.click()}
+                    disabled={uploadingArchivo}
+                    className="w-full border-2 border-dashed border-gray-200 hover:border-indigo-300 rounded-xl py-8 flex flex-col items-center justify-center gap-2 transition-colors disabled:opacity-60"
+                  >
+                    {uploadingArchivo ? (
+                      <>
+                        <Loader2 className="h-5 w-5 text-indigo-500 animate-spin" />
+                        <span className="text-sm text-gray-500">Subiendo…</span>
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="h-5 w-5 text-gray-400" />
+                        <span className="text-sm text-gray-500">Subir el archivo</span>
+                      </>
+                    )}
+                  </button>
+                )}
+
+                <input
+                  ref={archivoInputRef}
+                  type="file"
+                  accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.epub"
+                  onChange={subirArchivoDigital}
+                  className="hidden"
+                />
+
+                {/* El aviso más importante de la pantalla: hasta que la entrega
+                    automática exista (Fase 3), y con transferencia siempre, el
+                    mail lo manda la dueña. Mejor decirlo acá que dejar que se
+                    entere por un comprador enojado. */}
+                <p className="text-xs text-gray-400">
+                  El archivo queda guardado en privado: solo lo puede descargar quien lo compre.
+                </p>
+              </div>
+            )}
 
             <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
               <div className="flex items-center justify-between">

@@ -9,6 +9,7 @@ import { DEFAULT_SHIPPING_METHODS, LIVE_QUOTE_DOMICILIO_ID } from "@/types/store
 import { cotizarEnvio } from "@/lib/enviopack";
 import { calculateGoalAmount, MIN_DONATION, MAX_DONATION_PCT_OF_GOAL } from "@/lib/canasta";
 import { recordStockMovement, dispatchLowStockAlerts, type LowStockItem } from "@/lib/stockMovements";
+import { getStoreType } from "@/lib/storeTypes";
 import { priceCart, resolveBasePrice, parseEscalones, type PricingItem, type ActivePromotion } from "@/lib/pricing";
 import { parseStringArray } from "@/lib/promotions";
 import { couponDiscountFor } from "@/lib/coupons";
@@ -264,10 +265,17 @@ export async function POST(req: NextRequest) {
           ownerId: true,
           affiliatesEnabled: true,
           commissionRate: true,
+          tipoTienda: true,
         },
       });
 
       if (!store) throw new Error("Tienda no encontrada");
+
+      /* Rubros sin stock: un archivo descargable se vende infinitas veces.
+         `hideVariants` hace que el formulario guarde una variante sintética con
+         stock 1, así que sin este freno el primer comprador dejaba el producto
+         en cero y el segundo se comía "Sin stock suficiente". */
+      const stockIlimitado = getStoreType(store.tipoTienda || "ROPA").stockIlimitado === true;
 
       let validAffiliateId: string | null = null;
       let resolvedAffiliateUserId: string | null = null;
@@ -308,7 +316,10 @@ export async function POST(req: NextRequest) {
         const variant = item.variantId ? product.variants.find((v) => v.id === item.variantId) : null;
         if (item.variantId && !variant) throw new Error("Variante no disponible");
 
-        if (variant) {
+        // `stockIlimitado` saltea el bloque entero a propósito: sin descuento no
+        // hay agotado que avisar ni movimiento de stock que registrar. `variant`
+        // sigue disponible más abajo para resolver el precio.
+        if (variant && !stockIlimitado) {
           // Decrementa stock atómicamente — si no hay suficiente, count=0 y lanzamos error
           const decremented = await tx.productVariant.updateMany({
             where: { id: variant.id, stock: { gte: item.quantity } },

@@ -47,6 +47,13 @@ export async function POST(_req: NextRequest, ctx: Ctx) {
       // de …") y obliga a repasarlo antes de publicar.
       // La descripción sí se copia: describe el producto, que es el mismo.
       seoDescription:   source.seoDescription,
+      // El archivo SÍ se copia: sin esto la copia de un producto digital nacía
+      // sin nada que entregar, y al publicarla se vendía algo que el comprador
+      // nunca iba a recibir. Las dos apuntan al mismo objeto del bucket, que es
+      // lo correcto — es el mismo archivo, vendido dos veces.
+      archivoPath:      source.archivoPath,
+      archivoNombre:    source.archivoNombre,
+      archivoPeso:      source.archivoPeso,
       isActive:         false,
       variants: {
         create: source.variants.map(v => ({

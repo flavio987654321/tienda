@@ -62,6 +62,7 @@ export async function POST(req: NextRequest) {
     parsedWeightKg, parsedWidthCm, parsedHeightCm, parsedDepthCm,
     parsedOfferBadge, parsedOfferNote, parsedOfferEndsAt,
     parsedSeoTitle, parsedSeoDescription,
+    parsedArchivoPath, parsedArchivoNombre, parsedArchivoPeso,
   } = validated;
 
   // Guard de seguridad: escalones y soloMayorista solo aplican a tiendas mayoristas
@@ -72,6 +73,17 @@ export async function POST(req: NextRequest) {
   const isWholesaleStore = store.tieneVentaMayorista && storeTypeConfig.supportsWholesale;
   const safeEscalonados = isWholesaleStore ? JSON.stringify(parsedPreciosEscalonados) : "[]";
   const safeSoloMayorista = isWholesaleStore ? parsedSoloMayorista : false;
+
+  /* Un producto digital sin archivo no se puede entregar: se cobraría algo que
+     el comprador nunca va a recibir. El formulario ya lo pide, pero el freno
+     tiene que estar acá — a esta ruta se le puede pegar directo, sin pasar por
+     la pantalla. */
+  if (storeTypeConfig.requiereArchivo && !parsedArchivoPath) {
+    return NextResponse.json(
+      { error: "Subí el archivo que se va a descargar el comprador." },
+      { status: 400 }
+    );
+  }
 
   const parsedPublishAt = publishAt ? new Date(publishAt) : null;
   const scheduledInFuture = parsedPublishAt && parsedPublishAt > new Date();
@@ -104,6 +116,9 @@ export async function POST(req: NextRequest) {
       depthCm: parsedDepthCm,
       seoTitle: parsedSeoTitle,
       seoDescription: parsedSeoDescription,
+      archivoPath: parsedArchivoPath,
+      archivoNombre: parsedArchivoNombre,
+      archivoPeso: parsedArchivoPeso,
       publishAt: parsedPublishAt,
       isActive: scheduledInFuture ? false : true,
       storeId: store.id,

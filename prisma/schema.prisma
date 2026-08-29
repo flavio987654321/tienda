@@ -560,6 +560,17 @@ model Product {
   heightCm Float?
   depthCm  Float?
 
+  // Producto digital (rubro DIGITAL): el archivo que el comprador descarga.
+  // `archivoPath` guarda la RUTA en el bucket PRIVADO con el formato
+  // `supabase://<bucket>/<path>`, nunca una URL pública — si acá hubiera una url
+  // servible, el archivo pago se bajaría sin comprarlo con solo tenerla. Quien
+  // corresponde pide un link firmado y de vida corta. Mismo criterio que los
+  // documentos de afiliados; ver /api/vendedoras/cv/[id].
+  // Los tres son nullable: un producto físico no tiene ninguno.
+  archivoPath   String?
+  archivoNombre String?
+  archivoPeso   Int?
+
   storeId String
   store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
 

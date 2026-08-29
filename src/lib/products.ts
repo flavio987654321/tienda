@@ -152,6 +152,9 @@ type ProductBodyRaw = {
   offerEndsAt?: unknown;
   seoTitle?: unknown;
   seoDescription?: unknown;
+  archivoPath?: unknown;
+  archivoNombre?: unknown;
+  archivoPeso?: unknown;
 };
 
 type ValidatedProductBody = {
@@ -175,6 +178,9 @@ type ValidatedProductBody = {
   parsedOfferEndsAt: Date | null;
   parsedSeoTitle: string | null;
   parsedSeoDescription: string | null;
+  parsedArchivoPath: string | null;
+  parsedArchivoNombre: string | null;
+  parsedArchivoPeso: number | null;
 };
 
 const VALID_OFFER_BADGES = new Set(["OFERTA", "SALE", "PCT"]);
@@ -205,7 +211,7 @@ function textoSeoOpcional(valor: unknown, tope: number): string | null {
 export function validateProductBody(
   body: ProductBodyRaw
 ): { error: NextResponse } | ValidatedProductBody {
-  const { name, price, comparePrice, costPrice, precioMayorista, cantMinMayorista, preciosEscalonados, soloMayorista, cuotas, variants, reelUrls, weightKg, widthCm, heightCm, depthCm, offerBadge, offerNote, offerEndsAt, seoTitle, seoDescription } = body;
+  const { name, price, comparePrice, costPrice, precioMayorista, cantMinMayorista, preciosEscalonados, soloMayorista, cuotas, variants, reelUrls, weightKg, widthCm, heightCm, depthCm, offerBadge, offerNote, offerEndsAt, seoTitle, seoDescription, archivoPath, archivoNombre, archivoPeso } = body;
 
   if (!name || typeof name !== "string" || name.trim().length < 2) {
     return { error: NextResponse.json({ error: "Nombre requerido (mínimo 2 caracteres)" }, { status: 400 }) };
@@ -388,6 +394,38 @@ export function validateProductBody(
   const depthResult = parsePositiveDimension(depthCm, "La profundidad");
   if ("error" in depthResult) return depthResult;
 
+  /* ── Archivo del producto digital ──────────────────────────────────────────
+     Se valida el FORMATO de la ruta, no solo que sea texto. Lo que llega acá lo
+     manda el navegador, y sin este chequeo alcanzaba con postear una url
+     cualquiera para que el producto "digital" apuntara a un archivo servido en
+     abierto — justamente lo que el bucket privado viene a evitar. La ruta
+     legítima la arma /api/upload y siempre tiene este prefijo.
+
+     OJO: esto NO verifica que la ruta sea de ESTA tienda. Esa verificación va
+     en la entrega (Fase 3), que es donde se decide quién puede bajar qué; acá
+     sólo se descarta lo que ni siquiera tiene forma de ruta nuestra. */
+  let parsedArchivoPath: string | null = null;
+  if (archivoPath != null && String(archivoPath).trim() !== "") {
+    const ruta = String(archivoPath).trim();
+    if (!ruta.startsWith("supabase://")) {
+      return { error: NextResponse.json({ error: "La ruta del archivo no es válida. Volvé a subirlo." }, { status: 400 }) };
+    }
+    parsedArchivoPath = ruta;
+  }
+
+  const parsedArchivoNombre = archivoNombre != null && String(archivoNombre).trim() !== ""
+    ? String(archivoNombre).trim().slice(0, 200)
+    : null;
+
+  let parsedArchivoPeso: number | null = null;
+  if (archivoPeso != null && String(archivoPeso).trim() !== "") {
+    const peso = parseInt(String(archivoPeso), 10);
+    if (isNaN(peso) || peso < 0) {
+      return { error: NextResponse.json({ error: "El peso del archivo no es válido" }, { status: 400 }) };
+    }
+    parsedArchivoPeso = peso;
+  }
+
   const normalizedVariants = normalizeVariants(variants);
   if (normalizedVariants.length === 0) {
     return { error: NextResponse.json({ error: "El producto debe tener al menos una variante con stock" }, { status: 400 }) };
@@ -462,6 +500,9 @@ export function validateProductBody(
     parsedOfferEndsAt,
     parsedSeoTitle: textoSeoOpcional(seoTitle, MAX_SEO_TITLE),
     parsedSeoDescription: textoSeoOpcional(seoDescription, MAX_SEO_DESCRIPTION),
+    parsedArchivoPath,
+    parsedArchivoNombre,
+    parsedArchivoPeso,
   };
 }
 

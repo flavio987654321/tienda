@@ -52,6 +52,7 @@ export async function PATCH(req: NextRequest, ctx: ProductRouteContext) {
     parsedWeightKg, parsedWidthCm, parsedHeightCm, parsedDepthCm,
     parsedOfferBadge, parsedOfferNote, parsedOfferEndsAt,
     parsedSeoTitle, parsedSeoDescription,
+    parsedArchivoPath, parsedArchivoNombre, parsedArchivoPeso,
   } = validated;
 
   // Guard de seguridad: escalones y soloMayorista solo aplican a tiendas mayoristas.
@@ -65,6 +66,15 @@ export async function PATCH(req: NextRequest, ctx: ProductRouteContext) {
   const isWholesaleStorePatch = (ownerStore?.tieneVentaMayorista ?? false) && storeTypeConfigPatch.supportsWholesale;
   const safeEscalonados = isWholesaleStorePatch ? JSON.stringify(parsedPreciosEscalonados) : "[]";
   const safeSoloMayorista = isWholesaleStorePatch ? parsedSoloMayorista : false;
+
+  /* Mismo freno que en el alta: editar tampoco puede dejar un producto digital
+     sin archivo. Sin esto, se creaba con archivo y se le sacaba después. */
+  if (storeTypeConfigPatch.requiereArchivo && !parsedArchivoPath) {
+    return NextResponse.json(
+      { error: "Subí el archivo que se va a descargar el comprador." },
+      { status: 400 }
+    );
+  }
 
   const parsedPublishAt = publishAt !== undefined ? (publishAt ? new Date(publishAt) : null) : undefined;
   const scheduledInFuture = parsedPublishAt && parsedPublishAt > new Date();
@@ -229,6 +239,9 @@ export async function PATCH(req: NextRequest, ctx: ProductRouteContext) {
         depthCm: parsedDepthCm,
         seoTitle: parsedSeoTitle,
         seoDescription: parsedSeoDescription,
+        archivoPath: parsedArchivoPath,
+        archivoNombre: parsedArchivoNombre,
+        archivoPeso: parsedArchivoPeso,
         ...(parsedPublishAt !== undefined
           ? { publishAt: parsedPublishAt, ...(scheduledInFuture ? { isActive: false } : {}) }
           : {}),
