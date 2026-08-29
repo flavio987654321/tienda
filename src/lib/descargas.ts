@@ -25,6 +25,35 @@ export const PREFIJO_ARCHIVO_DIGITAL = `supabase://${DIGITAL_BUCKET}/`;
 export const MAX_ARCHIVO_DIGITAL_MB = 15;
 export const MAX_ARCHIVO_DIGITAL_BYTES = MAX_ARCHIVO_DIGITAL_MB * 1024 * 1024;
 
+/**
+ * ¿Esta ruta guardada apunta de verdad a un archivo del bucket de productos
+ * digitales?
+ *
+ * Vive acá, en una función sola, porque la preguntan DOS lugares que no se
+ * conocen entre sí: la validación del producto (para no dejar guardar una ruta
+ * torcida) y la ruta de entrega (para no servirla aunque se haya guardado antes
+ * de que este chequeo existiera). Si los dos no contestan igual, el que afloje
+ * es por donde se cuela.
+ *
+ * Lo que descarta y por qué:
+ *
+ * - **Otro bucket.** Es el caso grave: con sólo exigir `supabase://`, una dueña
+ *   escribía `supabase://affiliate-docs/…` en su producto, se lo compraba, y el
+ *   servidor le firmaba un link al bucket de los documentos de identidad de los
+ *   afiliados. El prefijo lleva el bucket adentro y termina en barra, así que un
+ *   bucket que EMPIECE igual (`producto-digital-viejo`) tampoco pasa.
+ * - **Una URL pública** (`https://…`): no empieza con el prefijo.
+ * - **`..` y la barra inicial**: la ruta se pega dentro de la URL que se firma, y
+ *   un salto de directorio la sacaría del prefijo recién anclado.
+ * - **El prefijo pelado**, sin archivo después.
+ */
+export function rutaDeArchivoValida(ruta: string | null | undefined): boolean {
+  if (!ruta || !ruta.startsWith(PREFIJO_ARCHIVO_DIGITAL)) return false;
+  const resto = ruta.slice(PREFIJO_ARCHIVO_DIGITAL.length);
+  if (!resto || resto.startsWith("/") || resto.includes("..")) return false;
+  return true;
+}
+
 export type ArchivoEntregado = { nombre: string; token: string };
 /* El vencimiento sale de la base y NO se recalcula al mandar el mail. Cuando el
    webhook se reintenta días después, el permiso que se reusa es el original: si

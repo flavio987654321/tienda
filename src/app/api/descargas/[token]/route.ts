@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { getClientIp } from "@/lib/request-ip";
-import { DIGITAL_BUCKET, PREFIJO_ARCHIVO_DIGITAL } from "@/lib/descargas";
+import { DIGITAL_BUCKET, PREFIJO_ARCHIVO_DIGITAL, rutaDeArchivoValida } from "@/lib/descargas";
 
 export const runtime = "nodejs";
 
@@ -85,12 +85,12 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ toke
      está acá Y en la validación del producto: el de allá evita que se guarde, y
      éste evita que sirva aunque se haya guardado antes de existir aquel. */
   const archivoPath = permiso.orderItem.product.archivoPath;
-  if (!archivoPath || !archivoPath.startsWith(PREFIJO_ARCHIVO_DIGITAL)) return noAnda;
+  if (!rutaDeArchivoValida(archivoPath)) return noAnda;
 
-  const filePath = archivoPath.slice(PREFIJO_ARCHIVO_DIGITAL.length);
-  // Sin `..` ni barras al inicio: la ruta se pega en la URL que se firma, y un
-  // salto de directorio la sacaría del prefijo que acabamos de anclar.
-  if (!filePath || filePath.startsWith("/") || filePath.includes("..")) return noAnda;
+  const filePath = archivoPath!.slice(PREFIJO_ARCHIVO_DIGITAL.length);
+  // El bucket es la constante, NO lo que diga la ruta: `rutaDeArchivoValida` ya
+  // garantizó que coinciden, y firmar la constante deja el ataque sin superficie
+  // aunque mañana alguien afloje la validación.
   const bucket = DIGITAL_BUCKET;
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, "");

@@ -6,7 +6,7 @@ import { hasActivePremium, SUB_STATUS_SELECT } from "@/lib/subscription";
 import { PRO_MAX_PRODUCTS, MAX_PRODUCTS_POR_TIENDA } from "@/lib/planLimits";
 import sanitizeHtml from "sanitize-html";
 import { DESCRIPTION_TEXT_COLORS } from "@/lib/richTextColors";
-import { PREFIJO_ARCHIVO_DIGITAL, MAX_ARCHIVO_DIGITAL_BYTES } from "@/lib/descargas";
+import { rutaDeArchivoValida, MAX_ARCHIVO_DIGITAL_BYTES } from "@/lib/descargas";
 
 // Solo se acepta exactamente uno de los hex de la paleta cerrada del editor
 // (ver richTextColors.ts) — así un POST directo a la API (sin pasar por el
@@ -408,16 +408,9 @@ export function validateProductBody(
   let parsedArchivoPath: string | null = null;
   if (archivoPath != null && String(archivoPath).trim() !== "") {
     const ruta = String(archivoPath).trim();
-    /* Se exige el prefijo COMPLETO —con el bucket de productos digitales— y no
-       sólo `supabase://`. Con el prefijo corto, una dueña podía escribir a mano
-       `supabase://affiliate-docs/...` en su producto y hacer que la ruta de
-       descarga le firmara un link al bucket de los documentos de identidad de
-       los afiliados. Anclar el bucket cierra esa familia entera. */
-    if (!ruta.startsWith(PREFIJO_ARCHIVO_DIGITAL)) {
-      return { error: NextResponse.json({ error: "La ruta del archivo no es válida. Volvé a subirlo." }, { status: 400 }) };
-    }
-    const resto = ruta.slice(PREFIJO_ARCHIVO_DIGITAL.length);
-    if (!resto || resto.startsWith("/") || resto.includes("..")) {
+    /* La misma función que usa la ruta de entrega — ver `rutaDeArchivoValida`.
+       Acá evita que se guarde una ruta torcida; allá evita que se sirva. */
+    if (!rutaDeArchivoValida(ruta)) {
       return { error: NextResponse.json({ error: "La ruta del archivo no es válida. Volvé a subirlo." }, { status: 400 }) };
     }
     parsedArchivoPath = ruta;
