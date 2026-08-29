@@ -305,11 +305,17 @@ export async function POST(req: NextRequest) {
       }
 
       const MAX_QUANTITY_PER_ITEM = 99;
+      /* Un archivo no se compra por unidades: la entrega emite UN permiso por
+         línea, sin importar la cantidad. Sin este tope, alguien pedía 99 del
+         mismo PDF, se le cobraban 99 y recibía un solo link — le cobrabas 98
+         veces algo que no le entregaste. El tope va en el server porque es acá
+         donde se arma el precio; que el carrito no ofrezca el "+" es aparte. */
+      const topeDeCantidad = entregaDigital ? 1 : MAX_QUANTITY_PER_ITEM;
       const normalizedItems = items
         .map((item) => ({
           productId: item.productId,
           variantId: item.variantId ?? null,
-          quantity: Math.min(Math.max(1, Math.floor(Number(item.quantity) || 1)), MAX_QUANTITY_PER_ITEM),
+          quantity: Math.min(Math.max(1, Math.floor(Number(item.quantity) || 1)), topeDeCantidad),
         }))
         .filter((item) => item.productId);
 

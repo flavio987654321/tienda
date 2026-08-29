@@ -803,12 +803,15 @@ model DigitalDownload {
   /// Para que la dueña vea en el panel si el comprador lo bajó o nunca entró.
   ultimaDescarga DateTime?
 
-  orderItemId String
+  /// ÚNICO: un permiso por línea comprada, y la base es quien lo garantiza.
+  /// Leer "¿ya existe?" antes de crear no alcanza — dos avisos de Mercado Pago
+  /// en paralelo leen los dos "todavía no" y crean los dos, dejando dos tokens
+  /// vivos y un tope de 10 descargas donde debía haber 5. Con la restricción
+  /// acá, el `upsert` de lib/descargas resuelve la carrera sin transacción.
+  orderItemId String    @unique
   orderItem   OrderItem @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
-
-  @@index([orderItemId])
   /// Para la limpieza de los vencidos en el cron diario.
   @@index([expiresAt])
 }

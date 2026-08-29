@@ -1,7 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { checkRateLimit } from "@/lib/rate-limit";
+import { getClientIp } from "@/lib/request-ip";
+import { DIGITAL_BUCKET, PREFIJO_ARCHIVO_DIGITAL } from "@/lib/descargas";
 
 export const runtime = "nodejs";
+
+/* Ritmo por IP. El token es de 64 caracteres al azar, así que adivinarlo no es
+   el riesgo — el riesgo es que alguien martille la ruta y cada intento pague una
+   consulta a la base. 30 por minuto le sobra a una persona que baja lo que
+   compró (y que puede reintentar), y le corta las patas a un script. */
+const RATE_LIMIT_MAX = 30;
+const RATE_LIMIT_WINDOW_MS = 60_000;
 
 /* Dos minutos, igual que el CV de un afiliado. Alcanza de sobra para que el
    navegador empiece la bajada y es poco para que el link sirva si se reenvía. */
@@ -22,11 +32,18 @@ const SIGNED_URL_TTL_SECONDS = 120;
  * evita. Lo que protege es el token —aleatorio, con vencimiento y con tope—, no
  * un login.
  */
-export async function GET(_req: NextRequest, { params }: { params: Promise<{ token: string }> }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ token: string }> }) {
+  if (!(await checkRateLimit(`descargas:${getClientIp(req)}`, RATE_LIMIT_MAX, RATE_LIMIT_WINDOW_MS))) {
+    return NextResponse.json({ error: "Demasiados intentos. Esperá un momento." }, { status: 429 });
+  }
+
   const { token } = await params;
 
-  // Un token con forma rara no se busca en la base: se corta acá.
-  if (!token || token.length < 20 || token.length > 100) {
+  /* Un token con forma rara ni se busca en la base: se corta acá. El nuestro son
+     64 caracteres hexadecimales (dos uuid sin guiones), así que cualquier cosa
+     que no tenga esa pinta es basura o un intento de inyectar algo raro en la
+     consulta. */
+  if (!token || !/^[0-9a-f]{64}$/.test(token)) {
     return NextResponse.json({ error: "Link inválido" }, { status: 404 });
   }
 
@@ -58,14 +75,23 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ tok
   if (permiso.expiresAt < new Date()) return noAnda;
   if (permiso.descargas >= permiso.maxDescargas) return noAnda;
 
-  const archivoPath = permiso.orderItem.product.archivoPath;
-  if (!archivoPath || !archivoPath.startsWith("supabase://")) return noAnda;
+  /* Se exige el prefijo COMPLETO, con el bucket de productos digitales adentro,
+     y el bucket que se firma es la constante — no lo que diga la ruta guardada.
 
-  const sinEsquema = archivoPath.slice("supabase://".length);
-  const barra = sinEsquema.indexOf("/");
-  if (barra < 1) return noAnda;
-  const bucket = sinEsquema.slice(0, barra);
-  const filePath = sinEsquema.slice(barra + 1);
+     Si acá se aceptara cualquier `supabase://` y se firmara el bucket que nombra
+     la ruta, una dueña podía escribir a mano `supabase://affiliate-docs/...` en
+     su propio producto, comprárselo, y hacer que este endpoint le firmara un
+     link al bucket de los documentos de identidad de los afiliados. El chequeo
+     está acá Y en la validación del producto: el de allá evita que se guarde, y
+     éste evita que sirva aunque se haya guardado antes de existir aquel. */
+  const archivoPath = permiso.orderItem.product.archivoPath;
+  if (!archivoPath || !archivoPath.startsWith(PREFIJO_ARCHIVO_DIGITAL)) return noAnda;
+
+  const filePath = archivoPath.slice(PREFIJO_ARCHIVO_DIGITAL.length);
+  // Sin `..` ni barras al inicio: la ruta se pega en la URL que se firma, y un
+  // salto de directorio la sacaría del prefijo que acabamos de anclar.
+  if (!filePath || filePath.startsWith("/") || filePath.includes("..")) return noAnda;
+  const bucket = DIGITAL_BUCKET;
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, "");
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;

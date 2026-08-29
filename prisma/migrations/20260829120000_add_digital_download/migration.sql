@@ -22,10 +22,11 @@
 -- un comprador del archivo, y el generador de JS es predecible a partir de unas
 -- pocas salidas del mismo proceso.
 --
--- ── Los dos índices ──────────────────────────────────────────────────────────
--- `token` es único porque se busca por él en cada descarga. `orderItemId` para
--- listar en el panel qué se entregó de cada pedido. `expiresAt` para que la
--- limpieza diaria de vencidos no lea la tabla entera.
+-- ── Los tres índices ─────────────────────────────────────────────────────────
+-- `token` es único porque se busca por él en cada descarga. `orderItemId` es
+-- único porque es la regla del modelo —un permiso por línea— y porque es lo que
+-- hace que dos webhooks simultáneos no emitan dos permisos. `expiresAt` para que
+-- la limpieza diaria de vencidos no lea la tabla entera.
 
 CREATE TABLE IF NOT EXISTS "DigitalDownload" (
     "id" TEXT NOT NULL,
@@ -41,7 +42,12 @@ CREATE TABLE IF NOT EXISTS "DigitalDownload" (
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS "DigitalDownload_token_key" ON "DigitalDownload"("token");
-CREATE INDEX IF NOT EXISTS "DigitalDownload_orderItemId_idx" ON "DigitalDownload"("orderItemId");
+-- ÚNICO, no un índice común: un permiso por línea comprada, garantizado por la
+-- base. Leer "¿ya existe?" antes de crear no alcanza — dos avisos de Mercado
+-- Pago en paralelo leen los dos "todavía no" y crean los dos, dejando dos
+-- tokens vivos y un tope de 10 descargas donde debía haber 5. Con esta
+-- restricción, el upsert de lib/descargas resuelve la carrera sin transacción.
+CREATE UNIQUE INDEX IF NOT EXISTS "DigitalDownload_orderItemId_key" ON "DigitalDownload"("orderItemId");
 CREATE INDEX IF NOT EXISTS "DigitalDownload_expiresAt_idx" ON "DigitalDownload"("expiresAt");
 
 -- La FK va en un bloque idempotente por si la migración se corre dos veces:

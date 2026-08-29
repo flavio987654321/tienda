@@ -6,6 +6,7 @@ import { fileTypeFromBuffer } from "file-type";
 import { medirImagen, avisoDeFotoChica } from "@/lib/medidas-imagen";
 import { getCurrentUser } from "@/lib/auth-session";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { DIGITAL_BUCKET, MAX_ARCHIVO_DIGITAL_MB, MAX_ARCHIVO_DIGITAL_BYTES } from "@/lib/descargas";
 
 export const runtime = "nodejs";
 
@@ -15,13 +16,10 @@ const MAX_DOCUMENT_SIZE_MB = 15;
 const MAX_DOCUMENT_SIZE_BYTES = MAX_DOCUMENT_SIZE_MB * 1024 * 1024;
 const MAX_VIDEO_SIZE_MB = 50;
 const MAX_VIDEO_SIZE_BYTES = MAX_VIDEO_SIZE_MB * 1024 * 1024;
-// El archivo que se vende en el rubro DIGITAL. Mismo tope que un documento: el
-// rubro se definió para archivos chicos (plantillas, ebooks, licencias) y los
-// videos/cursos quedaron explícitamente afuera — ver PRODUCTOS-DIGITALES.md.
-// Subir el tope acá NO alcanza para videos: el archivo viaja entero por esta
-// función y el límite real lo pone la plataforma, no esta constante.
-const MAX_DIGITAL_SIZE_MB = 15;
-const MAX_DIGITAL_SIZE_BYTES = MAX_DIGITAL_SIZE_MB * 1024 * 1024;
+// El tope del archivo que se vende vive en lib/descargas (importado arriba), no
+// acá: la validación del producto compara contra el mismo número y con dos
+// copias se desalineaban. Subirlo NO alcanza para vender videos — el archivo
+// viaja entero por esta función y el límite real lo pone la plataforma.
 const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 const ALLOWED_VIDEO_TYPES = new Set(["video/mp4", "video/webm", "video/quicktime", "video/ogg"]);
 const ALLOWED_DOCUMENT_TYPES = new Set([
@@ -64,8 +62,12 @@ const DOCS_BUCKET = process.env.SUPABASE_DOCS_BUCKET || "affiliate-docs";
    quien compró la pide con un link firmado y de vida corta. Bucket aparte del de
    afiliados a propósito: son dos cosas con permisos distintos —un DNI lo mira el
    admin, un producto lo baja el comprador— y mezclarlas sería un lío el día que
-   haya que dar acceso a uno sin dar el otro. */
-const DIGITAL_BUCKET = process.env.SUPABASE_DIGITAL_BUCKET || "producto-digital";
+   haya que dar acceso a uno sin dar el otro.
+
+   El nombre y el tope se importan de lib/descargas, que es de donde también los
+   leen la validación del producto y la ruta de entrega: con una copia en cada
+   lado, cambiar el bucket en uno solo dejaba archivos que se suben pero no se
+   pueden entregar. */
 
 const RATE_LIMIT_MAX = 20;
 const RATE_LIMIT_WINDOW_MS = 60_000;
@@ -186,9 +188,9 @@ export async function POST(req: NextRequest) {
       if (!ALLOWED_DIGITAL_TYPES.has(file.type)) {
         return NextResponse.json({ error: "Solo se permiten PDF, Word, Excel, PowerPoint, ZIP, EPUB, TXT o imagenes" }, { status: 400 });
       }
-      if (file.size > MAX_DIGITAL_SIZE_BYTES) {
+      if (file.size > MAX_ARCHIVO_DIGITAL_BYTES) {
         return NextResponse.json(
-          { error: `El archivo no puede superar ${MAX_DIGITAL_SIZE_MB} MB. Para algo más pesado —un curso en video— conviene subirlo a YouTube o Vimeo y vender el acceso.` },
+          { error: `El archivo no puede superar ${MAX_ARCHIVO_DIGITAL_MB} MB. Para algo más pesado —un curso en video— conviene subirlo a YouTube o Vimeo y vender el acceso.` },
           { status: 413 }
         );
       }

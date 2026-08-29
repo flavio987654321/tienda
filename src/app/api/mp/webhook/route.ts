@@ -6,7 +6,7 @@ import MercadoPagoConfig, { Payment } from "mercadopago";
 import { createNotification } from "@/lib/notifications";
 import { runOrderAction } from "@/lib/orderActions";
 import { sendOrderPaymentConfirmedEmail, sendCommissionEarnedEmail, parseOrderPromoSummary, sendDigitalDownloadEmail } from "@/lib/email";
-import { crearDescargasDigitales, vencimientoDesdeAhora, MAX_DESCARGAS } from "@/lib/descargas";
+import { crearDescargasDigitales, MAX_DESCARGAS } from "@/lib/descargas";
 import { despues } from "@/lib/despues";
 
 type CommissionResult = { commissionId: string; amount: number; rate: number; newBalance: number };
@@ -340,14 +340,17 @@ async function processPaymentWebhook(paymentId: string) {
        es el mail, y ese sí va en segundo plano. */
     if (order.buyer?.email) {
       try {
-        const archivos = await crearDescargasDigitales(order.id);
-        if (archivos.length > 0) {
+        const { archivos, venceEl } = await crearDescargasDigitales(order.id);
+        // `venceEl` sale de la base, no de "hoy + 30": en un reintento del
+        // webhook se reusa el permiso original, y recalcular la fecha le
+        // prometería al comprador una vigencia que el link no tiene.
+        if (archivos.length > 0 && venceEl) {
           despues(() => sendDigitalDownloadEmail({
             buyerEmail: order.buyer.email,
             buyerName: order.buyer.name || "",
             storeName: order.store.name,
             archivos,
-            venceEl: vencimientoDesdeAhora(),
+            venceEl,
             maxDescargas: MAX_DESCARGAS,
           }), "MP: links de descarga al comprador");
         }

@@ -8,7 +8,29 @@ import { prisma } from "@/lib/prisma";
 export const DIAS_DE_VIGENCIA = 30;
 export const MAX_DESCARGAS = 5;
 
+/* El bucket privado donde viven los archivos que se venden, en UN solo lugar:
+   lo usan la subida, la validación del producto y la ruta de descarga, y los
+   tres tienen que estar de acuerdo.
+
+   Por qué importa que sea uno fijo y no "el que diga la ruta guardada": la ruta
+   de descarga firma contra el bucket que le indica `archivoPath`. Si eso no se
+   ancla, una dueña puede escribir a mano `supabase://affiliate-docs/...` en su
+   propio producto, comprárselo, y hacer que el servidor le firme un link al
+   bucket de los DOCUMENTOS DE IDENTIDAD de los afiliados. Anclarlo cierra la
+   familia entera de ese ataque, no sólo ese caso. */
+export const DIGITAL_BUCKET = process.env.SUPABASE_DIGITAL_BUCKET || "producto-digital";
+export const PREFIJO_ARCHIVO_DIGITAL = `supabase://${DIGITAL_BUCKET}/`;
+
+/** Tope del archivo que se vende. Debe coincidir con `/api/upload`. */
+export const MAX_ARCHIVO_DIGITAL_MB = 15;
+export const MAX_ARCHIVO_DIGITAL_BYTES = MAX_ARCHIVO_DIGITAL_MB * 1024 * 1024;
+
 export type ArchivoEntregado = { nombre: string; token: string };
+/* El vencimiento sale de la base y NO se recalcula al mandar el mail. Cuando el
+   webhook se reintenta días después, el permiso que se reusa es el original: si
+   el mail dijera "30 días desde hoy", le estaría prometiendo al comprador una
+   fecha que el link no va a respetar. */
+export type Entrega = { archivos: ArchivoEntregado[]; venceEl: Date | null };
 
 /**
  * Emite los permisos de descarga de un pedido ya pagado.
@@ -22,7 +44,7 @@ export type ArchivoEntregado = { nombre: string; token: string };
  * vivos para el mismo archivo, y el tope de 5 pasaba a ser de 10 sin que nadie
  * lo decidiera.
  */
-export async function crearDescargasDigitales(orderId: string): Promise<ArchivoEntregado[]> {
+export async function crearDescargasDigitales(orderId: string): Promise<Entrega> {
   const items = await prisma.orderItem.findMany({
     where: {
       orderId,
@@ -32,24 +54,28 @@ export async function crearDescargasDigitales(orderId: string): Promise<ArchivoE
     },
     select: {
       id: true,
-      product: { select: { name: true, archivoNombre: true } },
-      descargas: { select: { token: true }, take: 1 },
+      product: { select: { name: true } },
+      descargas: { select: { token: true, expiresAt: true }, take: 1 },
     },
   });
 
-  if (items.length === 0) return [];
+  if (items.length === 0) return { archivos: [], venceEl: null };
 
   const vence = new Date(Date.now() + DIAS_DE_VIGENCIA * 24 * 60 * 60 * 1000);
-  const entregados: ArchivoEntregado[] = [];
+  const archivos: ArchivoEntregado[] = [];
+  // El más TEMPRANO de los vencimientos reales: si un permiso viejo vence antes
+  // que los nuevos, el mail tiene que decir esa fecha y no la optimista.
+  let venceEl: Date | null = null;
 
   for (const item of items) {
     // El nombre que ve el comprador: el del producto, no el del archivo. El
     // archivo puede llamarse "final_v3_ESTE.pdf" y eso no es lo que compró.
     const nombre = item.product.name;
 
-    const yaEmitido = item.descargas[0]?.token;
+    const yaEmitido = item.descargas[0];
     if (yaEmitido) {
-      entregados.push({ nombre, token: yaEmitido });
+      archivos.push({ nombre, token: yaEmitido.token });
+      if (!venceEl || yaEmitido.expiresAt < venceEl) venceEl = yaEmitido.expiresAt;
       continue;
     }
 
@@ -59,22 +85,29 @@ export async function crearDescargasDigitales(orderId: string): Promise<ArchivoE
        verdad — adivinarlo a fuerza de intentos no es una opción. */
     const token = `${randomUUID()}${randomUUID()}`.replace(/-/g, "");
 
-    await prisma.digitalDownload.create({
-      data: {
+    /* `upsert` sobre `orderItemId`, que es ÚNICO en la base. La lectura de
+       arriba no alcanza para ser idempotente: dos avisos de Mercado Pago en
+       paralelo leen los dos "todavía no hay" y crean los dos. El único lugar
+       donde eso se decide sin carrera es la restricción de la base, y el upsert
+       la usa — el segundo no crea, lee el que quedó. */
+    const permiso = await prisma.digitalDownload.upsert({
+      where: { orderItemId: item.id },
+      create: {
         token,
         orderItemId: item.id,
         expiresAt: vence,
         maxDescargas: MAX_DESCARGAS,
       },
+      // Vacío a propósito: si ya existe NO se le corre el vencimiento ni se le
+      // reinicia el contador. Un reintento del webhook no puede regalar 5
+      // descargas nuevas.
+      update: {},
+      select: { token: true, expiresAt: true },
     });
 
-    entregados.push({ nombre, token });
+    archivos.push({ nombre, token: permiso.token });
+    if (!venceEl || permiso.expiresAt < venceEl) venceEl = permiso.expiresAt;
   }
 
-  return entregados;
-}
-
-/** Cuándo vencen los permisos que se emitan ahora — para el texto del mail. */
-export function vencimientoDesdeAhora(): Date {
-  return new Date(Date.now() + DIAS_DE_VIGENCIA * 24 * 60 * 60 * 1000);
+  return { archivos, venceEl };
 }
