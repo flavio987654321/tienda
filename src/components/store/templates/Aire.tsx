@@ -2,6 +2,7 @@
 import { useState, useEffect, useMemo, useRef, useSyncExternalStore, Fragment } from "react";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { carruselMs, barraMs } from "@/types/store-config";
+import { anunciosPorDefecto, garantiasPorDefecto } from "@/lib/beneficios-rubro";
 import { usePushBell } from "@/contexts/PushBellContext";
 import { useSesion } from "@/components/AuthProvider";
 import StoreFollowButton from "@/components/store/StoreFollowButton";
@@ -79,11 +80,9 @@ const EJEMPLOS_RESENAS_AIRE: EjemplosDeResenas = {
 
 
 
-const announcementMessages_DEFAULT = [
-  "🚚 Envío gratis en compras mayores a $30.000",
-  "🔄 Cambios sin cargo hasta 30 días",
-  "💳 6 cuotas sin interés",
-];
+/* Los textos por defecto salen de lib/beneficios-rubro: una tienda que entrega
+   por descarga no puede abrir prometiendo envío gratis. Ver el porqué largo
+   allá. Acá sólo se eligen según el rubro que trae la config. */
 
 /* ── Ícono de carrito flotante — variantes para elegir en modo edición ── */
 const CART_ICON_OPTIONS: React.ReactNode[] = [
@@ -136,14 +135,22 @@ const AIRE_STRIP_ICONS: React.ReactNode[][] = [
 
 /* De a cuántos productos crece el catálogo cuando se toca "Ver más". */
 const PASO_CATALOGO = 24;
-const GARANTIAS = [
+/* Los íconos son del template (cada uno tiene su trazo); los TEXTOS salen del
+   rubro. El primero cambia de camión a rayo cuando no hay envío: un camión
+   arriba de "Descarga inmediata" desmiente el texto. */
+const ICONO_ENTREGA_FISICA = <svg width={28} height={28} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.4} strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 5v4h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>;
+const ICONO_ENTREGA_DIGITAL = <svg width={28} height={28} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.4} strokeLinecap="round" strokeLinejoin="round"><polyline points="13 2 4 14 12 14 11 22 20 10 12 10 13 2"/></svg>;
+const ICONO_CAMBIOS = <svg width={28} height={28} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.4} strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 0 1 15-6.7L21 8M21 12a9 9 0 0 1-15 6.7L3 16"/><polyline points="21 3 21 8 16 8"/><polyline points="3 21 3 16 8 16"/></svg>;
+const ICONO_MAIL = <svg width={28} height={28} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.4} strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg>;
+
+const GARANTIAS_BASE = [
   {
     title:"Envío gratis", desc:"En compras mayores a $30.000",
-    svg: <svg width={28} height={28} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.4} strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 5v4h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>,
+    svg: ICONO_ENTREGA_FISICA,
   },
   {
     title:"Cambios sin cargo", desc:"Hasta 30 días después de la compra",
-    svg: <svg width={28} height={28} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.4} strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 0 1 15-6.7L21 8M21 12a9 9 0 0 1-15 6.7L3 16"/><polyline points="21 3 21 8 16 8"/><polyline points="3 21 3 16 8 16"/></svg>,
+    svg: ICONO_CAMBIOS,
   },
   {
     title:"Pago seguro", desc:"Todos los medios de pago protegidos",
@@ -154,6 +161,20 @@ const GARANTIAS = [
     svg: <svg width={28} height={28} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.4} strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>,
   },
 ];
+
+/* Las mismas cuatro fichas, con los textos del rubro y los dos primeros íconos
+   acompañando. La cuarta ("Atención personalizada") vale para cualquier rubro y
+   por eso no está en `garantiasPorDefecto`. */
+function garantiasDe(tipoTienda: string | null | undefined) {
+  const textos = garantiasPorDefecto(tipoTienda);
+  const digital = textos[0].title !== GARANTIAS_BASE[0].title;
+  return [
+    { ...textos[0], svg: digital ? ICONO_ENTREGA_DIGITAL : ICONO_ENTREGA_FISICA },
+    { ...textos[1], svg: digital ? ICONO_MAIL : ICONO_CAMBIOS },
+    { ...textos[2], svg: GARANTIAS_BASE[2].svg },
+    GARANTIAS_BASE[3],
+  ];
+}
 
 /* Las secciones que el dueño puede reordenar y apagar. Hoy hay UNA. Las demas
    se agregan a medida que se construyen: un id listado aca sin bloque que lo
@@ -595,7 +616,9 @@ export default function Aire() {
   const promoBannerEnabled = storeConfig?.promoBanner?.enabled !== false;
   const announcementMessages = (storeConfig?.promoBanner?.messages?.filter(m => m.trim()) ?? []).length > 0
     ? storeConfig!.promoBanner!.messages!.filter(m => m.trim())
-    : announcementMessages_DEFAULT;
+    : anunciosPorDefecto(storeConfig?.tipoTienda);
+  // Las fichas del hero, con los textos que correspondan al rubro.
+  const GARANTIAS = garantiasDe(storeConfig?.tipoTienda);
   const showAnnouncement = promoBannerEnabled && announcementVisible;
   const announcementBarHeight = showAnnouncement ? ANNOUNCEMENT_BAR_H : 0;
 

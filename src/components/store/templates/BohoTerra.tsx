@@ -1,5 +1,6 @@
 ﻿"use client";
 import { barraMs } from "@/types/store-config";
+import { anunciosDeRubro } from "@/lib/beneficios-rubro";
 import { useState, useEffect, useRef, useMemo, Fragment } from "react";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { usePushBell } from "@/contexts/PushBellContext";
@@ -68,6 +69,8 @@ const CART_ICON_OPTIONS: React.ReactNode[] = [
 ];
 
 
+/* Los textos de la barra salen del rubro (ver lib/beneficios-rubro): una tienda
+   que entrega por descarga no puede abrir prometiendo envío gratis. */
 const announcementMessages_DEFAULT = [
   "🌿 Envío gratis en compras mayores a $30.000",
   "🔄 Cambios sin cargo hasta 30 días",
@@ -505,7 +508,7 @@ export default function BohoTerra() {
   const promoBannerEnabled = storeConfig?.promoBanner?.enabled !== false;
   const announcementMessages = (storeConfig?.promoBanner?.messages?.filter(m => m.trim()) ?? []).length > 0
     ? storeConfig!.promoBanner!.messages!.filter(m => m.trim())
-    : announcementMessages_DEFAULT;
+    : anunciosDeRubro(storeConfig?.tipoTienda, announcementMessages_DEFAULT);
   const showAnnouncement = promoBannerEnabled && announcementVisible;
   const announcementBarHeight = showAnnouncement ? ANNOUNCEMENT_BAR_H : 0;
 
