@@ -893,6 +893,28 @@ function ProductosPageInner({ embebido }: { embebido?: CatalogoEmbebido }) {
   // Tech Nova y Urban Pulse usan sidebar de filtros a la izquierda (solo desktop).
   // En mobile caen al layout minimal (dropdown) que funciona bien en touch.
   const isSidebarTemplate = template === "tech-nova" || template === "urban-pulse";
+  /* ── El tercer acomodo: el MURO ───────────────────────────────────────────
+     Hasta acá había dos formas de acomodar esta página, y las diez tiendas se
+     repartían entre ellas: los filtros ARRIBA en filas (Aire, Boho Terra, Chic
+     Paris) o una BARRA AL COSTADO (Tech Nova, Urban Pulse). Las dos empujan los
+     productos hacia abajo o hacia el margen, y las dos se reconocen de una.
+
+     Aurora estrena la tercera: la pantalla abre con producto de borde a borde,
+     sin nada arriba, y los controles flotan ENCIMA en una barra de vidrio que
+     acompaña el scroll. Lo que cambia es la POSICIÓN, que es lo único que se
+     nota de verdad — pintar los mismos filtros de otro color no alcanza. */
+  const esMuro = template === "aurora";
+  /* Qué está mirando el visitante, en una línea. En el acomodo de siempre esto es
+     el título grande de arriba; en el muro no hay título grande, así que el dato
+     viaja a la barra flotante y, además, se deja un H1 para el que llega de
+     Google y para los lectores de pantalla. Sin esto la página se quedaba SIN
+     encabezado: no es un detalle de estilo, es la pregunta "¿dónde estoy?". */
+  const tituloMuro = onlyPromos ? (eventoNombraFiltro ?? "En promoción")
+    : onlyOfertas ? "Ofertas"
+    : onlyDestacados ? "Lo más buscado"
+    : activeCategory === "Todos" ? "Todos los productos" : activeCategory;
+  /** Los filtros finos (precio, atributos) viven plegados adentro de la barra. */
+  const [filtrosAbiertos, setFiltrosAbiertos] = useState(false);
   /* ── La barra de filtros al costado arranca en 1024, no en 768 ────────────────
      Con `!isMobile` arrancaba apenas se dejaba de ser celular, y ahí no entra.
      A 768 —que es un iPad de pie, no un caso raro— la cuenta daba así:
@@ -1896,7 +1918,23 @@ function ProductosPageInner({ embebido }: { embebido?: CatalogoEmbebido }) {
       </div>
       </>)}
 
-      <div style={{ maxWidth:1280, margin:"0 auto", padding:"clamp(32px,5vw,48px) clamp(16px,4vw,32px)" }}>
+      {/* El muro respira distinto: casi sin aire arriba —para que el producto
+          arranque pegado a la barra— y con lugar de sobra abajo, que es donde
+          flota la barra de filtros y no puede tapar la última fila. */}
+      <div style={{ maxWidth: esMuro ? 1500 : 1280, margin:"0 auto",
+        padding: esMuro ? "clamp(10px,1.5vw,18px) clamp(12px,2.5vw,26px) clamp(120px,14vw,170px)"
+                        : "clamp(32px,5vw,48px) clamp(16px,4vw,32px)" }}>
+
+      {esMuro ? (
+        <>
+          {/* Se lee pero no se ve: el muro no tiene título dibujado y una página de
+              catálogo sin H1 le saca la orientación al que llega de Google y al que
+              usa lector de pantalla. */}
+          <h1 style={{ position:"absolute", width:1, height:1, padding:0, margin:-1,
+            overflow:"hidden", clip:"rect(0 0 0 0)", whiteSpace:"nowrap", border:0 }}>{tituloMuro}</h1>
+          {gridAndPagination}
+        </>
+      ) : (<>
 
         {/* ── TÍTULO + BÚSQUEDA ──────────────────────────────────────── */}
         {/* Kicker per-template */}
@@ -2346,7 +2384,121 @@ function ProductosPageInner({ embebido }: { embebido?: CatalogoEmbebido }) {
           </>
         )}
 
+      </>)}
+
       </div>
+
+      {/* ── LA BARRA QUE FLOTA ───────────────────────────────────────────────
+          Va FIJA al pie de la ventana y no arriba del contenido: arriba es donde
+          están en los otros seis templates, y ahí empuja los productos hacia
+          abajo. Acá el producto arranca pegado al borde y la barra viaja encima,
+          en vidrio, siempre a la misma distancia del pulgar.
+
+          Va a 88px del piso EN TODOS LOS ANCHOS, y eso no es un capricho: abajo
+          viven el boton de WhatsApp y el del carrito del template, que miden 52 y
+          arrancan a 24 del borde, o sea que ocupan hasta 76. Primero se subio solo
+          en celular, y estaba mal: la barra mide hasta 1000 y se centra, asi que a
+          768 iba de 12 a 756 y se montaba justo encima del boton de WhatsApp
+          (692-744). Medido. Con 88 fijo el borde de abajo de la barra queda por
+          encima del techo de los botones en cualquier ancho, sin numeros magicos
+          por pantalla.
+
+          Los filtros finos (precio, atributos) no ocupan lugar hasta que se
+          piden: se despliegan hacia arriba desde la misma barra. */}
+      {esMuro && (
+        <div style={{ position:"fixed", left:0, right:0, bottom: 88,
+          zIndex: capaFicha - 1, display:"flex", justifyContent:"center",
+          padding:"0 12px", pointerEvents:"none" }}>
+          <div style={{ pointerEvents:"auto", width:"100%", maxWidth:"min(1000px, 100%)",
+            background:"rgba(6,7,13,0.76)",
+            backdropFilter:"blur(20px) saturate(150%)",
+            WebkitBackdropFilter:"blur(20px) saturate(150%)",
+            border:`1px solid ${border}`,
+            borderRadius: filtrosAbiertos ? 20 : 999,
+            boxShadow:"0 18px 50px rgba(0,0,0,0.55)",
+            overflow:"hidden", transition:"border-radius 0.25s" }}>
+
+            {filtrosAbiertos && (
+              <div style={{ padding:"14px 18px 12px", borderBottom:`1px solid ${borderFaint}`, maxHeight:"46vh", overflowY:"auto" }}>
+                {/* Los tres de siempre. Viven acá y no sueltos arriba —que es donde
+                    están en los otros templates— pero SIGUEN ESTANDO: sacarlos del
+                    encabezado no puede significar sacarlos de la tienda. */}
+                <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginBottom: dynamicFiltersContent ? 14 : 0 }}>
+                  <button onClick={() => { setOnlyDestacados(o => !o); setOnlyOfertas(false); setOnlyPromos(false); setPage(1); }}
+                    style={{ background: onlyDestacados ? chipBg : "transparent", color: onlyDestacados ? chipText : T,
+                      border:`1px solid ${onlyDestacados ? chipBg : inputBorder}`, borderRadius:999,
+                      padding:"8px 14px", fontSize:12, cursor:"pointer", fontFamily:"inherit" }}>
+                    ⭐ Lo más buscado
+                  </button>
+                  {hayOfertas && (
+                    <button onClick={() => { setOnlyOfertas(o => !o); setOnlyDestacados(false); setOnlyPromos(false); setPage(1); }}
+                      style={{ background: onlyOfertas ? chipBg : "transparent", color: onlyOfertas ? chipText : T,
+                        border:`1px solid ${onlyOfertas ? chipBg : inputBorder}`, borderRadius:999,
+                        padding:"8px 14px", fontSize:12, cursor:"pointer", fontFamily:"inherit" }}>
+                      🔥 En oferta
+                    </button>
+                  )}
+                  {promotions.length > 0 && (
+                    <button onClick={() => { setOnlyPromos(o => !o); setOnlyOfertas(false); setOnlyDestacados(false); setPage(1); }}
+                      style={{ background: onlyPromos ? chipBg : "transparent", color: onlyPromos ? chipText : T,
+                        border:`1px solid ${onlyPromos ? chipBg : inputBorder}`, borderRadius:999,
+                        padding:"8px 14px", fontSize:12, cursor:"pointer", fontFamily:"inherit" }}>
+                      {eventoNombraFiltro ? `🎁 ${eventoNombraFiltro}` : "🎁 En promoción"}
+                    </button>
+                  )}
+                  <button onClick={() => { changeCategory("Todos"); setSearch(""); setOnlyOfertas(false); setOnlyDestacados(false); setOnlyPromos(false); clearAttrFilters(); setPriceRange(null); }}
+                    style={{ background:"transparent", color:MID, border:"none", padding:"8px 10px",
+                      fontSize:12, cursor:"pointer", fontFamily:"inherit", textDecoration:"underline" }}>
+                    Limpiar todo
+                  </button>
+                </div>
+                {dynamicFiltersContent}
+              </div>
+            )}
+
+            <div style={{ display:"flex", alignItems:"center", gap:9, flexWrap:"wrap",
+              padding: isMobile ? "9px 11px" : "10px 14px" }}>
+              <span style={{ display:"flex", flexDirection:"column", gap:1, whiteSpace:"nowrap" }}>
+                <span style={{ fontSize:13, color:T, fontFamily:serif, lineHeight:1.1 }}>{tituloMuro}</span>
+                <span style={{ fontSize:10, color:MID, letterSpacing:1.5, textTransform:"uppercase" }}>
+                  {filtered.length} resultado{filtered.length !== 1 ? "s" : ""}
+                </span>
+              </span>
+              <input value={search} onChange={e => { setSearch(e.target.value); setPage(1); }}
+                placeholder="Buscar…" aria-label="Buscar productos"
+                style={{ flex:"1 1 130px", minWidth:0, background:"rgba(255,255,255,0.06)",
+                  border:`1px solid ${inputBorder}`, borderRadius:999, color:T,
+                  padding:"9px 14px", fontSize:13, outline:"none", fontFamily:"inherit" }} />
+              <select value={activeCategory} onChange={e => changeCategory(e.target.value)}
+                aria-label="Categoría"
+                style={{ background:"rgba(255,255,255,0.06)", border:`1px solid ${inputBorder}`,
+                  borderRadius:999, color:T, padding:"9px 12px", fontSize:12, outline:"none",
+                  cursor:"pointer", fontFamily:"inherit", maxWidth:150 }}>
+                {CATEGORIES.map(c => <option key={c} value={c} style={{ background:"#0e0f1a", color:T }}>{c}</option>)}
+              </select>
+              <select value={sortBy} onChange={e => { setSortBy(e.target.value); setPage(1); }}
+                aria-label="Ordenar"
+                style={{ background:"rgba(255,255,255,0.06)", border:`1px solid ${inputBorder}`,
+                  borderRadius:999, color:T, padding:"9px 12px", fontSize:12, outline:"none",
+                  cursor:"pointer", fontFamily:"inherit", maxWidth:150 }}>
+                <option value="newest"     style={{ background:"#0e0f1a", color:T }}>Más recientes</option>
+                <option value="price_asc"  style={{ background:"#0e0f1a", color:T }}>Precio ↑</option>
+                <option value="price_desc" style={{ background:"#0e0f1a", color:T }}>Precio ↓</option>
+                <option value="name_az"    style={{ background:"#0e0f1a", color:T }}>Nombre A→Z</option>
+                <option value="discount"   style={{ background:"#0e0f1a", color:T }}>Mayor descuento</option>
+              </select>
+              <button onClick={() => setFiltrosAbiertos(o => !o)}
+                  style={{ background: filtrosAbiertos ? chipBg : "transparent",
+                    color: filtrosAbiertos ? chipText : T,
+                    border:`1px solid ${filtrosAbiertos ? chipBg : inputBorder}`,
+                    borderRadius:999, padding:"9px 16px", fontSize:12, cursor:"pointer",
+                    fontFamily:"inherit", whiteSpace:"nowrap", transition:"background 0.2s, color 0.2s" }}>
+                  {filtrosAbiertos ? "Menos filtros" : "Más filtros"}
+                </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── FOOTER — misma info que el footer del home de cada template
           (nombre, redes, políticas, reportar tienda), con la paleta del tema activo.
