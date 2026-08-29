@@ -6,22 +6,25 @@
 
 ## 📍 ESTADO ACTUAL (se actualiza a medida que avanzamos)
 
-- ✅ **Fase 1 — El rubro existe y se puede elegir. HECHA (27/08), sin commitear
-  y sin deployar.** Falta solamente probarlo a mano en el navegador.
-  - Tocados: `storeTypes.ts` · `designBrief.ts` · `TiendasClient.tsx` ·
-    `opcionSugerida.ts` · `store-config.ts` (5 archivos).
-  - `ayuda/index.ts` NO hizo falta — ver el detalle en la Fase 1.
-- 🔄 **Fase 2 — El formulario. CASI COMPLETA (28/08), sin commitear y sin deployar.**
-  - Tocados: `storeTypes.ts` (flag `requiereArchivo`) · `schema.prisma` + migración
-    nueva · `upload/route.ts` · `products.ts` · las dos rutas de `api/productos` ·
-    el formulario (7 archivos).
-  - **Falta**: aplicar la migración (toca producción, lo decidís vos), frenar el
-    guardado sin archivo, y probar la subida de verdad.
-- 🔄 **Fase 3 — La entrega. ESCRITA (29/08), sin commitear, sin deployar y SIN
-  PROBAR.** Modelo + migración, ruta de descarga, emisión idempotente de permisos,
-  mail, disparador en el webhook de MP, checkout sin envío y limpieza en el cron.
-  - **Falta probarla**: necesita las migraciones aplicadas y el bucket creado.
+**Todo commiteado en `main`, NADA deployado.** Migraciones ya aplicadas a la base.
+
+- ✅ **Fase 1 — El rubro existe y se puede elegir.** Verificado en el navegador:
+  el rubro aparece en el selector y en el directorio, el formulario trae sus
+  categorías, sus campos y sus textos de ejemplo.
+- ✅ **Fase 2 — El formulario.** Bloque "Archivo del producto", columnas nuevas,
+  subida **directa a Supabase** (ver más abajo por qué cambió), freno para no
+  publicar sin archivo, y los textos revisados rubro por rubro.
+- 🔄 **Fase 3 — La entrega. ESCRITA Y SIN PROBAR.** Modelo, ruta de descarga,
+  emisión idempotente, mail, disparador en el webhook de MP, checkout sin envío y
+  limpieza en el cron. Compila y la ruta contesta bien a un token inválido, pero
+  **el camino feliz no corrió nunca**.
 - 🔲 Fases 4 y 5: sin empezar.
+
+### Lo único que bloquea probar de punta a punta
+
+🔲 **Un archivo de menos de 50 MB.** El PDF real de la tienda pesa 117 MB y
+Supabase no lo acepta (ver abajo). Con un PDF chico se puede verificar la cadena
+entera: subida → guardado → compra → mail → descarga.
 
 ---
 
@@ -201,9 +204,50 @@ muerto. Lo que salió:
 - Sin código muerto: las constantes, el helper de peso y los dos íconos nuevos
   están todos en uso.
 
+### Probado en el navegador (29/08) — dos cosas que sólo se ven usándolo
+
+**El archivo NO puede pasar por nuestro servidor.** Al subir de verdad, `500` sin
+explicación. En el log: *"Request body exceeded 10MB for /api/upload"*. Hay dos
+techos que no ponemos nosotros —Next corta el cuerpo del pedido en 10 MB, y
+producción antes— y el archivo llegaba cortado.
+
+Resuelto: el navegador pide un permiso firmado a `/api/upload/firma-digital` y
+sube **directo a Supabase**. El servidor no toca los bytes.
+
+- Como ya no se le pueden mirar los bytes, la validación se mudó al **bucket**
+  (`file_size_limit` + `allowed_mime_types`): lo aplica Supabase sobre el archivo
+  real, no un `if` nuestro. Es más difícil de saltear que antes.
+- La **ruta la elige el servidor**, nunca el cliente — si el navegador la eligiera
+  podría pisar el archivo de otra tienda.
+- La ruta se guarda **recién con la subida confirmada**: un corte a mitad de
+  camino no deja el producto apuntando a la nada.
+
+**⚠️ El tope real son 50 MB, y lo pone Supabase, no nosotros.** Es el límite
+global de subida del proyecto (plan gratuito). Crear el bucket pidiendo 150 MB
+devuelve `413 "The object exceeded the maximum allowed size"` y **el bucket no se
+crea**, así que la subida falla con un 502 mudo. Medido: 50 entra, 100 no.
+Levantarlo depende del plan de Supabase.
+
+- El caso real que lo destapó: la guía de 46 páginas que quiere vender pesa
+  **117 MB** — exportada a calidad de imprenta. **No se puede subir.** Y aunque se
+  pudiera, no conviene: su compradora tendría que bajar 117 MB (a Flavio le costó
+  hasta por WhatsApp) con sólo 5 intentos de descarga, y el tráfico lo paga la
+  plataforma. **Hay que pedirle el PDF exportado en calidad para pantalla.**
+- Por eso el formulario avisa (sin bloquear) arriba de 25 MB.
+
+### Los textos del formulario, revisados rubro por rubro (29/08)
+
+Cinco textos hablaban de productos físicos. Corregidos: consejos de fotos, reels,
+ayuda de Tags, ayuda de Ficha técnica y el bloque de Promociones. El último no era
+sólo redacción: nombraba **3×2** y **envío gratis**, y ninguna de las dos puede
+aplicarse acá —se vende de a una unidad y no hay envío—, así que invitaba a crear
+una promoción que nunca iba a andar.
+
 ### Lo que falta de la Fase 2
 
-- 🔲 **Aplicar la migración** (decisión de Flavio — toca producción).
+- ✅ **Migraciones aplicadas** a la base (29/08, `prisma migrate deploy`). Se nota:
+  `/api/descargas/[token]` ya contesta 404 con su mensaje en vez del 500 de
+  "la tabla no existe".
 - 🔲 **No dejar publicar sin archivo.** Hoy el bloque dice "Archivo del producto *"
   pero nada frena el guardado si está vacío: se puede publicar un producto digital
   que no se puede entregar. El aviso rojo de la Fase 4 lo detecta después; falta el
