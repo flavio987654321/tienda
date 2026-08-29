@@ -17,7 +17,11 @@
     el formulario (7 archivos).
   - **Falta**: aplicar la migración (toca producción, lo decidís vos), frenar el
     guardado sin archivo, y probar la subida de verdad.
-- 🔲 Fases 3 a 5: sin empezar.
+- 🔄 **Fase 3 — La entrega. ESCRITA (29/08), sin commitear, sin deployar y SIN
+  PROBAR.** Modelo + migración, ruta de descarga, emisión idempotente de permisos,
+  mail, disparador en el webhook de MP, checkout sin envío y limpieza en el cron.
+  - **Falta probarla**: necesita las migraciones aplicadas y el bucket creado.
+- 🔲 Fases 4 y 5: sin empezar.
 
 ---
 
@@ -214,18 +218,61 @@ muerto. Lo que salió:
 
 ## FASE 3 — La entrega (el corazón del asunto)
 
-- 🔲 **Modelo `DigitalDownload`** en Prisma: `orderItemId`, `token` (con
-  `randomUUID`, nunca `Math.random()`), `expiresAt`, `descargas Int`, `maxDescargas`.
-- 🔲 **`/api/descargas/[token]`** — ruta nueva, calcada de `/api/vendedoras/cv/[id]`:
-  verifica el token, chequea vencimiento y tope, emite link firmado de vida corta
-  de Supabase, suma una descarga.
-- 🔲 **Disparador en `/api/mp/webhook`** — cuando el pago queda aprobado y el pedido
-  tiene ítems digitales, crear el token y mandar el mail.
-- 🔲 **Mail nuevo en `src/lib/email.ts`** — al lado de `sendOrderPaymentConfirmedEmail`.
-  Botón de descarga + cuándo vence + cuántas descargas le quedan.
-- 🔲 **`/api/checkout`** — si todos los ítems son digitales, saltear el método de
-  envío y dejar `shippingCost` en 0. `Order.shippingAddress` ya tiene `"{}"` por
-  defecto, así que ese lado no rompe.
+**Decidido (29/08): el link vive 30 días y se puede usar 5 veces.** Constantes en
+`src/lib/descargas.ts`, en un solo lugar.
+
+- ✅ **Modelo `DigitalDownload`** + migración `20260829120000_add_digital_download`.
+  Una fila **por línea comprada**, no por producto: dos personas que compran el
+  mismo PDF tienen cada una su token, su vencimiento y su cuenta — si colgara del
+  producto, agotar el tope de uno se lo agotaría al otro.
+- ✅ **`/api/descargas/[token]`** — calcada de `/api/vendedoras/cv/[id]`. Tres
+  decisiones que vale la pena recordar:
+  - **Todo lo que sale mal devuelve el MISMO 404.** No se distingue "no existe"
+    de "vencido" de "sin descargas": contestar distinto convertiría la ruta en un
+    oráculo para averiguar qué tokens existen.
+  - **No pide sesión, a propósito.** El comprador no tiene por qué tener cuenta, y
+    obligarlo a registrarse para bajar lo que ya pagó es peor que el riesgo. Lo
+    que protege es el token (aleatorio, con vencimiento y con tope), no un login.
+  - **El contador sube ANTES de firmar, con un UPDATE condicional** (`descargas <
+    max` en el mismo WHERE). Dos pedidos simultáneos —doble clic, link
+    reenviado— y sólo uno pasa: el tope no se puede desbordar. Contar antes hace
+    que una firma fallida gaste una descarga, y ese es el lado correcto para
+    equivocarse: al revés se regalarían descargas sin límite.
+- ✅ **`src/lib/descargas.ts`** — emite los permisos. **Idempotente**: si el ítem
+  ya tiene permiso se reusa. Mercado Pago reintenta los webhooks, y sin esto una
+  compra terminaba con dos tokens vivos y el tope de 5 pasaba a ser de 10.
+  Token = dos `randomUUID` pegados, nunca `Math.random()`.
+- ✅ **Disparador en `/api/mp/webhook`** — el gatillo es el **pago acreditado**, no
+  el pedido creado: entregar antes sería regalarle el archivo a quien abandonó el
+  pago. Emitir los permisos NO va en segundo plano (es escribir en la base y tiene
+  que pasar); el mail sí. Si la entrega falla no se re-lanza el error: el pago ya
+  está confirmado y no se puede desarmar por eso.
+- ✅ **`sendDigitalDownloadEmail`** — el mail lleva **tokens, no direcciones de
+  archivo**: un mail se reenvía sin pensarlo y una dirección al bucket serviría
+  para siempre. Avisa cuándo vence y cuántas descargas hay, y le dice que lo
+  guarde apenas lo baje.
+- ✅ **`/api/checkout`** — sin envío ni código postal para el rubro digital. Se
+  decide por RUBRO y no por los productos del carrito, porque una tienda tiene un
+  solo rubro. Va **antes** de `findShippingMethod`: si no, una tienda digital sin
+  métodos configurados caía en `DEFAULT_SHIPPING_METHODS` y le cobraba al
+  comprador el envío de un paquete que no existe.
+- ✅ **Limpieza en el cron diario** — los permisos se borran **30 días después de
+  vencer**, no al vencer: mientras la fila existe, la dueña ve en el panel que ese
+  comprador tuvo su link y cuántas veces lo bajó.
+
+**Chequeos (29/08):** ✅ tsc · ✅ 53/53 · ✅ eslint · la ruta de descarga devuelve
+404 con un token con forma inválida. **Sin build de producción y sin deploy.**
+
+### ⚠️ Nada de esto está probado de verdad
+
+Verificado que compila y que el 404 sale bien. **El camino feliz no se pudo probar
+ni una vez**, y hacen falta tres cosas que no dependen del código:
+
+1. 🔲 **Las dos migraciones aplicadas.** Hoy `/api/descargas/[token]` tira 500 con
+   *"The table public.DigitalDownload does not exist"* — que es exactamente lo
+   esperado y confirma que la ruta llega bien hasta la consulta.
+2. 🔲 **El bucket privado creado** en Supabase.
+3. 🔲 **Poder entrar al panel** (el login local sigue trabado por el captcha).
 
 ### ⚠️ El agujero de la transferencia
 
