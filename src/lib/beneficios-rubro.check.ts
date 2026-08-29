@@ -43,7 +43,7 @@ const chequear = (titulo: string, condicion: boolean, detalle?: unknown) => {
 
 console.log("\nTextos por rubro\n");
 
-const RUBROS_SIN_ENVIO = STORE_TYPES.filter((t) => t.requiereArchivo).map((t) => t.id);
+const RUBROS_SIN_ENVIO: string[] = STORE_TYPES.filter((t) => t.requiereArchivo).map((t) => t.id);
 chequear("hay al menos un rubro que entrega por descarga", RUBROS_SIN_ENVIO.length > 0, RUBROS_SIN_ENVIO);
 
 for (const rubro of RUBROS_SIN_ENVIO) {
