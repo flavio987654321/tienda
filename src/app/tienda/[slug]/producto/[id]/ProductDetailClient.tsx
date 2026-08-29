@@ -44,7 +44,7 @@ const fmt = (n: number) => "$" + n.toLocaleString("es-AR");
 
 export default function ProductDetailClient({
   slug, productId, productoInicial = null, templateInicial = null,
-  legalesInicial = null, esAutosInicial = false,
+  legalesInicial = null, tipoTiendaInicial = null,
   storeIdInicial = null, isOwnerInicial = false, showPushBell = false,
   isVerified = false, verifiedInfo, promoBanner = null,
   navTagline = null, storeNameInicial = null, esEditor = false,
@@ -77,7 +77,10 @@ export default function ProductDetailClient({
   templateInicial?: string | null;
   /** Qué políticas legales linkea el pie, resueltas en el servidor. */
   legalesInicial?: ClaveLegal[] | null;
-  esAutosInicial?: boolean;
+  /** El rubro de la tienda. Antes era `esAutosInicial`, un booleano: sólo
+   *  servía para saber si el pie tenía que decir "envíos" o no, y desde que hay
+   *  un tercer rubro con nombres propios esa pregunta ya no es de sí o no. */
+  tipoTiendaInicial?: string | null;
   /* ── Lo que necesita la BARRA de arriba ────────────────────────────────────
      Todo esto se resuelve en el servidor y llega puesto, igual que el producto,
      y por el mismo motivo: si esperara al pedido del navegador, la barra saldría
@@ -141,7 +144,7 @@ export default function ProductDetailClient({
   // del navegador, el pie saldría sin los links en el HTML inicial y
   // aparecerían recién al hidratar, o sea nunca para Google.
   const [legales, setLegales] = useState<ClaveLegal[] | undefined>(legalesInicial ?? undefined);
-  const [esAutos, setEsAutos] = useState(esAutosInicial ?? false);
+  const [tipoTienda, setTipoTienda] = useState<string | null>(tipoTiendaInicial ?? null);
   const [accentOverride, setAccentOverride] = useState<string | undefined>(undefined);
   const [footerBg, setFooterBg] = useState<string | undefined>(undefined);
   const [loading, setLoading] = useState(true);
@@ -160,7 +163,7 @@ export default function ProductDetailClient({
         setHasMercadoPago(!!data.hasMercadoPago);
         setIsOwner(!!data.isOwner);
         if (Array.isArray(data.legales)) setLegales(data.legales);
-        setEsAutos(data.store.tipoTienda === "AUTOS");
+        setTipoTienda(data.store.tipoTienda ?? null);
         try {
           const cfg = JSON.parse(data.store.storeConfig || "{}");
           if (cfg.whatsapp?.enabled && cfg.whatsapp?.number) setWhatsapp(cfg.whatsapp.number);
@@ -329,7 +332,7 @@ export default function ProductDetailClient({
   if (ThemedDetail) {
     const view: ProductDetailViewProps = {
       slug, storeName, currency, whatsapp, product, related, hasMercadoPago,
-      isPreview, isOwner, socialLinks, legales, esAutos, accentOverride, footerBg, cart,
+      isPreview, isOwner, socialLinks, legales, tipoTienda, accentOverride, footerBg, cart,
       activeImg, setActiveImg, seleccion, setOpcion,
       canAdd, qty, setQty, addToCart, cartCount, toastMsg, discount, promo: detailPromo, catalogHref,
       /* Para la barra de arriba. Ver la nota en `ProductDetailViewProps`. */

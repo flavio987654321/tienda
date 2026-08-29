@@ -750,7 +750,7 @@ export default function HomeStudio() {
           </div>
         )}
         <div style={{ display:"flex", flexWrap:"wrap", justifyContent:"center", gap:"0 16px" }}>
-          {linksLegales(config?.slug, config?.legales, { enEditor: isPreview }).map(({ clave: tipo, label }) => (
+          {linksLegales(config?.slug, config?.legales, { tipoTienda: config?.tipoTienda, enEditor: isPreview }).map(({ clave: tipo, label }) => (
             <a key={tipo} href={`/tienda/${config?.slug ?? ""}/politicas?tipo=${tipo}`} style={{ fontSize:10, color:ftMid, opacity:0.7, textDecoration:"none" }}>{label}</a>
           ))}
           {!editMode && (

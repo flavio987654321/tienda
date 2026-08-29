@@ -190,8 +190,55 @@ exactamente lo mismo. Eran tres copias de la regla y una sola funcionaba.
   `commissionRate` —el porcentaje que la tienda le paga a sus afiliadas— y
   `ownerId`.
 
+## 9. El rubro que entrega un archivo (29/08/2026)
+
+Las tres políticas generadas estaban escritas para algo que llega en una caja.
+Aplicadas a una tienda que vende un PDF no quedaban raras: quedaban **falsas**.
+
+| Decía | Por qué no se puede decir |
+|---|---|
+| "Realizamos envíos a todo el país" | no se envía nada |
+| "dentro de los 10 días **desde que recibís el producto**" | no hay un momento en que se reciba: se descarga |
+| "garantía de 6 meses si son nuevos y 3 si son usados" | un archivo no se usa ni se rompe |
+| "devolvelo sin uso, con sus etiquetas y su embalaje original" | es un PDF |
+| "podés cancelar salvo que ya haya sido despachado" | nunca se despacha |
+
+**El derecho de arrepentimiento NO se toca.** Son los mismos 10 días corridos
+del art. 34 y esta tienda no los recorta. Lo único que cambia es **desde cuándo
+se cuentan** — desde la compra, porque no hay entrega física — y las dos
+cláusulas que hablan de un objeto, que pasan a decir lo que sí se puede
+prometer: si el archivo no abre o no es el que se publicó, se reemplaza o se
+devuelve el dinero, sin plazo.
+
+Se agregan además dos cosas que antes no estaban escritas en ningún lado:
+
+- **Qué pasa con el link al cancelar.** Deja de funcionar, se devuelve el dinero,
+  y si ya se bajó el archivo se pide borrarlo. Es la pregunta que sigue.
+- **Que la venta es una licencia de uso personal.** Es lo único que la tienda
+  tiene para oponerle a quien revenda el archivo o lo suba a un grupo, y es el
+  riesgo número uno de vender algo que se copia sin costo.
+
+Los **nombres** de dos de las cuatro políticas también cambian: "Política de
+envíos" pasa a "Política de entrega y descarga" y "Devoluciones y cambios" a
+"Devoluciones y arrepentimiento". El pie de cada template los usa, así que si no
+cambiaran, el link diría una cosa y la página que abre diría otra.
+
+Para eso `titulosLegales` y `linksLegales` dejaron de tomar un `esAutos: boolean`
+y toman el rubro. Un booleano sólo sabe contestar una pregunta, y ya son tres los
+rubros con nombres propios: dos booleanos que se excluyen entre sí son un enum
+mal escrito.
+
 ### Lo que sigue abierto
 
 - **No hay ninguna tienda de autos en la base**, así que ese camino legal está
   cubierto solo por los chequeos, nunca por un navegador. Cuando exista la
   primera, mirar `/politicas` y el pie de `/vehiculos` de verdad.
+- **Tampoco hay ninguna tienda de descargas todavía**, así que lo de arriba corre
+  igual: los textos están chequeados, ninguno se leyó publicado.
+- **No existe el "botón de arrepentimiento".** La Resolución 424/2020 de la
+  Secretaría de Comercio Interior exige que los sitios de venta online tengan un
+  botón visible en la primera pantalla para iniciar la baja o el arrepentimiento.
+  Hoy el derecho está **escrito** en las políticas de cada tienda y en
+  `/terminos`, pero no hay un botón: quien quiera ejercerlo tiene que escribirle
+  al comercio. **Esto no es del rubro digital** — le falta a la plataforma
+  entera, a las once tiendas por igual. Se anota acá porque salió mirando esto.

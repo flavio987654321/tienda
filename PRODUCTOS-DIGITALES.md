@@ -468,11 +468,55 @@ paso, la pantalla de Pagos deja de mostrarle la franja "Cómo se entrega" entera
 
 ---
 
-## FASE 5 — Legales
+## FASE 5 — Legales — HECHA (29/08)
 
-- 🔲 **Botón de arrepentimiento**: en venta a distancia de contenido digital el
-  derecho de retracto tiene tratamiento distinto una vez descargado el archivo.
-  Revisar `LEGALES.md` y los términos que genera cada tienda.
+El detalle largo está en `LEGALES.md`, sección 9. Resumen:
+
+Las tres políticas que genera el asistente estaban escritas para algo que llega
+en una caja. En una tienda que vende un PDF no quedaban raras: quedaban
+**falsas** — prometían un envío que no existe, hablaban de "cuando recibís el
+producto", daban una garantía de 6 y 3 meses de un objeto que se usa y se rompe,
+y pedían devolverlo "sin uso, con sus etiquetas y su embalaje original".
+
+- ✅ **El derecho de arrepentimiento NO se toca.** Son los mismos 10 días
+  corridos del art. 34. Lo único que cambia es desde cuándo se cuentan —desde la
+  compra, porque no hay entrega física— y las dos cláusulas que hablan de un
+  objeto.
+- ✅ **Lo que sí se puede prometer**: si el archivo no abre o no es el que se
+  publicó, se reemplaza o se devuelve el dinero, sin plazo.
+- ✅ **Qué pasa con el link al cancelar** — deja de funcionar, se devuelve la
+  plata, y si ya se bajó se pide borrarlo. Es la pregunta que sigue y no estaba
+  escrita en ningún lado.
+- ✅ **La venta es una licencia de uso personal.** Es lo único que la tienda tiene
+  para oponerle a quien revenda el archivo o lo suba a un grupo — el riesgo
+  número uno de vender algo que se copia sin costo.
+- ✅ **Los nombres de dos políticas cambian**: "Política de envíos" → "Política de
+  entrega y descarga", "Devoluciones y cambios" → "Devoluciones y
+  arrepentimiento". El pie de cada template los usa; si no cambiaran, el link
+  diría una cosa y la página que abre diría otra.
+- ✅ **`titulosLegales` y `linksLegales` toman el rubro y no un `esAutos`.** Un
+  booleano sólo sabe contestar una pregunta, y ya son tres los rubros con
+  nombres propios.
+- ✅ **El asistente deja de preguntarle por envíos** a quien no envía.
+- ✅ **La página pública de políticas** cambia los dos derechos que están escritos
+  para un objeto ("desde que recibís el producto", garantía de 6/3 meses).
+- ✅ **Chequeos nuevos** en `legal-generator.check.ts` (17 casos) y
+  `politicas-tienda.check.ts`, por los DOS lados: que el rubro digital diga lo
+  suyo, y que **sin la bandera todo salga exactamente como antes**.
+
+**Chequeos (29/08):** ✅ `npx tsc --noEmit` limpio · ✅ `npm run check` 56/56 ·
+✅ eslint sin errores. **Sin build de producción y sin deploy.**
+
+### 🔲 Lo que NO se hizo, y no es del rubro digital
+
+**No existe el "botón de arrepentimiento".** La Resolución 424/2020 exige que
+los sitios de venta online tengan un botón visible en la primera pantalla para
+iniciar la baja o el arrepentimiento. Hoy el derecho está **escrito** en las
+políticas de cada tienda y en `/terminos`, pero botón no hay: quien quiera
+ejercerlo tiene que escribirle al comercio.
+
+Le falta a **la plataforma entera**, a las once tiendas por igual — no es algo
+que traiga el rubro nuevo. Se anota acá porque salió mirando esto.
 
 ---
 

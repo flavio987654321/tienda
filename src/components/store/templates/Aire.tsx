@@ -941,7 +941,11 @@ export default function Aire() {
       isPreview, isOwner,
       socialLinks: storeConfig?.socialLinks,
       legales: storeConfig?.legales,
-      esAutos: false,   // Aire es de ropa
+      // Antes decía `esAutos: false` con un "// Aire es de ropa" al lado. Aire
+      // dejó de ser sólo de ropa: hoy lo puede usar cualquier rubro menos autos,
+      // incluido el que entrega por descarga — y ahí el pie decía "Política de
+      // envíos" linkeando a una página titulada "Política de entrega y descarga".
+      tipoTienda: storeConfig?.tipoTienda,
       accentOverride: G,
       footerBg: undefined,   // el pie lo dibuja Aire, no el cuerpo de la ficha
       cart,
@@ -1217,7 +1221,7 @@ export default function Aire() {
        publicadas —para que la dueña vea dónde van y se acuerde de cargarlas— y
        en la tienda real sólo las que publicó. Eso lo decide `linksLegales`, que
        es el mismo helper que usan el resto de los templates y el mail. */
-    const legales = linksLegales(storeConfig?.slug, storeConfig?.legales, { enEditor });
+    const legales = linksLegales(storeConfig?.slug, storeConfig?.legales, { tipoTienda: storeConfig?.tipoTienda, enEditor });
     if (legales.length > 0) {
       cols.push({ titulo: "Ayuda", items: legales.map(l => ({ label: l.label, href: l.href })) });
     }

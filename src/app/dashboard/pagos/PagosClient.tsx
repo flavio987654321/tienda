@@ -76,7 +76,13 @@ export default function PagosClient({ initial }: Props) {
   const [originPostalCode, setOriginPostalCode] = useState(initial.originPostalCode);
   const [legalWizardOpen, setLegalWizardOpen] = useState(false);
 
-  const storeInfo: LegalStoreInfo = { name: initial.storeName, contact: initial.contact };
+  const storeInfo: LegalStoreInfo = {
+    name: initial.storeName,
+    contact: initial.contact,
+    // De acá lo toman los tres generadores y el asistente, que ya recibe el
+    // storeInfo entero: no hay que acordarse de pasárselo a cada uno.
+    entregaPorDescarga: initial.entregaPorDescarga,
+  };
   const isAutos = initial.isAutos;
   const entregaPorDescarga = initial.entregaPorDescarga;
 
@@ -621,7 +627,7 @@ export default function PagosClient({ initial }: Props) {
 
           <PolicyBlock
             icon={<Truck className="h-3.5 w-3.5" />}
-            label={isAutos ? "Condiciones de la operación" : "Política de devoluciones y cambios"}
+            label={isAutos ? "Condiciones de la operación" : entregaPorDescarga ? "Devoluciones y arrepentimiento" : "Política de devoluciones y cambios"}
             active={policyReturnsActive}
             onToggle={() => setPolicyReturnsActive((v) => !v)}
             value={policyReturns}
@@ -765,7 +771,7 @@ function LegalWizardModal({ storeInfo, hechos, onClose, onApply }: {
 
         {!preview ? (
           <div className="space-y-4">
-            <div>
+            {!storeInfo.entregaPorDescarga && <div>
               <p className="text-xs font-semibold text-slate-700 mb-1.5">¿Hacés envíos a todo el país, o solo entregás en tu zona / retiro en persona?</p>
               <div className="flex gap-2">
                 <button type="button" onClick={() => setShipsNationwide(true)}
@@ -777,9 +783,9 @@ function LegalWizardModal({ storeInfo, hechos, onClose, onApply }: {
                   Solo en persona
                 </button>
               </div>
-            </div>
+            </div>}
 
-            {shipsNationwide && (
+            {!storeInfo.entregaPorDescarga && shipsNationwide && (
               <div>
                 <p className="text-xs font-semibold text-slate-700 mb-1.5">¿Cuántos días tarda el envío en promedio?</p>
                 <input

@@ -68,6 +68,65 @@ chequear("vacío cae al default", generatePolicyShipping(TIENDA, { ...BASE, avgD
 chequear("solo espacios también", generatePolicyShipping(TIENDA, { ...BASE, avgDeliveryDays: "   " }).includes("3 a 7"));
 chequear("sin envío no habla de días", !generatePolicyShipping(TIENDA, { ...BASE, shipsNationwide: false }).includes("días hábiles"));
 
+/* ── 2 bis) La tienda que entrega un archivo ──────────────────────────────────
+   Las tres políticas generadas estaban escritas para algo que llega en una caja.
+   Aplicadas a una tienda de descargas no quedaban "raras": quedaban falsas. Le
+   prometían un envío que no existe, le hablaban de un producto que "recibe"
+   cuando nunca recibe nada, y le pedían devolverlo "sin uso, con sus etiquetas y
+   su embalaje original".
+
+   Lo que NO cambia, y por eso se chequea explícitamente: el derecho de
+   arrepentimiento son los mismos 10 días corridos del art. 34. Esta tienda no lo
+   recorta. Lo único distinto es desde cuándo se cuentan. */
+console.log("\n2 bis) La tienda que entrega un archivo");
+
+const DIGITAL: LegalStoreInfo = { ...TIENDA, entregaPorDescarga: true };
+
+const entregaDigital = generatePolicyShipping(DIGITAL, BASE);
+chequear("entrega: no promete envíos a todo el país",
+  !entregaDigital.includes("Realizamos envíos") && !entregaDigital.includes("días hábiles"), entregaDigital.slice(0, 120));
+chequear("entrega: dice que llega por mail", entregaDigital.includes("link de descarga"));
+chequear("entrega: dice cuánto dura y cuántas veces",
+  entregaDigital.includes("30 días corridos") && entregaDigital.includes("5 veces"));
+chequear("entrega: ignora las respuestas de envío del asistente",
+  generatePolicyShipping(DIGITAL, { ...BASE, shipsNationwide: false, avgDeliveryDays: "40" }) === entregaDigital);
+
+const devolucionesDigital = generatePolicyReturns(DIGITAL, BASE);
+chequear("devoluciones: conserva los 10 días del art. 34",
+  devolucionesDigital.includes("10 días corridos") && devolucionesDigital.includes("art. 34"));
+chequear("devoluciones: los cuenta desde la compra, no desde que 'recibís el producto'",
+  !devolucionesDigital.includes("recibís el producto"), devolucionesDigital.slice(0, 200));
+chequear("devoluciones: no promete la garantía de 6 y 3 meses de un objeto",
+  !devolucionesDigital.includes("6 meses") && !devolucionesDigital.includes("3 meses"));
+chequear("devoluciones: no pide devolverlo con etiquetas y embalaje",
+  !devolucionesDigital.includes("embalaje original") && !devolucionesDigital.includes("sin uso"));
+chequear("devoluciones: dice qué pasa con el link al cancelar",
+  devolucionesDigital.includes("deja de funcionar"));
+chequear("devoluciones: promete reemplazo si el archivo no abre",
+  devolucionesDigital.includes("no se abre") || devolucionesDigital.includes("no se abre, llega dañado"));
+
+const conDiasExtra = generatePolicyReturns(DIGITAL, { ...BASE, extraReturnDays: 20 });
+chequear("devoluciones: los días extra también valen acá", conDiasExtra.includes("30 días corridos desde la compra"));
+
+const terminosDigital = generatePolicyTerms(DIGITAL, BASE);
+chequear("términos: no habla de despacho donde no se despacha",
+  !terminosDigital.includes("despachado"), terminosDigital.slice(0, 200));
+/* La licencia es lo único que la tienda tiene para oponerle a quien revenda el
+   archivo o lo suba a un grupo, y es el riesgo número uno de vender algo que se
+   copia sin costo. */
+chequear("términos: dice que es para uso personal y no se revende",
+  terminosDigital.includes("uso personal") && terminosDigital.includes("revenderlos"));
+
+/* Y el otro lado: sin la bandera, todo sale exactamente como antes. Es lo que
+   permite que el campo sea opcional sin romperle la política a nadie. */
+chequear("sin la bandera, la entrega sigue siendo la de siempre",
+  generatePolicyShipping(TIENDA, BASE).includes("Realizamos envíos a todo el país"));
+chequear("sin la bandera, las devoluciones siguen siendo las de siempre",
+  generatePolicyReturns(TIENDA, BASE).includes("recibís el producto") &&
+    generatePolicyReturns(TIENDA, BASE).includes("6 meses"));
+chequear("sin la bandera, los términos no hablan de licencias",
+  !generatePolicyTerms(TIENDA, BASE).includes("uso personal"));
+
 /* ── 3) La privacidad declara lo que de verdad hay ────────────────────────── */
 console.log("\n3) La politica de privacidad no miente sobre los trackers");
 

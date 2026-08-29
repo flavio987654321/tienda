@@ -710,6 +710,10 @@ function ProductosPageInner({ embebido }: { embebido?: CatalogoEmbebido }) {
   const [socialLinks, setSocialLinks] = useState<Record<string, string>>({});
   // Qué políticas legales linkea el pie. Ver `lib/politicas-tienda`.
   const [legales, setLegales] = useState<ClaveLegal[] | undefined>(undefined);
+  /* Y con qué nombre. Dos de las cuatro se llaman distinto según el rubro: en
+     una tienda que entrega por descarga el pie decía "Política de envíos" y
+     linkeaba a una página titulada "Política de entrega y descarga". */
+  const [tipoTienda, setTipoTienda] = useState<string | null>(null);
   const [footerBg, setFooterBg] = useState<string | null>(null);
   const [whatsapp, setWhatsapp] = useState<{ enabled: boolean; number: string; message: string } | null>(null);
   const [cartIconIdx, setCartIconIdx] = useState(0);
@@ -838,6 +842,7 @@ function ProductosPageInner({ embebido }: { embebido?: CatalogoEmbebido }) {
         setHasMercadoPago(!!data.hasMercadoPago);
         setStoreName(data.store.name ?? "Tienda");
         if (Array.isArray(data.legales)) setLegales(data.legales);
+        setTipoTienda(data.store.tipoTienda ?? null);
         if (data.store.tipoTienda === "AUTOS") {
           const qs = fromEditor ? "?from=editor" : "";
           router.replace(`/tienda/${slug}/vehiculos${qs}`);
@@ -2526,7 +2531,7 @@ function ProductosPageInner({ embebido }: { embebido?: CatalogoEmbebido }) {
           </div>
         )}
         <div style={{ display:"flex", flexWrap:"wrap", justifyContent:"center", gap:"0 16px" }}>
-          {linksLegales(slug, legales, { enEditor: fromEditor }).map(({ clave, label, href }) => (
+          {linksLegales(slug, legales, { tipoTienda, enEditor: fromEditor }).map(({ clave, label, href }) => (
             <a key={clave} href={href} style={{ fontSize:10, color:footerFg, opacity:0.6, textDecoration:"none" }}>{label}</a>
           ))}
           <button onClick={() => setShowReport(true)}

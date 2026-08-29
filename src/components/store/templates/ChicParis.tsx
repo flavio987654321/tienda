@@ -2225,7 +2225,7 @@ export default function ChicParis() {
               escritorio se mantienen las dos puntas. */}
           <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", justifyContent: isMobile ? "center" : "space-between", alignItems: "center", flexWrap: "wrap", gap: isMobile ? 16 : "8px 24px", paddingLeft: isMobile ? 0 : (hasWA ? 110 : 0), paddingRight: isMobile ? 0 : 100, textAlign: isMobile ? "center" : undefined }}>
             <div style={{ display: "flex", flexWrap: "wrap", justifyContent: isMobile ? "center" : undefined, gap: "4px 16px" }}>
-              {linksLegales(storeConfig?.slug, storeConfig?.legales, { enEditor: editMode }).map(({ clave: tipo, label }) => (
+              {linksLegales(storeConfig?.slug, storeConfig?.legales, { tipoTienda: storeConfig?.tipoTienda, enEditor: editMode }).map(({ clave: tipo, label }) => (
                 editMode ? (
                   <button key={tipo} type="button" onClick={() => window.open("/dashboard/pagos", "_blank")}
                     title="Editar en Dashboard → Pagos"

@@ -2676,7 +2676,7 @@ export default function UrbanPulse() {
             /* ── MOBILE: 2 filas centradas ── */
             <div style={{ borderTop:`1px solid ${footerUpMid}`, paddingTop:20, paddingBottom:80, display:"flex", flexDirection:"column", gap:10, alignItems:"center" }}>
               <div style={{ display:"flex", flexWrap:"wrap", gap:"4px 14px", justifyContent:"center" }}>
-                {linksLegales(storeConfig?.slug, storeConfig?.legales, { enEditor: editMode, cortos: true }).map(({ clave: tipo, label }) => (
+                {linksLegales(storeConfig?.slug, storeConfig?.legales, { tipoTienda: storeConfig?.tipoTienda, enEditor: editMode, cortos: true }).map(({ clave: tipo, label }) => (
                   editMode ? (
                     <button key={tipo} type="button" onClick={() => window.open("/dashboard/pagos", "_blank")}
                       title="Editar en Dashboard → Pagos"
@@ -2713,7 +2713,7 @@ export default function UrbanPulse() {
             /* ── DESKTOP: fila izq/der original ── */
             <div style={{ borderTop:`1px solid ${footerUpMid}`, paddingTop:22, paddingLeft: hasWA ? 110 : 0, paddingRight:110, display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:"8px 24px" }}>
               <div style={{ display:"flex", flexWrap:"wrap", gap:"0 16px" }}>
-                {linksLegales(storeConfig?.slug, storeConfig?.legales, { enEditor: editMode, cortos: true }).map(({ clave: tipo, label }) => (
+                {linksLegales(storeConfig?.slug, storeConfig?.legales, { tipoTienda: storeConfig?.tipoTienda, enEditor: editMode, cortos: true }).map(({ clave: tipo, label }) => (
                   editMode ? (
                     <button key={tipo} type="button" onClick={() => window.open("/dashboard/pagos", "_blank")}
                       title="Editar en Dashboard → Pagos"

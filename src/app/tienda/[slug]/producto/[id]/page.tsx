@@ -249,7 +249,7 @@ async function findStoreConfig(slug: string) {
     tiendaTapada(slug),
   ]);
   const legales = documentosPublicados(store);
-  const esAutos = store?.tipoTienda === "AUTOS";
+  const tipoTienda = store?.tipoTienda ?? null;
 
   /* La MISMA regla de "es premium" que la portada: tier + suscripción viva.
      Escrita distinta, la campanita aparecería en una pantalla y no en la otra
@@ -280,7 +280,7 @@ async function findStoreConfig(slug: string) {
     const parsed: Partial<StoreConfig> = JSON.parse(store?.storeConfig || "{}");
     return {
       analytics: parsed.analytics, currency: parsed.currency || "ARS",
-      template: parsed.template ?? null, legales, esAutos, ...barra,
+      template: parsed.template ?? null, legales, tipoTienda, ...barra,
       promoBanner: parsed.promoBanner ?? null,
       /* La bajada del logo ("TIENDA ONLINE") es un texto que la dueña puede
          cambiar, y vive en los overrides como cualquier otro. Se lee sólo el
@@ -294,7 +294,7 @@ async function findStoreConfig(slug: string) {
   } catch {
     return {
       analytics: undefined, currency: "ARS" as const,
-      template: null, legales, esAutos, ...barra,
+      template: null, legales, tipoTienda, ...barra,
       promoBanner: null, navTagline: null, storeNameOverride: null,
     };
   }
@@ -333,7 +333,7 @@ export default async function ProductoPage({ params, searchParams }: ProductoPag
   }
 
   const {
-    analytics, currency, template, legales, esAutos,
+    analytics, currency, template, legales, tipoTienda,
     storeId, isOwnerInicial, showPushBell, isVerified, verifiedInfo,
     promoBanner, navTagline, storeNameOverride,
   } = await findStoreConfig(slug);
@@ -406,7 +406,7 @@ export default async function ProductoPage({ params, searchParams }: ProductoPag
           productoInicial={product ? mapProduct(product as RawProduct) : null}
           templateInicial={template}
           legalesInicial={legales}
-          esAutosInicial={esAutos}
+          tipoTiendaInicial={tipoTienda}
           storeIdInicial={storeId}
           isOwnerInicial={isOwnerInicial}
           showPushBell={showPushBell}
