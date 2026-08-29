@@ -416,13 +416,16 @@ export const TEMPLATE_DEFAULTS: Record<TemplateId, { accent: string; storeName: 
 };
 
 export const TEMPLATE_TIPO_TIENDA: Record<TemplateId, string[]> = {
-  "aire":         ["ROPA", "GENERAL"],
-  "boho-terra":   ["ROPA", "GASTRONOMIA", "GENERAL"],
+  // Los tres neutros llevan además DIGITAL: un archivo descargable se muestra
+  // igual que cualquier producto —foto, nombre, precio, botón— y sin esto el
+  // rubro nuevo se quedaría SIN NINGÚN diseño para elegir, o sea sin tienda.
+  "aire":         ["ROPA", "GENERAL", "DIGITAL"],
+  "boho-terra":   ["ROPA", "GASTRONOMIA", "GENERAL", "DIGITAL"],
   "urban-pulse":  ["ROPA", "GENERAL"],
   "chic-paris":   ["ROPA", "GENERAL"],
   // Aurora no está atada a un rubro: es una estética, no una categoría. Por eso
   // aparece en los mismos tres que los templates más generales de Moda.
-  "aurora":       ["ROPA", "GASTRONOMIA", "GENERAL"],
+  "aurora":       ["ROPA", "GASTRONOMIA", "GENERAL", "DIGITAL"],
   "auto-motor":   ["AUTOS"],
   "auto-drive":   ["AUTOS"],
   "electro-prime": ["HOGAR_TECH"],

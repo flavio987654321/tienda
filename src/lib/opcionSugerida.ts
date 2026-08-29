@@ -98,6 +98,16 @@ export function sugerirOpcion(tipoTienda: string, category: string, subcategory:
         ayuda: "La versión o equipamiento. Escribila y apretá Enter.",
         valores: [],
       };
+    // DIGITAL tampoco llega acá (tiene `hideVariants`), pero se deja explícito:
+    // sin este caso caería en el `default` y le ofrecería talles de ropa a un PDF.
+    case "DIGITAL":
+      return {
+        nombre: "Formato",
+        titulo: "Formatos",
+        placeholder: "ej: PDF, Excel",
+        ayuda: "El formato del archivo. Escribilo y apretá Enter.",
+        valores: [],
+      };
     case "GENERAL":
       return {
         nombre: "Variante",

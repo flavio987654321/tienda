@@ -15,6 +15,7 @@ export const RUBROS: { id: string; label: string; emoji: string }[] = [
   { id: "HOGAR_TECH",   label: "Tecno y hogar",   emoji: "🏠" },
   { id: "AUTOS",        label: "Autos y motos",   emoji: "🚗" },
   { id: "GASTRONOMIA",  label: "Gastronomía",     emoji: "🍽️" },
+  { id: "DIGITAL",      label: "Productos digitales", emoji: "📥" },
   { id: "HOTELERIA",    label: "Hotelería",       emoji: "🏨" },
   { id: "INMOBILIARIA", label: "Inmobiliaria",    emoji: "🏢" },
   { id: "GENERAL",      label: "Otros",           emoji: "🏪" },
