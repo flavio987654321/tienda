@@ -8,6 +8,7 @@
 // se nota hasta que aparece en la facturación.
 
 import { cotizarCambioDePlan, getSubscriptionStatus, PRICES } from "./subscription";
+import { PLANES, PRECIOS_DIGITALES, planDe, planDeSuscripcion } from "./planLimits";
 
 let failed = 0;
 function check(id: string, ok: boolean, desc: string) {
@@ -21,8 +22,21 @@ const hace = (dias: number) => new Date(HOY.getTime() - dias * DIA);
 const dentro = (dias: number) => new Date(HOY.getTime() + dias * DIA);
 
 /** Una suscripción activa que arrancó hace `usados` días y dura `total`. */
-function sub(tier: "BASIC" | "PREMIUM", plan: "MONTHLY" | "ANNUAL", usados: number, total: number) {
+function sub(
+  /* Los tiers de los tres ecosistemas, no sólo los de tienda: PAGO-Ñ necesita
+     armar una suscripción digital para probar que el guard corta en las dos
+     direcciones. */
+  tier: "BASIC" | "PREMIUM" | "FREE" | "STARTER" | "PRO",
+  plan: "MONTHLY" | "ANNUAL",
+  usados: number,
+  total: number,
+  /* El rol va como parámetro y no fijo en "OWNER" porque es lo que decide de qué
+     producto es la suscripción, y eso es justo lo que hay que poder cruzar en
+     los casos PAGO-N y PAGO-O de abajo. */
+  role: string = "OWNER"
+) {
   return {
+    role,
     tier,
     plan,
     status: "ACTIVE",
@@ -175,6 +189,76 @@ const aProMensual = { plan: "OWNER_BASIC", billing: "MONTHLY" } as const;
   // trial tiene que estar vencido. Si `now` se ignorara, esto daría TRIAL.
   check("RELOJ-D", getSubscriptionStatus(trialViejo, dentro(400)) === "EXPIRED",
     "con una fecha futura, el mismo trial da vencido");
+}
+
+// ── El crédito no cruza productos ──────────────────────────────────────────
+//
+// Los tres casos de acá abajo cubren el agujero más caro que apareció al sumar
+// el tercer ecosistema, y ninguno se ve usando la aplicación: se ven recién en
+// la liquidación del mes siguiente.
+//
+// El crédito por días no usados salía del tier a secas: `tier === "PREMIUM"`
+// daba el precio de Tienda Premium y CUALQUIER OTRA COSA daba el de Tienda Pro.
+// O sea que una suscripción digital de plan Starter acreditaba $20.000 —el
+// precio de Tienda Pro— que esa persona nunca pagó.
+//
+// Y encima la ruta de pago tiene una rama que activa la suscripción SIN pasar
+// por Mercado Pago cuando el total da cero. Las dos cosas juntas son un camino
+// para llevarse un plan pago de arriba: con un anual de tienda por delante, el
+// crédito tapaba el precio del plan digital y la suscripción se activaba sola.
+{
+  // Anual de Tienda Premium con 300 días por delante — el crédito más grande
+  // que puede existir— pedido contra un plan digital.
+  const tienda = sub("PREMIUM", "ANNUAL", 65, 365);
+  const q = cotizarCambioDePlan(tienda, { plan: "DIGITAL_PRO", billing: "MONTHLY" }, HOY);
+  check("PAGO-N",
+    q.credito === 0 &&
+    q.aPagar === PRECIOS_DIGITALES.DIGITAL_PRO.MONTHLY &&
+    q.motivoSinCredito === "OTRO_ECOSISTEMA",
+    "una suscripción de tienda NO acredita nada contra un plan digital");
+}
+{
+  // Y al revés, que el guard no esté puesto en una sola dirección.
+  const digital = sub("PRO", "ANNUAL", 65, 365, "DIGITAL");
+  const q = cotizarCambioDePlan(digital, aPremiumMensual, HOY);
+  check("PAGO-Ñ",
+    q.credito === 0 && q.aPagar === PRICES.OWNER_PREMIUM.MONTHLY,
+    "una suscripción digital NO acredita nada contra un plan de tienda");
+}
+{
+  // Un plan que no se cobra nunca no se cotiza. Lo que importa acá no es el cero
+  // sino el motivo: es la señal de la que se agarra la ruta de pago para
+  // rechazarlo antes de crear una preferencia en Mercado Pago.
+  const q = cotizarCambioDePlan(null, { plan: "DIGITAL_FREE", billing: "MONTHLY" }, HOY);
+  check("PAGO-O", q.motivoSinCredito === "PLAN_SIN_PRECIO",
+    "un plan gratis no se cotiza y se puede distinguir del resto");
+}
+
+// ── El registro de planes se sostiene solo ─────────────────────────────────
+{
+  // Rol + tier tiene que identificar UN plan y no dos. Si dos filas comparten el
+  // par, `planDeSuscripcion` devuelve la primera que encuentra y el crédito sale
+  // del plan equivocado — que es exactamente el error que esta tabla vino a
+  // cerrar, reaparecido por otra puerta.
+  const pares = Object.values(PLANES).map((p) => `${p.role}|${p.tier}`);
+  check("PLAN-A", new Set(pares).size === pares.length,
+    "cada combinación de rol y tier identifica un solo plan");
+}
+{
+  // La vuelta completa: de un plan a una suscripción y de vuelta al plan.
+  const malos = (Object.keys(PLANES) as (keyof typeof PLANES)[]).filter(
+    (key) => planDeSuscripcion({ role: PLANES[key].role, tier: PLANES[key].tier }) !== key
+  );
+  check("PLAN-B", malos.length === 0,
+    "toda suscripción guardada se puede volver a mapear a su plan");
+}
+{
+  // Una clave que no existe tiene que dar null, no un objeto heredado del
+  // prototipo. `plan` llega del navegador: sin el hasOwnProperty, mandar
+  // "constructor" devolvía una función y la validación creía que el plan existe.
+  const sucias = ["__proto__", "constructor", "toString", "PLAN_QUE_NO_EXISTE", ""];
+  check("PLAN-C", sucias.every((k) => planDe(k) === null),
+    "una clave de plan inventada o heredada del prototipo devuelve null");
 }
 
 console.log(failed === 0 ? "\n✅ La cuenta da bien en todos los casos." : `\n❌ ${failed} caso(s) fallan.`);

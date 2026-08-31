@@ -1300,8 +1300,8 @@ model Subscription {
   id                 String    @id @default(cuid())
   userId             String    @unique
   user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  role               String // AFFILIATE | OWNER
-  tier               String    @default("BASIC") // BASIC | PREMIUM (solo para OWNER)
+  role               String // AFFILIATE | OWNER | DIGITAL — el registro de planes (planLimits.PLANES) es quien manda
+  tier               String    @default("BASIC") // OWNER: BASIC | PREMIUM — DIGITAL: FREE | STARTER | PRO
   plan               String // MONTHLY | ANNUAL
   status             String    @default("TRIAL") // TRIAL | ACTIVE | GRACE | EXPIRED | CANCELLED
   trialEndsAt        DateTime

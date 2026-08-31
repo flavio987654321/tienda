@@ -175,3 +175,109 @@ export const TOPES_DIGITALES = {
   STARTER: { paginas: 5,  bonos: 3, upsells: 1, ebooksIA: 2 },
   PRO:     { paginas: 25, bonos: 5, upsells: 3, ebooksIA: 5 },
 } as const;
+
+/* ══════════════════════════════════════════════════════════════════════════
+   EL REGISTRO DE PLANES — la única tabla que dice qué planes existen
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/**
+ * A qué producto pertenece cada plan. Dos planes de ecosistemas distintos NUNCA
+ * se mezclan: una cuenta es una sola cosa, y su suscripción también.
+ */
+export type Ecosistema = "TIENDA" | "AFILIADO" | "DIGITAL";
+
+export type DefinicionPlan = {
+  ecosistema: Ecosistema;
+  /** Lo que se guarda en `Subscription.role`. */
+  role: string;
+  /** Lo que se guarda en `Subscription.tier`. */
+  tier: string;
+  /** `null` = no se cobra nunca. La ruta de pago tiene que rechazarlo. */
+  precios: { MONTHLY: number; ANNUAL: number } | null;
+  /** El nombre que ve la persona: en el checkout de MP, en el mail y en Mi Plan. */
+  label: string;
+};
+
+/**
+ * Todos los planes que existen, con su ecosistema, su rol, su tier y su precio.
+ *
+ * **Por qué existe esta tabla.** Antes el rol y el tier se deducían mirando el
+ * TEXTO de la clave del plan, en el webhook que activa la suscripción:
+ *
+ *     const safeRole = plan.startsWith("OWNER") ? "OWNER" : "AFFILIATE";
+ *     const safeTier = plan === "OWNER_PREMIUM" ? "PREMIUM" : "BASIC";
+ *
+ * Eso funciona mientras existan dos familias de planes. Con la tercera se rompe
+ * en silencio y del peor modo posible: `DIGITAL_PRO` no empieza con "OWNER", así
+ * que alguien que paga un plan digital quedaba registrado como **AFILIADO**, y
+ * con el tier en "BASIC" recibía los topes del plan chico habiendo pagado el
+ * grande. Nadie lo reporta como error: la persona simplemente ve menos de lo que
+ * compró.
+ *
+ * Con la tabla, el rol y el tier son una búsqueda, no una adivinanza. Y agregar
+ * un plan es agregar una fila, no acordarse de tres `if` repartidos.
+ *
+ * **Los precios NO se copian acá**: salen de `PRICES` y `PRECIOS_DIGITALES`, que
+ * siguen siendo la única fuente del número. Esta tabla dice qué plan usa cuál.
+ */
+export const PLANES = {
+  OWNER_BASIC:     { ecosistema: "TIENDA",   role: "OWNER",     tier: "BASIC",   precios: PRICES.OWNER_BASIC,                label: "Tienda Pro" },
+  OWNER_PREMIUM:   { ecosistema: "TIENDA",   role: "OWNER",     tier: "PREMIUM", precios: PRICES.OWNER_PREMIUM,              label: "Tienda Premium" },
+  AFFILIATE:       { ecosistema: "AFILIADO", role: "AFFILIATE", tier: "BASIC",   precios: null,                              label: "Afiliado" },
+  DIGITAL_FREE:    { ecosistema: "DIGITAL",  role: "DIGITAL",   tier: "FREE",    precios: null,                              label: "Free" },
+  DIGITAL_STARTER: { ecosistema: "DIGITAL",  role: "DIGITAL",   tier: "STARTER", precios: PRECIOS_DIGITALES.DIGITAL_STARTER, label: "Starter" },
+  DIGITAL_PRO:     { ecosistema: "DIGITAL",  role: "DIGITAL",   tier: "PRO",     precios: PRECIOS_DIGITALES.DIGITAL_PRO,     label: "Pro" },
+} as const satisfies Record<string, DefinicionPlan>;
+
+export type PlanKey = keyof typeof PLANES;
+
+/**
+ * La definición de un plan, o `null` si la clave no existe.
+ *
+ * **Falla cerrado a propósito**, y el `hasOwnProperty` no es paranoia de más: la
+ * clave llega del navegador y va directo a buscar un precio. Sin él, un `plan`
+ * con valor `"constructor"` o `"__proto__"` devuelve un objeto heredado en vez de
+ * `undefined`, y a partir de ahí la validación cree que el plan existe.
+ */
+export function planDe(key: unknown): DefinicionPlan | null {
+  if (typeof key !== "string") return null;
+  return Object.prototype.hasOwnProperty.call(PLANES, key)
+    ? (PLANES as Record<string, DefinicionPlan>)[key]
+    : null;
+}
+
+/** ¿Este plan se cobra? Los gratis (Free, Afiliado) nunca deben llegar al pago. */
+export function esPlanPago(key: unknown): boolean {
+  return planDe(key)?.precios != null;
+}
+
+/**
+ * El camino inverso: de una suscripción guardada, qué plan es.
+ *
+ * Lo necesita el prorrateo para saber **cuánto pagó de verdad** quien cambia de
+ * plan. Antes eso se deducía del tier solo (`tier === "PREMIUM" ? PREMIUM :
+ * BASIC`), o sea que cualquier tier desconocido caía en el plan de tienda más
+ * barato: a alguien con plan Starter se le acreditaba el precio de Tienda Pro,
+ * plata que nunca pagó.
+ */
+export function planDeSuscripcion(sub: { role: string; tier: string } | null): PlanKey | null {
+  if (!sub) return null;
+  const entrada = Object.entries(PLANES).find(
+    ([, def]) => def.role === sub.role && def.tier === sub.tier
+  );
+  return (entrada?.[0] as PlanKey | undefined) ?? null;
+}
+
+/**
+ * El ecosistema al que pertenece un rol guardado, o `null` si no se reconoce.
+ *
+ * Mira SÓLO el rol y no el par rol+tier a propósito. Es la pregunta que hace el
+ * candado que impide mezclar suscripciones, y ahí conviene ser robusto: una fila
+ * vieja con un tier raro tiene que seguir identificándose como "de tienda" en vez
+ * de caer en "no sé qué es". Para el prorrateo, que necesita el precio exacto,
+ * está `planDeSuscripcion`, que sí exige el par completo.
+ */
+export function ecosistemaDeRol(role: string | null | undefined): Ecosistema | null {
+  if (!role) return null;
+  return Object.values(PLANES).find((def) => def.role === role)?.ecosistema ?? null;
+}

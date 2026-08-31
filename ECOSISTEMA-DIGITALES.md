@@ -767,29 +767,78 @@ Términos que el monto cambia en cada renovación. `currency_id: "ARS"` ya está
 donde tiene que estar y el cobro es el mismo que el de las tiendas.
 
 
-- 🔲 `Subscription.role` acepta `"DIGITAL"` (hoy es un `String` libre con
-  `AFFILIATE | OWNER`, así que no hay migración destructiva) y `tier` acepta los
-  tres escalones.
-- 🔲 Dos entradas nuevas en `PRICES` (`DIGITAL_STARTER`, `DIGITAL_PRO`), cada una
-  con MONTHLY y ANNUAL.
-- 🔲 `COMBINACIONES` en `cotizar/route.ts` pasa de 4 a 8. Ojo el comentario que
-  tiene arriba: dice "las cuatro combinaciones" y hay que actualizarlo.
-- 🔲 La lista blanca de `preferencia/route.ts:43` suma las dos claves. **Se valida
-  contra la lista, nunca con un cast**: `plan` llega del navegador y va directo a
-  buscar un precio.
-- 🔲 **Free rechazado en el pago**, igual que `AFFILIATE`: es gratuito y no tiene
-  por qué llegar nunca una preferencia suya.
-- 🔲 **La cuarta tarjeta en `/registro`.** Hoy la pantalla de "Crear cuenta gratis"
-  ofrece tres caminos: *Tengo una tienda*, *Soy vendedor/a*, *Soy cliente*. Falta
-  el cuarto, con su propia descripción. **Va acá y no en la Fase 1** a propósito:
-  esa tarjeta tiene que crear una cuenta con rol `DIGITAL` y su suscripción, que
-  es justo lo que construye esta fase. Ponerla antes sería un botón que no lleva
-  a ningún lado.
+### ✅ Los cimientos de seguridad — HECHOS (31/08/26)
+
+Antes de sumar un solo plan nuevo se cerraron los agujeros que el ecosistema
+nuevo abría en el camino del dinero. Todos tienen la misma forma: **no
+rompen nada, no tiran ningún error**, y se descubren en la liquidación del mes
+siguiente o el día que a alguien se le cierra la tienda sola.
+
+- ✅ **El registro de planes** (`PLANES` en `planLimits.ts`): la única tabla que
+  dice qué planes existen, con su ecosistema, rol, tier, precio y nombre.
+  Reemplaza a `plan.startsWith("OWNER")`, que mandaba cualquier plan digital a
+  `AFFILIATE` y le daba los topes del plan más chico a quien pagó el grande.
+  Agregar un plan ahora es agregar una fila.
+  - `planDe()` **falla cerrado**: `plan` llega del navegador, así que una clave
+    heredada del prototipo (`"constructor"`, `"__proto__"`) devuelve `null`.
+- ✅ **El candado de ecosistema**, en las DOS rutas. `Subscription.userId` es
+  único y las dos escrituras son un `upsert` por `userId`: sin candado, una dueña
+  de tienda que tocara un plan digital **se quedaba sin la suscripción de su
+  tienda** y el cron diario se la cerraba sola.
+  - En `preferencia`: corta con 409 y un mensaje en castellano llano.
+  - En `webhook`: **se vuelve a verificar antes de escribir**, porque ésa es la
+    ruta que escribe y entre crear la preferencia y acreditar el pago pasa
+    tiempo. Si cruza, no se aplica y se registra fuerte: queda un pago cobrado
+    sin activar, que se resuelve a mano. Mejor eso que cerrarle la tienda a
+    alguien que está pagando.
+- ✅ **El prorrateo con su freno** (`cotizarCambioDePlan`): el plan actual se
+  busca por rol + tier en el registro, no se deduce del tier solo — así cualquier
+  tier desconocido caía en `OWNER_BASIC` y le acreditaba a un plan Starter los
+  $20.000 de Tienda Pro. Y el crédito **no cruza ecosistemas**: un anual de
+  Tienda Premium por delante generaba un crédito enorme contra un plan digital,
+  el total daba cero, y la rama de "activar sin pasar por MP" regalaba el plan.
+- ✅ **Los planes sin precio se rechazan antes del cobro**, en las dos rutas. Free
+  y Afiliado cotizan en cero, y esa rama de activación sin pago los daba por
+  pagados.
+- ✅ **Los chequeos**: 9 nuevos en `subscription.check.ts` (PAGO-N/Ñ/O, PLAN-A/B/C)
+  y un archivo nuevo, `pagos-suscripcion.check.ts`, que lee las tres rutas como
+  texto y verifica que los frenos sigan ahí. Es tosco a propósito: no prueba que
+  funcionen, prueba que **nadie los borró**.
+  - Los 17 chequeos de plata que ya existían pasan con **los mismos números**: el
+    refactor no movió un peso de las tiendas.
+
+### ✅ Los planes digitales, enchufados — HECHOS (31/08/26)
+
+- ✅ `Subscription.role` acepta `"DIGITAL"`: es un `String` libre, así que **no
+  hubo migración**. Se corrigieron los comentarios del schema, que decían
+  `AFFILIATE | OWNER` y `BASIC | PREMIUM` y ya mentían.
+- ✅ Los precios (`PRECIOS_DIGITALES`) y los topes (`TOPES_DIGITALES`) en
+  `planLimits.ts`, al lado de los que ya estaban.
+- ✅ Las dos claves nuevas en el registro, o sea en la lista blanca de
+  `preferencia`: se valida contra la tabla, nunca con un cast.
+- ✅ **Free rechazado en el pago**, con su mensaje propio.
+- ✅ `COMBINACIONES` en `cotizar/route.ts`: **ya no es una lista escrita a mano**.
+  Se deriva del registro filtrando los planes con precio, así que pasó de 4 a 8
+  sola y el próximo plan entra sin tocar el archivo. Si un plan pago faltara ahí,
+  el modal de pago no encuentra su precio, muestra "no se pudo calcular" y deja
+  el botón apagado — un plan que no se puede comprar, sin ningún error visible.
+
+### 🔲 Lo que queda de la Fase 2
+
+- 🔲 **El ciclo de vida de la sección 3** (Free → prueba → caída a Free). Es lo
+  más grande que queda. Hoy el cron sólo mira `role: "OWNER"`
+  (`cron/daily/route.ts:288`), así que las suscripciones digitales no las maneja
+  nadie.
+  - Los productos de más **no se borran**: se despublican y ella elige cuáles
+    quedan.
+  - La comisión se **congela al momento del pedido**, no se lee del plan de hoy.
+  - El aviso de "bajaste a Free".
+  - ¿La prueba de 7 días se puede tomar más de una vez?
+- 🔲 **La cuarta tarjeta en `/registro`.** Tiene que crear una cuenta con rol
+  `DIGITAL` y su suscripción Free, así que va después del ciclo de vida.
   - Ojo el mismo detalle de ancho que en la página de precios: ahí también son
     tres tarjetas que pasan a cuatro.
-- 🔲 Los topes nuevos en `planLimits.ts`, al lado de los que ya están.
-- 🔲 El ciclo de vida de la sección 3 (Free → prueba → caída a Free).
-- 🔲 El alta, el cobro y la renovación, reusando `/api/suscripcion/*`.
+- 🔲 El tope anti-abuso de páginas de venta, junto al código que lo aplica.
 - 🔲 La comisión de plataforma sumada a `marketplaceFee`, y **qué pasa cuando una
   venta tiene afiliado Y comisión de plataforma** (las dos salen del mismo
   número).
@@ -804,6 +853,24 @@ donde tiene que estar y el cobro es el mismo que el de las tiendas.
 - 🔲 Las pantallas, decidiendo una por una qué se copia de `/dashboard`.
 
 ## FASE 4 — La IA
+
+Las cuatro cosas están decididas en 2.4. Lo que falta acá es **cómo se pagan y
+cómo se frenan**, y eso va antes que cualquier pantalla: el tope no se agrega
+después, porque hasta que exista la factura de Anthropic no tiene techo.
+
+- 🔲 **Medir un ebook de verdad** antes de prometer un número. La estimación de
+  hoy es US$2–4 por ebook con Opus 5, y está sin verificar. `ebooksIA` en
+  `TOPES_DIGITALES` (0 / 2 / 5) es provisorio hasta esa medición.
+- 🔲 **Las cuatro capas de topes**, calcadas de `asistente-limites.ts`: ráfaga,
+  diario por cuenta, global de cuentas Free, global total. Ninguna función sale
+  sin tope, tampoco en Pro.
+- 🔲 **La capa de cuentas Free es la crítica**: es gratis, no pide tarjeta y da
+  acceso a IA. Veinte cuentas truchas son la misma persona y ningún tope por
+  usuario se entera.
+- 🔲 Generar la vidriera entera (el gancho principal).
+- 🔲 Escribir el contenido del ebook/PDF.
+- 🔲 Los textos de venta y los mails (entrega, carrito abandonado).
+- 🔲 Sasha adaptada: embudos, descargas y conversión en vez de stock y envíos.
 
 ## FASE 5 — La página de venta y el checkout
 

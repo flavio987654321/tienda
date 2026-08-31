@@ -2,11 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { createHmac, timingSafeEqual } from "crypto";
 import { prisma } from "@/lib/prisma";
 import { periodFor } from "@/lib/subscription";
+import { planDe, ecosistemaDeRol } from "@/lib/planLimits";
 import { sendSubscriptionConfirmationEmail } from "@/lib/resend";
 import { despues } from "@/lib/despues";
 
-// Valores aceptados en metadata — cualquier otra cosa se rechaza
-const VALID_PLANS = new Set(["OWNER_BASIC", "OWNER_PREMIUM"]);
+// Valores aceptados en metadata — cualquier otra cosa se rechaza.
+// Los planes ya no van en una lista escrita a mano: salen del registro, que es
+// el mismo que usa la ruta que creó la preferencia.
 const VALID_BILLINGS = new Set(["MONTHLY", "ANNUAL"]);
 
 function verifyMPSignature(req: NextRequest, dataId: string): boolean {
@@ -77,8 +79,11 @@ export async function POST(req: NextRequest) {
       console.error("WEBHOOK suscripcion: userId inválido en metadata", { userId });
       return NextResponse.json({ ok: true });
     }
-    if (!VALID_PLANS.has(plan)) {
-      console.error("WEBHOOK suscripcion: plan inválido en metadata", { plan });
+    // El plan sale del registro, no de una lista escrita a mano acá. Se exige
+    // además que TENGA precio: un plan gratis nunca puede llegar por un pago.
+    const defPlan = planDe(plan);
+    if (!defPlan || !defPlan.precios) {
+      console.error("WEBHOOK suscripcion: plan inválido o sin precio en metadata", { plan });
       return NextResponse.json({ ok: true });
     }
     if (!VALID_BILLINGS.has(billing)) {
@@ -116,9 +121,42 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true });
     }
 
-    // ── Derivar role/tier desde el plan (nunca desde metadata sin verificar) ──
-    const safeRole = plan.startsWith("OWNER") ? "OWNER" : "AFFILIATE";
-    const safeTier = plan === "OWNER_PREMIUM" ? "PREMIUM" : "BASIC";
+    /* ── El candado de ecosistema, otra vez ───────────────────────────────────
+     *
+     * Ya está en la ruta que crea la preferencia, y acá va igual porque **esta
+     * es la que escribe**. Entre que se crea una preferencia y se acredita el
+     * pago pasa tiempo, y el estado de la cuenta puede haber cambiado: alguien
+     * arranca un pago de un plan digital sin suscripción, se registra una tienda
+     * mientras tanto, y el pago cae después. El upsert por `userId` le pisaría
+     * la suscripción de la tienda y el cron se la cerraría.
+     *
+     * Si pasa, NO se aplica y se registra fuerte. Queda un pago cobrado sin
+     * activar, que se resuelve a mano — mucho mejor que cerrarle la tienda a
+     * alguien que está pagando. */
+    const subActual = await prisma.subscription.findUnique({
+      where: { userId },
+      select: { role: true },
+    });
+    const ecoActual = ecosistemaDeRol(subActual?.role);
+    if (
+      ecoActual !== null &&
+      ecoActual !== defPlan.ecosistema &&
+      (ecoActual === "DIGITAL" || defPlan.ecosistema === "DIGITAL")
+    ) {
+      console.error(
+        "WEBHOOK suscripcion: PAGO QUE CRUZA ECOSISTEMAS — no se aplica, revisar a mano",
+        { paymentId, userId, plan, ecosistemaDelPago: defPlan.ecosistema, ecosistemaActual: ecoActual }
+      );
+      return NextResponse.json({ ok: true });
+    }
+
+    // ── Role y tier salen del registro, no de mirar el texto de la clave ──────
+    // Antes eran `plan.startsWith("OWNER") ? "OWNER" : "AFFILIATE"` y
+    // `plan === "OWNER_PREMIUM" ? "PREMIUM" : "BASIC"`. Con un tercer ecosistema
+    // eso rompe en silencio: quien pagaba un plan digital quedaba registrado como
+    // AFILIADO y con el tier del plan más chico.
+    const safeRole = defPlan.role;
+    const safeTier = defPlan.tier;
     const { couponId } = payment.metadata ?? {};
 
     const now = new Date();
@@ -157,7 +195,7 @@ export async function POST(req: NextRequest) {
     if (userRecord.email) {
       // El nombre que le llega por email tiene que coincidir con el del checkout
       // y con el de "Mi plan": son el mismo plan visto tres veces.
-      const planLabel = plan === "OWNER_PREMIUM" ? "Tienda Premium" : "Tienda Pro";
+      const planLabel = defPlan.label;
       const billingLabel = billing === "MONTHLY" ? "Mensual" : "Anual";
       despues(() => sendSubscriptionConfirmationEmail({
         to: userRecord.email,

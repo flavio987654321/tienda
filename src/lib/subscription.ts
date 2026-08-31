@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { PRICES } from "@/lib/planLimits";
+import { PRICES, PLANES, planDe, planDeSuscripcion, type PlanKey } from "@/lib/planLimits";
 
 // Los precios se mudaron a planLimits (este archivo importa Prisma y las pantallas
 // del navegador los necesitan). Se re-exportan para no romper a quien ya los pedía
@@ -197,11 +197,22 @@ export function reactivationCredit(sub: {
   return null;
 }
 
-export type PlanKey = "OWNER_BASIC" | "OWNER_PREMIUM";
+/* La lista de planes vive en `planLimits` (que no importa Prisma, así que la
+   pueden leer las pantallas del navegador). Se re-exporta desde acá para no
+   romper a quien ya la pedía de este archivo. */
+export type { PlanKey };
 export type Billing = "MONTHLY" | "ANNUAL";
 
 /** Por qué no se descuenta nada, para poder decirlo en pantalla en vez de callarlo. */
-export type SinCredito = "TRIAL" | "VENCIDA" | "MISMA_SUSCRIPCION" | "SIN_SUSCRIPCION";
+export type SinCredito =
+  | "TRIAL"
+  | "VENCIDA"
+  | "MISMA_SUSCRIPCION"
+  | "SIN_SUSCRIPCION"
+  /** Viene de otro producto: una suscripción de tienda no acredita en una digital. */
+  | "OTRO_ECOSISTEMA"
+  /** El plan destino no se cobra (Free, Afiliado) o la clave no existe. */
+  | "PLAN_SIN_PRECIO";
 
 export type CotizacionCambio = {
   destino: { plan: PlanKey; billing: Billing };
@@ -217,6 +228,10 @@ export type CotizacionCambio = {
 };
 
 type SubParaCotizar = {
+  /* `role` es obligatorio y no está de adorno: sin él no se puede saber de qué
+     producto viene la suscripción, y el crédito se calcularía cruzando
+     ecosistemas. Ver el guard de OTRO_ECOSISTEMA más abajo. */
+  role: string;
   tier: string;
   plan: string;
   status: string;
@@ -225,8 +240,6 @@ type SubParaCotizar = {
   currentPeriodEnd: Date | null;
   gracePeriodEndsAt: Date | null;
 } | null;
-
-const planKeyDe = (tier: string): PlanKey => (tier === "PREMIUM" ? "OWNER_PREMIUM" : "OWNER_BASIC");
 
 /**
  * Cuánto se le cobra a alguien que cambia de plan, descontándole los días que ya
@@ -265,7 +278,24 @@ export function cotizarCambioDePlan(
   destino: { plan: PlanKey; billing: Billing },
   now: Date = new Date()
 ): CotizacionCambio {
-  const precioLista = PRICES[destino.plan][destino.billing];
+  const defDestino = planDe(destino.plan);
+
+  /* Un plan sin precio (Free, Afiliado) o una clave que no existe no se cotiza.
+     Devuelve cero y el motivo, pero NO es la puerta por la que alguien se lleva
+     algo gratis: la ruta de pago rechaza los planes sin precio antes de llamar
+     acá, y `pagos-suscripcion.check.ts` vigila que ese rechazo siga estando. */
+  if (!defDestino?.precios) {
+    return {
+      destino,
+      precioLista: 0,
+      credito: 0,
+      aPagar: 0,
+      diasRestantes: 0,
+      motivoSinCredito: "PLAN_SIN_PRECIO",
+    };
+  }
+
+  const precioLista = defDestino.precios[destino.billing];
   const sinCredito = (motivo: SinCredito | null): CotizacionCambio => ({
     destino,
     precioLista,
@@ -276,6 +306,23 @@ export function cotizarCambioDePlan(
   });
 
   if (!sub) return sinCredito("SIN_SUSCRIPCION");
+
+  /* El plan que REALMENTE tiene hoy, buscado por rol + tier en el registro. No
+     se deduce del tier solo: cualquier tier desconocido caía en OWNER_BASIC y le
+     acreditaba a un plan digital el precio de Tienda Pro. */
+  const planActual = planDeSuscripcion(sub);
+  if (!planActual) return sinCredito("SIN_SUSCRIPCION");
+
+  /* ⚠️ El guard que impide que el crédito cruce productos.
+     Una suscripción de tienda no acredita nada contra un plan digital ni al
+     revés: son negocios distintos y ni siquiera se pueden tener a la vez (ver
+     el candado de ecosistema en `preferencia`). Sin esto, alguien con un anual
+     de Tienda Premium por delante generaba un crédito enorme contra un plan
+     digital, el total daba cero, y la rama de "activar sin pasar por MP" le
+     regalaba el plan entero. */
+  if (PLANES[planActual].ecosistema !== defDestino.ecosistema) {
+    return sinCredito("OTRO_ECOSISTEMA");
+  }
 
   // Con `now`, no con la hora real: toda esta función tiene que mirar el mismo
   // momento. Más abajo el crédito se calcula contra `now`, así que si el estado
@@ -288,7 +335,7 @@ export function cotizarCambioDePlan(
   // Renovar lo mismo extiende el período, no lo reemplaza: no hay nada sin usar
   // que devolver. Sin esto, renovar todos los días acreditaría el período entero
   // cada vez.
-  if (planKeyDe(sub.tier) === destino.plan && sub.plan === destino.billing) {
+  if (planActual === destino.plan && sub.plan === destino.billing) {
     return sinCredito("MISMA_SUSCRIPCION");
   }
 
@@ -303,7 +350,13 @@ export function cotizarCambioDePlan(
   const restante = fin - now.getTime();
   if (duracion <= 0 || restante <= 0) return sinCredito("VENCIDA");
 
-  const precioPagado = PRICES[planKeyDe(sub.tier)][sub.plan === "ANNUAL" ? "ANNUAL" : "MONTHLY"];
+  /* Lo que pagó de verdad: el precio de SU plan, no el del plan al que va. Con el
+     precio del destino, pasar de Pro a Premium acreditaba $25.000 de un mes que
+     costó $20.000. El `?? 0` no debería ocurrir nunca —un plan sin precio no
+     llega hasta acá porque no genera una suscripción paga— y si ocurriera,
+     acreditar cero es el lado correcto para equivocarse. */
+  const preciosActuales = PLANES[planActual].precios;
+  const precioPagado = preciosActuales?.[sub.plan === "ANNUAL" ? "ANNUAL" : "MONTHLY"] ?? 0;
 
   // La proporción se toma sobre el período real y se acota a [0,1] por las dudas:
   // una fecha futura mal cargada no puede acreditar más de lo que se pagó.
