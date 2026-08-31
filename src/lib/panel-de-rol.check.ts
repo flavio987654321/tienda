@@ -32,6 +32,7 @@ chequear("ADMIN va al panel de admin", panelDeRol("ADMIN").href === "/admin");
 chequear("OWNER va al dashboard", panelDeRol("OWNER").href === "/dashboard");
 chequear("SELLER va al panel de afiliados", panelDeRol("SELLER").href === "/afiliados");
 chequear("un comprador va a mi cuenta", panelDeRol("BUYER").href === "/mi-cuenta");
+chequear("DIGITAL va al panel de productos digitales", panelDeRol("DIGITAL").href === "/digitales");
 
 console.log("\nSin rol conocido, nadie se queda sin destino:");
 chequear("null cae en mi cuenta", panelDeRol(null).href === "/mi-cuenta");
@@ -51,6 +52,11 @@ chequear(
   "ADMIN con tienda sigue yendo al panel de admin",
   panelDeRol("ADMIN", true).href === "/admin",
   "el admin manda: es el único que no puede quedar atrapado en el dashboard",
+);
+chequear(
+  "DIGITAL con tienda va al dashboard",
+  panelDeRol("DIGITAL", true).href === "/dashboard",
+  "no deberia poder pasar —una cuenta es un solo producto— pero si pasa, la tienda manda: es lo que se cierra si nadie la atiende",
 );
 chequear(
   "SELLER con tienda va al dashboard, no al panel de afiliados",

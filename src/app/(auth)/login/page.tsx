@@ -9,8 +9,12 @@ import { useLoginForm } from "@/hooks/useLoginForm";
 import { isPwa } from "@/lib/pwa";
 import {
   Loader2, Eye, EyeOff, ArrowRight,
-  Users, CheckCircle, Store, Wallet,
+  Users, CheckCircle, Store, Wallet, Download,
 } from "lucide-react";
+
+/* El mismo interruptor que la página de precios y el registro: mientras esté
+   apagado, Productos Digitales no aparece en ningún lado. */
+const DIGITALES_ON = process.env.NEXT_PUBLIC_DIGITALES_ENABLED === "1";
 
 function LoginForm() {
   const searchParams = useSearchParams();
@@ -76,10 +80,12 @@ function LoginForm() {
         <div className="relative space-y-6">
           <div>
             <h2 className="text-4xl font-black text-white leading-tight mb-3">
-              Una plataforma,<br />tres formas de usarla
+              Una plataforma,<br />{DIGITALES_ON ? "cuatro" : "tres"} formas de usarla
             </h2>
             <p className="text-orange-50/80 leading-relaxed text-sm">
-              Vendedores, afiliados y clientes comparten el mismo acceso.
+              {DIGITALES_ON
+                ? "Tiendas, afiliados, clientes y productos digitales comparten el mismo acceso."
+                : "Vendedores, afiliados y clientes comparten el mismo acceso."}
             </p>
           </div>
 
@@ -116,6 +122,19 @@ function LoginForm() {
                 <p className="text-orange-50/70 text-xs leading-relaxed">Explorá tiendas, guardá favoritos y seguí el estado de tus pedidos.</p>
               </div>
             </div>
+
+            {/* Productos Digitales */}
+            {DIGITALES_ON && (
+              <div className="bg-white/10 border border-white/20 rounded-2xl p-4 flex items-start gap-4">
+                <div className="w-9 h-9 bg-white/15 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <Download className="h-4 w-4 text-white" />
+                </div>
+                <div>
+                  <p className="text-white text-sm font-bold mb-0.5">Vendo productos digitales</p>
+                  <p className="text-orange-50/70 text-xs leading-relaxed">Subí tu ebook o plantilla, armá su página de venta y entregala sola al cobrar.</p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -152,6 +171,8 @@ function LoginForm() {
               <CheckCircle className="h-5 w-5 flex-shrink-0" />
               {registered === "seller"
                 ? "Cuenta de afiliado creada. Ahora inicia sesion."
+                : registered === "digital"
+                ? "Tu cuenta de Productos Digitales está lista, en el plan Free. Iniciá sesión para entrar."
                 : "¡Cuenta creada con éxito! Ahora iniciá sesión."}
             </motion.div>
           )}

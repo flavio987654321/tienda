@@ -38,5 +38,22 @@ export function panelDeRol(
   if (role === "ADMIN") return { href: "/admin", label: "Admin" };
   if (role === "OWNER" || tieneTienda) return { href: "/dashboard", label: "Mi tienda" };
   if (role === "SELLER") return { href: "/afiliados", label: "Mi panel" };
+  if (role === "DIGITAL") return { href: "/digitales", label: "Mis productos" };
   return { href: "/mi-cuenta", label: "Mi cuenta" };
+}
+
+/**
+ * Cómo se llama la cuenta de cada rol, en castellano y en minúscula.
+ *
+ * Se usa para explicarle a alguien que golpeó la puerta equivocada: "tu cuenta
+ * es **de tienda**". Va al lado de `panelDeRol` porque es la misma decisión
+ * contada de otra forma, y estaba copiada a mano en los dos layouts que la
+ * necesitan —cada uno con su propio `? :` y su propio olvido.
+ */
+export function nombreDeCuenta(role: string | null | undefined): string {
+  if (role === "ADMIN") return "de administrador";
+  if (role === "OWNER") return "de tienda";
+  if (role === "SELLER") return "de afiliado";
+  if (role === "DIGITAL") return "de productos digitales";
+  return "de cliente";
 }

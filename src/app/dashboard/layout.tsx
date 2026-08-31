@@ -1,4 +1,5 @@
 import { getCurrentUser } from "@/lib/auth-session";
+import { panelDeRol, nombreDeCuenta } from "@/lib/panel-de-rol";
 import { getUserSubscription, getSubscriptionStatus, daysRemaining, reactivationCredit } from "@/lib/subscription";
 import { prisma } from "@/lib/prisma";
 import SubscriptionGate from "@/components/subscription/SubscriptionGate";
@@ -93,10 +94,11 @@ export default async function DashboardLayout({ children }: { children: React.Re
      `PanelRolAjeno` decide: en la web redirige igual que siempre, y adentro de la
      app explica qué pasó y ofrece salir para entrar con la cuenta correcta. */
   if (user.role !== "OWNER") {
-    const destino =
-      user.role === "ADMIN" ? "/admin" : user.role === "SELLER" ? "/afiliados" : "/mi-cuenta";
-    const cuenta =
-      user.role === "ADMIN" ? "de administrador" : user.role === "SELLER" ? "de afiliado" : "de cliente";
+    /* De `panelDeRol` y no de un `? :` acá: era una copia a mano de la misma
+       decisión, y al sumar el rol DIGITAL mandaba a esa cuenta a "Mi cuenta",
+       que es el panel de los clientes. */
+    const destino = panelDeRol(user.role).href;
+    const cuenta = nombreDeCuenta(user.role);
     return (
       <>
         <PWAManager appVersion={DASHBOARD_VERSION} versionKey="pwa_dashboard_version" disableNotifPrompt scope="/dashboard" />

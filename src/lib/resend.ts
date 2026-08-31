@@ -964,7 +964,7 @@ export async function sendWelcomeEmail({
 }: {
   to: string;
   userName: string;
-  role: "OWNER" | "SELLER" | "BUYER";
+  role: "OWNER" | "SELLER" | "BUYER" | "DIGITAL";
   storeName?: string | null;
 }) {
   if (!process.env.RESEND_API_KEY) return;
@@ -1022,6 +1022,16 @@ export async function sendWelcomeEmail({
         ${paso(4, "Cobrá tu comisión", "Se acredita sola en tu panel de comisiones cuando el pago se confirma.")}
       </table>
       ${btn("/afiliados", "Ver tiendas disponibles")}`;
+  } else if (role === "DIGITAL") {
+    titular = "Tu cuenta ya está lista";
+    intro = "Arrancás en el plan <strong>Free</strong>: es gratis, no vence y no te pedimos ninguna tarjeta.";
+    cuerpo = `
+      <p style="font-size:15px;color:#374151;line-height:1.6;margin-bottom:20px;">
+        El Free se paga con una comisión por venta, así que no hay ningún abono que se te venza ni
+        nada que se te cierre por no pagar. Cuando quieras más páginas de venta o una comisión más
+        baja, pasás a Starter o a Pro desde tu panel.
+      </p>
+      ${btn("/digitales", "Ir a mi panel")}`;
   } else {
     titular = "Bienvenido a TiendaApps";
     intro = "Tu cuenta ya está lista. Es gratuita y no requiere tarjeta.";

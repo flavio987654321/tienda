@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { panelDeRol, nombreDeCuenta } from "@/lib/panel-de-rol";
 import { getCurrentUser } from "@/lib/auth-session";
 import TermsUpdateBanner from "@/components/TermsUpdateBanner";
 import PWAManager from "@/components/PWAManager";
@@ -80,10 +81,10 @@ export default async function AfiliadosLayout({ children }: { children: React.Re
      metía el otro panel adentro de esta ventana, fuera de su `scope`. Ver el
      comentario largo en `PanelRolAjeno`. */
   if (user.role !== "SELLER") {
-    const destino =
-      user.role === "ADMIN" ? "/admin" : user.role === "OWNER" ? "/dashboard" : "/mi-cuenta";
-    const cuenta =
-      user.role === "ADMIN" ? "de administrador" : user.role === "OWNER" ? "de tienda" : "de cliente";
+    /* Ver el mismo cambio en el layout del dashboard: la decisión vive en
+       `panelDeRol`, no copiada en cada panel. */
+    const destino = panelDeRol(user.role).href;
+    const cuenta = nombreDeCuenta(user.role);
     return (
       <>
         <PWAManager appVersion={AFILIADOS_VERSION} versionKey="pwa_afiliados_version" disableNotifPrompt scope="/afiliados" />

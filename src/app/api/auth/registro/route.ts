@@ -7,8 +7,15 @@ import { CURRENT_TERMS_VERSION } from "@/lib/legal";
 import { verifyTurnstile } from "@/lib/turnstile";
 import { getClientIp } from "@/lib/request-ip";
 import { sendWelcomeEmail } from "@/lib/resend";
+import { altaDigitalFree } from "@/lib/subscription";
 
 const TERMS_VERSION = CURRENT_TERMS_VERSION;
+
+/* Productos Digitales todavía no está abierto. El interruptor se mira también
+   acá y no sólo en la pantalla: el formulario se puede saltear pegándole
+   directo a esta ruta, y sin esto se podrían crear cuentas de un ecosistema que
+   no existe para nadie más. */
+const DIGITALES_ON = process.env.NEXT_PUBLIC_DIGITALES_ENABLED === "1";
 
 function toSlug(text: string) {
   return text
@@ -60,7 +67,18 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const type = accountType === "seller" ? "SELLER" : accountType === "buyer" ? "BUYER" : "OWNER";
+    /* Ojo el default: cualquier valor desconocido cae en OWNER. Por eso
+       "digital" tiene que estar escrito acá — sin su rama, pedir una cuenta
+       digital creaba una cuenta de TIENDA, con su tienda vacía y su prueba de
+       7 días corriendo. */
+    const type =
+      accountType === "seller" ? "SELLER" :
+      accountType === "buyer" ? "BUYER" :
+      accountType === "digital" ? "DIGITAL" :
+      "OWNER";
+    if (type === "DIGITAL" && !DIGITALES_ON) {
+      return NextResponse.json({ error: "Las cuentas de Productos Digitales todavía no están disponibles." }, { status: 400 });
+    }
     if (type === "OWNER" && !storeName) {
       return NextResponse.json({ error: "El nombre de la tienda es requerido" }, { status: 400 });
     }
@@ -130,7 +148,13 @@ export async function POST(req: NextRequest) {
                 },
               }
             : {}),
-          // El plan de afiliados (SELLER) es gratuito — no se crea Subscription para ese rol
+          /* Quién arranca con suscripción y cuál.
+             - OWNER   → su prueba de 7 días, que al vencer le cierra la tienda.
+             - DIGITAL → Free, sin tarjeta y sin vencimiento. Los 7 días existen
+                         igual, pero son para probar Starter o Pro desde adentro
+                         y no la puerta de entrada. Ver `altaDigitalFree`.
+             - SELLER  → el plan de afiliados es gratuito y no crea Subscription.
+             - BUYER   → tampoco. */
           ...(type === "OWNER"
             ? {
                 subscription: {
@@ -143,6 +167,8 @@ export async function POST(req: NextRequest) {
                   },
                 },
               }
+            : type === "DIGITAL"
+            ? { subscription: { create: { ...altaDigitalFree() } } }
             : {}),
         },
       });

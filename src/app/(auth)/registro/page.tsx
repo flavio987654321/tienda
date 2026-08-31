@@ -12,7 +12,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import {
   Loader2, Eye, EyeOff, ArrowRight,
-  Store, Users, CheckCircle, ShoppingCart, Zap,
+  Store, Users, CheckCircle, ShoppingCart, Zap, Download, Sparkles,
 } from "lucide-react";
 
 export default function RegistroPage() {
@@ -23,7 +23,12 @@ export default function RegistroPage() {
   );
 }
 
-type AccountType = "owner" | "seller" | "buyer";
+type AccountType = "owner" | "seller" | "buyer" | "digital";
+
+/* El mismo interruptor que usa la página de precios: mientras esté apagado, la
+   cuarta tarjeta no existe. La ruta de registro lo mira también del lado del
+   servidor, así que apagarlo no deja una puerta abierta por atrás. */
+const DIGITALES_ON = process.env.NEXT_PUBLIC_DIGITALES_ENABLED === "1";
 
 // El plan de vendedor/a (seller) es gratuito, por eso no tiene precios acá.
 // Los números salen de lib/subscription, que es de donde los toma el cobro: acá
@@ -90,7 +95,30 @@ const TYPES = [
     ],
     cta: "Crear mi cuenta",
   },
-];
+  /* La cuarta: Productos Digitales.
+
+     Se dice "páginas de venta" y nunca "tiendas" — la competencia vende una
+     tienda por subdominio y nosotros vendemos productos con su página.
+
+     Comparte el naranja y el ícono con la tarjeta de /precios a propósito: es el
+     mismo producto visto dos veces, y quien viene de ahí tiene que reconocerlo.
+     Queda en la punta opuesta a "Tengo una tienda", que es la otra naranja. */
+  {
+    key: "digital" as AccountType,
+    icon: Download,
+    color: "orange",
+    title: "Vendo productos digitales",
+    desc: "Vendé ebooks, plantillas y guías con entrega automática al pagar.",
+    perks: [
+      "Entrega automática al pagar",
+      "La IA te arma la página de venta",
+      "La IA te escribe el ebook",
+      "Bonos y upsells por producto",
+      "Cobrás con Mercado Pago",
+    ],
+    cta: "Crear mi cuenta",
+  },
+].filter((t) => t.key !== "digital" || DIGITALES_ON);
 
 const COLOR_MAP: Record<string, { bg: string; border: string; ring: string; text: string; btn: string; check: string; iconBg: string }> = {
   orange: {
@@ -164,6 +192,7 @@ function RegistroContent() {
     rawPlan === "owner" ? "owner" :
     rawPlan === "buyer" ? "buyer" :
     rawPlan === "seller" ? "seller" :
+    rawPlan === "digital" && DIGITALES_ON ? "digital" :
     null;
   const billingParam = searchParams.get("billing");
   const rawRedirect = searchParams.get("redirect");
@@ -277,6 +306,8 @@ function RegistroContent() {
       router.push(`/login?registered=buyer${redirectParam ? `&redirect=${encodeURIComponent(redirectParam)}` : ""}`);
     } else if (accountType === "seller") {
       router.push(`/login?registered=seller`);
+    } else if (accountType === "digital") {
+      router.push(`/login?registered=digital`);
     } else {
       router.push(`/login?registered=true`);
     }
@@ -310,6 +341,11 @@ function RegistroContent() {
       gradient: "from-rose-500 via-orange-500 to-amber-500",
       headline: "Todo lo que\nquerés, en un lugar",
       sub: "Explorá tiendas, guardá favoritos y seguí tus pedidos desde cualquier dispositivo.",
+    },
+    digital: {
+      gradient: "from-orange-600 via-amber-500 to-rose-500",
+      headline: "Vendé tu\nconocimiento",
+      sub: "Subís el archivo, la IA te arma la página de venta y el que compra lo recibe al instante.",
     },
   };
 
@@ -703,7 +739,8 @@ function RegistroContent() {
       <div className="absolute top-1/4 -left-32 w-80 h-80 bg-orange-200/40 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-1/4 -right-32 w-80 h-80 bg-rose-200/30 rounded-full blur-3xl pointer-events-none" />
 
-      <div className="relative w-full max-w-5xl">
+      {/* Con la cuarta tarjeta el contenedor crece; con tres queda como estaba. */}
+      <div className={`relative w-full ${TYPES.length === 4 ? "max-w-7xl" : "max-w-5xl"}`}>
         <div className="text-center mb-10">
           <Link href="/" className="inline-flex items-center gap-2.5 mb-8">
             <AppLogo size={72} />
@@ -713,7 +750,10 @@ function RegistroContent() {
           <p className="text-gray-500 text-lg">¿Cómo querés usar TiendaApps?</p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {/* Cuatro columnas recién en lg. En 768 son dos y dos: cuatro tarjetas
+            con lista de beneficios adentro no entran en esa pantalla sin
+            volverse ilegibles. */}
+        <div className={`grid grid-cols-1 gap-4 ${TYPES.length === 4 ? "sm:grid-cols-2 lg:grid-cols-4" : "sm:grid-cols-3"}`}>
           {TYPES.map(({ key, icon: Icon, color, title, desc, perks, cta, ...rest }) => {
             const premiumPerks = "premiumPerks" in rest ? (rest as { premiumPerks: string[] }).premiumPerks : undefined;
             const c = COLOR_MAP[color];
@@ -737,7 +777,14 @@ function RegistroContent() {
                 <div className={`w-12 h-12 ${c.iconBg} rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
                   <Icon className={`h-6 w-6 ${c.text}`} />
                 </div>
-                <h3 className="text-lg font-black text-gray-950 mb-1.5">{title}</h3>
+                <div className="flex items-start gap-2 mb-1.5 flex-wrap">
+                  <h3 className="text-lg font-black text-gray-950">{title}</h3>
+                  {key === "digital" && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-orange-600 text-white text-[10px] font-black px-2 py-0.5 mt-0.5">
+                      <Sparkles className="h-3 w-3" /> Nuevo
+                    </span>
+                  )}
+                </div>
                 <p className="text-gray-500 text-xs mb-4 leading-relaxed">{desc}</p>
                 <ul className="space-y-1.5 mb-4">
                   {perks.map((p) => (
@@ -792,6 +839,8 @@ function RegistroContent() {
                     <p className="text-xs text-gray-400 mb-3">
                       {key === "owner"
                         ? `${money(PRICES.owner[step1Tier].MONTHLY)}/mes · 7 días gratis`
+                        : key === "digital"
+                        ? "Gratis · Sin tarjeta · Comisión por venta"
                         : "Gratis · Sin tarjeta · Sin límite de tiempo"}
                     </p>
                   )}

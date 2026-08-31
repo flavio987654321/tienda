@@ -861,20 +861,46 @@ La diferencia con las tiendas no es un detalle y conviene tenerla escrita:
 - 🔲 El mail de "bajaste a Free". Hoy es un aviso dentro de la app, que necesita
   el panel de la Fase 3 para poder verse.
 
+### ✅ La puerta de entrada — HECHA (31/08/26)
+
+- ✅ **La cuarta tarjeta en `/registro`**, "Vendo productos digitales". Crea la
+  cuenta con rol `DIGITAL` y su suscripción Free con `altaDigitalFree()`.
+  - Naranja y con el mismo ícono que la tarjeta de `/precios` a propósito: es el
+    mismo producto visto dos veces. Queda en la punta opuesta a "Tengo una
+    tienda", que es la otra naranja.
+  - Anchos revisados en los tres: 360 apiladas, **768 en dos y dos** —cuatro
+    tarjetas con lista adentro no entran en esa pantalla—, 1280 las cuatro en
+    fila.
+- ✅ **El default de la ruta de registro era una trampa**: `accountType`
+  desconocido caía en `OWNER`. Sin su rama escrita, pedir una cuenta digital
+  creaba una cuenta **de tienda**, con su tienda vacía y su prueba de 7 días
+  corriendo.
+- ✅ **El interruptor se mira también del lado del servidor.** El formulario se
+  puede saltear pegándole directo a la ruta; apagarlo en la pantalla no alcanzaba.
+- ✅ **La cara propia del ingreso**: el panel del login pasa de "tres formas de
+  usarla" a cuatro, con su tarjeta, y el aviso de cuenta creada tiene su texto
+  —dice que quedó en Free.
+- ✅ **El mail de bienvenida** del rol digital.
+- ✅ **`panelDeRol` manda `DIGITAL` a `/digitales`.** Y de paso: los dos layouts
+  de panel tenían **esa misma decisión copiada a mano**, cada uno con su `? :`.
+  Con el rol nuevo mandaban una cuenta digital a "Mi cuenta", que es el panel de
+  los clientes. Ahora los dos preguntan en un solo lugar.
+- ✅ **`/digitales` existe**, con su guarda de sesión y de rol en el layout. Es
+  sólo la puerta: adentro dice que el panel se está construyendo. Sin ella,
+  `panelDeRol` mandaba a una ruta que da 404.
+  - **Todavía sin manifest ni ícono ni `PWAManager`**: un manifiesto a medias
+    instala una app rota. Va con el panel de verdad, en la Fase 3.
+
+> **Lo que NO se pudo probar de punta a punta.** Crear una cuenta de prueba
+> escribiría en la Supabase **de producción** —es la que usa `.env.local`— y el
+> ingreso está roto en local por el captcha. Así que el circuito está leído y
+> revisado, pero no ejecutado. Ver `login-roto-por-captcha`.
+
 ### 🔲 Lo que queda de la Fase 2
 
-**La puerta de entrada** — hoy no hay ninguna forma de crear una cuenta digital.
-Es lo que sigue, en este orden:
-
-- 🔲 **La cuarta tarjeta en `/registro`.** Crea la cuenta con rol `DIGITAL` y su
-  suscripción Free, usando `altaDigitalFree()`. Ya se puede escribir: el ciclo de
-  vida que le faltaba está hecho.
-  - Ojo el mismo detalle de ancho que en la página de precios: ahí también son
-    tres tarjetas que pasan a cuatro.
-- 🔲 **La cara propia del ingreso.** El login de Productos Digitales con su propia
-  descripción, como la tienen los otros ecosistemas.
 - 🔲 **Los pasos de creación antes de entrar al panel.** Hay imágenes de
-  referencia para esto; van cuando lleguen.
+  referencia para esto; van cuando lleguen. Su lugar es `/digitales`, que hoy es
+  una pantalla sola que dice que el panel se está construyendo.
 
 **Lo que sigue abierto:**
 
