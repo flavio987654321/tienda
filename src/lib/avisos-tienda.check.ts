@@ -68,8 +68,6 @@ function tiendaSana(): EstadoTienda {
     promosVencidas: 0,
     fbTokenExpiresAt: null,
     tienePoliticas: true,
-    productosDigitalesSinArchivo: 0,
-    compradoresSinDescargar: 0,
   };
 }
 
@@ -270,97 +268,6 @@ console.log("\n── Casos borde ───────────────�
   );
 }
 
-/* ── El rubro que entrega por descarga ──────────────────────────────────────
-   No es un caso borde más: era un paso IMPOSIBLE de tildar. "Configurá tus
-   métodos de envío" nunca se iba a poder completar en una tienda que no envía
-   nada, y mientras quede un paso sin tildar el onboarding no se marca terminado.
-   Y mientras no se marque, `avisosDeTienda` corta antes de los amarillos.
-
-   O sea que un solo paso de más apagaba, para ese rubro entero: la barra de
-   pasos (que no se iba nunca de la pantalla), TODOS los avisos amarillos, y
-   encima encendía un rojo permanente por algo que no estaba roto. */
-{
-  const digital = { ...tiendaSana(), tipoTienda: "DIGITAL" };
-  // Una tienda de descargas no configura envíos: no tiene qué configurar.
-  digital.storeConfig = JSON.stringify({
-    template: "aire",
-    paymentInfo: { transferencia: { enabled: true, alias: "mi.alias" } },
-  });
-  const c = condicionesTienda(digital);
-  afirmar(c.entregaPorDescarga, "el rubro se reconoce por la bandera, no por el nombre");
-  afirmar(!c.tieneEnvios, "y efectivamente no tiene envíos configurados");
-  afirmar(pasosTerminados(c), "→ sus pasos NO exigen envíos: se pueden terminar");
-
-  const avisos = avisosDeTienda(digital);
-  afirmar(!avisos.some((a) => a.id === "sin-envios"), "no le sale el rojo de envíos");
-  afirmar(
-    avisosDelMenu(avisos).length === 0,
-    "y el menú le queda limpio: no hay nada roto que arreglar"
-  );
-}
-
-{
-  // El otro lado del mismo arreglo: donde SÍ hay que despachar, el rojo sigue.
-  const fisica = tiendaSana();
-  fisica.storeConfig = JSON.stringify({
-    template: "aire",
-    paymentInfo: { transferencia: { enabled: true, alias: "mi.alias" } },
-  });
-  const c = condicionesTienda(fisica);
-  afirmar(!c.entregaPorDescarga, "una tienda de ropa no entrega por descarga");
-  afirmar(!pasosTerminados(c), "sus pasos SIGUEN exigiendo envíos");
-  afirmar(
-    avisosDeTienda(fisica).some((a) => a.id === "sin-envios"),
-    "→ y le sale el rojo de envíos, como antes"
-  );
-}
-
-/* Los dos avisos de la sección Descargas. El rojo existe por una puerta que no
-   pasa por la validación: la ruta que guarda un producto ya no deja publicar sin
-   archivo en este rubro, pero CAMBIAR el rubro de una tienda que ya tenía
-   productos cargados los deja publicados igual, comprables y sin nada para
-   entregar. */
-{
-  const digital = { ...tiendaSana(), tipoTienda: "DIGITAL", productosDigitalesSinArchivo: 2 };
-  const avisos = avisosDeTienda(digital);
-  const aviso = avisos.find((a) => a.id === "productos-sin-archivo");
-  afirmar(!!aviso, "producto publicado sin archivo genera aviso");
-  afirmar(aviso?.nivel === "rojo", "y es rojo: se puede comprar algo que no se puede entregar");
-  afirmar(aviso?.seccion === "/dashboard/descargas", "vive en la sección Descargas");
-  afirmar(
-    avisosDelMenu(avisos).some((a) => a.id === "productos-sin-archivo"),
-    "y por rojo llega al menú lateral"
-  );
-  afirmar(aviso?.titulo.includes("2 productos") === true, "el plural sale bien");
-}
-
-{
-  const unoSolo = { ...tiendaSana(), tipoTienda: "DIGITAL", productosDigitalesSinArchivo: 1 };
-  const aviso = avisosDeTienda(unoSolo).find((a) => a.id === "productos-sin-archivo");
-  afirmar(aviso?.titulo === "Tenés un producto publicado sin archivo", "y el singular también");
-}
-
-{
-  const sinDescargar = { ...tiendaSana(), tipoTienda: "DIGITAL", compradoresSinDescargar: 3 };
-  const avisos = avisosDeTienda(sinDescargar);
-  const aviso = avisos.find((a) => a.id === "compras-sin-descargar");
-  afirmar(!!aviso, "compras que nadie bajó generan aviso");
-  afirmar(aviso?.nivel === "amarillo", "y es amarillo: se vendió igual, sólo que no lo bajaron");
-  afirmar(
-    !avisosDelMenu(avisos).some((a) => a.id === "compras-sin-descargar"),
-    "así que NO llega al menú lateral"
-  );
-}
-
-{
-  // Y no se le cuelan a un rubro que no entrega archivos, aunque el número venga
-  // sucio: la condición mira el rubro, no sólo el contador.
-  const ropa = { ...tiendaSana(), productosDigitalesSinArchivo: 5, compradoresSinDescargar: 5 };
-  const ids = avisosDeTienda(ropa).map((a) => a.id);
-  afirmar(!ids.includes("productos-sin-archivo"), "una tienda de ropa no recibe el rojo de archivos");
-  afirmar(!ids.includes("compras-sin-descargar"), "ni el amarillo de descargas");
-}
-
 {
   const roto = { ...tiendaSana(), storeConfig: "{ esto no es json" };
   const c = condicionesTienda(roto);
@@ -409,11 +316,6 @@ async function contraLaBaseReal() {
         promosVencidas: 0,
         fbTokenExpiresAt: t.fbTokenExpiresAt,
         tienePoliticas: !!(t.policyReturns?.trim() || t.policyShipping?.trim()),
-        // Las dos de descargas no se consultan en este repaso: hoy ninguna
-        // tienda de la base es del rubro digital, así que siempre darían 0 y
-        // serían dos consultas por tienda para no cambiar ninguna línea.
-        productosDigitalesSinArchivo: 0,
-        compradoresSinDescargar: 0,
       };
       const avisos = avisosDeTienda(estado);
       const rojos = avisos.filter((a) => a.nivel === "rojo").length;

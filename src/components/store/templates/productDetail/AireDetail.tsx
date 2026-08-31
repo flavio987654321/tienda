@@ -82,7 +82,7 @@ export const themeBase: DetailTheme = {
 
 export default function AireDetail({ view }: { view: ProductDetailViewProps }) {
   const { slug, storeName, catalogHref, whatsapp, product, isPreview,
-          accentOverride, socialLinks, legales, footerBg, tipoTienda } = view;
+          accentOverride, socialLinks, legales, footerBg, esAutos } = view;
   const theme = resolveDetailTheme(themeBase, accentOverride);
   const G = theme.accent;
   const accentText = theme.accentText;
@@ -101,7 +101,7 @@ export default function AireDetail({ view }: { view: ProductDetailViewProps }) {
   const pieBorde = pieText === T ? LN : "rgba(255,255,255,0.16)";
 
   const columnas: { titulo: string; items: { label: string; href: string; externo?: boolean }[] }[] = [];
-  const legalesLinks = linksLegales(slug, legales, { tipoTienda, enEditor: isPreview });
+  const legalesLinks = linksLegales(slug, legales, { esAutos, enEditor: isPreview });
   if (legalesLinks.length > 0) {
     columnas.push({ titulo: "Ayuda", items: legalesLinks.map(l => ({ label: l.label, href: l.href })) });
   }

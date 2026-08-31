@@ -1,6 +1,5 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
-import { entregaPorDescarga } from "@/lib/beneficios-rubro";
 import Link from "next/link";
 import { FadeImage } from "@/components/store/templates/shared/FadeImage";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
@@ -135,14 +134,6 @@ const CC_SECTION_IDS = ["cc-departamentos", "cc-ofertas", "cc-productos", "cc-pr
 
 export default function CasaClara() {
   const config    = useStoreConfig();
-  /* La línea de confianza del pie del hero. Es UNA frase con separadores, no
-     una lista, así que la versión digital se escribe acá con la voz de este
-     diseño; sólo la PREGUNTA de cuál usar es compartida (ver
-     lib/beneficios-rubro). "Envíos a todo el país" es imposible en una tienda
-     que entrega por descarga. */
-  const lineaDeConfianza = entregaPorDescarga(config?.tipoTienda)
-    ? "Cuotas con tarjeta · Descarga inmediata · Te llega el link por mail"
-    : "Cuotas con tarjeta · Garantía oficial · Envíos a todo el país";
   const pushBell  = usePushBell();
   const storefront = useStorefront();
   const { products, promotions, loadingProducts } = storefront;
@@ -388,7 +379,7 @@ export default function CasaClara() {
         {/* confianza — línea chica al pie del hero */}
         <div style={{ position:"relative", zIndex:1, textAlign:"center", padding:"36px 24px", marginTop:24, borderTop:"1px solid #f0f0f0" }}>
           <p style={{ margin:0, fontSize:11.5, color:heroMid, letterSpacing:0.4 }}>
-            <EditableZone field="trustLine" label="Línea de confianza">{lineaDeConfianza}</EditableZone>
+            <EditableZone field="trustLine" label="Línea de confianza">Cuotas con tarjeta · Garantía oficial · Envíos a todo el país</EditableZone>
           </p>
         </div>
       </section>
@@ -617,7 +608,7 @@ export default function CasaClara() {
           </div>
         )}
         <div style={{ display:"flex", flexWrap:"wrap", justifyContent:"center", gap:"0 14px" }}>
-          {linksLegales(config?.slug, config?.legales, { tipoTienda: config?.tipoTienda, enEditor: isPreview }).map(({ clave: tipo, label }) => (
+          {linksLegales(config?.slug, config?.legales, { enEditor: isPreview }).map(({ clave: tipo, label }) => (
             <a key={tipo} href={`/tienda/${config?.slug ?? ""}/politicas?tipo=${tipo}`} style={{ fontSize:10, color:ftMid, opacity:0.7, textDecoration:"none" }}>{label}</a>
           ))}
           {!editMode && (

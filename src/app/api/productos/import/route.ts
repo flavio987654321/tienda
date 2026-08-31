@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
 import { sanitizeDescription, checkCupoDeProductos, checkRitmoDeCreacion } from "@/lib/products";
-import { getStoreType } from "@/lib/storeTypes";
 
 type CsvRow = {
   nombre: string;
@@ -81,18 +80,6 @@ export async function POST(req: NextRequest) {
   // El tipo de tienda se lee del lado del servidor (no de lo que mande el
   // cliente) para decidir si hay que armar los atributos de vehículo.
   const isAutos = store.tipoTienda === "AUTOS";
-
-  /* Los rubros que venden un archivo no se pueden importar por CSV: una planilla
-     no lleva el archivo adentro, y esta ruta crea productos SIN pasar por
-     `validateProductBody` —o sea, sin el freno que exige el archivo—. Sin este
-     corte se podían dar de alta 500 productos digitales que no se pueden
-     entregar, y encima publicados. */
-  if (getStoreType(store.tipoTienda || "ROPA").requiereArchivo) {
-    return NextResponse.json(
-      { error: "En este rubro los productos se cargan de a uno: cada uno necesita su archivo, y eso no entra en una planilla." },
-      { status: 400 }
-    );
-  }
 
   let created = 0;
   const errors: { row: number; error: string }[] = [];

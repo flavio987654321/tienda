@@ -113,9 +113,8 @@ chequear("sin slug no rompe el href",
 /* ── 5) Los nombres ───────────────────────────────────────────────────────── */
 console.log("\n5) Como se llama cada una");
 
-const normal = titulosLegales("ROPA");
-const autos = titulosLegales("AUTOS");
-const digital = titulosLegales("DIGITAL");
+const normal = titulosLegales(false);
+const autos = titulosLegales(true);
 chequear("normal: Política de envíos", normal.envios.largo === "Política de envíos");
 // Una concesionaria no envía ni acepta devoluciones: la operación se cierra en
 // persona. Llamarlas así le prometía al comprador algo que no existe.
@@ -124,25 +123,7 @@ chequear("autos: NO dice devoluciones", autos.devoluciones.largo === "Condicione
 chequear("términos se llama igual en los dos", normal.terminos.largo === autos.terminos.largo);
 chequear("privacidad se llama igual en los dos", normal.privacidad.largo === autos.privacidad.largo);
 chequear("los links de autos usan el nombre de autos",
-  linksLegales("conce", publicadas, { tipoTienda: "AUTOS" })[1].label === "Cómo se coordina la entrega");
-
-/* El rubro que entrega por descarga tampoco envía, pero por el motivo contrario:
-   entrega en el acto, por mail. Y "cambios" sobre un archivo no significa nada.
-   Si el pie dijera "Política de envíos" estaría contradiciendo a la página que
-   linkea, que ya se titula distinto — y prometiendo un envío que no existe. */
-chequear("digital: NO dice envíos", digital.envios.largo === "Política de entrega y descarga");
-chequear("digital: NO dice cambios", digital.devoluciones.largo === "Devoluciones y arrepentimiento");
-chequear("digital: términos y privacidad se llaman igual que siempre",
-  digital.terminos.largo === normal.terminos.largo && digital.privacidad.largo === normal.privacidad.largo);
-chequear("los links de una tienda de descargas usan SU nombre",
-  linksLegales("archivos", publicadas, { tipoTienda: "DIGITAL" })[1].label === "Política de entrega y descarga");
-chequear("sin rubro se cae en los nombres de siempre, no en los de un rubro",
-  linksLegales("x", publicadas)[1].label === "Política de envíos");
-chequear("y los tres rubros tienen título para las cuatro claves",
-  [normal, autos, digital].every((t) => CLAVES_LEGALES.every((c) => !!t[c].corto && !!t[c].largo)));
-chequear("los cortos de digital también entran en un pie de una línea",
-  linksLegales("x", publicadas, { tipoTienda: "DIGITAL", cortos: true }).every((l) => l.label.length <= 14),
-  linksLegales("x", publicadas, { tipoTienda: "DIGITAL", cortos: true }).map((l) => l.label));
+  linksLegales("conce", publicadas, { esAutos: true })[1].label === "Cómo se coordina la entrega");
 chequear("los cortos entran en un pie de una línea",
   linksLegales("x", publicadas, { cortos: true }).every((l) => l.label.length <= 14),
   linksLegales("x", publicadas, { cortos: true }).map((l) => l.label));

@@ -23,8 +23,6 @@
  * Acá vive la decisión una sola vez —`documentosPublicados`— y la usan todos.
  */
 
-import { getStoreType } from "@/lib/storeTypes";
-
 /** Las cuatro. El orden es el que se ve en las pestañas y en el pie. */
 export const CLAVES_LEGALES = ["devoluciones", "envios", "terminos", "privacidad"] as const;
 export type ClaveLegal = (typeof CLAVES_LEGALES)[number];
@@ -65,39 +63,20 @@ const CAMPO: Record<ClaveLegal, { texto: keyof FilaPoliticas; activa: keyof Fila
 };
 
 /**
- * Cómo se llama cada política, según el rubro de la tienda.
+ * Cómo se llama cada política.
  *
- * Dos de las cuatro cambian de nombre, y no por gusto: llamarle "Política de
- * envíos" a la de una tienda que no envía es prometerle al comprador algo que
- * no existe, en el documento donde no se puede prometer de más.
- *
- *   · **Autos** no envía ni acepta devoluciones: la operación se cierra en
- *     persona.
- *   · **Descargas** tampoco envía, pero por el motivo contrario — entrega en el
- *     acto, por mail. Y "cambios" sobre un archivo no significa nada: lo que
- *     hay es arrepentimiento y reemplazo.
- *
- * ── Por qué toma el rubro y no un booleano ───────────────────────────────────
- * Antes era `titulosLegales(esAutos: boolean)`. Un booleano sólo sabe contestar
- * una pregunta, y el día que apareció el segundo rubro con nombres propios no
- * había dónde ponerlo sin agregar un segundo booleano — y dos booleanos que se
- * excluyen entre sí son un enum mal escrito. El rubro ya es el dato.
+ * Para autos cambian dos: esa tienda no envía ni acepta devoluciones —la
+ * operación se cierra en persona— así que llamarlas "Política de envíos" sería
+ * prometerle al comprador algo que no existe. Los nombres son los mismos que
+ * usa el panel, para que el dueño reconozca en su tienda lo que escribió.
  */
-export function titulosLegales(
-  tipoTienda: string | null | undefined
-): Record<ClaveLegal, { corto: string; largo: string }> {
-  const esAutos = tipoTienda === "AUTOS";
-  const entregaPorDescarga = getStoreType(tipoTienda ?? "ROPA").requiereArchivo === true;
+export function titulosLegales(esAutos: boolean): Record<ClaveLegal, { corto: string; largo: string }> {
   return {
     devoluciones: esAutos
       ? { corto: "Operación", largo: "Condiciones de la operación" }
-      : entregaPorDescarga
-      ? { corto: "Devoluciones", largo: "Devoluciones y arrepentimiento" }
       : { corto: "Devoluciones", largo: "Política de devoluciones y cambios" },
     envios: esAutos
       ? { corto: "Entrega", largo: "Cómo se coordina la entrega" }
-      : entregaPorDescarga
-      ? { corto: "Entrega", largo: "Política de entrega y descarga" }
       : { corto: "Envíos", largo: "Política de envíos" },
     terminos: { corto: "Términos", largo: "Términos y condiciones" },
     privacidad: { corto: "Privacidad", largo: "Política de privacidad" },
@@ -154,11 +133,9 @@ export function limpiarTextoLegal(crudo: unknown, max = MAX_LARGO_POLITICA): str
 export function linksLegales(
   slug: string | undefined,
   publicadas: ClaveLegal[] | undefined,
-  // `tipoTienda` y no `esAutos`, por lo mismo que `titulosLegales`: los nombres
-  // de dos de las cuatro dependen del rubro, y ya son tres rubros distintos.
-  opciones: { tipoTienda?: string | null; enEditor?: boolean; cortos?: boolean } = {}
+  opciones: { esAutos?: boolean; enEditor?: boolean; cortos?: boolean } = {}
 ): { clave: ClaveLegal; label: string; href: string }[] {
-  const titulos = titulosLegales(opciones.tipoTienda);
+  const titulos = titulosLegales(!!opciones.esAutos);
   const visibles = opciones.enEditor ? [...CLAVES_LEGALES] : (publicadas ?? []);
   return visibles.map((clave) => ({
     clave,

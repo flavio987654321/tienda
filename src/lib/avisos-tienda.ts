@@ -1,7 +1,6 @@
 import { cache } from "react";
 import { prisma } from "@/lib/prisma";
 import { getSubscriptionStatus } from "@/lib/subscription";
-import { getStoreType } from "@/lib/storeTypes";
 
 /* ── El único lugar donde se decide qué le falta a una tienda ─────────────────
    Antes esto vivía en dos lados que no se hablaban: la barra de "7/8 pasos"
@@ -51,20 +50,6 @@ export type EstadoTienda = {
   /** Vencimiento del token de Meta. Null = no hay Meta conectado, o se desconoce. */
   fbTokenExpiresAt: Date | null;
   tienePoliticas: boolean;
-  /**
-   * Productos publicados a los que les falta el archivo que se vende.
-   *
-   * Hoy la ruta que guarda un producto NO deja publicar sin archivo en este
-   * rubro. Esto igual hace falta, porque hay una puerta que no pasa por ahí:
-   * cambiar el rubro de una tienda que ya tenía productos cargados. Ahí quedan
-   * publicados, se pueden comprar, y no hay nada que entregar.
-   *
-   * Sólo se cuenta en los rubros que entregan un archivo — ver el porqué del
-   * viaje aparte en `cargarEstadoTienda`.
-   */
-  productosDigitalesSinArchivo: number;
-  /** Compras entregadas cuyo comprador nunca bajó el archivo, con el link todavía vivo. */
-  compradoresSinDescargar: number;
 };
 
 export const cargarEstadoTienda = cache(async (ownerId: string): Promise<EstadoTienda | null> => {
@@ -126,37 +111,6 @@ export const cargarEstadoTienda = cache(async (ownerId: string): Promise<EstadoT
 
   if (!store) return null;
 
-  /* ── El viaje de más, y por qué se paga sólo acá ────────────────────────────
-     Estas dos cuentas son de un rubro solo. Meterlas arriba costaría dos
-     consultas a TODA tienda —incluida cada tienda de ropa, que nunca las va a
-     mirar— y arriba no se puede saltear: el `tipoTienda` viene justamente de
-     la consulta que está adentro de ese mismo `Promise.all`.
-
-     Así que se hace un segundo viaje, y sólo para las tiendas que entregan por
-     descarga, que son una minoría. Las dos van juntas en un `Promise.all`, así
-     el viaje es uno y no dos. */
-  const entregaPorDescarga = getStoreType(store.tipoTienda ?? "ROPA").requiereArchivo === true;
-  let productosDigitalesSinArchivo = 0;
-  let compradoresSinDescargar = 0;
-  if (entregaPorDescarga) {
-    [productosDigitalesSinArchivo, compradoresSinDescargar] = await Promise.all([
-      prisma.product.count({
-        where: { storeId: store.id, deletedAt: null, isActive: true, archivoPath: null },
-      }),
-      /* Sólo los que TODAVÍA pueden bajarlo. Un permiso vencido y sin usar
-         también es un problema, pero ya no tiene arreglo desde acá: reenviar el
-         mail manda el mismo link, que sigue vencido. Un aviso que no se puede
-         resolver es ruido. */
-      prisma.digitalDownload.count({
-        where: {
-          descargas: 0,
-          expiresAt: { gt: ahora },
-          orderItem: { order: { storeId: store.id } },
-        },
-      }),
-    ]);
-  }
-
   return {
     storeId: store.id,
     tipoTienda: store.tipoTienda,
@@ -178,8 +132,6 @@ export const cargarEstadoTienda = cache(async (ownerId: string): Promise<EstadoT
     // (términos y privacidad) las genera la plataforma, éstas las escribe quien
     // vende y son las que el comprador busca antes de comprar.
     tienePoliticas: !!(store.policyReturns?.trim() || store.policyShipping?.trim()),
-    productosDigitalesSinArchivo,
-    compradoresSinDescargar,
   };
 });
 
@@ -222,13 +174,6 @@ export type CondicionesTienda = {
   estaVerificada: boolean;
   /** Sin NINGUNA forma de cobrar: ni MercadoPago, ni transferencia, ni efectivo. */
   noPuedeCobrar: boolean;
-  /**
-   * El rubro entrega un archivo que se descarga: no hay nada que despachar.
-   *
-   * Sale de la bandera del rubro y no de comparar contra un nombre, igual que
-   * el resto: el día que haya un segundo rubro sin envío, esto lo acompaña solo.
-   */
-  entregaPorDescarga: boolean;
   suscripcionCaida: boolean;
 };
 
@@ -243,7 +188,6 @@ export type DatosDeConfiguracion = Pick<
 
 export function condicionesTienda(estado: DatosDeConfiguracion): CondicionesTienda {
   const esAutos = estado.tipoTienda === "AUTOS";
-  const entregaPorDescarga = getStoreType(estado.tipoTienda ?? "ROPA").requiereArchivo === true;
 
   let tienePlantilla = false;
   let tieneEnvios = false;
@@ -275,7 +219,6 @@ export function condicionesTienda(estado: DatosDeConfiguracion): CondicionesTien
     // Las tiendas de autos no cobran por la plataforma: se contacta y se arregla
     // aparte, así que no tener medio de cobro no les rompe nada.
     noPuedeCobrar: !esAutos && !tieneMercadoPago && !tieneDatosDeCobro,
-    entregaPorDescarga,
     suscripcionCaida: estado.estadoSuscripcion === "GRACE" || estado.estadoSuscripcion === "EXPIRED",
   };
 }
@@ -289,15 +232,7 @@ export function condicionesTienda(estado: DatosDeConfiguracion): CondicionesTien
 export function pasosTerminados(c: CondicionesTienda): boolean {
   const basicos = c.tieneLogo && c.tienePlantilla && c.tieneProductos && c.tieneDescripcion && c.estaPublicada;
   if (c.esAutos) return basicos;
-  /* Sin el paso de envíos cuando no hay nada que despachar. Esto no es un
-     detalle cosmético: era un paso IMPOSIBLE de tildar, y mientras quede uno
-     sin tildar el onboarding nunca se marca terminado. Y mientras no se marque,
-     `avisosDeTienda` corta antes de los amarillos: una tienda de descargas no
-     iba a ver JAMÁS ninguno de ellos, ni la barra de pasos se le iba a ir de la
-     pantalla. Un solo paso de más apagaba media pantalla. */
-  const cobro = c.tieneMercadoPago && c.tieneDatosDeCobro;
-  if (c.entregaPorDescarga) return basicos && cobro;
-  return basicos && cobro && c.tieneEnvios;
+  return basicos && c.tieneMercadoPago && c.tieneDatosDeCobro && c.tieneEnvios;
 }
 
 /**
@@ -397,11 +332,7 @@ export function avisosDeTienda(estado: EstadoTienda): Aviso[] {
     });
   }
 
-  /* El rojo de envíos no va donde no hay envío: en un rubro que entrega por
-     descarga el checkout se termina igual —lo saltea a propósito— así que este
-     aviso sería un rojo permanente por algo que no está roto. Y un rojo que no
-     se puede apagar deja de leerse, incluidos los que sí importan. */
-  if (!c.esAutos && !c.entregaPorDescarga && !c.tieneEnvios) {
+  if (!c.esAutos && !c.tieneEnvios) {
     avisos.push({
       id: "sin-envios",
       nivel: "rojo",
@@ -412,43 +343,9 @@ export function avisosDeTienda(estado: EstadoTienda): Aviso[] {
     });
   }
 
-  /* Rojo de verdad: el producto está publicado, se puede comprar, y no hay nada
-     que entregar. La compradora paga y espera un mail que no puede llegar.
-     Es el único rojo que no se enciende por algo que falta configurar sino por
-     algo que ya se puede vender mal. */
-  if (c.entregaPorDescarga && estado.productosDigitalesSinArchivo > 0) {
-    const uno = estado.productosDigitalesSinArchivo === 1;
-    avisos.push({
-      id: "productos-sin-archivo",
-      nivel: "rojo",
-      seccion: "/dashboard/descargas",
-      titulo: uno
-        ? "Tenés un producto publicado sin archivo"
-        : `Tenés ${estado.productosDigitalesSinArchivo} productos publicados sin archivo`,
-      detalle: uno
-        ? "Se puede comprar y no hay nada que entregar: quien lo pague va a esperar un mail que no llega."
-        : "Se pueden comprar y no hay nada que entregar: quien los pague va a esperar un mail que no llega.",
-      href: "/dashboard/productos",
-    });
-  }
-
   /* ── Amarillos ──────────────────────────────────────────────────────────────
      Se vende igual, pero se vende peor. No van al menú lateral: aparecen al
      entrar a la sección, que es donde se pueden resolver. */
-
-  if (c.entregaPorDescarga && estado.compradoresSinDescargar > 0) {
-    const uno = estado.compradoresSinDescargar === 1;
-    avisos.push({
-      id: "compras-sin-descargar",
-      nivel: "amarillo",
-      seccion: "/dashboard/descargas",
-      titulo: uno ? "Hay una compra sin descargar" : `Hay ${estado.compradoresSinDescargar} compras sin descargar`,
-      detalle: uno
-        ? "Pagó y nunca bajó el archivo. Puede que el mail le haya caído en spam: desde acá se lo reenviás."
-        : "Pagaron y nunca bajaron el archivo. Puede que el mail les haya caído en spam: desde acá se los reenviás.",
-      href: "/dashboard/descargas",
-    });
-  }
 
   if (estado.productosSinFoto > 0) {
     const uno = estado.productosSinFoto === 1;

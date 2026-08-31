@@ -319,8 +319,7 @@ export interface ProductDetailViewProps {
   socialLinks: Record<string, string> | undefined;
   /** Qué políticas legales linkea el pie. Ver `lib/politicas-tienda`. */
   legales: ClaveLegal[] | undefined;
-  /** El rubro de la tienda. Lo usan los nombres de las políticas del pie. */
-  tipoTienda?: string | null;
+  esAutos?: boolean;
   accentOverride: string | undefined;
   footerBg: string | undefined;
   cart: ReturnType<typeof useCartLogic>;
@@ -1115,7 +1114,7 @@ function detailCartTheme(theme: DetailTheme): CartTheme {
 // copyright, redes sociales, políticas, reportar tienda) — un solo lugar
 // para los 4 templates en vez de un footer simplificado por archivo.
 export function ProductDetailFooter({ theme, bg: defaultBg = "#0a0a0a", view }: { theme: DetailTheme; bg?: string; view: ProductDetailViewProps }) {
-  const { slug, storeName, socialLinks, isPreview, footerBg, legales, tipoTienda } = view;
+  const { slug, storeName, socialLinks, isPreview, footerBg, legales, esAutos } = view;
   const [showReport, setShowReport] = useState(false);
   // El color de fondo lo elige el dueño en el editor (mismo campo que el footer
   // del home); si todavía no lo tocó, usamos el default propio del template.
@@ -1150,7 +1149,7 @@ export function ProductDetailFooter({ theme, bg: defaultBg = "#0a0a0a", view }: 
         </div>
       )}
       <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "0 16px" }}>
-        {linksLegales(slug, legales, { tipoTienda, enEditor: isPreview }).map(({ clave, label, href }) => (
+        {linksLegales(slug, legales, { esAutos, enEditor: isPreview }).map(({ clave, label, href }) => (
           <a key={clave} href={href} style={{ fontSize: 10, color: fg, opacity: 0.55, textDecoration: "none" }}>{label}</a>
         ))}
         {!isPreview && (

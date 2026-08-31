@@ -1,6 +1,5 @@
 "use client";
 import { barraMs } from "@/types/store-config";
-import { anunciosDeRubro, garantiasDeRubro, entregaPorDescarga } from "@/lib/beneficios-rubro";
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { FadeImage } from "@/components/store/templates/shared/FadeImage";
@@ -90,23 +89,12 @@ function makeCategoryIcons(color: string): React.ReactNode[] {
   ];
 }
 
-/* Los cuatro sellos de confianza. Los textos ya no viven pegados al nombre del
-   campo editable, porque cuál va en cada sello pasó a depender del rubro (ver
-   lib/beneficios-rubro): de los cuatro de acá, DOS —"Retiro en local" y "Envío
-   a todo el país"— son imposibles en una tienda que entrega por descarga. El
-   nombre del campo no cambió: lo que la dueña ya editó sigue en su lugar. */
-const CONFIANZA_PROPIA = [
-  { title: "Cuotas con tarjeta",   desc: "Pagá en cuotas con tu tarjeta de crédito" },
-  { title: "Garantía oficial",     desc: "Todos los productos con garantía del vendedor" },
-  { title: "Retiro en local",      desc: "Coordiná el retiro sin costo de envío" },
-  { title: "Envío a todo el país", desc: "Recibí tu compra donde estés" },
+const CONFIANZA = [
+  { fv: "trust1Title", fl: "trust1Desc", t: "Cuotas con tarjeta",   d: "Pagá en cuotas con tu tarjeta de crédito" },
+  { fv: "trust2Title", fl: "trust2Desc", t: "Garantía oficial",    d: "Todos los productos con garantía del vendedor" },
+  { fv: "trust3Title", fl: "trust3Desc", t: "Retiro en local",     d: "Coordiná el retiro sin costo de envío" },
+  { fv: "trust4Title", fl: "trust4Desc", t: "Envío a todo el país", d: "Recibí tu compra donde estés" },
 ];
-
-/* Con qué ícono abre cada sello. Los físicos abrían en 0,1,2,3 —tarjeta,
-   escudo, local, CAMIÓN—: ese camión arriba de "Descarga inmediata" desmentiría
-   el texto. La dueña los sigue cambiando con el botón ↻. */
-const ICONOS_DE_FABRICA         = [0, 1, 2, 3]; // tarjeta, escudo, local, camión
-const ICONOS_DE_FABRICA_DIGITAL = [4, 6, 1, 7]; // rayo, sobre, escudo, chat
 
 const SOCIAL_NETWORKS: ["instagram"|"facebook"|"tiktok"|"youtube"|"pinterest", string][] = [
   ["instagram", "Instagram"], ["facebook", "Facebook"], ["tiktok", "TikTok"], ["youtube", "YouTube"], ["pinterest", "Pinterest"],
@@ -137,11 +125,6 @@ const TRUST_ICONS: React.ReactNode[] = [
   <svg key="truck" width={24} height={24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 5v4h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>,
   <svg key="bolt" width={24} height={24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>,
   <svg key="gift" width={24} height={24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>,
-  // El sobre y el chat entraron para los sellos del rubro digital. Van AL FINAL
-  // a propósito: el override guarda el número de ícono, así que meterlos en el
-  // medio le cambiaría el dibujo a toda tienda que ya lo hubiera elegido.
-  <svg key="mail" width={24} height={24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg>,
-  <svg key="chat" width={24} height={24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>,
 ];
 
 function ProductCard({ product, href, currency, isFavorite, onToggleFavorite, editMode, promotions }: {
@@ -323,16 +306,7 @@ export default function ElectroPrime() {
   const promoBannerEnabled = config?.promoBanner?.enabled !== false;
   const annMessages = (config?.promoBanner?.messages?.filter(m => m.trim()) ?? []).length > 0
     ? config!.promoBanner!.messages!.filter(m => m.trim())
-    : anunciosDeRubro(config?.tipoTienda, DEFAULTS);
-
-  /* Los sellos, con los textos y los íconos del rubro. Los nombres de los campos
-     editables se arman acá y son los de siempre. */
-  const CONFIANZA = garantiasDeRubro(config?.tipoTienda, CONFIANZA_PROPIA).map((g, i) => ({
-    fv: `trust${i + 1}Title`, fl: `trust${i + 1}Desc`, t: g.title, d: g.desc,
-  }));
-  const iconosDeFabrica = entregaPorDescarga(config?.tipoTienda)
-    ? ICONOS_DE_FABRICA_DIGITAL
-    : ICONOS_DE_FABRICA;
+    : DEFAULTS;
   const showAnn = promoBannerEnabled && annVisible;
   const PROMO_H = 36;
   const NAV_H   = 64;
@@ -625,7 +599,7 @@ export default function ElectroPrime() {
         <EditableSectionBg field="bgConfianza" label="Fondo confianza" />
         <div className="ep-trust-grid" style={{ position:"relative", zIndex:1, maxWidth:1240, margin:"0 auto", display:"grid" }}>
           {CONFIANZA.map((c, i) => {
-            const iconIdx = Math.abs(parseInt(overrides[`trust${i+1}IconIdx`]?.text ?? String(iconosDeFabrica[i])) || 0) % TRUST_ICONS.length;
+            const iconIdx = Math.abs(parseInt(overrides[`trust${i+1}IconIdx`]?.text ?? String(i)) || 0) % TRUST_ICONS.length;
             const nextIdx = (iconIdx + 1) % TRUST_ICONS.length;
             return (
               <div key={i} style={{ display:"flex", alignItems:"center", gap:12, padding:"24px 20px", borderRight: i < 3 ? "1px solid rgba(0,0,0,0.06)" : "none" }}>
@@ -879,7 +853,7 @@ export default function ElectroPrime() {
           </div>
         )}
         <div style={{ display:"flex", flexWrap:"wrap", justifyContent:"center", gap:"0 16px" }}>
-          {linksLegales(config?.slug, config?.legales, { tipoTienda: config?.tipoTienda, enEditor: isPreview }).map(({ clave: tipo, label }) => (
+          {linksLegales(config?.slug, config?.legales, { enEditor: isPreview }).map(({ clave: tipo, label }) => (
             <a key={tipo} href={`/tienda/${config?.slug ?? ""}/politicas?tipo=${tipo}`} style={{ fontSize:10, color:ftMid, opacity:0.6, textDecoration:"none" }}>{label}</a>
           ))}
           {!editMode && (

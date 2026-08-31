@@ -1,6 +1,5 @@
 ﻿"use client";
 import { barraMs } from "@/types/store-config";
-import { anunciosDeRubro } from "@/lib/beneficios-rubro";
 import { useState, useEffect, useRef, useMemo, Fragment } from "react";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
 import { usePushBell } from "@/contexts/PushBellContext";
@@ -69,8 +68,6 @@ const CART_ICON_OPTIONS: React.ReactNode[] = [
 ];
 
 
-/* Los textos de la barra salen del rubro (ver lib/beneficios-rubro): una tienda
-   que entrega por descarga no puede abrir prometiendo envío gratis. */
 const announcementMessages_DEFAULT = [
   "🌿 Envío gratis en compras mayores a $30.000",
   "🔄 Cambios sin cargo hasta 30 días",
@@ -508,7 +505,7 @@ export default function BohoTerra() {
   const promoBannerEnabled = storeConfig?.promoBanner?.enabled !== false;
   const announcementMessages = (storeConfig?.promoBanner?.messages?.filter(m => m.trim()) ?? []).length > 0
     ? storeConfig!.promoBanner!.messages!.filter(m => m.trim())
-    : anunciosDeRubro(storeConfig?.tipoTienda, announcementMessages_DEFAULT);
+    : announcementMessages_DEFAULT;
   const showAnnouncement = promoBannerEnabled && announcementVisible;
   const announcementBarHeight = showAnnouncement ? ANNOUNCEMENT_BAR_H : 0;
 
@@ -1760,7 +1757,7 @@ export default function BohoTerra() {
             barra recupera el ancho completo. */}
         <div style={{ borderTop:`1px solid rgba(44,34,24,0.07)`, paddingTop: 16, paddingBottom: isMobile ? 92 : 16, paddingLeft: isMobile ? 16 : (hasWA ? 110 : 40), paddingRight: isMobile ? 16 : 110, maxWidth:1280, margin:"0 auto", display:"flex", alignItems:"center", justifyContent: isMobile ? "center" : "space-between", flexWrap:"wrap", gap:"8px 24px", textAlign: isMobile ? "center" : undefined }}>
           <div style={{ display:"flex", flexWrap:"wrap", justifyContent: isMobile ? "center" : undefined, gap:"4px 16px" }}>
-            {linksLegales(storeConfig?.slug, storeConfig?.legales, { tipoTienda: storeConfig?.tipoTienda, enEditor: editMode }).map(({ clave: tipo, label }) => (
+            {linksLegales(storeConfig?.slug, storeConfig?.legales, { enEditor: editMode }).map(({ clave: tipo, label }) => (
               editMode ? (
                 <button key={tipo} type="button" onClick={() => window.open("/dashboard/pagos", "_blank")}
                   title="Editar en Dashboard → Pagos"

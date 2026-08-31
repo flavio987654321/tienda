@@ -10,7 +10,6 @@ export type StoreType =
   | "AUTOS"
   | "HOGAR_TECH"
   | "GASTRONOMIA"
-  | "DIGITAL"
   | "GENERAL";
 
 export interface ExtraField {
@@ -55,30 +54,6 @@ export interface StoreTypeConfig {
   // acumular varios gastos, a diferencia de un producto de stock repetido.
   usesVehicleExpenses?: boolean;
   condicionOptions?: string[];
-  /**
-   * El producto se entrega como archivo descargable: el formulario pide subirlo
-   * y sin archivo no se puede publicar.
-   *
-   * Flag y no una comparación contra "DIGITAL" repartida por el código, por el
-   * mismo motivo que `supportsAffiliates`: el día que otro rubro venda archivos
-   * —una disquería con sus temas, un estudio con planos— se destraba cambiando
-   * UN booleano acá y no persiguiendo comparaciones por seis archivos.
-   */
-  requiereArchivo?: boolean;
-  /**
-   * El stock no se descuenta al vender: hay existencias infinitas.
-   *
-   * Explícito y NO inferido de `requiereArchivo`, por el mismo motivo que
-   * `showServiceHistory` no se infiere de `hideVariants`: son dos cosas
-   * distintas que hoy coinciden. Un rubro futuro podría vender un archivo con
-   * stock limitado (entradas numeradas, cupos de un taller), y heredar por
-   * error "vendé infinito" sería vender lo que no hay.
-   *
-   * Ojo con lo contrario también: `hideVariants` hace que el formulario mande
-   * una variante sintética con stock 1. Sin este flag, un PDF se vendería UNA
-   * sola vez y quedaría agotado para siempre.
-   */
-  stockIlimitado?: boolean;
   checkoutMode: "cart" | "inquiry";
   /**
    * Si el rubro puede tener programa de afiliados.
@@ -565,44 +540,6 @@ export const STORE_TYPES: StoreTypeConfig[] = [
     },
     extraFields: [
       { key: "ingredientes", label: "Ingredientes", placeholder: "Lista de ingredientes..." },
-    ],
-  },
-  {
-    id: "DIGITAL",
-    label: "Productos digitales",
-    emoji: "📥",
-    description: "Archivos que el comprador descarga: plantillas, ebooks, guías, licencias y códigos. No se envía nada — se entregan solos cuando entra el pago.",
-    // Nada de esto se manda por correo ni se cuenta en un depósito: sin envío,
-    // sin variantes (un PDF no tiene talle ni color) y sin género. El mayorista
-    // tampoco aplica: no hay costo por unidad que baje comprando de a diez.
-    supportsWholesale: false,
-    supportsCondicion: false,
-    hideVariants: true,
-    hideTags: false,
-    hideGender: true,
-    hideShipping: true,
-    requiereArchivo: true,
-    stockIlimitado: true,
-    // Carrito, NO consulta. Es la diferencia con AUTOS, que también esconde el
-    // envío: acá el pago online es justamente lo que dispara la entrega.
-    checkoutMode: "cart" as const,
-    supportsAffiliates: true,
-    variantValuePlaceholder: "Opción 1, Opción 2",
-    namePlaceholder: "Ej: Plantilla de presupuesto familiar en Excel",
-    tagsPlaceholder: "canva, excel, imprimible",
-    // "plantillas" acá es lo que compra el cliente (un archivo ya diseñado). No
-    // confundir con /afiliados/plantillas, que son textos para copiar y pegar:
-    // viven en pantallas distintas y no se cruzan nunca.
-    categorias: ["plantillas", "ebooks", "licencias"],
-    subcategorias: {
-      plantillas: ["canva", "excel", "word", "notion", "imprimibles"],
-      ebooks: ["guías", "recetarios", "libros"],
-      licencias: ["software", "códigos", "accesos"],
-    },
-    extraFields: [
-      { key: "formato",  label: "Formato",           placeholder: "PDF, XLSX, DOCX, ZIP..." },
-      { key: "programa", label: "Programa necesario", placeholder: "Canva, Excel, Word..." },
-      { key: "paginas",  label: "Páginas",            placeholder: "24", type: "number" },
     ],
   },
   {

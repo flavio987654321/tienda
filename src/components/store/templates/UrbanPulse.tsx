@@ -1,6 +1,5 @@
 "use client";
 import { useVistaTemplate, urlParaCompartirProducto } from "@/components/store/templates/shared/useVistaTemplate";
-import { anunciosDeRubro, garantiasDeRubro, entregaPorDescarga } from "@/lib/beneficios-rubro";
 import CatalogoGenerico, { type CatalogoEmbebido } from "@/app/tienda/[slug]/productos/CatalogoGenerico";
 import { BotonVolver } from "@/components/store/templates/shared/BotonVolver";
 /* Qué productos van en la vitrina de la portada: la regla vive en `vitrina.ts`,
@@ -103,18 +102,13 @@ const EJEMPLOS_RESENAS: EjemplosDeResenas = {
   ],
 };
 
-/* El ticker era una sola frase con los separadores adentro. Ahora es la lista
-   de las cuatro cosas que dice, y los " · " los pone quien la arma: así puede
-   pasar por `anunciosDeRubro`, que reemplaza las promesas que un rubro no
-   puede cumplir. En una tienda que entrega por descarga, "ENVÍO GRATIS" y
-   "30 DÍAS DE CAMBIO" son mentira. */
-const TICKER_PROPIO = ["NUEVA COLECCIÓN", "ENVÍO GRATIS +$30.000", "30 DÍAS DE CAMBIO", "6 CUOTAS SIN INTERÉS"];
+const TICKER = "NUEVA COLECCIÓN · ENVÍO GRATIS +$30.000 · 30 DÍAS DE CAMBIO · 6 CUOTAS SIN INTERÉS · ";
 
-const GARANTIAS_PROPIAS = [
-  { title:"Envío gratis",      desc:"En compras +$30.000" },
-  { title:"30 días de cambio", desc:"Sin cargo"           },
-  { title:"Pago seguro",       desc:"100% protegido"      },
-  { title:"Soporte 24/7",      desc:"Siempre disponibles" },
+const GARANTIAS = [
+  { title:"Envío gratis",     desc:"En compras +$30.000"  },
+  { title:"30 días de cambio", desc:"Sin cargo"            },
+  { title:"Pago seguro",      desc:"100% protegido"        },
+  { title:"Soporte 24/7",     desc:"Siempre disponibles"   },
 ];
 
 const UP_STRIP_ICONS: React.ReactNode[][] = [
@@ -129,7 +123,6 @@ const UP_STRIP_ICONS: React.ReactNode[][] = [
     <svg key="undo"      width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.51"/></svg>,
     <svg key="check-c"   width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>,
     <svg key="arrows-lr" width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>,
-    <svg key="mail-2"    width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>,
   ],
   [
     <svg key="shield" width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>,
@@ -144,13 +137,6 @@ const UP_STRIP_ICONS: React.ReactNode[][] = [
     <svg key="mail"    width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>,
   ],
 ];
-
-/* Qué ícono viene puesto de fábrica en cada casillero. Sin esto los cuatro
-   arrancaban en el 0, o sea un CAMIÓN arriba de "Descarga inmediata": el texto
-   diría una cosa y el dibujo la contraria. La dueña los sigue cambiando con el
-   botón ↻; esto es sólo con cuál abre. */
-const ICONOS_DE_FABRICA         = [0, 0, 0, 0]; // camión, flechas, escudo, chat
-const ICONOS_DE_FABRICA_DIGITAL = [2, 4, 0, 0]; // rayo, sobre, escudo, chat
 
 const scrollTo = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior:"smooth" });
 
@@ -622,14 +608,9 @@ export default function UrbanPulse() {
 
   const promoBannerEnabled = storeConfig?.promoBanner?.enabled !== false;
   const configMsgs = storeConfig?.promoBanner?.messages?.filter(m => m.trim()) ?? [];
-  const tickerContent =
-    (configMsgs.length > 0 ? configMsgs : anunciosDeRubro(storeConfig?.tipoTienda, TICKER_PROPIO))
-      .join(" · ") + " · ";
-  // Las cuatro fichas del damero, con los textos y los íconos que correspondan.
-  const GARANTIAS = garantiasDeRubro(storeConfig?.tipoTienda, GARANTIAS_PROPIAS);
-  const iconosDeFabrica = entregaPorDescarga(storeConfig?.tipoTienda)
-    ? ICONOS_DE_FABRICA_DIGITAL
-    : ICONOS_DE_FABRICA;
+  const tickerContent = configMsgs.length > 0
+    ? configMsgs.join(" · ") + " · "
+    : TICKER;
 
   useEffect(() => {
     const fn = () => setScrolled(window.scrollY > 50);
@@ -1422,7 +1403,7 @@ export default function UrbanPulse() {
             Es además cómo está resuelto el hero, que también va a sangre. */}
         <div style={{ display:"grid", gridTemplateColumns: isMobile ? "repeat(2,minmax(0,1fr))" : "repeat(4,minmax(0,1fr))" }}>
           {GARANTIAS.map((g, i) => {
-            const iconIdx = (Math.abs(parseInt(textOverrides[`garantia${i+1}Icon`]?.text ?? String(iconosDeFabrica[i])) || 0)) % UP_STRIP_ICONS[i].length;
+            const iconIdx = (Math.abs(parseInt(textOverrides[`garantia${i+1}Icon`]?.text ?? "0") || 0)) % UP_STRIP_ICONS[i].length;
             const nextIdx = (iconIdx + 1) % UP_STRIP_ICONS[i].length;
             // En escritorio son 4 columnas y alterna uno sí uno no. En celular son
             // 2, y con esa misma cuenta quedarían dos FRANJAS VERTICALES en vez de
@@ -2676,7 +2657,7 @@ export default function UrbanPulse() {
             /* ── MOBILE: 2 filas centradas ── */
             <div style={{ borderTop:`1px solid ${footerUpMid}`, paddingTop:20, paddingBottom:80, display:"flex", flexDirection:"column", gap:10, alignItems:"center" }}>
               <div style={{ display:"flex", flexWrap:"wrap", gap:"4px 14px", justifyContent:"center" }}>
-                {linksLegales(storeConfig?.slug, storeConfig?.legales, { tipoTienda: storeConfig?.tipoTienda, enEditor: editMode, cortos: true }).map(({ clave: tipo, label }) => (
+                {linksLegales(storeConfig?.slug, storeConfig?.legales, { enEditor: editMode, cortos: true }).map(({ clave: tipo, label }) => (
                   editMode ? (
                     <button key={tipo} type="button" onClick={() => window.open("/dashboard/pagos", "_blank")}
                       title="Editar en Dashboard → Pagos"
@@ -2713,7 +2694,7 @@ export default function UrbanPulse() {
             /* ── DESKTOP: fila izq/der original ── */
             <div style={{ borderTop:`1px solid ${footerUpMid}`, paddingTop:22, paddingLeft: hasWA ? 110 : 0, paddingRight:110, display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:"8px 24px" }}>
               <div style={{ display:"flex", flexWrap:"wrap", gap:"0 16px" }}>
-                {linksLegales(storeConfig?.slug, storeConfig?.legales, { tipoTienda: storeConfig?.tipoTienda, enEditor: editMode, cortos: true }).map(({ clave: tipo, label }) => (
+                {linksLegales(storeConfig?.slug, storeConfig?.legales, { enEditor: editMode, cortos: true }).map(({ clave: tipo, label }) => (
                   editMode ? (
                     <button key={tipo} type="button" onClick={() => window.open("/dashboard/pagos", "_blank")}
                       title="Editar en Dashboard → Pagos"

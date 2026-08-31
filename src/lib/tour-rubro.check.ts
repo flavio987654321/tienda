@@ -117,50 +117,6 @@ chequear(
   /!store\.tipoTiendaConfigurado/.test(gate)
 );
 
-/* ── 6) Los textos del tour no pueden prometer lo que el rubro no hace ──────
-   El motor ya saltea los pasos cuyo botón no está en pantalla, pero un paso que
-   SÍ existe se dibuja con el texto genérico si el rubro no tiene el suyo. Y el
-   genérico habla de una tienda que envía: "lo marcás como enviado", "importá
-   desde un CSV", "2x1", "tus opciones de envío".
-
-   En una tienda que entrega por descarga eso no es un matiz: la importación por
-   CSV está BLOQUEADA en ese rubro, y el 2x1 nunca se puede aplicar porque se
-   vende de a una unidad. O sea que el tour —lo primero que ve alguien que entra
-   por primera vez— la mandaría a hacer dos cosas que el sistema después le
-   impide.
-
-   Se chequea acá y no a ojo porque el texto genérico se lee perfecto: sólo está
-   mal para un rubro, y hay que acordarse de cuál. */
-console.log("\n6) Los pasos que cambian según el rubro digital");
-
-const guiones = leer("src/components/tours.ts");
-
-/* Cada paso, con lo que su texto GENÉRICO promete y el rubro digital no puede
-   cumplir. Si el paso pierde su variante, cae en el genérico y vuelve a mentir. */
-const PASOS_QUE_CAMBIAN: { paso: string; prohibido: RegExp; porque: string }[] = [
-  { paso: "pedidos",     prohibido: /enviado/i,      porque: "no hay nada que despachar" },
-  { paso: "productos",   prohibido: /CSV/i,          porque: "la importación por CSV está bloqueada en este rubro" },
-  { paso: "promociones", prohibido: /2x1|cantidad/i, porque: "se vende de a una unidad" },
-  { paso: "pagos",       prohibido: /env[íi]o/i,     porque: "no hay envíos que configurar" },
-];
-
-for (const { paso, prohibido, porque } of PASOS_QUE_CAMBIAN) {
-  // El bloque del paso: desde su clave hasta el cierre de primer nivel.
-  const bloque = guiones.match(new RegExp(`\\n  "?${paso}"?: \\{[\\s\\S]*?\\n  \\},`))?.[0] ?? "";
-  chequear(`${paso}: existe en el guion`, bloque.length > 0);
-  if (!bloque) continue;
-
-  const variante = bloque.match(/DIGITAL: \{[\s\S]*?\n {6}\}/)?.[0] ?? "";
-  chequear(`${paso}: tiene texto propio para el rubro digital (${porque})`, variante.length > 0);
-  if (!variante) continue;
-
-  chequear(
-    `${paso}: ese texto no promete lo que el rubro no hace`,
-    !prohibido.test(variante),
-    variante.slice(0, 120)
-  );
-}
-
 console.log(
   fallos === 0
     ? "\nTodo bien: el tour no puede abrirse arriba del modal de rubro.\n"

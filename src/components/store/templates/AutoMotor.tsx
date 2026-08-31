@@ -686,7 +686,7 @@ export default function AutoMotor() {
             </EditableZone>
           </p>
           <div style={{ display:"flex", flexWrap:"wrap", justifyContent:"center", gap:"0 16px" }}>
-            {linksLegales(config?.slug, config?.legales, { enEditor: isPreview, tipoTienda: "AUTOS" }).map(({ clave: tipo, label }) => (
+            {linksLegales(config?.slug, config?.legales, { enEditor: isPreview, esAutos: true }).map(({ clave: tipo, label }) => (
               <a key={tipo} href={`/tienda/${config?.slug ?? ""}/politicas?tipo=${tipo}`}
                 style={{ fontSize:10, color:ftMid, opacity:0.45, textDecoration:"none", letterSpacing:0.5 }}
                 onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity="1"; }}

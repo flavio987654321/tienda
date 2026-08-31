@@ -9,7 +9,6 @@ import { DEFAULT_SHIPPING_METHODS, LIVE_QUOTE_DOMICILIO_ID } from "@/types/store
 import { cotizarEnvio } from "@/lib/enviopack";
 import { calculateGoalAmount, MIN_DONATION, MAX_DONATION_PCT_OF_GOAL } from "@/lib/canasta";
 import { recordStockMovement, dispatchLowStockAlerts, type LowStockItem } from "@/lib/stockMovements";
-import { getStoreType } from "@/lib/storeTypes";
 import { priceCart, resolveBasePrice, parseEscalones, type PricingItem, type ActivePromotion } from "@/lib/pricing";
 import { parseStringArray } from "@/lib/promotions";
 import { couponDiscountFor } from "@/lib/coupons";
@@ -190,7 +189,6 @@ export async function POST(req: NextRequest) {
       storeConfig: true,
       isActive: true,
       closedAt: true,
-      tipoTienda: true,
       owner: {
         select: {
           banned: true,
@@ -234,37 +232,22 @@ export async function POST(req: NextRequest) {
     }
   } catch { /* noop */ }
 
-  /* En un rubro que entrega por descarga no hay envío que resolver ni código
-     postal que pedir: el archivo llega por mail. Se decide por el rubro y no por
-     los productos del carrito porque una tienda tiene UN rubro — no existe el
-     carrito mixto con algo para mandar por correo.
-
-     Va antes de `findShippingMethod` a propósito: si no, una tienda digital sin
-     métodos configurados caía en `DEFAULT_SHIPPING_METHODS` y le cobraba al
-     comprador un envío de un paquete que no existe. */
-  const entregaDigital = getStoreType(store.tipoTienda || "ROPA").requiereArchivo === true;
-
-  let shipping: { label: string; cost: number };
-  if (entregaDigital) {
-    shipping = { label: "Descarga online", cost: 0 };
-  } else {
-    const foundShippingMethod = findShippingMethod(shippingMethod, storeShippingMethods);
-    if (foundShippingMethod?.liveQuote && (!customer?.postalCode?.trim() || !customer?.province?.trim())) {
-      return NextResponse.json(
-        { error: "Ingresá tu código postal y provincia para cotizar el envío" },
-        { status: 400 }
-      );
-    }
-
-    shipping = await resolveShipping(
-      foundShippingMethod,
-      storeShippingMethods,
-      storeId,
-      customer?.postalCode ?? "",
-      customer?.province ?? "",
-      items.map((i) => ({ productId: i.productId, quantity: Math.max(1, Math.floor(Number(i.quantity) || 1)) }))
+  const foundShippingMethod = findShippingMethod(shippingMethod, storeShippingMethods);
+  if (foundShippingMethod?.liveQuote && (!customer?.postalCode?.trim() || !customer?.province?.trim())) {
+    return NextResponse.json(
+      { error: "Ingresá tu código postal y provincia para cotizar el envío" },
+      { status: 400 }
     );
   }
+
+  const shipping = await resolveShipping(
+    foundShippingMethod,
+    storeShippingMethods,
+    storeId,
+    customer?.postalCode ?? "",
+    customer?.province ?? "",
+    items.map((i) => ({ productId: i.productId, quantity: Math.max(1, Math.floor(Number(i.quantity) || 1)) }))
+  );
 
   try {
     let usedRewardCouponId: string | null = null;
@@ -281,17 +264,10 @@ export async function POST(req: NextRequest) {
           ownerId: true,
           affiliatesEnabled: true,
           commissionRate: true,
-          tipoTienda: true,
         },
       });
 
       if (!store) throw new Error("Tienda no encontrada");
-
-      /* Rubros sin stock: un archivo descargable se vende infinitas veces.
-         `hideVariants` hace que el formulario guarde una variante sintética con
-         stock 1, así que sin este freno el primer comprador dejaba el producto
-         en cero y el segundo se comía "Sin stock suficiente". */
-      const stockIlimitado = getStoreType(store.tipoTienda || "ROPA").stockIlimitado === true;
 
       let validAffiliateId: string | null = null;
       let resolvedAffiliateUserId: string | null = null;
@@ -305,17 +281,11 @@ export async function POST(req: NextRequest) {
       }
 
       const MAX_QUANTITY_PER_ITEM = 99;
-      /* Un archivo no se compra por unidades: la entrega emite UN permiso por
-         línea, sin importar la cantidad. Sin este tope, alguien pedía 99 del
-         mismo PDF, se le cobraban 99 y recibía un solo link — le cobrabas 98
-         veces algo que no le entregaste. El tope va en el server porque es acá
-         donde se arma el precio; que el carrito no ofrezca el "+" es aparte. */
-      const topeDeCantidad = entregaDigital ? 1 : MAX_QUANTITY_PER_ITEM;
       const normalizedItems = items
         .map((item) => ({
           productId: item.productId,
           variantId: item.variantId ?? null,
-          quantity: Math.min(Math.max(1, Math.floor(Number(item.quantity) || 1)), topeDeCantidad),
+          quantity: Math.min(Math.max(1, Math.floor(Number(item.quantity) || 1)), MAX_QUANTITY_PER_ITEM),
         }))
         .filter((item) => item.productId);
 
@@ -338,10 +308,7 @@ export async function POST(req: NextRequest) {
         const variant = item.variantId ? product.variants.find((v) => v.id === item.variantId) : null;
         if (item.variantId && !variant) throw new Error("Variante no disponible");
 
-        // `stockIlimitado` saltea el bloque entero a propósito: sin descuento no
-        // hay agotado que avisar ni movimiento de stock que registrar. `variant`
-        // sigue disponible más abajo para resolver el precio.
-        if (variant && !stockIlimitado) {
+        if (variant) {
           // Decrementa stock atómicamente — si no hay suficiente, count=0 y lanzamos error
           const decremented = await tx.productVariant.updateMany({
             where: { id: variant.id, stock: { gte: item.quantity } },

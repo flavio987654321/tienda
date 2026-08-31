@@ -8,7 +8,7 @@ import { getCurrentUser } from "@/lib/auth-session";
 import ProductsTable from "./ProductsTable";
 import ChangeStoreTypeButton from "./ChangeStoreTypeButton";
 import CsvImportButton from "./CsvImportButton";
-import { STORE_TYPES, getStoreType } from "@/lib/storeTypes";
+import { STORE_TYPES } from "@/lib/storeTypes";
 import { parseStringArray } from "@/lib/promotions";
 import type { Prisma } from "@prisma/client";
 import AvisosDeSeccion from "@/components/dashboard/AvisosDeSeccion";
@@ -279,15 +279,10 @@ export default async function ProductosPage({ searchParams }: Props) {
               />
             ) : null;
           })()}
-          {/* Sin CSV en los rubros que venden un archivo: una planilla no lo
-              lleva adentro. La ruta de importación lo rechaza igual — esto es
-              para no ofrecer un botón que sólo puede terminar en error. */}
-          {!getStoreType(store.tipoTienda || "ROPA").requiereArchivo && (
-            <CsvImportButton
-              tipoTienda={store.tipoTienda ?? "ROPA"}
-              className="min-w-0 justify-center sm:justify-start"
-            />
-          )}
+          <CsvImportButton
+            tipoTienda={store.tipoTienda ?? "ROPA"}
+            className="min-w-0 justify-center sm:justify-start"
+          />
         </div>
       </div>
 

@@ -560,7 +560,18 @@ model Product {
   heightCm Float?
   depthCm  Float?
 
-  // Producto digital (rubro DIGITAL): el archivo que el comprador descarga.
+  // ── SIN USO HOY. Ver la nota de `DigitalDownload`, más abajo ──────────────
+  // Estas tres columnas EXISTEN EN LA BASE de producción: la migración
+  // 20260828120000_add_producto_digital se aplicó. Ningún código las lee ni las
+  // escribe desde que los productos digitales dejaron de ser un rubro de tienda
+  // y pasaron a ser un producto aparte.
+  //
+  // Se dejan declaradas a propósito. Sacarlas de acá no las saca de la base: lo
+  // único que lograría es que Prisma vea una base con columnas que su esquema no
+  // menciona, y la próxima migración de CUALQUIER otra cosa pida un reset — en
+  // la base de producción. Son nullable y no molestan a nadie.
+  //
+  // Cuando se arme el ecosistema propio, el diseño de abajo sigue valiendo:
   // `archivoPath` guarda la RUTA en el bucket PRIVADO con el formato
   // `supabase://<bucket>/<path>`, nunca una URL pública — si acá hubiera una url
   // servible, el archivo pago se bajaría sin comprarlo con solo tenerla. Quien
@@ -777,15 +788,34 @@ model OrderItem {
   descargas DigitalDownload[]
 }
 
+/// ── SIN USO HOY, y a propósito ─────────────────────────────────────────────
+///
+/// Esta tabla EXISTE EN LA BASE de producción: la migración
+/// 20260829120000_add_digital_download se aplicó el 29/08/2026. Está vacía y
+/// ningún código la toca desde que los productos digitales dejaron de ser un
+/// rubro de tienda para pasar a ser un producto aparte, con su propio panel y su
+/// propia suscripción.
+///
+/// **No se borra.** Borrar el modelo de acá no borra la tabla de la base: lo
+/// único que lograría es que Prisma vea una tabla que su esquema no menciona, y
+/// que la próxima migración de cualquier otra cosa pida un reset de la base de
+/// producción. Y borrarla de verdad, con una migración, sería tirar un diseño
+/// que costó una auditoría entera y que el ecosistema nuevo va a necesitar
+/// igual — porque lo que cambia es el panel, no la entrega.
+///
+/// ── El diseño, para cuando se retome ───────────────────────────────────────
+///
 /// El permiso de descarga de un producto digital, emitido cuando el pago se
 /// acredita. Es una fila por línea comprada, no por producto: dos personas que
 /// compran el mismo PDF tienen cada una su token, su vencimiento y su cuenta.
 ///
-/// El token NO es la ubicación del archivo: es una llave que se canjea en
-/// /api/descargas/[token], que recién ahí —y después de mirar vencimiento y
-/// tope— le pide a Supabase un link firmado de vida corta. Así el mail nunca
-/// lleva una dirección que sirva sola, y el permiso se puede vencer o agotar sin
-/// tener que mover el archivo.
+/// El token NO es la ubicación del archivo: es una llave que se canjea en una
+/// ruta que —después de mirar vencimiento y tope— le pide a Supabase un link
+/// firmado de vida corta. Así el mail nunca lleva una dirección que sirva sola,
+/// y el permiso se puede vencer o agotar sin tener que mover el archivo.
+///
+/// Lo aprendido armándolo (los 7 agujeros que tuvo, el techo real de 50 MB de
+/// Supabase, por qué el bucket va anclado) está en PRODUCTOS-DIGITALES.md.
 model DigitalDownload {
   id    String @id @default(cuid())
   /// Se canjea en la URL, así que va indexado y único. Se genera con
@@ -807,12 +837,12 @@ model DigitalDownload {
   /// Leer "¿ya existe?" antes de crear no alcanza — dos avisos de Mercado Pago
   /// en paralelo leen los dos "todavía no" y crean los dos, dejando dos tokens
   /// vivos y un tope de 10 descargas donde debía haber 5. Con la restricción
-  /// acá, el `upsert` de lib/descargas resuelve la carrera sin transacción.
+  /// acá, un `upsert` resuelve la carrera sin necesidad de transacción.
   orderItemId String    @unique
   orderItem   OrderItem @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
-  /// Para la limpieza de los vencidos en el cron diario.
+  /// Para la limpieza de los vencidos, cuando vuelva a haber un cron que la haga.
   @@index([expiresAt])
 }
 

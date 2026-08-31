@@ -16,27 +16,7 @@ export type LegalWizardAnswers = {
 export type LegalStoreInfo = {
   name: string;
   contact: string;
-  /**
-   * La tienda entrega un archivo que se descarga: no despacha nada.
-   *
-   * Cambia las tres políticas generadas, y no por una palabra. Una tienda de
-   * descargas con el texto de siempre le promete al comprador un envío que no
-   * existe, le habla de un producto que "recibe" cuando nunca recibe nada, y le
-   * pide devolver el archivo "sin uso, con sus etiquetas y embalaje original".
-   *
-   * Es opcional para no romper a quien ya llama a estas funciones con dos
-   * campos: sin ella, todo sale exactamente como antes.
-   */
-  entregaPorDescarga?: boolean;
 };
-
-/* Cuánto dura el link y cuántas veces se puede usar. Están escritos acá y no
-   importados de lib/descargas a propósito: esto es TEXTO LEGAL, y el día que
-   alguien cambie la constante técnica no puede reescribirle la política a una
-   tienda que ya la tiene publicada y fechada. Si se cambian allá, se cambian
-   acá a mano y con intención. */
-const DIAS_DEL_LINK = 30;
-const VECES_DEL_LINK = 5;
 
 /* ── Los topes de los campos numéricos ─────────────────────────────────────────
  *
@@ -83,22 +63,6 @@ export function porDondeEscribir(contacto: string): string {
 export function generatePolicyShipping(store: LegalStoreInfo, answers: LegalWizardAnswers): string {
   const blocks: string[] = [];
 
-  /* No hay envío que describir: hay una entrega, y es distinta. Las respuestas
-     del asistente sobre envíos se ignoran enteras — el asistente ni siquiera se
-     las pregunta a esta tienda. */
-  if (store.entregaPorDescarga) {
-    blocks.push(
-      "Lo que se compra en esta tienda es un archivo digital: no se envía nada por correo ni hay retiro en persona."
-    );
-    blocks.push(
-      `Apenas se acredita el pago recibís un email con tu link de descarga privado. El link es tuyo, funciona durante ${DIAS_DEL_LINK} días corridos desde la compra y se puede usar hasta ${VECES_DEL_LINK} veces, para que puedas bajarlo en la computadora y en el teléfono.`
-    );
-    blocks.push(
-      `Te recomendamos guardar el archivo apenas lo descargues. Si el email no te llegó —a veces cae en la carpeta de correo no deseado— o el link dejó de funcionar antes de tiempo, escribinos ${porDondeEscribir(store.contact)} indicando tu número de pedido y te lo volvemos a mandar.`
-    );
-    return blocks.join("\n\n");
-  }
-
   if (answers.shipsNationwide) {
     const demora = (answers.avgDeliveryDays || "").trim().slice(0, MAX_LARGO_DEMORA) || "3 a 7";
     blocks.push(
@@ -120,38 +84,6 @@ export function generatePolicyShipping(store: LegalStoreInfo, answers: LegalWiza
 export function generatePolicyReturns(store: LegalStoreInfo, answers: LegalWizardAnswers): string {
   const totalDays = 10 + acotarDiasExtra(answers.extraReturnDays);
   const blocks: string[] = [];
-
-  /* ── El caso del archivo descargable ───────────────────────────────────────
-     El derecho de arrepentimiento NO se toca: son los mismos 10 días corridos
-     del art. 34 y esta tienda no los recorta. Lo que cambia es desde CUÁNDO se
-     cuentan —no hay un momento en que "recibís el producto", así que se cuentan
-     desde la compra— y las dos cláusulas de abajo, que hablan de un objeto:
-
-       · la garantía de 6 y 3 meses es la de un producto que se usa y se rompe;
-         un archivo no se rompe. Lo que sí puede pasar es que no abra o no sea
-         el que se publicó, y eso es lo que se promete resolver.
-       · "devolver el producto sin uso, con sus etiquetas y su embalaje
-         original" no se le puede pedir a nadie sobre un PDF.
-
-     Se dice también qué pasa con el link al cancelar, porque es la pregunta que
-     sigue y no está escrita en ningún lado. */
-  if (store.entregaPorDescarga) {
-    blocks.push(
-      `Tenés derecho a cancelar tu compra sin necesidad de justificar el motivo dentro de los 10 días corridos desde que la hacés (derecho de arrepentimiento, Ley 24.240 art. 34). Para ejercerlo, escribinos ${porDondeEscribir(store.contact)} indicando tu número de pedido.`
-    );
-    blocks.push(
-      "Al cancelar, tu link de descarga deja de funcionar y te devolvemos el dinero. Si ya habías bajado el archivo, te pedimos que lo borres: al cancelar la compra dejás de tener permiso para usarlo o compartirlo."
-    );
-    blocks.push(
-      `Si el archivo no se abre, llega dañado o no es el que estaba publicado, escribinos ${porDondeEscribir(store.contact)} y te lo reemplazamos o te devolvemos el dinero, sin importar el plazo.`
-    );
-    if (acotarDiasExtra(answers.extraReturnDays) > 0) {
-      blocks.push(
-        `Además del mínimo legal, en ${store.name || "nuestra tienda"} te damos un total de ${totalDays} días corridos desde la compra para pedir la cancelación.`
-      );
-    }
-    return blocks.join("\n\n");
-  }
 
   blocks.push(
     `Tenés derecho a cancelar tu compra sin necesidad de justificar el motivo dentro de los 10 días corridos desde que recibís el producto (derecho de arrepentimiento, Ley 24.240 art. 34). Para ejercerlo, escribinos ${porDondeEscribir(store.contact)} indicando tu número de pedido.`
@@ -189,16 +121,6 @@ export function generatePolicyTerms(store: LegalStoreInfo, answers: LegalWizardA
     "Los precios se publican en pesos argentinos e incluyen los impuestos correspondientes. Nos reservamos el derecho de modificarlos sin previo aviso, sin afectar compras ya confirmadas."
   );
 
-  /* Lo que se compra es una licencia de uso personal, no la obra. Sin esto
-     escrito, la tienda no tiene con qué contestarle a quien revenda el archivo
-     o lo suba a un grupo — y es el riesgo número uno de vender algo que se
-     copia sin costo. */
-  if (store.entregaPorDescarga) {
-    blocks.push(
-      "Los archivos que se venden en esta tienda son para tu uso personal. Podés descargarlos y guardarlos las veces que necesites dentro del plazo del link, pero no revenderlos, redistribuirlos ni publicarlos, en todo o en parte, sin autorización escrita nuestra."
-    );
-  }
-
   blocks.push(
     "Tus datos personales se utilizan exclusivamente para gestionar tu pedido, conforme a la Ley 25.326 de Protección de Datos Personales."
   );
@@ -209,13 +131,8 @@ export function generatePolicyTerms(store: LegalStoreInfo, answers: LegalWizardA
       `Si cancelás un pedido luego de haber sido confirmado, podemos aplicar un cargo administrativo del ${cargo}% del valor de la compra.`
     );
   } else {
-    // Sin "salvo que ya haya sido despachado" donde no se despacha nada: en una
-    // tienda de descargas esa excepción no se puede cumplir nunca y sólo
-    // confunde a quien la lee buscando saber si puede cancelar.
     blocks.push(
-      store.entregaPorDescarga
-        ? "Podés cancelar un pedido confirmado sin cargo, dentro del plazo de arrepentimiento."
-        : "Podés cancelar un pedido confirmado sin cargo, salvo que ya haya sido despachado."
+      "Podés cancelar un pedido confirmado sin cargo, salvo que ya haya sido despachado."
     );
   }
 

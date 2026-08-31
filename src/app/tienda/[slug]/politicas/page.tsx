@@ -7,7 +7,6 @@ import {
   documentosPublicados, titulosLegales, textoPublicado,
   type ClaveLegal,
 } from "@/lib/politicas-tienda";
-import { getStoreType } from "@/lib/storeTypes";
 
 export const dynamic = "force-dynamic";
 
@@ -80,8 +79,8 @@ export default async function PoliticasPage({ params, searchParams }: Props) {
   if (!store) notFound();
 
   const acc = store.primaryColor || "#4f46e5";
-  const entregaPorDescarga = getStoreType(store.tipoTienda ?? "ROPA").requiereArchivo === true;
-  const titulos = titulosLegales(store.tipoTienda);
+  const esAutos = store.tipoTienda === "AUTOS";
+  const titulos = titulosLegales(esAutos);
 
   // La lista sale de la misma función que usan los pies de página y el mail, así
   // que una política apagada desaparece de los tres lados a la vez. Antes acá se
@@ -211,20 +210,8 @@ export default async function PoliticasPage({ params, searchParams }: Props) {
               </div>
               <dl className="divide-y divide-slate-100 px-5">
                 {[
-                  /* Los dos primeros están escritos para un objeto que llega en
-                     una caja: "desde que recibís el producto" y una garantía de
-                     6 y 3 meses que es la de algo que se usa y se rompe. En una
-                     tienda que vende un archivo no hay un momento en que se
-                     reciba nada —se descarga— y un archivo no se desgasta. El
-                     derecho es EL MISMO y dura lo mismo; lo que cambia es desde
-                     cuándo se cuenta y qué es lo que se garantiza.
-                     Los otros dos valen igual para cualquier tienda. */
-                  entregaPorDescarga
-                    ? ["Arrepentimiento", "Podés cancelar una compra online dentro de los 10 días corridos desde que la hacés, sin costo y sin dar explicaciones."]
-                    : ["Arrepentimiento", "Podés cancelar una compra online dentro de los 10 días corridos desde que recibís el producto, sin costo y sin dar explicaciones."],
-                  entregaPorDescarga
-                    ? ["Lo que comprás", "El archivo tiene que ser el que se publicó y tiene que poder abrirse. Si no lo es, o no funciona, te lo tienen que reemplazar o devolverte el dinero."]
-                    : ["Garantía legal", "Los productos tienen garantía de 6 meses si son nuevos y 3 meses si son usados, contados desde la entrega."],
+                  ["Arrepentimiento", "Podés cancelar una compra online dentro de los 10 días corridos desde que recibís el producto, sin costo y sin dar explicaciones."],
+                  ["Garantía legal", "Los productos tienen garantía de 6 meses si son nuevos y 3 meses si son usados, contados desde la entrega."],
                   ["Información clara", "Tenés derecho a conocer el precio total y las condiciones de la operación antes de comprar."],
                   ["Reclamos", "Podés presentar un reclamo ante Defensa del Consumidor de tu provincia sin cargo y sin abogado."],
                 ].map(([titulo, texto]) => (

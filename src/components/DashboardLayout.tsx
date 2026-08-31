@@ -8,9 +8,7 @@ import {
   ShoppingBag, Package, Users, TrendingUp, Store, Settings, LogOut,
   BarChart2, Tag, Loader2, MessageCircle, BadgeCheck, ChevronRight,
   CreditCard, Menu, X, Wallet, AlertTriangle, Bell, ShoppingCart, Star, LayoutGrid, BadgePercent,
-  Download,
 } from "lucide-react";
-import { STORE_TYPES } from "@/lib/storeTypes";
 import { useAuth } from "@/components/AuthProvider";
 import { useIsPwa } from "@/hooks/useIsPwa";
 import { AppLogo } from "@/components/AppLogo";
@@ -23,13 +21,6 @@ import { GUION_PANEL, TOUR_PANEL_KEY } from "@/components/tours";
 import TermsUpdateBanner from "@/components/TermsUpdateBanner";
 
 const LEADS_STORE_TYPES = ["AUTOS"];
-
-/* Los rubros que entregan un archivo descargable. Se deriva de la bandera del
-   rubro y no se escribe a mano como la de arriba: un rubro nuevo que entregue
-   por descarga aparece acá solo, sin que nadie se acuerde de volver a este
-   archivo. (LEADS_STORE_TYPES es de antes y quedó así; se puede derivar igual
-   el día que se toque.) */
-const ARCHIVO_STORE_TYPES = STORE_TYPES.filter((t) => t.requiereArchivo).map((t) => t.id);
 
 // Suscripción a los eventos online/offline del navegador para useSyncExternalStore.
 // A nivel de módulo para que la referencia sea estable entre renders.
@@ -80,13 +71,6 @@ const NAV_GROUPS: NavGroup[] = [
       { href: "/dashboard/pedidos",    label: "Pedidos",    icon: ShoppingBag,   tourId: "pedidos",   hiddenFor: LEADS_STORE_TYPES },
       { href: "/dashboard/consultas",  label: "Consultas",  icon: MessageCircle, onlyFor: LEADS_STORE_TYPES, tourId: "consultas" },
       { href: "/dashboard/productos",  label: "Productos",  icon: Package,       tourId: "productos", labelFor: { AUTOS: "Vehículos" } },
-      /* Descargas: sólo para los rubros que entregan un archivo, y sólo con la
-         bandera prendida. Lo segundo es para poder mergear el rubro entero sin
-         que ninguna dueña lo vea todavía — el mismo mecanismo que Aplicaciones.
-         Se habilita con NEXT_PUBLIC_DIGITALES_ENABLED=1. */
-      ...(process.env.NEXT_PUBLIC_DIGITALES_ENABLED === "1"
-        ? [{ href: "/dashboard/descargas", label: "Descargas", icon: Download, tourId: "descargas", onlyFor: ARCHIVO_STORE_TYPES }]
-        : []),
       { href: "/dashboard/cupones",        label: "Cupones",        icon: Tag,   tourId: "cupones",   hiddenFor: LEADS_STORE_TYPES },
       { href: "/dashboard/promociones",    label: "Promociones",    icon: BadgePercent, tourId: "promociones", hiddenFor: LEADS_STORE_TYPES },
       { href: "/dashboard/carritos-abandonados", label: "Carritos abandonados", icon: ShoppingCart, tourId: "carritos-abandonados", hiddenFor: LEADS_STORE_TYPES },

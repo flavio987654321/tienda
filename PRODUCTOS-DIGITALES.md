@@ -1,12 +1,60 @@
-# PLAN — RUBRO DE PRODUCTOS DIGITALES
+# PRODUCTOS DIGITALES — lo aprendido en el intento de hacerlo un rubro
 
-> Creado: 2026-08-27 | Workflow: 🔲 pendiente | 🔄 en progreso | ✅ hecho | ❌ descartado con justificación
-> Objetivo: que una tienda pueda vender archivos que se descargan (plantillas, ebooks, licencias)
-> sin envío, sin stock y sin talles, entregándolos solos cuando entra el pago.
+> ⛔ **ESTE PLAN NO SE SIGUE MÁS. El código que describe fue retirado el 31/08/2026.**
+> Lo que queda de este documento es el registro de lo que se probó, lo que se
+> midió y lo que salió mal. Vale entero para lo que viene, porque **lo que cambia
+> es el panel, no la entrega**.
 
-## 📍 ESTADO ACTUAL (se actualiza a medida que avanzamos)
+## 🔄 Por qué se retiró (31/08/2026)
 
-**Todo commiteado en `main`, NADA deployado.** Migraciones ya aplicadas a la base.
+Se hizo como un **rubro de tienda más**, al lado de Ropa, Autos y Hogar. Andando
+se vio que está mal encarado: quien vende archivos no necesita variantes, ni
+talles, ni stock, ni un checkout que pida dirección, ni la mitad del panel de una
+tienda. Es **otro producto**, no otro rubro — como pasó con afiliados y clientes,
+que terminaron siendo dos ecosistemas con su panel y su vida propia.
+
+Así que va a tener **panel propio y suscripción propia**, reusando de la tienda
+sólo lo que sirva (carritos abandonados, promos, estadísticas, mi plan, perfil,
+pedidos, reseñas).
+
+### Qué se retiró y qué quedó
+
+**Retirado** (todo lo que existía sólo para el rubro dentro de tiendas): el rubro
+en el selector, el bloque de archivo del formulario, la entrega, la sección
+Descargas, los avisos, el tour, los textos por rubro de los templates, las
+políticas legales por rubro y el filtro de la ayuda.
+
+**Quedó, porque se sostiene solo:**
+
+- El arreglo de **Sasha**, que le decía a las tiendas de Gastronomía que su rubro
+  "todavía no está disponible". La lista de rubros ahora sale del sistema y no de
+  un texto escrito a mano que se queda viejo.
+- **Las columnas y la tabla en la base** — ver abajo.
+- **Este documento.**
+
+### ⚠️ La base ya está migrada, y eso NO se revierte
+
+Las dos migraciones (`add_producto_digital` y `add_digital_download`) **se
+aplicaron a la base de producción el 29/08**. Borrar el código no borra la base.
+
+Por eso el modelo `DigitalDownload` y las tres columnas `archivo*` de `Product`
+**siguen declaradas en `schema.prisma`**, con su explicación al lado. Sacarlas
+del esquema no las saca de la base: lo único que lograría es que Prisma vea una
+base con cosas que su esquema no menciona, y que **la próxima migración de
+cualquier otra cosa pida un reset de la base de producción**.
+
+Están vacías, son nullable y no molestan. Y el diseño de la entrega —token,
+vencimiento, tope de descargas, un permiso por línea comprada— **se va a usar
+igual** en el ecosistema nuevo.
+
+---
+
+## 📍 De acá para abajo: el plan viejo, como quedó
+
+Se deja tal cual para no perder el detalle de lo que ya está resuelto y medido.
+Lo marcado ✅ **funcionaba** — pero el código ya no está en el proyecto.
+
+**Nada de esto se deployó nunca.** Migraciones aplicadas a la base.
 
 - ✅ **Fase 1 — El rubro existe y se puede elegir.** Verificado en el navegador:
   el rubro aparece en el selector y en el directorio, el formulario trae sus

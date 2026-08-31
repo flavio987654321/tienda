@@ -2,7 +2,6 @@
 import { useVistaTemplate, urlParaCompartirProducto } from "@/components/store/templates/shared/useVistaTemplate";
 import CatalogoGenerico, { type CatalogoEmbebido } from "@/app/tienda/[slug]/productos/CatalogoGenerico";
 import { BotonVolver } from "@/components/store/templates/shared/BotonVolver";
-import { anunciosDeRubro, garantiasPorDefecto } from "@/lib/beneficios-rubro";
 import { barraMs } from "@/types/store-config";
 import { useState, useEffect, useLayoutEffect, useMemo, useRef, useCallback, useSyncExternalStore, Fragment } from "react";
 import { useStoreConfig } from "@/contexts/StoreConfigContext";
@@ -100,7 +99,7 @@ const AU_STRIP_ICONS: React.ReactNode[][] = [
   ],
 ];
 
-const GARANTIAS_BASE = [
+const GARANTIAS = [
   {
     title:"Envío gratis", desc:"En compras mayores a $30.000",
     svg: <svg width={28} height={28} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.4} strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 5v4h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>,
@@ -118,23 +117,6 @@ const GARANTIAS_BASE = [
     svg: <svg width={28} height={28} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.4} strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>,
   },
 ];
-
-/* Los íconos son de Aurora; los textos, del rubro. El primero pasa de camión a
-   rayo y el segundo de flechas a sobre: un camión arriba de "Descarga inmediata"
-   desmentiría el texto. La cuarta ficha vale para cualquier rubro. */
-const ICONO_RAYO = <svg width={28} height={28} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.4} strokeLinecap="round" strokeLinejoin="round"><polyline points="13 2 4 14 12 14 11 22 20 10 12 10 13 2"/></svg>;
-const ICONO_SOBRE = <svg width={28} height={28} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.4} strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg>;
-
-function garantiasDe(tipoTienda: string | null | undefined) {
-  const textos = garantiasPorDefecto(tipoTienda);
-  const digital = textos[0].title !== GARANTIAS_BASE[0].title;
-  return [
-    { ...textos[0], svg: digital ? ICONO_RAYO  : GARANTIAS_BASE[0].svg },
-    { ...textos[1], svg: digital ? ICONO_SOBRE : GARANTIAS_BASE[1].svg },
-    { ...textos[2], svg: GARANTIAS_BASE[2].svg },
-    GARANTIAS_BASE[3],
-  ];
-}
 
 // Sin "au-categorias": las categorías ya no son una sección propia con tres
 // baldosas elegidas a mano, son el segundo mazo de la vidriera del hero — y
@@ -480,9 +462,7 @@ export default function Aurora() {
   const promoBannerEnabled = storeConfig?.promoBanner?.enabled !== false;
   const announcementMessages = (storeConfig?.promoBanner?.messages?.filter(m => m.trim()) ?? []).length > 0
     ? storeConfig!.promoBanner!.messages!.filter(m => m.trim())
-    : anunciosDeRubro(storeConfig?.tipoTienda, announcementMessages_DEFAULT);
-  // Las fichas del hero, con los textos que correspondan al rubro.
-  const GARANTIAS = garantiasDe(storeConfig?.tipoTienda);
+    : announcementMessages_DEFAULT;
   const showAnnouncement = promoBannerEnabled && announcementVisible;
   const announcementBarHeight = showAnnouncement ? ANNOUNCEMENT_BAR_H : 0;
 
@@ -1586,7 +1566,7 @@ export default function Aurora() {
           /* ── MOBILE: 2 filas centradas ── */
           <div style={{ borderTop:`1px solid rgba(240,235,227,0.05)`, paddingTop:20, paddingBottom:80, maxWidth:1280, margin:"0 auto", display:"flex", flexDirection:"column", gap:10, alignItems:"center" }}>
             <div style={{ display:"flex", flexWrap:"wrap", gap:"4px 16px", justifyContent:"center" }}>
-              {linksLegales(storeConfig?.slug, storeConfig?.legales, { tipoTienda: storeConfig?.tipoTienda, enEditor: editMode }).map(({ clave: tipo, label }) => (
+              {linksLegales(storeConfig?.slug, storeConfig?.legales, { enEditor: editMode }).map(({ clave: tipo, label }) => (
                 editMode ? (
                   <button key={tipo} type="button" onClick={() => window.open("/dashboard/pagos", "_blank")}
                     title="Editar en Dashboard → Pagos"
@@ -1627,7 +1607,7 @@ export default function Aurora() {
           /* ── DESKTOP: fila izq/der original ── */
           <div style={{ borderTop:`1px solid rgba(240,235,227,0.05)`, paddingTop:24, paddingLeft: hasWA ? 110 : 0, paddingRight:110, maxWidth:1280, margin:"0 auto", display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:"8px 24px" }}>
             <div style={{ display:"flex", flexWrap:"wrap", gap:"0 20px" }}>
-              {linksLegales(storeConfig?.slug, storeConfig?.legales, { tipoTienda: storeConfig?.tipoTienda, enEditor: editMode }).map(({ clave: tipo, label }) => (
+              {linksLegales(storeConfig?.slug, storeConfig?.legales, { enEditor: editMode }).map(({ clave: tipo, label }) => (
                 editMode ? (
                   <button key={tipo} type="button" onClick={() => window.open("/dashboard/pagos", "_blank")}
                     title="Editar en Dashboard → Pagos"

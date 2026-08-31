@@ -5,8 +5,7 @@ import { prisma } from "@/lib/prisma";
 import MercadoPagoConfig, { Payment } from "mercadopago";
 import { createNotification } from "@/lib/notifications";
 import { runOrderAction } from "@/lib/orderActions";
-import { sendOrderPaymentConfirmedEmail, sendCommissionEarnedEmail, parseOrderPromoSummary, sendDigitalDownloadEmail } from "@/lib/email";
-import { crearDescargasDigitales, MAX_DESCARGAS } from "@/lib/descargas";
+import { sendOrderPaymentConfirmedEmail, sendCommissionEarnedEmail, parseOrderPromoSummary } from "@/lib/email";
 import { despues } from "@/lib/despues";
 
 type CommissionResult = { commissionId: string; amount: number; rate: number; newBalance: number };
@@ -329,37 +328,6 @@ async function processPaymentWebhook(paymentId: string) {
         ...parseOrderPromoSummary(order.promoSummary),
         promoSavings: order.promoSavings,
       }), "MP: comprobante de pago al comprador");
-    }
-
-    /* Entrega de lo digital. Va acá y no en el checkout porque el disparador es
-       el PAGO ACREDITADO, no el pedido creado: entregar antes sería regalar el
-       archivo a quien abandonó el pago a mitad de camino.
-
-       Fuera del `despues` de arriba a propósito: emitir los permisos es escribir
-       en la base y tiene que pasar sí o sí. El que puede fallar sin romper nada
-       es el mail, y ese sí va en segundo plano. */
-    if (order.buyer?.email) {
-      try {
-        const { archivos, venceEl } = await crearDescargasDigitales(order.id);
-        // `venceEl` sale de la base, no de "hoy + 30": en un reintento del
-        // webhook se reusa el permiso original, y recalcular la fecha le
-        // prometería al comprador una vigencia que el link no tiene.
-        if (archivos.length > 0 && venceEl) {
-          despues(() => sendDigitalDownloadEmail({
-            buyerEmail: order.buyer.email,
-            buyerName: order.buyer.name || "",
-            storeName: order.store.name,
-            archivos,
-            venceEl,
-            maxDescargas: MAX_DESCARGAS,
-          }), "MP: links de descarga al comprador");
-        }
-      } catch (err) {
-        // No se re-lanza: el pago YA está confirmado y el pedido cerrado. Que
-        // falle la entrega no puede desarmar eso. Queda el error para reenviar
-        // a mano desde el panel.
-        console.error("[mp/webhook] no se pudieron emitir las descargas", orderId, err);
-      }
     }
 
     console.log(`[mp/webhook] pago confirmado — paymentId=${paymentId} orderId=${orderId}`);

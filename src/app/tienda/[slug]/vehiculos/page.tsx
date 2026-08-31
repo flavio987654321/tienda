@@ -578,7 +578,7 @@ function VehiculosPageInner() {
         padding:"28px clamp(16px,4vw,32px)", marginTop:8 }}>
         <div style={{ maxWidth:1280, margin:"0 auto", display:"flex", flexWrap:"wrap",
           justifyContent:"center", alignItems:"center", gap:"8px 18px" }}>
-          {linksLegales(slug, legales, { tipoTienda: "AUTOS", enEditor: fromEditor }).map(({ clave, label, href }) => (
+          {linksLegales(slug, legales, { esAutos: true, enEditor: fromEditor }).map(({ clave, label, href }) => (
             <a key={clave} href={href}
               style={{ fontSize:11, color:MID, textDecoration:"none", letterSpacing:0.3 }}>
               {label}

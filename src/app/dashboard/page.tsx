@@ -206,11 +206,7 @@ export default async function DashboardPage() {
         tip: "CBU, alias o efectivo — para que los clientes sepan cómo pagarte.",
       },
     ] : []),
-    /* El paso de envíos, sólo donde hay algo que despachar. La condición sale
-       de `condicionesTienda` y es la MISMA que usa `pasosTerminados` para
-       decidir si el onboarding está completo: si acá se mostrara un paso que
-       allá no se exige, la barra diría "7 de 8" para siempre. */
-    ...(!isAutos && !condiciones.entregaPorDescarga ? [{
+    ...(!isAutos ? [{
       done: hasShippingConfigured,
       label: "Configurá tus métodos de envío",
       href: "/dashboard/pagos",

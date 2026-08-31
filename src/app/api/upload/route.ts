@@ -15,10 +15,6 @@ const MAX_DOCUMENT_SIZE_MB = 15;
 const MAX_DOCUMENT_SIZE_BYTES = MAX_DOCUMENT_SIZE_MB * 1024 * 1024;
 const MAX_VIDEO_SIZE_MB = 50;
 const MAX_VIDEO_SIZE_BYTES = MAX_VIDEO_SIZE_MB * 1024 * 1024;
-// El tope del archivo que se vende vive en lib/descargas (importado arriba), no
-// acá: la validación del producto compara contra el mismo número y con dos
-// copias se desalineaban. Subirlo NO alcanza para vender videos — el archivo
-// viaja entero por esta función y el límite real lo pone la plataforma.
 const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 const ALLOWED_VIDEO_TYPES = new Set(["video/mp4", "video/webm", "video/quicktime", "video/ogg"]);
 const ALLOWED_DOCUMENT_TYPES = new Set([
@@ -43,11 +39,6 @@ const DEFAULT_BUCKET = "product-images";
    Ahora van a un bucket privado propio, y se leen con un link firmado y de vida
    corta que emite /api/vendedoras/cv/[id] después de verificar quién pregunta. */
 const DOCS_BUCKET = process.env.SUPABASE_DOCS_BUCKET || "affiliate-docs";
-
-/* El archivo que se VENDE no pasa por esta ruta: va directo del navegador al
-   bucket privado, con un permiso que firma /api/upload/firma-digital. Se hizo
-   así porque el archivo viajando por acá chocaba contra el techo del cuerpo del
-   pedido —10 MB en Next, menos en producción— y llegaba cortado. */
 
 const RATE_LIMIT_MAX = 20;
 const RATE_LIMIT_WINDOW_MS = 60_000;
@@ -179,10 +170,7 @@ export async function POST(req: NextRequest) {
 
     const bytes = await file.arrayBuffer();
 
-    // Validar tipo real por magic bytes — no confiar en Content-Type del cliente.
-    // Se saltea para documentos y para el archivo digital: un .docx, un .xlsx o
-    // un .txt no tienen una firma que este validador reconozca, y rechazarlos
-    // sería romper justo los formatos que el rubro existe para vender.
+    // Validar tipo real por magic bytes — no confiar en Content-Type del cliente
     if (!isDocument) {
       const detected = await fileTypeFromBuffer(Buffer.from(bytes));
       const allowedSet = isVideo ? ALLOWED_VIDEO_TYPES : ALLOWED_IMAGE_TYPES;
@@ -206,7 +194,6 @@ export async function POST(req: NextRequest) {
 
     if (getSupabaseStorageConfig()) {
       const folder = isDocument ? "affiliate-docs" : isVideo ? "store-videos" : "products";
-      // El bucket privado devuelve `supabase://bucket/path`, no una URL.
       const url = isDocument
         ? await uploadToSupabaseStorage(file, bytes, folder, { bucket: DOCS_BUCKET, isPublic: false })
         : await uploadToSupabaseStorage(file, bytes, folder);
@@ -220,13 +207,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    /* Acá abajo se escribe en `public/uploads`, que Next sirve en abierto. Para
-       fotos y videos da igual —son públicos de todos modos—, y los documentos de
-       afiliados nunca llegan hasta este punto sin Supabase configurado.
-
-       El archivo que se VENDE no pasa por esta ruta en absoluto: va directo del
-       navegador al bucket privado (ver /api/upload/firma-digital), justamente
-       para que no exista un camino donde termine en una carpeta pública. */
     const ext = extensionFor(file);
     const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
     const uploadDir = path.join(process.cwd(), "public", "uploads");

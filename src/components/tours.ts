@@ -1,7 +1,7 @@
 import {
   TrendingUp, ShoppingBag, MessageCircle, Package, Tag, BadgePercent, ShoppingCart,
   Users, Star, Bell, Store, Settings, LayoutGrid, Wallet, BarChart2, CreditCard,
-  Eye, ArrowRight, MousePointerClick, SlidersHorizontal, Save, ExternalLink, Download,
+  Eye, ArrowRight, MousePointerClick, SlidersHorizontal, Save, ExternalLink,
 } from "lucide-react";
 
 export type Texto = { title: string; body: string };
@@ -33,24 +33,12 @@ export const GUION_PANEL: Guion = {
         title: "Panel principal",
         body: "El resumen de tu concesionaria: consultas recibidas, vehículos disponibles y la guía de configuración inicial.",
       },
-      DIGITAL: {
-        title: "Panel principal",
-        body: "El resumen de tu tienda: ventas, descargas entregadas y la guía de configuración inicial.",
-      },
     },
   },
   pedidos: {
     icon: ShoppingBag,
     title: "Pedidos",
     body: "Cuando un cliente compra, el pedido aparece acá. Lo confirmás, lo marcás como enviado y después como entregado.",
-    porTipo: {
-      // Acá no se marca "enviado" ni "entregado": no hay nada que despachar. Con
-      // Mercado Pago el archivo sale solo apenas se acredita el pago.
-      DIGITAL: {
-        title: "Pedidos",
-        body: "Cada compra aparece acá. Si cobrás con Mercado Pago, el archivo le llega solo al comprador apenas se acredita el pago — no tenés que hacer nada.",
-      },
-    },
   },
   consultas: {
     icon: MessageCircle,
@@ -66,20 +54,7 @@ export const GUION_PANEL: Guion = {
         title: "Tus vehículos",
         body: "Cargá autos, motos o camionetas con fotos, precio, ficha técnica y estado: Disponible, Reservado o Vendido.",
       },
-      // Sin CSV: la importación está bloqueada en este rubro porque una planilla
-      // no puede traer el archivo adentro. Ofrecerla sería mandarla a un error.
-      DIGITAL: {
-        title: "Tus productos",
-        body: "Cargá cada producto con sus fotos, su precio y el archivo que se descarga el comprador. Sin archivo no se puede publicar: sería vender algo que no se puede entregar.",
-      },
     },
-  },
-  /* Sólo existe en los rubros que entregan un archivo, así que no necesita
-     variante por tipo: si el botón no está, el paso se saltea solo. */
-  descargas: {
-    icon: Download,
-    title: "Descargas",
-    body: "Quién compró cada archivo, si ya lo bajó y cuántas veces. Si a alguien no le llegó el mail —suele caer en spam— desde acá le reenviás el link.",
   },
   cupones: {
     icon: Tag,
@@ -90,14 +65,6 @@ export const GUION_PANEL: Guion = {
     icon: BadgePercent,
     title: "Promociones",
     body: "Ofertas que se aplican solas en el carrito, sin que el cliente tenga que escribir ningún código: 2x1, descuentos por cantidad o por monto de compra.",
-    porTipo: {
-      // Sin 2x1 ni descuentos por cantidad: se vende de a una unidad, así que
-      // esas promos nunca se aplicarían. Tampoco envío gratis: no hay envío.
-      DIGITAL: {
-        title: "Promociones",
-        body: "Descuentos que se aplican solos en el carrito, sin que el cliente escriba ningún código. Podés aplicarlos a un producto, a una categoría o a toda la tienda, con fecha de inicio y de fin.",
-      },
-    },
   },
   "carritos-abandonados": {
     icon: ShoppingCart,
@@ -160,14 +127,6 @@ export const GUION_PANEL: Guion = {
       AUTOS: {
         title: "Legal y políticas",
         body: "Tus términos y condiciones y la política de devoluciones. Tus clientes las abren desde el pie de página del sitio.",
-      },
-      /* No hay envíos que configurar. Y acá va el aviso más importante de todo
-         el tour: sin Mercado Pago la entrega NO sale sola y tiene que mandar el
-         archivo a mano, cosa que conviene que sepa antes de publicar y no
-         después, con una compradora esperando un mail que no llega. */
-      DIGITAL: {
-        title: "Cómo cobrás",
-        body: "Conectá Mercado Pago acá. En tu rubro no es un detalle: es lo que hace que el archivo se entregue solo al acreditarse el pago. Con transferencia o efectivo vas a tener que mandarlo vos a mano.",
       },
     },
   },

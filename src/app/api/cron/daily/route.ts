@@ -228,7 +228,7 @@ export async function GET(req: NextRequest) {
     // confirmarse: el webhook solo toca las PENDING, así que borrar una viva
     // haría que un pago real no se registre nunca.
     const ago7d = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-    const [sessions, clicks, notifications, adminLogs, coupons, storeViews, oldCarts, staleDonations, chatSasha, descargasVencidas] = await Promise.all([
+    const [sessions, clicks, notifications, adminLogs, coupons, storeViews, oldCarts, staleDonations, chatSasha] = await Promise.all([
       prisma.session.deleteMany({ where: { expires: { lt: now } } }),
       prisma.affiliateClick.deleteMany({ where: { createdAt: { lt: ago90d } } }),
       prisma.notification.deleteMany({ where: { read: true, createdAt: { lt: ago30d } } }),
@@ -252,14 +252,8 @@ export async function GET(req: NextRequest) {
           NOT: { esAviso: true, leidoAt: null },
         },
       }),
-      // Permisos de descarga vencidos. Se borran 30 días DESPUÉS del vencimiento
-      // y no en el momento: mientras la fila existe, la dueña ve en el panel que
-      // ese comprador tuvo su link y cuántas veces lo bajó. Borrarla al vencer
-      // haría desaparecer la entrega del historial justo cuando es más probable
-      // que el comprador escriba para reclamarla.
-      prisma.digitalDownload.deleteMany({ where: { expiresAt: { lt: ago30d } } }),
     ]);
-    result.cleanup = { sessions: sessions.count, clicks: clicks.count, notifications: notifications.count, adminLogs: adminLogs.count, coupons: coupons.count, storeViews: storeViews.count, oldCarts: oldCarts.count, staleDonations: staleDonations.count, chatSasha: chatSasha.count, descargasVencidas: descargasVencidas.count };
+    result.cleanup = { sessions: sessions.count, clicks: clicks.count, notifications: notifications.count, adminLogs: adminLogs.count, coupons: coupons.count, storeViews: storeViews.count, oldCarts: oldCarts.count, staleDonations: staleDonations.count, chatSasha: chatSasha.count };
   }
 
   // ── 6. PREMIOS MENSUALES (solo día 1 del mes) ──────────────────────────────
