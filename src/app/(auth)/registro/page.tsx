@@ -842,7 +842,7 @@ function RegistroContent() {
                       {key === "owner"
                         ? `${money(PRICES.owner[step1Tier].MONTHLY)}/mes · 7 días gratis`
                         : key === "digital"
-                        ? "Gratis · Sin tarjeta · Comisión por venta"
+                        ? "Gratis · Sin tarjeta · Starter y Pro se prueban desde adentro"
                         : "Gratis · Sin tarjeta · Sin límite de tiempo"}
                     </p>
                   )}

@@ -143,11 +143,30 @@ function TarjetaDigital({ tier, isAnnual }: { tier: TierDigital; isAnnual: boole
         ))}
       </ul>
 
-      {/* La Fase 2 le pone el alta y el cobro de verdad. Hasta entonces no se
-          finge un botón que no lleva a ningún lado. */}
-      <button disabled className="w-full py-3.5 rounded-2xl text-sm font-bold bg-gray-100 text-gray-400 cursor-not-allowed">
-        Próximamente
-      </button>
+      {/* Al Free se entra YA, porque entrar es gratis: crea la cuenta y listo.
+
+          Starter y Pro siguen en "Próximamente" y no es por prudencia: a esos
+          dos NO se entra desde acá. Se prueban siete días desde adentro del
+          panel, que es lo que todavía no existe (Fase 3). Un botón que hoy
+          cobrara $30.000 antes de que la persona vea una sola pantalla estaría
+          vendiendo algo que no puede usar. */}
+      {gratis ? (
+        <Link
+          href="/registro?plan=digital"
+          className="flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl text-sm font-bold bg-gray-900 hover:bg-gray-800 text-white transition-all"
+        >
+          Crear cuenta gratis <ArrowRight className="h-4 w-4" />
+        </Link>
+      ) : (
+        <button disabled className="w-full py-3.5 rounded-2xl text-sm font-bold bg-gray-100 text-gray-400 cursor-not-allowed">
+          Próximamente
+        </button>
+      )}
+      {gratis && (
+        <p className="text-center text-xs text-gray-400 mt-3">
+          Después probás Starter o Pro 7 días desde tu panel
+        </p>
+      )}
     </div>
   );
 }
