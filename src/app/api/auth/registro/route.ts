@@ -67,15 +67,35 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    /* Ojo el default: cualquier valor desconocido cae en OWNER. Por eso
-       "digital" tiene que estar escrito acá — sin su rama, pedir una cuenta
-       digital creaba una cuenta de TIENDA, con su tienda vacía y su prueba de
-       7 días corriendo. */
-    const type =
-      accountType === "seller" ? "SELLER" :
-      accountType === "buyer" ? "BUYER" :
-      accountType === "digital" ? "DIGITAL" :
-      "OWNER";
+    /* El tipo de cuenta sale de una tabla y no de una cadena de ternarios.
+
+       El ternario que había acá terminaba en `: "OWNER"`, o sea que CUALQUIER
+       valor desconocido creaba una cuenta de tienda. Con tres tipos se notaba
+       poco; al sumar el cuarto, pedir una cuenta digital creaba una cuenta DE
+       TIENDA —con su tienda vacía y su prueba de 7 días corriendo— y sin ningún
+       error: la persona pedía una cosa y recibía otra.
+
+       El `hasOwnProperty` es por lo mismo que en `planDe`: `accountType` llega del
+       navegador, y sin él un valor como "constructor" devuelve algo heredado del
+       prototipo en vez de undefined.
+
+       Sin `accountType` sigue siendo OWNER, que es como se comportaba antes para
+       quien no lo manda. Lo que ya no pasa es que un valor equivocado se tome
+       por bueno. */
+    type TipoDeCuenta = "OWNER" | "SELLER" | "BUYER" | "DIGITAL";
+    const TIPOS_DE_CUENTA: Record<string, TipoDeCuenta> = {
+      owner: "OWNER",
+      seller: "SELLER",
+      buyer: "BUYER",
+      digital: "DIGITAL",
+    };
+    let type: TipoDeCuenta = "OWNER";
+    if (accountType !== undefined && accountType !== null) {
+      if (typeof accountType !== "string" || !Object.prototype.hasOwnProperty.call(TIPOS_DE_CUENTA, accountType)) {
+        return NextResponse.json({ error: "Tipo de cuenta inválido" }, { status: 400 });
+      }
+      type = TIPOS_DE_CUENTA[accountType];
+    }
     if (type === "DIGITAL" && !DIGITALES_ON) {
       return NextResponse.json({ error: "Las cuentas de Productos Digitales todavía no están disponibles." }, { status: 400 });
     }

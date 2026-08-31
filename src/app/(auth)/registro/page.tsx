@@ -464,6 +464,8 @@ function RegistroContent() {
                 ? "Tu tienda estará lista en segundos."
                 : accountType === "seller"
                 ? "Te mandamos al panel de vendedor."
+                : accountType === "digital"
+                ? "Arrancás en el plan Free, sin tarjeta."
                 : "Empezá a explorar tiendas ya."}
             </p>
 
