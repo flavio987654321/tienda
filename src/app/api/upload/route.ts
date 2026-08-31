@@ -6,6 +6,14 @@ import { fileTypeFromBuffer } from "file-type";
 import { medirImagen, avisoDeFotoChica } from "@/lib/medidas-imagen";
 import { getCurrentUser } from "@/lib/auth-session";
 import { checkRateLimit } from "@/lib/rate-limit";
+/* Cuánto puede guardarse el navegador el archivo. Se importa y NO se escribe de
+   nuevo acá: la subida directa de videos usa exactamente la misma, y dos copias
+   del mismo valor se separan solas — que es, textualmente, el bug que nos hizo
+   prometer videos de 50 MB. El porqué largo está en lib/subida-directa.
+   Ojo: esto vale para lo que se suba DE ACÁ EN MÁS. Lo que ya está arriba quedó
+   con "no-cache" grabado y se arregla con scripts/arreglar-cache-de-imagenes.mjs,
+   que se corre una sola vez. */
+import { CACHE_DE_UN_ANIO } from "@/lib/subida-directa";
 
 export const runtime = "nodejs";
 
@@ -139,6 +147,9 @@ async function uploadToSupabaseStorage(
       Authorization: `Bearer ${config.serviceRoleKey}`,
       "Content-Type": file.type,
       "x-upsert": "false",
+      // Ver CACHE_DE_UN_ANIO: sin esta línea Supabase sirve todo con "no-cache"
+      // y cada visita vuelve a bajar las fotos enteras.
+      "cache-control": CACHE_DE_UN_ANIO,
     },
     body: bytes,
   });

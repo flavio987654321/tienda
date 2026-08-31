@@ -86,6 +86,23 @@ export const EXTENSION_DE_VIDEO: Record<string, string> = {
   "video/ogg": "ogv",
 };
 
+/**
+ * Cuánto puede guardarse el navegador el archivo.
+ *
+ * Sin esto Supabase lo sirve con `Cache-Control: no-cache` —"no lo guardes,
+ * pedímelo de nuevo"— y el navegador obedece. Medido en la cuenta real: 264 MB
+ * guardados y 5,865 GB SERVIDOS en un mes. Las mismas fotos salieron unas 22
+ * veces. No se llenó el depósito, se pasó el reparto.
+ *
+ * En un video pesa el triple: es lo más grande que sirve el sitio, y sin caché
+ * se vuelve a bajar entero cada vez que alguien abre la ficha del producto.
+ *
+ * Un año es seguro porque la ruta la arma el servidor con la fecha en
+ * milisegundos y un uuid: una dirección NUNCA cambia de contenido. Cambiar el
+ * video sube otro archivo, con otro nombre.
+ */
+export const CACHE_DE_UN_ANIO = "public, max-age=31536000, immutable";
+
 /** Cuánto vive el permiso de subida. Alcanza de sobra para 50 MB por una
  *  conexión mala, y no deja un permiso dando vueltas medio día. */
 export const MINUTOS_DEL_PERMISO = 30;

@@ -31,7 +31,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   BUCKET_VIDEOS, MAX_VIDEO_MB, MAX_VIDEO_BYTES, VIDEO_PESADO_MB,
-  TIPOS_VIDEO, EXTENSION_DE_VIDEO,
+  TIPOS_VIDEO, EXTENSION_DE_VIDEO, CACHE_DE_UN_ANIO,
 } from "./subida-directa";
 
 const RAIZ = join(__dirname, "..", "..");
@@ -161,6 +161,61 @@ chequear(
   "y hay tope de permisos por persona",
   /checkRateLimit\(`firma-video:\$\{user\.id\}`/.test(firma),
   "cada permiso es una escritura habilitada en el storage"
+);
+
+console.log("\n5) Lo que se sube se puede guardar en el navegador");
+
+/* Esto no rompe nada y no se ve en pantalla: se ve en la factura. Sin la
+   cabecera, Supabase guarda el archivo con `cacheControl: "no-cache"` y el
+   navegador vuelve a bajarlo entero cada vez. Medido en la cuenta real: 264 MB
+   guardados y 5,865 GB servidos en un mes — las mismas fotos salieron unas 22
+   veces. Se pasó el reparto, no el depósito. */
+const arreglador = leer("scripts/arreglar-cache-de-imagenes.mjs");
+
+chequear(
+  "es un caché largo de verdad, no unos minutos",
+  /max-age=31536000/.test(CACHE_DE_UN_ANIO) && /immutable/.test(CACHE_DE_UN_ANIO),
+  CACHE_DE_UN_ANIO
+);
+chequear(
+  "y no dice lo contrario",
+  !/no-cache|no-store|max-age=0/.test(CACHE_DE_UN_ANIO),
+  CACHE_DE_UN_ANIO
+);
+chequear(
+  "la subida que pasa por el servidor la manda",
+  /"cache-control": CACHE_DE_UN_ANIO/.test(porServidor)
+);
+/* En un video pesa el triple: es lo más grande que sirve el sitio. Y como los
+   bytes no pasan por nuestro servidor, el navegador es el ÚNICO que puede
+   decirlo — si se cae de acá, no hay otro lugar donde ponerlo. */
+chequear(
+  "la subida directa del video también",
+  /"cache-control": CACHE_DE_UN_ANIO/.test(formulario)
+);
+chequear(
+  "los dos usan la MISMA constante, no dos copias",
+  /import \{ CACHE_DE_UN_ANIO \} from "@\/lib\/subida-directa"/.test(porServidor) &&
+    /CACHE_DE_UN_ANIO/.test(formulario) &&
+    !/const CACHE_DE_UN_ANIO =/.test(porServidor),
+  "dos copias del mismo valor se separan solas: es el bug que hizo prometer videos de 50 MB"
+);
+chequear(
+  "existe el script que arregla lo que ya estaba subido",
+  arreglador.length > 0 && /--aplicar/.test(arreglador),
+  "lo viejo se quedó con no-cache grabado y no se arregla solo"
+);
+/* Bajar y volver a subir 264 MB es barato una vez y caro tres. Y si se corta a
+   la mitad tiene que poder retomarse sin rehacer lo hecho. */
+chequear(
+  "y saltea lo que ya está bien, así se puede volver a correr",
+  /a\.meta\.cacheControl !== CACHE/.test(arreglador)
+);
+/* Una descarga cortada, subida con upsert, reemplazaría una foto sana por una
+   rota — y no habría forma de volver atrás. */
+chequear(
+  "y no pisa un archivo con una descarga incompleta",
+  /bytes\.byteLength !== meta\.size/.test(arreglador)
 );
 
 console.log(fallos === 0 ? "\n✓ todo bien\n" : `\n✗ ${fallos} falla(s)\n`);

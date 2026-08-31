@@ -16,7 +16,7 @@ import Image from "next/image";
 import { getStoreType, etiquetaCategoria, camposActivos, camposPropios, ejemploNombre, ejemploTags } from "@/lib/storeTypes";
 import { sugerirOpcion, opcionesIniciales, nombresDeOpciones, renombrarOpcion, agregarOpcion, quitarOpcion, estadoDelBuilder, opcionesQueNoEntranEnElBuilder, filasIncompletas, claveDeCombinacion, MAX_OPCIONES } from "@/lib/opcionSugerida";
 import { esOpcionDeColor } from "@/lib/opciones";
-import { MAX_VIDEO_MB, MAX_VIDEO_BYTES, VIDEO_PESADO_MB } from "@/lib/subida-directa";
+import { MAX_VIDEO_MB, MAX_VIDEO_BYTES, VIDEO_PESADO_MB, CACHE_DE_UN_ANIO } from "@/lib/subida-directa";
 import { calcMargin, calcVehicleCostTotal, formatFechaGasto } from "@/lib/margin";
 import StockHistoryPanel from "../StockHistoryPanel";
 import RichTextEditor from "@/components/RichTextEditor";
@@ -1066,7 +1066,13 @@ function ProductoFormPage() {
       // 2. Mandar los bytes a Supabase. Este pedido NO pasa por nosotros.
       const subida = await fetch(permiso.urlDeSubida as string, {
         method: "PUT",
-        headers: { "Content-Type": file.type },
+        headers: {
+          "Content-Type": file.type,
+          /* Sin esto el video queda guardado con "no-cache" y se vuelve a bajar
+             ENTERO cada vez que alguien abre la ficha. Como los bytes no pasan
+             por nuestro servidor, este es el único lugar donde se puede decir. */
+          "cache-control": CACHE_DE_UN_ANIO,
+        },
         body: file,
       });
       if (!subida.ok) {
