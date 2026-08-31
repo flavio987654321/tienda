@@ -4,15 +4,152 @@ import { useState, Suspense, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSearchParams } from "next/navigation";
-import { Check, ShoppingBag, Zap, Store, Star, ArrowRight, PartyPopper, ShoppingCart, Crown, Mail, X, BadgeCheck } from "lucide-react";
+import { Check, ShoppingBag, Zap, Store, Star, ArrowRight, ArrowLeft, PartyPopper, ShoppingCart, Crown, Mail, X, BadgeCheck, Download, Sparkles } from "lucide-react";
 import { SiteNav } from "@/components/SiteNav";
 import { SiteFooter } from "@/components/SiteFooter";
 import PaymentModal from "@/components/subscription/PaymentModal";
-import { PRICES, PRO_MAX_ACTIVE_COUPONS, PRO_MAX_LIVE_PROMOTIONS, PRO_MAX_AFFILIATES, PRO_MAX_PRODUCTS, MAX_PRODUCTS_POR_TIENDA, PUSH_CAMPAIGNS_PER_WEEK } from "@/lib/planLimits";
+import { PRICES, PRO_MAX_ACTIVE_COUPONS, PRO_MAX_LIVE_PROMOTIONS, PRO_MAX_AFFILIATES, PRO_MAX_PRODUCTS, MAX_PRODUCTS_POR_TIENDA, PUSH_CAMPAIGNS_PER_WEEK, PRECIOS_DIGITALES, COMISION_DIGITAL, TOPES_DIGITALES } from "@/lib/planLimits";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 function money(amount: number) {
   return new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(amount);
+}
+
+/* Se puede mergear sin que nadie lo vea. Mismo recurso que usó el intento
+   anterior: esconder un botón no cierra una URL, pero acá no hay URL nueva —
+   es una sección de una página que ya existe. */
+const DIGITALES_ON = process.env.NEXT_PUBLIC_DIGITALES_ENABLED === "1";
+
+type TierDigital = "FREE" | "STARTER" | "PRO";
+
+/* Las mismas filas para los tres planes, prendidas o apagadas según el tier. Una
+   lista por plan se desincroniza sola: se agrega una función arriba y queda sin
+   nombrar en los otros dos, que es como se termina prometiendo de más. */
+function featuresDigital(tier: TierDigital) {
+  const t = TOPES_DIGITALES[tier];
+  const pago = tier !== "FREE";
+  return [
+    { text: `${t.paginas} página${t.paginas === 1 ? "" : "s"} de venta`, on: true },
+    { text: `${t.bonos} bono${t.bonos === 1 ? "" : "s"} por producto`, on: true },
+    /* Sin upsells se nombra la función, no el número: "0 upsells por producto"
+       se lee como un error de programación y no como algo que no tenés. */
+    { text: t.upsells > 0 ? `${t.upsells} upsell${t.upsells === 1 ? "" : "s"} por producto` : "Upsells por producto", on: t.upsells > 0 },
+    { text: pago ? `${t.ebooksIA} ebooks escritos con IA por mes` : "Ebooks escritos con IA", on: pago },
+    { text: "Página de venta armada con IA", on: pago },
+    { text: "Textos y mails con IA", on: pago },
+    { text: "Sasha, la asistente", on: pago },
+    { text: "Pagos con transferencia", on: pago },
+    { text: "Entrega automática con token", on: true },
+    { text: "Descargas y estadísticas", on: true },
+    { text: "Ver carritos abandonados", on: true },
+    { text: "Mail automático de recuperación", on: tier === "PRO" },
+    { text: "Dominio propio", on: tier === "PRO" },
+  ];
+}
+
+const FAQ_TIENDAS = [
+  { q: "¿Necesito tarjeta de crédito para el período de prueba?", a: "No. Los 7 días de prueba son completamente gratis y no te pedimos datos de pago hasta que decides suscribirte." },
+  { q: "¿Qué es el subdominio incluido?", a: "Al crear tu tienda recibís automáticamente una URL del tipo tutienda.tiendaapps.com. Es gratis y funciona desde el primer día." },
+  { q: "¿Cómo funciona el dominio propio en Tienda Premium?", a: "Comprás tu dominio donde quieras (ej: Namecheap, GoDaddy) y lo conectás desde tu panel. Nosotros hacemos toda la configuración técnica automáticamente. El dominio es tuyo y lo renovás vos directamente, cuesta aproximadamente $9 USD/año." },
+  { q: "¿Puedo pasar de Tienda Pro a Tienda Premium?", a: "Sí, podés cambiar de plan en cualquier momento desde tu panel." },
+  { q: "¿Qué pasa si supero los 6 afiliados en Tienda Pro?", a: "No podés agregar más afiliados hasta renovar a Tienda Premium. Los afiliados existentes siguen funcionando." },
+  { q: "¿Qué pasa cuando vence mi suscripción?", a: "Te avisamos con anticipación. Tenés 4 días de gracia para renovar antes de que se limite el acceso." },
+];
+
+/* Las de Productos Digitales. Contestan lo que la tabla de planes no puede: qué
+   es una página de venta, cómo llega el archivo, y las dos cosas que conviene
+   saber ANTES de elegir plan y no después — que la comisión se suma a la de
+   Mercado Pago, y que con transferencia la entrega no sale sola. */
+const FAQ_DIGITAL = [
+  { q: "¿El plan Free tiene fecha de vencimiento?", a: "No. Es gratis para siempre y no te pedimos tarjeta. No pagás abono: nos llevamos una comisión sobre cada venta que hagas. Si no vendés, no pagás nada." },
+  { q: "¿Qué es una “página de venta”?", a: "Es la página donde se vende uno de tus productos: la foto, el texto, el precio, los bonos y el botón de compra. Va una por producto, así que cuando decimos “5 páginas de venta” queremos decir que podés tener 5 productos publicados." },
+  { q: "¿Cómo recibe el archivo el que me compra?", a: "Apenas se acredita el pago le llega un mail con un link privado y personal. Ese link vive 30 días y se puede usar hasta 5 veces, así que lo puede bajar en el celular y en la computadora sin problema. Desde tu panel ves quién lo descargó y quién todavía no, y podés reenviárselo." },
+  { q: "¿La comisión es lo único que me cobran por venta?", a: "No: nuestra comisión se suma a lo que Mercado Pago cobra por procesar el pago, que es aparte y va para ellos. Conviene tenerlo en cuenta al poner el precio de tu producto." },
+  { q: "¿Puedo cobrar por transferencia?", a: "Desde el plan Starter, sí. Pero tené en cuenta que con transferencia la entrega no es automática: como el pago no nos avisa solo, tenés que confirmarlo vos desde el panel y recién ahí le sale el mail con el link. Con Mercado Pago sale solo." },
+  { q: "¿Qué pasa si dejo de pagar el plan?", a: "No te cerramos nada ni perdés tus productos: volvés al plan Free. Se te apagan las funciones del plan pago y la comisión vuelve a la del Free, pero tu página y tus ventas siguen ahí." },
+  { q: "Ya tengo una tienda en TiendaApps, ¿puedo usar la misma cuenta?", a: "No. Cada cuenta es una sola cosa, así que para vender productos digitales necesitás registrarte con otro correo. Son dos negocios distintos y cada uno tiene su panel." },
+];
+
+const COPY_DIGITAL: Record<TierDigital, { nombre: string; bajada: string }> = {
+  FREE:    { nombre: "Free",    bajada: "Para validar tu primer producto." },
+  STARTER: { nombre: "Starter", bajada: "Para arrancar tu negocio digital con IA." },
+  PRO:     { nombre: "Pro",     bajada: "Para escalar: más volumen, recuperación y marca propia." },
+};
+
+/** Una de las tres tarjetas de adentro de Productos Digitales. */
+function TarjetaDigital({ tier, isAnnual }: { tier: TierDigital; isAnnual: boolean }) {
+  const esPro = tier === "PRO";
+  const gratis = tier === "FREE";
+  const precio = gratis
+    ? null
+    : tier === "PRO" ? PRECIOS_DIGITALES.DIGITAL_PRO : PRECIOS_DIGITALES.DIGITAL_STARTER;
+  const porMes = precio ? (isAnnual ? Math.round(precio.ANNUAL / 12) : precio.MONTHLY) : 0;
+
+  return (
+    /* Free en gris como la tarjeta de Cliente, los dos pagos en naranja como el
+       resto de la página. Sin esto, Free y Starter salían idénticos. */
+    <div className={`rounded-3xl p-8 flex flex-col ${
+      esPro ? "border-2 border-orange-400 bg-orange-50/40"
+        : gratis ? "border border-gray-200 bg-gray-50"
+        : "border border-orange-200 bg-orange-50/40"
+    }`}>
+      {esPro && (
+        <div className="inline-flex self-start items-center gap-1.5 rounded-full bg-orange-600 text-white text-xs font-black px-3 py-1 mb-3">
+          <Crown className="h-3.5 w-3.5" /> Más completo
+        </div>
+      )}
+      <h3 className="text-2xl font-black text-gray-950 mb-1">{COPY_DIGITAL[tier].nombre}</h3>
+      <p className="text-gray-500 text-sm mb-5">{COPY_DIGITAL[tier].bajada}</p>
+
+      <div className="mb-4">
+        {gratis ? (
+          <>
+            <span className="text-4xl font-black text-gray-950">Gratis</span>
+            <p className="text-xs text-gray-400 mt-1">Para siempre · Sin tarjeta</p>
+          </>
+        ) : (
+          <>
+            <div className="flex items-end gap-2">
+              <span className="text-4xl font-black text-gray-950">{money(porMes)}</span>
+              <span className="text-gray-500 text-sm mb-1.5">/mes</span>
+            </div>
+            {isAnnual && precio && (
+              <p className="text-xs text-gray-500 mt-1">
+                {money(precio.ANNUAL)} facturado anualmente
+                <span className="ml-2 text-teal-600 font-semibold">
+                  Ahorrás {money(precio.MONTHLY * 12 - precio.ANNUAL)}
+                </span>
+              </p>
+            )}
+          </>
+        )}
+      </div>
+
+      <div className={`rounded-xl px-4 py-2.5 mb-6 border ${gratis ? "border-gray-200 bg-white" : "border-orange-300 bg-orange-100/60"}`}>
+        <span className={`text-sm font-bold ${gratis ? "text-gray-700" : "text-orange-700"}`}>
+          Comisión {COMISION_DIGITAL[tier]}% por venta
+        </span>
+        {esPro && <span className="ml-2 text-xs text-orange-600 font-semibold">la más baja</span>}
+      </div>
+
+      <ul className="space-y-3 mb-8 flex-1">
+        {featuresDigital(tier).map((f) => (
+          <li key={f.text} className={`flex items-start gap-2.5 text-sm ${f.on ? "text-gray-600" : "text-gray-300"}`}>
+            {f.on
+              ? <Check className={`h-4 w-4 shrink-0 mt-0.5 ${gratis ? "text-teal-600" : "text-orange-500"}`} />
+              : <X className="h-4 w-4 text-gray-300 shrink-0 mt-0.5" />}
+            {f.text}
+          </li>
+        ))}
+      </ul>
+
+      {/* La Fase 2 le pone el alta y el cobro de verdad. Hasta entonces no se
+          finge un botón que no lleva a ningún lado. */}
+      <button disabled className="w-full py-3.5 rounded-2xl text-sm font-bold bg-gray-100 text-gray-400 cursor-not-allowed">
+        Próximamente
+      </button>
+    </div>
+  );
 }
 
 type Cotizacion = {
@@ -43,6 +180,9 @@ export default function PreciosPage() {
 function PreciosContent() {
   const [isAnnual, setIsAnnual] = useState(false);
   const [ownerTier, setOwnerTier] = useState<"BASIC" | "PREMIUM">("BASIC");
+  /* Productos Digitales no es una tarjeta más: al tocarla, las cuatro se
+     reemplazan por sus tres planes. Son dos vistas de la misma pantalla. */
+  const [verDigitales, setVerDigitales] = useState(false);
   const [payModal, setPayModal] = useState<{ plan: "OWNER_BASIC" | "OWNER_PREMIUM" | "AFFILIATE"; billing: "MONTHLY" | "ANNUAL" } | null>(null);
   // Precios ya calculados por el servidor, con el descuento por días no usados
   // aplicado. Vacío mientras carga o si no hay sesión: ahí se muestra el de lista.
@@ -170,8 +310,12 @@ function PreciosContent() {
     <div className="min-h-screen bg-white text-gray-950">
       <SiteNav active="precios" fixed />
 
+      {/* max-w-7xl y no 6xl: con la cuarta tarjeta la fila pasó a cuatro columnas
+          y a 6xl el selector "Tienda Pro / Tienda Premium" se partía en dos
+          renglones. El resto de la página no se estira porque el encabezado va
+          centrado y las preguntas frecuentes tienen su propio max-w-2xl. */}
       <div className="pt-32 pb-24 px-6">
-        <div className="max-w-6xl mx-auto">
+        <div className="max-w-7xl mx-auto">
 
           {/* Banner post-registro */}
           {isRegistered && (
@@ -243,10 +387,11 @@ function PreciosContent() {
           </div>
 
           {/* Cards */}
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {!verDigitales && (
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-5">
 
             {/* ── AFILIADO ── */}
-            <div className="rounded-3xl border border-amber-200 bg-amber-50/40 p-8 flex flex-col">
+            <div className="rounded-3xl border border-amber-200 bg-amber-50/40 p-6 xl:p-7 flex flex-col">
               <div className="text-xs font-bold text-amber-700 uppercase tracking-widest mb-3">Para vendedores independientes</div>
               <div className="w-12 h-12 rounded-2xl bg-amber-100 flex items-center justify-center mb-5">
                 <Zap className="h-6 w-6 text-amber-600" />
@@ -303,7 +448,7 @@ function PreciosContent() {
             </div>
 
             {/* ── DUEÑO DE TIENDA (con selector interno) ── */}
-            <div className="rounded-3xl border border-orange-200 bg-orange-50/40 p-8 flex flex-col ring-1 ring-orange-300 relative">
+            <div className="rounded-3xl border border-orange-200 bg-orange-50/40 p-6 xl:p-7 flex flex-col ring-1 ring-orange-300 relative">
               <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
                 <span className="bg-orange-600 text-white text-xs font-bold px-4 py-1.5 rounded-full shadow-lg shadow-orange-500/30">
                   Más popular
@@ -321,13 +466,13 @@ function PreciosContent() {
               <div className="flex rounded-xl border border-gray-200 bg-white p-1 gap-1 mb-5">
                 <button
                   onClick={() => setOwnerTier("BASIC")}
-                  className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${ownerTier === "BASIC" ? "bg-orange-600 text-white shadow" : "text-gray-500 hover:text-gray-900"}`}
+                  className={`flex-1 py-2 rounded-lg text-sm lg:text-xs font-bold whitespace-nowrap transition-all ${ownerTier === "BASIC" ? "bg-orange-600 text-white shadow" : "text-gray-500 hover:text-gray-900"}`}
                 >
                   Tienda Pro
                 </button>
                 <button
                   onClick={() => setOwnerTier("PREMIUM")}
-                  className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-1.5 ${ownerTier === "PREMIUM" ? "bg-amber-500 text-white shadow" : "text-gray-500 hover:text-gray-900"}`}
+                  className={`flex-1 py-2 rounded-lg text-sm lg:text-xs font-bold whitespace-nowrap transition-all flex items-center justify-center gap-1.5 ${ownerTier === "PREMIUM" ? "bg-amber-500 text-white shadow" : "text-gray-500 hover:text-gray-900"}`}
                 >
                   <Crown className="h-3.5 w-3.5" /> Tienda Premium
                 </button>
@@ -471,8 +616,12 @@ function PreciosContent() {
               </p>
             </div>
 
-            {/* ── CLIENTE ── */}
-            <div className="rounded-3xl border border-gray-200 bg-gray-50 p-8 flex flex-col md:col-span-2 md:w-1/2 md:mx-auto lg:col-span-1 lg:w-auto lg:mx-0">
+            {/* ── CLIENTE ──
+                Antes tenía `md:col-span-2 md:w-1/2 md:mx-auto` para centrarse:
+                con tres tarjetas en una grilla de dos columnas quedaba huérfana
+                abajo. Con cuatro son 2×2 y no sobra ninguna, así que el centrado
+                se sacó — dejarlo la dejaba flotando en el medio de su fila. */}
+            <div className="rounded-3xl border border-gray-200 bg-gray-50 p-6 xl:p-7 flex flex-col">
               <div className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Para compradores</div>
               <div className="w-12 h-12 rounded-2xl bg-gray-200/60 flex items-center justify-center mb-5">
                 <ShoppingCart className="h-6 w-6 text-gray-500" />
@@ -506,20 +655,107 @@ function PreciosContent() {
               )}
               <p className="text-center text-xs text-gray-400 mt-3">Sin tarjeta · Sin límite de tiempo</p>
             </div>
-          </div>
 
-          {/* FAQ */}
+            {DIGITALES_ON && (
+            /* ── PRODUCTOS DIGITALES ──
+                No abre otra pantalla: al tocarla, las cuatro tarjetas se
+                reemplazan por sus tres planes, en el mismo lugar y con el mismo
+                interruptor Mensual/Anual de arriba.
+
+                Se dice "páginas de venta" y NUNCA "tiendas": la competencia
+                vende una tienda por subdominio y nosotros vendemos productos con
+                su página. Ver ECOSISTEMA-DIGITALES.md, punto 2.3. */
+            <div className="rounded-3xl border border-orange-200 bg-orange-50/40 p-6 xl:p-7 flex flex-col">
+              <div className="text-xs font-bold text-orange-700 uppercase tracking-widest mb-3">Para vender archivos</div>
+              <div className="w-12 h-12 rounded-2xl bg-orange-100 flex items-center justify-center mb-5">
+                <Download className="h-6 w-6 text-orange-600" />
+              </div>
+              <div className="flex items-center gap-2 mb-1 flex-wrap">
+                <h2 className="text-2xl font-black text-gray-950">Productos Digitales</h2>
+                <span className="inline-flex items-center gap-1 rounded-full bg-orange-600 text-white text-[10px] font-black px-2 py-0.5">
+                  <Sparkles className="h-3 w-3" /> Nuevo
+                </span>
+              </div>
+              <p className="text-gray-500 text-sm mb-6">Vendé ebooks, plantillas y guías con entrega automática y páginas armadas con IA.</p>
+
+              <div className="mb-2">
+                <span className="text-4xl font-black text-gray-950">Gratis</span>
+                <p className="text-xs text-gray-400 mt-1">
+                  Desde $0 · Comisión desde {COMISION_DIGITAL.PRO}% por venta
+                </p>
+              </div>
+
+              <div className="h-px bg-orange-200/70 my-6" />
+
+              <ul className="space-y-3 mb-8 flex-1">
+                {["Entrega automática al pagar", "La IA te arma la página de venta", "La IA te escribe el ebook", "Bonos y upsells por producto", "Cobrás con Mercado Pago"].map((f) => (
+                  <li key={f} className="flex items-start gap-2.5 text-sm text-gray-600">
+                    <Check className="h-4 w-4 text-orange-500 shrink-0 mt-0.5" />
+                    {f}
+                  </li>
+                ))}
+              </ul>
+
+              <button
+                onClick={() => setVerDigitales(true)}
+                className="flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl text-sm font-bold bg-orange-600 hover:bg-orange-700 text-white transition-all"
+              >
+                Ver los planes <ArrowRight className="h-4 w-4" />
+              </button>
+              <p className="text-center text-xs text-gray-400 mt-3">3 planes · Empezá gratis</p>
+            </div>
+            )}
+          </div>
+          )}
+
+          {/* ── LOS TRES PLANES DE PRODUCTOS DIGITALES ──
+              Reemplaza a la fila de cuatro, no se agrega abajo. */}
+          {DIGITALES_ON && verDigitales && (
+            <div>
+              <button
+                onClick={() => setVerDigitales(false)}
+                className="inline-flex items-center gap-2 text-sm font-semibold text-gray-500 hover:text-gray-900 mb-6"
+              >
+                <ArrowLeft className="h-4 w-4" /> Volver a todos los planes
+              </button>
+
+              <div className="flex flex-wrap items-center gap-3 mb-2">
+                <div className="w-12 h-12 rounded-2xl bg-orange-100 flex items-center justify-center shrink-0">
+                  <Download className="h-6 w-6 text-orange-600" />
+                </div>
+                <h2 className="text-3xl font-black text-gray-950">Productos Digitales</h2>
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-orange-600 text-white text-xs font-black px-3 py-1">
+                  <Sparkles className="h-3.5 w-3.5" /> Nuevo
+                </span>
+              </div>
+              <p className="text-gray-500 text-sm mb-8 max-w-2xl">
+                Vendé ebooks, plantillas y guías con entrega automática. La IA te arma la
+                página de venta y te escribe el producto.
+              </p>
+
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <TarjetaDigital tier="FREE" isAnnual={isAnnual} />
+                <TarjetaDigital tier="STARTER" isAnnual={isAnnual} />
+                <TarjetaDigital tier="PRO" isAnnual={isAnnual} />
+              </div>
+
+              <p className="text-xs text-gray-400 mt-6 max-w-3xl">
+                La comisión por venta se retiene junto con el cobro de Mercado Pago y se
+                suma a lo que Mercado Pago cobra por procesar el pago. Sólo se aplica a las
+                ventas cobradas online: con transferencia o efectivo no pasa por nosotros,
+                y la entrega del archivo la confirmás vos.
+              </p>
+            </div>
+          )}
+
+          {/* FAQ — cambia con la vista.
+              Al que está mirando los planes digitales no le sirve leer sobre el
+              dominio propio de Tienda Premium ni sobre el tope de afiliados: son
+              de otro producto. Cada vista muestra sus propias preguntas. */}
           <div className="mt-20 max-w-2xl mx-auto">
             <h2 className="text-2xl font-black text-center mb-8 text-gray-950">Preguntas frecuentes</h2>
             <div className="space-y-4">
-              {[
-                { q: "¿Necesito tarjeta de crédito para el período de prueba?", a: "No. Los 7 días de prueba son completamente gratis y no te pedimos datos de pago hasta que decides suscribirte." },
-                { q: "¿Qué es el subdominio incluido?", a: "Al crear tu tienda recibís automáticamente una URL del tipo tutienda.tiendaapps.com. Es gratis y funciona desde el primer día." },
-                { q: "¿Cómo funciona el dominio propio en Tienda Premium?", a: "Comprás tu dominio donde quieras (ej: Namecheap, GoDaddy) y lo conectás desde tu panel. Nosotros hacemos toda la configuración técnica automáticamente. El dominio es tuyo y lo renovás vos directamente, cuesta aproximadamente $9 USD/año." },
-                { q: "¿Puedo pasar de Tienda Pro a Tienda Premium?", a: "Sí, podés cambiar de plan en cualquier momento desde tu panel." },
-                { q: "¿Qué pasa si supero los 6 afiliados en Tienda Pro?", a: "No podés agregar más afiliados hasta renovar a Tienda Premium. Los afiliados existentes siguen funcionando." },
-                { q: "¿Qué pasa cuando vence mi suscripción?", a: "Te avisamos con anticipación. Tenés 4 días de gracia para renovar antes de que se limite el acceso." },
-              ].map(({ q, a }) => (
+              {(verDigitales ? FAQ_DIGITAL : FAQ_TIENDAS).map(({ q, a }) => (
                 <div key={q} className="rounded-2xl border border-gray-100 bg-gray-50 p-5">
                   <p className="text-sm font-semibold text-gray-900 mb-2">{q}</p>
                   <p className="text-sm text-gray-500">{a}</p>

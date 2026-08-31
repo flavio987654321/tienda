@@ -99,3 +99,79 @@ export const livePromotionsWhere = (storeId: string, now = new Date()): Prisma.S
   archivedAt: null,
   OR: [{ endsAt: null }, { endsAt: { gt: now } }],
 });
+
+/* ══════════════════════════════════════════════════════════════════════════
+   PRODUCTOS DIGITALES — el cuarto ecosistema
+   Ver ECOSISTEMA-DIGITALES.md
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/**
+ * Los abonos de Productos Digitales, en pesos.
+ *
+ * Viven en su propia constante y no adentro de `PRICES` porque son otra familia
+ * de planes: `PRICES` lo consume `getPriceForRole`, que sólo entiende de OWNER y
+ * AFFILIATE. Separarlos evita tener que tocar esa función para agregar un
+ * ecosistema.
+ *
+ * El anual es −25%, el mismo descuento que Tienda Pro.
+ *
+ * ⚠️ **SE COBRA EN PESOS PERO SE GASTA EN DÓLARES — hay que revisarlos.**
+ *
+ * Estuvieron un rato listados en dólares (US$20 y US$40) justamente por esto, y
+ * el 31/08 se decidió pasarlos a pesos: el cliente es un vendedor argentino que
+ * paga con tarjeta argentina, y un cobro en dólares desde el exterior le suma
+ * percepciones impositivas que encarecen el producto sin que nosotros veamos un
+ * peso de esa diferencia.
+ *
+ * El costo, en cambio, **sigue siendo en dólares** (Anthropic por la IA, Supabase
+ * por el egress, Vercel). Con el ebook a US$3 de API:
+ *
+ *   - Starter ($30.000, 2 ebooks = US$6) se da vuelta con el dólar a ~$15.000.
+ *   - Pro ($60.000, 5 ebooks = US$15) se da vuelta con el dólar a **~$4.000**,
+ *     y a ~$3.000 si el ebook sale US$4.
+ *
+ * **Pro es el que se da vuelta primero y por lejos**, porque es el que más IA
+ * regala. Si el dólar se mueve fuerte y estos números no, el plan caro pasa a
+ * perder plata en silencio. Los topes de `TOPES_DIGITALES` son la otra palanca.
+ */
+export const PRECIOS_DIGITALES = {
+  DIGITAL_STARTER: { MONTHLY: 30000, ANNUAL: 270000 },
+  DIGITAL_PRO:     { MONTHLY: 60000, ANNUAL: 540000 },
+} as const;
+
+/**
+ * La comisión que retiene la plataforma por venta, en por ciento.
+ *
+ * No es infraestructura nueva: `marketplace_fee` ya viaja en cada preferencia de
+ * Mercado Pago (`lib/mp.ts`) llevando la comisión del afiliado. Esto se suma a
+ * ese número.
+ *
+ * ⚠️ Sólo funciona con Mercado Pago. Con transferencia y efectivo no pasa un peso
+ * por la plataforma, así que no hay nada que retener — por eso el plan Free no
+ * lleva transferencia: se saltearía la comisión entera.
+ */
+export const COMISION_DIGITAL = {
+  FREE: 8,
+  STARTER: 6,
+  PRO: 2,
+} as const;
+
+/**
+ * Los topes de cada plan.
+ *
+ * `paginas` son productos: cada producto digital tiene su propia página de venta,
+ * así que son el mismo número. **En la pantalla se dice "páginas de venta" y
+ * nunca "tiendas"** — la competencia vende tiendas (una por subdominio) y
+ * nosotros no, y prometer lo de ellos sería mentir.
+ *
+ * `ebooksIA` es el único tope que responde a un costo real: un ebook generado
+ * cuesta entre US$2 y US$4 de API. Los otros tres son comerciales.
+ */
+export const TOPES_DIGITALES = {
+  /* Free va con `upsells: 0` y no con `null`: es un tope, no una ausencia. La
+     pantalla lo dibuja tachado y sin el número — "0 upsells por producto" se lee
+     como un error de programación, no como una función que no tenés. */
+  FREE:    { paginas: 1,  bonos: 1, upsells: 0, ebooksIA: 0 },
+  STARTER: { paginas: 5,  bonos: 3, upsells: 1, ebooksIA: 2 },
+  PRO:     { paginas: 25, bonos: 5, upsells: 3, ebooksIA: 5 },
+} as const;
