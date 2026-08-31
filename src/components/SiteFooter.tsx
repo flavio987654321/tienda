@@ -38,9 +38,13 @@ const AFILIADOS = [
    su lugar natural — y de paso es la puerta para el que todavía no tiene
    cuenta y está averiguando cómo funciona. */
 const AYUDA_Y_LEGAL = [
-  { href: "/ayuda",      label: "Centro de ayuda" },
-  { href: "/terminos",   label: "Términos y condiciones" },
-  { href: "/privacidad", label: "Política de privacidad" },
+  { href: "/ayuda",           label: "Centro de ayuda" },
+  { href: "/terminos",        label: "Términos y condiciones" },
+  { href: "/privacidad",      label: "Política de privacidad" },
+  /* El botón de arrepentimiento (Resolución 424/2020) tiene que estar accesible
+     desde la primera pantalla y sin registro. El pie está en todas las páginas
+     públicas, así que desde acá se llega desde cualquiera. */
+  { href: "/arrepentimiento", label: "Botón de arrepentimiento" },
 ];
 
 export function SiteFooter() {

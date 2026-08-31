@@ -190,6 +190,62 @@ exactamente lo mismo. Eran tres copias de la regla y una sola funcionaba.
   `commissionRate` —el porcentaje que la tienda le paga a sus afiliadas— y
   `ownerId`.
 
+## 9. El botón de arrepentimiento (31/08/2026)
+
+La **Resolución 424/2020** de la Secretaría de Comercio Interior obliga a todo
+sitio de venta online a tener un botón que esté **en la primera pantalla**, sin
+registro, que permita **iniciar** la revocación de la compra, y que entregue una
+**constancia con número**.
+
+Lo que había era el derecho **explicado**: los 10 días del art. 34 estaban
+escritos en las políticas de cada tienda y en `/terminos`. Lo que faltaba era por
+dónde ejercerlo — hasta acá, escribirle al comercio y esperar.
+
+### Dónde está
+
+- **En cada tienda**: una quinta solapa de `/tienda/<slug>/politicas`. No es un
+  documento: es un formulario, está siempre, y no se puede apagar.
+- **En TiendaApps**: `/arrepentimiento`, linkeada desde el pie del sitio. La
+  plataforma también vende —las suscripciones— así que le corresponde igual. Sin
+  eso sería el único negocio del sitio sin botón.
+
+### Por qué vive adentro de la página legal y no en una ruta propia
+
+Los pies de las once plantillas ya linkean ahí, y **arman el link ellos**:
+`/tienda/<slug>/politicas?tipo=<clave>`. Como una solapa más, los once lo
+muestran **sin tocar ni un template**. Una ruta aparte habría obligado a editar
+once archivos para agregar un link: once oportunidades de olvidarse de uno, y ese
+uno sería una tienda incumpliendo.
+
+### Las tres decisiones que no se ven
+
+- **El motivo NO es obligatorio.** Está a un asterisco de distancia y parece una
+  mejora. Pero el art. 34 dice *sin necesidad de justificar el motivo*: pedirlo
+  contradiría, en el formulario, lo que la política de la misma tienda promete
+  dos solapas más allá.
+- **No pide sesión.** La resolución exige que se pueda usar sin registrarse, y
+  quien compró como invitado tiene el mismo derecho. Por eso la ruta va
+  protegida como lo que es —una puerta abierta a internet— con tope por IP y
+  captcha, y el captcha se verifica **después** de validar los campos: el token
+  es de un solo uso y gastarlo antes obliga a resolverlo de nuevo para corregir
+  una letra.
+- **Si el mail falla, la solicitud igual queda registrada.** El número guardado
+  con su fecha es lo que vale ante un reclamo. Un error de correo no puede
+  convertirse en un "no se registró" en la cara de alguien con un plazo
+  corriendo. Lo mismo con un slug que no existe: se toma igual, contra la
+  plataforma, y alguien la lee.
+
+### Lo que NO hace
+
+No resuelve nada ni decide nada: **guarda un pedido**. Qué se devuelve y cómo se
+arregla entre la persona y quien le vendió. La plataforma deja constancia de que
+la solicitud entró, cuándo y con qué número — que es lo que sirve si después hay
+reclamo.
+
+Por ahora se avisa **sólo por mail**: uno a quien vende y otro con la constancia
+a quien se arrepintió. El listado en el panel viene después; el dato se guarda
+desde el primer día para que ese listado no arranque sin historia.
+
 ### Lo que sigue abierto
 
 - **No hay ninguna tienda de autos en la base**, así que ese camino legal está

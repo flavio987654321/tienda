@@ -123,7 +123,10 @@ chequear(
 );
 chequear(
   "es un bucket propio y no el de las fotos",
-  BUCKET_VIDEOS !== "product-images" && /id: BUCKET_VIDEOS/.test(firma),
+  // El `as string` es para que TypeScript compare de verdad en vez de decidir
+  // solo —la constante es un literal— que dos textos distintos nunca son
+  // iguales. Justamente lo que se quiere vigilar es que alguien la CAMBIE.
+  (BUCKET_VIDEOS as string) !== "product-images" && /id: BUCKET_VIDEOS/.test(firma),
   "tocarle la config al bucket del que dependen todas las fotos, para arreglar los videos, es cambiarle el motor a un auto andando"
 );
 chequear(

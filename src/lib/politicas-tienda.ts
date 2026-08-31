@@ -28,6 +28,25 @@ export const CLAVES_LEGALES = ["devoluciones", "envios", "terminos", "privacidad
 export type ClaveLegal = (typeof CLAVES_LEGALES)[number];
 
 /**
+ * La quinta solapa, que NO es un documento.
+ *
+ * El botón de arrepentimiento que exige la Resolución 424/2020 no es un texto
+ * que la dueña escribe y decide si publicar: es un formulario, está siempre, y
+ * no se puede apagar. Por eso vive fuera de `CLAVES_LEGALES` —esa lista es la
+ * de las columnas de la base— y se suma aparte donde hace falta.
+ *
+ * ── Por qué acá y no en una ruta propia ──────────────────────────────────────
+ *
+ * Los pies de las once plantillas ya linkean a esta página, y **arman el link
+ * ellos**: `/tienda/<slug>/politicas?tipo=<clave>`. Metiéndolo como una solapa
+ * más, los once lo muestran sin tocar ni uno. Una ruta aparte habría obligado a
+ * editar once archivos para agregar un link — once oportunidades de olvidarse de
+ * uno, y ese uno sería una tienda sin botón, que es la que incumple.
+ */
+export const CLAVE_ARREPENTIMIENTO = "arrepentimiento";
+export type ClaveDePagina = ClaveLegal | typeof CLAVE_ARREPENTIMIENTO;
+
+/**
  * Cuánto texto se guarda por política.
  *
  * Eran 2000 y quedaban cortos: unos términos y condiciones de verdad —con
@@ -70,8 +89,11 @@ const CAMPO: Record<ClaveLegal, { texto: keyof FilaPoliticas; activa: keyof Fila
  * prometerle al comprador algo que no existe. Los nombres son los mismos que
  * usa el panel, para que el dueño reconozca en su tienda lo que escribió.
  */
-export function titulosLegales(esAutos: boolean): Record<ClaveLegal, { corto: string; largo: string }> {
+export function titulosLegales(esAutos: boolean): Record<ClaveDePagina, { corto: string; largo: string }> {
   return {
+    // Se llama igual en todos los rubros: es el nombre que le puso la
+    // resolución, y cambiárselo haría que no se reconozca.
+    [CLAVE_ARREPENTIMIENTO]: { corto: "Arrepentimiento", largo: "Botón de arrepentimiento" },
     devoluciones: esAutos
       ? { corto: "Operación", largo: "Condiciones de la operación" }
       : { corto: "Devoluciones", largo: "Política de devoluciones y cambios" },
@@ -134,9 +156,16 @@ export function linksLegales(
   slug: string | undefined,
   publicadas: ClaveLegal[] | undefined,
   opciones: { esAutos?: boolean; enEditor?: boolean; cortos?: boolean } = {}
-): { clave: ClaveLegal; label: string; href: string }[] {
+): { clave: ClaveDePagina; label: string; href: string }[] {
   const titulos = titulosLegales(!!opciones.esAutos);
-  const visibles = opciones.enEditor ? [...CLAVES_LEGALES] : (publicadas ?? []);
+  /* El arrepentimiento va SIEMPRE y va último. Siempre, porque no depende de que
+     la dueña haya escrito nada —es un formulario, no un texto— y porque la
+     resolución no lo hace opcional. Último, porque los otros cuatro son lo que
+     alguien viene a leer antes de comprar y este es lo que viene a usar después. */
+  const visibles: ClaveDePagina[] = [
+    ...(opciones.enEditor ? [...CLAVES_LEGALES] : (publicadas ?? [])),
+    CLAVE_ARREPENTIMIENTO,
+  ];
   return visibles.map((clave) => ({
     clave,
     // Algunos pies son de una sola línea y no entran cuatro nombres largos.

@@ -5,8 +5,10 @@ import { ArrowLeft, ShoppingBag } from "lucide-react";
 import type { Metadata } from "next";
 import {
   documentosPublicados, titulosLegales, textoPublicado,
-  type ClaveLegal,
+  CLAVE_ARREPENTIMIENTO,
+  type ClaveLegal, type ClaveDePagina,
 } from "@/lib/politicas-tienda";
+import ArrepentimientoForm from "@/components/ArrepentimientoForm";
 
 export const dynamic = "force-dynamic";
 
@@ -87,9 +89,17 @@ export default async function PoliticasPage({ params, searchParams }: Props) {
   // miraba solo si había texto y el interruptor "Oculta" del panel no hacía nada.
   const publicadas = documentosPublicados(store);
 
-  const pedida = publicadas.includes(tipo as ClaveLegal) ? (tipo as ClaveLegal) : undefined;
-  const activa = pedida ?? publicadas[0];
-  const contenido = activa ? textoPublicado(store, activa) : null;
+  /* Las solapas que se ven. El arrepentimiento va SIEMPRE y va último: no
+     depende de que la dueña haya escrito nada —es un formulario, no un texto— y
+     la Resolución 424/2020 no lo hace opcional. Los otros cuatro son lo que
+     alguien viene a leer antes de comprar; este es lo que viene a usar después. */
+  const solapas: ClaveDePagina[] = [...publicadas, CLAVE_ARREPENTIMIENTO];
+
+  const pedida = solapas.includes(tipo as ClaveDePagina) ? (tipo as ClaveDePagina) : undefined;
+  const activa = pedida ?? solapas[0];
+  const esArrepentimiento = activa === CLAVE_ARREPENTIMIENTO;
+  const contenido =
+    activa && !esArrepentimiento ? textoPublicado(store, activa as ClaveLegal) : null;
 
   const actualizada = store.policiesUpdatedAt
     ? store.policiesUpdatedAt.toLocaleDateString("es-AR", FECHA_LARGA)
@@ -131,7 +141,7 @@ export default async function PoliticasPage({ params, searchParams }: Props) {
         </header>
 
         <div className="mt-10 gap-12 lg:grid lg:grid-cols-[210px_minmax(0,1fr)] lg:items-start">
-          {publicadas.length > 0 && (
+          {solapas.length > 0 && (
             <nav
               aria-label="Documentos"
               className="mb-10 border-b border-slate-200 pb-6 lg:sticky lg:top-24 lg:mb-0 lg:border-b-0 lg:pb-0"
@@ -140,7 +150,7 @@ export default async function PoliticasPage({ params, searchParams }: Props) {
                 Documentos
               </p>
               <ul className="flex flex-wrap gap-x-6 gap-y-2 lg:block lg:space-y-1">
-                {publicadas.map((clave) => {
+                {solapas.map((clave) => {
                   const esActiva = clave === activa;
                   return (
                     <li key={clave}>
@@ -164,7 +174,19 @@ export default async function PoliticasPage({ params, searchParams }: Props) {
           )}
 
           <article className="min-w-0">
-            {activa && contenido ? (
+            {esArrepentimiento ? (
+              <>
+                <h2 className="text-xl font-bold tracking-tight sm:text-2xl">
+                  {titulos[CLAVE_ARREPENTIMIENTO].largo}
+                </h2>
+                <p className="mt-2 max-w-[68ch] text-sm leading-relaxed text-slate-500">
+                  Para dar marcha atrás con una compra que hiciste en {store.name}.
+                </p>
+                <div className="mt-6">
+                  <ArrepentimientoForm slug={slug} nombreDeQuienVende={store.name} accent={acc} />
+                </div>
+              </>
+            ) : activa && contenido ? (
               <>
                 <h2 className="text-xl font-bold tracking-tight sm:text-2xl">{titulos[activa].largo}</h2>
                 <div className="mt-6 max-w-[68ch] space-y-4">

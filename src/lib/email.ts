@@ -2341,3 +2341,149 @@ export async function sendNewsletterCampanaEmail({
     `,
   });
 }
+
+/* ── Arrepentimiento (Resolución 424/2020) ────────────────────────────────────
+ *
+ * Salen DOS mails y los dos importan, por motivos distintos:
+ *
+ *   · A quien vende, para que se entere. Sin esto la solicitud queda esperando
+ *     en una base que nadie mira, y del otro lado hay un plazo corriendo.
+ *   · A quien se arrepintió, porque **la constancia es la parte que exige la
+ *     resolución**. Un botón que toma el pedido y no devuelve nada deja a la
+ *     persona sin con qué demostrar que lo pidió, que es justo para lo que
+ *     sirve.
+ *
+ * Van los dos en un `Promise.allSettled` y no en cadena: si el mail a la tienda
+ * falla —una casilla mal escrita, por ejemplo— la persona igual tiene que
+ * recibir su constancia. El que falle se registra.
+ */
+export async function sendArrepentimientoEmails({
+  numero,
+  fecha,
+  nombre,
+  email,
+  telefono,
+  referencia,
+  motivo,
+  tienda,
+}: {
+  numero: string;
+  fecha: Date;
+  nombre: string;
+  email: string;
+  telefono?: string;
+  referencia: string;
+  motivo?: string;
+  /** Null = la solicitud es contra TiendaApps, no contra una tienda. */
+  tienda: { nombre: string; email: string } | null;
+}) {
+  if (!process.env.RESEND_API_KEY) return;
+
+  const cuando = fecha.toLocaleString("es-AR", {
+    day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit",
+  });
+  const destinatario = tienda?.nombre ?? "TiendaApps";
+  const paraQuienVende = tienda?.email ?? process.env.ADMIN_EMAIL;
+
+  const datos = `
+    <table style="width:100%;margin-bottom:20px;font-size:14px;">
+      <tr><td style="color:#6b7280;padding:4px 0;width:120px;">Constancia</td><td style="font-weight:700;font-family:monospace;">${escapeHtml(numero)}</td></tr>
+      <tr><td style="color:#6b7280;padding:4px 0;">Fecha</td><td>${escapeHtml(cuando)}</td></tr>
+      <tr><td style="color:#6b7280;padding:4px 0;">Nombre</td><td style="font-weight:600;">${escapeHtml(nombre)}</td></tr>
+      <tr><td style="color:#6b7280;padding:4px 0;">Email</td><td><a href="mailto:${escapeHtml(email)}" style="color:#4f46e5;">${escapeHtml(email)}</a></td></tr>
+      ${telefono ? `<tr><td style="color:#6b7280;padding:4px 0;">Teléfono</td><td>${escapeHtml(telefono)}</td></tr>` : ""}
+      <tr><td style="color:#6b7280;padding:4px 0;">Su compra</td><td>${escapeHtml(referencia)}</td></tr>
+    </table>
+    ${motivo ? `<div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:16px;font-size:14px;line-height:1.6;color:#374151;white-space:pre-wrap;">${escapeHtml(motivo)}</div>` : ""}
+  `;
+
+  const resultados = await Promise.allSettled([
+    /* 1. A quien vende. Con `replyTo` a la persona, para que contestar el mail
+       sea contestarle a ella y no haga falta copiar la dirección a mano. */
+    paraQuienVende
+      ? transporter.sendMail({
+          from: `"TiendaApps" <${FROM_ADDRESS}>`,
+          to: paraQuienVende,
+          replyTo: email,
+          subject: `⚠️ Arrepentimiento de compra — constancia ${numero}`,
+          html: `
+      <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 16px;color:#111827;">
+        <div style="background:#b45309;border-radius:12px;padding:24px;margin-bottom:24px;">
+          <p style="color:rgba(255,255,255,0.75);font-size:13px;margin:0 0 4px;">Solicitud de arrepentimiento</p>
+          <h1 style="color:#fff;font-size:20px;margin:0;font-weight:700;">Alguien quiere dar marcha atrás con su compra</h1>
+        </div>
+        <p style="color:#374151;font-size:15px;margin-bottom:20px;">
+          Se recibió por el botón de arrepentimiento de <strong>${escapeHtml(destinatario)}</strong>.
+        </p>
+        ${datos}
+        <div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:12px;padding:16px;margin:20px 0;">
+          <p style="font-size:14px;color:#92400e;margin:0;">
+            <strong>Es un derecho, no un pedido de favor.</strong> La Ley 24.240 (art. 34) le da
+            10 días corridos para arrepentirse sin tener que justificar por qué, y el reintegro
+            va sin descuentos. Contestale cuanto antes: respondiendo este mail le escribís directo.
+          </p>
+        </div>
+        <p style="color:#9ca3af;font-size:12px;text-align:center;margin-top:24px;">
+          Este mail se generó automáticamente · TiendaApps
+        </p>
+      </div>
+          `,
+        })
+      : Promise.resolve(),
+
+    /* 2. La constancia, a quien se arrepintió. Es la parte que pide la
+       resolución: sin número entregado, el botón no cumple. */
+    transporter.sendMail({
+      from: `"TiendaApps" <${FROM_ADDRESS}>`,
+      to: email,
+      subject: `Tu constancia de arrepentimiento — ${numero}`,
+      html: `
+      <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 16px;color:#111827;">
+        <div style="background:#4f46e5;border-radius:12px;padding:24px;margin-bottom:24px;text-align:center;">
+          <p style="color:rgba(255,255,255,0.75);font-size:13px;margin:0 0 8px;">Constancia de arrepentimiento</p>
+          <p style="color:#fff;font-size:28px;margin:0;font-weight:800;font-family:monospace;letter-spacing:2px;">${escapeHtml(numero)}</p>
+        </div>
+
+        <p style="color:#374151;font-size:15px;margin-bottom:8px;">Hola <strong>${escapeHtml(nombre)}</strong>,</p>
+        <p style="color:#374151;font-size:15px;margin-bottom:20px;">
+          Recibimos tu solicitud de arrepentimiento sobre tu compra en
+          <strong>${escapeHtml(destinatario)}</strong>. Guardá este número: es la constancia de
+          que la pediste, y con qué fecha.
+        </p>
+
+        ${datos}
+
+        <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:12px;padding:16px;margin:20px 0;">
+          <p style="font-size:14px;color:#075985;margin:0 0 8px;"><strong>Qué pasa ahora</strong></p>
+          <p style="font-size:14px;color:#075985;margin:0;line-height:1.6;">
+            Le avisamos a ${escapeHtml(destinatario)} y se va a comunicar con vos para resolverlo.
+            La Ley 24.240 te da 10 días corridos para arrepentirte sin justificar el motivo, y el
+            reintegro va sin descuentos.
+          </p>
+        </div>
+
+        <p style="color:#6b7280;font-size:13px;line-height:1.6;">
+          Si no tenés respuesta, podés reclamar sin cargo y sin abogado ante Defensa del
+          Consumidor de tu provincia —
+          <a href="https://www.argentina.gob.ar/produccion/defensadelconsumidor" style="color:#4f46e5;">argentina.gob.ar/defensadelconsumidor</a>.
+          Llevá este número.
+        </p>
+
+        <p style="color:#9ca3af;font-size:12px;text-align:center;margin-top:24px;">
+          Este mail se generó automáticamente · TiendaApps
+        </p>
+      </div>
+      `,
+    }),
+  ]);
+
+  /* Se registra cuál falló y cuál no. Si el que no salió es el de la constancia,
+     la persona se quedó sin su comprobante y hay que mandárselo a mano: eso
+     tiene que quedar escrito en algún lado, no perderse en un catch mudo. */
+  const nombres = ["aviso a quien vende", "constancia a quien compró"];
+  resultados.forEach((r, i) => {
+    if (r.status === "rejected") {
+      console.error(`[arrepentimiento] ${numero}: no salió el ${nombres[i]}:`, r.reason);
+    }
+  });
+}

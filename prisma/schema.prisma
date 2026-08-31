@@ -9,42 +9,42 @@ datasource db {
 }
 
 model User {
-  id              String    @id @default(cuid())
-  name            String?
-  email           String    @unique
-  emailVerified   DateTime?
-  image           String?
-  bannerImage     String?
-  password        String?
-  role            String    @default("BUYER")
-  banned          Boolean   @default(false)
-  bio             String?
-  city            String?
-  instagramHandle String?
-  phone           String?
-  notifyNewStores Boolean   @default(false)
+  id                     String    @id @default(cuid())
+  name                   String?
+  email                  String    @unique
+  emailVerified          DateTime?
+  image                  String?
+  bannerImage            String?
+  password               String?
+  role                   String    @default("BUYER")
+  banned                 Boolean   @default(false)
+  bio                    String?
+  city                   String?
+  instagramHandle        String?
+  phone                  String?
+  notifyNewStores        Boolean   @default(false)
   preferredPlacaTemplate String?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
   // Aceptación de Términos y Condiciones generales al registrarse (cualquier rol)
-  termsAcceptedAt DateTime?
-  termsVersion    String?
-  termsAcceptedIp String?
+  termsAcceptedAt        DateTime?
+  termsVersion           String?
+  termsAcceptedIp        String?
   // Última versión de los términos por la que se le mandó el aviso por email.
   // Separada de termsVersion (que es lo que ACEPTÓ) para no volver a escribirle
   // a quien ya fue avisado pero todavía no entró a aceptar.
-  termsNotifiedVersion String?
+  termsNotifiedVersion   String?
   // Datos bancarios para retiros de comisiones (únicos por persona, aplican a todas sus afiliaciones)
-  affiliateCbu         String?
-  affiliateAlias       String?
-  affiliateCuil        String?
-  affiliateBankHolder  String?
+  affiliateCbu           String?
+  affiliateAlias         String?
+  affiliateCuil          String?
+  affiliateBankHolder    String?
   affiliateBankUpdatedAt DateTime?
   // OTP para verificación de identidad antes de acceder/modificar datos bancarios
-  otpCode      String?
-  otpExpiresAt DateTime?
-  otpPurpose   String?
-  otpAttempts  Int       @default(0) // intentos fallidos; se resetea al verificar o al generar nuevo código
+  otpCode                String?
+  otpExpiresAt           DateTime?
+  otpPurpose             String?
+  otpAttempts            Int       @default(0) // intentos fallidos; se resetea al verificar o al generar nuevo código
 
   accounts           Account[]
   sessions           Session[]
@@ -298,12 +298,12 @@ model Store {
   // Ver lib/avisos-tienda.
   onboardingCompletedAt DateTime?
   // Verificación de identidad
-  isVerified              Boolean   @default(false)
-  verificationBanned      Boolean   @default(false)
-  verifiedShowName        Boolean   @default(false)
-  verifiedShowCity        Boolean   @default(false)
-  verifiedShowPhone       Boolean   @default(false)
-  verifiedShowSince       Boolean   @default(false)
+  isVerified            Boolean   @default(false)
+  verificationBanned    Boolean   @default(false)
+  verifiedShowName      Boolean   @default(false)
+  verifiedShowCity      Boolean   @default(false)
+  verifiedShowPhone     Boolean   @default(false)
+  verifiedShowSince     Boolean   @default(false)
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
 
@@ -333,6 +333,7 @@ model Store {
   archives            StoreArchive[]
   promotions          StorePromotion[]
   newsletter          NewsletterSubscriber[]
+  arrepentimientos    Arrepentimiento[]
 }
 
 // Suscripciones push a tiendas. userId es null para suscriptores anónimos legacy;
@@ -408,8 +409,8 @@ model PushCampaign {
   /// seguir contándolo.
   deletedAt DateTime?
 
-  emailStatus String  @default("SIN_MAIL")
-  sentEmail   Int     @default(0)
+  emailStatus String @default("SIN_MAIL")
+  sentEmail   Int    @default(0)
 
   /// Hasta dónde llegó el envío por mail, recorriendo los suscriptores por
   /// (createdAt, id) ascendente. Guarda el id del ÚLTIMO al que se le mandó.
@@ -497,55 +498,55 @@ model VerificationRequest {
 }
 
 model Product {
-  id               String    @id @default(cuid())
-  name             String
-  description      String?
-  price            Float
-  comparePrice     Float?
+  id                 String    @id @default(cuid())
+  name               String
+  description        String?
+  price              Float
+  comparePrice       Float?
   // Costo interno del producto (nunca se muestra en la tienda). Se usa para
   // calcular el margen de ganancia. null = sin dato cargado (no asumir 0).
-  costPrice        Float?
-  featured         Boolean   @default(false)
-  viewCount        Int       @default(0)
-  images           String    @default("[]")
-  category         String    @default("general")
-  subcategory      String?
-  gender           String    @default("unisex")
-  tags             String    @default("[]")
-  attributes       String    @default("[]")
-  reelUrls         String    @default("[]")
-  precioMayorista     Float?
-  cantMinMayorista    Int?
+  costPrice          Float?
+  featured           Boolean   @default(false)
+  viewCount          Int       @default(0)
+  images             String    @default("[]")
+  category           String    @default("general")
+  subcategory        String?
+  gender             String    @default("unisex")
+  tags               String    @default("[]")
+  attributes         String    @default("[]")
+  reelUrls           String    @default("[]")
+  precioMayorista    Float?
+  cantMinMayorista   Int?
   // Escalones de precio mayorista: JSON array [{desde:Int, precio:Float}] en orden ascendente por "desde".
   // Cada banda aplica a partir de "desde" unidades; precio debe ser < precioMayorista.
-  preciosEscalonados  String  @default("[]")
+  preciosEscalonados String    @default("[]")
   // Producto exclusivo de catálogo mayorista: solo aparece en tiendas con tieneVentaMayorista=true.
-  soloMayorista       Boolean @default(false)
+  soloMayorista      Boolean   @default(false)
   // Descuento por cantidad (retail): aplica cuando el cliente suma promoQtyMin o más unidades del mismo producto.
   // promoType: "PERCENT" = porcentaje de descuento | "N_PAY_M" = llevá N pagá M
-  promoQtyMin      Int?
-  promoQtyDiscount Float?
-  promoType        String  @default("PERCENT")
-  promoPayQty      Int?
-  offerBadge       String?
-  offerNote        String?
-  offerEndsAt      DateTime?
+  promoQtyMin        Int?
+  promoQtyDiscount   Float?
+  promoType          String    @default("PERCENT")
+  promoPayQty        Int?
+  offerBadge         String?
+  offerNote          String?
+  offerEndsAt        DateTime?
   // Cuotas sin interés informativas (no conectado a ninguna API bancaria ni
   // de Mercado Pago): 0 = no mostrar, o 3/6/12. Solo se muestra en la tienda
   // si además la tienda tiene Mercado Pago conectado.
-  cuotas           Int       @default(0)
+  cuotas             Int       @default(0)
   // Título y descripción propios para los resultados de Google. null = armarlos
   // solos a partir del nombre y la descripción (ver `generateMetadata` en la
   // ficha de producto). Sin límite de largo en la base a propósito: los 60/160
   // de Google son cuánto MUESTRA, no un máximo válido — el aviso va en el
   // formulario, que es donde se puede explicar.
-  seoTitle         String?
-  seoDescription   String?
-  isActive         Boolean   @default(true)
-  deletedAt        DateTime?
-  publishAt        DateTime?
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  seoTitle           String?
+  seoDescription     String?
+  isActive           Boolean   @default(true)
+  deletedAt          DateTime?
+  publishAt          DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
   vehicleStatus  String?
   soldAt         DateTime?
@@ -639,18 +640,18 @@ model ProductVariant {
 }
 
 model StockMovement {
-  id          String   @id @default(cuid())
+  id          String         @id @default(cuid())
   variantId   String
   variant     ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
   productId   String
-  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  type        String   // MANUAL | SALE | CANCELLATION | BULK_ADJUST | PRODUCT_EDIT
+  product     Product        @relation(fields: [productId], references: [id], onDelete: Cascade)
+  type        String // MANUAL | SALE | CANCELLATION | BULK_ADJUST | PRODUCT_EDIT
   delta       Int
   stockBefore Int
   stockAfter  Int
   reason      String?
   changedBy   String
-  createdAt   DateTime @default(now())
+  createdAt   DateTime       @default(now())
 
   @@index([variantId])
   @@index([productId])
@@ -763,14 +764,14 @@ model OrderStatusLog {
 }
 
 model OrderItem {
-  id       String @id @default(cuid())
-  quantity Int
-  price    Float
+  id         String @id @default(cuid())
+  quantity   Int
+  price      Float
   // Total real de la línea (precio efectivo × cantidad), calculado por el motor
   // de precios. En una promo N×M el descuento NO es uniforme por unidad, así que
   // price × quantity no reconstruye el total exacto — este campo lo guarda tal
   // cual se cobró. Nullable: las órdenes viejas caen en price × quantity.
-  lineTotal Float?
+  lineTotal  Float?
   // Costo del producto "congelado" al momento de la venta (copiado de
   // Product.costPrice en el checkout). No se recalcula si el costo del
   // producto cambia después — así un reporte de un mes cerrado no varía solo.
@@ -825,11 +826,11 @@ model DigitalDownload {
   token String @unique
 
   /// Cuándo deja de servir. 30 días desde la compra.
-  expiresAt DateTime
+  expiresAt      DateTime
   /// Cuántas veces se usó y cuántas se permiten. El tope corta el reenvío del
   /// link a diez amigos sin castigar al que lo baja en el celular y en la compu.
-  descargas    Int @default(0)
-  maxDescargas Int @default(5)
+  descargas      Int       @default(0)
+  maxDescargas   Int       @default(5)
   /// Para que la dueña vea en el panel si el comprador lo bajó o nunca entró.
   ultimaDescarga DateTime?
 
@@ -842,8 +843,57 @@ model DigitalDownload {
   orderItem   OrderItem @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
+
   /// Para la limpieza de los vencidos, cuando vuelva a haber un cron que la haga.
   @@index([expiresAt])
+}
+
+/// Una solicitud de arrepentimiento: alguien que compró y quiere dar marcha
+/// atrás. La exige la Resolución 424/2020 — el botón tiene que estar a la vista
+/// y sin registro, y tiene que devolver una constancia con número.
+///
+/// El derecho ya existía y estaba escrito en las políticas de cada tienda (los
+/// 10 días del art. 34 de la Ley 24.240). Lo que faltaba era por dónde
+/// ejercerlo: hasta acá, escribirle al comercio y esperar.
+///
+/// NO guarda una decisión, guarda un pedido. Qué se resuelve se resuelve entre
+/// la persona y quien le vendió; la plataforma deja constancia de que la
+/// solicitud entró, cuándo entró y con qué número. Eso es lo que sirve el día
+/// que alguien reclama.
+model Arrepentimiento {
+  id String @id @default(cuid())
+
+  /// El número que se le entrega como constancia. Se dicta por teléfono, así que
+  /// no lleva las parejas que se confunden dichas en voz alta (O/0, I/1).
+  /// Ver numeroDeConstancia() en lib/arrepentimiento.
+  numero String @unique
+
+  /// NULL a propósito: la solicitud puede ser contra una tienda **o contra
+  /// TiendaApps**, que también vende (las suscripciones) y por lo tanto también
+  /// necesita el botón. Sin esta columna nullable haría falta una segunda tabla
+  /// idéntica para decir lo mismo.
+  storeId String?
+  store   Store?  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  nombre     String
+  email      String
+  telefono   String?
+  /// Con qué identifica su compra: número de pedido, o el email con el que la
+  /// hizo. Es texto libre porque del otro lado hay alguien que quizá no encuentra
+  /// el número, y pedirle un formato exacto sería trabarle el derecho.
+  referencia String
+  /// Opcional, y esto no es un descuido: el art. 34 dice "sin necesidad de
+  /// justificar el motivo". Pedirlo obligatorio sería contradecir en el
+  /// formulario lo que la política promete dos solapas más allá.
+  motivo     String?
+
+  /// RECIBIDO por ahora. El listado en el panel viene después; el dato se guarda
+  /// desde el primer día para que ese listado no arranque sin historia.
+  estado String @default("RECIBIDO")
+
+  createdAt DateTime @default(now())
+
+  @@index([storeId, createdAt(sort: Desc)])
 }
 
 model Payment {
@@ -943,7 +993,7 @@ model Commission {
   status         String    @default("PENDING") // PENDING | PAID (wallet) | DISBURSED (MP directo)
   paidAt         DateTime?
   disbursedAt    DateTime?
-  disbursementId String?   // ID del pago en MP cuando status = DISBURSED
+  disbursementId String? // ID del pago en MP cuando status = DISBURSED
   createdAt      DateTime  @default(now())
 
   affiliateId String
@@ -956,12 +1006,12 @@ model Commission {
 }
 
 model Wallet {
-  id             String    @id @default(cuid())
-  balance        Float     @default(0)
-  totalEarned    Float     @default(0)
-  totalWithdrawn Float     @default(0)
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  id             String   @id @default(cuid())
+  balance        Float    @default(0)
+  totalEarned    Float    @default(0)
+  totalWithdrawn Float    @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   affiliateId String    @unique
   affiliate   Affiliate @relation(fields: [affiliateId], references: [id])
@@ -1006,7 +1056,7 @@ model PublicReview {
   comment    String?
   reviewer   String
   verified   Boolean  @default(false)
-  verifiedBy String?  // "auto" = cruzado con Order DB | "owner" = dueño lo marcó manualmente
+  verifiedBy String? // "auto" = cruzado con Order DB | "owner" = dueño lo marcó manualmente
   createdAt  DateTime @default(now())
 
   // "APPROVED" | "PENDING"
@@ -1037,7 +1087,7 @@ model PublicReview {
 model Coupon {
   id             String    @id @default(cuid())
   code           String
-  label          String?   // etiqueta visible (ej: "20% OFF") — usada por el widget
+  label          String? // etiqueta visible (ej: "20% OFF") — usada por el widget
   discountType   String    @default("percentage")
   discountValue  Float
   minOrderAmount Float     @default(0)
@@ -1045,14 +1095,14 @@ model Coupon {
   usedCount      Int       @default(0)
   expiresAt      DateTime?
   isActive       Boolean   @default(true)
-  winnerEmail    String?   // si no es null, solo este email puede usar el cupón (premios de gamificación)
+  winnerEmail    String? // si no es null, solo este email puede usar el cupón (premios de gamificación)
   createdAt      DateTime  @default(now())
 
   storeId String
   store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
 
-  orders              Order[]
-  gamificationPrizes  GamificationPrize[]
+  orders             Order[]
+  gamificationPrizes GamificationPrize[]
 
   @@unique([storeId, code])
 }
@@ -1064,24 +1114,24 @@ model Coupon {
 // Se llama StorePromotion (no Promotion) porque ya existe un model Promotion:
 // el del panel admin del marketplace (banners de la home). Son cosas distintas.
 model StorePromotion {
-  id             String    @id @default(cuid())
-  name           String    // lo que ve la dueña en el panel (ej. "Verano en remeras")
+  id   String @id @default(cuid())
+  name String // lo que ve la dueña en el panel (ej. "Verano en remeras")
 
   // Qué descuenta
-  type           String    // PERCENT | FIXED | N_PAY_M | FREE_SHIPPING
-  value          Float?    // % (1..90) o monto fijo; null en N_PAY_M y FREE_SHIPPING
-  minQty         Int?      // N de "llevá N"  (solo N_PAY_M)
-  payQty         Int?      // M de "pagá M"   (solo N_PAY_M, payQty < minQty)
-  minOrderAmount Float     @default(0) // compra mínima para que aplique (0 = sin mínimo)
+  type           String // PERCENT | FIXED | N_PAY_M | FREE_SHIPPING
+  value          Float? // % (1..90) o monto fijo; null en N_PAY_M y FREE_SHIPPING
+  minQty         Int? // N de "llevá N"  (solo N_PAY_M)
+  payQty         Int? // M de "pagá M"   (solo N_PAY_M, payQty < minQty)
+  minOrderAmount Float  @default(0) // compra mínima para que aplique (0 = sin mínimo)
 
   // A qué se aplica. Arrays como JSON string, igual que tags/reelUrls del repo.
-  scope          String    @default("ALL")  // ALL | CATEGORY | PRODUCTS
-  categories     String    @default("[]")   // JSON: nombres de categoría si scope=CATEGORY
-  productIds     String    @default("[]")   // JSON: ids de producto si scope=PRODUCTS
+  scope      String @default("ALL") // ALL | CATEGORY | PRODUCTS
+  categories String @default("[]") // JSON: nombres de categoría si scope=CATEGORY
+  productIds String @default("[]") // JSON: ids de producto si scope=PRODUCTS
 
   // Cuándo corre. null = sin límite por ese lado. Al pasar endsAt deja de aplicar sola.
-  startsAt       DateTime?
-  endsAt         DateTime?
+  startsAt DateTime?
+  endsAt   DateTime?
 
   // Con qué se combina (por defecto NO, como Tiendanube). priority desempata.
   combinesWithCoupons    Boolean @default(false)
@@ -1092,13 +1142,13 @@ model StorePromotion {
   // propio). null = promo suelta, sin evento. Cuando tiene valor, la tienda lo
   // muestra en el tag del producto y le pone su nombre al filtro del listado.
   // No cambia el cálculo del precio, es solo presentación.
-  eventLabel     String?
+  eventLabel String?
 
-  isActive       Boolean   @default(true)  // toggle pausar/activar
-  archivedAt     DateTime?                 // seteado = en historial, no aplica más
+  isActive   Boolean   @default(true) // toggle pausar/activar
+  archivedAt DateTime? // seteado = en historial, no aplica más
 
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   storeId String
   store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
@@ -1514,68 +1564,68 @@ model DonationTestimonial {
 // ─── GAMIFICACIÓN (Ruleta / Raspadita) ────────────────────────────────────────
 
 model GamificationWidget {
-  id            String   @id @default(cuid())
-  storeId       String   @unique
-  store         Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  id      String @id @default(cuid())
+  storeId String @unique
+  store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
 
-  type          String   @default("SPIN")         // SPIN | SCRATCH
-  isActive      Boolean  @default(false)
+  type     String  @default("SPIN") // SPIN | SCRATCH
+  isActive Boolean @default(false)
 
-  title         String   @default("¡Girá y ganá!")
-  subtitle      String   @default("Probá tu suerte y ganá un premio")
-  buttonText    String   @default("¡Girá y ganá!")
-  reclaimText   String   @default("Reclamar premio")
-  legalText     String?
-  centerType    String   @default("text")          // text | logo
-  centerText    String?
+  title       String  @default("¡Girá y ganá!")
+  subtitle    String  @default("Probá tu suerte y ganá un premio")
+  buttonText  String  @default("¡Girá y ganá!")
+  reclaimText String  @default("Reclamar premio")
+  legalText   String?
+  centerType  String  @default("text") // text | logo
+  centerText  String?
 
-  triggerType   String   @default("FIRST_CLICK")   // FIRST_CLICK | ON_ENTER | DELAY
+  triggerType   String  @default("FIRST_CLICK") // FIRST_CLICK | ON_ENTER | DELAY
   triggerDelay  Int?
-  showFrequency String   @default("ONCE_SESSION")  // ALWAYS | ONCE_SESSION | ONCE_EVER
-  emailRequired Boolean  @default(true)
+  showFrequency String  @default("ONCE_SESSION") // ALWAYS | ONCE_SESSION | ONCE_EVER
+  emailRequired Boolean @default(true)
 
-  styles        String   @default("{}")            // JSON de colores/estilos
+  styles String @default("{}") // JSON de colores/estilos
 
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  prizes        GamificationPrize[]
-  spins         GamificationSpin[]
+  prizes GamificationPrize[]
+  spins  GamificationSpin[]
 }
 
 model GamificationPrize {
-  id          String             @id @default(cuid())
-  widgetId    String
-  widget      GamificationWidget @relation(fields: [widgetId], references: [id], onDelete: Cascade)
+  id       String             @id @default(cuid())
+  widgetId String
+  widget   GamificationWidget @relation(fields: [widgetId], references: [id], onDelete: Cascade)
 
-  label       String             // "20% OFF", "Envío gratis", "Sin premio"
-  probability Int                // 0-100, deben sumar 100 por widget
-  isNoPrize   Boolean            @default(false)
-  order       Int                @default(0)       // orden en la ruleta/raspadita
-  winHours    Int                @default(48)       // horas de validez del cupón para el ganador, desde que gana
+  label       String // "20% OFF", "Envío gratis", "Sin premio"
+  probability Int // 0-100, deben sumar 100 por widget
+  isNoPrize   Boolean @default(false)
+  order       Int     @default(0) // orden en la ruleta/raspadita
+  winHours    Int     @default(48) // horas de validez del cupón para el ganador, desde que gana
 
-  couponId    String?
-  coupon      Coupon?            @relation(fields: [couponId], references: [id], onDelete: SetNull)
+  couponId String?
+  coupon   Coupon? @relation(fields: [couponId], references: [id], onDelete: SetNull)
 
   @@index([widgetId])
 }
 
 model GamificationSpin {
-  id         String             @id @default(cuid())
-  widgetId   String
-  widget     GamificationWidget @relation(fields: [widgetId], references: [id], onDelete: Cascade)
+  id       String             @id @default(cuid())
+  widgetId String
+  widget   GamificationWidget @relation(fields: [widgetId], references: [id], onDelete: Cascade)
 
   email      String?
   ip         String
   prizeLabel String?
-  isNoPrize  Boolean            @default(false)
-  couponId   String?            // null si no hubo premio
-  couponCode String?            // código entregado (snapshot por si el cupón se borra)
+  isNoPrize  Boolean @default(false)
+  couponId   String? // null si no hubo premio
+  couponCode String? // código entregado (snapshot por si el cupón se borra)
 
-  createdAt  DateTime           @default(now())
+  createdAt DateTime @default(now())
 
+  @@unique([widgetId, email]) // previene doble giro por race condition; NULL != NULL → anónimos no se bloquean entre sí
   @@index([widgetId])
-  @@unique([widgetId, email])  // previene doble giro por race condition; NULL != NULL → anónimos no se bloquean entre sí
 }
 
 // ─── ACTIVITY FEED ────────────────────────────────────────────────────────────
@@ -1586,7 +1636,7 @@ model StoreActivityEvent {
   id        String   @id @default(cuid())
   storeId   String
   store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  type      String   // NEW_ORDER | NEW_REVIEW | NEW_AFFILIATE | CART_RECOVERED
+  type      String // NEW_ORDER | NEW_REVIEW | NEW_AFFILIATE | CART_RECOVERED
   data      String   @default("{}") // JSON: { total?, buyerName?, productName?, reviewerName?, rating?, affiliateName? }
   createdAt DateTime @default(now())
 
@@ -1601,7 +1651,7 @@ model StoreMilestone {
   id         String    @id @default(cuid())
   storeId    String
   store      Store     @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  type       String    // FIRST_ORDER | FIRST_REVIEW | FIRST_AFFILIATE | REVENUE_1K | REVENUE_10K | REVENUE_50K
+  type       String // FIRST_ORDER | FIRST_REVIEW | FIRST_AFFILIATE | REVENUE_1K | REVENUE_10K | REVENUE_50K
   achievedAt DateTime  @default(now())
   shownAt    DateTime?
 
@@ -1621,37 +1671,37 @@ model StoreMilestone {
 // construye por patrón: se agrupan por tipoTienda + estetica y se hace primero
 // lo que más se repite, para que cada diseño nuevo le sirva a muchas y no a una.
 model DesignBrief {
-  id             String   @id @default(cuid())
+  id              String   @id @default(cuid())
   // Qué pidió
-  tipoTienda     String   // ROPA | HOGAR_TECH | AUTOS | GASTRONOMIA | HOTELERIA | INMOBILIARIA | GENERAL (ver lib/designBrief RUBROS)
-  estetica       String   // ver lib/designBrief ESTETICAS
-  paleta         String   // ver lib/designBrief PALETAS
-  coloresPropios String?
-  referencias    String?
-  noQuiero       String?
+  tipoTienda      String // ROPA | HOGAR_TECH | AUTOS | GASTRONOMIA | HOTELERIA | INMOBILIARIA | GENERAL (ver lib/designBrief RUBROS)
+  estetica        String // ver lib/designBrief ESTETICAS
+  paleta          String // ver lib/designBrief PALETAS
+  coloresPropios  String?
+  referencias     String?
+  noQuiero        String?
   // Datos que definen la anatomía de la plantilla (ver lib/designBrief).
   // Opcionales porque los briefs anteriores a esta pregunta no los tienen.
-  nombreTienda   String?
-  queVende       String?  // "remeras de mujer", "repuestos de moto": el rubro solo no alcanza
-  fotos          String?  // propias | algunas | catalogo | ninguna
-  catalogo       String?  // chico | medio | grande | enorme
-  logo           String?  // tengo | feo | no
+  nombreTienda    String?
+  queVende        String? // "remeras de mujer", "repuestos de moto": el rubro solo no alcanza
+  fotos           String? // propias | algunas | catalogo | ninguna
+  catalogo        String? // chico | medio | grande | enorme
+  logo            String? // tengo | feo | no
   // Quién lo pidió
-  nombre         String
-  email          String
-  telefono       String?
-  tieneTienda    Boolean  @default(false)
-  tiendaUrl      String?
+  nombre          String
+  email           String
+  telefono        String?
+  tieneTienda     Boolean  @default(false)
+  tiendaUrl       String?
   // Aceptación de que el diseño se publica en el catálogo. Mismo patrón que
   // tcOwner* de Store (fecha + IP + versión), pero con su propia versión:
   // DESIGN_BRIEF_TERMS_VERSION en lib/legal, no CURRENT_TERMS_VERSION.
-  acceptedAt     DateTime @default(now())
-  acceptedIp     String?
+  acceptedAt      DateTime @default(now())
+  acceptedIp      String?
   acceptedVersion String
   // NEW = sin mirar | REVIEWED = leído | BUILDING = se está diseñando
   // DONE = la plantilla ya está publicada | DISCARDED = no se va a hacer
-  status         String   @default("NEW")
-  createdAt      DateTime @default(now())
+  status          String   @default("NEW")
+  createdAt       DateTime @default(now())
 
   @@index([status, createdAt(sort: Desc)])
   @@index([tipoTienda, estetica])
@@ -1670,7 +1720,7 @@ model DesignBrief {
 model AdminSectionView {
   id      String   @id @default(cuid())
   userId  String
-  section String   // disenos | leads | testimonios | donaciones
+  section String // disenos | leads | testimonios | donaciones
   seenAt  DateTime @default(now())
 
   @@unique([userId, section])

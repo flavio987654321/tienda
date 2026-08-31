@@ -12,7 +12,7 @@
 
 import {
   documentosPublicados, textoPublicado, limpiarTextoLegal, linksLegales,
-  titulosLegales, CLAVES_LEGALES, MAX_LARGO_POLITICA,
+  titulosLegales, CLAVES_LEGALES, MAX_LARGO_POLITICA, CLAVE_ARREPENTIMIENTO,
   type FilaPoliticas,
 } from "./politicas-tienda";
 
@@ -90,7 +90,8 @@ chequear("solo `false` apaga", !documentosPublicados({ policyTerms: "algo", poli
 console.log("\n4) Los links del pie de la tienda");
 
 const publicadas = documentosPublicados(COMPLETA);
-chequear("en la tienda salen las cuatro", linksLegales("mi-tienda", publicadas).length === 4);
+chequear("en la tienda salen las cuatro, más el arrepentimiento",
+  linksLegales("mi-tienda", publicadas).length === 5);
 chequear("el href apunta bien",
   linksLegales("mi-tienda", publicadas)[0].href === "/tienda/mi-tienda/politicas?tipo=devoluciones",
   linksLegales("mi-tienda", publicadas)[0].href);
@@ -98,15 +99,29 @@ chequear("el href apunta bien",
 // Este era el otro bug: el pie listaba las tres siempre, tuviera o no la tienda
 // algo cargado. Una tienda recién hecha mostraba tres links que llevaban a
 // "esta tienda todavía no publicó sus políticas".
-chequear("tienda sin políticas: NINGÚN link",
-  linksLegales("nueva", documentosPublicados({})).length === 0);
-chequear("con dos publicadas salen dos",
-  linksLegales("x", documentosPublicados({ policyTerms: "a", policyPrivacy: "b" })).length === 2);
+/* Antes esto decía "NINGÚN link". Ya no: el botón de arrepentimiento va SIEMPRE,
+   tenga la tienda políticas o no. No es un documento que la dueña escribe y
+   decide publicar — es un formulario que la Resolución 424/2020 no hace
+   opcional. Lo que sigue valiendo es lo otro: que no aparezcan links a
+   documentos que llevan a "esta tienda todavía no publicó esta política". */
+{
+  const deUnaNueva = linksLegales("nueva", documentosPublicados({}));
+  chequear("tienda sin políticas: ningún documento…", deUnaNueva.length === 1);
+  chequear("…pero el botón de arrepentimiento SÍ está",
+    deUnaNueva[0]?.clave === CLAVE_ARREPENTIMIENTO, deUnaNueva.map((l) => l.clave));
+}
+chequear("con dos publicadas salen dos, más el arrepentimiento",
+  linksLegales("x", documentosPublicados({ policyTerms: "a", policyPrivacy: "b" })).length === 3);
+/* Último, siempre. Los otros cuatro son lo que alguien viene a leer ANTES de
+   comprar; este es lo que viene a usar después, y arriba les correría el lugar
+   a los que sí se leen de corrido. */
+chequear("y va último",
+  linksLegales("x", documentosPublicados({ policyTerms: "a" })).at(-1)?.clave === CLAVE_ARREPENTIMIENTO);
 
 // En el editor sí se muestran las cuatro: el dueño tiene que poder ver dónde
 // van a caer aunque todavía no las haya escrito.
-chequear("en el editor salen las cuatro aunque no haya nada",
-  linksLegales("x", [], { enEditor: true }).length === 4);
+chequear("en el editor salen las cuatro aunque no haya nada, más el arrepentimiento",
+  linksLegales("x", [], { enEditor: true }).length === 5);
 chequear("sin slug no rompe el href",
   linksLegales(undefined, publicadas)[0].href === "/tienda//politicas?tipo=devoluciones");
 
@@ -124,8 +139,13 @@ chequear("términos se llama igual en los dos", normal.terminos.largo === autos.
 chequear("privacidad se llama igual en los dos", normal.privacidad.largo === autos.privacidad.largo);
 chequear("los links de autos usan el nombre de autos",
   linksLegales("conce", publicadas, { esAutos: true })[1].label === "Cómo se coordina la entrega");
+/* Eran 14 y pasaron a 15 por "Arrepentimiento", que es el nombre con el que se
+   lo reconoce y no conviene acortar. Se subió después de mirar el pie más
+   apretado —el de Urban Pulse, que es el único que pide los cortos—: su
+   contenedor es `flexWrap:"wrap"`, así que una etiqueta más larga baja de
+   renglón en vez de desbordar. */
 chequear("los cortos entran en un pie de una línea",
-  linksLegales("x", publicadas, { cortos: true }).every((l) => l.label.length <= 14),
+  linksLegales("x", publicadas, { cortos: true }).every((l) => l.label.length <= 15),
   linksLegales("x", publicadas, { cortos: true }).map((l) => l.label));
 chequear("hay título para las cuatro claves",
   CLAVES_LEGALES.every((c) => !!normal[c].corto && !!normal[c].largo));
@@ -162,7 +182,13 @@ for (let mascara = 0; mascara < 16; mascara++) {
     policyPrivacy: mascara & 8 ? "d" : null,
   };
   const lista = documentosPublicados(fila);
-  const delPie = linksLegales("x", lista).map((l) => l.clave);
+  /* Sin el arrepentimiento: lo que este chequeo cuida es que los tres coincidan
+     en qué DOCUMENTOS hay publicados, y el arrepentimiento no es uno — está
+     siempre, no depende de que la dueña haya escrito nada, y por eso el pie
+     lo lleva y el mail no. */
+  const delPie = linksLegales("x", lista)
+    .map((l) => l.clave)
+    .filter((c) => c !== CLAVE_ARREPENTIMIENTO);
   const delMail = CLAVES_LEGALES.filter((c) => textoPublicado(fila, c) !== null);
   if (lista.join(",") !== delPie.join(",") || lista.join(",") !== delMail.join(",")) coinciden = false;
 }
