@@ -9,11 +9,34 @@ import { checkRateLimit } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 
+/* ── Por qué los tres topes son 4 MB y no más ─────────────────────────────────
+ *
+ * Acá el archivo llega como CUERPO de un pedido, y el cuerpo de un pedido tiene
+ * un techo que no ponemos nosotros: **4,5 MB** en producción (funciones
+ * serverless de Vercel; es de la plataforma y no se levanta desde el código), y
+ * unos 10 MB en desarrollo, donde Next corta antes con "Request body exceeded
+ * 10MB".
+ *
+ * Hasta ahora esto declaraba **50 MB para video** y **15 MB para documentos**.
+ * Los dos números eran imposibles: el archivo ni siquiera llegaba a esta
+ * validación — lo cortaba la plataforma antes, con un error que no explica nada.
+ * Un tope que miente es peor que uno bajo, porque el que lo lee cree que puede.
+ *
+ * Los videos del formulario de producto ya no pasan por acá: van DERECHO a
+ * Supabase con un permiso firmado (ver /api/upload/firma y lib/subida-directa),
+ * que es la única forma de mover 50 MB de verdad. Esta rama queda para los
+ * paneles de administración, que suben videos chicos.
+ *
+ * Los documentos de afiliados (el DNI) siguen pasando por acá y por eso bajan a
+ * 4 MB: una foto de DNI sacada con un celular nuevo puede pasar los 4,5 y hoy
+ * falla igual, sólo que sin decir por qué. Con este número, al menos el mensaje
+ * es cierto y accionable. Merecen la subida directa también — está anotado.
+ */
 const MAX_FILE_SIZE_MB = 4;
 const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
-const MAX_DOCUMENT_SIZE_MB = 15;
+const MAX_DOCUMENT_SIZE_MB = 4;
 const MAX_DOCUMENT_SIZE_BYTES = MAX_DOCUMENT_SIZE_MB * 1024 * 1024;
-const MAX_VIDEO_SIZE_MB = 50;
+const MAX_VIDEO_SIZE_MB = 4;
 const MAX_VIDEO_SIZE_BYTES = MAX_VIDEO_SIZE_MB * 1024 * 1024;
 const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 const ALLOWED_VIDEO_TYPES = new Set(["video/mp4", "video/webm", "video/quicktime", "video/ogg"]);

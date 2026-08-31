@@ -9,13 +9,14 @@ import CampoAuto from "@/components/CampoAuto";
 import {
   Plus, Trash2, Loader2, ArrowLeft, ChevronLeft, ChevronRight,
   X, Star, ShoppingCart, Heart, Tag, Package, Calendar, Film,
-  Search, ChevronDown,
+  Search, ChevronDown, AlertTriangle,
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { getStoreType, etiquetaCategoria, camposActivos, camposPropios, ejemploNombre, ejemploTags } from "@/lib/storeTypes";
 import { sugerirOpcion, opcionesIniciales, nombresDeOpciones, renombrarOpcion, agregarOpcion, quitarOpcion, estadoDelBuilder, opcionesQueNoEntranEnElBuilder, filasIncompletas, claveDeCombinacion, MAX_OPCIONES } from "@/lib/opcionSugerida";
 import { esOpcionDeColor } from "@/lib/opciones";
+import { MAX_VIDEO_MB, MAX_VIDEO_BYTES, VIDEO_PESADO_MB } from "@/lib/subida-directa";
 import { calcMargin, calcVehicleCostTotal, formatFechaGasto } from "@/lib/margin";
 import StockHistoryPanel from "../StockHistoryPanel";
 import RichTextEditor from "@/components/RichTextEditor";
@@ -106,8 +107,12 @@ const MAX_PRODUCT_IMAGES = 8;
 // server. Antes el formulario no lo miraba: podías subir un 4to video de 50 MB y
 // recién al guardar la API lo rechazaba, con el archivo ya subido y huerfano.
 const MAX_PRODUCT_REELS = 3;
-// Debe coincidir con MAX_VIDEO_SIZE_MB de api/upload/route.ts
-const MAX_VIDEO_SIZE_MB = 50;
+/* El tope y el aviso salen de lib/subida-directa, que es donde vive el porqué:
+   el video ya NO pasa por nuestro servidor —no podría, el cuerpo de un pedido
+   tiene un techo de 4,5 MB en producción— sino que va derecho a Supabase con un
+   permiso firmado. Antes este número estaba escrito acá y otra vez en la ruta de
+   subida, y los dos decían 50 MB, que era justo lo único que no se podía. */
+const MAX_VIDEO_SIZE_MB = MAX_VIDEO_MB;
 function makeDefaultVariant(dimensions: string[]): Variant {
   const attrs: Record<string, string> = {};
   dimensions.forEach(d => { attrs[d] = ""; });
@@ -378,7 +383,13 @@ async function readJsonResponse(res: Response) {
   const text = await res.text();
   if (!text) return {};
   try {
-    return JSON.parse(text) as { url?: string; error?: string; aviso?: string };
+    // `urlDeSubida` y `urlFinal` son las del permiso de subida directa del
+    // video (ver /api/upload/firma). Van acá y no en un tipo aparte porque la
+    // función es la misma: leer una respuesta que puede no ser JSON.
+    return JSON.parse(text) as {
+      url?: string; error?: string; aviso?: string;
+      urlDeSubida?: string; urlFinal?: string;
+    };
   } catch {
     return { error: text };
   }
@@ -467,6 +478,10 @@ function ProductoFormPage() {
   // con los errores rojos haría que se lea como "algo falló".
   const [avisoFoto, setAvisoFoto] = useState("");
   const [uploadingVideo, setUploadingVideo] = useState(false);
+  /* Avisa, no bloquea: un video pesado entra igual, pero el que lo mire desde el
+     celular lo va a pagar con sus datos. Va aparte de `error` a propósito — un
+     aviso en rojo al lado del video que SÍ se subió se lee como que algo falló. */
+  const [avisoVideo, setAvisoVideo] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoFileInputRef = useRef<HTMLInputElement>(null);
   const [reelUrls, setReelUrls] = useState<string[]>([]);
@@ -1003,6 +1018,16 @@ function ProductoFormPage() {
     markDirty();
   }
 
+  /* El video va DERECHO a Supabase, sin pasar por nuestro servidor.
+     Antes viajaba como cuerpo de un pedido a /api/upload, y ahí se estrellaba
+     contra un techo que no ponemos nosotros: 4,5 MB en producción. El formulario
+     decía "hasta 50 MB" y el servidor lo repetía, pero el archivo ni llegaba a
+     la validación — lo cortaba la plataforma antes, con un error que no explica
+     nada. El porqué largo está en lib/subida-directa.
+
+     Son tres pasos, y el orden importa: la dirección del video se guarda SOLO
+     si los bytes llegaron. Al revés quedaría un producto apuntando a un video
+     que no existe. */
   async function handleVideoFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -1013,14 +1038,48 @@ function ProductoFormPage() {
       if (videoFileInputRef.current) videoFileInputRef.current.value = "";
       return;
     }
+    /* Se mide acá y no allá: pedirle al navegador que suba 60 MB para que
+       Supabase los rechace al final es hacerle perder el tiempo y los datos. */
+    if (file.size > MAX_VIDEO_BYTES) {
+      const pesa = (file.size / (1024 * 1024)).toFixed(1);
+      setError(`El video pesa ${pesa} MB y el máximo es ${MAX_VIDEO_MB} MB. Probá recortarlo o bajarle la calidad.`);
+      if (videoFileInputRef.current) videoFileInputRef.current.value = "";
+      return;
+    }
     setUploadingVideo(true);
     setError("");
+    setAvisoVideo(
+      file.size > VIDEO_PESADO_MB * 1024 * 1024
+        ? `El video pesa ${(file.size / (1024 * 1024)).toFixed(1)} MB. Entra, pero quien lo mire desde el celular lo va a pagar con sus datos y muchos van a cortar antes de que cargue.`
+        : ""
+    );
     try {
-      const fd = new FormData();
-      fd.append("file", file);
-      const res = await fetch("/api/upload", { method: "POST", body: fd });
-      const data = await readJsonResponse(res);
-      if (!res.ok) throw new Error(data.error || "No se pudo subir el video");
+      // 1. Pedir el permiso. Acá viaja el tipo y el tamaño, no el archivo.
+      const permisoRes = await fetch("/api/upload/firma", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tipoContenido: file.type, tamano: file.size }),
+      });
+      const permiso = await readJsonResponse(permisoRes);
+      if (!permisoRes.ok) throw new Error(permiso.error || "No se pudo subir el video");
+
+      // 2. Mandar los bytes a Supabase. Este pedido NO pasa por nosotros.
+      const subida = await fetch(permiso.urlDeSubida as string, {
+        method: "PUT",
+        headers: { "Content-Type": file.type },
+        body: file,
+      });
+      if (!subida.ok) {
+        /* Supabase contesta con su propio texto. Se registra el crudo y se le
+           muestra a la dueña algo que se entienda: la vez pasada un error de
+           este paso llegó como "no se pudo" a secas y no había forma de saber
+           que el problema era el tope del bucket. */
+        console.error("[video] Supabase rechazó la subida:", subida.status, await subida.text().catch(() => ""));
+        throw new Error("El video no se pudo subir. Probá de nuevo o con otro archivo.");
+      }
+
+      // 3. Recién ahora, con los bytes arriba, se guarda la dirección.
+      const data = { url: permiso.urlFinal as string };
       if (data.url) {
         // Re-chequeo adentro del updater y no contra el largo del render: mientras
         // el video viajaba se pudo haber pegado un link, y sumar acá a ciegas
@@ -1773,6 +1832,13 @@ function ProductoFormPage() {
                   >
                     <X className="h-4 w-4" />
                   </button>
+                </div>
+              )}
+
+              {avisoVideo && (
+                <div className="flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-3">
+                  <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5 text-amber-500" />
+                  <p className="text-xs text-amber-800 leading-relaxed">{avisoVideo}</p>
                 </div>
               )}
 
