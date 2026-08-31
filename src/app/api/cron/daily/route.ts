@@ -13,7 +13,8 @@ import { sendWithdrawalReminderEmail, sendMpHealthAlertEmail } from "@/lib/email
 import { limpiar } from "@/app/api/cron/cleanup/route";
 import { createNotification, createNotificationMany } from "@/lib/notifications";
 import { generarCuponesMensuales, expirarCuponesVencidos } from "@/lib/rewards";
-import { closureDeadline, CLOSURE_WARNING_DAYS } from "@/lib/subscription";
+import { closureDeadline, CLOSURE_WARNING_DAYS, getSubscriptionStatus, caidaAFree } from "@/lib/subscription";
+import { PLANES, planDeSuscripcion } from "@/lib/planLimits";
 import { applyStoreClosure } from "@/lib/store-closure";
 import { getStoreSnapshot } from "@/lib/asistente-insights";
 import { armarAvisos, filtrarRepetidos } from "@/lib/asistente-avisos";
@@ -391,6 +392,68 @@ export async function GET(req: NextRequest) {
   }
 
   result.vencimientos = { revisadas: vencibles.length, cerradas, avisosVencida, avisosUltimos };
+
+  // ── 7 bis. PRODUCTOS DIGITALES: LA CAÍDA A FREE ────────────────────────────
+  //
+  // Acá NO se cierra nada, y esa es toda la diferencia con el bloque de arriba.
+  // El Free es para siempre y lo paga la comisión por venta, así que quien deja
+  // de pagar Starter o Pro no tiene ninguna deuda: vuelve a Free, conserva su
+  // cuenta, sus productos y sus ventas, y lo único que cambia es que sube la
+  // comisión y se apagan las funciones pagas.
+  //
+  // Vale para los dos caminos que terminan igual: la prueba de 7 días que se
+  // agotó sin pagar, y el plan pago que se venció y ya pasó su gracia.
+  //
+  // El filtro por `tier` deja afuera a las que ya están en Free, que son la
+  // mayoría y no tienen nada que revisar.
+  const digitales = await prisma.subscription.findMany({
+    where: { role: "DIGITAL", tier: { not: "FREE" }, status: { in: ["ACTIVE", "TRIAL", "GRACE"] } },
+    select: {
+      id: true,
+      userId: true,
+      role: true,
+      tier: true,
+      status: true,
+      trialEndsAt: true,
+      currentPeriodEnd: true,
+      gracePeriodEndsAt: true,
+    },
+  });
+
+  let caidasAFree = 0;
+
+  for (const sub of digitales) {
+    // GRACE todavía tiene el plan pago andando: son los días de colchón después
+    // del vencimiento, y ahí no se toca nada.
+    if (getSubscriptionStatus(sub, now) !== "EXPIRED") continue;
+
+    // Si el par rol+tier no resuelve a ningún plan conocido, el aviso dice "tu
+    // plan pago terminó". El default NO puede ser el label de Free: quedaría un
+    // mail que dice "tu plan Free terminó", que es justo lo que no pasó.
+    const claveDelPlan = planDeSuscripcion(sub);
+    const planPerdido = claveDelPlan ? PLANES[claveDelPlan].label : "pago";
+
+    await prisma.subscription.update({ where: { id: sub.id }, data: caidaAFree() });
+
+    // 🔲 PENDIENTE (Fase 3/5): despublicar las páginas de venta que pasen el tope
+    // de Free. NO se borran — se despublican y ella elige cuáles quedan. Va acá,
+    // en esta misma vuelta, y todavía no se puede escribir porque el modelo de
+    // producto digital no existe. Hasta que exista, una cuenta que cae de Pro a
+    // Free se queda con más páginas publicadas de las que su plan permite.
+    // Es el lado correcto para equivocarse mientras tanto: de más, no de menos.
+
+    await createNotification({
+      userId: sub.userId,
+      type: "DIGITAL_DOWNGRADE",
+      title: `Tu plan ${planPerdido} terminó`,
+      body: "Tu cuenta sigue abierta y no perdiste nada: tus productos y tus ventas están donde estaban. Volviste al plan Free, así que la comisión por venta sube y las funciones pagas quedan apagadas. Podés volver a Starter o Pro cuando quieras.",
+      link: "/digitales/mi-plan",
+    });
+
+    caidasAFree++;
+  }
+
+  result.digitales = { revisadas: digitales.length, caidasAFree };
 
   // ── AVISO DE CAMBIO EN LOS TÉRMINOS ────────────────────────────────────────
   // Le escribe SOLO a quien todavía no aceptó la versión vigente y a quien no

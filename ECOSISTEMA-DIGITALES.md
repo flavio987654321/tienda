@@ -823,21 +823,65 @@ siguiente o el día que a alguien se le cierra la tienda sola.
   el modal de pago no encuentra su precio, muestra "no se pudo calcular" y deja
   el botón apagado — un plan que no se puede comprar, sin ningún error visible.
 
+### ✅ El ciclo de vida — HECHO (31/08/26), menos una pieza que depende de la Fase 5
+
+La diferencia con las tiendas no es un detalle y conviene tenerla escrita:
+
+| | Tienda | Digital |
+|---|---|---|
+| Entrada | prueba de 7 días | **Free**, sin tarjeta |
+| Si no paga | **se le cierra la tienda** | **vuelve a Free**, no se cierra nada |
+| Los 7 días | son la puerta de entrada | son la prueba de Starter o Pro **desde adentro** |
+
+- ✅ **Un plan que no se cobra no puede vencer** (`planVence`). Sin esto el Free
+  quedaba EXPIRED al instante: `getSubscriptionStatus` falla cerrado ante un
+  ACTIVE sin `currentPeriodEnd`, que es exactamente la forma de una suscripción
+  que no se renueva nunca.
+  - La excepción **no le afloja el vencimiento a nadie más**: se pregunta por el
+    precio del plan, no por su nombre, y un llamador que no trae rol ni tier
+    sigue fallando cerrado. Lo vigilan VIDA-C y VIDA-D.
+- ✅ **`altaDigitalFree()` y `caidaAFree()`**: los dos únicos lugares donde se
+  escribe el estado de una cuenta digital.
+  - Caer a Free **no borra nada** y **no reinicia la prueba** (VIDA-G):
+    reiniciarla sería regalar siete días de Starter en cada caída, para siempre.
+- ✅ **La prueba se toma una sola vez** (`pruebaYaUsada`), sin columna nueva: lo
+  recuerda la distancia entre `createdAt` y `trialEndsAt`. Es el lado seguro para
+  equivocarse; si se quiere abrir, se abre en esa función y en ningún otro lado.
+- ✅ **La sección 7 bis del cron diario**: busca las digitales que ya vencieron y
+  las devuelve a Free con su aviso. GRACE no se toca — son los días de colchón y
+  el plan pago sigue andando.
+- ✅ **11 chequeos nuevos** (VIDA-A a VIDA-K).
+
+- 🔲 **Lo que falta y no se puede escribir todavía**: despublicar las páginas de
+  venta que pasen el tope de Free cuando alguien cae. El modelo de producto
+  digital no existe hasta la Fase 5. El lugar exacto está marcado en el cron.
+  Mientras tanto una cuenta que cae de Pro a Free se queda con más páginas
+  publicadas de las que le tocan — de más y no de menos, que es el lado correcto
+  para equivocarse.
+- 🔲 El mail de "bajaste a Free". Hoy es un aviso dentro de la app, que necesita
+  el panel de la Fase 3 para poder verse.
+
 ### 🔲 Lo que queda de la Fase 2
 
-- 🔲 **El ciclo de vida de la sección 3** (Free → prueba → caída a Free). Es lo
-  más grande que queda. Hoy el cron sólo mira `role: "OWNER"`
-  (`cron/daily/route.ts:288`), así que las suscripciones digitales no las maneja
-  nadie.
-  - Los productos de más **no se borran**: se despublican y ella elige cuáles
-    quedan.
-  - La comisión se **congela al momento del pedido**, no se lee del plan de hoy.
-  - El aviso de "bajaste a Free".
-  - ¿La prueba de 7 días se puede tomar más de una vez?
-- 🔲 **La cuarta tarjeta en `/registro`.** Tiene que crear una cuenta con rol
-  `DIGITAL` y su suscripción Free, así que va después del ciclo de vida.
+**La puerta de entrada** — hoy no hay ninguna forma de crear una cuenta digital.
+Es lo que sigue, en este orden:
+
+- 🔲 **La cuarta tarjeta en `/registro`.** Crea la cuenta con rol `DIGITAL` y su
+  suscripción Free, usando `altaDigitalFree()`. Ya se puede escribir: el ciclo de
+  vida que le faltaba está hecho.
   - Ojo el mismo detalle de ancho que en la página de precios: ahí también son
     tres tarjetas que pasan a cuatro.
+- 🔲 **La cara propia del ingreso.** El login de Productos Digitales con su propia
+  descripción, como la tienen los otros ecosistemas.
+- 🔲 **Los pasos de creación antes de entrar al panel.** Hay imágenes de
+  referencia para esto; van cuando lleguen.
+
+**Lo que sigue abierto:**
+
+- 🔲 La comisión **congelada al momento del pedido**, no leída del plan de hoy.
+  Si alguien vende con Pro (2 %) y después cae a Free (8 %), esa venta ya hecha se
+  liquida al 2 %: cobrarle la diferencia después sería cambiarle el precio a algo
+  que ya pasó. Va con el modelo de pedido digital.
 - 🔲 El tope anti-abuso de páginas de venta, junto al código que lo aplica.
 - 🔲 La comisión de plataforma sumada a `marketplaceFee`, y **qué pasa cuando una
   venta tiene afiliado Y comisión de plataforma** (las dos salen del mismo

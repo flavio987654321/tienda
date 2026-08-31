@@ -7,7 +7,10 @@
 // un error de un factor de 10 en el crédito regala una suscripción entera, y no
 // se nota hasta que aparece en la facturación.
 
-import { cotizarCambioDePlan, getSubscriptionStatus, PRICES } from "./subscription";
+import {
+  cotizarCambioDePlan, getSubscriptionStatus, PRICES,
+  altaDigitalFree, caidaAFree, pruebaYaUsada,
+} from "./subscription";
 import { PLANES, PRECIOS_DIGITALES, planDe, planDeSuscripcion } from "./planLimits";
 
 let failed = 0;
@@ -259,6 +262,86 @@ const aProMensual = { plan: "OWNER_BASIC", billing: "MONTHLY" } as const;
   const sucias = ["__proto__", "constructor", "toString", "PLAN_QUE_NO_EXISTE", ""];
   check("PLAN-C", sucias.every((k) => planDe(k) === null),
     "una clave de plan inventada o heredada del prototipo devuelve null");
+}
+
+
+// ── El ciclo de vida de Productos Digitales ────────────────────────────────
+//
+// La regla que cambia todo: el Free no se cobra, así que no puede vencer. Sin
+// eso, una cuenta gratis nacía y quedaba EXPIRED en el acto —`getSubscriptionStatus`
+// falla cerrado ante un ACTIVE sin `currentPeriodEnd`, que es exactamente la
+// forma de una suscripción que no se renueva nunca.
+//
+// Y el otro lado, más importante todavía: eso NO puede aflojarle el vencimiento
+// a las tiendas. VIDA-B y VIDA-C están para eso.
+{
+  const free = { ...altaDigitalFree(HOY), createdAt: HOY };
+
+  check("VIDA-A", getSubscriptionStatus(free, dentro(3650)) === "ACTIVE",
+    "el Free digital sigue activo diez años después: no se cobra, no vence");
+
+  check("VIDA-B", planDeSuscripcion(free) === "DIGITAL_FREE",
+    "una cuenta digital recién creada se identifica como el plan Free");
+
+  // Los mismos datos, sin role ni tier: es lo que ve un llamador con un `select`
+  // recortado, y tiene que comportarse igual que antes de todo esto.
+  const sinRol = { status: "ACTIVE", trialEndsAt: HOY, currentPeriodEnd: null, gracePeriodEndsAt: null };
+  check("VIDA-C", getSubscriptionStatus(sinRol, dentro(1)) === "EXPIRED",
+    "sin rol ni tier se falla cerrado: un ACTIVE sin vencimiento sigue dando vencido");
+
+  // Y una tienda con esa misma forma tampoco se salva: su plan sí se cobra.
+  const tiendaSinFecha = { role: "OWNER", tier: "BASIC", status: "ACTIVE", trialEndsAt: HOY, currentPeriodEnd: null, gracePeriodEndsAt: null };
+  check("VIDA-D", getSubscriptionStatus(tiendaSinFecha, dentro(1)) === "EXPIRED",
+    "un plan de tienda sin vencimiento sigue dando vencido: la excepción es sólo para lo que no se cobra");
+}
+{
+  // La prueba de 7 días vencida es lo que el cron busca para devolverla a Free.
+  const probando = {
+    role: "DIGITAL", tier: "PRO", status: "TRIAL",
+    trialEndsAt: dentro(7), currentPeriodEnd: null, gracePeriodEndsAt: null,
+  };
+  check("VIDA-E",
+    getSubscriptionStatus(probando, HOY) === "TRIAL" &&
+    getSubscriptionStatus(probando, dentro(8)) === "EXPIRED",
+    "la prueba de un plan digital vence como cualquier otra");
+}
+{
+  // Caer a Free no borra nada y, sobre todo, no reinicia la prueba: reiniciarla
+  // sería regalar siete días de Starter en cada caída, para siempre.
+  const antes = {
+    ...altaDigitalFree(HOY),
+    tier: "PRO", status: "ACTIVE",
+    trialEndsAt: dentro(7),
+    currentPeriodEnd: dentro(30),
+  };
+  const despues = { ...antes, ...caidaAFree() };
+
+  check("VIDA-F",
+    despues.tier === "FREE" && despues.status === "ACTIVE" && despues.currentPeriodEnd === null,
+    "caer a Free deja la cuenta viva, sin plan pago y sin vencimiento");
+
+  check("VIDA-G", despues.trialEndsAt === antes.trialEndsAt,
+    "caer a Free NO reinicia la prueba de 7 días");
+
+  check("VIDA-H", getSubscriptionStatus(despues, dentro(3650)) === "ACTIVE",
+    "y la cuenta caída a Free tampoco vence después");
+}
+{
+  // La prueba se toma una sola vez, y lo que lo recuerda es la distancia entre
+  // el alta y `trialEndsAt`. Sin columna nueva.
+  const reciente = { ...altaDigitalFree(HOY), createdAt: HOY };
+  check("VIDA-I", pruebaYaUsada(reciente) === false,
+    "una cuenta recién creada todavía tiene su prueba disponible");
+
+  const yaProbo = { ...reciente, trialEndsAt: dentro(7) };
+  check("VIDA-J", pruebaYaUsada(yaProbo) === true,
+    "arrancar la prueba queda registrado, así no se puede tomar dos veces");
+
+  // El margen de un minuto existe por las milésimas entre nuestro reloj y el de
+  // la base. Un segundo de diferencia no puede leerse como una prueba usada.
+  const porMilesimas = { ...reciente, trialEndsAt: new Date(HOY.getTime() + 1000) };
+  check("VIDA-K", pruebaYaUsada(porMilesimas) === false,
+    "un segundo de diferencia entre relojes no cuenta como prueba usada");
 }
 
 console.log(failed === 0 ? "\n✅ La cuenta da bien en todos los casos." : `\n❌ ${failed} caso(s) fallan.`);

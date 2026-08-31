@@ -81,12 +81,26 @@ export function getSubscriptionStatus(sub: {
   trialEndsAt: Date;
   currentPeriodEnd: Date | null;
   gracePeriodEndsAt: Date | null;
+  /* Opcionales porque hay llamadores que traen la suscripción con un `select`
+     recortado. Sin ellos el comportamiento es exactamente el de antes: sólo
+     habilitan la pregunta de si el plan se cobra. Ver `planVence`. */
+  role?: string | null;
+  tier?: string | null;
 }, now: Date = new Date()): SubscriptionStatus {
 
   // CANCELLED es un estado terminal y acá no se interpreta: quien cierra su
   // tienda conservando días pagos vuelve a ACTIVE en /api/tienda/reactivar, o
   // sea que la base dice la verdad y esta función no tiene que adivinarla.
   if (sub.status === "CANCELLED") return "CANCELLED";
+
+  /* Un plan que no se cobra no puede vencer por falta de pago. Es el Free de
+     Productos Digitales: no tiene `currentPeriodEnd` porque no se renueva nunca,
+     y sin esta rama la lógica de abajo lo daba por EXPIRED al instante.
+
+     Los planes de tienda no pasan por acá: todos tienen precio. Y un llamador
+     que no trae `role`/`tier` tampoco, porque `planVence` falla cerrado. */
+  if (!planVence(sub)) return "ACTIVE";
+
   if (sub.status === "TRIAL") {
     return now <= sub.trialEndsAt ? "TRIAL" : "EXPIRED";
   }
@@ -116,6 +130,7 @@ export function isSubscriptionActive(sub: Parameters<typeof getSubscriptionStatu
  * abajo no puede hacer su trabajo, y TypeScript lo avisa recién si el tipo coincide.
  */
 export const SUB_STATUS_SELECT = {
+  role: true,
   tier: true,
   status: true,
   trialEndsAt: true,
@@ -163,6 +178,112 @@ export function closureDeadline(sub: Parameters<typeof getSubscriptionStatus>[0]
   const expiredAt = sub.currentPeriodEnd ?? sub.trialEndsAt;
   const days = sub.currentPeriodEnd ? PAID_CLOSURE_DAYS : TRIAL_CLOSURE_DAYS;
   return new Date(expiredAt.getTime() + days * 86400000);
+}
+
+
+/* ══════════════════════════════════════════════════════════════════════════
+   EL CICLO DE VIDA DE PRODUCTOS DIGITALES
+
+   Es distinto del de las tiendas y conviene tenerlo claro antes de leer el
+   código, porque la diferencia no es un detalle:
+
+     TIENDA    trial de 7 días → si no paga, se le CIERRA la tienda.
+     DIGITAL   entra en Free → si no paga, VUELVE A FREE. No cierra nada.
+
+   El motivo es que el Free es para siempre y lo paga la comisión por venta: no
+   hay ninguna deuda que cobrar, así que no hay nada que cerrar. Quien deja de
+   pagar Starter o Pro no pierde su cuenta, ni sus productos, ni sus ventas —
+   sube la comisión y se apagan las funciones pagas.
+
+   Los 7 días de prueba siguen existiendo, pero cambian de lugar: no son la
+   puerta de entrada, son la prueba de Starter o Pro DESDE ADENTRO.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/**
+ * ¿Este plan puede vencer por falta de pago?
+ *
+ * Un plan que no se cobra, no. Suena obvio y sin embargo sin esta pregunta el
+ * Free quedaba EXPIRED al día siguiente de crearse: `getSubscriptionStatus`
+ * falla cerrado ante un ACTIVE sin `currentPeriodEnd`, que es exactamente la
+ * forma que tiene una suscripción gratuita —no tiene período porque no se
+ * renueva nunca.
+ *
+ * Se pregunta por el precio y no por el nombre del plan a propósito: la regla
+ * real es "no se cobra", no "se llama Free".
+ */
+export function planVence(sub: { role?: string | null; tier?: string | null }): boolean {
+  if (!sub.role || !sub.tier) return true; // sin datos, se asume que vence: falla cerrado
+  const plan = planDeSuscripcion({ role: sub.role, tier: sub.tier });
+  if (!plan) return true;
+  return PLANES[plan].precios !== null;
+}
+
+/**
+ * Si la prueba de 7 días ya se usó.
+ *
+ * No hay una columna que lo diga y no se agrega una: `trialEndsAt` ya lo cuenta.
+ * Una cuenta digital nace con `trialEndsAt` en el mismo momento que
+ * `createdAt` —o sea, con la prueba en cero— y empezar la prueba la empuja siete
+ * días hacia adelante. Si la fecha quedó muy por delante del alta, la prueba se
+ * usó; si no, sigue disponible.
+ *
+ * El minuto de margen es por las milésimas entre el `new Date()` nuestro y el
+ * `now()` de la base. La distancia real que separa los dos casos es de siete
+ * días, así que el margen puede ser generoso sin arriesgar nada.
+ *
+ * 🔲 DECISIÓN ABIERTA: hoy la prueba se toma **una sola vez**. Es el lado seguro
+ * para equivocarse —una prueba repetible es Starter gratis para siempre, de a
+ * siete días— y si se quiere abrir, se abre acá y en ningún otro lado.
+ */
+export function pruebaYaUsada(sub: { trialEndsAt: Date; createdAt: Date }): boolean {
+  return sub.trialEndsAt.getTime() > sub.createdAt.getTime() + 60000;
+}
+
+/**
+ * Los campos de una cuenta digital recién creada: Free, sin tarjeta y sin
+ * vencimiento.
+ *
+ * `plan: "MONTHLY"` no significa que se le cobre por mes: la columna es
+ * obligatoria y sólo describe el ciclo de facturación cuando hay algo que
+ * facturar. `currentPeriodEnd` en null es lo que la hace para siempre.
+ */
+export function altaDigitalFree(now: Date = new Date()) {
+  return {
+    role: "DIGITAL",
+    tier: "FREE",
+    plan: "MONTHLY",
+    status: "ACTIVE",
+    // La prueba nace sin usar: misma fecha que el alta. Ver `pruebaYaUsada`.
+    trialEndsAt: now,
+    currentPeriodStart: null,
+    currentPeriodEnd: null,
+    gracePeriodEndsAt: null,
+  } as const;
+}
+
+/**
+ * Los campos que devuelven una cuenta digital a Free.
+ *
+ * Se usa cuando se termina la prueba sin pagar y cuando se vence un plan pago
+ * después de su gracia. **No borra nada**: ni la cuenta, ni los productos, ni
+ * las ventas. Sube la comisión y apaga las funciones pagas, y eso es todo.
+ *
+ * `trialEndsAt` no se toca a propósito: es lo que recuerda que la prueba ya se
+ * usó, y reiniciarlo la regalaría de nuevo en cada caída.
+ */
+export function caidaAFree() {
+  return {
+    tier: "FREE",
+    status: "ACTIVE",
+    currentPeriodStart: null,
+    currentPeriodEnd: null,
+    gracePeriodEndsAt: null,
+    // Los avisos eran de la suscripción que se venció. La próxima vez que pague
+    // y se le venza, tiene que volver a recibirlos.
+    expiredNotifiedAt: null,
+    closingNotifiedAt: null,
+    cancelAtPeriodEnd: false,
+  } as const;
 }
 
 /**
