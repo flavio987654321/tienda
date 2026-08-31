@@ -7,7 +7,9 @@ import { sendArrepentimientoEmails } from "@/lib/email";
 import {
   errorDeLosDatos,
   numeroDeConstancia,
+  MAX_EMAIL,
   MAX_MOTIVO,
+  MAX_NOMBRE,
   MAX_REFERENCIA,
   MAX_TELEFONO,
 } from "@/lib/arrepentimiento";
@@ -37,12 +39,39 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => null);
   if (!body) return NextResponse.json({ error: "Datos inválidos" }, { status: 400 });
 
-  const nombre = String(body.nombre ?? "").trim();
-  const email = String(body.email ?? "").trim().toLowerCase();
+  /* Honeypot: un campo escondido que una persona no ve y un bot llena solo.
+     Se le contesta que salió bien —con un número que no existe— para que no
+     aprenda cuál es el campo que lo delata. Es lo que frena al bot ANTES del
+     captcha, y este formulario es el más goloso de los tres que hay públicos:
+     cada envío manda DOS mails. */
+  if (body.website) {
+    /* Queda registrado, y acá esa línea de log importa más que en los otros
+       formularios: si algún día un gestor de contraseñas le completa el campo
+       trampa a una persona de verdad —hay gestores que rellenan un campo
+       llamado "website"— su solicitud se descarta sin que ella se entere, y lo
+       que se descarta es el ejercicio de un derecho con un plazo corriendo.
+       Con esto, al menos queda el rastro para recuperarla. */
+    console.warn(
+      "[arrepentimiento] descartada por el campo trampa:",
+      String(body.email ?? "").slice(0, 200)
+    );
+    return NextResponse.json({ ok: true, numero: numeroDeConstancia() });
+  }
+
+  /* Cada campo se corta a su tope ANTES de mirarlo. El corte no reemplaza a la
+     validación —`errorDeLosDatos` sigue abajo— pero garantiza que nada de largo
+     desconocido llegue a una consulta, a un mail o a un log, aunque mañana
+     alguien mueva una validación de lugar. */
+  const nombre = String(body.nombre ?? "").trim().slice(0, MAX_NOMBRE);
+  const email = String(body.email ?? "").trim().toLowerCase().slice(0, MAX_EMAIL);
   const telefono = String(body.telefono ?? "").trim().slice(0, MAX_TELEFONO);
   const referencia = String(body.referencia ?? "").trim().slice(0, MAX_REFERENCIA);
   const motivo = String(body.motivo ?? "").trim().slice(0, MAX_MOTIVO);
-  const slug = String(body.slug ?? "").trim();
+  /* El slug va a una consulta y a un log. A la consulta entra parametrizado, así
+     que por ahí no se cuela nada; el tope es para que no llegue un texto enorme
+     ni con saltos de línea, que en un log sirven para escribir renglones falsos
+     y ensuciar lo que uno mira cuando algo pasa. */
+  const slug = String(body.slug ?? "").trim().replace(/[^a-z0-9-]/gi, "").slice(0, 120);
 
   const problema = errorDeLosDatos({ nombre, email, telefono, referencia, motivo });
   if (problema) return NextResponse.json({ error: problema }, { status: 400 });

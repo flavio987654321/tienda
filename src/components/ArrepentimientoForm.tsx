@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { CheckCircle2, AlertTriangle } from "lucide-react";
 import { useTurnstile } from "@/components/Turnstile";
-import { MAX_MOTIVO, MAX_REFERENCIA } from "@/lib/arrepentimiento";
+import { MAX_EMAIL, MAX_MOTIVO, MAX_NOMBRE, MAX_REFERENCIA, MAX_TELEFONO } from "@/lib/arrepentimiento";
 
 /**
  * El botón de arrepentimiento, en su versión de formulario.
@@ -42,6 +42,11 @@ export default function ArrepentimientoForm({
   const [telefono, setTelefono] = useState("");
   const [referencia, setReferencia] = useState("");
   const [motivo, setMotivo] = useState("");
+  /* El honeypot. Una persona no lo ve —está fuera de la pantalla, fuera del
+     orden de tabulación y oculto para los lectores de pantalla— pero un bot que
+     completa todo lo que encuentra lo llena. Si viene con algo, el servidor
+     contesta que salió bien y no hace nada. Frena al bot ANTES del captcha. */
+  const [website, setWebsite] = useState("");
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState("");
   const [constancia, setConstancia] = useState("");
@@ -57,7 +62,7 @@ export default function ArrepentimientoForm({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          slug, nombre, email, telefono, referencia, motivo,
+          slug, nombre, email, telefono, referencia, motivo, website,
           turnstileToken: captcha.token,
         }),
       });
@@ -85,10 +90,10 @@ export default function ArrepentimientoForm({
         <CheckCircle2 className="mx-auto h-10 w-10 text-emerald-500" />
         <h3 className="mt-4 text-lg font-bold text-emerald-900">Tu solicitud quedó registrada</h3>
         <p className="mt-1 text-sm text-emerald-800">Este es tu número de constancia. Guardalo.</p>
-        <p className="mt-5 font-mono text-2xl font-extrabold tracking-[0.15em] text-emerald-900">
+        <p className="mt-5 break-all font-mono text-xl font-extrabold tracking-[0.15em] text-emerald-900 sm:text-2xl">
           {constancia}
         </p>
-        <p className="mx-auto mt-5 max-w-md text-sm leading-relaxed text-emerald-800">
+        <p className="mx-auto mt-5 max-w-md break-words text-sm leading-relaxed text-emerald-800">
           Te lo mandamos también por email. Le avisamos a {nombreDeQuienVende}, que se va a
           comunicar con vos para resolverlo.
         </p>
@@ -115,7 +120,7 @@ export default function ArrepentimientoForm({
           value={nombre}
           onChange={(e) => setNombre(e.target.value)}
           required
-          maxLength={120}
+          maxLength={MAX_NOMBRE}
           autoComplete="name"
           className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-slate-500"
         />
@@ -127,7 +132,7 @@ export default function ArrepentimientoForm({
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
-          maxLength={200}
+          maxLength={MAX_EMAIL}
           autoComplete="email"
           className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-slate-500"
         />
@@ -137,7 +142,7 @@ export default function ArrepentimientoForm({
         <input
           value={telefono}
           onChange={(e) => setTelefono(e.target.value)}
-          maxLength={40}
+          maxLength={MAX_TELEFONO}
           autoComplete="tel"
           className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-slate-500"
         />
@@ -170,12 +175,27 @@ export default function ArrepentimientoForm({
         />
       </Campo>
 
+      {/* Honeypot: escondido para una persona, visible para un bot que llena todo
+          lo que encuentra. `tabIndex={-1}` lo saca del orden de tabulación y
+          `aria-hidden` hace que un lector de pantalla tampoco lo ofrezca, así
+          que nadie que use el formulario de verdad se lo cruza. */}
+      <input
+        type="text"
+        name="website"
+        value={website}
+        onChange={(e) => setWebsite(e.target.value)}
+        tabIndex={-1}
+        autoComplete="off"
+        aria-hidden="true"
+        style={{ position: "absolute", left: "-9999px", width: 1, height: 1, opacity: 0 }}
+      />
+
       {captcha.widget}
 
       {error && (
         <div className="flex items-start gap-2.5 rounded-lg border border-red-200 bg-red-50 px-3.5 py-3">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-red-500" />
-          <p className="text-sm text-red-800">{error}</p>
+          <p className="break-words text-sm text-red-800">{error}</p>
         </div>
       )}
 

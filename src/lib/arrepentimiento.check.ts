@@ -135,6 +135,74 @@ chequear(
   "si no, corregir una letra obliga a resolver el captcha otra vez"
 );
 
+console.log("\n4 bis) El campo trampa");
+
+/* Frena al bot ANTES del captcha y sin molestar a nadie. Este formulario es el
+   más goloso de los tres públicos del proyecto: cada envío manda DOS mails. */
+chequear("el formulario lleva el campo trampa", /name="website"/.test(formulario));
+chequear(
+  "escondido, fuera del tabulador y oculto para lectores de pantalla",
+  /tabIndex=\{-1\}/.test(formulario) &&
+    /aria-hidden="true"/.test(formulario) &&
+    /autoComplete="off"/.test(formulario) &&
+    /left: "-9999px"/.test(formulario),
+  "si una persona lo ve o lo tabula, deja de ser una trampa y pasa a ser un bug"
+);
+chequear("y lo manda al servidor", /motivo, website,/.test(formulario));
+chequear(
+  "el servidor lo mira ANTES que nada",
+  cuerpoDeLaRuta.indexOf("body.website") < cuerpoDeLaRuta.indexOf("errorDeLosDatos(")
+);
+chequear(
+  "y le contesta que salió bien, para no enseñarle cuál es el campo",
+  /if \(body\.website\) \{[\s\S]{0,700}return NextResponse\.json\(\{ ok: true, numero: numeroDeConstancia\(\) \}\)/.test(ruta)
+);
+/* Hay gestores de contraseñas que completan un campo llamado "website". Si le
+   pasa a una persona de verdad, su solicitud se descarta sin que se entere — y
+   lo que se descarta es un derecho con un plazo corriendo. */
+chequear(
+  "pero deja rastro, por si el descartado fue una persona",
+  /descartada por el campo trampa/.test(ruta)
+);
+
+console.log("\n4 ter) Nada entra sin tope");
+
+/* Se busca la línea entera con `includes` y no con una expresión armada al vuelo:
+   una expresión construida con texto pegado es fácil de escribir mal, y escrita
+   mal da verdadero siempre — un chequeo que nunca falla es peor que no tenerlo. */
+for (const campo of ["nombre", "email", "telefono", "referencia", "motivo"]) {
+  const declaracion =
+    cuerpoDeLaRuta.split("\n").find((l) => l.includes(`const ${campo} = String(body.${campo}`)) ?? "";
+  chequear(
+    `${campo}: se corta antes de usarse`,
+    declaracion.includes(".slice(0, MAX_"),
+    declaracion.trim() || "no se encontró la declaración"
+  );
+}
+chequear(
+  "el slug se limpia y se corta antes de ir a la consulta y al log",
+  /const slug = String\(body\.slug[\s\S]{0,90}\.replace\([\s\S]{0,40}\)\.slice\(0, 120\)/.test(cuerpoDeLaRuta),
+  "un texto con saltos de línea en un log sirve para escribir renglones falsos"
+);
+chequear(
+  "y el formulario usa los MISMOS topes que el servidor, no números escritos a mano",
+  /maxLength=\{MAX_NOMBRE\}/.test(formulario) &&
+    /maxLength=\{MAX_EMAIL\}/.test(formulario) &&
+    /maxLength=\{MAX_TELEFONO\}/.test(formulario) &&
+    /maxLength=\{MAX_REFERENCIA\}/.test(formulario) &&
+    /maxLength=\{MAX_MOTIVO\}/.test(formulario),
+  "escritos a mano se separan solos, y el que sufre es quien escribe de más y recibe un error en vez de un tope"
+);
+
+/* Lo que la dueña escribe entra en pantallas que mira cualquiera. Un nombre de
+   tienda de una sola palabra larguísima, sin esto, empuja el ancho del teléfono
+   en vez de bajar de renglón. */
+chequear(
+  "el texto largo baja de renglón en vez de estirar la pantalla",
+  /break-words/.test(formulario) && /break-all/.test(formulario),
+  "el nombre de la tienda y el número de constancia son los dos que pueden desbordar"
+);
+
 console.log("\n5) La solicitud no se pierde");
 
 chequear(

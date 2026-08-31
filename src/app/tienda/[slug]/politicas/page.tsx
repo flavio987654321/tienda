@@ -179,7 +179,11 @@ export default async function PoliticasPage({ params, searchParams }: Props) {
                 <h2 className="text-xl font-bold tracking-tight sm:text-2xl">
                   {titulos[CLAVE_ARREPENTIMIENTO].largo}
                 </h2>
-                <p className="mt-2 max-w-[68ch] text-sm leading-relaxed text-slate-500">
+                {/* `break-words`: el nombre de la tienda lo escribe su dueña y
+                    puede ser una sola palabra larguísima. Sin esto, en un
+                    teléfono empuja la pantalla a lo ancho en vez de bajar de
+                    renglón. */}
+                <p className="mt-2 max-w-[68ch] break-words text-sm leading-relaxed text-slate-500">
                   Para dar marcha atrás con una compra que hiciste en {store.name}.
                 </p>
                 <div className="mt-6">
