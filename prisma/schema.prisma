@@ -583,6 +583,30 @@ model Product {
   archivoNombre String?
   archivoPeso   Int?
 
+  /// ── El embudo de Productos Digitales ──────────────────────────────────────
+  ///
+  /// Un producto digital, un bono y un upsell son LA MISMA COSA: un archivo con
+  /// título, descripción, precio e imagen. Lo único que los separa es el papel
+  /// que juegan y de quién cuelgan.
+  ///
+  ///   PRINCIPAL → es lo que se compra. Tiene su propia página de venta.
+  ///   BONO      → va de regalo con la compra. Precio 0, y `comparePrice`
+  ///               guarda el valor que se muestra tachado.
+  ///   UPSELL    → se ofrece aparte durante el checkout, con su propio precio.
+  ///
+  /// Por eso NO hay tablas nuevas. Dos tablas más —una de bonos y otra de
+  /// upsells— serían dos copias del mismo formulario, de la misma subida de
+  /// archivo y de la misma entrega, que después se desincronizan de a una.
+  ///
+  /// `null` en un producto de tienda, que es lo que son todos hoy.
+  rolDigital String?
+  /// De qué PRINCIPAL cuelga. Null en el principal y en todo producto físico.
+  /// Con `Cascade`: borrar el principal se lleva sus bonos y sus upsells, que no
+  /// tienen dónde vivir sin él.
+  padreId String?
+  padre   Product?  @relation("EmbudoDigital", fields: [padreId], references: [id], onDelete: Cascade)
+  hijos   Product[] @relation("EmbudoDigital")
+
   storeId String
   store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
 
@@ -604,6 +628,10 @@ model Product {
   // justamente el número de productos de todas las tiendas juntas, y el día que
   // se note ya va a estar doliendo en cada visita.
   @@index([storeId])
+  // La ficha de un producto digital pide sus bonos y sus upsells de una:
+  // `where: { padreId }`. Sin esto es un escaneo de la tabla entera —la de TODAS
+  // las tiendas— cada vez que alguien abre un producto o su página de venta.
+  @@index([padreId])
 }
 
 // Gastos asociados a un vehículo (Autos/Motos): compra, lavado, service,

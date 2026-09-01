@@ -51,6 +51,9 @@ const cron = soloCodigo(readFileSync("src/app/api/cron/daily/route.ts", "utf8"))
 const perfil = soloCodigo(readFileSync("src/app/api/perfil/route.ts", "utf8"));
 const registro = soloCodigo(readFileSync("src/app/api/auth/registro/route.ts", "utf8"));
 const mails = soloCodigo(readFileSync("src/lib/resend.ts", "utf8"));
+const crear = soloCodigo(readFileSync("src/app/api/digitales/productos/route.ts", "utf8"));
+const editar = soloCodigo(readFileSync("src/app/api/digitales/productos/[id]/route.ts", "utf8"));
+const pantallaProductos = soloCodigo(readFileSync("src/app/digitales/productos/ProductosClient.tsx", "utf8"));
 
 /* ── 1. La ruta que regala un plan pago ────────────────────────────────────── */
 console.log("\n1) Los frenos de /api/digitales/prueba");
@@ -296,6 +299,74 @@ chequear("el nombre en la barra se recorta con puntos", /truncate/.test(barra));
 /* El `<main>` no puede desbordar a lo ancho: si lo hace, la página entera se
    mueve para los costados en el celular y la barra lateral se despega. */
 chequear("el contenido no desborda a lo ancho", /overflow-x-hidden/.test(layout));
+
+/* ── 11. Las rutas que crean y editan productos ────────────────────────────── */
+console.log("\n11) Los frenos de /api/digitales/productos");
+
+chequear("crear exige sesión Y rol DIGITAL",
+  /user\.role !== "DIGITAL"/.test(crear) && /status: 403/.test(crear));
+chequear("editar y borrar también", /user\.role !== "DIGITAL"/.test(editar));
+chequear("crear tiene tope de intentos", /checkRateLimit\(`digital-producto:/.test(crear));
+
+/* El rol decide dónde se guarda el producto. Con un cast entraría cualquier
+   cadena; con `rolDe` sale de una lista o no sale. */
+chequear("el rol sale de la lista, no de un cast",
+  /rolDe\(rolCrudo\)/.test(crear) && !/as RolDigital/.test(crear));
+
+/* ⚠️ El freno más importante de esta ruta. `padreId` llega del navegador: sin
+   cruzarlo contra la tienda de ESTA cuenta, mandar el id del producto de otra
+   persona le cuelga un bono adentro de su embudo, y ese bono se entrega con sus
+   compras. */
+chequear("el producto padre se verifica contra la cuenta que pide",
+  /findFirst\([\s\S]{0,200}?id: padreId,[\s\S]{0,80}?storeId: espacio\.storeId/.test(crear));
+
+/* El botón apagado en la pantalla es una cortesía, no un permiso: se cuenta en
+   la base. */
+chequear("el tope del plan se cuenta en la base",
+  /prisma\.product\.count\(/.test(crear) && /cuantos >= tope/.test(crear));
+
+/* Un producto recién creado NO puede nacer publicado, aunque venga con todo
+   cargado: todavía no tiene archivo, y publicar sin archivo es cobrar por algo
+   que no se entrega. */
+chequear("nace despublicado siempre", /isActive: false,/.test(crear));
+
+/* Y publicar pasa por el mismo chequeo que dibuja el cartel rojo, verificado del
+   lado del SERVIDOR: la pantalla apaga el botón, pero el botón no es el permiso. */
+chequear("publicar pasa por loQueFalta en el servidor",
+  /if \(publicado === true\)/.test(editar) && /loQueFalta\(\{/.test(editar));
+
+/* ⚠️ El `id` viaja en la URL. Sin cruzarlo con el dueño, alguien edita, publica
+   o borra el producto de otra persona probando ids. Va adentro del `where` a
+   propósito: una consulta que ya no puede devolver lo ajeno no se puede olvidar
+   de comprobarlo después. */
+chequear("un producto sólo se toca si es de quien lo pide",
+  /store: \{ ownerId: userId \}/.test(editar));
+
+/* Borrar de verdad dejaría pedidos viejos sin poder decir qué se vendió, y con
+   ellos los permisos de descarga de gente que ya pagó. */
+chequear("el borrado es suave y arrastra los bonos y upsells",
+  /deletedAt: ahora/.test(editar) && /padreId: id/.test(editar));
+
+/* Las dos rutas y la pantalla usan LA MISMA validación. Copiada en cada una se
+   desincroniza sola: se agrega una condición al alta y la edición sigue
+   aceptando lo que el alta rechaza. Ya pasó con el teléfono. */
+chequear("crear, editar y la pantalla comparten validarCampos",
+  /validarCampos\(/.test(crear) && /validarCampos\(/.test(editar) && /validarCampos\(/.test(pantallaProductos));
+
+/* Un bono es un regalo: su precio lo fija el servidor en 0 y no se acepta el que
+   venga del navegador. */
+chequear("el precio de un bono lo pone el servidor",
+  /rol === "BONO" \? 0 : price/.test(crear) && /rol === "BONO" \? 0 : price/.test(editar));
+
+/* ⚠️ El doble clic. `guardando` y `trabajando` son estado, y el estado se ve
+   recién en el dibujo siguiente: dos clics en el mismo cuadro leen los dos el
+   valor viejo, los dos pasan, y salen dos pedidos. El botón apagado llega tarde.
+   Un ref cambia en el acto. Sin esto, dos altas seguidas crean dos productos y
+   gastan dos lugares del plan. */
+chequear("el doble clic se corta con un ref, no con estado",
+  /useRef\(false\)/.test(pantallaProductos) && /enVuelo\.current = true/.test(pantallaProductos));
+chequear("y lo tienen las cuatro acciones que escriben",
+  (pantallaProductos.match(/if \(.*enVuelo\.current\) return;|if \(enVuelo\.current\) return;/g) ?? []).length >= 4);
 
 console.log(fallos === 0
   ? "\nok — el panel de Productos Digitales sigue en pie"

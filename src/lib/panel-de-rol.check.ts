@@ -53,10 +53,33 @@ chequear(
   panelDeRol("ADMIN", true).href === "/admin",
   "el admin manda: es el único que no puede quedar atrapado en el dashboard",
 );
+/* ⚠️ ESTE CHEQUEO ESTABA AL REVÉS, y se dio vuelta a propósito el 01/09/26.
+ *
+ * Decía "DIGITAL con tienda va al dashboard", con este motivo: *"no debería
+ * poder pasar —una cuenta es un solo producto— pero si pasa, la tienda manda: es
+ * lo que se cierra si nadie la atiende"*.
+ *
+ * Las dos mitades de ese razonamiento dejaron de valer:
+ *
+ *   1. **Ahora SÍ pasa, y a propósito.** Una cuenta de Productos Digitales tiene
+ *      una `Store` de verdad: es el motor que le presta el catálogo, el checkout
+ *      y los pedidos. Se crea sola al guardar el primer producto. Nunca se le
+ *      muestra ni se le llama "tienda", pero existe. Con la regla vieja, cargar
+ *      el primer producto mandaba a la persona al panel de tiendas — donde el
+ *      layout le mira el rol, ve DIGITAL y le contesta "esta no es tu cuenta".
+ *      Quedaba rebotando entre dos paneles.
+ *
+ *   2. **Esa tienda no se cierra.** El cron que cierra por falta de pago filtra
+ *      `role: "OWNER"` (sección 6 de `cron/daily`), así que nunca la toca. El
+ *      miedo que justificaba mandarla al dashboard no existe.
+ *
+ * `tieneTienda` sigue mandando para todos los demás: es para cuentas viejas que
+ * son dueñas de una tienda y todavía no tienen el rol OWNER.
+ */
 chequear(
-  "DIGITAL con tienda va al dashboard",
-  panelDeRol("DIGITAL", true).href === "/dashboard",
-  "no deberia poder pasar —una cuenta es un solo producto— pero si pasa, la tienda manda: es lo que se cierra si nadie la atiende",
+  "DIGITAL con tienda va a SU panel, no al de tiendas",
+  panelDeRol("DIGITAL", true).href === "/digitales",
+  "su tienda es el motor, no su negocio: nunca se le muestra y el cron no la cierra",
 );
 chequear(
   "SELLER con tienda va al dashboard, no al panel de afiliados",

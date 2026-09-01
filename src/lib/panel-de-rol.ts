@@ -36,9 +36,24 @@ export function panelDeRol(
   tieneTienda = false,
 ): DestinoDePanel {
   if (role === "ADMIN") return { href: "/admin", label: "Admin" };
+  /* DIGITAL va ANTES que `tieneTienda`, y el orden es todo el punto.
+   *
+   * Una cuenta de Productos Digitales tiene una `Store` de verdad: es el motor
+   * que le presta el catálogo, el checkout y los pedidos. Nunca se le muestra ni
+   * se le llama "tienda", pero existe en la base.
+   *
+   * Con la regla vieja, en el momento en que esa cuenta cargaba su primer
+   * producto pasaba a tener tienda, y ESTA función la empezaba a mandar al panel
+   * de tiendas. Ahí el layout del dashboard le mira el rol, ve DIGITAL, y le
+   * contesta "esta no es tu cuenta": la persona quedaba rebotando entre dos
+   * paneles, y el único aviso era el que le decía que se había equivocado de
+   * puerta.
+   *
+   * `tieneTienda` sigue existiendo para lo que vino a resolver: cuentas viejas
+   * que son dueñas de una tienda y todavía no tienen el rol OWNER. */
+  if (role === "DIGITAL") return { href: "/digitales", label: "Mis productos" };
   if (role === "OWNER" || tieneTienda) return { href: "/dashboard", label: "Mi tienda" };
   if (role === "SELLER") return { href: "/afiliados", label: "Mi panel" };
-  if (role === "DIGITAL") return { href: "/digitales", label: "Mis productos" };
   return { href: "/mi-cuenta", label: "Mi cuenta" };
 }
 

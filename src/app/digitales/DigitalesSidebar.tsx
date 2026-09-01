@@ -9,20 +9,22 @@ import { useAuth } from "@/components/AuthProvider";
 import NotificationBell from "@/components/NotificationBell";
 import { COPY_DIGITAL, type TierDigital } from "@/lib/planes-digitales";
 import {
-  Home, UserRound, Menu, X, LogOut, Loader2, ChevronRight, Sparkles,
+  Home, UserRound, Package, Menu, X, LogOut, Loader2, ChevronRight, Sparkles,
 } from "lucide-react";
 
 /* ── Las pantallas del panel, en UNA sola lista ──────────────────────────────
  *
- * Dos, y son las dos que existen de verdad. Sin entradas apagadas ni
+ * Tres, y son las tres que existen de verdad. Sin entradas apagadas ni
  * "próximamente": un menú que nombra pantallas que no están se lee como que el
- * panel se rompió, no como que eso viene después.
+ * panel se rompió, no como que eso viene después. Un chequeo abre cada `href` y
+ * verifica que exista su `page.tsx`.
  *
  * La lista es una sola para la barra de escritorio y para el cajón del celular.
  * Es la corrección que ya se le hizo a `AfiliadosNav`, donde eran dos listas y
  * cuatro pantallas enteras y andando no tenían botón en la computadora. */
 const LINKS: { href: string; label: string; Icon: React.ElementType }[] = [
   { href: "/digitales", label: "Inicio", Icon: Home },
+  { href: "/digitales/productos", label: "Productos", Icon: Package },
   { href: "/digitales/mi-cuenta", label: "Mi cuenta", Icon: UserRound },
 ];
 

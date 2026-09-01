@@ -1239,14 +1239,55 @@ Probado al revés: destapando a mano uno de los agujeros recién arreglados, fal
 lo señala con archivo y línea. Total: **60 pruebas**.
 
 
+### ✅ El modelo de producto digital — HECHO (01/09/26)
+
+Era la decisión que destrababa todo lo demás. **Un producto, un bono y un upsell
+son la misma cosa con distinto papel**, así que van en la misma tabla y se
+separan por `rolDigital`. No hay tablas nuevas a propósito: dos tablas más serían
+dos copias del mismo formulario, de la misma subida y de la misma entrega, y se
+desincronizan de a una.
+
+- ✅ Dos columnas en `Product`: `rolDigital` (PRINCIPAL / BONO / UPSELL) y
+  `padreId`, que cuelga los hijos de su principal con borrado en cascada.
+- ✅ Migración `20260901120000_add_embudo_digital`, escrita a mano, comparada
+  contra `prisma migrate diff` antes de aplicarla. Después: 115 productos, 0 con
+  rol y 0 con padre — no tocó nada de lo que ya estaba.
+- ✅ `productos-digitales.ts`, sin Prisma adentro para que la pantalla lo pueda
+  importar: `rolDe`, `topeDe`, `loQueFalta`, `validarCampos`, `imagenValida`.
+- ✅ `espacio-digital.ts` crea la `Store` que le presta el motor a la cuenta
+  **recién al guardar el primer producto**, y nunca se le dice "tienda" en
+  pantalla. Entrar a mirar no deja una tienda vacía colgando.
+
+### ✅ Productos — crear, editar, publicar — HECHO (01/09/26)
+
+- ✅ Una sola pantalla para los tres roles, con el principal arriba y sus bonos y
+  upsells anidados, cada grupo con su contador contra el tope del plan.
+- ✅ Portada por `/api/upload`, con lista blanca al guardar: una dirección ajena
+  adentro de la página de venta es un rastreador de un tercero mirando quién
+  entra.
+- ✅ **Publicar está bloqueado hasta que exista el archivo**, en la pantalla y
+  otra vez en el servidor. Es el peor final posible de este ecosistema: se cobra
+  la plata y no llega nada.
+- ✅ Los frenos de las rutas: rol DIGITAL, tope de intentos, el rol sale de una
+  lista y no de un cast, **el padre se verifica contra la cuenta que pide**, el
+  tope se cuenta en la base, y nace despublicado siempre.
+- ✅ Borrado suave que arrastra bonos y upsells: borrar de verdad dejaría pedidos
+  viejos sin poder decir qué se vendió, y con ellos los permisos de descarga de
+  gente que ya pagó.
+- ✅ Doble clic cortado con un ref y no con estado: el estado se ve recién en el
+  dibujo siguiente, así que dos clics en el mismo cuadro pasaban los dos.
+- ✅ 20 pruebas nuevas (`productos-digitales.check.ts` y el bloque 11 de
+  `panel-digitales.check.ts`).
+
+- 🔲 **Subir el archivo del producto** — bucket privado en Supabase con permiso
+  firmado, igual que `/api/upload/firma`. Hasta que exista, publicar queda
+  cerrado a propósito.
+
 ### 🔲 Lo que sigue
 
-- 🔲 **El modelo de producto digital** — la decisión que destraba todo lo demás.
-  Sin él no se pueden escribir Productos, ni Ventas, ni el asistente de
-  bienvenida, ni el despublicado de páginas de más al caer a Free.
+- 🔲 **Configuración** — la pantalla que sigue.
 - 🔲 **Inicio de verdad**: las URLs y los próximos pasos. Hoy es una pantalla que
   dice que el panel se está construyendo, con un solo link a Mi cuenta.
-- 🔲 **Productos** — crear, subir el archivo, publicar.
 - 🔲 **Ventas**, y recién después **Estadísticas**, cuando haya qué mostrar.
 - 🔲 **El asistente de la primera vez** (los 5 pasos de la competencia). Se diseña
   ahora, se construye último: depende de las Fases 4 y 5.
