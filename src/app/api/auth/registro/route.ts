@@ -7,7 +7,8 @@ import { CURRENT_TERMS_VERSION } from "@/lib/legal";
 import { verifyTurnstile } from "@/lib/turnstile";
 import { getClientIp } from "@/lib/request-ip";
 import { sendWelcomeEmail } from "@/lib/resend";
-import { altaDigitalFree } from "@/lib/subscription";
+import { altaDigitalFree, altaDigitalConPrueba } from "@/lib/subscription";
+import { TIERS_DIGITALES, type TierDigital } from "@/lib/planes-digitales";
 
 const TERMS_VERSION = CURRENT_TERMS_VERSION;
 
@@ -33,7 +34,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Demasiados intentos. Esperá un momento e intentá de nuevo." }, { status: 429 });
     }
 
-    const { name, email, password, storeName, accountType, billing, tier, phone, termsAccepted, ageConfirmed, turnstileToken } = await req.json();
+    const { name, email, password, storeName, accountType, billing, tier, digitalTier, phone, termsAccepted, ageConfirmed, turnstileToken } = await req.json();
 
     if (!name || !email || !password) {
       return NextResponse.json({ error: "Todos los campos son requeridos" }, { status: 400 });
@@ -99,6 +100,27 @@ export async function POST(req: NextRequest) {
     if (type === "DIGITAL" && !DIGITALES_ON) {
       return NextResponse.json({ error: "Las cuentas de Productos Digitales todavía no están disponibles." }, { status: 400 });
     }
+
+    /* El plan digital que eligió, validado contra la lista real.
+
+       Se busca en un array con `find` y no en un objeto a propósito: no hay
+       prototipo del que heredar, así que "constructor" no puede colarse. Lo que
+       no esté en la lista se rechaza en vez de caer en un default, y sin plan
+       elegido es FREE — nunca uno pago.
+
+       Que esto sea seguro NO depende de esta validación sola: el alta de un plan
+       pago sale de `altaDigitalConPrueba`, que devuelve TRIAL y jamás ACTIVE. Aun
+       si esta lista se aflojara, lo más que se podría pedir son los siete días
+       que la pantalla ofrece igual. */
+    let tierDigital: TierDigital = "FREE";
+    if (type === "DIGITAL" && digitalTier !== undefined && digitalTier !== null) {
+      const elegido = TIERS_DIGITALES.find((t) => t === digitalTier);
+      if (!elegido) {
+        return NextResponse.json({ error: "Plan inválido" }, { status: 400 });
+      }
+      tierDigital = elegido;
+    }
+
     if (type === "OWNER" && !storeName) {
       return NextResponse.json({ error: "El nombre de la tienda es requerido" }, { status: 400 });
     }
@@ -188,7 +210,14 @@ export async function POST(req: NextRequest) {
                 },
               }
             : type === "DIGITAL"
-            ? { subscription: { create: { ...altaDigitalFree() } } }
+            ? {
+                subscription: {
+                  create:
+                    tierDigital === "FREE"
+                      ? { ...altaDigitalFree() }
+                      : { ...altaDigitalConPrueba(tierDigital) },
+                },
+              }
             : {}),
         },
       });
@@ -201,6 +230,7 @@ export async function POST(req: NextRequest) {
         userName: name,
         role: type,
         storeName: type === "OWNER" ? storeName : null,
+        digitalPlan: type === "DIGITAL" ? tierDigital : null,
       }).catch((err) => console.error("[email] sendWelcomeEmail failed:", err));
 
       return NextResponse.json({ success: true, userId: user.id });

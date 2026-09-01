@@ -261,6 +261,34 @@ export function altaDigitalFree(now: Date = new Date()) {
   } as const;
 }
 
+
+/**
+ * Los campos de una cuenta digital que arranca **probando** un plan pago.
+ *
+ * El estado es `TRIAL` y **nunca `ACTIVE`**, y eso no es un detalle de estilo: el
+ * tier lo elige la persona en una pantalla del navegador y viaja en el pedido de
+ * alta. Si esta función pudiera devolver `ACTIVE`, cualquiera pediría `PRO` en el
+ * alta y se llevaría el plan más caro sin pagar un peso. Con `TRIAL`, lo más que
+ * puede conseguir son los siete días que la pantalla le ofrece igual.
+ *
+ * Y esos siete días quedan **gastados** (ver `pruebaYaUsada`): la fecha se va al
+ * futuro, así que no se puede volver a pedir la prueba desde adentro.
+ *
+ * Al vencer, el cron la devuelve a Free. No se cierra nada.
+ */
+export function altaDigitalConPrueba(tier: "STARTER" | "PRO", now: Date = new Date()) {
+  return {
+    role: "DIGITAL",
+    tier,
+    plan: "MONTHLY",
+    status: "TRIAL",
+    trialEndsAt: new Date(now.getTime() + TRIAL_DAYS * 86400000),
+    currentPeriodStart: null,
+    currentPeriodEnd: null,
+    gracePeriodEndsAt: null,
+  } as const;
+}
+
 /**
  * Los campos que devuelven una cuenta digital a Free.
  *

@@ -961,11 +961,15 @@ export async function sendWelcomeEmail({
   userName,
   role,
   storeName,
+  digitalPlan,
 }: {
   to: string;
   userName: string;
   role: "OWNER" | "SELLER" | "BUYER" | "DIGITAL";
   storeName?: string | null;
+  /** El plan con el que arrancó una cuenta digital. Sin esto el mail le decía
+   *  "arrancás en Free" a quien acababa de elegir Pro. */
+  digitalPlan?: "FREE" | "STARTER" | "PRO" | null;
 }) {
   if (!process.env.RESEND_API_KEY) return;
 
@@ -1024,7 +1028,9 @@ export async function sendWelcomeEmail({
       ${btn("/afiliados", "Ver tiendas disponibles")}`;
   } else if (role === "DIGITAL") {
     titular = "Tu cuenta ya está lista";
-    intro = "Arrancás en el plan <strong>Free</strong>: es gratis, no vence y no te pedimos ninguna tarjeta.";
+    intro = digitalPlan && digitalPlan !== "FREE"
+      ? `Estás probando <strong>${digitalPlan === "PRO" ? "Pro" : "Starter"}</strong> por 7 días, sin tarjeta. Al terminar, si no pagás, tu cuenta vuelve al plan Free — no se cierra nada.`
+      : "Arrancás en el plan <strong>Free</strong>: es gratis, no vence y no te pedimos ninguna tarjeta.";
     cuerpo = `
       <p style="font-size:15px;color:#374151;line-height:1.6;margin-bottom:20px;">
         El Free se paga con una comisión por venta, así que no hay ningún abono que se te venza ni

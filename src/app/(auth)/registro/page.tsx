@@ -7,11 +7,12 @@ import { useTurnstile } from "@/components/Turnstile";
 import { validarContrasena, LARGO_MINIMO } from "@/lib/password-policy";
 import { isPwa } from "@/lib/pwa";
 import { trackEvent } from "@/lib/meta-pixel";
-import { PRICES as PLAN_PRICES, PRO_MAX_AFFILIATES, PRO_MAX_ACTIVE_COUPONS, PRO_MAX_PRODUCTS } from "@/lib/planLimits";
+import { PRICES as PLAN_PRICES, PRO_MAX_AFFILIATES, PRO_MAX_ACTIVE_COUPONS, PRO_MAX_PRODUCTS, PRECIOS_DIGITALES, COMISION_DIGITAL } from "@/lib/planLimits";
+import { featuresDigital, COPY_DIGITAL, TIERS_DIGITALES, type TierDigital } from "@/lib/planes-digitales";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import {
-  Loader2, Eye, EyeOff, ArrowRight,
+  Loader2, Eye, EyeOff, ArrowRight, ArrowLeft,
   Store, Users, CheckCircle, ShoppingCart, Zap, Download, Sparkles,
 } from "lucide-react";
 
@@ -116,7 +117,7 @@ const TYPES = [
       "Bonos y upsells por producto",
       "Cobrás con Mercado Pago",
     ],
-    cta: "Crear mi cuenta",
+    cta: "Elegir plan",
   },
 ].filter((t) => t.key !== "digital" || DIGITALES_ON);
 
@@ -201,6 +202,13 @@ function RegistroContent() {
   const rawTier = searchParams.get("tier");
   const tierParam: "BASIC" | "PREMIUM" = rawTier === "premium" || rawTier === "PREMIUM" ? "PREMIUM" : "BASIC";
 
+  /* El mismo parámetro sirve para los dos productos, porque nunca conviven: una
+     tienda no tiene tier digital ni al revés. Se compara en mayúsculas contra la
+     lista real de tiers y lo que no esté cae en FREE — nunca en un plan pago. */
+  const tierDigitalEnLaUrl = TIERS_DIGITALES.find((t) => t === (rawTier ?? "").toUpperCase()) ?? null;
+  const tierEnLaUrl = tierDigitalEnLaUrl !== null;
+  const tierDigitalParam: TierDigital = tierDigitalEnLaUrl ?? "FREE";
+
   const [step, setStep] = useState<"type" | "form">(planParam ? "form" : "type");
   const [accountType, setAccountType] = useState<AccountType>(planParam ?? "owner");
   const [ownerTier, setOwnerTier] = useState<"BASIC" | "PREMIUM">(tierParam);
@@ -216,6 +224,12 @@ function RegistroContent() {
   const [loading, setLoading] = useState(false);
   const [redirecting, setRedirecting] = useState(false);
   const [step1Tier, setStep1Tier] = useState<"BASIC" | "PREMIUM">("BASIC");
+  /* La tarjeta de Productos Digitales no lleva derecho al formulario: primero se
+     elige el plan, igual que la de tienda elige entre Pro y Premium. La
+     diferencia es que son tres y no entran adentro de la tarjeta, así que
+     reemplazan a las cuatro — la misma interacción que en /precios. */
+  const [verPlanesDigitales, setVerPlanesDigitales] = useState(false);
+  const [digitalTier, setDigitalTier] = useState<TierDigital>(tierDigitalParam);
   const captcha = useTurnstile("registro");
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -253,7 +267,21 @@ function RegistroContent() {
     setFieldErrors((p) => ({ ...p, [name]: err }));
   }
 
+  /* Elegido el plan, recién ahí se va al formulario. El tier viaja en el estado
+     y se manda con el alta: el servidor lo vuelve a validar, porque esto es el
+     navegador y acá no se decide nada que cueste plata. */
+  function elegirPlanDigital(tier: TierDigital) {
+    setDigitalTier(tier);
+    setAccountType("digital");
+    setVerPlanesDigitales(false);
+    setStep("form");
+  }
+
   function selectType(t: AccountType) {
+    /* Digitales pasa por la pantalla de planes. Se saltea sólo si ya vino
+       elegido en la URL (?plan=digital&tier=starter), que es como llega el que
+       apretó un plan en /precios. */
+    if (t === "digital" && !tierEnLaUrl) { setVerPlanesDigitales(true); return; }
     setAccountType(t);
     if (t === "owner") setOwnerTier(step1Tier);
     setStep("form");
@@ -276,7 +304,7 @@ function RegistroContent() {
     const res = await fetch("/api/auth/registro", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...form, accountType, billing, tier: ownerTier, phone: form.phone.trim(), termsAccepted, ageConfirmed, turnstileToken: captcha.token }),
+      body: JSON.stringify({ ...form, accountType, billing, tier: ownerTier, digitalTier, phone: form.phone.trim(), termsAccepted, ageConfirmed, turnstileToken: captcha.token }),
     });
     const data = await res.json();
     captcha.reset();
@@ -296,10 +324,16 @@ function RegistroContent() {
     // se distingue es el tipo de cuenta, que es lo que después deja armar
     // públicos parecidos solo con los que abren tienda.
     trackEvent("CompleteRegistration", { content_name: accountType, status: true });
-    // El alta de un OWNER arranca la prueba gratis de 7 días. Es un evento
-    // estándar aparte para poder optimizar campañas directamente contra esto,
-    // que es la conversión que de verdad importa.
-    if (accountType === "owner") trackEvent("StartTrial");
+    // El alta que arranca una prueba gratis de 7 días. Es un evento estándar
+    // aparte para poder optimizar campañas directamente contra esto, que es la
+    // conversión que de verdad importa.
+    //
+    // Una cuenta digital también puede arrancar probando, si eligió Starter o
+    // Pro en vez de Free. Sin esta rama esas altas no se contaban y las campañas
+    // de digitales optimizaban contra nada.
+    if (accountType === "owner" || (accountType === "digital" && digitalTier !== "FREE")) {
+      trackEvent("StartTrial");
+    }
 
     setRedirecting(true);
     if (accountType === "buyer") {
@@ -447,11 +481,21 @@ function RegistroContent() {
             <div className="flex items-center justify-between mb-8">
               <div className={`flex items-center gap-3 px-4 py-2.5 rounded-2xl border ${colors.border} ${colors.bg}`}>
                 <selected.icon className={`h-4 w-4 ${colors.text}`} />
-                <span className={`text-sm font-semibold ${colors.text}`}>{selected.title}</span>
+                <span className={`text-sm font-semibold ${colors.text}`}>
+                  {selected.title}
+                  {accountType === "digital" && ` · ${COPY_DIGITAL[digitalTier].nombre}`}
+                </span>
               </div>
               <button
                 type="button"
-                onClick={() => { setStep("type"); setError(""); }}
+                /* En digitales "Cambiar" vuelve a los planes y no a las cuatro
+                   cuentas: lo que se cambia nueve de cada diez veces es el plan,
+                   y desde ahí se puede seguir saliendo a las cuentas. */
+                onClick={() => {
+                  setError("");
+                  if (accountType === "digital") { setVerPlanesDigitales(true); }
+                  setStep("type");
+                }}
                 className="text-xs text-gray-500 hover:text-gray-800 transition-colors underline underline-offset-2"
               >
                 Cambiar
@@ -465,7 +509,9 @@ function RegistroContent() {
                 : accountType === "seller"
                 ? "Te mandamos al panel de vendedor."
                 : accountType === "digital"
-                ? "Arrancás en el plan Free, sin tarjeta."
+                ? digitalTier === "FREE"
+                  ? "Arrancás en el plan Free, sin tarjeta."
+                  : `Probás ${COPY_DIGITAL[digitalTier].nombre} 7 días gratis, sin tarjeta.`
                 : "Empezá a explorar tiendas ya."}
             </p>
 
@@ -748,13 +794,112 @@ function RegistroContent() {
             <AppLogo size={72} />
             <span className="text-2xl font-black text-gray-950">TiendaApps</span>
           </Link>
-          <h1 className="text-4xl font-black text-gray-950 mb-3">Crear cuenta gratis</h1>
-          <p className="text-gray-500 text-lg">¿Cómo querés usar TiendaApps?</p>
+          <h1 className="text-4xl font-black text-gray-950 mb-3">
+            {verPlanesDigitales ? "Elegí tu plan" : "Crear cuenta gratis"}
+          </h1>
+          <p className="text-gray-500 text-lg">
+            {verPlanesDigitales
+              ? "Todos arrancan sin tarjeta. Podés cambiar de plan cuando quieras."
+              : "¿Cómo querés usar TiendaApps?"}
+          </p>
         </div>
 
-        {/* Cuatro columnas recién en lg. En 768 son dos y dos: cuatro tarjetas
-            con lista de beneficios adentro no entran en esa pantalla sin
-            volverse ilegibles. */}
+        {/* ── LOS TRES PLANES DE PRODUCTOS DIGITALES ──
+            Reemplazan a las cuatro tarjetas, no se agregan abajo: es la misma
+            interacción que en /precios, y quien viene de ahí la reconoce.
+
+            Elegir Starter o Pro NO cobra nada acá: arranca sus 7 días de prueba.
+            Al terminar, si no pagó, la cuenta cae a Free — no se cierra nada.
+            Por eso el botón dice "Probar 7 días gratis" y no "Suscribirme". */}
+        {verPlanesDigitales ? (
+          <>
+            <button
+              type="button"
+              onClick={() => setVerPlanesDigitales(false)}
+              className="inline-flex items-center gap-2 text-sm font-semibold text-gray-500 hover:text-gray-900 mb-6"
+            >
+              <ArrowLeft className="h-4 w-4" /> Volver a todas las cuentas
+            </button>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {TIERS_DIGITALES.map((tier) => {
+                const gratis = tier === "FREE";
+                const esPro = tier === "PRO";
+                const precio = gratis
+                  ? null
+                  : esPro ? PRECIOS_DIGITALES.DIGITAL_PRO : PRECIOS_DIGITALES.DIGITAL_STARTER;
+                return (
+                  <div
+                    key={tier}
+                    className={`rounded-3xl p-6 flex flex-col ${
+                      esPro ? "border-2 border-orange-400 bg-orange-50/40"
+                        : gratis ? "border border-gray-200 bg-gray-50"
+                        : "border border-orange-200 bg-orange-50/40"
+                    }`}
+                  >
+                    {esPro && (
+                      <div className="inline-flex self-start items-center gap-1.5 rounded-full bg-orange-600 text-white text-[10px] font-black px-2.5 py-1 mb-3">
+                        <Zap className="h-3 w-3" /> Más completo
+                      </div>
+                    )}
+                    <h3 className="text-xl font-black text-gray-950 mb-1">{COPY_DIGITAL[tier].nombre}</h3>
+                    <p className="text-gray-500 text-xs mb-4">{COPY_DIGITAL[tier].bajada}</p>
+
+                    <div className="mb-4">
+                      {precio ? (
+                        <>
+                          <span className="text-3xl font-black text-gray-950">{money(precio.MONTHLY)}</span>
+                          <span className="text-gray-500 text-xs">/mes</span>
+                          <p className="text-[11px] text-gray-400 mt-1">Después de los 7 días de prueba</p>
+                        </>
+                      ) : (
+                        <>
+                          <span className="text-3xl font-black text-gray-950">Gratis</span>
+                          <p className="text-[11px] text-gray-400 mt-1">Para siempre · Sin tarjeta</p>
+                        </>
+                      )}
+                    </div>
+
+                    <div className={`rounded-xl px-3 py-2 mb-4 border ${gratis ? "border-gray-200 bg-white" : "border-orange-300 bg-orange-100/60"}`}>
+                      <span className={`text-xs font-bold ${gratis ? "text-gray-700" : "text-orange-700"}`}>
+                        Comisión {COMISION_DIGITAL[tier]}% por venta
+                      </span>
+                    </div>
+
+                    <ul className="space-y-1.5 mb-5 flex-1">
+                      {featuresDigital(tier).map((f) => (
+                        <li key={f.text} className={`flex items-start gap-2 text-xs ${f.on ? "text-gray-600" : "text-gray-300"}`}>
+                          <CheckCircle className={`h-3.5 w-3.5 shrink-0 mt-0.5 ${f.on ? (gratis ? "text-teal-600" : "text-orange-500") : "text-gray-200"}`} />
+                          {f.text}
+                        </li>
+                      ))}
+                    </ul>
+
+                    <button
+                      type="button"
+                      onClick={() => elegirPlanDigital(tier)}
+                      className={`flex items-center justify-center gap-2 w-full py-3 rounded-2xl text-sm font-bold transition-all ${
+                        gratis
+                          ? "bg-gray-900 hover:bg-gray-800 text-white"
+                          : "bg-orange-600 hover:bg-orange-500 text-white"
+                      }`}
+                    >
+                      {gratis ? "Empezar gratis" : "Probar 7 días gratis"} <ArrowRight className="h-4 w-4" />
+                    </button>
+                    {!gratis && (
+                      <p className="text-center text-[11px] text-gray-400 mt-2.5">
+                        Sin tarjeta. Si no pagás, volvés a Free.
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        ) : (
+        /* Cuatro columnas recién en lg. En 768 son dos y dos: cuatro tarjetas
+           con lista de beneficios adentro no entran en esa pantalla sin
+           volverse ilegibles. */
         <div className={`grid grid-cols-1 gap-4 ${TYPES.length === 4 ? "sm:grid-cols-2 lg:grid-cols-4" : "sm:grid-cols-3"}`}>
           {TYPES.map(({ key, icon: Icon, color, title, desc, perks, cta, ...rest }) => {
             const premiumPerks = "premiumPerks" in rest ? (rest as { premiumPerks: string[] }).premiumPerks : undefined;
@@ -842,7 +987,7 @@ function RegistroContent() {
                       {key === "owner"
                         ? `${money(PRICES.owner[step1Tier].MONTHLY)}/mes · 7 días gratis`
                         : key === "digital"
-                        ? "Gratis · Sin tarjeta · Starter y Pro se prueban desde adentro"
+                        ? "3 planes · Empezás gratis · Sin tarjeta"
                         : "Gratis · Sin tarjeta · Sin límite de tiempo"}
                     </p>
                   )}
@@ -854,6 +999,7 @@ function RegistroContent() {
             );
           })}
         </div>
+        )}
 
         <p className="text-center text-sm text-gray-500 mt-8">
           ¿Ya tenés cuenta?{" "}

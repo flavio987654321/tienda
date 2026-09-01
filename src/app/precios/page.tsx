@@ -8,8 +8,9 @@ import { Check, ShoppingBag, Zap, Store, Star, ArrowRight, ArrowLeft, PartyPoppe
 import { SiteNav } from "@/components/SiteNav";
 import { SiteFooter } from "@/components/SiteFooter";
 import PaymentModal from "@/components/subscription/PaymentModal";
-import { PRICES, PRO_MAX_ACTIVE_COUPONS, PRO_MAX_LIVE_PROMOTIONS, PRO_MAX_AFFILIATES, PRO_MAX_PRODUCTS, MAX_PRODUCTS_POR_TIENDA, PUSH_CAMPAIGNS_PER_WEEK, PRECIOS_DIGITALES, COMISION_DIGITAL, TOPES_DIGITALES } from "@/lib/planLimits";
+import { PRICES, PRO_MAX_ACTIVE_COUPONS, PRO_MAX_LIVE_PROMOTIONS, PRO_MAX_AFFILIATES, PRO_MAX_PRODUCTS, MAX_PRODUCTS_POR_TIENDA, PUSH_CAMPAIGNS_PER_WEEK, PRECIOS_DIGITALES, COMISION_DIGITAL } from "@/lib/planLimits";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { featuresDigital, COPY_DIGITAL, type TierDigital } from "@/lib/planes-digitales";
 
 function money(amount: number) {
   return new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(amount);
@@ -19,33 +20,6 @@ function money(amount: number) {
    anterior: esconder un botón no cierra una URL, pero acá no hay URL nueva —
    es una sección de una página que ya existe. */
 const DIGITALES_ON = process.env.NEXT_PUBLIC_DIGITALES_ENABLED === "1";
-
-type TierDigital = "FREE" | "STARTER" | "PRO";
-
-/* Las mismas filas para los tres planes, prendidas o apagadas según el tier. Una
-   lista por plan se desincroniza sola: se agrega una función arriba y queda sin
-   nombrar en los otros dos, que es como se termina prometiendo de más. */
-function featuresDigital(tier: TierDigital) {
-  const t = TOPES_DIGITALES[tier];
-  const pago = tier !== "FREE";
-  return [
-    { text: `${t.paginas} página${t.paginas === 1 ? "" : "s"} de venta`, on: true },
-    { text: `${t.bonos} bono${t.bonos === 1 ? "" : "s"} por producto`, on: true },
-    /* Sin upsells se nombra la función, no el número: "0 upsells por producto"
-       se lee como un error de programación y no como algo que no tenés. */
-    { text: t.upsells > 0 ? `${t.upsells} upsell${t.upsells === 1 ? "" : "s"} por producto` : "Upsells por producto", on: t.upsells > 0 },
-    { text: pago ? `${t.ebooksIA} ebooks escritos con IA por mes` : "Ebooks escritos con IA", on: pago },
-    { text: "Página de venta armada con IA", on: pago },
-    { text: "Textos y mails con IA", on: pago },
-    { text: "Sasha, la asistente", on: pago },
-    { text: "Pagos con transferencia", on: pago },
-    { text: "Entrega automática con token", on: true },
-    { text: "Descargas y estadísticas", on: true },
-    { text: "Ver carritos abandonados", on: true },
-    { text: "Mail automático de recuperación", on: tier === "PRO" },
-    { text: "Dominio propio", on: tier === "PRO" },
-  ];
-}
 
 const FAQ_TIENDAS = [
   { q: "¿Necesito tarjeta de crédito para el período de prueba?", a: "No. Los 7 días de prueba son completamente gratis y no te pedimos datos de pago hasta que decides suscribirte." },
@@ -69,12 +43,6 @@ const FAQ_DIGITAL = [
   { q: "¿Qué pasa si dejo de pagar el plan?", a: "No te cerramos nada ni perdés tus productos: volvés al plan Free. Se te apagan las funciones del plan pago y la comisión vuelve a la del Free, pero tu página y tus ventas siguen ahí." },
   { q: "Ya tengo una tienda en TiendaApps, ¿puedo usar la misma cuenta?", a: "No. Cada cuenta es una sola cosa, así que para vender productos digitales necesitás registrarte con otro correo. Son dos negocios distintos y cada uno tiene su panel." },
 ];
-
-const COPY_DIGITAL: Record<TierDigital, { nombre: string; bajada: string }> = {
-  FREE:    { nombre: "Free",    bajada: "Para validar tu primer producto." },
-  STARTER: { nombre: "Starter", bajada: "Para arrancar tu negocio digital con IA." },
-  PRO:     { nombre: "Pro",     bajada: "Para escalar: más volumen, recuperación y marca propia." },
-};
 
 /** Una de las tres tarjetas de adentro de Productos Digitales. */
 function TarjetaDigital({ tier, isAnnual }: { tier: TierDigital; isAnnual: boolean }) {
@@ -143,30 +111,23 @@ function TarjetaDigital({ tier, isAnnual }: { tier: TierDigital; isAnnual: boole
         ))}
       </ul>
 
-      {/* Al Free se entra YA, porque entrar es gratis: crea la cuenta y listo.
+      {/* Los tres llevan al mismo lado: crear la cuenta con ese plan elegido.
 
-          Starter y Pro siguen en "Próximamente" y no es por prudencia: a esos
-          dos NO se entra desde acá. Se prueban siete días desde adentro del
-          panel, que es lo que todavía no existe (Fase 3). Un botón que hoy
-          cobrara $30.000 antes de que la persona vea una sola pantalla estaría
-          vendiendo algo que no puede usar. */}
-      {gratis ? (
-        <Link
-          href="/registro?plan=digital"
-          className="flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl text-sm font-bold bg-gray-900 hover:bg-gray-800 text-white transition-all"
-        >
-          Crear cuenta gratis <ArrowRight className="h-4 w-4" />
-        </Link>
-      ) : (
-        <button disabled className="w-full py-3.5 rounded-2xl text-sm font-bold bg-gray-100 text-gray-400 cursor-not-allowed">
-          Próximamente
-        </button>
-      )}
-      {gratis && (
-        <p className="text-center text-xs text-gray-400 mt-3">
-          Después probás Starter o Pro 7 días desde tu panel
-        </p>
-      )}
+          A Starter y Pro NO se les cobra acá: arrancan sus 7 días de prueba, sin
+          tarjeta. Al terminar, si no pagó, la cuenta cae a Free y no se cierra
+          nada. Por eso el botón dice "Probar 7 días gratis" y no "Suscribirme":
+          prometer una suscripción y arrancar una prueba son cosas distintas. */}
+      <Link
+        href={`/registro?plan=digital&tier=${tier.toLowerCase()}`}
+        className={`flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl text-sm font-bold transition-all ${
+          gratis ? "bg-gray-900 hover:bg-gray-800 text-white" : "bg-orange-600 hover:bg-orange-700 text-white"
+        }`}
+      >
+        {gratis ? "Crear cuenta gratis" : "Probar 7 días gratis"} <ArrowRight className="h-4 w-4" />
+      </Link>
+      <p className="text-center text-xs text-gray-400 mt-3">
+        {gratis ? "Para siempre · Sin tarjeta" : "Sin tarjeta. Si no pagás, volvés a Free."}
+      </p>
     </div>
   );
 }

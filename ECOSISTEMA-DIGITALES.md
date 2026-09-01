@@ -307,10 +307,20 @@ comisión.
 > **El trial deja de ser la puerta de entrada y pasa a ser la prueba de los planes
 > PAGOS. Y el final del camino deja de ser el cierre: es caer a Free.**
 
-- **Entrar es Free**, sin trial y sin tarjeta. El trial no se ofrece en Free
-  porque no significa nada ahí.
-- **Los 7 días se prueban desde adentro**: estando en Free, activás Starter/Pro/
-  Max por 7 días sin tarjeta. Es un trial *de la función*, no *de la cuenta*.
+- **El piso siempre es Free**, sin tarjeta. Ningún camino cobra nada por entrar.
+- **Los 7 días son la prueba de los planes PAGOS, no de la cuenta.** Y se pueden
+  arrancar en dos momentos, que terminan igual:
+  - **En el registro**, eligiendo Starter o Pro en vez de Free. *(Corregido el
+    31/08/26: la primera versión decía que entrar era siempre Free y que la
+    prueba sólo se activaba desde adentro. Se probó y no cerraba: en /precios se
+    ofrecían tres planes y el registro no dejaba elegir ninguno — dos puertas
+    contando historias distintas. Ahora la tarjeta dice "Elegir plan" y muestra
+    los tres, igual que la de tienda elige entre Pro y Premium.)*
+  - **Desde adentro**, estando en Free.
+- **Elegir un plan pago NUNCA cobra en el alta.** La cuenta nace en `TRIAL`, jamás
+  en `ACTIVE`, y eso está puesto en el código y vigilado por VIDA-L: el tier lo
+  elige la persona en el navegador, así que si el alta pudiera dejar una cuenta
+  activa, cualquiera pediría Pro y se llevaría el plan más caro sin pagar.
 - **Al vencer no se cierra nada: se cae a Free.** No se pierde la vidriera, ni los
   productos, ni las ventas, ni los compradores. Sube la comisión y se apagan las
   funciones del plan pago.
@@ -334,9 +344,12 @@ comisión.
 - 🔲 **Los avisos.** El modelo `Subscription` ya trae `expiredNotifiedAt` y
   `closingNotifiedAt` para no mandar dos veces el mismo mail. Acá hace falta el
   aviso nuevo de "bajaste a Free y esto es lo que cambia", que no existe.
-- 🔲 **¿Se puede volver a probar?** Un trial por cuenta, o uno por plan, o uno por
-  año. Sin esta regla, alguien prueba Max 7 días, cae a Free, y vuelve a probar
-  Max para siempre.
+- ✅ **¿Se puede volver a probar?** RESUELTO: **una sola vez por cuenta**. Sin esta
+  regla, alguien prueba Pro 7 días, cae a Free, y vuelve a probar Pro para
+  siempre. Lo recuerda `pruebaYaUsada` sin columna nueva —la distancia entre
+  `createdAt` y `trialEndsAt`— y caer a Free no la reinicia (VIDA-G, VIDA-O). Es
+  el lado seguro para equivocarse; si se quiere abrir, se abre en esa función y
+  en ningún otro lado.
 
 ---
 
@@ -863,8 +876,14 @@ La diferencia con las tiendas no es un detalle y conviene tenerla escrita:
 
 ### ✅ La puerta de entrada — HECHA (31/08/26)
 
-- ✅ **La cuarta tarjeta en `/registro`**, "Vendo productos digitales". Crea la
-  cuenta con rol `DIGITAL` y su suscripción Free con `altaDigitalFree()`.
+- ✅ **La cuarta tarjeta en `/registro`**, "Vendo productos digitales". No lleva
+  derecho al formulario: dice **"Elegir plan"** y muestra los tres, igual que la
+  de tienda elige entre Pro y Premium. Recién elegido el plan se va al
+  formulario, y la cuenta se crea con `altaDigitalFree()` o con
+  `altaDigitalConPrueba()` según lo que haya elegido.
+  - **Los tres botones de `/precios` ahora funcionan** y llevan al mismo lado:
+    `/registro?plan=digital&tier=…`. Antes los tres decían "Próximamente" y el
+    registro no ofrecía ninguno — dos puertas contando historias distintas.
   - Naranja y con el mismo ícono que la tarjeta de `/precios` a propósito: es el
     mismo producto visto dos veces. Queda en la punta opuesta a "Tengo una
     tienda", que es la otra naranja.

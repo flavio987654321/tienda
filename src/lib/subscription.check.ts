@@ -9,7 +9,7 @@
 
 import {
   cotizarCambioDePlan, getSubscriptionStatus, PRICES,
-  altaDigitalFree, caidaAFree, pruebaYaUsada,
+  altaDigitalFree, altaDigitalConPrueba, caidaAFree, pruebaYaUsada,
 } from "./subscription";
 import { PLANES, PRECIOS_DIGITALES, planDe, planDeSuscripcion } from "./planLimits";
 
@@ -342,6 +342,35 @@ const aProMensual = { plan: "OWNER_BASIC", billing: "MONTHLY" } as const;
   const porMilesimas = { ...reciente, trialEndsAt: new Date(HOY.getTime() + 1000) };
   check("VIDA-K", pruebaYaUsada(porMilesimas) === false,
     "un segundo de diferencia entre relojes no cuenta como prueba usada");
+}
+
+{
+  /* El alta eligiendo un plan pago. Lo único que importa acá es que NO quede
+     activa: el tier lo elige la persona en el navegador y viaja en el pedido, así
+     que si esto pudiera dar ACTIVE, cualquiera pediría Pro y se llevaría el plan
+     más caro sin pagar. */
+  const conPrueba = altaDigitalConPrueba("PRO", HOY);
+
+  check("VIDA-L", conPrueba.status === "TRIAL",
+    "elegir un plan pago en el alta arranca una PRUEBA, nunca una suscripción activa");
+
+  check("VIDA-M", conPrueba.currentPeriodEnd === null && conPrueba.currentPeriodStart === null,
+    "y no inventa un período pago: no se cobró nada");
+
+  check("VIDA-N",
+    getSubscriptionStatus(conPrueba, dentro(3)) === "TRIAL" &&
+    getSubscriptionStatus(conPrueba, dentro(8)) === "EXPIRED",
+    "la prueba vale 7 días y después queda vencida, que es lo que el cron busca");
+
+  check("VIDA-Ñ", pruebaYaUsada({ ...conPrueba, createdAt: HOY }) === true,
+    "la prueba queda gastada desde el alta: no se puede volver a pedir desde adentro");
+
+  // Y al vencer cae a Free como cualquier otra, sin perder la marca de usada.
+  const caida = { ...conPrueba, ...caidaAFree() };
+  check("VIDA-O",
+    caida.tier === "FREE" && caida.status === "ACTIVE" &&
+    pruebaYaUsada({ ...caida, createdAt: HOY }) === true,
+    "al vencer vuelve a Free y la prueba sigue contando como usada");
 }
 
 console.log(failed === 0 ? "\n✅ La cuenta da bien en todos los casos." : `\n❌ ${failed} caso(s) fallan.`);
