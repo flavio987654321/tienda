@@ -382,14 +382,14 @@ function PreciosContent() {
 
             {/* ── AFILIADO ── */}
             <div className="rounded-3xl border border-amber-200 bg-amber-50/40 p-6 xl:p-7 flex flex-col">
-              <div className="text-xs font-bold text-amber-700 uppercase tracking-widest mb-3">Para vendedores independientes</div>
+              <div className="text-xs font-bold text-amber-700 uppercase tracking-widest mb-3 min-h-[44px]">Para vendedores independientes</div>
               <div className="w-12 h-12 rounded-2xl bg-amber-100 flex items-center justify-center mb-5">
                 <Zap className="h-6 w-6 text-amber-600" />
               </div>
               <h2 className="text-2xl font-black text-gray-950 mb-1">Afiliado</h2>
-              <p className="text-gray-500 text-sm mb-6">Vendé productos de otras tiendas y ganá comisiones sin tener stock.</p>
+              <p className="text-gray-500 text-sm mb-5 min-h-[60px]">Vendé productos de otras tiendas y ganá comisiones sin tener stock.</p>
 
-              <div className="mb-2">
+              <div className="mb-2 min-h-[152px]">
                 <div className="flex items-end gap-2">
                   <span className="text-4xl font-black text-gray-950">Gratis</span>
                 </div>
@@ -434,7 +434,11 @@ function PreciosContent() {
                   Empezar gratis <ArrowRight className="h-4 w-4" />
                 </Link>
               )}
-              <p className="text-center text-xs text-gray-400 mt-3">Sin costo · Sin tarjeta · Acceso inmediato</p>
+              {/* Alto reservado para dos renglones en las cuatro: la de tiendas
+                  dice "7 dias gratis · Sin tarjeta · Cancela cuando quieras" y parte
+                  en dos, asi que sin esto su boton quedaba 16 px mas arriba que los
+                  otros tres. */}
+              <p className="text-center text-xs text-gray-400 mt-3 min-h-[32px]">Sin costo · Sin tarjeta · Acceso inmediato</p>
             </div>
 
             {/* ── DUEÑO DE TIENDA (con selector interno) ── */}
@@ -445,13 +449,17 @@ function PreciosContent() {
                 </span>
               </div>
 
-              <div className="text-xs font-bold text-orange-700 uppercase tracking-widest mb-3">Para dueños de tienda</div>
+              <div className="text-xs font-bold text-orange-700 uppercase tracking-widest mb-3 min-h-[44px]">Para dueños de tienda</div>
               <div className="w-12 h-12 rounded-2xl bg-orange-100 flex items-center justify-center mb-5">
                 <Store className="h-6 w-6 text-orange-600" />
               </div>
               <h2 className="text-2xl font-black text-gray-950 mb-1">Dueño de Tienda</h2>
-              <p className="text-gray-500 text-sm mb-5">Creá tu tienda online y gestioná afiliados que vendan por vos.</p>
+              <p className="text-gray-500 text-sm mb-5 min-h-[60px]">Creá tu tienda online y gestioná afiliados que vendan por vos.</p>
 
+              {/* El selector y el precio comparten el alto reservado: acá
+                  arriba hay un elemento más que en las otras tres tarjetas, y
+                  sin esto su divisor quedaba 34 px más abajo. */}
+              <div className="min-h-[152px] mb-2">
               {/* Selector de tier */}
               <div className="flex rounded-xl border border-gray-200 bg-white p-1 gap-1 mb-5">
                 <button
@@ -482,8 +490,9 @@ function PreciosContent() {
                   </p>
                 )}
               </div>
+              </div>
 
-              <div className="h-px bg-orange-100 my-5" />
+              <div className="h-px bg-orange-100 my-6" />
 
               {/* Features dinámicas según tier */}
               <ul className="space-y-3 mb-8 flex-1">
@@ -601,7 +610,7 @@ function PreciosContent() {
                   </Link>
                 );
               })()}
-              <p className="text-center text-xs text-gray-400 mt-3">
+              <p className="text-center text-xs text-gray-400 mt-3 min-h-[32px]">
                 {isCurrentPlan("OWNER", ownerTier) ? `${userSub!.daysLeft} días restantes` : "7 días gratis · Sin tarjeta · Cancelá cuando quieras"}
               </p>
             </div>
@@ -612,14 +621,14 @@ function PreciosContent() {
                 abajo. Con cuatro son 2×2 y no sobra ninguna, así que el centrado
                 se sacó — dejarlo la dejaba flotando en el medio de su fila. */}
             <div className="rounded-3xl border border-gray-200 bg-gray-50 p-6 xl:p-7 flex flex-col">
-              <div className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Para compradores</div>
+              <div className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3 min-h-[44px]">Para compradores</div>
               <div className="w-12 h-12 rounded-2xl bg-gray-200/60 flex items-center justify-center mb-5">
                 <ShoppingCart className="h-6 w-6 text-gray-500" />
               </div>
               <h2 className="text-2xl font-black text-gray-700 mb-1">Cliente</h2>
-              <p className="text-gray-500 text-sm mb-6">Explorá tiendas, comprá y seguí tus pedidos sin costo.</p>
+              <p className="text-gray-500 text-sm mb-5 min-h-[60px]">Explorá tiendas, comprá y seguí tus pedidos sin costo.</p>
 
-              <div className="mb-2">
+              <div className="mb-2 min-h-[152px]">
                 <span className="text-4xl font-black text-gray-700">Gratis</span>
                 <p className="text-xs text-gray-400 mt-1">Sin suscripción · Siempre gratis</p>
               </div>
@@ -643,7 +652,7 @@ function PreciosContent() {
                   Crear cuenta gratis <ArrowRight className="h-4 w-4" />
                 </Link>
               )}
-              <p className="text-center text-xs text-gray-400 mt-3">Sin tarjeta · Sin límite de tiempo</p>
+              <p className="text-center text-xs text-gray-400 mt-3 min-h-[32px]">Sin tarjeta · Sin límite de tiempo</p>
             </div>
 
             {DIGITALES_ON && (
@@ -656,22 +665,30 @@ function PreciosContent() {
                 vende una tienda por subdominio y nosotros vendemos productos con
                 su página. Ver ECOSISTEMA-DIGITALES.md, punto 2.3. */
             <div className="rounded-3xl border border-orange-200 bg-orange-50/40 p-6 xl:p-7 flex flex-col">
-              <div className="text-xs font-bold text-orange-700 uppercase tracking-widest mb-3">Para vender archivos</div>
-              <div className="w-12 h-12 rounded-2xl bg-orange-100 flex items-center justify-center mb-5">
-                <Download className="h-6 w-6 text-orange-600" />
-              </div>
-              <div className="flex items-center gap-2 mb-1 flex-wrap">
-                <h2 className="text-2xl font-black text-gray-950">Productos Digitales</h2>
-                <span className="inline-flex items-center gap-1 rounded-full bg-orange-600 text-white text-[10px] font-black px-2 py-0.5">
+              <div className="text-xs font-bold text-orange-700 uppercase tracking-widest mb-3 min-h-[44px] flex items-start gap-2 flex-wrap">
+                Para vender archivos
+                <span className="inline-flex items-center gap-1 rounded-full bg-orange-600 text-white text-[10px] font-black px-2 py-0.5 normal-case tracking-normal">
                   <Sparkles className="h-3 w-3" /> Nuevo
                 </span>
               </div>
-              <p className="text-gray-500 text-sm mb-6">Vendé ebooks, plantillas y guías con entrega automática y páginas armadas con IA.</p>
+              <div className="w-12 h-12 rounded-2xl bg-orange-100 flex items-center justify-center mb-5">
+                <Download className="h-6 w-6 text-orange-600" />
+              </div>
+              <h2 className="text-2xl font-black text-gray-950 mb-1">Productos Digitales</h2>
+              <p className="text-gray-500 text-sm mb-5 min-h-[60px]">Vendé ebooks, plantillas y guías con entrega automática y páginas armadas con IA.</p>
 
-              <div className="mb-2">
+              {/* "Comisión desde 2%" era engañoso y por eso se cambió.
+                  El 2% es el de Pro, que sale $60.000 por mes: es el número más
+                  lindo pegado al plan más caro, y arriba de la palabra "Gratis".
+                  Quien entra gratis paga 8%. Ahora se dice ese, y se nombran los
+                  planes pagos en vez de esconderlos detrás de un "desde". */}
+              <div className="mb-2 min-h-[152px]">
                 <span className="text-4xl font-black text-gray-950">Gratis</span>
-                <p className="text-xs text-gray-400 mt-1">
-                  Desde $0 · Comisión desde {COMISION_DIGITAL.PRO}% por venta
+                <p className="text-xs text-gray-500 mt-1">
+                  Para siempre, con {COMISION_DIGITAL.FREE}% de comisión por venta
+                </p>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  Starter y Pro desde {money(PRECIOS_DIGITALES.DIGITAL_STARTER.MONTHLY)}/mes
                 </p>
               </div>
 
@@ -692,7 +709,7 @@ function PreciosContent() {
               >
                 Ver los planes <ArrowRight className="h-4 w-4" />
               </button>
-              <p className="text-center text-xs text-gray-400 mt-3">3 planes · Empezá gratis</p>
+              <p className="text-center text-xs text-gray-400 mt-3 min-h-[32px]">3 planes · Empezá gratis</p>
             </div>
             )}
           </div>

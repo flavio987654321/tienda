@@ -673,6 +673,17 @@ Todo esto ya está resuelto, medido y en varios casos aplicado a producción:
 
 ## FASE 1 — La página de precios — HECHA (31/08/26)
 
+### ⚠️ Corregido el 31/08/26 — la tarjeta decía "comisión desde 2%"
+
+El 2% es el de **Pro**, que sale $60.000 por mes: era el número más lindo pegado
+al plan más caro, y puesto justo abajo de la palabra **Gratis**. Quien entra
+gratis paga **8%**.
+
+Ahora la tarjeta dice el 8% y nombra los planes pagos ("Starter y Pro desde
+$30.000/mes") en vez de esconderlos detrás de un "desde". "Gratis" se queda
+porque es verdad —hay un plan gratuito para siempre— pero deja de ser la única
+cosa que se lee.
+
 **No se deployó.** Se mira en local con `NEXT_PUBLIC_DIGITALES_ENABLED="1"`.
 
 ### Cómo quedó (cambió sobre la marcha)
