@@ -77,8 +77,8 @@ export default async function MiCuentaPage() {
       <BotonVolver />
 
       <div className="mb-6">
-        <h1 className="text-2xl font-black text-gray-900">Mi cuenta</h1>
-        <p className="text-gray-500 text-sm mt-1">Tu plan y tus datos personales.</p>
+        <h1 className="text-2xl font-black text-gray-900 panel-oscuro:text-gray-100">Mi cuenta</h1>
+        <p className="text-gray-500 panel-oscuro:text-gray-400 text-sm mt-1">Tu plan y tus datos personales.</p>
       </div>
 
       <MiCuentaClient

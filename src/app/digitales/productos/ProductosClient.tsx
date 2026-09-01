@@ -38,9 +38,9 @@ const ICONO: Record<RolDigital, React.ElementType> = {
 };
 
 const TINTA: Record<RolDigital, { borde: string; fondo: string; texto: string; suave: string }> = {
-  PRINCIPAL: { borde: "border-orange-200", fondo: "bg-orange-100", texto: "text-orange-600", suave: "bg-orange-50/40" },
-  BONO:      { borde: "border-amber-200",  fondo: "bg-amber-100",  texto: "text-amber-600",  suave: "bg-amber-50/40" },
-  UPSELL:    { borde: "border-rose-200",   fondo: "bg-rose-100",   texto: "text-rose-600",   suave: "bg-rose-50/40" },
+  PRINCIPAL: { borde: "border-orange-200 panel-oscuro:border-orange-500/30", fondo: "bg-orange-100 panel-oscuro:bg-orange-500/15", texto: "text-orange-600", suave: "bg-orange-50 panel-oscuro:bg-orange-500/10" },
+  BONO:      { borde: "border-amber-200 panel-oscuro:border-amber-500/30",  fondo: "bg-amber-100 panel-oscuro:bg-amber-500/15",  texto: "text-amber-600",  suave: "bg-amber-50 panel-oscuro:bg-amber-500/10" },
+  UPSELL:    { borde: "border-rose-200 panel-oscuro:border-rose-500/30",   fondo: "bg-rose-100 panel-oscuro:bg-rose-500/15",   texto: "text-rose-600",   suave: "bg-rose-50/40 panel-oscuro:bg-rose-500/10" },
 };
 
 type Borrador = {
@@ -76,6 +76,209 @@ const MAX_IMAGEN_MB = 4;
  * nada. Es el peor final posible de este ecosistema, así que la puerta queda
  * cerrada hasta que la subida esté hecha de verdad.
  */
+/**
+ * Lo que la tarjeta y el grupo necesitan de la pantalla.
+ *
+ * Va como un objeto en vez de ocho props sueltas porque los dos componentes lo
+ * pasan hacia abajo tal cual: con props sueltas, agregar una acción obliga a
+ * tocar los tres lugares por los que viaja.
+ */
+type Acciones = {
+  tier: TierDigital;
+  trabajando: string | null;
+  setBorrador: (b: Borrador) => void;
+  publicar: (p: ProductoEnPantalla, publicado: boolean) => void;
+  borrar: (p: ProductoEnPantalla) => void;
+  hijosDe: (padreId: string, rol: RolDigital) => ProductoEnPantalla[];
+};
+
+/* ⚠️ Tarjeta y Grupo viven ACÁ AFUERA y no adentro de la pantalla.
+ *
+ * Un componente definido adentro del cuerpo de otro se vuelve a crear en cada
+ * dibujo, así que React lo trata como un componente distinto: desmonta y vuelve
+ * a montar todo lo que hay abajo en cada tecla que se escribe en el formulario.
+ * Acá adentro hay un `<img>` por tarjeta, y eso se ve como un parpadeo de todas
+ * las portadas mientras escribís. Mismo motivo que en `configuracion/piezas.tsx`. */
+
+/* ── Una tarjeta, igual para los tres roles ──────────────────────────────── */
+function Tarjeta({ p, acc }: { p: ProductoEnPantalla; acc: Acciones }) {
+  const Icono = ICONO[p.rol];
+  const tinta = TINTA[p.rol];
+  const falta = loQueFalta({
+    rolDigital: p.rol,
+    archivoPath: p.tieneArchivo ? "hay" : null,
+    price: p.price,
+    name: p.name,
+  });
+  const ocupado = acc.trabajando === p.id;
+
+  return (
+    <div className={`rounded-2xl border ${tinta.borde} bg-white panel-oscuro:bg-gray-900 p-4 sm:p-5 shadow-sm`}>
+      <div className="flex gap-4">
+        {/* La portada si la hay; si no, el ícono del rol. Un cuadro vacío en su
+            lugar se lee como que la imagen se rompió. */}
+        {p.imagen ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={p.imagen}
+            alt=""
+            className="w-14 h-14 shrink-0 rounded-xl object-cover border border-gray-100 panel-oscuro:border-gray-800"
+          />
+        ) : (
+          <div className={`w-14 h-14 shrink-0 rounded-xl ${tinta.fondo} flex items-center justify-center`}>
+            <Icono className={`h-6 w-6 ${tinta.texto}`} />
+          </div>
+        )}
+
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-3">
+            <p className="font-bold text-gray-900 panel-oscuro:text-gray-100 leading-snug break-words">{p.name}</p>
+            <span
+              className={`shrink-0 text-[11px] font-bold px-2.5 py-1 rounded-full border ${
+                p.publicado
+                  ? "bg-emerald-50 panel-oscuro:bg-emerald-500/10 text-emerald-700 panel-oscuro:text-emerald-300 border-emerald-200 panel-oscuro:border-emerald-500/30"
+                  : "bg-gray-100 panel-oscuro:bg-gray-800 text-gray-500 panel-oscuro:text-gray-400 border-gray-200 panel-oscuro:border-gray-700"
+              }`}
+            >
+              {p.publicado ? "Publicado" : "Borrador"}
+            </span>
+          </div>
+
+          {p.description && (
+            <p className="text-sm text-gray-500 panel-oscuro:text-gray-400 mt-1 line-clamp-2 break-words">{p.description}</p>
+          )}
+
+          <div className="flex items-baseline gap-2 mt-2">
+            {p.rol === "BONO" ? (
+              <span className="text-emerald-600 font-black">GRATIS</span>
+            ) : (
+              <span className="text-gray-900 panel-oscuro:text-gray-100 font-black">{money(p.price)}</span>
+            )}
+            {p.comparePrice !== null && p.comparePrice > 0 && (
+              <span className="text-sm text-gray-400 panel-oscuro:text-gray-500 line-through">{money(p.comparePrice)}</span>
+            )}
+          </div>
+
+          {/* El aviso va ACÁ adentro y no en un panel de errores aparte: el
+              lugar donde se ve el problema tiene que ser el lugar donde se
+              arregla. */}
+          {falta && (
+            <div className="mt-3 flex items-start gap-2 rounded-xl bg-red-50 panel-oscuro:bg-red-500/10 border border-red-100 panel-oscuro:border-red-500/25 px-3 py-2">
+              <AlertTriangle className="h-4 w-4 text-red-500 shrink-0 mt-0.5" />
+              <p className="text-xs text-red-700 panel-oscuro:text-red-300 font-medium">{falta}</p>
+            </div>
+          )}
+
+          {p.tieneArchivo && p.archivoNombre && (
+            <p className="mt-2 text-xs text-gray-400 panel-oscuro:text-gray-500 truncate">
+              Archivo: {p.archivoNombre}
+              {p.archivoPeso ? ` · ${Math.round(p.archivoPeso / 1024 / 1024 * 10) / 10} MB` : ""}
+            </p>
+          )}
+
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <button
+              onClick={() =>
+                acc.setBorrador({
+                  id: p.id,
+                  rol: p.rol,
+                  padreId: p.padreId,
+                  name: p.name,
+                  description: p.description ?? "",
+                  imagen: p.imagen,
+                  price: p.price ? String(p.price) : "",
+                  comparePrice: p.comparePrice ? String(p.comparePrice) : "",
+                })
+              }
+              disabled={ocupado}
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 text-xs font-bold text-gray-700 panel-oscuro:text-gray-300 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800 transition-colors disabled:opacity-50"
+            >
+              <Pencil className="h-3.5 w-3.5" /> Editar
+            </button>
+
+            <button
+              onClick={() => acc.publicar(p, !p.publicado)}
+              disabled={ocupado || (!p.publicado && falta !== null)}
+              title={!p.publicado && falta ? falta : undefined}
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 text-xs font-bold text-gray-700 panel-oscuro:text-gray-300 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {ocupado ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : p.publicado ? (
+                <EyeOff className="h-3.5 w-3.5" />
+              ) : (
+                <Eye className="h-3.5 w-3.5" />
+              )}
+              {p.publicado ? "Despublicar" : "Publicar"}
+            </button>
+
+            <button
+              onClick={() => acc.borrar(p)}
+              disabled={ocupado}
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-red-500 hover:bg-red-50 panel-oscuro:hover:bg-red-500/10 transition-colors disabled:opacity-50 ml-auto"
+            >
+              <Trash2 className="h-3.5 w-3.5" /> Borrar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+/* ── Un grupo de hijos (bonos o upsells) de un principal ─────────────────── */
+function Grupo({ padre, rol, acc }: { padre: ProductoEnPantalla; rol: "BONO" | "UPSELL"; acc: Acciones }) {
+  const items = acc.hijosDe(padre.id, rol);
+  const tope = topeDe(acc.tier, rol);
+  const lleno = items.length >= tope;
+  const tinta = TINTA[rol];
+
+  return (
+    <div className={`rounded-2xl border ${tinta.borde} ${tinta.suave} p-4`}>
+      <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
+        <div className="min-w-0">
+          <p className="text-sm font-bold text-gray-900 panel-oscuro:text-gray-100">
+            {COPY_ROL[rol].titulo}{" "}
+            <span className="text-xs font-medium text-gray-400 panel-oscuro:text-gray-500">
+              {items.length} de {tope}
+            </span>
+          </p>
+          <p className="text-xs text-gray-500 panel-oscuro:text-gray-400 mt-0.5">{COPY_ROL[rol].bajada}</p>
+        </div>
+
+        {lleno ? (
+          <a
+            href="/digitales/mi-cuenta"
+            className="shrink-0 inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white panel-oscuro:bg-gray-900 border border-gray-200 panel-oscuro:border-gray-700 text-xs font-bold text-gray-500 panel-oscuro:text-gray-400 hover:text-orange-600 hover:border-orange-300 transition-colors"
+          >
+            {tope === 0 ? "Tu plan no los incluye" : "Llegaste al tope"}
+            <ArrowUpRight className="h-3.5 w-3.5" />
+          </a>
+        ) : (
+          <button
+            onClick={() => acc.setBorrador(borradorNuevo(rol, padre.id))}
+            className="shrink-0 inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white panel-oscuro:bg-gray-900 border border-gray-200 panel-oscuro:border-gray-700 text-xs font-bold text-gray-700 panel-oscuro:text-gray-300 hover:border-gray-300 panel-oscuro:hover:border-gray-600 transition-colors"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            {rol === "BONO" ? "Agregar bono" : "Agregar upsell"}
+          </button>
+        )}
+      </div>
+
+      {items.length === 0 ? (
+        <p className="text-xs text-gray-400 panel-oscuro:text-gray-500">Todavía no cargaste ninguno.</p>
+      ) : (
+        <div className="space-y-3">
+          {items.map((h) => (
+            <Tarjeta key={h.id} p={h} acc={acc} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function ProductosClient({
   tier,
   productos,
@@ -149,6 +352,11 @@ export default function ProductosClient({
   const principales = productos.filter((p) => p.rol === "PRINCIPAL");
   const hijosDe = (padreId: string, rol: RolDigital) =>
     productos.filter((p) => p.padreId === padreId && p.rol === rol);
+
+  /* Lo que la tarjeta y el grupo necesitan de acá. Se arma una vez y se pasa
+     hacia abajo: las funciones se declaran en el cuerpo del componente, así que
+     memorizarlo no ganaría nada —el objeto cambiaría igual en cada dibujo—. */
+  const acc: Acciones = { tier, trabajando, setBorrador, publicar, borrar, hijosDe };
 
   const topePrincipales = topeDe(tier, "PRINCIPAL");
   const llegoAlTope = principales.length >= topePrincipales;
@@ -274,200 +482,22 @@ export default function ProductosClient({
     }
   }
 
-  /* ── Una tarjeta, igual para los tres roles ──────────────────────────────── */
-  function Tarjeta({ p }: { p: ProductoEnPantalla }) {
-    const Icono = ICONO[p.rol];
-    const tinta = TINTA[p.rol];
-    const falta = loQueFalta({
-      rolDigital: p.rol,
-      archivoPath: p.tieneArchivo ? "hay" : null,
-      price: p.price,
-      name: p.name,
-    });
-    const ocupado = trabajando === p.id;
-
-    return (
-      <div className={`rounded-2xl border ${tinta.borde} bg-white p-4 sm:p-5 shadow-sm`}>
-        <div className="flex gap-4">
-          {/* La portada si la hay; si no, el ícono del rol. Un cuadro vacío en su
-              lugar se lee como que la imagen se rompió. */}
-          {p.imagen ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={p.imagen}
-              alt=""
-              className="w-14 h-14 shrink-0 rounded-xl object-cover border border-gray-100"
-            />
-          ) : (
-            <div className={`w-14 h-14 shrink-0 rounded-xl ${tinta.fondo} flex items-center justify-center`}>
-              <Icono className={`h-6 w-6 ${tinta.texto}`} />
-            </div>
-          )}
-
-          <div className="min-w-0 flex-1">
-            <div className="flex items-start justify-between gap-3">
-              <p className="font-bold text-gray-900 leading-snug break-words">{p.name}</p>
-              <span
-                className={`shrink-0 text-[11px] font-bold px-2.5 py-1 rounded-full border ${
-                  p.publicado
-                    ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                    : "bg-gray-100 text-gray-500 border-gray-200"
-                }`}
-              >
-                {p.publicado ? "Publicado" : "Borrador"}
-              </span>
-            </div>
-
-            {p.description && (
-              <p className="text-sm text-gray-500 mt-1 line-clamp-2 break-words">{p.description}</p>
-            )}
-
-            <div className="flex items-baseline gap-2 mt-2">
-              {p.rol === "BONO" ? (
-                <span className="text-emerald-600 font-black">GRATIS</span>
-              ) : (
-                <span className="text-gray-900 font-black">{money(p.price)}</span>
-              )}
-              {p.comparePrice !== null && p.comparePrice > 0 && (
-                <span className="text-sm text-gray-400 line-through">{money(p.comparePrice)}</span>
-              )}
-            </div>
-
-            {/* El aviso va ACÁ adentro y no en un panel de errores aparte: el
-                lugar donde se ve el problema tiene que ser el lugar donde se
-                arregla. */}
-            {falta && (
-              <div className="mt-3 flex items-start gap-2 rounded-xl bg-red-50 border border-red-100 px-3 py-2">
-                <AlertTriangle className="h-4 w-4 text-red-500 shrink-0 mt-0.5" />
-                <p className="text-xs text-red-700 font-medium">{falta}</p>
-              </div>
-            )}
-
-            {p.tieneArchivo && p.archivoNombre && (
-              <p className="mt-2 text-xs text-gray-400 truncate">
-                Archivo: {p.archivoNombre}
-                {p.archivoPeso ? ` · ${Math.round(p.archivoPeso / 1024 / 1024 * 10) / 10} MB` : ""}
-              </p>
-            )}
-
-            <div className="mt-3 flex flex-wrap items-center gap-2">
-              <button
-                onClick={() =>
-                  setBorrador({
-                    id: p.id,
-                    rol: p.rol,
-                    padreId: p.padreId,
-                    name: p.name,
-                    description: p.description ?? "",
-                    imagen: p.imagen,
-                    price: p.price ? String(p.price) : "",
-                    comparePrice: p.comparePrice ? String(p.comparePrice) : "",
-                  })
-                }
-                disabled={ocupado}
-                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 text-xs font-bold text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
-              >
-                <Pencil className="h-3.5 w-3.5" /> Editar
-              </button>
-
-              <button
-                onClick={() => publicar(p, !p.publicado)}
-                disabled={ocupado || (!p.publicado && falta !== null)}
-                title={!p.publicado && falta ? falta : undefined}
-                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 text-xs font-bold text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                {ocupado ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : p.publicado ? (
-                  <EyeOff className="h-3.5 w-3.5" />
-                ) : (
-                  <Eye className="h-3.5 w-3.5" />
-                )}
-                {p.publicado ? "Despublicar" : "Publicar"}
-              </button>
-
-              <button
-                onClick={() => borrar(p)}
-                disabled={ocupado}
-                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-red-500 hover:bg-red-50 transition-colors disabled:opacity-50 ml-auto"
-              >
-                <Trash2 className="h-3.5 w-3.5" /> Borrar
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  /* ── Un grupo de hijos (bonos o upsells) de un principal ─────────────────── */
-  function Grupo({ padre, rol }: { padre: ProductoEnPantalla; rol: "BONO" | "UPSELL" }) {
-    const items = hijosDe(padre.id, rol);
-    const tope = topeDe(tier, rol);
-    const lleno = items.length >= tope;
-    const tinta = TINTA[rol];
-
-    return (
-      <div className={`rounded-2xl border ${tinta.borde} ${tinta.suave} p-4`}>
-        <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
-          <div className="min-w-0">
-            <p className="text-sm font-bold text-gray-900">
-              {COPY_ROL[rol].titulo}{" "}
-              <span className="text-xs font-medium text-gray-400">
-                {items.length} de {tope}
-              </span>
-            </p>
-            <p className="text-xs text-gray-500 mt-0.5">{COPY_ROL[rol].bajada}</p>
-          </div>
-
-          {lleno ? (
-            <a
-              href="/digitales/mi-cuenta"
-              className="shrink-0 inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white border border-gray-200 text-xs font-bold text-gray-500 hover:text-orange-600 hover:border-orange-300 transition-colors"
-            >
-              {tope === 0 ? "Tu plan no los incluye" : "Llegaste al tope"}
-              <ArrowUpRight className="h-3.5 w-3.5" />
-            </a>
-          ) : (
-            <button
-              onClick={() => setBorrador(borradorNuevo(rol, padre.id))}
-              className="shrink-0 inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white border border-gray-200 text-xs font-bold text-gray-700 hover:border-gray-300 transition-colors"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              {rol === "BONO" ? "Agregar bono" : "Agregar upsell"}
-            </button>
-          )}
-        </div>
-
-        {items.length === 0 ? (
-          <p className="text-xs text-gray-400">Todavía no cargaste ninguno.</p>
-        ) : (
-          <div className="space-y-3">
-            {items.map((h) => (
-              <Tarjeta key={h.id} p={h} />
-            ))}
-          </div>
-        )}
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-5">
       {/* Cuánto usaste de tu plan. Se dice "páginas de venta" y nunca "tiendas":
           la competencia vende tiendas y nosotros no. */}
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-gray-100 bg-white px-5 py-4 shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 px-5 py-4 shadow-sm">
         <div>
-          <p className="text-sm font-bold text-gray-900">
+          <p className="text-sm font-bold text-gray-900 panel-oscuro:text-gray-100">
             {principales.length} de {topePrincipales} página{topePrincipales === 1 ? "" : "s"} de venta
           </p>
-          <p className="text-xs text-gray-500 mt-0.5">Tu plan {COPY_DIGITAL[tier].nombre}</p>
+          <p className="text-xs text-gray-500 panel-oscuro:text-gray-400 mt-0.5">Tu plan {COPY_DIGITAL[tier].nombre}</p>
         </div>
 
         {llegoAlTope ? (
           <a
             href="/digitales/mi-cuenta"
-            className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-orange-200 bg-orange-50 text-sm font-bold text-orange-700 hover:bg-orange-100 transition-colors"
+            className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-orange-200 panel-oscuro:border-orange-500/30 bg-orange-50 panel-oscuro:bg-orange-500/10 text-sm font-bold text-orange-700 panel-oscuro:text-orange-300 hover:bg-orange-100 transition-colors"
           >
             Llegaste al tope de tu plan
             <ArrowUpRight className="h-4 w-4" />
@@ -483,18 +513,18 @@ export default function ProductosClient({
       </div>
 
       {error && (
-        <div className="rounded-2xl border border-red-200 bg-red-50 px-5 py-4">
-          <p className="text-sm font-medium text-red-700">{error}</p>
+        <div className="rounded-2xl border border-red-200 panel-oscuro:border-red-500/30 bg-red-50 panel-oscuro:bg-red-500/10 px-5 py-4">
+          <p className="text-sm font-medium text-red-700 panel-oscuro:text-red-300">{error}</p>
         </div>
       )}
 
       {principales.length === 0 ? (
-        <div className="rounded-3xl border border-gray-100 bg-white p-10 text-center shadow-sm">
-          <div className="w-14 h-14 bg-orange-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+        <div className="rounded-3xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 p-10 text-center shadow-sm">
+          <div className="w-14 h-14 bg-orange-100 panel-oscuro:bg-orange-500/15 rounded-2xl flex items-center justify-center mx-auto mb-4">
             <BookOpen className="h-7 w-7 text-orange-600" />
           </div>
-          <p className="text-gray-900 font-bold text-lg mb-1">Todavía no cargaste ningún producto</p>
-          <p className="text-gray-500 text-sm mb-6 max-w-sm mx-auto leading-relaxed">
+          <p className="text-gray-900 panel-oscuro:text-gray-100 font-bold text-lg mb-1">Todavía no cargaste ningún producto</p>
+          <p className="text-gray-500 panel-oscuro:text-gray-400 text-sm mb-6 max-w-sm mx-auto leading-relaxed">
             Un producto es tu ebook, tu plantilla o tu guía. Después le vas a poder sumar bonos de
             regalo y upsells.
           </p>
@@ -508,10 +538,10 @@ export default function ProductosClient({
       ) : (
         principales.map((p) => (
           <div key={p.id} className="space-y-3">
-            <Tarjeta p={p} />
+            <Tarjeta p={p} acc={acc} />
             <div className="pl-0 sm:pl-8 space-y-3">
-              <Grupo padre={p} rol="BONO" />
-              <Grupo padre={p} rol="UPSELL" />
+              <Grupo padre={p} rol="BONO" acc={acc} />
+              <Grupo padre={p} rol="UPSELL" acc={acc} />
             </div>
           </div>
         ))
@@ -521,14 +551,14 @@ export default function ProductosClient({
       {borrador && (
         <div className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center p-0 sm:p-4">
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => !guardando && setBorrador(null)} />
-          <div className="relative w-full sm:max-w-lg max-h-[92vh] overflow-y-auto bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl">
-            <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between">
-              <p className="font-black text-gray-900">
+          <div className="relative w-full sm:max-w-lg max-h-[92vh] overflow-y-auto bg-white panel-oscuro:bg-gray-900 rounded-t-3xl sm:rounded-3xl shadow-2xl">
+            <div className="sticky top-0 bg-white panel-oscuro:bg-gray-900 border-b border-gray-100 panel-oscuro:border-gray-800 px-6 py-4 flex items-center justify-between">
+              <p className="font-black text-gray-900 panel-oscuro:text-gray-100">
                 {borrador.id ? "Editar" : `Nuevo ${borrador.rol === "PRINCIPAL" ? "producto" : borrador.rol === "BONO" ? "bono" : "upsell"}`}
               </p>
               <button
                 onClick={() => !guardando && setBorrador(null)}
-                className="w-8 h-8 rounded-xl bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 transition-colors"
+                className="w-8 h-8 rounded-xl bg-gray-100 panel-oscuro:bg-gray-800 hover:bg-gray-200 panel-oscuro:hover:bg-gray-700 flex items-center justify-center text-gray-500 panel-oscuro:text-gray-400 transition-colors"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -543,21 +573,21 @@ export default function ProductosClient({
                   <img
                     src={borrador.imagen}
                     alt=""
-                    className="w-24 h-24 shrink-0 rounded-2xl object-cover border border-gray-200"
+                    className="w-24 h-24 shrink-0 rounded-2xl object-cover border border-gray-200 panel-oscuro:border-gray-700"
                   />
                 ) : (
-                  <div className="w-24 h-24 shrink-0 rounded-2xl bg-gray-100 border border-dashed border-gray-300 flex items-center justify-center">
-                    <ImageIcon className="h-7 w-7 text-gray-400" />
+                  <div className="w-24 h-24 shrink-0 rounded-2xl bg-gray-100 panel-oscuro:bg-gray-800 border border-dashed border-gray-300 panel-oscuro:border-gray-600 flex items-center justify-center">
+                    <ImageIcon className="h-7 w-7 text-gray-400 panel-oscuro:text-gray-500" />
                   </div>
                 )}
 
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-bold text-gray-900">Portada</p>
-                  <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">
+                  <p className="text-sm font-bold text-gray-900 panel-oscuro:text-gray-100">Portada</p>
+                  <p className="text-xs text-gray-500 panel-oscuro:text-gray-400 mt-0.5 leading-relaxed">
                     Es la imagen que se ve en tu página de venta. Hasta {MAX_IMAGEN_MB} MB.
                   </p>
                   <div className="mt-2.5 flex flex-wrap items-center gap-2">
-                    <label className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 text-xs font-bold text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer">
+                    <label className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 text-xs font-bold text-gray-700 panel-oscuro:text-gray-300 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800 transition-colors cursor-pointer">
                       {subiendo ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ImageIcon className="h-3.5 w-3.5" />}
                       {subiendo ? "Subiendo..." : borrador.imagen ? "Cambiar" : "Subir imagen"}
                       <input
@@ -577,7 +607,7 @@ export default function ProductosClient({
                     {borrador.imagen && (
                       <button
                         onClick={() => setBorrador({ ...borrador, imagen: null })}
-                        className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-red-500 hover:bg-red-50 transition-colors"
+                        className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-red-500 hover:bg-red-50 panel-oscuro:hover:bg-red-500/10 transition-colors"
                       >
                         <Trash2 className="h-3.5 w-3.5" /> Sacar
                       </button>
@@ -587,19 +617,19 @@ export default function ProductosClient({
               </div>
 
               <div>
-                <label htmlFor="titulo" className="block text-xs font-semibold text-gray-600 mb-1.5">Título</label>
+                <label htmlFor="titulo" className="block text-xs font-semibold text-gray-600 panel-oscuro:text-gray-400 mb-1.5">Título</label>
                 <input
                   id="titulo"
                   value={borrador.name}
                   maxLength={LARGO_TITULO}
                   onChange={(e) => setBorrador({ ...borrador, name: e.target.value })}
                   placeholder="Guía práctica de mecánica del automotor"
-                  className="w-full px-4 py-3 rounded-2xl border border-gray-200 text-sm text-gray-900 focus:border-orange-400 focus:ring-2 focus:ring-orange-100 outline-none transition-all"
+                  className="w-full px-4 py-3 rounded-2xl border border-gray-200 panel-oscuro:border-gray-700 text-sm text-gray-900 panel-oscuro:text-gray-100 focus:border-orange-400 focus:ring-2 focus:ring-orange-100 outline-none transition-all"
                 />
               </div>
 
               <div>
-                <label htmlFor="desc" className="block text-xs font-semibold text-gray-600 mb-1.5">Descripción</label>
+                <label htmlFor="desc" className="block text-xs font-semibold text-gray-600 panel-oscuro:text-gray-400 mb-1.5">Descripción</label>
                 <textarea
                   id="desc"
                   value={borrador.description}
@@ -607,9 +637,9 @@ export default function ProductosClient({
                   rows={5}
                   onChange={(e) => setBorrador({ ...borrador, description: e.target.value })}
                   placeholder="Qué se lleva la persona que lo compra."
-                  className="w-full px-4 py-3 rounded-2xl border border-gray-200 text-sm text-gray-900 focus:border-orange-400 focus:ring-2 focus:ring-orange-100 outline-none transition-all resize-y"
+                  className="w-full px-4 py-3 rounded-2xl border border-gray-200 panel-oscuro:border-gray-700 text-sm text-gray-900 panel-oscuro:text-gray-100 focus:border-orange-400 focus:ring-2 focus:ring-orange-100 outline-none transition-all resize-y"
                 />
-                <p className="text-xs text-gray-400 mt-1.5">
+                <p className="text-xs text-gray-400 panel-oscuro:text-gray-500 mt-1.5">
                   Se usa en la página de venta. {borrador.description.length.toLocaleString("es-AR")} / {LARGO_DESCRIPCION.toLocaleString("es-AR")}
                 </p>
               </div>
@@ -617,28 +647,28 @@ export default function ProductosClient({
               {/* Un bono va gratis por definición, así que no se le pide precio:
                   un campo apagado que siempre dice 0 sólo confunde. */}
               {borrador.rol === "BONO" ? (
-                <div className="rounded-2xl bg-amber-50 border border-amber-100 px-4 py-3">
-                  <p className="text-sm font-bold text-gray-900">Un bono va gratis</p>
-                  <p className="text-xs text-gray-500 mt-0.5">
+                <div className="rounded-2xl bg-amber-50 panel-oscuro:bg-amber-500/10 border border-amber-100 panel-oscuro:border-amber-500/25 px-4 py-3">
+                  <p className="text-sm font-bold text-gray-900 panel-oscuro:text-gray-100">Un bono va gratis</p>
+                  <p className="text-xs text-gray-500 panel-oscuro:text-gray-400 mt-0.5">
                     No se cobra: se entrega junto con la compra del producto principal.
                   </p>
                 </div>
               ) : (
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label htmlFor="precio" className="block text-xs font-semibold text-gray-600 mb-1.5">Precio</label>
+                    <label htmlFor="precio" className="block text-xs font-semibold text-gray-600 panel-oscuro:text-gray-400 mb-1.5">Precio</label>
                     <input
                       id="precio"
                       inputMode="decimal"
                       value={borrador.price}
                       onChange={(e) => setBorrador({ ...borrador, price: e.target.value.replace(/[^\d.,]/g, "") })}
                       placeholder="16990"
-                      className="w-full px-4 py-3 rounded-2xl border border-gray-200 text-sm text-gray-900 focus:border-orange-400 focus:ring-2 focus:ring-orange-100 outline-none transition-all"
+                      className="w-full px-4 py-3 rounded-2xl border border-gray-200 panel-oscuro:border-gray-700 text-sm text-gray-900 panel-oscuro:text-gray-100 focus:border-orange-400 focus:ring-2 focus:ring-orange-100 outline-none transition-all"
                     />
                   </div>
                   <div>
-                    <label htmlFor="antes" className="block text-xs font-semibold text-gray-600 mb-1.5">
-                      Precio original <span className="font-normal text-gray-400">(opcional)</span>
+                    <label htmlFor="antes" className="block text-xs font-semibold text-gray-600 panel-oscuro:text-gray-400 mb-1.5">
+                      Precio original <span className="font-normal text-gray-400 panel-oscuro:text-gray-500">(opcional)</span>
                     </label>
                     <input
                       id="antes"
@@ -646,7 +676,7 @@ export default function ProductosClient({
                       value={borrador.comparePrice}
                       onChange={(e) => setBorrador({ ...borrador, comparePrice: e.target.value.replace(/[^\d.,]/g, "") })}
                       placeholder="84950"
-                      className="w-full px-4 py-3 rounded-2xl border border-gray-200 text-sm text-gray-900 focus:border-orange-400 focus:ring-2 focus:ring-orange-100 outline-none transition-all"
+                      className="w-full px-4 py-3 rounded-2xl border border-gray-200 panel-oscuro:border-gray-700 text-sm text-gray-900 panel-oscuro:text-gray-100 focus:border-orange-400 focus:ring-2 focus:ring-orange-100 outline-none transition-all"
                     />
                   </div>
                 </div>
@@ -656,10 +686,10 @@ export default function ProductosClient({
               {error && <p className="text-sm text-red-600 font-medium">{error}</p>}
             </div>
 
-            <div className="sticky bottom-0 bg-white border-t border-gray-100 px-6 py-4 flex items-center justify-end gap-3">
+            <div className="sticky bottom-0 bg-white panel-oscuro:bg-gray-900 border-t border-gray-100 panel-oscuro:border-gray-800 px-6 py-4 flex items-center justify-end gap-3">
               <button
                 onClick={() => !guardando && setBorrador(null)}
-                className="px-5 py-3 rounded-2xl text-sm font-bold text-gray-500 hover:bg-gray-50 transition-colors"
+                className="px-5 py-3 rounded-2xl text-sm font-bold text-gray-500 panel-oscuro:text-gray-400 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800 transition-colors"
               >
                 Cancelar
               </button>

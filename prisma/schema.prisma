@@ -253,6 +253,30 @@ model Store {
   tieneVentaMayorista   Boolean   @default(false)
   // Config visual del nuevo editor de templates
   storeConfig           String    @default("{}")
+  // ── Configuración de una cuenta de Productos Digitales ──────────────────────
+  //
+  // Van como columnas y no adentro de `storeConfig` porque `storeConfig` es la
+  // config VISUAL del editor de templates: se reescribe entero cada vez que se
+  // guarda un diseño, y estos cuatro campos no tienen nada que ver con el
+  // diseño. Un guardado de template se los llevaría puestos.
+  //
+  // Los cuatro son opcionales: una cuenta que recién entra no tiene ninguno, y
+  // la pantalla tiene que poder dibujarse igual.
+
+  // El nombre que ve el comprador durante el pago y en la página de descarga.
+  // Separado de `name` a propósito: el de la marca puede ser largo o gracioso, y
+  // el que aparece en el resumen de la tarjeta conviene que sea reconocible. Si
+  // está vacío se usa `name`.
+  checkoutName          String?
+  // A dónde escribe quien compró y no recibió el archivo. Va en el mail de
+  // entrega, así que es la única forma que tiene esa persona de reclamar.
+  supportEmail          String?
+  // ── El contexto de la IA ────────────────────────────────────────────────────
+  // El NICHO de la cuenta: lo que la IA usa como referencia para todo lo que
+  // genera (el ebook, los bonos, los upsells y los textos de venta). Sin esto,
+  // cada generación arranca de cero y sale de otro tema.
+  iaProducto            String?
+  iaDescripcion         String?
   // MercadoPago Marketplace — credenciales del dueño de la tienda (cifradas)
   mpAccessToken         String?
   mpRefreshToken        String?

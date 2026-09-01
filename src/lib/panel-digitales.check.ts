@@ -54,6 +54,13 @@ const mails = soloCodigo(readFileSync("src/lib/resend.ts", "utf8"));
 const crear = soloCodigo(readFileSync("src/app/api/digitales/productos/route.ts", "utf8"));
 const editar = soloCodigo(readFileSync("src/app/api/digitales/productos/[id]/route.ts", "utf8"));
 const pantallaProductos = soloCodigo(readFileSync("src/app/digitales/productos/ProductosClient.tsx", "utf8"));
+const config = soloCodigo(readFileSync("src/app/api/digitales/configuracion/route.ts", "utf8"));
+const pantallaConfig = soloCodigo(readFileSync("src/app/digitales/configuracion/ConfiguracionClient.tsx", "utf8"));
+const tabGeneral = soloCodigo(readFileSync("src/app/digitales/configuracion/TabGeneral.tsx", "utf8"));
+const piezasConfig = soloCodigo(readFileSync("src/app/digitales/configuracion/piezas.tsx", "utf8"));
+const paginaConfig = soloCodigo(readFileSync("src/app/digitales/configuracion/page.tsx", "utf8"));
+const mpConnect = soloCodigo(readFileSync("src/app/api/mp/oauth/connect/route.ts", "utf8"));
+const mpCallback = soloCodigo(readFileSync("src/app/api/mp/oauth/callback/route.ts", "utf8"));
 
 /* ── 1. La ruta que regala un plan pago ────────────────────────────────────── */
 console.log("\n1) Los frenos de /api/digitales/prueba");
@@ -219,10 +226,13 @@ console.log("\n7) Editar tus datos no pisa lo que no tocaste");
    `city: city?.trim() || null` para los tres campos SIEMPRE, así que quien
    mandara sólo nombre y teléfono —como hace esta pantalla, que no pide ciudad—
    le borraba la ciudad a la persona sin nombrarla. */
+/* La regla se mudó a `texto-limpio.ts` para que la usen las CUATRO puertas que
+   escriben texto y no sólo ésta. Acá se comprueba que la ruta la use; el
+   comportamiento en sí lo prueba `texto-limpio.check.ts`, ejecutándolo. */
 chequear("la ruta distingue 'no vino' de 'vino vacío'",
-  /if \(valor === undefined\) return undefined;/.test(perfil) &&
-  !/city: city\?\.trim\(\) \|\| null/.test(perfil));
-chequear("los campos tienen tope de largo", /const TOPES = \{/.test(perfil) && /slice\(0, tope\)/.test(perfil));
+  /campoTexto/.test(perfil) && !/city: city\?\.trim\(\) \|\| null/.test(perfil));
+chequear("los campos tienen tope de largo",
+  /const TOPES = \{/.test(perfil) && /campo\(/.test(perfil));
 chequear("la ruta tiene tope de intentos", /checkRateLimit\(`perfil:/.test(perfil));
 chequear("la pantalla manda sólo los campos que edita",
   /name: nombre\.trim\(\), phone: telefono\.trim\(\)/.test(miCuenta));
@@ -256,7 +266,7 @@ chequear("el nombre tiene mínimo del lado del servidor", /data\.name\.length < 
    de línea adentro del nombre se arrastra a los mails; el byte nulo rompe
    Postgres, que no lo acepta adentro de un texto. */
 chequear("se limpian los caracteres de control",
-  /\\u0000-\\u001F/.test(perfil) || /\\x00-\\x1F/.test(perfil));
+  /from "@\/lib\/texto-limpio"/.test(perfil));
 
 /* ⚠️ El agujero de verdad que apareció al hacer editable el nombre.
    `sendVerificationReceivedEmail` y `sendVerificationApprovedEmail` metían
@@ -367,6 +377,225 @@ chequear("el doble clic se corta con un ref, no con estado",
   /useRef\(false\)/.test(pantallaProductos) && /enVuelo\.current = true/.test(pantallaProductos));
 chequear("y lo tienen las cuatro acciones que escriben",
   (pantallaProductos.match(/if \(.*enVuelo\.current\) return;|if \(enVuelo\.current\) return;/g) ?? []).length >= 4);
+
+/* ── 12. La Configuración del negocio ──────────────────────────────────────── */
+console.log("\n12) Los frenos de /api/digitales/configuracion");
+
+chequear("guardar exige sesión Y rol DIGITAL",
+  /user\.role !== "DIGITAL"/.test(config) && /status: 403/.test(config));
+chequear("tiene tope de intentos", /checkRateLimit\(`digital-config:/.test(config));
+
+/* Es un PATCH parcial: cada sección de la pantalla manda sólo su campo. Un POST
+   del objeto entero haría que guardar el WhatsApp reescribiera el nombre y el
+   logo con lo que la pantalla tuviera cargado, que puede estar viejo. */
+chequear("sólo se escribe lo que vino", /PATCH/.test(config) && /\.\.\.\(typeof nombre === "string"/.test(config));
+chequear("un pedido vacío se rechaza en vez de crear el espacio de gorra",
+  /vino\.every\(\(v\) => v === undefined\)/.test(config));
+
+/* ⚠️ El mail de soporte va adentro del mail de entrega: es la ÚNICA puerta que
+   tiene alguien que pagó y no recibió el archivo. Si acá entra cualquier cosa,
+   esa persona se queda sin forma de reclamar. */
+chequear("el mail de soporte se valida", /validarEmail\(supportEmail\)/.test(config));
+chequear("y se guarda en minúsculas", /supportEmail\.toLowerCase\(\)/.test(config));
+
+/* El contexto de la IA es el nicho de la cuenta: entra en CADA pedido a la IA,
+   así que un texto sin tope se paga en cada generación. El recorte va del lado
+   del servidor aunque la pantalla tenga `maxLength` — el `maxLength` es del
+   navegador, y el navegador no es quien manda el pedido. */
+chequear("el contexto de la IA se valida", /validarContextoIA\(/.test(config));
+chequear("y se recorta del lado del servidor",
+  /limpiarTexto\(iaDescripcion, LARGO_IA_DESCRIPCION\)/.test(config));
+
+/* Vacío se guarda como `null` y no como cadena vacía: `null` es "no lo definió"
+   —el checkout cae al nombre de la marca, la IA sabe que no tiene nicho— y una
+   cadena vacía es un valor puesto que pasa cualquier chequeo de "¿está
+   cargado?" sin decir nada. */
+/* Vacío se guarda como `null` y no como cadena vacía: `null` es "no lo definió"
+   —el checkout cae al nombre de la marca, la IA sabe que no tiene nicho— y una
+   cadena vacía es un valor puesto que pasa cualquier chequeo de "¿está cargado?"
+   sin decir nada. Lo garantiza `limpiarTexto`, que es compartida. */
+chequear("lo que llega vacío se guarda como null, no como texto vacío",
+  /from "@\/lib\/texto-limpio"/.test(config));
+
+/* ⚠️ El slug es único en TODA la tabla de tiendas, no sólo entre las digitales.
+   Y hay una carrera: dos cuentas pidiendo la misma dirección en el mismo
+   instante pasan las dos el chequeo y una choca contra el índice. Sin el catch,
+   esa persona ve un error de base sin explicación. */
+chequear("la dirección se comprueba contra todas las tiendas",
+  /findFirst\([\s\S]{0,120}?slug: slugNuevo/.test(config));
+chequear("y la carrera contra el índice único se atrapa", /P2002/.test(config));
+
+/* La misma lista blanca que la portada de un producto, importada y no copiada:
+   una dirección ajena adentro de una página nuestra es un rastreador de un
+   tercero mirando quién entra. */
+chequear("el logo pasa por la lista blanca", /logoValido\(logo\)/.test(config));
+/* El WhatsApp salió de esta pantalla: el orden de la competencia trae "Mail de
+   soporte" en su lugar, que además es lo que va adentro del mail de entrega. La
+   ruta ya no lo acepta —era un camino validado al que no llegaba nadie— y la
+   regla del teléfono sigue viva donde sí se usa: el registro y Mi cuenta. */
+chequear("el WhatsApp ya no entra por acá: era un camino muerto",
+  !/whatsappNumber/.test(config));
+
+/* ⚠️ Esto es un componente de servidor que le pasa sus datos al del navegador,
+   así que todo lo que seleccione termina viajando adentro del HTML. Los tokens
+   de Mercado Pago no se pueden ni rozar. */
+chequear("la pantalla NO lee los tokens de Mercado Pago",
+  !/mpAccessToken/.test(paginaConfig) && !/mpRefreshToken/.test(paginaConfig));
+chequear("sólo mira si está conectado", /mpConnectedAt: true/.test(paginaConfig));
+
+chequear("el doble clic se corta con un ref, no con estado",
+  /useRef\(false\)/.test(pantallaConfig) && /if \(enVuelo\.current\) return;/.test(pantallaConfig));
+chequear("la pantalla y el servidor comparten las validaciones",
+  /validarSlug/.test(pantallaConfig) && /validarSlug/.test(config)
+  && /validarNombre/.test(pantallaConfig) && /validarNombre/.test(config));
+
+/* ⚠️ Lo que se dibuja pero todavía no anda.
+ *
+ * Se dibuja a propósito —lo que no está dibujado se olvida— pero una sección que
+ * PARECE que anda y no anda es peor que no tenerla: la persona la configura, se
+ * queda tranquila y se entera de que no pasó nada cuando ya es tarde. Los
+ * controles apagados y el aviso son lo único que separa "esto viene después" de
+ * "esto está roto". */
+chequear("las secciones que todavía no andan se avisan",
+  /EtiquetaPendiente/.test(piezasConfig) && /Todavía no/.test(piezasConfig));
+chequear("y dicen QUÉ falta, no 'próximamente'",
+  !/próximamente/i.test(tabGeneral) && /NotaPendiente/.test(tabGeneral));
+
+/* Cada control de una sección apagada va deshabilitado de verdad. Un cartel que
+   dice "todavía no" arriba de un campo que se puede escribir es un cartel que
+   nadie lee. */
+chequear("y sus controles están apagados de verdad",
+  (tabGeneral.match(/disabled\b/g) ?? []).length >= 5);
+
+/* ⚠️ La zona de peligro es la que MENOS se puede apurar: de la cuenta cuelgan
+   pedidos y permisos de descarga de gente que ya pagó. Un borrado hecho de
+   cualquier manera les saca el acceso a lo que compraron. */
+chequear("borrar la cuenta sigue apagado",
+  /Zona de peligro/.test(tabGeneral) && /Cerrar mi cuenta/.test(tabGeneral));
+
+/* El nombre del checkout es opcional y vacío quiere decir "usá el de la marca".
+   Un campo vacío no dice eso solo, así que la pantalla muestra siempre cuál va
+   a quedar. */
+chequear("se muestra qué nombre va a ver el comprador",
+  /checkoutEfectivo/.test(tabGeneral));
+
+/* Los IDs de medición se guardan MEZCLANDO adentro de `storeConfig`, que es un
+   JSON con el diseño entero, los cobros y los envíos. Escribir el objeto desde
+   esta pantalla —que no conoce el resto— lo borraría sin enterarse. */
+chequear("los IDs de medición se mezclan, no pisan el storeConfig",
+  /configNueva = actual\?\.storeConfig \?\? "\{\}"/.test(config) && /mergeAnalytics\(configNueva/.test(config));
+chequear("y se validan con la misma regla que los inyecta",
+  /from "@\/lib\/tracking-ids"/.test(config));
+
+/* ⚠️ EL CANDADO DE LA TRANSFERENCIA.
+ *
+ * Free no puede prenderla, y el chequeo tiene que estar en el SERVIDOR: la
+ * pantalla dibuja un candado, y un candado dibujado no frena a nadie que arme el
+ * pedido a mano. Y no es una función recortada para empujar a pagar — Free no
+ * cobra abono, así que lo único que deja es la comisión, y esa comisión se
+ * retiene adentro del cobro de Mercado Pago. En una transferencia no pasa un
+ * peso por la plataforma: un Free con transferencia prendida no paga nada por
+ * nada. */
+const pantallaPagos = soloCodigo(readFileSync("src/app/digitales/configuracion/TabPagos.tsx", "utf8"));
+
+chequear("el candado de la transferencia está en el SERVIDOR",
+  /TRANSFERENCIA_DIGITAL\[tier\]/.test(config) && /status: 409/.test(config));
+
+/* Y el plan se lee de la BASE, no de lo que diga el navegador: si viniera en el
+   pedido, cualquiera se declararía Pro. */
+chequear("y el plan se lee de la base, no del pedido",
+  /prisma\.subscription\.findUnique\([\s\S]{0,120}?userId: user\.id/.test(config));
+
+chequear("los datos de transferencia se validan con la misma función que la pantalla",
+  /validarTransferencia\(/.test(config) && /validarTransferencia\(/.test(pantallaConfig));
+
+/* El CBU se guarda con números y nada más, aunque se haya pegado del homebanking
+   con espacios o guiones. */
+chequear("el CBU se guarda limpio", /soloDigitos\(t\.cbu\)/.test(config));
+
+/* Se mezcla adentro de `paymentInfo` para no borrarle el efectivo a una tienda
+   que sí lo usa: una cuenta digital no tiene por qué saber que existe. */
+chequear("la transferencia se mezcla, no pisa el paymentInfo",
+  /mergeTransferencia\(configNueva/.test(config));
+
+/* ⚠️ Con Mercado Pago la entrega es automática; con transferencia NO — alguien
+   tiene que mirar el banco y confirmar a mano. Quien la prende sin saberlo se
+   entera cuando un comprador reclama que pagó y no recibió nada. */
+chequear("se avisa que con transferencia la entrega deja de ser automática",
+  /la entrega no es automática/.test(pantallaPagos));
+
+/* ── 12 bis. El tema del panel ─────────────────────────────────────────────── */
+console.log("\n12 bis) Claro y oscuro");
+
+const tema = soloCodigo(readFileSync("src/lib/tema-digitales.ts", "utf8"));
+const layoutDig = soloCodigo(readFileSync("src/app/digitales/layout.tsx", "utf8"));
+const estilos = readFileSync("src/app/globals.css", "utf8");
+
+/* ⚠️ Por qué una variante propia y no `dark:`. `next-themes` está en la raíz con
+   `defaultTheme="dark"`, así que `<html>` lleva `.dark` casi siempre: un
+   `dark:bg-gray-900` adentro del panel se aplicaría SIEMPRE y sin forma de
+   apagarlo desde la pantalla de Apariencia. */
+chequear("el panel tiene su propia variante, separada de la del sitio",
+  /@custom-variant panel-oscuro/.test(estilos));
+
+/* ⚠️ El parpadeo. Sin un script sincrónico, entrar en oscuro es un flash blanco
+   de pantalla completa: el HTML llega claro, React hidrata, y recién ahí se lee
+   la preferencia. Ningún efecto de React corre antes del primer dibujo. */
+chequear("el tema se pinta con un script, antes del primer dibujo",
+  /SCRIPT_TEMA/.test(layoutDig) && /dangerouslySetInnerHTML/.test(layoutDig));
+
+/* Leer `localStorage` TIRA con el almacenamiento bloqueado. Sin el `try`, ese
+   error corta el script y la página queda a medio pintar. */
+chequear("y ese script no se cae aunque el almacenamiento esté bloqueado",
+  /function\(\)\{try\{/.test(tema) && /catch\(e\)\{/.test(tema));
+
+chequear("el tema sale de una lista, nunca de un valor por defecto",
+  /TEMAS as readonly string\[\]\)\.includes/.test(tema));
+
+/* `color-scheme` no es decorativo: es lo que hace que las barras de scroll y los
+   desplegables salgan oscuros. Sin esto, adentro de un panel oscuro se abre un
+   menú blanco. */
+chequear("se acompaña con color-scheme", /style\.colorScheme/.test(tema));
+
+/* Zona horaria se sacó: vendemos en Argentina, así que era un selector con una
+   sola respuesta posible. */
+/* Se busca la SECCIÓN, no la palabra: el comentario que explica por qué se sacó
+   sigue en el archivo a propósito, y un chequeo que se tropiece con su propia
+   explicación obliga a borrar la explicación para que pase. */
+chequear("zona horaria ya no se dibuja", !/titulo="Zona horaria"/.test(tabGeneral));
+
+/* Y Apariencia dejó de ser una sección apagada: ahora hace algo de verdad. */
+chequear("Apariencia ya no está apagada",
+  /titulo="Apariencia"/.test(tabGeneral) && /p\.setTema\(/.test(tabGeneral));
+
+/* ── 13. La vuelta de Mercado Pago ─────────────────────────────────────────── */
+console.log("\n13) A dónde vuelve quien conecta el cobro");
+
+/* ⚠️ EL chequeo de esta sección. El callback redirige con NUESTRO dominio, que
+   es exactamente lo que un atacante quiere para que un engaño se vea legítimo.
+   Por eso el destino se traduce contra una lista fija en vez de guardarse la
+   dirección entera: aunque la palabra llegara de otro lado, lo peor que puede
+   pasar es caer en el destino por defecto. */
+chequear("el destino sale de una lista fija, no de una dirección guardada",
+  /const VUELTAS: Record<string, string>/.test(mpCallback) && /VUELTA_POR_DEFECTO/.test(mpCallback));
+chequear("y la lista tiene los dos paneles",
+  /tienda: "\/dashboard\/pagos"/.test(mpCallback) && /digital: "\/digitales\/configuracion"/.test(mpCallback));
+
+/* El panel de origen sale del ROL y no de un parámetro: un destino que viaja en
+   el pedido lo cambia cualquiera. */
+chequear("de qué panel salió lo decide el rol, no el pedido",
+  /user\.role === "DIGITAL" \? "digital" : "tienda"/.test(mpConnect));
+
+/* Si algo falla, la persona tiene que volver al panel del que salió. Una cuenta
+   digital que aterriza en /dashboard/pagos ve el panel que no le corresponde. */
+chequear("hasta el error vuelve al panel correcto",
+  (mpCallback.match(/\$\{destino\}\?mp=error/g) ?? []).length >= 2);
+
+/* Una cuenta digital puede no tener su espacio creado todavía: se crea con el
+   primer producto, y conectar el cobro antes de cargar nada es de lo más
+   razonable que puede hacer alguien que recién entra. */
+chequear("conectar el cobro funciona aunque todavía no haya ningún producto",
+  /espacioDigital\(user\.id\)/.test(mpConnect));
 
 console.log(fallos === 0
   ? "\nok — el panel de Productos Digitales sigue en pie"

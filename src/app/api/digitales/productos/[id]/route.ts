@@ -5,6 +5,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import {
   rolDe, loQueFalta, validarCampos, imagenValida, LARGO_TITULO, LARGO_DESCRIPCION,
 } from "@/lib/productos-digitales";
+import { limpiarTexto } from "@/lib/texto-limpio";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -80,9 +81,9 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
     where: { id },
     data: {
       // `undefined` en Prisma es "no lo toques": sólo se escribe lo que vino.
-      ...(typeof name === "string" ? { name: name.trim().slice(0, LARGO_TITULO) } : {}),
+      ...(typeof name === "string" ? { name: limpiarTexto(name, LARGO_TITULO) ?? "" } : {}),
       ...(description !== undefined
-        ? { description: typeof description === "string" ? description.slice(0, LARGO_DESCRIPCION) : null }
+        ? { description: limpiarTexto(description, LARGO_DESCRIPCION) }
         : {}),
       ...(typeof precio === "number" ? { price: precio } : {}),
       ...(comparePrice !== undefined

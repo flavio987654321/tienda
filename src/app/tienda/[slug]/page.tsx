@@ -362,6 +362,7 @@ export default async function TiendaPage({ params, searchParams }: TiendaPagePro
       <StoreTrackingScripts
         googleAnalyticsId={config.analytics?.googleAnalyticsId}
         facebookPixelId={config.analytics?.facebookPixelId}
+        clarityProjectId={config.analytics?.clarityProjectId}
         purchase={purchase}
       />
       <PWAManager appVersion={STORE_VERSION} versionKey="pwa_store_version" disableNotifPrompt />

@@ -20,12 +20,12 @@ export default function DigitalesPage() {
     <div className="mx-auto w-full max-w-2xl px-4 sm:px-6 py-10">
 
       <div className="text-center">
-        <div className="w-14 h-14 bg-orange-100 rounded-2xl flex items-center justify-center mx-auto mb-5">
+        <div className="w-14 h-14 bg-orange-100 panel-oscuro:bg-orange-500/15 rounded-2xl flex items-center justify-center mx-auto mb-5">
           <Sparkles className="h-7 w-7 text-orange-600" />
         </div>
 
         <h1 className="text-3xl font-black text-gray-950 mb-3">Tu cuenta ya está lista</h1>
-        <p className="text-gray-500 leading-relaxed">
+        <p className="text-gray-500 panel-oscuro:text-gray-400 leading-relaxed">
           Estamos terminando las pantallas para cargar tu primer producto digital y armar su
           página de venta. Mientras tanto, tu plan y tus datos ya se pueden ver y cambiar.
         </p>
@@ -34,15 +34,15 @@ export default function DigitalesPage() {
       <div className="mt-8 space-y-3">
         <Link
           href="/digitales/mi-cuenta"
-          className="w-full flex items-center justify-between gap-3 px-5 py-4 rounded-2xl border border-orange-200 bg-white hover:border-orange-400 hover:shadow-md transition-all group"
+          className="w-full flex items-center justify-between gap-3 px-5 py-4 rounded-2xl border border-orange-200 panel-oscuro:border-orange-500/30 bg-white panel-oscuro:bg-gray-900 hover:border-orange-400 hover:shadow-md transition-all group"
         >
           <div className="flex min-w-0 items-center gap-3 text-left">
-            <div className="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center shrink-0">
+            <div className="w-10 h-10 bg-orange-100 panel-oscuro:bg-orange-500/15 rounded-xl flex items-center justify-center shrink-0">
               <UserRound className="h-5 w-5 text-orange-600" />
             </div>
             <div className="min-w-0">
-              <p className="text-sm font-bold text-gray-900">Mi cuenta</p>
-              <p className="text-xs text-gray-500">Tu plan, la comisión, tus datos y los 7 días de prueba</p>
+              <p className="text-sm font-bold text-gray-900 panel-oscuro:text-gray-100">Mi cuenta</p>
+              <p className="text-xs text-gray-500 panel-oscuro:text-gray-400">Tu plan, la comisión, tus datos y los 7 días de prueba</p>
             </div>
           </div>
           <ArrowRight className="h-4 w-4 shrink-0 text-orange-400 group-hover:translate-x-0.5 transition-transform" />
@@ -52,9 +52,9 @@ export default function DigitalesPage() {
             mail: era una promesa que nadie iba a cumplir, escrita en la primera
             pantalla que ve alguien que acaba de confiarnos sus datos. Ahora dice
             sólo lo que es cierto. */}
-        <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
-          <p className="text-sm font-bold text-gray-900 mb-1">Tu cuenta queda guardada</p>
-          <p className="text-xs text-gray-500 leading-relaxed">
+        <div className="bg-white panel-oscuro:bg-gray-900 border border-gray-100 panel-oscuro:border-gray-800 rounded-2xl p-5 shadow-sm">
+          <p className="text-sm font-bold text-gray-900 panel-oscuro:text-gray-100 mb-1">Tu cuenta queda guardada</p>
+          <p className="text-xs text-gray-500 panel-oscuro:text-gray-400 leading-relaxed">
             Podés cerrar esta página y volver cuando quieras: el plan Free no vence, así que no
             hay nada que se te pase.
           </p>

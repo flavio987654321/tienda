@@ -6,6 +6,7 @@ import type { TierDigital } from "@/lib/planes-digitales";
 import {
   rolDe, topeDe, validarCampos, imagenValida, LARGO_TITULO, LARGO_DESCRIPCION,
 } from "@/lib/productos-digitales";
+import { limpiarTexto } from "@/lib/texto-limpio";
 import { espacioDigital } from "@/lib/espacio-digital";
 
 export const runtime = "nodejs";
@@ -121,8 +122,8 @@ export async function POST(req: NextRequest) {
       storeId: espacio.storeId,
       rolDigital: rol,
       padreId: padre,
-      name: name.trim().slice(0, LARGO_TITULO),
-      description: typeof description === "string" ? description.slice(0, LARGO_DESCRIPCION) : null,
+      name: limpiarTexto(name, LARGO_TITULO) ?? "",
+      description: limpiarTexto(description, LARGO_DESCRIPCION),
       price: typeof precio === "number" ? precio : 0,
       comparePrice: typeof comparePrice === "number" && comparePrice > 0 ? comparePrice : null,
       /* La imagen se guarda sólo si es una dirección NUESTRA. Ver `imagenValida`:

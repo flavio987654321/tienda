@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { campoTexto } from "@/lib/texto-limpio";
 import { validarTelefono, LARGO_MAXIMO as TELEFONO_MAXIMO } from "@/lib/telefono";
 
 export async function GET() {
@@ -35,17 +36,11 @@ const TOPES = { name: 80, city: 80, phone: TELEFONO_MAXIMO } as const;
  * tocarla ni nombrarla. La única pantalla que existía mandaba los tres juntos y
  * por eso nunca se vio.
  */
-function campo(valor: unknown, tope: number): string | null | undefined {
-  if (valor === undefined) return undefined;
-  if (valor === null) return null;
-  if (typeof valor !== "string") return undefined;
-  /* Se sacan los caracteres de control antes de medir. No los escribe nadie a
-     mano: llegan pegados desde otro lado, y un salto de linea metido adentro
-     del nombre se arrastra a los mails y a los encabezados. El byte nulo ademas
-     rompe Postgres, que no lo acepta adentro de un texto. */
-  const limpio = valor.replace(/[\u0000-\u001F\u007F]/g, " ").trim().slice(0, tope).trim();
-  return limpio.length > 0 ? limpio : null;
-}
+/* La regla vive en `texto-limpio.ts` y ya no acá: estaba escrita en esta ruta y
+   en ningún lado más, así que el nombre que se limpiaba entrando por acá se
+   guardaba sucio entrando por Configuración o por Productos. Es el mismo agujero
+   que ya tuvimos con el teléfono. */
+const campo = campoTexto;
 
 export async function PUT(req: NextRequest) {
   const user = await getCurrentUser();

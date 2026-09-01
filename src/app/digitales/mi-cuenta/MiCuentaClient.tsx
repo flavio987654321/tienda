@@ -44,11 +44,11 @@ const ESTILO: Record<TierDigital, { degrade: string; icono: React.ElementType; s
 };
 
 const ESTADO_CFG: Record<Estado, { label: string; texto: string; fondo: string; borde: string; Icon: React.ElementType }> = {
-  TRIAL:     { label: "Probando",       texto: "text-amber-700",   fondo: "bg-amber-50",   borde: "border-amber-200",   Icon: Clock },
-  ACTIVE:    { label: "Activo",         texto: "text-emerald-700", fondo: "bg-emerald-50", borde: "border-emerald-200", Icon: CheckCircle },
-  GRACE:     { label: "Pago pendiente", texto: "text-orange-700",  fondo: "bg-orange-50",  borde: "border-orange-200",  Icon: AlertTriangle },
-  EXPIRED:   { label: "Terminado",      texto: "text-red-700",     fondo: "bg-red-50",     borde: "border-red-200",     Icon: AlertTriangle },
-  CANCELLED: { label: "Cancelado",      texto: "text-gray-600",    fondo: "bg-gray-100",   borde: "border-gray-200",    Icon: AlertTriangle },
+  TRIAL:     { label: "Probando",       texto: "text-amber-700",   fondo: "bg-amber-50 panel-oscuro:bg-amber-500/10",   borde: "border-amber-200 panel-oscuro:border-amber-500/30",   Icon: Clock },
+  ACTIVE:    { label: "Activo",         texto: "text-emerald-700 panel-oscuro:text-emerald-300", fondo: "bg-emerald-50 panel-oscuro:bg-emerald-500/10", borde: "border-emerald-200 panel-oscuro:border-emerald-500/30", Icon: CheckCircle },
+  GRACE:     { label: "Pago pendiente", texto: "text-orange-700 panel-oscuro:text-orange-300",  fondo: "bg-orange-50 panel-oscuro:bg-orange-500/10",  borde: "border-orange-200 panel-oscuro:border-orange-500/30",  Icon: AlertTriangle },
+  EXPIRED:   { label: "Terminado",      texto: "text-red-700 panel-oscuro:text-red-300",     fondo: "bg-red-50 panel-oscuro:bg-red-500/10",     borde: "border-red-200 panel-oscuro:border-red-500/30",     Icon: AlertTriangle },
+  CANCELLED: { label: "Cancelado",      texto: "text-gray-600 panel-oscuro:text-gray-400",    fondo: "bg-gray-100 panel-oscuro:bg-gray-800",   borde: "border-gray-200 panel-oscuro:border-gray-700",    Icon: AlertTriangle },
 };
 
 /**
@@ -218,12 +218,12 @@ export default function MiCuentaClient({ tier, billing, estado, dias, renovacion
 
         {/* ── El plan de hoy ───────────────────────────────────────────────── */}
         <div className={`rounded-3xl bg-gradient-to-br ${cfg.degrade} p-6 text-white shadow-xl ${cfg.sombra} relative overflow-hidden`}>
-          <div className="absolute -top-8 -right-8 w-40 h-40 bg-white/10 rounded-full" />
-          <div className="absolute -bottom-12 -left-6 w-32 h-32 bg-white/10 rounded-full" />
+          <div className="absolute -top-8 -right-8 w-40 h-40 bg-white panel-oscuro:bg-gray-900/10 rounded-full" />
+          <div className="absolute -bottom-12 -left-6 w-32 h-32 bg-white panel-oscuro:bg-gray-900/10 rounded-full" />
 
           <div className="relative">
             <div className="flex items-start justify-between gap-3 mb-4">
-              <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm shrink-0">
+              <div className="w-12 h-12 bg-white panel-oscuro:bg-gray-900/20 rounded-2xl flex items-center justify-center backdrop-blur-sm shrink-0">
                 <PlanIcon className="h-6 w-6 text-white" />
               </div>
               <div className={`flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full border ${estadoCfg.fondo} ${estadoCfg.texto} ${estadoCfg.borde}`}>
@@ -242,7 +242,7 @@ export default function MiCuentaClient({ tier, billing, estado, dias, renovacion
             {/* Free no tiene fecha de nada, así que en vez de una cuenta regresiva
                 vacía se dice lo único que hay para decir: que no se termina. */}
             {esFree && (
-              <div className="mt-5 bg-white/15 rounded-2xl px-4 py-3 backdrop-blur-sm">
+              <div className="mt-5 bg-white panel-oscuro:bg-gray-900/15 rounded-2xl px-4 py-3 backdrop-blur-sm">
                 <p className="text-white font-semibold text-sm">
                   No te pedimos ninguna tarjeta y no vence nunca. Cobramos {COMISION_DIGITAL.FREE}% de comisión por venta.
                 </p>
@@ -255,8 +255,8 @@ export default function MiCuentaClient({ tier, billing, estado, dias, renovacion
                   <span>{estado === "TRIAL" ? "Días de prueba que te quedan" : "Días para regularizar el pago"}</span>
                   <span className="font-black text-white text-sm">{dias} día{dias !== 1 ? "s" : ""}</span>
                 </div>
-                <div className="h-2 bg-white/20 rounded-full overflow-hidden">
-                  <div className="h-full bg-white rounded-full transition-all" style={{ width: `${Math.min(100, (dias / totalDias) * 100)}%` }} />
+                <div className="h-2 bg-white panel-oscuro:bg-gray-900/20 rounded-full overflow-hidden">
+                  <div className="h-full bg-white panel-oscuro:bg-gray-900 rounded-full transition-all" style={{ width: `${Math.min(100, (dias / totalDias) * 100)}%` }} />
                 </div>
                 <p className="text-white/80 text-xs mt-2.5 leading-relaxed">
                   {estado === "TRIAL"
@@ -267,7 +267,7 @@ export default function MiCuentaClient({ tier, billing, estado, dias, renovacion
             )}
 
             {estado === "ACTIVE" && renovacion && (
-              <div className="mt-5 bg-white/15 rounded-2xl px-4 py-3 backdrop-blur-sm">
+              <div className="mt-5 bg-white panel-oscuro:bg-gray-900/15 rounded-2xl px-4 py-3 backdrop-blur-sm">
                 <p className="text-white/70 text-xs mb-0.5">Próxima renovación</p>
                 <p className="text-white font-bold text-sm">
                   {renovacion}
@@ -277,7 +277,7 @@ export default function MiCuentaClient({ tier, billing, estado, dias, renovacion
             )}
 
             {(estado === "EXPIRED" || estado === "CANCELLED") && (
-              <div className="mt-5 bg-white/15 rounded-2xl px-4 py-3 backdrop-blur-sm">
+              <div className="mt-5 bg-white panel-oscuro:bg-gray-900/15 rounded-2xl px-4 py-3 backdrop-blur-sm">
                 <p className="text-white font-semibold text-sm">
                   Tu plan pago terminó. Seguís con las funciones de Free hasta que lo renueves.
                 </p>
@@ -290,18 +290,18 @@ export default function MiCuentaClient({ tier, billing, estado, dias, renovacion
             En su propia tarjeta y no perdida entre las funciones: es lo único de
             esta pantalla que le sale plata en cada venta, así que tiene que poder
             leerse sin buscarla. */}
-        <div className="rounded-3xl border border-gray-100 bg-white p-6 shadow-sm">
+        <div className="rounded-3xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 p-6 shadow-sm">
           <div className="flex items-center gap-2 mb-3">
             <Percent className="h-4 w-4 text-orange-500" />
-            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Comisión por venta</p>
+            <p className="text-xs font-bold text-gray-400 panel-oscuro:text-gray-500 uppercase tracking-widest">Comisión por venta</p>
           </div>
-          <p className="text-3xl font-black text-gray-900">{comision}%</p>
-          <p className="text-sm text-gray-500 mt-1.5 leading-relaxed">
+          <p className="text-3xl font-black text-gray-900 panel-oscuro:text-gray-100">{comision}%</p>
+          <p className="text-sm text-gray-500 panel-oscuro:text-gray-400 mt-1.5 leading-relaxed">
             Es lo que retenemos de cada venta cobrada con Mercado Pago.{" "}
             {tier !== "PRO" && (
               <>
                 Con {tier === "FREE" ? "Starter baja a " : "Pro baja a "}
-                <strong className="text-gray-700">
+                <strong className="text-gray-700 panel-oscuro:text-gray-300">
                   {tier === "FREE" ? COMISION_DIGITAL.STARTER : COMISION_DIGITAL.PRO}%
                 </strong>.
               </>
@@ -310,8 +310,8 @@ export default function MiCuentaClient({ tier, billing, estado, dias, renovacion
         </div>
 
         {/* ── Qué incluye ──────────────────────────────────────────────────── */}
-        <div className="rounded-3xl border border-gray-100 bg-white p-6 shadow-sm">
-          <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">
+        <div className="rounded-3xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 p-6 shadow-sm">
+          <p className="text-xs font-bold text-gray-400 panel-oscuro:text-gray-500 uppercase tracking-widest mb-4">
             Incluido en {COPY_DIGITAL[tier].nombre}
           </p>
           <div className="grid grid-cols-1 gap-2.5">
@@ -320,10 +320,10 @@ export default function MiCuentaClient({ tier, billing, estado, dias, renovacion
                 gana al cambiar. */}
             {featuresDigital(tier).map(({ text, on }) => (
               <div key={text} className="flex items-center gap-3">
-                <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${on ? `bg-gradient-to-br ${cfg.degrade}` : "bg-gray-200"}`}>
-                  {on ? <CheckCircle className="h-3 w-3 text-white" /> : <X className="h-3 w-3 text-gray-400" />}
+                <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${on ? `bg-gradient-to-br ${cfg.degrade}` : "bg-gray-200 panel-oscuro:bg-gray-700"}`}>
+                  {on ? <CheckCircle className="h-3 w-3 text-white" /> : <X className="h-3 w-3 text-gray-400 panel-oscuro:text-gray-500" />}
                 </div>
-                <span className={`text-sm ${on ? "text-gray-700" : "text-gray-400 line-through"}`}>{text}</span>
+                <span className={`text-sm ${on ? "text-gray-700 panel-oscuro:text-gray-300" : "text-gray-400 panel-oscuro:text-gray-500 line-through"}`}>{text}</span>
               </div>
             ))}
           </div>
@@ -333,12 +333,12 @@ export default function MiCuentaClient({ tier, billing, estado, dias, renovacion
             Sólo desde Free y sólo si la prueba sigue sin usar. La ruta lo vuelve a
             verificar: esto es la pantalla, no el permiso. */}
         {esFree && pruebaDisponible && DIGITALES_ABIERTO && (
-          <div className="rounded-3xl border border-orange-200 bg-gradient-to-br from-orange-50 to-amber-50 p-6 shadow-sm">
+          <div className="rounded-3xl border border-orange-200 panel-oscuro:border-orange-500/30 bg-gradient-to-br from-orange-50 to-amber-50 p-6 shadow-sm">
             <div className="flex items-center gap-2 mb-1">
               <Sparkles className="h-4 w-4 text-orange-500" />
               <p className="text-xs font-bold text-orange-600 uppercase tracking-widest">7 días gratis</p>
             </div>
-            <p className="text-sm text-gray-600 mb-4 leading-relaxed">
+            <p className="text-sm text-gray-600 panel-oscuro:text-gray-400 mb-4 leading-relaxed">
               Probá un plan pago una semana. No te pedimos tarjeta y no se te cobra nada:
               cuando se terminan, volvés a Free solo.
             </p>
@@ -352,14 +352,14 @@ export default function MiCuentaClient({ tier, billing, estado, dias, renovacion
                     key={destino}
                     onClick={() => empezarPrueba(destino)}
                     disabled={probando !== null}
-                    className="flex items-center gap-3 px-4 py-3.5 rounded-2xl bg-white border border-orange-200 hover:border-orange-400 hover:shadow-md transition-all text-left disabled:opacity-60 disabled:cursor-not-allowed group"
+                    className="flex items-center gap-3 px-4 py-3.5 rounded-2xl bg-white panel-oscuro:bg-gray-900 border border-orange-200 panel-oscuro:border-orange-500/30 hover:border-orange-400 hover:shadow-md transition-all text-left disabled:opacity-60 disabled:cursor-not-allowed group"
                   >
-                    <div className="w-9 h-9 rounded-xl bg-orange-100 flex items-center justify-center shrink-0">
+                    <div className="w-9 h-9 rounded-xl bg-orange-100 panel-oscuro:bg-orange-500/15 flex items-center justify-center shrink-0">
                       {cargando ? <Loader2 className="h-4 w-4 text-orange-600 animate-spin" /> : <Icono className="h-4 w-4 text-orange-600" />}
                     </div>
                     <div className="min-w-0">
-                      <p className="text-sm font-bold text-gray-900">Probar {COPY_DIGITAL[destino].nombre}</p>
-                      <p className="text-xs text-gray-500">después {money(PRECIOS_DIGITALES[PLAN_KEY[destino]].MONTHLY)}/mes</p>
+                      <p className="text-sm font-bold text-gray-900 panel-oscuro:text-gray-100">Probar {COPY_DIGITAL[destino].nombre}</p>
+                      <p className="text-xs text-gray-500 panel-oscuro:text-gray-400">después {money(PRECIOS_DIGITALES[PLAN_KEY[destino]].MONTHLY)}/mes</p>
                     </div>
                     <ArrowRight className="h-4 w-4 shrink-0 ml-auto text-orange-400 group-hover:translate-x-0.5 transition-transform" />
                   </button>
@@ -372,15 +372,15 @@ export default function MiCuentaClient({ tier, billing, estado, dias, renovacion
         )}
 
         {/* ── Cambiar de plan ──────────────────────────────────────────────── */}
-        <div className="rounded-3xl border border-gray-100 bg-white p-6 shadow-sm">
-          <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Cambiar de plan</p>
+        <div className="rounded-3xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 p-6 shadow-sm">
+          <p className="text-xs font-bold text-gray-400 panel-oscuro:text-gray-500 uppercase tracking-widest mb-4">Cambiar de plan</p>
           <div className="space-y-2.5">
 
             {/* Con el producto todavía cerrado no se ofrece pagar. La ruta de la
                 preferencia rechaza estos planes igual, así que un botón sería un
                 botón que no puede funcionar. */}
             {!DIGITALES_ABIERTO && (
-              <p className="text-sm text-gray-500 leading-relaxed">
+              <p className="text-sm text-gray-500 panel-oscuro:text-gray-400 leading-relaxed">
                 Los planes pagos todavía no están abiertos. Tu cuenta Free anda igual y no vence.
               </p>
             )}
@@ -392,10 +392,10 @@ export default function MiCuentaClient({ tier, billing, estado, dias, renovacion
                   <button
                     key={destino}
                     onClick={() => setPagar({ plan: PLAN_KEY[destino], billing })}
-                    className="w-full flex items-center justify-between gap-3 px-5 py-3.5 rounded-2xl border border-orange-200 bg-orange-50 hover:bg-orange-100 transition-colors"
+                    className="w-full flex items-center justify-between gap-3 px-5 py-3.5 rounded-2xl border border-orange-200 panel-oscuro:border-orange-500/30 bg-orange-50 panel-oscuro:bg-orange-500/10 hover:bg-orange-100 transition-colors"
                   >
-                    <div className="flex min-w-0 items-center gap-3 text-left text-sm font-semibold text-orange-700">
-                      <div className="w-8 h-8 bg-orange-100 rounded-xl flex items-center justify-center shrink-0">
+                    <div className="flex min-w-0 items-center gap-3 text-left text-sm font-semibold text-orange-700 panel-oscuro:text-orange-300">
+                      <div className="w-8 h-8 bg-orange-100 panel-oscuro:bg-orange-500/15 rounded-xl flex items-center justify-center shrink-0">
                         {destino === "PRO" ? <Crown className="h-4 w-4 text-orange-600" /> : <Rocket className="h-4 w-4 text-orange-600" />}
                       </div>
                       Suscribirme a {COPY_DIGITAL[destino].nombre}
@@ -412,10 +412,10 @@ export default function MiCuentaClient({ tier, billing, estado, dias, renovacion
                 {estado === "TRIAL" && !esFree && (
                   <button
                     onClick={() => setPagar({ plan: PLAN_KEY[tier], billing })}
-                    className="w-full flex items-center justify-between gap-3 px-5 py-3.5 rounded-2xl border border-orange-200 bg-orange-50 hover:bg-orange-100 transition-colors"
+                    className="w-full flex items-center justify-between gap-3 px-5 py-3.5 rounded-2xl border border-orange-200 panel-oscuro:border-orange-500/30 bg-orange-50 panel-oscuro:bg-orange-500/10 hover:bg-orange-100 transition-colors"
                   >
-                    <div className="flex min-w-0 items-center gap-3 text-left text-sm font-semibold text-orange-700">
-                      <div className="w-8 h-8 bg-orange-100 rounded-xl flex items-center justify-center shrink-0">
+                    <div className="flex min-w-0 items-center gap-3 text-left text-sm font-semibold text-orange-700 panel-oscuro:text-orange-300">
+                      <div className="w-8 h-8 bg-orange-100 panel-oscuro:bg-orange-500/15 rounded-xl flex items-center justify-center shrink-0">
                         <PlanIcon className="h-4 w-4 text-orange-600" />
                       </div>
                       Quedarme en {COPY_DIGITAL[tier].nombre}
@@ -428,10 +428,10 @@ export default function MiCuentaClient({ tier, billing, estado, dias, renovacion
                 {!esFree && (estado === "GRACE" || estado === "EXPIRED" || estado === "CANCELLED") && (
                   <button
                     onClick={() => setPagar({ plan: PLAN_KEY[tier], billing })}
-                    className="w-full flex items-center justify-between gap-3 px-5 py-3.5 rounded-2xl border border-orange-200 bg-orange-50 hover:bg-orange-100 transition-colors"
+                    className="w-full flex items-center justify-between gap-3 px-5 py-3.5 rounded-2xl border border-orange-200 panel-oscuro:border-orange-500/30 bg-orange-50 panel-oscuro:bg-orange-500/10 hover:bg-orange-100 transition-colors"
                   >
-                    <div className="flex min-w-0 items-center gap-3 text-left text-sm font-semibold text-orange-700">
-                      <div className="w-8 h-8 bg-orange-100 rounded-xl flex items-center justify-center shrink-0">
+                    <div className="flex min-w-0 items-center gap-3 text-left text-sm font-semibold text-orange-700 panel-oscuro:text-orange-300">
+                      <div className="w-8 h-8 bg-orange-100 panel-oscuro:bg-orange-500/15 rounded-xl flex items-center justify-center shrink-0">
                         <PlanIcon className="h-4 w-4 text-orange-600" />
                       </div>
                       Renovar {COPY_DIGITAL[tier].nombre}
@@ -444,9 +444,9 @@ export default function MiCuentaClient({ tier, billing, estado, dias, renovacion
                 {!esFree && billing === "MONTHLY" && (estado === "ACTIVE" || estado === "TRIAL") && (
                   <button
                     onClick={() => setPagar({ plan: PLAN_KEY[tier], billing: "ANNUAL" })}
-                    className="w-full flex items-center justify-between gap-3 px-5 py-3.5 rounded-2xl border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 transition-colors"
+                    className="w-full flex items-center justify-between gap-3 px-5 py-3.5 rounded-2xl border border-emerald-200 panel-oscuro:border-emerald-500/30 bg-emerald-50 panel-oscuro:bg-emerald-500/10 hover:bg-emerald-100 transition-colors"
                   >
-                    <div className="flex min-w-0 items-center gap-3 text-left text-sm font-semibold text-emerald-700">
+                    <div className="flex min-w-0 items-center gap-3 text-left text-sm font-semibold text-emerald-700 panel-oscuro:text-emerald-300">
                       <div className="w-8 h-8 bg-emerald-100 rounded-xl flex items-center justify-center shrink-0">
                         <Star className="h-4 w-4 text-emerald-600" />
                       </div>
@@ -462,10 +462,10 @@ export default function MiCuentaClient({ tier, billing, estado, dias, renovacion
                 {tier === "STARTER" && (estado === "ACTIVE" || estado === "TRIAL") && (
                   <button
                     onClick={() => setPagar({ plan: "DIGITAL_PRO", billing })}
-                    className="w-full flex items-center justify-between gap-3 px-5 py-3.5 rounded-2xl border border-rose-200 bg-rose-50 hover:bg-rose-100 transition-colors"
+                    className="w-full flex items-center justify-between gap-3 px-5 py-3.5 rounded-2xl border border-rose-200 panel-oscuro:border-rose-500/30 bg-rose-50 hover:bg-rose-100 transition-colors"
                   >
                     <div className="flex min-w-0 items-center gap-3 text-left text-sm font-semibold text-rose-700">
-                      <div className="w-8 h-8 bg-rose-100 rounded-xl flex items-center justify-center shrink-0">
+                      <div className="w-8 h-8 bg-rose-100 panel-oscuro:bg-rose-500/15 rounded-xl flex items-center justify-center shrink-0">
                         <Crown className="h-4 w-4 text-rose-600" />
                       </div>
                       Mejorar a Pro
@@ -483,30 +483,30 @@ export default function MiCuentaClient({ tier, billing, estado, dias, renovacion
             <a
               href="/precios"
               {...(inPwa ? { target: "_blank", rel: "noopener noreferrer" } : {})}
-              className="w-full flex items-center justify-between gap-3 px-5 py-3.5 rounded-2xl border border-gray-100 hover:bg-gray-50 transition-colors"
+              className="w-full flex items-center justify-between gap-3 px-5 py-3.5 rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800 transition-colors"
             >
-              <div className="flex min-w-0 items-center gap-3 text-left text-sm font-medium text-gray-600">
-                <div className="w-8 h-8 bg-gray-100 rounded-xl flex items-center justify-center shrink-0">
-                  <Star className="h-4 w-4 text-gray-500" />
+              <div className="flex min-w-0 items-center gap-3 text-left text-sm font-medium text-gray-600 panel-oscuro:text-gray-400">
+                <div className="w-8 h-8 bg-gray-100 panel-oscuro:bg-gray-800 rounded-xl flex items-center justify-center shrink-0">
+                  <Star className="h-4 w-4 text-gray-500 panel-oscuro:text-gray-400" />
                 </div>
                 Comparar los tres planes
               </div>
-              <ArrowRight className="h-4 w-4 shrink-0 text-gray-400" />
+              <ArrowRight className="h-4 w-4 shrink-0 text-gray-400 panel-oscuro:text-gray-500" />
             </a>
           </div>
         </div>
 
         {/* ── Tus datos ────────────────────────────────────────────────────── */}
-        <div className="rounded-3xl border border-gray-100 bg-white p-6 shadow-sm">
+        <div className="rounded-3xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 p-6 shadow-sm">
           <div className="flex items-center gap-2 mb-1">
             <UserRound className="h-4 w-4 text-orange-500" />
-            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Tus datos</p>
+            <p className="text-xs font-bold text-gray-400 panel-oscuro:text-gray-500 uppercase tracking-widest">Tus datos</p>
           </div>
-          <p className="text-sm text-gray-500 mb-5">Sólo los vemos nosotros. No se le muestran a quien te compra.</p>
+          <p className="text-sm text-gray-500 panel-oscuro:text-gray-400 mb-5">Sólo los vemos nosotros. No se le muestran a quien te compra.</p>
 
           <div className="space-y-4">
             <div>
-              <label htmlFor="nombre" className="block text-xs font-semibold text-gray-600 mb-1.5">Nombre</label>
+              <label htmlFor="nombre" className="block text-xs font-semibold text-gray-600 panel-oscuro:text-gray-400 mb-1.5">Nombre</label>
               <input
                 id="nombre"
                 type="text"
@@ -515,10 +515,10 @@ export default function MiCuentaClient({ tier, billing, estado, dias, renovacion
                 aria-invalid={problemaNombre !== null}
                 aria-describedby={problemaNombre ? "error-nombre" : undefined}
                 onChange={(e) => { setNombre(e.target.value); setGuardado(false); }}
-                className={`w-full px-4 py-3 rounded-2xl border text-sm text-gray-900 outline-none transition-all ${
+                className={`w-full px-4 py-3 rounded-2xl border text-sm text-gray-900 panel-oscuro:text-gray-100 outline-none transition-all ${
                   problemaNombre
                     ? "border-red-300 focus:border-red-400 focus:ring-2 focus:ring-red-100"
-                    : "border-gray-200 focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                    : "border-gray-200 panel-oscuro:border-gray-700 focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
                 }`}
                 placeholder="Cómo te llamás"
               />
@@ -528,11 +528,11 @@ export default function MiCuentaClient({ tier, billing, estado, dias, renovacion
             </div>
 
             <div>
-              <label htmlFor="telefono" className="block text-xs font-semibold text-gray-600 mb-1.5">
+              <label htmlFor="telefono" className="block text-xs font-semibold text-gray-600 panel-oscuro:text-gray-400 mb-1.5">
                 Celular de contacto
               </label>
               <div className="relative">
-                <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 panel-oscuro:text-gray-500" />
                 <input
                   id="telefono"
                   type="tel"
@@ -542,10 +542,10 @@ export default function MiCuentaClient({ tier, billing, estado, dias, renovacion
                   aria-invalid={problemaTelefono !== null}
                   aria-describedby={problemaTelefono ? "error-telefono" : "ayuda-telefono"}
                   onChange={(e) => { setTelefono(e.target.value); setGuardado(false); }}
-                  className={`w-full pl-11 pr-4 py-3 rounded-2xl border text-sm text-gray-900 outline-none transition-all ${
+                  className={`w-full pl-11 pr-4 py-3 rounded-2xl border text-sm text-gray-900 panel-oscuro:text-gray-100 outline-none transition-all ${
                     problemaTelefono
                       ? "border-red-300 focus:border-red-400 focus:ring-2 focus:ring-red-100"
-                      : "border-gray-200 focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                      : "border-gray-200 panel-oscuro:border-gray-700 focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
                   }`}
                   placeholder="+54 9 11 5555 5555"
                 />
@@ -553,7 +553,7 @@ export default function MiCuentaClient({ tier, billing, estado, dias, renovacion
               {problemaTelefono ? (
                 <p id="error-telefono" className="text-xs text-red-600 mt-1.5 font-medium">{problemaTelefono}</p>
               ) : (
-                <p id="ayuda-telefono" className="text-xs text-gray-400 mt-1.5">
+                <p id="ayuda-telefono" className="text-xs text-gray-400 panel-oscuro:text-gray-500 mt-1.5">
                   Lo usamos sólo para escribirte desde soporte si hace falta.
                 </p>
               )}
@@ -578,20 +578,20 @@ export default function MiCuentaClient({ tier, billing, estado, dias, renovacion
 
           {/* Lo que no se puede cambiar acá. Va abajo y en gris para que se lea
               como información y no como un formulario que no anda. */}
-          <div className="mt-6 pt-5 border-t border-gray-100 space-y-3">
+          <div className="mt-6 pt-5 border-t border-gray-100 panel-oscuro:border-gray-800 space-y-3">
             <div className="flex items-center gap-3">
-              <Mail className="h-4 w-4 text-gray-400 shrink-0" />
+              <Mail className="h-4 w-4 text-gray-400 panel-oscuro:text-gray-500 shrink-0" />
               <div className="min-w-0">
-                <p className="text-xs text-gray-400">Correo</p>
-                <p className="text-sm text-gray-700 font-medium break-all">{cuenta.email}</p>
+                <p className="text-xs text-gray-400 panel-oscuro:text-gray-500">Correo</p>
+                <p className="text-sm text-gray-700 panel-oscuro:text-gray-300 font-medium break-all">{cuenta.email}</p>
               </div>
             </div>
             {cuenta.alta && (
               <div className="flex items-center gap-3">
-                <CalendarDays className="h-4 w-4 text-gray-400 shrink-0" />
+                <CalendarDays className="h-4 w-4 text-gray-400 panel-oscuro:text-gray-500 shrink-0" />
                 <div>
-                  <p className="text-xs text-gray-400">Cuenta creada</p>
-                  <p className="text-sm text-gray-700 font-medium">{cuenta.alta}</p>
+                  <p className="text-xs text-gray-400 panel-oscuro:text-gray-500">Cuenta creada</p>
+                  <p className="text-sm text-gray-700 panel-oscuro:text-gray-300 font-medium">{cuenta.alta}</p>
                 </div>
               </div>
             )}
@@ -609,31 +609,31 @@ export default function MiCuentaClient({ tier, billing, estado, dias, renovacion
             El link al correo prueba que sos vos con algo que la sesión no tiene, y
             reusa el circuito de "olvidé mi contraseña" que ya está hecho y
             probado. Menos código y más seguro. */}
-        <div className="rounded-3xl border border-gray-100 bg-white p-6 shadow-sm">
+        <div className="rounded-3xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 p-6 shadow-sm">
           <div className="flex items-center gap-2 mb-1">
             <KeyRound className="h-4 w-4 text-orange-500" />
-            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Contraseña</p>
+            <p className="text-xs font-bold text-gray-400 panel-oscuro:text-gray-500 uppercase tracking-widest">Contraseña</p>
           </div>
 
           {linkMandado ? (
-            <div className="mt-3 rounded-2xl bg-emerald-50 border border-emerald-100 p-4">
-              <p className="text-sm font-bold text-gray-900 mb-1">Revisá tu correo</p>
-              <p className="text-xs text-gray-500 leading-relaxed">
-                Si <strong className="text-gray-700 break-all">{cuenta.email}</strong> es tu dirección, te llegó
+            <div className="mt-3 rounded-2xl bg-emerald-50 panel-oscuro:bg-emerald-500/10 border border-emerald-100 panel-oscuro:border-emerald-500/25 p-4">
+              <p className="text-sm font-bold text-gray-900 panel-oscuro:text-gray-100 mb-1">Revisá tu correo</p>
+              <p className="text-xs text-gray-500 panel-oscuro:text-gray-400 leading-relaxed">
+                Si <strong className="text-gray-700 panel-oscuro:text-gray-300 break-all">{cuenta.email}</strong> es tu dirección, te llegó
                 un link para poner una contraseña nueva. Puede tardar un minuto y a veces cae en Correo no
                 deseado.
               </p>
             </div>
           ) : (
             <>
-              <p className="text-sm text-gray-500 mt-2 mb-4 leading-relaxed">
+              <p className="text-sm text-gray-500 panel-oscuro:text-gray-400 mt-2 mb-4 leading-relaxed">
                 La cambiás desde un link que te mandamos por correo. Lo hacemos así y no con un formulario
                 acá para que nadie que agarre tu sesión abierta pueda dejarte afuera de tu cuenta.
               </p>
               <button
                 onClick={mandarLinkDeContrasena}
                 disabled={mandandoLink}
-                className="w-full sm:w-auto px-6 py-3 rounded-2xl border border-gray-200 text-sm font-bold text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-60 inline-flex items-center justify-center gap-2"
+                className="w-full sm:w-auto px-6 py-3 rounded-2xl border border-gray-200 panel-oscuro:border-gray-700 text-sm font-bold text-gray-700 panel-oscuro:text-gray-300 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800 transition-colors disabled:opacity-60 inline-flex items-center justify-center gap-2"
               >
                 {mandandoLink ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
                 {mandandoLink ? "Mandando..." : "Mandarme el link"}
@@ -646,12 +646,12 @@ export default function MiCuentaClient({ tier, billing, estado, dias, renovacion
             El cartel más importante de la pantalla, y por eso está en los cinco
             estados. Es la diferencia real con el plan de una tienda: acá no hay
             cierre, no hay fecha límite y no se borra nada. */}
-        <div className="rounded-3xl border border-emerald-100 bg-emerald-50/60 p-5">
+        <div className="rounded-3xl border border-emerald-100 panel-oscuro:border-emerald-500/25 bg-emerald-50 panel-oscuro:bg-emerald-500/10 p-5">
           <div className="flex gap-3">
             <ShieldCheck className="h-5 w-5 text-emerald-600 shrink-0 mt-0.5" />
             <div>
-              <p className="text-sm font-bold text-gray-900">Tu cuenta no se cierra</p>
-              <p className="text-xs text-gray-500 mt-1 leading-relaxed">
+              <p className="text-sm font-bold text-gray-900 panel-oscuro:text-gray-100">Tu cuenta no se cierra</p>
+              <p className="text-xs text-gray-500 panel-oscuro:text-gray-400 mt-1 leading-relaxed">
                 Si un plan pago se termina, volvés a Free y seguís adentro. No se borra ningún producto,
                 ninguna venta ni ninguna página: cambian la comisión y las funciones pagas, nada más.
               </p>

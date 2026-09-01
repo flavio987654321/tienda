@@ -9,12 +9,12 @@ import { useAuth } from "@/components/AuthProvider";
 import NotificationBell from "@/components/NotificationBell";
 import { COPY_DIGITAL, type TierDigital } from "@/lib/planes-digitales";
 import {
-  Home, UserRound, Package, Menu, X, LogOut, Loader2, ChevronRight, Sparkles,
+  Home, UserRound, Package, Settings, Menu, X, LogOut, Loader2, ChevronRight, Sparkles,
 } from "lucide-react";
 
 /* ── Las pantallas del panel, en UNA sola lista ──────────────────────────────
  *
- * Tres, y son las tres que existen de verdad. Sin entradas apagadas ni
+ * Cuatro, y son las cuatro que existen de verdad. Sin entradas apagadas ni
  * "próximamente": un menú que nombra pantallas que no están se lee como que el
  * panel se rompió, no como que eso viene después. Un chequeo abre cada `href` y
  * verifica que exista su `page.tsx`.
@@ -25,6 +25,11 @@ import {
 const LINKS: { href: string; label: string; Icon: React.ElementType }[] = [
   { href: "/digitales", label: "Inicio", Icon: Home },
   { href: "/digitales/productos", label: "Productos", Icon: Package },
+  /* Configuración es lo del NEGOCIO —con qué cobrás, cómo te ve el comprador— y
+     Mi cuenta es lo de la persona. Van separadas y en este orden: sin cobros
+     conectados no se vende nada, así que lo primero que hay que encontrar es
+     esto y no los datos personales. */
+  { href: "/digitales/configuracion", label: "Configuración", Icon: Settings },
   { href: "/digitales/mi-cuenta", label: "Mi cuenta", Icon: UserRound },
 ];
 
@@ -88,13 +93,13 @@ export default function DigitalesSidebar({ tier }: Props) {
   return (
     <>
       {/* ── ESCRITORIO: la franja que se abre sola (lg+) ──────────────────── */}
-      <aside className="group hidden lg:flex fixed left-0 top-0 h-full w-14 hover:w-60 hover:shadow-xl bg-white border-r border-gray-100 flex-col z-[60] transition-[width] duration-200 overflow-hidden">
+      <aside className="group hidden lg:flex fixed left-0 top-0 h-full w-14 hover:w-60 hover:shadow-xl bg-white panel-oscuro:bg-gray-900 border-r border-gray-100 panel-oscuro:border-gray-800 flex-col z-[60] transition-[width] duration-200 overflow-hidden">
         <Link
           href={hrefLogo}
-          className="flex items-center gap-3 h-[61px] px-[15px] border-b border-gray-100 shrink-0 hover:bg-gray-50 transition-colors"
+          className="flex items-center gap-3 h-[61px] px-[15px] border-b border-gray-100 panel-oscuro:border-gray-800 shrink-0 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800 transition-colors"
         >
           <AppLogo size={52} className="shrink-0" />
-          <span className="font-bold text-gray-900 whitespace-nowrap overflow-hidden max-w-0 group-hover:max-w-xs transition-[max-width] duration-200">
+          <span className="font-bold text-gray-900 panel-oscuro:text-gray-100 whitespace-nowrap overflow-hidden max-w-0 group-hover:max-w-xs transition-[max-width] duration-200">
             TiendaApps
           </span>
         </Link>
@@ -107,8 +112,8 @@ export default function DigitalesSidebar({ tier }: Props) {
               title={label}
               className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
                 activa(href)
-                  ? "bg-orange-50 text-orange-600 font-semibold"
-                  : "text-gray-600 hover:bg-gray-50"
+                  ? "bg-orange-50 panel-oscuro:bg-orange-500/10 text-orange-600 font-semibold"
+                  : "text-gray-600 panel-oscuro:text-gray-400 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800"
               }`}
             >
               <Icon className="h-4 w-4 shrink-0" />
@@ -119,12 +124,12 @@ export default function DigitalesSidebar({ tier }: Props) {
           ))}
         </nav>
 
-        <div className="p-2 border-t border-gray-100 space-y-0.5 shrink-0">
+        <div className="p-2 border-t border-gray-100 panel-oscuro:border-gray-800 space-y-0.5 shrink-0">
           <button
             onClick={salir}
             disabled={saliendo}
             title="Cerrar sesión"
-            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-red-500 hover:bg-red-50 transition-colors disabled:opacity-60"
+            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-red-500 hover:bg-red-50 panel-oscuro:hover:bg-red-500/10 transition-colors disabled:opacity-60"
           >
             {saliendo ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" /> : <LogOut className="h-4 w-4 shrink-0" />}
             <span className="whitespace-nowrap overflow-hidden max-w-0 group-hover:max-w-xs transition-[max-width] duration-200">
@@ -138,13 +143,13 @@ export default function DigitalesSidebar({ tier }: Props) {
           <Link
             href="/digitales/mi-cuenta"
             title={`${nombre} — plan ${COPY_DIGITAL[tier].nombre}`}
-            className="flex items-center gap-2.5 px-1 py-2.5 rounded-xl bg-gray-50 border border-gray-100 hover:bg-orange-50 hover:border-orange-100 transition-colors"
+            className="flex items-center gap-2.5 px-1 py-2.5 rounded-xl bg-gray-50 panel-oscuro:bg-gray-800/50 border border-gray-100 panel-oscuro:border-gray-800 hover:bg-orange-50 hover:border-orange-100 transition-colors"
           >
-            <div className="h-8 w-8 shrink-0 rounded-full bg-orange-100 flex items-center justify-center text-orange-700 font-bold text-sm">
+            <div className="h-8 w-8 shrink-0 rounded-full bg-orange-100 panel-oscuro:bg-orange-500/15 flex items-center justify-center text-orange-700 panel-oscuro:text-orange-300 font-bold text-sm">
               {inicial}
             </div>
             <div className="flex-1 min-w-0 overflow-hidden max-w-0 group-hover:max-w-xs transition-[max-width] duration-200">
-              <p className="text-xs font-semibold text-gray-800 truncate whitespace-nowrap">{nombre}</p>
+              <p className="text-xs font-semibold text-gray-800 panel-oscuro:text-gray-200 truncate whitespace-nowrap">{nombre}</p>
               <p className="text-[10px] text-orange-500 font-medium whitespace-nowrap">
                 Plan {COPY_DIGITAL[tier].nombre}
               </p>
@@ -155,18 +160,18 @@ export default function DigitalesSidebar({ tier }: Props) {
       </aside>
 
       {/* ── CELULAR: barra arriba (< lg) ──────────────────────────────────── */}
-      <header className="lg:hidden fixed top-0 left-0 right-0 z-[60] h-14 bg-white border-b border-gray-100 flex items-center justify-between px-3">
+      <header className="lg:hidden fixed top-0 left-0 right-0 z-[60] h-14 bg-white panel-oscuro:bg-gray-900 border-b border-gray-100 panel-oscuro:border-gray-800 flex items-center justify-between px-3">
         <button
           onClick={() => setMobileOpen(true)}
-          className="flex items-center justify-center w-9 h-9 rounded-xl hover:bg-gray-100 active:bg-gray-200 transition-colors"
+          className="flex items-center justify-center w-9 h-9 rounded-xl hover:bg-gray-100 panel-oscuro:hover:bg-gray-700 active:bg-gray-200 transition-colors"
           aria-label="Abrir menú"
         >
-          <Menu className="h-5 w-5 text-gray-600" />
+          <Menu className="h-5 w-5 text-gray-600 panel-oscuro:text-gray-400" />
         </button>
 
         <Link href={hrefLogo} className="flex items-center gap-2">
           <AppLogo size={52} />
-          <span className="font-bold text-gray-900 text-sm">TiendaApps</span>
+          <span className="font-bold text-gray-900 panel-oscuro:text-gray-100 text-sm">TiendaApps</span>
         </Link>
 
         <div className="flex items-center gap-1">
@@ -180,18 +185,18 @@ export default function DigitalesSidebar({ tier }: Props) {
       {mobileOpen && (
         <div className="lg:hidden fixed inset-0 z-[70]">
           <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" onClick={() => setMobileOpen(false)} />
-          <div className="relative w-72 max-w-[85vw] h-full bg-white flex flex-col shadow-2xl animate-slide-in-left">
-            <div className="flex items-center justify-between h-14 px-4 border-b border-gray-100 shrink-0">
+          <div className="relative w-72 max-w-[85vw] h-full bg-white panel-oscuro:bg-gray-900 flex flex-col shadow-2xl animate-slide-in-left">
+            <div className="flex items-center justify-between h-14 px-4 border-b border-gray-100 panel-oscuro:border-gray-800 shrink-0">
               <Link href={hrefLogo} className="flex items-center gap-2" onClick={() => setMobileOpen(false)}>
                 <Sparkles className="h-5 w-5 text-orange-600" />
-                <span className="font-bold text-gray-900 text-sm">TiendaApps</span>
+                <span className="font-bold text-gray-900 panel-oscuro:text-gray-100 text-sm">TiendaApps</span>
               </Link>
               <button
                 onClick={() => setMobileOpen(false)}
-                className="flex items-center justify-center w-8 h-8 rounded-lg hover:bg-gray-100 active:bg-gray-200 transition-colors"
+                className="flex items-center justify-center w-8 h-8 rounded-lg hover:bg-gray-100 panel-oscuro:hover:bg-gray-700 active:bg-gray-200 transition-colors"
                 aria-label="Cerrar menú"
               >
-                <X className="h-4 w-4 text-gray-500" />
+                <X className="h-4 w-4 text-gray-500 panel-oscuro:text-gray-400" />
               </button>
             </div>
 
@@ -203,8 +208,8 @@ export default function DigitalesSidebar({ tier }: Props) {
                   onClick={() => setMobileOpen(false)}
                   className={`flex items-center gap-3 px-3 py-3 rounded-xl text-sm transition-colors ${
                     activa(href)
-                      ? "bg-orange-50 text-orange-600 font-semibold"
-                      : "text-gray-700 hover:bg-gray-50 active:bg-gray-100"
+                      ? "bg-orange-50 panel-oscuro:bg-orange-500/10 text-orange-600 font-semibold"
+                      : "text-gray-700 panel-oscuro:text-gray-300 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800 active:bg-gray-100"
                   }`}
                 >
                   <Icon className={`h-5 w-5 shrink-0 ${activa(href) ? "" : "text-orange-500"}`} />
@@ -213,11 +218,11 @@ export default function DigitalesSidebar({ tier }: Props) {
               ))}
             </nav>
 
-            <div className="p-3 border-t border-gray-100 space-y-0.5 shrink-0">
+            <div className="p-3 border-t border-gray-100 panel-oscuro:border-gray-800 space-y-0.5 shrink-0">
               <button
                 onClick={salir}
                 disabled={saliendo}
-                className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm text-red-500 hover:bg-red-50 active:bg-red-100 transition-colors disabled:opacity-60"
+                className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm text-red-500 hover:bg-red-50 panel-oscuro:hover:bg-red-500/10 active:bg-red-100 transition-colors disabled:opacity-60"
               >
                 {saliendo ? <Loader2 className="h-5 w-5 shrink-0 animate-spin" /> : <LogOut className="h-5 w-5 shrink-0" />}
                 {saliendo ? "Cerrando..." : "Cerrar sesión"}
@@ -225,13 +230,13 @@ export default function DigitalesSidebar({ tier }: Props) {
               <Link
                 href="/digitales/mi-cuenta"
                 onClick={() => setMobileOpen(false)}
-                className="flex items-center gap-3 px-3 py-3 rounded-xl bg-gray-50 border border-gray-100 hover:bg-orange-50 hover:border-orange-100 transition-colors"
+                className="flex items-center gap-3 px-3 py-3 rounded-xl bg-gray-50 panel-oscuro:bg-gray-800/50 border border-gray-100 panel-oscuro:border-gray-800 hover:bg-orange-50 hover:border-orange-100 transition-colors"
               >
-                <div className="h-9 w-9 shrink-0 rounded-full bg-orange-100 flex items-center justify-center text-orange-700 font-bold text-base">
+                <div className="h-9 w-9 shrink-0 rounded-full bg-orange-100 panel-oscuro:bg-orange-500/15 flex items-center justify-center text-orange-700 panel-oscuro:text-orange-300 font-bold text-base">
                   {inicial}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-semibold text-gray-800 truncate">{nombre}</p>
+                  <p className="text-xs font-semibold text-gray-800 panel-oscuro:text-gray-200 truncate">{nombre}</p>
                   <p className="text-[10px] text-orange-500 font-medium">Plan {COPY_DIGITAL[tier].nombre}</p>
                 </div>
                 <ChevronRight className="h-3.5 w-3.5 shrink-0 text-gray-300" />

@@ -2,6 +2,23 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* El modo oscuro del panel de Productos Digitales.
+ *
+ * ── Por qué una variante propia y no `dark:` ─────────────────────────────────
+ * `next-themes` está en la raíz con `defaultTheme="dark"`, así que `<html>` lleva
+ * la clase `.dark` CASI SIEMPRE. Los paneles se ven claros nada más que porque
+ * usan clases de un solo tono: en cuanto uno escribiera `dark:bg-gray-900`
+ * adentro del panel, se aplicaría siempre y sin forma de apagarlo desde acá.
+ *
+ * Con una variante propia el panel maneja su tema y no toca el del resto del
+ * sitio. El atributo va en `<html>` porque nada más en todo el proyecto usa esta
+ * variante, y ahí lo puede escribir un script antes del primer dibujo — que es
+ * lo único que evita el parpadeo blanco al entrar en oscuro.
+ *
+ * El valor siempre es "claro" u "oscuro", nunca "auto": lo automático se
+ * resuelve en JS y se escribe ya decidido. Una sola fuente de verdad. */
+@custom-variant panel-oscuro (&:where([data-panel-tema="oscuro"], [data-panel-tema="oscuro"] *));
+
 :root {
   --background: #ffffff;
   --foreground: #171717;

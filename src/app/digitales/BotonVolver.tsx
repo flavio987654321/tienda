@@ -29,7 +29,7 @@ export default function BotonVolver({
   return (
     <Link
       href={href}
-      className="group inline-flex items-center gap-1.5 mb-4 text-sm font-medium text-gray-500 hover:text-orange-600 transition-colors"
+      className="group inline-flex items-center gap-1.5 mb-4 text-sm font-medium text-gray-500 panel-oscuro:text-gray-400 hover:text-orange-600 transition-colors"
     >
       <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
       {children}

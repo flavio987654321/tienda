@@ -262,6 +262,8 @@ export type StoreConfig = {
   analytics?: {
     googleAnalyticsId?: string;
     facebookPixelId?: string;
+    /** Microsoft Clarity: grabaciones de pantalla y mapas de calor. */
+    clarityProjectId?: string;
   };
   textOverrides: Record<string, TextOverride>;
   imageOverrides: Record<string, ImageOverride>;
@@ -440,7 +442,7 @@ export const DEFAULT_CONFIG: StoreConfig = {
   socialLinks:   { instagram: "", facebook: "", tiktok: "", youtube: "", pinterest: "" },
   currency:      "ARS",
   seo:           { enabled: false, title: "", description: "" },
-  analytics:     { googleAnalyticsId: "", facebookPixelId: "" },
+  analytics:     { googleAnalyticsId: "", facebookPixelId: "", clarityProjectId: "" },
   textOverrides: {},
   imageOverrides: {},
   sectionColors: {},

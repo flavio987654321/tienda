@@ -48,9 +48,14 @@ export const storeConfigSchema = z.object({
      `language` se fue del todo: era un selector que no leía nadie. El valor que
      haya quedado en el JSON de una tienda vieja se preserva como clave ajena y
      queda inerte, igual que `featuredCategories`. */
+  /* ⚠️ Una clave nueva acá NO es opcional agregarla: zod DESCARTA lo que no
+     figura, y `analytics` es una clave de diseño, así que la reescribe entera
+     cada vez que se guarda el editor. Un ID que no esté declarado se guarda
+     bien, se ve bien, y desaparece la primera vez que alguien toca el diseño. */
   analytics: z.object({
     googleAnalyticsId: z.string().max(30).optional(),
     facebookPixelId: z.string().max(30).optional(),
+    clarityProjectId: z.string().max(30).optional(),
   }).optional(),
   // Espejo de `TextOverride` (src/types/store-config.ts). Zod DESCARTA las claves
   // que no figuran acá: si se agrega un ajuste al panel y se olvida esta lista, se
@@ -209,6 +214,64 @@ export function mergeDesignConfig(existingRaw: string | null | undefined, design
     Object.entries(existing).filter(([key]) => !DESIGN_KEYS.has(key))
   );
   return JSON.stringify({ ...preserved, ...design });
+}
+
+/**
+ * Config resultante de guardar SÓLO los IDs de medición.
+ *
+ * Toca `analytics` y nada más: todo lo demás —el diseño entero, los cobros, los
+ * envíos— queda byte por byte como estaba. Existe porque la Configuración de
+ * Productos Digitales escribe estos dos IDs, y guardar el objeto entero desde
+ * una pantalla que no conoce el resto de la config lo borraría sin enterarse.
+ *
+ * Una cadena vacía **borra** la clave en vez de guardarse: `{ pixelId: "" }`
+ * pasaría cualquier chequeo de "¿está cargado?" y dejaría la tienda diciendo que
+ * mide cuando no mide nada.
+ */
+export function mergeAnalytics(
+  existingRaw: string | null | undefined,
+  ids: { googleAnalyticsId?: string; facebookPixelId?: string; clarityProjectId?: string }
+): string {
+  const existing = parseConfig(existingRaw);
+  const previo = (existing.analytics ?? {}) as Record<string, unknown>;
+  const analytics: Record<string, unknown> = { ...previo };
+
+  for (const clave of ["googleAnalyticsId", "facebookPixelId", "clarityProjectId"] as const) {
+    const v = ids[clave];
+    // `undefined` es "de eso no te estoy hablando"; "" es "borralo".
+    if (v === undefined) continue;
+    if (v.trim() === "") delete analytics[clave];
+    else analytics[clave] = v.trim();
+  }
+
+  // Sin ningún ID, la clave se va entera en vez de quedar como `{}`.
+  if (Object.keys(analytics).length === 0) {
+    const { analytics: _fuera, ...resto } = existing;
+    void _fuera;
+    return JSON.stringify(resto);
+  }
+  return JSON.stringify({ ...existing, analytics });
+}
+
+/**
+ * Config resultante de guardar SÓLO los datos de transferencia.
+ *
+ * Toca `paymentInfo.transferencia` y nada más. `paymentInfo.efectivo` y todo el
+ * resto del config quedan como estaban: una cuenta de Productos Digitales no
+ * tiene por qué saber que existe el efectivo, y menos borrárselo a una tienda
+ * que sí lo usa.
+ */
+export function mergeTransferencia(
+  existingRaw: string | null | undefined,
+  transferencia: Record<string, unknown>
+): string {
+  const existing = parseConfig(existingRaw);
+  const pago = (existing.paymentInfo ?? {}) as Record<string, unknown>;
+  const previa = (pago.transferencia ?? {}) as Record<string, unknown>;
+  return JSON.stringify({
+    ...existing,
+    paymentInfo: { ...pago, transferencia: { ...previa, ...transferencia } },
+  });
 }
 
 /**

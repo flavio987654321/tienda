@@ -382,6 +382,7 @@ export default async function ProductoPage({ params, searchParams }: ProductoPag
       <StoreTrackingScripts
         googleAnalyticsId={analytics?.googleAnalyticsId}
         facebookPixelId={analytics?.facebookPixelId}
+        clarityProjectId={analytics?.clarityProjectId}
         viewContent={product ? { contentId: product.id, value: product.price, currency } : undefined}
       />
       {/* `productoInicial` es lo que arregla el SEO de esta pantalla.

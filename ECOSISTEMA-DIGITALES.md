@@ -1283,9 +1283,193 @@ desincronizan de a una.
   firmado, igual que `/api/upload/firma`. Hasta que exista, publicar queda
   cerrado a propósito.
 
-### 🔲 Lo que sigue
+### ✅ Configuración — HECHA a medias, y a propósito (01/09/26)
 
-- 🔲 **Configuración** — la pantalla que sigue.
+El orden es el de la competencia, que fue lo que pidió Flavio expresamente
+("lo que más me interesa es cómo está ordenado"). Menos **Idioma**: ellos venden
+en todo el mundo y nosotros en Argentina, así que sería un selector con una sola
+opción.
+
+**Pestañas:** General · Pagos · Meta/Tracking · Dominio.
+
+Anda de verdad:
+
+- ✅ **Tus datos** — logo, nombre, **nombre en el checkout** (separado, vacío =
+  usa el de la marca), dirección y **mail de soporte**.
+- ✅ **Contexto para la IA** — `iaProducto` e `iaDescripcion`: el **nicho** de la
+  cuenta, que es lo que va a leer todo lo que genere la IA. Es la pieza que
+  faltaba y la que conecta esta pantalla con la Fase 4.
+- ✅ **Pagos** — Mercado Pago con la comisión del plan al lado del botón.
+- ✅ Migración `20260901160000_config_digital`: 4 columnas nullables en `Store`,
+  comparadas contra `migrate diff` antes de aplicar.
+- ✅ El callback de Mercado Pago vuelve **al panel del que salió**. Antes iba
+  siempre a `/dashboard/pagos`. El destino se traduce contra una lista fija: la
+  redirección lleva nuestro dominio, y guardar la dirección entera habría hecho
+  una redirección abierta.
+- ✅ **Un botón de guardar por sección.** La competencia tiene "Guardar cambios"
+  arriba Y "Guardar contexto" abajo, y no se puede saber cuál guarda qué.
+- ✅ 47 pruebas nuevas entre `configuracion-digital.check.ts` y los bloques 12 y
+  13 de `panel-digitales.check.ts`.
+
+Dibujado pero **apagado, con el motivo escrito en pantalla** — está así para que
+no se olvide, no porque falte poco:
+
+- ❌ **Zona horaria** — **sacada** (01/09/26). Vendemos en Argentina: era un
+  selector con una sola respuesta posible. El corte del día queda fijo en Buenos
+  Aires.
+- ✅ **Apariencia** (Automático / Claro / Oscuro) — **anda** (01/09/26). Ver
+  abajo.
+- 🔲 **App y avisos de ventas** — a una cuenta digital todavía no le llega ningún
+  push.
+- 🔲 **Zona de peligro** — ⚠️ la que menos se puede apurar: de la cuenta cuelgan
+  pedidos y **permisos de descarga de gente que ya pagó**.
+### ✅ Apariencia: claro y oscuro — HECHA (01/09/26)
+
+Las tres opciones andan y la preferencia queda en **este aparato**, no en la
+base: es de quien mira, no de la cuenta.
+
+#### ⚠️ Por qué NO se usó `dark:`
+
+`next-themes` está en la raíz con `defaultTheme="dark"`, así que **`<html>` lleva
+la clase `.dark` casi siempre**. Los paneles se veían claros nada más que porque
+usaban clases de un solo tono: en cuanto uno escribiera `dark:bg-gray-900`
+adentro del panel, se aplicaría **siempre** y sin forma de apagarlo desde
+Apariencia.
+
+Por eso el panel tiene **su propia variante**, `panel-oscuro:`, sobre un atributo
+`data-panel-tema` en `<html>`. Maneja su tema sin tocar el del resto del sitio.
+
+#### El parpadeo, que es la mitad del trabajo
+
+Sin un `<script>` **sincrónico**, entrar en oscuro es un flash blanco de pantalla
+completa: el HTML llega claro, React hidrata, y recién ahí se lee la preferencia.
+Ningún efecto de React corre antes del primer dibujo; un script en línea sí.
+
+Medido con Playwright: al recargar con "oscuro" guardado, **el atributo ya vale
+"oscuro" en `DOMContentLoaded`** — o sea, antes de que React exista.
+
+- ✅ El valor guardado siempre es "claro" u "oscuro", nunca "auto": lo automático
+  se resuelve en JS y se escribe ya decidido. Una sola fuente de verdad.
+- ✅ Todo el script va en un `try`: leer `localStorage` **tira** con el
+  almacenamiento bloqueado, y ese error cortaría el script dejando la página a
+  medio pintar.
+- ✅ Se acompaña con `color-scheme`, que no es decorativo: es lo que hace que las
+  barras de scroll y los desplegables salgan oscuros. Sin eso, adentro de un
+  panel oscuro se abre un menú blanco.
+- ✅ **361 clases emparejadas** en las 6 pantallas del panel, con un mapa único —
+  si cada archivo eligiera su propio gris, el panel se vería de seis colores.
+- ✅ Verificado en los dos temas a 360 / 768 / 1280, sin desborde.
+
+### ✅ Meta / Tracking — HECHA (01/09/26)
+
+Estuvo a punto de quedar apagada por un error de análisis: se habían mezclado dos
+cosas distintas.
+
+| | Necesita | Estado |
+|---|---|---|
+| **Pegar el ID** de un píxel que ya tenés | nada de Meta | ✅ hecho |
+| **Elegir o crear** el píxel desde el panel | `ads_management` | 🔲 nunca se pidió |
+
+`facebook.ts` pide `business_management, catalog_management`. Crear un píxel es
+`POST /{businessId}/adspixels`, que pide `ads_management` — **ese permiso ni
+siquiera está en el diálogo**. No es que Meta lo rechazó: no se solicitó. El
+código del píxel ya está escrito.
+
+- ✅ **Píxel de Meta** y **Google Analytics**, pegando el ID.
+- ✅ **Microsoft Clarity** — grabaciones de pantalla y mapas de calor, gratis y
+  sin límite. Acepta el **script de instalación entero** y le saca el ID: Clarity
+  no muestra el ID pelado en ningún lado cómodo.
+- ✅ Los formatos de ID viven en **`tracking-ids.ts`, una sola definición**, que
+  usan la pantalla que los deja escribir y el componente que los inyecta. Estaban
+  declarados sueltos adentro del inyector; ese valor entra literal en un
+  `<script>` público, y dos copias de la regla se desincronizan de a una.
+- ✅ El píxel de la plataforma y el de la vendedora ya estaban separados por ruta,
+  y `/tienda` está en `RUTAS_EXCLUIDAS_PIXEL` — o sea que la página de venta de un
+  producto digital queda cubierta sola. Verificado con `meta-pixel.check.ts`.
+
+#### ⚠️ Clarity: el agujero que casi se cuela
+
+`analytics` es una clave de **diseño**, así que el editor de templates la
+reescribe entera al guardar, y **zod descarta las claves que no conoce**. Un
+`clarityProjectId` no declarado en el esquema se guardaría bien, se vería bien, y
+desaparecería la primera vez que alguien tocara el diseño — sin error y sin
+rastro. Hay que tocar los tres archivos juntos, siempre:
+`lib/store-config.ts`, `types/store-config.ts` y el inyector. Un chequeo lo
+verifica para los tres IDs.
+
+#### 🔲 Lo que NO se copió, y por qué
+
+- 🔲 **API de Conversiones (CAPI)** — sí vale, y bastante: el píxel del navegador
+  lo comen los bloqueadores y el iPhone; CAPI le avisa a Meta desde el servidor.
+  **Media base ya está**: `StoreTrackingScripts` manda el `Purchase` con
+  `eventId` y `emHash`, y ese `eventId` es justo lo que CAPI necesita para no
+  contar la venta dos veces. No es pegar un token: es mandar el evento.
+- 🔲 **Verificación de dominio** — sólo sirve con dominio propio (Fase 5 bis).
+- ❌ **Utmify y UTMIFLOW** — dos servicios del ambiente de infoproductos
+  brasileño. El texto de ayuda de la competencia quedó **en portugués**
+  (*"Generalo en Integrações > Webhooks"*), así que ni lo tradujeron: lo
+  heredaron de una plantilla. Si Flavio no las conoce, sus vendedoras tampoco.
+- 🔲 **Dominio propio** — depende de la Fase 5 bis.
+
+### Qué cambia en Configuración según el plan — CERRADO (01/09/26)
+
+La regla que ordena todo el panel, y que da vuelta el instinto de trabar por
+trabar:
+
+> **En Free ganamos por comisión, así que todo lo que lo ayude a vender nos hace
+> ganar a nosotros. Se traba SOLO lo que nos saltea la comisión o lo que nos
+> cuesta plata recurrente. Nada más.**
+
+| Sección | Free | Starter | Pro |
+|---|---|---|---|
+| Datos, dirección, mail de soporte | igual | igual | igual |
+| **Contexto para la IA** | **sí** | sí | sí |
+| Comisión de Mercado Pago | 8 % | 6 % | 2 % |
+| **Transferencia** | **🔒 no** | sí | sí |
+| **Píxel de Meta y Analytics** | **sí** | sí | sí |
+| App y notificaciones | sí | sí | sí |
+| **Dominio propio** (cuando exista) | **🔒 no** | sí | sí |
+
+Los cuatro porqués:
+
+- **Transferencia trabada en Free**, y no es para empujar a pagar: Free no paga
+  abono, así que lo único que deja es el 8 % que se retiene adentro del cobro de
+  Mercado Pago. En una transferencia no pasa un peso por la plataforma. Un Free
+  con transferencia prendida no paga nada por nada.
+- **Píxel y Analytics para los tres.** No nos cuesta un peso —es el píxel de la
+  vendedora— y sin medir vende menos, o sea que cobramos menos. Trabarlo en Free
+  es pegarnos un tiro en el pie.
+- **App y notificaciones para los tres**, igual que la competencia.
+- **Dominio propio sólo en los planes pagos.**
+
+#### ⚠️ La IA en Free — decidido el 01/09/26, falta el número
+
+**Free NO se queda sin IA.** Decisión de Flavio, con este argumento: *"por algo
+nos cobramos la comisión"*. Una cuenta que no arranca no vende, y si no vende no
+hay 8 % de nada.
+
+La forma es la más simple, y la dijo Flavio así: **la IA existe en los tres
+planes, lo que cambia es el tope.** No hay funciones de IA prendidas y apagadas
+según el plan; hay un número distinto.
+
+| | Free | Starter | Pro |
+|---|---|---|---|
+| `ebooksIA` | **1** (era 0) | 2 | 5 |
+
+**`ebooksIA: 1` en Free no es un número al azar:** es exactamente lo que entra en
+la única página de venta que Free puede publicar (`paginas: 1`). Le alcanza para
+llenar lo que tiene y ni uno más.
+
+Por eso **Contexto para la IA se le muestra a los tres**: es lo que la IA lee
+para generar.
+
+- 🔲 **Sigue provisorio hasta medir un ebook de verdad** (Fase 4). Si sale US$4,
+  un Free que nunca vende nos cuesta eso y no lo recuperamos nunca.
+- 🔲 Y sigue en pie que **la capa de cuentas Free es la crítica**: es gratis, no
+  pide tarjeta, y veinte cuentas truchas son la misma persona. El tope por
+  usuario no se entera.
+
+### 🔲 Lo que sigue
 - 🔲 **Inicio de verdad**: las URLs y los próximos pasos. Hoy es una pantalla que
   dice que el panel se está construyendo, con un solo link a Mi cuenta.
 - 🔲 **Ventas**, y recién después **Estadísticas**, cuando haya qué mostrar.

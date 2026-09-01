@@ -9,6 +9,7 @@ import { DIGITALES_VERSION } from "@/lib/app-versions";
 import { prisma } from "@/lib/prisma";
 import type { TierDigital } from "@/lib/planes-digitales";
 import DigitalesSidebar from "./DigitalesSidebar";
+import { SCRIPT_TEMA } from "@/lib/tema-digitales";
 
 export const metadata: Metadata = {
   title: "Productos Digitales — TiendaApps",
@@ -96,7 +97,12 @@ export default async function DigitalesLayout({ children }: { children: React.Re
   const tier = (sub?.tier ?? "FREE") as TierDigital;
 
   return (
-    <div className="h-screen bg-gray-50 flex overflow-hidden text-gray-900 [color-scheme:light]">
+    <div className="h-screen bg-gray-50 panel-oscuro:bg-gray-950 flex overflow-hidden text-gray-900 panel-oscuro:text-gray-100 transition-colors">
+      {/* Pinta el tema ANTES del primer dibujo. Sin esto, entrar en oscuro es un
+          flash blanco de pantalla completa: el HTML llega claro, React hidrata y
+          recién ahí se lee la preferencia. Ningún efecto de React puede correr
+          antes de que el navegador pinte; un `<script>` sincrónico sí. */}
+      <script dangerouslySetInnerHTML={{ __html: SCRIPT_TEMA }} />
       <PWAManager appVersion={DIGITALES_VERSION} versionKey="pwa_digitales_version" disableNotifPrompt scope="/digitales" />
       <PanelSplash nombre="TiendaApps Digitales" />
       <DigitalesSidebar tier={tier} />
@@ -104,7 +110,7 @@ export default async function DigitalesLayout({ children }: { children: React.Re
           lo mismo con la barra de arriba del celular. El scroll va acá adentro y
           no en el `body`: si no, la barra lateral se va con la página. Mismo
           molde que `DashboardLayout`. */}
-      <main className="lg:ml-14 flex-1 flex flex-col bg-gray-50 pt-14 lg:pt-0 overflow-y-auto overflow-x-hidden">
+      <main className="lg:ml-14 flex-1 flex flex-col bg-gray-50 panel-oscuro:bg-gray-950 pt-14 lg:pt-0 overflow-y-auto overflow-x-hidden transition-colors">
         {children}
       </main>
     </div>

@@ -157,6 +157,29 @@ export const COMISION_DIGITAL = {
 } as const;
 
 /**
+ * Qué planes pueden cobrar por transferencia.
+ *
+ * ⚠️ **Free no puede, y no es una función recortada para que pague: es lo que
+ * sostiene que Free exista.**
+ *
+ * Free no cobra abono. Lo único que deja es la comisión del 8%, y esa comisión
+ * se retiene sola dentro del cobro de Mercado Pago (`marketplace_fee`). Con una
+ * transferencia **no pasa un peso por la plataforma**: el comprador le deposita
+ * derecho a la vendedora y no hay nada de dónde retener.
+ *
+ * O sea que un Free con transferencia prendida es un Free que no paga nada por
+ * nada. No se saltea "una comisión": se saltea la única que hay.
+ *
+ * Starter y Pro sí la tienen, porque ahí el abono ya está pago y la comisión es
+ * lo de menos.
+ */
+export const TRANSFERENCIA_DIGITAL = {
+  FREE: false,
+  STARTER: true,
+  PRO: true,
+} as const;
+
+/**
  * Los topes de cada plan.
  *
  * `paginas` son productos: cada producto digital tiene su propia página de venta,
@@ -166,12 +189,26 @@ export const COMISION_DIGITAL = {
  *
  * `ebooksIA` es el único tope que responde a un costo real: un ebook generado
  * cuesta entre US$2 y US$4 de API. Los otros tres son comerciales.
+ *
+ * ⚠️ **La IA existe en los tres planes; lo que cambia es el tope.** Decisión de
+ * Flavio (01/09/26), y el argumento es el modelo entero de Free: no paga abono,
+ * así que lo único que deja es la comisión — y una cuenta que no arranca nunca
+ * vende nada, o sea que el 8 % de cero es cero. Regalarle la primera generación
+ * es lo que hace que esa cuenta empiece a facturar.
+ *
+ * Free estuvo en `ebooksIA: 0` hasta esa fecha, que era lo contrario: le
+ * mostrábamos el nicho para la IA y después no la dejábamos usarla nunca.
  */
 export const TOPES_DIGITALES = {
   /* Free va con `upsells: 0` y no con `null`: es un tope, no una ausencia. La
      pantalla lo dibuja tachado y sin el número — "0 upsells por producto" se lee
-     como un error de programación, no como una función que no tenés. */
-  FREE:    { paginas: 1,  bonos: 1, upsells: 0, ebooksIA: 0 },
+     como un error de programación, no como una función que no tenés.
+
+     `ebooksIA: 1` no es un número al azar: es exactamente lo que entra en la
+     única página de venta que tiene Free. Le alcanza para llenar lo que puede
+     publicar y ni uno más. **Sigue siendo provisorio hasta medir un ebook de
+     verdad** (Fase 4): si sale US$4, un Free que nunca vende nos cuesta eso. */
+  FREE:    { paginas: 1,  bonos: 1, upsells: 0, ebooksIA: 1 },
   STARTER: { paginas: 5,  bonos: 3, upsells: 1, ebooksIA: 2 },
   PRO:     { paginas: 25, bonos: 5, upsells: 3, ebooksIA: 5 },
 } as const;

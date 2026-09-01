@@ -72,8 +72,8 @@ export default async function ProductosPage() {
       <BotonVolver />
 
       <div className="mb-6">
-        <h1 className="text-2xl font-black text-gray-900">Tus productos</h1>
-        <p className="text-gray-500 text-sm mt-1">
+        <h1 className="text-2xl font-black text-gray-900 panel-oscuro:text-gray-100">Tus productos</h1>
+        <p className="text-gray-500 panel-oscuro:text-gray-400 text-sm mt-1">
           Cada producto tiene su página de venta, sus bonos y sus upsells.
         </p>
       </div>
