@@ -515,16 +515,14 @@ function RegistroContent() {
             </Link>
 
             {/* Tipo + cambiar */}
-            <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center justify-between gap-3 mb-8">
               <div className={`flex items-center gap-3 px-4 py-2.5 rounded-2xl border ${colors.border} ${colors.bg}`}>
                 <selected.icon className={`h-4 w-4 ${colors.text}`} />
-                <span className={`text-sm font-semibold ${colors.text}`}>
-                  {selected.title}
-                  {accountType === "digital" &&
-                    ` · ${COPY_DIGITAL[digitalTier].nombre}${
-                      digitalTier !== "FREE" ? (billing === "ANNUAL" ? " anual" : " mensual") : ""
-                    }`}
-                </span>
+                {/* Sin el plan. Lo dice el recuadro de abajo, con el doble de
+                    tamaño y al lado del precio. Acá sólo estorbaba: en 360 el
+                    texto pasaba a dos renglones, la chapita se estiraba y
+                    empujaba a "Cambiar" fuera de la pantalla. */}
+                <span className={`text-sm font-semibold ${colors.text}`}>{selected.title}</span>
               </div>
               <button
                 type="button"
@@ -549,11 +547,99 @@ function RegistroContent() {
                 : accountType === "seller"
                 ? "Te mandamos al panel de vendedor."
                 : accountType === "digital"
-                ? digitalTier === "FREE"
-                  ? "Arrancás en el plan Free, sin tarjeta."
-                  : `Probás ${COPY_DIGITAL[digitalTier].nombre} 7 días gratis, sin tarjeta.`
+                /* Sin repetir el plan ni los 7 días: eso lo dice el recuadro de
+                   abajo, con mucha más fuerza que un renglón gris. Decirlo dos
+                   veces seguidas le quita peso a las dos. */
+                ? "Es el último paso."
                 : "Empezá a explorar tiendas ya."}
             </p>
+
+            {/* El resumen de lo que eligió, arriba del formulario.
+
+                Existe porque acá es donde la persona decide si completa sus
+                datos o se va, y la única señal de lo que estaba por hacer eran
+                una chapita chica arriba y un renglón gris. Lo que tiene que
+                quedar clarísimo son dos cosas: qué plan y que son 7 días gratis
+                sin tarjeta.
+
+                Y una tercera, que es la que saca el miedo: al terminar no se
+                cierra nada. Decirlo ANTES de pedir los datos es lo honesto —
+                después de crear la cuenta ya no es un aviso, es una excusa. */}
+            {accountType === "digital" && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3 }}
+                className={`mb-7 rounded-2xl border p-5 ${
+                  digitalTier === "FREE"
+                    ? "border-gray-200 bg-gray-50"
+                    : "border-orange-200 bg-gradient-to-br from-orange-50 to-rose-50/60"
+                }`}
+              >
+                <div className="flex items-center gap-2 mb-3">
+                  <span className={`inline-flex items-center gap-1.5 rounded-full text-[11px] font-black px-2.5 py-1 ${
+                    digitalTier === "FREE" ? "bg-gray-900 text-white" : "bg-orange-600 text-white"
+                  }`}>
+                    {digitalTier !== "FREE" && <Zap className="h-3 w-3" />}
+                    Plan {COPY_DIGITAL[digitalTier].nombre}
+                  </span>
+                  {digitalTier !== "FREE" && (
+                    <span className="text-xs text-gray-500 font-medium">
+                      {billing === "ANNUAL" ? "Facturación anual" : "Facturación mensual"}
+                    </span>
+                  )}
+                </div>
+
+                {digitalTier === "FREE" ? (
+                  <>
+                    <p className="text-2xl font-black text-gray-950 leading-tight">Gratis para siempre</p>
+                    <p className="text-sm text-gray-500 mt-0.5">Sin tarjeta y sin fecha de vencimiento.</p>
+                    <div className="h-px bg-gray-200 my-4" />
+                    <p className="text-xs text-gray-500 leading-relaxed">
+                      No pagás abono: nos llevamos una comisión del{" "}
+                      <strong className="text-gray-700">{COMISION_DIGITAL.FREE}% sobre cada venta</strong> que
+                      hagas. Si no vendés, no pagás nada.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-3xl font-black text-gray-950 leading-tight">7 días gratis</p>
+                    <p className="text-sm text-gray-600 mt-0.5">
+                      Sin tarjeta. Hoy no se te cobra nada.
+                    </p>
+
+                    <div className="h-px bg-orange-200/70 my-4" />
+
+                    <div className="flex items-baseline justify-between gap-3 flex-wrap">
+                      <span className="text-xs text-gray-500">Después de la prueba</span>
+                      <span className="text-right">
+                        <span className="text-lg font-black text-gray-950">
+                          {money(
+                            billing === "ANNUAL"
+                              ? Math.round(PRECIOS_DIGITALES[`DIGITAL_${digitalTier}`].ANNUAL / 12)
+                              : PRECIOS_DIGITALES[`DIGITAL_${digitalTier}`].MONTHLY
+                          )}
+                        </span>
+                        <span className="text-gray-500 text-xs font-normal">/mes</span>
+                        {billing === "ANNUAL" && (
+                          <span className="block text-[11px] text-gray-500">
+                            {money(PRECIOS_DIGITALES[`DIGITAL_${digitalTier}`].ANNUAL)}/año
+                            <span className="ml-1.5 text-teal-600 font-bold">
+                              Ahorrás {money(PRECIOS_DIGITALES[`DIGITAL_${digitalTier}`].MONTHLY * 12 - PRECIOS_DIGITALES[`DIGITAL_${digitalTier}`].ANNUAL)}
+                            </span>
+                          </span>
+                        )}
+                      </span>
+                    </div>
+
+                    <p className="text-xs text-gray-500 leading-relaxed mt-3">
+                      Si no pagás, <strong className="text-gray-700">volvés al plan Free</strong>. No se cierra
+                      nada ni perdés tus productos ni tus ventas.
+                    </p>
+                  </>
+                )}
+              </motion.div>
+            )}
 
             {/* Plan toggle — solo para owner y seller */}
             {hasPlan && planPrices && (
