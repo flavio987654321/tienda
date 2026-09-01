@@ -1136,8 +1136,86 @@ localhost el link no se puede probar en local**: Supabase manda a producción.
   lo cuente, y ahí le estaría diciendo "tu suscripción venció" a alguien que
   tiene un plan que no vence.
 
-- ✅ **27 chequeos nuevos** en `panel-digitales.check.ts`, más PAGO-P. Total: 58
-  pruebas.
+- ✅ **Los chequeos**: `panel-digitales.check.ts` (10 secciones) y `telefono.check.ts`
+  (TEL-A a TEL-N), más PAGO-P en `subscription.check.ts`. Total: **59 pruebas**.
+
+### ✅ La barra lateral y Mi cuenta — HECHOS (01/09/26)
+
+Al verlo andando aparecieron dos cosas.
+
+**La barra estaba copiada del panel equivocado.** Era horizontal, calcada de
+`/afiliados`. El panel que manda en esta plataforma es el de tiendas, y ese es
+**lateral**. Dos paneles del mismo producto con el menú en lugares distintos se
+sienten dos programas distintos.
+
+- ✅ `DigitalesSidebar`: franja de 56 px que se abre a 240 al pasar el mouse,
+  mismo molde que `DashboardLayout`. No la dejé fija en 240 porque lo que viene
+  —productos, ventas, estadísticas— son tablas anchas, y esos píxeles se los come
+  todo el tiempo para mostrar dos palabras que el ícono ya dice.
+- ✅ En el celular: barra arriba y cajón, que es lo único que entra.
+- ✅ La tarjeta de abajo dice **en qué plan estás** sin entrar a ninguna pantalla.
+  Sin nombre cargado cae al correo y recién después a un texto fijo: decía "Mi
+  cuenta", que es el nombre de la pantalla a la que la propia tarjeta lleva, y
+  quedaba el menú repetido.
+- ✅ **Botón de volver** arriba de cada pantalla de adentro. En escritorio parece
+  de más —el panel de tiendas se lo sacó por eso— pero en el celular el menú vive
+  atrás de una hamburguesa, y hay un caso peor: **el aviso del cron linkea DERECHO
+  a Mi cuenta**, así que se puede caer en una pantalla de adentro sin haber pasado
+  nunca por el inicio. Un chequeo recorre las pantallas y falla si alguna se queda
+  sin salida.
+
+**"Mi plan" pasó a ser "Mi cuenta"**, juntando el plan con los datos de la
+persona, como lo tiene la competencia. Se miran juntos y el panel todavía no
+tiene tantas pantallas como para partirlos.
+
+- ✅ Nombre y celular editables, correo y fecha de alta a la vista.
+- 🔲 **NO se copiaron las barras de "Tu uso actual"** (Tiendas 1/1,
+  Almacenamiento 92 KB…), que es lo mejor que tienen. Hoy no hay qué contar: el
+  modelo de producto digital no existe, y una barra clavada en 0 es un número
+  inventado esperando a mentir. Van apenas exista el modelo.
+- ✅ **La contraseña se cambia por un link al correo, no con un formulario.** Un
+  formulario ahí deja que cualquiera con la sesión abierta —el teléfono
+  desbloqueado arriba de la mesa— te cambie la contraseña y te deje afuera de tu
+  propia cuenta. Pedir la vieja tampoco alcanza: para verificarla hay que volver a
+  iniciar sesión contra Supabase, que según cómo esté configurado exige captcha y
+  contestaría "contraseña incorrecta" siempre. El link reusa el circuito de
+  "olvidé mi contraseña", que ya está hecho y probado.
+
+### ✅ La revisión antes de commitear — cuatro defectos (01/09/26)
+
+Los tres primeros son de seguridad y **ninguno lo introdujo esta pantalla**: ya
+estaban, y hacer el nombre y el teléfono editables los puso al alcance.
+
+1. ⚠️ **Dos mails metían el nombre CRUDO adentro del HTML.**
+   `sendVerificationReceivedEmail` y `sendVerificationApprovedEmail` eran las dos
+   únicas de `resend.ts` sin `escapeHtml`. Con el nombre editable desde el panel,
+   eso es HTML puesto por la persona dentro de un correo que mandamos nosotros.
+2. ⚠️ **La regla del teléfono estaba sólo en el registro.** O sea que el número
+   que el alta rechazaba se guardaba igual entrando por `/api/perfil`. Es el mismo
+   error que ya había pasado con la contraseña. Ahora vive en `lib/telefono` y la
+   usan los tres: registro, ruta y pantalla (14 chequeos, TEL-A a TEL-N).
+   - El que más importa es TEL-H: sin lista de caracteres permitidos entraba
+     *"llamame al 1155556666 y preguntá por Juan"* como si fuera un teléfono. Se
+     descubre el día que soporte necesita llamar.
+3. ⚠️ **`/api/perfil` pisaba los tres campos siempre** (`city?.trim() || null`).
+   Quien mandara sólo nombre y teléfono —exactamente lo que hace esta pantalla—
+   **le borraba la ciudad a la persona** sin tocarla ni nombrarla. Nunca se vio
+   porque la única pantalla que existía mandaba los tres juntos. Ahora distingue
+   "no vino" de "vino vacío", limpia caracteres de control, tiene topes de largo,
+   mínimo de nombre y tope de intentos.
+4. **El botón de guardar se podía apretar de nuevo con los mismos datos.**
+   Comparaba contra la prop, que no cambia sin recargar. Ahora compara contra lo
+   último guardado, y la pantalla se queda con lo que devolvió la base y no con lo
+   que se escribió.
+
+**Verificado en 360 / 768 / 1280** con capturas reales y midiendo el DOM: cero
+desborde horizontal en los tres, ningún texto cortado en la barra abierta.
+
+- 🔲 **Queda pendiente barrer el resto de `resend.ts`.** El escaneo encontró otras
+  interpolaciones sin escapar en mails que no toca este panel (`ownerName`,
+  `donorName`, `message`, `titular`). No se arreglaron acá para no mezclar, pero
+  **hay que revisarlas**: son la misma clase de agujero.
+
 
 ### 🔲 Lo que sigue
 
@@ -1145,14 +1223,11 @@ localhost el link no se puede probar en local**: Supabase manda a producción.
   Sin él no se pueden escribir Productos, ni Ventas, ni el asistente de
   bienvenida, ni el despublicado de páginas de más al caer a Free.
 - 🔲 **Inicio de verdad**: las URLs y los próximos pasos. Hoy es una pantalla que
-  dice que el panel se está construyendo, con un solo link a Mi plan.
+  dice que el panel se está construyendo, con un solo link a Mi cuenta.
 - 🔲 **Productos** — crear, subir el archivo, publicar.
 - 🔲 **Ventas**, y recién después **Estadísticas**, cuando haya qué mostrar.
 - 🔲 **El asistente de la primera vez** (los 5 pasos de la competencia). Se diseña
   ahora, se construye último: depende de las Fases 4 y 5.
-- 🔲 **Verlo en los tres anchos** (360 / 768 / 1280). No se pudo todavía: para
-  entrar al panel hace falta una cuenta digital con sesión, y el ingreso sigue
-  trabado por el captcha de Supabase.
 
 
 ## FASE 4 — La IA

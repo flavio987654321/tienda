@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { validarContrasena } from "@/lib/password-policy";
+import { validarTelefono } from "@/lib/telefono";
 import { CURRENT_TERMS_VERSION } from "@/lib/legal";
 import { verifyTurnstile } from "@/lib/turnstile";
 import { getClientIp } from "@/lib/request-ip";
@@ -54,12 +55,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: problemaContrasena }, { status: 400 });
     }
     if (phone !== undefined) {
-      if (typeof phone !== "string" || phone.length > 30) {
+      if (typeof phone !== "string") {
         return NextResponse.json({ error: "Teléfono inválido" }, { status: 400 });
       }
-      const digits = phone.replace(/\D/g, "");
-      if (digits.length < 8 || digits.length > 15) {
-        return NextResponse.json({ error: "El teléfono debe tener entre 8 y 15 dígitos" }, { status: 400 });
+      /* La regla vive ahora en `lib/telefono`, que usa también la ruta que lo
+         EDITA después. Estaba sólo acá: el número que no se podía cargar al
+         crear la cuenta se guardaba igual entrando por `/api/perfil`. */
+      const problemaTelefono = validarTelefono(phone);
+      if (problemaTelefono) {
+        return NextResponse.json({ error: problemaTelefono }, { status: 400 });
       }
     }
 

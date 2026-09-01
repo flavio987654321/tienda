@@ -6,7 +6,9 @@ import PanelSplash from "@/components/panel/PanelSplash";
 import PanelRolAjeno from "@/components/panel/PanelRolAjeno";
 import LoginGate from "@/components/panel/LoginGate";
 import { DIGITALES_VERSION } from "@/lib/app-versions";
-import DigitalesNav from "./DigitalesNav";
+import { prisma } from "@/lib/prisma";
+import type { TierDigital } from "@/lib/planes-digitales";
+import DigitalesSidebar from "./DigitalesSidebar";
 
 export const metadata: Metadata = {
   title: "Productos Digitales — TiendaApps",
@@ -81,12 +83,30 @@ export default async function DigitalesLayout({ children }: { children: React.Re
     );
   }
 
+  /* El plan, sólo para la tarjeta de abajo de la barra. Se lee acá y no en la
+     barra porque la barra es del navegador y no puede tocar la base; y se lee
+     una vez para todo el panel en vez de una por pantalla.
+     `?? "FREE"` porque el menú se tiene que dibujar igual: una cuenta digital sin
+     suscripción no debería existir —el alta la crea en el mismo pedido— y si
+     pasa, Free es lo que esa cuenta puede hacer de verdad. */
+  const sub = await prisma.subscription.findUnique({
+    where: { userId: user.id },
+    select: { tier: true },
+  });
+  const tier = (sub?.tier ?? "FREE") as TierDigital;
+
   return (
-    <>
+    <div className="h-screen bg-gray-50 flex overflow-hidden text-gray-900 [color-scheme:light]">
       <PWAManager appVersion={DIGITALES_VERSION} versionKey="pwa_digitales_version" disableNotifPrompt scope="/digitales" />
       <PanelSplash nombre="TiendaApps Digitales" />
-      <DigitalesNav />
-      {children}
-    </>
+      <DigitalesSidebar tier={tier} />
+      {/* `lg:ml-14` deja libre la franja de la barra, que es `fixed`; `pt-14` hace
+          lo mismo con la barra de arriba del celular. El scroll va acá adentro y
+          no en el `body`: si no, la barra lateral se va con la página. Mismo
+          molde que `DashboardLayout`. */}
+      <main className="lg:ml-14 flex-1 flex flex-col bg-gray-50 pt-14 lg:pt-0 overflow-y-auto overflow-x-hidden">
+        {children}
+      </main>
+    </div>
   );
 }

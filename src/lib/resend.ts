@@ -45,7 +45,7 @@ export async function sendVerificationReceivedEmail({
           <p style="color:#c7d2fe;font-size:13px;margin:0 0 6px;font-weight:500;">TiendaApps</p>
           <h1 style="color:#fff;font-size:22px;margin:0;font-weight:800;">Solicitud recibida</h1>
         </div>
-        <p style="font-size:15px;color:#374151;margin-bottom:6px;">Hola <strong>${userName || "ahí"}</strong>,</p>
+        <p style="font-size:15px;color:#374151;margin-bottom:6px;">Hola <strong>${escapeHtml(userName) || "ahí"}</strong>,</p>
         <p style="font-size:15px;color:#374151;margin-bottom:24px;">
           Recibimos tus documentos de verificación de identidad. Nuestro equipo los revisará en las próximas <strong>24 a 48 horas</strong> y te notificaremos el resultado por este mismo correo.
         </p>
@@ -85,7 +85,7 @@ export async function sendVerificationApprovedEmail({
           <p style="color:#bfdbfe;font-size:13px;margin:0 0 6px;font-weight:500;">TiendaApps</p>
           <h1 style="color:#fff;font-size:22px;margin:0;font-weight:800;">✓ Identidad verificada</h1>
         </div>
-        <p style="font-size:15px;color:#374151;margin-bottom:6px;">Hola <strong>${userName || "ahí"}</strong>,</p>
+        <p style="font-size:15px;color:#374151;margin-bottom:6px;">Hola <strong>${escapeHtml(userName) || "ahí"}</strong>,</p>
         <p style="font-size:15px;color:#374151;margin-bottom:24px;">
           ¡Buenas noticias! Tu identidad fue verificada exitosamente. Tu tienda ahora muestra el <strong>badge azul de verificación</strong> que genera confianza en tus clientes.
         </p>

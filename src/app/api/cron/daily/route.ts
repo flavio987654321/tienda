@@ -462,11 +462,11 @@ export async function GET(req: NextRequest) {
           type: "DIGITAL_DOWNGRADE",
           title: `Tu plan ${planPerdido} terminó`,
           body: "Tu cuenta sigue abierta y no perdiste nada: tus productos y tus ventas están donde estaban. Volviste al plan Free, así que la comisión por venta sube y las funciones pagas quedan apagadas. Podés volver a Starter o Pro cuando quieras.",
-          /* Derecho a Mi Plan, que es donde se ve lo que pasó y desde donde se
+          /* Derecho a Mi cuenta, que es donde se ve lo que pasó y desde donde se
              vuelve a Starter o Pro. Estuvo apuntando a la raíz del panel mientras
              esa pantalla no existía: el aviso hubiera llevado a un 404, y justo
              al que acaba de perder su plan. */
-          link: "/digitales/mi-plan",
+          link: "/digitales/mi-cuenta",
         };
       })
     );
