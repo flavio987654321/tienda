@@ -1137,7 +1137,8 @@ localhost el link no se puede probar en local**: Supabase manda a producción.
   tiene un plan que no vence.
 
 - ✅ **Los chequeos**: `panel-digitales.check.ts` (10 secciones) y `telefono.check.ts`
-  (TEL-A a TEL-N), más PAGO-P en `subscription.check.ts`. Total: **59 pruebas**.
+  (TEL-A a TEL-N) y `mails-escapados.check.ts`, más PAGO-P en `subscription.check.ts`.
+  Total: **60 pruebas**.
 
 ### ✅ La barra lateral y Mi cuenta — HECHOS (01/09/26)
 
@@ -1211,10 +1212,31 @@ estaban, y hacer el nombre y el teléfono editables los puso al alcance.
 **Verificado en 360 / 768 / 1280** con capturas reales y midiendo el DOM: cero
 desborde horizontal en los tres, ningún texto cortado en la barra abierta.
 
-- 🔲 **Queda pendiente barrer el resto de `resend.ts`.** El escaneo encontró otras
-  interpolaciones sin escapar en mails que no toca este panel (`ownerName`,
-  `donorName`, `message`, `titular`). No se arreglaron acá para no mezclar, pero
-  **hay que revisarlas**: son la misma clase de agujero.
+### ✅ El barrido de los mails — HECHO (01/09/26)
+
+Se revisaron las **130 interpolaciones** de `resend.ts` y `email.ts` una por una.
+
+- ✅ **13 agujeros más en `resend.ts`**, además de los dos del nombre: la denuncia
+  de una tienda (`storeName`, `storeSlug`, `reason`, **`description`** —el texto
+  libre de quien denuncia— y `reporterEmail`) y toda la canasta solidaria
+  (`campaignName`, `donorName`, **`message`** y `campaignUrl`). Los dos en negrita
+  son texto libre escrito por una persona.
+- ✅ Uno en `email.ts`: el `storeSlug` de un link, ahora con `encodeURIComponent`.
+- ✅ **`email.ts` estaba bien.** Todo lo que viene de una persona ya pasaba por
+  `escapeHtml` al armarse — direcciones, políticas de la tienda, datos bancarios,
+  el color del newsletter (que además se valida como hexadecimal antes de entrar a
+  un `style=`). Las 20 marcas que quedaban eran la **pregunta** de un ternario, no
+  el valor.
+- ✅ **Los `subject:` NO se escapan**, y es correcto: son texto plano, no HTML.
+  Escaparlos haría que a alguien le llegue "Tienda &amp; Co" en el asunto.
+
+**El chequeo nuevo** (`mails-escapados.check.ts`) recorre los dos archivos, saca lo
+que ya está protegido —`escapeHtml`, `encodeURIComponent`, los formateadores de
+plata, los textos entre comillas y la condición de los ternarios— y falla si lo que
+queda nombra algo que suele venir de una persona.
+
+Probado al revés: destapando a mano uno de los agujeros recién arreglados, falla y
+lo señala con archivo y línea. Total: **60 pruebas**.
 
 
 ### 🔲 Lo que sigue

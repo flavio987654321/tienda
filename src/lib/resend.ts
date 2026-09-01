@@ -252,7 +252,7 @@ export async function sendVerificationNewRequestAdminEmail({
           <h1 style="color:#fff;font-size:20px;margin:0;font-weight:800;">Nueva verificación pendiente</h1>
         </div>
         <p style="font-size:15px;color:#374151;margin-bottom:20px;">
-          <strong>${ownerName}</strong> (${ownerEmail}) envió una solicitud de verificación de identidad.
+          <strong>${escapeHtml(ownerName)}</strong> (${escapeHtml(ownerEmail)}) envió una solicitud de verificación de identidad.
         </p>
         <div style="text-align:center;margin-bottom:24px;">
           <a href="${APP_URL}/admin/verificaciones"
@@ -292,13 +292,13 @@ export async function sendStoreReportAdminEmail({
         </div>
         <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:12px;padding:20px;margin-bottom:20px;">
           <p style="font-size:13px;color:#991b1b;margin:0 0 4px;font-weight:700;text-transform:uppercase;letter-spacing:0.03em;">Tienda denunciada</p>
-          <p style="font-size:16px;font-weight:700;color:#111827;margin:0 0 4px;">${storeName}</p>
-          <p style="font-size:13px;color:#6b7280;margin:0;">tiendaapps.com/tienda/${storeSlug}</p>
+          <p style="font-size:16px;font-weight:700;color:#111827;margin:0 0 4px;">${escapeHtml(storeName)}</p>
+          <p style="font-size:13px;color:#6b7280;margin:0;">tiendaapps.com/tienda/${escapeHtml(storeSlug)}</p>
         </div>
         <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:20px;margin-bottom:20px;">
-          <p style="font-size:13px;color:#374151;margin:0 0 6px;font-weight:600;">Motivo: <span style="color:#dc2626;">${reason}</span></p>
-          ${description ? `<p style="font-size:14px;color:#374151;margin:8px 0 0;">${description}</p>` : ""}
-          ${reporterEmail ? `<p style="font-size:13px;color:#6b7280;margin:10px 0 0;">Reportado por: ${reporterEmail}</p>` : ""}
+          <p style="font-size:13px;color:#374151;margin:0 0 6px;font-weight:600;">Motivo: <span style="color:#dc2626;">${escapeHtml(reason)}</span></p>
+          ${description ? `<p style="font-size:14px;color:#374151;margin:8px 0 0;">${escapeHtml(description)}</p>` : ""}
+          ${reporterEmail ? `<p style="font-size:13px;color:#6b7280;margin:10px 0 0;">Reportado por: ${escapeHtml(reporterEmail)}</p>` : ""}
         </div>
         <div style="text-align:center;margin-bottom:24px;">
           <a href="${APP_URL}/admin/denuncias"
@@ -575,7 +575,7 @@ export async function sendCanastaCompletedAdminEmail({
           <p style="color:#fde68a;font-size:13px;margin:0 0 6px;font-weight:500;">${label}</p>
           <h1 style="color:#fff;font-size:22px;margin:0;font-weight:800;">¡Se completó la meta!</h1>
         </div>
-        <p style="font-size:15px;color:#374151;margin-bottom:6px;"><strong>${campaignName}</strong> llegó a su meta.</p>
+        <p style="font-size:15px;color:#374151;margin-bottom:6px;"><strong>${escapeHtml(campaignName)}</strong> llegó a su meta.</p>
         <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:20px;margin-bottom:24px;">
           <p style="font-size:14px;color:#92400e;margin:0;font-weight:600;">Total recaudado: ${fmt(totalRaised)} de ${fmt(goalAmount)}</p>
         </div>
@@ -610,8 +610,8 @@ export async function sendCanastaDonationConfirmedEmail({
   const label = campaignType === "LIBRE" ? "Causa Libre" : "Canasta Solidaria";
   const bodyText =
     campaignType === "LIBRE"
-      ? `Tu donación de <strong>${fmt(amount)}</strong> a la <strong>${campaignName}</strong> ya está registrada. Nuestro equipo se encarga de hacerla llegar. Si querés ver cómo sigue, podés entrar a la página de la causa cuando quieras.`
-      : `Tu donación de <strong>${fmt(amount)}</strong> a la <strong>${campaignName}</strong> ya está registrada. Cuando se complete la meta, nuestro equipo elige a la familia que la recibe. Si querés ver cómo sigue, podés entrar a la página de la campaña cuando quieras.`;
+      ? `Tu donación de <strong>${fmt(amount)}</strong> a la <strong>${escapeHtml(campaignName)}</strong> ya está registrada. Nuestro equipo se encarga de hacerla llegar. Si querés ver cómo sigue, podés entrar a la página de la causa cuando quieras.`
+      : `Tu donación de <strong>${fmt(amount)}</strong> a la <strong>${escapeHtml(campaignName)}</strong> ya está registrada. Cuando se complete la meta, nuestro equipo elige a la familia que la recibe. Si querés ver cómo sigue, podés entrar a la página de la campaña cuando quieras.`;
   const closingText =
     campaignType === "LIBRE"
       ? "Gracias a aportes como el tuyo, alguien va a recibir una ayuda real. No es solo plata: es una forma concreta de decirle a alguien que no está solo. ¡Gracias por ser parte! 💛"
@@ -627,7 +627,7 @@ export async function sendCanastaDonationConfirmedEmail({
           <p style="color:#fde68a;font-size:13px;margin:0 0 6px;font-weight:500;">${label}</p>
           <h1 style="color:#fff;font-size:22px;margin:0;font-weight:800;">¡Gracias por donar!</h1>
         </div>
-        <p style="font-size:15px;color:#374151;margin-bottom:6px;">Hola <strong>${donorName}</strong>,</p>
+        <p style="font-size:15px;color:#374151;margin-bottom:6px;">Hola <strong>${escapeHtml(donorName)}</strong>,</p>
         <p style="font-size:15px;color:#374151;margin-bottom:16px;">
           ${bodyText}
         </p>
@@ -635,7 +635,7 @@ export async function sendCanastaDonationConfirmedEmail({
           ${closingText}
         </p>
         <div style="text-align:center;margin-bottom:28px;">
-          <a href="${campaignUrl}"
+          <a href="${escapeHtml(campaignUrl)}"
              style="display:inline-block;background:#d97706;color:#fff;padding:14px 32px;border-radius:10px;font-weight:700;font-size:15px;text-decoration:none;">
             Ver la campaña
           </a>
@@ -674,12 +674,12 @@ export async function sendCanastaAnnouncementEmail({
       <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 16px;color:#111827;background:#fff;">
         <div style="background:#d97706;border-radius:16px;padding:32px 24px;margin-bottom:28px;text-align:center;">
           <p style="color:#fde68a;font-size:13px;margin:0 0 6px;font-weight:500;">${label}</p>
-          <h1 style="color:#fff;font-size:20px;margin:0;font-weight:800;">${campaignName}</h1>
+          <h1 style="color:#fff;font-size:20px;margin:0;font-weight:800;">${escapeHtml(campaignName)}</h1>
         </div>
-        <p style="font-size:15px;color:#374151;margin-bottom:6px;">Hola <strong>${donorName}</strong>,</p>
-        <p style="font-size:15px;color:#374151;margin-bottom:24px;white-space:pre-line;">${message}</p>
+        <p style="font-size:15px;color:#374151;margin-bottom:6px;">Hola <strong>${escapeHtml(donorName)}</strong>,</p>
+        <p style="font-size:15px;color:#374151;margin-bottom:24px;white-space:pre-line;">${escapeHtml(message)}</p>
         <div style="text-align:center;margin-bottom:28px;">
-          <a href="${campaignUrl || `${APP_URL}/comunidad/campana`}"
+          <a href="${escapeHtml(campaignUrl || `${APP_URL}/comunidad/campana`)}"
              style="display:inline-block;background:#d97706;color:#fff;padding:14px 32px;border-radius:10px;font-weight:700;font-size:15px;text-decoration:none;">
             Ver la campaña
           </a>

@@ -230,7 +230,7 @@ export async function sendReviewRequestEmail({
   const productLinks = products
     .map(
       (p) =>
-        `<a href="${appUrl}/tienda/${storeSlug}?producto=${encodeURIComponent(p.id)}"
+        `<a href="${appUrl}/tienda/${encodeURIComponent(storeSlug)}?producto=${encodeURIComponent(p.id)}"
            style="display:block;padding:10px 16px;border-bottom:1px solid #f3f4f6;font-size:14px;color:#6366f1;text-decoration:none;">
           ⭐ Dejar reseña de <strong>${escapeHtml(p.name)}</strong>
         </a>`
