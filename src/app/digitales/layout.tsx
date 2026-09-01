@@ -9,6 +9,7 @@ import { DIGITALES_VERSION } from "@/lib/app-versions";
 import { prisma } from "@/lib/prisma";
 import type { TierDigital } from "@/lib/planes-digitales";
 import DigitalesSidebar from "./DigitalesSidebar";
+import TemaDelPanel from "./TemaDelPanel";
 import { SCRIPT_TEMA } from "@/lib/tema-digitales";
 
 export const metadata: Metadata = {
@@ -103,6 +104,12 @@ export default async function DigitalesLayout({ children }: { children: React.Re
           recién ahí se lee la preferencia. Ningún efecto de React puede correr
           antes de que el navegador pinte; un `<script>` sincrónico sí. */}
       <script dangerouslySetInnerHTML={{ __html: SCRIPT_TEMA }} />
+      {/* El script de arriba sólo corre cuando la página se carga, y lee el tema
+          del sistema una sola vez. Esto se ocupa del resto de la visita: pinta
+          cuando se entra con un Link, sigue los cambios del sistema mientras la
+          preferencia sea "Automático", y levanta el atributo al salir del panel
+          para no dejárselo puesto al resto del sitio. */}
+      <TemaDelPanel />
       <PWAManager appVersion={DIGITALES_VERSION} versionKey="pwa_digitales_version" disableNotifPrompt scope="/digitales" />
       <PanelSplash nombre="TiendaApps Digitales" />
       <DigitalesSidebar tier={tier} />

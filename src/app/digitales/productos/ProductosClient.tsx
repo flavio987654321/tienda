@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRef, useState } from "react";
 import {
   Plus, Gift, TrendingUp, BookOpen, Loader2, Pencil, Trash2, AlertTriangle, Image as ImageIcon,
@@ -248,13 +249,13 @@ function Grupo({ padre, rol, acc }: { padre: ProductoEnPantalla; rol: "BONO" | "
         </div>
 
         {lleno ? (
-          <a
+          <Link
             href="/digitales/mi-cuenta"
             className="shrink-0 inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white panel-oscuro:bg-gray-900 border border-gray-200 panel-oscuro:border-gray-700 text-xs font-bold text-gray-500 panel-oscuro:text-gray-400 hover:text-orange-600 hover:border-orange-300 transition-colors"
           >
             {tope === 0 ? "Tu plan no los incluye" : "Llegaste al tope"}
             <ArrowUpRight className="h-3.5 w-3.5" />
-          </a>
+          </Link>
         ) : (
           <button
             onClick={() => acc.setBorrador(borradorNuevo(rol, padre.id))}
@@ -495,13 +496,13 @@ export default function ProductosClient({
         </div>
 
         {llegoAlTope ? (
-          <a
+          <Link
             href="/digitales/mi-cuenta"
             className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-orange-200 panel-oscuro:border-orange-500/30 bg-orange-50 panel-oscuro:bg-orange-500/10 text-sm font-bold text-orange-700 panel-oscuro:text-orange-300 hover:bg-orange-100 transition-colors"
           >
             Llegaste al tope de tu plan
             <ArrowUpRight className="h-4 w-4" />
-          </a>
+          </Link>
         ) : (
           <button
             onClick={() => setBorrador(borradorNuevo("PRINCIPAL", null))}

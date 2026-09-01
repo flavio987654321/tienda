@@ -19,6 +19,23 @@
  * resuelve en JS y se escribe ya decidido. Una sola fuente de verdad. */
 @custom-variant panel-oscuro (&:where([data-panel-tema="oscuro"], [data-panel-tema="oscuro"] *));
 
+/* Lo que el tema NO puede pintar con clases: las barras de scroll, el menú de un
+ * `<select>` y el calendario de un `<input type="date">`. Eso sale del
+ * `color-scheme`, y lo dibuja el sistema operativo.
+ *
+ * Va en CSS y no en JS a propósito, aunque parezca el lugar raro. `next-themes`
+ * escribe `color-scheme` como estilo EN LÍNEA sobre `<html>`, y un estilo en
+ * línea le gana a cualquier regla normal: el panel en claro quedaba con la barra
+ * de scroll y los desplegables oscuros. Ponerlo desde JS era pelearse por quién
+ * escribe último —el script del tema corre antes que el efecto de `next-themes`,
+ * así que perdía siempre—; con `!important` no hay carrera que perder.
+ *
+ * Se veía sólo entrando: tocar un botón de Apariencia corre `aplicarTema`, que
+ * escribía el valor bueno después, y ahí se acomodaba. Probando el selector es
+ * invisible. */
+[data-panel-tema="claro"] { color-scheme: light !important; }
+[data-panel-tema="oscuro"] { color-scheme: dark !important; }
+
 :root {
   --background: #ffffff;
   --foreground: #171717;

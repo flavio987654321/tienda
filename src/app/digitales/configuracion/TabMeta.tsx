@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { BarChart3, LineChart, Info, MousePointerClick, HelpCircle } from "lucide-react";
 import { Seccion, BotonGuardar, Etiqueta, Ayuda, CLASE_INPUT } from "./piezas";
 import { LARGO_ID_MEDICION, extraerClarityId } from "@/lib/tracking-ids";
@@ -51,13 +52,16 @@ export default function TabMeta(p: Props) {
             ayuda aparte. Nadie sabe de memoria dónde está el ID del píxel, y la
             competencia lo resolvió igual: el momento en que se necesita la
             explicación es el momento en que se está mirando el campo vacío. */}
-        <a
+        {/* `Link` y no `<a>`: con el `<a>` esto recargaba la página entera para
+            ir a una pantalla del mismo sitio, y volver perdía todo lo que
+            estuviera escrito y sin guardar en las otras solapas. */}
+        <Link
           href="/ayuda"
           className="inline-flex items-center gap-1.5 mb-3 text-xs font-bold text-orange-600 hover:text-orange-500 transition-colors"
         >
           <HelpCircle className="h-3.5 w-3.5" />
           ¿No sabés dónde encontrar tu ID?
-        </a>
+        </Link>
 
         <Etiqueta htmlFor="pixel" opcional>ID del píxel</Etiqueta>
         <input

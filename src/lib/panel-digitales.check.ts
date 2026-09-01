@@ -554,8 +554,16 @@ chequear("el tema sale de una lista, nunca de un valor por defecto",
 
 /* `color-scheme` no es decorativo: es lo que hace que las barras de scroll y los
    desplegables salgan oscuros. Sin esto, adentro de un panel oscuro se abre un
-   menú blanco. */
-chequear("se acompaña con color-scheme", /style\.colorScheme/.test(tema));
+   menú blanco.
+   ⚠️ Y sale del CSS, colgado del mismo atributo, NO de JS: `next-themes` escribe
+   el suyo en línea sobre `<html>` y en línea le gana a cualquier JS que corra
+   antes. Escrito desde el script del tema, el panel en claro se veía con las
+   barras y los desplegables oscuros — y se acomodaba recién al tocar un botón de
+   Apariencia, que es justo lo que uno hace al probarlo. */
+chequear("el color-scheme cuelga del atributo desde el CSS, con !important",
+  /\[data-panel-tema="claro"\][^}]*color-scheme:\s*light\s*!important/.test(estilos) &&
+  /\[data-panel-tema="oscuro"\][^}]*color-scheme:\s*dark\s*!important/.test(estilos));
+chequear("y no hay una segunda copia escribiéndolo desde JS", !/style\.colorScheme/.test(tema));
 
 /* Zona horaria se sacó: vendemos en Argentina, así que era un selector con una
    sola respuesta posible. */
@@ -596,6 +604,41 @@ chequear("hasta el error vuelve al panel correcto",
    razonable que puede hacer alguien que recién entra. */
 chequear("conectar el cobro funciona aunque todavía no haya ningún producto",
   /espacioDigital\(user\.id\)/.test(mpConnect));
+
+/* ── 14. Moverse adentro del panel ─────────────────────────────────────────── */
+console.log("\n14) Los enlaces de adentro del panel");
+
+/* ⚠️ Un `<a href="/digitales/...">` recarga la aplicación entera para ir a una
+   pantalla que ya está cargada. Se nota en tres cosas: el parpadeo blanco al
+   pasar de una pantalla a otra —justo el que el script del tema existe para
+   evitar—, la barra lateral que se vuelve a armar, y lo que quedó escrito y sin
+   guardar en un formulario, que se pierde sin aviso.
+   La regla es angosta a propósito: `<a>` a una ruta de `/api/` o a la web
+   comercial está bien y hay casos con su comentario. Lo que no puede haber es un
+   `<a>` a una pantalla DEL PANEL. */
+function tsxDe(dir: string): string[] {
+  const salida: string[] = [];
+  for (const e of readdirSync(dir, { withFileTypes: true })) {
+    const ruta = `${dir}/${e.name}`;
+    if (e.isDirectory()) salida.push(...tsxDe(ruta));
+    else if (e.name.endsWith(".tsx")) salida.push(ruta);
+  }
+  return salida;
+}
+
+const conAnclaInterna = tsxDe("src/app/digitales").filter((f) => {
+  const src = soloCodigo(readFileSync(f, "utf8"));
+  /* Busca la apertura de un `<a` y, dentro de la misma etiqueta, un href al
+     panel. `[^>]*` no cruza el `>` de cierre, así que no confunde un `<a>` de
+     arriba con el href de otra etiqueta más abajo. */
+  return /<a\s[^>]*href="\/digitales\//.test(src);
+});
+chequear(
+  conAnclaInterna.length === 0
+    ? "todas las pantallas del panel navegan con Link"
+    : `hay <a> a pantallas del panel en: ${conAnclaInterna.join(", ")}`,
+  conAnclaInterna.length === 0
+);
 
 console.log(fallos === 0
   ? "\nok — el panel de Productos Digitales sigue en pie"
