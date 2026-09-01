@@ -209,7 +209,17 @@ function RegistroContent() {
   const tierEnLaUrl = tierDigitalEnLaUrl !== null;
   const tierDigitalParam: TierDigital = tierDigitalEnLaUrl ?? "FREE";
 
-  const [step, setStep] = useState<"type" | "form">(planParam ? "form" : "type");
+  /* La URL decide dónde ARRANCA la pantalla y nada más.
+   *
+   * `?plan=digital` sin un tier válido no puede saltar al formulario: sería
+   * mandar a alguien a completar sus datos sin haberle mostrado nunca los tres
+   * planes, y creándole la cuenta en Free porque sí. Con tier —que es como llega
+   * quien apretó un plan en /precios— ya eligió, y ahí sí va derecho al
+   * formulario. */
+  const arrancaEnPlanesDigitales = planParam === "digital" && !tierEnLaUrl;
+  const [step, setStep] = useState<"type" | "form">(
+    planParam && !arrancaEnPlanesDigitales ? "form" : "type"
+  );
   const [accountType, setAccountType] = useState<AccountType>(planParam ?? "owner");
   const [ownerTier, setOwnerTier] = useState<"BASIC" | "PREMIUM">(tierParam);
   const [billing, setBilling] = useState<"MONTHLY" | "ANNUAL">(
@@ -228,7 +238,7 @@ function RegistroContent() {
      elige el plan, igual que la de tienda elige entre Pro y Premium. La
      diferencia es que son tres y no entran adentro de la tarjeta, así que
      reemplazan a las cuatro — la misma interacción que en /precios. */
-  const [verPlanesDigitales, setVerPlanesDigitales] = useState(false);
+  const [verPlanesDigitales, setVerPlanesDigitales] = useState(arrancaEnPlanesDigitales);
   const [digitalTier, setDigitalTier] = useState<TierDigital>(tierDigitalParam);
   const captcha = useTurnstile("registro");
 
@@ -278,10 +288,17 @@ function RegistroContent() {
   }
 
   function selectType(t: AccountType) {
-    /* Digitales pasa por la pantalla de planes. Se saltea sólo si ya vino
-       elegido en la URL (?plan=digital&tier=starter), que es como llega el que
-       apretó un plan en /precios. */
-    if (t === "digital" && !tierEnLaUrl) { setVerPlanesDigitales(true); return; }
+    /* Digitales SIEMPRE pasa por la pantalla de planes.
+     *
+     * Acá había un `&& !tierEnLaUrl` y era un error: el tier de la URL no se
+     * borra al navegar por la pantalla, así que quien entraba desde /precios con
+     * un plan elegido, volvía a las cuatro cuentas y apretaba "Elegir plan",
+     * caía derecho al formulario otra vez — el botón no hacía lo que decía, y
+     * quedaba sin forma de cambiar de plan salvo editando la dirección.
+     *
+     * La URL ya hizo su trabajo más arriba, eligiendo dónde arranca la pantalla.
+     * A partir del primer clic manda lo que la persona toca. */
+    if (t === "digital") { setVerPlanesDigitales(true); return; }
     setAccountType(t);
     if (t === "owner") setOwnerTier(step1Tier);
     setStep("form");
