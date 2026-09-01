@@ -385,6 +385,26 @@ function RegistroContent() {
 
   const panel = LEFT_PANEL[accountType];
 
+  /* El texto del botón que ENVÍA el formulario, que no es el de la tarjeta.
+   *
+   * Salían del mismo lugar (`selected.cta`) y con tres tipos de cuenta funcionaba
+   * de casualidad: "Crear mi tienda" sirve igual para la tarjeta y para el envío.
+   * Digitales rompió la coincidencia — su tarjeta dice "Elegir plan", así que el
+   * botón de abajo del formulario también decía "Elegir plan", cuando el plan ya
+   * estaba elegido diez pasos antes.
+   *
+   * Y no dice "Suscribite": acá no se cobra nada y el formulario ni siquiera pide
+   * una tarjeta. Prometer una suscripción y arrancar una prueba son cosas
+   * distintas, y la que confunde de verdad es hacerle creer a alguien que se le
+   * cobró.
+   */
+  const textoDelBoton =
+    accountType === "digital"
+      ? digitalTier === "FREE"
+        ? "Crear mi cuenta"
+        : `Empezar mi prueba de ${COPY_DIGITAL[digitalTier].nombre}`
+      : selected.cta;
+
   /* ── STEP 2: split layout ── */
   if (step === "form") {
     return (
@@ -755,7 +775,7 @@ function RegistroContent() {
                 className={`w-full text-white py-4 rounded-2xl font-bold text-base transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-xl hover:scale-[1.02] disabled:hover:scale-100 ${colors.btn}`}
               >
                 {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-                {loading ? "Creando cuenta..." : selected.cta}
+                {loading ? "Creando cuenta..." : textoDelBoton}
               </button>
             </form>
 
