@@ -215,7 +215,7 @@ export async function POST(req: NextRequest) {
                   create:
                     tierDigital === "FREE"
                       ? { ...altaDigitalFree() }
-                      : { ...altaDigitalConPrueba(tierDigital) },
+                      : { ...altaDigitalConPrueba(tierDigital, billing === "ANNUAL" ? "ANNUAL" : "MONTHLY") },
                 },
               }
             : {}),

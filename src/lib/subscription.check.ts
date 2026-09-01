@@ -349,7 +349,7 @@ const aProMensual = { plan: "OWNER_BASIC", billing: "MONTHLY" } as const;
      activa: el tier lo elige la persona en el navegador y viaja en el pedido, así
      que si esto pudiera dar ACTIVE, cualquiera pediría Pro y se llevaría el plan
      más caro sin pagar. */
-  const conPrueba = altaDigitalConPrueba("PRO", HOY);
+  const conPrueba = altaDigitalConPrueba("PRO", "MONTHLY", HOY);
 
   check("VIDA-L", conPrueba.status === "TRIAL",
     "elegir un plan pago en el alta arranca una PRUEBA, nunca una suscripción activa");
@@ -367,6 +367,13 @@ const aProMensual = { plan: "OWNER_BASIC", billing: "MONTHLY" } as const;
 
   // Y al vencer cae a Free como cualquier otra, sin perder la marca de usada.
   const caida = { ...conPrueba, ...caidaAFree() };
+  // El ciclo elegido se guarda: quien vino con "Anual" desde precios no pierde
+  // el descuento en el camino al formulario.
+  check("VIDA-P",
+    altaDigitalConPrueba("STARTER", "ANNUAL", HOY).plan === "ANNUAL" &&
+    altaDigitalConPrueba("STARTER", "MONTHLY", HOY).plan === "MONTHLY",
+    "la prueba se queda con el ciclo de facturación que se eligió");
+
   check("VIDA-O",
     caida.tier === "FREE" && caida.status === "ACTIVE" &&
     pruebaYaUsada({ ...caida, createdAt: HOY }) === true,

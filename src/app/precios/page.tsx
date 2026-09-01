@@ -120,7 +120,9 @@ function TarjetaDigital({ tier, isAnnual }: { tier: TierDigital; isAnnual: boole
           nada. Por eso el botón dice "Probar 7 días gratis" y no "Suscribirme":
           prometer una suscripción y arrancar una prueba son cosas distintas. */}
       <Link
-        href={`/registro?plan=digital&tier=${tier.toLowerCase()}`}
+        /* El ciclo viaja con el plan. Sin esto, tocar "Anual" acá y apretar el
+           botón perdía el descuento en el camino al registro, en silencio. */
+        href={`/registro?plan=digital&tier=${tier.toLowerCase()}${isAnnual ? "&billing=annual" : ""}`}
         className={`flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl text-sm font-bold transition-all duration-200 hover:scale-[1.03] active:scale-[0.98] ${
           gratis
             ? "bg-gray-900 hover:bg-gray-800 text-white shadow-lg shadow-gray-900/15 hover:shadow-xl hover:shadow-gray-900/25"

@@ -881,6 +881,13 @@ La diferencia con las tiendas no es un detalle y conviene tenerla escrita:
   de tienda elige entre Pro y Premium. Recién elegido el plan se va al
   formulario, y la cuenta se crea con `altaDigitalFree()` o con
   `altaDigitalConPrueba()` según lo que haya elegido.
+  - **Mensual / Anual también se elige ahí**, con el mismo interruptor que ya
+    tiene el formulario de tienda. No se cobra nada —arranca una prueba— pero el
+    ciclo queda guardado y es el que va a estar puesto al pagar: quien venía de
+    `/precios` con "Anual" prendido perdía el −25% en el camino, en silencio
+    (VIDA-P). El número grande es **por mes en los dos ciclos**: un $540.000
+    gigante al lado de un $30.000 parece dieciocho veces más caro cuando en
+    realidad es más barato.
   - **Los tres botones de `/precios` ahora funcionan** y llevan al mismo lado:
     `/registro?plan=digital&tier=…`. Antes los tres decían "Próximamente" y el
     registro no ofrecía ninguno — dos puertas contando historias distintas.

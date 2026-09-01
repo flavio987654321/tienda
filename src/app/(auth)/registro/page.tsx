@@ -520,7 +520,10 @@ function RegistroContent() {
                 <selected.icon className={`h-4 w-4 ${colors.text}`} />
                 <span className={`text-sm font-semibold ${colors.text}`}>
                   {selected.title}
-                  {accountType === "digital" && ` · ${COPY_DIGITAL[digitalTier].nombre}`}
+                  {accountType === "digital" &&
+                    ` · ${COPY_DIGITAL[digitalTier].nombre}${
+                      digitalTier !== "FREE" ? (billing === "ANNUAL" ? " anual" : " mensual") : ""
+                    }`}
                 </span>
               </div>
               <button
@@ -858,6 +861,39 @@ function RegistroContent() {
               <ArrowLeft className="h-4 w-4" /> Volver a todas las cuentas
             </button>
 
+            {/* Mensual / Anual, el mismo que ya tiene el formulario de tienda.
+
+                Acá no se cobra nada —esto arranca una prueba—, pero el ciclo
+                elegido queda guardado en la suscripción y es el que va a estar
+                puesto cuando llegue el momento de pagar. Sin esto, quien venía de
+                /precios con "Anual" prendido perdía el descuento en el camino y
+                sin que nada se lo dijera. */}
+            <div className="flex justify-center mb-6">
+              <div className="inline-flex rounded-2xl border border-gray-200 bg-gray-50 p-1 gap-1">
+                <button
+                  type="button"
+                  onClick={() => setBilling("MONTHLY")}
+                  className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${
+                    billing === "MONTHLY" ? "bg-white text-gray-900 shadow" : "text-gray-500 hover:text-gray-900"
+                  }`}
+                >
+                  Mensual
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setBilling("ANNUAL")}
+                  className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 ${
+                    billing === "ANNUAL" ? "bg-white text-gray-900 shadow" : "text-gray-500 hover:text-gray-900"
+                  }`}
+                >
+                  Anual
+                  <span className={`text-xs font-black px-1.5 py-0.5 rounded-full ${billing === "ANNUAL" ? "bg-teal-600 text-white" : "bg-teal-100 text-teal-700"}`}>
+                    -25%
+                  </span>
+                </button>
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-stretch">
               {TIERS_DIGITALES.map((tier, i) => {
                 const gratis = tier === "FREE";
@@ -901,13 +937,29 @@ function RegistroContent() {
                       {/* Alto fijo para los tres: Free no tiene la línea de
                           "después de los 7 días" y sin esto arrancaba la lista
                           un renglón más arriba que las otras dos, que es lo que
-                          después desalineaba todo hacia abajo. */}
-                      <div className="mb-4 min-h-[68px]">
+                          después desalineaba todo hacia abajo. El anual suma un
+                          renglón más, así que el alto reservado lo contempla. */}
+                      <div className="mb-4 min-h-[84px]">
                         {precio ? (
                           <>
-                            <span className="text-3xl font-black text-gray-950">{money(precio.MONTHLY)}</span>
+                            {/* El número grande es POR MES en los dos ciclos. Un
+                                "$540.000" gigante al lado de un "$30.000" no se
+                                puede comparar: parece dieciocho veces más caro
+                                cuando en realidad es más barato. */}
+                            <span className="text-3xl font-black text-gray-950">
+                              {money(billing === "ANNUAL" ? Math.round(precio.ANNUAL / 12) : precio.MONTHLY)}
+                            </span>
                             <span className="text-gray-500 text-xs">/mes</span>
-                            <p className="text-[11px] text-gray-400 mt-1">Después de los 7 días de prueba</p>
+                            <p className="text-[11px] text-gray-400 mt-1">
+                              {billing === "ANNUAL"
+                                ? `${money(precio.ANNUAL)} al año, después de la prueba`
+                                : "Después de los 7 días de prueba"}
+                            </p>
+                            {billing === "ANNUAL" && (
+                              <p className="text-[11px] font-bold text-teal-600 mt-0.5">
+                                Ahorrás {money(precio.MONTHLY * 12 - precio.ANNUAL)}
+                              </p>
+                            )}
                           </>
                         ) : (
                           <>

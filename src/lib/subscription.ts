@@ -276,11 +276,19 @@ export function altaDigitalFree(now: Date = new Date()) {
  *
  * Al vencer, el cron la devuelve a Free. No se cierra nada.
  */
-export function altaDigitalConPrueba(tier: "STARTER" | "PRO", now: Date = new Date()) {
+export function altaDigitalConPrueba(
+  tier: "STARTER" | "PRO",
+  /* El ciclo que eligió. No se cobra nada todavía, pero queda guardado y es el
+     que va a estar puesto cuando llegue el momento de pagar: quien vino con
+     "Anual" desde la pantalla de precios no tiene por qué perder el descuento en
+     el camino, y sin que nada se lo diga. */
+  billing: "MONTHLY" | "ANNUAL" = "MONTHLY",
+  now: Date = new Date(),
+) {
   return {
     role: "DIGITAL",
     tier,
-    plan: "MONTHLY",
+    plan: billing,
     status: "TRIAL",
     trialEndsAt: new Date(now.getTime() + TRIAL_DAYS * 86400000),
     currentPeriodStart: null,
