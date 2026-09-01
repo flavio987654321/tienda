@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Loader2, X, CheckCircle, Ticket, Lock, ArrowLeft, ShieldCheck } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
+import { PLANES, type PlanKey } from "@/lib/planLimits";
 
 /**
  * Ojo: este modal NO recibe el importe.
@@ -17,7 +18,10 @@ import { QRCodeSVG } from "qrcode.react";
  * aunque se equivoque.
  */
 type Props = {
-  plan: "OWNER_BASIC" | "OWNER_PREMIUM" | "AFFILIATE";
+  /* Cualquier plan del registro, y no una lista escrita acá: este modal lo abren
+     ahora el panel de tiendas y el de Productos Digitales. Con la lista a mano,
+     sumar un plan compilaba igual y el modal lo anunciaba con el nombre de otro. */
+  plan: PlanKey;
   billing: "MONTHLY" | "ANNUAL";
   onClose: () => void;
   onSuccess: () => void;
@@ -116,11 +120,14 @@ export default function PaymentModal({ plan, billing, onClose, onSuccess }: Prop
     }
   }
 
-  // Los nombres que ve la gente son "Tienda Pro" y "Tienda Premium". "Básico" es
-  // el valor interno del tier y no existe en ninguna pantalla ni en los Términos:
-  // que apareciera justo en el modal de pago era pedirle plata por un plan que no
-  // figura en ningún lado.
-  const planLabel = plan === "OWNER_PREMIUM" ? "Tienda Premium" : plan === "OWNER_BASIC" ? "Tienda Pro" : "Afiliado";
+  /* El nombre sale del registro de planes, que es el mismo que usa el checkout de
+     Mercado Pago y el mail de confirmación: el plan tiene que llamarse igual en
+     los tres lugares.
+     Era un `? :` escrito a mano con los tres planes de entonces, y cualquier plan
+     nuevo caía en el `else` y se anunciaba como "Afiliado" — o sea, se le pedía
+     plata por un plan con el nombre de otro. "Básico" tampoco aparece: es el
+     valor interno del tier y no existe en ninguna pantalla ni en los Términos. */
+  const planLabel = PLANES[plan].label;
   const billingLabel = billing === "MONTHLY" ? "mensual" : "anual";
 
   const renewalDate = (() => {

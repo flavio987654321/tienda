@@ -236,6 +236,19 @@ const aProMensual = { plan: "OWNER_BASIC", billing: "MONTHLY" } as const;
   check("PAGO-O", q.motivoSinCredito === "PLAN_SIN_PRECIO",
     "un plan gratis no se cotiza y se puede distinguir del resto");
 }
+{
+  /* El camino de una cuenta digital que se suscribe: está en Free y compra
+     Starter. Paga el precio de lista —no hay nada pagado que devolver— y el
+     motivo tiene que decir eso y no "VENCIDA": el plan Free no vence.
+     Free no tiene período, así que se le sacan las fechas a mano. */
+  const enFree = { ...sub("FREE", "MONTHLY", 0, 30, "DIGITAL"), currentPeriodStart: null, currentPeriodEnd: null };
+  const q = cotizarCambioDePlan(enFree, { plan: "DIGITAL_STARTER", billing: "MONTHLY" }, HOY);
+  check("PAGO-P",
+    q.credito === 0 &&
+    q.aPagar === PRECIOS_DIGITALES.DIGITAL_STARTER.MONTHLY &&
+    q.motivoSinCredito === "PLAN_GRATIS",
+    "de Free a Starter se cobra el precio entero, y el motivo no dice que venció nada");
+}
 
 // ── El registro de planes se sostiene solo ─────────────────────────────────
 {

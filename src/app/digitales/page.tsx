@@ -1,44 +1,63 @@
 import Link from "next/link";
-import { Sparkles } from "lucide-react";
+import { Sparkles, CreditCard, ArrowRight } from "lucide-react";
 
-/* La pantalla mínima que cierra el circuito del registro.
+/* El inicio del panel.
  *
  * Se entra acá recién creada la cuenta, así que tiene que decir la verdad: la
- * cuenta existe, es Free y no vence, y el panel se está construyendo. Los pasos
- * de bienvenida van justo acá cuando estén definidos. */
+ * cuenta existe, anda, y las pantallas para cargar productos todavía se están
+ * construyendo. Lo único que ya funciona de punta a punta es Mi plan, y por eso
+ * es lo único que ofrece.
+ *
+ * Los pasos de bienvenida —el asistente de la primera vez— van justo acá cuando
+ * exista el modelo de producto digital: sin él, un asistente que pide "cargá tu
+ * primer producto" no tiene a dónde guardarlo.
+ */
 export default function DigitalesPage() {
   return (
-    <div className="min-h-screen bg-white flex items-center justify-center p-6">
-      <div className="w-full max-w-lg text-center">
-        <div className="w-14 h-14 bg-orange-100 rounded-2xl flex items-center justify-center mx-auto mb-5">
-          <Sparkles className="h-7 w-7 text-orange-600" />
-        </div>
+    <div className="min-h-screen bg-gray-50/60">
+      <div className="mx-auto w-full max-w-2xl px-4 sm:px-6 py-10">
 
-        <h1 className="text-3xl font-black text-gray-950 mb-3">Tu cuenta ya está lista</h1>
-        <p className="text-gray-500 leading-relaxed mb-6">
-          Estás en el plan <strong className="text-gray-700">Free</strong>: es gratis, no vence y no
-          te pedimos ninguna tarjeta. Estamos terminando el panel para cargar tu primer producto
-          digital y armar su página de venta.
-        </p>
+        <div className="text-center">
+          <div className="w-14 h-14 bg-orange-100 rounded-2xl flex items-center justify-center mx-auto mb-5">
+            <Sparkles className="h-7 w-7 text-orange-600" />
+          </div>
 
-        {/* Decía "te avisamos por email" y no había ningún código que mandara
-            ese mail: era una promesa que nadie iba a cumplir, escrita en la
-            primera pantalla que ve alguien que acaba de confiarnos sus datos.
-            Ahora dice sólo lo que es cierto. */}
-        <div className="bg-orange-50/60 border border-orange-100 rounded-2xl p-5 text-left">
-          <p className="text-sm font-bold text-gray-900 mb-1">Tu cuenta queda guardada</p>
-          <p className="text-xs text-gray-500 leading-relaxed">
-            Podés cerrar esta página y volver cuando quieras: el plan Free no vence, así que no hay
-            nada que se te pase.
+          <h1 className="text-3xl font-black text-gray-950 mb-3">Tu cuenta ya está lista</h1>
+          <p className="text-gray-500 leading-relaxed">
+            Estamos terminando las pantallas para cargar tu primer producto digital y armar su
+            página de venta. Mientras tanto, tu plan ya se puede ver y cambiar.
           </p>
         </div>
 
-        <Link
-          href="/"
-          className="inline-block mt-7 text-sm text-orange-600 font-bold hover:text-orange-700 transition-colors"
-        >
-          Volver al inicio
-        </Link>
+        <div className="mt-8 space-y-3">
+          <Link
+            href="/digitales/mi-plan"
+            className="w-full flex items-center justify-between gap-3 px-5 py-4 rounded-2xl border border-orange-200 bg-white hover:border-orange-400 hover:shadow-md transition-all group"
+          >
+            <div className="flex min-w-0 items-center gap-3 text-left">
+              <div className="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center shrink-0">
+                <CreditCard className="h-5 w-5 text-orange-600" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-bold text-gray-900">Mi plan</p>
+                <p className="text-xs text-gray-500">Tu plan, la comisión y los 7 días de prueba</p>
+              </div>
+            </div>
+            <ArrowRight className="h-4 w-4 shrink-0 text-orange-400 group-hover:translate-x-0.5 transition-transform" />
+          </Link>
+
+          {/* Decía "te avisamos por email" y no había ningún código que mandara
+              ese mail: era una promesa que nadie iba a cumplir, escrita en la
+              primera pantalla que ve alguien que acaba de confiarnos sus datos.
+              Ahora dice sólo lo que es cierto. */}
+          <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
+            <p className="text-sm font-bold text-gray-900 mb-1">Tu cuenta queda guardada</p>
+            <p className="text-xs text-gray-500 leading-relaxed">
+              Podés cerrar esta página y volver cuando quieras: el plan Free no vence, así que no
+              hay nada que se te pase.
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );

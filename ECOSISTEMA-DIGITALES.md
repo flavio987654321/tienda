@@ -1061,12 +1061,99 @@ localhost el link no se puede probar en local**: Supabase manda a producción.
 
 ## FASE 3 — El panel `/digitales`
 
-- 🔲 Layout calcado del patrón de `/afiliados`: guarda de sesión Y de rol en el
-  layout, no en la página — desde la página el panel alcanza a dibujarse un
-  segundo antes de patearte, y parece que se rompe.
-- 🔲 Su manifest, su ícono y su clave de localStorage propia (`DIGITALES_VERSION`
-  en `src/lib/app-versions.ts`).
-- 🔲 Las pantallas, decidiendo una por una qué se copia de `/dashboard`.
+### ✅ El esqueleto y Mi Plan — HECHOS (31/08/26)
+
+- ✅ **La barra del panel** (`DigitalesNav`), con **dos entradas y no más**:
+  Inicio y Mi plan. No hay entradas apagadas ni "próximamente" — un menú que
+  nombra pantallas que no están se lee como "el panel está roto", no como "eso
+  viene después". Lo vigila un chequeo que abre cada `href` del nav y verifica
+  que exista su `page.tsx`.
+  - **Una sola lista** para la barra ancha y para el menú del celular. Es la
+    corrección que ya se le había hecho a `AfiliadosNav`, donde eran dos y cuatro
+    pantallas enteras y andando no tenían botón en la computadora.
+  - El corte va en **768** y no en 1024 como afiliados: son dos links, entran
+    cómodos mucho antes.
+  - Adentro de la app instalada, el logo lleva al inicio DEL PANEL y el botón de
+    "ir al sitio principal" no existe. Mismo motivo que en los otros dos: los
+    `<Link>` de Next navegan del lado del cliente, así que el `scope` del
+    manifiesto no encierra a nadie y se terminaba navegando tiendaapps.com
+    adentro de la app, sin barra de direcciones y sin forma de volver.
+- ✅ **El manifiesto, el ícono y `DIGITALES_VERSION`.** Ya pueden ir: estaban
+  escritos desde antes pero sin enchufar, porque un manifiesto a medias instala
+  una app rota. Ahora el panel tiene adentro una pantalla que funciona.
+  - El ícono va en **petróleo** (`#0c3b44`). Los otros dos ya se llevaron los
+    extremos —blanco el de tiendas, grafito el de afiliados— y un tercero en
+    cualquier neutro sería el del medio: a 48 píxeles no se distinguiría. No se
+    usó el naranja del producto porque el logo YA es naranja.
+  - `disableNotifPrompt`, igual que afiliados: hoy a una cuenta digital no le
+    llega ningún push. Pedir permiso de notificaciones a quien no va a recibir
+    ninguna es prometer algo que no se cumple.
+- ✅ **Mi Plan** (`/digitales/mi-plan`), la primera pantalla que dice la verdad
+  entera: el plan, el estado, los días que quedan y qué pasa cuando se terminan.
+  - **No es una copia de la del panel de tiendas**, y no puede serlo: el plan de
+    acá se comporta al revés. Una tienda que no paga se cierra; una cuenta
+    digital vuelve a Free y sigue andando. La pantalla del dueño avisa un cierre;
+    ésta tiene que sacar el miedo, porque el miedo acá sería mentira. Por eso el
+    cartel de **"tu cuenta no se cierra" está en los cinco estados**.
+  - **La comisión en su propia tarjeta**, no perdida entre las funciones: es lo
+    único de la pantalla que le sale plata en cada venta.
+  - Los tres números —comisión, precio y funciones— salen de `COMISION_DIGITAL`,
+    `PRECIOS_DIGITALES` y `featuresDigital`. Ninguno escrito a mano.
+  - Las cuentas se hacen en el **servidor** y bajan resueltas. La pantalla del
+    dueño hace lo contrario —le pasa la suscripción cruda al componente de
+    navegador, que importa `@/lib/subscription`, que arrastra Prisma— y esa
+    cadena no había por qué volver a tenderla.
+- ✅ **El botón de probar 7 días desde adentro** (`/api/digitales/prueba`).
+  `pruebaYaUsada` estaba escrita desde la Fase 2 y **no la llamaba nadie**: ésta
+  es su primera puerta.
+  - ⚠️ Es la **única ruta del proyecto que regala un plan pago**. No cobra, así
+    que no pasa por el webhook ni por ninguno de los controles que ya existen:
+    los suyos son todos propios. Siete frenos, uno por cada forma de romperla —
+    sesión, tope de intentos, el tier de una tabla con `hasOwnProperty` (nunca un
+    cast), el producto tiene que estar abierto, la suscripción tiene que ser
+    DIGITAL, hay que venir de Free, y la prueba tiene que estar sin usar.
+  - La escritura es un `updateMany` con la condición adentro del `where` y no un
+    `update` por id: así un doble click no empuja `trialEndsAt` catorce días.
+  - El estado que queda es **TRIAL y nunca ACTIVE**. El tier lo elige el
+    navegador; un ACTIVE acá sería el plan más caro, gratis y para siempre.
+- ✅ **El aviso del cron ya apunta a Mi Plan.** Estuvo yendo a la raíz del panel
+  mientras esa pantalla no existía, para no mandar a un 404 justo al que acababa
+  de perder su plan.
+
+**Dos cosas que se arreglaron de paso, y son del camino del dinero:**
+
+- ✅ **Las `back_urls` de Mercado Pago dependen del ecosistema.** Estaban fijas en
+  `/dashboard/mi-plan`, que era cierto mientras los únicos planes pagos fueran
+  los de tienda. El que pagaba Starter volvía al panel de tiendas, que le mira el
+  rol y le contesta "esta no es tu cuenta" — justo después de pagar.
+- ✅ **El nombre del plan en el modal de pago sale del registro.** Era un `? :`
+  escrito a mano con los tres planes de entonces, así que **cualquier plan nuevo
+  caía en el `else` y se anunciaba como "Afiliado"**: se le pedía plata por un
+  plan con el nombre de otro.
+- ✅ Y un tercero, interno: quien está en Free y compra Starter ya no sale
+  etiquetado como `VENCIDA` en la cotización, sino como `PLAN_GRATIS` (PAGO-P).
+  El importe siempre fue el correcto; el motivo se vería el día que una pantalla
+  lo cuente, y ahí le estaría diciendo "tu suscripción venció" a alguien que
+  tiene un plan que no vence.
+
+- ✅ **27 chequeos nuevos** en `panel-digitales.check.ts`, más PAGO-P. Total: 58
+  pruebas.
+
+### 🔲 Lo que sigue
+
+- 🔲 **El modelo de producto digital** — la decisión que destraba todo lo demás.
+  Sin él no se pueden escribir Productos, ni Ventas, ni el asistente de
+  bienvenida, ni el despublicado de páginas de más al caer a Free.
+- 🔲 **Inicio de verdad**: las URLs y los próximos pasos. Hoy es una pantalla que
+  dice que el panel se está construyendo, con un solo link a Mi plan.
+- 🔲 **Productos** — crear, subir el archivo, publicar.
+- 🔲 **Ventas**, y recién después **Estadísticas**, cuando haya qué mostrar.
+- 🔲 **El asistente de la primera vez** (los 5 pasos de la competencia). Se diseña
+  ahora, se construye último: depende de las Fases 4 y 5.
+- 🔲 **Verlo en los tres anchos** (360 / 768 / 1280). No se pudo todavía: para
+  entrar al panel hace falta una cuenta digital con sesión, y el ingreso sigue
+  trabado por el captcha de Supabase.
+
 
 ## FASE 4 — La IA
 

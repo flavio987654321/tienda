@@ -176,11 +176,15 @@ export async function POST(req: NextRequest) {
   const client = platformClient();
   const preference = new Preference(client);
 
-  const backUrls = {
-    success: `${APP_URL}/dashboard/mi-plan`,
-    failure: `${APP_URL}/dashboard/mi-plan`,
-    pending: `${APP_URL}/dashboard/mi-plan`,
-  };
+  /* A dónde vuelve la persona cuando Mercado Pago termina, y depende del
+     ecosistema del plan que compró.
+     Estaba fijo en `/dashboard/mi-plan`, que era cierto mientras los únicos
+     planes pagos fueran los de tienda. Con los planes digitales, el que pagaba
+     Starter terminaba en el panel de tiendas: el layout del dashboard mira el
+     rol, ve DIGITAL, y le muestra "esta no es tu cuenta" — justo después de
+     pagar, que es el peor momento para que parezca que algo salió mal. */
+  const volverA = `${APP_URL}${defPlan.ecosistema === "DIGITAL" ? "/digitales/mi-plan" : "/dashboard/mi-plan"}`;
+  const backUrls = { success: volverA, failure: volverA, pending: volverA };
 
   let pref;
   try {

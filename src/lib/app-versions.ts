@@ -25,3 +25,8 @@ export const STORE_VERSION = BUILD_ID;
    aviso de "hay una versión nueva" en su tienda no tiene por qué dejar de verlo
    en el panel de afiliados. */
 export const AFILIADOS_VERSION = BUILD_ID;
+
+/* Y Productos Digitales es la cuarta, con el mismo criterio: comparte el valor
+   —sale del mismo build— y va con su propia clave de localStorage. Quien cierra
+   el aviso de versión nueva en un panel no tiene por qué dejar de verlo en otro. */
+export const DIGITALES_VERSION = BUILD_ID;

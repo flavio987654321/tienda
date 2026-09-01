@@ -382,7 +382,9 @@ export type SinCredito =
   /** Viene de otro producto: una suscripción de tienda no acredita en una digital. */
   | "OTRO_ECOSISTEMA"
   /** El plan destino no se cobra (Free, Afiliado) o la clave no existe. */
-  | "PLAN_SIN_PRECIO";
+  | "PLAN_SIN_PRECIO"
+  /** El plan que tiene HOY no se cobra (Free): no hay nada pagado que devolver. */
+  | "PLAN_GRATIS";
 
 export type CotizacionCambio = {
   destino: { plan: PlanKey; billing: Billing };
@@ -508,6 +510,15 @@ export function cotizarCambioDePlan(
   if (planActual === destino.plan && sub.plan === destino.billing) {
     return sinCredito("MISMA_SUSCRIPCION");
   }
+
+  /* Quien está en Free no acredita nada, y el motivo NO es que se le haya
+     vencido algo: nunca pagó, y su plan no vence. Sin esta rama caía en el "sin
+     fechas" de acá abajo —Free no tiene período— y salía etiquetado como
+     VENCIDA. El importe es el mismo (precio de lista, que es lo correcto), así
+     que hoy no se ve en ningún lado; se ve el día que una pantalla cuente el
+     motivo, y ahí le estaría diciendo "tu suscripción venció" a alguien que
+     tiene un plan que no vence. */
+  if (PLANES[planActual].precios === null) return sinCredito("PLAN_GRATIS");
 
   const inicio = sub.currentPeriodStart?.getTime();
   const fin = sub.currentPeriodEnd?.getTime();
