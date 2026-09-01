@@ -8,18 +8,13 @@ import { Check, ShoppingBag, Zap, Store, Star, ArrowRight, ArrowLeft, PartyPoppe
 import { SiteNav } from "@/components/SiteNav";
 import { SiteFooter } from "@/components/SiteFooter";
 import PaymentModal from "@/components/subscription/PaymentModal";
-import { PRICES, PRO_MAX_ACTIVE_COUPONS, PRO_MAX_LIVE_PROMOTIONS, PRO_MAX_AFFILIATES, PRO_MAX_PRODUCTS, MAX_PRODUCTS_POR_TIENDA, PUSH_CAMPAIGNS_PER_WEEK, PRECIOS_DIGITALES, COMISION_DIGITAL } from "@/lib/planLimits";
+import { PRICES, PRO_MAX_ACTIVE_COUPONS, PRO_MAX_LIVE_PROMOTIONS, PRO_MAX_AFFILIATES, PRO_MAX_PRODUCTS, MAX_PRODUCTS_POR_TIENDA, PUSH_CAMPAIGNS_PER_WEEK, PRECIOS_DIGITALES, COMISION_DIGITAL, DIGITALES_ABIERTO } from "@/lib/planLimits";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { featuresDigital, COPY_DIGITAL, type TierDigital } from "@/lib/planes-digitales";
 
 function money(amount: number) {
   return new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(amount);
 }
-
-/* Se puede mergear sin que nadie lo vea. Mismo recurso que usó el intento
-   anterior: esconder un botón no cierra una URL, pero acá no hay URL nueva —
-   es una sección de una página que ya existe. */
-const DIGITALES_ON = process.env.NEXT_PUBLIC_DIGITALES_ENABLED === "1";
 
 const FAQ_TIENDAS = [
   { q: "¿Necesito tarjeta de crédito para el período de prueba?", a: "No. Los 7 días de prueba son completamente gratis y no te pedimos datos de pago hasta que decides suscribirte." },
@@ -655,7 +650,7 @@ function PreciosContent() {
               <p className="text-center text-xs text-gray-400 mt-3 min-h-[32px]">Sin tarjeta · Sin límite de tiempo</p>
             </div>
 
-            {DIGITALES_ON && (
+            {DIGITALES_ABIERTO && (
             /* ── PRODUCTOS DIGITALES ──
                 No abre otra pantalla: al tocarla, las cuatro tarjetas se
                 reemplazan por sus tres planes, en el mismo lugar y con el mismo
@@ -717,7 +712,7 @@ function PreciosContent() {
 
           {/* ── LOS TRES PLANES DE PRODUCTOS DIGITALES ──
               Reemplaza a la fila de cuatro, no se agrega abajo. */}
-          {DIGITALES_ON && verDigitales && (
+          {DIGITALES_ABIERTO && verDigitales && (
             <div>
               <button
                 onClick={() => setVerDigitales(false)}

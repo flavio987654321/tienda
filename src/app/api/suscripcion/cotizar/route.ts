@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth-session";
 import { prisma } from "@/lib/prisma";
 import { cotizarCambioDePlan, type Billing } from "@/lib/subscription";
-import { PLANES, type PlanKey } from "@/lib/planLimits";
+import { PLANES, planCerrado, type PlanKey } from "@/lib/planLimits";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +22,7 @@ const CICLOS: Billing[] = ["MONTHLY", "ANNUAL"];
  * cotizar, y pedirlo devolvería cero, que en una pantalla se lee como gratis.
  */
 const COMBINACIONES: { plan: PlanKey; billing: Billing }[] = Object.entries(PLANES)
-  .filter(([, def]) => def.precios !== null)
+  .filter(([, def]) => def.precios !== null && !planCerrado(def))
   .flatMap(([plan]) => CICLOS.map((billing) => ({ plan: plan as PlanKey, billing })));
 
 /**

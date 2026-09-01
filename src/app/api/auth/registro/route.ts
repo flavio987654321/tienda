@@ -9,14 +9,9 @@ import { getClientIp } from "@/lib/request-ip";
 import { sendWelcomeEmail } from "@/lib/resend";
 import { altaDigitalFree, altaDigitalConPrueba } from "@/lib/subscription";
 import { TIERS_DIGITALES, type TierDigital } from "@/lib/planes-digitales";
+import { DIGITALES_ABIERTO } from "@/lib/planLimits";
 
 const TERMS_VERSION = CURRENT_TERMS_VERSION;
-
-/* Productos Digitales todavía no está abierto. El interruptor se mira también
-   acá y no sólo en la pantalla: el formulario se puede saltear pegándole
-   directo a esta ruta, y sin esto se podrían crear cuentas de un ecosistema que
-   no existe para nadie más. */
-const DIGITALES_ON = process.env.NEXT_PUBLIC_DIGITALES_ENABLED === "1";
 
 function toSlug(text: string) {
   return text
@@ -97,7 +92,7 @@ export async function POST(req: NextRequest) {
       }
       type = TIPOS_DE_CUENTA[accountType];
     }
-    if (type === "DIGITAL" && !DIGITALES_ON) {
+    if (type === "DIGITAL" && !DIGITALES_ABIERTO) {
       return NextResponse.json({ error: "Las cuentas de Productos Digitales todavía no están disponibles." }, { status: 400 });
     }
 

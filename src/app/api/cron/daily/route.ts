@@ -422,18 +422,25 @@ export async function GET(req: NextRequest) {
 
   let caidasAFree = 0;
 
-  for (const sub of digitales) {
-    // GRACE todavía tiene el plan pago andando: son los días de colchón después
-    // del vencimiento, y ahí no se toca nada.
-    if (getSubscriptionStatus(sub, now) !== "EXPIRED") continue;
+  /* Todo junto y no de a una.
+   *
+   * El cron corre UNA vez por día y tiene 60 segundos (es el techo del plan
+   * gratis de Vercel, declarado arriba en `maxDuration`). Y lo que se corta si se
+   * acaba el tiempo es lo de ABAJO, sin ningún error: la plataforma mata la
+   * función y nadie se entera.
+   *
+   * De a una eran dos consultas por cuenta —el update y el aviso—, así que el
+   * costo crecía con la cantidad de cuentas digitales. Así son tres consultas en
+   * total, sin importar cuántas sean. El estado que se escribe es idéntico para
+   * todas (`caidaAFree()` no depende de la cuenta), que es justo lo que permite
+   * un solo `updateMany`. */
+  const vencidas = digitales.filter((sub) => getSubscriptionStatus(sub, now) === "EXPIRED");
 
-    // Si el par rol+tier no resuelve a ningún plan conocido, el aviso dice "tu
-    // plan pago terminó". El default NO puede ser el label de Free: quedaría un
-    // mail que dice "tu plan Free terminó", que es justo lo que no pasó.
-    const claveDelPlan = planDeSuscripcion(sub);
-    const planPerdido = claveDelPlan ? PLANES[claveDelPlan].label : "pago";
-
-    await prisma.subscription.update({ where: { id: sub.id }, data: caidaAFree() });
+  if (vencidas.length > 0) {
+    await prisma.subscription.updateMany({
+      where: { id: { in: vencidas.map((s) => s.id) } },
+      data: caidaAFree(),
+    });
 
     // 🔲 PENDIENTE (Fase 3/5): despublicar las páginas de venta que pasen el tope
     // de Free. NO se borran — se despublican y ella elige cuáles quedan. Va acá,
@@ -442,15 +449,28 @@ export async function GET(req: NextRequest) {
     // Free se queda con más páginas publicadas de las que su plan permite.
     // Es el lado correcto para equivocarse mientras tanto: de más, no de menos.
 
-    await createNotification({
-      userId: sub.userId,
-      type: "DIGITAL_DOWNGRADE",
-      title: `Tu plan ${planPerdido} terminó`,
-      body: "Tu cuenta sigue abierta y no perdiste nada: tus productos y tus ventas están donde estaban. Volviste al plan Free, así que la comisión por venta sube y las funciones pagas quedan apagadas. Podés volver a Starter o Pro cuando quieras.",
-      link: "/digitales/mi-plan",
-    });
+    await createNotificationMany(
+      vencidas.map((sub) => {
+        /* Si el par rol+tier no resuelve a ningún plan conocido, el aviso dice
+           "tu plan pago terminó". El default NO puede ser el label de Free:
+           quedaría un aviso que dice "tu plan Free terminó", que es justo lo que
+           no pasó. */
+        const claveDelPlan = planDeSuscripcion(sub);
+        const planPerdido = claveDelPlan ? PLANES[claveDelPlan].label : "pago";
+        return {
+          userId: sub.userId,
+          type: "DIGITAL_DOWNGRADE",
+          title: `Tu plan ${planPerdido} terminó`,
+          body: "Tu cuenta sigue abierta y no perdiste nada: tus productos y tus ventas están donde estaban. Volviste al plan Free, así que la comisión por venta sube y las funciones pagas quedan apagadas. Podés volver a Starter o Pro cuando quieras.",
+          /* A la raíz del panel y no a "/digitales/mi-plan", que NO EXISTE: el
+             aviso llevaba a un 404, y justo al que acaba de perder su plan. La
+             pantalla de Mi Plan es de la Fase 3; cuando exista, se apunta ahí. */
+          link: "/digitales",
+        };
+      })
+    );
 
-    caidasAFree++;
+    caidasAFree = vencidas.length;
   }
 
   result.digitales = { revisadas: digitales.length, caidasAFree };

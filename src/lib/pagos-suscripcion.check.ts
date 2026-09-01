@@ -140,6 +140,20 @@ chequear("la cotización deriva sus combinaciones del registro",
   /def\.precios !== null/.test(cotizar) &&
   !/plan: "OWNER_BASIC"/.test(cotizar));
 
+/* ── 7. Un producto cerrado no se cobra ────────────────────────────────────── */
+console.log("\n7) Los planes de un producto que no está abierto no llegan al cobro");
+
+// El interruptor de Productos Digitales no es sólo de dibujo. Sin este freno, con
+// el producto apagado se podía pagar igual pegándole derecho a la ruta: la
+// pantalla no ofrecía el botón, pero la ruta lo aceptaba. Se cobraba de verdad, y
+// lo que se recibía era una pantalla que dice "el panel se está construyendo".
+chequear("la preferencia rechaza un plan de un producto cerrado",
+  /if \(planCerrado\(defPlan\)\)/.test(preferencia));
+chequear("el webhook también lo rechaza antes de escribir",
+  /if \(planCerrado\(defPlan\)\)/.test(webhook));
+chequear("la cotización no publica los precios de un producto cerrado",
+  /!planCerrado\(def\)/.test(cotizar));
+
 console.log(fallos === 0
   ? "\nok — los frenos de las rutas de pago siguen en su lugar"
   : `\nFALLA — ${fallos} chequeo(s) de las rutas de pago`);

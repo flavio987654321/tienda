@@ -11,7 +11,7 @@ import {
   cotizarCambioDePlan, getSubscriptionStatus, PRICES,
   altaDigitalFree, altaDigitalConPrueba, caidaAFree, pruebaYaUsada,
 } from "./subscription";
-import { PLANES, PRECIOS_DIGITALES, planDe, planDeSuscripcion } from "./planLimits";
+import { PLANES, PRECIOS_DIGITALES, planDe, planDeSuscripcion, planCerrado, DIGITALES_ABIERTO } from "./planLimits";
 
 let failed = 0;
 function check(id: string, ok: boolean, desc: string) {
@@ -378,6 +378,48 @@ const aProMensual = { plan: "OWNER_BASIC", billing: "MONTHLY" } as const;
     caida.tier === "FREE" && caida.status === "ACTIVE" &&
     pruebaYaUsada({ ...caida, createdAt: HOY }) === true,
     "al vencer vuelve a Free y la prueba sigue contando como usada");
+}
+
+{
+  /* La excepción de "no vence" tiene que valer SÓLO para Productos Digitales.
+     Afiliado también figura sin precio en el registro, así que una regla escrita
+     como "todo plan sin precio no vence" le cambiaba el comportamiento de
+     callado: una suscripción de afiliado vencida pasaba a estar activa para
+     siempre. Hoy el alta de afiliado no crea suscripción, pero las viejas y las
+     que carga el admin existen igual. */
+  const afiliadoVencido = {
+    role: "AFFILIATE", tier: "BASIC", status: "ACTIVE",
+    trialEndsAt: hace(90), currentPeriodEnd: hace(60), gracePeriodEndsAt: hace(56),
+  };
+  check("VIDA-Q", getSubscriptionStatus(afiliadoVencido, HOY) === "EXPIRED",
+    "una suscripción de afiliado vencida sigue vencida: la excepción es sólo de digitales");
+
+  const afiliadoSinFecha = {
+    role: "AFFILIATE", tier: "BASIC", status: "ACTIVE",
+    trialEndsAt: hace(90), currentPeriodEnd: null, gracePeriodEndsAt: null,
+  };
+  check("VIDA-R", getSubscriptionStatus(afiliadoSinFecha, HOY) === "EXPIRED",
+    "y una sin fecha de vencimiento también, igual que antes de todo esto");
+}
+{
+  /* El interruptor no es sólo de dibujo: decide si los planes se pueden cobrar.
+     Con el producto apagado, sus planes no tienen que llegar nunca al cobro. */
+  const cerrados = (Object.keys(PLANES) as (keyof typeof PLANES)[])
+    .filter((k) => planCerrado(PLANES[k]));
+  const digitalesPagos = (Object.keys(PLANES) as (keyof typeof PLANES)[])
+    .filter((k) => PLANES[k].ecosistema === "DIGITAL" && PLANES[k].precios !== null);
+
+  check("PLAN-D",
+    DIGITALES_ABIERTO ? cerrados.length === 0 : digitalesPagos.every((k) => cerrados.includes(k)),
+    DIGITALES_ABIERTO
+      ? "con el producto abierto, ningún plan queda cerrado"
+      : "con el producto apagado, sus planes pagos no se pueden cobrar");
+
+  check("PLAN-E",
+    (Object.keys(PLANES) as (keyof typeof PLANES)[])
+      .filter((k) => PLANES[k].ecosistema !== "DIGITAL")
+      .every((k) => !planCerrado(PLANES[k])),
+    "el interruptor no toca a los planes de los otros productos");
 }
 
 console.log(failed === 0 ? "\n✅ La cuenta da bien en todos los casos." : `\n❌ ${failed} caso(s) fallan.`);

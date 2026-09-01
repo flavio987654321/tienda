@@ -950,6 +950,59 @@ La diferencia con las tiendas no es un detalle y conviene tenerla escrita:
   venta tiene afiliado Y comisión de plataforma** (las dos salen del mismo
   número).
 
+
+## REVISIÓN COMPLETA — 31/08/26, antes de seguir con la Fase 3
+
+Se revisaron los 13 commits de la rama, con foco en tres preguntas: ¿quedó algo a
+medias?, ¿quedamos vulnerables?, ¿se entiende lo que decimos?
+
+### Lo que apareció y se arregló
+
+- ✅ **Con el producto apagado, sus planes se podían pagar igual.** El interruptor
+  estaba escrito a mano en cuatro pantallas y **ninguna de las tres rutas que
+  mueven plata lo miraba**. Pegándole derecho a `/api/suscripcion/preferencia` se
+  cobraba un plan digital de verdad, y lo que se recibía era la pantalla que dice
+  "el panel se está construyendo". Ahora el interruptor vive en `planLimits`
+  (`DIGITALES_ABIERTO` + `planCerrado`), lo miran las tres rutas, y lo vigilan
+  PLAN-D, PLAN-E y la sección 7 de `pagos-suscripcion.check.ts`.
+- ✅ **El aviso de "bajaste a Free" llevaba a un 404.** Apuntaba a
+  `/digitales/mi-plan`, que es de la Fase 3 y no existe. Justo al que acaba de
+  perder su plan.
+- ✅ **La regla de "no vence" tocaba a los afiliados sin querer.** Estaba escrita
+  como "todo plan sin precio", y Afiliado también figura sin precio: una
+  suscripción de afiliado vencida pasaba a estar activa para siempre, en silencio.
+  Ahora la excepción es sólo de Productos Digitales (VIDA-Q, VIDA-R).
+- ✅ **El cron hacía dos consultas por cuenta.** Corre **una vez por día con 60
+  segundos** (plan gratis de Vercel) y lo que se corta si se acaba el tiempo es lo
+  de abajo, sin ningún error. Ahora son tres consultas en total, no importa
+  cuántas cuentas haya.
+- ✅ **`/digitales` prometía un mail que nadie manda.** Decía "te avisamos por
+  email cuando el panel esté abierto" y no hay código que lo mande. Ahora dice
+  sólo lo que es cierto.
+- ✅ **`esPlanPago` era código muerto** — cero llamadores. Borrado.
+
+### Lo que se revisó y está bien
+
+- Las tres rutas de pago: monto del servidor, candado de ecosistema en las dos
+  que escriben, planes sin precio rechazados, y el alta de un plan pago que
+  devuelve `TRIAL` y nunca `ACTIVE`.
+- El alta: captcha, tope de ritmo, contraseña, términos, edad, email único y
+  rollback del usuario de Supabase si falla la base. Todo corre **antes** de mirar
+  qué tipo de cuenta es, así que lo hereda igual.
+- Las guardas de los tres paneles, ahora las tres preguntando a `panelDeRol`.
+- Ninguna ruta `/digitales/...` referenciada que no exista.
+
+### Lo que queda sabido y anotado
+
+- 🔲 **Nada impide abrir muchas cuentas Free** con correos distintos. Hoy no
+  cuesta nada; **pasa a importar el día que se encienda la IA** (Fase 4).
+- 🔲 **El correo no se verifica** (`email_confirm: true` sin mandar nada). Es así
+  para los cuatro roles desde antes; no lo trajo esto.
+- 🔲 **`pruebaYaUsada` no tiene llamador todavía**: la va a usar el botón de
+  "probar Starter" del panel. La otra mitad de la regla ya está viva.
+- 🔲 Despublicar las páginas de más al caer a Free: necesita el modelo de producto
+  digital (Fase 5). El lugar exacto está marcado en el cron.
+
 ## FASE 3 — El panel `/digitales`
 
 - 🔲 Layout calcado del patrón de `/afiliados`: guarda de sesión Y de rol en el

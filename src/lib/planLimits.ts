@@ -246,11 +246,6 @@ export function planDe(key: unknown): DefinicionPlan | null {
     : null;
 }
 
-/** ¿Este plan se cobra? Los gratis (Free, Afiliado) nunca deben llegar al pago. */
-export function esPlanPago(key: unknown): boolean {
-  return planDe(key)?.precios != null;
-}
-
 /**
  * El camino inverso: de una suscripción guardada, qué plan es.
  *
@@ -280,4 +275,31 @@ export function planDeSuscripcion(sub: { role: string; tier: string } | null): P
 export function ecosistemaDeRol(role: string | null | undefined): Ecosistema | null {
   if (!role) return null;
   return Object.values(PLANES).find((def) => def.role === role)?.ecosistema ?? null;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   EL INTERRUPTOR DE PRODUCTOS DIGITALES
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/**
+ * ¿Está abierto Productos Digitales?
+ *
+ * Vive acá y no copiado en cada pantalla porque no es sólo una decisión de
+ * dibujo: **también decide si sus planes se pueden cobrar**. Estaba escrito a
+ * mano en cuatro archivos y ninguno de los tres que mueven plata lo miraba, así
+ * que con el producto apagado igual se podía pagar un plan digital pegándole
+ * derecho a la ruta de pago. Se cobraba de verdad, y lo que se recibía era una
+ * pantalla que dice "el panel se está construyendo".
+ */
+export const DIGITALES_ABIERTO = process.env.NEXT_PUBLIC_DIGITALES_ENABLED === "1";
+
+/**
+ * Un plan que existe en el registro pero **todavía no se puede comprar**, porque
+ * su producto no está abierto al público.
+ *
+ * Es distinto de un plan sin precio: éste tiene precio y algún día se va a
+ * cobrar. Hoy no.
+ */
+export function planCerrado(def: DefinicionPlan): boolean {
+  return def.ecosistema === "DIGITAL" && !DIGITALES_ABIERTO;
 }

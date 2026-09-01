@@ -215,7 +215,14 @@ export function planVence(sub: { role?: string | null; tier?: string | null }): 
   if (!sub.role || !sub.tier) return true; // sin datos, se asume que vence: falla cerrado
   const plan = planDeSuscripcion({ role: sub.role, tier: sub.tier });
   if (!plan) return true;
-  return PLANES[plan].precios !== null;
+  const def = PLANES[plan];
+  /* Acotado a Productos Digitales a propósito, y no a "todo plan sin precio".
+     Afiliado también figura sin precio en el registro, así que la regla amplia le
+     cambiaba el comportamiento de callado: una suscripción de afiliado pasaba a
+     no vencer nunca. Hoy el alta de afiliado no crea suscripción, pero las viejas
+     y las que carga el admin existen igual, y ESTE no es el cambio que las tiene
+     que tocar. Lo vigila VIDA-Q. */
+  return !(def.ecosistema === "DIGITAL" && def.precios === null);
 }
 
 /**
@@ -230,6 +237,12 @@ export function planVence(sub: { role?: string | null; tier?: string | null }): 
  * El minuto de margen es por las milésimas entre el `new Date()` nuestro y el
  * `now()` de la base. La distancia real que separa los dos casos es de siete
  * días, así que el margen puede ser generoso sin arriesgar nada.
+ *
+ * ⚠️ TODAVÍA NO LA LLAMA NADIE, y es a propósito: la va a usar el botón de
+ * "probar Starter" del panel, que es de la Fase 3. Se escribió ahora porque la
+ * otra mitad de la regla YA está viva —`altaDigitalConPrueba` gasta la prueba
+ * empujando `trialEndsAt` siete días— y sin esta función esa marca no la lee
+ * nadie. Los chequeos VIDA-I a VIDA-K y VIDA-Ñ la vigilan mientras tanto.
  *
  * 🔲 DECISIÓN ABIERTA: hoy la prueba se toma **una sola vez**. Es el lado seguro
  * para equivocarse —una prueba repetible es Starter gratis para siempre, de a

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createHmac, timingSafeEqual } from "crypto";
 import { prisma } from "@/lib/prisma";
 import { periodFor } from "@/lib/subscription";
-import { planDe, ecosistemaDeRol } from "@/lib/planLimits";
+import { planDe, ecosistemaDeRol, planCerrado } from "@/lib/planLimits";
 import { sendSubscriptionConfirmationEmail } from "@/lib/resend";
 import { despues } from "@/lib/despues";
 
@@ -84,6 +84,13 @@ export async function POST(req: NextRequest) {
     const defPlan = planDe(plan);
     if (!defPlan || !defPlan.precios) {
       console.error("WEBHOOK suscripcion: plan inválido o sin precio en metadata", { plan });
+      return NextResponse.json({ ok: true });
+    }
+    /* Igual que en la ruta de la preferencia, y acá también porque ésta es la
+       que escribe: entre que se crea un pago y se acredita puede haberse apagado
+       el producto. Si pasa, no se aplica y se registra fuerte. */
+    if (planCerrado(defPlan)) {
+      console.error("WEBHOOK suscripcion: pago de un plan cerrado — no se aplica, revisar a mano", { plan });
       return NextResponse.json({ ok: true });
     }
     if (!VALID_BILLINGS.has(billing)) {

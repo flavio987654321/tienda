@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth-session";
 import { prisma } from "@/lib/prisma";
 import { periodFor, cotizarCambioDePlan } from "@/lib/subscription";
-import { planDe, ecosistemaDeRol } from "@/lib/planLimits";
+import { planDe, ecosistemaDeRol, planCerrado } from "@/lib/planLimits";
 import { platformClient } from "@/lib/mp";
 import { Preference } from "mercadopago";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -44,6 +44,18 @@ export async function POST(req: NextRequest) {
   const defPlan = planDe(plan);
   if (!defPlan) {
     return NextResponse.json({ error: "Plan inválido" }, { status: 400 });
+  }
+
+  /* Un producto que todavía no está abierto no se cobra, aunque su plan tenga
+     precio y esté en el registro. Sin esto, con Productos Digitales apagado se
+     podía pagar igual pegándole derecho a esta ruta: la pantalla no ofrecía el
+     botón, pero la ruta lo aceptaba. Se cobraba de verdad y lo que se recibía era
+     una pantalla que dice "el panel se está construyendo". */
+  if (planCerrado(defPlan)) {
+    return NextResponse.json(
+      { error: "Ese plan todavía no está disponible." },
+      { status: 400 }
+    );
   }
 
   // Los planes gratis (Afiliado, y el Free de digitales) no se cobran nunca.

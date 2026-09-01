@@ -21,11 +21,15 @@ export default function DigitalesPage() {
           digital y armar su página de venta.
         </p>
 
+        {/* Decía "te avisamos por email" y no había ningún código que mandara
+            ese mail: era una promesa que nadie iba a cumplir, escrita en la
+            primera pantalla que ve alguien que acaba de confiarnos sus datos.
+            Ahora dice sólo lo que es cierto. */}
         <div className="bg-orange-50/60 border border-orange-100 rounded-2xl p-5 text-left">
-          <p className="text-sm font-bold text-gray-900 mb-1">Te avisamos por email</p>
+          <p className="text-sm font-bold text-gray-900 mb-1">Tu cuenta queda guardada</p>
           <p className="text-xs text-gray-500 leading-relaxed">
-            Cuando el panel esté abierto te escribimos al correo con el que te registraste. No hace
-            falta que hagas nada.
+            Podés cerrar esta página y volver cuando quieras: el plan Free no vence, así que no hay
+            nada que se te pase.
           </p>
         </div>
 

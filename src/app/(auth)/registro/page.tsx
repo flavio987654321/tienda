@@ -7,7 +7,7 @@ import { useTurnstile } from "@/components/Turnstile";
 import { validarContrasena, LARGO_MINIMO } from "@/lib/password-policy";
 import { isPwa } from "@/lib/pwa";
 import { trackEvent } from "@/lib/meta-pixel";
-import { PRICES as PLAN_PRICES, PRO_MAX_AFFILIATES, PRO_MAX_ACTIVE_COUPONS, PRO_MAX_PRODUCTS, PRECIOS_DIGITALES, COMISION_DIGITAL } from "@/lib/planLimits";
+import { PRICES as PLAN_PRICES, PRO_MAX_AFFILIATES, PRO_MAX_ACTIVE_COUPONS, PRO_MAX_PRODUCTS, PRECIOS_DIGITALES, COMISION_DIGITAL, DIGITALES_ABIERTO } from "@/lib/planLimits";
 import { featuresDigital, COPY_DIGITAL, TIERS_DIGITALES, type TierDigital } from "@/lib/planes-digitales";
 import Link from "next/link";
 import { motion } from "framer-motion";
@@ -25,11 +25,6 @@ export default function RegistroPage() {
 }
 
 type AccountType = "owner" | "seller" | "buyer" | "digital";
-
-/* El mismo interruptor que usa la página de precios: mientras esté apagado, la
-   cuarta tarjeta no existe. La ruta de registro lo mira también del lado del
-   servidor, así que apagarlo no deja una puerta abierta por atrás. */
-const DIGITALES_ON = process.env.NEXT_PUBLIC_DIGITALES_ENABLED === "1";
 
 // El plan de vendedor/a (seller) es gratuito, por eso no tiene precios acá.
 // Los números salen de lib/subscription, que es de donde los toma el cobro: acá
@@ -119,7 +114,7 @@ const TYPES = [
     ],
     cta: "Elegir plan",
   },
-].filter((t) => t.key !== "digital" || DIGITALES_ON);
+].filter((t) => t.key !== "digital" || DIGITALES_ABIERTO);
 
 const COLOR_MAP: Record<string, { bg: string; border: string; ring: string; text: string; btn: string; check: string; iconBg: string }> = {
   orange: {
@@ -193,7 +188,7 @@ function RegistroContent() {
     rawPlan === "owner" ? "owner" :
     rawPlan === "buyer" ? "buyer" :
     rawPlan === "seller" ? "seller" :
-    rawPlan === "digital" && DIGITALES_ON ? "digital" :
+    rawPlan === "digital" && DIGITALES_ABIERTO ? "digital" :
     null;
   const billingParam = searchParams.get("billing");
   const rawRedirect = searchParams.get("redirect");

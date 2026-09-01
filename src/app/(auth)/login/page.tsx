@@ -6,15 +6,12 @@ import { AppLogo } from "@/components/AppLogo";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { useLoginForm } from "@/hooks/useLoginForm";
+import { DIGITALES_ABIERTO } from "@/lib/planLimits";
 import { isPwa } from "@/lib/pwa";
 import {
   Loader2, Eye, EyeOff, ArrowRight,
   Users, CheckCircle, Store, Wallet, Download,
 } from "lucide-react";
-
-/* El mismo interruptor que la página de precios y el registro: mientras esté
-   apagado, Productos Digitales no aparece en ningún lado. */
-const DIGITALES_ON = process.env.NEXT_PUBLIC_DIGITALES_ENABLED === "1";
 
 function LoginForm() {
   const searchParams = useSearchParams();
@@ -80,10 +77,10 @@ function LoginForm() {
         <div className="relative space-y-6">
           <div>
             <h2 className="text-4xl font-black text-white leading-tight mb-3">
-              Una plataforma,<br />{DIGITALES_ON ? "cuatro" : "tres"} formas de usarla
+              Una plataforma,<br />{DIGITALES_ABIERTO ? "cuatro" : "tres"} formas de usarla
             </h2>
             <p className="text-orange-50/80 leading-relaxed text-sm">
-              {DIGITALES_ON
+              {DIGITALES_ABIERTO
                 ? "Tiendas, afiliados, clientes y productos digitales comparten el mismo acceso."
                 : "Vendedores, afiliados y clientes comparten el mismo acceso."}
             </p>
@@ -124,7 +121,7 @@ function LoginForm() {
             </div>
 
             {/* Productos Digitales */}
-            {DIGITALES_ON && (
+            {DIGITALES_ABIERTO && (
               <div className="bg-white/10 border border-white/20 rounded-2xl p-4 flex items-start gap-4">
                 <div className="w-9 h-9 bg-white/15 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5">
                   <Download className="h-4 w-4 text-white" />
