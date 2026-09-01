@@ -56,10 +56,12 @@ function TarjetaDigital({ tier, isAnnual }: { tier: TierDigital; isAnnual: boole
   return (
     /* Free en gris como la tarjeta de Cliente, los dos pagos en naranja como el
        resto de la página. Sin esto, Free y Starter salían idénticos. */
-    <div className={`rounded-3xl p-8 flex flex-col ${
-      esPro ? "border-2 border-orange-400 bg-orange-50/40"
-        : gratis ? "border border-gray-200 bg-gray-50"
-        : "border border-orange-200 bg-orange-50/40"
+    <div className={`group rounded-3xl p-8 flex flex-col transition-all duration-300 hover:-translate-y-1 ${
+      esPro
+        ? "border-2 border-orange-400 bg-orange-50/40 shadow-lg shadow-orange-500/10 hover:shadow-2xl hover:shadow-orange-500/25"
+        : gratis
+        ? "border border-gray-200 bg-gray-50 hover:border-gray-300 hover:shadow-xl hover:shadow-gray-900/5"
+        : "border border-orange-200 bg-orange-50/40 hover:border-orange-300 hover:shadow-xl hover:shadow-orange-500/15"
     }`}>
       {esPro && (
         <div className="inline-flex self-start items-center gap-1.5 rounded-full bg-orange-600 text-white text-xs font-black px-3 py-1 mb-3">
@@ -119,13 +121,19 @@ function TarjetaDigital({ tier, isAnnual }: { tier: TierDigital; isAnnual: boole
           prometer una suscripción y arrancar una prueba son cosas distintas. */}
       <Link
         href={`/registro?plan=digital&tier=${tier.toLowerCase()}`}
-        className={`flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl text-sm font-bold transition-all ${
-          gratis ? "bg-gray-900 hover:bg-gray-800 text-white" : "bg-orange-600 hover:bg-orange-700 text-white"
+        className={`flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl text-sm font-bold transition-all duration-200 hover:scale-[1.03] active:scale-[0.98] ${
+          gratis
+            ? "bg-gray-900 hover:bg-gray-800 text-white shadow-lg shadow-gray-900/15 hover:shadow-xl hover:shadow-gray-900/25"
+            : "bg-orange-600 hover:bg-orange-700 text-white shadow-lg shadow-orange-500/25 hover:shadow-xl hover:shadow-orange-500/40"
         }`}
       >
-        {gratis ? "Crear cuenta gratis" : "Probar 7 días gratis"} <ArrowRight className="h-4 w-4" />
+        {gratis ? "Crear cuenta gratis" : "Probar 7 días gratis"}
+        <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />
       </Link>
-      <p className="text-center text-xs text-gray-400 mt-3">
+      {/* Mismo alto para los tres: el renglón de los planes pagos parte en dos
+          en pantallas angostas y el del Free no, y sin esto el botón del Free
+          quedaba más abajo que los otros. */}
+      <p className="text-center text-xs text-gray-400 mt-3 min-h-[36px]">
         {gratis ? "Para siempre · Sin tarjeta" : "Sin tarjeta. Si no pagás, volvés a Free."}
       </p>
     </div>

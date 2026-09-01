@@ -841,77 +841,112 @@ function RegistroContent() {
               <ArrowLeft className="h-4 w-4" /> Volver a todas las cuentas
             </button>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {TIERS_DIGITALES.map((tier) => {
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-stretch">
+              {TIERS_DIGITALES.map((tier, i) => {
                 const gratis = tier === "FREE";
                 const esPro = tier === "PRO";
                 const precio = gratis
                   ? null
                   : esPro ? PRECIOS_DIGITALES.DIGITAL_PRO : PRECIOS_DIGITALES.DIGITAL_STARTER;
                 return (
-                  <div
+                  /* Entran de a una, en el orden en que se leen. El retardo es
+                     chico a propósito: alcanza para que la fila no aparezca de
+                     golpe, y no tanto como para que haya que esperarla. */
+                  <motion.div
                     key={tier}
-                    className={`rounded-3xl p-6 flex flex-col ${
-                      esPro ? "border-2 border-orange-400 bg-orange-50/40"
-                        : gratis ? "border border-gray-200 bg-gray-50"
-                        : "border border-orange-200 bg-orange-50/40"
+                    initial={{ opacity: 0, y: 18 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.35, delay: i * 0.08, ease: "easeOut" }}
+                    className={`group relative rounded-3xl p-6 flex flex-col transition-all duration-300 hover:-translate-y-1 ${
+                      esPro
+                        ? "border-2 border-orange-400 bg-orange-50/40 shadow-lg shadow-orange-500/10 hover:shadow-2xl hover:shadow-orange-500/25"
+                        : gratis
+                        ? "border border-gray-200 bg-gray-50 hover:border-gray-300 hover:shadow-xl hover:shadow-gray-900/5"
+                        : "border border-orange-200 bg-orange-50/40 hover:border-orange-300 hover:shadow-xl hover:shadow-orange-500/15"
                     }`}
                   >
+                    {/* El resplandor del plan destacado. Sólo en Pro y sólo al
+                        pasar por encima: si está siempre prendido deja de
+                        destacar nada. */}
                     {esPro && (
-                      <div className="inline-flex self-start items-center gap-1.5 rounded-full bg-orange-600 text-white text-[10px] font-black px-2.5 py-1 mb-3">
-                        <Zap className="h-3 w-3" /> Más completo
-                      </div>
+                      <div className="pointer-events-none absolute -inset-px rounded-3xl bg-gradient-to-b from-orange-400/0 via-orange-400/0 to-orange-400/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                     )}
-                    <h3 className="text-xl font-black text-gray-950 mb-1">{COPY_DIGITAL[tier].nombre}</h3>
-                    <p className="text-gray-500 text-xs mb-4">{COPY_DIGITAL[tier].bajada}</p>
 
-                    <div className="mb-4">
-                      {precio ? (
-                        <>
-                          <span className="text-3xl font-black text-gray-950">{money(precio.MONTHLY)}</span>
-                          <span className="text-gray-500 text-xs">/mes</span>
-                          <p className="text-[11px] text-gray-400 mt-1">Después de los 7 días de prueba</p>
-                        </>
-                      ) : (
-                        <>
-                          <span className="text-3xl font-black text-gray-950">Gratis</span>
-                          <p className="text-[11px] text-gray-400 mt-1">Para siempre · Sin tarjeta</p>
-                        </>
+                    <div className="relative flex flex-col flex-1">
+                      {esPro && (
+                        <div className="inline-flex self-start items-center gap-1.5 rounded-full bg-orange-600 text-white text-[10px] font-black px-2.5 py-1 mb-3 shadow-sm shadow-orange-500/30">
+                          <Zap className="h-3 w-3" /> Más completo
+                        </div>
                       )}
-                    </div>
+                      <h3 className="text-xl font-black text-gray-950 mb-1">{COPY_DIGITAL[tier].nombre}</h3>
+                      <p className="text-gray-500 text-xs mb-4">{COPY_DIGITAL[tier].bajada}</p>
 
-                    <div className={`rounded-xl px-3 py-2 mb-4 border ${gratis ? "border-gray-200 bg-white" : "border-orange-300 bg-orange-100/60"}`}>
-                      <span className={`text-xs font-bold ${gratis ? "text-gray-700" : "text-orange-700"}`}>
-                        Comisión {COMISION_DIGITAL[tier]}% por venta
-                      </span>
-                    </div>
+                      {/* Alto fijo para los tres: Free no tiene la línea de
+                          "después de los 7 días" y sin esto arrancaba la lista
+                          un renglón más arriba que las otras dos, que es lo que
+                          después desalineaba todo hacia abajo. */}
+                      <div className="mb-4 min-h-[68px]">
+                        {precio ? (
+                          <>
+                            <span className="text-3xl font-black text-gray-950">{money(precio.MONTHLY)}</span>
+                            <span className="text-gray-500 text-xs">/mes</span>
+                            <p className="text-[11px] text-gray-400 mt-1">Después de los 7 días de prueba</p>
+                          </>
+                        ) : (
+                          <>
+                            <span className="text-3xl font-black text-gray-950">Gratis</span>
+                            <p className="text-[11px] text-gray-400 mt-1">Para siempre · Sin tarjeta</p>
+                          </>
+                        )}
+                      </div>
 
-                    <ul className="space-y-1.5 mb-5 flex-1">
-                      {featuresDigital(tier).map((f) => (
-                        <li key={f.text} className={`flex items-start gap-2 text-xs ${f.on ? "text-gray-600" : "text-gray-300"}`}>
-                          <CheckCircle className={`h-3.5 w-3.5 shrink-0 mt-0.5 ${f.on ? (gratis ? "text-teal-600" : "text-orange-500") : "text-gray-200"}`} />
-                          {f.text}
-                        </li>
-                      ))}
-                    </ul>
-
-                    <button
-                      type="button"
-                      onClick={() => elegirPlanDigital(tier)}
-                      className={`flex items-center justify-center gap-2 w-full py-3 rounded-2xl text-sm font-bold transition-all ${
+                      <div className={`rounded-xl px-3 py-2 mb-4 border transition-colors ${
                         gratis
-                          ? "bg-gray-900 hover:bg-gray-800 text-white"
-                          : "bg-orange-600 hover:bg-orange-500 text-white"
-                      }`}
-                    >
-                      {gratis ? "Empezar gratis" : "Probar 7 días gratis"} <ArrowRight className="h-4 w-4" />
-                    </button>
-                    {!gratis && (
-                      <p className="text-center text-[11px] text-gray-400 mt-2.5">
-                        Sin tarjeta. Si no pagás, volvés a Free.
-                      </p>
-                    )}
-                  </div>
+                          ? "border-gray-200 bg-white group-hover:border-gray-300"
+                          : "border-orange-300 bg-orange-100/60 group-hover:bg-orange-100"
+                      }`}>
+                        <span className={`text-xs font-bold ${gratis ? "text-gray-700" : "text-orange-700"}`}>
+                          Comisión {COMISION_DIGITAL[tier]}% por venta
+                        </span>
+                      </div>
+
+                      <ul className="space-y-1.5 mb-5 flex-1">
+                        {featuresDigital(tier).map((f) => (
+                          <li key={f.text} className={`flex items-start gap-2 text-xs ${f.on ? "text-gray-600" : "text-gray-300"}`}>
+                            <CheckCircle className={`h-3.5 w-3.5 shrink-0 mt-0.5 ${f.on ? (gratis ? "text-teal-600" : "text-orange-500") : "text-gray-200"}`} />
+                            {f.text}
+                          </li>
+                        ))}
+                      </ul>
+
+                      {/* El botón y su renglón van pegados abajo con `mt-auto`, y
+                          el renglón lo tienen LOS TRES. Cuando sólo lo tenían los
+                          pagos, el botón del Free quedaba más abajo que los otros
+                          dos: no era un problema de altura de tarjeta sino de que
+                          a una le faltaba una línea al pie. */}
+                      <div className="mt-auto">
+                        <button
+                          type="button"
+                          onClick={() => elegirPlanDigital(tier)}
+                          className={`flex items-center justify-center gap-2 w-full py-3 rounded-2xl text-sm font-bold transition-all duration-200 hover:scale-[1.03] active:scale-[0.98] ${
+                            gratis
+                              ? "bg-gray-900 hover:bg-gray-800 text-white shadow-lg shadow-gray-900/15 hover:shadow-xl hover:shadow-gray-900/25"
+                              : "bg-orange-600 hover:bg-orange-500 text-white shadow-lg shadow-orange-500/25 hover:shadow-xl hover:shadow-orange-500/40"
+                          }`}
+                        >
+                          {gratis ? "Empezar gratis" : "Probar 7 días gratis"}
+                          <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />
+                        </button>
+                        {/* Alto reservado para dos renglones. En 768 el renglón
+                            de los planes pagos parte en dos y el del Free no, así
+                            que sin esto el botón del Free quedaba 17 px más abajo
+                            que los otros dos. */}
+                        <p className="text-center text-[11px] text-gray-400 mt-2.5 min-h-[34px]">
+                          {gratis ? "No te pedimos tarjeta nunca." : "Sin tarjeta. Si no pagás, volvés a Free."}
+                        </p>
+                      </div>
+                    </div>
+                  </motion.div>
                 );
               })}
             </div>
