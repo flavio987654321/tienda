@@ -16,6 +16,13 @@ import {
 function LoginForm() {
   const searchParams = useSearchParams();
   const registered = searchParams.get("registered");
+  /* Vuelve de tocar el botón del mail. Lo pone Supabase al redirigir, después de
+     dar el correo por confirmado. */
+  const confirmado = searchParams.get("confirmado") === "1";
+  /* El alta salió bien pero el mail no. La cuenta existe y no se puede usar, así
+     que hay que decirlo y ofrecer el reenvío — callarlo la deja esperando un mail
+     que nunca va a llegar. */
+  const mailFallo = searchParams.get("mail") === "0";
   const redirectTo = searchParams.get("redirect");
   const [inPwa, setInPwa] = useState(false);
 
@@ -33,6 +40,7 @@ function LoginForm() {
     showPass, setShowPass,
     error, info, loading, resetting, captcha,
     entrando: redirecting,
+    faltaConfirmar, reenviando, reenviarConfirmacion,
     handleSubmit, handleForgotPassword,
   } = useLoginForm(() => {
     const safeRedirect = redirectTo && redirectTo.startsWith("/") && !redirectTo.startsWith("//") ? redirectTo : null;
@@ -159,18 +167,33 @@ function LoginForm() {
             </Link>
           )}
 
-          {registered && (
+          {/* Vuelve del mail: el correo quedó confirmado y ya puede entrar. */}
+          {confirmado && (
             <motion.div
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               className="bg-teal-50 border border-teal-200 text-teal-700 px-4 py-3.5 rounded-2xl text-sm mb-6 flex items-center gap-3"
             >
               <CheckCircle className="h-5 w-5 flex-shrink-0" />
-              {registered === "seller"
-                ? "Cuenta de afiliado creada. Ahora inicia sesion."
-                : registered === "digital"
-                ? "Tu cuenta de Productos Digitales está lista, en el plan Free. Iniciá sesión para entrar."
-                : "¡Cuenta creada con éxito! Ahora iniciá sesión."}
+              Correo confirmado. Ya podés entrar con tu email y tu contraseña.
+            </motion.div>
+          )}
+
+          {/* Recién creada la cuenta. El mensaje ya NO dice "iniciá sesión": todavía
+              no puede, y mandarla a probar sería mandarla a un error. Lo que tiene
+              que hacer es abrir el mail. */}
+          {registered && !confirmado && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-orange-50 border border-orange-200 text-orange-800 px-4 py-4 rounded-2xl text-sm mb-6"
+            >
+              <p className="font-bold mb-1">{mailFallo ? "No pudimos mandarte el mail" : "Revisá tu correo"}</p>
+              <p className="leading-relaxed">
+                {mailFallo
+                  ? "Tu cuenta está creada, pero el mail de confirmación no salió. Escribí tu email acá abajo y tocá el botón para que te lo mandemos de nuevo."
+                  : "Tu cuenta está creada. Te mandamos un mail para confirmar tu dirección: abrilo y tocá el botón, y ya podés entrar acá. Si no lo ves, mirá en spam."}
+              </p>
             </motion.div>
           )}
 
@@ -185,6 +208,19 @@ function LoginForm() {
             >
               {error}
             </motion.div>
+          )}
+
+          {/* Aparece sólo cuando el ingreso falló POR eso: al lado del error, y no
+              como un link suelto que nadie va a buscar. */}
+          {(faltaConfirmar || mailFallo) && (
+            <button
+              type="button"
+              onClick={reenviarConfirmacion}
+              disabled={reenviando}
+              className="w-full mb-6 py-3 rounded-2xl text-sm font-bold border border-orange-200 bg-orange-50 text-orange-700 hover:bg-orange-100 transition-all disabled:opacity-60"
+            >
+              {reenviando ? "Enviando..." : "No me llegó, reenviármelo"}
+            </button>
           )}
 
           {info && (

@@ -956,12 +956,51 @@ export async function sendStoreClosedAffiliateEmail({
  * distintas — a una dueña le sirve "cargá tu primer producto" y a un afiliado
  * no le dice nada.
  */
+
+/**
+ * El mail de "acá va tu link otra vez", cuando alguien pide que se lo reenvíen.
+ *
+ * Es a propósito mucho más corto que el de bienvenida: la persona ya lo recibió
+ * una vez, ya sabe qué es la plataforma, y lo único que necesita es el botón. Un
+ * mail largo acá sólo aleja el clic.
+ */
+export async function sendConfirmEmail({ to, confirmLink }: { to: string; confirmLink: string }) {
+  if (!process.env.RESEND_API_KEY) {
+    throw new Error("RESEND_API_KEY no configurada: no se puede reenviar la confirmación");
+  }
+
+  await resend.emails.send({
+    from: FROM,
+    to,
+    subject: "Confirmá tu correo — TiendaApps",
+    html: `
+      <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 16px;color:#111827;background:#fff;">
+        <div style="background:#ea580c;border-radius:16px;padding:28px 24px;margin-bottom:26px;text-align:center;">
+          <p style="color:#fed7aa;font-size:13px;margin:0 0 6px;font-weight:500;">TiendaApps</p>
+          <h1 style="color:#fff;font-size:22px;margin:0;font-weight:800;">Confirmá tu correo</h1>
+        </div>
+        <p style="font-size:15px;color:#374151;margin-bottom:24px;line-height:1.6;">
+          Acá está tu link de nuevo. Es un clic y ya podés entrar a tu cuenta.
+        </p>
+        <div style="text-align:center;margin-bottom:24px;">
+          <a href="${escapeHtml(confirmLink)}" style="display:inline-block;background:#ea580c;color:#fff;text-decoration:none;font-weight:700;font-size:15px;padding:14px 30px;border-radius:12px;">Confirmar mi correo</a>
+        </div>
+        <p style="font-size:13px;color:#6b7280;line-height:1.6;margin-bottom:24px;">
+          Si no creaste ninguna cuenta en TiendaApps, ignorá este mail: sin este clic no pasa nada.
+        </p>
+        <p style="color:#9ca3af;font-size:12px;text-align:center;">TiendaApps — tu tienda online profesional</p>
+      </div>
+    `,
+  });
+}
+
 export async function sendWelcomeEmail({
   to,
   userName,
   role,
   storeName,
   digitalPlan,
+  confirmLink,
 }: {
   to: string;
   userName: string;
@@ -970,11 +1009,24 @@ export async function sendWelcomeEmail({
   /** El plan con el que arrancó una cuenta digital. Sin esto el mail le decía
    *  "arrancás en Free" a quien acababa de elegir Pro. */
   digitalPlan?: "FREE" | "STARTER" | "PRO" | null;
+  /** El link que confirma el correo. Sin esto la cuenta queda creada y sin poder
+   *  entrar, así que este mail dejó de ser informativo: es la llave. */
+  confirmLink?: string | null;
 }) {
-  if (!process.env.RESEND_API_KEY) return;
+  /* Antes esto era un `return` silencioso: sin clave configurada, no se manda y
+     listo. Ahora el mail lleva el link de confirmación, así que callarse sería
+     dejar la cuenta creada y sin forma de entrar, sin que nadie se entere. */
+  if (!process.env.RESEND_API_KEY) {
+    if (confirmLink) throw new Error("RESEND_API_KEY no configurada: no se puede mandar la confirmación");
+    return;
+  }
 
   const hola = escapeHtml(userName) || "ahí";
+  /* Con confirmación pendiente este botón devuelve vacío: llevaría al panel, que
+     todavía la va a rebotar. El único botón del mail tiene que ser el de
+     confirmar. */
   const btn = (href: string, label: string) =>
+    confirmLink ? "" :
     APP_URL
       ? `<div style="text-align:center;margin-bottom:24px;">
            <a href="${APP_URL}${href}" style="display:inline-block;background:#4f46e5;color:#fff;text-decoration:none;font-weight:700;font-size:14px;padding:13px 28px;border-radius:12px;">${label}</a>
@@ -1049,6 +1101,23 @@ export async function sendWelcomeEmail({
       ${btn("/tiendas", "Explorar tiendas")}`;
   }
 
+  /* Cuando hay link de confirmación, ES el mail: se pone arriba de todo y el
+     botón de "ir a mi panel" de cada rol desaparece. Dos botones compitiendo, y
+     uno de ellos llevando a una pantalla que todavía no la va a dejar entrar,
+     es la forma más rápida de que no toque el que importa. */
+  const bloqueConfirmacion = confirmLink
+    ? `<div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:12px;padding:22px 18px;margin-bottom:26px;text-align:center;">
+         <p style="margin:0 0 6px;font-size:17px;font-weight:800;color:#9a3412;">Confirmá tu correo</p>
+         <p style="margin:0 0 18px;font-size:14px;color:#7c2d12;line-height:1.6;">
+           Es un clic. Hasta que lo hagas no vas a poder entrar a tu cuenta.
+         </p>
+         <a href="${escapeHtml(confirmLink)}" style="display:inline-block;background:#ea580c;color:#fff;text-decoration:none;font-weight:700;font-size:15px;padding:14px 30px;border-radius:12px;">Confirmar mi correo</a>
+         <p style="margin:16px 0 0;font-size:12px;color:#9a3412;line-height:1.5;">
+           Si no creaste ninguna cuenta en TiendaApps, ignorá este mail: sin este clic no pasa nada.
+         </p>
+       </div>`
+    : "";
+
   await resend.emails.send({
     from: FROM,
     to,
@@ -1061,6 +1130,7 @@ export async function sendWelcomeEmail({
         </div>
         <p style="font-size:15px;color:#374151;margin-bottom:6px;">Hola <strong>${hola}</strong>,</p>
         <p style="font-size:15px;color:#374151;margin-bottom:24px;">${intro}</p>
+        ${bloqueConfirmacion}
         ${cuerpo}
         <p style="font-size:14px;color:#6b7280;margin-bottom:24px;">
           ¿Alguna duda? Respondé este email y te contestamos.

@@ -147,14 +147,36 @@ export async function POST(req: NextRequest) {
     }
 
     const supabase = createSupabaseAdminClient();
-    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+
+    /* El alta y el link de confirmación, en un solo paso.
+     *
+     * Antes esto era `admin.createUser({ email_confirm: true })`, que quiere decir
+     * literalmente "creá esta cuenta y dala por confirmada". O sea que nunca se le
+     * escribía a la dirección: alguien podía registrarse con el correo de otra
+     * persona y quedarse con él. El de esa persona además no podía volver a
+     * usarlo, y los mails de esa cuenta —incluidos los pedidos, si era una
+     * tienda— le llegaban a un desconocido.
+     *
+     * `generateLink` con tipo "signup" hace las dos cosas de una: crea la cuenta
+     * SIN confirmar y devuelve el link que la confirma. Es la misma función que
+     * usa la recuperación de contraseña desde siempre.
+     *
+     * El mail lo mandamos NOSOTROS por Resend, con el diseño de la plataforma, en
+     * vez de dejárselo a la plantilla por defecto de Supabase.
+     */
+    const redirectTo = `${(process.env.NEXT_PUBLIC_APP_URL ?? "").replace(/\/$/, "")}/login?confirmado=1`;
+
+    const { data: authData, error: authError } = await supabase.auth.admin.generateLink({
+      type: "signup",
       email: normalizedEmail,
       password,
-      email_confirm: true,
-      user_metadata: { name, role: type },
+      options: { data: { name, role: type }, redirectTo },
     });
 
-    if (authError || !authData.user) {
+    const linkDeConfirmacion = authData?.properties?.action_link;
+
+    if (authError || !authData?.user || !linkDeConfirmacion) {
+      console.error("REGISTRO: no se pudo generar el link de confirmación", authError?.message);
       return NextResponse.json({ error: authError?.message || "No se pudo crear el usuario" }, { status: 400 });
     }
 
@@ -217,18 +239,32 @@ export async function POST(req: NextRequest) {
         },
       });
 
-      // Bienvenida. Va acá y no por cron: el alta es el disparador, así llega
-      // en el momento. Sin await a propósito — si Resend está caído o lento, la
-      // cuenta ya está creada y no tiene por qué fallar el registro por un mail.
-      sendWelcomeEmail({
-        to: normalizedEmail,
-        userName: name,
-        role: type,
-        storeName: type === "OWNER" ? storeName : null,
-        digitalPlan: type === "DIGITAL" ? tierDigital : null,
-      }).catch((err) => console.error("[email] sendWelcomeEmail failed:", err));
+      /* El mail de bienvenida ahora es LA LLAVE, y por eso se espera.
+       *
+       * Antes iba sin `await` a propósito: si Resend estaba caído, la cuenta ya
+       * estaba creada y no tenía sentido fallar el registro por un mail
+       * informativo. Ahora ese mail lleva adentro el link de confirmación, así
+       * que si no sale, la cuenta queda creada y **nadie puede entrar**.
+       *
+       * Si falla NO se borra la cuenta: el mail pudo haberse mandado igual y
+       * estar en camino, y borrarla sería peor. Se avisa a la pantalla, que le
+       * ofrece reenviarlo. */
+      let mailEnviado = true;
+      try {
+        await sendWelcomeEmail({
+          to: normalizedEmail,
+          userName: name,
+          role: type,
+          storeName: type === "OWNER" ? storeName : null,
+          digitalPlan: type === "DIGITAL" ? tierDigital : null,
+          confirmLink: linkDeConfirmacion,
+        });
+      } catch (err) {
+        mailEnviado = false;
+        console.error("REGISTRO: no se pudo mandar el mail de confirmación a", normalizedEmail, err);
+      }
 
-      return NextResponse.json({ success: true, userId: user.id });
+      return NextResponse.json({ success: true, userId: user.id, mailEnviado });
     } catch (dbError) {
       // Revertir usuario Supabase para no dejar registros huérfanos
       const { error: deleteError } = await supabase.auth.admin.deleteUser(authData.user.id);

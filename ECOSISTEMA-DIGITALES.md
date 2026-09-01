@@ -1003,6 +1003,62 @@ medias?, ¿quedamos vulnerables?, ¿se entiende lo que decimos?
 - 🔲 Despublicar las páginas de más al caer a Free: necesita el modelo de producto
   digital (Fase 5). El lugar exacto está marcado en el cron.
 
+
+## CONFIRMACIÓN DE CORREO — HECHA (31/08/26)
+
+No es de Productos Digitales: **toca a los cuatro roles**. Se anota acá porque se
+hizo en esta rama y porque salió de revisar la seguridad del alta.
+
+### El agujero
+
+El alta le decía a Supabase `email_confirm: true`, que significa literalmente
+*"creá esta cuenta y dala por confirmada"*. **Nunca se le escribía a la
+dirección.** Alguien podía registrarse con el correo de otra persona y quedárselo:
+
+- el dueño real **no podía volver a usar su propio correo**, quedaba ocupado;
+- los mails de esa cuenta —**los pedidos incluidos**, si era una tienda— le
+  llegaban a un desconocido;
+- y al revés, quien escribía mal su correo nunca recibía nada y no se enteraba
+  de por qué.
+
+Prender "Confirm email" en el panel de Supabase **no lo arreglaba**: esa opción
+vale para la puerta normal, y nosotros entramos por la de administrador, que se
+saltea el paso a propósito.
+
+### Cómo quedó
+
+- ✅ El alta usa `generateLink` de tipo `signup`: crea la cuenta **sin confirmar**
+  y devuelve el link. Es la misma función que usa la recuperación de contraseña
+  desde siempre.
+- ✅ El link viaja en el mail de bienvenida, **por Resend y con nuestro diseño**,
+  no con la plantilla de Supabase. Un solo mail, no dos.
+- ✅ **Ese mail dejó de ser informativo: es la llave.** Ahora se espera, y si no
+  sale la pantalla lo dice y ofrece el reenvío. Antes iba sin `await` y sin clave
+  de Resend se callaba: eso ahora dejaría cuentas creadas sin poder entrar.
+- ✅ El ingreso distingue **"falta confirmar"** de "contraseña equivocada". Sin
+  eso, la persona se ponía a cambiar una contraseña que estaba perfecta.
+- ✅ **"No me llegó, reenviármelo"**, en las dos pantallas de ingreso —incluida la
+  de la app instalada, que es la que no tiene links ni forma de salir.
+- ✅ 13 chequeos nuevos en `confirmacion-correo.check.ts`.
+
+### Lo que hay que saber
+
+- **Las cuentas viejas no se rompen**: todas se crearon con el sello puesto y
+  siguen entrando igual. Esto sólo aplica a las nuevas.
+- 🔲 **El reenvío tiene DOS caminos** —el nuestro con link mágico, y el de
+  Supabase como respaldo— porque no se pudo probar contra un Supabase de prueba y
+  el peor final acá es alguien que se registra y **se queda afuera para siempre**.
+  Cuando se confirme cuál anda, **se borra el otro**.
+- 🔲 **El Site URL de Supabase sigue apuntando a `tienda-six-ecru.vercel.app`.**
+  Funciona, pero los links de los mails llevan a esa dirección en vez de a
+  `tiendaapps.com`. Cambiarlo es su propio movimiento, con su prueba.
+
+### ✅ Lo que ya está hecho en el panel de Supabase
+
+Redirect URLs cargadas (Total: 4): las dos que ya estaban, más
+`http://localhost:3000/**` y `https://www.tiendaapps.com/**`. **Sin la de
+localhost el link no se puede probar en local**: Supabase manda a producción.
+
 ## FASE 3 — El panel `/digitales`
 
 - 🔲 Layout calcado del patrón de `/afiliados`: guarda de sesión Y de rol en el

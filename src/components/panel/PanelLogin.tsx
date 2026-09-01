@@ -56,6 +56,7 @@ export default function PanelLogin({
     password, setPassword,
     showPass, setShowPass,
     error, info, loading, resetting, captcha,
+    faltaConfirmar, reenviando, reenviarConfirmacion,
     handleSubmit, handleForgotPassword,
   } = useLoginForm(() => window.location.reload());
 
@@ -76,6 +77,20 @@ export default function PanelLogin({
           <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3.5 rounded-2xl text-sm mb-6">
             {error}
           </div>
+        )}
+
+        {/* Va también acá y no sólo en /login: ésta es la pantalla de la app
+            instalada, que no tiene links ni barra de direcciones. Quien se queda
+            afuera por falta de confirmar, acá se queda sin ninguna salida. */}
+        {faltaConfirmar && (
+          <button
+            type="button"
+            onClick={reenviarConfirmacion}
+            disabled={reenviando}
+            className="w-full mb-6 py-3 rounded-2xl text-sm font-bold border border-orange-200 bg-orange-50 text-orange-700 hover:bg-orange-100 transition-all disabled:opacity-60"
+          >
+            {reenviando ? "Enviando..." : "No me llegó, reenviármelo"}
+          </button>
         )}
 
         {info && (

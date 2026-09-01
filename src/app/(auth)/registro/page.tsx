@@ -347,15 +347,20 @@ function RegistroContent() {
       trackEvent("StartTrial");
     }
 
+    /* Si el mail de confirmación no salió, la cuenta existe pero no se puede
+       usar. La pantalla de ingreso tiene que decirlo y ofrecer el reenvío, en vez
+       de mandarla a esperar un mail que no viene. */
+    const sufijoMail = data?.mailEnviado === false ? "&mail=0" : "";
+
     setRedirecting(true);
     if (accountType === "buyer") {
-      router.push(`/login?registered=buyer${redirectParam ? `&redirect=${encodeURIComponent(redirectParam)}` : ""}`);
+      router.push(`/login?registered=buyer${sufijoMail}${redirectParam ? `&redirect=${encodeURIComponent(redirectParam)}` : ""}`);
     } else if (accountType === "seller") {
-      router.push(`/login?registered=seller`);
+      router.push(`/login?registered=seller${sufijoMail}`);
     } else if (accountType === "digital") {
-      router.push(`/login?registered=digital`);
+      router.push(`/login?registered=digital${sufijoMail}`);
     } else {
-      router.push(`/login?registered=true`);
+      router.push(`/login?registered=true${sufijoMail}`);
     }
   }
 

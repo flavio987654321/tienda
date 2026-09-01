@@ -51,6 +51,10 @@ export function useLoginForm(alEntrar: () => void) {
   const [resetting, setResetting] = useState(false);
   /** Ya entró y se está yendo. La pantalla puede tapar el formulario con esto. */
   const [entrando, setEntrando] = useState(false);
+  /** El ingreso falló porque falta confirmar el correo. La pantalla usa esto para
+   *  ofrecer el reenvío en vez de dejar a la persona probando contraseñas. */
+  const [faltaConfirmar, setFaltaConfirmar] = useState(false);
+  const [reenviando, setReenviando] = useState(false);
 
   /* Candados sincrónicos contra el doble clic, igual que el `pendingRef` del botón
      de seguir y el `subiendo` de la carga de logo.
@@ -74,6 +78,7 @@ export function useLoginForm(alEntrar: () => void) {
     setLoading(true);
     setError("");
     setInfo("");
+    setFaltaConfirmar(false);
 
     // Todo camino que NO entra tiene que soltar el candado, si no el formulario
     // queda trabado para siempre después del primer intento fallido.
@@ -121,6 +126,18 @@ export function useLoginForm(alEntrar: () => void) {
          perfecta. Son dos problemas distintos y la solución de cada uno también:
          uno se arregla escribiendo bien, el otro recargando. */
       const detalle = (loginError as { message?: string })?.message ?? "";
+
+      /* La cuenta existe y la contraseña está bien: lo que falta es el clic en el
+         mail. Sin este caso aparte, Supabase devuelve un error y nosotros
+         decíamos "Email o contraseña incorrectos" — así que la persona se ponía a
+         cambiar una contraseña que estaba perfecta, y nunca se enteraba de que
+         tenía un mail esperándola. */
+      if (/not confirmed|email_not_confirmed/i.test(detalle)) {
+        setFaltaConfirmar(true);
+        fallar("Te falta confirmar tu correo. Te mandamos un mail cuando te registraste: abrilo y tocá el botón.");
+        return;
+      }
+
       fallar(
         /captcha/i.test(detalle)
           ? "No pudimos verificar que no seas un robot. Recargá la pantalla e intentá de nuevo."
@@ -166,11 +183,35 @@ export function useLoginForm(alEntrar: () => void) {
     }
   }
 
+  /** Reenvía el mail de confirmación. Contesta siempre lo mismo, exista o no la
+   *  cuenta: la ruta tampoco distingue, para que esto no sirva de buscador de
+   *  correos registrados. */
+  async function reenviarConfirmacion() {
+    if (reenviando) return;
+    setReenviando(true);
+    setError("");
+    setInfo("");
+    try {
+      await fetch("/api/auth/reenviar-confirmacion", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim() }),
+      });
+      setInfo("Listo, te lo mandamos de nuevo. Revisá tu correo, y mirá también en spam.");
+      setFaltaConfirmar(false);
+    } catch {
+      setError("No pudimos conectarnos. Revisá tu conexión e intentá de nuevo.");
+    } finally {
+      setReenviando(false);
+    }
+  }
+
   return {
     email, setEmail,
     password, setPassword,
     showPass, setShowPass,
     error, info, loading, resetting, entrando,
+    faltaConfirmar, reenviando, reenviarConfirmacion,
     handleSubmit, handleForgotPassword,
     /* Las dos pantallas dibujan `captcha.widget` y suman `!captcha.ready` al
        `disabled` del botón. `ready` da true cuando el captcha no está
