@@ -1,0 +1,510 @@
+/* ══════════════════════════════════════════════════════════════════════════
+   QUÉ ES UNA PÁGINA DE VENTA
+   ══════════════════════════════════════════════════════════════════════════
+
+   Un producto digital no se vende desde una ficha de catálogo: se vende desde
+   una página larga que arranca prometiendo algo y termina en un botón. Este
+   archivo declara **qué secciones existen, en qué orden, con qué campos y con
+   qué topes**. No dibuja nada.
+
+   ── Por qué un catálogo y no bloques libres ─────────────────────────────────
+
+   Se podría dejar armar la página con bloques sueltos, como un editor. No, y el
+   motivo no es ahorrar trabajo: **esta página la va a llenar la IA** (Fase 4).
+   Con un catálogo fijo, lo que la IA devuelve se compara campo por campo contra
+   esta lista antes de guardarse — sobra algo, se tira; falta algo, se ve. Con
+   bloques libres no hay contra qué comparar y lo que devuelva entra tal cual.
+
+   Y de paso sale gratis lo otro: la pantalla se dibuja leyendo esta lista, así
+   que un campo nuevo no se olvida en ningún lado, y el tope de caracteres es uno
+   solo para el panel, para la ruta que guarda y para la IA.
+
+   ── Una sola pieza dibuja la página ─────────────────────────────────────────
+
+   La vista previa del panel y la página pública tienen que ser EL MISMO código
+   leyendo esto. Si son dos, se separan solas y la previa termina mintiendo —
+   ya nos pasó con la previa de los templates de tienda, que apagaba los clics y
+   mostraba algo que no era.
+
+   ── Sin saltos de línea ─────────────────────────────────────────────────────
+
+   Todos los textos pasan por `limpiarTexto`, que reemplaza los caracteres de
+   control por un espacio. O sea que no hay párrafos con Enter adentro. Es a
+   propósito: si hacen falta dos ideas separadas, son dos campos o dos ítems de
+   una lista, no un campo con un salto. Un texto con saltos se rompe distinto en
+   cada ancho y viaja mal al mail. */
+
+import { limpiarTexto } from "@/lib/texto-limpio";
+
+/* ── Los tipos de campo ─────────────────────────────────────────────────────
+ *
+ *   texto    → una línea (títulos, nombres, texto de botón)
+ *   parrafo  → varias oraciones, pero seguidas (ver arriba: sin saltos)
+ *   lista    → varios ítems iguales, cada uno con sus propios campos
+ *   imagen   → una dirección de imagen
+ *   fecha    → un momento real, en ISO
+ */
+export type TipoCampo = "texto" | "parrafo" | "lista" | "imagen" | "fecha";
+
+export type Campo = {
+  clave: string;
+  /** Lo que se lee arriba de la casilla en el panel. */
+  etiqueta: string;
+  tipo: TipoCampo;
+  /** Tope de caracteres. En `lista`, no aplica. */
+  largo: number;
+  /** El texto con el que arranca la sección. Neutro: no habla de ningún rubro. */
+  ejemplo?: string;
+  /** Debajo de la casilla. Se usa para lo que hay que aclarar, no para adornar. */
+  ayuda?: string;
+  /** Si queda vacío, vuelve al ejemplo. Sólo para lo que rompe la página si falta. */
+  obligatorio?: boolean;
+  /** Sólo en `lista`. */
+  campos?: Campo[];
+  /** Sólo en `lista`: cuántos ítems entran. */
+  maxItems?: number;
+};
+
+export type Seccion = {
+  clave: string;
+  /** El nombre en la lista del panel. */
+  nombre: string;
+  /** Para qué sirve, en una línea. Se muestra al lado del nombre. */
+  para: string;
+  /** `false` = no tiene botón de ocultar. Ver los porqués abajo, uno por uno. */
+  sePuedeOcultar: boolean;
+  /** `false` = queda clavada en su lugar del catálogo. */
+  sePuedeMover: boolean;
+  /** Si arranca encendida en una página nueva. */
+  encendida: boolean;
+  campos: Campo[];
+};
+
+/** Largo de una dirección de imagen. Las de Supabase firmadas son largas. */
+const LARGO_IMAGEN = 600;
+
+/* ══════════════════════════════════════════════════════════════════════════
+   EL CATÁLOGO
+   ══════════════════════════════════════════════════════════════════════════
+
+   El orden de esta lista es el orden con el que nace una página, y es un guion
+   de venta: prometer → mostrar qué es → qué más se lleva → por qué le sirve →
+   qué le pasa si no lo resuelve → cómo funciona → quién más lo compró → cuánto
+   sale → qué pasa si no le gusta → dudas.
+
+   Se puede reordenar casi todo. Lo que NO se puede está marcado y explicado. */
+export const SECCIONES: readonly Seccion[] = [
+  {
+    clave: "portada",
+    nombre: "Portada",
+    para: "Lo primero que se ve, con el botón de comprar",
+    /* No se oculta ni se mueve: es la primera pantalla. Una página sin portada
+       arranca en el medio de una explicación. */
+    sePuedeOcultar: false,
+    sePuedeMover: false,
+    encendida: true,
+    campos: [
+      { clave: "titulo", etiqueta: "Título", tipo: "texto", largo: 120,
+        ejemplo: "La promesa de tu producto, en una línea",
+        ayuda: "Lo que se lleva quien compra, no el nombre del archivo." },
+      { clave: "subtitulo", etiqueta: "Subtítulo", tipo: "parrafo", largo: 300,
+        ejemplo: "Explicá en dos o tres oraciones qué resuelve y para quién es." },
+      { clave: "imagen", etiqueta: "Imagen", tipo: "imagen", largo: LARGO_IMAGEN },
+      { clave: "textoBoton", etiqueta: "Texto del botón", tipo: "texto", largo: 40,
+        ejemplo: "Comprar ahora", obligatorio: true },
+    ],
+  },
+
+  {
+    clave: "producto",
+    nombre: "Qué te llevás",
+    para: "El ebook principal",
+    /* ⚠️ No se oculta: es lo que se compra. Una página de venta sin el producto
+       cobra sin decir qué entrega. */
+    sePuedeOcultar: false,
+    sePuedeMover: true,
+    encendida: true,
+    campos: [
+      { clave: "titulo", etiqueta: "Título de la sección", tipo: "texto", largo: 80,
+        ejemplo: "Qué te llevás", obligatorio: true },
+    ],
+    /* El nombre, la descripción, la imagen y el precio NO se escriben acá: salen
+       del producto. Si se copiaran, el día que se corrige el precio en Productos
+       la página de venta seguiría mostrando el viejo, y ese número es el que la
+       persona lee antes de pagar. */
+  },
+
+  {
+    clave: "bonos",
+    nombre: "Bonos de regalo",
+    para: "Lo que va incluido y gratis con la compra",
+    sePuedeOcultar: true,
+    sePuedeMover: true,
+    encendida: true,
+    campos: [
+      { clave: "titulo", etiqueta: "Título", tipo: "texto", largo: 80,
+        ejemplo: "Además te llevás gratis" },
+      { clave: "subtitulo", etiqueta: "Bajada", tipo: "parrafo", largo: 200,
+        ejemplo: "Todo esto viene incluido, sin costo extra." },
+    ],
+    /* Los bonos salen de los hijos del producto, igual que arriba. Acá sólo va
+       el encabezado. Y si no hay ningún bono cargado, la sección no se dibuja
+       aunque esté encendida: un título de regalos sin regalos abajo es peor que
+       no tenerlo. */
+  },
+
+  {
+    clave: "beneficios",
+    nombre: "Beneficios",
+    para: "Qué gana quien lo compra",
+    sePuedeOcultar: true,
+    sePuedeMover: true,
+    encendida: true,
+    campos: [
+      { clave: "titulo", etiqueta: "Título", tipo: "texto", largo: 80,
+        ejemplo: "Qué vas a lograr" },
+      { clave: "items", etiqueta: "Beneficios", tipo: "lista", largo: 0, maxItems: 8,
+        campos: [
+          { clave: "texto", etiqueta: "Beneficio", tipo: "texto", largo: 140 },
+        ] },
+    ],
+  },
+
+  {
+    clave: "dolores",
+    nombre: "Esto te suena",
+    para: "El problema que la persona tiene hoy",
+    sePuedeOcultar: true,
+    sePuedeMover: true,
+    encendida: true,
+    campos: [
+      { clave: "titulo", etiqueta: "Título", tipo: "texto", largo: 80,
+        ejemplo: "¿Te pasa esto?" },
+      { clave: "items", etiqueta: "Situaciones", tipo: "lista", largo: 0, maxItems: 6,
+        campos: [
+          { clave: "texto", etiqueta: "Situación", tipo: "texto", largo: 140 },
+        ] },
+    ],
+  },
+
+  {
+    clave: "comoFunciona",
+    nombre: "Cómo funciona",
+    para: "Qué pasa después de pagar",
+    sePuedeOcultar: true,
+    sePuedeMover: true,
+    encendida: true,
+    campos: [
+      { clave: "titulo", etiqueta: "Título", tipo: "texto", largo: 80,
+        ejemplo: "Cómo lo recibís" },
+      { clave: "pasos", etiqueta: "Pasos", tipo: "lista", largo: 0, maxItems: 5,
+        campos: [
+          { clave: "titulo", etiqueta: "Paso", tipo: "texto", largo: 60 },
+          { clave: "detalle", etiqueta: "Detalle", tipo: "parrafo", largo: 200 },
+        ] },
+    ],
+  },
+
+  {
+    clave: "opiniones",
+    nombre: "Opiniones",
+    para: "Lo que dijeron quienes ya lo compraron",
+    sePuedeOcultar: true,
+    /* Apagada por defecto, y no es un descuido: una página recién creada no
+       tiene ninguna opinión de verdad, así que si naciera encendida lo primero
+       que hace la herramienta es pedirte que inventes tres. */
+    sePuedeMover: true,
+    encendida: false,
+    campos: [
+      { clave: "titulo", etiqueta: "Título", tipo: "texto", largo: 80,
+        ejemplo: "Lo que dicen" },
+      { clave: "items", etiqueta: "Opiniones", tipo: "lista", largo: 0, maxItems: 6,
+        campos: [
+          { clave: "nombre", etiqueta: "Nombre", tipo: "texto", largo: 60,
+            ayuda: "De una persona real que te lo haya dicho." },
+          { clave: "texto", etiqueta: "Qué dijo", tipo: "parrafo", largo: 300 },
+        ] },
+    ],
+  },
+
+  {
+    clave: "precio",
+    nombre: "Precio",
+    para: "Cuánto sale y el botón de comprar",
+    /* ⚠️ **No se oculta.** En el de la competencia sí, y esa combinación permite
+       armar una página que dice "Comprar ahora" y no muestra el precio en ningún
+       lado hasta el checkout. Eso genera devoluciones, y acá la ley de defensa
+       del consumidor pide que el precio esté a la vista antes de pagar. */
+    sePuedeOcultar: false,
+    sePuedeMover: true,
+    encendida: true,
+    campos: [
+      { clave: "titulo", etiqueta: "Título", tipo: "texto", largo: 80,
+        ejemplo: "Todo esto por" },
+      { clave: "aclaracion", etiqueta: "Aclaración", tipo: "texto", largo: 120,
+        ejemplo: "Pago único. Lo recibís al instante por mail." },
+      { clave: "textoBoton", etiqueta: "Texto del botón", tipo: "texto", largo: 40,
+        ejemplo: "Comprar ahora", obligatorio: true },
+    ],
+  },
+
+  {
+    clave: "garantia",
+    nombre: "Garantía",
+    para: "Qué pasa si no le sirve",
+    sePuedeOcultar: true,
+    sePuedeMover: true,
+    encendida: false,
+    campos: [
+      { clave: "titulo", etiqueta: "Título", tipo: "texto", largo: 80,
+        ejemplo: "Garantía" },
+      { clave: "texto", etiqueta: "Qué prometés", tipo: "parrafo", largo: 400,
+        ayuda: "Lo que escribas acá es una promesa que después tenés que cumplir vos." },
+    ],
+    /* Apagada por defecto porque es una obligación que se asume, no una decoración
+       que se prende sin leer. Aparte de lo que se prometa acá, en Argentina una
+       compra a distancia tiene 10 días de arrepentimiento por ley: eso corre
+       igual, se escriba o no. */
+  },
+
+  {
+    clave: "preguntas",
+    nombre: "Preguntas frecuentes",
+    para: "Las dudas que frenan la compra",
+    sePuedeOcultar: true,
+    sePuedeMover: true,
+    encendida: true,
+    campos: [
+      { clave: "titulo", etiqueta: "Título", tipo: "texto", largo: 80,
+        ejemplo: "Preguntas frecuentes" },
+      { clave: "items", etiqueta: "Preguntas", tipo: "lista", largo: 0, maxItems: 10,
+        campos: [
+          { clave: "pregunta", etiqueta: "Pregunta", tipo: "texto", largo: 140 },
+          { clave: "respuesta", etiqueta: "Respuesta", tipo: "parrafo", largo: 500 },
+        ] },
+    ],
+  },
+
+  /* ── Las dos de urgencia ────────────────────────────────────────────────────
+   *
+   * 🔲 **Decisión pendiente (02/09/26).** En el de la competencia las dos son
+   * mentira configurable: el reloj es una cuenta regresiva que se reinicia, los
+   * cupos son un número que se escribe a mano ("Quedan 7") y no cuenta nada, y
+   * el cartelito de "Fulana compró hace 5 minutos" es una sección que se llena
+   * sola con nombres.
+   *
+   * Acá quedaron con la forma honesta, y las dos nacen apagadas:
+   *
+   *   - La oferta termina en una FECHA de verdad, y cuando termina el precio
+   *     tiene que cambiar de verdad (el `comparePrice` del producto).
+   *   - El aviso de ventas no tiene nada para escribir: muestra compras reales
+   *     de ese producto, que ya están en la base.
+   *
+   * Si se decide la versión inventada, el cambio es chico y va acá. Pero la
+   * herramienta se la damos nosotros, así que la decisión es nuestra también. */
+  {
+    clave: "urgencia",
+    nombre: "Oferta con fecha",
+    para: "Una cuenta regresiva que termina de verdad",
+    sePuedeOcultar: true,
+    sePuedeMover: true,
+    encendida: false,
+    campos: [
+      { clave: "texto", etiqueta: "Texto", tipo: "texto", largo: 60,
+        ejemplo: "Oferta por tiempo limitado" },
+      { clave: "hasta", etiqueta: "Termina el", tipo: "fecha", largo: 40,
+        ayuda: "Cuando llegue esa fecha el cartel desaparece y el precio vuelve al normal." },
+    ],
+  },
+
+  {
+    clave: "avisoDeVentas",
+    nombre: "Aviso de ventas",
+    para: "Muestra compras reales y recientes de este producto",
+    sePuedeOcultar: true,
+    sePuedeMover: true,
+    encendida: false,
+    campos: [],
+  },
+
+  {
+    clave: "pie",
+    nombre: "Pie de página",
+    para: "Tus datos de contacto y los enlaces legales",
+    /* ⚠️ **No se oculta.** Acá van el contacto de quien vende y los enlaces
+       legales. Quien compra tiene que poder encontrar a quién reclamarle, y esa
+       parte no es una preferencia de diseño. */
+    sePuedeOcultar: false,
+    sePuedeMover: false,
+    encendida: true,
+    campos: [
+      { clave: "texto", etiqueta: "Texto libre", tipo: "parrafo", largo: 300,
+        ayuda: "Opcional. El contacto y los enlaces legales van solos." },
+    ],
+  },
+];
+
+/* SEO no es una sección: no se dibuja en la página, es lo que ve Google. Y no va
+   acá porque el producto YA tiene `seoTitle` y `seoDescription` en la base —
+   duplicarlo sería tener dos títulos de Google para la misma cosa. */
+
+/* ══════════════════════════════════════════════════════════════════════════
+   LO QUE SE GUARDA
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/** Una sección, como queda guardada. El orden del array ES el orden de la página. */
+export type SeccionGuardada = {
+  clave: string;
+  visible: boolean;
+  campos: Record<string, unknown>;
+};
+
+export type PaginaVenta = { secciones: SeccionGuardada[] };
+
+export function buscarSeccion(clave: string): Seccion | null {
+  return SECCIONES.find((s) => s.clave === clave) ?? null;
+}
+
+/* ── Normalizar ─────────────────────────────────────────────────────────────
+ *
+ * Todo lo que llega de afuera pasa por acá, y sale una página válida SIEMPRE.
+ * No devuelve errores: recorta, descarta lo que no conoce y completa lo que
+ * falta. El motivo es que esta misma función atiende dos puertas distintas —el
+ * panel y la IA— y ninguna de las dos puede dejar la página en un estado que la
+ * pantalla no sepa dibujar.
+ *
+ * Lo que garantiza, y por qué cada cosa:
+ *
+ *   - **Sólo claves del catálogo.** Una sección inventada no entra. Sin esto, lo
+ *     que devuelva la IA se guarda tal cual y después se dibuja.
+ *   - **Ninguna repetida.** Dos "precio" en la misma página son dos botones de
+ *     comprar con dos números.
+ *   - **Están todas.** Si falta una, se agrega apagada en su lugar. Así una
+ *     sección nueva del catálogo aparece sola en las páginas viejas.
+ *   - **Lo que no se puede ocultar, va visible.** El precio y el producto no se
+ *     apagan mandando `visible: false` a mano.
+ *   - **Lo que no se puede mover, vuelve a su lugar.** La portada primera, el
+ *     pie último, aunque el pedido diga otra cosa.
+ *   - **Todo texto recortado a su tope**, con `limpiarTexto`, igual que en el
+ *     resto de la app.
+ */
+export function normalizarContenido(valor: unknown): PaginaVenta {
+  const entrada = leerSecciones(valor);
+
+  /* Lo que vino, en su orden, sin desconocidas y sin repetidas. */
+  const vistas = new Set<string>();
+  const enOrden: SeccionGuardada[] = [];
+  for (const cruda of entrada) {
+    const clave = typeof cruda?.clave === "string" ? cruda.clave : null;
+    if (!clave || vistas.has(clave)) continue;
+    const def = buscarSeccion(clave);
+    if (!def) continue;
+    vistas.add(clave);
+    enOrden.push(normalizarSeccion(def, cruda));
+  }
+
+  /* Las que faltan se agregan en el lugar que tienen en el catálogo. Van con su
+     `encendida` de fábrica sólo si la página venía vacía; si la persona ya
+     ordenó su página y aparece una sección nueva, entra apagada para no
+     cambiarle la página sin avisar. */
+  const paginaNueva = enOrden.length === 0;
+  for (let i = 0; i < SECCIONES.length; i++) {
+    const def = SECCIONES[i];
+    if (vistas.has(def.clave)) continue;
+    const nueva = normalizarSeccion(def, null);
+    if (!paginaNueva && def.sePuedeOcultar) nueva.visible = false;
+    enOrden.splice(Math.min(i, enOrden.length), 0, nueva);
+  }
+
+  /* Las clavadas vuelven a su lugar del catálogo, venga lo que venga. */
+  const sueltas = enOrden.filter((s) => buscarSeccion(s.clave)?.sePuedeMover !== false);
+  const finales: SeccionGuardada[] = [...sueltas];
+  for (let i = 0; i < SECCIONES.length; i++) {
+    const def = SECCIONES[i];
+    if (def.sePuedeMover) continue;
+    const fija = enOrden.find((s) => s.clave === def.clave);
+    if (fija) finales.splice(Math.min(i, finales.length), 0, fija);
+  }
+
+  return { secciones: finales };
+}
+
+function leerSecciones(valor: unknown): Array<Record<string, unknown>> {
+  if (typeof valor === "string") {
+    try {
+      return leerSecciones(JSON.parse(valor));
+    } catch {
+      return [];
+    }
+  }
+  if (!valor || typeof valor !== "object") return [];
+  const lista = (valor as { secciones?: unknown }).secciones;
+  if (!Array.isArray(lista)) return [];
+  /* Tope duro por si llega un array enorme: el catálogo tiene un largo fijo, así
+     que más que eso es basura o un intento de hacernos trabajar de más. */
+  return lista.slice(0, SECCIONES.length * 4).filter(
+    (x): x is Record<string, unknown> => !!x && typeof x === "object" && !Array.isArray(x)
+  );
+}
+
+function normalizarSeccion(def: Seccion, cruda: Record<string, unknown> | null): SeccionGuardada {
+  const visible = def.sePuedeOcultar ? cruda?.visible !== false : true;
+  const crudos = cruda?.campos;
+  const origen: Record<string, unknown> =
+    crudos && typeof crudos === "object" && !Array.isArray(crudos)
+      ? (crudos as Record<string, unknown>)
+      : {};
+
+  const campos: Record<string, unknown> = {};
+  for (const campo of def.campos) {
+    campos[campo.clave] = normalizarCampo(campo, origen[campo.clave], cruda === null);
+  }
+  return { clave: def.clave, visible: cruda === null ? def.encendida && visible : visible, campos };
+}
+
+function normalizarCampo(campo: Campo, valor: unknown, esNueva: boolean): unknown {
+  if (campo.tipo === "lista") {
+    const hijos = campo.campos ?? [];
+    const tope = campo.maxItems ?? 0;
+    if (!Array.isArray(valor)) return [];
+    const items: Array<Record<string, unknown>> = [];
+    for (const cruda of valor.slice(0, tope)) {
+      if (!cruda || typeof cruda !== "object" || Array.isArray(cruda)) continue;
+      const item: Record<string, unknown> = {};
+      let algo = false;
+      for (const hijo of hijos) {
+        const limpio = normalizarCampo(hijo, (cruda as Record<string, unknown>)[hijo.clave], false);
+        item[hijo.clave] = limpio;
+        if (typeof limpio === "string" && limpio.length > 0) algo = true;
+      }
+      /* Un ítem con todos los campos vacíos dibuja una fila en blanco. */
+      if (algo) items.push(item);
+    }
+    return items;
+  }
+
+  if (campo.tipo === "fecha") {
+    if (typeof valor !== "string") return null;
+    const t = Date.parse(valor);
+    return Number.isFinite(t) ? new Date(t).toISOString() : null;
+  }
+
+  if (campo.tipo === "imagen") {
+    const limpio = limpiarTexto(valor, campo.largo);
+    /* Sólo direcciones https. Un `javascript:` o un `data:` acá terminan
+       adentro de un atributo de la página pública. */
+    return limpio && /^https:\/\//i.test(limpio) ? limpio : "";
+  }
+
+  const limpio = limpiarTexto(valor, campo.largo);
+  if (limpio) return limpio;
+  /* Vacío es vacío, salvo lo que rompe la página: el botón de comprar sin texto
+     es un botón que no se lee. */
+  if (campo.obligatorio) return campo.ejemplo ?? "";
+  return esNueva ? campo.ejemplo ?? "" : "";
+}
+
+/** La página con la que nace un producto: todo por defecto. */
+export function contenidoPorDefecto(): PaginaVenta {
+  return normalizarContenido(null);
+}

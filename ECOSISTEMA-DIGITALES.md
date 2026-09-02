@@ -1807,7 +1807,85 @@ Anotado ahora que se sabe qué forma tiene (ver 2.3). Cuelga del producto, en
 
 - 🔲 El armado de la página: gancho, producto, precio tachado, bonos, prueba
   social, dolores, testimonios, apilado de valor, 3 pasos, garantía, preguntas
-  frecuentes, cierre y **barra fija abajo**.
+  frecuentes, cierre y **barra fija abajo**. → **el catálogo de secciones ya
+  está**, ver abajo; falta dibujarlas.
+
+### ✅ Qué es una página de venta — el catálogo, HECHO (02/09/26)
+
+Vive en `src/lib/pagina-venta.ts`, con 34 chequeos en su `.check.ts`. No dibuja
+nada: declara **qué secciones existen, con qué campos, con qué topes y cuáles no
+se pueden apagar**. Salió de mirar el "Diseño de tienda → Contenido" de la
+competencia, que tiene 13 secciones con ocultar y reordenar, y una vista previa
+que se edita desde los dos lados.
+
+**Por qué un catálogo cerrado y no bloques libres.** No es por ahorrar trabajo:
+esta página la va a llenar la IA (Fase 4). Con un catálogo fijo, lo que la IA
+devuelve se compara campo por campo contra la lista antes de guardarse — sobra
+algo, se tira; falta algo, se ve. Con bloques libres no hay contra qué comparar.
+De yapa, la pantalla se dibuja leyendo la misma lista, así que un campo nuevo no
+se olvida en ningún lado.
+
+**Las 13 secciones**, en orden de guion de venta: portada · qué te llevás ·
+bonos · beneficios · esto te suena · cómo funciona · opiniones · precio ·
+garantía · preguntas frecuentes · oferta con fecha · aviso de ventas · pie.
+
+**Lo que NO se puede apagar, y por qué cada uno:**
+
+| Sección | Motivo |
+|---|---|
+| **Precio** | En el de la competencia sí se puede ocultar, y esa combinación arma una página que dice "Comprar ahora" sin mostrar cuánto sale hasta el checkout. Acá el precio se ve antes de pagar, siempre. |
+| **Qué te llevás** | Una página que cobra tiene que decir qué entrega. |
+| **Pie** | Ahí está el contacto de quien vende: a quién reclamarle no es una preferencia de diseño. |
+| **Portada** | Es la primera pantalla. Sin ella la página arranca en el medio de una explicación. |
+
+Y no alcanza con no dibujar el botón: mandar `visible: false` a mano tampoco
+funciona, está chequeado (NOR-D).
+
+**Lo que se decidió de paso:**
+
+- **El producto no se copia a la página.** Nombre, descripción, imagen y precio
+  salen del producto; en la sección va sólo el encabezado. Si se copiaran, el día
+  que se corrige el precio en Productos la página seguiría mostrando el viejo — y
+  ese número es el que la persona lee antes de pagar.
+- **Sin saltos de línea.** Todo pasa por `limpiarTexto`. Dos ideas separadas son
+  dos campos o dos ítems, no un campo con Enter adentro. (La competencia llegó a
+  lo mismo: su Hero tiene bloques de texto sueltos, no un campo con saltos.)
+- **Las imágenes, sólo `https:`.** Un `javascript:` o un `data:` acá terminan
+  adentro de un atributo de la página pública.
+- **Opiniones, garantía y las dos de urgencia nacen apagadas.** Una página recién
+  creada no tiene ninguna opinión de verdad; encenderla de fábrica es pedir que
+  se inventen tres. La garantía es una obligación que se asume, no una decoración
+  que se prende sin leer.
+- **SEO no es una sección**: el producto ya tiene `seoTitle` y `seoDescription`.
+- **Una sección nueva del catálogo aparece sola en las páginas viejas, pero
+  apagada.** No se le cambia la página a nadie sin avisar.
+
+**Descartado de lo que tienen ellos:**
+
+- 🚫 **Código (CSS)** y 🚫 **Secciones HTML insertadas** — la segunda es la
+  primera entrando por la ventana, y peor: con HTML se meten formularios y
+  scripts, no sólo colores. En una página que cobra, no.
+- 🚫 **Recursos** como sección aparte — su propio cartel dice que existe "para
+  usarlos en el código HTML/CSS personalizado". Sin CSS se queda sin motivo. Las
+  imágenes de la página se suben desde adentro de Contenido.
+
+**🔲 Decisión pendiente: la urgencia.** En el de ellos las tres son mentira
+configurable — el reloj se reinicia, "Quedan 7 cupos" es un número escrito a mano
+que no cuenta nada, y "Fulana compró hace 5 minutos" es una sección que se llena
+sola. Quedaron con la forma honesta y apagadas: la oferta termina en una **fecha
+real** y ahí el precio cambia de verdad, y el aviso de ventas no tiene nada para
+escribir porque muestra **compras reales** de ese producto. Si se decide la
+versión inventada el cambio es chico, pero la herramienta se la damos nosotros.
+
+**🔲 Lo que sigue**, en este orden: la página pública (una sola pieza dibuja la
+página, usada también como vista previa — si son dos se separan solas y la previa
+termina mintiendo, ya pasó con los templates de tienda) → el editor con ocultar y
+ordenar → la previa PC/celular al lado → tocar a la derecha y que se abra la
+casilla a la izquierda.
+
+**Falta dónde guardarlo.** La columna en `Product` va con la migración de la
+Fase 5, junto con la de la Fase 5 bis, para no tocar la base de producción dos
+veces.
 - 🔲 **Bonos** — modelo, pantalla y checkout. No existe nada en el proyecto.
 - 🔲 **Upsell** — idem.
 - 🔲 **La escasez atada a datos reales** (contador, cupos, avisos de compra). Ver
