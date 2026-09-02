@@ -44,8 +44,9 @@ import { limpiarTexto } from "@/lib/texto-limpio";
  *   imagen   → una dirección de imagen
  *   fecha    → un momento real, en ISO
  *   numero   → un entero con piso y techo
+ *   icono    → UN símbolo: un emoji, no una letra
  */
-export type TipoCampo = "texto" | "parrafo" | "lista" | "imagen" | "fecha" | "numero";
+export type TipoCampo = "texto" | "parrafo" | "lista" | "imagen" | "fecha" | "numero" | "icono";
 
 /* ── El aviso que el editor le manda a su previa ────────────────────────────
  *
@@ -84,6 +85,14 @@ export type Campo = {
   campos?: Campo[];
   /** Sólo en `lista`: cuántos ítems entran. */
   maxItems?: number;
+  /**
+   * Sólo en `icono`: los que se ofrecen de un clic.
+   *
+   * No son la única opción: se puede pegar cualquier emoji. Están porque el
+   * teclado de emojis de Windows es Win+punto y mucha gente no lo sabe — sin
+   * esta fila, el campo queda vacío en la mayoría de las páginas.
+   */
+  sugerencias?: string[];
   /** Sólo en `numero`: piso, techo y con cuál arranca. */
   min?: number;
   max?: number;
@@ -220,6 +229,8 @@ export const SECCIONES: readonly Seccion[] = [
          competencia y es la diferencia más grande entre su página y la nuestra. */
       { clave: "items", etiqueta: "Beneficios", tipo: "lista", largo: 0, maxItems: 8,
         campos: [
+          { clave: "icono", etiqueta: "Ícono", tipo: "icono", largo: 8,
+            sugerencias: ["✅", "⭐", "🚀", "💡", "🎯", "🔒", "⚡", "📈", "🧠", "🏆", "❤️", "🔧"] },
           { clave: "titulo", etiqueta: "Beneficio", tipo: "texto", largo: 90 },
           { clave: "detalle", etiqueta: "Por qué te sirve", tipo: "parrafo", largo: 220 },
         ] },
@@ -241,6 +252,8 @@ export const SECCIONES: readonly Seccion[] = [
         ejemplo: "Si alguna de estas te suena, esto es para vos." },
       { clave: "items", etiqueta: "Situaciones", tipo: "lista", largo: 0, maxItems: 6,
         campos: [
+          { clave: "icono", etiqueta: "Ícono", tipo: "icono", largo: 8,
+            sugerencias: ["😩", "😕", "⏳", "💸", "❌", "😰", "🌀", "🤯", "🚧", "📉"] },
           { clave: "titulo", etiqueta: "Situación", tipo: "texto", largo: 90 },
           { clave: "detalle", etiqueta: "Por qué duele", tipo: "parrafo", largo: 220 },
         ] },
@@ -1040,6 +1053,34 @@ function normalizarSeccion(def: Seccion, cruda: Record<string, unknown> | null):
   };
 }
 
+/**
+ * El primer símbolo de un texto, o vacío.
+ *
+ * ⚠️ Dos cosas que parecen detalle y no lo son:
+ *
+ *   · Un emoji puede ser VARIOS caracteres —una bandera, o uno con modificador
+ *     de color— así que cortar con `slice(0, 1)` deja medio dibujo, que se ve
+ *     como un cuadradito. `Intl.Segmenter` los cuenta como uno solo.
+ *   · Las letras y los números se descartan. En el campo de la competencia se
+ *     escribe cualquier cosa; si alguien escribe "hola" acá, no puede quedar
+ *     una "h" suelta adentro del círculo donde va el ícono.
+ */
+function primerSimbolo(texto: string): string {
+  const t = texto.trim();
+  if (!t) return "";
+
+  let primero: string;
+  if (typeof Intl !== "undefined" && "Segmenter" in Intl) {
+    const partes = new Intl.Segmenter("es", { granularity: "grapheme" }).segment(t);
+    primero = [...partes][0]?.segment ?? "";
+  } else {
+    primero = Array.from(t)[0] ?? "";
+  }
+
+  if (/[\p{L}\p{N}]/u.test(primero)) return "";
+  return primero;
+}
+
 function normalizarCampo(campo: Campo, valor: unknown, esNueva: boolean): unknown {
   if (campo.tipo === "lista") {
     const hijos = campo.campos ?? [];
@@ -1059,6 +1100,10 @@ function normalizarCampo(campo: Campo, valor: unknown, esNueva: boolean): unknow
       if (algo) items.push(item);
     }
     return items;
+  }
+
+  if (campo.tipo === "icono") {
+    return primerSimbolo(limpiarTexto(valor, campo.largo) ?? "");
   }
 
   if (campo.tipo === "numero") {

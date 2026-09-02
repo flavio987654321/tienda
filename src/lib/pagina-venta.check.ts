@@ -624,6 +624,46 @@ check("ANCHO-B", /overflow-x-clip/.test(dibujante),
 check("ANCHO-C", !/overflow-x-hidden/.test(dibujante),
   "y se recorta con clip, no con hidden, que dejaría un scroll vertical propio");
 
+/* ── El ícono de cada ítem ────────────────────────────────────────────────── */
+
+/* El campo es libre —se pega el emoji que se quiera— pero lo que llega se limpia
+   igual. El de la competencia es un texto suelto: lo que escribas ahí es lo que
+   aparece adentro del círculo, sea lo que sea. */
+
+const conIcono = SECCIONES.filter((s) => s.campos.some((c) =>
+  (c.campos ?? []).some((h) => h.tipo === "icono")));
+check("ICO-A", conIcono.length === 2,
+  "los beneficios y las situaciones llevan ícono propio");
+
+check("ICO-B", conIcono.every((s) => s.campos.some((c) =>
+  (c.campos ?? []).some((h) => h.tipo === "icono" && (h.sugerencias ?? []).length >= 6))),
+  "y cada uno ofrece varios de un clic: el teclado de emojis es Win+punto y casi nadie lo sabe");
+
+const icono = (v: unknown) => {
+  const p = normalizarContenido({ secciones: [{ clave: "beneficios", campos: {
+    items: [{ titulo: "algo", icono: v }] } }] });
+  const items = seccion(p, "beneficios")?.campos.items as Array<Record<string, string>>;
+  return items[0]?.icono;
+};
+
+check("ICO-C", icono("🔧") === "🔧" && icono("  ⭐  ") === "⭐",
+  "un emoji entra tal cual, con espacios o sin ellos");
+
+/* ⚠️ Un emoji puede ser VARIOS caracteres: una bandera son dos, y uno con
+   modificador de color son cuatro. Cortando con slice(0,1) queda medio dibujo,
+   que en pantalla es un cuadradito. */
+check("ICO-D", icono("🇦🇷") === "🇦🇷" && icono("👍🏽") === "👍🏽",
+  "y uno de varios caracteres no se corta por la mitad");
+
+check("ICO-E", ["hola", "h", "7", "", "   ", null, 5, {}, []].every((v) => icono(v) === ""),
+  "una letra, un número o cualquier otra cosa quedan en nada: nunca una 'h' en el círculo");
+
+check("ICO-F", icono("⭐🚀🎯") === "⭐",
+  "y de varios queda uno solo: el círculo tiene lugar para uno");
+
+check("ICO-G", dibujante.includes('{i.icono || (esDolor ? "!" : "✓")}'),
+  "sin ícono elegido se dibuja el de siempre, no un hueco");
+
 /* ── Las letras ───────────────────────────────────────────────────────────── */
 
 check("LET-A", TIPOGRAFIAS.length === 3 && new Set(TIPOGRAFIAS.map((t) => t.clave)).size === 3,

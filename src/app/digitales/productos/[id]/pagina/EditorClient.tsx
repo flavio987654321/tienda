@@ -119,6 +119,68 @@ function CasillaTexto({
   );
 }
 
+/**
+ * El ícono de un ítem: un emoji, o ninguno.
+ *
+ * Se puede pegar cualquiera —el campo es libre—, pero la fila de sugerencias
+ * está porque el teclado de emojis de Windows es Win+punto y mucha gente no lo
+ * sabe. Sin esa fila el campo queda vacío en casi todas las páginas.
+ *
+ * Lo que se escriba pasa igual por `normalizarContenido`: se queda un solo
+ * símbolo, y si es una letra o un número se descarta. O sea que no puede quedar
+ * una "h" adentro del círculo del ícono.
+ */
+function CasillaIcono({
+  campo, valor, onChange,
+}: { campo: Campo; valor: string; onChange: (v: string) => void }) {
+  const sugerencias = campo.sugerencias ?? [];
+
+  return (
+    <div className="block">
+      <span className="mb-1 flex items-center justify-between gap-2">
+        <span className="text-xs font-bold text-gray-600 panel-oscuro:text-gray-300">
+          {campo.etiqueta}
+        </span>
+        {valor && (
+          <button
+            type="button"
+            onClick={() => onChange("")}
+            className="text-[11px] font-medium text-gray-400 hover:text-gray-600 panel-oscuro:hover:text-gray-200"
+          >
+            Sacar
+          </button>
+        )}
+      </span>
+      <div className="flex flex-wrap items-center gap-1">
+        <input
+          type="text"
+          value={valor}
+          maxLength={campo.largo}
+          aria-label={campo.etiqueta}
+          placeholder="—"
+          onChange={(e) => onChange(e.target.value)}
+          className="w-12 shrink-0 rounded-xl border border-gray-200 bg-white px-2 py-2 text-center text-base text-gray-900 focus:border-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-100 panel-oscuro:border-gray-700 panel-oscuro:bg-gray-900 panel-oscuro:text-gray-100 panel-oscuro:focus:ring-orange-500/20"
+        />
+        {sugerencias.map((e) => (
+          <button
+            key={e}
+            type="button"
+            onClick={() => onChange(e)}
+            aria-pressed={valor === e}
+            className={`grid h-8 w-8 place-items-center rounded-lg text-base transition ${
+              valor === e
+                ? "bg-orange-100 ring-2 ring-orange-300 panel-oscuro:bg-orange-500/20 panel-oscuro:ring-orange-500/40"
+                : "hover:bg-gray-100 panel-oscuro:hover:bg-gray-800"
+            }`}
+          >
+            {e}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function CasillaImagen({
   campo, valor, onChange, onError,
 }: { campo: Campo; valor: string; onChange: (v: string) => void; onError: (m: string) => void }) {
@@ -227,14 +289,14 @@ function CasillaLista({
         {items.map((it, i) => (
           <div key={i} className="rounded-xl border border-gray-200 bg-gray-50/60 p-3 panel-oscuro:border-gray-700 panel-oscuro:bg-gray-800/40">
             <div className="grid gap-2">
-              {hijos.map((h) => (
-                <CasillaTexto
-                  key={h.clave}
-                  campo={h}
-                  valor={typeof it[h.clave] === "string" ? it[h.clave] : ""}
-                  onChange={(v) => cambiar(i, h.clave, v)}
-                />
-              ))}
+              {hijos.map((h) => {
+                const v = typeof it[h.clave] === "string" ? it[h.clave] : "";
+                const alCambiar = (x: string) => cambiar(i, h.clave, x);
+                if (h.tipo === "icono") {
+                  return <CasillaIcono key={h.clave} campo={h} valor={v} onChange={alCambiar} />;
+                }
+                return <CasillaTexto key={h.clave} campo={h} valor={v} onChange={alCambiar} />;
+              })}
             </div>
             <div className="mt-2 flex items-center gap-1">
               <button

@@ -414,13 +414,20 @@ function Contenido({ clave, campos, tono, datos }: {
                 key={n}
                 className={`flex items-start gap-3 bg-[color:var(--pv-tarjeta)] p-4 ${estilo.tarjeta}`}
               >
+                {/* El ícono que eligió quien vende, y si no eligió ninguno el de
+                    siempre. Con ícono propio se saca el círculo de color: un
+                    emoji adentro de una pastilla verde queda como un parche. */}
                 <span
                   aria-hidden="true"
                   className={`mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full text-sm font-bold ${
-                    esDolor ? "bg-rose-100 text-rose-600" : "bg-emerald-100 text-emerald-700"
+                    i.icono
+                      ? "text-base"
+                      : esDolor
+                        ? "bg-rose-100 text-rose-600"
+                        : "bg-emerald-100 text-emerald-700"
                   }`}
                 >
-                  {esDolor ? "!" : "✓"}
+                  {i.icono || (esDolor ? "!" : "✓")}
                 </span>
                 <span className="min-w-0">
                   {i.titulo && (
