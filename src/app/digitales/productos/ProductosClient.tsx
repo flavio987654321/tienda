@@ -11,7 +11,7 @@ import {
   COPY_ROL, topeDe, loQueFalta, validarCampos, LARGO_TITULO, LARGO_DESCRIPCION,
   type RolDigital,
 } from "@/lib/productos-digitales";
-import { MAX_PDF_MB, TIPO_PDF, validarSubida } from "@/lib/subida-digital";
+import { MAX_PDF_MB, TIPO_PDF, validarSubida, avisoDePeso } from "@/lib/subida-digital";
 
 export type ProductoEnPantalla = {
   id: string;
@@ -125,6 +125,9 @@ function Tarjeta({ p, acc }: { p: ProductoEnPantalla; acc: Acciones }) {
   });
   const ocupado = acc.trabajando === p.id;
   const subiendoEste = acc.subiendoArchivo === p.id;
+  /* La MISMA regla que usa el servidor al confirmar. Si el aviso cambia, cambia
+     en los dos lados a la vez. */
+  const avisoPeso = p.archivoPeso ? avisoDePeso(p.archivoPeso) : null;
 
   return (
     <div className={`rounded-2xl border ${tinta.borde} bg-white panel-oscuro:bg-gray-900 p-4 sm:p-5 shadow-sm`}>
@@ -187,6 +190,18 @@ function Tarjeta({ p, acc }: { p: ProductoEnPantalla; acc: Acciones }) {
             <p className="mt-2 text-xs text-gray-400 panel-oscuro:text-gray-500 truncate">
               Archivo: {p.archivoNombre}
               {p.archivoPeso ? ` · ${Math.round(p.archivoPeso / 1024 / 1024 * 10) / 10} MB` : ""}
+            </p>
+          )}
+
+          {/* ⚠️ El aviso del peso vive ACÁ, calculado del peso guardado, y no en
+              un cartel que aparece al terminar de subir.
+              Estaba puesto con `setError` justo antes del `reload`, así que se
+              perdía siempre: nadie lo vio nunca. Acá se ve cada vez que mira el
+              producto, que además es cuando sirve — el archivo pesado no molesta
+              el día que se sube, molesta en cada venta. */}
+          {avisoPeso && (
+            <p className="mt-1.5 text-[11px] leading-relaxed text-amber-700 panel-oscuro:text-amber-400">
+              {avisoPeso}
             </p>
           )}
 
@@ -486,6 +501,7 @@ export default function ProductosClient({
 
     enVuelo.current = true;
     setSubiendoArchivo(p.id);
+    const soltar = () => { enVuelo.current = false; setSubiendoArchivo(null); };
     try {
       const permisoRes = await fetch("/api/digitales/archivo/firma", {
         method: "POST",
@@ -495,6 +511,7 @@ export default function ProductosClient({
       const permiso = await permisoRes.json().catch(() => ({}));
       if (!permisoRes.ok || !permiso.urlDeSubida || !permiso.ruta) {
         setError(permiso.error ?? "No pudimos preparar la subida.");
+        soltar();
         return;
       }
 
@@ -510,6 +527,7 @@ export default function ProductosClient({
            que el problema era el tope del bucket. */
         console.error("[archivo] Supabase rechazó la subida:", subida.status, await subida.text().catch(() => ""));
         setError("El archivo no se pudo subir. Probá de nuevo.");
+        soltar();
         return;
       }
 
@@ -521,21 +539,21 @@ export default function ProductosClient({
       const datos = await cierre.json().catch(() => ({}));
       if (!cierre.ok) {
         setError(datos.error ?? "El archivo subió pero no lo pudimos guardar.");
+        soltar();
         return;
       }
 
-      /* El aviso de peso no bloquea nada: el archivo ya está. Se muestra en el
-         mismo lugar que los errores porque es lo que la persona está mirando. */
-      if (datos.aviso) setError(datos.aviso as string);
+      /* El aviso del peso NO se muestra acá. Se mostraba con `setError` y después
+         venía este `reload`, así que se perdía siempre: la persona no lo vio
+         nunca. Ahora vive en la tarjeta, calculado del peso guardado — se ve cada
+         vez que mira el producto y no una sola vez, que además es cuando sirve. */
       window.location.reload();
+      /* El cerrojo NO se suelta acá: la página se está yendo, y devolverle el
+         botón durante ese rato es ofrecerle subir dos veces. Mismo criterio que
+         guardar, publicar y borrar. */
     } catch {
       setError("No pudimos subir el archivo. Revisá tu conexión.");
-    } finally {
-      /* Igual que en el resto de la pantalla: el cerrojo se suelta sólo en los
-         caminos que NO recargan. Después de un `reload` no hay nada que soltar,
-         y soltarlo antes deja una ventana para el segundo clic. */
-      enVuelo.current = false;
-      setSubiendoArchivo(null);
+      soltar();
     }
   }
 

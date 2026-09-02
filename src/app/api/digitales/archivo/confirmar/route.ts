@@ -6,6 +6,7 @@ import {
   BUCKET_DIGITALES,
   MAX_PDF_BYTES,
   refDeArchivo,
+  rutaDeRef,
   nombreDeArchivo,
   avisoDePeso,
 } from "@/lib/subida-digital";
@@ -99,10 +100,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Esa ruta no es tuya" }, { status: 403 });
   }
 
-  /* Y que el producto sea de esta cuenta, por lo mismo que en la firma. */
+  /* Y que el producto sea de esta cuenta, por lo mismo que en la firma.
+     Se trae el `archivoPath` de ahora porque si esto es un reemplazo hay que
+     borrar el de antes; ver abajo. */
   const producto = await prisma.product.findFirst({
     where: { id: productoId, store: { ownerId: user.id } },
-    select: { id: true },
+    select: { id: true, archivoPath: true },
   });
   if (!producto) {
     return NextResponse.json({ error: "Ese producto no existe" }, { status: 404 });
@@ -139,6 +142,32 @@ export async function POST(req: NextRequest) {
     },
     select: { id: true, archivoNombre: true, archivoPeso: true },
   });
+
+  /* ⚠️ Borrar el archivo de antes, si esto era un reemplazo.
+   *
+   * Sin esto, cada vez que alguien cambia el PDF queda uno viejo en el bucket
+   * que **ya no apunta a ningún lado y no se puede alcanzar**: lo pagamos para
+   * siempre sin que le sirva a nadie.
+   *
+   * Y no es sólo desprolijo, es una puerta: el permiso se puede pedir 30 veces
+   * por hora, y a 50 MB cada uno son **1,5 GB por hora por cuenta** — en un plan
+   * gratis que no pide tarjeta. Con el borrado, reemplazar cien veces deja un
+   * archivo, no cien.
+   *
+   * Va DESPUÉS de guardar y a propósito: si se borrara antes y el guardado
+   * fallara, el producto quedaría apuntando a un archivo que ya no está. Y si
+   * falla el borrado no se corta el pedido —el producto ya apunta bien, que es
+   * lo que importa—; queda el registro para poder barrerlo después. */
+  const anterior = rutaDeRef(producto.archivoPath);
+  if (anterior && anterior !== ruta) {
+    const borrado = await fetch(`${config.supabaseUrl}/storage/v1/object/${BUCKET_DIGITALES}/${anterior}`, {
+      method: "DELETE",
+      headers: { apikey: config.serviceRoleKey, Authorization: `Bearer ${config.serviceRoleKey}` },
+    }).catch(() => null);
+    if (!borrado?.ok) {
+      console.error("[archivo-digital] quedó huérfano:", anterior, borrado?.status ?? "sin respuesta");
+    }
+  }
 
   return NextResponse.json({
     ok: true,

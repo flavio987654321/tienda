@@ -127,6 +127,26 @@ check("BUCK-C", new RegExp(`allowed_mime_types[^\\n]*${TIPO_PDF}`).test(firma) |
 check("BUCK-D", /file_size_limit/.test(firma),
   "y el tope de tamaño, que es el que manda cuando los bytes ya no pasan por acá");
 
+/* ── El reemplazo no puede dejar basura ───────────────────────────────────── */
+
+/* ⚠️ Cada reemplazo dejaba el PDF anterior en el bucket, sin apuntar a ningun
+   lado y sin forma de alcanzarlo: lo pagamos para siempre. Y no era solo
+   desprolijo — el permiso se pide 30 veces por hora y a 50 MB cada uno son
+   1,5 GB por hora por cuenta, en un plan gratis que no pide tarjeta. */
+const confirmar = readFileSync("src/app/api/digitales/archivo/confirmar/route.ts", "utf8");
+check("VIEJO-A", /method: "DELETE"/.test(confirmar),
+  "al reemplazar se borra el archivo anterior");
+
+/* Se lo saca de lo GUARDADO, no de algo que mande el navegador: si la ruta a
+   borrar viniera en el pedido, alguien borraria el archivo de otra persona. */
+check("VIEJO-B", /rutaDeRef\(producto\.archivoPath\)/.test(confirmar),
+  "y la ruta a borrar sale de la base, nunca del pedido");
+
+/* Borrar ANTES de guardar y que el guardado falle deja el producto apuntando a
+   un archivo que ya no esta: se publica, se vende y no se entrega. */
+check("VIEJO-C", confirmar.indexOf("prisma.product.update") < confirmar.indexOf("method: \"DELETE\""),
+  "y se borra DESPUES de guardar, no antes");
+
 console.log(fallos === 0
   ? "\nok — el archivo del producto entra por una sola puerta y no queda servible"
   : `\nFALLA — ${fallos} chequeo(s) del archivo del producto`);
