@@ -4,13 +4,14 @@ import Link from "next/link";
 import { useRef, useState } from "react";
 import {
   Plus, Gift, TrendingUp, BookOpen, Loader2, Pencil, Trash2, AlertTriangle, Image as ImageIcon,
-  Eye, EyeOff, X, ArrowUpRight,
+  Eye, EyeOff, X, ArrowUpRight, Upload,
 } from "lucide-react";
 import { COPY_DIGITAL, type TierDigital } from "@/lib/planes-digitales";
 import {
   COPY_ROL, topeDe, loQueFalta, validarCampos, LARGO_TITULO, LARGO_DESCRIPCION,
   type RolDigital,
 } from "@/lib/productos-digitales";
+import { MAX_PDF_MB, TIPO_PDF, validarSubida } from "@/lib/subida-digital";
 
 export type ProductoEnPantalla = {
   id: string;
@@ -63,21 +64,6 @@ function borradorNuevo(rol: RolDigital, padreId: string | null): Borrador {
 const MAX_IMAGEN_MB = 4;
 
 /**
- * La pantalla de productos.
- *
- * ── Por qué una sola lista y no tres ─────────────────────────────────────────
- * Un producto, un bono y un upsell son la misma cosa con distinto papel, así que
- * comparten formulario, tarjeta y validación. Tres pantallas serían tres copias
- * que se desincronizan de a una.
- *
- * ── Qué NO hace todavía ──────────────────────────────────────────────────────
- * Subir el archivo. Y por eso **publicar está bloqueado hasta que exista**: lo
- * corta `loQueFalta`, acá y otra vez en el servidor. Un producto publicado sin
- * archivo se puede comprar y no se puede entregar — se cobra la plata y no llega
- * nada. Es el peor final posible de este ecosistema, así que la puerta queda
- * cerrada hasta que la subida esté hecha de verdad.
- */
-/**
  * Lo que la tarjeta y el grupo necesitan de la pantalla.
  *
  * Va como un objeto en vez de ocho props sueltas porque los dos componentes lo
@@ -87,9 +73,12 @@ const MAX_IMAGEN_MB = 4;
 type Acciones = {
   tier: TierDigital;
   trabajando: string | null;
+  /** El id del producto cuyo archivo se está subiendo, o `null`. */
+  subiendoArchivo: string | null;
   setBorrador: (b: Borrador) => void;
   publicar: (p: ProductoEnPantalla, publicado: boolean) => void;
   borrar: (p: ProductoEnPantalla) => void;
+  subirArchivo: (p: ProductoEnPantalla, file: File) => void;
   hijosDe: (padreId: string, rol: RolDigital) => ProductoEnPantalla[];
 };
 
@@ -112,6 +101,7 @@ function Tarjeta({ p, acc }: { p: ProductoEnPantalla; acc: Acciones }) {
     name: p.name,
   });
   const ocupado = acc.trabajando === p.id;
+  const subiendoEste = acc.subiendoArchivo === p.id;
 
   return (
     <div className={`rounded-2xl border ${tinta.borde} bg-white panel-oscuro:bg-gray-900 p-4 sm:p-5 shadow-sm`}>
@@ -177,7 +167,48 @@ function Tarjeta({ p, acc }: { p: ProductoEnPantalla; acc: Acciones }) {
             </p>
           )}
 
+          {/* ⚠️ El aviso del peso va ANTES de elegir el archivo, no después.
+              La competencia abre el explorador directo y no dice el límite hasta
+              que ya elegiste: con el caso real que tenemos anotado —una guía de
+              46 páginas de 117 MB— eso es esperar la subida entera para que
+              falle. Y no dice "máximo 50 MB", que no le indica a nadie qué
+              hacer, sino la instrucción que resuelve el problema. */}
+          {!p.tieneArchivo && (
+            <p className="mt-2 text-[11px] leading-relaxed text-gray-400 panel-oscuro:text-gray-500">
+              PDF de hasta {MAX_PDF_MB} MB. Si te pasás, exportalo en calidad para pantalla.
+            </p>
+          )}
+
           <div className="mt-3 flex flex-wrap items-center gap-2">
+            {/* La etiqueta ES el botón: un `<input type="file">` no se puede
+                disfrazar, así que se esconde y se lo dispara desde acá. */}
+            <label
+              className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-colors ${
+                subiendoEste || ocupado
+                  ? "opacity-50 cursor-not-allowed border border-gray-200 panel-oscuro:border-gray-700 text-gray-500"
+                  : p.tieneArchivo
+                    ? "cursor-pointer border border-gray-200 panel-oscuro:border-gray-700 text-gray-700 panel-oscuro:text-gray-300 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800"
+                    : "cursor-pointer bg-orange-600 text-white hover:bg-orange-500"
+              }`}
+            >
+              {subiendoEste ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+              {subiendoEste ? "Subiendo…" : p.tieneArchivo ? "Reemplazar PDF" : "Subir PDF"}
+              <input
+                type="file"
+                accept="application/pdf"
+                className="hidden"
+                disabled={subiendoEste || ocupado}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  /* Se limpia el input para que elegir el MISMO archivo dos
+                     veces seguidas vuelva a disparar el `onChange`: si el valor
+                     no cambia, el navegador no avisa nada. */
+                  e.target.value = "";
+                  if (file) acc.subirArchivo(p, file);
+                }}
+              />
+            </label>
+
             <button
               onClick={() =>
                 acc.setBorrador({
@@ -280,6 +311,29 @@ function Grupo({ padre, rol, acc }: { padre: ProductoEnPantalla; rol: "BONO" | "
   );
 }
 
+/**
+ * La pantalla de productos.
+ *
+ * ── Por qué una sola lista y no tres ─────────────────────────────────────────
+ * Un producto, un bono y un upsell son la misma cosa con distinto papel, así que
+ * comparten formulario, tarjeta y validación. Tres pantallas serían tres copias
+ * que se desincronizan de a una.
+ *
+ * ── Las dos subidas de esta pantalla son distintas a propósito ───────────────
+ * La **portada** pasa por `/api/upload`, o sea por nuestro servidor: una imagen
+ * entra cómoda en el cuerpo de un pedido, y así se pueden mirar los BYTES y
+ * confirmar que un "image/png" es de verdad un png.
+ *
+ * El **archivo del producto** no puede hacer eso: un ebook de 30 MB no entra en
+ * un pedido. Va derecho a Supabase con un permiso firmado, en tres pasos, y la
+ * validación de verdad vive en el bucket. Ver `subirArchivo` más abajo y el
+ * porqué largo en `lib/subida-digital`.
+ *
+ * ── Publicar sigue cerrado hasta que haya archivo ────────────────────────────
+ * Lo corta `loQueFalta`, acá y otra vez en el servidor. Un producto publicado sin
+ * archivo se puede comprar y no se puede entregar — se cobra la plata y no llega
+ * nada. Es el peor final posible de este ecosistema.
+ */
 export default function ProductosClient({
   tier,
   productos,
@@ -292,6 +346,10 @@ export default function ProductosClient({
   const [error, setError] = useState("");
   const [trabajando, setTrabajando] = useState<string | null>(null);
   const [subiendo, setSubiendo] = useState(false);
+  /* Aparte de `subiendo`, que es el de la portada adentro del modal: los dos
+     pueden estar prendidos a la vez y son botones distintos. Guarda el ID del
+     producto y no un booleano, para prender la tarjeta que corresponde. */
+  const [subiendoArchivo, setSubiendoArchivo] = useState<string | null>(null);
 
   /**
    * El cerrojo del doble clic.
@@ -350,6 +408,91 @@ export default function ProductosClient({
     }
   }
 
+  /**
+   * El archivo del producto: el PDF que se lleva quien compra.
+   *
+   * Son tres pasos y **ninguno se puede saltear**:
+   *
+   *   1. Le pedimos permiso a nuestro servidor. Ahí no viaja el archivo, sólo su
+   *      tipo y su tamaño. El servidor elige la ruta —si la eligiera el
+   *      navegador podría escribir sobre el archivo de otra cuenta—.
+   *   2. Los bytes van DERECHO a Supabase. No pasan por nosotros: un ebook no
+   *      entra en el cuerpo de un pedido, que Next corta bastante antes.
+   *   3. Recién ahí se confirma, y el servidor va a MIRAR que el archivo esté.
+   *
+   * El paso 3 no es burocracia. Como el 2 no pasa por nosotros, "ya lo subí" es
+   * una afirmación de la parte interesada: sin comprobarla, alcanzaría con
+   * llamar a confirmar sin haber subido nada para marcar el producto como
+   * entregable, publicarlo y cobrar por un archivo que no existe.
+   */
+  async function subirArchivo(p: ProductoEnPantalla, file: File) {
+    if (enVuelo.current) return;
+    setError("");
+
+    /* La MISMA función que usa el servidor. No lo reemplaza —lo que valida el
+       navegador no protege nada— pero evita empezar a subir 60 MB para que el
+       servidor los rechace al final. */
+    const problema = validarSubida({ tipo: file.type, tamano: file.size });
+    if (problema) {
+      setError(problema);
+      return;
+    }
+
+    enVuelo.current = true;
+    setSubiendoArchivo(p.id);
+    try {
+      const permisoRes = await fetch("/api/digitales/archivo/firma", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ productoId: p.id, tipo: file.type, tamano: file.size }),
+      });
+      const permiso = await permisoRes.json().catch(() => ({}));
+      if (!permisoRes.ok || !permiso.urlDeSubida || !permiso.ruta) {
+        setError(permiso.error ?? "No pudimos preparar la subida.");
+        return;
+      }
+
+      const subida = await fetch(permiso.urlDeSubida as string, {
+        method: "PUT",
+        headers: { "Content-Type": TIPO_PDF },
+        body: file,
+      });
+      if (!subida.ok) {
+        /* Supabase contesta con su propio texto. Se registra el crudo y se
+           muestra algo que se entienda: la vez pasada, en los videos, un error
+           de este paso llegó como "no se pudo" a secas y no había forma de saber
+           que el problema era el tope del bucket. */
+        console.error("[archivo] Supabase rechazó la subida:", subida.status, await subida.text().catch(() => ""));
+        setError("El archivo no se pudo subir. Probá de nuevo.");
+        return;
+      }
+
+      const cierre = await fetch("/api/digitales/archivo/confirmar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ productoId: p.id, ruta: permiso.ruta, nombre: file.name }),
+      });
+      const datos = await cierre.json().catch(() => ({}));
+      if (!cierre.ok) {
+        setError(datos.error ?? "El archivo subió pero no lo pudimos guardar.");
+        return;
+      }
+
+      /* El aviso de peso no bloquea nada: el archivo ya está. Se muestra en el
+         mismo lugar que los errores porque es lo que la persona está mirando. */
+      if (datos.aviso) setError(datos.aviso as string);
+      window.location.reload();
+    } catch {
+      setError("No pudimos subir el archivo. Revisá tu conexión.");
+    } finally {
+      /* Igual que en el resto de la pantalla: el cerrojo se suelta sólo en los
+         caminos que NO recargan. Después de un `reload` no hay nada que soltar,
+         y soltarlo antes deja una ventana para el segundo clic. */
+      enVuelo.current = false;
+      setSubiendoArchivo(null);
+    }
+  }
+
   const principales = productos.filter((p) => p.rol === "PRINCIPAL");
   const hijosDe = (padreId: string, rol: RolDigital) =>
     productos.filter((p) => p.padreId === padreId && p.rol === rol);
@@ -357,7 +500,7 @@ export default function ProductosClient({
   /* Lo que la tarjeta y el grupo necesitan de acá. Se arma una vez y se pasa
      hacia abajo: las funciones se declaran en el cuerpo del componente, así que
      memorizarlo no ganaría nada —el objeto cambiaría igual en cada dibujo—. */
-  const acc: Acciones = { tier, trabajando, setBorrador, publicar, borrar, hijosDe };
+  const acc: Acciones = { tier, trabajando, subiendoArchivo, setBorrador, publicar, borrar, subirArchivo, hijosDe };
 
   const topePrincipales = topeDe(tier, "PRINCIPAL");
   const llegoAlTope = principales.length >= topePrincipales;

@@ -1451,6 +1451,34 @@ desincronizan de a una.
     productos: una pantalla nueva mostraría las mismas tarjetas dos veces. El
     renglón del archivo ya está dibujado en nuestra pantalla de Productos, y
     cuando llegue la IA su botón va al lado del de subir.
+  - ⚠️ **Su propio cartel del "Pegar link" nos da la razón** (visto el 01/09/26).
+    El modal avisa: *"Asegurate de que el link esté con permisos públicos
+    ('cualquiera con el link puede ver'), sino tus compradores no van a poder
+    acceder."* Están diciendo en voz alta que **el archivo queda público en
+    internet**: sin token, sin vencimiento, sin tope de descargas, y el comprador
+    lo comparte y listo. Y abajo aclaran para qué existe — *"Útil para archivos
+    >50MB"*: **tienen nuestro mismo techo** y el link es su salida de emergencia.
+    Nosotros ya tenemos otra salida para ese caso y es mejor: pedir el PDF
+    exportado en calidad de pantalla (el de 117 MB baja a unos pocos).
+  - ⚠️ **"Generar con IA" no escribe texto: arma un PDF DISEÑADO.** Su modal no
+    pregunta de qué se trata —eso ya lo sabe del título y la descripción—, sino
+    **cómo se ve**: *"Todos generan un ebook premium con portada, imágenes y
+    maquetación profesional"*, con cuatro estilos a elegir.
+    **Esto puede dejar corta la cuenta de 3 bis.** Los US$2–4 estimados son para
+    escribir texto; portada e imágenes generadas se pagan aparte. Si el mercado
+    espera *eso* cuando lee "ebook con IA", el número de la Fase 4 cambia. Va a la
+    medición.
+  - **El aviso del peso va ANTES de elegir el archivo, no después.** Su botón abre
+    el explorador directo y no dice el límite hasta que ya elegiste: con la guía
+    de 117 MB eso es esperar la subida entera para que falle. Y el texto no puede
+    ser "máximo 50 MB" —eso no le dice a nadie qué hacer— sino **"exportá el PDF
+    en calidad para pantalla"**, que es la instrucción que resuelve el problema.
+  - **Qué NO se copia de sus pantallas.** La función no es de nadie —"subir un
+    PDF" no se registra—; la expresión sí. No se copian sus textos literales
+    (*"Elegí el estilo de tu ebook"* y las descripciones de cada estilo) ni su
+    curaduría: **Revista / Editorial / Notas al margen / Collage** por separado son
+    genéricos, pero los cuatro juntos son su selección. Nuestros estilos, nuestros
+    nombres, nuestros textos.
   - **Dos caminos, no tres: "Subir PDF" y "Generar con IA".** Ellos ofrecen
     además **"Pegar link"** y nosotros no: toda nuestra entrega es un token que se
     canjea por un link firmado de vida corta, y un link pegado a Drive **no
@@ -1687,6 +1715,11 @@ Las cuatro cosas están decididas en 2.4. Lo que falta acá es **cómo se pagan 
 cómo se frenan**, y eso va antes que cualquier pantalla: el tope no se agrega
 después, porque hasta que exista la factura de Anthropic no tiene techo.
 
+- ⚠️ **Medir qué es "un ebook", no sólo cuánto sale.** Visto el 01/09/26: su
+  "Generar con IA" produce un PDF **con portada, imágenes y maquetación**, no 40
+  páginas de texto. Si eso es lo que el mercado entiende por "ebook con IA", la
+  medición tiene que ser de eso — las imágenes se pagan aparte y el número de
+  abajo queda corto.
 - 🔲 **Medir un ebook de verdad** antes de prometer un número. La estimación de
   hoy es US$2–4 por ebook con Opus 5, y está sin verificar. `ebooksIA` en
   `TOPES_DIGITALES` (0 / 2 / 5) es provisorio hasta esa medición.
