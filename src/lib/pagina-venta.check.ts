@@ -623,6 +623,45 @@ check("ANCHO-B", /overflow-x-clip/.test(dibujante),
 check("ANCHO-C", !/overflow-x-hidden/.test(dibujante),
   "y se recorta con clip, no con hidden, que dejaría un scroll vertical propio");
 
+/* ── Lo que no se puede inventar ──────────────────────────────────────────── */
+
+/* ⚠️ Visto el 02/09/26 en el editor de la competencia: su IA llena la prueba
+   social sola con tres personas inventadas y la dibuja como una CAPTURA DE
+   WHATSAPP —hora, señal, doble tilde de leído— con el título "TESTIMONIOS
+   REALES" arriba. Un testimonio dice "esto me dijeron"; una captura dice "acá
+   está la conversación". La segunda se cree mucho más, y es falsa. */
+
+const opiniones = buscarSeccion("opiniones");
+
+check("OPI-A", opiniones?.encendida === false,
+  "las opiniones nacen apagadas: una página nueva no tiene ninguna de verdad");
+
+check("OPI-B", typeof opiniones?.aviso === "string" && opiniones.aviso.length > 0,
+  "y avisan, antes de escribir, que una inventada es publicidad engañosa");
+
+/* El aviso arriba de las casillas y no abajo: leído después de escribir, llega
+   tarde. Y sólo donde escribir tiene consecuencias afuera de la página — si lo
+   llevaran todas las secciones, no se leería ninguno. */
+check("OPI-C", editor.includes("{def.aviso && ("),
+  "el editor dibuja ese aviso arriba de todo lo que haya para escribir");
+
+check("OPI-D", SECCIONES.filter((s) => s.aviso).length <= 3,
+  "y son pocos: un aviso en cada sección no lo lee nadie");
+
+/* ⚠️ Su campo `Rating (1-5)` se tipea a mano, y de esos 5, 5 y 4 sale el
+   ⭐4,9 de la ficha. Un promedio de estrellas es un dato estadístico: sin
+   ventas no hay estadística, así que no hay dónde escribirlo. */
+const hayRating = SECCIONES.some((s) => s.campos.some((c) =>
+  /rating|estrella|puntaje|calificacion|reseñas|ventas/i.test(c.clave)
+  || (c.campos ?? []).some((h) => /rating|estrella|puntaje|calificacion/i.test(h.clave))));
+check("OPI-E", !hayRating,
+  "no hay campo de estrellas ni de cantidad de ventas: eso sale del sistema o no sale");
+
+/* Se dibuja como una CITA, que es lo que es. No como la captura de una
+   conversación, que se lee como prueba de que pasó. */
+check("OPI-F", dibujante.includes("<blockquote") && dibujante.includes("<figcaption"),
+  "una opinión se dibuja como cita con su firma, no como prueba de nada");
+
 /* ── La oferta se ve, y no se puede inventar ──────────────────────────────── */
 
 /* ⚠️ Esto salió de mirar la página de la competencia al lado de la nuestra el

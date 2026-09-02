@@ -707,6 +707,14 @@ export default function EditorDePagina({ productoId, nombre, publicado, pagina: 
 
                   {abierto && (
                     <div className="grid gap-3 border-t border-gray-100 px-3 pb-4 pt-3 panel-oscuro:border-gray-800">
+                      {/* Antes que las casillas, no después: un aviso debajo de lo que
+                          ya escribiste llega tarde. */}
+                      {def.aviso && (
+                        <p className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-800 panel-oscuro:border-amber-500/30 panel-oscuro:bg-amber-500/10 panel-oscuro:text-amber-300">
+                          <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                          {def.aviso}
+                        </p>
+                      )}
                       {def.campos.length === 0 && (
                         <p className="text-xs text-gray-500 panel-oscuro:text-gray-400">
                           Esta sección no tiene nada para escribir: se llena sola.

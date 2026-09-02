@@ -102,6 +102,17 @@ export type Seccion = {
   sePuedeMover: boolean;
   /** Si arranca encendida en una página nueva. */
   encendida: boolean;
+  /**
+   * Lo que hay que leer ANTES de llenar esta sección. Se muestra arriba de
+   * todas las casillas, en el editor.
+   *
+   * ⚠️ No es para explicar qué va: para eso está `para` y la `ayuda` de cada
+   * campo. Es para las secciones donde escribir algo tiene consecuencias
+   * afuera de la página — una promesa que después hay que cumplir, o una
+   * afirmación de la que responde quien vende. La mayoría no lleva ninguno,
+   * y ahí está la gracia: si lo llevaran todas, no se lee ninguno.
+   */
+  aviso?: string;
   campos: Campo[];
 };
 
@@ -253,6 +264,17 @@ export const SECCIONES: readonly Seccion[] = [
        que hace la herramienta es pedirte que inventes tres. */
     sePuedeMover: true,
     encendida: false,
+    /* ⚠️ Visto el 02/09/26 en el editor de la competencia: su IA llena esta
+       sección sola con tres personas inventadas —nombre, texto y un rating
+       del 1 al 5 escrito a mano— y la dibuja como una captura de WhatsApp,
+       con hora, señal y doble tilde de leído. Arriba del bloque el título
+       dice "TESTIMONIOS REALES".
+
+       Eso ya no es exagerar: es prueba falsificada. Y el que responde por lo
+       que dice la página no es la plataforma, es quien vende. Por eso acá la
+       sección nace apagada, no hay campo de rating, y esto se lee antes de
+       escribir la primera letra. */
+    aviso: "Sólo opiniones que te hayan dicho de verdad. Una inventada es publicidad engañosa, y el que responde sos vos.",
     campos: [
       { clave: "titulo", etiqueta: "Título", tipo: "texto", largo: 80,
         ejemplo: "Lo que dicen" },
