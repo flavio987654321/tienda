@@ -818,6 +818,22 @@ Todo esto ya está resuelto, medido y en varios casos aplicado a producción:
 
 ## FASE 1 — La página de precios — HECHA (31/08/26)
 
+> ### 🛑 HECHA no quiere decir PUBLICABLE
+>
+> Anotado el 01/09/26, mirando la tarjeta de planes que dibuja `featuresDigital`.
+> La página está armada y anda, pero **casi todo lo que promete todavía no
+> existe**: los ebooks con IA, la página armada con IA, los textos y mails con IA,
+> Sasha adaptada, el mail de recuperación, el dominio propio. Y la entrega
+> automática con token está **escrita y nunca corrió**.
+>
+> Es el mismo criterio que ya se aplicó con los textos de fábrica de los
+> templates: *"no rompen nada, la tienda carga, se ve linda y vende. Solamente
+> mienten, que es peor, porque nadie lo va a reportar como error."*
+>
+> **Nada de esto se publica hasta que exista**, o cada fila apagada de esa tarjeta
+> es una venta hecha sobre algo que no está. Cuando llegue el momento de
+> deployar, esta lista se recorre fila por fila contra el código.
+
 ### ⚠️ Corregido el 31/08/26 — la tarjeta decía "comisión desde 2%"
 
 El 2% es el de **Pro**, que sale $60.000 por mes: era el número más lindo pegado
@@ -1755,9 +1771,40 @@ tortas ve tortas y nada más.
 
 Desde la vereda se ve igual. Desde adentro, el nuestro es mucho más simple.
 
+### Qué recibe cada plan — CERRADO (01/09/26)
+
+| | Dirección del producto | Dominio propio |
+|---|---|---|
+| **Free** | `mecanica.tiendaapps.com` | ❌ |
+| **Starter** | `mecanica.tiendaapps.com` | ❌ |
+| **Pro** | `mecanica.tiendaapps.com` | ✅ `mecanicafacil.com` |
+
+**El subdominio va en los tres planes. Lo que Pro compra es la calle, no la
+casa.** Dos motivos, y el segundo es el que manda:
+
+1. **Si el subdominio fuera sólo de Pro, Starter se queda con el mismo problema
+   que esta fase viene a arreglar**: dos productos, dos nichos, una sola
+   dirección. Y no nos cuesta nada — una columna y una regla en un middleware que
+   ya existe. Cobrarlo no suma un peso y le rompe la promesa a Starter.
+2. ⚠️ **Si el slug del producto apareciera recién al mejorar el plan, la dirección
+   CAMBIA.** Alguien en Free pauta dos meses contra `detodo.tiendaapps.com`, junta
+   historial de píxel y la gente comparte el link; pasa a Starter y el producto se
+   muda. Se pierden los anuncios corriendo, el historial de conversiones y todos
+   los links compartidos. **Cambiarle la URL a algo que ya se está publicitando es
+   de lo peor que se le puede hacer a alguien.** Con el slug desde el día uno, la
+   dirección no cambia nunca: mejorar el plan le SUMA un dominio encima y el de
+   abajo sigue funcionando.
+
+Y el argumento de venta de Pro queda más limpio que "te damos dominio": es *"tu
+anuncio va a tu dominio, y ese dominio lo podés verificar en Meta"*.
+
+La competencia lo tiene igual — su panel dice *"Función disponible en plan Pro o
+superior"* para conectar el dominio.
+
 ### Qué hay que tocar
 
-- 🔲 **Slug propio en `Product`**, único — le da el subdominio.
+- 🔲 **Slug propio en `Product`**, único y **en los tres planes** — le da el
+  subdominio, y tiene que existir desde que el producto se crea.
 - 🔲 **Dominio propio en `Product`.** Hoy `customDomain` está en `Store` y es
   `@unique`: **uno por cuenta**. Para tener dos dominios en la misma cuenta, el
   dominio tiene que colgar del producto.
@@ -1765,7 +1812,10 @@ Desde la vereda se ve igual. Desde adentro, el nuestro es mucho más simple.
   heredar la marca de la tienda.
 - 🔲 **La regla en el middleware**, que ya sabe traducir *dominio → tienda*: falta
   el caso *dominio → producto*.
-- 🔲 Qué pasa si el slug del producto choca con el de una tienda.
+- 🔲 **Qué pasa si el slug del producto choca con el de una tienda.** Con el
+  subdominio en los tres planes esto deja de ser un caso raro y pasa a ser el
+  caso normal: hay muchos más productos que tiendas, y comparten el mismo espacio
+  de nombres.
 
 ⚠️ **"Poder cambiar el nombre y el dominio" NO lo resuelve** — y fue la primera
 idea. Si se cambian, se rompe el producto anterior. No es *cambiable*: es **uno
