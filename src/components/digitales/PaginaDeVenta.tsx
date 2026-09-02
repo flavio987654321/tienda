@@ -22,7 +22,7 @@
    Quien la ve no tiene cuenta ni preferencia guardada. */
 
 import {
-  seDibuja, conFichas, buscarEstilo, buscarPaleta,
+  seDibuja, conFichas, buscarEstilo, buscarPaleta, COLORES_CLAROS, COLORES_OSCUROS,
   type PaginaVenta, type Estilo,
 } from "@/lib/pagina-venta";
 import BarraDeOferta from "./BarraDeOferta";
@@ -124,9 +124,9 @@ function Numeros({ producto, bonos, estilo }: {
     <div>
       <p className={`text-4xl text-[color:var(--pv-tinta)] sm:text-5xl ${estilo.titulo}`}>{money(producto.price)}</p>
       {ahorro > 0 && producto.comparePrice ? (
-        <p className="mt-2 text-slate-500">
+        <p className="mt-2 text-[color:var(--pv-tenue)]">
           <span className="line-through">{money(producto.comparePrice)}</span>{" "}
-          <span className="font-semibold text-emerald-700">ahorrás {money(ahorro)}</span>
+          <span className="font-semibold text-[color:var(--pv-ok)]">ahorrás {money(ahorro)}</span>
         </p>
       ) : null}
 
@@ -138,7 +138,7 @@ function Numeros({ producto, bonos, estilo }: {
           <ul className="mt-2 grid gap-1">
             {bonos.map((b) => (
               <li key={b.id} className="flex items-baseline justify-between gap-3 text-sm">
-                <span className="min-w-0 text-slate-700">{b.name}</span>
+                <span className="min-w-0 text-[color:var(--pv-tinta)]">{b.name}</span>
                 <span className="shrink-0 font-bold text-emerald-700">GRATIS</span>
               </li>
             ))}
@@ -155,7 +155,7 @@ function Numeros({ producto, bonos, estilo }: {
    automática, y ese aviso va en el checkout, que todavía no existe. */
 function Sellos() {
   return (
-    <p className="flex flex-wrap items-center justify-center gap-x-5 gap-y-1 text-xs font-medium text-slate-500">
+    <p className="flex flex-wrap items-center justify-center gap-x-5 gap-y-1 text-xs font-medium text-[color:var(--pv-tenue)]">
       <span>🔒 Pago seguro con Mercado Pago</span>
       <span>✉️ Lo recibís por mail</span>
     </p>
@@ -199,7 +199,7 @@ function Contenido({ clave, campos, datos }: {
               {titulo || producto.name}
             </h1>
             {texto(campos, "subtitulo") && (
-              <p className="max-w-2xl text-pretty text-base leading-relaxed text-slate-600 sm:text-lg">
+              <p className="max-w-2xl text-pretty text-base leading-relaxed text-[color:var(--pv-tenue)] sm:text-lg">
                 {texto(campos, "subtitulo")}
               </p>
             )}
@@ -208,7 +208,7 @@ function Contenido({ clave, campos, datos }: {
               <img
                 src={imagen}
                 alt=""
-                className="w-full max-w-md rounded-2xl border border-slate-200 object-cover shadow-sm"
+                className="w-full max-w-md rounded-2xl border border-[color:var(--pv-linea)] object-cover shadow-sm"
               />
             )}
             <BotonComprar esPrevia={esPrevia} estilo={estilo}>{texto(campos, "textoBoton")}</BotonComprar>
@@ -221,7 +221,7 @@ function Contenido({ clave, campos, datos }: {
       return (
         <Seccion tono="gris" estilo={estilo}>
           <Titulo estilo={estilo}>{texto(campos, "titulo")}</Titulo>
-          <div className={`mt-8 flex flex-col gap-5 bg-white p-5 sm:flex-row sm:items-start sm:gap-6 sm:p-6 ${estilo.tarjeta}`}>
+          <div className={`mt-8 flex flex-col gap-5 bg-[color:var(--pv-tarjeta)] p-5 sm:flex-row sm:items-start sm:gap-6 sm:p-6 ${estilo.tarjeta}`}>
             {producto.imagen && (
               /* eslint-disable-next-line @next/next/no-img-element */
               <img
@@ -233,7 +233,7 @@ function Contenido({ clave, campos, datos }: {
             <div className="min-w-0">
               <h3 className="text-lg font-semibold text-slate-900">{producto.name}</h3>
               {producto.description && (
-                <p className="mt-2 text-pretty text-sm leading-relaxed text-slate-600">
+                <p className="mt-2 text-pretty text-sm leading-relaxed text-[color:var(--pv-tenue)]">
                   {producto.description}
                 </p>
               )}
@@ -247,14 +247,14 @@ function Contenido({ clave, campos, datos }: {
         <Seccion estilo={estilo}>
           <Titulo estilo={estilo}>{texto(campos, "titulo")}</Titulo>
           {texto(campos, "subtitulo") && (
-            <p className="mt-3 text-center text-slate-600">{texto(campos, "subtitulo")}</p>
+            <p className="mt-3 text-center text-[color:var(--pv-tenue)]">{texto(campos, "subtitulo")}</p>
           )}
           <ul className="mt-8 grid gap-4 sm:grid-cols-2">
             {bonos.map((b) => (
               <li key={b.id} className={`bg-amber-50/60 p-5 ${estilo.tarjeta}`}>
                 <h3 className="font-semibold text-slate-900">{b.name}</h3>
                 {b.description && (
-                  <p className="mt-2 text-sm leading-relaxed text-slate-600">{b.description}</p>
+                  <p className="mt-2 text-sm leading-relaxed text-[color:var(--pv-tenue)]">{b.description}</p>
                 )}
                 <p className="mt-3 flex items-baseline gap-2">
                   <span className="text-base font-bold text-emerald-700">GRATIS</span>
@@ -280,7 +280,7 @@ function Contenido({ clave, campos, datos }: {
             {items.map((i, n) => (
               <li
                 key={n}
-                className={`flex items-start gap-3 bg-white p-4 ${estilo.tarjeta}`}
+                className={`flex items-start gap-3 bg-[color:var(--pv-tarjeta)] p-4 ${estilo.tarjeta}`}
               >
                 <span
                   aria-hidden="true"
@@ -290,7 +290,7 @@ function Contenido({ clave, campos, datos }: {
                 >
                   {esDolor ? "!" : "✓"}
                 </span>
-                <span className="text-pretty text-slate-700">{i.texto}</span>
+                <span className="text-pretty text-[color:var(--pv-tinta)]">{i.texto}</span>
               </li>
             ))}
           </ul>
@@ -315,7 +315,7 @@ function Contenido({ clave, campos, datos }: {
                 <div className="min-w-0">
                   {p.titulo && <h3 className="font-semibold text-slate-900">{p.titulo}</h3>}
                   {p.detalle && (
-                    <p className="mt-1 text-pretty text-sm leading-relaxed text-slate-600">
+                    <p className="mt-1 text-pretty text-sm leading-relaxed text-[color:var(--pv-tenue)]">
                       {p.detalle}
                     </p>
                   )}
@@ -334,12 +334,12 @@ function Contenido({ clave, campos, datos }: {
           <Titulo estilo={estilo}>{texto(campos, "titulo")}</Titulo>
           <div className="mt-8 grid gap-4 sm:grid-cols-2">
             {items.map((i, n) => (
-              <figure key={n} className={`bg-white p-5 ${estilo.tarjeta}`}>
-                <blockquote className="text-pretty leading-relaxed text-slate-700">
+              <figure key={n} className={`bg-[color:var(--pv-tarjeta)] p-5 ${estilo.tarjeta}`}>
+                <blockquote className="text-pretty leading-relaxed text-[color:var(--pv-tinta)]">
                   {i.texto}
                 </blockquote>
                 {i.nombre && (
-                  <figcaption className="mt-3 text-sm font-medium text-slate-500">
+                  <figcaption className="mt-3 text-sm font-medium text-[color:var(--pv-tenue)]">
                     {i.nombre}
                   </figcaption>
                 )}
@@ -360,7 +360,7 @@ function Contenido({ clave, campos, datos }: {
             <Numeros producto={producto} bonos={bonos} estilo={estilo} />
             <BotonComprar esPrevia={esPrevia} estilo={estilo}>{texto(campos, "textoBoton")}</BotonComprar>
             {texto(campos, "aclaracion") && (
-              <p className="text-sm text-slate-500">{texto(campos, "aclaracion")}</p>
+              <p className="text-sm text-[color:var(--pv-tenue)]">{texto(campos, "aclaracion")}</p>
             )}
           </div>
         </Seccion>
@@ -371,9 +371,9 @@ function Contenido({ clave, campos, datos }: {
          que no quede un título que dice 7 con una garantía de 30. */
       return (
         <Seccion tono="gris" estilo={estilo}>
-          <div className={`mx-auto max-w-2xl bg-white p-6 text-center ${estilo.tarjeta}`}>
+          <div className={`mx-auto max-w-2xl bg-[color:var(--pv-tarjeta)] p-6 text-center ${estilo.tarjeta}`}>
             <Titulo estilo={estilo}>{conFichas(texto(campos, "titulo"), campos)}</Titulo>
-            <p className="mt-3 text-pretty leading-relaxed text-slate-600">
+            <p className="mt-3 text-pretty leading-relaxed text-[color:var(--pv-tenue)]">
               {conFichas(texto(campos, "texto"), campos)}
             </p>
           </div>
@@ -392,7 +392,7 @@ function Contenido({ clave, campos, datos }: {
             {items.map((i, n) => (
               <details
                 key={n}
-                className={`group bg-white px-5 py-4 ${estilo.tarjeta}`}
+                className={`group bg-[color:var(--pv-tarjeta)] px-5 py-4 ${estilo.tarjeta}`}
               >
                 <summary className="cursor-pointer list-none font-medium text-slate-900 marker:content-none">
                   <span className="flex items-start justify-between gap-4">
@@ -403,7 +403,7 @@ function Contenido({ clave, campos, datos }: {
                   </span>
                 </summary>
                 {i.respuesta && (
-                  <p className="mt-3 text-pretty leading-relaxed text-slate-600">{i.respuesta}</p>
+                  <p className="mt-3 text-pretty leading-relaxed text-[color:var(--pv-tenue)]">{i.respuesta}</p>
                 )}
               </details>
             ))}
@@ -437,7 +437,7 @@ function Contenido({ clave, campos, datos }: {
     /* Fija abajo. Sale del flujo, así que no importa dónde esté en la lista. */
     case "barra":
       return (
-        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 px-4 py-3 shadow-[0_-2px_12px_rgba(0,0,0,0.08)] backdrop-blur">
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-[color:var(--pv-linea)] bg-[color:var(--pv-tarjeta)]/95 px-4 py-3 shadow-[0_-2px_12px_rgba(0,0,0,0.08)] backdrop-blur">
           <div className="mx-auto flex max-w-3xl items-center justify-between gap-3">
             <p className="min-w-0">
               <span className="block text-lg font-extrabold leading-none text-slate-900">
@@ -458,12 +458,12 @@ function Contenido({ clave, campos, datos }: {
 
     case "pie":
       return (
-        <footer className="border-t border-slate-200 bg-white">
-          <div className="mx-auto max-w-3xl px-5 py-10 text-center text-sm text-slate-500 sm:px-8">
+        <footer className="border-t border-[color:var(--pv-linea)] bg-[color:var(--pv-tarjeta)]">
+          <div className="mx-auto max-w-3xl px-5 py-10 text-center text-sm text-[color:var(--pv-tenue)] sm:px-8">
             {texto(campos, "texto") && (
               <p className="mb-4 text-pretty">{texto(campos, "texto")}</p>
             )}
-            {vendedor.nombre && <p className="font-medium text-slate-700">{vendedor.nombre}</p>}
+            {vendedor.nombre && <p className="font-medium text-[color:var(--pv-tinta)]">{vendedor.nombre}</p>}
             {vendedor.contacto && <p className="mt-1">{vendedor.contacto}</p>}
             {texto(campos, "copyright") && (
               <p className="mt-4 text-xs">
@@ -474,9 +474,9 @@ function Contenido({ clave, campos, datos }: {
                 decoración. El de arrepentimiento lo pide la Resolución 424/2020
                 y ya existe en el proyecto; en el pie de la competencia no está. */}
             <p className="mt-2 flex flex-wrap justify-center gap-x-3 gap-y-1 text-xs">
-              <a href="/terminos" className="underline hover:text-slate-700">Términos</a>
-              <a href="/privacidad" className="underline hover:text-slate-700">Privacidad</a>
-              <a href="/arrepentimiento" className="underline hover:text-slate-700">
+              <a href="/terminos" className="underline hover:text-[color:var(--pv-tinta)]">Términos</a>
+              <a href="/privacidad" className="underline hover:text-[color:var(--pv-tinta)]">Privacidad</a>
+              <a href="/arrepentimiento" className="underline hover:text-[color:var(--pv-tinta)]">
                 Botón de arrepentimiento
               </a>
             </p>
@@ -506,12 +506,21 @@ export default function PaginaDeVenta(datos: DatosDePagina) {
      sin color. Con variables, el mismo `bg-[color:var(--pv-acento)]` sirve para
      las seis paletas. */
   const paleta = buscarPaleta(datos.pagina.paleta);
+  const estiloRaiz = buscarEstilo(datos.pagina.estilo);
+  /* El estilo Nocturno es el único que toca los colores: da vuelta la tinta, el
+     fondo y las tarjetas. El ACENTO no cambia — es lo que hace saltar el botón,
+     y es el mismo color en las dos versiones. */
+  const g = estiloRaiz.oscuro ? COLORES_OSCUROS : COLORES_CLAROS;
   const colores = {
-    "--pv-tinta": paleta.tinta,
-    "--pv-acento": paleta.acento,
-    "--pv-sobre": paleta.sobreAcento,
-    "--pv-fondo": paleta.fondo,
-    "--pv-suave": paleta.suave,
+    "--pv-tinta": g.tinta,
+    "--pv-ok": g.ok,
+    "--pv-tenue": g.tenue,
+    "--pv-linea": g.linea,
+    "--pv-tarjeta": g.tarjeta,
+    "--pv-acento": estiloRaiz.oscuro ? paleta.acentoOscuro : paleta.acento,
+    "--pv-sobre": estiloRaiz.oscuro ? paleta.sobreAcentoOscuro : paleta.sobreAcento,
+    "--pv-fondo": estiloRaiz.oscuro ? COLORES_OSCUROS.fondo : paleta.fondo,
+    "--pv-suave": estiloRaiz.oscuro ? COLORES_OSCUROS.suave : paleta.suave,
   } as React.CSSProperties;
 
   return (

@@ -11,7 +11,7 @@
 import { readFileSync } from "fs";
 import {
   SECCIONES, buscarSeccion, contenidoPorDefecto, normalizarContenido, porQueNoSeDibuja,
-  conFichas, FICHA_DIAS, FICHA_ANIO, ESTILOS, PALETAS,
+  conFichas, FICHA_DIAS, FICHA_ANIO, ESTILOS, PALETAS, COLORES_CLAROS, COLORES_OSCUROS,
   type Campo,
 } from "./pagina-venta";
 
@@ -462,18 +462,44 @@ function contraste(a: string, b: string): number {
 
 const MINIMO = 4.5;
 const flojas = PALETAS.filter((p) =>
-  contraste(p.tinta, p.fondo) < MINIMO ||
-  contraste(p.tinta, p.suave) < MINIMO ||
+  contraste(COLORES_CLAROS.tinta, p.fondo) < MINIMO ||
+  contraste(COLORES_CLAROS.tinta, p.suave) < MINIMO ||
+  contraste(COLORES_CLAROS.tenue, p.fondo) < MINIMO ||
   contraste(p.sobreAcento, p.acento) < MINIMO);
 
 check("PAL-A", flojas.length === 0,
-  `toda paleta se lee: texto sobre fondo y sobre el botón, mínimo ${MINIMO}` +
+  `toda paleta se lee en claro: texto y texto tenue sobre el fondo, y el texto del botón, mínimo ${MINIMO}` +
   (flojas.length ? ` — flojas: ${flojas.map((p) => p.nombre).join(", ")}` : ""));
+
+/* ⚠️ El estilo Nocturno da vuelta los colores, así que hay que medirlo aparte:
+   una paleta que se lee en claro no se lee sola en oscuro. El caso concreto que
+   lo destapó es el verde del "ahorrás $X" — el oscuro sobre fondo oscuro
+   desaparece, y ese renglón es el que dice cuánta plata se ahorra. */
+const o = COLORES_OSCUROS;
+const flojasOscuro =
+  contraste(o.tinta, o.fondo) < MINIMO ||
+  contraste(o.tinta, o.tarjeta) < MINIMO ||
+  contraste(o.tenue, o.fondo) < MINIMO ||
+  contraste(o.ok, o.fondo) < MINIMO;
+check("PAL-J", !flojasOscuro,
+  "y la versión oscura también: texto, texto tenue y el verde del ahorro");
+
+/* El acento no cambia entre claro y oscuro — es lo que hace saltar el botón—,
+   así que tiene que leerse contra los dos fondos. */
+/* ⚠️ MEDIDO: los acentos oscuros no se despegan del fondo oscuro. Grafito daba
+   1,28 sobre 3 — el botón de comprar quedaba casi invisible—, y Azul y Violeta
+   tampoco llegaban. Por eso cada paleta tiene su acento para Nocturno. */
+const acentosFlojos = PALETAS.filter((p) =>
+  contraste(p.acentoOscuro, o.fondo) < 3 ||
+  contraste(p.sobreAcentoOscuro, p.acentoOscuro) < MINIMO);
+check("PAL-K", acentosFlojos.length === 0,
+  "el botón también se despega del fondo oscuro, y su texto se lee" +
+  (acentosFlojos.length ? ` — flojos: ${acentosFlojos.map((p) => p.nombre).join(", ")}` : ""));
 
 check("PAL-B", PALETAS.length >= 3 && new Set(PALETAS.map((p) => p.clave)).size === PALETAS.length,
   "hay varias paletas y ninguna clave repetida");
-check("PAL-C", ESTILOS.length === 3 && new Set(ESTILOS.map((e) => e.clave)).size === 3,
-  "hay tres estilos, sin claves repetidas");
+check("PAL-C", ESTILOS.length >= 3 && new Set(ESTILOS.map((e) => e.clave)).size === ESTILOS.length,
+  "hay varios estilos, sin claves repetidas");
 
 /* ⚠️ Este chequeo salió de un error real: el primer intento tenía "Clásico" y
    "Suave" con la misma cara —cambiaba el radio de los bordes y poco más— y no se

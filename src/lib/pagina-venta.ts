@@ -476,7 +476,39 @@ export type Estilo = {
   titulo: string;
   /** El aire de cada sección. Es lo que más se nota de lejos. */
   seccion: string;
+  /**
+   * Página oscura. Da vuelta la tinta, el fondo y las tarjetas; el acento de la
+   * paleta queda igual, que es lo que hace saltar el botón.
+   *
+   * Es el único estilo que toca los colores, y por eso los tonos oscuros están
+   * acá y no adentro de cada paleta: si cada paleta tuviera su versión oscura
+   * serían doce combinaciones para revisar en vez de seis.
+   */
+  oscuro?: boolean;
 };
+
+/** Los grises de la página clara. */
+export const COLORES_CLAROS = {
+  tinta: "#0f172a",
+  tenue: "#64748b",
+  linea: "#e2e8f0",
+  tarjeta: "#ffffff",
+  /* El verde del "ahorrás", que va sobre el fondo de la página. */
+  ok: "#047857",
+} as const;
+
+/** Y los de la oscura. El acento sigue saliendo de la paleta. */
+export const COLORES_OSCUROS = {
+  tinta: "#f1f5f9",
+  tenue: "#94a3b8",
+  linea: "#1e293b",
+  tarjeta: "#131c2e",
+  /* Más claro que el de la página clara: el verde oscuro sobre fondo oscuro no
+     se lee, y ese renglón es el que dice cuánta plata se ahorra. */
+  ok: "#34d399",
+  fondo: "#0b1220",
+  suave: "#0f172a",
+} as const;
 
 /* ⚠️ Los tres tienen que verse DISTINTOS de lejos, no en el detalle. El primer
    intento tenía "Clásico" y "Suave" con la misma cara —cambiaba el radio de los
@@ -520,6 +552,30 @@ export const ESTILOS: readonly Estilo[] = [
     titulo: "font-semibold tracking-tight",
     seccion: "py-16 sm:py-24",
   },
+  /* Sin tarjetas: en vez de encerrar cada cosa en un recuadro, las separa con una
+     línea, como una revista. La diferencia más grande de los cinco es la letra —
+     es el único con serif. */
+  {
+    clave: "editorial",
+    nombre: "Editorial",
+    para: "Como una revista. Títulos con serif y líneas en vez de recuadros.",
+    tarjeta: "rounded-none border-0 border-t border-[color:var(--pv-linea)] pt-6",
+    boton: "rounded-none",
+    titulo: "font-serif font-normal tracking-tight",
+    seccion: "py-14 sm:py-20",
+  },
+  /* El único que da vuelta los colores. En una página que se lee de noche en el
+     celular —que es donde se compran estas cosas— el botón salta mucho más. */
+  {
+    clave: "nocturno",
+    nombre: "Nocturno",
+    para: "Fondo oscuro. El botón salta y las fotos se ven más.",
+    tarjeta: "rounded-xl border border-white/10 shadow-[0_10px_30px_-12px_rgba(0,0,0,0.85)]",
+    boton: "rounded-xl shadow-lg",
+    titulo: "font-extrabold tracking-tight",
+    seccion: "py-12 sm:py-20",
+    oscuro: true,
+  },
 ];
 
 /**
@@ -537,6 +593,18 @@ export type Paleta = {
   acento: string;
   /** El texto ARRIBA del acento. */
   sobreAcento: string;
+  /**
+   * El acento en el estilo Nocturno, y el texto que va encima.
+   *
+   * ⚠️ No es un capricho: MEDIDO, los acentos oscuros no se despegan del fondo
+   * oscuro. Grafito daba 1,28 sobre 3 que hace falta — o sea que el botón de
+   * comprar quedaba casi invisible. Azul y Violeta tampoco llegaban.
+   *
+   * Por eso en oscuro el botón se da vuelta: fondo claro y letra oscura. Es el
+   * mismo color de la paleta, más claro.
+   */
+  acentoOscuro: string;
+  sobreAcentoOscuro: string;
   /** El fondo de la página. */
   fondo: string;
   /** El fondo de las secciones alternadas. */
@@ -547,12 +615,12 @@ export type Paleta = {
    más lindos en la tarjetita del panel y dejan el texto del botón por debajo del
    contraste mínimo — ver los chequeos, que lo calculan. */
 export const PALETAS: readonly Paleta[] = [
-  { clave: "naranja", nombre: "Naranja", tinta: "#0f172a", acento: "#c2410c", sobreAcento: "#ffffff", fondo: "#ffffff", suave: "#f8fafc" },
-  { clave: "azul",    nombre: "Azul",    tinta: "#0f172a", acento: "#1d4ed8", sobreAcento: "#ffffff", fondo: "#ffffff", suave: "#f8fafc" },
-  { clave: "verde",   nombre: "Verde",   tinta: "#0f172a", acento: "#15803d", sobreAcento: "#ffffff", fondo: "#ffffff", suave: "#f6faf7" },
-  { clave: "violeta", nombre: "Violeta", tinta: "#0f172a", acento: "#6d28d9", sobreAcento: "#ffffff", fondo: "#ffffff", suave: "#faf8ff" },
-  { clave: "rosa",    nombre: "Rosa",    tinta: "#0f172a", acento: "#be185d", sobreAcento: "#ffffff", fondo: "#ffffff", suave: "#fff7fa" },
-  { clave: "grafito", nombre: "Grafito", tinta: "#0f172a", acento: "#1e293b", sobreAcento: "#ffffff", fondo: "#ffffff", suave: "#f4f4f5" },
+  { clave: "naranja", nombre: "Naranja", tinta: "#0f172a", acento: "#c2410c", sobreAcento: "#ffffff", acentoOscuro: "#fb923c", sobreAcentoOscuro: "#0f172a", fondo: "#ffffff", suave: "#f8fafc" },
+  { clave: "azul",    nombre: "Azul",    tinta: "#0f172a", acento: "#1d4ed8", sobreAcento: "#ffffff", acentoOscuro: "#60a5fa", sobreAcentoOscuro: "#0f172a", fondo: "#ffffff", suave: "#f8fafc" },
+  { clave: "verde",   nombre: "Verde",   tinta: "#0f172a", acento: "#15803d", sobreAcento: "#ffffff", acentoOscuro: "#4ade80", sobreAcentoOscuro: "#0f172a", fondo: "#ffffff", suave: "#f6faf7" },
+  { clave: "violeta", nombre: "Violeta", tinta: "#0f172a", acento: "#6d28d9", sobreAcento: "#ffffff", acentoOscuro: "#a78bfa", sobreAcentoOscuro: "#0f172a", fondo: "#ffffff", suave: "#faf8ff" },
+  { clave: "rosa",    nombre: "Rosa",    tinta: "#0f172a", acento: "#be185d", sobreAcento: "#ffffff", acentoOscuro: "#f472b6", sobreAcentoOscuro: "#0f172a", fondo: "#ffffff", suave: "#fff7fa" },
+  { clave: "grafito", nombre: "Grafito", tinta: "#0f172a", acento: "#1e293b", sobreAcento: "#ffffff", acentoOscuro: "#e2e8f0", sobreAcentoOscuro: "#0f172a", fondo: "#ffffff", suave: "#f4f4f5" },
 ];
 
 export const buscarEstilo = (clave: unknown): Estilo =>
