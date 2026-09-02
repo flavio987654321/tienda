@@ -294,6 +294,14 @@ export default function EditorDePagina({ productoId, nombre, publicado, pagina: 
   const [ancho, setAncho] = useState<"pc" | "celular">("pc");
   const [vista, setVista] = useState<"editar" | "previa">("editar");
   const [solapa, setSolapa] = useState<"estilo" | "contenido">("contenido");
+  /* La que se acaba de abrir desde la previa. Se destaca un rato y se apaga:
+     sin eso, la lista se movió sola y no queda claro dónde caíste. */
+  const [recienAbierta, setRecienAbierta] = useState<string | null>(null);
+  useEffect(() => {
+    if (!recienAbierta) return;
+    const t = setTimeout(() => setRecienAbierta(null), 1600);
+    return () => clearTimeout(t);
+  }, [recienAbierta]);
   const enVuelo = useRef(false);
   const marco = useRef<HTMLIFrameElement>(null);
 
@@ -342,6 +350,7 @@ export default function EditorDePagina({ productoId, nombre, publicado, pagina: 
         const clave = d.clave;
         setSolapa("contenido");
         setAbierta(clave);
+        setRecienAbierta(clave);
         /* Después de dibujar: si se busca ahora, la sección todavía está
            cerrada y el navegador la centra en el lugar equivocado. */
         requestAnimationFrame(() => {
@@ -598,6 +607,7 @@ export default function EditorDePagina({ productoId, nombre, publicado, pagina: 
               const def = buscarSeccion(s.clave);
               if (!def) return null;
               const abierto = abierta === s.clave;
+              const reciente = recienAbierta === s.clave;
               /* ⚠️ El motivo sale de la MISMA función que usa la página pública
                  para decidir qué pinta. Si acá se escribiera aparte, el panel
                  diría una cosa y la página haría otra. */
@@ -611,7 +621,9 @@ export default function EditorDePagina({ productoId, nombre, publicado, pagina: 
                     abierto
                       ? "border-orange-300 panel-oscuro:border-orange-500/40"
                       : "border-gray-200 panel-oscuro:border-gray-700"
-                  } ${porQueNo ? "opacity-60" : ""}`}
+                  } ${porQueNo ? "opacity-60" : ""} ${
+                    reciente ? "ring-2 ring-sky-400 ring-offset-2 panel-oscuro:ring-offset-gray-950" : ""
+                  }`}
                 >
                   <div className="flex items-center gap-1 p-3">
                     <button

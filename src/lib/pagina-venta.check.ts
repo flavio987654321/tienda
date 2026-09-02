@@ -583,6 +583,17 @@ check("TOC-A", /d\.tipo === AVISO_TOCAR[\s\S]{0,120}buscarSeccion\(d\.clave\)/.t
 check("TOC-B", /data-seccion=\{s\.clave\}/.test(editor),
   "y cada sección del editor se puede encontrar para traerla a la vista");
 
+/* Se toca el TEXTO, no un cartelito de veinte píxeles arriba a la derecha:
+   apuntarle a la chapita es puntería, tocar el párrafo sale solo. */
+check("TOC-D", /onClick=\{alClic\}/.test(dibujante),
+  "el bloque entero abre su casilla, no sólo el cartel del nombre");
+
+/* Pero si el clic cayó sobre algo que ya hace otra cosa —el botón de comprar, un
+   enlace del pie, una pregunta que se abre— gana eso: si no, la previa se comería
+   sus propios controles. */
+check("TOC-E", /closest\("button, a, summary, input, label/.test(dibujante),
+  "y un clic sobre un botón o un enlace sigue haciendo lo suyo");
+
 /* La marca es sólo de la previa: quien compra no tiene que ver recuadros de
    edición ni poder tocar nada que no sea comprar. */
 check("TOC-C", /alTocarSeccion/.test(dibujante) && !/alTocarSeccion/.test(publica),

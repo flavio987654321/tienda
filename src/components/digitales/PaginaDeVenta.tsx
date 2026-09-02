@@ -579,8 +579,26 @@ function MarcaDeSeccion({ clave, alTocar, children }: {
   clave: string; alTocar: (clave: string) => void; children: React.ReactNode;
 }) {
   const nombre = buscarSeccion(clave)?.nombre ?? clave;
+
+  /* ⚠️ Se toca EL TEXTO, no un cartelito. Apuntarle a una chapita de 20 píxeles
+     arriba a la derecha es puntería; tocar el párrafo que querés cambiar es lo
+     que sale solo. El cartel queda como señal de qué sección es y como camino
+     para el teclado.
+
+     Lo que sí se respeta: si el clic cayó sobre algo que ya hace otra cosa —el
+     botón de comprar, un enlace del pie, una pregunta que se abre— gana eso.
+     Si no, la página se comería sus propios controles adentro de la previa. */
+  const alClic = (e: React.MouseEvent<HTMLDivElement>) => {
+    const t = e.target as HTMLElement;
+    if (t.closest("button, a, summary, input, label, [role='button']")) return;
+    alTocar(clave);
+  };
+
   return (
-    <div className="group/marca relative outline-2 -outline-offset-2 outline-dashed outline-transparent transition-[outline-color] hover:outline-sky-500">
+    <div
+      onClick={alClic}
+      className="group/marca relative cursor-pointer outline-2 -outline-offset-2 outline-dashed outline-transparent transition-[outline-color] hover:outline-sky-500"
+    >
       {children}
       <button
         type="button"
