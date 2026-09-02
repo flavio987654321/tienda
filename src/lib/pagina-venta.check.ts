@@ -604,6 +604,25 @@ check("TOC-C", /alTocarSeccion/.test(dibujante) && !/alTocarSeccion/.test(public
 check("VIVO-D", /ref=\{marco\}/.test(editor) && !/key=\{refresco\}/.test(editor),
   "la previa se actualiza sin volver a cargarse, así no pierde el scroll");
 
+/* ── Que un texto largo no rompa la página ────────────────────────────────── */
+
+/* ⚠️ Visto ROTO en la página de la competencia el 02/09/26: se pega un título sin
+   espacios ("carasfsdfsdfsdfsdf…"), la palabra no puede cortarse en ningún lado y
+   empuja el ancho de toda la página. Queda una barra de scroll horizontal, el
+   título saliéndose de la pantalla y el contenido corrido.
+
+   Nosotros teníamos el mismo agujero. Se tapa en UN lugar porque `overflow-wrap`
+   se hereda: puesto en la raíz, vale para todos los textos de la página. */
+check("ANCHO-A", /\[overflow-wrap:anywhere\]/.test(dibujante),
+  "una palabra sin espacios se corta en vez de empujar el ancho de la página");
+check("ANCHO-B", /overflow-x-clip/.test(dibujante),
+  "y si algo igual se pasa, se recorta: nunca aparece scroll horizontal");
+
+/* `clip` y no `hidden`: `hidden` en un eje convierte el otro en un contenedor
+   con scroll propio, y la página quedaría con una barra vertical adentro. */
+check("ANCHO-C", !/overflow-x-hidden/.test(dibujante),
+  "y se recorta con clip, no con hidden, que dejaría un scroll vertical propio");
+
 /* ── Quién puede enmarcar la página ───────────────────────────────────────── */
 
 /* ⚠️ La política base del sitio es `frame-ancestors 'none'`, y con eso la previa

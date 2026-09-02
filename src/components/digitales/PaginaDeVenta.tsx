@@ -271,7 +271,7 @@ function Contenido({ clave, campos, datos }: {
       return (
         <Seccion tono="gris" estilo={estilo}>
           <Titulo estilo={estilo}>{texto(campos, "titulo")}</Titulo>
-          <div className="mt-8 grid items-center gap-8 md:grid-cols-2">
+          <div className="mt-8 grid items-center gap-8 md:grid-cols-2 [&>*]:min-w-0">
             {producto.imagen ? (
               /* eslint-disable-next-line @next/next/no-img-element */
               <img
@@ -647,9 +647,22 @@ export default function PaginaDeVenta(datos: DatosDePagina) {
   } as React.CSSProperties;
 
   return (
+    /* ⚠️ Las dos clases raras de acá tapan el mismo agujero, y es uno que vimos
+       roto en la página de la competencia el 02/09/26: alguien pega un título sin
+       espacios —"carasfsdfsdfsdfsdf…"— y la palabra no puede cortarse en ningún
+       lado, así que empuja el ancho de la página. Resultado: barra de scroll
+       horizontal, el título saliéndose de la pantalla y todo el contenido corrido.
+
+       · `overflow-wrap: anywhere` deja cortar adentro de una palabra. Se pone UNA
+         vez acá porque esa propiedad se hereda: vale para todos los textos de la
+         página sin tener que acordarse en cada uno. Y de paso achica el ancho
+         mínimo que las cajas piden, que es lo que rompía las columnas.
+       · `overflow-x-clip` es la red: si algo igual se pasa, se recorta y no
+         aparece la barra horizontal. Va `clip` y no `hidden` porque `hidden`
+         convertiría el alto en un contenedor con scroll propio. */
     <div
       style={colores}
-      className={`min-h-screen bg-[color:var(--pv-fondo)] text-[color:var(--pv-tinta)] antialiased ${conBarra ? "pb-24" : ""}`}
+      className={`min-h-screen overflow-x-clip [overflow-wrap:anywhere] bg-[color:var(--pv-fondo)] text-[color:var(--pv-tinta)] antialiased ${conBarra ? "pb-24" : ""}`}
     >
       {datos.pagina.secciones.map((s) => {
         if (!seDibuja(s, ctx)) return null;
