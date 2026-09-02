@@ -7,7 +7,7 @@ import {
   Loader2, ExternalLink, Save, Monitor, Smartphone, Lock, ImageIcon, AlertTriangle,
 } from "lucide-react";
 import {
-  SECCIONES, buscarSeccion, type Campo, type PaginaVenta, type SeccionGuardada,
+  SECCIONES, buscarSeccion, porQueNoSeDibuja, type Campo, type PaginaVenta, type SeccionGuardada,
 } from "@/lib/pagina-venta";
 
 /**
@@ -437,7 +437,10 @@ export default function EditorDePagina({ productoId, nombre, publicado, pagina: 
               const def = buscarSeccion(s.clave);
               if (!def) return null;
               const abierto = abierta === s.clave;
-              const sinBonos = s.clave === "bonos" && cuantosBonos === 0;
+              /* ⚠️ El motivo sale de la MISMA función que usa la página pública
+                 para decidir qué pinta. Si acá se escribiera aparte, el panel
+                 diría una cosa y la página haría otra. */
+              const porQueNo = porQueNoSeDibuja(s, { hayBonos: cuantosBonos > 0 });
 
               return (
                 <div
@@ -446,7 +449,7 @@ export default function EditorDePagina({ productoId, nombre, publicado, pagina: 
                     abierto
                       ? "border-orange-300 panel-oscuro:border-orange-500/40"
                       : "border-gray-200 panel-oscuro:border-gray-700"
-                  } ${s.visible ? "" : "opacity-60"}`}
+                  } ${porQueNo ? "opacity-60" : ""}`}
                 >
                   <div className="flex items-center gap-1 p-3">
                     <button
@@ -458,8 +461,18 @@ export default function EditorDePagina({ productoId, nombre, publicado, pagina: 
                         <span className="block truncate text-sm font-bold text-gray-900 panel-oscuro:text-gray-100">
                           {def.nombre}
                         </span>
-                        <span className="block truncate text-[11px] text-gray-500 panel-oscuro:text-gray-400">
-                          {sinBonos ? "No se dibuja: todavía no cargaste ningún bono" : def.para}
+                        {/* Cuando no se va a ver, el renglón lo dice y dice por
+                            qué. "No se dibuja" a secas se lee como un error
+                            nuestro; con el motivo, se lee como algo que falta
+                            escribir. */}
+                        <span
+                          className={`block truncate text-[11px] ${
+                            porQueNo
+                              ? "font-medium text-amber-600 panel-oscuro:text-amber-400"
+                              : "text-gray-500 panel-oscuro:text-gray-400"
+                          }`}
+                        >
+                          {porQueNo ? `No se ve: ${porQueNo.toLowerCase()}` : def.para}
                         </span>
                       </span>
                       {abierto ? (

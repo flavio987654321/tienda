@@ -10,7 +10,7 @@
 
 import { readFileSync } from "fs";
 import {
-  SECCIONES, buscarSeccion, contenidoPorDefecto, normalizarContenido,
+  SECCIONES, buscarSeccion, contenidoPorDefecto, normalizarContenido, porQueNoSeDibuja,
   type Campo,
 } from "./pagina-venta";
 
@@ -308,6 +308,49 @@ check("EDI-C", /maxLength=\{campo\.largo\}/.test(editor),
    diseño, porque las medidas miran el ancho de la VENTANA. */
 check("EDI-D", /<iframe/.test(editor) && /src=\{`\/p\/\$\{productoId\}`\}/.test(editor),
   "la previa es la página de verdad adentro de un iframe");
+
+/* ── Qué se dibuja y qué no ───────────────────────────────────────────────── */
+
+/* ⚠️ Una sola regla, leída desde los dos lados: la página pública decide con
+   ella qué pinta, y el editor avisa con ella "esta sección no se va a ver, y por
+   qué". Si fueran dos, el panel diría una cosa y la página haría otra. */
+const sinBonos = { hayBonos: false };
+const conBonos = { hayBonos: true };
+const secc = (clave: string, campos: Record<string, unknown> = {}, visible = true) =>
+  ({ clave, visible, campos });
+
+check("DIB-A", porQueNoSeDibuja(secc("bonos"), sinBonos) !== null
+  && porQueNoSeDibuja(secc("bonos"), conBonos) === null,
+  "la sección de bonos se dibuja sólo si hay bonos cargados");
+
+check("DIB-B", porQueNoSeDibuja(secc("beneficios", { items: [] }), sinBonos) !== null
+  && porQueNoSeDibuja(secc("beneficios", { items: [{ texto: "algo" }] }), sinBonos) === null,
+  "una lista vacía no se dibuja, y con un ítem sí");
+
+/* Un ítem con todos los campos en blanco no cuenta: dibujaría un renglón vacío. */
+check("DIB-C", porQueNoSeDibuja(secc("preguntas", { items: [{ pregunta: "", respuesta: "" }] }), sinBonos) !== null,
+  "ni un ítem con todo en blanco");
+
+check("DIB-D", porQueNoSeDibuja(secc("beneficios", { items: [{ texto: "x" }] }), sinBonos, ) === null
+  && porQueNoSeDibuja({ ...secc("beneficios", { items: [{ texto: "x" }] }), visible: false }, sinBonos) !== null,
+  "y una sección apagada no se dibuja aunque tenga contenido");
+
+/* Las que van siempre no dependen de nada: si alguna vez devolvieran un motivo,
+   habría páginas publicadas sin precio o sin producto. */
+check("DIB-E", ["portada", "producto", "precio", "pie"].every(
+  (c) => porQueNoSeDibuja(secc(c), sinBonos) === null),
+  "portada, producto, precio y pie se dibujan siempre, aun vacías");
+
+/* El aviso de ventas muestra compras REALES. Hoy no hay ninguna venta digital,
+   así que no se dibuja — y lo que no va a hacer nunca es inventar una. */
+check("DIB-F", porQueNoSeDibuja(secc("avisoDeVentas"), conBonos) !== null,
+  "el aviso de ventas no dibuja nada hasta que haya una venta de verdad");
+
+const dibujante = readFileSync("src/components/digitales/PaginaDeVenta.tsx", "utf8");
+check("DIB-G", /seDibuja\(s, ctx\)/.test(dibujante),
+  "la página pública decide con esa regla, no con una copia adentro");
+check("DIB-H", /porQueNoSeDibuja\(s, \{ hayBonos/.test(editor),
+  "y el editor avisa con la misma, así los dos dicen lo mismo");
 
 /* ── Quién puede enmarcar la página ───────────────────────────────────────── */
 

@@ -365,6 +365,65 @@ export function buscarSeccion(clave: string): Seccion | null {
   return SECCIONES.find((s) => s.clave === clave) ?? null;
 }
 
+/* ── Si una sección se dibuja o no ──────────────────────────────────────────
+ *
+ * ⚠️ **Una sola regla, leída desde los dos lados**: la usa la página pública
+ * para decidir qué pinta, y el editor para avisar "esta no se va a ver, y por
+ * qué". Si fueran dos, el panel diría una cosa y la página haría otra — que es
+ * la peor forma de descubrir que tu página salió a medias.
+ *
+ * Estar encendida no alcanza. Un "Además te llevás gratis" sin ningún bono
+ * abajo, o un "Preguntas frecuentes" sin preguntas, se leen como que la página
+ * se rompió; no tenerlos, no. */
+
+const conAlgo = (v: unknown): boolean =>
+  Array.isArray(v) && v.some((i) => i && typeof i === "object" &&
+    Object.values(i as Record<string, unknown>).some((x) => typeof x === "string" && x.length > 0));
+
+const hayTexto = (v: unknown): boolean => typeof v === "string" && v.length > 0;
+
+/** Qué necesita saber la regla y no está adentro del contenido. */
+export type ContextoDePagina = { hayBonos: boolean };
+
+/**
+ * Por qué esta sección NO se va a ver. `null` = se ve.
+ *
+ * Devuelve el motivo y no un `false` a secas porque el editor lo muestra tal
+ * cual: "no se dibuja" sin decir por qué se lee como un error nuestro.
+ */
+export function porQueNoSeDibuja(s: SeccionGuardada, ctx: ContextoDePagina): string | null {
+  if (!s.visible) return "Está apagada";
+
+  switch (s.clave) {
+    case "bonos":
+      return ctx.hayBonos ? null : "Todavía no cargaste ningún bono";
+    case "beneficios":
+      return conAlgo(s.campos.items) ? null : "Todavía no escribiste ningún beneficio";
+    case "dolores":
+      return conAlgo(s.campos.items) ? null : "Todavía no escribiste ninguna situación";
+    case "comoFunciona":
+      return conAlgo(s.campos.pasos) ? null : "Todavía no escribiste ningún paso";
+    case "opiniones":
+      return conAlgo(s.campos.items) ? null : "Todavía no cargaste ninguna opinión";
+    case "preguntas":
+      return conAlgo(s.campos.items) ? null : "Todavía no escribiste ninguna pregunta";
+    case "garantia":
+      return hayTexto(s.campos.texto) ? null : "Todavía no escribiste qué prometés";
+    case "urgencia":
+      return hayTexto(s.campos.hasta) ? null : "Falta la fecha en que termina";
+    /* Muestra compras REALES, y todavía no hay ninguna venta digital en el
+       sistema. Lo que no va a hacer nunca es inventar una. */
+    case "avisoDeVentas":
+      return "Va a aparecer con tu primera venta";
+    default:
+      return null;
+  }
+}
+
+/** Atajo para la página pública, que sólo necesita el sí o el no. */
+export const seDibuja = (s: SeccionGuardada, ctx: ContextoDePagina): boolean =>
+  porQueNoSeDibuja(s, ctx) === null;
+
 /* ── Normalizar ─────────────────────────────────────────────────────────────
  *
  * Todo lo que llega de afuera pasa por acá, y sale una página válida SIEMPRE.

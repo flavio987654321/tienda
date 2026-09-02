@@ -21,7 +21,7 @@
    Por eso tampoco sigue el tema del panel: la página pública es clara siempre.
    Quien la ve no tiene cuenta ni preferencia guardada. */
 
-import type { PaginaVenta } from "@/lib/pagina-venta";
+import { seDibuja, type PaginaVenta } from "@/lib/pagina-venta";
 import BarraDeOferta from "./BarraDeOferta";
 
 export type ProductoParaPagina = {
@@ -166,8 +166,6 @@ function Contenido({ clave, campos, datos }: {
       );
 
     case "bonos": {
-      /* Sin bonos cargados no se dibuja, aunque la sección esté encendida. */
-      if (bonos.length === 0) return null;
       return (
         <Seccion>
           <Titulo>{texto(campos, "titulo")}</Titulo>
@@ -197,7 +195,6 @@ function Contenido({ clave, campos, datos }: {
     case "beneficios":
     case "dolores": {
       const items = lista(campos, "items").filter((i) => i.texto);
-      if (items.length === 0) return null;
       const esDolor = clave === "dolores";
       return (
         <Seccion tono={esDolor ? "gris" : undefined}>
@@ -226,7 +223,6 @@ function Contenido({ clave, campos, datos }: {
 
     case "comoFunciona": {
       const pasos = lista(campos, "pasos").filter((p) => p.titulo || p.detalle);
-      if (pasos.length === 0) return null;
       return (
         <Seccion>
           <Titulo>{texto(campos, "titulo")}</Titulo>
@@ -256,7 +252,6 @@ function Contenido({ clave, campos, datos }: {
 
     case "opiniones": {
       const items = lista(campos, "items").filter((i) => i.texto);
-      if (items.length === 0) return null;
       return (
         <Seccion tono="gris">
           <Titulo>{texto(campos, "titulo")}</Titulo>
@@ -312,7 +307,6 @@ function Contenido({ clave, campos, datos }: {
     }
 
     case "garantia": {
-      if (!texto(campos, "texto")) return null;
       return (
         <Seccion tono="gris">
           <div className="mx-auto max-w-2xl rounded-2xl border border-emerald-200 bg-white p-6 text-center">
@@ -327,7 +321,6 @@ function Contenido({ clave, campos, datos }: {
 
     case "preguntas": {
       const items = lista(campos, "items").filter((i) => i.pregunta);
-      if (items.length === 0) return null;
       return (
         <Seccion>
           <Titulo>{texto(campos, "titulo")}</Titulo>
@@ -367,12 +360,6 @@ function Contenido({ clave, campos, datos }: {
       return <BarraDeOferta texto={texto(campos, "texto")} hasta={hasta} />;
     }
 
-    /* 🔲 Muestra compras REALES de este producto. Todavía no hay ninguna venta
-       digital en el sistema, así que hoy no dibuja nada. Lo que no va a hacer
-       nunca es inventar una. */
-    case "avisoDeVentas":
-      return null;
-
     case "pie":
       return (
         <footer className="border-t border-slate-200 bg-white">
@@ -397,10 +384,16 @@ function Contenido({ clave, campos, datos }: {
 }
 
 export default function PaginaDeVenta(datos: DatosDePagina) {
+  /* ⚠️ Qué se dibuja lo decide `seDibuja`, en `lib/pagina-venta`, y NO cada
+     `case` de acá. Es la misma función que el editor usa para avisar "esta
+     sección no se va a ver, y por qué". Si la regla viviera acá adentro, el
+     panel diría una cosa y la página haría otra — que es la peor forma de
+     enterarse de que tu página salió a medias. */
+  const ctx = { hayBonos: datos.bonos.length > 0 };
   return (
     <div className="min-h-screen bg-white text-slate-900 antialiased">
       {datos.pagina.secciones.map((s) =>
-        s.visible ? (
+        seDibuja(s, ctx) ? (
           <Contenido key={s.clave} clave={s.clave} campos={s.campos} datos={datos} />
         ) : null
       )}
