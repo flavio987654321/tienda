@@ -43,8 +43,12 @@ import { limpiarTexto } from "@/lib/texto-limpio";
  *   lista    → varios ítems iguales, cada uno con sus propios campos
  *   imagen   → una dirección de imagen
  *   fecha    → un momento real, en ISO
+ *   numero   → un entero con piso y techo
  */
-export type TipoCampo = "texto" | "parrafo" | "lista" | "imagen" | "fecha";
+export type TipoCampo = "texto" | "parrafo" | "lista" | "imagen" | "fecha" | "numero";
+
+/** Lo que se puede escribir adentro de un texto y se reemplaza al dibujar. */
+export const FICHA_DIAS = "{dias}";
 
 export type Campo = {
   clave: string;
@@ -63,6 +67,10 @@ export type Campo = {
   campos?: Campo[];
   /** Sólo en `lista`: cuántos ítems entran. */
   maxItems?: number;
+  /** Sólo en `numero`: piso, techo y con cuál arranca. */
+  min?: number;
+  max?: number;
+  porDefecto?: number;
 };
 
 export type Seccion = {
@@ -256,15 +264,28 @@ export const SECCIONES: readonly Seccion[] = [
     sePuedeMover: true,
     encendida: false,
     campos: [
+      { clave: "dias", etiqueta: "Días de garantía", tipo: "numero", largo: 0,
+        min: 1, max: 365, porDefecto: 10,
+        ayuda: `Escribí ${FICHA_DIAS} en el título o en el texto y se reemplaza por este número.` },
       { clave: "titulo", etiqueta: "Título", tipo: "texto", largo: 80,
-        ejemplo: "Garantía" },
+        ejemplo: `Garantía de ${FICHA_DIAS} días` },
       { clave: "texto", etiqueta: "Qué prometés", tipo: "parrafo", largo: 400,
+        ejemplo: `Si en los primeros ${FICHA_DIAS} días sentís que no te sirvió, escribinos y te devolvemos lo que pagaste.`,
         ayuda: "Lo que escribas acá es una promesa que después tenés que cumplir vos." },
     ],
-    /* Apagada por defecto porque es una obligación que se asume, no una decoración
-       que se prende sin leer. Aparte de lo que se prometa acá, en Argentina una
-       compra a distancia tiene 10 días de arrepentimiento por ley: eso corre
-       igual, se escriba o no. */
+    /* Apagada por defecto porque es una obligación que se asume, no una
+       decoración que se prende sin leer.
+
+       ⚠️ **El número arranca en 10 y no en 7 por un motivo.** En Argentina una
+       compra a distancia ya tiene 10 días corridos de arrepentimiento por ley
+       (art. 34 de la 24.240, Resolución 424/2020) y eso corre se escriba o no —
+       de hecho ya está hecho, ver `/arrepentimiento`. Prometer 7 no ahorra nada:
+       igual hay que dar 10, y encima la página anuncia menos de lo que la
+       persona tiene derecho a pedir. La competencia arranca en 7.
+
+       El número vive en UN campo y los textos lo nombran con `{dias}`. Escrito a
+       mano en dos lados, se cambia uno y queda un título que dice 7 con una
+       configuración que dice 30. */
   },
 
   {
@@ -420,6 +441,22 @@ export function porQueNoSeDibuja(s: SeccionGuardada, ctx: ContextoDePagina): str
   }
 }
 
+/**
+ * Reemplaza `{dias}` por el número que tiene la sección.
+ *
+ * Existe para que el número viva en UN solo campo. Escrito a mano en el título y
+ * en el texto, se corrige uno y queda un título que dice 7 al lado de una
+ * garantía de 30.
+ *
+ * Va con `split`/`join` y no con una expresión regular: las llaves tienen
+ * significado propio ahí adentro y este texto lo escribe una persona.
+ */
+export function conFichas(valor: string, campos: Record<string, unknown>): string {
+  if (!valor.includes(FICHA_DIAS)) return valor;
+  const dias = typeof campos.dias === "number" ? String(campos.dias) : "";
+  return valor.split(FICHA_DIAS).join(dias);
+}
+
 /** Atajo para la página pública, que sólo necesita el sí o el no. */
 export const seDibuja = (s: SeccionGuardada, ctx: ContextoDePagina): boolean =>
   porQueNoSeDibuja(s, ctx) === null;
@@ -540,6 +577,26 @@ function normalizarCampo(campo: Campo, valor: unknown, esNueva: boolean): unknow
       if (algo) items.push(item);
     }
     return items;
+  }
+
+  if (campo.tipo === "numero") {
+    const piso = campo.min ?? 0;
+    const techo = campo.max ?? Number.MAX_SAFE_INTEGER;
+    const base = campo.porDefecto ?? piso;
+    /* Llega del navegador, así que puede venir como texto. Lo que no sea un
+       número usable vuelve al DE FÁBRICA, no al piso: la casilla vacía es lo que
+       manda el editor cuando la borrás, y ahí querés los 10 de vuelta, no un 1.
+       Y un campo de días vacío dibujaría "Garantía de  días".
+
+       ⚠️ Se mira el tipo antes de convertir. `Number("")`, `Number(null)` y
+       `Number([])` son 0 —los tres— así que un `Number()` a secas los da por
+       válidos y los baja al piso. */
+    let n: number;
+    if (typeof valor === "number") n = valor;
+    else if (typeof valor === "string" && valor.trim() !== "") n = Number(valor);
+    else return base;
+    if (!Number.isFinite(n)) return base;
+    return Math.min(techo, Math.max(piso, Math.round(n)));
   }
 
   if (campo.tipo === "fecha") {

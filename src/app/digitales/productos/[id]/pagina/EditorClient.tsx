@@ -561,6 +561,33 @@ export default function EditorDePagina({ productoId, nombre, publicado, pagina: 
                             />
                           );
                         }
+                        if (campo.tipo === "numero") {
+                          return (
+                            <label key={campo.clave} className="block">
+                              <span className="mb-1 block text-xs font-bold text-gray-600 panel-oscuro:text-gray-300">
+                                {campo.etiqueta}
+                              </span>
+                              {/* `min`/`max` en la casilla ADEMÁS del recorte del
+                                  servidor: sin ellos las flechitas del navegador
+                                  te dejan bajar a cero y el aviso llega recién
+                                  al guardar. */}
+                              <input
+                                type="number"
+                                inputMode="numeric"
+                                min={campo.min}
+                                max={campo.max}
+                                value={typeof valor === "number" ? valor : (campo.porDefecto ?? "")}
+                                onChange={(e) => setCampo(s.clave, campo.clave, e.target.value === "" ? "" : Number(e.target.value))}
+                                className="w-32 rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-100 panel-oscuro:border-gray-700 panel-oscuro:bg-gray-900 panel-oscuro:text-gray-100"
+                              />
+                              {campo.ayuda && (
+                                <span className="mt-1 block text-[11px] text-gray-500 panel-oscuro:text-gray-400">
+                                  {campo.ayuda}
+                                </span>
+                              )}
+                            </label>
+                          );
+                        }
                         if (campo.tipo === "fecha") {
                           return (
                             <label key={campo.clave} className="block">

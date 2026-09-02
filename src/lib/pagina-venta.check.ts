@@ -11,6 +11,7 @@
 import { readFileSync } from "fs";
 import {
   SECCIONES, buscarSeccion, contenidoPorDefecto, normalizarContenido, porQueNoSeDibuja,
+  conFichas, FICHA_DIAS,
   type Campo,
 } from "./pagina-venta";
 
@@ -36,12 +37,15 @@ const camposOk = SECCIONES.every((s) => {
 check("CAT-B", camposOk, "ni dos campos con la misma clave adentro de una sección");
 
 /* Un campo sin tope es un campo sin tope en la base: alguien pega un libro. */
-const conTope = (c: Campo): boolean =>
-  c.tipo === "lista"
-    ? (c.maxItems ?? 0) > 0 && (c.campos ?? []).length > 0 && (c.campos ?? []).every(conTope)
-    : c.largo > 0;
+const conTope = (c: Campo): boolean => {
+  if (c.tipo === "lista") {
+    return (c.maxItems ?? 0) > 0 && (c.campos ?? []).length > 0 && (c.campos ?? []).every(conTope);
+  }
+  if (c.tipo === "numero") return typeof c.min === "number" && typeof c.max === "number" && c.min <= c.max;
+  return c.largo > 0;
+};
 check("CAT-C", SECCIONES.every((s) => s.campos.every(conTope)),
-  "todo campo tiene tope: los de texto en caracteres, las listas en cantidad");
+  "todo campo tiene tope: los de texto en caracteres, las listas en cantidad, los números en piso y techo");
 
 /* ── Lo que no se puede apagar ─────────────────────────────────────────────
  *
@@ -202,6 +206,43 @@ check("FEC-B", ["mañana", "", "31/02/2026", 5, null, {}].every((v) => {
   const p = normalizarContenido({ secciones: [{ clave: "urgencia", campos: { hasta: v } }] });
   return seccion(p, "urgencia")?.campos.hasta === null;
 }), "y lo que no es una fecha queda en null, no en una cuenta regresiva rara");
+
+/* ── La garantía y sus días ───────────────────────────────────────────────── */
+
+/* ⚠️ Arranca en 10 y no en 7 (que es lo que pone la competencia) porque en
+   Argentina una compra a distancia ya tiene 10 días de arrepentimiento por ley,
+   y eso corre se escriba o no. Prometer menos no ahorra nada: igual hay que dar
+   los 10, y encima la página anuncia menos de lo que la persona puede pedir. */
+const campoDias = buscarSeccion("garantia")?.campos.find((c) => c.clave === "dias");
+check("GAR-A", campoDias?.porDefecto === 10,
+  "la garantía arranca en 10 días, que es lo que la ley da igual");
+
+check("GAR-B", (() => {
+  const p = normalizarContenido({ secciones: [{ clave: "garantia", campos: { dias: 0 } }] });
+  const d = seccion(p, "garantia")?.campos.dias as number;
+  const q = normalizarContenido({ secciones: [{ clave: "garantia", campos: { dias: 99999 } }] });
+  return d === (campoDias?.min ?? 1) && (seccion(q, "garantia")?.campos.dias as number) === (campoDias?.max ?? 365);
+})(), "y el número queda entre su piso y su techo");
+
+check("GAR-C", ["", "   ", null, undefined, {}, [], "muchos", NaN].every((v) => {
+  const p = normalizarContenido({ secciones: [{ clave: "garantia", campos: { dias: v } }] });
+  return seccion(p, "garantia")?.campos.dias === 10;
+}), "lo que no es un número vuelve al de fábrica: vacío dibujaría 'Garantía de  días'");
+
+check("GAR-D", (() => {
+  const p = normalizarContenido({ secciones: [{ clave: "garantia", campos: { dias: 30.7 } }] });
+  return seccion(p, "garantia")?.campos.dias === 31;
+})(), "y siempre es entero: no existe media garantía");
+
+/* El número vive en UN campo y los textos lo nombran. Escrito a mano en dos
+   lados, se cambia uno y queda un título que dice 7 con una garantía de 30. */
+check("GAR-E", (() => {
+  const campos = { dias: 15, titulo: `Garantía de ${FICHA_DIAS} días` };
+  return conFichas(campos.titulo, campos) === "Garantía de 15 días";
+})(), "{dias} en un texto se reemplaza por el número de al lado");
+
+check("GAR-F", conFichas("sin ficha", { dias: 15 }) === "sin ficha",
+  "y un texto sin la ficha queda igual");
 
 /* ── Las listas ───────────────────────────────────────────────────────────── */
 

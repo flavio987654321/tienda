@@ -21,7 +21,7 @@
    Por eso tampoco sigue el tema del panel: la página pública es clara siempre.
    Quien la ve no tiene cuenta ni preferencia guardada. */
 
-import { seDibuja, type PaginaVenta } from "@/lib/pagina-venta";
+import { seDibuja, conFichas, type PaginaVenta } from "@/lib/pagina-venta";
 import BarraDeOferta from "./BarraDeOferta";
 
 export type ProductoParaPagina = {
@@ -307,12 +307,14 @@ function Contenido({ clave, campos, datos }: {
     }
 
     case "garantia": {
+      /* `{dias}` sale del campo de al lado. El número vive en un solo lugar para
+         que no quede un título que dice 7 con una garantía de 30. */
       return (
         <Seccion tono="gris">
           <div className="mx-auto max-w-2xl rounded-2xl border border-emerald-200 bg-white p-6 text-center">
-            <Titulo>{texto(campos, "titulo")}</Titulo>
+            <Titulo>{conFichas(texto(campos, "titulo"), campos)}</Titulo>
             <p className="mt-3 text-pretty leading-relaxed text-slate-600">
-              {texto(campos, "texto")}
+              {conFichas(texto(campos, "texto"), campos)}
             </p>
           </div>
         </Seccion>
