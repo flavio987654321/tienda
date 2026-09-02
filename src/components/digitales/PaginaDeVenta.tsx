@@ -135,7 +135,9 @@ function Numeros({ producto, bonos, estilo }: {
       {ahorro > 0 && producto.comparePrice ? (
         <p className="mt-2 text-[color:var(--pv-tenue)]">
           <span className="line-through">{money(producto.comparePrice)}</span>{" "}
-          <span className="font-semibold text-[color:var(--pv-ok)]">ahorrás {money(ahorro)}</span>
+          <span className="font-semibold text-[color:var(--pv-ok)]">
+            ahorrás {money(ahorro)} ({Math.round((ahorro / producto.comparePrice) * 100)}% OFF)
+          </span>
         </p>
       ) : null}
 
@@ -230,7 +232,11 @@ function Contenido({ clave, campos, datos }: {
   switch (clave) {
     case "portada": {
       const titulo = texto(campos, "titulo");
-      const imagen = texto(campos, "imagen") || producto.imagen;
+      /* NO cae en la foto del producto si no hay una propia: esa foto es la
+         estrella de la sección de abajo, y repetida dos veces seguidas pierde
+         toda la fuerza. Igual que en la página de la competencia, donde el
+         encabezado son sólo palabras. */
+      const imagen = texto(campos, "imagen");
       return (
         <Seccion estilo={estilo}>
           <div className="flex flex-col items-center gap-6 text-center">
@@ -256,26 +262,43 @@ function Contenido({ clave, campos, datos }: {
       );
     }
 
+    /* ⚠️ Ésta es LA sección de la página: la foto de un lado y la oferta entera
+       del otro. Antes era una fichita con el nombre y la descripción, y la oferta
+       aparecía recién mucho más abajo — o sea que quien entraba desde un anuncio
+       tenía que scrollear para enterarse de cuánto sale.
+       Sigue sin tener campos de precio: todo sale del producto. */
     case "producto":
       return (
         <Seccion tono="gris" estilo={estilo}>
           <Titulo estilo={estilo}>{texto(campos, "titulo")}</Titulo>
-          <div className={`mt-8 flex flex-col gap-5 bg-[color:var(--pv-tarjeta)] p-5 sm:flex-row sm:items-start sm:gap-6 sm:p-6 ${estilo.tarjeta}`}>
-            {producto.imagen && (
+          <div className="mt-8 grid items-center gap-8 md:grid-cols-2">
+            {producto.imagen ? (
               /* eslint-disable-next-line @next/next/no-img-element */
               <img
                 src={producto.imagen}
                 alt=""
-                className="h-40 w-full shrink-0 rounded-xl object-cover sm:h-36 sm:w-32"
+                className={`w-full object-cover ${estilo.tarjeta}`}
               />
-            )}
-            <div className="min-w-0">
-              <h3 className="text-lg font-semibold text-slate-900">{producto.name}</h3>
+            ) : null}
+
+            <div className={producto.imagen ? "" : "mx-auto max-w-xl text-center md:col-span-2"}>
+              <h3 className={`text-pretty text-xl text-[color:var(--pv-tinta)] sm:text-2xl ${estilo.titulo}`}>
+                {producto.name}
+              </h3>
               {producto.description && (
-                <p className="mt-2 text-pretty text-sm leading-relaxed text-[color:var(--pv-tenue)]">
+                <p className="mt-3 text-pretty leading-relaxed text-[color:var(--pv-tenue)]">
                   {producto.description}
                 </p>
               )}
+              <div className={`mt-6 bg-[color:var(--pv-tarjeta)] p-5 ${estilo.tarjeta}`}>
+                <Numeros producto={producto} bonos={bonos} estilo={estilo} />
+                <div className="mt-5 grid gap-3">
+                  <BotonComprar esPrevia={esPrevia} estilo={estilo}>
+                    {texto(campos, "textoBoton")}
+                  </BotonComprar>
+                  <Sellos />
+                </div>
+              </div>
             </div>
           </div>
         </Seccion>

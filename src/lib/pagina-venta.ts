@@ -151,7 +151,9 @@ export const SECCIONES: readonly Seccion[] = [
     encendida: true,
     campos: [
       { clave: "titulo", etiqueta: "Título de la sección", tipo: "texto", largo: 80,
-        ejemplo: "Qué te llevás", obligatorio: true },
+        ejemplo: "Qué te llevás" },
+      { clave: "textoBoton", etiqueta: "Texto del botón", tipo: "texto", largo: 40,
+        ejemplo: "Comprar ahora", obligatorio: true },
     ],
     /* El nombre, la descripción, la imagen y el precio NO se escriben acá: salen
        del producto. Si se copiaran, el día que se corrige el precio en Productos
