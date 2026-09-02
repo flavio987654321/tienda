@@ -162,10 +162,15 @@ function Sellos() {
   );
 }
 
-function Seccion({ children, tono }: { children: React.ReactNode; tono?: "gris" }) {
+function Seccion({ children, tono, estilo }: {
+  children: React.ReactNode; tono?: "gris"; estilo: Estilo;
+}) {
+  /* El aire lo pone el estilo. Es lo que más separa a los tres de lejos: Suave
+     respira el doble que Clásico, y eso se nota scrolleando aunque el color sea
+     el mismo. */
   return (
     <section className={tono === "gris" ? "bg-[color:var(--pv-suave)]" : ""}>
-      <div className="mx-auto max-w-3xl px-5 py-12 sm:px-8 sm:py-16">{children}</div>
+      <div className={`mx-auto max-w-3xl px-5 sm:px-8 ${estilo.seccion}`}>{children}</div>
     </section>
   );
 }
@@ -188,7 +193,7 @@ function Contenido({ clave, campos, datos }: {
       const titulo = texto(campos, "titulo");
       const imagen = texto(campos, "imagen") || producto.imagen;
       return (
-        <Seccion>
+        <Seccion estilo={estilo}>
           <div className="flex flex-col items-center gap-6 text-center">
             <h1 className={`text-balance text-3xl leading-tight text-[color:var(--pv-tinta)] sm:text-4xl md:text-5xl ${estilo.titulo}`}>
               {titulo || producto.name}
@@ -214,7 +219,7 @@ function Contenido({ clave, campos, datos }: {
 
     case "producto":
       return (
-        <Seccion tono="gris">
+        <Seccion tono="gris" estilo={estilo}>
           <Titulo estilo={estilo}>{texto(campos, "titulo")}</Titulo>
           <div className={`mt-8 flex flex-col gap-5 bg-white p-5 sm:flex-row sm:items-start sm:gap-6 sm:p-6 ${estilo.tarjeta}`}>
             {producto.imagen && (
@@ -239,7 +244,7 @@ function Contenido({ clave, campos, datos }: {
 
     case "bonos": {
       return (
-        <Seccion>
+        <Seccion estilo={estilo}>
           <Titulo estilo={estilo}>{texto(campos, "titulo")}</Titulo>
           {texto(campos, "subtitulo") && (
             <p className="mt-3 text-center text-slate-600">{texto(campos, "subtitulo")}</p>
@@ -269,7 +274,7 @@ function Contenido({ clave, campos, datos }: {
       const items = lista(campos, "items").filter((i) => i.texto);
       const esDolor = clave === "dolores";
       return (
-        <Seccion tono={esDolor ? "gris" : undefined}>
+        <Seccion tono={esDolor ? "gris" : undefined} estilo={estilo}>
           <Titulo estilo={estilo}>{texto(campos, "titulo")}</Titulo>
           <ul className="mx-auto mt-8 grid max-w-2xl gap-3">
             {items.map((i, n) => (
@@ -296,7 +301,7 @@ function Contenido({ clave, campos, datos }: {
     case "comoFunciona": {
       const pasos = lista(campos, "pasos").filter((p) => p.titulo || p.detalle);
       return (
-        <Seccion>
+        <Seccion estilo={estilo}>
           <Titulo estilo={estilo}>{texto(campos, "titulo")}</Titulo>
           <ol className="mx-auto mt-8 grid max-w-2xl gap-4">
             {pasos.map((p, n) => (
@@ -325,7 +330,7 @@ function Contenido({ clave, campos, datos }: {
     case "opiniones": {
       const items = lista(campos, "items").filter((i) => i.texto);
       return (
-        <Seccion tono="gris">
+        <Seccion tono="gris" estilo={estilo}>
           <Titulo estilo={estilo}>{texto(campos, "titulo")}</Titulo>
           <div className="mt-8 grid gap-4 sm:grid-cols-2">
             {items.map((i, n) => (
@@ -347,7 +352,7 @@ function Contenido({ clave, campos, datos }: {
 
     case "precio":
       return (
-        <Seccion>
+        <Seccion estilo={estilo}>
           <div className={`mx-auto flex max-w-xl flex-col items-center gap-5 bg-[color:var(--pv-suave)] px-5 py-10 text-center sm:px-8 ${estilo.tarjeta}`}>
             <Titulo estilo={estilo}>{texto(campos, "titulo")}</Titulo>
             {/* El precio no se puede ocultar: `lib/pagina-venta` no le da botón
@@ -365,7 +370,7 @@ function Contenido({ clave, campos, datos }: {
       /* `{dias}` sale del campo de al lado. El número vive en un solo lugar para
          que no quede un título que dice 7 con una garantía de 30. */
       return (
-        <Seccion tono="gris">
+        <Seccion tono="gris" estilo={estilo}>
           <div className={`mx-auto max-w-2xl bg-white p-6 text-center ${estilo.tarjeta}`}>
             <Titulo estilo={estilo}>{conFichas(texto(campos, "titulo"), campos)}</Titulo>
             <p className="mt-3 text-pretty leading-relaxed text-slate-600">
@@ -379,7 +384,7 @@ function Contenido({ clave, campos, datos }: {
     case "preguntas": {
       const items = lista(campos, "items").filter((i) => i.pregunta);
       return (
-        <Seccion>
+        <Seccion estilo={estilo}>
           <Titulo estilo={estilo}>{texto(campos, "titulo")}</Titulo>
           {/* `details` nativo: abre y cierra sin una línea de JavaScript, y
               funciona igual si el script no cargó. */}
@@ -419,7 +424,7 @@ function Contenido({ clave, campos, datos }: {
 
     case "cierre":
       return (
-        <Seccion tono="gris">
+        <Seccion tono="gris" estilo={estilo}>
           <div className="mx-auto flex max-w-xl flex-col items-center gap-6 text-center">
             <Titulo estilo={estilo}>{texto(campos, "titulo")}</Titulo>
             <Numeros producto={producto} bonos={bonos} estilo={estilo} />

@@ -475,6 +475,19 @@ check("PAL-B", PALETAS.length >= 3 && new Set(PALETAS.map((p) => p.clave)).size 
 check("PAL-C", ESTILOS.length === 3 && new Set(ESTILOS.map((e) => e.clave)).size === 3,
   "hay tres estilos, sin claves repetidas");
 
+/* ⚠️ Este chequeo salió de un error real: el primer intento tenía "Clásico" y
+   "Suave" con la misma cara —cambiaba el radio de los bordes y poco más— y no se
+   distinguían. Tres estilos que se ven igual son un estilo con tres nombres. */
+const caras = ESTILOS.map((e) => [e.tarjeta, e.boton, e.titulo, e.seccion].join("|"));
+check("PAL-H", new Set(caras).size === ESTILOS.length,
+  "y ninguno comparte la cara con otro");
+
+/* El aire es lo que más se nota de lejos, así que tienen que ser tres distintos:
+   si los tres respiran igual, la diferencia queda en detalles que sólo se ven
+   mirando de cerca. */
+check("PAL-I", new Set(ESTILOS.map((e) => e.seccion)).size === ESTILOS.length,
+  "cada estilo tiene su propio aire, que es lo primero que se ve");
+
 /* Una clave que no conocemos vuelve a la de fábrica. No se guarda lo que llegó:
    si mañana se saca una paleta, las páginas que la usaban se dibujan con la
    primera y no con un color que ya no existe. */

@@ -474,32 +474,51 @@ export type Estilo = {
   tarjeta: string;
   boton: string;
   titulo: string;
+  /** El aire de cada sección. Es lo que más se nota de lejos. */
+  seccion: string;
 };
 
+/* ⚠️ Los tres tienen que verse DISTINTOS de lejos, no en el detalle. El primer
+   intento tenía "Clásico" y "Suave" con la misma cara —cambiaba el radio de los
+   bordes y poco más— y no se distinguían.
+
+   Lo que los separa, y en este orden de importancia:
+     1. **El aire.** Suave respira el doble que Clásico. Se nota al scrollear.
+     2. **El borde.** Clásico tiene línea fina, Marcado línea gruesa negra,
+        Suave no tiene ninguno.
+     3. **La sombra.** Clásico no tiene, Marcado la tiene dura y corrida,
+        Suave la tiene grande y difusa.
+     4. **El título.** Clásico normal, Marcado negrita y mayúsculas, Suave
+        apretado.
+
+   Hay un chequeo que falla si dos estilos comparten la misma cara. */
 export const ESTILOS: readonly Estilo[] = [
   {
     clave: "clasico",
     nombre: "Clásico",
-    para: "Prolijo y tranquilo. Bordes suaves y sombras livianas.",
-    tarjeta: "rounded-2xl border border-slate-200 shadow-sm",
-    boton: "rounded-xl shadow-lg",
+    para: "Prolijo y compacto. Líneas finas, sin sombras, todo cerca.",
+    tarjeta: "rounded-lg border border-slate-200",
+    boton: "rounded-lg",
     titulo: "font-bold",
+    seccion: "py-10 sm:py-14",
   },
   {
     clave: "marcado",
     nombre: "Marcado",
-    para: "Fuerte y directo. Bordes gruesos, sombras duras, títulos grandes.",
-    tarjeta: "rounded-none border-2 border-slate-900 shadow-[5px_5px_0_0_rgba(15,23,42,1)]",
-    boton: "rounded-none border-2 border-slate-900 shadow-[5px_5px_0_0_rgba(15,23,42,1)]",
+    para: "Fuerte y directo. Bordes gruesos, sombras duras, títulos en mayúscula.",
+    tarjeta: "rounded-none border-2 border-slate-900 shadow-[6px_6px_0_0_rgba(15,23,42,1)]",
+    boton: "rounded-none border-2 border-slate-900 shadow-[6px_6px_0_0_rgba(15,23,42,1)]",
     titulo: "font-black uppercase tracking-tight",
+    seccion: "py-12 sm:py-16",
   },
   {
     clave: "suave",
     nombre: "Suave",
-    para: "Amable y redondeado. Sin bordes duros.",
-    tarjeta: "rounded-[1.75rem] border border-transparent shadow-md",
-    boton: "rounded-full shadow-xl",
-    titulo: "font-bold",
+    para: "Con mucho aire. Sin bordes, esquinas muy redondeadas, botones tipo píldora.",
+    tarjeta: "rounded-[2rem] border-0 shadow-[0_14px_40px_-12px_rgba(15,23,42,0.28)]",
+    boton: "rounded-full shadow-[0_14px_30px_-8px_rgba(15,23,42,0.45)]",
+    titulo: "font-semibold tracking-tight",
+    seccion: "py-16 sm:py-24",
   },
 ];
 
