@@ -125,6 +125,17 @@ tocar `ownerId @unique` ni obligarnos a construir el selector, el panel general 
 el ranking, que del otro lado existen **sólo porque tienen multi-tienda**. B sería
 pagar por adelantado una estructura que todavía no sabemos si alguien va a usar.
 
+> #### ⚠️ C no es "para después": es lo que hace que Pro tenga sentido
+>
+> Ampliado el 01/09/26. Acá decía "una columna de slug" y es bastante más — y
+> sobre todo, **no es opcional**. El caso que lo destapa: alguien vende un ebook de
+> mecánica y después uno de tortas. La publicidad se hace **por producto**, y el
+> que compra no se casa con el negocio sino con el ebook. Con una sola dirección
+> por cuenta, **los 5 productos de Pro sólo sirven si los 5 son del mismo nicho**.
+>
+> El alcance completo, el dibujo y la medición de por qué B es cara (116 archivos,
+> 245 lugares) están en la **Fase 5 bis**.
+
 > #### 🚫 NUNCA escribir "tiendas" en nuestra página de precios
 >
 > Sería prometer lo de ellos y entregar lo nuestro. Se dice **"páginas de
@@ -667,7 +678,7 @@ puede cosechar; una página generada no le sirve a nadie afuera. Ver 2.4 bis.
 | Pagos con transferencia | ❌ | ✅ | ✅ |
 | **Ver carritos abandonados** | ✅ | ✅ | ✅ |
 | **Mail automático de recuperación** | ❌ | ❌ | ✅ |
-| Dominio propio | ❌ | ❌ | ✅ |
+| Dominio propio **por producto** | ❌ | ❌ | ✅ |
 | Entrega automática con token | ✅ | ✅ | ✅ |
 | Descargas y estadísticas | ✅ | ✅ | ✅ |
 
@@ -1586,7 +1597,7 @@ trabar:
 | **Transferencia** | **🔒 no** | sí | sí |
 | **Píxel de Meta y Analytics** | **sí** | sí | sí |
 | App y notificaciones | sí | sí | sí |
-| **Dominio propio** (cuando exista) | **🔒 no** | sí | sí |
+| **Dominio propio por producto** (cuando exista) | **🔒 no** | **🔒 no** | sí |
 
 Los cuatro porqués:
 
@@ -1598,7 +1609,11 @@ Los cuatro porqués:
   vendedora— y sin medir vende menos, o sea que cobramos menos. Trabarlo en Free
   es pegarnos un tiro en el pie.
 - **App y notificaciones para los tres**, igual que la competencia.
-- **Dominio propio sólo en los planes pagos.**
+- **Dominio propio sólo en Pro**, y es **por producto**, no por cuenta. Esta tabla
+  decía "sí" también en Starter y contradecía a la tabla de planes de la sección 4
+  y al código (`featuresDigital` lo prende sólo en Pro). Corregido el 01/09/26.
+  Que sea por producto es lo que hace que los 5 productos de Pro puedan ser de 5
+  nichos distintos — ver Fase 5 bis.
 
 #### ⚠️ La IA en Free — decidido el 01/09/26, falta el número
 
@@ -1606,17 +1621,32 @@ Los cuatro porqués:
 nos cobramos la comisión"*. Una cuenta que no arranca no vende, y si no vende no
 hay 8 % de nada.
 
-La forma es la más simple, y la dijo Flavio así: **la IA existe en los tres
-planes, lo que cambia es el tope.** No hay funciones de IA prendidas y apagadas
-según el plan; hay un número distinto.
+**⚠️ Corregido el mismo día: lo que cambia no es el tope, es PARA QUÉ.**
+
+La primera forma fue "la IA existe en los tres planes y lo que cambia es el
+número", y a Free le tocaba `ebooksIA: 1`. Mirando la tabla de la competencia se
+vio que estaba al revés de lo que conviene:
 
 | | Free | Starter | Pro |
 |---|---|---|---|
-| `ebooksIA` | **1** (era 0) | 2 | 5 |
+| `ebooksIA` | **0** (estuvo un rato en 1) | 2 | 5 |
+| Página y fichas armadas con IA | **✅** | ✅ | ✅ |
 
-**`ebooksIA: 1` en Free no es un número al azar:** es exactamente lo que entra en
-la única página de venta que Free puede publicar (`paginas: 1`). Le alcanza para
-llenar lo que tiene y ni uno más.
+A Free la IA le arma **la cáscara** —la página y las fichas— y el contenido del
+ebook lo trae la persona. Los dos motivos:
+
+1. **El costo está al revés de lo que parece.** El ebook son US$2 a 4 de API; los
+   textos de una landing son centavos. Estábamos regalando lo caro y cobrando lo
+   barato.
+2. **Free no pide tarjeta.** Un ebook escrito con IA sirve FUERA de la
+   plataforma: diez cuentas, diez ebooks. Una página generada no le sirve a nadie
+   afuera. **Lo que se regala tiene que ser lo que no se puede cosechar.**
+
+Y el gancho de Free no se pierde: lo que impresiona al entrar es ver la tienda
+armada sola, y eso lo dan los centavos de texto, no los dólares del ebook.
+
+El reparto completo —el lote de arranque, el reintento incluido, la prueba de 7
+días y las cinco paredes— está en **2.4 bis**.
 
 Por eso **Contexto para la IA se le muestra a los tres**: es lo que la IA lee
 para generar.
@@ -1681,12 +1711,113 @@ Anotado ahora que se sabe qué forma tiene (ver 2.3). Cuelga del producto, en
 
 ## FASE 5 bis — La dirección propia por producto
 
-La opción C de 2.3, separada a propósito: da lo único valioso de multi-tienda sin
-romper nada.
+La opción C de 2.3. **Estaba escrita como "una columna de slug" y es bastante más
+que eso** — ampliada el 01/09/26.
 
-- 🔲 Columna de slug en `Product`, única.
-- 🔲 Una regla más en el middleware, que **ya sabe mapear subdominio → tienda**:
-  falta el caso subdominio → producto digital.
+### Por qué no es opcional
+
+El caso que lo destapa: alguien vende un ebook de **mecánica** y después quiere
+vender uno de **tortas**. Hoy los dos cuelgan de la misma dirección y de la misma
+marca, así que el anuncio de tortas cae en una página que arriba dice "Detodo" y
+vive en un dominio de mecánica. **La publicidad se hace por producto, y el que
+compra no se casa con el negocio: se casa con el ebook.**
+
+> **Sin esta fase, los 5 productos de Pro sólo sirven si los 5 son del mismo
+> nicho.** Eso no es un detalle técnico: es lo que Pro vende. Alguien que paga
+> $60.000 por 5 productos y descubre que los 5 tienen que ser de mecánica entendió
+> otra cosa de la que le vendimos.
+
+### Cómo es hoy
+
+```
+Cuenta "Detodo"
+   └─ una sola dirección: detodo.tiendaapps.com
+        ├─ /producto/1  → ebook de mecánica
+        ├─ /producto/2  → ebook de tortas
+        └─ /producto/3  → ebook de guitarra
+```
+
+### Cómo queda
+
+```
+Cuenta "Detodo"  ←  nadie la ve nunca. Es donde se administra.
+   ├─ Producto 1  →  mecanicafacil.com        (dominio propio)
+   ├─ Producto 2  →  tortascaseras.com        (dominio propio)
+   └─ Producto 3  →  guitarra.tiendaapps.com  (subdominio, si no compra dominio)
+```
+
+Cada producto pasa a ser **su propio sitio**: su dirección, su nombre y su cara.
+La cuenta se vuelve invisible para el que compra. El que llega desde un anuncio de
+tortas ve tortas y nada más.
+
+- **Ellos:** 5 oficinas, cada una con un local.
+- **Nosotros:** 1 oficina con 5 locales, cada uno con su vidriera y su dirección.
+
+Desde la vereda se ve igual. Desde adentro, el nuestro es mucho más simple.
+
+### Qué hay que tocar
+
+- 🔲 **Slug propio en `Product`**, único — le da el subdominio.
+- 🔲 **Dominio propio en `Product`.** Hoy `customDomain` está en `Store` y es
+  `@unique`: **uno por cuenta**. Para tener dos dominios en la misma cuenta, el
+  dominio tiene que colgar del producto.
+- 🔲 **Identidad propia del producto** — nombre y aspecto de esa página, sin
+  heredar la marca de la tienda.
+- 🔲 **La regla en el middleware**, que ya sabe traducir *dominio → tienda*: falta
+  el caso *dominio → producto*.
 - 🔲 Qué pasa si el slug del producto choca con el de una tienda.
+
+⚠️ **"Poder cambiar el nombre y el dominio" NO lo resuelve** — y fue la primera
+idea. Si se cambian, se rompe el producto anterior. No es *cambiable*: es **uno
+por producto**.
+
+### Por qué el subdominio solo no alcanza
+
+**No se puede verificar en Meta un dominio que no es tuyo.** Si el ebook vive en
+`tortas.tiendaapps.com`, ese dominio es NUESTRO: la persona no lo puede verificar
+en su Business Manager, y sin dominio verificado la atribución de sus anuncios se
+degrada — sobre todo en iPhone. Para el que paga publicidad, que es todo el
+público de este ecosistema, **el dominio propio no es vanidad: es medición**.
+(Esto ata la "verificación de dominio" que quedó anotada en Meta / Tracking.)
+
+### Por qué es la opción barata — medido el 01/09/26
+
+La alternativa era la opción B, romper la cuenta en 5 tiendas. **Medido en el
+repo: 116 archivos y 245 lugares dan por sentado que una cuenta tiene UNA
+tienda.** No es tocar el esquema: es que en 245 lugares donde dice "la tienda de
+esta persona" habría que preguntar "¿cuál de las cinco?", y cada uno es una chance
+de equivocarse. Más el selector de tienda, el panel general y el ranking, que del
+otro lado existen sólo porque tienen multi-tienda.
+
+**Con la opción C no se toca ninguno de esos 116 archivos.** Quedan intactos
+`ownerId @unique`, el panel, la conexión de Mercado Pago, la suscripción, los
+roles, el registro y los layouts. Lo único que gana el producto es una dirección y
+una cara.
+
+Y el middleware sale más barato de lo que parece: **ya resuelve dominio propio →
+tienda y ya está depurado.** Hay un comentario ahí contando que durante un tiempo
+ningún dominio propio resolvió jamás, porque la consulta iba contra PostgREST y
+fallaba en silencio. Ese error ya está pagado.
+
+**Para mantenerlo no cuesta nada:** el dominio lo compra y lo paga el comerciante;
+no hay servidor nuevo, ni base nueva, ni deploy nuevo. Son N direcciones que entran
+por la misma puerta a la misma aplicación.
+
+### El orden está forzado
+
+```
+archivo del producto  →  la página de venta (Fase 5)  →  su dirección (5 bis)
+```
+
+No se le puede dar dirección a una página que todavía no existe. Lo único que
+conviene adelantar es **la migración**: agregarle a `Product` el slug y el dominio
+en la MISMA migración que la página de venta, para no tocar la base dos veces.
+
+### 🔲 Lo único que hay que chequear antes de prometerlo
+
+Pasamos de **1 dominio por cuenta** a **hasta 5**. Multiplicar por cinco los
+dominios apuntados a un mismo proyecto de Vercel es lo único que puede tener un
+límite de plataforma. No cuesta plata nuestra, pero hay que mirarlo **antes** de
+escribirlo en la página de precios.
 
 ## FASE 6 — Legales
