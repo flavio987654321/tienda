@@ -65,6 +65,29 @@ export const MINUTOS_DEL_PERMISO = 30;
  *  tarjeta y viaja en el mail de entrega. */
 export const LARGO_NOMBRE_ARCHIVO = 120;
 
+/* ── 🔲 Lo que falta, y va con la ENTREGA (Fase 5) ───────────────────────────
+ *
+ * Los dos salieron de repasar esto el 02/09/26 y ninguno se puede resolver
+ * todavía: las dos respuestas dependen del permiso de descarga, que no existe.
+ *
+ * **1. Barrer el PDF de un producto borrado.** Borrar un producto es un borrado
+ * BLANDO y el PDF se queda — y tiene que quedarse: quien ya compró tiene un
+ * permiso que le dura 30 días, y borrar el archivo le rompe una compra que ya
+ * pagó. Lo que falta es que después alguien lo limpie; hoy nadie lo hace, el
+ * cron diario no toca el storage. Pasados los 30 días ese archivo no le sirve a
+ * nadie y lo seguimos pagando. El plazo sale del permiso: barrerlo antes de que
+ * exista es adivinar el número.
+ *
+ * **2. Reemplazar el PDF de un producto YA VENDIDO** le cambia el archivo a quien
+ * lo compró antes: el token no guarda la ubicación, pide un link firmado del
+ * archivo que el producto tiene AHORA. Para corregir una errata o publicar una
+ * versión 2 está perfecto; para vender una cosa y entregar otra, no. Falta
+ * decidir si se avisa, si se congela lo vendido, o si se acepta como está.
+ *
+ * ⚠️ **No confundir el 2 con el huérfano del reemplazo**, que sí está tapado en
+ * `/archivo/confirmar`: aquél era el archivo VIEJO quedándose en el bucket sin
+ * que nadie lo pudiera alcanzar. Éste es el comprador alcanzando el NUEVO. */
+
 /**
  * Si la subida se puede intentar, o por qué no.
  *

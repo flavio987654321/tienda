@@ -1815,6 +1815,28 @@ Anotado ahora que se sabe qué forma tiene (ver 2.3). Cuelga del producto, en
 - 🔲 El aviso de que **con transferencia la entrega no es automática**, antes de
   comprar y no después.
 
+### Lo que la entrega tiene que resolver del archivo (visto el 02/09/26)
+
+Los dos salieron de repasar la subida, y los dos **van con la entrega y no antes**
+—las dos respuestas dependen de un plazo y de un modelo que todavía no existen—.
+
+- 🔲 **Barrer el PDF de un producto borrado, 30 días después.** Borrar un producto
+  es un borrado BLANDO y sus bonos y upsells se van con él, pero **el PDF se
+  queda, y tiene que quedarse**: quien ya compró tiene un permiso de descarga que
+  le dura 30 días, y borrar el archivo le rompe una compra que ya pagó. El
+  problema es que después **nadie lo limpia** — verificado, el cron diario no
+  toca el storage. Pasados los 30 días ningún permiso puede seguir vivo, así que
+  ese archivo no le sirve a nadie y lo seguimos pagando.
+  No es urgente como el huérfano del reemplazo —ése se disparaba 30 veces por
+  hora, éste sólo cuando alguien borra— pero es el mismo gasto que no avisa. Y el
+  plazo sale del permiso de descarga: barrerlo antes de que exista es adivinar.
+
+- 🔲 **Reemplazar el PDF de un producto YA VENDIDO le cambia el archivo a quien lo
+  compró antes.** El token no guarda la ubicación: pide un link firmado del
+  archivo que el producto tiene AHORA. Para corregir una errata o publicar una
+  versión 2 está perfecto; para vender una cosa y entregar otra, no tanto. Hay
+  que decidir si se avisa, si se congela lo vendido, o si se acepta como está.
+
 ## FASE 5 bis — La dirección propia por producto
 
 La opción C de 2.3. **Estaba escrita como "una columna de slug" y es bastante más
