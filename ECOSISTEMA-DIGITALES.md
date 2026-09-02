@@ -128,8 +128,12 @@ pagar por adelantado una estructura que todavía no sabemos si alguien va a usar
 > #### 🚫 NUNCA escribir "tiendas" en nuestra página de precios
 >
 > Sería prometer lo de ellos y entregar lo nuestro. Se dice **"páginas de
-> venta"** — que además suena a más: 5 páginas contra sus 2 tiendas, 25 contra
-> sus 5.
+> venta"**.
+>
+> *(Acá decía "y además suena a más: 5 páginas contra sus 2 tiendas, 25 contra
+> sus 5". Se cayó el 01/09/26 con los topes en 1/3/5 — ver abajo. Empatamos, no
+> les ganamos, y está bien: lo nuestro se diferencia por la comisión y por la IA,
+> que ellos no tienen.)*
 
 #### Y eso destraba lo que dábamos por caro
 
@@ -197,6 +201,109 @@ pagar por adelantado una estructura que todavía no sabemos si alguien va a usar
 > acceso a IA. Necesita la capa de "global de cuentas gratis" que ya existe para
 > las de prueba, por el mismo motivo exacto: veinte cuentas truchas son la misma
 > persona y ninguna capa por-usuario se entera.
+
+### 2.4 bis Cómo se reparte la IA — CERRADO (01/09/26)
+
+**La regla: se cuenta lo que cuesta.** Los cuatro usos de la IA cuestan cosas
+ridículamente distintas; meterlos en una bolsa sola sería cobrar caro lo barato y
+regalar lo caro.
+
+| Qué hace | Qué produce | Cuánto cuesta | Cómo se limita |
+|---|---|---|---|
+| **Escribe el ebook** | 40 páginas | **US$2 a 4** | **Cupo contado.** Es el único número que va en la tabla de precios |
+| **Arma la página de venta** | textos de una landing | centavos | Ráfaga y tope diario. 🔲 Hoy no tiene ninguno |
+| **Títulos, descripciones, mails** | frases sueltas | casi nada | Sólo ráfaga |
+| **Sasha** | conversación | por mensaje | Ya resuelto en `asistente-limites.ts` |
+
+Lo barato no se cuenta, se protege del script: contar las regeneraciones de un
+título pone fricción donde no hay costo y llena la tabla de precios de números
+que no le importan a nadie.
+
+#### El cupo del ebook
+
+| | Al contratar (una vez) | Por mes | Reintentos por ebook |
+|---|---|---|---|
+| Free | — | — | — |
+| Starter | **3** | 2 | 1 |
+| Pro | **6** | 5 | 1 |
+
+**El arranque existe porque el mes 1 es cuando se necesita todo y el mes 6 no se
+necesita nada.** El embudo se arma una vez y después se vende; un cupo mensual da
+poco justo cuando más falta hace. El arranque es exactamente un producto entero
+—el principal más sus bonos (Starter 1+2, Pro 1+5)— y **se paga una sola vez**:
+es costo de conseguir el cliente, no un costo que corre para siempre.
+
+**El mensual no se toca** (2 y 5), así que el peor caso —alguien que quema todo,
+todos los meses— deja el margen donde lo midió 3 bis.
+
+#### ⚠️ Se cuentan EBOOKS, con techo de reintentos
+
+Lo que cuesta plata es cada vez que se aprieta el botón, no el ebook que queda al
+final. Contando ebooks a secas, alguien genera diez veces hasta que le guste: en
+Pro serían **50 llamadas en vez de 5**, con el mismo abono, y ese plan pasa a
+perder plata sin que nos enteremos hasta la factura.
+
+La salida: **N ebooks, y cada uno se puede volver a generar 1 vez.** El cartel
+dice la verdad —son 5 ebooks, no 5 intentos— y el costo tiene fondo.
+
+Y es justo por otro lado: **si la primera salida sale mal es más culpa nuestra que
+de la persona.** Cobrarle un ebook entero por una generación mala trae reclamos;
+una segunda oportunidad incluida los evita.
+
+⚠️ Duplicar las llamadas baja el margen del peor caso de **71 % / 65 %** a
+**~42 % / ~30 %**. Pro es el que se da vuelta primero si el dólar se mueve: con 1
+reintento aguanta, con 2 no.
+
+#### La prueba de 7 días: el plan entero, UNA generación
+
+**No podemos copiar cómo se cubren ellos.** Su prueba de 15 días pide tarjeta
+(Stripe, nombre, número y CVC): la tarjeta es una pared que se construye sola —
+veinte cuentas piden veinte tarjetas y Stripe detecta la repetida. Nosotros
+prometemos **7 días SIN tarjeta**, y cobramos con Mercado Pago, que en nuestro
+esquema **no tiene suscripción recurrente**: no hay ninguna tarjeta guardada a la
+cual cobrarle en 7 días. Su modelo entero depende de una infraestructura que no
+tenemos.
+
+Y la prueba sin tarjeta **es una ventaja acá**, no un descuido: pedir la tarjeta
+de entrada mata la conversión en Argentina. No se tira — se hace que la prueba
+nos salga barata.
+
+| Durante los 7 días | Con el primer cobro |
+|---|---|
+| **Todo el plan**: productos, bonos, upsells, transferencia, Sasha, página armada con IA | Se libera el cupo completo: el arranque y el mensual |
+| **1 sola generación de ebook** | |
+
+**El recorte va sobre la IA, no sobre el plan.** Los lugares no cuestan nada;
+recortarlos hace que la prueba se sienta mutilada sin ahorrar un peso. Con una
+generación alcanza para lo que la prueba tiene que probar —si la IA escribe
+bien—, y el embudo se completa igual subiendo PDFs propios, así que se puede
+recorrer la cadena entera: crear, vender, entregar.
+
+Baja la exposición de una cuenta trucha de **US$15 a US$3**.
+
+#### Las cinco paredes, en orden
+
+1. **Lo caro está detrás del cobro.** La estructural, y la única que no depende de
+   detectar a nadie: no importa cuántas cuentas se abran, en ninguna hay algo caro
+   que llevarse.
+2. **El tope global de las cuentas en prueba** — la capa 3 de Sasha, que existe
+   justo para esto: veinte cuentas truchas tienen cada una su tope intacto y
+   ninguna capa por-usuario se entera de que son la misma persona. Va **separado**
+   del tope de las que pagan, para que el que abusa no deje sin IA al que paga.
+3. **La prueba es de una sola vez por cuenta.** Ya resuelto (`pruebaYaUsada`).
+4. **OTP antes de la primera generación** — 🔲 opcional. Encarece cosechar
+   (veinte teléfonos, no veinte mails) sin pedir tarjeta. Se prende si aparece
+   abuso real, no antes.
+5. **El spending limit de Anthropic.** El único techo que de verdad garantiza que
+   no llegue una factura de US$500. Vive fuera del repo.
+
+> #### 🔲 Nada de esto se escribe en código todavía
+>
+> No existe el contador que lo aplique, y acá la regla es que **una constante que
+> no lee nadie es código muerto** — por eso mismo se sacó el tope anti-abuso en su
+> momento. Va en la Fase 4, junto al código que lo use. Lo único que ya está en
+> `planLimits.ts` es `ebooksIA` (0/2/5), que es el número que dibuja la tarjeta.
+
 
 ### 2.5 Son TRES planes: Free + Starter + Pro
 
@@ -539,20 +646,22 @@ bono. Con tres escalones no nos podemos dar ese lujo.
 > - **Starter → Pro**: pasás de *vender* a *escalar*. Lo que se compra es el
 >   alcance: remarketing, dominio propio y el tope alto de IA.
 
-Free no lleva IA, y ése es justamente el motivo por el que puede ser gratis sin
-fundirnos (ver 2.4).
+Free sí lleva IA, pero **la barata**: le arma la página y las fichas, y el
+contenido del ebook lo trae la persona. El ebook son US$2 a 4 de API y los textos
+de una landing son centavos — estábamos regalando lo caro y cobrando lo barato. Y
+Free no pide tarjeta: un ebook escrito con IA sirve fuera de la plataforma y se
+puede cosechar; una página generada no le sirve a nadie afuera. Ver 2.4 bis.
 
 | | **Free** *validar* | **Starter** *vender* | **Pro** *escalar* |
 |---|---|---|---|
 | **Abono mensual** | $0 | **$30.000** | **$60.000** |
 | **Abono anual** (−25%) | — | $270.000 → *$22.500/mes* | $540.000 → *$45.000/mes* |
 | **Comisión por venta** | **8%** | **6%** | **2%** |
-| Productos = páginas de venta | 1 | 5 | 25 |
+| Productos = páginas de venta | 1 | 2 | 5 |
 | **Ebooks con IA por mes** | ❌ | **2** | **5** |
-| Bonos por producto | 1 | 3 | 5 |
-| Upsell | ❌ | 1 | 3 |
-| Página de venta | plantilla fija | **armada con IA** | armada con IA |
-| Ebooks con IA por mes | ❌ | 🔲 tope | 🔲 tope alto |
+| Bonos por producto | 1 | 2 | 5 |
+| Upsells por producto | 1 | 2 | 3 |
+| Página de venta armada con IA | ✅ | ✅ | ✅ |
 | Textos y mails con IA | ❌ | ✅ | ✅ |
 | Sasha | ❌ | ✅ | ✅ |
 | Pagos con transferencia | ❌ | ✅ | ✅ |
@@ -580,6 +689,17 @@ plantilla) y ver quién dejó el carrito.
   dólar** — ver el recuadro de 3 ter, que dice cuándo se da vuelta cada plan.
 - **Menos comisión que la competencia** (8/6/2 contra su 10/8/6/2) **y menos
   ebooks**. Es un canje honesto y una buena posición para entrar.
+- **Las páginas bajaron de 1/5/25 a 1/3/5 el 01/09/26.** El 25 no era generoso:
+  era inerte. Un techo que nadie toca **no genera ni una sola mejora de plan** —
+  un límite sólo hace plata cuando alguien se choca contra él—, y además dejaba
+  una caída de plan sin solución posible (20 páginas publicadas cayendo a 1).
+  Que el techo de Pro sea 5 y no 10: el que paga Pro no escala con más productos,
+  escala con más publicidad y más upsells sobre el embudo que ya le funciona, y
+  eso ya lo cubren `bonos` y `upsells`, que son **por producto**. Si a los
+  mejores clientes de la competencia les quedara corto el 5, tendrían un plan de
+  10 — tienen cuatro planes y terminan en cinco.
+  Y arrancar apretado es reversible: subirle el tope a una cuenta es un renglón;
+  bajárselo a alguien que ya publicó es ir a despublicarle páginas.
 
 ### Los puntos de equilibrio de 8 / 6 / 2
 
@@ -657,7 +777,21 @@ Todo esto ya está resuelto, medido y en varios casos aplicado a producción:
 
 ## 7. Lo que TODAVÍA falta decidir
 
-- 🔲 **El tope anti-abuso de páginas de venta**, por arriba de las 25 de Pro.
+- 🔲 **¿El bono viaja como línea del pedido?** El permiso de descarga es **uno por
+  línea comprada**, con 5 descargas cada uno. Si el bono es su propia línea, cada
+  uno tiene su token y sus 5 descargas y está todo bien. Si no lo es, hay un solo
+  token para 6 archivos y **el comprador no llega ni a bajar una vez cada cosa**:
+  pagó y no puede tener todo. Es el tipo de agujero que aparece el día que alguien
+  compra, no antes. Sale de contar los archivos por venta (ver Fase 3, el archivo
+  del producto).
+- 🔲 **¿El cupo mensual de IA no usado se acumula o se pierde?** Perderlo es más
+  barato para nosotros y más molesto para la persona. Si se acumula, va con techo.
+  Se decide junto con el contador, en la Fase 4.
+- 🔲 **¿Las generaciones de página se cuentan, o alcanza con ráfaga y diario?** La
+  postura de 2.4 bis es que no se cuentan —cuestan centavos y contarlas pone
+  fricción donde no hay costo—, pero eso vale mientras el número de la factura le
+  dé la razón. Se revisa con la medición de la Fase 4.
+- 🔲 **El tope anti-abuso de páginas de venta**, por arriba de las 5 de Pro.
   Mismo criterio que `MAX_PRODUCTS_POR_TIENDA` (5.000) en `planLimits.ts`, que
   existe porque el plan se elige en el formulario de registro y **un tope que
   sólo mira el plan no frena justo al que lo quiere evadir**. Va en la Fase 2,
@@ -1283,6 +1417,30 @@ desincronizan de a una.
   firmado, igual que `/api/upload/firma`. Hasta que exista, publicar queda
   cerrado a propósito.
 
+  **Cerrado el 01/09/26, mirando el panel de ellos:**
+
+  - **Va en la tarjeta del producto, no en una pantalla aparte.** Ellos tienen un
+    "Diseño de ebooks" separado, pero sus tarjetas son las mismas que las de
+    productos: una pantalla nueva mostraría las mismas tarjetas dos veces. El
+    renglón del archivo ya está dibujado en nuestra pantalla de Productos, y
+    cuando llegue la IA su botón va al lado del de subir.
+  - **Dos caminos, no tres: "Subir PDF" y "Generar con IA".** Ellos ofrecen
+    además **"Pegar link"** y nosotros no: toda nuestra entrega es un token que se
+    canjea por un link firmado de vida corta, y un link pegado a Drive **no
+    vence, no se agota, no se revoca y lo puede cambiar la vendedora después de
+    haber cobrado**. Es tirar el único diseño que ya costó una auditoría entera.
+  - **Sólo PDF para empezar.** Es lo que se vende en este mercado, se abre en
+    cualquier lado y es la superficie más angosta. Se amplía si alguien lo pide.
+  - **Cada bono y cada upsell es un archivo aparte.** No es una etiqueta ni un
+    descuento: es otro ebook con su propio contenido. En Pro son hasta **45
+    archivos por cuenta** (5 productos × 1 principal + 5 bonos + 3 upsells).
+  - ⚠️ **Y el bono va incluido y gratis, así que una venta arrastra varios
+    archivos**: en Pro, el principal más 5 bonos son **6 descargas de una sola
+    compra**, hasta 9 si acepta los upsells. A 25 MB cada uno son 150 MB por
+    venta, y ese tráfico lo paga la plataforma — es egress, que es justo por
+    donde se va la cuota de Supabase. El aviso de los 25 MB no es "tu archivo es
+    grande": es **"tu archivo se multiplica por seis en cada venta"**.
+
 ### ✅ Configuración — HECHA a medias, y a propósito (01/09/26)
 
 El orden es el de la competencia, que fue lo que pidió Flavio expresamente
@@ -1492,6 +1650,15 @@ después, porque hasta que exista la factura de Anthropic no tiene techo.
 - 🔲 **La capa de cuentas Free es la crítica**: es gratis, no pide tarjeta y da
   acceso a IA. Veinte cuentas truchas son la misma persona y ningún tope por
   usuario se entera.
+- 🔲 **El lote de arranque, y que llegue con el COBRO y no con la prueba.** Los 7
+  días son sin tarjeta: entregar ahí las 6 generaciones de Pro es regalarle hasta
+  US$48 a alguien del que no tenemos un solo dato de cobro. En la prueba va el
+  plan entero con **una** generación. Ver 2.4 bis.
+- 🔲 **El reintento incluido por ebook.** Se cuentan ebooks —es lo que dice el
+  cartel— pero cada uno se regenera una sola vez, si no el costo no tiene fondo.
+- 🔲 **El tope de la página de venta con IA.** Hoy `paginas` limita cuántas se
+  pueden TENER y nada limita cuántas veces se pide regenerarla. Volver a generar
+  es lo primero que hace todo el mundo, y Free tiene ese botón.
 - 🔲 Generar la vidriera entera (el gancho principal).
 - 🔲 Escribir el contenido del ebook/PDF.
 - 🔲 Los textos de venta y los mails (entrega, carrito abandonado).

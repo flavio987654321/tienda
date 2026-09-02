@@ -38,10 +38,20 @@ check("ROL-C", [null, undefined, 3, {}, ["BONO"]].every((v) => rolDe(v) === null
 
 /* ── Los topes ────────────────────────────────────────────────────────────── */
 
-check("TOPE-A", topeDe("FREE", "PRINCIPAL") === 1 && topeDe("FREE", "BONO") === 1 && topeDe("FREE", "UPSELL") === 0,
-  "Free: 1 página de venta, 1 bono, ningún upsell");
-check("TOPE-B", topeDe("PRO", "PRINCIPAL") === 25 && topeDe("PRO", "BONO") === 5 && topeDe("PRO", "UPSELL") === 3,
-  "Pro: 25 páginas, 5 bonos, 3 upsells");
+/* ⚠️ El upsell de Free NO puede volver a cero. Estuvo así y era el único tope que
+   jugaba en contra nuestra: en Free lo único que cobramos es el 8 % de comisión,
+   y un upsell sube el ticket — o sea que sube esa comisión. */
+check("TOPE-A", topeDe("FREE", "PRINCIPAL") === 1 && topeDe("FREE", "BONO") === 1 && topeDe("FREE", "UPSELL") === 1,
+  "Free: 1 página de venta, 1 bono y 1 upsell — uno de cada cosa");
+check("TOPE-B", topeDe("PRO", "PRINCIPAL") === 5 && topeDe("PRO", "BONO") === 5 && topeDe("PRO", "UPSELL") === 3,
+  "Pro: 5 páginas, 5 bonos, 3 upsells");
+
+/* ⚠️ El techo de arriba no puede volver a inflarse sin querer. Estuvo en 25, que
+   no era generoso sino inerte: un tope que nadie toca no genera ni una mejora de
+   plan, y encima dejaba una caída de plan imposible de resolver (20 páginas
+   publicadas cayendo a 1). La competencia vende 1/2/3/5 en cuatro planes. */
+check("TOPE-B2", topeDe("PRO", "PRINCIPAL") <= 10,
+  "el techo de páginas sigue siendo un número que alguien puede alcanzar de verdad");
 
 /* Las páginas de venta y los productos principales son EL MISMO número: cada
    principal tiene su página. Si algún día dejaran de coincidir, la pantalla
@@ -52,9 +62,27 @@ check("TOPE-C", TIERS_DIGITALES.every((t) => topeDe(t, "PRINCIPAL") === TOPES_DI
 check("TOPE-D", TIERS_DIGITALES.every((t) => ROLES.every((r) => Number.isInteger(topeDe(t, r)) && topeDe(t, r) >= 0)),
   "ningún tope es negativo ni fraccionario");
 
+/* ⚠️ La IA no puede tener más generaciones que lugares donde ponerlas: sería
+   venderle a alguien algo que no va a poder usar, y pagarlo nosotros.
+
+   El lugar NO son las páginas. **Un bono y un upsell también son ebooks** y
+   también se generan —la competencia les pone el mismo botón de "Generar con
+   IA"—, así que los lugares son `paginas × (1 principal + bonos + upsells)`.
+   Escrito contra `paginas` a secas, este chequeo comparaba contra un número
+   nueve veces más chico que el real, y el día que subiera `ebooksIA` iba a fallar
+   pidiendo que se levanten las páginas, que es justo lo que no hay que hacer.
+
+   Es una cota de cordura y no una cuenta exacta: `ebooksIA` es POR MES y los
+   lugares son absolutos, así que en un año se generan más ebooks que lugares
+   hay. Lo que caza es un número absurdo, no un desbalance fino. */
+check("TOPE-E", TIERS_DIGITALES.every((t) => {
+  const x = TOPES_DIGITALES[t];
+  return x.ebooksIA <= x.paginas * (1 + x.bonos + x.upsells);
+}), "la IA no tiene más generaciones que lugares donde ponerlas");
+
 /* Pagar más nunca puede dar menos. Es el argumento de venta de toda la pantalla
    de planes: si alguna vez se invirtiera, estaríamos cobrando por quitar. */
-check("TOPE-E", ROLES.every((r) => topeDe("FREE", r) <= topeDe("STARTER", r) && topeDe("STARTER", r) <= topeDe("PRO", r)),
+check("TOPE-F", ROLES.every((r) => topeDe("FREE", r) <= topeDe("STARTER", r) && topeDe("STARTER", r) <= topeDe("PRO", r)),
   "los topes suben de Free a Starter a Pro, nunca bajan");
 
 /* ── Qué falta para publicar ──────────────────────────────────────────────── */

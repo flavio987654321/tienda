@@ -190,27 +190,65 @@ export const TRANSFERENCIA_DIGITAL = {
  * `ebooksIA` es el único tope que responde a un costo real: un ebook generado
  * cuesta entre US$2 y US$4 de API. Los otros tres son comerciales.
  *
- * ⚠️ **La IA existe en los tres planes; lo que cambia es el tope.** Decisión de
- * Flavio (01/09/26), y el argumento es el modelo entero de Free: no paga abono,
- * así que lo único que deja es la comisión — y una cuenta que no arranca nunca
- * vende nada, o sea que el 8 % de cero es cero. Regalarle la primera generación
- * es lo que hace que esa cuenta empiece a facturar.
+ * ⚠️ **Las páginas bajaron de 1/5/25 a 1/3/5 el 01/09/26.** El 25 no era generoso,
+ * era inerte: un techo que nadie toca no genera ni una sola mejora de plan, y un
+ * límite sólo hace plata cuando alguien se choca contra él. De paso desactivaba
+ * el argumento entero de la tabla — la competencia vende 1/2/3/5 en CUATRO
+ * planes, así que nuestro Starter empataba su plan más caro y Pro lo
+ * quintuplicaba. Un número que nadie alcanza no convence a nadie que esté
+ * pensando, y a quien sí piensa le avisa que la tabla está inventada.
  *
- * Free estuvo en `ebooksIA: 0` hasta esa fecha, que era lo contrario: le
- * mostrábamos el nicho para la IA y después no la dejábamos usarla nunca.
+ * Que el techo de Pro sea 5 y no 10 salió de una discusión que perdí: el que paga
+ * Pro no escala con más productos sino con más publicidad y más upsells sobre el
+ * embudo que ya le funciona — y eso ya lo cubren `bonos` y `upsells`, que son por
+ * producto. Si a los mejores clientes de la competencia les quedara corto el 5,
+ * tendrían un plan de 10; tienen cuatro planes y terminan en cinco.
+ *
+ * Y arrancar apretado es reversible: subirle el tope a una cuenta es un renglón,
+ * bajárselo a alguien que ya publicó es ir a despublicarle páginas.
+ *
+ * En Pro `paginas` y `ebooksIA` ahora coinciden (5 y 5): no existe una página que
+ * la IA no pueda llenar. En Starter no coinciden a propósito — que una de las
+ * tres la traiga la persona nos evita pagar generación por cada página publicada.
+ *
+ * ⚠️ **La IA existe en los tres planes; lo que cambia es PARA QUÉ.** Decisión de
+ * Flavio (01/09/26), corregida el mismo día mirando la tabla de la competencia.
+ *
+ * A Free la IA le arma **la página y las fichas** —la cáscara—, y el contenido
+ * del ebook lo trae la persona. `ebooksIA: 0` en Free no es negarle la IA: es
+ * darle la barata y cobrarle la cara.
+ *
+ * Los dos motivos, y ninguno es copiarlos:
+ *
+ *   1. **El costo está al revés de lo que parece.** El ebook son US$2 a 4 de
+ *      API; los textos de una página de venta son centavos. Estábamos regalando
+ *      lo caro y cobrando lo barato.
+ *   2. **Free no pide tarjeta.** Un ebook escrito con IA sirve FUERA de la
+ *      plataforma: alguien abre diez cuentas y se lleva diez ebooks. Una página
+ *      generada no le sirve a nadie afuera. Lo que se regala tiene que ser lo
+ *      que no se puede cosechar.
+ *
+ * Y el gancho de Free no se pierde: lo que impresiona al entrar es ver la tienda
+ * armada sola, y eso lo dan los centavos de texto, no los dólares del ebook.
  */
 export const TOPES_DIGITALES = {
-  /* Free va con `upsells: 0` y no con `null`: es un tope, no una ausencia. La
-     pantalla lo dibuja tachado y sin el número — "0 upsells por producto" se lee
-     como un error de programación, no como una función que no tenés.
+  /* ⚠️ **Free lleva un upsell, y no es generosidad: es el único tope que en cero
+     jugaba en contra nuestra.** En Free no cobramos abono — lo único que
+     entra es el 8 % de comisión—, y un upsell SUBE EL TICKET, o sea que sube esa
+     comisión. Bloquearlo nos costaba plata a nosotros. Estuvo en 0 hasta el
+     01/09/26.
+
+     El mismo argumento explica por qué los upsells suben en los tres escalones
+     (1 → 2 → 3) y no se estancan: la comisión baja de 8 % a 6 % a 2 %, así que
+     el upsell nos rinde MÁS justo en los planes donde menos abono cobramos.
 
      `ebooksIA: 1` no es un número al azar: es exactamente lo que entra en la
      única página de venta que tiene Free. Le alcanza para llenar lo que puede
      publicar y ni uno más. **Sigue siendo provisorio hasta medir un ebook de
      verdad** (Fase 4): si sale US$4, un Free que nunca vende nos cuesta eso. */
-  FREE:    { paginas: 1,  bonos: 1, upsells: 0, ebooksIA: 1 },
-  STARTER: { paginas: 5,  bonos: 3, upsells: 1, ebooksIA: 2 },
-  PRO:     { paginas: 25, bonos: 5, upsells: 3, ebooksIA: 5 },
+  FREE:    { paginas: 1, bonos: 1, upsells: 1, ebooksIA: 0 },
+  STARTER: { paginas: 2, bonos: 2, upsells: 2, ebooksIA: 2 },
+  PRO:     { paginas: 5, bonos: 5, upsells: 3, ebooksIA: 5 },
 } as const;
 
 /* ══════════════════════════════════════════════════════════════════════════
