@@ -5,6 +5,7 @@ import { getCurrentUser } from "@/lib/auth-session";
 import { normalizarContenido } from "@/lib/pagina-venta";
 import PaginaDeVenta, { type ProductoParaPagina } from "@/components/digitales/PaginaDeVenta";
 import PaginaEnVivo from "./PaginaEnVivo";
+import { CLASES_FUENTES } from "@/lib/fuentes-venta";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -116,7 +117,22 @@ export default async function PaginaDeVentaPublica({ params, searchParams }: Pro
      comprar queda apagado para no arrancar un pago desde el panel.
      No abre ninguna puerta: es la misma página y los mismos datos. */
   const previa = (await searchParams).previa === "1";
-  if (previa) return <PaginaEnVivo {...datos} esPrevia />;
+  /* ⚠️ Las dos letras se declaran acá y no adentro del dibujante, y van las
+     DOS aunque se use una. El dibujante lo comparten la página pública y la
+     previa del editor —y la previa cambia de letra sin recargar—, así que las
+     dos variables tienen que existir de antemano. No cuesta nada: van sin
+     preload, o sea que se baja sólo la que se dibuja. */
+  if (previa) {
+    return (
+      <div className={CLASES_FUENTES}>
+        <PaginaEnVivo {...datos} esPrevia />
+      </div>
+    );
+  }
 
-  return <PaginaDeVenta {...datos} />;
+  return (
+    <div className={CLASES_FUENTES}>
+      <PaginaDeVenta {...datos} />
+    </div>
+  );
 }

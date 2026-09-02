@@ -12,7 +12,7 @@ import { readFileSync } from "fs";
 import {
   SECCIONES, buscarSeccion, contenidoPorDefecto, normalizarContenido, porQueNoSeDibuja,
   conFichas, FICHA_DIAS, FICHA_ANIO, ESTILOS, PALETAS, COLORES_CLAROS, COLORES_OSCUROS,
-  TONOS, buscarTono,
+  TONOS, buscarTono, TIPOGRAFIAS, buscarTipografia,
   type Campo,
 } from "./pagina-venta";
 
@@ -623,6 +623,49 @@ check("ANCHO-B", /overflow-x-clip/.test(dibujante),
    con scroll propio, y la página quedaría con una barra vertical adentro. */
 check("ANCHO-C", !/overflow-x-hidden/.test(dibujante),
   "y se recorta con clip, no con hidden, que dejaría un scroll vertical propio");
+
+/* ── Las letras ───────────────────────────────────────────────────────────── */
+
+check("LET-A", TIPOGRAFIAS.length === 3 && new Set(TIPOGRAFIAS.map((t) => t.clave)).size === 3,
+  "hay tres letras y ninguna clave repetida");
+
+check("LET-B", ["inventada", "", null, 5, {}, undefined].every((v) => buscarTipografia(v).clave === TIPOGRAFIAS[0].clave),
+  "una letra desconocida vuelve a la primera: la página nunca queda sin fuente");
+
+check("LET-C", (() => {
+  const p = normalizarContenido({ tipografia: "clasica" });
+  const q = normalizarContenido({ tipografia: "inventada" });
+  return p.tipografia === "clasica" && q.tipografia === TIPOGRAFIAS[0].clave;
+})(), "y la que se eligió se guarda, igual que el estilo y la paleta");
+
+/* ⚠️ Cada una lleva su stack entero y no un nombre suelto. Si la fuente no bajó
+   —o no baja nunca, que pasa— el texto se lee igual, y con una letra del mismo
+   tipo: una serif cae en Georgia, no en la que le toque a cada aparato. */
+check("LET-D", TIPOGRAFIAS.every((t) => t.familia.split(",").length >= 2),
+  "cada letra tiene su reserva: si la fuente no baja, el texto se lee igual");
+
+check("LET-E", TIPOGRAFIAS.every((t) => t.familia.includes("var(--")),
+  "y todas salen de una variable, así que la previa cambia de letra sin recargar");
+
+/* ⚠️ Sin preload, el navegador de quien compra se baja SÓLO la letra que se
+   dibuja. Con el preload de fábrica se bajaría siempre las dos, en la pantalla
+   donde cada milésima decide si compran o no. */
+const fuentes = readFileSync("src/lib/fuentes-venta.ts", "utf8");
+/* Se cuentan sólo los renglones de configuración —los que empiezan con dos
+   espacios— y no las menciones: el comentario de arriba las nombra también, y
+   contando texto suelto este chequeo pasaría con la configuración al revés. */
+const renglones = (re: RegExp) => (fuentes.match(re) ?? []).length;
+check("LET-F", renglones(/^ {2}preload: false,$/gm) === 2
+  && renglones(/^ {2}display: "swap",$/gm) === 2,
+  "las dos que se bajan van sin preload y con swap: se baja la que se usa");
+
+/* Las dos variables se declaran siempre, aunque se use una sola: el dibujante lo
+   comparten la página y la previa, y la previa cambia de letra sin recargar. */
+check("LET-G", publica.includes("CLASES_FUENTES") && !dibujante.includes("next/font"),
+  "las fuentes las cuelga la página, no el dibujante que también corre en el navegador");
+
+check("LET-H", editor.includes("TIPOGRAFIAS.map("),
+  "y el editor deja elegir entre las tres");
 
 /* ── Los fondos de cada bloque ────────────────────────────────────────────── */
 

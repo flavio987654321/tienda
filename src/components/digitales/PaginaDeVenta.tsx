@@ -22,7 +22,7 @@
    Quien la ve no tiene cuenta ni preferencia guardada. */
 
 import {
-  seDibuja, conFichas, buscarEstilo, buscarPaleta, buscarSeccion,
+  seDibuja, conFichas, buscarEstilo, buscarPaleta, buscarSeccion, buscarTipografia,
   COLORES_CLAROS, COLORES_OSCUROS,
   type PaginaVenta, type Estilo,
 } from "@/lib/pagina-venta";
@@ -712,6 +712,10 @@ export default function PaginaDeVenta(datos: DatosDePagina) {
     "--pv-fondo": estiloRaiz.oscuro ? COLORES_OSCUROS.fondo : paleta.fondo,
     "--pv-suave": estiloRaiz.oscuro ? COLORES_OSCUROS.suave : paleta.suave,
     "--pv-fuerte": estiloRaiz.oscuro ? paleta.fuerteOscuro : paleta.fuerte,
+    /* La letra entra igual que los colores, por variable, y se hereda: con
+       ponerla en la raíz vale para toda la página. Los archivos los declara
+       `lib/fuentes-venta`, colgado más arriba por la página pública. */
+    fontFamily: buscarTipografia(datos.pagina.tipografia).familia,
   } as React.CSSProperties;
 
   return (

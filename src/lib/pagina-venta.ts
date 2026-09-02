@@ -665,6 +665,53 @@ export const ESTILOS: readonly Estilo[] = [
   },
 ];
 
+/* ── Las tres letras ────────────────────────────────────────────────────────
+ *
+ * Lo que más separa dos páginas de un vistazo, y casi nadie lo nota mirando:
+ * se nota SINTIENDO. La misma página en serif parece de otra empresa.
+ *
+ * Acá va sólo el nombre de la familia; los archivos los carga
+ * `lib/fuentes-venta`, que es el que puede importar `next/font`. Separado a
+ * propósito: este archivo lo lee también el editor, que corre en el navegador.
+ *
+ * `familia` es un stack entero y no un nombre suelto: si la fuente todavía no
+ * bajó —o no bajó nunca— el texto se lee igual con la de reserva, y con una del
+ * mismo tipo, no con la que le toque a cada aparato. */
+export type Tipografia = {
+  clave: string;
+  nombre: string;
+  para: string;
+  /** El `font-family` completo, con sus reservas. */
+  familia: string;
+};
+
+export const TIPOGRAFIAS: readonly Tipografia[] = [
+  {
+    clave: "moderna",
+    nombre: "Moderna",
+    para: "Limpia y neutra. La que ves ahora.",
+    /* Es la misma de la plataforma, que ya está cargada en todas las páginas:
+       elegir ésta no baja ni un archivo más. */
+    familia: "var(--font-marca), ui-sans-serif, system-ui, sans-serif",
+  },
+  {
+    clave: "clasica",
+    nombre: "Clásica",
+    para: "Con serifas, como un libro. Se lee seria.",
+    familia: "var(--pv-serif), Georgia, 'Times New Roman', serif",
+  },
+  {
+    clave: "marcada",
+    nombre: "Marcada",
+    para: "Geométrica y redonda. Se lee moderna y cercana.",
+    familia: "var(--pv-geo), ui-sans-serif, system-ui, sans-serif",
+  },
+];
+
+/** Una letra desconocida vuelve a la primera. Nunca deja la página sin fuente. */
+export function buscarTipografia(clave: unknown): Tipografia {
+  return TIPOGRAFIAS.find((t) => t.clave === clave) ?? TIPOGRAFIAS[0];
+}
 /* ── Los tres fondos ────────────────────────────────────────────────────────
  *
  * Cada sección elige con cuál de estos tres se dibuja. Es una LISTA CERRADA y
@@ -767,6 +814,8 @@ export type PaginaVenta = {
   estilo: string;
   /** Clave de `PALETAS`. Idem. */
   paleta: string;
+  /** Clave de `TIPOGRAFIAS`. Idem. */
+  tipografia: string;
   secciones: SeccionGuardada[];
 };
 
@@ -931,6 +980,7 @@ export function normalizarContenido(valor: unknown): PaginaVenta {
   return {
     estilo: buscarEstilo(suelto?.estilo).clave,
     paleta: buscarPaleta(suelto?.paleta).clave,
+    tipografia: buscarTipografia(suelto?.tipografia).clave,
     secciones: finales,
   };
 }

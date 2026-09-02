@@ -7,7 +7,7 @@ import {
   Loader2, ExternalLink, Save, Monitor, Smartphone, Lock, ImageIcon, AlertTriangle,
 } from "lucide-react";
 import {
-  TONOS, buscarTono,
+  TONOS, buscarTono, TIPOGRAFIAS,
   SECCIONES, ESTILOS, PALETAS, buscarSeccion, porQueNoSeDibuja,
   AVISO_BORRADOR, AVISO_LISTA, AVISO_TOCAR,
   type Campo, type PaginaVenta, type SeccionGuardada,
@@ -392,6 +392,12 @@ export default function EditorDePagina({ productoId, nombre, publicado, pagina: 
     setError("");
   }
 
+  function setTipografia(clave: string) {
+    setPagina((p) => ({ ...p, tipografia: clave }));
+    setSucio(true);
+    setError("");
+  }
+
   const setCampo = (clave: string, k: string, v: unknown) =>
     actualizar(clave, (s) => ({ ...s, campos: { ...s.campos, [k]: v } }));
 
@@ -600,6 +606,36 @@ export default function EditorDePagina({ productoId, nombre, publicado, pagina: 
                       />
                       <span className="truncate text-xs font-bold text-gray-800 panel-oscuro:text-gray-200">
                         {p.nombre}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <p className="mb-1 text-xs font-bold text-gray-600 panel-oscuro:text-gray-300">
+                  Letra
+                </p>
+                <p className="mb-2 text-[11px] text-gray-500 panel-oscuro:text-gray-400">
+                  Es lo que más cambia la sensación de la página.
+                </p>
+                <div className="grid gap-2">
+                  {TIPOGRAFIAS.map((t) => (
+                    <button
+                      key={t.clave}
+                      type="button"
+                      onClick={() => setTipografia(t.clave)}
+                      className={`rounded-2xl border p-3 text-left transition-colors ${
+                        pagina.tipografia === t.clave
+                          ? "border-orange-400 bg-orange-50/60 panel-oscuro:border-orange-500/50 panel-oscuro:bg-orange-500/10"
+                          : "border-gray-200 bg-white hover:border-gray-300 panel-oscuro:border-gray-700 panel-oscuro:bg-gray-900"
+                      }`}
+                    >
+                      <span className="block text-sm font-bold text-gray-900 panel-oscuro:text-gray-100">
+                        {t.nombre}
+                      </span>
+                      <span className="mt-0.5 block text-[11px] text-gray-500 panel-oscuro:text-gray-400">
+                        {t.para}
                       </span>
                     </button>
                   ))}
