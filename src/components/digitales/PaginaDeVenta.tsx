@@ -21,7 +21,10 @@
    Por eso tampoco sigue el tema del panel: la página pública es clara siempre.
    Quien la ve no tiene cuenta ni preferencia guardada. */
 
-import { seDibuja, conFichas, type PaginaVenta } from "@/lib/pagina-venta";
+import {
+  seDibuja, conFichas, buscarEstilo, buscarPaleta,
+  type PaginaVenta, type Estilo,
+} from "@/lib/pagina-venta";
 import BarraDeOferta from "./BarraDeOferta";
 
 export type ProductoParaPagina = {
@@ -65,12 +68,18 @@ const lista = (c: Record<string, unknown>, k: string): Array<Record<string, stri
  * celular la página es larga y volver arriba a buscar el botón es donde se
  * pierde la venta. Es el mismo componente, no dos copias. */
 
-function BotonComprar({ children, esPrevia }: { children: string; esPrevia?: boolean }) {
+function BotonComprar({ children, esPrevia, estilo }: {
+  children: string; esPrevia?: boolean; estilo: Estilo;
+}) {
+  /* El color sale de la paleta y la forma del estilo. Ninguno de los dos está
+     escrito acá: si lo estuvieran, elegir otra paleta no cambiaría el botón —
+     que es justo lo único que hay que mirar en esta página. */
   const clases =
-    "inline-flex w-full max-w-md items-center justify-center rounded-xl bg-orange-600 px-6 py-4 " +
-    "text-base font-semibold text-white shadow-lg shadow-orange-600/20 transition " +
-    "hover:bg-orange-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 " +
-    "focus-visible:outline-orange-600 sm:text-lg";
+    "inline-flex w-full max-w-md items-center justify-center px-6 py-4 " +
+    "text-base font-semibold transition hover:brightness-110 sm:text-lg " +
+    "bg-[color:var(--pv-acento)] text-[color:var(--pv-sobre)] " +
+    "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 " +
+    "focus-visible:outline-[color:var(--pv-acento)] " + estilo.boton;
 
   /* En la previa no es un enlace: se ve igual pero no arranca un pago. */
   if (esPrevia) {
@@ -84,10 +93,10 @@ function BotonComprar({ children, esPrevia }: { children: string; esPrevia?: boo
   return <button type="button" className={clases}>{children}</button>;
 }
 
-function Titulo({ children }: { children: string }) {
+function Titulo({ children, estilo }: { children: string; estilo: Estilo }) {
   if (!children) return null;
   return (
-    <h2 className="text-balance text-center text-2xl font-bold text-slate-900 sm:text-3xl">
+    <h2 className={`text-balance text-center text-2xl text-[color:var(--pv-tinta)] sm:text-3xl ${estilo.titulo}`}>
       {children}
     </h2>
   );
@@ -103,7 +112,9 @@ function Titulo({ children }: { children: string }) {
  * ⚠️ Todo sale del PRODUCTO. En la página de la competencia el cierre tiene sus
  * propias casillas de precio, así que el número vive en tres lugares; el día que
  * corrigen uno, la misma página muestra dos precios distintos. Acá no se puede. */
-function Numeros({ producto, bonos }: { producto: ProductoParaPagina; bonos: ProductoParaPagina[] }) {
+function Numeros({ producto, bonos, estilo }: {
+  producto: ProductoParaPagina; bonos: ProductoParaPagina[]; estilo: Estilo;
+}) {
   const ahorro =
     producto.comparePrice && producto.comparePrice > producto.price
       ? producto.comparePrice - producto.price
@@ -111,7 +122,7 @@ function Numeros({ producto, bonos }: { producto: ProductoParaPagina; bonos: Pro
 
   return (
     <div>
-      <p className="text-4xl font-extrabold text-slate-900 sm:text-5xl">{money(producto.price)}</p>
+      <p className={`text-4xl text-[color:var(--pv-tinta)] sm:text-5xl ${estilo.titulo}`}>{money(producto.price)}</p>
       {ahorro > 0 && producto.comparePrice ? (
         <p className="mt-2 text-slate-500">
           <span className="line-through">{money(producto.comparePrice)}</span>{" "}
@@ -120,7 +131,7 @@ function Numeros({ producto, bonos }: { producto: ProductoParaPagina; bonos: Pro
       ) : null}
 
       {bonos.length > 0 && (
-        <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50/70 px-4 py-3 text-left">
+        <div className={`mt-5 bg-amber-50/70 px-4 py-3 text-left ${estilo.tarjeta}`}>
           <p className="text-[11px] font-bold uppercase tracking-wide text-amber-700">
             Incluye {bonos.length} {bonos.length === 1 ? "bono gratis" : "bonos gratis"}
           </p>
@@ -153,7 +164,7 @@ function Sellos() {
 
 function Seccion({ children, tono }: { children: React.ReactNode; tono?: "gris" }) {
   return (
-    <section className={tono === "gris" ? "bg-slate-50" : ""}>
+    <section className={tono === "gris" ? "bg-[color:var(--pv-suave)]" : ""}>
       <div className="mx-auto max-w-3xl px-5 py-12 sm:px-8 sm:py-16">{children}</div>
     </section>
   );
@@ -170,6 +181,7 @@ function Contenido({ clave, campos, datos }: {
   datos: DatosDePagina;
 }) {
   const { producto, bonos, vendedor, anio, esPrevia } = datos;
+  const estilo = buscarEstilo(datos.pagina.estilo);
 
   switch (clave) {
     case "portada": {
@@ -178,7 +190,7 @@ function Contenido({ clave, campos, datos }: {
       return (
         <Seccion>
           <div className="flex flex-col items-center gap-6 text-center">
-            <h1 className="text-balance text-3xl font-extrabold leading-tight text-slate-900 sm:text-4xl md:text-5xl">
+            <h1 className={`text-balance text-3xl leading-tight text-[color:var(--pv-tinta)] sm:text-4xl md:text-5xl ${estilo.titulo}`}>
               {titulo || producto.name}
             </h1>
             {texto(campos, "subtitulo") && (
@@ -194,7 +206,7 @@ function Contenido({ clave, campos, datos }: {
                 className="w-full max-w-md rounded-2xl border border-slate-200 object-cover shadow-sm"
               />
             )}
-            <BotonComprar esPrevia={esPrevia}>{texto(campos, "textoBoton")}</BotonComprar>
+            <BotonComprar esPrevia={esPrevia} estilo={estilo}>{texto(campos, "textoBoton")}</BotonComprar>
           </div>
         </Seccion>
       );
@@ -203,8 +215,8 @@ function Contenido({ clave, campos, datos }: {
     case "producto":
       return (
         <Seccion tono="gris">
-          <Titulo>{texto(campos, "titulo")}</Titulo>
-          <div className="mt-8 flex flex-col gap-5 rounded-2xl border border-slate-200 bg-white p-5 sm:flex-row sm:items-start sm:gap-6 sm:p-6">
+          <Titulo estilo={estilo}>{texto(campos, "titulo")}</Titulo>
+          <div className={`mt-8 flex flex-col gap-5 bg-white p-5 sm:flex-row sm:items-start sm:gap-6 sm:p-6 ${estilo.tarjeta}`}>
             {producto.imagen && (
               /* eslint-disable-next-line @next/next/no-img-element */
               <img
@@ -228,13 +240,13 @@ function Contenido({ clave, campos, datos }: {
     case "bonos": {
       return (
         <Seccion>
-          <Titulo>{texto(campos, "titulo")}</Titulo>
+          <Titulo estilo={estilo}>{texto(campos, "titulo")}</Titulo>
           {texto(campos, "subtitulo") && (
             <p className="mt-3 text-center text-slate-600">{texto(campos, "subtitulo")}</p>
           )}
           <ul className="mt-8 grid gap-4 sm:grid-cols-2">
             {bonos.map((b) => (
-              <li key={b.id} className="rounded-2xl border border-amber-200 bg-amber-50/60 p-5">
+              <li key={b.id} className={`bg-amber-50/60 p-5 ${estilo.tarjeta}`}>
                 <h3 className="font-semibold text-slate-900">{b.name}</h3>
                 {b.description && (
                   <p className="mt-2 text-sm leading-relaxed text-slate-600">{b.description}</p>
@@ -258,12 +270,12 @@ function Contenido({ clave, campos, datos }: {
       const esDolor = clave === "dolores";
       return (
         <Seccion tono={esDolor ? "gris" : undefined}>
-          <Titulo>{texto(campos, "titulo")}</Titulo>
+          <Titulo estilo={estilo}>{texto(campos, "titulo")}</Titulo>
           <ul className="mx-auto mt-8 grid max-w-2xl gap-3">
             {items.map((i, n) => (
               <li
                 key={n}
-                className="flex items-start gap-3 rounded-xl border border-slate-200 bg-white p-4"
+                className={`flex items-start gap-3 bg-white p-4 ${estilo.tarjeta}`}
               >
                 <span
                   aria-hidden="true"
@@ -285,13 +297,13 @@ function Contenido({ clave, campos, datos }: {
       const pasos = lista(campos, "pasos").filter((p) => p.titulo || p.detalle);
       return (
         <Seccion>
-          <Titulo>{texto(campos, "titulo")}</Titulo>
+          <Titulo estilo={estilo}>{texto(campos, "titulo")}</Titulo>
           <ol className="mx-auto mt-8 grid max-w-2xl gap-4">
             {pasos.map((p, n) => (
               <li key={n} className="flex items-start gap-4">
                 <span
                   aria-hidden="true"
-                  className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-orange-100 font-bold text-orange-700"
+                  className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[color:var(--pv-acento)] font-bold text-[color:var(--pv-sobre)]"
                 >
                   {n + 1}
                 </span>
@@ -314,10 +326,10 @@ function Contenido({ clave, campos, datos }: {
       const items = lista(campos, "items").filter((i) => i.texto);
       return (
         <Seccion tono="gris">
-          <Titulo>{texto(campos, "titulo")}</Titulo>
+          <Titulo estilo={estilo}>{texto(campos, "titulo")}</Titulo>
           <div className="mt-8 grid gap-4 sm:grid-cols-2">
             {items.map((i, n) => (
-              <figure key={n} className="rounded-2xl border border-slate-200 bg-white p-5">
+              <figure key={n} className={`bg-white p-5 ${estilo.tarjeta}`}>
                 <blockquote className="text-pretty leading-relaxed text-slate-700">
                   {i.texto}
                 </blockquote>
@@ -336,12 +348,12 @@ function Contenido({ clave, campos, datos }: {
     case "precio":
       return (
         <Seccion>
-          <div className="mx-auto flex max-w-xl flex-col items-center gap-5 rounded-3xl border border-orange-200 bg-orange-50/50 px-5 py-10 text-center sm:px-8">
-            <Titulo>{texto(campos, "titulo")}</Titulo>
+          <div className={`mx-auto flex max-w-xl flex-col items-center gap-5 bg-[color:var(--pv-suave)] px-5 py-10 text-center sm:px-8 ${estilo.tarjeta}`}>
+            <Titulo estilo={estilo}>{texto(campos, "titulo")}</Titulo>
             {/* El precio no se puede ocultar: `lib/pagina-venta` no le da botón
                 de apagar, y mandar visible:false tampoco lo apaga. */}
-            <Numeros producto={producto} bonos={bonos} />
-            <BotonComprar esPrevia={esPrevia}>{texto(campos, "textoBoton")}</BotonComprar>
+            <Numeros producto={producto} bonos={bonos} estilo={estilo} />
+            <BotonComprar esPrevia={esPrevia} estilo={estilo}>{texto(campos, "textoBoton")}</BotonComprar>
             {texto(campos, "aclaracion") && (
               <p className="text-sm text-slate-500">{texto(campos, "aclaracion")}</p>
             )}
@@ -354,8 +366,8 @@ function Contenido({ clave, campos, datos }: {
          que no quede un título que dice 7 con una garantía de 30. */
       return (
         <Seccion tono="gris">
-          <div className="mx-auto max-w-2xl rounded-2xl border border-emerald-200 bg-white p-6 text-center">
-            <Titulo>{conFichas(texto(campos, "titulo"), campos)}</Titulo>
+          <div className={`mx-auto max-w-2xl bg-white p-6 text-center ${estilo.tarjeta}`}>
+            <Titulo estilo={estilo}>{conFichas(texto(campos, "titulo"), campos)}</Titulo>
             <p className="mt-3 text-pretty leading-relaxed text-slate-600">
               {conFichas(texto(campos, "texto"), campos)}
             </p>
@@ -368,14 +380,14 @@ function Contenido({ clave, campos, datos }: {
       const items = lista(campos, "items").filter((i) => i.pregunta);
       return (
         <Seccion>
-          <Titulo>{texto(campos, "titulo")}</Titulo>
+          <Titulo estilo={estilo}>{texto(campos, "titulo")}</Titulo>
           {/* `details` nativo: abre y cierra sin una línea de JavaScript, y
               funciona igual si el script no cargó. */}
           <div className="mx-auto mt-8 grid max-w-2xl gap-3">
             {items.map((i, n) => (
               <details
                 key={n}
-                className="group rounded-xl border border-slate-200 bg-white px-5 py-4"
+                className={`group bg-white px-5 py-4 ${estilo.tarjeta}`}
               >
                 <summary className="cursor-pointer list-none font-medium text-slate-900 marker:content-none">
                   <span className="flex items-start justify-between gap-4">
@@ -409,9 +421,9 @@ function Contenido({ clave, campos, datos }: {
       return (
         <Seccion tono="gris">
           <div className="mx-auto flex max-w-xl flex-col items-center gap-6 text-center">
-            <Titulo>{texto(campos, "titulo")}</Titulo>
-            <Numeros producto={producto} bonos={bonos} />
-            <BotonComprar esPrevia={esPrevia}>{texto(campos, "textoBoton")}</BotonComprar>
+            <Titulo estilo={estilo}>{texto(campos, "titulo")}</Titulo>
+            <Numeros producto={producto} bonos={bonos} estilo={estilo} />
+            <BotonComprar esPrevia={esPrevia} estilo={estilo}>{texto(campos, "textoBoton")}</BotonComprar>
             <Sellos />
           </div>
         </Seccion>
@@ -433,7 +445,7 @@ function Contenido({ clave, campos, datos }: {
               ) : null}
             </p>
             <span className="w-auto max-w-[60%] shrink-0 [&>button]:w-auto [&>button]:px-5 [&>button]:py-3 [&>button]:text-sm">
-              <BotonComprar esPrevia={esPrevia}>{texto(campos, "textoBoton")}</BotonComprar>
+              <BotonComprar esPrevia={esPrevia} estilo={estilo}>{texto(campos, "textoBoton")}</BotonComprar>
             </span>
           </div>
         </div>
@@ -482,8 +494,26 @@ export default function PaginaDeVenta(datos: DatosDePagina) {
   /* La barra está fija arriba de todo, así que tapa el final de la página. Sin
      este colchón, el último renglón del pie queda abajo del botón y no se lee. */
   const conBarra = datos.pagina.secciones.some((s) => s.clave === "barra" && seDibuja(s, ctx));
+
+  /* ⚠️ La paleta entra como variables de CSS y no como clases de Tailwind.
+     Tailwind necesita ver la clase ENTERA escrita en el código para generarla;
+     una armada pegando pedazos —`bg-${color}-600`— no existe y la página sale
+     sin color. Con variables, el mismo `bg-[color:var(--pv-acento)]` sirve para
+     las seis paletas. */
+  const paleta = buscarPaleta(datos.pagina.paleta);
+  const colores = {
+    "--pv-tinta": paleta.tinta,
+    "--pv-acento": paleta.acento,
+    "--pv-sobre": paleta.sobreAcento,
+    "--pv-fondo": paleta.fondo,
+    "--pv-suave": paleta.suave,
+  } as React.CSSProperties;
+
   return (
-    <div className={`min-h-screen bg-white text-slate-900 antialiased ${conBarra ? "pb-24" : ""}`}>
+    <div
+      style={colores}
+      className={`min-h-screen bg-[color:var(--pv-fondo)] text-[color:var(--pv-tinta)] antialiased ${conBarra ? "pb-24" : ""}`}
+    >
       {datos.pagina.secciones.map((s) =>
         seDibuja(s, ctx) ? (
           <Contenido key={s.clave} clave={s.clave} campos={s.campos} datos={datos} />

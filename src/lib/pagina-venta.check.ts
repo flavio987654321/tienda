@@ -11,7 +11,7 @@
 import { readFileSync } from "fs";
 import {
   SECCIONES, buscarSeccion, contenidoPorDefecto, normalizarContenido, porQueNoSeDibuja,
-  conFichas, FICHA_DIAS, FICHA_ANIO,
+  conFichas, FICHA_DIAS, FICHA_ANIO, ESTILOS, PALETAS,
   type Campo,
 } from "./pagina-venta";
 
@@ -437,6 +437,68 @@ check("DIB-G", /seDibuja\(s, ctx\)/.test(dibujante),
   "la página pública decide con esa regla, no con una copia adentro");
 check("DIB-H", /porQueNoSeDibuja\(s, \{ hayBonos/.test(editor),
   "y el editor avisa con la misma, así los dos dicen lo mismo");
+
+/* ── El estilo y la paleta ────────────────────────────────────────────────── */
+
+/* ⚠️ EL motivo por el que las paletas son combinaciones armadas y no un
+   cuentagotas: con colores libres alguien elige amarillo sobre blanco y el
+   BOTÓN DE COMPRAR desaparece — y no lo ve, porque en su pantalla y con su luz
+   se distingue. Acá el contraste se calcula, no se confía.
+
+   La cuenta es la de la norma de accesibilidad (WCAG): 4,5 para texto normal.
+   Se aplica al texto sobre el fondo y al texto ARRIBA del botón. */
+function canal(c: number): number {
+  const s = c / 255;
+  return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+}
+function luz(hex: string): number {
+  const n = parseInt(hex.slice(1), 16);
+  return 0.2126 * canal((n >> 16) & 255) + 0.7152 * canal((n >> 8) & 255) + 0.0722 * canal(n & 255);
+}
+function contraste(a: string, b: string): number {
+  const [x, y] = [luz(a), luz(b)].sort((p, q) => q - p);
+  return (x + 0.05) / (y + 0.05);
+}
+
+const MINIMO = 4.5;
+const flojas = PALETAS.filter((p) =>
+  contraste(p.tinta, p.fondo) < MINIMO ||
+  contraste(p.tinta, p.suave) < MINIMO ||
+  contraste(p.sobreAcento, p.acento) < MINIMO);
+
+check("PAL-A", flojas.length === 0,
+  `toda paleta se lee: texto sobre fondo y sobre el botón, mínimo ${MINIMO}` +
+  (flojas.length ? ` — flojas: ${flojas.map((p) => p.nombre).join(", ")}` : ""));
+
+check("PAL-B", PALETAS.length >= 3 && new Set(PALETAS.map((p) => p.clave)).size === PALETAS.length,
+  "hay varias paletas y ninguna clave repetida");
+check("PAL-C", ESTILOS.length === 3 && new Set(ESTILOS.map((e) => e.clave)).size === 3,
+  "hay tres estilos, sin claves repetidas");
+
+/* Una clave que no conocemos vuelve a la de fábrica. No se guarda lo que llegó:
+   si mañana se saca una paleta, las páginas que la usaban se dibujan con la
+   primera y no con un color que ya no existe. */
+check("PAL-D", ["inventada", "", null, 5, {}].every((v) => {
+  const p = normalizarContenido({ estilo: v, paleta: v });
+  return p.estilo === ESTILOS[0].clave && p.paleta === PALETAS[0].clave;
+}), "un estilo o una paleta desconocidos vuelven a los de fábrica");
+
+check("PAL-E", (() => {
+  const p = normalizarContenido({ estilo: "suave", paleta: "violeta" });
+  return p.estilo === "suave" && p.paleta === "violeta";
+})(), "y los que existen se respetan");
+
+/* ⚠️ Tailwind necesita ver la clase ENTERA escrita en el código para generarla.
+   Una armada pegando pedazos no existe, y la página sale sin estilo. */
+check("PAL-F", ESTILOS.every((e) => ![e.tarjeta, e.boton, e.titulo].some((c) => c.includes("${"))),
+  "las clases de cada estilo están escritas enteras, no armadas con pedazos");
+
+/* El color del botón sale de la paleta, no de una clase escrita en el dibujante:
+   si estuviera escrito ahí, elegir otra paleta no cambiaría lo único que hay
+   que mirar en la página. */
+check("PAL-G", /bg-\[color:var\(--pv-acento\)\]/.test(dibujante)
+  && !/bg-orange-600/.test(dibujante),
+  "el botón de comprar toma su color de la paleta");
 
 /* ── La previa en vivo ────────────────────────────────────────────────────── */
 

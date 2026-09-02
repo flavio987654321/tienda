@@ -7,7 +7,8 @@ import {
   Loader2, ExternalLink, Save, Monitor, Smartphone, Lock, ImageIcon, AlertTriangle,
 } from "lucide-react";
 import {
-  SECCIONES, buscarSeccion, porQueNoSeDibuja, AVISO_BORRADOR, AVISO_LISTA,
+  SECCIONES, ESTILOS, PALETAS, buscarSeccion, porQueNoSeDibuja,
+  AVISO_BORRADOR, AVISO_LISTA,
   type Campo, type PaginaVenta, type SeccionGuardada,
 } from "@/lib/pagina-venta";
 
@@ -292,6 +293,7 @@ export default function EditorDePagina({ productoId, nombre, publicado, pagina: 
   const [error, setError] = useState("");
   const [ancho, setAncho] = useState<"pc" | "celular">("pc");
   const [vista, setVista] = useState<"editar" | "previa">("editar");
+  const [solapa, setSolapa] = useState<"estilo" | "contenido">("contenido");
   const enVuelo = useRef(false);
   const marco = useRef<HTMLIFrameElement>(null);
 
@@ -343,7 +345,19 @@ export default function EditorDePagina({ productoId, nombre, publicado, pagina: 
   }, [sucio]);
 
   function actualizar(clave: string, cambio: (s: SeccionGuardada) => SeccionGuardada) {
-    setPagina((p) => ({ secciones: p.secciones.map((s) => (s.clave === clave ? cambio(s) : s)) }));
+    setPagina((p) => ({ ...p, secciones: p.secciones.map((s) => (s.clave === clave ? cambio(s) : s)) }));
+    setSucio(true);
+    setError("");
+  }
+
+  function setEstilo(clave: string) {
+    setPagina((p) => ({ ...p, estilo: clave }));
+    setSucio(true);
+    setError("");
+  }
+
+  function setPaleta(clave: string) {
+    setPagina((p) => ({ ...p, paleta: clave }));
     setSucio(true);
     setError("");
   }
@@ -370,7 +384,7 @@ export default function EditorDePagina({ productoId, nombre, publicado, pagina: 
       if (buscarSeccion(p.secciones[j].clave)?.sePuedeMover === false) return p;
       const copia = [...p.secciones];
       [copia[i], copia[j]] = [copia[j], copia[i]];
-      return { secciones: copia };
+      return { ...p, secciones: copia };
     });
     setSucio(true);
   }
@@ -468,9 +482,98 @@ export default function EditorDePagina({ productoId, nombre, publicado, pagina: 
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)]">
-        {/* ── Las secciones ─────────────────────────────────────────────────── */}
+        {/* ── Estilo y contenido ────────────────────────────────────────────── */}
         <div className={vista === "editar" ? "" : "hidden lg:block"}>
-          <div className="grid gap-2">
+          {/* El estilo va PRIMERO: se elige cómo se ve y después se escribe.
+              Es una solapa y no un ítem de la barra lateral porque el diseño es
+              de ESTE producto — una cuenta Pro tiene hasta cinco páginas con su
+              propio estilo cada una. */}
+          <div className="mb-3 flex gap-1 rounded-xl bg-gray-100 p-1 panel-oscuro:bg-gray-800">
+            {(["estilo", "contenido"] as const).map((s) => (
+              <button
+                key={s}
+                type="button"
+                onClick={() => setSolapa(s)}
+                className={`flex-1 rounded-lg px-3 py-2 text-xs font-bold capitalize transition-colors ${
+                  solapa === s
+                    ? "bg-white text-gray-900 shadow-sm panel-oscuro:bg-gray-900 panel-oscuro:text-gray-100"
+                    : "text-gray-500 panel-oscuro:text-gray-400"
+                }`}
+              >
+                {s === "estilo" ? "Estilo y paleta" : "Contenido"}
+              </button>
+            ))}
+          </div>
+
+          {solapa === "estilo" && (
+            <div className="grid gap-4">
+              <div>
+                <p className="mb-2 text-xs font-bold text-gray-600 panel-oscuro:text-gray-300">
+                  Estilo
+                </p>
+                <div className="grid gap-2">
+                  {ESTILOS.map((e) => (
+                    <button
+                      key={e.clave}
+                      type="button"
+                      onClick={() => setEstilo(e.clave)}
+                      className={`rounded-2xl border p-3 text-left transition-colors ${
+                        pagina.estilo === e.clave
+                          ? "border-orange-400 bg-orange-50/60 panel-oscuro:border-orange-500/50 panel-oscuro:bg-orange-500/10"
+                          : "border-gray-200 bg-white hover:border-gray-300 panel-oscuro:border-gray-700 panel-oscuro:bg-gray-900"
+                      }`}
+                    >
+                      <span className="block text-sm font-bold text-gray-900 panel-oscuro:text-gray-100">
+                        {e.nombre}
+                      </span>
+                      <span className="mt-0.5 block text-[11px] text-gray-500 panel-oscuro:text-gray-400">
+                        {e.para}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <p className="mb-1 text-xs font-bold text-gray-600 panel-oscuro:text-gray-300">
+                  Paleta
+                </p>
+                {/* ⚠️ Son combinaciones armadas y no un selector de colores. Con
+                    colores libres alguien elige amarillo sobre blanco y el botón
+                    de comprar desaparece — y no lo ve, porque en su pantalla se
+                    distingue. Hay un chequeo que calcula el contraste de cada
+                    una y falla si alguna baja del mínimo. */}
+                <p className="mb-2 text-[11px] text-gray-500 panel-oscuro:text-gray-400">
+                  Todas se leen bien. Por eso no hay colores sueltos.
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  {PALETAS.map((p) => (
+                    <button
+                      key={p.clave}
+                      type="button"
+                      onClick={() => setPaleta(p.clave)}
+                      className={`flex items-center gap-2 rounded-xl border p-2.5 text-left transition-colors ${
+                        pagina.paleta === p.clave
+                          ? "border-orange-400 bg-orange-50/60 panel-oscuro:border-orange-500/50 panel-oscuro:bg-orange-500/10"
+                          : "border-gray-200 bg-white hover:border-gray-300 panel-oscuro:border-gray-700 panel-oscuro:bg-gray-900"
+                      }`}
+                    >
+                      <span
+                        aria-hidden="true"
+                        className="h-6 w-6 shrink-0 rounded-full border border-black/10"
+                        style={{ background: p.acento }}
+                      />
+                      <span className="truncate text-xs font-bold text-gray-800 panel-oscuro:text-gray-200">
+                        {p.nombre}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className={solapa === "contenido" ? "grid gap-2" : "hidden"}>
             {pagina.secciones.map((s, i) => {
               const def = buscarSeccion(s.clave);
               if (!def) return null;

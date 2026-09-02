@@ -442,6 +442,106 @@ export const SECCIONES: readonly Seccion[] = [
    LO QUE SE GUARDA
    ══════════════════════════════════════════════════════════════════════════ */
 
+/* ══════════════════════════════════════════════════════════════════════════
+   CÓMO SE VE — el estilo y la paleta
+   ══════════════════════════════════════════════════════════════════════════
+
+   ── Por qué son opciones armadas y no colores libres ────────────────────────
+
+   Con un selector de colores libre, alguien elige amarillo sobre blanco y **el
+   botón de comprar desaparece**. En una página cualquiera eso es feo; en una que
+   cobra, es plata que no entra — y el que la eligió no lo ve, porque en su
+   pantalla y con su luz se distingue.
+
+   Con opciones armadas el contraste está garantizado, y hay un chequeo que
+   calcula el contraste real de cada paleta y falla si alguna baja del mínimo que
+   pide la norma. Ninguna se puede romper por error.
+
+   Y es lo mismo que hace la competencia: paletas para elegir, no un cuentagotas.
+
+   ── El estilo NO lo elige la IA ─────────────────────────────────────────────
+
+   Medido el 02/09/26 en la de ellos: al entrar por primera vez el estilo era el
+   de fábrica ("Clásico"), no uno elegido. La IA escribe el contenido; la forma
+   viene puesta y la cambia la persona. Acá igual. */
+
+export type Estilo = {
+  clave: string;
+  nombre: string;
+  para: string;
+  /** Clases de Tailwind, escritas enteras: si se armaran pegando pedazos, el
+   *  compilador no las ve y la página sale sin estilo. */
+  tarjeta: string;
+  boton: string;
+  titulo: string;
+};
+
+export const ESTILOS: readonly Estilo[] = [
+  {
+    clave: "clasico",
+    nombre: "Clásico",
+    para: "Prolijo y tranquilo. Bordes suaves y sombras livianas.",
+    tarjeta: "rounded-2xl border border-slate-200 shadow-sm",
+    boton: "rounded-xl shadow-lg",
+    titulo: "font-bold",
+  },
+  {
+    clave: "marcado",
+    nombre: "Marcado",
+    para: "Fuerte y directo. Bordes gruesos, sombras duras, títulos grandes.",
+    tarjeta: "rounded-none border-2 border-slate-900 shadow-[5px_5px_0_0_rgba(15,23,42,1)]",
+    boton: "rounded-none border-2 border-slate-900 shadow-[5px_5px_0_0_rgba(15,23,42,1)]",
+    titulo: "font-black uppercase tracking-tight",
+  },
+  {
+    clave: "suave",
+    nombre: "Suave",
+    para: "Amable y redondeado. Sin bordes duros.",
+    tarjeta: "rounded-[1.75rem] border border-transparent shadow-md",
+    boton: "rounded-full shadow-xl",
+    titulo: "font-bold",
+  },
+];
+
+/**
+ * Una paleta.
+ *
+ * `sobreAcento` no es decorativo: es el color del texto ARRIBA del botón. Si
+ * fuera siempre blanco, un acento claro dejaría el botón ilegible.
+ */
+export type Paleta = {
+  clave: string;
+  nombre: string;
+  /** El texto y los títulos. */
+  tinta: string;
+  /** El botón de comprar y lo que hay que mirar. */
+  acento: string;
+  /** El texto ARRIBA del acento. */
+  sobreAcento: string;
+  /** El fondo de la página. */
+  fondo: string;
+  /** El fondo de las secciones alternadas. */
+  suave: string;
+};
+
+/* Los acentos son tonos oscuros a propósito. Los claros del mismo color se ven
+   más lindos en la tarjetita del panel y dejan el texto del botón por debajo del
+   contraste mínimo — ver los chequeos, que lo calculan. */
+export const PALETAS: readonly Paleta[] = [
+  { clave: "naranja", nombre: "Naranja", tinta: "#0f172a", acento: "#c2410c", sobreAcento: "#ffffff", fondo: "#ffffff", suave: "#f8fafc" },
+  { clave: "azul",    nombre: "Azul",    tinta: "#0f172a", acento: "#1d4ed8", sobreAcento: "#ffffff", fondo: "#ffffff", suave: "#f8fafc" },
+  { clave: "verde",   nombre: "Verde",   tinta: "#0f172a", acento: "#15803d", sobreAcento: "#ffffff", fondo: "#ffffff", suave: "#f6faf7" },
+  { clave: "violeta", nombre: "Violeta", tinta: "#0f172a", acento: "#6d28d9", sobreAcento: "#ffffff", fondo: "#ffffff", suave: "#faf8ff" },
+  { clave: "rosa",    nombre: "Rosa",    tinta: "#0f172a", acento: "#be185d", sobreAcento: "#ffffff", fondo: "#ffffff", suave: "#fff7fa" },
+  { clave: "grafito", nombre: "Grafito", tinta: "#0f172a", acento: "#1e293b", sobreAcento: "#ffffff", fondo: "#ffffff", suave: "#f4f4f5" },
+];
+
+export const buscarEstilo = (clave: unknown): Estilo =>
+  ESTILOS.find((e) => e.clave === clave) ?? ESTILOS[0];
+
+export const buscarPaleta = (clave: unknown): Paleta =>
+  PALETAS.find((p) => p.clave === clave) ?? PALETAS[0];
+
 /** Una sección, como queda guardada. El orden del array ES el orden de la página. */
 export type SeccionGuardada = {
   clave: string;
@@ -449,7 +549,13 @@ export type SeccionGuardada = {
   campos: Record<string, unknown>;
 };
 
-export type PaginaVenta = { secciones: SeccionGuardada[] };
+export type PaginaVenta = {
+  /** Clave de `ESTILOS`. Una desconocida vuelve a la primera, nunca rompe. */
+  estilo: string;
+  /** Clave de `PALETAS`. Idem. */
+  paleta: string;
+  secciones: SeccionGuardada[];
+};
 
 export function buscarSeccion(clave: string): Seccion | null {
   return SECCIONES.find((s) => s.clave === clave) ?? null;
@@ -605,7 +711,28 @@ export function normalizarContenido(valor: unknown): PaginaVenta {
     if (fija) finales.splice(Math.min(i, finales.length), 0, fija);
   }
 
-  return { secciones: finales };
+  /* Una clave de estilo o de paleta que no conocemos vuelve a la primera. No se
+     guarda lo que llegó: si mañana se saca una paleta, las páginas que la usaban
+     se dibujan con la de fábrica y no con un color que ya no existe. */
+  const suelto = leerObjeto(valor);
+  return {
+    estilo: buscarEstilo(suelto?.estilo).clave,
+    paleta: buscarPaleta(suelto?.paleta).clave,
+    secciones: finales,
+  };
+}
+
+/** El objeto de arriba de todo, venga como objeto o como JSON. */
+function leerObjeto(valor: unknown): Record<string, unknown> | null {
+  if (typeof valor === "string") {
+    try {
+      return leerObjeto(JSON.parse(valor));
+    } catch {
+      return null;
+    }
+  }
+  if (!valor || typeof valor !== "object" || Array.isArray(valor)) return null;
+  return valor as Record<string, unknown>;
 }
 
 function leerSecciones(valor: unknown): Array<Record<string, unknown>> {
