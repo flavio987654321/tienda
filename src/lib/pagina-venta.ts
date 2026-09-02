@@ -49,6 +49,8 @@ export type TipoCampo = "texto" | "parrafo" | "lista" | "imagen" | "fecha" | "nu
 
 /** Lo que se puede escribir adentro de un texto y se reemplaza al dibujar. */
 export const FICHA_DIAS = "{dias}";
+/** El año, para el copyright. Ver el porqué en la sección `pie`. */
+export const FICHA_ANIO = "{año}";
 
 export type Campo = {
   clave: string;
@@ -348,6 +350,54 @@ export const SECCIONES: readonly Seccion[] = [
     campos: [],
   },
 
+  /* ── El cierre ─────────────────────────────────────────────────────────────
+   *
+   * La última pantalla antes de irse: el precio otra vez, lo que se lleva, y el
+   * botón. Repetir el precio NO es un truco sucio — la página es larga, la
+   * persona baja y se distrae, y tiene que volver a encontrarlo sin subir. Es lo
+   * que hace cualquier página de venta.
+   *
+   * ⚠️ **Pero el precio no se escribe acá.** En la de la competencia el cierre
+   * tiene sus propias casillas de "Precio" y "Precio original", con lo cual el
+   * número vive en TRES lugares: el producto, el resumen y el cierre. El día que
+   * alguien corrige uno y se olvida de los otros, la misma página muestra dos
+   * precios distintos — y es el número que la persona lee antes de pagar.
+   * Acá sale del producto, siempre, y no hay forma de que discrepen. */
+  {
+    clave: "cierre",
+    nombre: "Cierre",
+    para: "El último empujón: el precio otra vez y el botón",
+    sePuedeOcultar: true,
+    sePuedeMover: true,
+    encendida: true,
+    campos: [
+      { clave: "titulo", etiqueta: "Título", tipo: "texto", largo: 120,
+        ejemplo: "Empezá hoy" },
+      { clave: "textoBoton", etiqueta: "Texto del botón", tipo: "texto", largo: 40,
+        ejemplo: "Comprar y descargar", obligatorio: true },
+    ],
+  },
+
+  /* ── La barra pegada abajo ─────────────────────────────────────────────────
+   *
+   * Lo único de la pantalla de ellos que copiaría tal cual. En el celular la
+   * página mide varias pantallas de alto: sin esto, alguien convencido en la
+   * mitad tiene que ponerse a buscar el botón.
+   *
+   * La de ellos lleva el reloj adentro; ésta no. Precio y botón, nada más. */
+  {
+    clave: "barra",
+    nombre: "Barra de compra",
+    para: "El botón siempre a mano, pegado abajo",
+    sePuedeOcultar: true,
+    sePuedeMover: false,
+    encendida: true,
+    campos: [
+      { clave: "textoBoton", etiqueta: "Texto del botón", tipo: "texto", largo: 30,
+        ejemplo: "Comprar", obligatorio: true },
+    ],
+  },
+
   {
     clave: "pie",
     nombre: "Pie de página",
@@ -361,6 +411,12 @@ export const SECCIONES: readonly Seccion[] = [
     campos: [
       { clave: "texto", etiqueta: "Texto libre", tipo: "parrafo", largo: 300,
         ayuda: "Opcional. El contacto y los enlaces legales van solos." },
+      /* ⚠️ El año va con ficha y no escrito. El de la competencia dice
+         "© 2026 Taller Digital" a mano: el 1 de enero queda viejo en todas las
+         páginas de todos sus clientes a la vez, y nadie se entera. */
+      { clave: "copyright", etiqueta: "Copyright", tipo: "texto", largo: 120,
+        ejemplo: `© ${FICHA_ANIO}`,
+        ayuda: `Escribí ${FICHA_ANIO} y se reemplaza solo por el año en curso.` },
     ],
   },
 ];
@@ -451,10 +507,24 @@ export function porQueNoSeDibuja(s: SeccionGuardada, ctx: ContextoDePagina): str
  * Va con `split`/`join` y no con una expresión regular: las llaves tienen
  * significado propio ahí adentro y este texto lo escribe una persona.
  */
-export function conFichas(valor: string, campos: Record<string, unknown>): string {
-  if (!valor.includes(FICHA_DIAS)) return valor;
-  const dias = typeof campos.dias === "number" ? String(campos.dias) : "";
-  return valor.split(FICHA_DIAS).join(dias);
+export function conFichas(
+  valor: string,
+  campos: Record<string, unknown>,
+  extra?: { anio?: number }
+): string {
+  let salida = valor;
+  if (salida.includes(FICHA_DIAS)) {
+    const dias = typeof campos.dias === "number" ? String(campos.dias) : "";
+    salida = salida.split(FICHA_DIAS).join(dias);
+  }
+  /* ⚠️ El año llega de afuera y no se saca acá con `new Date()`. Dos motivos:
+     esta función tiene que dar siempre lo mismo con las mismas entradas —si no,
+     no se puede chequear—, y el año lo tiene que resolver quien sabe cuándo se
+     está dibujando la página. */
+  if (salida.includes(FICHA_ANIO) && typeof extra?.anio === "number") {
+    salida = salida.split(FICHA_ANIO).join(String(extra.anio));
+  }
+  return salida;
 }
 
 /** Atajo para la página pública, que sólo necesita el sí o el no. */

@@ -54,7 +54,10 @@ async function loQueSeMuestra(id: string) {
     const user = await getCurrentUser();
     if (!user || user.id !== fila.store.ownerId) return null;
   }
-  return fila;
+  /* El año sale de acá y no de adentro del dibujo: un componente que se pregunta
+     la fecha mientras dibuja no da siempre lo mismo, y con caché el copyright se
+     congela en el año en que se generó la página. */
+  return { ...fila, anio: new Date().getFullYear() };
 }
 
 /** La portada. Un JSON roto no puede tumbar la página entera. */
@@ -102,6 +105,7 @@ export default async function PaginaDeVentaPublica({ params }: Props) {
       producto={paraPagina(fila)}
       bonos={fila.hijos.map(paraPagina)}
       vendedor={{ nombre: fila.store.name, contacto: fila.store.whatsappNumber }}
+      anio={fila.anio}
     />
   );
 }

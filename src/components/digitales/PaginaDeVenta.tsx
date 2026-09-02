@@ -40,6 +40,8 @@ export type DatosDePagina = {
   bonos: ProductoParaPagina[];
   /** Quién vende, para el pie. */
   vendedor: { nombre: string | null; contacto: string | null };
+  /** El año en curso, para el copyright. Lo resuelve quien dibuja, no el texto. */
+  anio: number;
   /** `true` en la vista previa: apaga el botón para no arrancar un pago. */
   esPrevia?: boolean;
 };
@@ -91,6 +93,64 @@ function Titulo({ children }: { children: string }) {
   );
 }
 
+/* ── Los números de la oferta ───────────────────────────────────────────────
+ *
+ * El precio, el tachado, el ahorro y los bonos incluidos. Se dibujan en el
+ * resumen de precio y otra vez en el cierre, y **es la misma pieza**: repetir la
+ * oferta está bien —la página es larga y la persona se distrae—, pero tiene que
+ * decir lo mismo en los dos lados.
+ *
+ * ⚠️ Todo sale del PRODUCTO. En la página de la competencia el cierre tiene sus
+ * propias casillas de precio, así que el número vive en tres lugares; el día que
+ * corrigen uno, la misma página muestra dos precios distintos. Acá no se puede. */
+function Numeros({ producto, bonos }: { producto: ProductoParaPagina; bonos: ProductoParaPagina[] }) {
+  const ahorro =
+    producto.comparePrice && producto.comparePrice > producto.price
+      ? producto.comparePrice - producto.price
+      : 0;
+
+  return (
+    <div>
+      <p className="text-4xl font-extrabold text-slate-900 sm:text-5xl">{money(producto.price)}</p>
+      {ahorro > 0 && producto.comparePrice ? (
+        <p className="mt-2 text-slate-500">
+          <span className="line-through">{money(producto.comparePrice)}</span>{" "}
+          <span className="font-semibold text-emerald-700">ahorrás {money(ahorro)}</span>
+        </p>
+      ) : null}
+
+      {bonos.length > 0 && (
+        <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50/70 px-4 py-3 text-left">
+          <p className="text-[11px] font-bold uppercase tracking-wide text-amber-700">
+            Incluye {bonos.length} {bonos.length === 1 ? "bono gratis" : "bonos gratis"}
+          </p>
+          <ul className="mt-2 grid gap-1">
+            {bonos.map((b) => (
+              <li key={b.id} className="flex items-baseline justify-between gap-3 text-sm">
+                <span className="min-w-0 text-slate-700">{b.name}</span>
+                <span className="shrink-0 font-bold text-emerald-700">GRATIS</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* Los sellos de al lado del botón. Dicen sólo lo que podemos sostener: el cobro
+   va por Mercado Pago y la entrega es por mail.
+   🔲 "Al instante" NO está acá a propósito: con transferencia la entrega no es
+   automática, y ese aviso va en el checkout, que todavía no existe. */
+function Sellos() {
+  return (
+    <p className="flex flex-wrap items-center justify-center gap-x-5 gap-y-1 text-xs font-medium text-slate-500">
+      <span>🔒 Pago seguro con Mercado Pago</span>
+      <span>✉️ Lo recibís por mail</span>
+    </p>
+  );
+}
+
 function Seccion({ children, tono }: { children: React.ReactNode; tono?: "gris" }) {
   return (
     <section className={tono === "gris" ? "bg-slate-50" : ""}>
@@ -109,7 +169,7 @@ function Contenido({ clave, campos, datos }: {
   campos: Record<string, unknown>;
   datos: DatosDePagina;
 }) {
-  const { producto, bonos, vendedor, esPrevia } = datos;
+  const { producto, bonos, vendedor, anio, esPrevia } = datos;
 
   switch (clave) {
     case "portada": {
@@ -273,30 +333,14 @@ function Contenido({ clave, campos, datos }: {
       );
     }
 
-    case "precio": {
-      const ahorro =
-        producto.comparePrice && producto.comparePrice > producto.price
-          ? producto.comparePrice - producto.price
-          : 0;
+    case "precio":
       return (
         <Seccion>
           <div className="mx-auto flex max-w-xl flex-col items-center gap-5 rounded-3xl border border-orange-200 bg-orange-50/50 px-5 py-10 text-center sm:px-8">
             <Titulo>{texto(campos, "titulo")}</Titulo>
-            <div>
-              {/* El precio no se puede ocultar: `lib/pagina-venta` no le da botón
-                  de apagar, y mandar visible:false tampoco lo apaga. */}
-              <p className="text-4xl font-extrabold text-slate-900 sm:text-5xl">
-                {money(producto.price)}
-              </p>
-              {ahorro > 0 && producto.comparePrice ? (
-                <p className="mt-2 text-slate-500">
-                  <span className="line-through">{money(producto.comparePrice)}</span>{" "}
-                  <span className="font-semibold text-emerald-700">
-                    ahorrás {money(ahorro)}
-                  </span>
-                </p>
-              ) : null}
-            </div>
+            {/* El precio no se puede ocultar: `lib/pagina-venta` no le da botón
+                de apagar, y mandar visible:false tampoco lo apaga. */}
+            <Numeros producto={producto} bonos={bonos} />
             <BotonComprar esPrevia={esPrevia}>{texto(campos, "textoBoton")}</BotonComprar>
             {texto(campos, "aclaracion") && (
               <p className="text-sm text-slate-500">{texto(campos, "aclaracion")}</p>
@@ -304,7 +348,6 @@ function Contenido({ clave, campos, datos }: {
           </div>
         </Seccion>
       );
-    }
 
     case "garantia": {
       /* `{dias}` sale del campo de al lado. El número vive en un solo lugar para
@@ -362,6 +405,40 @@ function Contenido({ clave, campos, datos }: {
       return <BarraDeOferta texto={texto(campos, "texto")} hasta={hasta} />;
     }
 
+    case "cierre":
+      return (
+        <Seccion tono="gris">
+          <div className="mx-auto flex max-w-xl flex-col items-center gap-6 text-center">
+            <Titulo>{texto(campos, "titulo")}</Titulo>
+            <Numeros producto={producto} bonos={bonos} />
+            <BotonComprar esPrevia={esPrevia}>{texto(campos, "textoBoton")}</BotonComprar>
+            <Sellos />
+          </div>
+        </Seccion>
+      );
+
+    /* Fija abajo. Sale del flujo, así que no importa dónde esté en la lista. */
+    case "barra":
+      return (
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 px-4 py-3 shadow-[0_-2px_12px_rgba(0,0,0,0.08)] backdrop-blur">
+          <div className="mx-auto flex max-w-3xl items-center justify-between gap-3">
+            <p className="min-w-0">
+              <span className="block text-lg font-extrabold leading-none text-slate-900">
+                {money(producto.price)}
+              </span>
+              {producto.comparePrice && producto.comparePrice > producto.price ? (
+                <span className="text-xs text-slate-400 line-through">
+                  {money(producto.comparePrice)}
+                </span>
+              ) : null}
+            </p>
+            <span className="w-auto max-w-[60%] shrink-0 [&>button]:w-auto [&>button]:px-5 [&>button]:py-3 [&>button]:text-sm">
+              <BotonComprar esPrevia={esPrevia}>{texto(campos, "textoBoton")}</BotonComprar>
+            </span>
+          </div>
+        </div>
+      );
+
     case "pie":
       return (
         <footer className="border-t border-slate-200 bg-white">
@@ -371,10 +448,20 @@ function Contenido({ clave, campos, datos }: {
             )}
             {vendedor.nombre && <p className="font-medium text-slate-700">{vendedor.nombre}</p>}
             {vendedor.contacto && <p className="mt-1">{vendedor.contacto}</p>}
-            <p className="mt-4 text-xs">
+            {texto(campos, "copyright") && (
+              <p className="mt-4 text-xs">
+                {conFichas(texto(campos, "copyright"), campos, { anio })}
+              </p>
+            )}
+            {/* ⚠️ Los tres van FIJOS y no son campos: son obligaciones, no
+                decoración. El de arrepentimiento lo pide la Resolución 424/2020
+                y ya existe en el proyecto; en el pie de la competencia no está. */}
+            <p className="mt-2 flex flex-wrap justify-center gap-x-3 gap-y-1 text-xs">
               <a href="/terminos" className="underline hover:text-slate-700">Términos</a>
-              {" · "}
               <a href="/privacidad" className="underline hover:text-slate-700">Privacidad</a>
+              <a href="/arrepentimiento" className="underline hover:text-slate-700">
+                Botón de arrepentimiento
+              </a>
             </p>
           </div>
         </footer>
@@ -392,8 +479,11 @@ export default function PaginaDeVenta(datos: DatosDePagina) {
      panel diría una cosa y la página haría otra — que es la peor forma de
      enterarse de que tu página salió a medias. */
   const ctx = { hayBonos: datos.bonos.length > 0 };
+  /* La barra está fija arriba de todo, así que tapa el final de la página. Sin
+     este colchón, el último renglón del pie queda abajo del botón y no se lee. */
+  const conBarra = datos.pagina.secciones.some((s) => s.clave === "barra" && seDibuja(s, ctx));
   return (
-    <div className="min-h-screen bg-white text-slate-900 antialiased">
+    <div className={`min-h-screen bg-white text-slate-900 antialiased ${conBarra ? "pb-24" : ""}`}>
       {datos.pagina.secciones.map((s) =>
         seDibuja(s, ctx) ? (
           <Contenido key={s.clave} clave={s.clave} campos={s.campos} datos={datos} />

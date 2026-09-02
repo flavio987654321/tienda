@@ -11,7 +11,7 @@
 import { readFileSync } from "fs";
 import {
   SECCIONES, buscarSeccion, contenidoPorDefecto, normalizarContenido, porQueNoSeDibuja,
-  conFichas, FICHA_DIAS,
+  conFichas, FICHA_DIAS, FICHA_ANIO,
   type Campo,
 } from "./pagina-venta";
 
@@ -243,6 +243,51 @@ check("GAR-E", (() => {
 
 check("GAR-F", conFichas("sin ficha", { dias: 15 }) === "sin ficha",
   "y un texto sin la ficha queda igual");
+
+/* ── El cierre, la barra y el pie ─────────────────────────────────────────── */
+
+/* ⚠️ EL punto de esta tanda. En la página de la competencia el cierre tiene sus
+   PROPIAS casillas de "Precio" y "Precio original", así que el número vive en
+   tres lugares: el producto, el resumen y el cierre. Corregís uno, te olvidás de
+   otro, y la misma página muestra dos precios distintos — el que la persona lee
+   antes de pagar. Acá el precio no es un campo de ninguna sección. */
+const escribenPrecio = SECCIONES.filter((s) =>
+  s.campos.some((c) => /precio|price/i.test(c.clave)));
+check("CIE-A", escribenPrecio.length === 0,
+  "ninguna sección tiene un campo de precio: sale del producto y no puede discrepar");
+
+check("CIE-B", buscarSeccion("cierre") !== null && buscarSeccion("barra") !== null,
+  "existen el cierre y la barra de compra");
+
+/* La barra vive pegada al borde de abajo, así que moverla en la lista no
+   significa nada. */
+check("CIE-C", buscarSeccion("barra")?.sePuedeMover === false,
+  "la barra no se ordena: está fuera del flujo de la página");
+check("CIE-D", buscarSeccion("barra")?.sePuedeOcultar === true
+  && buscarSeccion("cierre")?.sePuedeOcultar === true,
+  "pero las dos se pueden apagar");
+
+/* El año escrito a mano queda viejo el 1 de enero en todas las páginas de todos
+   los clientes a la vez, y nadie se entera. El de la competencia dice "© 2026". */
+check("PIE-A", (() => {
+  const c = buscarSeccion("pie")?.campos.find((x) => x.clave === "copyright");
+  return typeof c?.ejemplo === "string" && c.ejemplo.includes(FICHA_ANIO);
+})(), "el copyright de fábrica lleva la ficha del año, no un número escrito");
+
+check("PIE-B", conFichas(`© ${FICHA_ANIO} Taller`, {}, { anio: 2027 }) === "© 2027 Taller",
+  "y la ficha se reemplaza por el año que le pasen");
+
+/* Sin el año, la ficha queda cruda en la página. Se prefiere eso a inventar un
+   año: es visible y se arregla, un año equivocado no se nota. */
+check("PIE-C", conFichas(`© ${FICHA_ANIO}`, {}) === `© ${FICHA_ANIO}`,
+  "sin año no se inventa ninguno");
+
+/* Los enlaces legales van fijos y no son campos: son obligaciones. El de
+   arrepentimiento lo pide la Resolución 424/2020 y ya existe en el proyecto. */
+check("PIE-D", (() => {
+  const d = readFileSync("src/components/digitales/PaginaDeVenta.tsx", "utf8");
+  return ["/terminos", "/privacidad", "/arrepentimiento"].every((h) => d.includes(`href="${h}"`));
+})(), "el pie lleva Términos, Privacidad y el botón de arrepentimiento, fijos");
 
 /* ── Las listas ───────────────────────────────────────────────────────────── */
 
