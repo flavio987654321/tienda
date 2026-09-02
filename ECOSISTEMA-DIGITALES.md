@@ -1883,9 +1883,57 @@ termina mintiendo, ya pasó con los templates de tienda) → el editor con ocult
 ordenar → la previa PC/celular al lado → tocar a la derecha y que se abra la
 casilla a la izquierda.
 
-**Falta dónde guardarlo.** La columna en `Product` va con la migración de la
-Fase 5, junto con la de la Fase 5 bis, para no tocar la base de producción dos
-veces.
+### ✅ La página pública y el editor — HECHOS (02/09/26)
+
+- **`components/digitales/PaginaDeVenta.tsx`** — la única pieza que dibuja la
+  página. Se mira en `/p/<id>` (dirección **provisoria**: la definitiva es el
+  subdominio por producto, Fase 5 bis). Vive fuera de `/digitales` porque ese
+  layout trae barra lateral, tema del panel y guarda de rol, y quien compra no
+  tiene cuenta.
+- **`digitales/productos/[id]/pagina`** — el editor, con las secciones a la
+  izquierda y la página de verdad al lado.
+- **`api/digitales/productos/[id]/pagina`** — guarda. Todo pasa por
+  `normalizarContenido` y se guarda el resultado, **nunca el cuerpo del pedido**.
+
+**Dónde vive el editor — CERRADO (02/09/26).** Se entra desde la tarjeta del
+producto, botón "Página de venta". **No hay ítem nuevo en la barra lateral**, y
+el motivo es nuestro modelo: la competencia puede poner "Diseño de tienda" suelto
+en su menú porque arriba tiene un selector de tienda y cada tienda es un embudo;
+acá una cuenta Pro tiene hasta 5 páginas con 5 direcciones, así que un "Diseño"
+suelto no diría **cuál de las 5** edita. Y se llama "Página de venta", no "Diseño
+de tienda": con ese nombre heredábamos su forma sin querer y terminábamos con una
+vidriera que nadie visita, cuando en nuestro modelo la gente entra desde un
+anuncio derecho a UN producto.
+
+**La página no se crea: nace con el producto.** `paginaVenta` en `null` quiere
+decir "todavía no la tocaron" y se dibuja con los textos de fábrica. No existe el
+estado "producto sin página", ni un paso de "crear la página". Eso contesta la
+duda de qué pasa en Pro: **la IA no crea 5 páginas**, crea un embudo y llena su
+página; los otros 4 productos nacen después, cada uno con la suya en blanco y con
+otra descripción, que es lo que evita que los 5 hablen del mismo nicho.
+
+**La previa es un `iframe` a la página real, y se refresca al guardar.** No es
+prolijidad: un recuadro angosto adentro del panel **no reacomoda el diseño**,
+porque las medidas de Tailwind miran el ancho de la ventana y no el del recuadro.
+Una "previa de celular" hecha así mostraría el diseño de escritorio apretado —
+algo que ningún visitante ve nunca. El `iframe` tiene su propia ventana. Y muestra
+lo GUARDADO, no lo que se está tipeando: es la diferencia entre una previa honesta
+y una que miente.
+
+**Lo que la página se niega a dibujar:** una sección encendida pero sin contenido
+(un "Además te llevás gratis" sin ningún bono abajo es peor que no tenerlo), y una
+oferta con fecha ya vencida.
+
+**La migración — `20260902120000_add_pagina_venta`, aplicada el 02/09/26.**
+Una sola columna `TEXT` que acepta vacío, en `Product`. Se **separó** de la de la
+Fase 5 bis, contra lo que decía este documento: mirada de cerca, agregar una
+columna nullable es instantáneo y no reescribe filas, así que "tocar la base dos
+veces" no cuesta nada — y meter `slug` y `customDomain` antes de decidir cómo
+funcionan (¿único global o por cuenta?, ¿qué pasa con los anuncios si cambia?)
+sería ponerlos mal con datos adentro.
+
+**🔲 Lo que sigue de esta pantalla:** que la previa siga lo que se tipea sin
+guardar, y el ida y vuelta (tocar un texto en la previa y que se abra su casilla).
 - 🔲 **Bonos** — modelo, pantalla y checkout. No existe nada en el proyecto.
 - 🔲 **Upsell** — idem.
 - 🔲 **La escasez atada a datos reales** (contador, cupos, avisos de compra). Ver

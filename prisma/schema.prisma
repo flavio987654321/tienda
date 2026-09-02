@@ -624,6 +624,17 @@ model Product {
   ///
   /// `null` en un producto de tienda, que es lo que son todos hoy.
   rolDigital String?
+  /// El contenido de su página de venta: un JSON con las secciones, su orden,
+  /// cuáles están encendidas y los textos de cada una.
+  ///
+  /// La FORMA la declara `lib/pagina-venta`, no la base. Lo que entra pasa antes
+  /// por `normalizarContenido`, que descarta lo que no está en el catálogo y
+  /// recorta cada campo a su tope; acá se guarda el resultado.
+  ///
+  /// `null` = todavía no la tocaron, y se dibuja con los textos de fábrica. Sólo
+  /// tiene sentido en un PRINCIPAL: los bonos y los upsells viajan adentro de la
+  /// página de él, no tienen una propia.
+  paginaVenta String?
   /// De qué PRINCIPAL cuelga. Null en el principal y en todo producto físico.
   /// Con `Cascade`: borrar el principal se lleva sus bonos y sus upsells, que no
   /// tienen dónde vivir sin él.

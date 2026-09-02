@@ -8,6 +8,7 @@
  * se ven en el panel: se ven en un reclamo.
  */
 
+import { readFileSync } from "fs";
 import {
   SECCIONES, buscarSeccion, contenidoPorDefecto, normalizarContenido,
   type Campo,
@@ -251,6 +252,62 @@ check("IDA-A", (() => {
   const dos = normalizarContenido(JSON.stringify(una));
   return JSON.stringify(una) === JSON.stringify(dos);
 })(), "normalizar dos veces da lo mismo, y pasando por JSON también");
+
+/* ── La ruta que guarda ───────────────────────────────────────────────────── */
+
+/* ⚠️ Todo lo de arriba no sirve de nada si la ruta guarda lo que le mandaron sin
+   pasarlo por `normalizarContenido`. Es UNA línea, y no se nota hasta que una
+   página publicada aparece sin precio. */
+const guardar = readFileSync("src/app/api/digitales/productos/[id]/pagina/route.ts", "utf8");
+
+check("RUTA-A", /normalizarContenido\(cuerpo\)/.test(guardar),
+  "lo que llega se normaliza antes de guardarse");
+check("RUTA-B", /paginaVenta:\s*JSON\.stringify\(pagina\)/.test(guardar)
+  && !/paginaVenta:\s*JSON\.stringify\(cuerpo\)/.test(guardar)
+  && !/paginaVenta:\s*crudo/.test(guardar),
+  "y lo que se guarda es lo normalizado, nunca el cuerpo del pedido");
+
+/* El dueño va ADENTRO del where: una consulta que ya no puede devolver lo ajeno
+   no se puede olvidar de comprobarlo. */
+check("RUTA-C", /ownerId:\s*user\.id/.test(guardar),
+  "sólo se puede guardar la página de un producto propio");
+check("RUTA-D", /rolDigital:\s*"PRINCIPAL"/.test(guardar),
+  "y sólo la de un principal: los bonos viajan adentro de la de su padre");
+
+/* `JSON.parse` de varios megas bloquea el hilo mientras corre. Se mide antes. */
+check("RUTA-E", guardar.indexOf("crudo.length > MAX_CUERPO") < guardar.indexOf("JSON.parse(crudo)"),
+  "el cuerpo se mide ANTES de parsearlo");
+
+/* ── La página pública ────────────────────────────────────────────────────── */
+
+const publica = readFileSync("src/app/p/[id]/page.tsx", "utf8");
+check("PUB-A", /normalizarContenido\(fila\.paginaVenta\)/.test(publica),
+  "lo guardado se vuelve a normalizar al leerlo: una columna vieja se dibuja con la forma de hoy");
+check("PUB-B", /rolDigital:\s*"PRINCIPAL"/.test(publica),
+  "sólo un principal tiene página pública");
+/* Un borrador con su precio adentro no se le muestra a cualquiera que pruebe ids. */
+check("PUB-C", /isActive/.test(publica) && /ownerId/.test(publica),
+  "un producto sin publicar lo ve sólo su dueña");
+
+/* ── El editor ────────────────────────────────────────────────────────────── */
+
+const editor = readFileSync("src/app/digitales/productos/[id]/pagina/EditorClient.tsx", "utf8");
+
+/* Que una sección no se pueda apagar no puede parecer un error: donde iría el
+   botón va un candado que dice por qué. */
+const fijas = SECCIONES.filter((s) => !s.sePuedeOcultar).map((s) => s.clave);
+const motivos = editor.split("const MOTIVO_FIJO")[1] ?? "";
+check("EDI-A", fijas.length > 0 && fijas.every((c) => new RegExp(`${c}:\\s*"`).test(motivos)),
+  "cada sección que no se puede apagar explica por qué");
+
+check("EDI-B", /enVuelo\.current/.test(editor),
+  "el guardado no se dispara dos veces con doble clic");
+check("EDI-C", /maxLength=\{campo\.largo\}/.test(editor),
+  "las casillas llevan el tope del catálogo, no uno escrito a mano");
+/* La previa es un iframe y no un recuadro: un recuadro angosto no reacomoda el
+   diseño, porque las medidas miran el ancho de la VENTANA. */
+check("EDI-D", /<iframe/.test(editor) && /src=\{`\/p\/\$\{productoId\}`\}/.test(editor),
+  "la previa es la página de verdad adentro de un iframe");
 
 console.log(fallos === 0
   ? "\nok — la página de venta no se puede dejar sin precio, sin producto ni sin contacto"

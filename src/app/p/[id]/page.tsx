@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
-import { contenidoPorDefecto } from "@/lib/pagina-venta";
+import { normalizarContenido } from "@/lib/pagina-venta";
 import PaginaDeVenta, { type ProductoParaPagina } from "@/components/digitales/PaginaDeVenta";
 
 export const runtime = "nodejs";
@@ -19,10 +19,10 @@ export const dynamic = "force-dynamic";
  * Vive fuera de `/digitales` a propósito: ese layout trae la barra lateral del
  * panel, el tema claro/oscuro y la guarda de rol. Quien compra no tiene cuenta.
  *
- * 🔲 **El contenido todavía no se guarda.** Sale de `contenidoPorDefecto()`, o
- * sea que todas las páginas se ven iguales salvo por el producto. La columna
- * donde va el contenido entra con la migración de la Fase 5, junto con la de la
- * 5 bis, para no tocar la base de producción dos veces.
+ * El contenido sale de `paginaVenta`, y se vuelve a normalizar al leerlo: si la
+ * columna quedó vieja porque el catálogo cambió, lo que se dibuja tiene la forma
+ * de HOY. `null` —nunca la editaron— da los textos de fábrica, así que no existe
+ * el estado "producto sin página".
  */
 
 type Props = { params: Promise<{ id: string }> };
@@ -39,7 +39,7 @@ async function loQueSeMuestra(id: string) {
     where: { id, deletedAt: null, rolDigital: "PRINCIPAL" },
     select: {
       id: true, name: true, description: true, price: true, comparePrice: true,
-      images: true, isActive: true,
+      images: true, isActive: true, paginaVenta: true,
       store: { select: { ownerId: true, name: true, whatsappNumber: true } },
       hijos: {
         where: { deletedAt: null, rolDigital: "BONO", isActive: true },
@@ -98,7 +98,7 @@ export default async function PaginaDeVentaPublica({ params }: Props) {
 
   return (
     <PaginaDeVenta
-      pagina={contenidoPorDefecto()}
+      pagina={normalizarContenido(fila.paginaVenta)}
       producto={paraPagina(fila)}
       bonos={fila.hijos.map(paraPagina)}
       vendedor={{ nombre: fila.store.name, contacto: fila.store.whatsappNumber }}

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRef, useState } from "react";
 import {
   Plus, Gift, TrendingUp, BookOpen, Loader2, Pencil, Trash2, AlertTriangle, Image as ImageIcon,
-  Eye, EyeOff, X, ArrowUpRight, Upload, Sparkles, ExternalLink,
+  Eye, EyeOff, X, ArrowUpRight, Upload, Sparkles, ExternalLink, LayoutTemplate,
 } from "lucide-react";
 import { COPY_DIGITAL, type TierDigital } from "@/lib/planes-digitales";
 import {
@@ -311,14 +311,22 @@ function Tarjeta({ p, acc }: { p: ProductoEnPantalla; acc: Acciones }) {
                 subdominio por producto (Fase 5 bis). Y se abre en otra pestaña
                 porque sale del panel: es la página pública, no una previa. */}
             {p.rol === "PRINCIPAL" && (
-              <Link
-                href={`/p/${p.id}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 text-xs font-bold text-gray-700 panel-oscuro:text-gray-300 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800 transition-colors"
-              >
-                <ExternalLink className="h-3.5 w-3.5" /> Ver página
-              </Link>
+              <>
+                <Link
+                  href={`/digitales/productos/${p.id}/pagina`}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 text-xs font-bold text-gray-700 panel-oscuro:text-gray-300 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800 transition-colors"
+                >
+                  <LayoutTemplate className="h-3.5 w-3.5" /> Página de venta
+                </Link>
+                <Link
+                  href={`/p/${p.id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 text-xs font-bold text-gray-700 panel-oscuro:text-gray-300 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800 transition-colors"
+                >
+                  <ExternalLink className="h-3.5 w-3.5" /> Ver página
+                </Link>
+              </>
             )}
 
             <button
