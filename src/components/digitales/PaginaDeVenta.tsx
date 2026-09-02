@@ -84,8 +84,8 @@ function BotonComprar({ children, esPrevia, estilo }: {
      escrito acá: si lo estuvieran, elegir otra paleta no cambiaría el botón —
      que es justo lo único que hay que mirar en esta página. */
   const clases =
-    "inline-flex w-full max-w-md items-center justify-center px-6 py-4 " +
-    "text-base font-semibold transition hover:brightness-110 sm:text-lg " +
+    "inline-flex w-full max-w-md items-center justify-center px-6 py-5 " +
+    "text-lg font-bold transition hover:brightness-110 sm:text-xl " +
     "bg-[color:var(--pv-acento)] text-[color:var(--pv-sobre)] " +
     "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 " +
     "focus-visible:outline-[color:var(--pv-acento)] " + estilo.boton;
@@ -129,17 +129,50 @@ function Numeros({ producto, bonos, estilo }: {
       ? producto.comparePrice - producto.price
       : 0;
 
+  /* De la resta sale todo lo demás: el sello, el tachado y el renglón verde. */
+  const porcentaje =
+    ahorro > 0 && producto.comparePrice
+      ? Math.round((ahorro / producto.comparePrice) * 100)
+      : 0;
+
   return (
     <div>
-      <p className={`text-4xl text-[color:var(--pv-tinta)] sm:text-5xl ${estilo.titulo}`}>{money(producto.price)}</p>
-      {ahorro > 0 && producto.comparePrice ? (
-        <p className="mt-2 text-[color:var(--pv-tenue)]">
-          <span className="line-through">{money(producto.comparePrice)}</span>{" "}
-          <span className="font-semibold text-[color:var(--pv-ok)]">
-            ahorrás {money(ahorro)} ({Math.round((ahorro / producto.comparePrice) * 100)}% OFF)
-          </span>
+      {/* ⚠️ El sello sale de una RESTA, no de un texto que alguien escribe. Si no
+          hay precio tachado no hay sello, así que no puede quedar un "50% OFF"
+          arriba de un precio que nunca bajó. Es la diferencia entre esto y el
+          cartel de la competencia, que es un campo libre. */}
+      {porcentaje > 0 && (
+        <p
+          className={`mb-4 inline-block bg-[color:var(--pv-ok)] px-3 py-1.5 text-xs font-extrabold uppercase tracking-wide text-[color:var(--pv-fondo)] ${estilo.sello}`}
+        >
+          {porcentaje}% de descuento
         </p>
-      ) : null}
+      )}
+
+      {/* El precio viejo va AL LADO del nuevo y no abajo: pegados, el ojo hace la
+          resta solo y no hay que leer nada.
+
+          Son dos `span` adentro de un `p` y no un flex a propósito: así siguen la
+          alineación de donde estén —a la izquierda en la ficha del producto,
+          centrados en la de precio— sin tener que pasarles por dónde van. */}
+      <p>
+        {ahorro > 0 && producto.comparePrice ? (
+          <span className="mr-3 text-xl text-[color:var(--pv-tenue)] line-through sm:text-2xl">
+            {money(producto.comparePrice)}
+          </span>
+        ) : null}
+        <span className={`text-4xl text-[color:var(--pv-tinta)] sm:text-5xl ${estilo.titulo}`}>
+          {money(producto.price)}
+        </span>
+      </p>
+
+      {/* Cuánta plata se ahorra es el dato que más empuja de la página, y estaba
+          en letra chica gris al lado del tachado. Ahora es un renglón propio. */}
+      {ahorro > 0 && (
+        <p className="mt-2 text-lg font-extrabold text-[color:var(--pv-ok)] sm:text-xl">
+          Ahorrás {money(ahorro)}
+        </p>
+      )}
 
       {bonos.length > 0 && (
         <div className={`mt-5 bg-amber-50/70 px-4 py-3 text-left ${estilo.tarjeta}`}>
@@ -184,13 +217,31 @@ function valorDeLosBonos(bonos: ProductoParaPagina[]): number {
    va por Mercado Pago y la entrega es por mail.
    🔲 "Al instante" NO está acá a propósito: con transferencia la entrega no es
    automática, y ese aviso va en el checkout, que todavía no existe. */
-function Sellos() {
+function Sellos({ dias }: { dias?: number | null }) {
   return (
     <p className="flex flex-wrap items-center justify-center gap-x-5 gap-y-1 text-xs font-medium text-[color:var(--pv-tenue)]">
       <span>🔒 Pago seguro con Mercado Pago</span>
       <span>✉️ Lo recibís por mail</span>
+      {/* ⚠️ El tercero aparece SÓLO si la sección de garantía se va a ver, y con
+          los días que dice esa sección. Un sello de garantía en una página que no
+          la tiene es una promesa que nadie escribió y que después hay que
+          cumplir igual. */}
+      {dias ? <span>🛡️ Garantía de {dias} días</span> : null}
     </p>
   );
+}
+
+/**
+ * Los días de garantía, o `null` si esa sección no se va a ver.
+ *
+ * Pregunta por `seDibuja` y no por `visible` porque una sección encendida pero
+ * vacía tampoco se dibuja: el sello tiene que decir lo mismo que la página.
+ */
+function diasDeGarantia(datos: DatosDePagina): number | null {
+  const s = datos.pagina.secciones.find((x) => x.clave === "garantia");
+  if (!s || !seDibuja(s, { hayBonos: datos.bonos.length > 0 })) return null;
+  const d = s.campos.dias;
+  return typeof d === "number" && d > 0 ? d : null;
 }
 
 /** La bajada de una sección. Vacía no dibuja nada. */
@@ -296,7 +347,7 @@ function Contenido({ clave, campos, datos }: {
                   <BotonComprar esPrevia={esPrevia} estilo={estilo}>
                     {texto(campos, "textoBoton")}
                   </BotonComprar>
-                  <Sellos />
+                  <Sellos dias={diasDeGarantia(datos)} />
                 </div>
               </div>
             </div>
@@ -508,7 +559,7 @@ function Contenido({ clave, campos, datos }: {
             <Titulo estilo={estilo}>{texto(campos, "titulo")}</Titulo>
             <Numeros producto={producto} bonos={bonos} estilo={estilo} />
             <BotonComprar esPrevia={esPrevia} estilo={estilo}>{texto(campos, "textoBoton")}</BotonComprar>
-            <Sellos />
+            <Sellos dias={diasDeGarantia(datos)} />
           </div>
         </Seccion>
       );

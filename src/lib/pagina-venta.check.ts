@@ -623,6 +623,55 @@ check("ANCHO-B", /overflow-x-clip/.test(dibujante),
 check("ANCHO-C", !/overflow-x-hidden/.test(dibujante),
   "y se recorta con clip, no con hidden, que dejaría un scroll vertical propio");
 
+/* ── La oferta se ve, y no se puede inventar ──────────────────────────────── */
+
+/* ⚠️ Esto salió de mirar la página de la competencia al lado de la nuestra el
+   02/09/26: la de ellos parecía una vidriera y la nuestra no. La diferencia no
+   era el color — era que el descuento estaba susurrado.
+
+   Lo que ellos hacen para verse vivos y NOSOTROS NO COPIAMOS: cupos que no
+   existen, un reloj que se reinicia solo, ⭐4,9 con cero ventas y "16 personas
+   viendo". Todo eso es inventado.
+
+   Lo de acá abajo es lo contrario: el sello y el ahorro salen de una resta
+   entre dos números que cargó quien vende. Sin precio tachado no hay nada. */
+
+check("OFE-A", ESTILOS.every((e) => e.sello.trim().length > 0),
+  "cada estilo dice qué forma tiene su sello de oferta");
+
+/* No reusa `tarjeta`: la de Editorial es una línea arriba con espacio abajo, y
+   en una píldora de tres palabras eso queda como un renglón suelto. */
+check("OFE-B", ESTILOS.every((e) => e.sello !== e.tarjeta),
+  "y el sello no es la tarjeta: una tarjeta achicada no se lee como sello");
+
+/* ⚠️ El de la competencia es un campo de texto libre, así que se puede escribir
+   "80% OFF" arriba de un precio que nunca bajó. Acá no hay dónde escribirlo:
+   ninguna sección tiene un campo de descuento ni de precio. */
+const hayCampoDePrecio = SECCIONES.some((s) => s.campos.some((c) =>
+  /precio|descuento|oferta|porcentaje|ahorr/i.test(c.clave)));
+check("OFE-C", !hayCampoDePrecio,
+  "el descuento no se escribe en ningún lado: sale de restar los dos precios");
+
+check("OFE-D", dibujante.includes("porcentaje > 0 &&")
+  && dibujante.includes("${estilo.sello}"),
+  "y sin precio tachado el sello directamente no se dibuja");
+
+/* El renglón del ahorro era el más chico de la ficha siendo el que más empuja. */
+check("OFE-E", dibujante.includes("font-extrabold text-[color:var(--pv-ok)]"),
+  "cuánta plata se ahorra tiene renglón propio y peso, no letra chica gris");
+
+/* ⚠️ Un sello de garantía en una página SIN garantía es una promesa que nadie
+   escribió y que después hay que cumplir igual. Por eso mira `seDibuja` y no
+   `visible`: una sección encendida pero vacía tampoco se dibuja. */
+check("OFE-F", dibujante.includes("{dias ? <span>")
+  && dibujante.includes("seDibuja(s, { hayBonos"),
+  "el sello de garantía aparece sólo si esa sección se va a ver de verdad");
+
+/* Los días del sello y los del texto tienen que ser el mismo número, y ese
+   número vive en el campo de la sección — no hay un 7 escrito en el dibujante. */
+check("OFE-G", dibujante.includes("Garantía de {dias} días"),
+  "y con los días que dice la sección, no con un número escrito en el dibujo");
+
 /* ── Quién puede enmarcar la página ───────────────────────────────────────── */
 
 /* ⚠️ La política base del sitio es `frame-ancestors 'none'`, y con eso la previa

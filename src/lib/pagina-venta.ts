@@ -492,6 +492,16 @@ export type Estilo = {
   tarjeta: string;
   boton: string;
   titulo: string;
+  /**
+   * La forma del sello de oferta: la píldora que dice cuánto por ciento se
+   * descuenta.
+   *
+   * ⚠️ Va aparte de `tarjeta` y NO reusa esa clase. La `tarjeta` de Editorial
+   * es una línea arriba con espacio abajo; aplicada a una píldora de tres
+   * palabras queda un renglón suelto en vez de un sello. Cada estilo dice cómo
+   * es su sello, igual que dice cómo es su botón.
+   */
+  sello: string;
   /** El aire de cada sección. Es lo que más se nota de lejos. */
   seccion: string;
   /**
@@ -550,6 +560,7 @@ export const ESTILOS: readonly Estilo[] = [
     tarjeta: "rounded-lg border border-slate-200",
     boton: "rounded-lg",
     titulo: "font-bold",
+    sello: "rounded-full",
     seccion: "py-10 sm:py-14",
   },
   {
@@ -559,6 +570,7 @@ export const ESTILOS: readonly Estilo[] = [
     tarjeta: "rounded-none border-2 border-slate-900 shadow-[6px_6px_0_0_rgba(15,23,42,1)]",
     boton: "rounded-none border-2 border-slate-900 shadow-[6px_6px_0_0_rgba(15,23,42,1)]",
     titulo: "font-black uppercase tracking-tight",
+    sello: "rounded-none border-2 border-slate-900",
     seccion: "py-12 sm:py-16",
   },
   {
@@ -568,6 +580,7 @@ export const ESTILOS: readonly Estilo[] = [
     tarjeta: "rounded-[2rem] border-0 shadow-[0_14px_40px_-12px_rgba(15,23,42,0.28)]",
     boton: "rounded-full shadow-[0_14px_30px_-8px_rgba(15,23,42,0.45)]",
     titulo: "font-semibold tracking-tight",
+    sello: "rounded-full",
     seccion: "py-16 sm:py-24",
   },
   /* Sin tarjetas: en vez de encerrar cada cosa en un recuadro, las separa con una
@@ -580,6 +593,7 @@ export const ESTILOS: readonly Estilo[] = [
     tarjeta: "rounded-none border-0 border-t border-[color:var(--pv-linea)] pt-6",
     boton: "rounded-none",
     titulo: "font-serif font-normal tracking-tight",
+    sello: "rounded-none",
     seccion: "py-14 sm:py-20",
   },
   /* El único que da vuelta los colores. En una página que se lee de noche en el
@@ -591,6 +605,7 @@ export const ESTILOS: readonly Estilo[] = [
     tarjeta: "rounded-xl border border-white/10 shadow-[0_10px_30px_-12px_rgba(0,0,0,0.85)]",
     boton: "rounded-xl shadow-lg",
     titulo: "font-extrabold tracking-tight",
+    sello: "rounded-lg",
     seccion: "py-12 sm:py-20",
     oscuro: true,
   },
