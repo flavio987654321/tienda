@@ -79,6 +79,28 @@ const storePublicHeaders = paymentHeaders.map((h) => {
   return h;
 });
 
+/* La página de venta de un producto digital (`/p/<id>`).
+ *
+ * Se ve embebida en un `iframe` adentro del editor del panel, así que necesita
+ * dejarse enmarcar por nuestro propio dominio. Sin esto la previa sale en blanco
+ * y la consola dice "Framing violates frame-ancestors 'none'".
+ *
+ * Se afloja SOLO a `'self'`, no a `*`: cualquier otro sitio la sigue sin poder
+ * meter adentro de un iframe suyo. Eso importa acá más que en otras pantallas,
+ * porque en esta se aprieta el botón de pagar — y un iframe ajeno arriba es
+ * exactamente cómo se roba ese clic.
+ *
+ * ⚠️ Y a diferencia de `/tienda/` y `/preview/`, esta NO sale de `cspPayment`:
+ * arranca de la política base, o sea SIN `unsafe-eval`. Cuando el checkout traiga
+ * el SDK de Mercado Pago va a hacer falta, y ese es el momento de aflojarlo — no
+ * antes de que exista lo que lo necesita. */
+const cspPaginaDigital = csp.replace("frame-ancestors 'none'", "frame-ancestors 'self'");
+const paginaDigitalHeaders = securityHeaders.map((h) => {
+  if (h.key === "Content-Security-Policy") return { key: h.key, value: cspPaginaDigital };
+  if (h.key === "X-Frame-Options") return { key: h.key, value: "SAMEORIGIN" };
+  return h;
+});
+
 // Identificador del build, para avisarle al usuario que hay versión nueva.
 // Sale del commit que Vercel está deployando, así cambia solo en cada deploy y
 // nadie tiene que acordarse de subir un número a mano.
@@ -108,13 +130,15 @@ const nextConfig: NextConfig = {
       ]},
       // Regla base: todo excepto las rutas que tienen su propio set de headers más permisivo
       // (si no se excluyen, el browser recibe dos CSP headers y aplica la intersección — unsafe-eval se pierde)
-      { source: "/((?!preview\\/|tienda\\/|precios|dashboard).*)", headers: securityHeaders },
+      { source: "/((?!preview\\/|tienda\\/|p\\/|precios|dashboard).*)", headers: securityHeaders },
       // Páginas donde carga el SDK de MercadoPago (checkout de tienda + suscripciones + dashboard)
       { source: "/(precios|dashboard.*)", headers: paymentHeaders },
       // Tiendas públicas: pago habilitado + embebibles en iframe same-origin (para previews en cards)
       { source: "/tienda/(.*)", headers: storePublicHeaders },
       // Preview de templates — permite iframe same-origin para el editor de diseño
       { source: "/preview/(.*)", headers: previewHeaders },
+      // Página de venta de un producto digital — la enmarca el editor del panel
+      { source: "/p/(.*)", headers: paginaDigitalHeaders },
     ];
   },
   images: {

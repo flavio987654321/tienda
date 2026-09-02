@@ -309,6 +309,25 @@ check("EDI-C", /maxLength=\{campo\.largo\}/.test(editor),
 check("EDI-D", /<iframe/.test(editor) && /src=\{`\/p\/\$\{productoId\}`\}/.test(editor),
   "la previa es la página de verdad adentro de un iframe");
 
+/* ── Quién puede enmarcar la página ───────────────────────────────────────── */
+
+/* ⚠️ La política base del sitio es `frame-ancestors 'none'`, y con eso la previa
+   del editor salía EN BLANCO. Se afloja sólo para `/p/`, y sólo a `'self'`.
+   Nunca a `*`: en esta pantalla se aprieta el botón de pagar, y un iframe ajeno
+   encima es exactamente cómo se roba ese clic. */
+const config = readFileSync("next.config.ts", "utf8");
+
+check("CSP-A", /source:\s*"\/p\/\(\.\*\)"/.test(config),
+  "la página de venta tiene su propia regla de cabeceras");
+check("CSP-B", /cspPaginaDigital[\s\S]{0,120}frame-ancestors 'self'/.test(config),
+  "y se deja enmarcar por nuestro propio dominio, que es lo que hace andar la previa");
+check("CSP-C", !/frame-ancestors \*/.test(config),
+  "por NADIE más: un iframe ajeno arriba del botón de pagar roba el clic");
+/* Sin excluirla de la regla base, el navegador recibe dos CSP y aplica la
+   intersección — o sea que vuelve a ganar `'none'` y la previa queda en blanco. */
+check("CSP-D", config.includes("|p\\\\/|precios"),
+  "y está excluida de la regla base, o las dos cabeceras se pisan");
+
 console.log(fallos === 0
   ? "\nok — la página de venta no se puede dejar sin precio, sin producto ni sin contacto"
   : `\nFALLA — ${fallos} chequeo(s) de la página de venta`);
