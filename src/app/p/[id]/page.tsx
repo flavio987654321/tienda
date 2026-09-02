@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
 import { normalizarContenido } from "@/lib/pagina-venta";
 import PaginaDeVenta, { type ProductoParaPagina } from "@/components/digitales/PaginaDeVenta";
+import PaginaEnVivo from "./PaginaEnVivo";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -25,7 +26,10 @@ export const dynamic = "force-dynamic";
  * el estado "producto sin página".
  */
 
-type Props = { params: Promise<{ id: string }> };
+type Props = {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+};
 
 /**
  * El producto y su gente, **si se puede mostrar**.
@@ -94,18 +98,25 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export default async function PaginaDeVentaPublica({ params }: Props) {
+export default async function PaginaDeVentaPublica({ params, searchParams }: Props) {
   const { id } = await params;
   const fila = await loQueSeMuestra(id);
   if (!fila) notFound();
 
-  return (
-    <PaginaDeVenta
-      pagina={normalizarContenido(fila.paginaVenta)}
-      producto={paraPagina(fila)}
-      bonos={fila.hijos.map(paraPagina)}
-      vendedor={{ nombre: fila.store.name, contacto: fila.store.whatsappNumber }}
-      anio={fila.anio}
-    />
-  );
+  const datos = {
+    pagina: normalizarContenido(fila.paginaVenta),
+    producto: paraPagina(fila),
+    bonos: fila.hijos.map(paraPagina),
+    vendedor: { nombre: fila.store.name, contacto: fila.store.whatsappNumber },
+    anio: fila.anio,
+  };
+
+  /* `?previa=1` es lo que carga el editor adentro de su iframe. Sólo cambia dos
+     cosas: la página escucha el borrador que le manda el editor, y el botón de
+     comprar queda apagado para no arrancar un pago desde el panel.
+     No abre ninguna puerta: es la misma página y los mismos datos. */
+  const previa = (await searchParams).previa === "1";
+  if (previa) return <PaginaEnVivo {...datos} esPrevia />;
+
+  return <PaginaDeVenta {...datos} />;
 }

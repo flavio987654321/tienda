@@ -7,7 +7,8 @@ import {
   Loader2, ExternalLink, Save, Monitor, Smartphone, Lock, ImageIcon, AlertTriangle,
 } from "lucide-react";
 import {
-  SECCIONES, buscarSeccion, porQueNoSeDibuja, type Campo, type PaginaVenta, type SeccionGuardada,
+  SECCIONES, buscarSeccion, porQueNoSeDibuja, AVISO_BORRADOR, AVISO_LISTA,
+  type Campo, type PaginaVenta, type SeccionGuardada,
 } from "@/lib/pagina-venta";
 
 /**
@@ -23,9 +24,9 @@ import {
  * que ningún visitante va a ver nunca. Un `iframe` tiene su propia ventana, así
  * que al angostarlo el diseño se reacomoda de verdad.
  *
- * ⚠️ Muestra lo **guardado**, no lo que estás tipeando. Por eso se refresca sola
- * al guardar. Es la diferencia entre una previa honesta y una que miente: acá lo
- * que se ve es exactamente lo que ve quien compra.
+ * Y sigue lo que se escribe: como es otra ventana, no se entera sola, así que se
+ * le manda el borrador por `postMessage` y ella se redibuja. Es la página de
+ * verdad dibujando el texto de ahora — no una imitación.
  */
 
 const MAX_IMAGEN_MB = 4;
@@ -290,9 +291,47 @@ export default function EditorDePagina({ productoId, nombre, publicado, pagina: 
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState("");
   const [ancho, setAncho] = useState<"pc" | "celular">("pc");
-  const [refresco, setRefresco] = useState(0);
   const [vista, setVista] = useState<"editar" | "previa">("editar");
   const enVuelo = useRef(false);
+  const marco = useRef<HTMLIFrameElement>(null);
+
+  /* ── La previa sigue lo que se escribe ──────────────────────────────────────
+   *
+   * La previa es un `iframe` a la página real, así que es OTRA ventana y no se
+   * entera de lo que se tipea acá. Se le manda el borrador y ella se redibuja.
+   *
+   * Va con un respiro de 150 ms: sin él se manda un aviso por tecla, y en un
+   * párrafo largo son cientos de dibujos de una página entera.
+   *
+   * ⚠️ El destino del aviso es nuestro propio origen y no `"*"`. Con `"*"`, si
+   * algún día ese iframe apuntara a otro lado, le estaríamos entregando el
+   * borrador a un dominio ajeno. */
+  useEffect(() => {
+    const t = setTimeout(() => {
+      marco.current?.contentWindow?.postMessage(
+        { tipo: AVISO_BORRADOR, pagina },
+        window.location.origin
+      );
+    }, 150);
+    return () => clearTimeout(t);
+  }, [pagina]);
+
+  /* La previa tarda en cargar. Cuando termina, saluda — y recién ahí tiene
+     sentido mandarle el borrador de nuevo: lo que se haya escrito mientras
+     cargaba se perdió, y sin esto la previa arranca desfasada. */
+  useEffect(() => {
+    const alSaludo = (e: MessageEvent) => {
+      if (e.origin !== window.location.origin) return;
+      const d = e.data as { tipo?: unknown } | null;
+      if (!d || typeof d !== "object" || d.tipo !== AVISO_LISTA) return;
+      marco.current?.contentWindow?.postMessage(
+        { tipo: AVISO_BORRADOR, pagina },
+        window.location.origin
+      );
+    };
+    window.addEventListener("message", alSaludo);
+    return () => window.removeEventListener("message", alSaludo);
+  }, [pagina]);
 
   /* Avisar antes de irse con cambios sin guardar. La página es larga y se pierde
      un rato de trabajo sin que nada lo insinúe. */
@@ -358,7 +397,6 @@ export default function EditorDePagina({ productoId, nombre, publicado, pagina: 
          texto o se descartó algo, se ve ahora y no la próxima vez que se entre. */
       setPagina(data.pagina as PaginaVenta);
       setSucio(false);
-      setRefresco((n) => n + 1);
     } catch {
       setError("No pudimos conectarnos. Revisá tu internet e intentá de nuevo.");
     } finally {
@@ -630,7 +668,7 @@ export default function EditorDePagina({ productoId, nombre, publicado, pagina: 
           <div className="sticky top-4">
             <div className="mb-2 flex items-center justify-between gap-2">
               <p className="text-xs text-gray-500 panel-oscuro:text-gray-400">
-                {sucio ? "Guardá para verlo acá" : "Así se ve"}
+                {sucio ? "Así va a quedar · sin guardar" : "Así se ve"}
               </p>
               <div className="flex gap-1 rounded-lg bg-gray-100 p-0.5 panel-oscuro:bg-gray-800">
                 <button
@@ -654,9 +692,14 @@ export default function EditorDePagina({ productoId, nombre, publicado, pagina: 
 
             <div className="overflow-hidden rounded-2xl border border-gray-200 bg-gray-100 panel-oscuro:border-gray-700 panel-oscuro:bg-gray-800">
               <div className={`mx-auto bg-white ${ancho === "celular" ? "max-w-[390px]" : ""}`}>
+                {/* `?previa=1` hace dos cosas: la página escucha el borrador que
+                    le mandamos, y apaga el botón de comprar para que un clic acá
+                    adentro no arranque un pago.
+                    Y NO lleva `key`: si se volviera a montar en cada cambio,
+                    perdería el scroll y arrancaría de arriba a cada tecla. */}
                 <iframe
-                  key={refresco}
-                  src={`/p/${productoId}`}
+                  ref={marco}
+                  src={`/p/${productoId}?previa=1`}
                   title="Vista previa de la página de venta"
                   className="h-[70vh] w-full border-0"
                 />

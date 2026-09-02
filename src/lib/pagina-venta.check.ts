@@ -392,7 +392,7 @@ check("EDI-C", /maxLength=\{campo\.largo\}/.test(editor),
   "las casillas llevan el tope del catálogo, no uno escrito a mano");
 /* La previa es un iframe y no un recuadro: un recuadro angosto no reacomoda el
    diseño, porque las medidas miran el ancho de la VENTANA. */
-check("EDI-D", /<iframe/.test(editor) && /src=\{`\/p\/\$\{productoId\}`\}/.test(editor),
+check("EDI-D", /<iframe/.test(editor) && editor.includes("/p/${productoId}?previa=1"),
   "la previa es la página de verdad adentro de un iframe");
 
 /* ── Qué se dibuja y qué no ───────────────────────────────────────────────── */
@@ -437,6 +437,29 @@ check("DIB-G", /seDibuja\(s, ctx\)/.test(dibujante),
   "la página pública decide con esa regla, no con una copia adentro");
 check("DIB-H", /porQueNoSeDibuja\(s, \{ hayBonos/.test(editor),
   "y el editor avisa con la misma, así los dos dicen lo mismo");
+
+/* ── La previa en vivo ────────────────────────────────────────────────────── */
+
+/* La previa es otra ventana, así que el editor le manda el borrador. Un
+   `message` lo puede mandar CUALQUIER ventana — incluida una página ajena que
+   meta ésta en un iframe suyo—, así que hay dos cosas que no se negocian. */
+const enVivo = readFileSync("src/app/p/[id]/PaginaEnVivo.tsx", "utf8");
+
+check("VIVO-A", /e\.origin !== window\.location\.origin/.test(enVivo),
+  "sólo se escuchan avisos de nuestro propio origen");
+check("VIVO-B", /normalizarContenido\(d\.pagina\)/.test(enVivo),
+  "y el borrador que llega pasa por el catálogo, igual que si viniera del servidor");
+
+/* Con `"*"` como destino, el día que ese iframe apunte a otro lado le estaríamos
+   entregando el borrador a un dominio ajeno. */
+check("VIVO-C", !/postMessage\([^)]*,\s*["']\*["']\s*\)/.test(editor)
+  && !/postMessage\([^)]*,\s*["']\*["']\s*\)/.test(enVivo),
+  "y ningún aviso se manda a `*`");
+
+/* Sin `key`, el iframe no se vuelve a montar en cada cambio: si lo hiciera,
+   perdería el scroll y saltaría al principio a cada tecla. */
+check("VIVO-D", /ref=\{marco\}/.test(editor) && !/key=\{refresco\}/.test(editor),
+  "la previa se actualiza sin volver a cargarse, así no pierde el scroll");
 
 /* ── Quién puede enmarcar la página ───────────────────────────────────────── */
 

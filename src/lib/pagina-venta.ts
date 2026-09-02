@@ -47,6 +47,19 @@ import { limpiarTexto } from "@/lib/texto-limpio";
  */
 export type TipoCampo = "texto" | "parrafo" | "lista" | "imagen" | "fecha" | "numero";
 
+/* ── El aviso que el editor le manda a su previa ────────────────────────────
+ *
+ * La previa es un `iframe` a la página real —necesita su propia ventana para que
+ * el diseño se reacomode de verdad—, así que para que siga lo que se escribe hay
+ * que **mandarle el borrador a esa ventana**. Este es el nombre del aviso.
+ *
+ * Vive acá, con el catálogo, porque lo usan los dos lados: el editor para
+ * mandarlo y la página para escucharlo. En dos archivos distintos, alguien
+ * cambia uno y la previa deja de moverse sin que nada falle. */
+export const AVISO_BORRADOR = "pagina-venta:borrador";
+/** La previa avisa que ya está lista para recibir. Ver el porqué en el editor. */
+export const AVISO_LISTA = "pagina-venta:lista";
+
 /** Lo que se puede escribir adentro de un texto y se reemplaza al dibujar. */
 export const FICHA_DIAS = "{dias}";
 /** El año, para el copyright. Ver el porqué en la sección `pie`. */
