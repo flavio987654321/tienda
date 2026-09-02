@@ -316,6 +316,10 @@ export const SECCIONES: readonly Seccion[] = [
     sePuedeOcultar: true,
     sePuedeMover: true,
     encendida: false,
+    /* La otra sección donde lo que se escribe sale de la página y entra en la
+       vida real. En opiniones se afirma algo que pasó; acá se promete algo que
+       va a pasar, y lo paga quien vende, de su bolsillo. */
+    aviso: "Lo que prometas acá lo vas a tener que cumplir con tu plata. Por ley ya tenés 10 días de arrepentimiento, escribas esto o no.",
     campos: [
       { clave: "dias", etiqueta: "Días de garantía", tipo: "numero", largo: 0,
         min: 1, max: 365, porDefecto: 10,
