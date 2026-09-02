@@ -333,7 +333,26 @@ chequear("el producto padre se verifica contra la cuenta que pide",
 /* El botón apagado en la pantalla es una cortesía, no un permiso: se cuenta en
    la base. */
 chequear("el tope del plan se cuenta en la base",
-  /prisma\.product\.count\(/.test(crear) && /cuantos >= tope/.test(crear));
+  /\.product\.count\(/.test(crear) && /cuantos >= tope/.test(crear));
+
+/* ⚠️ Y se cuenta DENTRO de la misma transacción que crea, con candado por tienda.
+   Sueltos, contar y crear son dos pasos con un ratito en el medio: dos pedidos de
+   la misma cuenta preguntan "¿cuántos hay?", a los dos les contestan "cero" y los
+   dos crean. Quedan dos productos en un plan que permite uno.
+   Con una persona haciendo clic no pasaba —va de a uno—, pero la cáscara que
+   arma la IA crea el principal, el bono y el upsell de una sentada, que es
+   exactamente el caso que lo dispara. */
+chequear("contar y crear van juntos, con candado por tienda",
+  /\$transaction\(async \(tx\)/.test(crear) &&
+  /pg_advisory_xact_lock/.test(crear) &&
+  /tx\.product\.count\(/.test(crear) &&
+  /tx\.product\.create\(/.test(crear));
+
+/* El candado va por TIENDA y no global: si no, dos personas distintas creando
+   productos al mismo tiempo se harían cola una detrás de la otra sin motivo. */
+chequear("el candado es por tienda, no de toda la base",
+  /pg_advisory_xact_lock\(hashtext\(\$\{?espacio\.storeId/.test(crear) ||
+  /hashtext\(\$\{espacio\.storeId\}\)/.test(crear));
 
 /* Un producto recién creado NO puede nacer publicado, aunque venga con todo
    cargado: todavía no tiene archivo, y publicar sin archivo es cobrar por algo

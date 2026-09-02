@@ -1715,11 +1715,13 @@ Las cuatro cosas están decididas en 2.4. Lo que falta acá es **cómo se pagan 
 cómo se frenan**, y eso va antes que cualquier pantalla: el tope no se agrega
 después, porque hasta que exista la factura de Anthropic no tiene techo.
 
-- ⚠️ **Medir qué es "un ebook", no sólo cuánto sale.** Visto el 01/09/26: su
-  "Generar con IA" produce un PDF **con portada, imágenes y maquetación**, no 40
-  páginas de texto. Si eso es lo que el mercado entiende por "ebook con IA", la
-  medición tiene que ser de eso — las imágenes se pagan aparte y el número de
-  abajo queda corto.
+- ⚠️ **Medir qué es "un ebook", no sólo cuánto sale.** Su modal PROMETE un PDF
+  *"premium con portada, imágenes y maquetación profesional"*.
+  **Ojo: eso es su cartel, no algo que hayamos visto andar.** En Free el botón
+  está frenado, así que nadie lo pudo correr. Si de verdad es eso lo que el
+  mercado entiende por "ebook con IA", la medición tiene que ser de eso —las
+  imágenes se pagan aparte— y el número de abajo queda corto. Si es marketing, no
+  cambia nada. Hay que verlo antes de creerlo.
 - 🔲 **Medir un ebook de verdad** antes de prometer un número. La estimación de
   hoy es US$2–4 por ebook con Opus 5, y está sin verificar. `ebooksIA` en
   `TOPES_DIGITALES` (0 / 2 / 5) es provisorio hasta esa medición.
@@ -1738,6 +1740,17 @@ después, porque hasta que exista la factura de Anthropic no tiene techo.
 - 🔲 **El tope de la página de venta con IA.** Hoy `paginas` limita cuántas se
   pueden TENER y nada limita cuántas veces se pide regenerarla. Volver a generar
   es lo primero que hace todo el mundo, y Free tiene ese botón.
+- ✅ **Qué es la "cáscara", visto de primera mano en su Free (02/09/26).** La IA
+  crea **SÓLO TEXTO**: título, descripción y precio del principal, del bono y del
+  upsell. **Ni PDF ni imagen** — la portada que se ve en las capturas la subió
+  Flavio a mano. O sea que la cáscara cae exactamente en la pantalla de Productos
+  que ya existe: tres tarjetas, las tres en rojo con "falta el archivo", y en cada
+  una el botón de subir el PDF. No hay que construir nada nuevo para recibirla.
+- 🔲 **Cuántas tarjetas crea la cáscara: ¿siempre 1+1+1, o llena el plan?** En su
+  Free son 1 principal + 1 bono + 1 upsell, que es justo el tope de Free y no se
+  distingue de "llena el plan". En Pro llenar el plan serían **9 tarjetas vacías**
+  de una, todas en rojo — mal primer día. Un embudo completo (1+1+1) se entiende y
+  se puede terminar; el resto se agrega creciendo.
 - 🔲 Generar la vidriera entera (el gancho principal).
 - 🔲 Escribir el contenido del ebook/PDF.
 - 🔲 Los textos de venta y los mails (entrega, carrito abandonado).

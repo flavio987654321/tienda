@@ -93,50 +93,77 @@ export async function POST(req: NextRequest) {
     padre = principal.id;
   }
 
-  /* El tope se cuenta en la base y NO se confía en que la pantalla haya apagado
-     el botón: el botón apagado es una cortesía, no un permiso. */
-  const cuantos = await prisma.product.count({
-    where: {
-      storeId: espacio.storeId,
-      rolDigital: rol,
-      deletedAt: null,
-      ...(rol === "PRINCIPAL" ? {} : { padreId: padre }),
-    },
-  });
   const tope = topeDe(tier, rol);
-  if (cuantos >= tope) {
+
+  /* ⚠️ Contar y crear van JUNTOS, en una transacción y con candado.
+   *
+   * Antes eran dos pasos sueltos: contar, y después crear. Entre uno y otro hay
+   * un ratito, y en ese ratito entra otro pedido de la misma cuenta: los dos
+   * preguntan "¿cuántos hay?", a los dos les contestan "cero", y los dos crean.
+   * Quedan dos productos en un plan que permite uno.
+   *
+   * Con una persona haciendo clic no pasaba —va de a uno, y el doble clic ya
+   * está trabado en la pantalla—. Pero la cáscara que arma la IA crea el
+   * principal, el bono y el upsell de una sentada, que es exactamente el caso
+   * que lo dispara. Se tapa ahora porque después hay que descubrirlo mirando una
+   * cuenta Free con tres productos.
+   *
+   * El candado es POR TIENDA (`pg_advisory_xact_lock`) y no global: dos
+   * creaciones de la misma cuenta se hacen una después de la otra, y las de
+   * cuentas distintas no se estorban entre sí. Se suelta solo al terminar la
+   * transacción, salga bien o salga mal. */
+  const creado = await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${espacio.storeId}))`;
+
+    /* El tope se cuenta en la base y NO se confía en que la pantalla haya apagado
+       el botón: el botón apagado es una cortesía, no un permiso. */
+    const cuantos = await tx.product.count({
+      where: {
+        storeId: espacio.storeId,
+        rolDigital: rol,
+        deletedAt: null,
+        ...(rol === "PRINCIPAL" ? {} : { padreId: padre }),
+      },
+    });
+    if (cuantos >= tope) return null;
+
+    return tx.product.create({
+      data: {
+        storeId: espacio.storeId,
+        rolDigital: rol,
+        padreId: padre,
+        name: limpiarTexto(name, LARGO_TITULO) ?? "",
+        description: limpiarTexto(description, LARGO_DESCRIPCION),
+        price: typeof precio === "number" ? precio : 0,
+        comparePrice: typeof comparePrice === "number" && comparePrice > 0 ? comparePrice : null,
+        /* La imagen se guarda sólo si es una dirección NUESTRA. Ver `imagenValida`:
+           una url ajena adentro de la página de venta es un rastreador de un
+           tercero que ve entrar a cada visitante. */
+        images: imagenValida(imagen) ? JSON.stringify([imagen]) : "[]",
+        /* Nace despublicado SIEMPRE, aunque venga con todo cargado. Publicar es
+           una decisión aparte y con su propio chequeo: un producto sin archivo
+           publicado se puede comprar y no se puede entregar. */
+        isActive: false,
+      },
+      select: { id: true },
+    });
+  });
+
+  /* `null` es "no entrabas por el tope". Se contesta afuera de la transacción a
+     propósito: adentro habría que tirar para cortarla, y una excepción para algo
+     que no es un error deja rastros feos en los registros. */
+  if (!creado) {
     return NextResponse.json(
       {
         error:
           tope === 0
             ? "Tu plan no incluye upsells. Pasá a Starter o Pro para agregarlos."
-            : `Llegaste al tope de tu plan. Pasá a un plan más grande para agregar más.`,
+            : "Llegaste al tope de tu plan. Pasá a un plan más grande para agregar más.",
         tope,
       },
       { status: 409 }
     );
   }
-
-  const creado = await prisma.product.create({
-    data: {
-      storeId: espacio.storeId,
-      rolDigital: rol,
-      padreId: padre,
-      name: limpiarTexto(name, LARGO_TITULO) ?? "",
-      description: limpiarTexto(description, LARGO_DESCRIPCION),
-      price: typeof precio === "number" ? precio : 0,
-      comparePrice: typeof comparePrice === "number" && comparePrice > 0 ? comparePrice : null,
-      /* La imagen se guarda sólo si es una dirección NUESTRA. Ver `imagenValida`:
-         una url ajena adentro de la página de venta es un rastreador de un
-         tercero que ve entrar a cada visitante. */
-      images: imagenValida(imagen) ? JSON.stringify([imagen]) : "[]",
-      /* Nace despublicado SIEMPRE, aunque venga con todo cargado. Publicar es una
-         decisión aparte y con su propio chequeo: un producto sin archivo
-         publicado se puede comprar y no se puede entregar. */
-      isActive: false,
-    },
-    select: { id: true },
-  });
 
   return NextResponse.json({ ok: true, id: creado.id });
 }
