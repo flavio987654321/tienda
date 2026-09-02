@@ -7,6 +7,7 @@ import {
   Loader2, ExternalLink, Save, Monitor, Smartphone, Lock, ImageIcon, AlertTriangle,
 } from "lucide-react";
 import {
+  TONOS, buscarTono,
   SECCIONES, ESTILOS, PALETAS, buscarSeccion, porQueNoSeDibuja,
   AVISO_BORRADOR, AVISO_LISTA, AVISO_TOCAR,
   type Campo, type PaginaVenta, type SeccionGuardada,
@@ -394,6 +395,11 @@ export default function EditorDePagina({ productoId, nombre, publicado, pagina: 
   const setCampo = (clave: string, k: string, v: unknown) =>
     actualizar(clave, (s) => ({ ...s, campos: { ...s.campos, [k]: v } }));
 
+  /* El fondo de una sección. Se comprueba contra la lista antes de guardarlo:
+     es la misma que aplica el servidor, y de las dos manda la del servidor. */
+  const setTono = (clave: string, tono: string) =>
+    actualizar(clave, (s) => ({ ...s, tono: buscarTono(tono).clave }));
+
   function alternar(clave: string) {
     /* Lo que no se puede ocultar no tiene botón, así que acá no debería llegar
        nunca. Igual se comprueba: es la misma regla que el servidor aplica de
@@ -714,6 +720,33 @@ export default function EditorDePagina({ productoId, nombre, publicado, pagina: 
                           <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
                           {def.aviso}
                         </p>
+                      )}
+                      {/* El fondo de la sección. Sólo para las que dibujan una
+                          franja: la barra, el reloj y el pie no llevan. */}
+                      {def.tono && (
+                        <div>
+                          <p className="mb-1.5 text-xs font-medium text-gray-600 panel-oscuro:text-gray-300">
+                            Fondo del bloque
+                          </p>
+                          <div className="flex gap-1 rounded-xl bg-gray-100 p-1 panel-oscuro:bg-gray-800">
+                            {TONOS.map((t) => (
+                              <button
+                                key={t.clave}
+                                type="button"
+                                title={t.para}
+                                onClick={() => setTono(s.clave, t.clave)}
+                                aria-pressed={s.tono === t.clave}
+                                className={`flex-1 rounded-lg px-2 py-1.5 text-xs font-medium transition ${
+                                  s.tono === t.clave
+                                    ? "bg-white text-gray-900 shadow-sm panel-oscuro:bg-gray-700 panel-oscuro:text-gray-100"
+                                    : "text-gray-500 hover:text-gray-700 panel-oscuro:text-gray-400 panel-oscuro:hover:text-gray-200"
+                                }`}
+                              >
+                                {t.nombre}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
                       )}
                       {def.campos.length === 0 && (
                         <p className="text-xs text-gray-500 panel-oscuro:text-gray-400">

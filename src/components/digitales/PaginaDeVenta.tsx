@@ -175,15 +175,15 @@ function Numeros({ producto, bonos, estilo }: {
       )}
 
       {bonos.length > 0 && (
-        <div className={`mt-5 bg-amber-50/70 px-4 py-3 text-left ${estilo.tarjeta}`}>
-          <p className="text-[11px] font-bold uppercase tracking-wide text-amber-700">
+        <div className={`mt-5 bg-[color:var(--pv-fuerte)] px-4 py-3 text-left ${estilo.tarjeta}`}>
+          <p className="text-[11px] font-bold uppercase tracking-wide text-[color:var(--pv-tinta)]">
             Incluye {bonos.length} {bonos.length === 1 ? "bono gratis" : "bonos gratis"}
           </p>
           <ul className="mt-2 grid gap-1">
             {bonos.map((b) => (
               <li key={b.id} className="flex items-baseline justify-between gap-3 text-sm">
                 <span className="min-w-0 text-[color:var(--pv-tinta)]">{b.name}</span>
-                <span className="shrink-0 font-bold text-emerald-700">
+                <span className="shrink-0 font-bold text-[color:var(--pv-ok)]">
                   {b.comparePrice ? <s className="mr-2 font-normal opacity-60">{money(b.comparePrice)}</s> : null}
                   GRATIS
                 </span>
@@ -191,7 +191,7 @@ function Numeros({ producto, bonos, estilo }: {
             ))}
           </ul>
           {valorDeLosBonos(bonos) > 0 && (
-            <p className="mt-2 border-t border-amber-200 pt-2 text-sm font-bold text-amber-800">
+            <p className="mt-2 border-t border-[color:var(--pv-linea)] pt-2 text-sm font-bold text-[color:var(--pv-tinta)]">
               Todo esto vale {money(valorDeLosBonos(bonos))} y va incluido
             </p>
           )}
@@ -254,14 +254,27 @@ function Bajada({ children }: { children: string }) {
   );
 }
 
+/* Los tres fondos, en el único lugar donde se traducen a una clase. Están
+   escritas enteras porque Tailwind necesita ver la clase completa en el código:
+   una armada pegando pedazos no existe y la sección sale sin fondo. */
+const FONDO: Record<string, string> = {
+  fondo: "",
+  suave: "bg-[color:var(--pv-suave)]",
+  fuerte: "bg-[color:var(--pv-fuerte)]",
+};
+
 function Seccion({ children, tono, estilo }: {
-  children: React.ReactNode; tono?: "gris"; estilo: Estilo;
+  children: React.ReactNode; tono?: string; estilo: Estilo;
 }) {
-  /* El aire lo pone el estilo. Es lo que más separa a los tres de lejos: Suave
+  /* El aire lo pone el estilo. Es lo que más separa a los cinco de lejos: Suave
      respira el doble que Clásico, y eso se nota scrolleando aunque el color sea
-     el mismo. */
+     el mismo.
+
+     El FONDO lo elige quien arma la página, sección por sección. Los tres salen
+     de la paleta —no hay color escrito acá— así que cambiar de paleta cambia los
+     tres juntos y no hay combinación fea posible. */
   return (
-    <section className={tono === "gris" ? "bg-[color:var(--pv-suave)]" : ""}>
+    <section className={FONDO[tono ?? "fondo"] ?? ""}>
       <div className={`mx-auto max-w-3xl px-5 sm:px-8 ${estilo.seccion}`}>{children}</div>
     </section>
   );
@@ -272,9 +285,12 @@ function Seccion({ children, tono, estilo }: {
  * Una sección encendida pero SIN CONTENIDO no se dibuja. Un título de "Además
  * te llevás gratis" sin ningún bono abajo es peor que no tener la sección. */
 
-function Contenido({ clave, campos, datos }: {
+function Contenido({ clave, campos, tono, datos }: {
   clave: string;
   campos: Record<string, unknown>;
+  /* Con qué fondo se dibuja. Viene de lo guardado, no de este `switch`: antes
+     cada `case` traía el suyo escrito y la alternancia no se podía cambiar. */
+  tono: string;
   datos: DatosDePagina;
 }) {
   const { producto, bonos, vendedor, anio, esPrevia } = datos;
@@ -289,7 +305,7 @@ function Contenido({ clave, campos, datos }: {
          encabezado son sólo palabras. */
       const imagen = texto(campos, "imagen");
       return (
-        <Seccion estilo={estilo}>
+        <Seccion tono={tono} estilo={estilo}>
           <div className="flex flex-col items-center gap-6 text-center">
             <h1 className={`text-balance text-3xl leading-tight text-[color:var(--pv-tinta)] sm:text-4xl md:text-5xl ${estilo.titulo}`}>
               {titulo || producto.name}
@@ -320,7 +336,7 @@ function Contenido({ clave, campos, datos }: {
        Sigue sin tener campos de precio: todo sale del producto. */
     case "producto":
       return (
-        <Seccion tono="gris" estilo={estilo}>
+        <Seccion tono={tono} estilo={estilo}>
           <Titulo estilo={estilo}>{texto(campos, "titulo")}</Titulo>
           <div className="mt-8 grid items-center gap-8 md:grid-cols-2 [&>*]:min-w-0">
             {producto.imagen ? (
@@ -357,22 +373,22 @@ function Contenido({ clave, campos, datos }: {
 
     case "bonos": {
       return (
-        <Seccion estilo={estilo}>
+        <Seccion tono={tono} estilo={estilo}>
           <Titulo estilo={estilo}>{texto(campos, "titulo")}</Titulo>
           {texto(campos, "subtitulo") && (
             <p className="mt-3 text-center text-[color:var(--pv-tenue)]">{texto(campos, "subtitulo")}</p>
           )}
           <ul className="mt-8 grid gap-4 sm:grid-cols-2">
             {bonos.map((b) => (
-              <li key={b.id} className={`bg-amber-50/60 p-5 ${estilo.tarjeta}`}>
-                <h3 className="font-semibold text-slate-900">{b.name}</h3>
+              <li key={b.id} className={`bg-[color:var(--pv-tarjeta)] p-5 ${estilo.tarjeta}`}>
+                <h3 className="font-semibold text-[color:var(--pv-tinta)]">{b.name}</h3>
                 {b.description && (
                   <p className="mt-2 text-sm leading-relaxed text-[color:var(--pv-tenue)]">{b.description}</p>
                 )}
                 <p className="mt-3 flex items-baseline gap-2">
-                  <span className="text-base font-bold text-emerald-700">GRATIS</span>
+                  <span className="text-base font-bold text-[color:var(--pv-ok)]">GRATIS</span>
                   {b.comparePrice ? (
-                    <span className="text-sm text-slate-400 line-through">{money(b.comparePrice)}</span>
+                    <span className="text-sm text-[color:var(--pv-tenue)] line-through">{money(b.comparePrice)}</span>
                   ) : null}
                 </p>
               </li>
@@ -387,7 +403,7 @@ function Contenido({ clave, campos, datos }: {
       const items = lista(campos, "items").filter((i) => i.titulo || i.detalle);
       const esDolor = clave === "dolores";
       return (
-        <Seccion tono={esDolor ? "gris" : undefined} estilo={estilo}>
+        <Seccion tono={tono} estilo={estilo}>
           <Titulo estilo={estilo}>{texto(campos, "titulo")}</Titulo>
           <Bajada>{texto(campos, "subtitulo")}</Bajada>
           {/* Dos columnas en pantalla grande: con el detalle abajo de cada uno,
@@ -428,7 +444,7 @@ function Contenido({ clave, campos, datos }: {
     case "comoFunciona": {
       const pasos = lista(campos, "pasos").filter((p) => p.titulo || p.detalle);
       return (
-        <Seccion estilo={estilo}>
+        <Seccion tono={tono} estilo={estilo}>
           <Titulo estilo={estilo}>{texto(campos, "titulo")}</Titulo>
           <Bajada>{texto(campos, "subtitulo")}</Bajada>
           <ol className="mx-auto mt-8 grid max-w-2xl gap-4">
@@ -441,7 +457,7 @@ function Contenido({ clave, campos, datos }: {
                   {n + 1}
                 </span>
                 <div className="min-w-0">
-                  {p.titulo && <h3 className="font-semibold text-slate-900">{p.titulo}</h3>}
+                  {p.titulo && <h3 className="font-semibold text-[color:var(--pv-tinta)]">{p.titulo}</h3>}
                   {p.detalle && (
                     <p className="mt-1 text-pretty text-sm leading-relaxed text-[color:var(--pv-tenue)]">
                       {p.detalle}
@@ -458,7 +474,7 @@ function Contenido({ clave, campos, datos }: {
     case "opiniones": {
       const items = lista(campos, "items").filter((i) => i.texto);
       return (
-        <Seccion tono="gris" estilo={estilo}>
+        <Seccion tono={tono} estilo={estilo}>
           <Titulo estilo={estilo}>{texto(campos, "titulo")}</Titulo>
           <Bajada>{texto(campos, "subtitulo")}</Bajada>
           <div className="mt-8 grid gap-4 sm:grid-cols-2">
@@ -481,7 +497,7 @@ function Contenido({ clave, campos, datos }: {
 
     case "precio":
       return (
-        <Seccion estilo={estilo}>
+        <Seccion tono={tono} estilo={estilo}>
           <div className={`mx-auto flex max-w-xl flex-col items-center gap-5 bg-[color:var(--pv-suave)] px-5 py-10 text-center sm:px-8 ${estilo.tarjeta}`}>
             <Titulo estilo={estilo}>{texto(campos, "titulo")}</Titulo>
             {/* El precio no se puede ocultar: `lib/pagina-venta` no le da botón
@@ -499,7 +515,7 @@ function Contenido({ clave, campos, datos }: {
       /* `{dias}` sale del campo de al lado. El número vive en un solo lugar para
          que no quede un título que dice 7 con una garantía de 30. */
       return (
-        <Seccion tono="gris" estilo={estilo}>
+        <Seccion tono={tono} estilo={estilo}>
           <div className={`mx-auto max-w-2xl bg-[color:var(--pv-tarjeta)] p-6 text-center ${estilo.tarjeta}`}>
             <Titulo estilo={estilo}>{conFichas(texto(campos, "titulo"), campos)}</Titulo>
             <p className="mt-3 text-pretty leading-relaxed text-[color:var(--pv-tenue)]">
@@ -513,7 +529,7 @@ function Contenido({ clave, campos, datos }: {
     case "preguntas": {
       const items = lista(campos, "items").filter((i) => i.pregunta);
       return (
-        <Seccion estilo={estilo}>
+        <Seccion tono={tono} estilo={estilo}>
           <Titulo estilo={estilo}>{texto(campos, "titulo")}</Titulo>
           <Bajada>{texto(campos, "subtitulo")}</Bajada>
           {/* `details` nativo: abre y cierra sin una línea de JavaScript, y
@@ -524,10 +540,10 @@ function Contenido({ clave, campos, datos }: {
                 key={n}
                 className={`group bg-[color:var(--pv-tarjeta)] px-5 py-4 ${estilo.tarjeta}`}
               >
-                <summary className="cursor-pointer list-none font-medium text-slate-900 marker:content-none">
+                <summary className="cursor-pointer list-none font-medium text-[color:var(--pv-tinta)] marker:content-none">
                   <span className="flex items-start justify-between gap-4">
                     <span className="text-pretty">{i.pregunta}</span>
-                    <span aria-hidden="true" className="mt-0.5 shrink-0 text-slate-400 transition group-open:rotate-45">
+                    <span aria-hidden="true" className="mt-0.5 shrink-0 text-[color:var(--pv-tenue)] transition group-open:rotate-45">
                       +
                     </span>
                   </span>
@@ -554,7 +570,7 @@ function Contenido({ clave, campos, datos }: {
 
     case "cierre":
       return (
-        <Seccion tono="gris" estilo={estilo}>
+        <Seccion tono={tono} estilo={estilo}>
           <div className="mx-auto flex max-w-xl flex-col items-center gap-6 text-center">
             <Titulo estilo={estilo}>{texto(campos, "titulo")}</Titulo>
             <Numeros producto={producto} bonos={bonos} estilo={estilo} />
@@ -570,11 +586,11 @@ function Contenido({ clave, campos, datos }: {
         <div className="fixed inset-x-0 bottom-0 z-40 border-t border-[color:var(--pv-linea)] bg-[color:var(--pv-tarjeta)]/95 px-4 py-3 shadow-[0_-2px_12px_rgba(0,0,0,0.08)] backdrop-blur">
           <div className="mx-auto flex max-w-3xl items-center justify-between gap-3">
             <p className="min-w-0">
-              <span className="block text-lg font-extrabold leading-none text-slate-900">
+              <span className="block text-lg font-extrabold leading-none text-[color:var(--pv-tinta)]">
                 {money(producto.price)}
               </span>
               {producto.comparePrice && producto.comparePrice > producto.price ? (
-                <span className="text-xs text-slate-400 line-through">
+                <span className="text-xs text-[color:var(--pv-tenue)] line-through">
                   {money(producto.comparePrice)}
                 </span>
               ) : null}
@@ -695,6 +711,7 @@ export default function PaginaDeVenta(datos: DatosDePagina) {
     "--pv-sobre": estiloRaiz.oscuro ? paleta.sobreAcentoOscuro : paleta.sobreAcento,
     "--pv-fondo": estiloRaiz.oscuro ? COLORES_OSCUROS.fondo : paleta.fondo,
     "--pv-suave": estiloRaiz.oscuro ? COLORES_OSCUROS.suave : paleta.suave,
+    "--pv-fuerte": estiloRaiz.oscuro ? paleta.fuerteOscuro : paleta.fuerte,
   } as React.CSSProperties;
 
   return (
@@ -717,7 +734,7 @@ export default function PaginaDeVenta(datos: DatosDePagina) {
     >
       {datos.pagina.secciones.map((s) => {
         if (!seDibuja(s, ctx)) return null;
-        const dibujo = <Contenido key={s.clave} clave={s.clave} campos={s.campos} datos={datos} />;
+        const dibujo = <Contenido key={s.clave} clave={s.clave} campos={s.campos} tono={s.tono} datos={datos} />;
         /* La barra de compra no se marca: está pegada al borde de la ventana, así
            que su envoltorio no tiene alto y el cartelito quedaría en cualquier
            lado. Su nombre además es obvio: es el único botón flotante. */

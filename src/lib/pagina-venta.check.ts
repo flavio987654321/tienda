@@ -12,6 +12,7 @@ import { readFileSync } from "fs";
 import {
   SECCIONES, buscarSeccion, contenidoPorDefecto, normalizarContenido, porQueNoSeDibuja,
   conFichas, FICHA_DIAS, FICHA_ANIO, ESTILOS, PALETAS, COLORES_CLAROS, COLORES_OSCUROS,
+  TONOS, buscarTono,
   type Campo,
 } from "./pagina-venta";
 
@@ -403,7 +404,7 @@ check("EDI-D", /<iframe/.test(editor) && editor.includes("/p/${productoId}?previ
 const sinBonos = { hayBonos: false };
 const conBonos = { hayBonos: true };
 const secc = (clave: string, campos: Record<string, unknown> = {}, visible = true) =>
-  ({ clave, visible, campos });
+  ({ clave, visible, tono: "fondo", campos });
 
 check("DIB-A", porQueNoSeDibuja(secc("bonos"), sinBonos) !== null
   && porQueNoSeDibuja(secc("bonos"), conBonos) === null,
@@ -622,6 +623,81 @@ check("ANCHO-B", /overflow-x-clip/.test(dibujante),
    con scroll propio, y la página quedaría con una barra vertical adentro. */
 check("ANCHO-C", !/overflow-x-hidden/.test(dibujante),
   "y se recorta con clip, no con hidden, que dejaría un scroll vertical propio");
+
+/* ── Los fondos de cada bloque ────────────────────────────────────────────── */
+
+/* ⚠️ Esto es lo que reemplaza al selector de color libre, y el motivo de que sea
+   una LISTA CERRADA está acá abajo: con tres tonos medidos de antemano se puede
+   probar que todo texto se lee sobre todo fondo. Con un color elegido en el
+   momento no hay nada que probar.
+
+   El pedido que lo originó era otro: que dos páginas no se parezcan. Se cumple
+   igual — la misma paleta alternando suave/fondo no se parece en nada a la misma
+   paleta con tres bloques fuertes seguidos. */
+
+check("TON-A", TONOS.length === 3 && new Set(TONOS.map((t) => t.clave)).size === 3,
+  "hay tres fondos y ninguna clave repetida");
+
+check("TON-B", ["inventado", "", null, 5, {}, undefined].every((v) => buscarTono(v).clave === TONOS[0].clave),
+  "un fondo desconocido vuelve al primero: nunca queda una sección sin dibujar");
+
+/* Que no todas nazcan iguales: una página de fábrica que alterna ya se ve
+   armada, y es lo primero que mira quien recién entra. */
+const conTono = SECCIONES.filter((s) => s.tono);
+check("TON-C", new Set(conTono.map((s) => s.tono)).size === 3,
+  "y de fábrica se usan los tres, no todas las secciones con el mismo");
+
+/* La barra flotante, el reloj, el pie y el aviso de ventas no dibujan franja.
+   Guardarles un fondo sería guardar algo que no se ve en ningún lado. */
+check("TON-D", (() => {
+  const p = normalizarContenido({ secciones: [{ clave: "barra", tono: "fuerte" }] });
+  return seccion(p, "barra")?.tono === TONOS[0].clave;
+})(), "a una sección que no dibuja franja no se le guarda ningún fondo");
+
+check("TON-E", (() => {
+  const p = normalizarContenido({ secciones: [{ clave: "portada", tono: "fuerte" }] });
+  const q = normalizarContenido({ secciones: [{ clave: "portada", tono: "inventado" }] });
+  return seccion(p, "portada")?.tono === "fuerte"
+    && seccion(q, "portada")?.tono === TONOS[0].clave;
+})(), "y a una que sí, se le guarda el que eligió — o el primero si es inventado");
+
+/* ⚠️ Acá está la prueba que un selector libre no podría tener. Cada texto contra
+   cada uno de los tres fondos de cada paleta, en claro y en oscuro.
+
+   Salió de medir lo que había: el gris tenue estaba en 4,33–4,55 sobre el tono
+   suave, o sea al límite de 4,5 con el fondo casi blanco. Por eso el gris se
+   oscureció antes de darle color a los fondos, y no al revés. */
+const tonosFlojos = PALETAS.filter((p) => {
+  const claros = [p.fondo, p.suave, p.fuerte];
+  const oscuros = [COLORES_OSCUROS.fondo, COLORES_OSCUROS.suave, p.fuerteOscuro];
+  return claros.some((f) => contraste(COLORES_CLAROS.tinta, f) < MINIMO
+      || contraste(COLORES_CLAROS.tenue, f) < MINIMO
+      || contraste(COLORES_CLAROS.ok, f) < MINIMO)
+    || oscuros.some((f) => contraste(COLORES_OSCUROS.tinta, f) < MINIMO
+      || contraste(COLORES_OSCUROS.tenue, f) < MINIMO
+      || contraste(COLORES_OSCUROS.ok, f) < MINIMO);
+});
+check("TON-F", tonosFlojos.length === 0,
+  `texto, texto tenue y el verde del ahorro se leen sobre los TRES fondos, en clara y en oscura`
+  + (tonosFlojos.length ? ` — flojas: ${tonosFlojos.map((p) => p.nombre).join(", ")}` : ""));
+
+/* Y que los tres se distingan: tres fondos iguales son un fondo con tres
+   nombres, que es exactamente lo que había antes (1,046 de diferencia). */
+const sinDiferencia = PALETAS.filter((p) =>
+  contraste(p.fondo, p.suave) < 1.05 || contraste(p.suave, p.fuerte) < 1.05);
+check("TON-G", sinDiferencia.length === 0,
+  "y los tres se diferencian de verdad: antes había 4,6% entre fondo y suave"
+  + (sinDiferencia.length ? ` — iguales: ${sinDiferencia.map((p) => p.nombre).join(", ")}` : ""));
+
+/* ⚠️ Estaba ROTO: los pasos de "Cómo funciona", cada pregunta frecuente y el
+   precio de la barra fija tenían `text-slate-900` escrito a mano. Sobre una
+   tarjeta clara se ve; en el estilo Nocturno la tarjeta es #131c2e y quedaba
+   negro sobre negro. Un color de texto escrito a mano no sigue al estilo. */
+check("TON-H", !/text-slate-[0-9]/.test(dibujante) && !/amber-/.test(dibujante),
+  "ningún texto ni fondo escrito a mano: todo sale de la paleta o del estilo");
+
+check("TON-I", editor.includes("TONOS.map(") && editor.includes("buscarTono(tono).clave"),
+  "el editor ofrece los tres y comprueba el que llega contra la lista");
 
 /* ── Lo que no se puede inventar ──────────────────────────────────────────── */
 

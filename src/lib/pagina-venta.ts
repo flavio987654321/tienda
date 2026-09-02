@@ -103,6 +103,14 @@ export type Seccion = {
   /** Si arranca encendida en una página nueva. */
   encendida: boolean;
   /**
+   * Con qué fondo nace, de `TONOS`. Después se cambia desde el editor.
+   *
+   * `undefined` = esta sección NO lleva fondo propio, y el editor no le
+   * muestra el control. Son las que no dibujan una franja: la barra flotante,
+   * el reloj, el pie y el aviso de ventas.
+   */
+  tono?: string;
+  /**
    * Lo que hay que leer ANTES de llenar esta sección. Se muestra arriba de
    * todas las casillas, en el editor.
    *
@@ -139,6 +147,7 @@ export const SECCIONES: readonly Seccion[] = [
     sePuedeOcultar: false,
     sePuedeMover: false,
     encendida: true,
+    tono: "fondo",
     campos: [
       { clave: "titulo", etiqueta: "Título", tipo: "texto", largo: 120,
         ejemplo: "La promesa de tu producto, en una línea",
@@ -160,6 +169,7 @@ export const SECCIONES: readonly Seccion[] = [
     sePuedeOcultar: false,
     sePuedeMover: true,
     encendida: true,
+    tono: "suave",
     campos: [
       { clave: "titulo", etiqueta: "Título de la sección", tipo: "texto", largo: 80,
         ejemplo: "Qué te llevás" },
@@ -179,6 +189,7 @@ export const SECCIONES: readonly Seccion[] = [
     sePuedeOcultar: true,
     sePuedeMover: true,
     encendida: true,
+    tono: "fuerte",
     campos: [
       { clave: "titulo", etiqueta: "Título", tipo: "texto", largo: 80,
         ejemplo: "Además te llevás gratis" },
@@ -198,6 +209,7 @@ export const SECCIONES: readonly Seccion[] = [
     sePuedeOcultar: true,
     sePuedeMover: true,
     encendida: true,
+    tono: "fondo",
     campos: [
       { clave: "titulo", etiqueta: "Título", tipo: "texto", largo: 80,
         ejemplo: "Qué vas a lograr" },
@@ -221,6 +233,7 @@ export const SECCIONES: readonly Seccion[] = [
     sePuedeOcultar: true,
     sePuedeMover: true,
     encendida: true,
+    tono: "suave",
     campos: [
       { clave: "titulo", etiqueta: "Título", tipo: "texto", largo: 80,
         ejemplo: "¿Te pasa esto?" },
@@ -241,6 +254,7 @@ export const SECCIONES: readonly Seccion[] = [
     sePuedeOcultar: true,
     sePuedeMover: true,
     encendida: true,
+    tono: "fondo",
     campos: [
       { clave: "titulo", etiqueta: "Título", tipo: "texto", largo: 80,
         ejemplo: "Cómo lo recibís" },
@@ -264,6 +278,7 @@ export const SECCIONES: readonly Seccion[] = [
        que hace la herramienta es pedirte que inventes tres. */
     sePuedeMover: true,
     encendida: false,
+    tono: "suave",
     /* ⚠️ Visto el 02/09/26 en el editor de la competencia: su IA llena esta
        sección sola con tres personas inventadas —nombre, texto y un rating
        del 1 al 5 escrito a mano— y la dibuja como una captura de WhatsApp,
@@ -299,6 +314,7 @@ export const SECCIONES: readonly Seccion[] = [
     sePuedeOcultar: false,
     sePuedeMover: true,
     encendida: true,
+    tono: "fuerte",
     campos: [
       { clave: "titulo", etiqueta: "Título", tipo: "texto", largo: 80,
         ejemplo: "Todo esto por" },
@@ -316,6 +332,7 @@ export const SECCIONES: readonly Seccion[] = [
     sePuedeOcultar: true,
     sePuedeMover: true,
     encendida: false,
+    tono: "suave",
     /* La otra sección donde lo que se escribe sale de la página y entra en la
        vida real. En opiniones se afirma algo que pasó; acá se promete algo que
        va a pasar, y lo paga quien vende, de su bolsillo. */
@@ -352,6 +369,7 @@ export const SECCIONES: readonly Seccion[] = [
     sePuedeOcultar: true,
     sePuedeMover: true,
     encendida: true,
+    tono: "fondo",
     campos: [
       { clave: "titulo", etiqueta: "Título", tipo: "texto", largo: 80,
         ejemplo: "Preguntas frecuentes" },
@@ -427,6 +445,7 @@ export const SECCIONES: readonly Seccion[] = [
     sePuedeOcultar: true,
     sePuedeMover: true,
     encendida: true,
+    tono: "fuerte",
     campos: [
       { clave: "titulo", etiqueta: "Título", tipo: "texto", largo: 120,
         ejemplo: "Empezá hoy" },
@@ -544,11 +563,20 @@ export type Estilo = {
 /** Los grises de la página clara. */
 export const COLORES_CLAROS = {
   tinta: "#0f172a",
-  tenue: "#64748b",
+  /* ⚠️ Era #64748b y se oscureció el 02/09/26. MEDIDO: sobre el tono suave
+     daba 4,33–4,55 contra un mínimo de 4,5 — o sea que ya estaba al límite
+     con el fondo casi blanco, y cualquier tono con color de verdad lo tiraba
+     abajo (3,75 en el peor caso). Con este sube a 7,58 sobre blanco y 4,91 en
+     el tono más marcado, y recién ahí los fondos pueden tener color. */
+  tenue: "#475569",
   linea: "#e2e8f0",
   tarjeta: "#ffffff",
-  /* El verde del "ahorrás", que va sobre el fondo de la página. */
-  ok: "#047857",
+  /* El verde del "ahorrás", que ahora va sobre CUALQUIERA de los tres fondos.
+     Era #047857 y se oscureció junto con los tonos: sobre el fondo fuerte daba
+     3,55 en el peor caso, contra el mínimo de 4,5 — o sea que el renglón que
+     dice cuánta plata se ahorra no se leía justo en los bloques más marcados.
+     Con éste el peor caso es 4,98. */
+  ok: "#065f46",
 } as const;
 
 /** Y los de la oscura. El acento sigue saliendo de la paleta. */
@@ -637,6 +665,33 @@ export const ESTILOS: readonly Estilo[] = [
   },
 ];
 
+/* ── Los tres fondos ────────────────────────────────────────────────────────
+ *
+ * Cada sección elige con cuál de estos tres se dibuja. Es una LISTA CERRADA y
+ * no un selector de color libre, y eso no es por ahorrar trabajo:
+ *
+ *   · Con lista cerrada, el contraste de cada texto sobre cada fondo está
+ *     medido de antemano y hay una prueba que lo verifica. Con un selector
+ *     libre el color se elige en el momento y no hay nada que verificar —
+ *     alguien pone un celeste lindo y el texto tenue desaparece.
+ *   · Los tres salen del color que ya eligió la persona, así que no hay
+ *     combinación fea posible: cambiás la paleta y los tres cambian juntos.
+ *
+ * Lo que SÍ da esto, y era el pedido: dos páginas con el mismo estilo y la
+ * misma paleta se ven distintas si una alterna suave/fondo y la otra tiene tres
+ * bloques fuertes seguidos. */
+export type Tono = { clave: string; nombre: string; para: string };
+
+export const TONOS: readonly Tono[] = [
+  { clave: "fondo",  nombre: "Fondo",  para: "El fondo de la página" },
+  { clave: "suave",  nombre: "Suave",  para: "Un tinte del color elegido" },
+  { clave: "fuerte", nombre: "Fuerte", para: "El mismo color, más marcado" },
+];
+
+/** Un tono desconocido vuelve al primero. Nunca rompe. */
+export function buscarTono(clave: unknown): Tono {
+  return TONOS.find((t) => t.clave === clave) ?? TONOS[0];
+}
 /**
  * Una paleta.
  *
@@ -666,20 +721,30 @@ export type Paleta = {
   sobreAcentoOscuro: string;
   /** El fondo de la página. */
   fondo: string;
-  /** El fondo de las secciones alternadas. */
+  /**
+   * Los otros dos fondos: el mismo acento mezclado con blanco al 10% y al 22%.
+   *
+   * ⚠️ Los números no son al ojo. Con el acento al 22% el texto tenue queda
+   * entre 4,91 y 5,60 sobre el mínimo de 4,5; más fuerte que eso y el gris
+   * deja de leerse. Si mañana se agrega una paleta, hay una prueba que mide
+   * los dos tonos y falla si alguno no llega.
+   */
   suave: string;
+  fuerte: string;
+  /** El tono fuerte del estilo Nocturno: el acento claro sobre el fondo oscuro. */
+  fuerteOscuro: string;
 };
 
 /* Los acentos son tonos oscuros a propósito. Los claros del mismo color se ven
    más lindos en la tarjetita del panel y dejan el texto del botón por debajo del
    contraste mínimo — ver los chequeos, que lo calculan. */
 export const PALETAS: readonly Paleta[] = [
-  { clave: "naranja", nombre: "Naranja", tinta: "#0f172a", acento: "#c2410c", sobreAcento: "#ffffff", acentoOscuro: "#fb923c", sobreAcentoOscuro: "#0f172a", fondo: "#ffffff", suave: "#f8fafc" },
-  { clave: "azul",    nombre: "Azul",    tinta: "#0f172a", acento: "#1d4ed8", sobreAcento: "#ffffff", acentoOscuro: "#60a5fa", sobreAcentoOscuro: "#0f172a", fondo: "#ffffff", suave: "#f8fafc" },
-  { clave: "verde",   nombre: "Verde",   tinta: "#0f172a", acento: "#15803d", sobreAcento: "#ffffff", acentoOscuro: "#4ade80", sobreAcentoOscuro: "#0f172a", fondo: "#ffffff", suave: "#f6faf7" },
-  { clave: "violeta", nombre: "Violeta", tinta: "#0f172a", acento: "#6d28d9", sobreAcento: "#ffffff", acentoOscuro: "#a78bfa", sobreAcentoOscuro: "#0f172a", fondo: "#ffffff", suave: "#faf8ff" },
-  { clave: "rosa",    nombre: "Rosa",    tinta: "#0f172a", acento: "#be185d", sobreAcento: "#ffffff", acentoOscuro: "#f472b6", sobreAcentoOscuro: "#0f172a", fondo: "#ffffff", suave: "#fff7fa" },
-  { clave: "grafito", nombre: "Grafito", tinta: "#0f172a", acento: "#1e293b", sobreAcento: "#ffffff", acentoOscuro: "#e2e8f0", sobreAcentoOscuro: "#0f172a", fondo: "#ffffff", suave: "#f4f4f5" },
+  { clave: "naranja", nombre: "Naranja", tinta: "#0f172a", acento: "#c2410c", sobreAcento: "#ffffff", acentoOscuro: "#fb923c", sobreAcentoOscuro: "#0f172a", fondo: "#ffffff", suave: "#f9ece7", fuerte: "#f2d5ca", fuerteOscuro: "#2d2424" },
+  { clave: "azul",    nombre: "Azul",    tinta: "#0f172a", acento: "#1d4ed8", sobreAcento: "#ffffff", acentoOscuro: "#60a5fa", sobreAcentoOscuro: "#0f172a", fondo: "#ffffff", suave: "#e8edfb", fuerte: "#cdd8f6", fuerteOscuro: "#17273f" },
+  { clave: "verde",   nombre: "Verde",   tinta: "#0f172a", acento: "#15803d", sobreAcento: "#ffffff", acentoOscuro: "#4ade80", sobreAcentoOscuro: "#0f172a", fondo: "#ffffff", suave: "#e8f2ec", fuerte: "#cce3d4", fuerteOscuro: "#142f2d" },
+  { clave: "violeta", nombre: "Violeta", tinta: "#0f172a", acento: "#6d28d9", sobreAcento: "#ffffff", acentoOscuro: "#a78bfa", sobreAcentoOscuro: "#0f172a", fondo: "#ffffff", suave: "#f0eafb", fuerte: "#dfd0f7", fuerteOscuro: "#21233f" },
+  { clave: "rosa",    nombre: "Rosa",    tinta: "#0f172a", acento: "#be185d", sobreAcento: "#ffffff", acentoOscuro: "#f472b6", sobreAcentoOscuro: "#0f172a", fondo: "#ffffff", suave: "#f9e8ef", fuerte: "#f1ccdb", fuerteOscuro: "#2c1f35" },
+  { clave: "grafito", nombre: "Grafito", tinta: "#0f172a", acento: "#1e293b", sobreAcento: "#ffffff", acentoOscuro: "#e2e8f0", sobreAcentoOscuro: "#0f172a", fondo: "#ffffff", suave: "#e9eaeb", fuerte: "#ced0d4", fuerteOscuro: "#29303d" },
 ];
 
 export const buscarEstilo = (clave: unknown): Estilo =>
@@ -692,6 +757,8 @@ export const buscarPaleta = (clave: unknown): Paleta =>
 export type SeccionGuardada = {
   clave: string;
   visible: boolean;
+  /** Clave de `TONOS`. Una desconocida vuelve a la primera, nunca rompe. */
+  tono: string;
   campos: Record<string, unknown>;
 };
 
@@ -911,7 +978,16 @@ function normalizarSeccion(def: Seccion, cruda: Record<string, unknown> | null):
   for (const campo of def.campos) {
     campos[campo.clave] = normalizarCampo(campo, origen[campo.clave], cruda === null);
   }
-  return { clave: def.clave, visible: cruda === null ? def.encendida && visible : visible, campos };
+  /* Una sección sin `tono` en el catálogo no dibuja franja, así que el que
+     venga se descarta: guardar un fuerte que nunca se ve es guardar mentira. */
+  const tono = def.tono ? buscarTono(cruda?.tono ?? def.tono).clave : TONOS[0].clave;
+
+  return {
+    clave: def.clave,
+    visible: cruda === null ? def.encendida && visible : visible,
+    tono,
+    campos,
+  };
 }
 
 function normalizarCampo(campo: Campo, valor: unknown, esNueva: boolean): unknown {
