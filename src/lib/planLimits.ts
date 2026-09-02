@@ -231,6 +231,30 @@ export const TRANSFERENCIA_DIGITAL = {
  * Y el gancho de Free no se pierde: lo que impresiona al entrar es ver la tienda
  * armada sola, y eso lo dan los centavos de texto, no los dólares del ebook.
  */
+/**
+ * El lote de ebooks con IA que se entrega UNA vez, al empezar.
+ *
+ * Existe porque el mes 1 es cuando se necesita todo y el mes 6 no se necesita
+ * nada: el embudo se arma una vez y después se vende. Un cupo mensual da poco
+ * justo cuando más falta hace. El número es exactamente **un producto entero** —
+ * el principal más sus bonos (Starter 1+2, Pro 1+5).
+ *
+ * ⚠️ **No se entrega en la prueba, se entrega con el PRIMER COBRO.** Los 7 días
+ * son sin tarjeta: darle las 6 generaciones de Pro a alguien del que no tenemos
+ * un solo dato de cobro es regalar hasta US$48 por cuenta, tantas veces como
+ * cuentas quiera abrir. Durante la prueba va el plan entero con UNA generación.
+ *
+ * Vive acá y no sólo en el documento porque la tarjeta de planes lo dibuja, y un
+ * número que vive nada más que en un `.md` se desincroniza del código — ya pasó
+ * dos veces con este mismo archivo el 01/09/26. Cuando la Fase 4 construya el
+ * contador, lee esta misma constante.
+ */
+export const EBOOKS_IA_ARRANQUE = {
+  FREE: 0,
+  STARTER: 3,
+  PRO: 6,
+} as const;
+
 export const TOPES_DIGITALES = {
   /* ⚠️ **Free lleva un upsell, y no es generosidad: es el único tope que en cero
      jugaba en contra nuestra.** En Free no cobramos abono — lo único que

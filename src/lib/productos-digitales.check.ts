@@ -14,7 +14,7 @@
 import {
   rolDe, topeDe, loQueFalta, validarCampos, imagenValida, PRECIO_MAXIMO, LARGO_TITULO, ROLES,
 } from "./productos-digitales";
-import { TOPES_DIGITALES } from "./planLimits";
+import { TOPES_DIGITALES, EBOOKS_IA_ARRANQUE } from "./planLimits";
 import { TIERS_DIGITALES } from "./planes-digitales";
 
 let fallos = 0;
@@ -79,6 +79,27 @@ check("TOPE-E", TIERS_DIGITALES.every((t) => {
   const x = TOPES_DIGITALES[t];
   return x.ebooksIA <= x.paginas * (1 + x.bonos + x.upsells);
 }), "la IA no tiene más generaciones que lugares donde ponerlas");
+
+/* ── El lote de arranque ──────────────────────────────────────────────────── */
+
+/* ⚠️ Free no lleva arranque, y no puede llevarlo por accidente: no cobra abono,
+   así que ahí no hay ningún "primer cobro" con el cual entregarlo. Un arranque en
+   Free sería el regalo de bienvenida de una cuenta que no da ni un dato. */
+check("ARR-A", EBOOKS_IA_ARRANQUE.FREE === 0 && TOPES_DIGITALES.FREE.ebooksIA === 0,
+  "Free no lleva arranque ni cupo mensual de ebooks: la IA le arma la cáscara");
+
+/* El arranque es UN PRODUCTO ENTERO: el principal más sus bonos. De ahí salen el
+   3 de Starter y el 6 de Pro, y no de un número redondo. */
+for (const t of ["STARTER", "PRO"] as const) {
+  const x = TOPES_DIGITALES[t];
+  check(`ARR-B-${t}`, EBOOKS_IA_ARRANQUE[t] === 1 + x.bonos,
+    `${t}: el arranque (${EBOOKS_IA_ARRANQUE[t]}) es un producto entero — el principal más sus ${x.bonos} bonos`);
+}
+
+/* Y nunca puede quedar por debajo del cupo mensual: un "lote de bienvenida" que
+   da menos que un mes cualquiera no es un lote de bienvenida. */
+check("ARR-C", (["STARTER", "PRO"] as const).every((t) => EBOOKS_IA_ARRANQUE[t] >= TOPES_DIGITALES[t].ebooksIA),
+  "el arranque nunca da menos que un mes normal");
 
 /* Pagar más nunca puede dar menos. Es el argumento de venta de toda la pantalla
    de planes: si alguna vez se invirtiera, estaríamos cobrando por quitar. */

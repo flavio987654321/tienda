@@ -1,4 +1,4 @@
-import { TOPES_DIGITALES } from "@/lib/planLimits";
+import { TOPES_DIGITALES, EBOOKS_IA_ARRANQUE } from "@/lib/planLimits";
 
 /* El texto de los tres planes de Productos Digitales, en un solo lugar.
  *
@@ -44,11 +44,16 @@ export function featuresDigital(tier: TierDigital) {
     /* Sin upsells se nombra la función, no el número: "0 upsells por producto"
        se lee como un error de programación y no como algo que no tenés. */
     { text: t.upsells > 0 ? `${t.upsells} upsell${s(t.upsells)} por producto` : "Upsells por producto", on: t.upsells > 0 },
+    /* La dirección propia va en los TRES planes, y el dominio sólo en Pro: lo que
+       Pro compra es la calle, no la casa. Gatear el subdominio dejaría a Starter
+       con dos productos de dos nichos colgando de una sola dirección, que es
+       justo el problema que la Fase 5 bis viene a arreglar. Ver allá. */
+    { text: "Dirección propia para cada producto", on: true },
     /* Sin generaciones se nombra la función y va apagada, igual que los upsells:
        "0 ebooks escritos con IA" se lee como un error de programación. */
     {
       text: t.ebooksIA > 0
-        ? `${t.ebooksIA} ebook${s(t.ebooksIA)} escrito${s(t.ebooksIA)} con IA por mes`
+        ? `${EBOOKS_IA_ARRANQUE[tier]} ebooks con IA al empezar, y ${t.ebooksIA} por mes`
         : "Ebooks escritos con IA",
       on: t.ebooksIA > 0,
     },
@@ -64,6 +69,9 @@ export function featuresDigital(tier: TierDigital) {
     { text: "Descargas y estadísticas", on: true },
     { text: "Ver carritos abandonados", on: true },
     { text: "Mail automático de recuperación", on: tier === "PRO" },
-    { text: "Dominio propio", on: tier === "PRO" },
+    /* "Por producto" no es un detalle: es TODO. Un dominio por cuenta no le sirve
+       a quien vende en dos nichos, que es el caso que hace falta cubrir para que
+       los 5 productos de Pro tengan sentido. */
+    { text: "Dominio propio para cada producto", on: tier === "PRO" },
   ];
 }
