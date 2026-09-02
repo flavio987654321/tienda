@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import {
   SECCIONES, ESTILOS, PALETAS, buscarSeccion, porQueNoSeDibuja,
-  AVISO_BORRADOR, AVISO_LISTA,
+  AVISO_BORRADOR, AVISO_LISTA, AVISO_TOCAR,
   type Campo, type PaginaVenta, type SeccionGuardada,
 } from "@/lib/pagina-venta";
 
@@ -324,12 +324,32 @@ export default function EditorDePagina({ productoId, nombre, publicado, pagina: 
   useEffect(() => {
     const alSaludo = (e: MessageEvent) => {
       if (e.origin !== window.location.origin) return;
-      const d = e.data as { tipo?: unknown } | null;
-      if (!d || typeof d !== "object" || d.tipo !== AVISO_LISTA) return;
-      marco.current?.contentWindow?.postMessage(
-        { tipo: AVISO_BORRADOR, pagina },
-        window.location.origin
-      );
+      const d = e.data as { tipo?: unknown; clave?: unknown } | null;
+      if (!d || typeof d !== "object") return;
+
+      if (d.tipo === AVISO_LISTA) {
+        marco.current?.contentWindow?.postMessage(
+          { tipo: AVISO_BORRADOR, pagina },
+          window.location.origin
+        );
+        return;
+      }
+
+      /* Tocaron una sección en la previa: se abre su casilla de este lado.
+         Cambia de solapa si hacía falta, la abre y la trae a la vista.
+         ⚠️ La clave se comprueba contra el catálogo: llega de otra ventana. */
+      if (d.tipo === AVISO_TOCAR && typeof d.clave === "string" && buscarSeccion(d.clave)) {
+        const clave = d.clave;
+        setSolapa("contenido");
+        setAbierta(clave);
+        /* Después de dibujar: si se busca ahora, la sección todavía está
+           cerrada y el navegador la centra en el lugar equivocado. */
+        requestAnimationFrame(() => {
+          document
+            .querySelector('[data-seccion="' + clave + '"]')
+            ?.scrollIntoView({ behavior: "smooth", block: "center" });
+        });
+      }
     };
     window.addEventListener("message", alSaludo);
     return () => window.removeEventListener("message", alSaludo);
@@ -586,6 +606,7 @@ export default function EditorDePagina({ productoId, nombre, publicado, pagina: 
               return (
                 <div
                   key={s.clave}
+                  data-seccion={s.clave}
                   className={`rounded-2xl border bg-white transition-colors panel-oscuro:bg-gray-900 ${
                     abierto
                       ? "border-orange-300 panel-oscuro:border-orange-500/40"

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import PaginaDeVenta, { type DatosDePagina } from "@/components/digitales/PaginaDeVenta";
 import {
-  AVISO_BORRADOR, AVISO_LISTA, normalizarContenido, type PaginaVenta,
+  AVISO_BORRADOR, AVISO_LISTA, AVISO_TOCAR, normalizarContenido, type PaginaVenta,
 } from "@/lib/pagina-venta";
 
 /**
@@ -59,5 +59,18 @@ export default function PaginaEnVivo(datos: DatosDePagina) {
     return () => window.removeEventListener("message", alAviso);
   }, []);
 
-  return <PaginaDeVenta {...datos} pagina={borrador ?? datos.pagina} />;
+  /* Al tocar una sección acá adentro, el editor la abre del otro lado. La previa
+     no cambia nada por su cuenta: sólo avisa cuál se tocó. */
+  const alTocarSeccion = (clave: string) => {
+    if (window.parent === window) return;
+    window.parent.postMessage({ tipo: AVISO_TOCAR, clave }, window.location.origin);
+  };
+
+  return (
+    <PaginaDeVenta
+      {...datos}
+      pagina={borrador ?? datos.pagina}
+      alTocarSeccion={alTocarSeccion}
+    />
+  );
 }

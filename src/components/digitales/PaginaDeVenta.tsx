@@ -22,7 +22,8 @@
    Quien la ve no tiene cuenta ni preferencia guardada. */
 
 import {
-  seDibuja, conFichas, buscarEstilo, buscarPaleta, COLORES_CLAROS, COLORES_OSCUROS,
+  seDibuja, conFichas, buscarEstilo, buscarPaleta, buscarSeccion,
+  COLORES_CLAROS, COLORES_OSCUROS,
   type PaginaVenta, type Estilo,
 } from "@/lib/pagina-venta";
 import BarraDeOferta from "./BarraDeOferta";
@@ -47,6 +48,14 @@ export type DatosDePagina = {
   anio: number;
   /** `true` en la vista previa: apaga el botón para no arrancar un pago. */
   esPrevia?: boolean;
+  /**
+   * Sólo en la previa del panel: al pasar el mouse marca cada sección y muestra
+   * su nombre, y al tocarla avisa cuál fue.
+   *
+   * ⚠️ Va apagado en la página pública. Quien compra no tiene que ver recuadros
+   * de edición ni poder tocar nada que no sea comprar.
+   */
+  alTocarSeccion?: (clave: string) => void;
 };
 
 function money(n: number) {
@@ -536,6 +545,32 @@ function Contenido({ clave, campos, datos }: {
   }
 }
 
+/**
+ * El recuadro que aparece al pasar el mouse por una sección, en la previa.
+ *
+ * Es un `button` de verdad y no un `div` con `onClick`: así se llega con el
+ * teclado y se anuncia solo. Va con `sr-only` un texto que dice qué hace, porque
+ * lo que se ve es apenas el nombre de la sección.
+ */
+function MarcaDeSeccion({ clave, alTocar, children }: {
+  clave: string; alTocar: (clave: string) => void; children: React.ReactNode;
+}) {
+  const nombre = buscarSeccion(clave)?.nombre ?? clave;
+  return (
+    <div className="group/marca relative outline-2 -outline-offset-2 outline-dashed outline-transparent transition-[outline-color] hover:outline-sky-500">
+      {children}
+      <button
+        type="button"
+        onClick={() => alTocar(clave)}
+        className="absolute right-3 top-3 z-20 hidden rounded-lg bg-sky-600 px-2.5 py-1.5 text-xs font-bold text-white shadow-lg group-hover/marca:block"
+      >
+        <span className="sr-only">Editar la sección </span>
+        {nombre}
+      </button>
+    </div>
+  );
+}
+
 export default function PaginaDeVenta(datos: DatosDePagina) {
   /* ⚠️ Qué se dibuja lo decide `seDibuja`, en `lib/pagina-venta`, y NO cada
      `case` de acá. Es la misma función que el editor usa para avisar "esta
@@ -575,11 +610,19 @@ export default function PaginaDeVenta(datos: DatosDePagina) {
       style={colores}
       className={`min-h-screen bg-[color:var(--pv-fondo)] text-[color:var(--pv-tinta)] antialiased ${conBarra ? "pb-24" : ""}`}
     >
-      {datos.pagina.secciones.map((s) =>
-        seDibuja(s, ctx) ? (
-          <Contenido key={s.clave} clave={s.clave} campos={s.campos} datos={datos} />
-        ) : null
-      )}
+      {datos.pagina.secciones.map((s) => {
+        if (!seDibuja(s, ctx)) return null;
+        const dibujo = <Contenido key={s.clave} clave={s.clave} campos={s.campos} datos={datos} />;
+        /* La barra de compra no se marca: está pegada al borde de la ventana, así
+           que su envoltorio no tiene alto y el cartelito quedaría en cualquier
+           lado. Su nombre además es obvio: es el único botón flotante. */
+        if (!datos.alTocarSeccion || s.clave === "barra") return dibujo;
+        return (
+          <MarcaDeSeccion key={s.clave} clave={s.clave} alTocar={datos.alTocarSeccion}>
+            {dibujo}
+          </MarcaDeSeccion>
+        );
+      })}
     </div>
   );
 }

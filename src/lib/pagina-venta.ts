@@ -59,6 +59,8 @@ export type TipoCampo = "texto" | "parrafo" | "lista" | "imagen" | "fecha" | "nu
 export const AVISO_BORRADOR = "pagina-venta:borrador";
 /** La previa avisa que ya está lista para recibir. Ver el porqué en el editor. */
 export const AVISO_LISTA = "pagina-venta:lista";
+/** Y avisa que tocaron una sección, para que el editor la abra. */
+export const AVISO_TOCAR = "pagina-venta:tocar";
 
 /** Lo que se puede escribir adentro de un texto y se reemplaza al dibujar. */
 export const FICHA_DIAS = "{dias}";

@@ -573,6 +573,21 @@ check("VIVO-C", !/postMessage\([^)]*,\s*["']\*["']\s*\)/.test(editor)
   && !/postMessage\([^)]*,\s*["']\*["']\s*\)/.test(enVivo),
   "y ningún aviso se manda a `*`");
 
+/* ── Tocar en la previa abre la casilla ───────────────────────────────────── */
+
+/* ⚠️ La clave de la sección llega de OTRA VENTANA, así que se comprueba contra
+   el catálogo antes de usarla. Sin eso, un aviso armado a mano manda cualquier
+   cosa a `querySelector`. */
+check("TOC-A", /d\.tipo === AVISO_TOCAR[\s\S]{0,120}buscarSeccion\(d\.clave\)/.test(editor),
+  "la sección que llega de la previa se comprueba contra el catálogo");
+check("TOC-B", /data-seccion=\{s\.clave\}/.test(editor),
+  "y cada sección del editor se puede encontrar para traerla a la vista");
+
+/* La marca es sólo de la previa: quien compra no tiene que ver recuadros de
+   edición ni poder tocar nada que no sea comprar. */
+check("TOC-C", /alTocarSeccion/.test(dibujante) && !/alTocarSeccion/.test(publica),
+  "la página pública no dibuja las marcas de edición");
+
 /* Sin `key`, el iframe no se vuelve a montar en cada cambio: si lo hiciera,
    perdería el scroll y saltaría al principio a cada tecla. */
 check("VIVO-D", /ref=\{marco\}/.test(editor) && !/key=\{refresco\}/.test(editor),
