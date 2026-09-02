@@ -292,16 +292,16 @@ check("PIE-D", (() => {
 /* ── Las listas ───────────────────────────────────────────────────────────── */
 
 check("LIS-A", (() => {
-  const items = Array.from({ length: 50 }, (_, i) => ({ texto: `beneficio ${i}` }));
+  const items = Array.from({ length: 50 }, (_, i) => ({ titulo: `beneficio ${i}` }));
   const p = normalizarContenido({ secciones: [{ clave: "beneficios", campos: { items } }] });
   return (seccion(p, "beneficios")?.campos.items as unknown[]).length === 8;
 })(), "una lista se corta en su tope de ítems");
 
 check("LIS-B", (() => {
-  const items = [{ texto: "sirve" }, { texto: "  " }, {}, null, "hola", { otro: "x" }];
+  const items = [{ titulo: "sirve" }, { titulo: "  " }, {}, null, "hola", { otro: "x" }];
   const p = normalizarContenido({ secciones: [{ clave: "beneficios", campos: { items } }] });
   const l = seccion(p, "beneficios")?.campos.items as Array<Record<string, unknown>>;
-  return l.length === 1 && l[0].texto === "sirve";
+  return l.length === 1 && l[0].titulo === "sirve";
 })(), "los ítems vacíos o basura se descartan: no dibujan filas en blanco");
 
 check("LIS-C", (() => {
@@ -410,15 +410,15 @@ check("DIB-A", porQueNoSeDibuja(secc("bonos"), sinBonos) !== null
   "la sección de bonos se dibuja sólo si hay bonos cargados");
 
 check("DIB-B", porQueNoSeDibuja(secc("beneficios", { items: [] }), sinBonos) !== null
-  && porQueNoSeDibuja(secc("beneficios", { items: [{ texto: "algo" }] }), sinBonos) === null,
+  && porQueNoSeDibuja(secc("beneficios", { items: [{ titulo: "algo" }] }), sinBonos) === null,
   "una lista vacía no se dibuja, y con un ítem sí");
 
 /* Un ítem con todos los campos en blanco no cuenta: dibujaría un renglón vacío. */
 check("DIB-C", porQueNoSeDibuja(secc("preguntas", { items: [{ pregunta: "", respuesta: "" }] }), sinBonos) !== null,
   "ni un ítem con todo en blanco");
 
-check("DIB-D", porQueNoSeDibuja(secc("beneficios", { items: [{ texto: "x" }] }), sinBonos, ) === null
-  && porQueNoSeDibuja({ ...secc("beneficios", { items: [{ texto: "x" }] }), visible: false }, sinBonos) !== null,
+check("DIB-D", porQueNoSeDibuja(secc("beneficios", { items: [{ titulo: "x" }] }), sinBonos) === null
+  && porQueNoSeDibuja({ ...secc("beneficios", { items: [{ titulo: "x" }] }), visible: false }, sinBonos) !== null,
   "y una sección apagada no se dibuja aunque tenga contenido");
 
 /* Las que van siempre no dependen de nada: si alguna vez devolvieran un motivo,
@@ -437,6 +437,22 @@ check("DIB-G", /seDibuja\(s, ctx\)/.test(dibujante),
   "la página pública decide con esa regla, no con una copia adentro");
 check("DIB-H", /porQueNoSeDibuja\(s, \{ hayBonos/.test(editor),
   "y el editor avisa con la misma, así los dos dicen lo mismo");
+
+/* ── Lo que la IA tiene que poder llenar ──────────────────────────────────── */
+
+/* ⚠️ Un beneficio de un solo renglón se lee como una lista de supermercado. Con
+   el porqué abajo, convence — es lo que hace la competencia y era la diferencia
+   más grande entre su página y la nuestra. Vale igual para los puntos de dolor. */
+check("LLE-A", ["beneficios", "dolores"].every((c) => {
+  const items = buscarSeccion(c)?.campos.find((x) => x.clave === "items");
+  const hijos = (items?.campos ?? []).map((h) => h.clave);
+  return hijos.includes("titulo") && hijos.includes("detalle");
+}), "cada beneficio y cada dolor tienen título Y explicación, no un renglón suelto");
+
+/* La bajada de cada sección es texto que la IA llena y que hoy no existía. */
+check("LLE-B", ["beneficios", "dolores", "comoFunciona", "preguntas", "opiniones"].every(
+  (c) => buscarSeccion(c)?.campos.some((x) => x.clave === "subtitulo")),
+  "las secciones largas tienen bajada, no sólo título");
 
 /* ── El estilo y la paleta ────────────────────────────────────────────────── */
 

@@ -186,9 +186,15 @@ export const SECCIONES: readonly Seccion[] = [
     campos: [
       { clave: "titulo", etiqueta: "Título", tipo: "texto", largo: 80,
         ejemplo: "Qué vas a lograr" },
+      { clave: "subtitulo", etiqueta: "Bajada", tipo: "texto", largo: 140,
+        ejemplo: "Todo lo que te llevás en un solo lugar." },
+      /* ⚠️ Título Y explicación, no un renglón suelto. Un renglón se lee como una
+         lista de supermercado; con el porqué abajo, convence. Es lo que hace la
+         competencia y es la diferencia más grande entre su página y la nuestra. */
       { clave: "items", etiqueta: "Beneficios", tipo: "lista", largo: 0, maxItems: 8,
         campos: [
-          { clave: "texto", etiqueta: "Beneficio", tipo: "texto", largo: 140 },
+          { clave: "titulo", etiqueta: "Beneficio", tipo: "texto", largo: 90 },
+          { clave: "detalle", etiqueta: "Por qué te sirve", tipo: "parrafo", largo: 220 },
         ] },
     ],
   },
@@ -203,9 +209,12 @@ export const SECCIONES: readonly Seccion[] = [
     campos: [
       { clave: "titulo", etiqueta: "Título", tipo: "texto", largo: 80,
         ejemplo: "¿Te pasa esto?" },
+      { clave: "subtitulo", etiqueta: "Bajada", tipo: "texto", largo: 140,
+        ejemplo: "Si alguna de estas te suena, esto es para vos." },
       { clave: "items", etiqueta: "Situaciones", tipo: "lista", largo: 0, maxItems: 6,
         campos: [
-          { clave: "texto", etiqueta: "Situación", tipo: "texto", largo: 140 },
+          { clave: "titulo", etiqueta: "Situación", tipo: "texto", largo: 90 },
+          { clave: "detalle", etiqueta: "Por qué duele", tipo: "parrafo", largo: 220 },
         ] },
     ],
   },
@@ -220,6 +229,8 @@ export const SECCIONES: readonly Seccion[] = [
     campos: [
       { clave: "titulo", etiqueta: "Título", tipo: "texto", largo: 80,
         ejemplo: "Cómo lo recibís" },
+      { clave: "subtitulo", etiqueta: "Bajada", tipo: "texto", largo: 140,
+        ejemplo: "Tres pasos y ya lo tenés." },
       { clave: "pasos", etiqueta: "Pasos", tipo: "lista", largo: 0, maxItems: 5,
         campos: [
           { clave: "titulo", etiqueta: "Paso", tipo: "texto", largo: 60 },
@@ -241,6 +252,7 @@ export const SECCIONES: readonly Seccion[] = [
     campos: [
       { clave: "titulo", etiqueta: "Título", tipo: "texto", largo: 80,
         ejemplo: "Lo que dicen" },
+      { clave: "subtitulo", etiqueta: "Bajada", tipo: "texto", largo: 140 },
       { clave: "items", etiqueta: "Opiniones", tipo: "lista", largo: 0, maxItems: 6,
         campos: [
           { clave: "nombre", etiqueta: "Nombre", tipo: "texto", largo: 60,
@@ -313,6 +325,8 @@ export const SECCIONES: readonly Seccion[] = [
     campos: [
       { clave: "titulo", etiqueta: "Título", tipo: "texto", largo: 80,
         ejemplo: "Preguntas frecuentes" },
+      { clave: "subtitulo", etiqueta: "Bajada", tipo: "texto", largo: 140,
+        ejemplo: "Lo que más nos preguntan antes de comprar." },
       { clave: "items", etiqueta: "Preguntas", tipo: "lista", largo: 0, maxItems: 10,
         campos: [
           { clave: "pregunta", etiqueta: "Pregunta", tipo: "texto", largo: 140 },

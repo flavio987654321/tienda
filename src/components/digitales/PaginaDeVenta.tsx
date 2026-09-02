@@ -139,14 +139,34 @@ function Numeros({ producto, bonos, estilo }: {
             {bonos.map((b) => (
               <li key={b.id} className="flex items-baseline justify-between gap-3 text-sm">
                 <span className="min-w-0 text-[color:var(--pv-tinta)]">{b.name}</span>
-                <span className="shrink-0 font-bold text-emerald-700">GRATIS</span>
+                <span className="shrink-0 font-bold text-emerald-700">
+                  {b.comparePrice ? <s className="mr-2 font-normal opacity-60">{money(b.comparePrice)}</s> : null}
+                  GRATIS
+                </span>
               </li>
             ))}
           </ul>
+          {valorDeLosBonos(bonos) > 0 && (
+            <p className="mt-2 border-t border-amber-200 pt-2 text-sm font-bold text-amber-800">
+              Todo esto vale {money(valorDeLosBonos(bonos))} y va incluido
+            </p>
+          )}
         </div>
       )}
     </div>
   );
+}
+
+/**
+ * Lo que valen los bonos, sumado.
+ *
+ * ⚠️ Es una SUMA de números que cargó quien vende, no un número inventado: el
+ * precio tachado de cada bono. Si no le puso ninguno, el bono no suma nada y el
+ * renglón no aparece — preferimos no mostrar el total antes que rellenarlo con
+ * un valor imaginado.
+ */
+function valorDeLosBonos(bonos: ProductoParaPagina[]): number {
+  return bonos.reduce((t, b) => t + (b.comparePrice ?? 0), 0);
 }
 
 /* Los sellos de al lado del botón. Dicen sólo lo que podemos sostener: el cobro
@@ -158,6 +178,16 @@ function Sellos() {
     <p className="flex flex-wrap items-center justify-center gap-x-5 gap-y-1 text-xs font-medium text-[color:var(--pv-tenue)]">
       <span>🔒 Pago seguro con Mercado Pago</span>
       <span>✉️ Lo recibís por mail</span>
+    </p>
+  );
+}
+
+/** La bajada de una sección. Vacía no dibuja nada. */
+function Bajada({ children }: { children: string }) {
+  if (!children) return null;
+  return (
+    <p className="mx-auto mt-3 max-w-2xl text-pretty text-center text-[color:var(--pv-tenue)]">
+      {children}
     </p>
   );
 }
@@ -271,12 +301,15 @@ function Contenido({ clave, campos, datos }: {
 
     case "beneficios":
     case "dolores": {
-      const items = lista(campos, "items").filter((i) => i.texto);
+      const items = lista(campos, "items").filter((i) => i.titulo || i.detalle);
       const esDolor = clave === "dolores";
       return (
         <Seccion tono={esDolor ? "gris" : undefined} estilo={estilo}>
           <Titulo estilo={estilo}>{texto(campos, "titulo")}</Titulo>
-          <ul className="mx-auto mt-8 grid max-w-2xl gap-3">
+          <Bajada>{texto(campos, "subtitulo")}</Bajada>
+          {/* Dos columnas en pantalla grande: con el detalle abajo de cada uno,
+              en una sola columna la sección se hace larguísima. */}
+          <ul className="mt-8 grid gap-3 sm:grid-cols-2">
             {items.map((i, n) => (
               <li
                 key={n}
@@ -290,7 +323,18 @@ function Contenido({ clave, campos, datos }: {
                 >
                   {esDolor ? "!" : "✓"}
                 </span>
-                <span className="text-pretty text-[color:var(--pv-tinta)]">{i.texto}</span>
+                <span className="min-w-0">
+                  {i.titulo && (
+                    <span className="block text-pretty font-semibold text-[color:var(--pv-tinta)]">
+                      {i.titulo}
+                    </span>
+                  )}
+                  {i.detalle && (
+                    <span className="mt-1 block text-pretty text-sm leading-relaxed text-[color:var(--pv-tenue)]">
+                      {i.detalle}
+                    </span>
+                  )}
+                </span>
               </li>
             ))}
           </ul>
@@ -303,6 +347,7 @@ function Contenido({ clave, campos, datos }: {
       return (
         <Seccion estilo={estilo}>
           <Titulo estilo={estilo}>{texto(campos, "titulo")}</Titulo>
+          <Bajada>{texto(campos, "subtitulo")}</Bajada>
           <ol className="mx-auto mt-8 grid max-w-2xl gap-4">
             {pasos.map((p, n) => (
               <li key={n} className="flex items-start gap-4">
@@ -332,6 +377,7 @@ function Contenido({ clave, campos, datos }: {
       return (
         <Seccion tono="gris" estilo={estilo}>
           <Titulo estilo={estilo}>{texto(campos, "titulo")}</Titulo>
+          <Bajada>{texto(campos, "subtitulo")}</Bajada>
           <div className="mt-8 grid gap-4 sm:grid-cols-2">
             {items.map((i, n) => (
               <figure key={n} className={`bg-[color:var(--pv-tarjeta)] p-5 ${estilo.tarjeta}`}>
@@ -386,6 +432,7 @@ function Contenido({ clave, campos, datos }: {
       return (
         <Seccion estilo={estilo}>
           <Titulo estilo={estilo}>{texto(campos, "titulo")}</Titulo>
+          <Bajada>{texto(campos, "subtitulo")}</Bajada>
           {/* `details` nativo: abre y cierra sin una línea de JavaScript, y
               funciona igual si el script no cargó. */}
           <div className="mx-auto mt-8 grid max-w-2xl gap-3">
