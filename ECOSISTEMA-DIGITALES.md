@@ -1746,11 +1746,55 @@ después, porque hasta que exista la factura de Anthropic no tiene techo.
   Flavio a mano. O sea que la cáscara cae exactamente en la pantalla de Productos
   que ya existe: tres tarjetas, las tres en rojo con "falta el archivo", y en cada
   una el botón de subir el PDF. No hay que construir nada nuevo para recibirla.
-- 🔲 **Cuántas tarjetas crea la cáscara: ¿siempre 1+1+1, o llena el plan?** En su
-  Free son 1 principal + 1 bono + 1 upsell, que es justo el tope de Free y no se
-  distingue de "llena el plan". En Pro llenar el plan serían **9 tarjetas vacías**
-  de una, todas en rojo — mal primer día. Un embudo completo (1+1+1) se entiende y
-  se puede terminar; el resto se agrega creciendo.
+- ✅ **La cáscara se arma POR PRODUCTO, no por cuenta — CERRADO (02/09/26).**
+
+  Siempre **un embudo completo**: el principal, un bono y un upsell. Nunca se
+  llena el plan de una.
+
+  El motivo no es que 9 tarjetas vacías sean un mal primer día —eso es
+  cosmética—. Es que **una descripción es un nicho**: si alguien escribe "vendo
+  cosas de mecánica" y la IA arma los 5 productos de Pro, **los 5 van a ser de
+  autos**. Y eso es lo contrario de para qué sirve Pro — los 5 productos existen
+  justamente para ser de nichos distintos, que es la misma razón por la que cada
+  uno necesita su dominio (Fase 5 bis). Generarlos todos de un texto deja cuatro
+  de sobra.
+
+  Y de acá se cae una duda que estaba anotada: *"¿qué pasa si la persona ya tiene
+  productos cuando la IA corre?"*. **Deja de existir.** No hay ningún momento
+  especial "la primera vez": la primera vez es simplemente "tenés 0 productos,
+  hagamos uno", y después es el mismo botón siempre.
+
+  ```
+  cuenta vacía   →  contás tu nicho      →  1 embudo (producto + bono + upsell)
+  querés otro    →  "Crear producto"     →  contás EL OTRO nicho  →  otro embudo
+  ```
+
+  Free no necesita el botón del segundo: su tope es 1 y la pantalla ya dice
+  "llegaste al tope".
+
+  Los números del arranque acompañan sin haberlo buscado: Starter tiene 3
+  generaciones y un embudo son 3 ebooks —justo—; Pro tiene 6, o sea un embudo
+  entero y medio del siguiente.
+
+  Y refuerza la Fase 5 bis desde otro lado: si cada producto se arma con su
+  propio nicho, su título, su descripción y su cara **son de ese nicho**. Lo de
+  ayer y lo de hoy son la misma idea mirada de dos lados — **el producto es la
+  unidad, no la cuenta**.
+- 🔲 **Son DOS botones de IA distintos, y conviene no mezclarlos.** Se ven
+  parecidos y cuestan cosas completamente distintas:
+
+  | | Dónde va | Qué hace | Cuánto cuesta | Quién lo tiene |
+  |---|---|---|---|---|
+  | **Armar el embudo** | adentro de "Crear producto" | 3 fichas con título, descripción y precio | centavos, es texto corto | los tres planes |
+  | **Escribir el ebook** | en cada tarjeta, al lado de "Subir PDF" | el PDF de ESA ficha | US$2–4 | Starter y Pro |
+
+  El primero corre **una vez por producto**; el segundo, **una por tarjeta**. El
+  cupo de `ebooksIA` es del segundo nada más — el primero no se cuenta, por lo
+  mismo que no se cuentan los títulos: contar lo barato pone fricción donde no
+  hay costo (ver 2.4 bis).
+
+  Y el orden es el que se ve en el panel de la competencia: primero aparece la
+  cáscara, y recién ahí cada tarjeta tiene su botón de generar el contenido.
 - 🔲 Generar la vidriera entera (el gancho principal).
 - 🔲 Escribir el contenido del ebook/PDF.
 - 🔲 Los textos de venta y los mails (entrega, carrito abandonado).

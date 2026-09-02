@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRef, useState } from "react";
 import {
   Plus, Gift, TrendingUp, BookOpen, Loader2, Pencil, Trash2, AlertTriangle, Image as ImageIcon,
-  Eye, EyeOff, X, ArrowUpRight, Upload,
+  Eye, EyeOff, X, ArrowUpRight, Upload, Sparkles,
 } from "lucide-react";
 import { COPY_DIGITAL, type TierDigital } from "@/lib/planes-digitales";
 import {
@@ -62,6 +62,29 @@ function borradorNuevo(rol: RolDigital, padreId: string | null): Borrador {
 
 /** El tope real de `/api/upload`: lo pone la plataforma, no nosotros. */
 const MAX_IMAGEN_MB = 4;
+
+/**
+ * Si la IA existe ya.
+ *
+ * ⚠️ **Está en `false` y los dos botones de IA se dibujan APAGADOS a propósito.**
+ * No es un olvido: el hueco donde van dice algo que el botón solo no dice —que el
+ * archivo tiene dos caminos, escribirlo o subirlo— y así no se construye una
+ * pantalla que después haya que rediseñar para meterlos.
+ *
+ * Son dos botones distintos y cuestan cosas distintas:
+ *
+ *   1. **Armar el embudo** — adentro de "Crear producto". Hace las tres fichas
+ *      con título, descripción y precio. Son centavos: es texto corto. Va en los
+ *      tres planes.
+ *   2. **Escribir el ebook** — en cada tarjeta, al lado de "Subir PDF". Hace el
+ *      PDF de ESA ficha. Son US$2 a 4. Es el que gasta el cupo de `ebooksIA`, y
+ *      por eso Free no lo tiene.
+ *
+ * Prenderlo es cambiar este `false`, y **no hay que hacerlo hasta que la Fase 4
+ * exista de verdad**. Hay un chequeo que falla si esto queda en `true` sin que
+ * exista la ruta que genera.
+ */
+const IA_LISTA = false;
 
 /**
  * Lo que la tarjeta y el grupo necesitan de la pantalla.
@@ -208,6 +231,29 @@ function Tarjeta({ p, acc }: { p: ProductoEnPantalla; acc: Acciones }) {
                 }}
               />
             </label>
+
+            {/* ⚠️ El segundo botón de IA, apagado. Ver `IA_LISTA`.
+                Se dibuja aunque no ande porque el hueco al lado de "Subir PDF"
+                dice algo que el botón solo no dice: **el archivo tiene dos
+                caminos, no uno**. Y el motivo de que esté apagado no es el mismo
+                en los tres planes — en Free es el plan y es para siempre; en
+                Starter y Pro es que todavía no lo construimos. Decir cuál es se
+                lee al pasar el mouse, no hay que adivinarlo. */}
+            <button
+              type="button"
+              disabled
+              title={
+                IA_LISTA
+                  ? undefined
+                  : acc.tier === "FREE"
+                    ? "Tu plan no incluye escribir el ebook con IA. El PDF lo subís vos."
+                    : "Todavía no está listo."
+              }
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-dashed border-gray-300 panel-oscuro:border-gray-700 text-xs font-bold text-gray-400 panel-oscuro:text-gray-500 cursor-not-allowed"
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+              Generar con IA
+            </button>
 
             <button
               onClick={() =>
@@ -709,6 +755,25 @@ export default function ProductosClient({
             </div>
 
             <div className="px-6 py-5 space-y-4">
+              {/* ⚠️ El primero de los dos botones de IA, apagado. Ver `IA_LISTA`.
+                  Sólo en el producto principal: la IA arma el embudo ENTERO —el
+                  principal con su bono y su upsell—, así que no tiene sentido
+                  ofrecerlo cuando ya estás creando un bono suelto. */}
+              {!borrador.id && borrador.rol === "PRINCIPAL" && (
+                <div className="flex items-center gap-3 rounded-2xl border border-dashed border-gray-300 panel-oscuro:border-gray-700 bg-gray-50 panel-oscuro:bg-gray-800/50 px-4 py-3">
+                  <Sparkles className="h-4 w-4 shrink-0 text-gray-400 panel-oscuro:text-gray-500" />
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold text-gray-500 panel-oscuro:text-gray-400">
+                      Contame de qué se trata y te armo el embudo
+                      <span className="ml-2 font-medium">· Próximamente</span>
+                    </p>
+                    <p className="text-[11px] text-gray-400 panel-oscuro:text-gray-500 mt-0.5 leading-relaxed">
+                      El producto, un bono de regalo y un upsell, con sus textos y precios.
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {/* La portada. Va primera porque es lo primero que ve quien entra a
                   la página de venta. */}
               <div className="flex items-start gap-4">

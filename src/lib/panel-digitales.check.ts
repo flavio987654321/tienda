@@ -354,6 +354,8 @@ chequear("el candado es por tienda, no de toda la base",
   /pg_advisory_xact_lock\(hashtext\(\$\{?espacio\.storeId/.test(crear) ||
   /hashtext\(\$\{espacio\.storeId\}\)/.test(crear));
 
+
+
 /* Un producto recién creado NO puede nacer publicado, aunque venga con todo
    cargado: todavía no tiene archivo, y publicar sin archivo es cobrar por algo
    que no se entrega. */
@@ -658,6 +660,38 @@ chequear(
     : `hay <a> a pantallas del panel en: ${conAnclaInterna.join(", ")}`,
   conAnclaInterna.length === 0
 );
+
+/* ── Los dos botones de IA, dibujados y apagados ───────────────────────────── */
+console.log("\n15) La IA que todavía no existe");
+
+/* Se dibujan aunque no anden porque el hueco donde van dice algo que el botón
+   solo no dice: que el archivo tiene DOS caminos, escribirlo o subirlo. */
+chequear("los dos botones de IA están dibujados",
+  (pantallaProductos.match(/Generar con IA|te armo el embudo/g) ?? []).length >= 2);
+
+/* ⚠️ EL chequeo de esta sección, y es un pasador. `IA_LISTA` prendido con la ruta
+   de generación sin construir es una pantalla que promete escribir un ebook y no
+   escribe nada. Prenderlo tiene que costar más que borrar una palabra: acá falla
+   la prueba y dice por qué. */
+const rutaIA = existsSync("src/app/api/digitales/ia");
+chequear(
+  rutaIA
+    ? "la IA ya existe: `IA_LISTA` puede prenderse"
+    : "`IA_LISTA` sigue apagado mientras no exista la ruta que genera",
+  rutaIA || /const IA_LISTA = false;/.test(pantallaProductos)
+);
+
+/* Y que los botones dependan de esa palabra y no de un `disabled` suelto en cada
+   uno, que es como se prende uno y se olvida el otro. */
+chequear("el botón del ebook mira `IA_LISTA` para saber qué explicar",
+  /IA_LISTA\s*\n?\s*\?/.test(pantallaProductos) || /IA_LISTA \?/.test(pantallaProductos));
+
+/* Free no lo tiene por el PLAN y para siempre; Starter y Pro no lo tienen todavía.
+   Son dos motivos distintos y el cartel tiene que decir cuál es, o el que paga
+   cree que le falta plan. */
+chequear("el motivo de que esté apagado distingue el plan de la obra",
+  /Tu plan no incluye escribir el ebook con IA/.test(pantallaProductos) &&
+  /Todavía no está listo/.test(pantallaProductos));
 
 console.log(fallos === 0
   ? "\nok — el panel de Productos Digitales sigue en pie"
