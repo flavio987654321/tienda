@@ -1120,6 +1120,32 @@ export function ofertaVencida(pagina: PaginaVenta, ahora: number): boolean {
   return fin <= ahora;
 }
 
+/**
+ * Los días de garantía que promete ESTA página, o `null` si no promete ninguna.
+ *
+ * ── Por qué esto no puede vivir en la pantalla ──────────────────────────────
+ *
+ * Porque lo leen TRES lugares y los tres tienen que decir lo mismo: el sello del
+ * checkout, el texto que se acepta antes de pagar, y la ruta que guarda ese
+ * texto como prueba. Con la cuenta copiada en cada uno, alcanza con tocar la
+ * página para que el sello prometa 30 días y la prueba guardada diga que no hay
+ * devolución. Eso es exactamente lo que un abogado de consumo busca.
+ *
+ * ⚠️ Y la garantía del vendedor GANA sobre la excepción del art. 1116: ese
+ * artículo arranca con "excepto pacto en contrario", y prometer 30 días es el
+ * pacto en contrario. Por eso el consentimiento tiene que nombrarla en vez de
+ * contradecirla. Ver `consentimiento-digital`.
+ */
+export function diasDeGarantia(pagina: PaginaVenta): number | null {
+  const s = pagina.secciones.find((x) => x.clave === "garantia");
+  if (!s || !s.visible) return null;
+  const dias = s.campos.dias;
+  /* Entero y positivo. `Infinity` pasa `> 0` —ya nos mordió una vez en los
+     precios— y un 0 no es una garantía, es no tener ninguna. */
+  if (typeof dias !== "number" || !Number.isFinite(dias) || dias <= 0) return null;
+  return Math.floor(dias);
+}
+
 /* ── Normalizar ─────────────────────────────────────────────────────────────
  *
  * Todo lo que llega de afuera pasa por acá, y sale una página válida SIEMPRE.

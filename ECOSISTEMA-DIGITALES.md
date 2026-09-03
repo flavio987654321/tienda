@@ -2053,6 +2053,68 @@ su propio cobro: dos clics y la tarjeta otra vez.
 - 🔲 El aviso de que **con transferencia la entrega no es automática**, antes de
   comprar y no después.
 
+### ✅ LA PANTALLA DE VENTAS — HECHA (03/09/26)
+
+Todo el ecosistema cobraba, entregaba y mandaba el mail solo, y quien vendía **no
+tenía un solo lugar donde ver que eso hubiera pasado**. La plata entraba a su
+cuenta de Mercado Pago y el resto era fe.
+
+`/digitales/ventas`, tercera del menú —después de Productos y antes de
+Configuración, porque es la que se abre todos los días—. Contesta tres cosas:
+
+1. **Cuánto te quedó.** No cuánto vendiste: cuánto te quedó **después de la
+   comisión**. Es el número que la gente busca y el que nadie muestra.
+2. **Quién compró.** El correo, para poder escribirle. Con búsqueda por correo o
+   nombre, que es lo que se tiene a mano cuando alguien escribe "no me llegó".
+3. **Si lo bajó.** Una compra cobrada que nunca se descargó es un reclamo que
+   todavía no llegó —el mail se fue a spam, el enlace venció—. Verlo antes es la
+   diferencia entre resolverlo y enterarse por una queja. Hay un aviso arriba
+   cuando hay archivos pagos sin bajar.
+
+**⚠️ La comisión sale de la ORDEN, no del plan de hoy.** Alguien que vendió diez
+veces en Free al 8% y hoy está en Pro vería esas diez recalculadas al 2%: números
+que nunca existieron. Cada orden guarda su `lockedCommissionRate` al cobrarse y
+la pantalla lee ese número — `comisionCongelada`, que es la misma cuenta que
+`comisionDeLaVenta` pero con el porcentaje congelado en vez del plan actual.
+
+**Pagina en el servidor**, y el filtro, la búsqueda y la página viajan en la
+dirección: el link se comparte, el botón atrás funciona y recargar no pierde
+nada. Traer todo y filtrar en el navegador anda con veinte ventas y se cae con
+dos mil.
+
+**Las fechas se formatean en el servidor con la zona de Argentina escrita.** En
+el navegador, el mismo texto sale distinto en el servidor (que corre en UTC) y en
+la máquina de quien mira: React avisa de la hidratación y una venta de las 22:30
+aparece con la fecha del día siguiente.
+
+### ✅ Los avisos al vendedor — HECHOS (03/09/26)
+
+Hasta acá **no había un solo `createNotification` en ninguna ruta de digitales**:
+una venta y una devolución pasaban las dos en silencio. Ahora los dos escriben en
+la campanita del panel:
+
+- **"¡Vendiste!"** — con lo que le QUEDA después de la comisión, no el bruto. El
+  bruto ya lo ve en Mercado Pago; el número que nadie le muestra es el otro.
+- **"Devolución"** / **"Contracargo"** — que la plata salió y que se cortó el
+  acceso, porque son dos cosas graves que pasaron sin que las pidiera.
+
+Van a la campanita y no como push: una cuenta digital hoy no tiene pedido el
+permiso de notificaciones (`disableNotifPrompt` en el layout, a propósito). El
+día que se saque esa bandera, la venta es el primer aviso que justifica
+interrumpir a alguien.
+
+### ✅ El inicio del panel dejó de mentir — HECHO (03/09/26)
+
+Decía *"estamos terminando las pantallas para cargar tu primer producto
+digital"*. Era cierto el día que se escribió y dejó de serlo cuando aparecieron
+Productos, la página de venta, el checkout y Ventas — pero el texto se quedó. La
+primera pantalla del panel le decía a alguien que acababa de pagar que todavía no
+podía hacer nada, con todo andando al lado.
+
+Es el segundo error de la misma forma en la misma pantalla (el primero fue "te
+avisamos por email", sin ningún código que mandara ese mail). Por eso ahora no
+describe el estado de la obra: sólo lleva a lo que hay.
+
 ### ✅ La previa sigue lo que se escribe, y se toca — HECHO (02/09/26)
 
 Los dos que quedaban de la pantalla anterior.
@@ -2305,13 +2367,45 @@ página muestre una promesa más corta que la que ya rige.
 Por eso el piso del campo pasó de 1 a 10 días. **No se agregó una obligación: se
 sacó una mentira.**
 
-#### Por qué duele más acá que en una tienda física
+#### ⚠️ CORRECCIÓN (03/09/26): la excepción SÍ existe en Argentina
 
-Un PDF descargado no se puede devolver. En la Unión Europea la norma contempla
-justamente eso —si aceptaste la descarga inmediata perdés el derecho a
-arrepentirte (Directiva 2011/83, art. 16 m)—. **En Argentina esa excepción no
-existe**, así que quien vende queda expuesto. No es una interpretación cómoda: es
-que no hay un escudo escrito.
+Acá decía: *"En la Unión Europea la norma contempla justamente eso (Directiva
+2011/83, art. 16 m). **En Argentina esa excepción no existe**, así que quien vende
+queda expuesto."*
+
+**Era falso, y era el párrafo que más pesaba de toda esta sección.**
+
+El **art. 1116 inc. b del Código Civil y Comercial** dice, textual, que el derecho
+de revocar no se aplica a los contratos de
+
+> *"...suministro de grabaciones sonoras o de video, de discos y de programas
+> informáticos que han sido decodificados por el consumidor, así como de ficheros
+> informáticos, suministrados por vía electrónica, susceptibles de ser descargados
+> o reproducidos con carácter inmediato para su uso permanente"*
+
+O sea: **exactamente un ebook que se baja.** Es el equivalente argentino de la
+directiva europea, y estaba desde 2015.
+
+Tres cosas que sí siguen siendo ciertas, y que son la letra chica de la buena
+noticia:
+
+1. **El artículo arranca con "excepto pacto en contrario".** Si los términos o la
+   página prometen devolución, la promesa gana y la excepción se cae. Por eso la
+   sección de Garantía de la página **le gana al art. 1116**, y por eso el texto
+   que se acepta en el pago la nombra en vez de contradecirla.
+2. **La excepción se activa con la DESCARGA, no con la compra.** Si todavía no lo
+   bajó, el arrepentimiento corre completo y se devuelve sin discutir. La
+   pantalla de Ventas muestra "sin bajar" justo para poder ver esa línea.
+3. **Hay debate doctrinario** sobre si el art. 1116 del Código limita al art. 34
+   de la Ley 24.240, que es más específica y más protectoria. Y los jueces de
+   consumo fallan para el lado del consumidor ante la duda. Por eso las PRUEBAS
+   importan más que el texto.
+
+#### ⚠️ Y la ley no es la exposición real: Mercado Pago sí
+
+Tener razón no frena un contracargo. Si la persona reclama a Mercado Pago o a la
+tarjeta, deciden ellos, mirando pruebas, y por defecto le creen a quien reclama.
+Todo lo de acá abajo existe para tener qué mostrar en ese momento.
 
 #### Por qué igual conviene mostrarla
 
@@ -2327,13 +2421,40 @@ O sea que quien la esconde paga los dos costos.
 
 Ninguna anula el derecho. Cambian el incentivo del que abusa.
 
-- 🔲 **Marcar el PDF con el mail de quien compró.** Es la que más rinde. No frena
-  una devolución, frena que después lo repartan.
+- ✅ **La casilla del art. 1116, antes de pagar** — HECHO (03/09/26). Es la que
+  más cubre por lo que cuesta. Convierte "él dice / yo digo" en un consentimiento
+  con fecha, hora, IP y **el texto exacto que esa persona leyó**, guardado en la
+  orden (`digitalConsentAt/Ip/Texto`). Se guarda el texto entero y no un `true`
+  ni un número de versión: si mañana se cambia la redacción, una venta vieja
+  tiene que seguir mostrando la que su comprador leyó. Un booleano no prueba
+  nada. Y el texto lo elige el SERVIDOR — si viajara desde el navegador sería un
+  campo que cualquiera reescribe. Ver `lib/consentimiento-digital`.
+- ✅ **Registro de la descarga** — HECHO (03/09/26): cuándo, desde qué IP y con
+  qué navegador, una fila por descarga (`DigitalDownloadLog`). Se anota DESPUÉS
+  de firmar el enlace —anotarlo antes dejaría escrito "se lo bajó" en una
+  descarga que terminó en error— y nunca frena la entrega: un registro que falla
+  no puede negar un archivo ya pagado. Se guarda la PRIMERA, que es la entrega,
+  no sólo la última.
 - ✅ **El enlace de descarga vence** — el permiso dura 30 días. Ya está.
-- 🔲 **Registro de la descarga**: cuándo, desde dónde, cuántas veces. Sirve para
-  detectar a alguien que lo hace de sistema, no para negar un caso suelto.
-- 🔲 **Cortar el acceso al pedir la devolución.** Con un PDF ya bajado no aplica;
-  sí aplicaría a una biblioteca o a un acceso online, si algún día existen.
+- ✅ **Cortar el acceso ante devolución o contracargo** — HECHO (03/09/26, commit
+  `98cb8101`). Con un PDF ya bajado no recupera nada, pero corta las descargas
+  que faltan. `in_mediation` queda afuera a propósito: una mediación no está
+  resuelta, y cortarle el archivo a alguien mientras reclama es castigarlo por
+  reclamar.
+- ❌ **Marcar el PDF con el mail de quien compró** — DESCARTADO (03/09/26).
+  Estaba anotada como "la que más rinde" y no lo es. **Se saca con cualquier app
+  gratis**: hay decenas que quitan marcas de agua de un PDF en dos minutos. O sea
+  que es trabajo, procesamiento y depósito duplicado a cambio de una molestia
+  menor para el único que la querría sacar.
+
+  Y además chocaba con dos límites que ya nos aprietan: el archivo hoy baja
+  **derecho de Supabase al navegador**, así que marcarlo obligaría a pasarlo por
+  nosotros —contra el techo de 4,5 MB de la plataforma— y a **guardar una copia
+  por comprador**, multiplicando el egress de Supabase, que es justo por donde ya
+  nos pasamos una vez. Costaba caro y no servía.
+
+  Lo que sí protege contra la reventa es el registro de descargas más el tope de
+  5: se ve quién lo hace de sistema.
 
 #### ✅ DECIDIDO (02/09/26): la comisión se devuelve entera
 
@@ -2345,8 +2466,23 @@ El motivo: si la venta se deshizo no hay servicio prestado, y quedarse con la
 comisión de una venta anulada es lo primero que alguien captura de pantalla y
 publica. El costo de esa foto es mucho más alto que lo que se junta reteniendo.
 
-🔲 **Falta escribirlo donde se lee**: en los términos, en la pantalla de
-suscripción y en el detalle de la venta cuando la devolución exista de verdad.
+🔲 **Falta escribirlo donde se lee**: en la pantalla de suscripción y en el
+detalle de la venta cuando la devolución exista de verdad. En los **términos** ya
+está (03/09/26): punto **6 ter** del apartado Cliente, más la excepción nombrada
+en el punto 7 de derechos del consumidor. Los plazos de ahí salen de
+`DIAS_DEL_PERMISO` y `MAX_DESCARGAS`, no escritos a mano: lo que vale para un
+reclamo es lo que dicen los términos, así que no pueden prometer un número
+distinto del que el sistema aplica.
+
+⚠️ **Falta que lo lea un abogado de consumo.** El texto está escrito para
+defenderse solo, pero nadie del proyecto es abogado. Es media hora y es la parte
+más barata de todo esto.
+
+🔲 **Falta el apartado del VENDEDOR digital en los términos.** Hoy están los tres
+de siempre —Dueño de tienda, Vendedor/Afiliado, Cliente— y una cuenta DIGITAL no
+es ninguno de esos. El punto 6 ter cubre al comprador, que es el lado del que
+sale un reclamo por devolución; falta el lado de quien vende (comisión, qué pasa
+con una devolución, qué puede subir).
 
 ## FASE 5 bis — La dirección propia por producto
 

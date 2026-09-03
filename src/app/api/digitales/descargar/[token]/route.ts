@@ -170,6 +170,29 @@ export async function GET(
     );
   }
 
+  /* ══════════════════════════════════════════════════════════════════════
+     LA PRUEBA DE ENTREGA
+     ══════════════════════════════════════════════════════════════════════
+
+     Se anota DESPUÉS de firmar y nunca antes: acá el archivo ya está entregado
+     de verdad. Anotarlo arriba dejaría escrito "se lo bajó el día 5" en una
+     descarga que terminó en error 502 — una prueba falsa es peor que ninguna.
+
+     ⚠️ Va con `.catch` y sin `await` que frene la respuesta: esto es evidencia
+     para un contracargo, no parte de la entrega. Si la fila no se puede escribir
+     —la base ocupada, la tabla todavía sin migrar— la persona igual se tiene que
+     llevar lo que pagó. Un registro que falla no puede negar un archivo.
+
+     El agente se recorta: lo escribe el cliente y puede venir con kilobytes de
+     basura. */
+  prisma.digitalDownloadLog.create({
+    data: {
+      downloadId: permiso.id,
+      ip,
+      agente: _req.headers.get("user-agent")?.slice(0, 300) ?? null,
+    },
+  }).catch((e) => console.error("[digital-descarga] no se pudo registrar la descarga:", e));
+
   /* 302 y no 301: el enlace firmado dura cinco minutos, y un navegador que
      guarde el permanente mandaría a la persona a una dirección muerta la próxima
      vez, sin siquiera preguntarnos. */

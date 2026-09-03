@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth-session";
 import { prisma } from "@/lib/prisma";
-import { normalizarContenido, variablesDePagina, buscarEstilo } from "@/lib/pagina-venta";
+import { normalizarContenido, variablesDePagina, buscarEstilo, diasDeGarantia } from "@/lib/pagina-venta";
 import { CLASES_FUENTES } from "@/lib/fuentes-venta";
 import { loQueFalta } from "@/lib/productos-digitales";
 import { totalDeLaCompra, type ItemDeCompra } from "@/lib/compra-digital";
@@ -116,12 +116,13 @@ export default async function PantallaDePago({ params }: Props) {
 
   /* Los días de garantía que promete SU página, no un número escrito acá: la
      pantalla de pago no puede prometer algo distinto de la que trajo a la
-     persona. Si esa sección está apagada, no se muestra el sello. */
-  const seccionGarantia = pagina.secciones.find((s) => s.clave === "garantia" && s.visible);
-  const diasDeGarantia =
-    seccionGarantia && typeof seccionGarantia.campos.dias === "number"
-      ? seccionGarantia.campos.dias
-      : null;
+     persona. Si esa sección está apagada, no se muestra el sello.
+
+     ⚠️ Sale de la función compartida y no de una cuenta hecha acá: el mismo
+     número lo lee el texto que se acepta antes de pagar y la ruta que lo guarda
+     como prueba. Copiado en tres lados, el sello promete 30 días y la prueba
+     guardada dice que no hay devolución. Ver `consentimiento-digital`. */
+  const dias = diasDeGarantia(pagina);
 
   return (
     <div className={CLASES_FUENTES}>
@@ -148,7 +149,7 @@ export default async function PantallaDePago({ params }: Props) {
           }))}
           /* El total de arranque, calculado por la misma función que cobra. */
           totalBase={totalDeLaCompra(principal, [])}
-          diasDeGarantia={diasDeGarantia}
+          diasDeGarantia={dias}
           diasDelEnlace={DIAS_DEL_PERMISO}
           maxDescargas={MAX_DESCARGAS}
           vendedor={fila.store.owner.name}

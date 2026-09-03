@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Loader2, Download, CheckCircle2, Mail, AlertTriangle, Clock } from "lucide-react";
+import { textoQueAcepto } from "@/lib/consentimiento-digital";
 
 /**
  * Lo que se ve después de pagar: la espera, los archivos y una última oferta.
@@ -38,6 +39,7 @@ type Props = {
   diasDelEnlace: number;
   maxDescargas: number;
   vendedor: string | null;
+  diasDeGarantia: number | null;
   botonRedondo: string;
   tarjeta: string;
   upsells: Upsell[];
@@ -113,6 +115,13 @@ export default function GraciasClient(p: Props) {
           productoId: p.productoId,
           ordenPrevia: p.ordenId,
           upsells: [upsellId],
+          /* La frase del art. 1116 está a la vista arriba del botón que se acaba
+             de apretar, así que apretarlo ES la aceptación. Acá no hay casilla a
+             propósito: una casilla más en la pantalla de después de pagar mata la
+             oferta, y el valor legal es el mismo mientras la frase esté visible y
+             no escondida atrás de un link. El texto que se guarda lo elige el
+             servidor —el del agregado, no el del checkout—. */
+          acepto: true,
         }),
       });
       const d = await r.json().catch(() => ({}));
@@ -236,6 +245,12 @@ export default function GraciasClient(p: Props) {
                 {yendo === u.id ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
                 {yendo === u.id ? "Abriendo el pago…" : "Agregarlo"}
               </button>
+              {/* ⚠️ ARRIBA de nada y ABAJO del botón no da igual: tiene que estar
+                  en la misma tarjeta y a la vista cuando se aprieta. Es lo que se
+                  guarda como aceptado. */}
+              <p className="mt-2 text-[11.5px] leading-relaxed text-[color:var(--pv-tenue)]">
+                {textoQueAcepto(true, p.diasDeGarantia)}
+              </p>
             </div>
           ))}
           {/* 🔲 Es un cobro nuevo, no un click. El "un click de verdad" necesita

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { normalizarContenido, variablesDePagina, buscarEstilo } from "@/lib/pagina-venta";
+import { normalizarContenido, variablesDePagina, buscarEstilo, diasDeGarantia } from "@/lib/pagina-venta";
 import { CLASES_FUENTES } from "@/lib/fuentes-venta";
 import { DIAS_DEL_PERMISO, MAX_DESCARGAS } from "@/lib/entrega-digital";
 import GraciasClient from "./GraciasClient";
@@ -89,6 +89,10 @@ export default async function Gracias({ params, searchParams }: Props) {
           diasDelEnlace={DIAS_DEL_PERMISO}
           maxDescargas={MAX_DESCARGAS}
           vendedor={fila.store.owner.name}
+          /* Para el texto que se acepta al sumar la oferta de después de pagar:
+             si la página promete garantía, el consentimiento la nombra en vez de
+             contradecirla. Misma función que el sello del checkout. */
+          diasDeGarantia={diasDeGarantia(pagina)}
           botonRedondo={estilo.boton}
           tarjeta={estilo.tarjeta}
           upsells={fila.hijos

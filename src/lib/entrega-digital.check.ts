@@ -274,6 +274,35 @@ check("MAIL-F", cobro.indexOf("prisma.$transaction") < cobro.indexOf("sendEntreg
 check("MAIL-G", cobro.includes("dias: DIAS_DEL_PERMISO") && cobro.includes("maxDescargas: MAX_DESCARGAS"),
   "los plazos que promete el mail salen de la misma constante que los aplica");
 
+/* ── El registro de descargas ───────────────────────────────────────────────
+ *
+ * Es la prueba de entrega ante un contracargo. El contador dice "se bajó 3
+ * veces" y nada más: no dice cuándo ni desde dónde, así que como prueba no sirve.
+ */
+const sinComent = (s: string) => s.replace(/\/\*[\s\S]*?\*\//g, "");
+const descargaLimpia = sinComent(descarga);
+
+check("LOG-A", /prisma\.digitalDownloadLog\.create/.test(descargaLimpia),
+  "cada descarga entregada deja una fila con cuándo, desde dónde y con qué");
+
+/* ⚠️ DESPUÉS de firmar el enlace, nunca antes. Anotado arriba quedaría escrito
+   "se lo bajó" en una descarga que terminó en error 502, y una prueba falsa es
+   peor que ninguna. */
+check("LOG-B",
+  descargaLimpia.indexOf("enlaceDeDescarga(config") < descargaLimpia.indexOf("digitalDownloadLog.create"),
+  "se anota DESPUÉS de firmar el enlace: no se registra una entrega que falló");
+
+/* Y no puede frenar la entrega. Si la fila no se puede escribir —la base
+   ocupada, la tabla todavía sin migrar— la persona igual se lleva lo que pagó. */
+check("LOG-C",
+  /digitalDownloadLog\.create\(\{[\s\S]{0,400}?\}\)\s*\.catch/.test(descargaLimpia) &&
+  !/await prisma\.digitalDownloadLog\.create/.test(descargaLimpia),
+  "un registro que falla no puede negar un archivo ya pagado");
+
+/* El `User-Agent` lo escribe el cliente: entra recortado o no entra. */
+check("LOG-D", /user-agent"\)\?\.slice\(0, \d+\)/.test(descargaLimpia),
+  "el navegador que se anota viene recortado, que lo escribe quien pide");
+
 console.log(fallos === 0
   ? "\nok — sólo baja el archivo quien lo pagó, y sólo mientras vale su permiso"
   : `\nFALLA — ${fallos} chequeo(s) de la entrega digital`);

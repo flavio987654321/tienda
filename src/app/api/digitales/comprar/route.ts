@@ -5,6 +5,8 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { getClientIp } from "@/lib/request-ip";
 import { normalizarEmail } from "@/lib/newsletter";
 import { limpiarTexto } from "@/lib/texto-limpio";
+import { textoQueAcepto } from "@/lib/consentimiento-digital";
+import { normalizarContenido, diasDeGarantia } from "@/lib/pagina-venta";
 import { loQueFalta } from "@/lib/productos-digitales";
 import { COMISION_DIGITAL } from "@/lib/planLimits";
 import type { TierDigital } from "@/lib/planes-digitales";
@@ -116,6 +118,29 @@ export async function POST(req: NextRequest) {
      saludar en el mail de entrega. */
   const nombre = limpiarTexto(cuerpo.nombre, LARGO_NOMBRE);
 
+  /* ══════════════════════════════════════════════════════════════════════
+     EL CONSENTIMIENTO, Y POR QUÉ SE FRENA ACÁ Y NO EN LA PANTALLA
+     ══════════════════════════════════════════════════════════════════════
+
+     Es la única defensa que hay contra "compré, bajé el PDF y a los dos días
+     pedí la plata de vuelta". Ver el archivo `consentimiento-digital`.
+
+     La casilla ya está en el checkout y el botón no se prende sin ella, pero eso
+     lo controla el navegador: quien pega derecho contra esta ruta no pasa por
+     ninguna pantalla. Si el freno viviera sólo allá, la prueba faltaría justo en
+     las compras que después se discuten.
+
+     ⚠️ Y se compara contra `true` exacto, no por verdadero. `"false"`, `1` y
+     `"no"` son todos verdaderos en JavaScript, y esto lo escribe quien llama. */
+  if (cuerpo.acepto !== true) {
+    return NextResponse.json(
+      { error: "Marcá la casilla para poder seguir." },
+      { status: 400 },
+    );
+  }
+  /* El texto exacto se arma más abajo, cuando ya se leyó la página: necesita
+     saber si promete garantía. Acá sólo se corta el pedido que no aceptó. */
+
   /* ⚠️ EL TELÉFONO NO SE PIDE TODAVÍA, y es a propósito.
    *
    * Va a hacer falta para recuperar carritos por WhatsApp, pero hoy no lo lee
@@ -149,6 +174,8 @@ export async function POST(req: NextRequest) {
     },
     select: {
       id: true, name: true, price: true, archivoPath: true, rolDigital: true,
+      /* Sólo para saber si promete garantía. Ver el bloque del consentimiento. */
+      paginaVenta: true,
       store: {
         select: {
           id: true, ownerId: true, mpAccessToken: true, isPublished: true,
@@ -195,6 +222,17 @@ export async function POST(req: NextRequest) {
       { status: 409 },
     );
   }
+  /* ⚠️ EL TEXTO QUE SE GUARDA COMO PRUEBA, armado ACÁ y no en la pantalla.
+     Sale de la misma función que dibuja el sello de garantía del checkout, así
+     que lo prometido y lo aceptado no pueden decir cosas distintas. Y si la
+     página promete garantía, el texto la NOMBRA en vez de contradecirla:
+     prometer 30 días es el "pacto en contrario" del art. 1116, y le gana a la
+     excepción. Ver `consentimiento-digital`. */
+  const textoAceptado = textoQueAcepto(
+    !!ordenPrevia,
+    diasDeGarantia(normalizarContenido(producto.paginaVenta)),
+  );
+
   const tokenDelVendedor = decryptToken(producto.store.mpAccessToken);
   if (!tokenDelVendedor) {
     console.error("[digital-comprar] token de MP ilegible, tienda", producto.store.id);
@@ -347,6 +385,11 @@ export async function POST(req: NextRequest) {
              panel de tiendas, a donde una orden digital no llega: ese panel es
              de rol OWNER y esta tienda es de una cuenta DIGITAL. */
           lockedCommissionRate: COMISION_DIGITAL[tier],
+          /* La prueba del art. 1116, congelada con la orden: cuándo, desde dónde
+             y qué texto decía la pantalla. Ver `consentimiento-digital`. */
+          digitalConsentAt: new Date(),
+          digitalConsentIp: ip,
+          digitalConsentTexto: textoAceptado,
           items: { create: ordenPrevia ? itemsDelAgregado(upsells) : armarItems(principal, bonos, upsells) },
           /* ⚠️ La fila de pago nace con la orden, igual que en el checkout de
              tiendas. El webhook la busca por `orderId` para marcarla aprobada y

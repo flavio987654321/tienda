@@ -1,5 +1,10 @@
 import type { Metadata } from "next";
 import { PRICES, PRO_MAX_ACTIVE_COUPONS, PRO_MAX_LIVE_PROMOTIONS, PRO_MAX_AFFILIATES, PRO_MAX_PRODUCTS, MAX_PRODUCTS_POR_TIENDA } from "@/lib/planLimits";
+/* Los plazos de la entrega digital salen de la MISMA constante que los aplica.
+   Escritos a mano acá, el día que cambie el tope los términos prometen un número
+   y el sistema entrega otro — y lo que vale para un reclamo es lo que dicen los
+   términos. */
+import { DIAS_DEL_PERMISO, MAX_DESCARGAS } from "@/lib/entrega-digital";
 import { siteUrl } from "@/lib/site";
 import PaginaLegalPlataforma, { rolValido } from "@/components/legal/PaginaLegalPlataforma";
 import { volverAlPanel, panelValido, robotsDeDocumentoLegal } from "@/components/legal/desde-el-panel";
@@ -399,6 +404,27 @@ const CONTENT = {
         title: "6. Devoluciones y reembolsos",
         body: "Las políticas de devolución y reembolso son definidas por cada tienda. Te recomendamos consultar la política de la tienda antes de comprar. En caso de incumplimiento grave por parte de una tienda, podés reportarlo a marketplacemitienda@gmail.com",
       },
+      /* ⚠️ ESTA SECCIÓN ES LA QUE SOSTIENE TODO EL ECOSISTEMA DE PRODUCTOS
+         DIGITALES, y está escrita para que se pueda leer sin abogado.
+         La excepción del art. 1116 inc. b arranca con "excepto pacto en
+         contrario": si acá dijéramos de más —o si la página de venta promete una
+         garantía— la excepción se cae. Por eso el punto de la garantía está
+         escrito y por eso el consentimiento del checkout la nombra.
+         Ver `lib/consentimiento-digital`. */
+      {
+        title: "6 ter. Productos digitales (archivos de descarga inmediata)",
+        body: "Algunas cuentas de TiendaApps venden productos digitales: archivos que se descargan, como ebooks, plantillas o guías. Funcionan distinto de un producto físico y estas son las reglas, en castellano:",
+        list: [
+          "Cómo te llega: apenas Mercado Pago acredita el pago, se habilita la descarga en la pantalla de agradecimiento y además te mandamos un correo con el enlace. No se envía nada por correo postal ni hay costo de envío.",
+          `Cuánto te dura: el enlace vale ${DIAS_DEL_PERMISO} días corridos desde la compra y permite hasta ${MAX_DESCARGAS} descargas. Es para que lo puedas bajar en el celular y en la computadora sin quedarte sin acceso. Guardá el archivo apenas puedas.`,
+          "Arrepentimiento SI TODAVÍA NO LO DESCARGASTE: tenés los 10 días corridos del art. 34 de la Ley 24.240, como en cualquier compra a distancia. Pedilo por el botón de arrepentimiento del sitio y se te devuelve el dinero.",
+          "Arrepentimiento UNA VEZ DESCARGADO: no corresponde. Lo establece el art. 1116 inc. b del Código Civil y Comercial, que excluye del derecho de revocación a los archivos informáticos suministrados por vía electrónica que se pueden descargar o reproducir de inmediato para uso permanente. Por eso, antes de pagar, se te muestra esta condición y tenés que aceptarla marcando una casilla: la aceptación queda registrada con fecha y hora.",
+          "La garantía que ofrezca quien vende MANDA sobre lo anterior. Si la página de venta promete algo como \"30 días o te devolvemos la plata\", esa promesa vale y podés hacerla valer aunque hayas descargado el archivo. El texto que aceptás en el pago lo dice expresamente cuando hay garantía. Se reclama a quien te vendió.",
+          "Si el archivo no llega, no abre o no es lo que se describía, no estás sin derechos: eso no es arrepentimiento sino incumplimiento, y se reclama igual (Ley 24.240, arts. 10 bis y 19). Escribile primero a quien te vendió y, si no responde, a marketplacemitienda@gmail.com",
+          "Qué registramos de tus descargas: la fecha y hora, tu dirección IP y el navegador desde el que bajaste el archivo. Se guarda con un solo fin —poder acreditar que la entrega se hizo, si alguna vez se discute el cobro— y se borra junto con el permiso de descarga. No se usa para publicidad ni se comparte con terceros fuera de ese fin.",
+          "El contenido del archivo es de quien lo vende, no de TiendaApps. Comprarlo te habilita a usarlo, no a revenderlo ni a redistribuirlo.",
+        ],
+      },
       {
         title: "6 bis. Donaciones a la Canasta Solidaria o a una Causa Libre",
         body: "TiendaApps ofrece, de forma opcional, la posibilidad de donar a la iniciativa \"Canasta Solidaria\" (una colecta comunitaria para comprar una canasta de alimentos real a un vecino) o a una \"Causa Libre\" (una colecta para una persona o situación puntual, descripta en cada campaña) — las dos sin fines de lucro. Al donar, aceptás lo siguiente:",
@@ -417,7 +443,7 @@ const CONTENT = {
         body: null,
         list: [
           "Derecho a información clara y veraz: antes de comprar, tenés derecho a conocer el precio total (con envío e impuestos), descripción del producto, datos de contacto del vendedor y plazo de entrega.",
-          "Derecho de arrepentimiento (art. 34): si compraste a distancia (por internet), podés cancelar la compra sin dar explicaciones dentro de los 10 días corridos desde que recibiste el producto o desde que contrataste el servicio. El vendedor debe reintegrarte el dinero sin descuentos.",
+          "Derecho de arrepentimiento (art. 34): si compraste a distancia (por internet), podés cancelar la compra sin dar explicaciones dentro de los 10 días corridos desde que recibiste el producto o desde que contrataste el servicio. El vendedor debe reintegrarte el dinero sin descuentos. Única excepción: los archivos digitales que ya descargaste (art. 1116 inc. b del Código Civil y Comercial) — está explicado en el punto 6 ter, y si todavía no lo descargaste el derecho corre igual.",
           "Garantía legal (art. 11): los productos tienen garantía mínima de 3 meses para productos usados y 6 meses para productos nuevos. Si el producto tiene un defecto, podés pedir reparación, cambio o devolución del dinero.",
           "Derecho a trato digno (art. 8 bis): tenés derecho a ser tratado con respeto y dignidad. No podés ser discriminado ni intimidado.",
           "Derecho a hacer reclamos: podés reclamar ante la tienda, ante TiendaApps (marketplacemitienda@gmail.com) o ante Defensa del Consumidor de tu provincia sin costo alguno.",

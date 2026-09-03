@@ -623,7 +623,7 @@ model Product {
   /// archivo y de la misma entrega, que después se desincronizan de a una.
   ///
   /// `null` en un producto de tienda, que es lo que son todos hoy.
-  rolDigital String?
+  rolDigital  String?
   /// El contenido de su página de venta: un JSON con las secciones, su orden,
   /// cuáles están encendidas y los textos de cada una.
   ///
@@ -638,9 +638,9 @@ model Product {
   /// De qué PRINCIPAL cuelga. Null en el principal y en todo producto físico.
   /// Con `Cascade`: borrar el principal se lleva sus bonos y sus upsells, que no
   /// tienen dónde vivir sin él.
-  padreId String?
-  padre   Product?  @relation("EmbudoDigital", fields: [padreId], references: [id], onDelete: Cascade)
-  hijos   Product[] @relation("EmbudoDigital")
+  padreId     String?
+  padre       Product?  @relation("EmbudoDigital", fields: [padreId], references: [id], onDelete: Cascade)
+  hijos       Product[] @relation("EmbudoDigital")
 
   storeId String
   store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
@@ -722,31 +722,51 @@ model StockMovement {
 }
 
 model Order {
-  id                   String   @id @default(cuid())
-  status               String   @default("PENDING")
+  id                   String  @id @default(cuid())
+  status               String  @default("PENDING")
   total                Float
-  subtotal             Float    @default(0)
-  discountAmount       Float    @default(0)
-  shippingCost         Float    @default(0)
+  subtotal             Float   @default(0)
+  discountAmount       Float   @default(0)
+  shippingCost         Float   @default(0)
   // Lo que el envío HABRÍA costado cuando una promo lo bonificó. `shippingCost`
   // guarda lo que pagó el comprador (0 con envío gratis), así que sin esta columna
   // el costo del envío regalado desaparecía del sistema y Métricas contaba esa
   // plata como ganancia. 0 = no se bonificó nada (#7c).
-  shippingWaived       Float    @default(0)
+  shippingWaived       Float   @default(0)
   shippingMethod       String?
   // Promociones aplicadas, "congeladas" al momento de la venta: después la promo
   // puede cambiar, pausarse o archivarse, y el comprobante tiene que seguir diciendo
   // la verdad de lo que se cobró.
   // - promoSavings: cuánto ahorró el comprador por promos (número suelto para métricas).
   // - promoSummary: JSON con QUÉ promos ganaron { applied:[{name,label,savings}], freeShipping }.
-  promoSavings         Float    @default(0)
+  promoSavings         Float   @default(0)
   promoSummary         String?
   trackingCode         String?
   notes                String?
-  shippingAddress      String   @default("{}")
+  shippingAddress      String  @default("{}")
   lockedCommissionRate Float?
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
+
+  // ── El consentimiento del art. 1116 inc. b, para ventas DIGITALES ─────────
+  //
+  // Un archivo que se descarga y queda para siempre está EXCEPTUADO del derecho
+  // de arrepentimiento: lo dice el Código Civil y Comercial, art. 1116 inc. b.
+  // Pero la excepción arranca con "excepto pacto en contrario", así que hay que
+  // poder mostrar que la persona lo supo ANTES de pagar, no después de reclamar.
+  //
+  // Estas tres columnas son esa prueba: cuándo lo aceptó, desde dónde, y —lo que
+  // más importa— QUÉ TEXTO decía la pantalla en ese momento. El texto se guarda
+  // entero y no una versión ni un `true`: si mañana se cambia la redacción, una
+  // venta vieja tiene que seguir mostrando la que su comprador leyó de verdad.
+  // Un booleano no prueba nada; un texto con fecha, sí.
+  //
+  // Nulas en toda venta de TIENDA: allá el arrepentimiento corre completo y no
+  // hay nada que exceptuar.
+  digitalConsentAt    DateTime?
+  digitalConsentIp    String?
+  digitalConsentTexto String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   buyerId String
   buyer   User   @relation(fields: [buyerId], references: [id])
@@ -905,10 +925,57 @@ model DigitalDownload {
   orderItemId String    @unique
   orderItem   OrderItem @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
 
+  /// Una fila por descarga. Ver `DigitalDownloadLog`.
+  registros DigitalDownloadLog[]
+
   createdAt DateTime @default(now())
 
   /// Para la limpieza de los vencidos, cuando vuelva a haber un cron que la haga.
   @@index([expiresAt])
+}
+
+/// ══════════════════════════════════════════════════════════════════════════
+/// CADA VEZ QUE ALGUIEN BAJÓ UN ARCHIVO PAGO
+/// ══════════════════════════════════════════════════════════════════════════
+///
+/// ── Para qué sirve de verdad ──────────────────────────────────────────────
+///
+/// Para un contracargo. Tener razón por el art. 1116 no frena a Mercado Pago:
+/// ellos deciden mirando pruebas, y por defecto le creen a quien reclama. El
+/// contador de `DigitalDownload` dice "se bajó 3 veces" y nada más — no dice
+/// cuándo ni desde dónde, así que como prueba de entrega no alcanza.
+///
+/// Esta tabla sí: "el 05/09 a las 14:22, desde 190.x.x.x, con este navegador".
+/// Eso es lo que se adjunta a una defensa.
+///
+/// ── Por qué una tabla y no dos columnas más ───────────────────────────────
+///
+/// Porque "la última descarga" no prueba nada útil: si alguien bajó el archivo
+/// el día 1 y volvió a entrar el día 20, la única fecha guardada sería la del
+/// 20 y la entrega original desaparece. Lo que se defiende es la PRIMERA.
+///
+/// ── Datos personales ──────────────────────────────────────────────────────
+///
+/// La IP identifica a una persona, así que esto se guarda por un motivo
+/// concreto y acotado —probar la entrega ante un reclamo— y muere con el
+/// permiso: `onDelete: Cascade`. Tiene que estar dicho en los términos.
+model DigitalDownloadLog {
+  id String @id @default(cuid())
+
+  downloadId String
+  download   DigitalDownload @relation(fields: [downloadId], references: [id], onDelete: Cascade)
+
+  /// Puede faltar: detrás de ciertos proxys no llega ninguna cabecera confiable.
+  /// Se guarda lo que haya y no se inventa un "0.0.0.0" que después alguien lee
+  /// como si fuera una dirección de verdad.
+  ip     String?
+  /// Recortado antes de guardar: un `User-Agent` lo escribe el cliente y puede
+  /// venir con kilobytes de basura.
+  agente String?
+
+  createdAt DateTime @default(now())
+
+  @@index([downloadId, createdAt(sort: Desc)])
 }
 
 /// Una solicitud de arrepentimiento: alguien que compró y quiere dar marcha

@@ -231,9 +231,12 @@ check("PAN-D", /if \(esPrevia\)[\s\S]{0,200}disabled/.test(dibujante),
 /* ⚠️ Un solo campo obligatorio. La competencia pide cuatro y para entregar un
    PDF hace falta uno: cada campo de más entre el botón y el pago es gente que se
    va, y ninguno de los otros tres entrega nada. */
-const obligatorios = (formulario.match(/<input/g) ?? []).length;
-check("PAN-E", obligatorios === 2 && formulario.includes("Opcional"),
-  "hay dos casillas y sólo una es obligatoria: el mail");
+/* Se cuentan los campos donde hay que ESCRIBIR, no todos los `<input>`: la
+   casilla del consentimiento es un `checkbox` y no es un campo que se llena.
+   Contando todo, PAN-E se disparaba solo el día que se sumó la casilla. */
+const paraEscribir = (formulario.match(/<input\b(?![^>]*type="checkbox")/g) ?? []).length;
+check("PAN-E", paraEscribir === 2 && formulario.includes("Opcional"),
+  "hay dos casillas para escribir y sólo una es obligatoria: el mail");
 
 /* ⚠️ Ningún precio viaja del navegador al servidor. Lo único que sube son
    identificadores; los importes los vuelve a buscar la ruta en la base. */
@@ -257,7 +260,12 @@ check("PAN-H", pantalla.includes("puedeCobrar") && formulario.includes("!p.puede
 /* Los días de garantía salen de SU página, no de un número escrito en el
    checkout: la pantalla de pago no puede prometer algo distinto de la que trajo
    a la persona. */
-check("PAN-I", pantalla.includes('s.clave === "garantia" && s.visible'),
+/* ⚠️ Y sale de la función COMPARTIDA, no de una cuenta hecha en la pantalla:
+   el mismo número lo leen el sello, el texto que se acepta y la ruta que lo
+   guarda como prueba. Copiado en tres lados, el sello promete 30 días y la
+   prueba guardada dice que no hay devolución. */
+check("PAN-I", pantalla.includes("diasDeGarantia(pagina)") &&
+  !pantalla.includes('s.clave === "garantia"'),
   "la garantía que promete el checkout es la que dice su propia página de venta");
 
 /* Una pantalla de pago en un buscador sólo consigue que alguien entre por el
@@ -364,6 +372,83 @@ check("GRA-E", !/email|customerName|buyer: \{ select: \{ email/.test(estadoRuta)
 
 check("GRA-F", estadoRuta.includes("checkRateLimit") && estadoRuta.includes('owner.role !== "DIGITAL"'),
   "y tiene límite por IP, y no contesta por órdenes que no son digitales");
+
+/* ── El consentimiento del art. 1116 ────────────────────────────────────────
+ *
+ * Es la única defensa contra "compré, bajé el PDF y a los dos días pedí la plata
+ * de vuelta". Todo lo de acá abajo protege que la prueba EXISTA y que la escriba
+ * el servidor: una prueba que redacta el navegador no prueba nada.
+ */
+const consentimiento = readFileSync("src/lib/consentimiento-digital.ts", "utf8");
+const sinComentarios = (s: string) => s.replace(/\/\*[\s\S]*?\*\//g, "");
+
+/* El texto tiene que NOMBRAR el artículo. "No hay devoluciones" a secas es una
+   cláusula abusiva; lo que la sostiene es la excepción de la ley. */
+check("CON-A", /1116/.test(consentimiento) && /arrepentimiento|devoluci/i.test(consentimiento),
+  "el texto que se acepta cita el art. 1116, no dice sólo 'no hay devoluciones'");
+
+/* ⚠️ Y no puede prometer que el arrepentimiento no existe: si todavía no lo
+   descargó, corre completo. Decir lo contrario es lo que vuelve abusiva la
+   cláusula entera. */
+check("CON-B", /10 d[ií]as/.test(consentimiento),
+  "y aclara que sin descargar sí se puede arrepentir dentro de los 10 días");
+
+/* La casilla arranca apagada. Una casilla premarcada no es consentimiento. */
+check("CON-C", /useState\(false\)/.test(formulario) && /type="checkbox"/.test(formulario),
+  "la casilla del checkout existe y arranca apagada");
+
+/* El botón no se prende sin ella, Y la función lo vuelve a mirar: un `disabled`
+   se saca desde la consola en dos segundos. */
+check("CON-D", /disabled=\{yendo \|\| !p\.puedeCobrar \|\| !acepto\}/.test(formulario) &&
+  /if \(!acepto\)/.test(formulario),
+  "el botón de pagar está apagado sin la casilla, y `pagar` la mira de nuevo");
+
+/* ⚠️ EL FRENO DE VERDAD ESTÁ EN LA RUTA. Quien pega derecho contra la API no
+   pasa por ninguna pantalla, y son justo esas compras las que después se
+   discuten. Y compara contra `true` exacto: `"false"` y `1` son verdaderos. */
+check("CON-E", /cuerpo\.acepto !== true/.test(sinComentarios(ruta)),
+  "la ruta rechaza la compra sin consentimiento, comparando contra `true` exacto");
+
+/* El texto lo elige el SERVIDOR. Si viajara en el cuerpo, la prueba sería un
+   campo que cualquiera reescribe antes de mandarlo. */
+const cuerpoAgregado = sinComentarios(gracias)
+  .match(/body: JSON\.stringify\(\{[\s\S]{0,300}?\}\)/)?.[0] ?? "";
+check("CON-F",
+  /textoQueAcepto\(/.test(sinComentarios(ruta)) &&
+  !/TEXTO_CONSENTIMIENTO/.test(cuerpoDelPedido) &&
+  !/TEXTO_CONSENTIMIENTO/.test(cuerpoAgregado),
+  "el texto que se guarda lo pone el servidor: el navegador sólo manda que aceptó");
+
+/* Se guarda con la orden, y con las tres cosas: cuándo, desde dónde y qué. */
+check("CON-G",
+  /digitalConsentAt/.test(ruta) && /digitalConsentIp/.test(ruta) && /digitalConsentTexto/.test(ruta),
+  "la orden guarda cuándo, desde qué IP y qué texto se aceptó");
+
+/* El agregado tiene su PROPIO texto: lo que se acepta ahí es otra cosa —una
+   segunda compra— y guardar el del checkout sería guardar una prueba de algo
+   que esa persona no leyó. Por eso `textoQueAcepto(true, …)`. */
+check("CON-H",
+  /textoQueAcepto\(true,/.test(gracias) && /acepto: true/.test(cuerpoAgregado),
+  "la oferta de después de pagar muestra su propio texto y lo manda aceptado");
+
+/* ══════════════════════════════════════════════════════════════════════════
+   LA GARANTÍA DEL VENDEDOR LE GANA AL ART. 1116, Y HAY QUE DECIRLO
+   ══════════════════════════════════════════════════════════════════════════
+
+   La página puede prometer "30 días o te devolvemos la plata", y el checkout lo
+   muestra como sello. Con la casilla arriba, la misma pantalla decía las dos
+   cosas. Y no es sólo feo: el art. 1116 arranca con "excepto pacto en
+   contrario", así que prometer 30 días ES el pacto en contrario. */
+check("CON-I",
+  /export function textoQueAcepto\(esAgregado: boolean, diasDeGarantia: number \| null\)/.test(consentimiento) &&
+  /garant[ií]a de \$\{dias\}/.test(consentimiento),
+  "el texto que se acepta nombra la garantía del vendedor en vez de negarla");
+
+/* Y el número sale de la MISMA función en los tres lugares. */
+check("CON-J",
+  /diasDeGarantia\(normalizarContenido\(producto\.paginaVenta\)\)/.test(ruta) &&
+  /diasDeGarantia\(pagina\)/.test(pantalla),
+  "el sello, el texto aceptado y la prueba guardada leen la misma función");
 
 console.log(fallos === 0
   ? "\nok — la compra digital cobra lo que dice y no entrega lo que no se pagó"

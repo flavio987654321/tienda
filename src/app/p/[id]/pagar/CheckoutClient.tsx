@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
+import { textoQueAcepto } from "@/lib/consentimiento-digital";
 import { Loader2, Lock, ShieldCheck, Package, Check, AlertTriangle } from "lucide-react";
 
 /**
@@ -62,6 +63,9 @@ export default function CheckoutClient(p: Props) {
   const [nombre, setNombre] = useState("");
   const [elegidos, setElegidos] = useState<string[]>([]);
   const [error, setError] = useState("");
+  /* Arranca APAGADA, siempre. Una casilla de consentimiento que viene marcada
+     de fábrica no es consentimiento: es un cartel. */
+  const [acepto, setAcepto] = useState(false);
   const [yendo, setYendo] = useState(false);
   /* ⚠️ El freno del doble click. `useState` no alcanza: dos clics seguidos leen
      el mismo `false` antes de que React vuelva a dibujar, y salen los dos. Con
@@ -91,6 +95,12 @@ export default function CheckoutClient(p: Props) {
       setError("Escribí un correo válido: es a donde te mandamos el archivo.");
       return;
     }
+    /* El botón ya está apagado sin la casilla; esto es por si alguien lo
+       prende desde la consola. La ruta lo mira una tercera vez. */
+    if (!acepto) {
+      setError("Marcá la casilla para poder seguir.");
+      return;
+    }
     enVuelo.current = true;
     setYendo(true);
     setError("");
@@ -104,6 +114,9 @@ export default function CheckoutClient(p: Props) {
           nombre: nombre.trim() || undefined,
           /* Sólo identificadores. Ningún precio viaja desde acá. */
           upsells: elegidos,
+          /* Viaja el HECHO de haber aceptado, no el texto: el texto lo pone el
+             servidor. Una prueba que la escribe el navegador no prueba nada. */
+          acepto: true,
         }),
       });
       const datos = await r.json().catch(() => ({}));
@@ -203,6 +216,27 @@ export default function CheckoutClient(p: Props) {
             <p className="mt-1.5 text-[12px] text-[color:var(--pv-tenue)]">Para saludarte por tu nombre en el mail.</p>
           </div>
 
+          {/* ── La casilla del art. 1116 ──────────────────────────────────
+              Es la única defensa contra "compré, bajé el PDF y pedí la plata de
+              vuelta". Ver `lib/consentimiento-digital`.
+
+              Va ARRIBA del botón y sin achicar: una prueba legal escondida en
+              letra de 9 px o atrás de un link es una prueba que un juez de
+              consumo descarta. Y el texto que se guarda lo elige el servidor,
+              no esta pantalla. */}
+          <label className="mt-5 flex cursor-pointer items-start gap-2.5">
+            <input
+              type="checkbox"
+              checked={acepto}
+              onChange={(e) => { setAcepto(e.target.checked); if (error) setError(""); }}
+              disabled={!p.puedeCobrar}
+              className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer accent-[color:var(--pv-acento)]"
+            />
+            <span className="text-[12.5px] leading-relaxed text-[color:var(--pv-tenue)]">
+              {textoQueAcepto(false, p.diasDeGarantia)}
+            </span>
+          </label>
+
           {error && (
             <p role="alert" className="mt-4 bg-[color:var(--pv-fuerte)] px-3 py-2 text-sm font-medium text-[color:var(--pv-tinta)]">
               {error}
@@ -212,7 +246,9 @@ export default function CheckoutClient(p: Props) {
           <button
             type="button"
             onClick={pagar}
-            disabled={yendo || !p.puedeCobrar}
+            /* Se apaga sin la casilla, y además `pagar` lo vuelve a mirar: un
+               `disabled` se saca desde la consola en dos segundos. */
+            disabled={yendo || !p.puedeCobrar || !acepto}
             className={`mt-5 flex w-full items-center justify-center gap-2 bg-[color:var(--pv-acento)] px-6 py-4 text-lg font-bold text-[color:var(--pv-sobre)] transition hover:brightness-110 disabled:opacity-50 ${p.botonRedondo}`}
           >
             {yendo ? <Loader2 className="h-5 w-5 animate-spin" /> : null}
