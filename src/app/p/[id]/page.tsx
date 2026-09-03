@@ -87,15 +87,47 @@ const paraPagina = (f: {
   imagen: primeraImagen(f.images),
 });
 
+/**
+ * Lo que se ve FUERA de la página: el renglón de Google y la tarjeta que
+ * aparece al pegar el link en WhatsApp, en Instagram o en un anuncio.
+ *
+ * ⚠️ En este rubro la tarjeta pesa MÁS que Google. La venta arranca casi
+ * siempre en un link compartido o en un anuncio, no en una búsqueda: si al
+ * pegarlo no aparece la foto del ebook, se comparte un renglón azul pelado.
+ *
+ * Los dos textos se pueden escribir en el editor, y vacíos caen en el nombre y
+ * la descripción del producto — que es lo que se usaba hasta ahora.
+ */
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
   const fila = await loQueSeMuestra(id);
   if (!fila) return { title: "Producto no encontrado" };
+
+  const seo = normalizarContenido(fila.paginaVenta).seo;
+  const comoTexto = (k: string) => (typeof seo[k] === "string" ? (seo[k] as string) : "");
+  const titulo = comoTexto("titulo") || fila.name;
+  const descripcion = comoTexto("descripcion") || fila.description || undefined;
+  const imagen = primeraImagen(fila.images);
+
   return {
-    title: fila.name,
-    description: fila.description ?? undefined,
+    title: titulo,
+    description: descripcion,
     /* Un borrador no se indexa aunque su dueña lo esté mirando. */
     robots: fila.isActive ? undefined : { index: false, follow: false },
+    openGraph: {
+      title: titulo,
+      description: descripcion,
+      type: "website",
+      /* La foto del producto. Sin esto WhatsApp muestra un renglón sin imagen,
+         que en un chat pasa desapercibido al lado de cualquier otro link. */
+      images: imagen ? [imagen] : undefined,
+    },
+    twitter: {
+      card: imagen ? "summary_large_image" : "summary",
+      title: titulo,
+      description: descripcion,
+      images: imagen ? [imagen] : undefined,
+    },
   };
 }
 

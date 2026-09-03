@@ -12,7 +12,7 @@ import { readFileSync } from "fs";
 import {
   SECCIONES, buscarSeccion, contenidoPorDefecto, normalizarContenido, porQueNoSeDibuja,
   conFichas, FICHA_DIAS, FICHA_ANIO, ESTILOS, PALETAS, COLORES_CLAROS, COLORES_OSCUROS,
-  TONOS, buscarTono, TIPOGRAFIAS, buscarTipografia,
+  TONOS, buscarTono, TIPOGRAFIAS, buscarTipografia, CAMPOS_SEO,
   type Campo,
 } from "./pagina-venta";
 
@@ -623,6 +623,45 @@ check("ANCHO-B", /overflow-x-clip/.test(dibujante),
    con scroll propio, y la página quedaría con una barra vertical adentro. */
 check("ANCHO-C", !/overflow-x-hidden/.test(dibujante),
   "y se recorta con clip, no con hidden, que dejaría un scroll vertical propio");
+
+/* ── Lo que se ve fuera de la página ──────────────────────────────────────── */
+
+/* ⚠️ En este rubro la tarjeta de WhatsApp pesa MÁS que Google: la venta arranca
+   casi siempre en un link compartido o en un anuncio, no en una búsqueda. Sin
+   `openGraph.images`, pegar el link muestra un renglón azul pelado que en un
+   chat pasa desapercibido al lado de cualquier otro. */
+
+check("SEO-A", CAMPOS_SEO.length === 2 && CAMPOS_SEO.every((c) => c.largo > 0),
+  "el título y la descripción de buscadores se pueden escribir, y tienen tope");
+
+/* 60 y 160 no son redondos: son donde cortan Google y la tarjeta. Un tope mayor
+   deja escribir algo que después se ve cortado en la mitad de una palabra. */
+check("SEO-B", (() => {
+  const t = CAMPOS_SEO.find((c) => c.clave === "titulo");
+  const d = CAMPOS_SEO.find((c) => c.clave === "descripcion");
+  return (t?.largo ?? 0) <= 70 && (d?.largo ?? 0) <= 200;
+})(), "y los topes son los que aguanta cada lugar, no un número redondo");
+
+/* Vacíos NO rompen nada: caen en el nombre y la descripción del producto, que es
+   lo que se usaba antes de que estos campos existieran. */
+check("SEO-C", (() => {
+  const p = normalizarContenido(null);
+  return p.seo.titulo === "" && p.seo.descripcion === "";
+})(), "nacen vacíos: sin escribir nada se sigue usando el nombre del producto");
+
+check("SEO-D", (() => {
+  const p = normalizarContenido({ seo: { titulo: "x".repeat(300), colado: "<script>" } });
+  return (p.seo.titulo as string).length === 60 && !("colado" in p.seo);
+})(), "y lo que llega se recorta igual que todo lo demás, aunque no se dibuje");
+
+check("SEO-E", publica.includes("openGraph") && publica.includes("primeraImagen(fila.images)"),
+  "al compartir el link va la foto del producto, no un renglón pelado");
+
+check("SEO-F", publica.includes("index: false"),
+  "y un borrador sigue sin indexarse aunque su dueña lo esté mirando");
+
+check("SEO-G", editor.includes("CAMPOS_SEO.map("),
+  "el editor los muestra, al final del contenido: es lo que menos se toca");
 
 /* ── La portada ───────────────────────────────────────────────────────────── */
 

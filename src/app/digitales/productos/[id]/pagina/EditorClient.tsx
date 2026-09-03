@@ -7,7 +7,7 @@ import {
   Loader2, ExternalLink, Save, Monitor, Smartphone, Lock, ImageIcon, AlertTriangle,
 } from "lucide-react";
 import {
-  TONOS, buscarTono, TIPOGRAFIAS,
+  TONOS, buscarTono, TIPOGRAFIAS, CAMPOS_SEO,
   SECCIONES, ESTILOS, PALETAS, buscarSeccion, porQueNoSeDibuja,
   AVISO_BORRADOR, AVISO_LISTA, AVISO_TOCAR,
   type Campo, type PaginaVenta, type SeccionGuardada,
@@ -460,6 +460,12 @@ export default function EditorDePagina({ productoId, nombre, publicado, pagina: 
     setError("");
   }
 
+  const setSeo = (clave: string, v: string) => {
+    setPagina((p) => ({ ...p, seo: { ...p.seo, [clave]: v } }));
+    setSucio(true);
+    setError("");
+  };
+
   const setCampo = (clave: string, k: string, v: unknown) =>
     actualizar(clave, (s) => ({ ...s, campos: { ...s.campos, [k]: v } }));
 
@@ -707,6 +713,11 @@ export default function EditorDePagina({ productoId, nombre, publicado, pagina: 
           )}
 
           <div className={solapa === "contenido" ? "grid gap-2" : "hidden"}>
+            {/* ⚠️ Ojo con el orden: esto va DESPUÉS de las secciones, y a
+                propósito. Es lo que menos se toca y lo único que no se dibuja en
+                la página, así que arriba estorbaría todos los días para servir
+                una vez. Se llega scrolleando, que es cuando se busca. */}
+            <SeoAparte pagina={pagina} onChange={setSeo} />
             {pagina.secciones.map((s, i) => {
               const def = buscarSeccion(s.clave);
               if (!def) return null;
@@ -982,6 +993,40 @@ export default function EditorDePagina({ productoId, nombre, publicado, pagina: 
             </div>
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Los dos textos que se ven FUERA de la página: el renglón de Google y la
+ * tarjeta que aparece al pegar el link en WhatsApp o en Instagram.
+ *
+ * Va en una tarjeta aparte y no como una sección más porque no es un bloque:
+ * no se dibuja, no se apaga y no se ordena. Y los dos son opcionales — vacíos
+ * caen en el nombre y la descripción del producto.
+ */
+function SeoAparte({ pagina, onChange }: {
+  pagina: PaginaVenta; onChange: (clave: string, v: string) => void;
+}) {
+  return (
+    <div className="mt-4 rounded-2xl border border-gray-200 bg-white p-3 panel-oscuro:border-gray-700 panel-oscuro:bg-gray-900">
+      <p className="text-sm font-bold text-gray-900 panel-oscuro:text-gray-100">
+        Cómo se ve al compartirla
+      </p>
+      <p className="mb-3 mt-0.5 text-[11px] leading-relaxed text-gray-500 panel-oscuro:text-gray-400">
+        Lo que aparece en Google y en la tarjeta de WhatsApp. La foto sale sola de
+        la portada del producto.
+      </p>
+      <div className="grid gap-3">
+        {CAMPOS_SEO.map((campo) => (
+          <CasillaTexto
+            key={campo.clave}
+            campo={campo}
+            valor={typeof pagina.seo[campo.clave] === "string" ? (pagina.seo[campo.clave] as string) : ""}
+            onChange={(v) => onChange(campo.clave, v)}
+          />
+        ))}
       </div>
     </div>
   );

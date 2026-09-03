@@ -754,6 +754,32 @@ export const TIPOGRAFIAS: readonly Tipografia[] = [
 export function buscarTipografia(clave: unknown): Tipografia {
   return TIPOGRAFIAS.find((t) => t.clave === clave) ?? TIPOGRAFIAS[0];
 }
+/* ── Lo que se ve FUERA de la página ────────────────────────────────────────
+ *
+ * Dos textos que no se dibujan en ningún lado de la página y sin embargo son
+ * lo primero que la gente ve de ella: el renglón de Google y —sobre todo— la
+ * tarjeta que aparece al pegar el link en WhatsApp, en Instagram o en un
+ * anuncio. Para este rubro esa tarjeta pesa más que Google: la venta arranca
+ * casi siempre en un link compartido, no en una búsqueda.
+ *
+ * Vacíos NO rompen nada: caen en el nombre y la descripción del producto, que
+ * es lo que se usaba hasta ahora. Se pueden escribir porque sirven para cosas
+ * distintas — el título de la página es una promesa y puede ser largo; el de
+ * Google se corta a los 60 caracteres y conviene que tenga la palabra que la
+ * gente busca.
+ *
+ * ⚠️ Van sueltos y no como una sección más: una sección es un bloque que se
+ * dibuja, se apaga y se ordena. Esto no se dibuja nunca. Meterlo en la lista
+ * obligaría a inventarle un `visible` y un lugar en el orden que no significan
+ * nada.
+ */
+export const CAMPOS_SEO: readonly Campo[] = [
+  { clave: "titulo", etiqueta: "Título en Google y al compartir", tipo: "texto", largo: 60,
+    ayuda: "Se corta a los 60 caracteres. Vacío usa el nombre del producto." },
+  { clave: "descripcion", etiqueta: "Descripción", tipo: "parrafo", largo: 160,
+    ayuda: "El renglón de abajo en Google y en la tarjeta de WhatsApp. Vacía usa la descripción del producto." },
+];
+
 /* ── Los tres fondos ────────────────────────────────────────────────────────
  *
  * Cada sección elige con cuál de estos tres se dibuja. Es una LISTA CERRADA y
@@ -858,6 +884,8 @@ export type PaginaVenta = {
   paleta: string;
   /** Clave de `TIPOGRAFIAS`. Idem. */
   tipografia: string;
+  /** Los textos de `CAMPOS_SEO`. No se dibujan: viajan en las cabeceras. */
+  seo: Record<string, unknown>;
   secciones: SeccionGuardada[];
 };
 
@@ -1023,8 +1051,29 @@ export function normalizarContenido(valor: unknown): PaginaVenta {
     estilo: buscarEstilo(suelto?.estilo).clave,
     paleta: buscarPaleta(suelto?.paleta).clave,
     tipografia: buscarTipografia(suelto?.tipografia).clave,
+    seo: normalizarSeo(suelto?.seo),
     secciones: finales,
   };
+}
+
+/**
+ * Los textos de buscadores, con los mismos topes que todo lo demás.
+ *
+ * Pasa por `normalizarCampo` igual que un campo de sección: lo que no está en
+ * `CAMPOS_SEO` se descarta y lo largo se recorta. Un título de 400 caracteres
+ * no rompe la página —no se dibuja— pero le llega entero a Google.
+ */
+function normalizarSeo(valor: unknown): Record<string, unknown> {
+  const origen = valor && typeof valor === "object" && !Array.isArray(valor)
+    ? (valor as Record<string, unknown>)
+    : {};
+  const seo: Record<string, unknown> = {};
+  for (const campo of CAMPOS_SEO) {
+    /* `esNueva` en false a propósito: acá NO hay texto de fábrica que poner.
+       Vacío significa 'usá el del producto', que es lo que hace la página. */
+    seo[campo.clave] = normalizarCampo(campo, origen[campo.clave], false);
+  }
+  return seo;
 }
 
 /** El objeto de arriba de todo, venga como objeto o como JSON. */
