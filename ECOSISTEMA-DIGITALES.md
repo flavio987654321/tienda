@@ -2135,6 +2135,67 @@ Los dos salieron de repasar la subida, y los dos **van con la entrega y no antes
   versión 2 está perfecto; para vender una cosa y entregar otra, no tanto. Hay
   que decidir si se avisa, si se congela lo vendido, o si se acepta como está.
 
+### 🔲 Las devoluciones y el arrepentimiento (mirado el 02/09/26)
+
+La pregunta que lo destapó, y es la correcta: *"¿no es medio tramposo? Compran,
+descargan, y a los 10 días ponen arrepentimiento: nosotros devolvemos la plata y
+ellos se quedan con el producto."*
+
+**Sí, es asimétrico, y no hay forma limpia de esquivarlo.**
+
+#### Lo que hay que entender primero
+
+El derecho de arrepentimiento **no lo crea la sección de Garantía de la página**.
+Sale del art. 34 de la Ley 24.240 y corre desde la compra, haya o no un cartel.
+Apagar la sección no lo apaga: sólo hace que quien compra no se entere, y que la
+página muestre una promesa más corta que la que ya rige.
+
+Por eso el piso del campo pasó de 1 a 10 días. **No se agregó una obligación: se
+sacó una mentira.**
+
+#### Por qué duele más acá que en una tienda física
+
+Un PDF descargado no se puede devolver. En la Unión Europea la norma contempla
+justamente eso —si aceptaste la descarga inmediata perdés el derecho a
+arrepentirte (Directiva 2011/83, art. 16 m)—. **En Argentina esa excepción no
+existe**, así que quien vende queda expuesto. No es una interpretación cómoda: es
+que no hay un escudo escrito.
+
+#### Por qué igual conviene mostrarla
+
+- **Es raro.** Los pedidos de devolución en infoproductos son un porcentaje bajo.
+  Pasa, pero no es lo normal.
+- **Mostrar la garantía suele dar más ventas de las que cuesta en devoluciones.**
+  Es el resultado más repetido en venta directa. Y esconderla no baja las
+  devoluciones —el derecho existe igual— sólo baja las ventas.
+
+O sea que quien la esconde paga los dos costos.
+
+#### Lo que sí se puede hacer, y va con la entrega
+
+Ninguna anula el derecho. Cambian el incentivo del que abusa.
+
+- 🔲 **Marcar el PDF con el mail de quien compró.** Es la que más rinde. No frena
+  una devolución, frena que después lo repartan.
+- ✅ **El enlace de descarga vence** — el permiso dura 30 días. Ya está.
+- 🔲 **Registro de la descarga**: cuándo, desde dónde, cuántas veces. Sirve para
+  detectar a alguien que lo hace de sistema, no para negar un caso suelto.
+- 🔲 **Cortar el acceso al pedir la devolución.** Con un PDF ya bajado no aplica;
+  sí aplicaría a una biblioteca o a un acceso online, si algún día existen.
+
+#### ✅ DECIDIDO (02/09/26): la comisión se devuelve entera
+
+Si alguien se arrepiente, **la plataforma devuelve su comisión completa**. La
+competencia no lo aclara en ningún lado; nosotros lo escribimos antes de cobrar el
+primer peso.
+
+El motivo: si la venta se deshizo no hay servicio prestado, y quedarse con la
+comisión de una venta anulada es lo primero que alguien captura de pantalla y
+publica. El costo de esa foto es mucho más alto que lo que se junta reteniendo.
+
+🔲 **Falta escribirlo donde se lee**: en los términos, en la pantalla de
+suscripción y en el detalle de la venta cuando la devolución exista de verdad.
+
 ## FASE 5 bis — La dirección propia por producto
 
 La opción C de 2.3. **Estaba escrita como "una columna de slug" y es bastante más
