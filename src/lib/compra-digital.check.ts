@@ -10,7 +10,7 @@
 
 import { readFileSync } from "fs";
 import {
-  totalDeLaCompra, comisionDeLaVenta, armarItems, upsellsQueValen,
+  totalDeLaCompra, totalDelAgregado, comisionDeLaVenta, armarItems, itemsDelAgregado, upsellsQueValen,
   MAX_UPSELLS_POR_COMPRA, type ItemDeCompra,
 } from "./compra-digital";
 import { COMISION_DIGITAL } from "./planLimits";
@@ -196,7 +196,10 @@ check("RUT-F", ruta.includes('status: "PENDING"') && ruta.includes("createdAt: {
 
 /* Nunca se actualiza una cuenta existente desde el checkout: si el correo es de
    alguien que vende, se le colgaría la orden encima de sus datos. */
-check("RUT-G", /findUnique\(\{ where: \{ email \}[\s\S]{0,200}user\.create/.test(ruta),
+/* Se mira la INTENCIÓN y no el nombre de la variable: buscar la cuenta, y crearla
+   sólo si no estaba. Lo que no puede aparecer nunca es un `update`. */
+check("RUT-G", /user\.findUnique\([\s\S]{0,160}\?\?[\s\S]{0,200}user\.create/.test(ruta) &&
+  !ruta.includes("user.update"),
   "un correo que ya tiene cuenta se reusa y NO se toca");
 
 /* ── La pantalla de pago ──────────────────────────────────────────────────── */
@@ -261,6 +264,78 @@ check("PAN-I", pantalla.includes('s.clave === "garantia" && s.visible'),
    medio del embudo, sin haber leído lo que está por comprar. */
 check("PAN-J", /robots: \{ index: false/.test(pantalla),
   "la pantalla de pago no se indexa");
+
+/* ── El agregado: la oferta de después de pagar ───────────────────────────── */
+
+const gracias = readFileSync("src/app/p/[id]/gracias/GraciasClient.tsx", "utf8");
+const paginaGracias = readFileSync("src/app/p/[id]/gracias/page.tsx", "utf8");
+const estadoRuta = readFileSync("src/app/api/digitales/estado-compra/[orden]/route.ts", "utf8");
+
+/* ⚠️ EL error que hay que hacer imposible: cobrarle el ebook dos veces a alguien
+   en la pantalla que aparece JUSTO DESPUÉS de que lo pagó. */
+check("AGR-A", totalDelAgregado([
+  { id: "U1", name: "u", price: 4900, rolDigital: "UPSELL" },
+]) === 4900, "un agregado cobra sólo el upsell, no el producto principal");
+
+check("AGR-B", itemsDelAgregado([
+  { id: "U1", name: "u", price: 4900, rolDigital: "UPSELL" },
+]).length === 1, "y su orden lleva una sola línea: la del upsell");
+
+check("AGR-C", totalDelAgregado([]) === 0, "sin upsells no hay nada que cobrar");
+check("AGR-D", totalDelAgregado([
+  { id: "U", name: "u", price: Infinity, rolDigital: "UPSELL" },
+]) === 0, "y un precio roto vale cero, igual que en la compra normal");
+
+/* ⚠️ Lo más serio del agregado. El correo sale de la ORDEN ANTERIOR y nunca del
+   pedido: con el mail viniendo del navegador, alguien con un identificador de
+   orden ajeno podría colgarle una compra al correo de otra persona. */
+check("AGR-E", !/ordenPrevia[\s\S]{0,600}email: cuerpo\.email/.test(ruta) &&
+  ruta.includes("compradorPrevio = previa.buyer"),
+  "en un agregado el comprador sale de la orden anterior, no del pedido");
+
+/* Y esa orden tiene que ser de ESTA tienda y estar YA PAGADA. Sin lo primero, el
+   identificador de una orden de otro vendedor sirve para colgarle un upsell
+   nuestro; sin lo segundo, se pueden encadenar compras sin pagar ninguna. */
+check("AGR-F", /ordenPrevia[\s\S]{0,500}storeId: producto\.store\.id/.test(ruta) &&
+  /ordenPrevia[\s\S]{0,600}status: "CONFIRMED"/.test(ruta),
+  "la compra anterior tiene que ser de esta tienda y estar pagada");
+
+check("AGR-G", gracias.includes("ordenPrevia: p.ordenId") && !/email:/.test(gracias),
+  "la pantalla manda el identificador de la compra, nunca un correo");
+
+/* No ofrecerle de nuevo algo que acaba de pagar. */
+check("AGR-H", paginaGracias.includes("yaComprados"),
+  "no se ofrece un upsell que ya está en esa compra");
+
+/* ── La pantalla de gracias ───────────────────────────────────────────────── */
+
+/* ⚠️ Mercado Pago devuelve acá apenas aprueba, y los permisos los emite el aviso
+   de pago unos segundos después. Sin la espera, quien acaba de pagar ve
+   "confirmando" y tiene que recargar a mano para enterarse de que ya está. */
+check("GRA-A", gracias.includes("estado-compra") && gracias.includes("setTimeout(preguntar"),
+  "la pantalla espera al aviso de pago sola, sin pedir que se recargue");
+
+/* Y no gira para siempre: pasado el rato explica qué hacer. */
+check("GRA-B", gracias.includes("HASTA_MS") && gracias.includes('"demorado"'),
+  "si tarda demasiado deja de preguntar y dice que el mail llega igual");
+
+/* ⚠️ Abrir la dirección de descarga GASTA una de las cinco. Si la pantalla las
+   disparara sola al cargar, una recarga costaría una descarga de cada archivo. */
+check("GRA-C", !/window\.location[\s\S]{0,80}descargar/.test(gracias) &&
+  gracias.includes('href={`/api/digitales/descargar/'),
+  "los archivos se bajan tocando un botón, nunca solos al cargar");
+
+/* Primero se cumple lo que la persona pagó; recién después se le ofrece algo
+   más. Al revés parece que el archivo está atrás de otra compra. */
+check("GRA-D", gracias.indexOf("Descargar") < gracias.indexOf("Una cosa más"),
+  "la oferta va DESPUÉS de los archivos, nunca antes");
+
+/* La ruta de estado es pública y no puede filtrar datos de la persona. */
+check("GRA-E", !/email|customerName|buyer: \{ select: \{ email/.test(estadoRuta),
+  "el estado de la compra no devuelve ni el correo ni el nombre de quien compró");
+
+check("GRA-F", estadoRuta.includes("checkRateLimit") && estadoRuta.includes('owner.role !== "DIGITAL"'),
+  "y tiene límite por IP, y no contesta por órdenes que no son digitales");
 
 console.log(fallos === 0
   ? "\nok — la compra digital cobra lo que dice y no entrega lo que no se pagó"

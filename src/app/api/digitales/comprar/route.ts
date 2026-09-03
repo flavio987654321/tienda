@@ -9,7 +9,7 @@ import { loQueFalta } from "@/lib/productos-digitales";
 import { COMISION_DIGITAL } from "@/lib/planLimits";
 import type { TierDigital } from "@/lib/planes-digitales";
 import {
-  totalDeLaCompra, comisionDeLaVenta, armarItems, upsellsQueValen,
+  totalDeLaCompra, totalDelAgregado, comisionDeLaVenta, armarItems, itemsDelAgregado, upsellsQueValen,
   MAX_UPSELLS_POR_COMPRA, type ItemDeCompra,
 } from "@/lib/compra-digital";
 
@@ -82,12 +82,29 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "No sabemos qué producto querés comprar." }, { status: 400 });
   }
 
-  /* El mail es lo ÚNICO obligatorio, y es obligatorio porque es a donde va el
-     archivo. Se normaliza a minúsculas acá: es la identidad del comprador y del
-     carrito abandonado, así que "Ana@X.com" y "ana@x.com" tienen que ser la
-     misma persona o se le duplica la cuenta y se le pierde la compra. */
-  const email = normalizarEmail(cuerpo.email);
-  if (!email) {
+  /**
+   * ── Un AGREGADO: la oferta de después de pagar ────────────────────────────
+   *
+   * Cuando viene el identificador de una compra ya confirmada, esto es un
+   * agregado: se cobran SÓLO los upsells, sin el principal ni los bonos, porque
+   * la persona ya los pagó y ya los tiene.
+   *
+   * ⚠️ Y el correo sale de ESA orden, nunca del pedido. Es la diferencia entre
+   * "agregale esto a mi compra" y "agregale esto a la compra de cualquiera": con
+   * el mail viniendo del navegador, alguien con un identificador de orden ajeno
+   * podría colgarle una compra al correo de otra persona.
+   */
+  const ordenPrevia =
+    typeof cuerpo.ordenPrevia === "string" && ID_RE.test(cuerpo.ordenPrevia)
+      ? cuerpo.ordenPrevia
+      : null;
+
+  /* El mail es obligatorio en una compra nueva, y es a donde va el archivo. Se
+     normaliza a minúsculas: es la identidad del comprador y del carrito
+     abandonado, así que "Ana@X.com" y "ana@x.com" tienen que ser la misma
+     persona o se le duplica la cuenta y se le pierde la compra. */
+  const emailDelPedido = normalizarEmail(cuerpo.email);
+  if (!ordenPrevia && !emailDelPedido) {
     return NextResponse.json(
       { error: "Escribí un correo válido: es a donde te mandamos el archivo." },
       { status: 400 },
@@ -199,7 +216,39 @@ export async function POST(req: NextRequest) {
 
   const upsells = upsellsQueValen(cuerpo.upsells, producto.hijos, producto.id);
 
-  const total = totalDeLaCompra(principal, upsells);
+  /* ── Si es un agregado, de quién y sobre qué ───────────────────────────── */
+
+  let compradorPrevio: { id: string; email: string } | null = null;
+  if (ordenPrevia) {
+    const previa = await prisma.order.findFirst({
+      where: {
+        id: ordenPrevia,
+        /* ⚠️ De ESTA tienda. Sin esto, el identificador de una orden de otro
+           vendedor serviría para agregarle un upsell nuestro a su compra. */
+        storeId: producto.store.id,
+        /* Y ya pagada. Colgar un agregado de una orden pendiente permitiría
+           armar compras encadenadas sin haber pagado ninguna. */
+        status: "CONFIRMED",
+      },
+      select: { buyer: { select: { id: true, email: true } } },
+    });
+    if (!previa) {
+      return NextResponse.json(
+        { error: "No encontramos tu compra anterior. Probá desde la página del producto." },
+        { status: 404 },
+      );
+    }
+    compradorPrevio = previa.buyer;
+
+    if (upsells.length === 0) {
+      return NextResponse.json({ error: "No hay nada para agregar." }, { status: 400 });
+    }
+  }
+
+  /* Un agregado cobra SÓLO los upsells: el principal y los bonos ya están
+     pagados y entregados. Cobrarlos de nuevo sería el peor error posible en la
+     pantalla que aparece justo después de pagar. */
+  const total = ordenPrevia ? totalDelAgregado(upsells) : totalDeLaCompra(principal, upsells);
   if (!(total > 0)) {
     return NextResponse.json({ error: "Esta compra no está disponible ahora mismo." }, { status: 409 });
   }
@@ -236,12 +285,15 @@ export async function POST(req: NextRequest) {
          de alguien que vende, se reusa su `User` para colgarle la orden y no se
          le toca ni el nombre ni el rol. Mismo criterio que el checkout de
          tiendas, y por el mismo motivo: una cuenta es una sola cosa. */
-      const comprador =
-        (await tx.user.findUnique({ where: { email }, select: { id: true } })) ??
+      /* En un agregado el comprador ya está resuelto y sale de la orden
+         anterior, así que ni se busca ni se crea nada. */
+      const comprador = compradorPrevio ?? (
+        (await tx.user.findUnique({ where: { email: emailDelPedido! }, select: { id: true } })) ??
         (await tx.user.create({
-          data: { email, name: nombre, role: "BUYER" },
+          data: { email: emailDelPedido!, name: nombre, role: "BUYER" },
           select: { id: true },
-        }));
+        }))
+      );
 
       /* ⚠️ EL FRENO DEL DOBLE CLICK, y de algo peor: volver atrás desde Mercado
          Pago y apretar Pagar otra vez. Sin esto, cada intento deja una orden
@@ -286,7 +338,7 @@ export async function POST(req: NextRequest) {
              panel de tiendas, a donde una orden digital no llega: ese panel es
              de rol OWNER y esta tienda es de una cuenta DIGITAL. */
           lockedCommissionRate: COMISION_DIGITAL[tier],
-          items: { create: armarItems(principal, bonos, upsells) },
+          items: { create: ordenPrevia ? itemsDelAgregado(upsells) : armarItems(principal, bonos, upsells) },
           /* ⚠️ La fila de pago nace con la orden, igual que en el checkout de
              tiendas. El webhook la busca por `orderId` para marcarla aprobada y
              guardar el identificador de Mercado Pago: sin ella, el aviso de pago
@@ -312,7 +364,9 @@ export async function POST(req: NextRequest) {
      persona vive en la orden y en el mail, no en la pantalla de MP. */
   const items = [{
     id: orden.id,
-    title: upsells.length > 0 ? `${producto.name} + ${upsells.length} más` : producto.name,
+    title: ordenPrevia
+      ? upsells.map((u) => u.name).join(" + ")
+      : upsells.length > 0 ? `${producto.name} + ${upsells.length} más` : producto.name,
     unit_price: total,
     quantity: 1,
   }];

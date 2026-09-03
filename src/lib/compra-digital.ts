@@ -95,6 +95,31 @@ export function comisionDeLaVenta(total: number, tier: TierDigital): number {
 }
 
 /**
+ * Lo que se cobra por un AGREGADO: una compra que se suma a otra ya pagada.
+ *
+ * ── Por qué es su propia función ────────────────────────────────────────────
+ *
+ * Porque un agregado NO lleva el principal ni los bonos: la persona ya los pagó
+ * y ya los tiene. Meterlos otra vez le cobraría el ebook dos veces, que es el
+ * peor error posible en la pantalla que aparece justo después de pagar.
+ *
+ * Se escribe aparte en vez de meterle una bandera a `totalDeLaCompra`, porque
+ * una bandera que decide si se cobra o no el producto principal es una línea de
+ * la que hay que acordarse en todos lados. Dos funciones con nombres distintos
+ * no se confunden.
+ */
+export function totalDelAgregado(upsells: ItemDeCompra[]): number {
+  return upsells.reduce((suma, u) => suma + pesos(u.price), 0);
+}
+
+/** Las líneas de un agregado: sólo los upsells, sin principal y sin bonos. */
+export function itemsDelAgregado(
+  upsells: ItemDeCompra[],
+): Array<{ productId: string; price: number; quantity: number }> {
+  return upsells.map((u) => ({ productId: u.id, price: pesos(u.price), quantity: 1 }));
+}
+
+/**
  * Las líneas de la orden.
  *
  * ⚠️ **Una línea por cosa entregable, incluidos los bonos a precio cero.** No es
