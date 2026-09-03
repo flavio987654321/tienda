@@ -3,6 +3,26 @@
 // el contenido cambie de forma sustantiva — dispara el banner de re-aceptación
 // para usuarios que aceptaron una versión anterior.
 //
+// 1.7 (03/09/2026) — Productos Digitales, y un arreglo que sale de él.
+//   · Faltaba la solapa "Productos Digitales" en los dos documentos, y el
+//     problema no era que faltara: era que le dábamos OTRO. El registro armaba
+//     el link con una cadena de tres condiciones —seller, owner, y todo lo demás
+//     a "buyer"— escrita cuando los tipos de cuenta eran tres. Al aparecer el
+//     cuarto, quien se registraba en Productos Digitales aceptaba los términos
+//     del Cliente: el documento de alguien que COMPRA en una tienda, y el que
+//     promete 10 días de arrepentimiento para todo. Ahora el rol viaja entero.
+//   · Los archivos de descarga inmediata están exceptuados del derecho de
+//     arrepentimiento por el art. 1116 inc. b del Código Civil y Comercial. Se
+//     escribe en el punto 6 ter del Cliente y se nombra la excepción en el
+//     punto 7 de sus derechos, con las dos condiciones que la sostienen: si no
+//     lo descargó el derecho corre completo, y la garantía que ofrezca quien
+//     vende le gana a la excepción ("excepto pacto en contrario").
+//   · La privacidad no declaraba dos datos personales que el sistema empezó a
+//     guardar: la dirección IP de quien acepta esa condición antes de pagar, y
+//     la IP y el navegador de cada descarga. Estaban en los términos y faltaban
+//     ahí. Se declaran en las dos solapas —la de quien vende y la de quien
+//     compra— con su finalidad, su base legal y su plazo.
+//
 // 1.6 (11/08/2026) — tres arreglos que salieron de revisar el texto, no de un
 // cambio de producto:
 //   · La sección 5 del Dueño decía "sos responsable de las comisiones que
@@ -44,7 +64,7 @@
 // cambiaron seis veces (Meta, Google Analytics, cambio de rubro, entre otros), así
 // que el banner nunca se disparó por ninguno de esos cambios. El bump a 1.3
 // arrastró toda esa deuda de una.
-export const CURRENT_TERMS_VERSION = "1.6";
+export const CURRENT_TERMS_VERSION = "1.7";
 
 /**
  * Condiciones del diseño colaborativo (/diseno-propio). Versión aparte de
@@ -68,9 +88,9 @@ export const DESIGN_BRIEF_TERMS_VERSION = "1.0";
  * sección ni "conforme a lo dispuesto".
  */
 export const CURRENT_TERMS_SUMMARY: string[] = [
-  "Aclaramos quién paga las comisiones de afiliados. Había dos partes del texto que decían cosas distintas: ahora queda escrito en un solo lugar que las paga TiendaApps directamente al afiliado, y que lo tuyo es definir el porcentaje y avisar si lo cambiás.",
-  "Escribimos qué pasa cuando eliminás tu cuenta, que antes no estaba explicado en ningún lado: qué se borra, qué queda anonimizado por obligación fiscal, y por qué conviene cerrar la tienda en vez de eliminarla si lo único que querés es dejar de pagar.",
-  "Si donaste a la Canasta Solidaria o a una Causa Libre, ahora tenés tu propia solapa en los términos. Antes te mandaba a la de Cliente, aunque para donar no hace falta tener cuenta ni haber comprado nunca.",
+  "Si vendés productos digitales, ahora tenés tu propia solapa en los términos y en la privacidad. Antes te mandaba a la de Cliente, que es la de alguien que compra en una tienda: no decía nada de tu comisión ni de cómo se entrega un archivo, y encima te prometía diez días de arrepentimiento sobre tus propias ventas.",
+  "Escribimos qué pasa con la devolución de un archivo que ya se descargó. Si todavía no lo bajaste, tenés tus diez días como en cualquier compra por internet. Si ya lo bajaste, no corresponde — lo dice el Código Civil y Comercial— y por eso ahora te lo mostramos antes de pagar y te pedimos que lo aceptes. Y si quien vende ofrece una garantía en su página, esa garantía vale igual.",
+  "Contamos qué guardamos de una descarga: la fecha, la dirección IP y el navegador. Sirve para poder demostrar que el archivo se entregó si algún día se discute el cobro, y para nada más. No se usa para publicidad y se borra junto con el enlace de descarga.",
 ];
 
 /**
@@ -80,4 +100,4 @@ export const CURRENT_TERMS_SUMMARY: string[] = [
  * afirman que "la fecha de última actualización al inicio de esta página siempre
  * refleja la versión vigente". Si subís la versión, actualizá esto también.
  */
-export const TERMS_LAST_UPDATED = "agosto 2026";
+export const TERMS_LAST_UPDATED = "septiembre 2026";

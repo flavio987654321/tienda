@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { PRICES, PRO_MAX_ACTIVE_COUPONS, PRO_MAX_LIVE_PROMOTIONS, PRO_MAX_AFFILIATES, PRO_MAX_PRODUCTS, MAX_PRODUCTS_POR_TIENDA } from "@/lib/planLimits";
+import { PRICES, PRO_MAX_ACTIVE_COUPONS, PRO_MAX_LIVE_PROMOTIONS, PRO_MAX_AFFILIATES, PRO_MAX_PRODUCTS, MAX_PRODUCTS_POR_TIENDA, COMISION_DIGITAL } from "@/lib/planLimits";
 /* Los plazos de la entrega digital salen de la MISMA constante que los aplica.
    Escritos a mano acá, el día que cambie el tope los términos prometen un número
    y el sistema entrega otro — y lo que vale para un reclamo es lo que dicen los
@@ -339,6 +339,99 @@ const CONTENT = {
       {
         title: "9. Contacto",
         body: "Para consultas escribinos a marketplacemitienda@gmail.com",
+      },
+    ],
+  },
+  /* ⚠️ Faltaba, y no era que faltara un documento: era que le dábamos OTRO. El
+     registro mandaba a las cuentas digitales a leer los términos de Cliente
+     —los de alguien que compra en una tienda, y los que prometen 10 días de
+     arrepentimiento para todo—. Arreglado el 03/09/26 junto con este apartado. */
+  digital: {
+    label: "Productos Digitales",
+    sections: [
+      {
+        title: "1. Aceptación de los términos",
+        body: "Al crear una cuenta de Productos Digitales en TiendaApps, aceptás estos Términos y Condiciones en su totalidad. Si no estás de acuerdo con alguna parte, no podés usar el servicio.",
+      },
+      {
+        title: "1 bis. Edad mínima requerida",
+        body: "Tenés que ser mayor de 18 años para crear una cuenta. Al registrarte declarás que cumplís con ese requisito. Si detectamos una cuenta de una persona menor de edad, la eliminamos junto con todos sus datos.",
+      },
+      {
+        title: "2. Qué es este servicio",
+        body: "Productos Digitales es un espacio para vender archivos que se descargan —ebooks, guías, plantillas— con su propia página de venta y entrega automática. No es una tienda: no hay envíos, no hay stock y no hay carrito con varios productos.",
+        list: [
+          "Vos ponés el archivo, el precio y los textos. TiendaApps pone la página, el cobro y la entrega.",
+          "El cobro se hace con Mercado Pago, a tu nombre, con tu cuenta conectada. La plata entra a tu cuenta de Mercado Pago, no a la nuestra.",
+          "Apenas Mercado Pago acredita el pago, la plataforma le entrega el archivo a quien compró: se lo muestra en pantalla y se lo manda por correo.",
+        ],
+      },
+      {
+        title: "3. La comisión, y qué pasa si hay una devolución",
+        body: "TiendaApps retiene un porcentaje de cada venta. No hay factura ni cobro aparte: la comisión se retiene sola dentro del cobro de Mercado Pago.",
+        list: [
+          `El porcentaje depende de tu plan: ${COMISION_DIGITAL.FREE}% en Free, ${COMISION_DIGITAL.STARTER}% en Starter y ${COMISION_DIGITAL.PRO}% en Pro. En Free no hay abono: la comisión es lo único que se cobra.`,
+          "El porcentaje queda congelado en cada venta al momento de cobrarse. Si después cambiás de plan, las ventas viejas conservan el porcentaje que tenían — no se recalculan.",
+          "Si hay una devolución, TiendaApps devuelve su comisión completa. Si la venta se deshizo no hay servicio prestado, y quedarnos con la comisión de una venta anulada sería cobrar por nada.",
+          "La comisión solo funciona con Mercado Pago. Si en el futuro se habilitan otros medios de pago, se informará cómo se cobra en cada uno antes de activarlos.",
+        ],
+      },
+      {
+        title: "4. Qué podés vender, y qué no",
+        body: "Sos el único responsable del archivo que subís y de lo que prometés en tu página de venta.",
+        list: [
+          "Tiene que ser tuyo o tenés que tener derecho a venderlo. Subir material de otra persona —un ebook ajeno, un curso pirateado, plantillas con licencia que no permite reventa— es motivo de baja inmediata y de responder ante quien reclame.",
+          "Lo que la página promete tiene que ser lo que el archivo entrega. Una página que anuncia 200 páginas y entrega 12 es publicidad engañosa (arts. 4 y 8, Ley 24.240), y responde quien la escribió.",
+          "No se puede vender contenido ilegal, ni que infrinja derechos de terceros, ni que prometa resultados que no se pueden cumplir (curas, rendimientos financieros garantizados y similares).",
+          "Si un tercero reclama por contenido que subiste, te comprometés a avisarnos de inmediato y a colaborar en la defensa. La responsabilidad final será proporcional a la participación de cada parte, conforme la legislación argentina. Esta cláusula no implica renuncia a ningún derecho reconocido por la Ley 24.240.",
+        ],
+      },
+      {
+        title: "5. La entrega, y qué se registra de ella",
+        body: "La entrega la hace la plataforma, no vos. Estos son sus límites y su registro:",
+        list: [
+          `El enlace de descarga vale ${DIAS_DEL_PERMISO} días corridos desde la compra y permite hasta ${MAX_DESCARGAS} descargas. Es para que quien compró lo pueda bajar en el celular y en la computadora sin quedarse afuera.`,
+          "Podés reenviar el mail de entrega desde tu panel de Ventas, con un tope diario por venta. Si el enlace estaba vencido, el reenvío lo renueva; el contador de descargas no se reinicia.",
+          "De cada descarga queda registrada la fecha, la dirección IP y el navegador. Es la prueba de que la entrega se hizo, y existe para poder defender un cobro si alguien lo discute. Vos ves si se descargó y cuándo; no ves la dirección IP.",
+          "Si borrás un producto, su archivo queda 30 días en cuarentena antes de eliminarse del depósito. Ese plazo protege a quien todavía tiene un permiso vigente: no podemos dejar sin su compra a alguien que ya pagó.",
+        ],
+      },
+      {
+        title: "6. Devoluciones: qué te cubre y qué no",
+        body: "Un archivo de descarga inmediata no funciona como un producto físico, y conviene que sepas exactamente dónde estás parado.",
+        list: [
+          "Si quien compró NO descargó el archivo, tiene los 10 días corridos de arrepentimiento del art. 34 de la Ley 24.240, como en cualquier compra a distancia. Se devuelve y listo. Tu panel de Ventas muestra 'sin bajar' justamente para que puedas ver esa línea.",
+          "Si YA lo descargó, el arrepentimiento no corresponde: lo excluye el art. 1116 inc. b del Código Civil y Comercial. Para que esa excepción se sostenga, antes de pagar le mostramos la condición y le pedimos que la acepte, y guardamos esa aceptación con fecha, hora y el texto que leyó.",
+          "⚠️ La garantía que ofrezcas en tu página MANDA sobre lo anterior. El art. 1116 empieza con 'excepto pacto en contrario': si tu página promete '30 días o te devolvemos la plata', esa promesa vale aunque el archivo se haya descargado, y la cumplís vos. Por eso, cuando activás la sección de Garantía, el texto que acepta quien compra la nombra en lugar de contradecirla.",
+          "Nada de esto te cubre si el archivo no llega, no abre o no es lo que la página describía. Eso no es arrepentimiento sino incumplimiento, y se reclama igual (Ley 24.240, arts. 10 bis y 19).",
+          "Una devolución o un contracargo cortan el acceso a las descargas que falten. Lo que ya se descargó no vuelve: es una asimetría que ninguna plataforma puede resolver.",
+        ],
+      },
+      {
+        title: "7. Los datos de quien te compra",
+        body: null,
+        list: [
+          "Recibís el correo y el nombre de quien te compra para poder entregarle el archivo y contactarlo por su compra.",
+          "Si los usás para otra cosa —mandarle promociones, sumarlo a una lista, pasárselos a un tercero— sos vos el responsable de ese uso frente a la Ley 25.326, no TiendaApps.",
+          "No recibís su dirección IP ni sus datos de pago. Nosotros tampoco guardamos datos de tarjetas: eso lo maneja Mercado Pago.",
+        ],
+      },
+      {
+        title: "8. Tu plan y su baja",
+        body: null,
+        list: [
+          "Los planes pagos se cobran por adelantado. Si un pago no se acredita, la cuenta vuelve al plan Free y te avisamos por la campanita del panel.",
+          "Volver a Free no borra nada: tus productos, tus páginas y tus ventas quedan donde están. Lo que cambia son los topes y la comisión.",
+          "Podés eliminar tu cuenta cuando quieras. Tus ventas quedan registradas a efectos contables y de garantías, y tus archivos se eliminan del depósito respetando la cuarentena de la sección 5.",
+        ],
+      },
+      {
+        title: "9. Disponibilidad y cambios",
+        body: "Hacemos lo posible por mantener el servicio disponible, pero no podemos garantizar que no haya interrupciones. Si Mercado Pago tiene una caída, los cobros y las entregas se demoran hasta que se restablezca — la entrega se dispara con su aviso de pago, así que sale sola cuando el aviso llega. Podemos actualizar estos términos avisándote con razonable anticipación ante cambios significativos.",
+      },
+      {
+        title: "10. Contacto y reclamos",
+        body: "Para consultas o reclamos escribinos a marketplacemitienda@gmail.com. También podés contactar a Defensa del Consumidor de tu provincia, o recurrir al Sistema Nacional de Arbitraje de Consumo (SNAC), gratuito y voluntario: argentina.gob.ar/produccion/defensadelconsumidor/snac",
       },
     ],
   },

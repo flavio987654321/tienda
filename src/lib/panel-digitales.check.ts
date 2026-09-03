@@ -890,6 +890,75 @@ chequear("ninguna consulta de lista sale sin techo", listasSinTecho.length === 0
 chequear("Ventas pagina en el servidor, no sólo recorta",
   /skip: \(pagina - 1\) \* POR_PAGINA/.test(ventasPag) && /take: POR_PAGINA/.test(ventasPag));
 
+/* ══════════════════════════════════════════════════════════════════════════
+   17. CADA TIPO DE CUENTA LEE SU PROPIO DOCUMENTO
+   ══════════════════════════════════════════════════════════════════════════
+
+   El bug que esto existe para que no vuelva: el registro armaba el link a los
+   términos con una cadena de tres condiciones —seller, owner, y todo lo demás a
+   "buyer"— escrita cuando los tipos de cuenta eran tres. Al aparecer el cuarto,
+   `digital` caía en ese último "buyer", así que quien se registraba en Productos
+   Digitales aceptaba los términos del CLIENTE: el documento de alguien que
+   compra en una tienda, y encima el que promete 10 días de arrepentimiento.
+
+   No fallaba nada. No había error. Sólo se firmaba el papel equivocado.
+*/
+console.log("\n17) Cada tipo de cuenta lee su propio documento");
+
+const registroPag = readFileSync("src/app/(auth)/registro/page.tsx", "utf8");
+const terminosPag = readFileSync("src/app/terminos/page.tsx", "utf8");
+const privacidadPag = readFileSync("src/app/privacidad/page.tsx", "utf8");
+
+/* ⚠️ EL CHEQUEO QUE LO HABRÍA AGARRADO. Saca los tipos de cuenta de su propia
+   declaración y exige que los dos documentos tengan solapa para cada uno. El día
+   que aparezca un quinto ecosistema, esto falla antes de que nadie firme nada. */
+const tiposDeCuenta = (registroPag.match(/type AccountType = ([^;]+);/)?.[1] ?? "")
+  .split("|").map((t) => t.trim().replace(/"/g, "")).filter(Boolean);
+
+chequear("se pudieron leer los tipos de cuenta", tiposDeCuenta.length >= 4, tiposDeCuenta);
+for (const tipo of tiposDeCuenta) {
+  chequear(`"${tipo}" tiene su solapa en términos y en privacidad`,
+    new RegExp(`^  ${tipo}: \\{`, "m").test(terminosPag) &&
+    new RegExp(`^  ${tipo}: \\{`, "m").test(privacidadPag));
+}
+
+/* Y el rol viaja ENTERO a los dos documentos, sin traducirse en el camino. Un
+   `else` que elige un documento legal envejece mal: no se rompe, se equivoca.
+   `rolValido` del otro lado ya descarta cualquier rol que no exista. */
+chequear("el registro manda el rol entero, sin traducirlo",
+  /href=\{`\/terminos\?role=\$\{accountType\}`\}/.test(registroPag) &&
+  /href=\{`\/privacidad\?role=\$\{accountType\}`\}/.test(registroPag));
+
+/* Los números que el texto promete salen de las constantes que los aplican.
+   Escritos a mano, los términos prometen un plazo y el sistema aplica otro — y
+   en un reclamo vale lo que dice el papel. */
+chequear("los plazos y la comisión de los términos salen de las constantes",
+  /DIAS_DEL_PERMISO/.test(terminosPag) && /MAX_DESCARGAS/.test(terminosPag) &&
+  /COMISION_DIGITAL\.FREE/.test(terminosPag));
+
+/* ⚠️ Las dos IPs que este ecosistema guarda y ningún otro. Están en los términos
+   desde que existen; el agujero fue que faltaran en la política de privacidad,
+   que es el documento donde la Ley 25.326 exige declararlas. */
+const digitalPriv = privacidadPag.slice(
+  privacidadPag.indexOf("  digital: {"),
+  privacidadPag.indexOf("  buyer: {"),
+);
+chequear("privacidad declara la IP del consentimiento y la de cada descarga",
+  /1116/.test(digitalPriv) && (digitalPriv.match(/dirección IP/g) ?? []).length >= 2 &&
+  /Ley 25\.326/.test(digitalPriv));
+
+/* Y quien COMPRA un producto digital también tiene que poder leerlo: nunca se
+   registra, así que jamás eligió una solapa, pero es su dato el que se guarda. */
+chequear("y la solapa de Cliente también lo dice, para quien compra",
+  /producto digital/i.test(privacidadPag.slice(privacidadPag.indexOf("  buyer: {"))));
+
+/* Un cambio de documento sin subir la versión es un cambio que nadie re-acepta:
+   el banner mira este número. Estuvo clavado en 1.2 mientras el texto cambió
+   seis veces — está contado en el propio archivo. */
+const legal = readFileSync("src/lib/legal.ts", "utf8");
+chequear("la versión de los términos subió con este cambio",
+  /CURRENT_TERMS_VERSION = "1\.7"/.test(legal) && /1\.7 \(03\/09\/2026\)/.test(legal));
+
 console.log(fallos === 0
   ? "\nok — el panel de Productos Digitales sigue en pie"
   : `\nFALLA — ${fallos} chequeo(s) del panel de Productos Digitales`);

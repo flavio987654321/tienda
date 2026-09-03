@@ -45,6 +45,9 @@ const COLOR_ROL: Record<string, { texto: string; activo: string; borde: string }
   owner:  { texto: "text-indigo-700", activo: "bg-indigo-50 border-indigo-200 text-indigo-700", borde: "border-indigo-600" },
   seller: { texto: "text-purple-700", activo: "bg-purple-50 border-purple-200 text-purple-700", borde: "border-purple-600" },
   buyer:  { texto: "text-pink-700",   activo: "bg-pink-50 border-pink-200 text-pink-700",       borde: "border-pink-600" },
+  /* El naranja es el color del panel de Productos Digitales: quien llega desde
+     ahí tiene que reconocer que está leyendo lo suyo. */
+  digital: { texto: "text-orange-700", activo: "bg-orange-50 border-orange-200 text-orange-700", borde: "border-orange-600" },
   donor:  { texto: "text-amber-700",  activo: "bg-amber-50 border-amber-200 text-amber-700",    borde: "border-amber-600" },
 };
 const COLOR_POR_DEFECTO = { texto: "text-slate-800", activo: "bg-slate-100 border-slate-300 text-slate-700", borde: "border-slate-500" };

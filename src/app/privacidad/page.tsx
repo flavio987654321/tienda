@@ -321,6 +321,113 @@ const CONTENT = {
       },
     ],
   },
+  /* ⚠️ Una cuenta de Productos Digitales NO es ninguno de los otros tres, y
+     hasta el 03/09/26 el registro la mandaba a leer la de Cliente — el documento
+     de alguien que COMPRA en una tienda, no el de alguien que vende archivos y
+     nos paga comisión.
+
+     Y hay dos datos que este ecosistema guarda y ningún otro: la IP de quien
+     acepta la condición del art. 1116 antes de pagar, y la IP de cada descarga.
+     Los dos son datos personales, los dos nacieron el 03/09/26, y los dos ya
+     estaban escritos en los términos — faltaban acá. Ver el punto 3. */
+  digital: {
+    label: "Productos Digitales",
+    sections: [
+      {
+        title: "1. Información que recopilamos",
+        body: "Al registrarte en Productos Digitales recopilamos:",
+        list: [
+          "Datos de cuenta: nombre, email y contraseña (almacenada con hash bcrypt).",
+          "Datos de tu producto: nombre, precio, textos e imágenes de tu página de venta, y el archivo que subís para entregar (por ejemplo un PDF). El archivo se guarda en Supabase Storage y no es público: solo se llega a él con un enlace firmado de cinco minutos que emitimos al canjear un permiso de descarga.",
+          "Datos de suscripción: el plan que tenés, su estado y sus fechas. Los pagos los procesa Mercado Pago; no almacenamos datos de tarjetas.",
+          "Datos de tu cuenta de cobro: si conectás Mercado Pago, guardamos el permiso de acceso que nos otorga, cifrado. Sirve solo para crear los cobros de tus ventas a tu nombre.",
+          "Datos de tus ventas: el email y el nombre de quien te compra, qué compró, cuánto pagó y la comisión de la plataforma.",
+          "Datos de uso: sesiones, acciones en el panel y eventos de la plataforma.",
+        ],
+      },
+      {
+        title: "1 bis. Menores de edad",
+        body: null,
+        list: [
+          "TiendaApps no está dirigido a personas menores de 18 años y no recopilamos intencionalmente datos personales de menores.",
+          "Si tomamos conocimiento de que hemos recopilado datos de un menor de edad, procederemos a eliminar la cuenta y todos sus datos dentro de los 30 días.",
+          "Para reportar una cuenta de menor de edad o solicitar la eliminación de datos de un menor escribinos a marketplacemitienda@gmail.com con el asunto 'Cuenta de menor de edad — eliminación de datos'.",
+        ],
+      },
+      {
+        title: "2. Cómo usamos tu información",
+        body: null,
+        list: [
+          "Para gestionar tu cuenta, tu plan y tu página de venta.",
+          "Para cobrar tus ventas a través de Mercado Pago y retener la comisión de la plataforma.",
+          "Para entregarle el archivo a quien te compra y avisarte cuando vendés.",
+          "Para mostrarte tus ventas, tus cobros y si el archivo se descargó.",
+          "Para mejorar la plataforma en base a patrones de uso anónimos.",
+        ],
+      },
+      {
+        title: "3. Datos de quien te compra, y por qué guardamos su dirección IP",
+        body: "Una venta digital deja registrados dos datos que no deja ninguna otra operación de la plataforma. Los dos existen por el mismo motivo: poder demostrar qué pasó si alguien discute el cobro.",
+        list: [
+          "La aceptación previa a pagar: antes de pagar, quien compra tiene que marcar una casilla entendiendo que un archivo de descarga inmediata, una vez descargado, queda fuera del derecho de arrepentimiento (art. 1116 inc. b del Código Civil y Comercial). Guardamos la fecha y hora, su dirección IP y el texto exacto que leyó.",
+          "El registro de cada descarga: cada vez que se descarga el archivo guardamos la fecha y hora, la dirección IP y el navegador desde el que se bajó.",
+          "Para qué, y para qué no: son la prueba de que la entrega se hizo y de que la condición se aceptó, y se usan únicamente si hay un reclamo, una devolución o un contracargo. No se usan para publicidad, no se cruzan con otros datos y no se comparten con terceros fuera de ese fin.",
+          "Base legal: interés legítimo en acreditar el cumplimiento de una operación y en defenderse de un reclamo (art. 5 inc. f, Ley 25.326).",
+          "Cuánto duran: el registro de descargas se elimina junto con el permiso de descarga al que pertenece. La aceptación se conserva con la orden, como parte del comprobante de la operación.",
+          "Sos responsable de los datos de tus compradores: el email y el nombre de quien te compra se guardan para poder entregarle el archivo y para que puedas contactarlo. Si los usás para otra cosa —por ejemplo, mandarle promociones— sos vos quien responde por ese uso, no TiendaApps.",
+        ],
+      },
+      {
+        title: "4. Compartir con terceros",
+        body: "No vendemos tus datos. Los compartimos con:",
+        list: [
+          "Mercado Pago, para procesar el cobro de tus ventas y el de tu suscripción. Se rigen por su propia política.",
+          "Resend, el servicio que envía los correos de entrega a quien te compra. Recibe el email, el nombre y el detalle de lo comprado.",
+          "Supabase y Vercel como proveedores de infraestructura. Supabase además aloja el archivo que subís.",
+          "Autoridades competentes cuando sea requerido por ley.",
+        ],
+      },
+      {
+        title: "5. Retención de datos",
+        body: null,
+        list: [
+          "Datos de cuenta (nombre, email): mientras la cuenta esté activa + 30 días para eliminación completa.",
+          "El archivo que subís: mientras el producto exista. Si lo borrás, el archivo queda 30 días en cuarentena y después se elimina definitivamente del depósito — ese plazo existe para no dejar sin su compra a alguien que todavía tiene un permiso de descarga vigente.",
+          "Permisos de descarga: 30 días desde la compra. El registro de descargas se elimina con ellos.",
+          "Ventas y cobros: se conservan como documentación comercial, por las mismas razones y plazos que el resto de la plataforma (art. 328 del Código Civil y Comercial).",
+          "Para eliminar tu cuenta antes del plazo escribí a marketplacemitienda@gmail.com con el asunto 'Eliminación de cuenta — [tu email]'.",
+        ],
+      },
+      {
+        title: "6. Cookies y tecnologías de seguimiento",
+        body: null,
+        list: [
+          "Cookies técnicas: cookies de sesión estrictamente necesarias para mantenerte autenticado (gestionadas por NextAuth.js). Sin estas el panel no funciona.",
+          "Meta Pixel propio de TiendaApps: se carga en las páginas de la plataforma —inicio, registro, precios— para medir nuestra propia publicidad. No se carga en tu página de venta ni en el checkout de tus productos.",
+          "Tu propio Meta Pixel: si lo configurás en tu panel, se ejecuta en tu página de venta bajo la política de Meta, no la de TiendaApps. Informar su uso a quien te visita es responsabilidad tuya.",
+        ],
+      },
+      {
+        title: "7. Seguridad",
+        body: "Usamos HTTPS en todas las comunicaciones. Tus contraseñas se almacenan con hash y nunca en texto plano. El permiso de acceso de Mercado Pago se guarda cifrado. Tu archivo no es accesible por dirección directa: cada descarga exige un permiso válido y emite un enlace firmado que vence a los cinco minutos. Nunca te pediremos tu contraseña por email o chat.",
+      },
+      {
+        title: "8. Tus derechos (ARCO — Ley 25.326)",
+        body: "Podés ejercer tus derechos de Acceso, Rectificación, Cancelación y Oposición en cualquier momento:",
+        list: [
+          "Desde la configuración de tu cuenta para acceder o eliminar tus datos directamente.",
+          "Por email a marketplacemitienda@gmail.com con el asunto 'Solicitud ARCO — [tipo de derecho]'.",
+          "Excepción por obligación legal (art. 16 inc. 5, Ley 25.326): los datos que integran respaldos contables y los que acreditan una entrega ya realizada pueden conservarse bloqueados durante el plazo legal; no se usan para ningún otro fin.",
+          "Respondemos dentro de los 10 días hábiles (art. 14, Ley 25.326).",
+          "Si considerás que no fue atendido correctamente podés recurrir a la Dirección Nacional de Protección de Datos Personales: argentina.gob.ar/aaip/datospersonales",
+        ],
+      },
+      {
+        title: "9. Cambios a esta política",
+        body: "Ante cambios significativos te avisaremos por el canal que consideremos más adecuado (email, aviso en tu panel u otro medio de contacto que nos hayas dejado), con razonable anticipación. La fecha de 'última actualización' al inicio de esta página siempre refleja la versión vigente.",
+      },
+    ],
+  },
   buyer: {
     label: "Cliente",
     sections: [
@@ -364,6 +471,23 @@ const CONTENT = {
           "Base legal: interés legítimo en recuperar una operación que vos iniciaste (art. 5 inc. f, Ley 25.326). No es publicidad: no se usa para enviarte novedades ni ofertas de otros productos.",
           "Cuánto dura: si no completás la compra, el carrito se elimina automáticamente a los 45 días de tu última actividad.",
           "Cómo frenarlo: escribiendo a marketplacemitienda@gmail.com pedís que se borre el carrito y no recibís el recordatorio. También podés pedírselo directamente a la tienda.",
+        ],
+      },
+      /* ⚠️ Quien compra un producto digital NO se registra: alcanza con su
+         correo. Así que nunca eligió "Cliente" en ningún lado — pero es el
+         apartado que le corresponde, y es el único lugar donde puede leer que
+         guardamos su IP. Está en los términos (punto 6 ter) desde el 03/09/26 y
+         faltaba acá. */
+      {
+        title: "2 ter. Si comprás un producto digital (un ebook, una guía)",
+        body: "Comprar un archivo de descarga no funciona igual que comprar algo que se envía, y deja registrados dos datos que una compra común no deja:",
+        list: [
+          "No hace falta que te registres: alcanza con tu correo, que es a donde te mandamos el archivo. Igual queda una cuenta asociada a ese correo para poder colgarle la compra.",
+          "Tu aceptación antes de pagar: antes de pagar marcás una casilla entendiendo que un archivo de descarga inmediata, una vez descargado, queda fuera del derecho de arrepentimiento (art. 1116 inc. b del Código Civil y Comercial). Guardamos la fecha y hora, tu dirección IP y el texto exacto que leíste.",
+          "Cada descarga: cada vez que bajás el archivo guardamos la fecha y hora, tu dirección IP y el navegador.",
+          "Para qué, y para qué no: son la prueba de que la entrega se hizo y de que la condición se aceptó, y se usan únicamente si hay un reclamo, una devolución o un contracargo. No se usan para publicidad, no se cruzan con otros datos y no se comparten con terceros fuera de ese fin. Base legal: art. 5 inc. f de la Ley 25.326.",
+          "Cuánto duran: tu enlace de descarga vale 30 días; el registro de descargas se elimina junto con él. Tu aceptación se conserva con la orden, como parte del comprobante.",
+          "Qué ve quien te vendió: tu correo, tu nombre si lo dejaste, qué compraste y si llegaste a descargarlo. No ve tu dirección IP.",
         ],
       },
       {

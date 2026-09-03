@@ -848,9 +848,21 @@ function RegistroContent() {
                     className="mt-0.5 h-4 w-4 rounded border-gray-300 bg-white accent-orange-600 cursor-pointer flex-shrink-0"
                   />
                   <span className="text-xs text-gray-600 leading-relaxed group-hover:text-gray-700 transition-colors">
+                    {/* ⚠️ El rol va DERECHO, sin traducir. Acá había una cadena
+                        de tres condiciones —seller, owner, y todo lo demás a
+                        "buyer"— escrita cuando los tipos de cuenta eran tres.
+                        Al aparecer el cuarto, `digital` caía en ese último
+                        "buyer": quien se registraba en Productos Digitales
+                        aceptaba los términos del CLIENTE, el documento de
+                        alguien que compra en una tienda. Y los de Cliente son
+                        justo los que prometen 10 días de arrepentimiento.
+                        Un `else` que decide un documento legal envejece mal.
+                        `rolValido` del otro lado ya descarta cualquier rol que
+                        no exista, así que mandarlo entero es más seguro que
+                        traducirlo. Encontrado el 03/09/26. */}
                     Leí y acepto los{" "}
                     <Link
-                      href={`/terminos?role=${accountType === "seller" ? "seller" : accountType === "owner" ? "owner" : "buyer"}`}
+                      href={`/terminos?role=${accountType}`}
                       className="text-gray-600 underline hover:text-gray-900 transition-colors"
                       target="_blank"
                       rel="noopener noreferrer"
@@ -860,7 +872,7 @@ function RegistroContent() {
                     </Link>
                     {" "}y la{" "}
                     <Link
-                      href={`/privacidad?role=${accountType === "seller" ? "seller" : accountType === "owner" ? "owner" : "buyer"}`}
+                      href={`/privacidad?role=${accountType}`}
                       className="text-gray-600 underline hover:text-gray-900 transition-colors"
                       target="_blank"
                       rel="noopener noreferrer"
