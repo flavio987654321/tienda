@@ -1916,9 +1916,11 @@ otra descripción, que es lo que evita que los 5 hablen del mismo nicho.
 prolijidad: un recuadro angosto adentro del panel **no reacomoda el diseño**,
 porque las medidas de Tailwind miran el ancho de la ventana y no el del recuadro.
 Una "previa de celular" hecha así mostraría el diseño de escritorio apretado —
-algo que ningún visitante ve nunca. El `iframe` tiene su propia ventana. Y muestra
-lo GUARDADO, no lo que se está tipeando: es la diferencia entre una previa honesta
-y una que miente.
+algo que ningún visitante ve nunca. El `iframe` tiene su propia ventana.
+
+> **Corregido el 02/09/26.** Este párrafo decía que la previa muestra lo
+> GUARDADO y no lo que se está tipeando. Ya no: sigue el borrador en vivo. Ver
+> más abajo *La previa sigue lo que se escribe*.
 
 **Lo que la página se niega a dibujar:** una sección encendida pero sin contenido
 (un "Además te llevás gratis" sin ningún bono abajo es peor que no tenerlo), y una
@@ -1932,14 +1934,184 @@ veces" no cuesta nada — y meter `slug` y `customDomain` antes de decidir cómo
 funcionan (¿único global o por cuenta?, ¿qué pasa con los anuncios si cambia?)
 sería ponerlos mal con datos adentro.
 
-**🔲 Lo que sigue de esta pantalla:** que la previa siga lo que se tipea sin
-guardar, y el ida y vuelta (tocar un texto en la previa y que se abra su casilla).
+**✅ Los dos que faltaban de esta pantalla — HECHOS (02/09/26):** que la previa
+siga lo que se tipea sin guardar, y el ida y vuelta (tocar un texto en la previa
+y que se abra su casilla).
+
+**🔲 Lo que sigue de la Fase 5:**
+
 - 🔲 **Bonos** — modelo, pantalla y checkout. No existe nada en el proyecto.
 - 🔲 **Upsell** — idem.
-- 🔲 **La escasez atada a datos reales** (contador, cupos, avisos de compra). Ver
-  el recuadro de 2.3: si se reinicia sola es publicidad engañosa.
+- ✅ **La escasez atada a datos reales** — resuelto el 02/09/26, y en los tres
+  casos por el mismo criterio: la herramienta existe, vacía. El **contador**
+  termina de verdad y desaparece solo, así que nace apagado —es para una promo
+  real, no un adorno que hay que renovar—; el **aviso de ventas** existe pero
+  no dibuja nada hasta que haya una venta (chequeo DIB-F); y los **cupos** no
+  existen y no se van a hacer. Medido con sus propias capturas, el reloj de la
+  competencia se reinicia: 13:44 marcaba 04:32, 16:07 marcaba 02:59 y después
+  marcaba 09:02 — subió.
 - 🔲 El aviso de que **con transferencia la entrega no es automática**, antes de
   comprar y no después.
+
+### ✅ La previa sigue lo que se escribe, y se toca — HECHO (02/09/26)
+
+Los dos que quedaban de la pantalla anterior.
+
+- **Sigue lo que se tipea.** El editor le manda el borrador al `iframe` por
+  `postMessage`, con 150 ms de respiro —sin eso se manda un aviso por tecla y en
+  un párrafo largo son cientos de dibujos de la página entera—. La previa **no se
+  recarga**: si se recargara perdería el scroll en cada letra.
+- **Lo que llega se comprueba las dos veces.** El aviso tiene que venir de nuestro
+  propio origen, y el borrador pasa por `normalizarContenido` igual que si viniera
+  del servidor. Un `message` lo puede mandar cualquier ventana: sin esto, una
+  página ajena que nos meta en un iframe suyo le cambia el precio y el botón a la
+  página de venta de otro. La CSP ya es una cerradura; ésta es la segunda.
+- **Se toca el bloque y se abre su casilla.** Se toca **el texto**, no un cartelito
+  de 20 píxeles arriba a la derecha: apuntarle a la chapita es puntería, tocar el
+  párrafo que querés cambiar sale solo. Si el clic cae sobre algo que ya hace otra
+  cosa —el botón de comprar, un enlace del pie, una pregunta que se abre— gana
+  eso, o la página se comería sus propios controles adentro de la previa.
+
+### ✅ El diseño: estilo, paleta, fondo por bloque y letra — HECHO (02/09/26)
+
+**La plataforma pone el diseño, la IA pone el texto.** Quedó cerrado el 02/09/26
+mirando la página de la competencia: lo que se ve ahí no lo diseñó su IA, viene de
+fábrica y la persona lo cambia. Es lo mismo que vamos a hacer.
+
+- **5 estilos** — Clásico, Marcado, Suave, Editorial, Nocturno. Lo que los separa,
+  en orden de cuánto se nota: **el aire** (Suave respira el doble que Clásico), el
+  borde, la sombra y el título. Hay un chequeo que falla si dos comparten la cara
+  (PAL-H) y otro si dos respiran igual (PAL-I): el primer intento tenía Clásico y
+  Suave con la misma cara y no se distinguían.
+- **6 paletas**, no un selector de colores. Con colores libres alguien elige
+  amarillo sobre blanco y el botón de comprar desaparece — y no lo ve, porque en
+  su pantalla se distingue. Un chequeo calcula el contraste de cada una.
+- **3 fondos por bloque** — Fondo / Suave / Fuerte, elegidos sección por sección.
+  También lista cerrada: con tres tonos medidos de antemano se puede **probar** que
+  todo texto se lee sobre todo fondo; con un color elegido en el momento no hay
+  nada que probar.
+- **3 letras** — Moderna (la de la plataforma, ya cargada: elegirla no baja ni un
+  archivo), Clásica (Lora) y Marcada (Outfit). Van sin preload: el `@font-face`
+  queda declarado y el navegador se baja **sólo la que aparece en pantalla**. Con
+  el preload de fábrica se bajaría siempre las dos, en la pantalla donde cada
+  milésima decide si compran.
+
+`5 × 6 × 3 = 90 caras`, y encima cada una con el fondo de sus quince bloques
+elegido aparte. La pregunta que lo originó era "¿qué hacemos cuando haya 50
+vendedores?".
+
+**Dos colores se oscurecieron, y en ese orden, porque el segundo dependía del
+primero.** Los fondos con color no entraban sin esto:
+
+| | antes | ahora | por qué |
+| --- | --- | --- | --- |
+| gris tenue | `#64748b` | `#475569` | daba **4,33** sobre el tono suave, contra un mínimo de 4,5 |
+| verde del ahorro | `#047857` | `#065f46` | daba **3,55** sobre el tono fuerte |
+
+Y salió a la luz un agujero del chequeo viejo: comparaba el gris contra el fondo
+blanco pero **nunca contra el tono suave**. Por eso nadie se había enterado.
+
+**🔲 Pendiente de decidir:** el estilo Editorial fuerza serifas en los títulos, así
+que con Editorial la Letra sólo cambia el cuerpo. Se puede separar —estilo =
+forma, letra = letra— y que Editorial se distinga por sus líneas.
+
+### ✅ La oferta se ve, sin inventar nada — HECHO (02/09/26)
+
+La ficha de precio parecía muerta al lado de la de ellos, y la diferencia no era
+el color: el descuento estaba susurrado.
+
+- **Sello de oferta**, sacado de la **resta** entre los dos precios. Sin precio
+  tachado no hay sello.
+- **El precio viejo al lado del nuevo**, no abajo: pegados, el ojo hace la resta
+  solo.
+- **"Ahorrás $X"** en renglón propio, grande y verde. Era el dato que más empuja y
+  estaba en letra chica gris.
+- **Tres sellos** en vez de dos. El de garantía aparece **sólo si esa sección se va
+  a ver** y con los días que ella dice: un sello de garantía en una página sin
+  garantía es una promesa que nadie escribió y que después hay que cumplir igual.
+
+**Lo que no se copia, y por qué nosotros no podemos.** El de ellos es un campo de
+texto libre: se puede escribir "80% OFF" arriba de un precio que nunca bajó. Acá
+**no hay dónde escribirlo** — ninguna sección tiene campo de descuento ni de
+precio, y hay un chequeo (OFE-C) que falla si alguien agrega uno.
+
+### ✅ Lo que no se puede inventar — HECHO (02/09/26)
+
+**Visto de primera mano en su editor el 02/09/26.** Su IA llena la prueba social
+sola con tres personas inventadas —nombre, texto y un `Rating (1-5)` tipeado a
+mano— y la dibuja como una **captura de WhatsApp**, con hora, señal, "en línea" y
+doble tilde de leído. Arriba del bloque el título dice **"TESTIMONIOS REALES"**.
+
+Un testimonio dice "esto me dijeron". Una captura dice "acá está la conversación,
+mirala". La segunda se cree mucho más, y es falsa. Y **el que responde por lo que
+dice la página no es la plataforma: es quien vende**.
+
+- **Las opiniones nacen apagadas** y avisan antes de la primera letra: *"Sólo
+  opiniones que te hayan dicho de verdad. Una inventada es publicidad engañosa, y
+  el que responde sos vos."*
+- **No hay campo de rating ni de cantidad de ventas.** Un promedio de estrellas es
+  un dato estadístico: sin ventas no hay estadística. De ahí sale su ⭐4,9 con cero
+  ventas.
+- **Se dibujan como cita firmada** (`<blockquote>` + `<figcaption>`), no como
+  prueba de que algo pasó.
+- **La garantía también avisa**: *"Lo que prometas acá lo vas a tener que cumplir
+  con tu plata. Por ley ya tenés 10 días de arrepentimiento, escribas esto o no."*
+
+**Dos avisos en quince secciones, y hay un chequeo que deja poner hasta tres.** Si
+los llevaran todas, no se leería ninguno.
+
+**Sobre el riesgo legal de parecernos — mirado el 02/09/26.** Las ideas, las
+funcionalidades y la estructura de una página de venta no se protegen: "portada →
+beneficios → precio → preguntas" es el guion estándar desde antes de internet. Sí
+se protegen el código fuente (nunca lo vimos), la marca (no usamos nada suyo) y
+los textos literales (los nuestros son propios). Y la vuelta importa: **las cosas
+que no copiamos son justo las que tienen riesgo** — el precio tachado que nunca se
+cobró (Lealtad Comercial, Decreto 274/2019), las opiniones inventadas, y la
+imitación de la interfaz de WhatsApp, que es marca de Meta.
+
+### ✅ Cuatro errores encontrados y arreglados (02/09/26)
+
+Los cuatro estaban rotos **antes** de esta tanda; salieron de mirar la página en
+serio, no de una prueba que falló.
+
+1. **La previa salía en blanco.** La bloqueaba nuestra propia CSP: la política base
+   del sitio es `frame-ancestors 'none'`. Se aflojó **sólo** para `/p/` y **sólo** a
+   `'self'` — nunca a `*`: en esa pantalla se aprieta el botón de pagar, y un
+   iframe ajeno encima es exactamente cómo se roba ese clic.
+2. **Una palabra sin espacios rompía la página.** Visto roto **en la de ellos**, y
+   lo teníamos igual: la palabra no puede cortarse en ningún lado y empuja el ancho
+   de toda la página. Se tapa en un solo lugar porque `overflow-wrap` se hereda.
+3. **El estilo Nocturno tenía texto invisible.** Los pasos de "Cómo funciona", cada
+   pregunta frecuente, el "+" que las abre y el precio de la barra fija tenían
+   `text-slate-900` escrito a mano; sobre la tarjeta oscura de Nocturno quedaban
+   **negro sobre negro**.
+4. **El recuadro de bonos era amarillo siempre.** `amber` fijo: elegías Violeta y
+   seguía amarillo.
+
+Ahora un chequeo (TON-H) falla si vuelve a aparecer un color de texto o de fondo
+escrito a mano en el dibujante.
+
+### 🔲 La pasada bloque por bloque — EMPEZADA (02/09/26)
+
+Con la página llena de contenido de prueba se ve qué le falta a cada bloque, que
+vacío no se notaba. Se va en el orden de la página.
+
+- ✅ **Beneficios** y ✅ **Esto te suena** — ícono propio por ítem. Antes los cuatro
+  beneficios eran cuatro renglones con el mismo tilde verde. El campo es libre pero
+  lo que llega se limpia: queda **un** símbolo, no se parte por la mitad —una
+  bandera son dos caracteres y uno con tono de piel son cuatro— y las letras y
+  números se descartan, así que escribir "hola" no deja una "h" adentro del
+  círculo. Y una fila de sugerencias de un clic, que no es adorno: el teclado de
+  emojis de Windows es Win+punto y mucha gente no lo sabe.
+- 🔲 Portada · Qué te llevás · Bonos · Opiniones · Preguntas · Oferta con fecha ·
+  Cierre · Barra · Pie
+- 🔲 **Cómo funciona** — los círculos numerados en fila.
+- 🔲 **Precio** — el resumen como lista de lo que incluye, con la cuenta del valor
+  total.
+- 🔲 **Garantía** — el sello.
+- 🔲 **Qué pasa si se borra el título de una sección.** En el editor de ellos dice
+  "si los dejás vacíos se usa el texto por defecto". Hay que ver si la nuestra
+  dibuja un hueco.
 
 ### Lo que la entrega tiene que resolver del archivo (visto el 02/09/26)
 
