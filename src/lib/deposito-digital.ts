@@ -55,6 +55,50 @@ export function configDeposito(): ConfigDeposito | null {
  */
 export type ResultadoBorrado = "borrado" | "noEstaba" | "fallo";
 
+/**
+ * Cuánto vive el enlace firmado con el que se baja un archivo.
+ *
+ * Cinco minutos: alcanza de sobra para que arranque la descarga, y deja muerto
+ * al enlace que quedó en el historial del navegador o pegado en un chat. El
+ * archivo que ya empezó a bajar NO se corta cuando vence — la firma se comprueba
+ * al pedirlo, no durante la transferencia.
+ *
+ * ⚠️ Es lo contrario del permiso de SUBIDA (`MINUTOS_DEL_PERMISO`, 30): aquél
+ * tiene que aguantar 50 MB por una conexión mala; éste se usa en un segundo y
+ * después sólo puede hacer daño.
+ */
+export const MINUTOS_DEL_ENLACE = 5;
+
+/**
+ * Un enlace de vida corta para bajar un archivo del bucket privado.
+ *
+ * ── Por qué firmado y no servido por nosotros ───────────────────────────────
+ *
+ * Porque el archivo baja **derecho de Supabase al navegador**, sin pasar por
+ * nuestra función. Un PDF de 50 MB atravesando `/api` choca contra el techo de
+ * 4,5 MB de la plataforma, y aunque no chocara nos haría pagar el tránsito dos
+ * veces. El servidor decide QUIÉN puede bajar; el archivo lo entrega Supabase.
+ */
+export async function enlaceDeDescarga(
+  { supabaseUrl, serviceRoleKey }: ConfigDeposito,
+  ruta: string,
+): Promise<string | null> {
+  const res = await fetch(`${supabaseUrl}/storage/v1/object/sign/${BUCKET_DIGITALES}/${ruta}`, {
+    method: "POST",
+    headers: {
+      apikey: serviceRoleKey,
+      Authorization: `Bearer ${serviceRoleKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ expiresIn: MINUTOS_DEL_ENLACE * 60 }),
+  }).catch(() => null);
+
+  if (!res?.ok) return null;
+  const datos = (await res.json().catch(() => null)) as { signedURL?: unknown } | null;
+  if (typeof datos?.signedURL !== "string") return null;
+  return `${supabaseUrl}/storage/v1${datos.signedURL}`;
+}
+
 export async function borrarDelDeposito(
   { supabaseUrl, serviceRoleKey }: ConfigDeposito,
   ruta: string,

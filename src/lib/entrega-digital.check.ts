@@ -154,6 +154,58 @@ const sinSecreto = firma.slice(firma.indexOf("if (!secret)"), firma.indexOf("con
 check("FIR-C", sinSecreto.includes('NODE_ENV === "production"') && sinSecreto.includes("return false"),
   "en producción sin secreto configurado se rechaza TODO");
 
+/* ── El canje del token por el archivo ────────────────────────────────────── */
+
+const descarga = readFileSync("src/app/api/digitales/descargar/[token]/route.ts", "utf8");
+const deposito = readFileSync("src/lib/deposito-digital.ts", "utf8");
+
+/* ⚠️ EL chequeo de esta ruta. Con dos pedidos a la vez —el doble click de
+   siempre, o el enlace abierto en dos pestañas— los dos leen "van 4 de 5" y los
+   dos pasarían un `if`. La condición tiene que estar adentro del `where` para
+   que la base deje pasar uno solo. Es el mismo patrón que el alta de productos
+   contra el tope del plan. */
+check("DES-A", /updateMany\(\{[\s\S]{0,300}descargas: \{ lt: permiso\.maxDescargas \}/.test(descarga),
+  "el tope se aplica adentro del where: dos pedidos juntos no gastan dos descargas");
+
+/* Y se cuenta ANTES de firmar: si se firmara primero, un pedido que muere en el
+   medio entrega el archivo sin descontar nada. */
+check("DES-B", descarga.indexOf("updateMany") < descarga.indexOf("enlaceDeDescarga(config"),
+  "se descuenta antes de firmar, no después");
+
+/* ⚠️ Pero si la firma falla, la descarga se devuelve. Sin esto, un problema
+   NUESTRO —Supabase caído— le come una de las cinco a alguien que no bajó nada. */
+check("DES-C", descarga.includes("decrement: 1"),
+  "y si la firma falla se devuelve la descarga: un error nuestro no la gasta");
+
+/* Una orden cancelada después (contracargo, devolución) deja el permiso escrito.
+   El archivo no se tiene que entregar más. */
+check("DES-D", descarga.includes('order.status !== "CONFIRMED"'),
+  "una compra que dejó de estar confirmada ya no baja nada");
+
+check("DES-E", descarga.includes("expiresAt <= ahora") && descarga.includes("descargas >= permiso.maxDescargas"),
+  "se distingue vencido de agotado, para poder decir cuál de los dos es");
+
+/* ⚠️ El archivo baja DERECHO de Supabase. Servirlo nosotros choca contra el techo
+   de 4,5 MB de la plataforma —un PDF puede pesar 50— y encima paga el tránsito
+   dos veces. */
+check("DES-F", descarga.includes("NextResponse.redirect"),
+  "se redirige al enlace firmado: el archivo no pasa por nuestra función");
+
+/* Corto. Un enlace de descarga que dura horas es un enlace que se reenvía. */
+check("DES-G", /MINUTOS_DEL_ENLACE = ([1-9]|10)\b/.test(deposito),
+  "el enlace firmado dura pocos minutos");
+
+/* Sin sesión, el token es TODA la autorización, así que la puerta necesita techo
+   propio. */
+check("DES-H", descarga.includes("checkRateLimit"),
+  "la ruta pública de descarga tiene límite por IP");
+
+/* 🔲 Cuando exista la página de descarga, hay que chequear que el mail linkee a
+   ELLA y no acá: esta dirección descuenta una descarga con sólo abrirla, y los
+   enlaces de un mail los visitan solos Outlook Safe Links y los antivirus. */
+check("DES-I", descarga.includes("descuenta una descarga con sólo abrirla"),
+  "queda escrito por qué el mail no puede linkear acá derecho");
+
 console.log(fallos === 0
   ? "\nok — sólo baja el archivo quien lo pagó, y sólo mientras vale su permiso"
   : `\nFALLA — ${fallos} chequeo(s) de la entrega digital`);
