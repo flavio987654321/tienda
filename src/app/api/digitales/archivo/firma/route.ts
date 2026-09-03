@@ -102,7 +102,20 @@ export async function POST(req: NextRequest) {
 
   /* Firmar es barato pero no gratis: cada permiso es una escritura habilitada.
      30 por hora alcanza de sobra para cargar un embudo entero con sus bonos y
-     corregir alguno, y corta a quien use el bucket como depósito. */
+     corregir alguno, y corta a quien use el bucket como depósito.
+
+     ⚠️ **Ésta es la ÚNICA de las siete rutas de digitales que falla CERRADA**, y
+     la diferencia es quién paga el error.
+
+     Las otras seis dejan pasar el pedido si no se puede consultar el límite:
+     mejor que la gente pueda trabajar a bloquear a todos porque se cayó Redis.
+     Acá no. Este límite es lo único que separa a una cuenta de pedir 30
+     permisos por hora de 50 MB cada uno — **1,5 GB por hora**, en un plan
+     gratuito que no pide tarjeta. Si el límite no se puede verificar, no hay
+     nada que lo frene, y la factura de Supabase la pagamos nosotros.
+
+     El costo de fallar cerrado es que alguien no puede subir un PDF durante un
+     rato y ve un mensaje que se lo dice. El de fallar abierto no tiene techo. */
   try {
     if (!(await checkRateLimit(`archivo-digital:${user.id}`, 30, 60 * 60_000))) {
       return NextResponse.json(
@@ -112,6 +125,13 @@ export async function POST(req: NextRequest) {
     }
   } catch {
     console.error("[rate-limit] Redis no disponible en /api/digitales/archivo/firma");
+    return NextResponse.json(
+      {
+        error:
+          "No podemos preparar la subida en este momento. Probá de nuevo en unos minutos.",
+      },
+      { status: 503 }
+    );
   }
 
   const body = await req.json().catch(() => null);

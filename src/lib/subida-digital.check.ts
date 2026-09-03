@@ -172,6 +172,19 @@ check("REP-A", firma.includes("deletedAt: null") && confirmar.includes("deletedA
 check("REP-B", confirmar.includes("${user.id}/${productoId}/"),
   "y la ruta que se confirma tiene que ser de esa cuenta Y de ese producto");
 
+/* ⚠️ HALLAZGO 3. Las siete rutas de digitales atrapan el error de Redis y DEJAN
+   PASAR el pedido: mejor que la gente trabaje a bloquear a todos porque se cayó
+   el limitador. En seis está bien. En ésta no.
+
+   Este límite es lo único que separa a una cuenta de pedir 30 permisos por hora
+   de 50 MB cada uno —1,5 GB por hora, en un plan gratuito que no pide tarjeta— y
+   la factura de Supabase la pagamos nosotros. El costo de fallar cerrado es que
+   alguien espere unos minutos para subir un PDF; el de fallar abierto no tiene
+   techo. */
+const trasElLimite = firma.slice(firma.indexOf("archivo-digital:"));
+check("REP-D", trasElLimite.includes("status: 503"),
+  "si no se puede verificar el límite NO se firma: es la única que falla cerrada");
+
 /* Lo que ya estaba bien y conviene que siga: el navegador dice que subió, y el
    servidor va a mirar. Sin esto alcanza con llamar a confirmar sin haber subido
    nada para marcar el producto como entregable. */
@@ -182,33 +195,3 @@ console.log(fallos === 0
   ? "\nok — el archivo del producto entra por una sola puerta y no queda servible"
   : `\nFALLA — ${fallos} chequeo(s) del archivo del producto`);
 process.exit(fallos === 0 ? 0 : 1);
-
-/* ── Repaso de las dos rutas, 03/09/26 ────────────────────────────────────── */
-
-/* Los dos salieron de leer las siete rutas de digitales una por una con la
-   misma lista, antes de arrancar el checkout. */
-
-/* ⚠️ HALLAZGO 1. Estas dos eran las ÚNICAS consultas de producto de todo
-   digitales sin `deletedAt: null` — las otras cinco rutas ya lo tenían. Sin él
-   se firma y se confirma sobre un producto BORRADO: el archivo entra al bucket,
-   nadie lo va a poder alcanzar nunca y lo seguimos pagando. */
-check("REP-A", firma.includes("deletedAt: null") && confirmar.includes("deletedAt: null"),
-  "no se sube ni se confirma un archivo a un producto borrado");
-
-/* ⚠️ HALLAZGO 2, el más serio de los dos. La ruta se comprobaba contra la
-   CUENTA (`<user>/`) pero no contra el PRODUCTO, y `rutaDeArchivo` la arma como
-   `<cuenta>/<producto>/…`.
-
-   O sea que alguien podía confirmar la ruta del archivo de SU producto A sobre
-   su producto B. Los dos quedaban apuntando al mismo objeto, y el día que
-   reemplazara el archivo de A —que borra el viejo— B quedaba publicado
-   apuntando a la nada: se cobra y no hay nada que entregar. Es exactamente el
-   fallo que estas dos rutas existen para evitar. */
-check("REP-B", confirmar.includes("${user.id}/${productoId}/"),
-  "y la ruta que se confirma tiene que ser de esa cuenta Y de ese producto");
-
-/* Lo que ya estaba bien y conviene que siga: el navegador dice que subió, y el
-   servidor va a mirar. Sin esto alcanza con llamar a confirmar sin haber subido
-   nada para marcar el producto como entregable. */
-check("REP-C", confirmar.includes("pesoReal") && confirmar.includes('method: "HEAD"'),
-  "el servidor comprueba que el archivo EXISTA, no le cree al navegador");
