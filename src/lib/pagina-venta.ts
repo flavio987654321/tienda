@@ -1027,6 +1027,51 @@ export function conFichas(
   return salida;
 }
 
+/**
+ * Los colores y la letra de una página, como variables de CSS.
+ *
+ * ── Por qué es una función y no está adentro del dibujante ──────────────────
+ *
+ * Porque **el checkout tiene que verse igual que la página que lo trajo**, y ésa
+ * es toda la apuesta del diseño: el checkout no se configura, hereda. Con el
+ * armado escrito en cada pantalla alcanzaría con tocar una para que la página de
+ * venta sea Violeta Nocturno y el checkout un formulario blanco genérico —
+ * justo en la pantalla donde se pone la tarjeta y donde menos conviene que algo
+ * parezca de otro sitio.
+ *
+ * Estando acá, no se pueden separar: las dos pantallas piden lo mismo a la misma
+ * función. Hay un chequeo que falla si alguna vuelve a armarlas por su cuenta.
+ *
+ * ── Por qué variables y no clases de Tailwind ───────────────────────────────
+ *
+ * Tailwind necesita ver la clase ENTERA escrita en el código para generarla; una
+ * armada pegando pedazos —`bg-${color}-600`— no existe y la pantalla sale sin
+ * color. Con variables, el mismo `bg-[color:var(--pv-acento)]` sirve para las
+ * seis paletas.
+ */
+export function variablesDePagina(pagina: PaginaVenta): Record<string, string> {
+  const paleta = buscarPaleta(pagina.paleta);
+  const estilo = buscarEstilo(pagina.estilo);
+  /* Nocturno es el único que da vuelta los colores. El ACENTO no cambia: es lo
+     que hace saltar el botón, y es el mismo en las dos versiones. */
+  const g = estilo.oscuro ? COLORES_OSCUROS : COLORES_CLAROS;
+  return {
+    "--pv-tinta": g.tinta,
+    "--pv-ok": g.ok,
+    "--pv-tenue": g.tenue,
+    "--pv-linea": g.linea,
+    "--pv-tarjeta": g.tarjeta,
+    "--pv-acento": estilo.oscuro ? paleta.acentoOscuro : paleta.acento,
+    "--pv-sobre": estilo.oscuro ? paleta.sobreAcentoOscuro : paleta.sobreAcento,
+    "--pv-fondo": estilo.oscuro ? COLORES_OSCUROS.fondo : paleta.fondo,
+    "--pv-suave": estilo.oscuro ? COLORES_OSCUROS.suave : paleta.suave,
+    "--pv-fuerte": estilo.oscuro ? paleta.fuerteOscuro : paleta.fuerte,
+    /* La letra entra igual que los colores y se hereda: puesta en la raíz vale
+       para toda la pantalla. */
+    fontFamily: buscarTipografia(pagina.tipografia).familia,
+  };
+}
+
 /** Atajo para la página pública, que sólo necesita el sí o el no. */
 export const seDibuja = (s: SeccionGuardada, ctx: ContextoDePagina): boolean =>
   porQueNoSeDibuja(s, ctx) === null;

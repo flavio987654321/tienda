@@ -1207,6 +1207,15 @@ check("CSP-A", /source:\s*"\/p\/\(\.\*\)"/.test(config),
   "la página de venta tiene su propia regla de cabeceras");
 check("CSP-B", /cspPaginaDigital[\s\S]{0,120}frame-ancestors 'self'/.test(config),
   "y se deja enmarcar por nuestro propio dominio, que es lo que hace andar la previa");
+/* ⚠️ La pantalla de pago cuelga de `/p/`, así que sin regla propia hereda el
+   `frame-ancestors 'self'` de la página de venta — y ahí es donde se aprieta el
+   botón de pagar. Y va DESPUÉS: las dos reglas coinciden con esa dirección y en
+   Next gana la última. Invertirlas deja el checkout enmarcable sin avisar. */
+check("CSP-E", config.indexOf('{ source: "/p/(.*)", headers: paginaDigitalHeaders }') <
+  config.indexOf('{ source: "/p/(.*)/pagar", headers: securityHeaders }') &&
+  config.includes('"/p/(.*)/pagar"'),
+  "la pantalla de pago recupera la política base, y su regla va DESPUÉS de la general");
+
 check("CSP-C", !/frame-ancestors \*/.test(config),
   "por NADIE más: un iframe ajeno arriba del botón de pagar roba el clic");
 /* Sin excluirla de la regla base, el navegador recibe dos CSP y aplica la

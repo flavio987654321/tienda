@@ -23,7 +23,7 @@
 
 import {
   seDibuja, conFichas, buscarEstilo, buscarPaleta, buscarSeccion, buscarTipografia,
-  ofertaVencida, COLORES_CLAROS, COLORES_OSCUROS,
+  ofertaVencida, variablesDePagina, COLORES_CLAROS, COLORES_OSCUROS,
   type PaginaVenta, type Estilo,
 } from "@/lib/pagina-venta";
 import BarraDeOferta from "./BarraDeOferta";
@@ -77,8 +77,8 @@ const lista = (c: Record<string, unknown>, k: string): Array<Record<string, stri
  * celular la página es larga y volver arriba a buscar el botón es donde se
  * pierde la venta. Es el mismo componente, no dos copias. */
 
-function BotonComprar({ children, esPrevia, estilo }: {
-  children: string; esPrevia?: boolean; estilo: Estilo;
+function BotonComprar({ children, esPrevia, estilo, productoId }: {
+  children: string; esPrevia?: boolean; estilo: Estilo; productoId: string;
 }) {
   /* El color sale de la paleta y la forma del estilo. Ninguno de los dos está
      escrito acá: si lo estuvieran, elegir otra paleta no cambiaría el botón —
@@ -98,8 +98,14 @@ function BotonComprar({ children, esPrevia, estilo }: {
       </button>
     );
   }
-  /* 🔲 El destino real es el checkout, que todavía no existe (Fase 5). */
-  return <button type="button" className={clases}>{children}</button>;
+  /* Un enlace de verdad, no un botón con `onClick`. Así se puede abrir en otra
+     pestaña, el navegador lo precarga y funciona aunque el JavaScript no llegue
+     a cargar — y es la única cosa de esta página que hay que poder tocar. */
+  return (
+    <a href={`/p/${productoId}/pagar`} className={clases}>
+      {children}
+    </a>
+  );
 }
 
 function Titulo({ children, estilo }: { children: string; estilo: Estilo }) {
@@ -507,7 +513,7 @@ function Contenido({ clave, campos, tono, datos }: {
                 desde un anuncio no conoce la tienda, y las dos preguntas que se
                 hace antes de bajar son si es seguro y cómo lo recibe. Contestarlas
                 recién a mitad de página es contestarlas tarde. */}
-            <BotonComprar esPrevia={esPrevia} estilo={estilo}>{texto(campos, "textoBoton")}</BotonComprar>
+            <BotonComprar esPrevia={esPrevia} estilo={estilo} productoId={producto.id}>{texto(campos, "textoBoton")}</BotonComprar>
             <Sellos dias={diasDeGarantia(datos)} />
           </div>
         </Seccion>
@@ -545,7 +551,7 @@ function Contenido({ clave, campos, tono, datos }: {
               <div className={`mt-6 bg-[color:var(--pv-tarjeta)] p-5 ${estilo.tarjeta}`}>
                 <Numeros datos={datos} estilo={estilo} />
                 <div className="mt-5 grid gap-3">
-                  <BotonComprar esPrevia={esPrevia} estilo={estilo}>
+                  <BotonComprar esPrevia={esPrevia} estilo={estilo} productoId={producto.id}>
                     {texto(campos, "textoBoton")}
                   </BotonComprar>
                   <Sellos dias={diasDeGarantia(datos)} />
@@ -745,7 +751,7 @@ function Contenido({ clave, campos, tono, datos }: {
             {/* El precio no se puede ocultar: `lib/pagina-venta` no le da botón
                 de apagar, y mandar visible:false tampoco lo apaga. */}
             <Numeros datos={datos} estilo={estilo} listaAparte />
-            <BotonComprar esPrevia={esPrevia} estilo={estilo}>{texto(campos, "textoBoton")}</BotonComprar>
+            <BotonComprar esPrevia={esPrevia} estilo={estilo} productoId={producto.id}>{texto(campos, "textoBoton")}</BotonComprar>
             <Sellos dias={dias} />
             {texto(campos, "aclaracion") && (
               <p className="text-sm text-[color:var(--pv-tenue)]">{texto(campos, "aclaracion")}</p>
@@ -843,7 +849,7 @@ function Contenido({ clave, campos, tono, datos }: {
           <div className="mx-auto flex max-w-xl flex-col items-center gap-6 text-center">
             <Titulo estilo={estilo}>{texto(campos, "titulo")}</Titulo>
             <Numeros datos={datos} estilo={estilo} />
-            <BotonComprar esPrevia={esPrevia} estilo={estilo}>{texto(campos, "textoBoton")}</BotonComprar>
+            <BotonComprar esPrevia={esPrevia} estilo={estilo} productoId={producto.id}>{texto(campos, "textoBoton")}</BotonComprar>
             <Sellos dias={diasDeGarantia(datos)} />
           </div>
         </Seccion>
@@ -887,7 +893,7 @@ function Contenido({ clave, campos, tono, datos }: {
               </span>
             </p>
             <span className="w-auto max-w-[60%] shrink-0 [&>button]:w-auto [&>button]:px-5 [&>button]:py-3 [&>button]:text-sm">
-              <BotonComprar esPrevia={esPrevia} estilo={estilo}>{texto(campos, "textoBoton")}</BotonComprar>
+              <BotonComprar esPrevia={esPrevia} estilo={estilo} productoId={producto.id}>{texto(campos, "textoBoton")}</BotonComprar>
             </span>
           </div>
         </div>
@@ -982,33 +988,10 @@ export default function PaginaDeVenta(datos: DatosDePagina) {
      este colchón, el último renglón del pie queda abajo del botón y no se lee. */
   const conBarra = datos.pagina.secciones.some((s) => s.clave === "barra" && seDibuja(s, ctx));
 
-  /* ⚠️ La paleta entra como variables de CSS y no como clases de Tailwind.
-     Tailwind necesita ver la clase ENTERA escrita en el código para generarla;
-     una armada pegando pedazos —`bg-${color}-600`— no existe y la página sale
-     sin color. Con variables, el mismo `bg-[color:var(--pv-acento)]` sirve para
-     las seis paletas. */
-  const paleta = buscarPaleta(datos.pagina.paleta);
-  const estiloRaiz = buscarEstilo(datos.pagina.estilo);
-  /* El estilo Nocturno es el único que toca los colores: da vuelta la tinta, el
-     fondo y las tarjetas. El ACENTO no cambia — es lo que hace saltar el botón,
-     y es el mismo color en las dos versiones. */
-  const g = estiloRaiz.oscuro ? COLORES_OSCUROS : COLORES_CLAROS;
-  const colores = {
-    "--pv-tinta": g.tinta,
-    "--pv-ok": g.ok,
-    "--pv-tenue": g.tenue,
-    "--pv-linea": g.linea,
-    "--pv-tarjeta": g.tarjeta,
-    "--pv-acento": estiloRaiz.oscuro ? paleta.acentoOscuro : paleta.acento,
-    "--pv-sobre": estiloRaiz.oscuro ? paleta.sobreAcentoOscuro : paleta.sobreAcento,
-    "--pv-fondo": estiloRaiz.oscuro ? COLORES_OSCUROS.fondo : paleta.fondo,
-    "--pv-suave": estiloRaiz.oscuro ? COLORES_OSCUROS.suave : paleta.suave,
-    "--pv-fuerte": estiloRaiz.oscuro ? paleta.fuerteOscuro : paleta.fuerte,
-    /* La letra entra igual que los colores, por variable, y se hereda: con
-       ponerla en la raíz vale para toda la página. Los archivos los declara
-       `lib/fuentes-venta`, colgado más arriba por la página pública. */
-    fontFamily: buscarTipografia(datos.pagina.tipografia).familia,
-  } as React.CSSProperties;
+  /* ⚠️ Los colores y la letra salen de `variablesDePagina`, en el catálogo, y
+     NO se arman acá: el checkout pide exactamente lo mismo a la misma función.
+     Es lo que hace que no se puedan separar. Ver el comentario largo allá. */
+  const colores = variablesDePagina(datos.pagina) as React.CSSProperties;
 
   return (
     /* ⚠️ Las dos clases raras de acá tapan el mismo agujero, y es uno que vimos

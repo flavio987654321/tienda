@@ -139,6 +139,16 @@ const nextConfig: NextConfig = {
       { source: "/preview/(.*)", headers: previewHeaders },
       // Página de venta de un producto digital — la enmarca el editor del panel
       { source: "/p/(.*)", headers: paginaDigitalHeaders },
+      /* ⚠️ La PANTALLA DE PAGO no se enmarca ni desde acá adentro. Cuelga de
+         `/p/`, así que sin esta línea heredaba el `frame-ancestors 'self'` que la
+         página de venta necesita para su previa — y ahí se aprieta el botón de
+         pagar. `'self'` ya bloquea a un sitio ajeno, pero una pantalla de pago no
+         tiene ningún motivo para ser enmarcable, ni siquiera por nosotros.
+         VA DESPUÉS de la regla de arriba a propósito: las dos coinciden con esta
+         dirección, y la documentación de Next dice que con la misma clave de
+         cabecera **gana la última**. Invertirlas deja el checkout en `'self'`
+         sin que nada avise. */
+      { source: "/p/(.*)/pagar", headers: securityHeaders },
     ];
   },
   images: {
