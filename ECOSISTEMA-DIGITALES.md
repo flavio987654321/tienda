@@ -2106,9 +2106,25 @@ Ahora los tres viajan juntos en una barra pegada arriba, sólo abajo de `lg`. El
 guardar del encabezado desaparece ahí: dos botones que hacen lo mismo se leen
 como que uno hace otra cosa.
 
-**`top-14` y no `top-0`**, que es el detalle que casi se come todo: el contenedor
-que scrollea arranca en el borde de la pantalla y los primeros 56 px se los tapa
-la barra fija del celular. Pegada en 0, la barra quedaba escondida atrás.
+**⚠️ El desplazamiento me lo mandé mal la primera vez, y él lo vio a 768.** Puse
+`top-14`, razonando que el contenedor que scrollea arranca en el borde de la
+pantalla y que los primeros 56 px se los tapa la barra fija del celular. Pero ese
+contenedor (`<main>`) **ya tiene `pt-14` justamente para eso**, y el
+desplazamiento de lo pegado se cuenta desde donde arranca su contenido. O sea que
+los 56 px se sumaban dos veces: la barra quedaba flotando 56 px abajo de la del
+celular, con contenido asomando en el medio — que es exactamente como se ve algo
+que NO se pega. Va `top-0`, y el chequeo ahora prohíbe cualquier otro
+desplazamiento en vez de exigir uno.
+
+**Y la grilla se estiraba con su contenido, cortando el editor a 360.** Abajo de
+`lg` no declaraba ninguna columna, así que la única que hay se dimensionaba sola:
+una columna `auto` mide **al menos el contenido más ancho que tenga adentro**, y
+no le importa que el contenedor sea más angosto. Con un solo hijo que no supiera
+achicarse, la columna entera se estiraba y arrastraba a todo lo demás — a cada
+tarjeta de sección le quedaban los botones afuera de la pantalla, cortados por el
+`overflow-x-hidden` del panel. `grid-cols-1` de Tailwind es
+`repeat(1, minmax(0, 1fr))`: mínimo **cero**. Es la misma cuenta que ya hacían
+los `minmax(0, …)` del `lg:` de al lado; faltaba para pantalla chica.
 
 **Y cambiar de solapa ya no pierde dónde estabas.** Las dos columnas se esconden
 con `display: none`, así que al pasar a la previa el formulario desaparece de

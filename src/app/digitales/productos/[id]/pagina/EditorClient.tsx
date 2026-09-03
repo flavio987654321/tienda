@@ -649,10 +649,16 @@ export default function EditorDePagina({ productoId, nombre, publicado, pagina: 
           el aviso de "tenés cambios sin guardar" esperando en la puerta, esa
           combinación es una trampa.
 
-          `top-14` y no `top-0`: el contenedor que scrollea empieza en el borde de
-          la pantalla, y los primeros 56 px se los tapa la barra fija del celular.
-          Pegada en 0, esto quedaba abajo de esa barra. */}
-      <div className="sticky top-14 z-30 -mx-4 mb-4 flex items-center gap-2 border-b border-gray-100 bg-gray-50/95 px-4 py-2 backdrop-blur panel-oscuro:border-gray-800 panel-oscuro:bg-gray-950/95 sm:-mx-6 sm:px-6 lg:hidden">
+          ⚠️ `top-0`, y la primera versión decía `top-14` — mal. El razonamiento
+          era: "el contenedor que scrollea empieza en el borde de la pantalla y
+          los primeros 56 px se los tapa la barra fija del celular, así que hay
+          que correrla 56". Pero ese contenedor (`<main>`) YA tiene `pt-14`
+          justamente para eso, y el desplazamiento de lo pegado se cuenta desde
+          donde arranca su contenido. O sea que los 56 se sumaban dos veces y la
+          barra quedaba flotando 56 px abajo de la barra del celular, con
+          contenido asomando en el medio — se veía como si no se pegara.
+          Visto a 768 px el 03/09/26. */}
+      <div className="sticky top-0 z-30 -mx-4 mb-4 flex items-center gap-2 border-b border-gray-100 bg-gray-50/95 px-4 py-2 backdrop-blur panel-oscuro:border-gray-800 panel-oscuro:bg-gray-950/95 sm:-mx-6 sm:px-6 lg:hidden">
         <div className="flex flex-1 gap-1 rounded-xl bg-gray-100 p-1 panel-oscuro:bg-gray-800">
           {(["editar", "previa"] as const).map((v) => (
             <button
@@ -684,9 +690,27 @@ export default function EditorDePagina({ productoId, nombre, publicado, pagina: 
         </button>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)]">
+      {/* ⚠️ `grid-cols-1` NO es decorativo, y su falta cortaba el editor a 360.
+       *
+       * Abajo de `lg` esto no declaraba ninguna columna, así que la única que
+       * hay se dimensionaba sola: una columna `auto` mide **al menos el
+       * contenido más ancho que tenga adentro**, y no le importa que el
+       * contenedor sea más angosto. Con un solo hijo que no supiera achicarse
+       * —un campo, una grilla de dos, un texto sin cortar— la columna entera se
+       * estiraba y arrastraba a todos los demás. El resultado en el celular era
+       * que a cada tarjeta de sección le quedaban los botones afuera de la
+       * pantalla, cortados por el `overflow-x-hidden` del panel.
+       *
+       * `grid-cols-1` de Tailwind es `repeat(1, minmax(0, 1fr))`: el mínimo pasa
+       * a ser CERO, así que la columna se queda del ancho que hay y lo de adentro
+       * se acomoda. Es exactamente lo que ya hacían los `minmax(0, ...)` del
+       * `lg:` de al lado — faltaba la misma cuenta para pantalla chica.
+       *
+       * Los `min-w-0` de las dos columnas son la misma idea un escalón más
+       * abajo: sin eso, un hijo que no se achica vuelve a empujar desde adentro. */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)]">
         {/* ── Estilo y contenido ────────────────────────────────────────────── */}
-        <div className={vista === "editar" ? "" : "hidden lg:block"}>
+        <div className={`min-w-0 ${vista === "editar" ? "" : "hidden lg:block"}`}>
           {/* El estilo va PRIMERO: se elige cómo se ve y después se escribe.
               Es una solapa y no un ítem de la barra lateral porque el diseño es
               de ESTE producto — una cuenta Pro tiene hasta cinco páginas con su
@@ -755,7 +779,7 @@ export default function EditorDePagina({ productoId, nombre, publicado, pagina: 
                       key={p.clave}
                       type="button"
                       onClick={() => setPaleta(p.clave)}
-                      className={`flex items-center gap-2 rounded-xl border p-2.5 text-left transition-colors ${
+                      className={`flex min-w-0 items-center gap-2 rounded-xl border p-2.5 text-left transition-colors ${
                         pagina.paleta === p.clave
                           ? "border-orange-400 bg-orange-50/60 panel-oscuro:border-orange-500/50 panel-oscuro:bg-orange-500/10"
                           : "border-gray-200 bg-white hover:border-gray-300 panel-oscuro:border-gray-700 panel-oscuro:bg-gray-900"
@@ -1060,7 +1084,7 @@ export default function EditorDePagina({ productoId, nombre, publicado, pagina: 
         </div>
 
         {/* ── La previa ─────────────────────────────────────────────────────── */}
-        <div className={vista === "previa" ? "" : "hidden lg:block"}>
+        <div className={`min-w-0 ${vista === "previa" ? "" : "hidden lg:block"}`}>
           <div className="sticky top-4">
             <div className="mb-2 flex items-center justify-between gap-2">
               <p className="text-xs text-gray-500 panel-oscuro:text-gray-400">

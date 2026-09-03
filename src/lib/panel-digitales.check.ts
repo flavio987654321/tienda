@@ -747,7 +747,7 @@ chequear("y suelta el freno al salir del editor",
 console.log("\n16) El editor en pantalla chica");
 
 const barraDelEditor = editorPag.slice(
-  editorPag.indexOf('className="sticky top-14'),
+  editorPag.indexOf('className="sticky top-0'),
   editorPag.indexOf("{/* ── Estilo y contenido"),
 );
 
@@ -755,7 +755,7 @@ const barraDelEditor = editorPag.slice(
    el encabezado, había que subir varias pantallas para guardar — y el aviso de
    "tenés cambios sin guardar" esperando en la puerta convierte eso en trampa. */
 chequear("las solapas y el guardar quedan pegados arriba en pantalla chica",
-  barraDelEditor.includes("sticky top-14") &&
+  barraDelEditor.includes("sticky top-0") &&
   barraDelEditor.includes("lg:hidden") &&
   barraDelEditor.includes("onClick={guardar}"));
 
@@ -764,10 +764,22 @@ chequear("las solapas y el guardar quedan pegados arriba en pantalla chica",
 chequear("el guardar del encabezado desaparece en pantalla chica",
   /onClick=\{guardar\}[\s\S]{0,300}?hidden items-center[\s\S]{0,200}?lg:inline-flex/.test(editorPag));
 
-/* `top-0` la dejaría abajo de la barra fija del celular: el contenedor que
-   scrollea arranca en el borde de la pantalla y esos 56 px están tapados. */
-chequear("se pega ABAJO de la barra del celular, no atrás",
-  !barraDelEditor.includes("sticky top-0"));
+/* ⚠️ El desplazamiento NO se escribe acá: el contenedor que scrollea ya tiene
+   `pt-14` para dejarle lugar a la barra fija del celular, y lo pegado se cuenta
+   desde donde arranca su contenido. Con `top-14` los 56 px se sumaban dos veces
+   y la barra quedaba flotando, con contenido asomando entre ella y la barra del
+   celular. Se veía como si no se pegara. */
+chequear("el desplazamiento sale del `pt-14` del contenedor, no se suma de nuevo",
+  !/sticky top-(?!0\b)/.test(barraDelEditor) && /pt-14/.test(layout));
+
+/* ⚠️ Y la grilla declara su columna también en pantalla chica. Sin
+   `grid-cols-1`, la única columna se dimensiona por el contenido más ancho que
+   tenga adentro y arrastra a todo lo demás: a 360 los botones de cada sección
+   quedaban afuera de la pantalla, cortados por el `overflow-x-hidden` del panel.
+   `grid-cols-1` de Tailwind es `repeat(1, minmax(0, 1fr))` — mínimo cero. */
+chequear("la grilla del editor no se estira con su contenido",
+  /grid grid-cols-1 gap-6 lg:grid-cols-\[minmax\(0,420px\)_minmax\(0,1fr\)\]/.test(editorPag) &&
+  (editorPag.match(/min-w-0 \$\{vista ===/g) ?? []).length === 2);
 
 /* Las dos columnas se esconden con `display:none`, así que al cambiar de solapa
    el navegador recorta el scroll. Sin esto, la previa se abre por el medio y el
