@@ -2087,6 +2087,51 @@ el navegador, el mismo texto sale distinto en el servidor (que corre en UTC) y e
 la máquina de quien mira: React avisa de la hidratación y una venta de las 22:30
 aparece con la fecha del día siguiente.
 
+### ✅ Reenviar el mail de entrega — HECHO (03/09/26)
+
+El agujero que tapa, dicho como pasa de verdad:
+
+> Alguien paga. El mail se va a spam. Cierra la pantalla de gracias.
+> Te escribe: *"no me llegó nada"*.
+> **Y no podés hacer absolutamente nada.**
+
+No tiene cuenta, así que no puede recuperar el enlace solo; y en Ventas la venta
+se veía pero no se podía tocar. Terminaba en devolución, o en una captura de
+pantalla. Es la razón por la que esto se hizo antes que arreglar el editor en
+pantallas chicas: aquello lo sufre quien vende, que tiene una computadora al
+lado; esto lo sufre quien ya pagó.
+
+**Renueva el vencimiento y NO el contador**, y esa distinción es todo el diseño:
+son dos límites con dueños distintos. El vencimiento protege contra un enlace
+vivo para siempre, no contra la persona — si venció y quien vende decide
+ayudarla, renovarlo es exactamente lo que hay que hacer. El contador protege
+contra que el enlace se reparta a diez amigos, y eso no cambia porque el mail se
+reenvíe. Si ya se usaron las cinco **no se manda nada**: un mail con un botón que
+devuelve error es peor que no mandarlo, y además casi siempre significa que la
+persona sí tiene el archivo.
+
+Y sólo renueva los que **estaban** vencidos, con la condición adentro del
+`where`: reenviar no le puede regalar treinta días a un enlace que estaba por la
+mitad.
+
+Los frenos: la venta tiene que ser suya —una ajena contesta lo mismo que una que
+no existe—, tres reenvíos por venta por día, veinte por cuenta por hora, y el
+freno del doble click, que acá cuesta dos mails al mismo comprador y dos de sus
+tres reenvíos del día.
+
+**Espera al mail antes de contestar**, al revés que el aviso de pago: allá la
+respuesta va para Mercado Pago y el mail sale con `despues`; acá va para una
+persona que apretó un botón. Decirle "listo" sin haber esperado es mentirle justo
+cuando está tratando de resolverle un problema a un cliente.
+
+De paso, cómo se arma el mail se mudó a `armadoDelMail` en `entrega-digital`:
+ahora lo arman dos lugares y el reenviado se prueba mucho menos, así que escrito
+en los dos se separaban solos.
+
+🔲 **No queda anotado en la base cuántas veces se reenvió** — hoy eso lo lleva el
+limitador, que se olvida cuando pasa la ventana. Para mostrar "reenviado hace 5
+minutos" hace falta una columna. Va con el detalle de la venta.
+
 ### ✅ Los avisos al vendedor — HECHOS (03/09/26)
 
 Hasta acá **no había un solo `createNotification` en ninguna ruta de digitales**:

@@ -68,3 +68,50 @@ export function lineasEntregables<T extends { id: string; product: { archivoPath
 ): T[] {
   return items.filter((i) => !!i.product.archivoPath);
 }
+
+/** Lo mínimo que hay que saber de una línea para armarle el mail. */
+type LineaParaElMail = {
+  id: string;
+  product: {
+    id: string;
+    name: string;
+    archivoPath: string | null;
+    archivoNombre: string | null;
+    rolDigital: string | null;
+    padreId: string | null;
+  };
+};
+
+/**
+ * Cómo se arma el mail de entrega de una orden: qué archivos lleva, cómo se
+ * llama la compra y a qué pantalla de gracias apunta el botón.
+ *
+ * ── Por qué esto es una función y no está escrito en el webhook ─────────────
+ *
+ * Porque ahora lo arman DOS lugares: el aviso de pago, que lo manda solo, y el
+ * botón de "reenviar" de la pantalla de Ventas, que lo manda a pedido. Con la
+ * cuenta escrita en los dos, alcanza con tocar uno para que el mail automático y
+ * el reenviado digan cosas distintas — y el segundo se prueba mucho menos.
+ *
+ * ⚠️ EN UN AGREGADO —la oferta de después de pagar— LA ORDEN NO TIENE PRINCIPAL:
+ * lleva sólo el upsell, porque el principal se pagó en la orden anterior. Buscar
+ * el principal y salir si no está dejaba esas compras sin mail. Se toma el
+ * principal si está, y si no, el padre del upsell: la pantalla de gracias cuelga
+ * del producto del embudo, no de la línea.
+ */
+export function armadoDelMail<T extends LineaParaElMail>(items: T[]) {
+  const entregables = lineasEntregables(items);
+  const laPrincipal = items.find((i) => i.product.rolDigital === "PRINCIPAL")?.product;
+  const primera = items[0]?.product;
+  return {
+    entregables,
+    /* A qué producto del embudo pertenece la pantalla de gracias. */
+    idDeLaPagina: laPrincipal?.id ?? primera?.padreId ?? null,
+    /* Y el título dice lo que se compró en ESTA orden: en un agregado, el upsell. */
+    comoSeLlama: laPrincipal?.name ?? primera?.name ?? "tu compra",
+    archivos: entregables.map((l) => ({
+      nombre: l.product.archivoNombre ?? l.product.name,
+      esBono: l.product.rolDigital === "BONO",
+    })),
+  };
+}

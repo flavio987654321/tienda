@@ -257,7 +257,9 @@ check("MAIL-C", (cuerpoDelMail.match(/escapeHtml\(/g) ?? []).length >= 4,
 
 /* ⚠️ En un AGREGADO la orden no tiene principal: lleva sólo el upsell. Buscar el
    principal y salir si no está dejaba a esas compras sin mail de entrega. */
-check("MAIL-D", cobro.includes("primera?.padreId"),
+/* La cuenta se mudó a `armadoDelMail` cuando el reenvío pasó a armar el mismo
+   mail: se busca donde vive ahora, no donde vivía. */
+check("MAIL-D", fuente.includes("primera?.padreId"),
   "un agregado también recibe su mail, aunque su orden no tenga producto principal");
 
 /* Con `despues`, no con `await` ni con una promesa suelta. En serverless una
@@ -302,6 +304,76 @@ check("LOG-C",
 /* El `User-Agent` lo escribe el cliente: entra recortado o no entra. */
 check("LOG-D", /user-agent"\)\?\.slice\(0, \d+\)/.test(descargaLimpia),
   "el navegador que se anota viene recortado, que lo escribe quien pide");
+
+/* ── Reenviar el mail de entrega ────────────────────────────────────────────
+ *
+ * Es el único camino de vuelta para alguien que pagó y se quedó sin su archivo:
+ * no tiene cuenta, así que no puede recuperar nada por su cuenta. Y es un botón
+ * que le manda un correo a un tercero, así que todo lo de acá abajo es freno.
+ */
+const reenvio = sinComent(readFileSync("src/app/api/digitales/ventas/[orden]/reenviar/route.ts", "utf8"));
+
+/* ⚠️ QUE LA VENTA SEA SUYA. Sin esto, cualquier cuenta digital con sesión le
+   reenvía el mail al comprador de cualquier otra cambiando un identificador. */
+check("REE-A",
+  /venta\.store\.ownerId !== user\.id/.test(reenvio) && /user\.role !== "DIGITAL"/.test(reenvio),
+  "sólo se reenvía una venta propia, y sólo desde una cuenta digital");
+
+/* Y se contesta lo mismo que si no existiera: "no es tuya" y "no existe" no se
+   distinguen desde afuera, así que esto tampoco sirve para averiguar qué hay. */
+check("REE-B", /!venta \|\| venta\.store\.ownerId !== user\.id[\s\S]{0,200}status: 404/.test(reenvio),
+  "una venta ajena contesta lo mismo que una que no existe");
+
+check("REE-C", /venta\.status !== "CONFIRMED"/.test(reenvio),
+  "una venta sin cobrar no tiene nada que entregar");
+
+/* ⚠️ Renueva el VENCIMIENTO y nunca el CONTADOR. Son dos límites con dueños
+   distintos: el vencimiento protege contra un enlace vivo para siempre, y el
+   contador contra que se reparta a diez amigos. Reenviar el mail no cambia lo
+   segundo. */
+/* Se miran sólo las ESCRITURAS. `descargas` y `maxDescargas` aparecen de sobra
+   en el `select` y en el texto del mail, y eso está bien: lo que no puede pasar
+   es que alguno entre en un `data:`. */
+const loQueEscribe = reenvio.match(/data: \{[^}]*\}/g) ?? [];
+check("REE-D",
+  /data: \{ expiresAt: vencimientoDelPermiso\(ahora\) \}/.test(reenvio) &&
+  loQueEscribe.length > 0 && loQueEscribe.every((d) => !/descargas/i.test(d)),
+  "el reenvío renueva el vencimiento y no toca el contador de descargas");
+
+/* Y sólo renueva los que ESTABAN vencidos, con la condición adentro del `where`:
+   reenviar no le puede regalar 30 días a un enlace que estaba por la mitad. */
+check("REE-E", /where: \{ id: \{ in: vencidos \}, expiresAt: \{ lte: ahora \} \}/.test(reenvio),
+  "no le regala treinta días a un enlace que todavía valía");
+
+/* Si no queda ninguna descarga, no se manda nada: un mail con un botón que
+   devuelve error es peor que no mandarlo. */
+check("REE-F", /conSaldo\.length === 0[\s\S]{0,400}status: 409/.test(reenvio),
+  "sin descargas disponibles no se manda el mail, se explica por qué");
+
+/* Los dos topes: por venta —para que el botón no sea una máquina de mandarle
+   correos a alguien— y por cuenta, para quien aprieta todos los de la lista. */
+check("REE-G",
+  /digital-reenvio:\$\{ordenId\}/.test(reenvio) && /digital-reenvio-cuenta:\$\{user\.id\}/.test(reenvio),
+  "hay tope por venta y tope por cuenta");
+
+/* ⚠️ Se ESPERA el mail, al revés que en el aviso de pago: allá la respuesta va
+   para Mercado Pago, acá va para una persona que apretó un botón y necesita
+   saber si salió. Decirle "listo" sin haber esperado es mentirle. */
+check("REE-H",
+  /await sendEntregaDigitalEmail\(/.test(reenvio) && !/despues\(/.test(reenvio),
+  "el reenvío espera al mail antes de contestar, y no lo manda en diferido");
+
+/* Y la respuesta no repite el correo de quien compró: ya está en la pantalla. */
+check("REE-I", !/buyer\.email/.test(reenvio.slice(reenvio.indexOf("return NextResponse.json({\n    ok: true"))),
+  "la respuesta no devuelve datos de quien compró");
+
+/* ⚠️ UNA SOLA FORMA DE ARMAR EL MAIL. El automático y el reenviado tienen que
+   decir lo mismo, y el reenviado se prueba mucho menos: con la cuenta escrita en
+   los dos lugares, se separan solos. */
+check("REE-J",
+  /armadoDelMail\(/.test(cobro) && /armadoDelMail\(/.test(reenvio) &&
+  !/rolDigital === "PRINCIPAL"/.test(sinComent(cobro)),
+  "el mail automático y el reenviado se arman con la misma función");
 
 console.log(fallos === 0
   ? "\nok — sólo baja el archivo quien lo pagó, y sólo mientras vale su permiso"

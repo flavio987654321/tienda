@@ -3,7 +3,7 @@ import MercadoPagoConfig, { Payment } from "mercadopago";
 import { prisma } from "@/lib/prisma";
 import { firmaDeMercadoPagoValida } from "@/lib/mp-firma";
 import {
-  nuevoTokenDeDescarga, vencimientoDelPermiso, lineasEntregables,
+  nuevoTokenDeDescarga, vencimientoDelPermiso, lineasEntregables, armadoDelMail,
   MAX_DESCARGAS, DIAS_DEL_PERMISO,
 } from "@/lib/entrega-digital";
 import { comisionCongelada } from "@/lib/compra-digital";
@@ -357,11 +357,11 @@ async function acreditar(idDelPago: string) {
     link: "/digitales/ventas",
   });
 
-  const laPrincipal = orden.items.find((i) => i.product.rolDigital === "PRINCIPAL")?.product;
-  const primera = orden.items[0]?.product;
-  const idDeLaPagina = laPrincipal?.id ?? primera?.padreId ?? null;
-  /* Y el título dice lo que se compró en ESTA orden: en un agregado, el upsell. */
-  const comoSeLlama = laPrincipal?.name ?? primera?.name ?? "tu compra";
+  /* ⚠️ Cómo se arma el mail vive en `entrega-digital` y no acá, porque ahora lo
+     arman DOS lugares: este aviso de pago, que lo manda solo, y el botón de
+     reenviar de la pantalla de Ventas, que lo manda a pedido. Escrita en los
+     dos, la cuenta se separa sola — y el reenviado se prueba mucho menos. */
+  const { idDeLaPagina, comoSeLlama, archivos } = armadoDelMail(orden.items);
 
   if (orden.buyer.email && idDeLaPagina) {
     const dondeVerlos = `${APP_URL}/p/${idDeLaPagina}/gracias?orden=${orden.id}`;
@@ -370,10 +370,7 @@ async function acreditar(idDelPago: string) {
         to: orden.buyer.email!,
         nombre: orden.buyer.name,
         producto: comoSeLlama,
-        archivos: entregables.map((l) => ({
-          nombre: l.product.archivoNombre ?? l.product.name,
-          esBono: l.product.rolDigital === "BONO",
-        })),
+        archivos,
         enlace: dondeVerlos,
         vendedor: orden.store.owner.name,
         dias: DIAS_DEL_PERMISO,
