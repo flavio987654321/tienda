@@ -95,11 +95,11 @@ async function acreditar(idDelPago: string) {
 
   /* ── Lo que NO se acreditó ─────────────────────────────────────────────── */
 
-  if (pago.status === "cancelled" || pago.status === "rejected" || pago.status === "refunded") {
-    /* Se cancela con la condición adentro del `where`: si dos avisos llegan
-       juntos, o si la orden ya se confirmó, esto no pisa nada. En digitales no
-       hay stock que devolver ni cupón que reponer — por eso no pasa por
-       `runOrderAction`, que existe para eso. */
+  if (pago.status === "cancelled" || pago.status === "rejected") {
+    /* Un pago que nunca se acreditó. Se cancela con la condición adentro del
+       `where`: si dos avisos llegan juntos, o si la orden ya se confirmó por
+       otro camino, esto no pisa nada. En digitales no hay stock que devolver ni
+       cupón que reponer — por eso no pasa por `runOrderAction`. */
     await prisma.order.updateMany({
       where: { id: ordenId, status: "PENDING" },
       data: { status: "CANCELLED" },
@@ -108,6 +108,65 @@ async function acreditar(idDelPago: string) {
       where: { orderId: ordenId, status: "PENDING" },
       data: { status: "REJECTED", externalId: idDelPago },
     });
+    return;
+  }
+
+  /**
+   * ── Se devolvió la plata DESPUÉS de acreditarse ──────────────────────────
+   *
+   * ⚠️ Esto no hacía nada, y era el agujero más serio del webhook. `refunded`
+   * estaba metido arriba con `cancelled` y `rejected`, todos contra órdenes
+   * `PENDING` — pero una devolución llega sobre una orden que YA está CONFIRMED,
+   * así que el `updateMany` actualizaba cero filas y se iba en silencio. La
+   * persona seguía bajando el archivo con la plata ya devuelta, para siempre.
+   * Y un contracargo ni siquiera estaba contemplado. Encontrado releyendo el
+   * webhook el 03/09/26.
+   *
+   * Pasar la orden a CANCELLED corta la descarga **sola**: la ruta de descarga
+   * exige que la orden esté CONFIRMED. No hay nada más que apagar.
+   *
+   * ── `in_mediation` queda AFUERA, a propósito ────────────────────────────
+   *
+   * Una mediación no está resuelta: puede terminar a favor de cualquiera de los
+   * dos. Cortarle el archivo a alguien mientras reclama es castigarlo por
+   * reclamar, y si después gana, se quedó sin lo que pagó. Se corta cuando hay
+   * una decisión, no cuando hay una discusión.
+   *
+   * ── Lo que NO recupera ──────────────────────────────────────────────────
+   *
+   * El PDF que ya se bajó. Es la asimetría que no tiene arreglo limpio y que ya
+   * está escrita en el documento: un archivo descargado no vuelve. Lo que esto
+   * corta son las descargas que faltan.
+   */
+  if (pago.status === "refunded" || pago.status === "charged_back") {
+    const { count } = await prisma.order.updateMany({
+      where: { id: ordenId, status: { in: ["PENDING", "CONFIRMED"] } },
+      data: { status: "CANCELLED" },
+    });
+    await prisma.payment.updateMany({
+      where: { orderId: ordenId },
+      data: { status: "REFUNDED", externalId: idDelPago },
+    });
+
+    /* Sólo si de verdad cambió algo: el mismo aviso llega repetido y no tiene
+       sentido escribir el mismo renglón de historia diez veces. */
+    if (count > 0) {
+      await prisma.orderStatusLog.create({
+        data: {
+          orderId: ordenId,
+          fromStatus: "CONFIRMED",
+          toStatus: "CANCELLED",
+          changedBy: pago.status === "refunded" ? "digital_devolucion" : "digital_contracargo",
+        },
+      }).catch((e) => console.error("[digital-cobro] no se pudo registrar la devolución:", e));
+
+      /* 🔲 Falta avisarle al vendedor. Hoy digitales no tiene notificaciones —no
+         hay un solo `createNotification` en sus rutas— así que por ahora queda
+         en el log. Va con la pantalla de Ventas. */
+      console.warn("[digital-cobro] devolución/contracargo: se cortó el acceso", {
+        ordenId, estado: pago.status,
+      });
+    }
     return;
   }
 

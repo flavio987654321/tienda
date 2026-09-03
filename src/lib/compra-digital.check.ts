@@ -326,6 +326,15 @@ check("AGR-G", gracias.includes("ordenPrevia: p.ordenId") && !/email:/.test(grac
 check("AGR-H", paginaGracias.includes("yaComprados"),
   "no se ofrece un upsell que ya está en esa compra");
 
+/* ⚠️ El freno del doble click NO agarraba en un agregado. Buscaba una orden
+   pendiente con `productId: producto.id` —el principal— y un agregado no lo
+   lleva: sólo lleva el upsell. O sea que en la oferta de después de pagar cada
+   clic dejaba una orden pendiente nueva, y el panel de ventas se llenaba de
+   compras que nunca fueron. Encontrado releyendo el 03/09/26. */
+check("AGR-I", ruta.includes("loQueVaEnLaOrden") &&
+  ruta.includes("productId: { in: loQueVaEnLaOrden }"),
+  "el freno del doble click mira lo que ESTA orden va a tener, no el principal");
+
 /* ── La pantalla de gracias ───────────────────────────────────────────────── */
 
 /* ⚠️ Mercado Pago devuelve acá apenas aprueba, y los permisos los emite el aviso

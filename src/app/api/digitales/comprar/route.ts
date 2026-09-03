@@ -300,9 +300,18 @@ export async function POST(req: NextRequest) {
          PENDING colgada; el panel de ventas del vendedor se llena de compras que
          nunca fueron y las métricas mienten.
 
-         Se reusa la orden pendiente de ESTA persona por ESTE producto si es
+         Se reusa la orden pendiente de ESTA persona por ESTO mismo si es
          reciente y por el mismo importe. Distinto importe = agregó o sacó un
-         upsell, y eso sí es otra compra. */
+         upsell, y eso sí es otra compra.
+
+         ⚠️ La condición mira los productos que ESTA orden va a tener, no el
+         principal. Buscaba `productId: producto.id` —el principal— y un AGREGADO
+         no lo lleva: sólo lleva el upsell. O sea que el freno no agarraba nunca
+         en la oferta de después de pagar, y cada clic dejaba una orden pendiente
+         nueva. Encontrado releyendo, el 03/09/26. */
+      const loQueVaEnLaOrden = ordenPrevia
+        ? upsells.map((u) => u.id)
+        : [producto.id, ...upsells.map((u) => u.id)];
       const desde = new Date(Date.now() - MINUTOS_DE_LA_ORDEN * 60 * 1000);
       const pendiente = await tx.order.findFirst({
         where: {
@@ -311,7 +320,7 @@ export async function POST(req: NextRequest) {
           status: "PENDING",
           total,
           createdAt: { gte: desde },
-          items: { some: { productId: producto.id } },
+          items: { some: { productId: { in: loQueVaEnLaOrden } } },
         },
         select: { id: true },
         orderBy: { createdAt: "desc" },

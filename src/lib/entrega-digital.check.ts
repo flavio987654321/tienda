@@ -86,6 +86,7 @@ check("ENT-C", lineasEntregables([linea("a", null)]).length === 0,
 /* ── El webhook ───────────────────────────────────────────────────────────── */
 
 const cobro = readFileSync("src/app/api/digitales/cobro/route.ts", "utf8");
+const descarga = readFileSync("src/app/api/digitales/descargar/[token]/route.ts", "utf8");
 
 /* ⚠️ La dirección del webhook es pública: viaja en cada preferencia. Sin firma,
    un `POST` escrito a mano con el id de una orden ajena la confirma sin haber
@@ -128,6 +129,35 @@ check("WEB-H", cobro.includes("TOLERANCIA") && cobro.includes("no se entrega"),
 check("WEB-I", cobro.includes("entregables.length === 0"),
   "si no hay nada que entregar, la venta NO se confirma");
 
+/* ── La devolución y el contracargo, 03/09/26 ─────────────────────────────── */
+
+/* ⚠️ EL agujero más serio que tenía el webhook, encontrado releyéndolo.
+   `refunded` estaba metido con `cancelled` y `rejected`, todos contra órdenes
+   PENDING. Pero una devolución llega sobre una orden que ya está CONFIRMED, así
+   que el `updateMany` actualizaba CERO filas y se iba en silencio: la persona
+   seguía bajando el archivo con la plata ya devuelta, para siempre. Y un
+   contracargo ni siquiera estaba contemplado. */
+check("DEV-A", /refunded" \|\| pago\.status === "charged_back"/.test(cobro),
+  "una devolución y un contracargo se atienden, no sólo los pagos rechazados");
+
+check("DEV-B", /status: \{ in: \["PENDING", "CONFIRMED"\] \}/.test(cobro),
+  "y alcanzan a una orden YA CONFIRMADA, que es donde llegan de verdad");
+
+/* Pasar la orden a CANCELLED corta la descarga sola: la ruta de descarga exige
+   CONFIRMED. Es lo que hace que no haya nada más que apagar. */
+check("DEV-C", descarga.includes('order.status !== "CONFIRMED"'),
+  "cancelar la orden corta la descarga sola: no hay dos lugares que apagar");
+
+/* ⚠️ `in_mediation` queda AFUERA. Una mediación no está resuelta: cortarle el
+   archivo a alguien mientras reclama es castigarlo por reclamar, y si después
+   gana se quedó sin lo que pagó. */
+check("DEV-D", !cobro.includes('"in_mediation"'),
+  "una mediación sin resolver NO corta el acceso: se corta con una decisión");
+
+/* Queda la historia de que fue una devolución y no una cancelación cualquiera. */
+check("DEV-E", cobro.includes("digital_devolucion") && cobro.includes("digital_contracargo"),
+  "queda registrado en el historial cuál de las dos fue");
+
 /* ── La firma, compartida ─────────────────────────────────────────────────── */
 
 /* ⚠️ Estaba escrita sólo en el webhook de tiendas. Con una copia en cada uno
@@ -156,7 +186,6 @@ check("FIR-C", sinSecreto.includes('NODE_ENV === "production"') && sinSecreto.in
 
 /* ── El canje del token por el archivo ────────────────────────────────────── */
 
-const descarga = readFileSync("src/app/api/digitales/descargar/[token]/route.ts", "utf8");
 const deposito = readFileSync("src/lib/deposito-digital.ts", "utf8");
 
 /* ⚠️ EL chequeo de esta ruta. Con dos pedidos a la vez —el doble click de
