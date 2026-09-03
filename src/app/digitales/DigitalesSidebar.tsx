@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
+import { LinkDelPanel as Link } from "./SalidaSinGuardar";
 import { usePathname } from "next/navigation";
 import { useIsPwa } from "@/hooks/useIsPwa";
 import { AppLogo } from "@/components/AppLogo";

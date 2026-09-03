@@ -12,6 +12,7 @@ import {
   AVISO_BORRADOR, AVISO_LISTA, AVISO_TOCAR,
   type Campo, type PaginaVenta, type SeccionGuardada,
 } from "@/lib/pagina-venta";
+import { useSalida } from "@/app/digitales/SalidaSinGuardar";
 
 /**
  * El editor de la página de venta.
@@ -431,13 +432,24 @@ export default function EditorDePagina({ productoId, nombre, publicado, pagina: 
   }, [pagina]);
 
   /* Avisar antes de irse con cambios sin guardar. La página es larga y se pierde
-     un rato de trabajo sin que nada lo insinúe. */
+     un rato de trabajo sin que nada lo insinúe.
+     Hacen falta LOS DOS y cada uno tapa una salida distinta: `beforeunload` la
+     descarga de verdad —F5, cerrar la pestaña— y el proveedor los `<Link>` de
+     adentro del panel, que no descargan nada. Ver `SalidaSinGuardar`. */
   useEffect(() => {
     if (!sucio) return;
     const alSalir = (e: BeforeUnloadEvent) => e.preventDefault();
     window.addEventListener("beforeunload", alSalir);
     return () => window.removeEventListener("beforeunload", alSalir);
   }, [sucio]);
+
+  /* La limpieza no es un detalle: sin ella, guardar y salir seguiría preguntando
+     desde otra pantalla, porque el interruptor vive arriba y sobrevive al editor. */
+  const { setBloqueado } = useSalida();
+  useEffect(() => {
+    setBloqueado(sucio);
+    return () => setBloqueado(false);
+  }, [sucio, setBloqueado]);
 
   function actualizar(clave: string, cambio: (s: SeccionGuardada) => SeccionGuardada) {
     setPagina((p) => ({ ...p, secciones: p.secciones.map((s) => (s.clave === clave ? cambio(s) : s)) }));

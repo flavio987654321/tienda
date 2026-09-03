@@ -10,6 +10,7 @@ import { prisma } from "@/lib/prisma";
 import type { TierDigital } from "@/lib/planes-digitales";
 import DigitalesSidebar from "./DigitalesSidebar";
 import TemaDelPanel from "./TemaDelPanel";
+import { ProveedorDeSalida } from "./SalidaSinGuardar";
 import { SCRIPT_TEMA } from "@/lib/tema-digitales";
 
 export const metadata: Metadata = {
@@ -112,14 +113,20 @@ export default async function DigitalesLayout({ children }: { children: React.Re
       <TemaDelPanel />
       <PWAManager appVersion={DIGITALES_VERSION} versionKey="pwa_digitales_version" disableNotifPrompt scope="/digitales" />
       <PanelSplash nombre="TiendaApps Digitales" />
-      <DigitalesSidebar tier={tier} />
-      {/* `lg:ml-14` deja libre la franja de la barra, que es `fixed`; `pt-14` hace
-          lo mismo con la barra de arriba del celular. El scroll va acá adentro y
-          no en el `body`: si no, la barra lateral se va con la página. Mismo
-          molde que `DashboardLayout`. */}
-      <main className="lg:ml-14 flex-1 flex flex-col bg-gray-50 panel-oscuro:bg-gray-950 pt-14 lg:pt-0 overflow-y-auto overflow-x-hidden transition-colors">
-        {children}
-      </main>
+      {/* Envuelve la barra Y la pantalla, y en ese orden importa: la pantalla es
+          la que dice "tengo cambios sin guardar" y los links que se los llevan
+          puestos están en la barra. Separados, cada uno tendría su propio estado
+          y la barra nunca se enteraría. */}
+      <ProveedorDeSalida>
+        <DigitalesSidebar tier={tier} />
+        {/* `lg:ml-14` deja libre la franja de la barra, que es `fixed`; `pt-14` hace
+            lo mismo con la barra de arriba del celular. El scroll va acá adentro y
+            no en el `body`: si no, la barra lateral se va con la página. Mismo
+            molde que `DashboardLayout`. */}
+        <main className="lg:ml-14 flex-1 flex flex-col bg-gray-50 panel-oscuro:bg-gray-950 pt-14 lg:pt-0 overflow-y-auto overflow-x-hidden transition-colors">
+          {children}
+        </main>
+      </ProveedorDeSalida>
     </div>
   );
 }

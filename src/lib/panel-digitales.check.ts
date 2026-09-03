@@ -693,6 +693,50 @@ chequear("el motivo de que esté apagado distingue el plan de la obra",
   /Tu plan no incluye escribir el ebook con IA/.test(pantallaProductos) &&
   /Todavía no está listo/.test(pantallaProductos));
 
+/* ── No perder el trabajo al salir, 03/09/26 ──────────────────────────────── */
+
+/* ⚠️ Encontrado A MANO probando el panel botón por botón, y es la clase de
+   agujero que ningún chequeo iba a encontrar solo: la guarda EXISTÍA.
+
+   El editor avisaba con `beforeunload`, que salta cuando el navegador descarga
+   la página de verdad —F5, cerrar la pestaña—. Pero irse a "Mi cuenta" desde la
+   barra es un `<Link>` de Next: navega del lado del cliente y no descarga nada,
+   así que el aviso no aparecía y el trabajo se perdía en silencio. La guarda no
+   cubría la salida más usada de todas.
+
+   El arreglo es el patrón que documenta Next 16 para el App Router: un contexto
+   y un `<Link>` propio que pregunta en su `onNavigate`. */
+/* `barra` y `layoutDig` ya están leídos más arriba en este mismo archivo. */
+const salida = readFileSync("src/app/digitales/SalidaSinGuardar.tsx", "utf8");
+const volver = readFileSync("src/app/digitales/BotonVolver.tsx", "utf8");
+const editorPag = readFileSync("src/app/digitales/productos/[id]/pagina/EditorClient.tsx", "utf8");
+
+chequear("el freno cancela la navegación de verdad",
+  salida.includes("onNavigate") && salida.includes("e.preventDefault()"));
+
+/* Si el proveedor no envolviera a los dos, la barra tendría su propio estado y
+   nunca se enteraría de que la pantalla tiene algo que perder. */
+chequear("el proveedor envuelve la barra Y la pantalla",
+  layoutDig.indexOf("<ProveedorDeSalida>") < layoutDig.indexOf("<DigitalesSidebar") &&
+  layoutDig.indexOf("{children}") < layoutDig.indexOf("</ProveedorDeSalida>"));
+
+/* ⚠️ Éste es EL chequeo. Volver a `next/link` en cualquiera de los dos deja el
+   agujero exactamente como estaba, sin romper nada y sin avisar. */
+chequear("la barra y el botón de volver usan el Link del panel, no el de Next",
+  barra.includes('LinkDelPanel as Link } from "./SalidaSinGuardar"') &&
+  volver.includes('LinkDelPanel as Link } from "./SalidaSinGuardar"') &&
+  !/^import Link from "next\/link";$/m.test(barra) &&
+  !/^import Link from "next\/link";$/m.test(volver));
+
+/* Los dos, y cada uno tapa una salida distinta. */
+chequear("el editor avisa por las dos vías: descarga y Link",
+  editorPag.includes("beforeunload") && editorPag.includes("setBloqueado(sucio)"));
+
+/* Sin soltar el freno al desmontar, guardar y salir seguiría preguntando desde
+   otra pantalla: el interruptor vive arriba y sobrevive al editor. */
+chequear("y suelta el freno al salir del editor",
+  editorPag.includes("return () => setBloqueado(false)"));
+
 console.log(fallos === 0
   ? "\nok — el panel de Productos Digitales sigue en pie"
   : `\nFALLA — ${fallos} chequeo(s) del panel de Productos Digitales`);

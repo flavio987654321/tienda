@@ -1,5 +1,7 @@
-import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+/* El `<Link>` del panel y no el de Next: éste pregunta antes de irse si la
+   pantalla tiene cambios sin guardar. Ver `SalidaSinGuardar`. */
+import { LinkDelPanel as Link } from "./SalidaSinGuardar";
 
 /**
  * El "volver" de arriba de cada pantalla del panel.
