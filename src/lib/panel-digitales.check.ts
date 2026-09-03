@@ -737,6 +737,54 @@ chequear("el editor avisa por las dos vías: descarga y Link",
 chequear("y suelta el freno al salir del editor",
   editorPag.includes("return () => setBloqueado(false)"));
 
+/* ── La pantalla de Ventas ──────────────────────────────────────────────────
+ *
+ * Es la que contesta la única pregunta por la que alguien abre el panel todos
+ * los días: ¿vendí? Y es la que muestra plata, así que lo que se cuida acá es
+ * que los números digan la verdad.
+ */
+const ventasPag = soloCodigo(readFileSync("src/app/digitales/ventas/page.tsx", "utf8"));
+const ventasCli = soloCodigo(readFileSync("src/app/digitales/ventas/VentasClient.tsx", "utf8"));
+
+/* En el menú, y arriba: enterrada abajo obligaría a pasar por Configuración
+   para llegar a lo que más se mira. */
+chequear("Ventas está en el menú, antes de Configuración",
+  barra.indexOf("/digitales/ventas") > barra.indexOf("/digitales/productos") &&
+  barra.indexOf("/digitales/ventas") < barra.indexOf("/digitales/configuracion"));
+
+/* ⚠️ LA COMISIÓN SALE DE LA ORDEN, NO DEL PLAN DE HOY. Alguien que vendió diez
+   veces en Free al 8% y hoy está en Pro vería esas diez recalculadas al 2%:
+   números que nunca existieron. */
+chequear("la comisión de una venta vieja sale del porcentaje congelado en la orden",
+  ventasPag.includes("comisionCongelada") &&
+  ventasPag.includes("lockedCommissionRate") &&
+  !ventasPag.includes("comisionDeLaVenta"));
+
+/* Sólo las ventas de ESTA cuenta. Es una pantalla con sesión, pero la consulta
+   tiene que estar anclada a su tienda igual: sin el `storeId`, un filtro mal
+   armado muestra las ventas de todo el mundo. */
+chequear("sólo se leen las ventas de la tienda de quien mira",
+  /storeId: store\.id/.test(ventasPag) && ventasPag.includes('user.role !== "DIGITAL"'));
+
+/* Todo lo que llega por la dirección se limpia: el estado sale de una lista
+   nuestra, la búsqueda tiene tope de largo y la página es un entero sano. */
+chequear("el filtro sólo puede ser uno de los nuestros, nunca texto crudo",
+  ventasPag.includes("esFiltro(parametros.estado)") && ventasPag.includes("FILTROS[filtro]"));
+chequear("la búsqueda entra recortada y la página es un entero sano",
+  /slice\(0, 120\)/.test(ventasPag) && /Number\.isFinite\(pedida\)/.test(ventasPag));
+
+/* La fecha se arma en el servidor y con la zona escrita. Formateada en el
+   navegador, el mismo texto sale distinto en el servidor (que corre en UTC) y en
+   la máquina de quien mira: React avisa de la hidratación y una venta de las
+   22:30 aparece con la fecha del día siguiente. */
+chequear("las fechas se formatean en el servidor y con la zona de Argentina",
+  ventasPag.includes("America/Argentina/Buenos_Aires") && !ventasCli.includes("DateTimeFormat"));
+
+/* ⚠️ No se inventa un estado de descarga donde no hay permiso: una línea sin
+   archivo no puede decir "0 de 5", porque eso afirma que hay algo esperando. */
+chequear("una línea sin permiso no muestra un contador inventado",
+  ventasCli.includes("l.bajadas === null"));
+
 console.log(fallos === 0
   ? "\nok — el panel de Productos Digitales sigue en pie"
   : `\nFALLA — ${fallos} chequeo(s) del panel de Productos Digitales`);

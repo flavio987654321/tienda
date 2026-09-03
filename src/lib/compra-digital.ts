@@ -83,9 +83,28 @@ export function totalDeLaCompra(principal: ItemDeCompra, upsells: ItemDeCompra[]
  * partes por diseño.
  */
 export function comisionDeLaVenta(total: number, tier: TierDigital): number {
+  return comisionCongelada(total, COMISION_DIGITAL[tier]);
+}
+
+/**
+ * La misma cuenta, pero con el porcentaje que quedó GUARDADO en la venta.
+ *
+ * ── Por qué hace falta una segunda puerta ───────────────────────────────────
+ *
+ * `comisionDeLaVenta` mira el plan de HOY, y sirve para cobrar. La pantalla de
+ * ventas mira ventas VIEJAS: si alguien vendió en Free al 8% y después pasó a
+ * Pro, recalcular con el plan de hoy le mostraría al 2% una venta que se cobró
+ * al 8%. Por eso la orden se guarda con su `lockedCommissionRate` y por eso el
+ * panel lee ese número y no el plan.
+ *
+ * Toma `unknown` a propósito: la columna es opcional en la base, así que puede
+ * llegar `null`. Y va por `pesos`, que descarta `Infinity` y `NaN` — un `Float`
+ * de Postgres los guarda.
+ */
+export function comisionCongelada(total: number, porcentaje: unknown): number {
   const base = pesos(total);
-  if (base === 0) return 0;
-  const pct = COMISION_DIGITAL[tier];
+  const pct = pesos(porcentaje);
+  if (base === 0 || pct === 0) return 0;
   const fee = Math.round((base * pct) / 100);
   /* ⚠️ Nunca más que el total. No debería poder pasar con porcentajes de un
      dígito, pero es el número que se le manda a Mercado Pago: una comisión mayor

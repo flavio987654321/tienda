@@ -9,12 +9,12 @@ import { useAuth } from "@/components/AuthProvider";
 import NotificationBell from "@/components/NotificationBell";
 import { COPY_DIGITAL, type TierDigital } from "@/lib/planes-digitales";
 import {
-  Home, UserRound, Package, Settings, Menu, X, LogOut, Loader2, ChevronRight, Sparkles,
+  Home, UserRound, Package, Receipt, Settings, Menu, X, LogOut, Loader2, ChevronRight, Sparkles,
 } from "lucide-react";
 
 /* ── Las pantallas del panel, en UNA sola lista ──────────────────────────────
  *
- * Cuatro, y son las cuatro que existen de verdad. Sin entradas apagadas ni
+ * Cinco, y son las cinco que existen de verdad. Sin entradas apagadas ni
  * "próximamente": un menú que nombra pantallas que no están se lee como que el
  * panel se rompió, no como que eso viene después. Un chequeo abre cada `href` y
  * verifica que exista su `page.tsx`.
@@ -25,6 +25,11 @@ import {
 const LINKS: { href: string; label: string; Icon: React.ElementType }[] = [
   { href: "/digitales", label: "Inicio", Icon: Home },
   { href: "/digitales/productos", label: "Productos", Icon: Package },
+  /* Ventas va JUSTO DESPUÉS de Productos y antes de lo demás: es la pantalla que
+     se abre todos los días, y la única que contesta la pregunta por la que
+     alguien entra al panel —¿vendí?—. Enterrada abajo obligaría a pasar por
+     Configuración para llegar a lo que más se mira. */
+  { href: "/digitales/ventas", label: "Ventas", Icon: Receipt },
   /* Configuración es lo del NEGOCIO —con qué cobrás, cómo te ve el comprador— y
      Mi cuenta es lo de la persona. Van separadas y en este orden: sin cobros
      conectados no se vende nada, así que lo primero que hay que encontrar es

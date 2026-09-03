@@ -6,12 +6,20 @@ import {
   nuevoTokenDeDescarga, vencimientoDelPermiso, lineasEntregables,
   MAX_DESCARGAS, DIAS_DEL_PERMISO,
 } from "@/lib/entrega-digital";
+import { comisionCongelada } from "@/lib/compra-digital";
 import { sendEntregaDigitalEmail } from "@/lib/resend";
+import { createNotification } from "@/lib/notifications";
 import { despues } from "@/lib/despues";
 
 export const runtime = "nodejs";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "";
+
+/* Para el texto de los avisos. Sin decimales, igual que en el resto del
+   ecosistema: los importes son pesos enteros y "12.000,00" en una campanita
+   ocupa lugar sin decir nada más. */
+const plata = (n: number) =>
+  new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(n);
 
 /**
  * El aviso de pago de una compra digital.
@@ -160,9 +168,29 @@ async function acreditar(idDelPago: string) {
         },
       }).catch((e) => console.error("[digital-cobro] no se pudo registrar la devolución:", e));
 
-      /* 🔲 Falta avisarle al vendedor. Hoy digitales no tiene notificaciones —no
-         hay un solo `createNotification` en sus rutas— así que por ahora queda
-         en el log. Va con la pantalla de Ventas. */
+      /* ⚠️ Y SE LE AVISA A QUIEN VENDIÓ. Esto no es un detalle de comodidad: la
+         plata ya salió de su cuenta de Mercado Pago y el acceso ya se cortó, o
+         sea que pasaron dos cosas graves sin que nadie las haya pedido. Sin este
+         aviso se entera cuando abre el panel, si lo abre.
+         Se lee el dueño recién acá, con `updateMany` ya hecho: la orden se
+         cancela igual aunque esta consulta falle. */
+      const deQuien = await prisma.order.findUnique({
+        where: { id: ordenId },
+        select: { total: true, store: { select: { ownerId: true } } },
+      }).catch(() => null);
+
+      if (deQuien) {
+        const esContracargo = pago.status === "charged_back";
+        await createNotification({
+          userId: deQuien.store.ownerId,
+          type: "DIGITAL_DEVOLUCION",
+          title: esContracargo ? "Contracargo en una venta" : "Devolución en una venta",
+          body: `Se ${esContracargo ? "reclamó" : "devolvió"} el pago de ${plata(deQuien.total)}. `
+            + "Le cortamos el acceso al archivo, pero lo que ya se descargó no vuelve.",
+          link: "/digitales/ventas",
+        });
+      }
+
       console.warn("[digital-cobro] devolución/contracargo: se cortó el acceso", {
         ordenId, estado: pago.status,
       });
@@ -177,9 +205,9 @@ async function acreditar(idDelPago: string) {
   const orden = await prisma.order.findUnique({
     where: { id: ordenId },
     select: {
-      id: true, status: true, total: true,
+      id: true, status: true, total: true, lockedCommissionRate: true,
       buyer: { select: { email: true, name: true } },
-      store: { select: { owner: { select: { role: true, name: true } } } },
+      store: { select: { ownerId: true, owner: { select: { role: true, name: true } } } },
       items: {
         select: {
           id: true,
@@ -304,6 +332,31 @@ async function acreditar(idDelPago: string) {
      anterior. Buscar el principal y salir si no está dejaba a esas compras sin
      mail de entrega. Se toma el principal si está, y si no, el padre del upsell:
      la pantalla de gracias cuelga del producto del embudo, no de la línea. */
+  /* ── El aviso a quien vendió ────────────────────────────────────────────
+   *
+   * La campanita del panel, no un push: una cuenta digital hoy no tiene permiso
+   * de notificaciones pedido (ver el comentario largo en el layout del panel),
+   * así que esto se lee al entrar. Es el primer aviso que digitales escribe por
+   * algo que pasó bien, y es el que hace que Ventas valga la pena abrir.
+   *
+   * ⚠️ Dice lo que LE QUEDA, no lo que se vendió. El bruto ya lo va a ver en
+   * Mercado Pago; el número que nadie le muestra es el de después de la
+   * comisión, y sale del porcentaje congelado en la orden — no del plan de hoy.
+   *
+   * No va con `despues` como el mail: es una fila en nuestra propia base, tarda
+   * milisegundos, y `createNotification` ya se traga su propio error sin voltear
+   * nada. Un aviso que no se escribe no puede tumbar una venta cobrada.
+   */
+  const leQueda = orden.total - comisionCongelada(orden.total, orden.lockedCommissionRate);
+  await createNotification({
+    userId: orden.store.ownerId,
+    type: "DIGITAL_VENTA",
+    title: "¡Vendiste!",
+    body: `${plata(orden.total)} — te quedan ${plata(leQueda)} después de la comisión.`
+      + " Ya le mandamos el archivo a quien compró.",
+    link: "/digitales/ventas",
+  });
+
   const laPrincipal = orden.items.find((i) => i.product.rolDigital === "PRINCIPAL")?.product;
   const primera = orden.items[0]?.product;
   const idDeLaPagina = laPrincipal?.id ?? primera?.padreId ?? null;

@@ -22,8 +22,8 @@
    Quien la ve no tiene cuenta ni preferencia guardada. */
 
 import {
-  seDibuja, conFichas, buscarEstilo, buscarPaleta, buscarSeccion, buscarTipografia,
-  ofertaVencida, variablesDePagina, COLORES_CLAROS, COLORES_OSCUROS,
+  seDibuja, conFichas, buscarEstilo, buscarSeccion,
+  ofertaVencida, variablesDePagina,
   type PaginaVenta, type Estilo,
 } from "@/lib/pagina-venta";
 import BarraDeOferta from "./BarraDeOferta";
