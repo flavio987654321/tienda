@@ -147,7 +147,68 @@ check("VIEJO-B", /rutaDeRef\(producto\.archivoPath\)/.test(confirmar),
 check("VIEJO-C", confirmar.indexOf("prisma.product.update") < confirmar.indexOf("method: \"DELETE\""),
   "y se borra DESPUES de guardar, no antes");
 
+
+/* ── Repaso de las dos rutas, 03/09/26 ────────────────────────────────────── */
+
+/* Los dos salieron de leer las siete rutas de digitales una por una con la
+   misma lista, antes de arrancar el checkout. */
+
+/* ⚠️ HALLAZGO 1. Estas dos eran las ÚNICAS consultas de producto de todo
+   digitales sin `deletedAt: null` — las otras cinco rutas ya lo tenían. Sin él
+   se firma y se confirma sobre un producto BORRADO: el archivo entra al bucket,
+   nadie lo va a poder alcanzar nunca y lo seguimos pagando. */
+check("REP-A", firma.includes("deletedAt: null") && confirmar.includes("deletedAt: null"),
+  "no se sube ni se confirma un archivo a un producto borrado");
+
+/* ⚠️ HALLAZGO 2, el más serio de los dos. La ruta se comprobaba contra la
+   CUENTA (`<user>/`) pero no contra el PRODUCTO, y `rutaDeArchivo` la arma como
+   `<cuenta>/<producto>/…`.
+
+   O sea que alguien podía confirmar la ruta del archivo de SU producto A sobre
+   su producto B. Los dos quedaban apuntando al mismo objeto, y el día que
+   reemplazara el archivo de A —que borra el viejo— B quedaba publicado
+   apuntando a la nada: se cobra y no hay nada que entregar. Es exactamente el
+   fallo que estas dos rutas existen para evitar. */
+check("REP-B", confirmar.includes("${user.id}/${productoId}/"),
+  "y la ruta que se confirma tiene que ser de esa cuenta Y de ese producto");
+
+/* Lo que ya estaba bien y conviene que siga: el navegador dice que subió, y el
+   servidor va a mirar. Sin esto alcanza con llamar a confirmar sin haber subido
+   nada para marcar el producto como entregable. */
+check("REP-C", confirmar.includes("pesoReal") && confirmar.includes('method: "HEAD"'),
+  "el servidor comprueba que el archivo EXISTA, no le cree al navegador");
+
 console.log(fallos === 0
   ? "\nok — el archivo del producto entra por una sola puerta y no queda servible"
   : `\nFALLA — ${fallos} chequeo(s) del archivo del producto`);
 process.exit(fallos === 0 ? 0 : 1);
+
+/* ── Repaso de las dos rutas, 03/09/26 ────────────────────────────────────── */
+
+/* Los dos salieron de leer las siete rutas de digitales una por una con la
+   misma lista, antes de arrancar el checkout. */
+
+/* ⚠️ HALLAZGO 1. Estas dos eran las ÚNICAS consultas de producto de todo
+   digitales sin `deletedAt: null` — las otras cinco rutas ya lo tenían. Sin él
+   se firma y se confirma sobre un producto BORRADO: el archivo entra al bucket,
+   nadie lo va a poder alcanzar nunca y lo seguimos pagando. */
+check("REP-A", firma.includes("deletedAt: null") && confirmar.includes("deletedAt: null"),
+  "no se sube ni se confirma un archivo a un producto borrado");
+
+/* ⚠️ HALLAZGO 2, el más serio de los dos. La ruta se comprobaba contra la
+   CUENTA (`<user>/`) pero no contra el PRODUCTO, y `rutaDeArchivo` la arma como
+   `<cuenta>/<producto>/…`.
+
+   O sea que alguien podía confirmar la ruta del archivo de SU producto A sobre
+   su producto B. Los dos quedaban apuntando al mismo objeto, y el día que
+   reemplazara el archivo de A —que borra el viejo— B quedaba publicado
+   apuntando a la nada: se cobra y no hay nada que entregar. Es exactamente el
+   fallo que estas dos rutas existen para evitar. */
+check("REP-B", confirmar.includes("${user.id}/${productoId}/"),
+  "y la ruta que se confirma tiene que ser de esa cuenta Y de ese producto");
+
+/* Lo que ya estaba bien y conviene que siga: el navegador dice que subió, y el
+   servidor va a mirar. Sin esto alcanza con llamar a confirmar sin haber subido
+   nada para marcar el producto como entregable. */
+check("REP-C", confirmar.includes("pesoReal") && confirmar.includes('method: "HEAD"'),
+  "el servidor comprueba que el archivo EXISTA, no le cree al navegador");

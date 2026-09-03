@@ -92,11 +92,18 @@ export async function POST(req: NextRequest) {
   }
 
   /* ⚠️ La ruta la manda el navegador, así que se comprueba que sea una de las
-     que ESTE usuario puede haber recibido. `rutaDeArchivo` la arma empezando por
-     el id de la cuenta; sin esta línea, alguien podría confirmar apuntando al
-     archivo de otra persona y quedarse con su ebook en su propio producto.
+     que ESTE usuario puede haber recibido para ESTE producto. `rutaDeArchivo`
+     la arma como `<cuenta>/<producto>/…`, así que se piden los dos tramos.
+
+     Con la cuenta sola no alcanzaba, y no es teórico: alguien podía confirmar
+     la ruta del archivo de SU producto A sobre su producto B. Los dos quedaban
+     apuntando al MISMO objeto, y el día que reemplazara el archivo de A —que
+     borra el objeto viejo, unas líneas más abajo— B quedaba publicado
+     apuntando a la nada: se cobra y no hay nada que entregar. Es exactamente
+     el fallo que estas dos rutas existen para evitar.
+
      El `..` se rechaza aparte: `a/../../b` empieza bien y sale igual. */
-  if (!ruta.startsWith(`${user.id}/`) || ruta.includes("..")) {
+  if (!ruta.startsWith(`${user.id}/${productoId}/`) || ruta.includes("..")) {
     return NextResponse.json({ error: "Esa ruta no es tuya" }, { status: 403 });
   }
 
@@ -104,7 +111,9 @@ export async function POST(req: NextRequest) {
      Se trae el `archivoPath` de ahora porque si esto es un reemplazo hay que
      borrar el de antes; ver abajo. */
   const producto = await prisma.product.findFirst({
-    where: { id: productoId, store: { ownerId: user.id } },
+    /* `deletedAt: null` por lo mismo que en la firma: confirmar sobre un
+       producto borrado deja un archivo que nadie va a alcanzar nunca. */
+    where: { id: productoId, deletedAt: null, store: { ownerId: user.id } },
     select: { id: true, archivoPath: true },
   });
   if (!producto) {

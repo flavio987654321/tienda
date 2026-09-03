@@ -136,7 +136,12 @@ export async function POST(req: NextRequest) {
      el navegador: cualquiera podría firmar un permiso apuntando al producto de
      otra persona y, al confirmar, reemplazarle el ebook que vende. */
   const producto = await prisma.product.findFirst({
-    where: { id: productoId, store: { ownerId: user.id } },
+    /* ⚠️ `deletedAt: null` faltaba, y era la única consulta de producto de
+       todo digitales que no lo tenía junto con la de confirmar. Sin él se
+       firma un permiso para un producto BORRADO: el archivo entra al bucket,
+       nadie lo va a poder alcanzar nunca y lo pagamos igual. Es el mismo
+       gasto silencioso que el huérfano del reemplazo. */
+    where: { id: productoId, deletedAt: null, store: { ownerId: user.id } },
     select: { id: true },
   });
   if (!producto) {
