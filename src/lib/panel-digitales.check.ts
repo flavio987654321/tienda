@@ -737,6 +737,50 @@ chequear("el editor avisa por las dos vías: descarga y Link",
 chequear("y suelta el freno al salir del editor",
   editorPag.includes("return () => setBloqueado(false)"));
 
+/* ── 16. El editor en pantalla chica ────────────────────────────────────────
+ *
+ * Es la única pantalla del panel donde hay que mostrar DOS cosas a la vez —el
+ * formulario y la previa— y a 360 px entra una. Las solapas ya estaban; lo que
+ * faltaba era que se pudieran usar sin volver arriba, y que guardar no
+ * dependiera de scrollear hasta el techo.
+ */
+console.log("\n16) El editor en pantalla chica");
+
+const barraDelEditor = editorPag.slice(
+  editorPag.indexOf('className="sticky top-14'),
+  editorPag.indexOf("{/* ── Estilo y contenido"),
+);
+
+/* ⚠️ Las solapas Y el guardar viajan juntos y pegados. Con el guardar quieto en
+   el encabezado, había que subir varias pantallas para guardar — y el aviso de
+   "tenés cambios sin guardar" esperando en la puerta convierte eso en trampa. */
+chequear("las solapas y el guardar quedan pegados arriba en pantalla chica",
+  barraDelEditor.includes("sticky top-14") &&
+  barraDelEditor.includes("lg:hidden") &&
+  barraDelEditor.includes("onClick={guardar}"));
+
+/* Y no quedan dos botones de guardar a la vista: el del encabezado es sólo de
+   escritorio. Dos botones que hacen lo mismo se leen como que uno hace otra. */
+chequear("el guardar del encabezado desaparece en pantalla chica",
+  /onClick=\{guardar\}[\s\S]{0,300}?hidden items-center[\s\S]{0,200}?lg:inline-flex/.test(editorPag));
+
+/* `top-0` la dejaría abajo de la barra fija del celular: el contenedor que
+   scrollea arranca en el borde de la pantalla y esos 56 px están tapados. */
+chequear("se pega ABAJO de la barra del celular, no atrás",
+  !barraDelEditor.includes("sticky top-0"));
+
+/* Las dos columnas se esconden con `display:none`, así que al cambiar de solapa
+   el navegador recorta el scroll. Sin esto, la previa se abre por el medio y el
+   formulario vuelve en cualquier lado menos donde se estaba escribiendo. */
+chequear("cambiar de solapa no pierde dónde estabas",
+  editorPag.includes("scrollDelFormulario") &&
+  /contenedor\.scrollTop = vista === "previa" \? 0 : scrollDelFormulario\.current/.test(editorPag));
+
+/* El ancla existe porque `scrollIntoView` sobre algo `sticky` usa la posición
+   donde está pegado, o sea que no scrollea nada. */
+chequear("el scroll se cuelga de un ancla y no de la barra pegada",
+  /ref=\{ancla\}/.test(editorPag) && /ancla\.current\?\.closest\("main"\)/.test(editorPag));
+
 /* ── La pantalla de Ventas ──────────────────────────────────────────────────
  *
  * Es la que contesta la única pregunta por la que alguien abre el panel todos

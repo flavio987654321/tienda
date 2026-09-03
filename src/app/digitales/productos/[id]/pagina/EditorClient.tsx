@@ -360,6 +360,43 @@ export default function EditorDePagina({ productoId, nombre, publicado, pagina: 
   const [error, setError] = useState("");
   const [ancho, setAncho] = useState<"pc" | "celular">("pc");
   const [vista, setVista] = useState<"editar" | "previa">("editar");
+
+  /* ══════════════════════════════════════════════════════════════════════
+     CAMBIAR DE SOLAPA SIN PERDER DÓNDE ESTABAS
+     ══════════════════════════════════════════════════════════════════════
+
+     Las dos columnas se esconden con `display: none`, así que al pasar a la
+     previa el formulario —que mide varias pantallas— desaparece de golpe y el
+     navegador recorta el scroll a lo que quedó. Sin esto pasaban las dos cosas
+     molestas: se cae a la previa por el medio, y al volver a Editar el
+     formulario arranca en cualquier lado menos donde se estaba escribiendo.
+
+     Se guarda dónde estaba el formulario antes de irse y se lo devuelve al
+     volver; y la previa siempre arranca de arriba, que es como se mira una
+     página. */
+  const ancla = useRef<HTMLDivElement>(null);
+  const scrollDelFormulario = useRef(0);
+  /* El primer dibujo no mueve nada: sin esto, entrar al editor te empuja el
+     scroll aunque no hayas tocado ninguna solapa. */
+  const yaSeDibujo = useRef(false);
+
+  function cambiarVista(v: "editar" | "previa") {
+    if (v === vista) return;
+    if (vista === "editar") {
+      scrollDelFormulario.current = ancla.current?.closest("main")?.scrollTop ?? 0;
+    }
+    setVista(v);
+  }
+
+  /* Va en un efecto y no en el `onClick` porque hay que esperar a que React
+     redibuje: apenas se toca la solapa, el alto del contenedor todavía es el
+     viejo y cualquier `scrollTop` que se escriba lo recorta el navegador. */
+  useEffect(() => {
+    if (!yaSeDibujo.current) { yaSeDibujo.current = true; return; }
+    const contenedor = ancla.current?.closest("main");
+    if (!contenedor) return;
+    contenedor.scrollTop = vista === "previa" ? 0 : scrollDelFormulario.current;
+  }, [vista]);
   const [solapa, setSolapa] = useState<"estilo" | "contenido">("contenido");
   /* La que se acaba de abrir desde la previa. Se destaca un rato y se apaga:
      sin eso, la lista se movió sola y no queda claro dónde caíste. */
@@ -568,11 +605,15 @@ export default function EditorDePagina({ productoId, nombre, publicado, pagina: 
           >
             <ExternalLink className="h-3.5 w-3.5" /> Abrirla
           </Link>
+          {/* ⚠️ En pantalla chica este botón NO va acá: se va con el scroll, y el
+              formulario es larguísimo. Abajo hay uno igual, pegado arriba, que
+              está siempre a mano. Dos botones a la vista serían dos botones que
+              hacen lo mismo, así que éste desaparece. */}
           <button
             type="button"
             onClick={guardar}
             disabled={guardando || !sucio}
-            className="inline-flex items-center gap-1.5 rounded-xl bg-orange-600 px-4 py-2 text-xs font-bold text-white transition-colors hover:bg-orange-700 disabled:cursor-not-allowed disabled:opacity-40"
+            className="hidden items-center gap-1.5 rounded-xl bg-orange-600 px-4 py-2 text-xs font-bold text-white transition-colors hover:bg-orange-700 disabled:cursor-not-allowed disabled:opacity-40 lg:inline-flex"
           >
             {guardando ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
             {sucio ? "Guardar cambios" : "Guardado"}
@@ -587,22 +628,60 @@ export default function EditorDePagina({ productoId, nombre, publicado, pagina: 
         </p>
       )}
 
-      {/* En el celular no entran las dos columnas, así que se elige una. */}
-      <div className="mb-4 flex gap-1 rounded-xl bg-gray-100 p-1 panel-oscuro:bg-gray-800 lg:hidden">
-        {(["editar", "previa"] as const).map((v) => (
-          <button
-            key={v}
-            type="button"
-            onClick={() => setVista(v)}
-            className={`flex-1 rounded-lg px-3 py-2 text-xs font-bold transition-colors ${
-              vista === v
-                ? "bg-white text-gray-900 shadow-sm panel-oscuro:bg-gray-900 panel-oscuro:text-gray-100"
-                : "text-gray-500 panel-oscuro:text-gray-400"
-            }`}
-          >
-            {v === "editar" ? "Editar" : "Vista previa"}
-          </button>
-        ))}
+      {/* El ancla no dibuja nada: es de dónde se cuelga el `scrollIntoView` que
+          busca el contenedor que scrollea. No puede ser la barra de acá abajo
+          porque ésa es `sticky`, y `scrollIntoView` sobre algo pegado usa la
+          posición donde está pegado — o sea, no scrollea nada. */}
+      <div ref={ancla} aria-hidden="true" className="lg:hidden" />
+
+      {/* ══════════════════════════════════════════════════════════════════
+          LA BARRA DE PANTALLA CHICA
+          ══════════════════════════════════════════════════════════════════
+
+          En el celular no entran las dos columnas, así que se elige una. Eso ya
+          estaba. Lo que faltaba es que se pudiera elegir SIN VOLVER ARRIBA: este
+          formulario mide varias pantallas, y con las solapas quietas en el
+          encabezado, mirar cómo quedó una sección de abajo era scrollear hasta
+          el techo, tocar, y scrollear de vuelta. Nadie hace eso dos veces.
+
+          Y el botón de guardar viene con ellas por lo mismo, que es peor: ahí
+          arriba se lo comía el scroll, así que para guardar había que subir. Con
+          el aviso de "tenés cambios sin guardar" esperando en la puerta, esa
+          combinación es una trampa.
+
+          `top-14` y no `top-0`: el contenedor que scrollea empieza en el borde de
+          la pantalla, y los primeros 56 px se los tapa la barra fija del celular.
+          Pegada en 0, esto quedaba abajo de esa barra. */}
+      <div className="sticky top-14 z-30 -mx-4 mb-4 flex items-center gap-2 border-b border-gray-100 bg-gray-50/95 px-4 py-2 backdrop-blur panel-oscuro:border-gray-800 panel-oscuro:bg-gray-950/95 sm:-mx-6 sm:px-6 lg:hidden">
+        <div className="flex flex-1 gap-1 rounded-xl bg-gray-100 p-1 panel-oscuro:bg-gray-800">
+          {(["editar", "previa"] as const).map((v) => (
+            <button
+              key={v}
+              type="button"
+              onClick={() => cambiarVista(v)}
+              className={`flex-1 rounded-lg px-3 py-2 text-xs font-bold transition-colors ${
+                vista === v
+                  ? "bg-white text-gray-900 shadow-sm panel-oscuro:bg-gray-900 panel-oscuro:text-gray-100"
+                  : "text-gray-500 panel-oscuro:text-gray-400"
+              }`}
+            >
+              {v === "editar" ? "Editar" : "Vista previa"}
+            </button>
+          ))}
+        </div>
+
+        {/* Dice "Guardar" a secas y no "Guardar cambios": al lado de dos solapas
+            y a 360 px, la palabra de más empuja las solapas a la mitad de ancho.
+            Apagado dice "Guardado", que es la misma señal que arriba. */}
+        <button
+          type="button"
+          onClick={guardar}
+          disabled={guardando || !sucio}
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-orange-600 px-3.5 py-2.5 text-xs font-bold text-white transition-colors hover:bg-orange-700 disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          {guardando ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+          {sucio ? "Guardar" : "Guardado"}
+        </button>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)]">

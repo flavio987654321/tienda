@@ -2087,6 +2087,47 @@ el navegador, el mismo texto sale distinto en el servidor (que corre en UTC) y e
 la máquina de quien mira: React avisa de la hidratación y una venta de las 22:30
 aparece con la fecha del día siguiente.
 
+### ✅ El editor en pantalla chica — HECHO (03/09/26)
+
+La única pantalla del panel donde hay que mostrar **dos cosas a la vez** —el
+formulario y la previa— y a 360 px entra una. Las solapas *Editar / Vista previa*
+ya estaban; lo que faltaba era poder usarlas.
+
+**Dos problemas, y los dos eran el mismo: todo vivía arriba.**
+
+1. **Las solapas estaban quietas en el encabezado.** Este formulario mide varias
+   pantallas, así que mirar cómo quedó una sección de abajo era scrollear hasta
+   el techo, tocar, y scrollear de vuelta. Nadie hace eso dos veces.
+2. **El botón de guardar también**, y eso es peor: para guardar había que subir.
+   Con el aviso de "tenés cambios sin guardar" esperando en la puerta, esa
+   combinación es una trampa — se sale, salta el cartel, y no se sabe por qué.
+
+Ahora los tres viajan juntos en una barra pegada arriba, sólo abajo de `lg`. El
+guardar del encabezado desaparece ahí: dos botones que hacen lo mismo se leen
+como que uno hace otra cosa.
+
+**`top-14` y no `top-0`**, que es el detalle que casi se come todo: el contenedor
+que scrollea arranca en el borde de la pantalla y los primeros 56 px se los tapa
+la barra fija del celular. Pegada en 0, la barra quedaba escondida atrás.
+
+**Y cambiar de solapa ya no pierde dónde estabas.** Las dos columnas se esconden
+con `display: none`, así que al pasar a la previa el formulario desaparece de
+golpe y el navegador recorta el scroll a lo que quedó: se caía a la previa por el
+medio, y al volver a Editar el formulario arrancaba en cualquier lado menos donde
+se estaba escribiendo. Se guarda la posición del formulario antes de irse y se la
+devuelve al volver; la previa siempre arranca de arriba, que es como se mira una
+página.
+
+Va en un efecto y no en el `onClick` porque hay que esperar a que React redibuje:
+apenas se toca la solapa, el alto del contenedor todavía es el viejo y cualquier
+`scrollTop` que se escriba lo recorta el navegador. Y se cuelga de un **ancla**
+—un `div` vacío— y no de la barra: `scrollIntoView` sobre algo `sticky` usa la
+posición donde está pegado, o sea que no scrollea nada.
+
+🔲 Lo que sigue sin resolverse, y no tiene solución: **en el celular no se pueden
+ver las dos al mismo tiempo.** Es el ancho, no el código. Esto hace que
+alternar cueste un toque en vez de dos scrolls.
+
 ### ✅ Reenviar el mail de entrega — HECHO (03/09/26)
 
 El agujero que tapa, dicho como pasa de verdad:
