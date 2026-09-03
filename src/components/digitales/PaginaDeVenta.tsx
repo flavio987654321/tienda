@@ -723,13 +723,38 @@ function Contenido({ clave, campos, tono, datos }: {
     case "garantia": {
       /* `{dias}` sale del campo de al lado. El número vive en un solo lugar para
          que no quede un título que dice 7 con una garantía de 30. */
+      const dias = typeof campos.dias === "number" ? campos.dias : null;
       return (
         <Seccion tono={tono} estilo={estilo}>
-          <div className={`mx-auto max-w-2xl bg-[color:var(--pv-tarjeta)] p-6 text-center ${estilo.tarjeta}`}>
+          <div className={`mx-auto max-w-2xl bg-[color:var(--pv-tarjeta)] p-6 text-center sm:p-8 ${estilo.tarjeta}`}>
+            {/* El escudo. Un bloque de garantía sin nada que mirar se lee como
+                un párrafo más y se saltea; con el sello arriba se frena el ojo.
+                El círculo toma el verde de la página, no uno escrito acá. */}
+            <span
+              aria-hidden="true"
+              className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-[color:var(--pv-ok)]/10 text-3xl"
+            >
+              🛡️
+            </span>
             <Titulo estilo={estilo}>{conFichas(texto(campos, "titulo"), campos)}</Titulo>
             <p className="mt-3 text-pretty leading-relaxed text-[color:var(--pv-tenue)]">
               {conFichas(texto(campos, "texto"), campos)}
             </p>
+            {/* ⚠️ El sello dice lo que la persona puede HACER, con los días de al
+                lado. El de la competencia dice que protege al comprador, y eso
+                suena a que responde la plataforma — cuando acá la devolución la
+                paga quien vende, de su bolsillo. No firmamos con nuestro nombre
+                una promesa que cumple otro.
+
+                Hay un chequeo que falla si esa frase vuelve a aparecer, así que
+                acá está dicha con otras palabras a propósito. */}
+            {dias ? (
+              <p
+                className={`mt-5 inline-block bg-[color:var(--pv-ok)] px-4 py-2 text-sm font-bold text-[color:var(--pv-fondo)] ${estilo.sello}`}
+              >
+                {dias} días para pedir la devolución
+              </p>
+            ) : null}
           </div>
         </Seccion>
       );

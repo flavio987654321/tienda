@@ -624,6 +624,35 @@ check("ANCHO-B", /overflow-x-clip/.test(dibujante),
 check("ANCHO-C", !/overflow-x-hidden/.test(dibujante),
   "y se recorta con clip, no con hidden, que dejaría un scroll vertical propio");
 
+/* ── El sello de la garantía ──────────────────────────────────────────────── */
+
+/* ⚠️ Su bloque tiene un piso de 1 día y el ejemplo que vimos estaba en 7. En
+   Argentina una compra a distancia ya tiene 10 días corridos de arrepentimiento
+   por el art. 34 de la 24.240, y eso corre se escriba o no. Una página que dice
+   "Garantía de 7 días" hace creer que al octavo no se puede devolver, cuando sí
+   se puede. Por eso acá el piso es 10 y no 1. */
+
+check("GAR-G", (campoDias?.min ?? 0) === 10,
+  "no se puede prometer menos de 10 días: la ley ya los da y prometer 7 confunde");
+
+/* Subir el piso recorta hacia ARRIBA, que es el lado seguro: un 7 guardado antes
+   de este cambio se dibuja como 10, nunca al revés. */
+check("GAR-H", (() => {
+  const p = normalizarContenido({ secciones: [{ clave: "garantia", campos: { dias: 7 } }] });
+  return seccion(p, "garantia")?.campos.dias === 10;
+})(), "y un 7 guardado de antes se dibuja como 10, no como 7");
+
+/* Un bloque de garantía sin nada que mirar se lee como un párrafo más y se
+   saltea. El escudo frena el ojo; el sello dice qué se puede hacer. */
+check("GAR-I", dibujante.includes("🛡️") && dibujante.includes("días para pedir la devolución"),
+  "la garantía lleva su escudo y su sello, con los días que dice la sección");
+
+/* ⚠️ El sello de la competencia dice "Protección al Comprador", que suena a que
+   protege la plataforma. Acá la devolución la paga quien vende, de su bolsillo:
+   no firmamos con nuestro nombre una promesa que cumple otro. */
+check("GAR-J", !/protecci[oó]n al comprador/i.test(dibujante),
+  "y no dice 'protección al comprador': eso suena a que responde la plataforma");
+
 /* ── El resumen de precio ─────────────────────────────────────────────────── */
 
 /* ⚠️ Mirado en su editor el 02/09/26. Dos hallazgos, y los dos son del mismo

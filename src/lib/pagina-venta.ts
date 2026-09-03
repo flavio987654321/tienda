@@ -361,9 +361,18 @@ export const SECCIONES: readonly Seccion[] = [
        va a pasar, y lo paga quien vende, de su bolsillo. */
     aviso: "Lo que prometas acá lo vas a tener que cumplir con tu plata. Por ley ya tenés 10 días de arrepentimiento, escribas esto o no.",
     campos: [
+      /* ⚠️ El PISO es 10, no 1, y por el mismo motivo que el valor de fábrica:
+         en Argentina una compra a distancia ya tiene 10 días corridos de
+         arrepentimiento por el art. 34 de la 24.240, y eso corre se escriba o
+         no. Dejar poner 7 —que es lo que tiene la competencia— pone en la
+         página una garantía MÁS CORTA que la que la ley ya da, y quien la lee
+         se cree que a los 8 días no puede devolver.
+
+         Subir el piso recorta hacia arriba, que es el lado seguro: un 7
+         guardado antes se dibuja como 10, nunca al revés. */
       { clave: "dias", etiqueta: "Días de garantía", tipo: "numero", largo: 0,
-        min: 1, max: 365, porDefecto: 10,
-        ayuda: `Escribí ${FICHA_DIAS} en el título o en el texto y se reemplaza por este número.` },
+        min: 10, max: 365, porDefecto: 10,
+        ayuda: `Mínimo 10: por ley toda compra a distancia ya los tiene. Escribí ${FICHA_DIAS} en el título o en el texto y se reemplaza por este número.` },
       { clave: "titulo", etiqueta: "Título", tipo: "texto", largo: 80,
         ejemplo: `Garantía de ${FICHA_DIAS} días` },
       { clave: "texto", etiqueta: "Qué prometés", tipo: "parrafo", largo: 400,
