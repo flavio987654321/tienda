@@ -713,11 +713,6 @@ export default function EditorDePagina({ productoId, nombre, publicado, pagina: 
           )}
 
           <div className={solapa === "contenido" ? "grid gap-2" : "hidden"}>
-            {/* ⚠️ Ojo con el orden: esto va DESPUÉS de las secciones, y a
-                propósito. Es lo que menos se toca y lo único que no se dibuja en
-                la página, así que arriba estorbaría todos los días para servir
-                una vez. Se llega scrolleando, que es cuando se busca. */}
-            <SeoAparte pagina={pagina} onChange={setSeo} />
             {pagina.secciones.map((s, i) => {
               const def = buscarSeccion(s.clave);
               if (!def) return null;
@@ -946,6 +941,16 @@ export default function EditorDePagina({ productoId, nombre, publicado, pagina: 
                 </div>
               );
             })}
+
+            {/* ⚠️ DESPUÉS de las secciones, y a propósito: es lo que menos se
+                toca y lo único que no se dibuja en la página. Arriba estorbaría
+                todos los días para servir una vez. */}
+            <SeoAparte
+              pagina={pagina}
+              abierto={abierta === CLAVE_SEO}
+              onAbrir={() => setAbierta(abierta === CLAVE_SEO ? null : CLAVE_SEO)}
+              onChange={setSeo}
+            />
           </div>
         </div>
 
@@ -1006,28 +1011,77 @@ export default function EditorDePagina({ productoId, nombre, publicado, pagina: 
  * no se dibuja, no se apaga y no se ordena. Y los dos son opcionales — vacíos
  * caen en el nombre y la descripción del producto.
  */
-function SeoAparte({ pagina, onChange }: {
-  pagina: PaginaVenta; onChange: (clave: string, v: string) => void;
+/**
+ * La clave con la que se abre y se cierra, igual que una sección.
+ *
+ * ⚠️ Empieza con un caracter que ninguna clave del catálogo puede tener, así
+ * que jamás choca con una sección de verdad — y si mañana alguien agrega una
+ * sección, tampoco.
+ */
+const CLAVE_SEO = "@seo";
+
+function SeoAparte({ pagina, abierto, onAbrir, onChange }: {
+  pagina: PaginaVenta;
+  abierto: boolean;
+  onAbrir: () => void;
+  onChange: (clave: string, v: string) => void;
 }) {
+  /* Plegada de fábrica y con la misma cara que una sección: al lado de trece
+     tarjetas cerradas, una abierta se lee como que algo hay que hacer ahí. Y
+     ésta es la que menos se toca de todas. */
+  const escritos = CAMPOS_SEO.filter((c) => {
+    const v = pagina.seo[c.clave];
+    return typeof v === "string" && v.length > 0;
+  }).length;
+
   return (
-    <div className="mt-4 rounded-2xl border border-gray-200 bg-white p-3 panel-oscuro:border-gray-700 panel-oscuro:bg-gray-900">
-      <p className="text-sm font-bold text-gray-900 panel-oscuro:text-gray-100">
-        Cómo se ve al compartirla
-      </p>
-      <p className="mb-3 mt-0.5 text-[11px] leading-relaxed text-gray-500 panel-oscuro:text-gray-400">
-        Lo que aparece en Google y en la tarjeta de WhatsApp. La foto sale sola de
-        la portada del producto.
-      </p>
-      <div className="grid gap-3">
-        {CAMPOS_SEO.map((campo) => (
-          <CasillaTexto
-            key={campo.clave}
-            campo={campo}
-            valor={typeof pagina.seo[campo.clave] === "string" ? (pagina.seo[campo.clave] as string) : ""}
-            onChange={(v) => onChange(campo.clave, v)}
-          />
-        ))}
+    <div
+      className={`rounded-2xl border bg-white transition-colors panel-oscuro:bg-gray-900 ${
+        abierto
+          ? "border-orange-300 panel-oscuro:border-orange-500/40"
+          : "border-gray-200 panel-oscuro:border-gray-700"
+      }`}
+    >
+      <div className="flex items-center gap-1 p-3">
+        <button
+          type="button"
+          onClick={onAbrir}
+          className="flex min-w-0 flex-1 items-center gap-2 text-left"
+        >
+          <span className="min-w-0">
+            <span className="block truncate text-sm font-bold text-gray-900 panel-oscuro:text-gray-100">
+              Cómo se ve al compartirla
+            </span>
+            <span className="block truncate text-[11px] text-gray-500 panel-oscuro:text-gray-400">
+              {escritos === 0
+                ? "Usa el nombre y la descripción del producto"
+                : "Google y la tarjeta de WhatsApp"}
+            </span>
+          </span>
+          {abierto ? (
+            <ChevronUp className="ml-auto h-4 w-4 shrink-0 text-gray-400" />
+          ) : (
+            <ChevronDown className="ml-auto h-4 w-4 shrink-0 text-gray-400" />
+          )}
+        </button>
       </div>
+
+      {abierto && (
+        <div className="grid gap-3 border-t border-gray-100 px-3 pb-4 pt-3 panel-oscuro:border-gray-800">
+          <p className="text-[11px] leading-relaxed text-gray-500 panel-oscuro:text-gray-400">
+            Lo que aparece en Google y en la tarjeta de WhatsApp. La foto sale sola
+            de la portada del producto.
+          </p>
+          {CAMPOS_SEO.map((campo) => (
+            <CasillaTexto
+              key={campo.clave}
+              campo={campo}
+              valor={typeof pagina.seo[campo.clave] === "string" ? (pagina.seo[campo.clave] as string) : ""}
+              onChange={(v) => onChange(campo.clave, v)}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

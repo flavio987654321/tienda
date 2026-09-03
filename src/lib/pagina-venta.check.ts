@@ -663,6 +663,17 @@ check("SEO-F", publica.includes("index: false"),
 check("SEO-G", editor.includes("CAMPOS_SEO.map("),
   "el editor los muestra, al final del contenido: es lo que menos se toca");
 
+/* ⚠️ Salió de un error mío: el comentario decía «va DESPUÉS de las secciones» y
+   el código la dibujaba ANTES, así que era lo primero de la lista. Este chequeo
+   compara las posiciones en vez de creerle al comentario. */
+check("SEO-H", editor.indexOf("pagina.secciones.map(") < editor.indexOf("<SeoAparte"),
+  "y va después de las secciones, no antes: se toca una vez y estorba todos los días");
+
+/* Plegada de fábrica. Al lado de trece tarjetas cerradas, una abierta se lee
+   como que algo hay que hacer ahí — y es la que menos se toca de todas. */
+check("SEO-I", editor.includes("abierto={abierta === CLAVE_SEO}"),
+  "nace plegada y se abre igual que una sección, con la misma cara");
+
 /* ── La portada ───────────────────────────────────────────────────────────── */
 
 /* Quien entra desde un anuncio cae acá sin contexto ninguno: no sabe qué tipo
