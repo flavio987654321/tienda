@@ -23,7 +23,7 @@
 
 import {
   seDibuja, conFichas, buscarEstilo, buscarPaleta, buscarSeccion, buscarTipografia,
-  COLORES_CLAROS, COLORES_OSCUROS,
+  ofertaVencida, COLORES_CLAROS, COLORES_OSCUROS,
   type PaginaVenta, type Estilo,
 } from "@/lib/pagina-venta";
 import BarraDeOferta from "./BarraDeOferta";
@@ -142,16 +142,35 @@ function Titulo({ children, estilo }: { children: string; estilo: Estilo }) {
  *
  * Todos los números salen de lo que cargó quien vende. Acá no se inventa uno
  * solo: se suma y se resta.
+ *
+ * ── Por qué toma `datos` ENTERO y no `(producto, bonos)` ────────────────────
+ *
+ * La cuenta necesita tres cosas —el producto, los bonos y si la oferta con
+ * fecha venció— y la leen cuatro lugares distintos: la ficha de precio, la
+ * lista de lo que incluye, la portada y la barra fija. Con argumentos sueltos
+ * alcanza con olvidarse uno en un solo lugar para que la barra diga un número y
+ * la ficha diga otro. **Ya pasó una vez**: el editor y la página contaban los
+ * bonos con reglas distintas y una decía $20.000 donde la otra decía $34.000.
+ *
+ * Con un solo argumento no hay nada que olvidar.
  */
-function cuentaDeLaOferta(producto: ProductoParaPagina, bonos: ProductoParaPagina[]) {
-  /* Sin precio tachado, el regular es el que se cobra: el ebook no aporta
-     ahorro y el total es sólo lo que suman los bonos. */
-  const regular = producto.comparePrice && producto.comparePrice > producto.price
+function cuentaDeLaOferta(datos: DatosDePagina) {
+  const { producto, bonos } = datos;
+  /* Ver `ofertaVencida`: pasada la fecha, el descuento del producto deja de
+     mostrarse. Los bonos siguen contando porque siguen viniendo. */
+  const vencida = ofertaVencida(datos.pagina, Date.now());
+  /* Sin precio tachado —o con la oferta ya terminada— el regular es el que se
+     cobra: el ebook no aporta ahorro y el total es sólo lo que suman los bonos. */
+  const regular = !vencida && producto.comparePrice && producto.comparePrice > producto.price
     ? producto.comparePrice
     : producto.price;
   const valorTotal = regular + valorDeLosBonos(bonos);
   const ahorro = valorTotal > producto.price ? valorTotal - producto.price : 0;
   return {
+    /* Sale de acá y no se recalcula afuera. `LoQueIncluye` tenía su propia copia
+       de estas tres líneas, así que el día que cambiara la regla —hoy— una se
+       enteraba y la otra no. */
+    regular,
     valorTotal,
     ahorro,
     porcentaje: ahorro > 0 ? Math.round((ahorro / valorTotal) * 100) : 0,
@@ -159,15 +178,17 @@ function cuentaDeLaOferta(producto: ProductoParaPagina, bonos: ProductoParaPagin
        ebook: es lo que vale el paquete. Y eso hay que decirlo con la palabra
        al lado, o se lee como un precio que alguien pagó alguna vez. */
     conBonos: valorDeLosBonos(bonos) > 0,
+    vencida,
   };
 }
 
-function Numeros({ producto, bonos, estilo, listaAparte }: {
-  producto: ProductoParaPagina; bonos: ProductoParaPagina[]; estilo: Estilo;
+function Numeros({ datos, estilo, listaAparte }: {
+  datos: DatosDePagina; estilo: Estilo;
   /** `true` cuando al lado ya está la lista de lo que incluye: no se repite. */
   listaAparte?: boolean;
 }) {
-  const { valorTotal, ahorro, porcentaje, conBonos } = cuentaDeLaOferta(producto, bonos);
+  const { producto, bonos } = datos;
+  const { valorTotal, ahorro, porcentaje, conBonos } = cuentaDeLaOferta(datos);
 
   return (
     <div>
@@ -262,17 +283,16 @@ function Numeros({ producto, bonos, estilo, listaAparte }: {
  * suma exactamente el total. Y el total es el mismo que usa el sello, el
  * tachado y la barra de abajo, porque los cuatro leen `cuentaDeLaOferta`.
  */
-function LoQueIncluye({ producto, bonos, dias, estilo }: {
-  producto: ProductoParaPagina;
-  bonos: ProductoParaPagina[];
+function LoQueIncluye({ datos, dias, estilo }: {
+  datos: DatosDePagina;
   /** Los días de garantía, o `null` si esa sección no se va a ver. */
   dias: number | null;
   estilo: Estilo;
 }) {
-  const { valorTotal, conBonos } = cuentaDeLaOferta(producto, bonos);
-  const regular = producto.comparePrice && producto.comparePrice > producto.price
-    ? producto.comparePrice
-    : producto.price;
+  const { producto, bonos } = datos;
+  /* `regular` sale de la cuenta y ya NO se recalcula acá: tenía su propia copia
+     de la fórmula, y con la oferta vencida las dos daban números distintos. */
+  const { valorTotal, conBonos, regular } = cuentaDeLaOferta(datos);
 
   /* Sin bonos y sin garantía la lista tendría un solo renglón, que no compara
      con nada: ahí no aporta y el precio se muestra solo, como antes. */
@@ -523,7 +543,7 @@ function Contenido({ clave, campos, tono, datos }: {
                 </p>
               )}
               <div className={`mt-6 bg-[color:var(--pv-tarjeta)] p-5 ${estilo.tarjeta}`}>
-                <Numeros producto={producto} bonos={bonos} estilo={estilo} />
+                <Numeros datos={datos} estilo={estilo} />
                 <div className="mt-5 grid gap-3">
                   <BotonComprar esPrevia={esPrevia} estilo={estilo}>
                     {texto(campos, "textoBoton")}
@@ -721,10 +741,10 @@ function Contenido({ clave, campos, tono, datos }: {
         <Seccion tono={tono} estilo={estilo}>
           <div className={`mx-auto flex max-w-xl flex-col items-center gap-5 bg-[color:var(--pv-suave)] px-5 py-10 text-center sm:px-8 ${estilo.tarjeta}`}>
             <Titulo estilo={estilo}>{texto(campos, "titulo")}</Titulo>
-            <LoQueIncluye producto={producto} bonos={bonos} dias={dias} estilo={estilo} />
+            <LoQueIncluye datos={datos} dias={dias} estilo={estilo} />
             {/* El precio no se puede ocultar: `lib/pagina-venta` no le da botón
                 de apagar, y mandar visible:false tampoco lo apaga. */}
-            <Numeros producto={producto} bonos={bonos} estilo={estilo} listaAparte />
+            <Numeros datos={datos} estilo={estilo} listaAparte />
             <BotonComprar esPrevia={esPrevia} estilo={estilo}>{texto(campos, "textoBoton")}</BotonComprar>
             <Sellos dias={dias} />
             {texto(campos, "aclaracion") && (
@@ -822,7 +842,7 @@ function Contenido({ clave, campos, tono, datos }: {
         <Seccion tono={tono} estilo={estilo}>
           <div className="mx-auto flex max-w-xl flex-col items-center gap-6 text-center">
             <Titulo estilo={estilo}>{texto(campos, "titulo")}</Titulo>
-            <Numeros producto={producto} bonos={bonos} estilo={estilo} />
+            <Numeros datos={datos} estilo={estilo} />
             <BotonComprar esPrevia={esPrevia} estilo={estilo}>{texto(campos, "textoBoton")}</BotonComprar>
             <Sellos dias={diasDeGarantia(datos)} />
           </div>
@@ -831,7 +851,7 @@ function Contenido({ clave, campos, tono, datos }: {
 
     /* Fija abajo. Sale del flujo, así que no importa dónde esté en la lista. */
     case "barra": {
-      const ahorroBarra = cuentaDeLaOferta(producto, bonos);
+      const ahorroBarra = cuentaDeLaOferta(datos);
       return (
         <div className="fixed inset-x-0 bottom-0 z-40 border-t border-[color:var(--pv-linea)] bg-[color:var(--pv-tarjeta)]/95 px-4 py-3 shadow-[0_-2px_12px_rgba(0,0,0,0.08)] backdrop-blur">
           <div className="mx-auto flex max-w-3xl items-center justify-between gap-3">

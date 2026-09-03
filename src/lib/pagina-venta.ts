@@ -427,21 +427,28 @@ export const SECCIONES: readonly Seccion[] = [
 
   /* ── Las dos de urgencia ────────────────────────────────────────────────────
    *
-   * 🔲 **Decisión pendiente (02/09/26).** En el de la competencia las dos son
-   * mentira configurable: el reloj es una cuenta regresiva que se reinicia, los
-   * cupos son un número que se escribe a mano ("Quedan 7") y no cuenta nada, y
-   * el cartelito de "Fulana compró hace 5 minutos" es una sección que se llena
-   * sola con nombres.
+   * ✅ **DECIDIDO (03/09/26): fecha real, y sin cupos.**
+   *
+   * En el de la competencia las tres son mentira configurable: el reloj es una
+   * cuenta regresiva que se reinicia —probado con sus propias capturas, 13:44 →
+   * 04:32 → 02:59—, los cupos son un número que se escribe a mano ("Quedan 7") y
+   * no cuenta nada, y el cartelito de "Fulana compró hace 5 minutos" es una
+   * sección que se llena sola con nombres inventados.
    *
    * Acá quedaron con la forma honesta, y las dos nacen apagadas:
    *
-   *   - La oferta termina en una FECHA de verdad, y cuando termina el precio
-   *     tiene que cambiar de verdad (el `comparePrice` del producto).
+   *   - La oferta termina en una FECHA de verdad, guardada y una sola para todo
+   *     el mundo. No se reinicia, y al pasar se va el reloj Y se apaga el
+   *     descuento del producto: sin tachado, sin "Ahorrás" y sin sello. Ver
+   *     `ofertaVencida`.
    *   - El aviso de ventas no tiene nada para escribir: muestra compras reales
    *     de ese producto, que ya están en la base.
    *
-   * Si se decide la versión inventada, el cambio es chico y va acá. Pero la
-   * herramienta se la damos nosotros, así que la decisión es nuestra también. */
+   * **Y no hay campo de cupos, a propósito.** Un PDF no tiene stock: hay
+   * infinitas copias, así que "quedan 7" es falso SIEMPRE. Es el mismo motivo
+   * por el que no hay campo de estrellas. La única forma honesta sería que el
+   * checkout cortara la venta de verdad en 7, y eso es otra función: el día que
+   * exista, el campo se agrega acá y no antes. */
   {
     clave: "urgencia",
     nombre: "Oferta con fecha",
@@ -453,7 +460,12 @@ export const SECCIONES: readonly Seccion[] = [
       { clave: "texto", etiqueta: "Texto", tipo: "texto", largo: 60,
         ejemplo: "Oferta por tiempo limitado" },
       { clave: "hasta", etiqueta: "Termina el", tipo: "fecha", largo: 40,
-        ayuda: "Cuando llegue esa fecha el cartel desaparece y el precio vuelve al normal." },
+        /* ⚠️ Decía "el precio vuelve al normal" y eso NO es lo que pasa: se
+           sigue cobrando lo mismo. Lo que se apaga es el argumento —el tachado,
+           el ahorro y el sello—, no la caja. Un texto de ayuda que promete de
+           más es peor que no tenerlo: quien lo lee cree que la plataforma le
+           sube el precio sola. */
+        ayuda: "Cuando llegue esa fecha se va el reloj y la página deja de mostrar el descuento. El precio que cobrás no cambia." },
     ],
   },
 
@@ -592,6 +604,26 @@ export type Estilo = {
   /** El aire de cada sección. Es lo que más se nota de lejos. */
   seccion: string;
   /**
+   * Qué le impone este estilo al control de Letra, si le impone algo.
+   *
+   * ── La decisión, 03/09/26 ─────────────────────────────────────────────────
+   *
+   * Editorial fija serifas en los títulos, así que con Editorial puesto elegir
+   * "Marcada" no cambia los títulos: sólo el cuerpo. Un control que no hace lo
+   * que dice es un error aunque el diseño esté bien.
+   *
+   * Se evaluó separarlo —estilo = forma, letra = letra, y que Editorial se
+   * distinga por sus filetes— y **se decidió no hacerlo**: la serifa ES lo que
+   * separa a Editorial de los otros cuatro. Sacándosela quedan cinco estilos más
+   * parecidos entre sí, que es lo contrario de lo que hace falta cuando haya
+   * cincuenta vendedores eligiendo entre los mismos.
+   *
+   * Así que el acoplamiento se queda y **se dice**. Es un texto y no un `if` con
+   * "editorial" escrito en el editor: el día que otro estilo imponga su letra,
+   * pone su aviso acá y la pantalla lo muestra sola.
+   */
+  avisoDeLetra?: string;
+  /**
    * Página oscura. Da vuelta la tinta, el fondo y las tarjetas; el acento de la
    * paleta queda igual, que es lo que hace saltar el botón.
    *
@@ -691,6 +723,7 @@ export const ESTILOS: readonly Estilo[] = [
     titulo: "font-serif font-normal tracking-tight",
     sello: "rounded-none",
     seccion: "py-14 sm:py-20",
+    avisoDeLetra: "Editorial pone sus propias serifas en los títulos. La letra que elijas cambia el cuerpo del texto.",
   },
   /* El único que da vuelta los colores. En una página que se lee de noche en el
      celular —que es donde se compran estas cosas— el botón salta mucho más. */
@@ -997,6 +1030,50 @@ export function conFichas(
 /** Atajo para la página pública, que sólo necesita el sí o el no. */
 export const seDibuja = (s: SeccionGuardada, ctx: ContextoDePagina): boolean =>
   porQueNoSeDibuja(s, ctx) === null;
+
+/**
+ * Si la oferta con fecha ya terminó.
+ *
+ * ── Por qué existe, y qué se decidió el 03/09/26 ────────────────────────────
+ *
+ * El reloj ya era honesto: cuenta hacia una fecha guardada en la base, la misma
+ * para todo el mundo, y al llegar a cero **desaparece**. No se reinicia como el
+ * de la competencia, que anuncia un límite que no existe.
+ *
+ * Pero se quedaba a mitad de camino. Pasada la fecha se iba el reloj **y el
+ * precio tachado seguía ahí**, con su "Ahorrás $X" y su sello de descuento. O
+ * sea que la página seguía pregonando una rebaja cuyo propio final ya había
+ * anunciado. Eso es exactamente lo que no queríamos.
+ *
+ * Lo que termina es el descuento DEL PRODUCTO: se deja de tachar el
+ * `comparePrice`. Los bonos no se tocan —siguen viniendo y siguen valiendo lo
+ * que valen— así que el "Ahorrás" no desaparece, se achica a lo que de verdad
+ * sigue siendo cierto. Lo que dejó de valer deja de contar; lo que sigue
+ * valiendo sigue contando.
+ *
+ * **No sube el precio.** Se sigue cobrando lo mismo: lo que se apaga es el
+ * ARGUMENTO, no la caja. Cambiarle el precio a alguien porque se le venció una
+ * fecha que quizás olvidó actualizar es una decisión del vendedor, no nuestra.
+ * Y el incentivo queda igual de fuerte: quien deja vencer la fecha pierde el
+ * tachado y el sello hasta que ponga una nueva.
+ *
+ * `ahora` entra por parámetro y no se saca acá con `Date.now()`, por lo mismo
+ * que el año en `conFichas`: con las mismas entradas tiene que dar siempre lo
+ * mismo, o no se puede chequear.
+ */
+export function ofertaVencida(pagina: PaginaVenta, ahora: number): boolean {
+  const s = pagina.secciones.find((x) => x.clave === "urgencia");
+  /* Sin la sección, o apagada, no hay ninguna promesa de final que se pueda
+     incumplir: un precio tachado sin fecha es sólo el precio del vendedor. */
+  if (!s || !s.visible) return false;
+  const hasta = s.campos.hasta;
+  if (typeof hasta !== "string") return false;
+  const fin = Date.parse(hasta);
+  /* Una fecha ilegible NO vence la oferta. Ante la duda se deja como estaba: el
+     precio de la página no lo puede cambiar un campo que no se entendió. */
+  if (!Number.isFinite(fin)) return false;
+  return fin <= ahora;
+}
 
 /* ── Normalizar ─────────────────────────────────────────────────────────────
  *

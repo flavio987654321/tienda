@@ -8,11 +8,11 @@
  * se ven en el panel: se ven en un reclamo.
  */
 
-import { readFileSync } from "fs";
+import { readFileSync, readdirSync } from "fs";
 import {
   SECCIONES, buscarSeccion, contenidoPorDefecto, normalizarContenido, porQueNoSeDibuja,
   conFichas, FICHA_DIAS, FICHA_ANIO, ESTILOS, PALETAS, COLORES_CLAROS, COLORES_OSCUROS,
-  TONOS, buscarTono, TIPOGRAFIAS, buscarTipografia, CAMPOS_SEO,
+  TONOS, buscarTono, TIPOGRAFIAS, buscarTipografia, CAMPOS_SEO, ofertaVencida,
   type Campo,
 } from "./pagina-venta";
 
@@ -1085,8 +1085,24 @@ check("TON-G", sinDiferencia.length === 0,
    precio de la barra fija tenían `text-slate-900` escrito a mano. Sobre una
    tarjeta clara se ve; en el estilo Nocturno la tarjeta es #131c2e y quedaba
    negro sobre negro. Un color de texto escrito a mano no sigue al estilo. */
-check("TON-H", !/text-slate-[0-9]/.test(dibujante) && !/amber-/.test(dibujante),
-  "ningún texto ni fondo escrito a mano: todo sale de la paleta o del estilo");
+/* ⚠️ Y mira TODA la carpeta, no sólo el dibujante. Miraba un archivo solo, y por
+   eso no vio que `BarraDeOferta` —que vive al lado— tenía `bg-amber-400` fijo:
+   elegías Violeta y la barra seguía amarilla, y en Nocturno era una franja clara
+   arriba de una página oscura. El mismo error, en el archivo de al lado. */
+/* ⚠️ Y mira el CÓDIGO, no los comentarios. Este chequeo ya falló dos veces por
+   culpa de quien lo estaba arreglando: el comentario que explica "esto era
+   `bg-amber-400` y estaba mal" contiene la palabra que el chequeo busca. Sacar
+   los bloques `/* *​/` antes de mirar lo resuelve para siempre, en vez de tener
+   que esquivar palabras al escribir. */
+const sinComentarios = (s: string) => s.replace(/\/\*[\s\S]*?\*\//g, "");
+
+const piezasDeLaPagina = readdirSync("src/components/digitales")
+  .filter((f) => f.endsWith(".tsx"))
+  .map((f) => ({ f, txt: sinComentarios(readFileSync(`src/components/digitales/${f}`, "utf8")) }));
+
+check("TON-H", piezasDeLaPagina.every(({ txt }) =>
+  !/text-slate-[0-9]/.test(txt) && !/amber-/.test(txt)),
+  "ningún texto ni fondo escrito a mano en toda la página: sale de la paleta o del estilo");
 
 check("TON-I", editor.includes("TONOS.map(") && editor.includes("buscarTono(tono).clave"),
   "el editor ofrece los tres y comprueba el que llega contra la lista");
@@ -1197,6 +1213,96 @@ check("CSP-C", !/frame-ancestors \*/.test(config),
    intersección — o sea que vuelve a ganar `'none'` y la previa queda en blanco. */
 check("CSP-D", config.includes("|p\\\\/|precios"),
   "y está excluida de la regla base, o las dos cabeceras se pisan");
+
+/* ── La oferta con fecha termina de verdad, 03/09/26 ──────────────────────── */
+
+/* ⚠️ El reloj ya era honesto: fecha guardada, una sola para todo el mundo, y al
+   pasar desaparece. Pero se quedaba a mitad — **el precio tachado seguía ahí**,
+   con su "Ahorrás" y su sello. La página seguía pregonando una rebaja cuyo final
+   ella misma había anunciado, que es exactamente lo que no queríamos hacer. */
+
+const AYER = Date.parse("2026-09-02T12:00:00.000Z");
+const HOY  = Date.parse("2026-09-03T12:00:00.000Z");
+
+const conUrgencia = (visible: boolean, hasta: unknown) => {
+  const p = contenidoPorDefecto();
+  p.secciones = p.secciones.map((s) =>
+    s.clave === "urgencia" ? { ...s, visible, campos: { ...s.campos, hasta } } : s);
+  return p;
+};
+
+check("VEN-A", ofertaVencida(conUrgencia(true, "2026-09-02T12:00:00.000Z"), HOY) === true,
+  "una fecha ya pasada vence la oferta");
+check("VEN-B", ofertaVencida(conUrgencia(true, "2026-09-04T12:00:00.000Z"), HOY) === false,
+  "y una que todavía no llegó, no");
+
+/* El borde exacto: al segundo en que llega, terminó. Un reloj que muestra 00:00
+   y una página que todavía tacha el precio se contradicen en pantalla. */
+check("VEN-C", ofertaVencida(conUrgencia(true, "2026-09-03T12:00:00.000Z"), HOY) === true,
+  "el instante exacto ya cuenta como terminada");
+
+/* ⚠️ Sin la sección no hay ninguna promesa de final que incumplir: un precio
+   tachado sin fecha es sólo el precio del vendedor, y apagarlo sería romperle la
+   oferta a todo el que nunca usó esta sección. */
+check("VEN-D", ofertaVencida(conUrgencia(false, "2026-09-02T12:00:00.000Z"), HOY) === false,
+  "con la sección apagada la fecha no apaga nada");
+
+/* Ante la duda se deja como estaba: el precio de la página no lo puede cambiar
+   un campo que no se entendió. */
+check("VEN-E", [null, undefined, "", "mañana", 5, {}, AYER].every(
+  (v) => ofertaVencida(conUrgencia(true, v), HOY) === false),
+  "una fecha ilegible NO vence la oferta");
+
+/* Que el tiempo entre por parámetro es lo que hace posible todo lo de arriba: una
+   función que mira el reloj por su cuenta da distinto en cada corrida. Es la
+   misma regla que ya seguía `conFichas` con el año. */
+const catalogo = readFileSync("src/lib/pagina-venta.ts", "utf8");
+check("VEN-F", /export function ofertaVencida\(pagina: PaginaVenta, ahora: number\)/.test(catalogo),
+  "el tiempo entra por parámetro y no se saca adentro: si no, no se puede chequear");
+
+/* ⚠️ EL chequeo de esta tanda. Cuatro lugares dibujan el precio —ficha, lista,
+   portada y barra fija— y con argumentos sueltos alcanza olvidarse el
+   vencimiento en UNO para que la barra diga un número y la ficha otro. Ya pasó
+   con los bonos: una decía $20.000 donde la otra decía $34.000. */
+const vecesQueSeNombra = (dibujante.match(/cuentaDeLaOferta\(/g) ?? []).length;
+const llamadas = vecesQueSeNombra - 1; // la primera es la definición
+const conDatos = (dibujante.match(/cuentaDeLaOferta\(datos\)/g) ?? []).length;
+check("VEN-G", llamadas >= 3 && llamadas === conDatos,
+  "los lugares que dibujan precio piden la cuenta igual: un argumento, nada que olvidar");
+
+/* `LoQueIncluye` tenía su propia copia de la fórmula del precio regular. Con la
+   oferta vencida las dos daban números distintos en la misma pantalla. */
+check("VEN-H", (dibujante.match(/comparePrice > producto\.price/g) ?? []).length === 1,
+  "el precio regular se calcula en UN solo lugar, no copiado en cada pieza");
+
+/* No sube el precio: apaga el argumento, no la caja. Si el texto de ayuda
+   prometiera otra cosa, quien lo lee creería que le cambiamos el precio solo. */
+check("VEN-I", buscarSeccion("urgencia")?.campos.find((c) => c.clave === "hasta")
+  ?.ayuda?.includes("El precio que cobrás no cambia") === true,
+  "y la ayuda dice la verdad: lo que se apaga es el descuento, no lo que se cobra");
+
+/* ⚠️ Un PDF no tiene stock: hay infinitas copias, así que "quedan 7" es falso
+   siempre. Mismo motivo que no haya campo de estrellas. */
+check("VEN-J", !SECCIONES.some((s) => s.campos.some((c) =>
+  /cupo|stock|quedan|unidades/i.test(c.clave + c.etiqueta))),
+  "no hay dónde escribir cupos: sin checkout que los corte, todo número es mentira");
+
+/* ── Editorial dice lo que impone ─────────────────────────────────────────── */
+
+/* Editorial fija serifas en los títulos, así que ahí la Letra sólo cambia el
+   cuerpo. Se decidió no separarlos —la serifa ES lo que lo distingue de los otros
+   cuatro— y decirlo en su lugar. */
+const editorial = ESTILOS.find((e) => e.clave === "editorial");
+check("LET-I", (editorial?.avisoDeLetra ?? "").length > 20,
+  "Editorial avisa que se queda con los títulos");
+check("LET-J", ESTILOS.filter((e) => e.titulo.includes("font-serif"))
+  .every((e) => !!e.avisoDeLetra),
+  "y cualquier estilo que imponga su letra tiene que avisar, no sólo éste");
+
+/* El texto sale del estilo, no de un `if` con "editorial" escrito en la pantalla:
+   así el día que otro imponga su letra, el aviso aparece solo. */
+check("LET-K", editor.includes("avisoDeLetra") && !/clave === "editorial"/.test(editor),
+  "el editor lo muestra desde el dato, sin nombrar a Editorial a mano");
 
 console.log(fallos === 0
   ? "\nok — la página de venta no se puede dejar sin precio, sin producto ni sin contacto"

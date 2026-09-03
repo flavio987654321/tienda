@@ -1869,13 +1869,51 @@ funciona, está chequeado (NOR-D).
   usarlos en el código HTML/CSS personalizado". Sin CSS se queda sin motivo. Las
   imágenes de la página se suben desde adentro de Contenido.
 
-**🔲 Decisión pendiente: la urgencia.** En el de ellos las tres son mentira
-configurable — el reloj se reinicia, "Quedan 7 cupos" es un número escrito a mano
-que no cuenta nada, y "Fulana compró hace 5 minutos" es una sección que se llena
-sola. Quedaron con la forma honesta y apagadas: la oferta termina en una **fecha
-real** y ahí el precio cambia de verdad, y el aviso de ventas no tiene nada para
-escribir porque muestra **compras reales** de ese producto. Si se decide la
-versión inventada el cambio es chico, pero la herramienta se la damos nosotros.
+**✅ DECIDIDO (03/09/26): la urgencia va con fecha real, y sin cupos.**
+
+En el de ellos las tres son mentira configurable — el reloj se reinicia (probado
+con sus propias capturas: 13:44 → 04:32 → 02:59), "Quedan 7 cupos" es un número
+escrito a mano que no cuenta nada, y "Fulana compró hace 5 minutos" es una
+sección que se llena sola con nombres inventados.
+
+**El reloj ya era honesto y estaba a mitad de camino.** Contaba hacia una fecha
+guardada, la misma para todo el mundo, y al llegar a cero desaparecía. Pero
+**pasada la fecha el precio tachado seguía ahí**, con su "Ahorrás $X" y su sello
+de descuento: la página seguía pregonando una rebaja cuyo propio final ya había
+anunciado. Encontrado el 03/09/26 al ir a cerrar la decisión.
+
+Ahora, cuando la fecha pasa, se apaga **el descuento del producto**: sin tachado,
+sin "Ahorrás" y sin sello. Los bonos no se tocan —siguen viniendo y siguen
+valiendo lo que valen— así que el ahorro no desaparece, se achica a lo que sigue
+siendo cierto. **Lo que dejó de valer deja de contar; lo que sigue valiendo sigue
+contando.**
+
+**Y no sube el precio.** Se cobra lo mismo: lo que se apaga es el argumento, no
+la caja. Subirle el precio a alguien porque se le venció una fecha que quizás
+olvidó actualizar es decisión del vendedor, no nuestra. El incentivo igual queda
+fuerte: quien la deja vencer pierde el tachado y el sello hasta poner una nueva.
+
+**Sin campo de cupos, a propósito.** Un PDF no tiene stock —hay infinitas
+copias— así que "quedan 7" es falso **siempre**. Es el mismo motivo por el que no
+hay campo de estrellas. La única forma honesta sería que el checkout cortara la
+venta de verdad en 7; el día que exista, el campo se agrega y no antes.
+
+**Dos cosas se arreglaron de paso**, y las dos eran bugs que ya estaban:
+
+- `LoQueIncluye` **tenía su propia copia** de la fórmula del precio regular. Con
+  la oferta vencida las dos daban números distintos en la misma pantalla. Ahora
+  la cuenta toma un solo argumento (`datos`) y devuelve el regular: no queda nada
+  que olvidarse en uno de los cuatro lugares que dibujan precio. Es exactamente
+  la forma del bug de los bonos, donde una decía $20.000 y la otra $34.000.
+- `BarraDeOferta` tenía **`bg-amber-400` escrito a mano**: elegías Violeta y la
+  barra seguía amarilla, y en Nocturno era una franja clara sobre página oscura.
+  El mismo error del recuadro de bonos — **y el chequeo que lo cuida (TON-H)
+  miraba un solo archivo**, así que este de al lado le quedaba afuera. Ahora mira
+  la carpeta entera, y saca los comentarios antes de mirar: ya falló dos veces
+  porque el comentario que explica el error contenía la palabra buscada.
+
+El aviso de ventas queda como estaba: no tiene nada para escribir porque muestra
+**compras reales** de ese producto.
 
 **🔲 Lo que sigue**, en este orden: la página pública (una sola pieza dibuja la
 página, usada también como vista previa — si son dos se separan solas y la previa
@@ -2011,9 +2049,21 @@ primero.** Los fondos con color no entraban sin esto:
 Y salió a la luz un agujero del chequeo viejo: comparaba el gris contra el fondo
 blanco pero **nunca contra el tono suave**. Por eso nadie se había enterado.
 
-**🔲 Pendiente de decidir:** el estilo Editorial fuerza serifas en los títulos, así
-que con Editorial la Letra sólo cambia el cuerpo. Se puede separar —estilo =
-forma, letra = letra— y que Editorial se distinga por sus líneas.
+**✅ DECIDIDO (03/09/26): Editorial se queda con los títulos, y lo dice.** Ese
+estilo fuerza serifas, así que ahí la Letra sólo cambia el cuerpo — un control
+que no hace lo que dice es un error aunque el diseño esté bien.
+
+Se evaluó separarlos —estilo = forma, letra = letra, y que Editorial se distinga
+por sus filetes— y **se descartó**: la serifa ES lo que lo separa de los otros
+cuatro. Sacándosela quedan cinco estilos más parecidos entre sí, que es lo
+contrario de lo que hace falta el día que haya cincuenta vendedores eligiendo
+entre los mismos.
+
+Así que el acoplamiento se queda y se avisa, con un renglón abajo del selector.
+**El texto es un dato del estilo (`avisoDeLetra`), no un `if` que diga
+"editorial" en la pantalla**: el día que otro estilo imponga su letra, pone su
+aviso y aparece solo. Hay chequeo (LET-J) que falla si un estilo con serifas se
+olvida de avisar.
 
 ### ✅ La oferta se ve, sin inventar nada — HECHO (02/09/26)
 

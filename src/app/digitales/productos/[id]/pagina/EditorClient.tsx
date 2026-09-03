@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import {
   TONOS, buscarTono, TIPOGRAFIAS, CAMPOS_SEO,
-  SECCIONES, ESTILOS, PALETAS, buscarSeccion, porQueNoSeDibuja,
+  SECCIONES, ESTILOS, PALETAS, buscarSeccion, buscarEstilo, porQueNoSeDibuja,
   AVISO_BORRADOR, AVISO_LISTA, AVISO_TOCAR,
   type Campo, type PaginaVenta, type SeccionGuardada,
 } from "@/lib/pagina-venta";
@@ -702,6 +702,17 @@ export default function EditorDePagina({ productoId, nombre, publicado, pagina: 
                 <p className="mb-2 text-[11px] text-gray-500 panel-oscuro:text-gray-400">
                   Es lo que más cambia la sensación de la página.
                 </p>
+                {/* ⚠️ Con Editorial puesto, la Letra no toca los títulos: ese
+                    estilo trae sus propias serifas. Sin este renglón el control
+                    parece roto. El texto lo trae el estilo (`avisoDeLetra`), no
+                    está escrito acá con un `if` que diga "editorial": el día que
+                    otro estilo imponga su letra, aparece solo. */}
+                {buscarEstilo(pagina.estilo).avisoDeLetra && (
+                  <p className="mb-2 flex gap-1.5 rounded-lg bg-amber-50 px-2.5 py-2 text-[11px] text-amber-800 panel-oscuro:bg-amber-500/10 panel-oscuro:text-amber-300">
+                    <AlertTriangle className="mt-px h-3 w-3 shrink-0" />
+                    {buscarEstilo(pagina.estilo).avisoDeLetra}
+                  </p>
+                )}
                 <div className="grid gap-2">
                   {TIPOGRAFIAS.map((t) => (
                     <button

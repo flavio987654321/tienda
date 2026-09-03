@@ -46,7 +46,12 @@ export default function BarraDeOferta({ texto, hasta }: { texto: string; hasta: 
   )}:${dosCifras(seg % 60)}`;
 
   return (
-    <div className="bg-amber-400 px-5 py-3 text-center text-sm font-semibold text-amber-950">
+    /* ⚠️ El color sale de la paleta, no escrito a mano. Estaba `bg-amber-400`
+       fijo: elegías Violeta y la barra seguía amarilla, y en Nocturno era una
+       franja clara arriba de una página oscura. Es el mismo error que tenía el
+       recuadro de bonos; el chequeo que lo cuida (TON-H) miraba sólo el
+       dibujante y este archivo le quedaba afuera. Ahora lo cubre. */
+    <div className="bg-[color:var(--pv-acento)] px-5 py-3 text-center text-sm font-semibold text-[color:var(--pv-sobre)]">
       {texto ? `${texto} — ` : ""}
       {dias > 0 ? `${dias} ${dias === 1 ? "día" : "días"} y ` : ""}
       <span className="tabular-nums">{reloj}</span>
