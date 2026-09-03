@@ -40,10 +40,14 @@ export default async function EditorPaginaPage({ params }: Props) {
     select: {
       id: true, name: true, isActive: true, paginaVenta: true,
       store: { select: { name: true, whatsappNumber: true } },
+      /* ⚠️ Se traen TODOS, publicados o no, y se separan abajo. La página
+         pública sólo dibuja los publicados —un bono sin publicar puede no
+         tener archivo, y prometerlo es prometer algo que no se entrega—, pero
+         el editor tiene que poder decir CUÁL de los dos motivos es. */
       hijos: {
         where: { deletedAt: null, rolDigital: "BONO" },
         orderBy: { createdAt: "asc" },
-        select: { id: true, name: true, description: true, price: true, comparePrice: true },
+        select: { id: true, name: true, description: true, price: true, comparePrice: true, isActive: true },
       },
     },
   });
@@ -59,7 +63,11 @@ export default async function EditorPaginaPage({ params }: Props) {
         /* Normalizado del lado del servidor: si la columna quedó vieja porque el
            catálogo cambió, la pantalla arranca con la forma de HOY. */
         pagina={normalizarContenido(fila.paginaVenta)}
-        cuantosBonos={fila.hijos.length}
+        /* La misma cuenta que hace la página pública, no la de la tabla: si
+           fueran distintas, el editor diría que la sección se ve y la página
+           no la dibujaría. */
+        cuantosBonos={fila.hijos.filter((h) => h.isActive).length}
+        bonosSinPublicar={fila.hijos.filter((h) => !h.isActive).length}
       />
     </div>
   );

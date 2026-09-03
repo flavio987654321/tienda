@@ -624,6 +624,52 @@ check("ANCHO-B", /overflow-x-clip/.test(dibujante),
 check("ANCHO-C", !/overflow-x-hidden/.test(dibujante),
   "y se recorta con clip, no con hidden, que dejaría un scroll vertical propio");
 
+/* ── Los bonos: la misma cuenta en los dos lados ──────────────────────────── */
+
+/* ⚠️ ERROR REAL, encontrado el 03/09/26 mirando la barra de compra. El editor
+   contaba los bonos con `deletedAt: null, rolDigital: BONO` y la página pública
+   agregaba `isActive: true`. Con dos bonos cargados y sin publicar, el editor
+   decía que la sección de bonos SE VE y la página no dibujaba ninguno — y de
+   paso el precio tachado daba 20.000 en la barra contra 34.000 en el resto,
+   porque los bonos no llegaban a la cuenta.
+
+   Es la clase de error que este archivo existe para evitar: dos lados con la
+   misma pregunta y distinta respuesta. */
+
+const editorPagina = readFileSync("src/app/digitales/productos/[id]/pagina/page.tsx", "utf8");
+
+check("BON-A", editorPagina.includes("filter((h) => h.isActive)"),
+  "el editor cuenta los bonos PUBLICADOS, igual que la página pública");
+
+check("BON-B", publica.includes("isActive: true"),
+  "y la página dibuja sólo los publicados: un bono sin publicar puede no tener archivo");
+
+/* Los dos motivos son distintos y la salida también: uno se arregla cargando un
+   bono, el otro apretando publicar. Decir el equivocado manda a buscar donde no
+   es. */
+check("BON-C", (() => {
+  const s = { clave: "bonos", visible: true, tono: "fondo", campos: {} };
+  const sinNada = porQueNoSeDibuja(s, { hayBonos: false });
+  const sinPublicar = porQueNoSeDibuja(s, { hayBonos: false, bonosSinPublicar: 2 });
+  const conBonos = porQueNoSeDibuja(s, { hayBonos: true, bonosSinPublicar: 0 });
+  return sinNada !== null && sinPublicar !== null && sinNada !== sinPublicar && conBonos === null;
+})(), "y el editor distingue 'no cargaste ninguno' de 'los cargaste pero sin publicar'");
+
+/* ── La barra de compra ───────────────────────────────────────────────────── */
+
+/* Es lo único que se ve durante TODO el scroll. Un número solo, sin decir de qué
+   ni cuánto se ahorra, desperdicia el lugar más visto de la página. */
+check("BAR-A", dibujante.includes("Ebook + {bonos.length}"),
+  "la barra dice qué se lleva, no sólo cuánto sale");
+
+check("BAR-B", dibujante.includes("Ahorrás {money(ahorroBarra.ahorro)}"),
+  "y cuánto se ahorra, con la misma cuenta que el resto de la página");
+
+/* En pantalla angosta el botón necesita el lugar: el ahorro se esconde ahí y
+   vuelve en cuanto entra. Lo que NO se esconde nunca es el precio. */
+check("BAR-C", dibujante.includes("hidden text-xs font-bold text-[color:var(--pv-ok)] sm:inline"),
+  "en el celular se esconde el ahorro, no el precio: el botón necesita el lugar");
+
 /* ── Lo que se ve fuera de la página ──────────────────────────────────────── */
 
 /* ⚠️ En este rubro la tarjeta de WhatsApp pesa MÁS que Google: la venta arranca

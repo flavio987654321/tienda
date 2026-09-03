@@ -830,7 +830,8 @@ function Contenido({ clave, campos, tono, datos }: {
       );
 
     /* Fija abajo. Sale del flujo, así que no importa dónde esté en la lista. */
-    case "barra":
+    case "barra": {
+      const ahorroBarra = cuentaDeLaOferta(producto, bonos);
       return (
         <div className="fixed inset-x-0 bottom-0 z-40 border-t border-[color:var(--pv-linea)] bg-[color:var(--pv-tarjeta)]/95 px-4 py-3 shadow-[0_-2px_12px_rgba(0,0,0,0.08)] backdrop-blur">
           <div className="mx-auto flex max-w-3xl items-center justify-between gap-3">
@@ -839,14 +840,31 @@ function Contenido({ clave, campos, tono, datos }: {
                 con bonos cargados la barra decía 20.000 y el resto de la página
                 34.000 — dos números para lo mismo en la misma pantalla. */}
             <p className="min-w-0">
-              <span className="block text-lg font-extrabold leading-none text-[color:var(--pv-tinta)]">
-                {money(producto.price)}
-              </span>
-              {cuentaDeLaOferta(producto, bonos).ahorro > 0 ? (
-                <span className="text-xs text-[color:var(--pv-tenue)] line-through">
-                  {money(cuentaDeLaOferta(producto, bonos).valorTotal)}
+              {/* Qué se lleva, arriba del precio. Es la barra que queda a la vista
+                  todo el scroll: sin esto dice un número sin decir de qué. */}
+              {bonos.length > 0 && (
+                <span className="block truncate text-[10px] font-bold uppercase tracking-wide text-[color:var(--pv-tenue)]">
+                  Ebook + {bonos.length} {bonos.length === 1 ? "bono" : "bonos"}
                 </span>
-              ) : null}
+              )}
+              <span className="flex flex-wrap items-baseline gap-x-2">
+                <span className="text-lg font-extrabold leading-none text-[color:var(--pv-tinta)] sm:text-xl">
+                  {money(producto.price)}
+                </span>
+                {ahorroBarra.ahorro > 0 ? (
+                  <>
+                    <span className="text-xs text-[color:var(--pv-tenue)] line-through">
+                      {money(ahorroBarra.valorTotal)}
+                    </span>
+                    {/* El ahorro también acá: es el dato que más empuja y la barra
+                        es lo único que se ve durante todo el scroll. Se esconde en
+                        pantallas angostas, donde el botón necesita el lugar. */}
+                    <span className="hidden text-xs font-bold text-[color:var(--pv-ok)] sm:inline">
+                      Ahorrás {money(ahorroBarra.ahorro)}
+                    </span>
+                  </>
+                ) : null}
+              </span>
             </p>
             <span className="w-auto max-w-[60%] shrink-0 [&>button]:w-auto [&>button]:px-5 [&>button]:py-3 [&>button]:text-sm">
               <BotonComprar esPrevia={esPrevia} estilo={estilo}>{texto(campos, "textoBoton")}</BotonComprar>
@@ -854,6 +872,7 @@ function Contenido({ clave, campos, tono, datos }: {
           </div>
         </div>
       );
+    }
 
     case "pie":
       return (

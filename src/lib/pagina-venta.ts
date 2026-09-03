@@ -911,7 +911,18 @@ const conAlgo = (v: unknown): boolean =>
 const hayTexto = (v: unknown): boolean => typeof v === "string" && v.length > 0;
 
 /** Qué necesita saber la regla y no está adentro del contenido. */
-export type ContextoDePagina = { hayBonos: boolean };
+export type ContextoDePagina = {
+  /** Bonos que la página VA A DIBUJAR: cargados y publicados. */
+  hayBonos: boolean;
+  /**
+   * Cargados pero sin publicar.
+   *
+   * ⚠️ Existe para poder decir el motivo REAL. Sin esto el editor decía
+   * "todavía no cargaste ningún bono" a alguien que acababa de cargar dos, y
+   * lo único que le faltaba era publicarlos.
+   */
+  bonosSinPublicar?: number;
+};
 
 /**
  * Por qué esta sección NO se va a ver. `null` = se ve.
@@ -924,7 +935,12 @@ export function porQueNoSeDibuja(s: SeccionGuardada, ctx: ContextoDePagina): str
 
   switch (s.clave) {
     case "bonos":
-      return ctx.hayBonos ? null : "Todavía no cargaste ningún bono";
+      if (ctx.hayBonos) return null;
+      /* Los dos motivos son distintos y la salida también: uno se arregla
+         cargando un bono, el otro apretando publicar. */
+      return ctx.bonosSinPublicar
+        ? "Tus bonos están sin publicar"
+        : "Todavía no cargaste ningún bono";
     case "beneficios":
       return conAlgo(s.campos.items) ? null : "Todavía no escribiste ningún beneficio";
     case "dolores":

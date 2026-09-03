@@ -38,7 +38,10 @@ type Props = {
   nombre: string;
   publicado: boolean;
   pagina: PaginaVenta;
+  /** Bonos publicados: los que la página va a dibujar. */
   cuantosBonos: number;
+  /** Cargados pero sin publicar, para poder decir el motivo real. */
+  bonosSinPublicar: number;
 };
 
 /* ── Fechas ─────────────────────────────────────────────────────────────────
@@ -348,7 +351,7 @@ function CasillaLista({
 
 /* ── La pantalla ────────────────────────────────────────────────────────────*/
 
-export default function EditorDePagina({ productoId, nombre, publicado, pagina: inicial, cuantosBonos }: Props) {
+export default function EditorDePagina({ productoId, nombre, publicado, pagina: inicial, cuantosBonos, bonosSinPublicar }: Props) {
   const [pagina, setPagina] = useState<PaginaVenta>(inicial);
   const [abierta, setAbierta] = useState<string | null>(null);
   const [sucio, setSucio] = useState(false);
@@ -721,7 +724,7 @@ export default function EditorDePagina({ productoId, nombre, publicado, pagina: 
               /* ⚠️ El motivo sale de la MISMA función que usa la página pública
                  para decidir qué pinta. Si acá se escribiera aparte, el panel
                  diría una cosa y la página haría otra. */
-              const porQueNo = porQueNoSeDibuja(s, { hayBonos: cuantosBonos > 0 });
+              const porQueNo = porQueNoSeDibuja(s, { hayBonos: cuantosBonos > 0, bonosSinPublicar });
 
               return (
                 <div
