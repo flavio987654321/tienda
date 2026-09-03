@@ -1,8 +1,19 @@
 import { getCurrentUser } from "@/lib/auth-session";
 import { prisma } from "@/lib/prisma";
 import type { TierDigital } from "@/lib/planes-digitales";
+import { TOPES_DIGITALES } from "@/lib/planLimits";
 import BotonVolver from "../BotonVolver";
 import ProductosClient, { type ProductoEnPantalla } from "./ProductosClient";
+
+/**
+ * Cuántas filas puede llegar a traer esta pantalla, con el doble de margen.
+ *
+ * Sale de los topes y no de un número escrito acá: el día que Pro pase a 10
+ * páginas, el techo sube solo. Escrito a mano, esa misma mejora esconde la mitad
+ * de los productos de alguien sin decir nada.
+ */
+const TECHO_DE_PRODUCTOS =
+  TOPES_DIGITALES.PRO.paginas * (1 + TOPES_DIGITALES.PRO.bonos + TOPES_DIGITALES.PRO.upsells) * 2;
 
 /**
  * Tus productos digitales.
@@ -42,6 +53,20 @@ export default async function ProductosPage() {
     ? await prisma.product.findMany({
         where: { storeId: store.id, deletedAt: null },
         orderBy: { createdAt: "asc" },
+        /* ⚠️ Esta pantalla NO pagina, y no le hace falta: el plan la acota. Con
+           el tope más alto —Pro— son 5 páginas de 1 principal + 5 bonos + 3
+           upsells, o sea 45 filas y ni una más. Paginar 45 filas es agregar dos
+           botones para esconder algo que entra entero.
+
+           El techo va igual, y va calculado y no escrito a mano. No es por el
+           plan: es por si algún día se le escapa una fila al control de topes.
+           Una consulta sin límite contra una tabla que crece es la forma más
+           cara de descubrir ese agujero — y se descubre en producción. El doble
+           deja lugar para quien bajó de plan y conserva lo que ya tenía.
+
+           La lista de VENTAS es el caso opuesto y por eso sí pagina: las ventas
+           no las acota ningún plan, crecen para siempre. */
+        take: TECHO_DE_PRODUCTOS,
         select: {
           id: true, name: true, description: true, price: true, comparePrice: true,
           rolDigital: true, padreId: true, archivoPath: true, archivoNombre: true,

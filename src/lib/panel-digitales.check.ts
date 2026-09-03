@@ -785,6 +785,55 @@ chequear("las fechas se formatean en el servidor y con la zona de Argentina",
 chequear("una línea sin permiso no muestra un contador inventado",
   ventasCli.includes("l.bajadas === null"));
 
+/* ══════════════════════════════════════════════════════════════════════════
+   NINGUNA LISTA SIN TECHO
+   ══════════════════════════════════════════════════════════════════════════
+
+   Un `findMany` sin `take` anda perfecto con veinte filas y se cae con veinte
+   mil, sin avisar y en producción. Y no hace falta que sea a propósito: la
+   pantalla nueva se copia de una vieja y el límite no viaja en la copia.
+
+   Esto recorre TODO el ecosistema —el panel, sus rutas y las pantallas
+   públicas— y exige que cada `findMany` tenga `take` cerca. `take` puede ser
+   una página (Ventas), un techo calculado (Productos) o un tope de barrido; lo
+   que no puede es no estar.
+
+   Se busca en las 25 líneas siguientes porque entre el `findMany` y el `take`
+   suele haber un `where` largo y un comentario que explica por qué. */
+function archivosDeCodigo(raiz: string): string[] {
+  const salida: string[] = [];
+  for (const entrada of readdirSync(raiz, { withFileTypes: true })) {
+    const camino = `${raiz}/${entrada.name}`;
+    if (entrada.isDirectory()) salida.push(...archivosDeCodigo(camino));
+    else if (/\.tsx?$/.test(entrada.name)) salida.push(camino);
+  }
+  return salida;
+}
+
+const dondeSeLeenFilas = [
+  "src/app/digitales",
+  "src/app/api/digitales",
+  "src/app/p",
+].flatMap(archivosDeCodigo);
+
+const listasSinTecho: string[] = [];
+for (const archivo of dondeSeLeenFilas) {
+  const fuente = readFileSync(archivo, "utf8");
+  const lineas = fuente.split("\n");
+  lineas.forEach((linea, i) => {
+    if (!linea.includes("findMany(")) return;
+    const alcance = lineas.slice(i, i + 25).join("\n");
+    if (!/\btake:/.test(alcance)) listasSinTecho.push(`${archivo}:${i + 1}`);
+  });
+}
+
+chequear("ninguna consulta de lista sale sin techo", listasSinTecho.length === 0, listasSinTecho);
+
+/* Y la única que crece para siempre —las ventas— pagina de verdad: `skip` y
+   `take` van juntos. Con `take` solo, la página 2 muestra la 1. */
+chequear("Ventas pagina en el servidor, no sólo recorta",
+  /skip: \(pagina - 1\) \* POR_PAGINA/.test(ventasPag) && /take: POR_PAGINA/.test(ventasPag));
+
 console.log(fallos === 0
   ? "\nok — el panel de Productos Digitales sigue en pie"
   : `\nFALLA — ${fallos} chequeo(s) del panel de Productos Digitales`);

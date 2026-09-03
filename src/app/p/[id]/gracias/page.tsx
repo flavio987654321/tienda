@@ -4,7 +4,12 @@ import { prisma } from "@/lib/prisma";
 import { normalizarContenido, variablesDePagina, buscarEstilo, diasDeGarantia } from "@/lib/pagina-venta";
 import { CLASES_FUENTES } from "@/lib/fuentes-venta";
 import { DIAS_DEL_PERMISO, MAX_DESCARGAS } from "@/lib/entrega-digital";
+import { TOPES_DIGITALES } from "@/lib/planLimits";
 import GraciasClient from "./GraciasClient";
+
+/** Lo más que puede llevar una orden de un embudo, con el doble de margen. */
+const TECHO_DE_UNA_ORDEN =
+  (1 + TOPES_DIGITALES.PRO.bonos + TOPES_DIGITALES.PRO.upsells) * 2;
 
 /**
  * La pantalla de después de pagar.
@@ -73,6 +78,15 @@ export default async function Gracias({ params, searchParams }: Props) {
     ? (await prisma.orderItem.findMany({
         where: { orderId: ordenId },
         select: { productId: true },
+        /* Una orden de un embudo no puede tener más líneas que el embudo: un
+           principal, sus bonos y sus upsells. El techo sale de los topes del
+           plan más alto, con margen, y no de un número escrito acá.
+
+           Está acotada por naturaleza y el techo va igual, por lo mismo que en
+           la pantalla de Productos: una consulta de lista sin límite anda con
+           diez filas y se cae con diez mil, y se descubre en producción. Hay un
+           chequeo que recorre todo el ecosistema exigiéndolo. */
+        take: TECHO_DE_UNA_ORDEN,
       })).map((i) => i.productId)
     : [];
 
