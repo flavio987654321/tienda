@@ -624,6 +624,57 @@ check("ANCHO-B", /overflow-x-clip/.test(dibujante),
 check("ANCHO-C", !/overflow-x-hidden/.test(dibujante),
   "y se recorta con clip, no con hidden, que dejaría un scroll vertical propio");
 
+/* ── El resumen de precio ─────────────────────────────────────────────────── */
+
+/* ⚠️ Mirado en su editor el 02/09/26. Dos hallazgos, y los dos son del mismo
+   tipo: números que se escriben en vez de deducirse.
+
+   1. Su bloque de precio tiene campos `Precio` (16990) y `Precio original`
+      (84950) escritos A MANO acá, aparte del producto. Por eso el precio les
+      aparece repetido en tres lugares de la página y pueden discrepar.
+   2. Su lista NO SUMA el total que muestra: el ebook figura en 16.990 —el
+      precio con descuento— pero el 'valor total regular' de abajo dice 99.940,
+      que sale de un 84.950 que no está en ninguna fila. */
+
+check("SUM-A", dibujante.includes("function cuentaDeLaOferta"),
+  "la cuenta de la oferta vive en una sola función");
+
+/* El descuento aparece en el sello, en el tachado, en el renglón verde y en la
+   barra de abajo. Con la resta escrita en cada lado alcanza con tocar uno para
+   que la página muestre dos porcentajes distintos. */
+/* Se cuenta partiendo el texto y no con una expresión regular: lo que se busca
+   lleva paréntesis, y escaparlos uno por uno es donde se cuelan los errores. */
+const usos = dibujante.split("cuentaDeLaOferta(").length - 1;
+check("SUM-B", usos >= 4,
+  `y la leen todos los lugares donde aparece un precio, no cada uno la suya (${usos})`);
+
+check("SUM-C", !dibujante.includes("money(producto.comparePrice)"),
+  "la barra de abajo ya no calcula su propio tachado");
+
+/* ⚠️ Si el total incluye bonos, el número tachado NO es lo que costaba el ebook:
+   es lo que vale el paquete. Sin la palabra al lado se lee como un precio que
+   alguien pagó alguna vez, que es exactamente lo que no queremos. */
+check("SUM-D", dibujante.includes("valor total") && dibujante.includes("conBonos &&"),
+  "y cuando el tachado incluye bonos lo dice: es un valor total, no un precio viejo");
+
+/* Cada renglón muestra el valor REGULAR de esa cosa, así que la columna suma
+   exactamente el total de abajo. Es la incoherencia que ellos tienen. */
+check("SUM-E", dibujante.includes("<Renglon") && dibujante.includes("valorDeLosBonos(bonos)"),
+  "la lista de lo que incluye suma el mismo total que muestra abajo");
+
+/* Sin bonos y sin garantía la lista tendría un solo renglón, que no compara con
+   nada. Ahí no aporta y el precio se muestra solo. */
+check("SUM-F", dibujante.includes("if (!conBonos && !dias) return null;"),
+  "y no se dibuja cuando tendría un solo renglón: una lista de uno no compara nada");
+
+/* Que no haya campo de precio ya lo cubre CIE-A. Esto es lo otro que vimos en su
+   editor: tampoco puede haber un campo para el VALOR TOTAL. */
+const campoTotal = SECCIONES.some((s) => s.campos.some((c) =>
+  /total|valor|original/i.test(c.clave)
+  || (c.campos ?? []).some((h) => /total|valor|original/i.test(h.clave))));
+check("SUM-G", !campoTotal,
+  "el valor total tampoco se escribe: es una suma de lo que ya cargaste");
+
 /* ── Cómo funciona: los pasos ─────────────────────────────────────────────── */
 
 /* ⚠️ En el editor de la competencia el número del paso SE ESCRIBE A MANO: vimos

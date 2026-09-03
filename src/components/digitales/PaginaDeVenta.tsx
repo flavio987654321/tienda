@@ -121,19 +121,53 @@ function Titulo({ children, estilo }: { children: string; estilo: Estilo }) {
  * ⚠️ Todo sale del PRODUCTO. En la página de la competencia el cierre tiene sus
  * propias casillas de precio, así que el número vive en tres lugares; el día que
  * corrigen uno, la misma página muestra dos precios distintos. Acá no se puede. */
-function Numeros({ producto, bonos, estilo }: {
-  producto: ProductoParaPagina; bonos: ProductoParaPagina[]; estilo: Estilo;
-}) {
-  const ahorro =
-    producto.comparePrice && producto.comparePrice > producto.price
-      ? producto.comparePrice - producto.price
-      : 0;
+/**
+ * La cuenta de la oferta, en UN solo lugar.
+ *
+ * ── Por qué una función y no la resta suelta en cada lado ───────────────────
+ *
+ * El descuento aparece en el sello, en el precio tachado, en el renglón verde
+ * y en la barra de abajo. Con la resta escrita en cada uno, alcanza con tocar
+ * uno para que la página muestre dos porcentajes distintos — que es justo lo
+ * que le pasa a la de la competencia: su lista dice que el ebook sale 16.990
+ * pero el 'valor total regular' de abajo sale de 84.950, así que **la lista no
+ * suma el total que muestra**.
+ *
+ * ── Qué entra en el total ───────────────────────────────────────────────────
+ *
+ * El valor de lo que se lleva: el precio regular del ebook más el precio
+ * regular de cada bono. Los bonos entran porque se los lleva de verdad y
+ * porque la página YA dice GRATIS al lado de cada uno: si el ahorro no los
+ * contara, ese GRATIS no valdría nada.
+ *
+ * Todos los números salen de lo que cargó quien vende. Acá no se inventa uno
+ * solo: se suma y se resta.
+ */
+function cuentaDeLaOferta(producto: ProductoParaPagina, bonos: ProductoParaPagina[]) {
+  /* Sin precio tachado, el regular es el que se cobra: el ebook no aporta
+     ahorro y el total es sólo lo que suman los bonos. */
+  const regular = producto.comparePrice && producto.comparePrice > producto.price
+    ? producto.comparePrice
+    : producto.price;
+  const valorTotal = regular + valorDeLosBonos(bonos);
+  const ahorro = valorTotal > producto.price ? valorTotal - producto.price : 0;
+  return {
+    valorTotal,
+    ahorro,
+    porcentaje: ahorro > 0 ? Math.round((ahorro / valorTotal) * 100) : 0,
+    /* Si el total incluye bonos, el número tachado NO es lo que costaba el
+       ebook: es lo que vale el paquete. Y eso hay que decirlo con la palabra
+       al lado, o se lee como un precio que alguien pagó alguna vez. */
+    conBonos: valorDeLosBonos(bonos) > 0,
+  };
+}
 
-  /* De la resta sale todo lo demás: el sello, el tachado y el renglón verde. */
-  const porcentaje =
-    ahorro > 0 && producto.comparePrice
-      ? Math.round((ahorro / producto.comparePrice) * 100)
-      : 0;
+function Numeros({ producto, bonos, estilo, listaAparte }: {
+  producto: ProductoParaPagina; bonos: ProductoParaPagina[]; estilo: Estilo;
+  /** `true` cuando al lado ya está la lista de lo que incluye: no se repite. */
+  listaAparte?: boolean;
+}) {
+  const { valorTotal, ahorro, porcentaje, conBonos } = cuentaDeLaOferta(producto, bonos);
 
   return (
     <div>
@@ -156,10 +190,17 @@ function Numeros({ producto, bonos, estilo }: {
           alineación de donde estén —a la izquierda en la ficha del producto,
           centrados en la de precio— sin tener que pasarles por dónde van. */}
       <p>
-        {ahorro > 0 && producto.comparePrice ? (
-          <span className="mr-3 text-xl text-[color:var(--pv-tenue)] line-through sm:text-2xl">
-            {money(producto.comparePrice)}
-          </span>
+        {ahorro > 0 ? (
+          <>
+            {conBonos && (
+              <span className="mr-1.5 text-[11px] font-bold uppercase tracking-wide text-[color:var(--pv-tenue)]">
+                valor total
+              </span>
+            )}
+            <span className="mr-3 text-xl text-[color:var(--pv-tenue)] line-through sm:text-2xl">
+              {money(valorTotal)}
+            </span>
+          </>
         ) : null}
         <span className={`text-4xl text-[color:var(--pv-tinta)] sm:text-5xl ${estilo.titulo}`}>
           {money(producto.price)}
@@ -174,7 +215,7 @@ function Numeros({ producto, bonos, estilo }: {
         </p>
       )}
 
-      {bonos.length > 0 && (
+      {bonos.length > 0 && !listaAparte && (
         <div className={`mt-5 bg-[color:var(--pv-fuerte)] px-4 py-3 text-left ${estilo.tarjeta}`}>
           <p className="text-[11px] font-bold uppercase tracking-wide text-[color:var(--pv-tinta)]">
             Incluye {bonos.length} {bonos.length === 1 ? "bono gratis" : "bonos gratis"}
@@ -198,6 +239,115 @@ function Numeros({ producto, bonos, estilo }: {
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * Lo que incluye la compra, renglón por renglón, con la cuenta abajo.
+ *
+ * ── Por qué es la parte que más rinde ───────────────────────────────────────
+ *
+ * Un precio suelto se compara contra nada. La misma plata al lado de una lista
+ * de cuatro cosas con su valor cada una se compara contra el total, y ahí el
+ * número de abajo parece chico. Es lo que hace toda vidriera.
+ *
+ * ── Y por qué la nuestra suma ───────────────────────────────────────────────
+ *
+ * ⚠️ En la página de la competencia la lista NO suma el total que muestra: el
+ * ebook figura en 16.990 —el precio con descuento— pero el 'valor total
+ * regular' de abajo dice 99.940, que sale de un 84.950 que no está en ninguna
+ * fila. Nadie hace la cuenta, pero está mal.
+ *
+ * Acá cada renglón muestra el valor REGULAR de esa cosa, así que la columna
+ * suma exactamente el total. Y el total es el mismo que usa el sello, el
+ * tachado y la barra de abajo, porque los cuatro leen `cuentaDeLaOferta`.
+ */
+function LoQueIncluye({ producto, bonos, dias, estilo }: {
+  producto: ProductoParaPagina;
+  bonos: ProductoParaPagina[];
+  /** Los días de garantía, o `null` si esa sección no se va a ver. */
+  dias: number | null;
+  estilo: Estilo;
+}) {
+  const { valorTotal, conBonos } = cuentaDeLaOferta(producto, bonos);
+  const regular = producto.comparePrice && producto.comparePrice > producto.price
+    ? producto.comparePrice
+    : producto.price;
+
+  /* Sin bonos y sin garantía la lista tendría un solo renglón, que no compara
+     con nada: ahí no aporta y el precio se muestra solo, como antes. */
+  if (!conBonos && !dias) return null;
+
+  return (
+    <div className="w-full text-left">
+      <ul>
+        <Renglon nombre={producto.name} valor={money(regular)} estilo={estilo} />
+        {bonos.map((b) => (
+          <Renglon
+            key={b.id}
+            nombre={b.name}
+            icono="🎁"
+            valor={b.comparePrice ? money(b.comparePrice) : null}
+            remate="GRATIS"
+            estilo={estilo}
+          />
+        ))}
+        {dias ? (
+          <Renglon
+            nombre={`Garantía de ${dias} días`}
+            icono="🛡️"
+            valor={null}
+            remate="INCLUIDA"
+            estilo={estilo}
+          />
+        ) : null}
+      </ul>
+
+      {conBonos && (
+        <p className="mt-3 flex items-baseline justify-between gap-4 border-t border-[color:var(--pv-linea)] pt-3">
+          <span className="text-sm font-bold uppercase tracking-wide text-[color:var(--pv-tenue)]">
+            Valor total
+          </span>
+          <span className="shrink-0 text-lg font-extrabold text-[color:var(--pv-tinta)] line-through decoration-2">
+            {money(valorTotal)}
+          </span>
+        </p>
+      )}
+    </div>
+  );
+}
+
+/** Un renglón de la lista: tilde, qué es, y cuánto vale. */
+function Renglon({ nombre, valor, remate, icono, estilo }: {
+  nombre: string; valor: string | null; remate?: string; icono?: string; estilo: Estilo;
+}) {
+  return (
+    <li className="flex items-start gap-3 border-b border-[color:var(--pv-linea)] py-3 last:border-b-0">
+      <span
+        aria-hidden="true"
+        className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-[color:var(--pv-ok)] text-[11px] font-bold text-[color:var(--pv-fondo)]"
+      >
+        ✓
+      </span>
+      <span className="min-w-0 flex-1 text-pretty text-sm font-semibold text-[color:var(--pv-tinta)]">
+        {icono ? <span aria-hidden="true" className="mr-1">{icono}</span> : null}
+        {nombre}
+      </span>
+      <span className="shrink-0 text-right text-sm">
+        {valor && (
+          <span
+            className={
+              remate
+                ? "block text-xs text-[color:var(--pv-tenue)] line-through"
+                : `block font-bold text-[color:var(--pv-tinta)] ${estilo.titulo}`
+            }
+          >
+            {valor}
+          </span>
+        )}
+        {remate && <span className="block font-extrabold text-[color:var(--pv-ok)]">{remate}</span>}
+      </span>
+    </li>
   );
 }
 
@@ -547,21 +697,28 @@ function Contenido({ clave, campos, tono, datos }: {
       );
     }
 
-    case "precio":
+    case "precio": {
+      /* ⚠️ La lista va ARRIBA del precio, no abajo. Un precio suelto se compara
+         contra nada; leído después de cuatro renglones con su valor cada uno, se
+         compara contra el total. El orden es la mitad del efecto. */
+      const dias = diasDeGarantia(datos);
       return (
         <Seccion tono={tono} estilo={estilo}>
           <div className={`mx-auto flex max-w-xl flex-col items-center gap-5 bg-[color:var(--pv-suave)] px-5 py-10 text-center sm:px-8 ${estilo.tarjeta}`}>
             <Titulo estilo={estilo}>{texto(campos, "titulo")}</Titulo>
+            <LoQueIncluye producto={producto} bonos={bonos} dias={dias} estilo={estilo} />
             {/* El precio no se puede ocultar: `lib/pagina-venta` no le da botón
                 de apagar, y mandar visible:false tampoco lo apaga. */}
-            <Numeros producto={producto} bonos={bonos} estilo={estilo} />
+            <Numeros producto={producto} bonos={bonos} estilo={estilo} listaAparte />
             <BotonComprar esPrevia={esPrevia} estilo={estilo}>{texto(campos, "textoBoton")}</BotonComprar>
+            <Sellos dias={dias} />
             {texto(campos, "aclaracion") && (
               <p className="text-sm text-[color:var(--pv-tenue)]">{texto(campos, "aclaracion")}</p>
             )}
           </div>
         </Seccion>
       );
+    }
 
     case "garantia": {
       /* `{dias}` sale del campo de al lado. El número vive en un solo lugar para
@@ -637,13 +794,17 @@ function Contenido({ clave, campos, tono, datos }: {
       return (
         <div className="fixed inset-x-0 bottom-0 z-40 border-t border-[color:var(--pv-linea)] bg-[color:var(--pv-tarjeta)]/95 px-4 py-3 shadow-[0_-2px_12px_rgba(0,0,0,0.08)] backdrop-blur">
           <div className="mx-auto flex max-w-3xl items-center justify-between gap-3">
+            {/* ⚠️ El tachado sale de `cuentaDeLaOferta`, la misma que el sello y
+                el renglón verde. Antes leía `comparePrice` por su cuenta, así que
+                con bonos cargados la barra decía 20.000 y el resto de la página
+                34.000 — dos números para lo mismo en la misma pantalla. */}
             <p className="min-w-0">
               <span className="block text-lg font-extrabold leading-none text-[color:var(--pv-tinta)]">
                 {money(producto.price)}
               </span>
-              {producto.comparePrice && producto.comparePrice > producto.price ? (
+              {cuentaDeLaOferta(producto, bonos).ahorro > 0 ? (
                 <span className="text-xs text-[color:var(--pv-tenue)] line-through">
-                  {money(producto.comparePrice)}
+                  {money(cuentaDeLaOferta(producto, bonos).valorTotal)}
                 </span>
               ) : null}
             </p>
