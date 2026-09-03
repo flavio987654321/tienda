@@ -265,6 +265,25 @@ check("PAN-I", pantalla.includes('s.clave === "garantia" && s.visible'),
 check("PAN-J", /robots: \{ index: false/.test(pantalla),
   "la pantalla de pago no se indexa");
 
+/* ⚠️ Encontrado a mano el 03/09/26, probando el link. Era un `notFound()` seco:
+   sin publicar o sin archivo, 404 para todo el mundo — incluida la dueña, que
+   sólo quería ver cómo le quedó su propio checkout. Y la página de venta SÍ se
+   le muestra a su dueña sin publicar, así que era una función a medias. */
+check("PAN-K", pantalla.includes("getCurrentUser") && pantalla.includes("fila.store.ownerId"),
+  "la dueña puede ver su checkout antes de publicarlo, igual que su página de venta");
+
+/* Y se le dice QUÉ falta: un 404 la dejaba adivinando entre tres cosas. */
+check("PAN-L", pantalla.includes("avisoDePrevia") && formulario.includes("p.avisoDePrevia"),
+  "y se le dice qué le falta para poder vender, no un error mudo");
+
+/* ⚠️ Pero SÓLO a ella. Quien no es la dueña ve exactamente lo mismo que antes. */
+check("PAN-M", /user\.id !== fila\.store\.ownerId\) notFound\(\)/.test(pantalla),
+  "para cualquier otro sigue siendo 404: un borrador no se muestra");
+
+/* Y en esa previa no se puede pagar: el producto todavía no se puede entregar. */
+check("PAN-N", pantalla.includes("puedeCobrar={seLePuedeVender}"),
+  "en la previa el botón de pagar está apagado");
+
 /* ── El agregado: la oferta de después de pagar ───────────────────────────── */
 
 const gracias = readFileSync("src/app/p/[id]/gracias/GraciasClient.tsx", "utf8");

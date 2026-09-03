@@ -43,6 +43,13 @@ type Props = {
   maxDescargas: number;
   vendedor: string | null;
   puedeCobrar: boolean;
+  /**
+   * Qué le falta, cuando la mira su dueña antes de poder vender.
+   *
+   * `null` para todo el mundo salvo ella: si el producto no se puede vender,
+   * quien no es la dueña ni llega hasta acá.
+   */
+  avisoDePrevia: string | null;
   botonRedondo: string;
   tarjeta: string;
 };
@@ -132,13 +139,22 @@ export default function CheckoutClient(p: Props) {
         </span>
       </div>
 
-      {!p.puedeCobrar && (
-        <div className={`mb-6 flex gap-3 bg-[color:var(--pv-fuerte)] p-4 ${p.tarjeta}`}>
-          <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-[color:var(--pv-tinta)]" />
-          <p className="text-sm text-[color:var(--pv-tinta)]">
-            Quien vende todavía no terminó de configurar los cobros, así que esta compra
-            no se puede completar ahora. Volvé a intentar más tarde.
+      {/* ⚠️ Este cartel lo ve SÓLO la dueña del producto: si todavía no se puede
+          vender, quien no es ella ni llega a esta pantalla. Por eso está escrito
+          para ella —dice qué le falta y dónde arreglarlo— y no para un comprador.
+          Antes acá había un 404 pelado que no explicaba nada. */}
+      {p.avisoDePrevia && (
+        <div className={`mb-6 bg-[color:var(--pv-fuerte)] p-4 ${p.tarjeta}`}>
+          <p className="mb-1 text-[10px] font-extrabold uppercase tracking-widest text-[color:var(--pv-tenue)]">
+            Así lo van a ver — sólo lo ves vos
           </p>
+          <div className="flex gap-2.5">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-[color:var(--pv-tinta)]" />
+            <p className="text-sm text-[color:var(--pv-tinta)]">
+              {p.avisoDePrevia}{" "}
+              <span className="opacity-75">El botón de pagar está apagado hasta que se resuelva.</span>
+            </p>
+          </div>
         </div>
       )}
 

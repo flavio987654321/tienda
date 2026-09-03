@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { getCurrentUser } from "@/lib/auth-session";
 import { prisma } from "@/lib/prisma";
 import { normalizarContenido, variablesDePagina, buscarEstilo } from "@/lib/pagina-venta";
 import { CLASES_FUENTES } from "@/lib/fuentes-venta";
@@ -41,16 +42,15 @@ export default async function PantallaDePago({ params }: Props) {
   const { id } = await params;
 
   const fila = await prisma.product.findFirst({
-    /* Las mismas condiciones que la ruta que cobra. Si la pantalla mostrara
-       productos que la ruta después rechaza, alguien llenaría el mail y se
-       comería un error recién al apretar Pagar. */
-    where: { id, deletedAt: null, rolDigital: "PRINCIPAL", isActive: true },
+    /* ⚠️ Sin `isActive` en el `where`, a propósito: se busca igual y se decide
+       más abajo quién puede verlo. Ver `quiénPuedeVerla`. */
+    where: { id, deletedAt: null, rolDigital: "PRINCIPAL" },
     select: {
       id: true, name: true, price: true, comparePrice: true, archivoPath: true,
-      rolDigital: true, paginaVenta: true, images: true,
+      rolDigital: true, paginaVenta: true, images: true, isActive: true,
       store: {
         select: {
-          isPublished: true, mpAccessToken: true,
+          isPublished: true, mpAccessToken: true, ownerId: true,
           owner: { select: { role: true, name: true } },
         },
       },
@@ -70,12 +70,40 @@ export default async function PantallaDePago({ params }: Props) {
      productos se venden por su propia puerta. Ver `espacioDigital`. */
   if (!fila || fila.store.isPublished || fila.store.owner.role !== "DIGITAL") notFound();
 
-  /* Sin archivo o sin precio no hay nada que cobrar. Se mira acá igual que en la
-     ruta: entre publicar y comprar pueden pasar días. */
-  if (loQueFalta({
+  /* ══════════════════════════════════════════════════════════════════════════
+     QUIÉN PUEDE VERLA
+     ══════════════════════════════════════════════════════════════════════════
+
+     Antes esto era un `notFound()` seco: sin publicar o sin archivo, 404 para
+     todo el mundo — incluida la dueña del producto, que sólo quería mirar cómo
+     le quedó su propio checkout. Se topaba con un 404 pelado que no explica
+     nada. Encontrado a mano el 03/09/26, y era una función a medias: la página
+     de venta SÍ se le muestra a su dueña sin publicar, y el checkout no.
+
+     Ahora sigue el mismo criterio que `/p/[id]`: si todavía no se puede vender,
+     la ve la dueña y nadie más, marcada como previa y con el botón apagado.
+     Ver el checkout no puede depender de publicar el producto. */
+  const falta = loQueFalta({
     rolDigital: fila.rolDigital, archivoPath: fila.archivoPath,
     price: fila.price, name: fila.name,
-  })) notFound();
+  });
+  const sinMercadoPago = !fila.store.mpAccessToken;
+  const seLePuedeVender = fila.isActive && !falta && !sinMercadoPago;
+
+  let avisoDePrevia: string | null = null;
+  if (!seLePuedeVender) {
+    const user = await getCurrentUser();
+    /* Quien no es la dueña ve exactamente lo mismo que antes. */
+    if (!user || user.id !== fila.store.ownerId) notFound();
+
+    /* Y a ella se le dice QUÉ falta, en orden de qué tiene que resolver primero.
+       Un 404 la dejaba adivinando entre tres cosas distintas. */
+    avisoDePrevia =
+      falta ??
+      (sinMercadoPago
+        ? "Falta conectar Mercado Pago en Configuración → Pagos. Sin eso no podés cobrar."
+        : "Este producto todavía no está publicado, así que sólo lo ves vos.");
+  }
 
   const pagina = normalizarContenido(fila.paginaVenta);
   const estilo = buscarEstilo(pagina.estilo);
@@ -126,7 +154,8 @@ export default async function PantallaDePago({ params }: Props) {
           vendedor={fila.store.owner.name}
           /* Sin Mercado Pago conectado la pantalla no ofrece pagar: es preferible
              decirlo antes que dejar escribir el mail para fallar al final. */
-          puedeCobrar={Boolean(fila.store.mpAccessToken)}
+          puedeCobrar={seLePuedeVender}
+          avisoDePrevia={avisoDePrevia}
           botonRedondo={estilo.boton}
           tarjeta={estilo.tarjeta}
         />
