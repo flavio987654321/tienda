@@ -450,21 +450,66 @@ function Contenido({ clave, campos, tono, datos }: {
 
     case "comoFunciona": {
       const pasos = lista(campos, "pasos").filter((p) => p.titulo || p.detalle);
+
+      /* ⚠️ La fila sólo hasta CUATRO pasos, y no es una preferencia: con cinco,
+         cada columna queda en unos 180 píxeles y el título se parte en cuatro
+         renglones. Es el error que tiene la página de la competencia —su fila y
+         su línea punteada se rompen justo al pasar de cuatro— y acá se evita
+         solo, porque la decisión la toma la cantidad de pasos y no quien arma
+         la página. Con cinco se apila, que es como se lee bien.
+
+         Y la fila arranca recién en `lg`. En el celular una fila de círculos no
+         existe: entrarían tres letras por columna. */
+      const enFila = pasos.length > 1 && pasos.length <= 4;
+
+      /* La mitad del círculo (h-9 = 36px), que es donde va la línea que une. */
+      const alturaLinea = "top-[1.125rem]";
+
       return (
         <Seccion tono={tono} estilo={estilo}>
           <Titulo estilo={estilo}>{texto(campos, "titulo")}</Titulo>
           <Bajada>{texto(campos, "subtitulo")}</Bajada>
-          <ol className="mx-auto mt-8 grid max-w-2xl gap-4">
+          <ol
+            className={`mt-8 grid gap-6 ${
+              enFila ? "lg:flex lg:items-start lg:gap-0" : "mx-auto max-w-2xl gap-4"
+            }`}
+          >
             {pasos.map((p, n) => (
-              <li key={n} className="flex items-start gap-4">
+              <li
+                key={n}
+                className={`relative flex items-start gap-4 ${
+                  enFila ? "lg:flex-1 lg:flex-col lg:items-center lg:px-4 lg:text-center" : ""
+                }`}
+              >
+                {/* La línea que une los círculos: media a la izquierda y media a
+                    la derecha de cada uno. En dos mitades y no una línea sola de
+                    punta a punta porque así se adapta a cualquier cantidad sin
+                    medir nada — que es donde se rompe la de ellos. */}
+                {enFila && n > 0 && (
+                  <span
+                    aria-hidden="true"
+                    className={`absolute left-0 right-1/2 ${alturaLinea} hidden h-px bg-[color:var(--pv-linea)] lg:block`}
+                  />
+                )}
+                {enFila && n < pasos.length - 1 && (
+                  <span
+                    aria-hidden="true"
+                    className={`absolute left-1/2 right-0 ${alturaLinea} hidden h-px bg-[color:var(--pv-linea)] lg:block`}
+                  />
+                )}
+
+                {/* ⚠️ El número sale de la POSICIÓN, no de un campo. En el editor
+                    de la competencia se escribe a mano —vimos un "1)" tipeado
+                    adentro del título y un paso agregado que quedó sin número— y
+                    ahí reordenar deja los números mintiendo. */}
                 <span
                   aria-hidden="true"
-                  className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[color:var(--pv-acento)] font-bold text-[color:var(--pv-sobre)]"
+                  className="relative z-10 grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[color:var(--pv-acento)] font-bold text-[color:var(--pv-sobre)]"
                 >
                   {n + 1}
                 </span>
-                <div className="min-w-0">
-                  {p.titulo && <h3 className="font-semibold text-[color:var(--pv-tinta)]">{p.titulo}</h3>}
+                <div className={`min-w-0 ${enFila ? "lg:mt-3" : ""}`}>
+                  {p.titulo && <h3 className="text-pretty font-semibold text-[color:var(--pv-tinta)]">{p.titulo}</h3>}
                   {p.detalle && (
                     <p className="mt-1 text-pretty text-sm leading-relaxed text-[color:var(--pv-tenue)]">
                       {p.detalle}

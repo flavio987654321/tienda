@@ -276,7 +276,17 @@ export const SECCIONES: readonly Seccion[] = [
       { clave: "pasos", etiqueta: "Pasos", tipo: "lista", largo: 0, maxItems: 5,
         campos: [
           { clave: "titulo", etiqueta: "Paso", tipo: "texto", largo: 60 },
-          { clave: "detalle", etiqueta: "Detalle", tipo: "parrafo", largo: 200 },
+          /* ⚠️ 130 y no 220 como los beneficios, y el motivo es DÓNDE se dibuja:
+             hasta cuatro pasos van en fila, o sea una columna de unos 180
+             píxeles cada uno. Con 220 caracteres esa columna se estira a diez
+             renglones y queda el triple de alta que las de al lado — probado
+             el 02/09/26, se ve como un error aunque no lo sea. Los beneficios
+             van de a dos y a todo el ancho, así que ahí 220 entra.
+
+             O sea: el tope no es un número redondo, sale del lugar donde el
+             texto termina dibujado. */
+          { clave: "detalle", etiqueta: "Detalle", tipo: "parrafo", largo: 130,
+            ayuda: "Corto: los pasos van uno al lado del otro." },
         ] },
     ],
   },

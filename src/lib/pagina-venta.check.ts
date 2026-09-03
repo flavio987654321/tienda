@@ -624,6 +624,57 @@ check("ANCHO-B", /overflow-x-clip/.test(dibujante),
 check("ANCHO-C", !/overflow-x-hidden/.test(dibujante),
   "y se recorta con clip, no con hidden, que dejaría un scroll vertical propio");
 
+/* ── Cómo funciona: los pasos ─────────────────────────────────────────────── */
+
+/* ⚠️ En el editor de la competencia el número del paso SE ESCRIBE A MANO: vimos
+   un "1)" tipeado adentro del título y un paso agregado después que quedó sin
+   número. Reordenar ahí deja los números mintiendo. */
+
+const pasos = buscarSeccion("comoFunciona")?.campos.find((c) => c.clave === "pasos");
+
+check("PAS-A", (pasos?.campos ?? []).every((h) => !/numero|orden|paso|indice/i.test(h.clave)),
+  "el número del paso no es un campo: sale de la posición y no se puede desincronizar");
+
+check("PAS-B", dibujante.includes("{n + 1}"),
+  "y se dibuja contando, así que reordenar los pasos renumera solo");
+
+/* ⚠️ La fila se corta en cuatro y lo decide la CANTIDAD, no quien arma la
+   página. Con cinco pasos cada columna queda en unos 180 píxeles y el título se
+   parte en cuatro renglones — que es exactamente donde se rompe la fila de la
+   competencia. Acá con cinco se apila y se lee. */
+check("PAS-C", dibujante.includes("pasos.length > 1 && pasos.length <= 4"),
+  "la fila sólo hasta cuatro pasos: con cinco se apila en vez de romperse");
+
+check("PAS-D", (pasos?.maxItems ?? 0) === 5,
+  "y el tope sigue siendo cinco: el quinto entra apilado, no se prohíbe");
+
+/* La línea que une va en dos mitades por paso y no de punta a punta, así se
+   adapta a cualquier cantidad sin medir nada. */
+check("PAS-E", dibujante.includes("left-0 right-1/2") && dibujante.includes("left-1/2 right-0"),
+  "la línea que une los círculos se arma por mitades: sirve para dos pasos y para cuatro");
+
+/* ⚠️ El tope de un texto no es un número redondo: sale de DÓNDE se dibuja.
+   Los pasos van en fila —una columna de unos 180 píxeles cada uno— y los
+   beneficios van de a dos a todo el ancho. Con el mismo tope, el paso se
+   estira a diez renglones y queda el triple de alto que los de al lado.
+   Probado el 02/09/26 escribiendo hasta el tope. */
+const detallePaso = (pasos?.campos ?? []).find((h) => h.clave === "detalle");
+const detalleBeneficio = buscarSeccion("beneficios")?.campos
+  .find((c) => c.clave === "items")?.campos?.find((h) => h.clave === "detalle");
+
+check("PAS-F", (detallePaso?.largo ?? 0) > 0 && (detalleBeneficio?.largo ?? 0) > 0
+  && detallePaso!.largo < detalleBeneficio!.largo,
+  `el detalle de un paso entra en su columna: ${detallePaso?.largo} contra ${detalleBeneficio?.largo} de un beneficio, que va a todo el ancho`);
+
+/* Que el tope exista lo obliga CAT-C. Esto es lo otro: que se pueda escribir
+   algo de verdad. Un tope de 20 no rompe nada y hace la sección inservible. */
+const cortos = SECCIONES.flatMap((s) => s.campos.flatMap((c) =>
+  (c.tipo === "lista" ? (c.campos ?? []) : [c])))
+  .filter((c) => c.tipo === "parrafo" && c.largo < 100);
+check("PAS-G", cortos.length === 0,
+  "y ningún párrafo tiene un tope tan chico que no se pueda escribir una idea"
+  + (cortos.length ? ` — cortos: ${cortos.map((c) => c.clave).join(", ")}` : ""));
+
 /* ── El ícono de cada ítem ────────────────────────────────────────────────── */
 
 /* El campo es libre —se pega el emoji que se quiera— pero lo que llega se limpia
