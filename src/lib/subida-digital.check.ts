@@ -134,7 +134,8 @@ check("BUCK-D", /file_size_limit/.test(firma),
    desprolijo — el permiso se pide 30 veces por hora y a 50 MB cada uno son
    1,5 GB por hora por cuenta, en un plan gratis que no pide tarjeta. */
 const confirmar = readFileSync("src/app/api/digitales/archivo/confirmar/route.ts", "utf8");
-check("VIEJO-A", /method: "DELETE"/.test(confirmar),
+const deposito = readFileSync("src/lib/deposito-digital.ts", "utf8");
+check("VIEJO-A", confirmar.includes("borrarDelDeposito") && /method: "DELETE"/.test(deposito),
   "al reemplazar se borra el archivo anterior");
 
 /* Se lo saca de lo GUARDADO, no de algo que mande el navegador: si la ruta a
@@ -144,7 +145,7 @@ check("VIEJO-B", /rutaDeRef\(producto\.archivoPath\)/.test(confirmar),
 
 /* Borrar ANTES de guardar y que el guardado falle deja el producto apuntando a
    un archivo que ya no esta: se publica, se vende y no se entrega. */
-check("VIEJO-C", confirmar.indexOf("prisma.product.update") < confirmar.indexOf("method: \"DELETE\""),
+check("VIEJO-C", confirmar.indexOf("prisma.product.update") < confirmar.indexOf("borrarDelDeposito("),
   "y se borra DESPUES de guardar, no antes");
 
 
@@ -190,6 +191,53 @@ check("REP-D", trasElLimite.includes("status: 503"),
    nada para marcar el producto como entregable. */
 check("REP-C", confirmar.includes("pesoReal") && confirmar.includes('method: "HEAD"'),
   "el servidor comprueba que el archivo EXISTA, no le cree al navegador");
+
+/* ── El barrido de los borrados, 03/09/26 ─────────────────────────────────── */
+
+/* ⚠️ Salió de la pregunta "¿y si quiero cambiar de embudo?". Borrar un producto
+   digital lo marca como borrado —tiene que ser así: `OrderItem` apunta a él— pero
+   NADIE tocaba el archivo. Y borrar el principal se lleva de arrastre a sus bonos
+   y upsells, que tienen PDF propio: cambiar de embudo dejaba cuatro o cinco
+   archivos muertos en el bucket. A 50 MB de tope cada uno, contra el gigabyte de
+   depósito del plan gratis, unas pocas pasadas lo llenan. */
+const barrido = readFileSync("src/app/api/cron/cleanup/route.ts", "utf8");
+
+check("BAR-A", barrido.includes("barrerArchivosDeBorrados"),
+  "el cron diario barre los archivos de los productos borrados");
+
+/* Los dos filtros. El primero es la cuarentena; el segundo es el que evita el
+   único caso feo — un pago que se acredita DESPUÉS del borrado emite el permiso
+   tarde, y ese vence después de la cuarentena. */
+check("BAR-B", barrido.includes("deletedAt: { lt: corte }"),
+  "sólo toca lo borrado hace más de la cuarentena, nunca lo vivo");
+check("BAR-C", barrido.includes("expiresAt: { gt: now }"),
+  "y nunca el archivo de alguien que todavía tiene un permiso de descarga vivo");
+
+/* ⚠️ Sin soltar la referencia, el mismo producto vuelve a caer en la consulta
+   TODAS las noches y se le pega a Supabase para siempre por un archivo que ya no
+   está. */
+check("BAR-D", barrido.includes("archivoPath: null"),
+  "al barrer se suelta la referencia: no se reintenta para siempre");
+
+/* Y en ese orden. Al revés —soltar la referencia y que el borrado falle— deja el
+   archivo en el depósito sin nadie que lo nombre: exactamente lo que esto vino a
+   arreglar, pero ahora sin forma de encontrarlo. */
+check("BAR-E", barrido.indexOf("borrarDelDeposito(config") < barrido.indexOf("archivoPath: null"),
+  "y se suelta DESPUÉS de borrar, no antes");
+
+/* El cron diario entero tiene 60 segundos y esto va último. */
+check("BAR-F", barrido.includes("take: TOPE_BARRIDO") && /TOPE_BARRIDO = \d+/.test(deposito),
+  "hay tope por noche: un borrado masivo no se lleva puesto el resto del cron");
+
+/* Un objeto que ya no está no puede contar como error, o nunca se suelta la
+   referencia y volvemos al reintento eterno. */
+check("BAR-G", deposito.includes('"noEstaba"') && deposito.includes("res?.status === 404"),
+  "un archivo que ya no estaba cuenta como hecho, no como falla");
+
+/* La llave de servicio no puede vivir en un archivo que importa una pantalla, y
+   `subida-digital` lo importa `ProductosClient.tsx`. */
+check("BAR-H", !readFileSync("src/lib/subida-digital.ts", "utf8").includes("SERVICE_ROLE"),
+  "la llave de servicio no toca el archivo que importa el navegador");
 
 console.log(fallos === 0
   ? "\nok — el archivo del producto entra por una sola puerta y no queda servible"

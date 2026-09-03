@@ -2118,16 +2118,56 @@ vacío no se notaba. Se va en el orden de la página.
 Los dos salieron de repasar la subida, y los dos **van con la entrega y no antes**
 —las dos respuestas dependen de un plazo y de un modelo que todavía no existen—.
 
-- 🔲 **Barrer el PDF de un producto borrado, 30 días después.** Borrar un producto
-  es un borrado BLANDO y sus bonos y upsells se van con él, pero **el PDF se
-  queda, y tiene que quedarse**: quien ya compró tiene un permiso de descarga que
-  le dura 30 días, y borrar el archivo le rompe una compra que ya pagó. El
-  problema es que después **nadie lo limpia** — verificado, el cron diario no
-  toca el storage. Pasados los 30 días ningún permiso puede seguir vivo, así que
-  ese archivo no le sirve a nadie y lo seguimos pagando.
-  No es urgente como el huérfano del reemplazo —ése se disparaba 30 veces por
-  hora, éste sólo cuando alguien borra— pero es el mismo gasto que no avisa. Y el
-  plazo sale del permiso de descarga: barrerlo antes de que exista es adivinar.
+- ✅ **Barrer el PDF de un producto borrado, 30 días después — HECHO (03/09/26).**
+  Se adelantó a la entrega por una pregunta: *"¿y si quiero cambiar de embudo?"*.
+
+  Borrar un producto es un borrado BLANDO y sus bonos y upsells se van con él,
+  pero **el PDF se queda, y tiene que quedarse**: quien ya compró tiene un permiso
+  de descarga que le dura 30 días, y borrar el archivo le rompe una compra que ya
+  pagó. El problema era que después **nadie lo limpiaba** — verificado, el cron
+  diario no tocaba el storage.
+
+  **Y era peor de lo anotado.** Lo escrito hablaba de *el* PDF, en singular; el
+  borrado se lleva de arrastre a los bonos y upsells, **que tienen PDF propio**.
+  Cambiar de embudo dejaba cuatro o cinco archivos muertos, no uno. A 50 MB de
+  tope cada uno, contra **1 GB** de depósito del plan gratis, unas pocas pasadas
+  lo llenan. No es un agujero de seguridad —el bucket es privado y el enlace
+  firmado sale sólo de una compra— es plata.
+
+  Va colgado de `limpiar()`, que ya corre una vez por día, y filtra por dos cosas:
+
+  1. Borrado hace más de `DIAS_CUARENTENA_ARCHIVO` (30).
+  2. **Sin ningún permiso de descarga vivo.**
+
+  **La segunda parece sobrar, y casi sobra.** Un producto borrado no se puede
+  comprar, así que la última venta es anterior al borrado y su permiso vence, como
+  mucho, 30 días después: la cuarentena sola ya alcanza. Salvo en un caso — un
+  pago que se acredita DESPUÉS del borrado (Mercado Pago avisa cuando avisa) emite
+  el permiso tarde, y ése vence después del barrido. Cuesta una condición más en
+  la consulta y evita el único caso en que alguien paga y se queda sin nada.
+  `DigitalDownload` está vacía hoy, así que no filtra nada; está escrita para que
+  el día que exista el checkout esto ya lo respete, en vez de tener que acordarse.
+
+  Tres decisiones que no se ven pero sostienen todo:
+
+  - **Se suelta `archivoPath` DESPUÉS de borrar, nunca antes.** Al revés, un
+    borrado que falla deja el archivo en el depósito sin nadie que lo nombre:
+    exactamente lo que esto vino a arreglar, pero ahora sin forma de encontrarlo.
+  - **Un objeto que ya no está cuenta como hecho, no como falla.** Si contara como
+    error nunca se soltaría la referencia y el cron le pegaría a Supabase por ese
+    archivo todas las noches, para siempre.
+  - **Tope de 50 por noche.** El cron diario entero tiene 60 segundos —el techo de
+    Vercel— y esto va último. Lo que queda afuera se barre mañana.
+
+  De paso, el borrado del depósito quedó en un solo lugar (`lib/deposito-digital`)
+  y lo usan los dos que borran: el reemplazo y el barrido. Escrito dos veces, el
+  día que Supabase cambie qué contesta se entera uno y el otro no. Va aparte de
+  `subida-digital` a propósito: ese archivo lo importa una pantalla, y la llave de
+  servicio no puede rozar algo que se manda al navegador (chequeo BAR-H).
+
+  Probado en la base real en modo lectura: la consulta corre, 0 para barrer hoy, y
+  1 producto borrado con archivo — el bono de prueba, cuyo objeto ya se sacó a
+  mano. En 30 días va a contestar `noEstaba` y soltar la referencia sola.
 
 - 🔲 **Reemplazar el PDF de un producto YA VENDIDO le cambia el archivo a quien lo
   compró antes.** El token no guarda la ubicación: pide un link firmado del

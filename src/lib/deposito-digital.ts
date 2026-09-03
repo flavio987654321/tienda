@@ -1,0 +1,70 @@
+/**
+ * Sacar un archivo del bucket privado de productos digitales.
+ *
+ * Está en su propio archivo porque hay DOS lugares que borran del depósito y
+ * tienen que borrar igual: el reemplazo —cuando alguien sube un PDF nuevo sobre
+ * uno que ya estaba— y el barrido del cron, cuando un producto borrado cumple
+ * su cuarentena. Escrito dos veces, el día que Supabase cambie qué contesta se
+ * entera uno y el otro no.
+ *
+ * Va acá y no en `subida-digital.ts` a propósito: ese archivo lo importa una
+ * pantalla (`ProductosClient.tsx`), y la llave de servicio no puede ni rozar
+ * algo que se manda al navegador.
+ */
+
+import { BUCKET_DIGITALES } from "./subida-digital";
+
+/**
+ * Cuánto se le deja el archivo a un producto YA BORRADO antes de sacarlo del
+ * depósito.
+ *
+ * Son los mismos 30 días que dura el permiso de descarga (`DigitalDownload.
+ * expiresAt`), y no por casualidad: un producto borrado no se puede comprar, así
+ * que la última venta posible es anterior al borrado y su permiso vence, como
+ * mucho, 30 días después. Cumplido el plazo no queda nadie con derecho a bajarlo.
+ */
+export const DIAS_CUARENTENA_ARCHIVO = 30;
+
+/**
+ * Cuántos archivos barre el cron por noche.
+ *
+ * Hay tope porque cada uno es un pedido a Supabase, y el cron diario entero
+ * tiene 60 segundos —el techo del plan gratis de Vercel—. Sin esto, alguien que
+ * borra doscientos productos el mismo día se lleva puesto lo que corra después.
+ * Lo que quedó afuera se barre mañana; lo que importa es que se drene, no que
+ * sea hoy.
+ */
+export const TOPE_BARRIDO = 50;
+
+export type ConfigDeposito = { supabaseUrl: string; serviceRoleKey: string };
+
+/** `null` si falta alguna de las dos variables: sin ellas no hay nada que hacer. */
+export function configDeposito(): ConfigDeposito | null {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, "");
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!supabaseUrl || !serviceRoleKey) return null;
+  return { supabaseUrl, serviceRoleKey };
+}
+
+/**
+ * Qué pasó con el borrado.
+ *
+ * `noEstaba` se separa de `fallo` y no es un detalle: quien llama tiene que
+ * poder soltar la referencia igual. Si un objeto que ya no está contara como
+ * error, el cron lo volvería a intentar todas las noches para siempre.
+ */
+export type ResultadoBorrado = "borrado" | "noEstaba" | "fallo";
+
+export async function borrarDelDeposito(
+  { supabaseUrl, serviceRoleKey }: ConfigDeposito,
+  ruta: string,
+): Promise<ResultadoBorrado> {
+  const res = await fetch(`${supabaseUrl}/storage/v1/object/${BUCKET_DIGITALES}/${ruta}`, {
+    method: "DELETE",
+    headers: { apikey: serviceRoleKey, Authorization: `Bearer ${serviceRoleKey}` },
+  }).catch(() => null);
+
+  if (res?.ok) return "borrado";
+  if (res?.status === 404) return "noEstaba";
+  return "fallo";
+}

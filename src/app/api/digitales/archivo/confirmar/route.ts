@@ -10,6 +10,7 @@ import {
   nombreDeArchivo,
   avisoDePeso,
 } from "@/lib/subida-digital";
+import { configDeposito, borrarDelDeposito, type ConfigDeposito } from "@/lib/deposito-digital";
 
 export const runtime = "nodejs";
 
@@ -33,15 +34,6 @@ export const runtime = "nodejs";
  * navegador.
  */
 
-type Config = { supabaseUrl: string; serviceRoleKey: string };
-
-function configDeSupabase(): Config | null {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, "");
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!supabaseUrl || !serviceRoleKey) return null;
-  return { supabaseUrl, serviceRoleKey };
-}
-
 /**
  * Le pregunta a Supabase por el objeto. Devuelve el tamaño real en bytes, o
  * `null` si no está.
@@ -49,7 +41,7 @@ function configDeSupabase(): Config | null {
  * Va con `HEAD` sobre la ruta autenticada: no baja el archivo —serían 50 MB por
  * cada confirmación— y contesta con `content-length`.
  */
-async function pesoReal({ supabaseUrl, serviceRoleKey }: Config, ruta: string): Promise<number | null> {
+async function pesoReal({ supabaseUrl, serviceRoleKey }: ConfigDeposito, ruta: string): Promise<number | null> {
   const res = await fetch(`${supabaseUrl}/storage/v1/object/authenticated/${BUCKET_DIGITALES}/${ruta}`, {
     method: "HEAD",
     headers: { apikey: serviceRoleKey, Authorization: `Bearer ${serviceRoleKey}` },
@@ -120,7 +112,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Ese producto no existe" }, { status: 404 });
   }
 
-  const config = configDeSupabase();
+  const config = configDeposito();
   if (!config) {
     return NextResponse.json({ error: "Falta configurar Supabase Storage." }, { status: 500 });
   }
@@ -169,12 +161,9 @@ export async function POST(req: NextRequest) {
    * lo que importa—; queda el registro para poder barrerlo después. */
   const anterior = rutaDeRef(producto.archivoPath);
   if (anterior && anterior !== ruta) {
-    const borrado = await fetch(`${config.supabaseUrl}/storage/v1/object/${BUCKET_DIGITALES}/${anterior}`, {
-      method: "DELETE",
-      headers: { apikey: config.serviceRoleKey, Authorization: `Bearer ${config.serviceRoleKey}` },
-    }).catch(() => null);
-    if (!borrado?.ok) {
-      console.error("[archivo-digital] quedó huérfano:", anterior, borrado?.status ?? "sin respuesta");
+    const borrado = await borrarDelDeposito(config, anterior);
+    if (borrado === "fallo") {
+      console.error("[archivo-digital] quedó huérfano:", anterior);
     }
   }
 
