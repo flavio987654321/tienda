@@ -287,6 +287,13 @@ export async function POST(req: NextRequest) {
              de rol OWNER y esta tienda es de una cuenta DIGITAL. */
           lockedCommissionRate: COMISION_DIGITAL[tier],
           items: { create: armarItems(principal, bonos, upsells) },
+          /* ⚠️ La fila de pago nace con la orden, igual que en el checkout de
+             tiendas. El webhook la busca por `orderId` para marcarla aprobada y
+             guardar el identificador de Mercado Pago: sin ella, el aviso de pago
+             no tendría qué actualizar y la venta quedaría sin comprobante. */
+          payment: {
+            create: { provider: "mercadopago", status: "PENDING", amount: total, currency: "ARS" },
+          },
         },
         select: { id: true },
       });

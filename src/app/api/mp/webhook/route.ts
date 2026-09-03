@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createHmac, timingSafeEqual } from "crypto";
 import { waitUntil } from "@vercel/functions";
 import { prisma } from "@/lib/prisma";
 import MercadoPagoConfig, { Payment } from "mercadopago";
@@ -7,36 +6,11 @@ import { createNotification } from "@/lib/notifications";
 import { runOrderAction } from "@/lib/orderActions";
 import { sendOrderPaymentConfirmedEmail, sendCommissionEarnedEmail, parseOrderPromoSummary } from "@/lib/email";
 import { despues } from "@/lib/despues";
+/* La verificación de firma vive en su propia pieza: la comparten los dos
+   webhooks de pago. Ver el comentario largo en `lib/mp-firma`. */
+import { firmaDeMercadoPagoValida } from "@/lib/mp-firma";
 
 type CommissionResult = { commissionId: string; amount: number; rate: number; newBalance: number };
-
-function verifyMPSignature(req: NextRequest, dataId: string): boolean {
-  const secret = process.env.MP_WEBHOOK_SECRET;
-  if (!secret) {
-    if (process.env.NODE_ENV === "production") {
-      console.error("CRÍTICO: MP_WEBHOOK_SECRET no está configurado en producción — todas las solicitudes son rechazadas");
-      return false;
-    }
-    return true; // solo en dev/test sin secret
-  }
-
-  const xSignature = req.headers.get("x-signature");
-  const xRequestId = req.headers.get("x-request-id") ?? "";
-  if (!xSignature) return false;
-
-  const ts = xSignature.match(/ts=([^,]+)/)?.[1];
-  const v1 = xSignature.match(/v1=([^,]+)/)?.[1];
-  if (!ts || !v1) return false;
-
-  const manifest = `id:${dataId};request-id:${xRequestId};ts:${ts};`;
-  const expected = createHmac("sha256", secret).update(manifest).digest("hex");
-
-  try {
-    return timingSafeEqual(Buffer.from(expected), Buffer.from(v1));
-  } catch {
-    return false;
-  }
-}
 
 async function processPaymentWebhook(paymentId: string) {
   try {
@@ -350,7 +324,7 @@ export async function POST(req: NextRequest) {
     paymentId = body.data?.id ? String(body.data.id) : undefined;
     if (!paymentId) return NextResponse.json({ ok: true });
 
-    if (!verifyMPSignature(req, paymentId)) {
+    if (!firmaDeMercadoPagoValida(req, paymentId)) {
       console.warn("MP webhook: firma inválida — request ignorada", { paymentId });
       return NextResponse.json({ ok: true });
     }
