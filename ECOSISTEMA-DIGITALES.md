@@ -1978,8 +1978,70 @@ y que se abra su casilla).
 
 **🔲 Lo que sigue de la Fase 5:**
 
-- 🔲 **Bonos** — modelo, pantalla y checkout. No existe nada en el proyecto.
-- 🔲 **Upsell** — idem.
+- ✅ **Bonos** — modelo, pantalla y checkout. Hechos.
+- ✅ **Upsell** — hecho, y en dos lugares: antes de pagar (al lado del resumen) y
+  después de pagar (en la pantalla de gracias).
+
+### ✅ EL CHECKOUT — HECHO (03/09/26)
+
+De punta a punta: `comprar → Mercado Pago → cobro → permiso → descargar → mail`.
+
+**No hizo falta rehacer el camino del dinero.** `espacioDigital` ya había montado
+digitales sobre `Order`, `OrderItem` y `createCheckoutPreference`, justamente
+para eso. La comisión se retiene sola dentro del cobro (`marketplace_fee`), que
+es lo que sostiene que Free exista sin abono.
+
+**El checkout no se configura, hereda.** Los colores, la letra y la forma salen
+de `variablesDePagina`, la misma función que dibuja la página de venta. No hay
+editor de checkout y no lo va a haber: cada cosa configurable en la pantalla
+donde entra la plata es una forma de romperla. El de la competencia es uno solo
+para toda la tienda, así que un producto violeta lleva a un checkout genérico.
+
+**Un solo campo obligatorio**, el mail, porque es a donde va el archivo. Ellos
+piden cuatro. El nombre está y es opcional.
+
+**Lo que se encontró escribiéndolo, en orden de gravedad:**
+
+1. **`Infinity > 0` da `true`.** El filtro de importes era `> 0`, así que un
+   precio infinito salía como **comisión infinita** rumbo a Mercado Pago. Y
+   `price` es un `Float`: una columna de doble precisión de Postgres guarda
+   `Infinity` y `NaN` sin quejarse. Lo destapó su propio chequeo (COM-E).
+2. **La firma de Mercado Pago estaba escrita en un solo webhook.** Con una copia
+   en cada uno alcanzaba con arreglar uno para que el otro se quedara con el
+   agujero. Se sacó a `lib/mp-firma`, sin tocarle una línea al cuerpo.
+3. **La pantalla de pago heredaba `frame-ancestors 'self'`** de `/p/`, que la
+   página de venta necesita para su previa. Ahora tiene su propia regla, DESPUÉS
+   de la general porque en Next gana la última. Verificado en vivo.
+4. **El mail no puede linkear a la ruta de descarga**: abrirla gasta una de las
+   cinco, y los enlaces de un correo los visitan solos Outlook Safe Links y los
+   antivirus. Linkea a la pantalla de gracias, que tiene botones.
+5. **La fila `Payment` no nacía con la orden**, así que el aviso de pago no tenía
+   qué actualizar y la venta quedaba sin comprobante.
+6. **En un agregado la orden no tiene principal**, así que buscar el principal
+   para armar el mail dejaba esas compras sin entrega.
+
+**Tres carreras, y las tres las gana la base, no el código:** el permiso va con
+`upsert` sobre `orderItemId` (dos avisos en paralelo darían dos tokens y diez
+descargas donde debía haber cinco — lo advertía el propio modelo); el contador de
+descargas lleva la condición adentro del `where` (dos pestañas leen las dos "van
+4 de 5"); y una orden pendiente reciente se reusa en vez de crear otra.
+
+**La espera de la pantalla de gracias no es un adorno.** La preferencia va con
+`auto_return: "approved"`, así que Mercado Pago devuelve a la persona **antes**
+de que llegue el aviso que emite los permisos. La pantalla pregunta cada dos
+segundos y los botones aparecen solos; a los dos minutos deja de preguntar y
+explica que el mail llega igual.
+
+**Decisiones de esta tanda:** el archivo se baja en pantalla **y** se manda por
+mail (cada una tapa el agujero de la otra); sólo Mercado Pago por ahora; y el
+upsell post-pago se apoya en el identificador de la compra ya pagada, no en una
+bandera del navegador — con el correo saliendo de esa orden y nunca del pedido.
+
+🔲 **El upsell de UN SOLO CLICK** —sin volver a poner la tarjeta— necesita
+guardar la tarjeta del comprador (tokenización de MP): credenciales de cada
+vendedor manejando datos de tarjeta y consentimiento explícito. Es una función
+aparte y bastante más delicada. Lo que hay es la oferta en el momento exacto con
+su propio cobro: dos clics y la tarjeta otra vez.
 - ✅ **La escasez atada a datos reales** — resuelto el 02/09/26, y en los tres
   casos por el mismo criterio: la herramienta existe, vacía. El **contador**
   termina de verdad y desaparece solo, así que nace apagado —es para una promo

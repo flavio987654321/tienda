@@ -206,6 +206,45 @@ check("DES-H", descarga.includes("checkRateLimit"),
 check("DES-I", descarga.includes("descuenta una descarga con sólo abrirla"),
   "queda escrito por qué el mail no puede linkear acá derecho");
 
+/* ── El mail de entrega ───────────────────────────────────────────────────── */
+
+const mails = readFileSync("src/lib/resend.ts", "utf8");
+const cuerpoDelMail = mails.slice(mails.indexOf("export async function sendEntregaDigitalEmail"));
+
+/* ⚠️ EL chequeo del mail, y el que más caro sale si se afloja.
+   Abrir `/api/digitales/descargar/<token>` GASTA una de las cinco descargas, y
+   los enlaces de un correo los visitan solos —apenas llega— Outlook Safe Links,
+   los antivirus corporativos y los previsualizadores. Con el enlace directo acá,
+   alguien se queda sin sus cinco descargas sin haber tocado nada. */
+check("MAIL-A", !cuerpoDelMail.includes("/api/digitales/descargar"),
+  "el mail NO linkea a la ruta de descarga: abrirla sola gastaría una descarga");
+check("MAIL-B", cobro.includes("/gracias?orden="),
+  "linkea a la pantalla de gracias, que tiene los botones y abrirla no cuesta nada");
+
+/* Todo lo que llega de afuera —el nombre de quien compró, el del producto, el
+   del vendedor— se dibuja adentro de un HTML que se manda por mail. */
+check("MAIL-C", (cuerpoDelMail.match(/escapeHtml\(/g) ?? []).length >= 4,
+  "cada texto de afuera se escapa antes de entrar al HTML del mail");
+
+/* ⚠️ En un AGREGADO la orden no tiene principal: lleva sólo el upsell. Buscar el
+   principal y salir si no está dejaba a esas compras sin mail de entrega. */
+check("MAIL-D", cobro.includes("primera?.padreId"),
+  "un agregado también recibe su mail, aunque su orden no tenga producto principal");
+
+/* Con `despues`, no con `await` ni con una promesa suelta. En serverless una
+   promesa colgada no se resuelve: el mail llega tarde o no llega, en silencio. */
+check("MAIL-E", cobro.includes("despues(") && !/await sendEntregaDigitalEmail/.test(cobro),
+  "el mail sale con `despues`: ni frena la respuesta ni se pierde");
+
+/* Y si falla, la venta no se cae: ya está confirmada y los permisos emitidos. */
+check("MAIL-F", cobro.indexOf("prisma.$transaction") < cobro.indexOf("sendEntregaDigitalEmail({"),
+  "se manda DESPUÉS de confirmar: un mail que no sale no voltea una venta cobrada");
+
+/* Los plazos del mail salen de las constantes, no escritos a mano: la pantalla,
+   el mail y el barrido tienen que prometer todos lo mismo. */
+check("MAIL-G", cobro.includes("dias: DIAS_DEL_PERMISO") && cobro.includes("maxDescargas: MAX_DESCARGAS"),
+  "los plazos que promete el mail salen de la misma constante que los aplica");
+
 console.log(fallos === 0
   ? "\nok — sólo baja el archivo quien lo pagó, y sólo mientras vale su permiso"
   : `\nFALLA — ${fallos} chequeo(s) de la entrega digital`);

@@ -3,10 +3,15 @@ import MercadoPagoConfig, { Payment } from "mercadopago";
 import { prisma } from "@/lib/prisma";
 import { firmaDeMercadoPagoValida } from "@/lib/mp-firma";
 import {
-  nuevoTokenDeDescarga, vencimientoDelPermiso, lineasEntregables, MAX_DESCARGAS,
+  nuevoTokenDeDescarga, vencimientoDelPermiso, lineasEntregables,
+  MAX_DESCARGAS, DIAS_DEL_PERMISO,
 } from "@/lib/entrega-digital";
+import { sendEntregaDigitalEmail } from "@/lib/resend";
+import { despues } from "@/lib/despues";
 
 export const runtime = "nodejs";
+
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "";
 
 /**
  * El aviso de pago de una compra digital.
@@ -114,11 +119,17 @@ async function acreditar(idDelPago: string) {
     where: { id: ordenId },
     select: {
       id: true, status: true, total: true,
-      store: { select: { owner: { select: { role: true } } } },
+      buyer: { select: { email: true, name: true } },
+      store: { select: { owner: { select: { role: true, name: true } } } },
       items: {
         select: {
           id: true,
-          product: { select: { id: true, name: true, archivoPath: true } },
+          product: {
+            select: {
+              id: true, name: true, archivoPath: true, archivoNombre: true,
+              rolDigital: true, padreId: true,
+            },
+          },
         },
       },
     },
@@ -214,8 +225,49 @@ async function acreditar(idDelPago: string) {
     }
   });
 
-  /* 🔲 Falta el mail de entrega, que es lo que le avisa a la persona. Los
-     permisos ya están emitidos, así que cuando exista sólo tiene que leerlos.
-     Va en el mismo paso que la pantalla de gracias. */
-  console.log("[digital-cobro] entregada la orden", orden.id, "—", entregables.length, "archivo(s)");
+  /* ── El mail de entrega ─────────────────────────────────────────────────
+   *
+   * Va con `despues`: la respuesta a Mercado Pago sale enseguida y la plataforma
+   * se compromete a no matar la función hasta que el mail termine. Sin eso, en
+   * serverless la promesa queda colgada y el mail llega tarde o no llega, en
+   * silencio — le pasó al aviso de carrito abandonado.
+   *
+   * Y si el mail falla, la venta NO se cae: ya está confirmada y los permisos ya
+   * están emitidos. La persona igual tiene sus archivos en la pantalla de
+   * gracias. Un mail que no sale no puede voltear algo que ya se cobró.
+   *
+   * ⚠️ El enlace es la PANTALLA DE GRACIAS, nunca la dirección de descarga:
+   * abrir ésa gasta una de las cinco, y los enlaces de un mail los visitan solos
+   * los antivirus y los previsualizadores. Ver `sendEntregaDigitalEmail`.
+   */
+  /* ⚠️ En un AGREGADO —la oferta de después de pagar— la orden NO tiene
+     principal: lleva sólo el upsell, porque el principal ya se pagó en la orden
+     anterior. Buscar el principal y salir si no está dejaba a esas compras sin
+     mail de entrega. Se toma el principal si está, y si no, el padre del upsell:
+     la pantalla de gracias cuelga del producto del embudo, no de la línea. */
+  const laPrincipal = orden.items.find((i) => i.product.rolDigital === "PRINCIPAL")?.product;
+  const primera = orden.items[0]?.product;
+  const idDeLaPagina = laPrincipal?.id ?? primera?.padreId ?? null;
+  /* Y el título dice lo que se compró en ESTA orden: en un agregado, el upsell. */
+  const comoSeLlama = laPrincipal?.name ?? primera?.name ?? "tu compra";
+
+  if (orden.buyer.email && idDeLaPagina) {
+    const dondeVerlos = `${APP_URL}/p/${idDeLaPagina}/gracias?orden=${orden.id}`;
+    despues(
+      () => sendEntregaDigitalEmail({
+        to: orden.buyer.email!,
+        nombre: orden.buyer.name,
+        producto: comoSeLlama,
+        archivos: entregables.map((l) => ({
+          nombre: l.product.archivoNombre ?? l.product.name,
+          esBono: l.product.rolDigital === "BONO",
+        })),
+        enlace: dondeVerlos,
+        vendedor: orden.store.owner.name,
+        dias: DIAS_DEL_PERMISO,
+        maxDescargas: MAX_DESCARGAS,
+      }),
+      "digital-cobro: mail de entrega",
+    );
+  }
 }

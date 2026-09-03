@@ -1210,3 +1210,108 @@ export async function sendTermsUpdatedEmail({
     `,
   });
 }
+
+/**
+ * La entrega de un producto digital: el mail que llega cuando se acredita el pago.
+ *
+ * ══════════════════════════════════════════════════════════════════════════
+ * ⚠️ EL BOTÓN LLEVA A UNA PÁGINA, NUNCA A LA DIRECCIÓN DE DESCARGA
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * Abrir `/api/digitales/descargar/<token>` **gasta una de las cinco descargas**.
+ * Y los enlaces de un correo los visitan solos, apenas llega, un montón de cosas
+ * que no son la persona: Outlook Safe Links, los antivirus corporativos, los
+ * previsualizadores de los clientes de mail. Con el enlace directo acá, alguien
+ * podría quedarse sin sus cinco descargas sin haber tocado nada.
+ *
+ * Por eso apunta a la pantalla de gracias, que muestra los botones. Abrirla no
+ * cuesta nada. Hay un chequeo que falla si alguien pone `/descargar/` acá.
+ *
+ * ── Por qué el mail, si el archivo ya se bajó en pantalla ───────────────────
+ *
+ * Porque se decidió que fueran las dos cosas (03/09/26) y cada una tapa el
+ * agujero de la otra: la pantalla sirve a quien baja en el momento, y esto a
+ * quien cerró la pestaña, cambió de aparato, o lo quiere dos semanas después.
+ */
+export async function sendEntregaDigitalEmail({
+  to,
+  nombre,
+  producto,
+  archivos,
+  enlace,
+  vendedor,
+  dias,
+  maxDescargas,
+}: {
+  to: string;
+  nombre: string | null;
+  producto: string;
+  /** Lo que se lleva, para que el mail sea también un comprobante. */
+  archivos: { nombre: string; esBono: boolean }[];
+  /** La pantalla de gracias con sus botones. NUNCA la ruta de descarga. */
+  enlace: string;
+  vendedor: string | null;
+  dias: number;
+  maxDescargas: number;
+}) {
+  if (!process.env.RESEND_API_KEY) return;
+
+  const lista = archivos
+    .map(
+      (a) => `
+      <tr>
+        <td style="padding:10px 0;border-bottom:1px solid #f3f4f6;color:#111827;font-size:14px;">
+          ${escapeHtml(a.nombre)}
+          ${a.esBono ? `<span style="color:#059669;font-size:11px;font-weight:800;letter-spacing:.04em;margin-left:8px;">BONO GRATIS</span>` : ""}
+        </td>
+      </tr>`
+    )
+    .join("");
+
+  await resend.emails.send({
+    from: FROM,
+    to,
+    subject: `Ya podés descargar: ${producto}`,
+    html: `
+      <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 16px;color:#111827;background:#fff;">
+        <div style="background:#0f172a;border-radius:16px;padding:32px 24px;margin-bottom:28px;text-align:center;">
+          <p style="color:#94a3b8;font-size:13px;margin:0 0 6px;font-weight:500;">Tu compra está lista</p>
+          <h1 style="color:#fff;font-size:22px;margin:0;font-weight:800;">${escapeHtml(producto)}</h1>
+        </div>
+
+        <p style="font-size:15px;color:#374151;margin-bottom:6px;">
+          Hola${nombre ? ` <strong>${escapeHtml(nombre)}</strong>` : ""},
+        </p>
+        <p style="font-size:15px;color:#374151;margin-bottom:24px;">
+          Se acreditó tu pago. Ya podés descargar todo lo que compraste.
+        </p>
+
+        <div style="text-align:center;margin-bottom:28px;">
+          <a href="${enlace}"
+             style="display:inline-block;background:#0f172a;color:#fff;padding:14px 32px;border-radius:10px;font-weight:700;font-size:15px;text-decoration:none;">
+            Descargar mis archivos
+          </a>
+        </div>
+
+        <p style="font-size:13px;color:#6b7280;margin:0 0 8px;font-weight:700;">Lo que te llevás</p>
+        <table style="width:100%;border-collapse:collapse;margin-bottom:24px;">${lista}</table>
+
+        <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:16px;margin-bottom:24px;">
+          <p style="font-size:13px;color:#475569;margin:0;">
+            Tus enlaces valen <strong>${dias} días</strong> y <strong>${maxDescargas} descargas</strong> cada uno.
+            Guardá los archivos en tu computadora o teléfono apenas puedas.
+          </p>
+        </div>
+
+        <p style="font-size:14px;color:#6b7280;margin-bottom:24px;">
+          ¿Algún problema con tu compra?${vendedor ? ` Escribile a <strong>${escapeHtml(vendedor)}</strong>.` : ""}
+          Respondé este mail y lo vemos.
+        </p>
+
+        <p style="color:#9ca3af;font-size:12px;text-align:center;">
+          ${vendedor ? `${escapeHtml(vendedor)} vende a través de TiendaApps` : "TiendaApps"}
+        </p>
+      </div>
+    `,
+  });
+}
