@@ -624,6 +624,57 @@ check("ANCHO-B", /overflow-x-clip/.test(dibujante),
 check("ANCHO-C", !/overflow-x-hidden/.test(dibujante),
   "y se recorta con clip, no con hidden, que dejaría un scroll vertical propio");
 
+/* ── La portada ───────────────────────────────────────────────────────────── */
+
+/* Quien entra desde un anuncio cae acá sin contexto ninguno: no sabe qué tipo
+   de cosa es, ni si el sitio es serio, ni cómo lo recibiría. Las tres se
+   contestan en la primera pantalla o se contestan tarde. */
+
+const portada = buscarSeccion("portada");
+
+check("POR-A", (portada?.campos ?? [])[0]?.clave === "rotulo",
+  "la portada arranca con el rótulo: qué tipo de cosa es, antes del título");
+
+/* La competencia lo tiene pegado adelante del nombre ("EBOOK: Mecánica del…"),
+   o sea escrito adentro del mismo campo. Separado se dibuja distinto y se puede
+   dejar vacío sin tocar el título. */
+check("POR-B", (() => {
+  const c = (portada?.campos ?? []).find((x) => x.clave === "rotulo");
+  return (c?.largo ?? 999) <= 40;
+})(), "y es corto: es una etiqueta, no un segundo título");
+
+check("POR-C", dibujante.includes("{rotulo && ("),
+  "vacío no dibuja nada: no queda un hueco arriba del título");
+
+/* ⚠️ Los sellos van también en la PRIMERA pantalla, no sólo a mitad de página.
+   Las dos preguntas de quien cae desde un anuncio son si es seguro y cómo lo
+   recibe. */
+const conSellos = dibujante.split("<Sellos dias={diasDeGarantia(datos)} />").length - 1;
+check("POR-D", conSellos >= 3,
+  `los sellos aparecen en la portada, en el producto y en el cierre (${conSellos})`);
+
+/* ── Un título vacío no deja un hueco ─────────────────────────────────────── */
+
+/* Quedó anotado el 02/09/26 mirando su editor, que aclara "si los dejás vacíos
+   se usa el texto por defecto". Acá la respuesta es otra y es mejor: vacío no
+   dibuja NADA. Un título es opcional; lo que no puede quedar vacío es el texto
+   del botón, porque un botón sin texto no se puede apretar. */
+
+check("VAC-A", dibujante.includes("function Titulo") && dibujante.includes("if (!children) return null;"),
+  "un título vacío no dibuja el hueco: simplemente no está");
+
+check("VAC-B", (() => {
+  const p = normalizarContenido({ secciones: [{ clave: "portada", campos: {
+    titulo: "", textoBoton: "   " } }] });
+  const c = seccion(p, "portada")?.campos ?? {};
+  return c.titulo === "" && typeof c.textoBoton === "string" && c.textoBoton.length > 0;
+})(), "el título vacío se guarda vacío, pero el texto del botón vuelve al de fábrica");
+
+/* Y si además se borra el título de la portada, se dibuja el nombre del
+   producto: esa pantalla no puede quedar sin encabezado. */
+check("VAC-C", dibujante.includes("{titulo || producto.name}"),
+  "y la portada sin título cae en el nombre del producto, no en blanco");
+
 /* ── El sello de la garantía ──────────────────────────────────────────────── */
 
 /* ⚠️ Su bloque tiene un piso de 1 día y el ejemplo que vimos estaba en 7. En

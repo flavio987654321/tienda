@@ -158,6 +158,16 @@ export const SECCIONES: readonly Seccion[] = [
     encendida: true,
     tono: "fondo",
     campos: [
+      /* El rótulo de arriba de todo. Es corto a propósito —30 caracteres— porque
+         no es un título: es la etiqueta que dice QUÉ COSA es esto antes de que
+         se lea nada. Quien entra desde un anuncio cae acá sin contexto ninguno.
+
+         La competencia lo tiene, pero pegado adelante del nombre del producto
+         ("EBOOK: Mecánica del automotor…"), o sea escrito adentro del mismo
+         campo. Separado se puede dibujar distinto y se puede dejar vacío. */
+      { clave: "rotulo", etiqueta: "Rótulo", tipo: "texto", largo: 30,
+        ejemplo: "EBOOK",
+        ayuda: "Qué tipo de cosa es. Dejalo vacío si no suma." },
       { clave: "titulo", etiqueta: "Título", tipo: "texto", largo: 120,
         ejemplo: "La promesa de tu producto, en una línea",
         ayuda: "Lo que se lleva quien compra, no el nombre del archivo." },

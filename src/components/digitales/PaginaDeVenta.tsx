@@ -454,12 +454,22 @@ function Contenido({ clave, campos, tono, datos }: {
          toda la fuerza. Igual que en la página de la competencia, donde el
          encabezado son sólo palabras. */
       const imagen = texto(campos, "imagen");
+      const rotulo = texto(campos, "rotulo");
       return (
         <Seccion tono={tono} estilo={estilo}>
           <div className="flex flex-col items-center gap-6 text-center">
-            <h1 className={`text-balance text-3xl leading-tight text-[color:var(--pv-tinta)] sm:text-4xl md:text-5xl ${estilo.titulo}`}>
-              {titulo || producto.name}
-            </h1>
+            {/* El rótulo va junto al título, no separado por el hueco de la
+                columna: son una sola unidad de lectura. */}
+            <div className="flex flex-col items-center gap-3">
+              {rotulo && (
+                <p className="text-xs font-extrabold uppercase tracking-[0.2em] text-[color:var(--pv-acento)]">
+                  {rotulo}
+                </p>
+              )}
+              <h1 className={`text-balance text-3xl leading-tight text-[color:var(--pv-tinta)] sm:text-4xl md:text-5xl ${estilo.titulo}`}>
+                {titulo || producto.name}
+              </h1>
+            </div>
             {texto(campos, "subtitulo") && (
               <p className="max-w-2xl text-pretty text-base leading-relaxed text-[color:var(--pv-tenue)] sm:text-lg">
                 {texto(campos, "subtitulo")}
@@ -473,7 +483,12 @@ function Contenido({ clave, campos, tono, datos }: {
                 className="w-full max-w-md rounded-2xl border border-[color:var(--pv-linea)] object-cover shadow-sm"
               />
             )}
+            {/* ⚠️ Los sellos van también acá, en la PRIMERA pantalla. Quien cae
+                desde un anuncio no conoce la tienda, y las dos preguntas que se
+                hace antes de bajar son si es seguro y cómo lo recibe. Contestarlas
+                recién a mitad de página es contestarlas tarde. */}
             <BotonComprar esPrevia={esPrevia} estilo={estilo}>{texto(campos, "textoBoton")}</BotonComprar>
+            <Sellos dias={diasDeGarantia(datos)} />
           </div>
         </Seccion>
       );
