@@ -898,11 +898,38 @@ export default function ProductosClient({
               {/* Un bono va gratis por definición, así que no se le pide precio:
                   un campo apagado que siempre dice 0 sólo confunde. */}
               {borrador.rol === "BONO" ? (
-                <div className="rounded-2xl bg-amber-50 panel-oscuro:bg-amber-500/10 border border-amber-100 panel-oscuro:border-amber-500/25 px-4 py-3">
-                  <p className="text-sm font-bold text-gray-900 panel-oscuro:text-gray-100">Un bono va gratis</p>
-                  <p className="text-xs text-gray-500 panel-oscuro:text-gray-400 mt-0.5">
-                    No se cobra: se entrega junto con la compra del producto principal.
-                  </p>
+                <div className="grid gap-3">
+                  <div className="rounded-2xl bg-amber-50 panel-oscuro:bg-amber-500/10 border border-amber-100 panel-oscuro:border-amber-500/25 px-4 py-3">
+                    <p className="text-sm font-bold text-gray-900 panel-oscuro:text-gray-100">Un bono va gratis</p>
+                    <p className="text-xs text-gray-500 panel-oscuro:text-gray-400 mt-0.5">
+                      No se cobra: se entrega junto con la compra del producto principal.
+                    </p>
+                  </div>
+
+                  {/* ⚠️ Esto FALTABA, y era un agujero grande: el rol BONO escondía
+                      los dos campos de precio, y uno de los dos no era un precio.
+                      `comparePrice` en un bono es CUÁNTO VALE — el número tachado al
+                      lado de GRATIS— y de él sale toda la cuenta de la página de
+                      venta: el valor total, el porcentaje del sello y el renglón del
+                      ahorro. Sin poder escribirlo, un bono sumaba cero y el GRATIS
+                      no significaba nada. */}
+                  <div>
+                    <label htmlFor="valorBono" className="block text-xs font-semibold text-gray-600 panel-oscuro:text-gray-400 mb-1.5">
+                      Cuánto vale <span className="font-normal text-gray-400 panel-oscuro:text-gray-500">(opcional)</span>
+                    </label>
+                    <input
+                      id="valorBono"
+                      inputMode="decimal"
+                      value={borrador.comparePrice}
+                      onChange={(e) => setBorrador({ ...borrador, comparePrice: e.target.value.replace(/[^d.,]/g, "") })}
+                      placeholder="8000"
+                      className="w-full px-4 py-3 rounded-2xl border border-gray-200 panel-oscuro:border-gray-700 text-sm text-gray-900 panel-oscuro:text-gray-100 focus:border-orange-400 focus:ring-2 focus:ring-orange-100 outline-none transition-all"
+                    />
+                    <p className="text-xs text-gray-500 panel-oscuro:text-gray-400 mt-1.5">
+                      El número tachado al lado de GRATIS. Es lo que hace que el regalo
+                      valga algo: sin esto el bono no suma al total de tu página.
+                    </p>
+                  </div>
                 </div>
               ) : (
                 <div className="grid grid-cols-2 gap-3">

@@ -655,6 +655,37 @@ check("BON-C", (() => {
   return sinNada !== null && sinPublicar !== null && sinNada !== sinPublicar && conBonos === null;
 })(), "y el editor distingue 'no cargaste ninguno' de 'los cargaste pero sin publicar'");
 
+/* ── Cuánto vale un bono ──────────────────────────────────────────────────── */
+
+/* ⚠️ AGUJERO REAL, encontrado el 03/09/26 contestando "¿cómo lo ponemos gratis?".
+   Gratis es automático: el servidor fuerza `price = 0` para cualquier bono,
+   mande lo que mande el navegador. Pero el formulario, al ver el rol BONO,
+   escondía LOS DOS campos de precio — y uno de los dos no era un precio.
+
+   `comparePrice` en un bono es CUÁNTO VALE: el número tachado al lado de
+   GRATIS. De él sale el valor total de la página, el porcentaje del sello y el
+   renglón del ahorro. Sin poder escribirlo, un bono sumaba cero y el GRATIS no
+   significaba nada — toda esa maquinaria dependía de un número que quien vende
+   no tenía dónde cargar. */
+
+const productos = readFileSync("src/app/digitales/productos/ProductosClient.tsx", "utf8");
+
+check("VAL-A", productos.includes("id=\"valorBono\""),
+  "un bono tiene dónde escribir cuánto vale, aunque no tenga precio");
+
+check("VAL-B", productos.includes("Un bono va gratis"),
+  "y sigue diciendo que va gratis: el precio no se elige, se fuerza en el servidor");
+
+/* El que manda es el servidor: la pantalla es una cortesía. */
+const alta = readFileSync("src/app/api/digitales/productos/route.ts", "utf8");
+const edicion = readFileSync("src/app/api/digitales/productos/[id]/route.ts", "utf8");
+check("VAL-C", alta.includes("BONO") && edicion.includes('rol === "BONO" ? 0 : price'),
+  "y el precio de un bono lo pone el servidor en cero, no el navegador");
+
+/* De ese número sale toda la cuenta: si el bono no vale nada, no suma. */
+check("VAL-D", dibujante.includes("t + (b.comparePrice ?? 0)"),
+  "el valor total suma lo que vale cada bono, no lo que cuesta");
+
 /* ── La barra de compra ───────────────────────────────────────────────────── */
 
 /* Es lo único que se ve durante TODO el scroll. Un número solo, sin decir de qué
