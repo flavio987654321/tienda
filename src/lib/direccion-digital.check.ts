@@ -143,6 +143,44 @@ check("DIR-R",
 check("DIR-S", /revalidate: 300/.test(mid),
   "la consulta del subdominio va cacheada");
 
+/* ── Las reglas de seguridad cuando se entra por el subdominio ──────────── */
+
+/* ⚠️ ESTE CHEQUEO ES UN PASADOR, y vale la pena entender qué cuida.
+ *
+ * Las reglas de seguridad del navegador se eligen POR LA DIRECCIÓN: hay un juego
+ * para `/tienda/…`, otro para `/p/…`, otro para `/dashboard`. Cuando alguien
+ * entra por un subdominio, la dirección que ve esa regla es `/` a secas — así
+ * que cae en el juego base, el más estricto, y NO en el de `/p/`.
+ *
+ * Hoy eso no rompe nada, y es por un motivo concreto: **el checkout digital no
+ * carga el SDK de Mercado Pago, manda a Mercado Pago.** La persona se va del
+ * sitio, paga allá y vuelve. Sin SDK en la página, no hace falta `unsafe-eval`,
+ * que es lo único que el juego estricto no da.
+ *
+ * El día que ese checkout pase a cobrar EN la página —con el SDK embebido— la
+ * página va a andar por `/p/<id>` y va a fallar por el subdominio, que es la
+ * dirección que de verdad reparte la gente. Y va a fallar en producción, porque
+ * en desarrollo `unsafe-eval` viene puesto igual.
+ *
+ * Si este chequeo se pone en rojo, lo que falta es una regla por HOST en
+ * `next.config`, no sacar el chequeo. */
+const checkout = readFileSync("src/app/p/[id]/pagar/CheckoutClient.tsx", "utf8");
+check("DIR-T",
+  /window\.location\.replace\(datos\.initPoint\)/.test(checkout),
+  "el checkout digital manda a Mercado Pago en vez de cobrar en la página");
+
+check("DIR-U",
+  !/sdk\.mercadopago\.com/.test(checkout),
+  "y no trae el SDK, que es lo que necesitaría reglas más flojas en el subdominio");
+
+/* Y la contracara: la página de venta se deja enmarcar por nosotros para la
+   previa del editor, pero eso pasa por `/p/<id>` adentro del panel. Por el
+   subdominio llega el juego estricto, que no se deja enmarcar por nadie — más
+   cerrado, no menos. Ahí no hay nada que aflojar. */
+check("DIR-V",
+  /frame-ancestors 'self'/.test(readFileSync("next.config.ts", "utf8")),
+  "la página de venta se deja enmarcar sólo por nosotros, y sólo por su ruta");
+
 console.log(fallos === 0
   ? "\nok — un nombre no se lo pueden llevar dos, y las tiendas siguen andando"
   : `\nFALLA — ${fallos} chequeo(s) de la dirección del producto`);
