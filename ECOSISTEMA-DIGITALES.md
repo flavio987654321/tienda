@@ -2009,13 +2009,62 @@ La migración `20260904120000_cupo_ia` es aditiva —una tabla nueva— e idempo
 45 chequeos en `embudo-ia.check`, y los de los topes corren de verdad contra un
 contador falso, no mirando el código.
 
-🔲 **Falta el botón.** El motor está, el cupo está, y anda. La pantalla que lo usa
-es lo siguiente. Hoy `IA_LISTA` sigue en `false`.
+### ✅ 4.1 ter EL BOTÓN — HECHO (04/09/26)
 
-🔲 **Y falta mostrar el cupo**: el número grande de lo que queda, el detalle de
-las dos bolsas, y el aviso fuerte al cruzar de las del mes a las de bienvenida
-—que no vuelven—. Va con el botón. La ruta ya devuelve `salioDe` y `cupo` justo
-para eso.
+`EmbudoIA.tsx`. Tres pasos, y ninguno se puede saltear:
+
+1. **Contás tu nicho** — con el cupo a la vista antes de apretar nada.
+2. **Leés y editás las tres fichas.** Acá está el punto de todo: **lo que se
+   publica en una página que cobra lo firma quien vende**, así que tiene que
+   haberlo visto antes de que exista.
+3. **Se crean**, por `POST /api/digitales/productos` — la de siempre, la que
+   cuenta los topes del plan y valida los campos. Esta pantalla no reimplementa
+   ninguno de los dos controles.
+
+#### Dónde va el botón, y por qué no donde estaba dibujado
+
+El hueco de "Próximamente" estaba **adentro del formulario de crear producto**, y
+ahí no podía ir: la IA devuelve **tres** fichas y ese formulario crea **una**.
+Metido ahí habría que decidir qué hacer con las otras dos mientras hay un
+formulario a medio llenar encima. Vive afuera, arriba de la lista, en su propia
+ventana.
+
+**Y va primero, con "a mano" al lado.** En la pantalla vacía es el botón grande y
+cargar a mano es un enlace abajo: la pantalla vacía es el momento exacto del *"no
+sé qué escribir"*, que es el problema que esto resuelve. Escribir a mano sigue
+estando y sin castigo.
+
+#### El cupo, dicho como se entiende
+
+El número grande es el total —que es lo que la persona busca— y abajo, en chico,
+**las dos bolsas por separado**: *"8 de este mes (vuelven a ser 10 el 1°) · 6 de
+bienvenida (no se renuevan)"*. Con sólo el total, alguien gasta su bolsa
+permanente creyendo que se le renueva.
+
+**En Free el texto es otro**, porque no tiene bolsa mensual: *"En el plan gratis
+son 3 en total y no se renuevan"*. Decir "se renuevan" ahí sería mentir.
+
+Y **el momento que importa**: cuando una generación sale de la bolsa de
+bienvenida, se avisa arriba de las fichas. Es el único momento en que esta
+pantalla interrumpe, porque es el único cambio que no se puede deshacer.
+
+#### Tres cosas del repaso antes de commitear
+
+- ⚠️ **Si falla en el medio de crear los tres, el botón NO vuelve.** Los tres se
+  crean en orden —el principal primero, porque el bono y el upsell cuelgan de su
+  id— y si el segundo falla, el primero **ya quedó**. Apretar de nuevo crearía el
+  principal por segunda vez y gastaría otro lugar del plan. Se reemplaza por "Ver
+  qué quedó en la lista", que recarga. Cerrar con la X o el fondo también recarga
+  en ese caso: la lista de atrás está vieja.
+- **"Probar de nuevo" gasta otra generación, y se dice ANTES de apretarlo.**
+  Editar a mano no gasta ninguna, y también se dice.
+- **Los precios llevan su aviso**: la IA no conoce el mercado de hoy, así que son
+  una sugerencia para revisar antes de publicar.
+
+10 chequeos más (VEN-A … VEN-J), 55 en total en `embudo-ia.check`.
+
+🔲 **`IA_LISTA` sigue en `false`, y está bien:** esa bandera ahora es sólo del
+botón del **ebook**, que es el caro y no existe. Armar el embudo no pasa por ahí.
 
 ## FASE 5 — La página de venta y el checkout
 

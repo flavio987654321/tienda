@@ -661,13 +661,22 @@ chequear(
   conAnclaInterna.length === 0
 );
 
-/* ── Los dos botones de IA, dibujados y apagados ───────────────────────────── */
-console.log("\n15) La IA que todavía no existe");
+/* ── Los dos botones de IA ─────────────────────────────────────────────────── */
+console.log("\n15) La IA: uno anda, el otro todavía no");
 
-/* Se dibujan aunque no anden porque el hueco donde van dice algo que el botón
-   solo no dice: que el archivo tiene DOS caminos, escribirlo o subirlo. */
-chequear("los dos botones de IA están dibujados",
-  (pantallaProductos.match(/Generar con IA|te armo el embudo/g) ?? []).length >= 2);
+/* ⚠️ El de armar el embudo YA ANDA (04/09/26) y vive en su propia ventana, no
+   adentro del formulario de crear: la IA devuelve TRES fichas y ese formulario
+   crea UNA. Metido ahí habría que decidir qué hacer con las otras dos mientras
+   hay un formulario a medio llenar encima. */
+chequear("armar el embudo con IA existe y tiene su propia ventana",
+  existsSync("src/app/digitales/productos/EmbudoIA.tsx") &&
+  /setEmbudoIA\(true\)/.test(pantallaProductos) &&
+  !/te armo el embudo[\s\S]{0,200}Próximamente/.test(pantallaProductos));
+
+/* Y va PRIMERO, con "a mano" al lado. Es el camino que resuelve la pantalla en
+   blanco, que es el problema que la persona tiene cuando entra. */
+chequear("la IA es el botón principal y cargar a mano queda al lado",
+  pantallaProductos.indexOf("Armar con IA") < pantallaProductos.indexOf("A mano"));
 
 /* ⚠️ EL chequeo de esta sección, y es un pasador. `IA_LISTA` prendido con la ruta
    de generación sin construir es una pantalla que promete escribir un ebook y no

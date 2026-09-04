@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import type { TierDigital } from "@/lib/planes-digitales";
 import { TOPES_DIGITALES } from "@/lib/planLimits";
 import BotonVolver from "../BotonVolver";
+import { estadoDelCupo } from "@/lib/cupo-ia";
 import ProductosClient, { type ProductoEnPantalla } from "./ProductosClient";
 
 /**
@@ -48,6 +49,11 @@ export default async function ProductosPage() {
   ]);
 
   const tier = (sub?.tier ?? "FREE") as TierDigital;
+
+  /* Cuánto le queda de IA, para que el botón lo diga sin tener que preguntar
+     antes de abrirlo. Se lee, no se crea: una cuenta que nunca generó nada no
+     necesita una fila para saber que tiene todo. */
+  const cupoIA = await estadoDelCupo(user.id, tier);
 
   const filas = store
     ? await prisma.product.findMany({
@@ -103,7 +109,7 @@ export default async function ProductosPage() {
         </p>
       </div>
 
-      <ProductosClient tier={tier} productos={productos} />
+      <ProductosClient tier={tier} productos={productos} cupoIA={cupoIA} />
     </div>
   );
 }

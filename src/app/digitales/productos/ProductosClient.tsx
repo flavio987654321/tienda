@@ -12,6 +12,8 @@ import {
   type RolDigital,
 } from "@/lib/productos-digitales";
 import { MAX_PDF_MB, TIPO_PDF, validarSubida, avisoDePeso } from "@/lib/subida-digital";
+import type { EstadoDelCupo } from "@/lib/cupo-ia";
+import EmbudoIA from "./EmbudoIA";
 
 export type ProductoEnPantalla = {
   id: string;
@@ -64,25 +66,21 @@ function borradorNuevo(rol: RolDigital, padreId: string | null): Borrador {
 const MAX_IMAGEN_MB = 4;
 
 /**
- * Si la IA existe ya.
+ * Si el botón del EBOOK existe ya.
  *
- * ⚠️ **Está en `false` y los dos botones de IA se dibujan APAGADOS a propósito.**
- * No es un olvido: el hueco donde van dice algo que el botón solo no dice —que el
- * archivo tiene dos caminos, escribirlo o subirlo— y así no se construye una
- * pantalla que después haya que rediseñar para meterlos.
+ * Son dos botones distintos y cuestan cosas completamente distintas:
  *
- * Son dos botones distintos y cuestan cosas distintas:
+ *   1. **Armar el embudo** — ✅ HECHO (04/09/26). Hace las tres fichas con
+ *      título, descripción y precio. Son centavos: es texto corto. Va en los
+ *      tres planes y no pasa por esta bandera — tiene su propio botón, arriba de
+ *      la lista, y su propio cupo (ver `EmbudoIA` y `lib/cupo-ia`).
+ *   2. **Escribir el ebook** — 🔲 el que sigue apagado. Hace el PDF de ESA
+ *      ficha. Son US$2 a 4, o sea entre 150 y 300 veces más caro que el otro. Es
+ *      el que gasta el cupo de `ebooksIA`, y por eso Free no lo tiene.
  *
- *   1. **Armar el embudo** — adentro de "Crear producto". Hace las tres fichas
- *      con título, descripción y precio. Son centavos: es texto corto. Va en los
- *      tres planes.
- *   2. **Escribir el ebook** — en cada tarjeta, al lado de "Subir PDF". Hace el
- *      PDF de ESA ficha. Son US$2 a 4. Es el que gasta el cupo de `ebooksIA`, y
- *      por eso Free no lo tiene.
- *
- * Prenderlo es cambiar este `false`, y **no hay que hacerlo hasta que la Fase 4
- * exista de verdad**. Hay un chequeo que falla si esto queda en `true` sin que
- * exista la ruta que genera.
+ * ⚠️ Sigue en `false` **a propósito**: el motor del ebook no existe. Prenderlo es
+ * cambiar este valor, y no hay que hacerlo hasta que exista la ruta que genera.
+ * Hay un chequeo que falla si queda en `true` sin esa ruta.
  */
 const IA_LISTA = false;
 
@@ -422,11 +420,15 @@ function Grupo({ padre, rol, acc }: { padre: ProductoEnPantalla; rol: "BONO" | "
 export default function ProductosClient({
   tier,
   productos,
+  cupoIA,
 }: {
   tier: TierDigital;
   productos: ProductoEnPantalla[];
+  cupoIA: EstadoDelCupo;
 }) {
   const [borrador, setBorrador] = useState<Borrador | null>(null);
+  /** Si está abierta la ventana de armar el embudo con IA. */
+  const [embudoIA, setEmbudoIA] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState("");
   const [trabajando, setTrabajando] = useState<string | null>(null);
@@ -735,12 +737,24 @@ export default function ProductosClient({
             <ArrowUpRight className="h-4 w-4" />
           </Link>
         ) : (
-          <button
-            onClick={() => setBorrador(borradorNuevo("PRINCIPAL", null))}
-            className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-orange-600 text-white text-sm font-bold hover:bg-orange-500 transition-colors shadow-lg shadow-orange-200"
-          >
-            <Plus className="h-4 w-4" /> Crear producto
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            {/* ⚠️ La IA va PRIMERA y a mano va segunda, no al revés. Es el camino
+                que resuelve la pantalla en blanco —"no sé qué escribir"— y el que
+                hace que valga la pena el plan. Escribir a mano sigue estando, y
+                sin castigo: es un botón al lado, no un enlace escondido. */}
+            <button
+              onClick={() => setEmbudoIA(true)}
+              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-orange-600 text-white text-sm font-bold hover:bg-orange-500 transition-colors shadow-lg shadow-orange-200"
+            >
+              <Sparkles className="h-4 w-4" /> Armar con IA
+            </button>
+            <button
+              onClick={() => setBorrador(borradorNuevo("PRINCIPAL", null))}
+              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 text-sm font-bold text-gray-700 panel-oscuro:text-gray-300 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800 transition-colors"
+            >
+              <Plus className="h-4 w-4" /> A mano
+            </button>
+          </div>
         )}
       </div>
 
@@ -757,15 +771,25 @@ export default function ProductosClient({
           </div>
           <p className="text-gray-900 panel-oscuro:text-gray-100 font-bold text-lg mb-1">Todavía no cargaste ningún producto</p>
           <p className="text-gray-500 panel-oscuro:text-gray-400 text-sm mb-6 max-w-sm mx-auto leading-relaxed">
-            Un producto es tu ebook, tu plantilla o tu guía. Después le vas a poder sumar bonos de
-            regalo y upsells.
+            Un producto es tu ebook, tu plantilla o tu guía. Contame de qué se trata y te armo el
+            producto, un bono de regalo y un upsell — después lo editás.
           </p>
+          {/* La pantalla vacía es donde más pesa: es el momento exacto del "no sé
+              qué escribir". Por eso acá la IA es el botón grande. */}
           <button
-            onClick={() => setBorrador(borradorNuevo("PRINCIPAL", null))}
+            onClick={() => setEmbudoIA(true)}
             className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-orange-600 text-white text-sm font-bold hover:bg-orange-500 transition-colors shadow-lg shadow-orange-200"
           >
-            <Plus className="h-4 w-4" /> Crear mi primer producto
+            <Sparkles className="h-4 w-4" /> Armar mi embudo con IA
           </button>
+          <p className="mt-3">
+            <button
+              onClick={() => setBorrador(borradorNuevo("PRINCIPAL", null))}
+              className="text-[13px] font-semibold text-gray-500 panel-oscuro:text-gray-400 hover:text-orange-600 transition-colors underline underline-offset-2"
+            >
+              o cargalo a mano
+            </button>
+          </p>
         </div>
       ) : (
         principales.map((p) => (
@@ -778,6 +802,11 @@ export default function ProductosClient({
           </div>
         ))
       )}
+
+      {/* ── Armar el embudo con IA ────────────────────────────────────────
+          Su propia ventana y no un paso adentro del formulario: la IA devuelve
+          TRES fichas y el formulario crea UNA. Ver el comentario adentro. */}
+      {embudoIA && <EmbudoIA cupoInicial={cupoIA} onCerrar={() => setEmbudoIA(false)} />}
 
       {/* ── El formulario ─────────────────────────────────────────────────── */}
       {borrador && (
@@ -797,24 +826,14 @@ export default function ProductosClient({
             </div>
 
             <div className="px-6 py-5 space-y-4">
-              {/* ⚠️ El primero de los dos botones de IA, apagado. Ver `IA_LISTA`.
-                  Sólo en el producto principal: la IA arma el embudo ENTERO —el
-                  principal con su bono y su upsell—, así que no tiene sentido
-                  ofrecerlo cuando ya estás creando un bono suelto. */}
-              {!borrador.id && borrador.rol === "PRINCIPAL" && (
-                <div className="flex items-center gap-3 rounded-2xl border border-dashed border-gray-300 panel-oscuro:border-gray-700 bg-gray-50 panel-oscuro:bg-gray-800/50 px-4 py-3">
-                  <Sparkles className="h-4 w-4 shrink-0 text-gray-400 panel-oscuro:text-gray-500" />
-                  <div className="min-w-0">
-                    <p className="text-xs font-bold text-gray-500 panel-oscuro:text-gray-400">
-                      Contame de qué se trata y te armo el embudo
-                      <span className="ml-2 font-medium">· Próximamente</span>
-                    </p>
-                    <p className="text-[11px] text-gray-400 panel-oscuro:text-gray-500 mt-0.5 leading-relaxed">
-                      El producto, un bono de regalo y un upsell, con sus textos y precios.
-                    </p>
-                  </div>
-                </div>
-              )}
+              {/* ⚠️ Acá había un cartel de "Próximamente" para armar el embudo
+                  con IA, y se sacó el 04/09/26 cuando el botón pasó a existir.
+                  No se convirtió en un botón en este lugar a propósito: la IA
+                  arma el embudo ENTERO —principal, bono y upsell— y este
+                  formulario crea UNO. Metido acá, habría que decidir qué hacer
+                  con las otras dos fichas mientras hay un formulario a medio
+                  llenar encima. Vive afuera, arriba de la lista, con su propia
+                  ventana. Ver `EmbudoIA`. */}
 
               {/* La portada. Va primera porque es lo primero que ve quien entra a
                   la página de venta. */}

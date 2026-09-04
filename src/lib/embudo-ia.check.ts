@@ -204,6 +204,71 @@ check("RUT-K", devoluciones === 2,
 check("RUT-L", /salioDe: bolsa/.test(ruta) && /cupo: await estadoDelCupo/.test(ruta),
   "la respuesta dice de qué bolsa salió y cuánto queda");
 
+/* ── La ventana que la usa ──────────────────────────────────────────────── */
+
+const ventana = readFileSync("src/app/digitales/productos/EmbudoIA.tsx", "utf8");
+
+/* ⚠️ El paso de revisar no se puede saltear: lo que se publica en una página que
+   cobra lo firma quien vende, así que tiene que haberlo visto ANTES de que
+   exista. Nada se crea derecho desde la generación. */
+check("VEN-A",
+  /setPaso\("revisar"\)/.test(ventana) &&
+  ventana.indexOf("setPaso(\"revisar\")") < ventana.indexOf("crearLosTres"),
+  "primero se revisa y recién después se crea");
+
+/* Los tres se crean por la ruta de siempre, la que cuenta los topes del plan.
+   Esta pantalla no reimplementa ninguno de los dos controles. */
+check("VEN-B",
+  /fetch\("\/api\/digitales\/productos"/.test(ventana) &&
+  !/TOPES_DIGITALES|topeDe\(/.test(ventana),
+  "los productos se crean por la ruta de siempre, con sus topes de plan");
+
+/* ⚠️ El principal PRIMERO y esperando su id: el bono y el upsell cuelgan de él y
+   sin `padreId` la ruta los rechaza. Por eso no van los tres en paralelo. */
+check("VEN-C",
+  ventana.indexOf('rol: "PRINCIPAL"') < ventana.indexOf('rol: "BONO"') &&
+  ventana.indexOf('rol: "BONO"') < ventana.indexOf('rol: "UPSELL"') &&
+  /const padreId = principal\?\.id/.test(ventana),
+  "el principal se crea primero y los otros dos cuelgan de su id");
+
+/* ⚠️ Si falla en el medio, lo que se creó QUEDÓ y el botón NO puede volver:
+   apretarlo de nuevo crearía el principal por segunda vez y gastaría otro lugar
+   del plan. */
+check("VEN-D",
+  /if \(!huboAlgo\.current\) enVuelo\.current = false/.test(ventana) &&
+  /Ver qué quedó en la lista/.test(ventana),
+  "si quedó algo a medias, no se ofrece reintentar: se manda a mirar la lista");
+
+/* El freno del doble clic, que acá gasta cupo de verdad. */
+check("VEN-E", /useRef\(false\)/.test(ventana) && /if \(enVuelo\.current/.test(ventana),
+  "el doble clic no dispara dos generaciones");
+
+/* Los topes del campo son los mismos que corta el servidor. Puestos sólo allá,
+   el campo deja escribir de más y se recorta sin avisar. */
+check("VEN-F",
+  /maxLength=\{LARGO_DEL_NICHO\}/.test(ventana) && /MINIMO_DEL_NICHO/.test(ventana),
+  "el campo del nicho tiene el mismo tope que el servidor");
+
+/* ⚠️ LAS DOS BOLSAS SE MUESTRAN POR SEPARADO. Con sólo el total, alguien gasta
+   su bolsa permanente creyendo que se le renueva el mes que viene. */
+check("VEN-G",
+  /de este mes/.test(ventana) && /de bienvenida/.test(ventana) && /no se renuevan/.test(ventana),
+  "se muestran las dos bolsas y se dice cuál no vuelve");
+
+/* Y se avisa fuerte al cruzar a la que no vuelve. Es el único momento en que
+   esta pantalla interrumpe, porque es el único cambio que no se puede deshacer. */
+check("VEN-H",
+  /salioDe === "bienvenida"/.test(ventana) && /Se te acabaron las de este mes/.test(ventana),
+  "se avisa cuando la generación salió de la bolsa que no vuelve");
+
+/* "Probar de nuevo" gasta otra, y eso se dice ANTES de apretarlo. */
+check("VEN-I", /Probar de nuevo usa otra generación/.test(ventana),
+  "se avisa que regenerar gasta cupo, antes de apretarlo");
+
+/* Los precios son lo que la IA no puede saber: no conoce el dólar de hoy. */
+check("VEN-J", /Los precios son una sugerencia/.test(ventana),
+  "se dice que los precios hay que revisarlos");
+
 /* ── El cupo ────────────────────────────────────────────────────────────── */
 
 /* Ninguna función de IA sale sin límite, **ni en el plan más caro**. Es la regla
