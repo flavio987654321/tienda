@@ -388,6 +388,17 @@ const CONTENT = {
         ],
       },
       {
+        title: "2 ter. La inteligencia artificial que escribe por vos",
+        body: "El panel tiene botones que escriben: arman las fichas de tu producto, el texto de tu página de venta y el ebook completo. Funcionan con un modelo de inteligencia artificial de un tercero, y corren únicamente cuando vos apretás el botón.",
+        list: [
+          "Qué le compartimos: lo que vos escribís en esos campos — de qué se trata lo que vendés, para quién es, el título que le pusiste — y los textos de tu página de venta si pedís reescribirla. Nada más: ni tus datos de cuenta, ni tus ventas, ni un solo dato de quien te compra.",
+          "Quién lo procesa: Anthropic (proveedor del modelo Claude), bajo sus propios términos de procesamiento de datos. Política de privacidad: anthropic.com/privacy",
+          "Nunca corre solo: si no apretás esos botones, no sale ningún texto tuyo hacia el modelo.",
+          "Nosotros no entrenamos ningún modelo con lo que escribís, ni usamos tus textos para la cuenta de otra persona.",
+          "Lo que devuelve es tuyo, y lo firmás vos: el texto y el ebook que salgan de ahí quedan bajo tu responsabilidad como vendedor. Revisalos antes de publicarlos.",
+        ],
+      },
+      {
         title: "3. Datos de quien te compra, y por qué guardamos su dirección IP",
         body: "Una venta digital deja registrados dos datos que no deja ninguna otra operación de la plataforma. Los dos existen por el mismo motivo: poder demostrar qué pasó si alguien discute el cobro.",
         list: [
@@ -407,6 +418,7 @@ const CONTENT = {
           "Mercado Pago, para procesar el cobro de tus ventas y el de tu suscripción. Se rigen por su propia política.",
           "Resend, el servicio que envía los correos de entrega a quien te compra. Recibe el email, el nombre y el detalle de lo comprado.",
           "Supabase y Vercel como proveedores de infraestructura. Supabase además aloja el archivo que subís.",
+          "Anthropic, sólo si usás los botones de inteligencia artificial. Recibe lo que escribís en esos campos y nada más. Ver el punto 2 ter.",
           "Autoridades competentes cuando sea requerido por ley.",
         ],
       },
