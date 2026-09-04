@@ -4,10 +4,10 @@ import { prisma } from "@/lib/prisma";
 import { firmaDeMercadoPagoValida } from "@/lib/mp-firma";
 import {
   nuevoTokenDeDescarga, vencimientoDelPermiso, lineasEntregables, armadoDelMail,
-  MAX_DESCARGAS, DIAS_DEL_PERMISO,
+  MAX_DESCARGAS,
 } from "@/lib/entrega-digital";
 import { comisionCongelada } from "@/lib/compra-digital";
-import { sendEntregaDigitalEmail } from "@/lib/resend";
+import { mandarLaEntrega } from "@/lib/envio-digital";
 import { createNotification } from "@/lib/notifications";
 import { despues } from "@/lib/despues";
 
@@ -352,8 +352,13 @@ async function acreditar(idDelPago: string) {
     userId: orden.store.ownerId,
     type: "DIGITAL_VENTA",
     title: "¡Vendiste!",
+    /* ⚠️ Dice "le estamos mandando", no "ya le mandamos". Este aviso se escribe
+       ANTES de que el mail salga —a propósito: si esperara al mail, una entrega
+       que falla dejaría a quien vende sin enterarse de que vendió—, así que no
+       puede afirmar algo que todavía no pasó. Si el mail no sale, llega un
+       segundo aviso diciéndolo. */
     body: `${plata(orden.total)} — te quedan ${plata(leQueda)} después de la comisión.`
-      + " Ya le mandamos el archivo a quien compró.",
+      + " Le estamos mandando el archivo por mail.",
     link: "/digitales/ventas",
   });
 
@@ -365,17 +370,40 @@ async function acreditar(idDelPago: string) {
 
   if (orden.buyer.email && idDeLaPagina) {
     const dondeVerlos = `${APP_URL}/p/${idDeLaPagina}/gracias?orden=${orden.id}`;
+    const paraQuien = orden.buyer.email;
     despues(
-      () => sendEntregaDigitalEmail({
-        to: orden.buyer.email!,
-        nombre: orden.buyer.name,
-        producto: comoSeLlama,
-        archivos,
-        enlace: dondeVerlos,
-        vendedor: orden.store.owner.name,
-        dias: DIAS_DEL_PERMISO,
-        maxDescargas: MAX_DESCARGAS,
-      }),
+      async () => {
+        /* `mandarLaEntrega` anota el envío en `DigitalEnvioLog` salga o no
+           salga. Hasta acá, un mail que fallaba terminaba en un `console.error`
+           que nadie lee: la venta quedaba COBRADA, la persona sin nada, y sin un
+           solo rastro en la base. */
+        const envio = await mandarLaEntrega({
+          ordenId: orden.id,
+          motivo: "ENTREGA",
+          to: paraQuien,
+          nombre: orden.buyer.name,
+          producto: comoSeLlama,
+          archivos,
+          enlace: dondeVerlos,
+          vendedor: orden.store.owner.name,
+        });
+
+        /* ⚠️ Y si no salió, se le avisa a quien vendió — con el link a ESA venta,
+           que es donde está el botón para reenviarlo. Un fallo anotado en una
+           tabla que nadie mira no arregla nada: la persona que puede resolverlo
+           tiene que enterarse el mismo día, no cuando le reclamen.
+           No se reintenta solo: ver el comentario en `envio-digital`. */
+        if (!envio.ok) {
+          await createNotification({
+            userId: orden.store.ownerId,
+            type: "DIGITAL_ENTREGA_FALLIDA",
+            title: "No pudimos entregarle el archivo",
+            body: `El mail a ${paraQuien} no salió. Ya cobraste la venta, así que entrá`
+              + " y reenviáselo — quien compró todavía no tiene nada.",
+            link: `/digitales/ventas/${orden.id}`,
+          });
+        }
+      },
       "digital-cobro: mail de entrega",
     );
   }

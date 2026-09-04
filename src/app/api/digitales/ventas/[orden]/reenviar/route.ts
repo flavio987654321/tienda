@@ -3,9 +3,9 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
 import { checkRateLimit } from "@/lib/rate-limit";
 import {
-  armadoDelMail, vencimientoDelPermiso, DIAS_DEL_PERMISO, MAX_DESCARGAS,
+  armadoDelMail, vencimientoDelPermiso, MAX_DESCARGAS,
 } from "@/lib/entrega-digital";
-import { sendEntregaDigitalEmail } from "@/lib/resend";
+import { mandarLaEntrega } from "@/lib/envio-digital";
 
 export const runtime = "nodejs";
 
@@ -53,12 +53,15 @@ const VENTANA_POR_CUENTA = 60 * 60 * 1000;
  *
  * ── Lo que no hace ──────────────────────────────────────────────────────────
  *
- * 🔲 No queda anotado en la base cuántas veces se reenvió: hoy eso lo lleva el
- * limitador, que se olvida cuando pasa la ventana. Para poder mostrarle a quien
- * vende "reenviado hace 5 minutos" hacen falta dos columnas en `Order`
- * (`digitalReenvios` y `digitalUltimoReenvio`), y eso es otra migración. El
- * detalle de la venta ya existe y muestra todo lo demás — es lo único que le
- * falta a esa pantalla.
+ * ✅ Cada reenvío queda anotado (03/09/26). Antes esto lo llevaba sólo el
+ * limitador, que se olvida cuando pasa la ventana, así que quien vendía no tenía
+ * cómo saber si ya lo había mandado. Ahora `mandarLaEntrega` escribe una fila en
+ * `DigitalEnvioLog` —salga o no salga— y el detalle de la venta las muestra.
+ *
+ * Se resolvió con una tabla y no con un contador en `Order` a propósito: un
+ * contador y una "última fecha" pierden el medio, y en un reclamo "se lo
+ * mandamos el 3, el 5 y el 8" es una respuesta y "3 veces, la última el 8" es
+ * media. Ver `envio-digital`.
  */
 export async function POST(
   _req: NextRequest,
@@ -193,19 +196,25 @@ export async function POST(
      va para una persona que apretó un botón y necesita saber si salió o no.
      Decirle "listo" sin haber esperado es mentirle justo cuando está tratando de
      resolverle un problema a un cliente. */
-  try {
-    await sendEntregaDigitalEmail({
-      to: venta.buyer.email,
-      nombre: venta.buyer.name,
-      producto: comoSeLlama,
-      archivos,
-      enlace: dondeVerlos,
-      vendedor: venta.store.owner.name,
-      dias: DIAS_DEL_PERMISO,
-      maxDescargas: MAX_DESCARGAS,
-    });
-  } catch (e) {
-    console.error("[digital-reenvio] no se pudo mandar el mail:", ordenId, e);
+  /* Y va por `mandarLaEntrega`, que además lo deja anotado en `DigitalEnvioLog`
+     —salga o no salga—. El fallo se anota igual que el éxito: es el que hace
+     falta poder ver después. */
+  const envio = await mandarLaEntrega({
+    ordenId: venta.id,
+    motivo: "REENVIO",
+    to: venta.buyer.email,
+    nombre: venta.buyer.name,
+    producto: comoSeLlama,
+    archivos,
+    enlace: dondeVerlos,
+    vendedor: venta.store.owner.name,
+  });
+
+  if (!envio.ok) {
+    console.error("[digital-reenvio] no se pudo mandar el mail:", ordenId, envio.error);
+    /* El motivo NO viaja al navegador: puede traer detalles de la cuenta de
+       Resend o del dominio, y quien mira el panel no puede hacer nada con eso.
+       Queda guardado en la fila del envío, que es donde sirve. */
     return NextResponse.json(
       { error: "No pudimos mandar el mail. Probá de nuevo en un momento." },
       { status: 502 },

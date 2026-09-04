@@ -2232,12 +2232,8 @@ De paso, cómo se arma el mail se mudó a `armadoDelMail` en `entrega-digital`:
 ahora lo arman dos lugares y el reenviado se prueba mucho menos, así que escrito
 en los dos se separaban solos.
 
-🔲 **No queda anotado en la base cuántas veces se reenvió** — hoy eso lo lleva el
-limitador, que se olvida cuando pasa la ventana. Para mostrar "reenviado hace 5
-minutos" hace falta **una columna en `Order`**, o sea otra migración; el detalle
-de la venta ya está y muestra todo lo demás, así que esto quedó como lo único
-suelto de esa pantalla. Es aditivo (`digitalReenvios` + `digitalUltimoReenvio`) y
-se corre cuando se decida tocar la base de nuevo.
+✅ **Cada reenvío queda anotado** (03/09/26). Ver la sección siguiente: estudiando
+si hacía falta un contador apareció algo más grande, y se resolvió con una tabla.
 
 ### ✅ EL DETALLE DE UNA VENTA — HECHO (03/09/26)
 
@@ -2305,6 +2301,86 @@ seguiría diciendo la fecha vieja.
 devuelta es justo la que hay que poder abrir.
 
 13 chequeos nuevos (sección 19 de `panel-digitales.check`).
+
+### ✅ EL REGISTRO DE ENVÍOS — HECHO (03/09/26)
+
+**La pregunta era chica y la respuesta salió grande.** Faltaba anotar cuántas
+veces se había reenviado un mail. Estudiando dónde ponerlo apareció esto:
+
+> **Nadie podía contestar "¿salió el mail?".**
+
+El mail de entrega se manda con `despues`, fuera de la respuesta al aviso de
+Mercado Pago. Si fallaba, `despues` se lo tragaba en un `console.error` que nadie
+lee. Resultado: **la venta figuraba Cobrada, quien compró no recibía nada, y no
+quedaba un solo rastro en la base.** Quien vende se entera cuando le reclaman — o
+no se entera nunca y pierde al cliente sin saber por qué.
+
+#### ⚠️ Y había algo peor: el SDK de Resend no tira error, lo devuelve
+
+`resend.emails.send()` (v6) contesta `{ data, error }`. Cuando la API rechaza el
+mail —dirección inválida, dominio sin verificar, cuota agotada— **la promesa se
+resuelve igual**, con el error adentro. O sea que el `try/catch` que había
+alrededor **no se enteraba de nada** y el código seguía como si el mail hubiera
+salido.
+
+Eso vale para **todos los mails del proyecto**, no sólo para éste.
+
+🔲 **Los otros senders siguen sin mirar el `error`.** Acá se arregló sólo el de
+entrega digital, que es el único que se anota en una tabla: anotar "ENVIADO" sin
+mirarlo sería fabricar una prueba de entrega de algo que nunca salió. Los demás
+hay que repasarlos, y es un barrido aparte.
+
+#### Cómo quedó
+
+`DigitalEnvioLog`: una fila por mail de entrega, con motivo (**ENTREGA**, el
+automático del cobro, o **REENVIO**, el botón), estado (**ENVIADO** o **FALLO**),
+a qué dirección salió y qué dijo el error.
+
+- **Los dos caminos pasan por la misma función** (`mandarLaEntrega`, en
+  `lib/envio-digital`). Escritos por separado, uno de los dos se olvida de anotar
+  y el agujero vuelve por la mitad.
+- **Se anotan los fallos igual que los éxitos.** Un registro que sólo guarda los
+  éxitos no contesta la única pregunta por la que existe.
+- **Sin la clave de Resend también es un FALLO**, no un silencio: para quien
+  compró, un mail que no salió porque falta una variable de entorno y uno que
+  Resend rechazó son la misma cosa — no le llegó.
+- **Anotar no puede voltear una entrega ya pagada.** Misma regla que el registro
+  de descargas: un apunte que falla no puede negar un archivo cobrado.
+- **Si la entrega automática falla, le llega un aviso a quien vendió** con el link
+  a **esa** venta, que es donde está el botón de reenviar. Un fallo anotado en una
+  tabla que nadie mira no arregla nada.
+- **No se reintenta solo.** Un reintento automático de un mail rechazado por
+  dirección inválida son dos rechazos en vez de uno; y si la cuota se agotó, el
+  segundo tampoco entra. El camino de vuelta es el botón, que lo aprieta una
+  persona cuando ya sabe qué pasó.
+
+#### Un texto que había quedado mintiendo
+
+El aviso de la campanita decía *"Ya le mandamos el archivo a quien compró"* — y se
+escribe **antes** de que el mail salga. Es a propósito que se escriba antes: si
+esperara al mail, una entrega fallida dejaría a quien vende sin enterarse de que
+vendió. Pero entonces no puede afirmar algo que todavía no pasó. Ahora dice *"Le
+estamos mandando el archivo por mail"*, y si no sale, llega un segundo aviso
+diciéndolo.
+
+#### En el detalle de la venta
+
+Una sección nueva con cada mail y su resultado. Y cuando alguien pagó y **ningún**
+mail salió, el aviso va **arriba de todo**, en rojo y con `role="alert"`: es lo
+único de esa pantalla que no puede esperar a que se scrollee, porque cada hora que
+pasa es una hora en la que esa persona cree que la estafaron.
+
+⚠️ Y **sin filas no se afirma nada**: una venta anterior al 03/09/26 no tiene
+registro, y lo único cierto ahí es que no sabemos. Decir "no salió" mandaría a
+quien vende a molestar a un cliente contento.
+
+#### La migración
+
+`20260903180000_registro_de_envios`. Aditiva —una tabla nueva, nada existente
+cambia de forma ni de significado— e idempotente. **Corrida contra la base real
+el 03/09/26**, con permiso expreso. Sin deploy.
+
+8 chequeos nuevos (ENV-A … ENV-H en `entrega-digital.check`) y 3 más en el panel.
 
 ### ✅ Los avisos al vendedor — HECHOS (03/09/26)
 

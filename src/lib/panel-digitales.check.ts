@@ -1188,6 +1188,24 @@ chequear("cuando hay devolución, el detalle dice que la comisión se devuelve e
 chequear("el detalle descuenta con el porcentaje congelado y lo dice",
   detalle.includes("comisionCongelada") && /de tu plan de ese día/.test(detalleCrudo));
 
+/* Los mails de entrega, que son la otra pregunta que nadie podía contestar:
+   ¿salió? Con tope, porque el botón permite 3 por día y una venta vieja y muy
+   reclamada junta filas. */
+chequear("el detalle muestra los mails de entrega, con tope",
+  /enviosDigitales: \{[\s\S]{0,120}take: TOPE_ENVIOS/.test(detalle));
+
+/* ⚠️ Sin filas NO se afirma que el mail no salió: la venta es anterior al
+   registro y lo único cierto es que no sabemos. Inventar un problema en una
+   venta que anduvo bien manda a quien vende a molestar a un cliente contento. */
+chequear("sin filas de envío no se afirma que el mail no salió",
+  /nuncaSalio = orden\.enviosDigitales\.length > 0/.test(detalle));
+
+/* Y cuando de verdad pasó —alguien pagó y no recibió nada— se avisa ARRIBA DE
+   TODO. Es lo único de esta pantalla que no puede esperar a que se scrollee. */
+chequear("si el mail nunca salió, el aviso va arriba de todo y con role=alert",
+  detalle.indexOf("cobrada && nuncaSalio") < detalle.indexOf("Encabezado") &&
+  /role="alert"/.test(detalle));
+
 /* Se llega desde la lista, y desde TODAS las filas: una cancelada es justo la
    que hay que poder abrir para ver por qué. */
 chequear("desde la lista se entra al detalle de cualquier venta",

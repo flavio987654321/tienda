@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import {
-  AlertTriangle, Ban, CheckCircle2, Clock, Download, FileText, Monitor,
+  AlertTriangle, Ban, CheckCircle2, Clock, Download, FileText, Mail, Monitor,
   RotateCcw, ShieldCheck, User as Persona,
 } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth-session";
@@ -57,6 +57,10 @@ const ID_RE = /^(c[a-z0-9]{20,30}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4
    alcanza nunca hoy; está por si mañana el tope sube y para que una fila rara no
    dibuje una pantalla de mil renglones. */
 const TOPE_REGISTROS = 25;
+
+/* Y cuántos mails de entrega. El botón de reenviar permite 3 por día, así que
+   una venta vieja y muy reclamada puede juntar bastantes filas. */
+const TOPE_ENVIOS = 20;
 
 const AR_TZ = "America/Argentina/Buenos_Aires";
 /* Con la zona escrita a mano, igual que en la lista: el servidor corre en UTC y
@@ -149,6 +153,13 @@ export default async function DetalleDeVentaPage({
         take: 10,
         select: { id: true, toStatus: true, changedBy: true, changedAt: true },
       },
+      /* Los mails de entrega, con su tope. El botón permite 3 por día, así que
+         una venta vieja y muy reclamada puede juntar unas cuantas filas. */
+      enviosDigitales: {
+        orderBy: { createdAt: "desc" },
+        take: TOPE_ENVIOS,
+        select: { id: true, motivo: true, estado: true, para: true, createdAt: true },
+      },
       items: {
         select: {
           id: true,
@@ -190,6 +201,13 @@ export default async function DetalleDeVentaPage({
   const devuelta = orden.payment?.status === "REFUNDED";
   const contracargo = orden.statusLogs.some((l) => l.changedBy === "digital_contracargo");
 
+  /* ⚠️ "Nunca salió" exige que HAYA filas. Sin ninguna, la venta es anterior al
+     registro (03/09/26) y lo único cierto es que no sabemos: afirmar que el mail
+     no salió sería inventar un problema en una venta que anduvo bien. */
+  const huboFallo = orden.enviosDigitales.some((e) => e.estado === "FALLO");
+  const nuncaSalio = orden.enviosDigitales.length > 0
+    && !orden.enviosDigitales.some((e) => e.estado === "ENVIADO");
+
   const chip = cobrada
     ? { Icon: CheckCircle2, texto: "Cobrada", clase: "bg-green-50 panel-oscuro:bg-green-500/10 text-green-700 panel-oscuro:text-green-300" }
     : orden.status === "PENDING"
@@ -201,6 +219,23 @@ export default async function DetalleDeVentaPage({
   return (
     <div className="mx-auto w-full max-w-3xl px-4 sm:px-6 py-8">
       <BotonVolver href="/digitales/ventas">Volver a las ventas</BotonVolver>
+
+      {/* ⚠️ ARRIBA DE TODO, y sólo cuando de verdad pasó: alguien pagó y no
+          recibió nada. Es lo único de esta pantalla que no puede esperar a que
+          se scrollee, porque cada hora que pasa es una hora en la que esa
+          persona cree que la estafaron. */}
+      {cobrada && nuncaSalio && (
+        <p
+          role="alert"
+          className="mb-4 flex items-start gap-2 rounded-xl border border-red-300 panel-oscuro:border-red-500/40 bg-red-50 panel-oscuro:bg-red-500/10 px-4 py-3 text-[13px] font-semibold text-red-900 panel-oscuro:text-red-200"
+        >
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>
+            El mail de entrega de esta venta nunca salió. Quien compró pagó y todavía no tiene su
+            archivo — reenviáselo desde el botón de más abajo.
+          </span>
+        </p>
+      )}
 
       {/* ── Encabezado: estado, fecha e importes ───────────────────────── */}
       <div className="rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 p-4 sm:p-5">
@@ -412,6 +447,63 @@ export default async function DetalleDeVentaPage({
               más; las descargas usadas no vuelven.
             </p>
           </div>
+        )}
+      </Bloque>
+
+      {/* ── Los mails que salieron, y los que no ───────────────────────── */}
+      <Bloque titulo="Los mails de entrega" Icon={Mail}>
+        {orden.enviosDigitales.length === 0 ? (
+          <p className="text-[12.5px] text-gray-500 panel-oscuro:text-gray-400">
+            {cobrada
+              /* Con la venta cobrada y sin filas, lo único cierto es que es
+                 anterior al registro. Decir "no se mandó" sería afirmar algo que
+                 no sabemos. */
+              ? "Esta venta es anterior al registro de envíos (3 de septiembre de 2026), así que no sabemos"
+                + " qué pasó con su mail. Si quien compró dice que no le llegó, reenviáselo desde arriba."
+              : "Todavía no salió ningún mail: la entrega se manda cuando el pago se acredita."}
+          </p>
+        ) : (
+          <ul className="space-y-2">
+            {orden.enviosDigitales.map((e) => {
+              const salio = e.estado === "ENVIADO";
+              return (
+                <li key={e.id} className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-[12px]">
+                  <span className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[10.5px] font-bold ${
+                    salio
+                      ? "bg-green-50 panel-oscuro:bg-green-500/10 text-green-700 panel-oscuro:text-green-300"
+                      : "bg-red-50 panel-oscuro:bg-red-500/10 text-red-700 panel-oscuro:text-red-300"
+                  }`}>
+                    {salio ? <CheckCircle2 className="h-3 w-3" /> : <AlertTriangle className="h-3 w-3" />}
+                    {salio ? "Salió" : "No salió"}
+                  </span>
+                  <span className="font-semibold text-gray-900 panel-oscuro:text-gray-100">
+                    {conSegundos.format(e.createdAt)}
+                  </span>
+                  <span className="text-gray-500 panel-oscuro:text-gray-400">
+                    {e.motivo === "REENVIO" ? "reenviado a mano" : "entrega automática"}
+                  </span>
+                  {e.para && <span className="break-all text-gray-400">→ {e.para}</span>}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+
+        {/* ⚠️ El motivo técnico del fallo NO se muestra. Quien vende no puede
+            hacer nada con "domain not verified" y puede traer datos de nuestra
+            cuenta de Resend; queda guardado en la fila, que es donde sirve. Lo
+            que sí se dice es qué hacer. */}
+        {huboFallo && (
+          <p className="mt-3 flex items-start gap-2 rounded-xl bg-red-50 panel-oscuro:bg-red-500/10 border border-red-200 panel-oscuro:border-red-500/25 px-3.5 py-2.5 text-[12.5px] text-red-900 panel-oscuro:text-red-200">
+            <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+            <span>
+              {nuncaSalio
+                ? "Ninguno de los mails de esta venta llegó a salir. Quien compró pagó y no tiene nada:"
+                  + " reenviáselo desde arriba, y si vuelve a fallar avisanos."
+                : "Alguno de los intentos falló, pero después salió al menos uno. Si quien compró igual"
+                  + " dice que no le llegó, suele estar en spam."}
+            </span>
+          </p>
         )}
       </Bloque>
 

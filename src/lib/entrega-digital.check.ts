@@ -268,12 +268,14 @@ check("MAIL-E", cobro.includes("despues(") && !/await sendEntregaDigitalEmail/.t
   "el mail sale con `despues`: ni frena la respuesta ni se pierde");
 
 /* Y si falla, la venta no se cae: ya está confirmada y los permisos emitidos. */
-check("MAIL-F", cobro.indexOf("prisma.$transaction") < cobro.indexOf("sendEntregaDigitalEmail({"),
+check("MAIL-F", cobro.indexOf("prisma.$transaction") < cobro.indexOf("mandarLaEntrega({"),
   "se manda DESPUÉS de confirmar: un mail que no sale no voltea una venta cobrada");
 
 /* Los plazos del mail salen de las constantes, no escritos a mano: la pantalla,
-   el mail y el barrido tienen que prometer todos lo mismo. */
-check("MAIL-G", cobro.includes("dias: DIAS_DEL_PERMISO") && cobro.includes("maxDescargas: MAX_DESCARGAS"),
+   el mail y el barrido tienen que prometer todos lo mismo. Viven en
+   `envio-digital`, que es por donde pasan ahora los dos caminos del mail. */
+const envio = readFileSync("src/lib/envio-digital.ts", "utf8");
+check("MAIL-G", envio.includes("dias: DIAS_DEL_PERMISO") && envio.includes("maxDescargas: MAX_DESCARGAS"),
   "los plazos que promete el mail salen de la misma constante que los aplica");
 
 /* ── El registro de descargas ───────────────────────────────────────────────
@@ -360,7 +362,7 @@ check("REE-G",
    para Mercado Pago, acá va para una persona que apretó un botón y necesita
    saber si salió. Decirle "listo" sin haber esperado es mentirle. */
 check("REE-H",
-  /await sendEntregaDigitalEmail\(/.test(reenvio) && !/despues\(/.test(reenvio),
+  /await mandarLaEntrega\(/.test(reenvio) && !/despues\(/.test(reenvio),
   "el reenvío espera al mail antes de contestar, y no lo manda en diferido");
 
 /* Y la respuesta no repite el correo de quien compró: ya está en la pantalla. */
@@ -374,6 +376,76 @@ check("REE-J",
   /armadoDelMail\(/.test(cobro) && /armadoDelMail\(/.test(reenvio) &&
   !/rolDigital === "PRINCIPAL"/.test(sinComent(cobro)),
   "el mail automático y el reenviado se arman con la misma función");
+
+/* ── El registro de envíos ──────────────────────────────────────────────────
+ *
+ * ══════════════════════════════════════════════════════════════════════════
+ * NADIE PODÍA CONTESTAR "¿SALIÓ EL MAIL?"
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * El mail de entrega sale con `despues`, y si fallaba terminaba en un
+ * `console.error` que nadie lee: la venta quedaba COBRADA, quien compró sin
+ * nada, y sin un solo rastro en la base. `DigitalEnvioLog` es ese rastro.
+ */
+const resendSrc = readFileSync("src/lib/resend.ts", "utf8");
+
+/* Los dos caminos del mail —el automático y el botón— pasan por la misma
+   función, y esa función anota. Escritos por separado, uno de los dos se olvida
+   de anotar y el agujero vuelve por la mitad. */
+check("ENV-A",
+  /mandarLaEntrega\(/.test(cobro) && /mandarLaEntrega\(/.test(reenvio) &&
+  !/sendEntregaDigitalEmail\(/.test(cobro) && !/sendEntregaDigitalEmail\(/.test(reenvio),
+  "los dos caminos del mail pasan por la función que lo anota");
+
+/* Y se anotan LOS DOS resultados. Un registro que sólo guarda los éxitos no
+   contesta la única pregunta por la que existe. */
+check("ENV-B",
+  /prisma\.digitalEnvioLog\.create/.test(envio) &&
+  /estado: error === null \? "ENVIADO" : "FALLO"/.test(envio),
+  "se anota el envío salga o no salga");
+
+/* ⚠️ EL SDK DE RESEND NO TIRA ERROR: LO DEVUELVE. `resend.emails.send()`
+   resuelve la promesa igual cuando la API rechaza el mail, así que un `try/catch`
+   solo anotaría "ENVIADO" en un mail que nunca salió — o sea, fabricaría una
+   prueba de entrega. Hay que mirar el `error` del resultado. */
+check("ENV-C",
+  /if \(r\.error\) error = r\.error\.message/.test(envio) &&
+  /return \{ error: r\.error \? \{ message: r\.error\.message \} : null \}/.test(resendSrc),
+  "se mira el error que DEVUELVE Resend, no sólo el que tira");
+
+/* Sin la clave tampoco sale nada, y eso es un fallo y no un silencio: para quien
+   compró, las dos cosas son "no me llegó". Devolver vacío dejaría "ENVIADO". */
+check("ENV-D",
+  /RESEND_API_KEY no configurada/.test(resendSrc),
+  "sin la clave de Resend se contesta fallo, no silencio");
+
+/* ⚠️ Anotar no puede voltear una entrega ya pagada. Misma regla que el registro
+   de descargas: un apunte que falla no puede negar un archivo cobrado. */
+check("ENV-E",
+  /catch \(err\) \{\s*console\.error\("\[digital-envio\]/.test(envio),
+  "un registro de envío que falla no voltea la entrega");
+
+/* Un fallo anotado en una tabla que nadie mira no arregla nada: quien puede
+   resolverlo tiene que enterarse el mismo día, y con el link a ESA venta, que es
+   donde está el botón de reenviar. */
+check("ENV-F",
+  /DIGITAL_ENTREGA_FALLIDA/.test(cobro) && /link: `\/digitales\/ventas\/\$\{orden\.id\}`/.test(cobro),
+  "si la entrega falla, le llega un aviso a quien vendió con el link a esa venta");
+
+/* Y el aviso de la venta no puede afirmar que el mail ya salió: se escribe ANTES
+   de mandarlo, a propósito, para que una entrega fallida no deje a quien vende
+   sin enterarse de que vendió. */
+check("ENV-G",
+  /Le estamos mandando el archivo/.test(cobro) && !/Ya le mandamos el archivo/.test(cobro),
+  "el aviso de la venta no afirma que el mail ya salió");
+
+/* El motivo técnico del fallo se guarda, pero no viaja al navegador: puede traer
+   detalles de nuestra cuenta de Resend y quien mira el panel no puede hacer nada
+   con "domain not verified". */
+check("ENV-H",
+  !/envio\.error/.test(reenvio.slice(reenvio.indexOf("return NextResponse.json"))) ||
+  !/NextResponse\.json\(\s*\{ error: envio\.error/.test(reenvio),
+  "el motivo técnico del fallo no se le muestra a quien vende");
 
 console.log(fallos === 0
   ? "\nok — sólo baja el archivo quien lo pagó, y sólo mientras vale su permiso"

@@ -787,6 +787,9 @@ model Order {
   reviews    Review[]
   statusLogs OrderStatusLog[]
 
+  /// Cada mail de entrega que salió por esta venta. Ver `DigitalEnvioLog`.
+  enviosDigitales DigitalEnvioLog[]
+
   @@index([storeId, status, createdAt(sort: Desc)])
 }
 
@@ -976,6 +979,62 @@ model DigitalDownloadLog {
   createdAt DateTime @default(now())
 
   @@index([downloadId, createdAt(sort: Desc)])
+}
+
+/// Cada mail de entrega que salió —o que NO salió— por una venta digital.
+///
+/// ══════════════════════════════════════════════════════════════════════════
+/// EL AGUJERO QUE TAPA: NADIE PODÍA CONTESTAR "¿SALIÓ EL MAIL?"
+/// ══════════════════════════════════════════════════════════════════════════
+///
+/// El mail de entrega se manda con `despues`, fuera de la respuesta al aviso de
+/// Mercado Pago. Y si Resend se cae, `despues` se traga el error en un
+/// `console.error` que nadie lee. Resultado: la venta figura **Cobrada**, quien
+/// compró no recibió nada, y no queda un solo rastro en la base. Quien vende se
+/// entera cuando le reclaman — o no se entera nunca y pierde al cliente.
+///
+/// Esta tabla es ese rastro. Anota los DOS caminos por los que sale el mail: el
+/// automático del cobro y el botón de reenviar. Y anota los fallos igual que los
+/// éxitos: un mail que no salió es justo el que hay que poder ver.
+///
+/// ── Por qué una tabla y no dos columnas en `Order` ─────────────────────────
+///
+/// Porque un contador y una "última fecha" pierden el medio. Es el mismo motivo
+/// por el que `DigitalDownloadLog` guarda una fila por descarga en vez de sólo
+/// la última: en un reclamo, "se lo mandamos el 3, el 5 y el 8" es una respuesta
+/// y "3 veces, la última el 8" es media.
+///
+/// ── Y por qué se guarda a quién ────────────────────────────────────────────
+///
+/// Porque la dirección es parte de la prueba de entrega. "Se lo mandamos" no
+/// dice nada; "se lo mandamos a juan@gmail.com el 3/9 a las 14:01" sí. Se guarda
+/// la dirección tal como estaba ese día: si mañana la persona cambia su correo,
+/// el envío viejo tiene que seguir diciendo a dónde fue de verdad.
+model DigitalEnvioLog {
+  id String @id @default(cuid())
+
+  orderId String
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  /// ENTREGA (el automático, cuando se acredita el pago) o REENVIO (el botón).
+  /// Texto y no enum: el resto del proyecto guarda los estados así, y un enum
+  /// nuevo obliga a una migración cada vez que aparece un tercer motivo.
+  motivo String
+
+  /// ENVIADO o FALLO. Los fallos se guardan a propósito — son el único motivo
+  /// serio por el que esta tabla existe.
+  estado String
+
+  /// A qué dirección salió, congelada al momento del envío.
+  para String?
+
+  /// Qué dijo el error, recortado. Sirve para distinguir "Resend está caído" de
+  /// "esa dirección no existe", que se resuelven de maneras opuestas.
+  error String?
+
+  createdAt DateTime @default(now())
+
+  @@index([orderId, createdAt(sort: Desc)])
 }
 
 /// Una solicitud de arrepentimiento: alguien que compró y quiere dar marcha

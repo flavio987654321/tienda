@@ -1233,6 +1233,28 @@ export async function sendTermsUpdatedEmail({
  * agujero de la otra: la pantalla sirve a quien baja en el momento, y esto a
  * quien cerró la pestaña, cambió de aparato, o lo quiere dos semanas después.
  */
+/**
+ * Lo que contesta un envío que se puede anotar.
+ *
+ * ══════════════════════════════════════════════════════════════════════════
+ * ⚠️ EL SDK DE RESEND NO TIRA ERROR: LO DEVUELVE
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * `resend.emails.send()` (v6) contesta `{ data, error }`. Cuando la API rechaza
+ * el mail —dirección inválida, dominio sin verificar, cuota agotada— **la
+ * promesa se resuelve igual**, con `error` adentro. O sea que un `try/catch`
+ * alrededor no se entera de nada y el código sigue como si el mail hubiera
+ * salido.
+ *
+ * Eso vale para TODOS los mails del proyecto, no sólo para éste. Acá se
+ * devuelve el resultado porque este mail es el único que se anota en la base
+ * (ver `DigitalEnvioLog`): anotar "ENVIADO" sin mirar el `error` sería fabricar
+ * una prueba de entrega de algo que nunca salió, que es peor que no anotar nada.
+ *
+ * 🔲 Los otros senders siguen sin mirarlo. Está anotado en el plan.
+ */
+export type ResultadoDeEnvio = { error: { message: string } | null };
+
 export async function sendEntregaDigitalEmail({
   to,
   nombre,
@@ -1253,8 +1275,14 @@ export async function sendEntregaDigitalEmail({
   vendedor: string | null;
   dias: number;
   maxDescargas: number;
-}) {
-  if (!process.env.RESEND_API_KEY) return;
+}): Promise<ResultadoDeEnvio> {
+  /* Sin la clave no se manda nada, y eso se contesta como un fallo y no como un
+     silencio: para quien compró, un mail que no salió porque falta una variable
+     de entorno y uno que no salió porque Resend lo rechazó son la misma cosa —
+     no le llegó. Devolver `undefined` acá dejaría anotado "ENVIADO". */
+  if (!process.env.RESEND_API_KEY) {
+    return { error: { message: "RESEND_API_KEY no configurada" } };
+  }
 
   const lista = archivos
     .map(
@@ -1268,7 +1296,7 @@ export async function sendEntregaDigitalEmail({
     )
     .join("");
 
-  await resend.emails.send({
+  const r = await resend.emails.send({
     from: FROM,
     to,
     subject: `Ya podés descargar: ${producto}`,
@@ -1314,4 +1342,9 @@ export async function sendEntregaDigitalEmail({
       </div>
     `,
   });
+
+  /* Se devuelve el mensaje del error, no el objeto entero: lo que se guarda va a
+     una columna de texto y el objeto de Resend puede traer campos que no hacen
+     falta guardar. */
+  return { error: r.error ? { message: r.error.message } : null };
 }
