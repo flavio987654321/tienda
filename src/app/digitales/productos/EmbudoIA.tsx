@@ -4,7 +4,7 @@ import { useRef, useState } from "react";
 import { Loader2, Sparkles, X, AlertTriangle, RotateCcw, Check } from "lucide-react";
 import type { EstadoDelCupo } from "@/lib/cupo-ia";
 import {
-  LARGO_DEL_NICHO, MINIMO_DEL_NICHO, LARGO_TITULO_IA, LARGO_BAJADA_IA,
+  LARGO_DEL_NICHO, MINIMO_DEL_NICHO, LARGO_TITULO_IA, LARGO_BAJADA_IA, LARGO_TITULO_PROPIO,
   type EmbudoSugerido,
 } from "@/lib/embudo-ia";
 
@@ -55,6 +55,8 @@ export default function EmbudoIA({
 }) {
   const [paso, setPaso] = useState<Paso>("nicho");
   const [nicho, setNicho] = useState("");
+  /* Opcional: el título que la persona YA tiene. Ver `LARGO_TITULO_PROPIO`. */
+  const [titulo, setTitulo] = useState("");
   const [embudo, setEmbudo] = useState<EmbudoSugerido | null>(null);
   const [cupo, setCupo] = useState(cupoInicial);
   const [generando, setGenerando] = useState(false);
@@ -85,7 +87,7 @@ export default function EmbudoIA({
       const r = await fetch("/api/digitales/ia/embudo", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nicho: nicho.trim() }),
+        body: JSON.stringify({ nicho: nicho.trim(), titulo: titulo.trim() }),
       });
       const d = await r.json().catch(() => ({}));
       if (!r.ok || !d.ok) {
@@ -237,6 +239,30 @@ export default function EmbudoIA({
                 Cuanto más concreto, mejor sale. Después lo podés editar todo.
               </p>
 
+              {/* ⚠️ El título va PRIMERO y es opcional, y eso resuelve a la
+                  persona que no estábamos atendiendo: la que ya escribió su
+                  ebook y lo que necesita es ayuda para venderlo, no que le
+                  inventemos otro nombre. Si lo pone, se respeta tal cual. */}
+              <label className="mt-4 block">
+                <span className="text-[12.5px] font-bold text-gray-900 panel-oscuro:text-gray-100">
+                  ¿Ya tenés el título? <span className="font-medium text-gray-400">(opcional)</span>
+                </span>
+                <input
+                  value={titulo}
+                  onChange={(e) => setTitulo(e.target.value.slice(0, LARGO_TITULO_PROPIO))}
+                  maxLength={LARGO_TITULO_PROPIO}
+                  disabled={generando}
+                  placeholder="Ej: Hamburguesas Irresistibles — 50 recetas"
+                  className="mt-1.5 w-full rounded-2xl border border-gray-200 panel-oscuro:border-gray-700 bg-white panel-oscuro:bg-gray-800 px-4 py-2.5 text-sm text-gray-900 panel-oscuro:text-gray-100 placeholder:text-gray-400 focus:border-orange-400 focus:outline-none disabled:opacity-60"
+                />
+                <span className="mt-1 block text-[11px] text-gray-400">
+                  Si ya lo tenés escrito lo dejamos tal cual. Si no, te lo proponemos nosotros.
+                </span>
+              </label>
+
+              <label className="mt-4 block text-[12.5px] font-bold text-gray-900 panel-oscuro:text-gray-100">
+                ¿De qué se trata?
+              </label>
               <textarea
                 value={nicho}
                 onChange={(e) => setNicho(e.target.value.slice(0, LARGO_DEL_NICHO))}
@@ -246,7 +272,7 @@ export default function EmbudoIA({
                 rows={5}
                 disabled={generando}
                 placeholder="Ej: soy peluquera hace 10 años y quiero venderle a peluqueras que recién empiezan lo que sé de cortes y color."
-                className="mt-3 w-full rounded-2xl border border-gray-200 panel-oscuro:border-gray-700 bg-white panel-oscuro:bg-gray-800 px-4 py-3 text-sm leading-relaxed text-gray-900 panel-oscuro:text-gray-100 placeholder:text-gray-400 focus:border-orange-400 focus:outline-none disabled:opacity-60"
+                className="mt-1.5 w-full rounded-2xl border border-gray-200 panel-oscuro:border-gray-700 bg-white panel-oscuro:bg-gray-800 px-4 py-3 text-sm leading-relaxed text-gray-900 panel-oscuro:text-gray-100 placeholder:text-gray-400 focus:border-orange-400 focus:outline-none disabled:opacity-60"
               />
               <div className="mt-1 flex items-center justify-between text-[11px] text-gray-400">
                 <span>{largoOk ? "" : `Escribí un poco más (mínimo ${MINIMO_DEL_NICHO} caracteres)`}</span>

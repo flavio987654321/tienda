@@ -4,7 +4,7 @@ import { anthropic } from "@/lib/anthropic";
 import { permitirGeneracion } from "@/lib/ia-digitales";
 import { consumirDelCupo, devolverAlCupo, estadoDelCupo } from "@/lib/cupo-ia";
 import {
-  ESQUEMA_DEL_EMBUDO, INSTRUCCIONES, LARGO_DEL_NICHO, MINIMO_DEL_NICHO,
+  ESQUEMA_DEL_EMBUDO, INSTRUCCIONES, LARGO_DEL_NICHO, MINIMO_DEL_NICHO, LARGO_TITULO_PROPIO,
   normalizarEmbudo,
 } from "@/lib/embudo-ia";
 import { getSubscriptionStatus, getUserSubscription } from "@/lib/subscription";
@@ -109,6 +109,12 @@ export async function POST(req: NextRequest) {
     ? (body as { nicho: string }).nicho.trim().slice(0, LARGO_DEL_NICHO)
     : "";
 
+  /* Opcional: el título que la persona YA tiene. Si viene, se le pide al modelo
+     que lo respete y además se impone al normalizar — ver `normalizarEmbudo`. */
+  const tituloPropio = typeof (body as { titulo?: unknown })?.titulo === "string"
+    ? (body as { titulo: string }).titulo.trim().slice(0, LARGO_TITULO_PROPIO)
+    : "";
+
   if (nicho.length < MINIMO_DEL_NICHO) {
     return NextResponse.json(
       { error: "Contanos un poco más de qué se trata: con dos palabras no alcanza para armar nada." },
@@ -159,7 +165,10 @@ export async function POST(req: NextRequest) {
              que lo frena no es una frase mágica sino la forma de la salida —sólo
              puede llenar tres fichas de tres campos, y todo lo que no entre en el
              esquema se descarta antes de que nadie lo vea. */
-          content: `Esto es lo que vende la persona, en sus palabras:\n\n<negocio>\n${nicho}\n</negocio>`,
+          content: `Esto es lo que vende la persona, en sus palabras:\n\n<negocio>\n${nicho}\n</negocio>`
+            + (tituloPropio
+              ? `\n\nY el producto principal YA se llama así, usá este nombre tal cual:\n<titulo>\n${tituloPropio}\n</titulo>`
+              : ""),
         }],
       },
       { timeout: ESPERA_MS },
@@ -185,7 +194,7 @@ export async function POST(req: NextRequest) {
   });
 
   const bloque = respuesta.content.find((b) => b.type === "tool_use");
-  const embudo = bloque ? normalizarEmbudo(bloque.input) : null;
+  const embudo = bloque ? normalizarEmbudo(bloque.input, tituloPropio) : null;
 
   if (!embudo) {
     /* Llegó algo que no se puede mostrar. Se dice y se corta: media pantalla con

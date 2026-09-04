@@ -2223,6 +2223,78 @@ antes. La ruta del editor sigue siendo la única que escribe `paginaVenta`.
 🔲 **Falta encadenarlo con el embudo**: hoy son dos botones en dos pantallas. El
 "armar todo" de una sola vez va con el asistente de bienvenida.
 
+### ✅ Dos correcciones salidas de mirar el asistente de la competencia (04/09/26)
+
+Flavio creó una cuenta allá y mandó las pantallas. Antes de copiar nada,
+aparecieron dos cosas que estaban mal de nuestro lado.
+
+#### 1. ⚠️ Había DOS personas y sólo atendíamos a una
+
+Su paso 3 pide **el título y la descripción del ebook escritos por la persona**,
+y el botón dice *"Generar copys con IA"*: la IA de ellos **no propone el
+producto**, redacta la landing de un producto que ya existe.
+
+Eso destapa que hay dos situaciones distintas y las dos son reales:
+
+| | Qué necesita | A quién servía |
+|---|---|---|
+| **"No tengo nada"** | Que le propongan el producto entero | ✅ el nuestro |
+| **"Ya tengo el ebook"** | Ayuda para **venderlo**, no otro nombre | ❌ nadie |
+
+A la segunda le inventábamos otro título y tenía que pisarlo a mano — al revés
+de lo que le sirve. Ahora hay un campo **opcional** de título: *"Si ya lo tenés
+escrito lo dejamos tal cual. Si no, te lo proponemos nosotros."*
+
+⚠️ Y si viene, **se impone al normalizar**, no sólo se le pide al prompt. Un
+modelo puede "mejorar" un título aunque se le diga que no, y el resultado sería
+que alguien ve cambiado el nombre de un ebook que ya escribió. Pedirlo es una
+sugerencia; escribirlo de vuelta es la garantía.
+
+El bono y el upsell los sigue proponiendo la IA — eso ellos no lo hacen.
+
+#### 2. El campo de la descripción estaba corto
+
+Era de **600** caracteres. El de ellos acepta **10.000**, y tienen razón: quien
+ya escribió su ebook quiere **pegar el índice entero**, y con 600 no entra ni la
+mitad. Más texto de entrada es mejor salida y cuesta casi nada — 2.500 caracteres
+son unos 600 tokens, menos de un quinto de centavo.
+
+Subido a **2.500**. No a 10.000 porque pasado cierto punto lo que se agrega es
+relleno, y el tope existe para que nadie mande un libro por el precio de un
+párrafo.
+
+#### Lo que se decidió NO copiar de su asistente
+
+- **Su paso 1 (el selector Tienda / Checkout / Quiz).** Existe porque ellos
+  venden tres productos; nosotros vendemos uno. Un selector con una sola opción
+  es un clic de más y dos huecos a la vista.
+- **El panel de 8 tutoriales en video.** Se contradice con su propia promesa:
+  *"en menos de 5 minutos"* al lado de 50 minutos de video.
+- **"landing page de alta conversión".** Es una promesa de resultados —
+  exactamente lo que le prohibimos a nuestra IA escribir. No se puede prohibir
+  adentro y ponerlo en la propia pantalla.
+- **El selector de idioma**, con su *"no se puede cambiar después"*. Vendemos
+  sólo en Argentina y el prompt está en rioplatense a mano; y una puerta de una
+  sola dirección en el paso 2 es una trampa.
+
+#### 🔲 Y lo que quedó anotado para cuando se haga el asistente
+
+- **Su subdominio es de la CUENTA; el nuestro es de cada PRODUCTO.** Está
+  decidido desde el 01/09 y es la Fase 5 bis. Por eso ellos piden la dirección en
+  el paso 2 —con el marcador `mi-ebook`, porque no tienen con qué proponerla— y
+  nosotros la podemos **proponer sola** desde el nombre del producto, en el paso
+  final.
+- ⚠️ **El asistente no se puede hacer antes que la Fase 5 bis**: terminaría
+  entregando una dirección `/p/<id>` que después cambia, y todo lo que la persona
+  compartió deja de andar.
+- **Su paso 5 se llama "Listo" y promete "checkout con Mercado Pago… todo
+  listo"** — pero conectar Mercado Pago saca de la aplicación y es un trámite
+  aparte. El nuestro **no puede decir "listo" con el cobro sin conectar**.
+- 🔲 **Ellos venden "Checkout solo"**, sin landing, para quien ya tiene tráfico y
+  su propia página. Nosotros tenemos toda la maquinaria —checkout, cobro,
+  entrega, pantalla de gracias— y no lo ofrecemos. Es una decisión comercial, no
+  de diseño.
+
 ## FASE 5 — La página de venta y el checkout
 
 Anotado ahora que se sabe qué forma tiene (ver 2.3). Cuelga del producto, en

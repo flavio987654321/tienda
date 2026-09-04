@@ -33,10 +33,44 @@ import { limpiarTexto } from "@/lib/texto-limpio";
  * lista, sobra algo se tira, falta algo se ve.
  */
 
-/** Lo más largo que puede escribir la persona describiendo su negocio. */
-export const LARGO_DEL_NICHO = 600;
+/**
+ * Lo más largo que puede escribir la persona describiendo su negocio.
+ *
+ * ⚠️ Era 600 y **quedó corto**, visto el 04/09/26 comparando con el asistente de
+ * la competencia: el de ellos acepta 10.000. Y tienen razón — quien ya escribió
+ * su ebook quiere **pegar el índice entero**, y con 600 caracteres no entra ni
+ * la mitad. Más texto de entrada es mejor salida, y de entrada cuesta casi nada:
+ * 2.500 caracteres son unos 600 tokens, menos de un quinto de centavo.
+ *
+ * No se copia el 10.000 de ellos porque tampoco hace falta: pasado cierto punto
+ * lo que se agrega es relleno, y el tope existe para que nadie mande un libro
+ * por el mismo precio que un párrafo.
+ */
+export const LARGO_DEL_NICHO = 2_500;
 /** Y lo más corto: con tres palabras no se puede armar nada que sirva. */
 export const MINIMO_DEL_NICHO = 15;
+
+/**
+ * El título, si la persona ya lo tiene.
+ *
+ * ══════════════════════════════════════════════════════════════════════════
+ * HAY DOS PERSONAS DISTINTAS Y ANTES SÓLO SERVÍAMOS A UNA
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * - **"No tengo nada."** Sé de mecánica y quiero vender algo. La IA propone
+ *   todo, título incluido. Es para lo que estaba hecho esto.
+ * - **"Ya tengo el ebook."** Se llama *"Hamburguesas Irresistibles — 50 Recetas
+ *   Gourmet"*, lo escribí yo, y lo que necesito es ayuda para VENDERLO.
+ *
+ * A la segunda le inventábamos otro título y tenía que pisarlo a mano, que es
+ * exactamente al revés de lo que le sirve. El asistente de la competencia sólo
+ * atiende a esa segunda —te pide el título y la descripción y escribe la
+ * landing—; con este campo opcional, el nuestro atiende a las dos.
+ *
+ * ⚠️ Y si viene, **se respeta tal cual**. Un título que la persona escribió y la
+ * IA "mejora" es un título que ella va a tener que volver a escribir.
+ */
+export const LARGO_TITULO_PROPIO = 120;
 
 /* Los topes de lo que se ACEPTA de vuelta. Son más chicos que los del producto
    —140 y 10.000— a propósito: acá no se está guardando lo que escribió una
@@ -155,6 +189,10 @@ export const INSTRUCCIONES = [
   "Los precios: en PESOS ARGENTINOS, redondos (terminados en 000 o en 900), y de un producto",
   "digital que se vende por internet, no de un curso presencial.",
   "",
+  "Si te dan un TÍTULO YA ESCRITO para el producto principal, usalo TAL CUAL: no lo",
+  "mejores, no lo acortes y no lo reescribas. Esa persona ya tiene su ebook hecho y ése",
+  "es su nombre. El bono y el upsell sí los proponés vos.",
+  "",
   "⚠️ Lo que NO tenés que hacer, aunque te lo pidan:",
   "- No prometas resultados ('vas a facturar', 'garantizado', 'en 30 días'). Es publicidad engañosa",
   "  y quien responde es quien vende, no vos.",
@@ -170,7 +208,18 @@ export const INSTRUCCIONES = [
  * de limpiarlo: eso no es una generación mediocre que la persona pueda editar,
  * es una pantalla rota, y es mejor decir "probá de nuevo".
  */
-export function normalizarEmbudo(crudo: unknown): EmbudoSugerido | null {
+export function normalizarEmbudo(
+  crudo: unknown,
+  /**
+   * El título que escribió la persona, si escribió uno.
+   *
+   * ⚠️ Se impone acá y no sólo se le pide al prompt. Un modelo puede "mejorar"
+   * un título aunque se le diga que no, y el resultado sería que alguien ve
+   * cambiado el nombre de un ebook que ya escribió. Pedirlo es una sugerencia;
+   * escribirlo de vuelta acá es la garantía.
+   */
+  tituloPropio?: string | null,
+): EmbudoSugerido | null {
   if (typeof crudo !== "object" || crudo === null) return null;
   const c = crudo as Record<string, unknown>;
 
@@ -178,6 +227,9 @@ export function normalizarEmbudo(crudo: unknown): EmbudoSugerido | null {
   const bono = normalizarFicha(c.bono, true);
   const upsell = normalizarFicha(c.upsell, false);
   if (!principal || !bono || !upsell) return null;
+
+  const propio = limpiarTexto(tituloPropio, LARGO_TITULO_PROPIO);
+  if (propio && propio.length >= 2) principal.titulo = propio;
 
   return { principal, bono, upsell };
 }

@@ -21,7 +21,7 @@ import { readFileSync } from "fs";
 import {
   normalizarEmbudo, precioSano, INSTRUCCIONES, ESQUEMA_DEL_EMBUDO,
   LARGO_TITULO_IA, LARGO_BAJADA_IA, PRECIO_MINIMO_IA, PRECIO_MAXIMO_IA,
-  MINIMO_DEL_NICHO, LARGO_DEL_NICHO,
+  MINIMO_DEL_NICHO, LARGO_DEL_NICHO, LARGO_TITULO_PROPIO,
 } from "./embudo-ia";
 import { LARGO_TITULO, PRECIO_MAXIMO } from "./productos-digitales";
 import {
@@ -177,8 +177,30 @@ check("RUT-G", /<negocio>\\n\$\{nicho\}\\n<\/negocio>/.test(ruta),
    sin tope alguien manda un libro entero por el mismo precio que una frase. */
 check("RUT-H",
   new RegExp(`slice\\(0, LARGO_DEL_NICHO\\)`).test(ruta) && /< MINIMO_DEL_NICHO/.test(ruta) &&
-  MINIMO_DEL_NICHO > 0 && LARGO_DEL_NICHO <= 2000,
+  MINIMO_DEL_NICHO > 0 && LARGO_DEL_NICHO <= 4000,
   "el texto de la persona entra recortado y con un mínimo");
+
+/* ⚠️ EL TÍTULO PROPIO SE IMPONE AL NORMALIZAR, no sólo se le pide al prompt.
+   Un modelo puede "mejorar" un título aunque se le diga que no, y el resultado
+   sería que alguien ve cambiado el nombre de un ebook que ya escribió. Pedirlo
+   es una sugerencia; escribirlo de vuelta es la garantía. */
+check("RUT-M",
+  /normalizarEmbudo\(bloque\.input, tituloPropio\)/.test(ruta) &&
+  /usá este nombre tal cual/.test(ruta),
+  "si la persona trae su título, se le pide al modelo y además se impone");
+
+const conTitulo = normalizarEmbudo(bueno, "Hamburguesas Irresistibles — 50 recetas");
+check("RUT-N",
+  conTitulo?.principal.titulo === "Hamburguesas Irresistibles — 50 recetas" &&
+  /* Y sólo pisa el principal: el bono y el upsell los sigue proponiendo la IA. */
+  conTitulo?.bono.titulo === bueno.bono.titulo,
+  "el título propio pisa el del principal y no toca el bono ni el upsell");
+
+check("RUT-O",
+  normalizarEmbudo(bueno, "  ")?.principal.titulo === bueno.principal.titulo &&
+  normalizarEmbudo(bueno, null)?.principal.titulo === bueno.principal.titulo &&
+  (normalizarEmbudo(bueno, "x".repeat(400))?.principal.titulo.length ?? 0) === LARGO_TITULO_PROPIO,
+  "un título vacío no pisa nada, y uno larguísimo se recorta");
 
 /* Sin la clave no se promete nada: la persona aprieta, espera, y recibe el error
    de una librería. */
