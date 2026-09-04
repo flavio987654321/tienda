@@ -61,15 +61,23 @@ function leerAnalytics(raw: string | null | undefined): { pixelId: string; gaId:
 export default async function ConfiguracionPage({
   searchParams,
 }: {
-  searchParams: Promise<{ mp?: string }>;
+  searchParams: Promise<{ mp?: string; tab?: string }>;
 }) {
   /* El resultado de volver de Mercado Pago viaja en la URL, y se lee ACÁ y no en
      el navegador: leerlo con un efecto obligaba a guardarlo en estado, o sea un
      segundo dibujo completo de la pantalla por un cartel que ya se sabía antes
      de dibujar el primero. Se compara contra los dos valores que existen, así
      que lo que venga escrito en la URL no llega a ningún lado. */
-  const { mp } = await searchParams;
+  const { mp, tab } = await searchParams;
   const avisoMp = mp === "connected" || mp === "error" ? mp : null;
+
+  /* Con qué solapa abrir. Lo usan los primeros pasos del inicio, que llevan
+     derecho a Pagos: el sentido de ese paso es dejar a la persona donde se hace
+     la tarea, no en la puerta de Configuración para que la busque.
+     Se compara contra la lista nuestra y nunca se pasa el texto crudo — una
+     solapa inventada dibujaría una pantalla vacía. */
+  const SOLAPAS = ["general", "pagos", "meta", "legales"] as const;
+  const abrirEn = SOLAPAS.find((s) => s === tab) ?? null;
 
   const user = await getCurrentUser();
   if (!user || user.role !== "DIGITAL") return null;
@@ -137,6 +145,7 @@ export default async function ConfiguracionPage({
       </div>
 
       <ConfiguracionClient
+        abrirEn={abrirEn}
         tier={tier}
         nombre={store?.name ?? ""}
         checkoutName={store?.checkoutName ?? ""}

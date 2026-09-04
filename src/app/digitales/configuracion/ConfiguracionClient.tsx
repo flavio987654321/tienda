@@ -37,6 +37,15 @@ type Props = {
   hrefLegales: string | null;
   /** Cómo volvió de Mercado Pago. Lo lee el servidor de la URL. */
   avisoMp: "connected" | "error" | null;
+  /**
+   * Con qué solapa abrir, si vino pedida por la dirección (`?tab=pagos`).
+   *
+   * Lo usan los primeros pasos del inicio, que llevan derecho a Pagos: el
+   * sentido de ese paso es dejar a la persona donde se hace la tarea, no en la
+   * puerta de Configuración para que la busque. El servidor ya la comparó contra
+   * la lista, así que acá no puede llegar una inventada.
+   */
+  abrirEn: "general" | "pagos" | "meta" | "legales" | null;
 };
 
 /**
@@ -79,7 +88,9 @@ type Pestana = (typeof PESTANAS)[number]["id"];
 export default function ConfiguracionClient(p: Props) {
   /* Si volvés de Mercado Pago, la pantalla abre en Pagos: es donde está el
      cartel que dice cómo salió. Abrir en General obligaría a buscarlo. */
-  const [pestana, setPestana] = useState<Pestana>(p.avisoMp ? "pagos" : "general");
+  /* El aviso de Mercado Pago gana: si la persona vuelve de conectar, lo primero
+     que tiene que ver es cómo salió, aunque haya pedido otra solapa. */
+  const [pestana, setPestana] = useState<Pestana>(p.avisoMp ? "pagos" : (p.abrirEn ?? "general"));
 
   const [nom, setNom] = useState(p.nombre);
   const [checkout, setCheckout] = useState(p.checkoutName);

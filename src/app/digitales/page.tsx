@@ -1,5 +1,9 @@
 import Link from "next/link";
 import { Sparkles, UserRound, Package, Receipt, ArrowRight } from "lucide-react";
+import { getCurrentUser } from "@/lib/auth-session";
+import { prisma } from "@/lib/prisma";
+import { primerosPasos, terminado } from "@/lib/primeros-pasos";
+import PrimerosPasos from "./PrimerosPasos";
 
 /* El inicio del panel.
  *
@@ -16,8 +20,16 @@ import { Sparkles, UserRound, Package, Receipt, ArrowRight } from "lucide-react"
  * promete o niega de más envejece sola. Por eso ahora esto no describe el estado
  * de la obra — sólo lleva a lo que hay.
  *
- * Los pasos de bienvenida —el asistente de la primera vez— van justo acá cuando
- * exista. Hoy la lista de tres alcanza y no miente.
+ * ── Los primeros pasos, agregados el 04/09/26 ───────────────────────────────
+ *
+ * Acá decía que "los pasos de bienvenida van justo acá cuando exista". Existen.
+ *
+ * Y se calculan del estado REAL de la cuenta, sin ninguna bandera guardada: una
+ * bandera se desincroniza el día que alguien borra su producto o desconecta
+ * Mercado Pago, y la lista diría "listo" con la cuenta rota. Ver
+ * `lib/primeros-pasos`.
+ *
+ * Por eso la pantalla pasó a ser `async`: antes no leía nada.
  *
  * No lleva `min-h-screen`: el scroll ahora vive en el `<main>` del layout, al
  * lado de la barra lateral. Con la altura forzada acá quedaban dos barras de
@@ -46,7 +58,43 @@ const ATAJOS = [
   },
 ];
 
-export default function DigitalesPage() {
+export const dynamic = "force-dynamic";
+
+export default async function DigitalesPage() {
+  const user = await getCurrentUser();
+
+  /* Una sola consulta para los cinco pasos. El principal más VIEJO y no
+     cualquiera: es el que la persona armó primero, y por lo tanto el que está
+     mirando cuando la lista le dice "subí el archivo". */
+  const store = user
+    ? await prisma.store.findUnique({
+        where: { ownerId: user.id },
+        select: {
+          mpAccessToken: true,
+          products: {
+            where: { rolDigital: "PRINCIPAL", deletedAt: null },
+            orderBy: { createdAt: "asc" },
+            take: 1,
+            select: { id: true, archivoPath: true, paginaVenta: true, isActive: true },
+          },
+        },
+      })
+    : null;
+
+  /* Sin `Store` no hay nada cargado todavía, y eso no es un error: el espacio se
+     crea recién al guardar el primer producto (ver `espacioDigital`). Entrar a
+     mirar no tiene por qué dejar una tienda vacía colgando. */
+  const principal = store?.products[0] ?? null;
+  const pasos = primerosPasos({
+    principalId: principal?.id ?? null,
+    tieneArchivo: principal?.archivoPath != null,
+    /* `paginaVenta` es null hasta que se guarda el editor por primera vez, así
+       que sirve tal cual para saber si se armó. */
+    paginaArmada: principal?.paginaVenta != null,
+    cobroConectado: store?.mpAccessToken != null,
+    publicado: principal?.isActive === true,
+  });
+
   return (
     <div className="mx-auto w-full max-w-2xl px-4 sm:px-6 py-10">
 
@@ -63,6 +111,15 @@ export default function DigitalesPage() {
           archivo la hacemos nosotros: apenas se acredita el pago, sale solo.
         </p>
       </div>
+
+      {/* Los primeros pasos van ANTES de los atajos: mientras falte algo, esto
+          es lo único que importa de esta pantalla. Cuando están los cinco
+          desaparece sola y quedan los atajos, que es lo que sirve después. */}
+      {!terminado(pasos) && (
+        <div className="mt-8">
+          <PrimerosPasos pasos={pasos} />
+        </div>
+      )}
 
       <div className="mt-8 space-y-3">
         {ATAJOS.map(({ href, Icon, titulo, bajada }) => (

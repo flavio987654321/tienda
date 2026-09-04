@@ -2066,6 +2066,66 @@ pantalla interrumpe, porque es el único cambio que no se puede deshacer.
 🔲 **`IA_LISTA` sigue en `false`, y está bien:** esa bandera ahora es sólo del
 botón del **ebook**, que es el caro y no existe. Armar el embudo no pasa por ahí.
 
+### ✅ LOS PRIMEROS PASOS — HECHOS (04/09/26)
+
+El inicio del panel tenía escrito, desde el 03/09, que *"los pasos de bienvenida
+—el asistente de la primera vez— van justo acá cuando exista"*. Existen.
+
+Salió de mirar cómo lo hace la competencia: ni bien entrás al panel te da una
+serie de pasos, y adentro de ese recorrido está la IA que arma la cáscara.
+
+#### ⚠️ Se calcula del estado REAL, sin ninguna bandera guardada
+
+No hay ningún `onboardingCompletado` en la base, y es la decisión de fondo de
+esta pantalla. Una bandera guardada **se desincroniza**: el día que alguien borra
+su producto o desconecta Mercado Pago, la lista sigue diciendo "listo" con la
+cuenta rota — y esto es lo primero que ve alguien que se acaba de registrar.
+
+Calculado del dato de verdad **no puede mentir**, y si algo se rompe el paso
+vuelve a aparecer solo, que es justo lo que hay que ver.
+
+El costo es que no se puede cerrar. Tampoco hace falta: se va sola cuando están
+los cinco, y hasta entonces **cada uno que falta impide vender de verdad**. No
+hay pasos de cortesía — uno que se puede saltear entrena a saltearlos todos.
+
+#### Los cinco, y por qué en ese orden
+
+| # | Paso | Qué pasa si falta |
+|---|---|---|
+| 1 | **Armá tu producto** | No hay nada que vender. Y el botón dice *"Armarlo con IA"*: es el camino que resuelve la pantalla en blanco |
+| 2 | **Subí el archivo** | ⚠️ El peor de los cinco: **es el único que falla DESPUÉS de que alguien pagó**. Se cobra y no se puede entregar |
+| 3 | **Armá tu página de venta** | Es lo que la persona lee antes de decidir. Con el texto de fábrica se vende bastante menos |
+| 4 | **Conectá Mercado Pago** | El botón de comprar no cobra nada |
+| 5 | **Publicá** | Está todo listo y no lo ve nadie, ni con el link |
+
+⚠️ **El 4 podría ir primero y va cuarto a propósito.** Conectar Mercado Pago es
+el paso que más gente abandona —te saca de la aplicación, te pide iniciar
+sesión—, y ponerlo antes es perder a quien todavía no vio nada de lo suyo armado.
+Primero se ve el producto propio hecho; después se pide el trámite.
+
+#### Un solo botón, no cinco
+
+Sólo el primero que falta muestra su llamado a la acción. Cinco a la vez parecen
+más útiles y no llaman a ninguno — y el orden importa de verdad: subir el archivo
+de un producto que no existe no se puede. Pero **salta los que ya están**: si
+alguien conectó Mercado Pago antes de subir el archivo, el botón es el que de
+verdad falta y no el primero de la lista.
+
+Y abajo de cada paso pendiente va **la consecuencia, no la tarea**. La tarea ya
+está en el título; el motivo es lo que hace que alguien lo haga hoy.
+
+#### Lo que hubo que arreglar de paso
+
+**El paso de cobro llevaba a una solapa que nadie abría.** Configuración sólo
+abría Pagos cuando se volvía de Mercado Pago (`?mp=`), así que `?tab=pagos` habría
+dejado a la persona en General buscando. Ahora se lee, comparado contra la lista
+de solapas nuestra —una inventada dibujaría una pantalla vacía— y el aviso de
+Mercado Pago le sigue ganando: si volvés de conectar, lo primero que ves es cómo
+salió.
+
+16 chequeos en `primeros-pasos.check`, y corren la lógica de verdad contra fotos
+armadas a mano, no leyendo el archivo. **72 pruebas** en total.
+
 ## FASE 5 — La página de venta y el checkout
 
 Anotado ahora que se sabe qué forma tiene (ver 2.3). Cuelga del producto, en
