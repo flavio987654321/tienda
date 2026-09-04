@@ -1,7 +1,64 @@
 import { Resend } from "resend";
 import { PRO_MAX_PRODUCTS, PRO_MAX_AFFILIATES } from "@/lib/planLimits";
 
-const resend = new Resend(process.env.RESEND_API_KEY ?? "no-key");
+const clienteResend = new Resend(process.env.RESEND_API_KEY ?? "no-key");
+
+/**
+ * El cliente de Resend, envuelto para que un mail rechazado no se pierda.
+ *
+ * ══════════════════════════════════════════════════════════════════════════
+ * ⚠️ `resend.emails.send()` NO TIRA ERROR CUANDO LA API RECHAZA EL MAIL
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * Contesta `{ data, error }` y **resuelve la promesa igual**. Dirección
+ * inválida, dominio sin verificar, cuota agotada, clave revocada: todo eso llega
+ * como un campo adentro de la respuesta, no como una excepción.
+ *
+ * O sea que los 22 senders de este archivo venían mandando mails que la API
+ * rechazaba y **siguiendo como si hubieran salido**. Un `try/catch` alrededor no
+ * se enteraba de nada, y los `despues(...)` y los `.catch(...)` de los llamadores
+ * tampoco: no había nada que atrapar.
+ *
+ * Encontrado el 03/09/26 armando el registro de envíos de digitales. Es el mismo
+ * accidente que ya había pasado con el SMTP de Gmail en julio —25 mails muertos
+ * en silencio durante días— y por eso `lib/email.ts` sí lo mira desde entonces.
+ * Este archivo se quedó afuera de aquella corrección.
+ *
+ * ── Por qué se LOGUEA y no se tira, al revés que en `email.ts` ──────────────
+ *
+ * Porque los llamadores son distintos. Los de `email.ts` venían de nodemailer,
+ * que tiraba, así que ya estaban escritos para que un mail fallido no voltee
+ * nada. Los de acá se escribieron contra una función que nunca tiraba: hay
+ * varios `await sendLoQueSea(...)` sueltos adentro de rutas sin `try`, y
+ * convertirlos de golpe en excepciones haría, por ejemplo, que un registro
+ * fallara entero porque no salió el mail de bienvenida. Eso es peor que el
+ * problema.
+ *
+ * Así que el piso es: **nunca más en silencio**. Queda escrito con el asunto y el
+ * destinatario, que es lo que hace falta para encontrarlo.
+ *
+ * Y arriba de ese piso, lo que de verdad no puede fallar sin avisarle a la
+ * persona —confirmar el correo, recuperar la contraseña, entregar un archivo
+ * pago— devuelve el resultado y su llamador lo mira. Ver `ResultadoDeEnvio`.
+ */
+const resend = {
+  emails: {
+    async send(payload: Parameters<typeof clienteResend.emails.send>[0]) {
+      const r = await clienteResend.emails.send(payload);
+      if (r.error) {
+        console.error("[resend] la API rechazó el mail", {
+          /* El asunto y el destino, que es con lo que se encuentra de qué venta
+             o de qué persona se trata. El cuerpo no: son kilobytes de HTML en un
+             renglón de registro. */
+          asunto: "subject" in payload ? payload.subject : undefined,
+          para: payload.to,
+          motivo: r.error.message,
+        });
+      }
+      return r;
+    },
+  },
+};
 
 const FROM = process.env.RESEND_FROM ?? "TiendaApps <noreply@tiendaapps.com>";
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "";
@@ -964,12 +1021,30 @@ export async function sendStoreClosedAffiliateEmail({
  * una vez, ya sabe qué es la plataforma, y lo único que necesita es el botón. Un
  * mail largo acá sólo aleja el clic.
  */
-export async function sendConfirmEmail({ to, confirmLink }: { to: string; confirmLink: string }) {
+/**
+ * ⚠️ Devuelve el resultado, y su llamador lo mira.
+ *
+ * Sin este mail la persona **no puede entrar nunca**: no hay otro camino para
+ * confirmar la cuenta que acaba de crear. Es de los tres que no pueden fallar en
+ * silencio (los otros dos: recuperar la contraseña y entregar un archivo pago).
+ *
+ * Y tiene un segundo camino esperando —el reenvío propio de Supabase, con su
+ * plantilla— que hasta el 03/09/26 era **inalcanzable para este fallo**: como el
+ * envío nunca tiraba, la ruta contestaba "listo" y nunca llegaba a probarlo. Ver
+ * `api/auth/reenviar-confirmacion`.
+ */
+export async function sendConfirmEmail({
+  to,
+  confirmLink,
+}: {
+  to: string;
+  confirmLink: string;
+}): Promise<ResultadoDeEnvio> {
   if (!process.env.RESEND_API_KEY) {
     throw new Error("RESEND_API_KEY no configurada: no se puede reenviar la confirmación");
   }
 
-  await resend.emails.send({
+  const r = await resend.emails.send({
     from: FROM,
     to,
     subject: "Confirmá tu correo — TiendaApps",
@@ -992,6 +1067,8 @@ export async function sendConfirmEmail({ to, confirmLink }: { to: string; confir
       </div>
     `,
   });
+
+  return { error: r.error ? { message: r.error.message } : null };
 }
 
 export async function sendWelcomeEmail({

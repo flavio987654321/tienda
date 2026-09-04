@@ -31,6 +31,20 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
+  /* ⚠️ Acá NO se le cuenta a quien pide si el mail salió, y es a propósito.
+   *
+   * Toda esta ruta contesta lo mismo pase lo que pase para no revelar si esa
+   * dirección tiene cuenta. A esta altura ya se sabe que sí —`generateLink`
+   * funcionó—, así que contestar un error cuando el envío falla convertiría la
+   * respuesta en un "esta dirección existe": justo lo que las tres salidas
+   * genéricas de arriba evitan.
+   *
+   * Es una decisión, no un olvido: se cambia una propiedad que vale siempre por
+   * un mensaje mejor en un fallo raro. El fallo igual ya no pasa desapercibido
+   * —el envoltorio de `lib/resend` lo deja escrito con asunto y destinatario—,
+   * que era el problema de verdad. Si alguna vez se quiere avisar, hay que
+   * hacerlo sin que la respuesta cambie: por ejemplo reintentando, o mandando
+   * por un segundo camino como hace `reenviar-confirmacion`. */
   await sendPasswordResetEmail({
     to: email.trim().toLowerCase(),
     resetLink: data.properties.action_link,

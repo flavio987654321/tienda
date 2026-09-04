@@ -2325,10 +2325,9 @@ salido.
 
 Eso vale para **todos los mails del proyecto**, no sólo para éste.
 
-🔲 **Los otros senders siguen sin mirar el `error`.** Acá se arregló sólo el de
-entrega digital, que es el único que se anota en una tabla: anotar "ENVIADO" sin
-mirarlo sería fabricar una prueba de entrega de algo que nunca salió. Los demás
-hay que repasarlos, y es un barrido aparte.
+✅ **El barrido de los otros senders** — HECHO (04/09/26). Ver la sección
+siguiente. Y con una corrección de tamaño: eran **22 senders en un solo archivo**,
+no ~30 repartidos por el proyecto. `lib/email.ts` ya lo miraba desde julio.
 
 #### Cómo quedó
 
@@ -2381,6 +2380,79 @@ cambia de forma ni de significado— e idempotente. **Corrida contra la base rea
 el 03/09/26**, con permiso expreso. Sin deploy.
 
 8 chequeos nuevos (ENV-A … ENV-H en `entrega-digital.check`) y 3 más en el panel.
+
+### ✅ EL BARRIDO DE LOS MAILS — HECHO (04/09/26)
+
+**Esto no es de digitales, y por eso se hizo primero.** Los 22 senders de
+`lib/resend.ts` son los de **tiendas**: confirmar la cuenta, recuperar la
+contraseña, los pedidos, la suscripción, las denuncias, la canasta. Están
+andando en producción con gente real. Digitales todavía no vendió nada; tiendas
+sí. Así que el mismo agujero que en digitales era un pendiente, acá era un
+problema vivo.
+
+#### Lo que se midió antes de tocar
+
+Dos correcciones sobre el tamaño que había estimado:
+
+- **No eran ~30 repartidos por el proyecto: eran 22 en un solo archivo.**
+- **`lib/email.ts` ya lo miraba bien.** Sus 25 mails pasan por un adaptador que
+  convierte el `error` en excepción. Se arregló en julio de 2026, cuando el SMTP
+  de Gmail devolvía EAUTH 535 y el error se perdía en un `.catch()`: 25 mails
+  muertos en silencio durante días. **`lib/resend.ts` se quedó afuera de aquella
+  corrección y nadie lo notó** — porque un mail que no llega no hace ruido en
+  ningún lado.
+
+#### Cómo se arregló: envolviendo el cliente
+
+En vez de tocar los 22 senders uno por uno, el cliente de Resend queda envuelto:
+`clienteResend` es el de verdad y se usa **en un solo lugar**, adentro de un
+envoltorio que mira el `error` y lo deja escrito con el **asunto** y el
+**destinatario**. Las 22 funciones no cambiaron una línea y ninguna puede volver
+a fallar callada.
+
+#### Por qué se loguea y no se tira, al revés que en `email.ts`
+
+Porque los llamadores son distintos. Los de `email.ts` venían de nodemailer, que
+tiraba: ya estaban escritos para que un mail fallido no voltee nada. Los de
+`resend.ts` se escribieron contra una función que **nunca** tiraba, y hay varios
+`await sendLoQueSea(...)` sueltos adentro de rutas sin `try`. Convertirlos de
+golpe en excepciones haría que **un registro fallara entero porque no salió el
+mail de bienvenida**. Eso es peor que el problema.
+
+El piso es "nunca más en silencio". Arriba de ese piso van los que sí tienen que
+avisar.
+
+#### Un respaldo que estaba escrito y era inalcanzable
+
+`api/auth/reenviar-confirmacion` tiene **dos caminos**: el mail propio y, si
+falla, el reenvío de Supabase con su plantilla. El camino 2 estaba escrito,
+andando… y no se probaba nunca para este fallo: como el envío no tiraba, la ruta
+contestaba "listo" apenas mandaba. La persona veía *"te lo reenviamos"*, no le
+llegaba nada, y **el respaldo que existía justo para eso no se ejecutaba**.
+
+Ahora `sendConfirmEmail` devuelve si salió, y si no salió se cae al camino 2. Sin
+ese mail la persona **no puede entrar nunca**: no hay otra forma de confirmar la
+cuenta que acaba de crear.
+
+#### La excepción decidida: recuperar la contraseña
+
+`api/auth/reset-password` contesta lo mismo pase lo que pase, para no revelar si
+esa dirección tiene cuenta. Cuando el envío falla ya se sabe que la cuenta
+existe, así que contestar un error convertiría la respuesta en un *"esta
+dirección existe"* — justo lo que las tres salidas genéricas de arriba evitan.
+
+**Se deja como está, a propósito**, y escrito en el código: se cambiaría una
+propiedad que vale siempre por un mensaje mejor en un fallo raro. El fallo igual
+ya queda registrado. Si algún día se quiere avisar, hay que hacerlo **sin que la
+respuesta cambie** — reintentando, o con un segundo camino como el de
+confirmación.
+
+#### El chequeo que lo sostiene
+
+`mails-que-no-salen.check` (9 chequeos). El que más importa es el primero: que el
+cliente real se use **una sola vez**. Un segundo `clienteResend.emails.send` en
+cualquier lado —o un `new Resend(...)` en otro archivo— es un envío que se salteó
+el control, y el agujero vuelve por ahí.
 
 ### ✅ Los avisos al vendedor — HECHOS (03/09/26)
 
