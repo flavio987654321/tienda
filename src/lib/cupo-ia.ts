@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import type { TierDigital } from "@/lib/planes-digitales";
 import { getArgentinaDayKey } from "@/lib/fechas-comerciales";
+import { EBOOKS_IA_ARRANQUE, TOPES_DIGITALES } from "@/lib/planLimits";
 
 /**
  * El cupo de generaciones de IA de una cuenta digital.
@@ -46,7 +47,15 @@ import { getArgentinaDayKey } from "@/lib/fechas-comerciales";
  * uno solo por día.
  */
 
-/** Para qué es el cupo. El de ebooks todavía no se usa: lo va a usar el paso 3. */
+/**
+ * Para qué es el cupo.
+ *
+ * Son dos bolsas **completamente separadas**, una fila por concepto. No es un
+ * detalle de implementación: gastar todas las páginas de venta no puede dejar a
+ * nadie sin poder escribir su ebook, y al revés tampoco. Cuestan cosas
+ * distintas —centavos contra dólares— y se venden como dos renglones distintos
+ * en la página de precios.
+ */
 export type ConceptoIA = "EMBUDO" | "EBOOK";
 
 export type Bolsa = "mes" | "bienvenida";
@@ -71,6 +80,44 @@ export const CUPO_EMBUDO: Record<TierDigital, TopeDelCupo> = {
   STARTER: { bienvenida: 6,  mes: 5 },
   PRO:     { bienvenida: 12, mes: 10 },
 };
+
+/**
+ * Cuántos ebooks completos escribe la IA en cada plan.
+ *
+ * ⚠️ **Estos números NO se escriben acá: se leen de `planLimits`.** Son los
+ * mismos que dibuja la tarjeta de planes y los mismos que la página de precios
+ * ya está prometiendo. Escribirlos de nuevo sería la tercera copia del mismo
+ * número, y este archivo ya se desincronizó dos veces por eso (01/09/26). Si hay
+ * que cambiarlos, se cambian en `planLimits` y acá llegan solos.
+ *
+ * **Free tiene cero, y es a propósito.** Un ebook cuesta dólares, no centavos, y
+ * en Free no entra un peso hasta que la persona vende. Free igual puede publicar
+ * su producto: sube el PDF que ya tenía. Lo que no hace es pedirnos que se lo
+ * escribamos nosotros.
+ */
+export const CUPO_EBOOK: Record<TierDigital, TopeDelCupo> = {
+  FREE:    { bienvenida: EBOOKS_IA_ARRANQUE.FREE,    mes: TOPES_DIGITALES.FREE.ebooksIA },
+  STARTER: { bienvenida: EBOOKS_IA_ARRANQUE.STARTER, mes: TOPES_DIGITALES.STARTER.ebooksIA },
+  PRO:     { bienvenida: EBOOKS_IA_ARRANQUE.PRO,     mes: TOPES_DIGITALES.PRO.ebooksIA },
+};
+
+const CUPOS: Record<ConceptoIA, Record<TierDigital, TopeDelCupo>> = {
+  EMBUDO: CUPO_EMBUDO,
+  EBOOK: CUPO_EBOOK,
+};
+
+/**
+ * El tope que corresponde, mirando **las dos** cosas: el plan y para qué es.
+ *
+ * ⚠️ Existe porque las tres funciones de abajo recibían `concepto`, lo usaban
+ * para elegir la FILA y después leían el tope de `CUPO_EMBUDO` a secas. Con un
+ * solo concepto nadie lo notaba; el día que entrara el segundo, pedir el cupo de
+ * ebooks iba a contestar con el del embudo —12 en Pro en vez de 6, y 3 en Free
+ * en vez de 0, o sea la IA cara abierta justo en el plan que no la paga—.
+ */
+function topeDelCupo(tier: TierDigital, concepto: ConceptoIA): TopeDelCupo {
+  return CUPOS[concepto][tier];
+}
 
 export type EstadoDelCupo = {
   /** Lo que queda en total: el número grande, el que la persona busca. */
@@ -105,7 +152,7 @@ export async function estadoDelCupo(
   tier: TierDigital,
   concepto: ConceptoIA = "EMBUDO",
 ): Promise<EstadoDelCupo> {
-  const tope = CUPO_EMBUDO[tier];
+  const tope = topeDelCupo(tier, concepto);
   const mes = claveDelMes();
 
   const fila = await prisma.cupoIA.findUnique({
@@ -151,8 +198,14 @@ export async function consumirDelCupo(
   tier: TierDigital,
   concepto: ConceptoIA = "EMBUDO",
 ): Promise<Bolsa | null> {
-  const tope = CUPO_EMBUDO[tier];
+  const tope = topeDelCupo(tier, concepto);
   const mes = claveDelMes();
+
+  /* Un plan que no tiene NADA de esto —Free y los ebooks— se contesta sin tocar
+     la base. No es sólo ahorrarse una escritura: sin esto, cada clic de una
+     cuenta Free en un botón que no le corresponde deja una fila de cupo en cero
+     que no sirve para nada y que después hay que explicar mirando la tabla. */
+  if (tope.bienvenida <= 0 && tope.mes <= 0) return null;
 
   /* La fila tiene que existir para poder actualizarla. `upsert` sobre la clave
      única y no un "¿existe? entonces creá": dos pedidos en paralelo leen los dos

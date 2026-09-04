@@ -27,7 +27,8 @@ import { LARGO_TITULO, PRECIO_MAXIMO } from "./productos-digitales";
 import {
   permitirGeneracion, RAFAGA_IA, GLOBAL_DIARIO, GLOBAL_PRUEBA_DIARIO,
 } from "./ia-digitales";
-import { CUPO_EMBUDO, claveDelMes, mesSiguiente } from "./cupo-ia";
+import { CUPO_EMBUDO, CUPO_EBOOK, claveDelMes, mesSiguiente } from "./cupo-ia";
+import { EBOOKS_IA_ARRANQUE, TOPES_DIGITALES } from "./planLimits";
 
 let fallos = 0;
 const check = (id: string, ok: boolean, desc: string) => {
@@ -366,6 +367,56 @@ check("CUP-K",
      cuando alguien usa el botón, no cuando corre un proceso. */
   cupo.indexOf("NOT: { mesClave: mes }") < cupo.indexOf("mesUsadas: { increment: 1 }"),
   "el mes se reinicia al gastar, sin depender de ningún proceso nocturno");
+
+/* ── El cupo del ebook ──────────────────────────────────────────────────── */
+
+/* ⚠️ Los números del ebook NO se escriben en `cupo-ia`: se leen de
+   `planLimits`, que es de donde los saca también la tarjeta de planes. Este
+   chequeo es el que se rompe el día que alguien los copie a mano en un tercer
+   lugar y se desincronicen — que ya pasó dos veces con este mismo archivo. */
+check("CUP-L",
+  CUPO_EBOOK.FREE.bienvenida === EBOOKS_IA_ARRANQUE.FREE &&
+  CUPO_EBOOK.STARTER.bienvenida === EBOOKS_IA_ARRANQUE.STARTER &&
+  CUPO_EBOOK.PRO.bienvenida === EBOOKS_IA_ARRANQUE.PRO &&
+  CUPO_EBOOK.FREE.mes === TOPES_DIGITALES.FREE.ebooksIA &&
+  CUPO_EBOOK.STARTER.mes === TOPES_DIGITALES.STARTER.ebooksIA &&
+  CUPO_EBOOK.PRO.mes === TOPES_DIGITALES.PRO.ebooksIA,
+  "el cupo de ebooks sale de planLimits y no de una copia a mano");
+
+/* ⚠️ FREE NO ESCRIBE EBOOKS, en ninguna de las dos bolsas. Es la diferencia con
+   el embudo: aquél cuesta centavos y por eso Free tiene 3; un ebook cuesta
+   dólares, y en Free no entra un peso hasta que la persona vende. Free igual
+   puede publicar: sube el PDF que ya tenía. */
+check("CUP-M", CUPO_EBOOK.FREE.bienvenida === 0 && CUPO_EBOOK.FREE.mes === 0,
+  "Free no tiene ebooks con IA, ni de arranque ni por mes");
+
+/* Y el ebook siempre da menos que el embudo, en todos los planes y en las dos
+   bolsas: es cien veces más caro por tiro. El día que este chequeo falle, o se
+   subió el ebook sin mirar la factura o se bajó el embudo sin motivo. */
+check("CUP-N",
+  (["FREE", "STARTER", "PRO"] as const).every((t) =>
+    CUPO_EBOOK[t].bienvenida <= CUPO_EMBUDO[t].bienvenida &&
+    CUPO_EBOOK[t].mes <= CUPO_EMBUDO[t].mes),
+  "el cupo de ebooks nunca es más grande que el del embudo");
+
+/* ⚠️ EL TOPE SE ELIGE POR PLAN **Y POR CONCEPTO**. Las tres funciones recibían
+   `concepto`, lo usaban para elegir la fila, y después leían el tope de
+   `CUPO_EMBUDO` a secas. Con un solo concepto no se notaba; con el segundo,
+   pedir el cupo de ebooks contestaba con el del embudo —12 en Pro en vez de 6, y
+   3 en Free en vez de 0, o sea la IA cara abierta justo en el plan que no la
+   paga—. Si vuelve a aparecer `CUPO_EMBUDO[tier]` suelto, es esa regresión. */
+check("CUP-O",
+  !/CUPO_EMBUDO\[tier\]/.test(cupo) && /topeDelCupo\(tier, concepto\)/.test(cupo),
+  "el tope se elige mirando el plan y el concepto, no sólo el plan");
+
+/* Un plan sin nada de esto se contesta sin tocar la base. Sin este corte, cada
+   clic de una cuenta Free en un botón que no le corresponde deja una fila de
+   cupo en cero que no sirve para nada. */
+check("CUP-P",
+  /if \(tope\.bienvenida <= 0 && tope\.mes <= 0\) return null;/.test(cupo) &&
+  cupo.indexOf("if (tope.bienvenida <= 0 && tope.mes <= 0) return null;") <
+    cupo.indexOf("prisma.cupoIA.upsert"),
+  "un plan con cupo cero se rechaza antes de escribir en la base");
 
 /* ── Los topes que quedan (los invisibles) ──────────────────────────────── */
 
