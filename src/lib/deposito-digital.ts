@@ -99,6 +99,50 @@ export async function enlaceDeDescarga(
   return `${supabaseUrl}/storage/v1${datos.signedURL}`;
 }
 
+/**
+ * Poner un archivo en el bucket privado, **desde el servidor**.
+ *
+ * ── Por qué esto no existía hasta el ebook ─────────────────────────────────
+ *
+ * Porque hasta ahora los archivos los subía el navegador derecho a Supabase,
+ * con un permiso firmado. Es lo correcto para un PDF que la persona ya tiene:
+ * 50 MB pasando por nuestra función chocan contra el techo de 4,5 MB de la
+ * plataforma y nos harían pagar el tránsito dos veces.
+ *
+ * El ebook es al revés: el archivo **nace en el servidor**. Nadie lo tiene que
+ * subir, ya está acá. Mandarlo al navegador para que lo suba sería hacerlo
+ * viajar dos veces para nada.
+ *
+ * Y entra sin problema en el techo: un ebook de treinta páginas de texto pesa
+ * decenas de kilobytes. El techo de 4,5 MB es un problema de los PDF con
+ * imágenes, no de éste.
+ *
+ * ⚠️ `upsert: false` a propósito. La ruta la arma el servidor y lleva la hora,
+ * así que nunca debería chocar; si chocara, es que algo anda mal y es mejor
+ * enterarse que pisar en silencio un archivo que alguien podría estar bajando.
+ */
+export async function subirAlDeposito(
+  { supabaseUrl, serviceRoleKey }: ConfigDeposito,
+  ruta: string,
+  contenido: Buffer,
+  tipo = "application/pdf",
+): Promise<boolean> {
+  const res = await fetch(`${supabaseUrl}/storage/v1/object/${BUCKET_DIGITALES}/${ruta}`, {
+    method: "POST",
+    headers: {
+      apikey: serviceRoleKey,
+      Authorization: `Bearer ${serviceRoleKey}`,
+      "Content-Type": tipo,
+      "x-upsert": "false",
+    },
+    body: new Uint8Array(contenido),
+  }).catch(() => null);
+
+  if (res?.ok) return true;
+  console.error("[deposito-digital] no se pudo subir", { ruta, estado: res?.status });
+  return false;
+}
+
 export async function borrarDelDeposito(
   { supabaseUrl, serviceRoleKey }: ConfigDeposito,
   ruta: string,

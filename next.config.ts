@@ -121,6 +121,17 @@ const nextConfig: NextConfig = {
       dynamic: 0,
     },
   },
+  /* ⚠️ pdfkit lee las medidas de sus tipografías de archivos .afm que abre en
+     tiempo de ejecución, con una ruta que se arma sola. El empaquetador no ve
+     esas aperturas —no hay ningún `import` que las nombre— así que no las
+     copia, y la función se cae recién EN PRODUCCIÓN, al armar el primer PDF,
+     con un "no such file". En local anda porque está `node_modules` entero.
+
+     Es la ruta que arma el ebook y ninguna otra: son 300 KB que no tienen por
+     qué viajar con el resto. */
+  outputFileTracingIncludes: {
+    "/api/digitales/ia/ebook/armar": ["./node_modules/pdfkit/js/data/**"],
+  },
   async headers() {
     return [
       // Allow /sw.js to be registered with any sub-scope (needed for per-store scoped SW)

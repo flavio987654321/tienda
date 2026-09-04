@@ -326,6 +326,165 @@ check("LIM-E", MARGEN_DE_INTENTOS > 0 && MARGEN_DE_INTENTOS <= 10,
 check("CUP-EB", CUPO_EBOOK.FREE.bienvenida === 0 && CUPO_EBOOK.FREE.mes === 0,
   "Free no tiene ebooks con IA");
 
+/* ── Las tres rutas ─────────────────────────────────────────────────────── */
+
+const empezar = readFileSync("src/app/api/digitales/ia/ebook/route.ts", "utf8");
+const paso = readFileSync("src/app/api/digitales/ia/ebook/paso/route.ts", "utf8");
+const armar = readFileSync("src/app/api/digitales/ia/ebook/armar/route.ts", "utf8");
+const borrador = readFileSync("src/lib/ebook-borrador.ts", "utf8");
+const rutas = [empezar, paso, armar];
+
+/* ⚠️ CUANDO SE COMPARA EL ORDEN DE DOS COSAS, SE BUSCA LA LLAMADA Y NO EL
+   NOMBRE. Un archivo empieza con sus `import`, así que `indexOf("cobrar")`
+   encuentra la línea del import —el renglón 4— y no dónde se cobra de verdad.
+   Comparado contra cualquier otra cosa da siempre "primero", y el chequeo pasa
+   sin haber mirado nada.
+   Encontrado el 04/09/26: seis de los chequeos de acá abajo pasaban así. Por eso
+   ahora todos buscan `await loQueSea`, que sólo aparece donde se llama. */
+
+/* ⚠️ ROL DIGITAL, NO OWNER. Es el error que ya cometió la ruta de Sasha al
+   revés: pide OWNER y una cuenta digital recibe un 403. Cada ecosistema tiene
+   su puerta. */
+check("RUT-A", rutas.every((r) => /user\.role !== "DIGITAL"/.test(r)),
+  "las tres rutas piden rol DIGITAL");
+
+/* ⚠️ EL DUEÑO VA ADENTRO DEL `where`, no en un `if` después de leer. Sin esto,
+   mandando el id de otro se le escribe —y se le reemplaza— el archivo a un
+   producto ajeno. Es la falla más cara que puede tener este ecosistema. */
+check("RUT-B",
+  rutas.every((r) => /store: \{ ownerId: user\.id \}/.test(r)),
+  "las tres comprueban que el producto sea de la cuenta, dentro del where");
+
+/* Y sobre un producto borrado tampoco: dejaría un archivo que nadie alcanza. */
+check("RUT-C", rutas.every((r) => /deletedAt: null/.test(r)),
+  "ninguna trabaja sobre un producto borrado");
+
+/* ── Empezar: la única que cobra ────────────────────────────────────────── */
+
+/* Los topes van ANTES de leer el cuerpo y antes de tocar la base: un pedido
+   rechazado no tiene que costar nada. */
+check("RUT-D",
+  empezar.indexOf("await permitirGeneracion") < empezar.indexOf("req.json()"),
+  "los topes se cuentan antes de leer el cuerpo del pedido");
+
+/* ⚠️ EL CUPO SE GASTA ANTES DE LLAMAR AL MODELO. Después sería tarde: ocho
+   pedidos en paralelo pasarían todos el control —porque ninguno gastó
+   todavía— y generarían los ocho. */
+check("RUT-E",
+  empezar.indexOf("await consumirDelCupo") < empezar.indexOf("anthropic.messages.create"),
+  "el cupo se gasta antes de llamar al modelo");
+
+/* Y si la llamada falla, se devuelve: la persona no recibió nada y el fallo
+   fue nuestro. Son tres los caminos que no entregan nada. */
+check("RUT-F",
+  (empezar.match(/await devolver\(\)/g) ?? []).length >= 3,
+  "el cupo se devuelve en todos los caminos en los que no se entrega nada");
+
+/* Un plan sin ebooks se corta antes de todo, y el mensaje dice qué SÍ puede
+   hacer: "no disponible en tu plan" deja a alguien pensando que no puede
+   vender, cuando lo único que no puede es pedirnos que se lo escribamos. */
+check("RUT-G",
+  /podés subir tu propio PDF/.test(empezar) &&
+  empezar.indexOf("CUPO_EBOOK[tier]") < empezar.indexOf("await permitirGeneracion"),
+  "el plan sin ebooks se corta primero, diciendo qué sí puede hacer");
+
+/* Retomar un ebook a medias no puede costar plata: es el caso para el que se
+   guardó el borrador. */
+check("RUT-H",
+  empezar.indexOf("retomado: true") < empezar.indexOf("await consumirDelCupo"),
+  "retomar un ebook empezado se contesta antes de gastar nada");
+
+/* El reintento incluido: uno gratis por ebook, y a partir del segundo se paga. */
+check("RUT-I", /reintentos < 1/.test(empezar) && /esGratis/.test(empezar),
+  "el primer rehacer es gratis y el resto gasta cupo");
+
+/* Y no se puede rehacer mientras se escribe un capítulo: quedaría un capítulo
+   pagado escribiéndose contra un temario que ya no existe. */
+check("RUT-J", /Se está escribiendo un capítulo justo ahora/.test(empezar),
+  "no se puede rehacer el temario mientras se escribe un capítulo");
+
+/* ── El paso: no cobra, y es la que más gasta ───────────────────────────── */
+
+/* El cupo se gastó al empezar. Si esta ruta lo gastara otra vez, un ebook de
+   diez capítulos costaría diez ebooks de cupo. */
+check("RUT-K", !/consumirDelCupo/.test(paso),
+  "escribir un capítulo no vuelve a gastar cupo");
+
+/* ⚠️ El candado se toma ANTES de llamar al modelo. Al revés, dos pedidos
+   escribirían los dos el mismo capítulo y lo pagaríamos dos veces. */
+check("RUT-L",
+  paso.indexOf("await tomarElCandado") < paso.indexOf("anthropic.messages.create"),
+  "el candado se toma antes de llamar al modelo");
+
+/* Y se suelta apenas falla: sin eso habría que esperar los 90 segundos del
+   vencimiento, y quien mira la barra no entiende por qué el botón no hace nada. */
+check("RUT-M", (paso.match(/soltarElCandado/g) ?? []).length >= 2,
+  "el candado se suelta en los dos caminos de falla");
+
+/* ⚠️ LA MARCA DEL CANDADO VA EN EL `where` AL GUARDAR. Es lo que impide que un
+   pedido que tardó de más pise lo que escribió el que lo reemplazó: se leyó la
+   lista de capítulos antes de llamar al modelo, y guardar la lista vieja
+   borraría el capítulo del otro. */
+check("RUT-N", /where: \{ id, trabajandoDesde: marca \}/.test(borrador),
+  "guardar un capítulo comprueba que el candado siga siendo nuestro");
+
+/* El presupuesto de llamadas va contra el id del EBOOK y no contra la cuenta:
+   un ebook que se descontrola no le come el presupuesto a otro. */
+check("RUT-O", /ia-ebook-llamadas:\$\{ebook\.id\}/.test(paso),
+  "el presupuesto de intentos se cuenta por ebook, no por cuenta");
+
+/* Pedir un capítulo cuando ya están todos no puede costar plata. */
+check("RUT-P",
+  paso.indexOf("if (!sigue)") < paso.indexOf("anthropic.messages.create"),
+  "si ya están todos los capítulos, no se llama al modelo");
+
+/* ── Armar: la que toca el archivo ──────────────────────────────────────── */
+
+/* ⚠️ PRIMERO SUBIR, DESPUÉS ESCRIBIR LA REFERENCIA. Al revés, el producto
+   queda apuntando a un archivo que no existe, lo que falta lo da por listo y
+   se puede publicar: se cobra y no hay nada que entregar. */
+check("RUT-Q",
+  armar.indexOf("await subirAlDeposito") < armar.indexOf("archivoPath: refDeArchivo"),
+  "el archivo se sube antes de colgarlo del producto");
+
+/* Un ebook al que le falta un capítulo no se arma: sería entregar algo cortado
+   a la mitad y marcar el producto como entregable. */
+check("RUT-R",
+  /capitulos\.length < indice\.length/.test(armar) &&
+  armar.indexOf("capitulos.length < indice.length") < armar.indexOf("await armarPDF"),
+  "no se arma el PDF si falta escribir algún capítulo");
+
+/* Si no se puede guardar la referencia, el archivo subido se borra: si no,
+   queda en el depósito sin que nadie lo apunte y lo pagamos para siempre. */
+check("RUT-S",
+  /quedó huérfano:/.test(armar) && /borrarDelDeposito\(config, ruta\)/.test(armar),
+  "si falla el guardado, el archivo que se subió se borra");
+
+/* Y el anterior se borra DESPUÉS de guardar el nuevo: al revés, si el guardado
+   falla el producto queda apuntando a un archivo que ya no está. */
+check("RUT-T",
+  armar.indexOf("archivoPath: refDeArchivo") < armar.indexOf("anterior !== ruta"),
+  "el archivo viejo se borra después de guardar el nuevo, nunca antes");
+
+/* Dos armados a la vez subirían dos archivos y el producto se quedaría con
+   uno: el otro queda en el depósito sin que nadie lo alcance. */
+check("RUT-U", /tomarElCandado/.test(armar),
+  "armar el PDF también toma el candado");
+
+/* Esta ruta no llama al modelo, pero sube archivos y escribe en la base. */
+check("RUT-V", /checkRateLimit/.test(armar),
+  "armar tiene su propio freno, aunque no llame al modelo");
+
+/* ⚠️ pdfkit abre sus archivos de medidas en tiempo de ejecución, con una ruta
+   que se arma sola. El empaquetador no ve esas aperturas, así que no las copia
+   y la función se cae RECIÉN EN PRODUCCIÓN, al armar el primer PDF. En local
+   anda porque está node_modules entero — o sea que esto no se puede probar
+   acá, sólo cuidar. */
+const config = readFileSync("next.config.ts", "utf8");
+check("RUT-W",
+  /outputFileTracingIncludes/.test(config) && /pdfkit\/js\/data/.test(config),
+  "las tipografías de pdfkit viajan con la función que arma el PDF");
+
 elPDF().then(() => {
   console.log(fallos === 0
     ? "\nok — el ebook se lima antes de venderse, y el PDF se arma igual"

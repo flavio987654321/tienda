@@ -1129,8 +1129,17 @@ model EbookIA {
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  /// INDICE (armando el temario) | ESCRIBIENDO | ARMANDO (haciendo el PDF) |
-  /// LISTO | FALLADO. Texto y no enum, igual que en `CupoIA`.
+  /// En qué anda. Texto y no enum, igual que en `CupoIA`.
+  ///
+  ///   INDICE      — armando el temario.
+  ///   ESCRIBIENDO — faltan capítulos.
+  ///   COMPLETO    — están todos los capítulos, falta el PDF.
+  ///   LISTO       — el PDF ya está colgado del producto.
+  ///   FALLADO     — se cortó y quedó anotado el motivo en `error`.
+  ///
+  /// ⚠️ COMPLETO y LISTO no son lo mismo, y la diferencia importa: con COMPLETO
+  /// el texto está escrito y pagado pero **el producto todavía no tiene nada
+  /// que entregar**.
   estado String
 
   /// Lo que escribió la persona, tal como lo escribió. Se guarda para poder
