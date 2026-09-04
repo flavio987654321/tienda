@@ -1,5 +1,7 @@
 import { prisma } from "@/lib/prisma";
-import { normalizarSlug, validarSlug, SLUG_MINIMO } from "@/lib/configuracion-digital";
+import {
+  normalizarSlug, validarSlug, SLUG_MINIMO, dominioDeLaPlataforma,
+} from "@/lib/configuracion-digital";
 
 /**
  * La dirección propia de un producto digital: `mecanica.tiendaapps.com`.
@@ -36,15 +38,10 @@ import { normalizarSlug, validarSlug, SLUG_MINIMO } from "@/lib/configuracion-di
  * con la compra— y lo aplica quien llama.
  */
 
-/** El dominio de la plataforma, sin `www` y sin protocolo: `tiendaapps.com`. */
-export function dominioDeLaPlataforma(): string {
-  const crudo = process.env.NEXT_PUBLIC_APP_URL ?? "https://www.tiendaapps.com";
-  try {
-    return new URL(crudo).hostname.replace(/^www\./, "");
-  } catch {
-    return "tiendaapps.com";
-  }
-}
+/* Se reexporta desde donde vive de verdad. Está en `configuracion-digital`
+   porque este archivo importa Prisma, y las PANTALLAS necesitan el dominio para
+   dibujar la dirección: importándolo de acá se llevarían Prisma al navegador. */
+export { dominioDeLaPlataforma } from "@/lib/configuracion-digital";
 
 /** La dirección completa que se le muestra a la persona. */
 export function direccionDelProducto(slug: string): string {

@@ -181,6 +181,101 @@ check("DIR-V",
   /frame-ancestors 'self'/.test(readFileSync("next.config.ts", "utf8")),
   "la página de venta se deja enmarcar sólo por nosotros, y sólo por su ruta");
 
+/* ── La ruta y la pantalla ──────────────────────────────────────────────── */
+
+const ruta = readFileSync("src/app/api/digitales/productos/[id]/direccion/route.ts", "utf8");
+const pantalla = readFileSync("src/app/digitales/productos/[id]/direccion/DireccionClient.tsx", "utf8");
+const crear = readFileSync("src/app/api/digitales/productos/route.ts", "utf8");
+
+/* El dueño adentro del where, y sólo un PRINCIPAL: un bono no tiene dirección
+   porque no es una página que alguien visite. */
+check("DIR-W",
+  /store: \{ ownerId: userId \}/.test(ruta) && /rolDigital: "PRINCIPAL"/.test(ruta),
+  "la ruta pide dueño y sólo atiende al producto principal");
+
+/* ⚠️ MIRAR NO RESERVA. El GET dice si está libre; el que se lo queda es el POST,
+   con el candado adentro. Si el GET reservara, escribir en el campo iría
+   dejando nombres tomados por cada tecla. */
+check("DIR-X",
+  !/reservarSlug/.test(ruta.slice(ruta.indexOf("export async function GET"), ruta.indexOf("export async function POST"))),
+  "mirar si está libre no reserva nada");
+
+/* El GET también pide dueño: sin eso sería una ventanilla abierta para
+   preguntar por cualquier nombre de la plataforma. */
+check("DIR-Y",
+  (ruta.match(/user\.role !== "DIGITAL"/g) ?? []).length >= 2,
+  "el GET y el POST piden los dos una cuenta digital");
+
+/* Escribe y toma un candado de la base: va con freno aunque no cueste plata. */
+check("DIR-Z", /checkRateLimit/.test(ruta),
+  "guardar la dirección tiene freno");
+
+/* ⚠️ LO QUE ESTA PANTALLA TIENE QUE DECIR: cambiar la dirección rompe los links
+   ya repartidos. Es de lo poco acá que no se puede deshacer. */
+check("DIR-AA",
+  /la dirección de antes deja de funcionar/.test(pantalla),
+  "se avisa que cambiar la dirección rompe los links repartidos");
+
+/* Y el aviso aparece SÓLO cuando ya hay una puesta, que es cuando es verdad.
+   Ponerla por primera vez no rompe nada, y el que avisa siempre no avisa nunca. */
+check("DIR-AB",
+  /\{guardado && \(/.test(pantalla),
+  "el aviso aparece recién cuando ya hay una dirección puesta");
+
+/* Doble clic con un ref: el estado se ve recién en el siguiente dibujo. */
+check("DIR-AC",
+  /enVuelo = useRef\(false\)/.test(pantalla),
+  "el doble clic al guardar se frena con un ref");
+
+/* Se espera a que pare de escribir: sin esto sale una consulta por tecla. */
+check("DIR-AD",
+  /setTimeout\(/.test(pantalla) && /clearTimeout\(t\)/.test(pantalla),
+  "no se consulta una vez por tecla, se espera a que pare de escribir");
+
+/* "Mis Guías" se guarda como "mis-guias", y eso hay que verlo ANTES de guardar. */
+check("DIR-AE",
+  /Se va a guardar como/.test(pantalla),
+  "si lo escrito se normaliza, se muestra cómo va a quedar");
+
+/* ⚠️ UNA PANTALLA NO PUEDE IMPORTAR EL ARCHIVO QUE TRAE PRISMA. Pasó al
+   escribir esto: la lista de productos importó `direccion-digital` para dibujar
+   el dominio y se llevaba Prisma al navegador. El dominio vive en
+   `configuracion-digital`, que es puro. */
+const lista = readFileSync("src/app/digitales/productos/ProductosClient.tsx", "utf8");
+check("DIR-AF",
+  !/from "@\/lib\/direccion-digital"/.test(lista) && !/from "@\/lib\/direccion-digital"/.test(pantalla),
+  "ninguna pantalla importa el archivo que trae Prisma");
+
+/* ── La dirección al crear el producto ──────────────────────────────────── */
+
+/* Tiene que existir desde que el producto nace: una dirección que aparece más
+   tarde es una dirección que cambia. */
+check("DIR-AG",
+  /if \(rol === "PRINCIPAL"\) \{/.test(crear) && /buscarSlugLibre/.test(crear),
+  "un producto principal nace con su dirección");
+
+/* ⚠️ AFUERA de la transacción que crea. Reservar el nombre toma su propio
+   candado —sobre el nombre, no sobre la cuenta— y dos candados anidados que se
+   piden en distinto orden son un abrazo mortal esperando. */
+check("DIR-AH",
+  /* Con "await": sin eso, indexOf encuentra el import del renglón 2 y la
+     comparación da siempre "primero" sin haber mirado nada. Es la misma trampa
+     que ya se corrigió en otros cinco chequeos el 04/09/26. */
+  crear.indexOf("await prisma.$transaction") < crear.indexOf("await buscarSlugLibre") &&
+  crear.indexOf("if (!creado)") < crear.indexOf("await buscarSlugLibre"),
+  "la dirección se reserva después de cerrar la transacción que crea");
+
+/* Y si falla no corta el pedido: el producto ya existe y está bien. Quedarse
+   sin dirección no lo rompe — la tarjeta lo dice y hay un botón para elegirla. */
+check("DIR-AI",
+  /no se pudo reservar la dirección/.test(crear),
+  "si la dirección falla, el producto igual se creó y se anota");
+
+/* La tarjeta dice cuando falta, y con un botón que se ve. */
+check("DIR-AJ",
+  /Elegí tu dirección/.test(lista),
+  "la tarjeta avisa cuando al producto le falta la dirección");
+
 console.log(fallos === 0
   ? "\nok — un nombre no se lo pueden llevar dos, y las tiendas siguen andando"
   : `\nFALLA — ${fallos} chequeo(s) de la dirección del producto`);

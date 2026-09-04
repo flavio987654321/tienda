@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { buscarSlugLibre, reservarSlug } from "@/lib/direccion-digital";
 import { getCurrentUser } from "@/lib/auth-session";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -163,6 +164,37 @@ export async function POST(req: NextRequest) {
       },
       { status: 409 }
     );
+  }
+
+  /* ── La dirección del producto ─────────────────────────────────────────────
+   *
+   * ⚠️ SÓLO EL PRINCIPAL, y desde que nace. Si la dirección apareciera más
+   * tarde —al publicar, al mejorar de plan— sería una dirección que CAMBIA, y
+   * cambiarle la URL a algo que ya se está publicitando se lleva puestos los
+   * anuncios corriendo, el historial del píxel y los links repartidos.
+   *
+   * Un bono y un upsell no llevan: no son páginas que alguien visite, se
+   * entregan con la compra.
+   *
+   * ── Por qué va afuera de la transacción de arriba ─────────────────────────
+   *
+   * Porque reservar el nombre toma SU PROPIO candado —sobre el nombre, no sobre
+   * la cuenta—, y dos candados anidados que se piden en distinto orden son un
+   * abrazo mortal esperando. Afuera, el primero ya se soltó.
+   *
+   * ── Y por qué no corta el pedido si falla ─────────────────────────────────
+   *
+   * Porque el producto ya existe y está bien. Quedarse sin dirección no lo
+   * rompe: la tarjeta lo dice y hay un botón para elegirla a mano. Tirar acá
+   * sería devolver un error por algo que sí se creó, y la pantalla mostraría
+   * "no se pudo" al lado del producto recién hecho. */
+  if (rol === "PRINCIPAL") {
+    try {
+      const libre = await buscarSlugLibre(limpiarTexto(name, LARGO_TITULO) ?? "");
+      if (libre) await reservarSlug(creado.id, libre);
+    } catch (e) {
+      console.error("[productos-digitales] no se pudo reservar la dirección", { id: creado.id, e });
+    }
   }
 
   return NextResponse.json({ ok: true, id: creado.id });

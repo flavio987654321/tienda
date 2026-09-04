@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRef, useState } from "react";
 import {
   Plus, Gift, TrendingUp, BookOpen, Loader2, Pencil, Trash2, AlertTriangle, Image as ImageIcon,
-  Eye, EyeOff, X, ArrowUpRight, Upload, Sparkles, ExternalLink, LayoutTemplate,
+  Eye, EyeOff, X, ArrowUpRight, Upload, Sparkles, ExternalLink, LayoutTemplate, Globe,
 } from "lucide-react";
 import { COPY_DIGITAL, type TierDigital } from "@/lib/planes-digitales";
 import {
@@ -12,6 +12,9 @@ import {
   type RolDigital,
 } from "@/lib/productos-digitales";
 import { MAX_PDF_MB, TIPO_PDF, validarSubida, avisoDePeso } from "@/lib/subida-digital";
+/* ⚠️ De `configuracion-digital` y NO de `direccion-digital`: aquel importa
+   Prisma, y esto es una pantalla. */
+import { dominioDeLaPlataforma } from "@/lib/configuracion-digital";
 import type { EstadoDelCupo } from "@/lib/cupo-ia";
 /* `import type` se borra al compilar: no arrastra prisma al navegador. */
 import type { EstadoDelBorrador } from "@/lib/ebook-borrador";
@@ -34,6 +37,8 @@ export type ProductoEnPantalla = {
   publicado: boolean;
   /** El ebook que le está escribiendo la IA, o `null` si nunca pidió uno. */
   ebook: EstadoDelBorrador | null;
+  /** Su dirección: `mecanica` de `mecanica.tiendaapps.com`. Sólo el principal. */
+  slugDigital: string | null;
 };
 
 function money(n: number) {
@@ -69,6 +74,10 @@ function borradorNuevo(rol: RolDigital, padreId: string | null): Borrador {
 
 /** El tope real de `/api/upload`: lo pone la plataforma, no nosotros. */
 const MAX_IMAGEN_MB = 4;
+
+/* El dominio se calcula una vez y no por tarjeta: sale de una variable de
+   entorno que no cambia mientras la pantalla está abierta. */
+const DOMINIO = dominioDeLaPlataforma();
 
 /**
  * Si el botón del EBOOK existe ya.
@@ -210,6 +219,16 @@ function Tarjeta({ p, acc }: { p: ProductoEnPantalla; acc: Acciones }) {
             </p>
           )}
 
+          {/* La dirección se muestra en la tarjeta y no sólo adentro de su
+              pantalla: es lo que la persona copia y pega, así que tiene que
+              estar donde ya está mirando. `break-all` porque una dirección
+              larga en 360 empujaba la tarjeta entera. */}
+          {p.rol === "PRINCIPAL" && p.slugDigital && (
+            <p className="mt-2 text-[11.5px] font-semibold text-gray-500 panel-oscuro:text-gray-400 break-all">
+              {p.slugDigital}.{DOMINIO}
+            </p>
+          )}
+
           {/* Un ebook a medio escribir se dice en la tarjeta y no adentro de la
               ventana: si hay que abrir algo para enterarse de que quedó por la
               mitad, nadie se entera. */}
@@ -341,6 +360,20 @@ function Tarjeta({ p, acc }: { p: ProductoEnPantalla; acc: Acciones }) {
                   className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 text-xs font-bold text-gray-700 panel-oscuro:text-gray-300 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800 transition-colors"
                 >
                   <LayoutTemplate className="h-3.5 w-3.5" /> Página de venta
+                </Link>
+                <Link
+                  href={`/digitales/productos/${p.id}/direccion`}
+                  className={
+                    /* Sin dirección el botón se destaca: es lo que falta para
+                       poder repartir el producto, y en una fila de botones
+                       grises no lo vería nadie. */
+                    p.slugDigital
+                      ? "inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 text-xs font-bold text-gray-700 panel-oscuro:text-gray-300 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800 transition-colors"
+                      : "inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-orange-200 panel-oscuro:border-orange-500/30 text-xs font-bold text-orange-700 panel-oscuro:text-orange-300 hover:bg-orange-50 panel-oscuro:hover:bg-orange-500/10 transition-colors"
+                  }
+                >
+                  <Globe className="h-3.5 w-3.5" />
+                  {p.slugDigital ? "Dirección" : "Elegí tu dirección"}
                 </Link>
                 <Link
                   href={`/p/${p.id}`}

@@ -80,7 +80,7 @@ export default async function ProductosPage() {
         select: {
           id: true, name: true, description: true, price: true, comparePrice: true,
           rolDigital: true, padreId: true, archivoPath: true, archivoNombre: true,
-          archivoPeso: true, isActive: true, images: true,
+          archivoPeso: true, isActive: true, images: true, slugDigital: true,
           /* El borrador del ebook, para que la tarjeta diga en qué anda sin que
              haya que abrir nada. Se pide con la misma consulta: una aparte
              serían 45 viajes más para traer un número. */
@@ -112,6 +112,7 @@ export default async function ProductosPage() {
     /* Sin el texto de los capítulos: son decenas de miles de caracteres que la
        pantalla no muestra y que viajarían con cada dibujo. */
     ebook: f.ebookIA ? estadoDelBorrador(f.ebookIA) : null,
+    slugDigital: f.slugDigital,
   }));
 
   return (

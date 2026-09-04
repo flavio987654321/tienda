@@ -20,6 +20,23 @@ import { imagenValida } from "@/lib/productos-digitales";
    aplica el servidor. */
 
 export const LARGO_NOMBRE = 60;
+/**
+ * El dominio de la plataforma, sin `www` y sin protocolo: `tiendaapps.com`.
+ *
+ * ⚠️ Vive acá y no en `direccion-digital` por un motivo de empaquetado: aquel
+ * archivo importa Prisma, así que una PANTALLA que lo importe se lleva Prisma
+ * al navegador. Esto lo necesitan las pantallas para dibujar la dirección, y es
+ * una función pura que sólo lee una variable de entorno.
+ */
+export function dominioDeLaPlataforma(): string {
+  const crudo = process.env.NEXT_PUBLIC_APP_URL ?? "https://www.tiendaapps.com";
+  try {
+    return new URL(crudo).hostname.replace(/^www\./, "");
+  } catch {
+    return "tiendaapps.com";
+  }
+}
+
 export const SLUG_MINIMO = 3;
 export const SLUG_MAXIMO = 40;
 
