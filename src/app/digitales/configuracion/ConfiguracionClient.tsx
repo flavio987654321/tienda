@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Settings, CreditCard, BarChart3, Globe } from "lucide-react";
+import { Settings, CreditCard, BarChart3, Globe, Scale } from "lucide-react";
 import type { TierDigital } from "@/lib/planes-digitales";
 import {
   normalizarSlug, validarSlug, validarNombre, validarCheckoutName, validarEmail,
@@ -12,6 +12,7 @@ import { EtiquetaPendiente, NotaPendiente, Seccion } from "./piezas";
 import TabGeneral, { MAX_LOGO_MB } from "./TabGeneral";
 import TabPagos, { type DatosTransferencia } from "./TabPagos";
 import TabMeta from "./TabMeta";
+import TabLegales, { type ClaveDoc, type Politica } from "./TabLegales";
 import { validarTransferencia } from "@/lib/datos-bancarios";
 import { aplicarTema, temaGuardado, type Tema } from "@/lib/tema-digitales";
 
@@ -32,6 +33,8 @@ type Props = {
   transferencia: DatosTransferencia;
   publicados: number;
   base: string;
+  politicas: Record<ClaveDoc, Politica>;
+  hrefLegales: string | null;
   /** Cómo volvió de Mercado Pago. Lo lee el servidor de la URL. */
   avisoMp: "connected" | "error" | null;
 };
@@ -47,6 +50,10 @@ const PESTANAS = [
   { id: "general", label: "General", Icon: Settings, lista: true },
   { id: "pagos", label: "Pagos", Icon: CreditCard, lista: true },
   { id: "meta", label: "Meta / Tracking", Icon: BarChart3, lista: true },
+  /* Legales va DESPUES de lo que hace falta para vender y ANTES de Dominio, que
+     todavia no existe: no es lo primero que alguien viene a hacer, pero tiene
+     que estar antes de la primera venta. */
+  { id: "legales", label: "Legales", Icon: Scale, lista: true },
   { id: "dominio", label: "Dominio", Icon: Globe, lista: false },
 ] as const;
 
@@ -106,6 +113,7 @@ export default function ConfiguracionClient(p: Props) {
   const [guardando, setGuardando] = useState<string | null>(null);
   const [listo, setListo] = useState<string | null>(null);
   const [error, setError] = useState("");
+  const [pols, setPols] = useState(p.politicas);
   const [subiendo, setSubiendo] = useState(false);
   const enVuelo = useRef(false);
 
@@ -301,6 +309,17 @@ export default function ConfiguracionClient(p: Props) {
           setTr={setTr}
           guardar={guardar}
           problemaTr={problemaTr}
+        />
+      )}
+
+      {pestana === "legales" && (
+        <TabLegales
+          politicas={pols}
+          setPolitica={(clave, valor) => setPols((prev) => ({ ...prev, [clave]: valor }))}
+          guardando={guardando}
+          listo={listo}
+          guardar={guardar}
+          hrefLegales={p.hrefLegales}
         />
       )}
 

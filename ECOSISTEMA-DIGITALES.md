@@ -2087,6 +2087,53 @@ el navegador, el mismo texto sale distinto en el servidor (que corre en UTC) y e
 la máquina de quien mira: React avisa de la hidratación y una venta de las 22:30
 aparece con la fecha del día siguiente.
 
+### ✅ Cada vendedor publica SUS documentos — HECHO (03/09/26)
+
+Lo encontró una auditoría que salió de una pregunta suya: *"¿cubrimos a los
+dueños de tiendas de productos digitales, o ellos mismos tienen que armar sus
+políticas como hicimos con las tiendas?"*. La respuesta era **ni una cosa ni la
+otra**, y era el peor de los dos mundos.
+
+**El pie de cada página de venta linkeaba a `/terminos` y `/privacidad`: los
+documentos de TiendaApps.** O sea que quien compraba un ebook leía NUESTROS
+términos creyendo que eran los de quien se lo vendía. Y contradecía de frente lo
+que esos mismos términos dicen —"TiendaApps no es parte de esa relación de
+consumo"—, porque el pie de esa misma venta afirmaba que los nuestros la rigen.
+En una denuncia gana lo que el comprador vio, no lo que el contrato afirma.
+
+En tiendas nunca pasó: cada dueña escribe las suyas desde el primer día.
+
+**No hizo falta infraestructura nueva.** Las columnas viven en `Store` y una
+cuenta digital ya tiene la suya —la invisible que le presta el motor—, así que
+fue elegir tres de las cuatro que ya estaban. **Tres y no cuatro: no hay envíos
+que declarar**, y una "Política de envíos" en la página de un ebook le hace creer
+a quien compra que hay un despacho en el medio.
+
+Lo nuevo: la solapa **Legales** en Configuración, y `/p/<id>/legales` para el
+público.
+
+**Cuelga del PRODUCTO y no de la tienda** porque la tienda de una cuenta digital
+es invisible y su dirección no lleva a ningún lado. Lo que la persona conoce es
+el producto: llegó por `/p/<id>`. Es además la dirección que va a heredar el
+dominio propio de la Fase 5 bis, sin mudar nada.
+
+**Se dibuja con los colores y la letra de SU página**, no con los del panel: un
+salto a otro diseño se siente como haberse ido del sitio de quien vendió, que es
+lo contrario de lo que esta página existe para dejar claro.
+
+**Y los nuestros no desaparecen: quedan abajo y etiquetados** como "De la
+plataforma", con la aclaración de que no reemplazan a los de quien vende.
+Existen —el cobro y la entrega los hacemos nosotros— pero no rigen esa venta.
+
+**Los ejemplos son borradores, no plantillas que se guardan solas.** Hay que
+copiarlos, editarlos y apretar Guardar, y el cartel dice "lo que quede escrito te
+obliga a vos". Un documento legal que nadie leyó es peor que ninguno: promete
+cosas que no se piensan cumplir, y responde quien vende.
+
+⚠️ **El chequeo viejo daba verde justo por el error.** PIE-D exigía
+`href="/terminos"` — o sea, exigía que el pie mandara a los documentos de la
+plataforma. Ahora exige lo contrario.
+
 ### ✅ El editor en pantalla chica — HECHO (03/09/26)
 
 La única pantalla del panel donde hay que mostrar **dos cosas a la vez** —el

@@ -82,6 +82,10 @@ export default async function ConfiguracionPage({
         id: true, name: true, slug: true, logo: true, mpConnectedAt: true,
         checkoutName: true, supportEmail: true, iaProducto: true, iaDescripcion: true,
         storeConfig: true,
+        /* Las politicas que publica quien vende. Ver TabLegales. */
+        policyReturns: true, policyReturnsActive: true,
+        policyTerms: true, policyTermsActive: true,
+        policyPrivacy: true, policyPrivacyActive: true,
       },
     }),
   ]);
@@ -102,6 +106,24 @@ export default async function ConfiguracionPage({
         where: { storeId: store.id, rolDigital: "PRINCIPAL", isActive: true, deletedAt: null },
       })
     : 0;
+
+  /* Y a que producto apunta el link de "ver como quedaron": la pagina legal
+     cuelga del producto, no de la tienda -la tienda de una cuenta digital es
+     invisible-. Se toma el primero que exista; con ninguno, no hay link, y el
+     boton no se dibuja en vez de llevar a un 404. */
+  const primerProducto = store
+    ? await prisma.product.findFirst({
+        where: { storeId: store.id, rolDigital: "PRINCIPAL", deletedAt: null },
+        orderBy: { createdAt: "asc" },
+        select: { id: true },
+      })
+    : null;
+
+  const politicas = {
+    devoluciones: { texto: store?.policyReturns ?? "", visible: store?.policyReturnsActive !== false },
+    terminos: { texto: store?.policyTerms ?? "", visible: store?.policyTermsActive !== false },
+    privacidad: { texto: store?.policyPrivacy ?? "", visible: store?.policyPrivacyActive !== false },
+  };
 
   return (
     <div className="mx-auto w-full max-w-3xl px-4 sm:px-6 py-8">
@@ -132,6 +154,8 @@ export default async function ConfiguracionPage({
         cobroConectado={Boolean(store?.mpConnectedAt)}
         conectadoEl={store?.mpConnectedAt ? store.mpConnectedAt.toISOString() : null}
         base={process.env.NEXT_PUBLIC_APP_URL ?? "https://www.tiendaapps.com"}
+        politicas={politicas}
+        hrefLegales={primerProducto ? `/p/${primerProducto.id}/legales` : null}
       />
     </div>
   );

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth-session";
 import { prisma } from "@/lib/prisma";
+import { CLAVES_DIGITALES, CAMPOS_DE_POLITICA, limpiarTextoLegal } from "@/lib/politicas-tienda";
 import { checkRateLimit } from "@/lib/rate-limit";
 import {
   normalizarSlug, validarSlug, validarNombre, validarCheckoutName, validarEmail,
@@ -65,14 +66,14 @@ export async function PATCH(req: NextRequest) {
   }
   const {
     nombre, slug, logo, checkoutName, supportEmail, iaProducto, iaDescripcion,
-    gaId, pixelId, clarityId, transferencia,
+    gaId, pixelId, clarityId, transferencia, politicas,
   } = body as Record<string, unknown>;
 
   /* Nada que escribir. Sin esto, un pedido vacío devolvería ok y crearía el
      espacio de la cuenta de gorra. */
   const vino = [
     nombre, slug, logo, checkoutName, supportEmail, iaProducto, iaDescripcion,
-    gaId, pixelId, clarityId, transferencia,
+    gaId, pixelId, clarityId, transferencia, politicas,
   ];
   if (vino.every((v) => v === undefined)) {
     return NextResponse.json({ error: "No mandaste nada para guardar" }, { status: 400 });
@@ -218,10 +219,54 @@ export async function PATCH(req: NextRequest) {
     }
   }
 
+  /* ══════════════════════════════════════════════════════════════════════
+     LAS POLÍTICAS DE QUIEN VENDE
+     ══════════════════════════════════════════════════════════════════════
+
+     ⚠️ Hasta el 03/09/26 esto no existía, y el agujero no era que faltara: el
+     pie de cada página de venta linkeaba a `/terminos` y `/privacidad`, o sea a
+     LOS DOCUMENTOS DE LA PLATAFORMA. Quien compraba un ebook leía nuestros
+     términos creyendo que eran los de quien se lo vendía — y eso contradice de
+     frente lo que esos mismos términos dicen ("TiendaApps no es parte de esa
+     relación de consumo"). En tiendas nunca pasó: cada dueña escribe las suyas.
+
+     Son TRES y no las cuatro de tiendas: no hay envíos que declarar. Ver
+     `CLAVES_DIGITALES`.
+
+     Las columnas son las mismas de `Store` y el limpiador es el mismo
+     (`limpiarTextoLegal`, que corta a 6000 y normaliza los saltos de Windows):
+     una sola regla para los dos ecosistemas, en vez de una copia que se
+     desincroniza. */
+  const politicasLimpias: Record<string, string | boolean> = {};
+  if (politicas !== undefined) {
+    if (typeof politicas !== "object" || politicas === null || Array.isArray(politicas)) {
+      return NextResponse.json({ error: "Datos inválidos" }, { status: 400 });
+    }
+    const p = politicas as Record<string, unknown>;
+    for (const clave of CLAVES_DIGITALES) {
+      const campo = CAMPOS_DE_POLITICA[clave];
+      if (p[clave] !== undefined) politicasLimpias[campo.texto] = limpiarTextoLegal(p[clave]);
+      /* La bandera se compara contra `true` exacto. Llega del navegador, y
+         `"false"` es verdadero en JavaScript: sin esto, apagar una política
+         desde un cliente mal escrito la dejaba prendida. */
+      const visible = p[`${clave}Visible`];
+      if (visible !== undefined) politicasLimpias[campo.activa] = visible === true;
+    }
+    if (Object.keys(politicasLimpias).length === 0) {
+      return NextResponse.json({ error: "No mandaste ninguna política" }, { status: 400 });
+    }
+  }
+
   try {
     await prisma.store.update({
       where: { id: espacio.storeId },
       data: {
+        ...politicasLimpias,
+        /* La fecha que la página pública muestra como "última actualización".
+           Se toca sólo si de verdad vino una política: sin esta condición,
+           guardar el nombre de la marca haría figurar que los términos
+           cambiaron ese día, y eso es una afirmación sobre un documento legal. */
+        ...(Object.keys(politicasLimpias).length > 0 ? { policiesUpdatedAt: new Date() } : {}),
         // `undefined` en Prisma es "no lo toques": sólo se escribe lo que vino.
         ...(typeof nombre === "string" ? { name: limpiarTexto(nombre, LARGO_NOMBRE) ?? "" } : {}),
         ...(slugNuevo ? { slug: slugNuevo } : {}),

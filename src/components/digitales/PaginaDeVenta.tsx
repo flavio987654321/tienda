@@ -914,13 +914,32 @@ function Contenido({ clave, campos, tono, datos }: {
                 {conFichas(texto(campos, "copyright"), campos, { anio })}
               </p>
             )}
-            {/* ⚠️ Los tres van FIJOS y no son campos: son obligaciones, no
-                decoración. El de arrepentimiento lo pide la Resolución 424/2020
-                y ya existe en el proyecto; en el pie de la competencia no está. */}
+            {/* ══════════════════════════════════════════════════════════════
+                ⚠️ ACÁ ESTABA EL PROBLEMA MÁS SERIO DE TODO EL ECOSISTEMA
+                ══════════════════════════════════════════════════════════════
+
+                Estos links iban a `/terminos` y `/privacidad`: **los documentos
+                de TiendaApps**. O sea que quien compraba un ebook leía NUESTROS
+                términos creyendo que eran los de quien se lo vendía.
+
+                Y contradecía de frente lo que esos mismos términos dicen —
+                "TiendaApps no es parte de esa relación de consumo"—, porque el
+                pie de esa misma venta afirmaba que los nuestros la rigen. En una
+                denuncia gana lo que el comprador vio, no lo que el contrato
+                afirma. En tiendas nunca pasó: cada una publica las suyas.
+
+                Ahora van a `/p/<id>/legales`, que muestra las de quien vende y
+                deja las nuestras abajo, etiquetadas como de la plataforma.
+
+                El de arrepentimiento sigue siendo una obligación de la
+                Resolución 424/2020, no un campo, y por eso está siempre — pero
+                también entra por la página del producto, así la solicitud queda
+                asociada a quien vendió y no suelta contra la plataforma. */}
             <p className="mt-2 flex flex-wrap justify-center gap-x-3 gap-y-1 text-xs">
-              <a href="/terminos" className="underline hover:text-[color:var(--pv-tinta)]">Términos</a>
-              <a href="/privacidad" className="underline hover:text-[color:var(--pv-tinta)]">Privacidad</a>
-              <a href="/arrepentimiento" className="underline hover:text-[color:var(--pv-tinta)]">
+              <a href={`/p/${producto.id}/legales?tipo=terminos`} className="underline hover:text-[color:var(--pv-tinta)]">Términos</a>
+              <a href={`/p/${producto.id}/legales?tipo=privacidad`} className="underline hover:text-[color:var(--pv-tinta)]">Privacidad</a>
+              <a href={`/p/${producto.id}/legales?tipo=devoluciones`} className="underline hover:text-[color:var(--pv-tinta)]">Devoluciones</a>
+              <a href={`/p/${producto.id}/legales?tipo=arrepentimiento`} className="underline hover:text-[color:var(--pv-tinta)]">
                 Botón de arrepentimiento
               </a>
             </p>

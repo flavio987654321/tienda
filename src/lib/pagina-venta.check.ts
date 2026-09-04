@@ -283,12 +283,24 @@ check("PIE-B", conFichas(`© ${FICHA_ANIO} Taller`, {}, { anio: 2027 }) === "© 
 check("PIE-C", conFichas(`© ${FICHA_ANIO}`, {}) === `© ${FICHA_ANIO}`,
   "sin año no se inventa ninguno");
 
-/* Los enlaces legales van fijos y no son campos: son obligaciones. El de
-   arrepentimiento lo pide la Resolución 424/2020 y ya existe en el proyecto. */
+/* Los enlaces legales van fijos y no son campos: son obligaciones.
+ *
+ * ⚠️ CAMBIÓ A DÓNDE APUNTAN, y el chequeo viejo daba verde justo por el error.
+ * Exigía `href="/terminos"` y `href="/privacidad"` — o sea, exigía que el pie
+ * mandara a LOS DOCUMENTOS DE LA PLATAFORMA. Con eso, quien compraba un ebook
+ * leía nuestros términos creyendo que eran los de quien se lo vendía.
+ *
+ * Ahora los cuatro entran por `/p/<id>/legales`, que muestra los de quien vende
+ * y deja los nuestros abajo, etiquetados. El de arrepentimiento sigue siendo
+ * obligatorio por la Resolución 424/2020: lo que cambió es por dónde entra, así
+ * la solicitud queda asociada a quien vendió. */
 check("PIE-D", (() => {
   const d = readFileSync("src/components/digitales/PaginaDeVenta.tsx", "utf8");
-  return ["/terminos", "/privacidad", "/arrepentimiento"].every((h) => d.includes(`href="${h}"`));
-})(), "el pie lleva Términos, Privacidad y el botón de arrepentimiento, fijos");
+  const pie = d.slice(d.indexOf('case "pie":'));
+  const tipos = ["terminos", "privacidad", "devoluciones", "arrepentimiento"];
+  return tipos.every((t) => pie.includes(`/legales?tipo=${t}`)) &&
+    !pie.includes('href="/terminos"') && !pie.includes('href="/privacidad"');
+})(), "el pie lleva los documentos de quien vende, y el arrepentimiento, fijos");
 
 /* ── Las listas ───────────────────────────────────────────────────────────── */
 

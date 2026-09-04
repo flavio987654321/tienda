@@ -28,6 +28,24 @@ export const CLAVES_LEGALES = ["devoluciones", "envios", "terminos", "privacidad
 export type ClaveLegal = (typeof CLAVES_LEGALES)[number];
 
 /**
+ * Las que le corresponden a quien vende PRODUCTOS DIGITALES: tres, sin envíos.
+ *
+ * ── Por qué no son las cuatro ───────────────────────────────────────────────
+ *
+ * Porque no hay nada que enviar. Una "Política de envíos" en la página de un
+ * ebook es una promesa sobre algo que no existe, y peor: le hace creer a quien
+ * compra que hay un despacho en el medio, cuando el archivo baja al toque.
+ * Es el mismo criterio por el que `titulosLegales` renombra dos en el rubro
+ * autos — el documento se llama como lo que la operación de verdad tiene.
+ *
+ * ⚠️ Y el motor es EL MISMO. Las columnas viven en `Store`, y una cuenta digital
+ * ya tiene su `Store` —la invisible que le presta el motor—, así que esto no es
+ * infraestructura nueva: es elegir tres de las cuatro que ya estaban.
+ */
+export const CLAVES_DIGITALES = ["devoluciones", "terminos", "privacidad"] as const satisfies readonly ClaveLegal[];
+export type ClaveDigital = (typeof CLAVES_DIGITALES)[number];
+
+/**
  * La quinta solapa, que NO es un documento.
  *
  * El botón de arrepentimiento que exige la Resolución 424/2020 no es un texto
@@ -74,7 +92,15 @@ export type FilaPoliticas = {
   policyPrivacyActive?: boolean | null;
 };
 
-const CAMPO: Record<ClaveLegal, { texto: keyof FilaPoliticas; activa: keyof FilaPoliticas }> = {
+/**
+ * Qué columna de `Store` guarda cada política y cuál su interruptor.
+ *
+ * Exportado porque lo necesitan las rutas que ESCRIBEN, no sólo las que leen: la
+ * de digitales arma el `data:` del `update` desde acá. Con el mapeo copiado en
+ * la ruta, un renombre de columna rompería la lectura y dejaría la escritura
+ * apuntando a un campo que ya no existe — o peor, a otro que sí.
+ */
+export const CAMPOS_DE_POLITICA: Record<ClaveLegal, { texto: keyof FilaPoliticas; activa: keyof FilaPoliticas }> = {
   devoluciones: { texto: "policyReturns", activa: "policyReturnsActive" },
   envios: { texto: "policyShipping", activa: "policyShippingActive" },
   terminos: { texto: "policyTerms", activa: "policyTermsActive" },
@@ -115,19 +141,19 @@ export function titulosLegales(esAutos: boolean): Record<ClaveDePagina, { corto:
 export function documentosPublicados(fila: FilaPoliticas | null | undefined): ClaveLegal[] {
   if (!fila) return [];
   return CLAVES_LEGALES.filter((clave) => {
-    const texto = fila[CAMPO[clave].texto];
+    const texto = fila[CAMPOS_DE_POLITICA[clave].texto];
     if (typeof texto !== "string" || texto.trim().length === 0) return false;
     // `false` apaga; `null`/`undefined` no. Una tienda vieja que nunca tocó la
     // bandera tiene el default `true` de la base, pero si la fila llega de una
     // query que no seleccionó la columna, no hay que apagarle la política.
-    return fila[CAMPO[clave].activa] !== false;
+    return fila[CAMPOS_DE_POLITICA[clave].activa] !== false;
   });
 }
 
 /** El texto de una política puntual, o null si esa no se publica. */
 export function textoPublicado(fila: FilaPoliticas | null | undefined, clave: ClaveLegal): string | null {
   if (!fila || !documentosPublicados(fila).includes(clave)) return null;
-  const texto = fila[CAMPO[clave].texto];
+  const texto = fila[CAMPOS_DE_POLITICA[clave].texto];
   return typeof texto === "string" ? texto : null;
 }
 

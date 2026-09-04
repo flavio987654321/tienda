@@ -1013,6 +1013,77 @@ chequear("una baja de cuenta no toca los permisos ya vendidos",
   /8 bis\. Cuándo podemos suspender/.test(digitalTerm) &&
   /permisos de descarga vigentes se respetan/.test(digitalTerm));
 
+/* ══════════════════════════════════════════════════════════════════════════
+   18. CADA VENDEDOR PUBLICA SUS PROPIOS DOCUMENTOS
+   ══════════════════════════════════════════════════════════════════════════
+
+   El agujero que esto existe para que no vuelva: el pie de cada página de venta
+   linkeaba a `/terminos` y `/privacidad` —los de TiendaApps— así que quien
+   compraba un ebook leía NUESTROS documentos creyendo que eran los de quien se
+   lo vendía. Y contradecía de frente lo que esos mismos términos dicen. En una
+   denuncia gana lo que el comprador vio, no lo que el contrato afirma.
+*/
+console.log("\n18) Cada vendedor publica sus propios documentos");
+
+const dibujante = readFileSync("src/components/digitales/PaginaDeVenta.tsx", "utf8");
+const legalesPub = readFileSync("src/app/p/[id]/legales/page.tsx", "utf8");
+const tabLegales = readFileSync("src/app/digitales/configuracion/TabLegales.tsx", "utf8");
+const rutaConfig = soloCodigo(readFileSync("src/app/api/digitales/configuracion/route.ts", "utf8"));
+
+/* ⚠️ EL CHEQUEO QUE IMPORTA. El pie no puede volver a mandar a los documentos de
+   la plataforma como si fueran los de quien vende. */
+const pieDeLaPagina = dibujante.slice(dibujante.indexOf('case "pie":'));
+chequear("el pie manda a los documentos de quien vende, no a los nuestros",
+  /href=\{`\/p\/\$\{producto\.id\}\/legales/.test(pieDeLaPagina) &&
+  !/href="\/terminos"/.test(pieDeLaPagina) &&
+  !/href="\/privacidad"/.test(pieDeLaPagina));
+
+/* Y el arrepentimiento sigue estando: es la Resolución 424/2020, no una
+   preferencia. Lo que cambió es por dónde entra, no si existe. */
+chequear("el botón de arrepentimiento sigue en el pie",
+  /tipo=arrepentimiento/.test(pieDeLaPagina));
+
+chequear("la página legal del producto existe",
+  existsSync("src/app/p/[id]/legales/page.tsx"));
+
+/* Dice de quién son, arriba de todo. Es la línea que evita que alguien crea que
+   está leyendo los de la plataforma. */
+chequear("dice de quién son los documentos que se están leyendo",
+  /quien te vende este producto/.test(legalesPub));
+
+/* Y los nuestros siguen estando, pero abajo y etiquetados: existen, no rigen
+   esa venta, y hasta hoy eran los únicos que la página mostraba. */
+chequear("los de la plataforma quedan aparte y nombrados como tales",
+  /De la plataforma/.test(legalesPub) && /no reemplazan a las de quien te vende/.test(legalesPub));
+
+/* Tres y no cuatro: no hay envíos que declarar en un archivo que se descarga. */
+chequear("son tres documentos, sin envíos",
+  /CLAVES_DIGITALES = \["devoluciones", "terminos", "privacidad"\]/.test(
+    readFileSync("src/lib/politicas-tienda.ts", "utf8")));
+
+/* La pantalla para escribirlas, y que no guarde con su propia regla: el mismo
+   limpiador que tiendas, importado y no copiado. */
+chequear("hay dónde escribirlas y se guardan con el limpiador compartido",
+  existsSync("src/app/digitales/configuracion/TabLegales.tsx") &&
+  /limpiarTextoLegal\(/.test(rutaConfig) && /CAMPOS_DE_POLITICA/.test(rutaConfig));
+
+/* La bandera de visible llega del navegador: `"false"` es verdadero en
+   JavaScript, así que apagar una política tiene que comparar contra `true`. */
+chequear("apagar una política compara contra `true` exacto",
+  /visible === true/.test(rutaConfig));
+
+/* ⚠️ La fecha de "última actualización" sólo se toca si de verdad vino una
+   política. Sin la condición, guardar el nombre de la marca haría figurar que
+   los términos cambiaron ese día — una afirmación sobre un documento legal. */
+chequear("la fecha de actualización no se mueve por guardar otra cosa",
+  /Object\.keys\(politicasLimpias\)\.length > 0 \? \{ policiesUpdatedAt/.test(rutaConfig));
+
+/* El ejemplo se puede copiar, pero hay que guardarlo a mano y se avisa que
+   obliga: un documento legal copiado sin leer promete lo que no se va a
+   cumplir, y quien responde es quien vende. */
+chequear("el ejemplo se ofrece como borrador, no como documento listo",
+  /borrador para editar, no un documento listo/.test(tabLegales));
+
 /* Un cambio de documento sin subir la versión es un cambio que nadie re-acepta:
    el banner mira este número. Estuvo clavado en 1.2 mientras el texto cambió
    seis veces — está contado en el propio archivo. */
