@@ -4,6 +4,7 @@ import type { TierDigital } from "@/lib/planes-digitales";
 import { TOPES_DIGITALES } from "@/lib/planLimits";
 import BotonVolver from "../BotonVolver";
 import { estadoDelCupo } from "@/lib/cupo-ia";
+import { estadoDelBorrador } from "@/lib/ebook-borrador";
 import ProductosClient, { type ProductoEnPantalla } from "./ProductosClient";
 
 /**
@@ -54,6 +55,9 @@ export default async function ProductosPage() {
      antes de abrirlo. Se lee, no se crea: una cuenta que nunca generó nada no
      necesita una fila para saber que tiene todo. */
   const cupoIA = await estadoDelCupo(user.id, tier);
+  /* Y el de ebooks, que es una bolsa APARTE: gastar todas las páginas de venta
+     no puede dejar a nadie sin poder escribir su ebook. Ver `cupo-ia`. */
+  const cupoEbook = await estadoDelCupo(user.id, tier, "EBOOK");
 
   const filas = store
     ? await prisma.product.findMany({
@@ -77,6 +81,15 @@ export default async function ProductosPage() {
           id: true, name: true, description: true, price: true, comparePrice: true,
           rolDigital: true, padreId: true, archivoPath: true, archivoNombre: true,
           archivoPeso: true, isActive: true, images: true,
+          /* El borrador del ebook, para que la tarjeta diga en qué anda sin que
+             haya que abrir nada. Se pide con la misma consulta: una aparte
+             serían 45 viajes más para traer un número. */
+          ebookIA: {
+            select: {
+              estado: true, titulo: true, indice: true, capitulos: true,
+              trabajandoDesde: true, error: true, reintentos: true,
+            },
+          },
         },
       })
     : [];
@@ -96,6 +109,9 @@ export default async function ProductosPage() {
     archivoNombre: f.archivoNombre,
     archivoPeso: f.archivoPeso,
     publicado: f.isActive,
+    /* Sin el texto de los capítulos: son decenas de miles de caracteres que la
+       pantalla no muestra y que viajarían con cada dibujo. */
+    ebook: f.ebookIA ? estadoDelBorrador(f.ebookIA) : null,
   }));
 
   return (
@@ -109,7 +125,7 @@ export default async function ProductosPage() {
         </p>
       </div>
 
-      <ProductosClient tier={tier} productos={productos} cupoIA={cupoIA} />
+      <ProductosClient tier={tier} productos={productos} cupoIA={cupoIA} cupoEbook={cupoEbook} />
     </div>
   );
 }

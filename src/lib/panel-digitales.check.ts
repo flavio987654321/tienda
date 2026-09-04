@@ -695,11 +695,12 @@ chequear(
 chequear("el botón del ebook mira `IA_LISTA` para saber qué explicar",
   /IA_LISTA\s*\n?\s*\?/.test(pantallaProductos) || /IA_LISTA \?/.test(pantallaProductos));
 
-/* Free no lo tiene por el PLAN y para siempre; Starter y Pro no lo tienen todavía.
-   Son dos motivos distintos y el cartel tiene que decir cuál es, o el que paga
-   cree que le falta plan. */
+/* Free no lo tiene por el PLAN y para siempre; si algún día se apaga
+   `IA_LISTA`, el motivo es otro — que no anda todavía. Son dos motivos
+   distintos y el cartel tiene que decir cuál es, o el que paga cree que le
+   falta plan. Los dos textos tienen que seguir existiendo. */
 chequear("el motivo de que esté apagado distingue el plan de la obra",
-  /Tu plan no incluye escribir el ebook con IA/.test(pantallaProductos) &&
+  /viene desde el plan Starter/.test(pantallaProductos) &&
   /Todavía no está listo/.test(pantallaProductos));
 
 /* ── No perder el trabajo al salir, 03/09/26 ──────────────────────────────── */

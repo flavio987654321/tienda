@@ -485,6 +485,129 @@ check("RUT-W",
   /outputFileTracingIncludes/.test(config) && /pdfkit\/js\/data/.test(config),
   "las tipografías de pdfkit viajan con la función que arma el PDF");
 
+/* ── La pantalla ────────────────────────────────────────────────────────── */
+
+const ventana = readFileSync("src/app/digitales/productos/EbookIA.tsx", "utf8");
+const lista = readFileSync("src/app/digitales/productos/ProductosClient.tsx", "utf8");
+const pantalla = readFileSync("src/app/digitales/productos/page.tsx", "utf8");
+
+/* El botón existe, está prendido y abre la ventana. */
+check("PAN-A",
+  /const IA_LISTA = true;/.test(lista) && /acc\.abrirEbook\(p\)/.test(lista),
+  "el botón del ebook está prendido y abre la ventana");
+
+/* ⚠️ Doble clic. Dos clics en el mismo cuadro leen los dos el estado viejo, así
+   que el freno tiene que ser un ref y no un useState. */
+check("PAN-B", /enVuelo = useRef\(false\)/.test(ventana) && /enVuelo\.current = true/.test(ventana),
+  "el doble clic se frena con un ref, no con estado");
+
+/* ⚠️ Y el bucle se corta cuando la ventana se cierra. Sin esto sigue pidiendo
+   capítulos contra un componente que ya no existe — y cada pedido cuesta. */
+check("PAN-C",
+  /vivo = useRef\(true\)/.test(ventana) &&
+  /useEffect\(\(\) => \(\) => \{ vivo\.current = false; \}, \[\]\)/.test(ventana) &&
+  /if \(!vivo\.current\) return;/.test(ventana),
+  "cerrar la ventana corta el bucle de capítulos");
+
+/* ⚠️ EL ERROR FRENA EL BUCLE Y PONE UN BOTÓN. Un bucle que reintenta solo,
+   contra un modelo que está teniendo un mal día, gasta diez veces sin que nadie
+   mire. Seguir es decisión de la persona. */
+check("PAN-D",
+  /Seguir desde donde iba/.test(ventana) &&
+  !/setTimeout\([^)]*seguir/.test(ventana),
+  "un error frena el bucle y espera que la persona decida seguir");
+
+/* ⚠️ EL AGUJERO QUE ESTE CHEQUEO CUIDA. El bucle no arranca solo al volver a
+   una ventana dejada a medias —cada vuelta cuesta plata, así que seguir lo
+   decide la persona—. Con el botón sólo cuando había error, volver con TODOS
+   los capítulos escritos y el PDF sin armar dejaba la lista entera tildada y
+   nada que apretar: el ebook pago quedaba a un paso del final, sin salida. */
+check("PAN-P",
+  /\{!trabajando && \(/.test(ventana) && /Armar el PDF/.test(ventana),
+  "al volver a un ebook a medias siempre hay un botón para seguir");
+
+/* Lo más importante que dice esta pantalla: se puede cerrar sin perder nada.
+   Sin decirlo, cualquiera se queda cinco minutos sin animarse a tocar. */
+check("PAN-E",
+  /Podés cerrar esta ventana/.test(ventana) && /sin gastar otra generación/.test(ventana),
+  "se dice que cerrar no pierde lo escrito ni cuesta otra generación");
+
+/* Reemplazar un archivo que la persona subió a mano sin avisarle es perderle el
+   trabajo. Se avisa ANTES de apretar. */
+check("PAN-F",
+  /producto\.tieneArchivo && \(/.test(ventana) && /lo reemplaza/.test(ventana),
+  "si ya hay un PDF cargado, se avisa antes de reemplazarlo");
+
+/* La bolsa de bienvenida no vuelve nunca: cuando se empieza a gastar, se dice. */
+check("PAN-G",
+  /salioDe === "bienvenida"/.test(ventana) && /no se renuevan/.test(ventana),
+  "se avisa cuando el ebook sale de la bolsa que no se renueva");
+
+/* Y las dos bolsas se muestran separadas: con el total solo, alguien gasta su
+   reserva permanente creyendo que se le renueva. */
+check("PAN-H",
+  /quedanDelMes/.test(ventana) && /quedanDeBienvenida/.test(ventana),
+  "el cupo se muestra en sus dos bolsas, no como un total");
+
+/* Free ve el botón —el archivo tiene dos caminos, no uno— pero apagado, y el
+   cartel dice que es el plan y no una falla. */
+check("PAN-I",
+  /acc\.tier === "FREE"/.test(lista) && /viene desde el plan Starter/.test(lista),
+  "en Free el botón se ve apagado y dice que es por el plan");
+
+/* Un ebook a medio escribir se dice en la tarjeta: si hay que abrir algo para
+   enterarse, nadie se entera. */
+check("PAN-J",
+  /Ebook a medio escribir/.test(lista) && /p\.ebook\.escritos/.test(lista),
+  "la tarjeta dice si el ebook quedó a medio escribir");
+
+/* ⚠️ QUE LO LEA ANTES DE PUBLICAR. Lo que se vende lo firma quien vende:
+   nosotros no podemos garantizar que un modelo no escribió una macana, y quien
+   cobra es quien responde (art. 40 de la Ley 24.240). */
+check("PAN-K",
+  /Leelo antes de publicarlo/.test(ventana) && /quien vende es quien responde/.test(ventana),
+  "se pide leerlo antes de publicar, y se dice de quién es la responsabilidad");
+
+/* Los campos que se escriben a mano llevan tope, en el navegador y en el
+   servidor. El del navegador es comodidad; el que manda es el otro. */
+check("PAN-L",
+  /maxLength=\{LARGO_TEMA\}/.test(ventana) &&
+  /slice\(0, LARGO_TEMA\)/.test(ventana) &&
+  /maxLength=\{LARGO_PUBLICO\}/.test(ventana),
+  "los campos que se escriben tienen tope");
+
+/* Y no se puede mandar con dos palabras: el mismo mínimo que aplica el
+   servidor, leído de la misma constante. */
+check("PAN-M",
+  /tema\.trim\(\)\.length < MINIMO_TEMA/.test(ventana) && /disabled=\{trabajando \|\| temaCorto/.test(ventana),
+  "no se puede pedir el ebook con dos palabras, y el mínimo es el del servidor");
+
+/* ⚠️ El texto de los capítulos NO viaja al navegador. Son decenas de miles de
+   caracteres por producto que la pantalla no muestra —muestra una barra— y que
+   viajarían con cada dibujo de la lista. */
+check("PAN-N",
+  /estadoDelBorrador\(f\.ebookIA\)/.test(pantalla) && !/capitulos: f\.ebookIA/.test(pantalla),
+  "la lista de productos no manda el texto de los capítulos al navegador");
+
+/* El cupo de ebooks es una bolsa APARTE del de armar el embudo: gastar todas
+   las páginas de venta no puede dejar a nadie sin poder escribir su ebook. */
+check("PAN-O",
+  /estadoDelCupo\(user\.id, tier, "EBOOK"\)/.test(pantalla),
+  "la pantalla lee el cupo de ebooks aparte del de armar el embudo");
+
+/* ⚠️ SIN ESTO NO SE PUEDE PRENDER NADA. Los botones de IA mandan el texto de la
+   persona a un tercero, y eso hay que declararlo ANTES, no después. Estaba sin
+   declarar hasta el 04/09/26, con los otros dos botones de IA ya andando. */
+const privacidad = readFileSync("src/app/privacidad/page.tsx", "utf8");
+const solapaDigital = privacidad.slice(
+  privacidad.indexOf("  digital: {"), privacidad.indexOf("  buyer: {"));
+check("PRI-A",
+  /Anthropic/.test(solapaDigital) && /inteligencia artificial/.test(solapaDigital),
+  "la política de privacidad de digitales declara quién procesa los textos");
+check("PRI-B",
+  /ni un solo dato de quien te compra/.test(solapaDigital),
+  "y aclara que a la IA no le llega ningún dato de los compradores");
+
 elPDF().then(() => {
   console.log(fallos === 0
     ? "\nok — el ebook se lima antes de venderse, y el PDF se arma igual"

@@ -13,7 +13,10 @@ import {
 } from "@/lib/productos-digitales";
 import { MAX_PDF_MB, TIPO_PDF, validarSubida, avisoDePeso } from "@/lib/subida-digital";
 import type { EstadoDelCupo } from "@/lib/cupo-ia";
+/* `import type` se borra al compilar: no arrastra prisma al navegador. */
+import type { EstadoDelBorrador } from "@/lib/ebook-borrador";
 import EmbudoIA from "./EmbudoIA";
+import EbookIA from "./EbookIA";
 
 export type ProductoEnPantalla = {
   id: string;
@@ -29,6 +32,8 @@ export type ProductoEnPantalla = {
   archivoNombre: string | null;
   archivoPeso: number | null;
   publicado: boolean;
+  /** El ebook que le está escribiendo la IA, o `null` si nunca pidió uno. */
+  ebook: EstadoDelBorrador | null;
 };
 
 function money(n: number) {
@@ -78,11 +83,12 @@ const MAX_IMAGEN_MB = 4;
  *      ficha. Son US$2 a 4, o sea entre 150 y 300 veces más caro que el otro. Es
  *      el que gasta el cupo de `ebooksIA`, y por eso Free no lo tiene.
  *
- * ⚠️ Sigue en `false` **a propósito**: el motor del ebook no existe. Prenderlo es
- * cambiar este valor, y no hay que hacerlo hasta que exista la ruta que genera.
- * Hay un chequeo que falla si queda en `true` sin esa ruta.
+ * ✅ Prendido el 04/09/26, con las tres rutas hechas y con la política de
+ * privacidad de digitales declarando a Anthropic — que era el otro seguro que
+ * tenía este interruptor, y saltó al prenderlo: los botones de IA ya mandaban
+ * texto a un tercero y la solapa digital no lo nombraba.
  */
-const IA_LISTA = false;
+const IA_LISTA = true;
 
 /**
  * Lo que la tarjeta y el grupo necesitan de la pantalla.
@@ -100,6 +106,7 @@ type Acciones = {
   publicar: (p: ProductoEnPantalla, publicado: boolean) => void;
   borrar: (p: ProductoEnPantalla) => void;
   subirArchivo: (p: ProductoEnPantalla, file: File) => void;
+  abrirEbook: (p: ProductoEnPantalla) => void;
   hijosDe: (padreId: string, rol: RolDigital) => ProductoEnPantalla[];
 };
 
@@ -203,6 +210,15 @@ function Tarjeta({ p, acc }: { p: ProductoEnPantalla; acc: Acciones }) {
             </p>
           )}
 
+          {/* Un ebook a medio escribir se dice en la tarjeta y no adentro de la
+              ventana: si hay que abrir algo para enterarse de que quedó por la
+              mitad, nadie se entera. */}
+          {p.ebook && p.ebook.estado !== "LISTO" && (
+            <p className="mt-2 text-[11px] font-bold text-orange-700 panel-oscuro:text-orange-300">
+              Ebook a medio escribir: {p.ebook.escritos} de {p.ebook.total} capítulos.
+            </p>
+          )}
+
           {/* ⚠️ El aviso del peso va ANTES de elegir el archivo, no después.
               La competencia abre el explorador directo y no dice el límite hasta
               que ya elegiste: con el caso real que tenemos anotado —una guía de
@@ -245,27 +261,37 @@ function Tarjeta({ p, acc }: { p: ProductoEnPantalla; acc: Acciones }) {
               />
             </label>
 
-            {/* ⚠️ El segundo botón de IA, apagado. Ver `IA_LISTA`.
-                Se dibuja aunque no ande porque el hueco al lado de "Subir PDF"
-                dice algo que el botón solo no dice: **el archivo tiene dos
-                caminos, no uno**. Y el motivo de que esté apagado no es el mismo
-                en los tres planes — en Free es el plan y es para siempre; en
-                Starter y Pro es que todavía no lo construimos. Decir cuál es se
-                lee al pasar el mouse, no hay que adivinarlo. */}
+            {/* ⚠️ El segundo botón de IA. Ver `IA_LISTA`.
+                Se dibuja SIEMPRE, aunque el plan no lo tenga, porque el hueco al
+                lado de "Subir PDF" dice algo que el botón solo no dice: **el
+                archivo tiene dos caminos, no uno**. Y en Free apagado no es un
+                bug: es el plan, y para siempre. Lo dice el cartel al pasar el
+                mouse, no hay que adivinarlo. */}
             <button
               type="button"
-              disabled
+              onClick={() => acc.abrirEbook(p)}
+              disabled={!IA_LISTA || acc.tier === "FREE" || ocupado || subiendoEste}
               title={
-                IA_LISTA
-                  ? undefined
-                  : acc.tier === "FREE"
-                    ? "Tu plan no incluye escribir el ebook con IA. El PDF lo subís vos."
-                    : "Todavía no está listo."
+                acc.tier === "FREE"
+                  ? "Escribir el ebook con IA viene desde el plan Starter. En el gratis el PDF lo subís vos."
+                  : !IA_LISTA
+                    ? "Todavía no está listo."
+                    : undefined
               }
-              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-dashed border-gray-300 panel-oscuro:border-gray-700 text-xs font-bold text-gray-400 panel-oscuro:text-gray-500 cursor-not-allowed"
+              className={
+                IA_LISTA && acc.tier !== "FREE"
+                  ? "inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-orange-200 panel-oscuro:border-orange-500/30 text-xs font-bold text-orange-700 panel-oscuro:text-orange-300 hover:bg-orange-50 panel-oscuro:hover:bg-orange-500/10 transition-colors disabled:opacity-50"
+                  : "inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-dashed border-gray-300 panel-oscuro:border-gray-700 text-xs font-bold text-gray-400 panel-oscuro:text-gray-500 cursor-not-allowed"
+              }
             >
               <Sparkles className="h-3.5 w-3.5" />
-              Generar con IA
+              {/* El rótulo dice en qué estado está, así no hay que abrir la
+                  ventana para saber si quedó a medio escribir. */}
+              {!p.ebook
+                ? "Escribir con IA"
+                : p.ebook.estado === "LISTO"
+                  ? "Escrito con IA"
+                  : `Seguir (${p.ebook.escritos} de ${p.ebook.total})`}
             </button>
 
             <button
@@ -421,14 +447,19 @@ export default function ProductosClient({
   tier,
   productos,
   cupoIA,
+  cupoEbook,
 }: {
   tier: TierDigital;
   productos: ProductoEnPantalla[];
   cupoIA: EstadoDelCupo;
+  /** El cupo de EBOOKS, que es una bolsa aparte del de armar el embudo. */
+  cupoEbook: EstadoDelCupo;
 }) {
   const [borrador, setBorrador] = useState<Borrador | null>(null);
   /** Si está abierta la ventana de armar el embudo con IA. */
   const [embudoIA, setEmbudoIA] = useState(false);
+  /** El producto cuyo ebook se está escribiendo, o `null`. */
+  const [ebookDe, setEbookDe] = useState<ProductoEnPantalla | null>(null);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState("");
   const [trabajando, setTrabajando] = useState<string | null>(null);
@@ -590,7 +621,10 @@ export default function ProductosClient({
   /* Lo que la tarjeta y el grupo necesitan de acá. Se arma una vez y se pasa
      hacia abajo: las funciones se declaran en el cuerpo del componente, así que
      memorizarlo no ganaría nada —el objeto cambiaría igual en cada dibujo—. */
-  const acc: Acciones = { tier, trabajando, subiendoArchivo, setBorrador, publicar, borrar, subirArchivo, hijosDe };
+  const acc: Acciones = {
+    tier, trabajando, subiendoArchivo, setBorrador, publicar, borrar, subirArchivo,
+    abrirEbook: setEbookDe, hijosDe,
+  };
 
   const topePrincipales = topeDe(tier, "PRINCIPAL");
   const llegoAlTope = principales.length >= topePrincipales;
@@ -807,6 +841,15 @@ export default function ProductosClient({
           Su propia ventana y no un paso adentro del formulario: la IA devuelve
           TRES fichas y el formulario crea UNA. Ver el comentario adentro. */}
       {embudoIA && <EmbudoIA cupoInicial={cupoIA} onCerrar={() => setEmbudoIA(false)} />}
+
+      {ebookDe && (
+        <EbookIA
+          producto={{ id: ebookDe.id, name: ebookDe.name, tieneArchivo: ebookDe.tieneArchivo }}
+          cupoInicial={cupoEbook}
+          estadoInicial={ebookDe.ebook}
+          onCerrar={() => setEbookDe(null)}
+        />
+      )}
 
       {/* ── El formulario ─────────────────────────────────────────────────── */}
       {borrador && (
