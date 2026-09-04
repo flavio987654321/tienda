@@ -22,6 +22,21 @@
 //     la IP y el navegador de cada descarga. Estaban en los términos y faltaban
 //     ahí. Se declaran en las dos solapas —la de quien vende y la de quien
 //     compra— con su finalidad, su base legal y su plazo.
+//   · El aviso de TRANSFERENCIA INTERNACIONAL estaba escrito en una sola solapa
+//     —la de Dueño de tienda— y es un hecho de la plataforma entera: la base
+//     corre en aws-1-us-east-2 y el hosting también. O sea que los datos de quien
+//     vende afiliado, de quien compra, de quien dona y de quien vende productos
+//     digitales salían del país exactamente igual, y ninguno de los cuatro lo
+//     estaba leyendo. Lo exige el art. 12 de la Ley 25.326. Ahora está en las
+//     cinco, desde una sola constante para que no se puedan desincronizar.
+//     Salió de comparar nuestro temario contra el de un competidor —ellos sí
+//     tenían su propia sección— y de mirar a dónde apunta de verdad la base.
+//   · Se nombra el DOBLE ROL en la solapa de Productos Digitales: sobre los
+//     datos de su cuenta el responsable es TiendaApps; sobre los de sus
+//     compradores el responsable es quien vende, y nosotros somos el encargado.
+//     No es una formalidad: define a quién le llega un pedido de acceso o de
+//     borrado de un comprador. Antes estaba dicho como una obligación suelta
+//     ("respondés vos por ese uso") y no como lo que es.
 //
 // 1.6 (11/08/2026) — tres arreglos que salieron de revisar el texto, no de un
 // cambio de producto:

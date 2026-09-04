@@ -952,6 +952,34 @@ chequear("privacidad declara la IP del consentimiento y la de cada descarga",
 chequear("y la solapa de Cliente también lo dice, para quien compra",
   /producto digital/i.test(privacidadPag.slice(privacidadPag.indexOf("  buyer: {"))));
 
+/* ⚠️ Las CINCO solapas dicen que los datos salen del país. Estaba escrito en una
+   sola —la de Dueño de tienda— y es un hecho de la plataforma entera: la base
+   corre en `aws-1-us-east-2` y el hosting también. Lo exige el art. 12 de la Ley
+   25.326, y quien vende afiliado, quien compra y quien dona no lo leían. */
+chequear("las cinco solapas avisan que los datos salen del país",
+  (privacidadPag.match(/^\s+TRANSFERENCIA_INTERNACIONAL,$/gm) ?? []).length === tiposDeCuenta.length + 1);
+
+/* ══════════════════════════════════════════════════════════════════════════
+   ⚠️ LA IA NO SE PUEDE PRENDER SIN DECLARARLA
+   ══════════════════════════════════════════════════════════════════════════
+
+   Los planes digitales VENDEN funciones con IA —"Página de venta armada con IA"
+   en los tres, "Sasha, la asistente" en los pagos— y hoy la solapa digital de la
+   política de privacidad no nombra a ningún proveedor de modelos. Está bien
+   mientras `IA_LISTA` esté apagado: no se procesa nada, así que no hay nada que
+   declarar.
+
+   El día que se prenda, el texto de la página de venta de alguien sale hacia un
+   tercero, y eso hay que decirlo ANTES —no después—. Anthropic ya está declarado
+   en la solapa de Dueño de tienda, por Sasha; falta el equivalente acá.
+
+   Este chequeo es el recordatorio: se pone en rojo solo en el mismo commit que
+   encienda la IA. */
+chequear("si la IA está encendida, la solapa digital declara quién procesa",
+  !/const IA_LISTA = true/.test(pantallaProductos) ||
+  /Anthropic/.test(privacidadPag.slice(
+    privacidadPag.indexOf("  digital: {"), privacidadPag.indexOf("  buyer: {"))));
+
 /* Un cambio de documento sin subir la versión es un cambio que nadie re-acepta:
    el banner mira este número. Estuvo clavado en 1.2 mientras el texto cambió
    seis veces — está contado en el propio archivo. */

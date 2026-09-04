@@ -27,6 +27,27 @@ export async function generateMetadata({
   return { ...META, robots: robotsDeDocumentoLegal(panel) };
 }
 
+/**
+ * ⚠️ EL AVISO DE TRANSFERENCIA INTERNACIONAL, PARA LAS CINCO SOLAPAS.
+ *
+ * Estaba escrito en una sola —la de Dueño de tienda— y es un hecho de la
+ * plataforma entera: la base corre en `aws-1-us-east-2` y el hosting también. O
+ * sea que los datos de quien vende afiliado, de quien compra, de quien dona y de
+ * quien vende productos digitales salen del país exactamente igual, y ninguno de
+ * los cuatro lo estaba leyendo.
+ *
+ * El art. 12 de la Ley 25.326 exige informarlo. Va en una constante y no copiado
+ * cinco veces porque es el mismo hecho: copiado, se corrige en una solapa y
+ * quedan cuatro diciendo otra cosa.
+ *
+ * Encontrado el 03/09/26 comparando nuestro temario contra el de un competidor
+ * —ellos sí tenían su propia sección de transferencias— y confirmado mirando a
+ * dónde apunta de verdad la base de datos.
+ */
+const TRANSFERENCIA_INTERNACIONAL =
+  "Transferencias internacionales: los proveedores mencionados en esta sección procesan datos en servidores "
+  + "fuera de Argentina (principalmente EE.UU.). Se informa conforme al art. 12 de la Ley 25.326.";
+
 const CONTENT = {
   owner: {
     label: "Dueño de tienda",
@@ -173,7 +194,7 @@ const CONTENT = {
         title: "4. Procesadores de datos (terceros que procesan tus datos)",
         body: "No vendemos tus datos. Trabajamos con los siguientes proveedores que procesan datos en tu nombre:",
         list: [
-          "Transferencias internacionales: los proveedores detallados a continuación procesan datos en servidores fuera de Argentina (principalmente EE.UU.). Al usar TiendaApps, aceptás estas transferencias internacionales conforme al art. 12 de la Ley 25.326.",
+          TRANSFERENCIA_INTERNACIONAL,
           "Supabase (supabase.com): gestión de autenticación, base de datos y almacenamiento de archivos (incluyendo documentos de verificación en bucket privado). Servidores en AWS us-east-1. Política de privacidad: supabase.com/privacy",
           "Vercel (vercel.com): hosting y ejecución de la plataforma. Servidores en AWS/Cloudflare. Política de privacidad: vercel.com/legal/privacy-policy",
           "Mercado Pago (mercadopago.com.ar): procesamiento de pagos de suscripción. Nunca almacenamos datos de tarjetas — Mercado Pago gestiona todo con cumplimiento PCI-DSS nivel 1. Política de privacidad: mercadopago.com.ar/privacidad",
@@ -289,6 +310,7 @@ const CONTENT = {
         title: "4. Compartir información",
         body: "No vendemos tus datos. Los compartimos únicamente con:",
         list: [
+          TRANSFERENCIA_INTERNACIONAL,
           "Los dueños de tiendas a las que estés afiliado (solo tus estadísticas de ventas, no tus datos personales).",
           "MercadoPago: procesamos cobros a través de la cuenta de MercadoPago del dueño de la tienda. TiendaApps no almacena tokens de acceso de MP de los afiliados.",
           "Supabase y Vercel como proveedores de infraestructura.",
@@ -374,13 +396,14 @@ const CONTENT = {
           "Para qué, y para qué no: son la prueba de que la entrega se hizo y de que la condición se aceptó, y se usan únicamente si hay un reclamo, una devolución o un contracargo. No se usan para publicidad, no se cruzan con otros datos y no se comparten con terceros fuera de ese fin.",
           "Base legal: interés legítimo en acreditar el cumplimiento de una operación y en defenderse de un reclamo (art. 5 inc. f, Ley 25.326).",
           "Cuánto duran: el registro de descargas se elimina junto con el permiso de descarga al que pertenece. La aceptación se conserva con la orden, como parte del comprobante de la operación.",
-          "Sos responsable de los datos de tus compradores: el email y el nombre de quien te compra se guardan para poder entregarle el archivo y para que puedas contactarlo. Si los usás para otra cosa —por ejemplo, mandarle promociones— sos vos quien responde por ese uso, no TiendaApps.",
+          "Quién responde por los datos de tus compradores: sobre los datos de TU cuenta, el responsable es TiendaApps. Sobre los datos de quien te compra —su email, su nombre— el responsable sos VOS, y TiendaApps es solo el encargado que los procesa para entregarle el archivo y mostrártelos en tu panel. La diferencia importa cuando un comprador quiere acceder, corregir o borrar sus datos: ese pedido te llega a vos, y sos vos quien tiene que atenderlo. Si además usás esos datos para otra cosa —mandarle promociones, sumarlo a una lista— ese uso es tuyo y respondés vos por él ante la Ley 25.326.",
         ],
       },
       {
         title: "4. Compartir con terceros",
         body: "No vendemos tus datos. Los compartimos con:",
         list: [
+          TRANSFERENCIA_INTERNACIONAL,
           "Mercado Pago, para procesar el cobro de tus ventas y el de tu suscripción. Se rigen por su propia política.",
           "Resend, el servicio que envía los correos de entrega a quien te compra. Recibe el email, el nombre y el detalle de lo comprado.",
           "Supabase y Vercel como proveedores de infraestructura. Supabase además aloja el archivo que subís.",
@@ -509,6 +532,7 @@ const CONTENT = {
         title: "4. Compartir con terceros",
         body: "No vendemos tus datos. Los compartimos con:",
         list: [
+          TRANSFERENCIA_INTERNACIONAL,
           "Tiendas dentro de la plataforma, solo los datos necesarios para completar tus pedidos.",
           "Supabase y Vercel como proveedores de infraestructura.",
           "Envíopack (enviopack.com): si la tienda tiene activada la cotización automática de envío, le compartimos tu código postal y provincia (no tu nombre ni dirección completa) para calcular el costo del envío.",
@@ -640,6 +664,7 @@ const CONTENT = {
         title: "5. Procesadores de datos (terceros que procesan tus datos)",
         body: "No vendemos tus datos. Trabajamos con los siguientes proveedores:",
         list: [
+          TRANSFERENCIA_INTERNACIONAL,
           "Mercado Pago (mercadopago.com.ar): procesamiento del pago de tu donación. Nunca almacenamos datos de tarjetas.",
           "Resend (resend.com): envío de los emails de confirmación y de las consultas del formulario de ayuda.",
           "Supabase (supabase.com) y Vercel (vercel.com): infraestructura de base de datos y hosting de la plataforma.",
