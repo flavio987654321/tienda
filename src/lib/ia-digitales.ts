@@ -1,5 +1,4 @@
 import { contarConTope } from "@/lib/rate-limit";
-import type { TierDigital } from "@/lib/planes-digitales";
 
 /**
  * Los topes de la IA de Productos Digitales.
@@ -21,21 +20,21 @@ import type { TierDigital } from "@/lib/planes-digitales";
  * un presupuesto que no puede compartirse con el chat — si se cruzaran, una
  * tarde de charla con Sasha dejaría a alguien sin poder armar su producto.
  *
- * La forma sí es la misma, y a propósito: las mismas cuatro capas, en el mismo
- * orden, con el mismo `contarConTope`. Lo que ya se aprendió caro no se vuelve a
+ * La forma sí es la misma, y a propósito: el mismo `contarConTope`, el mismo
+ * orden, los globales últimos. Lo que ya se aprendió caro no se vuelve a
  * aprender.
  *
- * ── Lo que este archivo NO cuenta ──────────────────────────────────────────
+ * ── ⚠️ ACÁ ESTÁN LOS TOPES, NO EL CUPO ─────────────────────────────────────
  *
- * 🔲 **El cupo de ebooks.** Ése no es un tope de ráfaga: es un cupo con arranque
- * (3 en Starter, 6 en Pro, una sola vez), mensual (2 y 5) y un reintento por
- * ebook. Eso no vive en Redis con una ventana — se olvida y se regala de nuevo —,
- * necesita una columna en la base. Va con el botón del ebook, que es el que lo
- * gasta. Ver 2.4 bis del plan.
+ * No son lo mismo y conviene no mezclarlos:
  *
- * Acá está lo BARATO: armar el embudo y escribir la página. Cuesta centavos, así
- * que no se cuenta contra un cupo que la persona ve — se protege del script, que
- * es otra cosa.
+ * - **Tope** — invisible, anti-abuso. Nadie lo ve ni lo vende. Vive en Redis y
+ *   se olvida solo, que es lo correcto para una ráfaga. Es esto.
+ * - **Cupo** — parte de lo que se vende: *"3 en el plan gratis"*, *"12 al
+ *   empezar y 10 por mes en Pro"*. La persona lo ve gastarse y va escrito en la
+ *   página de precios, así que **no puede vivir en Redis**: un contador con
+ *   ventana se olvida y regala el cupo entero de nuevo. Vive en la base, en
+ *   `lib/cupo-ia`.
  */
 
 /* ── Capa 1: ráfaga ─────────────────────────────────────────────────────────
@@ -44,35 +43,44 @@ import type { TierDigital } from "@/lib/planes-digitales";
 export const RAFAGA_IA = 8;
 export const VENTANA_RAFAGA_MS = 10 * 60_000;
 
-/* ── Capa 2: diario por cuenta ──────────────────────────────────────────────
+/* ── Capa 2: el CUPO, que reemplazó al tope diario ──────────────────────────
  *
- * Y acá el plan SÍ cambia el número, al revés que en Sasha. El motivo es que
- * estas generaciones se corresponden con productos, y cuántos productos puede
- * tener cada plan ya está decidido: 1, 2 y 5. Darle 40 generaciones diarias a
- * una cuenta Free que puede tener **un** producto es pagar 39 llamadas que no
- * pueden terminar en nada.
+ * Acá hubo un tope diario por plan (10/20/40) y **se sacó el 04/09/26**, antes
+ * de que existiera el botón. Dos motivos:
  *
- * Los números son holgados igual —nadie rehace su embudo diez veces en un día
- * de buena fe— pero tienen fondo.
+ * 1. **Los números no cerraban.** 40 por día × 30 días × 1,35 centavos son
+ *    US$16 al mes de un plan Pro de US$43. El botón barato terminaba costando
+ *    como el caro en el peor caso, y el cálculo de márgenes del plan no lo tenía
+ *    en cuenta porque asumía que esto "no se contaba".
+ * 2. **Un tope diario no se puede explicar.** Se renueva solo, así que no hay
+ *    número que mostrarle a la persona que signifique algo — y cuanto más
+ *    números hay en pantalla, menos se entiende cuál se está gastando.
+ *
+ * Lo reemplaza un CUPO de verdad —arranque + mensual, contado en la base— que
+ * vive en `lib/cupo-ia`. Ese sí es parte de lo que se vende y se muestra.
+ *
+ * Acá quedan sólo los frenos invisibles: la ráfaga y los dos globales.
  */
-export const DIARIO_POR_PLAN: Record<TierDigital, number> = {
-  FREE: 10,
-  STARTER: 20,
-  PRO: 40,
-};
 
-/* ── Capa 3: el global de las cuentas en prueba ─────────────────────────────
+/* ── Capa 3: el global de las cuentas SIN ABONO ─────────────────────────────
  *
  * La capa que de verdad importa, y la que ninguna capa por-usuario puede tapar:
- * **veinte cuentas truchas son la misma persona** y cada una llega con su tope
+ * **veinte cuentas truchas son la misma persona** y cada una llega con su cupo
  * personal intacto.
  *
  * Va separado del global total para que el que abusa no deje sin IA al que paga.
  * Es la misma decisión que en Sasha, por el mismo motivo exacto.
  *
- * ⚠️ Y acá pesa más que allá: la prueba dura 7 días, **no pide tarjeta** y da
- * acceso a la IA. Es la única parte del sistema donde alguien gasta plata nuestra
- * sin habernos dado nunca un dato real.
+ * ⚠️ CUBRE A FREE, Y EL 04/09/26 NO LO CUBRÍA. Esto miraba sólo `TRIAL`, copiado
+ * de Sasha sin mirar que acá el mapa es otro: una cuenta Free digital es
+ * `ACTIVE` —no vence nunca, porque no se cobra— así que **quedaba afuera del
+ * único freno que ve las cuentas en serie**.
+ *
+ * Y Free es la MÁS expuesta de las dos, no la menos: la prueba dura 7 días y es
+ * una sola vez por cuenta (`pruebaYaUsada`); **Free no se termina nunca, no pide
+ * tarjeta y se abren las que uno quiera**. Encontrado el 04/09/26 comparando con
+ * cómo lo resuelve la competencia, que en su plan gratis da UNA generación y
+ * nunca más.
  */
 export const GLOBAL_PRUEBA_DIARIO = 150;
 
@@ -88,7 +96,7 @@ export const GLOBAL_DIARIO = 600;
 const AVISO_DESDE = 0.8;
 const UN_DIA_MS = 24 * 60 * 60_000;
 
-export type MotivoIA = "rafaga" | "diario" | "global-prueba" | "global";
+export type MotivoIA = "rafaga" | "global-prueba" | "global";
 
 export type VeredictoIA =
   | { permitido: true }
@@ -103,9 +111,16 @@ export type Contador = (
 
 export type PedidoIA = {
   userId: string;
-  tier: TierDigital;
-  /** Si la suscripción está en prueba (o todavía no hay ninguna). */
-  enPrueba: boolean;
+  /**
+   * Si la cuenta no paga: en prueba, **o en Free**.
+   *
+   * ⚠️ Free entra acá, y el 04/09/26 no entraba. Esta capa miraba sólo `TRIAL`,
+   * y una cuenta Free digital es `ACTIVE` —no vence nunca, porque no se cobra—,
+   * así que **quedaba afuera del único freno que ve las cuentas en serie**. Y es
+   * la MÁS expuesta de las dos: la prueba dura 7 días y es una sola vez por
+   * cuenta; Free no se termina nunca y se abren las que uno quiera.
+   */
+  sinAbono: boolean;
   /** El día de Argentina, `YYYY-MM-DD`. Va en la clave: el contador se cae solo. */
   day: string;
   /** Qué se está generando. Va en la clave para que no compartan contador. */
@@ -117,7 +132,6 @@ export type PedidoIA = {
    quiera abusar exactamente cuánto le falta. */
 const MENSAJES: Record<MotivoIA, string> = {
   rafaga: "Generaste varias seguidas. Esperá unos minutos y probá de nuevo.",
-  diario: "Llegaste al límite de generaciones de hoy. Mañana se renueva.",
   "global-prueba": "La IA está con mucha demanda en este momento. Probá de nuevo más tarde.",
   global: "La IA está con mucha demanda en este momento. Probá de nuevo más tarde.",
 };
@@ -144,21 +158,15 @@ function avisarSiSeAcerca(que: string, cuenta: number, limite: number): void {
  * dejar pasar. Ver el llamador.
  */
 export async function permitirGeneracion(
-  { userId, tier, enPrueba, day, que }: PedidoIA,
+  { userId, sinAbono, day, que }: PedidoIA,
   contar: Contador = contarConTope,
 ): Promise<VeredictoIA> {
   const rafaga = await contar(`ia-dig:${que}:${userId}`, RAFAGA_IA, VENTANA_RAFAGA_MS);
   if (!rafaga.permitido) return { permitido: false, motivo: "rafaga", mensaje: MENSAJES.rafaga };
 
-  /* El diario es de la CUENTA y no del botón: los dos botones baratos comparten
-     el mismo techo diario. Contarlos por separado le daría a una cuenta Free el
-     doble de generaciones que las que dice su número. */
-  const diario = await contar(`ia-dig-dia:${userId}`, DIARIO_POR_PLAN[tier], UN_DIA_MS);
-  if (!diario.permitido) return { permitido: false, motivo: "diario", mensaje: MENSAJES.diario };
-
-  if (enPrueba) {
-    const g = await contar(`ia-dig-prueba-dia:${day}`, GLOBAL_PRUEBA_DIARIO, UN_DIA_MS);
-    avisarSiSeAcerca("global de pruebas", g.cuenta, GLOBAL_PRUEBA_DIARIO);
+  if (sinAbono) {
+    const g = await contar(`ia-dig-gratis-dia:${day}`, GLOBAL_PRUEBA_DIARIO, UN_DIA_MS);
+    avisarSiSeAcerca("global de cuentas sin abono", g.cuenta, GLOBAL_PRUEBA_DIARIO);
     if (!g.permitido) return { permitido: false, motivo: "global-prueba", mensaje: MENSAJES["global-prueba"] };
   }
 

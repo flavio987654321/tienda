@@ -1877,39 +1877,145 @@ modelo — es la única parte de este bloque que está escrita y no probada.
 
 #### Los topes, que es la parte que no se negocia
 
-`lib/ia-digitales.ts`, cuatro capas con la misma forma que las de Sasha, porque
-**lo que ya se aprendió caro no se vuelve a aprender**:
+`lib/ia-digitales.ts`, con la misma forma que los de Sasha, porque **lo que ya se
+aprendió caro no se vuelve a aprender**:
 
 | Capa | Qué tapa |
 |---|---|
 | Ráfaga (8 / 10 min) | Que nadie dispare un script contra el endpoint |
-| Diario por cuenta (10 / 20 / 40) | El techo de una cuenta sola en el día |
-| Global de pruebas (150) | **Veinte cuentas truchas son la misma persona**, y ninguna capa por-usuario se entera |
-| Global total (600) | El corta-corriente |
+| Global de cuentas sin abono (150/día) | **Veinte cuentas truchas son la misma persona**, y ninguna capa por-usuario se entera |
+| Global total (600/día) | El corta-corriente |
 
 - **Archivo aparte del de Sasha, a propósito.** Si compartieran presupuesto, una
   tarde de charla con el asistente dejaría a alguien sin poder armar su producto.
-- **El diario cambia con el plan**, al revés que en Sasha. Estas generaciones se
-  corresponden con productos, y cuántos puede tener cada plan ya está decidido
-  (1, 2 y 5): darle 40 diarias a una cuenta Free que puede tener **un** producto
-  es pagar 39 llamadas que no pueden terminar en nada.
-- **El global de pruebas va separado del total** para que el que abusa no deje
-  sin IA al que paga. Misma decisión que en Sasha, mismo motivo.
 - ⚠️ **Los globales van ÚLTIMOS.** Los contadores suman aunque el pedido se
-  rechace —así es `INCR`—: si fueran primero, alguien ya bloqueado por su tope
+  rechace —así es `INCR`—: si fueran primero, alguien ya bloqueado por su cupo
   personal seguiría comiéndose el presupuesto de todos con cada intento.
 - ⚠️ **Si Redis no contesta, se FRENA.** Del otro lado hay algo que se paga, así
   que "no pude contar" tiene que cortar y nunca dejar pasar.
 
-Y el diario es de la **cuenta**, no del botón: los dos botones baratos comparten
-el techo. Contarlos por separado le daría a una cuenta Free el doble de
-generaciones que las que dice su número.
+### ✅ 4.1 bis EL CUPO — HECHO (04/09/26)
 
-34 chequeos en `embudo-ia.check`, y los de los topes corren de verdad contra un
+**Salió de una pregunta.** Contando cuánto costaba cada generación aparecieron dos
+cosas que no cerraban, y las dos las destapó comparar con la competencia.
+
+#### El primer agujero: los números del tope diario
+
+Había un tope diario por plan (10/20/40). **40 por día × 30 días × 1,35 centavos
+son US$16 al mes, de un plan Pro de US$43.** El botón barato terminaba costando
+como el caro en el peor caso, y el cálculo de márgenes de 2.4 bis no lo tenía en
+cuenta porque asumía que esto "no se contaba". Sumado a los ebooks, el margen del
+peor caso de Pro caía de 30% a ~16%.
+
+#### El segundo, y el serio: **Free quedaba afuera del único freno que ve las cuentas en serie**
+
+La capa "global de pruebas" está copiada de Sasha y mira `status === "TRIAL"`.
+Pero **una cuenta Free digital es `ACTIVE`** —no vence nunca, porque no se cobra—,
+así que no la contaba nadie.
+
+Y Free es la **más** expuesta de las dos, no la menos:
+
+| | Prueba | Free |
+|---|---|---|
+| Dura | 7 días | **para siempre** |
+| Pide tarjeta | no | no |
+| Se puede repetir | no (`pruebaYaUsada`) | **sí, las cuentas que quieras** |
+
+20 cuentas Free truchas × 10 por día = **~US$81 por mes** de gente que no paga un
+peso, y ninguna capa se enteraba porque quedaban por debajo del corta-corriente.
+
+Lo destapó el usuario contando cómo lo resuelve la competencia: **en su plan
+gratis te dan UNA generación y nunca más.** Nosotros teníamos 10 por día, para
+siempre, sin querer.
+
+#### La solución: cupo, no tope
+
+Son cosas distintas y conviene no mezclarlas nunca más:
+
+- **Tope** — invisible, anti-abuso. Nadie lo ve ni lo vende. Vive en Redis y se
+  olvida solo, que es lo correcto para una ráfaga.
+- **Cupo** — **parte de lo que se vende**. La persona lo ve gastarse y va escrito
+  en la página de precios, así que **no puede vivir en Redis**: un contador con
+  ventana se olvida y regala el cupo entero de nuevo.
+
+| | Al empezar (una vez, no vence) | Por mes (no se acumula) |
+|---|---|---|
+| **Free** | **3** | — |
+| **Starter** | **6** | **5** |
+| **Pro** | **12** | **10** |
+
+**El tope diario se sacó**: con un cupo mensual no agrega nada, es un segundo
+número que explicar para frenar algo que el cupo ya frenó, y **cuanto más números
+hay en pantalla menos se entiende cuál se está gastando**.
+
+Los números salen de los productos: **3 por producto**. Starter tiene 2 → 6 para
+arrancar; Pro tiene 5 → 12, con margen. Y el arranque es más grande que el
+mensual a propósito — el mes 1 es cuando la persona está probando, no sabe qué
+escribir y regenera varias veces, y **ese día es el que decide si se queda**.
+
+**Free no tiene bolsa mensual, y es la única decisión de plata acá.** En Starter y
+Pro hay un abono pagando la cuenta; en Free no entra un peso hasta que vende algo.
+Con cupo mensual, veinte cuentas truchas serían un gasto para siempre; con 3 de
+por vida, una cuenta trucha cuesta **cuatro centavos de dólar, una sola vez**.
+
+**Peor caso, después:** Pro pasa de US$16 a **US$0,14 por mes**. El margen queda
+intacto — la cáscara es 0,3% del plan en vez de 14%.
+
+#### ⚠️ Se gasta primero la del mes
+
+Porque es la que se vence. Al revés le quemaríamos a la persona su bolsa
+permanente mientras se le pierden sin usar las del mes: **una estafa silenciosa,
+de las que nadie nota hasta que le faltan.**
+
+Y el mensual **no se acumula**: si se acumulara, alguien que no toca la cuenta
+durante un año llega al mes 13 con 120 generaciones juntas y el peor caso vuelve
+entero.
+
+#### Cómo se cuenta sin que se rompa
+
+- **La condición va adentro del `where`, nunca en un `if` después de leer.** Leer
+  "¿le quedan?" y después restar es la carrera clásica: dos pedidos en paralelo
+  leen los dos "te queda 1" y los dos gastan. Con el "todavía le queda" adentro
+  del `UPDATE`, la base decide quién gana y el que pierde recibe `count: 0`.
+- **La fila se crea con `upsert`** sobre la clave única. Un "¿existe? entonces
+  creá" deja dos filas cuando llegan dos pedidos juntos, o sea **el doble de
+  cupo**.
+- **Devolver no puede dejar el contador en negativo** — eso sería cupo infinito.
+- **El mes se reinicia al gastar, sin cron.** `mesClave` guarda "2026-09"; si no
+  es la del mes actual, el contador se pone en cero en ese momento. En este plan
+  de Vercel el cron es uno por día, y un cupo que depende de que corra es un cupo
+  que algún día no vuelve.
+- **El cupo se gasta ANTES de llamar al modelo**, y se devuelve si la llamada
+  falla. Después sería tarde: ocho pedidos en paralelo pasarían todos el control
+  —porque ninguno gastó todavía— y generarían los ocho.
+
+#### Probado contra la base de verdad, no sólo leyendo el código
+
+Los chequeos leen fuente; esto cuenta plata. Se corrió contra la Supabase real y
+después se borró la fila:
+
+- 22 iniciales en Pro (10 del mes + 12 de bienvenida) ✓
+- gasta primero las del mes ✓
+- devolver suma una y no pasa del tope ✓
+- **10 pedidos EN PARALELO gastaron exactamente 10** — 8 del mes (las que
+  quedaban) y 2 de bienvenida. Ni una de más ni una perdida ✓
+- con el cupo vacío devuelve `null` ✓
+- con la clave del mes vieja, el mes vuelve solo ✓
+- Free: tres, y la cuarta es `null` ✓
+
+La migración `20260904120000_cupo_ia` es aditiva —una tabla nueva— e idempotente,
+**corrida contra la base real el 04/09/26**. Sin deploy.
+
+45 chequeos en `embudo-ia.check`, y los de los topes corren de verdad contra un
 contador falso, no mirando el código.
 
-🔲 **Falta el botón.** El motor está y anda; la pantalla que lo usa es lo
-siguiente. Hoy `IA_LISTA` sigue en `false`.
+🔲 **Falta el botón.** El motor está, el cupo está, y anda. La pantalla que lo usa
+es lo siguiente. Hoy `IA_LISTA` sigue en `false`.
+
+🔲 **Y falta mostrar el cupo**: el número grande de lo que queda, el detalle de
+las dos bolsas, y el aviso fuerte al cruzar de las del mes a las de bienvenida
+—que no vuelven—. Va con el botón. La ruta ya devuelve `salioDe` y `cupo` justo
+para eso.
 
 ## FASE 5 — La página de venta y el checkout
 

@@ -62,6 +62,8 @@ model User {
   storeFollows       StoreFollow[]
   donations          Donation[]
   asistenteMensajes  AsistenteMensaje[]
+  /// Cuántas generaciones de IA le quedan, por concepto. Ver `CupoIA`.
+  cuposIA            CupoIA[]
 }
 
 // Historial de chat con Sasha (asistente IA del dashboard). Se guarda en la base
@@ -1035,6 +1037,62 @@ model DigitalEnvioLog {
   createdAt DateTime @default(now())
 
   @@index([orderId, createdAt(sort: Desc)])
+}
+
+/// Cuántas generaciones de IA le quedan a una cuenta digital.
+///
+/// ══════════════════════════════════════════════════════════════════════════
+/// SON DOS BOLSAS, Y LA DIFERENCIA ES QUE UNA SE VENCE
+/// ══════════════════════════════════════════════════════════════════════════
+///
+/// - **Bienvenida**: se dan una vez, al empezar, y **no vencen nunca**. Existen
+///   porque el mes 1 es cuando se necesita todo —la persona está probando, no
+///   sabe qué escribir y regenera varias veces— y el mes 6 no se necesita nada.
+///   Ese primer día es el que decide si se queda.
+/// - **Del mes**: se renuevan el 1° y **no se acumulan**. Si se acumularan,
+///   alguien que no toca la cuenta durante un año llega al mes 13 con 120
+///   generaciones juntas y el peor caso vuelve entero.
+///
+/// ⚠️ **Se gasta primero la del mes.** Le conviene a la persona: la del mes se
+/// pierde si no la usa y la de bienvenida no. Al revés le quemaríamos su bolsa
+/// permanente mientras se le vencen sin usar las del mes.
+///
+/// ── Por qué una tabla y no columnas en `Subscription` ──────────────────────
+///
+/// Porque el mismo molde lo va a usar el cupo de ebooks, que es el caro y el
+/// que de verdad se vende. Con `concepto` adentro, los dos cupos son filas de
+/// esta tabla en vez de cuatro columnas más en una tabla que ya es larga.
+///
+/// ── Por qué el mes se guarda como texto y no se reinicia con un cron ───────
+///
+/// `mesClave` guarda "2026-09". Cuando llega un pedido y la clave no es la del
+/// mes actual, el contador se pone en cero **en ese momento**. Así el reinicio
+/// no depende de que un proceso nocturno corra: si el cron no corre, no pasa
+/// nada, porque nadie está esperando que corra.
+model CupoIA {
+  id String @id @default(cuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// EMBUDO (armar las tres fichas) o EBOOK (escribir el PDF). Texto y no enum:
+  /// un enum nuevo obliga a una migración cada vez que aparece un tercer uso.
+  concepto String
+
+  /// De la bolsa que no vence. Nunca se reinicia.
+  bienvenidaUsadas Int @default(0)
+
+  /// De la bolsa del mes, y de qué mes son ("2026-09").
+  mesUsadas Int     @default(0)
+  mesClave  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  /// Una fila por cuenta y concepto. Lo garantiza la base: leer "¿ya existe?"
+  /// antes de crear no alcanza — dos pedidos en paralelo leen los dos "todavía
+  /// no" y crean dos filas, y ahí el cupo se duplica solo.
+  @@unique([userId, concepto])
 }
 
 /// Una solicitud de arrepentimiento: alguien que compró y quiere dar marcha

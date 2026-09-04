@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth-session";
 import { anthropic } from "@/lib/anthropic";
 import { permitirGeneracion } from "@/lib/ia-digitales";
+import { consumirDelCupo, devolverAlCupo, estadoDelCupo } from "@/lib/cupo-ia";
 import {
   ESQUEMA_DEL_EMBUDO, INSTRUCCIONES, LARGO_DEL_NICHO, MINIMO_DEL_NICHO,
   normalizarEmbudo,
@@ -81,12 +82,14 @@ export async function POST(req: NextRequest) {
   /* ⚠️ Los topes van ANTES de leer el cuerpo y antes de tocar la base: un pedido
      rechazado no tiene que costar nada. Es la misma regla que en Sasha.
      Y si Redis no contesta, se FRENA. Del otro lado hay algo que se paga: "no
-     pude contar" tiene que cortar, nunca dejar pasar. */
+     pude contar" tiene que cortar, nunca dejar pasar.
+
+     `sinAbono` incluye a Free y no sólo a la prueba: una cuenta Free no vence
+     nunca, no pide tarjeta y se abren las que uno quiera. Ver `ia-digitales`. */
   try {
     const veredicto = await permitirGeneracion({
       userId: user.id,
-      tier,
-      enPrueba: estado === "TRIAL",
+      sinAbono: estado === "TRIAL" || tier === "FREE",
       day: getArgentinaDayKey(),
       que: "embudo",
     });
@@ -111,6 +114,24 @@ export async function POST(req: NextRequest) {
       { error: "Contanos un poco más de qué se trata: con dos palabras no alcanza para armar nada." },
       { status: 400 },
     );
+  }
+
+  /* ⚠️ EL CUPO SE GASTA ACÁ, ANTES DE LLAMAR AL MODELO.
+   *
+   * Después sería tarde: ocho pedidos en paralelo pasarían todos el control
+   * —porque ninguno gastó todavía— y generarían los ocho. Se gasta primero y,
+   * si la llamada falla, se devuelve: la persona no recibió nada y el fallo fue
+   * nuestro. Ver `devolverAlCupo`. */
+  const bolsa = await consumirDelCupo(user.id, tier);
+  if (!bolsa) {
+    const cupo = await estadoDelCupo(user.id, tier);
+    return NextResponse.json({
+      error: cupo.topeDelMes > 0
+        ? `Usaste todas tus generaciones. El ${cupo.proximoMes ? "1° del mes que viene" : "mes que viene"} tenés ${cupo.topeDelMes} nuevas.`
+        : "Usaste las 3 generaciones del plan gratis. En Starter tenés 6 al empezar y 5 por mes.",
+      sinCupo: true,
+      cupo,
+    }, { status: 429 });
   }
 
   let respuesta;
@@ -145,6 +166,8 @@ export async function POST(req: NextRequest) {
     );
   } catch (e) {
     console.error("[ia-embudo] falló la llamada a Anthropic", e);
+    /* No recibió nada, así que no se le cobra la generación. */
+    await devolverAlCupo(user.id, bolsa);
     return NextResponse.json(
       { error: "No pudimos armarlo en este momento. Probá de nuevo en un minuto." },
       { status: 502 },
@@ -171,11 +194,24 @@ export async function POST(req: NextRequest) {
       userId: user.id,
       stop: respuesta.stop_reason,
     });
+    /* Tampoco se le cobra ésta. Nos costó a nosotros —los tokens ya se
+       gastaron— pero la persona no se lleva nada, y cobrarle una generación por
+       un error nuestro es lo que después termina en un reclamo. */
+    await devolverAlCupo(user.id, bolsa);
     return NextResponse.json(
       { error: "Nos salió algo raro. Probá de nuevo, o contanos el negocio con otras palabras." },
       { status: 502 },
     );
   }
 
-  return NextResponse.json({ ok: true, embudo });
+  /* Cuánto le queda DESPUÉS de esta, para que la pantalla lo diga sin volver a
+     preguntar. Y `bolsa` viaja también: es lo que deja avisar fuerte cuando se
+     acabaron las del mes y se está empezando a comer las de bienvenida, que no
+     vuelven. */
+  return NextResponse.json({
+    ok: true,
+    embudo,
+    salioDe: bolsa,
+    cupo: await estadoDelCupo(user.id, tier),
+  });
 }

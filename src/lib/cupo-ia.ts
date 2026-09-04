@@ -1,0 +1,224 @@
+import { prisma } from "@/lib/prisma";
+import type { TierDigital } from "@/lib/planes-digitales";
+import { getArgentinaDayKey } from "@/lib/fechas-comerciales";
+
+/**
+ * El cupo de generaciones de IA de una cuenta digital.
+ *
+ * ══════════════════════════════════════════════════════════════════════════
+ * UN CUPO NO ES UN TOPE
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * **Tope** es invisible y anti-abuso: la ráfaga, los globales. Nadie lo ve ni lo
+ * vende, vive en Redis y se olvida solo. Está en `lib/ia-digitales`.
+ *
+ * **Cupo** es parte de lo que se vende: *"3 en el plan gratis"*, *"12 al empezar
+ * y 10 por mes en Pro"*. La persona lo ve gastarse, va escrito en la página de
+ * precios, y por eso **no puede vivir en Redis**: un contador con ventana se
+ * olvida cuando pasa la ventana y regala el cupo entero de nuevo.
+ *
+ * ── Las dos bolsas ─────────────────────────────────────────────────────────
+ *
+ * | | Cuántas | ¿Vuelven? |
+ * |---|---|---|
+ * | **De este mes** | 5 Starter / 10 Pro | Sí, el 1° de cada mes |
+ * | **De bienvenida** | 6 Starter / 12 Pro | **No.** Se dan una vez |
+ *
+ * El arranque existe porque **el mes 1 es cuando se necesita todo**: la persona
+ * está probando, no sabe qué escribir en el campo y regenera varias veces. Ese
+ * día es el que decide si se queda. El mes 6 no necesita nada.
+ *
+ * Y el mensual **no se acumula**: si se acumulara, alguien que no toca la cuenta
+ * durante un año llega al mes 13 con 120 generaciones juntas y el peor caso que
+ * esto viene a resolver vuelve entero.
+ *
+ * ── ⚠️ SE GASTA PRIMERO LA DEL MES ─────────────────────────────────────────
+ *
+ * Porque es la que se pierde si no se usa. Al revés le quemaríamos a la persona
+ * su bolsa permanente mientras se le vencen sin usar las del mes — una estafa
+ * silenciosa, de las que nadie nota hasta que le faltan.
+ *
+ * ── Por qué no hay ningún cron ─────────────────────────────────────────────
+ *
+ * `mesClave` guarda "2026-09". Cuando llega un pedido y la clave no es la del
+ * mes actual, el contador se pone en cero **en ese momento**. Así el reinicio no
+ * depende de que un proceso nocturno corra — y en este plan de Vercel el cron es
+ * uno solo por día.
+ */
+
+/** Para qué es el cupo. El de ebooks todavía no se usa: lo va a usar el paso 3. */
+export type ConceptoIA = "EMBUDO" | "EBOOK";
+
+export type Bolsa = "mes" | "bienvenida";
+
+export type TopeDelCupo = { bienvenida: number; mes: number };
+
+/**
+ * Cuántas generaciones da cada plan para armar el embudo.
+ *
+ * Los números salen de los productos, no del aire: **3 por producto**. Starter
+ * puede tener 2 → 6 para arrancar; Pro puede tener 5 → 12, con margen. El
+ * mensual alcanza para rehacer todo el catálogo dos veces.
+ *
+ * ⚠️ **Free no tiene bolsa mensual, y es la única decisión de plata acá.** En
+ * Starter y Pro hay un abono pagando la cuenta; en Free **no entra un peso hasta
+ * que la persona vende algo**, y Free no vence nunca ni pide tarjeta. Con cupo
+ * mensual, veinte cuentas truchas serían un gasto para siempre. Con 3 de por
+ * vida, una cuenta trucha nos cuesta cuatro centavos de dólar, una sola vez.
+ */
+export const CUPO_EMBUDO: Record<TierDigital, TopeDelCupo> = {
+  FREE:    { bienvenida: 3,  mes: 0 },
+  STARTER: { bienvenida: 6,  mes: 5 },
+  PRO:     { bienvenida: 12, mes: 10 },
+};
+
+export type EstadoDelCupo = {
+  /** Lo que queda en total: el número grande, el que la persona busca. */
+  quedan: number;
+  quedanDelMes: number;
+  quedanDeBienvenida: number;
+  topeDelMes: number;
+  topeDeBienvenida: number;
+  /** "2026-10": cuándo vuelven las del mes. `null` si el plan no tiene mensual. */
+  proximoMes: string | null;
+};
+
+/** El mes de Argentina, "2026-09". Sale del mismo reloj que el resto del panel. */
+export function claveDelMes(): string {
+  return getArgentinaDayKey().slice(0, 7);
+}
+
+/** El mes que viene, para poder decir cuándo vuelven. */
+export function mesSiguiente(clave: string): string {
+  const [anio, mes] = clave.split("-").map(Number);
+  return mes === 12 ? `${anio + 1}-01` : `${anio}-${String(mes + 1).padStart(2, "0")}`;
+}
+
+/**
+ * Cuánto le queda, sin gastar nada.
+ *
+ * Lo lee la pantalla para dibujar el cartel. No crea la fila: una cuenta que
+ * nunca generó nada no necesita una fila para saber que tiene todo.
+ */
+export async function estadoDelCupo(
+  userId: string,
+  tier: TierDigital,
+  concepto: ConceptoIA = "EMBUDO",
+): Promise<EstadoDelCupo> {
+  const tope = CUPO_EMBUDO[tier];
+  const mes = claveDelMes();
+
+  const fila = await prisma.cupoIA.findUnique({
+    where: { userId_concepto: { userId, concepto } },
+    select: { bienvenidaUsadas: true, mesUsadas: true, mesClave: true },
+  });
+
+  /* Si la fila es de un mes viejo, las del mes ya volvieron aunque nadie las
+     haya reiniciado todavía: el reinicio pasa al gastar, pero mostrarlas usadas
+     mientras tanto sería mentirle a quien mira. */
+  const usadasDelMes = fila && fila.mesClave === mes ? fila.mesUsadas : 0;
+  const usadasDeBienvenida = fila?.bienvenidaUsadas ?? 0;
+
+  const quedanDelMes = Math.max(0, tope.mes - usadasDelMes);
+  const quedanDeBienvenida = Math.max(0, tope.bienvenida - usadasDeBienvenida);
+
+  return {
+    quedan: quedanDelMes + quedanDeBienvenida,
+    quedanDelMes,
+    quedanDeBienvenida,
+    topeDelMes: tope.mes,
+    topeDeBienvenida: tope.bienvenida,
+    proximoMes: tope.mes > 0 ? mesSiguiente(mes) : null,
+  };
+}
+
+/**
+ * Gastar una generación. Devuelve de qué bolsa salió, o `null` si no queda.
+ *
+ * ══════════════════════════════════════════════════════════════════════════
+ * ⚠️ LA CONDICIÓN VA ADENTRO DEL `where`, NUNCA EN UN `if` DESPUÉS DE LEER
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * Leer "¿le quedan?" y después restar es la carrera clásica: dos pedidos en
+ * paralelo leen los dos "te queda 1" y los dos gastan, y la cuenta terminó con
+ * -1. Acá el "todavía le queda" es parte del `UPDATE`, así que la base decide
+ * quién gana y el que pierde recibe `count: 0`. No hace falta transacción.
+ *
+ * ⚠️ Y el orden: **primero la del mes**, que es la que se vence.
+ */
+export async function consumirDelCupo(
+  userId: string,
+  tier: TierDigital,
+  concepto: ConceptoIA = "EMBUDO",
+): Promise<Bolsa | null> {
+  const tope = CUPO_EMBUDO[tier];
+  const mes = claveDelMes();
+
+  /* La fila tiene que existir para poder actualizarla. `upsert` sobre la clave
+     única y no un "¿existe? entonces creá": dos pedidos en paralelo leen los dos
+     "todavía no" y crean dos filas, o sea el doble de cupo. */
+  await prisma.cupoIA.upsert({
+    where: { userId_concepto: { userId, concepto } },
+    update: {},
+    create: { userId, concepto, mesClave: mes },
+  });
+
+  /* El reinicio del mes, sin cron: si la clave guardada no es la de este mes, se
+     pone en cero acá mismo. Con la clave vieja en el `where`, dos pedidos a la
+     vez no lo reinician dos veces — el segundo ya no encuentra la clave vieja. */
+  if (tope.mes > 0) {
+    await prisma.cupoIA.updateMany({
+      where: { userId, concepto, NOT: { mesClave: mes } },
+      data: { mesUsadas: 0, mesClave: mes },
+    });
+
+    const delMes = await prisma.cupoIA.updateMany({
+      where: { userId, concepto, mesClave: mes, mesUsadas: { lt: tope.mes } },
+      data: { mesUsadas: { increment: 1 } },
+    });
+    if (delMes.count === 1) return "mes";
+  }
+
+  const deBienvenida = await prisma.cupoIA.updateMany({
+    where: { userId, concepto, bienvenidaUsadas: { lt: tope.bienvenida } },
+    data: { bienvenidaUsadas: { increment: 1 } },
+  });
+  if (deBienvenida.count === 1) return "bienvenida";
+
+  return null;
+}
+
+/**
+ * Devolver una generación que no llegó a usarse.
+ *
+ * Se gasta ANTES de llamar al modelo —si no, ocho pedidos en paralelo pasan
+ * todos el control y generan todos— así que cuando la llamada falla hay que
+ * devolverla: la persona no recibió nada y el fallo fue nuestro.
+ *
+ * ⚠️ Con el piso adentro del `where`. Sin él, un bug que llame a esto de más
+ * deja el contador en negativo, o sea cupo infinito para esa cuenta.
+ */
+export async function devolverAlCupo(
+  userId: string,
+  bolsa: Bolsa,
+  concepto: ConceptoIA = "EMBUDO",
+): Promise<void> {
+  try {
+    if (bolsa === "mes") {
+      await prisma.cupoIA.updateMany({
+        where: { userId, concepto, mesUsadas: { gt: 0 } },
+        data: { mesUsadas: { decrement: 1 } },
+      });
+    } else {
+      await prisma.cupoIA.updateMany({
+        where: { userId, concepto, bienvenidaUsadas: { gt: 0 } },
+        data: { bienvenidaUsadas: { decrement: 1 } },
+      });
+    }
+  } catch (e) {
+    /* Que no se pueda devolver no puede tumbar la respuesta de error que ya
+       estamos por darle a la persona: quedaría un 500 encima de un 502. Se
+       pierde una generación y se anota. */
+    console.error("[cupo-ia] no se pudo devolver la generación", { userId, bolsa, e });
+  }
+}

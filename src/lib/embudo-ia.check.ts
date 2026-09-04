@@ -25,8 +25,9 @@ import {
 } from "./embudo-ia";
 import { LARGO_TITULO, PRECIO_MAXIMO } from "./productos-digitales";
 import {
-  permitirGeneracion, DIARIO_POR_PLAN, RAFAGA_IA, GLOBAL_DIARIO, GLOBAL_PRUEBA_DIARIO,
+  permitirGeneracion, RAFAGA_IA, GLOBAL_DIARIO, GLOBAL_PRUEBA_DIARIO,
 } from "./ia-digitales";
+import { CUPO_EMBUDO, claveDelMes, mesSiguiente } from "./cupo-ia";
 
 let fallos = 0;
 const check = (id: string, ok: boolean, desc: string) => {
@@ -184,23 +185,110 @@ check("RUT-H",
 check("RUT-I", /if \(!process\.env\.ANTHROPIC_API_KEY\)/.test(ruta),
   "sin la clave de Anthropic se avisa antes de hacer esperar");
 
-/* ── Los topes ──────────────────────────────────────────────────────────── */
+/* ⚠️ EL CUPO SE GASTA ANTES DE LLAMAR AL MODELO. Después sería tarde: ocho
+   pedidos en paralelo pasarían todos el control —porque ninguno gastó todavía—
+   y generarían los ocho. */
+check("RUT-J",
+  ruta.indexOf("consumirDelCupo") < ruta.indexOf("anthropic.messages.create"),
+  "el cupo se gasta antes de llamar al modelo, no después");
 
-/* Ninguno puede ser cero ni infinito, **ni en el plan más caro**. Es la regla
+/* Y si la llamada falla, se devuelve: la persona no recibió nada y el fallo fue
+   nuestro. Cobrarle una generación por un error nuestro termina en un reclamo. */
+const devoluciones = (ruta.match(/devolverAlCupo\(/g) ?? []).length;
+check("RUT-K", devoluciones === 2,
+  `los dos caminos de error devuelven la generación (${devoluciones} de 2)`);
+
+/* La respuesta dice de qué bolsa salió. Es lo que le deja avisar a la pantalla
+   cuando se acabaron las del mes y se está empezando a comer las de bienvenida,
+   que no vuelven. Sin eso, la persona gasta su reserva sin enterarse. */
+check("RUT-L", /salioDe: bolsa/.test(ruta) && /cupo: await estadoDelCupo/.test(ruta),
+  "la respuesta dice de qué bolsa salió y cuánto queda");
+
+/* ── El cupo ────────────────────────────────────────────────────────────── */
+
+/* Ninguna función de IA sale sin límite, **ni en el plan más caro**. Es la regla
    que se escribió mirando el "Todos los ebooks con IA" de la competencia. */
-check("TOP-A",
-  Object.values(DIARIO_POR_PLAN).every((n) => Number.isFinite(n) && n > 0) &&
-  RAFAGA_IA > 0 && GLOBAL_DIARIO > 0 && GLOBAL_PRUEBA_DIARIO > 0,
-  "todos los topes existen y ninguno es infinito");
+check("CUP-A",
+  Object.values(CUPO_EMBUDO).every((c) =>
+    Number.isFinite(c.bienvenida) && Number.isFinite(c.mes) && c.bienvenida > 0 && c.mes >= 0),
+  "los tres planes tienen cupo, y ninguno es infinito");
 
-/* El plan más caro lleva el tope más alto, no ninguno. Y el global de pruebas va
-   por debajo del total: es un presupuesto chico y aparte, para que el que abusa
-   no deje sin IA al que paga. */
-check("TOP-B",
-  DIARIO_POR_PLAN.FREE < DIARIO_POR_PLAN.STARTER && DIARIO_POR_PLAN.STARTER < DIARIO_POR_PLAN.PRO,
-  "el tope diario sube con el plan");
+/* ⚠️ FREE NO TIENE BOLSA MENSUAL, y es la única decisión de plata acá. En
+   Starter y Pro hay un abono pagando la cuenta; en Free no entra un peso hasta
+   que la persona vende algo, y Free no vence nunca ni pide tarjeta. Con cupo
+   mensual, veinte cuentas truchas serían un gasto para siempre. */
+check("CUP-B", CUPO_EMBUDO.FREE.mes === 0 && CUPO_EMBUDO.FREE.bienvenida === 3,
+  "Free son 3 de por vida, sin bolsa mensual");
+
+/* Y el cupo sube con el plan, en las dos bolsas. */
+check("CUP-C",
+  CUPO_EMBUDO.FREE.bienvenida < CUPO_EMBUDO.STARTER.bienvenida &&
+  CUPO_EMBUDO.STARTER.bienvenida < CUPO_EMBUDO.PRO.bienvenida &&
+  CUPO_EMBUDO.STARTER.mes < CUPO_EMBUDO.PRO.mes,
+  "el cupo sube con el plan");
+
+/* El arranque es más grande que el mensual, a propósito: el primer día es cuando
+   la persona está probando, no sabe qué escribir y regenera varias veces — y es
+   el día que decide si se queda. Para el mes 6 ya entendió cómo funciona. */
+check("CUP-D",
+  CUPO_EMBUDO.STARTER.bienvenida > CUPO_EMBUDO.STARTER.mes &&
+  CUPO_EMBUDO.PRO.bienvenida > CUPO_EMBUDO.PRO.mes,
+  "la bolsa de bienvenida es más grande que la del mes");
+
+/* La clave del mes es la de Argentina y tiene la forma que el `where` espera. */
+check("CUP-E", /^\d{4}-\d{2}$/.test(claveDelMes()), "la clave del mes tiene la forma AAAA-MM");
+check("CUP-F",
+  mesSiguiente("2026-09") === "2026-10" && mesSiguiente("2026-12") === "2027-01",
+  "el mes que viene se calcula bien, y en diciembre cambia de año");
+
+/* ── Cómo se gasta ──────────────────────────────────────────────────────── */
+
+const cupo = readFileSync("src/lib/cupo-ia.ts", "utf8");
+
+/* ⚠️ SE GASTA PRIMERO LA DEL MES, porque es la que se vence. Al revés le
+   quemaríamos a la persona su bolsa permanente mientras se le pierden sin usar
+   las del mes: una estafa silenciosa, de las que nadie nota hasta que le
+   faltan. */
+check("CUP-G",
+  cupo.indexOf("mesUsadas: { increment: 1 }") < cupo.indexOf("bienvenidaUsadas: { increment: 1 }"),
+  "se gasta primero la del mes y después la de bienvenida");
+
+/* ⚠️ LA CONDICIÓN VA ADENTRO DEL `where`. Leer "¿le quedan?" y después restar es
+   la carrera clásica: dos pedidos en paralelo leen los dos "te queda 1" y los
+   dos gastan, y la cuenta termina en -1. */
+check("CUP-H",
+  /mesUsadas: \{ lt: tope\.mes \}/.test(cupo) &&
+  /bienvenidaUsadas: \{ lt: tope\.bienvenida \}/.test(cupo),
+  "el 'todavía le queda' es parte del UPDATE, no un if después de leer");
+
+/* Y la fila se crea con `upsert` sobre la clave única: un "¿existe? entonces
+   creá" deja dos filas cuando llegan dos pedidos juntos, o sea el doble de cupo. */
+check("CUP-I", /prisma\.cupoIA\.upsert/.test(cupo), "la fila del cupo se crea con upsert");
+
+/* Devolver no puede dejar el contador en negativo: eso sería cupo infinito. */
+check("CUP-J",
+  /mesUsadas: \{ gt: 0 \}/.test(cupo) && /bienvenidaUsadas: \{ gt: 0 \}/.test(cupo),
+  "devolver una generación no puede dejar el contador en negativo");
+
+/* El mes se reinicia al usarlo, sin cron: en este plan de Vercel el cron es uno
+   solo por día, y un cupo que depende de que corra es un cupo que algún día no
+   vuelve. */
+check("CUP-K",
+  /NOT: \{ mesClave: mes \}/.test(cupo) &&
+  /* El reinicio va ADENTRO del camino de gastar y antes de contar: así pasa
+     cuando alguien usa el botón, no cuando corre un proceso. */
+  cupo.indexOf("NOT: { mesClave: mes }") < cupo.indexOf("mesUsadas: { increment: 1 }"),
+  "el mes se reinicia al gastar, sin depender de ningún proceso nocturno");
+
+/* ── Los topes que quedan (los invisibles) ──────────────────────────────── */
+
+check("TOP-A", RAFAGA_IA > 0 && GLOBAL_DIARIO > 0 && GLOBAL_PRUEBA_DIARIO > 0,
+  "la ráfaga y los dos globales existen y ninguno es infinito");
+
+/* El global de las cuentas sin abono va por debajo del total: es un presupuesto
+   chico y aparte, para que el que abusa no deje sin IA al que paga. */
 check("TOP-C", GLOBAL_PRUEBA_DIARIO < GLOBAL_DIARIO,
-  "las cuentas en prueba compiten contra un presupuesto más chico y aparte");
+  "las cuentas sin abono compiten contra un presupuesto más chico y aparte");
 
 /* ⚠️ EL ORDEN. Los contadores suman aunque el pedido se rechace, así que los
    globales van ÚLTIMOS: si fueran primero, alguien ya bloqueado por su tope
@@ -210,47 +298,48 @@ check("TOP-C", GLOBAL_PRUEBA_DIARIO < GLOBAL_DIARIO,
    arriba de todo no existe. */
 async function losTopes() {
   const llamadas: string[] = [];
-  const contadorQueCorta = (clave: string) => {
-    llamadas.push(clave);
-    /* La ráfaga corta al primer intento; lo que importa es que después de cortar
-       no se haya tocado ningún contador global. */
-    return Promise.resolve({ permitido: false, cuenta: 99 });
-  };
   await permitirGeneracion(
-    { userId: "u1", tier: "FREE", enPrueba: true, day: "2026-09-04", que: "embudo" },
-    contadorQueCorta,
+    { userId: "u1", sinAbono: true, day: "2026-09-04", que: "embudo" },
+    (clave) => {
+      llamadas.push(clave);
+      /* La ráfaga corta al primer intento; lo que importa es que después de
+         cortar no se haya tocado ningún contador global. */
+      return Promise.resolve({ permitido: false, cuenta: 99 });
+    },
   );
   check("TOP-D",
     llamadas.length === 1 && llamadas[0].startsWith("ia-dig:embudo:") &&
-    !llamadas.some((c) => c.includes("global")),
+    !llamadas.some((c) => c.includes("global") || c.includes("gratis")),
     "cortado por ráfaga, no se toca ningún contador global");
 
-  /* Y con todo permitido, se cuentan las cuatro capas en orden. */
+  /* Y con todo permitido, se cuentan las tres capas en orden. */
   const todas: string[] = [];
   const veredicto = await permitirGeneracion(
-    { userId: "u1", tier: "PRO", enPrueba: true, day: "2026-09-04", que: "embudo" },
+    { userId: "u1", sinAbono: true, day: "2026-09-04", que: "embudo" },
     (c) => { todas.push(c); return Promise.resolve({ permitido: true, cuenta: 1 }); },
   );
   check("TOP-E",
-    veredicto.permitido === true && todas.length === 4 &&
-    todas[0].startsWith("ia-dig:") && todas[1].startsWith("ia-dig-dia:") &&
-    todas[2].startsWith("ia-dig-prueba-dia:") && todas[3].startsWith("ia-dig-global-dia:"),
-    "las cuatro capas se cuentan, y los globales van últimos");
+    veredicto.permitido === true && todas.length === 3 &&
+    todas[0].startsWith("ia-dig:") &&
+    todas[1].startsWith("ia-dig-gratis-dia:") && todas[2].startsWith("ia-dig-global-dia:"),
+    "las tres capas se cuentan, y los globales van últimos");
 
-  /* Una cuenta que paga no toca el presupuesto de las pruebas. */
+  /* Una cuenta que paga no toca el presupuesto de las que no pagan. */
   const dePago: string[] = [];
   await permitirGeneracion(
-    { userId: "u2", tier: "PRO", enPrueba: false, day: "2026-09-04", que: "embudo" },
+    { userId: "u2", sinAbono: false, day: "2026-09-04", que: "embudo" },
     (c) => { dePago.push(c); return Promise.resolve({ permitido: true, cuenta: 1 }); },
   );
-  check("TOP-F", !dePago.some((c) => c.includes("prueba")),
-    "una cuenta que paga no gasta el presupuesto de las cuentas en prueba");
+  check("TOP-F", !dePago.some((c) => c.includes("gratis")),
+    "una cuenta que paga no gasta el presupuesto de las que no pagan");
 
-  /* El diario es de la CUENTA y no del botón: contarlos por separado le daría a
-     una cuenta Free el doble de generaciones que las que dice su número. */
+  /* ⚠️ Y FREE ENTRA EN ESE PRESUPUESTO, no sólo la prueba. Es el agujero que
+     tenía esto el 04/09/26: miraba `TRIAL`, y una cuenta Free digital es
+     `ACTIVE`, así que quedaba afuera del único freno que ve las cuentas en
+     serie — siendo la más expuesta de las dos, porque no vence nunca. */
   check("TOP-G",
-    todas[1] === "ia-dig-dia:u1" && !todas[1].includes("embudo"),
-    "los dos botones baratos comparten el techo diario de la cuenta");
+    /sinAbono: estado === "TRIAL" \|\| tier === "FREE"/.test(ruta),
+    "Free entra en el global de las cuentas sin abono, no sólo la prueba");
 }
 
 losTopes().then(() => {
