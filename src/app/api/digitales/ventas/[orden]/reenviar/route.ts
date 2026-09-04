@@ -55,8 +55,10 @@ const VENTANA_POR_CUENTA = 60 * 60 * 1000;
  *
  * 🔲 No queda anotado en la base cuántas veces se reenvió: hoy eso lo lleva el
  * limitador, que se olvida cuando pasa la ventana. Para poder mostrarle a quien
- * vende "reenviado hace 5 minutos" hace falta una columna, y eso es otra
- * migración. Va cuando exista el detalle de la venta.
+ * vende "reenviado hace 5 minutos" hacen falta dos columnas en `Order`
+ * (`digitalReenvios` y `digitalUltimoReenvio`), y eso es otra migración. El
+ * detalle de la venta ya existe y muestra todo lo demás — es lo único que le
+ * falta a esa pantalla.
  */
 export async function POST(
   _req: NextRequest,

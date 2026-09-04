@@ -1,12 +1,13 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { LinkDelPanel as Link } from "../SalidaSinGuardar";
 import {
   Search, X, Loader2, ChevronLeft, ChevronRight, ShoppingBag,
-  CheckCircle2, Clock, Ban, Download, AlertTriangle, Send,
+  CheckCircle2, Clock, Ban, Download, AlertTriangle, ArrowRight,
 } from "lucide-react";
+import BotonReenviar from "./BotonReenviar";
 
 /**
  * La lista de ventas y sus filtros.
@@ -251,50 +252,18 @@ const CHIPS = {
 } as const;
 
 /**
- * Una venta, con su botón de reenviar.
+ * Una venta, con su botón de reenviar y su entrada al detalle.
  *
- * ── Por qué el estado del reenvío vive ACÁ y no arriba ──────────────────────
+ * ── Por qué el estado del reenvío vive en el botón y no acá ─────────────────
  *
- * Porque es de esta fila. Con un `useState` en la lista habría que llevar "cuál
- * está mandando" y "qué le pasó a cuál" en dos mapas, y el aviso de una venta
- * aparecería debajo de otra el día que la lista se reordene.
+ * Porque es de esa fila y de nadie más. Con un `useState` en la lista habría que
+ * llevar "cuál está mandando" y "qué le pasó a cuál" en dos mapas, y el aviso de
+ * una venta aparecería debajo de otra el día que la lista se reordene. El botón
+ * se lleva su propio estado adentro — ver `BotonReenviar`, que además lo comparte
+ * con el detalle.
  */
 function Venta({ v }: { v: VentaEnPantalla }) {
   const { Icon, texto, clase } = CHIPS[v.estado];
-  const [mandando, setMandando] = useState(false);
-  const [aviso, setAviso] = useState<{ ok: boolean; texto: string } | null>(null);
-  /* ⚠️ El freno del doble click. `useState` no alcanza: dos clics seguidos leen
-     el mismo `false` antes de que React vuelva a dibujar, y salen los dos —
-     dos mails al mismo comprador y dos de sus tres reenvíos del día quemados.
-     Con un `ref` el segundo ve el `true` en el mismo instante. */
-  const enVuelo = useRef(false);
-
-  async function reenviar() {
-    if (enVuelo.current) return;
-    enVuelo.current = true;
-    setMandando(true);
-    setAviso(null);
-    try {
-      const r = await fetch(`/api/digitales/ventas/${v.id}/reenviar`, { method: "POST" });
-      const d = await r.json().catch(() => ({}));
-      if (!r.ok || !d.ok) {
-        setAviso({ ok: false, texto: d.error ?? "No pudimos mandarlo. Probá de nuevo." });
-      } else {
-        setAviso({
-          ok: true,
-          texto: d.renovados > 0
-            /* Se dice cuando el enlace estaba vencido: es un cambio real en lo
-               que esa persona puede hacer, no un detalle técnico. */
-            ? "Mail reenviado, y le renovamos el enlace por 30 días más."
-            : "Mail reenviado.",
-        });
-      }
-    } catch {
-      setAviso({ ok: false, texto: "No pudimos conectarnos. Probá de nuevo." });
-    }
-    enVuelo.current = false;
-    setMandando(false);
-  }
 
   return (
     <div className="rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 p-4">
@@ -341,42 +310,22 @@ function Venta({ v }: { v: VentaEnPantalla }) {
         ))}
       </div>
 
-      {/* ── Reenviar ─────────────────────────────────────────────────────
-          Sólo en las cobradas: en una que nadie pagó no hay nada que mandar.
-          Es la única acción de esta pantalla, y existe porque hasta acá quien
-          vendía veía la venta y no la podía tocar: si el mail se iba a spam, no
-          había ningún camino de vuelta para quien había pagado. */}
-      {v.estado === "COBRADA" && (
-        <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-gray-100 panel-oscuro:border-gray-800 pt-3">
-          <button
-            type="button"
-            onClick={reenviar}
-            disabled={mandando}
-            className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-gray-200 panel-oscuro:border-gray-700 px-3 py-1.5 text-[12.5px] font-semibold text-gray-600 panel-oscuro:text-gray-300 transition-colors hover:border-orange-300 hover:text-orange-600 disabled:opacity-50"
-          >
-            {mandando
-              ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              : <Send className="h-3.5 w-3.5" />}
-            {mandando ? "Mandando…" : "Reenviar el mail"}
-          </button>
+      {/* ── Las acciones ─────────────────────────────────────────────────
+          "Ver el detalle" va en TODAS, incluso en una cancelada: ahí es donde se
+          ve por qué se canceló, y una devuelta es justo la que hay que poder
+          abrir. Reenviar, en cambio, sólo en las cobradas: en una que nadie pagó
+          no hay nada que mandar. */}
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-t border-gray-100 panel-oscuro:border-gray-800 pt-3">
+        {v.estado === "COBRADA" ? <BotonReenviar ordenId={v.id} /> : <span />}
 
-          {aviso && (
-            /* `role="status"` y no `alert`: es la respuesta a algo que la persona
-               apretó, no una interrupción. Un lector de pantalla lo anuncia
-               cuando termina de leer lo que estaba leyendo. */
-            <p
-              role="status"
-              className={`min-w-0 text-[12px] ${
-                aviso.ok
-                  ? "text-green-700 panel-oscuro:text-green-400"
-                  : "text-red-600 panel-oscuro:text-red-400"
-              }`}
-            >
-              {aviso.texto}
-            </p>
-          )}
-        </div>
-      )}
+        <Link
+          href={`/digitales/ventas/${v.id}`}
+          className="group inline-flex shrink-0 items-center gap-1 text-[12.5px] font-semibold text-gray-500 panel-oscuro:text-gray-400 transition-colors hover:text-orange-600"
+        >
+          Ver el detalle
+          <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+        </Link>
+      </div>
     </div>
   );
 }

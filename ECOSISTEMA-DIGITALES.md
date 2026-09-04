@@ -2234,7 +2234,77 @@ en los dos se separaban solos.
 
 🔲 **No queda anotado en la base cuántas veces se reenvió** — hoy eso lo lleva el
 limitador, que se olvida cuando pasa la ventana. Para mostrar "reenviado hace 5
-minutos" hace falta una columna. Va con el detalle de la venta.
+minutos" hace falta **una columna en `Order`**, o sea otra migración; el detalle
+de la venta ya está y muestra todo lo demás, así que esto quedó como lo único
+suelto de esa pantalla. Es aditivo (`digitalReenvios` + `digitalUltimoReenvio`) y
+se corre cuando se decida tocar la base de nuevo.
+
+### ✅ EL DETALLE DE UNA VENTA — HECHO (03/09/26)
+
+`/digitales/ventas/<id>`. **Es la carpeta que se abre cuando alguien reclama.**
+
+#### El agujero que tapa
+
+El sistema venía guardando dos pruebas y **no había ninguna pantalla que las
+mostrara**: la casilla del art. 1116 —con su fecha, su IP y el texto exacto que
+esa persona leyó— y una fila por cada descarga. Guardadas y mudas. *Una prueba
+que no se puede mostrar no es una prueba.*
+
+Y contra un contracargo de Mercado Pago no se gana con la ley: se gana pegando en
+el formulario de la disputa que el 3 de septiembre a las 14:02, desde tal IP, esa
+persona aceptó una frase que decía que no iba a poder devolverlo, y que a las
+14:03 bajó el archivo. Eso es esta pantalla.
+
+#### Qué muestra
+
+- **Los importes**, con el porcentaje de comisión **de la orden** y dicho: *"8%
+  de tu plan de ese día"*. Sin eso, alguien que pasó de Free a Pro ve un
+  descuento que no coincide con su plan de hoy y cree que le cobramos de más.
+- **Quién compró** — correo, nombre y teléfono si lo hay.
+- **Cada línea con su permiso** — descargas usadas sobre el tope, cuándo vence el
+  enlace, y el aviso de "nunca lo bajó" cuando corresponde.
+- **Cada descarga, una por una** — fecha con segundos, IP y navegador. El
+  `User-Agent` se muestra resumido (*"Chrome en Android"*) con la cadena entera
+  plegada abajo, para poder pegarla.
+- **Qué aceptó antes de pagar** — el texto **guardado en la orden**, no la
+  constante de hoy. Si leyera la constante, una venta de hace seis meses mostraría
+  una frase que su comprador nunca vio, que es exactamente lo contrario de una
+  prueba.
+- **Los dos números que se piden en un reclamo** — el de la venta y el del pago en
+  Mercado Pago, con botón de copiar **y a la vista**: `navigator.clipboard` no
+  existe fuera de un contexto seguro, así que tiene que poder copiarse a mano.
+- **Qué le fue pasando** — los `OrderStatusLog`, traducidos. Y las marcas que no
+  se conocen se muestran crudas: inventarles una frase sería tapar información en
+  la única pantalla donde importa que esté completa.
+
+#### Las tres decisiones que se cuidaron
+
+1. **El `storeId` va DENTRO del `where`, no en un `if` después de leer.** Es la
+   única línea que separa esta pantalla de *"poné el id de la venta de otro y
+   mirale el correo del comprador"*. Buscando con los dos, una venta ajena
+   directamente no existe: no hay nada que filtrar mal más abajo.
+2. **El token de descarga no se muestra en ningún lado.** Quien vende no lo
+   necesita —para ayudar está "Reenviar el mail", que va al correo de la venta— y
+   a la vista en el panel es un archivo que se reparte por fuera del tope de 5, y
+   encima con la cara de quien vendió.
+3. **El navegador no se adivina.** Si la cadena no se reconoce se muestra cruda:
+   escribir "Chrome" donde no se sabe es fabricar prueba. Y el orden de las
+   preguntas importa —Edge y Opera también dicen "Chrome" en su cadena, y Chrome
+   dice "Safari"—, así que preguntando al revés todo termina siendo Chrome.
+
+#### Lo que se acomodó de paso
+
+**"Reenviar el mail" pasó a ser un componente compartido** (`BotonReenviar`).
+Estaba metido adentro de la tarjeta de la lista, y el detalle lo necesitaba
+igual: copiado, el día que cambie el aviso cambia en uno de los dos, y el freno
+del doble click se copia mal en el otro. En el detalle además refresca la
+pantalla al terminar, porque ahí se muestra el vencimiento del enlace y si no
+seguiría diciendo la fecha vieja.
+
+**Y la lista linkea al detalle desde TODAS las filas**, no sólo las cobradas: una
+devuelta es justo la que hay que poder abrir.
+
+13 chequeos nuevos (sección 19 de `panel-digitales.check`).
 
 ### ✅ Los avisos al vendedor — HECHOS (03/09/26)
 
@@ -2615,8 +2685,15 @@ El motivo: si la venta se deshizo no hay servicio prestado, y quedarse con la
 comisión de una venta anulada es lo primero que alguien captura de pantalla y
 publica. El costo de esa foto es mucho más alto que lo que se junta reteniendo.
 
-🔲 **Falta escribirlo donde se lee**: en la pantalla de suscripción y en el
-detalle de la venta cuando la devolución exista de verdad. En los **términos** ya
+✅ **Escrito en el detalle de la venta** (03/09/26). Cuando una venta vuelve
+—devolución o contracargo— el detalle lo dice con todas las letras: *"Nuestra
+comisión se devuelve entera — de una venta que se deshizo no nos quedamos con
+nada"*. Y no aparece en cualquier cancelada: una que nadie pagó y una que se
+devolvió dicen las dos `CANCELLED` en `status`, así que se distinguen por
+`Payment.status === "REFUNDED"` y por la marca que dejó el webhook
+(`digital_devolucion` / `digital_contracargo`).
+
+🔲 **Falta escribirlo en la pantalla de suscripción.** En los **términos** ya
 está (03/09/26): punto **6 ter** del apartado Cliente, más la excepción nombrada
 en el punto 7 de derechos del consumidor. Los plazos de ahí salen de
 `DIAS_DEL_PERMISO` y `MAX_DESCARGAS`, no escritos a mano: lo que vale para un
@@ -2627,11 +2704,15 @@ distinto del que el sistema aplica.
 defenderse solo, pero nadie del proyecto es abogado. Es media hora y es la parte
 más barata de todo esto.
 
-🔲 **Falta el apartado del VENDEDOR digital en los términos.** Hoy están los tres
-de siempre —Dueño de tienda, Vendedor/Afiliado, Cliente— y una cuenta DIGITAL no
-es ninguno de esos. El punto 6 ter cubre al comprador, que es el lado del que
-sale un reclamo por devolución; falta el lado de quien vende (comisión, qué pasa
-con una devolución, qué puede subir).
+✅ **El apartado del VENDEDOR digital en los términos** — HECHO (03/09/26,
+commits `e12e9648` y `43d807c8`). Estaban los tres de siempre —Dueño de tienda,
+Vendedor/Afiliado, Cliente— y una cuenta DIGITAL no era ninguno: al registrarse
+firmaba **el documento del Cliente**, o sea el que promete 10 días de
+arrepentimiento, que es justo lo contrario de lo que le conviene a quien vende.
+Ahora tiene su propio apartado de 16 puntos: qué somos en su venta (art. 40 de la
+24.240, con el aviso de que es orden público y no se puede recortar), la
+comisión, los impuestos, que su contenido sigue siendo suyo, la licencia para
+alojarlo y entregarlo, las devoluciones y la suspensión.
 
 ## FASE 5 bis — La dirección propia por producto
 

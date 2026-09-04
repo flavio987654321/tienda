@@ -1091,6 +1091,109 @@ const legal = readFileSync("src/lib/legal.ts", "utf8");
 chequear("la versión de los términos subió con este cambio",
   /CURRENT_TERMS_VERSION = "1\.7"/.test(legal) && /1\.7 \(03\/09\/2026\)/.test(legal));
 
+/* ══════════════════════════════════════════════════════════════════════════
+   19. EL DETALLE DE UNA VENTA — la carpeta que se abre cuando alguien reclama
+   ══════════════════════════════════════════════════════════════════════════
+
+   El sistema venía guardando dos pruebas —la casilla del art. 1116 con su fecha,
+   su IP y el texto exacto que esa persona leyó, y una fila por descarga— y no
+   había ninguna pantalla que las mostrara. Una prueba que no se puede mostrar no
+   sirve para nada.
+
+   Lo que se cuida acá es, en este orden: que no se filtre la venta de otro, que
+   no se muestre el token, y que lo que se muestre como prueba sea lo guardado y
+   no una constante de hoy. */
+const detalleCrudo = readFileSync("src/app/digitales/ventas/[orden]/page.tsx", "utf8");
+const detalle = soloCodigo(detalleCrudo);
+const botonReenviar = soloCodigo(readFileSync("src/app/digitales/ventas/BotonReenviar.tsx", "utf8"));
+
+/* ⚠️ LO MÁS IMPORTANTE DE ESTA PANTALLA. El `storeId` va DENTRO del `where`, no
+   en un `if` después de leer: es la única línea que separa el detalle propio de
+   "poné el id de la venta de otro y mirale el correo del comprador". Buscando con
+   los dos, una venta ajena directamente no existe. */
+chequear("el detalle busca la venta con el storeId adentro del where",
+  /findFirst\(\{\s*where: \{ id: ordenId, storeId: store\.id \}/.test(detalle) &&
+  detalle.includes('user.role !== "DIGITAL"'));
+
+/* Y lo que llega por la dirección se valida antes de tocar la base, con el mismo
+   filtro que la ruta de reenviar. */
+chequear("el id de la venta se valida antes de consultar",
+  /ID_RE\.test\(ordenId\)/.test(detalle) && detalle.indexOf("ID_RE.test") < detalle.indexOf("findFirst"));
+
+/* ⚠️ El token de descarga NO se muestra. Quien vende no lo necesita —para ayudar
+   está "Reenviar el mail", que va al correo de la venta— y a la vista en el panel
+   es un archivo que se reparte por fuera del tope, con la cara de quien vendió. */
+chequear("el detalle no trae ni muestra el token de descarga",
+  !/\btoken\b/.test(detalle));
+
+/* La prueba es lo GUARDADO, no el texto de hoy. Si esto leyera la constante,
+   una venta de hace seis meses mostraría una frase que su comprador nunca vio —
+   que es exactamente lo contrario de una prueba. */
+chequear("se muestra el texto del consentimiento guardado en la orden, no la constante",
+  detalle.includes("orden.digitalConsentTexto") &&
+  !detalle.includes("TEXTO_CONSENTIMIENTO"));
+
+/* El registro de descargas es la otra mitad de la prueba, y va con techo: hoy el
+   tope real es 5, pero una lista sin `take` es una pantalla de mil renglones el
+   día que ese número cambie. */
+chequear("el registro de descargas se lee con tope",
+  /registros: \{[\s\S]{0,120}take: TOPE_REGISTROS/.test(detalle));
+
+/* Las fechas de la prueba, con la zona escrita a mano. Acá pesa el doble que en
+   la lista: una descarga de las 22:30 fechada al día siguiente en un reclamo es
+   una prueba que juega en contra. */
+chequear("las fechas del detalle llevan la zona de Argentina",
+  detalle.includes("America/Argentina/Buenos_Aires") &&
+  /second: "2-digit"/.test(detalle));
+
+/* ⚠️ El botón de reenviar es UNO solo. Copiado en la lista y en el detalle, el
+   día que cambie el aviso cambia en uno de los dos — y el freno del doble click
+   se copia mal en el otro. */
+chequear("reenviar el mail es un solo botón compartido",
+  existsSync("src/app/digitales/ventas/BotonReenviar.tsx") &&
+  ventasCli.includes("BotonReenviar") && detalle.includes("BotonReenviar") &&
+  !ventasCli.includes("/reenviar"));
+
+/* Y el freno sigue siendo un `ref`: dos clics seguidos leen el mismo `false` de
+   un `useState` antes de que React vuelva a dibujar, y salen los dos mails. */
+chequear("el botón compartido frena el doble click con un ref",
+  /useRef\(false\)/.test(botonReenviar) && /if \(enVuelo\.current\) return/.test(botonReenviar));
+
+/* ⚠️ El navegador no se inventa. Si la cadena no se reconoce se muestra cruda:
+   escribir "Chrome" donde no se sabe es fabricar prueba. Y el orden de las
+   preguntas importa —Edge y Opera también dicen "Chrome", y Chrome dice
+   "Safari"—, así que al revés todo termina siendo Chrome. */
+chequear("un navegador desconocido se muestra crudo, no adivinado",
+  /if \(!cual && !donde\) return \{ corto: ua\.slice\(0, 60\), crudo: ua \}/.test(detalle));
+chequear("Edge y Opera se preguntan antes que Chrome, y Chrome antes que Safari",
+  detalle.indexOf('"Edge"') < detalle.indexOf('"Chrome"') &&
+  detalle.indexOf('"Opera"') < detalle.indexOf('"Chrome"') &&
+  detalle.indexOf('"Chrome"') < detalle.indexOf('"Safari"'));
+
+/* Una cancelada y una devuelta se ven igual en `status` —las dos dicen
+   CANCELLED—, así que la devolución se reconoce por el pago y por la marca que
+   dejó el webhook. Sin esto, una devolución se muestra como "nadie la pagó". */
+chequear("una venta devuelta se distingue de una que nadie pagó",
+  /payment\?\.status === "REFUNDED"/.test(detalle) &&
+  detalle.includes("digital_contracargo"));
+
+/* La promesa que se escribió antes de cobrar el primer peso, dicha en el único
+   lugar donde se vuelve real. */
+chequear("cuando hay devolución, el detalle dice que la comisión se devuelve entera",
+  /Nuestra comisión se devuelve entera/.test(detalleCrudo));
+
+/* Y el porcentaje que se muestra es el de la orden. Sin decirlo, alguien que pasó
+   de Free a Pro ve un descuento que no coincide con su plan de hoy y cree que le
+   cobramos de más. */
+chequear("el detalle descuenta con el porcentaje congelado y lo dice",
+  detalle.includes("comisionCongelada") && /de tu plan de ese día/.test(detalleCrudo));
+
+/* Se llega desde la lista, y desde TODAS las filas: una cancelada es justo la
+   que hay que poder abrir para ver por qué. */
+chequear("desde la lista se entra al detalle de cualquier venta",
+  /href=\{`\/digitales\/ventas\/\$\{v\.id\}`\}/.test(ventasCli) &&
+  !/estado === "COBRADA" &&[\s\S]{0,80}Ver el detalle/.test(ventasCli));
+
 console.log(fallos === 0
   ? "\nok — el panel de Productos Digitales sigue en pie"
   : `\nFALLA — ${fallos} chequeo(s) del panel de Productos Digitales`);
