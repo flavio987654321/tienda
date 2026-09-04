@@ -980,6 +980,39 @@ chequear("si la IA está encendida, la solapa digital declara quién procesa",
   /Anthropic/.test(privacidadPag.slice(
     privacidadPag.indexOf("  digital: {"), privacidadPag.indexOf("  buyer: {"))));
 
+/* ── Las cinco secciones que salieron de comparar temarios ──────────────────
+ *
+ * Ninguna estaba, y las cinco tapan un hueco distinto. Se chequea que no
+ * desaparezcan, que es la forma en que un documento legal se rompe: nadie lo
+ * borra a propósito, se pierde en una reescritura.
+ */
+const digitalTerm = terminosPag.slice(
+  terminosPag.indexOf("  digital: {"), terminosPag.indexOf("  buyer: {"));
+
+/* ⚠️ La más importante: qué somos en la venta. El art. 40 hace solidariamente
+   responsable a toda la cadena, y no había una línea sobre el tema. */
+chequear("los términos digitales dicen qué es la plataforma en la venta",
+  /2 bis\. Qué somos en tu venta/.test(digitalTerm) && /art\. 40/.test(digitalTerm));
+
+/* ⚠️ Y dicen en voz alta que NO recortan derechos. Una cláusula que se presenta
+   como escudo del art. 40 —que es de orden público— es una cláusula abusiva; la
+   misma cláusula que admite su propio límite, no. */
+chequear("y aclaran que eso no le quita derechos a quien compra",
+  /orden público/.test(digitalTerm));
+
+/* El permiso para alojar y entregar el archivo. Sin esto guardábamos el PDF de
+   alguien y se lo mandábamos a terceros sin autorización escrita. */
+chequear("hay licencia para alojar y entregar el archivo, y sigue siendo suyo",
+  /4 bis\. Tu contenido sigue siendo tuyo/.test(digitalTerm));
+
+chequear("los impuestos del vendedor están escritos", /3 bis\. Los impuestos/.test(digitalTerm));
+chequear("la IA reparte responsabilidades antes de existir", /4 ter\./.test(digitalTerm));
+
+/* Y lo que más importa de la baja: no puede dejar sin su compra a quien pagó. */
+chequear("una baja de cuenta no toca los permisos ya vendidos",
+  /8 bis\. Cuándo podemos suspender/.test(digitalTerm) &&
+  /permisos de descarga vigentes se respetan/.test(digitalTerm));
+
 /* Un cambio de documento sin subir la versión es un cambio que nadie re-acepta:
    el banner mira este número. Estuvo clavado en 1.2 mientras el texto cambió
    seis veces — está contado en el propio archivo. */

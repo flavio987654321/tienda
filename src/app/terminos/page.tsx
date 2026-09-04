@@ -366,6 +366,31 @@ const CONTENT = {
           "Apenas Mercado Pago acredita el pago, la plataforma le entrega el archivo a quien compró: se lo muestra en pantalla y se lo manda por correo.",
         ],
       },
+      /* ⚠️ LA SECCIÓN QUE FALTABA ENTERA, y es la más importante de todas.
+       *
+       * El art. 40 de la Ley 24.240 hace solidariamente responsable a TODA la
+       * cadena de comercialización por el daño de un producto. Una plataforma
+       * que aloja el archivo, cobra reteniendo su comisión y manda el mail de
+       * entrega desde su propio dominio está mucho más adentro de esa cadena que
+       * un software que sólo presta pantallas — o sea que esto nos importa MÁS
+       * que a un competidor que deja el envío de mails en manos del vendedor.
+       *
+       * ⚠️ Y no es un escudo: el art. 40 es de orden público y un contrato no lo
+       * apaga. Por eso el último punto lo dice en voz alta en vez de esconderlo.
+       * Lo que esto sí hace es encuadrar la relación y dejar escrito, donde el
+       * vendedor lo lee antes de vender, que los reclamos de sus compradores son
+       * suyos. Sin esto no había una sola línea sobre el tema. */
+      {
+        title: "2 bis. Qué somos en tu venta, y qué no",
+        body: "TiendaApps te presta la herramienta: la página, el cobro y la entrega. Pero la venta es tuya, y conviene que esté escrito con todas las letras.",
+        list: [
+          "La compraventa se perfecciona entre vos y quien te compra. TiendaApps no es vendedora, ni autora, ni editora del producto, y no es parte de esa relación de consumo.",
+          "No revisamos ni aprobamos tu producto antes de que lo publiques, y no estamos obligados a hacerlo. Si en algún momento revisamos o damos de baja algo, es una facultad nuestra y no convierte a TiendaApps en responsable de lo que publicaste.",
+          "Cualquier reclamo, garantía, soporte o devolución por tu producto se resuelve con vos. Por eso tu página lleva tus datos de contacto y el mail de entrega los muestra.",
+          "⚠️ Esto NO recorta los derechos del comprador. El art. 40 de la Ley 24.240 es de orden público y ninguna cláusula lo puede desactivar: lo que esta sección hace es dejar claro quién responde por qué, no quitarle derechos a nadie. Si un comprador tiene un reclamo, lo puede hacer igual.",
+          "TiendaApps tampoco es tu socia, tu representante ni tu empleadora. Sos una actividad independiente, por tu cuenta y riesgo.",
+        ],
+      },
       {
         title: "3. La comisión, y qué pasa si hay una devolución",
         body: "TiendaApps retiene un porcentaje de cada venta. No hay factura ni cobro aparte: la comisión se retiene sola dentro del cobro de Mercado Pago.",
@@ -376,6 +401,19 @@ const CONTENT = {
           "La comisión solo funciona con Mercado Pago. Si en el futuro se habilitan otros medios de pago, se informará cómo se cobra en cada uno antes de activarlos.",
         ],
       },
+      /* La palabra "impuestos" aparecía UNA vez en todo el documento, y era en
+         el derecho del comprador a saber el precio final. Cero sobre el vendedor.
+         Para alguien que factura infoproductos en Argentina no es un detalle. */
+      {
+        title: "3 bis. Los impuestos son tuyos",
+        body: null,
+        list: [
+          "Vos determinás, declarás y pagás todos los tributos de tus ventas: IVA, ingresos brutos, ganancias, retenciones provinciales y cualquier otro que corresponda a tu situación.",
+          "TiendaApps no actúa como agente de retención ni de percepción de tus obligaciones fiscales. La comisión que retenemos es nuestra contraprestación por el servicio, no un impuesto.",
+          "El precio que ponés en tu página es el que ve tu comprador. Si tu situación fiscal exige discriminar algo, es tu responsabilidad reflejarlo ahí.",
+          "Lo mismo con la facturación a tus compradores: emitir el comprobante que corresponda es tuyo. TiendaApps te factura a vos la suscripción, no le factura nada a quien te compra.",
+        ],
+      },
       {
         title: "4. Qué podés vender, y qué no",
         body: "Sos el único responsable del archivo que subís y de lo que prometés en tu página de venta.",
@@ -384,6 +422,38 @@ const CONTENT = {
           "Lo que la página promete tiene que ser lo que el archivo entrega. Una página que anuncia 200 páginas y entrega 12 es publicidad engañosa (arts. 4 y 8, Ley 24.240), y responde quien la escribió.",
           "No se puede vender contenido ilegal, ni que infrinja derechos de terceros, ni que prometa resultados que no se pueden cumplir (curas, rendimientos financieros garantizados y similares).",
           "Si un tercero reclama por contenido que subiste, te comprometés a avisarnos de inmediato y a colaborar en la defensa. La responsabilidad final será proporcional a la participación de cada parte, conforme la legislación argentina. Esta cláusula no implica renuncia a ningún derecho reconocido por la Ley 24.240.",
+        ],
+      },
+      /* ⚠️ Faltaba el PERMISO. Los términos del Dueño de tienda tienen su
+         licencia desde siempre (sección 8); estos, escritos el mismo día que
+         esto se detectó, no la tenían. O sea que guardábamos su PDF, lo
+         firmábamos y se lo mandábamos por mail a terceros sin una línea que
+         dijera que nos autorizó. Es el hueco más fácil de tapar y el más raro
+         de tener abierto. */
+      {
+        title: "4 bis. Tu contenido sigue siendo tuyo",
+        body: null,
+        list: [
+          "Lo que subís es tuyo y sigue siendo tuyo. TiendaApps no adquiere ningún derecho sobre tu ebook, tus textos ni tus imágenes.",
+          "Lo que sí nos das es un permiso acotado y para una sola cosa: alojar el archivo, guardarlo, procesarlo y entregárselo a quien te lo compra. Sin ese permiso no podríamos ni guardarlo. Es revocable —se termina cuando borrás el producto o la cuenta— y no lo usamos para nada más: no lo mostramos en otro lado, no lo cedemos y no lo vendemos.",
+          "La única excepción a 'se termina cuando borrás' es la cuarentena de 30 días de la sección 5, que existe para no dejar sin su compra a alguien que ya pagó.",
+          "El software, el diseño, la marca y las plantillas de TiendaApps son nuestros. Al usar la plataforma tenés una licencia limitada para usarla, no para copiarla ni revenderla.",
+        ],
+      },
+      /* Los planes ya VENDEN funciones con IA —"Página de venta armada con IA"
+         está en los tres— así que el reparto de responsabilidades tiene que
+         estar escrito antes de que la primera se encienda, no después. Está
+         redactado como una condición de uso ("cuando uses"), no como una promesa
+         de disponibilidad. El otro lado del mismo pendiente vive en la política
+         de privacidad, y tiene su propio chequeo. */
+      {
+        title: "4 ter. Cuando uses las funciones con inteligencia artificial",
+        body: "Algunas funciones arman textos, páginas o fichas con IA. Lo que sale de ahí es un borrador tuyo, no una obra nuestra ni un consejo profesional.",
+        list: [
+          "Se entrega tal cual: puede tener errores, datos inventados o frases que no dicen lo que vos querías. Revisarlo antes de publicarlo o venderlo es tuyo.",
+          "Sos responsable de que lo generado sea veraz y de que no infrinja derechos de terceros. Que lo haya escrito una IA no cambia quién responde por lo que dice tu página.",
+          "Usar la IA no es una aprobación nuestra de nada. Es una herramienta, no una revisión ni una certificación.",
+          "Las funciones de IA pueden tener cupos según tu plan, y podemos suspenderlas si se usan para intentar sacar información de otras cuentas o del sistema.",
         ],
       },
       {
@@ -423,6 +493,23 @@ const CONTENT = {
           "Los planes pagos se cobran por adelantado. Si un pago no se acredita, la cuenta vuelve al plan Free y te avisamos por la campanita del panel.",
           "Volver a Free no borra nada: tus productos, tus páginas y tus ventas quedan donde están. Lo que cambia son los topes y la comisión.",
           "Podés eliminar tu cuenta cuando quieras. Tus ventas quedan registradas a efectos contables y de garantías, y tus archivos se eliminan del depósito respetando la cuarentena de la sección 5.",
+        ],
+      },
+      /* Nuestro derecho a cortar. Estaba dicho de refilón en la sección 4 ("es
+         motivo de baja inmediata") y en ningún lado se explicaba con qué
+         criterio, con o sin aviso, ni qué pasa con lo que ya se vendió. Una
+         facultad de dar de baja que no está escrita es una facultad que después
+         hay que discutir. */
+      {
+        title: "8 bis. Cuándo podemos suspender o dar de baja una cuenta",
+        body: "Podemos suspender o dar de baja una cuenta o un producto, con o sin aviso previo según la gravedad, cuando:",
+        list: [
+          "Se incumple lo de la sección 4 —material ajeno, contenido ilegal, una página que promete algo que el archivo no entrega— o hay indicios razonables de fraude.",
+          "Llega un reclamo fundado de un tercero por derechos sobre el contenido, mientras se verifica.",
+          "Lo exige una autoridad competente.",
+          "Se usa la plataforma para dañarla: sobrecargarla, esquivar sus límites o intentar sacar datos de otras cuentas.",
+          "Qué pasa con lo ya vendido: una baja no borra lo que alguien ya pagó. Los permisos de descarga vigentes se respetan, porque quien compró no tiene nada que ver con el motivo de la baja.",
+          "Qué NO pasa: una suspensión por incumplimiento no genera derecho a devolución del período de suscripción ya abonado.",
         ],
       },
       {

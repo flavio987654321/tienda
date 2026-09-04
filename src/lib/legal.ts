@@ -37,6 +37,34 @@
 //     No es una formalidad: define a quién le llega un pedido de acceso o de
 //     borrado de un comprador. Antes estaba dicho como una obligación suelta
 //     ("respondés vos por ese uso") y no como lo que es.
+//   · Cinco secciones más en los términos de Productos Digitales, salidas de
+//     comparar el temario contra el de un competidor (mismo día, sin publicar
+//     la 1.7 en el medio — por eso no hay 1.8):
+//       - "2 bis. Qué somos en tu venta": no había UNA LÍNEA sobre el rol de la
+//         plataforma. El art. 40 de la Ley 24.240 hace solidariamente
+//         responsable a toda la cadena de comercialización, y una plataforma que
+//         aloja el archivo, cobra reteniendo su comisión y manda el mail de
+//         entrega desde su propio dominio está más adentro de esa cadena que un
+//         software que sólo presta pantallas. La sección encuadra la relación y
+//         dice en voz alta que NO recorta derechos: el art. 40 es de orden
+//         público y ninguna cláusula lo apaga.
+//       - "3 bis. Los impuestos son tuyos": la palabra "impuestos" aparecía una
+//         sola vez en todo el documento, y era en el derecho del comprador a
+//         saber el precio final. Cero sobre el vendedor.
+//       - "4 bis. Tu contenido sigue siendo tuyo": faltaba el PERMISO. Los
+//         términos del Dueño de tienda tienen su licencia desde siempre; estos
+//         no, así que guardábamos el PDF de alguien, lo firmábamos y se lo
+//         mandábamos por mail a terceros sin una línea que dijera que nos
+//         autorizó.
+//       - "4 ter. Funciones con IA": los planes ya las venden, así que el
+//         reparto de responsabilidades tiene que estar antes de que la primera
+//         se encienda.
+//       - "8 bis. Suspensión y baja": la facultad de cortar estaba dicha de
+//         refilón y sin criterio. Incluye lo que importa de verdad: una baja no
+//         toca los permisos de descarga ya vendidos, porque quien compró no
+//         tiene nada que ver con el motivo de la baja.
+//     Quedan a decisión del titular, no escritas: limitación de responsabilidad,
+//     ley aplicable y jurisdicción, y la cláusula de no garantía de resultados.
 //
 // 1.6 (11/08/2026) — tres arreglos que salieron de revisar el texto, no de un
 // cambio de producto:
