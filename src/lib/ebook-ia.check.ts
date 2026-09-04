@@ -1,0 +1,334 @@
+/**
+ * Chequeos del ebook con IA: el temario, los capítulos y el PDF.
+ *
+ *   npx tsx src/lib/ebook-ia.check.ts
+ *
+ * ── Qué se cuida acá ────────────────────────────────────────────────────────
+ *
+ * Tres cosas, y las tres son plata.
+ *
+ * **Lo que sale es EL PRODUCTO.** No una pantalla: el archivo que alguien paga y
+ * baja. Un capítulo de dos renglones o un temario con capítulos repetidos no es
+ * un detalle feo, es una devolución.
+ *
+ * **El PDF tiene que armarse siempre.** Un emoji adentro de un párrafo no puede
+ * hacer fallar el armado del archivo que ya se cobró.
+ *
+ * **Y un ebook son once llamadas al modelo, no una.** Los topes que estaban
+ * escritos para un botón de una sola llamada lo cortan a la mitad.
+ */
+
+import { readFileSync } from "fs";
+import {
+  normalizarIndice, normalizarCapitulo, leerIndice, leerCapitulos,
+  elCapituloQueSigue, pedidoDelCapitulo,
+  INSTRUCCIONES_INDICE, INSTRUCCIONES_CAPITULO, ESQUEMA_DEL_INDICE, ESQUEMA_DEL_CAPITULO,
+  CAPITULOS_MIN, CAPITULOS_MAX, LARGO_TEMA, MINIMO_TEMA, LARGO_BLOQUE, BLOQUES_MAX,
+  TIPOS_DE_BLOQUE, LARGO_TITULO_EBOOK,
+  type CapituloEscrito, type CapituloPlaneado,
+} from "./ebook-ia";
+import { armarPDF, soloLoQueEntra } from "./ebook-pdf";
+import { CUPO_EBOOK } from "./cupo-ia";
+import { RAFAGA_CAPITULOS, RAFAGA_IA, MARGEN_DE_INTENTOS, GLOBAL_EBOOKS_DIARIO } from "./ia-digitales";
+
+let fallos = 0;
+const check = (id: string, ok: boolean, desc: string) => {
+  if (ok) console.log(`✅ ${id}  ${desc}`);
+  else { fallos++; console.log(`❌ ${id}  ${desc}`); }
+};
+
+const capitulosBuenos = (n: number) =>
+  Array.from({ length: n }, (_, i) => ({
+    titulo: `Capítulo ${i + 1}`,
+    resumen: "De qué se trata este capítulo, en dos renglones.",
+  }));
+
+/* ── El temario ─────────────────────────────────────────────────────────── */
+
+check("IND-A", normalizarIndice(null) === null && normalizarIndice("hola") === null,
+  "un temario que no es un objeto se rechaza");
+
+check("IND-B",
+  normalizarIndice({ titulo: "Un ebook", promesa: "p", capitulos: capitulosBuenos(CAPITULOS_MIN) }) !== null,
+  "un temario con el mínimo de capítulos se acepta");
+
+/* ⚠️ Menos del mínimo NO es un ebook. Se rechaza entero y se devuelve el cupo:
+   es preferible "probá de nuevo" a cobrarle tres capítulos a alguien. */
+check("IND-C",
+  normalizarIndice({ titulo: "Un ebook", promesa: "p", capitulos: capitulosBuenos(CAPITULOS_MIN - 1) }) === null,
+  "un temario con menos capítulos que el mínimo se rechaza entero");
+
+/* Y de más se recorta, no se rechaza: lo que sobra es plata que no se gasta. */
+check("IND-D",
+  normalizarIndice({ titulo: "Un ebook", promesa: "p", capitulos: capitulosBuenos(CAPITULOS_MAX + 5) })
+    ?.capitulos.length === CAPITULOS_MAX,
+  "un temario con capítulos de más se recorta al máximo");
+
+/* Dos capítulos con el mismo título dejan un índice que se lee como un error de
+   imprenta, y encima se escriben —y se pagan— dos veces. */
+check("IND-E",
+  normalizarIndice({
+    titulo: "Un ebook", promesa: "p",
+    capitulos: [...capitulosBuenos(CAPITULOS_MIN), { titulo: "capítulo 1", resumen: "otra cosa" }],
+  })?.capitulos.length === CAPITULOS_MIN,
+  "un capítulo con el título repetido se descarta");
+
+/* Un capítulo sin resumen no se puede escribir después: el resumen es lo único
+   que va a leer quien escriba ese capítulo. */
+check("IND-F",
+  normalizarIndice({
+    titulo: "Un ebook", promesa: "p",
+    capitulos: [...capitulosBuenos(CAPITULOS_MIN), { titulo: "Sin resumen", resumen: "" }],
+  })?.capitulos.length === CAPITULOS_MIN,
+  "un capítulo sin resumen se descarta");
+
+/* ⚠️ EL TÍTULO DE LA PERSONA GANA. Pedirle al modelo que lo respete es una
+   sugerencia; imponerlo acá es la garantía. Misma decisión que en el embudo. */
+check("IND-G",
+  normalizarIndice(
+    { titulo: "El que inventó la IA", promesa: "p", capitulos: capitulosBuenos(CAPITULOS_MIN) },
+    "El que ya tenía escrito",
+  )?.titulo === "El que ya tenía escrito",
+  "si la persona ya tiene título, se usa el suyo y no el de la IA");
+
+check("IND-H",
+  (normalizarIndice(
+    { titulo: "De la IA", promesa: "p", capitulos: capitulosBuenos(CAPITULOS_MIN) },
+    "  ",
+  )?.titulo) === "De la IA",
+  "un título propio vacío no pisa al de la IA");
+
+check("IND-I",
+  (normalizarIndice(
+    { titulo: "x".repeat(500), promesa: "p", capitulos: capitulosBuenos(CAPITULOS_MIN) },
+  )?.titulo.length ?? 0) <= LARGO_TITULO_EBOOK,
+  "el título se recorta a su tope");
+
+/* ── Los capítulos ──────────────────────────────────────────────────────── */
+
+const bloques = (n: number) =>
+  Array.from({ length: n }, () => ({ tipo: "parrafo", texto: "Un párrafo con algo adentro." }));
+
+check("CAP-A", normalizarCapitulo({ bloques: bloques(5) }, "Título") !== null,
+  "un capítulo con bloques suficientes se acepta");
+
+/* Un capítulo de dos renglones es un capítulo fallado. Mejor reintentarlo que
+   dejarlo adentro del PDF que alguien va a vender. */
+check("CAP-B", normalizarCapitulo({ bloques: bloques(2) }, "Título") === null,
+  "un capítulo de menos de tres bloques se rechaza");
+
+check("CAP-C", normalizarCapitulo({ bloques: bloques(5) }, "  ") === null,
+  "un capítulo sin título se rechaza");
+
+/* Un tipo que no conocemos se dibuja como párrafo. Descartarlo perdería texto
+   que la persona ya pagó; dibujarlo mal rompería el PDF. */
+check("CAP-D",
+  normalizarCapitulo({ bloques: [...bloques(3), { tipo: "tabla", texto: "algo" }] }, "T")
+    ?.bloques[3]?.tipo === "parrafo",
+  "un tipo de bloque desconocido se dibuja como párrafo");
+
+check("CAP-E",
+  (normalizarCapitulo({ bloques: [...bloques(3), { tipo: "parrafo", texto: "x".repeat(9999) }] }, "T")
+    ?.bloques[3]?.texto.length ?? 0) <= LARGO_BLOQUE,
+  "un bloque larguísimo se recorta a su tope");
+
+check("CAP-F",
+  (normalizarCapitulo({ bloques: bloques(BLOQUES_MAX + 20) }, "T")?.bloques.length ?? 0) <= BLOQUES_MAX,
+  "un capítulo con bloques de más se recorta");
+
+check("CAP-G", normalizarCapitulo({ bloques: "no es una lista" }, "T") === null,
+  "un capítulo que no trae lista de bloques se rechaza");
+
+/* ── Lo guardado ────────────────────────────────────────────────────────── */
+
+/* La columna es texto: lo que hay adentro es lo que había el día que se
+   escribió, no necesariamente lo que el código de hoy espera. Nada de esto
+   puede tirar una excepción — del otro lado hay una pantalla que tiene que
+   poder mostrar el ebook igual. */
+check("LEE-A",
+  leerIndice(null).length === 0 && leerIndice("{roto").length === 0 && leerIndice("{}").length === 0,
+  "un índice guardado roto se lee como vacío, sin tirar");
+
+check("LEE-B",
+  leerCapitulos(null).length === 0 && leerCapitulos("[1,2,3]").length === 0,
+  "capítulos guardados rotos se leen como vacío, sin tirar");
+
+const guardado = JSON.stringify([
+  { titulo: "Uno", bloques: bloques(4) },
+  { titulo: "Dos", bloques: bloques(4) },
+]);
+check("LEE-C", leerCapitulos(guardado).length === 2,
+  "los capítulos guardados bien se leen enteros");
+
+/* ── Cuál sigue ─────────────────────────────────────────────────────────── */
+
+const indice10: CapituloPlaneado[] = capitulosBuenos(CAPITULOS_MAX);
+const escritos3 = leerCapitulos(JSON.stringify(
+  Array.from({ length: 3 }, (_, i) => ({ titulo: `Capítulo ${i + 1}`, bloques: bloques(4) })),
+));
+
+check("SIG-A", elCapituloQueSigue(indice10, escritos3)?.numero === 4,
+  "el que sigue es el siguiente al último escrito");
+check("SIG-B",
+  elCapituloQueSigue(indice10, escritos3)?.capitulo.titulo === indice10[3].titulo,
+  "y es el capítulo del temario que corresponde a ese número");
+check("SIG-C", elCapituloQueSigue(capitulosBuenos(3), escritos3) === null,
+  "con todos escritos, no sigue ninguno");
+
+/* Nunca puede pedir un capítulo que el temario no tiene: eso sería escribir —y
+   cobrar— un capítulo inventado. */
+check("SIG-D",
+  elCapituloQueSigue(capitulosBuenos(2), escritos3) === null,
+  "si hay más escritos que planeados, tampoco sigue ninguno");
+
+/* ── Lo que se le pide al modelo ────────────────────────────────────────── */
+
+const pedido = pedidoDelCapitulo("El título", "El tema", "Gente que arranca", indice10, 4);
+check("PED-A", pedido.includes("<tema>") && pedido.includes("<temario>"),
+  "el texto de la persona va marcado y separado del temario");
+check("PED-B", pedido.includes("capítulo 4") && pedido.includes(indice10[3].titulo),
+  "se dice cuál capítulo toca, por número y por título");
+/* El temario entero va, el texto de los otros capítulos no: serían decenas de
+   miles de tokens por llamada, pagados diez veces, para algo que el resumen ya
+   resuelve. */
+check("PED-C", pedido.length < 6_000,
+  "el pedido de un capítulo no arrastra el texto de los anteriores");
+
+/* ── Las reglas del prompt ──────────────────────────────────────────────── */
+
+const prompts = INSTRUCCIONES_INDICE + "\n" + INSTRUCCIONES_CAPITULO;
+
+/* ⚠️ Un modelo inventa estadísticas y testimonios con total naturalidad, y
+   suenan perfectos. Esto termina impreso en algo que se vende. */
+check("PRO-A", /[Ee]stad[íi]sticas/.test(prompts) && /estudios/.test(prompts),
+  "se le prohíbe inventar estadísticas y estudios");
+check("PRO-B", /[Tt]estimonios/.test(prompts),
+  "se le prohíben los testimonios inventados");
+check("PRO-C", /garantizado|[Pp]romesas de resultado/.test(prompts),
+  "se le prohíbe prometer resultados");
+/* Si el tema toca salud, plata o leyes, la aclaración protege primero a quien
+   vende: el art. 40 de la Ley 24.240 lo alcanza a él. */
+/* Con \s+ y no un espacio: el prompt está escrito con renglones cortos para
+   poder leerlo, así que la frase cae partida en dos. Es la quinta vez en este
+   proyecto que un chequeo falla por buscar un espacio donde hay un salto. */
+check("PRO-D", /no\s+reemplaza a un profesional/.test(prompts),
+  "en salud, plata o leyes se aclara que no reemplaza a un profesional");
+check("PRO-E", /markdown/i.test(prompts) && /emojis/i.test(prompts),
+  "se le pide texto pelado: ni markdown ni emojis");
+check("PRO-F", /rioplatense/.test(prompts) && /"vos"/.test(prompts),
+  "se escribe en castellano rioplatense, de vos");
+
+/* La forma la garantiza la herramienta, no una frase pidiendo JSON. */
+check("ESQ-A",
+  ESQUEMA_DEL_INDICE.properties.capitulos.maxItems === CAPITULOS_MAX &&
+  ESQUEMA_DEL_INDICE.properties.capitulos.minItems === CAPITULOS_MIN,
+  "el esquema del temario pide entre el mínimo y el máximo de capítulos");
+check("ESQ-B",
+  ESQUEMA_DEL_CAPITULO.properties.bloques.maxItems === BLOQUES_MAX,
+  "el esquema del capítulo tiene tope de bloques");
+check("ESQ-C",
+  JSON.stringify(ESQUEMA_DEL_CAPITULO).includes(TIPOS_DE_BLOQUE.join('","')),
+  "el esquema sólo deja los tipos de bloque que el PDF sabe dibujar");
+
+/* El tema es largo porque hay gente que ya tiene el índice pensado y lo pega
+   entero. Con 600 caracteres tenía que resumirlo. */
+check("TEM-A", LARGO_TEMA >= 2_000 && MINIMO_TEMA >= 10,
+  "el tema entra pegado entero, y con dos palabras no alcanza");
+
+/* ── El PDF ─────────────────────────────────────────────────────────────── */
+
+check("PDF-A", soloLoQueEntra("acción ñandú «hola» —guión— café") === "acción ñandú «hola» —guión— café",
+  "los acentos, la eñe y las comillas latinas quedan intactos");
+
+/* ⚠️ Las tipografías de fábrica sólo entienden un byte. Un emoji adentro de un
+   párrafo no puede hacer fallar el armado del archivo que ya se cobró. */
+check("PDF-B", !/[\u{1F300}-\u{1FAFF}]/u.test(soloLoQueEntra("hola 🚀 chau 🎉")),
+  "los emojis se sacan antes de dibujar");
+check("PDF-C", soloLoQueEntra("mirá → esto").includes("->"),
+  "una flecha que no entra se cambia por una que sí, no desaparece");
+check("PDF-D", !soloLoQueEntra("un textoraro").includes(" "),
+  "los caracteres de control no llegan al PDF");
+
+const capsPDF: CapituloEscrito[] = Array.from({ length: 6 }, (_, i) => ({
+  titulo: `Capítulo ${i + 1}`,
+  bloques: [
+    { tipo: "parrafo", texto: "Un párrafo largo. ".repeat(40) },
+    { tipo: "subtitulo", texto: "Un subtítulo" },
+    { tipo: "vineta", texto: "Una viñeta con 🚀 y flecha →" },
+    { tipo: "parrafo", texto: "Otro párrafo. ".repeat(60) },
+  ],
+}));
+
+async function elPDF() {
+  const pdf = await armarPDF({
+    titulo: "Cómo hacer algo — con acentos y «comillas»",
+    promesa: "Vas a poder hacerlo solo.",
+    autor: "Quien lo vende 🚀",
+    capitulos: capsPDF,
+  });
+
+  check("PDF-E", pdf.subarray(0, 5).toString("latin1") === "%PDF-",
+    "sale un PDF de verdad");
+
+  /* Tapa + contenido + un capítulo por hoja nueva, como mínimo. */
+  const paginas = (pdf.toString("latin1").match(/\/Type\s*\/Page[^s]/g) ?? []).length;
+  check("PDF-F", paginas >= capsPDF.length + 2,
+    "hay al menos una hoja por capítulo, más la tapa y el contenido");
+
+  /* Un ebook entero pesa kilobytes: el techo de 4,5 MB de la plataforma no lo
+     roza ni de cerca. Si algún día esto falla, algo se está embebiendo. */
+  check("PDF-G", pdf.length < 2_000_000,
+    "el PDF pesa lo que pesa un texto, no lo que pesa una imagen");
+
+  /* Un ebook al que le falta un capítulo no se arma: se avisa y se reintenta. */
+  const vacio = await armarPDF({ titulo: "T", promesa: "", autor: "", capitulos: [] });
+  check("PDF-H", vacio.subarray(0, 5).toString("latin1") === "%PDF-",
+    "hasta sin capítulos el armado no tira, para que el error lo decida quien llama");
+}
+
+/* ── Los topes, que acá cuentan distinto ────────────────────────────────── */
+
+/* ⚠️ EL ERROR QUE ESTE CHEQUEO CUIDA. Un ebook son tantas llamadas como
+   capítulos, más la del temario, hechas por la pantalla sola en un par de
+   minutos. Con la ráfaga del botón barato (8 cada 10 minutos) el ebook se
+   cortaba en el capítulo 7 — y la culpa parecía nuestra. */
+check("LIM-A", RAFAGA_CAPITULOS > CAPITULOS_MAX + 1,
+  "la ráfaga de capítulos aguanta un ebook entero, y sobra");
+check("LIM-B", RAFAGA_CAPITULOS > RAFAGA_IA,
+  "y es más alta que la del botón de una sola llamada");
+
+const limites = readFileSync("src/lib/ia-digitales.ts", "utf8");
+
+/* Un capítulo no toca los globales: el ebook los tocó al empezar. Contarlo once
+   veces sería contar once veces el mismo trabajo, y tres ebooks dejarían sin IA
+   a todos los botones baratos del día. */
+check("LIM-C",
+  /if \(que === "capitulo"\) return \{ permitido: true \};/.test(limites) &&
+  limites.indexOf('if (que === "capitulo") return { permitido: true };') <
+    limites.indexOf("ia-dig-global-dia"),
+  "un capítulo no gasta del presupuesto global: lo gastó el ebook al empezar");
+
+/* Y el ebook tiene presupuesto propio, aparte del de lo barato. */
+check("LIM-D", GLOBAL_EBOOKS_DIARIO > 0 && /ia-dig-ebooks-dia/.test(limites),
+  "los ebooks tienen su propio global diario, separado del resto");
+
+/* El único agujero sin fondo: pedir "escribime el capítulo que falta" para
+   siempre. Cada intento fallido no le gasta cupo a la persona —no recibió
+   nada— pero nos cuesta plata igual. */
+check("LIM-E", MARGEN_DE_INTENTOS > 0 && MARGEN_DE_INTENTOS <= 10,
+  "hay un margen de reintentos por ebook, y es un margen y no una barra libre");
+
+/* ── El cupo ────────────────────────────────────────────────────────────── */
+
+/* Free no escribe ebooks. Está chequeado en el archivo del embudo también, y
+   acá se repite a propósito: es la línea que separa lo que cuesta centavos de
+   lo que cuesta dólares. */
+check("CUP-EB", CUPO_EBOOK.FREE.bienvenida === 0 && CUPO_EBOOK.FREE.mes === 0,
+  "Free no tiene ebooks con IA");
+
+elPDF().then(() => {
+  console.log(fallos === 0
+    ? "\nok — el ebook se lima antes de venderse, y el PDF se arma igual"
+    : `\nFALLA — ${fallos} chequeo(s) del ebook con IA`);
+  process.exit(fallos === 0 ? 0 : 1);
+});

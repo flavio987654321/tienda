@@ -43,6 +43,39 @@ import { contarConTope } from "@/lib/rate-limit";
 export const RAFAGA_IA = 8;
 export const VENTANA_RAFAGA_MS = 10 * 60_000;
 
+/**
+ * La ráfaga del ebook es otra, y no por generosidad: **un ebook son muchas
+ * llamadas de un solo pedido de la persona.**
+ *
+ * Se escribe de a un capítulo por vez —una función de este plan de Vercel tiene
+ * 60 segundos— así que diez capítulos son once llamadas seguidas, hechas por la
+ * pantalla sola mientras la persona mira una barra que avanza. Con el tope de 8
+ * de arriba, **el ebook se cortaba en el capítulo 7 y la culpa parecía nuestra**.
+ *
+ * Este número no protege de gastar de más: de eso se ocupan el cupo y el tope
+ * por ebook de acá abajo. Protege de un script que abra ebookes en serie.
+ */
+export const RAFAGA_CAPITULOS = 30;
+
+/**
+ * ⚠️ EL TOPE QUE DE VERDAD FRENA LA PLATA: cuántas llamadas puede pedir UN
+ * ebook, contadas contra el id de ese ebook y no contra la cuenta.
+ *
+ * Sin esto, una pantalla con un bucle mal escrito —o alguien apretando F5—
+ * puede pedir "escribime el capítulo que falta" para siempre. Cada intento
+ * fallido no gasta cupo de la persona (no recibió nada), pero **nos cuesta
+ * plata igual**, y es el único agujero de esta función que no tiene fondo.
+ *
+ * Es el número de capítulos más un margen: alcanza para que cada capítulo
+ * falle una vez y se reintente, y no para mucho más.
+ *
+ * Vive en Redis con ventana de dos horas, y que se olvide es correcto: alguien
+ * que retoma su ebook al día siguiente arranca con el margen entero de nuevo,
+ * que es justo el caso para el que se guardó el borrador.
+ */
+export const MARGEN_DE_INTENTOS = 6;
+export const VENTANA_DEL_EBOOK_MS = 2 * 60 * 60_000;
+
 /* ── Capa 2: el CUPO, que reemplazó al tope diario ──────────────────────────
  *
  * Acá hubo un tope diario por plan (10/20/40) y **se sacó el 04/09/26**, antes
@@ -92,6 +125,20 @@ export const GLOBAL_PRUEBA_DIARIO = 150;
  * en su consola y vive fuera de este repo. */
 export const GLOBAL_DIARIO = 600;
 
+/**
+ * Y el global de los ebooks va aparte del de todo lo demás, contando **ebooks
+ * empezados** y no llamadas.
+ *
+ * Aparte, porque si compartieran presupuesto tres ebooks se llevarían puesto el
+ * día entero de los botones baratos: un ebook son once llamadas y armar un
+ * embudo es una. Alguien que arma su producto un martes a la tarde no puede
+ * quedarse sin poder hacerlo porque otro pidió ebooks.
+ *
+ * Contando ebooks y no llamadas, porque lo que cuesta es el ebook: sus
+ * capítulos son pedazos del mismo trabajo, ya autorizado cuando empezó.
+ */
+export const GLOBAL_EBOOKS_DIARIO = 40;
+
 /** A partir de qué porcentaje de un tope global se avisa por consola. */
 const AVISO_DESDE = 0.8;
 const UN_DIA_MS = 24 * 60 * 60_000;
@@ -123,8 +170,15 @@ export type PedidoIA = {
   sinAbono: boolean;
   /** El día de Argentina, `YYYY-MM-DD`. Va en la clave: el contador se cae solo. */
   day: string;
-  /** Qué se está generando. Va en la clave para que no compartan contador. */
-  que: "embudo" | "pagina";
+  /**
+   * Qué se está generando. Va en la clave para que no compartan contador.
+   *
+   * `capitulo` es el raro de los cuatro: no es algo que la persona pida, es un
+   * pedazo del ebook que ya autorizó. Por eso lleva su propia ráfaga —más
+   * alta— y **no toca los globales**: el ebook ya los tocó cuando empezó, y
+   * contarlo once veces sería contar once veces el mismo trabajo.
+   */
+  que: "embudo" | "pagina" | "ebook" | "capitulo";
 };
 
 /* Los lee quien vende, no un desarrollador: dicen qué pasó y cuándo vuelve,
@@ -161,8 +215,21 @@ export async function permitirGeneracion(
   { userId, sinAbono, day, que }: PedidoIA,
   contar: Contador = contarConTope,
 ): Promise<VeredictoIA> {
-  const rafaga = await contar(`ia-dig:${que}:${userId}`, RAFAGA_IA, VENTANA_RAFAGA_MS);
+  const topeRafaga = que === "capitulo" ? RAFAGA_CAPITULOS : RAFAGA_IA;
+  const rafaga = await contar(`ia-dig:${que}:${userId}`, topeRafaga, VENTANA_RAFAGA_MS);
   if (!rafaga.permitido) return { permitido: false, motivo: "rafaga", mensaje: MENSAJES.rafaga };
+
+  /* Un capítulo no toca los globales: el ebook los tocó al empezar. Contarlo
+     once veces sería contar once veces el mismo trabajo, y con eso tres ebooks
+     dejarían sin IA a todos los botones baratos del día. */
+  if (que === "capitulo") return { permitido: true };
+
+  /* El ebook tiene su propio presupuesto diario, aparte del de lo barato. */
+  if (que === "ebook") {
+    const e = await contar(`ia-dig-ebooks-dia:${day}`, GLOBAL_EBOOKS_DIARIO, UN_DIA_MS);
+    avisarSiSeAcerca("global de ebooks", e.cuenta, GLOBAL_EBOOKS_DIARIO);
+    if (!e.permitido) return { permitido: false, motivo: "global", mensaje: MENSAJES.global };
+  }
 
   if (sinAbono) {
     const g = await contar(`ia-dig-gratis-dia:${day}`, GLOBAL_PRUEBA_DIARIO, UN_DIA_MS);

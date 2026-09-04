@@ -64,6 +64,8 @@ model User {
   asistenteMensajes  AsistenteMensaje[]
   /// Cuántas generaciones de IA le quedan, por concepto. Ver `CupoIA`.
   cuposIA            CupoIA[]
+  /// Los ebooks que la IA le está escribiendo o le escribió. Ver `EbookIA`.
+  ebooksIA           EbookIA[]
 }
 
 // Historial de chat con Sasha (asistente IA del dashboard). Se guarda en la base
@@ -637,6 +639,8 @@ model Product {
   /// tiene sentido en un PRINCIPAL: los bonos y los upsells viajan adentro de la
   /// página de él, no tienen una propia.
   paginaVenta String?
+  /// El ebook que le está escribiendo la IA, si pidió uno. Ver `EbookIA`.
+  ebookIA     EbookIA?
   /// De qué PRINCIPAL cuelga. Null en el principal y en todo producto físico.
   /// Con `Cascade`: borrar el principal se lleva sus bonos y sus upsells, que no
   /// tienen dónde vivir sin él.
@@ -1093,6 +1097,82 @@ model CupoIA {
   /// antes de crear no alcanza — dos pedidos en paralelo leen los dos "todavía
   /// no" y crean dos filas, y ahí el cupo se duplica solo.
   @@unique([userId, concepto])
+}
+
+/// El ebook que la IA está escribiendo, o ya escribió, para un producto.
+///
+/// ── Por qué existe una tabla y no alcanza con generar y devolver ──────────
+///
+/// Porque no entra en un pedido. Una función de este plan de Vercel tiene 60
+/// segundos y se corta; un ebook de verdad son diez capítulos y varios minutos.
+/// Así que se escribe **de a un capítulo por pedido**, y entre pedido y pedido
+/// lo escrito tiene que estar guardado en algún lado.
+///
+/// Y guardado en la base y no en la memoria del navegador: si alguien cierra la
+/// pestaña en el capítulo 7, lo que ya se pagó no se puede perder. Al volver,
+/// sigue donde estaba.
+///
+/// ── Uno por producto ──────────────────────────────────────────────────────
+///
+/// Rehacerlo pisa el mismo borrador. Por eso el contador de reintentos
+/// sobrevive a la regeneración: si cada intento creara una fila nueva, el
+/// "un reintento incluido" sería infinito.
+model EbookIA {
+  id String @id @default(cuid())
+
+  productId String  @unique
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  /// Quién lo pidió. Es a quien se le devuelve el cupo si esto termina mal, y
+  /// se guarda además del producto porque el producto se puede borrar y la
+  /// devolución del cupo no puede depender de eso.
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// INDICE (armando el temario) | ESCRIBIENDO | ARMANDO (haciendo el PDF) |
+  /// LISTO | FALLADO. Texto y no enum, igual que en `CupoIA`.
+  estado String
+
+  /// Lo que escribió la persona, tal como lo escribió. Se guarda para poder
+  /// reintentar sin volver a pedírselo, y para saber de dónde salió cada texto.
+  tema    String
+  publico String?
+
+  /// El título del ebook: el del producto, o el que propuso la IA.
+  titulo String
+
+  /// JSON, igual que `Product.paginaVenta`. La FORMA la declara `lib/ebook-ia`
+  /// y lo que entra pasa antes por su limado; acá se guarda el resultado.
+  ///
+  /// `indice` son los capítulos planeados; `capitulos`, los ya escritos. Que
+  /// sean dos campos es lo que deja saber cuánto falta sin adivinar.
+  indice    String
+  capitulos String
+
+  /// De qué bolsa del cupo salió: "mes" o "bienvenida". Sin esto no se puede
+  /// devolver lo gastado a la bolsa correcta.
+  bolsa String?
+
+  /// El reintento incluido: rehacer el ebook una vez no gasta cupo. A partir
+  /// del segundo, sí. Si no, el costo no tiene fondo.
+  reintentos Int @default(0)
+
+  /// ⚠️ EL CANDADO. Cuándo empezó a escribirse el capítulo que está en curso.
+  ///
+  /// Dos pedidos a la vez escribirían dos veces el mismo capítulo —y lo
+  /// cobrarían dos veces—. Se toma antes de llamar al modelo y se suelta al
+  /// guardar. Vence solo: un pedido que murió a mitad de camino no puede dejar
+  /// el ebook trabado para siempre.
+  trabajandoDesde DateTime?
+
+  /// Por qué falló, para poder decirlo en pantalla en vez de un "error".
+  error String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  /// La pantalla de productos pide todos los ebooks de la cuenta de una.
+  @@index([userId])
 }
 
 /// Una solicitud de arrepentimiento: alguien que compró y quiere dar marcha
