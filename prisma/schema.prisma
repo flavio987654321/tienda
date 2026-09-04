@@ -641,6 +641,31 @@ model Product {
   paginaVenta String?
   /// El ebook que le está escribiendo la IA, si pidió uno. Ver `EbookIA`.
   ebookIA     EbookIA?
+  /// ⚠️ LA DIRECCIÓN DEL PRODUCTO: `mecanica.tiendaapps.com`.
+  ///
+  /// Cada producto digital principal es **su propio sitio**. La cuenta no la ve
+  /// nunca nadie: quien llega desde un anuncio de tortas ve tortas y nada más.
+  /// Por eso la dirección cuelga del producto y no de la cuenta.
+  ///
+  /// Va en LOS TRES PLANES y existe desde que el producto se crea. Si apareciera
+  /// recién al mejorar de plan, la dirección CAMBIARÍA — y cambiarle la URL a
+  /// algo que ya se está publicitando se lleva puestos los anuncios corriendo,
+  /// el historial del píxel y todos los links compartidos.
+  ///
+  /// ⚠️ Comparte el espacio de nombres con `Store.slug`: los dos se traducen
+  /// desde el mismo subdominio. Que sean únicos entre las dos tablas no lo puede
+  /// garantizar un índice —vive en tablas distintas— así que lo garantiza un
+  /// candado al reservarlo. Ver `lib/direccion-digital`.
+  ///
+  /// `null` en un producto de tienda, en un bono y en un upsell: un bono no es
+  /// una página que alguien visite, se entrega con la compra.
+  slugDigital String? @unique
+  /// El dominio propio del comerciante: `mecanicafacil.com`. Sólo Pro.
+  ///
+  /// Existe acá y no en `Store` —donde ya está `customDomain`— porque aquél es
+  /// @unique por cuenta, o sea UNO. Pro tiene cinco productos y cada uno lleva
+  /// el suyo, así que el dominio tiene que colgar del producto.
+  dominioPropio String? @unique
   /// De qué PRINCIPAL cuelga. Null en el principal y en todo producto físico.
   /// Con `Cascade`: borrar el principal se lleva sus bonos y sus upsells, que no
   /// tienen dónde vivir sin él.

@@ -82,6 +82,38 @@ async function runSupabaseAuth(
   return { response, supabase };
 }
 
+/**
+ * A dónde lleva un subdominio: `/tienda/<slug>` o `/p/<id>`.
+ *
+ * `null` si no se pudo averiguar. Quien llama tiene que seguir de largo con lo
+ * que hacía antes — una tienda que ya andaba no puede romperse porque una
+ * consulta nueva no contestó.
+ *
+ * El middleware corre en el edge y no puede usar Prisma; por eso el salto por
+ * `/api/public/dominio`, que es el mismo que ya usa el dominio propio. Con
+ * cache: sin él sería una consulta a la base por cada visita.
+ */
+async function donde(sub: string, request: NextRequest): Promise<string | null> {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? request.nextUrl.origin;
+  if (!appUrl) return null;
+  try {
+    const res = await fetch(
+      `${appUrl}/api/public/dominio?sub=${encodeURIComponent(sub)}`,
+      { next: { revalidate: 300 } },
+    );
+    if (!res.ok) return null;
+    const { slug, producto } = await res.json() as { slug: string | null; producto: string | null };
+    /* La tienda primero: es lo que ya funcionaba. Los dos no pueden coexistir
+       —lo impide el candado de `direccion-digital`— pero si algún día
+       coexistieran, que gane lo viejo y no que se rompa. */
+    if (slug) return `/tienda/${slug}`;
+    if (producto) return `/p/${producto}`;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const host = (request.headers.get("host") ?? "").split(":")[0];
@@ -100,6 +132,20 @@ export async function middleware(request: NextRequest) {
       }
       const slug = subMatch[1];
       const url = request.nextUrl.clone();
+
+      /* ⚠️ Ese nombre puede ser DOS cosas desde la Fase 5 bis: una tienda o un
+         producto digital. Comparten el mismo espacio de nombres —los dos se
+         traducen desde el mismo subdominio— y sólo la base sabe cuál es.
+
+         Antes esto no preguntaba nada y reescribía derecho a `/tienda/…`. Si la
+         consulta falla, se hace exactamente eso: **una tienda no puede dejar de
+         funcionar porque se cayó una consulta que ella no necesita.** */
+      const destino = await donde(slug, request);
+      if (destino) {
+        url.pathname = `${destino}${pathname === "/" ? "" : pathname}`;
+        return NextResponse.rewrite(url);
+      }
+
       url.pathname = `/tienda/${slug}${pathname === "/" ? "" : pathname}`;
       return NextResponse.rewrite(url);
     }
