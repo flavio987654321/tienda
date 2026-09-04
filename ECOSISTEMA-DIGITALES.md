@@ -1800,6 +1800,117 @@ después, porque hasta que exista la factura de Anthropic no tiene techo.
 - 🔲 Los textos de venta y los mails (entrega, carrito abandonado).
 - 🔲 Sasha adaptada: embudos, descargas y conversión en vez de stock y envíos.
 
+### El orden en que se hace la Fase 4 — DECIDIDO (04/09/26)
+
+| # | Qué | Por qué ahí |
+|---|---|---|
+| **1** | **Armar el embudo** (3 fichas) | Cuesta centavos, lo tienen los tres planes, y valida toda la plomería —topes, esquema, limado— **antes** de gastar US$4 por tiro |
+| 2 | La página de venta con IA | También barata, y el catálogo cerrado ya está hecho justo para poder validar lo que devuelva |
+| 3 | El ebook | US$2–4 cada uno. Necesita el cupo persistente, que todavía no existe |
+| 4 | Sasha adaptada | La que menos bloquea: el asistente ya funciona, hay que cambiarle el cerebro |
+
+### ✅ 4.1 ARMAR EL EMBUDO CON IA — el motor, HECHO (04/09/26)
+
+`POST /api/digitales/ia/embudo`. Le contás de qué es tu negocio y devuelve tres
+fichas: principal, bono y upsell, cada una con título, bajada y precio.
+
+#### ⚠️ PROPONE. NO GUARDA NADA.
+
+Podría crear los tres productos de una y sería un botón más lindo. Pero entonces
+una generación mala deja tres productos para borrar a mano y —lo que importa—
+**el texto de un modelo entraría a la base sin que ninguna persona lo haya
+leído**. Lo que se publica en una página que cobra lo firma quien vende: tiene
+que haberlo visto antes.
+
+De yapa, los topes del plan y la validación de campos siguen viviendo en un solo
+lugar —la ruta de crear— en vez de duplicados y desincronizándose de a uno.
+
+#### El modelo: Sonnet 5, no Haiku
+
+Sasha usa Haiku 4.5 y está bien: es un chat de mucho volumen donde cada mensaje
+pesa poco. Esto corre **una vez por producto** y es lo primero que la persona ve
+de todo el ecosistema — acá el texto de venta *es* el producto. A este tamaño la
+diferencia de costo es una fracción de centavo; la de calidad, no.
+
+#### Lo que costó de verdad (medido, no estimado)
+
+**~2.100 tokens de entrada y ~480 de salida por generación: alrededor de 1,3
+centavos de dólar.** Confirma el "centavos" que decía 2.4 bis, ahora con número.
+El `console.log` de la ruta lo deja anotado en cada llamada para poder revisarlo
+cuando haya uso real.
+
+#### La forma la garantiza la API, no una frase
+
+La respuesta entra por una **herramienta de esquema fijo** con `tool_choice`
+forzado. Pidiendo "contestame en JSON" el modelo contesta en JSON **casi**
+siempre, y el "casi" acá es una pantalla rota.
+
+⚠️ **Eso no reemplaza validar.** El esquema garantiza que `precio` sea un número,
+no que sea un número sensato. Todo lo que vuelve pasa por `normalizarEmbudo`:
+
+- Los textos por **el mismo limpiador que usa lo que escribe una persona** — lo
+  que vuelve termina dibujado en una página pública, y un salto de línea adentro
+  de un título rompe el mismo renglón lo haya escrito quien lo haya escrito.
+- **El bono va en 0 aunque el modelo le ponga precio.** Un bono que se cobra no
+  es un regalo.
+- `NaN` e `Infinity` **son números** para el esquema, y pasan cualquier
+  comparación hasta que el total de un pedido sale en "NaN".
+- Un precio fuera de rango se **acomoda al borde**, no tira las tres fichas: el
+  modelo no conoce el dólar de hoy, así que su precio es una sugerencia para
+  editar y no un número para publicar.
+- Si falta una ficha entera o un título queda vacío, **no se muestra nada**:
+  media pantalla con una tarjeta buena y dos vacías es peor que "probá de nuevo".
+
+#### Lo que el propio ensayo encontró
+
+Con dos nichos de prueba salió muy bien —rioplatense, concreto, sin promesas— y
+apareció **un error que no se veía leyendo el prompt**: al mecánico le propuso un
+upsell de *"videos cortos donde te muestro…"*. **La plataforma entrega un archivo
+que se descarga, no videos.** Quedaba quien vende prometiendo algo que el sistema
+no le iba a mandar a nadie. El prompt ahora lo dice con todas las letras, y
+también que no proponga clases en vivo, comunidades ni acompañamiento.
+
+Y en la segunda pasada el texto se fue para el lado del lunfardo ("no te la
+claven", "te están afanando"). Es rioplatense, pero **esto lo firma con su nombre
+quien vende**: se le agregó el freno. Esa línea no se volvió a ensayar contra el
+modelo — es la única parte de este bloque que está escrita y no probada.
+
+#### Los topes, que es la parte que no se negocia
+
+`lib/ia-digitales.ts`, cuatro capas con la misma forma que las de Sasha, porque
+**lo que ya se aprendió caro no se vuelve a aprender**:
+
+| Capa | Qué tapa |
+|---|---|
+| Ráfaga (8 / 10 min) | Que nadie dispare un script contra el endpoint |
+| Diario por cuenta (10 / 20 / 40) | El techo de una cuenta sola en el día |
+| Global de pruebas (150) | **Veinte cuentas truchas son la misma persona**, y ninguna capa por-usuario se entera |
+| Global total (600) | El corta-corriente |
+
+- **Archivo aparte del de Sasha, a propósito.** Si compartieran presupuesto, una
+  tarde de charla con el asistente dejaría a alguien sin poder armar su producto.
+- **El diario cambia con el plan**, al revés que en Sasha. Estas generaciones se
+  corresponden con productos, y cuántos puede tener cada plan ya está decidido
+  (1, 2 y 5): darle 40 diarias a una cuenta Free que puede tener **un** producto
+  es pagar 39 llamadas que no pueden terminar en nada.
+- **El global de pruebas va separado del total** para que el que abusa no deje
+  sin IA al que paga. Misma decisión que en Sasha, mismo motivo.
+- ⚠️ **Los globales van ÚLTIMOS.** Los contadores suman aunque el pedido se
+  rechace —así es `INCR`—: si fueran primero, alguien ya bloqueado por su tope
+  personal seguiría comiéndose el presupuesto de todos con cada intento.
+- ⚠️ **Si Redis no contesta, se FRENA.** Del otro lado hay algo que se paga, así
+  que "no pude contar" tiene que cortar y nunca dejar pasar.
+
+Y el diario es de la **cuenta**, no del botón: los dos botones baratos comparten
+el techo. Contarlos por separado le daría a una cuenta Free el doble de
+generaciones que las que dice su número.
+
+34 chequeos en `embudo-ia.check`, y los de los topes corren de verdad contra un
+contador falso, no mirando el código.
+
+🔲 **Falta el botón.** El motor está y anda; la pantalla que lo usa es lo
+siguiente. Hoy `IA_LISTA` sigue en `false`.
+
 ## FASE 5 — La página de venta y el checkout
 
 Anotado ahora que se sabe qué forma tiene (ver 2.3). Cuelga del producto, en
