@@ -2316,6 +2316,85 @@ párrafo.
   entrega, pantalla de gracias— y no lo ofrecemos. Es una decisión comercial, no
   de diseño.
 
+### ✅ 4.3 EL EBOOK CON IA — HECHO (04/09/26)
+
+Lo que `/precios` vende y lo único por lo que alguien deja Free. Anda de punta
+a punta: se pide desde la tarjeta del producto y termina con el PDF cargado
+como su archivo.
+
+**La pared que decidió todo el diseño.** Una función de este plan de Vercel
+tiene 60 segundos. Un ebook son varios minutos, así que **no entra en un
+pedido**. Quedó partido en tres rutas:
+
+| | Qué hace | ¿Cobra? |
+|---|---|---|
+| `/ia/ebook` | arma el temario | sí, uno del cupo |
+| `/ia/ebook/paso` | escribe **un** capítulo | no |
+| `/ia/ebook/armar` | hace el PDF y lo cuelga del producto | no |
+
+De yapa sale mejor escrito: a un modelo al que se le pide "escribime 40
+páginas" de una se le afloja la mano a la mitad y termina resumiendo.
+
+**Cerrar la pestaña no cuesta plata.** Cada capítulo se guarda apenas se
+escribe (`EbookIA`), y volver a pedir el ebook de ese producto devuelve el
+borrador donde estaba sin gastar nada. Es todo el motivo por el que el borrador
+vive en la base.
+
+**El candado, y por qué no alcanza con tomarlo.** Dos pedidos a la vez
+escribirían dos veces el mismo capítulo. Pero el candado tiene que vencer —un
+pedido muerto no puede trabar el ebook para siempre— y ahí aparece el caso feo:
+el que tardó de más vuelve y guarda la lista que leyó ANTES, borrando el
+capítulo del que lo reemplazó. Por eso al guardar se comprueba que el candado
+siga siendo nuestro. Si no lo es, se tira lo escrito: costó plata, pero está
+peor perder lo del otro.
+
+**El único agujero sin fondo.** Escribir capítulos no gasta cupo —se pagó al
+empezar—, así que un bucle mal escrito puede pedir "escribime el que falta"
+para siempre: no le cuesta nada a la persona y nos cuesta a nosotros. El freno
+es un presupuesto de llamadas **por ebook**, contra el id de ese ebook y no
+contra la cuenta.
+
+**Un tope que lo habría cortado por la mitad.** La ráfaga eran 8 llamadas cada
+10 minutos, escrita para un botón de una sola llamada. Un ebook de 10 capítulos
+son 11 llamadas seguidas: se cortaba en el capítulo 7 y la culpa parecía
+nuestra. Los capítulos tienen ahora su propia ráfaga y no tocan los globales.
+
+**Free tiene cero, y el cartel dice qué SÍ puede hacer:** subir su propio PDF y
+venderlo igual. "No disponible en tu plan" deja a alguien pensando que no puede
+vender.
+
+**El PDF se arma con pdfkit, sin navegador.** Un Chrome adentro de una función
+serverless pesa más de 100 MB y tarda segundos en arrancar. Las tipografías de
+fábrica sólo entienden un byte, así que todo el texto pasa por un limpiador
+antes de dibujarse: un emoji adentro de un párrafo saldría como un garabato en
+un archivo ya cobrado. Medido: 19 páginas pesaron **21 KB** — el techo de
+4,5 MB de la plataforma no lo roza.
+
+#### Dos cosas que aparecieron haciéndolo
+
+- 🔴 **La IA mandaba textos a un tercero sin declararlo.** La política de
+  privacidad de digitales no nombraba a Anthropic ni mencionaba la IA, con el
+  botón del embudo y el de la página de venta **ya andando**. Saltó recién al
+  prender el del ebook, porque el seguro estaba puesto en ese botón y no en el
+  primero. No llegó a producción —el ecosistema está detrás de una bandera
+  apagada allá—, pero la declaración tenía que existir antes del primer botón.
+  Entra el punto "2 ter" de la solapa digital.
+- 🔴 **Un callejón sin salida al volver.** El bucle no arranca solo al reabrir
+  una ventana dejada a medias, y el botón de seguir estaba sólo cuando había
+  habido un error. Volver con todos los capítulos escritos y el PDF sin armar
+  dejaba la lista tildada y nada que apretar: el ebook pago quedaba a un paso
+  del final. Ahora el botón está siempre, y dice qué va a hacer.
+
+#### 🔲 Lo único que queda
+
+**Medir un ebook de verdad.** Nunca se generó uno completo: la estimación de
+US$2–4 sigue sin verificar y `EBOOKS_IA_ARRANQUE` / `ebooksIA` siguen siendo
+provisorios hasta esa medición. Cuesta plata real, así que se hace a pedido.
+
+⚠️ Y desde este commit, **el botón anda en local**: apretarlo gasta de verdad.
+
+---
+
 ## FASE 5 — La página de venta y el checkout
 
 Anotado ahora que se sabe qué forma tiene (ver 2.3). Cuelga del producto, en
