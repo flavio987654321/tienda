@@ -178,7 +178,7 @@ check("RUT-B",
 
 /* Los topes antes de leer el cuerpo, y si Redis falla se frena. */
 check("RUT-C",
-  ruta.indexOf("permitirGeneracion") < ruta.indexOf("req.json()") &&
+  ruta.indexOf("await permitirGeneracion") < ruta.indexOf("req.json()") &&
   /no se pudieron contar los topes, se rechaza/.test(ruta),
   "los topes van primero y, si no se pueden contar, se rechaza");
 
@@ -191,7 +191,7 @@ check("RUT-D",
 
 /* Y cuando sí gasta, gasta antes de llamar al modelo y devuelve si falla. */
 check("RUT-E",
-  ruta.indexOf("consumirDelCupo") < ruta.indexOf("anthropic.messages.create") &&
+  ruta.indexOf("await consumirDelCupo") < ruta.indexOf("anthropic.messages.create") &&
   (ruta.match(/if \(bolsa\) await devolverAlCupo/g) ?? []).length === 2,
   "el cupo se gasta antes de llamar y se devuelve en los dos caminos de error");
 

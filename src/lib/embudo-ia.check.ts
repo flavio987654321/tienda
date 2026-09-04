@@ -139,13 +139,19 @@ const ruta = readFileSync("src/app/api/digitales/ia/embudo/route.ts", "utf8");
 
 /* ⚠️ Rol DIGITAL, no OWNER. Es el error que ya está cometido al revés en la ruta
    de Sasha, que pide OWNER y por eso le contesta 403 a una cuenta digital. */
+/* ⚠️ SE BUSCA LA LLAMADA Y NO EL NOMBRE. Un archivo empieza por sus imports,
+   así que `indexOf("permitirGeneracion")` encontraba el renglón 4 —el import— y
+   no dónde se cuentan los topes de verdad. Comparado contra cualquier otra cosa
+   daba siempre "primero", y este chequeo pasaba sin haber mirado nada.
+   Encontrado el 04/09/26 mientras se escribían los del ebook. El código estaba
+   bien; el chequeo no lo estaba mirando. */
 check("RUT-A", /user\.role !== "DIGITAL"/.test(ruta) && !/role !== "OWNER"/.test(ruta),
   "la puerta es el rol DIGITAL, no el de tiendas");
 
 /* Los topes van ANTES de leer el cuerpo y antes de tocar la base: un pedido
    rechazado no tiene que costar nada. */
 check("RUT-B",
-  ruta.indexOf("permitirGeneracion") < ruta.indexOf("req.json()"),
+  ruta.indexOf("await permitirGeneracion") < ruta.indexOf("req.json()"),
   "los topes se aplican antes de leer el pedido");
 
 /* ⚠️ Y si Redis no contesta, se FRENA. Del otro lado hay algo que se paga: "no
@@ -212,7 +218,7 @@ check("RUT-I", /if \(!process\.env\.ANTHROPIC_API_KEY\)/.test(ruta),
    pedidos en paralelo pasarían todos el control —porque ninguno gastó todavía—
    y generarían los ocho. */
 check("RUT-J",
-  ruta.indexOf("consumirDelCupo") < ruta.indexOf("anthropic.messages.create"),
+  ruta.indexOf("await consumirDelCupo") < ruta.indexOf("anthropic.messages.create"),
   "el cupo se gasta antes de llamar al modelo, no después");
 
 /* Y si la llamada falla, se devuelve: la persona no recibió nada y el fallo fue

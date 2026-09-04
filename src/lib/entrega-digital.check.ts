@@ -92,7 +92,7 @@ const descarga = readFileSync("src/app/api/digitales/descargar/[token]/route.ts"
    un `POST` escrito a mano con el id de una orden ajena la confirma sin haber
    pagado nada — o sea, se lleva el archivo gratis. */
 check("WEB-A", cobro.includes("firmaDeMercadoPagoValida"), "el aviso de pago se verifica");
-check("WEB-B", cobro.indexOf("firmaDeMercadoPagoValida") < cobro.indexOf("prisma."),
+check("WEB-B", cobro.indexOf("!firmaDeMercadoPagoValida(") < cobro.indexOf("prisma."),
   "y se verifica ANTES de tocar la base");
 
 /* Un error hace que Mercado Pago reintente el mismo aviso una y otra vez. */
