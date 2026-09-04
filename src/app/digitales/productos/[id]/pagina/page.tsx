@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
 import { normalizarContenido } from "@/lib/pagina-venta";
 import BotonVolver from "../../../BotonVolver";
+import { estadoDelCupo } from "@/lib/cupo-ia";
+import type { TierDigital } from "@/lib/planes-digitales";
 import EditorDePagina from "./EditorClient";
 
 export const dynamic = "force-dynamic";
@@ -53,6 +55,14 @@ export default async function EditorPaginaPage({ params }: Props) {
   });
   if (!fila) notFound();
 
+  /* Cuánto le queda de IA, para que el botón lo diga sin tener que preguntar
+     antes de abrirlo. El plan sale de la suscripción, igual que en Productos. */
+  const sub = await prisma.subscription.findUnique({
+    where: { userId: user.id },
+    select: { tier: true },
+  });
+  const cupoIA = await estadoDelCupo(user.id, (sub?.tier ?? "FREE") as TierDigital);
+
   return (
     <div className="p-4 sm:p-6 lg:p-8">
       <BotonVolver href="/digitales/productos">Volver a productos</BotonVolver>
@@ -68,6 +78,9 @@ export default async function EditorPaginaPage({ params }: Props) {
            no la dibujaría. */
         cuantosBonos={fila.hijos.filter((h) => h.isActive).length}
         bonosSinPublicar={fila.hijos.filter((h) => !h.isActive).length}
+        cupoIA={cupoIA}
+        /* Nunca tuvo página: esa primera generación no gasta cupo. */
+        esLaPrimeraPagina={fila.paginaVenta === null}
       />
     </div>
   );

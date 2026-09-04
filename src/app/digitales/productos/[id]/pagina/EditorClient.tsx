@@ -13,6 +13,8 @@ import {
   type Campo, type PaginaVenta, type SeccionGuardada,
 } from "@/lib/pagina-venta";
 import { useSalida } from "@/app/digitales/SalidaSinGuardar";
+import type { EstadoDelCupo } from "@/lib/cupo-ia";
+import EscribirConIA from "./EscribirConIA";
 
 /**
  * El editor de la página de venta.
@@ -43,6 +45,10 @@ type Props = {
   cuantosBonos: number;
   /** Cargados pero sin publicar, para poder decir el motivo real. */
   bonosSinPublicar: number;
+  /** Cuántas generaciones de IA le quedan a la cuenta. */
+  cupoIA: EstadoDelCupo;
+  /** Si el producto nunca tuvo página: esa primera no gasta cupo. */
+  esLaPrimeraPagina: boolean;
 };
 
 /* ── Fechas ─────────────────────────────────────────────────────────────────
@@ -352,7 +358,10 @@ function CasillaLista({
 
 /* ── La pantalla ────────────────────────────────────────────────────────────*/
 
-export default function EditorDePagina({ productoId, nombre, publicado, pagina: inicial, cuantosBonos, bonosSinPublicar }: Props) {
+export default function EditorDePagina({
+  productoId, nombre, publicado, pagina: inicial, cuantosBonos, bonosSinPublicar,
+  cupoIA, esLaPrimeraPagina,
+}: Props) {
   const [pagina, setPagina] = useState<PaginaVenta>(inicial);
   const [abierta, setAbierta] = useState<string | null>(null);
   const [sucio, setSucio] = useState(false);
@@ -597,6 +606,16 @@ export default function EditorDePagina({ productoId, nombre, publicado, pagina: 
         </div>
 
         <div className="flex items-center gap-2">
+          {/* ⚠️ Escribe en el borrador y NO guarda: lo que devuelve se ve en la
+              previa, y si no gusta se sale sin guardar y vuelve lo de antes. Por
+              eso marca `sucio` — es un cambio como cualquier otro del editor. */}
+          <EscribirConIA
+            productoId={productoId}
+            cupoInicial={cupoIA}
+            hayCambiosSinGuardar={sucio}
+            esLaPrimera={esLaPrimeraPagina}
+            onListo={(nueva) => { setPagina(nueva); setSucio(true); setError(""); }}
+          />
           <Link
             href={`/p/${productoId}`}
             target="_blank"

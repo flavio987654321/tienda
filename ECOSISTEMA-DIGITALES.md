@@ -2126,6 +2126,103 @@ salió.
 16 chequeos en `primeros-pasos.check`, y corren la lógica de verdad contra fotos
 armadas a mano, no leyendo el archivo. **72 pruebas** en total.
 
+### ✅ 4.2 LA PÁGINA DE VENTA CON IA — HECHA (04/09/26)
+
+`POST /api/digitales/ia/pagina` + el botón **"Escribir con IA"** en el editor.
+
+#### ⚠️ Hay secciones que la IA NO puede tocar, y es lo más importante de acá
+
+No es una decisión de alcance: **es la línea entre escribir una página y
+fabricar prueba.**
+
+| Sección | Por qué queda afuera |
+|---|---|
+| **Opiniones** | Serían testimonios inventados de gente que no compró. Es lo primero que alguien captura de pantalla y publica, y es publicidad engañosa. La sección nace apagada justo por esto |
+| **Garantía** | Es una **obligación que se asume**, no un texto de venta. Y **le gana al art. 1116**: la promesa de la página vale más que la excepción del Código. Una IA prendiéndola le crea a quien vende un compromiso de devolución que nadie leyó |
+| **Oferta con fecha** | Es una fecha real. Inventarla es la cuenta regresiva mentirosa de la competencia, que ya se descartó por escrito |
+| **Aviso de ventas** | Se llenaría con compras que no pasaron |
+| **Precio** | Sale del producto. Copiado, el día que se corrige el precio la página sigue mostrando el viejo — y ese número es el que la persona lee antes de pagar |
+| **Barra y Pie** | No son texto de venta, y el pie lleva el contacto y los legales de quien vende |
+
+Escribe las **ocho de copy**: portada, qué te llevás, bonos, beneficios, esto te
+suena, cómo funciona, preguntas frecuentes y cierre.
+
+Y es una **lista blanca, no una negra**: con una negra, una sección nueva del
+catálogo entraría sola en lo que la IA escribe, y la próxima que se agregue puede
+ser otra "opiniones".
+
+#### El esquema se DERIVA del catálogo
+
+Escrito a mano se desincroniza: alguien agrega un campo a una sección y la IA no
+lo llena nunca, sin que falle nada. Derivado, un campo nuevo entra solo y uno que
+se saca deja de pedirse. **Es exactamente para lo que se hizo el catálogo
+cerrado** — está escrito en la Fase 5: *"con un catálogo fijo, lo que la IA
+devuelve se compara campo por campo contra la lista"*.
+
+Y lo que vuelve pasa por `normalizarContenido`, **la misma puerta que usa el
+editor**: descarta secciones que no existen, descarta campos que no existen y
+recorta lo largo con el tope del catálogo.
+
+⚠️ De paso, al modelo **se le dice** el tope de cada campo además de recortarlo
+después: recortado a secas, una frase de 200 caracteres en un campo de 90 queda
+cortada a la mitad de una palabra.
+
+#### ⚠️ Es un MERGE, no un reemplazo
+
+Regenerar el texto **no puede borrar el diseño** — el editor no tiene deshacer.
+Lo que no se toca: el estilo, la paleta, la tipografía, el orden de las
+secciones, qué secciones estaban prendidas, y los textos de las prohibidas.
+
+Y un campo que el modelo no mandó conserva el que había, en vez de quedar hueco.
+
+#### Lo que costó de verdad (medido)
+
+**3.811 tokens de entrada, 1.963 de salida: US$0,041.** La mitad de lo que había
+estimado (US$0,066). O sea:
+
+| | Medido | En pesos |
+|---|---|---|
+| Las 3 fichas del embudo | US$0,0135 | ~$19 |
+| La página | **US$0,041** | ~$57 |
+| **Las dos juntas** | **US$0,054** | **~$76** |
+
+Peor caso mensual, suponiendo que **todas** las generaciones sean de las caras:
+Free US$0,16 una vez, Starter US$0,27/mes, Pro **US$0,54/mes** — el **1,3%** del
+plan.
+
+#### ✅ DECIDIDO (04/09/26): la primera página de cada producto no gasta cupo
+
+Es lo que hace que *"armá tu embudo con IA"* entregue lo que promete. Sin esto,
+armar el embudo y escribir su página cuesta dos generaciones, y quien prueba el
+producto por primera vez se queda a mitad de camino sin entender por qué.
+
+**No se puede abusar**, y por dos motivos que se sostienen solos:
+
+1. La condición la verifica **el servidor contra la base** (`paginaVenta` en
+   `null`), no la manda el navegador.
+2. Hay **una página por producto del plan**: 1 en Free, 2 en Starter, 5 en Pro.
+   O sea que las páginas gratis de una cuenta tienen un techo duro igual al de
+   sus productos, y borrar uno para recrearlo cuesta una generación del cupo en
+   el embudo.
+
+Peor caso: 5 páginas gratis en Pro, unos **20 centavos de dólar** en toda la vida
+de la cuenta.
+
+#### El botón pregunta antes
+
+Porque **pisa texto** y el editor no tiene deshacer. La ventana dice qué escribe,
+**qué no toca** —lo que tranquiliza justo a quien ya tiene la página armada, que
+es el que no se anima— y avisa fuerte si hay cambios sin guardar.
+
+Y lo que devuelve entra **como borrador**: se ve en la previa que ya existe, y se
+guarda con el botón de siempre. Si no gusta, se sale sin guardar y vuelve lo de
+antes. La ruta del editor sigue siendo la única que escribe `paginaVenta`.
+
+32 chequeos en `pagina-ia.check`. **73 pruebas** en total.
+
+🔲 **Falta encadenarlo con el embudo**: hoy son dos botones en dos pantallas. El
+"armar todo" de una sola vez va con el asistente de bienvenida.
+
 ## FASE 5 — La página de venta y el checkout
 
 Anotado ahora que se sabe qué forma tiene (ver 2.3). Cuelga del producto, en
