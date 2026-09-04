@@ -788,31 +788,39 @@ Todo esto ya está resuelto, medido y en varios casos aplicado a producción:
 
 ## 7. Lo que TODAVÍA falta decidir
 
-- 🔲 **¿El bono viaja como línea del pedido?** El permiso de descarga es **uno por
+- ✅ **RESUELTO (03/09/26). El bono SÍ viaja como línea del pedido**, con precio
+  0 (`armarItems`). Así cada bono tiene su propio permiso de descarga con sus 5
+  bajadas, que era justo el agujero que se temía. La pregunta original decía: El permiso de descarga es **uno por
   línea comprada**, con 5 descargas cada uno. Si el bono es su propia línea, cada
   uno tiene su token y sus 5 descargas y está todo bien. Si no lo es, hay un solo
   token para 6 archivos y **el comprador no llega ni a bajar una vez cada cosa**:
   pagó y no puede tener todo. Es el tipo de agujero que aparece el día que alguien
   compra, no antes. Sale de contar los archivos por venta (ver Fase 3, el archivo
   del producto).
-- 🔲 **¿El cupo mensual de IA no usado se acumula o se pierde?** Perderlo es más
-  barato para nosotros y más molesto para la persona. Si se acumula, va con techo.
-  Se decide junto con el contador, en la Fase 4.
-- 🔲 **¿Las generaciones de página se cuentan, o alcanza con ráfaga y diario?** La
-  postura de 2.4 bis es que no se cuentan —cuestan centavos y contarlas pone
-  fricción donde no hay costo—, pero eso vale mientras el número de la factura le
-  dé la razón. Se revisa con la medición de la Fase 4.
+- ✅ **RESUELTO (04/09/26): el cupo mensual no usado SE PIERDE**, y la bolsa de
+  bienvenida NO. Por eso se gasta **primero la del mes** —es la que vence— y
+  recién después la de bienvenida. La pantalla lo dice con todas las letras y
+  avisa fuerte cuando se empieza a comer la que no vuelve.
+- ✅ **RESUELTO (04/09/26): las generaciones de página SÍ se cuentan**, del mismo
+  cupo que el embudo, **menos la primera de cada producto**. Se dio vuelta la
+  postura de 2.4 bis con el número medido en la mano: la página salió US$0,041
+  —tres veces el embudo— y es el botón que todo el mundo aprieta de nuevo. Lo que
+  no se cuenta es empezar.
 - 🔲 **El tope anti-abuso de páginas de venta**, por arriba de las 5 de Pro.
   Mismo criterio que `MAX_PRODUCTS_POR_TIENDA` (5.000) en `planLimits.ts`, que
   existe porque el plan se elige en el formulario de registro y **un tope que
   sólo mira el plan no frena justo al que lo quiere evadir**. Va en la Fase 2,
   junto con el código que lo aplique: se escribió en la Fase 1 y se sacó, porque
   una constante que no lee nadie es código muerto.
-- 🔲 **Cómo se unen Free, trial y gracia** (sección 3) — hay propuesta, falta
-  confirmarla.
-- 🔲 **Qué se le muestra al comprador antes de comprar** sobre los medios de pago:
-  con transferencia la entrega NO es automática (la dueña confirma a mano). Eso
-  hay que decirlo antes, no dejar que lo descubra esperando un mail que no llega.
+- ✅ **RESUELTO (01/09/26): cómo se unen Free, trial y gracia** (sección 3). Está
+  en `subscription.ts`: un plan que no vence contesta `ACTIVE` y listo, y una
+  cuenta digital que deja de pagar **vuelve a Free** en vez de cerrarse. Por eso
+  Free es `ACTIVE` y no `TRIAL` — que es lo que casi deja a las cuentas gratis
+  afuera del tope global de IA.
+- ✅ **NO APLICA (03/09/26).** La duda era qué avisarle al comprador cuando paga
+  por transferencia, porque ahí la entrega no es automática. **En digitales no hay
+  transferencia**: el único medio es Mercado Pago y la entrega sale sola cuando el
+  pago se aprueba. Si algún día se agrega otro medio, esta duda vuelve a abrirse.
 
 ---
 
@@ -1102,14 +1110,20 @@ La diferencia con las tiendas no es un detalle y conviene tenerla escrita:
 
 **Lo que sigue abierto:**
 
-- 🔲 La comisión **congelada al momento del pedido**, no leída del plan de hoy.
-  Si alguien vende con Pro (2 %) y después cae a Free (8 %), esa venta ya hecha se
-  liquida al 2 %: cobrarle la diferencia después sería cambiarle el precio a algo
-  que ya pasó. Va con el modelo de pedido digital.
-- 🔲 El tope anti-abuso de páginas de venta, junto al código que lo aplica.
-- 🔲 La comisión de plataforma sumada a `marketplaceFee`, y **qué pasa cuando una
-  venta tiene afiliado Y comisión de plataforma** (las dos salen del mismo
-  número).
+- ✅ La comisión **congelada al momento del pedido** — HECHA con el checkout
+  (03/09/26). `Order.lockedCommissionRate` guarda el porcentaje que regía cuando
+  se compró, y `comisionCongelada()` es la que leen las dos pantallas de ventas.
+  `comisionDeLaVenta()` mira el plan de hoy y sólo sirve para cobrar en el
+  momento. Si alguien vende con Pro (2 %) y después cae a Free (8 %), esa venta ya
+  hecha se sigue liquidando al 2 %.
+- ✅ La comisión de plataforma sumada a `marketplaceFee` — HECHA (03/09/26), y el
+  choque con el afiliado revisado ruta por ruta: **una orden digital nunca tiene
+  afiliado**, así que las dos cosas no se pisan. Está anotado en el código, no
+  sólo acá.
+- 🔲 El tope anti-abuso de páginas de venta, junto al código que lo aplica. **Es
+  lo único que queda abierto de la Fase 2.** El tope del plan sí existe
+  (`topeDe()`, aplicado al crear); falta el techo duro por encima, el
+  equivalente de `MAX_PRODUCTS_POR_TIENDA`.
 
 
 ## REVISIÓN COMPLETA — 31/08/26, antes de seguir con la Fase 3
@@ -1702,9 +1716,12 @@ para generar.
   usuario no se entera.
 
 ### 🔲 Lo que sigue
-- 🔲 **Inicio de verdad**: las URLs y los próximos pasos. Hoy es una pantalla que
-  dice que el panel se está construyendo, con un solo link a Mi cuenta.
-- 🔲 **Ventas**, y recién después **Estadísticas**, cuando haya qué mostrar.
+- ✅ **Ventas** — HECHA (03/09/26), con el detalle de cada venta y el registro de
+  envíos.
+- 🟡 **Inicio** — a medias. Ya no miente (03/09/26) y tiene los **primeros pasos**
+  (04/09/26), pero le falta lo de arriba: las direcciones de las páginas, la plata
+  del mes y los carritos abandonados. Es la pantalla que queda por rehacer.
+- 🔲 **Estadísticas**, cuando haya qué mostrar.
 - 🔲 **El asistente de la primera vez** (los 5 pasos de la competencia). Se diseña
   ahora, se construye último: depende de las Fases 4 y 5.
 
@@ -1725,21 +1742,25 @@ después, porque hasta que exista la factura de Anthropic no tiene techo.
 - 🔲 **Medir un ebook de verdad** antes de prometer un número. La estimación de
   hoy es US$2–4 por ebook con Opus 5, y está sin verificar. `ebooksIA` en
   `TOPES_DIGITALES` (0 / 2 / 5) es provisorio hasta esa medición.
-- 🔲 **Las cuatro capas de topes**, calcadas de `asistente-limites.ts`: ráfaga,
-  diario por cuenta, global de cuentas Free, global total. Ninguna función sale
-  sin tope, tampoco en Pro.
-- 🔲 **La capa de cuentas Free es la crítica**: es gratis, no pide tarjeta y da
+- ✅ **Las capas de topes** — HECHAS (04/09/26) en `ia-digitales.ts`, pero
+  quedaron **tres y no cuatro**: ráfaga, global de cuentas sin abono y global
+  total. **El diario por cuenta se sacó a propósito** — el cupo persistente
+  (`cupo-ia.ts`) ya es el freno que la persona ve, y sumarle un tope diario
+  invisible arriba era frenar dos veces lo mismo y cobrar caro por explicarlo.
+- ✅ **La capa de cuentas Free es la crítica**: es gratis, no pide tarjeta y da
   acceso a IA. Veinte cuentas truchas son la misma persona y ningún tope por
   usuario se entera.
-- 🔲 **El lote de arranque, y que llegue con el COBRO y no con la prueba.** Los 7
+- ✅ **El lote de arranque** — HECHO (04/09/26): es la bolsa de `bienvenida` de
+  `CUPO_EMBUDO`, separada de la del mes. Los 7
   días son sin tarjeta: entregar ahí las 6 generaciones de Pro es regalarle hasta
   US$48 a alguien del que no tenemos un solo dato de cobro. En la prueba va el
   plan entero con **una** generación. Ver 2.4 bis.
 - 🔲 **El reintento incluido por ebook.** Se cuentan ebooks —es lo que dice el
   cartel— pero cada uno se regenera una sola vez, si no el costo no tiene fondo.
-- 🔲 **El tope de la página de venta con IA.** Hoy `paginas` limita cuántas se
-  pueden TENER y nada limita cuántas veces se pide regenerarla. Volver a generar
-  es lo primero que hace todo el mundo, y Free tiene ese botón.
+- ✅ **El tope de la página de venta con IA** — HECHO (04/09/26). Regenerar gasta
+  del mismo cupo que el embudo; **la primera vez de cada producto es gratis**
+  (`esLaPrimera`), porque cobrarle a alguien por la página que todavía no existe
+  es cobrarle por empezar.
 - ✅ **Qué es la "cáscara", visto de primera mano en su Free (02/09/26).** La IA
   crea **SÓLO TEXTO**: título, descripción y precio del principal, del bono y del
   upsell. **Ni PDF ni imagen** — la portada que se ve en las capturas la subió
