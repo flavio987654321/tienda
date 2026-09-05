@@ -1,11 +1,11 @@
 import Link from "next/link";
 import {
   UserRound, Package, Receipt, ArrowRight, Globe, Pencil, Settings, Plus,
-  AlertTriangle, Clock, CircleDot, ExternalLink, Sparkles, ListChecks, ShoppingCart,
+  AlertTriangle, Clock, CircleDot, ExternalLink, Sparkles, ShoppingCart,
 } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth-session";
 import { prisma } from "@/lib/prisma";
-import { primerosPasos, terminado, elQueSigue, cuantosHechos } from "@/lib/primeros-pasos";
+import { primerosPasos, terminado } from "@/lib/primeros-pasos";
 import { fotoDelPanel, type NumerosDelPanel, type ProductoDelPanel } from "@/lib/panel-inicio";
 import { dominioDeLaPlataforma } from "@/lib/configuracion-digital";
 import { COPY_DIGITAL, type TierDigital } from "@/lib/planes-digitales";
@@ -28,14 +28,27 @@ import Direcciones from "./Direcciones";
  * verdad: **su dirección y su dominio, para copiar**. Esa es la operación real —
  * se pega en un anuncio, en un mensaje, en una historia.
  *
- * ── Los pasos son de la PRIMERA VEZ, no del panel ──────────────────────────
+ * ── Los pasos se van al TERMINARLOS, no al empezarlos ──────────────────────
  *
- * Estaban en el medio de la pantalla, y ahí no van: alguien que ya vendió
- * cuarenta veces no tiene por qué seguir viendo una lista de tareas de arranque
- * ocupándole el panel entero. Los pasos son el recibimiento — la pantalla
- * completa mientras la cuenta está vacía — y en cuanto hay un producto se
- * corren a la columna de la derecha, chiquitos, hasta que se terminan y se van
- * solos.
+ * Con la cuenta vacía son la pantalla entera. Con productos siguen arriba de la
+ * columna principal, enteros, **hasta que los cinco estén hechos**. Ahí
+ * desaparecen para siempre.
+ *
+ * ⚠️ Acá hubo un error y conviene que quede escrito. La objeción original era
+ * correcta —el que ya vendió cuarenta veces no tiene por qué seguir viendo una
+ * lista de arranque ocupándole el panel— pero se tradujo mal: se tomó *"ya tiene
+ * un producto"* como equivalente a *"ya no los necesita"*. No es lo mismo. Tener
+ * un producto es el paso 1 de 5: quedan el archivo, la página, Mercado Pago y
+ * publicar. Así que la lista se iba justo cuando más falta hacía, y lo único que
+ * sobrevivía era una tarjetita en la columna de al lado que en el teléfono cae
+ * al fondo de todo.
+ *
+ * Lo reportó Flavio probando una cuenta Free de verdad: *"cuando entré al panel
+ * y empecé a usar todo, ya no me aparecían más, habían dejado de existir"*.
+ *
+ * La condición que de verdad quiere decir "ya no los necesita" es
+ * `terminado(pasos)`, y con ella la objeción original se sigue cumpliendo sola:
+ * el que vendió cuarenta veces terminó los cinco y no ve nada.
  *
  * ⚠️ Lo que NO cambia es de dónde salen: del estado REAL de la cuenta, sin
  * ninguna bandera guardada. Una bandera se desincroniza el día que alguien borra
@@ -194,6 +207,31 @@ export default async function DigitalesPage({
         {/* ── Lo de la izquierda: cómo va ──────────────────────────────────── */}
         <div className="min-w-0 space-y-4">
 
+          {/* ══════════════════════════════════════════════════════════════════
+              LOS PASOS SE VAN AL TERMINARLOS, NO AL EMPEZARLOS
+              ══════════════════════════════════════════════════════════════════
+
+              ⚠️ Acá estaba el error, y era grande: la lista entera vivía sólo en
+              la pantalla de cuenta vacía, así que **al cargar el primer producto
+              desaparecía**. O sea que se iba justo después del paso 1 de 5, con
+              cuatro sin hacer — subir el archivo, armar la página, conectar
+              Mercado Pago y publicar—, y lo único que quedaba era una tarjetita
+              en la columna de al lado, que en el teléfono va al fondo de todo.
+
+              Reportado probando una cuenta Free de verdad: *"esos pasos, cuando
+              entré al panel y empecé a usar todo, ya no me aparecían más, habían
+              dejado de existir"*.
+
+              El motivo del error: cuando se sacaron del panel, tomé "ya tiene un
+              producto" como equivalente a "ya no los necesita". No es lo mismo.
+              Lo que de verdad quiere decir "ya no los necesita" es
+              `terminado(pasos)`, y esa condición ya existía dos renglones más
+              abajo — sólo estaba puesta sobre la versión chiquita.
+
+              Y la objeción original que los sacó de acá sigue respetada: el que
+              ya vendió cuarenta veces terminó los cinco, así que no ve nada. */}
+          {!terminado(pasos) && <PrimerosPasos pasos={pasos} />}
+
           {numeros && (
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               <Numero titulo="Ventas cobradas" valor={String(numeros.ventas)} />
@@ -336,29 +374,11 @@ export default async function DigitalesPage({
             </div>
           </div>
 
-          {/* ⚠️ Los pasos, chiquitos y a un costado. Ocupaban el medio de la
-              pantalla y ahí no van: el que ya vendió cuarenta veces no tiene por
-              qué seguir viendo la lista de arranque. Se van solos al terminar. */}
-          {!terminado(pasos) && (
-            <Link
-              href={elQueSigue(pasos)?.href ?? "/digitales/productos"}
-              className="block rounded-2xl border border-orange-200 panel-oscuro:border-orange-500/30 bg-orange-50 panel-oscuro:bg-orange-500/10 p-4 hover:border-orange-400 transition-colors"
-            >
-              <p className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-orange-700 panel-oscuro:text-orange-400">
-                <ListChecks className="h-3.5 w-3.5" />
-                Te falta {5 - cuantosHechos(pasos)} de 5
-              </p>
-              <p className="mt-1.5 text-[13px] font-bold text-orange-900 panel-oscuro:text-orange-200">
-                {elQueSigue(pasos)?.titulo}
-              </p>
-              <p className="mt-0.5 text-[11.5px] leading-relaxed text-orange-800 panel-oscuro:text-orange-300/80">
-                {elQueSigue(pasos)?.porque}
-              </p>
-              <span className="mt-2.5 inline-flex items-center gap-1.5 text-[12px] font-bold text-orange-700 panel-oscuro:text-orange-400">
-                Hacerlo <ArrowRight className="h-3.5 w-3.5" />
-              </span>
-            </Link>
-          )}
+          {/* ⚠️ Acá vivía la versión chiquita de los pasos, y se sacó: ahora la
+              lista entera está arriba de la columna principal mientras falte
+              alguno. Dos avisos de lo mismo en la misma pantalla es peor que
+              uno — y el de al lado era el que se veía, así que el de verdad no
+              se buscaba nunca. */}
         </aside>
       </div>
     </div>

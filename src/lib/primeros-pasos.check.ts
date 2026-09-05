@@ -96,7 +96,11 @@ check("PAS-H",
 
 /* Y la pantalla la esconde, en vez de dibujar cinco tildes que no hacen nada. */
 const inicio = readFileSync("src/app/digitales/page.tsx", "utf8");
-check("PAS-I", /!terminado\(pasos\) && \(/.test(inicio),
+/* ⚠️ Sin el paréntesis pegado: pedía `!terminado(pasos) && (` escrito tal cual y
+   se puso en rojo el día que la lista pasó a dibujarse sin envolver, con un
+   `<PrimerosPasos />` a secas. Lo que se cuida es la CONDICIÓN, no cómo esté
+   escrito el JSX que cuelga de ella. */
+check("PAS-I", /!terminado\(pasos\) &&/.test(inicio),
   "la lista desaparece sola cuando están los cinco");
 
 /* ── Que no pueda mentir ─────────────────────────────────────────────────── */

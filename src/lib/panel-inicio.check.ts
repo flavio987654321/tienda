@@ -254,13 +254,39 @@ check("PAN-AB",
   pagina.indexOf("if (productos.length === 0) {") < pagina.indexOf("<PrimerosPasos pasos={pasos} />"),
   "sin ningún producto, los pasos son la pantalla entera");
 
-/* ⚠️ Y con productos NO vuelven al medio: ocupaban la pantalla y el que ya
-   vendió cuarenta veces no tiene por qué seguir viendo la lista de arranque. */
+/* ══════════════════════════════════════════════════════════════════════════
+   CON PRODUCTOS, LOS PASOS SIGUEN ESTANDO HASTA QUE ESTÉN LOS CINCO
+   ══════════════════════════════════════════════════════════════════════════
+
+   ⚠️ Este chequeo decía lo contrario —"con productos, lo que falta va chiquito
+   en la columna de al lado"— y así estaba escrito el error: la lista entera
+   vivía sólo en la pantalla de cuenta vacía, así que **desaparecía al cargar el
+   primer producto**, con cuatro pasos sin hacer. Lo que quedaba era una
+   tarjetita en la columna de al lado, que en el teléfono va al fondo de todo.
+
+   Reportado probando una cuenta Free de verdad: *"cuando entré al panel y
+   empecé a usar todo, ya no me aparecían más"*.
+
+   La condición correcta nunca fue "¿ya tiene un producto?" sino
+   `terminado(pasos)`. La objeción que los sacó del medio sigue respetada: el
+   que ya vendió cuarenta veces terminó los cinco y no ve nada. */
 const conProductos = pagina.slice(pagina.indexOf("max-w-6xl"));
+
 check("PAN-AC",
-  !/<PrimerosPasos/.test(conProductos) && /<aside/.test(conProductos) &&
-  conProductos.indexOf("<aside") < conProductos.indexOf("elQueSigue(pasos)"),
-  "con productos, lo que falta va chiquito en la columna de al lado");
+  /\{!terminado\(pasos\) && <PrimerosPasos pasos=\{pasos\} \/>\}/.test(conProductos),
+  "con productos, la lista entera sigue estando mientras falte alguno");
+
+/* Y va en la columna PRINCIPAL, no en la de al lado: es lo que hay que hacer
+   ahora, y en el teléfono la columna de al lado se apila al fondo de todo. */
+check("PAN-AC2",
+  conProductos.indexOf("<PrimerosPasos") < conProductos.indexOf("<aside"),
+  "y va en la columna principal, no arrinconada al costado");
+
+/* Una sola vez. Dos avisos de lo mismo en la misma pantalla es peor que uno: el
+   chiquito de al lado era el que se veía, así que el de verdad no se buscaba. */
+check("PAN-AC3",
+  (conProductos.match(/<PrimerosPasos/g) ?? []).length === 1,
+  "y una sola vez, no dos avisos de lo mismo");
 
 /* Y se va solo cuando están los cinco: no hay nada que cerrar a mano. */
 check("PAN-AD",
