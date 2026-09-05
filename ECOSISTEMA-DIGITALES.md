@@ -3374,7 +3374,7 @@ serio, no de una prueba que falló.
 Ahora un chequeo (TON-H) falla si vuelve a aparecer un color de texto o de fondo
 escrito a mano en el dibujante.
 
-### 🔲 La pasada bloque por bloque — EMPEZADA (02/09/26)
+### ✅ La pasada bloque por bloque — TERMINADA (05/09/26)
 
 Con la página llena de contenido de prueba se ve qué le falta a cada bloque, que
 vacío no se notaba. Se va en el orden de la página.
@@ -3386,15 +3386,69 @@ vacío no se notaba. Se va en el orden de la página.
   números se descartan, así que escribir "hola" no deja una "h" adentro del
   círculo. Y una fila de sugerencias de un clic, que no es adorno: el teclado de
   emojis de Windows es Win+punto y mucha gente no lo sabe.
-- 🔲 Portada · Qué te llevás · Bonos · Opiniones · Preguntas · Oferta con fecha ·
-  Cierre · Barra · Pie
-- 🔲 **Cómo funciona** — los círculos numerados en fila.
-- 🔲 **Precio** — el resumen como lista de lo que incluye, con la cuenta del valor
-  total.
-- 🔲 **Garantía** — el sello.
-- 🔲 **Qué pasa si se borra el título de una sección.** En el editor de ellos dice
-  "si los dejás vacíos se usa el texto por defecto". Hay que ver si la nuestra
-  dibuja un hueco.
+- ✅ **Portada · Cómo funciona · Precio · Garantía · Oferta con fecha · Barra ·
+  Pie** — se habían hecho entre el 02 y el 03/09 y esta lista quedó sin tachar.
+  Están en sus commits: la portada que dice qué cosa es y contesta antes de que
+  bajen, los pasos en fila con el tope que esa fila aguanta, el resumen de
+  precio con la lista que suma de verdad, la garantía con su escudo, la oferta
+  que ahora termina de verdad, la barra que contaba los bonos distinto que el
+  resto, y el pie con los documentos de quien vende.
+
+- ✅ **Bonos, Opiniones y el hueco del título — HECHOS (05/09/26).** Lo que
+  faltaba de verdad de la pasada. Se dibujó la página entera con contenido de
+  prueba a 360, 768 y 1280, en los cinco estilos.
+
+  ⚠️ **Los bonos no mostraban su tapa.** Cada bono es un producto y tiene su
+  imagen cargada; la sección la tenía a mano y dibujaba texto pelado. Un regalo
+  que no se ve no parece un regalo. Ahora va la tapa, chica y al costado —arriba
+  y grande, la sección se hace de dos pantallas de alto justo en el medio de la
+  página—, cada bono numerado por su POSICIÓN (no hay campo que escribir a mano
+  y que quede mintiendo al borrar uno), y abajo la suma: *"los 3 bonos valen
+  $18.500 y van incluidos"*, sacada de `valorDeLosBonos`, la misma que usan el
+  resumen y la barra.
+
+  ⚠️ **La misma lista de bonos aparecía dos veces pegada.** La versión corta
+  adentro de la ficha del producto y, tres centímetros más abajo, la larga con
+  foto y descripción. Repetir la oferta al final está bien —la página es
+  larga—; repetirla pegada no es insistir, es que sobra. Ahora la ficha la
+  esconde **si la sección de Bonos se va a dibujar**, y si alguien la apaga la
+  lista vuelve sola a la ficha: el dato no se pierde, cambia de lugar.
+
+  ⚠️ **Y el resumen de precio decía el valor total dos veces seguidas**: la
+  lista cierra con "Valor total $38.500" y el tachado de abajo repetía el mismo
+  número con la misma palabra, dos renglones después. Hicieron falta DOS
+  banderas distintas y no una: en la ficha la lista va aparte pero el tachado se
+  queda —ahí es lo único que compara—, en el resumen es al revés.
+
+  **Las opiniones** ahora llevan la inicial de quien la dijo, y la última de una
+  cantidad impar toma el ancho entero en vez de dejar media columna vacía (los
+  bonos, igual). Sin estrellas, sin puntaje y sin foto, y eso es a propósito: la
+  sección de la competencia dibuja esto como una captura de WhatsApp —con hora,
+  señal y doble tilde— abajo de un título que dice "TESTIMONIOS REALES", y su IA
+  la llena sola con tres personas inventadas. Una inicial es lo máximo que se
+  puede dibujar sin agregarle a la opinión una prueba que nadie dio.
+
+- ✅ **Qué pasa si se borra el título de una sección — CONTESTADO (05/09/26): sí,
+  dibujaba un hueco.** El título no se dibuja —eso estaba bien, acá vacío es
+  vacío y no se inventa un texto por defecto como hace el editor de ellos— pero
+  el margen de arriba del contenido quedaba colgando de nada: 32 píxeles de aire
+  que se leen como un error de la página, no como una decisión de quien la armó.
+  Ahora ese aire existe sólo si hay encabezado. Chequeado dibujando la página
+  con TODOS los títulos borrados.
+
+- ✅ **Y apareció un bug que no estaba anotado: el precio se partía al medio.**
+  Medido a 768 en la ficha del producto: *"$ 15.0"* en un renglón y *"00"* en el
+  siguiente. La página lleva `overflow-wrap: anywhere` para que un título pegado
+  sin espacios no le rompa el ancho —eso se queda, es la red contra algo que
+  vimos roto en la página de la competencia— y entre dos `span` seguidos JSX no
+  deja ningún espacio: el tachado y el precio eran UNA sola palabra larguísima,
+  así que cortar adentro del número era el único lugar que le habíamos dejado al
+  navegador. Ahora cada importe es indivisible y hay dónde cortar entre uno y
+  otro. **Es el número que la persona lee antes de pagar.**
+
+  22 chequeos en `pagina-venta-dibujo.check.ts`, y **dibujan la página de
+  verdad** en vez de buscar texto en el componente: ninguna de estas tres cosas
+  se ve leyendo el código, se ven mirando el HTML que sale.
 
 ### Lo que la entrega tiene que resolver del archivo (visto el 02/09/26)
 

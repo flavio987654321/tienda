@@ -188,10 +188,22 @@ function cuentaDeLaOferta(datos: DatosDePagina) {
   };
 }
 
-function Numeros({ datos, estilo, listaAparte }: {
+function Numeros({ datos, estilo, listaAparte, totalAparte }: {
   datos: DatosDePagina; estilo: Estilo;
   /** `true` cuando al lado ya está la lista de lo que incluye: no se repite. */
   listaAparte?: boolean;
+  /**
+   * `true` cuando el renglón "Valor total" ya está justo arriba.
+   *
+   * ⚠️ Es distinto de `listaAparte` y por eso son dos: en la ficha del producto
+   * la lista de bonos está aparte —abajo, en su sección— pero el tachado ahí es
+   * lo único que dice cuánto valía, así que tiene que quedarse. En el resumen de
+   * precio pasa al revés: la lista termina con "Valor total $38.500" y el
+   * tachado de abajo repetía **el mismo número con la misma palabra**, dos
+   * renglones seguidos. Con una sola bandera para las dos cosas, arreglar una
+   * rompía la otra.
+   */
+  totalAparte?: boolean;
 }) {
   const { producto, bonos } = datos;
   const { valorTotal, ahorro, porcentaje, conBonos } = cuentaDeLaOferta(datos);
@@ -216,20 +228,33 @@ function Numeros({ datos, estilo, listaAparte }: {
           Son dos `span` adentro de un `p` y no un flex a propósito: así siguen la
           alineación de donde estén —a la izquierda en la ficha del producto,
           centrados en la de precio— sin tener que pasarles por dónde van. */}
+      {/* ⚠️ `whitespace-nowrap` en cada número y un espacio de verdad entre
+          ellos, y los dos hacen falta:
+
+          · Sin el `nowrap`, el precio se PARTÍA AL MEDIO. La página entera
+            lleva `overflow-wrap: anywhere` para que un título pegado sin
+            espacios no le rompa el ancho, y eso también deja cortar adentro de
+            un número. Medido a 768 en la ficha del producto: "$ 15.0" en un
+            renglón y "00" en el siguiente. Un precio partido no es un detalle
+            de diseño — es el número que la persona lee antes de pagar.
+          · Sin el espacio no hay dónde cortar: entre dos `span` seguidos, JSX
+            no deja ningún espacio, así que el tachado y el precio eran UNA sola
+            palabra larguísima. Por eso el navegador cortaba adentro del número:
+            era el único lugar que le habíamos dejado. */}
       <p>
-        {ahorro > 0 ? (
+        {ahorro > 0 && !totalAparte ? (
           <>
             {conBonos && (
-              <span className="mr-1.5 text-[11px] font-bold uppercase tracking-wide text-[color:var(--pv-tenue)]">
+              <span className="mr-1.5 whitespace-nowrap text-[11px] font-bold uppercase tracking-wide text-[color:var(--pv-tenue)]">
                 valor total
               </span>
             )}
-            <span className="mr-3 text-xl text-[color:var(--pv-tenue)] line-through sm:text-2xl">
+            <span className="mr-3 whitespace-nowrap text-xl text-[color:var(--pv-tenue)] line-through sm:text-2xl">
               {money(valorTotal)}
-            </span>
+            </span>{" "}
           </>
         ) : null}
-        <span className={`text-4xl text-[color:var(--pv-tinta)] sm:text-5xl ${estilo.titulo}`}>
+        <span className={`whitespace-nowrap text-4xl text-[color:var(--pv-tinta)] sm:text-5xl ${estilo.titulo}`}>
           {money(producto.price)}
         </span>
       </p>
@@ -238,7 +263,7 @@ function Numeros({ datos, estilo, listaAparte }: {
           en letra chica gris al lado del tachado. Ahora es un renglón propio. */}
       {ahorro > 0 && (
         <p className="mt-2 text-lg font-extrabold text-[color:var(--pv-ok)] sm:text-xl">
-          Ahorrás {money(ahorro)}
+          Ahorrás <span className="whitespace-nowrap">{money(ahorro)}</span>
         </p>
       )}
 
@@ -252,7 +277,7 @@ function Numeros({ datos, estilo, listaAparte }: {
               <li key={b.id} className="flex items-baseline justify-between gap-3 text-sm">
                 <span className="min-w-0 text-[color:var(--pv-tinta)]">{b.name}</span>
                 <span className="shrink-0 font-bold text-[color:var(--pv-ok)]">
-                  {b.comparePrice ? <s className="mr-2 font-normal opacity-60">{money(b.comparePrice)}</s> : null}
+                  {b.comparePrice ? <s className="mr-2 whitespace-nowrap font-normal opacity-60">{money(b.comparePrice)}</s> : null}{" "}
                   GRATIS
                 </span>
               </li>
@@ -408,17 +433,36 @@ function Sellos({ dias }: { dias?: number | null }) {
 }
 
 /**
- * Los días de garantía, o `null` si esa sección no se va a ver.
+ * Si una sección se va a ver en esta página.
  *
  * Pregunta por `seDibuja` y no por `visible` porque una sección encendida pero
- * vacía tampoco se dibuja: el sello tiene que decir lo mismo que la página.
+ * vacía tampoco se dibuja — un "Además te llevás gratis" sin bonos abajo no
+ * sale. Lo que se dibuja tiene que decidirse con la misma regla en todos lados
+ * o una parte de la página termina hablando de otra que no está.
  */
+function seVeSeccion(datos: DatosDePagina, clave: string): boolean {
+  const s = datos.pagina.secciones.find((x) => x.clave === clave);
+  return !!s && seDibuja(s, { hayBonos: datos.bonos.length > 0 });
+}
+
+/** Los días de garantía, o `null` si esa sección no se va a ver. */
 function diasDeGarantia(datos: DatosDePagina): number | null {
-  const s = datos.pagina.secciones.find((x) => x.clave === "garantia");
-  if (!s || !seDibuja(s, { hayBonos: datos.bonos.length > 0 })) return null;
-  const d = s.campos.dias;
+  if (!seVeSeccion(datos, "garantia")) return null;
+  const d = datos.pagina.secciones.find((x) => x.clave === "garantia")?.campos.dias;
   return typeof d === "number" && d > 0 ? d : null;
 }
+
+/**
+ * El aire de arriba del contenido, que existe SÓLO si hay encabezado.
+ *
+ * ⚠️ Es la respuesta a la pregunta que quedó abierta el 02/09: *"¿qué pasa si
+ * alguien borra el título de una sección?"*. Con el margen escrito fijo, pasaba
+ * esto: el título no se dibuja —`Titulo` devuelve `null` con el texto vacío— y
+ * el `mt-8` de abajo queda colgando de nada, o sea 32 píxeles de hueco arriba
+ * de una lista, sin nada que los explique. Se ve como un error de la página, no
+ * como una decisión de quien la armó.
+ */
+const aire = (hayEncabezado: boolean, clase: string) => (hayEncabezado ? clase : "");
 
 /** La bajada de una sección. Vacía no dibuja nada. */
 function Bajada({ children }: { children: string }) {
@@ -529,7 +573,7 @@ function Contenido({ clave, campos, tono, datos }: {
       return (
         <Seccion tono={tono} estilo={estilo}>
           <Titulo estilo={estilo}>{texto(campos, "titulo")}</Titulo>
-          <div className="mt-8 grid items-center gap-8 md:grid-cols-2 [&>*]:min-w-0">
+          <div className={`${aire(!!texto(campos, "titulo"), "mt-8")} grid items-center gap-8 md:grid-cols-2 [&>*]:min-w-0`}>
             {producto.imagen ? (
               /* eslint-disable-next-line @next/next/no-img-element */
               <img
@@ -549,7 +593,17 @@ function Contenido({ clave, campos, tono, datos }: {
                 </p>
               )}
               <div className={`mt-6 bg-[color:var(--pv-tarjeta)] p-5 ${estilo.tarjeta}`}>
-                <Numeros datos={datos} estilo={estilo} />
+                {/* ⚠️ `listaAparte` cuando la sección de Bonos se va a dibujar,
+                    que en el orden de fábrica es JUSTO acá abajo. Sin esto la
+                    misma lista de regalos aparece dos veces en la misma
+                    pantalla: la versión corta adentro de la ficha y, tres
+                    centímetros después, la larga con foto y descripción. Repetir
+                    la oferta más abajo está bien —la página es larga—; repetirla
+                    pegada no es insistir, es que sobra.
+
+                    Y si alguien apaga la sección de Bonos, esta lista vuelve
+                    sola: el dato no se pierde, cambia de lugar. */}
+                <Numeros datos={datos} estilo={estilo} listaAparte={seVeSeccion(datos, "bonos")} />
                 <div className="mt-5 grid gap-3">
                   <BotonComprar esPrevia={esPrevia} estilo={estilo} productoId={producto.id}>
                     {texto(campos, "textoBoton")}
@@ -563,28 +617,76 @@ function Contenido({ clave, campos, tono, datos }: {
       );
 
     case "bonos": {
+      const hayEnc = !!texto(campos, "titulo") || !!texto(campos, "subtitulo");
+      const valor = valorDeLosBonos(bonos);
       return (
         <Seccion tono={tono} estilo={estilo}>
           <Titulo estilo={estilo}>{texto(campos, "titulo")}</Titulo>
-          {texto(campos, "subtitulo") && (
-            <p className="mt-3 text-center text-[color:var(--pv-tenue)]">{texto(campos, "subtitulo")}</p>
-          )}
-          <ul className="mt-8 grid gap-4 sm:grid-cols-2">
-            {bonos.map((b) => (
-              <li key={b.id} className={`bg-[color:var(--pv-tarjeta)] p-5 ${estilo.tarjeta}`}>
-                <h3 className="font-semibold text-[color:var(--pv-tinta)]">{b.name}</h3>
-                {b.description && (
-                  <p className="mt-2 text-sm leading-relaxed text-[color:var(--pv-tenue)]">{b.description}</p>
-                )}
-                <p className="mt-3 flex items-baseline gap-2">
-                  <span className="text-base font-bold text-[color:var(--pv-ok)]">GRATIS</span>
-                  {b.comparePrice ? (
-                    <span className="text-sm text-[color:var(--pv-tenue)] line-through">{money(b.comparePrice)}</span>
-                  ) : null}
-                </p>
+          <Bajada>{texto(campos, "subtitulo")}</Bajada>
+          <ul className={`${aire(hayEnc, "mt-8")} grid gap-4 sm:grid-cols-2`}>
+            {bonos.map((b, n) => (
+              <li
+                key={b.id}
+                className={`flex gap-4 bg-[color:var(--pv-tarjeta)] p-4 ${estilo.tarjeta} ${
+                  /* El último de una cantidad impar ocupa el ancho entero. Sin
+                     esto, tres bonos dejan el tercero solo en media columna con
+                     un agujero al lado, que se lee como que falta algo. */
+                  bonos.length % 2 === 1 && n === bonos.length - 1 ? "sm:col-span-2" : ""
+                }`}
+              >
+                {/* ⚠️ La tapa del bono, que ANTES no se mostraba en ningún lado.
+                    Cada bono es un producto y tiene su imagen cargada; la
+                    sección la tenía a mano y dibujaba texto pelado. Un regalo
+                    que no se ve no parece un regalo.
+
+                    Va chica y al costado, no arriba y grande: son varias
+                    tarjetas y con la foto arriba la sección se hace de dos
+                    pantallas de alto, justo en el medio de la página.
+
+                    Sin `estilo.tarjeta` a propósito: en Editorial esa clase es
+                    una línea arriba con 24px de espacio, y aplicada a una
+                    miniatura la baja media tarjeta. */}
+                {b.imagen ? (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img
+                    src={b.imagen}
+                    alt=""
+                    className="h-24 w-20 shrink-0 object-cover"
+                  />
+                ) : null}
+                <div className="min-w-0 flex-1">
+                  {/* El número sale de la POSICIÓN, igual que en los pasos: no
+                      hay campo que se pueda escribir a mano y quedar mintiendo
+                      cuando se agrega o se borra un bono. */}
+                  <p className="text-[11px] font-bold uppercase tracking-wide text-[color:var(--pv-acento)]">
+                    Bono {n + 1}
+                  </p>
+                  <h3 className="mt-0.5 text-pretty font-semibold text-[color:var(--pv-tinta)]">{b.name}</h3>
+                  {b.description && (
+                    <p className="mt-2 text-sm leading-relaxed text-[color:var(--pv-tenue)]">{b.description}</p>
+                  )}
+                  <p className="mt-3 flex items-baseline gap-2">
+                    <span className="text-base font-bold text-[color:var(--pv-ok)]">GRATIS</span>
+                    {b.comparePrice ? (
+                      <span className="whitespace-nowrap text-sm text-[color:var(--pv-tenue)] line-through">{money(b.comparePrice)}</span>
+                    ) : null}
+                  </p>
+                </div>
               </li>
             ))}
           </ul>
+          {/* La suma, abajo de la lista. Es el mismo `valorDeLosBonos` que usan
+              el resumen de precio y la barra: si alguna vez hay que cambiar qué
+              entra en esa cuenta, cambia en los tres a la vez. Y no aparece si
+              ningún bono tiene precio tachado — preferimos no decir el total
+              antes que inventarlo. */}
+          {valor > 0 && (
+            <p className="mt-5 text-center text-sm font-bold text-[color:var(--pv-tinta)]">
+              {bonos.length === 1
+                ? `Este bono vale ${money(valor)} y va incluido`
+                : `Los ${bonos.length} bonos valen ${money(valor)} y van incluidos`}
+            </p>
+          )}
         </Seccion>
       );
     }
@@ -599,7 +701,12 @@ function Contenido({ clave, campos, tono, datos }: {
           <Bajada>{texto(campos, "subtitulo")}</Bajada>
           {/* Dos columnas en pantalla grande: con el detalle abajo de cada uno,
               en una sola columna la sección se hace larguísima. */}
-          <ul className="mt-8 grid gap-3 sm:grid-cols-2">
+          <ul
+            className={`${aire(
+              !!texto(campos, "titulo") || !!texto(campos, "subtitulo"),
+              "mt-8",
+            )} grid gap-3 sm:grid-cols-2`}
+          >
             {items.map((i, n) => (
               <li
                 key={n}
@@ -661,9 +768,10 @@ function Contenido({ clave, campos, tono, datos }: {
           <Titulo estilo={estilo}>{texto(campos, "titulo")}</Titulo>
           <Bajada>{texto(campos, "subtitulo")}</Bajada>
           <ol
-            className={`mt-8 grid gap-6 ${
-              enFila ? "lg:flex lg:items-start lg:gap-0" : "mx-auto max-w-2xl gap-4"
-            }`}
+            className={`${aire(
+              !!texto(campos, "titulo") || !!texto(campos, "subtitulo"),
+              "mt-8",
+            )} grid gap-6 ${enFila ? "lg:flex lg:items-start lg:gap-0" : "mx-auto max-w-2xl gap-4"}`}
           >
             {pasos.map((p, n) => (
               <li
@@ -720,19 +828,57 @@ function Contenido({ clave, campos, tono, datos }: {
         <Seccion tono={tono} estilo={estilo}>
           <Titulo estilo={estilo}>{texto(campos, "titulo")}</Titulo>
           <Bajada>{texto(campos, "subtitulo")}</Bajada>
-          <div className="mt-8 grid gap-4 sm:grid-cols-2">
-            {items.map((i, n) => (
-              <figure key={n} className={`bg-[color:var(--pv-tarjeta)] p-5 ${estilo.tarjeta}`}>
-                <blockquote className="text-pretty leading-relaxed text-[color:var(--pv-tinta)]">
-                  {i.texto}
-                </blockquote>
-                {i.nombre && (
-                  <figcaption className="mt-3 text-sm font-medium text-[color:var(--pv-tenue)]">
-                    {i.nombre}
-                  </figcaption>
-                )}
-              </figure>
-            ))}
+          <div
+            className={`${aire(
+              !!texto(campos, "titulo") || !!texto(campos, "subtitulo"),
+              "mt-8",
+            )} grid gap-4 sm:grid-cols-2`}
+          >
+            {items.map((i, n) => {
+              /* La inicial del nombre. Con `[...]` y no `charAt`: un nombre que
+                 empieza con un emoji o con una letra acentuada compuesta se
+                 parte por la mitad y sale un carácter roto adentro del círculo.
+
+                 ⚠️ Y NO hay foto ni estrellas, ni las va a haber. La sección de
+                 la competencia dibuja esto como una captura de WhatsApp —con
+                 hora, señal y doble tilde— arriba de un título que dice
+                 "TESTIMONIOS REALES", y su IA la llena sola con tres personas
+                 inventadas. Una inicial es lo máximo que se puede dibujar sin
+                 agregarle a la opinión una prueba que nadie dio. */
+              const inicial = [...(i.nombre ?? "").trim()][0]?.toUpperCase() ?? "";
+              return (
+                <figure
+                  key={n}
+                  className={`flex gap-4 bg-[color:var(--pv-tarjeta)] p-5 ${estilo.tarjeta} ${
+                    /* Igual que los bonos: la última de una cantidad impar toma
+                       el ancho entero en vez de dejar media columna vacía. Y
+                       cuando hay una sola opinión —el caso más común al
+                       arrancar— ocupa la fila entera en vez de quedar
+                       arrinconada en la mitad izquierda. */
+                    items.length % 2 === 1 && n === items.length - 1 ? "sm:col-span-2" : ""
+                  }`}
+                >
+                  {inicial && (
+                    <span
+                      aria-hidden="true"
+                      className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[color:var(--pv-fuerte)] font-bold text-[color:var(--pv-tinta)]"
+                    >
+                      {inicial}
+                    </span>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <blockquote className="text-pretty leading-relaxed text-[color:var(--pv-tinta)]">
+                      {i.texto}
+                    </blockquote>
+                    {i.nombre && (
+                      <figcaption className="mt-3 text-sm font-medium text-[color:var(--pv-tenue)]">
+                        {i.nombre}
+                      </figcaption>
+                    )}
+                  </div>
+                </figure>
+              );
+            })}
           </div>
         </Seccion>
       );
@@ -743,6 +889,10 @@ function Contenido({ clave, campos, tono, datos }: {
          contra nada; leído después de cuatro renglones con su valor cada uno, se
          compara contra el total. El orden es la mitad del efecto. */
       const dias = diasDeGarantia(datos);
+      /* Con bonos, `LoQueIncluye` cierra con el renglón "Valor total": el
+         tachado de `Numeros` diría lo mismo dos renglones más abajo. Sin bonos
+         ese renglón no existe y el tachado es lo único que compara. */
+      const { conBonos: elTotalYaSeDijo } = cuentaDeLaOferta(datos);
       return (
         <Seccion tono={tono} estilo={estilo}>
           <div className={`mx-auto flex max-w-xl flex-col items-center gap-5 bg-[color:var(--pv-suave)] px-5 py-10 text-center sm:px-8 ${estilo.tarjeta}`}>
@@ -750,7 +900,7 @@ function Contenido({ clave, campos, tono, datos }: {
             <LoQueIncluye datos={datos} dias={dias} estilo={estilo} />
             {/* El precio no se puede ocultar: `lib/pagina-venta` no le da botón
                 de apagar, y mandar visible:false tampoco lo apaga. */}
-            <Numeros datos={datos} estilo={estilo} listaAparte />
+            <Numeros datos={datos} estilo={estilo} listaAparte totalAparte={elTotalYaSeDijo} />
             <BotonComprar esPrevia={esPrevia} estilo={estilo} productoId={producto.id}>{texto(campos, "textoBoton")}</BotonComprar>
             <Sellos dias={dias} />
             {texto(campos, "aclaracion") && (
@@ -778,7 +928,9 @@ function Contenido({ clave, campos, tono, datos }: {
               🛡️
             </span>
             <Titulo estilo={estilo}>{conFichas(texto(campos, "titulo"), campos)}</Titulo>
-            <p className="mt-3 text-pretty leading-relaxed text-[color:var(--pv-tenue)]">
+            <p
+              className={`${aire(!!texto(campos, "titulo"), "mt-3")} text-pretty leading-relaxed text-[color:var(--pv-tenue)]`}
+            >
               {conFichas(texto(campos, "texto"), campos)}
             </p>
             {/* ⚠️ El sello dice lo que la persona puede HACER, con los días de al
@@ -809,7 +961,12 @@ function Contenido({ clave, campos, tono, datos }: {
           <Bajada>{texto(campos, "subtitulo")}</Bajada>
           {/* `details` nativo: abre y cierra sin una línea de JavaScript, y
               funciona igual si el script no cargó. */}
-          <div className="mx-auto mt-8 grid max-w-2xl gap-3">
+          <div
+            className={`mx-auto ${aire(
+              !!texto(campos, "titulo") || !!texto(campos, "subtitulo"),
+              "mt-8",
+            )} grid max-w-2xl gap-3`}
+          >
             {items.map((i, n) => (
               <details
                 key={n}
@@ -874,19 +1031,19 @@ function Contenido({ clave, campos, tono, datos }: {
                 </span>
               )}
               <span className="flex flex-wrap items-baseline gap-x-2">
-                <span className="text-lg font-extrabold leading-none text-[color:var(--pv-tinta)] sm:text-xl">
+                <span className="whitespace-nowrap text-lg font-extrabold leading-none text-[color:var(--pv-tinta)] sm:text-xl">
                   {money(producto.price)}
                 </span>
                 {ahorroBarra.ahorro > 0 ? (
                   <>
-                    <span className="text-xs text-[color:var(--pv-tenue)] line-through">
+                    <span className="whitespace-nowrap text-xs text-[color:var(--pv-tenue)] line-through">
                       {money(ahorroBarra.valorTotal)}
                     </span>
                     {/* El ahorro también acá: es el dato que más empuja y la barra
                         es lo único que se ve durante todo el scroll. Se esconde en
                         pantallas angostas, donde el botón necesita el lugar. */}
                     <span className="hidden text-xs font-bold text-[color:var(--pv-ok)] sm:inline">
-                      Ahorrás {money(ahorroBarra.ahorro)}
+                      Ahorrás <span className="whitespace-nowrap">{money(ahorroBarra.ahorro)}</span>
                     </span>
                   </>
                 ) : null}

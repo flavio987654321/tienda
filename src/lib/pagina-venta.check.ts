@@ -705,7 +705,15 @@ check("VAL-D", dibujante.includes("t + (b.comparePrice ?? 0)"),
 check("BAR-A", dibujante.includes("Ebook + {bonos.length}"),
   "la barra dice qué se lleva, no sólo cuánto sale");
 
-check("BAR-B", dibujante.includes("Ahorrás {money(ahorroBarra.ahorro)}"),
+/* ⚠️ Se busca la palabra y la cuenta por separado, y no el renglón entero
+   escrito tal cual. Estaba pegado como un solo texto y se puso en rojo el
+   05/09 por un arreglo que no lo tocaba: al número le entró un `span` con
+   `whitespace-nowrap` —para que un precio no se parta al medio— y el renglón
+   dejó de ser idéntico. Lo que este chequeo cuida es que el ahorro salga de
+   `ahorroBarra`, o sea de la misma cuenta que el resto de la página; cómo esté
+   envuelto es asunto del dibujo. */
+check("BAR-B",
+  /Ahorrás[\s\S]{0,120}money\(ahorroBarra\.ahorro\)/.test(dibujante),
   "y cuánto se ahorra, con la misma cuenta que el resto de la página");
 
 /* En pantalla angosta el botón necesita el lugar: el ahorro se esconde ahí y
