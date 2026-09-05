@@ -6,6 +6,7 @@ import {
   rolDe, loQueFalta, validarCampos, imagenValida, LARGO_TITULO, LARGO_DESCRIPCION,
 } from "@/lib/productos-digitales";
 import { limpiarTexto } from "@/lib/texto-limpio";
+import { desconectarDominio } from "@/lib/dominio-digital";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -129,6 +130,26 @@ export async function DELETE(_req: NextRequest, ctx: { params: Promise<{ id: str
     },
     data: { deletedAt: ahora, isActive: false },
   });
+
+  /* ── El dominio propio se suelta ───────────────────────────────────────────
+   *
+   * ⚠️ Y no es sólo prolijidad: cada dominio conectado ocupa un lugar del techo
+   * de Vercel —50 por proyecto en el plan gratuito—, y mientras siga anotado la
+   * persona no lo puede apuntar a ningún otro lado. Es SUYO: lo compró y lo paga.
+   *
+   * No corta el borrado si falla. El producto ya está borrado y eso es lo que
+   * pidió; un dominio que quedó colgado se arregla después y no lo afecta.
+   *
+   * ── La dirección de tiendaapps NO se suelta, a propósito ──────────────────
+   *
+   * Liberar `mecanica.tiendaapps.com` la dejaría disponible para cualquier otro,
+   * y los links viejos —que siguen dando vueltas— caerían en la página de un
+   * desconocido. Ocupar un nombre no le cuesta nada a nadie; eso sí costaría. */
+  try {
+    await desconectarDominio(id);
+  } catch (e) {
+    console.error("[productos-digitales] no se pudo soltar el dominio al borrar", { id, e });
+  }
 
   return NextResponse.json({ ok: true });
 }

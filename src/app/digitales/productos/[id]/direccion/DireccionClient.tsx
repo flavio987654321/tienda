@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Loader2, Check, AlertTriangle, Globe, Lock } from "lucide-react";
+import { Loader2, Check, AlertTriangle, Globe } from "lucide-react";
 import { normalizarSlug, SLUG_MAXIMO } from "@/lib/configuracion-digital";
 
 /**
@@ -226,23 +226,9 @@ export default function DireccionClient({
         {guardando ? "Guardando…" : guardado ? "Cambiar la dirección" : "Guardar la dirección"}
       </button>
 
-      {/* ── El dominio propio ────────────────────────────────────────────────
-          Se dibuja apagado a propósito, igual que el botón del ebook en Free:
-          el hueco dice algo que el botón solo no dice — que la dirección tiene
-          dos escalones, y cuál es el de arriba. */}
-      <div className="mt-8 rounded-2xl border border-dashed border-gray-300 panel-oscuro:border-gray-700 px-4 py-4">
-        <p className="flex items-center gap-2 text-[13px] font-bold text-gray-700 panel-oscuro:text-gray-300">
-          <Lock className="h-3.5 w-3.5 text-gray-400" />
-          Tu propio dominio
-        </p>
-        <p className="mt-1 text-[12px] leading-relaxed text-gray-500 panel-oscuro:text-gray-400">
-          Conectar un dominio tuyo —<strong>mecanicafacil.com</strong>— viene con el plan Pro. La
-          dirección de arriba sigue funcionando igual: el dominio se suma, no la reemplaza.
-        </p>
-        <p className="mt-2 text-[11.5px] text-gray-400 panel-oscuro:text-gray-500">
-          Todavía no está disponible. Cuando lo esté, se configura acá.
-        </p>
-      </div>
+      {/* ⚠️ El dominio propio NO se dibuja acá: es su propio componente y lo
+          monta la página, que es la que sabe el plan. Antes estaba adentro de
+          este archivo, apagado y con un cartel de "todavía no está disponible". */}
     </>
   );
 }

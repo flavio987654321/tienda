@@ -93,12 +93,18 @@ async function runSupabaseAuth(
  * `/api/public/dominio`, que es el mismo que ya usa el dominio propio. Con
  * cache: sin él sería una consulta a la base por cada visita.
  */
-async function donde(sub: string, request: NextRequest): Promise<string | null> {
+async function donde(
+  pregunta: "sub" | "host",
+  valor: string,
+  request: NextRequest,
+): Promise<string | null> {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? request.nextUrl.origin;
   if (!appUrl) return null;
   try {
     const res = await fetch(
-      `${appUrl}/api/public/dominio?sub=${encodeURIComponent(sub)}`,
+      `${appUrl}/api/public/dominio?${pregunta}=${encodeURIComponent(valor)}`,
+      /* Ni un subdominio ni un dominio propio cambian en la práctica. Sin cache
+         esto sería una consulta a la base por cada visita a cada tienda. */
       { next: { revalidate: 300 } },
     );
     if (!res.ok) return null;
@@ -140,7 +146,7 @@ export async function middleware(request: NextRequest) {
          Antes esto no preguntaba nada y reescribía derecho a `/tienda/…`. Si la
          consulta falla, se hace exactamente eso: **una tienda no puede dejar de
          funcionar porque se cayó una consulta que ella no necesita.** */
-      const destino = await donde(slug, request);
+      const destino = await donde("sub", slug, request);
       if (destino) {
         url.pathname = `${destino}${pathname === "/" ? "" : pathname}`;
         return NextResponse.rewrite(url);
@@ -162,27 +168,18 @@ export async function middleware(request: NextRequest) {
        abajo fallaba en silencio y ningún dominio propio resolvió jamás.
        Que PostgREST no llegue a las tablas es deseable y se deja como está; la
        consulta se mudó a /api/public/dominio, que usa Prisma. Ver ese archivo. */
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+    /* ⚠️ Y desde la Fase 5 bis un dominio propio también puede ser de un
+       PRODUCTO digital, no sólo de una tienda. `Store.customDomain` es único por
+       cuenta —uno— y una cuenta Pro trae hasta cinco productos, cada uno con el
+       suyo. La misma función contesta por los dos casos; ver `donde`.
 
-    if (appUrl) {
-      try {
-        const res = await fetch(
-          `${appUrl}/api/public/dominio?host=${encodeURIComponent(host)}`,
-          // El dominio propio de una tienda no cambia nunca en la práctica; sin
-          // cache esto sería una consulta a la base por cada visita.
-          { next: { revalidate: 300 } }
-        );
-        if (res.ok) {
-          const { slug } = await res.json() as { slug: string | null };
-          if (slug) {
-            const url = request.nextUrl.clone();
-            url.pathname = `/tienda/${slug}${pathname === "/" ? "" : pathname}`;
-            return NextResponse.rewrite(url);
-          }
-        }
-      } catch {
-        // Si falla el lookup deja pasar — la página 404 de Next.js lo maneja
-      }
+       Si la consulta no contesta, se deja pasar igual que antes: la 404 de Next
+       lo maneja y ninguna tienda se rompe por una consulta caída. */
+    const destino = await donde("host", host, request);
+    if (destino) {
+      const url = request.nextUrl.clone();
+      url.pathname = `${destino}${pathname === "/" ? "" : pathname}`;
+      return NextResponse.rewrite(url);
     }
 
     return NextResponse.next();

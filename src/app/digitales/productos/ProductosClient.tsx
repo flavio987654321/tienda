@@ -39,6 +39,8 @@ export type ProductoEnPantalla = {
   ebook: EstadoDelBorrador | null;
   /** Su dirección: `mecanica` de `mecanica.tiendaapps.com`. Sólo el principal. */
   slugDigital: string | null;
+  /** El dominio que conectó, si conectó alguno. Viene con Pro. */
+  dominioPropio: string | null;
 };
 
 function money(n: number) {
@@ -223,10 +225,23 @@ function Tarjeta({ p, acc }: { p: ProductoEnPantalla; acc: Acciones }) {
               pantalla: es lo que la persona copia y pega, así que tiene que
               estar donde ya está mirando. `break-all` porque una dirección
               larga en 360 empujaba la tarjeta entera. */}
-          {p.rol === "PRINCIPAL" && p.slugDigital && (
-            <p className="mt-2 text-[11.5px] font-semibold text-gray-500 panel-oscuro:text-gray-400 break-all">
-              {p.slugDigital}.{DOMINIO}
-            </p>
+          {/* ⚠️ Se muestran LAS DOS cuando hay dos, y no sólo el dominio: el
+              dominio se suma, no reemplaza, y la de tiendaapps sigue andando.
+              Mostrar sólo la de arriba haría pensar que la otra se apagó, que es
+              justo lo que esta fase promete que no pasa. */}
+          {p.rol === "PRINCIPAL" && (p.dominioPropio || p.slugDigital) && (
+            <div className="mt-2 space-y-0.5">
+              {p.dominioPropio && (
+                <p className="text-[11.5px] font-bold text-gray-700 panel-oscuro:text-gray-300 break-all">
+                  {p.dominioPropio}
+                </p>
+              )}
+              {p.slugDigital && (
+                <p className="text-[11.5px] font-semibold text-gray-500 panel-oscuro:text-gray-400 break-all">
+                  {p.slugDigital}.{DOMINIO}
+                </p>
+              )}
+            </div>
           )}
 
           {/* Un ebook a medio escribir se dice en la tarjeta y no adentro de la

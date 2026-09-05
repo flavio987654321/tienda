@@ -4,6 +4,8 @@ import { getCurrentUser } from "@/lib/auth-session";
 import { dominioDeLaPlataforma } from "@/lib/direccion-digital";
 import BotonVolver from "../../../BotonVolver";
 import DireccionClient from "./DireccionClient";
+import DominioPropio from "./DominioPropio";
+import { getUserSubscription } from "@/lib/subscription";
 
 export const dynamic = "force-dynamic";
 
@@ -34,9 +36,15 @@ export default async function DireccionPage({ params }: Props) {
      visite — se entrega con la compra. */
   const producto = await prisma.product.findFirst({
     where: { id, deletedAt: null, rolDigital: "PRINCIPAL", store: { ownerId: user.id } },
-    select: { id: true, name: true, slugDigital: true, isActive: true },
+    select: { id: true, name: true, slugDigital: true, dominioPropio: true, isActive: true },
   });
   if (!producto) notFound();
+
+  /* El plan decide si el dominio propio se dibuja prendido o apagado. Es sólo
+     para la VISTA: el que decide de verdad es la ruta que conecta, que lo vuelve
+     a mirar del lado del servidor. Una pantalla no es un permiso. */
+  const sub = await getUserSubscription(user.id);
+  const esPro = sub?.role === "DIGITAL" && sub.tier === "PRO";
 
   return (
     <div className="mx-auto w-full max-w-3xl px-4 sm:px-6 py-8">
@@ -59,6 +67,12 @@ export default async function DireccionPage({ params }: Props) {
           slugActual={producto.slugDigital}
           dominioBase={dominioDeLaPlataforma()}
           publicado={producto.isActive}
+        />
+
+        <DominioPropio
+          productoId={producto.id}
+          esPro={esPro}
+          dominioActual={producto.dominioPropio}
         />
       </div>
     </div>

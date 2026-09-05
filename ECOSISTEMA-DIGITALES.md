@@ -3535,19 +3535,24 @@ superior"* para conectar el dominio.
 
 ### Qué hay que tocar
 
-- 🔲 **Slug propio en `Product`**, único y **en los tres planes** — le da el
-  subdominio, y tiene que existir desde que el producto se crea.
-- 🔲 **Dominio propio en `Product`.** Hoy `customDomain` está en `Store` y es
+- ✅ **Slug propio en `Product`**, único y **en los tres planes** — le da el
+  subdominio, y tiene que existir desde que el producto se crea. *(04/09/26. El
+  producto principal nace con su dirección; se puede cambiar desde su pantalla.)*
+- ✅ **Dominio propio en `Product`.** Hoy `customDomain` está en `Store` y es
   `@unique`: **uno por cuenta**. Para tener dos dominios en la misma cuenta, el
-  dominio tiene que colgar del producto.
+  dominio tiene que colgar del producto. *(04/09/26. `Product.dominioPropio`,
+  único, sólo Pro y con el pago al día. Ver `dominio-digital.ts`.)*
 - 🔲 **Identidad propia del producto** — nombre y aspecto de esa página, sin
   heredar la marca de la tienda.
-- 🔲 **La regla en el middleware**, que ya sabe traducir *dominio → tienda*: falta
-  el caso *dominio → producto*.
-- 🔲 **Qué pasa si el slug del producto choca con el de una tienda.** Con el
+- ✅ **La regla en el middleware**, que ya sabe traducir *dominio → tienda*: falta
+  el caso *dominio → producto*. *(04/09/26. Los dos casos —subdominio y dominio
+  propio— pasan por la misma consulta, y si no contesta se deja pasar igual que
+  antes: una tienda que ya andaba no se puede romper por una consulta caída.)*
+- ✅ **Qué pasa si el slug del producto choca con el de una tienda.** Con el
   subdominio en los tres planes esto deja de ser un caso raro y pasa a ser el
   caso normal: hay muchos más productos que tiendas, y comparten el mismo espacio
-  de nombres.
+  de nombres. *(04/09/26. Un candado de Postgres sobre el NOMBRE, no sobre la
+  cuenta: ningún índice único puede ver dos tablas a la vez.)*
 
 ⚠️ **"Poder cambiar el nombre y el dominio" NO lo resuelve** — y fue la primera
 idea. Si se cambian, se rompe el producto anterior. No es *cambiable*: es **uno
@@ -3595,11 +3600,38 @@ No se le puede dar dirección a una página que todavía no existe. Lo único qu
 conviene adelantar es **la migración**: agregarle a `Product` el slug y el dominio
 en la MISMA migración que la página de venta, para no tocar la base dos veces.
 
-### 🔲 Lo único que hay que chequear antes de prometerlo
+### ✅ Lo único que había que chequear antes de prometerlo — MIRADO (04/09/26)
 
 Pasamos de **1 dominio por cuenta** a **hasta 5**. Multiplicar por cinco los
-dominios apuntados a un mismo proyecto de Vercel es lo único que puede tener un
-límite de plataforma. No cuesta plata nuestra, pero hay que mirarlo **antes** de
-escribirlo en la página de precios.
+dominios apuntados a un mismo proyecto de Vercel era lo único que podía tener un
+límite de plataforma. **Lo tiene, y se puede prometer igual.**
+
+| Plan de Vercel | Dominios por proyecto |
+|---|---|
+| **Hobby** *(el que tenemos)* | **50**, y es un tope duro |
+| Pro (US$20/mes) | Sin tope; hay un freno anti-abuso en 100.000 y se puede subir |
+
+Además, su API deja **100 altas de dominio por hora, y son POR EQUIPO**: uno
+martillando un botón deja sin altas a todos los demás. Por eso la ruta que
+conecta tiene freno propio de 10 por hora por cuenta.
+
+**Qué significa el 50 en la práctica.** Ahí adentro entran `tiendaapps.com`,
+`www.tiendaapps.com` y el dominio propio de cada tienda que ya conectó uno. Si
+cada cuenta Pro trae sus 5, **el techo se toca cerca de las 10 cuentas Pro** —y
+antes, contando las tiendas—. O sea que no frena el lanzamiento, pero **es una
+cuenta que hay que mirar de vez en cuando**: el día que se llene, ningún dominio
+nuevo levanta y el error no se ve desde acá, se ve en Vercel.
+
+**Y se destapa con US$20 por mes**, el día que haya 10 cuentas Pro pagando. No es
+una decisión que haya que tomar hoy.
+
+⚠️ **Lo que sí hubo que arreglar para que el 50 alcance:** del lado de tiendas, un
+dominio desconectado **quedaba pegado al proyecto de Vercel para siempre** —se
+daba de alta y nunca de baja—. Con 1 dominio por cuenta casi no se notaba; con 5
+por cuenta se llenaba solo de dominios que ya nadie usa. Ahora se da de baja al
+desconectarlo y al borrar el producto.
+
+🔲 **Queda pendiente:** soltar los dominios de las cuentas dadas de baja hace
+mucho. Hoy siguen anotados, y cada uno ocupa un lugar de esos 50.
 
 ## FASE 6 — Legales
