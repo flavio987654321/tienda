@@ -391,6 +391,33 @@ const CONTENT = {
           "TiendaApps tampoco es tu socia, tu representante ni tu empleadora. Sos una actividad independiente, por tu cuenta y riesgo.",
         ],
       },
+      /* ⚠️ LA DIRECCIÓN Y EL DOMINIO NO ESTABAN EN NINGUNA PARTE de este
+       * apartado (agregado el 04/09/26, con la Fase 5 bis recién hecha).
+       *
+       * La sección 4 del apartado de TIENDAS habla de dominio propio, pero es de
+       * otro apartado y de otro producto: allá es uno por cuenta y acá es uno
+       * por producto. Una cuenta digital que conectaba su dominio no tenía una
+       * sola línea que dijera de quién es, quién lo paga ni qué pasa si lo
+       * desconecta.
+       *
+       * Y la dirección de tiendaapps es todavía más delicada: es NUESTRA y se
+       * presta. Quien pauta contra ella durante meses tiene que saber, antes de
+       * empezar a gastar en publicidad, que no es suya y bajo qué condiciones la
+       * tiene. */
+      {
+        title: "2 ter. La dirección de tu producto, y tu dominio",
+        body: "Cada producto tiene su propia dirección, y puede tener además un dominio tuyo. Son dos cosas distintas y conviene no confundirlas.",
+        list: [
+          "La dirección tipo tuproducto.tiendaapps.com es NUESTRA y te la prestamos mientras tengas la cuenta activa. Viene con todos los planes, incluido el gratuito, y no se apaga por cambiar de plan.",
+          "El nombre lo elegís vos, si está libre. Se comparte con el resto de la plataforma: si otra cuenta ya lo tomó, no está disponible. Y hay nombres reservados que no se pueden usar porque harían pasar tu página por una nuestra.",
+          "⚠️ Si cambiás la dirección, la anterior deja de funcionar y no la reservamos: los enlaces que hayas repartido y los anuncios que apunten ahí dejan de llegar. Es tu decisión y la pantalla te lo avisa antes.",
+          "Podemos cambiar o dar de baja una dirección si suplanta una marca ajena, si imita a TiendaApps o si la usa una cuenta suspendida. Fuera de esos casos, no te la tocamos.",
+          "El dominio propio (ej: tuproducto.com) viene con el plan Pro, es uno por producto y lo comprás y lo pagás vos, en el registrador que quieras. No lo compramos, no lo gestionamos y no lo renovamos por vos.",
+          "Si no renovás tu dominio y lo perdés, no somos responsables. Tu dirección de tiendaapps.com sigue funcionando igual: el dominio se suma, no la reemplaza.",
+          "Podés desconectar tu dominio cuando quieras, aunque tu plan esté vencido: es tuyo. Al desconectarlo deja de abrir tu página en pocos minutos.",
+          "Si tu plan Pro se vence, el dominio que ya tenías conectado sigue funcionando, pero no vas a poder conectar uno nuevo ni cambiar el que hay hasta ponerlo al día.",
+        ],
+      },
       {
         title: "3. La comisión, y qué pasa si hay una devolución",
         body: "TiendaApps retiene un porcentaje de cada venta. No hay factura ni cobro aparte: la comisión se retiene sola dentro del cobro de Mercado Pago.",
@@ -456,6 +483,23 @@ const CONTENT = {
           "Las funciones de IA pueden tener cupos según tu plan, y podemos suspenderlas si se usan para intentar sacar información de otras cuentas o del sistema.",
         ],
       },
+      /* ⚠️ El 4 ter de arriba habla de la IA que escribe TEXTOS de la página.
+       * Esto es otra cosa y por eso va aparte: un ebook escrito por una máquina
+       * que después se VENDE a un tercero por plata. La diferencia importa —lo
+       * que ahí es un borrador que se revisa antes de publicar, acá es la
+       * mercadería. Agregado el 04/09/26, con la función ya andando. */
+      {
+        title: "4 quater. El ebook escrito con inteligencia artificial",
+        body: "Algunos planes incluyen que la IA te escriba un ebook completo a partir de un tema. Lo que sale de ahí es un BORRADOR tuyo, y venderlo sin leerlo es tu responsabilidad.",
+        list: [
+          "El contenido puede tener errores, afirmaciones inexactas o datos inventados. La IA no verifica nada de lo que escribe. Leerlo entero antes de venderlo es tuyo, no nuestro.",
+          "No es asesoramiento profesional de ninguna clase. Si el tema es de salud, dinero, derecho o cualquier otro donde una recomendación equivocada pueda hacer daño, sos vos quien responde por lo que ese archivo dice.",
+          "El texto no lleva estadísticas, estudios, testimonios ni casos reales, y no promete resultados. Si agregás algo de eso por tu cuenta, tenés que poder respaldarlo.",
+          "El resultado es tuyo y podés venderlo. TiendaApps no reclama derechos sobre él, y tampoco te garantiza que sea único: la misma herramienta puede producir textos parecidos para otra persona con un pedido parecido.",
+          "Los ebooks incluidos son un cupo por plan, no un servicio ilimitado. Un ebook que se generó cuenta aunque después no lo uses.",
+          "Si la generación se corta por un problema nuestro y no se llega a armar el archivo, esa generación no te la contamos.",
+        ],
+      },
       {
         title: "5. La entrega, y qué se registra de ella",
         body: "La entrega la hace la plataforma, no vos. Estos son sus límites y su registro:",
@@ -464,6 +508,12 @@ const CONTENT = {
           "Podés reenviar el mail de entrega desde tu panel de Ventas, con un tope diario por venta. Si el enlace estaba vencido, el reenvío lo renueva; el contador de descargas no se reinicia.",
           "De cada descarga queda registrada la fecha, la dirección IP y el navegador. Es la prueba de que la entrega se hizo, y existe para poder defender un cobro si alguien lo discute. Vos ves si se descargó y cuándo; no ves la dirección IP.",
           "Si borrás un producto, su archivo queda 30 días en cuarentena antes de eliminarse del depósito. Ese plazo protege a quien todavía tiene un permiso vigente: no podemos dejar sin su compra a alguien que ya pagó.",
+          /* Los bonos y los upsells viajan como líneas de la misma orden y se
+             entregan igual, pero no aparecían en ninguna parte del documento.
+             Un bono es un archivo que alguien recibe por haber pagado: le
+             corresponden exactamente las mismas reglas que al principal. */
+          "Los bonos van con la compra del producto principal y se entregan junto con él. Aunque su precio sea cero, son parte de lo que la persona compró: rigen para ellos las mismas reglas de entrega, de devolución y de responsabilidad que para el archivo principal.",
+          "Los upsells que la persona acepte se suman a la misma compra y se entregan igual. Si los acepta después de haber pagado, se cobran aparte y se entregan aparte, con su propio enlace.",
         ],
       },
       {

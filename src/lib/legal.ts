@@ -66,6 +66,33 @@
 //     Quedan a decisión del titular, no escritas: limitación de responsabilidad,
 //     ley aplicable y jurisdicción, y la cláusula de no garantía de resultados.
 //
+// 1.8 (04/09/2026) — tres cosas de Productos Digitales que el producto ya hacía
+//     y el documento no decía. Las tres nacen de la misma fase: cada producto
+//     pasó a tener su propia dirección y, en Pro, su propio dominio.
+//   · "2 ter. La dirección de tu producto, y tu dominio": NO EXISTÍA NADA. La
+//     sección 4 del Dueño habla de dominio propio, pero es de otro apartado y de
+//     otro producto —allá es uno por cuenta y acá uno por producto—, así que una
+//     cuenta digital que conectaba su dominio no tenía una línea que dijera de
+//     quién es, quién lo paga ni qué pasa si lo desconecta. Y falta lo más
+//     delicado: la dirección de tiendaapps es NUESTRA y se presta. Quien va a
+//     pautar contra ella durante meses tiene que saberlo antes de gastar el
+//     primer peso en publicidad, y saber que cambiarla rompe lo repartido.
+//   · "4 quater. El ebook escrito con IA": el 4 ter habla de la IA que escribe
+//     los textos de la página. Esto es otra cosa —un archivo escrito por una
+//     máquina que después se VENDE a un tercero por plata—, y lo que allá es un
+//     borrador que se revisa antes de publicar, acá es la mercadería. Dice que
+//     puede tener datos inventados, que no es asesoramiento profesional, que
+//     leerlo entero antes de venderlo es del vendedor, y que el resultado es
+//     suyo pero no se le garantiza que sea único.
+//   · Los bonos y los upsells en la sección 5: no aparecían en ninguna parte del
+//     documento aunque se entregan en cada compra. Un bono es un archivo que
+//     alguien recibe por haber pagado, aunque su precio sea cero: le corren las
+//     mismas reglas de entrega, devolución y responsabilidad que al principal.
+//     Sin esto, el archivo que más se regala era el único sin reglas escritas.
+//   ⚠️ Siguen sin escribirse, y siguen siendo decisión del titular: limitación de
+//     responsabilidad, ley aplicable y jurisdicción, y la cláusula de no garantía
+//     de resultados. Y este texto todavía no lo leyó un abogado de consumo.
+//
 // 1.6 (11/08/2026) — tres arreglos que salieron de revisar el texto, no de un
 // cambio de producto:
 //   · La sección 5 del Dueño decía "sos responsable de las comisiones que
@@ -107,7 +134,7 @@
 // cambiaron seis veces (Meta, Google Analytics, cambio de rubro, entre otros), así
 // que el banner nunca se disparó por ninguno de esos cambios. El bump a 1.3
 // arrastró toda esa deuda de una.
-export const CURRENT_TERMS_VERSION = "1.7";
+export const CURRENT_TERMS_VERSION = "1.8";
 
 /**
  * Condiciones del diseño colaborativo (/diseno-propio). Versión aparte de
@@ -131,9 +158,10 @@ export const DESIGN_BRIEF_TERMS_VERSION = "1.0";
  * sección ni "conforme a lo dispuesto".
  */
 export const CURRENT_TERMS_SUMMARY: string[] = [
-  "Si vendés productos digitales, ahora tenés tu propia solapa en los términos y en la privacidad. Antes te mandaba a la de Cliente, que es la de alguien que compra en una tienda: no decía nada de tu comisión ni de cómo se entrega un archivo, y encima te prometía diez días de arrepentimiento sobre tus propias ventas.",
-  "Escribimos qué pasa con la devolución de un archivo que ya se descargó. Si todavía no lo bajaste, tenés tus diez días como en cualquier compra por internet. Si ya lo bajaste, no corresponde — lo dice el Código Civil y Comercial— y por eso ahora te lo mostramos antes de pagar y te pedimos que lo aceptes. Y si quien vende ofrece una garantía en su página, esa garantía vale igual.",
-  "Contamos qué guardamos de una descarga: la fecha, la dirección IP y el navegador. Sirve para poder demostrar que el archivo se entregó si algún día se discute el cobro, y para nada más. No se usa para publicidad y se borra junto con el enlace de descarga.",
+  "Si vendés productos digitales, cada producto tuyo tiene ahora su propia dirección de internet, y escribimos las reglas. La dirección tipo tuproducto.tiendaapps.com es nuestra y te la prestamos mientras tengas la cuenta: viene con todos los planes, no se apaga por cambiar de plan, y si la cambiás vos, la anterior deja de funcionar y los enlaces que repartiste dejan de llegar.",
+  "Y si estás en Pro y conectás un dominio tuyo, ahora dice quién es dueño de qué: el dominio lo comprás y lo pagás vos donde quieras, no lo renovamos nosotros, y si lo perdés por no renovarlo no somos responsables. Lo podés desconectar cuando quieras, aunque tu plan esté vencido, porque es tuyo. Tu dirección de tiendaapps sigue funcionando igual: el dominio se suma, no la reemplaza.",
+  "Si usás la IA para que te escriba un ebook, quedó escrito qué es eso: un borrador tuyo. Puede tener errores o datos inventados, no es asesoramiento profesional, y leerlo entero antes de venderlo es tuyo. El resultado es tuyo y lo podés vender, pero no te garantizamos que sea único.",
+  "Y los bonos y los upsells ahora están nombrados: aunque el bono sea gratis, es parte de lo que la persona compró, y le corren las mismas reglas de entrega y de devolución que al archivo principal.",
 ];
 
 /**

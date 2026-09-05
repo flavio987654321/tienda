@@ -3692,3 +3692,79 @@ desconectarlo y al borrar el producto.
 mucho. Hoy siguen anotados, y cada uno ocupa un lugar de esos 50.
 
 ## FASE 6 — Legales
+
+⚠️ **Este título estuvo vacío hasta el 04/09/26, y eso hizo creer que la fase no
+existía.** No era así: la mayor parte del trabajo legal de este ecosistema ya
+estaba hecha y escrita en otro lado —en `/terminos`, en `/privacidad` y en la
+página legal de cada producto—, sólo que nadie lo había anotado acá. Un título
+vacío es peor que uno con una lista: da por perdido algo que está.
+
+### Lo que YA existe (auditado el 04/09/26)
+
+| Documento | Dónde | Estado |
+|---|---|---|
+| Términos, solapa **Productos Digitales** | `/terminos?role=digital` | ✅ 19 secciones |
+| Privacidad, solapa digital | `/privacidad` | ✅ incluye la IA y a Anthropic |
+| Página legal de cada producto | `/p/<id>/legales` | ✅ las políticas de quien vende + el formulario de arrepentimiento |
+| Consentimiento del art. 1116 | en cada orden | ✅ fecha, IP y **el texto exacto que esa persona leyó** |
+| Botón de arrepentimiento | Resolución 424/2020 | ✅ siempre presente, no depende de que se haya cargado nada |
+
+Lo del art. 1116 merece el subrayado: **no se guarda un `true`, se guarda el
+texto entero**. Si mañana se cambia la redacción, una venta vieja tiene que
+seguir mostrando la que su comprador leyó de verdad. Un booleano no prueba nada.
+
+### ✅ Lo que se agregó el 04/09/26 — versión 1.8 de los términos
+
+Tres huecos que el producto ya hacía y el documento no decía. Los tres salen de
+la Fase 5 bis y de la 4.3, o sea de funciones que se encendieron después de que
+el texto se escribió.
+
+- ✅ **"2 ter. La dirección de tu producto, y tu dominio"** — no existía nada. La
+  sección 4 del apartado de Dueño habla de dominio propio, pero es de otro
+  apartado y de otro producto: allá es **uno por cuenta** y acá **uno por
+  producto**. Una cuenta digital que conectaba su dominio no tenía una línea que
+  dijera de quién es, quién lo paga ni qué pasa si lo desconecta.
+  Y falta lo más delicado: **la dirección de tiendaapps es NUESTRA y se presta**.
+  Quien va a pautar contra ella durante meses tiene que saberlo antes de gastar
+  el primer peso, y saber que cambiarla rompe todo lo repartido.
+- ✅ **"4 quater. El ebook escrito con IA"** — el 4 ter habla de la IA que escribe
+  los TEXTOS de la página. Esto es otra cosa: un archivo escrito por una máquina
+  que después **se vende a un tercero por plata**. Lo que allá es un borrador que
+  se revisa antes de publicar, acá es la mercadería.
+- ✅ **Los bonos y los upsells**, en la sección 5. No aparecían en ninguna parte
+  del documento aunque se entregan en cada compra. Un bono es un archivo que
+  alguien recibe por haber pagado, **aunque su precio sea cero**: le corren las
+  mismas reglas de entrega, devolución y responsabilidad que al principal. Era el
+  archivo que más se regala y el único sin reglas escritas.
+
+Y se subió `CURRENT_TERMS_VERSION` a **1.8** con su resumen en criollo, que es lo
+que dispara el aviso de re-aceptación. Un cambio de documento sin subir la
+versión es un cambio que nadie re-acepta.
+
+### 🔲 Las tres decisiones que son del titular, no del que escribe
+
+Están anotadas desde la versión 1.7 y **siguen sin escribirse**. No es olvido: no
+las puede tomar nadie más.
+
+- 🔲 **Ley aplicable y jurisdicción.** Qué tribunales entienden si hay un juicio.
+  ⚠️ Ojo: contra un consumidor argentino, la Ley 24.240 es de orden público y una
+  cláusula que lo mande a litigar lejos se puede tener por no escrita. Sirve para
+  la relación con el VENDEDOR, no para tapar al comprador.
+- 🔲 **Tope de responsabilidad.** Hasta cuánto responde TiendaApps si algo sale
+  mal. Lo habitual es atarlo a lo cobrado en los últimos meses. Sin un número, el
+  techo es el que decida un juez.
+- 🔲 **Garantía de resultados.** Decir con todas las letras que no se garantiza
+  que nadie venda nada. Es la cláusula que más falta hace en un producto que se
+  vende con la promesa de "armá tu negocio digital".
+
+### 🔲 Y esto lo tiene que leer un abogado de consumo
+
+No es una formalidad y no lo reemplaza ninguna revisión de acá. Los documentos
+están escritos con criterio y en castellano llano, y se apoyan en artículos
+concretos (24.240, art. 1116 inc. b del CCyC, Resolución 424/2020), pero **quien
+los redactó no es abogado**. Antes de encender el cobro de verdad, esto se
+revisa.
+
+Lo que conviene llevarle, además del texto: las tres decisiones de arriba ya
+tomadas, para que las escriba él y no queden como están.
+

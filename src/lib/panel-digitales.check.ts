@@ -1098,8 +1098,25 @@ chequear("el ejemplo se ofrece como borrador, no como documento listo",
    el banner mira este número. Estuvo clavado en 1.2 mientras el texto cambió
    seis veces — está contado en el propio archivo. */
 const legal = readFileSync("src/lib/legal.ts", "utf8");
-chequear("la versión de los términos subió con este cambio",
-  /CURRENT_TERMS_VERSION = "1\.7"/.test(legal) && /1\.7 \(03\/09\/2026\)/.test(legal));
+
+/* ⚠️ NO se clava un número. Antes decía `= "1.7"` y `1.7 (03/09/2026)`, o sea que
+   el chequeo se ponía en rojo con CUALQUIER cambio de versión posterior —incluso
+   uno bien hecho— y lo único que enseñaba era a venir acá a corregir el número.
+   Un chequeo que hay que apagar para avanzar deja de leerse.
+
+   Lo que sí importa es que la versión vigente TENGA SU ENTRADA en el registro de
+   cambios del mismo archivo: subir el número sin contar qué cambió deja saliendo
+   un mail que describe la versión anterior, y es el mail que avisa un cambio de
+   contrato. */
+const versionVigente = /CURRENT_TERMS_VERSION = "([\d.]+)"/.exec(legal)?.[1] ?? "";
+chequear("la versión vigente de los términos tiene su entrada en el registro",
+  versionVigente.length > 0 &&
+  new RegExp(`^//\\s*${versionVigente.replace(/\./g, "\\.")} \\(\\d{2}/\\d{2}/\\d{4}\\)`, "m").test(legal));
+
+/* Y el resumen para el mail vive pegado a la versión: si se sube el número y no
+   se toca esto, el aviso sale contando los cambios de la versión de antes. */
+chequear("el resumen del mail de cambio de términos no quedó vacío",
+  /CURRENT_TERMS_SUMMARY: string\[\] = \[\s*"/.test(legal));
 
 /* ══════════════════════════════════════════════════════════════════════════
    19. EL DETALLE DE UNA VENTA — la carpeta que se abre cuando alguien reclama
