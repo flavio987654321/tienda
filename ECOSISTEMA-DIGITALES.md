@@ -781,8 +781,10 @@ Todo esto ya está resuelto, medido y en varios casos aplicado a producción:
 - **El gatillo es el pago acreditado, no el pedido creado.** Entregar antes es
   regalarle el archivo a quien abandonó el pago.
 - **Topes de IA en cuatro capas**, incluida la global de cuentas gratis (ver 2.4).
-- 🔲 **El login sigue trabado por el captcha**, en local y en producción. Si vamos
-  a probar de punta a punta, esto se destraba primero.
+- ✅ **El captcha del login anda** (revisado el 04/09/26). Esto decía que estaba
+  trabado en local y en producción y quedó escrito de una tarde en que falló;
+  después se arregló y la línea se quedó. Se corrige acá porque una lista de
+  pendientes con cosas que ya andan es peor que no tener lista: se deja de leer.
 
 ---
 
@@ -1454,9 +1456,11 @@ desincronizan de a una.
 - ✅ 20 pruebas nuevas (`productos-digitales.check.ts` y el bloque 11 de
   `panel-digitales.check.ts`).
 
-- 🔲 **Subir el archivo del producto** — bucket privado en Supabase con permiso
-  firmado, igual que `/api/upload/firma`. Hasta que exista, publicar queda
-  cerrado a propósito.
+- ✅ **Subir el archivo del producto** — HECHO. Bucket privado en Supabase con
+  permiso firmado, igual que `/api/upload/firma`: `deposito-digital`,
+  `subida-digital` y `/api/digitales/archivo/*`, con sus chequeos. Los bytes van
+  derecho del navegador al depósito, así que no los topea el techo de 4,5 MB de
+  las funciones. *(Marcado tarde: ya estaba hecho y la línea se quedó en 🔲.)*
 
   **Cerrado el 01/09/26, mirando el panel de ellos:**
 
@@ -1636,7 +1640,9 @@ verifica para los tres IDs.
   brasileño. El texto de ayuda de la competencia quedó **en portugués**
   (*"Generalo en Integrações > Webhooks"*), así que ni lo tradujeron: lo
   heredaron de una plantilla. Si Flavio no las conoce, sus vendedoras tampoco.
-- 🔲 **Dominio propio** — depende de la Fase 5 bis.
+- ✅ **Dominio propio** — HECHO (04/09/26) en la Fase 5 bis: uno por producto, con
+  Pro. Con esto **se destraba la verificación de dominio en Meta**, que era lo
+  único que la bloqueaba.
 
 ### Qué cambia en Configuración según el plan — CERRADO (01/09/26)
 
