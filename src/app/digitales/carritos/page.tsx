@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/auth-session";
 import { prisma } from "@/lib/prisma";
 import { carritosDeLaCuenta, haceCuanto, MADURACION_MS } from "@/lib/carritos-digitales";
 import type { TierDigital } from "@/lib/planes-digitales";
+import { getUserSubscription, isSubscriptionActive } from "@/lib/subscription";
 import BotonVolver from "../BotonVolver";
 import CarritosClient from "./CarritosClient";
 
@@ -40,10 +41,15 @@ export default async function CarritosPage() {
 
   const [store, sub] = await Promise.all([
     prisma.store.findUnique({ where: { ownerId: user.id }, select: { id: true, name: true } }),
-    prisma.subscription.findUnique({ where: { userId: user.id }, select: { tier: true } }),
+    getUserSubscription(user.id),
   ]);
 
-  const esPro = ((sub?.tier ?? "FREE") as TierDigital) === "PRO";
+  /* ⚠️ Con el plan AL DÍA, no sólo con el plan. Miraba `tier` a secas, y el
+     cron exige además `status in [ACTIVE, TRIAL]`: o sea que a alguien con la
+     tarjeta rebotada esta pantalla le decía "está prendido" mientras no le
+     estábamos escribiendo a nadie. Prometer de más una función que se cobra es
+     peor que no tenerla. */
+  const esPro = ((sub?.tier ?? "FREE") as TierDigital) === "PRO" && !!sub && isSubscriptionActive(sub);
   const ahora = new Date();
   const foto = store
     ? await carritosDeLaCuenta(store.id, ahora)

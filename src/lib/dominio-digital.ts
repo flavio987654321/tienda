@@ -98,9 +98,19 @@ export type AltaEnVercel =
  */
 export async function agregarDominioAVercel(dominio: string): Promise<AltaEnVercel> {
   const v = vercel();
-  /* Sin API configurada —desarrollo local— se deja pasar: acá no hay proyecto de
-     Vercel al que sumarlo y bloquear haría imposible probar la pantalla. */
   if (!v) {
+    /* ⚠️ En DESARROLLO se deja pasar: acá no hay proyecto de Vercel al que
+       sumarlo y bloquear haría imposible probar la pantalla.
+
+       En producción NO. Si falta la variable —o se venció el token— dejar pasar
+       guarda dominios que no van a levantar nunca, y lo único que quedaba era
+       este `warn` que no lee nadie: la persona se queda mirando un cartel que
+       dice "configurá tu DNS" mientras el problema está de este lado. Y encima
+       el dominio queda tomado para su dueño legítimo. */
+    if (process.env.NODE_ENV === "production") {
+      console.error(`[dominio-digital] VERCEL_TOKEN / VERCEL_PROJECT_ID sin configurar en producción — "${dominio}" NO se conectó`);
+      return { ok: false, motivo: "No pudimos conectar el dominio en este momento. Escribinos y lo vemos." };
+    }
     console.warn(`[dominio-digital] VERCEL_TOKEN / VERCEL_PROJECT_ID sin configurar — "${dominio}" no se sumó al proyecto`);
     return { ok: true, yaEstaba: false };
   }
@@ -273,6 +283,46 @@ async function apexSigueEnUso(dominio: string, exceptoProducto: string): Promise
  */
 function bajoElApex(campo: "customDomain" | "dominioPropio", apex: string) {
   return { OR: [{ [campo]: apex }, { [campo]: { endsWith: `.${apex}` } }] };
+}
+
+/**
+ * ¿Ese dominio está libre? Mira **las dos** tablas.
+ *
+ * ══════════════════════════════════════════════════════════════════════════
+ * ⚠️ ESTO TIENE QUE PREGUNTARLO **TODO** EL QUE CONECTE UN DOMINIO
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * Un dominio propio puede ser de una tienda (`Store.customDomain`) o de un
+ * producto digital (`Product.dominioPropio`), y son **dos tablas con dos
+ * índices únicos distintos**: la base acepta el mismo dominio en las dos sin
+ * quejarse. Quien desempata es el middleware, y le da prioridad a la tienda.
+ *
+ * Encontrado el 05/09/26: el lado de tiendas preguntaba sólo por `Store`, así
+ * que alguien podía escribir el dominio de un producto ajeno y **quedarse con
+ * la dirección**. Ni siquiera necesitaba el certificado — ya estaba emitido, a
+ * nombre de la víctima. Es la página contra la que está pautando.
+ *
+ * ── Por qué compara el texto tal cual, sin normalizar ──────────────────────
+ *
+ * Porque lo que decide a dónde va una visita es el `host` de la petición,
+ * comparado letra por letra contra lo guardado. Normalizar acá y guardar otra
+ * cosa allá haría que este chequeo mire una dirección distinta de la que
+ * después va a resolver. Cada lado normaliza como guarda; acá se compara lo
+ * que se va a escribir.
+ */
+export async function dominioLibre(dominio: string, exceptoProducto?: string): Promise<boolean> {
+  const [tienda, producto] = await Promise.all([
+    prisma.store.findFirst({ where: { customDomain: dominio }, select: { id: true } }),
+    /* Sin filtrar por borrado: si un producto borrado todavía lo tiene anotado
+       —porque falló el soltarlo—, el índice único lo va a rechazar igual. Decir
+       "está en uso" es la verdad; dejarlo pasar es un error más adelante que
+       nadie sabe leer. */
+    prisma.product.findFirst({
+      where: { dominioPropio: dominio, ...(exceptoProducto ? { id: { not: exceptoProducto } } : {}) },
+      select: { id: true },
+    }),
+  ]);
+  return !tienda && !producto;
 }
 
 /* ── Conectar y desconectar ─────────────────────────────────────────────── */

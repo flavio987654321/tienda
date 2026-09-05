@@ -3755,6 +3755,58 @@ superior"* para conectar el dominio.
   de nombres. *(04/09/26. Un candado de Postgres sobre el NOMBRE, no sobre la
   cuenta: ningún índice único puede ver dos tablas a la vez.)*
 
+#### ⚠️ El candado estaba puesto de un solo lado de la puerta — ARREGLADO (05/09/26)
+
+Salió del repaso de la sesión, no de un error que se haya visto. **El lado
+digital preguntaba por las dos tablas desde el primer día. El de tiendas
+preguntaba por una sola.**
+
+Son cuatro columnas y cuatro índices únicos, uno por columna:
+
+| | Tienda | Producto digital |
+|---|---|---|
+| Subdominio | `Store.slug` | `Product.slugDigital` |
+| Dominio propio | `Store.customDomain` | `Product.dominioPropio` |
+
+**Ninguno ve al otro**: la base acepta el mismo nombre en las dos tablas sin
+quejarse. Quien desempata es el middleware, y le da prioridad a la tienda.
+
+Lo que eso permitía:
+
+- **El dominio.** Alguien con Tienda Premium escribía el dominio propio de un
+  producto digital ajeno y se quedaba con la dirección. Ni siquiera necesitaba
+  el certificado: ya estaba emitido, **a nombre de la víctima**. Es la página
+  contra la que está pautando.
+- **El subdominio, y es peor.** Viene con los TRES planes, no sólo con Pro, y no
+  hacía falta mala intención: el slug de una tienda sale de su nombre, así que
+  alcanzaba con que alguien abriera "Mecánica Fácil" para llevarse puesta la
+  dirección del ebook de mecánica.
+
+**Verificado contra la base real ese día: 0 colisiones.** El arreglo llegó antes
+de que pasara.
+
+**Eran SEIS lugares que escriben una dirección, no dos.** Los cinco de la lista
+escrita a mano más uno que apareció solo:
+
+1. La dirección de un producto digital *(ya preguntaba bien)*.
+2. El alta de una tienda nueva — `uniqueStoreSlug` en el registro.
+3. La dirección del espacio digital.
+4. La herramienta de admin que renombra slugs **en lote** — la peor forma de que
+   pase.
+5. El dominio propio de una tienda.
+6. ⚠️ **`espacio-digital.ts`, el que crea la tienda de cada cuenta digital.**
+   Éste no estaba en la lista: **lo encontró el barrido del chequeo, la primera
+   vez que corrió**. Su comentario decía *"nadie lo ve, la dirección pública de
+   un producto digital es otra cosa, y va en su propia fase"* — y esa fase ya
+   había llegado.
+
+Los seis pasan ahora por `estaLibre` o `dominioLibre`, que miran las dos tablas.
+
+**13 chequeos en `direcciones-compartidas.check.ts`**, y el último **barre el
+árbol** en vez de confiar en la lista: cualquier archivo nuevo que escriba una de
+las cuatro columnas sin preguntar hace fallar la prueba. Probado con un archivo
+falso: lo detecta. Es lo que evita que el séptimo lugar vuelva a empezar.
+
 ⚠️ **"Poder cambiar el nombre y el dominio" NO lo resuelve** — y fue la primera
 idea. Si se cambian, se rompe el producto anterior. No es *cambiable*: es **uno
 por producto**.

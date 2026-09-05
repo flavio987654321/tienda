@@ -62,6 +62,19 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
     return NextResponse.json({ error: "No autorizado" }, { status: 403 });
   }
 
+  /* ⚠️ El GET también lleva freno, y no por abuso: cada llamada le pega DOS
+     veces a la API de Vercel, que tiene su propio tope por equipo. Sólo puede
+     hacerlo el dueño de ese producto, así que no es una puerta abierta — pero
+     una pantalla que reintente sola quema cuota de todos. 60 por hora deja
+     mirar cuanto quiera mientras espera el DNS. */
+  try {
+    if (!(await checkRateLimit(`dominio-digital-mirar:${user.id}`, 60, 60 * 60_000))) {
+      return NextResponse.json({ error: "Esperá un momento antes de volver a mirar." }, { status: 429 });
+    }
+  } catch {
+    console.error("[rate-limit] Redis no disponible en /api/digitales/productos/[id]/dominio (GET)");
+  }
+
   const { id } = await ctx.params;
   const producto = await elProducto(id, user.id);
   if (!producto) return NextResponse.json({ error: "Ese producto no existe" }, { status: 404 });

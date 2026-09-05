@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
+import { estaLibre } from "@/lib/direccion-digital";
 import { revalidatePath } from "next/cache";
 
 function toSlug(text: string) {
@@ -33,16 +34,17 @@ export async function POST() {
       continue;
     }
 
-    // Buscar el primer slug disponible
+    /* Buscar el primer slug disponible.
+     *
+     * ⚠️ `estaLibre` mira LAS DOS tablas: `<nombre>.tiendaapps.com` puede ser
+     * una tienda o un producto digital, y el middleware desempata a favor de la
+     * tienda. Preguntando sólo por `Store` —como hacía— esta herramienta le
+     * podía sacar el subdominio a un producto de un plumazo y en lote, que es
+     * la peor forma de que pase. Se excluye la propia tienda: si ya tiene ese
+     * nombre, no choca consigo misma. */
     let newSlug = base;
     let counter = 2;
-    while (true) {
-      const taken = await prisma.store.findUnique({
-        where: { slug: newSlug },
-        select: { id: true },
-      });
-      // Si no existe, o si es la misma tienda (ya tiene ese slug), está libre
-      if (!taken || taken.id === store.id) break;
+    while (!(await estaLibre(newSlug, undefined, store.id))) {
       newSlug = `${base}-${counter}`;
       counter++;
     }

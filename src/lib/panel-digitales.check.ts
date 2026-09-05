@@ -438,12 +438,19 @@ chequear("y se recorta del lado del servidor",
 chequear("lo que llega vacío se guarda como null, no como texto vacío",
   /from "@\/lib\/texto-limpio"/.test(config));
 
-/* ⚠️ El slug es único en TODA la tabla de tiendas, no sólo entre las digitales.
+/* ⚠️ La dirección se comprueba contra TODAS las tiendas y contra TODOS los
+   productos digitales: `algo.tiendaapps.com` puede ser una cosa o la otra, en
+   dos tablas con dos índices únicos que no se ven entre sí.
+
+   Esto pedía el `findFirst` con `slug: slugNuevo` escrito tal cual, y así estaba
+   —mirando una sola tabla— hasta el 05/09/26. Ahora pide la función compartida,
+   que es la que mira las dos. Ver `direcciones-compartidas.check.ts`.
+
    Y hay una carrera: dos cuentas pidiendo la misma dirección en el mismo
    instante pasan las dos el chequeo y una choca contra el índice. Sin el catch,
    esa persona ve un error de base sin explicación. */
-chequear("la dirección se comprueba contra todas las tiendas",
-  /findFirst\([\s\S]{0,120}?slug: slugNuevo/.test(config));
+chequear("la dirección se comprueba contra todas las tiendas Y todos los productos",
+  /estaLibre\(slugNuevo/.test(config) && /from "@\/lib\/direccion-digital"/.test(config));
 chequear("y la carrera contra el índice único se atrapa", /P2002/.test(config));
 
 /* La misma lista blanca que la portada de un producto, importada y no copiada:

@@ -3,6 +3,7 @@ import { getCurrentUser } from "@/lib/auth-session";
 import { prisma } from "@/lib/prisma";
 import { getUserSubscription, hasActivePremium } from "@/lib/subscription";
 import { syncTurnstileHostname } from "@/lib/turnstile";
+import { dominioLibre } from "@/lib/dominio-digital";
 
 // El captcha (Turnstile) valida el hostname: sin esto, en una tienda con dominio
 // propio los formularios de contacto/reseñas/ruleta quedarían deshabilitados.
@@ -63,13 +64,25 @@ export async function POST(req: NextRequest) {
 
   const cleaned = domain.trim().toLowerCase().replace(/^https?:\/\//, "").replace(/\/$/, "");
 
-  const existing = await prisma.store.findUnique({ where: { customDomain: cleaned } });
-  if (existing) return NextResponse.json({ error: "Ese dominio ya está en uso por otra tienda" }, { status: 409 });
-
   const previous = await prisma.store.findUnique({
     where: { ownerId: user.id },
     select: { customDomain: true },
   });
+
+  /* ⚠️ Las DOS tablas, no sólo `Store`. Un dominio propio también puede ser de
+     un producto digital (`Product.dominioPropio`), y son dos índices únicos
+     distintos: la base aceptaba el mismo dominio en las dos sin quejarse, y el
+     middleware desempata a favor de la tienda. O sea que escribir acá el
+     dominio de un producto ajeno le sacaba la dirección a su dueño, con el
+     certificado ya emitido a nombre de él. Ver `lib/dominio-digital`.
+
+     Y se saltea si es EL QUE YA TENÍAS: la consulta de antes tampoco excluía la
+     tienda propia, así que volver a guardar el mismo dominio contestaba que ya
+     estaba en uso. Con el texto viejo —"por otra tienda"— era raro; con el
+     nuevo —"en otra cuenta"— sería directamente falso. */
+  if (previous?.customDomain !== cleaned && !(await dominioLibre(cleaned))) {
+    return NextResponse.json({ error: "Ese dominio ya está conectado en otra cuenta" }, { status: 409 });
+  }
 
   await addDomainToVercel(cleaned);
   await syncTurnstileHostname(cleaned, "add");

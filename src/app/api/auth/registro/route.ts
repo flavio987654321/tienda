@@ -10,6 +10,7 @@ import { getClientIp } from "@/lib/request-ip";
 import { sendWelcomeEmail } from "@/lib/resend";
 import { altaDigitalFree, altaDigitalConPrueba } from "@/lib/subscription";
 import { TIERS_DIGITALES, type TierDigital } from "@/lib/planes-digitales";
+import { estaLibre } from "@/lib/direccion-digital";
 import { DIGITALES_ABIERTO } from "@/lib/planLimits";
 
 const TERMS_VERSION = CURRENT_TERMS_VERSION;
@@ -141,11 +142,18 @@ export async function POST(req: NextRequest) {
 
     if (type === "OWNER" && storeName) {
       const baseSlug = toSlug(storeName.trim()) || "tienda";
-      const [slugExists, nameExists] = await Promise.all([
-        prisma.store.findUnique({ where: { slug: baseSlug }, select: { id: true } }),
+      /* ⚠️ `estaLibre` y no `store.findUnique`: `algo.tiendaapps.com` puede ser
+         una tienda o un producto digital, en dos tablas con dos índices únicos
+         distintos, y el middleware desempata a favor de la tienda. Preguntando
+         sólo por `Store`, una tienda nueva se llevaba puesta la dirección de un
+         producto que ya la estaba usando — y sin mala intención: alcanza con
+         que alguien abra una tienda con un nombre parecido. Ver
+         `lib/direccion-digital`. */
+      const [slugLibre, nameExists] = await Promise.all([
+        estaLibre(baseSlug),
         prisma.store.findFirst({ where: { name: { equals: storeName.trim(), mode: "insensitive" } }, select: { id: true } }),
       ]);
-      if (slugExists || nameExists) {
+      if (!slugLibre || nameExists) {
         return NextResponse.json({ error: "Ya existe una tienda con un nombre muy similar. Elegí un nombre diferente." }, { status: 400 });
       }
     }
@@ -283,14 +291,18 @@ export async function POST(req: NextRequest) {
   }
 }
 
+/**
+ * ⚠️ Pregunta por LAS DOS tablas, con `estaLibre`. Un nombre ocupado por un
+ * producto digital está ocupado igual: los dos viven en
+ * `<nombre>.tiendaapps.com` y el middleware desempata a favor de la tienda, así
+ * que devolver uno tomado no da un error — le saca la dirección al que la tenía.
+ */
 async function uniqueStoreSlug(storeName: string): Promise<string> {
   const base = toSlug(storeName) || "tienda";
-  const first = await prisma.store.findUnique({ where: { slug: base } });
-  if (!first) return base;
+  if (await estaLibre(base)) return base;
   for (let i = 2; i <= 99; i++) {
     const candidate = `${base}-${i}`;
-    const exists = await prisma.store.findUnique({ where: { slug: candidate } });
-    if (!exists) return candidate;
+    if (await estaLibre(candidate)) return candidate;
   }
   // Fallback con timestamp si los 99 slots están ocupados (prácticamente imposible)
   return `${base}-${Date.now().toString(36)}`;

@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { estaLibre } from "@/lib/direccion-digital";
 
 /* ══════════════════════════════════════════════════════════════════════════
    EL ESPACIO DE LA CUENTA
@@ -63,14 +64,21 @@ export async function espacioDigital(userId: string): Promise<{ storeId: string 
 }
 
 /**
- * Un slug que no choque con el de ninguna tienda.
- *
- * Nadie lo ve —la dirección pública de un producto digital es otra cosa, y va en
- * su propia fase— pero la columna es única en toda la tabla, así que un choque
- * rompería el alta con un error de base que nadie sabría leer.
+ * Un slug que no choque con **ninguna dirección**, ni de tienda ni de producto.
  *
  * Arranca de la parte de adelante del correo porque es más fácil de reconocer
  * que un identificador al azar el día que haya que mirar la base a mano.
+ *
+ * ⚠️ El comentario que estaba acá decía "nadie lo ve, la dirección pública de un
+ * producto digital es otra cosa, y va en su propia fase". **Esa fase llegó** —la
+ * 5 bis— y con ella el slug del espacio dejó de ser invisible: `Store.slug` y
+ * `Product.slugDigital` viven los dos en `<nombre>.tiendaapps.com`, y el
+ * middleware desempata a favor de la tienda. O sea que un espacio nuevo que
+ * cayera sobre el nombre de un producto ya publicado le apagaba la dirección.
+ *
+ * Mirando sólo `Store` no daba error: daba un espacio con un nombre que ya era
+ * de otro. Por eso ahora pregunta `estaLibre`, igual que los otros cinco
+ * lugares que escriben una dirección. Ver `lib/direccion-digital`.
  */
 async function slugLibre(email: string): Promise<string> {
   const base =
@@ -84,8 +92,7 @@ async function slugLibre(email: string): Promise<string> {
   for (let intento = 0; intento < 20; intento++) {
     // El primero va sin sufijo; a partir del segundo se le cuelga uno al azar.
     const candidato = intento === 0 ? base : `${base}-${Math.random().toString(36).slice(2, 7)}`;
-    const tomado = await prisma.store.findUnique({ where: { slug: candidato }, select: { id: true } });
-    if (!tomado) return candidato;
+    if (await estaLibre(candidato)) return candidato;
   }
   /* Veinte intentos fallidos con sufijo al azar no pasa nunca; si pasara, es
      preferible un slug feo a un error de base sin explicación. */

@@ -8,6 +8,7 @@ import {
   validarContextoIA, logoValido,
   LARGO_NOMBRE, LARGO_CHECKOUT, LARGO_EMAIL, LARGO_IA_PRODUCTO, LARGO_IA_DESCRIPCION,
 } from "@/lib/configuracion-digital";
+import { estaLibre } from "@/lib/direccion-digital";
 import { validarGaId, validarPixelId, validarClarityId, extraerClarityId } from "@/lib/tracking-ids";
 import { mergeAnalytics, mergeTransferencia } from "@/lib/store-config";
 import {
@@ -177,17 +178,18 @@ export async function PATCH(req: NextRequest) {
   const espacio = await espacioDigital(user.id);
   if ("error" in espacio) return NextResponse.json({ error: espacio.error }, { status: 409 });
 
-  /* La dirección es única en toda la tabla de tiendas, así que se comprueba
-     contra TODAS y no sólo contra las digitales. Se excluye la propia: volver a
-     guardar la que ya tenías no puede fallar. */
-  if (slugNuevo) {
-    const tomada = await prisma.store.findFirst({
-      where: { slug: slugNuevo, id: { not: espacio.storeId } },
-      select: { id: true },
-    });
-    if (tomada) {
-      return NextResponse.json({ error: "Esa dirección ya está usada. Probá con otra." }, { status: 409 });
-    }
+  /* La dirección se comprueba contra TODAS las tiendas —no sólo las digitales—
+     y también contra los productos digitales, que viven en el mismo
+     `<nombre>.tiendaapps.com`. Se excluye la propia: volver a guardar la que ya
+     tenías no puede fallar.
+
+     ⚠️ Miraba sólo `Store` y por eso se rompía en silencio: son dos tablas con
+     dos índices únicos distintos, así que la base aceptaba el mismo nombre en
+     las dos y el middleware desempataba a favor de la tienda. Cambiar acá la
+     dirección del espacio le sacaba el subdominio a un producto que ya lo tenía
+     —incluso a un producto propio—. Ver `lib/direccion-digital`. */
+  if (slugNuevo && !(await estaLibre(slugNuevo, undefined, espacio.storeId))) {
+    return NextResponse.json({ error: "Esa dirección ya está usada. Probá con otra." }, { status: 409 });
   }
 
   /* Los IDs de medición viven adentro de `storeConfig`, que es un JSON con TODO

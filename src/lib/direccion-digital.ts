@@ -84,13 +84,38 @@ export async function buscarSlugLibre(base: string, intentos = 20): Promise<stri
 /**
  * ¿Está libre ese nombre? Mira **las dos** tablas.
  *
- * `exceptoProducto` deja que un producto conserve el nombre que ya tiene: sin
- * eso, guardar la misma dirección sin cambiarla se rechazaría por chocar
- * consigo misma.
+ * `exceptoProducto` deja que un producto conserve el nombre que ya tiene, y
+ * `exceptoTienda` lo mismo del otro lado: sin eso, guardar la misma dirección
+ * sin cambiarla se rechazaría por chocar consigo misma.
+ *
+ * ══════════════════════════════════════════════════════════════════════════
+ * ⚠️ ESTO TIENE QUE PREGUNTARLO **TODO** EL QUE ESCRIBA UN NOMBRE
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * `algo.tiendaapps.com` puede ser una tienda (`Store.slug`) o un producto
+ * digital (`Product.slugDigital`), y son **dos tablas con dos índices únicos
+ * distintos**: la base acepta el mismo nombre en las dos sin quejarse. Quien
+ * desempata es el middleware, y le da prioridad a la tienda.
+ *
+ * O sea que un lado que pregunte sólo por el suyo no se equivoca despacio: le
+ * saca la dirección a alguien que ya la estaba usando. Encontrado el 05/09/26
+ * revisando la sesión — el lado digital preguntaba por las dos desde el
+ * principio, y el de tiendas por una sola. **El candado estaba puesto de un
+ * solo lado de la puerta.**
+ *
+ * Hoy lo usan: la dirección del producto, el alta de una tienda nueva y la
+ * dirección del espacio digital.
  */
-export async function estaLibre(slug: string, exceptoProducto?: string): Promise<boolean> {
+export async function estaLibre(
+  slug: string,
+  exceptoProducto?: string,
+  exceptoTienda?: string,
+): Promise<boolean> {
   const [tienda, producto] = await Promise.all([
-    prisma.store.findFirst({ where: { slug }, select: { id: true } }),
+    prisma.store.findFirst({
+      where: { slug, ...(exceptoTienda ? { id: { not: exceptoTienda } } : {}) },
+      select: { id: true },
+    }),
     prisma.product.findFirst({
       where: { slugDigital: slug, ...(exceptoProducto ? { id: { not: exceptoProducto } } : {}) },
       select: { id: true },
