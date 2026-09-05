@@ -1718,9 +1718,10 @@ para generar.
 ### 🔲 Lo que sigue
 - ✅ **Ventas** — HECHA (03/09/26), con el detalle de cada venta y el registro de
   envíos.
-- 🟡 **Inicio** — a medias. Ya no miente (03/09/26) y tiene los **primeros pasos**
-  (04/09/26), pero le falta lo de arriba: las direcciones de las páginas, la plata
-  del mes y los carritos abandonados. Es la pantalla que queda por rehacer.
+- ✅ **El panel** — HECHO (04/09/26). Era "Inicio" y estaba vacío: tres atajos y
+  una frase. Ahora tiene **dos niveles** —todo junto o un producto a la vez—, la
+  plata del mes, las direcciones de cada página para copiar y los accesos rápidos
+  a un costado. Le falta todavía **los carritos abandonados**, que no existen aún.
 - 🔲 **Estadísticas**, cuando haya qué mostrar.
 - 🔲 **El asistente de la primera vez** (los 5 pasos de la competencia). Se diseña
   ahora, se construye último: depende de las Fases 4 y 5.
@@ -2087,7 +2088,57 @@ pantalla interrumpe, porque es el único cambio que no se puede deshacer.
 🔲 **`IA_LISTA` sigue en `false`, y está bien:** esa bandera ahora es sólo del
 botón del **ebook**, que es el caro y no existe. Armar el embudo no pasa por ahí.
 
-### ✅ LOS PRIMEROS PASOS — HECHOS (04/09/26)
+### ✅ EL PANEL DE DOS NIVELES — HECHO (04/09/26)
+
+La pantalla de Inicio se reemplazó por el panel. Sale del mismo lugar que la Fase
+5 bis: **una cuenta Pro puede ser cinco negocios de cinco nichos distintos**, y
+un solo número de "ventas" no le dice a nadie cuál de los cinco anda.
+
+#### Los dos niveles
+
+Arriba un selector —**Todos**, o un producto— y todo lo de abajo cambia con él.
+Viaja en la dirección (`/digitales?p=<id>`) y no en un estado: así el link se
+comparte, el botón atrás funciona, recargar no pierde nada y **el panel entero
+anda sin JavaScript**. Es la misma decisión que ya se tomó en Ventas.
+
+En la vista de un producto está lo que esta pantalla venía a resolver de verdad:
+**su dirección y su dominio, con botón de copiar**. Esa es la operación real —se
+pega en un anuncio, en un mensaje, en una historia— y hasta ahora había que ir a
+buscarla a otra pantalla. Se muestran **las dos** cuando hay dos: mostrar sólo el
+dominio propio haría pensar que la de tiendaapps se apagó, y no se apaga nunca.
+
+#### ⚠️ La plata tiene que dar LO MISMO que en Ventas
+
+Dos pantallas que muestran la misma plata no pueden decir números distintos: el
+que ve $170.000 en una y $168.000 en la otra deja de creerle a las dos.
+
+Por eso **el total sale de las ÓRDENES agrupadas por su porcentaje de comisión**,
+que es exactamente la cuenta que hace Ventas — y hay un chequeo que corre las dos
+al lado y se pone en rojo si alguna se mueve. Lo que sale de los ítems es sólo el
+reparto POR PRODUCTO, donde los bonos y los upsells suman al principal del que
+cuelgan: el que pregunta cuánto le dejó mecánica quiere el upsell adentro.
+
+Sumar ítems para el total no servía: alcanzaba un producto borrado para separar
+las dos pantallas.
+
+#### Los accesos rápidos, a la derecha
+
+Como los tiene la competencia. En pantalla grande son una columna al costado; en
+un teléfono se apilan **abajo** de los números, que es el orden correcto ahí:
+primero cómo va, después qué hacer.
+
+### ✅ LOS PRIMEROS PASOS — HECHOS (04/09/26), Y MUDADOS
+
+⚠️ **Ya no viven en el medio del panel** (04/09/26). Estaban ahí y ahí no van:
+alguien que ya vendió cuarenta veces no tiene por qué seguir viendo una lista de
+tareas de arranque ocupándole la pantalla entera.
+
+Ahora son **el recibimiento**: mientras la cuenta no tiene un solo producto, los
+pasos SON la pantalla —mostrar tres ceros y una lista vacía es peor que no
+mostrar nada—. En cuanto hay un producto se corren a la columna de la derecha,
+chiquitos, mostrando sólo **el que sigue**, y se van solos cuando están los cinco.
+
+Lo que NO cambió es de dónde salen, que es lo que sigue abajo.
 
 El inicio del panel tenía escrito, desde el 03/09, que *"los pasos de bienvenida
 —el asistente de la primera vez— van justo acá cuando exista"*. Existen.
