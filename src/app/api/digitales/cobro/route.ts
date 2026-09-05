@@ -10,6 +10,7 @@ import { comisionCongelada } from "@/lib/compra-digital";
 import { mandarLaEntrega } from "@/lib/envio-digital";
 import { createNotification } from "@/lib/notifications";
 import { despues } from "@/lib/despues";
+import { sendPushToUser } from "@/lib/push";
 
 export const runtime = "nodejs";
 
@@ -393,6 +394,33 @@ async function acreditar(idDelPago: string) {
       + " Le estamos mandando el archivo por mail.",
     link: "/digitales/ventas",
   });
+
+  /* ── Y el push al teléfono ─────────────────────────────────────────────────
+   *
+   * ⚠️ ES EL ÚNICO PUSH DE TODO EL ECOSISTEMA, y es a propósito. La devolución,
+   * la entrega que falló y la caída a Free se leen en la campanita al entrar. Un
+   * push es una interrupción: gastarla en algo que la persona no puede resolver
+   * en ese momento es la forma más rápida de que revoque el permiso, y entonces
+   * la próxima —la que sí importa— no llega.
+   *
+   * Esto es lo que justifica interrumpir: entró plata.
+   *
+   * Va con `despues` y no bloqueando: `sendPushToUser` sale a la red, a veces a
+   * un servicio que no contesta, y una venta ya cobrada no puede quedar
+   * esperando por un aviso. Si falla, el aviso de la campanita ya está escrito
+   * arriba — o sea que la persona se entera igual al entrar. */
+  despues(
+    () => sendPushToUser(orden.store.ownerId, {
+      title: "¡Vendiste!",
+      body: `${plata(orden.total)} — te quedan ${plata(leQueda)} después de la comisión.`,
+      url: "/digitales/ventas",
+      /* El `tag` hace que dos ventas seguidas no apilen dos globos idénticos en
+         la pantalla de bloqueo. Lleva el id de la orden justamente para que dos
+         ventas DISTINTAS sí se vean las dos. */
+      tag: `digital-venta-${orden.id}`,
+    }),
+    "[digital-cobro] push de la venta",
+  );
 
   /* ⚠️ Cómo se arma el mail vive en `entrega-digital` y no acá, porque ahora lo
      arman DOS lugares: este aviso de pago, que lo manda solo, y el botón de

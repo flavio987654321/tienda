@@ -5,6 +5,7 @@ import PWAManager from "@/components/PWAManager";
 import PanelSplash from "@/components/panel/PanelSplash";
 import PanelRolAjeno from "@/components/panel/PanelRolAjeno";
 import LoginGate from "@/components/panel/LoginGate";
+import NotificationBell from "@/components/NotificationBell";
 import { DIGITALES_VERSION } from "@/lib/app-versions";
 import { prisma } from "@/lib/prisma";
 import type { TierDigital } from "@/lib/planes-digitales";
@@ -49,12 +50,21 @@ export const metadata: Metadata = {
  * direcciones: una app que quedó en la pantalla de login se congelaría en su
  * build para siempre.
  *
- * `disableNotifPrompt` a propósito, igual que en afiliados: hoy a una cuenta
- * digital NO le llega ningún push. El único aviso que existe —"tu plan terminó,
- * volviste a Free"— lo escribe el cron como notificación de la campanita, que se
- * lee al entrar. Pedirle permiso de notificaciones a alguien que después no va a
- * recibir ninguna es prometer algo que no se cumple; cuando haya una venta que
- * justifique interrumpirlo, se saca esta bandera y el cartel aparece solo.
+ * ── El push, prendido el 05/09/26 ──────────────────────────────────────────
+ *
+ * Acá decía `disableNotifPrompt` con este motivo: *"pedirle permiso de
+ * notificaciones a alguien que después no va a recibir ninguna es prometer algo
+ * que no se cumple; cuando haya una venta que justifique interrumpirlo, se saca
+ * esta bandera"*.
+ *
+ * **Ya la hay.** Una venta digital cobrada manda push desde `digitales/cobro`,
+ * que es exactamente el caso que justifica interrumpir a alguien: entró plata.
+ * Se sacó la bandera y el cartel de permiso aparece solo.
+ *
+ * ⚠️ Y es el ÚNICO que se manda. Ni la devolución, ni la entrega que falló, ni
+ * la caída a Free: esos se leen en la campanita al entrar. Un push es una
+ * interrupción, y gastarla en algo que no se resuelve en el momento es la forma
+ * de que la próxima —la que sí importa— llegue con el permiso ya revocado.
  */
 export default async function DigitalesLayout({ children }: { children: React.ReactNode }) {
   const user = await getCurrentUser();
@@ -111,7 +121,7 @@ export default async function DigitalesLayout({ children }: { children: React.Re
           preferencia sea "Automático", y levanta el atributo al salir del panel
           para no dejárselo puesto al resto del sitio. */}
       <TemaDelPanel />
-      <PWAManager appVersion={DIGITALES_VERSION} versionKey="pwa_digitales_version" disableNotifPrompt scope="/digitales" />
+      <PWAManager appVersion={DIGITALES_VERSION} versionKey="pwa_digitales_version" scope="/digitales" />
       <PanelSplash nombre="TiendaApps Digitales" />
       {/* Envuelve la barra Y la pantalla, y en ese orden importa: la pantalla es
           la que dice "tengo cambios sin guardar" y los links que se los llevan
@@ -124,6 +134,19 @@ export default async function DigitalesLayout({ children }: { children: React.Re
             no en el `body`: si no, la barra lateral se va con la página. Mismo
             molde que `DashboardLayout`. */}
         <main className="lg:ml-14 flex-1 flex flex-col bg-gray-50 panel-oscuro:bg-gray-950 pt-14 lg:pt-0 overflow-y-auto overflow-x-hidden transition-colors">
+          {/* ⚠️ LA CAMPANITA EN ESCRITORIO. Existía sólo en la barra del celular,
+              así que quien trabaja en una computadora —que es donde se arma un
+              producto— NO VEÍA NINGUNO de los avisos. Y se escriben desde el
+              03/09: la venta, la devolución, la entrega que falló y la caída a
+              Free. Estaban ahí, escritos, y nadie los leía.
+
+              Va adentro del propio main y no flotando sobre la pantalla, que es
+              el molde de DashboardLayout: como es un renglón de verdad, empuja
+              al contenido en vez de taparle la esquina, y el desplegable no lo
+              recorta el overflow-hidden de la franja lateral. */}
+          <div className="hidden lg:flex justify-end items-center gap-1 px-4 pt-3 pb-0 shrink-0">
+            <NotificationBell userId={user.id} />
+          </div>
           {children}
         </main>
       </ProveedorDeSalida>

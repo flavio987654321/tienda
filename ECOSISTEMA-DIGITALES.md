@@ -1611,8 +1611,36 @@ no se olvide, no porque falte poco:
   Aires.
 - ✅ **Apariencia** (Automático / Claro / Oscuro) — **anda** (01/09/26). Ver
   abajo.
-- 🔲 **App y avisos de ventas** — a una cuenta digital todavía no le llega ningún
-  push.
+- ✅ **App y avisos de ventas** — HECHO (05/09/26). Y el pendiente estaba mal
+  escrito: los avisos **sí se escribían** desde el 03/09 —la venta, la
+  devolución, la entrega que falló y la caída a Free—. Lo que faltaba era poder
+  leerlos.
+
+  ⚠️ **La campanita existía sólo en la barra del celular.** En la computadora no
+  se veía ninguno, y armar un producto se hace en una computadora: alguien vendía
+  un viernes y se enteraba el lunes. Cuatro avisos escritos que nadie leía.
+
+  Ahora la campanita está también en escritorio —adentro del contenido y no
+  flotando, que es el molde de `DashboardLayout`: empuja en vez de tapar, y el
+  desplegable no lo recorta el `overflow-hidden` de la franja lateral—. Y los
+  cuatro tipos tienen su icono: caían todos en el de por defecto, así que una
+  VENTA se veía igual que una devolución.
+
+  **Y se prendió el push**, que estaba apagado con este motivo escrito: *"pedirle
+  permiso a alguien que después no va a recibir ninguna es prometer algo que no
+  se cumple; cuando haya una venta que justifique interrumpirlo, se saca esta
+  bandera"*. Ya la hay.
+
+  ⚠️ **Se manda UNO SOLO: el de la venta.** Ni la devolución, ni la entrega
+  fallida, ni la caída a Free — esos se leen al entrar. Un push es una
+  interrupción, y gastarla en algo que la persona no puede resolver en el momento
+  es la forma más rápida de que revoque el permiso, y entonces la próxima —la que
+  sí importa— no llega. Y dice **lo que le queda** después de la comisión, no el
+  bruto: el bruto ya lo ve en Mercado Pago.
+
+  14 chequeos en `avisos-digitales.check.ts`, y uno de ellos **busca los tipos en
+  el árbol** en vez de listarlos: el día que se agregue un aviso nuevo sin icono,
+  salta solo.
 - 🔲 **Zona de peligro** — ⚠️ la que menos se puede apurar: de la cuenta cuelgan
   pedidos y **permisos de descarga de gente que ya pagó**.
 ### ✅ Apariencia: claro y oscuro — HECHA (01/09/26)

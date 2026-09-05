@@ -52,6 +52,13 @@ const ICONS: Record<string, string> = {
   // Plan (dueño) — los emite el admin al cambiar el tier de una cuenta
   PLAN_UPGRADED: "👑",
   PLAN_DOWNGRADED: "📋",
+  /* Productos Digitales. ⚠️ Los cuatro se venían escribiendo desde el 03/09 sin
+     estar acá: caían en el icono por defecto, así que el aviso de una VENTA se
+     veía igual que el de una devolución. Es el que más se mira de los cuatro. */
+  DIGITAL_VENTA: "💸",
+  DIGITAL_DEVOLUCION: "↩️",
+  DIGITAL_ENTREGA_FALLIDA: "⚠️",
+  DIGITAL_DOWNGRADE: "📋",
 };
 
 function timeAgo(dateStr: string) {
