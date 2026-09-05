@@ -1,7 +1,7 @@
 import Link from "next/link";
 import {
   UserRound, Package, Receipt, ArrowRight, Globe, Pencil, Settings, Plus,
-  AlertTriangle, Clock, CircleDot, ExternalLink, Sparkles, ListChecks,
+  AlertTriangle, Clock, CircleDot, ExternalLink, Sparkles, ListChecks, ShoppingCart,
 } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth-session";
 import { prisma } from "@/lib/prisma";
@@ -218,13 +218,16 @@ export default async function DigitalesPage({
                 <Aviso
                   Icon={Clock}
                   tono="gris"
-                  href="/digitales/ventas?estado=esperando"
+                  /* A Carritos y no a Ventas: allá se ve la fila, acá se ve el
+                     correo de la persona y el botón para escribirle. El aviso
+                     tiene que llevar a donde se ACTÚA. */
+                  href="/digitales/carritos"
                   texto={
                     foto.total.esperando === 1
                       ? "1 compra empezada sin pagar"
                       : `${foto.total.esperando} compras empezadas sin pagar`
                   }
-                  bajada="Todavía pueden pagarse: no es una venta perdida."
+                  bajada="Podés ver quién es y escribirle: no es una venta perdida."
                 />
               )}
             </div>
@@ -311,6 +314,7 @@ export default async function DigitalesPage({
                   <Rapido href="/digitales/productos" Icon={Plus} texto="Cargar un producto" fuerte />
                   <Rapido href="/digitales/productos" Icon={Package} texto="Tus productos" />
                   <Rapido href="/digitales/ventas" Icon={Receipt} texto="Tus ventas" />
+                  <Rapido href="/digitales/carritos" Icon={ShoppingCart} texto="Carritos abandonados" />
                 </>
               )}
               <Rapido href="/digitales/configuracion" Icon={Settings} texto="Configuración" />

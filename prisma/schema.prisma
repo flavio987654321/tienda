@@ -796,6 +796,18 @@ model Order {
   digitalConsentIp    String?
   digitalConsentTexto String?
 
+  // ── El recordatorio del carrito abandonado (Productos Digitales, plan Pro) ──
+  //
+  // Cuándo se le mandó el mail a quien empezó la compra y no la terminó. Nulo
+  // mientras no se mandó ninguno, y se llena UNA sola vez: insistirle a alguien
+  // que no quiso comprar es correo no deseado, y encima con nuestro dominio de
+  // envío de por medio.
+  //
+  // Va en la orden y no en una tabla aparte porque acá el carrito abandonado ES
+  // la orden sin pagar — ver `lib/carritos-digitales`. Nula en toda venta de
+  // TIENDA, que tiene su propio `AbandonedCart`.
+  recordatorioAt DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

@@ -44,6 +44,31 @@ function numeroDe(titulo: string): string | null {
   return m ? m[1].toLowerCase().replace(/\s+/g, " ") : null;
 }
 
+/**
+ * El texto sin los comentarios del código.
+ *
+ * ⚠️ Hace falta y no es cosmético. Este chequeo busca "sección N" en el cuerpo
+ * de cada rol, y el cuerpo es **código fuente**: un comentario que explica por
+ * qué algo se escribió así —"la sección 2 bis de la solapa de Cliente sí habla
+ * de carritos, pero es de tiendas"— entraba como si fuera una referencia del
+ * documento, y el chequeo denunciaba una sección rota que ningún lector va a ver
+ * nunca. Pasó el 05/09/26 al documentar los carritos digitales.
+ *
+ * Se sacan las líneas que ARRANCAN con marca de comentario, que es como está
+ * escrito todo este proyecto. No se toca nada adentro de un texto entre comillas
+ * —ahí sí hay referencias de verdad— ni las direcciones con `https://`, que
+ * nunca empiezan renglón.
+ */
+function sinComentarios(fuente: string): string {
+  return fuente
+    .split("\n")
+    .filter((l) => {
+      const t = l.trimStart();
+      return !t.startsWith("//") && !t.startsWith("/*") && !t.startsWith("*");
+    })
+    .join("\n");
+}
+
 /** Solo lo que está adentro de `const CONTENT = { … };`. */
 function bloqueContenido(fuente: string): string {
   const desde = fuente.indexOf("const CONTENT = {");
@@ -99,7 +124,7 @@ for (const [nombre, ruta] of ARCHIVOS) {
     // "sección 8", "sección 8 ter", "seccion 7 quater" — pero NO las que
     // remiten al OTRO documento ("sección 6 de la Política de Privacidad"),
     // que se verifican aparte más abajo.
-    const refs = [...cuerpo.matchAll(new RegExp(String.raw`secci[oó]n (${ORDINAL})(?!\s+(?:de|del)\s+la\s+Pol)`, "gi"))]
+    const refs = [...sinComentarios(cuerpo).matchAll(new RegExp(String.raw`secci[oó]n (${ORDINAL})(?!\s+(?:de|del)\s+la\s+Pol)`, "gi"))]
       .map((m) => m[1].toLowerCase().replace(/\s+/g, " "));
 
     const rotas = [...new Set(refs)].filter((r) => !numeros.has(r));

@@ -1425,3 +1425,81 @@ export async function sendEntregaDigitalEmail({
      falta guardar. */
   return { error: r.error ? { message: r.error.message } : null };
 }
+
+/**
+ * El recordatorio de una compra que quedó por la mitad. Productos Digitales, Pro.
+ *
+ * ══════════════════════════════════════════════════════════════════════════
+ * SE MANDA UNA SOLA VEZ, Y ESO NO ES UNA LIMITACIÓN TÉCNICA
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * Insistirle a alguien que no quiso comprar es correo no deseado. Y el que queda
+ * mal no somos nosotros: es el negocio de quien vende, con su nombre en el
+ * asunto. Una sola vez es lo que se puede mandar sin quemar a nadie.
+ *
+ * ⚠️ Y no promete descuentos ni pone relojes. La competencia manda "última
+ * oportunidad" y "quedan 2 horas" a alguien que abandonó hace diez minutos, y
+ * eso es mentira escrita con el nombre de quien vende. Acá el mail dice lo único
+ * que es cierto: empezaste esto, acá está el link para terminarlo.
+ */
+export async function sendCarritoAbandonadoDigitalEmail({
+  to,
+  nombre,
+  producto,
+  total,
+  enlace,
+  vendedor,
+}: {
+  to: string;
+  nombre: string | null;
+  producto: string;
+  total: number;
+  /** La página de venta del producto. Nunca un link de pago viejo. */
+  enlace: string;
+  vendedor: string | null;
+}): Promise<ResultadoDeEnvio> {
+  if (!process.env.RESEND_API_KEY) {
+    return { error: { message: "RESEND_API_KEY no configurada" } };
+  }
+
+  const quien = vendedor?.trim() || "la tienda";
+  const hola = nombre?.trim() ? `Hola ${escapeHtml(nombre.trim())}` : "Hola";
+
+  const r = await resend.emails.send({
+    from: FROM,
+    to,
+    /* Sin signos de admiración ni emojis: es un recordatorio, no una promoción,
+       y en la bandeja tiene que parecer lo que es. */
+    subject: `Quedó pendiente tu compra de ${producto}`,
+    html: `
+      <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 16px;color:#111827;background:#fff;">
+        <p style="font-size:13px;color:#6b7280;margin:0 0 6px;font-weight:600;">${escapeHtml(quien)}</p>
+        <h1 style="font-size:21px;margin:0 0 20px;font-weight:800;color:#111827;">Tu compra quedó por la mitad</h1>
+
+        <p style="font-size:15px;line-height:1.6;color:#374151;margin:0 0 20px;">
+          ${hola}: empezaste a comprar <strong>${escapeHtml(producto)}</strong> y el pago no llegó a
+          completarse. Si querés, podés terminarlo cuando quieras — el link sigue andando.
+        </p>
+
+        <div style="display:flex;justify-content:space-between;padding:12px 0;margin-bottom:24px;border-top:1px solid #e5e7eb;border-bottom:1px solid #e5e7eb;">
+          <span style="font-size:14px;color:#6b7280;">${escapeHtml(producto)}</span>
+          <span style="font-size:14px;font-weight:700;color:#111827;">${fmt(total)}</span>
+        </div>
+
+        <div style="text-align:center;margin-bottom:28px;">
+          <a href="${enlace}"
+             style="display:inline-block;background:#111827;color:#fff;padding:14px 32px;border-radius:10px;font-weight:700;font-size:15px;text-decoration:none;">
+            Terminar la compra
+          </a>
+        </div>
+
+        <p style="font-size:12.5px;line-height:1.6;color:#9ca3af;margin:0;">
+          Si ya no te interesa, no hace falta que hagas nada: este es el único recordatorio que te
+          vamos a mandar por esta compra.
+        </p>
+      </div>
+    `,
+  });
+
+  return { error: r.error ? { message: r.error.message } : null };
+}

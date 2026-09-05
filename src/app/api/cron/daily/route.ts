@@ -24,6 +24,9 @@ import {
 import { despues } from "@/lib/despues";
 import { renovarTokensPorVencer } from "@/lib/facebook-token";
 import { rechazoDeCron } from "@/lib/cron-auth";
+import { sendCarritoAbandonadoDigitalEmail } from "@/lib/resend";
+import { PAGO_EN_CAMINO } from "@/lib/carritos-digitales";
+import { dominioDeLaPlataforma } from "@/lib/configuracion-digital";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "";
 
@@ -122,6 +125,117 @@ export async function GET(req: NextRequest) {
     });
   }
   result.abandonedCartsSent = (await Promise.all(enviosCarritos)).filter(Boolean).length;
+
+  // ── 2 bis. CARRITOS ABANDONADOS DE PRODUCTOS DIGITALES ─────────────────────
+  //
+  // Es la función que Pro vende, y por eso corre acá arriba: si el cron se corta
+  // por tiempo, lo que se pierde es lo de abajo. Ver el comentario de
+  // `maxDuration`.
+  //
+  // ⚠️ Acá un carrito abandonado ES una orden que nunca se pagó. En este
+  // ecosistema no hay carrito —se aprieta comprar, se escribe el correo y se sale
+  // derecho a Mercado Pago—, así que la orden en PENDING ya tiene todo. Ver
+  // `lib/carritos-digitales`.
+  //
+  // ── Las cuatro condiciones, y por qué cada una ────────────────────────────
+  //
+  //   1. **Sólo Pro, y con el plan al día.** Es lo que se cobra. Ver los planes.
+  //   2. **Una sola vez por compra** (`recordatorioAt: null`). Insistirle a quien
+  //      no quiso comprar es correo no deseado, y el que queda mal es el negocio
+  //      de quien vende, con su nombre en el asunto.
+  //   3. **El pago no puede estar EN CAMINO.** Mercado Pago deja pagar en
+  //      efectivo con un cupón que dura días: escribirle "te olvidaste de pagar"
+  //      a alguien que tiene el cupón en la mano es lo peor que puede hacer este
+  //      mail. El webhook anota esos estados justamente para esto.
+  //   4. **Ni muy nueva ni muy vieja.** Menos de 3 horas puede ser alguien que
+  //      está pagando; más de 7 días, escribirle es raro.
+  const desdeCarritoD = new Date(now.getTime() - 3 * 60 * 60 * 1000);
+  const hastaCarritoD = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+  const carritosDigitales = await prisma.order.findMany({
+    where: {
+      status: "PENDING",
+      recordatorioAt: null,
+      createdAt: { lte: desdeCarritoD, gte: hastaCarritoD },
+      // El pago no está en camino. `OR` con `is: null` porque una orden puede no
+      // tener fila de pago todavía, y esa también es un abandono.
+      OR: [
+        { payment: { is: null } },
+        { payment: { status: { notIn: [...PAGO_EN_CAMINO] } } },
+      ],
+      store: {
+        owner: {
+          role: "DIGITAL",
+          subscription: { tier: "PRO", status: { in: ["ACTIVE", "TRIAL"] } },
+        },
+      },
+    },
+    // Un tope: el cron entero tiene 60 segundos y esto no puede comerse el
+    // presupuesto de todo lo que viene abajo. Lo que no entre sale mañana — el
+    // `recordatorioAt` sigue en null, así que no se pierde ninguno.
+    take: 30,
+    orderBy: { createdAt: "asc" },
+    select: {
+      id: true, total: true,
+      buyer: { select: { email: true, name: true } },
+      store: { select: { name: true, checkoutName: true } },
+      items: {
+        select: {
+          product: {
+            select: {
+              id: true, name: true, rolDigital: true, isActive: true,
+              slugDigital: true, dominioPropio: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  const enviosCarritosD: Promise<boolean>[] = [];
+  for (const orden of carritosDigitales) {
+    const principal = orden.items.find((i) => i.product.rolDigital === "PRINCIPAL")?.product;
+    const correo = orden.buyer.email;
+
+    // Sin producto principal, sin correo, o con el producto despublicado no hay
+    // nada que mandar: el link llevaría a una página que no abre. Se marca igual
+    // para no volver a mirarlo todos los días.
+    const sePuede = Boolean(principal && principal.isActive && correo);
+
+    if (sePuede && principal && correo) {
+      // Su propia dirección si la tiene, que es la que la persona vio. El dominio
+      // primero: es el que reconoce si llegó por un anuncio.
+      const enlace = principal.dominioPropio
+        ? `https://${principal.dominioPropio}`
+        : principal.slugDigital
+          ? `https://${principal.slugDigital}.${dominioDeLaPlataforma()}`
+          : `${APP_URL}/p/${principal.id}`;
+
+      enviosCarritosD.push(
+        sendCarritoAbandonadoDigitalEmail({
+          to: correo,
+          nombre: orden.buyer.name,
+          producto: principal.name,
+          total: orden.total,
+          enlace,
+          // El nombre del checkout es el que la persona vio al pagar; el de la
+          // tienda es de puertas adentro y no lo reconocería.
+          vendedor: orden.store.checkoutName || orden.store.name,
+        })
+          .then((r) => {
+            if (r.error) console.error("[cron] carrito digital:", r.error.message);
+            return !r.error;
+          })
+          .catch((e) => { console.error("[cron] carrito digital:", e); return false; }),
+      );
+    }
+
+    // ⚠️ Se marca SIEMPRE, salga o no salga el mail. Si sólo se marcara al salir
+    // bien, una dirección de correo rota se reintentaría todos los días para
+    // siempre — y del otro lado hay una cuota de envío que se gasta igual.
+    await prisma.order.update({ where: { id: orden.id }, data: { recordatorioAt: now } });
+  }
+  result.carritosDigitalesSent = (await Promise.all(enviosCarritosD)).filter(Boolean).length;
 
   // ── 3. RECORDATORIOS DE RETIROS PENDIENTES ─────────────────────────────────
   const halfDay = 12 * 60 * 60 * 1000;
@@ -229,7 +343,21 @@ export async function GET(req: NextRequest) {
     // confirmarse: el webhook solo toca las PENDING, así que borrar una viva
     // haría que un pago real no se registre nunca.
     const ago7d = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-    const [sessions, clicks, notifications, adminLogs, coupons, storeViews, oldCarts, staleDonations, chatSasha] = await Promise.all([
+    /* ⚠️ Las compras digitales que nunca se pagaron. Acá el carrito abandonado ES
+       la orden sin pagar, así que sin esto quedaban PARA SIEMPRE con el correo y
+       el nombre de alguien que ni siquiera llegó a comprar. La política de
+       privacidad promete 45 días —los mismos que los carritos de tienda— y esta
+       línea es lo que hace que esa promesa sea cierta.
+
+       ⚠️ Y sólo de cuentas DIGITALES. Una orden PENDING de una tienda ya
+       descontó stock al crearse: borrarla dejaría el inventario mal para
+       siempre, y eso se cancela por otro camino que sí lo devuelve.
+
+       Borrar la orden se lleva sus ítems y su fila de pago por cascada. No hay
+       permiso de descarga que perder: esos existen sólo desde que se acredita. */
+    const ago45d = new Date(now.getTime() - 45 * 24 * 60 * 60 * 1000);
+
+    const [sessions, clicks, notifications, adminLogs, coupons, storeViews, oldCarts, staleDonations, chatSasha, comprasSinPagar] = await Promise.all([
       prisma.session.deleteMany({ where: { expires: { lt: now } } }),
       prisma.affiliateClick.deleteMany({ where: { createdAt: { lt: ago90d } } }),
       prisma.notification.deleteMany({ where: { read: true, createdAt: { lt: ago30d } } }),
@@ -238,6 +366,13 @@ export async function GET(req: NextRequest) {
       prisma.storeView.deleteMany({ where: { date: { lt: ago1y.toISOString().slice(0, 10) } } }),
       prisma.abandonedCart.deleteMany({ where: { recoveredAt: null, lastActivityAt: { lt: new Date(now.getTime() - 45 * 24 * 60 * 60 * 1000) } } }),
       prisma.donation.deleteMany({ where: { status: "PENDING", createdAt: { lt: ago7d } } }),
+      prisma.order.deleteMany({
+        where: {
+          status: "PENDING",
+          createdAt: { lt: ago45d },
+          store: { owner: { role: "DIGITAL" } },
+        },
+      }),
       // El historial de Sasha no se limpiaba nunca: la charla se resetea en
       // PANTALLA cada día (se filtra por `day`) pero las filas quedaban para
       // siempre. Con varias tiendas escribiendo todos los días, eso crece sin
@@ -254,7 +389,7 @@ export async function GET(req: NextRequest) {
         },
       }),
     ]);
-    result.cleanup = { sessions: sessions.count, clicks: clicks.count, notifications: notifications.count, adminLogs: adminLogs.count, coupons: coupons.count, storeViews: storeViews.count, oldCarts: oldCarts.count, staleDonations: staleDonations.count, chatSasha: chatSasha.count };
+    result.cleanup = { sessions: sessions.count, clicks: clicks.count, notifications: notifications.count, adminLogs: adminLogs.count, coupons: coupons.count, storeViews: storeViews.count, oldCarts: oldCarts.count, staleDonations: staleDonations.count, chatSasha: chatSasha.count, comprasSinPagar: comprasSinPagar.count };
   }
 
   // ── 6. PREMIOS MENSUALES (solo día 1 del mes) ──────────────────────────────

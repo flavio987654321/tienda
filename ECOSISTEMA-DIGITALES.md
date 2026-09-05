@@ -395,6 +395,67 @@ es plata suya de verdad.
 Todo esto **ya existe**: modelo `AbandonedCart` (con `reminderSentAt` y
 `recoveredAt`), la pantalla `/dashboard/carritos-abandonados` y su API.
 
+### ✅ HECHO (05/09/26) — y NO se copió el modelo de tiendas
+
+⚠️ La frase de arriba —"todo esto ya existe"— era una trampa. Sí existe, pero
+**del lado de tiendas, y ahí un carrito abandonado es otra cosa**.
+
+Allá `AbandonedCart` se llena mientras la persona mete cosas en el carrito, antes
+de ir a pagar. **Acá no hay carrito**: se aprieta comprar, se escribe el correo y
+se sale derecho a Mercado Pago. En ese momento ya existe una `Order` en PENDING
+con el correo, el producto y el monto.
+
+O sea que el dato que del otro lado hay que ir a juntar, **acá ya está** — y es
+mejor dato: no es alguien que miró, es alguien que llegó hasta la pantalla de
+pago. Copiar el modelo habría significado guardar dos veces lo mismo y tener dos
+verdades que se pueden contradecir.
+
+**Acá un carrito abandonado ES una orden que nunca se pagó.**
+
+#### ⚠️ Lo que casi rompe esto: el pago en efectivo
+
+Mercado Pago deja pagar en un kiosco, con un cupón que dura días. Esa compra
+queda pendiente y **se va a pagar**. Contarla como abandonada es escribirle *"te
+olvidaste de pagar"* a alguien que tiene el cupón en la mano — y el mail sale con
+el nombre de quien vende en el asunto.
+
+Y en nuestra base **eran indistinguibles**: el webhook tiraba a la basura todo lo
+que no fuera `approved`, así que "no quiso pagar" y "va a pagar mañana" quedaban
+las dos como una orden PENDING a secas. Ahora el webhook anota ese estado en la
+fila de pago —sin tocar la orden, que sigue PENDING— y los que están en camino se
+cuentan aparte y **nunca reciben el mail**.
+
+#### Qué recibe cada plan
+
+- ✅ **Ver la lista** — los tres planes, en `/digitales/carritos`. Con el correo
+  para copiar y un enlace que abre el programa de correo **de quien vende**, con
+  su propia dirección como remitente. Nosotros no mandamos nada ahí.
+- ✅ **El recordatorio automático** — sólo Pro, con el plan al día. Sale del cron
+  diario, **una sola vez por compra**, con el enlace a la dirección propia del
+  producto. No promete descuentos ni pone relojes: "última oportunidad" a alguien
+  que abandonó hace un rato es mentira escrita con el nombre de quien vende.
+
+Y la marca de "ya se le escribió" se pone **salga o no salga el mail**: marcando
+sólo al salir bien, una dirección rota se reintentaría todos los días para
+siempre, gastando cuota de envío.
+
+#### ⚠️ Y hubo que escribir la política ANTES de que saliera el primer mail
+
+La solapa digital de `/privacidad` **no tenía una sola mención a la palabra
+"carrito"**, y la función que le escribe a esa gente ya estaba escrita. Se agregó
+la sección "3 bis. Compras que alguien empezó y no terminó" con qué se guarda,
+con qué base legal (interés legítimo, art. 5 inc. f de la 25.326), que se manda
+una sola vez y que nunca se le escribe a quien tiene el pago en camino.
+
+Y ahí apareció otra: **esas compras sin pagar no se borraban nunca.** Quedaban
+para siempre con el correo de alguien que ni siquiera llegó a comprar. La
+política promete 45 días —los mismos que los carritos de tienda— así que se
+escribió la limpieza que lo cumple, y sólo para cuentas digitales: una orden
+PENDING de tienda ya descontó stock al crearse, y borrarla dejaría el inventario
+mal para siempre.
+
+32 chequeos nuevos en `carritos-digitales.check.ts`.
+
 ---
 
 ## 3. ⚠️ Cómo se unen el Free, los 7 días y el período de gracia
@@ -1727,7 +1788,8 @@ para generar.
 - ✅ **El panel** — HECHO (04/09/26). Era "Inicio" y estaba vacío: tres atajos y
   una frase. Ahora tiene **dos niveles** —todo junto o un producto a la vez—, la
   plata del mes, las direcciones de cada página para copiar y los accesos rápidos
-  a un costado. Le falta todavía **los carritos abandonados**, que no existen aún.
+  a un costado. *(Y los carritos abandonados, hechos el 05/09/26, tienen su
+  propia pantalla y su aviso en el panel.)*
 - 🔲 **Estadísticas**, cuando haya qué mostrar.
 - 🔲 **El asistente de la primera vez** (los 5 pasos de la competencia). Se diseña
   ahora, se construye último: depende de las Fases 4 y 5.

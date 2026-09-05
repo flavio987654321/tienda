@@ -1,0 +1,13 @@
+-- El recordatorio del carrito abandonado, para Productos Digitales.
+--
+-- Acá un carrito abandonado ES una orden que nunca se pagó: en este ecosistema
+-- no hay carrito, se aprieta comprar y se sale derecho a Mercado Pago, así que
+-- la orden en PENDING ya tiene el correo, el producto y el monto. Por eso la
+-- marca del recordatorio va en la orden y no en una tabla nueva.
+--
+-- Se llena UNA sola vez: insistirle a quien no quiso comprar es correo no
+-- deseado, y encima con nuestro dominio de envío de por medio.
+--
+-- Aditiva e idempotente: agrega una columna que admite nulos, así que ninguna
+-- fila existente cambia y volver a correrla no hace nada.
+ALTER TABLE "Order" ADD COLUMN IF NOT EXISTS "recordatorioAt" TIMESTAMP(3);

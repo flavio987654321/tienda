@@ -9,7 +9,7 @@ import { useAuth } from "@/components/AuthProvider";
 import NotificationBell from "@/components/NotificationBell";
 import { COPY_DIGITAL, type TierDigital } from "@/lib/planes-digitales";
 import {
-  Home, UserRound, Package, Receipt, Settings, Menu, X, LogOut, Loader2, ChevronRight, Sparkles,
+  Home, UserRound, Package, Receipt, Settings, Menu, X, LogOut, Loader2, ChevronRight, Sparkles, ShoppingCart,
 } from "lucide-react";
 
 /* ── Las pantallas del panel, en UNA sola lista ──────────────────────────────
@@ -30,6 +30,10 @@ const LINKS: { href: string; label: string; Icon: React.ElementType }[] = [
      alguien entra al panel —¿vendí?—. Enterrada abajo obligaría a pasar por
      Configuración para llegar a lo que más se mira. */
   { href: "/digitales/ventas", label: "Ventas", Icon: Receipt },
+  /* Los carritos van pegados a Ventas porque son la otra cara de lo mismo: una
+     es la plata que entró y la otra la que quedó en la puerta. Y va DESPUÉS,
+     no antes: lo primero que alguien quiere ver es lo que sí vendió. */
+  { href: "/digitales/carritos", label: "Carritos", Icon: ShoppingCart },
   /* Configuración es lo del NEGOCIO —con qué cobrás, cómo te ve el comprador— y
      Mi cuenta es lo de la persona. Van separadas y en este orden: sin cobros
      conectados no se vende nada, así que lo primero que hay que encontrar es

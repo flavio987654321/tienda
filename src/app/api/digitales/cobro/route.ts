@@ -198,7 +198,39 @@ async function acreditar(idDelPago: string) {
     return;
   }
 
-  if (pago.status !== "approved") return;
+  /* ── Lo que todavía no se acreditó, pero está en camino ──────────────────
+   *
+   * ⚠️ Esto antes salía por acá sin dejar rastro, y esa falta se nota en OTRA
+   * pantalla: en nuestra base, "no quiso pagar" y "va a pagar en un kiosco"
+   * quedaban idénticos, los dos como una orden PENDING a secas.
+   *
+   * Mercado Pago deja pagar en efectivo con un cupón que dura días. Esa compra
+   * queda pendiente y **se va a pagar**. Contarla como carrito abandonado sería
+   * escribirle "te olvidaste de pagar" a alguien que tiene el cupón en la mano
+   * —y con nuestro dominio de envío de por medio—. Ver `lib/carritos-digitales`.
+   *
+   * Se anota en la FILA DE PAGO y nada más: **la orden no se toca**. Sigue
+   * PENDING hasta que haya un pago aprobado de verdad, que es lo único que
+   * entrega el archivo y cobra la comisión. Y la condición va adentro del
+   * `where`, así que un aviso viejo que llega tarde no pisa una orden que
+   * mientras tanto se pagó o se canceló. */
+  if (pago.status !== "approved") {
+    const enCamino: Record<string, string> = {
+      pending: "PENDING_MP",
+      in_process: "IN_PROCESS",
+      authorized: "AUTHORIZED",
+    };
+    const anotar = enCamino[pago.status ?? ""];
+    if (anotar) {
+      await prisma.payment
+        .updateMany({
+          where: { orderId: ordenId, status: "PENDING", order: { status: "PENDING" } },
+          data: { status: anotar, externalId: idDelPago },
+        })
+        .catch((e) => console.error("[digital-cobro] no se pudo anotar el pago en camino", { ordenId, e }));
+    }
+    return;
+  }
 
   /* ── Lo que sí ─────────────────────────────────────────────────────────── */
 

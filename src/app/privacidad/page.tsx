@@ -410,6 +410,27 @@ const CONTENT = {
           "Quién responde por los datos de tus compradores: sobre los datos de TU cuenta, el responsable es TiendaApps. Sobre los datos de quien te compra —su email, su nombre— el responsable sos VOS, y TiendaApps es solo el encargado que los procesa para entregarle el archivo y mostrártelos en tu panel. La diferencia importa cuando un comprador quiere acceder, corregir o borrar sus datos: ese pedido te llega a vos, y sos vos quien tiene que atenderlo. Si además usás esos datos para otra cosa —mandarle promociones, sumarlo a una lista— ese uso es tuyo y respondés vos por él ante la Ley 25.326.",
         ],
       },
+      /* ⚠️ LA SOLAPA DIGITAL NO DECÍA UNA PALABRA DE ESTO —cero menciones a la
+       * palabra "carrito"— y la función que le escribe a esa gente ya está
+       * escrita. Agregado el 05/09/26, ANTES de que salga el primer mail.
+       *
+       * La sección 2 bis de la solapa de Cliente sí habla de carritos, pero es
+       * de tiendas: habla de un carrito con varios productos, de un cupón de
+       * descuento y de WhatsApp. Acá no hay nada de eso, y lo que sí hay —una
+       * orden sin pagar— se guarda distinto. */
+      {
+        title: "3 bis. Compras que alguien empezó y no terminó",
+        body: "Cuando alguien completa su correo para comprarte y no llega a pagar, esa compra queda guardada. Vos la ves en tu panel y, si tenés plan Pro, le mandamos un recordatorio en tu nombre.",
+        list: [
+          "Qué se guarda: el correo y el nombre que esa persona escribió, qué producto iba a comprar y por cuánto. Es lo mismo que habría quedado si el pago se completaba.",
+          "Qué ves vos: eso mismo, en la pantalla de Carritos abandonados, en los tres planes. Podés escribirle desde tu propio correo.",
+          "El recordatorio automático (plan Pro): lo manda TiendaApps desde su servidor, con el nombre de tu negocio en el asunto y el enlace a tu página. Se manda UNA sola vez por compra y nunca más: insistirle a quien no quiso comprar es correo no deseado.",
+          "Nunca se le escribe a quien tiene el pago en camino —efectivo o en revisión—: esa compra todavía se puede pagar sola.",
+          "Base legal: interés legítimo en recuperar una operación que la propia persona empezó (art. 5 inc. f, Ley 25.326). No es publicidad: no se le ofrece otra cosa ni se la suma a ninguna lista.",
+          "Cuánto dura: si la compra no se completa, se elimina sola a los 45 días. Después de eso no queda ni el correo ni el registro del intento.",
+          "Cómo frenarlo: escribiendo a marketplacemitienda@gmail.com se borra esa compra sin terminar y no sale ningún recordatorio.",
+        ],
+      },
       {
         title: "4. Compartir con terceros",
         body: "No vendemos tus datos. Los compartimos con:",
@@ -505,6 +526,9 @@ const CONTENT = {
           "Para qué: la tienda puede enviarte un único email recordándote el carrito, y contactarte por WhatsApp si dejaste tu teléfono. Puede ofrecerte un cupón de descuento para que termines la compra.",
           "Base legal: interés legítimo en recuperar una operación que vos iniciaste (art. 5 inc. f, Ley 25.326). No es publicidad: no se usa para enviarte novedades ni ofertas de otros productos.",
           "Cuánto dura: si no completás la compra, el carrito se elimina automáticamente a los 45 días de tu última actividad.",
+          /* Agregado el 05/09/26: lo de arriba es de una tienda con carrito. Una
+             compra de un producto digital no pasa por ahí y funciona distinto. */
+          "Si era la compra de un producto digital (un ebook, una guía): no hay carrito, así que lo que queda guardado es la compra sin pagar con tu correo, tu nombre y qué ibas a comprar. Quien vende la ve en su panel. Si tiene plan Pro, TiendaApps le manda de su parte UN único recordatorio con el enlace para terminarla, y nunca más. Si el pago estaba en camino —efectivo o en revisión— no se manda ninguno. Esa compra sin pagar también se elimina sola a los 45 días.",
           "Cómo frenarlo: escribiendo a marketplacemitienda@gmail.com pedís que se borre el carrito y no recibís el recordatorio. También podés pedírselo directamente a la tienda.",
         ],
       },

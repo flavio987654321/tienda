@@ -89,6 +89,19 @@
 //     alguien recibe por haber pagado, aunque su precio sea cero: le corren las
 //     mismas reglas de entrega, devolución y responsabilidad que al principal.
 //     Sin esto, el archivo que más se regala era el único sin reglas escritas.
+//   · Y la POLÍTICA DE PRIVACIDAD, "3 bis. Compras que alguien empezó y no
+//     terminó" (05/09). La solapa digital no tenía una sola mención a la palabra
+//     "carrito" y la función que le escribe a esa gente ya estaba escrita:
+//     alguien deja la compra por la mitad, el vendedor le ve el correo en su
+//     panel y —en Pro— nosotros le mandamos un mail en su nombre. Nada de eso
+//     estaba declarado. Se escribe qué se guarda, con qué base legal (interés
+//     legítimo, art. 5 inc. f de la 25.326), que el recordatorio sale UNA sola
+//     vez y que nunca se le escribe a quien tiene el pago en camino.
+//     Y se promete que esa compra sin pagar se borra a los 45 días, lo que
+//     obligó a escribir la limpieza que lo cumple: hasta ahora quedaban PARA
+//     SIEMPRE con el correo de alguien que ni siquiera llegó a comprar.
+//     El mismo párrafo se agrega a la solapa de Cliente, que hablaba sólo de
+//     carritos de tienda —con cupón y WhatsApp—, cosas que acá no existen.
 //   ⚠️ Siguen sin escribirse, y siguen siendo decisión del titular: limitación de
 //     responsabilidad, ley aplicable y jurisdicción, y la cláusula de no garantía
 //     de resultados. Y este texto todavía no lo leyó un abogado de consumo.
@@ -162,6 +175,7 @@ export const CURRENT_TERMS_SUMMARY: string[] = [
   "Y si estás en Pro y conectás un dominio tuyo, ahora dice quién es dueño de qué: el dominio lo comprás y lo pagás vos donde quieras, no lo renovamos nosotros, y si lo perdés por no renovarlo no somos responsables. Lo podés desconectar cuando quieras, aunque tu plan esté vencido, porque es tuyo. Tu dirección de tiendaapps sigue funcionando igual: el dominio se suma, no la reemplaza.",
   "Si usás la IA para que te escriba un ebook, quedó escrito qué es eso: un borrador tuyo. Puede tener errores o datos inventados, no es asesoramiento profesional, y leerlo entero antes de venderlo es tuyo. El resultado es tuyo y lo podés vender, pero no te garantizamos que sea único.",
   "Y los bonos y los upsells ahora están nombrados: aunque el bono sea gratis, es parte de lo que la persona compró, y le corren las mismas reglas de entrega y de devolución que al archivo principal.",
+  "Si alguien empieza a comprarte y no llega a pagar, ahora está escrito qué pasa con sus datos: vos le ves el correo en tu panel, y si tenés plan Pro le mandamos un único recordatorio de tu parte —nunca a quien tiene el pago en camino, como un pago en efectivo—. Esa compra sin pagar se borra sola a los 45 días.",
 ];
 
 /**
