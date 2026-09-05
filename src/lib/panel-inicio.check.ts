@@ -279,6 +279,44 @@ check("PAN-AF",
   /grid lg:grid-cols-\[minmax\(0,1fr\)_270px\]/.test(pagina),
   "las dos columnas son sólo de pantalla grande; en el teléfono se apilan");
 
+/* ══════════════════════════════════════════════════════════════════════════
+   LA PRIMERA PANTALLA DICE LO QUE LA HERRAMIENTA HACE
+   ══════════════════════════════════════════════════════════════════════════
+
+   ⚠️ Decía "Cargá tu producto, publicá su página y cobrá con Mercado Pago": el
+   camino A MANO, en la primera pantalla de una cuenta nueva. Los pasos de abajo
+   ya ofrecían la IA, pero se leen después — y el párrafo de arriba es el que
+   decide si sigue leyendo. Alguien que entra y lee "cargá tu producto" ya
+   entendió que le toca a ella.
+
+   Se chequea el BLOQUE de la primera vez y no el archivo entero: el resto del
+   panel nombra la IA por otros motivos y el chequeo pasaría sin mirar nada. */
+const arranca = pagina.indexOf("if (productos.length === 0)");
+const termina = pagina.indexOf("No lleva `min-h-screen`");
+const primeraVez = arranca >= 0 && termina > arranca ? pagina.slice(arranca, termina) : "";
+
+/* ⚠️ Las dos marcas se comprueban ANTES de cortar. Con `indexOf` devolviendo -1
+   el corte se lleva medio archivo y el chequeo pasa sin mirar lo que dice
+   mirar — es la misma trampa que ya apareció seis veces en este proyecto. Si
+   alguien renombra una de las dos, esto se pone en rojo y se arregla el corte,
+   que es lo correcto. */
+check("PAN-AG0", primeraVez.length > 200 && primeraVez.length < 4000,
+  "el bloque de la primera vez se encontró entero");
+
+check("PAN-AG",
+  /\bIA\b/.test(primeraVez),
+  "la primera pantalla nombra la IA, no sólo el camino a mano");
+
+/* Y sigue prometiendo lo único que ningún competidor hace por vos: la entrega.
+   Es la mitad que NO se puede perder al reescribir el arranque. */
+/* Dos palabras sueltas y no la frase entera, por dos motivos: el texto se parte
+   en renglones distintos según dónde caiga —una frase escrita tal cual se pone
+   en rojo por un salto de línea que no cambia nada— y lo que hay que cuidar es
+   LA PROMESA, no la redacción. Entrega + apenas: se entrega solo, al pagar. */
+check("PAN-AH",
+  /entrega/.test(primeraVez) && /apenas/.test(primeraVez),
+  "y no se perdió la promesa de la entrega automática");
+
 console.log(fallos === 0
   ? "\nok — la plata da lo mismo que en Ventas, y cada producto se lleva lo suyo"
   : `\nFALLA — ${fallos} chequeo(s) del panel`);

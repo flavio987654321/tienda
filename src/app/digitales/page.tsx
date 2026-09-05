@@ -109,9 +109,23 @@ export default async function DigitalesPage({
           <h1 className="text-2xl sm:text-3xl font-black text-gray-950 panel-oscuro:text-gray-50">
             Tu cuenta ya está lista
           </h1>
+          {/* ⚠️ ARRANCA POR LA IA, y no es adorno: es la primera pantalla de una
+              cuenta nueva y decía "Cargá tu producto, publicá su página y cobrá
+              con Mercado Pago" — o sea, describía el camino A MANO justo en la
+              pantalla que existe para vender el otro.
+
+              Los pasos de abajo ya lo dicen bien ("Armarlo con IA"), pero se
+              leen después: el párrafo de arriba es lo que decide si sigue
+              leyendo. Alguien que entra por primera vez y lee "cargá tu
+              producto" ya entendió que le toca a ella.
+
+              Es cierto en los tres planes: Free nace con 3 generaciones, que
+              alcanzan para armar el embudo y escribir la página. Por eso se
+              puede prometer acá sin letra chica. */}
           <p className="mt-3 text-gray-500 panel-oscuro:text-gray-400 leading-relaxed">
-            Cargá tu producto, publicá su página y cobrá con Mercado Pago. La entrega del archivo
-            la hacemos nosotros: apenas se acredita el pago, sale solo.
+            Escribí de qué se trata lo tuyo y la IA te arma el producto, un bono de regalo y un
+            upsell. Vos los editás, subís el archivo y publicás; la entrega la hacemos nosotros
+            apenas te pagan.
           </p>
         </div>
 
