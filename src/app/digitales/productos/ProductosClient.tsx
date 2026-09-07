@@ -11,7 +11,8 @@ import {
   COPY_ROL, topeDe, loQueFalta, validarCampos, LARGO_TITULO, LARGO_DESCRIPCION,
   type RolDigital,
 } from "@/lib/productos-digitales";
-import { MAX_PDF_MB, TIPO_PDF, validarSubida, avisoDePeso } from "@/lib/subida-digital";
+import { MAX_PDF_MB, avisoDePeso } from "@/lib/subida-digital";
+import { subirPdfDigital } from "@/lib/subir-pdf-digital";
 /* ⚠️ De `configuracion-digital` y NO de `direccion-digital`: aquel importa
    Prisma, y esto es una pantalla. */
 import { dominioDeLaPlataforma } from "@/lib/configuracion-digital";
@@ -595,71 +596,29 @@ export default function ProductosClient({
     if (enVuelo.current) return;
     setError("");
 
-    /* La MISMA función que usa el servidor. No lo reemplaza —lo que valida el
-       navegador no protege nada— pero evita empezar a subir 60 MB para que el
-       servidor los rechace al final. */
-    const problema = validarSubida({ tipo: file.type, tamano: file.size });
-    if (problema) {
-      setError(problema);
-      return;
-    }
-
     enVuelo.current = true;
     setSubiendoArchivo(p.id);
     const soltar = () => { enVuelo.current = false; setSubiendoArchivo(null); };
-    try {
-      const permisoRes = await fetch("/api/digitales/archivo/firma", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productoId: p.id, tipo: file.type, tamano: file.size }),
-      });
-      const permiso = await permisoRes.json().catch(() => ({}));
-      if (!permisoRes.ok || !permiso.urlDeSubida || !permiso.ruta) {
-        setError(permiso.error ?? "No pudimos preparar la subida.");
-        soltar();
-        return;
-      }
 
-      const subida = await fetch(permiso.urlDeSubida as string, {
-        method: "PUT",
-        headers: { "Content-Type": TIPO_PDF },
-        body: file,
-      });
-      if (!subida.ok) {
-        /* Supabase contesta con su propio texto. Se registra el crudo y se
-           muestra algo que se entienda: la vez pasada, en los videos, un error
-           de este paso llegó como "no se pudo" a secas y no había forma de saber
-           que el problema era el tope del bucket. */
-        console.error("[archivo] Supabase rechazó la subida:", subida.status, await subida.text().catch(() => ""));
-        setError("El archivo no se pudo subir. Probá de nuevo.");
-        soltar();
-        return;
-      }
+    /* ⚠️ Los tres llamados encadenados viven en `lib/subir-pdf-digital`, no acá:
+       el recibimiento de una cuenta nueva sube el archivo igual, y escrito dos
+       veces el día que cambie se entera uno y el otro no. */
+    const r = await subirPdfDigital(p.id, file);
 
-      const cierre = await fetch("/api/digitales/archivo/confirmar", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productoId: p.id, ruta: permiso.ruta, nombre: file.name }),
-      });
-      const datos = await cierre.json().catch(() => ({}));
-      if (!cierre.ok) {
-        setError(datos.error ?? "El archivo subió pero no lo pudimos guardar.");
-        soltar();
-        return;
-      }
-
-      /* El aviso del peso NO se muestra acá. Se mostraba con `setError` y después
-         venía este `reload`, así que se perdía siempre: la persona no lo vio
-         nunca. Ahora vive en la tarjeta, calculado del peso guardado — se ve cada
-         vez que mira el producto y no una sola vez, que además es cuando sirve. */
-      window.location.reload();
-      /* El cerrojo NO se suelta acá: la página se está yendo, y devolverle el
-         botón durante ese rato es ofrecerle subir dos veces. Mismo criterio que
-         guardar, publicar y borrar. */
-    } catch {
-      setError("No pudimos subir el archivo. Revisá tu conexión.");
+    if (!r.ok) {
+      setError(r.error);
       soltar();
+      return;
     }
+
+    /* El aviso del peso NO se muestra acá. Se mostraba con `setError` y después
+       venía este `reload`, así que se perdía siempre: la persona no lo vio
+       nunca. Ahora vive en la tarjeta, calculado del peso guardado — se ve cada
+       vez que mira el producto y no una sola vez, que además es cuando sirve. */
+    window.location.reload();
+    /* El cerrojo NO se suelta acá: la página se está yendo, y devolverle el
+       botón durante ese rato es ofrecerle subir dos veces. Mismo criterio que
+       guardar, publicar y borrar. */
   }
 
   const principales = productos.filter((p) => p.rol === "PRINCIPAL");

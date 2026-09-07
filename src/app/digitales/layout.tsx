@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import { getCurrentUser } from "@/lib/auth-session";
 import { panelDeRol, nombreDeCuenta } from "@/lib/panel-de-rol";
 import PWAManager from "@/components/PWAManager";
+import { estadoDelRecibimiento } from "@/lib/recibimiento";
+import { estadoDelCupo } from "@/lib/cupo-ia";
+import Recibimiento from "./Recibimiento";
 import PanelSplash from "@/components/panel/PanelSplash";
 import PanelRolAjeno from "@/components/panel/PanelRolAjeno";
 import LoginGate from "@/components/panel/LoginGate";
@@ -107,6 +110,43 @@ export default async function DigitalesLayout({ children }: { children: React.Re
     select: { tier: true },
   });
   const tier = (sub?.tier ?? "FREE") as TierDigital;
+
+  /* ══════════════════════════════════════════════════════════════════════════
+     EL RECIBIMIENTO: HASTA QUE LA CUENTA NO ESTÁ ARMADA, EL PANEL NO EXISTE
+     ══════════════════════════════════════════════════════════════════════════
+
+     Sin barra lateral, sin Configuración, sin Mi cuenta, sin números: la
+     pantalla entera son los cinco pasos, y el panel aparece recién cuando están
+     los cinco — con el producto, el archivo, la página, el cobro y la
+     publicación ya resueltos.
+
+     ⚠️ Va en el LAYOUT y no en cada pantalla, y ahí está la gracia: cubre las
+     nueve de una sola vez. Puesto pantalla por pantalla, alcanzaría con agregar
+     la décima y olvidarse para que una cuenta a medio armar entre por esa
+     puerta — y entraría a un panel de tres ceros, que es justo lo que esto
+     viene a evitar.
+
+     El costo es una consulta más por cada pantalla del panel que se abra. Es a
+     propósito y está medida: son dos lecturas por índice (`Store.ownerId` y el
+     principal más viejo). La alternativa era guardar una bandera de "ya
+     terminó", y esa se desincroniza el día que alguien borra su único producto:
+     diría "listo" con la cuenta vacía. Ver `lib/recibimiento`. */
+  const recibimiento = await estadoDelRecibimiento(user.id);
+  if (!recibimiento.listo) {
+    return (
+      <>
+        <script dangerouslySetInnerHTML={{ __html: SCRIPT_TEMA }} />
+        <TemaDelPanel />
+        <PWAManager appVersion={DIGITALES_VERSION} versionKey="pwa_digitales_version" scope="/digitales" />
+        <PanelSplash nombre="TiendaApps Digitales" />
+        <Recibimiento
+          pasos={recibimiento.pasos}
+          productoId={recibimiento.productoId}
+          cupoIA={await estadoDelCupo(user.id, tier)}
+        />
+      </>
+    );
+  }
 
   return (
     <div className="h-screen bg-gray-50 panel-oscuro:bg-gray-950 flex overflow-hidden text-gray-900 panel-oscuro:text-gray-100 transition-colors">
