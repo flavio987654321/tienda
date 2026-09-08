@@ -1,11 +1,14 @@
 import { prisma } from "@/lib/prisma";
-import { primerosPasos, terminado, type FotoDeLaCuenta, type Paso } from "@/lib/primeros-pasos";
+import {
+  primerosPasos, pasosDeLaPuerta, terminado, PASOS_DE_ADENTRO,
+  type FotoDeLaCuenta, type Paso,
+} from "@/lib/primeros-pasos";
 
 /**
- * EL RECIBIMIENTO: los cinco pasos, antes de que exista el panel.
+ * EL RECIBIMIENTO: armar la cuenta, antes de que exista el panel.
  *
  * ══════════════════════════════════════════════════════════════════════════
- * HASTA QUE NO ESTÁN LOS CINCO, EL PANEL NO EXISTE
+ * HASTA QUE NO ESTÁ ARMADA, EL PANEL NO EXISTE
  * ══════════════════════════════════════════════════════════════════════════
  *
  * No es una lista de tareas adentro del panel: **es la pantalla entera**. Sin
@@ -13,8 +16,19 @@ import { primerosPasos, terminado, type FotoDeLaCuenta, type Paso } from "@/lib/
  * recién creada no tiene nada que mirar en un panel —tres ceros y una lista
  * vacía— y sí tiene una cosa que hacer: armar lo que va a vender.
  *
- * El panel aparece **cuando los cinco pasos están hechos**, y aparece con el
- * producto, el archivo, la página, el cobro y la publicación ya resueltos.
+ * El panel aparece **cuando están los cuatro pasos de la puerta**, y aparece
+ * con el producto, el archivo, la página y el cobro ya resueltos.
+ *
+ * ── El quinto queda adentro, y es a propósito ──────────────────────────────
+ *
+ * Publicar NO abre la puerta. Pedirlo para entrar obliga a poner la página a la
+ * vista antes de haberla visto: quien recién conectó Mercado Pago todavía no
+ * miró cómo le quedó ni acomodó nada, así que lo primero que verían los
+ * compradores es la versión que la dueña no revisó.
+ *
+ * Se entra en borrador, se mira, se acomoda, y se publica cuando está conforme.
+ * El paso no se pierde: la lista del panel lo sigue pidiendo. Ver
+ * `pasosDeLaPuerta` en `lib/primeros-pasos`.
  *
  * ── Por qué se decide acá y no en cada pantalla ────────────────────────────
  *
@@ -32,9 +46,36 @@ import { primerosPasos, terminado, type FotoDeLaCuenta, type Paso } from "@/lib/
  */
 
 export type EstadoDelRecibimiento = {
+  /**
+   * SÓLO los pasos de la puerta: los cuatro que hay que terminar para entrar.
+   *
+   * Publicar no viene en esta lista, y por eso la pantalla puede decir "Paso 2
+   * de 4" sin mentir. Si viniera, mostraría un quinto círculo que nunca se
+   * puede tildar desde ahí —al tildarse ya estarías del otro lado de la puerta—
+   * y contaría un total que no es el que hay que hacer.
+   */
   pasos: Paso[];
   /** `true` cuando ya se puede entrar al panel. */
   listo: boolean;
+  /**
+   * Si el producto principal ya está publicado.
+   *
+   * No hace falta para la puerta —publicar no la abre— y se devuelve por una
+   * sola razón: es lo que separa "recién terminó de armar la cuenta" de "hace
+   * meses que vende". Sin esto, el día que salió la pantalla de "Todo listo"
+   * se la habría comido en la cara toda cuenta que ya venía usando el panel.
+   * Ver `TodoListo`.
+   */
+  publicado: boolean;
+  /**
+   * Los pasos DE ADENTRO que todavía faltan: el archivo, publicar, o los dos.
+   *
+   * Existe para que la pantalla de "Todo listo" no mienta. Desde que el archivo
+   * salió de la puerta se puede llegar ahí sin PDF, y un cartel que dice "ya
+   * podés cobrar" a alguien que no tiene nada que entregar es exactamente la
+   * promesa que este ecosistema no puede hacer.
+   */
+  pendientesAdentro: Paso[];
   /** El producto principal sobre el que corre el recibimiento, si ya existe. */
   productoId: string | null;
   /** Su nombre, para poder nombrarlo en los pasos que vienen después. */
@@ -55,9 +96,21 @@ export async function estadoDelRecibimiento(userId: string): Promise<EstadoDelRe
   const tienda = await prisma.store.findUnique({
     where: { ownerId: userId },
     select: {
-      /* Sólo si hay token, no el token. Un `select` de más acá lo arrastra a un
-         componente de servidor que después se lo pasa a uno de cliente, y la
-         llave de cobro termina escrita adentro del HTML. */
+      /* ⚠️ ESTO TRAE LA LLAVE DE COBRO ENTERA, no un "sí o no".
+         Acá decía *"Sólo si hay token, no el token"*, y era falso: Prisma no
+         tiene forma de pedir "¿existe?" de una columna suelta, así que
+         `mpAccessToken: true` devuelve el texto del token. Se cambió el
+         comentario y no la consulta porque la consulta está bien —traerlo es la
+         única forma de saber si está—, pero la frase de antes daba por puesta
+         una protección que no había.
+
+         LA PROTECCIÓN DE VERDAD es la forma que devuelve esta función: sólo
+         booleanos, ids y pasos. `tienda` muere acá adentro y nunca sale.
+
+         ⚠️ Por eso, al agregarle un campo a `EstadoDelRecibimiento`, mirá que
+         no arrastre `tienda` ni nada derivado del token. Lo que salga de acá se
+         lo pasa el layout a componentes de CLIENTE, y ahí termina escrito
+         adentro del HTML que se manda al navegador. */
       mpAccessToken: true,
       products: {
         where: { deletedAt: null, rolDigital: "PRINCIPAL" },
@@ -80,11 +133,16 @@ export async function estadoDelRecibimiento(userId: string): Promise<EstadoDelRe
     publicado: principal?.isActive === true,
   };
 
-  const pasos = primerosPasos(foto);
+  /* Los cinco se arman igual —el texto y el orden son los mismos que lee el
+     panel— y recién acá se separan los de la puerta de los de adentro. */
+  const todos = primerosPasos(foto);
+  const pasos = pasosDeLaPuerta(todos);
 
   return {
     pasos,
     listo: terminado(pasos),
+    publicado: foto.publicado,
+    pendientesAdentro: todos.filter((p) => !p.hecho && PASOS_DE_ADENTRO.includes(p.clave)),
     productoId: principal?.id ?? null,
     productoNombre: principal?.name ?? null,
   };

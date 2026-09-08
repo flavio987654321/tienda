@@ -14,6 +14,7 @@ import { prisma } from "@/lib/prisma";
 import type { TierDigital } from "@/lib/planes-digitales";
 import DigitalesSidebar from "./DigitalesSidebar";
 import TemaDelPanel from "./TemaDelPanel";
+import TodoListo from "./TodoListo";
 import { ProveedorDeSalida } from "./SalidaSinGuardar";
 import { SCRIPT_TEMA } from "@/lib/tema-digitales";
 
@@ -116,9 +117,16 @@ export default async function DigitalesLayout({ children }: { children: React.Re
      ══════════════════════════════════════════════════════════════════════════
 
      Sin barra lateral, sin Configuración, sin Mi cuenta, sin números: la
-     pantalla entera son los cinco pasos, y el panel aparece recién cuando están
-     los cinco — con el producto, el archivo, la página, el cobro y la
-     publicación ya resueltos.
+     pantalla entera son los pasos, y el panel aparece recién cuando están los
+     CUATRO de la puerta — con el producto, el archivo, la página y el cobro ya
+     resueltos.
+
+     ⚠️ Publicar NO abre la puerta, aunque también impida vender. Se entra en
+     borrador a propósito: pedir la publicación para entrar obliga a poner la
+     página a la vista antes de haberla visto, y lo primero que verían los
+     compradores sería la versión que la dueña nunca revisó. Se entra, se mira,
+     se acomoda, y se publica desde el panel — donde la lista de `PrimerosPasos`
+     lo sigue pidiendo hasta que esté hecho. Ver `pasosDeLaPuerta`.
 
      ⚠️ Va en el LAYOUT y no en cada pantalla, y ahí está la gracia: cubre las
      nueve de una sola vez. Puesto pantalla por pantalla, alcanzaría con agregar
@@ -167,6 +175,15 @@ export default async function DigitalesLayout({ children }: { children: React.Re
           la que dice "tengo cambios sin guardar" y los links que se los llevan
           puestos están en la barra. Separados, cada uno tendría su propio estado
           y la barra nunca se enteraría. */}
+      {/* ⚠️ "TODO LISTO": el cierre del recibimiento, encima del panel ya armado.
+          Se dibuja sólo mientras la publicación siga pendiente — o sea, en el
+          ratito entre terminar la puerta y publicar—. Sin esa condición, el día
+          que esto salga toda cuenta que ya venía usando el panel se comería una
+          felicitación por algo que hizo hace meses.
+
+          Que se muestre UNA VEZ lo decide el navegador y no la base: no gobierna
+          nada, la puerta sigue saliendo del estado real. Ver `TodoListo`. */}
+      {!recibimiento.publicado && <TodoListo productoId={recibimiento.productoId} pasos={recibimiento.pasos} pendientes={recibimiento.pendientesAdentro} />}
       <ProveedorDeSalida>
         <DigitalesSidebar tier={tier} />
         {/* `lg:ml-14` deja libre la franja de la barra, que es `fixed`; `pt-14` hace

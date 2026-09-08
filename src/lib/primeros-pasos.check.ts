@@ -16,7 +16,7 @@
 
 import { readFileSync, existsSync } from "fs";
 import {
-  primerosPasos, cuantosHechos, elQueSigue, terminado,
+  primerosPasos, cuantosHechos, elQueSigue, terminado, pasosDeLaPuerta, PASOS_DE_ADENTRO,
   type FotoDeLaCuenta,
 } from "./primeros-pasos";
 
@@ -158,6 +158,71 @@ check("PAS-O",
 
 check("PAS-P", existsSync("src/app/digitales/PrimerosPasos.tsx"),
   "la lista tiene su componente");
+
+/* ── La puerta del panel ──────────────────────────────────────────────────────
+ *
+ * Los cinco impiden vender, pero para ENTRAR alcanzan TRES: el producto, la
+ * página y el cobro. Publicar se decide mirando, y el archivo tiene dos caminos
+ * —subir un PDF o que la IA escriba el ebook— de los cuales uno vive adentro del
+ * panel: pedirlo en la puerta le escondía esa pantalla justo a quien pagó por
+ * ella. Ver `PASOS_DE_ADENTRO`. */
+
+const puerta = pasosDeLaPuerta(primerosPasos(VACIA));
+
+check("PAS-Q",
+  puerta.length === 3 && !puerta.some((p) => PASOS_DE_ADENTRO.includes(p.clave)),
+  "la puerta son tres pasos, y ni el archivo ni publicar están entre ellos");
+
+/* ⚠️ El que de verdad importa: con los tres hechos se entra, aunque falten el
+   archivo y publicar. Si esto falla, alguien queda encerrado afuera del panel
+   —y el panel es donde está el botón que le escribe el ebook—. */
+const soloLosTres = primerosPasos({ ...LISTA, tieneArchivo: false, publicado: false });
+check("PAS-R",
+  terminado(pasosDeLaPuerta(soloLosTres)) && !terminado(soloLosTres),
+  "sin archivo y sin publicar se entra igual, y la lista de adentro los sigue pidiendo");
+
+/* Y al revés: que falte cualquiera de los tres cierra la puerta. Se prueban los
+   tres y no uno de muestra — el que no se prueba es el que se olvida el día que
+   alguien toca `pasosDeLaPuerta`. */
+const cierran: Array<[string, FotoDeLaCuenta]> = [
+  ["producto", { ...LISTA, principalId: null }],
+  ["pagina", { ...LISTA, paginaArmada: false }],
+  ["cobro", { ...LISTA, cobroConectado: false }],
+];
+check("PAS-S",
+  cierran.every(([, foto]) => !terminado(pasosDeLaPuerta(primerosPasos(foto)))),
+  "si falta cualquiera de los tres, el panel no se abre");
+
+/* ⚠️ Y sacar el archivo de la puerta NO puede haber abierto el agujero que ese
+   paso tapaba. Lo que de verdad lo tapa es `loQueFalta`, dos veces más abajo:
+   publicar sin archivo se rechaza, y comprar lo vuelve a mirar. Si alguno de los
+   dos deja de mirarlo, esto avisa. */
+const rutaProducto = readFileSync("src/app/api/digitales/productos/[id]/route.ts", "utf8");
+const rutaComprar = readFileSync("src/app/api/digitales/comprar/route.ts", "utf8");
+check("PAS-V",
+  /loQueFalta\(/.test(rutaProducto) && /loQueFalta\(/.test(rutaComprar) &&
+  /!p\.archivoPath/.test(readFileSync("src/lib/productos-digitales.ts", "utf8")),
+  "sin archivo sigue sin poderse publicar ni comprar, que es lo que hacía bloqueante al paso 2");
+
+/* La compuerta es quien filtra, no el componente. */
+const compuerta = readFileSync("src/lib/recibimiento.ts", "utf8");
+check("PAS-T", /const pasos = pasosDeLaPuerta\(/.test(compuerta),
+  "la compuerta le pasa a la pantalla sólo los pasos de la puerta");
+
+/* `soloCodigo` saca los comentarios: adentro se los NOMBRA para explicar por qué
+   no están, y eso no es dibujarlos. */
+const recibimiento = soloCodigo(readFileSync("src/app/digitales/Recibimiento.tsx", "utf8"));
+check("PAS-U",
+  !/sigue\.clave === "publicar"/.test(recibimiento) && !/sigue\.clave === "archivo"/.test(recibimiento),
+  "el recibimiento ya no dibuja ni el archivo ni publicar");
+
+/* Y los dos caminos del archivo tienen que estar JUNTOS del otro lado: si el
+   botón de la IA desaparece de Productos, sacarlo de la puerta deja a Starter y
+   Pro sin ninguna forma de que se lo escriban. */
+const productos = readFileSync("src/app/digitales/productos/ProductosClient.tsx", "utf8");
+check("PAS-W",
+  /abrirEbook/.test(productos) && /subirPdfDigital|subir/i.test(productos),
+  "en Productos conviven los dos caminos del archivo: subir el PDF y escribirlo con IA");
 
 console.log(fallos === 0
   ? "\nok — los primeros pasos dicen lo que de verdad falta, y no se pueden apagar"

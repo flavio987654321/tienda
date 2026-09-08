@@ -17,9 +17,9 @@
  *
  * ── Por qué estos cinco y en este orden ────────────────────────────────────
  *
- * Es el orden del trabajo, no el del menú. Y los cinco son **bloqueantes**: sin
- * cualquiera de ellos no entra un peso. No hay pasos de cortesía — un paso que
- * se puede saltear entrena a saltearlos todos.
+ * Es el orden del trabajo, no el del menú. Y los cinco son **bloqueantes para
+ * vender**: sin cualquiera de ellos no entra un peso. No hay pasos de cortesía —
+ * un paso que se puede saltear entrena a saltearlos todos.
  *
  *   1. El producto — no hay nada que vender.
  *   2. El archivo — se puede cobrar y no se puede entregar. Es el peor de todos:
@@ -33,6 +33,22 @@
  * el paso que más gente abandona —te saca de la aplicación, pide iniciar sesión—
  * y ponerlo primero es perder a quien todavía no vio nada de lo suyo armado.
  * Primero se ve el producto propio hecho, después se pide el trámite.
+ *
+ * ══════════════════════════════════════════════════════════════════════════
+ * BLOQUEAR LA VENTA Y BLOQUEAR LA PUERTA NO ES LO MISMO
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * Los cinco impiden vender. Pero para **entrar al panel** alcanza con TRES —el
+ * producto, la página y el cobro—, y los otros dos quedan adentro a propósito.
+ *
+ * La regla es: a la puerta va lo que no se puede hacer de otra forma ni más
+ * tarde. Publicar se decide mirando, y el archivo tiene dos caminos, de los
+ * cuales uno vive adentro del panel. Pedirlos para entrar no protege nada —
+ * `loQueFalta` ya frena publicar y comprar sin archivo— y sí deja gente
+ * encerrada afuera. El porqué completo de cada uno está en `PASOS_DE_ADENTRO`.
+ *
+ * Los dos NO se pierden: la lista del panel (`PrimerosPasos`) los sigue
+ * mostrando hasta que estén hechos, y esa lista sí mira los cinco.
  */
 
 export type ClavePaso = "producto" | "archivo" | "pagina" | "cobro" | "publicar";
@@ -126,3 +142,61 @@ export const elQueSigue = (pasos: Paso[]): Paso | null => pasos.find((p) => !p.h
 
 /** Si ya está todo, la lista no se dibuja. */
 export const terminado = (pasos: Paso[]): boolean => pasos.every((p) => p.hecho);
+
+/**
+ * Los pasos que se hacen DESPUÉS de entrar al panel, no antes.
+ *
+ * Están nombrados acá y en ningún otro lado: la puerta se define como "todos
+ * menos éstos" y no como una lista de claves escrita aparte. Escrita aparte, el
+ * día que se agregue un paso hay que acordarse de tocar dos lugares — y
+ * olvidarse deja gente encerrada afuera del panel.
+ *
+ * ── `publicar` ────────────────────────────────────────────────────────────
+ * Pedirlo para entrar obliga a poner la página a la vista antes de haberla
+ * visto. Se entra en borrador, se mira, se acomoda, y se publica al final.
+ *
+ * ── `archivo` (07/09/26) ──────────────────────────────────────────────────
+ * Éste estaba en la puerta, y salió por dos motivos.
+ *
+ * El primero: **el archivo tiene dos caminos y uno solo entraba acá**. Se puede
+ * subir un PDF propio, o —desde Starter— pedir que la IA escriba el ebook. Lo
+ * segundo vive en la pantalla de Productos, o sea del otro lado de la puerta.
+ * Así que a alguien que pagó justamente para que se lo escribamos, la puerta le
+ * pedía un PDF que no tiene y le escondía la pantalla que se lo haría.
+ *
+ * El segundo: **sacarlo no abre ningún agujero**. El miedo escrito en el paso 2
+ * es "se cobra y no se puede entregar", y eso ya lo frena `loQueFalta` en dos
+ * lugares más abajo: publicar sin archivo se rechaza (`productos/[id]`), y
+ * comprar lo vuelve a mirar. Sin archivo no se publica, y sin publicar no se
+ * vende. La red estaba puesta dos veces antes de que esto fuera un paso.
+ *
+ * ⚠️ Lo que NO cambió es que sigue siendo bloqueante para VENDER, y la lista
+ * del panel lo sigue pidiendo hasta que esté.
+ */
+export const PASOS_DE_ADENTRO: ClavePaso[] = ["archivo", "publicar"];
+
+/**
+ * Los pasos que hay que terminar para que aparezca el panel.
+ *
+ * Los tres que no se pueden hacer de otra forma ni más tarde: sin producto no
+ * hay nada, la página se arma una sola vez, y sin Mercado Pago el panel no
+ * tiene nada que mostrar. Ver el comentario largo de arriba.
+ */
+export const pasosDeLaPuerta = (pasos: Paso[]): Paso[] =>
+  pasos.filter((p) => !PASOS_DE_ADENTRO.includes(p.clave));
+
+/**
+ * El nombre corto de cada paso, para las barras de progreso.
+ *
+ * Vive acá y no en cada pantalla porque lo dibujan DOS —el recibimiento y la
+ * pantalla de "Todo listo"—, una al lado de la otra en el mismo recorrido.
+ * Escrito dos veces, se renombra uno y la barra cambia de palabra a mitad de
+ * camino.
+ */
+export const NOMBRE_CORTO: Record<ClavePaso, string> = {
+  producto: "Producto",
+  archivo: "Archivo",
+  pagina: "Página",
+  cobro: "Cobro",
+  publicar: "Publicar",
+};
