@@ -153,7 +153,13 @@ export default function TodoListo({ productoId, pasos, pendientes }: {
                 pantalla: alguien que lee "todo listo" y cierra se queda pensando
                 que ya está vendiendo. La cuenta está armada, pero en borrador. */}
             <p className="mx-auto mt-2.5 max-w-sm text-pretty text-[13.5px] leading-relaxed text-gray-500 panel-oscuro:text-gray-400">
-              Tu producto está armado y el cobro conectado. Todavía no lo ve nadie: mirá cómo
+              {/* ⚠️ Acá decía "y el cobro conectado", y desde el 08/09/26 eso
+                  puede ser mentira: Mercado Pago salió de la puerta, así que se
+                  llega hasta acá sin conectarlo. Una pantalla que felicita por
+                  algo que no pasó es peor que una que no felicita — y encima el
+                  recuadro de abajo lo está pidiendo. Se nombra lo que la puerta
+                  de verdad exige: el producto y la página. */}
+              Tu producto está armado y tu página lista. Todavía no lo ve nadie: mirá cómo
               quedó y acomodá lo que quieras.
             </p>
 

@@ -83,12 +83,16 @@ export default async function PantallaDePago({ params }: Props) {
      Ahora sigue el mismo criterio que `/p/[id]`: si todavía no se puede vender,
      la ve la dueña y nadie más, marcada como previa y con el botón apagado.
      Ver el checkout no puede depender de publicar el producto. */
+  /* ⚠️ Mercado Pago va ADENTRO de `loQueFalta` desde el 08/09/26, y por eso acá
+     ya no se mira aparte: era la misma regla escrita en dos lados, con dos
+     textos distintos. El orden no cambió —el cobro es la última de las cuatro—
+     así que a la dueña se le sigue nombrando primero lo más grave. */
   const falta = loQueFalta({
     rolDigital: fila.rolDigital, archivoPath: fila.archivoPath,
     price: fila.price, name: fila.name,
+    cobroConectado: !!fila.store.mpAccessToken,
   });
-  const sinMercadoPago = !fila.store.mpAccessToken;
-  const seLePuedeVender = fila.isActive && !falta && !sinMercadoPago;
+  const seLePuedeVender = fila.isActive && !falta;
 
   let avisoDePrevia: string | null = null;
   if (!seLePuedeVender) {
@@ -99,10 +103,7 @@ export default async function PantallaDePago({ params }: Props) {
     /* Y a ella se le dice QUÉ falta, en orden de qué tiene que resolver primero.
        Un 404 la dejaba adivinando entre tres cosas distintas. */
     avisoDePrevia =
-      falta ??
-      (sinMercadoPago
-        ? "Falta conectar Mercado Pago en Configuración → Pagos. Sin eso no podés cobrar."
-        : "Este producto todavía no está publicado, así que sólo lo ves vos.");
+      falta ?? "Este producto todavía no está publicado, así que sólo lo ves vos.";
   }
 
   const pagina = normalizarContenido(fila.paginaVenta);

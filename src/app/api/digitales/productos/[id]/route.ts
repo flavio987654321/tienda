@@ -25,6 +25,9 @@ async function miProducto(userId: string, id: string) {
     where: { id, deletedAt: null, store: { ownerId: userId } },
     select: {
       id: true, name: true, price: true, rolDigital: true, archivoPath: true, isActive: true,
+      /* El cobro de la cuenta, para la puerta de publicar. Sólo si HAY token:
+         el token en sí no tiene por qué salir de la base para esto. */
+      store: { select: { mpAccessToken: true } },
     },
   });
 }
@@ -67,13 +70,15 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
   /* ⚠️ Publicar es lo único de esta ruta que puede hacer daño de verdad, así que
      se revisa contra lo que va a quedar guardado y no contra lo que hay hoy.
      Un producto publicado sin archivo se puede comprar y no se puede entregar:
-     se cobra la plata y no llega nada. */
+     se cobra la plata y no llega nada. Y uno publicado sin Mercado Pago es una
+     página viva con el botón de comprar roto — ver `loQueFalta`. */
   if (publicado === true) {
     const falta = loQueFalta({
       rolDigital: actual.rolDigital,
       archivoPath: actual.archivoPath,
       price: typeof precio === "number" ? precio : actual.price,
       name: typeof name === "string" ? name : actual.name,
+      cobroConectado: !!actual.store?.mpAccessToken,
     });
     if (falta) return NextResponse.json({ error: falta }, { status: 409 });
   }

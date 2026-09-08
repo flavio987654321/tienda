@@ -78,12 +78,46 @@ export function loQueFalta(p: {
   archivoPath: string | null;
   price: number;
   name: string;
+  /**
+   * Si la cuenta tiene Mercado Pago conectado.
+   *
+   * ══════════════════════════════════════════════════════════════════════════
+   * ⚠️ VA ACÁ DESDE EL 08/09/26, Y ES OBLIGATORIO A PROPÓSITO
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * Ese día Mercado Pago **salió de la puerta del panel**: la pantalla donde se
+   * conecta vive en Configuración, o sea del otro lado de una puerta que lo
+   * pedía, y quien todavía no tenía cuenta de MP —hay que crearla y verificar
+   * identidad, no es un clic— se quedaba afuera quemando sus siete días de
+   * prueba. Ver `PASOS_DE_ADENTRO` en `primeros-pasos`.
+   *
+   * Al sacarlo de ahí, la red se mueve acá: **se entra al panel y se hace todo,
+   * pero no se publica sin cobro.** Sin esto, alguien pondría a la vista una
+   * página con dirección propia, la metería en un anuncio, y el botón de
+   * comprar contestaría "probá más tarde" — plata gastada en publicidad para
+   * una página que no puede cobrar.
+   *
+   * Y es un campo OBLIGATORIO del tipo, no opcional: opcional, un lugar que se
+   * olvida de pasarlo deja de mirar el cobro **sin fallar**, que es exactamente
+   * la clase de agujero que no se ve hasta que alguien lo cuenta.
+   */
+  cobroConectado: boolean;
 }): string | null {
   if (!p.name.trim()) return "Falta ponerle un título.";
   if (!p.archivoPath) return "Falta el archivo. Sin él no hay nada que entregar.";
   /* Un bono es gratis por definición, así que no se le pide precio. El upsell y
      el principal sí: con precio 0 se regalarían solos. */
   if (p.rolDigital !== "BONO" && p.price <= 0) return "Falta ponerle precio.";
+  /* Último de los cuatro, y no por descuido: es el único que no lastima a
+     nadie. Sin archivo se cobra y no se entrega; sin cobro, simplemente no
+     entra un peso. Igual no se publica, por lo de arriba. */
+  /* ⚠️ El texto DICE DÓNDE se arregla, y no es adorno: es el único de los
+     cuatro que no se resuelve en la pantalla donde aparece el cartel. Este
+     mensaje estaba escrito así en el checkout y a secas acá; ahora es uno solo,
+     para que no queden dos versiones y se corrija una. */
+  if (!p.cobroConectado) {
+    return "Falta conectar Mercado Pago en Configuración → Pagos. Sin eso el botón de comprar no cobra nada.";
+  }
   return null;
 }
 

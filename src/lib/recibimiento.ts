@@ -16,15 +16,21 @@ import {
  * recién creada no tiene nada que mirar en un panel —tres ceros y una lista
  * vacía— y sí tiene una cosa que hacer: armar lo que va a vender.
  *
- * El panel aparece **cuando están los cuatro pasos de la puerta**, y aparece
- * con el producto, el archivo, la página y el cobro ya resueltos.
+ * El panel aparece **cuando están los pasos de la puerta**, que hoy son dos: el
+ * producto y la página. Cuáles son no lo decide este archivo — lo decide
+ * `pasosDeLaPuerta`, y acá se usa lo que devuelva.
  *
- * ── El quinto queda adentro, y es a propósito ──────────────────────────────
+ * ── Los otros tres quedan adentro, y es a propósito ────────────────────────
  *
  * Publicar NO abre la puerta. Pedirlo para entrar obliga a poner la página a la
- * vista antes de haberla visto: quien recién conectó Mercado Pago todavía no
- * miró cómo le quedó ni acomodó nada, así que lo primero que verían los
- * compradores es la versión que la dueña no revisó.
+ * vista antes de haberla visto: quien recién armó su producto todavía no miró
+ * cómo le quedó ni acomodó nada, así que lo primero que verían los compradores
+ * es la versión que la dueña no revisó.
+ *
+ * El archivo y el cobro tampoco, y por el mismo motivo entre los dos: **la
+ * pantalla donde se resuelven está adentro del panel**. Pedirlos en la puerta
+ * escondía justo el lugar donde se arreglan — el botón que escribe el ebook, y
+ * Configuración → Pagos. Ver `PASOS_DE_ADENTRO`.
  *
  * Se entra en borrador, se mira, se acomoda, y se publica cuando está conforme.
  * El paso no se pierde: la lista del panel lo sigue pidiendo. Ver

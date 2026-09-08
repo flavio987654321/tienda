@@ -161,37 +161,53 @@ check("PAS-P", existsSync("src/app/digitales/PrimerosPasos.tsx"),
 
 /* ── La puerta del panel ──────────────────────────────────────────────────────
  *
- * Los cinco impiden vender, pero para ENTRAR alcanzan TRES: el producto, la
- * página y el cobro. Publicar se decide mirando, y el archivo tiene dos caminos
- * —subir un PDF o que la IA escriba el ebook— de los cuales uno vive adentro del
- * panel: pedirlo en la puerta le escondía esa pantalla justo a quien pagó por
- * ella. Ver `PASOS_DE_ADENTRO`. */
+ * Los cinco impiden vender, pero para ENTRAR alcanzan DOS: el producto y la
+ * página. Publicar se decide mirando; el archivo tiene dos caminos —subir un PDF
+ * o que la IA escriba el ebook— de los cuales uno vive adentro del panel; y
+ * Mercado Pago se conecta desde Configuración, que también está adentro.
+ * Pedirlos en la puerta escondía justo la pantalla donde se arreglan.
+ * Ver `PASOS_DE_ADENTRO`. */
 
 const puerta = pasosDeLaPuerta(primerosPasos(VACIA));
 
 check("PAS-Q",
-  puerta.length === 3 && !puerta.some((p) => PASOS_DE_ADENTRO.includes(p.clave)),
-  "la puerta son tres pasos, y ni el archivo ni publicar están entre ellos");
+  puerta.length === 2 && !puerta.some((p) => PASOS_DE_ADENTRO.includes(p.clave)),
+  "la puerta son dos pasos, y ni el archivo, ni el cobro, ni publicar están entre ellos");
 
-/* ⚠️ El que de verdad importa: con los tres hechos se entra, aunque falten el
-   archivo y publicar. Si esto falla, alguien queda encerrado afuera del panel
-   —y el panel es donde está el botón que le escribe el ebook—. */
-const soloLosTres = primerosPasos({ ...LISTA, tieneArchivo: false, publicado: false });
+/* ⚠️ El que de verdad importa: con los dos hechos se entra, aunque falten el
+   archivo, el cobro y publicar. Si esto falla, alguien queda encerrado afuera
+   del panel —y el panel es donde está el botón que le escribe el ebook, y la
+   pantalla donde se conecta Mercado Pago—. */
+const soloLosDos = primerosPasos({
+  ...LISTA, tieneArchivo: false, cobroConectado: false, publicado: false,
+});
 check("PAS-R",
-  terminado(pasosDeLaPuerta(soloLosTres)) && !terminado(soloLosTres),
-  "sin archivo y sin publicar se entra igual, y la lista de adentro los sigue pidiendo");
+  terminado(pasosDeLaPuerta(soloLosDos)) && !terminado(soloLosDos),
+  "sin archivo, sin cobro y sin publicar se entra igual, y la lista de adentro los sigue pidiendo");
 
-/* Y al revés: que falte cualquiera de los tres cierra la puerta. Se prueban los
-   tres y no uno de muestra — el que no se prueba es el que se olvida el día que
+/* Y al revés: que falte cualquiera de los dos cierra la puerta. Se prueban los
+   dos y no uno de muestra — el que no se prueba es el que se olvida el día que
    alguien toca `pasosDeLaPuerta`. */
 const cierran: Array<[string, FotoDeLaCuenta]> = [
   ["producto", { ...LISTA, principalId: null }],
   ["pagina", { ...LISTA, paginaArmada: false }],
-  ["cobro", { ...LISTA, cobroConectado: false }],
 ];
 check("PAS-S",
   cierran.every(([, foto]) => !terminado(pasosDeLaPuerta(primerosPasos(foto)))),
-  "si falta cualquiera de los tres, el panel no se abre");
+  "si falta cualquiera de los dos, el panel no se abre");
+
+/* ⚠️ EL QUE PAGA EL CAMBIO DEL 08/09/26. Sacar el cobro de la puerta sólo es
+   seguro porque `loQueFalta` no deja publicar sin él: si no, alguien pone a la
+   vista una página con dirección propia, la mete en un anuncio, y el botón de
+   comprar contesta "probá más tarde". La plata del anuncio se va contra una
+   página que no puede cobrar.
+
+   Si este chequeo cae, hay que volver a poner el cobro en la puerta. */
+const libProductos = readFileSync("src/lib/productos-digitales.ts", "utf8");
+check("PAS-X",
+  /cobroConectado: boolean/.test(libProductos) && /!p\.cobroConectado/.test(libProductos) &&
+  /cobroConectado:/.test(readFileSync("src/app/api/digitales/productos/[id]/route.ts", "utf8")),
+  "sin Mercado Pago no se puede publicar, que es la red que reemplaza al paso de la puerta");
 
 /* ⚠️ Y sacar el archivo de la puerta NO puede haber abierto el agujero que ese
    paso tapaba. Lo que de verdad lo tapa es `loQueFalta`, dos veces más abajo:

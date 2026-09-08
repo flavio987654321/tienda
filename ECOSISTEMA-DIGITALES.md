@@ -2307,31 +2307,57 @@ hay pasos de cortesía — uno que se puede saltear entrena a saltearlos todos.
 | 4 | **Conectá Mercado Pago** | El botón de comprar no cobra nada |
 | 5 | **Publicá** | Está todo listo y no lo ve nadie, ni con el link |
 
-##### ⚠️ La puerta son CUATRO, no cinco (07/09/26)
+##### ⚠️ La puerta son DOS, no cinco (08/09/26)
 
-Los cinco impiden vender. Pero para **entrar al panel** alcanza con los cuatro
-primeros: publicar quedó del otro lado a propósito.
+Los cinco impiden vender. Pero para **entrar al panel** alcanzan dos: el
+producto y la página. Los otros tres quedaron adentro, y cada uno por su motivo.
 
-Pedirlo para entrar obliga a poner la página a la vista **antes de haberla
-visto**. Quien recién conectó Mercado Pago todavía no miró cómo le quedó, no
-acomodó nada y no configuró nada — así que lo primero que verían los compradores
-es exactamente la versión que la dueña nunca revisó. Publicar es una decisión, y
-una decisión se toma después de mirar.
+**La regla, en una línea: a la puerta va lo que no se puede hacer de otra forma
+ni más tarde.**
 
-Así que se entra en borrador, se mira, se acomoda, y se publica cuando la dueña
-está conforme. **El paso no se pierde**: la lista del panel (`PrimerosPasos`)
-sigue mostrando "Publicá tu página" con su botón hasta que esté hecho, y esa
-lista sí mira los cinco.
+- **Publicar** se decide mirando. Pedirlo para entrar obliga a poner la página a
+  la vista **antes de haberla visto**, así que lo primero que verían los
+  compradores es la versión que la dueña nunca revisó.
+- **El archivo** (07/09) tiene dos caminos —subir un PDF, o que la IA escriba el
+  ebook— y el segundo vive adentro del panel. La puerta le pedía un PDF que no
+  tiene justo a quien pagó para que se lo escribamos.
+- **El cobro** (08/09) es el mismo error, peor. **La pantalla donde se conecta
+  Mercado Pago está adentro del panel** (Configuración → Pagos): la puerta lo
+  pedía y escondía el lugar donde se resuelve. Y no es un clic — quien todavía
+  no tiene cuenta tiene que crearla y verificar identidad, que puede llevar
+  días, **de los siete de la prueba, que corren igual mientras está afuera**.
+  Alguien que se anotó a probar el producto se quedaba mirando una pantalla que
+  le pedía un trámite bancario.
+
+**Ninguno se pierde**: la lista del panel (`PrimerosPasos`) los sigue mostrando
+con su botón hasta que estén hechos, y esa lista sí mira los cinco.
+
+**⚠️ Y ninguno se saca sin poner su red antes.** Es la mitad de la decisión:
+
+| Paso que salió | Qué lo sigue frenando |
+|---|---|
+| Archivo | `loQueFalta` no deja publicar ni comprar sin él |
+| Cobro | `loQueFalta` **no deja publicar sin él** (nuevo el 08/09), y comprar lo rechaza con un mensaje escrito para el comprador |
+
+Sin la red del cobro, alguien pondría a la vista una página con dirección
+propia, la metería en un anuncio, y el botón de comprar contestaría *"probá más
+tarde"*: la plata de la publicidad gastada contra una página que no puede
+cobrar. Lo cuidan `PUB-I` a `PUB-L` y `PAS-X` — y `PAS-X` está escrito
+justamente para avisar si esa red se cae.
+
+Tampoco se hizo un botón de **"saltar"**, que era la otra forma. Un paso que se
+puede saltear entrena a saltearlos todos; sacarlo de la puerta no inventa un
+verbo nuevo y la lista de adentro lo sigue reclamando igual.
 
 Quién decide cuáles abren la puerta es `pasosDeLaPuerta`, y está nombrado en un
-solo lugar: la puerta se define como "todos menos publicar" y no como una lista
-de cuatro claves escrita aparte, que el día del sexto paso hay que acordarse de
-tocar en dos lados. Lo cuidan `PAS-Q` a `PAS-U`.
+solo lugar: la puerta se define como "todos menos `PASOS_DE_ADENTRO`" y no como
+una lista de claves escrita aparte, que el día del sexto paso hay que acordarse
+de tocar en dos lados. Lo cuidan `PAS-Q` a `PAS-U`.
 
-⚠️ **El 4 podría ir primero y va cuarto a propósito.** Conectar Mercado Pago es
-el paso que más gente abandona —te saca de la aplicación, te pide iniciar
-sesión—, y ponerlo antes es perder a quien todavía no vio nada de lo suyo armado.
-Primero se ve el producto propio hecho; después se pide el trámite.
+⚠️ **En la lista de los cinco, Mercado Pago sigue yendo cuarto y no primero.**
+Es el paso que más gente abandona —te saca de la aplicación, te pide iniciar
+sesión—, y ponerlo antes es perder a quien todavía no vio nada de lo suyo
+armado. Primero se ve el producto propio hecho; después se pide el trámite.
 
 #### Un solo botón, no cinco
 

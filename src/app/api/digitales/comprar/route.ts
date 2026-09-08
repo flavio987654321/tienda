@@ -201,26 +201,33 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Esta página ya no está disponible." }, { status: 404 });
   }
 
-  /* La misma puerta que no deja publicar. Se vuelve a mirar acá porque entre
-     "publicar" y "comprar" pueden pasar días: el archivo se pudo haber caído. */
-  const falta = loQueFalta({
-    rolDigital: producto.rolDigital,
-    archivoPath: producto.archivoPath,
-    price: producto.price,
-    name: producto.name,
-  });
-  if (falta) {
-    return NextResponse.json({ error: "Esta compra no está disponible ahora mismo." }, { status: 409 });
-  }
-
   /* ⚠️ Sin Mercado Pago conectado no hay cobro posible, y se dice CLARO: el que
      lee esto es un comprador, no la dueña. No es su culpa y no puede hacer nada,
-     así que el mensaje no le pide que arregle nada. */
+     así que el mensaje no le pide que arregle nada.
+
+     ⚠️ Y VA ANTES DE `loQueFalta`, que desde el 08/09/26 también mira el cobro.
+     Si fuera después no se ejecutaría nunca: aquél cortaría primero y el
+     comprador leería el "no está disponible ahora mismo" genérico en lugar de
+     este mensaje, que es el único de los dos que le dice qué pasó. */
   if (!producto.store.mpAccessToken) {
     return NextResponse.json(
       { error: "Quien vende todavía no terminó de configurar los cobros. Probá más tarde." },
       { status: 409 },
     );
+  }
+
+  /* La misma puerta que no deja publicar. Se vuelve a mirar acá porque entre
+     "publicar" y "comprar" pueden pasar días: el archivo se pudo haber caído, o
+     se pudo haber desconectado Mercado Pago. */
+  const falta = loQueFalta({
+    rolDigital: producto.rolDigital,
+    archivoPath: producto.archivoPath,
+    price: producto.price,
+    name: producto.name,
+    cobroConectado: !!producto.store.mpAccessToken,
+  });
+  if (falta) {
+    return NextResponse.json({ error: "Esta compra no está disponible ahora mismo." }, { status: 409 });
   }
   /* ⚠️ EL TEXTO QUE SE GUARDA COMO PRUEBA, armado ACÁ y no en la pantalla.
      Sale de la misma función que dibuja el sello de garantía del checkout, así

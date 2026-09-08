@@ -115,9 +115,12 @@ check("TOPE-F", ROLES.every((r) => topeDe("FREE", r) <= topeDe("STARTER", r) && 
 
 /* ── Qué falta para publicar ──────────────────────────────────────────────── */
 
-const listo = { rolDigital: "PRINCIPAL", archivoPath: "supabase://x/y.pdf", price: 100, name: "Guía" };
+const listo = {
+  rolDigital: "PRINCIPAL", archivoPath: "supabase://x/y.pdf", price: 100, name: "Guía",
+  cobroConectado: true,
+};
 
-check("PUB-A", loQueFalta(listo) === null, "con título, archivo y precio se puede publicar");
+check("PUB-A", loQueFalta(listo) === null, "con título, archivo, precio y cobro se puede publicar");
 
 /* EL chequeo que justifica todo el archivo. Sin archivo no hay nada que
    entregar, y publicarlo igual es cobrar por nada. */
@@ -133,13 +136,47 @@ check("PUB-E", loQueFalta({ ...listo, name: "   " }) !== null, "ni uno sin títu
    publicarse nunca. Pero el archivo se le exige igual —también se entrega—. */
 check("PUB-F", loQueFalta({ ...listo, rolDigital: "BONO", price: 0 }) === null,
   "un bono SÍ se publica con precio 0: es un regalo");
-check("PUB-G", loQueFalta({ rolDigital: "BONO", archivoPath: null, price: 0, name: "Checklist" }) !== null,
+check("PUB-G", loQueFalta({ rolDigital: "BONO", archivoPath: null, price: 0, name: "Checklist", cobroConectado: true }) !== null,
   "pero un bono sin archivo tampoco se publica: también hay que entregarlo");
 
 /* El orden importa: lo primero que se nombra es lo que hace imposible la venta,
    no lo que la hace incobrable. */
 check("PUB-H", (loQueFalta({ ...listo, archivoPath: null, price: 0 }) ?? "").toLowerCase().includes("archivo"),
   "faltando las dos cosas, primero se nombra el archivo");
+
+/* ── Sin Mercado Pago no se publica (08/09/26) ─────────────────────────────
+ *
+ * ⚠️ ESTA ES LA RED QUE PERMITE SACAR EL COBRO DE LA PUERTA DEL PANEL.
+ *
+ * Ese día Mercado Pago dejó de pedirse para ENTRAR —la pantalla donde se
+ * conecta vive adentro del panel, así que la puerta escondía el lugar donde se
+ * arregla, y el reloj de los siete días de prueba corría igual—. A cambio, la
+ * red se movió acá: se puede armar todo, pero **no poner a la vista una página
+ * que no puede cobrar**. Sin esto, alguien mete esa página en un anuncio y la
+ * plata de la publicidad se va contra un botón que contesta "probá más tarde".
+ *
+ * Si estos chequeos caen, el cambio de la puerta quedó sin su red. Ver
+ * `PASOS_DE_ADENTRO` en `primeros-pasos`. */
+check("PUB-I", loQueFalta({ ...listo, cobroConectado: false }) !== null,
+  "sin Mercado Pago conectado NO se puede publicar");
+
+/* El motivo tiene que decir DÓNDE se arregla: es el único de los cuatro que no
+   se resuelve en la pantalla donde aparece el cartel. */
+const sinCobro = loQueFalta({ ...listo, cobroConectado: false }) ?? "";
+check("PUB-J",
+  /mercado pago/i.test(sinCobro) && /configuraci/i.test(sinCobro) && /pagos/i.test(sinCobro),
+  "y el motivo nombra Mercado Pago y en qué pantalla se conecta");
+
+/* Un bono también: va adentro de la misma compra, así que si esa compra no se
+   puede cobrar, el bono tampoco se publica. */
+check("PUB-K", loQueFalta({ ...listo, rolDigital: "BONO", price: 0, cobroConectado: false }) !== null,
+  "un bono sin cobro conectado tampoco se publica");
+
+/* Y es el ÚLTIMO de los cuatro, no el primero: sin archivo se cobra y no se
+   entrega —eso lastima a alguien—; sin cobro, simplemente no entra un peso. */
+check("PUB-L",
+  (loQueFalta({ ...listo, archivoPath: null, cobroConectado: false }) ?? "").toLowerCase().includes("archivo"),
+  "faltando el archivo y el cobro, primero se nombra el archivo");
 
 /* ── Los campos ───────────────────────────────────────────────────────────── */
 

@@ -283,24 +283,16 @@ export default function Recibimiento({
                 </>
               )}
 
-              {/* ⚠️ Mercado Pago es un enlace de verdad y no un `fetch`: te saca
-                  de la aplicación, iniciás sesión allá y volvés. Al volver, este
-                  paso ya está hecho y la pantalla muestra el siguiente sola,
-                  porque el paso sale del estado real y no de un contador. */}
-              {sigue.clave === "cobro" && (
-                <>
-                  <Boton href="/api/mp/oauth/connect" disabled={ocupado}>
-                    <CreditCard className="h-4 w-4" /> {sigue.accion}
-                  </Boton>
-                  <p className="mt-3 text-[12px] leading-relaxed text-gray-400 panel-oscuro:text-gray-500">
-                    Te lleva a Mercado Pago y volvés acá. La plata de cada venta entra derecho a tu cuenta.
-                  </p>
-                </>
-              )}
+              {/* No hay rama para "cobro" ni para "publicar": esos pasos no
+                  llegan acá, así que dibujarlos sería código muerto con forma de
+                  botón. Los dos se hacen desde el panel — Mercado Pago en
+                  Configuración → Pagos, y publicar después de mirar cómo quedó
+                  la página. Ver `pasosDeLaPuerta` en `lib/primeros-pasos`.
 
-              {/* No hay rama para "publicar": ese paso no llega acá. Se hace
-                  desde el panel, después de mirar cómo quedó la página. Ver
-                  `pasosDeLaPuerta` en `lib/primeros-pasos`. */}
+                  ⚠️ El de cobro estuvo acá hasta el 08/09/26, y sacarlo fue el
+                  punto del cambio: la puerta pedía Mercado Pago y escondía la
+                  pantalla donde se conecta, con el reloj de la prueba corriendo.
+                  El botón no se perdió, vive en `TabPagos`. */}
             </div>
           </div>
 

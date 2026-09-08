@@ -38,16 +38,17 @@
  * BLOQUEAR LA VENTA Y BLOQUEAR LA PUERTA NO ES LO MISMO
  * ══════════════════════════════════════════════════════════════════════════
  *
- * Los cinco impiden vender. Pero para **entrar al panel** alcanza con TRES —el
- * producto, la página y el cobro—, y los otros dos quedan adentro a propósito.
+ * Los cinco impiden vender. Pero para **entrar al panel** alcanza con DOS —el
+ * producto y la página—, y los otros tres quedan adentro a propósito.
  *
  * La regla es: a la puerta va lo que no se puede hacer de otra forma ni más
- * tarde. Publicar se decide mirando, y el archivo tiene dos caminos, de los
- * cuales uno vive adentro del panel. Pedirlos para entrar no protege nada —
- * `loQueFalta` ya frena publicar y comprar sin archivo— y sí deja gente
+ * tarde. Publicar se decide mirando; el archivo tiene dos caminos, de los
+ * cuales uno vive adentro del panel; y Mercado Pago se conecta desde
+ * Configuración cuando la persona lo tenga. Pedirlos para entrar no protege
+ * nada —`loQueFalta` frena publicar y comprar sin ellos— y sí deja gente
  * encerrada afuera. El porqué completo de cada uno está en `PASOS_DE_ADENTRO`.
  *
- * Los dos NO se pierden: la lista del panel (`PrimerosPasos`) los sigue
+ * Los tres NO se pierden: la lista del panel (`PrimerosPasos`) los sigue
  * mostrando hasta que estén hechos, y esa lista sí mira los cinco.
  */
 
@@ -172,15 +173,35 @@ export const terminado = (pasos: Paso[]): boolean => pasos.every((p) => p.hecho)
  *
  * ⚠️ Lo que NO cambió es que sigue siendo bloqueante para VENDER, y la lista
  * del panel lo sigue pidiendo hasta que esté.
+ *
+ * ── `cobro` (08/09/26) ────────────────────────────────────────────────────
+ * Éste también estaba en la puerta, y salió por el mismo motivo, sólo que peor.
+ *
+ * **La pantalla donde se conecta Mercado Pago está adentro del panel**
+ * (Configuración → Pagos). O sea que la puerta pedía Mercado Pago y escondía
+ * el lugar donde se conecta. Y no es un clic: quien todavía no tiene cuenta
+ * tiene que crearla y verificar identidad, que puede llevar días — días de los
+ * **siete de la prueba**, que corren igual mientras la persona está afuera.
+ * Alguien que se anotó para probar el producto se quedaba mirando una pantalla
+ * que le pedía un trámite bancario.
+ *
+ * Y sacarlo tampoco abre un agujero: comprar sin Mercado Pago ya se rechazaba
+ * con un mensaje escrito para el comprador, y desde hoy **tampoco se puede
+ * publicar** — `loQueFalta` mira el cobro. O sea que se puede armar todo, y lo
+ * único que no se puede es poner a la vista una página que no cobraría.
+ *
+ * ⚠️ Ese último punto es la mitad de la decisión, no un detalle: sin él, una
+ * página viva con el botón de comprar roto se lleva puesta la plata de un
+ * anuncio. No se puede sacar de la puerta sin poner esa red.
  */
-export const PASOS_DE_ADENTRO: ClavePaso[] = ["archivo", "publicar"];
+export const PASOS_DE_ADENTRO: ClavePaso[] = ["archivo", "cobro", "publicar"];
 
 /**
  * Los pasos que hay que terminar para que aparezca el panel.
  *
- * Los tres que no se pueden hacer de otra forma ni más tarde: sin producto no
- * hay nada, la página se arma una sola vez, y sin Mercado Pago el panel no
- * tiene nada que mostrar. Ver el comentario largo de arriba.
+ * Los dos que no se pueden hacer de otra forma ni más tarde: sin producto no
+ * hay nada que mirar, y la página se arma una sola vez. Ver el comentario largo
+ * de arriba.
  */
 export const pasosDeLaPuerta = (pasos: Paso[]): Paso[] =>
   pasos.filter((p) => !PASOS_DE_ADENTRO.includes(p.clave));

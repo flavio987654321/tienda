@@ -119,6 +119,8 @@ const IA_LISTA = true;
  */
 type Acciones = {
   tier: TierDigital;
+  /** Si la cuenta ya conectó Mercado Pago. Sin eso no se publica. */
+  cobroConectado: boolean;
   trabajando: string | null;
   /** El id del producto cuyo archivo se está subiendo, o `null`. */
   subiendoArchivo: string | null;
@@ -147,6 +149,7 @@ function Tarjeta({ p, acc }: { p: ProductoEnPantalla; acc: Acciones }) {
     archivoPath: p.tieneArchivo ? "hay" : null,
     price: p.price,
     name: p.name,
+    cobroConectado: acc.cobroConectado,
   });
   const ocupado = acc.trabajando === p.id;
   const subiendoEste = acc.subiendoArchivo === p.id;
@@ -509,12 +512,15 @@ export default function ProductosClient({
   productos,
   cupoIA,
   cupoEbook,
+  cobroConectado,
 }: {
   tier: TierDigital;
   productos: ProductoEnPantalla[];
   cupoIA: EstadoDelCupo;
   /** El cupo de EBOOKS, que es una bolsa aparte del de armar el embudo. */
   cupoEbook: EstadoDelCupo;
+  /** Si ya conectó Mercado Pago: sin eso no se puede publicar. */
+  cobroConectado: boolean;
 }) {
   const [borrador, setBorrador] = useState<Borrador | null>(null);
   /** Si está abierta la ventana de armar el embudo con IA. */
@@ -641,7 +647,7 @@ export default function ProductosClient({
      hacia abajo: las funciones se declaran en el cuerpo del componente, así que
      memorizarlo no ganaría nada —el objeto cambiaría igual en cada dibujo—. */
   const acc: Acciones = {
-    tier, trabajando, subiendoArchivo, setBorrador, publicar, borrar, subirArchivo,
+    tier, cobroConectado, trabajando, subiendoArchivo, setBorrador, publicar, borrar, subirArchivo,
     abrirEbook: setEbookDe, hijosDe,
   };
 

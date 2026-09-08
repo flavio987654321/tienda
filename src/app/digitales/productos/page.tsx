@@ -56,7 +56,14 @@ export default async function ProductosPage() {
         currentPeriodEnd: true, gracePeriodEndsAt: true,
       },
     }),
-    prisma.store.findUnique({ where: { ownerId: user.id }, select: { id: true } }),
+    /* ⚠️ `mpAccessToken` sólo para saber SI está conectado, nunca para usarlo:
+       desde el 08/09/26 el cobro salió de la puerta del panel, así que se puede
+       llegar a esta pantalla sin él — y entonces la tarjeta tiene que decir que
+       sin eso no se publica, en vez de apagar el botón sin motivo. */
+    prisma.store.findUnique({
+      where: { ownerId: user.id },
+      select: { id: true, mpAccessToken: true },
+    }),
   ]);
 
   const tier = (sub?.tier ?? "FREE") as TierDigital;
@@ -144,7 +151,13 @@ export default async function ProductosPage() {
         </p>
       </div>
 
-      <ProductosClient tier={tier} productos={productos} cupoIA={cupoIA} cupoEbook={cupoEbook} />
+      <ProductosClient
+        tier={tier}
+        productos={productos}
+        cupoIA={cupoIA}
+        cupoEbook={cupoEbook}
+        cobroConectado={!!store?.mpAccessToken}
+      />
     </div>
   );
 }
