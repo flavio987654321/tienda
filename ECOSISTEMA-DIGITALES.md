@@ -2754,8 +2754,67 @@ sólo se ven en un ebook largo y ninguno lo hubiera encontrado una prueba corta:
   el aviso ya es honesto— pero es el próximo escalón de esta pantalla.
 - 🔲 **Formato infografía**: foto a sangre por hoja con el texto encima. Es el
   barato: **usa el texto que ya se genera, tal cual**.
-- 🔲 **Poder leer y corregir el texto antes de armar el PDF.** Hoy sólo se puede
-  rehacer entero. La competencia lo tiene y le falla.
+- 🔲 **Poder leer y corregir EL TEXTO antes de armar el PDF.** El temario ya se
+  puede corregir (abajo); lo escrito no. Hoy, si una frase no cierra, sólo se
+  puede rehacer entero. La competencia lo tiene y le falla.
+  - ⚠️ **No es el mismo editor otra vez.** Acá los topes son del molde del PDF y
+    no perdonan: un paso de receta son 160 caracteres, 8 pasos, 14 ingredientes.
+    Un campo libre deja que alguien arregle una frase y **rompa el PDF sin que
+    nada avise**, y se entere después de venderlo. Cada campo va con su tope y
+    su contador a la vista.
+
+### ✅ El editor del temario — HECHO (08/09/26)
+
+El primero de los dos editores, y **a propósito el primero**: es el único
+momento en que corregir sale gratis. Cada capítulo se escribe leyendo su título
+y su resumen del temario y nada más, así que un renglón cambiado acá cambia el
+capítulo entero **antes de que exista**. La misma corrección después de escrito
+cuesta rehacer el ebook.
+
+**Lo que cambió de fondo: la pantalla FRENA.** Antes el temario se armaba y el
+bucle arrancaba solo — se escribían diez capítulos sobre un temario que nadie
+había leído. Ahora sale un paso nuevo (`revisar`) entre armar y escribir. Y se
+puede volver al temario a media escritura, para corregir **lo que falta**.
+
+Se puede tocar el título del ebook, la promesa de la tapa, y de cada capítulo el
+título, el resumen y **qué foto buscar** — el campo que arregló las fotos de otro
+tema. Agregar, borrar y reordenar, en un ebook de texto.
+
+- **`lib/ebook-temario`** — la regla, aparte de la ruta: entra lo que mandó el
+  navegador, sale un temario limado o un motivo escrito. No toca la base, así
+  que se prueba entera sin base ni claves (TEM-A … TEM-V).
+- **`/api/digitales/ia/ebook/indice`** — GET para leerlo, POST para guardarlo.
+  Es la cuarta ruta del ebook y **la única que no gasta un peso**.
+- **La pantalla decide con la MISMA función que el servidor.** Escribir acá una
+  versión parecida de las reglas es el camino conocido a que el botón se prenda
+  y el servidor conteste que no (TEM-AB).
+
+**⚠️ Las tres cosas que no se pueden hacer, y por qué.**
+
+1. **Tocar lo que ya está escrito.** El capítulo escrito Nº 3 es el de la
+   entrada Nº 3 **por su posición y por nada más**. Moverla deja el texto de uno
+   abajo del título de otro — y eso *no falla*: sale un PDF perfecto que dice
+   cualquier cosa. Por eso el prefijo sale de la base y no de lo que llegó: ni
+   un pedido hecho a mano puede correr las posiciones (TEM-D, TEM-E).
+2. **Cambiar cuántas secciones tiene un recetario.** No son capítulos: son el
+   reparto de las recetas que se eligieron y se pagaron. Sacar una de uno de 30
+   entrega 27 con "30 RECETAS" en la tapa (TEM-G).
+3. **Guardar sin las opciones que ya estaban.** Formato, tema, color y cantidad
+   de recetas viven adentro del mismo JSON que el temario: reescribirlo sin
+   leerlas las borraría —un recetario volvería a ser un ebook de texto a mitad
+   de camino— y tomarlas del cuerpo dejaría cambiar por acá lo que se cobró
+   (TEM-W).
+
+**El candado, dos veces.** Se toma antes de guardar —`/paso` está leyendo de
+acá— y **con el candado en la mano se vuelve a leer la fila**: entre el primer
+`SELECT` y el candado puede haberse escrito un capítulo, y ese ya no se toca
+(TEM-X, TEM-Y).
+
+**Y avisa antes de perder lo escrito a mano.** Esta ventana se cierra con un
+clic en el fondo, y hasta acá eso no tenía nada que perder. Usa la misma guarda
+del editor de la página de venta, que además tapa la barra lateral.
+
+Sigue faltando el editor **del texto**, que es otra cosa y está anotado arriba.
 
 ---
 

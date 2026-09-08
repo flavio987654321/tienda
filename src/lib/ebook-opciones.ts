@@ -99,9 +99,21 @@ export const COMO_SE_LLAMA: Record<FormatoDeEbook, {
   obra: string;
   parte: string;
   partes: string;
+  /**
+   * Cómo se llama UNA ENTRADA DEL TEMARIO, que no siempre es lo mismo que una
+   * parte.
+   *
+   * ⚠️ En un ebook de texto coinciden —una entrada, un capítulo— pero en un
+   * recetario NO: una entrada del temario es una sección que agrupa hasta tres
+   * recetas. El editor del temario muestra entradas, así que decirle "recetas"
+   * a las cuatro secciones de un recetario de 10 sería mostrarle cuatro
+   * renglones a alguien que eligió diez.
+   */
+  tramo: string;
+  tramos: string;
 }> = {
-  texto: { obra: "Ebook", parte: "capítulo", partes: "capítulos" },
-  recetario: { obra: "Recetario", parte: "receta", partes: "recetas" },
+  texto: { obra: "Ebook", parte: "capítulo", partes: "capítulos", tramo: "capítulo", tramos: "capítulos" },
+  recetario: { obra: "Recetario", parte: "receta", partes: "recetas", tramo: "sección", tramos: "secciones" },
 };
 
 export const QUE_ES_CADA_TEMA: Record<TemaDeEbook, { nombre: string; explica: string }> = {

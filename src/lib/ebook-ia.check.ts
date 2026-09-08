@@ -782,12 +782,26 @@ check("PAN-E2",
   /Seguir escribiendo/.test(ventana) && /sin gastar otra generación/.test(ventana),
   "y se dice con qué botón se retoma, sin gastar otra generación");
 
-/* ⚠️ Y NO se promete el editor, que todavía no existe: acá decía "Vas a poder
-   leerlo y cambiarlo antes de publicar" y hoy sólo se puede rehacer entero.
-   Cuando el editor exista, esta prueba se da vuelta. */
+/* ⚠️ Y NO se promete el editor DEL TEXTO, que todavía no existe.
+   Desde el 08/09/26 sí hay editor **del temario** —se puede corregir la lista
+   de capítulos antes de que se escriba— pero lo escrito no se puede leer ni
+   arreglar: para eso sigue habiendo que rehacer el ebook entero. Así que la
+   frase que promete leerlo y arreglarlo sigue afuera.
+
+   ⚠️ Se mira SIN LOS COMENTARIOS, y eso no es un detalle: el archivo explica
+   con esas mismas palabras por qué la frase no está, y esa explicación hacía
+   fallar la prueba. Lo que se promete es lo que se DIBUJA. */
+const loQueSeVe = ventana.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^[ \t]*\/\/.*$/gm, "");
 check("PAN-E3",
-  !/cambiarlo antes de publicar/.test(ventana),
-  "no se promete un editor que todavía no está");
+  !/cambiarlo antes de publicar/.test(loQueSeVe),
+  "no se promete un editor del texto, que todavía no está");
+
+/* Y el que SÍ existe tiene que estar dicho antes de apretar: el temario se
+   muestra y se puede corregir, así que la pantalla lo cuenta en vez de dejar
+   que aparezca una pantalla con la que nadie contaba. */
+check("PAN-E6",
+  /te muestro el temario/.test(loQueSeVe),
+  "se avisa que primero sale el temario para revisarlo");
 
 /* Reemplazar un archivo que la persona subió a mano sin avisarle es perderle el
    trabajo. Se avisa ANTES de apretar. */

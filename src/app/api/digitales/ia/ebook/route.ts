@@ -10,6 +10,7 @@ import {
   CAPITULOS_MIN, LARGO_TEMA, MINIMO_TEMA, LARGO_PUBLICO,
 } from "@/lib/ebook-ia";
 import { normalizarOpciones } from "@/lib/ebook-opciones";
+import { sePuedeEditarElTemario } from "@/lib/ebook-temario";
 import { estadoDelBorrador, CANDADO_MS } from "@/lib/ebook-borrador";
 import { getSubscriptionStatus, getUserSubscription } from "@/lib/subscription";
 import { getArgentinaDayKey } from "@/lib/fechas-comerciales";
@@ -352,6 +353,23 @@ export async function POST(req: NextRequest) {
       trabajando: false,
       error: null,
       reintentos: yaHay ? yaHay.reintentos + 1 : 0,
+    },
+    /* ⚠️ EL TEMARIO ENTERO, para que la pantalla pueda mostrarlo y dejarlo
+       corregir sin ir a buscarlo de nuevo. Acá ya está en la mano; pedirlo otra
+       vez sería un viaje más que puede fallar justo después de una generación
+       que se cobró, y dejar a alguien mirando una pantalla vacía.
+
+       Misma forma que devuelve `/ebook/indice`, así la pantalla tiene un solo
+       lugar donde guardarlo. Ver `loQueSeEdita`. */
+    temario: {
+      titulo: indice.titulo,
+      promesa: indice.promesa,
+      capitulos: indice.capitulos,
+      escritos: 0,
+      formato: opciones.formato,
+      /* Del mismo estado con el que se acaba de guardar, no de un literal
+         repetido: si mañana se guarda en otro estado, esto lo acompaña. */
+      editable: sePuedeEditarElTemario(datos.estado),
     },
     /* `salioDe` es lo que deja avisar fuerte cuando se acabaron las del mes y se
        están empezando a comer las de bienvenida, que no vuelven. */

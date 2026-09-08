@@ -1,18 +1,31 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Loader2, Sparkles, X, AlertTriangle, Check, BookOpen, RotateCcw } from "lucide-react";
+import {
+  Loader2, Sparkles, X, AlertTriangle, Check, BookOpen, RotateCcw,
+  ListChecks, Trash2, Plus, ArrowUp, ArrowDown, Lock,
+} from "lucide-react";
 import type { EstadoDelCupo } from "@/lib/cupo-ia";
 /* `import type` se borra al compilar, así que esto NO arrastra al navegador
    nada de lo que ese archivo importa —prisma incluido—. Es sólo la forma. */
 import type { EstadoDelBorrador } from "@/lib/ebook-borrador";
-import { LARGO_TEMA, MINIMO_TEMA, LARGO_PUBLICO } from "@/lib/ebook-ia";
+import {
+  LARGO_TEMA, MINIMO_TEMA, LARGO_PUBLICO, CAPITULOS_MIN, CAPITULOS_MAX,
+  LARGO_TITULO_EBOOK, LARGO_TITULO_CAPITULO, LARGO_RESUMEN_CAPITULO, LARGO_FOTO,
+  type CapituloPlaneado,
+} from "@/lib/ebook-ia";
+/* ⚠️ LA MISMA FUNCIÓN QUE USA EL SERVIDOR PARA DECIDIR SI EL TEMARIO SIRVE.
+   No es un ahorro de código: es lo que hace imposible que la pantalla habilite
+   el botón y el servidor conteste que no, o que los dos digan cosas distintas
+   sobre el mismo capítulo. `ebook-temario` no toca la base a propósito. */
+import { revisarTemario, sePuedeEditarElTemario } from "@/lib/ebook-temario";
 import {
   FORMATOS, TEMAS, QUE_ES_CADA_FORMATO, QUE_ES_CADA_TEMA,
   OPCIONES_DE_FABRICA, FORMATOS_LISTOS, RECETAS_OPCIONES, COMO_SE_LLAMA,
   type FormatoDeEbook, type TemaDeEbook,
 } from "@/lib/ebook-opciones";
 import { PALETAS } from "@/lib/pagina-venta";
+import { useSalida } from "@/app/digitales/SalidaSinGuardar";
 
 /**
  * Escribir el ebook con IA.
@@ -45,7 +58,30 @@ import { PALETAS } from "@/lib/pagina-venta";
  * frena y pone un botón: seguir es una decisión de la persona, no del código.
  */
 
-type Paso = "contar" | "escribiendo" | "listo";
+/**
+ * ── El paso "revisar", y por qué está en el medio ──────────────────────────
+ *
+ * Entre armar el temario y escribirlo. Es el único momento en que cambiar una
+ * línea cambia el ebook entero **sin costar nada**: cada capítulo se escribe
+ * leyendo su título y su resumen del temario, así que corregir un título acá es
+ * gratis y corregirlo después es rehacer el ebook.
+ *
+ * ⚠️ Y por eso el bucle YA NO ARRANCA SOLO después del temario. Antes seguía de
+ * largo: se armaban diez capítulos sobre un temario que nadie había leído.
+ */
+type Paso = "contar" | "revisar" | "escribiendo" | "listo";
+
+/** El temario como lo devuelven las dos rutas que lo entregan. */
+type TemarioEnPantalla = {
+  titulo: string;
+  promesa: string;
+  capitulos: CapituloPlaneado[];
+  /** Cuántas entradas ya están escritas. Esas no se tocan. */
+  escritos: number;
+  formato: FormatoDeEbook;
+  /** Lo decide el servidor: con todo escrito, el temario ya no dirige nada. */
+  editable: boolean;
+};
 
 export default function EbookIA({
   producto,
@@ -89,6 +125,30 @@ export default function EbookIA({
   /* `true` cuando el ebook ya empezó: cerrar tiene que recargar, porque la
      tarjeta de atrás quedó vieja. */
   const [huboAlgo, setHuboAlgo] = useState(!!estadoInicial);
+
+  /* El temario que se está revisando. Llega por dos puertas: pegado a la
+     respuesta del temario recién armado —ya está en la mano, pedirlo de nuevo
+     sería un viaje más que puede fallar justo después de una generación
+     cobrada— o buscándolo cuando se vuelve a abrir. */
+  const [temario, setTemario] = useState<TemarioEnPantalla | null>(null);
+  /* Si se entró al editor desde la pantalla de escritura, hay a dónde volver
+     sin guardar. Recién armado no: ahí "volver" no significa nada. */
+  const [vengoDeEscribir, setVengoDeEscribir] = useState(false);
+
+  /* ⚠️ Hay algo escrito a mano que se pierde si se cierra.
+     Esta ventana se cierra con el fondo, y hasta acá eso no tenía nada que
+     perder: lo escrito se guardaba solo, capítulo por capítulo. El editor del
+     temario sí, y un clic al costado no puede llevarse diez renglones que
+     alguien acaba de corregir. Es la misma guarda del editor de la página de
+     venta, que además tapa la barra lateral. */
+  const [sinGuardar, setSinGuardar] = useState(false);
+  const { setBloqueado, avisar } = useSalida();
+  useEffect(() => {
+    setBloqueado(sinGuardar);
+    /* Sin la limpieza, el aviso sobrevive a la ventana y sigue preguntando
+       desde otra pantalla: el interruptor vive arriba, no acá. */
+    return () => setBloqueado(false);
+  }, [sinGuardar, setBloqueado]);
 
   /* ⚠️ Dos candados distintos, y hacen falta los dos.
      - `enVuelo` corta el doble clic: sin él, dos clics rápidos mandan dos
@@ -194,6 +254,19 @@ export default function EbookIA({
 
       const estado = datos.ebook as EstadoDelBorrador | undefined;
       if (estado) setEbook(estado);
+
+      /* ⚠️ ACÁ SE FRENA, Y ANTES SEGUÍA DE LARGO.
+         El temario está armado y pagado, pero todavía no se escribió una
+         palabra: es el momento en que corregir sale gratis. Se muestra y se
+         espera. Si el temario no vino —un ebook retomado, o una respuesta
+         vieja— se sigue como siempre, que es mejor que una pantalla vacía. */
+      const nuevo = datos.temario as TemarioEnPantalla | undefined;
+      if (nuevo) {
+        setTemario(nuevo);
+        setVengoDeEscribir(false);
+        setPaso("revisar");
+        return;
+      }
       setPaso("escribiendo");
     } catch {
       if (vivo.current) setError("Se cortó la conexión. Probá de nuevo.");
@@ -203,12 +276,103 @@ export default function EbookIA({
       if (vivo.current) setTrabajando(false);
     }
 
-    /* El temario ya está: se arranca a escribir sin pedir otro clic. */
+    /* Sólo si no hubo temario que revisar: con temario, escribir lo dispara el
+       botón del editor. */
     if (vivo.current) void seguir();
   }, [pedir, tema, publico, formato, temaVisual, paleta, cuantasRecetas, seguir]);
 
+  /* ── Abrir el temario desde la pantalla de escritura ──────────────────────
+     Se busca en el momento y no viaja en cada vuelta del bucle: son varios
+     miles de caracteres que la barra de progreso no usa para nada. Mismo
+     criterio que con el texto de los capítulos. */
+  const abrirTemario = useCallback(async () => {
+    if (enVuelo.current) return;
+    enVuelo.current = true;
+    setTrabajando(true);
+    setError(null);
+
+    try {
+      const res = await fetch(
+        `/api/digitales/ia/ebook/indice?productoId=${encodeURIComponent(producto.id)}`,
+      );
+      const datos = (await res.json().catch(() => null)) as Record<string, unknown> | null;
+      if (!vivo.current) return;
+
+      if (!res.ok || !datos?.ok) {
+        setError(typeof datos?.error === "string" ? datos.error : "No pudimos abrir el temario.");
+        return;
+      }
+
+      /* ⚠️ Manda lo que dice el SERVIDOR, no el estado que tiene la pantalla.
+         El botón se dibuja mirando `ebook.estado`, que puede estar viejo: si el
+         último capítulo se terminó de escribir en otra pestaña, acá seguiría
+         diciendo ESCRIBIENDO y se abriría un editor que ya no cambia nada. */
+      if (datos.editable !== true) {
+        setError("El ebook ya está escrito, así que el temario no cambia nada. Si querés otro, hay que rehacerlo.");
+        return;
+      }
+
+      setTemario(datos as unknown as TemarioEnPantalla);
+      setVengoDeEscribir(true);
+      setPaso("revisar");
+    } catch {
+      if (vivo.current) setError("Se cortó la conexión. Probá de nuevo.");
+    } finally {
+      enVuelo.current = false;
+      if (vivo.current) setTrabajando(false);
+    }
+  }, [producto.id]);
+
+  /* ── Guardar lo corregido y arrancar (o seguir) ───────────────────────────
+     Si no se tocó nada no se guarda: escribir en la base para dejar todo igual
+     es un pedido que puede fallar y arruinar un camino que iba bien. */
+  const guardarYEscribir = useCallback(async (
+    corregido: { titulo: string; promesa: string; capitulos: CapituloPlaneado[] },
+    cambiado: boolean,
+  ) => {
+    if (enVuelo.current) return;
+
+    if (!cambiado) {
+      setPaso("escribiendo");
+      void seguir();
+      return;
+    }
+
+    enVuelo.current = true;
+    setTrabajando(true);
+    setError(null);
+
+    try {
+      const { ok, datos } = await pedir("/api/digitales/ia/ebook/indice", corregido);
+      if (!vivo.current) return;
+
+      if (!ok) {
+        /* Se queda en el editor con el motivo escrito: mandarlo a escribir con
+           lo que el servidor no aceptó sería escribir contra el temario viejo
+           mientras la pantalla muestra el nuevo. */
+        setError(typeof datos.error === "string" ? datos.error : "No pudimos guardar el temario.");
+        return;
+      }
+
+      const estado = datos.ebook as EstadoDelBorrador | undefined;
+      if (estado) setEbook(estado);
+      setTemario(datos as unknown as TemarioEnPantalla);
+      setPaso("escribiendo");
+    } catch {
+      if (vivo.current) setError("Se cortó la conexión. Probá de nuevo.");
+      return;
+    } finally {
+      enVuelo.current = false;
+      if (vivo.current) setTrabajando(false);
+    }
+
+    if (vivo.current) void seguir();
+  }, [pedir, seguir]);
+
   const cerrar = () => {
     if (trabajando) return;
+    /* Pregunta sólo si hay algo a mano sin guardar; si no, cierra derecho. */
+    if (!avisar()) return;
     if (huboAlgo) window.location.reload(); else onCerrar();
   };
 
@@ -225,8 +389,14 @@ export default function EbookIA({
       <div className="relative w-full sm:max-w-xl max-h-[92vh] overflow-y-auto bg-white panel-oscuro:bg-gray-900 rounded-t-3xl sm:rounded-3xl shadow-2xl">
         <div className="sticky top-0 z-10 bg-white panel-oscuro:bg-gray-900 border-b border-gray-100 panel-oscuro:border-gray-800 px-6 py-4 flex items-center justify-between gap-3">
           <p className="flex items-center gap-2 font-black text-gray-900 panel-oscuro:text-gray-100">
-            <BookOpen className="h-4 w-4 text-orange-500" />
-            {paso === "listo" ? "Tu ebook está listo" : "Escribí tu ebook con IA"}
+            {paso === "revisar"
+              ? <ListChecks className="h-4 w-4 text-orange-500" />
+              : <BookOpen className="h-4 w-4 text-orange-500" />}
+            {paso === "listo"
+              ? "Tu ebook está listo"
+              : paso === "revisar"
+                ? "Revisá el temario"
+                : "Escribí tu ebook con IA"}
           </p>
           <button
             onClick={cerrar}
@@ -446,15 +616,44 @@ export default function EbookIA({
                 {trabajando ? "Armando el temario…" : "Escribir el ebook"}
               </button>
 
-              {/* ⚠️ Acá decía "Vas a poder leerlo y cambiarlo antes de
-                  publicar", y **el editor no existe**: hoy sólo se puede rehacer
-                  entero. Prometer una pantalla que no está es lo que después se
-                  reclama. Cuando el editor exista, vuelve la frase. */}
+              {/* ⚠️ Sólo se promete lo que existe. Acá decía "vas a poder
+                  leerlo y cambiarlo antes de publicar" cuando no había ningún
+                  editor, y eso es lo que después se reclama.
+
+                  Hoy hay editor DEL TEMARIO —primero se muestra la lista de
+                  capítulos y se puede corregir— pero **no del texto escrito**.
+                  Así que la frase dice temario, no ebook. */}
               <p className="mt-2 text-center text-[11px] text-gray-400 panel-oscuro:text-gray-500">
-                Tarda unos minutos. Quedate en esta pantalla mientras se escribe.
+                Primero te muestro el temario para que lo corrijas. Después tarda unos
+                minutos, y hay que quedarse en esta pantalla.
               </p>
             </>
           )}
+
+          {/* ── Revisar el temario ──────────────────────────────────────── */}
+          {paso === "revisar" && (temario ? (
+            <Temario
+              inicial={temario}
+              guardando={trabajando}
+              error={error}
+              onCambio={setSinGuardar}
+              onEscribir={guardarYEscribir}
+              onVolver={vengoDeEscribir ? () => { setError(null); setPaso("escribiendo"); } : null}
+            />
+          ) : (
+            /* No debería pasar —siempre se guarda el temario antes de venir
+               acá— pero una ventana en blanco arriba de un ebook pagado no es
+               una opción. */
+            <>
+              <Aviso>No pudimos mostrar el temario.</Aviso>
+              <button
+                onClick={() => setPaso("escribiendo")}
+                className="mt-3 w-full rounded-xl bg-orange-600 px-4 py-3 text-sm font-bold text-white hover:bg-orange-500 transition-colors"
+              >
+                Seguir igual
+              </button>
+            </>
+          ))}
 
           {/* ── Escribiendo ─────────────────────────────────────────────── */}
           {paso === "escribiendo" && (
@@ -535,6 +734,22 @@ export default function EbookIA({
                 </button>
               )}
 
+              {/* ⚠️ Corregir lo que FALTA, que todavía se puede.
+                  Aparece sólo mientras el temario dirige algo: con todo escrito
+                  los títulos del PDF salen de cada capítulo y no de acá, así que
+                  el botón haría sentir que se está arreglando algo mientras el
+                  archivo sale igual. Lo decide `sePuedeEditarElTemario`, la
+                  misma función con la que el servidor acepta o rechaza. */}
+              {!trabajando && ebook && sePuedeEditarElTemario(ebook.estado) && (
+                <button
+                  onClick={() => void abrirTemario()}
+                  className="mt-2 w-full inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 px-4 py-2.5 text-[13px] font-bold text-gray-700 panel-oscuro:text-gray-300 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800 transition-colors"
+                >
+                  <ListChecks className="h-4 w-4" />
+                  {escritos > 0 ? "Corregir lo que falta" : "Revisar el temario"}
+                </button>
+              )}
+
               {/* ⚠️ ACÁ DECÍA "cuando vuelvas sigue desde donde iba", y eso se
                   leía como que sigue SOLO. No sigue: el bucle vive en esta
                   pantalla, así que al irse la escritura se frena y al volver
@@ -599,6 +814,327 @@ export default function EbookIA({
         </div>
       </div>
     </div>
+  );
+}
+
+/**
+ * El editor del temario.
+ *
+ * ══════════════════════════════════════════════════════════════════════════
+ * LA PANTALLA MÁS BARATA DE TODO EL EBOOK
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * Cada capítulo se escribe leyendo **su título y su resumen** de esta lista, y
+ * nada más (ver `pedidoDelCapitulo`). O sea que un renglón cambiado acá cambia
+ * el capítulo entero antes de que exista, gratis. El mismo arreglo después de
+ * escrito cuesta rehacer el ebook.
+ *
+ * ── ⚠️ Por qué el botón se prende con la función del servidor ───────────────
+ *
+ * `revisarTemario` es la misma que decide del otro lado si el temario entra.
+ * Escribir acá una versión "parecida" de las reglas es el camino conocido a que
+ * la pantalla habilite el botón y el servidor conteste que no —o peor, a que
+ * los dos digan cosas distintas sobre el mismo capítulo—. Una regla, un
+ * mensaje, las dos puntas.
+ *
+ * ── Lo que no se puede tocar, y se ve ──────────────────────────────────────
+ *
+ * Lo ya escrito sale con candado y sin campos. No es una restricción de
+ * cortesía: el capítulo escrito Nº 3 es el de la entrada Nº 3 por posición y
+ * por nada más, así que moverla dejaría el texto de uno abajo del título de
+ * otro — y eso no falla, sale un PDF perfecto que dice cualquier cosa.
+ */
+function Temario({
+  inicial,
+  guardando,
+  error,
+  onCambio,
+  onEscribir,
+  onVolver,
+}: {
+  inicial: TemarioEnPantalla;
+  guardando: boolean;
+  error: string | null;
+  /** Avisa hacia arriba si hay algo escrito a mano que se perdería al cerrar. */
+  onCambio: (hay: boolean) => void;
+  onEscribir: (
+    corregido: { titulo: string; promesa: string; capitulos: CapituloPlaneado[] },
+    cambiado: boolean,
+  ) => void;
+  onVolver: (() => void) | null;
+}) {
+  const [titulo, setTitulo] = useState(inicial.titulo);
+  const [promesa, setPromesa] = useState(inicial.promesa);
+  const [capitulos, setCapitulos] = useState<CapituloPlaneado[]>(inicial.capitulos);
+
+  const esRecetario = inicial.formato === "recetario";
+  const nombres = COMO_SE_LLAMA[inicial.formato];
+  /* Las primeras `escritos` entradas ya tienen su capítulo escrito y pagado. */
+  const escritos = Math.min(inicial.escritos, capitulos.length);
+  const faltan = capitulos.length - escritos;
+
+  /* La misma revisión que hace el servidor, con el mismo mensaje. */
+  const revision = revisarTemario(
+    { titulo, promesa, capitulos },
+    { capitulos: inicial.capitulos, escritos: inicial.escritos, esRecetario },
+  );
+  const falta = revision.ok ? null : revision.error;
+
+  /* Se compara el resultado LIMADO contra lo guardado: así un espacio de más al
+     final no cuenta como un cambio y no dispara un guardado al pedo. */
+  const cambiado = revision.ok && JSON.stringify(revision.temario) !== JSON.stringify({
+    titulo: inicial.titulo,
+    promesa: inicial.promesa,
+    capitulos: inicial.capitulos,
+  });
+
+  /* Se avisa hacia arriba, que es donde está el botón de cerrar. Dos efectos y
+     no uno: la limpieza del segundo corre SÓLO al desmontarse, así que apagar
+     el aviso al salir del editor no se mezcla con prenderlo al escribir. */
+  useEffect(() => { onCambio(cambiado); }, [cambiado, onCambio]);
+  useEffect(() => () => onCambio(false), [onCambio]);
+
+  const cambiar = (i: number, campo: keyof CapituloPlaneado, valor: string) =>
+    setCapitulos((cs) => cs.map((c, j) => (j === i ? { ...c, [campo]: valor } : c)));
+
+  const borrar = (i: number) => setCapitulos((cs) => cs.filter((_, j) => j !== i));
+
+  const mover = (i: number, hacia: -1 | 1) =>
+    setCapitulos((cs) => {
+      const j = i + hacia;
+      /* Nunca por arriba de lo escrito: ahí empieza lo que no se toca. */
+      if (j < escritos || j >= cs.length) return cs;
+      const copia = [...cs];
+      [copia[i], copia[j]] = [copia[j], copia[i]];
+      return copia;
+    });
+
+  const agregar = () =>
+    setCapitulos((cs) =>
+      cs.length >= CAPITULOS_MAX ? cs : [...cs, { titulo: "", resumen: "", foto: "" }]);
+
+  /* Agregar y borrar sólo en un ebook de texto: las secciones de un recetario
+     son el reparto de las recetas que se eligieron y se pagaron. */
+  const sePuedeAgregar = !esRecetario && capitulos.length < CAPITULOS_MAX;
+  /* Y no por debajo del mínimo: dejar borrar hasta tres para después apagar el
+     botón con un cartel es hacerle deshacer el trabajo a alguien. */
+  const sePuedeBorrar = !esRecetario && capitulos.length > CAPITULOS_MIN && faltan > 1;
+
+  const campo =
+    "w-full rounded-lg border border-gray-200 panel-oscuro:border-gray-700 bg-white panel-oscuro:bg-gray-950 px-3 py-2 text-[13px] text-gray-900 panel-oscuro:text-gray-100 placeholder:text-gray-400 focus:border-orange-400 focus:outline-none disabled:opacity-60";
+  const chico =
+    "inline-flex h-7 w-7 items-center justify-center rounded-lg border border-gray-200 panel-oscuro:border-gray-700 text-gray-500 panel-oscuro:text-gray-400 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800 transition-colors disabled:opacity-30 disabled:cursor-not-allowed";
+
+  return (
+    <>
+      <p className="text-[13px] leading-relaxed text-gray-600 panel-oscuro:text-gray-300">
+        Esto es lo que armó la IA.{" "}
+        {escritos === 0 ? (
+          <>
+            Todavía <strong>no se escribió nada</strong>: lo que corrijas acá sale gratis y
+            cambia el ebook entero.
+          </>
+        ) : (
+          <>
+            Los primeros {escritos} ya están escritos y no se tocan. Podés corregir{" "}
+            <strong>lo que falta</strong>.
+          </>
+        )}
+      </p>
+
+      <label className="mt-4 block text-[12.5px] font-bold text-gray-700 panel-oscuro:text-gray-300">
+        Título
+      </label>
+      <input
+        value={titulo}
+        onChange={(e) => setTitulo(e.target.value.slice(0, LARGO_TITULO_EBOOK))}
+        maxLength={LARGO_TITULO_EBOOK}
+        disabled={guardando}
+        className={`mt-1.5 ${campo}`}
+      />
+
+      <label className="mt-3 block text-[12.5px] font-bold text-gray-700 panel-oscuro:text-gray-300">
+        La promesa de la tapa <span className="font-normal text-gray-400">(opcional)</span>
+      </label>
+      <textarea
+        value={promesa}
+        onChange={(e) => setPromesa(e.target.value.slice(0, LARGO_RESUMEN_CAPITULO))}
+        rows={2}
+        maxLength={LARGO_RESUMEN_CAPITULO}
+        disabled={guardando}
+        placeholder="Qué va a poder hacer quien lo lea cuando termine."
+        className={`mt-1.5 ${campo}`}
+      />
+
+      <div className="mt-5 flex items-baseline justify-between gap-2">
+        <p className="text-[12.5px] font-bold text-gray-700 panel-oscuro:text-gray-300">
+          {/* Con la palabra de su formato: las de un recetario son secciones que
+              agrupan recetas, no recetas sueltas. Ver `COMO_SE_LLAMA.tramo`. */}
+          {capitulos.length} {capitulos.length === 1 ? nombres.tramo : nombres.tramos}
+        </p>
+        {esRecetario && (
+          <p className="text-[11px] text-gray-400 panel-oscuro:text-gray-500">
+            Se pueden renombrar, no agregar ni quitar
+          </p>
+        )}
+      </div>
+
+      <p className="mt-1 text-[11.5px] leading-snug text-gray-500 panel-oscuro:text-gray-400">
+        El resumen es lo único que se lee para escribir cada {nombres.tramo}. La foto se
+        busca tal cual: describí una escena que se pueda fotografiar.
+      </p>
+
+      <ul className="mt-3 space-y-2.5">
+        {capitulos.map((c, i) => {
+          const trabado = i < escritos;
+          return (
+            <li
+              key={i}
+              className={`rounded-xl border p-3 ${
+                trabado
+                  ? "border-gray-100 bg-gray-50 panel-oscuro:border-gray-800 panel-oscuro:bg-gray-800/40"
+                  : "border-gray-200 panel-oscuro:border-gray-700"
+              }`}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[11px] font-bold uppercase tracking-wide text-gray-400 panel-oscuro:text-gray-500">
+                  {nombres.tramo} {i + 1}
+                </span>
+
+                {trabado ? (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 panel-oscuro:text-emerald-400">
+                    <Lock className="h-3 w-3" /> Ya escrito
+                  </span>
+                ) : (
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => mover(i, -1)}
+                      disabled={guardando || i <= escritos}
+                      aria-label={`Subir ${nombres.tramo} ${i + 1}`}
+                      className={chico}
+                    >
+                      <ArrowUp className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => mover(i, 1)}
+                      disabled={guardando || i >= capitulos.length - 1}
+                      aria-label={`Bajar ${nombres.tramo} ${i + 1}`}
+                      className={chico}
+                    >
+                      <ArrowDown className="h-3.5 w-3.5" />
+                    </button>
+                    {sePuedeBorrar && (
+                      <button
+                        type="button"
+                        onClick={() => borrar(i)}
+                        disabled={guardando}
+                        aria-label={`Borrar ${nombres.tramo} ${i + 1}`}
+                        className={`${chico} hover:text-red-600`}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {trabado ? (
+                <p className="mt-1.5 text-[13px] font-bold text-gray-500 panel-oscuro:text-gray-400">
+                  {c.titulo}
+                </p>
+              ) : (
+                <>
+                  <input
+                    value={c.titulo}
+                    onChange={(e) => cambiar(i, "titulo", e.target.value.slice(0, LARGO_TITULO_CAPITULO))}
+                    maxLength={LARGO_TITULO_CAPITULO}
+                    disabled={guardando}
+                    placeholder={`Título del ${nombres.tramo}`}
+                    className={`mt-1.5 ${campo} font-bold`}
+                  />
+                  <textarea
+                    value={c.resumen}
+                    onChange={(e) => cambiar(i, "resumen", e.target.value.slice(0, LARGO_RESUMEN_CAPITULO))}
+                    rows={2}
+                    maxLength={LARGO_RESUMEN_CAPITULO}
+                    disabled={guardando}
+                    placeholder="De qué se trata, en dos renglones."
+                    className={`mt-1.5 ${campo}`}
+                  />
+                  {/* El tope aparece recién cuando falta poco. Un contador
+                      siempre a la vista es ruido en diez renglones; un campo
+                      que deja de aceptar letras sin decir por qué se siente
+                      como que la pantalla se colgó. */}
+                  {c.resumen.length > LARGO_RESUMEN_CAPITULO * 0.8 && (
+                    <p className="mt-0.5 text-right text-[10.5px] text-gray-400 panel-oscuro:text-gray-500">
+                      {c.resumen.length} de {LARGO_RESUMEN_CAPITULO}
+                    </p>
+                  )}
+                  <input
+                    value={c.foto}
+                    onChange={(e) => cambiar(i, "foto", e.target.value.slice(0, LARGO_FOTO))}
+                    maxLength={LARGO_FOTO}
+                    disabled={guardando}
+                    placeholder="Qué foto buscar: manos amasando harina"
+                    className={`mt-1.5 ${campo} text-[12px]`}
+                  />
+                </>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+
+      {sePuedeAgregar && (
+        <button
+          type="button"
+          onClick={agregar}
+          disabled={guardando}
+          className="mt-2.5 w-full inline-flex items-center justify-center gap-2 rounded-xl border border-dashed border-gray-300 panel-oscuro:border-gray-700 px-4 py-2.5 text-[12.5px] font-bold text-gray-600 panel-oscuro:text-gray-400 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800 transition-colors disabled:opacity-50"
+        >
+          <Plus className="h-4 w-4" /> Agregar {nombres.tramo}
+        </button>
+      )}
+
+      {error && <Aviso>{error}</Aviso>}
+
+      {/* El motivo por el que el botón está apagado, escrito. Un botón gris sin
+          explicación deja a alguien tocándolo sin entender qué le falta. */}
+      {falta && (
+        <p className="mt-3 rounded-xl bg-amber-50 panel-oscuro:bg-amber-500/10 px-3.5 py-2.5 text-[12.5px] text-amber-900 panel-oscuro:text-amber-200">
+          {falta}
+        </p>
+      )}
+
+      <button
+        onClick={() => revision.ok && onEscribir(revision.temario, cambiado)}
+        disabled={guardando || !revision.ok}
+        className="mt-4 w-full inline-flex items-center justify-center gap-2 rounded-xl bg-orange-600 px-4 py-3 text-sm font-bold text-white hover:bg-orange-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+        {guardando
+          ? "Guardando…"
+          : escritos === 0
+            ? `Escribir ${capitulos.length === 1 ? "el" : "los"} ${capitulos.length} ${capitulos.length === 1 ? nombres.tramo : nombres.tramos}`
+            : "Guardar y seguir escribiendo"}
+      </button>
+
+      {onVolver && (
+        <button
+          onClick={onVolver}
+          disabled={guardando}
+          className="mt-2 w-full rounded-xl border border-gray-200 panel-oscuro:border-gray-700 px-4 py-2.5 text-[13px] font-bold text-gray-700 panel-oscuro:text-gray-300 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800 transition-colors disabled:opacity-50"
+        >
+          Volver sin guardar
+        </button>
+      )}
+
+      <p className="mt-3 text-center text-[11px] text-gray-400 panel-oscuro:text-gray-500">
+        Corregir el temario no gasta otra generación.
+      </p>
+    </>
   );
 }
 
