@@ -41,7 +41,26 @@ function primeraImagen(images: string): string | null {
   }
 }
 
-export default async function ProductosPage() {
+/**
+ * ⚠️ `?pagina=` SE LEE ACÁ, EN EL SERVIDOR, Y NO EN EL NAVEGADOR.
+ *
+ * Es cuál de las páginas de venta se está mirando (ver las solapas en
+ * `ProductosClient`). Leerlo del lado del cliente parece más simple y tiene dos
+ * problemas: en un efecto llega TARDE —se dibuja la primera y salta a la que
+ * pediste, un parpadeo en cada carga— y en el estado inicial rompe la
+ * hidratación, porque el servidor no tiene dirección que leer y manda otra cosa
+ * que el navegador.
+ *
+ * Leído acá llega con el primer dibujo y las dos puntas coinciden.
+ */
+export default async function ProductosPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const cual = (await searchParams).pagina;
+  const paginaInicial = typeof cual === "string" ? cual : null;
+
   const user = await getCurrentUser();
   if (!user || user.role !== "DIGITAL") return null;
 
@@ -167,6 +186,7 @@ export default async function ProductosPage() {
 
       <ProductosClient
         tier={tier}
+        paginaInicial={paginaInicial}
         productos={productos}
         cupoIA={cupoIA}
         cupoEbook={cupoEbook}

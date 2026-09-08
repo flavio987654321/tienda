@@ -1370,6 +1370,45 @@ chequear("el motivo por el que no se puede publicar está atado al botón",
     /producto, bono y upsell/.test(pantallaProductos));
 
   /* ══════════════════════════════════════════════════════════════════════════
+     UN EMBUDO POR VEZ, Y LA ELECCIÓN EN LA DIRECCIÓN
+     ══════════════════════════════════════════════════════════════════════════
+
+     Se dibujaban todos los principales uno abajo del otro. Con los cinco de Pro
+     son 45 tarjetas en un solo scroll —cada producto lleva hasta 5 bonos y 3
+     upsells— y encontrar el bono de la página tres es scrollear a ojo. */
+  chequear("se dibuja un solo embudo a la vez, el elegido",
+    /\(elegido \? \[elegido\] : \[\]\)\.map/.test(pantallaProductos) &&
+    !/^\s*principales\.map\(\(p\) => \(/m.test(pantallaProductos));
+
+  /* ⚠️ Y CON UNA SOLA PÁGINA NO HAY SOLAPAS. Una fila de una sola solapa no es
+     una elección: es un renglón ocupado que hace dudar de si falta algo. Y es el
+     caso de todo el plan Free, donde el tope de páginas es uno. */
+  chequear("las solapas aparecen sólo cuando hay más de una página",
+    /\{principales\.length > 1 && \(/.test(pantallaProductos));
+
+  /* ⚠️ LA ELECCIÓN VIVE EN LA DIRECCIÓN, Y LA LEE EL SERVIDOR.
+     Guardar un producto termina en `window.location.reload()`. Con la elección
+     sólo en memoria, editar el bono de la página dos te devolvía a la página uno
+     y el bono recién editado no estaba a la vista: se ve igual que si no se
+     hubiera guardado.
+
+     Y leída en el navegador tiene sus propios dos problemas: en un efecto llega
+     tarde —se dibuja la primera y salta, un parpadeo por carga— y en el estado
+     inicial rompe la hidratación, porque el servidor no tiene dirección que
+     leer. Por eso el parámetro entra como prop desde `page.tsx`. */
+  const pantallaProductosServidor = readFileSync("src/app/digitales/productos/page.tsx", "utf8");
+  chequear("cuál página se mira sale de `?pagina=`, leído en el servidor",
+    /searchParams/.test(pantallaProductosServidor) &&
+    /paginaInicial=\{paginaInicial\}/.test(pantallaProductosServidor) &&
+    /useState<string \| null>\(paginaInicial\)/.test(pantallaProductos));
+
+  /* Y un producto nuevo abre SU solapa: sin esto, crear la página tres te
+     devolvía a la uno y lo recién creado no estaba a la vista. */
+  chequear("un producto nuevo deja abierta su propia solapa",
+    /borrador\.rol === "PRINCIPAL" && typeof data\.id === "string"/.test(pantallaProductos) &&
+    /url\.searchParams\.set\("pagina", nuevoPrincipal\)/.test(pantallaProductos));
+
+  /* ══════════════════════════════════════════════════════════════════════════
      ⚠️ TODO `<label>` QUE ENVUELVA UN INPUT `sr-only` VA `relative`.
      ══════════════════════════════════════════════════════════════════════════
 

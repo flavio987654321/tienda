@@ -766,12 +766,19 @@ function Grupo({ padre, rol, acc }: { padre: ProductoEnPantalla; rol: "BONO" | "
  */
 export default function ProductosClient({
   tier,
+  paginaInicial,
   productos,
   cupoIA,
   cupoEbook,
   cobroConectado,
 }: {
   tier: TierDigital;
+  /**
+   * Cuál de las páginas de venta se está mirando, del `?pagina=` de la
+   * dirección. Lo lee el servidor y llega con el primer dibujo: ver el porqué
+   * largo en `page.tsx`. `null` es "la primera".
+   */
+  paginaInicial: string | null;
   productos: ProductoEnPantalla[];
   cupoIA: EstadoDelCupo;
   /** El cupo de EBOOKS, que es una bolsa aparte del de armar el embudo. */
@@ -902,6 +909,45 @@ export default function ProductosClient({
   const hijosDe = (padreId: string, rol: RolDigital) =>
     productos.filter((p) => p.padreId === padreId && p.rol === rol);
 
+  /* ══════════════════════════════════════════════════════════════════════════
+     UN EMBUDO POR VEZ
+     ══════════════════════════════════════════════════════════════════════════
+
+     Antes se dibujaban todos, uno abajo del otro. Con dos ya se lee mal; con los
+     cinco de Pro son **45 tarjetas** en un solo scroll —cada producto lleva
+     hasta 5 bonos y 3 upsells— y encontrar el bono de la página tres es
+     scrollear a ojo. El aire entre embudos ayudaba, pero el problema no es la
+     separación: es la cantidad.
+
+     Así que se elige cuál se mira, y se muestra ese.
+
+     ⚠️ La elección vive en la DIRECCIÓN (`?pagina=`) y no sólo en memoria, y no
+     es un lujo: guardar un producto termina en `window.location.reload()`
+     —la lista la arma el servidor, recargar es lo único que garantiza que se vea
+     lo que quedó guardado—. Con la elección en memoria, editar el bono de la
+     página dos te devolvía a la página uno y el bono recién editado no estaba a
+     la vista: parecía que no se había guardado.
+
+     Y de paso queda compartible y el botón de atrás del navegador hace algo
+     razonable.
+
+     `?? principales[0]` no es un descuido: es lo que pasa cuando se borra la
+     página que estabas mirando, o cuando llega una dirección con un id que ya no
+     existe. Cae en la primera en vez de mostrar una pantalla vacía. */
+  const [paginaVista, setPaginaVista] = useState<string | null>(paginaInicial);
+
+  const elegido = principales.find((p) => p.id === paginaVista) ?? principales[0] ?? null;
+
+  const elegirPagina = (id: string) => {
+    setPaginaVista(id);
+    /* `replaceState` y no `push`: cambiar de solapa no es navegar. Con `push`,
+       mirar las cinco páginas dejaba cinco pasos de historial y volver atrás
+       era apretar cinco veces para salir de la misma pantalla. */
+    const url = new URL(window.location.href);
+    url.searchParams.set("pagina", id);
+    window.history.replaceState(null, "", url);
+  };
+
   /* De qué producto cuelga el ebook que se está escribiendo, si cuelga de
      alguno. No es un adorno: es lo que le avisa a la persona que NO tiene que
      volver a explicar el contexto del principal —el servidor ya se lo manda al
@@ -988,6 +1034,25 @@ export default function ProductosClient({
          que se ve sea lo que quedó guardado.
          El cerrojo NO se suelta acá: la página se está yendo, y devolverle el
          botón a alguien durante ese rato es ofrecerle guardar dos veces. */
+
+      /* ⚠️ Un producto NUEVO abre su propia solapa. Sin esto, crear la página
+         tres te devolvía a la uno —la recarga cae en la primera— y lo que
+         acababas de crear no estaba a la vista: se ve igual que si no se hubiera
+         guardado. Sólo el principal, porque es el único que tiene solapa; un
+         bono se crea adentro de la que ya estás mirando.
+
+         La dirección se arma sobre la actual y no a mano, para no perder lo que
+         venga colgado el día que esta pantalla tenga otro parámetro. */
+      const nuevoPrincipal =
+        !borrador.id && borrador.rol === "PRINCIPAL" && typeof data.id === "string"
+          ? (data.id as string)
+          : null;
+      if (nuevoPrincipal) {
+        const url = new URL(window.location.href);
+        url.searchParams.set("pagina", nuevoPrincipal);
+        window.location.href = url.toString();
+        return;
+      }
       window.location.reload();
     } catch {
       setError("No pudimos conectarnos. Revisá tu internet e intentá de nuevo.");
@@ -1123,6 +1188,64 @@ export default function ProductosClient({
         )}
       </div>
 
+      {/* ── Las solapas: cuál de tus páginas estás mirando ─────────────────────
+          Van pegadas abajo del bloque del plan porque son de la misma idea: ahí
+          arriba dice "2 de 5 páginas de venta" y acá se elige cuál de esas dos.
+
+          ⚠️ CON UNA SOLA NO APARECEN. Una fila de una sola solapa no es una
+          elección, es un adorno que ocupa un renglón y hace dudar de si falta
+          algo. Y es el caso de todo el plan Free, donde el tope es uno.
+
+          ── Por qué el número Y el nombre ────────────────────────────────────
+          El número es lo que se pidió y lo que ordena —"la dos" es una forma
+          real de nombrarlas—, pero con cinco páginas los números solos no dicen
+          a cuál volver. El nombre es lo que se reconoce. Va cortado, porque un
+          título de 140 caracteres reventaría la fila.
+
+          ── Por qué botones y no un `<select>` ──────────────────────────────
+          Con cinco como máximo, todas entran a la vista y se cambia en un clic.
+          Un desplegable esconde lo que hay hasta que lo abrís.
+
+          `aria-pressed` y no `role="tab"`: las solapas de verdad se manejan con
+          las flechas del teclado, y prometer eso en el rol sin implementarlo es
+          peor que no prometerlo. Esto es un grupo de botones que se aprietan, y
+          con Tab se recorren solos. */}
+      {principales.length > 1 && (
+        <div
+          role="group"
+          aria-label="Elegí qué página de venta estás viendo"
+          className="-mt-5 flex gap-2 overflow-x-auto pb-1"
+        >
+          {principales.map((p, i) => {
+            const activa = elegido?.id === p.id;
+            return (
+              <button
+                key={p.id}
+                onClick={() => elegirPagina(p.id)}
+                aria-pressed={activa}
+                className={`shrink-0 inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-[13px] font-bold transition-colors ${
+                  activa
+                    ? "bg-orange-600 text-white shadow-sm"
+                    : "bg-white panel-oscuro:bg-gray-900 border border-gray-200 panel-oscuro:border-gray-700 text-gray-600 panel-oscuro:text-gray-300 hover:border-gray-300 panel-oscuro:hover:border-gray-600"
+                }`}
+              >
+                <span
+                  className={`grid h-5 w-5 shrink-0 place-items-center rounded-md text-[11px] ${
+                    activa ? "bg-white/25" : "bg-gray-100 panel-oscuro:bg-gray-800"
+                  }`}
+                >
+                  {i + 1}
+                </span>
+                {/* Sin título todavía es un caso real: se crea a mano y se guarda
+                    con el nombre a medio escribir. Una solapa en blanco no se
+                    puede apretar con confianza. */}
+                <span className="max-w-[9rem] truncate">{p.name.trim() || "Sin título"}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       {error && (
         <div className="rounded-2xl border border-red-200 panel-oscuro:border-red-500/30 bg-red-50 panel-oscuro:bg-red-500/10 px-5 py-4">
           <p className="text-sm font-medium text-red-700 panel-oscuro:text-red-300">{error}</p>
@@ -1157,7 +1280,7 @@ export default function ProductosClient({
           </p>
         </div>
       ) : (
-        principales.map((p) => (
+        (elegido ? [elegido] : []).map((p) => (
           /* ⚠️ SIN SANGRÍA. Acá había un `sm:pl-8` en los grupos, para mostrar
              que los bonos y los upsells cuelgan del producto. El costo era que
              TODO lo de abajo quedaba 32 px más angosto que la tarjeta de
