@@ -134,9 +134,44 @@ export const livePromotionsWhere = (storeId: string, now = new Date()): Prisma.S
  * regala. Si el dólar se mueve fuerte y estos números no, el plan caro pasa a
  * perder plata en silencio. Los topes de `TOPES_DIGITALES` son la otra palanca.
  */
+/**
+ * ⚠️ PRO PASÓ DE $60.000 A $89.000 EL 08/09/26, Y NO POR INFLACIÓN.
+ *
+ * El precio viejo estaba puesto a ojo, sin mirar el mercado. Puesto al lado de
+ * la competencia con el dólar a $1.520, la cuenta daba esto:
+ *
+ * | Plan de ellos | En pesos  | Qué da                        |
+ * |---------------|-----------|-------------------------------|
+ * | Starter US$20 | $30.400   | 2 tiendas, 2 bonos, 1 upsell  |
+ * | Pro US$60     | $91.200   | 3 tiendas, 3 bonos, 2 upsells |
+ * | **Max US$100**| **$152.000** | **5 tiendas, 5 bonos, 3 upsells, 2% de comisión** |
+ *
+ * **Nuestro Pro no equivale a su Pro: equivale a su Max**, ficha por ficha —5
+ * páginas, 5 bonos, 3 upsells, 2% de comisión—. O sea que estábamos vendiendo
+ * su plan de $152.000 a $60.000: **el 39%**.
+ *
+ * $89.000 queda **justo abajo de los $91.200 que sale su plan Pro**, y ese es el
+ * argumento entero: *por menos de lo que sale su Pro, te damos todo lo de su
+ * Max*. Sigue siendo 41% más barato que el plan que iguala.
+ *
+ * Starter NO se toca: sus $30.000 contra los $30.400 de su Starter están bien
+ * puestos, y encima le ganamos en upsells (2 contra 1) y en comisión (6% contra
+ * 8%).
+ *
+ * ── ⚠️ Y ACÁ HAY UNA DECISIÓN PENDIENTE QUE SE VA A OLVIDAR ────────────────
+ *
+ * **Ellos cobran en dólares y nosotros en pesos.** Su precio sube solo; el
+ * nuestro se licúa todos los meses sin que nadie haga nada. Se decidió el
+ * 08/09/26 **dejarlo en pesos y revisarlo a mano**, porque un abono que cambia
+ * todos los meses incomoda al comprador argentino.
+ *
+ * El costo de esa decisión es que hay que acordarse. La referencia para revisar:
+ * al 08/09/26, con el dólar a $1.520, Pro estaba al 59% del Max de ellos. Si esa
+ * proporción cae mucho por debajo, el precio quedó viejo.
+ */
 export const PRECIOS_DIGITALES = {
   DIGITAL_STARTER: { MONTHLY: 30000, ANNUAL: 270000 },
-  DIGITAL_PRO:     { MONTHLY: 60000, ANNUAL: 540000 },
+  DIGITAL_PRO:     { MONTHLY: 89000, ANNUAL: 801000 },
 } as const;
 
 /**
@@ -188,7 +223,22 @@ export const TRANSFERENCIA_DIGITAL = {
  * nosotros no, y prometer lo de ellos sería mentir.
  *
  * `ebooksIA` es el único tope que responde a un costo real: un ebook generado
- * cuesta entre US$2 y US$4 de API. Los otros tres son comerciales.
+ * cuesta **US$0,22** de API, medidos el 07/09/26 (acá decía "entre US$2 y US$4",
+ * que era una estimación que nunca se midió — ver el bloque de `ebooksIA` más
+ * abajo). Los otros tres son comerciales.
+ *
+ * ⚠️ Sigue siendo el único con costo real detrás, pero **el costo ya no aprieta
+ * como se creía**: los 6 de Pro son US$1,32 al mes, no US$20 a 40. Esa
+ * generosidad ya se sacó de acá el 08/09/26 — ver `EBOOKS_IA_ARRANQUE`.
+ *
+ * ⚠️ Y hay un multiplicador que no estaba contado: **el primer rehacer es
+ * gratis** (`reintentos < 1` en la ruta del temario). O sea que una unidad de
+ * cupo puede costar DOS generaciones enteras. El número honesto por unidad es
+ * US$0,44 y no US$0,22, y el techo duro —10 capítulos más los 6 reintentos, dos
+ * veces— es US$1,16. Con eso, Pro son US$2,64 al mes y Starter US$1,76.
+ *
+ * El rehacer gratis se deja igual: quien recibe un ebook malo y no puede
+ * rehacerlo pide devolución, y eso cuesta muchísimo más que 22 centavos.
  *
  * ⚠️ **Las páginas bajaron de 1/5/25 a 1/3/5 el 01/09/26.** El 25 no era generoso,
  * era inerte: un techo que nadie toca no genera ni una sola mejora de plan, y un
@@ -220,9 +270,23 @@ export const TRANSFERENCIA_DIGITAL = {
  *
  * Los dos motivos, y ninguno es copiarlos:
  *
- *   1. **El costo está al revés de lo que parece.** El ebook son US$2 a 4 de
- *      API; los textos de una página de venta son centavos. Estábamos regalando
- *      lo caro y cobrando lo barato.
+ *   1. **El costo está al revés de lo que parece.** El ebook es la llamada cara
+ *      —**US$0,22 medidos**, ver abajo— y los textos de una página de venta son
+ *      centavos. Estábamos regalando lo caro y cobrando lo barato.
+ *
+ *      ⚠️ MEDIDO EL 07/09/26, y acá decía **US$2 a 4**: un número que nunca se
+ *      midió y que estaba entre 9 y 18 veces por encima. Un ebook de verdad —8
+ *      capítulos, 4817 palabras, `claude-sonnet-5`— salió **US$0,2223** en 9
+ *      llamadas (22.437 tokens de entrada, 17.742 de salida). El techo, con las
+ *      10 capítulos que permite el esquema y todas las llamadas agotando su
+ *      `max_tokens`, es **US$0,38**: o sea que el PEOR caso posible sigue
+ *      estando cinco veces por debajo del piso que decía esta línea.
+ *
+ *      Qué cambia y qué no: el orden se mantiene —el ebook sigue siendo lo caro
+ *      y la página lo barato—, así que la decisión de qué regalar no se mueve.
+ *      Lo que cambia es la ESCALA, y con ella el argumento de que los topes de
+ *      `ebooksIA` responden a un costo que aprieta: diez ebooks de Pro son
+ *      US$2,22, no US$20 a 40.
  *   2. **Free no pide tarjeta.** Un ebook escrito con IA sirve FUERA de la
  *      plataforma: alguien abre diez cuentas y se lleva diez ebooks. Una página
  *      generada no le sirve a nadie afuera. Lo que se regala tiene que ser lo
@@ -249,10 +313,32 @@ export const TRANSFERENCIA_DIGITAL = {
  * dos veces con este mismo archivo el 01/09/26. Cuando la Fase 4 construya el
  * contador, lee esta misma constante.
  */
+/**
+ * ⚠️ SUBIÓ EL 08/09/26 — Y ES ACÁ DONDE HAY QUE SER GENEROSO, NO EN EL MENSUAL.
+ *
+ * Starter 3 → 6, Pro 6 → 12. El motivo es el que ya decía este comentario y no
+ * se estaba aplicando: **el embudo se arma una vez y después se vende.** El mes
+ * 1 se necesita todo y el mes 6 no se necesita nada.
+ *
+ * Se llegó acá descartando la idea de subir el MENSUAL a 12 en Pro, que fue lo
+ * primero que se propuso. Estaba mal por tres motivos:
+ *
+ *   1. Un tope que nadie alcanza es inerte, y **un límite sólo hace plata
+ *      cuando alguien se choca contra él** — el mismo error de las 25 páginas.
+ *   2. La competencia da 6 en su plan equivalente. No hay motivo para dar el
+ *      doble.
+ *   3. Quien genera 12 ebooks por mes no está armando un negocio: está
+ *      cosechando ebooks para vender afuera, que es el motivo por el que Free
+ *      quedó en 0.
+ *
+ * Con esto, un Pro llena **cuatro productos completos el primer mes** (12 + 6 =
+ * 18 generaciones, y un producto lleno son 6 archivos) y el quinto al mes
+ * siguiente. Igual de rápido que con 12 mensuales, sin dejar el grifo abierto.
+ */
 export const EBOOKS_IA_ARRANQUE = {
   FREE: 0,
-  STARTER: 3,
-  PRO: 6,
+  STARTER: 6,
+  PRO: 12,
 } as const;
 
 export const TOPES_DIGITALES = {
@@ -266,13 +352,34 @@ export const TOPES_DIGITALES = {
      (1 → 2 → 3) y no se estancan: la comisión baja de 8 % a 6 % a 2 %, así que
      el upsell nos rinde MÁS justo en los planes donde menos abono cobramos.
 
-     `ebooksIA: 1` no es un número al azar: es exactamente lo que entra en la
-     única página de venta que tiene Free. Le alcanza para llenar lo que puede
-     publicar y ni uno más. **Sigue siendo provisorio hasta medir un ebook de
-     verdad** (Fase 4): si sale US$4, un Free que nunca vende nos cuesta eso. */
+     ⚠️ Acá decía que `ebooksIA: 1` en Free era "provisorio hasta medir un ebook
+     de verdad". **Ya se midió —US$0,22— y Free se revisó el 08/09/26: queda en
+     0.** Y no por plata: 22 centavos no le hacen daño a nadie. Queda en 0 porque
+     un ebook escrito con IA **sirve fuera de la plataforma**, y Free no pide
+     tarjeta: alguien abre diez cuentas y se lleva diez ebooks para vender en
+     otro lado. Ese motivo no depende del costo, así que medirlo no lo cambió.
+
+     Free sigue teniendo la IA: le arma la página y las fichas —la cáscara, que
+     es lo que impresiona al entrar— y el contenido del ebook lo trae la persona. */
+  /* ⚠️ `ebooksIA` subió el 08/09/26: Starter 2 → 4, Pro 5 → 6. Son **los mismos
+     números que da la competencia** en los planes equivalentes (4 en su Starter,
+     6 en su Pro), y el costo real de esa subida es de centavos: dos ebooks más
+     por mes son US$0,88. Lo que de verdad se agrandó es el regalo de bienvenida
+     —ver `EBOOKS_IA_ARRANQUE`—, que es cuando hace falta.
+
+     Los `bonos` de Pro se quedan en 5, y eso también se revisó el 08/09/26: se
+     había propuesto bajarlos a 3 comparando contra el plan *Pro* de la
+     competencia, y era la columna equivocada. **Nuestro Pro equivale a su Max**,
+     que da exactamente 5 bonos y 3 upsells. Ver `PRECIOS_DIGITALES`.
+
+     ⚠️ Pero el costo de los bonos es real y **no es la IA: es el tráfico.** El
+     bono va gratis con la compra, así que CADA VENTA se lleva el principal más
+     todos sus bonos —en Pro son 6 archivos—. Eso pega en el egress de Supabase,
+     que es donde ya sabemos que aprieta. Si algún día hay que recortar algo de
+     Pro, es acá y no en los ebooks. */
   FREE:    { paginas: 1, bonos: 1, upsells: 1, ebooksIA: 0 },
-  STARTER: { paginas: 2, bonos: 2, upsells: 2, ebooksIA: 2 },
-  PRO:     { paginas: 5, bonos: 5, upsells: 3, ebooksIA: 5 },
+  STARTER: { paginas: 2, bonos: 2, upsells: 2, ebooksIA: 4 },
+  PRO:     { paginas: 5, bonos: 5, upsells: 3, ebooksIA: 6 },
 } as const;
 
 /* ══════════════════════════════════════════════════════════════════════════

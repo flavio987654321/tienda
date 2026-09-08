@@ -130,7 +130,16 @@ const nextConfig: NextConfig = {
      Es la ruta que arma el ebook y ninguna otra: son 300 KB que no tienen por
      qué viajar con el resto. */
   outputFileTracingIncludes: {
-    "/api/digitales/ia/ebook/armar": ["./node_modules/pdfkit/js/data/**"],
+    "/api/digitales/ia/ebook/armar": [
+      "./node_modules/pdfkit/js/data/**",
+      /* ⚠️ Y las tipografías del ebook, por el MISMO motivo: `ebook-pdf.ts`
+         las abre con una ruta que arma sola (`process.cwd() + /fuentes/`), no
+         hay `import` que las nombre, y sin esta línea no viajan. La diferencia
+         con los .afm es que esto no se cae: hay respaldo a las fuentes de
+         fábrica, así que el ebook saldría igual pero con otra letra —un
+         cambio de aspecto silencioso en producción, que es peor que un error. */
+      "./fuentes/**",
+    ],
   },
   async headers() {
     return [

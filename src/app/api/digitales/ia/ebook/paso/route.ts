@@ -8,8 +8,11 @@ import {
 } from "@/lib/ia-digitales";
 import {
   INSTRUCCIONES_CAPITULO, ESQUEMA_DEL_CAPITULO, normalizarCapitulo,
-  leerIndice, leerCapitulos, elCapituloQueSigue, pedidoDelCapitulo,
+  INSTRUCCIONES_RECETAS, esquemaDeRecetas, normalizarRecetas, pedidoDeRecetas,
+  leerIndice, leerCapitulos, leerGruposDeRecetas, recetasDeLaSeccion,
+  pedidoDelCapitulo,
 } from "@/lib/ebook-ia";
+import { leerOpciones } from "@/lib/ebook-opciones";
 import { estadoDelBorrador, tomarElCandado, guardarCapitulo, soltarElCandado } from "@/lib/ebook-borrador";
 import { getSubscriptionStatus, getUserSubscription } from "@/lib/subscription";
 import { getArgentinaDayKey } from "@/lib/fechas-comerciales";
@@ -114,8 +117,20 @@ export async function POST(req: NextRequest) {
 
   const ebook = producto.ebookIA;
   const indice = leerIndice(ebook.indice);
-  const escritos = leerCapitulos(ebook.capitulos);
-  const sigue = elCapituloQueSigue(indice, escritos);
+  const opciones = leerOpciones(ebook.indice);
+  const esRecetario = opciones.formato === "recetario";
+
+  /* ⚠️ Los dos formatos guardan en la MISMA columna y con la misma forma de
+     afuera: una lista donde cada elemento es una llamada ya cobrada. Por eso
+     de acá para abajo el bucle es idéntico —"¿cuál sigue?" es el largo de lo
+     escrito— y lo único que cambia es qué se le pide al modelo. */
+  const gruposDeRecetas = esRecetario ? leerGruposDeRecetas(ebook.capitulos) : [];
+  const escritos = esRecetario ? [] : leerCapitulos(ebook.capitulos);
+  const yaVan = esRecetario ? gruposDeRecetas.length : escritos.length;
+
+  const sigue = yaVan >= indice.length
+    ? null
+    : { numero: yaVan + 1, capitulo: indice[yaVan] };
 
   /* Ya está completo: se contesta que sí sin llamar al modelo. Que la pantalla
      pida uno de más no puede costar plata. */
@@ -163,22 +178,44 @@ export async function POST(req: NextRequest) {
     });
   }
 
+  /* Cuántas recetas escribe ESTA sección. Todas llevan tres menos la última,
+     que se queda con el resto: con 10 elegidas son 3, 3, 3 y 1. */
+  /* ⚠️ Nunca menos de una. `recetasDeLaSeccion` devuelve 0 para una sección que
+     no existe, y con eso el esquema pediría `minItems: 0` —una lista vacía
+     válida— y se pagaría una llamada que no puede devolver nada. Hoy no puede
+     pasar (el número sale del largo del temario), pero es el borde que se paga. */
+  const cuantasRecetas = esRecetario
+    ? Math.max(1, recetasDeLaSeccion(opciones.recetas, sigue.numero))
+    : 0;
+
   let respuesta;
   try {
     respuesta = await anthropic.messages.create(
       {
         model: "claude-sonnet-5",
-        max_tokens: 3000,
-        system: INSTRUCCIONES_CAPITULO,
-        tools: [{
-          name: "escribir_capitulo",
-          description: "Devuelve el capítulo en pedazos: párrafos, subtítulos y viñetas.",
-          input_schema: ESQUEMA_DEL_CAPITULO,
-        }],
-        tool_choice: { type: "tool", name: "escribir_capitulo" },
+        /* ⚠️ 4.000 para las recetas y no los 3.000 del capítulo. Medido: tres
+           recetas son 2.866 tokens de salida. Cortarse en `max_tokens` no
+           devuelve las que ya escribió, devuelve NADA, y se paga igual — pasó
+           con cinco recetas y 4.000. Ver `RECETAS_POR_LLAMADA`. */
+        max_tokens: esRecetario ? 4000 : 3000,
+        system: esRecetario ? INSTRUCCIONES_RECETAS : INSTRUCCIONES_CAPITULO,
+        tools: [esRecetario
+          ? {
+            name: "escribir_recetas",
+            description: "Devuelve las recetas de una sección, cada una con sus campos.",
+            input_schema: esquemaDeRecetas(cuantasRecetas),
+          }
+          : {
+            name: "escribir_capitulo",
+            description: "Devuelve el capítulo en pedazos: párrafos, subtítulos y viñetas.",
+            input_schema: ESQUEMA_DEL_CAPITULO,
+          }],
+        tool_choice: { type: "tool", name: esRecetario ? "escribir_recetas" : "escribir_capitulo" },
         messages: [{
           role: "user",
-          content: pedidoDelCapitulo(ebook.titulo, ebook.tema, ebook.publico, indice, sigue.numero),
+          content: esRecetario
+            ? pedidoDeRecetas(ebook.titulo, ebook.tema, ebook.publico, indice, sigue.numero, cuantasRecetas)
+            : pedidoDelCapitulo(ebook.titulo, ebook.tema, ebook.publico, indice, sigue.numero),
         }],
       },
       { timeout: ESPERA_MS },
@@ -201,19 +238,29 @@ export async function POST(req: NextRequest) {
   });
 
   const bloque = respuesta.content.find((b) => b.type === "tool_use");
-  const capitulo = bloque ? normalizarCapitulo(bloque.input, sigue.capitulo.titulo) : null;
 
-  if (!capitulo) {
-    console.error("[ia-ebook-paso] el capítulo no tenía la forma esperada", {
-      ebookId: ebook.id, capitulo: sigue.numero, stop: respuesta.stop_reason,
+  const capitulo = !esRecetario && bloque
+    ? normalizarCapitulo(bloque.input, sigue.capitulo.titulo)
+    : null;
+  const recetas = esRecetario && bloque
+    ? normalizarRecetas(bloque.input, cuantasRecetas)
+    : [];
+
+  if (esRecetario ? recetas.length === 0 : !capitulo) {
+    console.error("[ia-ebook-paso] lo escrito no tenía la forma esperada", {
+      ebookId: ebook.id, parte: sigue.numero, recetario: esRecetario, stop: respuesta.stop_reason,
     });
     await soltarElCandado(ebook.id, marca);
     return NextResponse.json({
-      error: `El capítulo ${sigue.numero} salió incompleto. Probá de nuevo: lo anterior no se pierde.`,
+      error: esRecetario
+        ? `Las recetas de "${sigue.capitulo.titulo}" salieron incompletas. Probá de nuevo: lo anterior no se pierde.`
+        : `El capítulo ${sigue.numero} salió incompleto. Probá de nuevo: lo anterior no se pierde.`,
     }, { status: 502 });
   }
 
-  const nuevos = [...escritos, capitulo];
+  const nuevos: unknown[] = esRecetario
+    ? [...gruposDeRecetas, recetas]
+    : [...escritos, capitulo];
   /* COMPLETO quiere decir "están todos los capítulos, falta el PDF". No es lo
      mismo que LISTO, que es cuando el archivo ya está colgado del producto. */
   const nuevoEstado = nuevos.length >= indice.length ? "COMPLETO" : "ESCRIBIENDO";

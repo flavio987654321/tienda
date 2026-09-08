@@ -60,3 +60,18 @@ stories/
 # Manifiesto de ids de datos de prueba. Es efimero (sirve para borrarlos
 # despues) y apunta a registros de la base real, asi que no va al repo.
 .borradores/datos-de-prueba.json
+
+# Pruebas a mano de los ebooks y recetarios. Gastan plata de verdad, se corren
+# con `npx dotenv -e .env.local -- npx tsx probar-*.mts`, y lo que dejan —los
+# PDFs, los volcados de texto y los JSON con lo generado— es para mirarlo una
+# vez, no para versionarlo. Un PDF de 2 MB por corrida engorda el repo para
+# siempre y no le sirve a nadie que clone.
+/probar-*.mts
+/dibujar-recetario.mts
+/*.pdf
+/ebook-generado.md
+/ebook-con-continuidad.md
+/ab-sin-contexto.md
+/recetas-medidas.json
+/recetario-*.json
+/dev-tmp.log

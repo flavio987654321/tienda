@@ -107,16 +107,62 @@ const CUPOS: Record<ConceptoIA, Record<TierDigital, TopeDelCupo>> = {
 };
 
 /**
- * El tope que corresponde, mirando **las dos** cosas: el plan y para qué es.
+ * Lo que le toca a una cuenta que **todavía no pagó nunca**.
  *
- * ⚠️ Existe porque las tres funciones de abajo recibían `concepto`, lo usaban
- * para elegir la FILA y después leían el tope de `CUPO_EMBUDO` a secas. Con un
- * solo concepto nadie lo notaba; el día que entrara el segundo, pedir el cupo de
+ * ══════════════════════════════════════════════════════════════════════════
+ * ⚠️ EL REGALO DE BIENVENIDA NO SE ENTREGA EN LA PRUEBA
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * Los días de prueba son **sin tarjeta**: no tenemos un solo dato de cobro de
+ * esa cuenta, y nada impide abrir otra. Entregarle ahí el arranque de Pro —12
+ * generaciones— es regalar hasta 12 ebooks por cuenta abierta, **tantas veces
+ * como cuentas quiera abrir alguien**. Y un ebook escrito con IA sirve fuera de
+ * la plataforma: es exactamente lo que se puede cosechar.
+ *
+ * Esta regla estaba escrita en `planLimits.ts` desde el 01/09/26 —"no se
+ * entrega en la prueba, se entrega con el PRIMER COBRO"— y **no estaba en el
+ * código**. `consumirDelCupo` recibía la cuenta y el plan, y nunca preguntaba si
+ * había pagado. Encontrado el 08/09/26, mirando por qué subir el arranque de 6 a
+ * 12 daba miedo.
+ *
+ * ── Sólo toca los EBOOKS ───────────────────────────────────────────────────
+ *
+ * El embudo y la página son centavos de texto corto, **y son el gancho de la
+ * prueba**: lo que impresiona al entrar es ver la tienda armada sola. Apretar
+ * eso sería apagar justo lo que hace que alguien pague. El ebook es lo caro y lo
+ * único que sirve afuera.
+ *
+ * ── Una, y no cero ─────────────────────────────────────────────────────────
+ *
+ * Cero dejaría el botón más importante del producto apagado durante toda la
+ * prueba, y quien está evaluando no llegaría a ver lo que compra. Con una, lo ve
+ * entero; el resto llega con el primer cobro.
+ */
+const CUPO_DE_PRUEBA: TopeDelCupo = { bienvenida: 0, mes: 1 };
+
+/**
+ * El tope que corresponde, mirando **las tres** cosas: el plan, para qué es, y
+ * si la cuenta ya pagó alguna vez.
+ *
+ * ⚠️ Existe porque las funciones de abajo recibían `concepto`, lo usaban para
+ * elegir la FILA y después leían el tope de `CUPO_EMBUDO` a secas. Con un solo
+ * concepto nadie lo notaba; el día que entrara el segundo, pedir el cupo de
  * ebooks iba a contestar con el del embudo —12 en Pro en vez de 6, y 3 en Free
  * en vez de 0, o sea la IA cara abierta justo en el plan que no la paga—.
  */
-function topeDelCupo(tier: TierDigital, concepto: ConceptoIA): TopeDelCupo {
-  return CUPOS[concepto][tier];
+export function topeDelCupo(
+  tier: TierDigital,
+  concepto: ConceptoIA,
+  enPrueba = false,
+): TopeDelCupo {
+  const tope = CUPOS[concepto][tier];
+  if (!enPrueba || concepto !== "EBOOK") return tope;
+  /* ⚠️ El mínimo con el tope del plan: un plan que no tiene ebooks —Free— no
+     pasa a tener uno por estar en prueba. */
+  return {
+    bienvenida: 0,
+    mes: Math.min(CUPO_DE_PRUEBA.mes, tope.mes + tope.bienvenida),
+  };
 }
 
 export type EstadoDelCupo = {
@@ -151,8 +197,11 @@ export async function estadoDelCupo(
   userId: string,
   tier: TierDigital,
   concepto: ConceptoIA = "EMBUDO",
+  /* ⚠️ Tiene que recibir lo MISMO que `consumirDelCupo`, o la pantalla dice un
+     número y el servidor entrega otro. Ver `CUPO_DE_PRUEBA`. */
+  enPrueba = false,
 ): Promise<EstadoDelCupo> {
-  const tope = topeDelCupo(tier, concepto);
+  const tope = topeDelCupo(tier, concepto, enPrueba);
   const mes = claveDelMes();
 
   const fila = await prisma.cupoIA.findUnique({
@@ -197,8 +246,10 @@ export async function consumirDelCupo(
   userId: string,
   tier: TierDigital,
   concepto: ConceptoIA = "EMBUDO",
+  /* ⚠️ `true` mientras la cuenta no pagó nunca. Ver `CUPO_DE_PRUEBA`. */
+  enPrueba = false,
 ): Promise<Bolsa | null> {
-  const tope = topeDelCupo(tier, concepto);
+  const tope = topeDelCupo(tier, concepto, enPrueba);
   const mes = claveDelMes();
 
   /* Un plan que no tiene NADA de esto —Free y los ebooks— se contesta sin tocar

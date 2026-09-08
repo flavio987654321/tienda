@@ -27,7 +27,7 @@ import { LARGO_TITULO, PRECIO_MAXIMO } from "./productos-digitales";
 import {
   permitirGeneracion, RAFAGA_IA, GLOBAL_DIARIO, GLOBAL_PRUEBA_DIARIO,
 } from "./ia-digitales";
-import { CUPO_EMBUDO, CUPO_EBOOK, claveDelMes, mesSiguiente } from "./cupo-ia";
+import { CUPO_EMBUDO, CUPO_EBOOK, claveDelMes, mesSiguiente, topeDelCupo } from "./cupo-ia";
 import { EBOOKS_IA_ARRANQUE, TOPES_DIGITALES } from "./planLimits";
 
 let fallos = 0;
@@ -412,8 +412,69 @@ check("CUP-N",
    3 en Free en vez de 0, o sea la IA cara abierta justo en el plan que no la
    paga—. Si vuelve a aparecer `CUPO_EMBUDO[tier]` suelto, es esa regresión. */
 check("CUP-O",
-  !/CUPO_EMBUDO\[tier\]/.test(cupo) && /topeDelCupo\(tier, concepto\)/.test(cupo),
-  "el tope se elige mirando el plan y el concepto, no sólo el plan");
+  !/CUPO_EMBUDO\[tier\]/.test(cupo) && /topeDelCupo\(tier, concepto, enPrueba\)/.test(cupo),
+  "el tope se elige mirando el plan, el concepto y si la cuenta ya pagó");
+
+/* ══════════════════════════════════════════════════════════════════════════
+   ⚠️ EL REGALO DE BIENVENIDA NO SE ENTREGA EN LA PRUEBA
+   ══════════════════════════════════════════════════════════════════════════
+
+   Los días de prueba son SIN TARJETA: no hay un dato de cobro y nada impide
+   abrir otra cuenta. Con el arranque de Pro en 12, entregarlo ahí es regalar
+   hasta 12 ebooks por cuenta abierta, tantas veces como cuentas quiera abrir
+   alguien — y un ebook escrito con IA sirve fuera de la plataforma, que es
+   justo lo que se puede cosechar.
+
+   ⚠️ Esta regla estaba escrita en `planLimits.ts` desde el 01/09/26 y **no
+   estaba en el código**: `consumirDelCupo` recibía la cuenta y el plan y nunca
+   preguntaba si había pagado. Se encontró el 08/09/26 al ir a subir el arranque
+   de 6 a 12. Estos chequeos existen para que no se vuelva a caer, porque es la
+   clase de agujero que no se ve: nada falla, sólo se regala. */
+check("CUP-Q",
+  /const CUPO_DE_PRUEBA/.test(cupo) &&
+  /if \(!enPrueba \|\| concepto !== "EBOOK"\) return tope;/.test(cupo),
+  "el cupo de la prueba existe y sólo aprieta los ebooks, no el embudo");
+
+/* ⚠️ Y esto se comprueba LLAMANDO A LA FUNCIÓN, no leyendo el archivo. Un
+   chequeo de texto pasa igual si la regla está escrita y no se aplica — que es
+   exactamente lo que pasó: la regla estaba escrita en `planLimits.ts` y el
+   código no la miraba. */
+check("CUP-R",
+  (["STARTER", "PRO"] as const).every((t) => {
+    const prueba = topeDelCupo(t, "EBOOK", true);
+    const pago = topeDelCupo(t, "EBOOK", false);
+    return prueba.bienvenida === 0
+      && prueba.mes === 1
+      && pago.bienvenida === EBOOKS_IA_ARRANQUE[t]
+      && pago.mes === TOPES_DIGITALES[t].ebooksIA;
+  }),
+  "en la prueba queda 1 ebook y cero de bienvenida; pagando, el cupo entero");
+
+/* Free no pasa a tener uno por estar en prueba: no tiene ebooks y punto. */
+check("CUP-R2",
+  topeDelCupo("FREE", "EBOOK", true).mes === 0 &&
+  topeDelCupo("FREE", "EBOOK", true).bienvenida === 0,
+  "un plan sin ebooks no gana uno por estar en prueba");
+
+/* Y el embudo NO se toca: es el gancho de la prueba y cuesta centavos. */
+check("CUP-R3",
+  (["FREE", "STARTER", "PRO"] as const).every((t) => {
+    const prueba = topeDelCupo(t, "EMBUDO", true);
+    return prueba.bienvenida === CUPO_EMBUDO[t].bienvenida && prueba.mes === CUPO_EMBUDO[t].mes;
+  }),
+  "el cupo del embudo es el mismo en la prueba: es lo barato y es el gancho");
+
+/* Y las dos puntas tienen que preguntarlo. Si lo pregunta el que gasta pero no
+   el que muestra, la pantalla dibuja el cupo del plan pagado y el botón después
+   dice que no queda — que es peor que no darlo. */
+{
+  const ruta = readFileSync("src/app/api/digitales/ia/ebook/route.ts", "utf8");
+  check("CUP-S",
+    /const enPrueba = estado === "TRIAL";/.test(ruta) &&
+    /consumirDelCupo\(user\.id, tier, "EBOOK", enPrueba\)/.test(ruta) &&
+    /estadoDelCupo\(user\.id, tier, "EBOOK", enPrueba\)/.test(ruta),
+    "la ruta que gasta el cupo del ebook mira si la cuenta está en prueba");
+}
 
 /* Un plan sin nada de esto se contesta sin tocar la base. Sin este corte, cada
    clic de una cuenta Free en un botón que no le corresponde deja una fila de

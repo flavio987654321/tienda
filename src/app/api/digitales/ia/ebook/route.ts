@@ -6,8 +6,10 @@ import { permitirGeneracion } from "@/lib/ia-digitales";
 import { consumirDelCupo, devolverAlCupo, estadoDelCupo, CUPO_EBOOK, type Bolsa } from "@/lib/cupo-ia";
 import {
   INSTRUCCIONES_INDICE, ESQUEMA_DEL_INDICE, normalizarIndice,
-  LARGO_TEMA, MINIMO_TEMA, LARGO_PUBLICO,
+  INSTRUCCIONES_INDICE_RECETARIO, esquemaDelIndiceRecetario, seccionesParaRecetas,
+  CAPITULOS_MIN, LARGO_TEMA, MINIMO_TEMA, LARGO_PUBLICO,
 } from "@/lib/ebook-ia";
+import { normalizarOpciones } from "@/lib/ebook-opciones";
 import { estadoDelBorrador, CANDADO_MS } from "@/lib/ebook-borrador";
 import { getSubscriptionStatus, getUserSubscription } from "@/lib/subscription";
 import { getArgentinaDayKey } from "@/lib/fechas-comerciales";
@@ -65,6 +67,10 @@ export async function POST(req: NextRequest) {
   }
   const tier = (sub.tier ?? "FREE") as TierDigital;
   const estado = getSubscriptionStatus(sub);
+  /* ⚠️ La cuenta todavía no pagó nunca: los días de prueba son sin tarjeta. El
+     regalo de bienvenida no se entrega hasta el primer cobro. Ver
+     `CUPO_DE_PRUEBA` en `cupo-ia`. */
+  const enPrueba = estado === "TRIAL";
 
   /* ⚠️ El plan sin ebooks se corta acá, con el motivo escrito. Antes de los
      topes y antes de leer el cuerpo: un pedido que no se va a atender no tiene
@@ -104,6 +110,10 @@ export async function POST(req: NextRequest) {
   const body = (await req.json().catch(() => null)) as Record<string, unknown> | null;
   const productoId = typeof body?.productoId === "string" ? body.productoId : "";
   const tema = typeof body?.tema === "string" ? body.tema.trim().slice(0, LARGO_TEMA) : "";
+  /* Formato, tema y color. Cualquier cosa rara cae a lo de fábrica: no se
+     corta una generación por una preferencia mal escrita. */
+  const opciones = normalizarOpciones(body?.opciones);
+
   const publico = typeof body?.publico === "string"
     ? (body.publico.trim().slice(0, LARGO_PUBLICO) || null)
     : null;
@@ -143,7 +153,7 @@ export async function POST(req: NextRequest) {
       ok: true,
       retomado: true,
       ebook: estadoDelBorrador(yaHay),
-      cupo: await estadoDelCupo(user.id, tier, "EBOOK"),
+      cupo: await estadoDelCupo(user.id, tier, "EBOOK", enPrueba),
     });
   }
 
@@ -178,9 +188,9 @@ export async function POST(req: NextRequest) {
      todavía— y generarían los ocho. Si la llamada falla, se devuelve. */
   let bolsa: Bolsa | null = null;
   if (!esGratis) {
-    bolsa = await consumirDelCupo(user.id, tier, "EBOOK");
+    bolsa = await consumirDelCupo(user.id, tier, "EBOOK", enPrueba);
     if (!bolsa) {
-      const cupo = await estadoDelCupo(user.id, tier, "EBOOK");
+      const cupo = await estadoDelCupo(user.id, tier, "EBOOK", enPrueba);
       return NextResponse.json({
         error: cupo.topeDelMes > 0
           ? `Usaste todos tus ebooks con IA. El ${cupo.proximoMes ? "1° del mes que viene" : "mes que viene"} tenés ${cupo.topeDelMes} nuevos.`
@@ -193,20 +203,31 @@ export async function POST(req: NextRequest) {
 
   const devolver = async () => { if (bolsa) await devolverAlCupo(user.id, bolsa, "EBOOK"); };
 
+  /* ── Un recetario se planea distinto ─────────────────────────────────────
+     La lista que devuelve el modelo es la misma —título, promesa y entradas—
+     pero cada entrada es una SECCIÓN de recetas y no un capítulo. Y cuántas
+     hay no lo decide el modelo: sale de cuántas recetas eligió la persona,
+     porque ese número va en la tapa y es lo que justifica el precio.
+     Ver `seccionesParaRecetas`. */
+  const esRecetario = opciones.formato === "recetario";
+  const secciones = esRecetario ? seccionesParaRecetas(opciones.recetas) : 0;
+
   let respuesta;
   try {
     respuesta = await anthropic.messages.create(
       {
         model: "claude-sonnet-5",
         max_tokens: 2000,
-        system: INSTRUCCIONES_INDICE,
+        system: esRecetario ? INSTRUCCIONES_INDICE_RECETARIO : INSTRUCCIONES_INDICE,
         /* La forma la garantiza la herramienta, no una frase pidiendo JSON:
            "contestame en JSON" funciona casi siempre, y el "casi" acá es una
            pantalla rota a mitad de un ebook pago. */
         tools: [{
           name: "armar_temario",
-          description: "Devuelve el título, la promesa y los capítulos del ebook.",
-          input_schema: ESQUEMA_DEL_INDICE,
+          description: esRecetario
+            ? "Devuelve el título, la promesa y las secciones del recetario."
+            : "Devuelve el título, la promesa y los capítulos del ebook.",
+          input_schema: esRecetario ? esquemaDelIndiceRecetario(secciones) : ESQUEMA_DEL_INDICE,
         }],
         tool_choice: { type: "tool", name: "armar_temario" },
         messages: [{
@@ -215,11 +236,17 @@ export async function POST(req: NextRequest) {
              lo anterior" no es una frase mágica: es la forma de la salida —sólo
              puede llenar un temario— y el limado de `normalizarIndice`. */
           content: [
-            `El ebook se llama "${producto.name}".`,
+            esRecetario
+              ? `El recetario se llama "${producto.name}".`
+              : `El ebook se llama "${producto.name}".`,
             publico ? `Está escrito para: ${publico}` : null,
             "",
             "De qué se trata, en palabras de quien lo vende:",
             `<tema>\n${tema}\n</tema>`,
+            ...(esRecetario ? [
+              "",
+              `Armá exactamente ${secciones} secciones. Adentro van a ir ${opciones.recetas} recetas en total.`,
+            ] : []),
           ].filter((l) => l !== null).join("\n"),
         }],
       },
@@ -243,7 +270,13 @@ export async function POST(req: NextRequest) {
   const bloque = respuesta.content.find((b) => b.type === "tool_use");
   /* El título del producto gana sobre el que proponga la IA: la persona ya le
      puso nombre a lo que vende. Ver `normalizarIndice`. */
-  const indice = bloque ? normalizarIndice(bloque.input, producto.name) : null;
+  /* ⚠️ El mínimo de un recetario son TODAS las secciones que se pidieron, no
+     `CAPITULOS_MIN`. Si el modelo devuelve siete de diez, el recetario saldría
+     con 21 recetas y se cobró uno de 30. Mejor "probá de nuevo" con el cupo
+     devuelto que entregar menos de lo que dice la tapa. */
+  const indice = bloque
+    ? normalizarIndice(bloque.input, producto.name, esRecetario ? secciones : CAPITULOS_MIN)
+    : null;
 
   if (!indice) {
     console.error("[ia-ebook] el temario no tenía la forma esperada", {
@@ -264,7 +297,13 @@ export async function POST(req: NextRequest) {
     tema,
     publico,
     titulo: indice.titulo,
-    indice: JSON.stringify(indice.capitulos),
+    /* ⚠️ La PROMESA va acá adentro desde el 07/09/26. Antes se guardaba
+       `indice.capitulos` a secas y la promesa —que el modelo escribe y es lo
+       único pensado para la tapa— se tiraba. Ver `leerPromesa`. */
+    /* ⚠️ Y las OPCIONES —formato, tema y color— también van acá adentro, no
+       en columnas propias: agregar columnas es una migración y esta base es la
+       de producción. Ver `ebook-opciones.ts`. */
+    indice: JSON.stringify({ promesa: indice.promesa, capitulos: indice.capitulos, opciones }),
     /* Se arranca de cero: el temario nuevo no tiene nada que ver con los
        capítulos del anterior. */
     capitulos: "[]",
@@ -302,9 +341,14 @@ export async function POST(req: NextRequest) {
     ebook: {
       estado: "ESCRIBIENDO",
       titulo: indice.titulo,
+      opciones,
       capitulos: indice.capitulos.map((c) => ({ titulo: c.titulo, listo: false })),
       escritos: 0,
-      total: indice.capitulos.length,
+      /* ⚠️ En la unidad que eligió la persona, igual que `estadoDelBorrador`:
+         para un recetario son RECETAS y no las secciones en que se parten. Si
+         acá dijera secciones, la barra arrancaría diciendo "0 de 4" a alguien
+         que eligió 10 y recién en la segunda vuelta se acomodaría. */
+      total: esRecetario ? opciones.recetas : indice.capitulos.length,
       trabajando: false,
       error: null,
       reintentos: yaHay ? yaHay.reintentos + 1 : 0,
@@ -313,6 +357,6 @@ export async function POST(req: NextRequest) {
        están empezando a comer las de bienvenida, que no vuelven. */
     salioDe: bolsa,
     gratis: esGratis,
-    cupo: await estadoDelCupo(user.id, tier, "EBOOK"),
+    cupo: await estadoDelCupo(user.id, tier, "EBOOK", enPrueba),
   });
 }

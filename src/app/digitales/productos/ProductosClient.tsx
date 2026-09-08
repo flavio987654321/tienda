@@ -19,6 +19,7 @@ import { dominioDeLaPlataforma } from "@/lib/configuracion-digital";
 import type { EstadoDelCupo } from "@/lib/cupo-ia";
 /* `import type` se borra al compilar: no arrastra prisma al navegador. */
 import type { EstadoDelBorrador } from "@/lib/ebook-borrador";
+import { COMO_SE_LLAMA } from "@/lib/ebook-opciones";
 import EmbudoIA from "./EmbudoIA";
 import EbookIA from "./EbookIA";
 
@@ -92,8 +93,15 @@ const DOMINIO = dominioDeLaPlataforma();
  *      tres planes y no pasa por esta bandera — tiene su propio botón, arriba de
  *      la lista, y su propio cupo (ver `EmbudoIA` y `lib/cupo-ia`).
  *   2. **Escribir el ebook** — 🔲 el que sigue apagado. Hace el PDF de ESA
- *      ficha. Son US$2 a 4, o sea entre 150 y 300 veces más caro que el otro. Es
- *      el que gasta el cupo de `ebooksIA`, y por eso Free no lo tiene.
+ *      ficha. Es el que gasta el cupo de `ebooksIA`, y por eso Free no lo tiene.
+ *
+ *      ⚠️ Acá decía *"Son US$2 a 4, o sea entre 150 y 300 veces más caro que el
+ *      otro"*. **Medido el 07/09/26: US$0,22.** Un ebook de 8 capítulos y 4817
+ *      palabras, en 9 llamadas a `claude-sonnet-5`. El techo con 10 capítulos
+ *      es US$0,38. Sigue siendo la llamada cara de las dos —el embudo es texto
+ *      corto— pero la distancia no es la que decía este comentario, y esa
+ *      distancia no se volvió a medir: se saca el número inventado en vez de
+ *      reemplazarlo por otro. Ver `planLimits`.
  *
  * ✅ Prendido el 04/09/26, con las tres rutas hechas y con la política de
  * privacidad de digitales declarando a Anthropic — que era el otro seguro que
@@ -248,9 +256,13 @@ function Tarjeta({ p, acc }: { p: ProductoEnPantalla; acc: Acciones }) {
           {/* Un ebook a medio escribir se dice en la tarjeta y no adentro de la
               ventana: si hay que abrir algo para enterarse de que quedó por la
               mitad, nadie se entera. */}
+          {/* ⚠️ Y con el nombre que corresponde: un recetario no tiene
+              capítulos, y decía "4 de 10 capítulos". Ver `COMO_SE_LLAMA`. */}
           {p.ebook && p.ebook.estado !== "LISTO" && (
             <p className="mt-2 text-[11px] font-bold text-orange-700 panel-oscuro:text-orange-300">
-              Ebook a medio escribir: {p.ebook.escritos} de {p.ebook.total} capítulos.
+              {COMO_SE_LLAMA[p.ebook.opciones.formato].obra} a medio escribir:{" "}
+              {p.ebook.escritos} de {p.ebook.total} {COMO_SE_LLAMA[p.ebook.opciones.formato].partes}.
+              {" "}Abrilo para seguir.
             </p>
           )}
 

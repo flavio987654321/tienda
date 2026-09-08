@@ -221,7 +221,7 @@ regalar lo caro.
 
 | Qué hace | Qué produce | Cuánto cuesta | Cómo se limita |
 |---|---|---|---|
-| **Escribe el ebook** | 40 páginas | **US$2 a 4** | **Cupo contado.** Es el único número que va en la tabla de precios |
+| **Escribe el ebook** | 40 páginas | **US$0,22** ⚠️ medido 07/09/26 | **Cupo contado.** Es el único número que va en la tabla de precios |
 | **Arma la página de venta** | textos de una landing | centavos | Ráfaga y tope diario. 🔲 Hoy no tiene ninguno |
 | **Títulos, descripciones, mails** | frases sueltas | casi nada | Sólo ráfaga |
 | **Sasha** | conversación | por mensaje | Ya resuelto en `asistente-limites.ts` |
@@ -313,7 +313,8 @@ Baja la exposición de una cuenta trucha de **US$15 a US$3**.
 > No existe el contador que lo aplique, y acá la regla es que **una constante que
 > no lee nadie es código muerto** — por eso mismo se sacó el tope anti-abuso en su
 > momento. Va en la Fase 4, junto al código que lo use. Lo único que ya está en
-> `planLimits.ts` es `ebooksIA` (0/2/5), que es el número que dibuja la tarjeta.
+> `planLimits.ts` es `ebooksIA` (0/4/6 desde el 08/09/26; eran 0/2/5), que es el
+> número que dibuja la tarjeta.
 
 
 ### 2.5 Son TRES planes: Free + Starter + Pro
@@ -602,23 +603,29 @@ buscar, ni congelar, ni explicar en los Términos.
 ### ⚠️ Lo que se resigna, y hay que vigilarlo
 
 **Se cobra en pesos pero se gasta en dólares.** Ese problema no desaparece: se
-acepta. Con el ebook a US$3 de API:
+acepta.
+
+⚠️ **Este recuadro decía "con el ebook a US$3 de API" y estaba 13 veces por
+encima. Medido el 07/09/26: US$0,22** —US$0,44 contando el rehacer gratis, que
+tampoco estaba contado—. Con el número de verdad, al dólar de $1.520 (08/09/26):
 
 | | Abono | Costo máximo de IA | Se da vuelta con el dólar a |
 |---|---|---|---|
-| **Starter** ($30.000, 2 ebooks) | ~US$21 hoy | US$6 | ~$15.000 |
-| **Pro** ($60.000, 5 ebooks) | ~US$43 hoy | US$15 | **~$4.000** |
+| **Starter** ($30.000, 4 ebooks) | US$19,7 | **US$1,76** | ~$170.000 |
+| **Pro** ($89.000, 6 ebooks) | US$58,6 | **US$2,64** | ~$337.000 |
 
-**Pro se da vuelta primero y por lejos**, porque es el que más IA regala. Con el
-dólar a $4.000 —menos de tres veces el de hoy— un cliente de Pro que use sus 5
-ebooks todos los meses no deja nada. Si el ebook sale US$4, ese punto se adelanta
-a **$3.000**.
+O sea que **el riesgo que este recuadro describía no existe**: haría falta un
+dólar de seis cifras para dar vuelta un plan. Lo que sí queda es lo otro:
 
-- 🔲 **Revisar estos precios cada tanto.** No es una tarea opcional: sin revisión,
-  el plan caro pasa a perder plata en silencio y nadie se entera hasta la factura
-  de Anthropic.
-- 🔲 La otra palanca es bajar `TOPES_DIGITALES.PRO.ebooksIA`, que duele menos que
-  subir el precio.
+- 🔲 **Revisar estos precios cada tanto**, pero por la INFLACIÓN y no por la IA.
+  Nuestros precios están en pesos y los de la competencia en dólares: el de ellos
+  sube solo y el nuestro se licúa. Decidido el 08/09/26: se dejan en pesos y se
+  revisan a mano. La referencia para saber si quedó viejo está en
+  `PRECIOS_DIGITALES`.
+- ❌ **Bajar `TOPES_DIGITALES.PRO.ebooksIA` ya no es una palanca**: son dos
+  dólares y medio. Si algún día hay que recortar Pro, el costo que de verdad
+  escala es el **tráfico de los bonos** —cada venta se lleva el principal más
+  todos sus bonos, 6 archivos en Pro— y eso pega en el egress de Supabase.
 
 ### Qué queda de la etapa "en dólares"
 
@@ -719,18 +726,20 @@ bono. Con tres escalones no nos podemos dar ese lujo.
 >   alcance: remarketing, dominio propio y el tope alto de IA.
 
 Free sí lleva IA, pero **la barata**: le arma la página y las fichas, y el
-contenido del ebook lo trae la persona. El ebook son US$2 a 4 de API y los textos
-de una landing son centavos — estábamos regalando lo caro y cobrando lo barato. Y
-Free no pide tarjeta: un ebook escrito con IA sirve fuera de la plataforma y se
-puede cosechar; una página generada no le sirve a nadie afuera. Ver 2.4 bis.
+contenido del ebook lo trae la persona. El ebook es la llamada cara —US$0,22
+medidos— y los textos de una landing son centavos: estábamos regalando lo caro y
+cobrando lo barato. Y Free no pide tarjeta: un ebook escrito con IA sirve fuera
+de la plataforma y se puede cosechar; una página generada no le sirve a nadie
+afuera. Ver 2.4 bis.
 
 | | **Free** *validar* | **Starter** *vender* | **Pro** *escalar* |
 |---|---|---|---|
-| **Abono mensual** | $0 | **$30.000** | **$60.000** |
-| **Abono anual** (−25%) | — | $270.000 → *$22.500/mes* | $540.000 → *$45.000/mes* |
+| **Abono mensual** | $0 | **$30.000** | **$89.000** |
+| **Abono anual** (−25%) | — | $270.000 → *$22.500/mes* | $801.000 → *$66.750/mes* |
 | **Comisión por venta** | **8%** | **6%** | **2%** |
 | Productos = páginas de venta | 1 | 2 | 5 |
-| **Ebooks con IA por mes** | ❌ | **2** | **5** |
+| **Ebooks con IA por mes** | ❌ | **4** | **6** |
+| **Ebooks de regalo al arrancar** | ❌ | **6** | **12** |
 | Bonos por producto | 1 | 2 | 5 |
 | Upsells por producto | 1 | 2 | 3 |
 | Página de venta armada con IA | ✅ | ✅ | ✅ |
@@ -754,11 +763,20 @@ plantilla) y ver quién dejó el carrito.
 - **Conviven con los precios de las tiendas** ($20.000 Pro / $25.000 Premium), que
   es de lo que se trataba: la página de precios se lee como un producto, no como
   dos.
-- **Los topes de ebooks son bajos a propósito** — 2 y 5, no 4 y 6 como la
-  competencia. Es lo único que define el costo del plan (ver 3 bis).
+- ⚠️ **Los topes de ebooks eran 2 y 5 "a propósito, porque definen el costo del
+  plan". Eso era falso y se corrigió el 08/09/26**: un ebook sale US$0,22, no los
+  US$2 a 4 que se habían estimado sin medir. Ahora son **4 y 6 — los mismos que
+  da la competencia** — y el regalo de arranque se duplicó a 6 y 12, que es donde
+  de verdad hace falta: *el embudo se arma una vez y después se vende*.
+- ⚠️ **Y el precio de Pro pasó de $60.000 a $89.000**, también el 08/09/26.
+  Puesto al lado de la competencia con el dólar a $1.520, resultó que **nuestro
+  Pro no equivale a su Pro sino a su Max** —5 páginas, 5 bonos, 3 upsells, 2% de
+  comisión, ficha por ficha— que ellos cobran **US$100 = $152.000**. Estábamos
+  vendiendo su plan de $152.000 a $60.000: el 39%. Los $89.000 quedan justo abajo
+  de los $91.200 que sale su plan *Pro*, y ése es el argumento entero: *por menos
+  de lo que sale su Pro, te damos todo lo de su Max*.
 - **Margen en el peor caso** (alguien que quema todos sus ebooks todos los meses):
-  **71% en Starter y 65% en Pro** al dólar de hoy. ⚠️ Ese margen **se mueve con el
-  dólar** — ver el recuadro de 3 ter, que dice cuándo se da vuelta cada plan.
+  **94% en Starter y 96% en Pro**. El costo de IA dejó de ser un factor.
 - **Menos comisión que la competencia** (8/6/2 contra su 10/8/6/2) **y menos
   ebooks**. Es un canje honesto y una buena posición para entrar.
 - **Las páginas bajaron de 1/5/25 a 1/3/5 el 01/09/26.** El 25 no era generoso:
@@ -1788,9 +1806,27 @@ vio que estaba al revés de lo que conviene:
 A Free la IA le arma **la cáscara** —la página y las fichas— y el contenido del
 ebook lo trae la persona. Los dos motivos:
 
-1. **El costo está al revés de lo que parece.** El ebook son US$2 a 4 de API; los
-   textos de una landing son centavos. Estábamos regalando lo caro y cobrando lo
-   barato.
+1. **El costo está al revés de lo que parece.** El ebook es la llamada cara
+   —US$0,22 medidos— y los textos de una landing son centavos. Estábamos
+   regalando lo caro y cobrando lo barato.
+
+   > ⚠️ **MEDIDO EL 07/09/26 — el número que estaba escrito era inventado.**
+   >
+   > Acá decía **US$2 a 4**, y nunca se había generado un ebook. Uno de verdad
+   > —8 capítulos, 4817 palabras, `claude-sonnet-5`, 9 llamadas— salió
+   > **US$0,2223**: 22.437 tokens de entrada y 17.742 de salida. El techo, con
+   > los 10 capítulos que permite el esquema y todas las llamadas agotando su
+   > `max_tokens`, es **US$0,38**. El peor caso posible queda cinco veces por
+   > debajo del piso que decía este documento.
+   >
+   > **Qué NO cambia:** el orden. El ebook sigue siendo lo caro y la página lo
+   > barato, así que qué se regala y qué se cobra se mantiene. Y el motivo 2 —lo
+   > cosechable— nunca dependió del costo.
+   >
+   > **Qué SÍ cambia:** la escala, y con ella el argumento de que los topes de
+   > `ebooksIA` responden a un costo que aprieta. Diez ebooks de Pro son US$2,22,
+   > no US$20 a 40. **Queda para decidir** si los topes se aflojan: el número que
+   > los justificaba era diez veces más grande que el real.
 2. **Free no pide tarjeta.** Un ebook escrito con IA sirve FUERA de la
    plataforma: diez cuentas, diez ebooks. Una página generada no le sirve a nadie
    afuera. **Lo que se regala tiene que ser lo que no se puede cosechar.**
@@ -2229,10 +2265,15 @@ primero cómo va, después qué hacer.
 alguien que ya vendió cuarenta veces no tiene por qué seguir viendo una lista de
 tareas de arranque ocupándole la pantalla entera.
 
-Ahora son **el recibimiento**: mientras la cuenta no tiene un solo producto, los
-pasos SON la pantalla —mostrar tres ceros y una lista vacía es peor que no
-mostrar nada—. En cuanto hay un producto se corren a la columna de la derecha,
-chiquitos, mostrando sólo **el que sigue**, y se van solos cuando están los cinco.
+Ahora son **el recibimiento**: mientras la cuenta no está armada, los pasos SON
+la pantalla entera —mostrar tres ceros y una lista vacía es peor que no mostrar
+nada—. Sin barra lateral, sin Configuración, sin Mi cuenta y sin números.
+
+⚠️ Corregido el 07/09/26: acá decía que *"en cuanto hay un producto se corren a
+la columna de la derecha, chiquitos"*. Eso era el diseño anterior. La compuerta
+del 06/09 lo reemplazó: la pantalla entera se sostiene hasta que la cuenta está
+armada, y recién ahí aparece el panel. Adentro, la lista chiquita sigue
+existiendo (`PrimerosPasos`) para el paso que queda.
 
 Lo que NO cambió es de dónde salen, que es lo que sigue abajo.
 
@@ -2265,6 +2306,27 @@ hay pasos de cortesía — uno que se puede saltear entrena a saltearlos todos.
 | 3 | **Armá tu página de venta** | Es lo que la persona lee antes de decidir. Con el texto de fábrica se vende bastante menos |
 | 4 | **Conectá Mercado Pago** | El botón de comprar no cobra nada |
 | 5 | **Publicá** | Está todo listo y no lo ve nadie, ni con el link |
+
+##### ⚠️ La puerta son CUATRO, no cinco (07/09/26)
+
+Los cinco impiden vender. Pero para **entrar al panel** alcanza con los cuatro
+primeros: publicar quedó del otro lado a propósito.
+
+Pedirlo para entrar obliga a poner la página a la vista **antes de haberla
+visto**. Quien recién conectó Mercado Pago todavía no miró cómo le quedó, no
+acomodó nada y no configuró nada — así que lo primero que verían los compradores
+es exactamente la versión que la dueña nunca revisó. Publicar es una decisión, y
+una decisión se toma después de mirar.
+
+Así que se entra en borrador, se mira, se acomoda, y se publica cuando la dueña
+está conforme. **El paso no se pierde**: la lista del panel (`PrimerosPasos`)
+sigue mostrando "Publicá tu página" con su botón hasta que esté hecho, y esa
+lista sí mira los cinco.
+
+Quién decide cuáles abren la puerta es `pasosDeLaPuerta`, y está nombrado en un
+solo lugar: la puerta se define como "todos menos publicar" y no como una lista
+de cuatro claves escrita aparte, que el día del sexto paso hay que acordarse de
+tocar en dos lados. Lo cuidan `PAS-Q` a `PAS-U`.
 
 ⚠️ **El 4 podría ir primero y va cuarto a propósito.** Conectar Mercado Pago es
 el paso que más gente abandona —te saca de la aplicación, te pide iniciar
@@ -2539,6 +2601,161 @@ US$2–4 sigue sin verificar y `EBOOKS_IA_ARRANQUE` / `ebooksIA` siguen siendo
 provisorios hasta esa medición. Cuesta plata real, así que se hace a pedido.
 
 ⚠️ Y desde este commit, **el botón anda en local**: apretarlo gasta de verdad.
+
+### 4.3.1 EL DISEÑO DEL PDF — en curso (07/09/26)
+
+**Por qué se abrió esto.** El ebook andaba, pero el archivo era texto negro
+sobre blanco. Comparado contra un recetario real hecho en Canva —46 hojas, una
+foto por hoja— la diferencia no eran los colores: eran **fotos, moldes por tipo
+de hoja, y contenido con estructura** en vez de párrafos sueltos.
+
+**Lo que ya está:**
+
+- ✅ **Tapa con foto**, tema claro y oscuro, sello con la cantidad de capítulos.
+- ✅ **Portadilla por capítulo**: número grande, foto y una caja "En este
+  capítulo" armada con los subtítulos que el modelo ya escribía y se tiraban —
+  no costó ni una llamada más.
+- ✅ **Muebles en cada hoja**: encabezado con el capítulo, franja al pie con la
+  marca de quien vende, número de página.
+- ✅ **Fotos de Pexels** (`src/lib/fotos-pexels.ts`). Todo devuelve `null` ante
+  cualquier problema: un ebook sin fotos es el que se entregaba antes, un ebook
+  que no se arma es plata cobrada sin nada que entregar. Tope: 25.000 búsquedas
+  por mes, y un ebook usa 9.
+- ✅ **Hoja de créditos**. ⚠️ No es cortesía: las reglas de la API de Pexels
+  piden enlace visible y acreditar al fotógrafo, y esto se vende.
+- ✅ **Tipografías propias** (Playfair Display + Lora, OFL, en `fuentes/`).
+  Declaradas en `next.config.ts` — sin eso no viajan a producción.
+
+**Tres errores que aparecieron y ya están arreglados**, anotados porque los tres
+sólo se ven en un ebook largo y ninguno lo hubiera encontrado una prueba corta:
+
+1. El pie de página se dibujaba abajo del margen, pdfkit lo tomaba como "no
+   entra", abría otra hoja, y eso disparaba otro pie: **recursión infinita**.
+2. Los muebles cambian la tipografía en el medio de un párrafo, así que **el
+   resto de cada párrafo cortado salía con la letra del pie**.
+3. Las viñetas de dos renglones volvían al margen (`indent` en pdfkit corre
+   sólo el primer renglón).
+
+**Lo que falta, en orden:**
+
+- ✅ **Las pruebas del código nuevo** (07/09/26). `ebook-pdf.check.ts` y
+  `fotos-pexels.check.ts`: el contraste de las 6 paletas contra los dos fondos,
+  el respaldo de tipografías, que una foto rota no voltee el armado, y que las
+  viñetas no filtren hojas. Esa última se probó rompiendo el código a propósito:
+  con el error da 14 hojas contra 11.
+- ✅ **El cambio a lo que se le pide al modelo** (07/09/26). Las dos cosas en el
+  mismo lugar, verificadas con **una sola llamada de US$0,046** en vez de un
+  ebook entero:
+  - qué foto buscar en cada capítulo. Antes se buscaba por el título y salía
+    cualquier cosa. **Medido: de 5 fotos del tema sobre 8, a 10 sobre 10.**
+  - `aviso`, el cuarto tipo de bloque, que sale como recuadro de color.
+- ✅ **Elegir formato, tema y color** (07/09/26). `ebook-opciones.ts` y los
+  botones en `EbookIA.tsx`. ⚠️ Se guardan **adentro del JSON de `indice`, no en
+  columnas**: agregar columnas es una migración y esta base es la de producción.
+  Cuando haya deploy, mudarlo es cambiar `leerOpciones` y dónde escribe la ruta.
+  - El color sale de las 6 paletas y **no hay selector libre**: cada paleta trae
+    el acento y el texto que va encima medidos entre sí. Con un color a
+    elección, una franja ilegible queda adentro de algo ya vendido.
+  - Por defecto, "el de tu página": si no elige, el ebook sigue a la página que
+    lo vendió, como hasta ahora.
+- ✅ **Que el modelo escriba recetas** (07/09/26). `INSTRUCCIONES_RECETAS`,
+  `ESQUEMA_DE_RECETAS`, `normalizarRecetas` y `pedidoDeRecetas` en
+  `ebook-ia.ts`. Probado con una llamada de verdad y dibujado en el molde: sale
+  con cantidades en gramos, temperaturas y palabras de acá (manteca, repasador,
+  mesada). ⚠️ Se le tuvo que decir **aparte** que los números SÍ van: con las
+  reglas del ebook de texto puestas —que le prohíben inventar cifras— devolvía
+  "harina, cantidad necesaria" y la receta no servía. Ver `REGLAS_DE_RECETA`.
+  - **Tres recetas por llamada, no cinco.** Medido: cinco se cortaron en
+    `max_tokens` y **no volvió ninguna** —se pagaron US$0,046 por nada—; tres
+    salieron completas en 28,9 s por US$0,035. Una receta son ~950 tokens, no
+    los 400 estimados. El techo que muerde primero **no es la plata, es el
+    reloj**: la función se corta a los 60 segundos.
+  - **Cuánto sale un recetario:** ~1 centavo por receta. 10 → US$0,12;
+    20 → US$0,23; **30 → US$0,35**, lo mismo que hoy sale un ebook de texto.
+- ✅ **Que una receta entre en UNA hoja, siempre** (07/09/26). Es la promesa
+  entera del formato: quien cocina apoya el teléfono y lee de ahí. Con las tres
+  recetas de verdad salieron **9 hojas para 3 recetas**. Cuatro causas, las
+  cuatro medidas y las cuatro arregladas:
+  1. La foto cuadrada de al lado del título medía siempre 148 puntos y empujaba
+     todo 160 abajo — **más que la banda ancha que no había entrado**. Ahora
+     mide lo que mide el título más lo que de verdad sobre.
+  2. Ocho pasos de tres renglones no entran a tamaño normal. La hoja ahora
+     **aprieta** en vez de partirse: tres densidades (`HOLGADA`, `APRETADA`,
+     `AL_LIMITE`) y se toma la primera que da.
+  3. `lineBreak: false` **no impide que pdfkit parta el renglón** cuando hay
+     `width`. El segundo pedazo caía encima del renglón siguiente: se leía
+     "1 cucharadi" y abajo, superpuesto a "300 ml", un "ta". Se recorta antes
+     de dibujar (`recortarAlAncho`), y el cuerpo se achica antes de recortar.
+  4. La descripción se limaba con 400 caracteres —el largo del resumen de un
+     capítulo— y ocupaba cinco renglones. Ahora tiene el suyo (120).
+  - `PASOS_MAX` bajó de 9 a 8 y `LARGO_PASO` de 200 a 160, porque con los de
+    antes **la receta más grande que el limado dejaba pasar no entraba ni con la
+    maqueta más apretada**: faltaban 32 puntos. Un tope que el molde no puede
+    cumplir no es un tope.
+  - Candados nuevos: **PDF-W** (la receta más grande posible entra en una hoja),
+    **PDF-X** (una corta no desperdicia), **PDF-Y** (la del medio, que es la que
+    se rompió — con una foto que se puede abrir de verdad). PDF-Y se verificó
+    rompiendo el código a propósito: con la foto fija da 9 hojas contra 6.
+- ✅ **Que no se le coma una letra al nombre de nadie** (07/09/26). La hoja de
+  créditos mostró "dil Ceren Çelikler": `soloLoQueEntra` descartaba entera
+  cualquier letra latina con un acento que la tipografía no tiene. Los nombres
+  del banco de imágenes son de todo el mundo, y esa hoja existe **justamente
+  para acreditarlos**. Ahora cae a la letra sin el adorno (PDF-Z).
+- ✅ **El recetario enchufado de punta a punta** (07/09/26). `"recetario"` ya
+  está en `FORMATOS_LISTOS`: se puede elegir en la pantalla y sale un recetario.
+  **Probado de verdad: 10 recetas, 5 llamadas, US$0,1308, 106 segundos, 13 hojas
+  —tapa, contenido, una hoja por receta y créditos—.**
+  - **El número de recetas lo elige quien vende** (10 / 20 / 30), no el modelo.
+    Va en la tapa —"10 RECETAS"— y es lo que justifica el precio. El control
+    aparece sólo cuando se elige Recetario; en un ebook de texto no significa
+    nada.
+  - ⚠️ Los tres números no son redondeos lindos: **caen justo** con lo que el
+    resto aguanta. Cada llamada escribe `RECETAS_POR_LLAMADA` (3) y el temario
+    no pasa de `CAPITULOS_MAX` (10) secciones, así que 30 es el techo real. Con
+    40, `leerIndice` cortaría cuatro secciones **sin decir nada** y se cobraría
+    un recetario de 40 para entregar uno de 30. Lo cuida OPC-S.
+  - **El bucle de las tres rutas no cambió.** Una sección = una llamada = una
+    entrada del temario, igual que un capítulo en un ebook de texto, y las dos
+    cosas se guardan en la misma columna con la misma forma de afuera. Por eso
+    "¿cuál sigue?", el candado, el presupuesto por ebook y la barra de la
+    pantalla siguen siendo los mismos.
+  - Y la última sección pide **el resto**, no tres: con 10 elegidas son 3, 3, 3 y
+    1. Si pidiera tres igual, saldrían 12 adentro de algo vendido como de diez.
+- ✅ **Dos cosas que aparecieron al mirar el recetario terminado** (07/09/26):
+  1. **La tapa salió sin la línea de abajo del título.** El prompt se
+     contradecía solo: las reglas de receta prohíben las promesas y el temario
+     pedía "una promesa". El modelo obedeció la prohibición y la dejó vacía.
+     Ahora dice con todas las letras que esa línea es una descripción del
+     contenido y que nunca va vacía. Verificado por **US$0,0089** (REC-O).
+  2. **Un paso terminaba a mitad de frase**: "…enfriando 10 minutos **en**".
+     `limpiarTexto` corta en el carácter que toca, y en una receta eso deja a
+     quien está amasando sin saber qué seguía. Ahora corta en el último punto
+     (`cortarEnUnaIdea`) **y** el prompt le dice al modelo cuántos caracteres
+     entran, que es lo que de verdad evita el corte (REC-K a REC-N).
+- ✅ **Lo que la pantalla dice mientras escribe** (08/09/26). Tres cosas que
+  estaban mal y ninguna se ve leyendo el código: se ven usándolo.
+  1. **El cartel prometía que seguía solo.** Decía *"Podés cerrar esta ventana…
+     cuando vuelvas sigue desde donde iba"*, y eso se lee como que hay alguien
+     escribiendo del otro lado. **No lo hay**: el bucle vive en la pantalla, así
+     que irse a otro panel FRENA la escritura. Alguien se iba creyendo que su
+     ebook se estaba escribiendo y volvía media hora después al mismo lugar.
+     Ahora dice las dos cosas —que hay que quedarse, y que si igual se va no
+     pierde nada y retoma con un botón— (PAN-E, PAN-E2).
+  2. **La barra contaba secciones en un recetario.** A alguien que eligió 10
+     recetas le decía "2 de 4". Ahora `EstadoDelBorrador` cuenta **en la unidad
+     que eligió la persona** (PAN-E4, REC-F).
+  3. **La tarjeta decía "capítulos" en un recetario**, que no tiene. Ahora sale
+     de `COMO_SE_LLAMA`, con el formato que viaja en el estado (PAN-J).
+  - Y de paso se sacó *"Vas a poder leerlo y cambiarlo antes de publicar"*, que
+    prometía un editor que no existe. Vuelve cuando el editor exista (PAN-E3).
+- 🔲 **Que la escritura no dependa de la pestaña abierta.** Hoy el bucle vive en
+  el navegador: irse lo frena. Está *dicho* y no se pierde nada, pero lo correcto
+  sería que siga del lado del servidor. No es urgente —tarda dos o tres minutos y
+  el aviso ya es honesto— pero es el próximo escalón de esta pantalla.
+- 🔲 **Formato infografía**: foto a sangre por hoja con el texto encima. Es el
+  barato: **usa el texto que ya se genera, tal cual**.
+- 🔲 **Poder leer y corregir el texto antes de armar el PDF.** Hoy sólo se puede
+  rehacer entero. La competencia lo tiene y le falla.
 
 ---
 

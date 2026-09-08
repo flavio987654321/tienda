@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
-import { leerIndice, leerCapitulos, type CapituloPlaneado } from "@/lib/ebook-ia";
+import { leerIndice, leerCapitulos, leerGruposDeRecetas, type CapituloPlaneado } from "@/lib/ebook-ia";
+import { leerOpciones, type OpcionesDelEbook } from "@/lib/ebook-opciones";
 
 /**
  * El borrador del ebook: lo que las tres rutas necesitan compartir.
@@ -26,8 +27,42 @@ export const CANDADO_MS = 90_000;
 export type EstadoDelBorrador = {
   estado: string;
   titulo: string;
-  /** Los capítulos planeados, y cuáles ya están escritos. */
+  /**
+   * Cómo eligió que salga: formato, tema visual, color y cuántas recetas.
+   *
+   * ══════════════════════════════════════════════════════════════════════════
+   * ⚠️ VUELVE ENTERA, Y NO SÓLO EL FORMATO
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * Dos motivos, y el segundo es un error que ya estaba:
+   *
+   * 1. Para **nombrar bien** lo que se está escribiendo. Sin esto la tarjeta
+   *    decía "4 de 10 capítulos" para un recetario, que no tiene capítulos.
+   * 2. Para que **"Rehacerlo" no se olvide de lo que la persona eligió.** Ese
+   *    botón devuelve a la pantalla del formulario, y ahí los botones arrancaban
+   *    en lo de fábrica: quien había hecho un recetario de 30 recetas volvía a
+   *    una pantalla que decía "Ebook de texto", y si apretaba sin mirar recibía
+   *    **otro producto y una generación cobrada**. Encontrado en el repaso del
+   *    08/09/26, antes de commitear.
+   */
+  opciones: OpcionesDelEbook;
+  /** Los capítulos planeados —o las secciones—, y cuáles ya están escritos. */
   capitulos: Array<{ titulo: string; listo: boolean }>;
+  /**
+   * Cuántas partes van y cuántas son, **EN LA UNIDAD QUE ELIGIÓ LA PERSONA**.
+   *
+   * ══════════════════════════════════════════════════════════════════════════
+   * ⚠️ EN UN RECETARIO SE CUENTAN RECETAS, NO SECCIONES
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * Un recetario de 10 recetas se escribe en 4 secciones, así que contando
+   * secciones la barra decía "2 de 4" a alguien que había elegido 10. El número
+   * que ve tiene que ser el que eligió, o no sabe qué está mirando.
+   *
+   * El bucle de la pantalla sigue funcionando igual —los dos números están en
+   * la misma unidad y `escritos` llega a `total`—, y de todos modos quien corta
+   * el bucle es el `listo` que manda el servidor, que sí cuenta secciones.
+   */
   escritos: number;
   total: number;
   /** `true` mientras hay un pedido escribiendo un capítulo ahora mismo. */
@@ -56,14 +91,30 @@ type FilaCruda = {
  */
 export function estadoDelBorrador(fila: FilaCruda): EstadoDelBorrador {
   const indice: CapituloPlaneado[] = leerIndice(fila.indice);
-  const escritos = leerCapitulos(fila.capitulos).length;
+  const opciones = leerOpciones(fila.indice);
+  const esRecetario = opciones.formato === "recetario";
+
+  /* ⚠️ Un recetario guarda grupos de recetas donde un ebook de texto guarda
+     capítulos, y `leerCapitulos` no los reconoce: devolvería 0 y la barra se
+     quedaría en cero para siempre mientras la persona mira cómo se escribe su
+     recetario. Cada elemento de la lista es una llamada ya cobrada, en los dos
+     formatos, así que la cuenta de secciones hechas es la misma. */
+  const grupos = esRecetario ? leerGruposDeRecetas(fila.capitulos) : [];
+  const partes = esRecetario ? grupos.length : leerCapitulos(fila.capitulos).length;
+
+  /* Y de ahí a la unidad que la persona eligió. Ver `escritos` arriba. */
+  const escritos = esRecetario ? grupos.reduce((n, g) => n + g.length, 0) : partes;
+  const total = esRecetario ? opciones.recetas : indice.length;
 
   return {
     estado: fila.estado,
     titulo: fila.titulo,
-    capitulos: indice.map((c, i) => ({ titulo: c.titulo, listo: i < escritos })),
+    opciones,
+    /* La lista tildada sigue siendo de secciones: son los nombres que el
+       modelo escribió y lo que de verdad se va completando de a uno. */
+    capitulos: indice.map((c, i) => ({ titulo: c.titulo, listo: i < partes })),
     escritos,
-    total: indice.length,
+    total,
     trabajando:
       fila.trabajandoDesde != null &&
       Date.now() - fila.trabajandoDesde.getTime() < CANDADO_MS,

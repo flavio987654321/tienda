@@ -7,6 +7,12 @@ import type { EstadoDelCupo } from "@/lib/cupo-ia";
    nada de lo que ese archivo importa —prisma incluido—. Es sólo la forma. */
 import type { EstadoDelBorrador } from "@/lib/ebook-borrador";
 import { LARGO_TEMA, MINIMO_TEMA, LARGO_PUBLICO } from "@/lib/ebook-ia";
+import {
+  FORMATOS, TEMAS, QUE_ES_CADA_FORMATO, QUE_ES_CADA_TEMA,
+  OPCIONES_DE_FABRICA, FORMATOS_LISTOS, RECETAS_OPCIONES, COMO_SE_LLAMA,
+  type FormatoDeEbook, type TemaDeEbook,
+} from "@/lib/ebook-opciones";
+import { PALETAS } from "@/lib/pagina-venta";
 
 /**
  * Escribir el ebook con IA.
@@ -21,10 +27,15 @@ import { LARGO_TEMA, MINIMO_TEMA, LARGO_PUBLICO } from "@/lib/ebook-ia";
  *
  * ── Lo más importante que hace esta pantalla ───────────────────────────────
  *
- * **Decir que se puede cerrar.** Lo escrito está guardado en el servidor después
- * de cada capítulo, así que cerrar no pierde nada ni cuesta otra generación. Sin
- * decirlo, cualquiera se queda cinco minutos mirando una barra sin animarse a
- * tocar nada.
+ * **Decir la verdad sobre qué pasa si se van.** Lo escrito queda guardado en el
+ * servidor después de cada parte, así que irse no pierde nada ni cuesta otra
+ * generación. Pero **la escritura se frena**: el bucle vive acá, no hay nadie
+ * escribiendo del otro lado.
+ *
+ * ⚠️ Hasta el 08/09/26 el cartel decía "cuando vuelvas sigue desde donde iba",
+ * que se lee como que sigue solo. Alguien se iba a otra pantalla creyendo que su
+ * ebook se seguía escribiendo, y volvía media hora después al mismo lugar.
+ * Ahora dice las dos cosas: que hay que quedarse, y que si se va no pierde nada.
  *
  * ── Por qué el bucle frena solo al primer error ────────────────────────────
  *
@@ -56,6 +67,20 @@ export default function EbookIA({
   });
 
   const [tema, setTema] = useState("");
+
+  /* Cómo quiere que salga. El formato hay que elegirlo ANTES de generar porque
+     cambia lo que se le pide al modelo; el tema y el color no tocan el texto.
+
+     ⚠️ ARRANCAN EN LO QUE YA HABÍA ELEGIDO, no en lo de fábrica. El botón
+     "Rehacerlo" devuelve a esta misma pantalla, y con los valores de fábrica
+     quien había hecho un recetario de 30 recetas volvía a una pantalla que
+     decía "Ebook de texto": si apretaba sin mirar, recibía otro producto y una
+     generación cobrada. */
+  const elegidas = estadoInicial?.opciones ?? OPCIONES_DE_FABRICA;
+  const [formato, setFormato] = useState<FormatoDeEbook>(elegidas.formato);
+  const [temaVisual, setTemaVisual] = useState<TemaDeEbook>(elegidas.tema);
+  const [cuantasRecetas, setCuantasRecetas] = useState<number>(elegidas.recetas);
+  const [paleta, setPaleta] = useState<string>(elegidas.paleta);
   const [publico, setPublico] = useState("");
 
   const [trabajando, setTrabajando] = useState(false);
@@ -149,7 +174,10 @@ export default function EbookIA({
     setError(null);
 
     try {
-      const { ok, datos } = await pedir("/api/digitales/ia/ebook", { tema, publico, rehacer });
+      const { ok, datos } = await pedir("/api/digitales/ia/ebook", {
+        tema, publico, rehacer,
+        opciones: { formato, tema: temaVisual, paleta, recetas: cuantasRecetas },
+      });
       if (!vivo.current) return;
 
       if (!ok) {
@@ -177,7 +205,7 @@ export default function EbookIA({
 
     /* El temario ya está: se arranca a escribir sin pedir otro clic. */
     if (vivo.current) void seguir();
-  }, [pedir, tema, publico, seguir]);
+  }, [pedir, tema, publico, formato, temaVisual, paleta, cuantasRecetas, seguir]);
 
   const cerrar = () => {
     if (trabajando) return;
@@ -257,6 +285,154 @@ export default function EbookIA({
                 className="mt-1.5 w-full rounded-xl border border-gray-200 panel-oscuro:border-gray-700 bg-white panel-oscuro:bg-gray-950 px-3.5 py-2.5 text-[13px] text-gray-900 panel-oscuro:text-gray-100 placeholder:text-gray-400 focus:border-orange-400 focus:outline-none disabled:opacity-60"
               />
 
+              {/* ── Cómo querés que salga ──────────────────────────────── */}
+
+              <p className="mt-5 text-[12.5px] font-bold text-gray-700 panel-oscuro:text-gray-300">
+                ¿Cómo querés que salga?
+              </p>
+
+              <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {FORMATOS.map((f) => {
+                  /* ⚠️ Apagado si el modelo todavía no lo sabe escribir. Ver
+                     `FORMATOS_LISTOS`: elegirlo daría un ebook de otro tipo. */
+                  const listo = FORMATOS_LISTOS.includes(f);
+                  return (
+                  <button
+                    key={f}
+                    type="button"
+                    onClick={() => listo && setFormato(f)}
+                    disabled={trabajando || !listo}
+                    title={listo ? undefined : "Todavía no está disponible"}
+                    aria-pressed={formato === f}
+                    className={`rounded-xl border px-3.5 py-3 text-left transition-colors disabled:opacity-60 ${
+                      formato === f
+                        ? "border-orange-400 bg-orange-50 panel-oscuro:bg-orange-500/10"
+                        : "border-gray-200 panel-oscuro:border-gray-700 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800"
+                    }`}
+                  >
+                    <span className="flex items-center gap-2 text-[13px] font-bold text-gray-900 panel-oscuro:text-gray-100">
+                      {QUE_ES_CADA_FORMATO[f].nombre}
+                      {!listo && (
+                        <span className="rounded-full bg-gray-200 panel-oscuro:bg-gray-700 px-1.5 py-0.5 text-[9.5px] font-bold uppercase tracking-wide text-gray-600 panel-oscuro:text-gray-300">
+                          Muy pronto
+                        </span>
+                      )}
+                    </span>
+                    <span className="mt-0.5 block text-[11.5px] leading-relaxed text-gray-600 panel-oscuro:text-gray-400">
+                      {QUE_ES_CADA_FORMATO[f].explica}
+                    </span>
+                  </button>
+                  );
+                })}
+              </div>
+
+              {/* ⚠️ Sólo para el recetario, y no es un adorno: este número va
+                  en la tapa —"30 RECETAS"— y es lo que justifica el precio.
+                  Dejárselo decidir al modelo sería que el producto salga
+                  distinto del que la persona pensaba vender.
+                  En un ebook de texto no aparece porque no significa nada. */}
+              {formato === "recetario" && (
+                <div className="mt-3 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 px-3.5 py-3">
+                  <p className="text-[12.5px] font-bold text-gray-700 panel-oscuro:text-gray-300">
+                    ¿Cuántas recetas?
+                  </p>
+                  <p className="mt-0.5 text-[11.5px] leading-snug text-gray-500 panel-oscuro:text-gray-400">
+                    Una por hoja. El número va en la tapa.
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {RECETAS_OPCIONES.map((n) => (
+                      <button
+                        key={n}
+                        type="button"
+                        onClick={() => setCuantasRecetas(n)}
+                        disabled={trabajando}
+                        aria-pressed={cuantasRecetas === n}
+                        className={`min-w-[64px] rounded-lg border px-3 py-2 text-[13px] font-bold transition-colors disabled:opacity-60 ${
+                          cuantasRecetas === n
+                            ? "border-orange-400 bg-orange-50 text-orange-800 panel-oscuro:bg-orange-500/10 panel-oscuro:text-orange-300"
+                            : "border-gray-200 panel-oscuro:border-gray-700 text-gray-700 panel-oscuro:text-gray-300 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800"
+                        }`}
+                      >
+                        {n}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                {TEMAS.map((x) => (
+                  <button
+                    key={x}
+                    type="button"
+                    onClick={() => setTemaVisual(x)}
+                    disabled={trabajando}
+                    aria-pressed={temaVisual === x}
+                    className={`flex items-center gap-2.5 rounded-xl border px-3.5 py-2.5 transition-colors disabled:opacity-60 ${
+                      temaVisual === x
+                        ? "border-orange-400 bg-orange-50 panel-oscuro:bg-orange-500/10"
+                        : "border-gray-200 panel-oscuro:border-gray-700 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800"
+                    }`}
+                  >
+                    <span
+                      aria-hidden
+                      className={`h-7 w-5 shrink-0 rounded border ${
+                        x === "oscuro"
+                          ? "border-gray-700 bg-gray-900"
+                          : "border-gray-300 bg-[#FCFAF7]"
+                      }`}
+                    />
+                    <span className="text-left">
+                      <span className="block text-[12.5px] font-bold text-gray-900 panel-oscuro:text-gray-100">
+                        {QUE_ES_CADA_TEMA[x].nombre}
+                      </span>
+                      <span className="block text-[11px] leading-snug text-gray-500 panel-oscuro:text-gray-400">
+                        {QUE_ES_CADA_TEMA[x].explica}
+                      </span>
+                    </span>
+                  </button>
+                ))}
+              </div>
+
+              {/* ⚠️ Los colores salen de `PALETAS` y no hay selector libre: cada
+                  paleta trae su acento Y el texto que va encima, medidos entre
+                  sí. Con un color a elección, una franja clara con texto blanco
+                  encima queda ilegible adentro de un archivo que ya se vendió y
+                  ya se mandó, y eso no se arregla después. */}
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPaleta("")}
+                  disabled={trabajando}
+                  aria-pressed={paleta === ""}
+                  className={`rounded-lg border px-2.5 py-1.5 text-[11.5px] font-bold transition-colors disabled:opacity-60 ${
+                    paleta === ""
+                      ? "border-orange-400 bg-orange-50 text-orange-800 panel-oscuro:bg-orange-500/10 panel-oscuro:text-orange-300"
+                      : "border-gray-200 panel-oscuro:border-gray-700 text-gray-600 panel-oscuro:text-gray-400 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800"
+                  }`}
+                >
+                  El de tu página
+                </button>
+
+                {PALETAS.map((p) => (
+                  <button
+                    key={p.clave}
+                    type="button"
+                    onClick={() => setPaleta(p.clave)}
+                    disabled={trabajando}
+                    aria-pressed={paleta === p.clave}
+                    aria-label={p.nombre}
+                    title={p.nombre}
+                    className={`h-8 w-8 rounded-full border-2 transition-transform disabled:opacity-60 ${
+                      paleta === p.clave
+                        ? "border-gray-900 panel-oscuro:border-gray-100 scale-110"
+                        : "border-transparent hover:scale-105"
+                    }`}
+                    style={{ backgroundColor: p.acento }}
+                  />
+                ))}
+              </div>
+
               <Cupo cupo={cupo} />
 
               {error && <Aviso>{error}</Aviso>}
@@ -270,8 +446,12 @@ export default function EbookIA({
                 {trabajando ? "Armando el temario…" : "Escribir el ebook"}
               </button>
 
+              {/* ⚠️ Acá decía "Vas a poder leerlo y cambiarlo antes de
+                  publicar", y **el editor no existe**: hoy sólo se puede rehacer
+                  entero. Prometer una pantalla que no está es lo que después se
+                  reclama. Cuando el editor exista, vuelve la frase. */}
               <p className="mt-2 text-center text-[11px] text-gray-400 panel-oscuro:text-gray-500">
-                Tarda unos minutos. Vas a poder leerlo y cambiarlo antes de publicar.
+                Tarda unos minutos. Quedate en esta pantalla mientras se escribe.
               </p>
             </>
           )}
@@ -300,8 +480,11 @@ export default function EbookIA({
                     style={{ width: `${porcentaje}%` }}
                   />
                 </div>
+                {/* ⚠️ Con la palabra de su formato. Un recetario contaba
+                    secciones, así que a alguien que eligió 10 recetas le decía
+                    "2 de 4": el número que ve tiene que ser el que eligió. */}
                 <span className="shrink-0 text-[12px] font-bold text-gray-500 panel-oscuro:text-gray-400">
-                  {escritos} de {total}
+                  {escritos} de {total} {COMO_SE_LLAMA[ebook?.opciones.formato ?? formato].partes}
                 </span>
               </div>
 
@@ -352,10 +535,19 @@ export default function EbookIA({
                 </button>
               )}
 
+              {/* ⚠️ ACÁ DECÍA "cuando vuelvas sigue desde donde iba", y eso se
+                  leía como que sigue SOLO. No sigue: el bucle vive en esta
+                  pantalla, así que al irse la escritura se frena y al volver
+                  hay que apretar el botón. Está hecho a propósito —cada vuelta
+                  cuesta plata— pero prometer lo contrario deja a alguien
+                  esperando en otra pestaña un trabajo que no está pasando. */}
               <p className="mt-4 rounded-xl bg-gray-50 panel-oscuro:bg-gray-800/60 px-3.5 py-2.5 text-[12px] leading-relaxed text-gray-600 panel-oscuro:text-gray-300">
-                Tarda unos minutos. <strong>Podés cerrar esta ventana</strong>: cada capítulo
-                queda guardado apenas se escribe, y cuando vuelvas sigue desde donde iba
-                sin gastar otra generación.
+                Tarda unos minutos y <strong>tenés que dejar esta ventana abierta</strong>: si
+                la cerrás o te vas a otra pantalla, la escritura se frena.
+                <br />
+                No se pierde nada — cada {COMO_SE_LLAMA[ebook?.opciones.formato ?? formato].parte} queda
+                guardado apenas se escribe. Cuando vuelvas, abrís este producto y apretás
+                <strong> Seguir escribiendo</strong>, sin gastar otra generación.
               </p>
             </>
           )}

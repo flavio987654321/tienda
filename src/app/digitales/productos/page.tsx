@@ -5,6 +5,7 @@ import { TOPES_DIGITALES } from "@/lib/planLimits";
 import BotonVolver from "../BotonVolver";
 import { estadoDelCupo } from "@/lib/cupo-ia";
 import { estadoDelBorrador } from "@/lib/ebook-borrador";
+import { getSubscriptionStatus } from "@/lib/subscription";
 import ProductosClient, { type ProductoEnPantalla } from "./ProductosClient";
 
 /**
@@ -45,7 +46,16 @@ export default async function ProductosPage() {
   if (!user || user.role !== "DIGITAL") return null;
 
   const [sub, store] = await Promise.all([
-    prisma.subscription.findUnique({ where: { userId: user.id }, select: { tier: true } }),
+    /* Sólo lo que hace falta: el plan, y lo que `getSubscriptionStatus` mira
+       para saber si todavía está en la prueba. Traer la fila entera sería leer
+       datos de cobro que esta pantalla no usa. */
+    prisma.subscription.findUnique({
+      where: { userId: user.id },
+      select: {
+        tier: true, status: true, trialEndsAt: true,
+        currentPeriodEnd: true, gracePeriodEndsAt: true,
+      },
+    }),
     prisma.store.findUnique({ where: { ownerId: user.id }, select: { id: true } }),
   ]);
 
@@ -56,8 +66,14 @@ export default async function ProductosPage() {
      necesita una fila para saber que tiene todo. */
   const cupoIA = await estadoDelCupo(user.id, tier);
   /* Y el de ebooks, que es una bolsa APARTE: gastar todas las páginas de venta
-     no puede dejar a nadie sin poder escribir su ebook. Ver `cupo-ia`. */
-  const cupoEbook = await estadoDelCupo(user.id, tier, "EBOOK");
+     no puede dejar a nadie sin poder escribir su ebook. Ver `cupo-ia`.
+
+     ⚠️ Con `enPrueba`, igual que la ruta que lo gasta. Sin esto la pantalla
+     dibujaría el cupo del plan pagado a alguien que todavía está probando, y al
+     apretar el botón el servidor le diría que no le queda: el número de la
+     pantalla tiene que ser el mismo que aplica el servidor. */
+  const enPrueba = !!sub && getSubscriptionStatus(sub) === "TRIAL";
+  const cupoEbook = await estadoDelCupo(user.id, tier, "EBOOK", enPrueba);
 
   const filas = store
     ? await prisma.product.findMany({

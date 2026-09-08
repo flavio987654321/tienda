@@ -75,14 +75,113 @@ export const LARGO_RESUMEN_CAPITULO = 400;
 export const BLOQUES_MAX = 60;
 export const LARGO_BLOQUE = 2_000;
 
-/** Los tres tipos de pedazo que sabe dibujar el PDF. Nada más entra. */
-export const TIPOS_DE_BLOQUE = ["subtitulo", "parrafo", "vineta"] as const;
+/**
+ * Los tipos de pedazo que sabe dibujar el PDF. Nada más entra.
+ *
+ * ⚠️ `aviso` se sumó el 07/09/26 y es el único que no es texto corrido: sale
+ * como un recuadro de color, aparte del párrafo. Agregar uno nuevo acá **no
+ * alcanza**: hay que enseñarle al PDF a dibujarlo (`dibujarBloque`), porque
+ * todo lo que no reconoce lo dibuja como párrafo y el recuadro no aparecería
+ * nunca — sin fallar, que es lo peor.
+ */
+export const TIPOS_DE_BLOQUE = ["subtitulo", "parrafo", "vineta", "aviso"] as const;
 export type TipoDeBloque = (typeof TIPOS_DE_BLOQUE)[number];
 
 export type Bloque = { tipo: TipoDeBloque; texto: string };
 
-export type CapituloPlaneado = { titulo: string; resumen: string };
+/** Cuántas palabras entran en la búsqueda de la foto del capítulo. */
+export const LARGO_FOTO = 80;
+
+export type CapituloPlaneado = {
+  titulo: string;
+  resumen: string;
+  /**
+   * Con qué buscar la foto de este capítulo en el banco de imágenes.
+   *
+   * ⚠️ Va acá y no se saca del título porque **el título no describe una
+   * foto**. Buscando por título, "Primeros pasos para arrancar esta semana"
+   * trajo una guitarra acústica y "Las masas base que no fallan" un pedazo de
+   * carne en salsa: 3 de 8 capítulos con una foto de otro tema, adentro de un
+   * ebook que se vende.
+   *
+   * Puede venir vacío —un ebook guardado antes de esta fecha no lo tiene— y en
+   * ese caso quien busca cae al título, que es lo que se hacía antes.
+   */
+  foto: string;
+};
 export type CapituloEscrito = { titulo: string; bloques: Bloque[] };
+
+/* ── El recetario ───────────────────────────────────────────────────────── */
+
+/**
+ * La otra clase de ebook.
+ *
+ * ══════════════════════════════════════════════════════════════════════════
+ * UNA RECETA NO ES PROSA: SON CAMPOS
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * Un ebook de texto se arma con párrafos y el molde sólo decide dónde cortan.
+ * Una receta no: "500 g de harina" va en una columna con la cantidad alineada
+ * a la derecha, "165 °C" va en una ficha arriba, y los pasos van numerados con
+ * su bolita. Eso **no se puede sacar de un párrafo** sin adivinar.
+ *
+ * Por eso el modelo devuelve los campos sueltos y el molde los ubica. Es la
+ * diferencia entre un recetario de verdad y un texto largo sobre cocina.
+ *
+ * ⚠️ Cada receta ocupa UNA hoja, y una hoja no es elástica: los topes de acá
+ * abajo no son manía de ordenado, son lo que hace que entre. Ver
+ * `hojaDeReceta` en `ebook-pdf.ts`.
+ *
+ * ── Por qué bajaron el 07/09/26 ────────────────────────────────────────────
+ *
+ * Estaban en 9 pasos de 200 caracteres, y con eso la receta más grande que el
+ * limado dejaba pasar **no entraba en la hoja ni con la maqueta más apretada**.
+ * Se midió: faltaban 32 puntos. Un tope que el molde no puede cumplir no es un
+ * tope, es una promesa rota más adelante. Ver PDF-W.
+ */
+export const INGREDIENTES_MAX = 14;
+export const PASOS_MAX = 8;
+export const LARGO_CAMPO_CORTO = 60;
+export const LARGO_PASO = 160;
+
+/**
+ * La descripción de la receta, la línea que va abajo del título.
+ *
+ * ⚠️ Acá se limaba con `LARGO_RESUMEN_CAPITULO`, que son 400 caracteres —el
+ * largo del resumen de un capítulo, que es otra cosa—. El molde la dibuja como
+ * UNA línea abajo del título: con 400 caracteres ocupaba cinco renglones y se
+ * comía el alto que necesitaban los pasos. Era uno de los tres motivos por los
+ * que una receta grande no cerraba en su hoja.
+ */
+export const LARGO_DESCRIPCION_RECETA = 120;
+
+export type Ingrediente = {
+  nombre: string;
+  /** "500 g", "2 cucharadas". Puede venir vacío: "sal a gusto" no lleva número. */
+  cantidad: string;
+};
+
+export type PasoDeReceta = {
+  /** En dos o tres palabras: "Activar la levadura". Va en negrita arriba del texto. */
+  titulo: string;
+  texto: string;
+};
+
+export type Receta = {
+  titulo: string;
+  /** Una línea, para debajo del título. */
+  descripcion: string;
+  /** Las tres fichas de arriba. Vacías si no aplican. */
+  rinde: string;
+  tiempo: string;
+  coccion: string;
+  ingredientes: Ingrediente[];
+  pasos: PasoDeReceta[];
+  /** El recuadro de abajo. Opcional. */
+  tip: string;
+  /** Con qué buscar la foto. Igual que en los capítulos de texto. */
+  foto: string;
+};
 
 export type IndiceSugerido = {
   titulo: string;
@@ -147,6 +246,15 @@ CÓMO SON LOS CAPÍTULOS
 - Cada uno con su título y un resumen de dos o tres renglones de qué se explica
   adentro. Ese resumen lo va a leer después quien escriba el capítulo, así que
   tiene que decir el contenido, no venderlo.
+- Y cada uno con una búsqueda de foto: dos a cuatro palabras que describan una
+  ESCENA QUE SE PUEDA FOTOGRAFIAR y que tenga que ver con el capítulo. Se va a
+  usar tal cual en un banco de imágenes.
+  Sí: "torta decorada sobre mesada", "manos amasando harina", "cuaderno de
+  pedidos y calculadora".
+  No: "primeros pasos", "la lógica del negocio", "expectativas realistas" — eso
+  no es ninguna foto y trae cualquier cosa.
+  Si el capítulo es abstracto, describí igual algo concreto del mundo de este
+  ebook. Nunca lo dejes vacío.
 - Uno no puede repetir a otro. Si dos se pisan, son uno solo.
 - Tienen que poder escribirse: si el tema no da para ${CAPITULOS_MIN}, hacé menos
   capítulos más largos antes que rellenar.
@@ -168,8 +276,14 @@ export const ESQUEMA_DEL_INDICE = {
         properties: {
           titulo: { type: "string" },
           resumen: { type: "string", description: "Dos o tres renglones de qué se explica adentro." },
+          foto: {
+            type: "string",
+            description:
+              "Dos a cuatro palabras que describan una escena fotografiable de este capítulo. " +
+              "Se busca tal cual en un banco de imágenes. Nada abstracto.",
+          },
         },
-        required: ["titulo", "resumen"],
+        required: ["titulo", "resumen", "foto"],
       },
     },
   },
@@ -196,6 +310,14 @@ CÓMO SALE
 - En pedazos: párrafos, algún subtítulo cuando el capítulo cambia de tema, y
   viñetas cuando de verdad hay una lista. Un capítulo que es todo viñetas no es
   un capítulo, es un apunte.
+- Y como mucho DOS "aviso" por capítulo. Un aviso sale en un recuadro de color,
+  aparte del texto, y sirve para una sola cosa: el dato que a quien lee le
+  ahorra un error o le da un atajo. Dos o tres renglones, no más.
+  Sí: "Si la masa se pega a las manos, no le agregues harina: metela 10 minutos
+  en la heladera."
+  No: un resumen de lo que ya dijiste, ni una frase de aliento, ni algo que
+  también está en un párrafo. Si el capítulo no tiene nada así, no pongas
+  ninguno — un recuadro con una obviedad adentro es peor que no tenerlo.
 - Arrancá por el contenido. Nada de "en este capítulo vamos a ver": quien lee
   ya leyó el título.
 - Explicá cómo se hace lo que estás explicando, con pasos y con ejemplos. Lo que
@@ -220,7 +342,8 @@ export const ESQUEMA_DEL_CAPITULO = {
           tipo: {
             type: "string",
             enum: [...TIPOS_DE_BLOQUE],
-            description: "subtitulo, parrafo o vineta.",
+            description:
+              "subtitulo, parrafo, vineta, o aviso para el dato que va en un recuadro aparte.",
           },
           texto: { type: "string" },
         },
@@ -245,7 +368,17 @@ export const ESQUEMA_DEL_CAPITULO = {
  * gana: pedirle al modelo que lo respete es una sugerencia, imponerlo acá es la
  * garantía. Es la misma decisión que en `normalizarEmbudo`.
  */
-export function normalizarIndice(crudo: unknown, tituloPropio?: string | null): IndiceSugerido | null {
+/**
+ * @param minimo Cuántas entradas hacen falta para que el temario sirva. Por
+ *   defecto `CAPITULOS_MIN`, que es lo que necesita un ebook de texto. Un
+ *   recetario pasa **la cantidad exacta de secciones** que se pidió: si vuelven
+ *   menos, el recetario saldría más chico de lo que se cobró.
+ */
+export function normalizarIndice(
+  crudo: unknown,
+  tituloPropio?: string | null,
+  minimo: number = CAPITULOS_MIN,
+): IndiceSugerido | null {
   if (!crudo || typeof crudo !== "object") return null;
   const c = crudo as Record<string, unknown>;
 
@@ -273,12 +406,17 @@ export function normalizarIndice(crudo: unknown, tituloPropio?: string | null): 
     if (vistos.has(clave)) continue;
     vistos.add(clave);
 
-    capitulos.push({ titulo: tit, resumen: res });
+    /* ⚠️ La búsqueda de foto NO puede tumbar un capítulo. Si el modelo no la
+       mandó, el capítulo sigue siendo bueno y el ebook se arma igual: quien
+       busca la foto cae al título, que es lo que se hacía antes de que este
+       campo existiera. Rechazar el capítulo por esto sería tirar un ebook
+       entero por una foto. */
+    capitulos.push({ titulo: tit, resumen: res, foto: limpiarTexto(b.foto, LARGO_FOTO) ?? "" });
   }
 
   /* Menos del mínimo no es un ebook. Se rechaza entero y se devuelve el cupo:
      es preferible "probá de nuevo" a cobrarle tres capítulos a alguien. */
-  if (capitulos.length < CAPITULOS_MIN) return null;
+  if (capitulos.length < minimo) return null;
 
   return { titulo, promesa, capitulos };
 }
@@ -322,11 +460,50 @@ export function normalizarCapitulo(crudo: unknown, titulo: string): CapituloEscr
  * lo que había el día que se escribió, no necesariamente lo que el código de hoy
  * espera encontrar.
  */
-export function leerIndice(guardado: string | null | undefined): CapituloPlaneado[] {
-  if (typeof guardado !== "string") return [];
+/**
+ * Las dos formas en que puede estar guardado el índice.
+ *
+ * ══════════════════════════════════════════════════════════════════════════
+ * LA VIEJA ES UNA LISTA; LA NUEVA, UNA LISTA CON LA PROMESA AL LADO
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * Hasta el 07/09/26 se guardaba `JSON.stringify(capitulos)` a secas, y **la
+ * promesa se tiraba**. La tapa la reemplazaba por el resumen del capítulo 1, que
+ * está escrito para el que ESCRIBE el capítulo y no para el que compra: la tapa
+ * de un producto en venta arrancaba con "Explica el punto de partida...".
+ *
+ * Se guarda adentro del mismo JSON y no en una columna nueva a propósito: una
+ * columna es una migración de la base para un campo de texto que ya viaja acá.
+ * Y por eso hay que seguir leyendo las dos formas — los ebooks de antes tienen
+ * la lista pelada y no se pueden reescribir.
+ */
+function abrirIndice(guardado: string | null | undefined): unknown[] | null {
+  if (typeof guardado !== "string") return null;
   let crudo: unknown;
-  try { crudo = JSON.parse(guardado); } catch { return []; }
-  if (!Array.isArray(crudo)) return [];
+  try { crudo = JSON.parse(guardado); } catch { return null; }
+  if (Array.isArray(crudo)) return crudo;                       // la vieja
+  const o = crudo as { capitulos?: unknown };                   // la nueva
+  return Array.isArray(o?.capitulos) ? o.capitulos : null;
+}
+
+/**
+ * La promesa de la tapa: qué se lleva quien lo lea.
+ *
+ * `""` en los ebooks guardados con la forma vieja, que no la tienen. Quien la
+ * usa decide con qué reemplazarla — no se inventa acá.
+ */
+export function leerPromesa(guardado: string | null | undefined): string {
+  if (typeof guardado !== "string") return "";
+  let crudo: unknown;
+  try { crudo = JSON.parse(guardado); } catch { return ""; }
+  if (Array.isArray(crudo)) return "";
+  const o = crudo as { promesa?: unknown };
+  return limpiarTexto(o?.promesa, LARGO_RESUMEN_CAPITULO) ?? "";
+}
+
+export function leerIndice(guardado: string | null | undefined): CapituloPlaneado[] {
+  const crudo = abrirIndice(guardado);
+  if (!crudo) return [];
 
   const capitulos: CapituloPlaneado[] = [];
   for (const bruto of crudo) {
@@ -336,7 +513,9 @@ export function leerIndice(guardado: string | null | undefined): CapituloPlanead
     const tit = limpiarTexto(b.titulo, LARGO_TITULO_CAPITULO);
     const res = limpiarTexto(b.resumen, LARGO_RESUMEN_CAPITULO);
     if (!tit) continue;
-    capitulos.push({ titulo: tit, resumen: res ?? "" });
+    /* Los ebooks guardados antes del 07/09/26 no tienen `foto`: vuelve vacía y
+       quien busca cae al título. Ver `CapituloPlaneado`. */
+    capitulos.push({ titulo: tit, resumen: res ?? "", foto: limpiarTexto(b.foto, LARGO_FOTO) ?? "" });
   }
   return capitulos;
 }
@@ -361,6 +540,13 @@ export function leerCapitulos(guardado: string | null | undefined): CapituloEscr
  *
  * Es el largo de lo escrito y no un contador aparte: un contador se puede
  * desincronizar de la lista, y el que manda es lo que de verdad está guardado.
+ *
+ * ⚠️ **SÓLO SIRVE PARA UN EBOOK DE TEXTO, y la ruta ya no la usa.** Un recetario
+ * guarda grupos de recetas donde éste espera capítulos, así que `leerCapitulos`
+ * le devolvería una lista vacía y esto contestaría siempre "el primero" — el
+ * bucle escribiría la sección 1 para siempre, cobrando cada vuelta. La ruta del
+ * paso hace la cuenta ella misma justamente por eso. Queda acá porque su prueba
+ * la cubre; si alguna vez se vuelve a usar, tiene que recibir el formato.
  */
 export function elCapituloQueSigue(
   indice: CapituloPlaneado[],
@@ -393,5 +579,534 @@ export function pedidoDelCapitulo(
     `<temario>\n${temario}\n</temario>`,
     "",
     `Te toca escribir el capítulo ${numero}: "${indice[numero - 1]?.titulo ?? ""}".`,
+  ].filter((l) => l !== null).join("\n");
+}
+
+/* ── El recetario: lo que se le pide al modelo ──────────────────────────── */
+
+/**
+ * Cuántas recetas escribe UNA llamada.
+ *
+ * ══════════════════════════════════════════════════════════════════════════
+ * NO ES UNA RECETA POR LLAMADA, Y ESA ES TODA LA DIFERENCIA DE PRECIO
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * Un capítulo de texto son 900 palabras: entra una sola por llamada y encima
+ * conviene, porque a un modelo al que se le piden dos capítulos le sale peor el
+ * segundo. Una receta son 150 palabras en campos cortos. Pedir de a una sería
+ * pagar el temario entero de entrada —el pedido va completo en cada llamada—
+ * treinta veces para escribir treinta recetas.
+ *
+ * ── Por qué TRES y no cinco ────────────────────────────────────────────────
+ *
+ * Medido el 07/09/26 con `probar-recetas.mts`, con este mismo prompt y este
+ * mismo esquema:
+ *
+ *   5 recetas → se cortó en `max_tokens` a los 4.000 y **no volvió ninguna**.
+ *                Se pagaron US$0,046 por nada.
+ *   3 recetas → 2.866 tokens de salida, 28,9 segundos, US$0,035. Las tres
+ *                completas.
+ *
+ * O sea que una receta son unos 950 tokens de salida, no los 400 que se había
+ * estimado. Con cinco harían falta 5.000 tokens y unos 48 segundos, **adentro
+ * de una función que se corta a los 60**. Tres deja el margen que hace falta
+ * para que un día lento no tire la llamada entera.
+ *
+ * ⚠️ Subir este número tiene dos techos, y el que muerde primero no es el
+ * dinero: es el reloj. Si alguna vez se sube, hay que subir `max_tokens` en la
+ * misma proporción — cortarse en `max_tokens` no devuelve las recetas que ya
+ * escribió, devuelve nada, y se paga igual.
+ */
+export const RECETAS_POR_LLAMADA = 3;
+
+/**
+ * Un texto recortado que TERMINA donde termina una idea.
+ *
+ * ══════════════════════════════════════════════════════════════════════════
+ * ⚠️ UN PASO CORTADO A MITAD DE PALABRA ES UNA RECETA QUE NO SE PUEDE SEGUIR
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * `limpiarTexto` corta en el carácter que toca, y en un nombre de persona o un
+ * título eso está bien. En un paso de receta no: en la prueba del 07/09/26 la
+ * receta de medialunas decía "Repetí este doblado tres veces, enfriando 10
+ * minutos **en**" y ahí se terminaba. Quien está amasando no tiene forma de
+ * saber qué venía después, y eso ya está adentro de un archivo vendido.
+ *
+ * Así que se corta en el último punto que quede razonablemente cerca del final
+ * —el paso termina siendo una idea completa, más corta— y si no hay ninguno, en
+ * el último espacio con puntos suspensivos, que al menos se lee como recortado
+ * y no como un error de tipeo.
+ *
+ * Esto es la red, no la solución: lo que de verdad evita el corte es que el
+ * prompt le diga al modelo cuántos caracteres tiene. Las dos cosas hacen falta.
+ */
+export function cortarEnUnaIdea(valor: unknown, tope: number): string | null {
+  const limpio = limpiarTexto(valor, 10_000);
+  if (!limpio) return null;
+  if (limpio.length <= tope) return limpio;
+
+  const cortado = limpio.slice(0, tope);
+
+  /* Un punto en el último 40% deja una idea entera y es lo mejor que se puede
+     hacer. Más atrás que eso perdería demasiado texto ya pagado. */
+  const punto = Math.max(cortado.lastIndexOf(". "), cortado.lastIndexOf("."));
+  if (punto >= tope * 0.6) return cortado.slice(0, punto + 1).trim();
+
+  const espacio = cortado.lastIndexOf(" ");
+  const hasta = espacio > tope * 0.5 ? espacio : tope - 1;
+  return `${cortado.slice(0, hasta).trim()}…`;
+}
+
+/**
+ * En cuántas secciones se parte un recetario de `total` recetas.
+ *
+ * Una sección = una llamada al modelo = una entrada del temario. El bucle de
+ * las tres rutas queda EXACTAMENTE igual que en un ebook de texto: donde aquél
+ * escribe un capítulo, éste escribe las recetas de una sección.
+ *
+ * ⚠️ Por eso `RECETAS_OPCIONES` llega hasta 30 y no más: 30 ÷ 3 son 10
+ * secciones, que es `CAPITULOS_MAX`. Con 40 el temario tendría 14 y `leerIndice`
+ * cortaría las últimas cuatro **sin decir nada** — se cobraría un recetario de
+ * 40 y saldría uno de 30.
+ */
+export function seccionesParaRecetas(total: number): number {
+  return Math.ceil(total / RECETAS_POR_LLAMADA);
+}
+
+/**
+ * Cuántas recetas escribe la sección número `numero`.
+ *
+ * Todas llevan `RECETAS_POR_LLAMADA` menos la última, que se queda con el
+ * resto. Con 10 recetas son 3, 3, 3 y 1.
+ *
+ * ⚠️ Esto NO puede ser `RECETAS_POR_LLAMADA` a secas. Con 10 elegidas saldrían
+ * 12: tres de más adentro de un archivo que se vendió como de diez, y el sello
+ * de la tapa diciendo otro número que el índice.
+ */
+export function recetasDeLaSeccion(total: number, numero: number): number {
+  const yaPedidas = (numero - 1) * RECETAS_POR_LLAMADA;
+  return Math.max(0, Math.min(RECETAS_POR_LLAMADA, total - yaPedidas));
+}
+
+/**
+ * Las reglas de escritura de una receta.
+ *
+ * ⚠️ NO son `REGLAS_COMUNES`, y la diferencia es una sola línea que importa
+ * mucho: allá se le prohíben los números porque un porcentaje inventado queda
+ * escrito como cierto en algo que se vende. **Acá los números son la receta.**
+ * Sin "180 °C" y sin "500 g" no hay nada que cocinar. Lo que sigue prohibido es
+ * el número que pretende ser un dato del mundo —"el 70% de la gente"—, no la
+ * cantidad de harina.
+ *
+ * Si esto se escribiera pegándole `REGLAS_COMUNES` arriba, el modelo devolvería
+ * "harina, cantidad necesaria" en todos los ingredientes y la receta no serviría.
+ */
+const REGLAS_DE_RECETA = `
+CÓMO ESCRIBÍS
+
+- En castellano rioplatense, tratando de "vos" a quien lee. Con los nombres que
+  se usan en Argentina: manteca y no mantequilla, palta y no aguacate, crema de
+  leche y no nata.
+- Ingredientes que se consiguen en cualquier supermercado de acá.
+- Nada de markdown, ni asteriscos, ni emojis. El formato lo pone el PDF.
+- Frases cortas y en imperativo: "Mezclá", "Llevá al horno". No "se mezcla".
+
+LOS NÚMEROS SÍ VAN
+
+- Cantidades, temperaturas y tiempos son la receta: "500 g", "180 °C", "25
+  minutos". Ponelos siempre, en gramos, mililitros, cucharadas o unidades.
+- Lo que no va son los números que pretenden ser un dato del mundo:
+  estadísticas, porcentajes, estudios, "está comprobado que". Ni testimonios, ni
+  nombres de personas o de marcas, ni precios.
+- Nada de promesas: "te va a salir perfecta" no se escribe. Se explica cómo se
+  hace y en qué se nota que está bien.
+
+QUE ENTRE EN LA HOJA — esto no es un capricho de diseño
+
+Cada receta ocupa UNA carilla y la carilla no se estira. Si te pasás, la receta
+sale cortada adentro de un archivo que alguien pagó.
+
+- Entre 4 y ${INGREDIENTES_MAX} ingredientes. Ninguno más.
+- El nombre del ingrediente, CORTO: dos o tres palabras. "manteca fría", no
+  "manteca fría para el hojaldre". La columna es angosta y un nombre largo sale
+  cortado. Para qué se usa cada cosa se explica en el paso.
+- Entre 4 y ${PASOS_MAX} pasos. Si te salen doce, juntá los que van seguidos.
+- Cada paso, **como mucho ${LARGO_PASO} caracteres**. Es un paso, no un párrafo, y
+  lo que se pase de ahí se corta: la receta queda a la mitad y quien la está
+  cocinando no tiene cómo saber qué seguía.
+- El título del paso, dos o tres palabras: "Activar la levadura".
+- La línea de abajo del título, como mucho ${LARGO_DESCRIPCION_RECETA} caracteres.
+`.trim();
+
+/**
+ * Un grupo de recetas.
+ *
+ * Recibe el recetario entero en temario, por el mismo motivo que el capítulo de
+ * texto: para no repetir la receta de la sección de al lado. No recibe el texto
+ * de las otras recetas.
+ */
+export const INSTRUCCIONES_RECETAS = `
+Escribís recetas para un recetario que se vende en internet, en Argentina.
+
+Te paso de qué se trata el recetario entero y qué sección te toca. Escribí las
+recetas de ESA sección y ninguna otra.
+
+QUÉ ES CADA RECETA
+
+- Un título con el nombre del plato. Como se lo pediría alguien: "Pan de campo
+  en airfryer". Nada de títulos graciosos que no dicen qué es.
+- Una línea abajo del título que diga cómo queda o cuándo se come. Una sola.
+- Las tres fichas de arriba: cuánto rinde ("6 porciones"), cuánto tiempo lleva
+  en total ("40 minutos") y la cocción ("180 °C, 25 minutos" o "Sin horno").
+  Si alguna no aplica de verdad, dejala vacía; no la inventes.
+- Los ingredientes, cada uno con su cantidad aparte del nombre: nombre "harina
+  0000", cantidad "500 g". Van en el orden en que se usan.
+  La cantidad es SÓLO el número y la unidad, y va corta: "500 g", "2 cucharadas",
+  "a gusto". Nada más entra ahí — si algo es optativo va en el nombre:
+  nombre "tomates cherry (opcional)", cantidad "8".
+- Los pasos, en orden, cada uno con su título corto y su texto.
+- Un consejo al final: el detalle que hace que salga bien, o cómo se guarda, o
+  con qué se reemplaza un ingrediente. Dos renglones. Si no tenés nada que
+  agregar, dejalo vacío — mejor vacío que una obviedad.
+- Y una búsqueda de foto: dos a cuatro palabras que describan el plato ya hecho,
+  como se vería en una foto. Se busca tal cual en un banco de imágenes.
+  Sí: "pan de campo cortado", "budin de limon en rodajas".
+  No: "receta facil", "el secreto de la abuela".
+
+LAS RECETAS TIENEN QUE FUNCIONAR
+
+Cada una se tiene que poder cocinar leyendo sólo esa hoja. Si un paso dice
+"preparar la masa" y la masa no está en ningún lado, la receta no sirve.
+
+No repitas una receta que ya está en otra sección del temario. Dos recetas casi
+iguales con otro nombre es lo primero que se nota y lo primero que se reclama.
+
+${REGLAS_DE_RECETA}
+`.trim();
+
+/**
+ * El temario de un recetario: las secciones, no los capítulos.
+ *
+ * Es el mismo lugar que `INSTRUCCIONES_INDICE` en un ebook de texto, y devuelve
+ * la misma forma —título, promesa y una lista— para que el resto del sistema no
+ * tenga que distinguirlas. Lo que cambia es qué es cada elemento de la lista.
+ */
+export const INSTRUCCIONES_INDICE_RECETARIO = `
+Sos quien arma el índice de un recetario que se va a vender en internet, en
+Argentina.
+
+Te van a contar de qué se trata, con las palabras de quien lo vende, y cuántas
+secciones tenés que armar. Ese número no se discute: devolvé exactamente ésas.
+
+QUÉ DEVOLVÉS
+
+- Un título del recetario. Concreto, que diga qué se cocina: "Panadería casera
+  en airfryer". Nada de títulos de una palabra.
+- Una línea para la tapa que diga QUÉ SE COCINA adentro. Es una descripción del
+  contenido, no una promesa de resultado, así que sí va y nunca la dejes vacía:
+  "Panes, facturas y pizzas hechos enteros en la airfryer, sin prender el
+  horno." Más abajo dice que no escribas promesas — eso es para el texto de las
+  recetas, esta línea es otra cosa y tiene que estar.
+- Las secciones, en orden.
+
+CÓMO SON LAS SECCIONES
+
+- Cada una agrupa recetas parecidas: "Panes de todos los días", "Facturas y
+  dulces", "Pizzas y tartas saladas". Es como está armado cualquier recetario.
+- Con su título y un resumen de dos renglones que diga QUÉ RECETAS van adentro.
+  Ese resumen lo va a leer después quien escriba las recetas, así que nombrá
+  platos concretos: "pan de campo, pan árabe, pan de molde y focaccia".
+- Una sección no puede pisar a otra. Si dos se superponen, cambiá una.
+- Y cada una con una búsqueda de foto: dos a cuatro palabras que describan un
+  plato de esa sección ya hecho, como se vería en una foto.
+  Sí: "pan casero cortado", "medialunas en bandeja".
+  No: "recetas ricas", "lo básico" — eso no es ninguna foto.
+- Ordenalas de lo más simple a lo más elaborado.
+
+${REGLAS_DE_RECETA}
+`.trim();
+
+/**
+ * El esquema del temario del recetario, con la cantidad de secciones clavada.
+ *
+ * ⚠️ Es una función y no una constante porque `minItems` y `maxItems` **tienen
+ * que ser el mismo número**, y ese número sale de cuántas recetas eligió la
+ * persona. Con un rango, el modelo devuelve las que quiere y el recetario sale
+ * de otro tamaño que el que se pidió y se cobró.
+ */
+export function esquemaDelIndiceRecetario(secciones: number) {
+  return {
+    type: "object" as const,
+    properties: {
+      titulo: { type: "string", description: "El título del recetario." },
+      promesa: {
+        type: "string",
+        description:
+          "Una línea para la tapa que diga qué se cocina adentro. Descripción del " +
+          "contenido, no promesa de resultado. Obligatoria: nunca vacía.",
+      },
+      capitulos: {
+        type: "array",
+        minItems: secciones,
+        maxItems: secciones,
+        items: {
+          type: "object",
+          properties: {
+            titulo: { type: "string", description: "El nombre de la sección." },
+            resumen: {
+              type: "string",
+              description: "Dos renglones nombrando los platos concretos que van adentro.",
+            },
+            foto: {
+              type: "string",
+              description:
+                "Dos a cuatro palabras que describan un plato de esta sección ya hecho. " +
+                "Se busca tal cual en un banco de imágenes.",
+            },
+          },
+          required: ["titulo", "resumen", "foto"],
+        },
+      },
+    },
+    required: ["titulo", "promesa", "capitulos"],
+  };
+}
+
+/**
+ * El esquema de un grupo de recetas, con la cantidad clavada.
+ *
+ * ⚠️ Función y no constante por lo mismo que el temario: la última sección de
+ * un recetario de 10 escribe UNA receta, no tres. Ver `recetasDeLaSeccion`.
+ */
+export function esquemaDeRecetas(cuantas: number) {
+  return {
+    ...ESQUEMA_DE_RECETAS,
+    properties: {
+      ...ESQUEMA_DE_RECETAS.properties,
+      recetas: { ...ESQUEMA_DE_RECETAS.properties.recetas, minItems: cuantas, maxItems: cuantas },
+    },
+  };
+}
+
+export const ESQUEMA_DE_RECETAS = {
+  type: "object" as const,
+  properties: {
+    recetas: {
+      type: "array",
+      minItems: 1,
+      maxItems: RECETAS_POR_LLAMADA,
+      items: {
+        type: "object",
+        properties: {
+          titulo: { type: "string", description: "El nombre del plato." },
+          descripcion: {
+            type: "string",
+            description: `Una línea: cómo queda o cuándo se come. Como mucho  caracteres.`,
+          },
+          rinde: { type: "string", description: "Cuánto rinde, por ejemplo 6 porciones. Vacío si no aplica." },
+          tiempo: { type: "string", description: "Cuánto lleva en total, por ejemplo 40 minutos." },
+          coccion: { type: "string", description: "La cocción: 180 °C, 25 minutos. O Sin horno." },
+          ingredientes: {
+            type: "array",
+            minItems: 2,
+            maxItems: INGREDIENTES_MAX,
+            items: {
+              type: "object",
+              properties: {
+                nombre: {
+                  type: "string",
+                  description: "El ingrediente, corto: dos o tres palabras. Por ejemplo harina 0000.",
+                },
+                cantidad: { type: "string", description: "Sólo el número y la unidad: 500 g. Vacío en sal a gusto." },
+              },
+              required: ["nombre", "cantidad"],
+            },
+          },
+          pasos: {
+            type: "array",
+            minItems: 2,
+            maxItems: PASOS_MAX,
+            items: {
+              type: "object",
+              properties: {
+                titulo: { type: "string", description: "Dos o tres palabras: Activar la levadura." },
+                texto: {
+                  type: "string",
+                  description: `Dos o tres renglones, como mucho  caracteres. Lo que se pase se corta.`,
+                },
+              },
+              required: ["titulo", "texto"],
+            },
+          },
+          tip: { type: "string", description: "El consejo del final. Puede ir vacío." },
+          foto: {
+            type: "string",
+            description:
+              "Dos a cuatro palabras que describan el plato ya hecho. " +
+              "Se busca tal cual en un banco de imágenes.",
+          },
+        },
+        required: ["titulo", "descripcion", "rinde", "tiempo", "coccion",
+                   "ingredientes", "pasos", "tip", "foto"],
+      },
+    },
+  },
+  required: ["recetas"],
+};
+
+/**
+ * Las recetas que devolvió el modelo, limadas.
+ *
+ * ⚠️ Los topes de acá abajo son los que hacen que la receta ENTRE EN LA HOJA. El
+ * esquema se los pide al modelo, pero pedir no es garantizar: si vuelve con
+ * dieciocho ingredientes, el molde los dibuja todos y la receta se derrama a la
+ * hoja siguiente, donde no hay ni título ni foto. Se corta acá.
+ *
+ * Y una receta sin ingredientes o sin pasos NO es una receta a la que le falta
+ * algo: es media hoja en blanco adentro de un archivo que se vendió. Se descarta
+ * entera y quien llama decide si reintenta.
+ */
+export function normalizarRecetas(crudo: unknown, cuantas = RECETAS_POR_LLAMADA): Receta[] {
+  if (!crudo || typeof crudo !== "object") return [];
+  const c = crudo as Record<string, unknown>;
+  if (!Array.isArray(c.recetas)) return [];
+
+  /* ⚠️ El tope es el de ESTA sección, no el general: la última de un recetario
+     de 10 escribe una sola. Si el modelo manda tres igual, sobran dos adentro
+     de algo que se vendió como de diez. */
+  const tope = Math.max(1, Math.min(cuantas, RECETAS_POR_LLAMADA));
+
+  const recetas: Receta[] = [];
+  for (const bruto of c.recetas) {
+    if (recetas.length >= tope) break;
+    if (!bruto || typeof bruto !== "object") continue;
+    const b = bruto as Record<string, unknown>;
+
+    const titulo = limpiarTexto(b.titulo, LARGO_TITULO_CAPITULO);
+    if (!titulo || titulo.length < 2) continue;
+
+    const ingredientes: Ingrediente[] = [];
+    if (Array.isArray(b.ingredientes)) {
+      for (const bi of b.ingredientes) {
+        if (ingredientes.length >= INGREDIENTES_MAX) break;
+        if (!bi || typeof bi !== "object") continue;
+        const i = bi as Record<string, unknown>;
+        const nombre = limpiarTexto(i.nombre, LARGO_CAMPO_CORTO);
+        if (!nombre) continue;
+        /* La cantidad SÍ puede venir vacía: "sal a gusto" no lleva número. */
+        ingredientes.push({ nombre, cantidad: limpiarTexto(i.cantidad, LARGO_CAMPO_CORTO) ?? "" });
+      }
+    }
+
+    const pasos: PasoDeReceta[] = [];
+    if (Array.isArray(b.pasos)) {
+      for (const bp of b.pasos) {
+        if (pasos.length >= PASOS_MAX) break;
+        if (!bp || typeof bp !== "object") continue;
+        const p = bp as Record<string, unknown>;
+        const texto = cortarEnUnaIdea(p.texto, LARGO_PASO);
+        if (!texto) continue;
+        /* El título del paso sí puede faltar: el molde numera igual. */
+        pasos.push({ titulo: limpiarTexto(p.titulo, LARGO_CAMPO_CORTO) ?? "", texto });
+      }
+    }
+
+    /* ⚠️ Sin esto no hay receta. Ver el comentario de arriba. */
+    if (ingredientes.length < 2 || pasos.length < 2) continue;
+
+    recetas.push({
+      titulo,
+      /* ⚠️ Con `LARGO_RESUMEN_CAPITULO` acá, la descripción entraba de 400
+         caracteres y ocupaba cinco renglones abajo del título. Ver
+         `LARGO_DESCRIPCION_RECETA`. */
+      descripcion: cortarEnUnaIdea(b.descripcion, LARGO_DESCRIPCION_RECETA) ?? "",
+      rinde: limpiarTexto(b.rinde, LARGO_CAMPO_CORTO) ?? "",
+      tiempo: limpiarTexto(b.tiempo, LARGO_CAMPO_CORTO) ?? "",
+      coccion: limpiarTexto(b.coccion, LARGO_CAMPO_CORTO) ?? "",
+      ingredientes,
+      pasos,
+      tip: cortarEnUnaIdea(b.tip, LARGO_BLOQUE) ?? "",
+      foto: limpiarTexto(b.foto, LARGO_FOTO) ?? "",
+    });
+  }
+
+  return recetas;
+}
+
+/**
+ * Las recetas ya escritas, tal como quedan guardadas.
+ *
+ * ══════════════════════════════════════════════════════════════════════════
+ * ⚠️ SE GUARDAN AGRUPADAS POR SECCIÓN, NO TODAS SEGUIDAS
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * Van en la misma columna que los capítulos de un ebook de texto —`capitulos`—
+ * y con la misma forma de afuera: una lista donde **cada elemento es una
+ * llamada al modelo ya cobrada**. Así `escritos >= indice.length` sigue
+ * queriendo decir "está completo" sin que nadie tenga que dividir por tres.
+ *
+ * Si se guardaran todas seguidas, retomar un recetario a medias necesitaría
+ * adivinar en qué sección se quedó a partir de cuántas recetas hay — y con la
+ * última sección más corta esa cuenta no cierra.
+ */
+export function leerGruposDeRecetas(guardado: string | null | undefined): Receta[][] {
+  if (typeof guardado !== "string") return [];
+  let crudo: unknown;
+  try { crudo = JSON.parse(guardado); } catch { return []; }
+  if (!Array.isArray(crudo)) return [];
+
+  const grupos: Receta[][] = [];
+  for (const bruto of crudo) {
+    if (grupos.length >= CAPITULOS_MAX) break;
+    if (!Array.isArray(bruto)) continue;
+    const recetas = normalizarRecetas({ recetas: bruto });
+    /* Un grupo vacío corta la lista: si la sección 2 no tiene nada, la 3 no
+       puede contar como escrita — el bucle tiene que volver a la 2. */
+    if (recetas.length === 0) break;
+    grupos.push(recetas);
+  }
+  return grupos;
+}
+
+/** Todas las recetas del recetario, en orden, para dibujar el PDF. */
+export function todasLasRecetas(guardado: string | null | undefined): Receta[] {
+  return leerGruposDeRecetas(guardado).flat();
+}
+
+/**
+ * El mensaje con el que se le piden las recetas de una sección.
+ *
+ * Es el mismo armado que `pedidoDelCapitulo` —y a propósito: la sección de un
+ * recetario ocupa el mismo lugar que el capítulo de un ebook de texto, así el
+ * bucle de las tres rutas no cambia—. Lo único que cambia es que en vez de un
+ * capítulo pide varias recetas.
+ */
+export function pedidoDeRecetas(
+  titulo: string,
+  tema: string,
+  publico: string | null,
+  indice: CapituloPlaneado[],
+  numero: number,
+  cuantas: number = RECETAS_POR_LLAMADA,
+): string {
+  const temario = indice
+    .map((c, i) => `${i + 1}. ${c.titulo}\n   ${c.resumen}`)
+    .join("\n");
+  const seccion = indice[numero - 1];
+
+  return [
+    `El recetario se llama "${titulo}".`,
+    publico ? `Está escrito para: ${publico}` : null,
+    "",
+    "De qué se trata, en palabras de quien lo vende:",
+    `<tema>\n${tema}\n</tema>`,
+    "",
+    "Las secciones del recetario:",
+    `<temario>\n${temario}\n</temario>`,
+    "",
+    `Te toca la sección ${numero}: "${seccion?.titulo ?? ""}".`,
+    seccion?.resumen ? `Qué va adentro: ${seccion.resumen}` : null,
+    "",
+    `Escribí ${cuantas} recetas para esa sección.`,
   ].filter((l) => l !== null).join("\n");
 }

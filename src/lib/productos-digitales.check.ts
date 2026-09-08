@@ -88,12 +88,19 @@ check("TOPE-E", TIERS_DIGITALES.every((t) => {
 check("ARR-A", EBOOKS_IA_ARRANQUE.FREE === 0 && TOPES_DIGITALES.FREE.ebooksIA === 0,
   "Free no lleva arranque ni cupo mensual de ebooks: la IA le arma la cáscara");
 
-/* El arranque es UN PRODUCTO ENTERO: el principal más sus bonos. De ahí salen el
-   3 de Starter y el 6 de Pro, y no de un número redondo. */
+/* ⚠️ El arranque son DOS PRODUCTOS ENTEROS: el principal más sus bonos, por dos.
+   De ahí salen el 6 de Starter y el 12 de Pro, y no de un número redondo.
+
+   Era uno solo hasta el 08/09/26, y se duplicó por lo que este mismo archivo ya
+   decía y no se estaba aplicando: **el embudo se arma una vez y después se
+   vende**. El mes 1 se necesita todo y el mes 6 no se necesita nada, así que la
+   generosidad va acá y no en el cupo mensual — que fue la primera idea y estaba
+   mal: un tope mensual que nadie alcanza es inerte, y el que sí lo alcanza no
+   está armando un negocio, está cosechando ebooks para vender afuera. */
 for (const t of ["STARTER", "PRO"] as const) {
   const x = TOPES_DIGITALES[t];
-  check(`ARR-B-${t}`, EBOOKS_IA_ARRANQUE[t] === 1 + x.bonos,
-    `${t}: el arranque (${EBOOKS_IA_ARRANQUE[t]}) es un producto entero — el principal más sus ${x.bonos} bonos`);
+  check(`ARR-B-${t}`, EBOOKS_IA_ARRANQUE[t] === 2 * (1 + x.bonos),
+    `${t}: el arranque (${EBOOKS_IA_ARRANQUE[t]}) son dos productos enteros — el principal más sus ${x.bonos} bonos, por dos`);
 }
 
 /* Y nunca puede quedar por debajo del cupo mensual: un "lote de bienvenida" que

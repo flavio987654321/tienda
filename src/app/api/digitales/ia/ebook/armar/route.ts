@@ -5,8 +5,11 @@ import { getCurrentUser } from "@/lib/auth-session";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { rutaDeArchivo, refDeArchivo, rutaDeRef, nombreDeArchivo } from "@/lib/subida-digital";
 import { configDeposito, subirAlDeposito, borrarDelDeposito } from "@/lib/deposito-digital";
-import { leerIndice, leerCapitulos } from "@/lib/ebook-ia";
+import { leerIndice, leerCapitulos, leerGruposDeRecetas, leerPromesa } from "@/lib/ebook-ia";
 import { armarPDF } from "@/lib/ebook-pdf";
+import { buscarFoto, buscarFotos } from "@/lib/fotos-pexels";
+import { leerOpciones } from "@/lib/ebook-opciones";
+import { normalizarContenido, buscarPaleta } from "@/lib/pagina-venta";
 import { estadoDelBorrador, tomarElCandado, soltarElCandado } from "@/lib/ebook-borrador";
 
 export const runtime = "nodejs";
@@ -61,6 +64,9 @@ export async function POST(req: NextRequest) {
     select: {
       id: true,
       archivoPath: true,
+      /* Para la tapa: de acá sale la paleta que la persona ya eligió para su
+         página de venta, así el PDF combina con la página que lo vendió. */
+      paginaVenta: true,
       store: { select: { name: true } },
       ebookIA: {
         select: {
@@ -76,11 +82,21 @@ export async function POST(req: NextRequest) {
 
   const ebook = producto.ebookIA;
   const indice = leerIndice(ebook.indice);
-  const capitulos = leerCapitulos(ebook.capitulos);
+
+  /* Formato, tema y color, tal como los eligió la persona antes de generar. */
+  const opciones = leerOpciones(ebook.indice);
+  const esRecetario = opciones.formato === "recetario";
+
+  /* Un recetario guarda grupos de recetas donde un ebook de texto guarda
+     capítulos, pero la cuenta de "¿está completo?" es la misma: un elemento
+     por cada llamada del temario. */
+  const grupos = esRecetario ? leerGruposDeRecetas(ebook.capitulos) : [];
+  const capitulos = esRecetario ? [] : leerCapitulos(ebook.capitulos);
+  const partes = esRecetario ? grupos.length : capitulos.length;
 
   /* ⚠️ No se arma un ebook al que le falta un capítulo. Sería entregar un
      archivo cortado a la mitad, y encima marcar el producto como entregable. */
-  if (capitulos.length === 0 || capitulos.length < indice.length) {
+  if (partes === 0 || partes < indice.length) {
     return NextResponse.json({
       error: "Todavía falta escribir algún capítulo.",
       ebook: estadoDelBorrador(ebook),
@@ -100,16 +116,80 @@ export async function POST(req: NextRequest) {
     }, { status: 409 });
   }
 
+  /* Los colores. Se sacan acá y no adentro de `armarPDF` porque aquel no tiene
+     por qué saber qué es una página de venta.
+
+     ⚠️ Manda lo que eligió para el ebook; si no eligió nada —`paleta` vacía—
+     se usa la de su página de venta, que es lo que se hacía antes de que se
+     pudiera elegir. Ver `OpcionesDelEbook.paleta`. */
+  const { paleta } = normalizarContenido(producto.paginaVenta);
+  const p = buscarPaleta(opciones.paleta || paleta);
+  const paletaDeLaTapa = {
+    tinta: p.tinta, acento: p.acento, sobreAcento: p.sobreAcento, suave: p.suave,
+    /* El par del modo oscuro también: está elegido a mano en `PALETAS` y es
+       mejor que el que el PDF calcularía solo. */
+    acentoOscuro: p.acentoOscuro, sobreAcentoOscuro: p.sobreAcentoOscuro,
+  };
+
+  /* ── Las fotos ──────────────────────────────────────────────────────────
+     Se buscan DESPUÉS de tomar el candado y antes de dibujar. Todas a la vez
+     —ver `buscarFotos`— porque acá adentro el techo son 60 segundos para todo.
+
+     ⚠️ Nada de esto puede frenar el armado: `buscarFoto` devuelve `null` ante
+     cualquier problema (sin clave, sin resultados, Pexels caído) y el molde
+     dibuja bloques de color en su lugar. Un ebook sin fotos es el que se
+     entregaba hasta ayer; un ebook que no se arma es plata cobrada sin nada
+     que entregar. */
+  /* ⚠️ La búsqueda sale de `indice[i].foto` —la que el modelo escribió pensando
+     en una foto— y NO del título del capítulo. Buscando por título salían
+     fotos de otro tema en 3 de cada 8 capítulos: "Primeros pasos para arrancar
+     esta semana" trajo una guitarra. El título queda de respaldo para los
+     ebooks guardados antes del 07/09/26, que no tienen el campo. */
+  /* ⚠️ En un recetario la foto NO va por sección sino por receta: cada hoja es
+     una receta y una foto del plato de al lado desentona más que no tener
+     ninguna. Y `fotosCapitulos` se empareja POR POSICIÓN con lo que se dibuja,
+     así que acá tiene que haber una por receta, en el mismo orden. */
+  const recetas = esRecetario ? grupos.flat() : [];
+  const consultas = esRecetario
+    ? recetas.map((r) => r.foto || r.titulo)
+    : capitulos.map((c, i) => indice[i]?.foto || c.titulo);
+
+  const [fotoTapa, fotosCapitulos] = await Promise.all([
+    buscarFoto(ebook.titulo, { alta: true }),
+    buscarFotos(consultas),
+  ]);
+
   let pdf: Buffer;
   try {
     pdf = await armarPDF({
       titulo: ebook.titulo,
-      /* La promesa de la tapa no se guardó aparte: el resumen del primer
-         capítulo cumple la misma función y sale del mismo temario. */
-      promesa: indice[0]?.resumen ?? "",
+      /* ⚠️ La promesa DE VERDAD, la que el modelo escribió para la tapa.
+         Acá decía que el resumen del capítulo 1 "cumple la misma función", y no:
+         ese resumen está escrito para quien ESCRIBE el capítulo —el prompt se lo
+         pide así, "que diga el contenido, no que lo venda"— y terminaba de tapa
+         de un producto en venta, arrancando con "Explica el punto de partida...".
+
+         El respaldo se queda para los ebooks guardados antes del 07/09/26, que
+         no tienen promesa y no se pueden reescribir. Ver `leerPromesa`. */
+      promesa: leerPromesa(ebook.indice) || indice[0]?.resumen || "",
       /* Quién lo vende. El ebook es de esa persona, no nuestro. */
       autor: producto.store?.name ?? "",
       capitulos,
+      /* ⚠️ Si viene con algo, manda esto y `capitulos` se ignora: son dos
+         moldes para el mismo archivo, no dos cosas que se apilan. */
+      recetas: esRecetario ? recetas : undefined,
+      /* ⚠️ La tapa sale con LOS COLORES DE LA PERSONA, los que ya eligió para
+         su página de venta. No se le pregunta nada nuevo: elige la paleta una
+         vez y el archivo que entrega combina con la página que lo vendió.
+
+         `normalizarContenido` devuelve una página válida aunque `paginaVenta`
+         sea `null` —la cuenta que todavía no la armó— y `buscarPaleta` cae a la
+         primera ante una clave desconocida, así que esto no puede romper el
+         armado de un ebook por culpa del diseño. */
+      paleta: paletaDeLaTapa,
+      modo: opciones.tema,
+      fotoTapa,
+      fotosCapitulos,
     });
   } catch (e) {
     console.error("[ia-ebook-armar] falló el armado del PDF", { ebookId: ebook.id, e });
