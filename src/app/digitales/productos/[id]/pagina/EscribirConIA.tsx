@@ -25,14 +25,11 @@ export default function EscribirConIA({
   productoId,
   cupoInicial,
   hayCambiosSinGuardar,
-  esLaPrimera,
   onListo,
 }: {
   productoId: string;
   cupoInicial: EstadoDelCupo;
   hayCambiosSinGuardar: boolean;
-  /** Si el producto nunca tuvo página: esa primera no gasta cupo. */
-  esLaPrimera: boolean;
   onListo: (pagina: PaginaVenta) => void;
 }) {
   const [abierto, setAbierto] = useState(false);
@@ -41,8 +38,7 @@ export default function EscribirConIA({
   const [error, setError] = useState("");
   const enVuelo = useRef(false);
 
-  /* La primera de cada producto es gratis, así que no depende del cupo. */
-  const sinCupo = !esLaPrimera && cupo.quedan <= 0;
+  const sinCupo = cupo.quedan <= 0;
 
   async function escribir() {
     if (enVuelo.current || sinCupo) return;
@@ -135,14 +131,9 @@ export default function EscribirConIA({
             )}
 
             <p className="mt-3 text-[12px] text-gray-600 panel-oscuro:text-gray-400">
-              {esLaPrimera
-                /* La primera de cada producto no gasta, y decirlo saca el miedo a
-                   apretar justo cuando la persona todavía no vio lo que hace. */
-                ? <><strong className="text-green-700 panel-oscuro:text-green-400">Esta primera no gasta cupo.</strong>{" "}
-                    Es la de estreno de este producto.</>
-                : sinCupo
-                  ? "No te quedan generaciones."
-                  : <>Usa <strong>1</strong> de tus <strong>{cupo.quedan}</strong> generaciones.</>}
+              {sinCupo
+                ? "No te quedan generaciones."
+                : <>Usa <strong>1</strong> de tus <strong>{cupo.quedan}</strong> generaciones.</>}
             </p>
 
             {error && (

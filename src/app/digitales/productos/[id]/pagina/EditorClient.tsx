@@ -47,8 +47,6 @@ type Props = {
   bonosSinPublicar: number;
   /** Cuántas generaciones de IA le quedan a la cuenta. */
   cupoIA: EstadoDelCupo;
-  /** Si el producto nunca tuvo página: esa primera no gasta cupo. */
-  esLaPrimeraPagina: boolean;
 };
 
 /* ── Fechas ─────────────────────────────────────────────────────────────────
@@ -369,7 +367,7 @@ function CasillaLista({
 
 export default function EditorDePagina({
   productoId, nombre, publicado, pagina: inicial, cuantosBonos, bonosSinPublicar,
-  cupoIA, esLaPrimeraPagina,
+  cupoIA,
 }: Props) {
   const [pagina, setPagina] = useState<PaginaVenta>(inicial);
   const [abierta, setAbierta] = useState<string | null>(null);
@@ -622,7 +620,6 @@ export default function EditorDePagina({
             productoId={productoId}
             cupoInicial={cupoIA}
             hayCambiosSinGuardar={sucio}
-            esLaPrimera={esLaPrimeraPagina}
             onListo={(nueva) => { setPagina(nueva); setSucio(true); setError(""); }}
           />
           <Link

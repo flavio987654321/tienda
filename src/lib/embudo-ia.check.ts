@@ -311,8 +311,16 @@ check("CUP-A",
    Starter y Pro hay un abono pagando la cuenta; en Free no entra un peso hasta
    que la persona vende algo, y Free no vence nunca ni pide tarjeta. Con cupo
    mensual, veinte cuentas truchas serían un gasto para siempre. */
-check("CUP-B", CUPO_EMBUDO.FREE.mes === 0 && CUPO_EMBUDO.FREE.bienvenida === 3,
-  "Free son 3 de por vida, sin bolsa mensual");
+/* ⚠️ Y SON 4, NO 3, DESDE EL 08/09/26. Es la contrapartida de haber sacado la
+   primera página gratis: un embudo completo pasó a costar DOS generaciones —una
+   por las tres fichas, otra por la página— así que con 3 alcanzaba para uno y
+   medio, y quien no quedaba conforme con el primero no podía rehacerlo entero.
+   Con 4 entran dos embudos completos, que es el margen para equivocarse una vez.
+
+   El número exacto está atado a propósito: es el que hace que la cuenta cierre,
+   y bajarlo sin tocar el costo del embudo deja a Free a mitad de camino. */
+check("CUP-B", CUPO_EMBUDO.FREE.mes === 0 && CUPO_EMBUDO.FREE.bienvenida === 4,
+  "Free son 4 de por vida —dos embudos completos— y sin bolsa mensual");
 
 /* Y el cupo sube con el plan, en las dos bolsas. */
 check("CUP-C",

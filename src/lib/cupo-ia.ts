@@ -76,7 +76,13 @@ export type TopeDelCupo = { bienvenida: number; mes: number };
  * vida, una cuenta trucha nos cuesta cuatro centavos de dólar, una sola vez.
  */
 export const CUPO_EMBUDO: Record<TierDigital, TopeDelCupo> = {
-  FREE:    { bienvenida: 3,  mes: 0 },
+  /* ⚠️ 3 → 4 el 08/09/26, y es la contrapartida de haber sacado la primera
+     página gratis. Un embudo completo pasó a costar DOS generaciones —una por
+     las tres fichas, otra por la página— así que con 3 alcanzaba para uno y
+     medio: quien no quedaba conforme con el primero no podía rehacerlo entero.
+     Con 4 entran dos embudos completos, que es el margen para equivocarse una
+     vez. Ver el porqué largo en `ia/pagina`. */
+  FREE:    { bienvenida: 4,  mes: 0 },
   STARTER: { bienvenida: 6,  mes: 5 },
   PRO:     { bienvenida: 12, mes: 10 },
 };

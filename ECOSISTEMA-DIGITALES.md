@@ -698,21 +698,31 @@ ese 6 se concluyó que Pro llenaba cuatro productos el primer mes: **llena dos.*
   productos en cinco meses, que es el ritmo real de un catálogo que se arma una
   vez y después se vende.
 
-- 🔲 **La página gratis no tiene techo, y es el único agujero de los cinco
-  caminos de IA.** `ia/pagina` la regala cuando `paginaVenta` está en null, o
-  sea **por producto**; y crear un producto a mano no gasta generaciones. El
-  bucle es: crear a mano → página gratis → borrar → repetir, sin fin. Lo único
-  que lo frena hoy son los topes de ráfaga (8 cada 10 minutos por cuenta, 150
-  por día para todo Free junto), así que la plata está acotada —unos US$6 el
-  peor día— pero **una sola cuenta puede comerse el presupuesto diario de Free y
-  dejar sin IA a las demás**. Ese es el daño, no el costo.
-  - El comentario de la ruta dice que no se puede abusar *"porque borrar uno
-    para recrearlo cuesta una generación en el embudo"*. Es cierto **sólo si se
-    recrea con el embudo**; a mano no cuesta nada.
-  - ⚠️ Y esa gratis **ya no tiene motivo**: existía porque el embudo NO escribía
-    la página, así que tener todo costaba dos generaciones. Desde el 08/09/26 el
-    embudo escribe la página en el mismo paso. El parche sobrevivió al problema
-    que parchaba.
+- ✅ ~~**La página gratis no tenía techo.**~~ **SACADA EL 08/09/26.** Era el
+  único agujero de los cinco caminos de IA. `ia/pagina` la regalaba cuando
+  `paginaVenta` estaba en null —o sea **por producto**— y crear un producto a
+  mano no gasta generaciones, así que el bucle era: crear a mano → página gratis
+  → borrar → repetir, sin fin.
+  - El comentario de la ruta decía que no se podía abusar *"porque borrar uno
+    para recrearlo cuesta una generación en el embudo"*. Era cierto **sólo si se
+    recrea con el embudo**; a mano no costaba nada.
+  - Lo único que lo frenaba eran los topes de ráfaga (8 cada 10 minutos por
+    cuenta, 150 por día para todo Free junto), así que la plata estaba acotada
+    —unos US$6 el peor día—. **El daño real era que una sola cuenta se comiera
+    el presupuesto diario de Free y dejara sin IA a las demás.**
+  - ⚠️ **Se sacó la regla en vez de ponerle un techo.** Un techo hubiera sido un
+    contador más que mantener; sin la excepción no queda ningún camino gratis,
+    así que no hay nada que farmear, nada que contar y nada que bloquear. Y esa
+    gratis ya no tenía motivo: existía porque el embudo NO escribía la página
+    —tener todo costaba dos generaciones—, y **el mismo día el embudo pasó a
+    escribirla en el mismo paso**. El parche sobrevivió al problema que parchaba.
+  - **Contrapartida, y es la única**: un embudo completo pasó a costar **2**
+    generaciones —una por las tres fichas, otra por la página— así que **Free
+    pasó de 3 a 4**, para que entren dos embudos completos. Starter y Pro no se
+    tocaron: ya les sobraba (11 y 22 el primer mes).
+  - `RUT-D` es el chequeo que impide que vuelva. Si algún día se reintroduce una
+    página gratis, lo primero que hay que mirar es si el embudo sigue
+    escribiendo la página, porque ése era el único motivo.
 
 ### Qué queda de la etapa "en dólares"
 

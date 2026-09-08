@@ -80,7 +80,6 @@ export default async function EditorPaginaPage({ params }: Props) {
         bonosSinPublicar={fila.hijos.filter((h) => !h.isActive).length}
         cupoIA={cupoIA}
         /* Nunca tuvo página: esa primera generación no gasta cupo. */
-        esLaPrimeraPagina={fila.paginaVenta === null}
       />
     </div>
   );

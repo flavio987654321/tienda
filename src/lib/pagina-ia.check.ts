@@ -182,12 +182,29 @@ check("RUT-C",
   /no se pudieron contar los topes, se rechaza/.test(ruta),
   "los topes van primero y, si no se pueden contar, se rechaza");
 
-/* La primera página de cada producto no gasta cupo, y la condición la verifica
-   el SERVIDOR contra la base — no la manda el navegador. */
+/* ══════════════════════════════════════════════════════════════════════════
+   ⚠️ NO HAY NINGÚN CAMINO GRATIS PARA ESCRIBIR UNA PÁGINA.
+   ══════════════════════════════════════════════════════════════════════════
+
+   Acá este chequeo pedía lo contrario: que la primera de cada producto fuera
+   gratis, decidido por el servidor. Esa regla era un parche del flujo partido
+   —armar el embudo NO escribía la página, así que tener todo costaba dos
+   generaciones— y el 08/09/26 el embudo pasó a escribirla en el mismo paso. El
+   parche sobrevivió al problema que parchaba, y mientras sobrevivió era el
+   ÚNICO agujero de los cinco caminos de IA del ecosistema: crear un producto a
+   mano no gasta nada, así que el bucle "crear a mano → página gratis → borrar"
+   no tenía techo.
+
+   Se sacó la regla en vez de ponerle un techo: un techo es un contador más que
+   mantener, y sin excepción no hay nada que farmear ni que contar.
+
+   Este chequeo es el que impide que vuelva. Si alguien reintroduce una página
+   gratis, falla — y lo que hay que revisar antes de reintroducirla es si el
+   embudo sigue escribiendo la página, porque ése era el único motivo. */
 check("RUT-D",
-  /const esLaPrimera = producto\.paginaVenta === null/.test(ruta) &&
-  !/body[\s\S]{0,80}primera/i.test(ruta),
-  "la primera página gratis la decide el servidor, no el navegador");
+  !/esLaPrimera/.test(ruta) &&
+  /const bolsa = await consumirDelCupo\(user\.id, tier\);/.test(ruta),
+  "escribir una página siempre gasta cupo, sin excepciones");
 
 /* Y cuando sí gasta, gasta antes de llamar al modelo y devuelve si falla. */
 check("RUT-E",
@@ -210,10 +227,15 @@ check("VEN-B",
   /No toca/.test(ventana) && /opiniones/.test(ventana) && /garantía/.test(ventana),
   "dice qué no toca: estilo, orden, opiniones y garantía");
 
-/* La primera es gratis y se dice: saca el miedo a apretar cuando todavía no vio
-   lo que hace. */
-check("VEN-C", /Esta primera no gasta cupo/.test(ventana),
-  "avisa cuando la generación no gasta cupo");
+/* ⚠️ Y SE DICE QUÉ VA A GASTAR, ANTES DE APRETAR. Acá el cartel decía "Esta
+   primera no gasta cupo" y era cierto hasta el 08/09/26 (ver `RUT-D`). Ahora
+   siempre gasta una, así que lo que tiene que estar dicho es cuántas quedan:
+   una pantalla que no lo dice deja que alguien apriete pensando que prueba
+   gratis y descubra el gasto después. */
+check("VEN-C",
+  /Usa <strong>1<\/strong> de tus <strong>\{cupo\.quedan\}<\/strong> generaciones/.test(ventana) &&
+  /No te quedan generaciones/.test(ventana),
+  "dice cuántas generaciones gasta y cuántas quedan, antes de apretar");
 
 const editor = readFileSync("src/app/digitales/productos/[id]/pagina/EditorClient.tsx", "utf8");
 check("VEN-D",

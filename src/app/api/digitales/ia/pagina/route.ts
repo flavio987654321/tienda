@@ -119,35 +119,50 @@ export async function POST(req: NextRequest) {
   if (!producto) {
     return NextResponse.json({ error: "No encontramos ese producto." }, { status: 404 });
   }
-
   /**
-   * ⚠️ LA PRIMERA PÁGINA DE CADA PRODUCTO NO GASTA CUPO.
+   * ⚠️ ACÁ LA PRIMERA PÁGINA DE CADA PRODUCTO ERA GRATIS. SE SACÓ EL 08/09/26.
    *
-   * Y no es una promoción: es lo que hace que "armá tu embudo con IA" entregue
-   * lo que promete. Sin esto, armar el embudo y quedarse con la página sin
-   * escribir cuesta dos generaciones, y quien está probando el producto por
-   * primera vez se queda a mitad de camino sin entender por qué.
+   * ── Por qué existía ────────────────────────────────────────────────────
    *
-   * ── Por qué no se puede abusar ─────────────────────────────────────────
+   * Porque armar el embudo NO escribía la página: creaba las tres fichas y se
+   * detenía. Sin el regalo, tener el embudo completo costaba dos generaciones y
+   * quien probaba el producto por primera vez se quedaba a mitad de camino sin
+   * entender por qué. Era un parche del flujo partido en dos.
    *
-   * Porque la condición la verifica el SERVIDOR contra la base —`paginaVenta`
-   * en null— y no la manda el navegador. Y hay un producto por página del plan:
-   * 1 en Free, 2 en Starter, 5 en Pro. O sea que las páginas gratis de una
-   * cuenta tienen un techo duro igual al de sus productos, y borrar uno para
-   * recrearlo cuesta una generación del cupo en el embudo.
+   * ── Por qué se fue ─────────────────────────────────────────────────────
    *
-   * Peor caso: 5 páginas gratis en Pro, unos 20 centavos de dólar en toda la
-   * vida de la cuenta.
+   * **Ese flujo se juntó en uno el mismo día**: armar el embudo ahora escribe la
+   * página en el mismo paso (ver `EmbudoIA`). El parche sobrevivió al problema
+   * que parchaba.
+   *
+   * ⚠️ Y mientras sobrevivía era el ÚNICO agujero de los cinco caminos de IA que
+   * tiene el ecosistema. El comentario que estaba acá decía que no se podía
+   * abusar *"porque hay un producto por página del plan, y borrar uno para
+   * recrearlo cuesta una generación del cupo en el embudo"*. Eso es cierto sólo
+   * si se recrea CON el embudo: **crear un producto a mano no gasta nada**. El
+   * bucle era crear a mano → página gratis → borrar → repetir, sin techo.
+   *
+   * Lo único que lo frenaba eran los topes de ráfaga —8 cada 10 minutos por
+   * cuenta, 150 por día para todo Free junto—, así que la plata estaba acotada;
+   * el daño real era que **una sola cuenta se comiera el presupuesto diario de
+   * Free** y dejara sin IA a las demás.
+   *
+   * ── Lo que se hizo en vez de ponerle techo ─────────────────────────────
+   *
+   * Nada. Se borró la regla. Un techo hubiera sido un contador más que mantener,
+   * y con la excepción afuera **no queda ningún camino gratis**: no hay nada que
+   * farmear, nada que contar y nada que bloquear.
+   *
+   * El único ajuste fue del otro lado: Free pasó de 3 generaciones a 4, para que
+   * un embudo completo —que ahora cuesta 2— entre dos veces. Ver `CUPO_EMBUDO`.
    */
-  const esLaPrimera = producto.paginaVenta === null;
-
-  const bolsa = esLaPrimera ? null : await consumirDelCupo(user.id, tier);
-  if (!esLaPrimera && !bolsa) {
+  const bolsa = await consumirDelCupo(user.id, tier);
+  if (!bolsa) {
     const cupo = await estadoDelCupo(user.id, tier);
     return NextResponse.json({
       error: cupo.topeDelMes > 0
         ? `Usaste todas tus generaciones. El 1° del mes que viene tenés ${cupo.topeDelMes} nuevas.`
-        : "Usaste las 3 generaciones del plan gratis. En Starter tenés 6 al empezar y 5 por mes.",
+        : `Usaste las ${cupo.topeDeBienvenida} generaciones del plan gratis. En Starter tenés 6 al empezar y 5 por mes.`,
       sinCupo: true,
       cupo,
     }, { status: 429 });
@@ -232,10 +247,10 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({
     ok: true,
     pagina,
-    /* `null` cuando fue la primera del producto, que es gratis. La pantalla lo
-       usa para no avisar "gastaste una" cuando no gastó nada. */
+    /* De qué bolsa salió —la del mes o la de bienvenida—, para que la pantalla
+       diga cuál se gastó. Ya no puede ser `null`: desde que se sacó la primera
+       gratis, escribir una página siempre sale de alguna. */
     salioDe: bolsa,
-    gratis: esLaPrimera,
     cupo: await estadoDelCupo(user.id, tier),
   });
 }
