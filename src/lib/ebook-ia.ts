@@ -582,6 +582,60 @@ export function pedidoDelCapitulo(
   ].filter((l) => l !== null).join("\n");
 }
 
+/**
+ * Cuánto del producto principal entra en el pedido.
+ *
+ * `LARGO_DESCRIPCION` son 10.000 caracteres: una descripción entera adentro del
+ * pedido tapa al tema, que es lo único que de verdad hay que escribir.
+ */
+export const LARGO_PADRE_EN_PEDIDO = 600;
+
+/**
+ * El contexto del producto principal, para cuando lo que se escribe es un bono
+ * o un upsell.
+ *
+ * ══════════════════════════════════════════════════════════════════════════
+ * UN BONO NACE DEL PRODUCTO, Y HASTA EL 08/09/26 EL MODELO NO LO SABÍA
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * La **cáscara** del embudo —título, descripción y precio— siempre se pidió con
+ * el principal a la vista: ver `pedidoDeUnaFicha`. El **contenido** no. A la
+ * ruta del ebook le llegaba el nombre del bono y nada más, así que un recetario
+ * bono de un curso de nutrición se escribía como un recetario suelto, sin una
+ * sola línea que lo atara a lo que la persona vende.
+ *
+ * El costo no era un texto feo. Era que **había que volver a explicar todo el
+ * contexto a mano**, en cada bono y en cada upsell, o pagar una generación por
+ * algo que no servía. Nadie lo hace: escribe dos palabras y aprieta.
+ *
+ * ── Por qué "complementarlo, no repetirlo" ─────────────────────────────────
+ *
+ * Es el único riesgo que agrega darle el contexto. Un modelo al que le contás
+ * de qué se trata el principal tiende a **escribir otra vez el principal**, más
+ * corto. Un bono que repite lo que la persona ya compró no es un bono.
+ *
+ * ⚠️ El texto del principal es de quien vende, no nuestro: va CERCADO en
+ * etiquetas y cortado, igual que el tema. Lo que frena un "ignorá lo anterior"
+ * no es una frase mágica: es que la salida sólo puede llenar un temario.
+ */
+export function contextoDelPadre(
+  rol: "BONO" | "UPSELL",
+  padre: { nombre: string; descripcion: string | null },
+): string[] {
+  const descripcion =
+    padre.descripcion?.trim().slice(0, LARGO_PADRE_EN_PEDIDO).trim() || null;
+
+  return [
+    rol === "BONO"
+      ? `Esto es un BONO DE REGALO de otro producto: se entrega junto con "${padre.nombre}".`
+      : `Esto es un UPSELL de otro producto: se le ofrece a quien ya compró "${padre.nombre}".`,
+    "Tiene que complementarlo, no repetirlo: quien lo recibe ya tiene el principal.",
+    ...(descripcion
+      ? ["", "De qué se trata el producto principal:", `<principal>\n${descripcion}\n</principal>`]
+      : []),
+  ];
+}
+
 /* ── El recetario: lo que se le pide al modelo ──────────────────────────── */
 
 /**

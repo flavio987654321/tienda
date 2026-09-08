@@ -85,11 +85,14 @@ type TemarioEnPantalla = {
 
 export default function EbookIA({
   producto,
+  padre,
   cupoInicial,
   estadoInicial,
   onCerrar,
 }: {
   producto: { id: string; name: string; tieneArchivo: boolean };
+  /** De qué producto es bono o upsell, o `null` si es un principal. */
+  padre: { nombre: string; rol: "BONO" | "UPSELL" } | null;
   cupoInicial: EstadoDelCupo;
   estadoInicial: EstadoDelBorrador | null;
   onCerrar: () => void;
@@ -416,6 +419,22 @@ export default function EbookIA({
                 Contame de qué se trata <strong>{producto.name}</strong> y lo escribo entero:
                 el temario y todos los capítulos, en un PDF listo para vender.
               </p>
+
+              {/* ⚠️ ESTE RENGLÓN LE SACA TRABAJO A LA PERSONA, no le agrega
+                  información. Hasta el 08/09/26 el ebook de un bono se escribía
+                  sin saber de qué producto colgaba, así que había que volver a
+                  explicar todo el contexto acá abajo —en cada bono y en cada
+                  upsell— o pagar una generación por algo que no servía. Ahora el
+                  servidor se lo manda al modelo, y esto es lo único que hace que
+                  se note: sin el cartel, el dato existe y nadie lo sabe. */}
+              {padre && (
+                <p className="mt-3 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 bg-gray-50 panel-oscuro:bg-gray-800/50 px-3.5 py-2.5 text-[12.5px] leading-relaxed text-gray-600 panel-oscuro:text-gray-300">
+                  Es {padre.rol === "BONO" ? "un bono de" : "un upsell de"}{" "}
+                  <strong className="text-gray-900 panel-oscuro:text-gray-100">{padre.nombre}</strong>.
+                  Ya sé de qué se trata ese producto, así que no hace falta que lo repitas: contame
+                  sólo lo de {padre.rol === "BONO" ? "este bono" : "este upsell"}.
+                </p>
+              )}
 
               {/* ⚠️ Se avisa ANTES de apretar, no después. Reemplazar un archivo
                   que la persona subió a mano sin avisarle es perderle el

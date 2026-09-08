@@ -21,7 +21,7 @@
 import { readFileSync } from "fs";
 import {
   normalizarIndice, normalizarCapitulo, leerIndice, leerCapitulos, leerPromesa,
-  elCapituloQueSigue, pedidoDelCapitulo,
+  elCapituloQueSigue, pedidoDelCapitulo, contextoDelPadre, LARGO_PADRE_EN_PEDIDO,
   INSTRUCCIONES_INDICE, INSTRUCCIONES_CAPITULO, ESQUEMA_DEL_INDICE, ESQUEMA_DEL_CAPITULO,
   CAPITULOS_MIN, CAPITULOS_MAX, LARGO_TEMA, MINIMO_TEMA, LARGO_BLOQUE, BLOQUES_MAX,
   TIPOS_DE_BLOQUE, LARGO_TITULO_EBOOK,
@@ -870,6 +870,85 @@ check("PAN-N",
 check("PAN-O",
   /estadoDelCupo\(user\.id, tier, "EBOOK", enPrueba\)/.test(pantalla),
   "la pantalla lee el cupo de ebooks aparte, y con el mismo criterio de prueba que el servidor");
+
+/* ── Un bono nace del producto ─────────────────────────────────────────────
+   La cáscara del embudo siempre se pidió con el principal a la vista; el
+   contenido no. Ver `contextoDelPadre`. */
+
+const contextoBono = contextoDelPadre("BONO", {
+  nombre: "Bachiller en Ciencias Naturales",
+  descripcion: "Un curso completo para rendir libre.",
+}).join("\n");
+
+check("PAD-A",
+  /BONO DE REGALO/.test(contextoBono) &&
+  contextoBono.includes("Bachiller en Ciencias Naturales") &&
+  contextoBono.includes("Un curso completo para rendir libre."),
+  "el bono se pide nombrando el producto del que cuelga, y con su descripción");
+
+/* ⚠️ La línea que evita el peor resultado posible: un modelo al que le contás
+   de qué se trata el principal tiende a escribir OTRA VEZ el principal, más
+   corto. Un bono que repite lo que la persona ya compró no es un bono. */
+check("PAD-B",
+  /complementarlo, no repetirlo/.test(contextoBono),
+  "y se le dice que complemente, no que repita");
+
+const contextoUpsell = contextoDelPadre("UPSELL", {
+  nombre: "Bachiller en Ciencias Naturales",
+  descripcion: null,
+}).join("\n");
+
+check("PAD-C",
+  /UPSELL/.test(contextoUpsell) && /ya compró/.test(contextoUpsell),
+  "el upsell se pide diciendo que va para quien YA compró el principal");
+
+/* Sin descripción no se manda una etiqueta vacía: `<principal></principal>` es
+   ruido que el modelo lee como que el principal no trata de nada. */
+check("PAD-D",
+  !/<principal>/.test(contextoUpsell),
+  "sin descripción del principal no viaja una etiqueta vacía");
+
+/* ⚠️ CORTADA. `LARGO_DESCRIPCION` son 10.000 caracteres: una descripción entera
+   adentro del pedido tapa al tema, que es lo único que hay que escribir. */
+const contextoLargo = contextoDelPadre("BONO", {
+  nombre: "X",
+  descripcion: "a".repeat(LARGO_PADRE_EN_PEDIDO + 500),
+}).join("\n");
+check("PAD-E",
+  !contextoLargo.includes("a".repeat(LARGO_PADRE_EN_PEDIDO + 1)) &&
+  contextoLargo.includes("a".repeat(LARGO_PADRE_EN_PEDIDO)),
+  "la descripción del principal se corta antes de entrar al pedido");
+
+/* Y va CERCADA, igual que el tema: es texto de quien vende, no nuestro. */
+check("PAD-F",
+  /<principal>/.test(contextoBono) && /<\/principal>/.test(contextoBono),
+  "el texto del principal va cercado en etiquetas");
+
+/* ⚠️ EL DUEÑO ADENTRO DEL `where`. El `padreId` sale de una fila que ya es de
+   esta cuenta, pero apunta a otra fila: leerla sin el dueño sería confiar en un
+   dato para saltear el control que ese mismo dato tendría que pasar. */
+check("PAD-G",
+  /where: \{ id: producto\.padreId, deletedAt: null, store: \{ ownerId: user\.id \} \}/.test(empezar),
+  "el producto padre se busca con el dueño adentro del where");
+
+/* Y ANTES de gastar el cupo: si esta consulta falla, no puede quedar una
+   generación consumida por un ebook que nunca se pidió. */
+check("PAD-H",
+  /* Contra la LLAMADA, no contra el `import` de arriba de todo. */
+  empezar.indexOf("producto.padreId") < empezar.indexOf("await consumirDelCupo("),
+  "el padre se busca antes de gastar el cupo");
+
+/* ⚠️ Y QUE LA PERSONA SE ENTERE. El servidor puede saberlo y la pantalla
+   callarlo: ahí el dato existe, nadie lo sabe, y se vuelve a escribir todo el
+   contexto a mano por las dudas — que es exactamente lo que se vino a sacar. */
+check("PAD-I",
+  /no hace falta que lo repitas/.test(ventana) && /padre\.rol === "BONO"/.test(ventana),
+  "la ventana avisa de qué producto cuelga y que no hay que repetir el contexto");
+
+check("PAD-J",
+  /padre=\{padreDelEbook\}/.test(lista) &&
+  /productos\.find\(\(x\) => x\.id === ebookDe\.padreId\)/.test(lista),
+  "la lista le pasa el padre a la ventana");
 
 /* ⚠️ SIN ESTO NO SE PUEDE PRENDER NADA. Los botones de IA mandan el texto de la
    persona a un tercero, y eso hay que declararlo ANTES, no después. Estaba sin

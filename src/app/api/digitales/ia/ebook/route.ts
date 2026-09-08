@@ -7,7 +7,7 @@ import { consumirDelCupo, devolverAlCupo, estadoDelCupo, CUPO_EBOOK, type Bolsa 
 import {
   INSTRUCCIONES_INDICE, ESQUEMA_DEL_INDICE, normalizarIndice,
   INSTRUCCIONES_INDICE_RECETARIO, esquemaDelIndiceRecetario, seccionesParaRecetas,
-  CAPITULOS_MIN, LARGO_TEMA, MINIMO_TEMA, LARGO_PUBLICO,
+  CAPITULOS_MIN, LARGO_TEMA, MINIMO_TEMA, LARGO_PUBLICO, contextoDelPadre,
 } from "@/lib/ebook-ia";
 import { normalizarOpciones } from "@/lib/ebook-opciones";
 import { sePuedeEditarElTemario } from "@/lib/ebook-temario";
@@ -131,7 +131,7 @@ export async function POST(req: NextRequest) {
   const producto = await prisma.product.findFirst({
     where: { id: productoId, deletedAt: null, store: { ownerId: user.id } },
     select: {
-      id: true, name: true, rolDigital: true,
+      id: true, name: true, rolDigital: true, padreId: true,
       ebookIA: {
         select: {
           id: true, estado: true, titulo: true, indice: true, capitulos: true,
@@ -183,6 +183,28 @@ export async function POST(req: NextRequest) {
       );
     }
   }
+
+  /* ── De qué producto es bono o upsell ────────────────────────────────────
+     Un hijo no se escribe en el aire: ver `contextoDelPadre`. Se busca ACÁ
+     —después de los dos caminos que salen sin generar, antes de gastar el
+     cupo— para no pagar una consulta cuando no se va a escribir nada, y para
+     que si esta falla no quede una generación consumida por un ebook que nunca
+     se pidió.
+
+     ⚠️ Con el dueño adentro del `where`, igual que el producto. El `padreId`
+     sale de una fila que ya es de esta cuenta, pero es una columna que apunta a
+     otra fila: leerla sin el dueño sería confiar en un dato para saltear el
+     control que ese mismo dato tendría que pasar. */
+  const rolHijo =
+    producto.rolDigital === "BONO" || producto.rolDigital === "UPSELL"
+      ? producto.rolDigital
+      : null;
+  const padre = rolHijo && producto.padreId
+    ? await prisma.product.findFirst({
+        where: { id: producto.padreId, deletedAt: null, store: { ownerId: user.id } },
+        select: { name: true, description: true },
+      })
+    : null;
 
   /* ⚠️ EL CUPO SE GASTA ANTES DE LLAMAR AL MODELO. Después sería tarde: ocho
      pedidos en paralelo pasarían todos el control —porque ninguno gastó
@@ -241,6 +263,12 @@ export async function POST(req: NextRequest) {
               ? `El recetario se llama "${producto.name}".`
               : `El ebook se llama "${producto.name}".`,
             publico ? `Está escrito para: ${publico}` : null,
+            /* Antes del tema a propósito: primero de qué producto cuelga esto,
+               después qué hay que escribir. Al revés, el contexto del principal
+               queda leyéndose como parte del pedido. */
+            ...(rolHijo && padre
+              ? ["", ...contextoDelPadre(rolHijo, { nombre: padre.name, descripcion: padre.description })]
+              : []),
             "",
             "De qué se trata, en palabras de quien lo vende:",
             `<tema>\n${tema}\n</tema>`,

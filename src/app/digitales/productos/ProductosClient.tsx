@@ -863,6 +863,22 @@ export default function ProductosClient({
   const hijosDe = (padreId: string, rol: RolDigital) =>
     productos.filter((p) => p.padreId === padreId && p.rol === rol);
 
+  /* De qué producto cuelga el ebook que se está escribiendo, si cuelga de
+     alguno. No es un adorno: es lo que le avisa a la persona que NO tiene que
+     volver a explicar el contexto del principal —el servidor ya se lo manda al
+     modelo, ver `contextoDelPadre`—. Sin ese renglón el dato existe y nadie lo
+     sabe, y se escribe todo de nuevo por las dudas.
+
+     Puede dar `null` con un `padreId` cargado: el principal pudo haberse
+     borrado. Ahí no hay nada que decir y no se dice nada. */
+  const padreCrudo = ebookDe?.padreId
+    ? productos.find((x) => x.id === ebookDe.padreId)
+    : null;
+  const padreDelEbook =
+    padreCrudo && ebookDe && ebookDe.rol !== "PRINCIPAL"
+      ? { nombre: padreCrudo.name, rol: ebookDe.rol }
+      : null;
+
   /* Lo que la tarjeta y el grupo necesitan de acá. Se arma una vez y se pasa
      hacia abajo: las funciones se declaran en el cuerpo del componente, así que
      memorizarlo no ganaría nada —el objeto cambiaría igual en cada dibujo—. */
@@ -1130,6 +1146,7 @@ export default function ProductosClient({
       {ebookDe && (
         <EbookIA
           producto={{ id: ebookDe.id, name: ebookDe.name, tieneArchivo: ebookDe.tieneArchivo }}
+          padre={padreDelEbook}
           cupoInicial={cupoEbook}
           estadoInicial={ebookDe.ebook}
           onCerrar={() => setEbookDe(null)}
