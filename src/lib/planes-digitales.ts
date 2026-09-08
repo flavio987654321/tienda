@@ -14,6 +14,27 @@ export type TierDigital = "FREE" | "STARTER" | "PRO";
 
 export const TIERS_DIGITALES: TierDigital[] = ["FREE", "STARTER", "PRO"];
 
+/**
+ * Si este plan es el más alto que hay, o sea que no hay a dónde mejorar.
+ *
+ * ══════════════════════════════════════════════════════════════════════════
+ * SIRVE PARA NO OFRECER ALGO QUE NO EXISTE
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * Sin esto, el panel le dice a quien ya está en Pro **"Llegaste al tope de tu
+ * plan →"** con un enlace a mejorar. Y no hay nada mejor: paga el más caro y la
+ * pantalla lo sigue empujando a comprar. Eso se lee como que le falta algo, y
+ * al llegar a Mi cuenta descubre que ya lo tiene — la peor combinación, porque
+ * primero le hace dudar y después le hace perder el viaje.
+ *
+ * ⚠️ Sale del ÚLTIMO de `TIERS_DIGITALES`, no de la palabra `"PRO"`. Escrito a
+ * mano, el día que se agregue un cuarto plan esto seguiría diciendo que Pro es
+ * el techo y le escondería la mejora justo a quien la puede pagar.
+ */
+export function esElPlanMasAlto(tier: TierDigital): boolean {
+  return tier === TIERS_DIGITALES[TIERS_DIGITALES.length - 1];
+}
+
 export const COPY_DIGITAL: Record<TierDigital, { nombre: string; bajada: string }> = {
   FREE:    { nombre: "Free",    bajada: "Para validar tu primer producto." },
   STARTER: { nombre: "Starter", bajada: "Para arrancar tu negocio digital con IA." },

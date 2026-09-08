@@ -6,7 +6,7 @@ import {
   Plus, Gift, TrendingUp, BookOpen, Loader2, Pencil, Trash2, AlertTriangle, Image as ImageIcon,
   Eye, EyeOff, X, ArrowUpRight, Upload, Sparkles, ExternalLink, LayoutTemplate, Globe,
 } from "lucide-react";
-import { COPY_DIGITAL, type TierDigital } from "@/lib/planes-digitales";
+import { COPY_DIGITAL, esElPlanMasAlto, type TierDigital } from "@/lib/planes-digitales";
 import {
   COPY_ROL, topeDe, loQueFalta, validarCampos, LARGO_TITULO, LARGO_DESCRIPCION,
   type RolDigital,
@@ -161,17 +161,29 @@ function Tarjeta({ p, acc }: { p: ProductoEnPantalla; acc: Acciones }) {
     <div className={`rounded-2xl border ${tinta.borde} bg-white panel-oscuro:bg-gray-900 p-4 sm:p-5 shadow-sm`}>
       <div className="flex gap-4">
         {/* La portada si la hay; si no, el ícono del rol. Un cuadro vacío en su
-            lugar se lee como que la imagen se rompió. */}
+            lugar se lee como que la imagen se rompió.
+
+            ⚠️ Y CON LA PALABRA DEL ROL ADENTRO. Antes era un cuadradito de
+            56 px con un ícono, y los tres roles se distinguían sólo por el tono
+            del ícono —naranja, ámbar, rosa—, que son tres naranjas. En una
+            pantalla con un producto, dos bonos y tres upsells, no se leía cuál
+            era cuál sin buscar el título de la sección más arriba. El borde
+            punteado dice además que ahí FALTA una portada, que es cierto. */}
         {p.imagen ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={p.imagen}
             alt=""
-            className="w-14 h-14 shrink-0 rounded-xl object-cover border border-gray-100 panel-oscuro:border-gray-800"
+            className="w-16 h-16 sm:w-24 sm:h-24 shrink-0 rounded-2xl object-cover border border-gray-100 panel-oscuro:border-gray-800"
           />
         ) : (
-          <div className={`w-14 h-14 shrink-0 rounded-xl ${tinta.fondo} flex items-center justify-center`}>
-            <Icono className={`h-6 w-6 ${tinta.texto}`} />
+          <div
+            className={`w-16 h-16 sm:w-24 sm:h-24 shrink-0 rounded-2xl border-2 border-dashed ${tinta.borde} ${tinta.suave} flex flex-col items-center justify-center gap-1`}
+          >
+            <Icono className={`h-5 w-5 sm:h-7 sm:w-7 ${tinta.texto}`} />
+            <span className={`text-[9px] sm:text-[10px] font-bold uppercase tracking-wide ${tinta.texto}`}>
+              {COPY_ROL[p.rol].corto}
+            </span>
           </div>
         )}
 
@@ -281,6 +293,20 @@ function Tarjeta({ p, acc }: { p: ProductoEnPantalla; acc: Acciones }) {
             </p>
           )}
 
+          {/* ── Los botones, en dos grupos y no en una pila ─────────────────
+              ⚠️ Eran OCHO, todos con el mismo peso, partidos en dos filas por
+              el `flex-wrap`. "Borrar" quedaba a la misma altura visual que
+              "Editar", y ninguno decía cuál era el que había que apretar ahora.
+
+              Ahora se leen tres cosas distintas:
+                · EL CONTENIDO — de dónde sale el archivo que se entrega.
+                · LA FICHA — título, precio, publicar, borrar. A la derecha.
+                · EL SITIO — su propia página y su dirección. Renglón aparte,
+                  abajo, y sólo en el principal (ver más abajo).
+
+              El separador de la derecha es `ml-auto` en pantalla ancha y un
+              salto de línea en 360: dos grupos apretados uno contra otro en un
+              celular se leen como una sola pila, que es de donde venimos. */}
           <div className="mt-3 flex flex-wrap items-center gap-2">
             {/* La etiqueta ES el botón: un `<input type="file">` no se puede
                 disfrazar, así que se esconde y se lo dispara desde acá. */}
@@ -344,6 +370,10 @@ function Tarjeta({ p, acc }: { p: ProductoEnPantalla; acc: Acciones }) {
                   : `Seguir (${p.ebook.escritos} de ${p.ebook.total})`}
             </button>
 
+            {/* ── La ficha: título, precio, publicar, borrar ───────────────
+                Se va a la derecha en pantalla ancha (`sm:ml-auto`) y baja a su
+                propio renglón en 360, donde `ml-auto` no separa nada. */}
+            <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
             <button
               onClick={() =>
                 acc.setBorrador({
@@ -379,13 +409,31 @@ function Tarjeta({ p, acc }: { p: ProductoEnPantalla; acc: Acciones }) {
               {p.publicado ? "Despublicar" : "Publicar"}
             </button>
 
-            {/* Sólo el principal tiene página de venta: los bonos y los upsells
-                viajan adentro de la de él, no tienen una propia.
-                ⚠️ La dirección `/p/<id>` es PROVISORIA — la definitiva es un
-                subdominio por producto (Fase 5 bis). Y se abre en otra pestaña
-                porque sale del panel: es la página pública, no una previa. */}
-            {p.rol === "PRINCIPAL" && (
-              <>
+            <button
+              onClick={() => acc.borrar(p)}
+              disabled={ocupado}
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-red-500 hover:bg-red-50 panel-oscuro:hover:bg-red-500/10 transition-colors disabled:opacity-50"
+            >
+              <Trash2 className="h-3.5 w-3.5" /> Borrar
+            </button>
+            </div>
+          </div>
+
+          {/* ── El sitio del producto: renglón propio ────────────────────────
+              Sólo el principal tiene página de venta: los bonos y los upsells
+              viajan adentro de la de él, no tienen una propia.
+
+              ⚠️ VA EN SU PROPIO RENGLÓN, separado por una línea, y no mezclado
+              con los otros seis botones. No es una acción más sobre la ficha:
+              es **el sitio del producto**, que es lo que nos separa de la
+              competencia —cada producto es su propio dominio— y ahí arriba
+              quedaba como el quinto botón gris de una fila de ocho.
+
+              ⚠️ La dirección `/p/<id>` es PROVISORIA — la definitiva es un
+              subdominio por producto (Fase 5 bis). Y se abre en otra pestaña
+              porque sale del panel: es la página pública, no una previa. */}
+          {p.rol === "PRINCIPAL" && (
+              <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-gray-100 panel-oscuro:border-gray-800 pt-3">
                 <Link
                   href={`/digitales/productos/${p.id}/pagina`}
                   className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 text-xs font-bold text-gray-700 panel-oscuro:text-gray-300 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800 transition-colors"
@@ -414,17 +462,8 @@ function Tarjeta({ p, acc }: { p: ProductoEnPantalla; acc: Acciones }) {
                 >
                   <ExternalLink className="h-3.5 w-3.5" /> Ver página
                 </Link>
-              </>
-            )}
-
-            <button
-              onClick={() => acc.borrar(p)}
-              disabled={ocupado}
-              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-red-500 hover:bg-red-50 panel-oscuro:hover:bg-red-500/10 transition-colors disabled:opacity-50 ml-auto"
-            >
-              <Trash2 className="h-3.5 w-3.5" /> Borrar
-            </button>
-          </div>
+              </div>
+          )}
         </div>
       </div>
     </div>
@@ -438,21 +477,44 @@ function Grupo({ padre, rol, acc }: { padre: ProductoEnPantalla; rol: "BONO" | "
   const tope = topeDe(acc.tier, rol);
   const lleno = items.length >= tope;
   const tinta = TINTA[rol];
+  const IconoRol = ICONO[rol];
 
   return (
     <div className={`rounded-2xl border ${tinta.borde} ${tinta.suave} p-4`}>
+      {/* ⚠️ La cabecera lleva el ÍCONO DEL ROL en un cuadro de su color, igual
+          que la miniatura de las tarjetas de adentro. Antes era un renglón de
+          texto chico, así que la sección y sus tarjetas no se veían como la
+          misma cosa: se leían como dos bloques sueltos que casualmente estaban
+          pegados. El ícono repetido es lo que los ata. */}
       <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
-        <div className="min-w-0">
-          <p className="text-sm font-bold text-gray-900 panel-oscuro:text-gray-100">
-            {COPY_ROL[rol].titulo}{" "}
-            <span className="text-xs font-medium text-gray-400 panel-oscuro:text-gray-500">
-              {items.length} de {tope}
-            </span>
-          </p>
-          <p className="text-xs text-gray-500 panel-oscuro:text-gray-400 mt-0.5">{COPY_ROL[rol].bajada}</p>
+        <div className="flex min-w-0 items-start gap-3">
+          <div className={`h-9 w-9 shrink-0 rounded-xl ${tinta.fondo} flex items-center justify-center`}>
+            <IconoRol className={`h-4.5 w-4.5 ${tinta.texto}`} />
+          </div>
+          <div className="min-w-0">
+            <p className="flex flex-wrap items-center gap-2 text-sm font-bold text-gray-900 panel-oscuro:text-gray-100">
+              {COPY_ROL[rol].titulo}
+              {/* El contador como sello y no como texto gris al lado: es el
+                  número que se mira para saber si queda lugar. */}
+              <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${tinta.fondo} ${tinta.texto}`}>
+                {items.length} de {tope}
+              </span>
+            </p>
+            <p className="text-xs text-gray-500 panel-oscuro:text-gray-400 mt-0.5">{COPY_ROL[rol].bajada}</p>
+          </div>
         </div>
 
-        {lleno ? (
+        {/* ⚠️ Igual que arriba: en el plan más alto no hay a dónde mejorar, así
+            que el cartel informa y no ofrece. Y `tope === 0` no puede pasar en
+            el plan de arriba —ningún plan tope tiene un rol en cero— pero se
+            contempla igual, porque quien lo lea no tiene que averiguarlo. */}
+        {lleno && esElPlanMasAlto(acc.tier) ? (
+          <p className="shrink-0 text-xs font-bold text-gray-500 panel-oscuro:text-gray-400">
+            {tope === 0
+              ? "Tu plan no los incluye"
+              : `Usaste ${tope === 1 ? "el único" : `los ${tope}`} de tu plan`}
+          </p>
+        ) : lleno ? (
           <Link
             href="/digitales/mi-cuenta"
             className="shrink-0 inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white panel-oscuro:bg-gray-900 border border-gray-200 panel-oscuro:border-gray-700 text-xs font-bold text-gray-500 panel-oscuro:text-gray-400 hover:text-orange-600 hover:border-orange-300 transition-colors"
@@ -787,7 +849,16 @@ export default function ProductosClient({
           <p className="text-xs text-gray-500 panel-oscuro:text-gray-400 mt-0.5">Tu plan {COPY_DIGITAL[tier].nombre}</p>
         </div>
 
-        {llegoAlTope ? (
+        {/* ⚠️ EN EL PLAN MÁS ALTO NO SE OFRECE MEJORAR, porque no hay a dónde.
+            Acá había un enlace a Mi cuenta para todos: quien pagaba el plan más
+            caro leía "Llegaste al tope de tu plan →", iba, y descubría que ya lo
+            tenía. Primero lo hace dudar y después le hace perder el viaje.
+            En el tope de arriba es un dato, no una oferta. */}
+        {llegoAlTope && esElPlanMasAlto(tier) ? (
+          <p className="text-sm font-bold text-gray-500 panel-oscuro:text-gray-400">
+            Usaste las {topePrincipales} de tu plan
+          </p>
+        ) : llegoAlTope ? (
           <Link
             href="/digitales/mi-cuenta"
             className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-orange-200 panel-oscuro:border-orange-500/30 bg-orange-50 panel-oscuro:bg-orange-500/10 text-sm font-bold text-orange-700 panel-oscuro:text-orange-300 hover:bg-orange-100 transition-colors"

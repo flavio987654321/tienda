@@ -29,18 +29,28 @@ export function rolDe(valor: unknown): RolDigital | null {
     : null;
 }
 
-export const COPY_ROL: Record<RolDigital, { titulo: string; bajada: string }> = {
+/**
+ * @property corto La palabra del rol, en singular, para el sello de la
+ *   miniatura. **No es el título recortado**: aquél es de sección y va en plural
+ *   —"Bonos"—, y en la ficha de UNO eso se lee como si esa tarjeta fuera todas.
+ *   Existe porque los tres roles se distinguían sólo por el tono del ícono, y
+ *   los tres tonos son naranjas.
+ */
+export const COPY_ROL: Record<RolDigital, { titulo: string; bajada: string; corto: string }> = {
   PRINCIPAL: {
     titulo: "Producto principal",
     bajada: "Es lo que la persona compra. Tiene su propia página de venta.",
+    corto: "Principal",
   },
   BONO: {
     titulo: "Bonos",
     bajada: "Van de regalo con la compra. No se cobran: suman valor.",
+    corto: "Bono",
   },
   UPSELL: {
     titulo: "Upsells",
     bajada: "Se ofrecen aparte durante la compra, con su propio precio.",
+    corto: "Upsell",
   },
 };
 
@@ -115,8 +125,12 @@ export function loQueFalta(p: {
      cuatro que no se resuelve en la pantalla donde aparece el cartel. Este
      mensaje estaba escrito así en el checkout y a secas acá; ahora es uno solo,
      para que no queden dos versiones y se corrija una. */
+  /* ⚠️ Y el texto vale para los TRES roles. Decía "el botón de comprar no cobra
+     nada", y en la tarjeta de un bono eso no se entiende: un bono es gratis y no
+     tiene botón de comprar propio — viaja adentro de la compra del principal.
+     Visto en el panel el 08/09/26, el mismo día que se escribió. */
   if (!p.cobroConectado) {
-    return "Falta conectar Mercado Pago en Configuración → Pagos. Sin eso el botón de comprar no cobra nada.";
+    return "Falta conectar Mercado Pago en Configuración → Pagos. Sin eso no se puede cobrar ninguna venta.";
   }
   return null;
 }

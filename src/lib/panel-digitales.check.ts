@@ -19,7 +19,7 @@
 
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { PLANES, TOPES_DIGITALES, COMISION_DIGITAL } from "./planLimits";
-import { TIERS_DIGITALES, featuresDigital } from "./planes-digitales";
+import { TIERS_DIGITALES, featuresDigital, esElPlanMasAlto } from "./planes-digitales";
 
 let fallos = 0;
 const chequear = (titulo: string, condicion: boolean, detalle?: unknown) => {
@@ -1245,6 +1245,30 @@ chequear("si el mail nunca salió, el aviso va arriba de todo y con role=alert",
 chequear("desde la lista se entra al detalle de cualquier venta",
   /href=\{`\/digitales\/ventas\/\$\{v\.id\}`\}/.test(ventasCli) &&
   !/estado === "COBRADA" &&[\s\S]{0,80}Ver el detalle/.test(ventasCli));
+
+/* ── No se ofrece mejorar cuando no hay a dónde (08/09/26) ─────────────────
+ *
+ * ⚠️ Quien paga el plan MÁS CARO leía "Llegaste al tope de tu plan →" con un
+ * enlace a Mi cuenta. No hay nada mejor que Pro: primero le hace pensar que le
+ * falta algo, y después le hace perder el viaje para descubrir que ya lo tiene.
+ * Encontrado mirando el panel el 08/09/26.
+ *
+ * Y `esElPlanMasAlto` sale del ÚLTIMO de `TIERS_DIGITALES`, no de la palabra
+ * "PRO": escrito a mano, el día del cuarto plan esto le escondería la mejora
+ * justo a quien la puede pagar. */
+chequear("`esElPlanMasAlto` es cierto sólo para el último de la lista, y sale de la lista",
+  esElPlanMasAlto(TIERS_DIGITALES[TIERS_DIGITALES.length - 1]) &&
+  TIERS_DIGITALES.slice(0, -1).every((t) => !esElPlanMasAlto(t)) &&
+  !/["']PRO["']/.test(
+    (readFileSync("src/lib/planes-digitales.ts", "utf8")
+      .match(/export function esElPlanMasAlto[\s\S]*?\n\}/) ?? [""])[0],
+  ));
+
+/* Los DOS carteles del tope —el de las páginas de venta y el de cada grupo de
+   bonos y upsells— tienen que preguntar. Uno solo arreglado deja el otro
+   empujando, y el de los bonos es el que más se ve. */
+chequear("en el plan más alto, los dos carteles del tope informan en vez de ofrecer mejorar",
+  (pantallaProductos.match(/esElPlanMasAlto\(/g) ?? []).length >= 2);
 
 console.log(fallos === 0
   ? "\nok — el panel de Productos Digitales sigue en pie"
