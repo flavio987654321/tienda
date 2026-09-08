@@ -136,6 +136,41 @@ export default function EmbudoIA({
       return d;
     };
 
+    /**
+     * Escribe y guarda la página de venta del principal recién creado.
+     *
+     * ⚠️ NO TIRA NUNCA, y ésa es toda la gracia. Los tres productos ya están
+     * creados y guardados cuando esto corre: si la IA está caída o la red se
+     * corta, dejar que el error suba haría que la pantalla diga "no pudimos
+     * crearlos" **sobre un embudo que sí se creó**, y además con el cartel de
+     * "ojo, lo que se alcanzó a crear quedó guardado" — asustando por algo que
+     * salió bien.
+     *
+     * Sin página tampoco se pierde nada: el botón "Escribir la página con IA"
+     * sigue estando en el editor, y sigue siendo gratis la primera vez, porque
+     * la condición es que `paginaVenta` esté en null y quedó en null.
+     */
+    const escribirLaPagina = async (productoId: string) => {
+      try {
+        const r = await fetch("/api/digitales/ia/pagina", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ productoId }),
+        });
+        const d = await r.json().catch(() => null);
+        if (!r.ok || !d?.pagina) return;
+
+        await fetch(`/api/digitales/productos/${productoId}/pagina`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(d.pagina),
+        });
+      } catch {
+        /* Anotado y nada más: ver el porqué largo arriba. */
+        console.warn("[embudo-ia] el embudo se creó pero la página quedó sin escribir");
+      }
+    };
+
     try {
       setCreando("tu producto");
       const principal = await crear({
@@ -159,6 +194,31 @@ export default function EmbudoIA({
         rol: "UPSELL", padreId,
         name: embudo.upsell.titulo, description: embudo.upsell.bajada, price: embudo.upsell.precio,
       });
+
+      /* ══════════════════════════════════════════════════════════════════════
+         Y LA PÁGINA DE VENTA, EN ESTE MISMO PASO
+         ══════════════════════════════════════════════════════════════════════
+
+         Hasta acá esto creaba las tres FICHAS —título, descripción, precio— y
+         se detenía. Quien entraba después a la página de venta se encontraba
+         doce renglones que decían "No se ve: todavía no escribiste nada", y el
+         botón para llenarla estaba arriba en el encabezado, fuera de la vista.
+
+         O sea: prometíamos resolver la pantalla en blanco y la resolvíamos a
+         medias. La competencia pide UNA descripción y devuelve el embudo Y la
+         página; nosotros pedíamos lo mismo y devolvíamos la mitad, con el resto
+         escondido detrás de un segundo botón que había que descubrir.
+
+         ⚠️ Y no cuesta una generación: la primera página de cada producto es
+         gratis por decisión, justamente para que "armá tu embudo con IA"
+         entregue lo que promete. El servidor lo verifica contra la base
+         (`paginaVenta` en null), no se lo manda la pantalla. Ver `ia/pagina`.
+
+         Son dos llamadas y no una porque la ruta que escribe NO guarda —está
+         hecha para el editor, donde se mira la previa antes de aceptar—. Acá no
+         hay nada que mirar todavía, así que se escribe y se guarda de una. */
+      setCreando("tu página de venta");
+      await escribirLaPagina(padreId);
 
       /* La lista la arma el servidor: recargar es lo único que garantiza que lo
          que se ve sea lo que quedó guardado. El cerrojo no se suelta: la página
@@ -233,7 +293,8 @@ export default function EmbudoIA({
             <>
               <p className="text-[13px] leading-relaxed text-gray-600 panel-oscuro:text-gray-300">
                 Contame qué sabés hacer y a quién le sirve. Con eso te armo <strong>el producto</strong>,
-                un <strong>bono</strong> de regalo y un <strong>upsell</strong>, con sus textos y sus precios.
+                un <strong>bono</strong> de regalo, un <strong>upsell</strong> y <strong>tu página
+                de venta</strong>, con sus textos y sus precios.
               </p>
               <p className="mt-1.5 text-[12px] text-gray-500 panel-oscuro:text-gray-400">
                 Cuanto más concreto, mejor sale. Después lo podés editar todo.
@@ -407,7 +468,10 @@ export default function EmbudoIA({
                       className="flex-1 inline-flex items-center justify-center gap-2 rounded-2xl bg-orange-600 px-5 py-3 text-sm font-bold text-white transition-opacity hover:bg-orange-700 disabled:opacity-50"
                     >
                       {creando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-                      {creando ? `Creando ${creando}…` : "Crear los tres"}
+                      {/* "Crear todo" y ya no "Crear los tres": desde que esto
+                          también escribe la página de venta, "los tres" se queda
+                          corto y hace parecer que la página es otro paso. */}
+                      {creando ? `Creando ${creando}…` : "Crear todo"}
                     </button>
                   </div>
                   {/* "Probar de nuevo" gasta otra generación, y eso se dice ANTES

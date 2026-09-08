@@ -631,6 +631,38 @@ async function losTopes() {
   check("FIC-E",
     /fetch\("\/api\/digitales\/productos"/.test(ficha),
     "la ventana crea por la ruta de siempre, que es la que tiene los topes del plan");
+
+  /* ── El embudo termina con la página escrita ─────────────────────────────
+     Esto creaba las tres FICHAS —título, descripción, precio— y se detenía.
+     Quien entraba después a la página de venta se encontraba doce renglones que
+     decían "todavía no escribiste nada", y el botón para llenarla estaba arriba
+     en el encabezado, fuera de la vista al scrollear.
+
+     O sea: prometíamos resolver la pantalla en blanco y la resolvíamos a
+     medias. La competencia pide UNA descripción y devuelve el embudo Y la
+     página. */
+  check("EMB-CA",
+    /setCreando\("tu página de venta"\)/.test(ventana) &&
+    /fetch\("\/api\/digitales\/ia\/pagina"/.test(ventana) &&
+    /\$\{productoId\}\/pagina`, \{\s*\n\s*method: "PUT"/.test(ventana),
+    "armar el embudo también escribe y guarda la página de venta");
+
+  /* ⚠️ Y ESA ÚLTIMA PARTE NO PUEDE VOLTEAR LO DEMÁS. Los tres productos ya
+     están creados y guardados cuando corre: si la IA está caída y el error
+     sube, la pantalla dice "no pudimos crearlos" sobre un embudo que SÍ se
+     creó, con el cartel de "ojo, lo que se alcanzó a crear quedó guardado".
+     Asustar por algo que salió bien es peor que quedarse sin la página, que
+     además se puede escribir después y sigue siendo gratis. */
+  check("EMB-CB",
+    /const escribirLaPagina = async \(productoId: string\) => \{\s*\n\s*try \{/.test(ventana) &&
+    /\} catch \{[\s\S]{0,400}?console\.warn\("\[embudo-ia\]/.test(ventana),
+    "y si la página falla, el embudo que ya se creó no se reporta como error");
+
+  /* Y se promete lo que ahora hace: la ventana nombra la página de venta antes
+     de apretar, no después. */
+  check("EMB-CC",
+    /tu página\s*\n?\s*de venta/.test(ventana) && /Crear todo/.test(ventana),
+    "la ventana dice de entrada que también sale la página de venta");
 }
 
 losTopes().then(() => {
