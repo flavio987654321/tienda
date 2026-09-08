@@ -173,6 +173,30 @@ html[data-panel-tema="oscuro"] body {
  * puso. Así el día que alguien agregue un banner al `<body>` no vuelve a
  * aparecer la franja: simplemente no hay a dónde scrollear.
  *
+ * ══════════════════════════════════════════════════════════════════════════
+ * ⚠️ `clip` Y NO `hidden`. NO SON SINÓNIMOS, Y LA DIFERENCIA ES ESTE BUG.
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * Acá decía `hidden`, y `hidden` NO apaga el scroll: apaga la BARRA. La caja
+ * sigue siendo un contenedor scrolleable, con su `scrollTop`, y **el navegador
+ * la puede mover solo**: cuando algo adentro recibe el foco, cuando se reacomoda
+ * la página, cuando el anclaje de scroll compensa un salto.
+ *
+ * O sea que el arreglo del 08/09/26 **tapó el síntoma y dejó el mecanismo
+ * entero puesto**, y lo dejó peor: el documento se seguía yendo para arriba,
+ * pero ahora sin barra para volver. Reportado el 08/09/26 apretando "Subir
+ * PDF": aparecía la franja y no había forma de sacarla.
+ *
+ * Cuál de esos movimientos fue el de ese caso no se pudo reproducir de este
+ * lado, y no hace falta saberlo: la regla no depende del disparador.
+ *
+ * `clip` es la que dice lo que queríamos decir: la caja **no es un contenedor
+ * scrolleable**, su `scrollTop` no se puede mover ni desde el navegador ni
+ * desde JavaScript. No hay a dónde ir.
+ *
+ * El `hidden` de arriba queda de respaldo para un navegador viejo que no
+ * entienda `clip` — ahí vuelve a ser lo de antes, que igual es mejor que nada.
+ *
  * ⚠️ Va con `[data-panel-tema]` —el atributo que el panel pone al entrar y
  * BORRA al salir— y no en `html` a secas. Suelto, dejaría el sitio público sin
  * poder scrollear, que es infinitamente peor que una franja. */
@@ -180,6 +204,7 @@ html[data-panel-tema],
 html[data-panel-tema] body {
   height: 100%;
   overflow: hidden;
+  overflow: clip;
 }
 
 /* Entrada del panel de edición del editor de tiendas. Vive acá y no dentro del

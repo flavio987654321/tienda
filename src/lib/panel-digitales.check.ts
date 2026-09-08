@@ -1315,9 +1315,29 @@ chequear("el motivo por el que no se puede publicar está atado al botón",
      para arriba y abajo queda el fondo. La regla tiene que estar atada a
      `data-panel-tema`: suelta, dejaría el SITIO PÚBLICO sin poder scrollear,
      que es muchísimo peor que la franja que arregla. */
+  const bloqueDelPanel = estilosGlobales.slice(
+    estilosGlobales.indexOf("html[data-panel-tema],"),
+    estilosGlobales.indexOf("html[data-panel-tema],") + 200);
   const noScrollea = /html\[data-panel-tema\],\s*html\[data-panel-tema\] body\s*\{[^}]*overflow:\s*hidden/.test(estilosGlobales);
   chequear("adentro del panel el documento no scrollea, y la regla no se escapa al sitio público",
     noScrollea && !/^html,\s*body\s*\{[^}]*overflow:\s*hidden/m.test(estilosGlobales));
+
+  /* ══════════════════════════════════════════════════════════════════════════
+     ⚠️ Y TIENE QUE SER `clip`, NO ALCANZA CON `hidden`.
+     ══════════════════════════════════════════════════════════════════════════
+
+     `hidden` apaga la BARRA, no el scroll: la caja sigue siendo un contenedor
+     scrolleable y el navegador la mueve solo —al enfocar algo, al reacomodar la
+     página, al compensar un salto—. Con `hidden` la franja volvió PEOR que
+     antes: el documento se iba igual, pero ya sin barra para volver.
+
+     `clip` es la que dice lo que hay que decir: la caja no es un contenedor
+     scrolleable y su `scrollTop` no se puede mover ni desde JavaScript.
+
+     Se pide que estén las dos, y en ese orden: `hidden` primero de respaldo
+     para un navegador que no entienda `clip`, `clip` después para ganarle. */
+  chequear("y el documento se recorta con `clip`, que es lo único que apaga el scroll de verdad",
+    /overflow:\s*hidden\s*;\s*overflow:\s*clip\s*;/.test(bloqueDelPanel));
 
   /* Y el `<main>` tiene que conservar SU scroll: si se pierde, la regla de
      arriba deja el panel sin ninguna forma de scrollear y no se ve el contenido
