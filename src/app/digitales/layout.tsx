@@ -15,6 +15,8 @@ import type { TierDigital } from "@/lib/planes-digitales";
 import DigitalesSidebar from "./DigitalesSidebar";
 import TemaDelPanel from "./TemaDelPanel";
 import TodoListo from "./TodoListo";
+/* Sólo desarrollo: se dibuja detrás de `NODE_ENV`, no viaja al build. */
+import SondaDeScroll from "./SondaDeScroll";
 import { ProveedorDeSalida } from "./SalidaSinGuardar";
 import { SCRIPT_TEMA } from "@/lib/tema-digitales";
 
@@ -182,6 +184,7 @@ export default async function DigitalesLayout({ children }: { children: React.Re
           preferencia sea "Automático", y levanta el atributo al salir del panel
           para no dejárselo puesto al resto del sitio. */}
       <TemaDelPanel />
+      {process.env.NODE_ENV === "development" && <SondaDeScroll />}
       <PWAManager appVersion={DIGITALES_VERSION} versionKey="pwa_digitales_version" scope="/digitales" />
       <PanelSplash nombre="TiendaApps Digitales" />
       {/* Envuelve la barra Y la pantalla, y en ese orden importa: la pantalla es

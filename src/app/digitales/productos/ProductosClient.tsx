@@ -412,10 +412,38 @@ function Tarjeta({ p, acc }: { p: ProductoEnPantalla; acc: Acciones }) {
                 `sr-only` lo saca de la vista pero lo deja enfocable, así que
                 se llega tabulando y se abre con Enter. Y como el foco queda en
                 el input invisible, el anillo lo dibuja el label con
-                `focus-within`: sin eso se tabula a un botón que no se ve. */}
+                `focus-within`: sin eso se tabula a un botón que no se ve.
+
+                ══════════════════════════════════════════════════════════════
+                ⚠️ Y EL LABEL VA `relative`. ES LA OTRA MITAD DE `sr-only`.
+                ══════════════════════════════════════════════════════════════
+
+                `sr-only` incluye `position: absolute`. Un absoluto se ubica
+                contra **el ancestro posicionado más cercano**, y si no hay
+                ninguno, contra el documento entero. Sin `relative` acá, este
+                input quedaba colgado del DOCUMENTO en vez de del botón: no se
+                movía con el scroll del `<main>`, y su posición —la de la última
+                tarjeta de la lista— caía miles de píxeles por debajo de la
+                ventana.
+
+                Eso hacía dos cosas. El documento pasaba a tener ese sobrante
+                para scrollear, que no debería existir nunca adentro del panel.
+                Y al apretar el botón —que le da el foco al input— el navegador
+                scrolleaba el documento para "mostrarlo": el armazón, que mide
+                una ventana justa, se iba para arriba y abajo aparecía la franja.
+
+                ⚠️ POR ESO PASABA SÓLO EN LAS TARJETAS DE ABAJO: cuanto más
+                abajo la tarjeta, más lejos caía su input y más se scrolleaba.
+                En la primera no se notaba nada.
+
+                Se persiguió tres veces por el lado equivocado —el fondo del
+                body, el `shrink-0`, el `overflow` del documento— porque el
+                síntoma era la franja. La causa era esta línea, que faltaba.
+
+                Con `relative`, el input vive adentro del botón y se acabó. */}
             <label
               aria-busy={subiendoEste}
-              className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-colors focus-within:outline-none focus-within:ring-2 focus-within:ring-orange-500 focus-within:ring-offset-2 panel-oscuro:focus-within:ring-offset-gray-900 ${
+              className={`relative inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-colors focus-within:outline-none focus-within:ring-2 focus-within:ring-orange-500 focus-within:ring-offset-2 panel-oscuro:focus-within:ring-offset-gray-900 ${
                 subiendoEste || ocupado
                   ? "opacity-50 cursor-not-allowed border border-gray-200 panel-oscuro:border-gray-700 text-gray-500"
                   : p.tieneArchivo
@@ -1206,8 +1234,12 @@ export default function ProductosClient({
                         `hidden`, o este botón tampoco se alcanza con el teclado.
                         Éste apareció por la prueba, no mirándolo: son dos
                         subidas en el mismo archivo y sólo se había arreglado
-                        una. Ver el porqué largo en el label del PDF. */}
-                    <label className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 text-xs font-bold text-gray-700 panel-oscuro:text-gray-300 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800 transition-colors cursor-pointer focus-within:outline-none focus-within:ring-2 focus-within:ring-orange-500 focus-within:ring-offset-2 panel-oscuro:focus-within:ring-offset-gray-900">
+                        una. Ver el porqué largo en el label del PDF.
+
+                        Y `relative` en el label por lo mismo: sin eso el input
+                        absoluto se cuelga del documento y le agrega sobrante
+                        para scrollear. Ver el porqué largo allá arriba. */}
+                    <label className="relative inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 text-xs font-bold text-gray-700 panel-oscuro:text-gray-300 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800 transition-colors cursor-pointer focus-within:outline-none focus-within:ring-2 focus-within:ring-orange-500 focus-within:ring-offset-2 panel-oscuro:focus-within:ring-offset-gray-900">
                       {subiendo ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ImageIcon className="h-3.5 w-3.5" />}
                       {subiendo ? "Subiendo..." : borrador.imagen ? "Cambiar" : "Subir imagen"}
                       <input

@@ -232,7 +232,12 @@ function CasillaImagen({
             <ImageIcon className="h-5 w-5 text-gray-400" />
           </div>
         )}
-        <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-gray-200 px-3 py-2 text-xs font-bold text-gray-700 transition-colors hover:bg-gray-50 focus-within:outline-none focus-within:ring-2 focus-within:ring-orange-500 focus-within:ring-offset-2 panel-oscuro:border-gray-700 panel-oscuro:text-gray-300 panel-oscuro:hover:bg-gray-800 panel-oscuro:focus-within:ring-offset-gray-900">
+        {/* ⚠️ `relative` no es de adorno: `sr-only` incluye `position: absolute`,
+            y sin un ancestro posicionado el input se cuelga del DOCUMENTO, le
+            agrega sobrante para scrollear y al enfocarlo el navegador mueve la
+            página entera. Ver el porqué largo en el label del PDF de
+            `ProductosClient`. */}
+        <label className="relative inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-gray-200 px-3 py-2 text-xs font-bold text-gray-700 transition-colors hover:bg-gray-50 focus-within:outline-none focus-within:ring-2 focus-within:ring-orange-500 focus-within:ring-offset-2 panel-oscuro:border-gray-700 panel-oscuro:text-gray-300 panel-oscuro:hover:bg-gray-800 panel-oscuro:focus-within:ring-offset-gray-900">
           {subiendo ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ImageIcon className="h-3.5 w-3.5" />}
           {valor ? "Cambiar" : "Subir imagen"}
           {/* ⚠️ `sr-only` y NO `hidden`: `display:none` no recibe foco y el

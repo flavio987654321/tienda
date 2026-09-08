@@ -1339,6 +1339,63 @@ chequear("el motivo por el que no se puede publicar está atado al botón",
   chequear("y el documento se recorta con `clip`, que es lo único que apaga el scroll de verdad",
     /overflow:\s*hidden\s*;\s*overflow:\s*clip\s*;/.test(bloqueDelPanel));
 
+  /* ══════════════════════════════════════════════════════════════════════════
+     ⚠️ TODO `<label>` QUE ENVUELVA UN INPUT `sr-only` VA `relative`.
+     ══════════════════════════════════════════════════════════════════════════
+
+     Ésta fue la causa de la franja, después de tres arreglos que le erraron.
+
+     `sr-only` incluye `position: absolute`. Un absoluto se ubica contra el
+     ancestro posicionado más cercano, y **si no hay ninguno, contra el documento
+     entero**. Sin `relative` en el label, el input escondido quedaba colgado del
+     documento: no se movía con el scroll del `<main>`, y su posición —la de la
+     última tarjeta de una lista larga— caía miles de píxeles debajo de la
+     ventana. Eso le daba al documento un sobrante para scrollear que no debería
+     existir, y al apretar el botón —que le da el foco al input— el navegador
+     movía la página entera para "mostrarlo".
+
+     Por eso pasaba sólo abajo de todo: cuanto más abajo la tarjeta, más lejos
+     caía su input. En la primera no se notaba.
+
+     Se revisan los CUATRO archivos del panel que esconden un input así. Es el
+     precio de haber elegido `sr-only` sobre `hidden` por accesibilidad: la otra
+     mitad del arreglo es esta línea, y falta sin hacer ruido. */
+  const conInputEscondido = [
+    "src/app/digitales/productos/ProductosClient.tsx",
+    "src/app/digitales/configuracion/TabGeneral.tsx",
+    "src/app/digitales/productos/[id]/pagina/EditorClient.tsx",
+  ];
+  for (const archivo of conInputEscondido) {
+    const src = readFileSync(archivo, "utf8");
+    let bien = true;
+    let visto = 0;
+    /* Por cada input escondido, el `<label ...>` que lo abre más cerca hacia
+       atrás. Es el que lo contiene: estos inputs viven pegados a su label. */
+    for (const m of src.matchAll(/className=(?:"|\{`)sr-only/g)) {
+      const antes = src.slice(0, m.index);
+      /* ⚠️ `<label` SEGUIDO DE ESPACIO, no `<label` a secas. Los comentarios de
+         estos labels explican el arreglo, y para explicarlo escriben `<label>`
+         en prosa: buscando `<label` pelado, la etiqueta "más cercana" resultaba
+         ser una palabra adentro de un comentario y el chequeo fallaba con el
+         código bien puesto. Una etiqueta de verdad siempre trae atributos.
+
+         (El primer intento fue borrar los comentarios antes de mirar, y salió
+         peor: un `/*` suelto adentro del archivo se llevó puesto 5.000
+         caracteres de código junto con ellos.) */
+      const abre = antes.search(/<label\s(?![\s\S]*<label\s)/);
+      if (abre === -1) continue;
+      /* Sólo los que envuelven un input de archivo: `PrimerosPasos` usa
+         `sr-only` en un `<span>` de texto, que no se enfoca ni se posiciona. */
+      const cuerpo = src.slice(abre, m.index);
+      if (!/type="file"/.test(cuerpo)) continue;
+      visto++;
+      const etiqueta = src.slice(abre, src.indexOf(">", abre));
+      if (!/\brelative\b/.test(etiqueta)) bien = false;
+    }
+    chequear(`en ${archivo.split("/").pop()}, todo label con input \`sr-only\` es \`relative\``,
+      visto > 0 && bien);
+  }
+
   /* Y el `<main>` tiene que conservar SU scroll: si se pierde, la regla de
      arriba deja el panel sin ninguna forma de scrollear y no se ve el contenido
      de abajo. Las dos mitades van juntas o no van. */

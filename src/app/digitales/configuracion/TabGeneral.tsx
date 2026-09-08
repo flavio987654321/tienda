@@ -89,7 +89,12 @@ export default function TabGeneral(p: Props) {
             <p className="text-xs font-semibold text-gray-600 panel-oscuro:text-gray-400">Logo</p>
             <p className="text-xs text-gray-500 panel-oscuro:text-gray-400 mt-0.5">Hasta {MAX_LOGO_MB} MB.</p>
             <div className="mt-2 flex flex-wrap items-center gap-2">
-              <label className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 text-xs font-bold text-gray-700 panel-oscuro:text-gray-300 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800 transition-colors cursor-pointer focus-within:outline-none focus-within:ring-2 focus-within:ring-orange-500 focus-within:ring-offset-2 panel-oscuro:focus-within:ring-offset-gray-900">
+              {/* ⚠️ `relative` no es de adorno: `sr-only` incluye
+                  `position: absolute`, y sin un ancestro posicionado el input se
+                  cuelga del DOCUMENTO, le agrega sobrante para scrollear y al
+                  enfocarlo el navegador mueve la página entera. Ver el porqué
+                  largo en el label del PDF de `ProductosClient`. */}
+              <label className="relative inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 text-xs font-bold text-gray-700 panel-oscuro:text-gray-300 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800 transition-colors cursor-pointer focus-within:outline-none focus-within:ring-2 focus-within:ring-orange-500 focus-within:ring-offset-2 panel-oscuro:focus-within:ring-offset-gray-900">
                 {p.subiendo
                   ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
                   : <ImageIcon className="h-3.5 w-3.5" />}
