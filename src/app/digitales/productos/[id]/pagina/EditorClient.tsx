@@ -232,13 +232,17 @@ function CasillaImagen({
             <ImageIcon className="h-5 w-5 text-gray-400" />
           </div>
         )}
-        <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-gray-200 px-3 py-2 text-xs font-bold text-gray-700 transition-colors hover:bg-gray-50 panel-oscuro:border-gray-700 panel-oscuro:text-gray-300 panel-oscuro:hover:bg-gray-800">
+        <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-gray-200 px-3 py-2 text-xs font-bold text-gray-700 transition-colors hover:bg-gray-50 focus-within:outline-none focus-within:ring-2 focus-within:ring-orange-500 focus-within:ring-offset-2 panel-oscuro:border-gray-700 panel-oscuro:text-gray-300 panel-oscuro:hover:bg-gray-800 panel-oscuro:focus-within:ring-offset-gray-900">
           {subiendo ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ImageIcon className="h-3.5 w-3.5" />}
           {valor ? "Cambiar" : "Subir imagen"}
+          {/* ⚠️ `sr-only` y NO `hidden`: `display:none` no recibe foco y el
+              `<label>` no está en el orden de tabulación, así que con `hidden`
+              este botón era inalcanzable con el teclado. Mismo arreglo que en la
+              pantalla de Productos, 08/09/26. */}
           <input
             type="file"
             accept="image/*"
-            className="hidden"
+            className="sr-only"
             disabled={subiendo}
             onChange={(e) => {
               const f = e.target.files?.[0];

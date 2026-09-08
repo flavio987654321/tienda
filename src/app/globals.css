@@ -406,3 +406,30 @@ body {
     margin: 12mm;
   }
 }
+
+/* ── El foco visible del panel de Productos Digitales ────────────────────────
+ *
+ * Una sola regla en vez de pegarle seis clases de Tailwind a cada botón. En esa
+ * pantalla hay más de diez blancos —subir, escribir con IA, editar, publicar,
+ * borrar, la página, la dirección, ver, agregar bono, agregar upsell— y cada uno
+ * repetido por producto, por bono y por upsell. Con clases sueltas, el que se
+ * agrega mañana sale sin foco y nadie lo nota: **el que navega con teclado no
+ * escribe reportes de error, se va.**
+ *
+ * ── Por qué `:focus-visible` y no `:focus` ─────────────────────────────────
+ * `:focus` también se dispara al hacer clic con el mouse, así que cada botón
+ * apretado quedaba con un anillo pegado hasta el clic siguiente. El navegador
+ * decide con `:focus-visible` cuándo hace falta mostrarlo, y acierta.
+ *
+ * ⚠️ Va acotada a `.panel-productos` a propósito. Es tentador ponerla global,
+ * pero el sitio público tiene fondos oscuros y botones sobre fotos donde un
+ * anillo naranja de 2 px no se ve. Cuando el resto del panel lo necesite, se le
+ * agrega la clase; que se vea es más importante que que sea automática.
+ *
+ * El `outline` va por afuera con `outline-offset`, así que no empuja nada ni
+ * cambia el tamaño del botón: no hay salto al tabular. */
+.panel-productos :is(a, button, label, [tabindex]):focus-visible {
+  outline: 2px solid #f97316; /* orange-500, el acento del panel */
+  outline-offset: 2px;
+  border-radius: 0.75rem; /* rounded-xl, que es lo que usan estos botones */
+}

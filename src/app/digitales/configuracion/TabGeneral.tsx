@@ -89,15 +89,22 @@ export default function TabGeneral(p: Props) {
             <p className="text-xs font-semibold text-gray-600 panel-oscuro:text-gray-400">Logo</p>
             <p className="text-xs text-gray-500 panel-oscuro:text-gray-400 mt-0.5">Hasta {MAX_LOGO_MB} MB.</p>
             <div className="mt-2 flex flex-wrap items-center gap-2">
-              <label className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 text-xs font-bold text-gray-700 panel-oscuro:text-gray-300 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800 transition-colors cursor-pointer">
+              <label className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 text-xs font-bold text-gray-700 panel-oscuro:text-gray-300 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800 transition-colors cursor-pointer focus-within:outline-none focus-within:ring-2 focus-within:ring-orange-500 focus-within:ring-offset-2 panel-oscuro:focus-within:ring-offset-gray-900">
                 {p.subiendo
                   ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
                   : <ImageIcon className="h-3.5 w-3.5" />}
                 {p.subiendo ? "Subiendo..." : p.img ? "Cambiar" : "Subir logo"}
+                {/* ⚠️ `sr-only` y NO `hidden`. `hidden` es `display:none`, y un
+                    elemento así no recibe foco; el `<label>` que lo envuelve
+                    tampoco está en el orden de tabulación. Con `hidden` este
+                    botón era inalcanzable con el teclado. El anillo lo dibuja el
+                    label con `focus-within`, porque el foco queda en el input
+                    invisible. Mismo arreglo que en la pantalla de Productos,
+                    08/09/26. */}
                 <input
                   type="file"
                   accept="image/*"
-                  className="hidden"
+                  className="sr-only"
                   disabled={p.subiendo}
                   onChange={(e) => {
                     const f = e.target.files?.[0];

@@ -140,8 +140,17 @@ export default async function ProductosPage() {
     dominioPropio: f.dominioPropio,
   }));
 
+  /* ⚠️ `max-w-6xl`, el mismo que la home del panel. Estaba en `max-w-3xl`
+     —768 px— así que la pantalla con MÁS contenido de todo el panel era la más
+     angosta, y encima no coincidía con la de al lado: pasar de Inicio a
+     Productos movía la columna entera. A 1920 quedaban 1150 px de blanco a los
+     costados mientras los títulos se cortaban con puntos suspensivos.
+
+     Y `panel-productos` no es de adorno: es lo que engancha la regla de foco
+     visible de `globals.css`, que cubre de una vez los más de diez botones de
+     esta pantalla. Ver el comentario largo allá. */
   return (
-    <div className="mx-auto w-full max-w-3xl px-4 sm:px-6 py-8">
+    <div className="panel-productos mx-auto w-full max-w-6xl px-4 sm:px-6 py-8">
       <BotonVolver />
 
       <div className="mb-6">

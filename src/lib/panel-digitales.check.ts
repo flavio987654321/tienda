@@ -1270,6 +1270,30 @@ chequear("`esElPlanMasAlto` es cierto sólo para el último de la lista, y sale 
 chequear("en el plan más alto, los dos carteles del tope informan en vez de ofrecer mejorar",
   (pantallaProductos.match(/esElPlanMasAlto\(/g) ?? []).length >= 2);
 
+/* ── Subir el archivo se tiene que poder con el teclado (08/09/26) ─────────
+ *
+ * ⚠️ El `<input type="file">` estaba con `class="hidden"`, o sea `display:none`.
+ * Un elemento así **no recibe foco**, y el `<label>` que lo envuelve tampoco
+ * está en el orden de tabulación: **con teclado, "Subir PDF" era inalcanzable**.
+ * Y subir el archivo es el paso obligatorio para poder vender — el único que en
+ * el plan Free no tiene otro camino.
+ *
+ * `sr-only` lo saca de la vista y lo deja enfocable. El `focus-within` del label
+ * es la otra mitad: sin él se tabula a un botón que no se ve, que en la práctica
+ * es lo mismo que no poder llegar.
+ *
+ * Quien navega con teclado no manda reportes de error: se va. Por eso esto se
+ * prueba en vez de confiar en que alguien lo mire. */
+chequear("el input de archivo se puede alcanzar con el teclado, y el foco se ve",
+  /type="file"[\s\S]{0,200}className="sr-only"/.test(pantallaProductos) &&
+  !/type="file"[\s\S]{0,200}className="hidden"/.test(pantallaProductos) &&
+  /focus-within:ring/.test(pantallaProductos));
+
+/* Y el motivo por el que "Publicar" está apagado tiene que llegar sin depender
+   del `title`, que en un celular no existe. */
+chequear("el motivo por el que no se puede publicar está atado al botón",
+  /aria-describedby=\{!p\.publicado && falta \?/.test(pantallaProductos));
+
 console.log(fallos === 0
   ? "\nok — el panel de Productos Digitales sigue en pie"
   : `\nFALLA — ${fallos} chequeo(s) del panel de Productos Digitales`);

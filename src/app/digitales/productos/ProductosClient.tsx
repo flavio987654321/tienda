@@ -55,6 +55,18 @@ const ICONO: Record<RolDigital, React.ElementType> = {
   UPSELL: TrendingUp,
 };
 
+/**
+ * ⚠️ EL GRIS DE LAS PISTAS ES `gray-500`, NO `gray-400`.
+ *
+ * Esta pantalla usaba `text-gray-400` para todo lo secundario: el precio
+ * tachado, el nombre del archivo, el aviso de los 50 MB, los "(opcional)" del
+ * formulario. Sobre blanco eso da **2,85:1**, y el mínimo para texto chico es
+ * 4,5:1. O sea que las pistas —justamente lo que explica qué hacer— eran lo
+ * menos legible de la pantalla, y quien peor las lee es quien más las necesita.
+ *
+ * `gray-500` da 4,83:1. Y en el modo oscuro se invierte a `gray-400`, que sobre
+ * el fondo oscuro pasa de 4,0:1 a 7,4:1: el par estaba mal en los dos modos.
+ */
 const TINTA: Record<RolDigital, { borde: string; fondo: string; texto: string; suave: string }> = {
   PRINCIPAL: { borde: "border-orange-200 panel-oscuro:border-orange-500/30", fondo: "bg-orange-100 panel-oscuro:bg-orange-500/15", texto: "text-orange-600", suave: "bg-orange-50 panel-oscuro:bg-orange-500/10" },
   BONO:      { borde: "border-amber-200 panel-oscuro:border-amber-500/30",  fondo: "bg-amber-100 panel-oscuro:bg-amber-500/15",  texto: "text-amber-600",  suave: "bg-amber-50 panel-oscuro:bg-amber-500/10" },
@@ -158,7 +170,14 @@ function Tarjeta({ p, acc }: { p: ProductoEnPantalla; acc: Acciones }) {
   const avisoPeso = p.archivoPeso ? avisoDePeso(p.archivoPeso) : null;
 
   return (
-    <div className={`rounded-2xl border ${tinta.borde} bg-white panel-oscuro:bg-gray-900 p-4 sm:p-5 shadow-sm`}>
+    /* La sombra crece al pasar el mouse. Es lo único que se mueve en la tarjeta
+       —nada de agrandarla ni levantarla— porque adentro hay ocho blancos que se
+       apuntan con el mouse: una tarjeta que se mueve corre el botón al que
+       estabas yendo. `motion-reduce` la apaga para quien pidió menos animación
+       en su sistema. */
+    <div
+      className={`rounded-2xl border ${tinta.borde} bg-white panel-oscuro:bg-gray-900 p-4 sm:p-5 shadow-sm transition-shadow hover:shadow-md motion-reduce:transition-none`}
+    >
       <div className="flex gap-4">
         {/* La portada si la hay; si no, el ícono del rol. Un cuadro vacío en su
             lugar se lee como que la imagen se rompió.
@@ -170,12 +189,25 @@ function Tarjeta({ p, acc }: { p: ProductoEnPantalla; acc: Acciones }) {
             era cuál sin buscar el título de la sección más arriba. El borde
             punteado dice además que ahí FALTA una portada, que es cierto. */}
         {p.imagen ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={p.imagen}
-            alt=""
-            className="w-16 h-16 sm:w-24 sm:h-24 shrink-0 rounded-2xl object-cover border border-gray-100 panel-oscuro:border-gray-800"
-          />
+          /* ⚠️ CON PORTADA TAMBIÉN LLEVA EL SELLO, encima de la imagen.
+             Estaba sólo en la rama sin portada, así que la etiqueta del rol
+             desaparecía justo en el producto PRINCIPAL —que es el único que
+             suele tener portada— y quedaba la tarjeta más importante siendo la
+             única que no se identifica. Se ve en el panel: el bono dice "BONO"
+             y el principal no decía nada. */
+          <div className="relative w-16 h-16 sm:w-24 sm:h-24 shrink-0">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={p.imagen}
+              alt=""
+              className="w-full h-full rounded-2xl object-cover border border-gray-100 panel-oscuro:border-gray-800"
+            />
+            <span
+              className={`absolute inset-x-1 bottom-1 rounded-lg ${tinta.fondo} ${tinta.texto} py-0.5 text-center text-[9px] sm:text-[10px] font-bold uppercase tracking-wide`}
+            >
+              {COPY_ROL[p.rol].corto}
+            </span>
+          </div>
         ) : (
           <div
             className={`w-16 h-16 sm:w-24 sm:h-24 shrink-0 rounded-2xl border-2 border-dashed ${tinta.borde} ${tinta.suave} flex flex-col items-center justify-center gap-1`}
@@ -212,7 +244,7 @@ function Tarjeta({ p, acc }: { p: ProductoEnPantalla; acc: Acciones }) {
               <span className="text-gray-900 panel-oscuro:text-gray-100 font-black">{money(p.price)}</span>
             )}
             {p.comparePrice !== null && p.comparePrice > 0 && (
-              <span className="text-sm text-gray-400 panel-oscuro:text-gray-500 line-through">{money(p.comparePrice)}</span>
+              <span className="text-sm text-gray-500 panel-oscuro:text-gray-400 line-through">{money(p.comparePrice)}</span>
             )}
           </div>
 
@@ -221,13 +253,18 @@ function Tarjeta({ p, acc }: { p: ProductoEnPantalla; acc: Acciones }) {
               arregla. */}
           {falta && (
             <div className="mt-3 flex items-start gap-2 rounded-xl bg-red-50 panel-oscuro:bg-red-500/10 border border-red-100 panel-oscuro:border-red-500/25 px-3 py-2">
-              <AlertTriangle className="h-4 w-4 text-red-500 shrink-0 mt-0.5" />
-              <p className="text-xs text-red-700 panel-oscuro:text-red-300 font-medium">{falta}</p>
+              <AlertTriangle aria-hidden className="h-4 w-4 text-red-500 shrink-0 mt-0.5" />
+              {/* El `id` lo usa el botón de publicar con `aria-describedby`: el
+                  motivo por el que está apagado tiene que llegarle también a
+                  quien no ve la franja roja. Ver ese botón más abajo. */}
+              <p id={`falta-${p.id}`} className="text-xs text-red-700 panel-oscuro:text-red-300 font-medium">
+                {falta}
+              </p>
             </div>
           )}
 
           {p.tieneArchivo && p.archivoNombre && (
-            <p className="mt-2 text-xs text-gray-400 panel-oscuro:text-gray-500 truncate">
+            <p className="mt-2 text-xs text-gray-500 panel-oscuro:text-gray-400 truncate">
               Archivo: {p.archivoNombre}
               {p.archivoPeso ? ` · ${Math.round(p.archivoPeso / 1024 / 1024 * 10) / 10} MB` : ""}
             </p>
@@ -288,7 +325,7 @@ function Tarjeta({ p, acc }: { p: ProductoEnPantalla; acc: Acciones }) {
               falle. Y no dice "máximo 50 MB", que no le indica a nadie qué
               hacer, sino la instrucción que resuelve el problema. */}
           {!p.tieneArchivo && (
-            <p className="mt-2 text-[11px] leading-relaxed text-gray-400 panel-oscuro:text-gray-500">
+            <p className="mt-2 text-[11px] leading-relaxed text-gray-500 panel-oscuro:text-gray-400">
               PDF de hasta {MAX_PDF_MB} MB. Si te pasás, exportalo en calidad para pantalla.
             </p>
           )}
@@ -309,9 +346,26 @@ function Tarjeta({ p, acc }: { p: ProductoEnPantalla; acc: Acciones }) {
               celular se leen como una sola pila, que es de donde venimos. */}
           <div className="mt-3 flex flex-wrap items-center gap-2">
             {/* La etiqueta ES el botón: un `<input type="file">` no se puede
-                disfrazar, así que se esconde y se lo dispara desde acá. */}
+                disfrazar, así que se esconde y se lo dispara desde acá.
+
+                ══════════════════════════════════════════════════════════════
+                ⚠️ SE ESCONDE CON `sr-only`, NUNCA CON `hidden`
+                ══════════════════════════════════════════════════════════════
+
+                `hidden` es `display: none`, y un elemento así **no recibe
+                foco**. Un `<label>` tampoco está en el orden de tabulación. O
+                sea que con `hidden` este botón era INALCANZABLE CON EL TECLADO:
+                quien no usa mouse no podía subir el archivo — el paso
+                obligatorio para poder vender, y el único que no tiene otro
+                camino en el plan Free.
+
+                `sr-only` lo saca de la vista pero lo deja enfocable, así que
+                se llega tabulando y se abre con Enter. Y como el foco queda en
+                el input invisible, el anillo lo dibuja el label con
+                `focus-within`: sin eso se tabula a un botón que no se ve. */}
             <label
-              className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-colors ${
+              aria-busy={subiendoEste}
+              className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-colors focus-within:outline-none focus-within:ring-2 focus-within:ring-orange-500 focus-within:ring-offset-2 panel-oscuro:focus-within:ring-offset-gray-900 ${
                 subiendoEste || ocupado
                   ? "opacity-50 cursor-not-allowed border border-gray-200 panel-oscuro:border-gray-700 text-gray-500"
                   : p.tieneArchivo
@@ -324,7 +378,8 @@ function Tarjeta({ p, acc }: { p: ProductoEnPantalla; acc: Acciones }) {
               <input
                 type="file"
                 accept="application/pdf"
-                className="hidden"
+                /* Ver el porqué largo arriba: `sr-only` y NO `hidden`. */
+                className="sr-only"
                 disabled={subiendoEste || ocupado}
                 onChange={(e) => {
                   const file = e.target.files?.[0];
@@ -357,7 +412,7 @@ function Tarjeta({ p, acc }: { p: ProductoEnPantalla; acc: Acciones }) {
               className={
                 IA_LISTA && acc.tier !== "FREE"
                   ? "inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-orange-200 panel-oscuro:border-orange-500/30 text-xs font-bold text-orange-700 panel-oscuro:text-orange-300 hover:bg-orange-50 panel-oscuro:hover:bg-orange-500/10 transition-colors disabled:opacity-50"
-                  : "inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-dashed border-gray-300 panel-oscuro:border-gray-700 text-xs font-bold text-gray-400 panel-oscuro:text-gray-500 cursor-not-allowed"
+                  : "inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-dashed border-gray-300 panel-oscuro:border-gray-700 text-xs font-bold text-gray-500 panel-oscuro:text-gray-400 cursor-not-allowed"
               }
             >
               <Sparkles className="h-3.5 w-3.5" />
@@ -397,6 +452,12 @@ function Tarjeta({ p, acc }: { p: ProductoEnPantalla; acc: Acciones }) {
               onClick={() => acc.publicar(p, !p.publicado)}
               disabled={ocupado || (!p.publicado && falta !== null)}
               title={!p.publicado && falta ? falta : undefined}
+              /* ⚠️ El `title` NO alcanza: no existe al tocar en un celular y un
+                 lector de pantalla no siempre lo anuncia. Con esto, el motivo
+                 —la misma franja roja de arriba— se lee junto con el nombre del
+                 botón, así que "Publicar, apagado" pasa a ser "Publicar, falta
+                 el archivo". Sin él, el botón está gris y no se sabe por qué. */
+              aria-describedby={!p.publicado && falta ? `falta-${p.id}` : undefined}
               className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 text-xs font-bold text-gray-700 panel-oscuro:text-gray-300 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
               {ocupado ? (
@@ -534,7 +595,7 @@ function Grupo({ padre, rol, acc }: { padre: ProductoEnPantalla; rol: "BONO" | "
       </div>
 
       {items.length === 0 ? (
-        <p className="text-xs text-gray-400 panel-oscuro:text-gray-500">Todavía no cargaste ninguno.</p>
+        <p className="text-xs text-gray-500 panel-oscuro:text-gray-400">Todavía no cargaste ninguno.</p>
       ) : (
         <div className="space-y-3">
           {items.map((h) => (
@@ -986,7 +1047,7 @@ export default function ProductosClient({
                   />
                 ) : (
                   <div className="w-24 h-24 shrink-0 rounded-2xl bg-gray-100 panel-oscuro:bg-gray-800 border border-dashed border-gray-300 panel-oscuro:border-gray-600 flex items-center justify-center">
-                    <ImageIcon className="h-7 w-7 text-gray-400 panel-oscuro:text-gray-500" />
+                    <ImageIcon className="h-7 w-7 text-gray-500 panel-oscuro:text-gray-400" />
                   </div>
                 )}
 
@@ -996,13 +1057,18 @@ export default function ProductosClient({
                     Es la imagen que se ve en tu página de venta. Hasta {MAX_IMAGEN_MB} MB.
                   </p>
                   <div className="mt-2.5 flex flex-wrap items-center gap-2">
-                    <label className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 text-xs font-bold text-gray-700 panel-oscuro:text-gray-300 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800 transition-colors cursor-pointer">
+                    {/* ⚠️ La MISMA regla que el PDF de arriba: `sr-only` y no
+                        `hidden`, o este botón tampoco se alcanza con el teclado.
+                        Éste apareció por la prueba, no mirándolo: son dos
+                        subidas en el mismo archivo y sólo se había arreglado
+                        una. Ver el porqué largo en el label del PDF. */}
+                    <label className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 text-xs font-bold text-gray-700 panel-oscuro:text-gray-300 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800 transition-colors cursor-pointer focus-within:outline-none focus-within:ring-2 focus-within:ring-orange-500 focus-within:ring-offset-2 panel-oscuro:focus-within:ring-offset-gray-900">
                       {subiendo ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ImageIcon className="h-3.5 w-3.5" />}
                       {subiendo ? "Subiendo..." : borrador.imagen ? "Cambiar" : "Subir imagen"}
                       <input
                         type="file"
                         accept="image/*"
-                        className="hidden"
+                        className="sr-only"
                         disabled={subiendo}
                         onChange={(e) => {
                           const f = e.target.files?.[0];
@@ -1048,7 +1114,7 @@ export default function ProductosClient({
                   placeholder="Qué se lleva la persona que lo compra."
                   className="w-full px-4 py-3 rounded-2xl border border-gray-200 panel-oscuro:border-gray-700 text-sm text-gray-900 panel-oscuro:text-gray-100 focus:border-orange-400 focus:ring-2 focus:ring-orange-100 outline-none transition-all resize-y"
                 />
-                <p className="text-xs text-gray-400 panel-oscuro:text-gray-500 mt-1.5">
+                <p className="text-xs text-gray-500 panel-oscuro:text-gray-400 mt-1.5">
                   Se usa en la página de venta. {borrador.description.length.toLocaleString("es-AR")} / {LARGO_DESCRIPCION.toLocaleString("es-AR")}
                 </p>
               </div>
@@ -1073,7 +1139,7 @@ export default function ProductosClient({
                       no significaba nada. */}
                   <div>
                     <label htmlFor="valorBono" className="block text-xs font-semibold text-gray-600 panel-oscuro:text-gray-400 mb-1.5">
-                      Cuánto vale <span className="font-normal text-gray-400 panel-oscuro:text-gray-500">(opcional)</span>
+                      Cuánto vale <span className="font-normal text-gray-500 panel-oscuro:text-gray-400">(opcional)</span>
                     </label>
                     <input
                       id="valorBono"
@@ -1104,7 +1170,7 @@ export default function ProductosClient({
                   </div>
                   <div>
                     <label htmlFor="antes" className="block text-xs font-semibold text-gray-600 panel-oscuro:text-gray-400 mb-1.5">
-                      Precio original <span className="font-normal text-gray-400 panel-oscuro:text-gray-500">(opcional)</span>
+                      Precio original <span className="font-normal text-gray-500 panel-oscuro:text-gray-400">(opcional)</span>
                     </label>
                     <input
                       id="antes"
