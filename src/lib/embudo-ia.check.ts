@@ -21,7 +21,7 @@ import { readFileSync } from "fs";
 import {
   normalizarEmbudo, precioSano, INSTRUCCIONES, ESQUEMA_DEL_EMBUDO,
   LARGO_TITULO_IA, LARGO_BAJADA_IA, PRECIO_MINIMO_IA, PRECIO_MAXIMO_IA,
-  MINIMO_DEL_NICHO, LARGO_DEL_NICHO, LARGO_TITULO_PROPIO,
+  MINIMO_DEL_NICHO, LARGO_DEL_NICHO, LARGO_TITULO_PROPIO, MINIMO_BAJADA_IA,
 } from "./embudo-ia";
 import { LARGO_TITULO, PRECIO_MAXIMO } from "./productos-digitales";
 import {
@@ -545,6 +545,92 @@ async function losTopes() {
   check("TOP-G",
     /sinAbono: estado === "TRIAL" \|\| tier === "FREE"/.test(ruta),
     "Free entra en el global de las cuentas sin abono, no sólo la prueba");
+}
+
+/* ── El prompt no se puede contradecir a sí mismo (08/09/26) ───────────────
+ *
+ * ⚠️ ESTE ES EL ERROR QUE MÁS VECES SE REPITIÓ EN ESTE PROYECTO, y nunca falla
+ * nada: sale una respuesta perfecta que dice otra cosa.
+ *
+ * Las instrucciones decían "Cortito. Nadie lee un párrafo en una tarjeta." para
+ * TODO, y el esquema pedía "dos o tres oraciones" en la bajada. El modelo
+ * obedeció la regla más corta y más memorable: las bajadas salieron con **53 y
+ * 75 caracteres**, la mitad de lo que pone la competencia — y esa bajada es lo
+ * primero que ve alguien que entra, y después es el texto de su página de venta.
+ *
+ * Ya había pasado igual en el recetario: las reglas prohibían las promesas y el
+ * temario pedía "una promesa", así que la tapa salía vacía (REC-O).
+ *
+ * Lo que de verdad cambia la salida es el NÚMERO escrito, no el adjetivo. Por
+ * eso las dos puntas tienen que nombrar el mismo mínimo. */
+{
+  const bajada = (ESQUEMA_DEL_EMBUDO.properties.principal as {
+    properties: { bajada: { description: string } };
+  }).properties.bajada.description;
+
+  check("EMB-BA",
+    bajada.includes(String(MINIMO_BAJADA_IA)) && bajada.includes(String(LARGO_BAJADA_IA)),
+    "el esquema le dice al modelo cuántos caracteres entran en la bajada, no 'dos o tres oraciones'");
+
+  const texto = INSTRUCCIONES;
+  check("EMB-BB",
+    texto.includes(String(MINIMO_BAJADA_IA)),
+    "y las instrucciones nombran el mismo mínimo, así que no pueden pedir cosas distintas");
+
+  /* Y que "cortito" quede atado al TÍTULO. Suelto vuelve a ganarle a la bajada,
+     que es exactamente como empezó esto. */
+  check("EMB-BC",
+    !/^- Cortito\./m.test(texto),
+    "no se le pide 'cortito' a todo: el título va corto y la bajada no");
+}
+
+/* ── Una ficha suelta para un producto que ya existe (08/09/26) ────────────
+ *
+ * ⚠️ EL AGUJERO QUE TAPA: `/ia/embudo` propone los tres y la pantalla los crea
+ * empezando por el principal. En Free el tope de principales es UNO, así que
+ * apenas alguien tiene su producto el botón "Armar con IA" desaparece y el
+ * embudo no se puede correr nunca más. Quien hizo su producto a mano quedaba
+ * sin ninguna forma de pedirle a la IA el bono ni el upsell.
+ *
+ * Visto en la base: una cuenta con el principal creado a las 18:30 y los bonos
+ * cuatro horas después. El upsell no existía **ni borrado**. */
+{
+  const ruta = readFileSync("src/app/api/digitales/ia/ficha/route.ts", "utf8");
+
+  /* ⚠️ EL MÁS IMPORTANTE. Esta ruta LEE el título, la descripción y el precio de
+     un producto y los devuelve escritos en la respuesta. Sin el dueño adentro
+     del `where`, mandando el id de otro se le leen los datos a un producto
+     ajeno — y encima se los contestamos. */
+  check("FIC-A",
+    /store: \{ ownerId: user\.id \}/.test(ruta) && /rolDigital: "PRINCIPAL"/.test(ruta),
+    "la ruta de la ficha pide que el producto sea de esta cuenta, adentro del where");
+
+  /* El cupo se gasta ANTES de llamar al modelo y se devuelve si falla: si se
+     gastara después, ocho pedidos en paralelo pasarían todos el control. */
+  const gasta = ruta.indexOf("consumirDelCupo");
+  const llama = ruta.indexOf("anthropic.messages.create");
+  check("FIC-B",
+    gasta > 0 && llama > gasta && (ruta.match(/devolverAlCupo/g) ?? []).length >= 2,
+    "el cupo se gasta antes de llamar al modelo, y se devuelve en los dos caminos que fallan");
+
+  /* El rol sale de una lista y no de un cast: con uno inventado, el esquema se
+     armaría con la descripción de otra cosa y saldría un bono cobrado. */
+  check("FIC-C",
+    /body\?\.rol === "BONO" \|\| body\?\.rol === "UPSELL"/.test(ruta),
+    "el rol sale de una lista cerrada, nunca de un cast");
+
+  /* Y la pantalla tiene que tener el botón: la ruta sola no la ve nadie. */
+  const grupo = readFileSync("src/app/digitales/productos/ProductosClient.tsx", "utf8");
+  check("FIC-D",
+    /acc\.pedirFicha\(padre, rol\)/.test(grupo) && /FichaIA/.test(grupo),
+    "la pantalla ofrece pedir un bono o un upsell con IA desde su sección");
+
+  /* Y la ventana crea por la ruta de SIEMPRE, que es la que cuenta los topes
+     del plan. Creando desde la suya, una cuenta Free se llenaría de bonos. */
+  const ficha = readFileSync("src/app/digitales/productos/FichaIA.tsx", "utf8");
+  check("FIC-E",
+    /fetch\("\/api\/digitales\/productos"/.test(ficha),
+    "la ventana crea por la ruta de siempre, que es la que tiene los topes del plan");
 }
 
 losTopes().then(() => {

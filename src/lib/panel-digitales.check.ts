@@ -1294,6 +1294,39 @@ chequear("el input de archivo se puede alcanzar con el teclado, y el foco se ve"
 chequear("el motivo por el que no se puede publicar está atado al botón",
   /aria-describedby=\{!p\.publicado && falta \?/.test(pantallaProductos));
 
+/* ── El fondo del sitio no se ve por detrás del panel (08/09/26) ───────────
+ *
+ * El sitio arranca en tema oscuro, así que el `<body>` está pintado de
+ * `#0f172a`. El panel es una caja clara apoyada encima: en cuanto no llega a
+ * cubrir el alto de la ventana, aparece una franja azul oscuro abajo. Visto en
+ * pantalla, no leyendo el código.
+ *
+ * ⚠️ Se cuida que la regla exista Y que esté atada a `data-panel-tema`, que es
+ * el atributo que el panel borra al salir. Con una clase propia, o suelta en el
+ * `body`, se le escaparía al sitio público. */
+{
+  const estilosGlobales = readFileSync("src/app/globals.css", "utf8");
+  chequear("el fondo del body acompaña al panel, y sólo mientras se está adentro",
+    /html\[data-panel-tema="claro"\]\s+body\s*\{[^}]*background/.test(estilosGlobales) &&
+    /html\[data-panel-tema="oscuro"\]\s+body\s*\{[^}]*background/.test(estilosGlobales));
+
+  /* ⚠️ Y el documento no scrollea adentro del panel. El diseño es caja fija con
+     el scroll en el `<main>`; si el `<body>` puede scrollear, el armazón se va
+     para arriba y abajo queda el fondo. La regla tiene que estar atada a
+     `data-panel-tema`: suelta, dejaría el SITIO PÚBLICO sin poder scrollear,
+     que es muchísimo peor que la franja que arregla. */
+  const noScrollea = /html\[data-panel-tema\],\s*html\[data-panel-tema\] body\s*\{[^}]*overflow:\s*hidden/.test(estilosGlobales);
+  chequear("adentro del panel el documento no scrollea, y la regla no se escapa al sitio público",
+    noScrollea && !/^html,\s*body\s*\{[^}]*overflow:\s*hidden/m.test(estilosGlobales));
+
+  /* Y el `<main>` tiene que conservar SU scroll: si se pierde, la regla de
+     arriba deja el panel sin ninguna forma de scrollear y no se ve el contenido
+     de abajo. Las dos mitades van juntas o no van. */
+  const armazon = readFileSync("src/app/digitales/layout.tsx", "utf8");
+  chequear("y el <main> conserva su propio scroll, que es el que reemplaza al del documento",
+    /<main[^>]*overflow-y-auto/.test(armazon));
+}
+
 console.log(fallos === 0
   ? "\nok — el panel de Productos Digitales sigue en pie"
   : `\nFALLA — ${fallos} chequeo(s) del panel de Productos Digitales`);

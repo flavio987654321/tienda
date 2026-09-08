@@ -21,6 +21,7 @@ import type { EstadoDelCupo } from "@/lib/cupo-ia";
 import type { EstadoDelBorrador } from "@/lib/ebook-borrador";
 import { COMO_SE_LLAMA } from "@/lib/ebook-opciones";
 import EmbudoIA from "./EmbudoIA";
+import FichaIA from "./FichaIA";
 import EbookIA from "./EbookIA";
 
 export type ProductoEnPantalla = {
@@ -67,10 +68,50 @@ const ICONO: Record<RolDigital, React.ElementType> = {
  * `gray-500` da 4,83:1. Y en el modo oscuro se invierte a `gray-400`, que sobre
  * el fondo oscuro pasa de 4,0:1 a 7,4:1: el par estaba mal en los dos modos.
  */
+/**
+ * El color de cada rol.
+ *
+ * ══════════════════════════════════════════════════════════════════════════
+ * ⚠️ TIENEN QUE SER TRES COLORES DISTINTOS, NO TRES NARANJAS
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * Eran naranja, ámbar y rosa. Los tres son cálidos y a la distancia de una
+ * pantalla son el mismo color: la única forma de saber si estabas mirando un
+ * bono o un upsell era leer el título de la sección. El color no estaba
+ * haciendo su trabajo, sólo estaba ocupando lugar — y por eso la pantalla se
+ * veía monótona por más que cada bloque tuviera "su" tinte.
+ *
+ * Ahora: **naranja el principal, violeta los bonos, celeste los upsells.**
+ * Tres tonos que se distinguen de un vistazo, y ninguno se pisa con los dos
+ * colores que ya tienen significado fijo en esta pantalla: el verde de
+ * "Publicado" y "GRATIS", y el rojo de lo que falta.
+ *
+ * El naranja se queda en el principal porque es el color de la marca y el
+ * principal es lo que se vende; los otros dos cuelgan de él.
+ *
+ * ⚠️ `texto` lleva su par oscuro. Antes era `text-orange-600` a secas, que
+ * sobre el fondo oscuro del panel queda por debajo del contraste mínimo: el
+ * sello del rol se leía mal justo en el modo donde más se nota.
+ */
 const TINTA: Record<RolDigital, { borde: string; fondo: string; texto: string; suave: string }> = {
-  PRINCIPAL: { borde: "border-orange-200 panel-oscuro:border-orange-500/30", fondo: "bg-orange-100 panel-oscuro:bg-orange-500/15", texto: "text-orange-600", suave: "bg-orange-50 panel-oscuro:bg-orange-500/10" },
-  BONO:      { borde: "border-amber-200 panel-oscuro:border-amber-500/30",  fondo: "bg-amber-100 panel-oscuro:bg-amber-500/15",  texto: "text-amber-600",  suave: "bg-amber-50 panel-oscuro:bg-amber-500/10" },
-  UPSELL:    { borde: "border-rose-200 panel-oscuro:border-rose-500/30",   fondo: "bg-rose-100 panel-oscuro:bg-rose-500/15",   texto: "text-rose-600",   suave: "bg-rose-50/40 panel-oscuro:bg-rose-500/10" },
+  PRINCIPAL: {
+    borde: "border-orange-200 panel-oscuro:border-orange-500/30",
+    fondo: "bg-orange-100 panel-oscuro:bg-orange-500/15",
+    texto: "text-orange-600 panel-oscuro:text-orange-300",
+    suave: "bg-orange-50 panel-oscuro:bg-orange-500/10",
+  },
+  BONO: {
+    borde: "border-violet-200 panel-oscuro:border-violet-500/30",
+    fondo: "bg-violet-100 panel-oscuro:bg-violet-500/15",
+    texto: "text-violet-600 panel-oscuro:text-violet-300",
+    suave: "bg-violet-50 panel-oscuro:bg-violet-500/10",
+  },
+  UPSELL: {
+    borde: "border-sky-200 panel-oscuro:border-sky-500/30",
+    fondo: "bg-sky-100 panel-oscuro:bg-sky-500/15",
+    texto: "text-sky-600 panel-oscuro:text-sky-300",
+    suave: "bg-sky-50 panel-oscuro:bg-sky-500/10",
+  },
 };
 
 type Borrador = {
@@ -141,6 +182,8 @@ type Acciones = {
   borrar: (p: ProductoEnPantalla) => void;
   subirArchivo: (p: ProductoEnPantalla, file: File) => void;
   abrirEbook: (p: ProductoEnPantalla) => void;
+  /** Pedirle a la IA UN bono o UN upsell para un principal que ya existe. */
+  pedirFicha: (padre: ProductoEnPantalla, rol: "BONO" | "UPSELL") => void;
   hijosDe: (padreId: string, rol: RolDigital) => ProductoEnPantalla[];
 };
 
@@ -233,8 +276,15 @@ function Tarjeta({ p, acc }: { p: ProductoEnPantalla; acc: Acciones }) {
             </span>
           </div>
 
+          {/* ⚠️ `max-w-prose`: la descripción NO se estira hasta el borde.
+              Un renglón se lee cómodo hasta unos 75 caracteres; sin tope, a 896
+              px son más de 120 y el ojo se pierde al volver al principio del
+              renglón siguiente. Es lo que hacía que la tarjeta se viera tirada
+              a lo ancho cuando se ensanchó la pantalla. */}
           {p.description && (
-            <p className="text-sm text-gray-500 panel-oscuro:text-gray-400 mt-1 line-clamp-2 break-words">{p.description}</p>
+            <p className="mt-1 max-w-prose text-sm text-gray-500 panel-oscuro:text-gray-400 line-clamp-2 break-words">
+              {p.description}
+            </p>
           )}
 
           <div className="flex items-baseline gap-2 mt-2">
@@ -541,13 +591,26 @@ function Grupo({ padre, rol, acc }: { padre: ProductoEnPantalla; rol: "BONO" | "
   const IconoRol = ICONO[rol];
 
   return (
-    <div className={`rounded-2xl border ${tinta.borde} ${tinta.suave} p-4`}>
-      {/* ⚠️ La cabecera lleva el ÍCONO DEL ROL en un cuadro de su color, igual
-          que la miniatura de las tarjetas de adentro. Antes era un renglón de
-          texto chico, así que la sección y sus tarjetas no se veían como la
-          misma cosa: se leían como dos bloques sueltos que casualmente estaban
-          pegados. El ícono repetido es lo que los ata. */}
-      <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
+    /* ══════════════════════════════════════════════════════════════════════
+       ⚠️ SIN CAJA QUE ENVUELVA. ES LO QUE HACE QUE LOS TAMAÑOS COINCIDAN.
+       ══════════════════════════════════════════════════════════════════════
+
+       Acá había un `<div>` con borde, fondo tintado y `p-4`. Ese `p-4` es
+       justamente el motivo por el que la tarjeta de un bono NUNCA podía medir
+       lo mismo que la del producto: quedaba 32 px más angosta, y eso se ve —
+       dos tarjetas casi iguales pero no iguales se leen como un error.
+
+       Ahora la sección es una BARRA de color y las tarjetas cuelgan abajo, al
+       mismo ancho que la del principal. Lo que las agrupa es el color, no una
+       caja: mismo criterio que usa la competencia, y el que ya funciona con la
+       miniatura y su sello. */
+    <div className="space-y-3">
+      {/* La barra de la sección: ícono del rol en su color, el contador como
+          sello, y el botón de agregar a la derecha. Es el ancla de color que
+          ata la sección con sus tarjetas ahora que no hay caja. */}
+      <div
+        className={`flex flex-wrap items-start justify-between gap-3 rounded-2xl border ${tinta.borde} ${tinta.suave} px-4 py-3`}
+      >
         <div className="flex min-w-0 items-start gap-3">
           <div className={`h-9 w-9 shrink-0 rounded-xl ${tinta.fondo} flex items-center justify-center`}>
             <IconoRol className={`h-4.5 w-4.5 ${tinta.texto}`} />
@@ -584,18 +647,50 @@ function Grupo({ padre, rol, acc }: { padre: ProductoEnPantalla; rol: "BONO" | "
             <ArrowUpRight className="h-3.5 w-3.5" />
           </Link>
         ) : (
-          <button
-            onClick={() => acc.setBorrador(borradorNuevo(rol, padre.id))}
-            className="shrink-0 inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white panel-oscuro:bg-gray-900 border border-gray-200 panel-oscuro:border-gray-700 text-xs font-bold text-gray-700 panel-oscuro:text-gray-300 hover:border-gray-300 panel-oscuro:hover:border-gray-600 transition-colors"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            {rol === "BONO" ? "Agregar bono" : "Agregar upsell"}
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            {/* ⚠️ EL BOTÓN QUE FALTABA.
+                "Armar con IA" arranca creando el principal, y en Free el tope de
+                principales es uno: apenas alguien tiene su producto, ese botón
+                desaparece y **el embudo no se puede correr nunca más**. Quien
+                hizo su producto a mano quedaba sin ninguna forma de pedirle a la
+                IA el bono ni el upsell, para siempre.
+
+                Visto en la base el 08/09/26: una cuenta con el principal creado
+                a las 18:30 y los bonos cuatro horas después. El upsell no
+                existía ni borrado, porque no había manera de pedirlo.
+
+                Va PRIMERO y relleno, y "a mano" al lado: es el camino que
+                resuelve la pantalla en blanco. Mismo criterio que arriba. */}
+            {IA_LISTA && (
+              <button
+                onClick={() => acc.pedirFicha(padre, rol)}
+                className="shrink-0 inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-orange-600 text-white text-xs font-bold hover:bg-orange-500 transition-colors"
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+                Con IA
+              </button>
+            )}
+            <button
+              onClick={() => acc.setBorrador(borradorNuevo(rol, padre.id))}
+              className="shrink-0 inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white panel-oscuro:bg-gray-900 border border-gray-200 panel-oscuro:border-gray-700 text-xs font-bold text-gray-700 panel-oscuro:text-gray-300 hover:border-gray-300 panel-oscuro:hover:border-gray-600 transition-colors"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              A mano
+            </button>
+          </div>
         )}
       </div>
 
       {items.length === 0 ? (
-        <p className="text-xs text-gray-500 panel-oscuro:text-gray-400">Todavía no cargaste ninguno.</p>
+        /* Sin la caja que envolvía, este renglón quedaba solo contra el borde
+           izquierdo de la pantalla. El recuadro punteado le da el mismo tamaño
+           que van a tener las tarjetas cuando existan: se ve el hueco que hay
+           que llenar en vez de una frase suelta. */
+        <div
+          className={`rounded-2xl border-2 border-dashed ${tinta.borde} px-4 py-6 text-center text-xs text-gray-500 panel-oscuro:text-gray-400`}
+        >
+          Todavía no cargaste {rol === "BONO" ? "ningún bono" : "ningún upsell"}.
+        </div>
       ) : (
         <div className="space-y-3">
           {items.map((h) => (
@@ -650,6 +745,8 @@ export default function ProductosClient({
   const [embudoIA, setEmbudoIA] = useState(false);
   /** El producto cuyo ebook se está escribiendo, o `null`. */
   const [ebookDe, setEbookDe] = useState<ProductoEnPantalla | null>(null);
+  /** Para qué principal y de qué tipo se está pidiendo una ficha con IA. */
+  const [fichaIA, setFichaIA] = useState<{ padre: ProductoEnPantalla; rol: "BONO" | "UPSELL" } | null>(null);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState("");
   const [trabajando, setTrabajando] = useState<string | null>(null);
@@ -771,7 +868,9 @@ export default function ProductosClient({
      memorizarlo no ganaría nada —el objeto cambiaría igual en cada dibujo—. */
   const acc: Acciones = {
     tier, cobroConectado, trabajando, subiendoArchivo, setBorrador, publicar, borrar, subirArchivo,
-    abrirEbook: setEbookDe, hijosDe,
+    abrirEbook: setEbookDe,
+    pedirFicha: (padre, rol) => setFichaIA({ padre, rol }),
+    hijosDe,
   };
 
   const topePrincipales = topeDe(tier, "PRINCIPAL");
@@ -899,7 +998,11 @@ export default function ProductosClient({
   }
 
   return (
-    <div className="space-y-5">
+    /* `space-y-8` afuera contra `space-y-3` adentro de cada embudo: eso es lo
+       que separa un producto del que sigue ahora que no hay sangría. Con los
+       cinco de Pro uno abajo del otro, sin esa diferencia se leen como una sola
+       lista larga de tarjetas sueltas. */
+    <div className="space-y-8">
       {/* Cuánto usaste de tu plan. Se dice "páginas de venta" y nunca "tiendas":
           la competencia vende tiendas y nosotros no. */}
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-gray-100 panel-oscuro:border-gray-800 bg-white panel-oscuro:bg-gray-900 px-5 py-4 shadow-sm">
@@ -984,9 +1087,23 @@ export default function ProductosClient({
         </div>
       ) : (
         principales.map((p) => (
+          /* ⚠️ SIN SANGRÍA. Acá había un `sm:pl-8` en los grupos, para mostrar
+             que los bonos y los upsells cuelgan del producto. El costo era que
+             TODO lo de abajo quedaba 32 px más angosto que la tarjeta de
+             arriba: la sangría era el último motivo por el que los tamaños no
+             coincidían, y se ve a simple vista aunque no se sepa por qué.
+
+             Lo que cuelga de qué ya lo dice el color —cada sección con su barra
+             y su tinte— y lo dice mejor, porque también funciona en 360, donde
+             la sangría estaba apagada y no decía nada.
+
+             Y para que dos embudos seguidos no se mezclen, la separación entre
+             productos es más grande que la de adentro: `space-y-10` afuera
+             contra `space-y-3` adentro. El aire agrupa igual que la sangría y
+             no le come ancho a nadie. */
           <div key={p.id} className="space-y-3">
             <Tarjeta p={p} acc={acc} />
-            <div className="pl-0 sm:pl-8 space-y-3">
+            <div className="space-y-3">
               <Grupo padre={p} rol="BONO" acc={acc} />
               <Grupo padre={p} rol="UPSELL" acc={acc} />
             </div>
@@ -998,6 +1115,17 @@ export default function ProductosClient({
           Su propia ventana y no un paso adentro del formulario: la IA devuelve
           TRES fichas y el formulario crea UNA. Ver el comentario adentro. */}
       {embudoIA && <EmbudoIA cupoInicial={cupoIA} onCerrar={() => setEmbudoIA(false)} />}
+
+      {/* Una ficha suelta —un bono o un upsell— para un principal que ya
+          existe. Ver el porqué largo adentro de `FichaIA`. */}
+      {fichaIA && (
+        <FichaIA
+          padre={{ id: fichaIA.padre.id, name: fichaIA.padre.name }}
+          rol={fichaIA.rol}
+          cupoInicial={cupoIA}
+          onCerrar={() => setFichaIA(null)}
+        />
+      )}
 
       {ebookDe && (
         <EbookIA

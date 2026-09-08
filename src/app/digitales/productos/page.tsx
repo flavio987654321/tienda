@@ -140,17 +140,22 @@ export default async function ProductosPage() {
     dominioPropio: f.dominioPropio,
   }));
 
-  /* ⚠️ `max-w-6xl`, el mismo que la home del panel. Estaba en `max-w-3xl`
-     —768 px— así que la pantalla con MÁS contenido de todo el panel era la más
-     angosta, y encima no coincidía con la de al lado: pasar de Inicio a
-     Productos movía la columna entera. A 1920 quedaban 1150 px de blanco a los
-     costados mientras los títulos se cortaban con puntos suspensivos.
+  /* ⚠️ `max-w-4xl` — 896 px — y no más.
+     ══════════════════════════════════════════════════════════════════════════
+     Estaba en 768 y lo llevé a 1152 para "aprovechar la pantalla". Salió peor:
+     una tarjeta de 1150 px de ancho y 180 de alto queda ESTIRADA, con la
+     descripción corriendo de punta a punta en un renglón larguísimo. Ancho no
+     es lo mismo que cómodo — un renglón de texto se lee bien hasta unos 80
+     caracteres, y a 1150 px son 150.
+
+     896 es el punto medio: entra más que en 768, los botones caben en una fila,
+     y nada queda tirado. Probado mirando, que es la única forma.
 
      Y `panel-productos` no es de adorno: es lo que engancha la regla de foco
      visible de `globals.css`, que cubre de una vez los más de diez botones de
      esta pantalla. Ver el comentario largo allá. */
   return (
-    <div className="panel-productos mx-auto w-full max-w-6xl px-4 sm:px-6 py-8">
+    <div className="panel-productos mx-auto w-full max-w-4xl px-4 sm:px-6 py-8">
       <BotonVolver />
 
       <div className="mb-6">

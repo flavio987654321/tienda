@@ -79,6 +79,26 @@ export const LARGO_TITULO_PROPIO = 120;
    largo, se corta acá y no en el CSS. */
 export const LARGO_TITULO_IA = 70;
 export const LARGO_BAJADA_IA = 400;
+/**
+ * Lo mínimo que tiene que medir una bajada para que no parezca un producto flaco.
+ *
+ * ══════════════════════════════════════════════════════════════════════════
+ * ES UNA GUÍA PARA EL MODELO, NO UN RECHAZO
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * Medido el 08/09/26 contra la competencia: sus fichas traen unos 150
+ * caracteres de bajada y las nuestras salieron con **53 y 75** — una sola frase.
+ * Y esa es la primera pantalla que ve alguien que acaba de entrar: si el texto
+ * sale flaco, el producto parece flaco, y encima es el texto que después va a
+ * la página de venta.
+ *
+ * ⚠️ Va en la descripción del esquema —o sea, adentro del prompt— y **no como
+ * un rechazo en `normalizarFicha`**. Rechazar por corto le costaría a la persona
+ * una generación por algo que no hizo mal, y la dejaría sin embudo. La lección
+ * es la de las recetas: lo que cambia la salida es decirle el número, no pedirle
+ * "dos o tres oraciones". Ver `LARGO_PASO` en `ebook-ia`.
+ */
+export const MINIMO_BAJADA_IA = 120;
 
 /* ⚠️ El rango de precios que se acepta, en pesos.
  *
@@ -151,9 +171,19 @@ function ficha(queEs: string, quePrecio: string) {
       },
       bajada: {
         type: "string" as const,
-        description: "Dos o tres oraciones diciendo qué se lleva quien lo compra y para qué le sirve."
-          + " En segunda persona ('vas a', 'tenés'). Sin saltos de línea, sin listas y sin promesas de"
-          + " resultados que no podemos garantizar.",
+        /* ⚠️ EL NÚMERO VA ESCRITO. "Dos o tres oraciones" es elástico: medido el
+           08/09/26, el bono salió con 53 y 75 caracteres —una sola frase— al
+           lado de una competencia que pone 150. Y ese texto es lo que la
+           persona ve al entrar por primera vez: si sale flaco, el producto
+           parece flaco.
+
+           Es la misma lección de las recetas (ver `LARGO_PASO`): lo que de
+           verdad cambia la salida es decirle cuántos caracteres entran, no
+           pedirle "dos o tres oraciones". */
+        description: `Entre ${MINIMO_BAJADA_IA} y ${LARGO_BAJADA_IA} caracteres: dos o tres oraciones`
+          + " diciendo qué se lleva quien lo compra, qué incluye y para qué le sirve. Una sola frase"
+          + " corta NO alcanza. En segunda persona ('vas a', 'tenés'). Sin saltos de línea, sin listas"
+          + " y sin promesas de resultados que no podemos garantizar.",
       },
       precio: { type: "number" as const, description: quePrecio },
     },
@@ -182,7 +212,17 @@ export const INSTRUCCIONES = [
   "Cómo escribir:",
   "- Castellano rioplatense, de vos. Como habla alguien en Buenos Aires, no un manual.",
   "- Concreto. 'Cómo cambiar el aceite sin ir al taller' vale; 'Guía completa de mecánica' no dice nada.",
-  "- Cortito. Nadie lee un párrafo en una tarjeta.",
+  /* ⚠️ ACÁ DECÍA "Cortito. Nadie lee un párrafo en una tarjeta." — a secas, para
+     todo. Y el esquema, dos pantallas más abajo, pedía "dos o tres oraciones"
+     en la bajada. El modelo obedeció la regla más corta y más memorable: las
+     bajadas salieron con 53 y 75 caracteres, la mitad de lo que pone la
+     competencia. Mismo error que el del recetario, donde las reglas prohibían
+     las promesas y el temario pedía una promesa: **el prompt se contradecía y
+     ganó la prohibición.**
+     Ahora se separa qué va corto y qué no, porque no es lo mismo. */
+  `- El TÍTULO va cortito: entra en un renglón y nadie lee un párrafo de título.`,
+  `- La BAJADA no. Son dos o tres oraciones, ${MINIMO_BAJADA_IA} caracteres como mínimo. Es lo que`,
+  "  lee quien está decidiendo si compra, y una sola frase suelta hace parecer flaco al producto.",
   "- Sin lunfardo fuerte, insultos ni 'te la clavan'. Suena cercano en una charla y no en un título:",
   "  esto lo firma con su nombre quien vende, en su propia página.",
   "",
@@ -232,6 +272,88 @@ export function normalizarEmbudo(
   if (propio && propio.length >= 2) principal.titulo = propio;
 
   return { principal, bono, upsell };
+}
+
+/* ── Una sola ficha, para un producto que ya existe ───────────────────────── */
+
+/**
+ * El esquema de pedirle UNA ficha suelta: un bono o un upsell para un principal
+ * que ya está creado.
+ *
+ * ══════════════════════════════════════════════════════════════════════════
+ * POR QUÉ HACE FALTA, Y NO ALCANZABA CON EL EMBUDO ENTERO
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * `crearLosTres` arranca SIEMPRE creando el principal. En Free el tope de
+ * principales es uno, así que apenas alguien crea su producto —con la IA, a
+ * mano, o desde el recibimiento— el botón "Armar con IA" desaparece y **el
+ * embudo no se puede correr nunca más**. Quien hizo su producto a mano quedaba
+ * sin forma de pedirle a la IA el bono ni el upsell, para siempre.
+ *
+ * Encontrado el 08/09/26 mirando la base: una cuenta con el principal creado a
+ * las 18:30 y los bonos cuatro horas después. El upsell no existía ni borrado,
+ * porque nunca hubo manera de pedirlo.
+ *
+ * ⚠️ Devuelve UNA ficha y no un embudo: el principal ya existe y no se toca.
+ * Proponerle otro principal sería ofrecerle reemplazar lo que ya vende.
+ */
+export function esquemaDeUnaFicha(rol: "BONO" | "UPSELL") {
+  return {
+    type: "object" as const,
+    properties: {
+      ficha: rol === "BONO"
+        ? ficha(
+          "Un regalo que va INCLUIDO con el producto principal y lo complementa: una plantilla, una"
+          + " checklist, un recetario. Tiene que ser algo DISTINTO del principal, no un resumen de lo"
+          + " mismo, y distinto de los que ya existen.",
+          "Siempre 0: el bono es gratis.",
+        )
+        : ficha(
+          "Una oferta que se muestra DESPUÉS de pagar el principal, para quien quiere más: algo más"
+          + " profundo, más completo o el paso siguiente. También es un archivo que se descarga, nunca"
+          + " un video ni una clase. Distinto de los que ya existen.",
+          "El precio en pesos argentinos.",
+        ),
+    },
+    required: ["ficha"],
+  } satisfies { type: "object"; properties: Record<string, unknown>; required: string[] };
+}
+
+/**
+ * El pedido: el principal que ya existe, y lo que ya cuelga de él.
+ *
+ * ⚠️ Los que YA EXISTEN van adentro a propósito. Sin esa lista, pedir un
+ * segundo bono devuelve una variante del primero — el modelo no tiene forma de
+ * saber que ya está—, y quien vende termina con dos regalos que son lo mismo.
+ */
+export function pedidoDeUnaFicha(
+  rol: "BONO" | "UPSELL",
+  principal: { titulo: string; bajada: string | null; precio: number },
+  yaExisten: string[],
+): string {
+  return [
+    rol === "BONO"
+      ? "Proponé UN bono de regalo para este producto que ya existe."
+      : "Proponé UN upsell para este producto que ya existe.",
+    "",
+    "El producto principal:",
+    `<titulo>\n${principal.titulo}\n</titulo>`,
+    principal.bajada ? `<descripcion>\n${principal.bajada}\n</descripcion>` : null,
+    `Se vende a $${principal.precio}.`,
+    ...(yaExisten.length > 0 ? [
+      "",
+      rol === "BONO"
+        ? "Ya tiene estos bonos, así que el tuyo tiene que ser algo distinto:"
+        : "Ya tiene estos upsells, así que el tuyo tiene que ser algo distinto:",
+      ...yaExisten.map((t) => `- ${t}`),
+    ] : []),
+  ].filter((l) => l !== null).join("\n");
+}
+
+/** Una ficha suelta, limada. `null` si no quedó nada mostrable. */
+export function normalizarUnaFicha(crudo: unknown, rol: "BONO" | "UPSELL"): FichaDelEmbudo | null {
+  if (typeof crudo !== "object" || crudo === null) return null;
+  return normalizarFicha((crudo as Record<string, unknown>).ficha, rol === "BONO");
 }
 
 function normalizarFicha(crudo: unknown, esBono: boolean): FichaDelEmbudo | null {

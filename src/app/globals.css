@@ -121,6 +121,67 @@ body {
   color: #f1f5f9;
 }
 
+/* ── El fondo del sitio no se puede ver por detrás del panel ─────────────────
+ *
+ * ⚠️ SÍNTOMA: una franja azul oscuro debajo del panel de Productos Digitales.
+ *
+ * El sitio arranca en tema OSCURO por defecto (`next-themes`), así que `<html>`
+ * lleva `.dark` casi siempre y el `<body>` queda pintado de `#0f172a`. El panel
+ * se ve claro nada más porque usa clases de un solo tono — es una caja clara
+ * apoyada sobre un fondo oscuro. En cuanto esa caja no llega a cubrir el alto de
+ * la ventana, aparece el fondo real de atrás.
+ *
+ * El armazón del panel es `h-screen`, así que "debería" cubrir siempre. Pero
+ * depender de que la cuenta del alto dé exacta es frágil: cualquier hermano con
+ * altura en el `<body>` —un widget, un banner, un `<Suspense>` que ocupa— vuelve
+ * a abrir la franja, y el que la vea no va a tener forma de saber de dónde sale.
+ * Se arregla en la raíz del problema: que el fondo de abajo YA SEA el del panel.
+ *
+ * ⚠️ Va con `[data-panel-tema]` y no con una clase nuestra a propósito: ese
+ * atributo lo escribe el panel al entrar y **lo borra al salir**
+ * (`TemaDelPanel.tsx`), así que esta regla no puede escaparse al sitio público
+ * ni quedarse pegada después de cerrar sesión.
+ *
+ * Los dos colores son los mismos que usa el armazón en `digitales/layout.tsx`
+ * (`bg-gray-50` y `bg-gray-950`). Si allá cambian, acá también. */
+html[data-panel-tema="claro"] body {
+  background: #f9fafb;
+}
+
+html[data-panel-tema="oscuro"] body {
+  background: #030712;
+}
+
+/* ── Adentro del panel, el DOCUMENTO no scrollea ─────────────────────────────
+ *
+ * ⚠️ SÍNTOMA: bajás con la rueda y aparece una franja abajo. Arriba de todo no
+ * está; aparece al scrollear. Y se ven DOS barras de scroll pegadas.
+ *
+ * El panel está diseñado como una caja del alto exacto de la ventana con el
+ * scroll adentro: `h-screen` + `overflow-hidden` en el armazón, y el `<main>`
+ * con su propio `overflow-y-auto` (ver `digitales/layout.tsx`). Con ese diseño,
+ * **el documento no tendría que poder scrollear nunca**. Si lo hace, el armazón
+ * —que mide una ventana justa— se va para arriba y abajo queda el fondo.
+ *
+ * Buscamos qué le agregaba alto al `<body>` y no aparece leyendo: el widget de
+ * chat devuelve `null`, el de la PWA es todo `fixed`, y el píxel es un
+ * `<noscript>` que no se dibuja. Puede ser cualquier cosa que se agregue mañana.
+ *
+ * Por eso esto no arregla un culpable: **hace cumplir la regla**. Adentro del
+ * panel, `html` y `body` miden una ventana y no se desbordan. Lo que sobre, se
+ * recorta; el scroll de verdad vive en el `<main>`, que es donde el diseño lo
+ * puso. Así el día que alguien agregue un banner al `<body>` no vuelve a
+ * aparecer la franja: simplemente no hay a dónde scrollear.
+ *
+ * ⚠️ Va con `[data-panel-tema]` —el atributo que el panel pone al entrar y
+ * BORRA al salir— y no en `html` a secas. Suelto, dejaría el sitio público sin
+ * poder scrollear, que es infinitamente peor que una franja. */
+html[data-panel-tema],
+html[data-panel-tema] body {
+  height: 100%;
+  overflow: hidden;
+}
+
 /* Entrada del panel de edición del editor de tiendas. Vive acá y no dentro del
    componente porque lo usan los tres editores (texto, imagen y fondo) y la regla
    tiene que existir aunque el que se abra primero sea cualquiera de ellos.

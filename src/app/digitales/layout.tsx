@@ -157,7 +157,20 @@ export default async function DigitalesLayout({ children }: { children: React.Re
   }
 
   return (
-    <div className="h-screen bg-gray-50 panel-oscuro:bg-gray-950 flex overflow-hidden text-gray-900 panel-oscuro:text-gray-100 transition-colors">
+    /* ⚠️ `shrink-0` NO ES DECORACIÓN.
+       ══════════════════════════════════════════════════════════════════════
+       Este `<div>` es hijo del `<body>`, que es `flex flex-col`. En un flex,
+       un hijo se puede ENCOGER por debajo del alto que pidió: `flex-shrink`
+       vale 1 por defecto. O sea que `h-screen` acá no era una garantía, era
+       una intención — y alcanzaba con que cualquier hermano del `<body>`
+       ocupara algo para que este armazón midiera menos que la ventana.
+
+       Cuando eso pasa se ve una franja abajo: la barra lateral llega hasta el
+       fondo igual —es `fixed` con `h-full`, no la afecta el flex— pero el área
+       de contenido no, y queda un escalón. Visto en pantalla el 08/09/26.
+
+       Con `shrink-0`, `h-screen` pasa a ser lo que dice. */
+    <div className="h-screen shrink-0 bg-gray-50 panel-oscuro:bg-gray-950 flex overflow-hidden text-gray-900 panel-oscuro:text-gray-100 transition-colors">
       {/* Pinta el tema ANTES del primer dibujo. Sin esto, entrar en oscuro es un
           flash blanco de pantalla completa: el HTML llega claro, React hidrata y
           recién ahí se lee la preferencia. Ningún efecto de React puede correr
