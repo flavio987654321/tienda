@@ -1340,6 +1340,36 @@ chequear("el motivo por el que no se puede publicar está atado al botón",
     /overflow:\s*hidden\s*;\s*overflow:\s*clip\s*;/.test(bloqueDelPanel));
 
   /* ══════════════════════════════════════════════════════════════════════════
+     CADA BOTÓN DE "AGREGAR" NOMBRA LO QUE CREA
+     ══════════════════════════════════════════════════════════════════════════
+
+     Los mismos dos botones existen TRES veces en esta pantalla —arriba para el
+     producto, y en el encabezado de bonos y de upsells— y decían lo mismo en los
+     tres lados: "Con IA" y "A mano". Eso dice el MÉTODO y no la cosa: se lee el
+     botón y no se sabe qué va a aparecer.
+
+     Con lector de pantalla era peor: se escuchaba "A mano" tres veces sin forma
+     de saber cuál era cuál, porque el título del grupo que da el contexto está
+     en otro elemento.
+
+     ⚠️ Y el de arriba HACE MÁS DE LO QUE PARECE: no crea un producto, crea los
+     tres —producto, bono y upsell— de una sola vez. Por eso lleva "todo" en el
+     nombre y un renglón que lo dice; sin eso, alguien aprieta esperando una
+     tarjeta y le aparecen tres.
+
+     Se pide la FORMA de cada uno, en positivo. En negativo —"que no diga 'A
+     mano' suelto"— chocaría con este mismo comentario, que las nombra para
+     explicarlas. Tercera vez que pasa en este archivo. */
+  chequear("los botones de los grupos dicen qué crean, no sólo cómo",
+    /\{COPY_ROL\[rol\]\.corto\} con IA/.test(pantallaProductos) &&
+    /\{COPY_ROL\[rol\]\.corto\} a mano/.test(pantallaProductos));
+
+  chequear("y el de arriba avisa que la IA crea los tres de una",
+    /Armar todo con IA/.test(pantallaProductos) &&
+    /Producto nuevo/.test(pantallaProductos) &&
+    /producto, bono y upsell/.test(pantallaProductos));
+
+  /* ══════════════════════════════════════════════════════════════════════════
      ⚠️ TODO `<label>` QUE ENVUELVA UN INPUT `sr-only` VA `relative`.
      ══════════════════════════════════════════════════════════════════════════
 

@@ -695,7 +695,18 @@ function Grupo({ padre, rol, acc }: { padre: ProductoEnPantalla; rol: "BONO" | "
                 className="shrink-0 inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-orange-600 text-white text-xs font-bold hover:bg-orange-500 transition-colors"
               >
                 <Sparkles className="h-3.5 w-3.5" />
-                Con IA
+                {/* ⚠️ EL BOTÓN NOMBRA LO QUE CREA, y no es cosmética.
+                    Estos dos botones existen TRES veces en la pantalla —arriba
+                    para el producto, acá para los bonos, acá abajo para los
+                    upsells— y decían lo mismo en los tres lados: "Con IA" y "A
+                    mano". Eso dice el MÉTODO y no la cosa: se lee el botón y no
+                    se sabe qué va a aparecer.
+
+                    Y con lector de pantalla era peor: se escuchaba "A mano"
+                    tres veces sin ninguna forma de saber cuál era cuál, porque
+                    el título del grupo que da el contexto está en otro
+                    elemento. Nombrar la cosa lo arregla de los dos lados. */}
+                {COPY_ROL[rol].corto} con IA
               </button>
             )}
             <button
@@ -703,7 +714,7 @@ function Grupo({ padre, rol, acc }: { padre: ProductoEnPantalla; rol: "BONO" | "
               className="shrink-0 inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white panel-oscuro:bg-gray-900 border border-gray-200 panel-oscuro:border-gray-700 text-xs font-bold text-gray-700 panel-oscuro:text-gray-300 hover:border-gray-300 panel-oscuro:hover:border-gray-600 transition-colors"
             >
               <Plus className="h-3.5 w-3.5" />
-              A mano
+              {COPY_ROL[rol].corto} a mano
             </button>
           </div>
         )}
@@ -1055,6 +1066,19 @@ export default function ProductosClient({
             {principales.length} de {topePrincipales} página{topePrincipales === 1 ? "" : "s"} de venta
           </p>
           <p className="text-xs text-gray-500 panel-oscuro:text-gray-400 mt-0.5">Tu plan {COPY_DIGITAL[tier].nombre}</p>
+          {/* ⚠️ QUÉ HACE EL BOTÓN DE AL LADO, PORQUE HACE MÁS DE LO QUE PARECE.
+              "Armar todo con IA" no crea un producto: crea LOS TRES —producto,
+              bono y upsell— de una sola vez (ver `EmbudoIA`). Sin este renglón
+              alguien lo aprieta esperando una tarjeta y le aparecen tres, que es
+              una sorpresa aunque sea buena.
+
+              Sólo cuando los botones están: al lado de "Usaste las 5 de tu plan"
+              sería contar algo que en ese momento no se puede hacer. */}
+          {!llegoAlTope && (
+            <p className="text-[11px] text-gray-400 panel-oscuro:text-gray-500 mt-1">
+              Con IA salen los tres de una: producto, bono y upsell.
+            </p>
+          )}
         </div>
 
         {/* ⚠️ EN EL PLAN MÁS ALTO NO SE OFRECE MEJORAR, porque no hay a dónde.
@@ -1084,13 +1108,16 @@ export default function ProductosClient({
               onClick={() => setEmbudoIA(true)}
               className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-orange-600 text-white text-sm font-bold hover:bg-orange-500 transition-colors shadow-lg shadow-orange-200"
             >
-              <Sparkles className="h-4 w-4" /> Armar con IA
+              <Sparkles className="h-4 w-4" /> Armar todo con IA
             </button>
             <button
               onClick={() => setBorrador(borradorNuevo("PRINCIPAL", null))}
               className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 text-sm font-bold text-gray-700 panel-oscuro:text-gray-300 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800 transition-colors"
             >
-              <Plus className="h-4 w-4" /> A mano
+              {/* "Producto nuevo" y no "A mano": el de al lado ya dice "con IA",
+                  así que la diferencia queda dicha sin repetir el método, y este
+                  botón nombra lo que hace en vez de cómo lo hace. */}
+              <Plus className="h-4 w-4" /> Producto nuevo
             </button>
           </div>
         )}
