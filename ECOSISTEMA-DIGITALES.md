@@ -2774,10 +2774,28 @@ sólo se ven en un ebook largo y ninguno lo hubiera encontrado una prueba corta:
      de `COMO_SE_LLAMA`, con el formato que viaja en el estado (PAN-J).
   - Y de paso se sacó *"Vas a poder leerlo y cambiarlo antes de publicar"*, que
     prometía un editor que no existe. Vuelve cuando el editor exista (PAN-E3).
-- 🔲 **Que la escritura no dependa de la pestaña abierta.** Hoy el bucle vive en
-  el navegador: irse lo frena. Está *dicho* y no se pierde nada, pero lo correcto
-  sería que siga del lado del servidor. No es urgente —tarda dos o tres minutos y
-  el aviso ya es honesto— pero es el próximo escalón de esta pantalla.
+- ✅ ~~**Que la escritura no dependa de la pestaña abierta.**~~ **HECHO
+  (08/09/26).** Cada capítulo llama al siguiente del lado del servidor, y el
+  último llama a armar el PDF (`lib/ebook-cadena.ts`). La pantalla pasó a
+  **empujar el primer eslabón y después mirar**: pregunta el estado cada cuatro
+  segundos contra `ia/ebook/estado` —una ruta nueva que sólo lee— para dibujar
+  la barra. Cerrar la ventana ya no frena nada, y el cartel dice eso.
+  - **La cadena reenvía la cookie del pedido**, no un secreto de servidor. Un
+    secreto obligaba a una puerta aparte en la ruta y a dar vuelta el control de
+    dueño —sacarlo de la fila que se va a escribir en vez de meterlo en el
+    `where`—; con la cookie, el eslabón siguiente entra por la misma puerta que
+    el navegador y no hubo que tocar una sola guarda (CAD-A, CAD-B).
+  - **No hacía falta un cron**: en este plan corren una vez por día, así que un
+    ebook habría tardado diez días. Y `after()` solo no alcanza: alarga la
+    función pero no le regala tiempo, sigue atada a los 60 segundos.
+  - ⚠️ **El eslabón del final es el que más caro salía de olvidar.** La pantalla
+    armaba el PDF al salir del bucle; sin encadenar hasta `armar`, la cadena
+    escribiría los diez capítulos con la pestaña cerrada y el archivo no
+    existiría igual — un ebook pago sin nada que entregar (CAD-C).
+  - Y hay red por si un eslabón se muere sin dejar error: a los 90 segundos sin
+    que avance el contador, la pantalla vuelve a mostrar el botón de seguir a
+    mano (PAN-P2). Sin eso, un ebook trabado se vería "escribiéndose" para
+    siempre y sin salida.
 - 🔲 **Formato infografía**: foto a sangre por hoja con el texto encima. Es el
   barato: **usa el texto que ya se genera, tal cual**.
 - 🔲 **Poder leer y corregir EL TEXTO antes de armar el PDF.** El temario ya se

@@ -746,18 +746,45 @@ check("PAN-D",
    los capítulos escritos y el PDF sin armar dejaba la lista entera tildada y
    nada que apretar: el ebook pago quedaba a un paso del final, sin salida. */
 check("PAN-P",
-  /\{!trabajando && \(/.test(ventana) && /Armar el PDF/.test(ventana),
+  /\{!trabajando && !cadenaAndando && \(/.test(ventana) && /Armar el PDF/.test(ventana),
   "al volver a un ebook a medias siempre hay un botón para seguir");
 
-/* ⚠️ LO MÁS IMPORTANTE QUE DICE ESTA PANTALLA, Y TIENE QUE DECIR LAS DOS COSAS.
-   Hasta el 08/09/26 decía sólo la mitad linda —"podés cerrar, cuando vuelvas
-   sigue desde donde iba"— y eso se lee como que sigue SOLO. No sigue: el bucle
-   vive en la pantalla. Alguien se iba a otro panel creyendo que su ebook se
-   estaba escribiendo y volvía media hora después al mismo lugar.
-   Ahora tiene que decir que se frena Y que no se pierde nada. */
+/* ⚠️ Y ESE BOTÓN NO PUEDE ESTAR MIENTRAS LA CADENA ANDA. Desde que la escritura
+   se fue al servidor, `trabajando` sólo es cierto durante el pedido que la
+   arranca: un segundo. Con la condición vieja, "Seguir escribiendo" quedaba a la
+   vista los tres minutos enteros al lado de una barra que avanzaba sola.
+
+   Y la otra mitad: `cadenaAndando` tiene que caerse cuando pasa demasiado sin
+   novedades. Un eslabón que se muere sin dejar error —una función que la
+   plataforma mató— dejaría el ebook "escribiéndose" para siempre y sin botón,
+   que es peor que el problema que se vino a arreglar. */
+check("PAN-P2",
+  /const cadenaAndando =/.test(ventana) &&
+  /ebook\.estado === "ESCRIBIENDO" \|\| ebook\.estado === "COMPLETO"/.test(ventana) &&
+  /!seFreno/.test(ventana) &&
+  /SIN_NOVEDADES_MS/.test(ventana),
+  "el botón se esconde mientras la cadena anda, y vuelve si se frena sin avisar");
+
+/* ⚠️ LO MÁS IMPORTANTE QUE DICE ESTA PANTALLA: LA VERDAD SOBRE IRSE.
+   Este cartel ya dijo las dos cosas contrarias, y las dos veces estuvo bien.
+
+   Decía "cuando vuelvas sigue desde donde iba" y era MENTIRA: el bucle vivía en
+   la pantalla, así que alguien se iba creyendo que su ebook se escribía y volvía
+   media hora después al mismo lugar. Se cambió por "tenés que dejar esta ventana
+   abierta", que fue cierto mientras lo fue.
+
+   Desde el 08/09/26 la escritura la maneja la cadena del servidor, así que
+   vuelve a decir que se puede ir — pero ahora porque es verdad.
+
+   ⚠️ ESTE CHEQUEO ES EL PAR DE LA CADENA. Si algún día `ebook-cadena` se saca y
+   este cartel se queda, la pantalla vuelve a prometer lo que no hace. Por eso
+   pide las dos cosas juntas: el texto acá Y el `seguirLaCadena` allá. */
+const cadena = readFileSync("src/app/api/digitales/ia/ebook/paso/route.ts", "utf8");
 check("PAN-E",
-  /la escritura se frena/.test(ventana) && /No se pierde nada/.test(ventana),
-  "se avisa que irse frena la escritura, y que aun así no se pierde nada");
+  /podés cerrar esto tranquila/.test(ventana) &&
+  /se sigue\s*\n?\s*escribiendo solo/.test(ventana) &&
+  /seguirLaCadena\(/.test(cadena),
+  "se avisa que se puede cerrar, y del otro lado existe la cadena que lo hace cierto");
 
 /* ⚠️ Y la barra cuenta con la palabra del formato. Decía "2 de 4" —secciones—
    a alguien que había elegido 10 recetas: el número que ve tiene que ser el
@@ -778,9 +805,21 @@ check("PAN-E5",
   /useState<number>\(elegidas\.recetas\)/.test(ventana),
   "al rehacer, los botones arrancan en lo que ya había elegido y no en lo de fábrica");
 
+/* Y se dice qué pasa con lo escrito y dónde aparece el archivo. Antes esto
+   pedía "Seguir escribiendo" y "sin gastar otra generación", que era el modo de
+   uso viejo: volver y apretar. Ahora no hay que apretar nada, así que lo que
+   tiene que estar dicho es lo otro — que cada parte se guarda sola y que el PDF
+   va a aparecer colgado del producto. Si no, "podés cerrar" deja a alguien sin
+   saber dónde mirar después. */
 check("PAN-E2",
-  /Seguir escribiendo/.test(ventana) && /sin gastar otra generación/.test(ventana),
-  "y se dice con qué botón se retoma, sin gastar otra generación");
+  /queda guardado apenas/.test(ventana) && /colgado del producto/.test(ventana),
+  "y se dice que cada parte se guarda sola y dónde va a aparecer el PDF");
+
+/* ⚠️ El botón para retomar a mano SIGUE EXISTIENDO, aunque ya no se nombre en
+   el cartel: es lo único que queda cuando la cadena se corta. */
+check("PAN-E2b",
+  /Seguir escribiendo/.test(ventana) && /Seguir desde donde iba/.test(ventana),
+  "y el botón de retomar a mano sigue estando para cuando la cadena se corta");
 
 /* ⚠️ Y NO se promete el editor DEL TEXTO, que todavía no existe.
    Desde el 08/09/26 sí hay editor **del temario** —se puede corregir la lista
@@ -870,6 +909,91 @@ check("PAN-N",
 check("PAN-O",
   /estadoDelCupo\(user\.id, tier, "EBOOK", enPrueba\)/.test(pantalla),
   "la pantalla lee el cupo de ebooks aparte, y con el mismo criterio de prueba que el servidor");
+
+/* ── La cadena: que el ebook se escriba con la pestaña cerrada ──────────────
+   Ver `ebook-cadena`. Lo que se cuida acá es que mover el bucle al servidor no
+   haya aflojado ninguna de las guardas que frenaban al bucle del navegador. */
+
+const eslabon = readFileSync("src/lib/ebook-cadena.ts", "utf8");
+
+/* ⚠️ LA GUARDA MÁS IMPORTANTE DE TODAS, Y ES POR LO QUE NO SE HIZO.
+   El primer diseño era un secreto de servidor y una puerta aparte en la ruta.
+   Eso obliga a dar vuelta el control de dueño: con sesión, el dueño va adentro
+   del `where`; con un secreto, hay que sacarlo de la fila que se va a escribir.
+   Una puerta más, con menos candado, en la ruta que más plata gasta.
+
+   Reenviando la cookie, el eslabón siguiente entra por la MISMA puerta que el
+   navegador. Si algún día aparece acá un secreto, es que se volvió al diseño
+   que se descartó. */
+/* ⚠️ Se busca el USO, no la palabra: `process.env.…SECRET`. El archivo explica
+   en prosa por qué NO se usó un secreto, y buscando la palabra suelta el propio
+   comentario hacía fallar la prueba. Tercera vez que pasa lo mismo en este
+   proyecto — los comentarios largos nombran lo que el chequeo prohíbe. */
+check("CAD-A",
+  /req\.headers\.get\("cookie"\)/.test(eslabon) &&
+  !/process\.env\.\w*SECRET/.test(eslabon),
+  "la cadena reenvía la cookie del pedido y no inventa una puerta con secreto");
+
+/* Y del lado de la ruta no puede haber aparecido ningún camino que saltee la
+   sesión: sigue entrando todo el mundo por `getCurrentUser`, con el dueño
+   adentro del `where`. */
+check("CAD-B",
+  /const user = await getCurrentUser\(\);/.test(cadena) &&
+  /where: \{ id: productoId, deletedAt: null, store: \{ ownerId: user\.id \} \}/.test(cadena) &&
+  !/CRON_SECRET/.test(cadena),
+  "la ruta del capítulo sigue pidiendo sesión y dueño, sin puerta nueva");
+
+/* ⚠️ EL AGUJERO QUE MÁS CARO SALDRÍA: escribir los diez capítulos y no armar el
+   PDF. La pantalla armaba el archivo al salir del bucle; con la pantalla
+   cerrada, sin esto, quedaría un ebook COMPLETO y un producto sin nada que
+   entregar. Escribir todo y no entregar nada es peor que no haber empezado.
+
+   Se pide en los DOS lugares donde la cadena puede llegar con todo escrito: al
+   guardar el último capítulo, y al entrar con el ebook ya completo. */
+check("CAD-C",
+  (cadena.match(/seguirLaCadena\(\s*\n?\s*req,\s*\n?\s*"\/api\/digitales\/ia\/ebook\/armar"/g) ?? []).length >= 1 &&
+  /nuevoEstado === "COMPLETO"\s*\n?\s*\?\s*"\/api\/digitales\/ia\/ebook\/armar"/.test(cadena) &&
+  /if \(ebook\.estado === "COMPLETO"\) \{\s*\n\s*seguirLaCadena\(req, "\/api\/digitales\/ia\/ebook\/armar"/.test(cadena),
+  "la cadena llega hasta el PDF, por los dos caminos que terminan con todo escrito");
+
+/* Y no reintenta sola. Es la misma regla que tenía el bucle del navegador: cada
+   intento cuesta plata aunque falle, y algo que reintenta contra un modelo que
+   está teniendo un mal día gasta diez veces sin que nadie mire. */
+/* Igual que arriba: se busca la FORMA de un reintento —un temporizador, un
+   bucle— y no la palabra, que está en el comentario que explica por qué no hay
+   ninguno. */
+check("CAD-D",
+  !/setTimeout\(|setInterval\(|while \(|for \(/.test(eslabon) &&
+  /console\.error/.test(eslabon),
+  "un eslabón que falla se anota y corta, no reintenta solo");
+
+/* ── El estado: la mitad que la pantalla necesita para mirar ─────────────── */
+const estadoRuta = readFileSync("src/app/api/digitales/ia/ebook/estado/route.ts", "utf8");
+
+check("CAD-E",
+  /where: \{ id: productoId, deletedAt: null, store: \{ ownerId: user\.id \} \}/.test(estadoRuta),
+  "el estado del ebook se lee con el dueño adentro del where");
+
+/* ⚠️ Y por `estadoDelBorrador`, que deja el texto afuera. Acá importa más que en
+   ningún otro lado: esto se pregunta cada cuatro segundos, así que devolver los
+   capítulos serían decenas de miles de caracteres por vuelta del reloj. */
+check("CAD-F",
+  /estadoDelBorrador\(producto\.ebookIA\)/.test(estadoRuta) &&
+  !/capitulos: producto\.ebookIA/.test(estadoRuta),
+  "el estado no manda el texto de los capítulos, que se pide cada pocos segundos");
+
+/* ⚠️ Y NO LLAMA AL MODELO. Es una ruta que se pide en bucle: si algún día
+   alguien le agrega una llamada, un ebook abierto costaría una generación cada
+   cuatro segundos. */
+check("CAD-G",
+  !/anthropic|consumirDelCupo/.test(estadoRuta),
+  "la ruta de estado no llama al modelo ni gasta cupo");
+
+/* Y la pantalla no puede preguntar sin freno: un reloj sin candado junta
+   preguntas contra un servidor lento y quedan cinco en el aire. */
+check("CAD-H",
+  /preguntando\.current/.test(ventana) && /MIRAR_CADA_MS/.test(ventana),
+  "el reloj de la pantalla no solapa preguntas");
 
 /* ── Un bono nace del producto ─────────────────────────────────────────────
    La cáscara del embudo siempre se pidió con el principal a la vista; el

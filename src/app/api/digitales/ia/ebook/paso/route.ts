@@ -13,6 +13,7 @@ import {
   pedidoDelCapitulo,
 } from "@/lib/ebook-ia";
 import { leerOpciones } from "@/lib/ebook-opciones";
+import { seguirLaCadena } from "@/lib/ebook-cadena";
 import { estadoDelBorrador, tomarElCandado, guardarCapitulo, soltarElCandado } from "@/lib/ebook-borrador";
 import { getSubscriptionStatus, getUserSubscription } from "@/lib/subscription";
 import { getArgentinaDayKey } from "@/lib/fechas-comerciales";
@@ -135,6 +136,16 @@ export async function POST(req: NextRequest) {
   /* Ya está completo: se contesta que sí sin llamar al modelo. Que la pantalla
      pida uno de más no puede costar plata. */
   if (!sigue) {
+    /* ⚠️ Pero si el PDF todavía no está, la cadena NO se puede cortar acá.
+       Es el ebook que quedó a un paso del final: están los diez capítulos,
+       falta el archivo. Sin esta línea, un eslabón que llega con todo escrito
+       contesta "listo" y se va, y queda un ebook pago sin nada que entregar.
+
+       Con LISTO no se hace nada: el archivo ya existe y volver a armarlo sería
+       trabajo y storage por gusto. */
+    if (ebook.estado === "COMPLETO") {
+      seguirLaCadena(req, "/api/digitales/ia/ebook/armar", { productoId });
+    }
     return NextResponse.json({ ok: true, listo: true, ebook: estadoDelBorrador(ebook) });
   }
 
@@ -285,6 +296,30 @@ export async function POST(req: NextRequest) {
       ebook: fresco ? estadoDelBorrador(fresco) : estadoDelBorrador(ebook),
     });
   }
+
+  /* ══════════════════════════════════════════════════════════════════════════
+     EL ESLABÓN SIGUIENTE. Acá es donde el ebook deja de depender de la pestaña.
+     ══════════════════════════════════════════════════════════════════════════
+
+     Falta un capítulo → se llama otra vez a esta misma ruta.
+     Están todos      → se llama a `armar`, que es la que hace el PDF y lo
+                        cuelga del producto.
+
+     ⚠️ La segunda mitad no es un detalle. La pantalla armaba el PDF al salir
+     del bucle, así que sin esta línea la cadena escribiría los diez capítulos
+     con la pestaña cerrada y el archivo no existiría igual: quedaría un ebook
+     COMPLETO y un producto sin nada que entregar. Escribir todo y no entregar
+     nada es peor que no haber empezado.
+
+     Va DESPUÉS de contestar (`despues`), así que la persona ve el capítulo
+     dibujarse sin esperar a que arranque el que sigue. Ver `ebook-cadena`. */
+  seguirLaCadena(
+    req,
+    nuevoEstado === "COMPLETO"
+      ? "/api/digitales/ia/ebook/armar"
+      : "/api/digitales/ia/ebook/paso",
+    { productoId },
+  );
 
   return NextResponse.json({
     ok: true,

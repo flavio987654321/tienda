@@ -34,23 +34,31 @@ import { useSalida } from "@/app/digitales/SalidaSinGuardar";
  * ESTA VENTANA MANEJA UN TRABAJO DE VARIOS MINUTOS
  * ══════════════════════════════════════════════════════════════════════════
  *
- * No es un botón que espera una respuesta: es un bucle. Pide el temario, y
- * después pide **un capítulo por vez** —porque una función del servidor tiene 60
- * segundos y se corta— hasta que están todos. Recién ahí arma el PDF.
+ * No es un botón que espera una respuesta: es un trabajo de varias llamadas.
+ * Pide el temario, y después se escribe **un capítulo por vez** —porque una
+ * función del servidor tiene 60 segundos y se corta— hasta que están todos.
+ * Recién ahí se arma el PDF.
  *
- * ── Lo más importante que hace esta pantalla ───────────────────────────────
+ * ══════════════════════════════════════════════════════════════════════════
+ * ⚠️ ESTA PANTALLA YA NO MANEJA ESE TRABAJO: LO MIRA
+ * ══════════════════════════════════════════════════════════════════════════
  *
- * **Decir la verdad sobre qué pasa si se van.** Lo escrito queda guardado en el
- * servidor después de cada parte, así que irse no pierde nada ni cuesta otra
- * generación. Pero **la escritura se frena**: el bucle vive acá, no hay nadie
- * escribiendo del otro lado.
+ * Hasta el 08/09/26 el bucle vivía acá: esta ventana pedía cada capítulo. Lo
+ * escrito quedaba guardado —irse no perdía nada ni costaba otra generación—
+ * pero **la escritura se frenaba**, y el cartel tenía que decirlo.
  *
- * ⚠️ Hasta el 08/09/26 el cartel decía "cuando vuelvas sigue desde donde iba",
- * que se lee como que sigue solo. Alguien se iba a otra pantalla creyendo que su
- * ebook se seguía escribiendo, y volvía media hora después al mismo lugar.
- * Ahora dice las dos cosas: que hay que quedarse, y que si se va no pierde nada.
+ * Ahora cada capítulo llama al siguiente del lado del servidor, y el último
+ * llama a armar el PDF (ver `ebook-cadena`). Esta pantalla hace dos cosas
+ * chicas: **empuja el primer eslabón** y después **pregunta cómo viene** cada
+ * cuatro segundos, para dibujar la barra. Cerrarla no frena nada.
  *
- * ── Por qué el bucle frena solo al primer error ────────────────────────────
+ * ⚠️ El cartel de abajo ya dijo las dos cosas contrarias y las dos veces dijo
+ * la verdad del día: primero "sigue desde donde iba" (mentira, no seguía),
+ * después "tenés que dejar esta ventana abierta" (cierto mientras lo fue), y
+ * hoy otra vez que se puede ir. Si algún día la cadena se saca, el párrafo
+ * vuelve atrás **en el mismo commit**.
+ *
+ * ── Por qué no reintenta solo al primer error ──────────────────────────────
  *
  * Porque cada intento **nos cuesta plata**, aunque falle y aunque a la persona
  * no se le cobre. Un bucle que reintenta solo, contra un modelo que está
@@ -70,6 +78,18 @@ import { useSalida } from "@/app/digitales/SalidaSinGuardar";
  * largo: se armaban diez capítulos sobre un temario que nadie había leído.
  */
 type Paso = "contar" | "revisar" | "escribiendo" | "listo";
+
+/** Cada cuánto se le pregunta al servidor cómo viene. */
+const MIRAR_CADA_MS = 4_000;
+/**
+ * Sin novedades por más de esto, se asume que la cadena se cortó.
+ *
+ * Un capítulo tarda alrededor de medio minuto, así que noventa segundos son tres
+ * capítulos de margen: no se acusa de colgado a un modelo que está teniendo un
+ * día lento. Y cuando se acusa no pasa nada malo —aparece un botón— porque lo
+ * escrito está guardado y seguir cuesta lo mismo que costaba.
+ */
+const SIN_NOVEDADES_MS = 90_000;
 
 /** El temario como lo devuelven las dos rutas que lo entregan. */
 type TemarioEnPantalla = {
@@ -172,7 +192,20 @@ export default function EbookIA({
     return { ok: res.ok, datos: (datos ?? {}) as Record<string, unknown> };
   }, [producto.id]);
 
-  /* ── El bucle: un capítulo por vuelta ─────────────────────────────────── */
+  /* ── Arrancar la cadena ───────────────────────────────────────────────────
+     ══════════════════════════════════════════════════════════════════════════
+     ACÁ HABÍA UN BUCLE, Y ESE BUCLE ERA EL PROBLEMA
+     ══════════════════════════════════════════════════════════════════════════
+
+     Antes esta función pedía un capítulo, esperaba, pedía el que sigue, y así
+     hasta armar el PDF. O sea que quien manejaba la escritura era **esta
+     pestaña**: irse la frenaba, y el cartel de abajo tenía que decirlo porque
+     era la verdad.
+
+     Ahora esto empuja UN eslabón y se corre. Del otro lado, cada capítulo
+     llama al siguiente y el último llama a armar el PDF (ver `ebook-cadena`).
+     La ventana pasa a mirar, no a manejar: el reloj de más abajo pregunta cómo
+     viene, y si la persona cierra todo el ebook se termina igual. */
   const seguir = useCallback(async () => {
     if (enVuelo.current) return;
     enVuelo.current = true;
@@ -180,54 +213,96 @@ export default function EbookIA({
     setError(null);
 
     try {
-      /* Mientras falten capítulos, se pide el que sigue. La condición se lee de
-         lo que contesta el servidor y no de un contador nuestro: el que sabe
-         cuántos hay escritos es el que los guarda. */
-      for (;;) {
-        if (!vivo.current) return;
-
-        const { ok, datos } = await pedir("/api/digitales/ia/ebook/paso", {});
-        if (!vivo.current) return;
-
-        if (!ok) {
-          setError(typeof datos.error === "string" ? datos.error : "No pudimos seguir. Probá de nuevo.");
-          return;
-        }
-
-        const estado = datos.ebook as EstadoDelBorrador | undefined;
-        if (estado) setEbook(estado);
-
-        if (datos.esperando === true) {
-          setError("Se está escribiendo desde otra pestaña. Cerrá esta y seguí en la otra.");
-          return;
-        }
-        if (datos.listo === true) break;
-        if (!estado || estado.escritos >= estado.total) break;
-      }
-
+      /* Con todos los capítulos escritos lo que falta es el PDF, no otro
+         capítulo. Es el caso de quien vuelve a un ebook que quedó a un paso del
+         final: la cadena se le cortó justo ahí, o cerró antes de que armara. */
+      const yaEstaTodo = !!ebook && ebook.total > 0 && ebook.escritos >= ebook.total;
+      const { ok, datos } = await pedir(
+        yaEstaTodo ? "/api/digitales/ia/ebook/armar" : "/api/digitales/ia/ebook/paso",
+        {},
+      );
       if (!vivo.current) return;
 
-      /* Están todos los capítulos: se arma el PDF y se cuelga del producto. */
-      const armado = await pedir("/api/digitales/ia/ebook/armar", {});
-      if (!vivo.current) return;
-
-      if (!armado.ok) {
-        setError(typeof armado.datos.error === "string"
-          ? armado.datos.error
-          : "El texto está listo pero no pudimos armar el PDF. Probá de nuevo.");
+      if (!ok) {
+        setError(typeof datos.error === "string" ? datos.error : "No pudimos seguir. Probá de nuevo.");
         return;
       }
 
-      const estado = armado.datos.ebook as EstadoDelBorrador | undefined;
+      const estado = datos.ebook as EstadoDelBorrador | undefined;
       if (estado) setEbook(estado);
-      setPaso("listo");
+      if (estado?.estado === "LISTO") setPaso("listo");
+
+      /* `esperando` es el candado del servidor: ya hay alguien escribiendo este
+         mismo capítulo. Antes eso era un error que frenaba el bucle; ahora es la
+         respuesta normal si la cadena ya venía andando. No hay nada que avisar:
+         el reloj va a mostrar el avance igual. */
     } catch {
       if (vivo.current) setError("Se cortó la conexión. Lo escrito quedó guardado: probá de nuevo.");
     } finally {
       enVuelo.current = false;
       if (vivo.current) setTrabajando(false);
     }
-  }, [pedir]);
+  }, [pedir, ebook]);
+
+  /* ── El reloj: cómo viene ─────────────────────────────────────────────────
+     Mira, no escribe. Pregunta el estado cada pocos segundos mientras haya algo
+     escribiéndose, y para cuando el ebook está listo o dio error.
+
+     ⚠️ `preguntando` corta el solapamiento. Sin él, un servidor lento junta
+     preguntas: se dispara la siguiente antes de que vuelva la anterior y quedan
+     cinco en el aire pisándose el resultado. */
+  const preguntando = useRef(false);
+  /* Cuándo se vio avanzar por última vez. Si pasa demasiado sin novedades, se
+     asume que la cadena se cortó en silencio y se ofrece el botón. */
+  const ultimoAvance = useRef({ cuando: 0, escritos: -1 });
+  const [seFreno, setSeFreno] = useState(false);
+
+  useEffect(() => {
+    if (paso !== "escribiendo") return;
+
+    /* ⚠️ El reloj se pone en hora ACÁ y no en el `useRef` de arriba. `Date.now()`
+       en el cuerpo del componente es impuro: se ejecuta en cada dibujo aunque
+       sólo sirva el primero, y el linter lo corta. Además así se pone en hora
+       cuando empieza a mirar, que es cuando empieza a contar la paciencia. */
+    ultimoAvance.current = { cuando: Date.now(), escritos: -1 };
+
+    const mirar = async () => {
+      if (preguntando.current || !vivo.current) return;
+      preguntando.current = true;
+      try {
+        const res = await fetch(
+          `/api/digitales/ia/ebook/estado?productoId=${encodeURIComponent(producto.id)}`,
+        );
+        if (!res.ok || !vivo.current) return;
+        const datos = (await res.json()) as { ebook?: EstadoDelBorrador };
+        const fresco = datos.ebook;
+        if (!fresco || !vivo.current) return;
+
+        setEbook(fresco);
+        if (fresco.escritos !== ultimoAvance.current.escritos) {
+          ultimoAvance.current = { cuando: Date.now(), escritos: fresco.escritos };
+          setSeFreno(false);
+        } else if (Date.now() - ultimoAvance.current.cuando > SIN_NOVEDADES_MS) {
+          setSeFreno(true);
+        }
+
+        if (fresco.estado === "LISTO") setPaso("listo");
+        /* El error que guardó el servidor gana sobre el que tenga la pantalla:
+           el que sabe por qué se cortó es el eslabón que se cortó. */
+        if (fresco.error) setError(fresco.error);
+      } catch {
+        /* Una consulta que falla no es noticia: se vuelve a preguntar en cuatro
+           segundos. Poner un cartel acá sería asustar por un hipo de red
+           mientras el ebook se sigue escribiendo perfecto del otro lado. */
+      } finally {
+        preguntando.current = false;
+      }
+    };
+
+    void mirar();
+    const tic = setInterval(() => void mirar(), MIRAR_CADA_MS);
+    return () => clearInterval(tic);
+  }, [paso, producto.id]);
 
   /* ── Empezar (o rehacer) ──────────────────────────────────────────────── */
   const empezar = useCallback(async (rehacer: boolean) => {
@@ -384,6 +459,27 @@ export default function EbookIA({
   const escritos = ebook?.escritos ?? 0;
   const total = ebook?.total ?? 0;
   const porcentaje = total > 0 ? Math.round((escritos / total) * 100) : 0;
+
+  /* ── ¿La cadena está andando del otro lado? ───────────────────────────────
+     No se puede preguntar directo: entre un capítulo y el siguiente hay un
+     hueco de un segundo en el que no hay nadie escribiendo, y `trabajando` del
+     servidor está en falso. Un botón que aparece y desaparece cada treinta
+     segundos es peor que no tenerlo.
+
+     Así que se deduce del estado, que sí es estable: mientras falte algo por
+     hacer y no haya un error, hay un eslabón en camino. Las tres formas de que
+     no lo haya son las tres que se restan.
+
+     `seFreno` es la red: si pasaron noventa segundos sin que avance el contador,
+     algún eslabón se cayó sin dejar error —una función que la plataforma mató,
+     una red que se cortó— y hay que devolverle el botón a la persona. Sin eso,
+     un ebook trabado se vería "escribiéndose" para siempre. */
+  const cadenaAndando =
+    !!ebook
+    && (ebook.estado === "ESCRIBIENDO" || ebook.estado === "COMPLETO")
+    && !ebook.error
+    && !error
+    && !seFreno;
 
   return (
     <div className="fixed inset-0 z-[85] flex items-end sm:items-center justify-center p-0 sm:p-4">
@@ -644,7 +740,7 @@ export default function EbookIA({
                   Así que la frase dice temario, no ebook. */}
               <p className="mt-2 text-center text-[11px] text-gray-400 panel-oscuro:text-gray-500">
                 Primero te muestro el temario para que lo corrijas. Después tarda unos
-                minutos, y hay que quedarse en esta pantalla.
+                minutos y se escribe solo: podés cerrar la ventana.
               </p>
             </>
           )}
@@ -712,7 +808,7 @@ export default function EbookIA({
                     <span className="mt-0.5 shrink-0">
                       {c.listo
                         ? <Check className="h-3.5 w-3.5 text-emerald-500" />
-                        : i === escritos && trabajando
+                        : i === escritos && (trabajando || cadenaAndando)
                           ? <Loader2 className="h-3.5 w-3.5 animate-spin text-orange-500" />
                           : <span className="block h-3.5 w-3.5 rounded-full border border-gray-200 panel-oscuro:border-gray-700" />}
                     </span>
@@ -738,8 +834,17 @@ export default function EbookIA({
                   ebook pago quedaba a un paso del final, sin salida.
 
                   Y el otro: un bucle que reintenta solo contra un modelo que está
-                  fallando gasta diez veces sin que nadie mire. */}
-              {!trabajando && (
+                  fallando gasta diez veces sin que nadie mire.
+
+                  ⚠️ Y AHORA TAMPOCO MIENTRAS LA CADENA ANDA. Desde que la
+                  escritura pasa del lado del servidor, `trabajando` sólo es
+                  cierto durante el pedido que la arranca: un segundo. Con esa
+                  sola condición, el botón "Seguir escribiendo" quedaba a la
+                  vista los tres minutos enteros, al lado de una barra que
+                  avanzaba sola. Quien lo apretara no rompería nada —el candado
+                  lo rebota— pero es un botón que se ofrece a hacer algo que ya
+                  está pasando. Ver `cadenaAndando`. */}
+              {!trabajando && !cadenaAndando && (
                 <button
                   onClick={() => void seguir()}
                   className="mt-3 w-full inline-flex items-center justify-center gap-2 rounded-xl bg-orange-600 px-4 py-3 text-sm font-bold text-white hover:bg-orange-500 transition-colors"
@@ -759,7 +864,7 @@ export default function EbookIA({
                   el botón haría sentir que se está arreglando algo mientras el
                   archivo sale igual. Lo decide `sePuedeEditarElTemario`, la
                   misma función con la que el servidor acepta o rechaza. */}
-              {!trabajando && ebook && sePuedeEditarElTemario(ebook.estado) && (
+              {!trabajando && !cadenaAndando && ebook && sePuedeEditarElTemario(ebook.estado) && (
                 <button
                   onClick={() => void abrirTemario()}
                   className="mt-2 w-full inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 px-4 py-2.5 text-[13px] font-bold text-gray-700 panel-oscuro:text-gray-300 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800 transition-colors"
@@ -769,19 +874,28 @@ export default function EbookIA({
                 </button>
               )}
 
-              {/* ⚠️ ACÁ DECÍA "cuando vuelvas sigue desde donde iba", y eso se
-                  leía como que sigue SOLO. No sigue: el bucle vive en esta
-                  pantalla, así que al irse la escritura se frena y al volver
-                  hay que apretar el botón. Está hecho a propósito —cada vuelta
-                  cuesta plata— pero prometer lo contrario deja a alguien
-                  esperando en otra pestaña un trabajo que no está pasando. */}
+              {/* ⚠️ ESTE CARTEL YA DIJO LAS DOS COSAS CONTRARIAS, Y LAS DOS
+                  VECES DIJO LA VERDAD DEL DÍA.
+
+                  Primero decía "cuando vuelvas sigue desde donde iba", que se
+                  leía como que seguía solo — y no seguía: el bucle vivía en esta
+                  pantalla. Se cambió por "tenés que dejar esta ventana abierta",
+                  que era honesto mientras fue cierto.
+
+                  Hoy la escritura la maneja el servidor (ver `ebook-cadena`), y
+                  la ventana sólo mira. Así que vuelve a decir que se puede ir,
+                  pero ahora porque es verdad.
+
+                  La regla es la misma de siempre: acá se dice lo que el código
+                  hace, no lo que quedaría lindo. Si alguna vez la cadena se
+                  saca, este párrafo vuelve atrás en el mismo commit. */}
               <p className="mt-4 rounded-xl bg-gray-50 panel-oscuro:bg-gray-800/60 px-3.5 py-2.5 text-[12px] leading-relaxed text-gray-600 panel-oscuro:text-gray-300">
-                Tarda unos minutos y <strong>tenés que dejar esta ventana abierta</strong>: si
-                la cerrás o te vas a otra pantalla, la escritura se frena.
+                Tarda unos minutos y <strong>podés cerrar esto tranquila</strong>: se sigue
+                escribiendo solo, aunque apagues la computadora.
                 <br />
-                No se pierde nada — cada {COMO_SE_LLAMA[ebook?.opciones.formato ?? formato].parte} queda
-                guardado apenas se escribe. Cuando vuelvas, abrís este producto y apretás
-                <strong> Seguir escribiendo</strong>, sin gastar otra generación.
+                Cada {COMO_SE_LLAMA[ebook?.opciones.formato ?? formato].parte} queda guardado apenas
+                se escribe. Cuando el PDF esté armado lo vas a ver colgado del producto, sin
+                tener que apretar nada.
               </p>
             </>
           )}
