@@ -331,9 +331,18 @@ export const TRANSFERENCIA_DIGITAL = {
  *      cosechando ebooks para vender afuera, que es el motivo por el que Free
  *      quedó en 0.
  *
- * Con esto, un Pro llena **cuatro productos completos el primer mes** (12 + 6 =
- * 18 generaciones, y un producto lleno son 6 archivos) y el quinto al mes
- * siguiente. Igual de rápido que con 12 mensuales, sin dejar el grifo abierto.
+ * ⚠️ ACÁ DECÍA "cuatro productos completos el primer mes (un producto lleno son
+ * 6 archivos)". **Son 9** —el principal, 5 bonos y 3 upsells— así que con 12 + 6
+ * = 18 llena DOS, no cuatro. El error se encontró el 08/09/26 contando de verdad
+ * lo que hace falta para llenar cada plan, y no es inofensivo: sobre ese 6 se
+ * había concluido que el mensual alcanzaba, y el mensual de Pro no alcanzaba ni
+ * para terminar un producto por mes. Por eso `TOPES_DIGITALES.PRO.ebooksIA` pasó
+ * de 6 a 9 el mismo día.
+ *
+ * Con los números corregidos: un Pro llena **dos productos completos el primer
+ * mes** (18 ebooks ÷ 9 archivos) y **uno por mes** después. Cinco productos en
+ * cinco meses, que para un catálogo que se arma una vez y después se vende es el
+ * ritmo real — nadie carga cinco embudos el mismo día.
  */
 export const EBOOKS_IA_ARRANQUE = {
   FREE: 0,
@@ -361,11 +370,39 @@ export const TOPES_DIGITALES = {
 
      Free sigue teniendo la IA: le arma la página y las fichas —la cáscara, que
      es lo que impresiona al entrar— y el contenido del ebook lo trae la persona. */
-  /* ⚠️ `ebooksIA` subió el 08/09/26: Starter 2 → 4, Pro 5 → 6. Son **los mismos
-     números que da la competencia** en los planes equivalentes (4 en su Starter,
-     6 en su Pro), y el costo real de esa subida es de centavos: dos ebooks más
-     por mes son US$0,88. Lo que de verdad se agrandó es el regalo de bienvenida
-     —ver `EBOOKS_IA_ARRANQUE`—, que es cuando hace falta.
+  /* ══════════════════════════════════════════════════════════════════════════
+     ⚠️ `ebooksIA` ES "UN PRODUCTO COMPLETO POR MES": 1 + bonos + upsells.
+     ══════════════════════════════════════════════════════════════════════════
+
+     Starter 4 → 5 · Pro 6 → 9, el 08/09/26. Y el número dejó de ser una
+     opinión: **cada archivo que se entrega necesita su ebook.** Un producto
+     completo de Pro son el principal, sus 5 bonos y sus 3 upsells: NUEVE
+     archivos. Con 6 por mes no se podía terminar ni un producto por mes en el
+     plan más caro. Starter estaba a uno de distancia: 5 archivos, 4 ebooks.
+
+     Se encontró contando de verdad lo que hace falta para llenar cada plan
+     (08/09/26), y de paso salió que el comentario de `EBOOKS_IA_ARRANQUE`
+     decía **"un producto lleno son 6 archivos"** y son 9. Sobre ese 6 se había
+     concluido que Pro llenaba cuatro productos el primer mes; llena dos.
+
+     ⚠️ Antes acá decía "son los mismos números que da la competencia (4 en su
+     Starter, 6 en su Pro)". Copiar el número del vecino **sin mirar cuántos
+     archivos tiene nuestro plan** es lo que dejó a Pro sin poder completar lo
+     que le vendimos: nuestro Pro lleva 5 bonos y 3 upsells, y si el suyo lleva
+     menos, el mismo número de ebooks no significa lo mismo.
+
+     El costo de la corrección: tres ebooks más por mes en Pro son **US$1,32**,
+     sobre un abono de US$58. Uno más en Starter son US$0,44 sobre US$19,7.
+
+     Free se queda en 0 por el motivo de siempre, que no es la plata: un ebook
+     escrito con IA sirve fuera de la plataforma y Free no pide tarjeta.
+
+     ⚠️ Hay un chequeo que exige esta cuenta en los planes pagos. Si algún día se
+     tocan `bonos` o `upsells`, falla y obliga a decidir en vez de dejar el
+     número viejo callado, que es exactamente lo que pasó acá.
+
+     Lo que de verdad se agrandó el 08/09/26 es el regalo de bienvenida —ver
+     `EBOOKS_IA_ARRANQUE`—, que es cuando hace falta.
 
      Los `bonos` de Pro se quedan en 5, y eso también se revisó el 08/09/26: se
      había propuesto bajarlos a 3 comparando contra el plan *Pro* de la
@@ -378,8 +415,8 @@ export const TOPES_DIGITALES = {
      que es donde ya sabemos que aprieta. Si algún día hay que recortar algo de
      Pro, es acá y no en los ebooks. */
   FREE:    { paginas: 1, bonos: 1, upsells: 1, ebooksIA: 0 },
-  STARTER: { paginas: 2, bonos: 2, upsells: 2, ebooksIA: 4 },
-  PRO:     { paginas: 5, bonos: 5, upsells: 3, ebooksIA: 6 },
+  STARTER: { paginas: 2, bonos: 2, upsells: 2, ebooksIA: 5 },
+  PRO:     { paginas: 5, bonos: 5, upsells: 3, ebooksIA: 9 },
 } as const;
 
 /* ══════════════════════════════════════════════════════════════════════════

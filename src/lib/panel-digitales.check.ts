@@ -177,6 +177,29 @@ chequear("los tres tiers tienen topes, comisión y funciones",
     COMISION_DIGITAL[t] !== undefined &&
     featuresDigital(t).length > 0));
 
+/* ══════════════════════════════════════════════════════════════════════════
+   EL CUPO MENSUAL DE EBOOKS ES "UN PRODUCTO COMPLETO POR MES"
+   ══════════════════════════════════════════════════════════════════════════
+
+   Cada archivo que se entrega necesita su ebook, y un producto completo son el
+   principal más sus bonos y sus upsells. En Pro son NUEVE.
+
+   Este chequeo existe porque el número se quedó viejo en silencio: estaba en 6
+   —copiado del plan equivalente de la competencia, sin mirar cuántos archivos
+   tiene el nuestro— y con eso el plan más caro no podía terminar ni un producto
+   por mes. Y el comentario que justificaba la decisión decía "un producto lleno
+   son 6 archivos", cuando son 9.
+
+   Atado así, el día que alguien toque `bonos` o `upsells` esto falla y obliga a
+   decidir, en vez de dejar el número viejo callado. Que es exactamente lo que
+   había pasado.
+
+   ⚠️ Free queda afuera a propósito: es 0, y no por plata. Un ebook escrito con
+   IA sirve fuera de la plataforma y Free no pide tarjeta. */
+chequear("el cupo mensual de ebooks alcanza para un producto completo por mes",
+  (["STARTER", "PRO"] as const).every((t) =>
+    TOPES_DIGITALES[t].ebooksIA === 1 + TOPES_DIGITALES[t].bonos + TOPES_DIGITALES[t].upsells));
+
 // La comisión tiene que bajar a medida que se paga más: es el argumento de venta
 // de la pantalla ("con Starter baja a 6%"). Si alguna vez subiera, ese texto
 // pasaría a mentir sin que nada avise.

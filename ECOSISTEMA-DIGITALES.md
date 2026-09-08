@@ -614,6 +614,30 @@ tampoco estaba contado—. Con el número de verdad, al dólar de $1.520 (08/09/
 | **Starter** ($30.000, 4 ebooks) | US$19,7 | **US$1,76** | ~$170.000 |
 | **Pro** ($89.000, 6 ebooks) | US$58,6 | **US$2,64** | ~$337.000 |
 
+> ⚠️ **ESA TABLA ESTABA INCOMPLETA, Y LA CORRECCIÓN ES DEL DÍA SIGUIENTE.**
+>
+> Contaba **sólo la bolsa mensual**. Al día siguiente —08/09/26, nosotros— se
+> duplicó la **bolsa de bienvenida** (Starter 3→6, Pro 6→12) y nadie volvió acá.
+> La bienvenida es más grande que el mensual, así que el primer mes es el que
+> manda y era el que faltaba.
+>
+> Y el 08/09/26 se corrigió además el mensual, contando de verdad cuántos
+> archivos tiene un producto completo (ver más abajo). Los números de hoy:
+>
+> | | Abono | **1er mes** (todo gastado) | **En régimen** | % del abono |
+> |---|---|---|---|---|
+> | **Free** | $0 | US$0,09 | — | — |
+> | **Starter** (6+5 ebooks) | US$19,7 | **US$4,84** | US$2,35 | 25% → **12%** |
+> | **Pro** (12+9 ebooks) | US$58,6 | **US$9,90** | US$4,26 | 17% → **7%** |
+>
+> **La conclusión de fondo se sostiene**: el primer mes es un pico por diseño
+> —para eso existe la bolsa de bienvenida— y en régimen los dos planes están
+> holgados. Lo que no se sostenía era el número: era **tres veces más chico** que
+> el real, y sobre él se dijo "el riesgo no existe".
+>
+> La lección no es el número, es el hábito: **este recuadro no se actualizó solo
+> cuando se tocaron los cupos.** Si se vuelven a tocar, se vuelve acá.
+
 O sea que **el riesgo que este recuadro describía no existe**: haría falta un
 dólar de seis cifras para dar vuelta un plan. Lo que sí queda es lo otro:
 
@@ -626,6 +650,69 @@ dólar de seis cifras para dar vuelta un plan. Lo que sí queda es lo otro:
   dólares y medio. Si algún día hay que recortar Pro, el costo que de verdad
   escala es el **tráfico de los bonos** —cada venta se lleva el principal más
   todos sus bonos, 6 archivos en Pro— y eso pega en el egress de Supabase.
+
+### ✅ Cuántas generaciones da cada plan, y si alcanzan — MEDIDO EL 08/09/26
+
+Contado de verdad, en vez de estimado. **Son dos bolsas separadas**: gastar una
+no toca la otra. Las generaciones pagan el embudo, un bono o upsell suelto, y la
+página de venta; los ebooks pagan el PDF entero (los capítulos no cobran aparte).
+
+| | Free | Starter | Pro |
+|---|---|---|---|
+| Abono | $0 | $30.000 | $89.000 |
+| Productos | 1 | 2 | 5 |
+| Bonos · upsells *por producto* | 1 · 1 | 2 · 2 | 5 · 3 |
+| **Archivos a entregar** | **3** | **10** | **45** |
+| Generaciones: bienvenida + mes | 3 + 0 | 6 + 5 | 12 + 10 |
+| Ebooks: bienvenida + mes | 0 + 0 | 6 + **5** | 12 + **9** |
+
+**¿Alcanza para llenar el plan?** Una generación de embudo da producto + 1 bono
++ 1 upsell + la página; cada bono o upsell extra es otra.
+
+| | Generaciones que necesita | Tiene el 1er mes | |
+|---|---|---|---|
+| Free | 1 | 3 | ✅ sobran 2 |
+| Starter | 6 | 11 | ✅ sobran 5 |
+| Pro | **35** | 22 | ⚠️ tres meses |
+
+⚠️ **Y ACÁ ESTABA EL ERROR QUE ESTE CONTEO ENCONTRÓ.** El mensual de ebooks era
+4 en Starter y 6 en Pro, copiados del plan equivalente de la competencia **sin
+mirar cuántos archivos tiene el nuestro**. Un producto completo de Pro son
+**nueve** archivos: con 6 por mes, el plan más caro no podía terminar ni un
+producto por mes. Starter estaba a uno de distancia.
+
+Corregido el 08/09/26: **el mensual es `1 + bonos + upsells`** —Starter 5, Pro
+9— y hay un chequeo que lo exige, así que tocar `bonos` obliga a decidir en vez
+de dejar el número viejo callado.
+
+Cuesta US$1,32 más por mes en Pro y US$0,44 en Starter. El comentario de
+`EBOOKS_IA_ARRANQUE` decía además *"un producto lleno son 6 archivos"* y sobre
+ese 6 se concluyó que Pro llenaba cuatro productos el primer mes: **llena dos.**
+
+**Cómo queda cada plan, en una línea:**
+
+- **Free** — sobrado y sin ebooks a propósito (un ebook con IA sirve fuera de la
+  plataforma y Free no pide tarjeta). Su único problema es el 🔲 de abajo.
+- **Starter** — calibrado casi exacto: llena su plan completo el primer mes.
+- **Pro** — dos productos completos el primer mes y uno por mes después. Cinco
+  productos en cinco meses, que es el ritmo real de un catálogo que se arma una
+  vez y después se vende.
+
+- 🔲 **La página gratis no tiene techo, y es el único agujero de los cinco
+  caminos de IA.** `ia/pagina` la regala cuando `paginaVenta` está en null, o
+  sea **por producto**; y crear un producto a mano no gasta generaciones. El
+  bucle es: crear a mano → página gratis → borrar → repetir, sin fin. Lo único
+  que lo frena hoy son los topes de ráfaga (8 cada 10 minutos por cuenta, 150
+  por día para todo Free junto), así que la plata está acotada —unos US$6 el
+  peor día— pero **una sola cuenta puede comerse el presupuesto diario de Free y
+  dejar sin IA a las demás**. Ese es el daño, no el costo.
+  - El comentario de la ruta dice que no se puede abusar *"porque borrar uno
+    para recrearlo cuesta una generación en el embudo"*. Es cierto **sólo si se
+    recrea con el embudo**; a mano no cuesta nada.
+  - ⚠️ Y esa gratis **ya no tiene motivo**: existía porque el embudo NO escribía
+    la página, así que tener todo costaba dos generaciones. Desde el 08/09/26 el
+    embudo escribe la página en el mismo paso. El parche sobrevivió al problema
+    que parchaba.
 
 ### Qué queda de la etapa "en dólares"
 
