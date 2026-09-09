@@ -3,7 +3,8 @@
 import { coloresDelEbook, type ColoresDeTapa, type ModoDelEbook } from "@/lib/ebook-colores";
 import type { Receta } from "@/lib/ebook-ia";
 import type { FotoDelCapitulo, Seleccion } from "@/lib/ebook-texto";
-import { MarcoDeLaHoja, Tocable, HuecoDeFoto, em, MARGEN } from "./previaPiezas";
+import { MarcoDeLaHoja, Tocable, HuecoDeFoto, em, anchoEnLaHoja } from "./previaPiezas";
+import type { Molde } from "@/lib/ebook-estilos";
 
 /**
  * Cómo va a quedar el recetario, al lado de lo que se está corrigiendo.
@@ -39,6 +40,7 @@ export default function VistaPreviaRecetario({
   tapa,
   paleta,
   modo,
+  molde,
   seleccion = null,
   onTocar,
 }: {
@@ -52,6 +54,8 @@ export default function VistaPreviaRecetario({
   tapa: FotoDelCapitulo;
   paleta: ColoresDeTapa;
   modo: ModoDelEbook;
+  /** El molde del estilo elegido: la hoja, el margen y la tapa salen de él. */
+  molde: Molde;
   seleccion?: Seleccion | null;
   onTocar?: (s: Seleccion) => void;
 }) {
@@ -59,6 +63,7 @@ export default function VistaPreviaRecetario({
 
   return (
     <MarcoDeLaHoja
+      molde={molde}
       t={t}
       titulo={titulo}
       promesa={promesa}
@@ -80,7 +85,7 @@ export default function VistaPreviaRecetario({
             <HuecoDeFoto foto={fotos[i]} respaldo={r.titulo} t={t} proporcion="595.28 / 168" />
           </Tocable>
 
-          <div style={{ paddingLeft: MARGEN, paddingRight: MARGEN, paddingTop: em(18), paddingBottom: em(30) }}>
+          <div style={{ paddingLeft: anchoEnLaHoja(molde.margen), paddingRight: anchoEnLaHoja(molde.margen), paddingTop: em(18), paddingBottom: em(30) }}>
             {/* El número de receta, en versalita arriba del título: es lo que
                 el archivo pone en el encabezado de la hoja. */}
             <p style={{ fontSize: em(8.5), letterSpacing: "0.1em", fontWeight: 700, color: t.acento }}>

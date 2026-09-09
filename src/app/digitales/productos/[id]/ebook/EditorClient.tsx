@@ -11,6 +11,7 @@ import VistaPreviaRecetario from "../../VistaPreviaRecetario";
 import type { ColoresDeTapa, ModoDelEbook } from "@/lib/ebook-colores";
 import type { FotoDelCapitulo, Seleccion } from "@/lib/ebook-texto";
 import ElegirFoto from "../../ElegirFoto";
+import { moldeDe } from "@/lib/ebook-estilos";
 import { useSalida } from "@/app/digitales/SalidaSinGuardar";
 
 /**
@@ -60,6 +61,7 @@ export default function EditorDeEbook({
   tapa: tapaInicial,
   total,
   paleta,
+  estilo,
   modo,
   deMentira = false,
 }: {
@@ -83,6 +85,14 @@ export default function EditorDeEbook({
   tapa: FotoDelCapitulo;
   total: number;
   paleta: ColoresDeTapa;
+  /**
+   * Cómo está armada la hoja, para que la previa dibuje ESE molde.
+   *
+   * Viaja como clave y no como molde ya resuelto para que la pantalla no tenga
+   * que importar la tabla entera sólo para pasarla de largo. `moldeDe` nunca
+   * falla: un estilo desconocido cae en el de siempre.
+   */
+  estilo: string;
   modo: ModoDelEbook;
   /**
    * El ejemplo de desarrollo: guarda de mentira.
@@ -116,6 +126,9 @@ export default function EditorDeEbook({
      cada receta vive ADENTRO de la receta, así que al guardar hay que volver a
      pegarla. Ver `guardar`. */
   const esRecetario = !!recetasIniciales;
+
+  /* El molde del estilo elegido, para las dos previas. Ver `ebook-estilos`. */
+  const molde = moldeDe(estilo);
   const [recetasGuardadas, setRecetasGuardadas] = useState<Receta[][]>(recetasIniciales ?? []);
   const [recetas, setRecetas] = useState<Receta[][]>(recetasIniciales ?? []);
 
@@ -551,6 +564,7 @@ export default function EditorDeEbook({
                   fotos={fotos}
                   tapa={tapa}
                   paleta={paleta}
+                  molde={molde}
                   modo={modo}
                   seleccion={seleccion}
                   onTocar={tocar}
@@ -564,6 +578,7 @@ export default function EditorDeEbook({
                   fotos={fotos}
                   tapa={tapa}
                   paleta={paleta}
+                  molde={molde}
                   modo={modo}
                   seleccion={seleccion}
                   onTocar={tocar}

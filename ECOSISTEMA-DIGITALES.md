@@ -2895,6 +2895,8 @@ sólo se ven en un ebook largo y ninguno lo hubiera encontrado una prueba corta:
     siempre y sin salida.
 - 🔲 **Formato infografía**: foto a sangre por hoja con el texto encima. Es el
   barato: **usa el texto que ya se genera, tal cual**.
+- ✅ ~~**Más de un diseño de hoja.**~~ HECHO el 09/09/26. Ver *Los cuatro moldes*
+  más abajo.
 - ✅ ~~**Poder leer y corregir EL TEXTO.**~~ HECHO el 09/09/26, para el ebook de
   texto. Ver *El editor del texto* más abajo.
   - 🔲 **Falta el del recetario.** Una receta no son párrafos: son campos, y los
@@ -4530,3 +4532,84 @@ No es una lista de cortesía: son los lugares donde un error se cobra caro.
   botón y el campo tiene que seguir siendo enfocable. Ninguno está roto.
 - 🔲 **La etiqueta "Muy pronto" de los formatos es código inalcanzable**: los dos
   formatos que existen están listos. Se deja como guarda para el tercero.
+
+## Los cuatro moldes de la hoja — 09/09/26
+
+**Lo que faltaba era un eje, no unos dibujos.** Había dos elecciones —el
+*formato* (de qué se trata: texto o recetario) y el *tema* con la *paleta* (de
+qué color sale)— y ninguna decía **cómo está armada la hoja**. Eso era uno solo
+y no se elegía. Ahora son cuatro, en `ebook-estilos`:
+
+| | Qué hace con la hoja | Qué le cuesta |
+|---|---|---|
+| **Libro** | Una columna, con aire; cada capítulo abre con su foto y su número | Es el más largo en hojas |
+| **Compacto** | Dos columnas de verdad, el título sobre la foto, entrada en bastardilla | En el celular se lee peor |
+| **Manual** | Columna angosta y una franja al costado con los subtítulos, afuera del texto | El renglón es corto: se estira |
+| **Cartel** | Títulos enormes, foto a toda la hoja, subtítulos resaltados en color | Gasta mucha tinta impreso |
+
+**Nuestros nombres y nuestra selección.** Está decidido más arriba y se sostuvo:
+los cuatro de la competencia por separado son genéricos, pero los cuatro juntos
+son su curaduría. Estos cuatro se llaman por lo que le hacen a la hoja.
+
+### ⚠️ Es GRATIS cambiarlo, y eso es la mitad de la función
+
+El estilo **no toca una sola palabra del texto**. Así que cambiarlo es volver a
+armar el PDF con lo que ya está pago — el mismo camino que cambiar el color — y
+no una generación nueva. Por eso el selector está **dos veces**:
+
+- en el modal, antes de generar, donde todavía no hay texto que mirar;
+- y **en la tarjeta, con el ebook ya escrito**, que es donde de verdad se puede
+  juzgar. Ahí van las cuatro miniaturas, se aprieta una y el archivo se rehace.
+
+El renglón que dice *"Es gratis"* no es un adorno: sin él nadie prueba, por
+miedo a que se le vaya un ebook del cupo.
+
+### Una tabla, un dibujante
+
+Cuatro moldes podían salir como cuatro funciones que dibujan la hoja entera, o
+como **una que lee números de una tabla**. Va la segunda: `ebook-pdf` tiene
+adentro seis arreglos que costaron ebooks rotos —la hoja en blanco de la viñeta,
+el párrafo que salía con la letra del pie, el número perdido sobre una foto
+clara—. Con cuatro copias, esos arreglos viven en una sola y los otros tres
+estilos vuelven a tener los bugs de julio.
+
+Lo que sí es código nuevo son las dos columnas: **pdfkit no sabe cortar un
+párrafo entre columnas** —para él la hoja es una caja— así que `escribirParrafo`
+mide y parte a mano. Los otros tres moldes **no pasan por ahí**: con una sola
+columna cae en el mismo `doc.text` de siempre, para no poner el camino nuevo
+abajo del estilo que ya usa todo el mundo.
+
+### Lo que se cuidó
+
+- **`libro` es el molde de antes, número por número.** Comparado contra la
+  versión anterior de `ebook-pdf`, sale con el texto en las mismas coordenadas,
+  las mismas letras y los mismos colores. Lo único que cambió son las curvas de
+  una esquina: el recuadro de aviso se dibujaba con radio 9 y la caja de la
+  portadilla con 10, siendo la misma caja; ahora las dos leen el molde. Quien
+  vendió un ebook en agosto y hoy rehace el PDF recibe el mismo archivo.
+- **Las tres puntas dibujan el mismo molde**: el PDF, la vista previa del editor
+  y **la imagen de portada** que se cuelga del producto. Esa imagen es lo que se
+  ve en la página de venta y en el enlace que se manda por WhatsApp: si el
+  archivo abriera a sangre y la portada mostrara el corte al 52 %, la foto del
+  producto sería de un ebook que no existe.
+- **Un problema que sólo se vio mirando**: con `cartel` la tapa a sangre sale
+  también en tema **claro**, y ahí el acento de la paleta —medido contra papel—
+  cae sobre un velo casi negro y desaparece. Se corrige con `acentoSobreLaFoto`.
+  En el código no se veía; en la hoja, enseguida.
+- **90 chequeos** (`ebook-estilos.check.ts` son 40 nuevos). Dos de ellos abren
+  el PDF armado y miran **dónde arranca cada renglón**: que `compacto` use las
+  dos columnas y que en `manual` los subtítulos caigan en la franja. Que
+  `columnas: 2` esté en la tabla no quiere decir que el archivo las use.
+
+### Lo que falta
+
+- 🔲 **Mirarlo en los tres anchos.** El selector del modal, las miniaturas de la
+  tarjeta y la previa a dos columnas no se vieron en 360 / 768 / 1280.
+- 🔲 **La previa no corta las hojas**, y con `compacto` tampoco reparte las dos
+  columnas como el archivo: las balancea el navegador sobre el capítulo entero.
+  Lo que sí muestra —y es lo que se necesita para elegir— es el ancho del
+  renglón. Fingir el corte sería peor: alguien acomodaría su texto para una
+  hoja que después no es.
+- 🔲 **El recetario sólo cambia la tapa y los márgenes.** Adentro, una receta
+  tiene su propio molde con tres densidades; meterle columnas o franja es otro
+  trabajo.

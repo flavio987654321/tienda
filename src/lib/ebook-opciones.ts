@@ -1,16 +1,23 @@
 import { PALETAS } from "@/lib/pagina-venta";
+import {
+  ESTILOS_LISTOS, ESTILO_DE_FABRICA, type EstiloDeEbook,
+} from "@/lib/ebook-estilos";
 
 /**
- * Cómo quiere que salga su ebook: formato, tema y color.
+ * Cómo quiere que salga su ebook: formato, estilo, tema y color.
  *
  * ══════════════════════════════════════════════════════════════════════════
- * TRES ELECCIONES QUE SE HACEN UNA VEZ Y NO SE PUEDEN DESHACER SOLAS
+ * CUATRO ELECCIONES, Y SÓLO UNA NO SE PUEDE DESHACER
  * ══════════════════════════════════════════════════════════════════════════
  *
  * Se eligen ANTES de generar, porque el formato cambia lo que se le pide al
- * modelo: un recetario no son párrafos, son campos (ver `Receta`). El tema y el
- * color no cambian el texto, así que esos sí se pueden cambiar después y volver
- * a armar el PDF sin pagar otra generación.
+ * modelo: un recetario no son párrafos, son campos (ver `Receta`). El tema, el
+ * color y el estilo no cambian el texto, así que esos sí se pueden cambiar
+ * después y volver a armar el PDF sin pagar otra generación.
+ *
+ * El **estilo** —cómo está armada la hoja: una columna o dos, dónde caen los
+ * subtítulos, cómo abre cada capítulo; ver `ebook-estilos`— entró el 09/09/26
+ * y es de los que se cambian después: no toca una sola palabra del texto.
  *
  * ── ⚠️ Dónde se guardan, y por qué ahí ─────────────────────────────────────
  *
@@ -123,6 +130,16 @@ export const QUE_ES_CADA_TEMA: Record<TemaDeEbook, { nombre: string; explica: st
 
 export type OpcionesDelEbook = {
   formato: FormatoDeEbook;
+  /**
+   * Cómo está armada la hoja. Una de `ESTILOS`.
+   *
+   * ⚠️ NO es una preferencia de gusto suelta: cambia el ancho del renglón, si
+   * hay una columna o dos y qué tan grande abre un capítulo. Un ebook armado
+   * con un estilo y rearmado con otro sale con **otra cantidad de hojas** —lo
+   * mismo escrito, en dos columnas, entra en casi la mitad—. Por eso se guarda
+   * con el ebook y no se recalcula: rearmar tiene que devolver lo mismo.
+   */
+  estilo: EstiloDeEbook;
   tema: TemaDeEbook;
   /**
    * La clave de una de `PALETAS`, o `""` para usar la de su página de venta.
@@ -144,6 +161,10 @@ export type OpcionesDelEbook = {
 
 export const OPCIONES_DE_FABRICA: OpcionesDelEbook = {
   formato: "texto",
+  /* ⚠️ `libro` es el molde con los números que `ebook-pdf` tenía escritos
+     adentro antes de que existiera este eje. Por eso un ebook viejo, que no
+     guardó estilo, sale EXACTAMENTE igual que antes al rearmarlo. */
+  estilo: ESTILO_DE_FABRICA,
   tema: "claro",
   paleta: "",
   recetas: RECETAS_DE_FABRICA,
@@ -167,6 +188,13 @@ export function normalizarOpciones(crudo: unknown): OpcionesDelEbook {
     ? (c.formato as FormatoDeEbook)
     : OPCIONES_DE_FABRICA.formato;
 
+  /* ⚠️ Contra `ESTILOS_LISTOS`, por el mismo motivo que el formato: un molde a
+     medias entregaría una hoja que no es la que se eligió. Y cae a `libro`, que
+     es el de siempre, no al primero de la lista. */
+  const estilo = ESTILOS_LISTOS.includes(c.estilo as EstiloDeEbook)
+    ? (c.estilo as EstiloDeEbook)
+    : ESTILO_DE_FABRICA;
+
   const tema = TEMAS.includes(c.tema as TemaDeEbook)
     ? (c.tema as TemaDeEbook)
     : OPCIONES_DE_FABRICA.tema;
@@ -187,7 +215,7 @@ export function normalizarOpciones(crudo: unknown): OpcionesDelEbook {
     ? cuantas
     : RECETAS_DE_FABRICA;
 
-  return { formato, tema, paleta, recetas };
+  return { formato, estilo, tema, paleta, recetas };
 }
 
 /**
@@ -195,6 +223,8 @@ export function normalizarOpciones(crudo: unknown): OpcionesDelEbook {
  *
  * Un ebook de antes del 07/09/26 no las tiene: sale la de fábrica, que es
  * exactamente lo que ese ebook era —texto, claro, con la paleta de su página—.
+ * Y uno de antes del 09/09/26 no tiene estilo: sale `libro`, que también es
+ * exactamente el molde con el que se armó.
  */
 export function leerOpciones(guardado: string | null | undefined): OpcionesDelEbook {
   if (typeof guardado !== "string") return { ...OPCIONES_DE_FABRICA };
@@ -204,4 +234,38 @@ export function leerOpciones(guardado: string | null | undefined): OpcionesDelEb
     return { ...OPCIONES_DE_FABRICA };
   }
   return normalizarOpciones((crudo as { opciones?: unknown }).opciones);
+}
+
+/**
+ * Lo guardado, con OTRO estilo adentro.
+ *
+ * ══════════════════════════════════════════════════════════════════════════
+ * ⚠️ ES EL ÚNICO CAMPO DE LAS OPCIONES QUE SE PUEDE CAMBIAR DESPUÉS
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * Y por eso esta función existe en vez de un `update` con las opciones enteras.
+ * Cambiar el formato de un ebook ya escrito sería marcar como recetario algo
+ * que se escribió como párrafos —el archivo saldría vacío—; cambiar la cantidad
+ * de recetas diría en la tapa un número que adentro no está. El estilo no toca
+ * ni una palabra: dibuja lo mismo de otra manera.
+ *
+ * Devuelve el texto tal cual si no se puede leer, por el mismo motivo que
+ * `conAvisoDeFotos`: preferir el estilo viejo antes que borrar el índice de un
+ * ebook ya pagado.
+ */
+export function conEstilo(guardado: string | null | undefined, estilo: string): string {
+  const tal = typeof guardado === "string" ? guardado : "";
+  let crudo: unknown;
+  try { crudo = JSON.parse(tal); } catch { return tal; }
+  if (!crudo || typeof crudo !== "object" || Array.isArray(crudo)) return tal;
+
+  const raiz = { ...(crudo as Record<string, unknown>) };
+  /* Se normaliza TODO y no sólo el estilo: así lo que queda guardado es una
+     opción válida entera, y un `indice` viejo sin `opciones` sale con las de
+     fábrica en vez de con un objeto que tiene un solo campo. */
+  raiz.opciones = normalizarOpciones({
+    ...normalizarOpciones(raiz.opciones),
+    estilo,
+  });
+  return JSON.stringify(raiz);
 }

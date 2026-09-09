@@ -1,7 +1,8 @@
 "use client";
 
-import type { coloresDelEbook } from "@/lib/ebook-colores";
+import { SOBRE_LA_FOTO, acentoSobreLaFoto, type coloresDelEbook } from "@/lib/ebook-colores";
 import { mismoPedazo, type FotoDelCapitulo, type Seleccion } from "@/lib/ebook-texto";
+import type { Molde } from "@/lib/ebook-estilos";
 
 /**
  * Las piezas que comparten las dos vistas previas.
@@ -30,8 +31,24 @@ export const MARGEN_PT = 56;
 /** De puntos del PDF a `em` de acá. */
 export const em = (pt: number) => `${(pt / CUERPO_PT).toFixed(3)}em`;
 
-/** El margen de la hoja, en porcentaje de su ancho. */
+/**
+ * El margen de la hoja, en porcentaje de su ancho.
+ *
+ * ⚠️ Quedó para el recetario, que dibuja con el margen de siempre. El ebook de
+ * texto ya no lo usa: su margen sale del molde, que puede ser 46 o 50. Ver
+ * `anchoEnLaHoja`.
+ */
 export const MARGEN = `${((MARGEN_PT / HOJA_PT) * 100).toFixed(2)}%`;
+
+/**
+ * Una medida en puntos del PDF, dicha en porcentaje del ancho de la hoja.
+ *
+ * ⚠️ Se mide contra el ANCHO incluso para las alturas de la tapa, porque la
+ * hoja de la previa tiene la proporción exacta de una A4: un porcentaje del
+ * ancho y uno del alto no son lo mismo, así que las alturas usan `altoEnLaHoja`.
+ */
+export const anchoEnLaHoja = (pt: number) => `${((pt / HOJA_PT) * 100).toFixed(3)}%`;
+export const altoEnLaHoja = (pt: number) => `${((pt / ALTO_HOJA_PT) * 100).toFixed(3)}%`;
 /**
  * La hoja: el marco, sus estilos y la tapa. Adentro va lo que cambia.
  *
@@ -40,9 +57,18 @@ export const MARGEN = `${((MARGEN_PT / HOJA_PT) * 100).toFixed(2)}%`;
  * rompió una vez y no se puede volver a romper en dos lugares distintos.
  */
 export function MarcoDeLaHoja({
-  t, titulo, promesa, autor, tapa, seleccion = null, onTocar, children,
+  t, molde, titulo, promesa, autor, tapa, seleccion = null, onTocar, children,
 }: {
   t: ReturnType<typeof coloresDelEbook>;
+  /**
+   * El molde del estilo elegido. Ver `ebook-estilos`.
+   *
+   * ⚠️ Sin esto la previa dibujaba **siempre la hoja de `libro`**: alguien
+   * elegía `cartel`, veía una tapa clásica al lado de su texto y recibía otro
+   * archivo. Una previa que muestra un estilo que no es, es peor que no tener
+   * previa — el punto de esta columna es no tener que armar el PDF para saber.
+   */
+  molde: Molde;
   titulo: string;
   promesa: string;
   autor: string;
@@ -51,8 +77,6 @@ export function MarcoDeLaHoja({
   onTocar?: (s: Seleccion) => void;
   children: React.ReactNode;
 }) {
-  const margen = MARGEN;
-
   return (
     /* ⚠️ DOS CAJAS, Y NO ES DECORACIÓN: la de afuera declara el contenedor y la
        de adentro es la que mide contra él. Estaban en una sola y la previa salía
@@ -104,62 +128,201 @@ export function MarcoDeLaHoja({
             Una hoja entera, con la proporción de una A4: es lo primero que ve
             quien compra, así que es lo primero que tiene que poder mirar quien
             vende. */}
-        <div
-          className="flex flex-col"
-          style={{ aspectRatio: "595.28 / 841.89", background: t.fondo }}
-        >
-          {/* La foto se lleva el 52 % de arriba, igual que en el archivo: ver
-              `tapa` en `ebook-pdf`. Con el tema oscuro va a sangre, tapando la
-              hoja entera; acá se dibuja el corte del tema claro, que es el que
-              usa casi todo el mundo. */}
-          {/* La foto de la tapa se toca para cambiarla. El texto de al lado no:
-              el título y la promesa no se editan en esta pantalla —salen del
-              temario— así que un recuadro ahí prometería algo que no pasa. */}
-          <Tocable
-            que={{ que: "tapa" }}
-            seleccion={seleccion}
-            onTocar={onTocar}
-            nombre="Cambiar la foto de la tapa"
-          >
-            <HuecoDeFoto foto={tapa} respaldo={titulo} t={t} alto="52%" />
-          </Tocable>
-
-          <div
-            className="flex flex-1 flex-col justify-between"
-            style={{ padding: margen }}
-          >
-            <div>
-              <div style={{ width: em(48), height: em(3.5), background: t.acento }} />
-              <p
-                style={{
-                  marginTop: em(18), fontSize: em(34), lineHeight: 1.12,
-                  fontWeight: 700, color: t.tinta,
-                }}
-              >
-                {titulo || "Sin título"}
-              </p>
-              {promesa && (
-                <p
-                  style={{
-                    marginTop: em(14), fontSize: em(12.5), lineHeight: 1.45, color: t.suave,
-                  }}
-                >
-                  {promesa}
-                </p>
-              )}
-            </div>
-
-            <p style={{ fontSize: em(10), letterSpacing: "0.08em", color: t.suave }}>
-              {autor ? autor.toUpperCase() : ""}
-            </p>
-          </div>
-        </div>
+        <TapaDeLaPrevia
+          t={t} molde={molde} titulo={titulo} promesa={promesa} autor={autor}
+          tapa={tapa} seleccion={seleccion} onTocar={onTocar}
+        />
 
         {children}
       </div>
     </div>
   );
 }
+/**
+ * La tapa, de las cuatro maneras que hay.
+ *
+ * ══════════════════════════════════════════════════════════════════════════
+ * ⚠️ ESTO TIENE QUE SEGUIR A `tapa` EN `ebook-pdf`, SIEMPRE
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * Es lo único que se ve antes de comprar, y es lo que la persona va a mostrar
+ * en Instagram. Si el PDF dibuja la foto a sangre y acá se ve el corte al 52 %,
+ * la elección se hace mirando algo que no existe.
+ *
+ * Los cortes —52 %, 44 %, 46 % de ancho, la franja de 96 puntos— son los mismos
+ * números que están allá. Cuando allá cambien, acá también.
+ *
+ * ── Y la foto se toca en todas ────────────────────────────────────────────
+ *
+ * El título y la promesa no: no se editan en esta pantalla —salen del temario—
+ * así que un recuadro ahí prometería algo que no pasa.
+ */
+function TapaDeLaPrevia({
+  t, molde, titulo, promesa, autor, tapa, seleccion, onTocar,
+}: {
+  t: ReturnType<typeof coloresDelEbook>;
+  molde: Molde;
+  titulo: string;
+  promesa: string;
+  autor: string;
+  tapa: FotoDelCapitulo;
+  seleccion: Seleccion | null;
+  onTocar?: (s: Seleccion) => void;
+}) {
+  const margen = anchoEnLaHoja(molde.margen);
+  const hoja = { aspectRatio: "595.28 / 841.89", background: t.fondo } as const;
+
+  const laFoto = (alto: string) => (
+    <Tocable
+      que={{ que: "tapa" }}
+      seleccion={seleccion}
+      onTocar={onTocar}
+      nombre="Cambiar la foto de la tapa"
+    >
+      <HuecoDeFoto foto={tapa} respaldo={titulo} t={t} alto={alto} />
+    </Tocable>
+  );
+
+  const elAutor = (color: string) => (
+    <p style={{ fontSize: em(10), letterSpacing: "0.08em", color }}>
+      {autor ? autor.toUpperCase() : ""}
+    </p>
+  );
+
+  /* ── A sangre ─────────────────────────────────────────────────────────────
+     La foto tapa la hoja y el texto va encima del velo. Es la de `cartel`
+     siempre, y la de cualquier molde en tema oscuro. */
+  if (molde.tapa === "sangre" || t.modo === "oscuro") {
+    return (
+      <div className="relative" style={hoja}>
+        <div className="absolute inset-0">{laFoto("100%")}</div>
+        {/* El velo, con las mismas paradas que el PDF: si el texto blanco cae
+            sobre una foto clara sin esto, la tapa se pierde. */}
+        <div
+          className="pointer-events-none absolute inset-x-0 bottom-0"
+          style={{
+            height: "74%",
+            background: "linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.66) 40%, rgba(0,0,0,0.97) 100%)",
+          }}
+        />
+        <div
+          className="pointer-events-none absolute inset-x-0 flex flex-col justify-end"
+          style={{ bottom: 0, top: "30%", padding: margen }}
+        >
+          <p style={{ fontSize: em(molde.tituloTapa + 6), lineHeight: 1.1, fontWeight: 700, color: SOBRE_LA_FOTO.titulo }}>
+            {titulo || "Sin título"}
+          </p>
+          <div style={{ width: em(62), height: em(4), background: acentoSobreLaFoto(t), marginTop: em(14) }} />
+          {promesa && (
+            <p style={{ marginTop: em(16), fontSize: em(13), lineHeight: 1.45, color: SOBRE_LA_FOTO.promesa }}>
+              {promesa}
+            </p>
+          )}
+          <div style={{ marginTop: em(20) }}>{elAutor(SOBRE_LA_FOTO.autor)}</div>
+        </div>
+      </div>
+    );
+  }
+
+  /* ── De titular ───────────────────────────────────────────────────────────
+     La foto arriba y el título adentro de una franja de acento. El texto va con
+     `sobreAcento`, que es el color que la paleta trae verificado contra él. */
+  if (molde.tapa === "titular") {
+    return (
+      <div className="flex flex-col" style={hoja}>
+        {laFoto("44%")}
+        <div style={{ background: t.acento, padding: `${em(28)} ${margen}` }}>
+          <p style={{ fontSize: em(9), letterSpacing: "0.24em", fontWeight: 700, color: t.sobreAcento }}>
+            GUÍA COMPLETA
+          </p>
+          <p
+            style={{
+              marginTop: em(14), fontSize: em(molde.tituloTapa), lineHeight: 1.12,
+              fontWeight: 700, color: t.sobreAcento,
+            }}
+          >
+            {titulo || "Sin título"}
+          </p>
+        </div>
+        <div className="flex flex-1 flex-col justify-between" style={{ padding: margen }}>
+          {promesa
+            ? <p style={{ fontSize: em(13), lineHeight: 1.45, color: t.tinta }}>{promesa}</p>
+            : <span />}
+          {elAutor(t.suave)}
+        </div>
+      </div>
+    );
+  }
+
+  /* ── De ficha ─────────────────────────────────────────────────────────────
+     El texto a la izquierda y la foto en una columna alta a la derecha. Repite
+     en la tapa lo que el molde `manual` hace adentro. */
+  if (molde.tapa === "ficha") {
+    return (
+      <div className="relative" style={hoja}>
+        <div className="absolute inset-y-0 right-0" style={{ width: "46%", bottom: altoEnLaHoja(96) }}>
+          {laFoto("100%")}
+        </div>
+        <div
+          className="absolute left-0 top-0 flex flex-col"
+          style={{ width: "54%", bottom: altoEnLaHoja(96), padding: margen }}
+        >
+          <p style={{ fontSize: em(8.5), letterSpacing: "0.22em", fontWeight: 700, color: t.acento }}>
+            GUÍA COMPLETA
+          </p>
+          <div style={{ width: em(44), height: em(4), background: t.acento, marginTop: em(12) }} />
+          <p
+            style={{
+              marginTop: em(20), fontSize: em(molde.tituloTapa), lineHeight: 1.12,
+              fontWeight: 700, color: t.tinta,
+            }}
+          >
+            {titulo || "Sin título"}
+          </p>
+          {promesa && (
+            <p style={{ marginTop: em(16), fontSize: em(12), lineHeight: 1.45, color: t.suave }}>
+              {promesa}
+            </p>
+          )}
+        </div>
+        <div
+          className="absolute inset-x-0 bottom-0 flex items-center"
+          style={{ height: altoEnLaHoja(96), background: t.acento, paddingLeft: margen, paddingRight: margen }}
+        >
+          {elAutor(t.sobreAcento)}
+        </div>
+      </div>
+    );
+  }
+
+  /* ── La clásica ───────────────────────────────────────────────────────────
+     La foto se lleva el 52 % de arriba y el texto baja al papel. */
+  return (
+    <div className="flex flex-col" style={hoja}>
+      {laFoto("52%")}
+      <div className="flex flex-1 flex-col justify-between" style={{ padding: margen }}>
+        <div>
+          <div style={{ width: em(48), height: em(3.5), background: t.acento }} />
+          <p
+            style={{
+              marginTop: em(18), fontSize: em(molde.tituloTapa + 4), lineHeight: 1.12,
+              fontWeight: 700, color: t.tinta,
+            }}
+          >
+            {titulo || "Sin título"}
+          </p>
+          {promesa && (
+            <p style={{ marginTop: em(14), fontSize: em(12.5), lineHeight: 1.45, color: t.suave }}>
+              {promesa}
+            </p>
+          )}
+        </div>
+        {elAutor(t.suave)}
+      </div>
+    </div>
+  );
+}
+
 /**
  * Un pedazo de la hoja que se puede tocar para ir a corregirlo.
  *

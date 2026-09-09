@@ -23,6 +23,7 @@
 import { readFileSync } from "fs";
 import sharp from "sharp";
 import { dibujarLaTapa, MEDIDAS_DE_LA_TAPA } from "./tapa-imagen";
+import { ESTILOS } from "./ebook-estilos";
 
 let fallos = 0;
 const check = (id: string, ok: boolean, desc: string) => {
@@ -244,6 +245,51 @@ async function laTapa() {
   check("TAP-S",
     /guardarImagen\(bytes, \{/.test(subida) && /from "@\/lib\/deposito-imagenes"/.test(armar),
     "la portada y la subida del navegador guardan por la misma puerta");
+
+  /* ══════════════════════════════════════════════════════════════════════════
+     ⚠️ ESTA IMAGEN ES LA TAPA DEL ARCHIVO, NO UNA ILUSTRACIÓN PARECIDA
+     ══════════════════════════════════════════════════════════════════════════
+
+     Se cuelga del producto cuando no hay foto, así que es lo que ve quien podría
+     comprar. Con cuatro moldes, el riesgo nuevo es que el PDF salga con la foto
+     a toda la hoja y la portada muestre el corte al 52 %: el mismo bug que ya
+     tuvo la vista previa con los colores, pero en la imagen que se comparte.
+
+     Se dibujan los cuatro de verdad y se comparan los bytes: si dos moldes con
+     tapa distinta dieran la misma imagen, es que el estilo no llegó. */
+  {
+    const conEstilo = async (estilo: string) => dibujarLaTapa({
+      titulo: "Vende tu conocimiento sin volverte loco",
+      promesa: "Un metodo corto para poner precio y cobrar.",
+      autor: "Taller de Flavio",
+      foto,
+      cantidad: 8, palabra: ["CAPITULO", "CAPITULOS"],
+      paleta: datos.paleta, modo: "claro", estilo,
+    });
+
+    const salidas = new Map<string, Buffer | null>();
+    for (const estilo of ESTILOS) salidas.set(estilo, await conEstilo(estilo));
+
+    check("TAP-T",
+      [...salidas.values()].every((b) => !!b && b.length > 5_000),
+      "los cuatro estilos dibujan su tapa");
+
+    /* Los cuatro moldes tienen cuatro tapas distintas —`clasica`, `titular`,
+       `ficha` y `sangre`— así que las cuatro imágenes tienen que diferir. */
+    const distintas = new Set([...salidas.values()].map((b) => b?.length ?? 0));
+    check("TAP-U", distintas.size === ESTILOS.length,
+      "y las cuatro salen distintas: el estilo llega hasta la imagen");
+
+    /* ⚠️ Y que el rótulo de arriba se vea. Con `cartel` esta tapa sale también
+       en tema CLARO, y ahí el acento de la paleta —medido contra papel— cae
+       encima de un velo casi negro y desaparece. Se encontró mirando la portada
+       generada; en el código no se ve. Ver `acentoSobreLaFoto`. */
+    const fuente = readFileSync("src/lib/tapa-imagen.ts", "utf8");
+    check("TAP-V",
+      /const acentoSobreElVelo = acentoSobreLaFoto\(t\);/.test(fuente)
+      && /color: acentoSobreElVelo/.test(fuente),
+      "sobre la foto oscurecida, el acento se corre hasta que se vea");
+  }
 
   console.log(fallos === 0
     ? "\nok — la tapa del ebook sale como imagen, con letras y sin llevarse el archivo"

@@ -13,7 +13,7 @@ import { armarPDF } from "@/lib/ebook-pdf";
 import { dibujarLaTapa } from "@/lib/tapa-imagen";
 import { configDeImagenes, guardarImagen, guardarImagenEnDisco } from "@/lib/deposito-imagenes";
 import { buscarFoto, buscarFotos, bajarElegida, comoFue } from "@/lib/fotos-pexels";
-import { leerOpciones } from "@/lib/ebook-opciones";
+import { leerOpciones, conEstilo } from "@/lib/ebook-opciones";
 import { normalizarContenido, buscarPaleta } from "@/lib/pagina-venta";
 import { estadoDelBorrador, tomarElCandado, soltarElCandado } from "@/lib/ebook-borrador";
 
@@ -91,7 +91,7 @@ export async function POST(req: NextRequest) {
   const ebook = producto.ebookIA;
   const indice = leerIndice(ebook.indice);
 
-  /* Formato, tema y color, tal como los eligió la persona antes de generar. */
+  /* Formato, estilo, tema y color, tal como los eligió la persona. */
   const opciones = leerOpciones(ebook.indice);
   const esRecetario = opciones.formato === "recetario";
 
@@ -122,6 +122,44 @@ export async function POST(req: NextRequest) {
       error: "Se está armando en este momento. Esperá unos segundos.",
       ebook: estadoDelBorrador(ebook),
     }, { status: 409 });
+  }
+
+  /* ══════════════════════════════════════════════════════════════════════════
+     CAMBIAR EL ESTILO, QUE ES GRATIS
+     ══════════════════════════════════════════════════════════════════════════
+
+     Rehacer el PDF no llama al modelo: dibuja de nuevo lo que ya está escrito y
+     pago. Por eso el estilo entra por acá y no por una ruta propia — es el mismo
+     trabajo, con otro molde.
+
+     ⚠️ **CON EL CANDADO YA TOMADO, y no antes.** Estaba arriba de todo y ahí
+     tenía un agujero: si en ese momento había otro armado en curso, esto ya
+     había guardado el estilo nuevo y dos renglones después el pedido se
+     rechazaba con "se está armando en este momento". El estilo quedaba guardado
+     **y el archivo seguía siendo el viejo**: la tarjeta marcaba `Cartel` y el
+     PDF que se descargaba era el de antes, hasta que alguien volviera a
+     rehacerlo. Acá adentro, o se guarda y se dibuja, o no pasa ninguna de las
+     dos.
+
+     Y se GUARDA antes de dibujar, no se le pasa directo a `armarPDF`: el dibujo
+     lee lo guardado, así que el archivo y lo que la pantalla promete no se
+     pueden separar.
+
+     No se valida acá: `conEstilo` normaliza, así que un estilo inventado queda
+     en el de fábrica en vez de cortar el rearmado de algo ya pagado. */
+  const estiloPedido = typeof body?.estilo === "string" ? body.estilo : "";
+  let estiloDelArchivo = opciones.estilo;
+
+  if (estiloPedido) {
+    const conElNuevo = conEstilo(ebook.indice, estiloPedido);
+    if (conElNuevo !== ebook.indice) {
+      await prisma.ebookIA.update({
+        where: { id: ebook.id },
+        data: { indice: conElNuevo },
+      });
+      ebook.indice = conElNuevo;
+      estiloDelArchivo = leerOpciones(conElNuevo).estilo;
+    }
   }
 
   /* Los colores. Se sacan acá y no adentro de `armarPDF` porque aquel no tiene
@@ -280,6 +318,11 @@ export async function POST(req: NextRequest) {
          armado de un ebook por culpa del diseño. */
       paleta: paletaDeLaTapa,
       modo: opciones.tema,
+      /* Cómo está armada la hoja. ⚠️ Sale de lo GUARDADO y no de lo que llegue
+         en el pedido: rearmar el mismo ebook dos veces tiene que devolver el
+         mismo archivo. Para cambiarlo hay una puerta aparte —ver la ruta de
+         `estilo`— que lo guarda primero y recién después rearma. */
+      estilo: estiloDelArchivo,
       fotoTapa,
       fotosCapitulos,
     });
@@ -412,6 +455,9 @@ export async function POST(req: NextRequest) {
         palabra: esRecetario ? ["RECETA", "RECETAS"] : ["CAPÍTULO", "CAPÍTULOS"],
         paleta: paletaDeLaTapa,
         modo: opciones.tema,
+        /* Y el mismo molde que el archivo: esta imagen ES la tapa del PDF, no
+           una ilustración parecida. Ver `dibujarLaTapa`. */
+        estilo: estiloDelArchivo,
       });
 
       if (imagen) {

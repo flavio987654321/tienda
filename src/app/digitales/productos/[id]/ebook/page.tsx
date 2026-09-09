@@ -90,6 +90,9 @@ export default async function EditorDeEbookPage({ params }: Props) {
           total={CAPITULOS_DE_EJEMPLO.length}
           paleta={PALETAS[0]}
           modo="claro"
+          /* El ejemplo se mira con el molde de siempre: la pantalla de prueba
+             es para ver el editor, no para comparar estilos. */
+          estilo="libro"
           /* ⚠️ Lo único que cambia respecto de un ebook de verdad: no guarda.
              Sin esto, el ejemplo le pegaría a la ruta con un id que no existe y
              la respuesta sería un 404 que no explica nada. */
@@ -169,6 +172,9 @@ export default async function EditorDeEbookPage({ params }: Props) {
             opciones.paleta || normalizarContenido(fila.paginaVenta).paleta,
           )}
           modo={opciones.tema}
+          /* Y con el molde que eligió, por el mismo motivo que la paleta: si la
+             previa dibujara otro, se corregiría mirando una hoja que no es. */
+          estilo={opciones.estilo}
         />
       ) : (
         <div className="max-w-2xl rounded-2xl border border-gray-200 panel-oscuro:border-gray-700 bg-white panel-oscuro:bg-gray-900 p-5">

@@ -1,6 +1,10 @@
 import sharp from "sharp";
 import path from "path";
-import { coloresDelEbook, type ColoresDeTapa, type ModoDelEbook } from "@/lib/ebook-colores";
+import {
+  coloresDelEbook, SOBRE_LA_FOTO, acentoSobreLaFoto,
+  type ColoresDeTapa, type ModoDelEbook,
+} from "@/lib/ebook-colores";
+import { moldeDe } from "@/lib/ebook-estilos";
 
 /**
  * La tapa del ebook, como imagen.
@@ -40,8 +44,6 @@ import { coloresDelEbook, type ColoresDeTapa, type ModoDelEbook } from "@/lib/eb
 
 /** Una hoja A4, en puntos: las mismas medidas que el PDF. */
 const HOJA = { ancho: 595.28, alto: 841.89 };
-const MARGEN = 56;
-const ANCHO_UTIL = HOJA.ancho - MARGEN * 2;
 
 /**
  * Cuántos píxeles por punto.
@@ -272,9 +274,27 @@ export async function dibujarLaTapa(d: {
   palabra: [string, string];
   paleta: ColoresDeTapa;
   modo: ModoDelEbook;
+  /**
+   * Cómo está armada la hoja. Ver `ebook-estilos`.
+   *
+   * ══════════════════════════════════════════════════════════════════════════
+   * ⚠️ ESTA IMAGEN ES LA TAPA DEL PDF, NO UNA ILUSTRACIÓN PARECIDA
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * Se cuelga del producto cuando no hay foto, así que es lo que la gente ve en
+   * la página de venta y lo que la vendedora manda por WhatsApp. Si el archivo
+   * abre con la foto a toda la hoja y acá se dibuja el corte al 52 %, la foto
+   * del producto muestra un ebook que no existe.
+   *
+   * Opcional y con red: sin estilo sale `clasica`, que es lo que había.
+   */
+  estilo?: string;
 }): Promise<Buffer | null> {
   try {
     const t = coloresDelEbook(d.paleta, d.modo);
+    const molde = moldeDe(d.estilo);
+    const margen = molde.margen;
+    const anchoUtil = HOJA.ancho - margen * 2;
     const titulo = limpio(d.titulo, 160);
     const promesa = limpio(d.promesa, 240);
     const autor = limpio(d.autor, 80).toUpperCase();
@@ -287,8 +307,14 @@ export async function dibujarLaTapa(d: {
 
     const capas: (Capa | null)[] = [];
 
-    /* ── Oscura con foto: la foto ocupa la hoja y el texto va encima ────── */
-    if (hayFoto && d.foto && t.modo === "oscuro") {
+    /* ── A sangre: la foto ocupa la hoja y el texto va encima ───────────────
+       ⚠️ La misma condición que el PDF: `cartel` va así SIEMPRE, no sólo en
+       tema oscuro. Ver `tapa` en `ebook-pdf`. */
+    if (hayFoto && d.foto && (molde.tapa === "sangre" || t.modo === "oscuro")) {
+      /* ⚠️ El acento corrido contra el velo: con `cartel` esta tapa sale también
+         en tema claro. Ver `acentoSobreLaFoto`. */
+      const acentoSobreElVelo = acentoSobreLaFoto(t);
+
       const fondo = await sharp(d.foto)
         .resize(ANCHO, ALTO, { fit: "cover", position: "centre" })
         .toBuffer();
@@ -299,30 +325,120 @@ export async function dibujarLaTapa(d: {
       capas.push({ input: velo(px(200), [[0, 0.62], [1, 0]]), top: 0, left: 0 });
 
       const arriba = await dibujarTexto("GUÍA COMPLETA", {
-        fuente: FUENTES.titulo, cuerpo: 9, color: t.acento, ancho: ANCHO_UTIL, entreLetras: 2.4,
+        fuente: FUENTES.titulo, cuerpo: 9, color: acentoSobreElVelo, ancho: anchoUtil, entreLetras: 2.4,
       });
-      capas.push(capa(arriba, px(MARGEN), px(60)));
+      capas.push(capa(arriba, px(margen), px(60)));
 
       const grande = await dibujarTexto(titulo, {
-        fuente: FUENTES.titulo, cuerpo: 37, color: "#FFFFFF", ancho: ANCHO_UTIL, entreRenglones: 3,
+        fuente: FUENTES.titulo,
+        /* El mismo 37 que el PDF, y el del molde sólo cuando fue ÉL quien pidió
+           esta tapa: si no, achicaría el título de todas las tapas oscuras que
+           ya se generaron. Ver `tapaASangre`. */
+        cuerpo: molde.tapa === "sangre" ? molde.tituloTapa : 37,
+        color: SOBRE_LA_FOTO.titulo, ancho: anchoUtil, entreRenglones: 3,
       });
       /* Apoyado en un renglón fijo y creciendo para arriba, igual que el PDF:
          así la raya de abajo siempre cae en el mismo lugar. */
-      capas.push(capa(grande, px(MARGEN), px(588) - (grande?.alto ?? 0)));
+      capas.push(capa(grande, px(margen), px(588) - (grande?.alto ?? 0)));
 
-      capas.push({ input: rectangulo(px(62), px(4), t.acento), top: px(608), left: px(MARGEN) });
+      capas.push({ input: rectangulo(px(62), px(4), acentoSobreElVelo), top: px(608), left: px(margen) });
 
       const bajada = await dibujarTexto(promesa, {
-        fuente: FUENTES.cursiva, cuerpo: 13, color: "#E9E2D8", ancho: ANCHO_UTIL - 30, entreRenglones: 3,
+        fuente: FUENTES.cursiva, cuerpo: 13, color: SOBRE_LA_FOTO.promesa, ancho: anchoUtil - 30, entreRenglones: 3,
       });
-      capas.push(capa(bajada, px(MARGEN), px(636)));
+      capas.push(capa(bajada, px(margen), px(636)));
 
       const firma = await dibujarTexto(autor, {
-        fuente: FUENTES.titulo, cuerpo: 9, color: "#CFC5B8", ancho: ANCHO_UTIL, entreLetras: 2.2,
+        fuente: FUENTES.titulo, cuerpo: 9, color: SOBRE_LA_FOTO.autor, ancho: anchoUtil, entreLetras: 2.2,
       });
-      capas.push(capa(firma, px(MARGEN), px(HOJA.alto - 66)));
+      capas.push(capa(firma, px(margen), px(HOJA.alto - 66)));
 
-      capas.push(...await elSello(d.cantidad, d.palabra, t, HOJA.ancho - MARGEN - 42, 706));
+      capas.push(...await elSello(d.cantidad, d.palabra, t, HOJA.ancho - margen - 42, 706));
+
+      return await componer(capas, t.fondo);
+    }
+
+    /* ── De titular: la foto arriba y el título adentro de una franja ──────
+       ⚠️ El título va sobre el acento, así que se escribe con `sobreAcento`
+       —el color que la paleta trae verificado contra él—. Con `tinta`, que es
+       lo que usa la tapa clásica, quedaría un azul noche sobre un azul noche. */
+    if (hayFoto && d.foto && molde.tapa === "titular") {
+      const corte = px(HOJA.alto * 0.44);
+      capas.push({
+        input: await sharp(d.foto).resize(ANCHO, corte, { fit: "cover", position: "centre" }).toBuffer(),
+        top: 0, left: 0,
+      });
+
+      const grande = await dibujarTexto(titulo, {
+        fuente: FUENTES.titulo, cuerpo: molde.tituloTapa, color: t.sobreAcento,
+        ancho: anchoUtil, entreRenglones: 3,
+      });
+      const altoFranja = (grande?.alto ?? 0) + px(76);
+      capas.push({ input: rectangulo(ANCHO, altoFranja, t.acento), top: corte, left: 0 });
+
+      const etiqueta = await dibujarTexto("GUÍA COMPLETA", {
+        fuente: FUENTES.titulo, cuerpo: 9, color: t.sobreAcento, ancho: anchoUtil, entreLetras: 2.4,
+      });
+      capas.push(capa(etiqueta, px(margen), corte + px(28)));
+      capas.push(capa(grande, px(margen), corte + px(48)));
+
+      const bajada = await dibujarTexto(promesa, {
+        fuente: FUENTES.cursiva, cuerpo: 13, color: t.tinta, ancho: anchoUtil - 30, entreRenglones: 3,
+      });
+      capas.push(capa(bajada, px(margen), corte + altoFranja + px(34)));
+
+      capas.push(...await elSello(
+        d.cantidad, d.palabra, t, HOJA.ancho - margen - 42, (corte + altoFranja) / ESCALA,
+      ));
+
+      const firma = await dibujarTexto(autor, {
+        fuente: FUENTES.titulo, cuerpo: 9, color: t.suave, ancho: anchoUtil, entreLetras: 2.2,
+      });
+      capas.push(capa(firma, px(margen), ALTO - px(62)));
+
+      return await componer(capas, t.fondo);
+    }
+
+    /* ── De ficha: el texto a la izquierda y la foto en una columna alta ─── */
+    if (hayFoto && d.foto && molde.tapa === "ficha") {
+      const anchoFoto = px(HOJA.ancho * 0.46);
+      const altoFoto = ALTO - px(96);
+      capas.push({
+        input: await sharp(d.foto).resize(anchoFoto, altoFoto, { fit: "cover", position: "centre" }).toBuffer(),
+        top: 0, left: ANCHO - anchoFoto,
+      });
+
+      /* El ancho del texto en PUNTOS, que es lo que pide `dibujarTexto`: la
+         mitad izquierda de la hoja menos los dos márgenes. */
+      const anchoTexto = HOJA.ancho * 0.54 - margen * 2;
+
+      const etiqueta = await dibujarTexto("GUÍA COMPLETA", {
+        fuente: FUENTES.titulo, cuerpo: 8.5, color: t.acento, ancho: anchoTexto, entreLetras: 2.2,
+      });
+      capas.push(capa(etiqueta, px(margen), px(96)));
+      capas.push({ input: rectangulo(px(44), px(4), t.acento), top: px(118), left: px(margen) });
+
+      const grande = await dibujarTexto(titulo, {
+        fuente: FUENTES.titulo, cuerpo: molde.tituloTapa, color: t.tinta,
+        ancho: anchoTexto, entreRenglones: 3,
+      });
+      capas.push(capa(grande, px(margen), px(148)));
+
+      const bajada = await dibujarTexto(promesa, {
+        fuente: FUENTES.cursiva, cuerpo: 12, color: t.suave, ancho: anchoTexto, entreRenglones: 3,
+      });
+      capas.push(capa(bajada, px(margen), px(148) + (grande?.alto ?? 0) + px(20)));
+
+      /* El sello en la columna del texto y no montado sobre la foto: acá la
+         foto llega hasta abajo, y un círculo encima le comería lo único que se
+         ve entero. */
+      capas.push(...await elSello(d.cantidad, d.palabra, t, margen + 42, altoFoto / ESCALA - 150));
+
+      capas.push({ input: rectangulo(ANCHO, px(96), t.acento), top: ALTO - px(96), left: 0 });
+      const firma = await dibujarTexto(autor, {
+        fuente: FUENTES.titulo, cuerpo: 9, color: t.sobreAcento, ancho: anchoTexto, entreLetras: 2.4,
+      });
+      capas.push(capa(firma, px(margen), ALTO - px(54)));
 
       return await componer(capas, t.fondo);
     }
@@ -340,23 +456,23 @@ export async function dibujarLaTapa(d: {
       /* Montado sobre el borde de la foto, del lado derecho: sin esto el corte
          entre la foto y el papel queda como una hoja partida al medio. */
       capas.push(...await elSello(
-        d.cantidad, d.palabra, t, HOJA.ancho - MARGEN - 42, HOJA.alto * 0.52,
+        d.cantidad, d.palabra, t, HOJA.ancho - margen - 42, HOJA.alto * 0.52,
       ));
 
       const etiqueta = await dibujarTexto("GUÍA COMPLETA", {
-        fuente: FUENTES.titulo, cuerpo: 9, color: t.acento, ancho: ANCHO_UTIL, entreLetras: 2.4,
+        fuente: FUENTES.titulo, cuerpo: 9, color: t.acento, ancho: anchoUtil, entreLetras: 2.4,
       });
-      capas.push(capa(etiqueta, px(MARGEN), corte + px(44)));
+      capas.push(capa(etiqueta, px(margen), corte + px(44)));
 
       const grande = await dibujarTexto(titulo, {
-        fuente: FUENTES.titulo, cuerpo: 30, color: t.tinta, ancho: ANCHO_UTIL, entreRenglones: 3,
+        fuente: FUENTES.titulo, cuerpo: molde.tituloTapa, color: t.tinta, ancho: anchoUtil, entreRenglones: 3,
       });
-      capas.push(capa(grande, px(MARGEN), corte + px(64)));
+      capas.push(capa(grande, px(margen), corte + px(64)));
 
       const yRaya = corte + px(64) + (grande?.alto ?? 0) + px(16);
-      capas.push(capa({ datos: rectangulo(px(62), px(4), t.acento), ancho: px(62), alto: px(4) }, px(MARGEN), yRaya));
+      capas.push(capa({ datos: rectangulo(px(62), px(4), t.acento), ancho: px(62), alto: px(4) }, px(margen), yRaya));
 
-      capas.push(...await elPie({ promesa, autor }, t, yRaya + px(24)));
+      capas.push(...await elPie({ promesa, autor }, t, yRaya + px(24), margen, anchoUtil));
       return await componer(capas, t.fondo);
     }
 
@@ -364,14 +480,14 @@ export async function dibujarLaTapa(d: {
     capas.push({ input: rectangulo(ANCHO, corte, t.acento), top: 0, left: 0 });
 
     const grande = await dibujarTexto(titulo, {
-      fuente: FUENTES.titulo, cuerpo: 34, color: t.sobreAcento, ancho: ANCHO_UTIL, entreRenglones: 4,
+      fuente: FUENTES.titulo, cuerpo: 34, color: t.sobreAcento, ancho: anchoUtil, entreRenglones: 4,
     });
     /* Adentro del bloque: si bajara al papel, la tapa quedaría con medio metro
        de color vacío arriba. */
-    capas.push(capa(grande, px(MARGEN), corte - (grande?.alto ?? 0) - px(54)));
-    capas.push({ input: rectangulo(px(62), px(4), t.sobreAcento), top: corte - px(34), left: px(MARGEN) });
+    capas.push(capa(grande, px(margen), corte - (grande?.alto ?? 0) - px(54)));
+    capas.push({ input: rectangulo(px(62), px(4), t.sobreAcento), top: corte - px(34), left: px(margen) });
 
-    capas.push(...await elPie({ promesa, autor }, t, corte + px(48)));
+    capas.push(...await elPie({ promesa, autor }, t, corte + px(48), margen, anchoUtil));
     return await componer(capas, t.fondo);
   } catch (e) {
     console.error("[tapa-imagen] no se pudo dibujar la tapa", e);
@@ -384,13 +500,15 @@ async function elPie(
   x: { promesa: string; autor: string },
   t: ReturnType<typeof coloresDelEbook>,
   y: number,
+  margen: number,
+  anchoUtil: number,
 ): Promise<(Capa | null)[]> {
   const capas: (Capa | null)[] = [];
 
   const bajada = await dibujarTexto(x.promesa, {
-    fuente: FUENTES.cursiva, cuerpo: 13, color: t.tinta, ancho: ANCHO_UTIL - 30, entreRenglones: 3,
+    fuente: FUENTES.cursiva, cuerpo: 13, color: t.tinta, ancho: anchoUtil - 30, entreRenglones: 3,
   });
-  capas.push(capa(bajada, px(MARGEN), y));
+  capas.push(capa(bajada, px(margen), y));
 
   if (x.autor) {
     /* La franja va a sangre y el nombre centrado adentro. Es lo que cierra la

@@ -24,7 +24,11 @@ import {
   OPCIONES_DE_FABRICA, FORMATOS_LISTOS, RECETAS_OPCIONES, COMO_SE_LLAMA,
   type FormatoDeEbook, type TemaDeEbook,
 } from "@/lib/ebook-opciones";
+import {
+  ESTILOS, ESTILOS_LISTOS, QUE_ES_CADA_ESTILO, type EstiloDeEbook,
+} from "@/lib/ebook-estilos";
 import { PALETAS } from "@/lib/pagina-venta";
+import { MiniaturaDeEstilo } from "./MiniaturaDeEstilo";
 import { useSalida } from "@/app/digitales/SalidaSinGuardar";
 
 /**
@@ -176,7 +180,15 @@ export default function EbookIA({
   const [temaVisual, setTemaVisual] = useState<TemaDeEbook>(elegidas.tema);
   const [cuantasRecetas, setCuantasRecetas] = useState<number>(elegidas.recetas);
   const [paleta, setPaleta] = useState<string>(elegidas.paleta);
+  const [estilo, setEstilo] = useState<EstiloDeEbook>(elegidas.estilo);
   const [publico, setPublico] = useState(contado?.publico ?? "");
+
+  /* Con qué color se pintan las miniaturas de los estilos: el que la persona
+     acaba de elegir abajo, para que las cuatro se vean con SU color y no con
+     uno de muestra. Sin paleta elegida —"la de tu página"— va el naranja del
+     panel, que es lo que la mayoría termina viendo. */
+  const colorDeLaMiniatura =
+    PALETAS.find((p) => p.clave === paleta)?.acento ?? "#c2410c";
 
   const [trabajando, setTrabajando] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -350,7 +362,7 @@ export default function EbookIA({
     try {
       const { ok, datos } = await pedir("/api/digitales/ia/ebook", {
         tema, publico, rehacer,
-        opciones: { formato, tema: temaVisual, paleta, recetas: cuantasRecetas },
+        opciones: { formato, estilo, tema: temaVisual, paleta, recetas: cuantasRecetas },
       });
       if (!vivo.current) return;
 
@@ -393,7 +405,7 @@ export default function EbookIA({
     /* Sólo si no hubo temario que revisar: con temario, escribir lo dispara el
        botón del editor. */
     if (vivo.current) void seguir();
-  }, [pedir, tema, publico, formato, temaVisual, paleta, cuantasRecetas, seguir]);
+  }, [pedir, tema, publico, formato, estilo, temaVisual, paleta, cuantasRecetas, seguir]);
 
   /* ── Abrir el temario desde la pantalla de escritura ──────────────────────
      Se busca en el momento y no viaja en cada vuelta del bucle: son varios
@@ -702,6 +714,68 @@ export default function EbookIA({
                   </div>
                 </div>
               )}
+
+              {/* ══════════════════════════════════════════════════════════
+                  EL ESTILO — Y QUE SE PUEDE CAMBIAR DESPUÉS, DICHO ACÁ
+                  ══════════════════════════════════════════════════════════
+
+                  ⚠️ El renglón de abajo no es un consuelo: sin él, esto parece
+                  una elección definitiva como el formato, y alguien se queda
+                  media hora comparando cuatro miniaturas de 44 píxeles antes de
+                  gastar una generación. Sabiendo que se cambia gratis con el
+                  ebook ya escrito —y viéndolo con su texto, que es cuando se
+                  puede juzgar de verdad— la decisión de acá deja de pesar. */}
+              <p className="mt-5 text-[12.5px] font-bold text-gray-700 panel-oscuro:text-gray-300">
+                ¿Cómo querés que esté armada la hoja?
+              </p>
+              <p className="mt-0.5 text-[11.5px] leading-snug text-gray-500 panel-oscuro:text-gray-400">
+                Esto lo podés cambiar después, gratis y sin volver a escribirlo.
+              </p>
+
+              <div className="mt-2 grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {ESTILOS.map((x) => {
+                  /* Mismo criterio que los formatos: un molde a medias se apaga
+                     acá y no entrega una hoja que no es la que se eligió. */
+                  const listo = ESTILOS_LISTOS.includes(x);
+                  return (
+                    <button
+                      key={x}
+                      type="button"
+                      onClick={() => listo && setEstilo(x)}
+                      disabled={trabajando || !listo}
+                      title={listo ? QUE_ES_CADA_ESTILO[x].explica : "Todavía no está disponible"}
+                      aria-pressed={estilo === x}
+                      className={`rounded-xl border p-2 text-left transition-colors disabled:opacity-60 ${
+                        estilo === x
+                          ? "border-orange-400 bg-orange-50 panel-oscuro:bg-orange-500/10"
+                          : "border-gray-200 panel-oscuro:border-gray-700 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800"
+                      }`}
+                    >
+                      <span className="block overflow-hidden rounded-md ring-1 ring-black/10 panel-oscuro:ring-white/10">
+                        <MiniaturaDeEstilo
+                          estilo={x}
+                          acento={colorDeLaMiniatura}
+                          tinta="#0f172a"
+                          papel="#FCFAF7"
+                        />
+                      </span>
+                      <span className="mt-1.5 block text-[12px] font-bold text-gray-900 panel-oscuro:text-gray-100">
+                        {QUE_ES_CADA_ESTILO[x].nombre}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Lo que hace y lo que le cuesta, del que está elegido. Uno solo
+                  y no los cuatro: cuatro descripciones abajo de cuatro
+                  miniaturas es una pared de texto que nadie lee. */}
+              <p className="mt-2 text-[11.5px] leading-relaxed text-gray-600 panel-oscuro:text-gray-400">
+                {QUE_ES_CADA_ESTILO[estilo].explica}{" "}
+                <span className="text-gray-500 panel-oscuro:text-gray-500">
+                  {QUE_ES_CADA_ESTILO[estilo].contra}
+                </span>
+              </p>
 
               <div className="mt-3 grid grid-cols-2 gap-2">
                 {TEMAS.map((x) => (

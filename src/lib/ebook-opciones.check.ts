@@ -190,7 +190,7 @@ const check = (id: string, ok: boolean, desc: string) => {
      la persona elige, y el ebook sale igual que siempre sin que nada avise. */
   const pantalla = readFileSync("src/app/digitales/productos/EbookIA.tsx", "utf8");
   check("OPC-J",
-    /opciones:\s*\{\s*formato,\s*tema:\s*temaVisual,\s*paleta,\s*recetas:\s*cuantasRecetas\s*\}/.test(pantalla),
+    /opciones:\s*\{\s*formato,\s*estilo,\s*tema:\s*temaVisual,\s*paleta,\s*recetas:\s*cuantasRecetas\s*\}/.test(pantalla),
     "la pantalla manda la elección al servidor, con la cantidad de recetas adentro");
 
   /* Y la ruta del temario tiene que GUARDARLA. */

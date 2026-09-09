@@ -428,17 +428,53 @@ const hay = (cuantos: number): LoQueHayEscrito => ({ capitulos: lista(cuantos) }
      archivo lo resuelve disolviendo la foto en el papel ANTES de donde empieza
      el número, y dejando liso el pedazo donde se apoya. Sin las dos cosas, el
      número se pierde adentro de algo que se vende — y no falla en ningún lado. */
+  /* ⚠️ Y desde que hay moldes, el número NO mide siempre 72 puntos: `cartel` lo
+     manda a 110. Así que ya no alcanza con que el papel liso mida 96 — tiene
+     que medir en proporción al número, y sobre todo tiene que ser MÁS ALTO que
+     lo que el número cuelga. Si `CUELGA` fuera el mayor de los dos, la cabeza
+     del número volvería a apoyarse en la foto, y sólo en el estilo que nadie
+     probó. Por eso se comparan los dos factores y no se mira un número. */
+  const comoSeCalcula = (nombre: string) => {
+    const m = new RegExp(`const ${nombre} = t\\.molde\\.numero \\* \\((\\d+) / (\\d+)\\);`).exec(pdf);
+    return m ? Number(m[1]) / Number(m[2]) : null;
+  };
+  const factorDelPapel = comoSeCalcula("ALTO_NUMERO");
+  const factorDeLaCaida = comoSeCalcula("CUELGA");
+
   check("TXT-BE",
-    /const ALTO_NUMERO = 96;/.test(pdf)
+    factorDelPapel !== null && factorDeLaCaida !== null
+    && factorDeLaCaida < factorDelPapel
     && /doc\.rect\(0, hasta, HOJA\.ancho, ALTO_NUMERO\)\.fill\(t\.fondo\)/.test(pdf),
     "el número del capítulo se apoya en papel liso, no arriba de la foto");
 
   /* Y que la previa dibuje LO MISMO: si allá hay degradado y acá no, la previa
      muestra un problema que el archivo no tiene, o al revés. */
   const previa2 = readFileSync("src/app/digitales/productos/VistaPreviaEbook.tsx", "utf8");
+
+  /* ⚠️ Y desde que hay moldes ya no alcanza con encontrar "96 / 350" escritos:
+     el alto de la banda y el del número los pone el estilo —`cartel` abre con
+     una foto de 430 y un número de 110—. Lo que se mide ahora es que la previa
+     los SAQUE DEL MOLDE, con la misma cuenta del PDF. Un `350` escrito a mano
+     acá volvería a mostrar la banda de `libro` en los cuatro estilos, y quien
+     eligiera `cartel` no vería la diferencia hasta armar el archivo. */
   check("TXT-BF",
-    /linear-gradient\(to bottom, transparent/.test(previa2) && /96 \/ 350/.test(previa2),
+    /linear-gradient\(to bottom, transparent/.test(previa2)
+    && /molde\.numero \* \(96 \/ 72\)/.test(previa2)
+    && /const alturaDeLaFoto = molde\.altoFoto;/.test(previa2)
+    && !/96 \/ 350/.test(previa2),
     "la vista previa dibuja el mismo degradado que el PDF");
+
+  /* ⚠️ Y que la previa dibuje EL MOLDE que se eligió, no siempre el de `libro`.
+     Es la trampa que ya se pisó una vez con los colores: la pantalla mostraba
+     una cosa y el archivo salía con otra. Acá se mira que las cuatro decisiones
+     que más cambian la hoja salgan del molde y no estén escritas. */
+  const marco = readFileSync("src/app/digitales/productos/previaPiezas.tsx", "utf8");
+  check("TXT-BF2",
+    /molde\.columnas === 2/.test(previa2)
+    && /molde\.franja > 0/.test(previa2)
+    && /molde\.subtitulo === "resaltado"/.test(previa2)
+    && /molde\.tapa === "sangre"/.test(marco),
+    "la previa dibuja el molde elegido: columnas, franja, subtítulo y tapa");
 }
 
 /* ── El tope del banco de imágenes ────────────────────────────────────────── */

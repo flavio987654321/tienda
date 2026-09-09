@@ -55,6 +55,51 @@ export const TAPA_DE_FABRICA: ColoresDeTapa = {
   tinta: "#0f172a", acento: "#1e293b", sobreAcento: "#ffffff", suave: "#e9eaeb",
 };
 
+/**
+ * Los colores del texto que va ENCIMA de una foto oscurecida.
+ *
+ * ══════════════════════════════════════════════════════════════════════════
+ * ⚠️ NO SALEN DE LA PALETA, Y POR ESO ESTÁN ACÁ Y NO ESCRITOS EN DOS LADOS
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * Abajo hay un velo negro, no papel: el color de la marca desaparecería contra
+ * él. Son tres blancos rotos, elegidos para que el título pegue y la promesa y
+ * el nombre queden un escalón atrás sin dejar de leerse.
+ *
+ * Los usan **la tapa a sangre del PDF** (`tapaASangre`) y **la misma tapa en la
+ * vista previa** (`TapaDeLaPrevia`). Escritos en los dos archivos, alcanzaba con
+ * aclarar uno para que la previa mostrara un gris y el archivo saliera con otro
+ * — que es exactamente lo que ya pasó con los colores de la hoja, y el motivo
+ * por el que existe este archivo.
+ */
+export const SOBRE_LA_FOTO = {
+  titulo: "#FFFFFF",
+  promesa: "#E9E2D8",
+  autor: "#CFC5B8",
+} as const;
+
+/** Contra qué se mide el acento cuando va sobre una foto oscurecida. */
+const VELO = "#141210";
+
+/**
+ * El acento, corrido hasta que se vea sobre el velo.
+ *
+ * ══════════════════════════════════════════════════════════════════════════
+ * ⚠️ EL ACENTO DE LA PALETA ESTÁ MEDIDO CONTRA PAPEL, NO CONTRA UN VELO
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * Hasta el 09/09/26 la tapa a sangre salía sólo en tema oscuro, y ahí el acento
+ * ya venía aclarado por `coloresDelEbook`. Con el molde `cartel` esa tapa sale
+ * **también en tema claro**, y entonces el rótulo "GUÍA COMPLETA" y la rayita
+ * quedan con un bordó de fondo claro encima de un velo casi negro: se pierden.
+ *
+ * Se descubrió mirando la portada generada, no leyendo el código: en la hoja se
+ * ve enseguida y en el código no se ve nunca.
+ */
+export function acentoSobreLaFoto(t: ColoresDelEbook): string {
+  return acentoQueSeVe(t.acento, t.sobreAcento, VELO).acento;
+}
+
 /** Claro es una hoja de papel; oscuro es una revista. Los dos con la marca. */
 export type ModoDelEbook = "claro" | "oscuro";
 

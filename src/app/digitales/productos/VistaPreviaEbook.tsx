@@ -1,6 +1,9 @@
 "use client";
 
-import { coloresDelEbook, type ColoresDeTapa, type ModoDelEbook } from "@/lib/ebook-colores";
+import {
+  coloresDelEbook, SOBRE_LA_FOTO, acentoSobreLaFoto,
+  type ColoresDeTapa, type ModoDelEbook,
+} from "@/lib/ebook-colores";
 import {
   COMO_SE_LLAMA_EL_BLOQUE,
   type FotoDelCapitulo, type Seleccion,
@@ -8,7 +11,10 @@ import {
 import type { CapituloEscrito } from "@/lib/ebook-ia";
 /* La hoja, la tapa, lo que se puede tocar y el hueco de la foto: son las mismas
    en el recetario, así que viven aparte. Ver `previaPiezas`. */
-import { MarcoDeLaHoja, Tocable, HuecoDeFoto, em, MARGEN } from "./previaPiezas";
+import {
+  MarcoDeLaHoja, Tocable, HuecoDeFoto, em, anchoEnLaHoja,
+} from "./previaPiezas";
+import { columnaDeTexto, anchoUtilDe, type Molde } from "@/lib/ebook-estilos";
 
 /**
  * Cómo va a quedar el ebook, al lado de lo que se está escribiendo.
@@ -56,6 +62,7 @@ export default function VistaPreviaEbook({
   fotos,
   tapa,
   paleta,
+  molde,
   modo,
   seleccion = null,
   onTocar,
@@ -83,6 +90,16 @@ export default function VistaPreviaEbook({
   paleta: ColoresDeTapa;
   modo: ModoDelEbook;
   /**
+   * Cómo está armada la hoja. Ver `ebook-estilos`.
+   *
+   * ⚠️ Todo lo de acá abajo sale de él: el margen, el ancho del renglón, si hay
+   * una columna o dos, cómo abre el capítulo y cómo se marca un subtítulo.
+   * Estaban escritos como números fijos —56, 350, 72, 13— porque había un solo
+   * molde. Con cuatro, esos números son los de UNO, y dejarlos ahí sería
+   * mostrarle a alguien la hoja de un estilo que no eligió.
+   */
+  molde: Molde;
+  /**
    * Qué pedazo está marcado, para dibujarlo marcado.
    *
    * ⚠️ Viene de arriba y no se decide acá: el mismo dato lo usa la columna de
@@ -95,75 +112,176 @@ export default function VistaPreviaEbook({
   onTocar?: (s: Seleccion) => void;
 }) {
   const t = coloresDelEbook(paleta, modo);
-  const margen = MARGEN;
+  const margen = anchoEnLaHoja(molde.margen);
+
+  /* Dónde arranca el cuerpo y cuánto mide. Con franja al costado no es el
+     margen: el texto se corre a la derecha y los subtítulos quedan afuera. La
+     cuenta es la misma que hace el PDF — vive en `ebook-estilos`. */
+  const columna = columnaDeTexto(molde);
+  const util = anchoUtilDe(molde);
+
+  /* La foto del capítulo, como fracción de la banda: los tres números del
+     degradado están en puntos y la banda cambia de alto según el molde. */
+  const alturaDeLaFoto = molde.altoFoto;
 
   return (
     /* El marco, los estilos y la tapa son de la HOJA y no de los capítulos:
        viven en `previaPiezas` porque el recetario dibuja exactamente lo mismo. */
-    <MarcoDeLaHoja t={t} titulo={titulo} promesa={promesa} autor={autor}
+    <MarcoDeLaHoja t={t} molde={molde} titulo={titulo} promesa={promesa} autor={autor}
       tapa={tapa} seleccion={seleccion} onTocar={onTocar}>
         {/* ── Los capítulos ────────────────────────────────────────────────── */}
         {capitulos.map((c, i) => (
           <div key={i}>
-            {/* La portadilla: la foto, el número grande encima, y abajo el
-                título con su rayita. En el archivo la banda mide 350 puntos de
-                una hoja de 841,89 — el 41,6 % — y el número se apoya en el
-                borde de abajo. Ver `portadilla` en `ebook-pdf`. */}
+            {/* La portadilla. Son tres, y las tres están del otro lado en
+                `portadilla`, `portadillaASangre` y `portadillaDeFicha`: si allá
+                cambian, acá también. */}
             <Tocable
               que={{ que: "foto", capitulo: i }}
               seleccion={seleccion}
               onTocar={onTocar}
               nombre={`Cambiar la foto del capítulo ${i + 1}`}
-              estilo={{ position: "relative", marginTop: i === 0 ? 0 : em(26) }}
+              estilo={{
+                position: "relative",
+                marginTop: i === 0 ? 0 : em(26),
+                /* La de ficha no va a sangre: la foto entra en la columna de
+                   texto, como una figura de un libro de estudio. */
+                paddingLeft: molde.portadilla === "ficha" ? anchoEnLaHoja(columna.x) : 0,
+                paddingRight: molde.portadilla === "ficha" ? margen : 0,
+                paddingTop: molde.portadilla === "ficha" ? em(30) : 0,
+              }}
             >
-              <HuecoDeFoto foto={fotos[i]} respaldo={c.titulo} t={t} proporcion="595.28 / 350" />
+              <HuecoDeFoto
+                foto={fotos[i]}
+                respaldo={c.titulo}
+                t={t}
+                proporcion={
+                  molde.portadilla === "ficha"
+                    ? `${columna.ancho} / ${alturaDeLaFoto}`
+                    : `595.28 / ${alturaDeLaFoto}`
+                }
+              />
 
               {/* ⚠️ EL MISMO DEGRADADO QUE EL PDF, y no es decoración: el número
                   va arriba de la foto, y una foto puede ser de cualquier color.
                   Sin esto, sobre una foto clara con un acento claro el número
                   desaparece. El archivo lo resuelve disolviendo la foto en el
                   papel antes de donde empieza el número; acá se dibuja igual,
-                  con los mismos 190 y 96 puntos. Ver `portadilla` en
-                  `ebook-pdf`: si allá cambian, acá también. */}
-              <div
-                style={{
-                  position: "absolute", left: 0, right: 0, bottom: `${((96 / 350) * 100).toFixed(2)}%`,
-                  height: `${(((190 - 96) / 350) * 100).toFixed(2)}%`,
-                  background: `linear-gradient(to bottom, transparent, ${t.fondo})`,
-                }}
-              />
-              <div
-                style={{
-                  position: "absolute", left: 0, right: 0, bottom: 0,
-                  height: `${((96 / 350) * 100).toFixed(2)}%`,
-                  background: t.fondo,
-                }}
-              />
+                  con los mismos 190 y 96 puntos —que ahora salen del alto del
+                  número, porque `cartel` lo manda a 110—. Ver `portadilla`.
 
-              <p
-                style={{
-                  position: "absolute", left: margen, bottom: em(6),
-                  fontSize: em(72), lineHeight: 0.9, fontWeight: 700, color: t.acento,
-                }}
-              >
-                {String(i + 1).padStart(2, "0")}
-              </p>
-            </Tocable>
+                  Sólo en `banda`: la de sangre apoya el texto ENCIMA de la foto,
+                  con velo, y la de ficha no tiene nada apoyado. */}
+              {molde.portadilla === "banda" && (
+                <>
+                  <div
+                    style={{
+                      position: "absolute", left: 0, right: 0,
+                      bottom: `${((molde.numero * (96 / 72)) / alturaDeLaFoto * 100).toFixed(2)}%`,
+                      height: `${(((190 - molde.numero * (96 / 72)) / alturaDeLaFoto) * 100).toFixed(2)}%`,
+                      background: `linear-gradient(to bottom, transparent, ${t.fondo})`,
+                    }}
+                  />
+                  <div
+                    style={{
+                      position: "absolute", left: 0, right: 0, bottom: 0,
+                      height: `${((molde.numero * (96 / 72)) / alturaDeLaFoto * 100).toFixed(2)}%`,
+                      background: t.fondo,
+                    }}
+                  />
+                </>
+              )}
 
-            <div style={{ paddingLeft: margen, paddingRight: margen, paddingTop: em(18) }}>
-              <Tocable
-                que={{ que: "titulo", capitulo: i }}
-                seleccion={seleccion}
-                onTocar={onTocar}
-                nombre={`Corregir el título del capítulo ${i + 1}`}
-              >
-                <p style={{ fontSize: em(25), lineHeight: 1.15, fontWeight: 700, color: t.tinta }}>
+              {/* En la de sangre, el velo que hace legible el texto blanco. */}
+              {molde.portadilla === "sangre" && (
+                <div
+                  className="pointer-events-none absolute inset-x-0 bottom-0"
+                  style={{
+                    height: "78%",
+                    background: "linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.6) 45%, rgba(0,0,0,0.92) 100%)",
+                  }}
+                />
+              )}
+
+              {molde.portadilla !== "ficha" && (
+                <p
+                  style={{
+                    position: "absolute", left: margen,
+                    bottom: molde.portadilla === "sangre"
+                      ? `${((molde.numero * 1.15 + 42) / alturaDeLaFoto * 100).toFixed(2)}%`
+                      : em(6),
+                    fontSize: em(molde.numero), lineHeight: 0.9, fontWeight: 700,
+                    color: molde.portadilla === "sangre" ? SOBRE_LA_FOTO.titulo : t.acento,
+                  }}
+                >
+                  {String(i + 1).padStart(2, "0")}
+                </p>
+              )}
+
+              {/* En la de sangre el TÍTULO también va sobre la foto. */}
+              {molde.portadilla === "sangre" && (
+                <p
+                  style={{
+                    position: "absolute", left: margen, right: margen,
+                    bottom: `${(42 / alturaDeLaFoto * 100).toFixed(2)}%`,
+                    fontSize: em(27), lineHeight: 1.15, fontWeight: 700, color: SOBRE_LA_FOTO.titulo,
+                  }}
+                >
                   {c.titulo || "Sin título"}
                 </p>
-              </Tocable>
-              <div style={{ width: em(48), height: em(3), background: t.acento, marginTop: em(14) }} />
+              )}
 
-              <div style={{ marginTop: em(20), paddingBottom: em(30) }}>
+              {/* La rayita apoyada en el borde de abajo de la foto, igual que en
+                  `portadillaASangre`. Va con el acento corrido contra el velo:
+                  ver `acentoSobreLaFoto`. */}
+              {molde.portadilla === "sangre" && (
+                <div
+                  className="pointer-events-none absolute"
+                  style={{
+                    left: margen, bottom: `${(26 / alturaDeLaFoto * 100).toFixed(2)}%`,
+                    width: em(48), height: em(3), background: acentoSobreLaFoto(t),
+                  }}
+                />
+              )}
+            </Tocable>
+
+            <div
+              style={{
+                paddingLeft: anchoEnLaHoja(columna.x),
+                paddingRight: margen,
+                paddingTop: em(18),
+              }}
+            >
+              {/* El título ya salió sobre la foto en la de sangre: repetirlo acá
+                  sería mostrarlo dos veces en una hoja que sólo lo tiene una. */}
+              {molde.portadilla !== "sangre" && (
+                <>
+                  <Tocable
+                    que={{ que: "titulo", capitulo: i }}
+                    seleccion={seleccion}
+                    onTocar={onTocar}
+                    nombre={`Corregir el título del capítulo ${i + 1}`}
+                  >
+                    <p style={{ fontSize: em(molde.portadilla === "ficha" ? 24 : 25), lineHeight: 1.15, fontWeight: 700, color: t.tinta }}>
+                      {c.titulo || "Sin título"}
+                    </p>
+                  </Tocable>
+                  <div style={{ width: em(48), height: em(3), background: t.acento, marginTop: em(14) }} />
+                </>
+              )}
+
+              <div
+                style={{
+                  marginTop: em(20), paddingBottom: em(30),
+                  /* Las dos columnas de `compacto`. ⚠️ Acá las balancea el
+                     navegador sobre el capítulo entero, y en el archivo se
+                     llenan hoja por hoja: no es el mismo corte. Lo que esto
+                     muestra —y es lo que se necesita para elegir— es el ANCHO
+                     del renglón, que es lo que de verdad cambia cómo se lee. */
+                  ...(molde.columnas === 2
+                    ? { columnCount: 2, columnGap: em(molde.calle) }
+                    : {}),
+                }}
+              >
                 {c.bloques.map((b, j) => (
                   /* ⚠️ Un pedazo vacío no lleva botón. `Pedazo` no dibuja nada
                      —en el PDF tampoco sale— y un botón sin adentro es un
@@ -181,7 +299,18 @@ export default function VistaPreviaEbook({
                     onTocar={onTocar}
                     nombre={`Corregir el ${COMO_SE_LLAMA_EL_BLOQUE[b.tipo].nombre.toLowerCase()} ${j + 1} del capítulo ${i + 1}`}
                   >
-                    <Pedazo bloque={b} t={t} />
+                    <Pedazo
+                      bloque={b}
+                      t={t}
+                      molde={molde}
+                      util={util}
+                      /* El primero que no es subtítulo abre el capítulo: los
+                         moldes con entrada lo escriben más grande, igual que en
+                         el archivo. Ver `capitulo` en `ebook-pdf`. */
+                      deEntrada={j === c.bloques.findIndex(
+                        (x) => x.tipo !== "subtitulo" && !!x.texto.trim(),
+                      )}
+                    />
                   </Tocable>
                   )
                 ))}
@@ -197,9 +326,16 @@ export default function VistaPreviaEbook({
 function Pedazo({
   bloque,
   t,
+  molde,
+  util,
+  deEntrada,
 }: {
   bloque: { tipo: string; texto: string };
   t: ReturnType<typeof coloresDelEbook>;
+  molde: Molde;
+  /** El ancho útil de la hoja, para sacar el subtítulo a la franja. */
+  util: number;
+  deEntrada: boolean;
 }) {
   const texto = bloque.texto.trim();
   /* Un pedazo vacío no se dibuja: en el PDF tampoco, `soloLoQueEntra` lo saca.
@@ -207,7 +343,74 @@ function Pedazo({
      pensar que el ebook va a salir con un hueco. */
   if (!texto) return null;
 
+  /* La interlínea del molde, dicha como múltiplo del cuerpo: en el PDF es un
+     hueco en puntos entre renglones, y en CSS es la altura del renglón entero. */
+  const renglon = (molde.cuerpo + molde.interlinea) / molde.cuerpo + 0.16;
+
   if (bloque.tipo === "subtitulo") {
+    /* ── En la franja del costado ──────────────────────────────────────────
+       El subtítulo sale del texto y se apoya en el margen izquierdo, y el
+       cuerpo sigue a su altura. Se hace con `float` y un margen negativo: es
+       exactamente lo que el PDF logra dibujándolo en `t.margen` y devolviendo
+       el cursor a la misma `y`. Ver `dibujarSubtitulo`. */
+    if (molde.franja > 0) {
+      return (
+        <div
+          style={{
+            float: "left", clear: "left",
+            width: `${((molde.franja / (util - molde.franja - molde.calle)) * 100).toFixed(2)}%`,
+            marginLeft: `${(-((molde.franja + molde.calle) / (util - molde.franja - molde.calle)) * 100).toFixed(2)}%`,
+            marginTop: em(14), marginBottom: em(6), paddingRight: em(molde.calle),
+          }}
+        >
+          <p
+            style={{
+              fontSize: em(molde.subtituloPt), lineHeight: 1.25,
+              fontWeight: 700, color: t.acento,
+            }}
+          >
+            {texto}
+          </p>
+        </div>
+      );
+    }
+
+    if (molde.subtitulo === "resaltado") {
+      return (
+        <div
+          style={{
+            background: t.acento, marginTop: em(20), marginBottom: em(10),
+            padding: `${em(9)} ${em(12)}`,
+          }}
+        >
+          <p
+            style={{
+              fontSize: em(molde.subtituloPt), lineHeight: 1.25,
+              fontWeight: 700, color: t.sobreAcento,
+            }}
+          >
+            {texto}
+          </p>
+        </div>
+      );
+    }
+
+    if (molde.subtitulo === "linea") {
+      return (
+        <div style={{ marginTop: em(18), marginBottom: em(6) }}>
+          <div style={{ height: em(0.8), background: t.acento, marginBottom: em(8) }} />
+          <p
+            style={{
+              fontSize: em(molde.subtituloPt), lineHeight: 1.3,
+              fontWeight: 700, color: t.tinta,
+            }}
+          >
+            {texto}
+          </p>
+        </div>
+      );
+    }
+
     return (
       <div style={{ marginTop: em(18), marginBottom: em(6), position: "relative" }}>
         {/* La rayita del margen, que es lo que hace que un subtítulo se vea
@@ -218,7 +421,12 @@ function Pedazo({
             width: em(3), height: em(13), background: t.acento,
           }}
         />
-        <p style={{ fontSize: em(13), lineHeight: 1.3, fontWeight: 700, color: t.tinta }}>
+        <p
+          style={{
+            fontSize: em(molde.subtituloPt), lineHeight: 1.3,
+            fontWeight: 700, color: t.tinta,
+          }}
+        >
           {texto}
         </p>
       </div>
@@ -229,7 +437,8 @@ function Pedazo({
     return (
       <div
         style={{
-          background: t.caja, borderRadius: em(9),
+          background: t.caja, borderRadius: em(molde.esquina),
+          borderLeft: `${em(3)} solid ${t.acento}`,
           padding: `${em(16)} ${em(22)}`, marginTop: em(14), marginBottom: em(14),
         }}
       >
@@ -249,18 +458,33 @@ function Pedazo({
   if (bloque.tipo === "vineta") {
     return (
       <div style={{ display: "flex", gap: em(9), marginBottom: em(6) }}>
-        <span style={{ fontSize: em(11.5), lineHeight: 1.55, color: t.tinta }}>•</span>
-        <p style={{ fontSize: em(11.5), lineHeight: 1.55, color: t.tinta }}>{texto}</p>
+        <span style={{ fontSize: em(molde.cuerpo), lineHeight: renglon, color: t.tinta }}>•</span>
+        <p style={{ fontSize: em(molde.cuerpo), lineHeight: renglon, color: t.tinta }}>{texto}</p>
       </div>
     );
   }
 
-  /* El párrafo va justificado, igual que en el PDF: es lo que más cambia cómo
-     se ve una hoja de texto corrido. */
+  /* La entrada: el primer párrafo del capítulo, más grande y en el color de
+     segunda. Sólo en los moldes que la tienen. Ver `entrada` en `ebook-estilos`. */
+  if (deEntrada && molde.entrada) {
+    return (
+      <p
+        style={{
+          fontSize: em(molde.cuerpo + 2.5), lineHeight: renglon,
+          fontStyle: "italic", color: t.suave, marginBottom: em(12),
+        }}
+      >
+        {texto}
+      </p>
+    );
+  }
+
+  /* El párrafo, con la alineación del molde: justificado en los de renglón
+     largo y a la izquierda en los angostos, igual que en el PDF. */
   return (
     <p
       style={{
-        fontSize: em(11.5), lineHeight: 1.6, textAlign: "justify",
+        fontSize: em(molde.cuerpo), lineHeight: renglon, textAlign: molde.alineado,
         color: t.tinta, marginBottom: em(9),
       }}
     >
