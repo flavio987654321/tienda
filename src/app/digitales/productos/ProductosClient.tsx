@@ -512,12 +512,24 @@ function Tarjeta({ p, acc }: { p: ProductoEnPantalla; acc: Acciones }) {
             >
               <Sparkles className="h-3.5 w-3.5" />
               {/* El rótulo dice en qué estado está, así no hay que abrir la
-                  ventana para saber si quedó a medio escribir. */}
+                  ventana para saber si quedó a medio escribir.
+
+                  ⚠️ Y DICE QUÉ ESCRIBE. Decía "Escribir con IA" a secas: el
+                  verbo y el método, sin la cosa. Al lado de "Subir PDF" —que sí
+                  nombra lo que sube— se leía como el botón de escribir
+                  *cualquier cosa*, y en la tarjeta de un bono ni siquiera se
+                  entendía que lo que escribe es el archivo que ese bono entrega.
+                  Es el mismo arreglo que se le hizo a "A mano" el 08/09/26.
+
+                  El nombre sale de `COMO_SE_LLAMA` y no está escrito acá: quien
+                  eligió recetario tiene que leer "recetario", no "ebook". Sin
+                  ebook empezado todavía no hay formato elegido, así que se dice
+                  "el ebook", que es lo que ofrece la ventana al abrirse. */}
               {!p.ebook
-                ? "Escribir con IA"
+                ? "Escribir el ebook"
                 : p.ebook.estado === "LISTO"
-                  ? "Escrito con IA"
-                  : `Seguir (${p.ebook.escritos} de ${p.ebook.total})`}
+                  ? `${COMO_SE_LLAMA[p.ebook.opciones.formato].obra} escrito`
+                  : `Seguir el ${COMO_SE_LLAMA[p.ebook.opciones.formato].obra.toLowerCase()} (${p.ebook.escritos} de ${p.ebook.total})`}
             </button>
 
             {/* ── La ficha: título, precio, publicar, borrar ───────────────
@@ -1522,7 +1534,23 @@ export default function ProductosClient({
                       id="valorBono"
                       inputMode="decimal"
                       value={borrador.comparePrice}
-                      onChange={(e) => setBorrador({ ...borrador, comparePrice: e.target.value.replace(/[^d.,]/g, "") })}
+                      /* ⚠️ `[^\d.,]` CON LA BARRA. Acá decía `[^d.,]` —sin ella—
+                         y eso no es un detalle de estilo: sin la barra, la `d`
+                         deja de significar "un dígito" y pasa a ser la letra d.
+                         O sea que la regla era "borrá todo lo que no sea una
+                         letra d, un punto o una coma", y **borraba los números**.
+
+                         Este campo no aceptaba un solo dígito: se escribía 8000
+                         y el casillero quedaba vacío. Y es el que le pone valor
+                         al bono, o sea de donde sale toda la cuenta de la página
+                         de venta —el total, el porcentaje del sello, el renglón
+                         del ahorro—. Sin él, el bono suma cero y el GRATIS al
+                         lado no significa nada.
+
+                         Los otros dos campos de precio de este mismo formulario
+                         siempre lo tuvieron bien; era sólo éste. Encontrado el
+                         08/09/26 revisando los formularios uno por uno. */
+                      onChange={(e) => setBorrador({ ...borrador, comparePrice: e.target.value.replace(/[^\d.,]/g, "") })}
                       placeholder="8000"
                       className="w-full px-4 py-3 rounded-2xl border border-gray-200 panel-oscuro:border-gray-700 text-sm text-gray-900 panel-oscuro:text-gray-100 focus:border-orange-400 focus:ring-2 focus:ring-orange-100 outline-none transition-all"
                     />

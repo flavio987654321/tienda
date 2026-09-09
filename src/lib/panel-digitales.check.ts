@@ -705,8 +705,20 @@ chequear("armar el embudo con IA existe y tiene su propia ventana",
 
 /* Y va PRIMERO, con "a mano" al lado. Es el camino que resuelve la pantalla en
    blanco, que es el problema que la persona tiene cuando entra. */
+/* ⚠️ SE COMPARAN LOS `onClick`, QUE SON CÓDIGO, Y NO LOS RÓTULOS.
+   Acá decía `indexOf("Armar con IA") < indexOf("A mano")`, y **no estaba
+   midiendo los botones**: los dos textos aparecían antes en los COMENTARIOS que
+   explican esta misma decisión, así que comparaba prosa contra prosa. Pasaba de
+   casualidad, y se cayó el 08/09/26 cuando un comentario nuevo nombró "A mano"
+   unas doscientas líneas más arriba — sin que la pantalla hubiera cambiado.
+
+   Los rótulos además ya cambiaron dos veces hoy ("Armar con IA" → "Armar todo
+   con IA", "A mano" → "Producto nuevo"): atar el chequeo a la palabra exacta lo
+   rompe cada vez que se mejora un texto. El `onClick` es lo que no cambia
+   mientras el botón siga siendo ese botón. */
 chequear("la IA es el botón principal y cargar a mano queda al lado",
-  pantallaProductos.indexOf("Armar con IA") < pantallaProductos.indexOf("A mano"));
+  pantallaProductos.indexOf("onClick={() => setEmbudoIA(true)}") <
+  pantallaProductos.indexOf('onClick={() => setBorrador(borradorNuevo("PRINCIPAL", null))}'));
 
 /* ⚠️ EL chequeo de esta sección, y es un pasador. `IA_LISTA` prendido con la ruta
    de generación sin construir es una pantalla que promete escribir un ebook y no
@@ -1408,6 +1420,40 @@ chequear("el motivo por el que no se puede publicar está atado al botón",
      caso de todo el plan Free, donde el tope de páginas es uno. */
   chequear("las solapas aparecen sólo cuando hay más de una página",
     /\{principales\.length > 1 && \(/.test(pantallaProductos));
+
+  /* ══════════════════════════════════════════════════════════════════════════
+     ⚠️ TODO CAMPO DE PRECIO DEJA ESCRIBIR NÚMEROS. PARECE OBVIO Y NO LO ERA.
+     ══════════════════════════════════════════════════════════════════════════
+
+     El campo "Cuánto vale" del bono tenía `replace(/[^d.,]/g, "")` — sin la
+     barra. Sin ella la `d` deja de significar "un dígito" y pasa a ser la letra
+     d, así que la regla era "borrá todo lo que no sea una letra d, un punto o
+     una coma" y **borraba los números**: se escribía 8000 y el casillero
+     quedaba vacío.
+
+     No es un campo de adorno: de él sale toda la cuenta de la página de venta
+     —el valor total de los bonos, el porcentaje del sello, el renglón del
+     ahorro—. Sin él el bono suma cero y el GRATIS al lado no significa nada.
+
+     Encontrado el 08/09/26 revisando los formularios uno por uno; los otros dos
+     campos de precio del mismo formulario siempre lo tuvieron bien. Un error de
+     un carácter que ningún tipo ni linter puede ver, porque las dos versiones
+     son expresiones regulares válidas. */
+  chequear("los campos de precio filtran dígitos de verdad, no la letra `d`",
+    !/replace\(\/\[\^d[.,]/.test(pantallaProductos) &&
+    (pantallaProductos.match(/replace\(\/\[\^\\d\.,\]\/g, ""\)/g) ?? []).length === 3);
+
+  /* ⚠️ Y EL BOTÓN DEL EBOOK DICE QUÉ ESCRIBE. Decía "Escribir con IA" a secas:
+     el verbo y el método, sin la cosa. Al lado de "Subir PDF" —que sí nombra lo
+     que sube— se leía como el botón de escribir cualquier cosa, y en la tarjeta
+     de un bono ni se entendía que lo que escribe es el archivo que ese bono
+     entrega. Mismo arreglo que el de "A mano".
+
+     Y el nombre sale de `COMO_SE_LLAMA`, no escrito a mano: quien eligió
+     recetario tiene que leer "recetario", no "ebook". */
+  chequear("el botón del ebook dice qué escribe, y con la palabra de su formato",
+    /\? "Escribir el ebook"/.test(pantallaProductos) &&
+    /COMO_SE_LLAMA\[p\.ebook\.opciones\.formato\]\.obra/.test(pantallaProductos));
 
   /* ══════════════════════════════════════════════════════════════════════════
      ⚠️ EN 360 LOS BOTONES DE LA TARJETA SON UNA GRILLA, NO UNA FILA QUE ENVUELVE
