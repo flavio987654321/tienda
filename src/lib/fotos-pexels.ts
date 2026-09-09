@@ -191,6 +191,115 @@ async function bajar(direccion: string): Promise<Buffer | null> {
 }
 
 /**
+ * Lo que se le muestra a alguien para que elija una foto.
+ *
+ * Es lo mismo que `FotoDelEbook` pero **sin la imagen**: acá viajan direcciones,
+ * no bytes. La chica es para la grilla del editor y la grande es la que va a
+ * bajar el armado cuando haga el PDF.
+ */
+export type FotoCandidata = {
+  id: string;
+  /** La miniatura, para la grilla. Pesa poco: se muestran quince. */
+  chica: string;
+  /** La buena, la que se guarda y baja el armado. */
+  url: string;
+  fotografo: string;
+  enlace: string;
+};
+
+/**
+ * Buscar fotos para elegir a mano, sin bajar ninguna.
+ *
+ * ══════════════════════════════════════════════════════════════════════════
+ * NO BAJA NADA, Y ESA ES LA DIFERENCIA CON `buscarFoto`
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * Aquella busca y **se trae la imagen**, porque quien la llama está armando el
+ * PDF y necesita los bytes. Ésta la llama una pantalla para mostrar una grilla:
+ * bajar quince imágenes por búsqueda a través de nuestro servidor sería pagar
+ * el tránsito de todo lo que alguien descarta mientras elige. Van las
+ * direcciones y las baja el navegador, que es lo que hace un navegador.
+ *
+ * ⚠️ Devuelve la miniatura Y la grande. La grande es la que se guarda: la
+ * miniatura de Pexels mide 280 px y adentro de un PDF, en una banda de media
+ * hoja, se ve como una foto rota.
+ */
+export async function buscarCandidatas(
+  consulta: string,
+  { alta = false }: { alta?: boolean } = {},
+): Promise<FotoCandidata[]> {
+  const clave = process.env.PEXELS_API_KEY;
+  if (!clave) return [];
+
+  const limpia = consulta.trim().slice(0, 120);
+  if (!limpia) return [];
+
+  const parametros = new URLSearchParams({
+    query: limpia,
+    orientation: alta ? "portrait" : "landscape",
+    per_page: "15",
+    locale: "es-ES",
+  });
+
+  let respuesta: Response;
+  try {
+    respuesta = await fetch(`${RAIZ}?${parametros}`, {
+      headers: { Authorization: clave },
+      signal: AbortSignal.timeout(ESPERA_BUSQUEDA),
+    });
+  } catch {
+    return [];
+  }
+
+  if (!respuesta.ok) {
+    console.error("[fotos-pexels] la búsqueda para elegir no salió", {
+      estado: respuesta.status, consulta: limpia,
+    });
+    return [];
+  }
+
+  let cuerpo: { photos?: unknown };
+  try {
+    cuerpo = (await respuesta.json()) as { photos?: unknown };
+  } catch {
+    return [];
+  }
+
+  const fotos = Array.isArray(cuerpo.photos)
+    ? (cuerpo.photos as (FotoDePexels & { src?: { medium?: unknown; tiny?: unknown } })[])
+    : [];
+
+  const salida: FotoCandidata[] = [];
+  for (const f of fotos) {
+    const url = texto(f?.src?.large2x) || texto(f?.src?.large) || texto(f?.src?.portrait);
+    const chica = texto(f?.src?.medium) || texto(f?.src?.tiny) || url;
+    const id = String(f?.id ?? "");
+    const fotografo = texto(f?.photographer);
+    const enlace = texto(f?.url);
+    /* Las cuatro cosas o ninguna: sin autor y enlace no se puede armar la hoja
+       de créditos, y esa hoja es la licencia. Ver `leerFotoElegida`. */
+    if (!id || !url || !fotografo || !enlace) continue;
+    salida.push({ id, chica, url, fotografo, enlace });
+  }
+  return salida;
+}
+
+/**
+ * Bajar una foto que ya se eligió, por su dirección.
+ *
+ * ⚠️ Quien llama tiene que haberla leído con `leerFotoElegida`, que es lo que
+ * comprueba que la dirección sea del banco. Acá no se vuelve a mirar: esto es
+ * el que baja, no el que decide.
+ */
+export async function bajarElegida(f: {
+  url: string; fotografo: string; enlace: string;
+}): Promise<FotoDelEbook | null> {
+  const datos = await bajar(f.url);
+  if (!datos) return null;
+  return { datos, fotografo: f.fotografo, enlace: f.enlace };
+}
+
+/**
  * Las fotos de un ebook entero, todas a la vez.
  *
  * ⚠️ **En paralelo y no en fila.** Una atrás de otra, diez fotos a dos

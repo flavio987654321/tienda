@@ -1,7 +1,9 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
-import { leerIndice, leerCapitulos, leerPromesa } from "@/lib/ebook-ia";
+import {
+  leerIndice, leerCapitulos, leerPromesa, leerFotoDeTapa,
+} from "@/lib/ebook-ia";
 import { leerOpciones, COMO_SE_LLAMA } from "@/lib/ebook-opciones";
 import { sePuedeEditarElTexto } from "@/lib/ebook-texto";
 import { normalizarContenido, buscarPaleta } from "@/lib/pagina-venta";
@@ -82,7 +84,8 @@ export default async function EditorDeEbookPage({ params }: Props) {
           promesa="Cómo pasar de tener algo para enseñar a la primera venta cobrada, sin público y sin publicidad."
           autor="Tu tienda"
           capitulos={CAPITULOS_DE_EJEMPLO}
-          fotos={FOTOS_DE_EJEMPLO}
+          fotos={FOTOS_DE_EJEMPLO.map((frase) => ({ frase, elegida: null }))}
+          tapa={{ frase: "libro abierto sobre un escritorio de madera", elegida: null }}
           total={CAPITULOS_DE_EJEMPLO.length}
           paleta={PALETAS[0]}
           modo="claro"
@@ -136,10 +139,10 @@ export default async function EditorDeEbookPage({ params }: Props) {
           /* Quién lo vende: el ebook es de esa persona, no nuestro. */
           autor={fila.store?.name ?? ""}
           capitulos={capitulos}
-          /* Con qué se busca la foto de cada capítulo: la frase que escribió el
-             modelo pensando en una foto, no el título. La misma que usa el
-             armado, y la que se puede corregir en el temario. */
-          fotos={indice.map((c) => c.foto)}
+          /* La foto de cada capítulo: con qué se busca y cuál se eligió a mano.
+             Las mismas que va a usar el armado. */
+          fotos={indice.map((c) => ({ frase: c.foto, elegida: c.fotoElegida ?? null }))}
+          tapa={leerFotoDeTapa(fila.ebookIA.indice)}
           total={indice.length}
           /* ⚠️ La misma cuenta que hace `/armar`: manda lo que eligió para el
              ebook y, si no eligió nada, la paleta de su página de venta. Si

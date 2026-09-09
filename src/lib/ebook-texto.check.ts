@@ -31,7 +31,11 @@
  */
 
 import { readFileSync } from "fs";
-import { revisarTexto, sePuedeEditarElTexto, COMO_SE_LLAMA_EL_BLOQUE, type LoQueHayEscrito } from "./ebook-texto";
+import {
+  revisarTexto, sePuedeEditarElTexto, COMO_SE_LLAMA_EL_BLOQUE,
+  pegarLasFotos, pegarLaTapa,
+  type LoQueHayEscrito,
+} from "./ebook-texto";
 import {
   BLOQUES_MIN, BLOQUES_MAX, LARGO_BLOQUE, LARGO_TITULO_CAPITULO,
   TIPOS_DE_BLOQUE, leerCapitulos,
@@ -400,6 +404,65 @@ const hay = (cuantos: number): LoQueHayEscrito => ({ capitulos: lista(cuantos) }
   check("TXT-AH",
     TIPOS_DE_BLOQUE.every((t) => (COMO_SE_LLAMA_EL_BLOQUE[t]?.nombre ?? "").length > 0),
     "cada tipo de pedazo tiene un nombre en castellano para mostrar");
+}
+
+/* ── Las fotos ────────────────────────────────────────────────────────────── */
+
+{
+  const indice = [
+    { titulo: 'Uno', resumen: 'De qué va.', foto: 'una escena', fotoElegida: null },
+    { titulo: 'Dos', resumen: 'De qué va.', foto: 'otra escena', fotoElegida: null },
+  ];
+  const buena = {
+    id: '123', url: 'https://images.pexels.com/photos/1/x.jpg',
+    fotografo: 'Alguien', enlace: 'https://www.pexels.com/photo/1/',
+  };
+
+  const r = pegarLasFotos({ fotos: [{ frase: 'cambiada', elegida: buena }, null] }, indice);
+  check('TXT-AQ', r[0].foto === 'cambiada' && r[0].fotoElegida?.id === '123',
+    'la foto elegida y su frase se guardan');
+  check('TXT-AR', r[1].foto === 'otra escena',
+    'el capítulo del que no se dijo nada queda como estaba');
+
+  /* ⚠️ Lo que NO puede pasar: que por la puerta de las fotos se reescriba el
+     temario. El resumen es lo único que se lee para escribir un capítulo. */
+  const r2 = pegarLasFotos(
+    { fotos: [{ frase: 'x', elegida: null, resumen: 'PISADO', titulo: 'PISADO' }] },
+    indice,
+  );
+  check('TXT-AS', r2[0].resumen === 'De qué va.' && r2[0].titulo === 'Uno',
+    'por las fotos no se puede reescribir el temario');
+
+  /* Y que una dirección que no es del banco no entre: el servidor la baja. */
+  const mala = { ...buena, url: 'http://10.0.0.1/interno.jpg' };
+  const r3 = pegarLasFotos({ fotos: [{ frase: 'x', elegida: mala }] }, indice);
+  check('TXT-AT', r3[0].fotoElegida === null,
+    'una dirección que no es del banco de imágenes se descarta');
+
+  const r4 = pegarLasFotos({ fotos: [{ frase: 'x', elegida: { ...buena, fotografo: '' } }] }, indice);
+  check('TXT-AU', r4[0].fotoElegida === null,
+    'una foto sin autor se descarta: ese nombre es la licencia');
+
+  /* La tapa: sin decir nada, queda la que había. */
+  const hayTapa = { frase: 'algo', elegida: null };
+  check('TXT-AV', pegarLaTapa({}, hayTapa).frase === 'algo',
+    'guardar el texto sin hablar de la tapa no borra la tapa');
+  check('TXT-AW', pegarLaTapa({ tapa: { frase: 'nueva', elegida: buena } }, hayTapa).elegida?.id === '123',
+    'la foto de la tapa se guarda');
+
+  /* Y que el armado la use: sin esto, elegirla no cambiaría el archivo. */
+  const armado = readFileSync('src/app/api/digitales/ia/ebook/armar/route.ts', 'utf8');
+  check('TXT-AX',
+    /bajarElegida\(/.test(armado) && /leerFotoDeTapa\(/.test(armado),
+    'el armado usa la foto elegida en vez de buscar otra');
+
+  /* ⚠️ Y que las otras dos rutas que reescriben el índice NO borren la tapa:
+     vive en la raíz de ese JSON, al lado de la promesa y las opciones. */
+  const temario = readFileSync('src/app/api/digitales/ia/ebook/indice/route.ts', 'utf8');
+  check('TXT-AY', /tapa: leerFotoDeTapa\(/.test(temario),
+    'corregir el temario no borra la foto de la tapa');
+  check('TXT-AZ', /fotoElegida: leerFotoElegida\(/.test(readFileSync('src/lib/ebook-temario.ts', 'utf8')),
+    'corregir el temario no borra las fotos elegidas de los capítulos');
 }
 
 console.log(fallos === 0

@@ -1,6 +1,7 @@
 "use client";
 
 import { coloresDelEbook, type ColoresDeTapa, type ModoDelEbook } from "@/lib/ebook-colores";
+import type { FotoDelCapitulo } from "@/lib/ebook-texto";
 import type { CapituloEscrito } from "@/lib/ebook-ia";
 
 /**
@@ -56,6 +57,7 @@ export default function VistaPreviaEbook({
   autor,
   capitulos,
   fotos,
+  tapa,
   paleta,
   modo,
 }: {
@@ -76,7 +78,9 @@ export default function VistaPreviaEbook({
    * Puede venir vacía —los ebooks guardados antes del 07/09/26 no la tienen— y
    * ahí la búsqueda cae al título, igual que en el armado.
    */
-  fotos: string[];
+  fotos: FotoDelCapitulo[];
+  /** La de la tapa, que no es un capítulo. */
+  tapa: FotoDelCapitulo;
   paleta: ColoresDeTapa;
   modo: ModoDelEbook;
 }) {
@@ -121,7 +125,7 @@ export default function VistaPreviaEbook({
               `tapa` en `ebook-pdf`. Con el tema oscuro va a sangre, tapando la
               hoja entera; acá se dibuja el corte del tema claro, que es el que
               usa casi todo el mundo. */}
-          <HuecoDeFoto busca={titulo} t={t} alto="52%" />
+          <HuecoDeFoto foto={tapa} respaldo={titulo} t={t} alto="52%" />
 
           <div
             className="flex flex-1 flex-col justify-between"
@@ -164,7 +168,7 @@ export default function VistaPreviaEbook({
             <div
               style={{ position: "relative", marginTop: i === 0 ? 0 : em(26) }}
             >
-              <HuecoDeFoto busca={fotos[i] || c.titulo} t={t} proporcion="595.28 / 350" />
+              <HuecoDeFoto foto={fotos[i]} respaldo={c.titulo} t={t} proporcion="595.28 / 350" />
               <p
                 style={{
                   position: "absolute", left: margen, bottom: em(6),
@@ -213,24 +217,45 @@ export default function VistaPreviaEbook({
  * puede hacer nada; leyendo "manos amasando harina" sabe exactamente qué tocar.
  */
 function HuecoDeFoto({
-  busca,
+  foto,
+  respaldo,
   t,
   alto,
   proporcion,
 }: {
-  busca: string;
+  foto: FotoDelCapitulo | undefined;
+  /** Con qué se busca si no hay frase: el título del capítulo, o el del ebook. */
+  respaldo: string;
   t: ReturnType<typeof coloresDelEbook>;
   alto?: string;
   proporcion?: string;
 }) {
+  const caja = {
+    height: alto,
+    aspectRatio: proporcion,
+    background: t.caja,
+  };
+
+  /* ⚠️ Elegida, se muestra DE VERDAD. Es la mitad de para qué sirve poder
+     elegirla: apretar una miniatura y ver la tapa cambiar en el momento, en vez
+     de armar el PDF entero para enterarse. */
+  if (foto?.elegida) {
+    return (
+      /* eslint-disable-next-line @next/next/no-img-element */
+      <img
+        src={foto.elegida.url}
+        alt=""
+        style={{ ...caja, width: "100%", objectFit: "cover", display: "block" }}
+      />
+    );
+  }
+
+  const busca = foto?.frase || respaldo;
+
   return (
     <div
       className="flex items-center justify-center"
-      style={{
-        height: alto, aspectRatio: proporcion,
-        background: t.caja,
-        padding: `${em(14)} ${em(28)}`,
-      }}
+      style={{ ...caja, padding: `${em(14)} ${em(28)}` }}
     >
       <p
         style={{

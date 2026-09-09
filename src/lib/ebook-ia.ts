@@ -132,6 +132,43 @@ export type Bloque = { tipo: TipoDeBloque; texto: string };
 /** Cuántas palabras entran en la búsqueda de la foto del capítulo. */
 export const LARGO_FOTO = 80;
 
+/** Los textos que vienen del banco de imágenes: dirección, autor, enlace. */
+export const LARGO_DIRECCION_FOTO = 500;
+export const LARGO_AUTOR_FOTO = 120;
+
+/**
+ * Una foto elegida a mano, en vez de buscada.
+ *
+ * ══════════════════════════════════════════════════════════════════════════
+ * ⚠️ SIN ESTO, LAS FOTOS CAMBIABAN SOLAS EN CADA ARMADO
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * Hasta el 09/09/26 no se guardaba **ninguna** foto: el armado buscaba de nuevo
+ * cada vez, con la frase del capítulo. O sea que rehacer el PDF para arreglar
+ * una falta de ortografía podía traer diez fotos distintas — y quien ya había
+ * mirado su ebook y le gustaba cómo se veía, lo perdía sin tocar nada.
+ *
+ * Y era peor que eso: no había forma de decir "esta no, la otra". La única
+ * palanca era reescribir la frase de búsqueda y cruzar los dedos.
+ *
+ * Guardando lo elegido, la foto **queda**. Y se puede cambiar, que es de lo que
+ * se trata: el editor muestra lo que hay en el banco y se elige una.
+ *
+ * ⚠️ Se guarda la DIRECCIÓN, no la imagen. Bajarla y guardarla nosotros sería
+ * pagar depósito y tránsito por una foto que Pexels sirve gratis; el armado la
+ * baja igual que antes, sólo que ya sabe cuál.
+ */
+export type FotoElegida = {
+  /** El id en el banco. Es lo que evita que dos capítulos elijan la misma. */
+  id: string;
+  /** De dónde bajarla al armar el PDF. */
+  url: string;
+  /** Quien la sacó. Va en la hoja de créditos, y no es opcional: es la licencia. */
+  fotografo: string;
+  /** La página de la foto en el banco. También va en los créditos. */
+  enlace: string;
+};
+
 export type CapituloPlaneado = {
   titulo: string;
   resumen: string;
@@ -148,6 +185,11 @@ export type CapituloPlaneado = {
    * ese caso quien busca cae al título, que es lo que se hacía antes.
    */
   foto: string;
+  /**
+   * La foto que se eligió a mano para este capítulo, o `null` para que la
+   * busque el armado con la frase de arriba. Ver `FotoElegida`.
+   */
+  fotoElegida?: FotoElegida | null;
 };
 export type CapituloEscrito = { titulo: string; bloques: Bloque[] };
 
@@ -541,6 +583,83 @@ export function leerPromesa(guardado: string | null | undefined): string {
   return limpiarTexto(o?.promesa, LARGO_RESUMEN_CAPITULO) ?? "";
 }
 
+/**
+ * La foto elegida, limada. `null` si no hay o si le falta algo.
+ *
+ * ⚠️ **Los cuatro campos son obligatorios y no hay medio elegido.** Sin `url`
+ * no hay qué bajar; sin `fotografo` y `enlace` la hoja de créditos queda
+ * incompleta, **y eso es la licencia del banco de imágenes**, no un adorno. Una
+ * foto a medias se descarta y el armado vuelve a buscar, que es lo que hacía
+ * antes de que esto existiera.
+ *
+ * Y la dirección se mira: tiene que ser `https` del banco. Lo que se guarda acá
+ * lo baja el servidor al armar, así que una dirección cualquiera sería pedirle
+ * a nuestro servidor que visite lo que diga el navegador.
+ */
+export function leerFotoElegida(crudo: unknown): FotoElegida | null {
+  if (!crudo || typeof crudo !== "object") return null;
+  const f = crudo as Record<string, unknown>;
+
+  const id = limpiarTexto(f.id, 40);
+  const url = limpiarTexto(f.url, LARGO_DIRECCION_FOTO);
+  const fotografo = limpiarTexto(f.fotografo, LARGO_AUTOR_FOTO);
+  const enlace = limpiarTexto(f.enlace, LARGO_DIRECCION_FOTO);
+
+  if (!id || !url || !fotografo || !enlace) return null;
+  if (!esDelBanco(url) || !esDelBanco(enlace)) return null;
+
+  return { id, url, fotografo, enlace };
+}
+
+/**
+ * Los dominios de los que el servidor acepta bajar una foto.
+ *
+ * ⚠️ **Esto es lo que impide que el navegador le haga visitar cualquier cosa al
+ * servidor.** La dirección viaja desde la pantalla, se guarda en la base y
+ * después el armado la baja desde adentro de nuestra red: sin esta lista,
+ * mandando una dirección de la red interna se la hacemos pedir nosotros.
+ */
+const DOMINIOS_DEL_BANCO = ["images.pexels.com", "www.pexels.com", "pexels.com"];
+
+function esDelBanco(direccion: string): boolean {
+  try {
+    const u = new URL(direccion);
+    return u.protocol === "https:" && DOMINIOS_DEL_BANCO.includes(u.hostname);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * La foto de la tapa: con qué se busca y cuál se eligió.
+ *
+ * ⚠️ Vive en la RAÍZ del mismo JSON, al lado de `promesa` y `opciones`, y no
+ * adentro de un capítulo: la tapa no es un capítulo. Es el mismo criterio que
+ * `leerPromesa` — una columna nueva en la base para un par de campos que ya
+ * viajan acá adentro no se justifica.
+ *
+ * `frase` vacía quiere decir "buscala con el título del ebook", que es lo que
+ * hacía el armado antes de que esto existiera.
+ */
+export function leerFotoDeTapa(
+  guardado: string | null | undefined,
+): { frase: string; elegida: FotoElegida | null } {
+  const vacia = { frase: "", elegida: null };
+  if (typeof guardado !== "string") return vacia;
+  let crudo: unknown;
+  try { crudo = JSON.parse(guardado); } catch { return vacia; }
+  if (!crudo || typeof crudo !== "object" || Array.isArray(crudo)) return vacia;
+
+  const t = (crudo as { tapa?: unknown }).tapa;
+  if (!t || typeof t !== "object") return vacia;
+  const f = t as Record<string, unknown>;
+
+  return {
+    frase: limpiarTexto(f.frase, LARGO_FOTO) ?? "",
+    elegida: leerFotoElegida(f.elegida),
+  };
+}
+
 export function leerIndice(guardado: string | null | undefined): CapituloPlaneado[] {
   const crudo = abrirIndice(guardado);
   if (!crudo) return [];
@@ -555,7 +674,12 @@ export function leerIndice(guardado: string | null | undefined): CapituloPlanead
     if (!tit) continue;
     /* Los ebooks guardados antes del 07/09/26 no tienen `foto`: vuelve vacía y
        quien busca cae al título. Ver `CapituloPlaneado`. */
-    capitulos.push({ titulo: tit, resumen: res ?? "", foto: limpiarTexto(b.foto, LARGO_FOTO) ?? "" });
+    capitulos.push({
+      titulo: tit,
+      resumen: res ?? "",
+      foto: limpiarTexto(b.foto, LARGO_FOTO) ?? "",
+      fotoElegida: leerFotoElegida(b.fotoElegida),
+    });
   }
   return capitulos;
 }

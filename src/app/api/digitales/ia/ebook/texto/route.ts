@@ -2,9 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { leerCapitulos } from "@/lib/ebook-ia";
+import { leerCapitulos, leerIndice, leerPromesa, leerFotoDeTapa } from "@/lib/ebook-ia";
 import { leerOpciones } from "@/lib/ebook-opciones";
-import { revisarTexto, sePuedeEditarElTexto } from "@/lib/ebook-texto";
+import {
+  revisarTexto, sePuedeEditarElTexto, pegarLasFotos, pegarLaTapa,
+} from "@/lib/ebook-texto";
 import { estadoDelBorrador, tomarElCandado, soltarElCandado } from "@/lib/ebook-borrador";
 
 export const runtime = "nodejs";
@@ -146,6 +148,26 @@ export async function POST(req: NextRequest) {
 
   const capitulos = JSON.stringify(revision.capitulos);
 
+  /* ══════════════════════════════════════════════════════════════════════════
+     LAS FOTOS VAN EN EL MISMO GUARDADO
+     ══════════════════════════════════════════════════════════════════════════
+
+     Viven en el índice —ahí está la frase con la que se busca cada una y, ahora,
+     cuál se eligió— así que esto reescribe las dos columnas de una. Es un solo
+     botón para la persona y una sola escritura acá: partido en dos guardados,
+     uno podría entrar y el otro no, y el capítulo quedaría con el texto nuevo y
+     la foto vieja.
+
+     ⚠️ Y se reescribe con `promesa` y `opciones` puestas de nuevo, igual que en
+     `/indice`: viven adentro de este mismo JSON, así que guardarlo sin ellas las
+     borraría — un recetario de 30 volvería a ser un ebook de texto. */
+  const indiceNuevo = JSON.stringify({
+    promesa: leerPromesa(fresco.indice),
+    capitulos: pegarLasFotos(body, leerIndice(fresco.indice)),
+    tapa: pegarLaTapa(body, leerFotoDeTapa(fresco.indice)),
+    opciones: leerOpciones(fresco.indice),
+  });
+
   /* Ver arriba: el archivo que está colgado es el de antes, así que el ebook
      deja de estar `LISTO`. Los otros estados no se tocan — corregir el capítulo
      3 mientras se escribe el 7 no cambia que se está escribiendo. */
@@ -153,7 +175,7 @@ export async function POST(req: NextRequest) {
 
   const guardado = await prisma.ebookIA.updateMany({
     where: { id: fresco.id, trabajandoDesde: marca },
-    data: { capitulos, estado, trabajandoDesde: null, error: null },
+    data: { capitulos, indice: indiceNuevo, estado, trabajandoDesde: null, error: null },
   });
   if (guardado.count !== 1) {
     /* Perdimos el candado mientras validábamos. No se pisa nada: se avisa. */
@@ -163,7 +185,7 @@ export async function POST(req: NextRequest) {
     }, { status: 409 });
   }
 
-  const fila = { ...fresco, capitulos, estado, trabajandoDesde: null, error: null };
+  const fila = { ...fresco, capitulos, indice: indiceNuevo, estado, trabajandoDesde: null, error: null };
 
   /* ⚠️ NO vuelve el texto guardado, y es a propósito: son decenas de miles de
      caracteres que la pantalla ya tiene en la mano —los acaba de mandar— y que

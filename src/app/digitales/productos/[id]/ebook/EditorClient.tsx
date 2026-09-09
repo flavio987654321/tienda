@@ -2,11 +2,13 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check, Loader2 } from "lucide-react";
+import { Check, Loader2, Image as ImageIcon } from "lucide-react";
 import EbookTexto from "../../EbookTexto";
 import VistaPreviaEbook from "../../VistaPreviaEbook";
 import type { CapituloEscrito } from "@/lib/ebook-ia";
 import type { ColoresDeTapa, ModoDelEbook } from "@/lib/ebook-colores";
+import type { FotoDelCapitulo } from "@/lib/ebook-texto";
+import ElegirFoto from "../../ElegirFoto";
 import { useSalida } from "@/app/digitales/SalidaSinGuardar";
 
 /**
@@ -51,7 +53,8 @@ export default function EditorDeEbook({
   promesa,
   autor,
   capitulos: guardadosIniciales,
-  fotos,
+  fotos: fotosIniciales,
+  tapa: tapaInicial,
   total,
   paleta,
   modo,
@@ -63,8 +66,10 @@ export default function EditorDeEbook({
   promesa: string;
   autor: string;
   capitulos: CapituloEscrito[];
-  /** Con qué se busca la foto de cada capítulo. Ver `VistaPreviaEbook`. */
-  fotos: string[];
+  /** La foto de cada capítulo: con qué buscarla y cuál se eligió. */
+  fotos: FotoDelCapitulo[];
+  /** La de la tapa, que vive en la raíz del índice. */
+  tapa: FotoDelCapitulo;
   total: number;
   paleta: ColoresDeTapa;
   modo: ModoDelEbook;
@@ -83,6 +88,16 @@ export default function EditorDeEbook({
      los dos ES "hay cambios sin guardar". */
   const [guardados, setGuardados] = useState(guardadosIniciales);
   const [capitulos, setCapitulos] = useState(guardadosIniciales);
+
+  /* Las fotos viajan con el texto: un solo guardado, un solo candado. Ver la
+     ruta que las guarda. */
+  const [fotos, setFotos] = useState(fotosIniciales);
+  const [tapa, setTapa] = useState(tapaInicial);
+  /* La linea de "lo guardado" de las fotos, igual que la del texto: sin esto,
+     cambiar SOLO una foto dejaba el boton de guardar apagado. */
+  const [fotosGuardadas, setFotosGuardadas] = useState(fotosIniciales);
+  const [tapaGuardada, setTapaGuardada] = useState(tapaInicial);
+  const [tapaAbierta, setTapaAbierta] = useState(false);
 
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -130,6 +145,8 @@ export default function EditorDeEbook({
       const pedazos = corregidos.reduce((n, c) => n + c.bloques.length, 0);
       setGuardados(corregidos);
       setCapitulos(corregidos);
+      setFotosGuardadas(fotos);
+      setTapaGuardada(tapa);
       setListo(
         `Se habría guardado: ${corregidos.length} capítulos, ${pedazos} pedazos. Y después se rehacía el PDF.`,
       );
@@ -142,7 +159,7 @@ export default function EditorDeEbook({
     setListo(null);
 
     try {
-      const { ok, datos } = await pedir("/api/digitales/ia/ebook/texto", { capitulos: corregidos });
+      const { ok, datos } = await pedir("/api/digitales/ia/ebook/texto", { capitulos: corregidos, fotos, tapa });
       if (!vivo.current) return;
 
       if (!ok) {
@@ -158,6 +175,8 @@ export default function EditorDeEbook({
          aceptó— y no lo que se tipeó, que puede tener un espacio de más. */
       setGuardados(corregidos);
       setCapitulos(corregidos);
+      setFotosGuardadas(fotos);
+      setTapaGuardada(tapa);
 
       if (datos.hayQueArmar === true) {
         const armado = await pedir("/api/digitales/ia/ebook/armar", {});
@@ -186,7 +205,7 @@ export default function EditorDeEbook({
       enVuelo.current = false;
       if (vivo.current) setGuardando(false);
     }
-  }, [pedir, router, deMentira]);
+  }, [pedir, router, deMentira, fotos, tapa]);
 
   return (
     <div>
@@ -247,11 +266,74 @@ export default function EditorDeEbook({
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* ── Lo que se escribe ──────────────────────────────────────────── */}
         <div className={`min-w-0 ${vista === "escribir" ? "" : "hidden lg:block"}`}>
+          {/* ── La foto de la tapa ─────────────────────────────────────────
+              Aparte de los capítulos y ARRIBA de todo, porque la tapa no es un
+              capítulo: es la primera hoja, la que se ve en la página de venta y
+              la que decide si alguien abre el archivo. Meterla adentro de la
+              lista la habría dejado como el capítulo cero de nada. */}
+          <div className="mb-3 rounded-2xl border border-gray-200 panel-oscuro:border-gray-700 bg-white panel-oscuro:bg-gray-900 p-4 sm:p-5">
+            {tapaAbierta ? (
+              <ElegirFoto
+                frase={tapa.frase}
+                elegida={tapa.elegida}
+                alta
+                deQue="la tapa"
+                disabled={guardando}
+                onFrase={(frase) => setTapa((t) => ({ ...t, frase }))}
+                onElegida={(elegida) => setTapa((t) => ({ ...t, elegida }))}
+                onCerrar={() => setTapaAbierta(false)}
+              />
+            ) : (
+              <button
+                type="button"
+                onClick={() => setTapaAbierta(true)}
+                disabled={guardando}
+                className="flex w-full items-center gap-3 text-left disabled:opacity-50"
+              >
+                {tapa.elegida ? (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img
+                    src={tapa.elegida.url}
+                    alt=""
+                    className="h-14 w-11 shrink-0 rounded object-cover"
+                  />
+                ) : (
+                  <span className="inline-flex h-14 w-11 shrink-0 items-center justify-center rounded bg-gray-100 panel-oscuro:bg-gray-800 text-gray-400">
+                    <ImageIcon className="h-4 w-4" />
+                  </span>
+                )}
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[12.5px] font-bold text-gray-800 panel-oscuro:text-gray-200">
+                    La foto de la tapa
+                  </span>
+                  <span className="block truncate text-[11.5px] text-gray-500 panel-oscuro:text-gray-400">
+                    {tapa.elegida
+                      ? `Elegida a mano, de ${tapa.elegida.fotografo}`
+                      : tapa.frase
+                        ? `Se busca “${tapa.frase}”`
+                        : "Se busca con el título del ebook"}
+                  </span>
+                </span>
+                <span className="shrink-0 text-[12px] font-bold text-orange-700 panel-oscuro:text-orange-300">
+                  Cambiar
+                </span>
+              </button>
+            )}
+          </div>
+
           <div className="rounded-2xl border border-gray-200 panel-oscuro:border-gray-700 bg-white panel-oscuro:bg-gray-900 p-4 sm:p-5">
             <EbookTexto
               guardados={guardados}
               capitulos={capitulos}
               onCapitulos={setCapitulos}
+              fotos={fotos}
+              onFotos={setFotos}
+              /* ⚠️ Sin esto, cambiar SÓLO una foto dejaba el botón de guardar
+                 apagado: aquel mide si cambió el texto, y una foto no es texto. */
+              otrosCambios={
+                JSON.stringify(fotos) !== JSON.stringify(fotosGuardadas)
+                || JSON.stringify(tapa) !== JSON.stringify(tapaGuardada)
+              }
               total={total}
               guardando={guardando}
               error={error}
@@ -291,6 +373,7 @@ export default function EditorDeEbook({
                 autor={autor}
                 capitulos={capitulos}
                 fotos={fotos}
+                tapa={tapa}
                 paleta={paleta}
                 modo={modo}
               />

@@ -1,8 +1,9 @@
 import { limpiarTexto } from "@/lib/texto-limpio";
 import {
-  BLOQUES_MIN, BLOQUES_MAX, LARGO_BLOQUE, LARGO_TITULO_CAPITULO,
-  TIPOS_DE_BLOQUE,
-  type Bloque, type TipoDeBloque, type CapituloEscrito,
+  BLOQUES_MIN, BLOQUES_MAX, LARGO_BLOQUE, LARGO_TITULO_CAPITULO, LARGO_FOTO,
+  TIPOS_DE_BLOQUE, leerFotoElegida,
+  type Bloque, type TipoDeBloque, type CapituloEscrito, type CapituloPlaneado,
+  type FotoElegida,
 } from "@/lib/ebook-ia";
 
 /**
@@ -205,4 +206,87 @@ export function revisarTexto(recibido: unknown, hay: LoQueHayEscrito): RevisionD
 
   /* Lo que se escribió mientras corregía se mantiene. Ver el aviso de arriba. */
   return { ok: true, capitulos: [...corregidos, ...hay.capitulos.slice(corregidos.length)] };
+}
+
+/* ── Las fotos ───────────────────────────────────────────────────────────── */
+
+/**
+ * Lo que la pantalla manda de cada foto: con qué buscarla, y cuál se eligió.
+ *
+ * Van en el mismo guardado que el texto y no en uno aparte, a propósito: es un
+ * solo botón para la persona, y del lado del servidor es el mismo candado y la
+ * misma escritura. Dos guardados separados abren la puerta a que uno entre y el
+ * otro no, y ahí el capítulo queda con el texto nuevo y la foto vieja.
+ */
+export type FotoRecibida = { frase: string; elegida: unknown };
+
+/** Lo mismo, ya limado: es lo que maneja la pantalla. */
+export type FotoDelCapitulo = { frase: string; elegida: FotoElegida | null };
+
+/**
+ * La foto de la tapa que llegó del navegador, limada.
+ *
+ * Se guarda en la raíz del índice, al lado de la promesa. Ver `leerFotoDeTapa`.
+ * Si no vino nada en el cuerpo, se devuelve lo que ya había: mandar el texto sin
+ * hablar de la tapa no puede borrar la tapa.
+ */
+export function pegarLaTapa(
+  recibido: unknown,
+  hay: FotoDelCapitulo,
+): FotoDelCapitulo {
+  const c = (recibido ?? {}) as Record<string, unknown>;
+  const t = c.tapa;
+  if (!t || typeof t !== "object") return hay;
+  const f = t as Record<string, unknown>;
+
+  return {
+    frase: limpiarTexto(f.frase, LARGO_FOTO) ?? "",
+    elegida: leerFotoElegida(f.elegida),
+  };
+}
+
+/**
+ * Las fotos corregidas, pegadas al temario que ya está guardado.
+ *
+ * ══════════════════════════════════════════════════════════════════════════
+ * ⚠️ EL TEMARIO SALE DE LA BASE, NO DEL NAVEGADOR
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * De lo que llega se toman **dos campos y nada más**: la frase de búsqueda y la
+ * foto elegida. El título y el resumen de cada entrada se quedan como están.
+ *
+ * No es prudencia de más: el resumen es lo único que se lee para escribir un
+ * capítulo, y esta pantalla no lo edita —lo edita el temario, antes—. Si acá se
+ * aceptara el objeto entero, un pedido armado a mano podría reescribir el
+ * temario por la puerta de las fotos, y encima sin pasar por las reglas que
+ * cuidan lo ya escrito. Ver `revisarTemario`.
+ *
+ * Y las de más se ignoran en silencio, que acá sí corresponde: no son algo que
+ * alguien escribió, son posiciones que ya no existen porque el temario tiene
+ * los capítulos que tiene.
+ */
+export function pegarLasFotos(
+  recibido: unknown,
+  indice: CapituloPlaneado[],
+): CapituloPlaneado[] {
+  const c = (recibido ?? {}) as Record<string, unknown>;
+  const fotos = c.fotos;
+  if (!Array.isArray(fotos)) return indice;
+
+  return indice.map((entrada, i) => {
+    const bruto = fotos[i];
+    if (!bruto || typeof bruto !== "object") return entrada;
+    const f = bruto as Record<string, unknown>;
+
+    return {
+      ...entrada,
+      /* Vacía se acepta: es "volvé a buscarla vos", y es lo que había antes de
+         que este campo existiera. */
+      foto: limpiarTexto(f.frase, LARGO_FOTO) ?? "",
+      /* `leerFotoElegida` es el que mira que la dirección sea del banco. Lo que
+         no pasa esa mirada vuelve `null`, o sea "buscala vos": una foto a
+         medias no puede dejar un capítulo sin nada. */
+      fotoElegida: leerFotoElegida(f.elegida),
+    };
+  });
 }

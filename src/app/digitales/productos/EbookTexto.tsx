@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import {
   Loader2, Plus, Trash2, ArrowUp, ArrowDown, ChevronDown, Check, AlertTriangle,
+  Image as ImageIcon,
 } from "lucide-react";
 import CampoAuto from "@/components/CampoAuto";
 import {
@@ -14,7 +15,10 @@ import {
    Igual que en el editor del temario: escribir acá una versión "parecida" de
    las reglas es el camino conocido a que la pantalla habilite el botón y el
    servidor conteste que no. Una regla, un mensaje, las dos puntas. */
-import { revisarTexto, COMO_SE_LLAMA_EL_BLOQUE } from "@/lib/ebook-texto";
+import {
+  revisarTexto, COMO_SE_LLAMA_EL_BLOQUE, type FotoDelCapitulo,
+} from "@/lib/ebook-texto";
+import ElegirFoto from "./ElegirFoto";
 
 /**
  * El editor del texto ya escrito.
@@ -59,6 +63,9 @@ export default function EbookTexto({
   guardados,
   capitulos,
   onCapitulos,
+  fotos,
+  onFotos,
+  otrosCambios = false,
   total,
   guardando,
   error,
@@ -71,6 +78,23 @@ export default function EbookTexto({
   /** Lo que se está escribiendo ahora. */
   capitulos: CapituloEscrito[];
   onCapitulos: (capitulos: CapituloEscrito[]) => void;
+  /**
+   * La foto de cada capítulo: con qué buscarla y cuál se eligió.
+   *
+   * ⚠️ Viene de arriba y no de acá adentro por lo mismo que el texto: la vista
+   * previa de al lado tiene que ver la foto elegida apenas se elige. Y es más
+   * larga que `capitulos` cuando faltan capítulos por escribir — hay una por
+   * entrada del temario, escrita o no.
+   */
+  fotos: FotoDelCapitulo[];
+  onFotos: (fotos: FotoDelCapitulo[]) => void;
+  /**
+   * Si cambió algo que no es el texto —una foto, la tapa—.
+   *
+   * ⚠️ Sin esto el botón de guardar medía SÓLO el texto, así que cambiar una
+   * foto y apretar no hacía nada: el botón estaba apagado y no decía por qué.
+   */
+  otrosCambios?: boolean;
   /** Cuántos capítulos tiene el ebook entero, escritos o no. */
   total: number;
   guardando: boolean;
@@ -83,6 +107,12 @@ export default function EbookTexto({
   /* Cuál está abierto. Arranca en el primero: abrir el editor y ver una lista
      de títulos cerrados no dice que adentro hay texto para corregir. */
   const [abierto, setAbierto] = useState<number | null>(0);
+  /* Y cuál capítulo tiene abierto el elegidor de foto. Uno solo por vez: son
+     quince miniaturas cada uno, y diez abiertos es una pared de fotos. */
+  const [fotoAbierta, setFotoAbierta] = useState<number | null>(null);
+
+  const cambiarFoto = (i: number, cambio: Partial<FotoDelCapitulo>) =>
+    onFotos(fotos.map((f, j) => (j === i ? { ...f, ...cambio } : f)));
 
   /* La misma revisión que hace el servidor, con el mismo mensaje. */
   const revision = revisarTexto({ capitulos }, { capitulos: guardados });
@@ -91,7 +121,9 @@ export default function EbookTexto({
   /* Se compara el resultado LIMADO contra lo guardado: así un espacio de más al
      final no cuenta como un cambio y no dispara un guardado al pedo. */
   const cambiado =
-    revision.ok && JSON.stringify(revision.capitulos) !== JSON.stringify(guardados);
+    revision.ok
+    && (otrosCambios
+      || JSON.stringify(revision.capitulos) !== JSON.stringify(guardados));
 
   /* Se avisa hacia arriba, que es donde está el botón de salir. Dos efectos y
      no uno: la limpieza del segundo corre SÓLO al desmontarse. */
@@ -201,6 +233,60 @@ export default function EbookTexto({
                     estilo={campo}
                     className="mt-1.5 font-bold"
                   />
+
+                  {/* ── La foto del capítulo ─────────────────────────────
+                      Va ACÁ arriba, pegada al título, y no al final: en el PDF
+                      la foto abre el capítulo —una banda de 350 puntos con el
+                      número encima— así que es lo primero que se ve de este
+                      capítulo, y tiene que ser lo primero que se pueda tocar. */}
+                  {fotoAbierta === i ? (
+                    <div className="mt-3">
+                      <ElegirFoto
+                        frase={fotos[i]?.frase ?? ""}
+                        elegida={fotos[i]?.elegida ?? null}
+                        deQue={`el capítulo ${i + 1}`}
+                        disabled={guardando}
+                        onFrase={(frase) => cambiarFoto(i, { frase })}
+                        onElegida={(elegida) => cambiarFoto(i, { elegida })}
+                        onCerrar={() => setFotoAbierta(null)}
+                      />
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setFotoAbierta(i)}
+                      disabled={guardando}
+                      className="mt-2.5 flex w-full items-center gap-2.5 rounded-lg border border-gray-200 panel-oscuro:border-gray-700 p-2 text-left hover:bg-gray-50 panel-oscuro:hover:bg-gray-800/60 transition-colors disabled:opacity-50"
+                    >
+                      {fotos[i]?.elegida ? (
+                        /* eslint-disable-next-line @next/next/no-img-element */
+                        <img
+                          src={fotos[i].elegida.url}
+                          alt=""
+                          className="h-9 w-12 shrink-0 rounded object-cover"
+                        />
+                      ) : (
+                        <span className="inline-flex h-9 w-12 shrink-0 items-center justify-center rounded bg-gray-100 panel-oscuro:bg-gray-800 text-gray-400">
+                          <ImageIcon className="h-4 w-4" />
+                        </span>
+                      )}
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-[11.5px] font-bold text-gray-700 panel-oscuro:text-gray-300">
+                          {fotos[i]?.elegida ? "Foto elegida" : "Foto automática"}
+                        </span>
+                        <span className="block truncate text-[11px] text-gray-500 panel-oscuro:text-gray-400">
+                          {fotos[i]?.elegida
+                            ? `De ${fotos[i].elegida.fotografo}`
+                            : fotos[i]?.frase
+                              ? `Se busca “${fotos[i].frase}”`
+                              : "Se busca con el título del capítulo"}
+                        </span>
+                      </span>
+                      <span className="shrink-0 text-[11.5px] font-bold text-orange-700 panel-oscuro:text-orange-300">
+                        Cambiar
+                      </span>
+                    </button>
+                  )}
 
                   <ul className="mt-3 space-y-2.5">
                     {c.bloques.map((b, k) => (

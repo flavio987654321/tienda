@@ -5,9 +5,11 @@ import { getCurrentUser } from "@/lib/auth-session";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { rutaDeArchivo, refDeArchivo, rutaDeRef, nombreDeArchivo } from "@/lib/subida-digital";
 import { configDeposito, subirAlDeposito, borrarDelDeposito } from "@/lib/deposito-digital";
-import { leerIndice, leerCapitulos, leerGruposDeRecetas, leerPromesa } from "@/lib/ebook-ia";
+import {
+  leerIndice, leerCapitulos, leerGruposDeRecetas, leerPromesa, leerFotoDeTapa,
+} from "@/lib/ebook-ia";
 import { armarPDF } from "@/lib/ebook-pdf";
-import { buscarFoto, buscarFotos } from "@/lib/fotos-pexels";
+import { buscarFoto, buscarFotos, bajarElegida } from "@/lib/fotos-pexels";
 import { leerOpciones } from "@/lib/ebook-opciones";
 import { normalizarContenido, buscarPaleta } from "@/lib/pagina-venta";
 import { estadoDelBorrador, tomarElCandado, soltarElCandado } from "@/lib/ebook-borrador";
@@ -154,9 +156,54 @@ export async function POST(req: NextRequest) {
     ? recetas.map((r) => r.foto || r.titulo)
     : capitulos.map((c, i) => indice[i]?.foto || c.titulo);
 
+  /* ══════════════════════════════════════════════════════════════════════════
+     ⚠️ LO ELEGIDO A MANO GANA, Y POR ESO LAS FOTOS YA NO CAMBIAN SOLAS
+     ══════════════════════════════════════════════════════════════════════════
+
+     Hasta el 09/09/26 acá se buscaba SIEMPRE, así que rehacer el PDF para
+     arreglar una falta de ortografía podía traer diez fotos distintas: quien ya
+     había mirado su ebook y le gustaba cómo se veía, lo perdía sin tocar nada.
+
+     Ahora, si el capítulo tiene una foto elegida, se baja ÉSA. La búsqueda
+     queda para los que no eligieron ninguna —que son todos hasta que alguien
+     entra al editor— así que el ebook de siempre sale igual que siempre.
+
+     `bajarElegida` devuelve `null` si la foto ya no está o si tarda de más, y
+     ahí se cae a la búsqueda: una foto vieja que desapareció del banco no puede
+     dejar un capítulo sin nada. Ver `FotoElegida`. */
+  const elegidas = esRecetario ? [] : capitulos.map((_, i) => indice[i]?.fotoElegida ?? null);
+
+  /* La tapa, igual: lo elegido gana y la búsqueda queda de respaldo. Su frase
+     puede estar vacía —nadie la tocó— y ahí se busca con el título del ebook,
+     que es lo que se hacía antes. Ver `leerFotoDeTapa`. */
+  const tapa = leerFotoDeTapa(ebook.indice);
+
   const [fotoTapa, fotosCapitulos] = await Promise.all([
-    buscarFoto(ebook.titulo, { alta: true }),
-    buscarFotos(consultas),
+    (async () => {
+      if (tapa.elegida) {
+        const bajada = await bajarElegida(tapa.elegida).catch(() => null);
+        if (bajada) return bajada;
+      }
+      return buscarFoto(tapa.frase || ebook.titulo, { alta: true });
+    })(),
+    Promise.all(
+      consultas.map(async (consulta, i) => {
+        const elegida = elegidas[i];
+        if (elegida) {
+          const bajada = await bajarElegida(elegida).catch(() => null);
+          if (bajada) return bajada;
+        }
+        return null;
+      }),
+    ).then(async (bajadas) => {
+      /* Las que quedaron sin foto se buscan como siempre, y JUNTAS: acá adentro
+         el techo son 60 segundos para todo. Se busca sólo lo que falta, así que
+         un ebook con las diez elegidas no le pide nada al banco. */
+      const faltan = consultas.map((c, i) => (bajadas[i] ? "" : c));
+      if (faltan.every((c) => !c)) return bajadas;
+      const buscadas = await buscarFotos(faltan);
+      return bajadas.map((b, i) => b ?? buscadas[i]);
+    }),
   ]);
 
   let pdf: Buffer;

@@ -2,6 +2,7 @@ import { limpiarTexto } from "@/lib/texto-limpio";
 import {
   CAPITULOS_MIN, CAPITULOS_MAX,
   LARGO_TITULO_EBOOK, LARGO_TITULO_CAPITULO, LARGO_RESUMEN_CAPITULO, LARGO_FOTO,
+  leerFotoElegida,
   type CapituloPlaneado,
 } from "@/lib/ebook-ia";
 
@@ -152,7 +153,18 @@ export function revisarTemario(recibido: unknown, hay: LoQueHay): Revision {
 
     /* La foto sí puede faltar: quien la busca cae al título, que es lo que se
        hacía antes de que este campo existiera. Nunca tumba un capítulo. */
-    nuevos.push({ titulo: tit, resumen: res, foto: limpiarTexto(b.foto, LARGO_FOTO) ?? "" });
+    /* ⚠️ Y la foto ELEGIDA viaja con su entrada. Sin esta línea, tocar el
+       temario borraba la foto que alguien había elegido a mano: se guardaba la
+       entrada sin ella y el armado volvía a buscar una cualquiera. Viaja por el
+       cuerpo y no se copia de lo guardado por posición, porque acá las entradas
+       se pueden mover y borrar — copiar por posición le daría la foto del 3 al
+       capítulo 4. Ver `FotoElegida`. */
+    nuevos.push({
+      titulo: tit,
+      resumen: res,
+      foto: limpiarTexto(b.foto, LARGO_FOTO) ?? "",
+      fotoElegida: leerFotoElegida(b.fotoElegida),
+    });
   }
 
   const capitulos = [...prefijo, ...nuevos];

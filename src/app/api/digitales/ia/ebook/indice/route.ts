@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { leerIndice, leerCapitulos, leerGruposDeRecetas, leerPromesa } from "@/lib/ebook-ia";
+import {
+  leerIndice, leerCapitulos, leerGruposDeRecetas, leerPromesa, leerFotoDeTapa,
+} from "@/lib/ebook-ia";
 import { leerOpciones } from "@/lib/ebook-opciones";
 import { revisarTemario, sePuedeEditarElTemario } from "@/lib/ebook-temario";
 import { estadoDelBorrador, tomarElCandado, soltarElCandado } from "@/lib/ebook-borrador";
@@ -182,9 +184,14 @@ export async function POST(req: NextRequest) {
      las borraría — un recetario de 30 volvería a ser un ebook de texto en el
      medio de la escritura. Y tomarlas del cuerpo sería dejar cambiar por acá
      lo que se cobró: el formato y la cantidad de recetas se eligen una vez. */
+  /* ⚠️ Y LA TAPA IGUAL: también vive en la raíz de este JSON, así que sin esta
+     línea corregir el temario borraría la foto que alguien eligió para la tapa.
+     No se toma del cuerpo porque esta pantalla no la edita — la edita el editor
+     del texto. Ver `leerFotoDeTapa`. */
   const indice = JSON.stringify({
     promesa: revision.temario.promesa,
     capitulos: revision.temario.capitulos,
+    tapa: leerFotoDeTapa(fresco.indice),
     opciones,
   });
 
