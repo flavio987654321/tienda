@@ -4438,3 +4438,77 @@ revisa.
 Lo que conviene llevarle, además del texto: las tres decisiones de arriba ya
 tomadas, para que las escriba él y no queden como están.
 
+
+---
+
+## Auditoría del panel de Productos — 09/09/26
+
+Repaso completo de las 25 rutas de `/api/digitales`, las 16 pantallas del panel
+y las bibliotecas del ecosistema, buscando cuatro cosas: límites y abuso,
+seguridad, funciones a medias y código muerto.
+
+### Lo que se arregló en el acto
+
+- 🟥 **La portada podía dejar el armado a mitad de camino.** Escrita el día
+  anterior: se dibujaba y se subía ENTRE la subida del PDF y la escritura en la
+  base, con el `images` viajando adentro de la misma transacción. Todo eso corre
+  en una función con techo de 60 segundos, así que un Supabase lento se comía el
+  tiempo que le faltaba al armado y la función moría **con el PDF ya arriba y
+  sin escribir la base**: el producto seguía entregando el archivo viejo y
+  quedaba uno huérfano que pagamos igual. Ahora la portada va DESPUÉS de que el
+  archivo quedó colgado; si falla, el producto queda sin foto y nada más.
+- 🟧 **Ninguna subida al depósito tenía tiempo máximo.** `subirAlDeposito` (el
+  PDF, hasta 50 MB) y `guardarImagen` usaban `fetch` sin plazo. Eran los dos
+  únicos pedidos a un tercero de este ecosistema sin él —los de Pexels y el del
+  modelo ya lo tenían—. 30 y 20 segundos.
+- 🟧 **La cadena mandaba la cookie a la dirección que decía el pedido.**
+  `req.url` se arma con la cabecera `Host`. El daño práctico era acotado (la
+  cookie que viaja es la de quien hizo el pedido), pero es un `fetch` a un lugar
+  que elige un tercero, con un secreto en la mano, en una plataforma que además
+  sirve dominios propios. Ahora se comprueba contra los nuestros.
+- 🟨 **`ventas/[orden]/reenviar` comprobaba el dueño en un `if`,** no adentro del
+  `where`. Funcionaba —404 en los dos casos— pero era la única ruta del
+  ecosistema que rompía la regla, y la regla existe para que la protección no
+  dependa de que ese `if` siga estando.
+
+### Lo que se revisó y está bien
+
+No es una lista de cortesía: son los lugares donde un error se cobra caro.
+
+- **Permisos.** Las 25 rutas piden sesión salvo las cuatro que son públicas a
+  propósito (el aviso de pago, la compra, la descarga por token y el estado de
+  una compra). Todas las de panel piden además rol DIGITAL, y todas las que
+  tocan un producto llevan el dueño **adentro del `where`**.
+- **El aviso de pago** verifica la firma de Mercado Pago, contesta 200 siempre
+  —para que no reintente al infinito— y es idempotente.
+- **El contador de descargas** decide en el `where` (`descargas < maxDescargas`),
+  así que dos pedidos a la vez no dan seis descargas de cinco. Y si nuestra firma
+  falla, la descarga se devuelve.
+- **La subida directa**: la ruta la elige el servidor, y al confirmar se
+  comprueba que empiece con `<usuario>/<producto>/` y que no tenga `..`.
+- **Los topes de IA** son cuatro capas —ráfaga, cupo en la base, global de
+  cuentas sin abono, corta-corriente— y los números están razonados. La ráfaga
+  del ebook va aparte (30) porque un ebook son once llamadas de un solo pedido.
+- **Sin XSS en digitales**: no hay un solo `dangerouslySetInnerHTML` en este
+  ecosistema; todo sale por JSX.
+- **Origen** verificado en el `middleware` para toda la API.
+- **Sin código muerto** en las bibliotecas del ecosistema: ni un solo exporte sin
+  usar, ni una ruta que no llame nadie.
+
+### 🔲 Lo que queda anotado
+
+- 🔲 **El recetario no se puede corregir a mano.** El botón está escondido y la
+  ruta lo rechaza. Es el mismo agujero que se le arregló al ebook de texto: una
+  coma mal puesta cuesta una generación entera. Sus recetas son campos
+  —ingredientes, pasos, tiempos—, no párrafos, así que necesita su propio editor.
+- 🔲 **Sentry sin `global-error` ni `onRequestError`.** Un error de renderizado
+  del armazón y un error de servidor no llegan a ningún lado.
+- 🔲 **El techo de gasto de verdad vive fuera del repo.** El corta-corriente de
+  acá (600 llamadas y 40 ebooks por día) frena lo nuestro; el único que garantiza
+  que no llegue una factura grande es el límite de gasto de la cuenta de
+  Anthropic. **Verificar que esté puesto.**
+- 🔲 **Dos campos de archivo sin teclado**, fuera de este panel: el CSV del
+  dashboard y la foto de afiliados usan `className="hidden"`, que los saca del
+  tabulador. El del panel digital ya está con `sr-only`.
+- 🔲 **La etiqueta "Muy pronto" de los formatos es código inalcanzable**: los dos
+  formatos que existen están listos. Se deja como guarda para el tercero.

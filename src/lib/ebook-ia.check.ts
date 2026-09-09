@@ -787,6 +787,29 @@ check("PAN-E",
   /seguirLaCadena\(/.test(cadena),
   "se avisa que se puede cerrar, y del otro lado existe la cadena que lo hace cierto");
 
+/* ══════════════════════════════════════════════════════════════════════════
+   ⚠️ Y LA CADENA SÓLO SE LLAMA A SÍ MISMA EN NUESTROS DOMINIOS
+   ══════════════════════════════════════════════════════════════════════════
+
+   El eslabón siguiente sale con LA COOKIE DE SESIÓN adentro —es lo que hace
+   que entre por la misma puerta, con el mismo dueño en el `where`— y la
+   dirección salía de `req.url`, que se arma con la cabecera `Host`, o sea con
+   un dato que manda quien llama.
+
+   El daño práctico era acotado: la cookie que viaja es la de quien hizo el
+   pedido, así que se la estaría regalando a sí mismo. Pero es un `fetch` a un
+   lugar que elige un tercero, saliendo de nuestra red y con un secreto en la
+   mano, y esta plataforma sirve dominios propios de cada persona — así que "el
+   Host siempre es el nuestro" no vale como supuesto.
+
+   Encontrado en la auditoría del panel del 09/09/26. */
+const elEslabon = readFileSync("src/lib/ebook-cadena.ts", "utf8");
+check("CAD-I",
+  /function esNuestra\(/.test(elEslabon)
+  && /esNuestra\(origen\) \? origen : respaldo/.test(elEslabon)
+  && /tiendaapps\.com/.test(elEslabon),
+  "la cadena no manda la cookie a una dirección que eligió el pedido");
+
 /* ⚠️ Y la barra cuenta con la palabra del formato. Decía "2 de 4" —secciones—
    a alguien que había elegido 10 recetas: el número que ve tiene que ser el
    que eligió, con su nombre al lado. */

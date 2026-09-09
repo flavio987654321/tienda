@@ -296,69 +296,6 @@ export async function POST(req: NextRequest) {
   /* Recién ahora se le pone al producto: el archivo ya está arriba. */
   const anterior = rutaDeRef(producto.archivoPath);
 
-  /* ══════════════════════════════════════════════════════════════════════════
-     LA TAPA, TAMBIÉN COMO IMAGEN
-     ══════════════════════════════════════════════════════════════════════════
-
-     Un producto digital sin portada se muestra con el ícono del rol adentro de
-     un recuadro punteado. En el panel eso está bien —dice "acá falta una foto",
-     y es cierto— pero es lo mismo que ve quien podría comprar en la página de
-     venta y en el enlace que se comparte por WhatsApp.
-
-     Y la tapa ya está hecha: es la primera hoja del archivo que se acaba de
-     armar. Estaba adentro de un PDF que sólo se puede ver bajándolo.
-
-     ⚠️ SÓLO si el producto no tiene portada. Si la persona subió la suya, esa
-     manda: esto llena un lugar vacío, no reemplaza una decisión.
-
-     ⚠️ Y nada de esto puede tirar. El archivo que se paga ya está arriba; una
-     portada que no se pudo dibujar no puede llevárselo puesto. Todo va en
-     `try`, y si algo sale mal el producto queda como estaba: sin foto. */
-  const yaTienePortada = (() => {
-    try {
-      const guardadas: unknown = JSON.parse(producto.images || "[]");
-      return Array.isArray(guardadas)
-        && typeof guardadas[0] === "string"
-        && guardadas[0].length > 0;
-    } catch {
-      return false;
-    }
-  })();
-
-  let portada: string | null = null;
-  if (!yaTienePortada) {
-    try {
-      const imagen = await dibujarLaTapa({
-        titulo: ebook.titulo,
-        promesa: promesaDeLaTapa,
-        autor,
-        /* La misma foto que se acaba de dibujar en el PDF, ya bajada: la
-           portada no le pide nada más al banco de imágenes. */
-        foto: fotoTapa?.datos ?? null,
-        /* Lo que dice el sello. En un recetario se cuentan recetas, que es la
-           unidad que la persona eligió y la que va en la tapa del archivo. */
-        cantidad: esRecetario ? recetas.length : capitulos.length,
-        palabra: esRecetario ? ["RECETA", "RECETAS"] : ["CAPÍTULO", "CAPÍTULOS"],
-        paleta: paletaDeLaTapa,
-        modo: opciones.tema,
-      });
-
-      if (imagen) {
-        portada = configDeImagenes()
-          ? await guardarImagen(imagen, {
-            extension: "jpg", tipo: "image/jpeg", carpeta: "products",
-          })
-          /* Sin Supabase sólo se puede en desarrollo, contra el disco. En
-             producción no hay dónde escribir y se sigue sin portada. */
-          : process.env.NODE_ENV === "production"
-            ? null
-            : await guardarImagenEnDisco(imagen, "jpg");
-      }
-    } catch (e) {
-      console.error("[ia-ebook-armar] no se pudo poner la portada", { ebookId: ebook.id, e });
-    }
-  }
-
   /* El índice tal como está AHORA. Se lee con el candado en la mano, que es lo
      que garantiza que nadie más lo esté escribiendo. Ver el `indice:` de abajo. */
   const fresco = await prisma.ebookIA.findUnique({
@@ -373,10 +310,6 @@ export async function POST(req: NextRequest) {
           archivoPath: refDeArchivo(ruta),
           archivoNombre: nombreDeArchivo(`${ebook.titulo}.pdf`),
           archivoPeso: pdf.length,
-          /* Va en la MISMA transacción que el archivo: es la tapa de ese
-             archivo. Si el guardado falla, no queda un producto mostrando la
-             portada de un ebook que no se colgó. */
-          ...(portada ? { images: JSON.stringify([portada]) } : {}),
         },
       }),
       prisma.ebookIA.update({
@@ -412,6 +345,93 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  /* ══════════════════════════════════════════════════════════════════════════
+     LA TAPA, TAMBIÉN COMO IMAGEN
+     ══════════════════════════════════════════════════════════════════════════
+
+     Un producto digital sin portada se muestra con el ícono del rol adentro de
+     un recuadro punteado. En el panel eso está bien —dice "acá falta una foto",
+     y es cierto— pero es lo mismo que ve quien podría comprar en la página de
+     venta y en el enlace que se comparte por WhatsApp.
+
+     Y la tapa ya está hecha: es la primera hoja del archivo que se acaba de
+     armar. Estaba adentro de un PDF que sólo se puede ver bajándolo.
+
+     ⚠️ SÓLO si el producto no tiene portada. Si la persona subió la suya, esa
+     manda: esto llena un lugar vacío, no reemplaza una decisión.
+
+     ══════════════════════════════════════════════════════════════════════════
+     ⚠️ Y VA ACÁ ABAJO, DESPUÉS DE QUE EL ARCHIVO YA QUEDÓ COLGADO.
+     ══════════════════════════════════════════════════════════════════════════
+
+     Estuvo un día arriba, entre la subida del PDF y la transacción, con el
+     `images` viajando adentro de ella. La idea era que la portada y el archivo
+     entraran juntos o no entrara ninguno. Estaba mal, y lo encontró la
+     auditoría del panel: todo esto corre adentro de una función con techo de
+     60 segundos, así que un Supabase lento dibujando o subiendo una imagen
+     **se comía el tiempo que le faltaba al armado** — y la función moría con el
+     PDF ya arriba y sin escribir la base. Resultado: el producto seguía
+     entregando el archivo viejo y quedaba uno huérfano que pagamos.
+
+     Una decoración no puede poner en riesgo lo que se vende. Ahora el archivo
+     ya está colgado y entregándose antes de que esto arranque; si la portada
+     falla, el producto queda sin foto y nada más. Las dos subidas tienen
+     además tiempo máximo, que era lo que faltaba de fondo.
+
+     ⚠️ Nada de esto puede tirar: todo va en `try`. */
+  let portada: string | null = null;
+  const yaTienePortada = (() => {
+    try {
+      const guardadas: unknown = JSON.parse(producto.images || "[]");
+      return Array.isArray(guardadas)
+        && typeof guardadas[0] === "string"
+        && guardadas[0].length > 0;
+    } catch {
+      return false;
+    }
+  })();
+
+  if (!yaTienePortada) {
+    try {
+      const imagen = await dibujarLaTapa({
+        titulo: ebook.titulo,
+        promesa: promesaDeLaTapa,
+        autor,
+        /* La misma foto que se acaba de dibujar en el PDF, ya bajada: la
+           portada no le pide nada más al banco de imágenes. */
+        foto: fotoTapa?.datos ?? null,
+        /* Lo que dice el sello. En un recetario se cuentan recetas, que es la
+           unidad que la persona eligió y la que va en la tapa del archivo. */
+        cantidad: esRecetario ? recetas.length : capitulos.length,
+        palabra: esRecetario ? ["RECETA", "RECETAS"] : ["CAPÍTULO", "CAPÍTULOS"],
+        paleta: paletaDeLaTapa,
+        modo: opciones.tema,
+      });
+
+      if (imagen) {
+        const donde = configDeImagenes()
+          ? await guardarImagen(imagen, {
+            extension: "jpg", tipo: "image/jpeg", carpeta: "products",
+          })
+          /* Sin Supabase sólo se puede en desarrollo, contra el disco. En
+             producción no hay dónde escribir y se sigue sin portada. */
+          : process.env.NODE_ENV === "production"
+            ? null
+            : await guardarImagenEnDisco(imagen, "jpg");
+
+        if (donde) {
+          await prisma.product.update({
+            where: { id: producto.id },
+            data: { images: JSON.stringify([donde]) },
+          });
+          portada = donde;
+        }
+      }
+    } catch (e) {
+      console.error("[ia-ebook-armar] no se pudo poner la portada", { ebookId: ebook.id, e });
+    }
+  }
+
   return NextResponse.json({
     ok: true,
     listo: true,
@@ -419,6 +439,8 @@ export async function POST(req: NextRequest) {
     /* Para la pantalla que está esperando: el archivo salió, pero salió sin
        fotos. Lo mismo que queda anotado, dicho en el momento. */
     sinFotos: alTope,
+    /* Si de paso se le puso la tapa como portada del producto. */
+    portada,
     ebook: estadoDelBorrador({
       ...ebook,
       estado: "LISTO", trabajandoDesde: null, error: null,

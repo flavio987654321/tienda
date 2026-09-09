@@ -87,8 +87,15 @@ export async function POST(
     );
   }
 
-  const venta = await prisma.order.findUnique({
-    where: { id: ordenId },
+  /* ⚠️ EL DUEÑO VA ADENTRO DEL `where`, no en un `if` de más abajo.
+
+     Estaba comprobado después de leer, y funcionaba —se contestaba 404 en los
+     dos casos, así que tampoco servía para averiguar qué órdenes hay—, pero era
+     la única ruta del ecosistema que rompía la regla. La regla existe justamente
+     para que no dependa de que el `if` de abajo siga estando el día que alguien
+     agregue un camino nuevo en el medio. Encontrado en la auditoría del panel. */
+  const venta = await prisma.order.findFirst({
+    where: { id: ordenId, store: { ownerId: user.id } },
     select: {
       id: true, status: true,
       store: { select: { ownerId: true, owner: { select: { name: true } } } },
@@ -108,12 +115,10 @@ export async function POST(
     },
   });
 
-  /* ⚠️ Que la venta sea SUYA. Sin esto, cualquier cuenta digital con sesión le
-     reenvía el mail al comprador de cualquier otra con sólo cambiar el
-     identificador de la dirección. Y se contesta lo mismo que si no existiera:
-     "no es tuya" y "no existe" no se distinguen desde afuera, así que esto
-     tampoco sirve para averiguar qué órdenes hay. */
-  if (!venta || venta.store.ownerId !== user.id) {
+  /* Se contesta lo mismo que si no existiera: "no es tuya" y "no existe" no se
+     distinguen desde afuera, así que esto tampoco sirve para averiguar qué
+     órdenes hay. */
+  if (!venta) {
     return NextResponse.json({ error: "No encontramos esa venta." }, { status: 404 });
   }
 

@@ -315,15 +315,26 @@ check("LOG-D", /user-agent"\)\?\.slice\(0, \d+\)/.test(descargaLimpia),
  */
 const reenvio = sinComent(readFileSync("src/app/api/digitales/ventas/[orden]/reenviar/route.ts", "utf8"));
 
-/* ⚠️ QUE LA VENTA SEA SUYA. Sin esto, cualquier cuenta digital con sesión le
-   reenvía el mail al comprador de cualquier otra cambiando un identificador. */
+/* ══════════════════════════════════════════════════════════════════════════
+   ⚠️ QUE LA VENTA SEA SUYA, Y ADENTRO DEL `where`.
+   ══════════════════════════════════════════════════════════════════════════
+
+   Sin el dueño, cualquier cuenta digital con sesión le reenvía el mail al
+   comprador de cualquier otra cambiando un identificador.
+
+   Y va adentro de la consulta, no en un `if` después de leer. Estuvo en un `if`
+   y funcionaba —contestaba 404 igual— pero era la única ruta del ecosistema que
+   rompía la regla, y la regla existe para que la protección no dependa de que
+   ese `if` siga estando el día que alguien agregue un camino nuevo en el medio.
+   Corregido en la auditoría del panel del 09/09/26. */
 check("REE-A",
-  /venta\.store\.ownerId !== user\.id/.test(reenvio) && /user\.role !== "DIGITAL"/.test(reenvio),
-  "sólo se reenvía una venta propia, y sólo desde una cuenta digital");
+  /where: \{ id: ordenId, store: \{ ownerId: user\.id \} \}/.test(reenvio)
+  && /user\.role !== "DIGITAL"/.test(reenvio),
+  "sólo se reenvía una venta propia, con el dueño adentro del where");
 
 /* Y se contesta lo mismo que si no existiera: "no es tuya" y "no existe" no se
    distinguen desde afuera, así que esto tampoco sirve para averiguar qué hay. */
-check("REE-B", /!venta \|\| venta\.store\.ownerId !== user\.id[\s\S]{0,200}status: 404/.test(reenvio),
+check("REE-B", /if \(!venta\) \{[\s\S]{0,200}status: 404/.test(reenvio),
   "una venta ajena contesta lo mismo que una que no existe");
 
 check("REE-C", /venta\.status !== "CONFIRMED"/.test(reenvio),

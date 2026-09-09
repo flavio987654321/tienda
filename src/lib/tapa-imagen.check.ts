@@ -198,22 +198,39 @@ async function laTapa() {
      llena un lugar vacío, no reemplaza una decisión. */
   check("TAP-O",
     /if \(!yaTienePortada\) \{/.test(armar)
-    && /\.\.\.\(portada \? \{ images: JSON\.stringify\(\[portada\]\) \} : \{\}\)/.test(armar),
+    && /data: \{ images: JSON\.stringify\(\[donde\]\) \}/.test(armar),
     "el armado sólo la pone si el producto no tiene portada");
 
-  /* ⚠️ En la MISMA transacción que el archivo: si el guardado falla, no puede
-     quedar un producto mostrando la tapa de un ebook que no se colgó. */
-  check("TAP-P",
-    armar.indexOf("...(portada ?") > armar.indexOf("prisma.$transaction(")
-    && armar.indexOf("...(portada ?") < armar.indexOf("prisma.ebookIA.update("),
-    "y la cuelga en la misma transacción que el archivo");
+  /* ══════════════════════════════════════════════════════════════════════════
+     ⚠️ Y SE DIBUJA DESPUÉS DE QUE EL ARCHIVO YA QUEDÓ COLGADO DEL PRODUCTO
+     ══════════════════════════════════════════════════════════════════════════
 
-  /* ⚠️ La portada se dibuja DESPUÉS de que el PDF ya está arriba. Al revés, un
-     problema dibujando una imagen decorativa se llevaría puesto el archivo que
-     se pagó. */
+     Estuvo un día al revés: se dibujaba entre la subida del PDF y la
+     transacción, y el `images` viajaba adentro de ella para que la portada y el
+     archivo entraran juntos o no entrara ninguno.
+
+     Estaba mal. Todo eso corre adentro de una función con techo de 60 segundos:
+     un Supabase lento dibujando o subiendo una imagen se comía el tiempo que le
+     faltaba al armado, y la función moría **con el PDF ya arriba y sin escribir
+     la base**. El producto seguía entregando el archivo viejo y quedaba uno
+     huérfano que pagamos igual.
+
+     Una decoración no puede poner en riesgo lo que se vende. Encontrado en la
+     auditoría del panel, un día después de haberlo escrito. */
+  check("TAP-P",
+    armar.indexOf("let portada: string | null = null") > armar.indexOf("prisma.$transaction("),
+    "y se dibuja después de que el archivo ya quedó colgado del producto");
+
+  /* ⚠️ Y las dos subidas que hace el armado tienen tiempo máximo. Sin él, un
+     Supabase colgado no da error: se queda esperando hasta que matan la función,
+     con el archivo a medio subir y la base sin escribir. Eran los únicos dos
+     `fetch` a un tercero de este ecosistema sin plazo. */
   check("TAP-Q",
-    armar.indexOf("const yaTienePortada") > armar.indexOf("await subirAlDeposito("),
-    "se dibuja después de que el archivo ya está guardado");
+    /signal: AbortSignal\.timeout\(ESPERA\)/.test(
+      readFileSync("src/lib/deposito-imagenes.ts", "utf8"))
+    && /signal: AbortSignal\.timeout\(ESPERA_DE_SUBIDA\)/.test(
+      readFileSync("src/lib/deposito-digital.ts", "utf8")),
+    "las dos subidas del armado tienen tiempo máximo");
 
   /* Y sin pedirle nada más al banco de imágenes: usa la foto que el PDF ya bajó. */
   check("TAP-R",

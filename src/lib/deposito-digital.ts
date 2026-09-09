@@ -121,6 +121,25 @@ export async function enlaceDeDescarga(
  * así que nunca debería chocar; si chocara, es que algo anda mal y es mejor
  * enterarse que pisar en silencio un archivo que alguien podría estar bajando.
  */
+/**
+ * ⚠️ CUÁNTO SE ESPERA A QUE SUBA, Y POR QUÉ TIENE QUE HABER UN NÚMERO.
+ *
+ * Esto corre adentro de una función con techo de 60 segundos —el armado del
+ * ebook, la confirmación de una subida— y hasta el 09/09/26 el `fetch` no tenía
+ * tiempo máximo. Un Supabase lento no devolvía un error: se quedaba colgado
+ * hasta que la plataforma mataba la función entera, **con el archivo a medio
+ * subir y sin que nadie escribiera la base**. Eso deja un archivo pago que no
+ * apunta a ningún lado y un producto que sigue entregando el de antes.
+ *
+ * 30 segundos: de sobra para los 50 MB que aguanta un producto por la ruta que
+ * pasa por el servidor, y la mitad del techo de la función, así que quien llama
+ * todavía tiene lugar para contestar que salió mal.
+ *
+ * Encontrado en la auditoría del panel: era el único `fetch` a un tercero de
+ * este ecosistema sin tiempo máximo. Los de Pexels y el del modelo ya tenían.
+ */
+const ESPERA_DE_SUBIDA = 30_000;
+
 export async function subirAlDeposito(
   { supabaseUrl, serviceRoleKey }: ConfigDeposito,
   ruta: string,
@@ -136,6 +155,7 @@ export async function subirAlDeposito(
       "x-upsert": "false",
     },
     body: new Uint8Array(contenido),
+    signal: AbortSignal.timeout(ESPERA_DE_SUBIDA),
   }).catch(() => null);
 
   if (res?.ok) return true;

@@ -72,11 +72,43 @@ import { despues } from "@/lib/despues";
  * tenga que acordarse de configurar nada. `NEXT_PUBLIC_APP_URL` queda de
  * respaldo por si algún proxy dejara `req.url` inservible.
  */
-function nuestraDireccion(req: NextRequest): string | null {
+/**
+ * ⚠️ Y SE COMPRUEBA QUE SEA NUESTRA, porque acá viaja la cookie.
+ *
+ * `req.url` se arma con la cabecera `Host` del pedido, o sea con un dato que
+ * manda quien llama. Sin esta lista, un pedido con un `Host` cualquiera hacía
+ * que el eslabón siguiente saliera hacia ESE servidor **con la cookie de sesión
+ * adentro**. En la práctica el daño era acotado —la cookie que viaja es la de
+ * quien hizo el pedido, así que se la estaría regalando a sí mismo— pero es un
+ * `fetch` a un lugar que elige un tercero, saliendo de nuestra red y con un
+ * secreto en la mano. Eso no se deja abierto porque hoy no se pueda explotar.
+ *
+ * Y esta plataforma sirve dominios propios de cada persona, así que "el Host
+ * siempre es el nuestro" no vale como supuesto. El panel, en cambio, vive
+ * SIEMPRE en el dominio de la plataforma: es la única puerta desde la que se
+ * arranca un ebook.
+ *
+ * Encontrado en la auditoría del panel del 09/09/26.
+ */
+function esNuestra(origen: string): boolean {
   try {
-    return new URL(req.url).origin;
+    const host = new URL(origen).hostname;
+    if (host === "localhost" || host === "127.0.0.1") return true;
+    if (host === "tiendaapps.com" || host.endsWith(".tiendaapps.com")) return true;
+    const propia = process.env.NEXT_PUBLIC_APP_URL;
+    return !!propia && new URL(propia).hostname === host;
   } catch {
-    return process.env.NEXT_PUBLIC_APP_URL || null;
+    return false;
+  }
+}
+
+function nuestraDireccion(req: NextRequest): string | null {
+  const respaldo = process.env.NEXT_PUBLIC_APP_URL || null;
+  try {
+    const origen = new URL(req.url).origin;
+    return esNuestra(origen) ? origen : respaldo;
+  } catch {
+    return respaldo;
   }
 }
 

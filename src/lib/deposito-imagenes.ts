@@ -50,6 +50,15 @@ export function configDeImagenes(): { url: string; clave: string; deposito: stri
  */
 const yaCreados = new Set<string>();
 
+/**
+ * ⚠️ Cuánto se espera. El servidor guarda imágenes adentro de funciones con
+ * techo de 60 segundos —el armado del ebook, por ejemplo— y un `fetch` sin
+ * tiempo máximo no falla: se cuelga hasta que matan la función, con lo que se
+ * estaba haciendo por la mitad. 20 segundos es de sobra para una imagen que
+ * pesa cientos de kilobytes.
+ */
+const ESPERA = 20_000;
+
 async function asegurarDeposito(
   url: string, clave: string, deposito: string, publico: boolean,
 ): Promise<void> {
@@ -63,12 +72,12 @@ async function asegurarDeposito(
 
   /* Primero se intenta actualizar el que ya está; si no existe, se crea. */
   const actualizar = await fetch(`${url}/storage/v1/bucket/${deposito}`, {
-    method: "PUT", headers: cabeceras, body: cuerpo,
+    method: "PUT", headers: cabeceras, body: cuerpo, signal: AbortSignal.timeout(ESPERA),
   }).catch(() => null);
 
   if (!actualizar?.ok) {
     await fetch(`${url}/storage/v1/bucket`, {
-      method: "POST", headers: cabeceras, body: cuerpo,
+      method: "POST", headers: cabeceras, body: cuerpo, signal: AbortSignal.timeout(ESPERA),
     }).catch((e) => console.error("[deposito-imagenes] no se pudo crear el depósito:", e));
   }
   yaCreados.add(deposito);
@@ -117,6 +126,7 @@ export async function guardarImagen(
       "cache-control": CACHE_DE_UN_ANIO,
     },
     body: bytes as BodyInit,
+    signal: AbortSignal.timeout(ESPERA),
   });
 
   if (!res.ok) {
