@@ -1410,6 +1410,33 @@ chequear("el motivo por el que no se puede publicar está atado al botón",
     /\{principales\.length > 1 && \(/.test(pantallaProductos));
 
   /* ══════════════════════════════════════════════════════════════════════════
+     ⚠️ EN 360 LOS BOTONES DE LA TARJETA SON UNA GRILLA, NO UNA FILA QUE ENVUELVE
+     ══════════════════════════════════════════════════════════════════════════
+
+     Con `flex-wrap` a secas cada botón mide lo que mide su texto y entra donde
+     entra: "Subir PDF" y "Escribir con IA" no entran juntos, "Editar" y
+     "Publicar" sí, "Borrar" queda solo. Siete botones de siete anchos distintos
+     en una columna despareja. Visto en pantalla el 08/09/26.
+
+     ⚠️ Y `contents` en el grupo de la ficha es la pieza que sostiene todo: hace
+     que esa caja desaparezca del armado y que Editar, Publicar y Borrar sean
+     celdas de la MISMA grilla. Sin eso los tres quedan apretados adentro de una
+     sola celda —media pantalla— y la grilla no sirve de nada. Se pide junto,
+     porque sacar cualquiera de las dos rompe la otra en silencio. */
+  chequear("en 360 los botones de la tarjeta van en grilla de dos columnas",
+    /className="mt-3 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center"/.test(pantallaProductos) &&
+    /className="contents sm:flex sm:flex-wrap sm:items-center sm:gap-2 sm:ml-auto"/.test(pantallaProductos) &&
+    /grid grid-cols-2 gap-2 border-t[^"]*sm:flex/.test(pantallaProductos));
+
+  /* Y el texto va centrado en su celda: estirado por la grilla y pegado a la
+     izquierda, la fila de dos se lee peor que la columna que vino a reemplazar. */
+  chequear("y el texto de esos botones queda centrado en su celda",
+    !/inline-flex items-center gap-1\.5 px-3 py-2 rounded-xl/.test(
+      pantallaProductos.slice(
+        pantallaProductos.indexOf("mt-3 grid grid-cols-2 gap-2 sm:flex"),
+        pantallaProductos.indexOf("function Grupo("))));
+
+  /* ══════════════════════════════════════════════════════════════════════════
      ⚠️ LAS SOLAPAS ENVUELVEN, NO SE ESCONDEN DETRÁS DE UN SCROLL.
      ══════════════════════════════════════════════════════════════════════════
 

@@ -394,7 +394,24 @@ function Tarjeta({ p, acc }: { p: ProductoEnPantalla; acc: Acciones }) {
               El separador de la derecha es `ml-auto` en pantalla ancha y un
               salto de línea en 360: dos grupos apretados uno contra otro en un
               celular se leen como una sola pila, que es de donde venimos. */}
-          <div className="mt-3 flex flex-wrap items-center gap-2">
+          {/* ══════════════════════════════════════════════════════════════════
+              ⚠️ EN 360 ES UNA GRILLA DE DOS COLUMNAS, NO UNA FILA QUE ENVUELVE.
+              ══════════════════════════════════════════════════════════════════
+
+              Con `flex-wrap` a secas, en un celular cada botón mide lo que mide
+              su texto y entra donde entra: "Subir PDF" y "Escribir con IA" no
+              entran juntos, "Editar" y "Publicar" sí, "Borrar" queda solo. El
+              resultado son siete botones de siete anchos distintos en una
+              columna despareja, que es lo que se vio en pantalla el 08/09/26.
+
+              Con la grilla son dos por renglón, todos del mismo ancho, y de paso
+              el área para tocar se agranda —que en un teléfono importa más que
+              en cualquier otro lado—.
+
+              De `sm` para arriba vuelve a ser la fila de siempre: ahí el ancho
+              sobra y la grilla desperdiciaría media pantalla estirando botones
+              de dos palabras. */}
+          <div className="mt-3 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
             {/* La etiqueta ES el botón: un `<input type="file">` no se puede
                 disfrazar, así que se esconde y se lo dispara desde acá.
 
@@ -443,7 +460,7 @@ function Tarjeta({ p, acc }: { p: ProductoEnPantalla; acc: Acciones }) {
                 Con `relative`, el input vive adentro del botón y se acabó. */}
             <label
               aria-busy={subiendoEste}
-              className={`relative inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-colors focus-within:outline-none focus-within:ring-2 focus-within:ring-orange-500 focus-within:ring-offset-2 panel-oscuro:focus-within:ring-offset-gray-900 ${
+              className={`relative inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-colors focus-within:outline-none focus-within:ring-2 focus-within:ring-orange-500 focus-within:ring-offset-2 panel-oscuro:focus-within:ring-offset-gray-900 ${
                 subiendoEste || ocupado
                   ? "opacity-50 cursor-not-allowed border border-gray-200 panel-oscuro:border-gray-700 text-gray-500"
                   : p.tieneArchivo
@@ -489,8 +506,8 @@ function Tarjeta({ p, acc }: { p: ProductoEnPantalla; acc: Acciones }) {
               }
               className={
                 IA_LISTA && acc.tier !== "FREE"
-                  ? "inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-orange-200 panel-oscuro:border-orange-500/30 text-xs font-bold text-orange-700 panel-oscuro:text-orange-300 hover:bg-orange-50 panel-oscuro:hover:bg-orange-500/10 transition-colors disabled:opacity-50"
-                  : "inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-dashed border-gray-300 panel-oscuro:border-gray-700 text-xs font-bold text-gray-500 panel-oscuro:text-gray-400 cursor-not-allowed"
+                  ? "inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-orange-200 panel-oscuro:border-orange-500/30 text-xs font-bold text-orange-700 panel-oscuro:text-orange-300 hover:bg-orange-50 panel-oscuro:hover:bg-orange-500/10 transition-colors disabled:opacity-50"
+                  : "inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-dashed border-gray-300 panel-oscuro:border-gray-700 text-xs font-bold text-gray-500 panel-oscuro:text-gray-400 cursor-not-allowed"
               }
             >
               <Sparkles className="h-3.5 w-3.5" />
@@ -506,7 +523,15 @@ function Tarjeta({ p, acc }: { p: ProductoEnPantalla; acc: Acciones }) {
             {/* ── La ficha: título, precio, publicar, borrar ───────────────
                 Se va a la derecha en pantalla ancha (`sm:ml-auto`) y baja a su
                 propio renglón en 360, donde `ml-auto` no separa nada. */}
-            <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
+            {/* ⚠️ `contents` en celular, y no es un detalle de estilo: hace que
+                esta caja DESAPAREZCA del armado y que Editar, Publicar y Borrar
+                sean celdas de la grilla de arriba, como los otros dos botones.
+                Sin eso, los tres quedarían apretados adentro de una sola celda
+                —media pantalla— y la grilla no serviría de nada.
+
+                De `sm` para arriba vuelve a ser una caja de verdad, que es lo
+                que necesita el `ml-auto` para empujar el grupo a la derecha. */}
+            <div className="contents sm:flex sm:flex-wrap sm:items-center sm:gap-2 sm:ml-auto">
             <button
               onClick={() =>
                 acc.setBorrador({
@@ -521,7 +546,7 @@ function Tarjeta({ p, acc }: { p: ProductoEnPantalla; acc: Acciones }) {
                 })
               }
               disabled={ocupado}
-              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 text-xs font-bold text-gray-700 panel-oscuro:text-gray-300 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800 transition-colors disabled:opacity-50"
+              className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 text-xs font-bold text-gray-700 panel-oscuro:text-gray-300 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800 transition-colors disabled:opacity-50"
             >
               <Pencil className="h-3.5 w-3.5" /> Editar
             </button>
@@ -536,7 +561,7 @@ function Tarjeta({ p, acc }: { p: ProductoEnPantalla; acc: Acciones }) {
                  botón, así que "Publicar, apagado" pasa a ser "Publicar, falta
                  el archivo". Sin él, el botón está gris y no se sabe por qué. */
               aria-describedby={!p.publicado && falta ? `falta-${p.id}` : undefined}
-              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 text-xs font-bold text-gray-700 panel-oscuro:text-gray-300 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 text-xs font-bold text-gray-700 panel-oscuro:text-gray-300 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
               {ocupado ? (
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -551,7 +576,7 @@ function Tarjeta({ p, acc }: { p: ProductoEnPantalla; acc: Acciones }) {
             <button
               onClick={() => acc.borrar(p)}
               disabled={ocupado}
-              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-red-500 hover:bg-red-50 panel-oscuro:hover:bg-red-500/10 transition-colors disabled:opacity-50"
+              className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-red-500 hover:bg-red-50 panel-oscuro:hover:bg-red-500/10 transition-colors disabled:opacity-50"
             >
               <Trash2 className="h-3.5 w-3.5" /> Borrar
             </button>
@@ -572,10 +597,10 @@ function Tarjeta({ p, acc }: { p: ProductoEnPantalla; acc: Acciones }) {
               subdominio por producto (Fase 5 bis). Y se abre en otra pestaña
               porque sale del panel: es la página pública, no una previa. */}
           {p.rol === "PRINCIPAL" && (
-              <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-gray-100 panel-oscuro:border-gray-800 pt-3">
+              <div className="mt-3 grid grid-cols-2 gap-2 border-t border-gray-100 panel-oscuro:border-gray-800 pt-3 sm:flex sm:flex-wrap sm:items-center">
                 <Link
                   href={`/digitales/productos/${p.id}/pagina`}
-                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 text-xs font-bold text-gray-700 panel-oscuro:text-gray-300 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800 transition-colors"
+                  className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 text-xs font-bold text-gray-700 panel-oscuro:text-gray-300 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800 transition-colors"
                 >
                   <LayoutTemplate className="h-3.5 w-3.5" /> Página de venta
                 </Link>
@@ -586,8 +611,8 @@ function Tarjeta({ p, acc }: { p: ProductoEnPantalla; acc: Acciones }) {
                        poder repartir el producto, y en una fila de botones
                        grises no lo vería nadie. */
                     p.slugDigital
-                      ? "inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 text-xs font-bold text-gray-700 panel-oscuro:text-gray-300 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800 transition-colors"
-                      : "inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-orange-200 panel-oscuro:border-orange-500/30 text-xs font-bold text-orange-700 panel-oscuro:text-orange-300 hover:bg-orange-50 panel-oscuro:hover:bg-orange-500/10 transition-colors"
+                      ? "inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 text-xs font-bold text-gray-700 panel-oscuro:text-gray-300 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800 transition-colors"
+                      : "inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-orange-200 panel-oscuro:border-orange-500/30 text-xs font-bold text-orange-700 panel-oscuro:text-orange-300 hover:bg-orange-50 panel-oscuro:hover:bg-orange-500/10 transition-colors"
                   }
                 >
                   <Globe className="h-3.5 w-3.5" />
@@ -597,7 +622,7 @@ function Tarjeta({ p, acc }: { p: ProductoEnPantalla; acc: Acciones }) {
                   href={`/p/${p.id}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 text-xs font-bold text-gray-700 panel-oscuro:text-gray-300 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800 transition-colors"
+                  className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 text-xs font-bold text-gray-700 panel-oscuro:text-gray-300 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800 transition-colors"
                 >
                   <ExternalLink className="h-3.5 w-3.5" /> Ver página
                 </Link>
