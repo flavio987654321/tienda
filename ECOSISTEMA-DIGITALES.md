@@ -4501,14 +4501,23 @@ No es una lista de cortesía: son los lugares donde un error se cobra caro.
   ruta lo rechaza. Es el mismo agujero que se le arregló al ebook de texto: una
   coma mal puesta cuesta una generación entera. Sus recetas son campos
   —ingredientes, pasos, tiempos—, no párrafos, así que necesita su propio editor.
-- 🔲 **Sentry sin `global-error` ni `onRequestError`.** Un error de renderizado
-  del armazón y un error de servidor no llegan a ningún lado.
+- ✅ **Sentry sin `global-error` ni `onRequestError`.** Hecho el 09/09/26. Eran
+  tres agujeros, no dos: los errores del servidor no llegaban (Next los atrapa
+  para dibujar la pantalla de error, así que Sentry no los ve), no había red
+  para cuando se rompe el armazón mismo, y las tres pantallas de error que ya
+  existían sólo escribían en la consola del navegador de quien tuvo el
+  problema. La de métricas ni siquiera recibía el error. De paso, el panel de
+  digitales no tenía red propia: cualquier error subía hasta el armazón y la
+  persona perdía la barra lateral. Catorce chequeos en `avisos-de-error`.
 - 🔲 **El techo de gasto de verdad vive fuera del repo.** El corta-corriente de
   acá (600 llamadas y 40 ebooks por día) frena lo nuestro; el único que garantiza
   que no llegue una factura grande es el límite de gasto de la cuenta de
   Anthropic. **Verificar que esté puesto.**
-- 🔲 **Dos campos de archivo sin teclado**, fuera de este panel: el CSV del
-  dashboard y la foto de afiliados usan `className="hidden"`, que los saca del
-  tabulador. El del panel digital ya está con `sr-only`.
+- ❌ **Dos campos de archivo sin teclado**: era una falsa alarma, revisada el
+  09/09/26. Se miraron los 25 `input type="file"` del proyecto entero: los que
+  usan `className="hidden"` tienen al lado un `<button>` de verdad que los
+  dispara con `.click()`, y a ese botón se llega con el tabulador. Los del
+  panel digital van con `sr-only`, que es otro caso: ahí la etiqueta ES el
+  botón y el campo tiene que seguir siendo enfocable. Ninguno está roto.
 - 🔲 **La etiqueta "Muy pronto" de los formatos es código inalcanzable**: los dos
   formatos que existen están listos. Se deja como guarda para el tercero.
