@@ -729,18 +729,17 @@ export default function EbookIA({
                   gastar una generación. Sabiendo que se cambia gratis con el
                   ebook ya escrito —y viéndolo con su texto, que es cuando se
                   puede juzgar de verdad— la decisión de acá deja de pesar. */}
-              {/* ⚠️ Y en un RECETARIO dice otra cosa, porque hace otra cosa.
-                  El estilo cambia la hoja de adentro sólo donde hay prosa; la
-                  hoja de una receta tiene su propio molde y todavía no lo
-                  escucha, así que las cuatro salen iguales adentro. Prometer
-                  "dos columnas" ahí sería que alguien elija mirando una hoja
-                  que ese archivo nunca va a tener. Ver `MiniaturaDeEstilo`. */}
+              {/* ⚠️ Y en un RECETARIO la miniatura dibuja UNA RECETA, no
+                  párrafos: lo que cambia ahí es dónde cae la foto y dónde caen
+                  rinde, tiempo y cocción. Hasta el 09/09/26 la hoja de la
+                  receta no leía el molde y acá se mostraba la tapa, que era lo
+                  único que el estilo le cambiaba. Ver `MiniaturaDeEstilo`. */}
               <p className="mt-5 text-[12.5px] font-bold text-gray-700 panel-oscuro:text-gray-300">
-                {esRecetario ? "¿Cómo querés que sea la tapa?" : "¿Cómo querés que esté armada la hoja?"}
+                {esRecetario ? "¿Cómo querés que esté armada cada receta?" : "¿Cómo querés que esté armada la hoja?"}
               </p>
               <p className="mt-0.5 text-[11.5px] leading-snug text-gray-500 panel-oscuro:text-gray-400">
                 {esRecetario
-                  ? "En un recetario esto cambia la tapa. La hoja de cada receta es la misma en los cuatro. Lo podés cambiar después, gratis."
+                  ? "Cambia dónde va la foto y dónde van rinde, tiempo y cocción. Lo podés cambiar después, gratis."
                   : "Esto lo podés cambiar después, gratis y sin volver a escribirlo."}
               </p>
 
@@ -755,7 +754,7 @@ export default function EbookIA({
                       type="button"
                       onClick={() => listo && setEstilo(x)}
                       disabled={trabajando || !listo}
-                      title={listo ? (esRecetario ? QUE_ES_CADA_ESTILO[x].tapa : QUE_ES_CADA_ESTILO[x].explica) : "Todavía no está disponible"}
+                      title={listo ? (esRecetario ? QUE_ES_CADA_ESTILO[x].receta : QUE_ES_CADA_ESTILO[x].explica) : "Todavía no está disponible"}
                       aria-pressed={estilo === x}
                       className={`rounded-xl border p-2 text-left transition-colors disabled:opacity-60 ${
                         estilo === x
@@ -766,7 +765,7 @@ export default function EbookIA({
                       <span className="block overflow-hidden rounded-md ring-1 ring-black/10 panel-oscuro:ring-white/10">
                         <MiniaturaDeEstilo
                           estilo={x}
-                          muestra={esRecetario ? "tapa" : "hoja"}
+                          muestra={esRecetario ? "receta" : "hoja"}
                           acento={colorDeLaMiniatura}
                           tinta="#0f172a"
                           papel="#FCFAF7"
@@ -785,7 +784,7 @@ export default function EbookIA({
                   miniaturas es una pared de texto que nadie lee. */}
               <p className="mt-2 text-[11.5px] leading-relaxed text-gray-600 panel-oscuro:text-gray-400">
                 {esRecetario ? (
-                  QUE_ES_CADA_ESTILO[estilo].tapa
+                  QUE_ES_CADA_ESTILO[estilo].receta
                 ) : (
                   <>
                     {QUE_ES_CADA_ESTILO[estilo].explica}{" "}

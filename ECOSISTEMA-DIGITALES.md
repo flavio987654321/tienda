@@ -4610,65 +4610,116 @@ abajo del estilo que ya usa todo el mundo.
   Lo que sí muestra —y es lo que se necesita para elegir— es el ancho del
   renglón. Fingir el corte sería peor: alguien acomodaría su texto para una
   hoja que después no es.
-- 🔲 **PENDIENTE GRANDE: los moldes adentro del recetario.** Ver la sección de
-  abajo, que es el plan.
+- ✅ **Los moldes adentro del recetario.** Hecho el 09/09/26. Ver la sección de
+  abajo.
 
-### 🔲 Lo que sigue: los cuatro moldes ADENTRO de la receta
+## Los cuatro moldes ADENTRO de la receta — 09/09/26
 
-**El estado de hoy, medido.** Se generó un recetario con los cuatro estilos y se
-miraron las hojas: **son la misma**. Sólo cambian el margen y el redondeo del
-recuadro del tip. El estilo hoy le cambia a un recetario **la tapa** (cuando hay
-foto) y nada más.
+**El estado del día anterior, medido.** Se generó un recetario con los cuatro
+estilos y se miraron las hojas: **eran la misma**. Cambiaban el margen y el
+redondeo del recuadro del tip, nada más. El estilo le cambiaba a un recetario la
+tapa y se terminaba ahí, porque `hojaDeReceta` tenía su acomodo escrito adentro
+y no leía el molde.
 
-**Por qué.** Los cuatro moldes están hechos para prosa —columnas, subtítulos,
-entrada, portadilla de capítulo— y la hoja de una receta no es prosa: es una
-ficha. `hojaDeReceta` tiene su propio molde, que **mide** ingredientes, pasos,
-fichas y tip para elegir entre tres densidades (`HOLGADA` / `APRETADA` /
-`AL_LIMITE`) y para decidir si la foto va de banda ancha o cuadrada al lado del
-título. Ese molde no lee `t.molde`.
+Ahora lo lee. El campo nuevo es `receta` en `ebook-estilos`, y son cuatro
+acomodos:
 
-**⚠️ Y mientras tanto la pantalla mentía.** Con "Recetario" elegido, el selector
-mostraba cuatro miniaturas con dos columnas de texto corrido y decía *"columna
-angosta y una franja al costado donde caen los subtítulos"*. Un recetario no
-tiene subtítulos. Arreglado el 09/09/26: ahí se muestra **la tapa**, que es lo
-que sí cambia, y los textos hablan de la tapa (`QUE_ES_CADA_ESTILO[x].tapa`,
-`MiniaturaDeEstilo muestra="tapa"`, EST-AA/AB/AC). Es un parche honesto, no la
-función: **se saca cuando esto esté hecho.**
-
-#### Qué tendría que hacer cada molde con una receta
-
-Las piezas ya existen adentro de `hojaDeReceta`; lo que falta es que el molde
-elija en vez de que elija la medición.
-
-| | La receta | Por qué |
+| | La receta | Qué gana |
 |---|---|---|
-| **Libro** | Foto en banda ancha arriba, fichas en fila, dos columnas (ingredientes / pasos) | Es el de hoy. **No se toca.** |
-| **Compacto** | Foto cuadrada al lado del título, fichas en fila | Gana alto: entra una receta más larga sin caer a `AL_LIMITE` |
-| **Manual** | **Las tres fichas (rinde / tiempo / cocción) en la franja del costado**, no arriba | Es como se lee una receta cocinando: el tiempo siempre a la vista mientras bajás por los pasos |
-| **Cartel** | Foto a toda la hoja arriba con el título de la receta encima | La misma idea que su portadilla de capítulo |
+| **Libro** | Foto ancha arriba, fichas en fila, ingredientes y pasos abajo | Es el de siempre. **No se tocó.** |
+| **Compacto** | Foto cuadrada al lado del título, y el título adentro de una franja de acento | Gana el alto de la banda: entra una receta más larga sin apretar la letra |
+| **Manual** | Rinde, tiempo y cocción **apilados en la franja del costado**, arriba de los ingredientes | Es como se lee cocinando: el tiempo a la vista mientras bajás por los pasos |
+| **Cartel** | Foto a sangre arriba con el título de la receta encima | La misma idea que su portadilla de capítulo |
 
-#### ⚠️ Lo que hay que cuidar, y es lo difícil
+### ⚠️ Lo que había que cuidar, que era una sola cosa
 
-- **`hojaDeReceta` es la función más delicada del archivo.** Decide si la receta
-  entra midiendo antes de dibujar (`alturaDelTip`, `alturaDeLosPasos`), y esas
-  cuentas usan el ancho útil. Cambiar el acomodo sin rehacer la medición parte
-  una receta entre dos hojas — y una receta partida es lo peor que le puede
-  pasar a este producto: se lee la mitad de los pasos y se arruina lo que se
-  estaba cocinando.
-- **Los tres números de `dibujarAviso` tienen que seguir coincidiendo** con los
-  que usa `alturaDelTip` para decidir si entra. Está anotado allá.
-- **`libro` tiene que seguir dando el mismo archivo**, igual que se cuidó con el
-  ebook de texto: hay recetarios generados con ese acomodo.
-- **La previa del recetario** (`VistaPreviaRecetario`) dibuja siempre la versión
-  holgada y lo dice en su comentario. Si el molde elige el acomodo, la previa
-  puede empezar a mostrarlo — pero sólo lo que el molde decide, nunca lo que
-  decide la medición.
-- **Las miniaturas vuelven a `hoja`**, y tienen que dibujar una receta —fichas,
-  dos columnas, tip— y no párrafos.
+**Que no se parta una receta.** Es la promesa entera del formato —quien cocina
+apoya el teléfono y lee de ahí— y se rompe en silencio: un acomodo nuevo que
+mueve la foto sin rehacer la medición no falla en ningún lado, sale un archivo
+mal cortado y nada más. Ya pasó el 07/09/26: nueve hojas para tres recetas.
 
-#### Cómo se prueba
+Por eso el acomodo nuevo **no toca las dos columnas**. Los anchos de la columna
+de ingredientes (168) y la de los pasos son los que `alturaDeLosPasos` usa para
+decidir si la receta entra, y son iguales en los cuatro. Lo único que se movió
+es lo de ARRIBA y dónde caen las tres fichas — y las dos cosas están adentro de
+la cuenta:
 
-Lo mismo que con el ebook de texto, que funcionó: **generar los cuatro y
-mirarlos**, no sólo compilar. Y un chequeo que abra el PDF armado y mire dónde
-arranca cada renglón —como EST-Y y EST-Z— porque que el molde diga `franja` no
-quiere decir que la receta la use.
+- con la franja, las fichas dejan de empujar a las dos columnas y pasan a contar
+  **contra la columna de los ingredientes**, adentro del mismo `Math.max`. Si los
+  pasos son más largos, las fichas no le cuestan un punto a la hoja. Eso es lo
+  que le hace ganar alto a `manual`;
+- la franja de fichas **la mide y la dibuja la misma función**. El tip tiene la
+  altura en `alturaDelTip` y el dibujo en `dibujarAviso`, con tres números que
+  hay que mantener iguales a mano; acá no puede pasar;
+- el relleno de la franja de título de `compacto` viaja en `aireDelTitulo` y lo
+  leen las cuatro cuentas del encabezado, no sólo el dibujo.
+
+### `libro` da EXACTAMENTE el mismo archivo
+
+Comprobado, no supuesto: se sacó la huella de los flujos de dibujo
+descomprimidos del PDF —los bytes enteros no sirven, pdfkit le mete la fecha de
+armado— antes y después de todo esto. **Mismo hash.** Quien vendió un recetario
+en agosto y hoy rehace el PDF recibe el archivo de siempre.
+
+Por eso también quedaron congelados dos números que se veían feos: el redondeo 8
+de la fila de fichas y el 168 de la banda. Los otros tres acomodos sí leen el
+molde, y por eso en `compacto` y en `cartel` la caja de fichas sale recta, igual
+que el recuadro del tip. Con una redonda y la otra recta la hoja se veía a medio
+terminar.
+
+### ⚠️ `compacto` casi sale igual que `libro`, y sólo se vio mirando
+
+Con el plan cumplido al pie de la letra —"foto cuadrada al lado del título"—
+`compacto` y `libro` daban **la misma hoja**. No por un error: cuando la receta
+es larga, `libro` cambia solo la banda ancha por el cuadrado al costado, que es
+justo lo que `compacto` hace siempre. O sea que en toda receta larga —la
+mayoría— las dos quedaban iguales salvo el margen.
+
+En el código no se veía; en la hoja, enseguida. Se corrigió metiendo el título
+adentro de una franja de acento que arranca en el borde y se corta antes de la
+foto: es lo mismo que hacen su tapa y su portadilla, y es lo que lo hace ver de
+diario. Es el mismo tipo de hallazgo que el `acentoSobreLaFoto` de `cartel` la
+semana pasada: **hay que generar los cuatro y mirarlos.**
+
+### El parche de la pantalla se sacó
+
+Mientras la receta no leía el molde, el selector de un recetario mostraba **la
+tapa** —lo único que cambiaba— y los textos hablaban de la tapa. Eso ya no va:
+la miniatura vuelve a la hoja y dibuja **una receta** (fichas, dos columnas,
+tip), y los textos dicen qué le hace a la receta. Se fueron con el parche
+`QUE_ES_CADA_ESTILO[x].tapa`, `MiniaturaDeEstilo muestra="tapa"` y su función
+`LaTapa`.
+
+La vista previa del editor ahora también dibuja el acomodo elegido. La regla
+sigue siendo la misma y está anotada allá: **muestra lo que decide el MOLDE, no
+lo que decide la medición.** Dónde cae la foto y dónde caen las fichas no
+dependen de lo que escribió el modelo; qué tan apretada sale la hoja, sí.
+
+### ⚠️ A quién le cambia el archivo
+
+A nadie que use `libro`, que son todos los que se armaron antes del 09/09/26 —el
+estilo de fábrica— y está comprobado arriba. Pero un recetario al que se le haya
+elegido `compacto`, `manual` o `cartel` **el día que el estilo sólo cambiaba la
+tapa** y que se vuelva a armar hoy, sale con la hoja de adentro distinta. Es lo
+que se buscaba: hasta ayer esa elección no hacía nada adentro. Se anota porque no
+hay forma de avisarlo desde el panel y porque el único caso real es el banco de
+pruebas.
+
+### Los chequeos
+
+Además de los de antes: **EST-AF** arma un recetario con cada estilo y cuenta
+las hojas —una receta, una hoja, en los cuatro—; **EST-AG** abre los flujos del
+PDF y compara dónde arranca cada renglón, así que dos acomodos que salen iguales
+lo hacen fallar; **EST-AH** mira que en `manual` las fichas caigan en la franja
+y **no** en la fila de arriba; **EST-AI**, que en `libro` sigan en la fila.
+**PDF-W** y **PDF-Y**, que probaban una sola hoja, ahora corren con los cuatro
+estilos: la receta más grande que el limado deja pasar entra en una hoja en los
+cuatro.
+
+### Lo que falta
+
+- 🔲 **Mirarlo en los tres anchos.** Sigue pendiente de la tanda anterior, y
+  ahora hay más para mirar: el selector del modal, las miniaturas de la tarjeta
+  —que ahora dibujan una receta— y la previa del recetario con sus cuatro
+  acomodos. Nada de esto se vio en 360 / 768 / 1280.
+- 🔲 **La previa no corta las hojas.** Sigue igual, y sigue siendo a propósito.

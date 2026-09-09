@@ -35,7 +35,7 @@ import {
 } from "./ebook-estilos";
 import { normalizarOpciones, leerOpciones, conEstilo } from "./ebook-opciones";
 import { armarPDF } from "./ebook-pdf";
-import type { Bloque, CapituloEscrito } from "./ebook-ia";
+import type { Bloque, CapituloEscrito, Receta } from "./ebook-ia";
 
 let fallos = 0;
 const check = (id: string, ok: boolean, desc: string) => {
@@ -59,6 +59,7 @@ const check = (id: string, ok: boolean, desc: string) => {
     && l.entrada === false
     && l.portadilla === "banda" && l.altoFoto === 350 && l.numero === 72
     && l.subtitulo === "raya" && l.subtituloPt === 13
+    && l.receta === "banda"
     && l.tapa === "clasica",
     "`libro` sigue siendo el molde con el que se armaron los ebooks de antes");
 
@@ -104,6 +105,14 @@ const check = (id: string, ok: boolean, desc: string) => {
   check("EST-G",
     new Set(ESTILOS.map(laForma)).size === ESTILOS.length,
     "los cuatro se distinguen en algo estructural, no sólo en el nombre");
+
+  /* ⚠️ Y lo mismo adentro de un RECETARIO, que es la otra mitad del catálogo.
+     Acá los cuatro daban la misma hoja hasta el 09/09/26: el estilo le cambiaba
+     la tapa y nada más. Cuatro acomodos distintos es lo que hace que elegir un
+     estilo signifique algo en un recetario. */
+  check("EST-G2",
+    new Set(ESTILOS.map((e) => MOLDES[e].receta)).size === ESTILOS.length,
+    "los cuatro acomodan una receta de cuatro formas distintas");
 }
 
 /* ── Las cuentas de la hoja ───────────────────────────────────────────────── */
@@ -263,40 +272,55 @@ const check = (id: string, ok: boolean, desc: string) => {
     && /columnaDeTexto\(m, ANCHO\)/.test(mini)
     && /anchoDeColumna\(m, ANCHO\)/.test(mini),
     "la miniatura se dibuja del molde, no a mano");
-
   /* ══════════════════════════════════════════════════════════════════════════
-     ⚠️ Y QUE UN RECETARIO NO PROMETA COLUMNAS
+     ⚠️ Y QUE UN RECETARIO MUESTRE UNA RECETA, NO PÁRRAFOS
      ══════════════════════════════════════════════════════════════════════════
 
-     El estilo cambia la hoja de adentro **sólo donde hay prosa**. La hoja de una
-     receta tiene su propio molde —mide ingredientes, pasos y fichas para elegir
-     entre tres densidades— y todavía no escucha al estilo: las cuatro salen
-     iguales adentro.
+     Hasta el 09/09/26 la hoja de una receta no leía el molde: las cuatro salían
+     iguales adentro y el estilo le cambiaba nada más que la tapa. El selector,
+     que no lo sabía, mostraba cuatro miniaturas con dos columnas de texto
+     corrido y decía "columna angosta y una franja al costado donde caen los
+     subtítulos". Un recetario no tiene subtítulos: se elegía mirando una hoja
+     que ese archivo nunca iba a tener.
 
-     La primera versión del selector no lo sabía, y con "Recetario" elegido
-     mostraba cuatro miniaturas con dos columnas de texto corrido y decía
-     "columna angosta y una franja al costado donde caen los subtítulos". Un
-     recetario no tiene subtítulos. Se elegía mirando una hoja que ese archivo
-     nunca iba a tener.
-
-     Así que en un recetario se muestra LA TAPA, que es lo que sí cambia, y los
-     textos hablan de la tapa. Cuando la receta aprenda los moldes, esto se saca
-     — y este chequeo con él. */
+     Se tapó mostrando la tapa —lo único que cambiaba— y ahora que la receta sí
+     lee el molde, la miniatura vuelve a la hoja: dibuja UNA RECETA, con sus
+     fichas y sus dos columnas. Esto cuida que no vuelva a dibujar párrafos. */
   check("EST-AA",
-    /muestra\?: "hoja" \| "tapa"/.test(mini) && /function LaTapa\(/.test(mini),
-    "la miniatura sabe dibujar la tapa, que es lo único que cambia en un recetario");
+    /muestra\?: "hoja" \| "receta"/.test(mini) && /function LaReceta\(/.test(mini)
+    && !/function LaTapa\(/.test(mini),
+    "la miniatura dibuja una receta, que es lo que hay adentro de un recetario");
 
   const cadaUno = readFileSync("src/lib/ebook-estilos.ts", "utf8");
   check("EST-AB",
-    ESTILOS.every((e) => QUE_ES_CADA_ESTILO[e].tapa.length > 20)
-    && /tapa: string;/.test(cadaUno),
-    "cada estilo dice qué le hace a la tapa, aparte de qué le hace a la hoja");
+    ESTILOS.every((e) => QUE_ES_CADA_ESTILO[e].receta.length > 20)
+    && new Set(ESTILOS.map((e) => QUE_ES_CADA_ESTILO[e].receta)).size === ESTILOS.length
+    && /receta: string;/.test(cadaUno),
+    "cada estilo dice qué le hace a una receta, y los cuatro dicen algo distinto");
 
   check("EST-AC",
-    /esRecetario \? "¿Cómo querés que sea la tapa\?"/.test(modal)
-    && /muestra=\{esRecetario \? "tapa" : "hoja"\}/.test(modal)
-    && /muestra=\{esUnRecetario \? "tapa" : "hoja"\}/.test(tarjeta),
-    "con un recetario, el modal y la tarjeta muestran la tapa y no la hoja");
+    /esRecetario \? "¿Cómo querés que esté armada cada receta\?"/.test(modal)
+    && /muestra=\{esRecetario \? "receta" : "hoja"\}/.test(modal)
+    && /muestra=\{esUnRecetario \? "receta" : "hoja"\}/.test(tarjeta),
+    "con un recetario, el modal y la tarjeta muestran la receta y no la prosa");
+
+  /* Y que la miniatura de la receta salga de la MISMA tabla que el archivo. Es
+     el mismo motivo que EST-W: cuatro dibujitos con los números copiados a mano
+     mienten a la primera que alguien agranda la banda en `hojaDeReceta`. */
+  check("EST-AD",
+    /HOJA_DE_RECETA/.test(mini) && /m\.receta === "sangre"/.test(mini)
+    && /R\.bandaMax/.test(mini) && /R\.ladoMax/.test(mini),
+    "la miniatura de la receta lee el acomodo y las medidas del molde");
+
+  /* La vista previa del editor, lo mismo: dibuja lo que decide el MOLDE —dónde
+     cae la foto y dónde caen las fichas— y nunca lo que decide la medición. */
+  const previa = readFileSync("src/app/digitales/productos/VistaPreviaRecetario.tsx", "utf8");
+  check("EST-AE",
+    /const acomodo = molde\.receta;/.test(previa)
+    && /acomodo === "sangre"/.test(previa) && /acomodo === "ficha"/.test(previa)
+    && /acomodo !== "franja"/.test(previa)
+    && /HOJA_DE_RECETA/.test(previa),
+    "la previa del recetario dibuja el acomodo del molde elegido");
 }
 
 /* ── Y que los cuatro armen un PDF de verdad ──────────────────────────────── */
@@ -317,6 +341,12 @@ function unCapitulo(i: number): CapituloEscrito {
     else bloques.push({ tipo: "parrafo", texto: parrafo(k) });
   }
   return { titulo: `Capitulo ${i}: de la idea al primer cobro`, bloques };
+}
+
+/** Cuántas hojas dice tener el PDF. Se lee del propio archivo. */
+function cuantasHojas(pdf: Buffer): number {
+  const m = pdf.toString("latin1").match(/\/Count\s+(\d+)/g) ?? [];
+  return m.reduce((mayor, x) => Math.max(mayor, Number(x.replace(/\D/g, ""))), 0);
 }
 
 /** Dónde arranca cada renglón del PDF, sacado de los flujos de contenido. */
@@ -416,6 +446,90 @@ async function dibujarLosCuatro() {
     && enManual.filter((x) => Math.abs(x - manual.margen) <= 1).length > 5
     && enManual.filter((x) => Math.abs(x - columnaDeTexto(manual).x) <= 1).length > 20,
     "en `manual` el subtítulo se dibuja en la franja y el cuerpo no baja");
+
+  /* ══════════════════════════════════════════════════════════════════════════
+     ⚠️ Y LAS CUATRO HOJAS DE RECETA, QUE ERAN LA MISMA HOJA
+     ══════════════════════════════════════════════════════════════════════════
+
+     Medido el 09/09/26 antes de tocar nada: se armó un recetario con los cuatro
+     estilos y las hojas de adentro salieron IGUALES. Sólo cambiaban el margen y
+     el redondeo del recuadro del tip, porque `hojaDeReceta` tenía su acomodo
+     escrito adentro y no leía el molde.
+
+     Que `receta: "franja"` esté en la tabla no quiere decir que el archivo la
+     use: eso es un campo que no lee nadie hasta que alguien lo lee. Así que acá
+     se abren los flujos del PDF y se mira dónde arranca cada renglón de verdad,
+     igual que con las dos columnas de `compacto`. */
+  const recetaDePrueba = (i: number): Receta => ({
+    titulo: `Pan de prueba número ${i} en airfryer`,
+    descripcion: "Corteza crocante y miga tierna, ideal para el desayuno o para acompañar cualquier comida.",
+    rinde: "1 pan grande, 8 porciones",
+    tiempo: "2 horas con levado",
+    coccion: "180 °C, 25 minutos",
+    ingredientes: Array.from({ length: 8 }, (_, n) => ({
+      nombre: `ingrediente ${n + 1}`, cantidad: "1 cucharadita",
+    })),
+    pasos: Array.from({ length: 6 }, (_, n) => ({
+      titulo: `Paso ${n + 1}`,
+      texto: "Mezclá todo con cuidado, amasá sobre la mesada unos ocho minutos hasta que quede liso y elástico, y dejá descansar tapado.",
+    })),
+    tip: "Si se dora demasiado rápido arriba, cubrilo con papel aluminio los últimos diez minutos.",
+    foto: "pan casero",
+  });
+
+  const RECETAS = 3;
+  const enRecetario: Record<string, number[]> = {};
+  const hojasDe: Record<string, number> = {};
+
+  for (const estilo of ESTILOS) {
+    const pdf = await armarPDF({
+      titulo: "Panadería casera en airfryer",
+      promesa: "Panes hechos enteros en la airfryer, sin prender el horno.",
+      autor: "La Panadería de Casa",
+      capitulos: [],
+      recetas: Array.from({ length: RECETAS }, (_, i) => recetaDePrueba(i + 1)),
+      estilo,
+    });
+    enRecetario[estilo] = arranquesDeRenglon(pdf);
+    hojasDe[estilo] = cuantasHojas(pdf);
+
+    /* ⚠️ LO PRIMERO ES QUE NO SE PARTA. Es la promesa entera del formato: quien
+       cocina apoya el teléfono y lee de ahí. Un acomodo nuevo que mueve la foto
+       sin rehacer la medición parte la receta en dos hojas y no falla en ningún
+       lado — sale un archivo mal cortado, y nada más. Tapa + contenido + una
+       hoja por receta. */
+    check(`EST-AF-${estilo}`,
+      hojasDe[estilo] === 2 + RECETAS,
+      `en ${estilo} cada receta entra en UNA hoja (${hojasDe[estilo]} hojas, se esperaban ${2 + RECETAS})`);
+  }
+
+  /* Que las cuatro hojas sean cuatro hojas, medido en el archivo y no leído en
+     la tabla: si dos dan los mismos arranques, son la misma hoja con otro
+     nombre y el selector le está haciendo perder el tiempo a alguien. */
+  const comoSeVe = (e: EstiloDeEbook) => [...new Set(enRecetario[e] ?? [])].sort((a, b) => a - b).join(",");
+  check("EST-AG",
+    new Set(ESTILOS.map(comoSeVe)).size === ESTILOS.length,
+    "las cuatro hojas de receta salen distintas en el archivo, no sólo en la tabla");
+
+  /* Y el de la franja, que es el que se puede escribir mal sin que se note: las
+     tres fichas tienen que caer ADENTRO de la caja del costado —el margen más
+     el relleno— y NO en la fila de arriba, que reparte la hoja en tres. */
+  const manualR = MOLDES.manual;
+  const enManualR = enRecetario.manual ?? [];
+  const anchoUtilManual = anchoUtilDe(manualR);
+  const terceraDeLaFila = Math.round(manualR.margen + 20 + (anchoUtilManual / 3) * 2);
+  check("EST-AH",
+    enManualR.filter((x) => Math.abs(x - (manualR.margen + 12)) <= 1).length >= RECETAS * 3
+    && enManualR.filter((x) => Math.abs(x - terceraDeLaFila) <= 1).length === 0,
+    "en `manual` las tres fichas caen en la franja del costado y no en la fila de arriba");
+
+  /* Y que `libro` siga teniendo la fila: es la hoja con la que se armaron los
+     recetarios que ya están vendidos. */
+  const libroR = MOLDES.libro;
+  const terceraEnLibro = Math.round(libroR.margen + 20 + (anchoUtilDe(libroR) / 3) * 2);
+  check("EST-AI",
+    (enRecetario.libro ?? []).filter((x) => Math.abs(x - terceraEnLibro) <= 1).length >= RECETAS,
+    "en `libro` las tres fichas siguen en la fila de arriba, a todo el ancho");
 
   console.log(fallos === 0
     ? "\nok — los cuatro moldes se distinguen, arman un PDF y `libro` sigue siendo el de siempre"

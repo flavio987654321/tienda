@@ -527,18 +527,19 @@ function Tarjeta({ p, acc }: { p: ProductoEnPantalla; acc: Acciones }) {
                   una generación. Sin el "es gratis" nadie prueba, por miedo a
                   que se le vaya un ebook del cupo. Ver `ebook-estilos`. */}
               {p.ebook && p.ebook.escritos > 0 && (() => {
-                /* ⚠️ Un recetario no tiene prosa adentro: el estilo le cambia
-                   la tapa y nada más. Las miniaturas y los textos tienen que
-                   decir eso. Ver `MiniaturaDeEstilo`. */
+                /* ⚠️ Adentro de un recetario no hay párrafos: la miniatura
+                   dibuja una receta y los textos hablan de la receta —dónde va
+                   la foto, dónde van rinde, tiempo y cocción—, no de columnas
+                   ni de subtítulos. Ver `MiniaturaDeEstilo`. */
                 const esUnRecetario = p.ebook.opciones.formato === "recetario";
                 return (
                 <div className="mt-3">
                   <p className="text-[11px] font-bold uppercase tracking-wide text-gray-500 panel-oscuro:text-gray-400">
-                    {esUnRecetario ? "La tapa" : "Cómo está armada la hoja"}
+                    {esUnRecetario ? "Cómo está armada cada receta" : "Cómo está armada la hoja"}
                   </p>
                   <p className="mt-0.5 text-[11.5px] leading-snug text-gray-500 panel-oscuro:text-gray-400">
                     {esUnRecetario
-                      ? "En un recetario el estilo cambia la tapa; la hoja de cada receta es la misma. Cambiarlo rehace el PDF. Es gratis."
+                      ? "Cambia dónde va la foto y dónde van rinde, tiempo y cocción. Rehace el PDF con las recetas que ya están escritas. Es gratis."
                       : "Cambiarlo rehace el PDF con lo que ya está escrito. Es gratis."}
                   </p>
                   <div className="mt-1.5 grid grid-cols-4 gap-1.5 sm:max-w-[280px]">
@@ -550,7 +551,7 @@ function Tarjeta({ p, acc }: { p: ProductoEnPantalla; acc: Acciones }) {
                           type="button"
                           onClick={() => !acc.deMentira && !puesto && acc.rehacerPDF(p, x)}
                           disabled={ocupado || acc.deMentira || puesto}
-                          title={acc.deMentira ? porQueApagado : (esUnRecetario ? QUE_ES_CADA_ESTILO[x].tapa : QUE_ES_CADA_ESTILO[x].explica)}
+                          title={acc.deMentira ? porQueApagado : (esUnRecetario ? QUE_ES_CADA_ESTILO[x].receta : QUE_ES_CADA_ESTILO[x].explica)}
                           aria-pressed={puesto}
                           className={`rounded-lg border p-1 text-left transition-colors disabled:cursor-not-allowed ${
                             puesto
@@ -561,7 +562,7 @@ function Tarjeta({ p, acc }: { p: ProductoEnPantalla; acc: Acciones }) {
                           <span className="block overflow-hidden rounded ring-1 ring-black/10 panel-oscuro:ring-white/10">
                             <MiniaturaDeEstilo
                               estilo={x}
-                              muestra={esUnRecetario ? "tapa" : "hoja"}
+                              muestra={esUnRecetario ? "receta" : "hoja"}
                               acento="#c2410c"
                               tinta="#0f172a"
                               papel="#FCFAF7"

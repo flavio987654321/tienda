@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  MOLDES, columnaDeTexto, anchoDeColumna,
+  MOLDES, columnaDeTexto, anchoDeColumna, HOJA_DE_RECETA,
   type EstiloDeEbook, type Molde,
 } from "@/lib/ebook-estilos";
 
@@ -39,30 +39,30 @@ export function MiniaturaDeEstilo({
   tinta: string;
   papel: string;
   /**
-   * Qué se dibuja: una hoja de adentro o la tapa.
+   * Qué hoja se dibuja: una de prosa o una de receta.
    *
    * ══════════════════════════════════════════════════════════════════════════
-   * ⚠️ EN UN RECETARIO HAY QUE MOSTRAR LA TAPA, Y NO ES UNA PREFERENCIA
+   * ⚠️ EN UN RECETARIO SE DIBUJA UNA RECETA, Y NO ES UNA PREFERENCIA
    * ══════════════════════════════════════════════════════════════════════════
    *
-   * El estilo cambia la hoja de adentro sólo cuando adentro hay **prosa**:
-   * columnas, subtítulos, portadilla de capítulo. La hoja de una receta tiene su
-   * propio molde —mide ingredientes, pasos y fichas para elegir entre tres
-   * densidades— y hoy no escucha al estilo, así que las cuatro salen iguales.
+   * Adentro de un recetario no hay párrafos: hay fichas, ingredientes y pasos.
+   * Dibujar acá dos columnas de texto corrido sería elegir mirando una hoja que
+   * ese archivo nunca va a tener — es exactamente lo que pasaba hasta el
+   * 09/09/26, cuando la hoja de la receta todavía no leía el molde y el
+   * selector de un recetario prometía subtítulos al costado.
    *
-   * Dibujar la hoja de adentro en el selector de un recetario mostraría dos
-   * columnas de texto corrido que ese archivo **nunca** va a tener: se elegiría
-   * mirando algo que no existe. Así que ahí se muestra la tapa, que es lo que sí
-   * cambia. Cuando la receta aprenda los moldes, esto vuelve a `hoja`.
+   * Ahora sí lo lee (ver `receta` en `ebook-estilos` y `hojaDeReceta`), así que
+   * esto dibuja **la misma receta que va a salir**: dónde cae la foto y dónde
+   * caen las tres fichas, que es lo que cambia entre los cuatro.
    */
-  muestra?: "hoja" | "tapa";
+  muestra?: "hoja" | "receta";
 }) {
   const m = MOLDES[estilo];
   const ANCHO = 595.28;
   const ALTO = 841.89;
 
-  if (muestra === "tapa") {
-    return <LaTapa molde={m} acento={acento} tinta={tinta} papel={papel} />;
+  if (muestra === "receta") {
+    return <LaReceta molde={m} acento={acento} tinta={tinta} papel={papel} />;
   }
 
   const texto = columnaDeTexto(m, ANCHO);
@@ -180,18 +180,26 @@ export function MiniaturaDeEstilo({
 }
 
 /**
- * Las cuatro tapas, en chiquito.
+ * Las cuatro hojas de receta, en chiquito.
  *
- * Los cortes son los mismos que dibujan `tapa` en `ebook-pdf` y
- * `TapaDeLaPrevia` en `previaPiezas`: 52 % la clásica, 44 % la de titular,
- * 46 % de ancho la de ficha, y la de sangre entera. Si allá cambian, acá
- * también — es lo mismo que se mira para elegir.
+ * ══════════════════════════════════════════════════════════════════════════
+ * UNA RECETA NO ES PROSA, Y ACÁ SE TIENE QUE VER
+ * ══════════════════════════════════════════════════════════════════════════
  *
- * ⚠️ La foto se dibuja como un bloque de acento apagado y NO como un hueco con
- * la palabra "foto": a este tamaño un rótulo no se lee, y lo que hay que ver es
- * **dónde cae** la foto, no que haya una.
+ * Lo de arriba dibuja renglones porque adentro de un ebook de texto hay
+ * párrafos. Adentro de un recetario hay una ficha: la foto, las tres medidas,
+ * los ingredientes de un lado y los pasos del otro. Si acá se dibujaran
+ * renglones, se elegiría mirando una hoja que ese archivo no tiene.
+ *
+ * Lo que cambia entre los cuatro —y es lo único que hay que ver a este tamaño—
+ * es **dónde cae la foto** y **dónde caen las tres fichas**. Las dos columnas
+ * de abajo son iguales en los cuatro, igual que en `hojaDeReceta`.
+ *
+ * ⚠️ Las medidas de la foto salen de `HOJA_DE_RECETA`, que es la misma tabla
+ * que lee el PDF. A este tamaño la diferencia entre 148 y 160 no se ve, pero el
+ * día que alguien agrande la banda en el archivo, la miniatura la agranda sola.
  */
-function LaTapa({
+function LaReceta({
   molde, acento, tinta, papel,
 }: {
   molde: Molde;
@@ -201,7 +209,55 @@ function LaTapa({
 }) {
   const ANCHO = 595.28;
   const ALTO = 841.89;
+  const m = molde;
+  const util = ANCHO - m.margen * 2;
   const foto = { fill: acento, opacity: 0.28 };
+
+  const R = HOJA_DE_RECETA;
+  const X_DER = m.margen + R.ingredientes + R.calle;
+  const ANCHO_DER = util - R.ingredientes - R.calle;
+
+  const aSangre = m.receta === "sangre";
+  const cuadrada = m.receta === "ficha";
+  const enLaFranja = m.receta === "franja";
+
+  /* Dónde termina lo de arriba. Cada acomodo apoya las columnas en un lugar
+     distinto, que es justamente lo que hay que ver: `compacto` arranca mucho
+     más arriba porque la foto se le fue al costado del título. */
+  const ALTO_TITULO = 30;
+  const yFoto = m.arriba + ALTO_TITULO + 18;
+  const yArriba = aSangre
+    ? R.sangreMax + 24
+    : cuadrada
+      ? m.arriba - 6 + R.ladoMax + 18
+      : yFoto + R.bandaMax + 16;
+
+  /* Las tres fichas: en fila a todo el ancho, o apiladas al costado. */
+  const ALTO_FILA = 52;
+  const ALTO_FRANJA = 130;
+  const yColumnas = enLaFranja ? yArriba : yArriba + ALTO_FILA + 22;
+  const yEtiquetaIzq = enLaFranja ? yColumnas + ALTO_FRANJA + 18 : yColumnas;
+
+  const pie = ALTO - m.abajo;
+  const ALTO_TIP = 70;
+  const yTip = pie - ALTO_TIP;
+
+  /* Los ingredientes: un renglón corto y la cantidad pegada a la derecha. */
+  const ingredientes: { y: number; ancho: number }[] = [];
+  for (let y = yEtiquetaIzq + 20; y + 6 <= yTip - 16; y += 18) {
+    ingredientes.push({
+      y,
+      ancho: R.ingredientes * (ingredientes.length % 3 === 1 ? 0.52 : 0.68),
+    });
+  }
+
+  /* Los pasos: el número redondo y dos o tres renglones al lado. */
+  const pasos: { y: number; renglones: number }[] = [];
+  for (let y = yColumnas + 20; y + 30 <= yTip - 16; ) {
+    const renglones = pasos.length % 3 === 1 ? 2 : 3;
+    pasos.push({ y, renglones });
+    y += renglones * 13 + 16;
+  }
 
   return (
     <svg
@@ -213,49 +269,106 @@ function LaTapa({
     >
       <rect x={0} y={0} width={ANCHO} height={ALTO} fill={papel} />
 
-      {molde.tapa === "sangre" && (
+      {/* ── La foto y el título ──────────────────────────────────────────── */}
+      {aSangre ? (
         <>
-          <rect x={0} y={0} width={ANCHO} height={ALTO} {...foto} />
-          {/* El velo, que es lo que hace legible el título encima. */}
-          <rect x={0} y={ALTO * 0.5} width={ANCHO} height={ALTO * 0.5} fill={tinta} opacity={0.55} />
-          <rect x={molde.margen} y={ALTO * 0.66} width={ANCHO - molde.margen * 2} height={molde.tituloTapa} fill={papel} />
-          <rect x={molde.margen} y={ALTO * 0.66 + molde.tituloTapa + 14} width={62} height={8} fill={acento} />
+          <rect x={0} y={0} width={ANCHO} height={R.sangreMax} fill={acento} opacity={0.55} />
+          {/* El título va ENCIMA de la foto, en claro sobre el velo. */}
+          <rect x={m.margen} y={R.sangreMax - 96} width={util * 0.72} height={ALTO_TITULO} fill={papel} />
+          <rect x={m.margen} y={R.sangreMax - 52} width={util * 0.5} height={9} fill={papel} opacity={0.7} />
         </>
-      )}
-
-      {molde.tapa === "titular" && (
+      ) : (
         <>
-          <rect x={0} y={0} width={ANCHO} height={ALTO * 0.44} {...foto} />
-          <rect x={0} y={ALTO * 0.44} width={ANCHO} height={molde.tituloTapa + 76} fill={acento} />
           <rect
-            x={molde.margen} y={ALTO * 0.44 + 44}
-            width={ANCHO - molde.margen * 2 - 60} height={molde.tituloTapa}
-            fill={papel}
-          />
-        </>
-      )}
-
-      {molde.tapa === "ficha" && (
-        <>
-          <rect x={ANCHO * 0.54} y={0} width={ANCHO * 0.46} height={ALTO - 96} {...foto} />
-          <rect x={molde.margen} y={118} width={44} height={8} fill={acento} />
-          <rect x={molde.margen} y={148} width={ANCHO * 0.54 - molde.margen * 2} height={molde.tituloTapa * 2.4} fill={tinta} opacity={0.75} />
-          <rect x={0} y={ALTO - 96} width={ANCHO} height={96} fill={acento} />
-        </>
-      )}
-
-      {molde.tapa === "clasica" && (
-        <>
-          <rect x={0} y={0} width={ANCHO} height={ALTO * 0.52} {...foto} />
-          <rect x={molde.margen} y={ALTO * 0.52 + 44} width={62} height={8} fill={acento} />
-          <rect
-            x={molde.margen} y={ALTO * 0.52 + 72}
-            width={ANCHO - molde.margen * 2} height={molde.tituloTapa * 2.2}
+            x={m.margen} y={m.arriba}
+            width={(cuadrada ? util - R.ladoMax - 20 : util - 60) * 0.9}
+            height={ALTO_TITULO}
             fill={tinta} opacity={0.75}
           />
-          <rect x={0} y={ALTO - 44} width={ANCHO} height={44} fill={acento} />
+          {cuadrada ? (
+            <rect
+              x={ANCHO - m.margen - R.ladoMax} y={m.arriba - 6}
+              width={R.ladoMax} height={R.ladoMax} {...foto}
+            />
+          ) : (
+            <rect x={m.margen} y={yFoto} width={util} height={R.bandaMax} {...foto} />
+          )}
         </>
       )}
+
+      {/* ── Las tres fichas ──────────────────────────────────────────────── */}
+      {enLaFranja ? (
+        <>
+          <rect
+            x={m.margen} y={yColumnas} width={R.ingredientes} height={ALTO_FRANJA}
+            rx={m.esquina} fill={acento} opacity={0.16}
+          />
+          <rect x={m.margen} y={yColumnas} width={3} height={ALTO_FRANJA} fill={acento} />
+          {[0, 1, 2].map((i) => (
+            <g key={i}>
+              <rect x={m.margen + 12} y={yColumnas + 16 + i * 40} width={40} height={6} fill={acento} />
+              <rect
+                x={m.margen + 12} y={yColumnas + 28 + i * 40}
+                width={R.ingredientes - 40} height={8}
+                fill={tinta} opacity={0.45}
+              />
+            </g>
+          ))}
+        </>
+      ) : (
+        <>
+          <rect x={m.margen} y={yArriba} width={util} height={ALTO_FILA} rx={8} fill={acento} opacity={0.16} />
+          {[0, 1, 2].map((i) => (
+            <g key={i}>
+              <rect x={m.margen + 20 + i * (util / 3)} y={yArriba + 14} width={36} height={6} fill={acento} />
+              <rect
+                x={m.margen + 20 + i * (util / 3)} y={yArriba + 27}
+                width={util / 3 - 46} height={8}
+                fill={tinta} opacity={0.45}
+              />
+            </g>
+          ))}
+        </>
+      )}
+
+      {/* ── Las dos columnas ─────────────────────────────────────────────── */}
+      <rect x={m.margen} y={yEtiquetaIzq} width={78} height={7} fill={acento} />
+      <rect x={X_DER} y={yColumnas} width={78} height={7} fill={acento} />
+
+      {ingredientes.map((ing, i) => (
+        <g key={`i${i}`}>
+          <rect x={m.margen} y={ing.y} width={ing.ancho} height={6} fill={tinta} opacity={0.32} />
+          <rect
+            x={m.margen + R.ingredientes - 26} y={ing.y}
+            width={26} height={6} fill={tinta} opacity={0.5}
+          />
+        </g>
+      ))}
+
+      {pasos.map((p, i) => (
+        <g key={`p${i}`}>
+          <circle cx={X_DER + 7} cy={p.y + 5} r={7.5} fill={acento} />
+          {Array.from({ length: p.renglones }, (_, k) => (
+            <rect
+              key={k}
+              x={X_DER + 22} y={p.y + k * 13}
+              width={(ANCHO_DER - 26) * (k === p.renglones - 1 ? 0.66 : 1)}
+              height={6}
+              fill={tinta} opacity={0.32}
+            />
+          ))}
+        </g>
+      ))}
+
+      {/* El consejo, abajo de todo y cruzando las dos columnas. */}
+      <rect
+        x={m.margen} y={yTip} width={util} height={ALTO_TIP}
+        rx={m.esquina} fill={acento} opacity={0.16}
+      />
+      <rect x={m.margen} y={yTip} width={3} height={ALTO_TIP} fill={acento} />
+
+      {/* La franja del pie, que todos los moldes tienen. */}
+      <rect x={0} y={ALTO - 34} width={ANCHO} height={34} fill={acento} />
     </svg>
   );
 }

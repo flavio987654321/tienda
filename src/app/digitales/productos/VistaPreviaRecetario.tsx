@@ -4,7 +4,7 @@ import { coloresDelEbook, type ColoresDeTapa, type ModoDelEbook } from "@/lib/eb
 import type { Receta } from "@/lib/ebook-ia";
 import type { FotoDelCapitulo, Seleccion } from "@/lib/ebook-texto";
 import { MarcoDeLaHoja, Tocable, HuecoDeFoto, em, anchoEnLaHoja } from "./previaPiezas";
-import type { Molde } from "@/lib/ebook-estilos";
+import { HOJA_DE_RECETA, type Molde } from "@/lib/ebook-estilos";
 
 /**
  * Cómo va a quedar el recetario, al lado de lo que se está corrigiendo.
@@ -18,18 +18,21 @@ import type { Molde } from "@/lib/ebook-estilos";
  * hoja es la misma A4 con el mismo margen. Lo único distinto es lo que va
  * adentro: **una receta no es prosa, son campos.**
  *
- * ── ⚠️ Lo que esta previa NO puede mostrar ─────────────────────────────────
+ * ── ⚠️ Lo que sí muestra y lo que NO ───────────────────────────────────────
  *
- * El PDF acomoda cada receta a su hoja: mide los ingredientes, los pasos, las
- * fichas y el tip, y con eso elige entre tres densidades y decide si la foto va
- * de banda ancha o cuadrada al lado del título (ver `hojaDeReceta`). Eso no se
- * puede repetir acá sin medir renglón por renglón, y **fingirlo sería peor que
- * no mostrarlo**: alguien acortaría una receta para un acomodo que después no
- * es el que sale.
+ * Desde el 09/09/26 la hoja de la receta lee el molde, así que acá se dibuja
+ * **lo que el molde decide**: dónde cae la foto —banda ancha, cuadrada al lado
+ * del título, o a sangre con el título encima— y dónde caen rinde, tiempo y
+ * cocción. Eso no depende de lo que escribió el modelo, así que se puede
+ * mostrar sin mentir.
  *
- * Así que se dibuja siempre la versión holgada —foto de banda arriba—, que es
- * la que sale en la mayoría, y lo que se juzga acá es lo que de verdad se está
- * corrigiendo: qué dice cada campo y si algo quedó largo de más.
+ * Lo que NO se dibuja es lo que decide la MEDICIÓN: el archivo mide los
+ * ingredientes, los pasos y el tip para elegir entre tres densidades, y cuando
+ * la banda no entra la cambia por un cuadrado (ver `hojaDeReceta`). Repetir esa
+ * cuenta acá pediría medir renglón por renglón con las tipografías del PDF, y
+ * **fingirla sería peor que no mostrarla**: alguien acortaría una receta para
+ * un acomodo que después no es el que sale. Así que la previa dibuja siempre la
+ * versión holgada del molde elegido.
  */
 export default function VistaPreviaRecetario({
   titulo,
@@ -54,12 +57,28 @@ export default function VistaPreviaRecetario({
   tapa: FotoDelCapitulo;
   paleta: ColoresDeTapa;
   modo: ModoDelEbook;
-  /** El molde del estilo elegido: la hoja, el margen y la tapa salen de él. */
+  /** El molde del estilo elegido: la hoja, el margen, la tapa y el acomodo de
+      cada receta salen de él. */
   molde: Molde;
   seleccion?: Seleccion | null;
   onTocar?: (s: Seleccion) => void;
 }) {
   const t = coloresDelEbook(paleta, modo);
+
+  /* Las mismas medidas que dibuja el archivo. Ver `HOJA_DE_RECETA`. */
+  const R = HOJA_DE_RECETA;
+  const acomodo = molde.receta;
+  const margen = anchoEnLaHoja(molde.margen);
+
+  /* Cuánto de la hoja se lleva la columna de los ingredientes, en porcentaje
+     del ancho útil: el archivo la tiene en 168 puntos y acá tiene que caer en
+     el mismo lugar, no en un 38 % puesto a ojo. */
+  const util = 595.28 - molde.margen * 2;
+  const anchoIngredientes = `${((R.ingredientes / util) * 100).toFixed(2)}%`;
+  /* Lo mismo con el cuadrado de `compacto`: va adentro de los márgenes, así que
+     se mide contra el ancho útil y no contra la hoja entera. */
+  const anchoCuadrada = `${((R.ladoMax / util) * 100).toFixed(2)}%`;
+
 
   return (
     <MarcoDeLaHoja
@@ -72,153 +91,267 @@ export default function VistaPreviaRecetario({
       seleccion={seleccion}
       onTocar={onTocar}
     >
-      {recetas.map((r, i) => (
-        <div key={i} style={{ marginTop: i === 0 ? 0 : em(26) }}>
-          {/* La foto de banda, arriba de todo. En el archivo mide hasta 168
-              puntos de una hoja de 841,89. Ver `ALTO_BANDA_MAX`. */}
+      {recetas.map((r, i) => {
+        const laFoto = (
           <Tocable
             que={{ que: "foto", capitulo: i }}
             seleccion={seleccion}
             onTocar={onTocar}
             nombre={`Cambiar la foto de la receta ${i + 1}`}
           >
-            <HuecoDeFoto foto={fotos[i]} respaldo={r.titulo} t={t} proporcion="595.28 / 168" />
+            <HuecoDeFoto
+              foto={fotos[i]}
+              respaldo={r.titulo}
+              t={t}
+              proporcion={acomodo === "sangre" ? `595.28 / ${R.sangreMax}` : `595.28 / ${R.bandaMax}`}
+            />
           </Tocable>
+        );
 
-          <div style={{ paddingLeft: anchoEnLaHoja(molde.margen), paddingRight: anchoEnLaHoja(molde.margen), paddingTop: em(18), paddingBottom: em(30) }}>
-            {/* El número de receta, en versalita arriba del título: es lo que
-                el archivo pone en el encabezado de la hoja. */}
-            <p style={{ fontSize: em(8.5), letterSpacing: "0.1em", fontWeight: 700, color: t.acento }}>
-              RECETA {String(i + 1).padStart(2, "0")}
+        const elNumero = (
+          <p style={{ fontSize: em(8.5), letterSpacing: "0.1em", fontWeight: 700, color: t.acento }}>
+            RECETA {String(i + 1).padStart(2, "0")}
+          </p>
+        );
+
+        const elTitulo = (claro: boolean) => (
+          <Tocable
+            que={{ que: "titulo", capitulo: i }}
+            seleccion={seleccion}
+            onTocar={onTocar}
+            nombre={`Corregir la receta ${i + 1}`}
+          >
+            <p style={{
+              marginTop: em(6), fontSize: em(22), lineHeight: 1.15, fontWeight: 700,
+              color: claro ? "#ffffff" : t.tinta,
+            }}>
+              {r.titulo || "Sin título"}
             </p>
-
-            <Tocable
-              que={{ que: "titulo", capitulo: i }}
-              seleccion={seleccion}
-              onTocar={onTocar}
-              nombre={`Corregir la receta ${i + 1}`}
-            >
-              <p style={{ marginTop: em(6), fontSize: em(22), lineHeight: 1.15, fontWeight: 700, color: t.tinta }}>
-                {r.titulo || "Sin título"}
+            {r.descripcion && (
+              <p style={{
+                marginTop: em(6), fontSize: em(11), lineHeight: 1.5, fontStyle: "italic",
+                color: claro ? "rgba(255,255,255,0.86)" : t.suave,
+              }}>
+                {r.descripcion}
               </p>
-              {r.descripcion && (
-                <p style={{ marginTop: em(6), fontSize: em(11), lineHeight: 1.5, fontStyle: "italic", color: t.suave }}>
-                  {r.descripcion}
-                </p>
-              )}
-            </Tocable>
+            )}
+          </Tocable>
+        );
 
-            {/* ── Las tres fichas ────────────────────────────────────────
-                Sólo las que tienen algo: una ficha vacía que dice "TIEMPO" y
-                nada abajo se lee como un dato que falta. En el archivo pasa lo
-                mismo — ver `tieneFichas`. */}
-            {(r.rinde || r.tiempo || r.coccion) && (
-              <div style={{ display: "flex", gap: em(10), marginTop: em(14), flexWrap: "wrap" }}>
-                {([["RINDE", r.rinde], ["TIEMPO", r.tiempo], ["COCCIÓN", r.coccion]] as const)
-                  .filter(([, valor]) => !!valor)
-                  .map(([nombre, valor]) => (
-                    <div
-                      key={nombre}
-                      style={{
-                        background: t.caja, borderRadius: em(6),
-                        padding: `${em(7)} ${em(12)}`, minWidth: em(84),
-                      }}
-                    >
-                      <p style={{ fontSize: em(7), letterSpacing: "0.1em", fontWeight: 700, color: t.acento }}>
-                        {nombre}
-                      </p>
-                      <p style={{ marginTop: em(2), fontSize: em(10), fontWeight: 700, color: t.tinta }}>
-                        {valor}
-                      </p>
-                    </div>
-                  ))}
+        return (
+          <div key={i} style={{ marginTop: i === 0 ? 0 : em(26) }}>
+            {/* ── Lo de arriba: la foto y el título, como los pone el molde ── */}
+            {acomodo === "sangre" ? (
+              /* La foto tapa lo alto de la hoja y el título va encima. El velo
+                 no es adorno: el título va en blanco sobre una foto que puede
+                 salir de cualquier color. Igual que en el archivo. */
+              <div style={{ position: "relative" }}>
+                {laFoto}
+                <div
+                  aria-hidden="true"
+                  style={{
+                    position: "absolute", inset: 0,
+                    background: "linear-gradient(to bottom, rgba(0,0,0,0) 22%, rgba(0,0,0,0.6) 62%, rgba(0,0,0,0.88) 100%)",
+                    /* ⚠️ Sin esto el velo se come los clics y la foto de abajo
+                       deja de poder tocarse para cambiarla. */
+                    pointerEvents: "none",
+                  }}
+                />
+                <div style={{
+                  position: "absolute", left: margen, right: margen, bottom: em(22),
+                }}>
+                  <p style={{ fontSize: em(8.5), letterSpacing: "0.1em", fontWeight: 700, color: "#ffffff" }}>
+                    RECETA {String(i + 1).padStart(2, "0")}
+                  </p>
+                  {elTitulo(true)}
+                </div>
               </div>
+            ) : acomodo === "ficha" ? (
+              /* La foto cuadrada al lado del título: lo que gana `compacto` es
+                 el alto que se llevaba la banda. */
+              <div style={{
+                display: "flex", gap: em(20), alignItems: "flex-start",
+                paddingLeft: margen, paddingRight: margen, paddingTop: em(18),
+              }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  {elNumero}
+                  {elTitulo(false)}
+                </div>
+                <div style={{ width: anchoCuadrada, flexShrink: 0 }}>
+                  <Tocable
+                    que={{ que: "foto", capitulo: i }}
+                    seleccion={seleccion}
+                    onTocar={onTocar}
+                    nombre={`Cambiar la foto de la receta ${i + 1}`}
+                  >
+                    <HuecoDeFoto foto={fotos[i]} respaldo={r.titulo} t={t} proporcion="1 / 1" />
+                  </Tocable>
+                </div>
+              </div>
+            ) : (
+              laFoto
             )}
 
-            {/* ── Las dos columnas ───────────────────────────────────────
-                Ingredientes a la izquierda y pasos a la derecha, como en el
-                archivo: los ingredientes se leen de arriba abajo mientras se
-                juntan las cosas, y los pasos después. */}
-            <div style={{ display: "flex", gap: em(26), marginTop: em(18), alignItems: "flex-start" }}>
-              <div style={{ width: "38%", flexShrink: 0 }}>
-                <p style={{ fontSize: em(8.5), letterSpacing: "0.1em", fontWeight: 700, color: t.acento }}>
-                  INGREDIENTES
-                </p>
-                <div style={{ width: em(30), height: em(2), background: t.acento, marginTop: em(6) }} />
-                <ul style={{ marginTop: em(10), listStyle: "none", padding: 0 }}>
-                  {r.ingredientes.map((ing, j) => (
-                    <li
-                      key={j}
-                      style={{
-                        display: "flex", justifyContent: "space-between", gap: em(8),
-                        fontSize: em(9.5), lineHeight: 1.5, color: t.tinta, marginBottom: em(4),
-                      }}
-                    >
-                      <span>{ing.nombre}</span>
-                      {/* La cantidad va a la derecha, alineada: es lo que hace
-                          que la lista se pueda leer de un vistazo mientras se
-                          junta todo. Puede faltar —"sal a gusto"—. */}
-                      {ing.cantidad && (
-                        <span style={{ fontWeight: 700, whiteSpace: "nowrap", color: t.suave }}>
-                          {ing.cantidad}
-                        </span>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              </div>
+            <div style={{
+              paddingLeft: margen, paddingRight: margen,
+              paddingTop: acomodo === "ficha" ? em(14) : em(18),
+              paddingBottom: em(30),
+            }}>
+              {/* En los dos acomodos de arriba el título ya se dibujó. */}
+              {acomodo !== "sangre" && acomodo !== "ficha" && (
+                <>
+                  {elNumero}
+                  {elTitulo(false)}
+                </>
+              )}
 
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ fontSize: em(8.5), letterSpacing: "0.1em", fontWeight: 700, color: t.acento }}>
-                  PREPARACIÓN
-                </p>
-                <div style={{ width: em(30), height: em(2), background: t.acento, marginTop: em(6) }} />
-                <ol style={{ marginTop: em(10), listStyle: "none", padding: 0 }}>
-                  {r.pasos.map((paso, j) => (
-                    <li key={j} style={{ display: "flex", gap: em(9), marginBottom: em(9) }}>
-                      <span
+              {/* Las tres fichas en fila, salvo que el molde las mande a la
+                  franja del costado: ahí van adentro de la columna de los
+                  ingredientes, arriba de la lista. */}
+              {acomodo !== "franja" && <Fichas r={r} apiladas={false} t={t} molde={molde} />}
+
+              {/* ── Las dos columnas ───────────────────────────────────────
+                  Ingredientes a la izquierda y pasos a la derecha, como en el
+                  archivo: los ingredientes se leen de arriba abajo mientras se
+                  juntan las cosas, y los pasos después. */}
+              <div style={{ display: "flex", gap: em(R.calle), marginTop: em(18), alignItems: "flex-start" }}>
+                <div style={{ width: anchoIngredientes, flexShrink: 0 }}>
+                  {acomodo === "franja" && <Fichas r={r} apiladas t={t} molde={molde} />}
+
+                  <p style={{ fontSize: em(8.5), letterSpacing: "0.1em", fontWeight: 700, color: t.acento }}>
+                    INGREDIENTES
+                  </p>
+                  <div style={{ width: em(30), height: em(2), background: t.acento, marginTop: em(6) }} />
+                  <ul style={{ marginTop: em(10), listStyle: "none", padding: 0 }}>
+                    {r.ingredientes.map((ing, j) => (
+                      <li
+                        key={j}
                         style={{
-                          flexShrink: 0, fontSize: em(9), fontWeight: 700, color: t.acento,
-                          lineHeight: 1.55, minWidth: em(14),
+                          display: "flex", justifyContent: "space-between", gap: em(8),
+                          fontSize: em(9.5), lineHeight: 1.5, color: t.tinta, marginBottom: em(4),
                         }}
                       >
-                        {String(j + 1).padStart(2, "0")}
-                      </span>
-                      <span>
-                        {paso.titulo && (
-                          <span style={{ display: "block", fontSize: em(9.5), fontWeight: 700, color: t.tinta }}>
-                            {paso.titulo}
+                        <span>{ing.nombre}</span>
+                        {/* La cantidad va a la derecha, alineada: es lo que hace
+                            que la lista se pueda leer de un vistazo mientras se
+                            junta todo. Puede faltar —"sal a gusto"—. */}
+                        {ing.cantidad && (
+                          <span style={{ fontWeight: 700, whiteSpace: "nowrap", color: t.suave }}>
+                            {ing.cantidad}
                           </span>
                         )}
-                        <span style={{ display: "block", fontSize: em(9.5), lineHeight: 1.55, color: t.tinta }}>
-                          {paso.texto}
-                        </span>
-                      </span>
-                    </li>
-                  ))}
-                </ol>
-              </div>
-            </div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
 
-            {/* El consejo, abajo de todo y en su recuadro. */}
-            {r.tip && (
-              <div
-                style={{
-                  background: t.caja, borderRadius: em(9),
-                  padding: `${em(14)} ${em(18)}`, marginTop: em(16),
-                }}
-              >
-                <p style={{ fontSize: em(8), letterSpacing: "0.1em", fontWeight: 700, color: t.acento }}>
-                  EL CONSEJO
-                </p>
-                <p style={{ marginTop: em(5), fontSize: em(9.5), lineHeight: 1.5, color: t.tinta }}>
-                  {r.tip}
-                </p>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ fontSize: em(8.5), letterSpacing: "0.1em", fontWeight: 700, color: t.acento }}>
+                    PREPARACIÓN
+                  </p>
+                  <div style={{ width: em(30), height: em(2), background: t.acento, marginTop: em(6) }} />
+                  <ol style={{ marginTop: em(10), listStyle: "none", padding: 0 }}>
+                    {r.pasos.map((paso, j) => (
+                      <li key={j} style={{ display: "flex", gap: em(9), marginBottom: em(9) }}>
+                        <span
+                          style={{
+                            flexShrink: 0, fontSize: em(9), fontWeight: 700, color: t.acento,
+                            lineHeight: 1.55, minWidth: em(14),
+                          }}
+                        >
+                          {String(j + 1).padStart(2, "0")}
+                        </span>
+                        <span>
+                          {paso.titulo && (
+                            <span style={{ display: "block", fontSize: em(9.5), fontWeight: 700, color: t.tinta }}>
+                              {paso.titulo}
+                            </span>
+                          )}
+                          <span style={{ display: "block", fontSize: em(9.5), lineHeight: 1.55, color: t.tinta }}>
+                            {paso.texto}
+                          </span>
+                        </span>
+                      </li>
+                    ))}
+                  </ol>
+                </div>
               </div>
-            )}
+
+              {/* El consejo, abajo de todo y en su recuadro. */}
+              {r.tip && (
+                <div
+                  style={{
+                    background: t.caja, borderRadius: em(9),
+                    padding: `${em(14)} ${em(18)}`, marginTop: em(16),
+                  }}
+                >
+                  <p style={{ fontSize: em(8), letterSpacing: "0.1em", fontWeight: 700, color: t.acento }}>
+                    EL CONSEJO
+                  </p>
+                  <p style={{ marginTop: em(5), fontSize: em(9.5), lineHeight: 1.5, color: t.tinta }}>
+                    {r.tip}
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
+        );
+      })}
+    </MarcoDeLaHoja>
+  );
+}
+
+/**
+ * Las tres fichas: en fila arriba, o apiladas al costado.
+ *
+ * ⚠️ Vive afuera del componente de arriba y no adentro: un componente declarado
+ * adentro de otro es un componente NUEVO en cada dibujado, así que React
+ * desmonta y vuelve a montar lo que hay abajo en cada tecla que se toca en el
+ * editor. Acá no se nota porque no guarda nada, pero es la clase de cosa que se
+ * copia al de al lado y ahí sí pierde el foco de un campo.
+ */
+function Fichas({
+  r, apiladas, t, molde,
+}: {
+  r: Receta;
+  apiladas: boolean;
+  t: ReturnType<typeof coloresDelEbook>;
+  molde: Molde;
+}) {
+  const puestas = ([["RINDE", r.rinde], ["TIEMPO", r.tiempo], ["COCCIÓN", r.coccion]] as const)
+    .filter(([, valor]) => !!valor);
+  /* Una ficha vacía que dice "TIEMPO" y nada abajo se lee como un dato que
+     falta. En el archivo pasa lo mismo — ver `fichasDe`. */
+  if (puestas.length === 0) return null;
+
+  return (
+    <div
+      style={apiladas
+        ? {
+          background: t.caja, borderRadius: em(molde.esquina),
+          borderLeft: `${em(3)} solid ${t.acento}`,
+          padding: `${em(12)} ${em(12)}`, marginBottom: em(18),
+        }
+        : { display: "flex", gap: em(10), marginTop: em(14), flexWrap: "wrap" }}
+    >
+      {puestas.map(([nombre, valor], i) => (
+        <div
+          key={nombre}
+          style={apiladas
+            ? { marginTop: i === 0 ? 0 : em(12) }
+            : {
+              background: t.caja, borderRadius: em(6),
+              padding: `${em(7)} ${em(12)}`, minWidth: em(84),
+            }}
+        >
+          <p style={{ fontSize: em(7), letterSpacing: "0.1em", fontWeight: 700, color: t.acento }}>
+            {nombre}
+          </p>
+          <p style={{ marginTop: em(2), fontSize: em(10), fontWeight: 700, color: t.tinta, lineHeight: 1.35 }}>
+            {valor}
+          </p>
         </div>
       ))}
-    </MarcoDeLaHoja>
+    </div>
   );
 }

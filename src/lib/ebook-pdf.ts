@@ -11,7 +11,7 @@ import {
 /* Y el molde salió de acá el mismo día, por el mismo motivo y para lo mismo:
    la previa tiene que poder dibujar la hoja del estilo que se eligió. */
 import {
-  moldeDe, anchoUtilDe, columnaDeTexto, anchoDeColumna,
+  moldeDe, anchoUtilDe, columnaDeTexto, anchoDeColumna, HOJA_DE_RECETA,
   type Molde, type EstiloDeEbook,
 } from "@/lib/ebook-estilos";
 
@@ -1452,9 +1452,18 @@ function recortarAlAncho(doc: Doc, texto: string, ancho: number): string {
   return corte > 0 ? `${texto.slice(0, corte).trimEnd()}…` : "";
 }
 
-/** Si la receta tiene al menos una de las tres fichas de arriba. */
-function tieneFichas(r: Receta): boolean {
-  return !!(soloLoQueEntra(r.rinde) || soloLoQueEntra(r.tiempo) || soloLoQueEntra(r.coccion));
+/**
+ * Las tres fichas de arriba, sólo las que tienen algo escrito.
+ *
+ * Una ficha vacía que dice "TIEMPO" y nada abajo se lee como un dato que falta,
+ * no como un dato que no hay.
+ */
+function fichasDe(r: Receta): [string, string][] {
+  return ([
+    ["RINDE", soloLoQueEntra(r.rinde)],
+    ["TIEMPO", soloLoQueEntra(r.tiempo)],
+    ["COCCIÓN", soloLoQueEntra(r.coccion)],
+  ] as [string, string][]).filter((f) => !!f[1]);
 }
 
 /**
@@ -1545,6 +1554,104 @@ function alturaDeLosPasos(doc: Doc, r: Receta, t: Tema, ancho: number, m: Medida
   return alto;
 }
 
+/**
+ * Las tres fichas APILADAS en la columna del costado, y cuánto se llevan.
+ *
+ * Es el acomodo de `manual`: rinde, tiempo y cocción quedan al costado, a la
+ * altura de los pasos, en vez de en una fila arriba que se pierde de vista en
+ * cuanto se empieza a leer.
+ *
+ * ══════════════════════════════════════════════════════════════════════════
+ * ⚠️ LA MISMA FUNCIÓN MIDE Y DIBUJA
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * El tip tiene la altura en `alturaDelTip` y el dibujo en `dibujarAviso`, con
+ * tres números que hay que mantener iguales a mano — está anotado allá, y es
+ * una trampa: si se desincronizan, la cuenta de "¿entra la receta?" miente y la
+ * hoja sale partida sin que falle nada. Acá no puede pasar: con `dibujar` en
+ * falso hace las mismas cuentas con las mismas letras y no pinta nada, así que
+ * el alto que se usó para decidir es, por construcción, el que ocupa después.
+ */
+function fichasEnLaFranja(
+  doc: Doc, fichas: [string, string][], t: Tema, m: Medidas,
+  x: number, ancho: number, y0: number, dibujar: boolean,
+): number {
+  let y = y0;
+  for (const [clave, valor] of fichas) {
+    if (dibujar) {
+      doc.font(t.etiqueta).fontSize(7).fillColor(t.acento)
+        .text(clave, x, y, { width: ancho, characterSpacing: 1.3, lineBreak: false });
+    }
+    /* ⚠️ La letra se elige ANTES de medir y FUERA del `if`: `heightOfString`
+       mide con la que esté puesta en el documento, así que midiendo con una y
+       dibujando con otra la cuenta daría cualquier cosa. */
+    doc.font(t.cuerpo).fontSize(m.tip).fillColor(t.tinta);
+    /* Acá el valor SÍ puede ocupar dos renglones y no se recorta: en la fila de
+       arriba no había alto para otro renglón y "2 horas y media contando el
+       levado" salía con puntos suspensivos justo en el dato que se mira antes
+       de ponerse a cocinar. Al costado sobra alto: se deja entero. */
+    const alto = doc.heightOfString(valor, { width: ancho, lineGap: 1 });
+    if (dibujar) doc.text(valor, x, y + 10, { width: ancho, lineGap: 1 });
+    y += 10 + alto + 12;
+  }
+  return y - y0;
+}
+
+/**
+ * La foto tapando lo alto de la hoja, con el título de la receta encima.
+ *
+ * Es el acomodo de `cartel`, y la misma idea que su portadilla de capítulo: lo
+ * que hace ver de revista es que la foto llegue al borde.
+ *
+ * ⚠️ Tapa el encabezado de la hoja —lo dibujó `muebles` cuando nació la página,
+ * antes que esto— así que el "RECETA 03" se vuelve a escribir acá sobre el
+ * velo. Sin eso, un recetario en `cartel` pierde el número en todas las hojas.
+ */
+function recetaASangre(
+  doc: Doc, titulo: string, descripcion: string, numero: number,
+  foto: FotoDelEbook | null | undefined, t: Tema, m: Medidas, alto: number,
+): void {
+  const puesta = foto ? fotoCubriendo(doc, foto, 0, 0, HOJA.ancho, alto) : false;
+
+  /* Sin foto, el bloque de acento: la misma red que la tapa y la portadilla.
+     Una cuenta sin fotos tiene que entregar un recetario igual de terminado. */
+  if (!puesta) doc.rect(0, 0, HOJA.ancho, alto).fill(t.acento);
+  else velo(doc, alto * 0.22, alto * 0.78, [[0, 0], [0.45, 0.6], [1, 0.92]]);
+
+  const tinta = puesta ? SOBRE_LA_FOTO.titulo : t.sobreAcento;
+
+  doc.font(t.titulo).fontSize(m.titulo);
+  const altoTitulo = doc.heightOfString(titulo, { width: t.ancho - 60, lineGap: 1 });
+  let altoDescripcion = 0;
+  if (descripcion) {
+    doc.font(t.cursiva).fontSize(m.descripcion);
+    altoDescripcion = 6 + doc.heightOfString(descripcion, { width: t.ancho - 90, lineGap: 2 });
+  }
+
+  /* El texto se apoya abajo de la foto, no arriba: es donde el velo es más
+     oscuro y donde una foto de comida tiene menos que mostrar. */
+  const yTitulo = alto - 34 - altoTitulo - altoDescripcion;
+
+  /* ⚠️ El rótulo va en CLARO sobre la foto, no en acento, y esto se vio
+     mirando: `acentoSobreLaFoto` corrige el acento contra el velo **casi
+     negro**, que es el de abajo de todo —ahí lo usa la portadilla a sangre para
+     su rayita—. Este rótulo va a media altura, donde el velo todavía es medio,
+     y con una foto clara el acento se perdía adentro. El título de al lado ya va
+     en claro por el mismo motivo; el rótulo va un tono más bajo para que se lea
+     como lo que es, un rótulo. */
+  doc.font(t.etiqueta).fontSize(7.5).fillColor(puesta ? SOBRE_LA_FOTO.promesa : tinta)
+    .text(`RECETA ${String(numero).padStart(2, "0")}`, t.margen, yTitulo - 18,
+      { width: t.ancho, characterSpacing: 1.6, lineBreak: false });
+
+  doc.font(t.titulo).fontSize(m.titulo).fillColor(tinta)
+    .text(titulo, t.margen, yTitulo, { width: t.ancho - 60, lineGap: 1 });
+
+  if (descripcion) {
+    doc.font(t.cursiva).fontSize(m.descripcion).fillColor(tinta)
+      .text(descripcion, t.margen, doc.y + 6, { width: t.ancho - 90, lineGap: 2 });
+  }
+}
+
 function hojaDeReceta(
   doc: Doc, r: Receta, numero: number, foto: FotoDelEbook | null | undefined,
   t: Tema, e: Estado,
@@ -1566,11 +1673,46 @@ function hojaDeReceta(
      título: ese hueco de la derecha estaba vacío igual, así que no cuesta ni
      un punto. Sin esto, las recetas largas salían sin foto y en un recetario
      eso desentona hoja por medio. */
-  const ALTO_BANDA_MAX = 168;
-  const ALTO_BANDA_MIN = 70;
-  const LADO_CHICA = 148;
-  /* Más chica que esto ya no es una foto de comida, es una estampilla. */
-  const LADO_CHICA_MIN = 74;
+  /* ⚠️ Las medidas de la foto salen de `ebook-estilos` y no de acá: las miran
+     también la miniatura con la que se elige el estilo y la vista previa del
+     editor. Los números son los mismos que estaban escritos en esta función. */
+  const {
+    bandaMax: ALTO_BANDA_MAX, bandaMin: ALTO_BANDA_MIN,
+    ladoMax: LADO_CHICA, ladoMin: LADO_CHICA_MIN,
+    sangreMax: ALTO_SANGRE_MAX, sangreMin: ALTO_SANGRE_MIN,
+  } = HOJA_DE_RECETA;
+
+  /* ── ⚠️ EL ACOMODO LO ELIGE EL MOLDE; EL TAMAÑO, LA MEDICIÓN ──────────────
+     Son dos decisiones distintas y se toman en dos lugares distintos:
+
+       · `t.molde.receta` dice **dónde va cada cosa** —la foto arriba, al
+         costado o a sangre; las fichas en fila o en la franja—, y eso no
+         depende de lo que escribió el modelo;
+       · `medir` dice **de qué tamaño**, y eso sí depende: es lo único que
+         evita que una receta se parta en dos hojas.
+
+     Mezclarlas sería que el estilo elegido cambie según lo larga que salió la
+     receta. Ver `ebook-estilos`. */
+  const acomodo = t.molde.receta;
+  const fichas = fichasDe(r);
+  /* Al costado sólo si hay fichas: una franja vacía deja un hueco al lado de
+     los ingredientes y se lee como que falta algo. */
+  const enLaFranja = acomodo === "franja" && fichas.length > 0;
+
+  /* ⚠️ LAS DOS COLUMNAS SON LAS MISMAS EN LOS CUATRO MOLDES, y no es pereza:
+     este ancho es el que `alturaDeLosPasos` usa para decidir si la receta
+     entra. Mover la columna de los pasos es rehacer esa cuenta, y una cuenta
+     mal rehecha no falla en ningún lado: sale una receta partida al medio.
+     Lo que cambia entre moldes es lo de ARRIBA y dónde caen las tres fichas.
+
+     Por lo mismo, la franja de las fichas mide lo que mide la columna de los
+     ingredientes (168) y NO `t.molde.franja` (132), que está medido para que un
+     subtítulo de prosa entre al costado del texto. Otra hoja, otra cuenta. */
+  const ANCHO_IZQ = HOJA_DE_RECETA.ingredientes;
+  const X_DER = t.margen + ANCHO_IZQ + HOJA_DE_RECETA.calle;
+  const ANCHO_DER = t.ancho - ANCHO_IZQ - HOJA_DE_RECETA.calle;
+  /* El aire de adentro de la caja de las fichas apiladas. */
+  const RELLENO_FRANJA = 12;
 
   const alturaDelEncabezado = (ancho: number, m: Medidas) => {
     doc.font(t.titulo).fontSize(m.titulo);
@@ -1583,6 +1725,26 @@ function hojaDeReceta(
   };
 
   /**
+   * Lo que se lleva la franja de fichas arriba de los ingredientes: la caja
+   * entera más el aire hasta la etiqueta. Cero cuando las fichas van en fila.
+   */
+  const alturaDeLaFranja = (m: Medidas) => (enLaFranja
+    ? fichasEnLaFranja(doc, fichas, t, m, 0, ANCHO_IZQ - RELLENO_FRANJA * 2, 0, false)
+      + RELLENO_FRANJA * 2 + 18
+    : 0);
+
+  /* ⚠️ `compacto` mete el título adentro de una franja de acento —la misma idea
+     que su tapa y que su portadilla de capítulo—, y esa franja tiene relleno
+     arriba y abajo. Diez puntos más que los otros tres, y por eso el aire viaja
+     en una variable: si el dibujo se llevara 28 y la cuenta de "¿entra?"
+     siguiera diciendo 18, una receta justa se partiría en dos. */
+  const aireDelTitulo = acomodo === "ficha" ? 28 : 18;
+
+  /** Cuánto tiene que medir la foto a sangre para que el título entre encima. */
+  const alturaDeLaSangre = (m: Medidas) =>
+    Math.max(ALTO_SANGRE_MIN, alturaDelEncabezado(t.ancho - 60, m) + 96);
+
+  /**
    * Todo lo que va abajo del título, con una densidad dada.
    *
    * `piso` es el renglón más abajo en el que puede arrancar sin que el final de
@@ -1590,17 +1752,28 @@ function hojaDeReceta(
    * la receta no entra.
    */
   const medir = (m: Medidas) => {
-    const altoPasos = alturaDeLosPasos(doc, r, t, t.ancho - 168 - 26, m);
+    const altoPasos = alturaDeLosPasos(doc, r, t, ANCHO_DER, m);
     const altoIngredientes = 20 + Math.min(r.ingredientes.length, INGREDIENTES_MAX) * m.ingrediente;
-    const altoColumnas = 20 + Math.max(altoPasos, altoIngredientes);
-    const altoFichas = tieneFichas(r) ? m.fichas + m.aireFichas : 0;
+    /* ⚠️ Con las fichas al costado, la fila de arriba NO existe y lo que tiene
+       que aguantarlas es la columna de los ingredientes. Por eso se suman acá
+       adentro del `Math.max` y no afuera: si los pasos son más largos que los
+       ingredientes más las fichas, las fichas no le cuestan un punto a la hoja.
+       Eso es lo que le hace ganar alto a `manual`. */
+    const altoColumnas = 20 + Math.max(altoPasos, alturaDeLaFranja(m) + altoIngredientes);
+    const altoFichas = fichas.length > 0 && !enLaFranja ? m.fichas + m.aireFichas : 0;
     /* ⚠️ Medido, no estimado. Acá había un 76 puesto a ojo y se pasaba por CINCO
        puntos: la receta entera se iba a una segunda hoja por un tip de dos
        renglones. Un número inventado en una cuenta de "¿entra o no entra?" no
        sirve — o sobra lugar, o se parte la hoja. */
     const altoTip = r.tip ? alturaDelTip(doc, soloLoQueEntra(r.tip), t, m) : 0;
     const piso = (HOJA.alto - t.abajo) - (altoFichas + altoColumnas + altoTip + 16);
-    return { piso, entra: piso >= t.arriba + alturaDelEncabezado(t.ancho - 148 - 20, m) + 18 };
+    /* Con la foto a sangre el título va ENCIMA de la foto, así que lo que tiene
+       que entrar arriba de las columnas no es un título apoyado en el papel: es
+       la foto entera con el título adentro. */
+    const entra = acomodo === "sangre"
+      ? piso >= alturaDeLaSangre(m) + 24
+      : piso >= t.arriba + alturaDelEncabezado(t.ancho - LADO_CHICA - 20, m) + aireDelTitulo;
+    return { piso, entra };
   };
 
   /* ⚠️ De la más holgada a la más apretada, y se toma la PRIMERA que entra. Al
@@ -1611,8 +1784,23 @@ function hojaDeReceta(
   const m = [HOLGADA, APRETADA, AL_LIMITE].find((x) => medir(x).entra) ?? AL_LIMITE;
   const { piso } = medir(m);
 
-  const sobra = piso - (t.arriba + alturaDelEncabezado(t.ancho - 60, m) + 18);
-  const banda = sobra >= ALTO_BANDA_MIN ? Math.min(ALTO_BANDA_MAX, Math.floor(sobra)) : 0;
+  /* ── Lo de arriba: la foto y el título ─────────────────────────────────── */
+
+  /* La foto a sangre va sólo si entra ENTERA. Si no, esta receta cae al acomodo
+     de siempre: una foto a sangre achicada hasta que entre no es el estilo que
+     se eligió, es una banda ancha con el título encima. */
+  const altoSangre = Math.min(ALTO_SANGRE_MAX, Math.floor(piso - 24));
+  const aSangre = acomodo === "sangre" && altoSangre >= alturaDeLaSangre(m);
+
+  const sobra = piso - (t.arriba + alturaDelEncabezado(t.ancho - 60, m) + aireDelTitulo);
+  /* ⚠️ `compacto` NO usa la banda ancha ni cuando sobra alto, y esa es toda su
+     gracia en un recetario: la foto cuadrada al lado del título ocupa el hueco
+     que ya estaba vacío, así que una receta que en `libro` caía a `APRETADA`
+     acá entra holgada. Es el mismo canje que hace en la prosa —más adentro por
+     hoja— dicho en la única moneda que tiene una receta: el alto. */
+  const banda = !aSangre && acomodo !== "ficha" && sobra >= ALTO_BANDA_MIN
+    ? Math.min(ALTO_BANDA_MAX, Math.floor(sobra))
+    : 0;
 
   const anchoEncabezado = banda > 0 ? t.ancho - 60 : t.ancho - LADO_CHICA - 20;
 
@@ -1633,44 +1821,81 @@ function hojaDeReceta(
      Si ni el cuadrado más chico entra, no hay foto. Una receta entera en su hoja
      vale más que una foto y media receta. */
   const altoDelTitulo = alturaDelEncabezado(anchoEncabezado, m);
-  const holgura = Math.max(0, piso - (t.arriba + altoDelTitulo + 18));
+  const holgura = Math.max(0, piso - (t.arriba + altoDelTitulo + aireDelTitulo));
   const ladoChica = Math.min(LADO_CHICA, Math.floor(altoDelTitulo + 6 + holgura));
-  const conCuadrada = banda === 0 && ladoChica >= LADO_CHICA_MIN;
+  const conCuadrada = !aSangre && banda === 0 && ladoChica >= LADO_CHICA_MIN;
+  /* La foto cuadrada arranca seis puntos arriba del título para que el bloque
+     se lea parejo. En `compacto` arranca doce, que es donde arranca su franja:
+     con seis, la franja empezaba antes que la foto y el escaloncito se veía. */
+  const yCuadrada = acomodo === "ficha" ? t.arriba - 12 : t.arriba - 6;
 
-  doc.font(t.titulo).fontSize(m.titulo).fillColor(t.tinta)
-    .text(titulo, t.margen, t.arriba, { width: anchoEncabezado, lineGap: 1 });
+  let y: number;
 
-  if (descripcion) {
-    doc.font(t.cursiva).fontSize(m.descripcion).fillColor(t.suave)
-      .text(descripcion, t.margen, doc.y + 6, { width: anchoEncabezado - 30, lineGap: 2 });
-  }
+  if (aSangre) {
+    recetaASangre(doc, titulo, descripcion, numero, foto, t, m, altoSangre);
+    y = altoSangre + 24;
+  } else {
+    /* ── La franja del título de `compacto` ────────────────────────────────
+       Sin esto `compacto` y `libro` salían la misma hoja, y no por un error:
+       cuando la receta es larga `libro` cambia la banda ancha por el cuadrado
+       al costado, que es justo lo que hace `compacto` siempre. O sea que en
+       toda receta larga —la mayoría— las dos hojas quedaban iguales salvo el
+       margen. Medido con tres recetas de verdad el 09/09/26.
 
-  let y = doc.y + 18;
+       La franja arranca en el BORDE de la hoja y no en el margen: es lo mismo
+       que hacen su tapa y su portadilla, y es lo que lo hace ver de diario. Se
+       corta antes de la foto para no pasarle por abajo. */
+    const conFranjaDeTitulo = acomodo === "ficha";
+    if (conFranjaDeTitulo) {
+      const hasta = conCuadrada ? HOJA.ancho - t.margen - ladoChica - 16 : HOJA.ancho;
+      doc.rect(0, t.arriba - 12, hasta, altoDelTitulo + 28).fill(t.acento);
+    }
+    const tinta = conFranjaDeTitulo ? t.sobreAcento : t.tinta;
 
-  /* La foto no es adorno: es lo que deja ver cómo tiene que quedar. */
-  if (foto) {
-    if (banda > 0) {
-      if (fotoCubriendo(doc, foto, t.margen, y, t.ancho, banda)) y += banda + 16;
-    } else if (conCuadrada) {
-      const x = HOJA.ancho - t.margen - ladoChica;
-      if (fotoCubriendo(doc, foto, x, t.arriba - 6, ladoChica, ladoChica)) {
-        /* Lo que siga arranca abajo de la foto si el título era más corto. */
-        y = Math.max(y, t.arriba - 6 + ladoChica + 18);
+    doc.font(t.titulo).fontSize(m.titulo).fillColor(tinta)
+      .text(titulo, t.margen, t.arriba, { width: anchoEncabezado, lineGap: 1 });
+
+    if (descripcion) {
+      doc.font(t.cursiva).fontSize(m.descripcion).fillColor(conFranjaDeTitulo ? tinta : t.suave)
+        .text(descripcion, t.margen, doc.y + 6, { width: anchoEncabezado - 30, lineGap: 2 });
+    }
+
+    y = doc.y + aireDelTitulo;
+    /* ⚠️ Y nunca arriba de la franja. `doc.y` queda donde el texto terminó de
+       escribirse, que puede caer un pelo más alto que lo que midió
+       `alturaDelEncabezado` —pdfkit no devuelve exactamente el mismo número—, y
+       ahí la fila de fichas se dibujaría ENCIMA del acento. El piso es
+       exactamente el que `medir` ya reservó, así que no cuesta un punto. */
+    if (conFranjaDeTitulo) y = Math.max(y, t.arriba + altoDelTitulo + aireDelTitulo);
+
+    /* La foto no es adorno: es lo que deja ver cómo tiene que quedar. */
+    if (foto) {
+      if (banda > 0) {
+        if (fotoCubriendo(doc, foto, t.margen, y, t.ancho, banda)) y += banda + 16;
+      } else if (conCuadrada) {
+        const x = HOJA.ancho - t.margen - ladoChica;
+        if (fotoCubriendo(doc, foto, x, yCuadrada, ladoChica, ladoChica)) {
+          /* Lo que siga arranca abajo de la foto si el título era más corto. */
+          y = Math.max(y, yCuadrada + ladoChica + 18);
+        }
       }
     }
   }
 
   /* Las tres fichas. Es lo que alguien mira antes de leer nada: cuánto rinde,
-     cuánto tarda, a qué temperatura. */
-  const fichas = ([
-    ["RINDE", soloLoQueEntra(r.rinde)],
-    ["TIEMPO", soloLoQueEntra(r.tiempo)],
-    ["COCCIÓN", soloLoQueEntra(r.coccion)],
-  ] as [string, string][]).filter((f) => !!f[1]);
-
-  if (fichas.length > 0) {
+     cuánto tarda, a qué temperatura. Van en fila arriba, salvo que el molde las
+     mande a la franja del costado: ahí se dibujan más abajo, adentro de la
+     columna de los ingredientes. */
+  if (fichas.length > 0 && !enLaFranja) {
     const ALTO = m.fichas;
-    doc.roundedRect(t.margen, y, t.ancho, ALTO, 8).fill(t.caja);
+    /* ⚠️ El 8 es el redondeo que `libro` tenía escrito adentro desde antes de
+       los moldes y ahí se queda: un recetario rearmado tiene que dar el mismo
+       archivo. Los otros acomodos leen su molde, y por eso en `compacto` y en
+       `cartel` esta caja sale recta, igual que el recuadro del tip. Con una
+       redonda y la otra recta la hoja se veía a medio terminar. */
+    const redondeo = acomodo === "banda" ? 8 : t.molde.esquina;
+    if (redondeo > 0) doc.roundedRect(t.margen, y, t.ancho, ALTO, redondeo).fill(t.caja);
+    else doc.rect(t.margen, y, t.ancho, ALTO).fill(t.caja);
     const ancho = t.ancho / fichas.length;
 
     /* ⚠️ El cuerpo se elige para que las tres fichas entren, no al revés.
@@ -1698,12 +1923,37 @@ function hojaDeReceta(
 
   /* ── Las dos columnas ──────────────────────────────────────────────────── */
 
-  const ANCHO_IZQ = 168;
-  const X_DER = t.margen + ANCHO_IZQ + 26;
-  const ANCHO_DER = t.ancho - ANCHO_IZQ - 26;
+  /* La franja: las tres fichas apiladas arriba de los ingredientes, adentro de
+     su caja. Se mide primero y se dibuja después con LA MISMA función, así que
+     la caja no puede quedar más corta que lo que lleva adentro. */
+  const altoDeLaFranja = alturaDeLaFranja(m);
+  if (enLaFranja) {
+    const altoCaja = altoDeLaFranja - 18;
+    /* ⚠️ El 8 del redondeo de la fila de arriba es el que `libro` tenía escrito
+       adentro desde antes de que existieran los moldes, y no se toca: un
+       recetario rearmado tiene que dar el mismo archivo. Esta caja es nueva, así
+       que lee el molde y sale con las esquinas del estilo. */
+    if (t.molde.esquina > 0) {
+      doc.roundedRect(t.margen, y, ANCHO_IZQ, altoCaja, t.molde.esquina).fill(t.caja);
+    } else {
+      doc.rect(t.margen, y, ANCHO_IZQ, altoCaja).fill(t.caja);
+    }
+    /* La rayita de acento del costado, la misma que marca el recuadro del tip:
+       es lo que hace que la franja se lea como una franja y no como un bloque
+       de color suelto. */
+    doc.rect(t.margen, y, 3, altoCaja).fill(t.acento);
+
+    fichasEnLaFranja(doc, fichas, t, m, t.margen + RELLENO_FRANJA,
+      ANCHO_IZQ - RELLENO_FRANJA * 2, y + RELLENO_FRANJA, true);
+  }
+
+  /* La etiqueta de los ingredientes baja lo que ocupe la franja; la de la
+     preparación no se mueve. Que las dos no queden a la misma altura es a
+     propósito: al costado hay una franja, no una segunda columna gemela. */
+  const yEtiquetaIzq = y + altoDeLaFranja;
 
   doc.font(t.etiqueta).fontSize(9).fillColor(t.acento)
-    .text("INGREDIENTES", t.margen, y, { width: ANCHO_IZQ, characterSpacing: 1.5, lineBreak: false });
+    .text("INGREDIENTES", t.margen, yEtiquetaIzq, { width: ANCHO_IZQ, characterSpacing: 1.5, lineBreak: false });
   doc.font(t.etiqueta).fontSize(9).fillColor(t.acento)
     .text("PREPARACIÓN", X_DER, y, { width: ANCHO_DER, characterSpacing: 1.5, lineBreak: false });
 
@@ -1736,7 +1986,7 @@ function hojaDeReceta(
   const anchoCantidad = Math.min(anchoDe(cuerpoIngrediente).cant, Math.floor(ANCHO_IZQ * 0.55));
   const anchoNombre = ANCHO_IZQ - anchoCantidad - 10;
 
-  let yIzq = y + 20;
+  let yIzq = yEtiquetaIzq + 20;
   for (const ing of lista) {
     doc.font(t.cuerpo).fontSize(cuerpoIngrediente).fillColor(t.tinta);
     doc.text(recortarAlAncho(doc, ing.nombre, anchoNombre), t.margen, yIzq,

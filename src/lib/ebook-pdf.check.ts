@@ -31,6 +31,7 @@ import {
   type DatosDelEbook,
 } from "./ebook-pdf";
 import { PALETAS } from "./pagina-venta";
+import { ESTILOS } from "./ebook-estilos";
 import {
   LARGO_BLOQUE, INGREDIENTES_MAX, PASOS_MAX, LARGO_PASO, LARGO_DESCRIPCION_RECETA,
   type Bloque, type CapituloEscrito, type Receta,
@@ -367,16 +368,24 @@ async function pruebasDeArmado() {
     foto: "pan casero",
   });
 
+  /* ⚠️ Y con LOS CUATRO ESTILOS, desde el 09/09/26. Cada uno acomoda la receta
+     de otra forma —la foto a sangre de `cartel` se lleva 330 puntos de arriba,
+     `manual` baja las fichas al costado— y cada acomodo tiene su propia cuenta
+     de si entra. Probar sólo el de fábrica dejaba los otros tres sin red, que
+     es exactamente donde un acomodo nuevo parte una receta sin fallar. */
   const CUANTAS = 4;
-  const recetario = await armarPDF({
-    ...base,
-    capitulos: [],
-    recetas: Array.from({ length: CUANTAS }, (_, i) => recetaGorda(i + 1)),
-  });
-  /* Tapa + contenido + una hoja por receta. Sin fotos no hay créditos. */
-  check("PDF-W", hojas(recetario) === 2 + CUANTAS,
-    `cada receta entra en UNA hoja aun con ${INGREDIENTES_MAX} ingredientes y ${PASOS_MAX} pasos largos `
-    + `(${hojas(recetario)} hojas, se esperaban ${2 + CUANTAS})`);
+  for (const estilo of ESTILOS) {
+    const recetario = await armarPDF({
+      ...base,
+      capitulos: [],
+      recetas: Array.from({ length: CUANTAS }, (_, i) => recetaGorda(i + 1)),
+      estilo,
+    });
+    /* Tapa + contenido + una hoja por receta. Sin fotos no hay créditos. */
+    check(`PDF-W-${estilo}`, hojas(recetario) === 2 + CUANTAS,
+      `en ${estilo}, cada receta entra en UNA hoja aun con ${INGREDIENTES_MAX} ingredientes y ${PASOS_MAX} pasos largos `
+      + `(${hojas(recetario)} hojas, se esperaban ${2 + CUANTAS})`);
+  }
 
   /* Y que no se haya arreglado apretando siempre: una receta corta tiene que
      seguir saliendo holgada y ocupar su hoja igual. */
@@ -433,15 +442,18 @@ async function pruebasDeArmado() {
     enlace: "https://www.pexels.com/foto/123/",
   };
 
-  const normales = await armarPDF({
-    ...base,
-    capitulos: [],
-    recetas: Array.from({ length: 3 }, (_, i) => recetaNormal(i + 1)),
-    fotosCapitulos: [fotoDeVerdad, fotoDeVerdad, fotoDeVerdad],
-  });
-  /* Tapa + contenido + 3 recetas + créditos, que aparecen porque hay fotos. */
-  check("PDF-Y", hojas(normales) === 6,
-    `una receta común de 8 pasos entra en su hoja con la foto puesta (${hojas(normales)} hojas, se esperaban 6)`);
+  for (const estilo of ESTILOS) {
+    const normales = await armarPDF({
+      ...base,
+      capitulos: [],
+      recetas: Array.from({ length: 3 }, (_, i) => recetaNormal(i + 1)),
+      fotosCapitulos: [fotoDeVerdad, fotoDeVerdad, fotoDeVerdad],
+      estilo,
+    });
+    /* Tapa + contenido + 3 recetas + créditos, que aparecen porque hay fotos. */
+    check(`PDF-Y-${estilo}`, hojas(normales) === 6,
+      `en ${estilo}, una receta común de 8 pasos entra en su hoja con la foto puesta (${hojas(normales)} hojas, se esperaban 6)`);
+  }
 
   /* El título y el autor van en los datos del archivo, que es lo que muestra
      el lector de PDF en la pestaña. Esos NO van comprimidos. */

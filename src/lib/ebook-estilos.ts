@@ -67,39 +67,39 @@ export const QUE_ES_CADA_ESTILO: Record<
     explica: string;
     contra: string;
     /**
-     * Qué hace con LA TAPA.
+     * Qué hace con LA HOJA DE UNA RECETA, que no es prosa.
      *
-     * ⚠️ Está aparte porque es lo único que el estilo cambia en un recetario:
-     * la hoja de una receta tiene su propio molde y todavía no escucha al
-     * estilo. Sin este texto, el selector de un recetario prometía columnas y
-     * subtítulos que ese archivo nunca iba a tener. Ver `MiniaturaDeEstilo`.
+     * ⚠️ Está aparte porque un recetario no tiene columnas de texto corrido ni
+     * subtítulos: tiene fichas, ingredientes y pasos. Con el texto de arriba,
+     * el selector de un recetario prometía "una franja al costado donde caen
+     * los subtítulos" — algo que ese archivo nunca iba a tener.
      */
-    tapa: string;
+    receta: string;
   }
 > = {
   libro: {
     nombre: "Libro",
     explica: "Una columna, con aire, y cada capítulo abre con su foto y su número.",
     contra: "Es el más largo en hojas.",
-    tapa: "La foto arriba y el título abajo, sobre el papel.",
+    receta: "Foto ancha arriba, las tres fichas en una fila y abajo los ingredientes y los pasos.",
   },
   compacto: {
     nombre: "Compacto",
     explica: "Dos columnas, como un diario. El título va sobre la foto y entra casi el doble por hoja.",
     contra: "En el celular se lee peor: hay que subir y bajar por cada columna.",
-    tapa: "La foto arriba y el título adentro de una franja de color.",
+    receta: "La foto cuadrada al lado del título: se gana alto y entra una receta más larga.",
   },
   manual: {
     nombre: "Manual",
     explica: "Columna angosta y una franja al costado donde caen los subtítulos, afuera del texto.",
     contra: "El renglón es corto: un texto largo se estira en más hojas.",
-    tapa: "La foto en una columna alta a la derecha y el texto al costado.",
+    receta: "Rinde, tiempo y cocción en la franja del costado, a la vista mientras bajás por los pasos.",
   },
   cartel: {
     nombre: "Cartel",
     explica: "Títulos enormes, fotos a toda la hoja y los subtítulos resaltados en color.",
     contra: "Gasta mucha tinta si alguien lo imprime.",
-    tapa: "La foto tapa la hoja entera y el título va encima.",
+    receta: "La foto tapa lo alto de la hoja y el título de la receta va encima.",
   },
 };
 
@@ -197,6 +197,37 @@ export type Molde = {
   /** El redondeo de los recuadros. 0 son esquinas rectas. */
   esquina: number;
 
+  /* ── La hoja de UNA RECETA ─────────────────────────────────────────────── */
+
+  /**
+   * Cómo se acomoda una receta, que no es prosa: es una ficha.
+   *
+   * ══════════════════════════════════════════════════════════════════════════
+   * ⚠️ POR QUÉ ES UN CAMPO APARTE Y NO SALE DE `portadilla`
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * Los campos de arriba —columnas, franja, entrada, subtítulo— están hechos
+   * para prosa, y una receta no tiene nada de eso. Hasta el 09/09/26 la hoja de
+   * una receta no leía el molde: las cuatro salían iguales adentro y el estilo
+   * le cambiaba nada más que la tapa.
+   *
+   * - `banda`: la foto ancha arriba, las tres fichas en una fila a todo el
+   *   ancho, y abajo los ingredientes y los pasos. **Es el de siempre.**
+   * - `ficha`: la foto cuadrada al lado del título, nunca de banda. Gana el
+   *   alto que se llevaba la banda, así que entra una receta más larga sin que
+   *   la hoja tenga que apretar la letra.
+   * - `franja`: las tres fichas apiladas arriba de los ingredientes, en la
+   *   columna del costado, en vez de en una fila arriba. Es como se lee una
+   *   receta cocinando: el tiempo a la vista mientras se baja por los pasos.
+   * - `sangre`: la foto tapa lo alto de la hoja y el título va encima.
+   *
+   * ⚠️ El acomodo lo elige el MOLDE; qué tan apretada sale la hoja lo sigue
+   * decidiendo la medición (`HOLGADA` / `APRETADA` / `AL_LIMITE` en
+   * `ebook-pdf`). Son dos cosas distintas y no se pisan: el molde dice dónde va
+   * cada cosa, la medición dice de qué tamaño para que la receta no se parta.
+   */
+  receta: "banda" | "ficha" | "franja" | "sangre";
+
   /* ── La tapa ───────────────────────────────────────────────────────────── */
 
   /**
@@ -226,6 +257,7 @@ export const MOLDES: Record<EstiloDeEbook, Molde> = {
     cuerpo: 11.5, interlinea: 3, alineado: "justify", entrada: false,
     portadilla: "banda", altoFoto: 350, numero: 72,
     subtitulo: "raya", subtituloPt: 13, esquina: 10,
+    receta: "banda",
     tapa: "clasica", tituloTapa: 30,
   },
 
@@ -237,6 +269,7 @@ export const MOLDES: Record<EstiloDeEbook, Molde> = {
     cuerpo: 10, interlinea: 2.2, alineado: "justify", entrada: true,
     portadilla: "sangre", altoFoto: 300, numero: 60,
     subtitulo: "linea", subtituloPt: 11, esquina: 0,
+    receta: "ficha",
     tapa: "titular", tituloTapa: 32,
   },
 
@@ -249,6 +282,7 @@ export const MOLDES: Record<EstiloDeEbook, Molde> = {
     cuerpo: 11, interlinea: 3.2, alineado: "left", entrada: false,
     portadilla: "ficha", altoFoto: 200, numero: 56,
     subtitulo: "raya", subtituloPt: 12.5, esquina: 4,
+    receta: "franja",
     tapa: "ficha", tituloTapa: 31,
   },
 
@@ -260,6 +294,7 @@ export const MOLDES: Record<EstiloDeEbook, Molde> = {
     cuerpo: 12.5, interlinea: 4.5, alineado: "left", entrada: true,
     portadilla: "sangre", altoFoto: 430, numero: 110,
     subtitulo: "resaltado", subtituloPt: 15, esquina: 0,
+    receta: "sangre",
     tapa: "sangre", tituloTapa: 38,
   },
 };
@@ -277,6 +312,41 @@ export function moldeDe(estilo: string | null | undefined): Molde {
     : ESTILO_DE_FABRICA;
   return MOLDES[clave];
 }
+
+/**
+ * Las medidas de la hoja de UNA RECETA que miran los tres.
+ *
+ * ══════════════════════════════════════════════════════════════════════════
+ * ⚠️ ACÁ Y NO ADENTRO DE `ebook-pdf`
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * El acomodo lo elige el molde (`receta`), pero las medidas las necesitan tres
+ * lugares: el archivo, la miniatura con la que se elige el estilo y la vista
+ * previa del editor. Escritas tres veces se desincronizan de a una —alguien
+ * agranda la banda en el PDF y la miniatura sigue mostrando la de antes— y
+ * entonces se elige mirando una hoja que no es la que sale.
+ *
+ * Son las mismas que `hojaDeReceta` tenía escritas adentro, con los mismos
+ * números: un recetario rearmado tiene que dar el mismo archivo.
+ */
+export const HOJA_DE_RECETA = {
+  /** La columna de los ingredientes, y la calle hasta la de los pasos. */
+  ingredientes: 168,
+  calle: 26,
+  /** La banda ancha de arriba: hasta acá crece, y de acá para abajo no va. */
+  bandaMax: 168,
+  bandaMin: 70,
+  /** El cuadrado de al lado del título. Más chico que el mínimo es una estampilla. */
+  ladoMax: 148,
+  ladoMin: 74,
+  /**
+   * La foto a sangre de `cartel`. El mínimo es alto a propósito: una foto a
+   * sangre de 120 puntos es una banda ancha que se comió el margen, y entonces
+   * `cartel` sale igual que `libro`.
+   */
+  sangreMax: 400,
+  sangreMin: 200,
+} as const;
 
 /**
  * Una hoja A4, en puntos.
