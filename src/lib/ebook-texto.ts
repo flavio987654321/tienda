@@ -90,6 +90,50 @@ export type RevisionDelTexto =
  * pedazo tiene que llamarse igual en el botón que lo crea y en el aviso que
  * dice que quedó vacío.
  */
+/**
+ * Qué pedazo del ebook se está mirando.
+ *
+ * ══════════════════════════════════════════════════════════════════════════
+ * LO QUE UNE LAS DOS COLUMNAS DEL EDITOR
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * A la izquierda se escribe y a la derecha se ve cómo queda. Hasta acá eran dos
+ * cosas que miraban lo mismo sin conocerse: se veía un párrafo mal escrito en la
+ * previa y había que **buscarlo a mano** en la lista de la izquierda — abrir el
+ * capítulo, contar los pedazos, adivinar cuál era. Con diez capítulos de quince
+ * pedazos, encontrar el que se está mirando es el trabajo.
+ *
+ * Con esto, tocar algo en la previa abre su capítulo y lleva el cursor a su
+ * campo; y al revés, escribir en un campo lo marca en la previa. Es un solo
+ * dato, arriba de las dos columnas, porque las dos lo tienen que mirar.
+ *
+ * Vive en este archivo —y no en la pantalla— porque lo usan tres componentes
+ * distintos y porque comparar dos selecciones tiene una sola forma correcta:
+ * `mismoPedazo`.
+ */
+export type Seleccion =
+  | { que: "tapa" }
+  | { que: "foto"; capitulo: number }
+  | { que: "titulo"; capitulo: number }
+  | { que: "bloque"; capitulo: number; bloque: number };
+
+/** Si dos selecciones son la misma. */
+export function mismoPedazo(a: Seleccion | null, b: Seleccion | null): boolean {
+  if (!a || !b || a.que !== b.que) return false;
+  if (a.que === "tapa") return true;
+  if (a.que === "bloque" && b.que === "bloque") {
+    return a.capitulo === b.capitulo && a.bloque === b.bloque;
+  }
+  /* Los otros dos casos sólo tienen capítulo. */
+  return "capitulo" in a && "capitulo" in b && a.capitulo === b.capitulo;
+}
+
+/** De qué capítulo es una selección, o `null` si es de la tapa. */
+export function deQueCapitulo(s: Seleccion | null): number | null {
+  if (!s || s.que === "tapa") return null;
+  return s.capitulo;
+}
+
 export const COMO_SE_LLAMA_EL_BLOQUE: Record<TipoDeBloque, {
   nombre: string;
   explica: string;

@@ -1,7 +1,10 @@
 "use client";
 
 import { coloresDelEbook, type ColoresDeTapa, type ModoDelEbook } from "@/lib/ebook-colores";
-import type { FotoDelCapitulo } from "@/lib/ebook-texto";
+import {
+  mismoPedazo, COMO_SE_LLAMA_EL_BLOQUE,
+  type FotoDelCapitulo, type Seleccion,
+} from "@/lib/ebook-texto";
 import type { CapituloEscrito } from "@/lib/ebook-ia";
 
 /**
@@ -60,6 +63,8 @@ export default function VistaPreviaEbook({
   tapa,
   paleta,
   modo,
+  seleccion = null,
+  onTocar,
 }: {
   titulo: string;
   promesa: string;
@@ -83,6 +88,17 @@ export default function VistaPreviaEbook({
   tapa: FotoDelCapitulo;
   paleta: ColoresDeTapa;
   modo: ModoDelEbook;
+  /**
+   * Qué pedazo está marcado, para dibujarlo marcado.
+   *
+   * ⚠️ Viene de arriba y no se decide acá: el mismo dato lo usa la columna de
+   * la izquierda para abrir ese capítulo y llevar el cursor a ese campo. Si
+   * cada columna guardara el suyo, tocar en una no movería la otra — que es
+   * exactamente lo que pasaba antes. Ver `Seleccion`.
+   */
+  seleccion?: Seleccion | null;
+  /** Qué se tocó. Sin esto la previa es de sólo mirar, como era hasta hoy. */
+  onTocar?: (s: Seleccion) => void;
 }) {
   const t = coloresDelEbook(paleta, modo);
   const margen = `${((MARGEN_PT / HOJA_PT) * 100).toFixed(2)}%`;
@@ -110,6 +126,27 @@ export default function VistaPreviaEbook({
            familia sí es la que corresponde: con la del panel, que es sin serif,
            la previa se veía como un formulario y no como un libro. */
         .pv-hoja, .pv-hoja * { font-family: Georgia, "Times New Roman", serif; }
+
+        /* ⚠️ Lo que se puede tocar se tiene que NOTAR que se puede tocar, y
+           sin ensuciar la hoja: el punto de esta columna es ver cómo queda el
+           archivo. Así que en reposo no se dibuja nada —la hoja se ve limpia—
+           y el recuadro aparece al pasar por encima. El marcado sí queda
+           dibujado, porque es la respuesta a lo que se acaba de tocar.
+
+           ⚠️ Y ojo con las comillas invertidas ACÁ ADENTRO: esto es un
+           template literal, así que una sola parte el bloque al medio y el
+           error aparece cincuenta renglones más abajo. Ya pasó.
+
+           Se usa outline y no border: un borde correría el texto un píxel cada vez
+           que el mouse pasa por arriba, y la hoja entera temblaría. */
+        .pv-tocable {
+          display: block; width: 100%; text-align: inherit;
+          font: inherit; color: inherit; background: none; border: 0; padding: 0;
+          cursor: pointer; outline-offset: -1px;
+        }
+        .pv-tocable:hover { outline: 1px dashed ${t.acento}; }
+        .pv-tocable:focus-visible { outline: 2px solid ${t.acento}; }
+        .pv-marcado, .pv-marcado:hover { outline: 2px solid ${t.acento}; }
       `}</style>
 
       <div className="pv-hoja" style={{ background: t.fondo, color: t.tinta }}>
@@ -125,7 +162,17 @@ export default function VistaPreviaEbook({
               `tapa` en `ebook-pdf`. Con el tema oscuro va a sangre, tapando la
               hoja entera; acá se dibuja el corte del tema claro, que es el que
               usa casi todo el mundo. */}
-          <HuecoDeFoto foto={tapa} respaldo={titulo} t={t} alto="52%" />
+          {/* La foto de la tapa se toca para cambiarla. El texto de al lado no:
+              el título y la promesa no se editan en esta pantalla —salen del
+              temario— así que un recuadro ahí prometería algo que no pasa. */}
+          <Tocable
+            que={{ que: "tapa" }}
+            seleccion={seleccion}
+            onTocar={onTocar}
+            nombre="Cambiar la foto de la tapa"
+          >
+            <HuecoDeFoto foto={tapa} respaldo={titulo} t={t} alto="52%" />
+          </Tocable>
 
           <div
             className="flex flex-1 flex-col justify-between"
@@ -165,8 +212,12 @@ export default function VistaPreviaEbook({
                 título con su rayita. En el archivo la banda mide 350 puntos de
                 una hoja de 841,89 — el 41,6 % — y el número se apoya en el
                 borde de abajo. Ver `portadilla` en `ebook-pdf`. */}
-            <div
-              style={{ position: "relative", marginTop: i === 0 ? 0 : em(26) }}
+            <Tocable
+              que={{ que: "foto", capitulo: i }}
+              seleccion={seleccion}
+              onTocar={onTocar}
+              nombre={`Cambiar la foto del capítulo ${i + 1}`}
+              estilo={{ position: "relative", marginTop: i === 0 ? 0 : em(26) }}
             >
               <HuecoDeFoto foto={fotos[i]} respaldo={c.titulo} t={t} proporcion="595.28 / 350" />
 
@@ -200,17 +251,42 @@ export default function VistaPreviaEbook({
               >
                 {String(i + 1).padStart(2, "0")}
               </p>
-            </div>
+            </Tocable>
 
             <div style={{ paddingLeft: margen, paddingRight: margen, paddingTop: em(18) }}>
-              <p style={{ fontSize: em(25), lineHeight: 1.15, fontWeight: 700, color: t.tinta }}>
-                {c.titulo || "Sin título"}
-              </p>
+              <Tocable
+                que={{ que: "titulo", capitulo: i }}
+                seleccion={seleccion}
+                onTocar={onTocar}
+                nombre={`Corregir el título del capítulo ${i + 1}`}
+              >
+                <p style={{ fontSize: em(25), lineHeight: 1.15, fontWeight: 700, color: t.tinta }}>
+                  {c.titulo || "Sin título"}
+                </p>
+              </Tocable>
               <div style={{ width: em(48), height: em(3), background: t.acento, marginTop: em(14) }} />
 
               <div style={{ marginTop: em(20), paddingBottom: em(30) }}>
                 {c.bloques.map((b, j) => (
-                  <Pedazo key={j} bloque={b} t={t} />
+                  /* ⚠️ Un pedazo vacío no lleva botón. `Pedazo` no dibuja nada
+                     —en el PDF tampoco sale— y un botón sin adentro es un
+                     recuadro invisible al que igual se llega con el tabulador.
+
+                     ⚠️ El `j` es la posición REAL en la lista, no la del que se
+                     dibujó: un pedazo vacío no se dibuja —`Pedazo` devuelve
+                     nada— y contando los dibujados, tocar el tercero llevaría
+                     al cuarto campo. */
+                  !b.texto.trim() ? null : (
+                  <Tocable
+                    key={j}
+                    que={{ que: "bloque", capitulo: i, bloque: j }}
+                    seleccion={seleccion}
+                    onTocar={onTocar}
+                    nombre={`Corregir el ${COMO_SE_LLAMA_EL_BLOQUE[b.tipo].nombre.toLowerCase()} ${j + 1} del capítulo ${i + 1}`}
+                  >
+                    <Pedazo bloque={b} t={t} />
+                  </Tocable>
+                  )
                 ))}
               </div>
             </div>
@@ -218,6 +294,51 @@ export default function VistaPreviaEbook({
         ))}
       </div>
     </div>
+  );
+}
+
+/**
+ * Un pedazo de la hoja que se puede tocar para ir a corregirlo.
+ *
+ * ══════════════════════════════════════════════════════════════════════════
+ * ⚠️ ES UN BOTÓN DE VERDAD, Y NO UN `div` CON `onClick`
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * Porque se llega con el tabulador, se aprieta con la barra espaciadora y un
+ * lector de pantalla lo anuncia. Un `div` que reacciona al clic no hace ninguna
+ * de las tres, y acá adentro está la única forma de encontrar rápido el párrafo
+ * que se quiere corregir.
+ *
+ * Por eso lleva `nombre`: sin él, el lector de pantalla anuncia el texto del
+ * párrafo entero como si fuera el nombre del botón. Con él dice qué hace.
+ *
+ * ── Y si nadie escucha, no es un botón ────────────────────────────────────
+ *
+ * Sin `onTocar` devuelve un `div` pelado. La previa se usa en un solo lugar hoy,
+ * pero una hoja llena de botones que no hacen nada es peor que una hoja.
+ */
+function Tocable({
+  que, seleccion, onTocar, nombre, estilo, children,
+}: {
+  que: Seleccion;
+  seleccion: Seleccion | null;
+  onTocar?: (s: Seleccion) => void;
+  nombre: string;
+  estilo?: React.CSSProperties;
+  children: React.ReactNode;
+}) {
+  if (!onTocar) return <div style={estilo}>{children}</div>;
+  return (
+    <button
+      type="button"
+      onClick={() => onTocar(que)}
+      aria-label={nombre}
+      title={nombre}
+      className={`pv-tocable${mismoPedazo(seleccion, que) ? " pv-marcado" : ""}`}
+      style={estilo}
+    >
+      {children}
+    </button>
   );
 }
 

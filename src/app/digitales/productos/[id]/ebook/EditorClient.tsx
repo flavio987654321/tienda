@@ -7,7 +7,7 @@ import EbookTexto from "../../EbookTexto";
 import VistaPreviaEbook from "../../VistaPreviaEbook";
 import type { CapituloEscrito } from "@/lib/ebook-ia";
 import type { ColoresDeTapa, ModoDelEbook } from "@/lib/ebook-colores";
-import type { FotoDelCapitulo } from "@/lib/ebook-texto";
+import type { FotoDelCapitulo, Seleccion } from "@/lib/ebook-texto";
 import ElegirFoto from "../../ElegirFoto";
 import { useSalida } from "@/app/digitales/SalidaSinGuardar";
 
@@ -99,6 +99,7 @@ export default function EditorDeEbook({
   const [tapaGuardada, setTapaGuardada] = useState(tapaInicial);
   const [tapaAbierta, setTapaAbierta] = useState(false);
 
+
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [listo, setListo] = useState<string | null>(null);
@@ -106,6 +107,31 @@ export default function EditorDeEbook({
   /* En el celular las dos columnas no entran, así que son dos solapas. Arranca
      en "escribir": a esta pantalla se entra a corregir, no a mirar. */
   const [vista, setVista] = useState<"escribir" | "previa">("escribir");
+
+  /* ══════════════════════════════════════════════════════════════════════════
+     QUÉ PEDAZO SE ESTÁ MIRANDO, Y POR QUÉ VIVE ACÁ
+     ══════════════════════════════════════════════════════════════════════════
+
+     Las dos columnas miran lo mismo, así que este dato tiene que estar arriba de
+     las dos. Guardado adentro de una, tocar en la previa no movería el editor y
+     escribir en el editor no marcaría nada en la previa: serían dos pantallas
+     una al lado de la otra, que es lo que eran hasta hoy.
+
+     Lo que se gana es concreto: en un ebook de diez capítulos de quince pedazos,
+     ver un párrafo mal escrito y encontrar SU campo era abrir capítulos y contar
+     renglones. Ahora se toca y aparece. Ver `Seleccion`. */
+  const [seleccion, setSeleccion] = useState<Seleccion | null>(null);
+
+  const tocar = useCallback((s: Seleccion) => {
+    setSeleccion(s);
+    /* La tapa no es un capítulo: se toca su foto y se abre su elegidor, que
+       vive acá arriba y no adentro de la lista. */
+    if (s.que === "tapa") setTapaAbierta(true);
+    /* ⚠️ En el celular las columnas son solapas: tocar algo en "Cómo queda" y
+       quedarse en "Cómo queda" haría que no pase nada visible. Se cambia a la
+       de escribir, que es donde acaba de aparecer el cursor. */
+    setVista("escribir");
+  }, []);
 
   /* ⚠️ Hay algo corregido a mano que se pierde si se sale de la pantalla.
      Acá pesa más que en una ventanita: esto es una dirección, así que se sale
@@ -294,12 +320,17 @@ export default function EditorDeEbook({
                 disabled={guardando}
                 onFrase={(frase) => setTapa((t) => ({ ...t, frase }))}
                 onElegida={(elegida) => setTapa((t) => ({ ...t, elegida }))}
-                onCerrar={() => setTapaAbierta(false)}
+                onCerrar={() => {
+                  setTapaAbierta(false);
+                  /* Y se despinta del otro lado: la marca es "esto es lo que
+                     estás tocando", así que cerrarlo la tiene que apagar. */
+                  setSeleccion((s) => (s?.que === "tapa" ? null : s));
+                }}
               />
             ) : (
               <button
                 type="button"
-                onClick={() => setTapaAbierta(true)}
+                onClick={() => tocar({ que: "tapa" })}
                 disabled={guardando}
                 className="flex w-full items-center gap-3 text-left disabled:opacity-50"
               >
@@ -347,6 +378,8 @@ export default function EditorDeEbook({
                 JSON.stringify(fotos) !== JSON.stringify(fotosGuardadas)
                 || JSON.stringify(tapa) !== JSON.stringify(tapaGuardada)
               }
+              seleccion={seleccion}
+              onSeleccion={setSeleccion}
               total={total}
               guardando={guardando}
               error={error}
@@ -389,6 +422,8 @@ export default function EditorDeEbook({
                 tapa={tapa}
                 paleta={paleta}
                 modo={modo}
+                seleccion={seleccion}
+                onTocar={tocar}
               />
             </div>
           </div>

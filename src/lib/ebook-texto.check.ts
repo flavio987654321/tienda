@@ -33,7 +33,7 @@
 import { readFileSync } from "fs";
 import {
   revisarTexto, sePuedeEditarElTexto, COMO_SE_LLAMA_EL_BLOQUE,
-  pegarLasFotos, pegarLaTapa,
+  pegarLasFotos, pegarLaTapa, mismoPedazo, deQueCapitulo,
   type LoQueHayEscrito,
 } from "./ebook-texto";
 import {
@@ -544,6 +544,146 @@ const hay = (cuantos: number): LoQueHayEscrito => ({ capitulos: lista(cuantos) }
     'corregir el temario no borra la foto de la tapa');
   check('TXT-AZ', /fotoElegida: leerFotoElegida\(/.test(readFileSync('src/lib/ebook-temario.ts', 'utf8')),
     'corregir el temario no borra las fotos elegidas de los capítulos');
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   LAS DOS COLUMNAS, CONECTADAS
+   ══════════════════════════════════════════════════════════════════════════
+
+   A la izquierda se escribe y a la derecha se ve cómo queda. Eran dos pantallas
+   una al lado de la otra: se veía un párrafo mal escrito en la previa y había
+   que **buscarlo a mano** del otro lado — abrir capítulos y contar renglones.
+   Con diez capítulos de quince pedazos, encontrarlo ES el trabajo.
+
+   Ahora se toca en la hoja y el editor abre ese capítulo con el cursor adentro
+   del campo. Y al revés: escribir en un campo lo marca en la hoja. */
+
+{
+  const previa = readFileSync("src/app/digitales/productos/VistaPreviaEbook.tsx", "utf8");
+  const editor = readFileSync("src/app/digitales/productos/EbookTexto.tsx", "utf8");
+  const pantalla = readFileSync(
+    "src/app/digitales/productos/[id]/ebook/EditorClient.tsx", "utf8");
+
+  /* ── Comparar dos selecciones, que es de lo que depende todo lo demás ─── */
+
+  check("SEL-A",
+    mismoPedazo({ que: "bloque", capitulo: 1, bloque: 2 }, { que: "bloque", capitulo: 1, bloque: 2 })
+    && !mismoPedazo({ que: "bloque", capitulo: 1, bloque: 2 }, { que: "bloque", capitulo: 1, bloque: 3 })
+    && !mismoPedazo({ que: "bloque", capitulo: 0, bloque: 2 }, { que: "bloque", capitulo: 1, bloque: 2 }),
+    "un pedazo es el mismo sólo si coinciden el capítulo Y la posición");
+
+  /* ⚠️ El título y la foto del MISMO capítulo no son lo mismo. Sin mirar el
+     `que`, tocar la foto marcaría el título: son dos campos distintos. */
+  check("SEL-B",
+    !mismoPedazo({ que: "titulo", capitulo: 2 }, { que: "foto", capitulo: 2 })
+    && mismoPedazo({ que: "foto", capitulo: 2 }, { que: "foto", capitulo: 2 }),
+    "el título y la foto de un capítulo no se confunden entre sí");
+
+  check("SEL-C",
+    mismoPedazo({ que: "tapa" }, { que: "tapa" })
+    && !mismoPedazo(null, { que: "tapa" })
+    && !mismoPedazo({ que: "tapa" }, null),
+    "la tapa se compara con la tapa, y nada se compara con nada");
+
+  /* La tapa no es un capítulo: no tiene número, y quien pregunte tiene que
+     recibir `null` en vez de un cero que abriría el capítulo 1. */
+  check("SEL-D",
+    deQueCapitulo({ que: "tapa" }) === null
+    && deQueCapitulo(null) === null
+    && deQueCapitulo({ que: "bloque", capitulo: 3, bloque: 0 }) === 3,
+    "la tapa no tiene capítulo, y un pedazo sí");
+
+  /* ── Que la hoja se pueda tocar ──────────────────────────────────────── */
+
+  /* ⚠️ Botones de verdad y no `div` con `onClick`: se llega con el tabulador,
+     se aprieta con la barra y un lector de pantalla los anuncia. */
+  check("SEL-E",
+    /<button/.test(previa) && /aria-label=\{nombre\}/.test(previa),
+    "lo que se toca en la previa son botones de verdad, con nombre");
+
+  /* Las cuatro cosas que se pueden tocar. Si alguna se cae, deja de haber
+     forma de llegar a ese campo desde la hoja. */
+  check("SEL-F",
+    /que=\{\{ que: "tapa" \}\}/.test(previa)
+    && /que=\{\{ que: "foto", capitulo: i \}\}/.test(previa)
+    && /que=\{\{ que: "titulo", capitulo: i \}\}/.test(previa)
+    && /que=\{\{ que: "bloque", capitulo: i, bloque: j \}\}/.test(previa),
+    "se pueden tocar la tapa, la foto, el título y cada pedazo");
+
+  /* ⚠️ Un pedazo vacío no se dibuja —en el PDF tampoco sale— y un botón sin
+     nada adentro es un recuadro invisible al que igual se llega tabulando. */
+  check("SEL-G",
+    /!b\.texto\.trim\(\) \? null : \(/.test(previa),
+    "un pedazo vacío no deja un botón invisible en la hoja");
+
+  /* ── Que el dato viva en UN solo lugar ───────────────────────────────── */
+
+  /* ⚠️ Arriba de las dos columnas. Guardado adentro de una, tocar en la previa
+     no movería el editor: serían dos pantallas juntas, que es lo que eran. */
+  check("SEL-H",
+    /const \[seleccion, setSeleccion\] = useState<Seleccion \| null>\(null\)/.test(pantalla)
+    && /seleccion=\{seleccion\}/.test(pantalla)
+    && /onTocar=\{tocar\}/.test(pantalla)
+    && /onSeleccion=\{setSeleccion\}/.test(pantalla),
+    "la selección vive arriba y baja a las dos columnas");
+
+  /* En el celular las columnas son solapas: tocar algo en "Cómo queda" y
+     quedarse ahí haría que no pase nada visible. */
+  check("SEL-I",
+    /setVista\("escribir"\)/.test(pantalla.slice(pantalla.indexOf("const tocar ="))),
+    "en el celular, tocar la hoja cambia a la solapa de escribir");
+
+  /* ── Que el editor NO se guarde una copia ────────────────────────────── */
+
+  /* ⚠️ Se DERIVA. La primera versión copiaba el capítulo abierto a su propio
+     estado con un efecto: dos verdades para el mismo hecho, y encima React
+     avisa que actualizar estado adentro de un efecto encadena dibujos. */
+  check("SEL-J",
+    /const abierto = desdeLaPrevia \?\? abiertoAMano/.test(editor)
+    && !/setAbierto\(cual\)/.test(editor),
+    "el capítulo abierto se deriva de la selección, no se copia");
+
+  /* ⚠️ Y cerrar a mano la apaga. Sin esto, un capítulo abierto desde la previa
+     no se puede cerrar: se vuelve a abrir solo y parece que el botón no anda. */
+  check("SEL-K",
+    /onSeleccion\?\.\(null\);\n\s*setAbiertoAMano\(/.test(editor),
+    "cerrar un capítulo a mano apaga la selección");
+
+  /* ── El salto al abrir un capítulo ───────────────────────────────────── */
+
+  /* ══════════════════════════════════════════════════════════════════════════
+     ⚠️ ABRIR UN CAPÍTULO NO PUEDE MOVER LA PANTALLA
+     ══════════════════════════════════════════════════════════════════════════
+
+     Abriendo el 3 con el 1 abierto pasaban dos cosas juntas: se cerraban quince
+     campos de ARRIBA y se abrían otros abajo. El renglón que se acababa de
+     apretar saltaba media pantalla y quedaba el contenido de otro capítulo
+     abajo del mouse.
+
+     El arreglo es medir dónde estaba el renglón, dejar que el navegador
+     reacomode, y correr la página exactamente lo mismo que se movió. */
+  check("SEL-L",
+    /const antes = renglon\?\.getBoundingClientRect\(\)\.top/.test(editor)
+    && /window\.scrollBy\(0, despues - antes\)/.test(editor),
+    "abrir un capítulo deja el renglón donde estaba");
+
+  /* ── Que los pedazos no sean una pared ───────────────────────────────── */
+
+  /* Los cuatro nombres de tipo más los tres botones, arriba de cada uno de los
+     quince campos, son ciento cinco controles apilados: el texto —lo único que
+     se viene a corregir— quedaba como un renglón más entre botones. */
+  check("SEL-M",
+    /marcado \? \(/.test(editor) && /\{marcado && \(/.test(editor),
+    "las herramientas de un pedazo se muestran sólo en el que se está tocando");
+
+  /* ⚠️ Y el tope de largo, dicho. Los campos cortan en `LARGO_BLOQUE`, así que
+     al llegar **las teclas dejan de hacer efecto sin decir nada**: se sigue
+     escribiendo, no aparece nada, y parece que se colgó la pantalla. */
+  check("SEL-N",
+    /function Cuenta\(/.test(editor)
+    && /largo < tope \* 0\.85/.test(editor)
+    && /Llegaste al máximo/.test(editor),
+    "el tope de caracteres se avisa antes de llegar, y no siempre");
 }
 
 console.log(fallos === 0
