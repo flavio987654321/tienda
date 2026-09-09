@@ -298,6 +298,26 @@ const hay = (cuantos: number): LoQueHayEscrito => ({ capitulos: lista(cuantos) }
     "el recetario no ofrece el editor del texto, que dibuja párrafos");
 }
 
+/* ── La página para mirarlo ───────────────────────────────────────────────── */
+
+{
+  /* ⚠️ Que la prueba NO se pueda abrir en producción. Es una pantalla con un
+     ebook inventado adentro: no muestra datos de nadie, pero una dirección
+     nuestra que dibuja un producto que no existe no tiene por qué existir
+     afuera. El candado es una línea y se puede borrar sin querer. */
+  const prueba = readFileSync("src/app/digitales/productos/prueba-editor/page.tsx", "utf8");
+  check("TXT-AI",
+    /process\.env\.NODE_ENV !== "development"/.test(prueba) && /notFound\(\)/.test(prueba),
+    "la pantalla de prueba del editor sólo se abre en desarrollo");
+
+  /* Y que siga sin tocar la base: el día que lea algo de verdad, el candado de
+     arriba deja de alcanzar y hay que pedir sesión. */
+  const dibujo = readFileSync("src/app/digitales/productos/prueba-editor/PruebaEditor.tsx", "utf8");
+  check("TXT-AJ",
+    !/prisma\.|fetch\(|getCurrentUser\(/.test(dibujo),
+    "la prueba no lee la base ni le pega a ninguna ruta: el ebook está escrito adentro");
+}
+
 /* ── Los nombres ──────────────────────────────────────────────────────────── */
 
 {
