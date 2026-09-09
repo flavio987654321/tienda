@@ -263,6 +263,40 @@ const check = (id: string, ok: boolean, desc: string) => {
     && /columnaDeTexto\(m, ANCHO\)/.test(mini)
     && /anchoDeColumna\(m, ANCHO\)/.test(mini),
     "la miniatura se dibuja del molde, no a mano");
+
+  /* ══════════════════════════════════════════════════════════════════════════
+     ⚠️ Y QUE UN RECETARIO NO PROMETA COLUMNAS
+     ══════════════════════════════════════════════════════════════════════════
+
+     El estilo cambia la hoja de adentro **sólo donde hay prosa**. La hoja de una
+     receta tiene su propio molde —mide ingredientes, pasos y fichas para elegir
+     entre tres densidades— y todavía no escucha al estilo: las cuatro salen
+     iguales adentro.
+
+     La primera versión del selector no lo sabía, y con "Recetario" elegido
+     mostraba cuatro miniaturas con dos columnas de texto corrido y decía
+     "columna angosta y una franja al costado donde caen los subtítulos". Un
+     recetario no tiene subtítulos. Se elegía mirando una hoja que ese archivo
+     nunca iba a tener.
+
+     Así que en un recetario se muestra LA TAPA, que es lo que sí cambia, y los
+     textos hablan de la tapa. Cuando la receta aprenda los moldes, esto se saca
+     — y este chequeo con él. */
+  check("EST-AA",
+    /muestra\?: "hoja" \| "tapa"/.test(mini) && /function LaTapa\(/.test(mini),
+    "la miniatura sabe dibujar la tapa, que es lo único que cambia en un recetario");
+
+  const cadaUno = readFileSync("src/lib/ebook-estilos.ts", "utf8");
+  check("EST-AB",
+    ESTILOS.every((e) => QUE_ES_CADA_ESTILO[e].tapa.length > 20)
+    && /tapa: string;/.test(cadaUno),
+    "cada estilo dice qué le hace a la tapa, aparte de qué le hace a la hoja");
+
+  check("EST-AC",
+    /esRecetario \? "¿Cómo querés que sea la tapa\?"/.test(modal)
+    && /muestra=\{esRecetario \? "tapa" : "hoja"\}/.test(modal)
+    && /muestra=\{esUnRecetario \? "tapa" : "hoja"\}/.test(tarjeta),
+    "con un recetario, el modal y la tarjeta muestran la tapa y no la hoja");
 }
 
 /* ── Y que los cuatro armen un PDF de verdad ──────────────────────────────── */

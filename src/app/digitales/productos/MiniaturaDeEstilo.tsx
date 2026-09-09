@@ -1,7 +1,8 @@
 "use client";
 
 import {
-  MOLDES, columnaDeTexto, anchoDeColumna, type EstiloDeEbook,
+  MOLDES, columnaDeTexto, anchoDeColumna,
+  type EstiloDeEbook, type Molde,
 } from "@/lib/ebook-estilos";
 
 /**
@@ -31,15 +32,38 @@ export function MiniaturaDeEstilo({
   acento,
   tinta,
   papel,
+  muestra = "hoja",
 }: {
   estilo: EstiloDeEbook;
   acento: string;
   tinta: string;
   papel: string;
+  /**
+   * Qué se dibuja: una hoja de adentro o la tapa.
+   *
+   * ══════════════════════════════════════════════════════════════════════════
+   * ⚠️ EN UN RECETARIO HAY QUE MOSTRAR LA TAPA, Y NO ES UNA PREFERENCIA
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * El estilo cambia la hoja de adentro sólo cuando adentro hay **prosa**:
+   * columnas, subtítulos, portadilla de capítulo. La hoja de una receta tiene su
+   * propio molde —mide ingredientes, pasos y fichas para elegir entre tres
+   * densidades— y hoy no escucha al estilo, así que las cuatro salen iguales.
+   *
+   * Dibujar la hoja de adentro en el selector de un recetario mostraría dos
+   * columnas de texto corrido que ese archivo **nunca** va a tener: se elegiría
+   * mirando algo que no existe. Así que ahí se muestra la tapa, que es lo que sí
+   * cambia. Cuando la receta aprenda los moldes, esto vuelve a `hoja`.
+   */
+  muestra?: "hoja" | "tapa";
 }) {
   const m = MOLDES[estilo];
   const ANCHO = 595.28;
   const ALTO = 841.89;
+
+  if (muestra === "tapa") {
+    return <LaTapa molde={m} acento={acento} tinta={tinta} papel={papel} />;
+  }
 
   const texto = columnaDeTexto(m, ANCHO);
   const anchoCol = anchoDeColumna(m, ANCHO);
@@ -151,6 +175,87 @@ export function MiniaturaDeEstilo({
 
       {/* La franja del pie, que todos los moldes tienen. */}
       <rect x={0} y={ALTO - 34} width={ANCHO} height={34} fill={acento} />
+    </svg>
+  );
+}
+
+/**
+ * Las cuatro tapas, en chiquito.
+ *
+ * Los cortes son los mismos que dibujan `tapa` en `ebook-pdf` y
+ * `TapaDeLaPrevia` en `previaPiezas`: 52 % la clásica, 44 % la de titular,
+ * 46 % de ancho la de ficha, y la de sangre entera. Si allá cambian, acá
+ * también — es lo mismo que se mira para elegir.
+ *
+ * ⚠️ La foto se dibuja como un bloque de acento apagado y NO como un hueco con
+ * la palabra "foto": a este tamaño un rótulo no se lee, y lo que hay que ver es
+ * **dónde cae** la foto, no que haya una.
+ */
+function LaTapa({
+  molde, acento, tinta, papel,
+}: {
+  molde: Molde;
+  acento: string;
+  tinta: string;
+  papel: string;
+}) {
+  const ANCHO = 595.28;
+  const ALTO = 841.89;
+  const foto = { fill: acento, opacity: 0.28 };
+
+  return (
+    <svg
+      viewBox={`0 0 ${ANCHO} ${ALTO}`}
+      className="h-auto w-full"
+      role="img"
+      aria-hidden="true"
+      preserveAspectRatio="xMidYMid meet"
+    >
+      <rect x={0} y={0} width={ANCHO} height={ALTO} fill={papel} />
+
+      {molde.tapa === "sangre" && (
+        <>
+          <rect x={0} y={0} width={ANCHO} height={ALTO} {...foto} />
+          {/* El velo, que es lo que hace legible el título encima. */}
+          <rect x={0} y={ALTO * 0.5} width={ANCHO} height={ALTO * 0.5} fill={tinta} opacity={0.55} />
+          <rect x={molde.margen} y={ALTO * 0.66} width={ANCHO - molde.margen * 2} height={molde.tituloTapa} fill={papel} />
+          <rect x={molde.margen} y={ALTO * 0.66 + molde.tituloTapa + 14} width={62} height={8} fill={acento} />
+        </>
+      )}
+
+      {molde.tapa === "titular" && (
+        <>
+          <rect x={0} y={0} width={ANCHO} height={ALTO * 0.44} {...foto} />
+          <rect x={0} y={ALTO * 0.44} width={ANCHO} height={molde.tituloTapa + 76} fill={acento} />
+          <rect
+            x={molde.margen} y={ALTO * 0.44 + 44}
+            width={ANCHO - molde.margen * 2 - 60} height={molde.tituloTapa}
+            fill={papel}
+          />
+        </>
+      )}
+
+      {molde.tapa === "ficha" && (
+        <>
+          <rect x={ANCHO * 0.54} y={0} width={ANCHO * 0.46} height={ALTO - 96} {...foto} />
+          <rect x={molde.margen} y={118} width={44} height={8} fill={acento} />
+          <rect x={molde.margen} y={148} width={ANCHO * 0.54 - molde.margen * 2} height={molde.tituloTapa * 2.4} fill={tinta} opacity={0.75} />
+          <rect x={0} y={ALTO - 96} width={ANCHO} height={96} fill={acento} />
+        </>
+      )}
+
+      {molde.tapa === "clasica" && (
+        <>
+          <rect x={0} y={0} width={ANCHO} height={ALTO * 0.52} {...foto} />
+          <rect x={molde.margen} y={ALTO * 0.52 + 44} width={62} height={8} fill={acento} />
+          <rect
+            x={molde.margen} y={ALTO * 0.52 + 72}
+            width={ANCHO - molde.margen * 2} height={molde.tituloTapa * 2.2}
+            fill={tinta} opacity={0.75}
+          />
+          <rect x={0} y={ALTO - 44} width={ANCHO} height={44} fill={acento} />
+        </>
+      )}
     </svg>
   );
 }

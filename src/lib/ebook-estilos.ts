@@ -62,27 +62,44 @@ export const ESTILO_DE_FABRICA: EstiloDeEbook = "libro";
  */
 export const QUE_ES_CADA_ESTILO: Record<
   EstiloDeEbook,
-  { nombre: string; explica: string; contra: string }
+  {
+    nombre: string;
+    explica: string;
+    contra: string;
+    /**
+     * Qué hace con LA TAPA.
+     *
+     * ⚠️ Está aparte porque es lo único que el estilo cambia en un recetario:
+     * la hoja de una receta tiene su propio molde y todavía no escucha al
+     * estilo. Sin este texto, el selector de un recetario prometía columnas y
+     * subtítulos que ese archivo nunca iba a tener. Ver `MiniaturaDeEstilo`.
+     */
+    tapa: string;
+  }
 > = {
   libro: {
     nombre: "Libro",
     explica: "Una columna, con aire, y cada capítulo abre con su foto y su número.",
     contra: "Es el más largo en hojas.",
+    tapa: "La foto arriba y el título abajo, sobre el papel.",
   },
   compacto: {
     nombre: "Compacto",
     explica: "Dos columnas, como un diario. El título va sobre la foto y entra casi el doble por hoja.",
     contra: "En el celular se lee peor: hay que subir y bajar por cada columna.",
+    tapa: "La foto arriba y el título adentro de una franja de color.",
   },
   manual: {
     nombre: "Manual",
     explica: "Columna angosta y una franja al costado donde caen los subtítulos, afuera del texto.",
     contra: "El renglón es corto: un texto largo se estira en más hojas.",
+    tapa: "La foto en una columna alta a la derecha y el texto al costado.",
   },
   cartel: {
     nombre: "Cartel",
     explica: "Títulos enormes, fotos a toda la hoja y los subtítulos resaltados en color.",
     contra: "Gasta mucha tinta si alguien lo imprime.",
+    tapa: "La foto tapa la hoja entera y el título va encima.",
   },
 };
 
