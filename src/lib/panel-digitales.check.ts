@@ -1517,6 +1517,33 @@ chequear("el motivo por el que no se puede publicar está atado al botón",
     /\? "Escribir el ebook"/.test(pantallaProductos) &&
     /COMO_SE_LLAMA\[p\.ebook\.opciones\.formato\]\.obra/.test(pantallaProductos));
 
+  /* ⚠️ Y DICE UNA ACCIÓN EN LOS TRES ESTADOS. Con el ebook terminado el rótulo
+     era "Ebook escrito": eso no es lo que el botón hace, es en qué estado está.
+     Se apretaba esperando algo, se abría una ventana que ofrece rehacerlo, y
+     desde el rótulo no había forma de saberlo. Un botón que describe un estado
+     se lee como un cartel y se aprieta como un botón — reportado mirando la
+     tarjeta el 09/09/26. */
+  chequear("y con el ebook terminado el botón sigue diciendo una acción",
+    /Escribirlo de nuevo/.test(pantallaProductos) &&
+    !/\.obra\} escrito/.test(pantallaProductos));
+
+  /* ══════════════════════════════════════════════════════════════════════════
+     ⚠️ EN LA TARJETA DE EJEMPLO, LO QUE NO ANDA TIENE QUE VERSE QUE NO ANDA
+     ══════════════════════════════════════════════════════════════════════════
+
+     El ejemplo dibuja la tarjeta entera con un producto inventado, así que sus
+     botones no le pegan a nada: el producto no existe. Se veían iguales a los
+     de verdad, se apretaban, y no pasaba nada — quien lo probó pensó que estaba
+     roto, y tenía razón: un botón que se puede apretar promete que hace algo.
+
+     Lo único que sí anda es "Editar el contenido", que abre el editor con el
+     ebook inventado, y por eso el cartel lo nombra. */
+  chequear("en el ejemplo, los botones que no hacen nada están apagados",
+    /deMentira: true/.test(pantallaProductos) &&
+    /const apagado = ocupado \|\| !!acc\.deMentira/.test(pantallaProductos) &&
+    /Es un ejemplo: este botón no hace nada/.test(pantallaProductos) &&
+    /apagado=\{acc\.deMentira\}/.test(pantallaProductos));
+
   /* ══════════════════════════════════════════════════════════════════════════
      ⚠️ EN 360 LOS BOTONES DE LA TARJETA SON UNA GRILLA, NO UNA FILA QUE ENVUELVE
      ══════════════════════════════════════════════════════════════════════════
@@ -1526,22 +1553,34 @@ chequear("el motivo por el que no se puede publicar está atado al botón",
      "Publicar" sí, "Borrar" queda solo. Siete botones de siete anchos distintos
      en una columna despareja. Visto en pantalla el 08/09/26.
 
-     ⚠️ Y `contents` en el grupo de la ficha es la pieza que sostiene todo: hace
-     que esa caja desaparezca del armado y que Editar, Publicar y Borrar sean
-     celdas de la MISMA grilla. Sin eso los tres quedan apretados adentro de una
-     sola celda —media pantalla— y la grilla no sirve de nada. Se pide junto,
-     porque sacar cualquiera de las dos rompe la otra en silencio. */
+     ⚠️ ANTES ESTO PEDÍA ADEMÁS UN `contents` EN EL GRUPO DE LA FICHA. Era la
+     pieza que hacía que Editar, Publicar y Borrar —metidos adentro de una caja
+     propia para poder empujarlos a la derecha— siguieran siendo celdas de la
+     MISMA grilla; sin eso quedaban apretados en media pantalla.
+
+     Ya no hace falta y por eso no se pide: los botones se separaron en TRES
+     grupos con su rótulo —el archivo, el producto, su página—, así que cada uno
+     es su propia grilla y no hay ninguna caja que disolver. Lo que se sigue
+     cuidando es lo de siempre: que en un celular sean grillas de dos columnas y
+     no una fila que envuelve. */
   chequear("en 360 los botones de la tarjeta van en grilla de dos columnas",
-    /className="mt-3 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center"/.test(pantallaProductos) &&
-    /className="contents sm:flex sm:flex-wrap sm:items-center sm:gap-2 sm:ml-auto"/.test(pantallaProductos) &&
-    /grid grid-cols-2 gap-2 border-t[^"]*sm:flex/.test(pantallaProductos));
+    (pantallaProductos.match(/grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center/g) ?? []).length >= 3);
+
+  /* ⚠️ Y CADA GRUPO DICE DE QUÉ ES. Ocho botones seguidos, todos del mismo
+     tamaño y del mismo color, no dicen a qué parte del producto le pegan:
+     "Borrar" quedaba a la misma altura visual que "Editar". */
+  chequear("y están agrupados con su rótulo, no todos en la misma fila",
+    /function Rotulo\(/.test(pantallaProductos) &&
+    /<Rotulo>El archivo que se entrega<\/Rotulo>/.test(pantallaProductos) &&
+    /<Rotulo>El producto<\/Rotulo>/.test(pantallaProductos) &&
+    /<Rotulo>Su página<\/Rotulo>/.test(pantallaProductos));
 
   /* Y el texto va centrado en su celda: estirado por la grilla y pegado a la
      izquierda, la fila de dos se lee peor que la columna que vino a reemplazar. */
   chequear("y el texto de esos botones queda centrado en su celda",
     !/inline-flex items-center gap-1\.5 px-3 py-2 rounded-xl/.test(
       pantallaProductos.slice(
-        pantallaProductos.indexOf("mt-3 grid grid-cols-2 gap-2 sm:flex"),
+        pantallaProductos.indexOf("grid grid-cols-2 gap-2 sm:flex"),
         pantallaProductos.indexOf("function Grupo("))));
 
   /* ══════════════════════════════════════════════════════════════════════════

@@ -207,6 +207,15 @@ type Acciones = {
    * armarlo— y ése es el arreglo, pero nadie iba a adivinarlo.
    */
   rehacerPDF: (p: ProductoEnPantalla) => void;
+  /**
+   * `true` en la tarjeta de ejemplo, donde las acciones no hacen nada.
+   *
+   * ⚠️ No es prolijidad: sin esto los botones del ejemplo se ven iguales a los
+   * de verdad, se aprietan, y **no pasa nada**. Quien lo probó pensó que estaba
+   * roto, y tenía razón en pensarlo — un botón que se puede apretar promete que
+   * hace algo. Con la bandera quedan apagados y dicen por qué.
+   */
+  deMentira?: boolean;
   /** Pedirle a la IA UN bono o UN upsell para un principal que ya existe. */
   pedirFicha: (padre: ProductoEnPantalla, rol: "BONO" | "UPSELL") => void;
   hijosDe: (padreId: string, rol: RolDigital) => ProductoEnPantalla[];
@@ -220,6 +229,66 @@ type Acciones = {
  * Acá adentro hay un `<img>` por tarjeta, y eso se ve como un parpadeo de todas
  * las portadas mientras escribís. Mismo motivo que en `configuracion/piezas.tsx`. */
 
+/**
+ * El nombre de un grupo de botones.
+ *
+ * ══════════════════════════════════════════════════════════════════════════
+ * ⚠️ OCHO BOTONES SEGUIDOS NO SON UNA TARJETA, SON UNA BOTONERA
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * Estaban todos en la misma fila gris: reemplazar el archivo, escribirlo con
+ * IA, cambiar el precio, publicar, borrar, editar la página, la dirección y ver
+ * cómo quedó. Ocho cosas de TRES temas distintos, con el mismo tamaño y el
+ * mismo color, y ninguna decía a qué parte del producto le pegaba. "Borrar"
+ * quedaba a la misma altura visual que "Editar".
+ *
+ * Con tres renglones que los nombran —el archivo, el producto, su página— cada
+ * botón se lee adentro de algo. Es lo mismo que se hizo adentro del editor del
+ * texto: lo que ordena no es achicar los botones, es decir de qué son.
+ */
+/**
+ * Un enlace de la tarjeta que, en el ejemplo, no lleva a ningún lado.
+ *
+ * ⚠️ En el ejemplo el producto no existe, así que estos enlaces terminarían en
+ * un 404. Se dibujan igual —el ejemplo está para ver la tarjeta entera— pero
+ * apagados y diciendo por qué. Un enlace que se puede apretar promete que va a
+ * algún lado.
+ */
+function Enlace({
+  href, externo = false, apagado, motivo, className, children,
+}: {
+  href: string;
+  externo?: boolean;
+  apagado?: boolean;
+  motivo?: string;
+  className: string;
+  children: React.ReactNode;
+}) {
+  if (apagado) {
+    return (
+      <span title={motivo} className={`${className} cursor-not-allowed opacity-50`}>
+        {children}
+      </span>
+    );
+  }
+  if (externo) {
+    return (
+      <a href={href} target="_blank" rel="noopener noreferrer" className={className}>
+        {children}
+      </a>
+    );
+  }
+  return <Link href={href} className={className}>{children}</Link>;
+}
+
+function Rotulo({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="mt-4 mb-1.5 text-[10.5px] font-bold uppercase tracking-wide text-gray-400 panel-oscuro:text-gray-500">
+      {children}
+    </p>
+  );
+}
+
 /* ── Una tarjeta, igual para los tres roles ──────────────────────────────── */
 function Tarjeta({ p, acc }: { p: ProductoEnPantalla; acc: Acciones }) {
   const Icono = ICONO[p.rol];
@@ -232,6 +301,12 @@ function Tarjeta({ p, acc }: { p: ProductoEnPantalla; acc: Acciones }) {
     cobroConectado: acc.cobroConectado,
   });
   const ocupado = acc.trabajando === p.id;
+  /* En el ejemplo todo está apagado menos "Editar el contenido", que es lo
+     único que abre algo de verdad. */
+  const apagado = ocupado || !!acc.deMentira;
+  const porQueApagado = acc.deMentira
+    ? "Es un ejemplo: este botón no hace nada. El que anda es «Editar el contenido»."
+    : undefined;
   const subiendoEste = acc.subiendoArchivo === p.id;
   /* La MISMA regla que usa el servidor al confirmar. Si el aviso cambia, cambia
      en los dos lados a la vez. */
@@ -353,8 +428,10 @@ function Tarjeta({ p, acc }: { p: ProductoEnPantalla; acc: Acciones }) {
               bajarlo y corregirlo. Es el único bloque de la tarjeta que aparece
               sólo cuando hay algo para entregar, y por eso se distingue del
               resto: es el estado que la persona está persiguiendo. */}
+          <Rotulo>El archivo que se entrega</Rotulo>
+
           {p.tieneArchivo && (
-            <div className="mt-3 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 bg-gray-50 panel-oscuro:bg-gray-800/40 px-3 py-2.5">
+            <div className="rounded-xl border border-gray-200 panel-oscuro:border-gray-700 bg-gray-50 panel-oscuro:bg-gray-800/40 px-3 py-2.5">
               <div className="flex items-start gap-2.5">
                 <FileText aria-hidden className="mt-0.5 h-4 w-4 shrink-0 text-gray-400 panel-oscuro:text-gray-500" />
                 <div className="min-w-0 flex-1">
@@ -381,15 +458,28 @@ function Tarjeta({ p, acc }: { p: ProductoEnPantalla; acc: Acciones }) {
                     pantalla nuestra, se va a un enlace firmado de Supabase que
                     baja el archivo. Con el router de Next quedaría a mitad de
                     camino. `rel` porque abre en otra pestaña. */}
-                <a
-                  href={`/api/digitales/productos/${p.id}/archivo`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 px-3 py-2 text-xs font-bold text-gray-700 panel-oscuro:text-gray-300 hover:bg-white panel-oscuro:hover:bg-gray-800 transition-colors"
-                >
-                  <Download className="h-3.5 w-3.5" />
-                  Descargar
-                </a>
+                {/* En el ejemplo el archivo no existe, así que bajarlo daría un
+                    error. Un botón apagado que dice por qué es mejor que uno
+                    que lleva a una pantalla rota. */}
+                {acc.deMentira ? (
+                  <span
+                    title={porQueApagado}
+                    className="inline-flex cursor-not-allowed items-center justify-center gap-1.5 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 px-3 py-2 text-xs font-bold text-gray-400 panel-oscuro:text-gray-600 opacity-60"
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                    Descargar
+                  </span>
+                ) : (
+                  <a
+                    href={`/api/digitales/productos/${p.id}/archivo`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 px-3 py-2 text-xs font-bold text-gray-700 panel-oscuro:text-gray-300 hover:bg-white panel-oscuro:hover:bg-gray-800 transition-colors"
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                    Descargar
+                  </a>
+                )}
 
                 {/* Sólo si hay texto de la IA para corregir. Un PDF que subió la
                     persona no se puede editar acá —no tenemos su contenido, sólo
@@ -459,29 +549,6 @@ function Tarjeta({ p, acc }: { p: ProductoEnPantalla; acc: Acciones }) {
             </p>
           )}
 
-          {/* La dirección se muestra en la tarjeta y no sólo adentro de su
-              pantalla: es lo que la persona copia y pega, así que tiene que
-              estar donde ya está mirando. `break-all` porque una dirección
-              larga en 360 empujaba la tarjeta entera. */}
-          {/* ⚠️ Se muestran LAS DOS cuando hay dos, y no sólo el dominio: el
-              dominio se suma, no reemplaza, y la de tiendaapps sigue andando.
-              Mostrar sólo la de arriba haría pensar que la otra se apagó, que es
-              justo lo que esta fase promete que no pasa. */}
-          {p.rol === "PRINCIPAL" && (p.dominioPropio || p.slugDigital) && (
-            <div className="mt-2 space-y-0.5">
-              {p.dominioPropio && (
-                <p className="text-[11.5px] font-bold text-gray-700 panel-oscuro:text-gray-300 break-all">
-                  {p.dominioPropio}
-                </p>
-              )}
-              {p.slugDigital && (
-                <p className="text-[11.5px] font-semibold text-gray-500 panel-oscuro:text-gray-400 break-all">
-                  {p.slugDigital}.{DOMINIO}
-                </p>
-              )}
-            </div>
-          )}
-
           {/* Un ebook a medio escribir se dice en la tarjeta y no adentro de la
               ventana: si hay que abrir algo para enterarse de que quedó por la
               mitad, nadie se entera. */}
@@ -538,7 +605,7 @@ function Tarjeta({ p, acc }: { p: ProductoEnPantalla; acc: Acciones }) {
               De `sm` para arriba vuelve a ser la fila de siempre: ahí el ancho
               sobra y la grilla desperdiciaría media pantalla estirando botones
               de dos palabras. */}
-          <div className="mt-3 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
+          <div className="mt-2 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
             {/* La etiqueta ES el botón: un `<input type="file">` no se puede
                 disfrazar, así que se esconde y se lo dispara desde acá.
 
@@ -587,8 +654,9 @@ function Tarjeta({ p, acc }: { p: ProductoEnPantalla; acc: Acciones }) {
                 Con `relative`, el input vive adentro del botón y se acabó. */}
             <label
               aria-busy={subiendoEste}
+              title={porQueApagado}
               className={`relative inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-colors focus-within:outline-none focus-within:ring-2 focus-within:ring-orange-500 focus-within:ring-offset-2 panel-oscuro:focus-within:ring-offset-gray-900 ${
-                subiendoEste || ocupado
+                subiendoEste || apagado
                   ? "opacity-50 cursor-not-allowed border border-gray-200 panel-oscuro:border-gray-700 text-gray-500"
                   : p.tieneArchivo
                     ? "cursor-pointer border border-gray-200 panel-oscuro:border-gray-700 text-gray-700 panel-oscuro:text-gray-300 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800"
@@ -602,7 +670,7 @@ function Tarjeta({ p, acc }: { p: ProductoEnPantalla; acc: Acciones }) {
                 accept="application/pdf"
                 /* Ver el porqué largo arriba: `sr-only` y NO `hidden`. */
                 className="sr-only"
-                disabled={subiendoEste || ocupado}
+                disabled={subiendoEste || apagado}
                 onChange={(e) => {
                   const file = e.target.files?.[0];
                   /* Se limpia el input para que elegir el MISMO archivo dos
@@ -623,13 +691,16 @@ function Tarjeta({ p, acc }: { p: ProductoEnPantalla; acc: Acciones }) {
             <button
               type="button"
               onClick={() => acc.abrirEbook(p)}
-              disabled={!IA_LISTA || acc.tier === "FREE" || ocupado || subiendoEste}
+              disabled={!IA_LISTA || acc.tier === "FREE" || apagado || subiendoEste}
               title={
-                acc.tier === "FREE"
+                porQueApagado
+                ?? (acc.tier === "FREE"
                   ? "Escribir el ebook con IA viene desde el plan Starter. En el gratis el PDF lo subís vos."
                   : !IA_LISTA
                     ? "Todavía no está listo."
-                    : undefined
+                    : p.ebook?.estado === "LISTO"
+                      ? "Lo escribe de nuevo desde cero con IA. Antes de hacer nada te dice qué se pierde."
+                      : undefined)
               }
               className={
                 IA_LISTA && acc.tier !== "FREE"
@@ -652,25 +723,27 @@ function Tarjeta({ p, acc }: { p: ProductoEnPantalla; acc: Acciones }) {
                   eligió recetario tiene que leer "recetario", no "ebook". Sin
                   ebook empezado todavía no hay formato elegido, así que se dice
                   "el ebook", que es lo que ofrece la ventana al abrirse. */}
+              {/* ⚠️ Y DICE UNA ACCIÓN, SIEMPRE. Con el ebook terminado decía
+                  "Ebook escrito", que no es lo que el botón hace: es en qué
+                  estado está. Se apretaba esperando algo, se abría una ventana
+                  que ofrece rehacerlo, y no había forma de saberlo desde el
+                  rótulo. Un botón que describe un estado se lee como un cartel
+                  y se aprieta como un botón. */}
               {!p.ebook
                 ? "Escribir el ebook"
                 : p.ebook.estado === "LISTO"
-                  ? `${COMO_SE_LLAMA[p.ebook.opciones.formato].obra} escrito`
+                  ? `Escribirlo de nuevo`
                   : `Seguir el ${COMO_SE_LLAMA[p.ebook.opciones.formato].obra.toLowerCase()} (${p.ebook.escritos} de ${p.ebook.total})`}
             </button>
 
-            {/* ── La ficha: título, precio, publicar, borrar ───────────────
-                Se va a la derecha en pantalla ancha (`sm:ml-auto`) y baja a su
-                propio renglón en 360, donde `ml-auto` no separa nada. */}
-            {/* ⚠️ `contents` en celular, y no es un detalle de estilo: hace que
-                esta caja DESAPAREZCA del armado y que Editar, Publicar y Borrar
-                sean celdas de la grilla de arriba, como los otros dos botones.
-                Sin eso, los tres quedarían apretados adentro de una sola celda
-                —media pantalla— y la grilla no serviría de nada.
+          </div>
 
-                De `sm` para arriba vuelve a ser una caja de verdad, que es lo
-                que necesita el `ml-auto` para empujar el grupo a la derecha. */}
-            <div className="contents sm:flex sm:flex-wrap sm:items-center sm:gap-2 sm:ml-auto">
+          {/* ── El producto: su ficha ─────────────────────────────────────
+              Título, precio, publicar y borrar. Estaban en la misma fila que el
+              archivo, así que "Borrar" quedaba al lado de "Reemplazar PDF" como
+              si fueran dos formas de hacer lo mismo. */}
+          <Rotulo>El producto</Rotulo>
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
             <button
               onClick={() =>
                 acc.setBorrador({
@@ -684,16 +757,23 @@ function Tarjeta({ p, acc }: { p: ProductoEnPantalla; acc: Acciones }) {
                   comparePrice: p.comparePrice ? String(p.comparePrice) : "",
                 })
               }
-              disabled={ocupado}
+              disabled={apagado}
+              title={porQueApagado}
               className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 text-xs font-bold text-gray-700 panel-oscuro:text-gray-300 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800 transition-colors disabled:opacity-50"
             >
-              <Pencil className="h-3.5 w-3.5" /> Editar
+              {/* ⚠️ Decía "Editar" a secas, y era el TERCER botón con esa
+                  palabra en la misma tarjeta: estaban también "Editar el
+                  contenido" —el texto del ebook— y "Editar la página" —la
+                  página de venta—. Tres editar, tres cosas distintas, y el más
+                  corto era el más ambiguo. Éste abre el título y el precio, así
+                  que eso dice. */}
+              <Pencil className="h-3.5 w-3.5" /> Precio y título
             </button>
 
             <button
               onClick={() => acc.publicar(p, !p.publicado)}
-              disabled={ocupado || (!p.publicado && falta !== null)}
-              title={!p.publicado && falta ? falta : undefined}
+              disabled={apagado || (!p.publicado && falta !== null)}
+              title={porQueApagado ?? (!p.publicado && falta ? falta : undefined)}
               /* ⚠️ El `title` NO alcanza: no existe al tocar en un celular y un
                  lector de pantalla no siempre lo anuncia. Con esto, el motivo
                  —la misma franja roja de arriba— se lee junto con el nombre del
@@ -714,12 +794,12 @@ function Tarjeta({ p, acc }: { p: ProductoEnPantalla; acc: Acciones }) {
 
             <button
               onClick={() => acc.borrar(p)}
-              disabled={ocupado}
+              disabled={apagado}
+              title={porQueApagado}
               className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-red-500 hover:bg-red-50 panel-oscuro:hover:bg-red-500/10 transition-colors disabled:opacity-50"
             >
               <Trash2 className="h-3.5 w-3.5" /> Borrar
             </button>
-            </div>
           </div>
 
           {/* ── El sitio del producto: renglón propio ────────────────────────
@@ -736,15 +816,51 @@ function Tarjeta({ p, acc }: { p: ProductoEnPantalla; acc: Acciones }) {
               subdominio por producto (Fase 5 bis). Y se abre en otra pestaña
               porque sale del panel: es la página pública, no una previa. */}
           {p.rol === "PRINCIPAL" && (
-              <div className="mt-3 grid grid-cols-2 gap-2 border-t border-gray-100 panel-oscuro:border-gray-800 pt-3 sm:flex sm:flex-wrap sm:items-center">
-                <Link
+            <>
+              <Rotulo>Su página</Rotulo>
+
+              {/* ⚠️ LA DIRECCIÓN VIVE ACÁ, en el grupo de la página, y no suelta
+                  arriba entre el precio y los botones. Es la dirección DE esta
+                  página: leerla al lado de "Editar la página" y "Ver cómo quedó"
+                  dice qué es; arriba, entre el archivo y el precio, era un
+                  renglón gris del que no se sabía a qué correspondía.
+
+                  Se muestra en la tarjeta y no sólo adentro de su pantalla
+                  porque es lo que la persona copia y pega, así que tiene que
+                  estar donde ya está mirando. `break-all` porque una dirección
+                  larga en 360 empujaba la tarjeta entera.
+
+                  ⚠️ Y se muestran LAS DOS cuando hay dos: el dominio propio se
+                  suma, no reemplaza, y la de tiendaapps sigue andando. Mostrar
+                  sólo la de arriba haría pensar que la otra se apagó. */}
+              {(p.dominioPropio || p.slugDigital) && (
+                <div className="space-y-0.5">
+                  {p.dominioPropio && (
+                    <p className="text-[11.5px] font-bold text-gray-700 panel-oscuro:text-gray-300 break-all">
+                      {p.dominioPropio}
+                    </p>
+                  )}
+                  {p.slugDigital && (
+                    <p className="text-[11.5px] font-semibold text-gray-500 panel-oscuro:text-gray-400 break-all">
+                      {p.slugDigital}.{DOMINIO}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              <div className="mt-2 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
+                <Enlace
                   href={`/digitales/productos/${p.id}/pagina`}
+                  apagado={acc.deMentira}
+                  motivo={porQueApagado}
                   className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 text-xs font-bold text-gray-700 panel-oscuro:text-gray-300 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800 transition-colors"
                 >
                   <LayoutTemplate className="h-3.5 w-3.5" /> Editar la página
-                </Link>
-                <Link
+                </Enlace>
+                <Enlace
                   href={`/digitales/productos/${p.id}/direccion`}
+                  apagado={acc.deMentira}
+                  motivo={porQueApagado}
                   className={
                     /* Sin dirección el botón se destaca: es lo que falta para
                        poder repartir el producto, y en una fila de botones
@@ -766,17 +882,23 @@ function Tarjeta({ p, acc }: { p: ProductoEnPantalla; acc: Acciones }) {
                       misma corrección que se le hizo a "A mano" y a "Escribir
                       con IA": el botón nombra lo que hace, no la cosa sobre la
                       que trabaja. */}
-                  {p.slugDigital ? "Su dirección" : "Elegí tu dirección"}
-                </Link>
-                <Link
+                  {/* ⚠️ "Su dirección" no era un verbo: era la única de las
+                      tres que nombraba una cosa en vez de decir qué le hace.
+                      Al lado de "Editar la página" y "Ver cómo quedó" se leía
+                      como un cartel con la dirección adentro. */}
+                  {p.slugDigital ? "Cambiar la dirección" : "Elegí tu dirección"}
+                </Enlace>
+                <Enlace
                   href={`/p/${p.id}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                  externo
+                  apagado={acc.deMentira}
+                  motivo={porQueApagado}
                   className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 panel-oscuro:border-gray-700 text-xs font-bold text-gray-700 panel-oscuro:text-gray-300 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800 transition-colors"
                 >
                   <ExternalLink className="h-3.5 w-3.5" /> Ver cómo quedó
-                </Link>
+                </Enlace>
               </div>
+            </>
           )}
         </div>
       </div>
@@ -1161,6 +1283,7 @@ export default function ProductosClient({
     subirArchivo: () => {},
     rehacerPDF: () => {},
     abrirEbook: () => {},
+    deMentira: true,
     pedirFicha: () => {},
     hijosDe: () => [],
   };
@@ -1524,9 +1647,9 @@ export default function ProductosClient({
         <div className="mb-8 rounded-3xl border-2 border-dashed border-amber-300 panel-oscuro:border-amber-500/40 bg-amber-50/60 panel-oscuro:bg-amber-500/5 p-3 sm:p-4">
           <p className="mb-3 text-[11.5px] leading-relaxed text-amber-900 panel-oscuro:text-amber-200">
             <strong>Ejemplo, sólo en desarrollo.</strong> Así se ve un producto con el
-            ebook terminado. Los botones no hacen nada, salvo{" "}
-            <strong>Editar el contenido</strong>, que abre el editor de verdad con un
-            ebook inventado.
+            ebook terminado. Este producto no existe, así que sus botones están apagados:
+            el único que anda es <strong>Editar el contenido</strong>, que abre el editor
+            de verdad con un ebook inventado.
           </p>
           <Tarjeta p={PRODUCTO_DE_EJEMPLO} acc={accDeEjemplo} />
         </div>
