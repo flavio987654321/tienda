@@ -531,13 +531,13 @@ export default function EbookIA({
     && !seFreno;
 
   /* ── ¿Se puede corregir a mano? ───────────────────────────────────────────
-     Un recetario todavía no: sus recetas son campos —cantidad, tiempo, pasos
-     numerados—, no párrafos, y este editor dibuja párrafos. Ofrecer el botón
-     igual sería un botón que se aprieta y contesta que no.
+     Los dos formatos tienen su editor desde el 09/09/26. Acá decía que un
+     recetario no, porque sus recetas son campos y aquel editor dibujaba
+     párrafos; ahora hay uno para cada uno.
 
-     ⚠️ Esto NO es la decisión: la toma el servidor y viaja en `editable`. Acá
-     sólo se evita ofrecer lo que ya sabemos que va a decir que no. */
-  const puedeCorregir = !!ebook && ebook.opciones.formato !== "recetario";
+     ⚠️ Esto NO es la decisión: la toma el servidor. Acá sólo se evita ofrecer
+     un botón que ya sabemos que va a contestar que no. */
+  const puedeCorregir = !!ebook;
 
   return (
     <div className="fixed inset-0 z-[85] flex items-end sm:items-center justify-center p-0 sm:p-4">

@@ -279,6 +279,19 @@ export type Receta = {
   tip: string;
   /** Con qué buscar la foto. Igual que en los capítulos de texto. */
   foto: string;
+  /**
+   * La que se eligió a mano, si se eligió alguna.
+   *
+   * ⚠️ Igual que en un capítulo de texto (`CapituloPlaneado.fotoElegida`), y por
+   * el mismo motivo: sin esto el armado busca de nuevo en cada PDF que se rehace
+   * y las fotos cambian solas. En un recetario se nota más — cada receta es una
+   * hoja con su foto, y quien ya acomodó las treinta no las quiere perder por
+   * arreglar una coma.
+   *
+   * Vive adentro de la receta y no en el índice, porque acá la unidad es la
+   * receta: el índice de un recetario tiene secciones, no recetas.
+   */
+  fotoElegida?: FotoElegida | null;
 };
 
 export type IndiceSugerido = {
@@ -1346,6 +1359,11 @@ export function normalizarRecetas(crudo: unknown, cuantas = RECETAS_POR_LLAMADA)
       pasos,
       tip: cortarEnUnaIdea(b.tip, LARGO_BLOQUE) ?? "",
       foto: limpiarTexto(b.foto, LARGO_FOTO) ?? "",
+      /* ⚠️ Se lee y se conserva: esta misma función es la que vuelve a leer lo
+         guardado (ver `leerGruposDeRecetas`), así que sin esta línea la foto que
+         alguien eligió a mano se perdería en la primera relectura. Del modelo
+         nunca viene —él manda `foto`, la frase— y ahí queda `null`. */
+      fotoElegida: leerFotoElegida(b.fotoElegida),
     });
   }
 

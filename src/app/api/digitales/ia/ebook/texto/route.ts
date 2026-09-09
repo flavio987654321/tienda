@@ -2,11 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { leerCapitulos, leerIndice, leerPromesa, leerFotoDeTapa } from "@/lib/ebook-ia";
+import {
+  leerCapitulos, leerIndice, leerPromesa, leerFotoDeTapa, leerGruposDeRecetas,
+} from "@/lib/ebook-ia";
 import { leerOpciones } from "@/lib/ebook-opciones";
 import {
   revisarTexto, sePuedeEditarElTexto, pegarLasFotos, pegarLaTapa,
 } from "@/lib/ebook-texto";
+import { revisarRecetas } from "@/lib/recetario-texto";
 import { estadoDelBorrador, tomarElCandado, soltarElCandado } from "@/lib/ebook-borrador";
 
 export const runtime = "nodejs";
@@ -122,51 +125,92 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Este producto todavía no tiene un ebook empezado." }, { status: 404 });
   }
 
-  /* Un recetario guarda grupos de recetas donde esto espera capítulos: una
-     receta son campos —cantidad, tiempo, pasos numerados—, no párrafos, y este
-     editor no los sabe dibujar. Sin este corte, `leerCapitulos` devolvería una
-     lista vacía y el mensaje sería "no llegó ningún capítulo", que no explica
-     nada. Ver `ebook-texto`. */
-  if (leerOpciones(fresco.indice).formato === "recetario") {
-    await soltarElCandado(fresco.id, marca);
-    return NextResponse.json({
-      error: "Un recetario todavía no se corrige a mano: sus recetas son campos, no párrafos.",
-    }, { status: 409 });
-  }
-
-  const hay = { capitulos: leerCapitulos(fresco.capitulos) };
-  if (hay.capitulos.length === 0) {
-    await soltarElCandado(fresco.id, marca);
-    return NextResponse.json({ error: "Todavía no hay nada escrito para corregir." }, { status: 409 });
-  }
-
-  const revision = revisarTexto(body, hay);
-  if (!revision.ok) {
-    await soltarElCandado(fresco.id, marca);
-    return NextResponse.json({ error: revision.error }, { status: 400 });
-  }
-
-  const capitulos = JSON.stringify(revision.capitulos);
-
   /* ══════════════════════════════════════════════════════════════════════════
-     LAS FOTOS VAN EN EL MISMO GUARDADO
+     DOS FORMATOS, UNA SOLA PUERTA
      ══════════════════════════════════════════════════════════════════════════
 
-     Viven en el índice —ahí está la frase con la que se busca cada una y, ahora,
-     cuál se eligió— así que esto reescribe las dos columnas de una. Es un solo
-     botón para la persona y una sola escritura acá: partido en dos guardados,
-     uno podría entrar y el otro no, y el capítulo quedaría con el texto nuevo y
-     la foto vieja.
+     Acá había un CORTE: un recetario se rechazaba con "todavía no se corrige a
+     mano", porque sus recetas son campos —cantidad, tiempo, pasos numerados— y
+     no párrafos. Eso dejaba a quien hizo un recetario con el mismo agujero que
+     tenía el ebook de texto antes de esta ruta: **arreglar una coma costaba una
+     generación entera**. Y en un recetario duele más, porque lo que se corrige
+     suele ser un número, y un número mal es una receta que no sale.
 
-     ⚠️ Y se reescribe con `promesa` y `opciones` puestas de nuevo, igual que en
-     `/indice`: viven adentro de este mismo JSON, así que guardarlo sin ellas las
-     borraría — un recetario de 30 volvería a ser un ebook de texto. */
-  const indiceNuevo = JSON.stringify({
-    promesa: leerPromesa(fresco.indice),
-    capitulos: pegarLasFotos(body, leerIndice(fresco.indice)),
-    tapa: pegarLaTapa(body, leerFotoDeTapa(fresco.indice)),
-    opciones: leerOpciones(fresco.indice),
-  });
+     Ahora los dos entran por acá. Lo que cambia es qué se revisa y qué se
+     guarda; todo lo de alrededor —el candado, la relectura fresca, el estado, el
+     freno, la respuesta— es lo mismo, y tiene que serlo: son las partes donde
+     equivocarse borra algo que se pagó.
+
+     ⚠️ Y cada formato lima con las reglas de SU lector. Las de un recetario
+     están en `revisarRecetas`, y no son las mismas: ahí lo que desaparece en
+     silencio no es un capítulo, es una receta entera. */
+  const opciones = leerOpciones(fresco.indice);
+  const esRecetario = opciones.formato === "recetario";
+
+  let capitulos: string;
+  let indiceNuevo: string;
+
+  if (esRecetario) {
+    const hay = { grupos: leerGruposDeRecetas(fresco.capitulos) };
+    if (hay.grupos.length === 0) {
+      await soltarElCandado(fresco.id, marca);
+      return NextResponse.json({ error: "Todavía no hay nada escrito para corregir." }, { status: 409 });
+    }
+
+    const revision = revisarRecetas(body, hay);
+    if (!revision.ok) {
+      await soltarElCandado(fresco.id, marca);
+      return NextResponse.json({ error: revision.error }, { status: 400 });
+    }
+
+    capitulos = JSON.stringify(revision.grupos);
+
+    /* ⚠️ El índice de un recetario tiene SECCIONES, no recetas, y esta pantalla
+       no las edita: la foto de cada receta vive adentro de la receta. Así que de
+       acá lo único que puede cambiar es la tapa, y todo lo demás se vuelve a
+       escribir tal cual — sin `promesa` y `opciones`, guardar esto convertiría
+       un recetario de 30 en un ebook de texto. */
+    indiceNuevo = JSON.stringify({
+      promesa: leerPromesa(fresco.indice),
+      capitulos: leerIndice(fresco.indice),
+      tapa: pegarLaTapa(body, leerFotoDeTapa(fresco.indice)),
+      opciones,
+    });
+  } else {
+    const hay = { capitulos: leerCapitulos(fresco.capitulos) };
+    if (hay.capitulos.length === 0) {
+      await soltarElCandado(fresco.id, marca);
+      return NextResponse.json({ error: "Todavía no hay nada escrito para corregir." }, { status: 409 });
+    }
+
+    const revision = revisarTexto(body, hay);
+    if (!revision.ok) {
+      await soltarElCandado(fresco.id, marca);
+      return NextResponse.json({ error: revision.error }, { status: 400 });
+    }
+
+    capitulos = JSON.stringify(revision.capitulos);
+
+    /* ══════════════════════════════════════════════════════════════════════════
+       LAS FOTOS VAN EN EL MISMO GUARDADO
+       ══════════════════════════════════════════════════════════════════════════
+
+       Viven en el índice —ahí está la frase con la que se busca cada una y,
+       ahora, cuál se eligió— así que esto reescribe las dos columnas de una. Es
+       un solo botón para la persona y una sola escritura acá: partido en dos
+       guardados, uno podría entrar y el otro no, y el capítulo quedaría con el
+       texto nuevo y la foto vieja.
+
+       ⚠️ Y se reescribe con `promesa` y `opciones` puestas de nuevo, igual que
+       en `/indice`: viven adentro de este mismo JSON, así que guardarlo sin
+       ellas las borraría. */
+    indiceNuevo = JSON.stringify({
+      promesa: leerPromesa(fresco.indice),
+      capitulos: pegarLasFotos(body, leerIndice(fresco.indice)),
+      tapa: pegarLaTapa(body, leerFotoDeTapa(fresco.indice)),
+      opciones,
+    });
+  }
 
   /* Ver arriba: el archivo que está colgado es el de antes, así que el ebook
      deja de estar `LISTO`. Los otros estados no se tocan — corregir el capítulo

@@ -2,10 +2,11 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-session";
 import {
-  leerIndice, leerCapitulos, leerPromesa, leerFotoDeTapa,
+  leerIndice, leerCapitulos, leerPromesa, leerFotoDeTapa, leerGruposDeRecetas,
 } from "@/lib/ebook-ia";
 import { leerOpciones, COMO_SE_LLAMA } from "@/lib/ebook-opciones";
 import { sePuedeEditarElTexto } from "@/lib/ebook-texto";
+import { fotosDeLasRecetas } from "@/lib/recetario-texto";
 import { normalizarContenido, buscarPaleta } from "@/lib/pagina-venta";
 import { PALETAS } from "@/lib/pagina-venta";
 import BotonVolver from "../../../BotonVolver";
@@ -121,8 +122,17 @@ export default async function EditorDeEbookPage({ params }: Props) {
   const esRecetario = opciones.formato === "recetario";
   const indice = leerIndice(fila.ebookIA.indice);
   const capitulos = esRecetario ? [] : leerCapitulos(fila.ebookIA.capitulos);
-  const puede =
-    !esRecetario && sePuedeEditarElTexto(fila.ebookIA.estado) && capitulos.length > 0;
+
+  /* ⚠️ Un recetario guarda GRUPOS de recetas donde un ebook de texto guarda
+     capítulos. Cada grupo es una llamada al modelo ya cobrada, y esa forma se
+     conserva hasta el guardado: la pantalla las muestra todas seguidas, pero lo
+     que va a la base se vuelve a agrupar igual. Ver `leerGruposDeRecetas`. */
+  const grupos = esRecetario ? leerGruposDeRecetas(fila.ebookIA.capitulos) : [];
+
+  /* Hasta el 09/09/26 esto decía `!esRecetario &&`: un recetario no se podía
+     corregir a mano y arreglar un número costaba una generación entera. */
+  const cuantas = esRecetario ? grupos.flat().length : capitulos.length;
+  const puede = sePuedeEditarElTexto(fila.ebookIA.estado) && cuantas > 0;
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
@@ -139,11 +149,18 @@ export default async function EditorDeEbookPage({ params }: Props) {
           /* Quién lo vende: el ebook es de esa persona, no nuestro. */
           autor={fila.store?.name ?? ""}
           capitulos={capitulos}
-          /* La foto de cada capítulo: con qué se busca y cuál se eligió a mano.
-             Las mismas que va a usar el armado. */
-          fotos={indice.map((c) => ({ frase: c.foto, elegida: c.fotoElegida ?? null }))}
+          /* Su presencia es lo que decide qué editor se dibuja. */
+          recetas={esRecetario ? grupos : undefined}
+          /* La foto de cada parte: con qué se busca y cuál se eligió a mano.
+             Las mismas que va a usar el armado.
+
+             ⚠️ En un recetario salen de las RECETAS y no del índice: ahí la
+             unidad es la receta y el índice tiene secciones. Ver `Receta`. */
+          fotos={esRecetario
+            ? fotosDeLasRecetas(grupos)
+            : indice.map((c) => ({ frase: c.foto, elegida: c.fotoElegida ?? null }))}
           tapa={leerFotoDeTapa(fila.ebookIA.indice)}
-          total={indice.length}
+          total={esRecetario ? cuantas : indice.length}
           /* ⚠️ La misma cuenta que hace `/armar`: manda lo que eligió para el
              ebook y, si no eligió nada, la paleta de su página de venta. Si
              fueran distintas, la previa mostraría una tapa y el archivo saldría
@@ -159,9 +176,11 @@ export default async function EditorDeEbookPage({ params }: Props) {
             Este {COMO_SE_LLAMA[opciones.formato].obra.toLowerCase()} no se corrige acá
           </p>
           <p className="mt-2 text-[13px] leading-relaxed text-gray-600 panel-oscuro:text-gray-300">
-            {esRecetario
-              ? "Un recetario no son párrafos: cada receta son campos —los ingredientes con su cantidad, los pasos numerados, el tiempo—, y esta pantalla corrige párrafos. Su editor todavía no está hecho."
-              : "Todavía no hay nada escrito. Lo que se puede corregir antes de escribir es el temario, y eso se hace desde la ventana del ebook, en la tarjeta del producto."}
+            {/* Ya no hay un caso de "este formato no se corrige": los dos se
+                corrigen. Lo único que queda es que todavía no haya nada escrito. */}
+            Todavía no hay nada escrito. Lo que se puede corregir antes de escribir es el
+            temario, y eso se hace desde la ventana del {COMO_SE_LLAMA[opciones.formato].obra.toLowerCase()},
+            en la tarjeta del producto.
           </p>
         </div>
       )}

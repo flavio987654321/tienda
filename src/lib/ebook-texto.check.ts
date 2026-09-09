@@ -302,7 +302,11 @@ const hay = (cuantos: number): LoQueHayEscrito => ({ capitulos: lista(cuantos) }
     /onCapitulos\(/.test(pantalla) && !/useState<CapituloEscrito\[\]>/.test(pantalla),
     "el texto vive arriba del editor, así la vista previa lo ve mientras se escribe");
 
-  const previa = readFileSync("src/app/digitales/productos/VistaPreviaEbook.tsx", "utf8");
+  /* ⚠️ Las dos: el marco, la tapa y lo que se puede tocar se mudaron a
+     `previaPiezas` cuando el recetario pasó a dibujar la misma hoja. Medir sólo
+     una de las dos deja de ver la mitad. */
+  const previa = readFileSync("src/app/digitales/productos/VistaPreviaEbook.tsx", "utf8")
+    + readFileSync("src/app/digitales/productos/previaPiezas.tsx", "utf8");
 
   /* ⚠️ Y que la previa NO tenga los colores escritos a mano. Salen de la misma
      función que usa el PDF (`ebook-colores`): una copia se desincroniza de a
@@ -349,10 +353,26 @@ const hay = (cuantos: number): LoQueHayEscrito => ({ capitulos: lista(cuantos) }
 
   const tarjeta = readFileSync("src/app/digitales/productos/ProductosClient.tsx", "utf8");
 
-  /* Y que un recetario no ofrezca el botón: sus recetas son campos. */
+  /* ══════════════════════════════════════════════════════════════════════════
+     ⚠️ ESTE CHEQUEO PEDÍA LO CONTRARIO, Y ESTABA BIEN QUE LO PIDIERA.
+     ══════════════════════════════════════════════════════════════════════════
+
+     Pedía que la tarjeta ESCONDIERA el botón en un recetario, porque este editor
+     dibuja párrafos y una receta son campos: ofrecerlo era ofrecer un botón que
+     se aprieta y contesta que no.
+
+     Desde el 09/09/26 el recetario tiene su propio editor (`RecetarioTexto`), así
+     que lo que hay que cuidar se dio vuelta: que el botón se ofrezca en los dos
+     formatos, y que la pantalla de adentro sepa cuál dibujar. Si algún día ese
+     editor se saca, este chequeo vuelve atrás EN EL MISMO COMMIT. */
   check("TXT-AG",
-    /p\.ebook\.opciones\.formato !== "recetario"/.test(tarjeta),
-    "el recetario no ofrece el editor del texto, que dibuja párrafos");
+    !/p\.ebook\.opciones\.formato !== "recetario"/.test(tarjeta)
+    && /sePuedeEditarElTexto\(p\.ebook\.estado\)/.test(tarjeta),
+    "los dos formatos ofrecen el botón de corregir");
+
+  check("TXT-AG2",
+    /esRecetario \? \(/.test(alrededor) && /<RecetarioTexto/.test(alrededor),
+    "y la pantalla de adentro dibuja el editor que corresponde a cada uno");
 
   /* ⚠️ Que se llegue por una DIRECCIÓN y no por un paso adentro del modal.
      Estuvo así un rato y estaba mal: un modal de 576 px es para decidir una
@@ -559,7 +579,11 @@ const hay = (cuantos: number): LoQueHayEscrito => ({ capitulos: lista(cuantos) }
    del campo. Y al revés: escribir en un campo lo marca en la hoja. */
 
 {
-  const previa = readFileSync("src/app/digitales/productos/VistaPreviaEbook.tsx", "utf8");
+  /* ⚠️ Las dos: el marco, la tapa y lo que se puede tocar se mudaron a
+     `previaPiezas` cuando el recetario pasó a dibujar la misma hoja. Medir sólo
+     una de las dos deja de ver la mitad. */
+  const previa = readFileSync("src/app/digitales/productos/VistaPreviaEbook.tsx", "utf8")
+    + readFileSync("src/app/digitales/productos/previaPiezas.tsx", "utf8");
   const editor = readFileSync("src/app/digitales/productos/EbookTexto.tsx", "utf8");
   const pantalla = readFileSync(
     "src/app/digitales/productos/[id]/ebook/EditorClient.tsx", "utf8");

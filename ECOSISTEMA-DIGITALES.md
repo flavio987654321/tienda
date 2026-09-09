@@ -4497,10 +4497,19 @@ No es una lista de cortesía: son los lugares donde un error se cobra caro.
 
 ### 🔲 Lo que queda anotado
 
-- 🔲 **El recetario no se puede corregir a mano.** El botón está escondido y la
-  ruta lo rechaza. Es el mismo agujero que se le arregló al ebook de texto: una
-  coma mal puesta cuesta una generación entera. Sus recetas son campos
-  —ingredientes, pasos, tiempos—, no párrafos, así que necesita su propio editor.
+- ✅ **El recetario no se puede corregir a mano.** Hecho el 09/09/26. Tiene su
+  propio editor —`RecetarioTexto`— con los campos que de verdad son: título,
+  bajada, las tres fichas, los ingredientes en dos columnas, los pasos numerados
+  que se pueden mover, el consejo y la foto. Entra por la MISMA ruta que el
+  texto, con el mismo candado y la misma relectura fresca; lo que cambia es qué
+  se revisa. Y ahora una receta también puede tener su foto elegida a mano: sin
+  eso, cada vez que se rehacía el PDF cambiaban las treinta.
+
+  Lo que más se cuidó: el lector descarta una receta ENTERA si se queda sin
+  título, con menos de dos ingredientes o con menos de dos pasos. Guardar así no
+  falla en ningún lado — la receta se pierde en la próxima lectura y el
+  recetario de treinta entrega veintinueve. 33 chequeos en `recetario-texto`,
+  incluida la ida y vuelta contra el lector de verdad.
 - ✅ **Sentry sin `global-error` ni `onRequestError`.** Hecho el 09/09/26. Eran
   tres agujeros, no dos: los errores del servidor no llegaban (Next los atrapa
   para dibujar la pantalla de error, así que Sentry no los ve), no había red

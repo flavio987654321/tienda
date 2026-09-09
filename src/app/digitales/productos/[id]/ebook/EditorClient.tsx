@@ -5,7 +5,9 @@ import { useRouter } from "next/navigation";
 import { Check, Loader2, Image as ImageIcon } from "lucide-react";
 import EbookTexto from "../../EbookTexto";
 import VistaPreviaEbook from "../../VistaPreviaEbook";
-import type { CapituloEscrito } from "@/lib/ebook-ia";
+import type { CapituloEscrito, Receta } from "@/lib/ebook-ia";
+import RecetarioTexto from "../../RecetarioTexto";
+import VistaPreviaRecetario from "../../VistaPreviaRecetario";
 import type { ColoresDeTapa, ModoDelEbook } from "@/lib/ebook-colores";
 import type { FotoDelCapitulo, Seleccion } from "@/lib/ebook-texto";
 import ElegirFoto from "../../ElegirFoto";
@@ -53,6 +55,7 @@ export default function EditorDeEbook({
   promesa,
   autor,
   capitulos: guardadosIniciales,
+  recetas: recetasIniciales,
   fotos: fotosIniciales,
   tapa: tapaInicial,
   total,
@@ -66,6 +69,14 @@ export default function EditorDeEbook({
   promesa: string;
   autor: string;
   capitulos: CapituloEscrito[];
+  /**
+   * Las recetas, agrupadas por sección, cuando esto es un recetario.
+   *
+   * ⚠️ Su presencia ES lo que decide qué editor se dibuja. Un recetario no
+   * tiene capítulos y un ebook de texto no tiene recetas: nunca vienen los dos.
+   * Ver `RecetarioTexto`.
+   */
+  recetas?: Receta[][];
   /** La foto de cada capítulo: con qué buscarla y cuál se eligió. */
   fotos: FotoDelCapitulo[];
   /** La de la tapa, que vive en la raíz del índice. */
@@ -98,6 +109,15 @@ export default function EditorDeEbook({
   const [fotosGuardadas, setFotosGuardadas] = useState(fotosIniciales);
   const [tapaGuardada, setTapaGuardada] = useState(tapaInicial);
   const [tapaAbierta, setTapaAbierta] = useState(false);
+
+  /* ── El recetario ────────────────────────────────────────────────────────
+     Mismo molde: lo guardado y lo que se está corrigiendo, separados. Lo que
+     cambia es la forma —grupos de recetas en vez de capítulos— y que la foto de
+     cada receta vive ADENTRO de la receta, así que al guardar hay que volver a
+     pegarla. Ver `guardar`. */
+  const esRecetario = !!recetasIniciales;
+  const [recetasGuardadas, setRecetasGuardadas] = useState<Receta[][]>(recetasIniciales ?? []);
+  const [recetas, setRecetas] = useState<Receta[][]>(recetasIniciales ?? []);
 
 
   const [guardando, setGuardando] = useState(false);
@@ -162,6 +182,87 @@ export default function EditorDeEbook({
     const datos = await res.json().catch(() => null);
     return { ok: res.ok, datos: (datos ?? {}) as Record<string, unknown> };
   }, [productoId]);
+
+  /**
+   * Las fotos vuelven a su lugar adentro de cada receta.
+   *
+   * ⚠️ En un ebook de texto las fotos viajan aparte —viven en el índice— pero
+   * en un recetario viven ADENTRO de la receta, porque ahí la unidad es la
+   * receta y el índice tiene secciones. La pantalla las maneja en una lista
+   * aparte, todas seguidas, así que acá se vuelven a pegar por posición.
+   */
+  const conSusFotos = useCallback((grupos: Receta[][]): Receta[][] => {
+    let n = 0;
+    return grupos.map((g) => g.map((r) => {
+      const f = fotos[n++];
+      return { ...r, foto: f?.frase ?? r.foto, fotoElegida: f?.elegida ?? null };
+    }));
+  }, [fotos]);
+
+  const guardarRecetario = useCallback(async (corregidas: Receta[][]) => {
+    if (enVuelo.current) return;
+    const conFotos = conSusFotos(corregidas);
+
+    if (deMentira) {
+      setRecetasGuardadas(conFotos);
+      setRecetas(conFotos);
+      setFotosGuardadas(fotos);
+      setTapaGuardada(tapa);
+      setListo(`Se habría guardado: ${conFotos.flat().length} recetas. Y después se rehacía el PDF.`);
+      return;
+    }
+
+    enVuelo.current = true;
+    setGuardando(true);
+    setError(null);
+    setListo(null);
+
+    try {
+      const { ok, datos } = await pedir("/api/digitales/ia/ebook/texto", { recetas: conFotos, tapa });
+      if (!vivo.current) return;
+
+      if (!ok) {
+        setError(typeof datos.error === "string" ? datos.error : "No pudimos guardar las recetas.");
+        return;
+      }
+
+      setRecetasGuardadas(conFotos);
+      setRecetas(conFotos);
+      setFotosGuardadas(fotos);
+      setTapaGuardada(tapa);
+
+      if (datos.hayQueArmar === true) {
+        const armado = await pedir("/api/digitales/ia/ebook/armar", {});
+        if (!vivo.current) return;
+        if (!armado.ok) {
+          setError(
+            typeof armado.datos.error === "string"
+              ? `Los cambios quedaron guardados, pero no pudimos rehacer el PDF: ${armado.datos.error}`
+              : "Los cambios quedaron guardados, pero no pudimos rehacer el PDF. Probá de nuevo desde la tarjeta del producto.",
+          );
+          return;
+        }
+        if (armado.datos.sinFotos === true) {
+          setListo(
+            "Guardado y el PDF se rehizo, pero salió SIN FOTOS: el banco de imágenes está al tope"
+            + " en este momento. Volvé a guardar en un rato y salen — no gasta ninguna generación.",
+          );
+          router.refresh();
+          return;
+        }
+        setListo("Guardado, y el PDF se rehizo con los cambios. Ése es el que se entrega.");
+      } else {
+        setListo("Guardado. El PDF se va a armar solo cuando termine de escribirse.");
+      }
+
+      router.refresh();
+    } catch {
+      if (vivo.current) setError("Se cortó la conexión. Probá de nuevo.");
+    } finally {
+      enVuelo.current = false;
+      if (vivo.current) setGuardando(false);
+    }
+  }, [pedir, router, deMentira, fotos, tapa, conSusFotos]);
 
   const guardar = useCallback(async (corregidos: CapituloEscrito[]) => {
     if (enVuelo.current) return;
@@ -366,6 +467,32 @@ export default function EditorDeEbook({
           </div>
 
           <div className="rounded-2xl border border-gray-200 panel-oscuro:border-gray-700 bg-white panel-oscuro:bg-gray-900 p-4 sm:p-5">
+            {/* ⚠️ Dos editores y no uno con `if` adentro: un recetario son
+                campos —ingredientes con su cantidad, pasos numerados, fichas— y
+                un ebook de texto son párrafos. Mezclados en un componente, cada
+                arreglo de uno hay que probarlo en los dos. Lo que SÍ comparten
+                —la hoja de la derecha, la selección, el guardado, el aviso de
+                salida— está afuera de los dos. */}
+            {esRecetario ? (
+              <RecetarioTexto
+                guardadas={recetasGuardadas}
+                recetas={recetas}
+                onRecetas={setRecetas}
+                fotos={fotos}
+                onFotos={setFotos}
+                otrosCambios={
+                  JSON.stringify(fotos) !== JSON.stringify(fotosGuardadas)
+                  || JSON.stringify(tapa) !== JSON.stringify(tapaGuardada)
+                }
+                seleccion={seleccion}
+                onSeleccion={setSeleccion}
+                guardando={guardando}
+                error={error}
+                onCambio={setSinGuardar}
+                onGuardar={guardarRecetario}
+                onVolver={() => router.push("/digitales/productos")}
+              />
+            ) : (
             <EbookTexto
               guardados={guardados}
               capitulos={capitulos}
@@ -387,6 +514,7 @@ export default function EditorDeEbook({
               onGuardar={guardar}
               onVolver={() => router.push("/digitales/productos")}
             />
+            )}
           </div>
         </div>
 
@@ -413,18 +541,34 @@ export default function EditorDeEbook({
                 metros, y sin esto la columna de la izquierda quedaría al lado
                 de una tira de tres pantallas de alto. */}
             <div className="max-h-[calc(100vh-8rem)] overflow-y-auto rounded-2xl">
-              <VistaPreviaEbook
-                titulo={titulo}
-                promesa={promesa}
-                autor={autor}
-                capitulos={capitulos}
-                fotos={fotos}
-                tapa={tapa}
-                paleta={paleta}
-                modo={modo}
-                seleccion={seleccion}
-                onTocar={tocar}
-              />
+              {esRecetario ? (
+                <VistaPreviaRecetario
+                  titulo={titulo}
+                  promesa={promesa}
+                  autor={autor}
+                  /* Todas seguidas: una receta es una hoja, y así se numeran. */
+                  recetas={recetas.flat()}
+                  fotos={fotos}
+                  tapa={tapa}
+                  paleta={paleta}
+                  modo={modo}
+                  seleccion={seleccion}
+                  onTocar={tocar}
+                />
+              ) : (
+                <VistaPreviaEbook
+                  titulo={titulo}
+                  promesa={promesa}
+                  autor={autor}
+                  capitulos={capitulos}
+                  fotos={fotos}
+                  tapa={tapa}
+                  paleta={paleta}
+                  modo={modo}
+                  seleccion={seleccion}
+                  onTocar={tocar}
+                />
+              )}
             </div>
           </div>
         </div>

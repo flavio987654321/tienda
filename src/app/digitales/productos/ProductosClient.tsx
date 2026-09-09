@@ -481,12 +481,16 @@ function Tarjeta({ p, acc }: { p: ProductoEnPantalla; acc: Acciones }) {
                   </a>
                 )}
 
-                {/* Sólo si hay texto de la IA para corregir. Un PDF que subió la
-                    persona no se puede editar acá —no tenemos su contenido, sólo
-                    el archivo— y un recetario son campos, no párrafos. La regla
-                    la decide la misma función que el servidor. */}
+                {/* Sólo si hay algo de la IA para corregir. Un PDF que subió la
+                    persona no se puede editar acá: no tenemos su contenido, sólo
+                    el archivo. La regla la decide la misma función que el
+                    servidor.
+
+                    ⚠️ Acá también decía `formato !== "recetario"`, porque un
+                    recetario son campos y el editor dibujaba párrafos. Desde el
+                    09/09/26 tiene el suyo: arreglar una cantidad ya no cuesta una
+                    generación entera. Ver `RecetarioTexto`. */}
                 {p.ebook
-                  && p.ebook.opciones.formato !== "recetario"
                   && p.ebook.escritos > 0
                   && sePuedeEditarElTexto(p.ebook.estado) && (
                   <Link

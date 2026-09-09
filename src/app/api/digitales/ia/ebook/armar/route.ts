@@ -177,7 +177,13 @@ export async function POST(req: NextRequest) {
      `bajarElegida` devuelve `null` si la foto ya no está o si tarda de más, y
      ahí se cae a la búsqueda: una foto vieja que desapareció del banco no puede
      dejar un capítulo sin nada. Ver `FotoElegida`. */
-  const elegidas = esRecetario ? [] : capitulos.map((_, i) => indice[i]?.fotoElegida ?? null);
+  /* ⚠️ En un recetario la foto elegida vive adentro de la RECETA y no en el
+     índice, porque ahí la unidad es la receta: el índice tiene secciones. Antes
+     acá había una lista vacía —un recetario no podía tener fotos elegidas— así
+     que cada vez que se rehacía el PDF las treinta fotos cambiaban solas. */
+  const elegidas = esRecetario
+    ? recetas.map((r) => r.fotoElegida ?? null)
+    : capitulos.map((_, i) => indice[i]?.fotoElegida ?? null);
 
   /* La tapa, igual: lo elegido gana y la búsqueda queda de respaldo. Su frase
      puede estar vacía —nadie la tocó— y ahí se busca con el título del ebook,
