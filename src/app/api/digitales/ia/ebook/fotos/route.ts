@@ -43,10 +43,29 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Tu cuenta no es de Productos Digitales." }, { status: 403 });
   }
 
+  /* ══════════════════════════════════════════════════════════════════════════
+     ⚠️ 120 POR HORA, Y EL NÚMERO TIENE UNA CUENTA ATRÁS
+     ══════════════════════════════════════════════════════════════════════════
+
+     Estaba en 60 y era poco: elegir la foto de diez capítulos y la tapa son
+     once fotos, y cada una lleva dos o tres búsquedas hasta encontrar la que
+     gusta — o sea unas treinta por ebook. Con 60 entraban dos ebooks por hora y
+     alguien que se sentaba una tarde a acomodar sus fotos se comía el tope sin
+     hacer nada raro. Con 120 entran cuatro.
+
+     ⚠️ Y NO se saca del todo, aunque no cueste plata. La clave del banco de
+     imágenes es UNA para toda la plataforma y su tope —según la documentación
+     de Pexels, 200 pedidos por hora y 20.000 por mes— se reparte entre todas
+     las cuentas. Sin tope por cuenta, un bucle mal escrito en una pantalla deja
+     sin fotos a todos los demás durante una hora.
+
+     Si algún día molesta de verdad, lo que lo arregla no es subir este número:
+     es guardar los resultados de cada búsqueda —la misma frase devuelve lo
+     mismo— o pagar un plan del banco. */
   try {
-    if (!(await checkRateLimit(`ebook-fotos:${user.id}`, 60, 60 * 60_000))) {
+    if (!(await checkRateLimit(`ebook-fotos:${user.id}`, 120, 60 * 60_000))) {
       return NextResponse.json({
-        error: "Buscaste muchas fotos seguidas. Esperá un rato y seguí.",
+        error: "Buscaste muchas fotos seguidas. Esperá un rato y seguí — no perdiste nada de lo que elegiste.",
       }, { status: 429 });
     }
   } catch {

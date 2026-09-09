@@ -9,9 +9,18 @@
    configuración. Acá el navegador las pide derecho y no nos cuestan nada. */
 
 import { useCallback, useRef, useState } from "react";
-import { ImageIcon, Loader2, Search, Check, RotateCcw, X } from "lucide-react";
+import { ImageIcon, Loader2, Search, Check, RotateCcw, X, Upload } from "lucide-react";
 import CampoAuto from "@/components/CampoAuto";
 import { LARGO_FOTO, type FotoElegida } from "@/lib/ebook-ia";
+
+/**
+ * Cuánto puede pesar una foto propia.
+ *
+ * ⚠️ No es el tope de `/api/upload` (4 MB) por casualidad: es el mismo. Pero
+ * acá pesa doble, porque esta foto se INCRUSTA en el PDF — once fotos de 4 MB
+ * son un archivo de 44 MB que después hay que entregar en cada venta.
+ */
+const MAX_FOTO_MB = 4;
 
 /**
  * Elegir la foto de un capítulo —o la de la tapa— a mano.
@@ -71,6 +80,7 @@ export default function ElegirFoto({
   onCerrar: () => void;
 }) {
   const [buscando, setBuscando] = useState(false);
+  const [subiendo, setSubiendo] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [resultados, setResultados] = useState<FotoDeCandidata[] | null>(null);
 
@@ -111,6 +121,57 @@ export default function ElegirFoto({
     }
   }, [frase, alta]);
 
+  /**
+   * Subir una foto propia.
+   *
+   * ⚠️ Pasa por `/api/upload`, que es la misma puerta por la que ya entran la
+   * portada del producto y las fotos de la página de venta: mira los BYTES y
+   * confirma que un "image/png" sea de verdad un png. Una imagen entra cómoda
+   * en los 4 MB que aguanta el cuerpo de un pedido, así que no hace falta el
+   * camino largo del archivo pago (permiso firmado y subida directa).
+   */
+  const subir = useCallback(async (file: File) => {
+    if (enVuelo.current) return;
+
+    if (file.size > MAX_FOTO_MB * 1024 * 1024) {
+      setError(`La foto no puede pesar más de ${MAX_FOTO_MB} MB. Exportala más chica y probá de nuevo.`);
+      return;
+    }
+
+    enVuelo.current = true;
+    setSubiendo(true);
+    setError(null);
+
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      const res = await fetch("/api/upload", { method: "POST", body: form });
+      const datos = (await res.json().catch(() => null)) as Record<string, unknown> | null;
+
+      if (!res.ok || typeof datos?.url !== "string") {
+        setError(typeof datos?.error === "string" ? datos.error : "No pudimos subir la foto.");
+        return;
+      }
+
+      /* El id sale de la dirección: es lo que hace que dos capítulos con la
+         misma foto propia no cuenten como dos fotos distintas. */
+      onElegida({
+        id: `propia:${datos.url.slice(-40)}`,
+        url: datos.url,
+        /* Vacíos a propósito: una foto propia no va a la hoja de créditos, que
+           es para la licencia del banco de imágenes. Ver `FotoElegida.propia`. */
+        fotografo: "",
+        enlace: "",
+        propia: true,
+      });
+    } catch {
+      setError("Se cortó la conexión. Probá de nuevo.");
+    } finally {
+      enVuelo.current = false;
+      setSubiendo(false);
+    }
+  }, [onElegida]);
+
   const campo =
     "border border-gray-200 panel-oscuro:border-gray-700 bg-white panel-oscuro:bg-gray-950 rounded-lg px-3 py-2 text-[13px] text-gray-900 panel-oscuro:text-gray-100 placeholder:text-gray-400 focus:border-orange-400 focus:outline-none disabled:opacity-60";
 
@@ -140,13 +201,13 @@ export default function ElegirFoto({
           />
           <div className="min-w-0 flex-1">
             <p className="text-[11.5px] font-bold text-gray-700 panel-oscuro:text-gray-300">
-              Elegida a mano
+              {elegida.propia ? "Foto tuya" : "Elegida a mano"}
             </p>
             {/* ⚠️ El nombre de quien la sacó, a la vista. No es un crédito de
                 cortesía: es la licencia del banco de imágenes, y va también en
                 la hoja de créditos del PDF. */}
             <p className="truncate text-[11px] text-gray-500 panel-oscuro:text-gray-400">
-              Foto de {elegida.fotografo}
+              {elegida.propia ? "La subiste vos" : `Foto de ${elegida.fotografo}`}
             </p>
           </div>
           <button
@@ -191,6 +252,41 @@ export default function ElegirFoto({
         Describí una escena, no el tema del capítulo: buscando por el título, “Primeros pasos
         para arrancar” trajo una guitarra.
       </p>
+
+      {/* ── O la tuya ──────────────────────────────────────────────────────
+          ⚠️ Es la mitad que faltaba. Buscar en el banco alcanza para un ebook
+          de temas generales, pero quien vende SU método, SU taller o SU
+          producto tiene las fotos y no le sirve ninguna de un banco. Y no hay
+          salida por afuera: un PDF armado no se edita en ningún lado.
+
+          El `<label>` con el input escondido es el mismo patrón que "Subir PDF"
+          en la tarjeta, incluidos sus dos porqués: `sr-only` y no `hidden`
+          —para que se llegue con el teclado— y `relative` en el label, sin lo
+          cual el input absoluto se cuelga del documento y le mete una franja de
+          scroll a la pantalla. Ver el comentario largo en `ProductosClient`. */}
+      <label
+        aria-busy={subiendo}
+        className="relative mt-2.5 inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-gray-200 panel-oscuro:border-gray-700 px-3 py-2 text-[12px] font-bold text-gray-700 panel-oscuro:text-gray-300 hover:bg-gray-50 panel-oscuro:hover:bg-gray-800 transition-colors focus-within:outline-none focus-within:ring-2 focus-within:ring-orange-500"
+      >
+        {subiendo ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+        {subiendo ? "Subiendo…" : "Subir una foto mía"}
+        <input
+          type="file"
+          className="sr-only"
+          /* ⚠️ Sólo jpg y png: son los dos que el PDF sabe dibujar. Un webp o un
+             gif se subirían bien y después el armado no los podría abrir — la
+             foto no aparecería y nadie sabría por qué. */
+          accept="image/jpeg,image/png"
+          disabled={disabled || subiendo}
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            /* Se limpia para que elegir el MISMO archivo dos veces seguidas
+               vuelva a disparar el `onChange`. */
+            e.target.value = "";
+            if (file) void subir(file);
+          }}
+        />
+      </label>
 
       {error && (
         <p className="mt-2.5 rounded-lg bg-amber-50 panel-oscuro:bg-amber-500/10 px-3 py-2 text-[12px] leading-relaxed text-amber-900 panel-oscuro:text-amber-200">

@@ -294,7 +294,16 @@ export async function buscarCandidatas(
 export async function bajarElegida(f: {
   url: string; fotografo: string; enlace: string;
 }): Promise<FotoDelEbook | null> {
-  const datos = await bajar(f.url);
+  /* ⚠️ Una foto propia subida EN DESARROLLO llega como ruta relativa
+     (`/uploads/…`), porque ahí `/api/upload` guarda en el disco en vez de
+     Supabase. `fetch` no sabe qué hacer con una ruta relativa del lado del
+     servidor, así que se completa con la dirección de la aplicación. En
+     producción la ruta ya viene entera y esto no toca nada. */
+  const direccion = f.url.startsWith("/")
+    ? `${(process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000").replace(/\/$/, "")}${f.url}`
+    : f.url;
+
+  const datos = await bajar(direccion);
   if (!datos) return null;
   return { datos, fotografo: f.fotografo, enlace: f.enlace };
 }

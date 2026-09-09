@@ -163,10 +163,26 @@ export type FotoElegida = {
   id: string;
   /** De dónde bajarla al armar el PDF. */
   url: string;
-  /** Quien la sacó. Va en la hoja de créditos, y no es opcional: es la licencia. */
+  /**
+   * Quien la sacó. Va en la hoja de créditos, y para una foto del banco **no
+   * es opcional: es la licencia**. Vacío sólo cuando la foto es propia.
+   */
   fotografo: string;
   /** La página de la foto en el banco. También va en los créditos. */
   enlace: string;
+  /**
+   * `true` si la subió quien vende, en vez de sacarla del banco.
+   *
+   * ⚠️ Cambia DOS reglas, y las dos importan:
+   *
+   *   · **De dónde puede venir la dirección.** Una del banco tiene que ser de
+   *     Pexels; una propia, de nuestro propio depósito. Ninguna puede ser una
+   *     dirección cualquiera: lo que se guarda acá lo baja nuestro servidor.
+   *   · **Los créditos.** Una foto propia no lleva a nadie a la hoja de
+   *     créditos —no hay a quién acreditar— y por eso ahí `fotografo` puede ir
+   *     vacío. `creditos` ya descarta los vacíos, así que sale sola.
+   */
+  propia?: boolean;
 };
 
 export type CapituloPlaneado = {
@@ -605,10 +621,44 @@ export function leerFotoElegida(crudo: unknown): FotoElegida | null {
   const fotografo = limpiarTexto(f.fotografo, LARGO_AUTOR_FOTO);
   const enlace = limpiarTexto(f.enlace, LARGO_DIRECCION_FOTO);
 
-  if (!id || !url || !fotografo || !enlace) return null;
+  if (!id || !url) return null;
+
+  /* Una foto propia: no tiene a quién acreditar, y su dirección tiene que ser
+     de nuestro depósito. Ver `propia`. */
+  if (f.propia === true) {
+    if (!esNuestra(url)) return null;
+    return { id, url, fotografo: "", enlace: "", propia: true };
+  }
+
+  /* Una del banco: los cuatro campos, y las dos direcciones de Pexels. */
+  if (!fotografo || !enlace) return null;
   if (!esDelBanco(url) || !esDelBanco(enlace)) return null;
 
   return { id, url, fotografo, enlace };
+}
+
+/**
+ * Las direcciones de nuestro propio depósito, para una foto subida a mano.
+ *
+ * ⚠️ Es la misma guarda que `esDelBanco` y por el mismo motivo: lo que se
+ * guarda acá lo baja el servidor al armar el PDF. Sin esta lista, mandando una
+ * dirección de la red interna se la hacemos pedir nosotros.
+ *
+ * En desarrollo `/api/upload` guarda en `public/uploads` y devuelve una ruta
+ * relativa; en producción devuelve la dirección pública de Supabase. Se aceptan
+ * las dos porque son las dos que esa ruta puede devolver, y ninguna otra.
+ */
+function esNuestra(direccion: string): boolean {
+  if (direccion.startsWith("/uploads/")) return !direccion.includes("..");
+
+  const nuestro = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? "").replace(/\/$/, "");
+  if (!nuestro) return false;
+  try {
+    const u = new URL(direccion);
+    return u.protocol === "https:" && u.origin === new URL(nuestro).origin;
+  } catch {
+    return false;
+  }
 }
 
 /**

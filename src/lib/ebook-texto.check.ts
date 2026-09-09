@@ -443,6 +443,38 @@ const hay = (cuantos: number): LoQueHayEscrito => ({ capitulos: lista(cuantos) }
   check('TXT-AU', r4[0].fotoElegida === null,
     'una foto sin autor se descarta: ese nombre es la licencia');
 
+  /* ── La foto propia ────────────────────────────────────────────────────
+     Cambia dos reglas: no lleva créditos —no hay a quién acreditar— y su
+     dirección tiene que ser de NUESTRO depósito, no del banco. */
+  const propia = { id: 'propia:x', url: '/uploads/abc.jpg', fotografo: '', enlace: '', propia: true };
+  const rp = pegarLasFotos({ fotos: [{ frase: 'x', elegida: propia }] }, indice);
+  check('TXT-BA', rp[0].fotoElegida?.propia === true && rp[0].fotoElegida?.url === '/uploads/abc.jpg',
+    'una foto propia entra sin autor: no va a la hoja de créditos');
+
+  /* ⚠️ Pero su dirección tampoco puede ser cualquiera: la baja el servidor. */
+  const rq = pegarLasFotos(
+    { fotos: [{ frase: 'x', elegida: { ...propia, url: 'http://10.0.0.1/interno.jpg' } }] },
+    indice,
+  );
+  check('TXT-BB', rq[0].fotoElegida === null,
+    'una foto "propia" apuntando a otro lado se descarta igual');
+
+  const rr = pegarLasFotos(
+    { fotos: [{ frase: 'x', elegida: { ...propia, url: '/uploads/../../etc/passwd' } }] },
+    indice,
+  );
+  check('TXT-BC', rr[0].fotoElegida === null,
+    'y una que se quiere salir de la carpeta, tampoco');
+
+  /* Sin la marca `propia`, la misma dirección NO entra: sería una foto del
+     banco sin autor y sin enlace. */
+  const rs = pegarLasFotos(
+    { fotos: [{ frase: 'x', elegida: { ...propia, propia: false } }] },
+    indice,
+  );
+  check('TXT-BD', rs[0].fotoElegida === null,
+    'sin la marca de propia, una foto sin autor no entra por la puerta del banco');
+
   /* La tapa: sin decir nada, queda la que había. */
   const hayTapa = { frase: 'algo', elegida: null };
   check('TXT-AV', pegarLaTapa({}, hayTapa).frase === 'algo',
